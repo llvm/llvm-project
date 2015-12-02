@@ -15,3 +15,4 @@ Details: isl/imath/LICENSE
 
 To update these libraries run 'autoreconf -i && ./configure && make dist' in
 the isl git directory and move the resulting files into lib/External/isl.
+Alternatively, run the update-isl.sh script.

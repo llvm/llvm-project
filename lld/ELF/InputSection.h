@@ -76,9 +76,16 @@ public:
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Rela &Rel);
 
   template <bool isRela>
-  void relocate(uint8_t *Buf, uint8_t *BufEnd,
-                llvm::iterator_range<
-                    const llvm::object::Elf_Rel_Impl<ELFT, isRela> *> Rels);
+  using RelIteratorRange =
+      llvm::iterator_range<const llvm::object::Elf_Rel_Impl<ELFT, isRela> *>;
+
+  template <bool isRela>
+  void relocate(uint8_t *Buf, uint8_t *BufEnd, RelIteratorRange<isRela> Rels);
+
+private:
+  template <bool isRela>
+  uint8_t *findMipsPairedReloc(uint8_t *Buf, uint32_t Type,
+                               RelIteratorRange<isRela> Rels);
 };
 
 template <class ELFT>

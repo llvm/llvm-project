@@ -5189,6 +5189,11 @@ static __isl_give isl_ast_graft_list *build_ast_from_extension(
  * with the filter and continue with the descendants of the node,
  * unless the resulting inverse schedule is empty, in which
  * case we return an empty list.
+ *
+ * If the result of the intersection is equal to the original "executed"
+ * relation, then keep the original representation since the intersection
+ * may have unnecessarily broken up the relation into a greater number
+ * of disjuncts.
  */
 static __isl_give isl_ast_graft_list *build_ast_from_filter(
 	__isl_take isl_ast_build *build, __isl_take isl_schedule_node *node,
@@ -5196,10 +5201,13 @@ static __isl_give isl_ast_graft_list *build_ast_from_filter(
 {
 	isl_ctx *ctx;
 	isl_union_set *filter;
+	isl_union_map *orig;
 	isl_ast_graft_list *list;
 	int empty;
+	isl_bool unchanged;
 	unsigned n1, n2;
 
+	orig = isl_union_map_copy(executed);
 	if (!build || !node || !executed)
 		goto error;
 
@@ -5214,9 +5222,15 @@ static __isl_give isl_ast_graft_list *build_ast_from_filter(
 			"filter node is not allowed to introduce "
 			"new parameters", goto error);
 
+	unchanged = isl_union_map_is_subset(orig, executed);
 	empty = isl_union_map_is_empty(executed);
-	if (empty < 0)
+	if (unchanged < 0 || empty < 0)
 		goto error;
+	if (unchanged) {
+		isl_union_map_free(executed);
+		return build_ast_from_child(build, node, orig);
+	}
+	isl_union_map_free(orig);
 	if (!empty)
 		return build_ast_from_child(build, node, executed);
 
@@ -5230,6 +5244,7 @@ error:
 	isl_ast_build_free(build);
 	isl_schedule_node_free(node);
 	isl_union_map_free(executed);
+	isl_union_map_free(orig);
 	return NULL;
 }
 

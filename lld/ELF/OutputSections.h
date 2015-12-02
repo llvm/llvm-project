@@ -118,10 +118,11 @@ public:
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
-  void addDynTlsEntry(SymbolBody *Sym);
+  bool addDynTlsEntry(SymbolBody *Sym);
   bool addLocalModelTlsIndex();
   bool empty() const { return Entries.empty(); }
   uintX_t getEntryAddr(const SymbolBody &B) const;
+  uintX_t getGlobalDynAddr(const SymbolBody &B) const;
 
   // Returns the symbol which corresponds to the first entry of the global part
   // of GOT on MIPS platform. It is required to fill up MIPS-specific dynamic
@@ -133,7 +134,7 @@ public:
   // the number of reserved entries. This method is MIPS-specific.
   unsigned getMipsLocalEntriesNum() const;
 
-  uint32_t getLocalTlsIndexVA() { return getVA() + LocalTlsIndexOff; }
+  uint32_t getLocalTlsIndexVA() { return Base::getVA() + LocalTlsIndexOff; }
 
 private:
   std::vector<const SymbolBody *> Entries;

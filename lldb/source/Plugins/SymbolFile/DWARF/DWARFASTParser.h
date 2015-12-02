@@ -33,6 +33,18 @@ public:
                             const DWARFDIE &die) = 0;
 
     virtual bool
+    CanCompleteType (const lldb_private::CompilerType &compiler_type)
+    {
+        return false;
+    }
+
+    virtual bool
+    CompleteType (const lldb_private::CompilerType &compiler_type)
+    {
+        return false;
+    }
+
+    virtual bool
     CompleteTypeFromDWARF (const DWARFDIE &die,
                            lldb_private::Type *type,
                            lldb_private::CompilerType &compiler_type) = 0;

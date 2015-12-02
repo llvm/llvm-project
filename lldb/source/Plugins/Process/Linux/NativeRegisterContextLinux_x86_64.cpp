@@ -327,6 +327,9 @@ namespace
 #ifndef NT_X86_XSTATE
 #define NT_X86_XSTATE 0x202
 #endif
+#ifndef NT_PRXFPREG
+#define NT_PRXFPREG 0x46e62b7f
+#endif
 
 NativeRegisterContextLinux*
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(const ArchSpec& target_arch,
@@ -832,6 +835,7 @@ NativeRegisterContextLinux_x86_64::IsGPR(uint32_t reg_index) const
 NativeRegisterContextLinux_x86_64::FPRType
 NativeRegisterContextLinux_x86_64::GetFPRType () const
 {
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
     if (m_fpr_type == eFPRTypeNotValid)
     {
         // TODO: Use assembly to call cpuid on the inferior and query ebx or ecx.
@@ -842,9 +846,15 @@ NativeRegisterContextLinux_x86_64::GetFPRType () const
         {
             // Fall back to general floating point with no AVX support.
             m_fpr_type = eFPRTypeFXSAVE;
+
+            // Check if FXSAVE area can be read.
+            if (const_cast<NativeRegisterContextLinux_x86_64*>(this)->ReadFPR().Fail())
+            {
+                if (log)
+                    log->Printf("NativeRegisterContextLinux_x86_64::%s ptrace APIs failed to read XSAVE/FXSAVE area", __FUNCTION__);
+            }
         }
     }
-
     return m_fpr_type;
 }
 
@@ -868,10 +878,24 @@ Error
 NativeRegisterContextLinux_x86_64::WriteFPR()
 {
     const FPRType fpr_type = GetFPRType ();
+    const lldb_private::ArchSpec& target_arch = GetRegisterInfoInterface().GetTargetArchitecture();
     switch (fpr_type)
     {
     case FPRType::eFPRTypeFXSAVE:
-        return NativeRegisterContextLinux::WriteFPR();
+        // For 32-bit inferiors on x86_32/x86_64 architectures,
+        // FXSAVE area can be written using PTRACE_SETREGSET ptrace api
+        // For 64-bit inferiors on x86_64 architectures,
+        // FXSAVE area can be written using PTRACE_SETFPREGS ptrace api
+        switch (target_arch.GetMachine ())
+        {
+            case llvm::Triple::x86:
+                return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_PRXFPREG);
+            case llvm::Triple::x86_64:
+                return NativeRegisterContextLinux::WriteFPR();
+            default:
+                assert(false && "Unhandled target architecture.");
+                break;
+        }
     case FPRType::eFPRTypeXSAVE:
         return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
     default:
@@ -980,10 +1004,24 @@ Error
 NativeRegisterContextLinux_x86_64::ReadFPR ()
 {
     const FPRType fpr_type = GetFPRType ();
+    const lldb_private::ArchSpec& target_arch = GetRegisterInfoInterface().GetTargetArchitecture();
     switch (fpr_type)
     {
     case FPRType::eFPRTypeFXSAVE:
-        return NativeRegisterContextLinux::ReadFPR();
+        // For 32-bit inferiors on x86_32/x86_64 architectures,
+        // FXSAVE area can be read using PTRACE_GETREGSET ptrace api
+        // For 64-bit inferiors on x86_64 architectures,
+        // FXSAVE area can be read using PTRACE_GETFPREGS ptrace api
+        switch (target_arch.GetMachine ())
+        {
+            case llvm::Triple::x86:
+                return ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_PRXFPREG);
+            case llvm::Triple::x86_64:
+                return NativeRegisterContextLinux::ReadFPR();
+            default:
+                assert(false && "Unhandled target architecture.");
+                break;
+        }
     case FPRType::eFPRTypeXSAVE:
         return ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
     default:

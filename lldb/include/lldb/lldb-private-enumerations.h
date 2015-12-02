@@ -241,6 +241,25 @@ enum class TypeValidatorResult : bool {
     Success = true,
     Failure = false
 };
+
+//----------------------------------------------------------------------
+// Enumerations that can be used to specify scopes types when looking up
+// types.
+//----------------------------------------------------------------------
+enum class CompilerContextKind
+{
+    Invalid = 0,
+    TranslationUnit,
+    Module,
+    Namespace,
+    Class,
+    Structure,
+    Union,
+    Function,
+    Variable,
+    Enumeration,
+    Typedef
+};
     
 } // namespace lldb_private
 

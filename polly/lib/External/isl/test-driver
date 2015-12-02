@@ -3,7 +3,7 @@
 
 scriptversion=2013-07-13.22; # UTC
 
-# Copyright (C) 2011-2013 Free Software Foundation, Inc.
+# Copyright (C) 2011-2014 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -106,11 +106,14 @@ trap "st=143; $do_exit" 15
 # Test script is run here.
 "$@" >$log_file 2>&1
 estatus=$?
+
 if test $enable_hard_errors = no && test $estatus -eq 99; then
-  estatus=1
+  tweaked_estatus=1
+else
+  tweaked_estatus=$estatus
 fi
 
-case $estatus:$expect_failure in
+case $tweaked_estatus:$expect_failure in
   0:yes) col=$red res=XPASS recheck=yes gcopy=yes;;
   0:*)   col=$grn res=PASS  recheck=no  gcopy=no;;
   77:*)  col=$blu res=SKIP  recheck=no  gcopy=yes;;
@@ -118,6 +121,12 @@ case $estatus:$expect_failure in
   *:yes) col=$lgn res=XFAIL recheck=no  gcopy=yes;;
   *:*)   col=$red res=FAIL  recheck=yes gcopy=yes;;
 esac
+
+# Report the test outcome and exit status in the logs, so that one can
+# know whether the test passed or failed simply by looking at the '.log'
+# file, without the need of also peaking into the corresponding '.trs'
+# file (automake bug#11814).
+echo "$res $test_name (exit status: $estatus)" >>$log_file
 
 # Report outcome to console.
 echo "${col}${res}${std}: $test_name"

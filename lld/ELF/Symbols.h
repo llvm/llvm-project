@@ -90,9 +90,11 @@ public:
   }
   void setDynamicSymbolTableIndex(unsigned V) { DynamicSymbolTableIndex = V; }
 
+  uint32_t GlobalDynIndex = -1;
   uint32_t GotIndex = -1;
   uint32_t GotPltIndex = -1;
   uint32_t PltIndex = -1;
+  bool hasGlobalDynIndex() { return GlobalDynIndex != uint32_t(-1); }
   bool isInGot() const { return GotIndex != -1U; }
   bool isInGotPlt() const { return GotPltIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }

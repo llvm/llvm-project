@@ -87,7 +87,7 @@ public:
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA) const override;
+                   uint64_t SA, uint8_t *PairedLoc = nullptr) const override;
 };
 
 class X86_64TargetInfo final : public TargetInfo {
@@ -106,7 +106,7 @@ public:
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA) const override;
+                   uint64_t SA, uint8_t *PairedLoc = nullptr) const override;
   bool isRelRelative(uint32_t Type) const override;
   bool isTlsOptimized(unsigned Type, const SymbolBody *S) const override;
   unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
@@ -133,7 +133,7 @@ public:
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA) const override;
+                   uint64_t SA, uint8_t *PairedLoc = nullptr) const override;
   bool isRelRelative(uint32_t Type) const override;
 };
 
@@ -150,7 +150,7 @@ public:
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA) const override;
+                   uint64_t SA, uint8_t *PairedLoc = nullptr) const override;
 };
 
 template <class ELFT> class MipsTargetInfo final : public TargetInfo {
@@ -166,7 +166,7 @@ public:
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA) const override;
+                   uint64_t SA, uint8_t *PairedLoc = nullptr) const override;
 };
 } // anonymous namespace
 
@@ -308,7 +308,8 @@ bool X86TargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
 }
 
 void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                uint64_t P, uint64_t SA) const {
+                                uint64_t P, uint64_t SA,
+                                uint8_t *PairedLoc) const {
   switch (Type) {
   case R_386_32:
     add32le(Loc, SA);
@@ -581,7 +582,8 @@ unsigned X86_64TargetInfo::relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
 }
 
 void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                   uint64_t P, uint64_t SA) const {
+                                   uint64_t P, uint64_t SA,
+                                   uint8_t *PairedLoc) const {
   switch (Type) {
   case R_X86_64_32:
     checkUInt<32>(SA, Type);
@@ -728,7 +730,8 @@ bool PPC64TargetInfo::isRelRelative(uint32_t Type) const {
 }
 
 void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                  uint64_t P, uint64_t SA) const {
+                                  uint64_t P, uint64_t SA,
+                                  uint8_t *PairedLoc) const {
   uint64_t TB = getPPC64TocBase();
 
   // For a TOC-relative relocation, adjust the addend and proceed in terms of
@@ -933,8 +936,8 @@ static uint64_t getAArch64Page(uint64_t Expr) {
 }
 
 void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
-                                    uint32_t Type, uint64_t P,
-                                    uint64_t SA) const {
+                                    uint32_t Type, uint64_t P, uint64_t SA,
+                                    uint8_t *PairedLoc) const {
   switch (Type) {
   case R_AARCH64_ABS16:
     checkIntUInt<16>(SA, Type);
@@ -1046,13 +1049,31 @@ bool MipsTargetInfo<ELFT>::relocNeedsPlt(uint32_t Type,
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
-                                       uint32_t Type, uint64_t P,
-                                       uint64_t SA) const {
+                                       uint32_t Type, uint64_t P, uint64_t SA,
+                                       uint8_t *PairedLoc) const {
   const endianness E = ELFT::TargetEndianness;
   switch (Type) {
   case R_MIPS_32:
     add32<E>(Loc, SA);
     break;
+  case R_MIPS_HI16: {
+    uint32_t Instr = read32<E>(Loc);
+    if (PairedLoc) {
+      uint64_t AHL = ((Instr & 0xffff) << 16) +
+                     llvm::SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
+      write32<E>(Loc, (Instr & 0xffff0000) | (((SA + AHL) >> 16) & 0xffff));
+    } else {
+      warning("Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16");
+      write32<E>(Loc, (Instr & 0xffff0000) | ((SA >> 16) & 0xffff));
+    }
+    break;
+  }
+  case R_MIPS_LO16: {
+    uint32_t Instr = read32<E>(Loc);
+    int64_t AHL = llvm::SignExtend64<16>(Instr & 0xffff);
+    write32<E>(Loc, (Instr & 0xffff0000) | ((SA + AHL) & 0xffff));
+    break;
+  }
   case R_MIPS_CALL16:
   case R_MIPS_GOT16: {
     int64_t V = SA - getMipsGpAddr<ELFT>();

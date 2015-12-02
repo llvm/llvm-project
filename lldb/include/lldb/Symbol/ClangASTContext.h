@@ -1006,10 +1006,18 @@ public:
                                lldb::AccessType access,
                                bool is_artificial);
     
-    bool
+    static bool
     SetHasExternalStorage (lldb::opaque_compiler_type_t type, bool has_extern);
     
-    
+
+    static bool
+    CanImport (const CompilerType &type, lldb_private::ClangASTImporter &importer);
+
+    static bool
+    Import (const CompilerType &type, lldb_private::ClangASTImporter &importer);
+
+    static bool
+    GetHasExternalStorage (const CompilerType &type);
     //------------------------------------------------------------------
     // Tag Declarations
     //------------------------------------------------------------------
@@ -1092,13 +1100,19 @@ public:
     
     void
     DumpTypeDescription (lldb::opaque_compiler_type_t type, Stream *s) override;
-    
+
+    static void
+    DumpTypeName (const CompilerType &type);
+
     static clang::EnumDecl *
     GetAsEnumDecl (const CompilerType& type);
     
     static clang::RecordDecl *
     GetAsRecordDecl (const CompilerType& type);
-    
+
+    static clang::TagDecl *
+    GetAsTagDecl (const CompilerType& type);
+
     clang::CXXRecordDecl *
     GetAsCXXRecordDecl (lldb::opaque_compiler_type_t type);
     
@@ -1109,9 +1123,12 @@ public:
     GetQualType (const CompilerType& type)
     {
         // Make sure we have a clang type before making a clang::QualType
-        ClangASTContext *ast = llvm::dyn_cast_or_null<ClangASTContext>(type.GetTypeSystem());
-        if (ast)
-            return clang::QualType::getFromOpaquePtr(type.GetOpaqueQualType());
+        if (type.GetOpaqueQualType())
+        {
+            ClangASTContext *ast = llvm::dyn_cast_or_null<ClangASTContext>(type.GetTypeSystem());
+            if (ast)
+                return clang::QualType::getFromOpaquePtr(type.GetOpaqueQualType());
+        }
         return clang::QualType();
     }
 

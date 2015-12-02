@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-err58-cpp %t
+// RUN: %check_clang_tidy %s cert-err58-cpp %t -- -- -std=c++11 -target x86_64-pc-linux-gnu
 
 struct S {
   S() noexcept(false);

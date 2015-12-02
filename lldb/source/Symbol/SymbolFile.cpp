@@ -142,3 +142,11 @@ SymbolFile::FindTypes (const SymbolContext& sc, const ConstString &name, const C
     return 0;
 }
 
+
+size_t
+SymbolFile::FindTypes (const std::vector<CompilerContext> &context, bool append, TypeMap& types)
+{
+    if (!append)
+        types.Clear();
+    return 0;
+}
