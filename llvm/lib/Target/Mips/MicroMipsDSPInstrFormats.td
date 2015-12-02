@@ -178,3 +178,37 @@ class POOL32A_1RAC_FMT<string instr_asm, bits<8> funct> : MMDSPInst<instr_asm> {
   let Inst{13-6}  = funct;
   let Inst{5-0}   = 0b111100;
 }
+
+class POOL32A_1RMASK7_FMT<string opstr, bits<8> op> : MMDSPInst<opstr> {
+  bits<5> rt;
+  bits<7> mask;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-21} = rt;
+  let Inst{20-14} = mask;
+  let Inst{13-6}  = op;
+  let Inst{5-0}   = 0b111100;
+}
+
+class POOL32A_1RIMM10_FMT<string opstr, bits<10> op> : MMDSPInst<opstr> {
+  bits<5> rd;
+  bits<10> imm;
+
+  let Inst{31-26} = 0;
+  let Inst{25-16} = imm;
+  let Inst{15-11} = rd;
+  let Inst{10}    = 0;
+  let Inst{9-0}   = op;
+}
+
+class POOL32A_1RIMM8_FMT<string opstr, bits<6> op> : MMDSPInst<opstr> {
+  bits<5> rt;
+  bits<8> imm;
+
+  let Inst{31-26} = 0;
+  let Inst{25-21} = rt;
+  let Inst{20-13} = imm;
+  let Inst{12}    = 0;
+  let Inst{11-6}  = op;
+  let Inst{5-0}   = 0b111100;
+}

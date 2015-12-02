@@ -156,7 +156,9 @@ class SanitizerCoverageModule : public ModulePass {
   void SetNoSanitizeMetadata(Instruction *I);
   void InjectCoverageAtBlock(Function &F, BasicBlock &BB, bool UseCalls);
   unsigned NumberOfInstrumentedBlocks() {
-    return SanCovFunction->getNumUses() + SanCovWithCheckFunction->getNumUses();
+    return SanCovFunction->getNumUses() +
+           SanCovWithCheckFunction->getNumUses() + SanCovTraceBB->getNumUses() +
+           SanCovTraceEnter->getNumUses();
   }
   Function *SanCovFunction;
   Function *SanCovWithCheckFunction;
@@ -211,12 +213,10 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
                             StringRef(""), StringRef(""),
                             /*hasSideEffects=*/true);
 
-  if (Options.TraceBB) {
-    SanCovTraceEnter = checkSanitizerInterfaceFunction(
-        M.getOrInsertFunction(kSanCovTraceEnter, VoidTy, Int32PtrTy, nullptr));
-    SanCovTraceBB = checkSanitizerInterfaceFunction(
-        M.getOrInsertFunction(kSanCovTraceBB, VoidTy, Int32PtrTy, nullptr));
-  }
+  SanCovTraceEnter = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(kSanCovTraceEnter, VoidTy, Int32PtrTy, nullptr));
+  SanCovTraceBB = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(kSanCovTraceBB, VoidTy, Int32PtrTy, nullptr));
 
   // At this point we create a dummy array of guards because we don't
   // know how many elements we will need.
@@ -466,7 +466,9 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
       ConstantInt::get(IntptrTy, (1 + NumberOfInstrumentedBlocks()) * 4));
   Type *Int32PtrTy = PointerType::getUnqual(IRB.getInt32Ty());
   GuardP = IRB.CreateIntToPtr(GuardP, Int32PtrTy);
-  if (UseCalls) {
+  if (Options.TraceBB) {
+    IRB.CreateCall(IsEntryBB ? SanCovTraceEnter : SanCovTraceBB, GuardP);
+  } else if (UseCalls) {
     IRB.CreateCall(SanCovWithCheckFunction, GuardP);
   } else {
     LoadInst *Load = IRB.CreateLoad(GuardP);
@@ -494,13 +496,6 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     StoreInst *SI = IRB.CreateStore(Inc, P);
     SetNoSanitizeMetadata(LI);
     SetNoSanitizeMetadata(SI);
-  }
-
-  if (Options.TraceBB) {
-    // Experimental support for tracing.
-    // Insert a callback with the same guard variable as used for coverage.
-    IRB.SetInsertPoint(&*IP);
-    IRB.CreateCall(IsEntryBB ? SanCovTraceEnter : SanCovTraceBB, GuardP);
   }
 }
 

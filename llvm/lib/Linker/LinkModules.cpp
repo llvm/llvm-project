@@ -406,18 +406,18 @@ class ModuleLinker {
 
   /// Function to import from source module, all other functions are
   /// imported as declarations instead of definitions.
-  Function *ImportFunction;
+  DenseSet<const GlobalValue *> *ImportFunction;
 
   /// Set to true if the given FunctionInfoIndex contains any functions
   /// from this source module, in which case we must conservatively assume
   /// that any of its functions may be imported into another module
   /// as part of a different backend compilation process.
-  bool HasExportedFunctions;
+  bool HasExportedFunctions = false;
 
   /// Set to true when all global value body linking is complete (including
   /// lazy linking). Used to prevent metadata linking from creating new
   /// references.
-  bool DoneLinkingBodies;
+  bool DoneLinkingBodies = false;
 
   bool HasError = false;
 
@@ -425,11 +425,10 @@ public:
   ModuleLinker(Module &DstM, Linker::IdentifiedStructTypeSet &Set, Module &SrcM,
                DiagnosticHandlerFunction DiagnosticHandler, unsigned Flags,
                const FunctionInfoIndex *Index = nullptr,
-               Function *FuncToImport = nullptr)
+               DenseSet<const GlobalValue *> *FuncToImport = nullptr)
       : DstM(DstM), SrcM(SrcM), TypeMap(Set), ValMaterializer(this),
         DiagnosticHandler(DiagnosticHandler), Flags(Flags), ImportIndex(Index),
-        ImportFunction(FuncToImport), HasExportedFunctions(false),
-        DoneLinkingBodies(false) {
+        ImportFunction(FuncToImport) {
     assert((ImportIndex || !ImportFunction) &&
            "Expect a FunctionInfoIndex when importing");
     // If we have a FunctionInfoIndex but no function to import,
@@ -458,9 +457,6 @@ private:
 
   /// Check if we should promote the given local value to global scope.
   bool doPromoteLocalToGlobal(const GlobalValue *SGV);
-
-  /// Check if all global value body linking is complete.
-  bool doneLinkingBodies() { return DoneLinkingBodies; }
 
   bool shouldLinkFromSource(bool &LinkFromSrc, const GlobalValue &Dest,
                             const GlobalValue &Src);
@@ -527,7 +523,7 @@ private:
   void linkGlobalInit(GlobalVariable &Dst, GlobalVariable &Src);
   bool linkFunctionBody(Function &Dst, Function &Src);
   void linkAliasBody(GlobalAlias &Dst, GlobalAlias &Src);
-  bool linkGlobalValueBody(GlobalValue &Src);
+  bool linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src);
 
   /// Functions that take care of cloning a specific global value type
   /// into the destination module.
@@ -636,7 +632,7 @@ bool ModuleLinker::doImportAsDefinition(const GlobalValue *SGV) {
     return true;
   // Only import the function requested for importing.
   auto *SF = dyn_cast<Function>(SGV);
-  if (SF && SF == ImportFunction)
+  if (SF && ImportFunction->count(SF))
     return true;
   // Otherwise no.
   return false;
@@ -886,7 +882,7 @@ Value *ModuleLinker::materializeDeclFor(Value *V) {
   // If we are done linking global value bodies (i.e. we are performing
   // metadata linking), don't link in the global value due to this
   // reference, simply map it to null.
-  if (doneLinkingBodies())
+  if (DoneLinkingBodies)
     return nullptr;
 
   linkGlobalValueProto(SGV);
@@ -924,7 +920,7 @@ void ModuleLinker::materializeInitFor(GlobalValue *New, GlobalValue *Old) {
   if (!New->hasLocalLinkage() && DoNotLinkFromSource.count(Old))
     return;
 
-  linkGlobalValueBody(*Old);
+  linkGlobalValueBody(*New, *Old);
 }
 
 bool ModuleLinker::getComdatLeader(Module &M, StringRef ComdatName,
@@ -1062,7 +1058,7 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
     if (isa<Function>(&Src)) {
       // For functions, LinkFromSrc iff this is the function requested
       // for importing. For variables, decide below normally.
-      LinkFromSrc = (&Src == ImportFunction);
+      LinkFromSrc = ImportFunction->count(&Src);
       return false;
     }
 
@@ -1566,9 +1562,7 @@ void ModuleLinker::linkAliasBody(GlobalAlias &Dst, GlobalAlias &Src) {
   Dst.setAliasee(Val);
 }
 
-bool ModuleLinker::linkGlobalValueBody(GlobalValue &Src) {
-  Value *Dst = ValueMap[&Src];
-  assert(Dst);
+bool ModuleLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
   if (const Comdat *SC = Src.getComdat()) {
     // To ensure that we don't generate an incomplete comdat group,
     // we must materialize and map in any other members that are not
@@ -1583,15 +1577,15 @@ bool ModuleLinker::linkGlobalValueBody(GlobalValue &Src) {
     }
   }
   if (shouldInternalizeLinkedSymbols())
-    if (auto *DGV = dyn_cast<GlobalValue>(Dst))
+    if (auto *DGV = dyn_cast<GlobalValue>(&Dst))
       DGV->setLinkage(GlobalValue::InternalLinkage);
   if (auto *F = dyn_cast<Function>(&Src))
-    return linkFunctionBody(cast<Function>(*Dst), *F);
+    return linkFunctionBody(cast<Function>(Dst), *F);
   if (auto *GVar = dyn_cast<GlobalVariable>(&Src)) {
-    linkGlobalInit(cast<GlobalVariable>(*Dst), *GVar);
+    linkGlobalInit(cast<GlobalVariable>(Dst), *GVar);
     return false;
   }
-  linkAliasBody(cast<GlobalAlias>(*Dst), cast<GlobalAlias>(Src));
+  linkAliasBody(cast<GlobalAlias>(Dst), cast<GlobalAlias>(Src));
   return false;
 }
 
@@ -2039,7 +2033,7 @@ Linker::Linker(Module &M)
 
 bool Linker::linkInModule(Module &Src, unsigned Flags,
                           const FunctionInfoIndex *Index,
-                          Function *FuncToImport) {
+                          DenseSet<const GlobalValue *> *FuncToImport) {
   ModuleLinker TheLinker(Composite, IdentifiedStructTypes, Src,
                          DiagnosticHandler, Flags, Index, FuncToImport);
   bool RetCode = TheLinker.run();

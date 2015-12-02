@@ -82,7 +82,7 @@ public:
   /// Returns true on error.
   bool linkInModule(Module &Src, unsigned Flags = Flags::None,
                     const FunctionInfoIndex *Index = nullptr,
-                    Function *FuncToImport = nullptr);
+                    DenseSet<const GlobalValue *> *FuncToImport = nullptr);
 
   static bool linkModules(Module &Dest, Module &Src,
                           DiagnosticHandlerFunction DiagnosticHandler,

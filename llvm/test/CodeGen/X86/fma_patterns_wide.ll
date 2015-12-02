@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+fma -fp-contract=fast | FileCheck %s --check-prefix=FMA
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+fma4,+fma -fp-contract=fast | FileCheck %s --check-prefix=FMA4
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+fma4 -fp-contract=fast | FileCheck %s --check-prefix=FMA4
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -fp-contract=fast | FileCheck %s --check-prefix=AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq -fp-contract=fast | FileCheck %s --check-prefix=AVX512
 
 ;
 ; Pattern: (fadd (fmul x, y), z) -> (fmadd x,y,z)
@@ -735,6 +735,87 @@ define <16 x float> @test_v16f32_fma_fmul_x_c1_c2_y(<16 x float> %x, <16 x float
   %m1 = fmul <16 x float> %m0, <float 16.0, float 15.0, float 14.0, float 13.0, float 12.0, float 11.0, float 10.0, float 9.0, float 8.0, float 7.0, float 6.0, float 5.0, float 4.0, float 3.0, float 2.0, float 1.0>
   %a  = fadd <16 x float> %m1, %y
   ret <16 x float> %a
+}
+
+; Pattern: (fneg (fmul x, y)) -> (fnmsub x, y, 0)
+
+define <16 x float> @test_v16f32_fneg_fmul(<16 x float> %x, <16 x float> %y) #0 {
+; FMA-LABEL: test_v16f32_fneg_fmul:
+; FMA:       # BB#0:
+; FMA-NEXT:    vxorps %ymm4, %ymm4, %ymm4
+; FMA-NEXT:    vfnmsub213ps %ymm4, %ymm2, %ymm0
+; FMA-NEXT:    vfnmsub213ps %ymm4, %ymm3, %ymm1
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: test_v16f32_fneg_fmul:
+; FMA4:       # BB#0:
+; FMA4-NEXT:    vxorps %ymm4, %ymm4, %ymm4
+; FMA4-NEXT:    vfnmsubps %ymm4, %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vfnmsubps %ymm4, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: test_v16f32_fneg_fmul:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vfnmsub213ps %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    retq
+  %m = fmul nsz <16 x float> %x, %y
+  %n = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %m
+  ret <16 x float> %n
+}
+
+define <8 x double> @test_v8f64_fneg_fmul(<8 x double> %x, <8 x double> %y) #0 {
+; FMA-LABEL: test_v8f64_fneg_fmul:
+; FMA:       # BB#0:
+; FMA-NEXT:    vxorpd %ymm4, %ymm4, %ymm4
+; FMA-NEXT:    vfnmsub213pd %ymm4, %ymm2, %ymm0
+; FMA-NEXT:    vfnmsub213pd %ymm4, %ymm3, %ymm1
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: test_v8f64_fneg_fmul:
+; FMA4:       # BB#0:
+; FMA4-NEXT:    vxorpd %ymm4, %ymm4, %ymm4
+; FMA4-NEXT:    vfnmsubpd %ymm4, %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vfnmsubpd %ymm4, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: test_v8f64_fneg_fmul:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vfnmsub213pd %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    retq
+  %m = fmul nsz <8 x double> %x, %y
+  %n = fsub <8 x double> <double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  ret <8 x double> %n
+}
+
+define <8 x double> @test_v8f64_fneg_fmul_no_nsz(<8 x double> %x, <8 x double> %y) #0 {
+; FMA-LABEL: test_v8f64_fneg_fmul_no_nsz:
+; FMA:       # BB#0:
+; FMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; FMA-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
+; FMA-NEXT:    vmovapd {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; FMA-NEXT:    vxorpd %ymm2, %ymm0, %ymm0
+; FMA-NEXT:    vxorpd %ymm2, %ymm1, %ymm1
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: test_v8f64_fneg_fmul_no_nsz:
+; FMA4:       # BB#0:
+; FMA4-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vmovapd {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; FMA4-NEXT:    vxorpd %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vxorpd %ymm2, %ymm1, %ymm1
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: test_v8f64_fneg_fmul_no_nsz:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vmulpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vxorpd {{.*}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %m = fmul <8 x double> %x, %y
+  %n = fsub <8 x double> <double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  ret <8 x double> %n
 }
 
 attributes #0 = { "unsafe-fp-math"="true" }

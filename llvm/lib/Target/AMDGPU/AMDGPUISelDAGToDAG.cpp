@@ -11,6 +11,8 @@
 /// \brief Defines an instruction selector for the AMDGPU target.
 //
 //===----------------------------------------------------------------------===//
+
+#include "AMDGPUDiagnosticInfoUnsupported.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUISelLowering.h" // For AMDGPUISD
 #include "AMDGPURegisterInfo.h"
@@ -1208,12 +1210,13 @@ SDNode *AMDGPUDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
   AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(N);
   SDLoc DL(N);
 
+  const MachineFunction &MF = CurDAG->getMachineFunction();
+  DiagnosticInfoUnsupported NotImplemented(*MF.getFunction(),
+                                           "addrspacecast not implemented");
+  CurDAG->getContext()->diagnose(NotImplemented);
+
   assert(Subtarget->hasFlatAddressSpace() &&
          "addrspacecast only supported with flat address space!");
-
-  assert((ASC->getSrcAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS &&
-          ASC->getDestAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS) &&
-         "Cannot cast address space to / from constant address!");
 
   assert((ASC->getSrcAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
           ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS) &&

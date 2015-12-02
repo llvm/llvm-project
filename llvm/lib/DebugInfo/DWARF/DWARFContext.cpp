@@ -163,20 +163,12 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
 
   if (DumpType == DIDT_All || DumpType == DIDT_CUIndex) {
     OS << "\n.debug_cu_index contents:\n";
-    DataExtractor CUIndexData(getCUIndexSection(), isLittleEndian(),
-                              savedAddressByteSize);
-    DWARFUnitIndex CUIndex;
-    if (CUIndex.parse(CUIndexData))
-      CUIndex.dump(OS);
+    getCUIndex().dump(OS);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_TUIndex) {
     OS << "\n.debug_tu_index contents:\n";
-    DataExtractor TUIndexData(getTUIndexSection(), isLittleEndian(),
-                              savedAddressByteSize);
-    DWARFUnitIndex TUIndex;
-    if (TUIndex.parse(TUIndexData))
-      TUIndex.dump(OS);
+    getTUIndex().dump(OS);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_LineDwo) {
@@ -280,7 +272,7 @@ const DWARFUnitIndex &DWARFContext::getCUIndex() {
 
   DataExtractor CUIndexData(getCUIndexSection(), isLittleEndian(), 0);
 
-  CUIndex = llvm::make_unique<DWARFUnitIndex>();
+  CUIndex = llvm::make_unique<DWARFUnitIndex>(DW_SECT_INFO);
   CUIndex->parse(CUIndexData);
   return *CUIndex;
 }
@@ -291,7 +283,7 @@ const DWARFUnitIndex &DWARFContext::getTUIndex() {
 
   DataExtractor TUIndexData(getTUIndexSection(), isLittleEndian(), 0);
 
-  TUIndex = llvm::make_unique<DWARFUnitIndex>();
+  TUIndex = llvm::make_unique<DWARFUnitIndex>(DW_SECT_TYPES);
   TUIndex->parse(TUIndexData);
   return *TUIndex;
 }

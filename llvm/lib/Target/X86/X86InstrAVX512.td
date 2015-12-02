@@ -5605,6 +5605,29 @@ let Predicates = [HasAVX512] in {
                         EVEX, EVEX_V128, EVEX_CD8<32, CD8VH>;
   }
 }
+
+//  Unordered/Ordered scalar fp compare with Sea and set EFLAGS
+multiclass avx512_ord_cmp_sae<bits<8> opc, X86VectorVTInfo _, SDNode OpNode,
+                            string OpcodeStr> {
+  def rb: AVX512<opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
+                 !strconcat(OpcodeStr, "\t{{sae}, $src2, $src1|$src1, $src2, {sae}}"),
+                 [(set EFLAGS, (OpNode (_.VT _.RC:$src1), _.RC:$src2, 
+                                                        (i32 FROUND_NO_EXC)))],
+                 IIC_SSE_COMIS_RR>, EVEX, EVEX_B, VEX_LIG, EVEX_V128,
+                 Sched<[WriteFAdd]>;
+}
+
+let Defs = [EFLAGS], Predicates = [HasAVX512] in {
+  defm VUCOMISSZ : avx512_ord_cmp_sae<0x2E, v4f32x_info, X86ucomiSae, "vucomiss">,
+                                   AVX512PSIi8Base, EVEX_CD8<32, CD8VT1>;
+  defm VUCOMISDZ : avx512_ord_cmp_sae<0x2E, v2f64x_info, X86ucomiSae, "vucomisd">,
+                                   AVX512PDIi8Base, VEX_W, EVEX_CD8<64, CD8VT1>;
+  defm VCOMISSZ : avx512_ord_cmp_sae<0x2F, v4f32x_info, X86comiSae, "vcomiss">,
+                                   AVX512PSIi8Base, EVEX_CD8<32, CD8VT1>;
+  defm VCOMISDZ : avx512_ord_cmp_sae<0x2F, v2f64x_info, X86comiSae, "vcomisd">,
+                                   AVX512PDIi8Base, VEX_W, EVEX_CD8<64, CD8VT1>;
+}
+
 let Defs = [EFLAGS], Predicates = [HasAVX512] in {
   defm VUCOMISSZ : sse12_ord_cmp<0x2E, FR32X, X86cmp, f32, f32mem, loadf32,
                                  "ucomiss">, PS, EVEX, VEX_LIG,

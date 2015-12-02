@@ -204,8 +204,12 @@ static bool isEAXLiveIn(MachineFunction &MF) {
   return false;
 }
 
-/// Check whether or not the terminators of \p MBB needs to read EFLAGS.
-static bool terminatorsNeedFlagsAsInput(const MachineBasicBlock &MBB) {
+/// Check if the flags need to be preserved before the terminators.
+/// This would be the case, if the eflags is live-in of the region
+/// composed by the terminators or live-out of that region, without
+/// being defined by a terminator.
+static bool
+flagsNeedToBePreservedBeforeTheTerminators(const MachineBasicBlock &MBB) {
   for (const MachineInstr &MI : MBB.terminators()) {
     bool BreakNext = false;
     for (const MachineOperand &MO : MI.operands()) {
@@ -215,15 +219,27 @@ static bool terminatorsNeedFlagsAsInput(const MachineBasicBlock &MBB) {
       if (Reg != X86::EFLAGS)
         continue;
 
-      // This terminator needs an eflag that is not defined
-      // by a previous terminator.
+      // This terminator needs an eflags that is not defined
+      // by a previous another terminator:
+      // EFLAGS is live-in of the region composed by the terminators.
       if (!MO.isDef())
         return true;
+      // This terminator defines the eflags, i.e., we don't need to preserve it.
+      // However, we still need to check this specific terminator does not
+      // read a live-in value.
       BreakNext = true;
     }
+    // We found a definition of the eflags, no need to preserve them.
     if (BreakNext)
-      break;
+      return false;
   }
+
+  // None of the terminators use or define the eflags.
+  // Check if they are live-out, that would imply we need to preserve them.
+  for (const MachineBasicBlock *Succ : MBB.successors())
+    if (Succ->isLiveIn(X86::EFLAGS))
+      return true;
+
   return false;
 }
 
@@ -297,28 +313,6 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
   }
 }
 
-// Check if \p MBB defines the flags register before the first terminator.
-static bool flagsDefinedLocally(const MachineBasicBlock &MBB) {
-  MachineBasicBlock::const_iterator FirstTerminator = MBB.getFirstTerminator();
-  for (MachineBasicBlock::const_iterator MII : MBB) {
-    if (MII == FirstTerminator)
-      return false;
-
-    for (const MachineOperand &MO : MII->operands()) {
-      if (!MO.isReg())
-        continue;
-      unsigned Reg = MO.getReg();
-      if (Reg != X86::EFLAGS)
-        continue;
-
-      // This instruction sets the eflag.
-      if (MO.isDef())
-        return true;
-    }
-  }
-  return false;
-}
-
 MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc DL,
     int64_t Offset, bool InEpilogue) const {
@@ -330,14 +324,9 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   if (!InEpilogue) {
     // Check if inserting the prologue at the beginning
     // of MBB would require to use LEA operations.
-    // We need to use LEA operations if both conditions are true:
-    // 1. One of the terminators need the flags.
-    // 2. The flags are not defined after the insertion point of the prologue.
-    // Note: Checking for the predecessors is a shortcut when obviously nothing
-    // will live accross the prologue.
-    UseLEA = STI.useLeaForSP() ||
-             (!MBB.pred_empty() && terminatorsNeedFlagsAsInput(MBB) &&
-              !flagsDefinedLocally(MBB));
+    // We need to use LEA operations if EFLAGS is live in, because
+    // it means an instruction will read it before it gets defined.
+    UseLEA = STI.useLeaForSP() || MBB.isLiveIn(X86::EFLAGS);
   } else {
     // If we can use LEA for SP but we shouldn't, check that none
     // of the terminators uses the eflags. Otherwise we will insert
@@ -346,10 +335,10 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
     // and is an optimization anyway.
     UseLEA = canUseLEAForSPInEpilogue(*MBB.getParent());
     if (UseLEA && !STI.useLeaForSP())
-      UseLEA = terminatorsNeedFlagsAsInput(MBB);
+      UseLEA = flagsNeedToBePreservedBeforeTheTerminators(MBB);
     // If that assert breaks, that means we do not do the right thing
     // in canUseAsEpilogue.
-    assert((UseLEA || !terminatorsNeedFlagsAsInput(MBB)) &&
+    assert((UseLEA || !flagsNeedToBePreservedBeforeTheTerminators(MBB)) &&
            "We shouldn't have allowed this insertion point");
   }
 
@@ -2598,10 +2587,10 @@ bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
     return true;
 
   // If we cannot use LEA to adjust SP, we may need to use ADD, which
-  // clobbers the EFLAGS. Check that none of the terminators reads the
-  // EFLAGS, and if one uses it, conservatively assume this is not
+  // clobbers the EFLAGS. Check that we do not need to preserve it,
+  // otherwise, conservatively assume this is not
   // safe to insert the epilogue here.
-  return !terminatorsNeedFlagsAsInput(MBB);
+  return !flagsNeedToBePreservedBeforeTheTerminators(MBB);
 }
 
 MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
