@@ -115,3 +115,5 @@ changes should be made to any of these files, follow the standard
 [llvm]: http://llvm.org "The LLVM Project"
 [lldb]: http://lldb.llvm.org "LLDB debugger"
 [cmake]: https://cmake.org
+[upstream]: http://swift.org/contributing/#llvm-and-swift "Upstream LLVM changes"
+
