@@ -249,6 +249,13 @@ These counters may also be used for in-process coverage-guided fuzzers. See
     uintptr_t
     __sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
 
+Tracing basic blocks
+====================
+An *experimental* feature to support basic block (or edge) tracing.
+With ``-fsanitize-coverage=trace-bb`` the compiler will insert
+``__sanitizer_cov_trace_basic_block(s32 *id)`` before every function, basic block, or edge
+(depending on the value of ``-fsanitize-coverage=[func,bb,edge]``).
+
 Tracing data flow
 =================
 

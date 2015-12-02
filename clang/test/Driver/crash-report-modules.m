@@ -1,9 +1,9 @@
 // RUN: rm -rf %t
-// RUN: mkdir %t
+// RUN: mkdir -p %t/i %t/m %t
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
-// RUN: %clang -fsyntax-only %s -I %S/Inputs/module -isysroot /tmp/     \
-// RUN: -fmodules -fmodules-cache-path=/tmp/ -DFOO=BAR 2>&1 | FileCheck %s
+// RUN: %clang -fsyntax-only %s -I %S/Inputs/module -isysroot %/t/i/    \
+// RUN: -fmodules -fmodules-cache-path=%t/m/ -DFOO=BAR 2>&1 | FileCheck %s
 
 // RUN: FileCheck --check-prefix=CHECKSRC %s -input-file %t/crash-report-*.m
 // RUN: FileCheck --check-prefix=CHECKSH %s -input-file %t/crash-report-*.sh
@@ -30,8 +30,8 @@ const int x = MODULE_MACRO;
 // CHECKSH-SAME: "-D" "FOO=BAR"
 // CHECKSH-NEXT: # Original command: {{.*$}}
 // CHECKSH-NEXT: "-cc1"
-// CHECKSH: "-isysroot" "/tmp/"
+// CHECKSH: "-isysroot" "{{[^"]*}}/i/"
 // CHECKSH: "-D" "FOO=BAR"
-// CHECKSH-NOT: "-fmodules-cache-path=/tmp/"
+// CHECKSH-NOT: "-fmodules-cache-path="
 // CHECKSH: "crash-report-modules-{{[^ ]*}}.m"
 // CHECKSH: "-ivfsoverlay" "crash-report-modules-{{[^ ]*}}.cache/vfs/vfs.yaml"
