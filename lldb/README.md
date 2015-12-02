@@ -99,4 +99,19 @@ Details on the contents:
 
   Contains the Swift Language and Swift Runtime code.
 
+
+# Contribution Subtleties
+
+The swift-lldb project enhances the core LLDB project developed under
+the [LLVM Project][llvm]. Swift support in the debugger is added via
+the existing source-level plugin infrastructure, isolated to files that
+are newly introduced in the lldb-swift repository.
+
+Files that come from the [core LLDB project][lldb] can be readily
+identified by their use of the LLVM comment header.  As no local
+changes should be made to any of these files, follow the standard
+[guidance for upstream changes][upstream].
+
+[llvm]: http://llvm.org "The LLVM Project"
+[lldb]: http://lldb.llvm.org "LLDB debugger"
 [cmake]: https://cmake.org
