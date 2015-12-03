@@ -18,7 +18,7 @@ installed on your development system:
 
   * OS X 10.11 (El Capitan) or later.
 
-  * Xcode 7.1 or later.
+  * [Xcode 7.2 Beta 4][xcode-download] or later.
 
   * [Cmake][cmake] (version 2.8.12.2 or later)
 
@@ -125,3 +125,4 @@ changes should be made to any of these files, follow the standard
 [swift-cmark]: http://github.com/apple/swift-cmark
 [swift-llvm]: http://github.com/apple/swift-llvm
 [upstream]: http://swift.org/contributing/#llvm-and-swift "Upstream LLVM changes"
+[xcode-download]: https://developer.apple.com/xcode/download/
