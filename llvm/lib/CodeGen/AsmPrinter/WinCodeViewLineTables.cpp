@@ -27,15 +27,15 @@ StringRef WinCodeViewLineTables::getFullFilepath(const MDNode *S) {
   auto *Scope = cast<DIScope>(S);
   StringRef Dir = Scope->getDirectory(),
             Filename = Scope->getFilename();
-  char *&Result = DirAndFilenameToFilepathMap[std::make_pair(Dir, Filename)];
-  if (Result)
-    return Result;
+  std::string &Filepath =
+      DirAndFilenameToFilepathMap[std::make_pair(Dir, Filename)];
+  if (!Filepath.empty())
+    return Filepath;
 
   // Clang emits directory and relative filename info into the IR, but CodeView
   // operates on full paths.  We could change Clang to emit full paths too, but
   // that would increase the IR size and probably not needed for other users.
   // For now, just concatenate and canonicalize the path here.
-  std::string Filepath;
   if (Filename.find(':') == 1)
     Filepath = Filename;
   else
@@ -74,8 +74,7 @@ StringRef WinCodeViewLineTables::getFullFilepath(const MDNode *S) {
   while ((Cursor = Filepath.find("\\\\", Cursor)) != std::string::npos)
     Filepath.erase(Cursor, 1);
 
-  Result = strdup(Filepath.c_str());
-  return StringRef(Result);
+  return Filepath;
 }
 
 void WinCodeViewLineTables::maybeRecordLocation(DebugLoc DL,

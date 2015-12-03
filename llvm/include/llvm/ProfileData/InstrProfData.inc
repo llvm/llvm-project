@@ -538,12 +538,13 @@ int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
     }
     NumValueKinds++;
     RuntimeRecord->SiteCountArray[I] = (uint8_t *)calloc(N, 1);
-    RuntimeRecord->NodesKind[I] = &RuntimeRecord->Nodes[S];
-    if (!RuntimeRecord->NodesKind[I])
+    if (!RuntimeRecord->SiteCountArray[I])
       return 1;
+    RuntimeRecord->NodesKind[I] = Nodes ? &Nodes[S] : NULL;
     for (J = 0; J < N; J++) {
+      /* Compute value count for each site. */
       uint32_t C = 0;
-      ValueProfNode *Site = RuntimeRecord->Nodes[S + J];
+      ValueProfNode *Site = Nodes ? RuntimeRecord->NodesKind[I][J] : NULL;
       while (Site) {
         C++;
         Site = Site->Next;
@@ -596,6 +597,8 @@ void getValueForSiteRT(const void *R, InstrProfValueData *Dst, uint32_t VK,
   unsigned I, N = 0;
   const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
   N = getNumValueDataForSiteRT(R, VK, S);
+  if (N == 0)
+    return;
   ValueProfNode *VNode = Record->NodesKind[VK][S];
   for (I = 0; I < N; I++) {
     Dst[I] = VNode->VData;

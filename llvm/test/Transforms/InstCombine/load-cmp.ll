@@ -148,8 +148,8 @@ define i1 @test8(i32 %X) {
   %S = icmp eq i16 %R, 0
   ret i1 %S
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT: and i32 %X, -2
-; CHECK-NEXT: icmp eq i32 {{.*}}, 8
+; CHECK-NEXT: or i32 %X, 1
+; CHECK-NEXT: icmp eq i32 {{.*}}, 9
 ; CHECK-NEXT: ret i1
 }
 

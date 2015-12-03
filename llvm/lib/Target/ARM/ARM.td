@@ -238,6 +238,8 @@ def ProcA15     : SubtargetFeature<"a15", "ARMProcFamily", "CortexA15",
                                    "Cortex-A15 ARM processors", []>;
 def ProcA17     : SubtargetFeature<"a17", "ARMProcFamily", "CortexA17",
                                    "Cortex-A17 ARM processors", []>;
+def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
+                                   "Cortex-A35 ARM processors", []>;
 def ProcA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors", []>;
 def ProcA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
@@ -602,6 +604,13 @@ def : ProcNoItin<"cortex-m7",                           [ARMv7em,
                                                          FeatureFPARMv8,
                                                          FeatureD16]>;
 
+
+def : ProcNoItin<"cortex-a35",                          [ARMv8a, ProcA35,
+                                                         FeatureHWDiv,
+                                                         FeatureHWDivARM,
+                                                         FeatureT2XtPk,
+                                                         FeatureCrypto,
+                                                         FeatureCRC]>;
 
 def : ProcNoItin<"cortex-a53",                          [ARMv8a, ProcA53,
                                                          FeatureHWDiv,

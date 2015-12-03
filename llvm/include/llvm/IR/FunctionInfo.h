@@ -165,19 +165,8 @@ private:
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
 
-  /// The main module being compiled, that we are importing into, if applicable.
-  /// Used to check if any of its functions are in the index and therefore
-  /// potentially exported.
-  const Module *ExportingModule;
-
-  /// Flag indicating whether the exporting module has any functions in the
-  /// index and therefore potentially exported (imported into another module).
-  bool HasExportedFunctions;
-
 public:
-  FunctionInfoIndex(const Module *M = nullptr)
-      : ExportingModule(M), HasExportedFunctions(false){};
-  ~FunctionInfoIndex() = default;
+  FunctionInfoIndex() = default;
 
   // Disable the copy constructor and assignment operators, so
   // no unexpected copying/moving occurs.
@@ -201,14 +190,6 @@ public:
 
   /// Add a function info for a function of the given name.
   void addFunctionInfo(StringRef FuncName, std::unique_ptr<FunctionInfo> Info) {
-    // Update the HasExportedFunctions flag, but only if we had a function
-    // summary (i.e. we aren't parsing them lazily or have a bitcode file
-    // without a function summary section).
-    if (ExportingModule && Info->functionSummary()) {
-      if (ExportingModule->getModuleIdentifier() ==
-          Info->functionSummary()->modulePath())
-        HasExportedFunctions = true;
-    }
     FunctionMap[FuncName].push_back(std::move(Info));
   }
 
@@ -248,11 +229,10 @@ public:
   }
 
   /// Check if the given Module has any functions available for exporting
-  /// in the index.
-  bool hasExportedFunctions(const Module *M) const {
-    assert(M == ExportingModule &&
-           "Checking for exported functions on unexpected module");
-    return HasExportedFunctions;
+  /// in the index. We consider any module present in the ModulePathStringTable
+  /// to have exported functions.
+  bool hasExportedFunctions(const Module &M) const {
+    return ModulePathStringTable.count(M.getModuleIdentifier());
   }
 };
 

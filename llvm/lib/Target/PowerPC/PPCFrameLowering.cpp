@@ -569,8 +569,7 @@ bool PPCFrameLowering::findScratchRegister(MachineBasicBlock *MBB,
   if ((UseAtEnd && MBB->isReturnBlock()) ||
       (!UseAtEnd && (&MBB->getParent()->front() == MBB)))
     return true;
-    
-  RS.initRegState();
+
   RS.enterBasicBlock(MBB);
 
   if (UseAtEnd && !MBB->empty()) {

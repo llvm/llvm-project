@@ -22,6 +22,15 @@
 namespace llvm {
 
 class AMDGPUHSATargetObjectFile final : public TargetLoweringObjectFileELF {
+private:
+  MCSection *DataGlobalAgentSection;
+  MCSection *DataGlobalProgramSection;
+  MCSection *RodataReadonlyAgentSection;
+
+  bool isAgentAllocationSection(const char *SectionName) const;
+  bool isAgentAllocation(const GlobalValue *GV) const;
+  bool isProgramAllocation(const GlobalValue *GV) const;
+
 public:
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 

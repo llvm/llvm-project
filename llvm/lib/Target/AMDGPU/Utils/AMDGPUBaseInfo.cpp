@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "AMDGPUBaseInfo.h"
+#include "AMDGPU.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -64,6 +66,37 @@ MCSection *getHSATextSection(MCContext &Ctx) {
                            ELF::SHF_EXECINSTR |
                            ELF::SHF_AMDGPU_HSA_AGENT |
                            ELF::SHF_AMDGPU_HSA_CODE);
+}
+
+MCSection *getHSADataGlobalAgentSection(MCContext &Ctx) {
+  return Ctx.getELFSection(".hsadata_global_agent", ELF::SHT_PROGBITS,
+                           ELF::SHF_ALLOC | ELF::SHF_WRITE |
+                           ELF::SHF_AMDGPU_HSA_GLOBAL |
+                           ELF::SHF_AMDGPU_HSA_AGENT);
+}
+
+MCSection *getHSADataGlobalProgramSection(MCContext &Ctx) {
+  return  Ctx.getELFSection(".hsadata_global_program", ELF::SHT_PROGBITS,
+                            ELF::SHF_ALLOC | ELF::SHF_WRITE |
+                            ELF::SHF_AMDGPU_HSA_GLOBAL);
+}
+
+MCSection *getHSARodataReadonlyAgentSection(MCContext &Ctx) {
+  return Ctx.getELFSection(".hsarodata_readonly_agent", ELF::SHT_PROGBITS,
+                           ELF::SHF_ALLOC | ELF::SHF_AMDGPU_HSA_READONLY |
+                           ELF::SHF_AMDGPU_HSA_AGENT);
+}
+
+bool isGroupSegment(const GlobalValue *GV) {
+  return GV->getType()->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+}
+
+bool isGlobalSegment(const GlobalValue *GV) {
+  return GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+}
+
+bool isReadOnlySegment(const GlobalValue *GV) {
+  return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }
 
 } // End namespace AMDGPU

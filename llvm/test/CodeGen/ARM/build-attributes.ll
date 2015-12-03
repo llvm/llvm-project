@@ -96,6 +96,9 @@
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7 | FileCheck %s --check-prefix=CORTEX-R7
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-R7-FAST
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
+; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35 | FileCheck %s --check-prefix=CORTEX-A35
+; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A35-FAST
+; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a53 | FileCheck %s --check-prefix=CORTEX-A53
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a53  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A53-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a53 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
@@ -129,6 +132,8 @@
 ; RUN: llc < %s -mtriple=armv8.1a-none-linux-gnueabi -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv8.1a-none-linux-gnueabi | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; ARMv8a (AArch32)
+; RUN: llc < %s -mtriple=armv8-none-linux-gnueabi -mcpu=cortex-a35 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: llc < %s -mtriple=armv8-none-linux-gnueabi -mcpu=cortex-a35 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv8-none-linux-gnueabi -mcpu=cortex-a57 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv8-none-linux-gnueabi -mcpu=cortex-a57 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv8-none-linux-gnueabi -mcpu=cortex-a72 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
@@ -1112,6 +1117,36 @@
 ; CORTEX-R7-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-R7-FAST-NOT:  .eabi_attribute 22
 ; CORTEX-R7-FAST:  .eabi_attribute 23, 1
+
+; CORTEX-A35:  .cpu cortex-a35
+; CORTEX-A35:  .eabi_attribute 6, 14
+; CORTEX-A35:  .eabi_attribute 7, 65
+; CORTEX-A35:  .eabi_attribute 8, 1
+; CORTEX-A35:  .eabi_attribute 9, 2
+; CORTEX-A35:  .fpu crypto-neon-fp-armv8
+; CORTEX-A35:  .eabi_attribute 12, 3
+; CORTEX-A35-NOT:   .eabi_attribute 19
+;; We default to IEEE 754 compliance
+; CORTEX-A35:  .eabi_attribute 20, 1
+; CORTEX-A35:  .eabi_attribute 21, 1
+; CORTEX-A35-NOT:  .eabi_attribute 22
+; CORTEX-A35:  .eabi_attribute 23, 3
+; CORTEX-A35:  .eabi_attribute 24, 1
+; CORTEX-A35:  .eabi_attribute 25, 1
+; CORTEX-A35-NOT:  .eabi_attribute 27
+; CORTEX-A35-NOT:  .eabi_attribute 28
+; CORTEX-A35:  .eabi_attribute 36, 1
+; CORTEX-A35:  .eabi_attribute 38, 1
+; CORTEX-A35:  .eabi_attribute 42, 1
+; CORTEX-A35-NOT:  .eabi_attribute 44
+; CORTEX-A35:  .eabi_attribute 68, 3
+
+; CORTEX-A35-FAST-NOT:   .eabi_attribute 19
+;; The A35 has the ARMv8 FP unit, which always flushes preserving sign.
+; CORTEX-A35-FAST:  .eabi_attribute 20, 2
+; CORTEX-A35-FAST-NOT:  .eabi_attribute 21
+; CORTEX-A35-FAST-NOT:  .eabi_attribute 22
+; CORTEX-A35-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A53:  .cpu cortex-a53
 ; CORTEX-A53:  .eabi_attribute 6, 14

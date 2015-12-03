@@ -353,12 +353,10 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
 
   // Record the number and types of the return values.
   for (const ISD::OutputArg &Out : Outs) {
-    if (Out.Flags.isByVal())
-      fail(DL, DAG, "WebAssembly hasn't implemented byval results");
+    assert(!Out.Flags.isByVal() && "byval is not valid for return values");
+    assert(!Out.Flags.isNest() && "nest is not valid for return values");
     if (Out.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca results");
-    if (Out.Flags.isNest())
-      fail(DL, DAG, "WebAssembly hasn't implemented nest results");
     if (Out.Flags.isInConsecutiveRegs())
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs results");
     if (Out.Flags.isInConsecutiveRegsLast())

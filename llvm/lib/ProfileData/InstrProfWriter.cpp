@@ -107,22 +107,23 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I) {
   std::tie(Where, NewFunc) =
       ProfileDataMap.insert(std::make_pair(I.Hash, InstrProfRecord()));
   InstrProfRecord &Dest = Where->second;
+
+  instrprof_error Result;
   if (NewFunc) {
     // We've never seen a function with this name and hash, add it.
     Dest = std::move(I);
+    Result = instrprof_error::success;
   } else {
     // We're updating a function we've seen before.
-    instrprof_error MergeResult = Dest.merge(I);
-    if (MergeResult != instrprof_error::success) {
-      return MergeResult;
-    }
+    Result = Dest.merge(I);
   }
 
   // We keep track of the max function count as we go for simplicity.
+  // Update this statistic no matter the result of the merge.
   if (Dest.Counts[0] > MaxFunctionCount)
     MaxFunctionCount = Dest.Counts[0];
 
-  return instrprof_error::success;
+  return Result;
 }
 
 std::pair<uint64_t, uint64_t> InstrProfWriter::writeImpl(raw_ostream &OS) {

@@ -10,7 +10,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/Analysis/LibCallSemantics.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

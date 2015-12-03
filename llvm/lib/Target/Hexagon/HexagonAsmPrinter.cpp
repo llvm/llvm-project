@@ -56,6 +56,11 @@
 
 using namespace llvm;
 
+namespace llvm {
+  void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
+                        MCInst &MCB, HexagonAsmPrinter &AP);
+}
+
 #define DEBUG_TYPE "asm-printer"
 
 static cl::opt<bool> AlignCalls(
@@ -179,6 +184,7 @@ bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 ///
 void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCInst MCB = HexagonMCInstrInfo::createBundle();
+  const MCInstrInfo &MCII = *Subtarget->getInstrInfo();
 
   if (MI->isBundle()) {
     const MachineBasicBlock* MBB = MI->getParent();
@@ -190,25 +196,23 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
           MII->getOpcode() == TargetOpcode::IMPLICIT_DEF)
         ++IgnoreCount;
       else {
-        HexagonLowerToMC(&*MII, MCB, *this);
+        HexagonLowerToMC(MCII, &*MII, MCB, *this);
       }
     }
   }
   else {
-    HexagonLowerToMC(MI, MCB, *this);
+    HexagonLowerToMC(MCII, MI, MCB, *this);
     HexagonMCInstrInfo::padEndloop(OutStreamer->getContext(), MCB);
   }
   // Examine the packet and try to find instructions that can be converted
   // to compounds.
-  HexagonMCInstrInfo::tryCompound(*Subtarget->getInstrInfo(),
-                                  OutStreamer->getContext(), MCB);
+  HexagonMCInstrInfo::tryCompound(MCII, OutStreamer->getContext(), MCB);
   // Examine the packet and convert pairs of instructions to duplex
   // instructions when possible.
   SmallVector<DuplexCandidate, 8> possibleDuplexes;
-  possibleDuplexes = HexagonMCInstrInfo::getDuplexPossibilties(
-      *Subtarget->getInstrInfo(), MCB);
-  HexagonMCShuffle(*Subtarget->getInstrInfo(), *Subtarget,
-                   OutStreamer->getContext(), MCB, possibleDuplexes);
+  possibleDuplexes = HexagonMCInstrInfo::getDuplexPossibilties(MCII, MCB);
+  HexagonMCShuffle(MCII, *Subtarget, OutStreamer->getContext(), MCB,
+                   possibleDuplexes);
   EmitToStreamer(*OutStreamer, MCB);
 }
 

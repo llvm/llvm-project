@@ -40,7 +40,7 @@ def F32_0 : WebAssemblyReg<"%f32.0">;
 def F64_0 : WebAssemblyReg<"%f64.0">;
 
 // The expression stack "register". This is an opaque entity which serves to
-// order uses and defs that must remain in FIFO order.
+// order uses and defs that must remain in LIFO order.
 def EXPR_STACK : WebAssemblyReg<"STACK">;
 
 // The incoming arguments "register". This is an opaque entity which serves to

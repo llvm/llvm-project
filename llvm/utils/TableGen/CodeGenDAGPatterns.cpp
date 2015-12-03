@@ -388,7 +388,13 @@ bool EEVT::TypeSet::EnforceSmallerThan(EEVT::TypeSet &Other, TreePattern &TP) {
   // the size of the smallest type.
   {
     TypeSet InputSet(Other);
-    MVT Smallest = TypeVec[0];
+    MVT Smallest = *std::min_element(TypeVec.begin(), TypeVec.end(),
+      [](MVT A, MVT B) {
+        return A.getScalarSizeInBits() < B.getScalarSizeInBits() ||
+               (A.getScalarSizeInBits() == B.getScalarSizeInBits() &&
+                A.getSizeInBits() < B.getSizeInBits());
+      });
+
     auto I = std::remove_if(Other.TypeVec.begin(), Other.TypeVec.end(),
       [Smallest](MVT OtherVT) {
         // Don't compare vector and non-vector types.
@@ -416,7 +422,12 @@ bool EEVT::TypeSet::EnforceSmallerThan(EEVT::TypeSet &Other, TreePattern &TP) {
   // the size of the largest type.
   {
     TypeSet InputSet(*this);
-    MVT Largest = Other.TypeVec[Other.TypeVec.size()-1];
+    MVT Largest = *std::max_element(Other.TypeVec.begin(), Other.TypeVec.end(),
+      [](MVT A, MVT B) {
+        return A.getScalarSizeInBits() < B.getScalarSizeInBits() ||
+               (A.getScalarSizeInBits() == B.getScalarSizeInBits() &&
+                A.getSizeInBits() < B.getSizeInBits());
+      });
     auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
       [Largest](MVT OtherVT) {
         // Don't compare vector and non-vector types.

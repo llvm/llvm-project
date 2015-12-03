@@ -38,6 +38,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -1511,14 +1512,14 @@ unsigned HexagonAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 }
 
 void HexagonAsmParser::OutOfRange(SMLoc IDLoc, long long Val, long long Max) {
-  std::stringstream errStr;
-  errStr << "value " << Val << "(0x" << std::hex << Val << std::dec
-         << ") out of range: ";
+  std::string errStr;
+  raw_string_ostream ES(errStr);
+  ES << "value " << Val << "(" << format_hex(Val, 0) << ") out of range: ";
   if (Max >= 0)
-    errStr << "0-" << Max;
+    ES << "0-" << Max;
   else
-    errStr << Max << "-" << (-Max - 1);
-  Error(IDLoc, errStr.str().c_str());
+    ES << Max << "-" << (-Max - 1);
+  Error(IDLoc, ES.str().c_str());
 }
 
 int HexagonAsmParser::processInstruction(MCInst &Inst,

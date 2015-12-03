@@ -13,6 +13,7 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   MachineFunctionInfo(),
   ShaderType(ShaderType::COMPUTE),
   LDSSize(0),
+  ABIArgOffset(0),
   ScratchSize(0),
   IsKernel(true) {
   Attribute A = MF.getFunction()->getFnAttribute(ShaderTypeAttribute);

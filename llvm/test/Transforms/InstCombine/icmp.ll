@@ -819,8 +819,8 @@ define i1 @test68(i32 %x) nounwind uwtable {
 
 ; PR14708
 ; CHECK-LABEL: @test69(
-; CHECK: %1 = and i32 %c, -33
-; CHECK: %2 = icmp eq i32 %1, 65
+; CHECK: %1 = or i32 %c, 32
+; CHECK: %2 = icmp eq i32 %1, 97
 ; CHECK: ret i1 %2
 define i1 @test69(i32 %c) nounwind uwtable {
   %1 = icmp eq i32 %c, 97

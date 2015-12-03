@@ -365,6 +365,11 @@ private:
   bool ParseSectionDirectiveHSAText();
   bool subtargetHasRegister(const MCRegisterInfo &MRI, unsigned RegNo) const;
   bool ParseDirectiveAMDGPUHsaKernel();
+  bool ParseDirectiveAMDGPUHsaModuleGlobal();
+  bool ParseDirectiveAMDGPUHsaProgramGlobal();
+  bool ParseSectionDirectiveHSADataGlobalAgent();
+  bool ParseSectionDirectiveHSADataGlobalProgram();
+  bool ParseSectionDirectiveHSARodataReadonlyAgent();
 
 public:
 public:
@@ -966,6 +971,46 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaKernel() {
   return false;
 }
 
+bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaModuleGlobal() {
+  if (getLexer().isNot(AsmToken::Identifier))
+    return TokError("expected symbol name");
+
+  StringRef GlobalName = Parser.getTok().getIdentifier();
+
+  getTargetStreamer().EmitAMDGPUHsaModuleScopeGlobal(GlobalName);
+  Lex();
+  return false;
+}
+
+bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaProgramGlobal() {
+  if (getLexer().isNot(AsmToken::Identifier))
+    return TokError("expected symbol name");
+
+  StringRef GlobalName = Parser.getTok().getIdentifier();
+
+  getTargetStreamer().EmitAMDGPUHsaProgramScopeGlobal(GlobalName);
+  Lex();
+  return false;
+}
+
+bool AMDGPUAsmParser::ParseSectionDirectiveHSADataGlobalAgent() {
+  getParser().getStreamer().SwitchSection(
+      AMDGPU::getHSADataGlobalAgentSection(getContext()));
+  return false;
+}
+
+bool AMDGPUAsmParser::ParseSectionDirectiveHSADataGlobalProgram() {
+  getParser().getStreamer().SwitchSection(
+      AMDGPU::getHSADataGlobalProgramSection(getContext()));
+  return false;
+}
+
+bool AMDGPUAsmParser::ParseSectionDirectiveHSARodataReadonlyAgent() {
+  getParser().getStreamer().SwitchSection(
+      AMDGPU::getHSARodataReadonlyAgentSection(getContext()));
+  return false;
+}
+
 bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
 
@@ -983,6 +1028,21 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".amdgpu_hsa_kernel")
     return ParseDirectiveAMDGPUHsaKernel();
+
+  if (IDVal == ".amdgpu_hsa_module_global")
+    return ParseDirectiveAMDGPUHsaModuleGlobal();
+
+  if (IDVal == ".amdgpu_hsa_program_global")
+    return ParseDirectiveAMDGPUHsaProgramGlobal();
+
+  if (IDVal == ".hsadata_global_agent")
+    return ParseSectionDirectiveHSADataGlobalAgent();
+
+  if (IDVal == ".hsadata_global_program")
+    return ParseSectionDirectiveHSADataGlobalProgram();
+
+  if (IDVal == ".hsarodata_readonly_agent")
+    return ParseSectionDirectiveHSARodataReadonlyAgent();
 
   return true;
 }

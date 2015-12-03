@@ -74,15 +74,17 @@ public:
   Module &getModule() const { return Composite; }
 
   /// \brief Link \p Src into the composite. The source is destroyed.
+  ///
   /// Passing OverrideSymbols as true will have symbols from Src
   /// shadow those in the Dest.
   /// For ThinLTO function importing/exporting the \p FunctionInfoIndex
-  /// is passed. If a \p FuncToImport is provided, only that single
-  /// function is imported from the source module.
+  /// is passed. If \p FunctionsToImport is provided, only the functions that
+  /// are part of the set will be imported from the source module.
+  ///
   /// Returns true on error.
   bool linkInModule(Module &Src, unsigned Flags = Flags::None,
                     const FunctionInfoIndex *Index = nullptr,
-                    DenseSet<const GlobalValue *> *FuncToImport = nullptr);
+                    DenseSet<const GlobalValue *> *FunctionsToImport = nullptr);
 
   static bool linkModules(Module &Dest, Module &Src,
                           DiagnosticHandlerFunction DiagnosticHandler,

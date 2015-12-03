@@ -1,12 +1,20 @@
-# RUN: llvm-profdata merge %s -o %t.out 2>&1 | FileCheck %s
-# CHECK: overflow.proftext: overflow: Counter overflow
+# RUN: llvm-profdata merge %s -o %t.out 2>&1 | FileCheck %s --check-prefix=MERGE
+# RUN: llvm-profdata show %t.out | FileCheck %s --check-prefix=SHOW
+# MERGE: overflow.proftext: overflow: Counter overflow
+# SHOW: Total functions: 1
+# SHOW: Maximum function count: 18446744073709551615
+# SHOW: Maximum internal block count: 18446744073709551615
 
 overflow
 1
-1
+3
+18446744073709551615
 9223372036854775808
+18446744073709551615
 
 overflow
 1
-1
+3
 9223372036854775808
+9223372036854775808
+0

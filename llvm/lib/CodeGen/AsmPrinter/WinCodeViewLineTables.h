@@ -98,7 +98,7 @@ class LLVM_LIBRARY_VISIBILITY WinCodeViewLineTables : public AsmPrinterHandler {
     }
   } FileNameRegistry;
 
-  typedef std::map<std::pair<StringRef, StringRef>, char *>
+  typedef std::map<std::pair<StringRef, StringRef>, std::string>
       DirAndFilenameToFilepathMapTy;
   DirAndFilenameToFilepathMapTy DirAndFilenameToFilepathMap;
   StringRef getFullFilepath(const MDNode *S);
@@ -115,14 +115,6 @@ class LLVM_LIBRARY_VISIBILITY WinCodeViewLineTables : public AsmPrinterHandler {
 
 public:
   WinCodeViewLineTables(AsmPrinter *Asm);
-
-  ~WinCodeViewLineTables() override {
-    for (DirAndFilenameToFilepathMapTy::iterator
-             I = DirAndFilenameToFilepathMap.begin(),
-             E = DirAndFilenameToFilepathMap.end();
-         I != E; ++I)
-      free(I->second);
-  }
 
   void setSymbolSize(const llvm::MCSymbol *, uint64_t) override {}
 

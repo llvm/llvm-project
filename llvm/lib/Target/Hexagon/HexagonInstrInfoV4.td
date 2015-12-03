@@ -3864,26 +3864,6 @@ let AddedComplexity = 100 in {
   def: Stoream_pat<truncstorei32, I64, addrga, LoReg, S2_storeriabs>;
 }
 
-// Map from Pd = load(globaladdress) -> Rd = memb(globaladdress), Pd = Rd
-let AddedComplexity = 100 in
-def : Pat <(i1 (load (HexagonCONST32_GP tglobaladdr:$global))),
-           (i1 (C2_tfrrp (i32 (L2_loadrbgp tglobaladdr:$global))))>;
-
-// Transfer global address into a register
-let isExtended = 1, opExtendable = 1, AddedComplexity=50, isMoveImm = 1,
-isAsCheapAsAMove = 1, isReMaterializable = 1, isCodeGenOnly = 1 in
-def TFRI_V4 : ALU32_ri<(outs IntRegs:$dst), (ins s16Ext:$src1),
-           "$dst = #$src1",
-           [(set IntRegs:$dst, (HexagonCONST32 tglobaladdr:$src1))]>;
-
-// Transfer a block address into a register
-def : Pat<(HexagonCONST32_GP tblockaddress:$src1),
-          (TFRI_V4 tblockaddress:$src1)>;
-
-let AddedComplexity = 50 in
-def : Pat<(HexagonCONST32_GP tglobaladdr:$src1),
-           (TFRI_V4 tglobaladdr:$src1)>;
-
 // i8/i16/i32 -> i64 loads
 // We need a complexity of 120 here to override preceding handling of
 // zextload.

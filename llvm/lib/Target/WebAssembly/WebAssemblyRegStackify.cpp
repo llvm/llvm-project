@@ -117,7 +117,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         break;
 
       // Iterate through the inputs in reverse order, since we'll be pulling
-      // operands off the stack in FIFO order.
+      // operands off the stack in LIFO order.
       bool AnyStackified = false;
       for (MachineOperand &Op : reverse(Insert->uses())) {
         // We're only interested in explicit virtual register operands.

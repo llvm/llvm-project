@@ -43,8 +43,8 @@ class ARMSubtarget : public ARMGenSubtargetInfo {
 protected:
   enum ARMProcFamilyEnum {
     Others, CortexA5, CortexA7, CortexA8, CortexA9, CortexA12, CortexA15,
-    CortexA17, CortexR4, CortexR4F, CortexR5, CortexR7, CortexA53, CortexA57,
-    CortexA72, Krait, Swift
+    CortexA17, CortexR4, CortexR4F, CortexR5, CortexR7, CortexA35, CortexA53,
+    CortexA57, CortexA72, Krait, Swift
   };
   enum ARMProcClassEnum {
     None, AClass, RClass, MClass

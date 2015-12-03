@@ -428,19 +428,22 @@ instrprof_error InstrProfRecord::merge(InstrProfRecord &Other) {
   if (Counts.size() != Other.Counts.size())
     return instrprof_error::count_mismatch;
 
+  instrprof_error Result = instrprof_error::success;
+
   for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
-    if (Counts[I] + Other.Counts[I] < Counts[I])
-      return instrprof_error::counter_overflow;
-    Counts[I] += Other.Counts[I];
+    bool ResultOverflowed;
+    Counts[I] = SaturatingAdd(Counts[I], Other.Counts[I], ResultOverflowed);
+    if (ResultOverflowed)
+      Result = instrprof_error::counter_overflow;
   }
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
-    instrprof_error result = mergeValueProfData(Kind, Other);
-    if (result != instrprof_error::success)
-      return result;
+    instrprof_error MergeValueResult = mergeValueProfData(Kind, Other);
+    if (MergeValueResult != instrprof_error::success)
+      Result = MergeValueResult;
   }
 
-  return instrprof_error::success;
+  return Result;
 }
 
 inline support::endianness getHostEndianness() {

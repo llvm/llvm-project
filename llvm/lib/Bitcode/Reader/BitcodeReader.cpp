@@ -6014,12 +6014,11 @@ llvm::getBitcodeProducerString(MemoryBufferRef Buffer, LLVMContext &Context,
 ErrorOr<std::unique_ptr<FunctionInfoIndex>>
 llvm::getFunctionInfoIndex(MemoryBufferRef Buffer,
                            DiagnosticHandlerFunction DiagnosticHandler,
-                           const Module *ExportingModule, bool IsLazy) {
+                           bool IsLazy) {
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
   FunctionIndexBitcodeReader R(Buf.get(), DiagnosticHandler, IsLazy);
 
-  std::unique_ptr<FunctionInfoIndex> Index =
-      llvm::make_unique<FunctionInfoIndex>(ExportingModule);
+  auto Index = llvm::make_unique<FunctionInfoIndex>();
 
   auto cleanupOnError = [&](std::error_code EC) {
     R.releaseBuffer(); // Never take ownership on error.

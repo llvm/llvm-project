@@ -173,10 +173,13 @@ define i128 @atomic_load_seq_cst(i128* %p) {
    ret i128 %r
 }
 
-define i128 @atomic_load_relaxed(i128* %p) {
+define i128 @atomic_load_relaxed(i64, i64, i128* %p) {
 ; CHECK-LABEL: atomic_load_relaxed:
 ; CHECK-NOT: dmb
-; CHECK: ldxp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0]
+; CHECK: [[LABEL:.?LBB[0-9]+_[0-9]+]]:
+; CHECK: ldxp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x2]
+; CHECK-NEXT: stxp [[SUCCESS:w[0-9]+]], [[LO]], [[HI]], [x2]
+; CHECK: cbnz [[SUCCESS]], [[LABEL]]
 ; CHECK-NOT: dmb
    %r = load atomic i128, i128* %p monotonic, align 16
    ret i128 %r

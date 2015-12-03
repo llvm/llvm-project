@@ -122,6 +122,8 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
+    // TODO: If we ever want to support v7, this needs to be extended
+    // to cover all floating point operations.
     if (!Subtarget->isV9() &&
         (MI->getOpcode() == SP::FCMPS || MI->getOpcode() == SP::FCMPD
          || MI->getOpcode() == SP::FCMPQ)) {

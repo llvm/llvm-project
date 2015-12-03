@@ -141,8 +141,8 @@ private:
   /// that are "live". These nodes must be scheduled before any other nodes that
   /// modifies the registers can be scheduled.
   unsigned NumLiveRegs;
-  std::vector<SUnit*> LiveRegDefs;
-  std::vector<SUnit*> LiveRegGens;
+  std::unique_ptr<SUnit*[]> LiveRegDefs;
+  std::unique_ptr<SUnit*[]> LiveRegGens;
 
   // Collect interferences between physical register use/defs.
   // Each interference is an SUnit and set of physical registers.
@@ -328,8 +328,8 @@ void ScheduleDAGRRList::Schedule() {
   NumLiveRegs = 0;
   // Allocate slots for each physical register, plus one for a special register
   // to track the virtual resource of a calling sequence.
-  LiveRegDefs.resize(TRI->getNumRegs() + 1, nullptr);
-  LiveRegGens.resize(TRI->getNumRegs() + 1, nullptr);
+  LiveRegDefs.reset(new SUnit*[TRI->getNumRegs() + 1]());
+  LiveRegGens.reset(new SUnit*[TRI->getNumRegs() + 1]());
   CallSeqEndForStart.clear();
   assert(Interferences.empty() && LRegsMap.empty() && "stale Interferences");
 
@@ -1218,7 +1218,7 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
 static void CheckForLiveRegDef(SUnit *SU, unsigned Reg,
-                               std::vector<SUnit*> &LiveRegDefs,
+                               SUnit **LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
                                const TargetRegisterInfo *TRI) {
@@ -1240,7 +1240,7 @@ static void CheckForLiveRegDef(SUnit *SU, unsigned Reg,
 /// CheckForLiveRegDefMasked - Check for any live physregs that are clobbered
 /// by RegMask, and add them to LRegs.
 static void CheckForLiveRegDefMasked(SUnit *SU, const uint32_t *RegMask,
-                                     std::vector<SUnit*> &LiveRegDefs,
+                                     ArrayRef<SUnit*> LiveRegDefs,
                                      SmallSet<unsigned, 4> &RegAdded,
                                      SmallVectorImpl<unsigned> &LRegs) {
   // Look at all live registers. Skip Reg0 and the special CallResource.
@@ -1278,7 +1278,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
   for (SUnit::pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
        I != E; ++I) {
     if (I->isAssignedRegDep() && LiveRegDefs[I->getReg()] != SU)
-      CheckForLiveRegDef(I->getSUnit(), I->getReg(), LiveRegDefs,
+      CheckForLiveRegDef(I->getSUnit(), I->getReg(), LiveRegDefs.get(),
                          RegAdded, LRegs, TRI);
   }
 
@@ -1302,7 +1302,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
           for (; NumVals; --NumVals, ++i) {
             unsigned Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
             if (TargetRegisterInfo::isPhysicalRegister(Reg))
-              CheckForLiveRegDef(SU, Reg, LiveRegDefs, RegAdded, LRegs, TRI);
+              CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
           }
         } else
           i += NumVals;
@@ -1328,13 +1328,15 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       }
     }
     if (const uint32_t *RegMask = getNodeRegMask(Node))
-      CheckForLiveRegDefMasked(SU, RegMask, LiveRegDefs, RegAdded, LRegs);
+      CheckForLiveRegDefMasked(SU, RegMask,
+                               makeArrayRef(LiveRegDefs.get(), TRI->getNumRegs()),
+                               RegAdded, LRegs);
 
     const MCInstrDesc &MCID = TII->get(Node->getMachineOpcode());
     if (!MCID.ImplicitDefs)
       continue;
     for (const uint16_t *Reg = MCID.getImplicitDefs(); *Reg; ++Reg)
-      CheckForLiveRegDef(SU, *Reg, LiveRegDefs, RegAdded, LRegs, TRI);
+      CheckForLiveRegDef(SU, *Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
   }
 
   return !LRegs.empty();

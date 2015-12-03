@@ -51,7 +51,9 @@ namespace {
     bool expandAtomicLoadToCmpXchg(LoadInst *LI);
     bool expandAtomicStore(StoreInst *SI);
     bool tryExpandAtomicRMW(AtomicRMWInst *AI);
-    bool expandAtomicRMWToLLSC(AtomicRMWInst *AI);
+    bool expandAtomicOpToLLSC(
+        Instruction *I, Value *Addr, AtomicOrdering MemOpOrder,
+        std::function<Value *(IRBuilder<> &, Value *)> PerformOp);
     bool expandAtomicCmpXchg(AtomicCmpXchgInst *CI);
     bool isIdempotentRMW(AtomicRMWInst *AI);
     bool simplifyIdempotentRMW(AtomicRMWInst *AI);
@@ -174,12 +176,14 @@ bool AtomicExpand::tryExpandAtomicLoad(LoadInst *LI) {
   switch (TLI->shouldExpandAtomicLoadInIR(LI)) {
   case TargetLoweringBase::AtomicExpansionKind::None:
     return false;
-  case TargetLoweringBase::AtomicExpansionKind::LLSC: {
+  case TargetLoweringBase::AtomicExpansionKind::LLSC:
+    return expandAtomicOpToLLSC(
+        LI, LI->getPointerOperand(), LI->getOrdering(),
+        [](IRBuilder<> &Builder, Value *Loaded) { return Loaded; });
+  case TargetLoweringBase::AtomicExpansionKind::LLOnly:
     return expandAtomicLoadToLL(LI);
-  }
-  case TargetLoweringBase::AtomicExpansionKind::CmpXChg: {
+  case TargetLoweringBase::AtomicExpansionKind::CmpXChg:
     return expandAtomicLoadToCmpXchg(LI);
-  }
   }
   llvm_unreachable("Unhandled case in tryExpandAtomicLoad");
 }
@@ -192,6 +196,7 @@ bool AtomicExpand::expandAtomicLoadToLL(LoadInst *LI) {
   // to be single-copy atomic by ARM is an ldrexd (A3.5.3).
   Value *Val =
       TLI->emitLoadLinked(Builder, LI->getPointerOperand(), LI->getOrdering());
+  TLI->emitAtomicCmpXchgNoStoreLLBalance(Builder);
 
   LI->replaceAllUsesWith(Val);
   LI->eraseFromParent();
@@ -245,20 +250,6 @@ static void createCmpXchgInstFun(IRBuilder<> &Builder, Value *Addr,
   NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
 }
 
-bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
-  switch (TLI->shouldExpandAtomicRMWInIR(AI)) {
-  case TargetLoweringBase::AtomicExpansionKind::None:
-    return false;
-  case TargetLoweringBase::AtomicExpansionKind::LLSC: {
-    return expandAtomicRMWToLLSC(AI);
-  }
-  case TargetLoweringBase::AtomicExpansionKind::CmpXChg: {
-    return expandAtomicRMWToCmpXchg(AI, createCmpXchgInstFun);
-  }
-  }
-  llvm_unreachable("Unhandled case in tryExpandAtomicRMW");
-}
-
 /// Emit IR to implement the given atomicrmw operation on values in registers,
 /// returning the new value.
 static Value *performAtomicOp(AtomicRMWInst::BinOp Op, IRBuilder<> &Builder,
@@ -296,10 +287,28 @@ static Value *performAtomicOp(AtomicRMWInst::BinOp Op, IRBuilder<> &Builder,
   }
 }
 
-bool AtomicExpand::expandAtomicRMWToLLSC(AtomicRMWInst *AI) {
-  AtomicOrdering MemOpOrder = AI->getOrdering();
-  Value *Addr = AI->getPointerOperand();
-  BasicBlock *BB = AI->getParent();
+bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
+  switch (TLI->shouldExpandAtomicRMWInIR(AI)) {
+  case TargetLoweringBase::AtomicExpansionKind::None:
+    return false;
+  case TargetLoweringBase::AtomicExpansionKind::LLSC:
+    return expandAtomicOpToLLSC(AI, AI->getPointerOperand(), AI->getOrdering(),
+                                [&](IRBuilder<> &Builder, Value *Loaded) {
+                                  return performAtomicOp(AI->getOperation(),
+                                                         Builder, Loaded,
+                                                         AI->getValOperand());
+                                });
+  case TargetLoweringBase::AtomicExpansionKind::CmpXChg:
+    return expandAtomicRMWToCmpXchg(AI, createCmpXchgInstFun);
+  default:
+    llvm_unreachable("Unhandled case in tryExpandAtomicRMW");
+  }
+}
+
+bool AtomicExpand::expandAtomicOpToLLSC(
+    Instruction *I, Value *Addr, AtomicOrdering MemOpOrder,
+    std::function<Value *(IRBuilder<> &, Value *)> PerformOp) {
+  BasicBlock *BB = I->getParent();
   Function *F = BB->getParent();
   LLVMContext &Ctx = F->getContext();
 
@@ -317,11 +326,11 @@ bool AtomicExpand::expandAtomicRMWToLLSC(AtomicRMWInst *AI) {
   // atomicrmw.end:
   //     fence?
   //     [...]
-  BasicBlock *ExitBB = BB->splitBasicBlock(AI->getIterator(), "atomicrmw.end");
+  BasicBlock *ExitBB = BB->splitBasicBlock(I->getIterator(), "atomicrmw.end");
   BasicBlock *LoopBB =  BasicBlock::Create(Ctx, "atomicrmw.start", F, ExitBB);
 
-  // This grabs the DebugLoc from AI.
-  IRBuilder<> Builder(AI);
+  // This grabs the DebugLoc from I.
+  IRBuilder<> Builder(I);
 
   // The split call above "helpfully" added a branch at the end of BB (to the
   // wrong place), but we might want a fence too. It's easiest to just remove
@@ -334,8 +343,7 @@ bool AtomicExpand::expandAtomicRMWToLLSC(AtomicRMWInst *AI) {
   Builder.SetInsertPoint(LoopBB);
   Value *Loaded = TLI->emitLoadLinked(Builder, Addr, MemOpOrder);
 
-  Value *NewVal =
-      performAtomicOp(AI->getOperation(), Builder, Loaded, AI->getValOperand());
+  Value *NewVal = PerformOp(Builder, Loaded);
 
   Value *StoreSuccess =
       TLI->emitStoreConditional(Builder, NewVal, Addr, MemOpOrder);
@@ -345,8 +353,8 @@ bool AtomicExpand::expandAtomicRMWToLLSC(AtomicRMWInst *AI) {
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
 
-  AI->replaceAllUsesWith(Loaded);
-  AI->eraseFromParent();
+  I->replaceAllUsesWith(Loaded);
+  I->eraseFromParent();
 
   return true;
 }
