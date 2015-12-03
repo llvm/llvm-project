@@ -86,7 +86,7 @@ bool FunctionIndexObjectFile::hasFunctionSummaryInMemBuffer(
 ErrorOr<std::unique_ptr<FunctionIndexObjectFile>>
 FunctionIndexObjectFile::create(MemoryBufferRef Object,
                                 DiagnosticHandlerFunction DiagnosticHandler,
-                                const Module *ExportingModule, bool IsLazy) {
+                                bool IsLazy) {
   std::unique_ptr<FunctionInfoIndex> Index;
 
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
@@ -94,7 +94,7 @@ FunctionIndexObjectFile::create(MemoryBufferRef Object,
     return BCOrErr.getError();
 
   ErrorOr<std::unique_ptr<FunctionInfoIndex>> IOrErr = getFunctionInfoIndex(
-      BCOrErr.get(), DiagnosticHandler, ExportingModule, IsLazy);
+      BCOrErr.get(), DiagnosticHandler, IsLazy);
 
   if (std::error_code EC = IOrErr.getError())
     return EC;
@@ -125,8 +125,7 @@ std::error_code FunctionIndexObjectFile::findFunctionSummaryInMemBuffer(
 // index object if found, or nullptr if not.
 ErrorOr<std::unique_ptr<FunctionInfoIndex>>
 llvm::getFunctionIndexForFile(StringRef Path,
-                              DiagnosticHandlerFunction DiagnosticHandler,
-                              const Module *ExportingModule) {
+                              DiagnosticHandlerFunction DiagnosticHandler) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Path);
   std::error_code EC = FileOrErr.getError();
@@ -134,8 +133,7 @@ llvm::getFunctionIndexForFile(StringRef Path,
     return EC;
   MemoryBufferRef BufferRef = (FileOrErr.get())->getMemBufferRef();
   ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
-      object::FunctionIndexObjectFile::create(BufferRef, DiagnosticHandler,
-                                              ExportingModule);
+      object::FunctionIndexObjectFile::create(BufferRef, DiagnosticHandler);
   EC = ObjOrErr.getError();
   if (EC)
     return EC;

@@ -33,7 +33,7 @@ class Triple;
 
 class AArch64Subtarget : public AArch64GenSubtargetInfo {
 protected:
-  enum ARMProcFamilyEnum {Others, CortexA53, CortexA57, Cyclone};
+  enum ARMProcFamilyEnum {Others, CortexA35, CortexA53, CortexA57, Cyclone};
 
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
   ARMProcFamilyEnum ARMProcFamily;

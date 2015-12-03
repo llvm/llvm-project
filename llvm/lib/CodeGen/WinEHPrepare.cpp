@@ -19,7 +19,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/LibCallSemantics.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"

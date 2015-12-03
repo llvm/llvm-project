@@ -69,7 +69,8 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
 
-  for (auto &MBB : MF)
+  for (auto &MBB : MF) {
+    DEBUG(dbgs() << "Basic Block: " << MBB.getName() << '\n');
     for (auto &MI : MBB)
       switch (MI.getOpcode()) {
       default:
@@ -94,9 +95,12 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
                         ->getFirstTerminator();
           if (&MI == Where || !MDT.dominates(&MI, Where))
             continue;
+          DEBUG(dbgs() << "Setting operand " << O << " in " << *Where <<
+                " from " << MI <<"\n");
           O.setReg(ToReg);
         }
       }
+  }
 
   return true;
 }

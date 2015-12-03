@@ -22,6 +22,7 @@
 namespace llvm {
 class AllocaInst;
 class BasicBlock;
+class CatchReturnInst;
 class Constant;
 class Function;
 class GlobalVariable;

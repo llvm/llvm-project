@@ -208,10 +208,16 @@ define i64 @test7(i64* %ptr, i64 %val1, i64 %val2) {
 define i64 @test8(i64* %ptr) {
 ; CHECK-LABEL: test8:
 ; CHECK: ldrexd [[REG1:(r[0-9]?[02468])]], [[REG2:(r[0-9]?[13579])]]
+; CHECK-NOT: strexd
+; CHECK: clrex
+; CHECK-NOT: strexd
 ; CHECK: dmb {{ish$}}
 
 ; CHECK-THUMB-LABEL: test8:
 ; CHECK-THUMB: ldrexd [[REG1:[a-z0-9]+]], [[REG2:[a-z0-9]+]]
+; CHECK-THUMB-NOT: strexd
+; CHECK-THUMB: clrex
+; CHECK-THUMB-NOT: strexd
 ; CHECK-THUMB: dmb {{ish$}}
 
   %r = load atomic i64, i64* %ptr seq_cst, align 8

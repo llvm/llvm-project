@@ -103,6 +103,8 @@ public:
 
   void EmitFunctionEntryLabel() override;
 
+  void EmitGlobalVariable(const GlobalVariable *GV) override;
+
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        unsigned AsmVariant, const char *ExtraCode,
                        raw_ostream &O) override;

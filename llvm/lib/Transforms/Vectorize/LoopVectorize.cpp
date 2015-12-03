@@ -5188,7 +5188,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(
         continue;
       }
 
-      // Count the number of live interals.
+      // Count the number of live intevals.
       unsigned RegUsage = 0;
       for (auto Inst : OpenIntervals)
         RegUsage += GetRegUsage(Inst->getType(), VFs[j]);

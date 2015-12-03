@@ -238,7 +238,11 @@ void Fuzzer::RunOneAndUpdateCorpus(Unit &U) {
 }
 
 void Fuzzer::ExecuteCallback(const Unit &U) {
-  int Res = USF.TargetFunction(U.data(), U.size());
+  const uint8_t *Data = U.data();
+  uint8_t EmptyData;
+  if (!Data) 
+    Data = &EmptyData;
+  int Res = USF.TargetFunction(Data, U.size());
   (void)Res;
   assert(Res == 0);
 }

@@ -736,3 +736,8 @@ fbld tbyte ptr [eax]
 fbstp tbyte ptr [eax]
 // CHECK: fbld (%eax)
 // CHECK: fbstp (%eax)
+
+fcomip st, st(2)
+fucomip st, st(2)
+// CHECK: fcompi  %st(2)
+// CHECK: fucompi  %st(2)

@@ -21,7 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
-#include "llvm/Analysis/LibCallSemantics.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"

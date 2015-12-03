@@ -97,10 +97,11 @@ void GlobalObject::setGlobalObjectSubClassData(unsigned Val) {
 }
 
 void GlobalObject::copyAttributesFrom(const GlobalValue *Src) {
-  const auto *GV = cast<GlobalObject>(Src);
-  GlobalValue::copyAttributesFrom(GV);
-  setAlignment(GV->getAlignment());
-  setSection(GV->getSection());
+  GlobalValue::copyAttributesFrom(Src);
+  if (const auto *GV = dyn_cast<GlobalObject>(Src)) {
+    setAlignment(GV->getAlignment());
+    setSection(GV->getSection());
+  }
 }
 
 const char *GlobalValue::getSection() const {
@@ -216,14 +217,14 @@ void GlobalVariable::setInitializer(Constant *InitVal) {
   }
 }
 
-/// copyAttributesFrom - copy all additional attributes (those not needed to
-/// create a GlobalVariable) from the GlobalVariable Src to this one.
+/// Copy all additional attributes (those not needed to create a GlobalVariable)
+/// from the GlobalVariable Src to this one.
 void GlobalVariable::copyAttributesFrom(const GlobalValue *Src) {
-  assert(isa<GlobalVariable>(Src) && "Expected a GlobalVariable!");
   GlobalObject::copyAttributesFrom(Src);
-  const GlobalVariable *SrcVar = cast<GlobalVariable>(Src);
-  setThreadLocalMode(SrcVar->getThreadLocalMode());
-  setExternallyInitialized(SrcVar->isExternallyInitialized());
+  if (const GlobalVariable *SrcVar = dyn_cast<GlobalVariable>(Src)) {
+    setThreadLocalMode(SrcVar->getThreadLocalMode());
+    setExternallyInitialized(SrcVar->isExternallyInitialized());
+  }
 }
 
 

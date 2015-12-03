@@ -354,7 +354,7 @@ TEST_F(InstrProfTest, get_icall_data_merge1_saturation) {
   const uint64_t Max = std::numeric_limits<uint64_t>::max();
 
   InstrProfRecord Record1("caller", 0x1234, {1});
-  InstrProfRecord Record2("caller", 0x1234, {1});
+  InstrProfRecord Record2("caller", 0x1234, {Max});
   InstrProfRecord Record3("callee1", 0x1235, {3, 4});
 
   Record1.reserveSites(IPVK_IndirectCallTarget, 1);
@@ -375,6 +375,9 @@ TEST_F(InstrProfTest, get_icall_data_merge1_saturation) {
   // Verify saturation of counts.
   ErrorOr<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
   ASSERT_TRUE(NoError(R.getError()));
+
+  ASSERT_EQ(Max, R.get().Counts[0]);
+
   ASSERT_EQ(1U, R.get().getNumValueSites(IPVK_IndirectCallTarget));
   std::unique_ptr<InstrProfValueData[]> VD =
           R.get().getValueForSite(IPVK_IndirectCallTarget, 0);

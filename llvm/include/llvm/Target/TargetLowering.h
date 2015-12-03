@@ -130,10 +130,12 @@ public:
   /// support for these atomic instructions, and also have different options
   /// w.r.t. what they should expand to.
   enum class AtomicExpansionKind {
-    None,      // Don't expand the instruction.
-    LLSC,      // Expand the instruction into loadlinked/storeconditional; used
-               // by ARM/AArch64.
-    CmpXChg,   // Expand the instruction into cmpxchg; used by at least X86.
+    None,    // Don't expand the instruction.
+    LLSC,    // Expand the instruction into loadlinked/storeconditional; used
+             // by ARM/AArch64.
+    LLOnly,  // Expand the (load) instruction into just a load-linked, which has
+             // greater atomic guarantees than a normal load.
+    CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
   };
 
   static ISD::NodeType getExtendForContent(BooleanContent Content) {

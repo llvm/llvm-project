@@ -1962,14 +1962,14 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     case ICmpInst::ICMP_EQ:
       if (LHS->getOperand(0) == RHS->getOperand(0)) {
         // if LHSCst and RHSCst differ only by one bit:
-        // (A == C1 || A == C2) -> (A & ~(C1 ^ C2)) == C1
+        // (A == C1 || A == C2) -> (A | (C1 ^ C2)) == C2
         assert(LHSCst->getValue().ule(LHSCst->getValue()));
 
         APInt Xor = LHSCst->getValue() ^ RHSCst->getValue();
         if (Xor.isPowerOf2()) {
-          Value *NegCst = Builder->getInt(~Xor);
-          Value *And = Builder->CreateAnd(LHS->getOperand(0), NegCst);
-          return Builder->CreateICmp(ICmpInst::ICMP_EQ, And, LHSCst);
+          Value *Cst = Builder->getInt(Xor);
+          Value *Or = Builder->CreateOr(LHS->getOperand(0), Cst);
+          return Builder->CreateICmp(ICmpInst::ICMP_EQ, Or, RHSCst);
         }
       }
 

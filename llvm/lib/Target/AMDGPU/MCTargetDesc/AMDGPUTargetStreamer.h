@@ -32,6 +32,10 @@ public:
   virtual void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) = 0;
 
   virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) = 0;
+
+  virtual void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) = 0;
+
+  virtual void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) = 0;
 };
 
 class AMDGPUTargetAsmStreamer : public AMDGPUTargetStreamer {
@@ -48,6 +52,10 @@ public:
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
+
+  void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) override;
+
+  void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 };
 
 class AMDGPUTargetELFStreamer : public AMDGPUTargetStreamer {
@@ -80,6 +88,10 @@ public:
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
+
+  void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) override;
+
+  void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 };
 
 }

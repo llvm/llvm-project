@@ -157,9 +157,14 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       return Err;
   }
 
+  unsigned Columns = 0;
+  for (auto &C : ContributionOffsets)
+    if (C)
+      ++Columns;
+
   Out.SwitchSection(MCOFI.getDwarfCUIndexSection());
   Out.EmitIntValue(2, 4);                   // Version
-  Out.EmitIntValue(8, 4);                   // Columns
+  Out.EmitIntValue(Columns, 4);             // Columns
   Out.EmitIntValue(IndexEntries.size(), 4); // Num Units
   // FIXME: This is not the right number of buckets for a real hash.
   Out.EmitIntValue(IndexEntries.size(), 4); // Num Buckets
@@ -173,18 +178,21 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     Out.EmitIntValue(i + 1, 4);
 
   // Write the column headers (which sections will appear in the table)
-  for (size_t i = 1; i != 9; ++i)
-    Out.EmitIntValue(i, 4);
+  for (size_t i = 0; i != array_lengthof(ContributionOffsets); ++i)
+    if (ContributionOffsets[i])
+      Out.EmitIntValue(i + DW_SECT_INFO, 4);
 
   // Write the offsets.
   for (const auto &E : IndexEntries)
-    for (const auto &C : E.Contributions)
-      Out.EmitIntValue(C.Offset, 4);
+    for (size_t i = 0; i != array_lengthof(E.Contributions); ++i)
+      if (ContributionOffsets[i])
+        Out.EmitIntValue(E.Contributions[i].Offset, 4);
 
   // Write the lengths.
   for (const auto &E : IndexEntries)
-    for (const auto &C : E.Contributions)
-      Out.EmitIntValue(C.Length, 4);
+    for (size_t i = 0; i != array_lengthof(E.Contributions); ++i)
+      if (ContributionOffsets[i])
+        Out.EmitIntValue(E.Contributions[i].Length, 4);
 
   return std::error_code();
 }

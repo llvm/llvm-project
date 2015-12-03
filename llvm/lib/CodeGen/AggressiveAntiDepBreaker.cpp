@@ -364,9 +364,11 @@ void AggressiveAntiDepBreaker::PrescanInstruction(MachineInstr *MI,
 
     // If MI's defs have a special allocation requirement, don't allow
     // any def registers to be changed. Also assume all registers
-    // defined in a call must not be changed (ABI).
+    // defined in a call must not be changed (ABI). Inline assembly may
+    // reference either system calls or the register directly. Skip it until we
+    // can tell user specified registers from compiler-specified.
     if (MI->isCall() || MI->hasExtraDefRegAllocReq() ||
-        TII->isPredicated(MI)) {
+        TII->isPredicated(MI) || MI->isInlineAsm()) {
       DEBUG(if (State->GetGroup(Reg) != 0) dbgs() << "->g0(alloc-req)");
       State->UnionGroups(Reg, 0);
     }
@@ -428,6 +430,7 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr *MI,
   // If MI's uses have special allocation requirement, don't allow
   // any use registers to be changed. Also assume all registers
   // used in a call must not be changed (ABI).
+  // Inline Assembly register uses also cannot be safely changed.
   // FIXME: The issue with predicated instruction is more complex. We are being
   // conservatively here because the kill markers cannot be trusted after
   // if-conversion:
@@ -443,7 +446,7 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr *MI,
   // changed.
   bool Special = MI->isCall() ||
     MI->hasExtraSrcRegAllocReq() ||
-    TII->isPredicated(MI);
+    TII->isPredicated(MI) || MI->isInlineAsm();
 
   // Scan the register uses for this instruction and update
   // live-ranges, groups and RegRefs.

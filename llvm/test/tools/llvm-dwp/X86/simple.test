@@ -42,7 +42,11 @@ CHECK:     DW_AT_name {{.*}} "b"
 CHECK:     DW_TAG_formal_parameter
 
 CHECK: .debug_cu_index contents:
-FIXME: Emit and verify the cu_index contents
+Ensure only the relevant/contained sections are included in the table:
+CHECK: Index Signature          INFO                     ABBREV                   STR_OFFSETS
+Don't bother checking the Signatures, they aren't correct yet.
+CHECK:                          [0x00000000, 0x00000029) [0x00000000, 0x00000031) [0x00000000, 0x00000010)
+CHECK:                          [0x00000029, 0x0000005e) [0x00000031, 0x00000075) [0x00000010, 0x00000024)
 
 CHECK: .debug_str.dwo contents:
 CHECK: "clang version

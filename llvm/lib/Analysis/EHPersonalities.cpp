@@ -1,4 +1,4 @@
-//===- LibCallSemantics.cpp - Describe library semantics ------------------===//
+//===- EHPersonalities.cpp - Compute EH-related information ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,14 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements interfaces that can be used to describe language
-// specific runtime library interfaces (e.g. libc, libm, etc) to LLVM
-// optimizers.
-//
-//===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/LibCallSemantics.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Function.h"
 using namespace llvm;

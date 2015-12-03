@@ -37,7 +37,7 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   /// determined or made to meet the stack requirements:
   ///   - single use (per path)
   ///   - single def (per path)
-  ///   - defined and used in FIFO order with other stack registers
+  ///   - defined and used in LIFO order with other stack registers
   BitVector VRegStackified;
 
 public:

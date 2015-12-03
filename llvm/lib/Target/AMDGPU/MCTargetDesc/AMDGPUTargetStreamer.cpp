@@ -231,6 +231,16 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
   }
 }
 
+void AMDGPUTargetAsmStreamer::EmitAMDGPUHsaModuleScopeGlobal(
+    StringRef GlobalName) {
+  OS << "\t.amdgpu_hsa_module_global " << GlobalName << '\n';
+}
+
+void AMDGPUTargetAsmStreamer::EmitAMDGPUHsaProgramScopeGlobal(
+    StringRef GlobalName) {
+  OS << "\t.amdgpu_hsa_program_global " << GlobalName << '\n';
+}
+
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetELFStreamer
 //===----------------------------------------------------------------------===//
@@ -315,4 +325,22 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
   MCSymbolELF *Symbol = cast<MCSymbolELF>(
       getStreamer().getContext().getOrCreateSymbol(SymbolName));
   Symbol->setType(ELF::STT_AMDGPU_HSA_KERNEL);
+}
+
+void AMDGPUTargetELFStreamer::EmitAMDGPUHsaModuleScopeGlobal(
+    StringRef GlobalName) {
+
+  MCSymbolELF *Symbol = cast<MCSymbolELF>(
+      getStreamer().getContext().getOrCreateSymbol(GlobalName));
+  Symbol->setType(ELF::STT_OBJECT);
+  Symbol->setBinding(ELF::STB_LOCAL);
+}
+
+void AMDGPUTargetELFStreamer::EmitAMDGPUHsaProgramScopeGlobal(
+    StringRef GlobalName) {
+
+  MCSymbolELF *Symbol = cast<MCSymbolELF>(
+      getStreamer().getContext().getOrCreateSymbol(GlobalName));
+  Symbol->setType(ELF::STT_OBJECT);
+  Symbol->setBinding(ELF::STB_GLOBAL);
 }

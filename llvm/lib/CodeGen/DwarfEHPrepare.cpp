@@ -16,7 +16,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/LibCallSemantics.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"

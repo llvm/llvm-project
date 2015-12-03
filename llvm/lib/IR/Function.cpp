@@ -421,12 +421,14 @@ void Function::clearGC() {
   }
 }
 
-/// copyAttributesFrom - copy all additional attributes (those not needed to
-/// create a Function) from the Function Src to this one.
+/// Copy all additional attributes (those not needed to create a Function) from
+/// the Function Src to this one.
 void Function::copyAttributesFrom(const GlobalValue *Src) {
-  assert(isa<Function>(Src) && "Expected a Function!");
   GlobalObject::copyAttributesFrom(Src);
-  const Function *SrcF = cast<Function>(Src);
+  const Function *SrcF = dyn_cast<Function>(Src);
+  if (!SrcF)
+    return;
+
   setCallingConv(SrcF->getCallingConv());
   setAttributes(SrcF->getAttributes());
   if (SrcF->hasGC())

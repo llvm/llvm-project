@@ -25,11 +25,11 @@ entry:
 }
 
 ; Won't import weak alias
-; CHECK-DAG: declare extern_weak void @weakalias()
+; CHECK-DAG: declare void @weakalias
 declare void @weakalias(...) #1
 
 ; Cannot create an alias to available_externally
-; CHECK-DAG: declare void @analias()
+; CHECK-DAG: declare void @analias
 declare void @analias(...) #1
 
 ; Aliases import the aliasee function

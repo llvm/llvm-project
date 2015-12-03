@@ -341,7 +341,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   PlaceMarkers(MF, MLI, TII, MDT);
 
 #ifndef NDEBUG
-  // Verify that block and loop beginnings and endings are in FIFO order, and
+  // Verify that block and loop beginnings and endings are in LIFO order, and
   // that all references to blocks are to blocks on the stack at the point of
   // the reference.
   SmallVector<std::pair<MachineBasicBlock *, bool>, 0> Stack;

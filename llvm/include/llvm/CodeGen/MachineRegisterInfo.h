@@ -73,7 +73,7 @@ private:
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
-  std::vector<MachineOperand *> PhysRegUseDefLists;
+  std::unique_ptr<MachineOperand *[]> PhysRegUseDefLists;
 
   /// getRegUseDefListHead - Return the head pointer for the register use/def
   /// list for the specified virtual or physical register.

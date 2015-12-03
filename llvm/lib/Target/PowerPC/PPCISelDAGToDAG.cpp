@@ -2780,7 +2780,7 @@ SDNode *PPCDAGToDAGISel::Select(SDNode *N) {
     if (PPCSubTarget->hasVSX() && (N->getValueType(0) == MVT::v2f64 ||
                                   N->getValueType(0) == MVT::v2i64)) {
       ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(N);
-      
+
       SDValue Op1 = N->getOperand(SVN->getMaskElt(0) < 2 ? 0 : 1),
               Op2 = N->getOperand(SVN->getMaskElt(1) < 2 ? 0 : 1);
       unsigned DM[2];
@@ -3106,7 +3106,7 @@ SDValue PPCDAGToDAGISel::combineToCMPB(SDNode *N) {
         if (!CurDAG->MaskedValueIsZero(Op0,
               APInt::getHighBitsSet(Bits, Bits - (b+1)*8)))
           return false;
-        
+
         LHS = Op0.getOperand(0);
         RHS = Op0.getOperand(1);
         return true;
