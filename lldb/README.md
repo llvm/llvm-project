@@ -22,7 +22,7 @@ installed on your development system:
 
   * [Cmake][cmake] (version 2.8.12.2 or later)
 
-* Linux x86_64 (Ubuntu 14.04, Ubuntu 15.10, RHEL 7)
+* Linux x86_64 (Ubuntu 14.04, Ubuntu 15.10)
 
   * clang 3.5 or later.
 
@@ -99,6 +99,12 @@ Details on the contents:
 
   Contains the Swift Language and Swift Runtime code.
 
+Note if you don't use the build-swift-cmake.py script to do the initial
+clone of the related project repositories, you'll need to manually clone
+them to the names above:
+* [swift-clang][swift-clang] should be cloned as `clang`
+* [swift-cmark][swift-cmark] should be cloned as `cmark`
+* [swift-llvm][swift-llvm] should be cloned as `llvm`
 
 # Contribution Subtleties
 
@@ -112,8 +118,10 @@ identified by their use of the LLVM comment header.  As no local
 changes should be made to any of these files, follow the standard
 [guidance for upstream changes][upstream].
 
-[llvm]: http://llvm.org "The LLVM Project"
-[lldb]: http://lldb.llvm.org "LLDB debugger"
 [cmake]: https://cmake.org
+[lldb]: http://lldb.llvm.org "LLDB debugger"
+[llvm]: http://llvm.org "The LLVM Project"
+[swift-clang]: http://github.com/apple/swift-clang
+[swift-cmark]: http://github.com/apple/swift-cmark
+[swift-llvm]: http://github.com/apple/swift-llvm
 [upstream]: http://swift.org/contributing/#llvm-and-swift "Upstream LLVM changes"
-
