@@ -24,31 +24,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-// CompilerContext allows an array of these items to be passed to
-// perform detailed lookups in SymbolVendor and SymbolFile functions.
-//----------------------------------------------------------------------
-struct CompilerContext
-{
-    CompilerContext (CompilerContextKind t, const ConstString &n) :
-        type(t),
-        name(n)
-    {
-    }
-
-    bool
-    operator == (const CompilerContext &rhs) const
-    {
-        return type == rhs.type && name == rhs.name;
-    }
-
-    void
-    Dump () const;
-
-    CompilerContextKind type;
-    ConstString name;
-};
-
 class SymbolFileType :
     public std::enable_shared_from_this<SymbolFileType>,
     public UserID
@@ -59,9 +34,6 @@ class SymbolFileType :
             m_symbol_file (symbol_file)
         {
         }
-
-        SymbolFileType (SymbolFile &symbol_file, const lldb::TypeSP &type_sp);
-
 
         ~SymbolFileType ()
         {

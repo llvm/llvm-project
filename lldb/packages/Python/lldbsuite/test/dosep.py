@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Run the test suite using a separate process for each test file.
 
@@ -55,6 +53,7 @@ import lldbsuite.support.seven as seven
 
 from . import dotest_channels
 from . import dotest_args
+from . import test_results
 
 # Todo: Convert this folder layout to be relative-import friendly and don't hack up
 # sys.path like this
@@ -1406,33 +1405,68 @@ def main(print_details_on_success, num_threads, test_subdir,
             test_name = os.path.splitext(xtime)[0]
             touch(os.path.join(session_dir, "{}-{}".format(result, test_name)))
 
-    print()
-    sys.stdout.write("Ran %d test suites" % num_test_files)
-    if num_test_files > 0:
-        sys.stdout.write(" (%d failed) (%f%%)" % (
-            len(failed), 100.0 * len(failed) / num_test_files))
-    print()
-    sys.stdout.write("Ran %d test cases" % num_test_cases)
-    if num_test_cases > 0:
-        sys.stdout.write(" (%d failed) (%f%%)" % (
-            fail_count, 100.0 * fail_count / num_test_cases))
-    print()
-    exit_code = 0
+    # Only run the old summary logic if we don't have a results formatter
+    # that already prints the summary.
+    if results_formatter is None or not results_formatter.replaces_summary():
+        print_legacy_summary = True
+    else:
+        print_legacy_summary = False
 
-    if len(failed) > 0:
-        failed.sort()
-        print("Failing Tests (%d)" % len(failed))
-        for f in failed:
-            print("%s: LLDB (suite) :: %s (%s)" % (
-                "TIMEOUT" if f in timed_out else "FAIL", f, system_info
-            ))
-        exit_code = 1
+    if not print_legacy_summary:
+        # Remove this timeout handling once
+        # https://llvm.org/bugs/show_bug.cgi?id=25703
+        # is addressed.
+        #
+        # Use non-event-based structures to count timeouts.
+        timeout_count = len(timed_out)
+        if timeout_count > 0:
+            failed.sort()
+            print("Timed out test files: {}".format(len(timed_out)))
+            for f in failed:
+                if f in timed_out:
+                    print("TIMEOUT: %s (%s)" % (f, system_info))
 
-    if len(unexpected_successes) > 0:
-        unexpected_successes.sort()
-        print("\nUnexpected Successes (%d)" % len(unexpected_successes))
-        for u in unexpected_successes:
-            print("UNEXPECTED SUCCESS: LLDB (suite) :: %s (%s)" % (u, system_info))
+        # Figure out exit code by count of test result types.
+        issue_count = (
+            results_formatter.counts_by_test_result_status(
+                test_results.EventBuilder.STATUS_ERROR) +
+            results_formatter.counts_by_test_result_status(
+                test_results.EventBuilder.STATUS_FAILURE) +
+            timeout_count)
+        # Return with appropriate result code
+        if issue_count > 0:
+            sys.exit(1)
+        else:
+            sys.exit(0)
+    else:
+        # Print the legacy test results summary.
+        print()
+        sys.stdout.write("Ran %d test suites" % num_test_files)
+        if num_test_files > 0:
+            sys.stdout.write(" (%d failed) (%f%%)" % (
+                len(failed), 100.0 * len(failed) / num_test_files))
+        print()
+        sys.stdout.write("Ran %d test cases" % num_test_cases)
+        if num_test_cases > 0:
+            sys.stdout.write(" (%d failed) (%f%%)" % (
+                fail_count, 100.0 * fail_count / num_test_cases))
+        print()
+        exit_code = 0
+
+        if len(failed) > 0:
+            failed.sort()
+            print("Failing Tests (%d)" % len(failed))
+            for f in failed:
+                print("%s: LLDB (suite) :: %s (%s)" % (
+                    "TIMEOUT" if f in timed_out else "FAIL", f, system_info
+                ))
+            exit_code = 1
+
+        if len(unexpected_successes) > 0:
+            unexpected_successes.sort()
+            print("\nUnexpected Successes (%d)" % len(unexpected_successes))
+            for u in unexpected_successes:
+                print("UNEXPECTED SUCCESS: LLDB (suite) :: %s (%s)" % (u, system_info))
 
     sys.exit(exit_code)
 

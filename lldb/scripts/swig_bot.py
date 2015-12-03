@@ -14,16 +14,27 @@ import traceback
 # LLDB modules
 import use_lldb_suite
 
+# swig_bot modules
+from swig_bot_lib import client
+from swig_bot_lib import server
+
 def process_args(args):
     parser = argparse.ArgumentParser(
         description='Run swig-bot client or server.')
 
-    # Arguments to control whether swig-bot runs as a client or server.
-    parser.add_argument(
-        "--mode",
-        required=True,
-        choices=["client", "server"],
-        help="Run swig_bot in either client or server mode.")
+    # Create and populate subparser arguments for when swig_bot is
+    # run in client or server mode
+    subparsers = parser.add_subparsers(
+        help="Pass --help to a sub-command to print detailed usage")
+    client_parser = subparsers.add_parser("client",
+                                          help="Run SWIG generation client")
+    client.add_subparser_args(client_parser)
+    client_parser.set_defaults(func=run_client)
+
+    server_parser = subparsers.add_parser("server",
+                                          help="Run SWIG generation server")
+    server.add_subparser_args(server_parser)
+    server_parser.set_defaults(func=run_server)
 
     # Arguments to control logging verbosity.
     parser.add_argument(
@@ -32,7 +43,7 @@ def process_args(args):
         default=False,
         help="Increase logging verbosity level.")
 
-    (options, remaining) = parser.parse_known_args(args)
+    options = parser.parse_args(args)
     # Set logging level.
     if options.verbose:
         log_level = logging.DEBUG
@@ -41,22 +52,26 @@ def process_args(args):
     logging.basicConfig(level=log_level)
     logging.info("logging is using level: %d", log_level)
 
-    return (options, remaining)
+    return options
+
+def run_client(options):
+    logging.info("Running swig_bot in client mode")
+    client.finalize_subparser_options(options)
+    client.run(options)
+
+def run_server(options):
+    logging.info("Running swig_bot in server mode")
+    server.finalize_subparser_options(options)
+    server.run(options)
 
 if __name__ == "__main__":
-    (options, remaining) = process_args(sys.argv[1:])
+    options = process_args(sys.argv[1:])
     try:
-        if options.mode == "client":
-            logging.info("Running swig_bot in client mode")
-            from swig_bot_lib import client
-            client.run(remaining)
-        elif options.mode == "server":
-            logging.info("Running swig_bot in server mode")
-            from swig_bot_lib import server
-            server.run(remaining)
-        else:
+        if options.func is None:
             logging.error("Unknown mode specified.  Expected client or server.")
             sys.exit(-1)
+        else:
+            options.func(options)
     except KeyboardInterrupt as e:
         logging.info("Ctrl+C received.  Shutting down...")
         sys.exit(-1)

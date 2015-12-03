@@ -182,7 +182,6 @@ class LoadUnloadTestCase(TestBase):
 
     @skipIfFreeBSD # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipUnlessListedRemote(['android'])
-    @expectedFailureAndroid # dlopen and dlclose prefixed with "__dl_" on android causing JIT compilation issues
     @skipIfWindows # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
@@ -205,21 +204,24 @@ class LoadUnloadTestCase(TestBase):
             shlib_dir = lldb.remote_platform.GetWorkingDirectory()
         else:
             shlib_dir = self.mydir
-        # Make sure that a_function does not exist at this point.
-        self.expect("image lookup -n a_function", "a_function should not exist yet",
-                    error=True, matching=False,
-            patterns = ["1 match found .* %s" % shlib_dir])
 
-        if lldb.remote_platform:
-            dylibName = os.path.join(shlib_dir, 'libloadunload_a.so')
-        elif self.platformIsDarwin():
+        if self.platformIsDarwin():
             dylibName = 'libloadunload_a.dylib'
         else:
             dylibName = 'libloadunload_a.so'
 
+        if lldb.remote_platform:
+            dylibPath = os.path.join(shlib_dir, dylibName)
+        else:
+            dylibPath = dylibName
+
+        # Make sure that a_function does not exist at this point.
+        self.expect("image lookup -n a_function", "a_function should not exist yet",
+                    error=True, matching=False, patterns = ["1 match found"])
+
         # Use lldb 'process load' to load the dylib.
-        self.expect("process load %s" % dylibName, "%s loaded correctly" % dylibName,
-            patterns = ['Loading "%s".*ok' % dylibName,
+        self.expect("process load %s" % dylibPath, "%s loaded correctly" % dylibPath,
+            patterns = ['Loading "%s".*ok' % dylibPath,
                         'Image [0-9]+ loaded'])
 
         # Search for and match the "Image ([0-9]+) loaded" pattern.
@@ -234,7 +236,7 @@ class LoadUnloadTestCase(TestBase):
 
         # Now we should have an entry for a_function.
         self.expect("image lookup -n a_function", "a_function should now exist",
-            patterns = ["1 match found .*%s" % shlib_dir])
+            patterns = ["1 match found .*%s" % dylibName])
 
         # Use lldb 'process unload' to unload the dylib.
         self.expect("process unload %s" % index, "%s unloaded correctly" % dylibName,

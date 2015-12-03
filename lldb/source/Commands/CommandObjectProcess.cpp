@@ -1204,8 +1204,9 @@ protected:
             Error error;
             const char *image_path = command.GetArgumentAtIndex(i);
             FileSpec image_spec (image_path, false);
-            process->GetTarget().GetPlatform()->ResolveRemotePath(image_spec, image_spec);
-            uint32_t image_token = process->LoadImage(image_spec, error);
+            PlatformSP platform = process->GetTarget().GetPlatform();
+            platform->ResolveRemotePath(image_spec, image_spec);
+            uint32_t image_token = platform->LoadImage(process, image_spec, error);
             if (image_token != LLDB_INVALID_IMAGE_TOKEN)
             {
                 result.AppendMessageWithFormat ("Loading \"%s\"...ok\nImage %u loaded.\n", image_path, image_token);  
@@ -1267,7 +1268,7 @@ protected:
             }
             else
             {
-                Error error (process->UnloadImage(image_token));
+                Error error (process->GetTarget().GetPlatform()->UnloadImage(process, image_token));
                 if (error.Success())
                 {
                     result.AppendMessageWithFormat ("Unloading shared library with index %u...ok\n", image_token);  

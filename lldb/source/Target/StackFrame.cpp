@@ -1519,7 +1519,7 @@ StackFrame::GetStatus (Stream& strm,
     if (show_source)
     {
         ExecutionContext exe_ctx (shared_from_this());
-        bool have_source = false;
+        bool have_source = false, have_debuginfo = false;
         Debugger::StopDisassemblyType disasm_display = Debugger::eStopDisassemblyTypeNever;
         Target *target = exe_ctx.GetTargetPtr();
         if (target)
@@ -1532,26 +1532,35 @@ StackFrame::GetStatus (Stream& strm,
             GetSymbolContext(eSymbolContextCompUnit | eSymbolContextLineEntry);
             if (m_sc.comp_unit && m_sc.line_entry.IsValid())
             {
-                have_source = true;
+                have_debuginfo = true;
                 if (source_lines_before > 0 || source_lines_after > 0)
                 {
-                    target->GetSourceManager().DisplaySourceLinesWithLineNumbers (m_sc.line_entry.file,
+                    size_t num_lines = target->GetSourceManager().DisplaySourceLinesWithLineNumbers (m_sc.line_entry.file,
                                                                                       m_sc.line_entry.line,
                                                                                       source_lines_before,
                                                                                       source_lines_after,
                                                                                       "->",
                                                                                       &strm);
+                    if (num_lines != 0)
+                        have_source = true;
+                    // TODO: Give here a one time warning if source file is missing.
                 }
             }
             switch (disasm_display)
             {
             case Debugger::eStopDisassemblyTypeNever:
                 break;
-                
+
+            case Debugger::eStopDisassemblyTypeNoDebugInfo:
+                if (have_debuginfo)
+                    break;
+                // Fall through to next case
+
             case Debugger::eStopDisassemblyTypeNoSource:
                 if (have_source)
                     break;
                 // Fall through to next case
+
             case Debugger::eStopDisassemblyTypeAlways:
                 if (target)
                 {

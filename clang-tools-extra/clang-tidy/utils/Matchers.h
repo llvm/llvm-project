@@ -23,22 +23,6 @@ AST_MATCHER(QualType, isExpensiveToCopy) {
   return IsExpensive && *IsExpensive;
 }
 
-AST_MATCHER(FunctionDecl, isNoThrow) {
-  const auto *FnTy = Node.getType()->getAs<FunctionProtoType>();
-  
-  // If the function does not have a prototype, then it is assumed to be a
-  // throwing function (as it would if the function did not have any exception
-  // specification).
-  if (!FnTy)
-    return false;
-
-  // Assume the best for any unresolved exception specification.
-  if (isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
-    return true;
-
-  return FnTy->isNothrow(Node.getASTContext());
-}
-
 } // namespace matchers
 } // namespace tidy
 } // namespace clang

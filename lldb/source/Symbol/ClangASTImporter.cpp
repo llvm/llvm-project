@@ -67,31 +67,6 @@ ClangASTImporter::CopyType (clang::ASTContext *dst_ast,
     return CopyType (dst_ast, src_ast, QualType::getFromOpaquePtr(type)).getAsOpaquePtr();
 }
 
-CompilerType
-ClangASTImporter::CopyType (ClangASTContext &dst_ast,
-                            const CompilerType &src_type)
-{
-    clang::ASTContext *dst_clang_ast = dst_ast.getASTContext();
-    if (dst_clang_ast)
-    {
-        ClangASTContext *src_ast = llvm::dyn_cast_or_null<ClangASTContext>(src_type.GetTypeSystem());
-        if (src_ast)
-        {
-            clang::ASTContext *src_clang_ast = src_ast->getASTContext();
-            if (src_clang_ast)
-            {
-                lldb::opaque_compiler_type_t dst_clang_type = CopyType(dst_clang_ast,
-                                                                       src_clang_ast,
-                                                                       src_type.GetOpaqueQualType());
-
-                if (dst_clang_type)
-                    return CompilerType(&dst_ast, dst_clang_type);
-            }
-        }
-    }
-    return CompilerType();
-}
-
 clang::Decl *
 ClangASTImporter::CopyDecl (clang::ASTContext *dst_ast,
                             clang::ASTContext *src_ast,
@@ -452,68 +427,6 @@ ClangASTImporter::CompleteObjCInterfaceDecl (clang::ObjCInterfaceDecl *interface
 
     return true;
 }
-
-bool
-ClangASTImporter::CompleteAndFetchChildren (clang::QualType type)
-{
-    if (!RequireCompleteType(type))
-        return false;
-
-    if (const TagType *tag_type = type->getAs<TagType>())
-    {
-        TagDecl *tag_decl = tag_type->getDecl();
-
-        DeclOrigin decl_origin = GetDeclOrigin(tag_decl);
-
-        if (!decl_origin.Valid())
-            return false;
-
-        MinionSP minion_sp (GetMinion(&tag_decl->getASTContext(), decl_origin.ctx));
-
-        TagDecl *origin_tag_decl = llvm::dyn_cast<TagDecl>(decl_origin.decl);
-
-        for (Decl *origin_child_decl : origin_tag_decl->decls())
-        {
-            minion_sp->Import(origin_child_decl);
-        }
-
-        if (RecordDecl *record_decl = dyn_cast<RecordDecl>(origin_tag_decl))
-        {
-            record_decl->setHasLoadedFieldsFromExternalStorage(true);
-        }
-
-        return true;
-    }
-
-    if (const ObjCObjectType *objc_object_type = type->getAs<ObjCObjectType>())
-    {
-        if (ObjCInterfaceDecl *objc_interface_decl = objc_object_type->getInterface())
-        {
-            DeclOrigin decl_origin = GetDeclOrigin(objc_interface_decl);
-
-            if (!decl_origin.Valid())
-                return false;
-
-            MinionSP minion_sp (GetMinion(&objc_interface_decl->getASTContext(), decl_origin.ctx));
-
-            ObjCInterfaceDecl *origin_interface_decl = llvm::dyn_cast<ObjCInterfaceDecl>(decl_origin.decl);
-
-            for (Decl *origin_child_decl : origin_interface_decl->decls())
-            {
-                minion_sp->Import(origin_child_decl);
-            }
-
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    
-    return true;
-}
-
 
 bool
 ClangASTImporter::RequireCompleteType (clang::QualType type)

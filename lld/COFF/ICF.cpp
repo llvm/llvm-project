@@ -185,8 +185,9 @@ void ICF::run(const std::vector<Chunk *> &Vec) {
   // Collect only mergeable sections and group by hash value.
   parallel_for_each(Vec.begin(), Vec.end(), [&](Chunk *C) {
     if (auto *SC = dyn_cast<SectionChunk>(C)) {
+      bool Global = SC->Sym && SC->Sym->isExternal();
       bool Writable = SC->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
-      if (SC->isCOMDAT() && SC->isLive() && !Writable)
+      if (SC->isCOMDAT() && SC->isLive() && Global && !Writable)
         SC->GroupID = getHash(SC) | (uint64_t(1) << 63);
     }
   });

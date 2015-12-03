@@ -1885,223 +1885,6 @@ Process::GetImageInfoAddress()
     return LLDB_INVALID_ADDRESS;
 }
 
-//----------------------------------------------------------------------
-// LoadImage
-//
-// This function provides a default implementation that works for most
-// unix variants. Any Process subclasses that need to do shared library
-// loading differently should override LoadImage and UnloadImage and
-// do what is needed.
-//----------------------------------------------------------------------
-uint32_t
-Process::LoadImage (const FileSpec &image_spec, Error &error)
-{
-    if (m_finalizing)
-    {
-        error.SetErrorString("process is tearing itself down");
-        return LLDB_INVALID_IMAGE_TOKEN;
-    }
-
-    char path[PATH_MAX];
-    image_spec.GetPath(path, sizeof(path));
-
-    DynamicLoader *loader = GetDynamicLoader();
-    if (loader)
-    {
-        error = loader->CanLoadImage();
-        if (error.Fail())
-            return LLDB_INVALID_IMAGE_TOKEN;
-    }
-    
-    if (error.Success())
-    {
-        ThreadSP thread_sp(GetThreadList ().GetSelectedThread());
-        
-        if (thread_sp)
-        {
-            StackFrameSP frame_sp (thread_sp->GetStackFrameAtIndex (0));
-            
-            if (frame_sp)
-            {
-                ExecutionContext exe_ctx;
-                frame_sp->CalculateExecutionContext (exe_ctx);
-                EvaluateExpressionOptions expr_options;
-                expr_options.SetUnwindOnError(true);
-                expr_options.SetIgnoreBreakpoints(true);
-                expr_options.SetExecutionPolicy(eExecutionPolicyAlways);
-                expr_options.SetResultIsInternal(true);
-                expr_options.SetLanguage(eLanguageTypeC_plus_plus);
-                
-                StreamString expr;
-                expr.Printf(R"(
-                               struct __lldb_dlopen_result { void *image_ptr; const char *error_str; } the_result;
-                               the_result.image_ptr = dlopen ("%s", 2);
-                               if (the_result.image_ptr == (void *) 0x0)
-                               {
-                                   the_result.error_str = dlerror();
-                               }
-                               else
-                               {
-                                   the_result.error_str = (const char *) 0x0;
-                               }
-                               the_result;
-                              )",
-                              path);
-                const char *prefix = R"(
-                                        extern "C" void* dlopen (const char *path, int mode);
-                                        extern "C" const char *dlerror (void);
-                                        )";
-                lldb::ValueObjectSP result_valobj_sp;
-                Error expr_error;
-                UserExpression::Evaluate (exe_ctx,
-                                          expr_options,
-                                          expr.GetData(),
-                                          prefix,
-                                          result_valobj_sp,
-                                          expr_error);
-                if (expr_error.Success())
-                {
-                    error = result_valobj_sp->GetError();
-                    if (error.Success())
-                    {
-                        Scalar scalar;
-                        ValueObjectSP image_ptr_sp = result_valobj_sp->GetChildAtIndex(0, true);
-                        if (image_ptr_sp && image_ptr_sp->ResolveValue (scalar))
-                        {
-                            addr_t image_ptr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
-                            if (image_ptr != 0 && image_ptr != LLDB_INVALID_ADDRESS)
-                            {
-                                uint32_t image_token = m_image_tokens.size();
-                                m_image_tokens.push_back (image_ptr);
-                                return image_token;
-                            }
-                            else if (image_ptr == 0)
-                            {
-                                ValueObjectSP error_str_sp = result_valobj_sp->GetChildAtIndex(1, true);
-                                if (error_str_sp)
-                                {
-                                    if (error_str_sp->IsCStringContainer(true))
-                                    {
-                                        DataBufferSP buffer_sp(new DataBufferHeap(10240,0));
-                                        size_t num_chars = error_str_sp->ReadPointedString (buffer_sp, error, 10240).first;
-                                        if (error.Success() && num_chars > 0)
-                                        {
-                                            error.Clear();
-                                            error.SetErrorStringWithFormat("dlopen error: %s", buffer_sp->GetBytes());
-                                        }
-                                        else
-                                        {
-                                            error.Clear();
-                                            error.SetErrorStringWithFormat("dlopen failed for unknown reasons.");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                    error = expr_error;
-            }
-        }
-    }
-    if (!error.AsCString())
-        error.SetErrorStringWithFormat("unable to load '%s'", path);
-    return LLDB_INVALID_IMAGE_TOKEN;
-}
-
-//----------------------------------------------------------------------
-// UnloadImage
-//
-// This function provides a default implementation that works for most
-// unix variants. Any Process subclasses that need to do shared library
-// loading differently should override LoadImage and UnloadImage and
-// do what is needed.
-//----------------------------------------------------------------------
-Error
-Process::UnloadImage (uint32_t image_token)
-{
-    Error error;
-
-    if (m_finalizing)
-    {
-        error.SetErrorString("process is tearing itself down");
-        return error;
-    }
-
-    if (image_token < m_image_tokens.size())
-    {
-        const addr_t image_addr = m_image_tokens[image_token];
-        if (image_addr == LLDB_INVALID_ADDRESS)
-        {
-            error.SetErrorString("image already unloaded");
-        }
-        else
-        {
-            DynamicLoader *loader = GetDynamicLoader();
-            if (loader)
-                error = loader->CanLoadImage();
-            
-            if (error.Success())
-            {
-                ThreadSP thread_sp(GetThreadList ().GetSelectedThread());
-                
-                if (thread_sp)
-                {
-                    StackFrameSP frame_sp (thread_sp->GetStackFrameAtIndex (0));
-                    
-                    if (frame_sp)
-                    {
-                        ExecutionContext exe_ctx;
-                        frame_sp->CalculateExecutionContext (exe_ctx);
-                        EvaluateExpressionOptions expr_options;
-                        expr_options.SetUnwindOnError(true);
-                        expr_options.SetIgnoreBreakpoints(true);
-                        expr_options.SetExecutionPolicy(eExecutionPolicyAlways);
-                        expr_options.SetLanguage(eLanguageTypeC_plus_plus);
-                        
-                        StreamString expr;
-                        expr.Printf("dlclose ((void *)0x%" PRIx64 ")", image_addr);
-                        const char *prefix = "extern \"C\" int dlclose(void* handle);\n";
-                        lldb::ValueObjectSP result_valobj_sp;
-                        Error expr_error;
-                        UserExpression::Evaluate (exe_ctx,
-                                                  expr_options,
-                                                  expr.GetData(),
-                                                  prefix,
-                                                  result_valobj_sp,
-                                                  expr_error);
-                        if (result_valobj_sp->GetError().Success())
-                        {
-                            Scalar scalar;
-                            if (result_valobj_sp->ResolveValue (scalar))
-                            {
-                                if (scalar.UInt(1))
-                                {
-                                    error.SetErrorStringWithFormat("expression failed: \"%s\"", expr.GetData());
-                                }
-                                else
-                                {
-                                    m_image_tokens[image_token] = LLDB_INVALID_ADDRESS;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            error = result_valobj_sp->GetError();
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        error.SetErrorString("invalid image token");
-    }
-    return error;
-}
-
 const lldb::ABISP &
 Process::GetABI()
 {
@@ -6722,4 +6505,26 @@ Process::GetModuleSpec(const FileSpec& module_file_spec,
 {
     module_spec.Clear();
     return false;
+}
+
+size_t
+Process::AddImageToken(lldb::addr_t image_ptr)
+{
+    m_image_tokens.push_back(image_ptr);
+    return m_image_tokens.size() - 1;
+}
+
+lldb::addr_t
+Process::GetImagePtrFromToken(size_t token) const
+{
+    if (token < m_image_tokens.size())
+        return m_image_tokens[token];
+    return LLDB_INVALID_IMAGE_TOKEN;
+}
+
+void
+Process::ResetImageToken(size_t token)
+{
+    if (token < m_image_tokens.size())
+        m_image_tokens[token] = LLDB_INVALID_IMAGE_TOKEN;
 }

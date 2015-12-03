@@ -29,10 +29,19 @@ from six.moves import cPickle
 
 # LLDB modules
 
+
 class EventBuilder(object):
     """Helper class to build test result event dictionaries."""
 
     BASE_DICTIONARY = None
+
+    # Test Status Tags
+    STATUS_SUCCESS = "success"
+    STATUS_FAILURE = "failure"
+    STATUS_EXPECTED_FAILURE = "expected_failure"
+    STATUS_UNEXPECTED_SUCCESS = "unexpected_success"
+    STATUS_SKIP = "skip"
+    STATUS_ERROR = "error"
 
     @staticmethod
     def _get_test_name_info(test):
@@ -182,7 +191,8 @@ class EventBuilder(object):
 
         @return the event dictionary
         """
-        return EventBuilder._event_dictionary_test_result(test, "success")
+        return EventBuilder._event_dictionary_test_result(
+            test, EventBuilder.STATUS_SUCCESS)
 
     @staticmethod
     def event_for_unexpected_success(test, bugnumber):
@@ -199,7 +209,7 @@ class EventBuilder(object):
 
         """
         event = EventBuilder._event_dictionary_test_result(
-            test, "unexpected_success")
+            test, EventBuilder.STATUS_UNEXPECTED_SUCCESS)
         if bugnumber:
             event["bugnumber"] = str(bugnumber)
         return event
@@ -216,7 +226,7 @@ class EventBuilder(object):
         @return the event dictionary
         """
         return EventBuilder._event_dictionary_issue(
-            test, "failure", error_tuple)
+            test, EventBuilder.STATUS_FAILURE, error_tuple)
 
     @staticmethod
     def event_for_expected_failure(test, error_tuple, bugnumber):
@@ -234,7 +244,7 @@ class EventBuilder(object):
 
         """
         event = EventBuilder._event_dictionary_issue(
-            test, "expected_failure", error_tuple)
+            test, EventBuilder.STATUS_EXPECTED_FAILURE, error_tuple)
         if bugnumber:
             event["bugnumber"] = str(bugnumber)
         return event
@@ -249,7 +259,8 @@ class EventBuilder(object):
 
         @return the event dictionary
         """
-        event = EventBuilder._event_dictionary_test_result(test, "skip")
+        event = EventBuilder._event_dictionary_test_result(
+            test, EventBuilder.STATUS_SKIP)
         event["skip_reason"] = reason
         return event
 
@@ -264,7 +275,8 @@ class EventBuilder(object):
 
         @return the event dictionary
         """
-        return EventBuilder._event_dictionary_issue(test, "error", error_tuple)
+        return EventBuilder._event_dictionary_issue(
+            test, EventBuilder.STATUS_ERROR, error_tuple)
 
     @staticmethod
     def event_for_cleanup_error(test, error_tuple):
@@ -279,7 +291,7 @@ class EventBuilder(object):
         @return the event dictionary
         """
         event = EventBuilder._event_dictionary_issue(
-            test, "error", error_tuple)
+            test, EventBuilder.STATUS_ERROR, error_tuple)
         event["issue_phase"] = "cleanup"
         return event
 
@@ -376,7 +388,6 @@ class ResultsFormatter(object):
     expectations about when the call should be chained.
 
     """
-
     @classmethod
     def arg_parser(cls):
         """@return arg parser used to parse formatter-specific options."""
@@ -395,6 +406,16 @@ class ResultsFormatter(object):
             raise Exception("ResultsFormatter created with no file object")
         self.start_time_by_test = {}
         self.terminate_called = False
+
+        # Store counts of test_result events by status.
+        self.result_status_counts = {
+            EventBuilder.STATUS_SUCCESS: 0,
+            EventBuilder.STATUS_EXPECTED_FAILURE: 0,
+            EventBuilder.STATUS_SKIP: 0,
+            EventBuilder.STATUS_UNEXPECTED_SUCCESS: 0,
+            EventBuilder.STATUS_FAILURE: 0,
+            EventBuilder.STATUS_ERROR: 0
+        }
 
         # Lock that we use while mutating inner state, like the
         # total test count and the elements.  We minimize how
@@ -417,14 +438,19 @@ class ResultsFormatter(object):
         # atexit() cleanup can call the "terminate if it hasn't been
         # called yet".
         if test_event is not None:
-            if test_event.get("event", "") == "terminate":
+            event_type = test_event.get("event", "")
+            if event_type == "terminate":
                 self.terminate_called = True
+            elif event_type == "test_result":
+                # Keep track of event counts per test result status type
+                status = test_event["status"]
+                self.result_status_counts[status] += 1
 
     def track_start_time(self, test_class, test_name, start_time):
-        """Tracks the start time of a test so elapsed time can be computed.
+        """tracks the start time of a test so elapsed time can be computed.
 
-        This alleviates the need for test results to be processed serially
-        by test.  It will save the start time for the test so that
+        this alleviates the need for test results to be processed serially
+        by test.  it will save the start time for the test so that
         elapsed_time_for_test() can compute the elapsed time properly.
         """
         if test_class is None or test_name is None:
@@ -435,9 +461,9 @@ class ResultsFormatter(object):
             self.start_time_by_test[test_key] = start_time
 
     def elapsed_time_for_test(self, test_class, test_name, end_time):
-        """Returns the elapsed time for a test.
+        """returns the elapsed time for a test.
 
-        This function can only be called once per test and requires that
+        this function can only be called once per test and requires that
         the track_start_time() method be called sometime prior to calling
         this method.
         """
@@ -454,15 +480,37 @@ class ResultsFormatter(object):
         return end_time - start_time
 
     def is_using_terminal(self):
-        """Returns True if this results formatter is using the terminal and
+        """returns true if this results formatter is using the terminal and
         output should be avoided."""
         return self.using_terminal
 
     def send_terminate_as_needed(self):
-        """Sends the terminate event if it hasn't been received yet."""
+        """sends the terminate event if it hasn't been received yet."""
         if not self.terminate_called:
             terminate_event = EventBuilder.bare_event("terminate")
             self.handle_event(terminate_event)
+
+    # Derived classes may require self access
+    # pylint: disable=no-self-use
+    def replaces_summary(self):
+        """Returns whether the results formatter includes a summary
+        suitable to replace the old lldb test run results.
+
+        @return True if the lldb test runner can skip its summary
+        generation when using this results formatter; False otherwise.
+        """
+        return False
+
+    def counts_by_test_result_status(self, status):
+        """Returns number of test method results for the given status.
+
+        @status_result a test result status (e.g. success, fail, skip)
+        as defined by the EventBuilder.STATUS_* class members.
+
+        @return an integer returning the number of test methods matching
+        the given test result status.
+        """
+        return self.result_status_counts[status]
 
 
 class XunitFormatter(ResultsFormatter):
@@ -527,7 +575,8 @@ class XunitFormatter(ResultsFormatter):
             unicode_content = str_or_unicode.decode('utf-8')
         else:
             unicode_content = str_or_unicode
-        return self.invalid_xml_re.sub(six.u('?'), unicode_content).encode('utf-8')
+        return self.invalid_xml_re.sub(
+            six.u('?'), unicode_content).encode('utf-8')
 
     @classmethod
     def arg_parser(cls):
@@ -622,12 +671,14 @@ class XunitFormatter(ResultsFormatter):
             }
 
         self.status_handlers = {
-            "success": self._handle_success,
-            "failure": self._handle_failure,
-            "error": self._handle_error,
-            "skip": self._handle_skip,
-            "expected_failure": self._handle_expected_failure,
-            "unexpected_success": self._handle_unexpected_success
+            EventBuilder.STATUS_SUCCESS: self._handle_success,
+            EventBuilder.STATUS_FAILURE: self._handle_failure,
+            EventBuilder.STATUS_ERROR: self._handle_error,
+            EventBuilder.STATUS_SKIP: self._handle_skip,
+            EventBuilder.STATUS_EXPECTED_FAILURE:
+                self._handle_expected_failure,
+            EventBuilder.STATUS_UNEXPECTED_SUCCESS:
+                self._handle_unexpected_success
             }
 
     def handle_event(self, test_event):
@@ -976,10 +1027,11 @@ class RawPickledFormatter(ResultsFormatter):
         # Tack on the pid.
         test_event["pid"] = self.pid
 
-        # Send it as {serialized_length_of_serialized_bytes}#{serialized_bytes}
-        pickled_message = cPickle.dumps(test_event)
-        self.out_file.send(
-            "{}#{}".format(len(pickled_message), pickled_message))
+        # Send it as {serialized_length_of_serialized_bytes}{serialized_bytes}
+        import struct
+        msg = cPickle.dumps(test_event)
+        packet = struct.pack("!I%ds" % len(msg), len(msg), msg)
+        self.out_file.send(packet)
 
 
 class DumpFormatter(ResultsFormatter):

@@ -33,10 +33,7 @@ from . import remote
 
 default_port = 8537
 
-def process_args(args):
-    # Setup the parser arguments that are accepted.
-    parser = argparse.ArgumentParser(description='SWIG generation server.')
-
+def add_subparser_args(parser):
     parser.add_argument(
         "--port",
         action="store",
@@ -49,8 +46,8 @@ def process_args(args):
         default=fs.find_executable("swig"),
         dest="swig_executable")
 
-    # Process args.
-    return parser.parse_args(args)
+def finalize_subparser_options(options):
+    pass
 
 def initialize_listening_socket(options):
     logging.debug("Creating socket...")
@@ -134,8 +131,7 @@ def accept_loop(sock, options):
             logging.error("An error occurred while processing the connection.")
             logging.error(error)
 
-def run(args):
-    options = process_args(args)
+def run(options):
     print(options)
     sock = initialize_listening_socket(options)
     accept_loop(sock, options)

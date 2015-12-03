@@ -987,9 +987,41 @@ class ModuleCache;
         virtual uint32_t
         GetDefaultMemoryCacheLineSize() { return 0; }
 
+        //------------------------------------------------------------------
+        /// Load a shared library into this process.
+        ///
+        /// Try and load a shared library into the current process. This
+        /// call might fail in the dynamic loader plug-in says it isn't safe
+        /// to try and load shared libraries at the moment.
+        ///
+        /// @param[in] process
+        ///     The process to load the image.
+        ///
+        /// @param[in] image_spec
+        ///     The image file spec that points to the shared library that
+        ///     you want to load.
+        ///
+        /// @param[out] error
+        ///     An error object that gets filled in with any errors that
+        ///     might occur when trying to load the shared library.
+        ///
+        /// @return
+        ///     A token that represents the shared library that can be
+        ///     later used to unload the shared library. A value of
+        ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+        ///     library can't be opened.
+        //------------------------------------------------------------------
+        virtual uint32_t
+        LoadImage (lldb_private::Process* process,
+                   const lldb_private::FileSpec& image_spec,
+                   lldb_private::Error& error);
+
+        virtual Error
+        UnloadImage (lldb_private::Process* process, uint32_t image_token);
+
     protected:
         bool m_is_host;
-        // Set to true when we are able to actually set the OS version while 
+        // Set to true when we are able to actually set the OS version while
         // being connected. For remote platforms, we might set the version ahead
         // of time before we actually connect and this version might change when
         // we actually connect to a remote platform. For the host platform this

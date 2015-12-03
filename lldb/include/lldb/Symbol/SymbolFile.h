@@ -15,6 +15,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+
 #include "lldb/Symbol/Type.h"
 
 namespace lldb_private {
@@ -141,8 +142,6 @@ public:
     virtual uint32_t        FindFunctions (const ConstString &name, const CompilerDeclContext *parent_decl_ctx, uint32_t name_type_mask, bool include_inlines, bool append, SymbolContextList& sc_list);
     virtual uint32_t        FindFunctions (const RegularExpression& regex, bool include_inlines, bool append, SymbolContextList& sc_list);
     virtual uint32_t        FindTypes (const SymbolContext& sc, const ConstString &name, const CompilerDeclContext *parent_decl_ctx, bool append, uint32_t max_matches, TypeMap& types);
-    virtual size_t          FindTypes (const std::vector<CompilerContext> &context, bool append, TypeMap& types);
-
 //  virtual uint32_t        FindTypes (const SymbolContext& sc, const RegularExpression& regex, bool append, uint32_t max_matches, TypeList& types) = 0;
     virtual TypeList *      GetTypeList ();
     virtual size_t          GetTypes (lldb_private::SymbolContextScope *sc_scope,

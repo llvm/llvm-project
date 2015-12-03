@@ -173,11 +173,24 @@ public:
     lldb_private::Error
     DisconnectRemote () override;
 
+    uint32_t
+    LoadImage (lldb_private::Process* process,
+               const lldb_private::FileSpec& image_spec,
+               lldb_private::Error& error) override;
+
+    lldb_private::Error
+    UnloadImage (lldb_private::Process* process, uint32_t image_token) override;
+
 protected:
     std::unique_ptr<lldb_private::OptionGroupOptions> m_options;
-        
     lldb::PlatformSP m_remote_platform_sp; // Allow multiple ways to connect to a remote POSIX-compliant OS
-    
+
+    lldb_private::Error
+    EvaluateLibdlExpression(lldb_private::Process* process,
+                            const char *expr_cstr,
+                            const char *expr_prefix,
+                            lldb::ValueObjectSP& result_valobj_sp);
+
 private:
     DISALLOW_COPY_AND_ASSIGN (PlatformPOSIX);
 };

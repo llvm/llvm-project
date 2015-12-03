@@ -30,7 +30,7 @@ from . import remote
 default_ip = "127.0.0.1"
 default_port = 8537
 
-def process_args(args):
+def add_subparser_args(parser):
     """Returns options processed from the provided command line.
 
     @param args the command line to process.
@@ -75,10 +75,6 @@ def process_args(args):
                     raise ValueError("Invalid connection string")
             setattr(namespace, self.dest, ip_port)
 
-    # Setup the parser arguments that are accepted.
-    parser = argparse.ArgumentParser(
-        description='Generate SWIG bindings.')
-
     parser.add_argument(
         "--local",
         action=FindLocalSwigAction,
@@ -112,9 +108,7 @@ def process_args(args):
         action="append",
         help="Specifies the language to generate bindings for")
 
-    # Process args.
-    options = parser.parse_args(args)
-
+def finalize_subparser_options(options):
     if options.languages is None:
         options.languages = ['python']
 
@@ -173,9 +167,7 @@ def handle_response(options, connection, response):
     finally:
         os.unlink(response_file_path)
 
-def run(args):
-    options = process_args(args)
-
+def run(options):
     if options.remote is None:
         logging.info("swig bot client using local swig installation at '{}'"
                      .format(options.swig_executable))

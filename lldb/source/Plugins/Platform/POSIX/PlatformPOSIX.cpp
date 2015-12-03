@@ -19,13 +19,18 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamString.h"
+#include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileCache.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Target/DynamicLoader.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Target/Thread.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -846,6 +851,140 @@ PlatformPOSIX::DebugProcess (ProcessLaunchInfo &launch_info,
 
 void
 PlatformPOSIX::CalculateTrapHandlerSymbolNames ()
-{   
+{
     m_trap_handlers.push_back (ConstString ("_sigtramp"));
-}   
+}
+
+Error
+PlatformPOSIX::EvaluateLibdlExpression(lldb_private::Process* process,
+                                       const char* expr_cstr,
+                                       const char* expr_prefix,
+                                       lldb::ValueObjectSP& result_valobj_sp)
+{
+    DynamicLoader *loader = process->GetDynamicLoader();
+    if (loader)
+    {
+        Error error = loader->CanLoadImage();
+        if (error.Fail())
+            return error;
+    }
+
+    ThreadSP thread_sp(process->GetThreadList().GetSelectedThread());
+    if (!thread_sp)
+        return Error("Selected thread isn't valid");
+
+    StackFrameSP frame_sp(thread_sp->GetStackFrameAtIndex(0));
+    if (!frame_sp)
+        return Error("Frame 0 isn't valid");
+
+    ExecutionContext exe_ctx;
+    frame_sp->CalculateExecutionContext(exe_ctx);
+    EvaluateExpressionOptions expr_options;
+    expr_options.SetUnwindOnError(true);
+    expr_options.SetIgnoreBreakpoints(true);
+    expr_options.SetExecutionPolicy(eExecutionPolicyAlways);
+    expr_options.SetLanguage(eLanguageTypeC_plus_plus);
+
+    Error expr_error;
+    UserExpression::Evaluate(exe_ctx,
+                             expr_options,
+                             expr_cstr,
+                             expr_prefix,
+                             result_valobj_sp,
+                             expr_error);
+    if (result_valobj_sp->GetError().Fail())
+        return result_valobj_sp->GetError();
+    return Error();
+}
+
+uint32_t
+PlatformPOSIX::LoadImage(lldb_private::Process* process, const FileSpec& image_spec, Error& error)
+{
+    char path[PATH_MAX];
+    image_spec.GetPath(path, sizeof(path));
+
+    StreamString expr;
+    expr.Printf(R"(
+                   struct __lldb_dlopen_result { void *image_ptr; const char *error_str; } the_result;
+                   the_result.image_ptr = dlopen ("%s", 2);
+                   if (the_result.image_ptr == (void *) 0x0)
+                   {
+                       the_result.error_str = dlerror();
+                   }
+                   else
+                   {
+                       the_result.error_str = (const char *) 0x0;
+                   }
+                   the_result;
+                  )",
+                  path);
+    const char *prefix = R"(
+                            extern "C" void* dlopen (const char *path, int mode);
+                            extern "C" const char *dlerror (void);
+                            )";
+    lldb::ValueObjectSP result_valobj_sp;
+    error = EvaluateLibdlExpression(process, expr.GetData(), prefix, result_valobj_sp);
+    if (error.Fail())
+        return LLDB_INVALID_IMAGE_TOKEN;
+
+    error = result_valobj_sp->GetError();
+    if (error.Fail())
+        return LLDB_INVALID_IMAGE_TOKEN;
+
+    Scalar scalar;
+    ValueObjectSP image_ptr_sp = result_valobj_sp->GetChildAtIndex(0, true);
+    if (!image_ptr_sp || !image_ptr_sp->ResolveValue(scalar))
+    {
+        error.SetErrorStringWithFormat("unable to load '%s'", path);
+        return LLDB_INVALID_IMAGE_TOKEN;
+    }
+
+    addr_t image_ptr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
+    if (image_ptr != 0 && image_ptr != LLDB_INVALID_ADDRESS)
+        return process->AddImageToken(image_ptr);
+
+    if (image_ptr == 0)
+    {
+        ValueObjectSP error_str_sp = result_valobj_sp->GetChildAtIndex(1, true);
+        if (error_str_sp && error_str_sp->IsCStringContainer(true))
+        {
+            DataBufferSP buffer_sp(new DataBufferHeap(10240,0));
+            size_t num_chars = error_str_sp->ReadPointedString (buffer_sp, error, 10240).first;
+            if (error.Success() && num_chars > 0)
+                error.SetErrorStringWithFormat("dlopen error: %s", buffer_sp->GetBytes());
+            else
+                error.SetErrorStringWithFormat("dlopen failed for unknown reasons.");
+            return LLDB_INVALID_IMAGE_TOKEN;
+        }
+    }
+    error.SetErrorStringWithFormat("unable to load '%s'", path);
+    return LLDB_INVALID_IMAGE_TOKEN;
+}
+
+Error
+PlatformPOSIX::UnloadImage (lldb_private::Process* process, uint32_t image_token)
+{
+    const addr_t image_addr = process->GetImagePtrFromToken(image_token);
+    if (image_addr == LLDB_INVALID_ADDRESS)
+        return Error("Invalid image token");
+
+    StreamString expr;
+    expr.Printf("dlclose((void *)0x%" PRIx64 ")", image_addr);
+    const char *prefix = "extern \"C\" int dlclose(void* handle);\n";
+    lldb::ValueObjectSP result_valobj_sp;
+    Error error = EvaluateLibdlExpression(process, expr.GetData(), prefix, result_valobj_sp);
+    if (error.Fail())
+        return error;
+
+    if (result_valobj_sp->GetError().Fail())
+        return result_valobj_sp->GetError();
+
+    Scalar scalar;
+    if (result_valobj_sp->ResolveValue(scalar))
+    {
+        if (scalar.UInt(1))
+            return Error("expression failed: \"%s\"", expr.GetData());
+        process->ResetImageToken(image_token);
+    }
+    return Error();
+}

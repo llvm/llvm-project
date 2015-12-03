@@ -24,6 +24,8 @@ import time
 # LLDB modules
 from . import lldbcurses
 from . import test_results
+from .test_results import EventBuilder
+
 
 class Curses(test_results.ResultsFormatter):
     """Receives live results from tests that are running and reports them to the terminal in a curses GUI"""
@@ -38,7 +40,7 @@ class Curses(test_results.ResultsFormatter):
         self.job_tests = [None] * 64
         self.results = list()
         try:
-            self.main_window = lldbcurses.intialize_curses()         
+            self.main_window = lldbcurses.intialize_curses()
             self.main_window.add_key_action('\t', self.main_window.select_next_first_responder, "Switch between views that can respond to keyboard input")
             self.main_window.refresh()
             self.job_panel = None
@@ -53,26 +55,25 @@ class Curses(test_results.ResultsFormatter):
             self.using_terminal = False
             print("Unexpected error:", sys.exc_info()[0])
             raise
-            
-        
+
         self.line_dict = dict()
-        #self.events_file = open("/tmp/events.txt", "w")
+        # self.events_file = open("/tmp/events.txt", "w")
         # self.formatters = list()
         # if tee_results_formatter:
         #     self.formatters.append(tee_results_formatter)
 
     def status_to_short_str(self, status):
-        if status == 'success':
+        if status == EventBuilder.STATUS_SUCCESS:
             return '.'
-        elif status == 'failure':
+        elif status == EventBuilder.STATUS_FAILURE:
             return 'F'
-        elif status == 'unexpected_success':
+        elif status == EventBuilder.STATUS_UNEXPECTED_SUCCESS:
             return '?'
-        elif status == 'expected_failure':
+        elif status == EventBuilder.STATUS_EXPECTED_FAILURE:
             return 'X'
-        elif status == 'skip':
+        elif status == EventBuilder.STATUS_SKIP:
             return 'S'
-        elif status == 'error':
+        elif status == EventBuilder.STATUS_ERROR:
             return 'E'
         else:
             return status
@@ -88,7 +89,7 @@ class Curses(test_results.ResultsFormatter):
                 self.info_panel.top()
             else:
                 self.info_panel.show()
-            
+
             self.main_window.push_first_responder(self.info_panel)
             test_start = self.results[selected_idx][0]
             test_result = self.results[selected_idx][1]
@@ -99,9 +100,9 @@ class Curses(test_results.ResultsFormatter):
 
     def hide_info_panel(self):
         self.main_window.pop_first_responder(self.info_panel)
-        self.info_panel.hide()        
+        self.info_panel.hide()
         self.main_window.refresh()
-        
+
     def toggle_status(self, status):
         if status:
             # Toggle showing and hiding results whose status matches "status" in "Results" window
@@ -123,8 +124,8 @@ class Curses(test_results.ResultsFormatter):
             name = test_result['test_class'] + '.' + test_result['test_name']
             self.results_panel.append_line('%s (%6.2f sec) %s' % (self.status_to_short_str(status), test_result['elapsed_time'], name))
         if update:
-            self.main_window.refresh()    
-            
+            self.main_window.refresh()
+
     def handle_event(self, test_event):
         with self.lock:
             super(Curses, self).handle_event(test_event)
@@ -137,7 +138,7 @@ class Curses(test_results.ResultsFormatter):
                 if 'event' in test_event:
                     check_for_one_key = True
                     #print(str(test_event), file=self.events_file)
-                    event = test_event['event']   
+                    event = test_event['event']
                     if self.status_panel:
                         self.status_panel.update_status('time', str(datetime.timedelta(seconds=math.floor(time.time() - self.start_time))))
                     if event == 'test_start':
@@ -176,7 +177,7 @@ class Curses(test_results.ResultsFormatter):
                     elif event == 'job_end':
                         self.jobs[worker_index] = ''
                         self.job_panel.set_line(worker_index, '')
-                    elif event == 'initialize': 
+                    elif event == 'initialize':
                         self.initialize_event = test_event
                         num_jobs = test_event['worker_count']
                         job_frame = self.main_window.get_contained_rect(height=num_jobs+2)
@@ -184,41 +185,40 @@ class Curses(test_results.ResultsFormatter):
                         status_frame = self.main_window.get_contained_rect(height=1, top_inset=self.main_window.get_size().h-1)
                         self.job_panel = lldbcurses.BoxedPanel(frame=job_frame, title="Jobs")
                         self.results_panel = lldbcurses.BoxedPanel(frame=results_frame, title="Results")
-                        
+
                         self.results_panel.add_key_action(curses.KEY_UP,    self.results_panel.select_prev      , "Select the previous list entry")
                         self.results_panel.add_key_action(curses.KEY_DOWN,  self.results_panel.select_next      , "Select the next list entry")
                         self.results_panel.add_key_action(curses.KEY_HOME,  self.results_panel.scroll_begin     , "Scroll to the start of the list")
                         self.results_panel.add_key_action(curses.KEY_END,   self.results_panel.scroll_end       , "Scroll to the end of the list")
                         self.results_panel.add_key_action(curses.KEY_ENTER, self.show_info_panel                , "Display info for the selected result item")
-                        self.results_panel.add_key_action('.', lambda : self.toggle_status('success')           , "Toggle showing/hiding tests whose status is 'success'")
-                        self.results_panel.add_key_action('e', lambda : self.toggle_status('error')             , "Toggle showing/hiding tests whose status is 'error'")
-                        self.results_panel.add_key_action('f', lambda : self.toggle_status('failure')           , "Toggle showing/hiding tests whose status is 'failure'")
-                        self.results_panel.add_key_action('s', lambda : self.toggle_status('skip')              , "Toggle showing/hiding tests whose status is 'skip'")
-                        self.results_panel.add_key_action('x', lambda : self.toggle_status('expected_failure')  , "Toggle showing/hiding tests whose status is 'expected_failure'")
-                        self.results_panel.add_key_action('?', lambda : self.toggle_status('unexpected_success'), "Toggle showing/hiding tests whose status is 'unexpected_success'")
+                        self.results_panel.add_key_action('.', lambda : self.toggle_status(EventBuilder.STATUS_SUCCESS)           , "Toggle showing/hiding tests whose status is 'success'")
+                        self.results_panel.add_key_action('e', lambda : self.toggle_status(EventBuilder.STATUS_ERROR)             , "Toggle showing/hiding tests whose status is 'error'")
+                        self.results_panel.add_key_action('f', lambda : self.toggle_status(EventBuilder.STATUS_FAILURE)           , "Toggle showing/hiding tests whose status is 'failure'")
+                        self.results_panel.add_key_action('s', lambda : self.toggle_status(EventBuilder.STATUS_SKIP)              , "Toggle showing/hiding tests whose status is 'skip'")
+                        self.results_panel.add_key_action('x', lambda : self.toggle_status(EventBuilder.STATUS_EXPECTED_FAILURE)  , "Toggle showing/hiding tests whose status is 'expected_failure'")
+                        self.results_panel.add_key_action('?', lambda : self.toggle_status(EventBuilder.STATUS_UNEXPECTED_SUCCESS), "Toggle showing/hiding tests whose status is 'unexpected_success'")
                         self.status_panel = lldbcurses.StatusPanel(frame=status_frame)
-                        
+
                         self.main_window.add_child(self.job_panel)
                         self.main_window.add_child(self.results_panel)
                         self.main_window.add_child(self.status_panel)
                         self.main_window.set_first_responder(self.results_panel)
-                        
+
                         self.status_panel.add_status_item(name="time", title="Elapsed", format="%s", width=20, value="0:00:00", update=False)
-                        self.status_panel.add_status_item(name="success", title="Success", format="%u", width=20, value=0, update=False)
-                        self.status_panel.add_status_item(name="failure", title="Failure", format="%u", width=20, value=0, update=False)
-                        self.status_panel.add_status_item(name="error", title="Error", format="%u", width=20, value=0, update=False)
-                        self.status_panel.add_status_item(name="skip", title="Skipped", format="%u", width=20, value=0, update=True)
-                        self.status_panel.add_status_item(name="expected_failure", title="Expected Failure", format="%u", width=30, value=0, update=False)
-                        self.status_panel.add_status_item(name="unexpected_success", title="Unexpected Success", format="%u", width=30, value=0, update=False)
+                        self.status_panel.add_status_item(name=EventBuilder.STATUS_SUCCESS, title="Success", format="%u", width=20, value=0, update=False)
+                        self.status_panel.add_status_item(name=EventBuilder.STATUS_FAILURE, title="Failure", format="%u", width=20, value=0, update=False)
+                        self.status_panel.add_status_item(name=EventBuilder.STATUS_ERROR, title="Error", format="%u", width=20, value=0, update=False)
+                        self.status_panel.add_status_item(name=EventBuilder.STATUS_SKIP, title="Skipped", format="%u", width=20, value=0, update=True)
+                        self.status_panel.add_status_item(name=EventBuilder.STATUS_EXPECTED_FAILURE, title="Expected Failure", format="%u", width=30, value=0, update=False)
+                        self.status_panel.add_status_item(name=EventBuilder.STATUS_UNEXPECTED_SUCCESS, title="Unexpected Success", format="%u", width=30, value=0, update=False)
                         self.main_window.refresh()
                     elif event == 'terminate':
                         #self.main_window.key_event_loop()
                         lldbcurses.terminate_curses()
                         check_for_one_key = False
                         self.using_terminal = False
-                        # Check for 1 keypress with no delay 
-                    
+                        # Check for 1 keypress with no delay
+
                     # Check for 1 keypress with no delay
                     if check_for_one_key:
-                        self.main_window.key_event_loop(0, 1) 
-                        
+                        self.main_window.key_event_loop(0, 1)

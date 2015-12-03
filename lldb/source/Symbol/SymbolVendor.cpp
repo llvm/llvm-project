@@ -361,21 +361,6 @@ SymbolVendor::FindTypes (const SymbolContext& sc, const ConstString &name, const
 }
 
 size_t
-SymbolVendor::FindTypes (const std::vector<CompilerContext> &context, bool append, TypeMap& types)
-{
-    ModuleSP module_sp(GetModule());
-    if (module_sp)
-    {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
-        if (m_sym_file_ap.get())
-            return m_sym_file_ap->FindTypes(context, append, types);
-    }
-    if (!append)
-        types.Clear();
-    return 0;
-}
-
-size_t
 SymbolVendor::GetTypes (SymbolContextScope *sc_scope,
                         uint32_t type_mask,
                         lldb_private::TypeList &type_list)

@@ -494,7 +494,7 @@ NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation (lldb::addr_t fai
         log->Printf ("NativeRegisterContextLinux_mips64::%s Reading PC from breakpoint location", __FUNCTION__);
 
     // PC register is at index 34 of the register array
-    const RegisterInfo *const pc_info_p = GetRegisterInfoAtIndex (34);
+    const RegisterInfo *const pc_info_p = GetRegisterInfoAtIndex (gpr_pc_mips64);
         
     error = ReadRegister (pc_info_p, pc_value);
     if (error.Success ())
@@ -502,7 +502,7 @@ NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation (lldb::addr_t fai
         pc = pc_value.GetAsUInt64 ();
         
         // CAUSE register is at index 37 of the register array
-        const RegisterInfo *const cause_info_p = GetRegisterInfoAtIndex (37);
+        const RegisterInfo *const cause_info_p = GetRegisterInfoAtIndex (gpr_cause_mips64);
         RegisterValue cause_value;
 
         ReadRegister (cause_info_p, cause_value);

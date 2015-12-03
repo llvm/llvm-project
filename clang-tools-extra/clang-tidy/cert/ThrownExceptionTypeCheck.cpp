@@ -23,7 +23,7 @@ void ThrownExceptionTypeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxThrowExpr(
           has(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
-              isCopyConstructor(), unless(matchers::isNoThrow()))))
+              isCopyConstructor(), unless(isNoThrow()))))
           .bind("expr"))),
       this);
 }

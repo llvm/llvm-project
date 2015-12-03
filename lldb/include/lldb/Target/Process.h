@@ -1235,33 +1235,6 @@ public:
     GetImageInfoAddress ();
 
     //------------------------------------------------------------------
-    /// Load a shared library into this process.
-    ///
-    /// Try and load a shared library into the current process. This
-    /// call might fail in the dynamic loader plug-in says it isn't safe
-    /// to try and load shared libraries at the moment.
-    ///
-    /// @param[in] image_spec
-    ///     The image file spec that points to the shared library that
-    ///     you want to load.
-    ///
-    /// @param[out] error
-    ///     An error object that gets filled in with any errors that
-    ///     might occur when trying to load the shared library.
-    ///
-    /// @return
-    ///     A token that represents the shared library that can be
-    ///     later used to unload the shared library. A value of
-    ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
-    ///     library can't be opened.
-    //------------------------------------------------------------------
-    virtual uint32_t
-    LoadImage (const FileSpec &image_spec, Error &error);
-
-    virtual Error
-    UnloadImage (uint32_t image_token);
-
-    //------------------------------------------------------------------
     /// Called when the process is about to broadcast a public stop.
     ///
     /// There are public and private stops. Private stops are when the
@@ -3159,6 +3132,15 @@ public:
     {
         return Error("Not supported");
     }
+
+    size_t
+    AddImageToken(lldb::addr_t image_ptr);
+
+    lldb::addr_t
+    GetImagePtrFromToken(size_t token) const;
+
+    void
+    ResetImageToken(size_t token);
 
 protected:
     void

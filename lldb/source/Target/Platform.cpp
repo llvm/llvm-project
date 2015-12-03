@@ -1983,3 +1983,16 @@ Platform::GetUnixSignals()
         return Host::GetUnixSignals();
     return GetRemoteUnixSignals();
 }
+
+uint32_t
+Platform::LoadImage(lldb_private::Process* process, const FileSpec& image_spec, Error& error)
+{
+    error.SetErrorString("LoadImage is not supported on the current platform");
+    return LLDB_INVALID_IMAGE_TOKEN;
+}
+
+Error
+Platform::UnloadImage(lldb_private::Process* process, uint32_t image_token)
+{
+    return Error("UnLoadImage is not supported on the current platform");
+}

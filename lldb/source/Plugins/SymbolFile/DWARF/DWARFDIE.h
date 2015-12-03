@@ -126,12 +126,6 @@ public:
         m_die = nullptr;
     }
 
-    lldb::ModuleSP
-    GetContainingDWOModule () const;
-
-    DWARFDIE
-    GetContainingDWOModuleDIE () const;
-
     //----------------------------------------------------------------------
     // Accessing information about a DIE
     //----------------------------------------------------------------------
@@ -222,9 +216,6 @@ public:
 
     void
     GetDWARFDeclContext (DWARFDeclContext &dwarf_decl_ctx) const;
-
-    void
-    GetDWOContext (std::vector<lldb_private::CompilerContext> &context) const;
 
     //----------------------------------------------------------------------
     // Getting attribute values from the DIE.

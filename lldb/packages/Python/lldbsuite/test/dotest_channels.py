@@ -44,10 +44,10 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
     def __init__(self, file_object, async_map, forwarding_func):
         asyncore.dispatcher.__init__(self, sock=file_object, map=async_map)
 
-        self.header_contents = ''
+        self.header_contents = b""
         self.packet_bytes_remaining = 0
         self.reading_header = True
-        self.ibuffer = ''
+        self.ibuffer = b''
         self.forwarding_func = forwarding_func
         if forwarding_func is None:
             # This whole class is useless if we do nothing with the
@@ -58,7 +58,7 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
         """Unpickles the collected input buffer bytes and forwards."""
         if len(self.ibuffer) > 0:
             self.forwarding_func(cPickle.loads(self.ibuffer))
-            self.ibuffer = ''
+            self.ibuffer = b''
 
     def consume_header_bytes(self, data):
         """Consumes header bytes from the front of data.
@@ -69,17 +69,21 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
         if not data or (len(data) == 0):
             return None
 
-        for index in range(len(data)):
-            byte = data[index]
-            if byte != '#':
-                # Header byte.
-                self.header_contents += byte
-            else:
-                # End of header.
-                self.packet_bytes_remaining = int(self.header_contents)
-                self.header_contents = ''
-                self.reading_header = False
-                return data[(index+1):]
+        full_header_len = 4
+
+        assert(len(self.header_contents) < full_header_len)
+
+        bytes_avail = len(data)
+        bytes_needed = full_header_len - len(self.header_contents)
+        header_bytes_avail = min(bytes_needed, bytes_avail)
+        self.header_contents += data[:header_bytes_avail]
+        if len(self.header_contents) == full_header_len:
+            import struct
+            # End of header.
+            self.packet_bytes_remaining = struct.unpack("!I", self.header_contents)[0]
+            self.header_contents = b""
+            self.reading_header = False
+            return data[header_bytes_avail:]
 
         # If we made it here, we've exhausted the data and
         # we're still parsing header content.

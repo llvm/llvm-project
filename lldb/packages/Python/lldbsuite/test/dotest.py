@@ -935,7 +935,15 @@ def setupTestResults():
         # Connect to the specified localhost port.
         results_file_object, cleanup_func = createSocketToLocalPort(
             results_port)
-        default_formatter_name = "lldbsuite.test.test_results.RawPickledFormatter"
+        default_formatter_name = (
+            "lldbsuite.test.test_results.RawPickledFormatter")
+
+    # If we have a results formatter name specified and we didn't specify
+    # a results file, we should use stdout.
+    if results_formatter_name is not None and results_file_object is None:
+        # Use stdout.
+        results_file_object = sys.stdout
+        cleanup_func = None
 
     if results_file_object:
         # We care about the formatter.  Choose user-specified or, if
@@ -945,7 +953,8 @@ def setupTestResults():
         else:
             formatter_name = default_formatter_name
 
-        # Create an instance of the class.  First figure out the package/module.
+        # Create an instance of the class.
+        # First figure out the package/module.
         components = formatter_name.split(".")
         module = importlib.import_module(".".join(components[:-1]))
 
@@ -963,7 +972,8 @@ def setupTestResults():
             command_line_options)
 
         # Create the TestResultsFormatter given the processed options.
-        results_formatter_object = clazz(results_file_object, formatter_options)
+        results_formatter_object = clazz(
+            results_file_object, formatter_options)
 
         # Start the results formatter session - we'll only have one
         # during a given dotest process invocation.

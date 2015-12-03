@@ -86,9 +86,10 @@ GetDebuggerList()
 OptionEnumValueElement
 g_show_disassembly_enum_values[] =
 {
-    { Debugger::eStopDisassemblyTypeNever,    "never",     "Never show disassembly when displaying a stop context."},
-    { Debugger::eStopDisassemblyTypeNoSource, "no-source", "Show disassembly when there is no source information, or the source file is missing when displaying a stop context."},
-    { Debugger::eStopDisassemblyTypeAlways,   "always",    "Always show disassembly when displaying a stop context."},
+    { Debugger::eStopDisassemblyTypeNever,          "never",            "Never show disassembly when displaying a stop context."},
+    { Debugger::eStopDisassemblyTypeNoDebugInfo,    "no-debuginfo",     "Show disassembly when there is no debug information."},
+    { Debugger::eStopDisassemblyTypeNoSource,       "no-source",        "Show disassembly when there is no source information, or the source file is missing when displaying a stop context."},
+    { Debugger::eStopDisassemblyTypeAlways,         "always",           "Always show disassembly when displaying a stop context."},
     { 0, NULL, NULL }
 };
 
@@ -150,7 +151,7 @@ g_properties[] =
 {   "prompt",                   OptionValue::eTypeString      , true, OptionValueString::eOptionEncodeCharacterEscapeSequences, "(lldb) ", NULL, "The debugger command line prompt displayed for the user." },
 {   "script-lang",              OptionValue::eTypeEnum        , true, eScriptLanguagePython, NULL, g_language_enumerators, "The script language to be used for evaluating user-written scripts." },
 {   "stop-disassembly-count",   OptionValue::eTypeSInt64      , true, 4    , NULL, NULL, "The number of disassembly lines to show when displaying a stopped context." },
-{   "stop-disassembly-display", OptionValue::eTypeEnum        , true, Debugger::eStopDisassemblyTypeNoSource, NULL, g_show_disassembly_enum_values, "Control when to display disassembly when displaying a stopped context." },
+{   "stop-disassembly-display", OptionValue::eTypeEnum        , true, Debugger::eStopDisassemblyTypeNoDebugInfo, NULL, g_show_disassembly_enum_values, "Control when to display disassembly when displaying a stopped context." },
 {   "stop-line-count-after",    OptionValue::eTypeSInt64      , true, 3    , NULL, NULL, "The number of sources lines to display that come after the current source line when displaying a stopped context." },
 {   "stop-line-count-before",   OptionValue::eTypeSInt64      , true, 3    , NULL, NULL, "The number of sources lines to display that come before the current source line when displaying a stopped context." },
 {   "term-width",               OptionValue::eTypeSInt64      , true, 80   , NULL, NULL, "The maximum number of columns to use for displaying text." },

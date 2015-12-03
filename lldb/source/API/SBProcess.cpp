@@ -1297,7 +1297,8 @@ SBProcess::LoadImage (lldb::SBFileSpec &sb_image_spec, lldb::SBError &sb_error)
         if (stop_locker.TryLock(&process_sp->GetRunLock()))
         {
             Mutex::Locker api_locker (process_sp->GetTarget().GetAPIMutex());
-            return process_sp->LoadImage (*sb_image_spec, sb_error.ref());
+            PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
+            return platform_sp->LoadImage (process_sp.get(), *sb_image_spec, sb_error.ref());
         }
         else
         {
@@ -1322,7 +1323,8 @@ SBProcess::UnloadImage (uint32_t image_token)
         if (stop_locker.TryLock(&process_sp->GetRunLock()))
         {
             Mutex::Locker api_locker (process_sp->GetTarget().GetAPIMutex());
-            sb_error.SetError (process_sp->UnloadImage (image_token));
+            PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
+            sb_error.SetError (platform_sp->UnloadImage (process_sp.get(), image_token));
         }
         else
         {

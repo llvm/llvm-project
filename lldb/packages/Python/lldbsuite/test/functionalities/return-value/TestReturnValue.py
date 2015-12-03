@@ -17,6 +17,7 @@ class ReturnValueTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["macosx","freebsd"], archs=["i386"])
+    @expectedFailureAll(oslist=["linux"], compiler="clang", compiler_version=["<=", "3.6"], archs=["i386"])
     @expectedFailureWindows("llvm.org/pr24778")
     @add_test_categories(['pyapi'])
     def test_with_python(self):
