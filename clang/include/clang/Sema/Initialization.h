@@ -828,6 +828,9 @@ public:
     /// \brief Initializer has a placeholder type which cannot be
     /// resolved by initialization.
     FK_PlaceholderType,
+    /// \brief Trying to take the address of a function that doesn't support
+    /// having its address taken.
+    FK_AddressOfUnaddressableFunction,
     /// \brief List-copy-initialization chose an explicit constructor.
     FK_ExplicitConstructor
   };

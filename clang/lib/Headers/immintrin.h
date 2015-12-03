@@ -42,6 +42,19 @@
 
 #include <avx2intrin.h>
 
+/* The 256-bit versions of functions in f16cintrin.h.
+   Intel documents these as being in immintrin.h, and
+   they depend on typedefs from avxintrin.h. */
+
+#define _mm256_cvtps_ph(a, imm) __extension__ ({ \
+ (__m128i)__builtin_ia32_vcvtps2ph256((__v8sf)(__m256)(a), (imm)); })
+
+static __inline __m256 __attribute__((__always_inline__, __nodebug__, __target__("f16c")))
+_mm256_cvtph_ps(__m128i __a)
+{
+  return (__m256)__builtin_ia32_vcvtph2ps256((__v8hi)__a);
+}
+
 #include <bmiintrin.h>
 
 #include <bmi2intrin.h>

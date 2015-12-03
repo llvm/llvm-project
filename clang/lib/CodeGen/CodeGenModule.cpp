@@ -1830,8 +1830,11 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
                                                  bool DontDefer,
                                                  bool IsForDefinition) {
   // If there was no specific requested type, just convert it now.
-  if (!Ty)
-    Ty = getTypes().ConvertType(cast<ValueDecl>(GD.getDecl())->getType());
+  if (!Ty) {
+    const auto *FD = cast<FunctionDecl>(GD.getDecl());
+    auto CanonTy = Context.getCanonicalType(FD->getType());
+    Ty = getTypes().ConvertFunctionType(CanonTy, FD);
+  }
 
   StringRef MangledName = getMangledName(GD);
   return GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer,

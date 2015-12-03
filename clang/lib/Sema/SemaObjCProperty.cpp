@@ -418,7 +418,7 @@ Sema::HandlePropertyInClassExtension(Scope *S,
   }
 
   // A readonly property declared in the primary class can be refined
-  // by adding a rewrite property within an extension.
+  // by adding a readwrite property within an extension.
   // Anything else is an error.
   unsigned PIkind = PIDecl->getPropertyAttributesAsWritten();
   if (!(isReadWrite && (PIkind & ObjCPropertyDecl::OBJC_PR_readonly))) {

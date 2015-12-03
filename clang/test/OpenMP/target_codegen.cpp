@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -16,15 +16,15 @@
 // sizes.
 
 // CHECK-DAG: [[SIZET2:@.+]] = private unnamed_addr constant [1 x i{{32|64}}] [i[[SZ:32|64]] 2]
-// CHECK-DAG: [[MAPT2:@.+]] = private unnamed_addr constant [1 x i32] [i32 3]
+// CHECK-DAG: [[MAPT2:@.+]] = private unnamed_addr constant [1 x i32] [i32 128]
 // CHECK-DAG: [[SIZET3:@.+]] = private unnamed_addr constant [2 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2]
-// CHECK-DAG: [[MAPT3:@.+]] = private unnamed_addr constant [2 x i32] [i32 3, i32 3]
-// CHECK-DAG: [[MAPT4:@.+]] = private unnamed_addr constant [9 x i32] [i32 3, i32 3, i32 1, i32 3, i32 3, i32 1, i32 1, i32 3, i32 3]
+// CHECK-DAG: [[MAPT3:@.+]] = private unnamed_addr constant [2 x i32] [i32 128, i32 128]
+// CHECK-DAG: [[MAPT4:@.+]] = private unnamed_addr constant [9 x i32] [i32 128, i32 3, i32 128, i32 3, i32 3, i32 128, i32 128, i32 3, i32 3]
 // CHECK-DAG: [[SIZET5:@.+]] = private unnamed_addr constant [3 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2, i[[SZ]] 40]
-// CHECK-DAG: [[MAPT5:@.+]] = private unnamed_addr constant [3 x i32] [i32 3, i32 3, i32 3]
+// CHECK-DAG: [[MAPT5:@.+]] = private unnamed_addr constant [3 x i32] [i32 128, i32 128, i32 3]
 // CHECK-DAG: [[SIZET6:@.+]] = private unnamed_addr constant [4 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2, i[[SZ]] 1, i[[SZ]] 40]
-// CHECK-DAG: [[MAPT6:@.+]] = private unnamed_addr constant [4 x i32] [i32 3, i32 3, i32 3, i32 3]
-// CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [5 x i32] [i32 3, i32 3, i32 1, i32 1, i32 3]
+// CHECK-DAG: [[MAPT6:@.+]] = private unnamed_addr constant [4 x i32] [i32 128, i32 128, i32 128, i32 3]
+// CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [5 x i32] [i32 3, i32 128, i32 128, i32 128, i32 3]
 // CHECK-DAG: @{{.*}} = private constant i8 0
 // CHECK-DAG: @{{.*}} = private constant i8 0
 // CHECK-DAG: @{{.*}} = private constant i8 0
@@ -66,7 +66,7 @@ int foo(int n) {
   // CHECK:       store i32 -1, i32* [[RHV]], align 4
   // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
   // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
-  // CHECK:       call void [[HVT1:@.+]](i32* {{[^,]+}})
+  // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}})
   #pragma omp target if(0)
   {
     a += 1;
@@ -79,15 +79,15 @@ int foo(int n) {
   // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PR]], i32 0, i32 [[IDX0]]
   // CHECK-DAG:   store i8* [[BP0:%[^,]+]], i8** [[BPADDR0]]
   // CHECK-DAG:   store i8* [[P0:%[^,]+]], i8** [[PADDR0]]
-  // CHECK-DAG:   [[BP0]] = bitcast i16* %{{.+}} to i8*
-  // CHECK-DAG:   [[P0]] = bitcast i16* %{{.+}} to i8*
+  // CHECK-DAG:   [[BP0]] = inttoptr i[[SZ]] %{{.+}} to i8*
+  // CHECK-DAG:   [[P0]] = inttoptr i[[SZ]] %{{.+}} to i8*
 
   // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
   // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
   // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
-  // CHECK:       call void [[HVT2:@.+]](i16* {{[^,]+}})
+  // CHECK:       call void [[HVT2:@.+]](i[[SZ]] {{[^,]+}})
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
   #pragma omp target if(1)
@@ -106,15 +106,15 @@ int foo(int n) {
   // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P]], i32 0, i32 0
   // CHECK-DAG:   store i8* [[BP0:%[^,]+]], i8** [[BPADDR0]]
   // CHECK-DAG:   store i8* [[P0:%[^,]+]], i8** [[PADDR0]]
-  // CHECK-DAG:   [[BP0]] = bitcast i32* %{{.+}} to i8*
-  // CHECK-DAG:   [[P0]] = bitcast i32* %{{.+}} to i8*
+  // CHECK-DAG:   [[BP0]] = inttoptr i[[SZ]] %{{.+}} to i8*
+  // CHECK-DAG:   [[P0]] = inttoptr i[[SZ]] %{{.+}} to i8*
 
   // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 1
   // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P]], i32 0, i32 1
   // CHECK-DAG:   store i8* [[BP1:%[^,]+]], i8** [[BPADDR1]]
   // CHECK-DAG:   store i8* [[P1:%[^,]+]], i8** [[PADDR1]]
-  // CHECK-DAG:   [[BP1]] = bitcast i16* %{{.+}} to i8*
-  // CHECK-DAG:   [[P1]] = bitcast i16* %{{.+}} to i8*
+  // CHECK-DAG:   [[BP1]] = inttoptr i[[SZ]] %{{.+}} to i8*
+  // CHECK-DAG:   [[P1]] = inttoptr i[[SZ]] %{{.+}} to i8*
   // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
   // CHECK-NEXT:  br label %[[IFEND:.+]]
 
@@ -137,12 +137,17 @@ int foo(int n) {
   }
 
   // We capture 3 VLA sizes in this target region
-  // CHECK:       store i[[SZ]] [[BNELEMSIZE:%.+]], i[[SZ]]* [[VLA0:%[^,]+]]
-  // CHECK:       store i[[SZ]] 5, i[[SZ]]* [[VLA1:%[^,]+]]
-  // CHECK:       store i[[SZ]] [[CNELEMSIZE1:%.+]], i[[SZ]]* [[VLA2:%[^,]+]]
+  // CHECK-64:       [[A_VAL:%.+]] = load i32, i32* %{{.+}},
+  // CHECK-64:       [[A_ADDR:%.+]] = bitcast i[[SZ]]* [[A_CADDR:%.+]] to i32*
+  // CHECK-64:       store i32 [[A_VAL]], i32* [[A_ADDR]],
+  // CHECK-64:       [[A_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[A_CADDR]],
 
-  // CHECK:       [[BNSIZE:%.+]] = mul nuw i[[SZ]] [[BNELEMSIZE]], 4
-  // CHECK:       [[CNELEMSIZE2:%.+]] = mul nuw i[[SZ]] 5, [[CNELEMSIZE1]]
+  // CHECK-32:       [[A_VAL:%.+]] = load i32, i32* %{{.+}},
+  // CHECK-32:       store i32 [[A_VAL]], i32* [[A_CADDR:%.+]],
+  // CHECK-32:       [[A_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[A_CADDR]],
+
+  // CHECK:       [[BNSIZE:%.+]] = mul nuw i[[SZ]] [[VLA0:%.+]], 4
+  // CHECK:       [[CNELEMSIZE2:%.+]] = mul nuw i[[SZ]] 5, [[VLA1:%.+]]
   // CHECK:       [[CNSIZE:%.+]] = mul nuw i[[SZ]] [[CNELEMSIZE2]], 8
 
   // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 20
@@ -183,26 +188,24 @@ int foo(int n) {
 
   // The names below are not necessarily consistent with the names used for the
   // addresses above as some are repeated.
-  // CHECK-DAG:   [[BP0:%[^,]+]] = bitcast i[[SZ]]* [[VLA0]] to i8*
-  // CHECK-DAG:   [[P0:%[^,]+]] = bitcast i[[SZ]]* [[VLA0]] to i8*
+  // CHECK-DAG:   [[BP0:%[^,]+]] = inttoptr i[[SZ]] [[VLA0]] to i8*
+  // CHECK-DAG:   [[P0:%[^,]+]] = inttoptr i[[SZ]] [[VLA0]] to i8*
   // CHECK-DAG:   store i8* [[BP0]], i8** {{%[^,]+}}
   // CHECK-DAG:   store i8* [[P0]], i8** {{%[^,]+}}
   // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP1:%[^,]+]] = bitcast i[[SZ]]* [[VLA1]] to i8*
-  // CHECK-DAG:   [[P1:%[^,]+]] = bitcast i[[SZ]]* [[VLA1]] to i8*
+  // CHECK-DAG:   [[BP1:%[^,]+]] = inttoptr i[[SZ]] [[VLA1]] to i8*
+  // CHECK-DAG:   [[P1:%[^,]+]] = inttoptr i[[SZ]] [[VLA1]] to i8*
   // CHECK-DAG:   store i8* [[BP1]], i8** {{%[^,]+}}
   // CHECK-DAG:   store i8* [[P1]], i8** {{%[^,]+}}
   // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP2:%[^,]+]] = bitcast i[[SZ]]* [[VLA2]] to i8*
-  // CHECK-DAG:   [[P2:%[^,]+]] = bitcast i[[SZ]]* [[VLA2]] to i8*
-  // CHECK-DAG:   store i8* [[BP2]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P2]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store i8* inttoptr (i[[SZ]] 5 to i8*), i8** {{%[^,]+}}
+  // CHECK-DAG:   store i8* inttoptr (i[[SZ]] 5 to i8*), i8** {{%[^,]+}}
   // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP3:%[^,]+]] = bitcast i32* %{{.+}} to i8*
-  // CHECK-DAG:   [[P3:%[^,]+]] = bitcast i32* %{{.+}} to i8*
+  // CHECK-DAG:   [[BP3:%[^,]+]] = inttoptr i[[SZ]] [[A_CVAL]] to i8*
+  // CHECK-DAG:   [[P3:%[^,]+]] = inttoptr i[[SZ]] [[A_CVAL]] to i8*
   // CHECK-DAG:   store i8* [[BP3]], i8** {{%[^,]+}}
   // CHECK-DAG:   store i8* [[P3]], i8** {{%[^,]+}}
   // CHECK-DAG:   store i[[SZ]] 4, i[[SZ]]* {{%[^,]+}}
@@ -265,67 +268,67 @@ int foo(int n) {
 
 // CHECK:       define internal void [[HVT0]]()
 
-// CHECK:       define internal void [[HVT1]](i32* dereferenceable(4) %{{.+}})
+// CHECK:       define internal void [[HVT1]](i[[SZ]] %{{.+}})
 // Create stack storage and store argument in there.
-// CHECK:       [[A_ADDR:%.+]] = alloca i32*, align
-// CHECK:       store i32* %{{.+}}, i32** [[A_ADDR]], align
-// CHECK:       [[A_ADDR2:%.+]] = load i32*, i32** [[A_ADDR]], align
-// CHECK:       load i32, i32* [[A_ADDR2]], align
+// CHECK:       [[AA_ADDR:%.+]] = alloca i[[SZ]], align
+// CHECK:       store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
+// CHECK-64:    [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i32*
+// CHECK-64:    load i32, i32* [[AA_CADDR]], align
+// CHECK-32:    load i32, i32* [[AA_ADDR]], align
 
-// CHECK:       define internal void [[HVT2]](i16* dereferenceable(2) %{{.+}})
+// CHECK:       define internal void [[HVT2]](i[[SZ]] %{{.+}})
 // Create stack storage and store argument in there.
-// CHECK:       [[AA_ADDR:%.+]] = alloca i16*, align
-// CHECK:       store i16* %{{.+}}, i16** [[AA_ADDR]], align
-// CHECK:       [[AA_ADDR2:%.+]] = load i16*, i16** [[AA_ADDR]], align
-// CHECK:       load i16, i16* [[AA_ADDR2]], align
+// CHECK:       [[AA_ADDR:%.+]] = alloca i[[SZ]], align
+// CHECK:       store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
+// CHECK:       [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i16*
+// CHECK:       load i16, i16* [[AA_CADDR]], align
 
 // CHECK:       define internal void [[HVT3]]
 // Create stack storage and store argument in there.
-// CHECK-DAG:   [[A_ADDR:%.+]] = alloca i32*, align
-// CHECK-DAG:   [[AA_ADDR:%.+]] = alloca i16*, align
-// CHECK-DAG:   store i32* %{{.+}}, i32** [[A_ADDR]], align
-// CHECK-DAG:   store i16* %{{.+}}, i16** [[AA_ADDR]], align
-// CHECK-DAG:   [[A_ADDR2:%.+]] = load i32*, i32** [[A_ADDR]], align
-// CHECK-DAG:   [[AA_ADDR2:%.+]] = load i16*, i16** [[AA_ADDR]], align
-// CHECK-DAG:   load i32, i32* [[A_ADDR2]], align
-// CHECK-DAG:   load i16, i16* [[AA_ADDR2]], align
+// CHECK:       [[A_ADDR:%.+]] = alloca i[[SZ]], align
+// CHECK:       [[AA_ADDR:%.+]] = alloca i[[SZ]], align
+// CHECK-DAG:   store i[[SZ]] %{{.+}}, i[[SZ]]* [[A_ADDR]], align
+// CHECK-DAG:   store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
+// CHECK-64-DAG:[[A_CADDR:%.+]] = bitcast i[[SZ]]* [[A_ADDR]] to i32*
+// CHECK-DAG:   [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i16*
+// CHECK-64-DAG:load i32, i32* [[A_CADDR]], align
+// CHECK-32-DAG:load i32, i32* [[A_ADDR]], align
+// CHECK-DAG:   load i16, i16* [[AA_CADDR]], align
 
 // CHECK:       define internal void [[HVT4]]
 // Create local storage for each capture.
-// CHECK-DAG:   [[LOCAL_A:%.+]] = alloca i32*
-// CHECK-DAG:   [[LOCAL_B:%.+]] = alloca [10 x float]*
-// CHECK-DAG:   [[LOCAL_VLA1:%.+]] = alloca i[[SZ]]*
-// CHECK-DAG:   [[LOCAL_BN:%.+]] = alloca float*
-// CHECK-DAG:   [[LOCAL_C:%.+]] = alloca [5 x [10 x double]]*
-// CHECK-DAG:   [[LOCAL_VLA2:%.+]] = alloca i[[SZ]]*
-// CHECK-DAG:   [[LOCAL_VLA3:%.+]] = alloca i[[SZ]]*
-// CHECK-DAG:   [[LOCAL_CN:%.+]] = alloca double*
-// CHECK-DAG:   [[LOCAL_D:%.+]] = alloca [[TT]]*
-// CHECK-DAG:   store i32* [[ARG_A:%.+]], i32** [[LOCAL_A]]
+// CHECK:       [[LOCAL_A:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_B:%.+]] = alloca [10 x float]*
+// CHECK:       [[LOCAL_VLA1:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_BN:%.+]] = alloca float*
+// CHECK:       [[LOCAL_C:%.+]] = alloca [5 x [10 x double]]*
+// CHECK:       [[LOCAL_VLA2:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_VLA3:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_CN:%.+]] = alloca double*
+// CHECK:       [[LOCAL_D:%.+]] = alloca [[TT]]*
+// CHECK-DAG:   store i[[SZ]] [[ARG_A:%.+]], i[[SZ]]* [[LOCAL_A]]
 // CHECK-DAG:   store [10 x float]* [[ARG_B:%.+]], [10 x float]** [[LOCAL_B]]
-// CHECK-DAG:   store i[[SZ]]* [[ARG_VLA1:%.+]], i[[SZ]]** [[LOCAL_VLA1]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_VLA1:%.+]], i[[SZ]]* [[LOCAL_VLA1]]
 // CHECK-DAG:   store float* [[ARG_BN:%.+]], float** [[LOCAL_BN]]
 // CHECK-DAG:   store [5 x [10 x double]]* [[ARG_C:%.+]], [5 x [10 x double]]** [[LOCAL_C]]
-// CHECK-DAG:   store i[[SZ]]* [[ARG_VLA2:%.+]], i[[SZ]]** [[LOCAL_VLA2]]
-// CHECK-DAG:   store i[[SZ]]* [[ARG_VLA3:%.+]], i[[SZ]]** [[LOCAL_VLA3]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_VLA2:%.+]], i[[SZ]]* [[LOCAL_VLA2]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_VLA3:%.+]], i[[SZ]]* [[LOCAL_VLA3]]
 // CHECK-DAG:   store double* [[ARG_CN:%.+]], double** [[LOCAL_CN]]
 // CHECK-DAG:   store [[TT]]* [[ARG_D:%.+]], [[TT]]** [[LOCAL_D]]
 
-// CHECK-DAG:   [[REF_A:%.+]] = load i32*, i32** [[LOCAL_A]],
+// CHECK-64-DAG:[[REF_A:%.+]] = bitcast i[[SZ]]* [[LOCAL_A]] to i32*
 // CHECK-DAG:   [[REF_B:%.+]] = load [10 x float]*, [10 x float]** [[LOCAL_B]],
-// CHECK-DAG:   [[REF_VLA1:%.+]] = load i[[SZ]]*, i[[SZ]]** [[LOCAL_VLA1]],
-// CHECK-DAG:   [[VAL_VLA1:%.+]] = load i[[SZ]], i[[SZ]]* [[REF_VLA1]],
+// CHECK-DAG:   [[VAL_VLA1:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_VLA1]],
 // CHECK-DAG:   [[REF_BN:%.+]] = load float*, float** [[LOCAL_BN]],
 // CHECK-DAG:   [[REF_C:%.+]] = load [5 x [10 x double]]*, [5 x [10 x double]]** [[LOCAL_C]],
-// CHECK-DAG:   [[REF_VLA2:%.+]] = load i[[SZ]]*, i[[SZ]]** [[LOCAL_VLA2]],
-// CHECK-DAG:   [[VAL_VLA2:%.+]] = load i[[SZ]], i[[SZ]]* [[REF_VLA2]],
-// CHECK-DAG:   [[REF_VLA3:%.+]] = load i[[SZ]]*, i[[SZ]]** [[LOCAL_VLA3]],
-// CHECK-DAG:   [[VAL_VLA3:%.+]] = load i[[SZ]], i[[SZ]]* [[REF_VLA3]],
+// CHECK-DAG:   [[VAL_VLA2:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_VLA2]],
+// CHECK-DAG:   [[VAL_VLA3:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_VLA3]],
 // CHECK-DAG:   [[REF_CN:%.+]] = load double*, double** [[LOCAL_CN]],
 // CHECK-DAG:   [[REF_D:%.+]] = load [[TT]]*, [[TT]]** [[LOCAL_D]],
 
 // Use captures.
-// CHECK-DAG:   load i32, i32* [[REF_A]]
+// CHECK-64-DAG:   load i32, i32* [[REF_A]]
+// CHECK-32-DAG:   load i32, i32* [[LOCAL_A]]
 // CHECK-DAG:   getelementptr inbounds [10 x float], [10 x float]* [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
 // CHECK-DAG:   getelementptr inbounds float, float* [[REF_BN]], i[[SZ]] 3
 // CHECK-DAG:   getelementptr inbounds [5 x [10 x double]], [5 x [10 x double]]* [[REF_C]], i[[SZ]] 0, i[[SZ]] 1
@@ -406,10 +409,16 @@ int bar(int n){
 //
 // CHECK: define {{.*}}[[FS1]]
 //
+// CHECK:          i8* @llvm.stacksave()
+// CHECK-64:       [[B_ADDR:%.+]] = bitcast i[[SZ]]* [[B_CADDR:%.+]] to i32*
+// CHECK-64:       store i32 %{{.+}}, i32* [[B_ADDR]],
+// CHECK-64:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_CADDR]],
+
+// CHECK-32:       store i32 %{{.+}}, i32* [[B_ADDR:%.+]],
+// CHECK-32:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_ADDR]],
+
 // We capture 2 VLA sizes in this target region
-// CHECK:       store i[[SZ]] 2, i[[SZ]]* [[VLA0:%[^,]+]]
-// CHECK:       store i[[SZ]] [[CELEMSIZE1:%.+]], i[[SZ]]* [[VLA1:%[^,]+]]
-// CHECK:       [[CELEMSIZE2:%.+]] = mul nuw i[[SZ]] 2, [[CELEMSIZE1]]
+// CHECK:       [[CELEMSIZE2:%.+]] = mul nuw i[[SZ]] 2, [[VLA0:%.+]]
 // CHECK:       [[CSIZE:%.+]] = mul nuw i[[SZ]] [[CELEMSIZE2]], 2
 
 // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
@@ -434,20 +443,18 @@ int bar(int n){
 
 // The names below are not necessarily consistent with the names used for the
 // addresses above as some are repeated.
-// CHECK-DAG:   [[BP0:%[^,]+]] = bitcast i[[SZ]]* [[VLA0]] to i8*
-// CHECK-DAG:   [[P0:%[^,]+]] = bitcast i[[SZ]]* [[VLA0]] to i8*
+// CHECK-DAG:   [[BP0:%[^,]+]] = inttoptr i[[SZ]] [[VLA0]] to i8*
+// CHECK-DAG:   [[P0:%[^,]+]] = inttoptr i[[SZ]] [[VLA0]] to i8*
 // CHECK-DAG:   store i8* [[BP0]], i8** {{%[^,]+}}
 // CHECK-DAG:   store i8* [[P0]], i8** {{%[^,]+}}
 // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-// CHECK-DAG:   [[BP1:%[^,]+]] = bitcast i[[SZ]]* [[VLA1]] to i8*
-// CHECK-DAG:   [[P1:%[^,]+]] = bitcast i[[SZ]]* [[VLA1]] to i8*
-// CHECK-DAG:   store i8* [[BP1]], i8** {{%[^,]+}}
-// CHECK-DAG:   store i8* [[P1]], i8** {{%[^,]+}}
+// CHECK-DAG:   store i8* inttoptr (i[[SZ]] 2 to i8*), i8** {{%[^,]+}}
+// CHECK-DAG:   store i8* inttoptr (i[[SZ]] 2 to i8*), i8** {{%[^,]+}}
 // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-// CHECK-DAG:   [[BP2:%[^,]+]] = bitcast i32* %{{.+}} to i8*
-// CHECK-DAG:   [[P2:%[^,]+]] = bitcast i32* %{{.+}} to i8*
+// CHECK-DAG:   [[BP2:%[^,]+]] = inttoptr i[[SZ]] [[B_CVAL]] to i8*
+// CHECK-DAG:   [[P2:%[^,]+]] = inttoptr i[[SZ]] [[B_CVAL]] to i8*
 // CHECK-DAG:   store i8* [[BP2]], i8** {{%[^,]+}}
 // CHECK-DAG:   store i8* [[P2]], i8** {{%[^,]+}}
 // CHECK-DAG:   store i[[SZ]] 4, i[[SZ]]* {{%[^,]+}}
@@ -488,15 +495,15 @@ int bar(int n){
 // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[P]], i32 0, i32 0
 // CHECK-DAG:   store i8* [[BP0:%[^,]+]], i8** [[BPADDR0]]
 // CHECK-DAG:   store i8* [[P0:%[^,]+]], i8** [[PADDR0]]
-// CHECK-DAG:   [[BP0]] = bitcast i32* %{{.+}} to i8*
-// CHECK-DAG:   [[P0]] = bitcast i32* %{{.+}} to i8*
+// CHECK-DAG:   [[BP0]] = inttoptr i[[SZ]] [[VAL0:%.+]] to i8*
+// CHECK-DAG:   [[P0]] = inttoptr i[[SZ]] [[VAL0]] to i8*
 
 // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BP]], i32 0, i32 1
 // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[P]], i32 0, i32 1
 // CHECK-DAG:   store i8* [[BP1:%[^,]+]], i8** [[BPADDR1]]
 // CHECK-DAG:   store i8* [[P1:%[^,]+]], i8** [[PADDR1]]
-// CHECK-DAG:   [[BP1]] = bitcast i16* %{{.+}} to i8*
-// CHECK-DAG:   [[P1]] = bitcast i16* %{{.+}} to i8*
+// CHECK-DAG:   [[BP1]] = inttoptr i[[SZ]] [[VAL1:%.+]] to i8*
+// CHECK-DAG:   [[P1]] = inttoptr i[[SZ]] [[VAL1]] to i8*
 
 // CHECK-DAG:   [[BPADDR2:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BP]], i32 0, i32 2
 // CHECK-DAG:   [[PADDR2:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[P]], i32 0, i32 2
@@ -540,15 +547,15 @@ int bar(int n){
 // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P]], i32 0, i32 0
 // CHECK-DAG:   store i8* [[BP0:%[^,]+]], i8** [[BPADDR0]]
 // CHECK-DAG:   store i8* [[P0:%[^,]+]], i8** [[PADDR0]]
-// CHECK-DAG:   [[BP0]] = bitcast i32* %{{.+}} to i8*
-// CHECK-DAG:   [[P0]] = bitcast i32* %{{.+}} to i8*
+// CHECK-DAG:   [[BP0]] = inttoptr i[[SZ]] [[VAL0:%.+]] to i8*
+// CHECK-DAG:   [[P0]] = inttoptr i[[SZ]] [[VAL0]] to i8*
 
 // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BP]], i32 0, i32 1
 // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P]], i32 0, i32 1
 // CHECK-DAG:   store i8* [[BP1:%[^,]+]], i8** [[BPADDR1]]
 // CHECK-DAG:   store i8* [[P1:%[^,]+]], i8** [[PADDR1]]
-// CHECK-DAG:   [[BP1]] = bitcast i16* %{{.+}} to i8*
-// CHECK-DAG:   [[P1]] = bitcast i16* %{{.+}} to i8*
+// CHECK-DAG:   [[BP1]] = inttoptr i[[SZ]] [[VAL1:%.+]] to i8*
+// CHECK-DAG:   [[P1]] = inttoptr i[[SZ]] [[VAL1]] to i8*
 
 // CHECK-DAG:   [[BPADDR2:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BP]], i32 0, i32 2
 // CHECK-DAG:   [[PADDR2:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P]], i32 0, i32 2
@@ -580,65 +587,66 @@ int bar(int n){
 
 // CHECK:       define internal void [[HVT7]]
 // Create local storage for each capture.
-// CHECK-DAG:   [[LOCAL_THIS:%.+]] = alloca [[S1]]*
-// CHECK-DAG:   [[LOCAL_B:%.+]] = alloca i32*
-// CHECK-DAG:   [[LOCAL_VLA1:%.+]] = alloca i[[SZ]]*
-// CHECK-DAG:   [[LOCAL_VLA2:%.+]] = alloca i[[SZ]]*
-// CHECK-DAG:   [[LOCAL_C:%.+]] = alloca i16*
+// CHECK:       [[LOCAL_THIS:%.+]] = alloca [[S1]]*
+// CHECK:       [[LOCAL_B:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_VLA1:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_VLA2:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_C:%.+]] = alloca i16*
 // CHECK-DAG:   store [[S1]]* [[ARG_THIS:%.+]], [[S1]]** [[LOCAL_THIS]]
-// CHECK-DAG:   store i32* [[ARG_B:%.+]], i32** [[LOCAL_B]]
-// CHECK-DAG:   store i[[SZ]]* [[ARG_VLA1:%.+]], i[[SZ]]** [[LOCAL_VLA1]]
-// CHECK-DAG:   store i[[SZ]]* [[ARG_VLA2:%.+]], i[[SZ]]** [[LOCAL_VLA2]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_B:%.+]], i[[SZ]]* [[LOCAL_B]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_VLA1:%.+]], i[[SZ]]* [[LOCAL_VLA1]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_VLA2:%.+]], i[[SZ]]* [[LOCAL_VLA2]]
 // CHECK-DAG:   store i16* [[ARG_C:%.+]], i16** [[LOCAL_C]]
 // Store captures in the context.
 // CHECK-DAG:   [[REF_THIS:%.+]] = load [[S1]]*, [[S1]]** [[LOCAL_THIS]],
-// CHECK-DAG:   [[REF_B:%.+]] = load i32*, i32** [[LOCAL_B]],
-// CHECK-DAG:   [[REF_VLA1:%.+]] = load i[[SZ]]*, i[[SZ]]** [[LOCAL_VLA1]],
-// CHECK-DAG:   [[VAL_VLA1:%.+]] = load i[[SZ]], i[[SZ]]* [[REF_VLA1]],
-// CHECK-DAG:   [[REF_VLA2:%.+]] = load i[[SZ]]*, i[[SZ]]** [[LOCAL_VLA2]],
-// CHECK-DAG:   [[VAL_VLA2:%.+]] = load i[[SZ]], i[[SZ]]* [[REF_VLA2]],
+// CHECK-64-DAG:[[REF_B:%.+]] = bitcast i[[SZ]]* [[LOCAL_B]] to i32*
+// CHECK-DAG:   [[VAL_VLA1:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_VLA1]],
+// CHECK-DAG:   [[VAL_VLA2:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_VLA2]],
 // CHECK-DAG:   [[REF_C:%.+]] = load i16*, i16** [[LOCAL_C]],
 // Use captures.
 // CHECK-DAG:   getelementptr inbounds [[S1]], [[S1]]* [[REF_THIS]], i32 0, i32 0
-// CHECK-DAG:   load i32, i32* [[REF_B]]
+// CHECK-64-DAG:load i32, i32* [[REF_B]]
+// CHECK-32-DAG:load i32, i32* [[LOCAL_B]]
 // CHECK-DAG:   getelementptr inbounds i16, i16* [[REF_C]], i[[SZ]] %{{.+}}
 
 
 // CHECK:       define internal void [[HVT6]]
 // Create local storage for each capture.
-// CHECK-DAG:   [[LOCAL_A:%.+]] = alloca i32*
-// CHECK-DAG:   [[LOCAL_AA:%.+]] = alloca i16*
-// CHECK-DAG:   [[LOCAL_AAA:%.+]] = alloca i8*
-// CHECK-DAG:   [[LOCAL_B:%.+]] = alloca [10 x i32]*
-// CHECK-DAG:   store i32* [[ARG_A:%.+]], i32** [[LOCAL_A]]
-// CHECK-DAG:   store i16* [[ARG_AA:%.+]], i16** [[LOCAL_AA]]
-// CHECK-DAG:   store i8* [[ARG_AAA:%.+]], i8** [[LOCAL_AAA]]
+// CHECK:       [[LOCAL_A:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_AA:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_AAA:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_B:%.+]] = alloca [10 x i32]*
+// CHECK-DAG:   store i[[SZ]] [[ARG_A:%.+]], i[[SZ]]* [[LOCAL_A]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_AA:%.+]], i[[SZ]]* [[LOCAL_AA]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_AAA:%.+]], i[[SZ]]* [[LOCAL_AAA]]
 // CHECK-DAG:   store [10 x i32]* [[ARG_B:%.+]], [10 x i32]** [[LOCAL_B]]
 // Store captures in the context.
-// CHECK-DAG:   [[REF_A:%.+]] = load i32*, i32** [[LOCAL_A]],
-// CHECK-DAG:   [[REF_AA:%.+]] = load i16*, i16** [[LOCAL_AA]],
-// CHECK-DAG:   [[REF_AAA:%.+]] = load i8*, i8** [[LOCAL_AAA]],
-// CHECK-DAG:   [[REF_B:%.+]] = load [10 x i32]*, [10 x i32]** [[LOCAL_B]],
+// CHECK-64-DAG:   [[REF_A:%.+]] = bitcast i[[SZ]]* [[LOCAL_A]] to i32*
+// CHECK-DAG:      [[REF_AA:%.+]] = bitcast i[[SZ]]* [[LOCAL_AA]] to i16*
+// CHECK-DAG:      [[REF_AAA:%.+]] = bitcast i[[SZ]]* [[LOCAL_AAA]] to i8*
+// CHECK-DAG:      [[REF_B:%.+]] = load [10 x i32]*, [10 x i32]** [[LOCAL_B]],
 // Use captures.
-// CHECK-DAG:   load i32, i32* [[REF_A]]
-// CHECK-DAG:   load i16, i16* [[REF_AA]]
-// CHECK-DAG:   load i8, i8* [[REF_AAA]]
-// CHECK-DAG:   getelementptr inbounds [10 x i32], [10 x i32]* [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
+// CHECK-64-DAG:   load i32, i32* [[REF_A]]
+// CHECK-DAG:      load i16, i16* [[REF_AA]]
+// CHECK-DAG:      load i8, i8* [[REF_AAA]]
+// CHECK-32-DAG:   load i32, i32* [[LOCAL_A]]
+// CHECK-DAG:      getelementptr inbounds [10 x i32], [10 x i32]* [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
 
 // CHECK:       define internal void [[HVT5]]
 // Create local storage for each capture.
-// CHECK-DAG:   [[LOCAL_A:%.+]] = alloca i32*
-// CHECK-DAG:   [[LOCAL_AA:%.+]] = alloca i16*
-// CHECK-DAG:   [[LOCAL_B:%.+]] = alloca [10 x i32]*
-// CHECK-DAG:   store i32* [[ARG_A:%.+]], i32** [[LOCAL_A]]
-// CHECK-DAG:   store i16* [[ARG_AA:%.+]], i16** [[LOCAL_AA]]
+// CHECK:       [[LOCAL_A:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_AA:%.+]] = alloca i[[SZ]]
+// CHECK:       [[LOCAL_B:%.+]] = alloca [10 x i32]*
+// CHECK-DAG:   store i[[SZ]] [[ARG_A:%.+]], i[[SZ]]* [[LOCAL_A]]
+// CHECK-DAG:   store i[[SZ]] [[ARG_AA:%.+]], i[[SZ]]* [[LOCAL_AA]]
 // CHECK-DAG:   store [10 x i32]* [[ARG_B:%.+]], [10 x i32]** [[LOCAL_B]]
 // Store captures in the context.
-// CHECK-DAG:   [[REF_A:%.+]] = load i32*, i32** [[LOCAL_A]],
-// CHECK-DAG:   [[REF_AA:%.+]] = load i16*, i16** [[LOCAL_AA]],
+// CHECK-64-DAG:[[REF_A:%.+]] = bitcast i[[SZ]]* [[LOCAL_A]] to i32*
+// CHECK-DAG:   [[REF_AA:%.+]] = bitcast i[[SZ]]* [[LOCAL_AA]] to i16*
 // CHECK-DAG:   [[REF_B:%.+]] = load [10 x i32]*, [10 x i32]** [[LOCAL_B]],
 // Use captures.
-// CHECK-DAG:   load i32, i32* [[REF_A]]
+// CHECK-64-DAG:   load i32, i32* [[REF_A]]
+// CHECK-32-DAG:   load i32, i32* [[LOCAL_A]]
 // CHECK-DAG:   load i16, i16* [[REF_AA]]
 // CHECK-DAG:   getelementptr inbounds [10 x i32], [10 x i32]* [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
 #endif

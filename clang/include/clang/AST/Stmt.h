@@ -1986,6 +1986,7 @@ public:
   enum VariableCaptureKind {
     VCK_This,
     VCK_ByRef,
+    VCK_ByCopy,
     VCK_VLAType,
   };
 
@@ -2005,21 +2006,7 @@ public:
     /// \param Var The variable being captured, or null if capturing this.
     ///
     Capture(SourceLocation Loc, VariableCaptureKind Kind,
-            VarDecl *Var = nullptr)
-      : VarAndKind(Var, Kind), Loc(Loc) {
-      switch (Kind) {
-      case VCK_This:
-        assert(!Var && "'this' capture cannot have a variable!");
-        break;
-      case VCK_ByRef:
-        assert(Var && "capturing by reference must have a variable!");
-        break;
-      case VCK_VLAType:
-        assert(!Var &&
-               "Variable-length array type capture cannot have a variable!");
-        break;
-      }
-    }
+            VarDecl *Var = nullptr);
 
     /// \brief Determine the kind of capture.
     VariableCaptureKind getCaptureKind() const { return VarAndKind.getInt(); }
@@ -2031,8 +2018,13 @@ public:
     /// \brief Determine whether this capture handles the C++ 'this' pointer.
     bool capturesThis() const { return getCaptureKind() == VCK_This; }
 
-    /// \brief Determine whether this capture handles a variable.
+    /// \brief Determine whether this capture handles a variable (by reference).
     bool capturesVariable() const { return getCaptureKind() == VCK_ByRef; }
+
+    /// \brief Determine whether this capture handles a variable by copy.
+    bool capturesVariableByCopy() const {
+      return getCaptureKind() == VCK_ByCopy;
+    }
 
     /// \brief Determine whether this capture handles a variable-length array
     /// type.
@@ -2044,7 +2036,7 @@ public:
     ///
     /// This operation is only valid if this capture captures a variable.
     VarDecl *getCapturedVar() const {
-      assert(capturesVariable() &&
+      assert((capturesVariable() || capturesVariableByCopy()) &&
              "No variable available for 'this' or VAT capture");
       return VarAndKind.getPointer();
     }

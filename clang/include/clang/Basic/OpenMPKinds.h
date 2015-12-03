@@ -111,6 +111,12 @@ bool isOpenMPLoopDirective(OpenMPDirectiveKind DKind);
 /// otherwise - false.
 bool isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind);
 
+/// \brief Checks if the specified directive is a taskloop directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a worksharing directive like 'omp taskloop',
+/// otherwise - false.
+bool isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind);
+
 /// \brief Checks if the specified directive is a parallel-kind directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a parallel-like directive like 'omp

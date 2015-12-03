@@ -44,8 +44,9 @@ CodeGenABITypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
 }
 
 const CGFunctionInfo &
-CodeGenABITypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty) {
-  return CGM->getTypes().arrangeFreeFunctionType(Ty);
+CodeGenABITypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty,
+                                         const FunctionDecl *FD) {
+  return CGM->getTypes().arrangeFreeFunctionType(Ty, FD);
 }
 
 const CGFunctionInfo &
@@ -55,8 +56,9 @@ CodeGenABITypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> Ty) {
 
 const CGFunctionInfo &
 CodeGenABITypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
-                                      const FunctionProtoType *FTP) {
-  return CGM->getTypes().arrangeCXXMethodType(RD, FTP);
+                                      const FunctionProtoType *FTP,
+                                      const CXXMethodDecl *MD) {
+  return CGM->getTypes().arrangeCXXMethodType(RD, FTP, MD);
 }
 
 const CGFunctionInfo &CodeGenABITypes::arrangeFreeFunctionCall(

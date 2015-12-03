@@ -2236,6 +2236,20 @@ namespaceDecl(isInline()) will match n::m.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isNoThrow0')"><a name="isNoThrow0Anchor">isNoThrow</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isNoThrow0"><pre>Matches functions that have a non-throwing exception specification.
+
+Given:
+  void f();
+  void g() noexcept;
+  void h() throw();
+  void i() throw(int);
+  void j() noexcept(false);
+functionDecl(isNoThrow())
+  matches the declarations of g, and h, but not f, i or j.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isTemplateInstantiation0')"><a name="isTemplateInstantiation0Anchor">isTemplateInstantiation</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isTemplateInstantiation0"><pre>Matches template instantiations of function, class, or static
 member variable template instantiations.

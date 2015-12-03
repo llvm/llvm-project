@@ -628,6 +628,16 @@ public:
                                 const FunctionDecl *Callee,
                                 ArrayRef<const Expr*> Args) const;
 
+  /// \brief If the current Expr is a pointer, this will try to statically
+  /// determine the number of bytes available where the pointer is pointing.
+  /// Returns true if all of the above holds and we were able to figure out the
+  /// size, false otherwise.
+  ///
+  /// \param Type - How to evaluate the size of the Expr, as defined by the
+  /// "type" parameter of __builtin_object_size
+  bool tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
+                             unsigned Type) const;
+
   /// \brief Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().
   enum NullPointerConstantKind {

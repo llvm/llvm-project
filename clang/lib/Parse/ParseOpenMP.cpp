@@ -37,7 +37,8 @@ static OpenMPDirectiveKind ParseOpenMPDirectiveKind(Parser &P) {
       {OMPD_for, OMPD_simd, OMPD_for_simd},
       {OMPD_parallel, OMPD_for, OMPD_parallel_for},
       {OMPD_parallel_for, OMPD_simd, OMPD_parallel_for_simd},
-      {OMPD_parallel, OMPD_sections, OMPD_parallel_sections}};
+      {OMPD_parallel, OMPD_sections, OMPD_parallel_sections},
+      {OMPD_taskloop, OMPD_simd, OMPD_taskloop_simd}};
   auto Tok = P.getCurToken();
   auto DKind =
       Tok.isAnnotation()
@@ -138,6 +139,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
   case OMPD_cancel:
   case OMPD_target_data:
   case OMPD_taskloop:
+  case OMPD_taskloop_simd:
     Diag(Tok, diag::err_omp_unexpected_directive)
         << getOpenMPDirectiveName(DKind);
     break;
@@ -158,7 +160,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
 ///         'parallel for' | 'parallel sections' | 'task' | 'taskyield' |
 ///         'barrier' | 'taskwait' | 'flush' | 'ordered' | 'atomic' |
 ///         'for simd' | 'parallel for simd' | 'target' | 'target data' |
-///         'taskgroup' | 'teams' {clause}
+///         'taskgroup' | 'teams' | 'taskloop' | 'taskloop simd' {clause}
 ///         annot_pragma_openmp_end
 ///
 StmtResult
@@ -234,7 +236,8 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed) {
   case OMPD_teams:
   case OMPD_taskgroup:
   case OMPD_target_data:
-  case OMPD_taskloop: {
+  case OMPD_taskloop:
+  case OMPD_taskloop_simd: {
     ConsumeToken();
     // Parse directive name of the 'critical' directive if any.
     if (DKind == OMPD_critical) {

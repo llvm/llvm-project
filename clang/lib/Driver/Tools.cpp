@@ -2057,7 +2057,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
   if (CPU == "cyclone" || CPU == "cortex-a53" || CPU == "cortex-a57" ||
-      CPU == "cortex-a72") {
+      CPU == "cortex-a72" || CPU == "cortex-a35") {
     Features.push_back("+neon");
     Features.push_back("+crc");
     Features.push_back("+crypto");
@@ -8721,8 +8721,7 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (!isAndroid)
         CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
     }
-  } else if (Args.hasArg(options::OPT_rtlib_EQ))
-    AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
+  }
 
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }

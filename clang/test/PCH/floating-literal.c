@@ -15,5 +15,5 @@ long double foo = 1.0E4000L;
 double bar = 1.0E300;
 // CHECK: double bar = 1.0000000000000001E+300;
 
-float wibble = 1.0E40;
-// CHECK: float wibble = 1.0E+40;
+float wibble = 2.0E38;
+// CHECK: float wibble = 2.0E+38;

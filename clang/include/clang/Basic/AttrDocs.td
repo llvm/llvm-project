@@ -263,6 +263,103 @@ Query for this feature with ``__has_attribute(enable_if)``.
   }];
 }
 
+def PassObjectSizeDocs : Documentation {
+  let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
+  let Content = [{
+.. Note:: The mangling of functions with parameters that are annotated with
+  ``pass_object_size`` is subject to change. You can get around this by
+  using ``__asm__("foo")`` to explicitly name your functions, thus preserving
+  your ABI; also, non-overloadable C functions with ``pass_object_size`` are
+  not mangled.
+
+The ``pass_object_size(Type)`` attribute can be placed on function parameters to
+instruct clang to call ``__builtin_object_size(param, Type)`` at each callsite
+of said function, and implicitly pass the result of this call in as an invisible
+argument of type ``size_t`` directly after the parameter annotated with
+``pass_object_size``. Clang will also replace any calls to
+``__builtin_object_size(param, Type)`` in the function by said implicit
+parameter.
+
+Example usage:
+
+.. code-block:: c
+
+  int bzero1(char *const p __attribute__((pass_object_size(0))))
+      __attribute__((noinline)) {
+    int i = 0;
+    for (/**/; i < (int)__builtin_object_size(p, 0); ++i) {
+      p[i] = 0;
+    }
+    return i;
+  }
+
+  int main() {
+    char chars[100];
+    int n = bzero1(&chars[0]);
+    assert(n == sizeof(chars));
+    return 0;
+  }
+
+If successfully evaluating ``__builtin_object_size(param, Type)`` at the
+callsite is not possible, then the "failed" value is passed in. So, using the
+definition of ``bzero1`` from above, the following code would exit cleanly:
+
+.. code-block:: c
+
+  int main2(int argc, char *argv[]) {
+    int n = bzero1(argv);
+    assert(n == -1);
+    return 0;
+  }
+
+``pass_object_size`` plays a part in overload resolution. If two overload
+candidates are otherwise equally good, then the overload with one or more
+parameters with ``pass_object_size`` is preferred. This implies that the choice
+between two identical overloads both with ``pass_object_size`` on one or more
+parameters will always be ambiguous; for this reason, having two such overloads
+is illegal. For example:
+
+.. code-block:: c++
+
+  #define PS(N) __attribute__((pass_object_size(N)))
+  // OK
+  void Foo(char *a, char *b); // Overload A
+  // OK -- overload A has no parameters with pass_object_size.
+  void Foo(char *a PS(0), char *b PS(0)); // Overload B
+  // Error -- Same signature (sans pass_object_size) as overload B, and both
+  // overloads have one or more parameters with the pass_object_size attribute.
+  void Foo(void *a PS(0), void *b);
+
+  // OK
+  void Bar(void *a PS(0)); // Overload C
+  // OK
+  void Bar(char *c PS(1)); // Overload D
+
+  void main() {
+    char known[10], *unknown;
+    Foo(unknown, unknown); // Calls overload B
+    Foo(known, unknown); // Calls overload B
+    Foo(unknown, known); // Calls overload B
+    Foo(known, known); // Calls overload B
+
+    Bar(known); // Calls overload D
+    Bar(unknown); // Calls overload D
+  }
+
+Currently, ``pass_object_size`` is a bit restricted in terms of its usage:
+
+* Only one use of ``pass_object_size`` is allowed per parameter.
+
+* It is an error to take the address of a function with ``pass_object_size`` on
+  any of its parameters. If you wish to do this, you can create an overload
+  without ``pass_object_size`` on any parameters.
+
+* It is an error to apply the ``pass_object_size`` attribute to parameters that
+  are not pointers. Additionally, any parameter that ``pass_object_size`` is
+  applied to must be marked ``const`` at its function's definition.
+  }];
+}
+
 def OverloadableDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

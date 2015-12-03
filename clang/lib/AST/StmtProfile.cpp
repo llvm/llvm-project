@@ -589,6 +589,11 @@ void StmtProfiler::VisitOMPTaskLoopDirective(const OMPTaskLoopDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
+void StmtProfiler::VisitOMPTaskLoopSimdDirective(
+    const OMPTaskLoopSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitExpr(const Expr *S) {
   VisitStmt(S);
 }
