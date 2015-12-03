@@ -1716,6 +1716,15 @@ TEST(IsDeleted, MatchesDeletedFunctionDeclarations) {
                       functionDecl(hasName("Func"), isDeleted())));
 }
 
+TEST(IsNoThrow, MatchesNoThrowFunctionDeclarations) {
+  EXPECT_TRUE(notMatches("void f();", functionDecl(isNoThrow())));
+  EXPECT_TRUE(notMatches("void f() throw(int);", functionDecl(isNoThrow())));
+  EXPECT_TRUE(
+      notMatches("void f() noexcept(false);", functionDecl(isNoThrow())));
+  EXPECT_TRUE(matches("void f() throw();", functionDecl(isNoThrow())));
+  EXPECT_TRUE(matches("void f() noexcept;", functionDecl(isNoThrow())));
+}
+
 TEST(isConstexpr, MatchesConstexprDeclarations) {
   EXPECT_TRUE(matches("constexpr int foo = 42;",
                       varDecl(hasName("foo"), isConstexpr())));
@@ -4486,6 +4495,8 @@ TEST(NNS, MatchesNestedNameSpecifiers) {
   EXPECT_TRUE(matches("template <typename T> class A { typename T::B b; };",
                       nestedNameSpecifier()));
   EXPECT_TRUE(matches("struct A { void f(); }; void A::f() {}",
+                      nestedNameSpecifier()));
+  EXPECT_TRUE(matches("namespace a { namespace b {} } namespace ab = a::b;",
                       nestedNameSpecifier()));
 
   EXPECT_TRUE(matches(

@@ -377,8 +377,8 @@ private:
 
   void mangleType(const TagType*);
   void mangleType(TemplateName);
-  void mangleBareFunctionType(const FunctionType *T,
-                              bool MangleReturnType);
+  void mangleBareFunctionType(const FunctionType *T, bool MangleReturnType,
+                              const FunctionDecl *FD = nullptr);
   void mangleNeonVectorType(const VectorType *T);
   void mangleAArch64NeonVectorType(const VectorType *T);
 
@@ -523,7 +523,7 @@ void CXXNameMangler::mangleFunctionEncoding(const FunctionDecl *FD) {
   }
 
   mangleBareFunctionType(FD->getType()->getAs<FunctionType>(), 
-                         MangleReturnType);
+                         MangleReturnType, FD);
 }
 
 static const DeclContext *IgnoreLinkageSpecDecls(const DeclContext *DC) {
@@ -1282,7 +1282,8 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   Out << "Ul";
   const FunctionProtoType *Proto = Lambda->getLambdaTypeInfo()->getType()->
                                    getAs<FunctionProtoType>();
-  mangleBareFunctionType(Proto, /*MangleReturnType=*/false);        
+  mangleBareFunctionType(Proto, /*MangleReturnType=*/false,
+                         Lambda->getLambdaStaticInvoker());
   Out << "E";
   
   // The number is omitted for the first closure type with a given 
@@ -2171,7 +2172,8 @@ void CXXNameMangler::mangleType(const FunctionNoProtoType *T) {
 }
 
 void CXXNameMangler::mangleBareFunctionType(const FunctionType *T,
-                                            bool MangleReturnType) {
+                                            bool MangleReturnType,
+                                            const FunctionDecl *FD) {
   // We should never be mangling something without a prototype.
   const FunctionProtoType *Proto = cast<FunctionProtoType>(T);
 
@@ -2194,8 +2196,19 @@ void CXXNameMangler::mangleBareFunctionType(const FunctionType *T,
     return;
   }
 
-  for (const auto &Arg : Proto->param_types())
-    mangleType(Context.getASTContext().getSignatureParameterType(Arg));
+  assert(!FD || FD->getNumParams() == Proto->getNumParams());
+  for (unsigned I = 0, E = Proto->getNumParams(); I != E; ++I) {
+    const auto &ParamTy = Proto->getParamType(I);
+    mangleType(Context.getASTContext().getSignatureParameterType(ParamTy));
+
+    if (FD) {
+      if (auto *Attr = FD->getParamDecl(I)->getAttr<PassObjectSizeAttr>()) {
+        // Attr can only take 1 character, so we can hardcode the length below.
+        assert(Attr->getType() <= 9 && Attr->getType() >= 0);
+        Out << "U17pass_object_size" << Attr->getType();
+      }
+    }
+  }
 
   FunctionTypeDepth.pop(saved);
 
@@ -4228,4 +4241,3 @@ ItaniumMangleContext *
 ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
   return new ItaniumMangleContextImpl(Context, Diags);
 }
-

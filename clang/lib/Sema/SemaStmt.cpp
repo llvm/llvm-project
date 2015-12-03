@@ -3803,11 +3803,10 @@ static void buildCapturedStmtCaptureList(
       continue;
     }
 
-    assert(Cap->isReferenceCapture() &&
-           "non-reference capture not yet implemented");
-
     Captures.push_back(CapturedStmt::Capture(Cap->getLocation(),
-                                             CapturedStmt::VCK_ByRef,
+                                             Cap->isReferenceCapture()
+                                                 ? CapturedStmt::VCK_ByRef
+                                                 : CapturedStmt::VCK_ByCopy,
                                              Cap->getVariable()));
     CaptureInits.push_back(Cap->getInitExpr());
   }

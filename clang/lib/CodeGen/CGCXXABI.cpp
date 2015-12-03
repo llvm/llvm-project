@@ -85,7 +85,7 @@ llvm::Value *CGCXXABI::EmitLoadOfMemberFunctionPointer(
   const CXXRecordDecl *RD = 
     cast<CXXRecordDecl>(MPT->getClass()->getAs<RecordType>()->getDecl());
   llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(
-                              CGM.getTypes().arrangeCXXMethodType(RD, FPT));
+      CGM.getTypes().arrangeCXXMethodType(RD, FPT, /*FD=*/nullptr));
   return llvm::Constant::getNullValue(FTy->getPointerTo());
 }
 

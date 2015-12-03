@@ -945,6 +945,33 @@ SEHFinallyStmt* SEHFinallyStmt::Create(const ASTContext &C, SourceLocation Loc,
   return new(C)SEHFinallyStmt(Loc,Block);
 }
 
+CapturedStmt::Capture::Capture(SourceLocation Loc, VariableCaptureKind Kind,
+                               VarDecl *Var)
+    : VarAndKind(Var, Kind), Loc(Loc) {
+  switch (Kind) {
+  case VCK_This:
+    assert(!Var && "'this' capture cannot have a variable!");
+    break;
+  case VCK_ByRef:
+    assert(Var && "capturing by reference must have a variable!");
+    break;
+  case VCK_ByCopy:
+    assert(Var && "capturing by copy must have a variable!");
+    assert(
+        (Var->getType()->isScalarType() || (Var->getType()->isReferenceType() &&
+                                            Var->getType()
+                                                ->castAs<ReferenceType>()
+                                                ->getPointeeType()
+                                                ->isScalarType())) &&
+        "captures by copy are expected to have a scalar type!");
+    break;
+  case VCK_VLAType:
+    assert(!Var &&
+           "Variable-length array type capture cannot have a variable!");
+    break;
+  }
+}
+
 CapturedStmt::Capture *CapturedStmt::getStoredCaptures() const {
   unsigned Size = sizeof(CapturedStmt) + sizeof(Stmt *) * (NumCaptures + 1);
 

@@ -418,3 +418,22 @@ void f(S::T6) {}
 // X64-DAG: @"\01?f@UnnamedType@@YAXUT5@S@1@@Z"
 // X64-DAG: @"\01?f@UnnamedType@@YAXPEAU<unnamed-type-T6>@S@1@@Z"
 }
+
+namespace PassObjectSize {
+// NOTE: This mangling is subject to change.
+// Reiterating from the comment in MicrosoftMangle, the scheme is pretend a
+// parameter of type __clang::__pass_object_sizeN exists after each pass object
+// size param P, where N is the Type of the pass_object_size attribute on P.
+//
+// e.g. we want to mangle:
+//   void foo(void *const __attribute__((pass_object_size(0))));
+// as if it were
+//   namespace __clang { enum __pass_object_size0 : size_t {}; }
+//   void foo(void *const, __clang::__pass_object_size0);
+// where __clang is a top-level namespace.
+
+// CHECK-DAG: define i32 @"\01?foo@PassObjectSize@@YAHQAHW4__pass_object_size0@__clang@@@Z"
+int foo(int *const i __attribute__((pass_object_size(0)))) { return 0; }
+// CHECK-DAG: define i32 @"\01?bar@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@@Z"
+int bar(int *const i __attribute__((pass_object_size(1)))) { return 0; }
+}

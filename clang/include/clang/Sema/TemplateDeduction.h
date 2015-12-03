@@ -236,7 +236,7 @@ struct TemplateSpecCandidate {
   }
 
   /// Diagnose a template argument deduction failure.
-  void NoteDeductionFailure(Sema &S);
+  void NoteDeductionFailure(Sema &S, bool ForTakingAddress);
 };
 
 /// TemplateSpecCandidateSet - A set of generalized overload candidates,
@@ -246,6 +246,10 @@ struct TemplateSpecCandidate {
 class TemplateSpecCandidateSet {
   SmallVector<TemplateSpecCandidate, 16> Candidates;
   SourceLocation Loc;
+  // Stores whether we're taking the address of these candidates. This helps us
+  // produce better error messages when dealing with the pass_object_size
+  // attribute on parameters.
+  bool ForTakingAddress;
 
   TemplateSpecCandidateSet(
       const TemplateSpecCandidateSet &) = delete;
@@ -254,7 +258,8 @@ class TemplateSpecCandidateSet {
   void destroyCandidates();
 
 public:
-  TemplateSpecCandidateSet(SourceLocation Loc) : Loc(Loc) {}
+  TemplateSpecCandidateSet(SourceLocation Loc, bool ForTakingAddress = false)
+      : Loc(Loc), ForTakingAddress(ForTakingAddress) {}
   ~TemplateSpecCandidateSet() { destroyCandidates(); }
 
   SourceLocation getLocation() const { return Loc; }

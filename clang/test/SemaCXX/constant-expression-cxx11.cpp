@@ -327,7 +327,7 @@ struct Str {
 };
 
 extern char externalvar[];
-constexpr bool constaddress = (void *)externalvar == (void *)0x4000UL; // expected-error {{must be initialized by a constant expression}}
+constexpr bool constaddress = (void *)externalvar == (void *)0x4000UL; // expected-error {{must be initialized by a constant expression}} expected-note {{reinterpret_cast}}
 constexpr bool litaddress = "foo" == "foo"; // expected-error {{must be initialized by a constant expression}} expected-warning {{unspecified}}
 static_assert(0 != "foo", "");
 
@@ -1874,10 +1874,9 @@ namespace NeverConstantTwoWays {
         0;
   }
 
-  // FIXME: We should diagnose the cast to long here, not the division by zero.
   constexpr int n = // expected-error {{must be initialized by a constant expression}}
-      (int *)(long)&n == &n ?
-        1 / 0 : // expected-warning {{division by zero}} expected-note {{division by zero}}
+      (int *)(long)&n == &n ? // expected-note {{reinterpret_cast}}
+        1 / 0 : // expected-warning {{division by zero}}
         0;
 }
 

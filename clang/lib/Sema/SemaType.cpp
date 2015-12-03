@@ -5487,9 +5487,12 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   // Pointer type qualifiers can only operate on pointer types, but not
   // pointer-to-member types.
   if (!isa<PointerType>(Desugared)) {
-    S.Diag(Attr.getLoc(), Type->isMemberPointerType() ?
-                          diag::err_attribute_no_member_pointers :
-                          diag::err_attribute_pointers_only) << Attr.getName();
+    if (Type->isMemberPointerType())
+      S.Diag(Attr.getLoc(), diag::err_attribute_no_member_pointers)
+          << Attr.getName();
+    else
+      S.Diag(Attr.getLoc(), diag::err_attribute_pointers_only)
+          << Attr.getName() << 0;
     return true;
   }
 

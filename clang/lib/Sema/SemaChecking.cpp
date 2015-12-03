@@ -8419,6 +8419,15 @@ bool Sema::CheckParmsForFunctionDef(ParmVarDecl *const *P,
         }
       }
     }
+
+    // Parameters with the pass_object_size attribute only need to be marked
+    // constant at function definitions. Because we lack information about
+    // whether we're on a declaration or definition when we're instantiating the
+    // attribute, we need to check for constness here.
+    if (const auto *Attr = Param->getAttr<PassObjectSizeAttr>())
+      if (!Param->getType().isConstQualified())
+        Diag(Param->getLocation(), diag::err_attribute_pointers_only)
+            << Attr->getSpelling() << 1;
   }
 
   return HasInvalidParm;
@@ -8538,7 +8547,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     return;
 
   llvm::APSInt index;
-  if (!IndexExpr->EvaluateAsInt(index, Context))
+  if (!IndexExpr->EvaluateAsInt(index, Context, Expr::SE_AllowSideEffects))
     return;
   if (IndexNegated)
     index = -index;
@@ -9869,4 +9878,3 @@ void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
         << ArgumentExpr->getSourceRange()
         << TypeTagExpr->getSourceRange();
 }
-

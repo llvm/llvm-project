@@ -1141,6 +1141,12 @@ static void addFunctionPointerConversion(Sema &S,
                                          SourceRange IntroducerRange,
                                          CXXRecordDecl *Class,
                                          CXXMethodDecl *CallOperator) {
+  // This conversion is explicitly disabled if the lambda's function has
+  // pass_object_size attributes on any of its parameters.
+  if (std::any_of(CallOperator->param_begin(), CallOperator->param_end(),
+                  std::mem_fn(&ParmVarDecl::hasAttr<PassObjectSizeAttr>)))
+    return;
+
   // Add the conversion to function pointer.
   const FunctionProtoType *CallOpProto = 
       CallOperator->getType()->getAs<FunctionProtoType>();

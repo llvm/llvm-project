@@ -38,6 +38,11 @@
 using namespace clang;
 using namespace sema;
 
+static bool functionHasPassObjectSizeParams(const FunctionDecl *FD) {
+  return std::any_of(FD->param_begin(), FD->param_end(),
+                     std::mem_fn(&ParmVarDecl::hasAttr<PassObjectSizeAttr>));
+}
+
 /// A convenience routine for creating a decayed reference to a function.
 static ExprResult
 CreateFunctionRefExpr(Sema &S, FunctionDecl *Fn, NamedDecl *FoundDecl,
@@ -60,12 +65,8 @@ CreateFunctionRefExpr(Sema &S, FunctionDecl *Fn, NamedDecl *FoundDecl,
     DRE->setHadMultipleCandidates(true);
 
   S.MarkDeclRefReferenced(DRE);
-
-  ExprResult E = DRE;
-  E = S.DefaultFunctionArrayConversion(E.get());
-  if (E.isInvalid())
-    return ExprError();
-  return E;
+  return S.ImpCastExprToType(DRE, S.Context.getPointerType(DRE->getType()),
+                             CK_FunctionToPointerDecay);
 }
 
 static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
@@ -1062,6 +1063,14 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
       return true;
   }
 
+  // Though pass_object_size is placed on parameters and takes an argument, we
+  // consider it to be a function-level modifier for the sake of function
+  // identity. Either the function has one or more parameters with
+  // pass_object_size or it doesn't.
+  if (functionHasPassObjectSizeParams(New) !=
+      functionHasPassObjectSizeParams(Old))
+    return true;
+
   // enable_if attributes are an order-sensitive part of the signature.
   for (specific_attr_iterator<EnableIfAttr>
          NewI = New->specific_attr_begin<EnableIfAttr>(),
@@ -1547,6 +1556,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   } else if (FromType->isFunctionType() && argIsLValue) {
     // Function-to-pointer conversion (C++ 4.3).
     SCS.First = ICK_Function_To_Pointer;
+
+    if (auto *DRE = dyn_cast<DeclRefExpr>(From->IgnoreParenCasts()))
+      if (auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl()))
+        if (!S.checkAddressOfFunctionIsAvailable(FD))
+          return false;
 
     // An lvalue of function type T can be converted to an rvalue of
     // type "pointer to T." The result is a pointer to the
@@ -2508,9 +2522,20 @@ enum {
   ft_parameter_arity,
   ft_parameter_mismatch,
   ft_return_type,
-  ft_qualifer_mismatch,
-  ft_addr_enable_if
+  ft_qualifer_mismatch
 };
+
+/// Attempts to get the FunctionProtoType from a Type. Handles
+/// MemberFunctionPointers properly.
+static const FunctionProtoType *tryGetFunctionProtoType(QualType FromType) {
+  if (auto *FPT = FromType->getAs<FunctionProtoType>())
+    return FPT;
+
+  if (auto *MPT = FromType->getAs<MemberPointerType>())
+    return MPT->getPointeeType()->getAs<FunctionProtoType>();
+
+  return nullptr;
+}
 
 /// HandleFunctionTypeMismatch - Gives diagnostic information for differeing
 /// function types.  Catches different number of parameter, mismatch in
@@ -2558,8 +2583,8 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
     return;
   }
 
-  const FunctionProtoType *FromFunction = FromType->getAs<FunctionProtoType>(),
-                          *ToFunction = ToType->getAs<FunctionProtoType>();
+  const FunctionProtoType *FromFunction = tryGetFunctionProtoType(FromType),
+                          *ToFunction = tryGetFunctionProtoType(ToType);
 
   // Both types need to be function types.
   if (!FromFunction || !ToFunction) {
@@ -8572,7 +8597,11 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
            S.IdentifyCUDAPreference(Caller, Cand2.Function);
   }
 
-  return false;
+  bool HasPS1 = Cand1.Function != nullptr &&
+                functionHasPassObjectSizeParams(Cand1.Function);
+  bool HasPS2 = Cand2.Function != nullptr &&
+                functionHasPassObjectSizeParams(Cand2.Function);
+  return HasPS1 != HasPS2 && HasPS1;
 }
 
 /// Determine whether two declarations are "equivalent" for the purposes of
@@ -8641,9 +8670,6 @@ void Sema::diagnoseEquivalentInternalLinkageDeclarations(
         << !M << (M ? M->getFullModuleName() : "");
   }
 }
-
-static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
-                                  unsigned NumArgs);
 
 /// \brief Computes the best viable function (C++ 13.3.3)
 /// within an overload candidate set.
@@ -8794,17 +8820,75 @@ static bool isFunctionAlwaysEnabled(const ASTContext &Ctx,
   return true;
 }
 
+/// \brief Returns true if we can take the address of the function.
+///
+/// \param Complain - If true, we'll emit a diagnostic
+/// \param InOverloadResolution - For the purposes of emitting a diagnostic, are
+///   we in overload resolution?
+/// \param Loc - The location of the statement we're complaining about. Ignored
+///   if we're not complaining, or if we're in overload resolution.
+static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
+                                              bool Complain,
+                                              bool InOverloadResolution,
+                                              SourceLocation Loc) {
+  if (!isFunctionAlwaysEnabled(S.Context, FD)) {
+    if (Complain) {
+      // FIXME(gbiv): Both diagnostics below lack tests. We should add tests.
+      if (InOverloadResolution)
+        S.Diag(FD->getLocStart(),
+               diag::note_addrof_ovl_candidate_disabled_by_enable_if_attr);
+      else
+        S.Diag(Loc, diag::err_addrof_function_disabled_by_enable_if_attr) << FD;
+    }
+    return false;
+  }
+
+  auto I = std::find_if(FD->param_begin(), FD->param_end(),
+                        std::mem_fn(&ParmVarDecl::hasAttr<PassObjectSizeAttr>));
+  if (I == FD->param_end())
+    return true;
+
+  if (Complain) {
+    // Add one to ParamNo because it's user-facing
+    unsigned ParamNo = std::distance(FD->param_begin(), I) + 1;
+    if (InOverloadResolution)
+      S.Diag(FD->getLocation(),
+             diag::note_ovl_candidate_has_pass_object_size_params)
+          << ParamNo;
+    else
+      S.Diag(Loc, diag::err_address_of_function_with_pass_object_size_params)
+          << FD << ParamNo;
+  }
+  return false;
+}
+
+static bool checkAddressOfCandidateIsAvailable(Sema &S,
+                                               const FunctionDecl *FD) {
+  return checkAddressOfFunctionIsAvailable(S, FD, /*Complain=*/true,
+                                           /*InOverloadResolution=*/true,
+                                           /*Loc=*/SourceLocation());
+}
+
+bool Sema::checkAddressOfFunctionIsAvailable(const FunctionDecl *Function,
+                                             bool Complain,
+                                             SourceLocation Loc) {
+  return ::checkAddressOfFunctionIsAvailable(*this, Function, Complain,
+                                             /*InOverloadResolution=*/false,
+                                             Loc);
+}
+
 // Notes the location of an overload candidate.
 void Sema::NoteOverloadCandidate(FunctionDecl *Fn, QualType DestType,
                                  bool TakingAddress) {
+  if (TakingAddress && !checkAddressOfCandidateIsAvailable(*this, Fn))
+    return;
+
   std::string FnDesc;
   OverloadCandidateKind K = ClassifyOverloadCandidate(*this, Fn, FnDesc);
   PartialDiagnostic PD = PDiag(diag::note_ovl_candidate)
                              << (unsigned) K << FnDesc;
-  if (TakingAddress && !isFunctionAlwaysEnabled(Context, Fn))
-    PD << ft_addr_enable_if;
-  else
-    HandleFunctionTypeMismatch(PD, Fn->getType(), DestType);
+
+  HandleFunctionTypeMismatch(PD, Fn->getType(), DestType);
   Diag(Fn->getLocation(), PD);
   MaybeEmitInheritedConstructorNote(*this, Fn);
 }
@@ -8858,7 +8942,7 @@ void ImplicitConversionSequence::DiagnoseAmbiguousConversion(
 }
 
 static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
-                                  unsigned I) {
+                                  unsigned I, bool TakingCandidateAddress) {
   const ImplicitConversionSequence &Conv = Cand->Conversions[I];
   assert(Conv.isBad());
   assert(Cand->Function && "for now, candidate must be a function");
@@ -9056,7 +9140,11 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
         return;
       }
   }
-  
+
+  if (TakingCandidateAddress &&
+      !checkAddressOfCandidateIsAvailable(S, Cand->Function))
+    return;
+
   // Emit the generic diagnostic and, optionally, add the hints to it.
   PartialDiagnostic FDiag = S.PDiag(diag::note_ovl_candidate_bad_conv);
   FDiag << (unsigned) FnKind << FnDesc
@@ -9167,7 +9255,8 @@ static TemplateDecl *getDescribedTemplate(Decl *Templated) {
 /// Diagnose a failed template-argument deduction.
 static void DiagnoseBadDeduction(Sema &S, Decl *Templated,
                                  DeductionFailureInfo &DeductionFailure,
-                                 unsigned NumArgs) {
+                                 unsigned NumArgs,
+                                 bool TakingCandidateAddress) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
   NamedDecl *ParamD;
   (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
@@ -9335,6 +9424,11 @@ static void DiagnoseBadDeduction(Sema &S, Decl *Templated,
         }
       }
     }
+
+    if (TakingCandidateAddress && isa<FunctionDecl>(Templated) &&
+        !checkAddressOfCandidateIsAvailable(S, cast<FunctionDecl>(Templated)))
+      return;
+
     // FIXME: For generic lambda parameters, check if the function is a lambda
     // call operator, and if so, emit a prettier and more informative 
     // diagnostic that mentions 'auto' and lambda in addition to 
@@ -9355,14 +9449,15 @@ static void DiagnoseBadDeduction(Sema &S, Decl *Templated,
 
 /// Diagnose a failed template-argument deduction, for function calls.
 static void DiagnoseBadDeduction(Sema &S, OverloadCandidate *Cand,
-                                 unsigned NumArgs) {
+                                 unsigned NumArgs,
+                                 bool TakingCandidateAddress) {
   unsigned TDK = Cand->DeductionFailure.Result;
   if (TDK == Sema::TDK_TooFewArguments || TDK == Sema::TDK_TooManyArguments) {
     if (CheckArityMismatch(S, Cand, NumArgs))
       return;
   }
   DiagnoseBadDeduction(S, Cand->Function, // pattern
-                       Cand->DeductionFailure, NumArgs);
+                       Cand->DeductionFailure, NumArgs, TakingCandidateAddress);
 }
 
 /// CUDA: diagnose an invalid call across targets.
@@ -9443,7 +9538,8 @@ static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
 /// more richly for those diagnostic clients that cared, but we'd
 /// still have to be just as careful with the default diagnostics.
 static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
-                                  unsigned NumArgs) {
+                                  unsigned NumArgs,
+                                  bool TakingCandidateAddress) {
   FunctionDecl *Fn = Cand->Function;
 
   // Note deleted candidates, but only if they're viable.
@@ -9471,7 +9567,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     return DiagnoseArityMismatch(S, Cand, NumArgs);
 
   case ovl_fail_bad_deduction:
-    return DiagnoseBadDeduction(S, Cand, NumArgs);
+    return DiagnoseBadDeduction(S, Cand, NumArgs, TakingCandidateAddress);
 
   case ovl_fail_illegal_constructor: {
     S.Diag(Fn->getLocation(), diag::note_ovl_candidate_illegal_constructor)
@@ -9489,7 +9585,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     unsigned I = (Cand->IgnoreObjectArgument ? 1 : 0);
     for (unsigned N = Cand->NumConversions; I != N; ++I)
       if (Cand->Conversions[I].isBad())
-        return DiagnoseBadConversion(S, Cand, I);
+        return DiagnoseBadConversion(S, Cand, I, TakingCandidateAddress);
 
     // FIXME: this currently happens when we're called from SemaInit
     // when user-conversion overload fails.  Figure out how to handle
@@ -9860,7 +9956,8 @@ void OverloadCandidateSet::NoteCandidates(Sema &S,
     ++CandsShown;
 
     if (Cand->Function)
-      NoteFunctionCandidate(S, Cand, Args.size());
+      NoteFunctionCandidate(S, Cand, Args.size(),
+                            /*TakingCandidateAddress=*/false);
     else if (Cand->IsSurrogate)
       NoteSurrogateCandidate(S, Cand);
     else {
@@ -9928,9 +10025,10 @@ struct CompareTemplateSpecCandidatesForDisplay {
 /// Diagnose a template argument deduction failure.
 /// We are treating these failures as overload failures due to bad
 /// deductions.
-void TemplateSpecCandidate::NoteDeductionFailure(Sema &S) {
+void TemplateSpecCandidate::NoteDeductionFailure(Sema &S,
+                                                 bool ForTakingAddress) {
   DiagnoseBadDeduction(S, Specialization, // pattern
-                       DeductionFailure, /*NumArgs=*/0);
+                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress);
 }
 
 void TemplateSpecCandidateSet::destroyCandidates() {
@@ -9983,7 +10081,7 @@ void TemplateSpecCandidateSet::NoteCandidates(Sema &S, SourceLocation Loc) {
 
     assert(Cand->Specialization &&
            "Non-matching built-in candidates are not added to Cands.");
-    Cand->NoteDeductionFailure(S);
+    Cand->NoteDeductionFailure(S, ForTakingAddress);
   }
 
   if (I != E)
@@ -10048,7 +10146,7 @@ public:
         HasComplained(false),
         OvlExprInfo(OverloadExpr::find(SourceExpr)),
         OvlExpr(OvlExprInfo.Expression),
-        FailedCandidates(OvlExpr->getNameLoc()) {
+        FailedCandidates(OvlExpr->getNameLoc(), /*ForTakingAddress=*/true) {
     ExtractUnqualifiedFunctionTypeFromTargetType();
 
     if (TargetFunctionType->isFunctionType()) {
@@ -10182,10 +10280,9 @@ private:
     Specialization = cast<FunctionDecl>(Specialization->getCanonicalDecl());
     assert(S.isSameOrCompatibleFunctionType(
               Context.getCanonicalType(Specialization->getType()),
-              Context.getCanonicalType(TargetFunctionType)) ||
-           (!S.getLangOpts().CPlusPlus && TargetType->isVoidPointerType()));
+              Context.getCanonicalType(TargetFunctionType)));
 
-    if (!isFunctionAlwaysEnabled(S.Context, Specialization))
+    if (!S.checkAddressOfFunctionIsAvailable(Specialization))
       return false;
 
     Matches.push_back(std::make_pair(CurAccessFunPair, Specialization));
@@ -10218,7 +10315,7 @@ private:
         return false;
       }
 
-      if (!isFunctionAlwaysEnabled(S.Context, FunDecl))
+      if (!S.checkAddressOfFunctionIsAvailable(FunDecl))
         return false;
 
       QualType ResultTy;
@@ -10341,8 +10438,9 @@ public:
            I != IEnd; ++I)
         if (FunctionDecl *Fun =
                 dyn_cast<FunctionDecl>((*I)->getUnderlyingDecl()))
-          S.NoteOverloadCandidate(Fun, TargetFunctionType,
-                                  /*TakingAddress=*/true);
+          if (!functionHasPassObjectSizeParams(Fun))
+            S.NoteOverloadCandidate(Fun, TargetFunctionType,
+                                    /*TakingAddress=*/true);
       FailedCandidates.NoteCandidates(S, OvlExpr->getLocStart());
     }
   }
@@ -11052,9 +11150,23 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     if (!Recovery.isInvalid())
       return Recovery;
 
-    SemaRef.Diag(Fn->getLocStart(),
-         diag::err_ovl_no_viable_function_in_call)
-      << ULE->getName() << Fn->getSourceRange();
+    // If the user passes in a function that we can't take the address of, we
+    // generally end up emitting really bad error messages. Here, we attempt to
+    // emit better ones.
+    for (const Expr *Arg : Args) {
+      if (!Arg->getType()->isFunctionType())
+        continue;
+      if (auto *DRE = dyn_cast<DeclRefExpr>(Arg->IgnoreParenImpCasts())) {
+        auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl());
+        if (FD &&
+            !SemaRef.checkAddressOfFunctionIsAvailable(FD, /*Complain=*/true,
+                                                       Arg->getExprLoc()))
+          return ExprError();
+      }
+    }
+
+    SemaRef.Diag(Fn->getLocStart(), diag::err_ovl_no_viable_function_in_call)
+        << ULE->getName() << Fn->getSourceRange();
     CandidateSet->NoteCandidates(SemaRef, OCD_AllCandidates, Args);
     break;
   }

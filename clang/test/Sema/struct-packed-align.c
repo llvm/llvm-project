@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify
-// expected-no-diagnostics
+// RUN: %clang_cc1 %s -fsyntax-only -triple=x86_64-windows-coff -verify
 
 // Packed structs.
 struct s {
@@ -137,4 +137,25 @@ extern int n2[__alignof(struct nS) == 8 ? 1 : -1];
 #else
 extern int n1[sizeof(struct nS) == 9 ? 1 : -1];
 extern int n2[__alignof(struct nS) == 1 ? 1 : -1];
+#endif
+
+// Packed attribute shouldn't be ignored for bit-field of char types.
+// Note from GCC reference manual: The 4.1, 4.2 and 4.3 series of GCC ignore
+// the packed attribute on bit-fields of type char. This has been fixed in
+// GCC 4.4 but the change can lead to differences in the structure layout.
+// See the documentation of -Wpacked-bitfield-compat for more information.
+struct packed_chars {
+  char a:4;
+  char b:8 __attribute__ ((packed));
+  // expected-warning@-1 {{'packed' attribute was ignored on bit-fields with single-byte alignment in older versions of GCC and Clang}}
+  char c:4;
+};
+
+#if defined(_WIN32)
+// On Windows clang uses MSVC compatible layout in this case.
+extern int o1[sizeof(struct packed_chars) == 3 ? 1 : -1];
+extern int o2[__alignof(struct packed_chars) == 1 ? 1 : -1];
+#else
+extern int o1[sizeof(struct packed_chars) == 2 ? 1 : -1];
+extern int o2[__alignof(struct packed_chars) == 1 ? 1 : -1];
 #endif
