@@ -71,8 +71,6 @@ public:
   Linker(Module &M, DiagnosticHandlerFunction DiagnosticHandler);
   Linker(Module &M);
 
-  Module &getModule() const { return Composite; }
-
   /// \brief Link \p Src into the composite. The source is destroyed.
   ///
   /// Passing OverrideSymbols as true will have symbols from Src

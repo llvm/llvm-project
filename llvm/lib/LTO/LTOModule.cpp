@@ -252,11 +252,7 @@ LTOModule *LTOModule::makeLTOModule(MemoryBufferRef Buffer,
   else
     Ret = new LTOModule(std::move(IRObj), target);
 
-  if (Ret->parseSymbols(errMsg)) {
-    delete Ret;
-    return nullptr;
-  }
-
+  Ret->parseSymbols();
   Ret->parseMetadata();
 
   return Ret;
@@ -592,9 +588,7 @@ void LTOModule::addPotentialUndefinedSymbol(const object::BasicSymbolRef &Sym,
   info.symbol = decl;
 }
 
-/// parseSymbols - Parse the symbols from the module and model-level ASM and add
-/// them to either the defined or undefined lists.
-bool LTOModule::parseSymbols(std::string &errMsg) {
+void LTOModule::parseSymbols() {
   for (auto &Sym : IRFile->symbols()) {
     const GlobalValue *GV = IRFile->getSymbolGV(Sym.getRawDataRefImpl());
     uint32_t Flags = Sym.getFlags();
@@ -649,8 +643,6 @@ bool LTOModule::parseSymbols(std::string &errMsg) {
     NameAndAttributes info = u->getValue();
     _symbols.push_back(info);
   }
-
-  return false;
 }
 
 /// parseMetadata - Parse metadata from the module

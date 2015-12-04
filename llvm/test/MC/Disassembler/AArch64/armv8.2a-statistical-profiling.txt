@@ -1,10 +1,6 @@
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+spe --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu --disassemble < %s | FileCheck --check-prefix=NO_SPE %s
 
-[0x1f,0x22,0x03,0xd5]
-# CHECK: hint #0x10
-# NO_SPE: hint #0x10
-
 [0x3f,0x22,0x03,0xd5]
 # CHECK: psb csync
 # NO_SPE: hint #0x11

@@ -52,7 +52,7 @@ OrcLazyJIT::createCompileCallbackMgr(Triple T) {
     default: return nullptr;
 
     case Triple::x86_64: {
-      typedef orc::JITCompileCallbackManager<orc::OrcX86_64> CCMgrT;
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64> CCMgrT;
       return llvm::make_unique<CCMgrT>(0);
     }
   }

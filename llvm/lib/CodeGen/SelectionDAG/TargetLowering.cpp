@@ -1074,7 +1074,9 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         Op.getOperand(0).getValueType().isFloatingPoint()) {
       bool OpVTLegal = isOperationLegalOrCustom(ISD::FGETSIGN, Op.getValueType());
       bool i32Legal  = isOperationLegalOrCustom(ISD::FGETSIGN, MVT::i32);
-      if ((OpVTLegal || i32Legal) && Op.getValueType().isSimple()) {
+      if ((OpVTLegal || i32Legal) && Op.getValueType().isSimple() &&
+           Op.getOperand(0).getValueType() != MVT::f128) {
+        // Cannot eliminate/lower SHL for f128 yet.
         EVT Ty = OpVTLegal ? Op.getValueType() : MVT::i32;
         // Make a FGETSIGN + SHL to move the sign bit into the appropriate
         // place.  We expect the SHL to be eliminated by other optimizations.

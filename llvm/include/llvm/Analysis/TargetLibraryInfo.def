@@ -27,6 +27,86 @@
 #define TLI_DEFINE_STRING_INTERNAL(string_repr) string_repr,
 #endif
 
+/// void *new(unsigned int);
+TLI_DEFINE_ENUM_INTERNAL(msvc_new_int)
+TLI_DEFINE_STRING_INTERNAL("??2@YAPAXI@Z")
+
+/// void *new(unsigned int, nothrow);
+TLI_DEFINE_ENUM_INTERNAL(msvc_new_int_nothrow)
+TLI_DEFINE_STRING_INTERNAL("??2@YAPAXIABUnothrow_t@std@@@Z")
+
+/// void *new(unsigned long long);
+TLI_DEFINE_ENUM_INTERNAL(msvc_new_longlong)
+TLI_DEFINE_STRING_INTERNAL("??2@YAPEAX_K@Z")
+
+/// void *new(unsigned long long, nothrow);
+TLI_DEFINE_ENUM_INTERNAL(msvc_new_longlong_nothrow)
+TLI_DEFINE_STRING_INTERNAL("??2@YAPEAX_KAEBUnothrow_t@std@@@Z")
+
+/// void operator delete(void*);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_ptr32)
+TLI_DEFINE_STRING_INTERNAL("??3@YAXPAX@Z")
+
+/// void operator delete(void*, nothrow);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_ptr32_nothrow)
+TLI_DEFINE_STRING_INTERNAL("??3@YAXPAXABUnothrow_t@std@@@Z")
+
+/// void operator delete(void*, unsigned int);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_ptr32_int)
+TLI_DEFINE_STRING_INTERNAL("??3@YAXPAXI@Z")
+
+/// void operator delete(void*);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_ptr64)
+TLI_DEFINE_STRING_INTERNAL("??3@YAXPEAX@Z")
+
+/// void operator delete(void*, nothrow);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_ptr64_nothrow)
+TLI_DEFINE_STRING_INTERNAL("??3@YAXPEAXAEBUnothrow_t@std@@@Z")
+
+/// void operator delete(void*, unsigned long long);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_ptr64_longlong)
+TLI_DEFINE_STRING_INTERNAL("??3@YAXPEAX_K@Z")
+
+/// void *new[](unsigned int);
+TLI_DEFINE_ENUM_INTERNAL(msvc_new_array_int)
+TLI_DEFINE_STRING_INTERNAL("??_U@YAPAXI@Z")
+
+/// void *new[](unsigned int, nothrow);
+TLI_DEFINE_ENUM_INTERNAL(msvc_new_array_int_nothrow)
+TLI_DEFINE_STRING_INTERNAL("??_U@YAPAXIABUnothrow_t@std@@@Z")
+
+/// void *new[](unsigned long long);
+TLI_DEFINE_ENUM_INTERNAL(msvc_new_array_longlong)
+TLI_DEFINE_STRING_INTERNAL("??_U@YAPEAX_K@Z")
+
+/// void *new[](unsigned long long, nothrow);
+TLI_DEFINE_ENUM_INTERNAL(msvc_new_array_longlong_nothrow)
+TLI_DEFINE_STRING_INTERNAL("??_U@YAPEAX_KAEBUnothrow_t@std@@@Z")
+
+/// void operator delete[](void*);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_array_ptr32)
+TLI_DEFINE_STRING_INTERNAL("??_V@YAXPAX@Z")
+
+/// void operator delete[](void*, nothrow);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_array_ptr32_nothrow)
+TLI_DEFINE_STRING_INTERNAL("??_V@YAXPAXABUnothrow_t@std@@@Z")
+
+/// void operator delete[](void*, unsigned int);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_array_ptr32_int)
+TLI_DEFINE_STRING_INTERNAL("??_V@YAXPAXI@Z")
+
+/// void operator delete[](void*);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_array_ptr64)
+TLI_DEFINE_STRING_INTERNAL("??_V@YAXPEAX@Z")
+
+/// void operator delete[](void*, nothrow);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_array_ptr64_nothrow)
+TLI_DEFINE_STRING_INTERNAL("??_V@YAXPEAXAEBUnothrow_t@std@@@Z")
+
+/// void operator delete[](void*, unsigned long long);
+TLI_DEFINE_ENUM_INTERNAL(msvc_delete_array_ptr64_longlong)
+TLI_DEFINE_STRING_INTERNAL("??_V@YAXPEAX_K@Z")
+
 /// int _IO_getc(_IO_FILE * __fp);
 TLI_DEFINE_ENUM_INTERNAL(under_IO_getc)
 TLI_DEFINE_STRING_INTERNAL("_IO_getc")
@@ -673,6 +753,7 @@ TLI_DEFINE_STRING_INTERNAL("modff")
 /// long double modfl(long double value, long double *iptr);
 TLI_DEFINE_ENUM_INTERNAL(modfl)
 TLI_DEFINE_STRING_INTERNAL("modfl")
+
 /// double nearbyint(double x);
 TLI_DEFINE_ENUM_INTERNAL(nearbyint)
 TLI_DEFINE_STRING_INTERNAL("nearbyint")

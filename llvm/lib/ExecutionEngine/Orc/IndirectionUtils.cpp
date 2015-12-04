@@ -19,7 +19,7 @@
 namespace llvm {
 namespace orc {
 
-void JITCompileCallbackManagerBase::anchor() {}
+void JITCompileCallbackManager::anchor() {}
 void IndirectStubsManagerBase::anchor() {}
 
 Constant* createIRTypedAddress(FunctionType &FT, TargetAddress Addr) {

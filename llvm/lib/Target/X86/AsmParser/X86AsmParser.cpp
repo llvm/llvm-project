@@ -1693,12 +1693,14 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
       return ParseIntelOperator(IOK_TYPE);
   }
 
+  bool PtrInOperand = false;
   unsigned Size = getIntelMemOperandSize(Tok.getString());
   if (Size) {
     Parser.Lex(); // Eat operand size (e.g., byte, word).
     if (Tok.getString() != "PTR" && Tok.getString() != "ptr")
       return ErrorOperand(Tok.getLoc(), "Expected 'PTR' or 'ptr' token!");
     Parser.Lex(); // Eat ptr.
+    PtrInOperand = true;
   }
   Start = Tok.getLoc();
 
@@ -1754,9 +1756,16 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   if (!ParseRegister(RegNo, Start, End)) {
     // If this is a segment register followed by a ':', then this is the start
     // of a segment override, otherwise this is a normal register reference.
-    if (getLexer().isNot(AsmToken::Colon))
+    // In case it is a normal register and there is ptr in the operand this 
+    // is an error
+    if (getLexer().isNot(AsmToken::Colon)){
+      if (PtrInOperand){
+        return ErrorOperand(Start, "expected memory operand after "
+                                   "'ptr', found register operand instead");
+      }
       return X86Operand::CreateReg(RegNo, Start, End);
-
+    }
+    
     return ParseIntelSegmentOverride(/*SegReg=*/RegNo, Start, Size);
   }
 

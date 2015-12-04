@@ -58,6 +58,10 @@ FunctionPass *createX86PadShortFunctions();
 /// to eliminate execution delays in some Atom processors.
 FunctionPass *createX86FixupLEAs();
 
+/// createX86OptimizeLEAs() - Return a pass that removes redundant
+/// address recalculations.
+FunctionPass *createX86OptimizeLEAs();
+
 /// createX86CallFrameOptimization - Return a pass that optimizes
 /// the code-size of x86 call sequences. This is done by replacing
 /// esp-relative movs with pushes.

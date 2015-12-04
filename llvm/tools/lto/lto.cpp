@@ -95,13 +95,14 @@ static void handleLibLTODiagnostic(lto_codegen_diagnostic_severity_t Severity,
 // libLTO API semantics, which require that the code generator owns the object
 // file.
 struct LibLTOCodeGenerator : LTOCodeGenerator {
-  LibLTOCodeGenerator() {
+  LibLTOCodeGenerator() : LTOCodeGenerator(getGlobalContext()) {
     setDiagnosticHandler(handleLibLTODiagnostic, nullptr); }
   LibLTOCodeGenerator(std::unique_ptr<LLVMContext> Context)
-      : LTOCodeGenerator(std::move(Context)) {
+      : LTOCodeGenerator(*Context), OwnedContext(std::move(Context)) {
     setDiagnosticHandler(handleLibLTODiagnostic, nullptr); }
 
   std::unique_ptr<MemoryBuffer> NativeObjectFile;
+  std::unique_ptr<LLVMContext> OwnedContext;
 };
 
 }

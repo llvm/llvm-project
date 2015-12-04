@@ -45,3 +45,15 @@ add rax, 3
 
 fadd   "?half@?0??bar@@YAXXZ@4NA"
 // CHECK: error: ambiguous operand size for instruction 'fadd'
+
+// Instruction line with PTR inside check that they don't accept register as memory.
+
+// CHECK:  error: expected memory operand after 'ptr', found register operand instead
+// CHECK: andps xmm1, xmmword ptr xmm1
+andps xmm1, xmmword ptr xmm1
+// CHECK:  error: expected memory operand after 'ptr', found register operand instead
+// CHECK: andps xmmword ptr xmm1, xmm1
+andps xmmword ptr xmm1, xmm1
+// CHECK:  error: expected memory operand after 'ptr', found register operand instead
+// CHECK: mov dword ptr eax, ebx
+mov dword ptr eax, ebx

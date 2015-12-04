@@ -254,6 +254,9 @@ bool X86PassConfig::addPreISel() {
 }
 
 void X86PassConfig::addPreRegAlloc() {
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createX86OptimizeLEAs());
+
   addPass(createX86CallFrameOptimization());
 }
 

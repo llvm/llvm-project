@@ -1535,6 +1535,20 @@ let isRegSequence = 1, Itinerary = CVI_VA_DV, Type = TypeCVI_VA_DV in
 defm V6_vcombine :
      T_HVX_alu_WV <"$dst = vcombine($src1,$src2)">, V6_vcombine_enc;
 
+def SDTHexagonVCOMBINE: SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>,
+      SDTCisSubVecOfVec<1, 0>]>;
+
+def HexagonVCOMBINE: SDNode<"HexagonISD::VCOMBINE", SDTHexagonVCOMBINE>;
+
+def: Pat<(v32i32 (HexagonVCOMBINE (v16i32 VectorRegs:$Vs),
+                                  (v16i32 VectorRegs:$Vt))),
+         (V6_vcombine VectorRegs:$Vs, VectorRegs:$Vt)>,
+         Requires<[UseHVXSgl]>;
+def: Pat<(v64i32 (HexagonVCOMBINE (v32i32 VecDblRegs:$Vs),
+                                  (v32i32 VecDblRegs:$Vt))),
+         (V6_vcombine_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
+         Requires<[UseHVXDbl]>;
+
 let Itinerary = CVI_VINLANESAT, Type = TypeCVI_VINLANESAT in {
 defm V6_vsathub :
      T_HVX_alu_VV <"$dst.ub = vsat($src1.h,$src2.h)">, V6_vsathub_enc;
@@ -1872,7 +1886,7 @@ defm V6_vasrhbrndsat :
      V6_vasrhbrndsat_enc;
 }
 
-// Assemlber mapped -- alias?
+// Assembler mapped -- alias?
 //defm V6_vtran2x2vdd : T_HVX_shift_VV <"">, V6_vtran2x2vdd_enc;
 let Itinerary = CVI_VP_VS_LONG, Type = TypeCVI_VP_VS in {
 defm V6_vshuffvdd :

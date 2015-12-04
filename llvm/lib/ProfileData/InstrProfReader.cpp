@@ -296,55 +296,28 @@ std::error_code RawInstrProfReader<IntPtrT>::readRawCounts(
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readValueProfilingData(
-    InstrProfRecord &Record) {
+std::error_code
+RawInstrProfReader<IntPtrT>::readValueProfilingData(InstrProfRecord &Record) {
 
   Record.clearValueData();
   if (!Data->Values || (ValueDataDelta == 0))
     return success();
 
-  // Read value data.
-  uint64_t NumVSites = 0;
-  for (uint32_t Kind = IPVK_First; Kind <= ValueKindLast; ++Kind)
-    NumVSites += swap(Data->NumValueSites[Kind]);
-  NumVSites += getNumPaddingBytes(NumVSites);
+  ErrorOr<std::unique_ptr<ValueProfData>> VDataPtrOrErr =
+      ValueProfData::getValueProfData(getValueDataCounts(Data->Values),
+                                      (const unsigned char *)ProfileEnd,
+                                      getDataEndianness());
 
-  auto VDataCounts = makeArrayRef(getValueDataCounts(Data->Values), NumVSites);
-  // Check bounds.
-  if (VDataCounts.data() < ValueDataStart ||
-      VDataCounts.data() + VDataCounts.size() >
-          reinterpret_cast<const uint8_t *>(ProfileEnd))
-    return error(instrprof_error::malformed);
+  if (VDataPtrOrErr.getError())
+    return VDataPtrOrErr.getError();
 
-  const InstrProfValueData *VDataPtr =
-      getValueData(swap(Data->Values) + NumVSites);
-  for (uint32_t Kind = IPVK_First; Kind <= ValueKindLast; ++Kind) {
-    NumVSites = swap(Data->NumValueSites[Kind]);
-    Record.reserveSites(Kind, NumVSites);
-    for (uint32_t VSite = 0; VSite < NumVSites; ++VSite) {
-
-      uint32_t VDataCount = VDataCounts[VSite];
-      if ((const char *)(VDataPtr + VDataCount) > ProfileEnd)
-        return error(instrprof_error::malformed);
-
-      std::vector<InstrProfValueData> CurrentValues;
-      CurrentValues.reserve(VDataCount);
-      for (uint32_t VIndex = 0; VIndex < VDataCount; ++VIndex) {
-        uint64_t TargetValue = swap(VDataPtr->Value);
-        uint64_t Count = swap(VDataPtr->Count);
-        CurrentValues.push_back({TargetValue, Count});
-        ++VDataPtr;
-      }
-      Record.addValueData(Kind, VSite, CurrentValues.data(),
-                          VDataCount, &FunctionPtrToNameMap);
-    }
-  }
+  VDataPtrOrErr.get()->deserializeTo(Record, &FunctionPtrToNameMap);
   return success();
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readNextRecord(
-    InstrProfRecord &Record) {
+std::error_code
+RawInstrProfReader<IntPtrT>::readNextRecord(InstrProfRecord &Record) {
   if (atEnd())
     if (std::error_code EC = readNextHeader(ProfileEnd))
       return EC;

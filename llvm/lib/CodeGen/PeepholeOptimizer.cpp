@@ -98,6 +98,10 @@ static cl::opt<bool>
 DisableAdvCopyOpt("disable-adv-copy-opt", cl::Hidden, cl::init(false),
                   cl::desc("Disable advanced copy optimization"));
 
+static cl::opt<bool> DisableNAPhysCopyOpt(
+    "disable-non-allocatable-phys-copy-opt", cl::Hidden, cl::init(false),
+    cl::desc("Disable non-allocatable physical register copy optimization"));
+
 // Limit the number of PHI instructions to process
 // in PeepholeOptimizer::getNextSource.
 static cl::opt<unsigned> RewritePHILimit(
@@ -111,6 +115,7 @@ STATISTIC(NumLoadFold,   "Number of loads folded");
 STATISTIC(NumSelects,    "Number of selects optimized");
 STATISTIC(NumUncoalescableCopies, "Number of uncoalescable copies optimized");
 STATISTIC(NumRewrittenCopies, "Number of copies rewritten");
+STATISTIC(NumNAPhysCopies, "Number of non-allocatable physical copies removed");
 
 namespace {
   class ValueTrackerResult;
@@ -162,12 +167,24 @@ namespace {
                        DenseMap<unsigned, MachineInstr*> &ImmDefMIs);
 
     /// \brief If copy instruction \p MI is a virtual register copy, track it in
-    /// the set \p CopiedFromRegs and \p CopyMIs. If this virtual register was
+    /// the set \p CopySrcRegs and \p CopyMIs. If this virtual register was
     /// previously seen as a copy, replace the uses of this copy with the
     /// previously seen copy's destination register.
     bool foldRedundantCopy(MachineInstr *MI,
-                           SmallSet<unsigned, 4> &CopiedFromRegs,
-                           DenseMap<unsigned, MachineInstr*> &CopyMIs);
+                           SmallSet<unsigned, 4> &CopySrcRegs,
+                           DenseMap<unsigned, MachineInstr *> &CopyMIs);
+
+    /// \brief Is the register \p Reg a non-allocatable physical register?
+    bool isNAPhysCopy(unsigned Reg);
+
+    /// \brief If copy instruction \p MI is a non-allocatable virtual<->physical
+    /// register copy, track it in the \p NAPhysToVirtMIs map. If this
+    /// non-allocatable physical register was previously copied to a virtual
+    /// registered and hasn't been clobbered, the virt->phys copy can be
+    /// deleted.
+    bool foldRedundantNAPhysCopy(
+        MachineInstr *MI,
+        DenseMap<unsigned, MachineInstr *> &NAPhysToVirtMIs);
 
     bool isLoadFoldable(MachineInstr *MI,
                         SmallSet<unsigned, 16> &FoldAsLoadDefCandidates);
@@ -1332,7 +1349,7 @@ bool PeepholeOptimizer::foldImmediate(MachineInstr *MI, MachineBasicBlock *MBB,
     if (ImmDefRegs.count(Reg) == 0)
       continue;
     DenseMap<unsigned, MachineInstr*>::iterator II = ImmDefMIs.find(Reg);
-    assert(II != ImmDefMIs.end());
+    assert(II != ImmDefMIs.end() && "couldn't find immediate definition");
     if (TII->FoldImmediate(MI, II->second, Reg, MRI)) {
       ++NumImmFold;
       return true;
@@ -1356,10 +1373,10 @@ bool PeepholeOptimizer::foldImmediate(MachineInstr *MI, MachineBasicBlock *MBB,
 //
 // Should replace %vreg2 uses with %vreg1:sub1
 bool PeepholeOptimizer::foldRedundantCopy(
-  MachineInstr *MI,
-  SmallSet<unsigned, 4> &CopySrcRegs,
-  DenseMap<unsigned, MachineInstr *> &CopyMIs) {
-  assert(MI->isCopy());
+    MachineInstr *MI,
+    SmallSet<unsigned, 4> &CopySrcRegs,
+    DenseMap<unsigned, MachineInstr *> &CopyMIs) {
+  assert(MI->isCopy() && "expected a COPY machine instruction");
 
   unsigned SrcReg = MI->getOperand(1).getReg();
   if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
@@ -1400,6 +1417,59 @@ bool PeepholeOptimizer::foldRedundantCopy(
   return true;
 }
 
+bool PeepholeOptimizer::isNAPhysCopy(unsigned Reg) {
+  return TargetRegisterInfo::isPhysicalRegister(Reg) &&
+         !MRI->isAllocatable(Reg);
+}
+
+bool PeepholeOptimizer::foldRedundantNAPhysCopy(
+    MachineInstr *MI, DenseMap<unsigned, MachineInstr *> &NAPhysToVirtMIs) {
+  assert(MI->isCopy() && "expected a COPY machine instruction");
+
+  if (DisableNAPhysCopyOpt)
+    return false;
+
+  unsigned DstReg = MI->getOperand(0).getReg();
+  unsigned SrcReg = MI->getOperand(1).getReg();
+  if (isNAPhysCopy(SrcReg) && TargetRegisterInfo::isVirtualRegister(DstReg)) {
+    // %vreg = COPY %PHYSREG
+    // Avoid using a datastructure which can track multiple live non-allocatable
+    // phys->virt copies since LLVM doesn't seem to do this.
+    NAPhysToVirtMIs.insert({SrcReg, MI});
+    return false;
+  }
+
+  if (!(TargetRegisterInfo::isVirtualRegister(SrcReg) && isNAPhysCopy(DstReg)))
+    return false;
+
+  // %PHYSREG = COPY %vreg
+  auto PrevCopy = NAPhysToVirtMIs.find(DstReg);
+  if (PrevCopy == NAPhysToVirtMIs.end()) {
+    // We can't remove the copy: there was an intervening clobber of the
+    // non-allocatable physical register after the copy to virtual.
+    DEBUG(dbgs() << "NAPhysCopy: intervening clobber forbids erasing " << *MI
+                 << '\n');
+    return false;
+  }
+
+  unsigned PrevDstReg = PrevCopy->second->getOperand(0).getReg();
+  if (PrevDstReg == SrcReg) {
+    // Remove the virt->phys copy: we saw the virtual register definition, and
+    // the non-allocatable physical register's state hasn't changed since then.
+    DEBUG(dbgs() << "NAPhysCopy: erasing " << *MI << '\n');
+    ++NumNAPhysCopies;
+    return true;
+  }
+
+  // Potential missed optimization opportunity: we saw a different virtual
+  // register get a copy of the non-allocatable physical register, and we only
+  // track one such copy. Avoid getting confused by this new non-allocatable
+  // physical register definition, and remove it from the tracked copies.
+  DEBUG(dbgs() << "NAPhysCopy: missed opportunity " << *MI << '\n');
+  NAPhysToVirtMIs.erase(PrevCopy);
+  return false;
+}
+
 bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
   if (skipOptnoneFunction(*MF.getFunction()))
     return false;
@@ -1433,6 +1503,13 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
     DenseMap<unsigned, MachineInstr*> ImmDefMIs;
     SmallSet<unsigned, 16> FoldAsLoadDefCandidates;
 
+    // Track when a non-allocatable physical register is copied to a virtual
+    // register so that useless moves can be removed.
+    //
+    // %PHYSREG is the map index; MI is the last valid `%vreg = COPY %PHYSREG`
+    // without any intervening re-definition of %PHYSREG.
+    DenseMap<unsigned, MachineInstr *> NAPhysToVirtMIs;
+
     // Set of virtual registers that are copied from.
     SmallSet<unsigned, 4> CopySrcRegs;
     DenseMap<unsigned, MachineInstr *> CopySrcMIs;
@@ -1453,10 +1530,51 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
       if (MI->isLoadFoldBarrier())
         FoldAsLoadDefCandidates.clear();
 
-      if (MI->isPosition() || MI->isPHI() || MI->isImplicitDef() ||
-          MI->isKill() || MI->isInlineAsm() ||
-          MI->hasUnmodeledSideEffects())
+      if (MI->isPosition() || MI->isPHI())
         continue;
+
+      if (!MI->isCopy()) {
+        for (const auto &Op : MI->operands()) {
+          // Visit all operands: definitions can be implicit or explicit.
+          if (Op.isReg()) {
+            unsigned Reg = Op.getReg();
+            if (Op.isDef() && isNAPhysCopy(Reg)) {
+              const auto &Def = NAPhysToVirtMIs.find(Reg);
+              if (Def != NAPhysToVirtMIs.end()) {
+                // A new definition of the non-allocatable physical register
+                // invalidates previous copies.
+                DEBUG(dbgs() << "NAPhysCopy: invalidating because of " << *MI
+                             << '\n');
+                NAPhysToVirtMIs.erase(Def);
+              }
+            }
+          } else if (Op.isRegMask()) {
+            const uint32_t *RegMask = Op.getRegMask();
+            for (auto &RegMI : NAPhysToVirtMIs) {
+              unsigned Def = RegMI.first;
+              if (MachineOperand::clobbersPhysReg(RegMask, Def)) {
+                DEBUG(dbgs() << "NAPhysCopy: invalidating because of " << *MI
+                             << '\n');
+                NAPhysToVirtMIs.erase(Def);
+              }
+            }
+          }
+        }
+      }
+
+      if (MI->isImplicitDef() || MI->isKill())
+        continue;
+
+      if (MI->isInlineAsm() || MI->hasUnmodeledSideEffects()) {
+        // Blow away all non-allocatable physical registers knowledge since we
+        // don't know what's correct anymore.
+        //
+        // FIXME: handle explicit asm clobbers.
+        DEBUG(dbgs() << "NAPhysCopy: blowing away all info due to " << *MI
+                     << '\n');
+        NAPhysToVirtMIs.clear();
+        continue;
+      }
 
       if ((isUncoalescableCopy(*MI) &&
            optimizeUncoalescableCopy(MI, LocalMIs)) ||
@@ -1479,7 +1597,9 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (MI->isCopy() && foldRedundantCopy(MI, CopySrcRegs, CopySrcMIs)) {
+      if (MI->isCopy() &&
+          (foldRedundantCopy(MI, CopySrcRegs, CopySrcMIs) ||
+           foldRedundantNAPhysCopy(MI, NAPhysToVirtMIs))) {
         LocalMIs.erase(MI);
         MI->eraseFromParent();
         Changed = true;

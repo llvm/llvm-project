@@ -12,8 +12,8 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; SI: buffer_store_dword [[EXTRACT]],
 
 ; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+\.[XYZW]]], [[ADDR:T[0-9]+.[XYZW]]]
-; EG: BFE_INT [[RES]], {{.*}}, 0.0, 1
-; EG-NEXT: LSHR * [[ADDR]]
+; EG: LSHR * [[ADDR]]
+; EG: BFE_INT * [[RES]], {{.*}}, 0.0, 1
 define void @sext_in_reg_i1_i32(i32 addrspace(1)* %out, i32 %in) {
   %shl = shl i32 %in, 31
   %sext = ashr i32 %shl, 31

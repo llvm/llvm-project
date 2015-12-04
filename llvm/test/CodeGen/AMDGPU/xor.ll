@@ -38,7 +38,7 @@ define void @xor_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in
 }
 
 ; FUNC-LABEL: {{^}}xor_i1:
-; EG: XOR_INT {{\** *}}T{{[0-9]+\.[XYZW], PV\.[XYZW], PS}}
+; EG: XOR_INT {{\** *}}{{T[0-9]+\.[XYZW]}}, {{PS|PV\.[XYZW]}}, {{PS|PV\.[XYZW]}}
 
 ; SI-DAG: v_cmp_le_f32_e32 [[CMP0:vcc]], 0, {{v[0-9]+}}
 ; SI-DAG: v_cmp_le_f32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]], 1.0, {{v[0-9]+}}

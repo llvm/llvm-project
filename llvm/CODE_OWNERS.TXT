@@ -53,10 +53,6 @@ N: Quentin Colombet
 E: qcolombet@apple.com
 D: Register allocators
 
-N: Anshuman Dasgupta
-E: adasgupt@codeaurora.org
-D: Hexagon Backend
-
 N: Duncan P. N. Exon Smith
 E: dexonsmith@apple.com
 D: Branch weights and BlockFrequencyInfo
@@ -137,6 +133,10 @@ D: TableGen
 N: Richard Osborne
 E: richard@xmos.com
 D: XCore Backend
+
+N: Krzysztof Parzyszek
+E: kparzysz@codeaurora.org
+D: Hexagon Backend
 
 N: Chad Rosier
 E: mcrosier@codeaurora.org

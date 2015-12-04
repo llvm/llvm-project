@@ -47,6 +47,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
@@ -805,33 +806,17 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-namespace {
-// A helper class for printing node and register info in a consistent way
-class PrintNodeInfo {
-public:
-  typedef PBQP::RegAlloc::PBQPRAGraph Graph;
-  typedef PBQP::RegAlloc::PBQPRAGraph::NodeId NodeId;
-
-  PrintNodeInfo(NodeId NId, const Graph &G) : G(G), NId(NId) {}
-
-  void print(raw_ostream &OS) const {
+/// Create Printable object for node and register info.
+static Printable PrintNodeInfo(PBQP::RegAlloc::PBQPRAGraph::NodeId NId,
+                               const PBQP::RegAlloc::PBQPRAGraph &G) {
+  return Printable([NId, &G](raw_ostream &OS) {
     const MachineRegisterInfo &MRI = G.getMetadata().MF.getRegInfo();
     const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
     unsigned VReg = G.getNodeMetadata(NId).getVReg();
     const char *RegClassName = TRI->getRegClassName(MRI.getRegClass(VReg));
     OS << NId << " (" << RegClassName << ':' << PrintReg(VReg, TRI) << ')';
-  }
-
-private:
-  const Graph &G;
-  NodeId NId;
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS, const PrintNodeInfo &PR) {
-  PR.print(OS);
-  return OS;
+  });
 }
-} // anonymous namespace
 
 void PBQP::RegAlloc::PBQPRAGraph::dump(raw_ostream &OS) const {
   for (auto NId : nodeIds()) {

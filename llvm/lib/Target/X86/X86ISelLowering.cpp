@@ -15622,54 +15622,40 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                SplitStack;
   SDLoc dl(Op);
 
+  // Get the inputs.
+  SDNode *Node = Op.getNode();
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size  = Op.getOperand(1);
+  unsigned Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
+  EVT VT = Node->getValueType(0);
+
+  // Chain the dynamic stack allocation so that it doesn't modify the stack
+  // pointer when other instructions are using the stack.
+  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(0, dl, true), dl);
+
+  bool Is64Bit = Subtarget->is64Bit();
+  MVT SPTy = getPointerTy(DAG.getDataLayout());
+
+  SDValue Result;
   if (!Lower) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    SDNode* Node = Op.getNode();
-
     unsigned SPReg = TLI.getStackPointerRegisterToSaveRestore();
     assert(SPReg && "Target cannot require DYNAMIC_STACKALLOC expansion and"
-        " not tell us which reg is the stack pointer!");
+                    " not tell us which reg is the stack pointer!");
     EVT VT = Node->getValueType(0);
-    SDValue Tmp1 = SDValue(Node, 0);
-    SDValue Tmp2 = SDValue(Node, 1);
     SDValue Tmp3 = Node->getOperand(2);
-    SDValue Chain = Tmp1.getOperand(0);
 
-    // Chain the dynamic stack allocation so that it doesn't modify the stack
-    // pointer when other instructions are using the stack.
-    Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(0, dl, true),
-        SDLoc(Node));
-
-    SDValue Size = Tmp2.getOperand(1);
     SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
     Chain = SP.getValue(1);
     unsigned Align = cast<ConstantSDNode>(Tmp3)->getZExtValue();
     const TargetFrameLowering &TFI = *Subtarget->getFrameLowering();
     unsigned StackAlign = TFI.getStackAlignment();
-    Tmp1 = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
+    Result = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
     if (Align > StackAlign)
-      Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
-          DAG.getConstant(-(uint64_t)Align, dl, VT));
-    Chain = DAG.getCopyToReg(Chain, dl, SPReg, Tmp1); // Output chain
-
-    Tmp2 = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, dl, true),
-        DAG.getIntPtrConstant(0, dl, true), SDValue(),
-        SDLoc(Node));
-
-    SDValue Ops[2] = { Tmp1, Tmp2 };
-    return DAG.getMergeValues(Ops, dl);
-  }
-
-  // Get the inputs.
-  SDValue Chain = Op.getOperand(0);
-  SDValue Size  = Op.getOperand(1);
-  unsigned Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
-  EVT VT = Op.getNode()->getValueType(0);
-
-  bool Is64Bit = Subtarget->is64Bit();
-  MVT SPTy = getPointerTy(DAG.getDataLayout());
-
-  if (SplitStack) {
+      Result = DAG.getNode(ISD::AND, dl, VT, Result,
+                         DAG.getConstant(-(uint64_t)Align, dl, VT));
+    Chain = DAG.getCopyToReg(Chain, dl, SPReg, Result); // Output chain
+  } else if (SplitStack) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
 
     if (Is64Bit) {
@@ -15687,10 +15673,8 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     const TargetRegisterClass *AddrRegClass = getRegClassFor(SPTy);
     unsigned Vreg = MRI.createVirtualRegister(AddrRegClass);
     Chain = DAG.getCopyToReg(Chain, dl, Vreg, Size);
-    SDValue Value = DAG.getNode(X86ISD::SEG_ALLOCA, dl, SPTy, Chain,
+    Result = DAG.getNode(X86ISD::SEG_ALLOCA, dl, SPTy, Chain,
                                 DAG.getRegister(Vreg, SPTy));
-    SDValue Ops1[2] = { Value, Chain };
-    return DAG.getMergeValues(Ops1, dl);
   } else {
     SDValue Flag;
     const unsigned Reg = (Subtarget->isTarget64BitLP64() ? X86::RAX : X86::EAX);
@@ -15712,9 +15696,14 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
       Chain = DAG.getCopyToReg(Chain, dl, SPReg, SP);
     }
 
-    SDValue Ops1[2] = { SP, Chain };
-    return DAG.getMergeValues(Ops1, dl);
+    Result = SP;
   }
+
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, dl, true),
+                             DAG.getIntPtrConstant(0, dl, true), SDValue(), dl);
+
+  SDValue Ops[2] = {Result, Chain};
+  return DAG.getMergeValues(Ops, dl);
 }
 
 SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {

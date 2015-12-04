@@ -133,7 +133,7 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
   for (unsigned i = 0; i != Header.NumBuckets; ++i) {
     auto &Row = Rows[i];
     if (auto *Contribs = Row.Contributions.get()) {
-      OS << format("%5u 0x%016" PRIx64 " ", i, Row.Signature);
+      OS << format("%5u 0x%016" PRIx64 " ", i + 1, Row.Signature);
       for (unsigned i = 0; i != Header.NumColumns; ++i) {
         auto &Contrib = Contribs[i];
         OS << format("[0x%08x, 0x%08x) ", Contrib.Offset,

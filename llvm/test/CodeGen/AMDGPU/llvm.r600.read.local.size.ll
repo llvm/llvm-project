@@ -5,7 +5,7 @@
 
 ; FUNC-LABEL: {{^}}local_size_x:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[1].Z
+; EG: MOV * [[VAL]], KC0[1].Z
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x6
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x18
@@ -23,7 +23,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}local_size_y:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[1].W
+; EG: MOV * [[VAL]], KC0[1].W
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x7
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x1c
@@ -38,7 +38,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}local_size_z:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[2].X
+; EG: MOV * [[VAL]], KC0[2].X
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x8
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x20

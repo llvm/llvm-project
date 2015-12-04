@@ -29,7 +29,7 @@ namespace llvm {
 class OrcLazyJIT {
 public:
 
-  typedef orc::JITCompileCallbackManagerBase CompileCallbackMgr;
+  typedef orc::JITCompileCallbackManager CompileCallbackMgr;
   typedef orc::ObjectLinkingLayer<> ObjLayerT;
   typedef orc::IRCompileLayer<ObjLayerT> CompileLayerT;
   typedef std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>

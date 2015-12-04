@@ -95,7 +95,7 @@ function(llvm_ExternalProject_Add name source_dir)
     if(variableName MATCHES "^${nameCanon}")
       string(REPLACE ";" "\;" value "${${variableName}}")
       list(APPEND PASSTHROUGH_VARIABLES
-        -D${variableName}=${${value}})
+        -D${variableName}=${value})
     endif()
   endforeach()
 

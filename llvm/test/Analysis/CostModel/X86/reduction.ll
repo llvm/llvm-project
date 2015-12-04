@@ -33,7 +33,7 @@ define fastcc i32 @reduction_cost_int(<8 x i32> %rdx) {
   %bin.rdx.3 = add <8 x i32> %bin.rdx.2, %rdx.shuf.3
 
 ; CHECK-LABEL: reduction_cost_int
-; CHECK:  cost of 23 {{.*}} extractelement
+; CHECK:  cost of 17 {{.*}} extractelement
 
   %r = extractelement <8 x i32> %bin.rdx.3, i32 0
   ret i32 %r

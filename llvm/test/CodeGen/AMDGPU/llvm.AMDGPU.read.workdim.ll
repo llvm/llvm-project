@@ -4,7 +4,7 @@
 
 ; FUNC-LABEL: {{^}}read_workdim:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[2].Z
+; EG: MOV * [[VAL]], KC0[2].Z
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0xb
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x2c
