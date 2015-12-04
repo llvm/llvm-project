@@ -1,5 +1,4 @@
 ; RUN: opt -S %loadPolly -polly-vectorizer=stripmine -polly-opt-isl -polly-ast -analyze < %s | FileCheck %s
-
 ; CHECK:       // 1st level tiling - Tiles
 ; CHECK:       #pragma known-parallel
 ; CHECK:       for (int c0 = 0; c0 <= floord(ni - 1, 32); c0 += 1)
@@ -12,16 +11,11 @@
 ; CHECK:                   #pragma simd
 ; CHECK:                   for (int c6 = 0; c6 <= 3; c6 += 1)
 ; CHECK:                     Stmt_for_body_6(32 * c0 + c3, 32 * c1 + 4 * c4 + c6, 32 * c2 + c5);
-; CHECK:               if (nj >= 32 * c1 + 4 && 32 * c1 + 31 >= nj) {
+; CHECK:               if (32 * c1 + 31 >= nj)
 ; CHECK:                 for (int c5 = 0; c5 <= min(31, nk - 32 * c2 - 1); c5 += 1)
 ; CHECK:                   #pragma simd
 ; CHECK:                   for (int c6 = 0; c6 < nj % 4; c6 += 1)
 ; CHECK:                     Stmt_for_body_6(32 * c0 + c3, -((nj - 1) % 4) + nj + c6 - 1, 32 * c2 + c5);
-; CHECK:               } else if (32 * c1 + 3 >= nj)
-; CHECK:                 for (int c5 = 0; c5 <= min(31, nk - 32 * c2 - 1); c5 += 1)
-; CHECK:                   #pragma simd
-; CHECK:                   for (int c6 = 0; c6 < nj - 32 * c1; c6 += 1)
-; CHECK:                     Stmt_for_body_6(32 * c0 + c3, 32 * c1 + c6, 32 * c2 + c5);
 ; CHECK:             }
 ; CHECK:           }
 

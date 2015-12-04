@@ -918,10 +918,7 @@ PlatformPOSIX::LoadImage(lldb_private::Process* process, const FileSpec& image_s
                    the_result;
                   )",
                   path);
-    const char *prefix = R"(
-                            extern "C" void* dlopen (const char *path, int mode);
-                            extern "C" const char *dlerror (void);
-                            )";
+    const char *prefix = GetLibdlFunctionDeclarations();
     lldb::ValueObjectSP result_valobj_sp;
     error = EvaluateLibdlExpression(process, expr.GetData(), prefix, result_valobj_sp);
     if (error.Fail())
@@ -970,7 +967,7 @@ PlatformPOSIX::UnloadImage (lldb_private::Process* process, uint32_t image_token
 
     StreamString expr;
     expr.Printf("dlclose((void *)0x%" PRIx64 ")", image_addr);
-    const char *prefix = "extern \"C\" int dlclose(void* handle);\n";
+    const char *prefix = GetLibdlFunctionDeclarations();
     lldb::ValueObjectSP result_valobj_sp;
     Error error = EvaluateLibdlExpression(process, expr.GetData(), prefix, result_valobj_sp);
     if (error.Fail())
@@ -987,4 +984,15 @@ PlatformPOSIX::UnloadImage (lldb_private::Process* process, uint32_t image_token
         process->ResetImageToken(image_token);
     }
     return Error();
+}
+
+const char*
+PlatformPOSIX::GetLibdlFunctionDeclarations() const
+{
+    return R"(
+              extern "C" void* dlopen(const char*, int);
+              extern "C" void* dlsym(void*, const char*);
+              extern "C" int   dlclose(void*);
+              extern "C" char* dlerror(void);
+             )";
 }

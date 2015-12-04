@@ -24,10 +24,14 @@ if (MSVC_IDE OR XCODE)
   endif()
 endif()
 
+if(NOT LIBCXX_INSTALL_LIBRARY)
+  set(exclude_from_all EXCLUDE_FROM_ALL)
+endif()
+
 if (LIBCXX_ENABLE_SHARED)
-  add_library(cxx SHARED ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  add_library(cxx SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 else()
-  add_library(cxx STATIC ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  add_library(cxx STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 endif()
 
 if (DEFINED LIBCXX_CXX_ABI_DEPS)
@@ -172,8 +176,11 @@ endif()
 
 if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
                                        LIBCXX_INSTALL_HEADERS))
+    if(LIBCXX_INSTALL_LIBRARY)
+      set(deps DEPENDS cxx)
+    endif()
     add_custom_target(install-libcxx
-                      DEPENDS cxx
+                      ${deps}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=libcxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")

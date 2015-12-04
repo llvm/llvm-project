@@ -156,7 +156,7 @@ extern "C" {
 //  object. Zero-fill the object. If memory can't be allocated, call
 //  std::terminate. Return a pointer to the memory to be used for the
 //  user's exception object.
-void * __cxa_allocate_exception (size_t thrown_size) throw() {
+_LIBCXXABI_FUNC_VIS void *__cxa_allocate_exception(size_t thrown_size) throw() {
     size_t actual_size = cxa_exception_size_from_exception_thrown_size(thrown_size);
     __cxa_exception* exception_header = static_cast<__cxa_exception*>(do_malloc(actual_size));
     if (NULL == exception_header)
@@ -167,7 +167,7 @@ void * __cxa_allocate_exception (size_t thrown_size) throw() {
 
 
 //  Free a __cxa_exception object allocated with __cxa_allocate_exception.
-void __cxa_free_exception (void * thrown_object) throw() {
+_LIBCXXABI_FUNC_VIS void __cxa_free_exception(void *thrown_object) throw() {
     do_free(cxa_exception_from_thrown_object(thrown_object));
 }
 
@@ -218,10 +218,8 @@ handler, _Unwind_RaiseException may return. In that case, __cxa_throw
 will call terminate, assuming that there was no handler for the
 exception.
 */
-LIBCXXABI_NORETURN
-void 
-__cxa_throw(void* thrown_object, std::type_info* tinfo, void (*dest)(void*))
-{
+_LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void
+__cxa_throw(void *thrown_object, std::type_info *tinfo, void (*dest)(void *)) {
     __cxa_eh_globals *globals = __cxa_get_globals();
     __cxa_exception* exception_header = cxa_exception_from_thrown_object(thrown_object);
 
@@ -253,9 +251,8 @@ The adjusted pointer is computed by the personality routine during phase 1
 
   Requires:  exception is native
 */
-void*
-__cxa_get_exception_ptr(void* unwind_exception) throw()
-{
+_LIBCXXABI_FUNC_VIS
+void *__cxa_get_exception_ptr(void *unwind_exception) throw() {
 #if LIBCXXABI_ARM_EHABI
     return reinterpret_cast<void*>(
         static_cast<_Unwind_Control_Block*>(unwind_exception)->barrier_cache.bitpattern[0]);
@@ -270,9 +267,8 @@ __cxa_get_exception_ptr(void* unwind_exception) throw()
 The routine to be called before the cleanup.  This will save __cxa_exception in
 __cxa_eh_globals, so that __cxa_end_cleanup() can recover later.
 */
-bool
-__cxa_begin_cleanup(void* unwind_arg) throw ()
-{
+_LIBCXXABI_FUNC_VIS
+bool __cxa_begin_cleanup(void *unwind_arg) throw() {
     _Unwind_Exception* unwind_exception = static_cast<_Unwind_Exception*>(unwind_arg);
     __cxa_eh_globals* globals = __cxa_get_globals();
     __cxa_exception* exception_header =
@@ -443,8 +439,7 @@ For a foreign exception:
 * If it has been rethrown, there is nothing to do.
 * Otherwise delete the exception and pop the catch stack to empty.
 */
-void __cxa_end_catch()
-{
+_LIBCXXABI_FUNC_VIS void __cxa_end_catch() {
   static_assert(sizeof(__cxa_exception) == sizeof(__cxa_dependent_exception),
                 "sizeof(__cxa_exception) must be equal to "
                 "sizeof(__cxa_dependent_exception)");
@@ -521,7 +516,7 @@ void __cxa_end_catch()
 // Note:  exception_header may be masquerading as a __cxa_dependent_exception
 //        and that's ok.  exceptionType is there too.
 //        However watch out for foreign exceptions.  Return null for them.
-std::type_info * __cxa_current_exception_type() {
+_LIBCXXABI_FUNC_VIS std::type_info *__cxa_current_exception_type() {
 //  get the current exception
     __cxa_eh_globals *globals = __cxa_get_globals_fast();
     if (NULL == globals)
@@ -546,10 +541,7 @@ If the exception is native:
   Note:  exception_header may be masquerading as a __cxa_dependent_exception
          and that's ok.
 */
-LIBCXXABI_NORETURN
-void
-__cxa_rethrow()
-{
+_LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void __cxa_rethrow() {
     __cxa_eh_globals* globals = __cxa_get_globals();
     __cxa_exception* exception_header = globals->caughtExceptions;
     if (NULL == exception_header)
@@ -594,9 +586,8 @@ __cxa_rethrow()
 
     Requires:  If thrown_object is not NULL, it is a native exception.
 */
-void
-__cxa_increment_exception_refcount(void* thrown_object) throw()
-{
+_LIBCXXABI_FUNC_VIS void
+__cxa_increment_exception_refcount(void *thrown_object) throw() {
     if (thrown_object != NULL )
     {
         __cxa_exception* exception_header = cxa_exception_from_thrown_object(thrown_object);
@@ -612,9 +603,8 @@ __cxa_increment_exception_refcount(void* thrown_object) throw()
 
     Requires:  If thrown_object is not NULL, it is a native exception.
 */
-void
-__cxa_decrement_exception_refcount(void* thrown_object) throw()
-{
+_LIBCXXABI_FUNC_VIS void
+__cxa_decrement_exception_refcount(void *thrown_object) throw() {
     if (thrown_object != NULL )
     {
         __cxa_exception* exception_header = cxa_exception_from_thrown_object(thrown_object);
@@ -637,9 +627,7 @@ __cxa_decrement_exception_refcount(void* thrown_object) throw()
     been no exceptions thrown, ever, on this thread, we can return NULL without 
     the need to allocate the exception-handling globals.
 */
-void*
-__cxa_current_primary_exception() throw()
-{
+_LIBCXXABI_FUNC_VIS void *__cxa_current_primary_exception() throw() {
 //  get the current exception
     __cxa_eh_globals* globals = __cxa_get_globals_fast();
     if (NULL == globals)

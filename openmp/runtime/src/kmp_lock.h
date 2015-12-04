@@ -1030,22 +1030,22 @@ extern void __kmp_cleanup_user_locks();
 
 #if KMP_USE_DYNAMIC_LOCK
 
-#define DYNA_HAS_FUTEX          (KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM))
-#define DYNA_HAS_HLE            (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC)
-#define DYNA_USE_FAST_FUTEX     0 && DYNA_HAS_FUTEX
-#define DYNA_USE_FAST_TAS       1 && DYNA_HAS_FUTEX
+#define KMP_HAS_FUTEX          (KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM))
+#define KMP_HAS_HLE            (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC)
+#define KMP_USE_FAST_FUTEX     0 && KMP_HAS_FUTEX
+#define KMP_USE_FAST_TAS       1 && KMP_HAS_FUTEX
 
 // List of lock definitions; all nested locks are indirect locks.
 // hle lock is xchg lock prefixed with XACQUIRE/XRELEASE.
 // All nested locks are indirect lock types.
-#if DYNA_HAS_FUTEX
-# if DYNA_HAS_HLE
+#if KMP_HAS_FUTEX
+# if KMP_HAS_HLE
 #  define FOREACH_D_LOCK(m, a) m(tas, a) m(futex, a) m(hle, a)
-#  define DYNA_LAST_D_LOCK_SEQ lockseq_hle
+#  define KMP_LAST_D_LOCK_SEQ lockseq_hle
 # else
 #  define FOREACH_D_LOCK(m, a) m(tas, a) m(futex, a)
-#  define DYNA_LAST_D_LOCK_SEQ lockseq_futex
-# endif // DYNA_HAS_HLE
+#  define KMP_LAST_D_LOCK_SEQ lockseq_futex
+# endif // KMP_HAS_HLE
 # if KMP_USE_ADAPTIVE_LOCKS
 #  define FOREACH_I_LOCK(m, a) m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a)   \
                                m(nested_tas, a) m(nested_futex, a) m(nested_ticket, a) \
@@ -1056,13 +1056,13 @@ extern void __kmp_cleanup_user_locks();
                                m(nested_queuing, a) m(nested_drdpa, a)
 # endif // KMP_USE_ADAPTIVE_LOCKS
 #else
-# if DYNA_HAS_HLE
+# if KMP_HAS_HLE
 #  define FOREACH_D_LOCK(m, a) m(tas, a)             m(hle, a)
-#  define DYNA_LAST_D_LOCK_SEQ lockseq_hle
+#  define KMP_LAST_D_LOCK_SEQ lockseq_hle
 # else
 #  define FOREACH_D_LOCK(m, a) m(tas, a)
-#  define DYNA_LAST_D_LOCK_SEQ lockseq_tas
-# endif // DYNA_HAS_HLE
+#  define KMP_LAST_D_LOCK_SEQ lockseq_tas
+# endif // KMP_HAS_HLE
 # if KMP_USE_ADAPTIVE_LOCKS
 #  define FOREACH_I_LOCK(m, a) m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a)   \
                                m(nested_tas, a)                    m(nested_ticket, a) \
@@ -1072,13 +1072,13 @@ extern void __kmp_cleanup_user_locks();
                                m(nested_tas, a)                    m(nested_ticket, a) \
                                m(nested_queuing, a) m(nested_drdpa, a)
 # endif // KMP_USE_ADAPTIVE_LOCKS
-#endif // DYNA_HAS_FUTEX
+#endif // KMP_HAS_FUTEX
 
 // Information used in dynamic dispatch
-#define DYNA_LOCK_VALUE_SHIFT 8
-#define DYNA_LOCK_TYPE_MASK   ((1<<DYNA_LOCK_VALUE_SHIFT)-1)
-#define DYNA_NUM_D_LOCKS      DYNA_LAST_D_LOCK_SEQ
-#define DYNA_NUM_I_LOCKS      (locktag_nested_drdpa+1)
+#define KMP_LOCK_VALUE_SHIFT 8
+#define KMP_LOCK_TYPE_MASK   ((1<<KMP_LOCK_VALUE_SHIFT)-1)
+#define KMP_NUM_D_LOCKS      KMP_LAST_D_LOCK_SEQ
+#define KMP_NUM_I_LOCKS      (locktag_nested_drdpa+1)
 
 // Base type for dynamic locks.
 typedef kmp_uint32 kmp_dyna_lock_t;
@@ -1101,14 +1101,14 @@ typedef enum {
 } kmp_indirect_locktag_t;
 
 // Utility macros that extract information from lock sequences.
-#define DYNA_IS_D_LOCK(seq) (seq >= lockseq_tas && seq <= DYNA_LAST_D_LOCK_SEQ)
-#define DYNA_IS_I_LOCK(seq) (seq >= lockseq_ticket && seq <= lockseq_nested_drdpa)
-#define DYNA_GET_I_TAG(seq) (kmp_indirect_locktag_t)(seq - lockseq_ticket)
-#define DYNA_GET_D_TAG(seq) (seq<<1 | 1)
+#define KMP_IS_D_LOCK(seq) (seq >= lockseq_tas && seq <= KMP_LAST_D_LOCK_SEQ)
+#define KMP_IS_I_LOCK(seq) (seq >= lockseq_ticket && seq <= lockseq_nested_drdpa)
+#define KMP_GET_I_TAG(seq) (kmp_indirect_locktag_t)(seq - lockseq_ticket)
+#define KMP_GET_D_TAG(seq) (seq<<1 | 1)
 
 // Enumerates direct lock tags starting from indirect tag.
 typedef enum {
-#define expand_tag(l,a) locktag_##l = DYNA_GET_D_TAG(lockseq_##l),
+#define expand_tag(l,a) locktag_##l = KMP_GET_D_TAG(lockseq_##l),
     FOREACH_D_LOCK(expand_tag, 0)
 #undef expand_tag
 } kmp_direct_locktag_t;
@@ -1134,34 +1134,34 @@ extern void (*(*__kmp_indirect_unset_ops))(kmp_user_lock_p, kmp_int32);
 extern int  (*(*__kmp_indirect_test_ops))(kmp_user_lock_p, kmp_int32);
 
 // Extracts direct lock tag from a user lock pointer
-#define DYNA_EXTRACT_D_TAG(l)   (*((kmp_dyna_lock_t *)(l)) & DYNA_LOCK_TYPE_MASK & -(*((kmp_dyna_lock_t *)(l)) & 1))
+#define KMP_EXTRACT_D_TAG(l)   (*((kmp_dyna_lock_t *)(l)) & KMP_LOCK_TYPE_MASK & -(*((kmp_dyna_lock_t *)(l)) & 1))
 
 // Extracts indirect lock index from a user lock pointer
-#define DYNA_EXTRACT_I_INDEX(l) (*(kmp_lock_index_t *)(l) >> 1)
+#define KMP_EXTRACT_I_INDEX(l) (*(kmp_lock_index_t *)(l) >> 1)
 
 // Returns function pointer to the direct lock function with l (kmp_dyna_lock_t *) and op (operation type).
-#define DYNA_D_LOCK_FUNC(l, op) __kmp_direct_##op##_ops[DYNA_EXTRACT_D_TAG(l)]
+#define KMP_D_LOCK_FUNC(l, op) __kmp_direct_##op##_ops[KMP_EXTRACT_D_TAG(l)]
 
 // Returns function pointer to the indirect lock function with l (kmp_indirect_lock_t *) and op (operation type).
-#define DYNA_I_LOCK_FUNC(l, op) __kmp_indirect_##op##_ops[((kmp_indirect_lock_t *)(l))->type]
+#define KMP_I_LOCK_FUNC(l, op) __kmp_indirect_##op##_ops[((kmp_indirect_lock_t *)(l))->type]
 
 // Initializes a direct lock with the given lock pointer and lock sequence.
-#define DYNA_INIT_D_LOCK(l, seq) __kmp_direct_init_ops[DYNA_GET_D_TAG(seq)]((kmp_dyna_lock_t *)l, seq)
+#define KMP_INIT_D_LOCK(l, seq) __kmp_direct_init_ops[KMP_GET_D_TAG(seq)]((kmp_dyna_lock_t *)l, seq)
 
 // Initializes an indirect lock with the given lock pointer and lock sequence.
-#define DYNA_INIT_I_LOCK(l, seq) __kmp_direct_init_ops[0]((kmp_dyna_lock_t *)(l), seq)
+#define KMP_INIT_I_LOCK(l, seq) __kmp_direct_init_ops[0]((kmp_dyna_lock_t *)(l), seq)
 
 // Returns "free" lock value for the given lock type.
-#define DYNA_LOCK_FREE(type)      (locktag_##type)
+#define KMP_LOCK_FREE(type)      (locktag_##type)
 
 // Returns "busy" lock value for the given lock teyp.
-#define DYNA_LOCK_BUSY(v, type)   ((v)<<DYNA_LOCK_VALUE_SHIFT | locktag_##type)
+#define KMP_LOCK_BUSY(v, type)   ((v)<<KMP_LOCK_VALUE_SHIFT | locktag_##type)
 
 // Returns lock value after removing (shifting) lock tag.
-#define DYNA_LOCK_STRIP(v)        ((v)>>DYNA_LOCK_VALUE_SHIFT)
+#define KMP_LOCK_STRIP(v)        ((v)>>KMP_LOCK_VALUE_SHIFT)
 
 // Updates __kmp_user_lock_seq with the give lock type.
-#define DYNA_STORE_LOCK_SEQ(type) (__kmp_user_lock_seq = lockseq_##type)
+#define KMP_STORE_LOCK_SEQ(type) (__kmp_user_lock_seq = lockseq_##type)
 
 // Internal entries for hinted lock initializers.
 extern void __kmp_init_lock_hinted(void **, int);
@@ -1180,28 +1180,28 @@ extern void __kmp_cleanup_indirect_user_locks();
 extern kmp_dyna_lockseq_t __kmp_user_lock_seq;
 
 // Jump table for "set lock location", available only for indirect locks.
-extern void (*__kmp_indirect_set_location[DYNA_NUM_I_LOCKS])(kmp_user_lock_p, const ident_t *);
-#define DYNA_SET_I_LOCK_LOCATION(lck, loc) {                        \
+extern void (*__kmp_indirect_set_location[KMP_NUM_I_LOCKS])(kmp_user_lock_p, const ident_t *);
+#define KMP_SET_I_LOCK_LOCATION(lck, loc) {                         \
     if (__kmp_indirect_set_location[(lck)->type] != NULL)           \
         __kmp_indirect_set_location[(lck)->type]((lck)->lock, loc); \
 }
 
 // Jump table for "set lock flags", available only for indirect locks.
-extern void (*__kmp_indirect_set_flags[DYNA_NUM_I_LOCKS])(kmp_user_lock_p, kmp_lock_flags_t);
-#define DYNA_SET_I_LOCK_FLAGS(lck, flag) {                        \
+extern void (*__kmp_indirect_set_flags[KMP_NUM_I_LOCKS])(kmp_user_lock_p, kmp_lock_flags_t);
+#define KMP_SET_I_LOCK_FLAGS(lck, flag) {                         \
     if (__kmp_indirect_set_flags[(lck)->type] != NULL)            \
         __kmp_indirect_set_flags[(lck)->type]((lck)->lock, flag); \
 }
 
 // Jump table for "get lock location", available only for indirect locks.
-extern const ident_t * (*__kmp_indirect_get_location[DYNA_NUM_I_LOCKS])(kmp_user_lock_p);
-#define DYNA_GET_I_LOCK_LOCATION(lck) ( __kmp_indirect_get_location[(lck)->type] != NULL      \
+extern const ident_t * (*__kmp_indirect_get_location[KMP_NUM_I_LOCKS])(kmp_user_lock_p);
+#define KMP_GET_I_LOCK_LOCATION(lck) ( __kmp_indirect_get_location[(lck)->type] != NULL       \
                                       ? __kmp_indirect_get_location[(lck)->type]((lck)->lock) \
                                       : NULL )
 
 // Jump table for "get lock flags", available only for indirect locks.
-extern kmp_lock_flags_t (*__kmp_indirect_get_flags[DYNA_NUM_I_LOCKS])(kmp_user_lock_p);
-#define DYNA_GET_I_LOCK_FLAGS(lck) ( __kmp_indirect_get_flags[(lck)->type] != NULL      \
+extern kmp_lock_flags_t (*__kmp_indirect_get_flags[KMP_NUM_I_LOCKS])(kmp_user_lock_p);
+#define KMP_GET_I_LOCK_FLAGS(lck) ( __kmp_indirect_get_flags[(lck)->type] != NULL       \
                                    ? __kmp_indirect_get_flags[(lck)->type]((lck)->lock) \
                                    : NULL )
 
@@ -1220,8 +1220,8 @@ extern kmp_lock_index_t __kmp_indirect_lock_table_next;
 extern int __kmp_num_locks_in_block;
 
 // Fast lock table lookup without consistency checking
-#define DYNA_LOOKUP_I_LOCK(l) ( (OMP_LOCK_T_SIZE < sizeof(void *)) \
-                              ? __kmp_indirect_lock_table[DYNA_EXTRACT_I_INDEX(l)] \
+#define KMP_LOOKUP_I_LOCK(l) ( (OMP_LOCK_T_SIZE < sizeof(void *))                 \
+                              ? __kmp_indirect_lock_table[KMP_EXTRACT_I_INDEX(l)] \
                               : *((kmp_indirect_lock_t **)l) )
 
 // Used once in kmp_error.c
@@ -1230,10 +1230,10 @@ __kmp_get_user_lock_owner(kmp_user_lock_p, kmp_uint32);
 
 #else // KMP_USE_DYNAMIC_LOCK
 
-# define DYNA_LOCK_BUSY(v, type)    (v)
-# define DYNA_LOCK_FREE(type)       0
-# define DYNA_LOCK_STRIP(v)         (v)
-# define DYNA_STORE_LOCK_SEQ(seq)
+# define KMP_LOCK_BUSY(v, type)    (v)
+# define KMP_LOCK_FREE(type)       0
+# define KMP_LOCK_STRIP(v)         (v)
+# define KMP_STORE_LOCK_SEQ(seq)
 
 #endif // KMP_USE_DYNAMIC_LOCK
 

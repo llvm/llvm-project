@@ -1273,19 +1273,25 @@ class GdbRemoteTestCaseBase(TestBase):
         args["expected_g_c2"] = "0"
         (state_reached, step_count) = self.count_single_steps_until_true(main_thread_id, self.g_c1_c2_contents_are, args, max_step_count=5, use_Hc_packet=use_Hc_packet, step_instruction=step_instruction)
         self.assertTrue(state_reached)
-        self.assertEqual(step_count, 1)
+        expected_step_count = 1
+        arch = self.getArchitecture()
+
+        #MIPS required "3" (ADDIU, SB, LD) machine instructions for updation of variable value
+        if re.match("mips",arch):
+           expected_step_count = 3
+        self.assertEqual(step_count, expected_step_count)
 
         # Verify we hit the next state.
         args["expected_g_c1"] = "0"
         args["expected_g_c2"] = "0"
         (state_reached, step_count) = self.count_single_steps_until_true(main_thread_id, self.g_c1_c2_contents_are, args, max_step_count=5, use_Hc_packet=use_Hc_packet, step_instruction=step_instruction)
         self.assertTrue(state_reached)
-        self.assertEqual(step_count, 1)
+        self.assertEqual(step_count, expected_step_count)
 
         # Verify we hit the next state.
         args["expected_g_c1"] = "0"
         args["expected_g_c2"] = "1"
         (state_reached, step_count) = self.count_single_steps_until_true(main_thread_id, self.g_c1_c2_contents_are, args, max_step_count=5, use_Hc_packet=use_Hc_packet, step_instruction=step_instruction)
         self.assertTrue(state_reached)
-        self.assertEqual(step_count, 1)
+        self.assertEqual(step_count, expected_step_count)
 

@@ -75,7 +75,7 @@ __kmp_validate_locks( void )
 static kmp_int32
 __kmp_get_tas_lock_owner( kmp_tas_lock_t *lck )
 {
-    return DYNA_LOCK_STRIP(TCR_4( lck->lk.poll )) - 1;
+    return KMP_LOCK_STRIP(TCR_4( lck->lk.poll )) - 1;
 }
 
 static inline bool
@@ -96,8 +96,8 @@ __kmp_acquire_tas_lock_timed_template( kmp_tas_lock_t *lck, kmp_int32 gtid )
     /* else __kmp_printf( "." );*/
 #endif /* USE_LOCK_PROFILE */
 
-    if ( ( lck->lk.poll == DYNA_LOCK_FREE(tas) )
-      && KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), DYNA_LOCK_FREE(tas), DYNA_LOCK_BUSY(gtid+1, tas) ) ) {
+    if ( ( lck->lk.poll == KMP_LOCK_FREE(tas) )
+      && KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), KMP_LOCK_FREE(tas), KMP_LOCK_BUSY(gtid+1, tas) ) ) {
         KMP_FSYNC_ACQUIRED(lck);
         return KMP_LOCK_ACQUIRED_FIRST;
     }
@@ -113,8 +113,8 @@ __kmp_acquire_tas_lock_timed_template( kmp_tas_lock_t *lck, kmp_int32 gtid )
         KMP_YIELD_SPIN( spins );
     }
 
-    while ( ( lck->lk.poll != DYNA_LOCK_FREE(tas) ) ||
-      ( ! KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), DYNA_LOCK_FREE(tas), DYNA_LOCK_BUSY(gtid+1, tas) ) ) ) {
+    while ( ( lck->lk.poll != KMP_LOCK_FREE(tas) ) ||
+      ( ! KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), KMP_LOCK_FREE(tas), KMP_LOCK_BUSY(gtid+1, tas) ) ) ) {
         //
         // FIXME - use exponential backoff here
         //
@@ -153,8 +153,8 @@ __kmp_acquire_tas_lock_with_checks( kmp_tas_lock_t *lck, kmp_int32 gtid )
 int
 __kmp_test_tas_lock( kmp_tas_lock_t *lck, kmp_int32 gtid )
 {
-    if ( ( lck->lk.poll == DYNA_LOCK_FREE(tas) )
-      && KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), DYNA_LOCK_FREE(tas), DYNA_LOCK_BUSY(gtid+1, tas) ) ) {
+    if ( ( lck->lk.poll == KMP_LOCK_FREE(tas) )
+      && KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), KMP_LOCK_FREE(tas), KMP_LOCK_BUSY(gtid+1, tas) ) ) {
         KMP_FSYNC_ACQUIRED( lck );
         return TRUE;
     }
@@ -178,7 +178,7 @@ __kmp_release_tas_lock( kmp_tas_lock_t *lck, kmp_int32 gtid )
     KMP_MB();       /* Flush all pending memory write invalidates.  */
 
     KMP_FSYNC_RELEASING(lck);
-    KMP_ST_REL32( &(lck->lk.poll), DYNA_LOCK_FREE(tas) );
+    KMP_ST_REL32( &(lck->lk.poll), KMP_LOCK_FREE(tas) );
     KMP_MB();       /* Flush all pending memory write invalidates.  */
 
     KMP_YIELD( TCR_4( __kmp_nth ) > ( __kmp_avail_proc ? __kmp_avail_proc :
@@ -208,7 +208,7 @@ __kmp_release_tas_lock_with_checks( kmp_tas_lock_t *lck, kmp_int32 gtid )
 void
 __kmp_init_tas_lock( kmp_tas_lock_t * lck )
 {
-    TCW_4( lck->lk.poll, DYNA_LOCK_FREE(tas) );
+    TCW_4( lck->lk.poll, KMP_LOCK_FREE(tas) );
 }
 
 static void
@@ -375,7 +375,7 @@ __kmp_destroy_nested_tas_lock_with_checks( kmp_tas_lock_t *lck )
 static kmp_int32
 __kmp_get_futex_lock_owner( kmp_futex_lock_t *lck )
 {
-    return DYNA_LOCK_STRIP(( TCR_4( lck->lk.poll ) >> 1 )) - 1;
+    return KMP_LOCK_STRIP(( TCR_4( lck->lk.poll ) >> 1 )) - 1;
 }
 
 static inline bool
@@ -404,10 +404,10 @@ __kmp_acquire_futex_lock_timed_template( kmp_futex_lock_t *lck, kmp_int32 gtid )
 
     kmp_int32 poll_val;
 
-    while ( ( poll_val = KMP_COMPARE_AND_STORE_RET32( & ( lck->lk.poll ), DYNA_LOCK_FREE(futex),
-             DYNA_LOCK_BUSY(gtid_code, futex) ) ) != DYNA_LOCK_FREE(futex) ) {
+    while ( ( poll_val = KMP_COMPARE_AND_STORE_RET32( & ( lck->lk.poll ), KMP_LOCK_FREE(futex),
+             KMP_LOCK_BUSY(gtid_code, futex) ) ) != KMP_LOCK_FREE(futex) ) {
 
-        kmp_int32 cond = DYNA_LOCK_STRIP(poll_val) & 1;
+        kmp_int32 cond = KMP_LOCK_STRIP(poll_val) & 1;
         KA_TRACE( 1000, ("__kmp_acquire_futex_lock: lck:%p, T#%d poll_val = 0x%x cond = 0x%x\n",
            lck, gtid, poll_val, cond ) );
 
@@ -424,12 +424,12 @@ __kmp_acquire_futex_lock_timed_template( kmp_futex_lock_t *lck, kmp_int32 gtid )
             // Try to set the lsb in the poll to indicate to the owner
             // thread that they need to wake this thread up.
             //
-            if ( ! KMP_COMPARE_AND_STORE_REL32( & ( lck->lk.poll ), poll_val, poll_val | DYNA_LOCK_BUSY(1, futex) ) ) {
+            if ( ! KMP_COMPARE_AND_STORE_REL32( & ( lck->lk.poll ), poll_val, poll_val | KMP_LOCK_BUSY(1, futex) ) ) {
                 KA_TRACE( 1000, ("__kmp_acquire_futex_lock: lck:%p(0x%x), T#%d can't set bit 0\n",
                   lck, lck->lk.poll, gtid ) );
                 continue;
             }
-            poll_val |= DYNA_LOCK_BUSY(1, futex);
+            poll_val |= KMP_LOCK_BUSY(1, futex);
 
             KA_TRACE( 1000, ("__kmp_acquire_futex_lock: lck:%p(0x%x), T#%d bit 0 set\n",
               lck, lck->lk.poll, gtid ) );
@@ -486,7 +486,7 @@ __kmp_acquire_futex_lock_with_checks( kmp_futex_lock_t *lck, kmp_int32 gtid )
 int
 __kmp_test_futex_lock( kmp_futex_lock_t *lck, kmp_int32 gtid )
 {
-    if ( KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), DYNA_LOCK_FREE(futex), DYNA_LOCK_BUSY(gtid+1, futex) << 1 ) ) {
+    if ( KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), KMP_LOCK_FREE(futex), KMP_LOCK_BUSY(gtid+1, futex) << 1 ) ) {
         KMP_FSYNC_ACQUIRED( lck );
         return TRUE;
     }
@@ -514,15 +514,15 @@ __kmp_release_futex_lock( kmp_futex_lock_t *lck, kmp_int32 gtid )
 
     KMP_FSYNC_RELEASING(lck);
 
-    kmp_int32 poll_val = KMP_XCHG_FIXED32( & ( lck->lk.poll ), DYNA_LOCK_FREE(futex) );
+    kmp_int32 poll_val = KMP_XCHG_FIXED32( & ( lck->lk.poll ), KMP_LOCK_FREE(futex) );
 
     KA_TRACE( 1000, ("__kmp_release_futex_lock: lck:%p, T#%d released poll_val = 0x%x\n",
        lck, gtid, poll_val ) );
 
-    if ( DYNA_LOCK_STRIP(poll_val) & 1 ) {
+    if ( KMP_LOCK_STRIP(poll_val) & 1 ) {
         KA_TRACE( 1000, ("__kmp_release_futex_lock: lck:%p, T#%d futex_wake 1 thread\n",
            lck, gtid ) );
-        syscall( __NR_futex, & ( lck->lk.poll ), FUTEX_WAKE, DYNA_LOCK_BUSY(1, futex), NULL, NULL, 0 );
+        syscall( __NR_futex, & ( lck->lk.poll ), FUTEX_WAKE, KMP_LOCK_BUSY(1, futex), NULL, NULL, 0 );
     }
 
     KMP_MB();       /* Flush all pending memory write invalidates.  */
@@ -557,7 +557,7 @@ __kmp_release_futex_lock_with_checks( kmp_futex_lock_t *lck, kmp_int32 gtid )
 void
 __kmp_init_futex_lock( kmp_futex_lock_t * lck )
 {
-    TCW_4( lck->lk.poll, DYNA_LOCK_FREE(futex) );
+    TCW_4( lck->lk.poll, KMP_LOCK_FREE(futex) );
 }
 
 static void
@@ -3019,13 +3019,13 @@ typedef enum kmp_lock_hint_t {
 // Direct lock initializers. It simply writes a tag to the low 8 bits of the lock word.
 #define expand_init_lock(l, a)                                              \
 static void init_##l##_lock(kmp_dyna_lock_t *lck, kmp_dyna_lockseq_t seq) { \
-    *lck = DYNA_LOCK_FREE(l);                                               \
+    *lck = KMP_LOCK_FREE(l);                                                \
     KA_TRACE(20, ("Initialized direct lock, tag = %x\n", *lck));            \
 }
 FOREACH_D_LOCK(expand_init_lock, 0)
 #undef expand_init_lock
 
-#if DYNA_HAS_HLE
+#if KMP_HAS_HLE
 
 // HLE lock functions - imported from the testbed runtime.
 #if KMP_MIC
@@ -3055,16 +3055,16 @@ __kmp_destroy_hle_lock(kmp_dyna_lock_t *lck)
 static void
 __kmp_acquire_hle_lock(kmp_dyna_lock_t *lck, kmp_int32 gtid)
 {
-    // Use gtid for DYNA_LOCK_BUSY if necessary
-    if (swap4(lck, DYNA_LOCK_BUSY(1, hle)) != DYNA_LOCK_FREE(hle)) {
+    // Use gtid for KMP_LOCK_BUSY if necessary
+    if (swap4(lck, KMP_LOCK_BUSY(1, hle)) != KMP_LOCK_FREE(hle)) {
         int delay = 1;
         do {
-            while (*(kmp_uint32 volatile *)lck != DYNA_LOCK_FREE(hle)) {
+            while (*(kmp_uint32 volatile *)lck != KMP_LOCK_FREE(hle)) {
                 for (int i = delay; i != 0; --i)
                     machine_pause();
                 delay = ((delay << 1) | 1) & 7;
             }
-        } while (swap4(lck, DYNA_LOCK_BUSY(1, hle)) != DYNA_LOCK_FREE(hle));
+        } while (swap4(lck, KMP_LOCK_BUSY(1, hle)) != KMP_LOCK_FREE(hle));
     }
 }
 
@@ -3079,7 +3079,7 @@ __kmp_release_hle_lock(kmp_dyna_lock_t *lck, kmp_int32 gtid)
 {
     __asm__ volatile(HLE_RELEASE "movl %1,%0"
                     : "=m"(*lck)
-                    : "r"(DYNA_LOCK_FREE(hle))
+                    : "r"(KMP_LOCK_FREE(hle))
                     : "memory");
 }
 
@@ -3092,7 +3092,7 @@ __kmp_release_hle_lock_with_checks(kmp_dyna_lock_t *lck, kmp_int32 gtid)
 static int
 __kmp_test_hle_lock(kmp_dyna_lock_t *lck, kmp_int32 gtid)
 {
-    return swap4(lck, DYNA_LOCK_BUSY(1, hle)) == DYNA_LOCK_FREE(hle);
+    return swap4(lck, KMP_LOCK_BUSY(1, hle)) == KMP_LOCK_FREE(hle);
 }
 
 static int
@@ -3101,7 +3101,7 @@ __kmp_test_hle_lock_with_checks(kmp_dyna_lock_t *lck, kmp_int32 gtid)
     return __kmp_test_hle_lock(lck, gtid); // TODO: add checks
 }
 
-#endif // DYNA_HAS_HLE
+#endif // KMP_HAS_HLE
 
 // Entry functions for indirect locks (first element of direct_*_ops[]).
 static void __kmp_init_indirect_lock(kmp_dyna_lock_t * l, kmp_dyna_lockseq_t tag);
@@ -3128,16 +3128,16 @@ void (*__kmp_direct_destroy_ops[])(kmp_dyna_lock_t *)
 // Differentiates *lock and *lock_with_checks.
 #define expand_func2(l, op)  0,(void (*)(kmp_dyna_lock_t *, kmp_int32))__kmp_##op##_##l##_##lock,
 #define expand_func2c(l, op) 0,(void (*)(kmp_dyna_lock_t *, kmp_int32))__kmp_##op##_##l##_##lock_with_checks,
-static void (*direct_set_tab[][DYNA_NUM_D_LOCKS*2+2])(kmp_dyna_lock_t *, kmp_int32)
+static void (*direct_set_tab[][KMP_NUM_D_LOCKS*2+2])(kmp_dyna_lock_t *, kmp_int32)
     = { { __kmp_set_indirect_lock, 0, FOREACH_D_LOCK(expand_func2, acquire)  },
         { __kmp_set_indirect_lock_with_checks, 0, FOREACH_D_LOCK(expand_func2c, acquire) } };
-static void (*direct_unset_tab[][DYNA_NUM_D_LOCKS*2+2])(kmp_dyna_lock_t *, kmp_int32)
+static void (*direct_unset_tab[][KMP_NUM_D_LOCKS*2+2])(kmp_dyna_lock_t *, kmp_int32)
     = { { __kmp_unset_indirect_lock, 0, FOREACH_D_LOCK(expand_func2, release)  },
         { __kmp_unset_indirect_lock_with_checks, 0, FOREACH_D_LOCK(expand_func2c, release) } };
 
 #define expand_func3(l, op)  0,(int  (*)(kmp_dyna_lock_t *, kmp_int32))__kmp_##op##_##l##_##lock,
 #define expand_func3c(l, op) 0,(int  (*)(kmp_dyna_lock_t *, kmp_int32))__kmp_##op##_##l##_##lock_with_checks,
-static int  (*direct_test_tab[][DYNA_NUM_D_LOCKS*2+2])(kmp_dyna_lock_t *, kmp_int32)
+static int  (*direct_test_tab[][KMP_NUM_D_LOCKS*2+2])(kmp_dyna_lock_t *, kmp_int32)
     = { { __kmp_test_indirect_lock, 0, FOREACH_D_LOCK(expand_func3, test)  },
         { __kmp_test_indirect_lock_with_checks, 0, FOREACH_D_LOCK(expand_func3c, test) } };
 
@@ -3158,16 +3158,16 @@ void (*__kmp_indirect_destroy_ops[])(kmp_user_lock_p)
 // Differentiates *lock and *lock_with_checks.
 #define expand_func5(l, op)  (void (*)(kmp_user_lock_p, kmp_int32))__kmp_##op##_##l##_##lock,
 #define expand_func5c(l, op) (void (*)(kmp_user_lock_p, kmp_int32))__kmp_##op##_##l##_##lock_with_checks,
-static void (*indirect_set_tab[][DYNA_NUM_I_LOCKS])(kmp_user_lock_p, kmp_int32)
+static void (*indirect_set_tab[][KMP_NUM_I_LOCKS])(kmp_user_lock_p, kmp_int32)
     = { { FOREACH_I_LOCK(expand_func5, acquire)  },
         { FOREACH_I_LOCK(expand_func5c, acquire) } };
-static void (*indirect_unset_tab[][DYNA_NUM_I_LOCKS])(kmp_user_lock_p, kmp_int32)
+static void (*indirect_unset_tab[][KMP_NUM_I_LOCKS])(kmp_user_lock_p, kmp_int32)
     = { { FOREACH_I_LOCK(expand_func5, release)  },
         { FOREACH_I_LOCK(expand_func5c, release) } };
 
 #define expand_func6(l, op)  (int  (*)(kmp_user_lock_p, kmp_int32))__kmp_##op##_##l##_##lock,
 #define expand_func6c(l, op) (int  (*)(kmp_user_lock_p, kmp_int32))__kmp_##op##_##l##_##lock_with_checks,
-static int  (*indirect_test_tab[][DYNA_NUM_I_LOCKS])(kmp_user_lock_p, kmp_int32)
+static int  (*indirect_test_tab[][KMP_NUM_I_LOCKS])(kmp_user_lock_p, kmp_int32)
     = { { FOREACH_I_LOCK(expand_func6, test)  },
         { FOREACH_I_LOCK(expand_func6c, test) } };
 
@@ -3182,14 +3182,14 @@ kmp_lock_index_t __kmp_indirect_lock_table_size;
 kmp_lock_index_t __kmp_indirect_lock_table_next;
 
 // Size of indirect locks.
-static kmp_uint32 __kmp_indirect_lock_size[DYNA_NUM_I_LOCKS] = {
+static kmp_uint32 __kmp_indirect_lock_size[KMP_NUM_I_LOCKS] = {
     sizeof(kmp_ticket_lock_t),      sizeof(kmp_queuing_lock_t),
 #if KMP_USE_ADAPTIVE_LOCKS
     sizeof(kmp_adaptive_lock_t),
 #endif
     sizeof(kmp_drdpa_lock_t),
     sizeof(kmp_tas_lock_t),
-#if DYNA_HAS_FUTEX
+#if KMP_HAS_FUTEX
     sizeof(kmp_futex_lock_t),
 #endif
     sizeof(kmp_ticket_lock_t),      sizeof(kmp_queuing_lock_t),
@@ -3197,13 +3197,13 @@ static kmp_uint32 __kmp_indirect_lock_size[DYNA_NUM_I_LOCKS] = {
 };
 
 // Jump tables for lock accessor/modifier.
-void (*__kmp_indirect_set_location[DYNA_NUM_I_LOCKS])(kmp_user_lock_p, const ident_t *) = { 0 };
-void (*__kmp_indirect_set_flags[DYNA_NUM_I_LOCKS])(kmp_user_lock_p, kmp_lock_flags_t) = { 0 };
-const ident_t * (*__kmp_indirect_get_location[DYNA_NUM_I_LOCKS])(kmp_user_lock_p) = { 0 };
-kmp_lock_flags_t (*__kmp_indirect_get_flags[DYNA_NUM_I_LOCKS])(kmp_user_lock_p) = { 0 };
+void (*__kmp_indirect_set_location[KMP_NUM_I_LOCKS])(kmp_user_lock_p, const ident_t *) = { 0 };
+void (*__kmp_indirect_set_flags[KMP_NUM_I_LOCKS])(kmp_user_lock_p, kmp_lock_flags_t) = { 0 };
+const ident_t * (*__kmp_indirect_get_location[KMP_NUM_I_LOCKS])(kmp_user_lock_p) = { 0 };
+kmp_lock_flags_t (*__kmp_indirect_get_flags[KMP_NUM_I_LOCKS])(kmp_user_lock_p) = { 0 };
 
 // Use different lock pools for different lock types.
-static kmp_indirect_lock_t * __kmp_indirect_lock_pool[DYNA_NUM_I_LOCKS] = { 0 };
+static kmp_indirect_lock_t * __kmp_indirect_lock_pool[KMP_NUM_I_LOCKS] = { 0 };
 
 // Inserts the given lock ptr to the lock table.
 kmp_lock_index_t 
@@ -3271,7 +3271,7 @@ __kmp_lookup_indirect_lock(void **user_lock, const char *func)
             KMP_FATAL(LockIsUninitialized, func);
         }
         if (OMP_LOCK_T_SIZE < sizeof(void *)) {
-            kmp_lock_index_t idx = DYNA_EXTRACT_I_INDEX(user_lock);
+            kmp_lock_index_t idx = KMP_EXTRACT_I_INDEX(user_lock);
             if (idx < 0 || idx >= __kmp_indirect_lock_table_size) {
                 KMP_FATAL(LockIsUninitialized, func);
             }
@@ -3285,7 +3285,7 @@ __kmp_lookup_indirect_lock(void **user_lock, const char *func)
         return lck; 
     } else {
         if (OMP_LOCK_T_SIZE < sizeof(void *)) {
-            return __kmp_indirect_lock_table[DYNA_EXTRACT_I_INDEX(user_lock)];
+            return __kmp_indirect_lock_table[KMP_EXTRACT_I_INDEX(user_lock)];
         } else {
             return *((kmp_indirect_lock_t **)user_lock);
         }
@@ -3301,9 +3301,9 @@ __kmp_init_indirect_lock(kmp_dyna_lock_t * lock, kmp_dyna_lockseq_t seq)
         seq = lockseq_queuing;
     }
 #endif
-    kmp_indirect_locktag_t tag = DYNA_GET_I_TAG(seq);
+    kmp_indirect_locktag_t tag = KMP_GET_I_TAG(seq);
     kmp_indirect_lock_t *l = __kmp_allocate_indirect_lock((void **)lock, __kmp_entry_gtid(), tag);
-    DYNA_I_LOCK_FUNC(l, init)(l->lock);
+    KMP_I_LOCK_FUNC(l, init)(l->lock);
     KA_TRACE(20, ("__kmp_init_indirect_lock: initialized indirect lock, tag = %x\n", l->type));
 }
 
@@ -3312,7 +3312,7 @@ __kmp_destroy_indirect_lock(kmp_dyna_lock_t * lock)
 {
     kmp_uint32 gtid = __kmp_entry_gtid();
     kmp_indirect_lock_t *l = __kmp_lookup_indirect_lock((void **)lock, "omp_destroy_lock");
-    DYNA_I_LOCK_FUNC(l, destroy)(l->lock);
+    KMP_I_LOCK_FUNC(l, destroy)(l->lock);
     kmp_indirect_locktag_t tag = l->type;
 
     __kmp_acquire_lock(&__kmp_global_lock, gtid);
@@ -3320,7 +3320,7 @@ __kmp_destroy_indirect_lock(kmp_dyna_lock_t * lock)
     // Use the base lock's space to keep the pool chain.
     l->lock->pool.next = (kmp_user_lock_p)__kmp_indirect_lock_pool[tag];
     if (OMP_LOCK_T_SIZE < sizeof(void *)) {
-        l->lock->pool.index = DYNA_EXTRACT_I_INDEX(lock);
+        l->lock->pool.index = KMP_EXTRACT_I_INDEX(lock);
     }
     __kmp_indirect_lock_pool[tag] = l;
 
@@ -3330,43 +3330,43 @@ __kmp_destroy_indirect_lock(kmp_dyna_lock_t * lock)
 static void
 __kmp_set_indirect_lock(kmp_dyna_lock_t * lock, kmp_int32 gtid)
 {
-    kmp_indirect_lock_t *l = DYNA_LOOKUP_I_LOCK(lock);
-    DYNA_I_LOCK_FUNC(l, set)(l->lock, gtid);
+    kmp_indirect_lock_t *l = KMP_LOOKUP_I_LOCK(lock);
+    KMP_I_LOCK_FUNC(l, set)(l->lock, gtid);
 }
 
 static void
 __kmp_unset_indirect_lock(kmp_dyna_lock_t * lock, kmp_int32 gtid)
 {
-    kmp_indirect_lock_t *l = DYNA_LOOKUP_I_LOCK(lock);
-    DYNA_I_LOCK_FUNC(l, unset)(l->lock, gtid);
+    kmp_indirect_lock_t *l = KMP_LOOKUP_I_LOCK(lock);
+    KMP_I_LOCK_FUNC(l, unset)(l->lock, gtid);
 }
 
 static int
 __kmp_test_indirect_lock(kmp_dyna_lock_t * lock, kmp_int32 gtid)
 {
-    kmp_indirect_lock_t *l = DYNA_LOOKUP_I_LOCK(lock);
-    return DYNA_I_LOCK_FUNC(l, test)(l->lock, gtid);
+    kmp_indirect_lock_t *l = KMP_LOOKUP_I_LOCK(lock);
+    return KMP_I_LOCK_FUNC(l, test)(l->lock, gtid);
 }
 
 static void
 __kmp_set_indirect_lock_with_checks(kmp_dyna_lock_t * lock, kmp_int32 gtid)
 {
     kmp_indirect_lock_t *l = __kmp_lookup_indirect_lock((void **)lock, "omp_set_lock");
-    DYNA_I_LOCK_FUNC(l, set)(l->lock, gtid);
+    KMP_I_LOCK_FUNC(l, set)(l->lock, gtid);
 }
 
 static void
 __kmp_unset_indirect_lock_with_checks(kmp_dyna_lock_t * lock, kmp_int32 gtid)
 {
     kmp_indirect_lock_t *l = __kmp_lookup_indirect_lock((void **)lock, "omp_unset_lock");
-    DYNA_I_LOCK_FUNC(l, unset)(l->lock, gtid);
+    KMP_I_LOCK_FUNC(l, unset)(l->lock, gtid);
 }
 
 static int
 __kmp_test_indirect_lock_with_checks(kmp_dyna_lock_t * lock, kmp_int32 gtid)
 {
     kmp_indirect_lock_t *l = __kmp_lookup_indirect_lock((void **)lock, "omp_test_lock");
-    return DYNA_I_LOCK_FUNC(l, test)(l->lock, gtid);
+    return KMP_I_LOCK_FUNC(l, test)(l->lock, gtid);
 }
 
 kmp_dyna_lockseq_t __kmp_user_lock_seq = lockseq_queuing;
@@ -3381,7 +3381,7 @@ __kmp_init_lock_hinted(void **lock, int hint)
             seq = lockseq_tas;
             break;
         case kmp_lock_hint_speculative:
-#if DYNA_HAS_HLE
+#if KMP_HAS_HLE
             seq = lockseq_hle;
 #else
             seq = lockseq_tas;
@@ -3401,15 +3401,15 @@ __kmp_init_lock_hinted(void **lock, int hint)
             seq = lockseq_queuing;
             break;
     }
-    if (DYNA_IS_D_LOCK(seq)) {
-        DYNA_INIT_D_LOCK(lock, seq);
+    if (KMP_IS_D_LOCK(seq)) {
+        KMP_INIT_D_LOCK(lock, seq);
 #if USE_ITT_BUILD
         __kmp_itt_lock_creating((kmp_user_lock_p)lock, NULL);
 #endif
     } else {
-        DYNA_INIT_I_LOCK(lock, seq);
+        KMP_INIT_I_LOCK(lock, seq);
 #if USE_ITT_BUILD
-        kmp_indirect_lock_t *ilk = DYNA_LOOKUP_I_LOCK(lock);
+        kmp_indirect_lock_t *ilk = KMP_LOOKUP_I_LOCK(lock);
         __kmp_itt_lock_creating(ilk->lock, NULL);
 #endif
     }
@@ -3423,7 +3423,7 @@ __kmp_get_user_lock_owner(kmp_user_lock_p lck, kmp_uint32 seq)
         case lockseq_tas:
         case lockseq_nested_tas:
             return __kmp_get_tas_lock_owner((kmp_tas_lock_t *)lck);
-#if DYNA_HAS_FUTEX
+#if KMP_HAS_FUTEX
         case lockseq_futex:
         case lockseq_nested_futex:
             return __kmp_get_futex_lock_owner((kmp_futex_lock_t *)lck);
@@ -3462,9 +3462,9 @@ __kmp_init_nest_lock_hinted(void **lock, int hint)
             seq = lockseq_nested_queuing;
             break;
     }
-    DYNA_INIT_I_LOCK(lock, seq);
+    KMP_INIT_I_LOCK(lock, seq);
 #if USE_ITT_BUILD
-    kmp_indirect_lock_t *ilk = DYNA_LOOKUP_I_LOCK(lock);
+    kmp_indirect_lock_t *ilk = KMP_LOOKUP_I_LOCK(lock);
     __kmp_itt_lock_creating(ilk->lock, NULL);
 #endif
 }
@@ -3539,7 +3539,7 @@ __kmp_cleanup_indirect_user_locks()
     int k;
 
     // Clean up locks in the pools first (they were already destroyed before going into the pools).
-    for (k = 0; k < DYNA_NUM_I_LOCKS; ++k) {
+    for (k = 0; k < KMP_NUM_I_LOCKS; ++k) {
         kmp_indirect_lock_t *l = __kmp_indirect_lock_pool[k];
         while (l != NULL) {
             kmp_indirect_lock_t *ll = l;
@@ -3556,7 +3556,7 @@ __kmp_cleanup_indirect_user_locks()
         kmp_indirect_lock_t *l = __kmp_indirect_lock_table[i];
         if (l != NULL) {
             // Locks not destroyed explicitly need to be destroyed here.
-            DYNA_I_LOCK_FUNC(l, destroy)(l->lock);
+            KMP_I_LOCK_FUNC(l, destroy)(l->lock);
             __kmp_free(l->lock);
             __kmp_free(l);
         }

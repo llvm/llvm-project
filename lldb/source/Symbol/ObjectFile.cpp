@@ -537,6 +537,7 @@ ObjectFile::ReadSectionData (const Section *section, DataExtractor& section_data
                 }
             }
         }
+        return GetData(section->GetFileOffset(), section->GetFileSize(), section_data);
     }
     else
     {

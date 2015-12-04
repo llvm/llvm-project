@@ -211,7 +211,8 @@ class LoadUnloadTestCase(TestBase):
             dylibName = 'libloadunload_a.so'
 
         if lldb.remote_platform:
-            dylibPath = os.path.join(shlib_dir, dylibName)
+            # Don't use os.path.join as we have to use the path separator for the target
+            dylibPath = shlib_dir + '/' + dylibName
         else:
             dylibPath = dylibName
 

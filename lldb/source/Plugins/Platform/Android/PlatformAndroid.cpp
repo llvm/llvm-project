@@ -377,90 +377,13 @@ PlatformAndroid::GetRemoteOSVersion ()
     return m_major_os_version != 0;
 }
 
-uint32_t
-PlatformAndroid::LoadImage(lldb_private::Process* process, const FileSpec& image_spec, Error& error)
+const char*
+PlatformAndroid::GetLibdlFunctionDeclarations() const
 {
-    char path[PATH_MAX];
-    image_spec.GetPath(path, sizeof(path));
-
-    StreamString expr;
-    expr.Printf(R"(
-                   struct __lldb_dlopen_result { void *image_ptr; const char *error_str; } the_result;
-                   the_result.image_ptr = __dl_dlopen ("%s", 2);
-                   if (the_result.image_ptr == (void*)0x0)
-                       the_result.error_str = __dl_dlerror();
-                   else
-                       the_result.error_str = (const char*)0x0;
-                   the_result;
-                  )",
-                  path);
-    const char *prefix = R"(
-                            extern "C" void* __dl_dlopen(const char* path, int mode);
-                            extern "C" const char *__dl_dlerror(void);
-                            )";
-    lldb::ValueObjectSP result_valobj_sp;
-    error = EvaluateLibdlExpression(process, expr.GetData(), prefix, result_valobj_sp);
-    if (error.Fail())
-        return LLDB_INVALID_IMAGE_TOKEN;
-
-    error = result_valobj_sp->GetError();
-    if (error.Fail())
-        return LLDB_INVALID_IMAGE_TOKEN;
-
-    Scalar scalar;
-    ValueObjectSP image_ptr_sp = result_valobj_sp->GetChildAtIndex(0, true);
-    if (!image_ptr_sp || !image_ptr_sp->ResolveValue(scalar))
-    {
-        error.SetErrorStringWithFormat("unable to load '%s'", path);
-        return LLDB_INVALID_IMAGE_TOKEN;
-    }
-
-    addr_t image_ptr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
-    if (image_ptr != 0 && image_ptr != LLDB_INVALID_ADDRESS)
-        return process->AddImageToken(image_ptr);
-
-    if (image_ptr == 0)
-    {
-        ValueObjectSP error_str_sp = result_valobj_sp->GetChildAtIndex(1, true);
-        if (error_str_sp && error_str_sp->IsCStringContainer(true))
-        {
-            DataBufferSP buffer_sp(new DataBufferHeap(10240,0));
-            size_t num_chars = error_str_sp->ReadPointedString (buffer_sp, error, 10240).first;
-            if (error.Success() && num_chars > 0)
-                error.SetErrorStringWithFormat("dlopen error: %s", buffer_sp->GetBytes());
-            else
-                error.SetErrorStringWithFormat("dlopen failed for unknown reasons.");
-            return LLDB_INVALID_IMAGE_TOKEN;
-        }
-    }
-    error.SetErrorStringWithFormat("unable to load '%s'", path);
-    return LLDB_INVALID_IMAGE_TOKEN;
-}
-
-Error
-PlatformAndroid::UnloadImage (lldb_private::Process* process, uint32_t image_token)
-{
-    const addr_t image_addr = process->GetImagePtrFromToken(image_token);
-    if (image_addr == LLDB_INVALID_ADDRESS)
-        return Error("Invalid image token");
-
-    StreamString expr;
-    expr.Printf("__dl_dlclose((void*)0x%" PRIx64 ")", image_addr);
-    const char *prefix = "extern \"C\" int __dl_dlclose(void* handle);\n";
-    lldb::ValueObjectSP result_valobj_sp;
-    Error error = EvaluateLibdlExpression(process, expr.GetData(), prefix, result_valobj_sp);
-    if (error.Fail())
-        return error;
-
-    if (result_valobj_sp->GetError().Fail())
-        return result_valobj_sp->GetError();
-
-    Scalar scalar;
-    if (result_valobj_sp->ResolveValue(scalar))
-    {
-        if (scalar.UInt(1))
-            return Error("expression failed: \"%s\"", expr.GetData());
-        process->ResetImageToken(image_token);
-    }
-    return Error();
+    return R"(
+              extern "C" void* dlopen(const char*, int) asm("__dl_dlopen");
+              extern "C" void* dlsym(void*, const char*) asm("__dl_dlsym");
+              extern "C" int   dlclose(void*) asm("__dl_dlclose");
+              extern "C" char* dlerror(void) asm("__dl_dlerror");
+             )";
 }

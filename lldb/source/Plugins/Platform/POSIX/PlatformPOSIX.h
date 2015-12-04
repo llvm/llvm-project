@@ -191,6 +191,9 @@ protected:
                             const char *expr_prefix,
                             lldb::ValueObjectSP& result_valobj_sp);
 
+    virtual const char*
+    GetLibdlFunctionDeclarations() const;
+
 private:
     DISALLOW_COPY_AND_ASSIGN (PlatformPOSIX);
 };

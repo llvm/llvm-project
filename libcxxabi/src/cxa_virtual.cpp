@@ -10,22 +10,16 @@
 #include "cxxabi.h"
 #include "abort_message.h"
 
-namespace __cxxabiv1
-{
-
-extern "C"
-{
-
-LIBCXXABI_NORETURN
+namespace __cxxabiv1 {
+extern "C" {
+_LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN
 void __cxa_pure_virtual(void) {
-    abort_message("Pure virtual function called!");
+  abort_message("Pure virtual function called!");
 }
 
-LIBCXXABI_NORETURN
+_LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN
 void __cxa_deleted_virtual(void) {
-    abort_message("Deleted virtual function called!");
+  abort_message("Deleted virtual function called!");
 }
-
-}  // extern "C"
-
-}  // abi
+} // extern "C"
+} // abi

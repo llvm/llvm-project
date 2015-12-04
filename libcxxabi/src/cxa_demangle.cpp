@@ -10,6 +10,8 @@
 #define _LIBCPP_EXTERN_TEMPLATE(...)
 #define _LIBCPP_NO_EXCEPTIONS
 
+#include "__cxxabi_config.h"
+
 #include <vector>
 #include <algorithm>
 #include <string>
@@ -4922,11 +4924,8 @@ struct Db
 
 }  // unnamed namespace
 
-extern "C"
-__attribute__ ((__visibility__("default")))
-char*
-__cxa_demangle(const char* mangled_name, char* buf, size_t* n, int* status)
-{
+extern "C" _LIBCXXABI_FUNC_VIS char *
+__cxa_demangle(const char *mangled_name, char *buf, size_t *n, int *status) {
     if (mangled_name == nullptr || (buf != nullptr && n == nullptr))
     {
         if (status)

@@ -192,7 +192,7 @@ ThreadPlanStepOut::GetDescription (Stream *s, lldb::DescriptionLevel level)
             // FIXME: find some useful way to present the m_return_id, since there may be multiple copies of the
             // same function on the stack.
 
-            s->Printf ("returning to frame at ");
+            s->Printf (" returning to frame at ");
             if (tmp_address.SetLoadAddress (m_return_addr, &GetTarget()))
             {
                 tmp_address.Dump(s, &GetThread(), Address::DumpStyleResolvedDescription, Address::DumpStyleLoadAddress);

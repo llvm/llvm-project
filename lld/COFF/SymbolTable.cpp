@@ -13,6 +13,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Core/Parallel.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -368,7 +369,7 @@ void SymbolTable::addCombinedLTOObjects() {
 
   // Create an object file and add it to the symbol table by replacing any
   // DefinedBitcode symbols with the definitions in the object file.
-  LTOCodeGenerator CG;
+  LTOCodeGenerator CG(getGlobalContext());
   CG.setOptLevel(Config->LTOOptLevel);
   std::vector<ObjectFile *> Objs = createLTOObjects(&CG);
 

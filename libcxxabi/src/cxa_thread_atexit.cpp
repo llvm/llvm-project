@@ -10,13 +10,12 @@
 #include "cxxabi.h"
 
 namespace __cxxabiv1 {
-
 extern "C" {
 
 #ifdef HAVE___CXA_THREAD_ATEXIT_IMPL
 
-int __cxa_thread_atexit(void (*dtor)(void *), void *obj,
-                        void *dso_symbol) throw() {
+_LIBCXXABI_FUNC_VIS int __cxa_thread_atexit(void (*dtor)(void *), void *obj,
+                                            void *dso_symbol) throw() {
   extern int __cxa_thread_atexit_impl(void (*)(void *), void *, void *);
   return __cxa_thread_atexit_impl(dtor, obj, dso_symbol);
 }
@@ -24,5 +23,4 @@ int __cxa_thread_atexit(void (*dtor)(void *), void *obj,
 #endif // HAVE__CXA_THREAD_ATEXIT_IMPL
 
 } // extern "C"
-
 } // namespace __cxxabiv1

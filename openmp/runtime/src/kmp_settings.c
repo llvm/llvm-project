@@ -3892,13 +3892,13 @@ __kmp_stg_parse_lock_kind( char const * name, char const * value, void * data ) 
       || __kmp_str_match( "testand-set", 2, value )
       || __kmp_str_match( "testandset", 2, value ) ) {
         __kmp_user_lock_kind = lk_tas;
-        DYNA_STORE_LOCK_SEQ(tas);
+        KMP_STORE_LOCK_SEQ(tas);
     }
 #if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
     else if ( __kmp_str_match( "futex", 1, value ) ) {
         if ( __kmp_futex_determine_capable() ) {
             __kmp_user_lock_kind = lk_futex;
-            DYNA_STORE_LOCK_SEQ(futex);
+            KMP_STORE_LOCK_SEQ(futex);
         }
         else {
             KMP_WARNING( FutexNotSupported, name, value );
@@ -3907,12 +3907,12 @@ __kmp_stg_parse_lock_kind( char const * name, char const * value, void * data ) 
 #endif
     else if ( __kmp_str_match( "ticket", 2, value ) ) {
         __kmp_user_lock_kind = lk_ticket;
-        DYNA_STORE_LOCK_SEQ(ticket);
+        KMP_STORE_LOCK_SEQ(ticket);
     }
     else if ( __kmp_str_match( "queuing", 1, value )
       || __kmp_str_match( "queue", 1, value ) ) {
         __kmp_user_lock_kind = lk_queuing;
-        DYNA_STORE_LOCK_SEQ(queuing);
+        KMP_STORE_LOCK_SEQ(queuing);
     }
     else if ( __kmp_str_match( "drdpa ticket", 1, value )
       || __kmp_str_match( "drdpa_ticket", 1, value )
@@ -3920,23 +3920,23 @@ __kmp_stg_parse_lock_kind( char const * name, char const * value, void * data ) 
       || __kmp_str_match( "drdpaticket", 1, value )
       || __kmp_str_match( "drdpa", 1, value ) ) {
         __kmp_user_lock_kind = lk_drdpa;
-        DYNA_STORE_LOCK_SEQ(drdpa);
+        KMP_STORE_LOCK_SEQ(drdpa);
     }
 #if KMP_USE_ADAPTIVE_LOCKS
     else if ( __kmp_str_match( "adaptive", 1, value )  ) {
         if( __kmp_cpuinfo.rtm ) { // ??? Is cpuinfo available here?
             __kmp_user_lock_kind = lk_adaptive;
-            DYNA_STORE_LOCK_SEQ(adaptive);
+            KMP_STORE_LOCK_SEQ(adaptive);
         } else {
             KMP_WARNING( AdaptiveNotSupported, name, value );
             __kmp_user_lock_kind = lk_queuing;
-            DYNA_STORE_LOCK_SEQ(queuing);
+            KMP_STORE_LOCK_SEQ(queuing);
         }
     }
 #endif // KMP_USE_ADAPTIVE_LOCKS
 #if KMP_USE_DYNAMIC_LOCK
     else if ( __kmp_str_match("hle", 1, value) ) {
-        DYNA_STORE_LOCK_SEQ(hle);
+        KMP_STORE_LOCK_SEQ(hle);
     }
 #endif
     else {

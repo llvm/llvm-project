@@ -18,7 +18,6 @@ class ThreadSpecificBreakTestCase(TestBase):
 
     @skipIfFreeBSD # test frequently times out or hangs
     @expectedFailureFreeBSD('llvm.org/pr18522') # hits break in another thread in testrun
-    @expectedFailureWindows("llvm.org/pr24777")
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux # this test fails 6/100 dosep runs
     def test_python(self):

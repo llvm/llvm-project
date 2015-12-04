@@ -3379,6 +3379,73 @@ error:
 
 /* Generate code for a single component, after shifting (if any)
  * has been applied, in case the schedule was specified as a schedule tree.
+ * In particular, do so for the specified sequence of subsets
+ * of the schedule domain, "before", "isolated", "after" and "other",
+ * where only the "isolated" part is considered to be isolated.
+ */
+static __isl_give isl_ast_graft_list *generate_shifted_component_parts(
+	__isl_take isl_union_map *executed, __isl_take isl_set *before,
+	__isl_take isl_set *isolated, __isl_take isl_set *after,
+	__isl_take isl_set *other, __isl_take isl_ast_build *build)
+{
+	isl_ast_graft_list *list, *res;
+
+	res = generate_shifted_component_tree_part(executed, before, build, 0);
+	list = generate_shifted_component_tree_part(executed, isolated,
+						    build, 1);
+	res = isl_ast_graft_list_concat(res, list);
+	list = generate_shifted_component_tree_part(executed, after, build, 0);
+	res = isl_ast_graft_list_concat(res, list);
+	list = generate_shifted_component_tree_part(executed, other, build, 0);
+	res = isl_ast_graft_list_concat(res, list);
+
+	isl_union_map_free(executed);
+	isl_ast_build_free(build);
+
+	return res;
+}
+
+/* Does "set" intersect "first", but not "second"?
+ */
+static isl_bool only_intersects_first(__isl_keep isl_set *set,
+	__isl_keep isl_set *first, __isl_keep isl_set *second)
+{
+	isl_bool disjoint;
+
+	disjoint = isl_set_is_disjoint(set, first);
+	if (disjoint < 0)
+		return isl_bool_error;
+	if (disjoint)
+		return isl_bool_false;
+
+	return isl_set_is_disjoint(set, second);
+}
+
+/* Generate code for a single component, after shifting (if any)
+ * has been applied, in case the schedule was specified as a schedule tree.
+ * In particular, do so in case of isolation where there is
+ * only an "isolated" part and an "after" part.
+ * "dead1" and "dead2" are freed by this function in order to simplify
+ * the caller.
+ *
+ * The "before" and "other" parts are set to empty sets.
+ */
+static __isl_give isl_ast_graft_list *generate_shifted_component_only_after(
+	__isl_take isl_union_map *executed, __isl_take isl_set *isolated,
+	__isl_take isl_set *after, __isl_take isl_ast_build *build,
+	__isl_take isl_set *dead1, __isl_take isl_set *dead2)
+{
+	isl_set *empty;
+
+	empty = isl_set_empty(isl_set_get_space(after));
+	isl_set_free(dead1);
+	isl_set_free(dead2);
+	return generate_shifted_component_parts(executed, isl_set_copy(empty),
+						isolated, after, empty, build);
+}
+
+/* Generate code for a single component, after shifting (if any)
+ * has been applied, in case the schedule was specified as a schedule tree.
  *
  * We first check if the user has specified an isolated schedule domain
  * and that we are not already outside of this isolated schedule domain.
@@ -3388,6 +3455,14 @@ error:
  * the remaining iterations (those that are incomparable
  * to the isolated domain).
  * We generate an AST for each piece and concatenate the results.
+ *
+ * In the special case where at least one element of the schedule
+ * domain that does not belong to the isolated domain needs
+ * to be scheduled after this isolated domain, but none of those
+ * elements need to be scheduled before, break up the schedule domain
+ * in only two parts, the isolated domain, and a part that will be
+ * scheduled after the isolated domain.
+ *
  * If no isolated set has been specified, then we generate an
  * AST for the entire inverse schedule.
  */
@@ -3402,7 +3477,7 @@ static __isl_give isl_ast_graft_list *generate_shifted_component_tree(
 	isl_basic_set *hull;
 	isl_set *isolated, *before, *after, *test;
 	isl_map *gt, *lt;
-	isl_ast_graft_list *list, *res;
+	isl_bool pure;
 
 	build = isl_ast_build_extract_isolated(build);
 	has_isolate = isl_ast_build_has_isolated(build);
@@ -3441,25 +3516,20 @@ static __isl_give isl_ast_graft_list *generate_shifted_component_tree(
 	after = isl_set_apply(isl_set_copy(isolated), lt);
 
 	domain = isl_set_subtract(domain, isl_set_copy(isolated));
+	pure = only_intersects_first(domain, after, before);
+	if (pure < 0)
+		executed = isl_union_map_free(executed);
+	else if (pure)
+		return generate_shifted_component_only_after(executed, isolated,
+						domain, build, before, after);
 	domain = isl_set_subtract(domain, isl_set_copy(before));
 	domain = isl_set_subtract(domain, isl_set_copy(after));
 	after = isl_set_subtract(after, isl_set_copy(isolated));
 	after = isl_set_subtract(after, isl_set_copy(before));
 	before = isl_set_subtract(before, isl_set_copy(isolated));
 
-	res = generate_shifted_component_tree_part(executed, before, build, 0);
-	list = generate_shifted_component_tree_part(executed, isolated,
-						    build, 1);
-	res = isl_ast_graft_list_concat(res, list);
-	list = generate_shifted_component_tree_part(executed, after, build, 0);
-	res = isl_ast_graft_list_concat(res, list);
-	list = generate_shifted_component_tree_part(executed, domain, build, 0);
-	res = isl_ast_graft_list_concat(res, list);
-
-	isl_union_map_free(executed);
-	isl_ast_build_free(build);
-
-	return res;
+	return generate_shifted_component_parts(executed, before, isolated,
+						after, domain, build);
 error:
 	isl_set_free(domain);
 	isl_set_free(isolated);
