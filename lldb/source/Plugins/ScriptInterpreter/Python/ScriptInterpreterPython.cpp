@@ -286,9 +286,14 @@ ScriptInterpreterPython::ScriptInterpreterPython(CommandInterpreter &interpreter
     PyRun_SimpleString (run_string.GetData());
 
     run_string.Clear();
-
     run_string.Printf ("run_one_line (%s, 'import copy, keyword, os, re, sys, uuid, lldb')", m_dictionary_name.c_str());
     PyRun_SimpleString (run_string.GetData());
+
+    // Reloading modules requires a different syntax in Python 2 and Python 3.  This provides
+    // a consistent syntax no matter what version of Python.
+    run_string.Clear();
+    run_string.Printf("run_one_line (%s, 'from six.moves import reload_module')", m_dictionary_name.c_str());
+    PyRun_SimpleString(run_string.GetData());
 
     // WARNING: temporary code that loads Cocoa formatters - this should be done on a per-platform basis rather than loading the whole set
     // and letting the individual formatter classes exploit APIs to check whether they can/cannot do their task
@@ -2626,9 +2631,9 @@ ScriptInterpreterPython::LoadScriptingModule(const char *pathname, bool can_relo
         if (was_imported)
         {
             if (!was_imported_locally)
-                command_stream.Printf("import %s ; reload(%s)",basename.c_str(),basename.c_str());
+                command_stream.Printf("import %s ; reload_module(%s)",basename.c_str(),basename.c_str());
             else
-                command_stream.Printf("reload(%s)",basename.c_str());
+                command_stream.Printf("reload_module(%s)",basename.c_str());
         }
         else
             command_stream.Printf("import %s",basename.c_str());

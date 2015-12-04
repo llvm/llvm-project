@@ -985,10 +985,11 @@ class PrintableRegex(object):
     def __repr__(self):
         return "re.compile(%s) -> %s" % (self.text, self.regex)
 
-def skip_if_callable(test, callable, reason):
-    if six.callable(test):
-        test.skipTest(reason)
-        return True
+def skip_if_callable(test, mycallable, reason):
+    if six.callable(mycallable):
+        if mycallable(test):
+            test.skipTest(reason)
+            return True
     return False
 
 def skip_if_library_missing(test, target, library):

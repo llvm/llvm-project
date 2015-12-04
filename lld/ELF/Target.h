@@ -61,8 +61,8 @@ public:
                            uint8_t *PairedLoc = nullptr) const = 0;
   virtual bool isTlsOptimized(unsigned Type, const SymbolBody *S) const;
   virtual unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
-                                       uint32_t Type, uint64_t P,
-                                       uint64_t SA) const;
+                                       uint32_t Type, uint64_t P, uint64_t SA,
+                                       const SymbolBody &S) const;
   virtual ~TargetInfo();
 
 protected:

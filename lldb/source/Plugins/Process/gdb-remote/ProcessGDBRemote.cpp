@@ -529,15 +529,20 @@ AugmentRegisterInfoViaABI (RegisterInfo &reg_info, ConstString reg_name, ABISP a
             RegisterInfo abi_reg_info;
             if (abi_sp->GetRegisterInfoByName (reg_name, abi_reg_info))
             {
-                if (reg_info.kinds[eRegisterKindEHFrame] == LLDB_INVALID_REGNUM
-                    && abi_reg_info.kinds[eRegisterKindEHFrame] != LLDB_INVALID_REGNUM)
+                if (reg_info.kinds[eRegisterKindEHFrame] == LLDB_INVALID_REGNUM &&
+                    abi_reg_info.kinds[eRegisterKindEHFrame] != LLDB_INVALID_REGNUM)
                 {
                     reg_info.kinds[eRegisterKindEHFrame] = abi_reg_info.kinds[eRegisterKindEHFrame];
                 }
-                if (reg_info.kinds[eRegisterKindDWARF] == LLDB_INVALID_REGNUM
-                    && abi_reg_info.kinds[eRegisterKindDWARF] != LLDB_INVALID_REGNUM)
+                if (reg_info.kinds[eRegisterKindDWARF] == LLDB_INVALID_REGNUM &&
+                    abi_reg_info.kinds[eRegisterKindDWARF] != LLDB_INVALID_REGNUM)
                 {
                     reg_info.kinds[eRegisterKindDWARF] = abi_reg_info.kinds[eRegisterKindDWARF];
+                }
+                if (reg_info.kinds[eRegisterKindGeneric] == LLDB_INVALID_REGNUM &&
+                    abi_reg_info.kinds[eRegisterKindGeneric] != LLDB_INVALID_REGNUM)
+                {
+                    reg_info.kinds[eRegisterKindGeneric] = abi_reg_info.kinds[eRegisterKindGeneric];
                 }
             }
         }

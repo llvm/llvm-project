@@ -97,9 +97,43 @@ namespace lldb_private {
     class JSONNumber : public JSONValue
     {
     public:
-        JSONNumber ();
-        explicit JSONNumber (uint64_t i);
-        explicit JSONNumber (double d);
+        typedef std::shared_ptr<JSONNumber> SP;
+
+        // We cretae a constructor for all integer and floating point type with using templates and
+        // SFINAE to avoid having ambiguous overloads because of the implicit type promotion. If we
+        // would have constructors only with int64_t, uint64_t and double types then constructing a
+        // JSONNumber from an int32_t (or any other similar type) would fail to compile.
+
+        template <typename T,
+                  typename std::enable_if<std::is_integral<T>::value &&
+                                          std::is_unsigned<T>::value>::type* = nullptr>
+        explicit JSONNumber (T u) :
+            JSONValue(JSONValue::Kind::Number),
+            m_data_type(DataType::Unsigned)
+        {
+            m_data.m_unsigned = u;
+        }
+
+        template <typename T,
+                  typename std::enable_if<std::is_integral<T>::value &&
+                                          std::is_signed<T>::value>::type* = nullptr>
+        explicit JSONNumber (T s) :
+            JSONValue(JSONValue::Kind::Number),
+            m_data_type(DataType::Signed)
+        {
+            m_data.m_signed = s;
+        }
+
+        template <typename T,
+                  typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
+        explicit JSONNumber (T d) :
+            JSONValue(JSONValue::Kind::Number),
+            m_data_type(DataType::Double)
+        {
+            m_data.m_double = d;
+        }
+
+        ~JSONNumber() override = default;
 
         JSONNumber (const JSONNumber& s) = delete;
         JSONNumber&
@@ -107,32 +141,35 @@ namespace lldb_private {
 
         void
         Write(Stream& s) override;
-        
-        typedef std::shared_ptr<JSONNumber> SP;
 
         uint64_t
-        GetData () { return m_data; }
+        GetAsUnsigned() const;
+
+        uint64_t
+        GetAsSigned() const;
 
         double
-        GetAsDouble()
-        {
-            if (m_is_integer)
-                return (double)m_data;
-            else
-                return m_double;
-        }
+        GetAsDouble() const;
 
         static bool classof(const JSONValue *V)
         {
             return V->GetKind() == JSONValue::Kind::Number;
         }
-        
-        ~JSONNumber() override = default;
-        
+
     private:
-        bool m_is_integer;
-        uint64_t m_data;
-        double m_double;
+        enum class DataType : uint8_t
+        {
+            Unsigned,
+            Signed,
+            Double
+        } m_data_type;
+
+        union
+        {
+            uint64_t m_unsigned;
+            int64_t  m_signed;
+            double   m_double;
+        } m_data;
     };
 
     class JSONTrue : public JSONValue

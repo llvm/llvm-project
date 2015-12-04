@@ -279,8 +279,9 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
                 const char *name = sc.GetFunctionName(Mangled::ePreferMangled).AsCString();
                 if (name)
                 {
-                    LanguageType sym_language = LanguageRuntime::GetLanguageForSymbolByName(target, name);
-                    if (m_language == eLanguageTypeC)
+                    LanguageType sym_language = LanguageRuntime::GuessLanguageForSymbolByName(target, name);
+                    if (Language::LanguageIsC(m_language) ||
+                        Language::LanguageIsPascal(m_language))
                     {
                         // We don't currently have a way to say "This symbol name is C" so for now, C means
                         // not ObjC and not C++, etc...
@@ -293,6 +294,12 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
                     }
                     else if (sym_language != m_language)
                     {
+                        // Note: This code prevents us from being able to find symbols
+                        // like 'printf' if the target language's option is set.  It
+                        // would be better to limit this filtering to only when the
+                        // breakpoint's language option is set (and not the target's),
+                        // but we can't know if m_language was set from the target or
+                        // breakpoint option.
                         remove_it = true;
                     }
                 }

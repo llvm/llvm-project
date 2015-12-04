@@ -39,7 +39,8 @@ SaveMiniDump(const lldb::ProcessSP &process_sp,
         return false;
     }
     HANDLE file_handle = ::CreateFileW(wide_name.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    const auto result = ::MiniDumpWriteDump(process_handle, process_sp->GetID(), file_handle, MiniDumpNormal, NULL, NULL, NULL);
+    const auto result = ::MiniDumpWriteDump(process_handle, process_sp->GetID(), file_handle,
+                                            MiniDumpWithFullMemoryInfo, NULL, NULL, NULL);
     ::CloseHandle(file_handle);
     ::CloseHandle(process_handle);
     if (!result)

@@ -12,6 +12,7 @@
 #include "InputFiles.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOModule.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/COFF.h"
@@ -315,12 +316,11 @@ void BitcodeFile::parse() {
   // Usually parse() is thread-safe, but bitcode file is an exception.
   std::lock_guard<std::mutex> Lock(Mu);
 
-  std::string Err;
-  M.reset(LTOModule::createFromBuffer(MB.getBufferStart(),
-                                      MB.getBufferSize(),
-                                      llvm::TargetOptions(), Err));
-  if (!Err.empty())
-    error(Err);
+  ErrorOr<std::unique_ptr<LTOModule>> ModOrErr =
+      LTOModule::createFromBuffer(llvm::getGlobalContext(), MB.getBufferStart(),
+                                  MB.getBufferSize(), llvm::TargetOptions());
+  error(ModOrErr, "Could not create lto module");
+  M = std::move(*ModOrErr);
 
   llvm::StringSaver Saver(Alloc);
   for (unsigned I = 0, E = M->getSymbolCount(); I != E; ++I) {

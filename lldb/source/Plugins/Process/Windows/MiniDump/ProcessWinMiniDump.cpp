@@ -17,21 +17,22 @@
 #include <memory>
 #include <mutex>
 
-#include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/Section.h"
-#include "lldb/Core/State.h"
+#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Log.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
+#include "lldb/Core/State.h"
+#include "lldb/Target/DynamicLoader.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/UnixSignals.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 
 #include "ExceptionRecord.h"
 #include "ThreadWinMiniDump.h"
@@ -270,6 +271,51 @@ ProcessWinMiniDump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size, Erro
     const size_t overlap = std::min(size, range.size - offset);
     std::memcpy(buf, range.ptr + offset, overlap);
     return overlap;
+}
+
+Error
+ProcessWinMiniDump::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &info)
+{
+    Error error;
+    size_t size;
+    const auto list = reinterpret_cast<const MINIDUMP_MEMORY_INFO_LIST *>(FindDumpStream(MemoryInfoListStream, &size));
+    if (list == nullptr || size < sizeof(MINIDUMP_MEMORY_INFO_LIST))
+    {
+        error.SetErrorString("the mini dump contains no memory range information");
+        return error;
+    }
+
+    if (list->SizeOfEntry < sizeof(MINIDUMP_MEMORY_INFO))
+    {
+        error.SetErrorString("the entries in the mini dump memory info list are smaller than expected");
+        return error;
+    }
+
+    if (size < list->SizeOfHeader + list->SizeOfEntry * list->NumberOfEntries)
+    {
+        error.SetErrorString("the mini dump memory info list is incomplete");
+        return error;
+    }
+
+    for (int i = 0; i < list->NumberOfEntries; ++i)
+    {
+        const auto entry = reinterpret_cast<const MINIDUMP_MEMORY_INFO *>(reinterpret_cast<const char *>(list) +
+                                                                          list->SizeOfHeader + i * list->SizeOfEntry);
+        const auto head = entry->BaseAddress;
+        const auto tail = head + entry->RegionSize;
+        if (head <= load_addr && load_addr < tail)
+        {
+            info.SetReadable(IsPageReadable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+            info.SetWritable(IsPageWritable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+            info.SetExecutable(IsPageExecutable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+            return error;
+        }
+    }
+    // Note that the memory info list doesn't seem to contain ranges in kernel space,
+    // so if you're walking a stack that has kernel frames, the stack may appear
+    // truncated.
+    error.SetErrorString("address is not in a known range");
+    return error;
 }
 
 void

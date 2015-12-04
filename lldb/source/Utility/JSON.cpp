@@ -60,38 +60,63 @@ JSONString::Write (Stream& s)
     s.Printf("\"%s\"", json_string_quote_metachars(m_data).c_str());
 }
 
-JSONNumber::JSONNumber () :
-    JSONValue(JSONValue::Kind::Number),
-    m_is_integer(true),
-    m_data(0),
-    m_double(0.0)
+uint64_t
+JSONNumber::GetAsUnsigned() const
 {
+    switch (m_data_type)
+    {
+        case DataType::Unsigned:
+            return m_data.m_unsigned;
+        case DataType::Signed:
+            return (uint64_t)m_data.m_signed;
+        case DataType::Double:
+            return (uint64_t)m_data.m_double;
+    }
 }
 
-JSONNumber::JSONNumber (uint64_t i) :
-    JSONValue(JSONValue::Kind::Number),
-    m_is_integer(true),
-    m_data(i),
-    m_double(0.0)
+uint64_t
+JSONNumber::GetAsSigned() const
 {
+    switch (m_data_type)
+    {
+        case DataType::Unsigned:
+            return (int64_t)m_data.m_unsigned;
+        case DataType::Signed:
+            return m_data.m_signed;
+        case DataType::Double:
+            return (int64_t)m_data.m_double;
+    }
 }
 
-
-JSONNumber::JSONNumber (double d) :
-    JSONValue(JSONValue::Kind::Number),
-    m_is_integer(false),
-    m_data(0),
-    m_double(d)
+double
+JSONNumber::GetAsDouble() const
 {
+    switch (m_data_type)
+    {
+        case DataType::Unsigned:
+            return (double)m_data.m_unsigned;
+        case DataType::Signed:
+            return (double)m_data.m_signed;
+        case DataType::Double:
+            return m_data.m_double;
+    }
 }
 
 void
 JSONNumber::Write (Stream& s)
 {
-    if (m_is_integer)
-        s.Printf("%" PRIu64, m_data);
-    else
-        s.Printf("%g", m_double);
+    switch (m_data_type)
+    {
+        case DataType::Unsigned:
+            s.Printf("%" PRIu64, m_data.m_unsigned);
+            break;
+        case DataType::Signed:
+            s.Printf("%" PRId64, m_data.m_signed);
+            break;
+        case DataType::Double:
+            s.Printf("%g", m_data.m_double);
+            break;
+    }
 }
 
 JSONTrue::JSONTrue () :
@@ -617,10 +642,20 @@ JSONParser::ParseJSONValue ()
 
         case JSONParser::Token::Integer:
         {
-            bool success = false;
-            uint64_t uval = StringConvert::ToUInt64(value.c_str(), 0, 0, &success);
-            if (success)
-                return JSONValue::SP(new JSONNumber(uval));
+            if (value.front() == '-')
+            {
+                bool success = false;
+                int64_t sval = StringConvert::ToSInt64(value.c_str(), 0, 0, &success);
+                if (success)
+                    return JSONValue::SP(new JSONNumber(sval));
+            }
+            else
+            {
+                bool success = false;
+                uint64_t uval = StringConvert::ToUInt64(value.c_str(), 0, 0, &success);
+                if (success)
+                    return JSONValue::SP(new JSONNumber(uval));
+            }
         }
             break;
 

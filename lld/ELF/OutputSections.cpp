@@ -217,16 +217,23 @@ bool RelocationSection<ELFT>::applyTlsDynamicReloc(SymbolBody *Body,
     return true;
   }
 
-  if (Body && Target->isTlsGlobalDynamicReloc(Type)) {
+  if (!Body || !Target->isTlsGlobalDynamicReloc(Type))
+    return false;
+
+  if (Target->isTlsOptimized(Type, Body)) {
     P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
-                        Target->getTlsModuleIndexReloc(), Config->Mips64EL);
-    P->r_offset = Out<ELFT>::Got->getGlobalDynAddr(*Body);
-    N->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
-                        Target->getTlsOffsetReloc(), Config->Mips64EL);
-    N->r_offset = Out<ELFT>::Got->getGlobalDynAddr(*Body) + sizeof(uintX_t);
+                        Target->getTlsGotReloc(), Config->Mips64EL);
+    P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
     return true;
   }
-  return false;
+
+  P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
+                      Target->getTlsModuleIndexReloc(), Config->Mips64EL);
+  P->r_offset = Out<ELFT>::Got->getGlobalDynAddr(*Body);
+  N->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
+                      Target->getTlsOffsetReloc(), Config->Mips64EL);
+  N->r_offset = Out<ELFT>::Got->getGlobalDynAddr(*Body) + sizeof(uintX_t);
+  return true;
 }
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {

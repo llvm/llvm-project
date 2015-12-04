@@ -118,7 +118,7 @@ public:
     }
     
     static lldb::LanguageType
-    GetLanguageForSymbolByName (Target &target, const char *symbol_name);
+    GuessLanguageForSymbolByName (Target &target, const char *symbol_name);
     
     Target&
     GetTargetRef()

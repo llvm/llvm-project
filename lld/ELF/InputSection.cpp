@@ -169,11 +169,14 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     }
 
     if (Target->isTlsOptimized(Type, &Body)) {
+      uintX_t SymVA = Target->relocNeedsGot(Type, Body)
+                          ? Out<ELFT>::Got->getEntryAddr(Body)
+                          : getSymVA<ELFT>(Body);
       // By optimizing TLS relocations, it is sometimes needed to skip
       // relocations that immediately follow TLS relocations. This function
       // knows how many slots we need to skip.
-      I += Target->relocateTlsOptimize(BufLoc, BufEnd, Type, AddrLoc,
-                                       getSymVA<ELFT>(Body));
+      I += Target->relocateTlsOptimize(BufLoc, BufEnd, Type, AddrLoc, SymVA,
+                                       Body);
       continue;
     }
 

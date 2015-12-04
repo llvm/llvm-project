@@ -661,7 +661,7 @@ void IdentifierNamingCheck::onEndOfTranslationUnit() {
       continue;
 
     if (Failure.ShouldFix) {
-      auto Diag = diag(Decl.getLocStart(), "invalid case style for %0 '%1'")
+      auto Diag = diag(Decl.getLocation(), "invalid case style for %0 '%1'")
                   << Failure.KindName << Decl.getName();
 
       for (const auto &Loc : Failure.RawUsageLocs) {

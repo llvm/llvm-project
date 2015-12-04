@@ -695,6 +695,24 @@ public:
     lldb::SBBroadcaster
     GetBroadcaster () const;
               
+     %feature("docstring", "
+    //------------------------------------------------------------------
+    /// Create an SBValue with the given name by treating the memory starting at addr as an entity of type.
+    ///
+    /// @param[in] name
+    ///     The name of the resultant SBValue
+    ///
+    /// @param[in] addr
+    ///     The address of the start of the memory region to be used.
+    ///
+    /// @param[in] type
+    ///     The type to use to interpret the memory starting at addr.
+    ///
+    /// @return
+    ///     An SBValue of the given type, may be invalid if there was an error reading
+    ///     the underlying memory.
+    //------------------------------------------------------------------
+    ") CreateValueFromAddress;
     lldb::SBValue
     CreateValueFromAddress (const char *name, lldb::SBAddress addr, lldb::SBType type);
 

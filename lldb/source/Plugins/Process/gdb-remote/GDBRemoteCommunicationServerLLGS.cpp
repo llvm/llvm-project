@@ -566,7 +566,7 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged)
 
         thread_obj_sp->SetObject("tid", std::make_shared<JSONNumber>(tid));
         if (signum != 0)
-            thread_obj_sp->SetObject("signal", std::make_shared<JSONNumber>(uint64_t(signum)));
+            thread_obj_sp->SetObject("signal", std::make_shared<JSONNumber>(signum));
 
         const std::string thread_name = thread_sp->GetName ();
         if (! thread_name.empty())
