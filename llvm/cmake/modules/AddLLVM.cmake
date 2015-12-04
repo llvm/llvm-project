@@ -512,6 +512,10 @@ function(llvm_add_library name)
       add_dependencies(${objlib} ${LLVM_COMMON_DEPENDS})
     endforeach()
   endif()
+
+  if(ARG_SHARED OR ARG_MODULE)
+    llvm_externalize_debuginfo(${name})
+  endif()
 endfunction()
 
 macro(add_llvm_library name)
@@ -655,14 +659,16 @@ macro(add_llvm_executable name)
   if( LLVM_COMMON_DEPENDS )
     add_dependencies( ${name} ${LLVM_COMMON_DEPENDS} )
   endif( LLVM_COMMON_DEPENDS )
+
+  llvm_externalize_debuginfo(${name})
 endmacro(add_llvm_executable name)
 
 function(export_executable_symbols target)
   if (NOT MSVC) # MSVC's linker doesn't support exporting all symbols.
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS 1)
     if (APPLE)
-      set_target_properties(${target} PROPERTIES
-        LINK_FLAGS "-rdynamic")
+      set_property(TARGET ${target} APPEND_STRING PROPERTY
+        LINK_FLAGS " -rdynamic")
     endif()
   endif()
 endfunction()
@@ -1166,5 +1172,26 @@ function(add_llvm_tool_symlink name dest)
         llvm_install_symlink(${name} ${dest})
       endif()
     endif()
+  endif()
+endfunction()
+
+function(llvm_externalize_debuginfo name)
+  if(NOT LLVM_EXTERNALIZE_DEBUGINFO)
+    return()
+  endif()
+
+  if(APPLE)
+    if(CMAKE_CXX_FLAGS MATCHES "-flto"
+      OR CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} MATCHES "-flto")
+
+      set(lto_object ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}-lto.o)
+      set_property(TARGET ${name} APPEND_STRING PROPERTY
+        LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
+    endif()
+    add_custom_command(TARGET ${name} POST_BUILD
+      COMMAND xcrun dsymutil $<TARGET_FILE:${name}>
+      COMMAND xcrun strip -Sl $<TARGET_FILE:${name}>)
+  else()
+    message(FATAL_ERROR "LLVM_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()
 endfunction()

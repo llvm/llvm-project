@@ -33,13 +33,24 @@ namespace llvm {
   /// An individual mapping from virtual register number to SUnit.
   struct VReg2SUnit {
     unsigned VirtReg;
+    LaneBitmask LaneMask;
     SUnit *SU;
 
-    VReg2SUnit(unsigned reg, SUnit *su): VirtReg(reg), SU(su) {}
+    VReg2SUnit(unsigned VReg, LaneBitmask LaneMask, SUnit *SU)
+      : VirtReg(VReg), LaneMask(LaneMask), SU(SU) {}
 
     unsigned getSparseSetIndex() const {
       return TargetRegisterInfo::virtReg2Index(VirtReg);
     }
+  };
+
+  /// Mapping from virtual register to SUnit including an operand index.
+  struct VReg2SUnitOperIdx : public VReg2SUnit {
+    unsigned OperandIndex;
+
+    VReg2SUnitOperIdx(unsigned VReg, LaneBitmask LaneMask,
+                      unsigned OperandIndex, SUnit *SU)
+      : VReg2SUnit(VReg, LaneMask, SU), OperandIndex(OperandIndex) {}
   };
 
   /// Record a physical register access.
@@ -69,7 +80,10 @@ namespace llvm {
   /// Track local uses of virtual registers. These uses are gathered by the DAG
   /// builder and may be consulted by the scheduler to avoid iterating an entire
   /// vreg use list.
-  typedef SparseMultiSet<VReg2SUnit, VirtReg2IndexFunctor> VReg2UseMap;
+  typedef SparseMultiSet<VReg2SUnit, VirtReg2IndexFunctor> VReg2SUnitMultiMap;
+
+  typedef SparseMultiSet<VReg2SUnitOperIdx, VirtReg2IndexFunctor>
+    VReg2SUnitOperIdxMultiMap;
 
   /// ScheduleDAGInstrs - A ScheduleDAG subclass for scheduling lists of
   /// MachineInstrs.
@@ -95,6 +109,9 @@ namespace llvm {
     /// it has taken responsibility for scheduling the terminator correctly.
     bool CanHandleTerminators;
 
+    /// Whether lane masks should get tracked.
+    bool TrackLaneMasks;
+
     /// State specific to the current scheduling region.
     /// ------------------------------------------------
 
@@ -117,7 +134,7 @@ namespace llvm {
     /// After calling BuildSchedGraph, each vreg used in the scheduling region
     /// is mapped to a set of SUnits. These include all local vreg uses, not
     /// just the uses for a singly defined vreg.
-    VReg2UseMap VRegUses;
+    VReg2SUnitMultiMap VRegUses;
 
     /// State internal to DAG building.
     /// -------------------------------
@@ -129,8 +146,12 @@ namespace llvm {
     Reg2SUnitsMap Defs;
     Reg2SUnitsMap Uses;
 
-    /// Track the last instruction in this region defining each virtual register.
-    VReg2SUnitMap VRegDefs;
+    /// Tracks the last instruction(s) in this region defining each virtual
+    /// register. There may be multiple current definitions for a register with
+    /// disjunct lanemasks.
+    VReg2SUnitMultiMap CurrentVRegDefs;
+    /// Tracks the last instructions in this region using each virtual register.
+    VReg2SUnitOperIdxMultiMap CurrentVRegUses;
 
     /// PendingLoads - Remember where unknown loads are after the most recent
     /// unknown store, as we iterate. As with Defs and Uses, this is here
@@ -200,7 +221,8 @@ namespace llvm {
     /// input.
     void buildSchedGraph(AliasAnalysis *AA,
                          RegPressureTracker *RPTracker = nullptr,
-                         PressureDiffs *PDiffs = nullptr);
+                         PressureDiffs *PDiffs = nullptr,
+                         bool TrackLaneMasks = false);
 
     /// addSchedBarrierDeps - Add dependencies from instructions in the current
     /// list of instructions being scheduled to scheduling barrier. We want to
@@ -247,6 +269,12 @@ namespace llvm {
     /// Other adjustments may be made to the instruction if necessary. Return
     /// true if the operand has been deleted, false if not.
     bool toggleKillFlag(MachineInstr *MI, MachineOperand &MO);
+
+    /// Returns a mask for which lanes get read/written by the given (register)
+    /// machine operand.
+    LaneBitmask getLaneMaskForMO(const MachineOperand &MO) const;
+
+    void collectVRegUses(SUnit *SU);
   };
 
   /// newSUnit - Creates a new SUnit and return a ptr to it.

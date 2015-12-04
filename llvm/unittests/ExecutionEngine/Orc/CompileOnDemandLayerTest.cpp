@@ -16,10 +16,10 @@ using namespace llvm::orc;
 
 namespace {
 
-class DummyCallbackManager : public orc::JITCompileCallbackManagerBase {
+class DummyCallbackManager : public orc::JITCompileCallbackManager {
 public:
   DummyCallbackManager()
-      : JITCompileCallbackManagerBase(0), NextStubAddress(0),
+      : JITCompileCallbackManager(0), NextStubAddress(0),
         UniversalCompile([]() { return 0; }) {
   }
 

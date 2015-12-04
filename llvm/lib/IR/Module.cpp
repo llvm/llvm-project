@@ -491,3 +491,15 @@ PICLevel::Level Module::getPICLevel() const {
 void Module::setPICLevel(PICLevel::Level PL) {
   addModuleFlag(ModFlagBehavior::Error, "PIC Level", PL);
 }
+
+void Module::setMaximumFunctionCount(uint64_t Count) {
+  addModuleFlag(ModFlagBehavior::Error, "MaxFunctionCount", Count);
+}
+
+Optional<uint64_t> Module::getMaximumFunctionCount() {
+  auto *Val =
+      cast_or_null<ConstantAsMetadata>(getModuleFlag("MaxFunctionCount"));
+  if (!Val)
+    return None;
+  return cast<ConstantInt>(Val->getValue())->getZExtValue();
+}

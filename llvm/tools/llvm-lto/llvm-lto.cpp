@@ -150,18 +150,34 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
     exit(1);
 }
 
+static void error(const Twine &Msg) {
+  errs() << "llvm-lto: " << Msg << '\n';
+  exit(1);
+}
+
+static void error(std::error_code EC, const Twine &Prefix) {
+  if (EC)
+    error(Prefix + ": " + EC.message());
+}
+
+template <typename T>
+static void error(const ErrorOr<T> &V, const Twine &Prefix) {
+  error(V.getError(), Prefix);
+}
+
 static std::unique_ptr<LTOModule>
 getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
-                  const TargetOptions &Options, std::string &Error) {
+                  const TargetOptions &Options) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Path);
-  if (std::error_code EC = BufferOrErr.getError()) {
-    Error = EC.message();
-    return nullptr;
-  }
+  error(BufferOrErr, "error loading file '" + Path + "'");
   Buffer = std::move(BufferOrErr.get());
-  return std::unique_ptr<LTOModule>(LTOModule::createInLocalContext(
+  std::string Error;
+  std::unique_ptr<LTOModule> Ret(LTOModule::createInLocalContext(
       Buffer->getBufferStart(), Buffer->getBufferSize(), Options, Error, Path));
+  if (!Error.empty())
+    error("error loading file '" + Path + "' " + Error);
+  return Ret;
 }
 
 /// \brief List symbols in each IR file.
@@ -170,42 +186,30 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
 /// functionality that's exposed by the C API to list symbols.  Moreover, this
 /// provides testing coverage for modules that have been created in their own
 /// contexts.
-static int listSymbols(StringRef Command, const TargetOptions &Options) {
+static void listSymbols(const TargetOptions &Options) {
   for (auto &Filename : InputFilenames) {
-    std::string Error;
     std::unique_ptr<MemoryBuffer> Buffer;
     std::unique_ptr<LTOModule> Module =
-        getLocalLTOModule(Filename, Buffer, Options, Error);
-    if (!Module) {
-      errs() << Command << ": error loading file '" << Filename
-             << "': " << Error << "\n";
-      return 1;
-    }
+        getLocalLTOModule(Filename, Buffer, Options);
 
     // List the symbols.
     outs() << Filename << ":\n";
     for (int I = 0, E = Module->getSymbolCount(); I != E; ++I)
       outs() << Module->getSymbolName(I) << "\n";
   }
-  return 0;
 }
 
 /// Create a combined index file from the input IR files and write it.
 ///
 /// This is meant to enable testing of ThinLTO combined index generation,
 /// currently available via the gold plugin via -thinlto.
-static int createCombinedFunctionIndex(StringRef Command) {
+static void createCombinedFunctionIndex() {
   FunctionInfoIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
         llvm::getFunctionIndexForFile(Filename, diagnosticHandler);
-    if (std::error_code EC = IndexOrErr.getError()) {
-      std::string Error = EC.message();
-      errs() << Command << ": error loading file '" << Filename
-             << "': " << Error << "\n";
-      return 1;
-    }
+    error(IndexOrErr, "error loading file '" + Filename + "'");
     std::unique_ptr<FunctionInfoIndex> Index = std::move(IndexOrErr.get());
     // Skip files without a function summary.
     if (!Index)
@@ -216,14 +220,9 @@ static int createCombinedFunctionIndex(StringRef Command) {
   assert(!OutputFilename.empty());
   raw_fd_ostream OS(OutputFilename + ".thinlto.bc", EC,
                     sys::fs::OpenFlags::F_None);
-  if (EC) {
-    errs() << Command << ": error opening the file '" << OutputFilename
-           << ".thinlto.bc': " << EC.message() << "\n";
-    return 1;
-  }
+  error(EC, "error opening the file '" + OutputFilename + ".thinlto.bc'");
   WriteFunctionSummaryToFile(CombinedIndex, OS);
   OS.close();
-  return 0;
 }
 
 int main(int argc, char **argv) {
@@ -234,10 +233,8 @@ int main(int argc, char **argv) {
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
 
-  if (OptLevel < '0' || OptLevel > '3') {
-    errs() << argv[0] << ": optimization level must be between 0 and 3\n";
-    return 1;
-  }
+  if (OptLevel < '0' || OptLevel > '3')
+    error("optimization level must be between 0 and 3");
 
   // Initialize the configured targets.
   InitializeAllTargets();
@@ -248,15 +245,19 @@ int main(int argc, char **argv) {
   // set up the TargetOptions for the machine
   TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
 
-  if (ListSymbolsOnly)
-    return listSymbols(argv[0], Options);
+  if (ListSymbolsOnly) {
+    listSymbols(Options);
+    return 0;
+  }
 
-  if (ThinLTO)
-    return createCombinedFunctionIndex(argv[0]);
+  if (ThinLTO) {
+    createCombinedFunctionIndex();
+    return 0;
+  }
 
   unsigned BaseArg = 0;
 
-  LTOCodeGenerator CodeGen;
+  LTOCodeGenerator CodeGen(getGlobalContext());
 
   if (UseDiagnosticHandler)
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);

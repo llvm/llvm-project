@@ -81,6 +81,7 @@ static void ImposeStackOrdering(MachineInstr *MI) {
 // more precise.
 static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
                          AliasAnalysis &AA) {
+  assert(Def->getParent() == Insert->getParent());
   bool SawStore = false, SawSideEffects = false;
   MachineBasicBlock::const_iterator D(Def), I(Insert);
   for (--I; I != D; --I)
@@ -155,17 +156,15 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
             Def->getOpcode() == WebAssembly::ARGUMENT_F64)
           continue;
 
-        // Single-use expression trees require defs that have one use, or that
-        // they be trivially clonable.
+        // Single-use expression trees require defs that have one use.
         // TODO: Eventually we'll relax this, to take advantage of set_local
         // returning its result.
         if (!MRI.hasOneUse(Reg))
           continue;
 
-        // For now, be conservative and don't look across block boundaries,
-        // unless we have something trivially clonable.
+        // For now, be conservative and don't look across block boundaries.
         // TODO: Be more aggressive.
-        if (Def->getParent() != &MBB && !Def->isMoveImmediate())
+        if (Def->getParent() != &MBB)
           continue;
 
         // Don't move instructions that have side effects or memory dependencies

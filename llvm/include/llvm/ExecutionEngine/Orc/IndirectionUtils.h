@@ -27,8 +27,8 @@
 namespace llvm {
 namespace orc {
 
-/// @brief Target-independent base class JITCompileCallbackManager.
-class JITCompileCallbackManagerBase {
+/// @brief Target-independent base class for compile callback management.
+class JITCompileCallbackManager {
 public:
 
   typedef std::function<TargetAddress()> CompileFtor;
@@ -50,13 +50,13 @@ public:
     CompileFtor &Compile;
   };
 
-  /// @brief Construct a JITCompileCallbackManagerBase.
+  /// @brief Construct a JITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
-  JITCompileCallbackManagerBase(TargetAddress ErrorHandlerAddress)
+  JITCompileCallbackManager(TargetAddress ErrorHandlerAddress)
     : ErrorHandlerAddress(ErrorHandlerAddress) {}
 
-  virtual ~JITCompileCallbackManagerBase() {}
+  virtual ~JITCompileCallbackManager() {}
 
   /// @brief Execute the callback for the given trampoline id. Called by the JIT
   ///        to compile functions on demand.
@@ -116,16 +116,16 @@ private:
   virtual void anchor();
 };
 
-/// @brief Manage compile callbacks.
+/// @brief Manage compile callbacks for in-process JITs.
 template <typename TargetT>
-class JITCompileCallbackManager : public JITCompileCallbackManagerBase {
+class LocalJITCompileCallbackManager : public JITCompileCallbackManager {
 public:
 
-  /// @brief Construct a JITCompileCallbackManager.
+  /// @brief Construct a InProcessJITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
-  JITCompileCallbackManager(TargetAddress ErrorHandlerAddress)
-    : JITCompileCallbackManagerBase(ErrorHandlerAddress) {
+  LocalJITCompileCallbackManager(TargetAddress ErrorHandlerAddress)
+    : JITCompileCallbackManager(ErrorHandlerAddress) {
 
     /// Set up the resolver block.
     std::error_code EC;

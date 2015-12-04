@@ -64,16 +64,9 @@ const char* LTOCodeGenerator::getVersionString() {
 #endif
 }
 
-LTOCodeGenerator::LTOCodeGenerator()
-    : Context(getGlobalContext()),
+LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
+    : Context(Context),
       MergedModule(new Module("ld-temp.o", Context)),
-      IRLinker(new Linker(*MergedModule)) {
-  initializeLTOPasses();
-}
-
-LTOCodeGenerator::LTOCodeGenerator(std::unique_ptr<LLVMContext> Context)
-    : OwnedContext(std::move(Context)), Context(*OwnedContext),
-      MergedModule(new Module("ld-temp.o", *OwnedContext)),
       IRLinker(new Linker(*MergedModule)) {
   initializeLTOPasses();
 }

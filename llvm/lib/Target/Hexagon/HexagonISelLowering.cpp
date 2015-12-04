@@ -2042,6 +2042,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VCMPWEQ:       return "HexagonISD::VCMPWEQ";
   case HexagonISD::VCMPWGT:       return "HexagonISD::VCMPWGT";
   case HexagonISD::VCMPWGTU:      return "HexagonISD::VCMPWGTU";
+  case HexagonISD::VCOMBINE:      return "HexagonISD::VCOMBINE";
   case HexagonISD::VSHLH:         return "HexagonISD::VSHLH";
   case HexagonISD::VSHLW:         return "HexagonISD::VSHLW";
   case HexagonISD::VSPLATB:       return "HexagonISD::VSPLTB";
@@ -2346,6 +2347,7 @@ SDValue
 HexagonTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc dl(Op);
+  bool UseHVX = Subtarget.useHVXOps();
   EVT VT = Op.getValueType();
   unsigned NElts = Op.getNumOperands();
   SDValue Vec = Op.getOperand(0);
@@ -2376,6 +2378,13 @@ HexagonTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
     }
   }
 
+  if (UseHVX) {
+    SDValue Vec0 = Op.getOperand(1);
+    assert((VecVT.getSizeInBits() == 64*8 && Subtarget.useHVXSglOps()) ||
+           (VecVT.getSizeInBits() == 128*8 && Subtarget.useHVXDblOps()));
+    SDValue Combined = DAG.getNode(HexagonISD::VCOMBINE, dl, VT, Vec0, Vec);
+    return Combined;
+  }
   for (unsigned i = 0, e = NElts; i != e; ++i) {
     unsigned OpIdx = NElts - i - 1;
     SDValue Operand = Op.getOperand(OpIdx);

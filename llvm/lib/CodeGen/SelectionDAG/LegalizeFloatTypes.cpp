@@ -43,10 +43,10 @@ static RTLIB::Libcall GetFPLibCall(EVT VT,
 }
 
 //===----------------------------------------------------------------------===//
-//  Result Float to Integer Conversion.
+//  Convert Float Results to Integer for Non-HW-supported Operations.
 //===----------------------------------------------------------------------===//
 
-void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
+bool DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
   DEBUG(dbgs() << "Soften float result " << ResNo << ": "; N->dump(&DAG);
         dbgs() << "\n");
   SDValue R = SDValue();
@@ -59,20 +59,26 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
 #endif
     llvm_unreachable("Do not know how to soften the result of this operator!");
 
-    case ISD::MERGE_VALUES:R = SoftenFloatRes_MERGE_VALUES(N, ResNo); break;
-    case ISD::BITCAST:     R = SoftenFloatRes_BITCAST(N); break;
-    case ISD::BUILD_PAIR:  R = SoftenFloatRes_BUILD_PAIR(N); break;
-    case ISD::ConstantFP:
-      R = SoftenFloatRes_ConstantFP(cast<ConstantFPSDNode>(N));
+    case ISD::Register:
+    case ISD::CopyFromReg:
+    case ISD::CopyToReg:
+      assert(isLegalInHWReg(N->getValueType(ResNo)) &&
+             "Unsupported SoftenFloatRes opcode!");
+      // Only when isLegalInHWReg, we can skip check of the operands.
+      R = SDValue(N, ResNo);
       break;
+    case ISD::MERGE_VALUES:R = SoftenFloatRes_MERGE_VALUES(N, ResNo); break;
+    case ISD::BITCAST:     R = SoftenFloatRes_BITCAST(N, ResNo); break;
+    case ISD::BUILD_PAIR:  R = SoftenFloatRes_BUILD_PAIR(N); break;
+    case ISD::ConstantFP:  R = SoftenFloatRes_ConstantFP(N, ResNo); break;
     case ISD::EXTRACT_VECTOR_ELT:
       R = SoftenFloatRes_EXTRACT_VECTOR_ELT(N); break;
-    case ISD::FABS:        R = SoftenFloatRes_FABS(N); break;
+    case ISD::FABS:        R = SoftenFloatRes_FABS(N, ResNo); break;
     case ISD::FMINNUM:     R = SoftenFloatRes_FMINNUM(N); break;
     case ISD::FMAXNUM:     R = SoftenFloatRes_FMAXNUM(N); break;
     case ISD::FADD:        R = SoftenFloatRes_FADD(N); break;
     case ISD::FCEIL:       R = SoftenFloatRes_FCEIL(N); break;
-    case ISD::FCOPYSIGN:   R = SoftenFloatRes_FCOPYSIGN(N); break;
+    case ISD::FCOPYSIGN:   R = SoftenFloatRes_FCOPYSIGN(N, ResNo); break;
     case ISD::FCOS:        R = SoftenFloatRes_FCOS(N); break;
     case ISD::FDIV:        R = SoftenFloatRes_FDIV(N); break;
     case ISD::FEXP:        R = SoftenFloatRes_FEXP(N); break;
@@ -84,7 +90,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FMA:         R = SoftenFloatRes_FMA(N); break;
     case ISD::FMUL:        R = SoftenFloatRes_FMUL(N); break;
     case ISD::FNEARBYINT:  R = SoftenFloatRes_FNEARBYINT(N); break;
-    case ISD::FNEG:        R = SoftenFloatRes_FNEG(N); break;
+    case ISD::FNEG:        R = SoftenFloatRes_FNEG(N, ResNo); break;
     case ISD::FP_EXTEND:   R = SoftenFloatRes_FP_EXTEND(N); break;
     case ISD::FP_ROUND:    R = SoftenFloatRes_FP_ROUND(N); break;
     case ISD::FP16_TO_FP:  R = SoftenFloatRes_FP16_TO_FP(N); break;
@@ -97,9 +103,9 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FSQRT:       R = SoftenFloatRes_FSQRT(N); break;
     case ISD::FSUB:        R = SoftenFloatRes_FSUB(N); break;
     case ISD::FTRUNC:      R = SoftenFloatRes_FTRUNC(N); break;
-    case ISD::LOAD:        R = SoftenFloatRes_LOAD(N); break;
-    case ISD::SELECT:      R = SoftenFloatRes_SELECT(N); break;
-    case ISD::SELECT_CC:   R = SoftenFloatRes_SELECT_CC(N); break;
+    case ISD::LOAD:        R = SoftenFloatRes_LOAD(N, ResNo); break;
+    case ISD::SELECT:      R = SoftenFloatRes_SELECT(N, ResNo); break;
+    case ISD::SELECT_CC:   R = SoftenFloatRes_SELECT_CC(N, ResNo); break;
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP:  R = SoftenFloatRes_XINT_TO_FP(N); break;
     case ISD::UNDEF:       R = SoftenFloatRes_UNDEF(N); break;
@@ -107,11 +113,19 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
   }
 
   // If R is null, the sub-method took care of registering the result.
-  if (R.getNode())
+  if (R.getNode()) {
     SetSoftenedFloat(SDValue(N, ResNo), R);
+    ReplaceSoftenFloatResult(N, ResNo, R);
+  }
+  // Return true only if the node is changed,
+  // assuming that the operands are also converted when necessary.
+  // Otherwise, return false to tell caller to scan operands.
+  return R.getNode() && R.getNode() != N;
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_BITCAST(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_BITCAST(SDNode *N, unsigned ResNo) {
+  if (isLegalInHWReg(N->getValueType(ResNo)))
+    return SDValue(N, ResNo);
   return BitConvertToInteger(N->getOperand(0));
 }
 
@@ -130,10 +144,14 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_BUILD_PAIR(SDNode *N) {
                      BitConvertToInteger(N->getOperand(1)));
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(ConstantFPSDNode *N) {
-  return DAG.getConstant(N->getValueAPF().bitcastToAPInt(), SDLoc(N),
+SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N, unsigned ResNo) {
+  // When LegalInHWReg, we can load better from the constant pool.
+  if (isLegalInHWReg(N->getValueType(ResNo)))
+    return SDValue(N, ResNo);
+  ConstantFPSDNode *CN = cast<ConstantFPSDNode>(N);
+  return DAG.getConstant(CN->getValueAPF().bitcastToAPInt(), SDLoc(CN),
                          TLI.getTypeToTransformTo(*DAG.getContext(),
-                                                  N->getValueType(0)));
+                                                  CN->getValueType(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N) {
@@ -143,7 +161,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N) {
                      NewOp, N->getOperand(1));
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N, unsigned ResNo) {
+  // When LegalInHWReg, FABS can be implemented as native bitwise operations.
+  if (isLegalInHWReg(N->getValueType(ResNo)))
+    return SDValue(N, ResNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   unsigned Size = NVT.getSizeInBits();
 
@@ -206,7 +227,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCEIL(SDNode *N) {
                          NVT, Op, false, SDLoc(N)).first;
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN(SDNode *N, unsigned ResNo) {
+  // When LegalInHWReg, FCOPYSIGN can be implemented as native bitwise operations.
+  if (isLegalInHWReg(N->getValueType(ResNo)))
+    return SDValue(N, ResNo);
   SDValue LHS = GetSoftenedFloat(N->getOperand(0));
   SDValue RHS = BitConvertToInteger(N->getOperand(1));
   SDLoc dl(N);
@@ -390,7 +414,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FNEARBYINT(SDNode *N) {
                          NVT, Op, false, SDLoc(N)).first;
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_FNEG(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_FNEG(SDNode *N, unsigned ResNo) {
+  // When LegalInHWReg, FNEG can be implemented as native bitwise operations.
+  if (isLegalInHWReg(N->getValueType(ResNo)))
+    return SDValue(N, ResNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDLoc dl(N);
   // Expand Y = FNEG(X) -> Y = SUB -0.0, X
@@ -580,7 +607,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FTRUNC(SDNode *N) {
                          NVT, Op, false, SDLoc(N)).first;
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N, unsigned ResNo) {
+  bool LegalInHWReg = isLegalInHWReg(N->getValueType(ResNo));
   LoadSDNode *L = cast<LoadSDNode>(N);
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -595,7 +623,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
                        L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
-    ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
+    if (N != NewL.getValue(1).getNode())
+      ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
     return NewL;
   }
 
@@ -609,17 +638,24 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   // Legalized the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
-  return BitConvertToInteger(DAG.getNode(ISD::FP_EXTEND, dl, VT, NewL));
+  auto ExtendNode = DAG.getNode(ISD::FP_EXTEND, dl, VT, NewL);
+  if (LegalInHWReg)
+    return ExtendNode;
+  return BitConvertToInteger(ExtendNode);
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_SELECT(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_SELECT(SDNode *N, unsigned ResNo) {
+  if (isLegalInHWReg(N->getValueType(ResNo)))
+    return SDValue(N, ResNo);
   SDValue LHS = GetSoftenedFloat(N->getOperand(1));
   SDValue RHS = GetSoftenedFloat(N->getOperand(2));
   return DAG.getSelect(SDLoc(N),
                        LHS.getValueType(), N->getOperand(0), LHS, RHS);
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_SELECT_CC(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_SELECT_CC(SDNode *N, unsigned ResNo) {
+  if (isLegalInHWReg(N->getValueType(ResNo)))
+    return SDValue(N, ResNo);
   SDValue LHS = GetSoftenedFloat(N->getOperand(2));
   SDValue RHS = GetSoftenedFloat(N->getOperand(3));
   return DAG.getNode(ISD::SELECT_CC, SDLoc(N),
@@ -645,7 +681,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_VAARG(SDNode *N) {
 
   // Legalized the chain result - switch anything that used the old chain to
   // use the new one.
-  ReplaceValueWith(SDValue(N, 1), NewVAARG.getValue(1));
+  if (N != NewVAARG.getValue(1).getNode())
+    ReplaceValueWith(SDValue(N, 1), NewVAARG.getValue(1));
   return NewVAARG;
 }
 
@@ -679,7 +716,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP(SDNode *N) {
 
 
 //===----------------------------------------------------------------------===//
-//  Operand Float to Integer Conversion..
+//  Convert Float Operand to Integer for Non-HW-supported Operations.
 //===----------------------------------------------------------------------===//
 
 bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
@@ -689,6 +726,8 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
 
   switch (N->getOpcode()) {
   default:
+    if (CanSkipSoftenFloatOperand(N, OpNo))
+      return false;
 #ifndef NDEBUG
     dbgs() << "SoftenFloatOperand Op #" << OpNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
@@ -704,14 +743,23 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_TO_UINT:  Res = SoftenFloatOp_FP_TO_UINT(N); break;
   case ISD::SELECT_CC:   Res = SoftenFloatOp_SELECT_CC(N); break;
   case ISD::SETCC:       Res = SoftenFloatOp_SETCC(N); break;
-  case ISD::STORE:       Res = SoftenFloatOp_STORE(N, OpNo); break;
+  case ISD::STORE:
+    Res = SoftenFloatOp_STORE(N, OpNo);
+    // Do not try to analyze or soften this node again if the value is
+    // or can be held in a register. In that case, Res.getNode() should
+    // be equal to N.
+    if (Res.getNode() == N &&
+        isLegalInHWReg(N->getOperand(OpNo).getValueType()))
+      return false;
+    // Otherwise, we need to reanalyze and lower the new Res nodes.
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
   if (!Res.getNode()) return false;
 
   // If the result is N, the sub-method updated N in place.  Tell the legalizer
-  // core about this.
+  // core about this to re-analyze.
   if (Res.getNode() == N)
     return true;
 
@@ -719,6 +767,41 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
          "Invalid operand expansion");
 
   ReplaceValueWith(SDValue(N, 0), Res);
+  return false;
+}
+
+bool DAGTypeLegalizer::CanSkipSoftenFloatOperand(SDNode *N, unsigned OpNo) {
+  if (!isLegalInHWReg(N->getOperand(OpNo).getValueType()))
+    return false;
+  // When the operand type can be kept in registers, SoftenFloatResult
+  // will call ReplaceValueWith to replace all references and we can
+  // skip softening this operand.
+  switch (N->getOperand(OpNo).getOpcode()) {
+    case ISD::BITCAST:
+    case ISD::ConstantFP:
+    case ISD::CopyFromReg:
+    case ISD::CopyToReg:
+    case ISD::FABS:
+    case ISD::FCOPYSIGN:
+    case ISD::FNEG:
+    case ISD::Register:
+    case ISD::SELECT:
+    case ISD::SELECT_CC:
+      return true;
+  }
+  // For some opcodes, SoftenFloatResult handles all conversion of softening
+  // and replacing operands, so that there is no need to soften operands
+  // again, although such opcode could be scanned for other illegal operands.
+  switch (N->getOpcode()) {
+    case ISD::ConstantFP:
+    case ISD::CopyFromReg:
+    case ISD::CopyToReg:
+    case ISD::FABS:
+    case ISD::FCOPYSIGN:
+    case ISD::FNEG:
+    case ISD::Register:
+      return true;
+  }
   return false;
 }
 

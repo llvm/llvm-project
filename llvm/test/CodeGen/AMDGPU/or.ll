@@ -153,7 +153,7 @@ define void @trunc_i64_or_to_i32(i32 addrspace(1)* %out, i64 %a, i64 %b) {
 }
 
 ; FUNC-LABEL: {{^}}or_i1:
-; EG: OR_INT {{\** *}}T{{[0-9]+\.[XYZW], PV\.[XYZW], PS}}
+; EG: OR_INT * {{\** *}}T{{[0-9]+\.[XYZW], PS, PV\.[XYZW]}}
 
 ; SI: s_or_b64 s[{{[0-9]+:[0-9]+}}], vcc, s[{{[0-9]+:[0-9]+}}]
 define void @or_i1(i32 addrspace(1)* %out, float addrspace(1)* %in0, float addrspace(1)* %in1) {

@@ -1373,7 +1373,19 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
           if (isa<UndefValue>(COp)) {
             CS << "u";
           } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
-            CS << CI->getZExtValue();
+            if (CI->getBitWidth() <= 64) {
+              CS << CI->getZExtValue();
+            } else {
+              // print multi-word constant as (w0,w1)
+              auto Val = CI->getValue();
+              CS << "(";
+              for (int i = 0, N = Val.getNumWords(); i < N; ++i) {
+                if (i > 0)
+                  CS << ",";
+                CS << Val.getRawData()[i];
+              }
+              CS << ")";
+            }
           } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
             SmallString<32> Str;
             CF->getValueAPF().toString(Str);

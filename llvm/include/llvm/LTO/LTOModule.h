@@ -170,7 +170,7 @@ private:
 
   /// Parse the symbols from the module and model-level ASM and add them to
   /// either the defined or undefined lists.
-  bool parseSymbols(std::string &errMsg);
+  void parseSymbols();
 
   /// Add a symbol which isn't defined just yet to a list to be resolved later.
   void addPotentialUndefinedSymbol(const object::BasicSymbolRef &Sym,

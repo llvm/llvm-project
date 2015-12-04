@@ -7,7 +7,7 @@
 
 ; FUNC-LABEL: {{^}}ngroups_x:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[0].X
+; EG: MOV {{\*? *}}[[VAL]], KC0[0].X
 
 ; HSA: .amd_kernel_code_t
 
@@ -38,7 +38,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}ngroups_y:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[0].Y
+; EG: MOV {{\*? *}}[[VAL]], KC0[0].Y
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x1
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x4
@@ -53,7 +53,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}ngroups_z:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[0].Z
+; EG: MOV {{\*? *}}[[VAL]], KC0[0].Z
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x2
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x8
@@ -68,7 +68,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}global_size_x:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[0].W
+; EG: MOV {{\*? *}}[[VAL]], KC0[0].W
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x3
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0xc
@@ -83,7 +83,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}global_size_y:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[1].X
+; EG: MOV {{\*? *}}[[VAL]], KC0[1].X
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x4
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x10
@@ -98,7 +98,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}global_size_z:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV [[VAL]], KC0[1].Y
+; EG: MOV {{\*? *}}[[VAL]], KC0[1].Y
 
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x5
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x14

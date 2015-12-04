@@ -1308,7 +1308,7 @@ private:
 
   std::map<std::string, std::unique_ptr<FunctionAST>> FunctionDefs;
 
-  JITCompileCallbackManager<OrcX86_64> CompileCallbacks;
+  LocalJITCompileCallbackManager<OrcX86_64> CompileCallbacks;
 };
 
 static void HandleDefinition(SessionContext &S, KaleidoscopeJIT &J) {

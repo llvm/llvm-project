@@ -371,7 +371,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
   }
   // Back past possible debugging pseudos at beginning of block.  This matters
   // when one block differs from the other only by whether debugging pseudos
-  // are present at the beginning.  (This way, the various checks later for
+  // are present at the beginning. (This way, the various checks later for
   // I1==MBB1->begin() work as expected.)
   if (I1 == MBB1->begin() && I2 != MBB2->begin()) {
     --I2;
@@ -1564,6 +1564,14 @@ ReoptimizeBlock:
       // removed, move this block to the end of the function.
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
+      // We're looking for cases where PrevBB could possibly fall through to
+      // FallThrough, but if FallThrough is an EH pad that wouldn't be useful
+      // so here we skip over any EH pads so we might have a chance to find
+      // a branch target from PrevBB.
+      while (FallThrough != MF.end() && FallThrough->isEHPad())
+        ++FallThrough;
+      // Now check to see if the current block is sitting between PrevBB and
+      // a block to which it could fall through.
       if (FallThrough != MF.end() &&
           !TII->AnalyzeBranch(PrevBB, PrevTBB, PrevFBB, PrevCond, true) &&
           PrevBB.isSuccessor(&*FallThrough)) {

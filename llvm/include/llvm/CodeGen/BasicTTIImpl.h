@@ -302,12 +302,8 @@ public:
 
     if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       // The operation is legal. Assume it costs 1.
-      // If the type is split to multiple registers, assume that there is some
-      // overhead to this.
       // TODO: Once we have extract/insert subvector cost we need to use them.
-      if (LT.first > 1)
-        return LT.first * 2 * OpCost;
-      return LT.first * 1 * OpCost;
+      return LT.first * OpCost;
     }
 
     if (!TLI->isOperationExpand(ISD, LT.second)) {

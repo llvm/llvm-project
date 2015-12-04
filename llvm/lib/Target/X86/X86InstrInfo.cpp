@@ -4412,9 +4412,19 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     int Pop = is64 ? X86::POP64r : X86::POP32r;
     int AX = is64 ? X86::RAX : X86::EAX;
 
-    bool AXDead = (Reg == AX) ||
-                  (MachineBasicBlock::LQR_Dead ==
-                   MBB.computeRegisterLiveness(&getRegisterInfo(), AX, MI));
+    bool AXDead = (Reg == AX);
+    // FIXME: The above could figure out that AX is dead in more cases with:
+    //          || (MachineBasicBlock::LQR_Dead ==
+    //            MBB.computeRegisterLiveness(&getRegisterInfo(), AX, MI));
+    //
+    //        Unfortunately this is slightly broken, see PR24535 and the likely
+    //        related PR25033 PR24991 PR24992 PR25201. These issues seem to
+    //        showcase sub-register / super-register confusion: a previous kill
+    //        of AH but no kill of AL leads computeRegisterLiveness to
+    //        erroneously conclude that AX is dead.
+    //
+    //        Once fixed, also update cmpxchg-clobber-flags.ll and
+    //        peephole-na-phys-copy-folding.ll.
 
     if (!AXDead)
       BuildMI(MBB, MI, DL, get(Push)).addReg(AX, getKillRegState(true));

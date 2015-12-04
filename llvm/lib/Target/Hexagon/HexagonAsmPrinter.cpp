@@ -191,29 +191,23 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
     unsigned IgnoreCount = 0;
 
-    for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII) {
+    for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
       if (MII->getOpcode() == TargetOpcode::DBG_VALUE ||
           MII->getOpcode() == TargetOpcode::IMPLICIT_DEF)
         ++IgnoreCount;
-      else {
+      else
         HexagonLowerToMC(MCII, &*MII, MCB, *this);
-      }
-    }
   }
-  else {
+  else
     HexagonLowerToMC(MCII, MI, MCB, *this);
-    HexagonMCInstrInfo::padEndloop(OutStreamer->getContext(), MCB);
-  }
-  // Examine the packet and try to find instructions that can be converted
-  // to compounds.
-  HexagonMCInstrInfo::tryCompound(MCII, OutStreamer->getContext(), MCB);
-  // Examine the packet and convert pairs of instructions to duplex
-  // instructions when possible.
-  SmallVector<DuplexCandidate, 8> possibleDuplexes;
-  possibleDuplexes = HexagonMCInstrInfo::getDuplexPossibilties(MCII, MCB);
-  HexagonMCShuffle(MCII, *Subtarget, OutStreamer->getContext(), MCB,
-                   possibleDuplexes);
-  EmitToStreamer(*OutStreamer, MCB);
+
+  bool Ok = HexagonMCInstrInfo::canonicalizePacket(
+      MCII, *Subtarget, OutStreamer->getContext(), MCB, nullptr);
+  assert(Ok);
+  (void)Ok;
+  if(HexagonMCInstrInfo::bundleSize(MCB) == 0)
+    return;
+  OutStreamer->EmitInstruction(MCB, getSubtargetInfo());
 }
 
 extern "C" void LLVMInitializeHexagonAsmPrinter() {

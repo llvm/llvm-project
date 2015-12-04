@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_MODULE_H
 #define LLVM_IR_MODULE_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/DataLayout.h"
@@ -639,6 +640,16 @@ public:
   /// \brief Set the PIC level (small or large model)
   void setPICLevel(PICLevel::Level PL);
 /// @}
+
+  /// @name Utility functions for querying and setting PGO counts
+  /// @{
+
+  /// \brief Set maximum function count in PGO mode
+  void setMaximumFunctionCount(uint64_t);
+
+  /// \brief Returns maximum function count in PGO mode
+  Optional<uint64_t> getMaximumFunctionCount();
+  /// @}
 };
 
 /// An raw_ostream inserter for modules.

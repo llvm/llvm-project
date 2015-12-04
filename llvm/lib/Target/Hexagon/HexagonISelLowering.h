@@ -80,6 +80,7 @@ bool isPositiveHalfWord(SDNode *N);
       INSERTRP,
       EXTRACTU,
       EXTRACTURP,
+      VCOMBINE,
       TC_RETURN,
       EH_RETURN,
       DCFETCH,

@@ -1654,6 +1654,10 @@ TargetLoweringBase::getTypeLegalizationCost(const DataLayout &DL,
     if (LK.first == TypeSplitVector || LK.first == TypeExpandInteger)
       Cost *= 2;
 
+    // Do not loop with f128 type.
+    if (MTy == LK.second)
+      return std::make_pair(Cost, MTy.getSimpleVT());
+
     // Keep legalizing the type.
     MTy = LK.second;
   }

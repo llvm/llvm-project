@@ -174,7 +174,7 @@ public:
     /// Defines - Reg or a super-register is defined.
     bool Defines;
 
-    /// Reads - Read or a super-register is read.
+    /// Reads - Reg or a super-register is read.
     bool Reads;
 
     /// ReadsOverlap - Reg or an overlapping register is read.

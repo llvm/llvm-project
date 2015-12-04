@@ -186,3 +186,14 @@ define void @test8() {
   call void @_ZdaPvj(i8* %naj, i32 32) builtin
   ret void
 }
+
+declare noalias i8* @"\01??2@YAPEAX_K@Z"(i64) nobuiltin
+declare void @"\01??3@YAXPEAX@Z"(i8*) nobuiltin
+
+; CHECK-LABEL: @test9(
+define void @test9() {
+  ; CHECK-NOT: call
+  %new_long_long = call noalias i8* @"\01??2@YAPEAX_K@Z"(i64 32) builtin
+  call void @"\01??3@YAXPEAX@Z"(i8* %new_long_long) builtin
+  ret void
+}

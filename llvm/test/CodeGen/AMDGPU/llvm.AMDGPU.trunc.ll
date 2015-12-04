@@ -3,7 +3,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI %s
 
 ; R600: {{^}}amdgpu_trunc:
-; R600: TRUNC T{{[0-9]+\.[XYZW]}}, KC0[2].Z
+; R600: TRUNC {{\*? *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
 ; SI: {{^}}amdgpu_trunc:
 ; SI: v_trunc_f32
 
