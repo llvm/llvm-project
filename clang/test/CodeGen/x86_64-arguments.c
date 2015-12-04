@@ -336,7 +336,8 @@ void func43(SA s) {
 
 // CHECK-LABEL: define i32 @f44
 // CHECK: ptrtoint
-// CHECK-NEXT: and {{.*}}, -32
+// CHECK-NEXT: add i64 %{{[0-9]+}}, 31
+// CHECK-NEXT: and i64 %{{[0-9]+}}, -32
 // CHECK-NEXT: inttoptr
 typedef int T44 __attribute((vector_size(32)));
 struct s44 { T44 x; int y; };

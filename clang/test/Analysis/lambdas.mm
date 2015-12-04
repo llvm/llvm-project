@@ -70,16 +70,60 @@ void castToBlockAndInline() {
     return p;
   })(7);
 
-  // FIXME: This should be TRUE. We're not handling lambda to block conversions
-  // properly in ExprEngine::VisitBlockExpr.
-  clang_analyzer_eval(result == 7); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(result == 7); // expected-warning{{TRUE}}
+}
+
+void castToBlockWithCaptureAndInline() {
+  int y = 7;
+
+  auto lambda = [y]{ return y; };
+  int(^block)() = lambda;
+
+  int result = block();
+  clang_analyzer_eval(result == 7); // expected-warning{{TRUE}}
+}
+
+void castMutableLambdaToBlock() {
+  int x = 0;
+
+  auto lambda = [x]() mutable {
+    x = x + 1;
+    return x;
+   };
+
+  // The block should copy the lambda before capturing.
+  int(^block)() = lambda;
+
+  int r1 = block();
+  clang_analyzer_eval(r1 == 1); // expected-warning{{TRUE}}
+
+  int r2 = block();
+  clang_analyzer_eval(r2 == 2); // expected-warning{{TRUE}}
+
+  // Because block copied the lambda, r3 should be 1.
+  int r3 = lambda();
+  clang_analyzer_eval(r3 == 1); // expected-warning{{TRUE}}
+
+  // Aliasing the block shouldn't copy the lambda.
+  int(^blockAlias)() = block;
+
+  int r4 = blockAlias();
+  clang_analyzer_eval(r4 == 3); // expected-warning{{TRUE}}
+
+  int r5 = block();
+  clang_analyzer_eval(r5 == 4); // expected-warning{{TRUE}}
+
+  // Another copy of lambda
+  int(^blockSecondCopy)() = lambda;
+  int r6 = blockSecondCopy();
+  clang_analyzer_eval(r6 == 2); // expected-warning{{TRUE}}
 }
 
 void castLambdaInLocalBlock() {
-  // FIXME: This results in a spurious
-  // "Address of stack-allocated block declared on line XX returned to caller" warning
-  // because we're not handling lambda to block conversions properly in ExprEngine.
-  auto lambda = []{ }; // expected-warning {{Address of stack-allocated block declared on line}}
+  // Make sure we don't emit a spurious diagnostic about the address of a block
+  // escaping in the implicit conversion operator method for lambda-to-block
+  // conversions.
+  auto lambda = []{ }; // no-warning
 
   void(^block)() = lambda;
   (void)block;

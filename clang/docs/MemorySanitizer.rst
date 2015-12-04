@@ -197,5 +197,4 @@ real-world programs, like Clang/LLVM itself.
 More Information
 ================
 
-`http://code.google.com/p/memory-sanitizer <http://code.google.com/p/memory-sanitizer/>`_
-
+`<https://github.com/google/sanitizers/wiki/MemorySanitizer>`_

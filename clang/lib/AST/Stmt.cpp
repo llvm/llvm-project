@@ -295,14 +295,15 @@ CompoundStmt::CompoundStmt(const ASTContext &C, ArrayRef<Stmt*> Stmts,
   std::copy(Stmts.begin(), Stmts.end(), Body);
 }
 
-void CompoundStmt::setStmts(const ASTContext &C, Stmt **Stmts,
-                            unsigned NumStmts) {
-  if (this->Body)
+void CompoundStmt::setStmts(const ASTContext &C, ArrayRef<Stmt *> Stmts) {
+  if (Body)
     C.Deallocate(Body);
-  this->CompoundStmtBits.NumStmts = NumStmts;
+  CompoundStmtBits.NumStmts = Stmts.size();
+  assert(CompoundStmtBits.NumStmts == Stmts.size() &&
+         "NumStmts doesn't fit in bits of CompoundStmtBits.NumStmts!");
 
-  Body = new (C) Stmt*[NumStmts];
-  memcpy(Body, Stmts, sizeof(Stmt *) * NumStmts);
+  Body = new (C) Stmt*[Stmts.size()];
+  std::copy(Stmts.begin(), Stmts.end(), Body);
 }
 
 const char *LabelStmt::getName() const {

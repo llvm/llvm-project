@@ -8833,7 +8833,6 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
                                               SourceLocation Loc) {
   if (!isFunctionAlwaysEnabled(S.Context, FD)) {
     if (Complain) {
-      // FIXME(gbiv): Both diagnostics below lack tests. We should add tests.
       if (InOverloadResolution)
         S.Diag(FD->getLocStart(),
                diag::note_addrof_ovl_candidate_disabled_by_enable_if_attr);

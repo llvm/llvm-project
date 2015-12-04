@@ -125,3 +125,11 @@ namespace PR7014 {
 
   namespace Y = X::Y;
 }
+
+namespace PR25731 {
+  void f() {
+    namespace X = PR25731;
+    namespace X = PR25731;
+    X::f();
+  }
+}

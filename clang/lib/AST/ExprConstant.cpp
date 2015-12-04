@@ -9408,7 +9408,11 @@ bool Expr::isIntegerConstantExpr(llvm::APSInt &Value, const ASTContext &Ctx,
 
   if (!isIntegerConstantExpr(Ctx, Loc))
     return false;
-  if (!EvaluateAsInt(Value, Ctx))
+  // The only possible side-effects here are due to UB discovered in the
+  // evaluation (for instance, INT_MAX + 1). In such a case, we are still
+  // required to treat the expression as an ICE, so we produce the folded
+  // value.
+  if (!EvaluateAsInt(Value, Ctx, SE_AllowSideEffects))
     llvm_unreachable("ICE cannot be evaluated!");
   return true;
 }

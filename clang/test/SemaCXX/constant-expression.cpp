@@ -141,3 +141,5 @@ namespace rdar16064952 {
    unsigned w = ({int a = b.val[sizeof(0)]; 0; }); // expected-warning {{use of GNU statement expression extension}}
   }
 }
+
+char PR17381_ice = 1000000 * 1000000; // expected-warning {{overflow}} expected-warning {{changes value}}

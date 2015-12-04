@@ -28,6 +28,4 @@ There are plans to support LeakSanitizer in :doc:`MemorySanitizer` builds.
 More Information
 ================
 
-`https://code.google.com/p/address-sanitizer/wiki/LeakSanitizer
-<https://code.google.com/p/address-sanitizer/wiki/LeakSanitizer>`_
-
+`<https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer>`_

@@ -51,7 +51,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
     if(variableName MATCHES "^COMPILER_RT")
       string(REPLACE ";" "\;" value "${${variableName}}")
       list(APPEND COMPILER_RT_PASSTHROUGH_VARIABLES
-        -D${variableName}=${${value}})
+        -D${variableName}=${value})
     endif()
   endforeach()
 
