@@ -129,13 +129,26 @@ SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex (Index i)
     const size_t word = i / (8 * m_ptr_size);
     const size_t offset = i % (8 * m_ptr_size);
     Error error;
-    const auto effective_ptr = m_bitmask_ptr + (word * m_ptr_size);
+    const lldb::addr_t effective_ptr = m_bitmask_ptr + (word * m_ptr_size);
 #ifdef DICTIONARY_IS_BROKEN_AGAIN
     printf("for idx = %" PRIu64 ", reading at word = %zu offset = %zu, effective_ptr = 0x%" PRIx64 "\n", i, word, offset, effective_ptr);
 #endif
-    const uint64_t data = m_process->ReadUnsignedIntegerFromMemory(effective_ptr , m_ptr_size, 0, error);
-    if (error.Fail())
-        return false;
+    
+    uint64_t data = 0;
+    
+    auto cached = m_bitmask_cache.find(effective_ptr);
+    if (cached != m_bitmask_cache.end())
+    {
+        data = cached->second;
+    }
+    else
+    {
+        data = m_process->ReadUnsignedIntegerFromMemory(effective_ptr, m_ptr_size, 0, error);
+        if (error.Fail())
+            return false;
+        m_bitmask_cache[effective_ptr] = data;
+    }
+    
     const uint64_t mask = (1UL << offset);
     const uint64_t value = (data & mask);
 #ifdef DICTIONARY_IS_BROKEN_AGAIN
@@ -199,7 +212,8 @@ SwiftHashedContainerNativeBufferHandler::SwiftHashedContainerNativeBufferHandler
     m_values_ptr(LLDB_INVALID_ADDRESS),
     m_element_type(),
     m_key_stride(key_type.GetByteStride()),
-    m_value_stride(0)
+    m_value_stride(0),
+    m_bitmask_cache()
 {
     static ConstString g_initializedEntries("initializedEntries");
     static ConstString g_values("values");
