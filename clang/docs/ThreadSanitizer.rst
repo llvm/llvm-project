@@ -131,5 +131,4 @@ especially in the form of minimized standalone tests is more than welcome.
 
 More Information
 ----------------
-`http://code.google.com/p/thread-sanitizer <http://code.google.com/p/thread-sanitizer/>`_.
-
+`<https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual>`_

@@ -421,7 +421,8 @@ bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
   const LocationContext *CurLC = Pred->getLocationContext();
   const StackFrameContext *CallerSFC = CurLC->getCurrentStackFrame();
   const LocationContext *ParentOfCallee = CallerSFC;
-  if (Call.getKind() == CE_Block) {
+  if (Call.getKind() == CE_Block &&
+      !cast<BlockCall>(Call).isConversionFromLambda()) {
     const BlockDataRegion *BR = cast<BlockCall>(Call).getBlockRegion();
     assert(BR && "If we have the block definition we should have its region");
     AnalysisDeclContext *BlockCtx = AMgr.getAnalysisDeclContext(D);

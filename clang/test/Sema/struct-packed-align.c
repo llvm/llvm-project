@@ -151,7 +151,7 @@ struct packed_chars {
   char c:4;
 };
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__declspec) // _MSC_VER is unavailable in cc1.
 // On Windows clang uses MSVC compatible layout in this case.
 extern int o1[sizeof(struct packed_chars) == 3 ? 1 : -1];
 extern int o2[__alignof(struct packed_chars) == 1 ? 1 : -1];

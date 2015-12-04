@@ -506,8 +506,56 @@ public:
     return BR->getDecl();
   }
 
+  bool isConversionFromLambda() const {
+    const BlockDecl *BD = getDecl();
+    if (!BD)
+      return false;
+
+    return BD->isConversionFromLambda();
+  }
+
+  /// \brief For a block converted from a C++ lambda, returns the block
+  /// VarRegion for the variable holding the captured C++ lambda record.
+  const VarRegion *getRegionStoringCapturedLambda() const {
+    assert(isConversionFromLambda());
+    const BlockDataRegion *BR = getBlockRegion();
+    assert(BR && "Block converted from lambda must have a block region");
+
+    auto I = BR->referenced_vars_begin();
+    assert(I != BR->referenced_vars_end());
+
+    return I.getCapturedRegion();
+  }
+
   RuntimeDefinition getRuntimeDefinition() const override {
-    return RuntimeDefinition(getDecl());
+    if (!isConversionFromLambda())
+      return RuntimeDefinition(getDecl());
+
+    // Clang converts lambdas to blocks with an implicit user-defined
+    // conversion operator method on the lambda record that looks (roughly)
+    // like:
+    //
+    // typedef R(^block_type)(P1, P2, ...);
+    // operator block_type() const {
+    //   auto Lambda = *this;
+    //   return ^(P1 p1, P2 p2, ...){
+    //     /* return Lambda(p1, p2, ...); */
+    //   };
+    // }
+    //
+    // Here R is the return type of the lambda and P1, P2, ... are
+    // its parameter types. 'Lambda' is a fake VarDecl captured by the block
+    // that is initialized to a copy of the the lambda.
+    //
+    // Sema leaves the body of a lambda-converted block empty (it is
+    // produced by CodeGen), so we can't analyze it directly. Instead, we skip
+    // the block body and analyze the operator() method on the the captured
+    // lambda.
+    const VarDecl *LambdaVD = getRegionStoringCapturedLambda()->getDecl();
+    const CXXRecordDecl *LambdaDecl = LambdaVD->getType()->getAsCXXRecordDecl();
+    CXXMethodDecl* LambdaCallOperator = LambdaDecl->getLambdaCallOperator();
+
+    return RuntimeDefinition(LambdaCallOperator);
   }
 
   bool argumentsMayEscape() const override {

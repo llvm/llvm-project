@@ -558,7 +558,7 @@ public:
     CompoundStmtBits.NumStmts = 0;
   }
 
-  void setStmts(const ASTContext &C, Stmt **Stmts, unsigned NumStmts);
+  void setStmts(const ASTContext &C, ArrayRef<Stmt *> Stmts);
 
   bool body_empty() const { return CompoundStmtBits.NumStmts == 0; }
   unsigned size() const { return CompoundStmtBits.NumStmts; }

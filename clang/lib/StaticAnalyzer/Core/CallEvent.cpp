@@ -598,10 +598,25 @@ void BlockCall::getExtraInvalidatedValues(ValueList &Values,
 
 void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
                                              BindingsTy &Bindings) const {
-  const BlockDecl *D = cast<BlockDecl>(CalleeCtx->getDecl());
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
+  ArrayRef<ParmVarDecl*> Params;
+  if (isConversionFromLambda()) {
+    auto *LambdaOperatorDecl = cast<CXXMethodDecl>(CalleeCtx->getDecl());
+    Params = LambdaOperatorDecl->parameters();
+
+    // For blocks converted from a C++ lambda, the callee declaration is the
+    // operator() method on the the lambda so we bind "this" to
+    // the lambda captured by the block.
+    const VarRegion *CapturedLambdaRegion = getRegionStoringCapturedLambda();
+    SVal ThisVal = loc::MemRegionVal(CapturedLambdaRegion);
+    Loc ThisLoc = SVB.getCXXThis(LambdaOperatorDecl, CalleeCtx);
+    Bindings.push_back(std::make_pair(ThisLoc, ThisVal));
+  } else {
+    Params = cast<BlockDecl>(CalleeCtx->getDecl())->parameters();
+  }
+
   addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
-                               D->parameters());
+                               Params);
 }
 
 

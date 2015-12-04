@@ -2910,15 +2910,26 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(Twine Name,
                                        const ObjCCommonTypesHelper &ObjCTypes) {
   SmallVector<llvm::Constant *, 16> Properties;
   llvm::SmallPtrSet<const IdentifierInfo*, 16> PropertySet;
+
+  auto AddProperty = [&](const ObjCPropertyDecl *PD) {
+    llvm::Constant *Prop[] = {GetPropertyName(PD->getIdentifier()),
+                              GetPropertyTypeString(PD, Container)};
+    Properties.push_back(llvm::ConstantStruct::get(ObjCTypes.PropertyTy, Prop));
+  };
+  if (const ObjCInterfaceDecl *OID = dyn_cast<ObjCInterfaceDecl>(OCD))
+    for (const ObjCCategoryDecl *ClassExt : OID->known_extensions())
+      for (auto *PD : ClassExt->properties()) {
+        PropertySet.insert(PD->getIdentifier());
+        AddProperty(PD);
+      }
   for (const auto *PD : OCD->properties()) {
-    PropertySet.insert(PD->getIdentifier());
-    llvm::Constant *Prop[] = {
-      GetPropertyName(PD->getIdentifier()),
-      GetPropertyTypeString(PD, Container)
-    };
-    Properties.push_back(llvm::ConstantStruct::get(ObjCTypes.PropertyTy,
-                                                   Prop));
+    // Don't emit duplicate metadata for properties that were already in a
+    // class extension.
+    if (!PropertySet.insert(PD->getIdentifier()).second)
+      continue;
+    AddProperty(PD);
   }
+
   if (const ObjCInterfaceDecl *OID = dyn_cast<ObjCInterfaceDecl>(OCD)) {
     for (const auto *P : OID->all_referenced_protocols())
       PushProtocolProperties(PropertySet, Properties, Container, P, ObjCTypes);

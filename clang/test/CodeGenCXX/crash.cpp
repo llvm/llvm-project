@@ -1,4 +1,3 @@
-// XFAIL: hexagon
 // RUN: %clang_cc1 %s -std=c++11 -emit-llvm-only
 // RUN: %clang_cc1 -emit-obj -o %t -debug-info-kind=line-tables-only -std=c++11 %s
 // CHECK that we don't crash.

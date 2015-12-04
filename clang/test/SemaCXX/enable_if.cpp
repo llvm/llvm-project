@@ -233,4 +233,23 @@ namespace FnPtrs {
     a = templatedConflict<int>; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@226{{candidate function}} expected-note@228{{candidate function}}
     a = &templatedConflict<int>; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@226{{candidate function}} expected-note@228{{candidate function}}
   }
+
+  int ovlNoCandidate(int m) __attribute__((enable_if(false, "")));
+  int ovlNoCandidate(int m) __attribute__((enable_if(0, "")));
+  void test7() {
+    int (*p)(int) = ovlNoCandidate; // expected-error{{address of overloaded function 'ovlNoCandidate' does not match required type}} expected-note@237{{made ineligible by enable_if}} expected-note@238{{made ineligible by enable_if}}
+    int (*p2)(int) = &ovlNoCandidate; // expected-error{{address of overloaded function 'ovlNoCandidate' does not match required type}} expected-note@237{{made ineligible by enable_if}} expected-note@238{{made ineligible by enable_if}}
+    int (*a)(int);
+    a = ovlNoCandidate; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@237{{made ineligible by enable_if}} expected-note@238{{made ineligible by enable_if}}
+    a = &ovlNoCandidate; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@237{{made ineligible by enable_if}} expected-note@238{{made ineligible by enable_if}}
+  }
+
+  int noOvlNoCandidate(int m) __attribute__((enable_if(false, "")));
+  void test8() {
+    int (*p)(int) = noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
+    int (*p2)(int) = &noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
+    int (*a)(int);
+    a = noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
+    a = &noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
+  }
 }

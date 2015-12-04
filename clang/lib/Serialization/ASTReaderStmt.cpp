@@ -134,7 +134,7 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   unsigned NumStmts = Record[Idx++];
   while (NumStmts--)
     Stmts.push_back(Reader.ReadSubStmt());
-  S->setStmts(Reader.getContext(), Stmts.data(), Stmts.size());
+  S->setStmts(Reader.getContext(), Stmts);
   S->LBraceLoc = ReadSourceLocation(Record, Idx);
   S->RBraceLoc = ReadSourceLocation(Record, Idx);
 }

@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -verify %s -fcxx-exceptions -std=c++1y
 
+namespace N {}
+
 template<typename T, // expected-note {{declared here}}
          typename T> struct X {}; // expected-error {{declaration of 'T' shadows template parameter}}
 
-template<typename T> struct Y { // expected-note 15{{declared here}}
+template<typename T> struct Y { // expected-note 16{{declared here}}
   template<typename T> struct A {}; // expected-error {{declaration of 'T' shadows template parameter}}
 
   struct B {
@@ -49,6 +51,9 @@ template<typename T> struct Y { // expected-note 15{{declared here}}
   }
   void d() {
     void T(); // expected-error {{declaration of 'T' shadows template parameter}}
+  }
+  void e() {
+    namespace T = N; // expected-error {{declaration of 'T' shadows template parameter}}
   }
 
   friend struct T; // expected-error {{declaration of 'T' shadows template parameter}}
