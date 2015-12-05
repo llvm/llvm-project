@@ -825,18 +825,20 @@ class AttributedStmt : public Stmt {
   AttributedStmt(SourceLocation Loc, ArrayRef<const Attr*> Attrs, Stmt *SubStmt)
     : Stmt(AttributedStmtClass), SubStmt(SubStmt), AttrLoc(Loc),
       NumAttrs(Attrs.size()) {
-    memcpy(getAttrArrayPtr(), Attrs.data(), Attrs.size() * sizeof(Attr *));
+    std::copy(Attrs.begin(), Attrs.end(), getAttrArrayPtr());
   }
 
   explicit AttributedStmt(EmptyShell Empty, unsigned NumAttrs)
     : Stmt(AttributedStmtClass, Empty), NumAttrs(NumAttrs) {
-    memset(getAttrArrayPtr(), 0, NumAttrs * sizeof(Attr *));
+    std::fill_n(getAttrArrayPtr(), NumAttrs, nullptr);
   }
 
-  Attr *const *getAttrArrayPtr() const {
-    return reinterpret_cast<Attr *const *>(this + 1);
+  const Attr *const *getAttrArrayPtr() const {
+    return reinterpret_cast<const Attr *const *>(this + 1);
   }
-  Attr **getAttrArrayPtr() { return reinterpret_cast<Attr **>(this + 1); }
+  const Attr **getAttrArrayPtr() {
+    return reinterpret_cast<const Attr **>(this + 1);
+  }
 
 public:
   static AttributedStmt *Create(const ASTContext &C, SourceLocation Loc,

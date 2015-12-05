@@ -952,26 +952,18 @@ are listed below.
       ``-fsanitize=address``:
       :doc:`AddressSanitizer`, a memory error
       detector.
-   -  ``-fsanitize=integer``: Enables checks for undefined or
-      suspicious integer behavior.
    -  .. _opt_fsanitize_thread:
 
       ``-fsanitize=thread``: :doc:`ThreadSanitizer`, a data race detector.
    -  .. _opt_fsanitize_memory:
 
       ``-fsanitize=memory``: :doc:`MemorySanitizer`,
-      an *experimental* detector of uninitialized reads. Not ready for
-      widespread use.
+      a detector of uninitialized reads. Requires instrumentation of all
+      program code.
    -  .. _opt_fsanitize_undefined:
 
-      ``-fsanitize=undefined``: Fast and compatible undefined behavior
-      checker. Enables the undefined behavior checks that have small
-      runtime cost and no impact on address space layout or ABI. This
-      includes all of the checks listed below other than
-      ``unsigned-integer-overflow``.
-
-   -  ``-fsanitize=undefined-trap``: This is a deprecated alias for
-      ``-fsanitize=undefined``.
+      ``-fsanitize=undefined``: :doc:`UndefinedBehaviorSanitizer`,
+      a fast and compatible undefined behavior checker.
 
    -  ``-fsanitize=dataflow``: :doc:`DataFlowSanitizer`, a general data
       flow analysis.
@@ -980,113 +972,17 @@ are listed below.
    -  ``-fsanitize=safe-stack``: :doc:`safe stack <SafeStack>`
       protection against stack-based memory corruption errors.
 
-   The following more fine-grained checks are also available:
-
-   -  ``-fsanitize=alignment``: Use of a misaligned pointer or creation
-      of a misaligned reference.
-   -  ``-fsanitize=bool``: Load of a ``bool`` value which is neither
-      ``true`` nor ``false``.
-   -  ``-fsanitize=bounds``: Out of bounds array indexing, in cases
-      where the array bound can be statically determined.
-   -  ``-fsanitize=cfi-cast-strict``: Enables :ref:`strict cast checks
-      <cfi-strictness>`.
-   -  ``-fsanitize=cfi-derived-cast``: Base-to-derived cast to the wrong
-      dynamic type. Requires ``-flto``.
-   -  ``-fsanitize=cfi-unrelated-cast``: Cast from ``void*`` or another
-      unrelated type to the wrong dynamic type. Requires ``-flto``.
-   -  ``-fsanitize=cfi-nvcall``: Non-virtual call via an object whose vptr is of
-      the wrong dynamic type. Requires ``-flto``.
-   -  ``-fsanitize=cfi-vcall``: Virtual call via an object whose vptr is of the
-      wrong dynamic type. Requires ``-flto``.
-   -  ``-fsanitize=enum``: Load of a value of an enumerated type which
-      is not in the range of representable values for that enumerated
-      type.
-   -  ``-fsanitize=float-cast-overflow``: Conversion to, from, or
-      between floating-point types which would overflow the
-      destination.
-   -  ``-fsanitize=float-divide-by-zero``: Floating point division by
-      zero.
-   -  ``-fsanitize=function``: Indirect call of a function through a
-      function pointer of the wrong type (Linux, C++ and x86/x86_64 only).
-   -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
-   -  ``-fsanitize=nonnull-attribute``: Passing null pointer as a function
-      parameter which is declared to never be null.
-   -  ``-fsanitize=null``: Use of a null pointer or creation of a null
-      reference.
-   -  ``-fsanitize=object-size``: An attempt to use bytes which the
-      optimizer can determine are not part of the object being
-      accessed. The sizes of objects are determined using
-      ``__builtin_object_size``, and consequently may be able to detect
-      more problems at higher optimization levels.
-   -  ``-fsanitize=return``: In C++, reaching the end of a
-      value-returning function without returning a value.
-   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer
-      from a function which is declared to never return null.
-   -  ``-fsanitize=shift``: Shift operators where the amount shifted is
-      greater or equal to the promoted bit-width of the left hand side
-      or less than zero, or where the left hand side is negative. For a
-      signed left shift, also checks for signed overflow in C, and for
-      unsigned overflow in C++. You can use ``-fsanitize=shift-base`` or
-      ``-fsanitize=shift-exponent`` to check only left-hand side or
-      right-hand side of shift operation, respectively.
-   -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow,
-      including all the checks added by ``-ftrapv``, and checking for
-      overflow in signed division (``INT_MIN / -1``).
-   -  ``-fsanitize=unreachable``: If control flow reaches
-      ``__builtin_unreachable``.
-   -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer
-      overflows.
-   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
-      does not evaluate to a positive value.
-   -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that
-      it is of the wrong dynamic type, or that its lifetime has not
-      begun or has ended. Incompatible with ``-fno-rtti``.
-
-   You can turn off or modify checks for certain source files, functions
-   or even variables by providing a special file:
-
-   -  ``-fsanitize-blacklist=/path/to/blacklist/file``: disable or modify
-      sanitizer checks for objects listed in the file. See
-      :doc:`SanitizerSpecialCaseList` for file format description.
-   -  ``-fno-sanitize-blacklist``: don't use blacklist file, if it was
-      specified earlier in the command line.
-
-   Extra features of MemorySanitizer (require explicit
-   ``-fsanitize=memory``):
-
-   -  ``-fsanitize-memory-track-origins[=level]``: Enables origin tracking in
-      MemorySanitizer. Adds a second section to MemorySanitizer
-      reports pointing to the heap or stack allocation the
-      uninitialized bits came from. Slows down execution by additional
-      1.5x-2x.
-
-      Possible values for level are 0 (off), 1, 2 (default). Level 2
-      adds more sections to MemorySanitizer reports describing the
-      order of memory stores the uninitialized value went
-      through. This mode may use extra memory in programs that copy
-      uninitialized memory a lot.
-   -  ``-fsanitize-memory-use-after-dtor``: Enables use-after-destruction
-      detection in MemorySanitizer. After invocation of the destructor,
-      the object is considered no longer readable. Facilitates the
-      detection of use-after-destroy bugs.
-
-      Setting the MSAN_OPTIONS=poison_in_dtor=1 enables the poisoning of
-      memory at runtime. Any subsequent access to the destroyed object
-      fails at runtime. This feature is still experimental, but this
-      environment variable must be set to 1 in order for the above flag
-      to have any effect.
+   There are more fine-grained checks available: see
+   the :ref:`list <ubsan-checks>` of specific kinds of
+   undefined behavior that can be detected and the :ref:`list <cfi-schemes>`
+   of control flow integrity schemes.
 
    The ``-fsanitize=`` argument must also be provided when linking, in
-   order to link to the appropriate runtime library. When using
-   ``-fsanitize=vptr`` (or a group that includes it, such as
-   ``-fsanitize=undefined``) with a C++ program, the link must be
-   performed by ``clang++``, not ``clang``, in order to link against the
-   C++-specific parts of the runtime library.
+   order to link to the appropriate runtime library.
 
    It is not possible to combine more than one of the ``-fsanitize=address``,
    ``-fsanitize=thread``, and ``-fsanitize=memory`` checkers in the same
-   program. The ``-fsanitize=undefined`` checks can only be combined with
-   ``-fsanitize=address``.
+   program.
 
 **-f[no-]sanitize-recover=check1,check2,...**
 
@@ -1094,7 +990,8 @@ are listed below.
    If the check is fatal, program will halt after the first error
    of this kind is detected and error report is printed.
 
-   By default, non-fatal checks are those enabled by UndefinedBehaviorSanitizer,
+   By default, non-fatal checks are those enabled by
+   :doc:`UndefinedBehaviorSanitizer`,
    except for ``-fsanitize=return`` and ``-fsanitize=unreachable``. Some
    sanitizers may not support recovery (or not support it by default
    e.g. :doc:`AddressSanitizer`), and always crash the program after the issue
@@ -1118,13 +1015,23 @@ are listed below.
    be used (for instance, when building libc or a kernel module), or where
    the binary size increase caused by the sanitizer runtime is a concern.
 
-   This flag is only compatible with ``local-bounds``,
-   ``unsigned-integer-overflow``, sanitizers in the ``cfi`` group and
-   sanitizers in the ``undefined`` group other than ``vptr``. If this flag
+   This flag is only compatible with :doc:`control flow integrity
+   <ControlFlowIntegrity>` schemes and :doc:`UndefinedBehaviorSanitizer`
+   checks other than ``vptr``. If this flag
    is supplied together with ``-fsanitize=undefined``, the ``vptr`` sanitizer
    will be implicitly disabled.
 
    This flag is enabled by default for sanitizers in the ``cfi`` group.
+
+.. option:: -fsanitize-blacklist=/path/to/blacklist/file
+
+   Disable or modify sanitizer checks for objects (source files, functions,
+   variables, types) listed in the file. See
+   :doc:`SanitizerSpecialCaseList` for file format description.
+
+.. option:: -fno-sanitize-blacklist
+
+   Don't use blacklist file, if it was specified earlier in the command line.
 
 **-f[no-]sanitize-coverage=[type,features,...]**
 
