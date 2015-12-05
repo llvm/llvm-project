@@ -7974,7 +7974,7 @@
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
-				STRIP_INSTALLED_PRODUCT = NO;
+				STRIP_INSTALLED_PRODUCT = YES;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
 				WARNING_CFLAGS = "-Wreorder";
@@ -8136,6 +8136,665 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = BuildAndIntegration;
+		};
+		237965E71C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				"ARCHS[sdk=iphoneos*]" = arm64;
+				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					__STDC_CONSTANT_MACROS,
+					__STDC_LIMIT_MACROS,
+					LLDB_CONFIGURATION_RELEASE,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
+					__STDC_CONSTANT_MACROS,
+					__STDC_LIMIT_MACROS,
+					LLDB_CONFIGURATION_RELEASE,
+					LLDB_DISABLE_PYTHON,
+					NO_XPC_SERVICES,
+				);
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				"GCC_WARN_64_TO_32_BIT_CONVERSION[arch=*64]" = NO;
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
+				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
+				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
+				LLDB_COMPRESSION_CFLAGS = "";
+				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
+				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11internal]" = "-DHAVE_LIBCOMPRESSION=1";
+				LLDB_COMPRESSION_LDFLAGS = "";
+				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DISABLE_PYTHON = 0;
+				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
+				LLDB_FRAMEWORK_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/System/Library/PrivateFrameworks";
+				LLDB_GUI_CFLAGS = "";
+				"LLDB_GUI_CFLAGS[sdk=appletvos*]" = "-DLLDB_DISABLE_CURSES=1";
+				"LLDB_GUI_CFLAGS[sdk=iphoneos*]" = "-DLLDB_DISABLE_CURSES=1";
+				"LLDB_GUI_CFLAGS[sdk=watchos*]" = "-DLLDB_DISABLE_CURSES=1";
+				LLDB_GUI_LDFLAGS = "-lpanel";
+				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
+				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
+				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_IS_BUILDBOT_BUILD = 0;
+				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
+				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
+				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
+				LLVM_BUILD_DIRTREE = "$(PREBUILT_SWIFTLANG)/..";
+				LLVM_BUILD_DIR_ARCH = "$(CURRENT_ARCH)/";
+				LLVM_CONFIGURATION = RelWithDebInfoAssert;
+				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				OBJROOT = "$(SYMROOT)";
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"-flimit-debug-info",
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_GUI_CFLAGS)",
+					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
+					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+				);
+				OTHER_LDFLAGS = "";
+				SDKROOT = macosx.internal;
+				"SDKROOT[arch=i386]" = macosx;
+				"SDKROOT[arch=x86_64]" = macosx;
+				"SDKROOT[arch=x86_64h]" = macosx;
+				STRIP_INSTALLED_PRODUCT = NO;
+				STRIP_STYLE = debugging;
+				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
+				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
+				WARNING_CFLAGS = "-Wreorder";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965E81C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965E91C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965EA1C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965EB1C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965EC1C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965ED1C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 350.0.0;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+				);
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = "";
+				INFOPLIST_FILE = "lldb-Info.plist";
+				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
+					"-Wl,-rpath,@loader_path",
+					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
+				);
+				PRODUCT_NAME = lldb;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965EE1C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_LINK_OBJC_RUNTIME = NO;
+				CLANG_OBJC_RUNTIME = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 350.0.0;
+				DEAD_CODE_STRIPPING = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 350.0.0;
+				EXPORTED_SYMBOLS_FILE = source/API/liblldb.xcode.exports;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+				);
+				FRAMEWORK_VERSION = A;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = "";
+				INFOPLIST_FILE = "resources/LLDB-Info.plist";
+				INSTALL_PATH = "$(LLDB_FRAMEWORK_INSTALL_DIR)";
+				LD_DYLIB_INSTALL_NAME = "@rpath/LLDB.framework/LLDB";
+				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
+				LLDB_TOOLS_INSTALL_DIR = "";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				OTHER_CPLUSPLUSFLAGS = (
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"-DDT_VARIANT_$(DT_VARIANT)",
+					"$(OTHER_CFLAGS)",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+				);
+				OTHER_LDFLAGS = "";
+				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+					"-framework",
+					Foundation,
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
+				);
+				"OTHER_LDFLAGS[sdk=macosx*]" = (
+					"$(inherited)",
+					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
+					"-lpython2.7",
+					"-filelist",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+					"-framework",
+					Foundation,
+					"-framework",
+					DebugSymbols,
+					"-framework",
+					Security,
+					"-framework",
+					CoreServices,
+					"-framework",
+					ApplicationServices,
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
+				);
+				PRODUCT_NAME = LLDB;
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965EF1C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				FRAMEWORK_SEARCH_PATHS = /System/Library/PrivateFrameworks;
+				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
+				ONLY_ACTIVE_ARCH = NO;
+				PRODUCT_NAME = "darwin-debug";
+				SKIP_INSTALL = YES;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F01C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_SOURCE_DIR = "$(SRCROOT)/clang";
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 350.0.0;
+				DYLIB_CURRENT_VERSION = 350.0.0;
+				EXECUTABLE_EXTENSION = a;
+				EXPORTED_SYMBOLS_FILE = tools/argdumper/argdumper.exports;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+				);
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = /usr/include/libxml2;
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				MACH_O_TYPE = staticlib;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DSWIFT_ENABLE_OBJECT_LITERALS",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+					"-DLLDB_USE_BUILTIN_DEMANGLER",
+					"-DDT_VARIANT_$(DT_VARIANT)",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+					"-DLLDB_USE_BUILTIN_DEMANGLER",
+				);
+				OTHER_LDFLAGS = "";
+				PATH = /opt/local/bin;
+				PRODUCT_NAME = "lib$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_SOURCE_DIR = "$(SRCROOT)/swift";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F11C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
+				DEAD_CODE_STRIPPING = YES;
+				EXPORTED_SYMBOLS_FILE = "tools/lldb-server/lldb-server.exports";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+				);
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				INFOPLIST_PREPROCESSOR_DEFINITIONS = (
+					"-lobjc",
+					"-lpython",
+					"-framework",
+					DebugSymbols,
+					"-framework",
+					Carbon,
+					"-framework",
+					Foundation,
+					"-framework",
+					AppKit,
+					"-v",
+					"-Wl,-v",
+				);
+				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				MACH_O_TYPE = mh_execute;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-flimit-debug-info",
+					"-Wparentheses",
+				);
+				"OTHER_CFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-flimit-debug-info",
+					"-Wparentheses",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
+				OTHER_LDFLAGS = "";
+				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
+					"-filelist",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+					"-lxml2",
+					"-framework",
+					Foundation,
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+				);
+				"OTHER_LDFLAGS[sdk=macosx*]" = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
+					"-lpython2.7",
+					"-lxml2",
+					"-framework",
+					DebugSymbols,
+					"-framework",
+					Foundation,
+					"-framework",
+					Carbon,
+					"-framework",
+					Security,
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+				);
+				PRODUCT_NAME = "lldb-server";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F21C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = YES;
+				CURRENT_PROJECT_VERSION = 350.0.0;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F31C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = YES;
+				CURRENT_PROJECT_VERSION = 350.0.0;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F41C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AXLE_ENABLE_DEBUG_INFO = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_ASSIGN_ENUM = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				COPY_PHASE_STRIP = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				OTHER_CFLAGS = "-Wparentheses";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F51C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F61C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				EXPORTED_SYMBOLS_FILE = tools/argdumper/argdumper.exports;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F71C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F81C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CURRENT_PROJECT_VERSION = 350.0.0;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(PROJECT_DIR)/tools/lldb-mi/lldb-Info.plist",
+					"-Wl,-rpath,@loader_path/",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965F91C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965FA1C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				EXPORTED_SYMBOLS_FILE = tools/argdumper/argdumper.exports;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				HEADER_SEARCH_PATHS = /usr/include/libxml2;
+				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-flimit-debug-info",
+					"-Wparentheses",
+				);
+				"OTHER_CFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-flimit-debug-info",
+					"-Wparentheses",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
+				OTHER_LDFLAGS = (
+					"-filelist",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
+					"-lpython2.7",
+					"-lxml2",
+					"-framework",
+					DebugSymbols,
+					"-framework",
+					Foundation,
+					"-framework",
+					Carbon,
+					"-framework",
+					Security,
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
+					"-filelist",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+					"-lxml2",
+					"-framework",
+					Foundation,
+				);
+				PATH = /opt/local/bin;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+			};
+			name = "CustomSwift-RelWithDebInfo";
+		};
+		237965FB1C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "lldb-gtest";
+			};
+			name = "CustomSwift-RelWithDebInfo";
 		};
 		239504D81BDD451400963CEA /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -12068,7 +12727,7 @@
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
-				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
+				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
 				WARNING_CFLAGS = "-Wreorder";
 			};
 			name = "CustomSwift-Release";
@@ -12799,6 +13458,7 @@
 				94DF55CC1ADDBF240030B937 /* CustomSwift-Debug */,
 				1DEB91F108733DB70010E9CD /* Release */,
 				94DF55DE1ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965E71C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				268A89B211963ECA00D953EB /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12813,6 +13473,7 @@
 				94DF55DA1ADDBF240030B937 /* CustomSwift-Debug */,
 				235AFBB8199BC6AD00897A4B /* Release */,
 				94DF55EC1ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965F61C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				235AFBB9199BC6AD00897A4B /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12827,6 +13488,7 @@
 				94DF55DB1ADDBF240030B937 /* CustomSwift-Debug */,
 				235AFBBF199BC6FD00897A4B /* Release */,
 				94DF55ED1ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965F71C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				235AFBC0199BC6FD00897A4B /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12842,6 +13504,7 @@
 				49CE1A521BDFDDEB00953D79 /* DebugPresubmission */,
 				49CE1A531BDFDDEB00953D79 /* CustomSwift-Debug */,
 				49CE1A541BDFDDEB00953D79 /* CustomSwift-Release */,
+				237965FB1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;
@@ -12855,6 +13518,7 @@
 				94DF55D21ADDBF240030B937 /* CustomSwift-Debug */,
 				26579F6B126A25920007C5CB /* Release */,
 				94DF55E41ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965EF1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				26579F6C126A25920007C5CB /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12869,6 +13533,7 @@
 				94DF55D11ADDBF240030B937 /* CustomSwift-Debug */,
 				2668020A115FD0ED008E1FE4 /* Release */,
 				94DF55E31ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965EE1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				268A89B511963ECA00D953EB /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12883,6 +13548,7 @@
 				94DF55D71ADDBF240030B937 /* CustomSwift-Debug */,
 				2687EAC81508110B00DD8C2E /* Release */,
 				94DF55E91ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965F21C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				2687EAC91508110B00DD8C2E /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12897,6 +13563,7 @@
 				94DF55D31ADDBF240030B937 /* CustomSwift-Debug */,
 				2689FFD613353D7A00698AC0 /* Release */,
 				94DF55E51ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965F01C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				2689FFD713353D7A00698AC0 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12911,6 +13578,7 @@
 				94DF55DC1ADDBF240030B937 /* CustomSwift-Debug */,
 				2690CD1D1A6DC0D000E717C8 /* Release */,
 				94DF55EE1ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965F81C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				2690CD1E1A6DC0D000E717C8 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12925,6 +13593,7 @@
 				94DF55CE1ADDBF240030B937 /* CustomSwift-Debug */,
 				26CEF3AB14FD58BF007286B2 /* Release */,
 				94DF55E01ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965E91C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				26CEF3AC14FD58BF007286B2 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12939,6 +13608,7 @@
 				94DF55CD1ADDBF240030B937 /* CustomSwift-Debug */,
 				26CEF3B414FD592B007286B2 /* Release */,
 				94DF55DF1ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965E81C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				26CEF3B514FD592B007286B2 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12953,6 +13623,7 @@
 				94DF55CF1ADDBF240030B937 /* CustomSwift-Debug */,
 				26CEF3BF14FD596A007286B2 /* Release */,
 				94DF55E11ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965EA1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				26CEF3C014FD596A007286B2 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12967,6 +13638,7 @@
 				94DF55D41ADDBF240030B937 /* CustomSwift-Debug */,
 				26DC6A131337FE6A00FF7998 /* Release */,
 				94DF55E61ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965F11C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				26DC6A141337FE6A00FF7998 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12981,6 +13653,7 @@
 				94DF55D01ADDBF240030B937 /* CustomSwift-Debug */,
 				26F5C26D10F3D9A5009D5894 /* Release */,
 				94DF55E21ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965ED1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				268A89B311963ECA00D953EB /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -12995,6 +13668,7 @@
 				94DF55D81ADDBF240030B937 /* CustomSwift-Debug */,
 				26F8EA1F18F6096500EFD6B1 /* Release */,
 				94DF55EA1ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965F41C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				26F8EA2018F6096500EFD6B1 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -13009,6 +13683,7 @@
 				49753FC21BEAB2BB00019E45 /* CustomSwift-Debug */,
 				49753FC31BEAB2BB00019E45 /* Release */,
 				49753FC41BEAB2BB00019E45 /* CustomSwift-Release */,
+				237965EC1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				49753FC51BEAB2BB00019E45 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -13023,6 +13698,7 @@
 				941E2F551AE81CA100AAA711 /* CustomSwift-Debug */,
 				941E2F561AE81CA100AAA711 /* Release */,
 				941E2F571AE81CA100AAA711 /* CustomSwift-Release */,
+				237965F91C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				941E2F581AE81CA100AAA711 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -13037,6 +13713,7 @@
 				94DF55DD1ADDBF240030B937 /* CustomSwift-Debug */,
 				94A928671A92B81600771D51 /* Release */,
 				94DF55EF1ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965FA1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				94A928681A92B81600771D51 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -13051,6 +13728,7 @@
 				94DF55D91ADDBF240030B937 /* CustomSwift-Debug */,
 				A54A7D0E1A0D99BB001912FE /* Release */,
 				94DF55EB1ADDBF2C0030B937 /* CustomSwift-Release */,
+				237965F51C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				A54A7D0F1A0D99BB001912FE /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -13065,6 +13743,7 @@
 				AF69678C1B4609A80014D221 /* CustomSwift-Debug */,
 				AF69678D1B4609A80014D221 /* Release */,
 				AF69678E1B4609A80014D221 /* CustomSwift-Release */,
+				237965F31C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				AF69678F1B4609A80014D221 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -13079,6 +13758,7 @@
 				AF6967A01B460A0B0014D221 /* CustomSwift-Debug */,
 				AF6967A11B460A0B0014D221 /* Release */,
 				AF6967A21B460A0B0014D221 /* CustomSwift-Release */,
+				237965EB1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				AF6967A31B460A0B0014D221 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;

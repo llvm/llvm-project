@@ -85,6 +85,8 @@ our %llvm_config_info;
         'DebugPresubmission'   => { configure_options => '--preset=LLDB_Swift_DebugPresubmission swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64' },
         'Release'         => { configure_options => '--preset=LLDB_Swift_Release swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64'},
         'ReleaseDebug'   => { configure_options => '--preset=LLDB_Swift_ReleaseDebug swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64'},
+        'RelWithDebInfo' => { configure_options => '--preset=LLDB_Swift_ReleaseDebug swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64'},
+        'RelWithDebInfoAssert' => { configure_options => '--preset=LLDB_Swift_ReleaseAssert swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64' },
         'ReleaseAssert' => { configure_options => '--preset=LLDB_Swift_ReleaseAssert swift_install_destdir=${llvm_dstroot}/swift-macosx-x86_64' },
     
         ### Don't change the --preset=LLDB_BNI bit below without also updating the is_ios_build 
