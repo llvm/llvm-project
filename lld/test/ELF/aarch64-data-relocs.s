@@ -1,20 +1,23 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-freebsd %s -o %t
-// RUN: ld.lld -shared %t -o %t2
+// RUN: llvm-mc -filetype=obj -triple=aarch64-none-freebsd %S/Inputs/abs256.s -o %t256.o
+// RUN: ld.lld %t %t256.o -o %t2
 // RUN: llvm-objdump -s %t2 | FileCheck %s
 // REQUIRES: aarch64
 
+.globl _start
+_start:
 .section .R_AARCH64_ABS64, "ax",@progbits
-  .xword sym + 36
+  .xword foo + 0x24
 
+// S = 0x100, A = 0x24
+// S + A = 0x124
 // CHECK: Contents of section .R_AARCH64_ABS64:
-// CHECK-NEXT: 1000 24000000 00000000
-//                  ^-- A = 0x24
+// CHECK-NEXT: 11000 24010000 00000000
 
 .section .R_AARCH64_PREL64, "ax",@progbits
-  .xword sym - . + 36
+  .xword foo - . + 0x24
 
-// S + A = 0x24
-// P = 0x1008
-// SA - P = 0xfffffffffffff01c
+// S = 0x100, A = 0x24, P = 0x11008
+// S + A - P = 0xfffffffffffef11c
 // CHECK: Contents of section .R_AARCH64_PREL64:
-// CHECK-NEXT: 1008 1cf0ffff ffffffff
+// CHECK-NEXT: 11008 1cf1feff ffffffff

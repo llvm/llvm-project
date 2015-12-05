@@ -143,6 +143,7 @@ public:
 class AArch64TargetInfo final : public TargetInfo {
 public:
   AArch64TargetInfo();
+  unsigned getDynReloc(unsigned Type) const override;
   unsigned getPltRefReloc(unsigned Type) const override;
   void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
@@ -905,6 +906,14 @@ AArch64TargetInfo::AArch64TargetInfo() {
   LazyRelocations = true;
   PltEntrySize = 16;
   PltZeroEntrySize = 32;
+}
+
+unsigned AArch64TargetInfo::getDynReloc(unsigned Type) const {
+  if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
+    return Type;
+  StringRef S = getELFRelocationTypeName(EM_AARCH64, Type);
+  error("Relocation " + S + " cannot be used when making a shared object; "
+                            "recompile with -fPIC.");
 }
 
 unsigned AArch64TargetInfo::getPltRefReloc(unsigned Type) const { return Type; }

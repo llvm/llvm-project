@@ -12,6 +12,7 @@ add_llvm_library(lldCOFF
   InputFiles.cpp
   MarkLive.cpp
   ModuleDef.cpp
+  PDB.cpp
   SymbolTable.cpp
   Symbols.cpp
   Writer.cpp

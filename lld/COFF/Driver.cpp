@@ -648,7 +648,7 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
 
   // Create a dummy PDB file to satisfy build sytem rules.
   if (auto *Arg = Args.getLastArg(OPT_pdb))
-    touchFile(Arg->getValue());
+    createPDB(Arg->getValue());
 
   // Identify unreferenced COMDAT sections.
   if (Config->DoGC)

@@ -164,6 +164,7 @@ std::unique_ptr<MemoryBuffer>
 convertResToCOFF(const std::vector<MemoryBufferRef> &MBs);
 
 void touchFile(StringRef Path);
+void createPDB(StringRef Path);
 
 // Create enum with OPT_xxx values for each option in Options.td
 enum {

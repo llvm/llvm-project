@@ -430,6 +430,8 @@ def getsource_if_available(obj):
 def builder_module():
     if sys.platform.startswith("freebsd"):
         return __import__("builder_freebsd")
+    if sys.platform.startswith("netbsd"):
+        return __import__("builder_netbsd")
     return __import__("builder_" + sys.platform)
 
 def run_adb_command(cmd, device_id):
