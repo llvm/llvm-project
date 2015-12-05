@@ -74,7 +74,8 @@ namespace llvm {
 
 std::string getPGOFuncName(StringRef RawFuncName,
                            GlobalValue::LinkageTypes Linkage,
-                           StringRef FileName) {
+                           StringRef FileName,
+                           uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
 
   // Function names may be prefixed with a binary '1' to indicate
   // that the backend should not modify the symbols due to any platform
@@ -96,8 +97,9 @@ std::string getPGOFuncName(StringRef RawFuncName,
   return FuncName;
 }
 
-std::string getPGOFuncName(const Function &F) {
-  return getPGOFuncName(F.getName(), F.getLinkage(), F.getParent()->getName());
+std::string getPGOFuncName(const Function &F, uint64_t Version) {
+  return getPGOFuncName(F.getName(), F.getLinkage(), F.getParent()->getName(),
+                        Version);
 }
 
 GlobalVariable *createPGOFuncNameVar(Module &M,

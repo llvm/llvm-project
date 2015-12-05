@@ -1748,13 +1748,13 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
     MI->setDesc(NewDesc);
 
     if (NewDesc.ImplicitDefs)
-      for (const uint16_t *ImpDefs = NewDesc.getImplicitDefs();
+      for (const MCPhysReg *ImpDefs = NewDesc.getImplicitDefs();
            *ImpDefs; ++ImpDefs)
         if (!MI->definesRegister(*ImpDefs))
           MI->addOperand(*MI->getParent()->getParent(),
                          MachineOperand::CreateReg(*ImpDefs, true, true));
     if (NewDesc.ImplicitUses)
-      for (const uint16_t *ImpUses = NewDesc.getImplicitUses();
+      for (const MCPhysReg *ImpUses = NewDesc.getImplicitUses();
            *ImpUses; ++ImpUses)
         if (!MI->readsRegister(*ImpUses))
           MI->addOperand(*MI->getParent()->getParent(),

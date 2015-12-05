@@ -152,6 +152,9 @@ protected:
   /// Processor has RDSEED instructions.
   bool HasRDSEED;
 
+  /// Processor has LAHF/SAHF instructions.
+  bool HasLAHFSAHF;
+
   /// True if BT (bit test) of memory instructions are slow.
   bool IsBTMemSlow;
 
@@ -374,6 +377,7 @@ public:
   bool hasSHA() const { return HasSHA; }
   bool hasPRFCHW() const { return HasPRFCHW; }
   bool hasRDSEED() const { return HasRDSEED; }
+  bool hasLAHFSAHF() const { return HasLAHFSAHF; }
   bool isBTMemSlow() const { return IsBTMemSlow; }
   bool isSHLDSlow() const { return IsSHLDSlow; }
   bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }

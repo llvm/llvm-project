@@ -369,7 +369,7 @@ public:
   /// AllocateRegBlock - Attempt to allocate a block of RegsRequired consecutive
   /// registers. If this is not possible, return zero. Otherwise, return the first
   /// register of the block that were allocated, marking the entire block as allocated.
-  unsigned AllocateRegBlock(ArrayRef<uint16_t> Regs, unsigned RegsRequired) {
+  unsigned AllocateRegBlock(ArrayRef<MCPhysReg> Regs, unsigned RegsRequired) {
     if (RegsRequired > Regs.size())
       return 0;
 

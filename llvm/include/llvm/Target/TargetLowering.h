@@ -1293,7 +1293,7 @@ protected:
 
   /// Remove all register classes.
   void clearRegisterClasses() {
-    memset(RegClassForVT, 0,MVT::LAST_VALUETYPE * sizeof(TargetRegisterClass*));
+    std::fill(std::begin(RegClassForVT), std::end(RegClassForVT), nullptr);
 
     AvailableRegClasses.clear();
   }

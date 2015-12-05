@@ -248,6 +248,10 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_SaveList;
     return CSR_64_RT_AllRegs_SaveList;
+  case CallingConv::CXX_FAST_TLS:
+    if (Is64Bit)
+      return CSR_64_TLS_Darwin_SaveList;
+    break;
   case CallingConv::Intel_OCL_BI: {
     if (HasAVX512 && IsWin64)
       return CSR_Win64_Intel_OCL_BI_AVX512_SaveList;
@@ -313,6 +317,10 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_RegMask;
     return CSR_64_RT_AllRegs_RegMask;
+  case CallingConv::CXX_FAST_TLS:
+    if (Is64Bit)
+      return CSR_64_TLS_Darwin_RegMask;
+    break;
   case CallingConv::Intel_OCL_BI: {
     if (HasAVX512 && IsWin64)
       return CSR_Win64_Intel_OCL_BI_AVX512_RegMask;

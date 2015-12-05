@@ -388,8 +388,8 @@ private:
   class ParseMemoryInst {
   public:
     ParseMemoryInst(Instruction *Inst, const TargetTransformInfo &TTI)
-        : Load(false), Store(false), Vol(false), MayReadFromMemory(false),
-          MayWriteToMemory(false), MatchingId(-1), Ptr(nullptr) {
+      : Load(false), Store(false), IsSimple(true), MayReadFromMemory(false),
+        MayWriteToMemory(false), MatchingId(-1), Ptr(nullptr) {
       MayReadFromMemory = Inst->mayReadFromMemory();
       MayWriteToMemory = Inst->mayWriteToMemory();
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
@@ -402,22 +402,22 @@ private:
           MatchingId = Info.MatchingId;
           MayReadFromMemory = Info.ReadMem;
           MayWriteToMemory = Info.WriteMem;
-          Vol = Info.Vol;
+          IsSimple = Info.IsSimple;
           Ptr = Info.PtrVal;
         }
       } else if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
         Load = true;
-        Vol = !LI->isSimple();
+        IsSimple = LI->isSimple();
         Ptr = LI->getPointerOperand();
       } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
         Store = true;
-        Vol = !SI->isSimple();
+        IsSimple = SI->isSimple();
         Ptr = SI->getPointerOperand();
       }
     }
     bool isLoad() const { return Load; }
     bool isStore() const { return Store; }
-    bool isVolatile() const { return Vol; }
+    bool isSimple() const { return IsSimple; }
     bool isMatchingMemLoc(const ParseMemoryInst &Inst) const {
       return Ptr == Inst.Ptr && MatchingId == Inst.MatchingId;
     }
@@ -430,7 +430,7 @@ private:
   private:
     bool Load;
     bool Store;
-    bool Vol;
+    bool IsSimple;
     bool MayReadFromMemory;
     bool MayWriteToMemory;
     // For regular (non-intrinsic) loads/stores, this is set to -1. For
@@ -554,8 +554,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     ParseMemoryInst MemInst(Inst, TTI);
     // If this is a non-volatile load, process it.
     if (MemInst.isValid() && MemInst.isLoad()) {
-      // Ignore volatile loads.
-      if (MemInst.isVolatile()) {
+      // Ignore volatile or ordered loads.
+      if (!MemInst.isSimple()) {
         LastStore = nullptr;
         // Don't CSE across synchronization boundaries.
         if (Inst->mayWriteToMemory())
@@ -662,8 +662,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
             MemInst.getPtr(),
             LoadValue(Inst, CurrentGeneration, MemInst.getMatchingId()));
 
-        // Remember that this was the last store we saw for DSE.
-        if (!MemInst.isVolatile())
+        // Remember that this was the last normal store we saw for DSE.
+        if (MemInst.isSimple())
           LastStore = Inst;
       }
     }

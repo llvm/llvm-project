@@ -160,15 +160,15 @@ static bool RetCC_ARM_AAPCS_Custom_f64(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                    State);
 }
 
-static const uint16_t RRegList[] = { ARM::R0,  ARM::R1,  ARM::R2,  ARM::R3 };
+static const MCPhysReg RRegList[] = { ARM::R0,  ARM::R1,  ARM::R2,  ARM::R3 };
 
-static const uint16_t SRegList[] = { ARM::S0,  ARM::S1,  ARM::S2,  ARM::S3,
-                                     ARM::S4,  ARM::S5,  ARM::S6,  ARM::S7,
-                                     ARM::S8,  ARM::S9,  ARM::S10, ARM::S11,
-                                     ARM::S12, ARM::S13, ARM::S14,  ARM::S15 };
-static const uint16_t DRegList[] = { ARM::D0, ARM::D1, ARM::D2, ARM::D3,
-                                     ARM::D4, ARM::D5, ARM::D6, ARM::D7 };
-static const uint16_t QRegList[] = { ARM::Q0, ARM::Q1, ARM::Q2, ARM::Q3 };
+static const MCPhysReg SRegList[] = { ARM::S0,  ARM::S1,  ARM::S2,  ARM::S3,
+                                      ARM::S4,  ARM::S5,  ARM::S6,  ARM::S7,
+                                      ARM::S8,  ARM::S9,  ARM::S10, ARM::S11,
+                                      ARM::S12, ARM::S13, ARM::S14,  ARM::S15 };
+static const MCPhysReg DRegList[] = { ARM::D0, ARM::D1, ARM::D2, ARM::D3,
+                                      ARM::D4, ARM::D5, ARM::D6, ARM::D7 };
+static const MCPhysReg QRegList[] = { ARM::Q0, ARM::Q1, ARM::Q2, ARM::Q3 };
 
 
 // Allocate part of an AAPCS HFA or HVA. We assume that each member of the HA
@@ -203,7 +203,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned &ValNo, MVT &ValVT,
   unsigned StackAlign = DL.getStackAlignment();
   unsigned Align = std::min(PendingMembers[0].getExtraInfo(), StackAlign);
 
-  ArrayRef<uint16_t> RegList;
+  ArrayRef<MCPhysReg> RegList;
   switch (LocVT.SimpleTy) {
   case MVT::i32: {
     RegList = RRegList;

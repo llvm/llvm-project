@@ -231,7 +231,7 @@ namespace opts {
 
 namespace llvm {
 
-void reportError(Twine Msg) {
+LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
   outs() << "\nError reading file: " << Msg << ".\n";
   outs().flush();
   exit(1);

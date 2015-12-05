@@ -64,7 +64,7 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
         // can use $discard instead.
         MachineOperand &MO = MI.getOperand(0);
         unsigned OldReg = MO.getReg();
-        if (OldReg == MI.getOperand(2).getReg()) {
+        if (OldReg == MI.getOperand(3).getReg()) {
           unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
           MO.setReg(NewReg);
           MO.setIsDead();

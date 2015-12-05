@@ -171,10 +171,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   // Fails with: should be run after register allocation.
   disablePass(&MachineCopyPropagationID);
 
-  // TODO: Until we get ReverseBranchCondition support, MachineBlockPlacement
-  // can create ugly-looking control flow.
-  disablePass(&MachineBlockPlacementID);
-
   // Run the register coloring pass to reduce the total number of registers.
   addPass(createWebAssemblyRegColoring());
 }
@@ -182,6 +178,9 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 void WebAssemblyPassConfig::addPreEmitPass() {
   // Put the CFG in structured form; insert BLOCK and LOOP markers.
   addPass(createWebAssemblyCFGStackify());
+
+  // Lower br_unless into br_if.
+  addPass(createWebAssemblyLowerBrUnless());
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
   addPass(createWebAssemblyRegNumbering());

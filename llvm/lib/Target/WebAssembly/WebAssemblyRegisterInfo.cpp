@@ -67,3 +67,12 @@ WebAssemblyRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const WebAssemblyFrameLowering *TFI = getFrameLowering(MF);
   return Regs[TFI->hasFP(MF)][TT.isArch64Bit()];
 }
+
+const TargetRegisterClass *
+WebAssemblyRegisterInfo::getPointerRegClass(const MachineFunction &MF,
+                                            unsigned Kind) const {
+  assert(Kind == 0 && "Only one kind of pointer on WebAssembly");
+  if (MF.getSubtarget<WebAssemblySubtarget>().hasAddr64())
+    return &WebAssembly::I64RegClass;
+  return &WebAssembly::I32RegClass;
+}

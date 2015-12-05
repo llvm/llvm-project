@@ -756,6 +756,7 @@ function. The operand fields are:
   * ``anyregcc``: code 13
   * ``preserve_mostcc``: code 14
   * ``preserve_allcc``: code 15
+  * ``cxx_fast_tlscc``: code 17
   * ``x86_stdcallcc``: code 64
   * ``x86_fastcallcc``: code 65
   * ``arm_apcscc``: code 66

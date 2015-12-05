@@ -15,6 +15,8 @@
 #include "llvm-c/lto.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
 #include "llvm/LTO/LTOModule.h"
@@ -64,6 +66,24 @@ static bool initialized = false;
 // Holds the command-line option parsing state of the LTO module.
 static bool parsedOptions = false;
 
+static LLVMContext *LTOContext = nullptr;
+
+static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
+  if (DI.getSeverity() != DS_Error) {
+    DiagnosticPrinterRawOStream DP(errs());
+    DI.print(DP);
+    errs() << '\n';
+    return;
+  }
+  sLastErrorString = "";
+  {
+    raw_string_ostream Stream(sLastErrorString);
+    DiagnosticPrinterRawOStream DP(Stream);
+    DI.print(DP);
+  }
+  sLastErrorString += '\n';
+}
+
 // Initialize the configured targets if they have not been initialized.
 static void lto_initialize() {
   if (!initialized) {
@@ -79,6 +99,9 @@ static void lto_initialize() {
     InitializeAllAsmParsers();
     InitializeAllAsmPrinters();
     InitializeAllDisassemblers();
+
+    LTOContext = &getGlobalContext();
+    LTOContext->setDiagnosticHandler(diagnosticHandler, nullptr, true);
     initialized = true;
   }
 }
@@ -95,7 +118,7 @@ static void handleLibLTODiagnostic(lto_codegen_diagnostic_severity_t Severity,
 // libLTO API semantics, which require that the code generator owns the object
 // file.
 struct LibLTOCodeGenerator : LTOCodeGenerator {
-  LibLTOCodeGenerator() : LTOCodeGenerator(getGlobalContext()) {
+  LibLTOCodeGenerator() : LTOCodeGenerator(*LTOContext) {
     setDiagnosticHandler(handleLibLTODiagnostic, nullptr); }
   LibLTOCodeGenerator(std::unique_ptr<LLVMContext> Context)
       : LTOCodeGenerator(*Context), OwnedContext(std::move(Context)) {
@@ -166,14 +189,21 @@ lto_module_is_object_file_in_memory_for_target(const void* mem,
 lto_module_t lto_module_create(const char* path) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  return wrap(LTOModule::createFromFile(path, Options, sLastErrorString));
+  ErrorOr<std::unique_ptr<LTOModule>> M =
+      LTOModule::createFromFile(*LTOContext, path, Options);
+  if (!M)
+    return nullptr;
+  return wrap(M->release());
 }
 
 lto_module_t lto_module_create_from_fd(int fd, const char *path, size_t size) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  return wrap(
-      LTOModule::createFromOpenFile(fd, path, size, Options, sLastErrorString));
+  ErrorOr<std::unique_ptr<LTOModule>> M =
+      LTOModule::createFromOpenFile(*LTOContext, fd, path, size, Options);
+  if (!M)
+    return nullptr;
+  return wrap(M->release());
 }
 
 lto_module_t lto_module_create_from_fd_at_offset(int fd, const char *path,
@@ -182,14 +212,21 @@ lto_module_t lto_module_create_from_fd_at_offset(int fd, const char *path,
                                                  off_t offset) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  return wrap(LTOModule::createFromOpenFileSlice(fd, path, map_size, offset,
-                                                 Options, sLastErrorString));
+  ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromOpenFileSlice(
+      *LTOContext, fd, path, map_size, offset, Options);
+  if (!M)
+    return nullptr;
+  return wrap(M->release());
 }
 
 lto_module_t lto_module_create_from_memory(const void* mem, size_t length) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  return wrap(LTOModule::createFromBuffer(mem, length, Options, sLastErrorString));
+  ErrorOr<std::unique_ptr<LTOModule>> M =
+      LTOModule::createFromBuffer(*LTOContext, mem, length, Options);
+  if (!M)
+    return nullptr;
+  return wrap(M->release());
 }
 
 lto_module_t lto_module_create_from_memory_with_path(const void* mem,
@@ -197,16 +234,22 @@ lto_module_t lto_module_create_from_memory_with_path(const void* mem,
                                                      const char *path) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  return wrap(
-      LTOModule::createFromBuffer(mem, length, Options, sLastErrorString, path));
+  ErrorOr<std::unique_ptr<LTOModule>> M =
+      LTOModule::createFromBuffer(*LTOContext, mem, length, Options, path);
+  if (!M)
+    return nullptr;
+  return wrap(M->release());
 }
 
 lto_module_t lto_module_create_in_local_context(const void *mem, size_t length,
                                                 const char *path) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  return wrap(LTOModule::createInLocalContext(mem, length, Options,
-                                              sLastErrorString, path));
+  ErrorOr<std::unique_ptr<LTOModule>> M =
+      LTOModule::createInLocalContext(mem, length, Options, path);
+  if (!M)
+    return nullptr;
+  return wrap(M->release());
 }
 
 lto_module_t lto_module_create_in_codegen_context(const void *mem,
@@ -215,8 +258,9 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
                                                   lto_code_gen_t cg) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  return wrap(LTOModule::createInContext(mem, length, Options, sLastErrorString,
-                                         path, &unwrap(cg)->getContext()));
+  ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createInContext(
+      mem, length, Options, path, &unwrap(cg)->getContext());
+  return wrap(M->release());
 }
 
 void lto_module_dispose(lto_module_t mod) { delete unwrap(mod); }

@@ -369,7 +369,7 @@ bool CallInst::dataOperandHasImpliedAttr(unsigned i,
 
   assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
          "Must be either a call argument or an operand bundle!");
-  return getOperandBundleForOperand(i - 1).operandsHaveAttr(A);
+  return bundleOperandHasAttr(i - 1, A);
 }
 
 /// IsConstantOne - Return true only if val is constant int 1
@@ -646,7 +646,7 @@ bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
 
   assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
          "Must be either an invoke argument or an operand bundle!");
-  return getOperandBundleForOperand(i - 1).operandsHaveAttr(A);
+  return bundleOperandHasAttr(i - 1, A);
 }
 
 void InvokeInst::addAttribute(unsigned i, Attribute::AttrKind attr) {

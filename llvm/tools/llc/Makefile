@@ -9,7 +9,7 @@
 
 LEVEL := ../..
 TOOLNAME := llc
-LINK_COMPONENTS := all-targets bitreader asmparser irreader mirparser
+LINK_COMPONENTS := all-targets bitreader asmparser irreader mirparser transformutils
 
 # Support plugins.
 NO_DEAD_STRIP := 1

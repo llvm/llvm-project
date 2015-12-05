@@ -1121,14 +1121,12 @@ struct OperandBundleUse {
   explicit OperandBundleUse(StringMapEntry<uint32_t> *Tag, ArrayRef<Use> Inputs)
       : Inputs(Inputs), Tag(Tag) {}
 
-  /// \brief Return true if all the operands in this operand bundle have the
-  /// attribute A.
-  ///
-  /// Currently there is no way to have attributes on operand bundles differ on
-  /// a per operand granularity.
-  bool operandsHaveAttr(Attribute::AttrKind A) const {
+  /// \brief Return true if the operand at index \p Idx in this operand bundle
+  /// has the attribute A.
+  bool operandHasAttr(unsigned Idx, Attribute::AttrKind A) const {
     if (isDeoptOperandBundle())
-      return A == Attribute::ReadOnly || A == Attribute::NoCapture;
+      if (A == Attribute::ReadOnly || A == Attribute::NoCapture)
+        return Inputs[Idx]->getType()->isPointerTy();
 
     // Conservative answer:  no operands have any attributes.
     return false;
@@ -1351,11 +1349,7 @@ public:
   /// It is an error to call this with an OpIdx that does not correspond to an
   /// bundle operand.
   OperandBundleUse getOperandBundleForOperand(unsigned OpIdx) const {
-    for (auto &BOI : bundle_op_infos())
-      if (BOI.Begin <= OpIdx && OpIdx < BOI.End)
-        return operandBundleFromBundleOpInfo(BOI);
-
-    llvm_unreachable("Did not find operand bundle for operand!");
+    return operandBundleFromBundleOpInfo(getBundleOpInfoForOperand(OpIdx));
   }
 
   /// \brief Return true if this operand bundle user has operand bundles that
@@ -1380,6 +1374,14 @@ public:
     }
 
     return false;
+  }
+
+  /// \brief Return true if the bundle operand at index \p OpIdx has the
+  /// attribute \p A.
+  bool bundleOperandHasAttr(unsigned OpIdx,  Attribute::AttrKind A) const {
+    auto &BOI = getBundleOpInfoForOperand(OpIdx);
+    auto OBU = operandBundleFromBundleOpInfo(BOI);
+    return OBU.operandHasAttr(OpIdx - BOI.Begin, A);
   }
 
 protected:
@@ -1516,6 +1518,18 @@ protected:
     assert(BI == Bundles.end() && "Incorrect allocation?");
 
     return It;
+  }
+
+  /// \brief Return the BundleOpInfo for the operand at index OpIdx.
+  ///
+  /// It is an error to call this with an OpIdx that does not correspond to an
+  /// bundle operand.
+  const BundleOpInfo &getBundleOpInfoForOperand(unsigned OpIdx) const {
+    for (auto &BOI : bundle_op_infos())
+      if (BOI.Begin <= OpIdx && OpIdx < BOI.End)
+        return BOI;
+
+    llvm_unreachable("Did not find operand bundle for operand!");
   }
 
   /// \brief Return the total number of values used in \p Bundles.

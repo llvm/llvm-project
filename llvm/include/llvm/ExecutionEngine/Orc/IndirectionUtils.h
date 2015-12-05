@@ -84,7 +84,11 @@ public:
   }
 
   /// @brief Reserve a compile callback.
-  virtual CompileCallbackInfo getCompileCallback() = 0;
+  CompileCallbackInfo getCompileCallback() {
+    TargetAddress TrampolineAddr = getAvailableTrampolineAddr();
+    auto &Compile = this->ActiveTrampolines[TrampolineAddr];
+    return CompileCallbackInfo(TrampolineAddr, Compile);
+  }
 
   /// @brief Get a CompileCallbackInfo for an existing callback.
   CompileCallbackInfo getCompileCallbackInfo(TargetAddress TrampolineAddr) {
@@ -113,6 +117,20 @@ protected:
   std::vector<TargetAddress> AvailableTrampolines;
 
 private:
+
+  TargetAddress getAvailableTrampolineAddr() {
+    if (this->AvailableTrampolines.empty())
+      grow();
+    assert(!this->AvailableTrampolines.empty() &&
+           "Failed to grow available trampolines.");
+    TargetAddress TrampolineAddr = this->AvailableTrampolines.back();
+    this->AvailableTrampolines.pop_back();
+    return TrampolineAddr;
+  }
+
+  // Create new trampolines - to be implemented in subclasses.
+  virtual void grow() = 0;
+
   virtual void anchor();
 };
 
@@ -145,13 +163,6 @@ public:
     assert(!EC && "Failed to mprotect resolver block");
   }
 
-  /// @brief Get/create a compile callback with the given signature.
-  CompileCallbackInfo getCompileCallback() final {
-    TargetAddress TrampolineAddr = getAvailableTrampolineAddr();
-    auto &Compile = this->ActiveTrampolines[TrampolineAddr];
-    return CompileCallbackInfo(TrampolineAddr, Compile);
-  }
-
 private:
 
   static TargetAddress reenter(void *CCMgr, void *TrampolineId) {
@@ -162,17 +173,7 @@ private:
                reinterpret_cast<uintptr_t>(TrampolineId)));
   }
 
-  TargetAddress getAvailableTrampolineAddr() {
-    if (this->AvailableTrampolines.empty())
-      grow();
-    assert(!this->AvailableTrampolines.empty() &&
-           "Failed to grow available trampolines.");
-    TargetAddress TrampolineAddr = this->AvailableTrampolines.back();
-    this->AvailableTrampolines.pop_back();
-    return TrampolineAddr;
-  }
-
-  void grow() {
+  void grow() override {
     assert(this->AvailableTrampolines.empty() && "Growing prematurely?");
 
     std::error_code EC;
@@ -201,7 +202,7 @@ private:
 					  sys::Memory::MF_READ |
 					  sys::Memory::MF_EXEC);
     assert(!EC && "Failed to mprotect trampoline block");
-    
+
     TrampolineBlocks.push_back(std::move(TrampolineBlock));
   }
 
@@ -403,7 +404,7 @@ void moveGlobalVariableInitializer(GlobalVariable &OrigGV,
                                    ValueMaterializer *Materializer = nullptr,
                                    GlobalVariable *NewGV = nullptr);
 
-/// @brief Clone 
+/// @brief Clone
 GlobalAlias* cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
                                   ValueToValueMapTy &VMap);
 

@@ -406,6 +406,16 @@ added in the future:
     This calling convention, like the `PreserveMost` calling convention, will be
     used by a future version of the ObjectiveC runtime and should be considered
     experimental at this time.
+"``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
+    This calling convention aims to minimize overhead in the caller by
+    preserving as many registers as possible. This calling convention behaves
+    identical to the `C` calling convention on how arguments and return values
+    are passed, but it uses a different set of caller/callee-saved registers.
+    Given that C-style TLS on Darwin has its own special CSRs, we can't use the
+    existing `PreserveMost`.
+
+    - On X86-64 the callee preserves all general purpose registers, except for
+      RDI and RAX.
 "``cc <n>``" - Numbered convention
     Any calling convention may be specified by number, allowing
     target-specific calling conventions to be used. Target specific

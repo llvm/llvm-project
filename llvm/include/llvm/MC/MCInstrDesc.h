@@ -15,12 +15,12 @@
 #ifndef LLVM_MC_MCINSTRDESC_H
 #define LLVM_MC_MCINSTRDESC_H
 
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/DataTypes.h"
 #include <string>
 
 namespace llvm {
   class MCInst;
-  class MCRegisterInfo;
   class MCSubtargetInfo;
   class FeatureBitset;
 
@@ -137,16 +137,16 @@ enum Flag {
 /// directly to describe itself.
 class MCInstrDesc {
 public:
-  unsigned short Opcode;        // The opcode number
-  unsigned short NumOperands;   // Num of args (may be more if variable_ops)
-  unsigned char NumDefs;        // Num of args that are definitions
-  unsigned char Size;           // Number of bytes in encoding.
-  unsigned short SchedClass;    // enum identifying instr sched class
-  uint64_t Flags;               // Flags identifying machine instr class
-  uint64_t TSFlags;             // Target Specific Flag values
-  const uint16_t *ImplicitUses; // Registers implicitly read by this instr
-  const uint16_t *ImplicitDefs; // Registers implicitly defined by this instr
-  const MCOperandInfo *OpInfo;  // 'NumOperands' entries about operands
+  unsigned short Opcode;         // The opcode number
+  unsigned short NumOperands;    // Num of args (may be more if variable_ops)
+  unsigned char NumDefs;         // Num of args that are definitions
+  unsigned char Size;            // Number of bytes in encoding.
+  unsigned short SchedClass;     // enum identifying instr sched class
+  uint64_t Flags;                // Flags identifying machine instr class
+  uint64_t TSFlags;              // Target Specific Flag values
+  const MCPhysReg *ImplicitUses; // Registers implicitly read by this instr
+  const MCPhysReg *ImplicitDefs; // Registers implicitly defined by this instr
+  const MCOperandInfo *OpInfo;   // 'NumOperands' entries about operands
   // Subtarget feature that this is deprecated on, if any
   // -1 implies this is not deprecated by any single feature. It may still be 
   // deprecated due to a "complex" reason, below.
@@ -472,7 +472,7 @@ public:
   /// marked as implicitly reading the 'CL' register, which it always does.
   ///
   /// This method returns null if the instruction has no implicit uses.
-  const uint16_t *getImplicitUses() const { return ImplicitUses; }
+  const MCPhysReg *getImplicitUses() const { return ImplicitUses; }
 
   /// \brief Return the number of implicit uses this instruction has.
   unsigned getNumImplicitUses() const {
@@ -494,7 +494,7 @@ public:
   /// EAX/EDX/EFLAGS registers.
   ///
   /// This method returns null if the instruction has no implicit defs.
-  const uint16_t *getImplicitDefs() const { return ImplicitDefs; }
+  const MCPhysReg *getImplicitDefs() const { return ImplicitDefs; }
 
   /// \brief Return the number of implicit defs this instruct has.
   unsigned getNumImplicitDefs() const {
@@ -509,7 +509,7 @@ public:
   /// \brief Return true if this instruction implicitly
   /// uses the specified physical register.
   bool hasImplicitUseOfPhysReg(unsigned Reg) const {
-    if (const uint16_t *ImpUses = ImplicitUses)
+    if (const MCPhysReg *ImpUses = ImplicitUses)
       for (; *ImpUses; ++ImpUses)
         if (*ImpUses == Reg)
           return true;

@@ -1,0 +1,7 @@
+REQUIRES: x86_64-linux
+RUN: sancov -obj %p/Inputs/test-linux_x86_64 -not-covered-functions %p/Inputs/test-linux_x86_64.sancov | FileCheck %s
+RUN: sancov -obj %p/Inputs/test-linux_x86_64 -not-covered-functions %p/Inputs/test-linux_x86_64-1.sancov | FileCheck --check-prefix=CHECK1 --allow-empty %s
+
+CHECK: Inputs{{[/\\]}}foo.cpp:5 foo()
+CHECK1-NOT: {{.}}*
+

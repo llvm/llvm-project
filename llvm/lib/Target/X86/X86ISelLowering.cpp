@@ -13930,6 +13930,9 @@ SDValue X86TargetLowering::ConvertCmpIfNecessary(SDValue Cmp,
   SDValue Srl = DAG.getNode(ISD::SRL, dl, MVT::i16, FNStSW,
                             DAG.getConstant(8, dl, MVT::i8));
   SDValue TruncSrl = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Srl);
+
+  // Some 64-bit targets lack SAHF support, but they do support FCOMI.
+  assert(Subtarget->hasLAHFSAHF() && "Target doesn't support SAHF or FCOMI?");
   return DAG.getNode(X86ISD::SAHF, dl, MVT::i32, TruncSrl);
 }
 

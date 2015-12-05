@@ -42,7 +42,7 @@ void Print(const Unit &U, const char *PrintAfter = "");
 void PrintASCII(const Unit &U, const char *PrintAfter = "");
 std::string Hash(const Unit &U);
 void SetTimer(int Seconds);
-void PrintFileAsBase64(const std::string &Path);
+std::string Base64(const Unit &U);
 int ExecuteCommand(const std::string &Command);
 
 // Private copy of SHA1 implementation.

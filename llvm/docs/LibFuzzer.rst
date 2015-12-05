@@ -483,6 +483,8 @@ Trophies
 
 * `Python <http://bugs.python.org/issue25388>`_
 
+* OpenSSL/BoringSSL: `[1] <https://boringssl.googlesource.com/boringssl/+/cb852981cd61733a7a1ae4fd8755b7ff950e857d>`_
+
 * `Libxml2
   <https://bugzilla.gnome.org/buglist.cgi?bug_status=__all__&content=libFuzzer&list_id=68957&order=Importance&product=libxml2&query_format=specific>`_
 

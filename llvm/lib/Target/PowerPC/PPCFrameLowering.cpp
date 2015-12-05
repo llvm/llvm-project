@@ -30,7 +30,7 @@ using namespace llvm;
 
 /// VRRegNo - Map from a numbered VR register to its enum value.
 ///
-static const uint16_t VRRegNo[] = {
+static const MCPhysReg VRRegNo[] = {
  PPC::V0 , PPC::V1 , PPC::V2 , PPC::V3 , PPC::V4 , PPC::V5 , PPC::V6 , PPC::V7 ,
  PPC::V8 , PPC::V9 , PPC::V10, PPC::V11, PPC::V12, PPC::V13, PPC::V14, PPC::V15,
  PPC::V16, PPC::V17, PPC::V18, PPC::V19, PPC::V20, PPC::V21, PPC::V22, PPC::V23,

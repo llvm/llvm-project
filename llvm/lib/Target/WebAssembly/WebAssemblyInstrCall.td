@@ -17,10 +17,10 @@ let Defs = [ARGUMENTS] in {
 // The call sequence start/end LLVM-isms isn't useful to WebAssembly since it's
 // a virtual ISA.
 let isCodeGenOnly = 1 in {
-def : I<(outs), (ins i64imm:$amt),
-        [(WebAssemblycallseq_start timm:$amt)]>;
-def : I<(outs), (ins i64imm:$amt1, i64imm:$amt2),
-        [(WebAssemblycallseq_end timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKDOWN : I<(outs), (ins i64imm:$amt),
+                         [(WebAssemblycallseq_start timm:$amt)]>;
+def ADJCALLSTACKUP : I<(outs), (ins i64imm:$amt),
+                       [(WebAssemblycallseq_end timm:$amt, undef)]>;
 } // isCodeGenOnly = 1
 
 multiclass CALL<WebAssemblyRegClass vt> {

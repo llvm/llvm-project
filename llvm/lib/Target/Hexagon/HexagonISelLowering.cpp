@@ -316,18 +316,18 @@ static bool CC_HexagonVector(unsigned ValNo, MVT ValVT,
                              MVT LocVT, CCValAssign::LocInfo LocInfo,
                              ISD::ArgFlagsTy ArgFlags, CCState &State) {
 
-    static const uint16_t VecLstS[] = { Hexagon::V0, Hexagon::V1,
-                                        Hexagon::V2, Hexagon::V3,
-                                        Hexagon::V4, Hexagon::V5,
-                                        Hexagon::V6, Hexagon::V7,
-                                        Hexagon::V8, Hexagon::V9,
-                                        Hexagon::V10, Hexagon::V11,
-                                        Hexagon::V12, Hexagon::V13,
-                                        Hexagon::V14, Hexagon::V15};
-    static const uint16_t VecLstD[] = { Hexagon::W0, Hexagon::W1,
-                                        Hexagon::W2, Hexagon::W3,
-                                        Hexagon::W4, Hexagon::W5,
-                                        Hexagon::W6, Hexagon::W7};
+    static const MCPhysReg VecLstS[] = { Hexagon::V0, Hexagon::V1,
+                                         Hexagon::V2, Hexagon::V3,
+                                         Hexagon::V4, Hexagon::V5,
+                                         Hexagon::V6, Hexagon::V7,
+                                         Hexagon::V8, Hexagon::V9,
+                                         Hexagon::V10, Hexagon::V11,
+                                         Hexagon::V12, Hexagon::V13,
+                                         Hexagon::V14, Hexagon::V15};
+    static const MCPhysReg VecLstD[] = { Hexagon::W0, Hexagon::W1,
+                                         Hexagon::W2, Hexagon::W3,
+                                         Hexagon::W4, Hexagon::W5,
+                                         Hexagon::W6, Hexagon::W7};
   auto &MF = State.getMachineFunction();
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   bool UseHVX = HST.useHVXOps();
@@ -1520,7 +1520,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       Subtarget(ST) {
   bool IsV4 = !Subtarget.hasV5TOps();
   auto &HRI = *Subtarget.getRegisterInfo();
-  bool UseHVX = Subtarget.useHVXOps(), UseHVXDbl = Subtarget.useHVXDblOps();
+  bool UseHVX = Subtarget.useHVXOps();
+  bool UseHVXSgl = Subtarget.useHVXSglOps();
+  bool UseHVXDbl = Subtarget.useHVXDblOps();
 
   setPrefLoopAlignment(4);
   setPrefFunctionAlignment(4);
@@ -1808,17 +1810,18 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i16, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8i8,  Custom);
   if (UseHVX) {
-    if(!UseHVXDbl) {
-      setOperationAction(ISD::CONCAT_VECTORS, MVT::v128i8, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS, MVT::v64i16, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS, MVT::v32i32, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS, MVT::v16i64, Custom);
-    }
-    else {
-      setOperationAction(ISD::CONCAT_VECTORS, MVT::v256i8, Custom);
+    if (UseHVXSgl) {
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v128i8,  Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v64i16,  Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v32i32,  Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v16i64,  Custom);
+    } else if (UseHVXDbl) {
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v256i8,  Custom);
       setOperationAction(ISD::CONCAT_VECTORS, MVT::v128i16, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS, MVT::v64i32, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS, MVT::v32i64, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v64i32,  Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v32i64,  Custom);
+    } else {
+      llvm_unreachable("Unrecognized HVX mode");
     }
   }
   // Subtarget-specific operation actions.
@@ -2212,8 +2215,7 @@ HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   unsigned Size = VT.getSizeInBits();
 
-  // A vector larger than 64 bits cannot be represented in Hexagon.
-  // Expand will split the vector.
+  // Only handle vectors of 64 bits or shorter.
   if (Size > 64)
     return SDValue();
 
@@ -2350,63 +2352,58 @@ HexagonTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
   bool UseHVX = Subtarget.useHVXOps();
   EVT VT = Op.getValueType();
   unsigned NElts = Op.getNumOperands();
-  SDValue Vec = Op.getOperand(0);
-  EVT VecVT = Vec.getValueType();
-  SDValue Width = DAG.getConstant(VecVT.getSizeInBits(), dl, MVT::i64);
-  SDValue Shifted = DAG.getNode(ISD::SHL, dl, MVT::i64, Width,
-                                DAG.getConstant(32, dl, MVT::i64));
-  SDValue ConstVal = DAG.getConstant(0, dl, MVT::i64);
+  SDValue Vec0 = Op.getOperand(0);
+  EVT VecVT = Vec0.getValueType();
+  unsigned Width = VecVT.getSizeInBits();
 
-  ConstantSDNode *W = dyn_cast<ConstantSDNode>(Width);
-  ConstantSDNode *S = dyn_cast<ConstantSDNode>(Shifted);
+  if (NElts == 2) {
+    MVT ST = VecVT.getSimpleVT();
+    // We are trying to concat two v2i16 to a single v4i16, or two v4i8
+    // into a single v8i8.
+    if (ST == MVT::v2i16 || ST == MVT::v4i8)
+      return DAG.getNode(HexagonISD::COMBINE, dl, VT, Op.getOperand(1), Vec0);
 
-  if ((VecVT.getSimpleVT() == MVT::v2i16) && (NElts == 2) && W && S) {
-    if ((W->getZExtValue() == 32) && ((S->getZExtValue() >> 32) == 32)) {
-      // We are trying to concat two v2i16 to a single v4i16.
-      SDValue Vec0 = Op.getOperand(1);
-      SDValue Combined  = DAG.getNode(HexagonISD::COMBINE, dl, VT, Vec0, Vec);
-      return DAG.getNode(ISD::BITCAST, dl, VT, Combined);
+    if (UseHVX) {
+      assert((Width ==  64*8 && Subtarget.useHVXSglOps()) ||
+             (Width == 128*8 && Subtarget.useHVXDblOps()));
+      SDValue Vec1 = Op.getOperand(1);
+      MVT OpTy = Subtarget.useHVXSglOps() ? MVT::v16i32 : MVT::v32i32;
+      MVT ReTy = Subtarget.useHVXSglOps() ? MVT::v32i32 : MVT::v64i32;
+      SDValue B0 = DAG.getNode(ISD::BITCAST, dl, OpTy, Vec0);
+      SDValue B1 = DAG.getNode(ISD::BITCAST, dl, OpTy, Vec1);
+      SDValue VC = DAG.getNode(HexagonISD::VCOMBINE, dl, ReTy, B1, B0);
+      return DAG.getNode(ISD::BITCAST, dl, VT, VC);
     }
   }
 
-  if ((VecVT.getSimpleVT() == MVT::v4i8) && (NElts == 2) && W && S) {
-    if ((W->getZExtValue() == 32) && ((S->getZExtValue() >> 32) == 32)) {
-      // We are trying to concat two v4i8 to a single v8i8.
-      SDValue Vec0 = Op.getOperand(1);
-      SDValue Combined  = DAG.getNode(HexagonISD::COMBINE, dl, VT, Vec0, Vec);
-      return DAG.getNode(ISD::BITCAST, dl, VT, Combined);
-    }
-  }
+  if (VT.getSizeInBits() != 32 && VT.getSizeInBits() != 64)
+    return SDValue();
 
-  if (UseHVX) {
-    SDValue Vec0 = Op.getOperand(1);
-    assert((VecVT.getSizeInBits() == 64*8 && Subtarget.useHVXSglOps()) ||
-           (VecVT.getSizeInBits() == 128*8 && Subtarget.useHVXDblOps()));
-    SDValue Combined = DAG.getNode(HexagonISD::VCOMBINE, dl, VT, Vec0, Vec);
-    return Combined;
-  }
+  SDValue C0 = DAG.getConstant(0, dl, MVT::i64);
+  SDValue C32 = DAG.getConstant(32, dl, MVT::i64);
+  SDValue W = DAG.getConstant(Width, dl, MVT::i64);
+  // Create the "width" part of the argument to insert_rp/insertp_rp.
+  SDValue S = DAG.getNode(ISD::SHL, dl, MVT::i64, W, C32);
+  SDValue V = C0;
+
   for (unsigned i = 0, e = NElts; i != e; ++i) {
-    unsigned OpIdx = NElts - i - 1;
-    SDValue Operand = Op.getOperand(OpIdx);
+    unsigned N = NElts-i-1;
+    SDValue OpN = Op.getOperand(N);
 
-    if (VT.getSizeInBits() == 64 &&
-        Operand.getValueType().getSizeInBits() == 32) {
+    if (VT.getSizeInBits() == 64 && OpN.getValueType().getSizeInBits() == 32) {
       SDValue C = DAG.getConstant(0, dl, MVT::i32);
-      Operand = DAG.getNode(HexagonISD::COMBINE, dl, VT, C, Operand);
+      OpN = DAG.getNode(HexagonISD::COMBINE, dl, VT, C, OpN);
     }
-
-    SDValue Idx = DAG.getConstant(OpIdx, dl, MVT::i64);
-    SDValue Offset = DAG.getNode(ISD::MUL, dl, MVT::i64, Idx, Width);
-    SDValue Combined = DAG.getNode(ISD::OR, dl, MVT::i64, Shifted, Offset);
-    const SDValue Ops[] = {ConstVal, Operand, Combined};
-
+    SDValue Idx = DAG.getConstant(N, dl, MVT::i64);
+    SDValue Offset = DAG.getNode(ISD::MUL, dl, MVT::i64, Idx, W);
+    SDValue Or = DAG.getNode(ISD::OR, dl, MVT::i64, S, Offset);
     if (VT.getSizeInBits() == 32)
-      ConstVal = DAG.getNode(HexagonISD::INSERTRP, dl, MVT::i32, Ops);
+      V = DAG.getNode(HexagonISD::INSERTRP, dl, MVT::i32, {V, OpN, Or});
     else
-      ConstVal = DAG.getNode(HexagonISD::INSERTRP, dl, MVT::i64, Ops);
+      V = DAG.getNode(HexagonISD::INSERTRP, dl, MVT::i64, {V, OpN, Or});
   }
 
-  return DAG.getNode(ISD::BITCAST, dl, VT, ConstVal);
+  return DAG.getNode(ISD::BITCAST, dl, VT, V);
 }
 
 SDValue

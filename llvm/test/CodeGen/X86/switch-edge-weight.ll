@@ -111,7 +111,7 @@ sw.epilog:
 ; BB#8 to BB#3: {11} (10)
 ; BB#8 to BB#4: {12} (10)
 ; BB#8 to BB#5: {13, 14} (20)
-; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}14.29%) BB#6({{[0-9a-fx/= ]+}}7.14%) BB#2({{[0-9a-fx/= ]+}}14.29%) BB#3({{[0-9a-fx/= ]+}}14.29%) BB#4({{[0-9a-fx/= ]+}}14.29%) BB#5({{[0-9a-fx/= ]+}}28.57%)
+; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}15.38%) BB#6({{[0-9a-fx/= ]+}}7.69%) BB#2({{[0-9a-fx/= ]+}}15.38%) BB#3({{[0-9a-fx/= ]+}}15.38%) BB#4({{[0-9a-fx/= ]+}}15.38%) BB#5({{[0-9a-fx/= ]+}}30.77%)
 }
 
 ; CHECK-LABEL: test3

@@ -853,7 +853,7 @@ with the latest Xcode:
 
 .. code-block:: console
 
-  % cmake -G "Ninja" -DCMAKE_OSX_ARCHITECTURES=“armv7;armv7s;arm64"
+  % cmake -G "Ninja" -DCMAKE_OSX_ARCHITECTURES="armv7;armv7s;arm64"
     -DCMAKE_TOOLCHAIN_FILE=<PATH_TO_LLVM>/cmake/platforms/iOS.cmake
     -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=Off -DLLVM_INCLUDE_TESTS=Off
     -DLLVM_INCLUDE_EXAMPLES=Off -DLLVM_ENABLE_BACKTRACES=Off [options]

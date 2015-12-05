@@ -100,6 +100,7 @@ namespace lltok {
     kw_preserve_mostcc, kw_preserve_allcc,
     kw_ghccc,
     kw_hhvmcc, kw_hhvm_ccc,
+    kw_cxx_fast_tlscc,
 
     // Attributes:
     kw_attributes,

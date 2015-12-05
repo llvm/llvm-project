@@ -11,6 +11,7 @@
 #define LLVM_TOOLS_LLVM_READOBJ_LLVM_READOBJ_H
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {
@@ -19,7 +20,7 @@ namespace llvm {
   }
 
   // Various helper functions.
-  void reportError(Twine Msg);
+  LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg);
   void error(std::error_code ec);
   bool relocAddressLess(object::RelocationRef A,
                         object::RelocationRef B);

@@ -1206,7 +1206,7 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
     const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
     assert(MCID.ImplicitDefs && "Physical reg def must be in implicit def list!");
     NumRes = MCID.getNumDefs();
-    for (const uint16_t *ImpDef = MCID.getImplicitDefs(); *ImpDef; ++ImpDef) {
+    for (const MCPhysReg *ImpDef = MCID.getImplicitDefs(); *ImpDef; ++ImpDef) {
       if (Reg == *ImpDef)
         break;
       ++NumRes;
@@ -1335,7 +1335,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
     const MCInstrDesc &MCID = TII->get(Node->getMachineOpcode());
     if (!MCID.ImplicitDefs)
       continue;
-    for (const uint16_t *Reg = MCID.getImplicitDefs(); *Reg; ++Reg)
+    for (const MCPhysReg *Reg = MCID.getImplicitDefs(); *Reg; ++Reg)
       CheckForLiveRegDef(SU, *Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
   }
 
@@ -2720,7 +2720,7 @@ static bool canClobberReachingPhysRegUse(const SUnit *DepSU, const SUnit *SU,
                                          ScheduleDAGRRList *scheduleDAG,
                                          const TargetInstrInfo *TII,
                                          const TargetRegisterInfo *TRI) {
-  const uint16_t *ImpDefs
+  const MCPhysReg *ImpDefs
     = TII->get(SU->getNode()->getMachineOpcode()).getImplicitDefs();
   const uint32_t *RegMask = getNodeRegMask(SU->getNode());
   if(!ImpDefs && !RegMask)
@@ -2739,7 +2739,7 @@ static bool canClobberReachingPhysRegUse(const SUnit *DepSU, const SUnit *SU,
         return true;
 
       if (ImpDefs)
-        for (const uint16_t *ImpDef = ImpDefs; *ImpDef; ++ImpDef)
+        for (const MCPhysReg *ImpDef = ImpDefs; *ImpDef; ++ImpDef)
           // Return true if SU clobbers this physical register use and the
           // definition of the register reaches from DepSU. IsReachable queries
           // a topological forward sort of the DAG (following the successors).
@@ -2758,13 +2758,13 @@ static bool canClobberPhysRegDefs(const SUnit *SuccSU, const SUnit *SU,
                                   const TargetRegisterInfo *TRI) {
   SDNode *N = SuccSU->getNode();
   unsigned NumDefs = TII->get(N->getMachineOpcode()).getNumDefs();
-  const uint16_t *ImpDefs = TII->get(N->getMachineOpcode()).getImplicitDefs();
+  const MCPhysReg *ImpDefs = TII->get(N->getMachineOpcode()).getImplicitDefs();
   assert(ImpDefs && "Caller should check hasPhysRegDefs");
   for (const SDNode *SUNode = SU->getNode(); SUNode;
        SUNode = SUNode->getGluedNode()) {
     if (!SUNode->isMachineOpcode())
       continue;
-    const uint16_t *SUImpDefs =
+    const MCPhysReg *SUImpDefs =
       TII->get(SUNode->getMachineOpcode()).getImplicitDefs();
     const uint32_t *SURegMask = getNodeRegMask(SUNode);
     if (!SUImpDefs && !SURegMask)

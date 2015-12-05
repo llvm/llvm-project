@@ -85,7 +85,7 @@ void HexagonMCChecker::init(MCInst const& MCI) {
     }
 
   // Get implicit register definitions.
-  const uint16_t* ImpDefs = MCID.getImplicitDefs();
+  const MCPhysReg *ImpDefs = MCID.getImplicitDefs();
   for (unsigned i = 0; i < MCID.getNumImplicitDefs(); ++i) {
     unsigned R = ImpDefs[i];
 
