@@ -1120,7 +1120,7 @@ define double @test_f64_fneg_fmul(double %x, double %y) #0 {
 ;
 ; FMA4-LABEL: test_f64_fneg_fmul:
 ; FMA4:       # BB#0:
-; FMA4-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; FMA4-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; FMA4-NEXT:    vfnmsubsd %xmm2, %xmm1, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 ;

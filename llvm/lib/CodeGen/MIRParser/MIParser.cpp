@@ -745,11 +745,11 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
   // Gather all the expected implicit operands.
   SmallVector<MachineOperand, 4> ImplicitOperands;
   if (MCID.ImplicitDefs)
-    for (const uint16_t *ImpDefs = MCID.getImplicitDefs(); *ImpDefs; ++ImpDefs)
+    for (const MCPhysReg *ImpDefs = MCID.getImplicitDefs(); *ImpDefs; ++ImpDefs)
       ImplicitOperands.push_back(
           MachineOperand::CreateReg(*ImpDefs, true, true));
   if (MCID.ImplicitUses)
-    for (const uint16_t *ImpUses = MCID.getImplicitUses(); *ImpUses; ++ImpUses)
+    for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses; ++ImpUses)
       ImplicitOperands.push_back(
           MachineOperand::CreateReg(*ImpUses, false, true));
 

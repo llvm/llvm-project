@@ -88,7 +88,7 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE_I32:
       case WebAssembly::STORE_I64:
         unsigned ToReg = MI.getOperand(0).getReg();
-        unsigned FromReg = MI.getOperand(2).getReg();
+        unsigned FromReg = MI.getOperand(3).getReg();
         for (auto I = MRI.use_begin(FromReg), E = MRI.use_end(); I != E;) {
           MachineOperand &O = *I++;
           MachineInstr *Where = O.getParent();

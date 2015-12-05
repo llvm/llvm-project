@@ -333,6 +333,8 @@ namespace llvm {
   /// This pass assigns indexes to each instruction.
   class SlotIndexes : public MachineFunctionPass {
   private:
+    // IndexListEntry allocator.
+    BumpPtrAllocator ileAllocator;
 
     typedef ilist<IndexListEntry> IndexList;
     IndexList indexList;
@@ -353,9 +355,6 @@ namespace llvm {
     /// and MBB id.
     SmallVector<IdxMBBPair, 8> idx2MBBMap;
 
-    // IndexListEntry allocator.
-    BumpPtrAllocator ileAllocator;
-
     IndexListEntry* createEntry(MachineInstr *mi, unsigned index) {
       IndexListEntry *entry =
         static_cast<IndexListEntry*>(
@@ -375,6 +374,11 @@ namespace llvm {
 
     SlotIndexes() : MachineFunctionPass(ID) {
       initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
+    }
+
+    ~SlotIndexes() {
+      // The indexList's nodes are all allocated in the BumpPtrAllocator.
+      indexList.clearAndLeakNodesUnsafely();
     }
 
     void getAnalysisUsage(AnalysisUsage &au) const override;

@@ -1,6 +1,7 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-block-placement | FileCheck %s
 
-; Test switch instructions.
+; Test switch instructions. Block placement is disabled because it reorders
+; the blocks in a way that isn't interesting here.
 
 target datalayout = "e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"

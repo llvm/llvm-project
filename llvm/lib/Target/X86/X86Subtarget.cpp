@@ -189,6 +189,15 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       FullFS = "+64bit,+sse2";
   }
 
+  // LAHF/SAHF are always supported in non-64-bit mode.
+  if (!In64BitMode) {
+    if (!FullFS.empty())
+      FullFS = "+sahf," + FullFS;
+    else
+      FullFS = "+sahf";
+  }
+
+
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPUName, FullFS);
 
@@ -264,6 +273,7 @@ void X86Subtarget::initializeEnvironment() {
   HasSHA = false;
   HasPRFCHW = false;
   HasRDSEED = false;
+  HasLAHFSAHF = false;
   HasMPX = false;
   IsBTMemSlow = false;
   IsSHLDSlow = false;

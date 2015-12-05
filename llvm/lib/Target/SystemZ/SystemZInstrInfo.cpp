@@ -676,7 +676,8 @@ SystemZInstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
                                         LiveVariables *LV) const {
   MachineInstr *MI = MBBI;
   MachineBasicBlock *MBB = MI->getParent();
-  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  MachineFunction *MF = MBB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
 
   unsigned Opcode = MI->getOpcode();
   unsigned NumOps = MI->getNumOperands();
@@ -703,14 +704,19 @@ SystemZInstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     }
     int ThreeOperandOpcode = SystemZ::getThreeOperandOpcode(Opcode);
     if (ThreeOperandOpcode >= 0) {
-      MachineInstrBuilder MIB =
-        BuildMI(*MBB, MBBI, MI->getDebugLoc(), get(ThreeOperandOpcode))
-        .addOperand(Dest);
+      // Create three address instruction without adding the implicit
+      // operands. Those will instead be copied over from the original
+      // instruction by the loop below.
+      MachineInstrBuilder MIB(*MF,
+                              MF->CreateMachineInstr(get(ThreeOperandOpcode),
+                                    MI->getDebugLoc(), /*NoImplicit=*/true));
+      MIB.addOperand(Dest);
       // Keep the kill state, but drop the tied flag.
       MIB.addReg(Src.getReg(), getKillRegState(Src.isKill()), Src.getSubReg());
       // Keep the remaining operands as-is.
       for (unsigned I = 2; I < NumOps; ++I)
         MIB.addOperand(MI->getOperand(I));
+      MBB->insert(MI, MIB);
       return finishConvertToThreeAddress(MI, MIB, LV);
     }
   }

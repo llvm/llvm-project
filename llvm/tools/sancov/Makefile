@@ -9,7 +9,8 @@
 
 LEVEL := ../..
 TOOLNAME := sancov
-LINK_COMPONENTS := DebugInfoDWARF DebugInfoPDB Object Support Symbolize
+LINK_COMPONENTS := all-targets DebugInfoDWARF DebugInfoPDB MC MCParser \
+  MCDisassembler Object Support Symbolize
 
 # This tool has no plugins, optimize startup time.
 TOOL_NO_EXPORTS := 1

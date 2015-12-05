@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=i386-linux-gnu %s -o - | FileCheck %s
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s
 
 ; FIXME Add -verify-machineinstrs back when PR24535 is fixed.
 

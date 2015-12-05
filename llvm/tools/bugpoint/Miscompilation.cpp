@@ -18,6 +18,7 @@
 #include "llvm/Config/config.h"   // for HAVE_LINK_R
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -207,6 +208,14 @@ namespace {
   };
 }
 
+static void diagnosticHandler(const DiagnosticInfo &DI) {
+  DiagnosticPrinterRawOStream DP(errs());
+  DI.print(DP);
+  errs() << '\n';
+  if (DI.getSeverity() == DS_Error)
+    exit(1);
+}
+
 /// TestMergedProgram - Given two modules, link them together and run the
 /// program, checking to see if the program matches the diff. If there is
 /// an error, return NULL. If not, return the merged module. The Broken argument
@@ -222,7 +231,7 @@ static Module *TestMergedProgram(const BugDriver &BD, Module *M1, Module *M2,
     M1 = CloneModule(M1);
     M2 = CloneModule(M2);
   }
-  if (Linker::linkModules(*M1, *M2))
+  if (Linker::linkModules(*M1, *M2, diagnosticHandler))
     exit(1);
   delete M2;   // We are done with this module.
 
@@ -390,7 +399,8 @@ static bool ExtractLoops(BugDriver &BD,
         MisCompFunctions.emplace_back(F->getName(), F->getFunctionType());
       }
 
-      if (Linker::linkModules(*ToNotOptimize, *ToOptimizeLoopExtracted))
+      if (Linker::linkModules(*ToNotOptimize, *ToOptimizeLoopExtracted,
+                              diagnosticHandler))
         exit(1);
 
       MiscompiledFunctions.clear();
@@ -418,7 +428,8 @@ static bool ExtractLoops(BugDriver &BD,
     // extraction both didn't break the program, and didn't mask the problem.
     // Replace the current program with the loop extracted version, and try to
     // extract another loop.
-    if (Linker::linkModules(*ToNotOptimize, *ToOptimizeLoopExtracted))
+    if (Linker::linkModules(*ToNotOptimize, *ToOptimizeLoopExtracted,
+                            diagnosticHandler))
       exit(1);
 
     delete ToOptimizeLoopExtracted;
@@ -594,7 +605,7 @@ static bool ExtractBlocks(BugDriver &BD,
     if (!I->isDeclaration())
       MisCompFunctions.emplace_back(I->getName(), I->getFunctionType());
 
-  if (Linker::linkModules(*ProgClone, *Extracted))
+  if (Linker::linkModules(*ProgClone, *Extracted, diagnosticHandler))
     exit(1);
 
   // Set the new program and delete the old one.

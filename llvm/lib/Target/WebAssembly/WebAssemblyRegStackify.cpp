@@ -61,15 +61,41 @@ FunctionPass *llvm::createWebAssemblyRegStackify() {
 }
 
 // Decorate the given instruction with implicit operands that enforce the
-// expression stack ordering constraints.
-static void ImposeStackOrdering(MachineInstr *MI) {
-  // Read and write the opaque EXPR_STACK register.
-  MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
-                                           /*isDef=*/true,
-                                           /*isImp=*/true));
+// expression stack ordering constraints needed for an instruction which is
+// consumed by an instruction using the expression stack.
+static void ImposeStackInputOrdering(MachineInstr *MI) {
+  // Write the opaque EXPR_STACK register.
+  if (!MI->definesRegister(WebAssembly::EXPR_STACK))
+    MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
+                                             /*isDef=*/true,
+                                             /*isImp=*/true));
+}
+
+// Decorate the given instruction with implicit operands that enforce the
+// expression stack ordering constraints for an instruction which is on
+// the expression stack.
+static void ImposeStackOrdering(MachineInstr *MI, MachineRegisterInfo &MRI) {
+  ImposeStackInputOrdering(MI);
+
+  // Also read the opaque EXPR_STACK register.
   MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
                                            /*isDef=*/false,
                                            /*isImp=*/true));
+
+  // Also, mark any inputs to this instruction as being consumed by an
+  // instruction on the expression stack.
+  // TODO: Find a lighter way to describe the appropriate constraints.
+  for (MachineOperand &MO : MI->uses()) {
+    if (!MO.isReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+      continue;
+    MachineInstr *Def = MRI.getVRegDef(Reg);
+    if (Def->getOpcode() == TargetOpcode::PHI)
+      continue;
+    ImposeStackInputOrdering(Def);
+  }
 }
 
 // Test whether it's safe to move Def to just before Insert. Note that this
@@ -126,8 +152,15 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           continue;
 
         unsigned Reg = Op.getReg();
-        if (!TargetRegisterInfo::isVirtualRegister(Reg))
+        if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+          // An instruction with a physical register. Conservatively mark it as
+          // an expression stack input so that it isn't reordered with anything
+          // in an expression stack which might use it (physical registers
+          // aren't in SSA form so it's not trivial to determine this).
+          // TODO: Be less conservative.
+          ImposeStackInputOrdering(Insert);
           continue;
+        }
 
         // Only consider registers with a single definition.
         // TODO: Eventually we may relax this, to stackify phi transfers.
@@ -178,11 +211,11 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         MBB.insert(MachineBasicBlock::instr_iterator(Insert),
                    Def->removeFromParent());
         MFI.stackifyVReg(Reg);
-        ImposeStackOrdering(Def);
+        ImposeStackOrdering(Def, MRI);
         Insert = Def;
       }
       if (AnyStackified)
-        ImposeStackOrdering(&MI);
+        ImposeStackOrdering(&MI, MRI);
     }
   }
 
@@ -203,6 +236,10 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (!MO.isReg())
           continue;
         unsigned VReg = MO.getReg();
+
+        // Don't stackify physregs like SP or FP.
+        if (!TargetRegisterInfo::isVirtualRegister(VReg))
+          continue;
 
         if (MFI.isVRegStackified(VReg)) {
           if (MO.isDef())

@@ -8450,12 +8450,14 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
             JumpProb += DefaultProb / 2;
             FallthroughProb -= DefaultProb / 2;
             JumpMBB->setSuccProbability(SI, DefaultProb / 2);
+            JumpMBB->normalizeSuccProbs();
             break;
           }
         }
 
         addSuccessorWithProb(CurMBB, Fallthrough, FallthroughProb);
         addSuccessorWithProb(CurMBB, JumpMBB, JumpProb);
+        CurMBB->normalizeSuccProbs();
 
         // The jump table header will be inserted in our current block, do the
         // range check, and fall through to our fallthrough block.

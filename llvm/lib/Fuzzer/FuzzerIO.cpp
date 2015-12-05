@@ -91,11 +91,6 @@ std::string DirPlusFile(const std::string &DirPath,
   return DirPath + "/" + FileName;
 }
 
-void PrintFileAsBase64(const std::string &Path) {
-  std::string Cmd = "base64 -w 0 < " + Path + "; echo";
-  ExecuteCommand(Cmd);
-}
-
 void Printf(const char *Fmt, ...) {
   va_list ap;
   va_start(ap, Fmt);

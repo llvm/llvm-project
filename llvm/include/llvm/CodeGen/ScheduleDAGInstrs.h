@@ -26,7 +26,6 @@ namespace llvm {
   class MachineFrameInfo;
   class MachineLoopInfo;
   class MachineDominatorTree;
-  class LiveIntervals;
   class RegPressureTracker;
   class PressureDiffs;
 
@@ -91,9 +90,6 @@ namespace llvm {
   protected:
     const MachineLoopInfo *MLI;
     const MachineFrameInfo *MFI;
-
-    /// Live Intervals provides reaching defs in preRA scheduling.
-    LiveIntervals *LIS;
 
     /// TargetSchedModel provides an interface to the machine model.
     TargetSchedModel SchedModel;
@@ -172,13 +168,9 @@ namespace llvm {
   public:
     explicit ScheduleDAGInstrs(MachineFunction &mf,
                                const MachineLoopInfo *mli,
-                               LiveIntervals *LIS = nullptr,
                                bool RemoveKillFlags = false);
 
     ~ScheduleDAGInstrs() override {}
-
-    /// \brief Expose LiveIntervals for use in DAG mutators and such.
-    LiveIntervals *getLIS() const { return LIS; }
 
     /// \brief Get the machine model for instruction scheduling.
     const TargetSchedModel *getSchedModel() const { return &SchedModel; }

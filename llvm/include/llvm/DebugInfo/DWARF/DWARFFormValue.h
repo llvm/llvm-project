@@ -84,6 +84,9 @@ public:
                  const DWARFUnit *u) const;
   static bool skipValue(uint16_t form, DataExtractor debug_info_data,
                         uint32_t *offset_ptr, const DWARFUnit *u);
+  static bool skipValue(uint16_t form, DataExtractor debug_info_data,
+                        uint32_t *offset_ptr, uint16_t Version,
+                        uint8_t AddrSize);
 
   static ArrayRef<uint8_t> getFixedFormSizes(uint8_t AddrSize,
                                              uint16_t Version);

@@ -569,13 +569,33 @@ void PMTopLevelManager::collectLastUses(SmallVectorImpl<Pass *> &LastUses,
 
 AnalysisUsage *PMTopLevelManager::findAnalysisUsage(Pass *P) {
   AnalysisUsage *AnUsage = nullptr;
-  DenseMap<Pass *, AnalysisUsage *>::iterator DMI = AnUsageMap.find(P);
+  auto DMI = AnUsageMap.find(P);
   if (DMI != AnUsageMap.end())
     AnUsage = DMI->second;
   else {
-    AnUsage = new AnalysisUsage();
-    P->getAnalysisUsage(*AnUsage);
-    AnUsageMap[P] = AnUsage;
+    // Look up the analysis usage from the pass instance (different instances
+    // of the same pass can produce different results), but unique the
+    // resulting object to reduce memory usage.  This helps to greatly reduce
+    // memory usage when we have many instances of only a few pass types
+    // (e.g. instcombine, simplifycfg, etc...) which tend to share a fixed set
+    // of dependencies.
+    AnalysisUsage AU;
+    P->getAnalysisUsage(AU);
+    
+    AUFoldingSetNode* Node = nullptr;
+    FoldingSetNodeID ID;
+    AUFoldingSetNode::Profile(ID, AU);
+    void *IP = nullptr;
+    if (auto *N = UniqueAnalysisUsages.FindNodeOrInsertPos(ID, IP))
+      Node = N;
+    else {
+      Node = new (AUFoldingSetNodeAllocator.Allocate()) AUFoldingSetNode(AU);
+      UniqueAnalysisUsages.InsertNode(Node, IP);
+    }
+    assert(Node && "cached analysis usage must be non null");
+
+    AnUsageMap[P] = &Node->AU;
+    AnUsage = &Node->AU;;
   }
   return AnUsage;
 }
@@ -798,10 +818,6 @@ PMTopLevelManager::~PMTopLevelManager() {
   for (SmallVectorImpl<ImmutablePass *>::iterator
          I = ImmutablePasses.begin(), E = ImmutablePasses.end(); I != E; ++I)
     delete *I;
-
-  for (DenseMap<Pass *, AnalysisUsage *>::iterator DMI = AnUsageMap.begin(),
-         DME = AnUsageMap.end(); DMI != DME; ++DMI)
-    delete DMI->second;
 }
 
 //===----------------------------------------------------------------------===//

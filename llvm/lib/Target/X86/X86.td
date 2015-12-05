@@ -182,6 +182,8 @@ def FeaturePRFCHW  : SubtargetFeature<"prfchw", "HasPRFCHW", "true",
                                       "Support PRFCHW instructions">;
 def FeatureRDSEED  : SubtargetFeature<"rdseed", "HasRDSEED", "true",
                                       "Support RDSEED instruction">;
+def FeatureLAHFSAHF : SubtargetFeature<"sahf", "HasLAHFSAHF", "true",
+                                       "Support LAHF and SAHF instructions">;
 def FeatureMPX     : SubtargetFeature<"mpx", "HasMPX", "true",
                                       "Support MPX instructions">;
 def FeatureLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
@@ -273,7 +275,8 @@ def : ProcessorModel<"core2", SandyBridgeModel, [
   FeatureSSSE3,
   FeatureFXSR,
   FeatureCMPXCHG16B,
-  FeatureSlowBTMem
+  FeatureSlowBTMem,
+  FeatureLAHFSAHF
 ]>;
 def : ProcessorModel<"penryn", SandyBridgeModel, [
   FeatureSlowUAMem16,
@@ -281,7 +284,8 @@ def : ProcessorModel<"penryn", SandyBridgeModel, [
   FeatureSSE41,
   FeatureFXSR,
   FeatureCMPXCHG16B,
-  FeatureSlowBTMem
+  FeatureSlowBTMem,
+  FeatureLAHFSAHF
 ]>;
 
 // Atom CPUs.
@@ -299,7 +303,8 @@ class BonnellProc<string Name> : ProcessorModel<Name, AtomModel, [
   FeatureSlowDivide64,
   FeatureCallRegIndirect,
   FeatureLEAUsesAG,
-  FeaturePadShortFunctions
+  FeaturePadShortFunctions,
+  FeatureLAHFSAHF
 ]>;
 def : BonnellProc<"bonnell">;
 def : BonnellProc<"atom">; // Pin the generic name to the baseline.
@@ -319,7 +324,8 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeaturePRFCHW,
   FeatureSlowLEA,
   FeatureSlowIncDec,
-  FeatureSlowBTMem
+  FeatureSlowBTMem,
+  FeatureLAHFSAHF
 ]>;
 def : SilvermontProc<"silvermont">;
 def : SilvermontProc<"slm">; // Legacy alias.
@@ -331,7 +337,8 @@ class NehalemProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureFXSR,
   FeatureCMPXCHG16B,
   FeatureSlowBTMem,
-  FeaturePOPCNT
+  FeaturePOPCNT,
+  FeatureLAHFSAHF
 ]>;
 def : NehalemProc<"nehalem">;
 def : NehalemProc<"corei7">;
@@ -346,7 +353,8 @@ class WestmereProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureSlowBTMem,
   FeaturePOPCNT,
   FeatureAES,
-  FeaturePCLMUL
+  FeaturePCLMUL,
+  FeatureLAHFSAHF
 ]>;
 def : WestmereProc<"westmere">;
 
@@ -363,7 +371,8 @@ class SandyBridgeProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureAES,
   FeaturePCLMUL,
   FeatureXSAVE,
-  FeatureXSAVEOPT
+  FeatureXSAVEOPT,
+  FeatureLAHFSAHF
 ]>;
 def : SandyBridgeProc<"sandybridge">;
 def : SandyBridgeProc<"corei7-avx">; // Legacy alias.
@@ -382,7 +391,8 @@ class IvyBridgeProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureXSAVEOPT,
   FeatureRDRAND,
   FeatureF16C,
-  FeatureFSGSBase
+  FeatureFSGSBase,
+  FeatureLAHFSAHF
 ]>;
 def : IvyBridgeProc<"ivybridge">;
 def : IvyBridgeProc<"core-avx-i">; // Legacy alias.
@@ -408,7 +418,8 @@ class HaswellProc<string Name> : ProcessorModel<Name, HaswellModel, [
   FeatureFMA,
   FeatureRTM,
   FeatureHLE,
-  FeatureSlowIncDec
+  FeatureSlowIncDec,
+  FeatureLAHFSAHF
 ]>;
 def : HaswellProc<"haswell">;
 def : HaswellProc<"core-avx2">; // Legacy alias.
@@ -436,7 +447,8 @@ class BroadwellProc<string Name> : ProcessorModel<Name, HaswellModel, [
   FeatureHLE,
   FeatureADX,
   FeatureRDSEED,
-  FeatureSlowIncDec
+  FeatureSlowIncDec,
+  FeatureLAHFSAHF
 ]>;
 def : BroadwellProc<"broadwell">;
 
@@ -465,7 +477,8 @@ class KnightsLandingProc<string Name> : ProcessorModel<Name, HaswellModel, [
   FeatureRTM,
   FeatureHLE,
   FeatureSlowIncDec,
-  FeatureMPX
+  FeatureMPX,
+  FeatureLAHFSAHF
 ]>;
 def : KnightsLandingProc<"knl">;
 
@@ -500,7 +513,8 @@ class SkylakeProc<string Name> : ProcessorModel<Name, HaswellModel, [
   FeatureSlowIncDec,
   FeatureMPX,
   FeatureXSAVEC,
-  FeatureXSAVES
+  FeatureXSAVES,
+  FeatureLAHFSAHF
 ]>;
 def : SkylakeProc<"skylake">;
 def : SkylakeProc<"skx">; // Legacy alias.
@@ -544,10 +558,10 @@ def : Proc<"athlon64-sse3",   [FeatureSlowUAMem16, FeatureSSE3,   Feature3DNowA,
                                FeatureSlowSHLD]>;
 def : Proc<"amdfam10",        [FeatureSSE4A, Feature3DNowA, FeatureFXSR,
                                FeatureCMPXCHG16B, FeatureLZCNT, FeaturePOPCNT,
-                               FeatureSlowBTMem, FeatureSlowSHLD]>;
+                               FeatureSlowBTMem, FeatureSlowSHLD, FeatureLAHFSAHF]>;
 def : Proc<"barcelona",       [FeatureSSE4A, Feature3DNowA, FeatureFXSR,
                                FeatureCMPXCHG16B, FeatureLZCNT, FeaturePOPCNT,
-                               FeatureSlowBTMem, FeatureSlowSHLD]>;
+                               FeatureSlowBTMem, FeatureSlowSHLD, FeatureLAHFSAHF]>;
 
 // Bobcat
 def : Proc<"btver1", [
@@ -560,7 +574,8 @@ def : Proc<"btver1", [
   FeatureLZCNT,
   FeaturePOPCNT,
   FeatureXSAVE,
-  FeatureSlowSHLD
+  FeatureSlowSHLD,
+  FeatureLAHFSAHF
 ]>;
 
 // Jaguar
@@ -580,7 +595,8 @@ def : ProcessorModel<"btver2", BtVer2Model, [
   FeaturePOPCNT,
   FeatureXSAVE,
   FeatureXSAVEOPT,
-  FeatureSlowSHLD
+  FeatureSlowSHLD,
+  FeatureLAHFSAHF
 ]>;
 
 // Bulldozer
@@ -598,7 +614,8 @@ def : Proc<"bdver1", [
   FeatureLZCNT,
   FeaturePOPCNT,
   FeatureXSAVE,
-  FeatureSlowSHLD
+  FeatureSlowSHLD,
+  FeatureLAHFSAHF
 ]>;
 // Piledriver
 def : Proc<"bdver2", [
@@ -619,7 +636,8 @@ def : Proc<"bdver2", [
   FeatureBMI,
   FeatureTBM,
   FeatureFMA,
-  FeatureSlowSHLD
+  FeatureSlowSHLD,
+  FeatureLAHFSAHF
 ]>;
 
 // Steamroller
@@ -643,7 +661,8 @@ def : Proc<"bdver3", [
   FeatureFMA,
   FeatureXSAVEOPT,
   FeatureSlowSHLD,
-  FeatureFSGSBase
+  FeatureFSGSBase,
+  FeatureLAHFSAHF
 ]>;
 
 // Excavator
@@ -666,7 +685,8 @@ def : Proc<"bdver4", [
   FeatureTBM,
   FeatureFMA,
   FeatureXSAVEOPT,
-  FeatureFSGSBase
+  FeatureFSGSBase,
+  FeatureLAHFSAHF
 ]>;
 
 def : Proc<"geode",           [FeatureSlowUAMem16, Feature3DNowA]>;

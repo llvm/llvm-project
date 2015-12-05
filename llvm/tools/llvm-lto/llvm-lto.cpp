@@ -124,23 +124,27 @@ static void handleDiagnostics(lto_codegen_diagnostic_severity_t Severity,
   errs() << Msg << "\n";
 }
 
+static std::string CurrentActivity;
 static void diagnosticHandler(const DiagnosticInfo &DI) {
   raw_ostream &OS = errs();
   OS << "llvm-lto: ";
   switch (DI.getSeverity()) {
   case DS_Error:
-    OS << "error: ";
+    OS << "error";
     break;
   case DS_Warning:
-    OS << "warning: ";
+    OS << "warning";
     break;
   case DS_Remark:
-    OS << "remark: ";
+    OS << "remark";
     break;
   case DS_Note:
-    OS << "note: ";
+    OS << "note";
     break;
   }
+  if (!CurrentActivity.empty())
+    OS << ' ' << CurrentActivity;
+  OS << ": ";
 
   DiagnosticPrinterRawOStream DP(OS);
   DI.print(DP);
@@ -148,6 +152,11 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
 
   if (DI.getSeverity() == DS_Error)
     exit(1);
+}
+
+static void diagnosticHandlerWithContenxt(const DiagnosticInfo &DI,
+                                          void *Context) {
+  diagnosticHandler(DI);
 }
 
 static void error(const Twine &Msg) {
@@ -172,12 +181,11 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
       MemoryBuffer::getFile(Path);
   error(BufferOrErr, "error loading file '" + Path + "'");
   Buffer = std::move(BufferOrErr.get());
-  std::string Error;
-  std::unique_ptr<LTOModule> Ret(LTOModule::createInLocalContext(
-      Buffer->getBufferStart(), Buffer->getBufferSize(), Options, Error, Path));
-  if (!Error.empty())
-    error("error loading file '" + Path + "' " + Error);
-  return Ret;
+  CurrentActivity = ("loading file '" + Path + "'").str();
+  ErrorOr<std::unique_ptr<LTOModule>> Ret = LTOModule::createInLocalContext(
+      Buffer->getBufferStart(), Buffer->getBufferSize(), Options, Path);
+  CurrentActivity = "";
+  return std::move(*Ret);
 }
 
 /// \brief List symbols in each IR file.
@@ -207,10 +215,11 @@ static void createCombinedFunctionIndex() {
   FunctionInfoIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
+    CurrentActivity = "loading file '" + Filename + "'";
     ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
         llvm::getFunctionIndexForFile(Filename, diagnosticHandler);
-    error(IndexOrErr, "error loading file '" + Filename + "'");
     std::unique_ptr<FunctionInfoIndex> Index = std::move(IndexOrErr.get());
+    CurrentActivity = "";
     // Skip files without a function summary.
     if (!Index)
       continue;
@@ -257,7 +266,10 @@ int main(int argc, char **argv) {
 
   unsigned BaseArg = 0;
 
-  LTOCodeGenerator CodeGen(getGlobalContext());
+  LLVMContext Context;
+  Context.setDiagnosticHandler(diagnosticHandlerWithContenxt, nullptr, true);
+
+  LTOCodeGenerator CodeGen(Context);
 
   if (UseDiagnosticHandler)
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);
@@ -274,14 +286,11 @@ int main(int argc, char **argv) {
   std::vector<std::string> KeptDSOSyms;
 
   for (unsigned i = BaseArg; i < InputFilenames.size(); ++i) {
-    std::string error;
-    std::unique_ptr<LTOModule> Module(
-        LTOModule::createFromFile(InputFilenames[i].c_str(), Options, error));
-    if (!error.empty()) {
-      errs() << argv[0] << ": error loading file '" << InputFilenames[i]
-             << "': " << error << "\n";
-      return 1;
-    }
+    CurrentActivity = "loading file '" + InputFilenames[i] + "'";
+    ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
+        LTOModule::createFromFile(Context, InputFilenames[i].c_str(), Options);
+    std::unique_ptr<LTOModule> &Module = *ModuleOrErr;
+    CurrentActivity = "";
 
     unsigned NumSyms = Module->getSymbolCount();
     for (unsigned I = 0; I < NumSyms; ++I) {

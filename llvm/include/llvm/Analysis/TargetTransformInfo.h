@@ -42,11 +42,13 @@ class Value;
 /// \brief Information about a load/store intrinsic defined by the target.
 struct MemIntrinsicInfo {
   MemIntrinsicInfo()
-      : ReadMem(false), WriteMem(false), Vol(false), MatchingId(0),
+      : ReadMem(false), WriteMem(false), IsSimple(false), MatchingId(0),
         NumMemRefs(0), PtrVal(nullptr) {}
   bool ReadMem;
   bool WriteMem;
-  bool Vol;
+  /// True only if this memory operation is non-volatile, non-atomic, and
+  /// unordered.  (See LoadInst/StoreInst for details on each)
+  bool IsSimple;
   // Same Id is set by the target for corresponding load/store intrinsics.
   unsigned short MatchingId;
   int NumMemRefs;

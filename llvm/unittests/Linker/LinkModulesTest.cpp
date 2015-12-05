@@ -71,6 +71,8 @@ protected:
   BasicBlock *ExitBB;
 };
 
+static void expectNoDiags(const DiagnosticInfo &DI) { EXPECT_TRUE(false); }
+
 TEST_F(LinkModuleTest, BlockAddress) {
   IRBuilder<> Builder(EntryBB);
 
@@ -93,7 +95,7 @@ TEST_F(LinkModuleTest, BlockAddress) {
   Builder.CreateRet(ConstantPointerNull::get(Type::getInt8PtrTy(Ctx)));
 
   Module *LinkedModule = new Module("MyModuleLinked", Ctx);
-  Linker::linkModules(*LinkedModule, *M);
+  Linker::linkModules(*LinkedModule, *M, expectNoDiags);
 
   // Delete the original module.
   M.reset();
@@ -169,13 +171,13 @@ static Module *getInternal(LLVMContext &Ctx) {
 TEST_F(LinkModuleTest, EmptyModule) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
-  Linker::linkModules(*EmptyM, *InternalM);
+  Linker::linkModules(*EmptyM, *InternalM, expectNoDiags);
 }
 
 TEST_F(LinkModuleTest, EmptyModule2) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
-  Linker::linkModules(*InternalM, *EmptyM);
+  Linker::linkModules(*InternalM, *EmptyM, expectNoDiags);
 }
 
 TEST_F(LinkModuleTest, TypeMerge) {

@@ -2030,11 +2030,6 @@ Linker::Linker(Module &M, DiagnosticHandlerFunction DiagnosticHandler)
   }
 }
 
-Linker::Linker(Module &M)
-    : Linker(M, [this](const DiagnosticInfo &DI) {
-        Composite.getContext().diagnose(DI);
-      }) {}
-
 bool Linker::linkInModule(Module &Src, unsigned Flags,
                           const FunctionInfoIndex *Index,
                           DenseSet<const GlobalValue *> *FunctionsToImport) {
@@ -2061,9 +2056,16 @@ bool Linker::linkModules(Module &Dest, Module &Src,
   return L.linkInModule(Src, Flags);
 }
 
-bool Linker::linkModules(Module &Dest, Module &Src, unsigned Flags) {
-  Linker L(Dest);
-  return L.linkInModule(Src, Flags);
+std::unique_ptr<Module>
+llvm::renameModuleForThinLTO(std::unique_ptr<Module> &M,
+                             const FunctionInfoIndex *Index,
+                             DiagnosticHandlerFunction DiagnosticHandler) {
+  std::unique_ptr<llvm::Module> RenamedModule(
+      new llvm::Module(M->getModuleIdentifier(), M->getContext()));
+  Linker L(*RenamedModule.get(), DiagnosticHandler);
+  if (L.linkInModule(*M.get(), llvm::Linker::Flags::None, Index))
+    return nullptr;
+  return RenamedModule;
 }
 
 //===----------------------------------------------------------------------===//

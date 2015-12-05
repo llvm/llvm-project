@@ -91,25 +91,24 @@ public:
   /// InitializeAllTargetMCs();
   /// InitializeAllAsmPrinters();
   /// InitializeAllAsmParsers();
-  static LTOModule *createFromFile(const char *path, TargetOptions options,
-                                   std::string &errMsg);
-  static LTOModule *createFromOpenFile(int fd, const char *path, size_t size,
-                                       TargetOptions options,
-                                       std::string &errMsg);
-  static LTOModule *createFromOpenFileSlice(int fd, const char *path,
-                                            size_t map_size, off_t offset,
-                                            TargetOptions options,
-                                            std::string &errMsg);
-  static LTOModule *createFromBuffer(const void *mem, size_t length,
-                                     TargetOptions options, std::string &errMsg,
-                                     StringRef path = "");
+  static ErrorOr<std::unique_ptr<LTOModule>>
+  createFromFile(LLVMContext &Context, const char *path, TargetOptions options);
+  static ErrorOr<std::unique_ptr<LTOModule>>
+  createFromOpenFile(LLVMContext &Context, int fd, const char *path,
+                     size_t size, TargetOptions options);
+  static ErrorOr<std::unique_ptr<LTOModule>>
+  createFromOpenFileSlice(LLVMContext &Context, int fd, const char *path,
+                          size_t map_size, off_t offset, TargetOptions options);
+  static ErrorOr<std::unique_ptr<LTOModule>>
+  createFromBuffer(LLVMContext &Context, const void *mem, size_t length,
+                   TargetOptions options, StringRef path = "");
 
-  static LTOModule *createInLocalContext(const void *mem, size_t length,
-                                         TargetOptions options,
-                                         std::string &errMsg, StringRef path);
-  static LTOModule *createInContext(const void *mem, size_t length,
-                                    TargetOptions options, std::string &errMsg,
-                                    StringRef path, LLVMContext *Context);
+  static ErrorOr<std::unique_ptr<LTOModule>>
+  createInLocalContext(const void *mem, size_t length, TargetOptions options,
+                       StringRef path);
+  static ErrorOr<std::unique_ptr<LTOModule>>
+  createInContext(const void *mem, size_t length, TargetOptions options,
+                  StringRef path, LLVMContext *Context);
 
   const Module &getModule() const {
     return const_cast<LTOModule*>(this)->getModule();
@@ -207,8 +206,9 @@ private:
   bool objcClassNameFromExpression(const Constant *c, std::string &name);
 
   /// Create an LTOModule (private version).
-  static LTOModule *makeLTOModule(MemoryBufferRef Buffer, TargetOptions options,
-                                  std::string &errMsg, LLVMContext *Context);
+  static ErrorOr<std::unique_ptr<LTOModule>>
+  makeLTOModule(MemoryBufferRef Buffer, TargetOptions options,
+                LLVMContext *Context);
 };
 }
 #endif

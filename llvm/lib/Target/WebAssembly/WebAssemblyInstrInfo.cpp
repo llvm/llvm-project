@@ -28,7 +28,9 @@ using namespace llvm;
 #include "WebAssemblyGenInstrInfo.inc"
 
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
-    : RI(STI.getTargetTriple()) {}
+    : WebAssemblyGenInstrInfo(WebAssembly::ADJCALLSTACKDOWN,
+                              WebAssembly::ADJCALLSTACKUP),
+      RI(STI.getTargetTriple()) {}
 
 void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
@@ -69,6 +71,15 @@ bool WebAssemblyInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
     case WebAssembly::BR_IF:
       if (HaveCond)
         return true;
+      Cond.push_back(MachineOperand::CreateImm(true));
+      Cond.push_back(MI.getOperand(0));
+      TBB = MI.getOperand(1).getMBB();
+      HaveCond = true;
+      break;
+    case WebAssembly::BR_UNLESS:
+      if (HaveCond)
+        return true;
+      Cond.push_back(MachineOperand::CreateImm(false));
       Cond.push_back(MI.getOperand(0));
       TBB = MI.getOperand(1).getMBB();
       HaveCond = true;
@@ -111,8 +122,6 @@ unsigned WebAssemblyInstrInfo::InsertBranch(MachineBasicBlock &MBB,
                                             MachineBasicBlock *FBB,
                                             ArrayRef<MachineOperand> Cond,
                                             DebugLoc DL) const {
-  assert(Cond.size() <= 1);
-
   if (Cond.empty()) {
     if (!TBB)
       return 0;
@@ -121,7 +130,17 @@ unsigned WebAssemblyInstrInfo::InsertBranch(MachineBasicBlock &MBB,
     return 1;
   }
 
-  BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addOperand(Cond[0]).addMBB(TBB);
+  assert(Cond.size() == 2 && "Expected a flag and a successor block");
+
+  if (Cond[0].getImm()) {
+    BuildMI(&MBB, DL, get(WebAssembly::BR_IF))
+        .addOperand(Cond[1])
+        .addMBB(TBB);
+  } else {
+    BuildMI(&MBB, DL, get(WebAssembly::BR_UNLESS))
+        .addOperand(Cond[1])
+        .addMBB(TBB);
+  }
   if (!FBB)
     return 1;
 
@@ -131,10 +150,7 @@ unsigned WebAssemblyInstrInfo::InsertBranch(MachineBasicBlock &MBB,
 
 bool WebAssemblyInstrInfo::ReverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert(Cond.size() == 1);
-
-  // TODO: Add branch reversal here... And re-enable MachineBlockPlacementID
-  // when we do.
-
-  return true;
+  assert(Cond.size() == 2 && "Expected a flag and a successor block");
+  Cond.front() = MachineOperand::CreateImm(!Cond.front().getImm());
+  return false;
 }

@@ -639,13 +639,13 @@ private:
   /// \brief Get the compact unwind number for a given register. The number
   /// corresponds to the enum lists in compact_unwind_encoding.h.
   int getCompactUnwindRegNum(unsigned Reg) const {
-    static const uint16_t CU32BitRegs[7] = {
+    static const MCPhysReg CU32BitRegs[7] = {
       X86::EBX, X86::ECX, X86::EDX, X86::EDI, X86::ESI, X86::EBP, 0
     };
-    static const uint16_t CU64BitRegs[] = {
+    static const MCPhysReg CU64BitRegs[] = {
       X86::RBX, X86::R12, X86::R13, X86::R14, X86::R15, X86::RBP, 0
     };
-    const uint16_t *CURegs = Is64Bit ? CU64BitRegs : CU32BitRegs;
+    const MCPhysReg *CURegs = Is64Bit ? CU64BitRegs : CU32BitRegs;
     for (int Idx = 1; *CURegs; ++CURegs, ++Idx)
       if (*CURegs == Reg)
         return Idx;

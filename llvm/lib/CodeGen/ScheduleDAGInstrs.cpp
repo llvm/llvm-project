@@ -51,9 +51,8 @@ static cl::opt<bool> UseTBAA("use-tbaa-in-sched-mi", cl::Hidden,
 
 ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      const MachineLoopInfo *mli,
-                                     LiveIntervals *LIS,
                                      bool RemoveKillFlags)
-    : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()), LIS(LIS),
+    : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
       RemoveKillFlags(RemoveKillFlags), CanHandleTerminators(false),
       TrackLaneMasks(false), FirstDbgValue(nullptr) {
   DbgValues.clear();

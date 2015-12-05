@@ -167,4 +167,33 @@ bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units) {
 
 int GetPid() { return getpid(); }
 
+
+std::string Base64(const Unit &U) {
+  static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                              "abcdefghijklmnopqrstuvwxyz"
+                              "0123456789+/";
+  std::string Res;
+  size_t i;
+  for (i = 0; i + 2 < U.size(); i += 3) {
+    uint32_t x = (U[i] << 16) + (U[i + 1] << 8) + U[i + 2];
+    Res += Table[(x >> 18) & 63];
+    Res += Table[(x >> 12) & 63];
+    Res += Table[(x >> 6) & 63];
+    Res += Table[x & 63];
+  }
+  if (i + 1 == U.size()) {
+    uint32_t x = (U[i] << 16);
+    Res += Table[(x >> 18) & 63];
+    Res += Table[(x >> 12) & 63];
+    Res += "==";
+  } else if (i + 2 == U.size()) {
+    uint32_t x = (U[i] << 16) + (U[i + 1] << 8);
+    Res += Table[(x >> 18) & 63];
+    Res += Table[(x >> 12) & 63];
+    Res += Table[(x >> 6) & 63];
+    Res += "=";
+  }
+  return Res;
+}
+
 }  // namespace fuzzer

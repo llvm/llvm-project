@@ -18,17 +18,9 @@ namespace {
 
 class DummyCallbackManager : public orc::JITCompileCallbackManager {
 public:
-  DummyCallbackManager()
-      : JITCompileCallbackManager(0), NextStubAddress(0),
-        UniversalCompile([]() { return 0; }) {
-  }
-
-  CompileCallbackInfo getCompileCallback() override {
-    return CompileCallbackInfo(++NextStubAddress, UniversalCompile);
-  }
+  DummyCallbackManager() : JITCompileCallbackManager(0) { }
 public:
-  TargetAddress NextStubAddress;
-  CompileFtor UniversalCompile;
+  void grow() override { llvm_unreachable("not implemented"); }
 };
 
 class DummyStubsManager : public orc::IndirectStubsManagerBase {

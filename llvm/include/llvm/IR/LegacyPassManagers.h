@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Pass.h"
@@ -250,7 +251,43 @@ private:
   /// Map from ID to immutable passes.
   SmallDenseMap<AnalysisID, ImmutablePass *, 8> ImmutablePassMap;
 
-  DenseMap<Pass *, AnalysisUsage *> AnUsageMap;
+
+  /// A wrapper around AnalysisUsage for the purpose of uniqueing.  The wrapper
+  /// is used to avoid needing to make AnalysisUsage itself a folding set node.
+  struct AUFoldingSetNode : public FoldingSetNode {
+    AnalysisUsage AU;
+    AUFoldingSetNode(const AnalysisUsage &AU) : AU(AU) {}
+    void Profile(FoldingSetNodeID &ID) const {
+      Profile(ID, AU);
+    }
+    static void Profile(FoldingSetNodeID &ID, const AnalysisUsage &AU) {
+      // TODO: We could consider sorting the dependency arrays within the
+      // AnalysisUsage (since they are conceptually unordered).
+      ID.AddBoolean(AU.getPreservesAll());
+      auto ProfileVec = [&](const SmallVectorImpl<AnalysisID>& Vec) {
+        ID.AddInteger(Vec.size());
+        for(AnalysisID AID : Vec)
+          ID.AddPointer(AID);
+      };
+      ProfileVec(AU.getRequiredSet());
+      ProfileVec(AU.getRequiredTransitiveSet());
+      ProfileVec(AU.getPreservedSet());
+      ProfileVec(AU.getUsedSet());
+    }
+  };
+
+  // Contains all of the unique combinations of AnalysisUsage.  This is helpful
+  // when we have multiple instances of the same pass since they'll usually
+  // have the same analysis usage and can share storage.
+  FoldingSet<AUFoldingSetNode> UniqueAnalysisUsages;
+  
+  // Allocator used for allocating UAFoldingSetNodes.  This handles deletion of
+  // all allocated nodes in one fell swoop.
+  SpecificBumpPtrAllocator<AUFoldingSetNode> AUFoldingSetNodeAllocator;
+  
+  // Maps from a pass to it's associated entry in UniqueAnalysisUsages.  Does
+  // not own the storage associated with either key or value.. 
+  DenseMap<Pass *, AnalysisUsage*> AnUsageMap;
 
   /// Collection of PassInfo objects found via analysis IDs and in this top
   /// level manager. This is used to memoize queries to the pass registry.

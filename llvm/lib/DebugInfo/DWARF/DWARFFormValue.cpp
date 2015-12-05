@@ -261,6 +261,12 @@ DWARFFormValue::skipValue(DataExtractor debug_info_data, uint32_t* offset_ptr,
 bool
 DWARFFormValue::skipValue(uint16_t form, DataExtractor debug_info_data,
                           uint32_t *offset_ptr, const DWARFUnit *cu) {
+  return skipValue(form, debug_info_data, offset_ptr, cu->getVersion(),
+                   cu->getAddressByteSize());
+}
+bool DWARFFormValue::skipValue(uint16_t form, DataExtractor debug_info_data,
+                               uint32_t *offset_ptr, uint16_t Version,
+                               uint8_t AddrSize) {
   bool indirect = false;
   do {
     switch (form) {
@@ -295,10 +301,10 @@ DWARFFormValue::skipValue(uint16_t form, DataExtractor debug_info_data,
 
     // Compile unit address sized values
     case DW_FORM_addr:
-      *offset_ptr += cu->getAddressByteSize();
+      *offset_ptr += AddrSize;
       return true;
     case DW_FORM_ref_addr:
-      *offset_ptr += getRefAddrSize(cu->getAddressByteSize(), cu->getVersion());
+      *offset_ptr += getRefAddrSize(AddrSize, Version);
       return true;
 
     // 0 byte values - implied from the form.

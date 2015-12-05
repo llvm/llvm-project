@@ -6,7 +6,7 @@ target datalayout = "e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: sext_i8_i32:
-; CHECK: i32.load8_s $push0=, $0{{$}}
+; CHECK: i32.load8_s $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @sext_i8_i32(i8 *%p) {
   %v = load i8, i8* %p
@@ -15,7 +15,7 @@ define i32 @sext_i8_i32(i8 *%p) {
 }
 
 ; CHECK-LABEL: zext_i8_i32:
-; CHECK: i32.load8_u $push0=, $0{{$}}
+; CHECK: i32.load8_u $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @zext_i8_i32(i8 *%p) {
   %v = load i8, i8* %p
@@ -24,7 +24,7 @@ define i32 @zext_i8_i32(i8 *%p) {
 }
 
 ; CHECK-LABEL: sext_i16_i32:
-; CHECK: i32.load16_s $push0=, $0{{$}}
+; CHECK: i32.load16_s $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @sext_i16_i32(i16 *%p) {
   %v = load i16, i16* %p
@@ -33,7 +33,7 @@ define i32 @sext_i16_i32(i16 *%p) {
 }
 
 ; CHECK-LABEL: zext_i16_i32:
-; CHECK: i32.load16_u $push0=, $0{{$}}
+; CHECK: i32.load16_u $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @zext_i16_i32(i16 *%p) {
   %v = load i16, i16* %p
@@ -42,7 +42,7 @@ define i32 @zext_i16_i32(i16 *%p) {
 }
 
 ; CHECK-LABEL: sext_i8_i64:
-; CHECK: i64.load8_s $push0=, $0{{$}}
+; CHECK: i64.load8_s $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @sext_i8_i64(i8 *%p) {
   %v = load i8, i8* %p
@@ -51,7 +51,7 @@ define i64 @sext_i8_i64(i8 *%p) {
 }
 
 ; CHECK-LABEL: zext_i8_i64:
-; CHECK: i64.load8_u $push0=, $0{{$}}
+; CHECK: i64.load8_u $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @zext_i8_i64(i8 *%p) {
   %v = load i8, i8* %p
@@ -60,7 +60,7 @@ define i64 @zext_i8_i64(i8 *%p) {
 }
 
 ; CHECK-LABEL: sext_i16_i64:
-; CHECK: i64.load16_s $push0=, $0{{$}}
+; CHECK: i64.load16_s $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @sext_i16_i64(i16 *%p) {
   %v = load i16, i16* %p
@@ -69,7 +69,7 @@ define i64 @sext_i16_i64(i16 *%p) {
 }
 
 ; CHECK-LABEL: zext_i16_i64:
-; CHECK: i64.load16_u $push0=, $0{{$}}
+; CHECK: i64.load16_u $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @zext_i16_i64(i16 *%p) {
   %v = load i16, i16* %p
@@ -78,7 +78,7 @@ define i64 @zext_i16_i64(i16 *%p) {
 }
 
 ; CHECK-LABEL: sext_i32_i64:
-; CHECK: i64.load32_s $push0=, $0{{$}}
+; CHECK: i64.load32_s $push0=, 0($0){{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @sext_i32_i64(i32 *%p) {
   %v = load i32, i32* %p
@@ -87,7 +87,7 @@ define i64 @sext_i32_i64(i32 *%p) {
 }
 
 ; CHECK-LABEL: zext_i32_i64:
-; CHECK: i64.load32_u $push0=, $0{{$}}
+; CHECK: i64.load32_u $push0=, 0($0){{$}}
 ; CHECK: return $pop0{{$}}
 define i64 @zext_i32_i64(i32 *%p) {
   %v = load i32, i32* %p
