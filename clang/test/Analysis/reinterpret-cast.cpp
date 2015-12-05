@@ -103,3 +103,16 @@ int radar_13146953(void) {
   set_x2((void *&)y);
   return *x + *y; // no warning
 }
+
+namespace PR25426 {
+  struct Base {
+    int field;
+  };
+
+  struct Derived : Base { };
+
+  void foo(int &p) {
+    Derived &d = (Derived &)(p);
+    d.field = 2;
+  }
+}

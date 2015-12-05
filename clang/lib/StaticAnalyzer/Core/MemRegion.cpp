@@ -1177,6 +1177,7 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
 /// Returns true if \p Base is an immediate base class of \p Child
 static bool isImmediateBase(const CXXRecordDecl *Child,
                             const CXXRecordDecl *Base) {
+  assert(Child && "Child must not be null");
   // Note that we do NOT canonicalize the base class here, because
   // ASTRecordLayout doesn't either. If that leads us down the wrong path,
   // so be it; at least we won't crash.
@@ -1256,18 +1257,18 @@ RegionOffset MemRegion::getAsOffset() const {
       if (!Child) {
         // We cannot compute the offset of the base class.
         SymbolicOffsetBase = R;
-      }
-
-      if (RootIsSymbolic) {
-        // Base layers on symbolic regions may not be type-correct.
-        // Double-check the inheritance here, and revert to a symbolic offset
-        // if it's invalid (e.g. due to a reinterpret_cast).
-        if (BOR->isVirtual()) {
-          if (!Child->isVirtuallyDerivedFrom(BOR->getDecl()))
-            SymbolicOffsetBase = R;
-        } else {
-          if (!isImmediateBase(Child, BOR->getDecl()))
-            SymbolicOffsetBase = R;
+      } else {
+        if (RootIsSymbolic) {
+          // Base layers on symbolic regions may not be type-correct.
+          // Double-check the inheritance here, and revert to a symbolic offset
+          // if it's invalid (e.g. due to a reinterpret_cast).
+          if (BOR->isVirtual()) {
+            if (!Child->isVirtuallyDerivedFrom(BOR->getDecl()))
+              SymbolicOffsetBase = R;
+          } else {
+            if (!isImmediateBase(Child, BOR->getDecl()))
+              SymbolicOffsetBase = R;
+          }
         }
       }
 

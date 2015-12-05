@@ -28,7 +28,10 @@ using namespace CodeGen;
 
 void CodeGenPGO::setFuncName(StringRef Name,
                              llvm::GlobalValue::LinkageTypes Linkage) {
-  FuncName = llvm::getPGOFuncName(Name, Linkage, CGM.getCodeGenOpts().MainFileName);
+  llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
+  FuncName = llvm::getPGOFuncName(
+      Name, Linkage, CGM.getCodeGenOpts().MainFileName,
+      PGOReader ? PGOReader->getVersion() : llvm::IndexedInstrProf::Version);
 
   // If we're generating a profile, create a variable for the name.
   if (CGM.getCodeGenOpts().ProfileInstrGenerate)

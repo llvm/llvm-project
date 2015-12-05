@@ -48,10 +48,7 @@ to disable inlining (just use ``-O1``) and tail call elimination
     % clang -fsanitize=memory -fno-omit-frame-pointer -g -O2 umr.cc
 
 If a bug is detected, the program will print an error message to
-stderr and exit with a non-zero exit code. Currently, MemorySanitizer
-does not symbolize its output by default, so you may need to use a
-separate script to symbolize the result offline (this will be fixed in
-future).
+stderr and exit with a non-zero exit code.
 
 .. code-block:: console
 
@@ -60,7 +57,9 @@ future).
         #0 0x7f45944b418a in main umr.cc:6
         #1 0x7f45938b676c in __libc_start_main libc-start.c:226
 
-By default, MemorySanitizer exits on the first detected error.
+By default, MemorySanitizer exits on the first detected error. If you
+find the error report hard to understand, try enabling
+:ref:`origin tracking <msan-origins>`.
 
 ``__has_feature(memory_sanitizer)``
 ------------------------------------
@@ -102,10 +101,12 @@ MemorySanitizer uses an external symbolizer to print files and line numbers in
 reports. Make sure that ``llvm-symbolizer`` binary is in ``PATH``,
 or set environment variable ``MSAN_SYMBOLIZER_PATH`` to point to it.
 
+.. _msan-origins:
+
 Origin Tracking
 ===============
 
-MemorySanitizer can track origins of unitialized values, similar to
+MemorySanitizer can track origins of uninitialized values, similar to
 Valgrind's --track-origins option. This feature is enabled by
 ``-fsanitize-memory-track-origins=2`` (or simply
 ``-fsanitize-memory-track-origins``) Clang option. With the code from
@@ -143,14 +144,29 @@ By default, MemorySanitizer collects both allocation points and all
 intermediate stores the uninitialized value went through.  Origin
 tracking has proved to be very useful for debugging MemorySanitizer
 reports. It slows down program execution by a factor of 1.5x-2x on top
-of the usual MemorySanitizer slowdown.
+of the usual MemorySanitizer slowdown and increases memory overhead.
 
-Clang option ``-fsanitize-memory-track-origins=1`` enabled a slightly
+Clang option ``-fsanitize-memory-track-origins=1`` enables a slightly
 faster mode when MemorySanitizer collects only allocation points but
 not intermediate stores.
 
+Use-after-destruction detection
+===============================
+
+You can enable experimental use-after-destruction detection in MemorySanitizer.
+After invocation of the destructor, the object will be considered no longer
+readable, and using underlying memory will lead to error reports in runtime.
+
+This feature is still experimental, in order to enable it at runtime you need
+to:
+
+#. Pass addition Clang option ``-fsanitize-memory-use-after-dtor`` during
+   compilation.
+#. Set environment variable `MSAN_OPTIONS=poison_in_dtor=1` before running
+   the program.
+
 Handling external code
-============================
+======================
 
 MemorySanitizer requires that all program code is instrumented. This
 also includes any libraries that the program depends on, even libc.
@@ -167,9 +183,7 @@ self-built instrumented libc++ (as a replacement for libstdc++).
 Supported Platforms
 ===================
 
-MemorySanitizer is supported on
-
-* Linux x86\_64 (tested on Ubuntu 12.04);
+MemorySanitizer is supported on Linux x86\_64/MIPS64/AArch64.
 
 Limitations
 ===========
@@ -180,19 +194,17 @@ Limitations
   address space. This means that tools like ``ulimit`` may not work as
   usually expected.
 * Static linking is not supported.
-* Non-position-independent executables are not supported.  Therefore, the
-  ``fsanitize=memory`` flag will cause Clang to act as though the ``-fPIE``
-  flag had been supplied if compiling without ``-fPIC``, and as though the
-  ``-pie`` flag had been supplied if linking an executable.
-* Depending on the version of Linux kernel, running without ASLR may
-  be not supported. Note that GDB disables ASLR by default. To debug
-  instrumented programs, use "set disable-randomization off".
+* Older versions of MSan (LLVM 3.7 and older) didn't work with
+  non-position-independent executables, and could fail on some Linux
+  kernel versions with disabled ASLR. Refer to documentation for older versions
+  for more details.
 
 Current Status
 ==============
 
-MemorySanitizer is an experimental tool. It is known to work on large
-real-world programs, like Clang/LLVM itself.
+MemorySanitizer is known to work on large real-world programs
+(like Clang/LLVM itself) that can be recompiled from source, including all
+dependent libraries.
 
 More Information
 ================

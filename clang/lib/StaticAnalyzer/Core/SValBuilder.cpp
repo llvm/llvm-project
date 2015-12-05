@@ -95,6 +95,9 @@ DefinedOrUnknownSVal
 SValBuilder::getRegionValueSymbolVal(const TypedValueRegion* region) {
   QualType T = region->getValueType();
 
+  if (T->isNullPtrType())
+    return makeZeroVal(T);
+  
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
@@ -112,6 +115,9 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *SymbolTag,
                                                    unsigned Count) {
   QualType T = Ex->getType();
 
+  if (T->isNullPtrType())
+    return makeZeroVal(T);
+
   // Compute the type of the result. If the expression is not an R-value, the
   // result should be a location.
   QualType ExType = Ex->getType();
@@ -126,6 +132,9 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned count) {
+  if (type->isNullPtrType())
+    return makeZeroVal(type);
+
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
@@ -142,6 +151,9 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const Stmt *stmt,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned visitCount) {
+  if (type->isNullPtrType())
+    return makeZeroVal(type);
+
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
@@ -160,6 +172,8 @@ SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
   QualType T = E->getType();
   assert(Loc::isLocType(T));
   assert(SymbolManager::canSymbolicate(T));
+  if (T->isNullPtrType())
+    return makeZeroVal(T);
 
   SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, T, VisitCount);
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
@@ -184,6 +198,9 @@ DefinedOrUnknownSVal
 SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
                                              const TypedValueRegion *region) {
   QualType T = region->getValueType();
+
+  if (T->isNullPtrType())
+    return makeZeroVal(T);
 
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
