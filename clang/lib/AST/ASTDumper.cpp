@@ -1385,20 +1385,23 @@ void ASTDumper::VisitTemplateTemplateParmDecl(
 
 void ASTDumper::VisitUsingDecl(const UsingDecl *D) {
   OS << ' ';
-  D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  if (D->getQualifier())
+    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getNameAsString();
 }
 
 void ASTDumper::VisitUnresolvedUsingTypenameDecl(
     const UnresolvedUsingTypenameDecl *D) {
   OS << ' ';
-  D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  if (D->getQualifier())
+    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getNameAsString();
 }
 
 void ASTDumper::VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D) {
   OS << ' ';
-  D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  if (D->getQualifier())
+    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getNameAsString();
   dumpType(D->getType());
 }

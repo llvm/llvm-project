@@ -2712,8 +2712,7 @@ llvm::iterator_range<BugReport::ranges_iterator> BugReport::getRanges() {
   if (Ranges.size() == 1 && !Ranges.begin()->isValid())
     return llvm::make_range(ranges_iterator(), ranges_iterator());
 
-  return llvm::iterator_range<BugReport::ranges_iterator>(Ranges.begin(),
-                                                          Ranges.end());
+  return llvm::make_range(Ranges.begin(), Ranges.end());
 }
 
 PathDiagnosticLocation BugReport::getLocation(const SourceManager &SM) const {
