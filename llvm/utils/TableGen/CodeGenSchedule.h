@@ -257,18 +257,16 @@ public:
   class_iterator classes_end() { return SchedClasses.end(); }
   const_class_iterator classes_end() const { return SchedClasses.end(); }
   iterator_range<class_iterator> classes() {
-   return iterator_range<class_iterator>(classes_begin(), classes_end());
+   return make_range(classes_begin(), classes_end());
   }
   iterator_range<const_class_iterator> classes() const {
-   return iterator_range<const_class_iterator>(classes_begin(), classes_end());
+   return make_range(classes_begin(), classes_end());
   }
   iterator_range<class_iterator> explicit_classes() {
-    return iterator_range<class_iterator>(
-        classes_begin(), classes_begin() + NumInstrSchedClasses);
+    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
   }
   iterator_range<const_class_iterator> explicit_classes() const {
-    return iterator_range<const_class_iterator>(
-        classes_begin(), classes_begin() + NumInstrSchedClasses);
+    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
   }
 
   Record *getModelOrItinDef(Record *ProcDef) const {

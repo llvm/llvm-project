@@ -1210,10 +1210,10 @@ public:
   const_op_iterator op_end()   const { return const_op_iterator(this, getNumOperands()); }
 
   inline iterator_range<op_iterator>  operands() {
-    return iterator_range<op_iterator>(op_begin(), op_end());
+    return make_range(op_begin(), op_end());
   }
   inline iterator_range<const_op_iterator> operands() const {
-    return iterator_range<const_op_iterator>(op_begin(), op_end());
+    return make_range(op_begin(), op_end());
   }
 };
 

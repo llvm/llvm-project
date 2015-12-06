@@ -119,7 +119,7 @@ namespace llvm {
     static iterator end()   { return iterator(nullptr); }
 
     static iterator_range<iterator> entries() {
-      return iterator_range<iterator>(begin(), end());
+      return make_range(begin(), end());
     }
 
     /// Abstract base class for registry listeners, which are informed when new

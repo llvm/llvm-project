@@ -515,10 +515,10 @@ public:
   bool                  global_empty() const { return GlobalList.empty(); }
 
   iterator_range<global_iterator> globals() {
-    return iterator_range<global_iterator>(global_begin(), global_end());
+    return make_range(global_begin(), global_end());
   }
   iterator_range<const_global_iterator> globals() const {
-    return iterator_range<const_global_iterator>(global_begin(), global_end());
+    return make_range(global_begin(), global_end());
   }
 
 /// @}
@@ -537,10 +537,10 @@ public:
   bool                    empty() const { return FunctionList.empty(); }
 
   iterator_range<iterator> functions() {
-    return iterator_range<iterator>(begin(), end());
+    return make_range(begin(), end());
   }
   iterator_range<const_iterator> functions() const {
-    return iterator_range<const_iterator>(begin(), end());
+    return make_range(begin(), end());
   }
 
 /// @}
@@ -555,10 +555,10 @@ public:
   bool                 alias_empty() const      { return AliasList.empty(); }
 
   iterator_range<alias_iterator> aliases() {
-    return iterator_range<alias_iterator>(alias_begin(), alias_end());
+    return make_range(alias_begin(), alias_end());
   }
   iterator_range<const_alias_iterator> aliases() const {
-    return iterator_range<const_alias_iterator>(alias_begin(), alias_end());
+    return make_range(alias_begin(), alias_end());
   }
 
 /// @}
@@ -579,12 +579,10 @@ public:
   bool named_metadata_empty() const { return NamedMDList.empty(); }
 
   iterator_range<named_metadata_iterator> named_metadata() {
-    return iterator_range<named_metadata_iterator>(named_metadata_begin(),
-                                                   named_metadata_end());
+    return make_range(named_metadata_begin(), named_metadata_end());
   }
   iterator_range<const_named_metadata_iterator> named_metadata() const {
-    return iterator_range<const_named_metadata_iterator>(named_metadata_begin(),
-                                                         named_metadata_end());
+    return make_range(named_metadata_begin(), named_metadata_end());
   }
 
   /// Destroy ConstantArrays in LLVMContext if they are not used.

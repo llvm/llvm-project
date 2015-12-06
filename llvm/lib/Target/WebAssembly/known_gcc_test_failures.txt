@@ -1,0 +1,2 @@
+# Tests which are known to fail from the GCC torture test suite.
+# FIXME: placeholder. The script which runs the tests needs a file here!

@@ -33,3 +33,17 @@ entry:
   %call = tail call i8* @memcpy(i8* %p, i8* %s, i32 %n)
   ret i8* %p
 }
+
+; Test that the optimization isn't performed on constant arguments.
+
+; CHECK-LABEL: test_constant_arg:
+; CHECK-NEXT: i32.const   $push0=, global{{$}}
+; CHECK-NEXT: call        $discard=, returns_arg, $pop0{{$}}
+; CHECK-NEXT: return{{$}}
+@global = external global i32
+@addr = global i32* @global
+define void @test_constant_arg() {
+  %call = call i32* @returns_arg(i32* @global)
+  ret void
+}
+declare i32* @returns_arg(i32* returned)

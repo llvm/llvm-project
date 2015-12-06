@@ -85,32 +85,33 @@ void HexagonMCChecker::init(MCInst const& MCI) {
     }
 
   // Get implicit register definitions.
-  const MCPhysReg *ImpDefs = MCID.getImplicitDefs();
-  for (unsigned i = 0; i < MCID.getNumImplicitDefs(); ++i) {
-    unsigned R = ImpDefs[i];
+  if (const MCPhysReg *ImpDef = MCID.getImplicitDefs())
+    for (; *ImpDef; ++ImpDef) {
+      unsigned R = *ImpDef;
 
-    if (Hexagon::R31 != R && MCID.isCall())
-      // Any register other than the LR and the PC are actually volatile ones
-      // as defined by the ABI, not modified implicitly by the call insn.
-      continue;
-    if (Hexagon::PC == R)
-      // Branches are the only insns that can change the PC,
-      // otherwise a read-only register.
-      continue;
+      if (Hexagon::R31 != R && MCID.isCall())
+        // Any register other than the LR and the PC are actually volatile ones
+        // as defined by the ABI, not modified implicitly by the call insn.
+        continue;
+      if (Hexagon::PC == R)
+        // Branches are the only insns that can change the PC,
+        // otherwise a read-only register.
+        continue;
 
-    if (Hexagon::USR_OVF == R)
-      // Many insns change the USR implicitly, but only one or another flag.
-      // The instruction table models the USR.OVF flag, which can be implicitly
-      // modified more than once, but cannot be modified in the same packet
-      // with an instruction that modifies is explicitly. Deal with such situ-
-      // ations individually.
-      SoftDefs.insert(R);
-    else if (isPredicateRegister(R) && HexagonMCInstrInfo::isPredicateLate(MCII, MCI))
-      // Include implicit late predicates.
-      LatePreds.insert(R);
-    else
-      Defs[R].insert(PredSense(PredReg, isTrue));
-  }
+      if (Hexagon::USR_OVF == R)
+        // Many insns change the USR implicitly, but only one or another flag.
+        // The instruction table models the USR.OVF flag, which can be implicitly
+        // modified more than once, but cannot be modified in the same packet
+        // with an instruction that modifies is explicitly. Deal with such situ-
+        // ations individually.
+        SoftDefs.insert(R);
+      else if (isPredicateRegister(R) &&
+               HexagonMCInstrInfo::isPredicateLate(MCII, MCI))
+        // Include implicit late predicates.
+        LatePreds.insert(R);
+      else
+        Defs[R].insert(PredSense(PredReg, isTrue));
+    }
 
   // Figure out explicit register definitions.
   for (unsigned i = 0; i < MCID.getNumDefs(); ++i) {

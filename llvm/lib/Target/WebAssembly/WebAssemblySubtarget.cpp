@@ -46,3 +46,4 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
       TLInfo(TM, *this) {}
 
 bool WebAssemblySubtarget::enableMachineScheduler() const { return true; }
+bool WebAssemblySubtarget::useAA() const { return true; }

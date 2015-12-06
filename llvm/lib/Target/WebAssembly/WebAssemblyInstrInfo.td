@@ -67,8 +67,6 @@ def WebAssemblywrapper  : SDNode<"WebAssemblyISD::Wrapper",
 //===----------------------------------------------------------------------===//
 
 def bb_op : Operand<OtherVT>;
-def tjumptable_op : Operand<iPTR>;
-def global : Operand<iPTR>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Instruction Format Definitions.
@@ -136,12 +134,10 @@ def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$dst)),
           (CONST_I32 tglobaladdr:$dst)>;
 def : Pat<(i32 (WebAssemblywrapper texternalsym:$dst)),
           (CONST_I32 texternalsym:$dst)>;
+def : Pat<(i32 (WebAssemblywrapper tjumptable:$dst)),
+          (CONST_I32 tjumptable:$dst)>;
 
 let Defs = [ARGUMENTS] in {
-
-def JUMP_TABLE : I<(outs I32:$dst), (ins tjumptable_op:$addr),
-                   [(set I32:$dst, (WebAssemblywrapper tjumptable:$addr))],
-                   "jump_table\t$dst, $addr">;
 
 // Function signature and local variable declaration "instructions".
 def PARAM  : I<(outs), (ins variable_ops), [], ".param  \t">;

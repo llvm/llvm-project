@@ -146,14 +146,20 @@ void WebAssemblyPassConfig::addIRPasses() {
 }
 
 bool WebAssemblyPassConfig::addInstSelector() {
+  (void)TargetPassConfig::addInstSelector();
   addPass(
       createWebAssemblyISelDag(getWebAssemblyTargetMachine(), getOptLevel()));
   return false;
 }
 
-bool WebAssemblyPassConfig::addILPOpts() { return true; }
+bool WebAssemblyPassConfig::addILPOpts() {
+  (void)TargetPassConfig::addILPOpts();
+  return true;
+}
 
 void WebAssemblyPassConfig::addPreRegAlloc() {
+  TargetPassConfig::addPreRegAlloc();
+
   // Prepare store instructions for register stackifying.
   addPass(createWebAssemblyStoreResults());
 
@@ -173,9 +179,13 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 
   // Run the register coloring pass to reduce the total number of registers.
   addPass(createWebAssemblyRegColoring());
+
+  TargetPassConfig::addPostRegAlloc();
 }
 
 void WebAssemblyPassConfig::addPreEmitPass() {
+  TargetPassConfig::addPreEmitPass();
+    
   // Put the CFG in structured form; insert BLOCK and LOOP markers.
   addPass(createWebAssemblyCFGStackify());
 

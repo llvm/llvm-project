@@ -272,10 +272,10 @@ public:
   }
 
   inline iterator_range<iterator> terminators() {
-    return iterator_range<iterator>(getFirstTerminator(), end());
+    return make_range(getFirstTerminator(), end());
   }
   inline iterator_range<const_iterator> terminators() const {
-    return iterator_range<const_iterator>(getFirstTerminator(), end());
+    return make_range(getFirstTerminator(), end());
   }
 
   // Machine-CFG iterators
@@ -325,16 +325,16 @@ public:
   bool                 succ_empty() const { return Successors.empty();   }
 
   inline iterator_range<pred_iterator> predecessors() {
-    return iterator_range<pred_iterator>(pred_begin(), pred_end());
+    return make_range(pred_begin(), pred_end());
   }
   inline iterator_range<const_pred_iterator> predecessors() const {
-    return iterator_range<const_pred_iterator>(pred_begin(), pred_end());
+    return make_range(pred_begin(), pred_end());
   }
   inline iterator_range<succ_iterator> successors() {
-    return iterator_range<succ_iterator>(succ_begin(), succ_end());
+    return make_range(succ_begin(), succ_end());
   }
   inline iterator_range<const_succ_iterator> successors() const {
-    return iterator_range<const_succ_iterator>(succ_begin(), succ_end());
+    return make_range(succ_begin(), succ_end());
   }
 
   // LiveIn management methods.

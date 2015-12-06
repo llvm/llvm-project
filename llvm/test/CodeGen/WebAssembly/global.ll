@@ -21,8 +21,7 @@ define i32 @foo() {
 ; CHECK-LABEL: call_memcpy:
 ; CHECK-NEXT: .param          i32, i32, i32{{$}}
 ; CHECK-NEXT: .result         i32{{$}}
-; CHECK-NEXT: i32.const       $push0=, memcpy{{$}}
-; CHECK-NEXT: call_indirect   $pop0, $0, $1, $2{{$}}
+; CHECK-NEXT: call            memcpy, $0, $1, $2{{$}}
 ; CHECK-NEXT: return          $0{{$}}
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1)
 define i8* @call_memcpy(i8* %p, i8* nocapture readonly %q, i32 %n) {

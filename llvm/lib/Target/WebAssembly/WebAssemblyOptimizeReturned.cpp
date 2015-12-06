@@ -57,6 +57,9 @@ void OptimizeReturned::visitCallSite(CallSite CS) {
     if (CS.paramHasAttr(1 + i, Attribute::Returned)) {
       Instruction *Inst = CS.getInstruction();
       Value *Arg = CS.getArgOperand(i);
+      // Ignore constants, globals, undef, etc.
+      if (isa<Constant>(Arg))
+        continue;
       // Like replaceDominatedUsesWith but using Instruction/Use dominance.
       for (auto UI = Arg->use_begin(), UE = Arg->use_end(); UI != UE;) {
         Use &U = *UI++;

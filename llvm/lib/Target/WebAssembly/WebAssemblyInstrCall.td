@@ -12,20 +12,22 @@
 ///
 //===----------------------------------------------------------------------===//
 
+// TODO: addr64: These currently assume the callee address is 32-bit.
+
 let Defs = [ARGUMENTS] in {
 
-// The call sequence start/end LLVM-isms isn't useful to WebAssembly since it's
-// a virtual ISA.
+// Call sequence markers. These have an immediate which represents the amount of
+// stack space to allocate or free, which is used for varargs lowering.
 let isCodeGenOnly = 1 in {
-def ADJCALLSTACKDOWN : I<(outs), (ins i64imm:$amt),
+def ADJCALLSTACKDOWN : I<(outs), (ins i32imm:$amt),
                          [(WebAssemblycallseq_start timm:$amt)]>;
-def ADJCALLSTACKUP : I<(outs), (ins i64imm:$amt),
+def ADJCALLSTACKUP : I<(outs), (ins i32imm:$amt),
                        [(WebAssemblycallseq_end timm:$amt, undef)]>;
 } // isCodeGenOnly = 1
 
 multiclass CALL<WebAssemblyRegClass vt> {
-  def CALL_#vt : I<(outs vt:$dst), (ins global:$callee, variable_ops),
-                   [(set vt:$dst, (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee)))],
+  def CALL_#vt : I<(outs vt:$dst), (ins i32imm:$callee, variable_ops),
+                   [(set vt:$dst, (WebAssemblycall1 (i32 imm:$callee)))],
                    "call    \t$dst, $callee">;
   def CALL_INDIRECT_#vt : I<(outs vt:$dst), (ins I32:$callee, variable_ops),
                             [(set vt:$dst, (WebAssemblycall1 I32:$callee))],
@@ -37,8 +39,8 @@ let Uses = [SP32, SP64], isCall = 1 in {
   defm : CALL<F32>;
   defm : CALL<F64>;
 
-  def CALL_VOID : I<(outs), (ins global:$callee, variable_ops),
-                    [(WebAssemblycall0 (WebAssemblywrapper tglobaladdr:$callee))],
+  def CALL_VOID : I<(outs), (ins i32imm:$callee, variable_ops),
+                    [(WebAssemblycall0 (i32 imm:$callee))],
                     "call    \t$callee">;
   def CALL_INDIRECT_VOID : I<(outs), (ins I32:$callee, variable_ops),
                              [(WebAssemblycall0 I32:$callee)],
@@ -46,3 +48,27 @@ let Uses = [SP32, SP64], isCall = 1 in {
 } // Uses = [SP32,SP64], isCall = 1
 
 } // Defs = [ARGUMENTS]
+
+// Patterns for matching a direct call to a global address.
+def : Pat<(i32 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_I32 tglobaladdr:$callee)>;
+def : Pat<(i64 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_I64 tglobaladdr:$callee)>;
+def : Pat<(f32 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_F32 tglobaladdr:$callee)>;
+def : Pat<(f64 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_F64 tglobaladdr:$callee)>;
+def : Pat<(WebAssemblycall0 (WebAssemblywrapper tglobaladdr:$callee)),
+          (CALL_VOID tglobaladdr:$callee)>;
+
+// Patterns for matching a direct call to an external symbol.
+def : Pat<(i32 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_I32 texternalsym:$callee)>;
+def : Pat<(i64 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_I64 texternalsym:$callee)>;
+def : Pat<(f32 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_F32 texternalsym:$callee)>;
+def : Pat<(f64 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_F64 texternalsym:$callee)>;
+def : Pat<(WebAssemblycall0 (WebAssemblywrapper texternalsym:$callee)),
+          (CALL_VOID texternalsym:$callee)>;

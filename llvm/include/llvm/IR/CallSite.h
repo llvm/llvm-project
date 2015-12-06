@@ -158,7 +158,7 @@ public:
 
   IterTy arg_end() const { return (*this)->op_end() - getArgumentEndOffset(); }
   iterator_range<IterTy> args() const {
-    return iterator_range<IterTy>(arg_begin(), arg_end());
+    return make_range(arg_begin(), arg_end());
   }
   bool arg_empty() const { return arg_end() == arg_begin(); }
   unsigned arg_size() const { return unsigned(arg_end() - arg_begin()); }
@@ -182,7 +182,7 @@ public:
     return (*this)->op_end() - (isCall() ? 1 : 3);
   }
   iterator_range<IterTy> data_ops() const {
-    return iterator_range<IterTy>(data_operands_begin(), data_operands_end());
+    return make_range(data_operands_begin(), data_operands_end());
   }
   bool data_operands_empty() const {
     return data_operands_end() == data_operands_begin();

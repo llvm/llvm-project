@@ -133,7 +133,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                     ISD::SETULT, ISD::SETULE, ISD::SETUGT, ISD::SETUGE})
       setCondCodeAction(CC, T, Expand);
     // Expand floating-point library function operators.
-    for (auto Op : {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOWI, ISD::FPOW})
+    for (auto Op : {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOWI, ISD::FPOW,
+                    ISD::FREM})
       setOperationAction(Op, T, Expand);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
@@ -227,10 +228,13 @@ WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':
-      if (VT == MVT::i32)
-        return std::make_pair(0U, &WebAssembly::I32RegClass);
-      if (VT == MVT::i64)
-        return std::make_pair(0U, &WebAssembly::I64RegClass);
+      assert(VT != MVT::iPTR && "Pointer MVT not expected here");
+      if (VT.isInteger() && !VT.isVector()) {
+        if (VT.getSizeInBits() <= 32)
+          return std::make_pair(0U, &WebAssembly::I32RegClass);
+        if (VT.getSizeInBits() <= 64)
+          return std::make_pair(0U, &WebAssembly::I64RegClass);
+      }
       break;
     default:
       break;
