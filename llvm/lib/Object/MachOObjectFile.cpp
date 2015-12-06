@@ -1403,8 +1403,7 @@ MachOObjectFile::exports(ArrayRef<uint8_t> Trie) {
   ExportEntry Finish(Trie);
   Finish.moveToEnd();
 
-  return iterator_range<export_iterator>(export_iterator(Start),
-                                         export_iterator(Finish));
+  return make_range(export_iterator(Start), export_iterator(Finish));
 }
 
 iterator_range<export_iterator> MachOObjectFile::exports() const {
@@ -1574,8 +1573,7 @@ MachOObjectFile::rebaseTable(ArrayRef<uint8_t> Opcodes, bool is64) {
   MachORebaseEntry Finish(Opcodes, is64);
   Finish.moveToEnd();
 
-  return iterator_range<rebase_iterator>(rebase_iterator(Start),
-                                         rebase_iterator(Finish));
+  return make_range(rebase_iterator(Start), rebase_iterator(Finish));
 }
 
 iterator_range<rebase_iterator> MachOObjectFile::rebaseTable() const {
@@ -1826,8 +1824,7 @@ MachOObjectFile::bindTable(ArrayRef<uint8_t> Opcodes, bool is64,
   MachOBindEntry Finish(Opcodes, is64, BKind);
   Finish.moveToEnd();
 
-  return iterator_range<bind_iterator>(bind_iterator(Start),
-                                       bind_iterator(Finish));
+  return make_range(bind_iterator(Start), bind_iterator(Finish));
 }
 
 iterator_range<bind_iterator> MachOObjectFile::bindTable() const {
@@ -1857,8 +1854,7 @@ MachOObjectFile::end_load_commands() const {
 
 iterator_range<MachOObjectFile::load_command_iterator>
 MachOObjectFile::load_commands() const {
-  return iterator_range<load_command_iterator>(begin_load_commands(),
-                                               end_load_commands());
+  return make_range(begin_load_commands(), end_load_commands());
 }
 
 StringRef

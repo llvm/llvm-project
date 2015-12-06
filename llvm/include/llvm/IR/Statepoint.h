@@ -173,7 +173,7 @@ public:
 
   /// range adapter for call arguments
   iterator_range<arg_iterator> call_args() const {
-    return iterator_range<arg_iterator>(arg_begin(), arg_end());
+    return make_range(arg_begin(), arg_end());
   }
 
   /// \brief Return true if the call or the callee has the given attribute.
@@ -201,8 +201,7 @@ public:
 
   /// range adapter for GC transition arguments
   iterator_range<arg_iterator> gc_transition_args() const {
-    return iterator_range<arg_iterator>(gc_transition_args_begin(),
-                                        gc_transition_args_end());
+    return make_range(gc_transition_args_begin(), gc_transition_args_end());
   }
 
   /// Number of additional arguments excluding those intended
@@ -225,7 +224,7 @@ public:
 
   /// range adapter for vm state arguments
   iterator_range<arg_iterator> vm_state_args() const {
-    return iterator_range<arg_iterator>(vm_state_begin(), vm_state_end());
+    return make_range(vm_state_begin(), vm_state_end());
   }
 
   typename CallSiteTy::arg_iterator gc_args_begin() const {
@@ -241,7 +240,7 @@ public:
 
   /// range adapter for gc arguments
   iterator_range<arg_iterator> gc_args() const {
-    return iterator_range<arg_iterator>(gc_args_begin(), gc_args_end());
+    return make_range(gc_args_begin(), gc_args_end());
   }
 
   /// Get list of all gc reloactes linked to this statepoint

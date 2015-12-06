@@ -280,6 +280,11 @@ class GlobalsMetadata {
 
   GlobalsMetadata() : inited_(false) {}
 
+  void reset() {
+    inited_ = false;
+    Entries.clear();
+  }
+
   void init(Module &M) {
     assert(!inited_);
     inited_ = true;
@@ -450,6 +455,7 @@ struct AddressSanitizer : public FunctionPass {
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
   bool doInitialization(Module &M) override;
+  bool doFinalization(Module &M) override;
   static char ID;  // Pass identification, replacement for typeid
 
   DominatorTree &getDominatorTree() const { return *DT; }
@@ -1519,6 +1525,11 @@ bool AddressSanitizer::doInitialization(Module &M) {
   }
   Mapping = getShadowMapping(TargetTriple, LongSize, CompileKernel);
   return true;
+}
+
+bool AddressSanitizer::doFinalization(Module &M) {
+  GlobalsMD.reset();
+  return false;
 }
 
 bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {

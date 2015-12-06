@@ -45,8 +45,7 @@ void HexagonMCInstrInfo::addConstExtender(MCContext &Context,
 iterator_range<MCInst::const_iterator>
 HexagonMCInstrInfo::bundleInstructions(MCInst const &MCI) {
   assert(isBundle(MCI));
-  return iterator_range<MCInst::const_iterator>(
-      MCI.begin() + bundleInstructionsOffset, MCI.end());
+  return make_range(MCI.begin() + bundleInstructionsOffset, MCI.end());
 }
 
 size_t HexagonMCInstrInfo::bundleSize(MCInst const &MCI) {

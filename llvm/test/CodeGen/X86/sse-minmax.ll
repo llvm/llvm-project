@@ -3,7 +3,7 @@
 ; RUN: llc < %s -march=x86-64 -mtriple=x86_64-apple-darwin -mcpu=nehalem -asm-verbose=false -enable-no-nans-fp-math  | FileCheck -check-prefix=FINITE %s
 
 ; Some of these patterns can be matched as SSE min or max. Some of
-; then can be matched provided that the operands are swapped.
+; them can be matched provided that the operands are swapped.
 ; Some of them can't be matched at all and require a comparison
 ; and a conditional branch.
 

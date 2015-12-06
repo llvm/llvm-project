@@ -493,11 +493,11 @@ public:
   }
 
   iterator_range<arg_iterator> args() {
-    return iterator_range<arg_iterator>(arg_begin(), arg_end());
+    return make_range(arg_begin(), arg_end());
   }
 
   iterator_range<const_arg_iterator> args() const {
-    return iterator_range<const_arg_iterator>(arg_begin(), arg_end());
+    return make_range(arg_begin(), arg_end());
   }
 
 /// @}

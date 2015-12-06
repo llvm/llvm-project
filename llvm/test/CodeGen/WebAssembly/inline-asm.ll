@@ -56,6 +56,22 @@ entry:
   ret i64 %0
 }
 
+; CHECK-LABEL: X_i16:
+; CHECK: foo $1{{$}}
+; CHECK: i32.store16 $discard=, 0($0), $1{{$}}
+define void @X_i16(i16 * %t) {
+  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16* %t)
+  ret void
+}
+
+; CHECK-LABEL: X_ptr:
+; CHECK: foo $1{{$}}
+; CHECK: i32.store $discard=, 0($0), $1
+define void @X_ptr(i16 ** %t) {
+  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16** %t)
+  ret void
+}
+
 attributes #0 = { nounwind }
 
 !0 = !{i32 47}

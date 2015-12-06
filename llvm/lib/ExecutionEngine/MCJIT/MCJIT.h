@@ -86,7 +86,7 @@ class MCJIT : public ExecutionEngine {
     ModulePtrSet::iterator begin_added() { return AddedModules.begin(); }
     ModulePtrSet::iterator end_added() { return AddedModules.end(); }
     iterator_range<ModulePtrSet::iterator> added() {
-      return iterator_range<ModulePtrSet::iterator>(begin_added(), end_added());
+      return make_range(begin_added(), end_added());
     }
 
     ModulePtrSet::iterator begin_loaded() { return LoadedModules.begin(); }

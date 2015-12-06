@@ -233,7 +233,7 @@ public:
     return value_op_iterator(op_end());
   }
   iterator_range<value_op_iterator> operand_values() {
-    return iterator_range<value_op_iterator>(value_op_begin(), value_op_end());
+    return make_range(value_op_begin(), value_op_end());
   }
 
   /// \brief Drop all references to operands.

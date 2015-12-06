@@ -235,7 +235,7 @@ public:
     parent_iterator parent_end() const { return ParentSCCs.end(); }
 
     iterator_range<parent_iterator> parents() const {
-      return iterator_range<parent_iterator>(parent_begin(), parent_end());
+      return make_range(parent_begin(), parent_end());
     }
 
     /// \brief Test if this SCC is a parent of \a C.
@@ -410,8 +410,7 @@ public:
   }
 
   iterator_range<postorder_scc_iterator> postorder_sccs() {
-    return iterator_range<postorder_scc_iterator>(postorder_scc_begin(),
-                                                  postorder_scc_end());
+    return make_range(postorder_scc_begin(), postorder_scc_end());
   }
 
   /// \brief Lookup a function in the graph which has already been scanned and

@@ -296,48 +296,46 @@ public:
   const_mop_iterator operands_end() const { return Operands + NumOperands; }
 
   iterator_range<mop_iterator> operands() {
-    return iterator_range<mop_iterator>(operands_begin(), operands_end());
+    return make_range(operands_begin(), operands_end());
   }
   iterator_range<const_mop_iterator> operands() const {
-    return iterator_range<const_mop_iterator>(operands_begin(), operands_end());
+    return make_range(operands_begin(), operands_end());
   }
   iterator_range<mop_iterator> explicit_operands() {
-    return iterator_range<mop_iterator>(
-        operands_begin(), operands_begin() + getNumExplicitOperands());
+    return make_range(operands_begin(),
+                      operands_begin() + getNumExplicitOperands());
   }
   iterator_range<const_mop_iterator> explicit_operands() const {
-    return iterator_range<const_mop_iterator>(
-        operands_begin(), operands_begin() + getNumExplicitOperands());
+    return make_range(operands_begin(),
+                      operands_begin() + getNumExplicitOperands());
   }
   iterator_range<mop_iterator> implicit_operands() {
-    return iterator_range<mop_iterator>(explicit_operands().end(),
-                                        operands_end());
+    return make_range(explicit_operands().end(), operands_end());
   }
   iterator_range<const_mop_iterator> implicit_operands() const {
-    return iterator_range<const_mop_iterator>(explicit_operands().end(),
-                                              operands_end());
+    return make_range(explicit_operands().end(), operands_end());
   }
   /// Returns a range over all explicit operands that are register definitions.
   /// Implicit definition are not included!
   iterator_range<mop_iterator> defs() {
-    return iterator_range<mop_iterator>(
-        operands_begin(), operands_begin() + getDesc().getNumDefs());
+    return make_range(operands_begin(),
+                      operands_begin() + getDesc().getNumDefs());
   }
   /// \copydoc defs()
   iterator_range<const_mop_iterator> defs() const {
-    return iterator_range<const_mop_iterator>(
-        operands_begin(), operands_begin() + getDesc().getNumDefs());
+    return make_range(operands_begin(),
+                      operands_begin() + getDesc().getNumDefs());
   }
   /// Returns a range that includes all operands that are register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
-    return iterator_range<mop_iterator>(
-        operands_begin() + getDesc().getNumDefs(), operands_end());
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_end());
   }
   /// \copydoc uses()
   iterator_range<const_mop_iterator> uses() const {
-    return iterator_range<const_mop_iterator>(
-        operands_begin() + getDesc().getNumDefs(), operands_end());
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_end());
   }
 
   /// Returns the number of the operand iterator \p I points to.
@@ -351,10 +349,10 @@ public:
   bool memoperands_empty() const { return NumMemRefs == 0; }
 
   iterator_range<mmo_iterator>  memoperands() {
-    return iterator_range<mmo_iterator>(memoperands_begin(), memoperands_end());
+    return make_range(memoperands_begin(), memoperands_end());
   }
   iterator_range<mmo_iterator> memoperands() const {
-    return iterator_range<mmo_iterator>(memoperands_begin(), memoperands_end());
+    return make_range(memoperands_begin(), memoperands_end());
   }
 
   /// Return true if this instruction has exactly one MachineMemOperand.

@@ -1479,14 +1479,12 @@ protected:
 
   /// \brief Return the range [\p bundle_op_info_begin, \p bundle_op_info_end).
   iterator_range<bundle_op_iterator> bundle_op_infos() {
-    return iterator_range<bundle_op_iterator>(bundle_op_info_begin(),
-                                              bundle_op_info_end());
+    return make_range(bundle_op_info_begin(), bundle_op_info_end());
   }
 
   /// \brief Return the range [\p bundle_op_info_begin, \p bundle_op_info_end).
   iterator_range<const_bundle_op_iterator> bundle_op_infos() const {
-    return iterator_range<const_bundle_op_iterator>(bundle_op_info_begin(),
-                                                    bundle_op_info_end());
+    return make_range(bundle_op_info_begin(), bundle_op_info_end());
   }
 
   /// \brief Populate the BundleOpInfo instances and the Use& vector from \p
