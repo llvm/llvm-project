@@ -65,8 +65,8 @@ __m128 test_mm_movehdup_ps(__m128 A) {
   return _mm_movehdup_ps(A);
 }
 
-__m128 test_mm_movedup_ps(__m128 A) {
-  // CHECK-LABEL: test_mm_movedup_ps
+__m128 test_mm_moveldup_ps(__m128 A) {
+  // CHECK-LABEL: test_mm_moveldup_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   return _mm_moveldup_ps(A);
 }

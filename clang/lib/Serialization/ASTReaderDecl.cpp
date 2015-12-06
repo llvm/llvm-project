@@ -412,9 +412,8 @@ public:
 
 template<typename DeclT>
 llvm::iterator_range<MergedRedeclIterator<DeclT>> merged_redecls(DeclT *D) {
-  return llvm::iterator_range<MergedRedeclIterator<DeclT>>(
-      MergedRedeclIterator<DeclT>(D),
-      MergedRedeclIterator<DeclT>());
+  return llvm::make_range(MergedRedeclIterator<DeclT>(D),
+                          MergedRedeclIterator<DeclT>());
 }
 
 uint64_t ASTDeclReader::GetCurrentCursorOffset() {
