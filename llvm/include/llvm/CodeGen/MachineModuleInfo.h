@@ -161,6 +161,12 @@ class MachineModuleInfo : public ImmutablePass {
   bool CallsUnwindInit;
   bool HasEHFunclets;
 
+  // TODO: Ideally, what we'd like is to have a switch that allows emitting 
+  // synchronous (precise at call-sites only) CFA into .eh_frame. However,
+  // even under this switch, we'd like .debug_frame to be precise when using.
+  // -g. At this moment, there's no way to specify that some CFI directives
+  // go into .eh_frame only, while others go into .debug_frame only.
+
   /// DbgInfoAvailable - True if debugging information is available
   /// in this module.
   bool DbgInfoAvailable;
@@ -234,11 +240,6 @@ public:
   ///
   bool hasDebugInfo() const { return DbgInfoAvailable; }
   void setDebugInfoAvailability(bool avail) { DbgInfoAvailable = avail; }
-
-  // Returns true if we need to generate precise CFI. Currently
-  // this is equivalent to hasDebugInfo(), but if we ever implement
-  // async EH, it will require precise CFI as well.
-  bool usePreciseUnwindInfo() const { return hasDebugInfo(); }
 
   bool callsEHReturn() const { return CallsEHReturn; }
   void setCallsEHReturn(bool b) { CallsEHReturn = b; }

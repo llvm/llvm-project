@@ -47,3 +47,46 @@ expression stack across the jump (sometimes). We should (a) model this, and
 (b) extend the stackifier to utilize it.
 
 //===---------------------------------------------------------------------===//
+
+The min/max operators aren't exactly a<b?a:b because of NaN and negative zero
+behavior. The ARM target has the same kind of min/max instructions and has
+implemented optimizations for them; we should do similar optimizations for
+WebAssembly.
+
+//===---------------------------------------------------------------------===//
+
+AArch64 runs SeparateConstOffsetFromGEPPass, followed by EarlyCSE and LICM.
+Would these be useful to run for WebAssembly too? Also, it has an option to
+run SimplifyCFG after running the AtomicExpand pass. Would this be useful for
+us too?
+
+//===---------------------------------------------------------------------===//
+
+When is it profitable to set isAsCheapAsAMove on instructions in WebAssembly?
+
+//===---------------------------------------------------------------------===//
+
+Register stackification uses the EXPR_STACK physical register to impose
+ordering dependencies on instructions with stack operands. This is pessimistic;
+we should consider alternate ways to model stack dependencies.
+
+//===---------------------------------------------------------------------===//
+
+Lots of things could be done in WebAssemblyTargetTransformInfo.cpp. Similarly,
+there are numerous optimization-related hooks that can be overridden in
+WebAssemblyTargetLowering.
+
+//===---------------------------------------------------------------------===//
+
+Instead of the OptimizeReturned pass, which should consider preserving the
+"returned" attribute through to MachineInstrs and extending the StoreResults
+pass to do this optimization on calls too. That would also let the
+WebAssemblyPeephole pass clean up dead defs for such calls, as it does for
+stores.
+
+//===---------------------------------------------------------------------===//
+
+Memset/memcpy/memmove should be marked with the "returned" attribute somehow,
+even when they are translated through intrinsics.
+
+//===---------------------------------------------------------------------===//

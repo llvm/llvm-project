@@ -29,8 +29,8 @@ entry:
 }
 
 ; CHECK0-NOT: @llvm.global_ctors = {{.*}}{ i32 2, void ()* @sancov.module_ctor }
-; CHECK1: @llvm.global_ctors = {{.*}}{ i32 2, void ()* @sancov.module_ctor }
-; CHECK2: @llvm.global_ctors = {{.*}}{ i32 2, void ()* @sancov.module_ctor }
+; CHECK1: @llvm.global_ctors = {{.*}}{ i32 2, void ()* @sancov.module_ctor, i8* null }
+; CHECK2: @llvm.global_ctors = {{.*}}{ i32 2, void ()* @sancov.module_ctor, i8* null }
 
 ; CHECK0-NOT: call void @__sanitizer_cov(
 ; CHECK0-NOT: call void @__sanitizer_cov_module_init(

@@ -98,22 +98,7 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     case WebAssembly::PARAM:
     case WebAssembly::RESULT:
     case WebAssembly::LOCAL:
-      switch (Op.getImm()) {
-      case MVT::i32:
-        O << "i32";
-        break;
-      case MVT::i64:
-        O << "i64";
-        break;
-      case MVT::f32:
-        O << "f32";
-        break;
-      case MVT::f64:
-        O << "f64";
-        break;
-      default:
-        llvm_unreachable("unexpected type");
-      }
+      O << WebAssembly::TypeToString(MVT::SimpleValueType(Op.getImm()));
       break;
     default:
       O << Op.getImm();
@@ -124,5 +109,20 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     Op.getExpr()->print(O, &MAI);
+  }
+}
+
+const char *llvm::WebAssembly::TypeToString(MVT Ty) {
+  switch (Ty.SimpleTy) {
+  case MVT::i32:
+    return "i32";
+  case MVT::i64:
+    return "i64";
+  case MVT::f32:
+    return "f32";
+  case MVT::f64:
+    return "f64";
+  default:
+    llvm_unreachable("unsupported type");
   }
 }

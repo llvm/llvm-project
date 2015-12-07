@@ -211,13 +211,13 @@ private:
 };
 
 /// @brief Base class for managing collections of named indirect stubs.
-class IndirectStubsManagerBase {
+class IndirectStubsManager {
 public:
 
   /// @brief Map type for initializing the manager. See init.
   typedef StringMap<std::pair<TargetAddress, JITSymbolFlags>> StubInitsMap;
 
-  virtual ~IndirectStubsManagerBase() {}
+  virtual ~IndirectStubsManager() {}
 
   /// @brief Create a single stub with the given name, target address and flags.
   virtual std::error_code createStub(StringRef StubName, TargetAddress StubAddr,
@@ -244,7 +244,7 @@ private:
 /// @brief IndirectStubsManager implementation for a concrete target, e.g.
 ///        OrcX86_64. (See OrcTargetSupport.h).
 template <typename TargetT>
-class IndirectStubsManager : public IndirectStubsManagerBase {
+class LocalIndirectStubsManager : public IndirectStubsManager {
 public:
 
   std::error_code createStub(StringRef StubName, TargetAddress StubAddr,

@@ -90,14 +90,14 @@ back:
 
 ; CHECK-LABEL: test2:
 ; CHECK: block BB2_2{{$}}
-; CHECK: br_if {{.*}}, BB2_2{{$}}
+; CHECK: br_if {{[^,]*}}, BB2_2{{$}}
 ; CHECK: BB2_1:
 ; CHECK: br_if ${{[0-9]+}}, BB2_1{{$}}
 ; CHECK: BB2_2:
 ; CHECK: return{{$}}
 ; OPT-LABEL: test2:
 ; OPT: block BB2_2{{$}}
-; OPT: br_if {{.*}}, BB2_2{{$}}
+; OPT: br_if {{[^,]*}}, BB2_2{{$}}
 ; OPT: BB2_1:
 ; OPT: br_if ${{[0-9]+}}, BB2_1{{$}}
 ; OPT: BB2_2:
@@ -140,9 +140,9 @@ for.end:
 ; OPT-LABEL: doublediamond:
 ; OPT: block BB3_5{{$}}
 ; OPT: block BB3_4{{$}}
-; OPT: br_if {{.*}}, BB3_4{{$}}
+; OPT: br_if {{[^,]*}}, BB3_4{{$}}
 ; OPT: block BB3_3{{$}}
-; OPT: br_if {{.*}}, BB3_3{{$}}
+; OPT: br_if {{[^,]*}}, BB3_3{{$}}
 ; OPT: br BB3_5{{$}}
 ; OPT: BB3_4:
 ; OPT: BB3_5:
@@ -204,7 +204,7 @@ exit:
 ; OPT-LABEL: diamond:
 ; OPT: block BB5_3{{$}}
 ; OPT: block BB5_2{{$}}
-; OPT: br_if {{.*}}, BB5_2{{$}}
+; OPT: br_if {{[^,]*}}, BB5_2{{$}}
 ; OPT: br BB5_3{{$}}
 ; OPT: BB5_2:
 ; OPT: BB5_3:
@@ -269,7 +269,7 @@ loop:
 ; OPT-NOT: br
 ; OPT: BB8_1:
 ; OPT: loop BB8_2{{$}}
-; OPT: br_if {{.*}}, BB8_1{{$}}
+; OPT: br_if {{[^,]*}}, BB8_1{{$}}
 ; OPT: BB8_2:
 ; OPT: return ${{[0-9]+}}{{$}}
 define i32 @simple_loop(i32* %p, i32 %a) {
@@ -333,7 +333,7 @@ exit:
 ; OPT-LABEL: ifelse_earlyexits:
 ; OPT: block BB10_4{{$}}
 ; OPT: block BB10_3{{$}}
-; OPT: br_if {{.*}}, BB10_3{{$}}
+; OPT: br_if {{[^,]*}}, BB10_3{{$}}
 ; OPT: br_if $1, BB10_4{{$}}
 ; OPT: br BB10_4{{$}}
 ; OPT: BB10_3:
@@ -379,9 +379,9 @@ exit:
 ; OPT: loop            BB11_7{{$}}
 ; OPT: block           BB11_6{{$}}
 ; OPT: block           BB11_5{{$}}
-; OPT: br_if           {{.*}}, BB11_5{{$}}
+; OPT: br_if           {{[^,]*}}, BB11_5{{$}}
 ; OPT: block           BB11_4{{$}}
-; OPT: br_if           {{.*}}, BB11_4{{$}}
+; OPT: br_if           {{[^,]*}}, BB11_4{{$}}
 ; OPT: br              BB11_6{{$}}
 ; OPT: BB11_4:
 ; OPT: br              BB11_6{{$}}

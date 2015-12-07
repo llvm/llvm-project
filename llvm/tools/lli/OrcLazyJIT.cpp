@@ -65,7 +65,8 @@ OrcLazyJIT::createIndirectStubsMgrBuilder(Triple T) {
 
     case Triple::x86_64:
       return [](){
-        return llvm::make_unique<orc::IndirectStubsManager<orc::OrcX86_64>>();
+        return llvm::make_unique<
+                       orc::LocalIndirectStubsManager<orc::OrcX86_64>>();
       };
   }
 }

@@ -1710,8 +1710,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
-  if (!Subtarget->is64Bit())
+  if (!Subtarget->is64Bit()) {
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
+  }
 
   // Only custom-lower 64-bit SADDO and friends on 64-bit because we don't
   // handle type legalization for these operations here.
@@ -15983,58 +15985,83 @@ static SDValue getTargetVShiftNode(unsigned Opc, SDLoc dl, MVT VT,
   return DAG.getNode(Opc, dl, VT, SrcOp, ShAmt);
 }
 
+/// \brief Return Mask with the necessary casting or extending
+/// for \p Mask according to \p MaskVT when lowering masking intrinsics
+static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
+                           const X86Subtarget *Subtarget,
+                           SelectionDAG &DAG, SDLoc dl) {
+
+  if (MaskVT.bitsGT(Mask.getSimpleValueType())) {
+    // Mask should be extended
+    Mask = DAG.getNode(ISD::ANY_EXTEND, dl,
+                       MVT::getIntegerVT(MaskVT.getSizeInBits()), Mask);
+  }
+
+  if (Mask.getSimpleValueType() == MVT::i64 && Subtarget->is32Bit()) {
+    assert(MaskVT == MVT::v64i1 && "Unexpected mask VT!");
+    assert(Subtarget->hasBWI() && "Expected AVX512BW target!");
+    // In case 32bit mode, bitcast i64 is illegal, extend/split it.
+    SDValue Lo, Hi;
+    Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Mask,
+                        DAG.getConstant(0, dl, MVT::i32));
+    Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Mask,
+                        DAG.getConstant(1, dl, MVT::i32));
+
+    Lo = DAG.getNode(ISD::BITCAST, dl, MVT::v32i1, Lo);
+    Hi = DAG.getNode(ISD::BITCAST, dl, MVT::v32i1, Hi);
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Hi, Lo);
+
+  } else {
+    MVT BitcastVT = MVT::getVectorVT(MVT::i1,
+                                     Mask.getSimpleValueType().getSizeInBits());
+    // In case when MaskVT equals v2i1 or v4i1, low 2 or 4 elements
+    // are extracted by EXTRACT_SUBVECTOR.
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MaskVT,
+                       DAG.getBitcast(BitcastVT, Mask),
+                       DAG.getIntPtrConstant(0, dl));
+  }
+}
+
 /// \brief Return (and \p Op, \p Mask) for compare instructions or
 /// (vselect \p Mask, \p Op, \p PreservedSrc) for others along with the
 /// necessary casting or extending for \p Mask when lowering masking intrinsics
 static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
-                                    SDValue PreservedSrc,
-                                    const X86Subtarget *Subtarget,
-                                    SelectionDAG &DAG) {
-    MVT VT = Op.getSimpleValueType();
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
-    SDValue VMask;
-    unsigned OpcodeSelect = ISD::VSELECT;
-    SDLoc dl(Op);
+                  SDValue PreservedSrc,
+                  const X86Subtarget *Subtarget,
+                  SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+  unsigned OpcodeSelect = ISD::VSELECT;
+  SDLoc dl(Op);
 
-    if (isAllOnesConstant(Mask))
-      return Op;
+  if (isAllOnesConstant(Mask))
+    return Op;
 
-    if (MaskVT.bitsGT(Mask.getSimpleValueType())) {
-      MVT newMaskVT = MVT::getIntegerVT(MaskVT.getSizeInBits());
-      VMask = DAG.getBitcast(MaskVT,
-                             DAG.getNode(ISD::ANY_EXTEND, dl, newMaskVT, Mask));
-    } else {
-      MVT BitcastVT = MVT::getVectorVT(MVT::i1,
-                                       Mask.getSimpleValueType().getSizeInBits());
-      // In case when MaskVT equals v2i1 or v4i1, low 2 or 4 elements
-      // are extracted by EXTRACT_SUBVECTOR.
-      VMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MaskVT,
-                          DAG.getBitcast(BitcastVT, Mask),
-                          DAG.getIntPtrConstant(0, dl));
-    }
+  SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
-    switch (Op.getOpcode()) {
-    default: break;
-    case X86ISD::PCMPEQM:
-    case X86ISD::PCMPGTM:
-    case X86ISD::CMPM:
-    case X86ISD::CMPMU:
-      return DAG.getNode(ISD::AND, dl, VT, Op, VMask);
-    case X86ISD::VFPCLASS:
+  switch (Op.getOpcode()) {
+  default: break;
+  case X86ISD::PCMPEQM:
+  case X86ISD::PCMPGTM:
+  case X86ISD::CMPM:
+  case X86ISD::CMPMU:
+    return DAG.getNode(ISD::AND, dl, VT, Op, VMask);
+  case X86ISD::VFPCLASS:
     case X86ISD::VFPCLASSS:
-      return DAG.getNode(ISD::OR, dl, VT, Op, VMask);
-    case X86ISD::VTRUNC:
-    case X86ISD::VTRUNCS:
-    case X86ISD::VTRUNCUS:
-      // We can't use ISD::VSELECT here because it is not always "Legal"
-      // for the destination type. For example vpmovqb require only AVX512
-      // and vselect that can operate on byte element type require BWI
-      OpcodeSelect = X86ISD::SELECT;
-      break;
-    }
-    if (PreservedSrc.getOpcode() == ISD::UNDEF)
-      PreservedSrc = getZeroVector(VT, Subtarget, DAG, dl);
-    return DAG.getNode(OpcodeSelect, dl, VT, VMask, Op, PreservedSrc);
+    return DAG.getNode(ISD::OR, dl, VT, Op, VMask);
+  case X86ISD::VTRUNC:
+  case X86ISD::VTRUNCS:
+  case X86ISD::VTRUNCUS:
+    // We can't use ISD::VSELECT here because it is not always "Legal"
+    // for the destination type. For example vpmovqb require only AVX512
+    // and vselect that can operate on byte element type require BWI
+    OpcodeSelect = X86ISD::SELECT;
+    break;
+  }
+  if (PreservedSrc.getOpcode() == ISD::UNDEF)
+    PreservedSrc = getZeroVector(VT, Subtarget, DAG, dl);
+  return DAG.getNode(OpcodeSelect, dl, VT, VMask, Op, PreservedSrc);
 }
 
 /// \brief Creates an SDNode for a predicated scalar operation.
@@ -16569,12 +16596,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget *Subtarget
       SDValue Mask = Op.getOperand(3);
       MVT VT = Op.getSimpleValueType();
       MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
-      MVT BitcastVT = MVT::getVectorVT(MVT::i1,
-                                       Mask.getSimpleValueType().getSizeInBits());
-      SDLoc dl(Op);
-      SDValue VMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MaskVT,
-                                  DAG.getBitcast(BitcastVT, Mask),
-                                  DAG.getIntPtrConstant(0, dl));
+      SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
       return DAG.getNode(IntrData->Opc0, dl, VT, VMask, Op.getOperand(1),
                          Op.getOperand(2));
     }
@@ -19977,6 +19999,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::x86_rdpmc:
       return getReadPerformanceCounter(N, dl, DAG, Subtarget, Results);
     }
+  }
+  case ISD::INTRINSIC_WO_CHAIN: {
+	  Results.push_back(LowerINTRINSIC_WO_CHAIN(SDValue(N, 0), Subtarget, DAG));
+	  return;
   }
   case ISD::READCYCLECOUNTER: {
     return getReadTimeStampCounter(N, dl, X86ISD::RDTSC_DAG, DAG, Subtarget,

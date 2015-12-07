@@ -39,11 +39,16 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
 MCOperand WebAssemblyMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                                      MCSymbol *Sym) const {
+  assert(MO.getTargetFlags() == 0 && "WebAssembly does not use target flags");
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
 
-  if (!MO.isJTI() && MO.getOffset())
-    llvm_unreachable("unknown symbol op");
+  int64_t Offset = MO.getOffset();
+  if (Offset != 0) {
+    assert(!MO.isJTI() && "Unexpected offset with jump table index");
+    Expr =
+        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+  }
 
   return MCOperand::createExpr(Expr);
 }

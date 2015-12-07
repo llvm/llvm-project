@@ -741,3 +741,8 @@ fcomip st, st(2)
 fucomip st, st(2)
 // CHECK: fcompi  %st(2)
 // CHECK: fucompi  %st(2)
+
+loopz _foo
+loopnz _foo
+// CHECK: loope _foo
+// CHECK: loopne _foo

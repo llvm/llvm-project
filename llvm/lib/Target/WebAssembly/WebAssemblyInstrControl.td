@@ -42,12 +42,12 @@ let Defs = [ARGUMENTS] in {
 // jump tables, so in practice we don't ever use TABLESWITCH_I64 in wasm32 mode
 // currently.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
-def TABLESWITCH_I32 : I<(outs), (ins I32:$index, variable_ops),
-                        [(WebAssemblytableswitch I32:$index)],
-                        "tableswitch\t$index">;
-def TABLESWITCH_I64 : I<(outs), (ins I64:$index, variable_ops),
-                        [(WebAssemblytableswitch I64:$index)],
-                        "tableswitch\t$index">;
+def TABLESWITCH_I32 : I<(outs), (ins I32:$index, bb_op:$default, variable_ops),
+                        [(WebAssemblytableswitch I32:$index, bb:$default)],
+                        "tableswitch\t$index, $default">;
+def TABLESWITCH_I64 : I<(outs), (ins I64:$index, bb_op:$default, variable_ops),
+                        [(WebAssemblytableswitch I64:$index, bb:$default)],
+                        "tableswitch\t$index, $default">;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // Placemarkers to indicate the start of a block or loop scope.

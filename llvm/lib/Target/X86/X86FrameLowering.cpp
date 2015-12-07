@@ -2525,10 +2525,10 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     // (Pushes of argument for frame setup, callee pops for frame destroy)
     Amount -= InternalAmt;
 
-    // If this is a callee-pop calling convention, and we're emitting precise
-    // SP-based CFI, emit a CFA adjust for the amount the callee popped.
-    if (isDestroy && InternalAmt && DwarfCFI && !hasFP(MF) && 
-        MMI.usePreciseUnwindInfo())
+    // TODO: This is needed only if we require precise CFA.
+    // If this is a callee-pop calling convention, emit a CFA adjust for
+    // the amount the callee popped.
+    if (isDestroy && InternalAmt && DwarfCFI && !hasFP(MF))
       BuildCFI(MBB, I, DL, 
                MCCFIInstruction::createAdjustCfaOffset(nullptr, -InternalAmt));
 
@@ -2549,11 +2549,14 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       // offset to be correct at each call site, while for debugging we want
       // it to be more precise.
       int CFAOffset = Amount;
-      if (!MMI.usePreciseUnwindInfo())
-        CFAOffset += InternalAmt;
-      CFAOffset = isDestroy ? -CFAOffset : CFAOffset;
-      BuildCFI(MBB, I, DL, 
-               MCCFIInstruction::createAdjustCfaOffset(nullptr, CFAOffset));
+      // TODO: When not using precise CFA, we also need to adjust for the
+      // InternalAmt here.
+
+      if (CFAOffset) {
+        CFAOffset = isDestroy ? -CFAOffset : CFAOffset;
+        BuildCFI(MBB, I, DL, 
+                 MCCFIInstruction::createAdjustCfaOffset(nullptr, CFAOffset));
+      }
     }
 
     return;
