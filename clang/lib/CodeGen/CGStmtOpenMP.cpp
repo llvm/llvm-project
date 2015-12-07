@@ -185,7 +185,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
     ++Cnt, ++I;
   }
 
-  PGO.assignRegionCounters(CD, F);
+  PGO.assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   FinishFunction(CD->getBodyRBrace());
 
@@ -2481,6 +2481,7 @@ static void EmitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
+  case OMPC_nogroup:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }

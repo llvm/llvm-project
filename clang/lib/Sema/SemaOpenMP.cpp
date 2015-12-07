@@ -5408,6 +5408,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_map:
+  case OMPC_nogroup:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -5684,6 +5685,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
+  case OMPC_nogroup:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -5817,6 +5819,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
+  case OMPC_nogroup:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -5926,6 +5929,9 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_simd:
     Res = ActOnOpenMPSIMDClause(StartLoc, EndLoc);
     break;
+  case OMPC_nogroup:
+    Res = ActOnOpenMPNogroupClause(StartLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -6009,6 +6015,11 @@ OMPClause *Sema::ActOnOpenMPSIMDClause(SourceLocation StartLoc,
   return new (Context) OMPSIMDClause(StartLoc, EndLoc);
 }
 
+OMPClause *Sema::ActOnOpenMPNogroupClause(SourceLocation StartLoc,
+                                          SourceLocation EndLoc) {
+  return new (Context) OMPNogroupClause(StartLoc, EndLoc);
+}
+
 OMPClause *Sema::ActOnOpenMPVarListClause(
     OpenMPClauseKind Kind, ArrayRef<Expr *> VarList, Expr *TailExpr,
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation ColonLoc,
@@ -6084,6 +6095,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
+  case OMPC_nogroup:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }

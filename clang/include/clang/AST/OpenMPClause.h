@@ -2893,6 +2893,37 @@ public:
   child_range children() { return child_range(&Priority, &Priority + 1); }
 };
 
+/// \brief This represents 'nogroup' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp taskloop nogroup
+/// \endcode
+/// In this example directive '#pragma omp taskloop' has 'nogroup' clause.
+///
+class OMPNogroupClause : public OMPClause {
+public:
+  /// \brief Build 'nogroup' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  ///
+  OMPNogroupClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_nogroup, StartLoc, EndLoc) {}
+
+  /// \brief Build an empty clause.
+  ///
+  OMPNogroupClause()
+      : OMPClause(OMPC_nogroup, SourceLocation(), SourceLocation()) {}
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_nogroup;
+  }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+};
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

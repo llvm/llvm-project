@@ -8087,6 +8087,9 @@ public:
   /// \brief Called on well-formed 'simd' clause.
   OMPClause *ActOnOpenMPSIMDClause(SourceLocation StartLoc,
                                    SourceLocation EndLoc);
+  /// \brief Called on well-formed 'nogroup' clause.
+  OMPClause *ActOnOpenMPNogroupClause(SourceLocation StartLoc,
+                                      SourceLocation EndLoc);
 
   OMPClause *ActOnOpenMPVarListClause(
       OpenMPClauseKind Kind, ArrayRef<Expr *> Vars, Expr *TailExpr,
