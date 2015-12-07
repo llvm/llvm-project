@@ -19220,3 +19220,58 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK: vucomiss -516(%rdx), %xmm22
 // CHECK:  encoding: [0x62,0xe1,0x7c,0x08,0x2e,0xb2,0xfc,0xfd,0xff,0xff]
           vucomiss -516(%rdx), %xmm22
+// CHECK: vmovsd (%rcx), %xmm25 {%k3}
+// CHECK:  encoding: [0x62,0x61,0xff,0x0b,0x10,0x09]
+          vmovsd (%rcx), %xmm25 {%k3}
+
+// CHECK: vmovsd (%rcx), %xmm25 {%k3} {z}
+// CHECK:  encoding: [0x62,0x61,0xff,0x8b,0x10,0x09]
+          vmovsd (%rcx), %xmm25 {%k3} {z}
+
+// CHECK: vmovsd %xmm19, %xmm3, %xmm27 {%k3} {z}
+// CHECK:  encoding: [0x62,0x21,0xe7,0x8b,0x10,0xdb]
+          vmovsd %xmm19, %xmm3, %xmm27 {%k3} {z}
+
+// CHECK: vmovss (%rcx), %xmm2 {%k4}
+// CHECK:  encoding: [0x62,0xf1,0x7e,0x0c,0x10,0x11]
+          vmovss (%rcx), %xmm2 {%k4}
+
+// CHECK: vmovss (%rcx), %xmm2 {%k4} {z}
+// CHECK:  encoding: [0x62,0xf1,0x7e,0x8c,0x10,0x11]
+          vmovss (%rcx), %xmm2 {%k4} {z}
+
+// CHECK: vmovss %xmm26, %xmm9, %xmm28 {%k4} {z}
+// CHECK:  encoding: [0x62,0x01,0x36,0x8c,0x10,0xe2]
+          vmovss %xmm26, %xmm9, %xmm28 {%k4} {z}
+
+// CHECK: vmovsd %xmm15, %xmm22, %xmm21 {%k7} {z}
+// CHECK:  encoding: [0x62,0xc1,0xcf,0x87,0x10,0xef]
+          vmovsd %xmm15, %xmm22, %xmm21 {%k7} {z}
+
+// CHECK: vmovsd %xmm8, %xmm13, %xmm3 {%k5} {z}
+// CHECK:  encoding: [0x62,0xd1,0x97,0x8d,0x10,0xd8]
+          vmovsd %xmm8, %xmm13, %xmm3 {%k5} {z}
+
+// CHECK: vmovss %xmm2, %xmm27, %xmm17 {%k2} {z}
+// CHECK:  encoding: [0x62,0xe1,0x26,0x82,0x10,0xca]
+          vmovss %xmm2, %xmm27, %xmm17 {%k2} {z}
+
+// CHECK: vmovss %xmm23, %xmm19, %xmm10 {%k3} {z}
+// CHECK:  encoding: [0x62,0x31,0x66,0x83,0x10,0xd7]
+          vmovss %xmm23, %xmm19, %xmm10 {%k3} {z}
+
+// CHECK: vmovsd %xmm4, %xmm15, %xmm4 {%k6} {z}
+// CHECK:  encoding: [0x62,0xf1,0x87,0x8e,0x10,0xe4]
+          vmovsd %xmm4, %xmm15, %xmm4 {%k6} {z}
+
+// CHECK: vmovsd %xmm14, %xmm2, %xmm20 {%k7} {z}
+// CHECK:  encoding: [0x62,0xc1,0xef,0x8f,0x10,0xe6]
+          vmovsd %xmm14, %xmm2, %xmm20 {%k7} {z}
+
+// CHECK: vmovss %xmm19, %xmm11, %xmm21 {%k3} {z}
+// CHECK:  encoding: [0x62,0xa1,0x26,0x8b,0x10,0xeb]
+          vmovss %xmm19, %xmm11, %xmm21 {%k3} {z}
+
+// CHECK: vmovss %xmm24, %xmm27, %xmm15 {%k2} {z}
+// CHECK:  encoding: [0x62,0x11,0x26,0x82,0x10,0xf8]
+          vmovss %xmm24, %xmm27, %xmm15 {%k2} {z}

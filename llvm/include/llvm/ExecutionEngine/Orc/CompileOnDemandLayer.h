@@ -39,7 +39,7 @@ namespace orc {
 /// compiled and executed.
 template <typename BaseLayerT,
           typename CompileCallbackMgrT = JITCompileCallbackManager,
-          typename IndirectStubsMgrT = IndirectStubsManagerBase>
+          typename IndirectStubsMgrT = IndirectStubsManager>
 class CompileOnDemandLayer {
 private:
 

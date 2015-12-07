@@ -1830,7 +1830,10 @@ void Verifier::visitFunction(const Function &F) {
         continue;
 
       DISubprogram *SP = Scope ? Scope->getSubprogram() : nullptr;
-      if (SP && !Seen.insert(SP).second)
+
+      // Scope and SP could be the same MDNode and we don't want to skip
+      // validation in that case
+      if (SP && ((Scope != SP) && !Seen.insert(SP).second))
         continue;
 
       // FIXME: Once N is canonical, check "SP == &N".

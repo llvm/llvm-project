@@ -6,17 +6,24 @@ declare void @good(i32 %a, i32 %b, i32 %c, i32 %d)
 declare void @large(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f)
 declare void @empty()
 
-; When we use an invoke, and have FP, we expect a .cfi_escape GNU_ARGS_SIZE
-; with size 16 before the invocation. Without FP, we expect.cfi_adjust_cfa_offset
-; before and after.
-; Darwin should not generate pushes in neither circumstance.
+; When we use an invoke, we expect a .cfi_escape GNU_ARGS_SIZE
+; with size 16 before the invocation. Without FP, we also expect
+; .cfi_adjust_cfa_offset after each push.
+; Darwin should not generate pushes in either circumstance.
 ; CHECK-LABEL: test1_nofp:
 ; LINUX: .cfi_escape 0x2e, 0x10
-; LINUX: .cfi_adjust_cfa_offset 16
 ; LINUX-NEXT: pushl   $4
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $3
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $2
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $1
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: call
 ; LINUX-NEXT: addl $16, %esp
 ; LINUX: .cfi_adjust_cfa_offset -16
@@ -62,11 +69,18 @@ cleanup:
 ; so darwin should not generate pushes.
 ; CHECK-LABEL: test2_nofp:
 ; LINUX-NOT: .cfi_escape
-; LINUX: .cfi_adjust_cfa_offset 16
-; LINUX-NEXT: pushl   $4
+; LINUX: pushl   $4
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $3
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $2
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $1
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: call
 ; LINUX-NEXT: addl $16, %esp
 ; LINUX: .cfi_adjust_cfa_offset -16
@@ -170,11 +184,18 @@ cleanup:
 ; without parameters, but don't need to adjust the cfa offset
 ; CHECK-LABEL: test5_nofp:
 ; LINUX: .cfi_escape 0x2e, 0x10
-; LINUX: .cfi_adjust_cfa_offset 16
 ; LINUX-NEXT: pushl   $4
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $3
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $2
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $1
+; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: call
 ; LINUX-NEXT: addl $16, %esp
 ; LINUX: .cfi_adjust_cfa_offset -16

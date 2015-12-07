@@ -43,9 +43,9 @@ static void appendToGlobalArray(const char *Array,
     }
     GVCtor->eraseFromParent();
   } else {
-    // Use a simple two-field struct if there isn't one already.
+    // Use the new three-field struct if there isn't one already.
     EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                            nullptr);
+                            IRB.getInt8PtrTy(), nullptr);
   }
 
   // Build a 2 or 3 field global_ctor entry.  We don't take a comdat key.

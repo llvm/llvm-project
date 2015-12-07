@@ -738,8 +738,10 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   let DecoderMethod = "DecodeMemMMImm16" in {
     def LB_MM  : Load<"lb", GPR32Opnd>, MMRel, LW_FM_MM<0x7>;
     def LBu_MM : Load<"lbu", GPR32Opnd>, MMRel, LW_FM_MM<0x5>;
-    def LH_MM  : Load<"lh", GPR32Opnd>, MMRel, LW_FM_MM<0xf>;
-    def LHu_MM : Load<"lhu", GPR32Opnd>, MMRel, LW_FM_MM<0xd>;
+    def LH_MM  : LoadMemory<"lh", GPR32Opnd, mem_simm16gpr>, MMRel,
+                 LW_FM_MM<0xf>;
+    def LHu_MM : LoadMemory<"lhu", GPR32Opnd, mem_simm16gpr>, MMRel,
+                 LW_FM_MM<0xd>;
     def LW_MM  : Load<"lw", GPR32Opnd>, MMRel, LW_FM_MM<0x3f>;
     def SB_MM  : Store<"sb", GPR32Opnd>, MMRel, LW_FM_MM<0x6>;
     def SH_MM  : Store<"sh", GPR32Opnd>, MMRel, LW_FM_MM<0xe>;
@@ -749,8 +751,10 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   let DecoderMethod = "DecodeMemMMImm9" in {
     def LBE_MM  : Load<"lbe", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x4>;
     def LBuE_MM : Load<"lbue", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x0>;
-    def LHE_MM  : Load<"lhe", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x5>;
-    def LHuE_MM : Load<"lhue", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x1>;
+    def LHE_MM  : LoadMemory<"lhe", GPR32Opnd, mem_simm9gpr>,
+                  POOL32C_LHUE_FM_MM<0x18, 0x6, 0x5>;
+    def LHuE_MM : LoadMemory<"lhue", GPR32Opnd, mem_simm9gpr>,
+                  POOL32C_LHUE_FM_MM<0x18, 0x6, 0x1>;
     def LWE_MM  : Load<"lwe", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x7>;
     def SBE_MM  : Store<"sbe", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0xa, 0x4>;
     def SHE_MM  : Store<"she", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0xa, 0x5>;

@@ -23,7 +23,7 @@ public:
   void grow() override { llvm_unreachable("not implemented"); }
 };
 
-class DummyStubsManager : public orc::IndirectStubsManagerBase {
+class DummyStubsManager : public orc::IndirectStubsManager {
 public:
   std::error_code createStub(StringRef StubName, TargetAddress InitAddr,
                              JITSymbolFlags Flags) override {

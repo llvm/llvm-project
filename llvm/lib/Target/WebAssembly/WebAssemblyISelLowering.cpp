@@ -196,9 +196,8 @@ FastISel *WebAssemblyTargetLowering::createFastISel(
 
 bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode * /*GA*/) const {
-  // The WebAssembly target doesn't support folding offsets into global
-  // addresses.
-  return false;
+  // All offsets can be folded.
+  return true;
 }
 
 MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
@@ -528,13 +527,12 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   SDLoc DL(Op);
   const auto *GA = cast<GlobalAddressSDNode>(Op);
   EVT VT = Op.getValueType();
-  assert(GA->getOffset() == 0 &&
-         "offsets on global addresses are forbidden by isOffsetFoldingLegal");
   assert(GA->getTargetFlags() == 0 && "WebAssembly doesn't set target flags");
   if (GA->getAddressSpace() != 0)
     fail(DL, DAG, "WebAssembly only expects the 0 address space");
   return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
-                     DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT));
+                     DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT,
+                                                GA->getOffset()));
 }
 
 SDValue

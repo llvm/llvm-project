@@ -1105,7 +1105,7 @@
 ; CORTEX-R7:  .eabi_attribute 25, 1
 ; CORTEX-R7:  .eabi_attribute 27, 1
 ; CORTEX-R7-NOT:  .eabi_attribute 28
-; CORTEX-R7-NOT:  .eabi_attribute 36
+; CORTEX-R7:  .eabi_attribute 36, 1
 ; CORTEX-R7:  .eabi_attribute 38, 1
 ; CORTEX-R7:  .eabi_attribute 42, 1
 ; CORTEX-R7:  .eabi_attribute 44, 2
