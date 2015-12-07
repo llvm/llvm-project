@@ -1241,7 +1241,7 @@ CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
   if (IsLambdaConversionToBlock)
     EmitLambdaBlockInvokeBody();
   else {
-    PGO.assignRegionCounters(blockDecl, fn);
+    PGO.assignRegionCounters(GlobalDecl(blockDecl), fn);
     incrementProfileCounter(blockDecl->getBody());
     EmitStmt(blockDecl->getBody());
   }

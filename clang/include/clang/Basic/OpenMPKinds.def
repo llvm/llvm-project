@@ -161,6 +161,7 @@ OPENMP_CLAUSE(map, OMPMapClause)
 OPENMP_CLAUSE(num_teams, OMPNumTeamsClause)
 OPENMP_CLAUSE(thread_limit, OMPThreadLimitClause)
 OPENMP_CLAUSE(priority, OMPPriorityClause)
+OPENMP_CLAUSE(nogroup, OMPNogroupClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -363,6 +364,7 @@ OPENMP_TASKLOOP_CLAUSE(final)
 OPENMP_TASKLOOP_CLAUSE(untied)
 OPENMP_TASKLOOP_CLAUSE(mergeable)
 OPENMP_TASKLOOP_CLAUSE(priority)
+OPENMP_TASKLOOP_CLAUSE(nogroup)
 
 // Clauses allowed for OpenMP directive 'taskloop simd'.
 // TODO: add next clauses
@@ -381,6 +383,7 @@ OPENMP_TASKLOOP_SIMD_CLAUSE(linear)
 OPENMP_TASKLOOP_SIMD_CLAUSE(aligned)
 OPENMP_TASKLOOP_SIMD_CLAUSE(safelen)
 OPENMP_TASKLOOP_SIMD_CLAUSE(simdlen)
+OPENMP_TASKLOOP_SIMD_CLAUSE(nogroup)
 
 #undef OPENMP_TASKLOOP_SIMD_CLAUSE
 #undef OPENMP_TASKLOOP_CLAUSE

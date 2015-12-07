@@ -78,13 +78,11 @@ public:
       setCurrentRegionCount(*Count);
   }
 
-  /// Check if we need to emit coverage mapping for a given declaration
-  void checkGlobalDecl(GlobalDecl GD);
   /// Assign counters to regions and configure them for PGO of a given
   /// function. Does nothing if instrumentation is not enabled and either
   /// generates global variables or associates PGO data with each of the
   /// counters depending on whether we are generating or using instrumentation.
-  void assignRegionCounters(const Decl *D, llvm::Function *Fn);
+  void assignRegionCounters(GlobalDecl GD, llvm::Function *Fn);
   /// Emit a coverage mapping range with a counter zero
   /// for an unused declaration.
   void emitEmptyCounterMapping(const Decl *D, StringRef FuncName,

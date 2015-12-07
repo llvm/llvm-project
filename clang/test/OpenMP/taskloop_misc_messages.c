@@ -52,6 +52,10 @@ void test_invalid_clause() {
 #pragma omp taskloop foo bar
   for (i = 0; i < 16; ++i)
     ;
+// expected-error@+1 {{directive '#pragma omp taskloop' cannot contain more than one 'nogroup' clause}}
+#pragma omp taskloop nogroup nogroup
+  for (i = 0; i < 16; ++i)
+    ;
 }
 
 void test_non_identifiers() {
