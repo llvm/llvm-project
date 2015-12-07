@@ -9,8 +9,12 @@ normal LLDB test run output when no other option is specified.
 """
 from __future__ import print_function
 
-from . import test_results
+# Python system includes
+import os
 
+# Our imports
+from . import test_results
+import lldbsuite
 
 class BasicResultsFormatter(test_results.ResultsFormatter):
     """Provides basic test result output."""
@@ -121,7 +125,8 @@ class BasicResultsFormatter(test_results.ResultsFormatter):
                 key=lambda x: x[1]["test_name"])
         return partitioned_events
 
-    def _print_summary_counts(self, categories, result_events_by_status):
+    def _print_summary_counts(
+        self, categories, result_events_by_status, extra_rows):
         """Prints summary counts for all categories.
 
         @param categories the list of categories on which to partition.
@@ -138,6 +143,13 @@ class BasicResultsFormatter(test_results.ResultsFormatter):
             categories, key=lambda x: len(x[1]))
         max_category_name_length = len(category_with_max_printed_name[1])
 
+        # If we are provided with extra rows, consider these row name lengths.
+        if extra_rows is not None:
+            for row in extra_rows:
+                name_length = len(row[0])
+                if name_length > max_category_name_length:
+                    max_category_name_length = name_length
+
         banner_text = "Test Result Summary"
         banner_separator = "".ljust(len(banner_text), "=")
 
@@ -145,6 +157,13 @@ class BasicResultsFormatter(test_results.ResultsFormatter):
             banner_separator,
             banner_text,
             banner_separator))
+
+        # Prepend extra rows
+        if extra_rows is not None:
+            for row in extra_rows:
+                extra_label = "{}:".format(row[0]).ljust(
+                    max_category_name_length + 1)
+                self.out_file.write("{} {:4}\n".format(extra_label, row[1]))
 
         for category in categories:
             result_status_id = category[0]
@@ -203,20 +222,20 @@ class BasicResultsFormatter(test_results.ResultsFormatter):
         if print_matching_tests:
             # Sort by test name
             for (_, event) in result_events_by_status[result_status_id]:
-                self.out_file.write("{}: {}.{} ({})\n".format(
+                test_relative_path = os.path.relpath(
+                    os.path.realpath(event["test_filename"]),
+                    lldbsuite.lldb_test_root)
+                self.out_file.write("{}: {} ({})\n".format(
                     detail_label,
-                    event["test_class"],
                     event["test_name"],
-                    event["test_filename"]))
+                    test_relative_path))
 
     def _finish_output_no_lock(self):
         """Writes the test result report to the output file."""
-        self.out_file.write("\nTest Results\n")
-        self.out_file.write(
-            "Total Test Methods Run (excluding reruns): {}\n".format(
-                len(self.result_events)))
-        self.out_file.write("Test Method rerun count: {}\n".format(
-            self.test_method_rerun_count))
+        extra_results = [
+            # Total test methods processed, excluding reruns.
+            ["Test Methods", len(self.result_events)],
+            ["Reruns", self.test_method_rerun_count]]
 
         # Output each of the test result entries.
         categories = [
@@ -236,9 +255,6 @@ class BasicResultsFormatter(test_results.ResultsFormatter):
         result_events_by_status = self._partition_results_by_status(
             categories)
 
-        # Print the summary
-        self._print_summary_counts(categories, result_events_by_status)
-
         # Print the details
         have_details = self._has_printable_details(
             categories, result_events_by_status)
@@ -247,6 +263,11 @@ class BasicResultsFormatter(test_results.ResultsFormatter):
             for category in categories:
                 self._report_category_details(
                     category, result_events_by_status)
+
+        # Print the summary
+        self._print_summary_counts(
+            categories, result_events_by_status, extra_results)
+
 
     def _finish_output(self):
         """Prepare and write the results report as all incoming events have

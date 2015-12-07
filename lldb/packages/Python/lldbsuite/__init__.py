@@ -18,3 +18,11 @@ def find_lldb_root():
 
 # lldbsuite.lldb_root refers to the root of the git/svn source checkout
 lldb_root = find_lldb_root()
+
+# lldbsuite.lldb_test_root refers to the root of the python test tree
+lldb_test_root = os.path.join(
+    lldb_root,
+    "packages",
+    "Python",
+    "lldbsuite",
+    "test")
