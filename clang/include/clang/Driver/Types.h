@@ -63,6 +63,9 @@ namespace types {
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
   bool isCXX(ID Id);
 
+  /// Is this LLVM IR.
+  bool isLLVMIR(ID Id);
+
   /// isCuda - Is this a CUDA input.
   bool isCuda(ID Id);
 

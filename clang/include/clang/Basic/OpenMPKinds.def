@@ -75,6 +75,9 @@
 #ifndef OPENMP_TASKLOOP_SIMD_CLAUSE
 #  define OPENMP_TASKLOOP_SIMD_CLAUSE(Name)
 #endif
+#ifndef OPENMP_DISTRIBUTE_CLAUSE
+#define OPENMP_DISTRIBUTE_CLAUSE(Name)
+#endif
 #ifndef OPENMP_DEFAULT_KIND
 #  define OPENMP_DEFAULT_KIND(Name)
 #endif
@@ -123,6 +126,7 @@ OPENMP_DIRECTIVE_EXT(for_simd, "for simd")
 OPENMP_DIRECTIVE_EXT(cancellation_point, "cancellation point")
 OPENMP_DIRECTIVE(taskloop)
 OPENMP_DIRECTIVE_EXT(taskloop_simd, "taskloop simd")
+OPENMP_DIRECTIVE(distribute)
 
 // OpenMP clauses.
 OPENMP_CLAUSE(if, OMPIfClause)
@@ -161,6 +165,7 @@ OPENMP_CLAUSE(map, OMPMapClause)
 OPENMP_CLAUSE(num_teams, OMPNumTeamsClause)
 OPENMP_CLAUSE(thread_limit, OMPThreadLimitClause)
 OPENMP_CLAUSE(priority, OMPPriorityClause)
+OPENMP_CLAUSE(grainsize, OMPGrainsizeClause)
 OPENMP_CLAUSE(nogroup, OMPNogroupClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
@@ -364,6 +369,7 @@ OPENMP_TASKLOOP_CLAUSE(final)
 OPENMP_TASKLOOP_CLAUSE(untied)
 OPENMP_TASKLOOP_CLAUSE(mergeable)
 OPENMP_TASKLOOP_CLAUSE(priority)
+OPENMP_TASKLOOP_CLAUSE(grainsize)
 OPENMP_TASKLOOP_CLAUSE(nogroup)
 
 // Clauses allowed for OpenMP directive 'taskloop simd'.
@@ -383,7 +389,14 @@ OPENMP_TASKLOOP_SIMD_CLAUSE(linear)
 OPENMP_TASKLOOP_SIMD_CLAUSE(aligned)
 OPENMP_TASKLOOP_SIMD_CLAUSE(safelen)
 OPENMP_TASKLOOP_SIMD_CLAUSE(simdlen)
+OPENMP_TASKLOOP_SIMD_CLAUSE(grainsize)
 OPENMP_TASKLOOP_SIMD_CLAUSE(nogroup)
+
+// Clauses allowed for OpenMP directive 'distribute'
+OPENMP_DISTRIBUTE_CLAUSE(private)
+OPENMP_DISTRIBUTE_CLAUSE(firstprivate)
+OPENMP_DISTRIBUTE_CLAUSE(lastprivate)
+OPENMP_DISTRIBUTE_CLAUSE(collapse)
 
 #undef OPENMP_TASKLOOP_SIMD_CLAUSE
 #undef OPENMP_TASKLOOP_CLAUSE
@@ -412,3 +425,4 @@ OPENMP_TASKLOOP_SIMD_CLAUSE(nogroup)
 #undef OPENMP_FOR_CLAUSE
 #undef OPENMP_FOR_SIMD_CLAUSE
 #undef OPENMP_MAP_KIND
+#undef OPENMP_DISTRIBUTE_CLAUSE

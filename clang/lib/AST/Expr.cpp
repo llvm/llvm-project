@@ -2891,7 +2891,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     return cast<CXXDefaultInitExpr>(this)->getExpr()
       ->isConstantInitializer(Ctx, false, Culprit);
   }
-  if (isEvaluatable(Ctx))
+  // Allow certain forms of UB in constant initializers: signed integer
+  // overflow and floating-point division by zero. We'll give a warning on
+  // these, but they're common enough that we have to accept them.
+  if (isEvaluatable(Ctx, SE_AllowUndefinedBehavior))
     return true;
   if (Culprit)
     *Culprit = this;

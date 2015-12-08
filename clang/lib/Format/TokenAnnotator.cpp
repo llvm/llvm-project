@@ -1743,10 +1743,20 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     return 2;
 
   if (Right.isMemberAccess()) {
-    if (Left.is(tok::r_paren) && Left.MatchingParen &&
-        Left.MatchingParen->ParameterCount > 0)
-      return 20; // Should be smaller than breaking at a nested comma.
-    return 150;
+    // Breaking before the "./->" of a chained call/member access is reasonably
+    // cheap, as formatting those with one call per line is generally
+    // desirable. In particular, it should be cheaper to break before the call
+    // than it is to break inside a call's parameters, which could lead to weird
+    // "hanging" indents. The exception is the very last "./->" to support this
+    // frequent pattern:
+    //
+    //   aaaaaaaa.aaaaaaaa.bbbbbbb().ccccccccccccccccccccc(
+    //       dddddddd);
+    //
+    // which might otherwise be blown up onto many lines. Here, clang-format
+    // won't produce "hanging" indents anyway as there is no other trailing
+    // call.
+    return Right.LastOperator ? 150 : 40;
   }
 
   if (Right.is(TT_TrailingAnnotation) &&

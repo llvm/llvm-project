@@ -26,10 +26,12 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/FunctionInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Object/FunctionIndexObjectFile.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -39,6 +41,24 @@ using namespace clang;
 using namespace llvm;
 
 namespace clang {
+/// Diagnostic handler used by invocations of Linker::LinkModules
+static void linkerDiagnosticHandler(const DiagnosticInfo &DI,
+                                    const llvm::Module *LinkModule,
+                                    DiagnosticsEngine &Diags) {
+  if (DI.getSeverity() != DS_Error)
+    return;
+
+  std::string MsgStorage;
+  {
+    raw_string_ostream Stream(MsgStorage);
+    DiagnosticPrinterRawOStream DP(Stream);
+    DI.print(DP);
+  }
+
+  Diags.Report(diag::err_fe_cannot_link_module)
+      << LinkModule->getModuleIdentifier() << MsgStorage;
+}
+
   class BackendConsumer : public ASTConsumer {
     virtual void anchor();
     DiagnosticsEngine &Diags;
@@ -167,7 +187,7 @@ namespace clang {
         llvm::Module *LinkModule = I.second.get();
         if (Linker::linkModules(*M, *LinkModule,
                                 [=](const DiagnosticInfo &DI) {
-                                  linkerDiagnosticHandler(DI, LinkModule);
+                                  linkerDiagnosticHandler(DI, LinkModule, Diags);
                                 },
                                 LinkFlags))
           return;
@@ -232,9 +252,6 @@ namespace clang {
       SourceLocation Loc = SourceLocation::getFromRawEncoding(LocCookie);
       ((BackendConsumer*)Context)->InlineAsmDiagHandler2(SM, Loc);
     }
-
-    void linkerDiagnosticHandler(const llvm::DiagnosticInfo &DI,
-                                 const llvm::Module *LinkModule);
 
     static void DiagnosticHandler(const llvm::DiagnosticInfo &DI,
                                   void *Context) {
@@ -545,22 +562,6 @@ void BackendConsumer::OptimizationFailureHandler(
   EmitOptimizationMessage(D, diag::warn_fe_backend_optimization_failure);
 }
 
-void BackendConsumer::linkerDiagnosticHandler(const DiagnosticInfo &DI,
-                                              const llvm::Module *LinkModule) {
-  if (DI.getSeverity() != DS_Error)
-    return;
-
-  std::string MsgStorage;
-  {
-    raw_string_ostream Stream(MsgStorage);
-    DiagnosticPrinterRawOStream DP(Stream);
-    DI.print(DP);
-  }
-
-  Diags.Report(diag::err_fe_cannot_link_module)
-      << LinkModule->getModuleIdentifier() << MsgStorage;
-}
-
 /// \brief This function is invoked when the backend needs
 /// to report something to the user.
 void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
@@ -785,11 +786,44 @@ void CodeGenAction::ExecuteAction() {
       TheModule->setTargetTriple(TargetOpts.Triple);
     }
 
+    auto DiagHandler = [&](const DiagnosticInfo &DI) {
+      linkerDiagnosticHandler(DI, TheModule.get(),
+                              getCompilerInstance().getDiagnostics());
+    };
+
+    // If we are performing ThinLTO importing compilation (indicated by
+    // a non-empty index file option), then we need promote to global scope
+    // and rename any local values that are potentially exported to other
+    // modules. Do this early so that the rest of the compilation sees the
+    // promoted symbols.
+    std::unique_ptr<FunctionInfoIndex> Index;
+    if (!CI.getCodeGenOpts().ThinLTOIndexFile.empty()) {
+      ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
+          llvm::getFunctionIndexForFile(CI.getCodeGenOpts().ThinLTOIndexFile,
+                                        DiagHandler);
+      if (std::error_code EC = IndexOrErr.getError()) {
+        std::string Error = EC.message();
+        errs() << "Error loading index file '"
+               << CI.getCodeGenOpts().ThinLTOIndexFile << "': " << Error
+               << "\n";
+        return;
+      }
+      Index = std::move(IndexOrErr.get());
+      assert(Index);
+      // Currently this requires creating a new Module object.
+      std::unique_ptr<llvm::Module> RenamedModule =
+          renameModuleForThinLTO(TheModule, Index.get(), DiagHandler);
+      if (!RenamedModule)
+        return;
+
+      TheModule = std::move(RenamedModule);
+    }
+
     LLVMContext &Ctx = TheModule->getContext();
     Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler);
     EmitBackendOutput(CI.getDiagnostics(), CI.getCodeGenOpts(), TargetOpts,
                       CI.getLangOpts(), CI.getTarget().getDataLayoutString(),
-                      TheModule.get(), BA, OS);
+                      TheModule.get(), BA, OS, std::move(Index));
     return;
   }
 

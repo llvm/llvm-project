@@ -128,6 +128,19 @@ bool types::isCXX(ID Id) {
   }
 }
 
+bool types::isLLVMIR(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
+  case TY_LLVM_IR:
+  case TY_LLVM_BC:
+  case TY_LTO_IR:
+  case TY_LTO_BC:
+    return true;
+  }
+}
+
 bool types::isCuda(ID Id) {
   switch (Id) {
   default:
