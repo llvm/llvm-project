@@ -1191,7 +1191,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           MergedDeoptArgs.insert(MergedDeoptArgs.end(), ChildOB.Inputs.begin(),
                                  ChildOB.Inputs.end());
 
-          OpDefs.emplace_back(StringRef("deopt"), std::move(MergedDeoptArgs));
+          OpDefs.emplace_back("deopt", std::move(MergedDeoptArgs));
         }
 
         Instruction *NewI = nullptr;

@@ -9,6 +9,8 @@
 @var64 = global double -0.0, align 8
 @var32 = global float -0.0, align 4
 @var16 = global half -0.0, align 2
+@var4f32 = global <4 x float> <float -0.0, float 0.0, float 1.0, float 2.0>
+@var4f16 = global <4 x half> <half -0.0, half 0.0, half 1.0, half 2.0>
 
 ; CHECK: var128:
 ; CHECK-NEXT: .quad 0                         # fp128 -0
@@ -39,3 +41,16 @@
 ; CHECK-NEXT: .short 32768                    # half -0
 ; CHECK-NEXT: .size
 
+; CHECK: var4f32:
+; CHECK-NEXT: .long 2147483648               # float -0
+; CHECK-NEXT: .long 0                        # float 0
+; CHECK-NEXT: .long 1065353216               # float 1
+; CHECK-NEXT: .long 1073741824               # float 2
+; CHECK-NEXT: .size
+
+; CHECK: var4f16:
+; CHECK-NEXT: .short 32768                    # half -0
+; CHECK-NEXT: .short 0                        # half 0
+; CHECK-NEXT: .short 15360                    # half 1
+; CHECK-NEXT: .short 16384                    # half 2
+; CHECK-NEXT: .size

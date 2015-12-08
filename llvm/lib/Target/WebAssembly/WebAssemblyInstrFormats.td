@@ -1,4 +1,4 @@
-// WebAssemblyInstrFormats.td - WebAssembly Instruction Formats -*- tblgen -*-//
+//=- WebAssemblyInstrFormats.td - WebAssembly Instr. Formats -*- tablegen -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //

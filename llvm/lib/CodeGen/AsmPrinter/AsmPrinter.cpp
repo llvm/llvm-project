@@ -1878,6 +1878,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
                                    const Constant *BaseCV = nullptr,
                                    uint64_t Offset = 0);
 
+static void emitGlobalConstantFP(const ConstantFP *CFP, AsmPrinter &AP);
+
 /// isRepeatedByteSequence - Determine whether the given value is
 /// composed of a repeated sequence of identical bytes and return the
 /// byte value.  If it is not a repeated sequence, return -1.
@@ -1956,22 +1958,8 @@ static void emitGlobalConstantDataSequential(const DataLayout &DL,
                                    ElementByteSize);
     }
   } else {
-    // FP Constants are printed as integer constants to avoid losing precision.
-    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
-      APFloat Num = CDS->getElementAsAPFloat(I);
-      if (AP.isVerbose()) {
-        if (ElementByteSize == 4)
-          AP.OutStreamer->GetCommentOS() << "float " << Num.convertToFloat()
-                                         << '\n';
-        else if (ElementByteSize == 8)
-          AP.OutStreamer->GetCommentOS() << "double " << Num.convertToDouble()
-                                         << '\n';
-        else
-          llvm_unreachable("Unexpected float width");
-      }
-      AP.OutStreamer->EmitIntValue(Num.bitcastToAPInt().getLimitedValue(),
-                                   ElementByteSize);
-    }
+    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I)
+      emitGlobalConstantFP(cast<ConstantFP>(CDS->getElementAsConstant(I)), AP);
   }
 
   unsigned Size = DL.getTypeAllocSize(CDS->getType());

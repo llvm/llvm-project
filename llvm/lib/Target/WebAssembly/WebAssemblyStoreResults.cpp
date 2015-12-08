@@ -72,6 +72,8 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
 
+  assert(MRI.isSSA() && "StoreResults depends on SSA form");
+
   for (auto &MBB : MF) {
     DEBUG(dbgs() << "Basic Block: " << MBB.getName() << '\n');
     for (auto &MI : MBB)

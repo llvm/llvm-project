@@ -5,13 +5,13 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 define void @test_copysign_const_magnitude_d(double %X) {
 ; CHECK: [[SIGNMASK:L.+]]:
-; CHECK-NEXT:   .quad -9223372036854775808    ## double -0.000000e+00
-; CHECK-NEXT:   .quad 0                       ## double 0.000000e+00
+; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
+; CHECK-NEXT:   .quad 0                       ## double 0
 ; CHECK: [[ZERO:L.+]]:
 ; CHECK-NEXT:   .space 16
 ; CHECK: [[ONE:L.+]]:
-; CHECK-NEXT:   .quad 4607182418800017408     ## double 1.000000e+00
-; CHECK-NEXT:   .quad 0                       ## double 0.000000e+00
+; CHECK-NEXT:   .quad 4607182418800017408     ## double 1
+; CHECK-NEXT:   .quad 0                       ## double 0
 ; CHECK-LABEL: test_copysign_const_magnitude_d:
 
 ; CHECK: id
@@ -50,17 +50,17 @@ define void @test_copysign_const_magnitude_d(double %X) {
 
 define void @test_copysign_const_magnitude_f(float %X) {
 ; CHECK: [[SIGNMASK:L.+]]:
-; CHECK-NEXT:   .long	2147483648              ## float -0.000000e+00
-; CHECK-NEXT:   .long	0                       ## float 0.000000e+00
-; CHECK-NEXT:   .long	0                       ## float 0.000000e+00
-; CHECK-NEXT:   .long	0                       ## float 0.000000e+00
+; CHECK-NEXT:   .long	2147483648              ## float -0
+; CHECK-NEXT:   .long	0                       ## float 0
+; CHECK-NEXT:   .long	0                       ## float 0
+; CHECK-NEXT:   .long	0                       ## float 0
 ; CHECK: [[ZERO:L.+]]:
 ; CHECK-NEXT:   .space 16
 ; CHECK: [[ONE:L.+]]:
-; CHECK-NEXT:   .long	1065353216              ## float 1.000000e+00
-; CHECK-NEXT:   .long	0                       ## float 0.000000e+00
-; CHECK-NEXT:   .long	0                       ## float 0.000000e+00
-; CHECK-NEXT:   .long	0                       ## float 0.000000e+00
+; CHECK-NEXT:   .long	1065353216              ## float 1
+; CHECK-NEXT:   .long	0                       ## float 0
+; CHECK-NEXT:   .long	0                       ## float 0
+; CHECK-NEXT:   .long	0                       ## float 0
 ; CHECK-LABEL: test_copysign_const_magnitude_f:
 
 ; CHECK: id

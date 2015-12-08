@@ -16,7 +16,6 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
-#include <string>
 
 namespace llvm {
 

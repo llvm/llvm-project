@@ -78,6 +78,7 @@ void PrintRelocations(const object::ObjectFile *o);
 void PrintSectionHeaders(const object::ObjectFile *o);
 void PrintSectionContents(const object::ObjectFile *o);
 void PrintSymbolTable(const object::ObjectFile *o);
+void report_error(StringRef File, std::error_code EC);
 
 } // end namespace llvm
 

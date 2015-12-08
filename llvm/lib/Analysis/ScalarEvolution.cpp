@@ -446,179 +446,179 @@ bool SCEVUnknown::isOffsetOf(Type *&CTy, Constant *&FieldNo) const {
 //===----------------------------------------------------------------------===//
 
 namespace {
-  /// SCEVComplexityCompare - Return true if the complexity of the LHS is less
-  /// than the complexity of the RHS.  This comparator is used to canonicalize
-  /// expressions.
-  class SCEVComplexityCompare {
-    const LoopInfo *const LI;
-  public:
-    explicit SCEVComplexityCompare(const LoopInfo *li) : LI(li) {}
+/// SCEVComplexityCompare - Return true if the complexity of the LHS is less
+/// than the complexity of the RHS.  This comparator is used to canonicalize
+/// expressions.
+class SCEVComplexityCompare {
+  const LoopInfo *const LI;
+public:
+  explicit SCEVComplexityCompare(const LoopInfo *li) : LI(li) {}
 
-    // Return true or false if LHS is less than, or at least RHS, respectively.
-    bool operator()(const SCEV *LHS, const SCEV *RHS) const {
-      return compare(LHS, RHS) < 0;
-    }
+  // Return true or false if LHS is less than, or at least RHS, respectively.
+  bool operator()(const SCEV *LHS, const SCEV *RHS) const {
+    return compare(LHS, RHS) < 0;
+  }
 
-    // Return negative, zero, or positive, if LHS is less than, equal to, or
-    // greater than RHS, respectively. A three-way result allows recursive
-    // comparisons to be more efficient.
-    int compare(const SCEV *LHS, const SCEV *RHS) const {
-      // Fast-path: SCEVs are uniqued so we can do a quick equality check.
-      if (LHS == RHS)
-        return 0;
+  // Return negative, zero, or positive, if LHS is less than, equal to, or
+  // greater than RHS, respectively. A three-way result allows recursive
+  // comparisons to be more efficient.
+  int compare(const SCEV *LHS, const SCEV *RHS) const {
+    // Fast-path: SCEVs are uniqued so we can do a quick equality check.
+    if (LHS == RHS)
+      return 0;
 
-      // Primarily, sort the SCEVs by their getSCEVType().
-      unsigned LType = LHS->getSCEVType(), RType = RHS->getSCEVType();
-      if (LType != RType)
-        return (int)LType - (int)RType;
+    // Primarily, sort the SCEVs by their getSCEVType().
+    unsigned LType = LHS->getSCEVType(), RType = RHS->getSCEVType();
+    if (LType != RType)
+      return (int)LType - (int)RType;
 
-      // Aside from the getSCEVType() ordering, the particular ordering
-      // isn't very important except that it's beneficial to be consistent,
-      // so that (a + b) and (b + a) don't end up as different expressions.
-      switch (static_cast<SCEVTypes>(LType)) {
-      case scUnknown: {
-        const SCEVUnknown *LU = cast<SCEVUnknown>(LHS);
-        const SCEVUnknown *RU = cast<SCEVUnknown>(RHS);
+    // Aside from the getSCEVType() ordering, the particular ordering
+    // isn't very important except that it's beneficial to be consistent,
+    // so that (a + b) and (b + a) don't end up as different expressions.
+    switch (static_cast<SCEVTypes>(LType)) {
+    case scUnknown: {
+      const SCEVUnknown *LU = cast<SCEVUnknown>(LHS);
+      const SCEVUnknown *RU = cast<SCEVUnknown>(RHS);
 
-        // Sort SCEVUnknown values with some loose heuristics. TODO: This is
-        // not as complete as it could be.
-        const Value *LV = LU->getValue(), *RV = RU->getValue();
+      // Sort SCEVUnknown values with some loose heuristics. TODO: This is
+      // not as complete as it could be.
+      const Value *LV = LU->getValue(), *RV = RU->getValue();
 
-        // Order pointer values after integer values. This helps SCEVExpander
-        // form GEPs.
-        bool LIsPointer = LV->getType()->isPointerTy(),
-             RIsPointer = RV->getType()->isPointerTy();
-        if (LIsPointer != RIsPointer)
-          return (int)LIsPointer - (int)RIsPointer;
+      // Order pointer values after integer values. This helps SCEVExpander
+      // form GEPs.
+      bool LIsPointer = LV->getType()->isPointerTy(),
+        RIsPointer = RV->getType()->isPointerTy();
+      if (LIsPointer != RIsPointer)
+        return (int)LIsPointer - (int)RIsPointer;
 
-        // Compare getValueID values.
-        unsigned LID = LV->getValueID(),
-                 RID = RV->getValueID();
-        if (LID != RID)
-          return (int)LID - (int)RID;
+      // Compare getValueID values.
+      unsigned LID = LV->getValueID(),
+        RID = RV->getValueID();
+      if (LID != RID)
+        return (int)LID - (int)RID;
 
-        // Sort arguments by their position.
-        if (const Argument *LA = dyn_cast<Argument>(LV)) {
-          const Argument *RA = cast<Argument>(RV);
-          unsigned LArgNo = LA->getArgNo(), RArgNo = RA->getArgNo();
-          return (int)LArgNo - (int)RArgNo;
-        }
-
-        // For instructions, compare their loop depth, and their operand
-        // count.  This is pretty loose.
-        if (const Instruction *LInst = dyn_cast<Instruction>(LV)) {
-          const Instruction *RInst = cast<Instruction>(RV);
-
-          // Compare loop depths.
-          const BasicBlock *LParent = LInst->getParent(),
-                           *RParent = RInst->getParent();
-          if (LParent != RParent) {
-            unsigned LDepth = LI->getLoopDepth(LParent),
-                     RDepth = LI->getLoopDepth(RParent);
-            if (LDepth != RDepth)
-              return (int)LDepth - (int)RDepth;
-          }
-
-          // Compare the number of operands.
-          unsigned LNumOps = LInst->getNumOperands(),
-                   RNumOps = RInst->getNumOperands();
-          return (int)LNumOps - (int)RNumOps;
-        }
-
-        return 0;
+      // Sort arguments by their position.
+      if (const Argument *LA = dyn_cast<Argument>(LV)) {
+        const Argument *RA = cast<Argument>(RV);
+        unsigned LArgNo = LA->getArgNo(), RArgNo = RA->getArgNo();
+        return (int)LArgNo - (int)RArgNo;
       }
 
-      case scConstant: {
-        const SCEVConstant *LC = cast<SCEVConstant>(LHS);
-        const SCEVConstant *RC = cast<SCEVConstant>(RHS);
+      // For instructions, compare their loop depth, and their operand
+      // count.  This is pretty loose.
+      if (const Instruction *LInst = dyn_cast<Instruction>(LV)) {
+        const Instruction *RInst = cast<Instruction>(RV);
 
-        // Compare constant values.
-        const APInt &LA = LC->getValue()->getValue();
-        const APInt &RA = RC->getValue()->getValue();
-        unsigned LBitWidth = LA.getBitWidth(), RBitWidth = RA.getBitWidth();
-        if (LBitWidth != RBitWidth)
-          return (int)LBitWidth - (int)RBitWidth;
-        return LA.ult(RA) ? -1 : 1;
-      }
-
-      case scAddRecExpr: {
-        const SCEVAddRecExpr *LA = cast<SCEVAddRecExpr>(LHS);
-        const SCEVAddRecExpr *RA = cast<SCEVAddRecExpr>(RHS);
-
-        // Compare addrec loop depths.
-        const Loop *LLoop = LA->getLoop(), *RLoop = RA->getLoop();
-        if (LLoop != RLoop) {
-          unsigned LDepth = LLoop->getLoopDepth(),
-                   RDepth = RLoop->getLoopDepth();
+        // Compare loop depths.
+        const BasicBlock *LParent = LInst->getParent(),
+          *RParent = RInst->getParent();
+        if (LParent != RParent) {
+          unsigned LDepth = LI->getLoopDepth(LParent),
+            RDepth = LI->getLoopDepth(RParent);
           if (LDepth != RDepth)
             return (int)LDepth - (int)RDepth;
         }
 
-        // Addrec complexity grows with operand count.
-        unsigned LNumOps = LA->getNumOperands(), RNumOps = RA->getNumOperands();
-        if (LNumOps != RNumOps)
-          return (int)LNumOps - (int)RNumOps;
-
-        // Lexicographically compare.
-        for (unsigned i = 0; i != LNumOps; ++i) {
-          long X = compare(LA->getOperand(i), RA->getOperand(i));
-          if (X != 0)
-            return X;
-        }
-
-        return 0;
-      }
-
-      case scAddExpr:
-      case scMulExpr:
-      case scSMaxExpr:
-      case scUMaxExpr: {
-        const SCEVNAryExpr *LC = cast<SCEVNAryExpr>(LHS);
-        const SCEVNAryExpr *RC = cast<SCEVNAryExpr>(RHS);
-
-        // Lexicographically compare n-ary expressions.
-        unsigned LNumOps = LC->getNumOperands(), RNumOps = RC->getNumOperands();
-        if (LNumOps != RNumOps)
-          return (int)LNumOps - (int)RNumOps;
-
-        for (unsigned i = 0; i != LNumOps; ++i) {
-          if (i >= RNumOps)
-            return 1;
-          long X = compare(LC->getOperand(i), RC->getOperand(i));
-          if (X != 0)
-            return X;
-        }
+        // Compare the number of operands.
+        unsigned LNumOps = LInst->getNumOperands(),
+          RNumOps = RInst->getNumOperands();
         return (int)LNumOps - (int)RNumOps;
       }
 
-      case scUDivExpr: {
-        const SCEVUDivExpr *LC = cast<SCEVUDivExpr>(LHS);
-        const SCEVUDivExpr *RC = cast<SCEVUDivExpr>(RHS);
+      return 0;
+    }
 
-        // Lexicographically compare udiv expressions.
-        long X = compare(LC->getLHS(), RC->getLHS());
+    case scConstant: {
+      const SCEVConstant *LC = cast<SCEVConstant>(LHS);
+      const SCEVConstant *RC = cast<SCEVConstant>(RHS);
+
+      // Compare constant values.
+      const APInt &LA = LC->getValue()->getValue();
+      const APInt &RA = RC->getValue()->getValue();
+      unsigned LBitWidth = LA.getBitWidth(), RBitWidth = RA.getBitWidth();
+      if (LBitWidth != RBitWidth)
+        return (int)LBitWidth - (int)RBitWidth;
+      return LA.ult(RA) ? -1 : 1;
+    }
+
+    case scAddRecExpr: {
+      const SCEVAddRecExpr *LA = cast<SCEVAddRecExpr>(LHS);
+      const SCEVAddRecExpr *RA = cast<SCEVAddRecExpr>(RHS);
+
+      // Compare addrec loop depths.
+      const Loop *LLoop = LA->getLoop(), *RLoop = RA->getLoop();
+      if (LLoop != RLoop) {
+        unsigned LDepth = LLoop->getLoopDepth(),
+          RDepth = RLoop->getLoopDepth();
+        if (LDepth != RDepth)
+          return (int)LDepth - (int)RDepth;
+      }
+
+      // Addrec complexity grows with operand count.
+      unsigned LNumOps = LA->getNumOperands(), RNumOps = RA->getNumOperands();
+      if (LNumOps != RNumOps)
+        return (int)LNumOps - (int)RNumOps;
+
+      // Lexicographically compare.
+      for (unsigned i = 0; i != LNumOps; ++i) {
+        long X = compare(LA->getOperand(i), RA->getOperand(i));
         if (X != 0)
           return X;
-        return compare(LC->getRHS(), RC->getRHS());
       }
 
-      case scTruncate:
-      case scZeroExtend:
-      case scSignExtend: {
-        const SCEVCastExpr *LC = cast<SCEVCastExpr>(LHS);
-        const SCEVCastExpr *RC = cast<SCEVCastExpr>(RHS);
-
-        // Compare cast expressions by operand.
-        return compare(LC->getOperand(), RC->getOperand());
-      }
-
-      case scCouldNotCompute:
-        llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
-      }
-      llvm_unreachable("Unknown SCEV kind!");
+      return 0;
     }
-  };
-}
+
+    case scAddExpr:
+    case scMulExpr:
+    case scSMaxExpr:
+    case scUMaxExpr: {
+      const SCEVNAryExpr *LC = cast<SCEVNAryExpr>(LHS);
+      const SCEVNAryExpr *RC = cast<SCEVNAryExpr>(RHS);
+
+      // Lexicographically compare n-ary expressions.
+      unsigned LNumOps = LC->getNumOperands(), RNumOps = RC->getNumOperands();
+      if (LNumOps != RNumOps)
+        return (int)LNumOps - (int)RNumOps;
+
+      for (unsigned i = 0; i != LNumOps; ++i) {
+        if (i >= RNumOps)
+          return 1;
+        long X = compare(LC->getOperand(i), RC->getOperand(i));
+        if (X != 0)
+          return X;
+      }
+      return (int)LNumOps - (int)RNumOps;
+    }
+
+    case scUDivExpr: {
+      const SCEVUDivExpr *LC = cast<SCEVUDivExpr>(LHS);
+      const SCEVUDivExpr *RC = cast<SCEVUDivExpr>(RHS);
+
+      // Lexicographically compare udiv expressions.
+      long X = compare(LC->getLHS(), RC->getLHS());
+      if (X != 0)
+        return X;
+      return compare(LC->getRHS(), RC->getRHS());
+    }
+
+    case scTruncate:
+    case scZeroExtend:
+    case scSignExtend: {
+      const SCEVCastExpr *LC = cast<SCEVCastExpr>(LHS);
+      const SCEVCastExpr *RC = cast<SCEVCastExpr>(RHS);
+
+      // Compare cast expressions by operand.
+      return compare(LC->getOperand(), RC->getOperand());
+    }
+
+    case scCouldNotCompute:
+      llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+    }
+    llvm_unreachable("Unknown SCEV kind!");
+  }
+};
+}  // end anonymous namespace
 
 /// GroupByComplexity - Given a list of SCEV objects, order them by their
 /// complexity, and group objects of the same complexity together by value.
@@ -666,24 +666,22 @@ static void GroupByComplexity(SmallVectorImpl<const SCEV *> &Ops,
   }
 }
 
-namespace {
-struct FindSCEVSize {
-  int Size;
-  FindSCEVSize() : Size(0) {}
-
-  bool follow(const SCEV *S) {
-    ++Size;
-    // Keep looking at all operands of S.
-    return true;
-  }
-  bool isDone() const {
-    return false;
-  }
-};
-}
-
 // Returns the size of the SCEV S.
 static inline int sizeOfSCEV(const SCEV *S) {
+  struct FindSCEVSize {
+    int Size;
+    FindSCEVSize() : Size(0) {}
+
+    bool follow(const SCEV *S) {
+      ++Size;
+      // Keep looking at all operands of S.
+      return true;
+    }
+    bool isDone() const {
+      return false;
+    }
+  };
+
   FindSCEVSize F;
   SCEVTraversal<FindSCEVSize> ST(F);
   ST.visitAll(S);
@@ -1929,14 +1927,6 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
   return Interesting;
 }
 
-namespace {
-  struct APIntCompare {
-    bool operator()(const APInt &LHS, const APInt &RHS) const {
-      return LHS.ult(RHS);
-    }
-  };
-}
-
 // We're trying to construct a SCEV of type `Type' with `Ops' as operands and
 // `OldFlags' as can't-wrap behavior.  Infer a more aggressive set of
 // can't-overflow flags for the operation if possible.
@@ -2149,6 +2139,12 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     if (CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
                                      Ops.data(), Ops.size(),
                                      APInt(BitWidth, 1), *this)) {
+      struct APIntCompare {
+        bool operator()(const APInt &LHS, const APInt &RHS) const {
+          return LHS.ult(RHS);
+        }
+      };
+
       // Some interesting folding opportunity is present, so its worthwhile to
       // re-generate the operands list. Group the operands by constant scale,
       // to avoid multiplying by the same constant scale multiple times.
@@ -3289,7 +3285,8 @@ const SCEV *ScalarEvolution::getCouldNotCompute() {
   return CouldNotCompute.get();
 }
 
-namespace {
+
+bool ScalarEvolution::checkValidity(const SCEV *S) const {
   // Helper class working with SCEVTraversal to figure out if a SCEV contains
   // a SCEVUnknown with null value-pointer. FindInvalidSCEVUnknown::FindOne
   // is set iff if find such SCEVUnknown.
@@ -3311,9 +3308,7 @@ namespace {
     }
     bool isDone() const { return FindOne; }
   };
-}
 
-bool ScalarEvolution::checkValidity(const SCEV *S) const {
   FindInvalidSCEVUnknown F;
   SCEVTraversal<FindInvalidSCEVUnknown> ST(F);
   ST.visitAll(S);
@@ -8721,30 +8716,28 @@ static bool findArrayDimensionsRec(ScalarEvolution &SE,
   return true;
 }
 
-namespace {
-struct FindParameter {
-  bool FoundParameter;
-  FindParameter() : FoundParameter(false) {}
-
-  bool follow(const SCEV *S) {
-    if (isa<SCEVUnknown>(S)) {
-      FoundParameter = true;
-      // Stop recursion: we found a parameter.
-      return false;
-    }
-    // Keep looking.
-    return true;
-  }
-  bool isDone() const {
-    // Stop recursion if we have found a parameter.
-    return FoundParameter;
-  }
-};
-}
-
 // Returns true when S contains at least a SCEVUnknown parameter.
 static inline bool
 containsParameters(const SCEV *S) {
+  struct FindParameter {
+    bool FoundParameter;
+    FindParameter() : FoundParameter(false) {}
+
+    bool follow(const SCEV *S) {
+      if (isa<SCEVUnknown>(S)) {
+        FoundParameter = true;
+        // Stop recursion: we found a parameter.
+        return false;
+      }
+      // Keep looking.
+      return true;
+    }
+    bool isDone() const {
+      // Stop recursion if we have found a parameter.
+      return FoundParameter;
+    }
+  };
+
   FindParameter F;
   SCEVTraversal<FindParameter> ST(F);
   ST.visitAll(S);
@@ -9406,24 +9399,22 @@ bool ScalarEvolution::properlyDominates(const SCEV *S, const BasicBlock *BB) {
   return getBlockDisposition(S, BB) == ProperlyDominatesBlock;
 }
 
-namespace {
-// Search for a SCEV expression node within an expression tree.
-// Implements SCEVTraversal::Visitor.
-struct SCEVSearch {
-  const SCEV *Node;
-  bool IsFound;
-
-  SCEVSearch(const SCEV *N): Node(N), IsFound(false) {}
-
-  bool follow(const SCEV *S) {
-    IsFound |= (S == Node);
-    return !IsFound;
-  }
-  bool isDone() const { return IsFound; }
-};
-}
-
 bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
+  // Search for a SCEV expression node within an expression tree.
+  // Implements SCEVTraversal::Visitor.
+  struct SCEVSearch {
+    const SCEV *Node;
+    bool IsFound;
+
+    SCEVSearch(const SCEV *N): Node(N), IsFound(false) {}
+
+    bool follow(const SCEV *S) {
+      IsFound |= (S == Node);
+      return !IsFound;
+    }
+    bool isDone() const { return IsFound; }
+  };
+
   SCEVSearch Search(Op);
   visitAll(S, Search);
   return Search.IsFound;
