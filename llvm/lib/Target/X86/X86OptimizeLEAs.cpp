@@ -294,11 +294,9 @@ bool OptimizeLEAPass::removeRedundantAddrCalc(
 
 bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
-  bool OptSize = MF.getFunction()->optForSize();
-  bool MinSize = MF.getFunction()->optForMinSize();
 
   // Perform this optimization only if we care about code size.
-  if (!OptSize && !MinSize)
+  if (!MF.getFunction()->optForSize())
     return false;
 
   MRI = &MF.getRegInfo();

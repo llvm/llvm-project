@@ -15,9 +15,11 @@
 #ifndef LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 #define LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 
+#include <memory>
 #include <vector>
 
 namespace llvm {
+class FunctionInfoIndex;
 class Pass;
 class TargetLibraryInfoImpl;
 class TargetMachine;
@@ -113,6 +115,9 @@ public:
   /// Inliner - Specifies the inliner to use.  If this is non-null, it is
   /// added to the per-module passes.
   Pass *Inliner;
+
+  /// The function summary index to use for function importing.
+  FunctionInfoIndex *FunctionIndex;
 
   bool DisableTailCalls;
   bool DisableUnitAtATime;

@@ -4,3 +4,7 @@
 
 declare void @foo()
 
+define void @use_foo() {
+  call void @foo()
+  ret void
+}

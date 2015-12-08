@@ -1592,7 +1592,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     //   not use the other opcode as it is a legacy artifact of TD files.
     int64_t Value;
     if (MO.getExpr()->evaluateAsAbsolute(Value)) {
-      // if the the operand can fit within a 7:2 field
+      // if the operand can fit within a 7:2 field
       if (Value < (1 << 8) && Value >= -(1 << 8)) {
         SMLoc myLoc = Operands[2]->getStartLoc();
         // # is left in startLoc in the case of ##

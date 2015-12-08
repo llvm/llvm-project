@@ -813,6 +813,14 @@ TEST_F(DILocationTest, getTemporary) {
   EXPECT_FALSE(L->isResolved());
 }
 
+TEST_F(DILocationTest, cloneTemporary) {
+  MDNode *N = MDNode::get(Context, None);
+  auto L = DILocation::getTemporary(Context, 2, 7, N);
+  EXPECT_TRUE(L->isTemporary());
+  auto L2 = L->clone();
+  EXPECT_TRUE(L2->isTemporary());
+}
+
 typedef MetadataTest GenericDINodeTest;
 
 TEST_F(GenericDINodeTest, get) {

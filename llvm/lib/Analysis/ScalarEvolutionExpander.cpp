@@ -933,6 +933,9 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos) {
       !SE.DT.dominates(InsertPos->getParent(), IncV->getParent()))
     return false;
 
+  if (!SE.LI.movementPreservesLCSSAForm(IncV, InsertPos))
+    return false;
+
   // Check that the chain of IV operands leading back to Phi can be hoisted.
   SmallVector<Instruction*, 4> IVIncs;
   for(;;) {

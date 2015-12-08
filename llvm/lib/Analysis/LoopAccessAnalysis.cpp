@@ -289,7 +289,7 @@ void RuntimePointerChecking::groupChecks(
   // don't process them twice.
   SmallSet<unsigned, 2> Seen;
 
-  // Go through all equivalence classes, get the the "pointer check groups"
+  // Go through all equivalence classes, get the "pointer check groups"
   // and add them to the overall solution. We use the order in which accesses
   // appear in 'Pointers' to enforce determinism.
   for (unsigned I = 0; I < Pointers.size(); ++I) {

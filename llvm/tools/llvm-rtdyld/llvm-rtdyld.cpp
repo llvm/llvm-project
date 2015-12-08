@@ -388,11 +388,6 @@ static int executeInput() {
   doPreallocation(MemMgr);
   RuntimeDyld Dyld(MemMgr, MemMgr);
 
-  // FIXME: Preserve buffers until resolveRelocations time to work around a bug
-  //        in RuntimeDyldELF.
-  // This fixme should be fixed ASAP. This is a very brittle workaround.
-  std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
-
   // If we don't have any input files, read from stdin.
   if (!InputFileList.size())
     InputFileList.push_back("-");
@@ -409,7 +404,6 @@ static int executeInput() {
       return Error("unable to create object file: '" + EC.message() + "'");
 
     ObjectFile &Obj = **MaybeObj;
-    InputBuffers.push_back(std::move(*InputBuffer));
 
     // Load the object file
     Dyld.loadObject(Obj);
@@ -656,11 +650,6 @@ static int linkAndVerify() {
   RuntimeDyldChecker Checker(Dyld, Disassembler.get(), InstPrinter.get(),
                              llvm::dbgs());
 
-  // FIXME: Preserve buffers until resolveRelocations time to work around a bug
-  //        in RuntimeDyldELF.
-  // This fixme should be fixed ASAP. This is a very brittle workaround.
-  std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
-
   // If we don't have any input files, read from stdin.
   if (!InputFileList.size())
     InputFileList.push_back("-");
@@ -679,7 +668,6 @@ static int linkAndVerify() {
       return Error("unable to create object file: '" + EC.message() + "'");
 
     ObjectFile &Obj = **MaybeObj;
-    InputBuffers.push_back(std::move(*InputBuffer));
 
     // Load the object file
     Dyld.loadObject(Obj);

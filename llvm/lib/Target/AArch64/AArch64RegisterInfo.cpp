@@ -46,6 +46,8 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_NoRegs_SaveList;
   if (MF->getFunction()->getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
+  if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS)
+    return CSR_AArch64_CXX_TLS_Darwin_SaveList;
   if (MF->getFunction()->getAttributes().hasAttrSomewhere(
       Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
@@ -63,6 +65,8 @@ AArch64RegisterInfo::getCalleeSavedRegsForLayout(
     return CSR_AArch64_NoRegs_SaveList;
   if (MF->getFunction()->getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
+  if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS)
+    return CSR_AArch64_CXX_TLS_Darwin_SaveList;
   else
     return CSR_AArch64_AAPCS_SaveList;
 }
@@ -75,6 +79,8 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_AArch64_NoRegs_RegMask;
   if (CC == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_RegMask;
+  if (CC == CallingConv::CXX_FAST_TLS)
+    return CSR_AArch64_CXX_TLS_Darwin_RegMask;
   if (MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_RegMask;
   else

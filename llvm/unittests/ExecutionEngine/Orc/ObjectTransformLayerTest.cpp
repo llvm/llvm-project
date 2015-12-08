@@ -157,21 +157,6 @@ public:
     resetExpectations();
   }
 
-  template <typename OwningMBSet>
-  void takeOwnershipOfBuffers(ObjSetHandleT H, OwningMBSet MBs) {
-    EXPECT_EQ(MockObjSetHandle, H);
-    EXPECT_EQ(MockBufferSet, *MBs);
-    LastCalled = "takeOwnershipOfBuffers";
-  }
-  void expectTakeOwnershipOfBuffers(ObjSetHandleT H, MockMemoryBufferSet *MBs) {
-    MockObjSetHandle = H;
-    MockBufferSet = *MBs;
-  }
-  void verifyTakeOwnershipOfBuffers() {
-    EXPECT_EQ("takeOwnershipOfBuffers", LastCalled);
-    resetExpectations();
-  }
-
 private:
   // Backing fields for remembering parameter/return values
   std::string LastCalled;
@@ -274,18 +259,6 @@ TEST(ObjectTransformLayerTest, Main) {
   M.expectMapSectionAddress(H, Buffer, MockAddress);
   T1.mapSectionAddress(H, Buffer, MockAddress);
   M.verifyMapSectionAddress();
-
-  // Test takeOwnershipOfBuffers, using unique pointer to buffer set
-  auto MockBufferSetPtr = llvm::make_unique<MockMemoryBufferSet>(366);
-  M.expectTakeOwnershipOfBuffers(H, MockBufferSetPtr.get());
-  T2.takeOwnershipOfBuffers(H, std::move(MockBufferSetPtr));
-  M.verifyTakeOwnershipOfBuffers();
-
-  // Test takeOwnershipOfBuffers, using naked pointer to buffer set
-  MockMemoryBufferSet MockBufferSet = 266;
-  M.expectTakeOwnershipOfBuffers(H, &MockBufferSet);
-  T1.takeOwnershipOfBuffers(H, &MockBufferSet);
-  M.verifyTakeOwnershipOfBuffers();
 
   // Verify transform getter (non-const)
   MockObjectFile Mutatee = 277;

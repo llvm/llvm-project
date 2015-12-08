@@ -100,7 +100,7 @@ static cl::opt<bool> AsmVerbose("asm-verbose",
 static cl::opt<bool>
     CompileTwice("compile-twice", cl::Hidden,
                  cl::desc("Run everything twice, re-using the same pass "
-                          "manager and verify the the result is the same."),
+                          "manager and verify the result is the same."),
                  cl::init(false));
 
 static int compileModule(char **, LLVMContext &);

@@ -71,6 +71,9 @@ extern "C" void LLVMInitializePowerPCTarget() {
   RegisterTargetMachine<PPC32TargetMachine> A(ThePPC32Target);
   RegisterTargetMachine<PPC64TargetMachine> B(ThePPC64Target);
   RegisterTargetMachine<PPC64TargetMachine> C(ThePPC64LETarget);
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializePPCBoolRetToIntPass(PR);
 }
 
 /// Return the datalayout string of a subtarget.
@@ -286,6 +289,8 @@ TargetPassConfig *PPCTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void PPCPassConfig::addIRPasses() {
+  if (TM->getOptLevel() != CodeGenOpt::None)
+    addPass(createPPCBoolRetToIntPass());
   addPass(createAtomicExpandPass(&getPPCTargetMachine()));
 
   // For the BG/Q (or if explicitly requested), add explicit data prefetch

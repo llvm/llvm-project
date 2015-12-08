@@ -11,3 +11,11 @@ define void @f1()  {
   getelementptr %A, %A* null, i32 0
   ret void
 }
+
+define %A* @use_g2() {
+ ret %A* @g2
+}
+
+define %B* @use_g3() {
+  ret %B* @g3
+}

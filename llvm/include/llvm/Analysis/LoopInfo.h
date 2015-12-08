@@ -37,6 +37,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
 #include <algorithm>
 
@@ -401,6 +402,9 @@ public:
   /// isLCSSAForm - Return true if the Loop is in LCSSA form
   bool isLCSSAForm(DominatorTree &DT) const;
 
+  /// \brief Return true if this Loop and all inner subloops are in LCSSA form.
+  bool isRecursivelyLCSSAForm(DominatorTree &DT) const;
+
   /// isLoopSimplifyForm - Return true if the Loop is in the form that
   /// the LoopSimplify form transforms loops to, which is sometimes called
   /// normal form.
@@ -682,6 +686,78 @@ public:
     // instruction, or in a loop that contains it as an inner loop, then using
     // it as a replacement will not break LCSSA form.
     return ToLoop->contains(getLoopFor(From->getParent()));
+  }
+
+  /// \brief Checks if moving a specific instruction can break LCSSA in any
+  /// loop.
+  ///
+  /// Return true if moving \p Inst to before \p NewLoc will break LCSSA,
+  /// assuming that the function containing \p Inst and \p NewLoc is currently
+  /// in LCSSA form.
+  bool movementPreservesLCSSAForm(Instruction *Inst, Instruction *NewLoc) {
+    assert(Inst->getFunction() == NewLoc->getFunction() &&
+           "Can't reason about IPO!");
+
+    auto *OldBB = Inst->getParent();
+    auto *NewBB = NewLoc->getParent();
+
+    // Movement within the same loop does not break LCSSA (the equality check is
+    // to avoid doing a hashtable lookup in case of intra-block movement).
+    if (OldBB == NewBB)
+      return true;
+
+    auto *OldLoop = getLoopFor(OldBB);
+    auto *NewLoop = getLoopFor(NewBB);
+
+    if (OldLoop == NewLoop)
+      return true;
+
+    // Check if Outer contains Inner; with the null loop counting as the
+    // "outermost" loop.
+    auto Contains = [](const Loop *Outer, const Loop *Inner) {
+      return !Outer || Outer->contains(Inner);
+    };
+
+    // To check that the movement of Inst to before NewLoc does not break LCSSA,
+    // we need to check two sets of uses for possible LCSSA violations at
+    // NewLoc: the users of NewInst, and the operands of NewInst.
+
+    // If we know we're hoisting Inst out of an inner loop to an outer loop,
+    // then the uses *of* Inst don't need to be checked.
+
+    if (!Contains(NewLoop, OldLoop)) {
+      for (Use &U : Inst->uses()) {
+        auto *UI = cast<Instruction>(U.getUser());
+        auto *UBB = isa<PHINode>(UI) ? cast<PHINode>(UI)->getIncomingBlock(U)
+                                     : UI->getParent();
+        if (UBB != NewBB && getLoopFor(UBB) != NewLoop)
+          return false;
+      }
+    }
+
+    // If we know we're sinking Inst from an outer loop into an inner loop, then
+    // the *operands* of Inst don't need to be checked.
+
+    if (!Contains(OldLoop, NewLoop)) {
+      // See below on why we can't handle phi nodes here.
+      if (isa<PHINode>(Inst))
+        return false;
+
+      for (Use &U : Inst->operands()) {
+        auto *DefI = dyn_cast<Instruction>(U.get());
+        if (!DefI)
+          return false;
+
+        // This would need adjustment if we allow Inst to be a phi node -- the
+        // new use block won't simply be NewBB.
+
+        auto *DefBlock = DefI->getParent();
+        if (DefBlock != NewBB && getLoopFor(DefBlock) != NewLoop)
+          return false;
+      }
+    }
+
+    return true;
   }
 };
 

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/FunctionInfo.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/CommandLine.h"
@@ -108,6 +109,7 @@ PassManagerBuilder::PassManagerBuilder() {
     SizeLevel = 0;
     LibraryInfo = nullptr;
     Inliner = nullptr;
+    FunctionIndex = nullptr;
     DisableUnitAtATime = false;
     DisableUnrollLoops = false;
     BBVectorize = RunBBVectorization;
@@ -475,6 +477,9 @@ void PassManagerBuilder::populateModulePassManager(
 void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   // Provide AliasAnalysis services for optimizations.
   addInitialAliasAnalysisPasses(PM);
+
+  if (FunctionIndex)
+    PM.add(createFunctionImportPass(FunctionIndex));
 
   // Propagate constants at call sites into the functions they call.  This
   // opens opportunities for globalopt (and inlining) by substituting function

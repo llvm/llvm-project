@@ -6,3 +6,7 @@
 
 ; CHECK-DAG: @Y = external global [1 x i32]
 @Y = external global [1 x i32]
+
+define [1 x i32]* @use-Y() {
+  ret [1 x i32] *@Y
+}

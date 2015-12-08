@@ -834,8 +834,8 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
   CallAnalyzer CA(TTI, ACT, *F, InlineConstants::IndirectCallThreshold, CS);
   if (CA.analyzeCall(CS)) {
     // We were able to inline the indirect call! Subtract the cost from the
-    // bonus we want to apply, but don't go below zero.
-    Cost -= std::max(0, InlineConstants::IndirectCallThreshold - CA.getCost());
+    // threshold to get the bonus we want to apply, but don't go below zero.
+    Cost -= std::max(0, CA.getThreshold() - CA.getCost());
   }
 
   return Base::visitCallSite(CS);

@@ -388,57 +388,64 @@ private:
   class ParseMemoryInst {
   public:
     ParseMemoryInst(Instruction *Inst, const TargetTransformInfo &TTI)
-      : Load(false), Store(false), IsSimple(true), MayReadFromMemory(false),
-        MayWriteToMemory(false), MatchingId(-1), Ptr(nullptr) {
-      MayReadFromMemory = Inst->mayReadFromMemory();
-      MayWriteToMemory = Inst->mayWriteToMemory();
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
-        MemIntrinsicInfo Info;
-        if (!TTI.getTgtMemIntrinsic(II, Info))
-          return;
-        if (Info.NumMemRefs == 1) {
-          Store = Info.WriteMem;
-          Load = Info.ReadMem;
-          MatchingId = Info.MatchingId;
-          MayReadFromMemory = Info.ReadMem;
-          MayWriteToMemory = Info.WriteMem;
-          IsSimple = Info.IsSimple;
-          Ptr = Info.PtrVal;
-        }
-      } else if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
-        Load = true;
-        IsSimple = LI->isSimple();
-        Ptr = LI->getPointerOperand();
+      : IsTargetMemInst(false), Inst(Inst) {
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst))
+        if (TTI.getTgtMemIntrinsic(II, Info) && Info.NumMemRefs == 1)
+          IsTargetMemInst = true;
+    }
+    bool isLoad() const {
+      if (IsTargetMemInst) return Info.ReadMem;
+      return isa<LoadInst>(Inst);
+    }
+    bool isStore() const {
+      if (IsTargetMemInst) return Info.WriteMem;
+      return isa<StoreInst>(Inst);
+    }
+    bool isSimple() const {
+      if (IsTargetMemInst) return Info.IsSimple;
+      if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
+        return LI->isSimple();
       } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-        Store = true;
-        IsSimple = SI->isSimple();
-        Ptr = SI->getPointerOperand();
+        return SI->isSimple();
       }
+      return Inst->isAtomic();
     }
-    bool isLoad() const { return Load; }
-    bool isStore() const { return Store; }
-    bool isSimple() const { return IsSimple; }
     bool isMatchingMemLoc(const ParseMemoryInst &Inst) const {
-      return Ptr == Inst.Ptr && MatchingId == Inst.MatchingId;
+      return (getPointerOperand() == Inst.getPointerOperand() &&
+              getMatchingId() == Inst.getMatchingId());
     }
-    bool isValid() const { return Ptr != nullptr; }
-    int getMatchingId() const { return MatchingId; }
-    Value *getPtr() const { return Ptr; }
-    bool mayReadFromMemory() const { return MayReadFromMemory; }
-    bool mayWriteToMemory() const { return MayWriteToMemory; }
+    bool isValid() const { return getPointerOperand() != nullptr; }
 
-  private:
-    bool Load;
-    bool Store;
-    bool IsSimple;
-    bool MayReadFromMemory;
-    bool MayWriteToMemory;
     // For regular (non-intrinsic) loads/stores, this is set to -1. For
     // intrinsic loads/stores, the id is retrieved from the corresponding
     // field in the MemIntrinsicInfo structure.  That field contains
     // non-negative values only.
-    int MatchingId;
-    Value *Ptr;
+    int getMatchingId() const {
+      if (IsTargetMemInst) return Info.MatchingId;
+      return -1;
+    }
+    Value *getPointerOperand() const {
+      if (IsTargetMemInst) return Info.PtrVal;
+      if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
+        return LI->getPointerOperand();
+      } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
+        return SI->getPointerOperand();
+      }
+      return nullptr;
+    }
+    bool mayReadFromMemory() const {
+      if (IsTargetMemInst) return Info.ReadMem;
+      return Inst->mayReadFromMemory();
+    }
+    bool mayWriteToMemory() const {
+      if (IsTargetMemInst) return Info.WriteMem;
+      return Inst->mayWriteToMemory();
+    }
+
+  private:
+    bool IsTargetMemInst;
+    MemIntrinsicInfo Info;
+    Instruction *Inst;
   };
 
   bool processNode(DomTreeNode *Node);
@@ -565,7 +572,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
       // If we have an available version of this load, and if it is the right
       // generation, replace this instruction.
-      LoadValue InVal = AvailableLoads.lookup(MemInst.getPtr());
+      LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
       if (InVal.Data != nullptr && InVal.Generation == CurrentGeneration &&
           InVal.MatchingId == MemInst.getMatchingId()) {
         Value *Op = getOrCreateResult(InVal.Data, Inst->getType());
@@ -583,7 +590,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
       // Otherwise, remember that we have this instruction.
       AvailableLoads.insert(
-          MemInst.getPtr(),
+          MemInst.getPointerOperand(),
           LoadValue(Inst, CurrentGeneration, MemInst.getMatchingId()));
       LastStore = nullptr;
       continue;
@@ -659,7 +666,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         // to non-volatile loads, so we don't have to check for volatility of
         // the store.
         AvailableLoads.insert(
-            MemInst.getPtr(),
+            MemInst.getPointerOperand(),
             LoadValue(Inst, CurrentGeneration, MemInst.getMatchingId()));
 
         // Remember that this was the last normal store we saw for DSE.

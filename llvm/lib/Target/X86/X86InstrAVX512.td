@@ -2396,16 +2396,6 @@ defm KUNPCKBW : avx512_mask_unpck<"bw", VK16, v16i1, VK8, HasAVX512>, PD;
 defm KUNPCKWD : avx512_mask_unpck<"wd", VK32, v32i1, VK16, HasBWI>, PS;
 defm KUNPCKDQ : avx512_mask_unpck<"dq", VK64, v64i1, VK32, HasBWI>, PS, VEX_W;
 
-multiclass avx512_mask_unpck_int<string IntName, string InstName> {
-  let Predicates = [HasAVX512] in
-    def : Pat<(!cast<Intrinsic>("int_x86_avx512_"##IntName##"_bw")
-                (i16 GR16:$src1), (i16 GR16:$src2)),
-              (COPY_TO_REGCLASS (!cast<Instruction>(InstName##"BWrr")
-              (v16i1 (COPY_TO_REGCLASS GR16:$src1, VK16)),
-              (v16i1 (COPY_TO_REGCLASS GR16:$src2, VK16))), GR16)>;
-}
-defm : avx512_mask_unpck_int<"kunpck",  "KUNPCK">;
-
 // Mask bit testing
 multiclass avx512_mask_testop<bits<8> opc, string OpcodeStr, RegisterClass KRC,
                               SDNode OpNode, Predicate prd> {
@@ -2495,6 +2485,9 @@ def : Pat<(v16i1 (insert_subvector undef, (v8i1 VK8:$src), (iPTR 0))),
 
 def : Pat<(v8i1 (extract_subvector (v16i1 VK16:$src), (iPTR 8))),
           (v8i1 (COPY_TO_REGCLASS (KSHIFTRWri VK16:$src, (i8 8)), VK8))>;
+
+def : Pat<(v16i1 (extract_subvector (v32i1 VK32:$src), (iPTR 0))),
+          (v16i1 (COPY_TO_REGCLASS VK32:$src, VK16))>;
 
 def : Pat<(v32i1 (extract_subvector (v64i1 VK64:$src), (iPTR 0))),
           (v32i1 (COPY_TO_REGCLASS VK64:$src, VK32))>;
@@ -2773,22 +2766,6 @@ def: Pat<(int_x86_avx512_mask_store_pd_512 addr:$ptr, (v8f64 VR512:$src),
          (VMOVAPDZmrk addr:$ptr, (v8i1 (COPY_TO_REGCLASS GR8:$mask, VK8WM)),
             VR512:$src)>;
 
-let Predicates = [HasAVX512, NoVLX] in {
-def: Pat<(X86mstore addr:$ptr, VK8WM:$mask, (v8f32 VR256:$src)),
-         (VMOVUPSZmrk addr:$ptr,
-         (v16i1 (COPY_TO_REGCLASS VK8WM:$mask, VK16WM)),
-         (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), VR256:$src, sub_ymm))>;
-
-def: Pat<(v8f32 (masked_load addr:$ptr, VK8WM:$mask, undef)),
-         (v8f32 (EXTRACT_SUBREG (v16f32 (VMOVUPSZrmkz
-          (v16i1 (COPY_TO_REGCLASS VK8WM:$mask, VK16WM)), addr:$ptr)), sub_ymm))>;
-
-def: Pat<(v8f32 (masked_load addr:$ptr, VK8WM:$mask, (v8f32 VR256:$src0))),
-         (v8f32 (EXTRACT_SUBREG (v16f32 (VMOVUPSZrmk
-         (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), VR256:$src0, sub_ymm),
-          (v16i1 (COPY_TO_REGCLASS VK8WM:$mask, VK16WM)), addr:$ptr)), sub_ymm))>;
-}
-
 defm VMOVDQA32 : avx512_alignedload_vl<0x6F, "vmovdqa32", avx512vl_i32_info,
                                        HasAVX512>,
                  avx512_alignedstore_vl<0x7F, "vmovdqa32", avx512vl_i32_info,
@@ -2849,17 +2826,6 @@ def : Pat<(v16i32 (vselect VK16WM:$mask, (v16i32 VR512:$src),
 def : Pat<(v16i32 (vselect VK16WM:$mask, (v16i32 immAllZerosV),
                            (v16i32 VR512:$src))),
                   (VMOVDQU32Zrrkz (KNOTWrr VK16WM:$mask), VR512:$src)>;
-}
-// NoVLX patterns
-let Predicates = [HasAVX512, NoVLX] in {
-def: Pat<(X86mstore addr:$ptr, VK8WM:$mask, (v8i32 VR256:$src)),
-         (VMOVDQU32Zmrk addr:$ptr,
-         (v16i1 (COPY_TO_REGCLASS VK8WM:$mask, VK16WM)),
-         (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256:$src, sub_ymm))>;
-
-def: Pat<(v8i32 (masked_load addr:$ptr, VK8WM:$mask, undef)),
-         (v8i32 (EXTRACT_SUBREG (v16i32 (VMOVDQU32Zrmkz
-          (v16i1 (COPY_TO_REGCLASS VK8WM:$mask, VK16WM)), addr:$ptr)), sub_ymm))>;
 }
 
 // Move Int Doubleword to Packed Double Int
