@@ -13,10 +13,12 @@ from __future__ import absolute_import
 
 # System modules
 import argparse
+import importlib
 import inspect
 import os
 import pprint
 import re
+import socket
 import sys
 import threading
 import time
@@ -28,6 +30,114 @@ import six
 from six.moves import cPickle
 
 # LLDB modules
+from . import configuration
+
+class CreatedFormatter(object):
+    def __init__(self, formatter, cleanup_func):
+        self.formatter = formatter
+        self.cleanup_func = cleanup_func
+
+
+def create_results_formatter():
+    """Sets up a test results formatter.
+
+    @param config an instance of FormatterConfig
+    that indicates how to setup the ResultsFormatter.
+
+    @return an instance of CreatedFormatter.
+    """
+    def create_socket(port):
+        """Creates a socket to the localhost on the given port.
+
+        @param port the port number of the listenering port on
+        the localhost.
+
+        @return (socket object, socket closing function)
+        """
+        def socket_closer(open_sock):
+            """Close down an opened socket properly."""
+            open_sock.shutdown(socket.SHUT_RDWR)
+            open_sock.close()
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(("localhost", port))
+        return (sock, lambda: socket_closer(sock))
+
+    default_formatter_name = None
+    results_file_object = None
+    cleanup_func = None
+
+    if configuration.results_filename:
+        # Open the results file for writing.
+        if configuration.results_filename == 'stdout':
+            results_file_object = sys.stdout
+            cleanup_func = None
+        elif configuration.results_filename == 'stderr':
+            results_file_object = sys.stderr
+            cleanup_func = None
+        else:
+            results_file_object = open(configuration.results_filename, "w")
+            cleanup_func = results_file_object.close
+        default_formatter_name = (
+            "lldbsuite.test.result_formatter.XunitFormatter")
+    elif configuration.results_port:
+        # Connect to the specified localhost port.
+        results_file_object, cleanup_func = create_socket(configuration.results_port)
+        default_formatter_name = (
+            "lldbsuite.test.result_formatter.RawPickledFormatter")
+
+    # If we have a results formatter name specified and we didn't specify
+    # a results file, we should use stdout.
+    if configuration.results_formatter_name is not None and results_file_object is None:
+        # Use stdout.
+        results_file_object = sys.stdout
+        cleanup_func = None
+
+    if results_file_object:
+        # We care about the formatter.  Choose user-specified or, if
+        # none specified, use the default for the output type.
+        if configuration.results_formatter_name:
+            formatter_name = configuration.results_formatter_name
+        else:
+            formatter_name = default_formatter_name
+
+        # Create an instance of the class.
+        # First figure out the package/module.
+        components = formatter_name.split(".")
+        module = importlib.import_module(".".join(components[:-1]))
+
+        # Create the class name we need to load.
+        cls = getattr(module, components[-1])
+
+        # Handle formatter options for the results formatter class.
+        formatter_arg_parser = cls.arg_parser()
+        if configuration.results_formatter_options and len(configuration.results_formatter_options) > 0:
+            command_line_options = configuration.results_formatter_options
+        else:
+            command_line_options = []
+
+        formatter_options = formatter_arg_parser.parse_args(
+            command_line_options)
+
+        # Create the TestResultsFormatter given the processed options.
+        results_formatter_object = cls(results_file_object, formatter_options)
+
+        def shutdown_formatter():
+            """Shuts down the formatter when it is no longer needed."""
+            # Tell the formatter to write out anything it may have
+            # been saving until the very end (e.g. xUnit results
+            # can't complete its output until this point).
+            results_formatter_object.send_terminate_as_needed()
+
+            # And now close out the output file-like object.
+            if cleanup_func is not None:
+                cleanup_func()
+
+        return CreatedFormatter(
+            results_formatter_object,
+            shutdown_formatter)
+    else:
+        return None
 
 
 class EventBuilder(object):

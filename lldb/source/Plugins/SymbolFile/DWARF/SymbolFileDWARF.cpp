@@ -1077,9 +1077,9 @@ SymbolFileDWARF::ParseImportedModules (const lldb_private::SymbolContext &sc, st
         if (ClangModulesDeclVendor::LanguageSupportsClangModules(sc.comp_unit->GetLanguage()))
         {
             UpdateExternalModuleListIfNeeded();
-            for (const std::pair<uint64_t, const ClangModuleInfo> &external_type_module : m_external_type_modules)
+            for (const auto &pair : m_external_type_modules)
             {
-                imported_modules.push_back(external_type_module.second.m_name);
+                imported_modules.push_back(pair.first);
             }
         }
     }
@@ -1515,13 +1515,32 @@ bool
 SymbolFileDWARF::HasForwardDeclForClangType (const CompilerType &compiler_type)
 {
     CompilerType compiler_type_no_qualifiers = ClangASTContext::RemoveFastQualifiers(compiler_type);
-    return GetForwardDeclClangTypeToDie().count (compiler_type_no_qualifiers.GetOpaqueQualType());
+    if (GetForwardDeclClangTypeToDie().count (compiler_type_no_qualifiers.GetOpaqueQualType()))
+    {
+        return true;
+    }
+    TypeSystem *type_system = compiler_type.GetTypeSystem();
+    if (type_system)
+    {
+        DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
+        if (dwarf_ast)
+            return dwarf_ast->CanCompleteType(compiler_type);
+    }
+    return false;
 }
 
 
 bool
 SymbolFileDWARF::CompleteType (CompilerType &compiler_type)
 {
+    TypeSystem *type_system = compiler_type.GetTypeSystem();
+    if (type_system)
+    {
+        DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
+        if (dwarf_ast && dwarf_ast->CanCompleteType(compiler_type))
+            return dwarf_ast->CompleteType(compiler_type);
+    }
+
     // We have a struct/union/class/enum that needs to be fully resolved.
     CompilerType compiler_type_no_qualifiers = ClangASTContext::RemoveFastQualifiers(compiler_type);
     auto die_it = GetForwardDeclClangTypeToDie().find (compiler_type_no_qualifiers.GetOpaqueQualType());
@@ -1641,6 +1660,17 @@ SymbolFileDWARF::GetFunction (const DWARFDIE &die, SymbolContext& sc)
     return false;
 }
 
+lldb::ModuleSP
+SymbolFileDWARF::GetDWOModule (ConstString name)
+{
+    UpdateExternalModuleListIfNeeded();
+    const auto &pos = m_external_type_modules.find(name);
+    if (pos != m_external_type_modules.end())
+        return pos->second;
+    else
+        return lldb::ModuleSP();
+}
+
 void
 SymbolFileDWARF::UpdateExternalModuleListIfNeeded()
 {
@@ -1658,37 +1688,24 @@ SymbolFileDWARF::UpdateExternalModuleListIfNeeded()
         const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
         if (die && die.HasChildren() == false)
         {
-            const uint64_t name_strp = die.GetAttributeValueAsUnsigned (DW_AT_name, UINT64_MAX);
-            const uint64_t dwo_path_strp = die.GetAttributeValueAsUnsigned (DW_AT_GNU_dwo_name, UINT64_MAX);
-            
-            if (name_strp != UINT64_MAX)
+            const char *name = die.GetAttributeValueAsString(DW_AT_name, nullptr);
+
+            if (name)
             {
-                if (m_external_type_modules.find(dwo_path_strp) == m_external_type_modules.end())
+                ConstString const_name(name);
+                if (m_external_type_modules.find(const_name) == m_external_type_modules.end())
                 {
-                    const char *name = get_debug_str_data().PeekCStr(name_strp);
-                    const char *dwo_path = get_debug_str_data().PeekCStr(dwo_path_strp);
-                    if (name || dwo_path)
+                    ModuleSP module_sp;
+                    const char *dwo_path = die.GetAttributeValueAsString(DW_AT_GNU_dwo_name, nullptr);
+                    if (dwo_path)
                     {
-                        ModuleSP module_sp;
-                        if (dwo_path)
-                        {
-                            ModuleSpec dwo_module_spec;
-                            dwo_module_spec.GetFileSpec().SetFile(dwo_path, false);
-                            dwo_module_spec.GetArchitecture() = m_obj_file->GetModule()->GetArchitecture();
-                            //printf ("Loading dwo = '%s'\n", dwo_path);
-                            Error error = ModuleList::GetSharedModule (dwo_module_spec, module_sp, NULL, NULL, NULL);
-                        }
-                        
-                        if (dwo_path_strp != LLDB_INVALID_UID)
-                        {
-                            m_external_type_modules[dwo_path_strp] = ClangModuleInfo { ConstString(name), module_sp };
-                        }
-                        else
-                        {
-                            // This hack should be removed promptly once clang emits both.
-                            m_external_type_modules[name_strp] = ClangModuleInfo { ConstString(name), module_sp };
-                        }
+                        ModuleSpec dwo_module_spec;
+                        dwo_module_spec.GetFileSpec().SetFile(dwo_path, false);
+                        dwo_module_spec.GetArchitecture() = m_obj_file->GetModule()->GetArchitecture();
+                        //printf ("Loading dwo = '%s'\n", dwo_path);
+                        Error error = ModuleList::GetSharedModule (dwo_module_spec, module_sp, NULL, NULL, NULL);
                     }
+                    m_external_type_modules[const_name] = module_sp;
                 }
             }
         }
@@ -2967,6 +2984,104 @@ SymbolFileDWARF::FindTypes (const SymbolContext& sc,
                                                           append, max_matches,
                                                           num_matches);
             }
+        }
+        return num_matches;
+    }
+    else
+    {
+        UpdateExternalModuleListIfNeeded();
+
+        for (const auto &pair : m_external_type_modules)
+        {
+            ModuleSP external_module_sp = pair.second;
+            if (external_module_sp)
+            {
+                SymbolVendor *sym_vendor = external_module_sp->GetSymbolVendor();
+                if (sym_vendor)
+                {
+                    const uint32_t num_external_matches = sym_vendor->FindTypes (sc,
+                                                                                 name,
+                                                                                 parent_decl_ctx,
+                                                                                 append,
+                                                                                 max_matches,
+                                                                                 types);
+                    if (num_external_matches)
+                        return num_external_matches;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+size_t
+SymbolFileDWARF::FindTypes (const std::vector<CompilerContext> &context,
+                            bool append,
+                            TypeMap& types)
+{
+    if (!append)
+        types.Clear();
+
+    if (context.empty())
+        return 0;
+
+    DIEArray die_offsets;
+
+    ConstString name = context.back().name;
+
+    if (m_using_apple_tables)
+    {
+        if (m_apple_types_ap.get())
+        {
+            const char *name_cstr = name.GetCString();
+            m_apple_types_ap->FindByName (name_cstr, die_offsets);
+        }
+    }
+    else
+    {
+        if (!m_indexed)
+            Index ();
+
+        m_type_index.Find (name, die_offsets);
+    }
+
+    const size_t num_die_matches = die_offsets.size();
+
+    if (num_die_matches)
+    {
+        size_t num_matches = 0;
+        DWARFDebugInfo* debug_info = DebugInfo();
+        for (size_t i=0; i<num_die_matches; ++i)
+        {
+            const DIERef& die_ref = die_offsets[i];
+            DWARFDIE die = debug_info->GetDIE (die_ref);
+
+            if (die)
+            {
+                std::vector<CompilerContext> die_context;
+                die.GetDWOContext(die_context);
+                if (die_context != context)
+                    continue;
+
+                Type *matching_type = ResolveType (die, true, true);
+                if (matching_type)
+                {
+                    // We found a type pointer, now find the shared pointer form our type list
+                    types.InsertUnique (matching_type->shared_from_this());
+                    ++num_matches;
+                }
+            }
+            else
+            {
+                if (m_using_apple_tables)
+                {
+                    GetObjectFile()->GetModule()->ReportErrorIfModifyDetected ("the DWARF debug information has been modified (.apple_types accelerator table had bad die 0x%8.8x for '%s')\n",
+                                                                               die_ref.die_offset, name.GetCString());
+                }
+            }
+
         }
         return num_matches;
     }

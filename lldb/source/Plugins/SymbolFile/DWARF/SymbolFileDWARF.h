@@ -211,6 +211,11 @@ public:
                uint32_t max_matches,
                lldb_private::TypeMap& types) override;
 
+    size_t
+    FindTypes (const std::vector<lldb_private::CompilerContext> &context,
+               bool append,
+               lldb_private::TypeMap& types) override;
+
     lldb_private::TypeList *
     GetTypeList () override;
 
@@ -305,6 +310,9 @@ public:
 
     virtual lldb_private::DWARFExpression::LocationListFormat
     GetLocationListFormat() const;
+
+    lldb::ModuleSP
+    GetDWOModule (lldb_private::ConstString name);
 
 protected:
     typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *> DIEToTypePtr;
@@ -483,12 +491,7 @@ protected:
 
     typedef std::set<lldb_private::Type *> TypeSet;
     
-    typedef struct {
-        lldb_private::ConstString   m_name;
-        lldb::ModuleSP              m_module_sp;
-    } ClangModuleInfo;
-    
-    typedef std::map<uint64_t, ClangModuleInfo> ExternalTypeModuleMap;
+    typedef std::map<lldb_private::ConstString, lldb::ModuleSP> ExternalTypeModuleMap;
 
     void
     GetTypes (const DWARFDIE &die,

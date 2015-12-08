@@ -14,11 +14,11 @@ class TestCppIncompleteTypes(TestBase):
 
         value_f = frame.EvaluateExpression("f")
         self.assertTrue(value_f.IsValid(), "'expr f' results in a valid SBValue object")
-        self.assertFalse(value_f.GetError().Success(), "'expr f' results in an error, but LLDB does not crash")
+        self.assertTrue(value_f.GetError().Success(), "'expr f' is successful")
 
         value_a = frame.EvaluateExpression("a")
         self.assertTrue(value_a.IsValid(), "'expr a' results in a valid SBValue object")
-        self.assertFalse(value_a.GetError().Success(), "'expr a' results in an error, but LLDB does not crash")
+        self.assertTrue(value_a.GetError().Success(), "'expr a' is successful")
 
     @skipIfGcc
     @skipIfWindows # Clang on Windows asserts in external record layout in this case.

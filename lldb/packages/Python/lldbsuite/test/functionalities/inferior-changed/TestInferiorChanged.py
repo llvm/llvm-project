@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test import configuration
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -55,7 +56,7 @@ class ChangedInferiorTestCase(TestBase):
         """Test lldb reloads the inferior after it was changed during the session."""
         self.runCmd("process kill")
         # Prod the lldb-platform that we have a newly built inferior ready.
-        if lldb.lldbtest_remote_sandbox:
+        if configuration.lldbtest_remote_sandbox:
             self.runCmd("file " + self.exe, CURRENT_EXECUTABLE_SET)
         self.runCmd("run", RUN_SUCCEEDED)
         self.runCmd("process status")

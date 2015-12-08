@@ -885,7 +885,7 @@ void ScopStmt::buildAccessRelations() {
       Ty = ScopArrayInfo::KIND_PHI;
     else if (Access->isExitPHI())
       Ty = ScopArrayInfo::KIND_EXIT_PHI;
-    else if (Access->isImplicit())
+    else if (Access->isScalar())
       Ty = ScopArrayInfo::KIND_SCALAR;
     else
       Ty = ScopArrayInfo::KIND_ARRAY;

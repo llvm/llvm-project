@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os, sys
 import lldb
+from lldbsuite.test import configuration
 from lldbsuite.test.lldbbench import *
 
 class CompileRunToBreakpointBench(BenchBase):
@@ -17,7 +18,7 @@ class CompileRunToBreakpointBench(BenchBase):
         self.exe = lldbtest_config.lldbExec
         self.function = 'Driver::MainLoop()'
 
-        self.count = lldb.bmIterationCount
+        self.count = configuration.bmIterationCount
         if self.count <= 0:
             self.count = 3
 

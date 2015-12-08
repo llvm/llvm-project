@@ -90,7 +90,7 @@ template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody *Sym) {
   return true;
 }
 
-template <class ELFT> bool GotSection<ELFT>::addLocalModelTlsIndex() {
+template <class ELFT> bool GotSection<ELFT>::addCurrentModuleTlsIndex() {
   if (LocalTlsIndexOff != uint32_t(-1))
     return false;
   Entries.push_back(nullptr);

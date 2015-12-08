@@ -322,6 +322,11 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
 
                 TagDecl *candidate_tag_decl = const_cast<TagDecl*>(tag_type->getDecl());
 
+                // We have found a type by basename and we need to make sure the decl contexts
+                // are the same before we can try to complete this type with another
+                if (!ClangASTContext::DeclsAreEquivalent (tag_decl, candidate_tag_decl))
+                    continue;
+
                 if (m_ast_importer_sp->CompleteTagDeclWithOrigin (tag_decl, candidate_tag_decl))
                     found = true;
             }

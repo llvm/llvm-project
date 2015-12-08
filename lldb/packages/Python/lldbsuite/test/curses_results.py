@@ -23,11 +23,11 @@ import time
 
 # LLDB modules
 from . import lldbcurses
-from . import test_results
-from .test_results import EventBuilder
+from . import result_formatter
+from .result_formatter import EventBuilder
 
 
-class Curses(test_results.ResultsFormatter):
+class Curses(result_formatter.ResultsFormatter):
     """Receives live results from tests that are running and reports them to the terminal in a curses GUI"""
 
     def __init__(self, out_file, options):

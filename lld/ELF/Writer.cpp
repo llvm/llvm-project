@@ -205,7 +205,7 @@ void Writer<ELFT>::scanRelocs(
     if (Target->isTlsLocalDynamicReloc(Type)) {
       if (Target->isTlsOptimized(Type, nullptr))
         continue;
-      if (Out<ELFT>::Got->addLocalModelTlsIndex())
+      if (Out<ELFT>::Got->addCurrentModuleTlsIndex())
         Out<ELFT>::RelaDyn->addReloc({&C, &RI});
       continue;
     }

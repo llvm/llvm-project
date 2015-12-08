@@ -49,6 +49,9 @@ class MiVarTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^done,status=\"editable\"")
         self.runCmd("-var-list-children var2")
         self.expect("\^done,numchild=\"0\",has_more=\"0\"")
+        # Ensure -var-list-children also works with quotes
+        self.runCmd("-var-list-children \"var2\"")
+        self.expect("\^done,numchild=\"0\",has_more=\"0\"")
         self.runCmd("-data-evaluate-expression \"g_MyVar=30\"")
         self.expect("\^done,value=\"30\"")
         self.runCmd("-var-update --all-values var2")

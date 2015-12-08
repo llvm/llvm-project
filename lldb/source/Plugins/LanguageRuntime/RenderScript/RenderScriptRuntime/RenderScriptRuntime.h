@@ -294,6 +294,24 @@ protected:
     static const size_t s_runtimeHookCount;
 
 private:
+    // Used to index expression format strings
+    enum ExpressionStrings
+    {
+       eExprGetOffsetPtr = 0,
+       eExprAllocGetType,
+       eExprTypeDimX,
+       eExprTypeDimY,
+       eExprTypeDimZ,
+       eExprTypeElemPtr,
+       eExprElementType,
+       eExprElementKind,
+       eExprElementVec,
+       eExprElementFieldCount,
+       eExprSubelementsId,
+       eExprSubelementsName,
+       eExprSubelementsArrSize
+    };
+
     RenderScriptRuntime(Process *process); // Call CreateInstance instead.
     
     static bool HookCallback(void *baton, StoppointCallbackContext *ctx, lldb::user_id_t break_id,
@@ -319,6 +337,8 @@ private:
     //
     // Helper functions for jitting the runtime
     //
+    const char* JITTemplate(ExpressionStrings e);
+
     bool JITDataPointer(AllocationDetails* allocation, StackFrame* frame_ptr,
                         unsigned int x = 0, unsigned int y = 0, unsigned int z = 0);
 

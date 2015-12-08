@@ -128,6 +128,9 @@ public:
                size_t max_matches,
                TypeMap& types);
 
+    virtual size_t
+    FindTypes (const std::vector<CompilerContext> &context, bool append, TypeMap& types);
+
     virtual CompilerDeclContext
     FindNamespace (const SymbolContext& sc, 
                    const ConstString &name,

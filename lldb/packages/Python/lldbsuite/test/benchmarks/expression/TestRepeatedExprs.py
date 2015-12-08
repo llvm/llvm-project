@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os, sys
 import lldb
+from lldbsuite.test import configuration
 from lldbsuite.test.lldbbench import *
 
 class RepeatedExprsCase(BenchBase):
@@ -18,7 +19,7 @@ class RepeatedExprsCase(BenchBase):
         self.line_to_break = line_number(self.source, '// Set breakpoint here.')
         self.lldb_avg = None
         self.gdb_avg = None
-        self.count = lldb.bmIterationCount
+        self.count = configuration.bmIterationCount
         if self.count <= 0:
             self.count = 100
 

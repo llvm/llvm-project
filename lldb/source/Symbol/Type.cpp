@@ -7,8 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Other libraries and framework includes
+// C Includes
+#include <stdio.h>
 
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Module.h"
@@ -36,6 +40,27 @@
 using namespace lldb;
 using namespace lldb_private;
 
+void
+CompilerContext::Dump() const
+{
+    switch (type)
+    {
+        case CompilerContextKind::Invalid:          printf("Invalid"); break;
+        case CompilerContextKind::TranslationUnit:  printf("TranslationUnit"); break;
+        case CompilerContextKind::Module:           printf("Module"); break;
+        case CompilerContextKind::Namespace:        printf("Namespace"); break;
+        case CompilerContextKind::Class:            printf("Class"); break;
+        case CompilerContextKind::Structure:        printf("Structure"); break;
+        case CompilerContextKind::Union:            printf("Union"); break;
+        case CompilerContextKind::Function:         printf("Function"); break;
+        case CompilerContextKind::Variable:         printf("Variable"); break;
+        case CompilerContextKind::Enumeration:      printf("Enumeration"); break;
+        case CompilerContextKind::Typedef:          printf("Typedef"); break;
+        default: printf("???(%u)", type);
+    }
+    printf("(\"%s\")\n", name.GetCString());
+}
+
 class TypeAppendVisitor
 {
 public:
@@ -60,6 +85,13 @@ TypeListImpl::Append (const lldb_private::TypeList &type_list)
 {
     TypeAppendVisitor cb(*this);
     type_list.ForEach(cb);
+}
+
+SymbolFileType::SymbolFileType (SymbolFile &symbol_file, const lldb::TypeSP &type_sp) :
+    UserID (type_sp ? type_sp->GetID() : LLDB_INVALID_UID),
+    m_symbol_file (symbol_file),
+    m_type_sp (type_sp)
+{
 }
 
 

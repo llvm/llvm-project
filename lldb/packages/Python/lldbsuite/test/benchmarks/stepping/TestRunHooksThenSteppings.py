@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os, sys
 import lldb
+from lldbsuite.test import configuration
 from lldbsuite.test.lldbbench import *
 
 class RunHooksThenSteppingsBench(BenchBase):
@@ -14,7 +15,7 @@ class RunHooksThenSteppingsBench(BenchBase):
 
     def setUp(self):
         BenchBase.setUp(self)
-        self.count = lldb.bmIterationCount
+        self.count = configuration.bmIterationCount
         if self.count <= 0:
             self.count = 50
 

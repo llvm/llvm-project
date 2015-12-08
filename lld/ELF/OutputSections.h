@@ -119,7 +119,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
   bool addDynTlsEntry(SymbolBody *Sym);
-  bool addLocalModelTlsIndex();
+  bool addCurrentModuleTlsIndex();
   bool empty() const { return Entries.empty(); }
   uintX_t getEntryAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;

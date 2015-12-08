@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from lldbsuite.test import configuration
 from lldbsuite.test.lldbtest import *
 from lldbgdbserverutils import *
 import logging
@@ -60,13 +61,13 @@ class GdbRemoteTestCaseBase(TestBase):
         self.named_pipe = None
         self.named_pipe_fd = None
         self.stub_sends_two_stop_notifications_on_kill = False
-        if lldb.platform_url:
-            if lldb.platform_url.startswith('unix-'):
+        if configuration.lldb_platform_url:
+            if configuration.lldb_platform_url.startswith('unix-'):
                 url_pattern = '(.+)://\[?(.+?)\]?/.*'
             else:
                 url_pattern = '(.+)://(.+):\d+'
-            scheme, host = re.match(url_pattern, lldb.platform_url).groups()
-            if lldb.remote_platform_name == 'remote-android' and host != 'localhost':
+            scheme, host = re.match(url_pattern, configuration.lldb_platform_url).groups()
+            if configuration.lldb_platform_name == 'remote-android' and host != 'localhost':
                 self.stub_device = host
                 self.stub_hostname = 'localhost'
             else:

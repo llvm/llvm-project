@@ -13,10 +13,11 @@ from __future__ import print_function
 import os
 
 # Our imports
-from . import test_results
+from . import result_formatter
 import lldbsuite
 
-class BasicResultsFormatter(test_results.ResultsFormatter):
+
+class BasicResultsFormatter(result_formatter.ResultsFormatter):
     """Provides basic test result output."""
     @classmethod
     def arg_parser(cls):
@@ -240,16 +241,16 @@ class BasicResultsFormatter(test_results.ResultsFormatter):
         # Output each of the test result entries.
         categories = [
             # result id, printed name, print matching tests?, detail label
-            [test_results.EventBuilder.STATUS_SUCCESS,
+            [result_formatter.EventBuilder.STATUS_SUCCESS,
              "Success", False, None],
-            [test_results.EventBuilder.STATUS_EXPECTED_FAILURE,
+            [result_formatter.EventBuilder.STATUS_EXPECTED_FAILURE,
              "Expected Failure", False, None],
-            [test_results.EventBuilder.STATUS_FAILURE,
+            [result_formatter.EventBuilder.STATUS_FAILURE,
              "Failure", True, "FAIL"],
-            [test_results.EventBuilder.STATUS_ERROR, "Error", True, "ERROR"],
-            [test_results.EventBuilder.STATUS_UNEXPECTED_SUCCESS,
+            [result_formatter.EventBuilder.STATUS_ERROR, "Error", True, "ERROR"],
+            [result_formatter.EventBuilder.STATUS_UNEXPECTED_SUCCESS,
              "Unexpected Success", True, "UNEXPECTED SUCCESS"],
-            [test_results.EventBuilder.STATUS_SKIP, "Skip", False, None]]
+            [result_formatter.EventBuilder.STATUS_SKIP, "Skip", False, None]]
 
         # Partition all the events by test result status
         result_events_by_status = self._partition_results_by_status(

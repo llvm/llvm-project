@@ -53,7 +53,7 @@ import lldbsuite.support.seven as seven
 
 from . import dotest_channels
 from . import dotest_args
-from . import test_results
+from . import result_formatter
 
 # Todo: Convert this folder layout to be relative-import friendly and don't hack up
 # sys.path like this
@@ -1429,9 +1429,9 @@ def main(print_details_on_success, num_threads, test_subdir,
         # Figure out exit code by count of test result types.
         issue_count = (
             results_formatter.counts_by_test_result_status(
-                test_results.EventBuilder.STATUS_ERROR) +
+                result_formatter.EventBuilder.STATUS_ERROR) +
             results_formatter.counts_by_test_result_status(
-                test_results.EventBuilder.STATUS_FAILURE) +
+                result_formatter.EventBuilder.STATUS_FAILURE) +
             timeout_count)
         # Return with appropriate result code
         if issue_count > 0:

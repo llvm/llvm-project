@@ -133,6 +133,9 @@ class RegisterCommandsTestCase(TestBase):
         if sys.platform.startswith("linux"):
             self.platform = "linux"
 
+        if sys.platform.startswith("netbsd"):
+            self.platform = "netbsd"
+
         if self.platform != "":
             self.log_file = os.path.join(os.getcwd(), 'TestRegisters.log')
             self.runCmd("log enable " + self.platform + " " + str(category) + " registers -v -f " + self.log_file, RUN_SUCCEEDED)

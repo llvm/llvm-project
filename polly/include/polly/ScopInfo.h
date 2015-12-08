@@ -680,6 +680,9 @@ public:
   /// nodes.
   bool isImplicit() const { return !isExplicit(); }
 
+  /// @brief Is this MemoryAccess modeling scalar dependences?
+  bool isScalar() const { return Origin == SCALAR; }
+
   /// @brief Is this MemoryAccess modeling special PHI node accesses?
   bool isPHI() const { return Origin == PHI; }
 

@@ -47,6 +47,12 @@ public:
                             const DWARFDIE &die) override;
 
     bool
+    CanCompleteType (const lldb_private::CompilerType &compiler_type) override;
+
+    bool
+    CompleteType (const lldb_private::CompilerType &compiler_type) override;
+
+    bool
     CompleteTypeFromDWARF (const DWARFDIE &die,
                            lldb_private::Type *type,
                            lldb_private::CompilerType &compiler_type) override;
@@ -175,6 +181,19 @@ protected:
     void
     LinkDeclToDIE (clang::Decl *decl, const DWARFDIE &die);
 
+    lldb_private::ClangASTImporter &
+    GetClangASTImporter();
+
+    lldb::TypeSP
+    ParseTypeFromDWO (const DWARFDIE &die, lldb_private::Log *log);
+
+    //----------------------------------------------------------------------
+    // Return true if this type is a declaration to a type in an external
+    // module.
+    //----------------------------------------------------------------------
+    lldb::ModuleSP
+    GetModuleForType (const DWARFDIE &die);
+
     typedef llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> DIEPointerSet;
     typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::DeclContext *> DIEToDeclContextMap;
     //typedef llvm::DenseMap<const clang::DeclContext *, DIEPointerSet> DeclContextToDIEMap;
@@ -188,6 +207,7 @@ protected:
     DIEToDeclContextMap m_die_to_decl_ctx;
     DeclContextToDIEMap m_decl_ctx_to_die;
     RecordDeclToLayoutMap m_record_decl_to_layout_map;
+    std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_ap;
 };
 
 #endif // SymbolFileDWARF_DWARFASTParserClang_h_

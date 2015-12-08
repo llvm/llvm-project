@@ -40,7 +40,7 @@ def getArchFlag():
 
 def getMake():
     """Returns the name for GNU make"""
-    if platform.system() == "FreeBSD":
+    if platform.system() == "FreeBSD" or platform.system() == "NetBSD":
       return "gmake"
     else:
       return "make"
