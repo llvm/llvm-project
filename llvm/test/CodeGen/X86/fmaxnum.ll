@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=sse2  < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=avx  < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=sse2  < %s | FileCheck %s --check-prefix=CHECK --check-prefix=SSE
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=avx  < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
 
 declare float @fmaxf(float, float)
 declare double @fmax(double, double)
@@ -58,18 +58,116 @@ define x86_fp80 @test_intrinsic_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 }
 
 ; CHECK-LABEL: @test_intrinsic_fmax_v2f32
-; CHECK: callq fmaxf
-; CHECK: callq fmaxf
+; SSE:         movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE-NEXT:    callq fmaxf
+; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; SSE-NEXT:    callq fmaxf
+; SSE-NEXT:    unpcklps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; SSE:         movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    callq fmaxf
+; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; SSE-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1,0]
+; SSE-NEXT:    callq fmaxf
+; SSE-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    unpcklps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
+; SSE:         movaps %xmm1, %xmm0
+; SSE-NEXT:    addq $72, %rsp
+; SSE-NEXT:    retq
+;
+; AVX:         vmovaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; AVX-NEXT:    callq fmaxf
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovshdup {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; AVX:         vmovshdup {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
+; AVX:         callq fmaxf
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vpermilpd $1, {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; AVX:         vpermilpd $1, {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
+; AVX:         callq fmaxf
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vpermilps $231, {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; AVX:         vpermilps $231, {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
+; AVX:         callq fmaxf
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX-NEXT:    addq $56, %rsp
+; AVX-NEXT:    retq
 define <2 x float> @test_intrinsic_fmax_v2f32(<2 x float> %x, <2 x float> %y) {
   %z = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> %y) readnone
   ret <2 x float> %z
 }
 
 ; CHECK-LABEL: @test_intrinsic_fmax_v4f32
-; CHECK: callq fmaxf
-; CHECK: callq fmaxf
-; CHECK: callq fmaxf
-; CHECK: callq fmaxf
+; SSE:         movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE-NEXT:    callq fmaxf
+; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; SSE-NEXT:    callq fmaxf
+; SSE-NEXT:    unpcklps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; SSE:         movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    callq fmaxf
+; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; SSE-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1,0]
+; SSE-NEXT:    callq fmaxf
+; SSE-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    unpcklps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
+; SSE:         movaps %xmm1, %xmm0
+; SSE-NEXT:    addq $72, %rsp
+; SSE-NEXT:    retq
+;
+; AVX:         vmovaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; AVX-NEXT:    callq fmaxf
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovshdup {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; AVX:         vmovshdup {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
+; AVX:         callq fmaxf
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vpermilpd $1, {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; AVX:         vpermilpd $1, {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
+; AVX:         callq fmaxf
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vpermilps $231, {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; AVX:         vpermilps $231, {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
+; AVX:         callq fmaxf
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX-NEXT:    addq $56, %rsp
+; AVX-NEXT:    retq
 define <4 x float> @test_intrinsic_fmax_v4f32(<4 x float> %x, <4 x float> %y) {
   %z = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> %y) readnone
   ret <4 x float> %z

@@ -32,6 +32,11 @@
 
 ; CHECK-DAG: @0 = external global i32
 @0 = external global i32
+
+define i32* @use0() {
+  ret i32* @0
+}
+
 ; CHECK-DAG: @Inte = global i32 1
 @Inte = global i32 1
 
@@ -101,4 +106,6 @@ define void @testIntern() {
   ret void
 }
 
-declare void @VecSizeCrash(%VecSize)
+define void @VecSizeCrash(%VecSize) {
+  ret void
+}

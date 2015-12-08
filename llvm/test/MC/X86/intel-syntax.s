@@ -746,3 +746,6 @@ loopz _foo
 loopnz _foo
 // CHECK: loope _foo
 // CHECK: loopne _foo
+
+sidt fword ptr [eax]
+// CHECK: sidtq (%eax)

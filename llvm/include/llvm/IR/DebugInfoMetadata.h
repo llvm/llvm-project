@@ -1118,8 +1118,10 @@ class DILocation : public MDNode {
   }
 
   TempDILocation cloneImpl() const {
-    return getTemporary(getContext(), getLine(), getColumn(), getScope(),
-                        getInlinedAt());
+    // Get the raw scope/inlinedAt since it is possible to invoke this on
+    // a DILocation containing temporary metadata.
+    return getTemporary(getContext(), getLine(), getColumn(), getRawScope(),
+                        getRawInlinedAt());
   }
 
   // Disallow replacing operands.

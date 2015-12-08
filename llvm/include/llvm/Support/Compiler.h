@@ -361,8 +361,11 @@
 /// \brief Whether LLVM itself is built with AddressSanitizer instrumentation.
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
 # define LLVM_ADDRESS_SANITIZER_BUILD 1
+# include <sanitizer/asan_interface.h>
 #else
 # define LLVM_ADDRESS_SANITIZER_BUILD 0
+# define __asan_poison_memory_region(p, size)
+# define __asan_unpoison_memory_region(p, size)
 #endif
 
 /// \macro LLVM_THREAD_SANITIZER_BUILD

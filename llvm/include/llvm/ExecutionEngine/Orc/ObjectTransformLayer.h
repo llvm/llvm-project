@@ -87,14 +87,6 @@ public:
     BaseLayer.mapSectionAddress(H, LocalAddress, TargetAddr);
   }
 
-  // Ownership hack.
-  // FIXME: Remove this as soon as RuntimeDyldELF can apply relocations without
-  //        referencing the original object.
-  template <typename OwningMBSet>
-  void takeOwnershipOfBuffers(ObjSetHandleT H, OwningMBSet MBs) {
-    BaseLayer.takeOwnershipOfBuffers(H, std::move(MBs));
-  }
-
   /// @brief Access the transform functor directly.
   TransformFtor &getTransform() { return Transform; }
 

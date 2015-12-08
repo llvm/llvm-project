@@ -2826,7 +2826,7 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   uint64_t OrigLowPc = OrigUnitDie->getAttributeValueAsAddress(
       &OrigUnit, dwarf::DW_AT_low_pc, -1ULL);
   // Ranges addresses are based on the unit's low_pc. Compute the
-  // offset we need to apply to adapt to the the new unit's low_pc.
+  // offset we need to apply to adapt to the new unit's low_pc.
   int64_t UnitPcOffset = 0;
   if (OrigLowPc != -1ULL)
     UnitPcOffset = int64_t(OrigLowPc) - Unit.getLowPc();

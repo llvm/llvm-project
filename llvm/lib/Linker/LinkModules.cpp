@@ -451,8 +451,7 @@ private:
 
   /// Handles cloning of a global values from the source module into
   /// the destination module, including setting the attributes and visibility.
-  GlobalValue *copyGlobalValueProto(const GlobalValue *SGV,
-                                    const GlobalValue *DGV, bool ForDefinition);
+  GlobalValue *copyGlobalValueProto(const GlobalValue *SGV, bool ForDefinition);
 
   /// Check if we should promote the given local value to global scope.
   bool doPromoteLocalToGlobal(const GlobalValue *SGV);
@@ -508,9 +507,6 @@ private:
   }
 
   void computeTypeMapping();
-
-  void upgradeMismatchedGlobalArray(StringRef Name);
-  void upgradeMismatchedGlobals();
 
   bool linkIfNeeded(GlobalValue &GV);
   Constant *linkAppendingVarProto(GlobalVariable *DstGV,
@@ -819,7 +815,6 @@ void ModuleLinker::setVisibility(GlobalValue *NewGV, const GlobalValue *SGV,
 }
 
 GlobalValue *ModuleLinker::copyGlobalValueProto(const GlobalValue *SGV,
-                                                const GlobalValue *DGV,
                                                 bool ForDefinition) {
   GlobalValue *NewGV;
   if (auto *SGVar = dyn_cast<GlobalVariable>(SGV)) {
@@ -845,7 +840,6 @@ GlobalValue *ModuleLinker::copyGlobalValueProto(const GlobalValue *SGV,
     NewGV->setLinkage(GlobalValue::ExternalWeakLinkage);
 
   copyGVAttributes(NewGV, SGV);
-  setVisibility(NewGV, SGV, DGV);
   return NewGV;
 }
 
@@ -1190,83 +1184,6 @@ void ModuleLinker::computeTypeMapping() {
   TypeMap.linkDefinedTypeBodies();
 }
 
-static void upgradeGlobalArray(GlobalVariable *GV) {
-  ArrayType *ATy = cast<ArrayType>(GV->getType()->getElementType());
-  StructType *OldTy = cast<StructType>(ATy->getElementType());
-  assert(OldTy->getNumElements() == 2 && "Expected to upgrade from 2 elements");
-
-  // Get the upgraded 3 element type.
-  PointerType *VoidPtrTy = Type::getInt8Ty(GV->getContext())->getPointerTo();
-  Type *Tys[3] = {OldTy->getElementType(0), OldTy->getElementType(1),
-                  VoidPtrTy};
-  StructType *NewTy = StructType::get(GV->getContext(), Tys, false);
-
-  // Build new constants with a null third field filled in.
-  Constant *OldInitC = GV->getInitializer();
-  ConstantArray *OldInit = dyn_cast<ConstantArray>(OldInitC);
-  if (!OldInit && !isa<ConstantAggregateZero>(OldInitC))
-    // Invalid initializer; give up.
-    return;
-  std::vector<Constant *> Initializers;
-  if (OldInit && OldInit->getNumOperands()) {
-    Value *Null = Constant::getNullValue(VoidPtrTy);
-    for (Use &U : OldInit->operands()) {
-      ConstantStruct *Init = cast<ConstantStruct>(U.get());
-      Initializers.push_back(ConstantStruct::get(
-          NewTy, Init->getOperand(0), Init->getOperand(1), Null, nullptr));
-    }
-  }
-  assert(Initializers.size() == ATy->getNumElements() &&
-         "Failed to copy all array elements");
-
-  // Replace the old GV with a new one.
-  ATy = ArrayType::get(NewTy, Initializers.size());
-  Constant *NewInit = ConstantArray::get(ATy, Initializers);
-  GlobalVariable *NewGV = new GlobalVariable(
-      *GV->getParent(), ATy, GV->isConstant(), GV->getLinkage(), NewInit, "",
-      GV, GV->getThreadLocalMode(), GV->getType()->getAddressSpace(),
-      GV->isExternallyInitialized());
-  NewGV->copyAttributesFrom(GV);
-  NewGV->takeName(GV);
-  assert(GV->use_empty() && "program cannot use initializer list");
-  GV->eraseFromParent();
-}
-
-void ModuleLinker::upgradeMismatchedGlobalArray(StringRef Name) {
-  // Look for the global arrays.
-  auto *DstGV = dyn_cast_or_null<GlobalVariable>(DstM.getNamedValue(Name));
-  if (!DstGV)
-    return;
-  auto *SrcGV = dyn_cast_or_null<GlobalVariable>(SrcM.getNamedValue(Name));
-  if (!SrcGV)
-    return;
-
-  // Check if the types already match.
-  auto *DstTy = cast<ArrayType>(DstGV->getType()->getElementType());
-  auto *SrcTy =
-      cast<ArrayType>(TypeMap.get(SrcGV->getType()->getElementType()));
-  if (DstTy == SrcTy)
-    return;
-
-  // Grab the element types.  We can only upgrade an array of a two-field
-  // struct.  Only bother if the other one has three-fields.
-  auto *DstEltTy = cast<StructType>(DstTy->getElementType());
-  auto *SrcEltTy = cast<StructType>(SrcTy->getElementType());
-  if (DstEltTy->getNumElements() == 2 && SrcEltTy->getNumElements() == 3) {
-    upgradeGlobalArray(DstGV);
-    return;
-  }
-  if (DstEltTy->getNumElements() == 3 && SrcEltTy->getNumElements() == 2)
-    upgradeGlobalArray(SrcGV);
-
-  // We can't upgrade any other differences.
-}
-
-void ModuleLinker::upgradeMismatchedGlobals() {
-  upgradeMismatchedGlobalArray("llvm.global_ctors");
-  upgradeMismatchedGlobalArray("llvm.global_dtors");
-}
-
 static void getArrayElements(const Constant *C,
                              SmallVectorImpl<Constant *> &Dest) {
   unsigned NumElements = cast<ArrayType>(C->getType())->getNumElements();
@@ -1279,9 +1196,25 @@ static void getArrayElements(const Constant *C,
 /// Return true on error.
 Constant *ModuleLinker::linkAppendingVarProto(GlobalVariable *DstGV,
                                               const GlobalVariable *SrcGV) {
-  ArrayType *SrcTy =
-      cast<ArrayType>(TypeMap.get(SrcGV->getType()->getElementType()));
-  Type *EltTy = SrcTy->getElementType();
+  Type *EltTy = cast<ArrayType>(TypeMap.get(SrcGV->getType()->getElementType()))
+                    ->getElementType();
+
+  StringRef Name = SrcGV->getName();
+  bool IsNewStructor = false;
+  bool IsOldStructor = false;
+  if (Name == "llvm.global_ctors" || Name == "llvm.global_dtors") {
+    if (cast<StructType>(EltTy)->getNumElements() == 3)
+      IsNewStructor = true;
+    else
+      IsOldStructor = true;
+  }
+
+  PointerType *VoidPtrTy = Type::getInt8Ty(SrcGV->getContext())->getPointerTo();
+  if (IsOldStructor) {
+    auto &ST = *cast<StructType>(EltTy);
+    Type *Tys[3] = {ST.getElementType(0), ST.getElementType(1), VoidPtrTy};
+    EltTy = StructType::get(SrcGV->getContext(), Tys, false);
+  }
 
   if (DstGV) {
     ArrayType *DstTy = cast<ArrayType>(DstGV->getType()->getElementType());
@@ -1335,10 +1268,6 @@ Constant *ModuleLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   SmallVector<Constant *, 16> SrcElements;
   getArrayElements(SrcGV->getInitializer(), SrcElements);
 
-  StringRef Name = SrcGV->getName();
-  bool IsNewStructor =
-      (Name == "llvm.global_ctors" || Name == "llvm.global_dtors") &&
-      cast<StructType>(EltTy)->getNumElements() == 3;
   if (IsNewStructor)
     SrcElements.erase(
         std::remove_if(SrcElements.begin(), SrcElements.end(),
@@ -1367,8 +1296,21 @@ Constant *ModuleLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   ValueMap[SrcGV] = Ret;
 
   for (auto *V : SrcElements) {
-    DstElements.push_back(
-        MapValue(V, ValueMap, RF_MoveDistinctMDs, &TypeMap, &ValMaterializer));
+    Constant *NewV;
+    if (IsOldStructor) {
+      auto *S = cast<ConstantStruct>(V);
+      auto *E1 = MapValue(S->getOperand(0), ValueMap, RF_MoveDistinctMDs,
+                          &TypeMap, &ValMaterializer);
+      auto *E2 = MapValue(S->getOperand(1), ValueMap, RF_MoveDistinctMDs,
+                          &TypeMap, &ValMaterializer);
+      Value *Null = Constant::getNullValue(VoidPtrTy);
+      NewV =
+          ConstantStruct::get(cast<StructType>(EltTy), E1, E2, Null, nullptr);
+    } else {
+      NewV =
+          MapValue(V, ValueMap, RF_MoveDistinctMDs, &TypeMap, &ValMaterializer);
+    }
+    DstElements.push_back(NewV);
   }
 
   NG->setInitializer(ConstantArray::get(NewType, DstElements));
@@ -1419,8 +1361,6 @@ Constant *ModuleLinker::linkGlobalValueProto(GlobalValue *SGV) {
   GlobalValue *NewGV;
   if (!LinkFromSrc && DGV) {
     NewGV = DGV;
-    // When linking from source we setVisibility from copyGlobalValueProto.
-    setVisibility(NewGV, SGV, DGV);
   } else {
     // If we are done linking global value bodies (i.e. we are performing
     // metadata linking), don't link in the global value due to this
@@ -1428,9 +1368,10 @@ Constant *ModuleLinker::linkGlobalValueProto(GlobalValue *SGV) {
     if (DoneLinkingBodies)
       return nullptr;
 
-    NewGV = copyGlobalValueProto(SGV, DGV, LinkFromSrc);
+    NewGV = copyGlobalValueProto(SGV, LinkFromSrc);
   }
 
+  setVisibility(NewGV, SGV, DGV);
   NewGV->setUnnamedAddr(HasUnnamedAddr);
 
   if (auto *NewGO = dyn_cast<GlobalObject>(NewGV)) {
@@ -1614,7 +1555,6 @@ bool ModuleLinker::linkModuleFlagsMetadata() {
 
   // Merge in the flags from the source module, and also collect its set of
   // requirements.
-  bool HasErr = false;
   for (unsigned I = 0, E = SrcModFlags->getNumOperands(); I != E; ++I) {
     MDNode *SrcOp = SrcModFlags->getOperand(I);
     ConstantInt *SrcBehavior =
@@ -1652,8 +1592,8 @@ bool ModuleLinker::linkModuleFlagsMetadata() {
       // Diagnose inconsistent flags which both have override behavior.
       if (SrcBehaviorValue == Module::Override &&
           SrcOp->getOperand(2) != DstOp->getOperand(2)) {
-        HasErr |= emitError("linking module flags '" + ID->getString() +
-                            "': IDs have conflicting override values");
+        emitError("linking module flags '" + ID->getString() +
+                  "': IDs have conflicting override values");
       }
       continue;
     } else if (SrcBehaviorValue == Module::Override) {
@@ -1665,8 +1605,8 @@ bool ModuleLinker::linkModuleFlagsMetadata() {
 
     // Diagnose inconsistent merge behavior types.
     if (SrcBehaviorValue != DstBehaviorValue) {
-      HasErr |= emitError("linking module flags '" + ID->getString() +
-                          "': IDs have conflicting behaviors");
+      emitError("linking module flags '" + ID->getString() +
+                "': IDs have conflicting behaviors");
       continue;
     }
 
@@ -1685,8 +1625,8 @@ bool ModuleLinker::linkModuleFlagsMetadata() {
     case Module::Error: {
       // Emit an error if the values differ.
       if (SrcOp->getOperand(2) != DstOp->getOperand(2)) {
-        HasErr |= emitError("linking module flags '" + ID->getString() +
-                            "': IDs have conflicting values");
+        emitError("linking module flags '" + ID->getString() +
+                  "': IDs have conflicting values");
       }
       continue;
     }
@@ -1731,13 +1671,13 @@ bool ModuleLinker::linkModuleFlagsMetadata() {
 
     MDNode *Op = Flags[Flag].first;
     if (!Op || Op->getOperand(2) != ReqValue) {
-      HasErr |= emitError("linking module flags '" + Flag->getString() +
-                          "': does not have the required value");
+      emitError("linking module flags '" + Flag->getString() +
+                "': does not have the required value");
       continue;
     }
   }
 
-  return HasErr;
+  return HasError;
 }
 
 // This function returns true if the triples match.
@@ -1808,6 +1748,9 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
        GV.hasAvailableExternallyLinkage()))
     return false;
 
+  if (GV.isDeclaration())
+    return false;
+
   if (const Comdat *SC = GV.getComdat()) {
     bool LinkFromSrc;
     Comdat::SelectionKind SK;
@@ -1876,9 +1819,6 @@ bool ModuleLinker::run() {
       return true;
     ComdatsChosen[&C] = std::make_pair(SK, LinkFromSrc);
   }
-
-  // Upgrade mismatched global arrays.
-  upgradeMismatchedGlobals();
 
   for (GlobalVariable &GV : SrcM.globals())
     if (const Comdat *SC = GV.getComdat())

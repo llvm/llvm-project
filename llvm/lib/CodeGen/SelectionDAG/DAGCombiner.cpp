@@ -3888,10 +3888,10 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize) {
 
   // Check whether Neg has the form (sub NegC, NegOp1) for some NegC and NegOp1.
   if (Neg.getOpcode() != ISD::SUB)
-    return 0;
+    return false;
   ConstantSDNode *NegC = isConstOrConstSplat(Neg.getOperand(0));
   if (!NegC)
-    return 0;
+    return false;
   SDValue NegOp1 = Neg.getOperand(1);
 
   // On the RHS of [A], if Pos is Pos' & (EltSize - 1), just replace Pos with

@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx | FileCheck %s
-
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f | FileCheck %s
 
 define <2 x double> @fabs_v2f64(<2 x double> %p)
 {

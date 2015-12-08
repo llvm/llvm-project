@@ -50,6 +50,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 using namespace llvm;
 
@@ -215,7 +216,7 @@ bool IndVarSimplify::isValidRewrite(Value *FromVal, Value *ToVal) {
 /// loop. For PHI nodes, there may be multiple uses, so compute the nearest
 /// common dominator for the incoming blocks.
 static Instruction *getInsertPointForUses(Instruction *User, Value *Def,
-                                          DominatorTree *DT) {
+                                          DominatorTree *DT, LoopInfo *LI) {
   PHINode *PHI = dyn_cast<PHINode>(User);
   if (!PHI)
     return User;
@@ -234,10 +235,21 @@ static Instruction *getInsertPointForUses(Instruction *User, Value *Def,
     InsertPt = InsertBB->getTerminator();
   }
   assert(InsertPt && "Missing phi operand");
-  assert((!isa<Instruction>(Def) ||
-          DT->dominates(cast<Instruction>(Def), InsertPt)) &&
-         "def does not dominate all uses");
-  return InsertPt;
+
+  auto *DefI = dyn_cast<Instruction>(Def);
+  if (!DefI)
+    return InsertPt;
+
+  assert(DT->dominates(DefI, InsertPt) && "def does not dominate all uses");
+
+  auto *L = LI->getLoopFor(DefI->getParent());
+  assert(!L || L->contains(LI->getLoopFor(InsertPt->getParent())));
+
+  for (auto *DTN = (*DT)[InsertPt->getParent()]; DTN; DTN = DTN->getIDom())
+    if (LI->getLoopFor(DTN->getBlock()) == L)
+      return DTN->getBlock()->getTerminator();
+
+  llvm_unreachable("DefI dominates InsertPt!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -528,8 +540,8 @@ Value *IndVarSimplify::expandSCEVIfNeeded(SCEVExpander &Rewriter, const SCEV *S,
 /// able to brute-force evaluate arbitrary instructions as long as they have
 /// constant operands at the beginning of the loop.
 void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
-  // Verify the input to the pass in already in LCSSA form.
-  assert(L->isLCSSAForm(*DT));
+  // Check a pre-condition.
+  assert(L->isRecursivelyLCSSAForm(*DT) && "Indvars did not preserve LCSSA!");
 
   SmallVector<BasicBlock*, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);
@@ -1167,10 +1179,11 @@ const SCEVAddRecExpr *WidenIV::getWideRecurrence(Instruction *NarrowUse) {
 
 /// This IV user cannot be widen. Replace this use of the original narrow IV
 /// with a truncation of the new wide IV to isolate and eliminate the narrow IV.
-static void truncateIVUse(NarrowIVDefUse DU, DominatorTree *DT) {
+static void truncateIVUse(NarrowIVDefUse DU, DominatorTree *DT, LoopInfo *LI) {
   DEBUG(dbgs() << "INDVARS: Truncate IV " << *DU.WideDef
         << " for user " << *DU.NarrowUse << "\n");
-  IRBuilder<> Builder(getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT));
+  IRBuilder<> Builder(
+      getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT, LI));
   Value *Trunc = Builder.CreateTrunc(DU.WideDef, DU.NarrowDef->getType());
   DU.NarrowUse->replaceUsesOfWith(DU.NarrowDef, Trunc);
 }
@@ -1207,7 +1220,8 @@ bool WidenIV::widenLoopCompare(NarrowIVDefUse DU) {
   assert (CastWidth <= IVWidth && "Unexpected width while widening compare.");
 
   // Widen the compare instruction.
-  IRBuilder<> Builder(getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT));
+  IRBuilder<> Builder(
+      getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT, LI));
   DU.NarrowUse->replaceUsesOfWith(DU.NarrowDef, DU.WideDef);
 
   // Widen the other operand of the compare, if necessary.
@@ -1229,7 +1243,7 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
       // After SimplifyCFG most loop exit targets have a single predecessor.
       // Otherwise fall back to a truncate within the loop.
       if (UsePhi->getNumOperands() != 1)
-        truncateIVUse(DU, DT);
+        truncateIVUse(DU, DT, LI);
       else {
         PHINode *WidePhi =
           PHINode::Create(DU.WideDef->getType(), 1, UsePhi->getName() + ".wide",
@@ -1297,7 +1311,7 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
     // This user does not evaluate to a recurence after widening, so don't
     // follow it. Instead insert a Trunc to kill off the original use,
     // eventually isolating the original narrow IV so it can be removed.
-    truncateIVUse(DU, DT);
+    truncateIVUse(DU, DT, LI);
     return nullptr;
   }
   // Assume block terminators cannot evaluate to a recurrence. We can't to
@@ -2165,9 +2179,9 @@ bool IndVarSimplify::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   // Clean up dead instructions.
   Changed |= DeleteDeadPHIs(L->getHeader(), TLI);
+
   // Check a post-condition.
-  assert(L->isLCSSAForm(*DT) &&
-         "Indvars did not leave the loop in lcssa form!");
+  assert(L->isRecursivelyLCSSAForm(*DT) && "Indvars did not preserve LCSSA!");
 
   // Verify that LFTR, and any other change have not interfered with SCEV's
   // ability to compute trip count.

@@ -36,11 +36,17 @@ namespace llvm {
 ///
 class AnalysisUsage {
 public:
-  typedef SmallVector<AnalysisID, 32> VectorType;
+  typedef SmallVectorImpl<AnalysisID> VectorType;
 
 private:
   /// Sets of analyses required and preserved by a pass
-  VectorType Required, RequiredTransitive, Preserved, Used;
+  // TODO: It's not clear that SmallVector is an appropriate data structure for
+  // this usecase.  The sizes were picked to minimize wasted space, but are
+  // otherwise fairly meaningless.
+  SmallVector<AnalysisID, 8> Required;
+  SmallVector<AnalysisID, 2> RequiredTransitive;
+  SmallVector<AnalysisID, 2> Preserved;
+  SmallVector<AnalysisID, 0> Used;
   bool PreservesAll;
 
 public:

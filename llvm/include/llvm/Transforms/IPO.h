@@ -20,6 +20,7 @@
 
 namespace llvm {
 
+class FunctionInfoIndex;
 class ModulePass;
 class Pass;
 class Function;
@@ -84,6 +85,10 @@ ModulePass *createEliminateAvailableExternallyPass();
 ///
 ModulePass *createGVExtractionPass(std::vector<GlobalValue*>& GVs, bool
                                    deleteFn = false);
+
+//===----------------------------------------------------------------------===//
+/// This pass performs iterative function importing from other modules.
+Pass *createFunctionImportPass(FunctionInfoIndex *Index = nullptr);
 
 //===----------------------------------------------------------------------===//
 /// createFunctionInliningPass - Return a new pass object that uses a heuristic

@@ -317,6 +317,9 @@ if( MSVC )
     -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
     -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
     -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
+        # C4592 is disabled because of false positives in Visual Studio 2015
+        # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
+    -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
 
 	# Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
 	# support the 'aligned' attribute in the way that clang sources requires (for

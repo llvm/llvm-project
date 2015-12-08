@@ -256,23 +256,38 @@ getFunctionIndexForFile(StringRef Path, std::string &Error,
 
 /// Pass that performs cross-module function import provided a summary file.
 class FunctionImportPass : public ModulePass {
+  /// Optional function summary index to use for importing, otherwise
+  /// the summary-file option must be specified.
+  FunctionInfoIndex *Index;
 
 public:
   /// Pass identification, replacement for typeid
   static char ID;
 
-  explicit FunctionImportPass() : ModulePass(ID) {}
+  /// Specify pass name for debug output
+  const char *getPassName() const override {
+    return "Function Importing";
+  }
+
+  explicit FunctionImportPass(FunctionInfoIndex *Index = nullptr)
+      : ModulePass(ID), Index(Index) {}
 
   bool runOnModule(Module &M) override {
-    if (SummaryFile.empty()) {
-      report_fatal_error("error: -function-import requires -summary-file\n");
-    }
-    std::string Error;
-    std::unique_ptr<FunctionInfoIndex> Index =
-        getFunctionIndexForFile(SummaryFile, Error, diagnosticHandler);
-    if (!Index) {
-      errs() << "Error loading file '" << SummaryFile << "': " << Error << "\n";
-      return false;
+    if (SummaryFile.empty() && !Index)
+      report_fatal_error("error: -function-import requires -summary-file or "
+                         "file from frontend\n");
+    std::unique_ptr<FunctionInfoIndex> IndexPtr;
+    if (!SummaryFile.empty()) {
+      if (Index)
+        report_fatal_error("error: -summary-file and index from frontend\n");
+      std::string Error;
+      IndexPtr = getFunctionIndexForFile(SummaryFile, Error, diagnosticHandler);
+      if (!IndexPtr) {
+        errs() << "Error loading file '" << SummaryFile << "': " << Error
+               << "\n";
+        return false;
+      }
+      Index = IndexPtr.get();
     }
 
     // Perform the import now.
@@ -293,5 +308,7 @@ INITIALIZE_PASS_END(FunctionImportPass, "function-import",
                     "Summary Based Function Import", false, false)
 
 namespace llvm {
-Pass *createFunctionImportPass() { return new FunctionImportPass(); }
+Pass *createFunctionImportPass(FunctionInfoIndex *Index = nullptr) {
+  return new FunctionImportPass(Index);
+}
 }

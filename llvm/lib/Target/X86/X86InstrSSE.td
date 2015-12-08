@@ -2906,7 +2906,7 @@ let isCodeGenOnly = 1 in {
 // Multiclass for vectors using the X86 logical operation aliases for FP.
 multiclass sse12_fp_packed_vector_logical_alias<
     bits<8> opc, string OpcodeStr, SDNode OpNode, OpndItins itins> {
-  let Predicates = [HasAVX, NoVLX] in {
+  let Predicates = [HasAVX, NoVLX_Or_NoDQI] in {
   defm V#NAME#PS : sse12_fp_packed<opc, !strconcat(OpcodeStr, "ps"), OpNode,
               VR128, v4f32, f128mem, loadv4f32, SSEPackedSingle, itins, 0>,
               PS, VEX_4V;

@@ -14,6 +14,4 @@ LINK_COMPONENTS := lto ipo scalaropts linker bitreader bitwriter mcdisassembler 
 # This tool has no plugins, optimize startup time.
 TOOL_NO_EXPORTS := 1
 
-NO_INSTALL := 1
-
 include $(LEVEL)/Makefile.common

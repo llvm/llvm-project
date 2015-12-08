@@ -244,7 +244,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         Changed = true;
         return LegalizeOp(ExpandStore(Op));
       }
-  } else if (Op.getOpcode() == ISD::MSCATTER)
+  } else if (Op.getOpcode() == ISD::MSCATTER || Op.getOpcode() == ISD::MSTORE)
     HasVectorValue = true;
 
   for (SDNode::value_iterator J = Node->value_begin(), E = Node->value_end();
@@ -343,6 +343,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::MSCATTER:
     QueryType = cast<MaskedScatterSDNode>(Node)->getValue().getValueType();
+    break;
+  case ISD::MSTORE:
+    QueryType = cast<MaskedStoreSDNode>(Node)->getValue().getValueType();
     break;
   }
 
