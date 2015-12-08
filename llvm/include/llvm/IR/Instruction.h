@@ -65,6 +65,13 @@ public:
   const Module *getModule() const;
   Module *getModule();
 
+  /// \brief Return the function this instruction belongs to.
+  ///
+  /// Note: it is undefined behavior to call this on an instruction not
+  /// currently inserted into a function.
+  const Function *getFunction() const;
+  Function *getFunction();
+
   /// removeFromParent - This method unlinks 'this' from the containing basic
   /// block, but does not delete it.
   ///
