@@ -3881,7 +3881,8 @@ void ASTWriter::WriteOptimizePragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(OPTIMIZE_PRAGMA_OPTIONS, Record);
 }
 
-void ASTWriter::WriteModuleFileExtension(ModuleFileExtensionWriter &Writer) {
+void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
+                                         ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
   Stream.EnterSubblock(EXTENSION_BLOCK_ID, 4);
 
@@ -3909,7 +3910,7 @@ void ASTWriter::WriteModuleFileExtension(ModuleFileExtensionWriter &Writer) {
   Stream.EmitRecordWithBlob(Abbrev, Record, Buffer);
 
   // Emit the contents of the extension block.
-  Writer.writeExtensionContents(Stream);
+  Writer.writeExtensionContents(SemaRef, Stream);
 
   // Exit the extension block.
   Stream.ExitBlock();
@@ -4576,7 +4577,7 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   // Write the module file extension blocks.
   for (const auto &ExtWriter : ModuleFileExtensionWriters)
-    WriteModuleFileExtension(*ExtWriter);
+    WriteModuleFileExtension(SemaRef, *ExtWriter);
 
   return Signature;
 }
