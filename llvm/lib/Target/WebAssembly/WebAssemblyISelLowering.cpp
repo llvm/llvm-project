@@ -593,8 +593,7 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
   // the current frame pointer.
   DAG.getMachineFunction().getFrameInfo()->setFrameAddressIsTaken(true);
   unsigned FP =
-      static_cast<const WebAssemblyRegisterInfo *>(Subtarget->getRegisterInfo())
-          ->getFrameRegister(DAG.getMachineFunction());
+      Subtarget->getRegisterInfo()->getFrameRegister(DAG.getMachineFunction());
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), DL, FP, PtrVT);
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   return DAG.getStore(Op.getOperand(0), DL, FrameAddr, Op.getOperand(1),

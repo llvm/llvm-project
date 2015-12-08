@@ -28,10 +28,10 @@ define float @fadd_2const_f32(float %x) #0 {
   ret float %z
 }
 
-; CHECK: float 5.000000e+00
-; CHECK: float 5.000000e+00
-; CHECK: float 5.000000e+00
-; CHECK: float 5.000000e+00
+; CHECK: float 5
+; CHECK: float 5
+; CHECK: float 5
+; CHECK: float 5
 define <4 x float> @fadd_2const_4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fadd_2const_4f32:
 ; CHECK:       # BB#0:
@@ -53,10 +53,10 @@ define float @fadd_x_fmul_x_c_f32(float %x) #0 {
   ret float %z
 }
 
-; CHECK: float 2.000000e+00
-; CHECK: float 3.000000e+00
-; CHECK: float 4.000000e+00
-; CHECK: float 5.000000e+00
+; CHECK: float 2
+; CHECK: float 3
+; CHECK: float 4
+; CHECK: float 5
 define <4 x float> @fadd_x_fmul_x_c_4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fadd_x_fmul_x_c_4f32:
 ; CHECK:       # BB#0:
@@ -78,10 +78,10 @@ define float @fadd_fmul_x_c_x_f32(float %x) #0 {
   ret float %z
 }
 
-; CHECK: float 2.000000e+00
-; CHECK: float 3.000000e+00
-; CHECK: float 4.000000e+00
-; CHECK: float 5.000000e+00
+; CHECK: float 2
+; CHECK: float 3
+; CHECK: float 4
+; CHECK: float 5
 define <4 x float> @fadd_fmul_x_c_x_4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fadd_fmul_x_c_x_4f32:
 ; CHECK:       # BB#0:
@@ -104,10 +104,10 @@ define float @fadd_fadd_x_x_fmul_x_c_f32(float %x) #0 {
   ret float %w
 }
 
-; CHECK: float 3.000000e+00
-; CHECK: float 4.000000e+00
-; CHECK: float 5.000000e+00
-; CHECK: float 6.000000e+00
+; CHECK: float 3
+; CHECK: float 4
+; CHECK: float 5
+; CHECK: float 6
 define <4 x float> @fadd_fadd_x_x_fmul_x_c_4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fadd_fadd_x_x_fmul_x_c_4f32:
 ; CHECK:       # BB#0:
@@ -131,10 +131,10 @@ define float @fadd_fmul_x_c_fadd_x_x_f32(float %x) #0 {
   ret float %w
 }
 
-; CHECK: float 3.000000e+00
-; CHECK: float 4.000000e+00
-; CHECK: float 5.000000e+00
-; CHECK: float 6.000000e+00
+; CHECK: float 3
+; CHECK: float 4
+; CHECK: float 5
+; CHECK: float 6
 define <4 x float> @fadd_fmul_x_c_fadd_x_x_4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fadd_fmul_x_c_fadd_x_x_4f32:
 ; CHECK:       # BB#0:
@@ -157,10 +157,10 @@ define float @fadd_x_fadd_x_x_f32(float %x) #0 {
   ret float %z
 }
 
-; CHECK: float 3.000000e+00
-; CHECK: float 3.000000e+00
-; CHECK: float 3.000000e+00
-; CHECK: float 3.000000e+00
+; CHECK: float 3
+; CHECK: float 3
+; CHECK: float 3
+; CHECK: float 3
 define <4 x float> @fadd_x_fadd_x_x_4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fadd_x_fadd_x_x_4f32:
 ; CHECK:       # BB#0:
@@ -182,10 +182,10 @@ define float @fadd_fadd_x_x_x_f32(float %x) #0 {
   ret float %z
 }
 
-; CHECK: float 3.000000e+00
-; CHECK: float 3.000000e+00
-; CHECK: float 3.000000e+00
-; CHECK: float 3.000000e+00
+; CHECK: float 3
+; CHECK: float 3
+; CHECK: float 3
+; CHECK: float 3
 define <4 x float> @fadd_fadd_x_x_x_4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fadd_fadd_x_x_x_4f32:
 ; CHECK:       # BB#0:
@@ -207,10 +207,10 @@ define float @fadd_fadd_x_x_fadd_x_x_f32(float %x) #0 {
   ret float %z
 }
 
-; CHECK: float 4.000000e+00
-; CHECK: float 4.000000e+00
-; CHECK: float 4.000000e+00
-; CHECK: float 4.000000e+00
+; CHECK: float 4
+; CHECK: float 4
+; CHECK: float 4
+; CHECK: float 4
 define <4 x float> @fadd_fadd_x_x_fadd_x_x_4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fadd_fadd_x_x_fadd_x_x_4f32:
 ; CHECK:       # BB#0:

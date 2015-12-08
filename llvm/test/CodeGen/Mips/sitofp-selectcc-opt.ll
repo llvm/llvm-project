@@ -7,7 +7,7 @@ entry:
 ; check that this transformation doesn't happen:
 ; (sint_to_fp (setcc x, y, cc)) -> (select_cc x, y, -1.0, 0.0,, cc)
 ;
-; CHECK-NOT:   # double -1.000000e+00
+; CHECK-NOT:   # double -1
 
   %tobool1 = icmp ne i32 %a, 0
   %not.tobool = icmp ne i64 %b, 0
@@ -19,4 +19,3 @@ entry:
   store double %add, double* @foo12.d4, align 8
   ret double %add
 }
-

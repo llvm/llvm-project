@@ -15,7 +15,7 @@
 /// are then marked as "stackified", meaning references to them are replaced by
 /// "push" and "pop" from the stack.
 ///
-/// This is primarily a code size optimiation, since temporary values on the
+/// This is primarily a code size optimization, since temporary values on the
 /// expression don't need to be named.
 ///
 //===----------------------------------------------------------------------===//
@@ -126,6 +126,8 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+
+  assert(MRI.isSSA() && "RegStackify depends on SSA form");
 
   // Walk the instructions from the bottom up. Currently we don't look past
   // block boundaries, and the blocks aren't ordered so the block visitation

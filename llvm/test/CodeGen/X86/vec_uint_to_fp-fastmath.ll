@@ -14,10 +14,10 @@
 ; CST-NEXT: .long 65535 # 0xffff
 
 ; CST: [[FPMASKCSTADDR:.LCPI[0-9_]+]]:
-; CST-NEXT: .long 1199570944 # float 6.553600e+04
-; CST-NEXT: .long 1199570944 # float 6.553600e+04
-; CST-NEXT: .long 1199570944 # float 6.553600e+04
-; CST-NEXT: .long 1199570944 # float 6.553600e+04
+; CST-NEXT: .long 1199570944 # float 65536
+; CST-NEXT: .long 1199570944 # float 65536
+; CST-NEXT: .long 1199570944 # float 65536
+; CST-NEXT: .long 1199570944 # float 65536
 
 ; AVX2: [[FPMASKCSTADDR:.LCPI[0-9_]+]]:
 ; AVX2-NEXT: .long 1199570944 # float 65536
@@ -69,10 +69,10 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; AVX-NEXT: .long 65535 # 0xffff
 
 ; AVX: [[FPMASKCSTADDR_v8:.LCPI[0-9_]+]]:
-; AVX-NEXT: .long 1199570944 # float 6.553600e+04
-; AVX-NEXT: .long 1199570944 # float 6.553600e+04
-; AVX-NEXT: .long 1199570944 # float 6.553600e+04
-; AVX-NEXT: .long 1199570944 # float 6.553600e+04
+; AVX-NEXT: .long 1199570944 # float 65536
+; AVX-NEXT: .long 1199570944 # float 65536
+; AVX-NEXT: .long 1199570944 # float 65536
+; AVX-NEXT: .long 1199570944 # float 65536
 
 ; AVX2: [[FPMASKCSTADDR_v8:.LCPI[0-9_]+]]:
 ; AVX2-NEXT: .long 1199570944 # float 65536

@@ -25,8 +25,3 @@ WebAssemblyTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
   return TargetTransformInfo::PSK_FastHardware;
 }
-
-bool WebAssemblyTTIImpl::haveFastSqrt(Type *Ty) const {
-  assert(Ty->isFPOrFPVectorTy() && "Ty must be floating point");
-  return true;
-}

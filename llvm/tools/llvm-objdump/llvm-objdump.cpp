@@ -252,7 +252,7 @@ void llvm::error(std::error_code EC) {
   exit(1);
 }
 
-static void report_error(StringRef File, std::error_code EC) {
+void llvm::report_error(StringRef File, std::error_code EC) {
   assert(EC);
   errs() << ToolName << ": '" << File << "': " << EC.message() << ".\n";
   exit(1);
