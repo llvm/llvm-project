@@ -55,8 +55,5 @@ int f(int i) {
 
 // rdar://18405357
 unsigned long long l = 65536 * 65536; // expected-warning {{overflow in expression; result is 0 with type 'int'}}
-#ifndef __cplusplus
-// expected-error@-2 {{not a compile-time constant}}
-#endif
 unsigned long long l2 = 65536 * (unsigned)65536;
 unsigned long long l3 = 65536 * 65536ULL;

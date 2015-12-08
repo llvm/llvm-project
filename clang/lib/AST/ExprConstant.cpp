@@ -715,6 +715,32 @@ namespace {
       return keepEvaluatingAfterSideEffect();
     }
 
+    /// Should we continue evaluation after encountering undefined behavior?
+    bool keepEvaluatingAfterUndefinedBehavior() {
+      switch (EvalMode) {
+      case EM_EvaluateForOverflow:
+      case EM_IgnoreSideEffects:
+      case EM_ConstantFold:
+      case EM_DesignatorFold:
+        return true;
+
+      case EM_PotentialConstantExpression:
+      case EM_PotentialConstantExpressionUnevaluated:
+      case EM_ConstantExpression:
+      case EM_ConstantExpressionUnevaluated:
+        return false;
+      }
+      llvm_unreachable("Missed EvalMode case");
+    }
+
+    /// Note that we hit something that was technically undefined behavior, but
+    /// that we can evaluate past it (such as signed overflow or floating-point
+    /// division by zero.)
+    bool noteUndefinedBehavior() {
+      EvalStatus.HasUndefinedBehavior = true;
+      return keepEvaluatingAfterUndefinedBehavior();
+    }
+
     /// Should we continue evaluation as much as possible after encountering a
     /// construct which can't be reduced to a value?
     bool keepEvaluatingAfterFailure() {
@@ -1549,7 +1575,7 @@ static bool HandleOverflow(EvalInfo &Info, const Expr *E,
                            const T &SrcValue, QualType DestType) {
   Info.CCEDiag(E, diag::note_constexpr_overflow)
     << SrcValue << DestType;
-  return Info.noteSideEffect();
+  return Info.noteUndefinedBehavior();
 }
 
 static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
@@ -1818,8 +1844,7 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const Expr *E,
 
   if (LHS.isInfinity() || LHS.isNaN()) {
     Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << LHS.isNaN();
-    // Undefined behavior is a side-effect.
-    return Info.noteSideEffect();
+    return Info.noteUndefinedBehavior();
   }
   return true;
 }
@@ -8835,6 +8860,12 @@ bool Expr::EvaluateAsBooleanCondition(bool &Result,
          HandleConversionToBool(Scratch.Val, Result);
 }
 
+static bool hasUnacceptableSideEffect(Expr::EvalStatus &Result,
+                                      Expr::SideEffectsKind SEK) {
+  return (SEK < Expr::SE_AllowSideEffects && Result.HasSideEffects) ||
+         (SEK < Expr::SE_AllowUndefinedBehavior && Result.HasUndefinedBehavior);
+}
+
 bool Expr::EvaluateAsInt(APSInt &Result, const ASTContext &Ctx,
                          SideEffectsKind AllowSideEffects) const {
   if (!getType()->isIntegralOrEnumerationType())
@@ -8842,7 +8873,7 @@ bool Expr::EvaluateAsInt(APSInt &Result, const ASTContext &Ctx,
 
   EvalResult ExprResult;
   if (!EvaluateAsRValue(ExprResult, Ctx) || !ExprResult.Val.isInt() ||
-      (!AllowSideEffects && ExprResult.HasSideEffects))
+      hasUnacceptableSideEffect(ExprResult, AllowSideEffects))
     return false;
 
   Result = ExprResult.Val.getInt();
@@ -8905,9 +8936,10 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 
 /// isEvaluatable - Call EvaluateAsRValue to see if this expression can be
 /// constant folded, but discard the result.
-bool Expr::isEvaluatable(const ASTContext &Ctx) const {
+bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
   EvalResult Result;
-  return EvaluateAsRValue(Result, Ctx) && !Result.HasSideEffects;
+  return EvaluateAsRValue(Result, Ctx) &&
+         !hasUnacceptableSideEffect(Result, SEK);
 }
 
 APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,

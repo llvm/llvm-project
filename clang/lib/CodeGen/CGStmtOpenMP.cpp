@@ -2045,6 +2045,11 @@ void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
   }(), S.getLocStart());
 }
 
+void CodeGenFunction::EmitOMPDistributeDirective(
+    const OMPDistributeDirective &S) {
+  llvm_unreachable("CodeGen for 'omp distribute' is not supported yet.");
+}
+
 static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
                                                    const CapturedStmt *S) {
   CodeGenFunction CGF(CGM, /*suppressNewContext=*/true);
@@ -2481,6 +2486,7 @@ static void EmitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
+  case OMPC_grainsize:
   case OMPC_nogroup:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }

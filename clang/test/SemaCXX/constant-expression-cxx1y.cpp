@@ -462,7 +462,7 @@ namespace loops {
       if ((c % 7) == 0) break;
     } while (c != 21);
 
-    return a == 10 && b == 12 & c == 14;
+    return a == 10 && b == 12 && c == 14;
   }
   static_assert(breaks_work(), "");
 

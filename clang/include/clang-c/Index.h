@@ -2264,7 +2264,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPTaskLoopSimdDirective      = 259,
 
-  CXCursor_LastStmt                      = CXCursor_OMPTaskLoopSimdDirective,
+   /** \brief OpenMP distribute directive.
+   */
+  CXCursor_OMPDistributeDirective        = 260,
+
+  CXCursor_LastStmt                      = CXCursor_OMPDistributeDirective,
 
   /**
    * \brief Cursor that represents the translation unit itself.

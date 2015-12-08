@@ -173,6 +173,19 @@ void testFunctionPointerCapture() {
   clang_analyzer_eval(i == 6); // expected-warning{{TRUE}}
 }
 
+// Captured variable-length array.
+
+void testVariableLengthArrayCaptured() {
+  int n = 2;
+  int array[n];
+  array[0] = 7;
+
+  int i = [&]{
+    return array[0];
+  }();
+
+  clang_analyzer_eval(i == 7); // expected-warning{{TRUE}}
+}
 
 // Test inline defensive checks
 int getNum();

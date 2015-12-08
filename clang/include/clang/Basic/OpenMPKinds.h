@@ -141,6 +141,13 @@ bool isOpenMPTeamsDirective(OpenMPDirectiveKind DKind);
 /// otherwise - false.
 bool isOpenMPSimdDirective(OpenMPDirectiveKind DKind);
 
+/// \brief Checks if the specified directive is a distribute directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a distribute-directive like 'omp
+/// distribute',
+/// otherwise - false.
+bool isOpenMPDistributeDirective(OpenMPDirectiveKind DKind);
+
 /// \brief Checks if the specified clause is one of private clauses like
 /// 'private', 'firstprivate', 'reduction' etc..
 /// \param Kind Clause kind.

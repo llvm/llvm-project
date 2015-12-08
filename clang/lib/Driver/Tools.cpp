@@ -215,13 +215,9 @@ static void AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
   Args.AddAllArgValues(CmdArgs, options::OPT_Zlinker_input);
 
   for (const auto &II : Inputs) {
-    if (!TC.HasNativeLLVMSupport()) {
+    if (!TC.HasNativeLLVMSupport() && types::isLLVMIR(II.getType()))
       // Don't try to pass LLVM inputs unless we have native support.
-      if (II.getType() == types::TY_LLVM_IR ||
-          II.getType() == types::TY_LTO_IR ||
-          II.getType() == types::TY_LLVM_BC || II.getType() == types::TY_LTO_BC)
-        D.Diag(diag::err_drv_no_linker_llvm_support) << TC.getTripleString();
-    }
+      D.Diag(diag::err_drv_no_linker_llvm_support) << TC.getTripleString();
 
     // Add filenames immediately.
     if (II.isFilename()) {
@@ -3419,6 +3415,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Args.AddLastArg(CmdArgs, options::OPT_flto, options::OPT_flto_EQ);
   }
 
+  if (const Arg *A = Args.getLastArg(options::OPT_fthinlto_index_EQ)) {
+    if (!types::isLLVMIR(Input.getType()))
+      D.Diag(diag::err_drv_argument_only_allowed_with) << A->getAsString(Args)
+                                                       << "-x ir";
+    Args.AddLastArg(CmdArgs, options::OPT_fthinlto_index_EQ);
+  }
+
   // We normally speed up the clang process a bit by skipping destructors at
   // exit, but when we're generating diagnostics we can rely on some of the
   // cleanup.
@@ -5995,8 +5998,7 @@ void gcc::Common::ConstructJob(Compilation &C, const JobAction &JA,
   // inputs into '-Wl,' options?
   for (const auto &II : Inputs) {
     // Don't try to pass LLVM or AST inputs to a generic gcc.
-    if (II.getType() == types::TY_LLVM_IR || II.getType() == types::TY_LTO_IR ||
-        II.getType() == types::TY_LLVM_BC || II.getType() == types::TY_LTO_BC)
+    if (types::isLLVMIR(II.getType()))
       D.Diag(diag::err_drv_no_linker_llvm_support)
           << getToolChain().getTripleString();
     else if (II.getType() == types::TY_AST)
@@ -6114,8 +6116,7 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // inputs into '-Wl,' options?
   for (const auto &II : Inputs) {
     // Don't try to pass LLVM or AST inputs to a generic gcc.
-    if (II.getType() == types::TY_LLVM_IR || II.getType() == types::TY_LTO_IR ||
-        II.getType() == types::TY_LLVM_BC || II.getType() == types::TY_LTO_BC)
+    if (types::isLLVMIR(II.getType()))
       D.Diag(clang::diag::err_drv_no_linker_llvm_support)
           << getToolChain().getTripleString();
     else if (II.getType() == types::TY_AST)
@@ -6129,7 +6130,7 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(II.getFilename());
     else
       // Don't render as input, we need gcc to do the translations.
-      // FIXME: Pranav: What is this ?
+      // FIXME: What is this?
       II.getInputArg().render(Args, CmdArgs);
   }
 
@@ -6659,11 +6660,11 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     SourceAction = SourceAction->getInputs()[0];
   }
 
-  // If -fno_integrated_as is used add -Q to the darwin assember driver to make
+  // If -fno-integrated-as is used add -Q to the darwin assember driver to make
   // sure it runs its system assembler not clang's integrated assembler.
   // Applicable to darwin11+ and Xcode 4+.  darwin<10 lacked integrated-as.
   // FIXME: at run-time detect assembler capabilities or rely on version
-  // information forwarded by -target-assembler-version (future)
+  // information forwarded by -target-assembler-version.
   if (Args.hasArg(options::OPT_fno_integrated_as)) {
     const llvm::Triple &T(getToolChain().getTriple());
     if (!(T.isMacOSX() && T.isMacOSXVersionLT(10, 7)))
@@ -10004,7 +10005,8 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       static_cast<const toolchains::MyriadToolChain &>(getToolChain());
   const llvm::Triple &T = TC.getTriple();
   ArgStringList CmdArgs;
-  bool UseStartfiles = !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
+  bool UseStartfiles =
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
   bool UseDefaultLibs =
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs);
 

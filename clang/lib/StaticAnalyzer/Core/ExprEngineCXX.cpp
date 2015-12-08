@@ -531,9 +531,23 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
   for (LambdaExpr::const_capture_init_iterator i = LE->capture_init_begin(),
                                                e = LE->capture_init_end();
        i != e; ++i, ++CurField) {
-    SVal Field = State->getLValue(*CurField, V);
-    SVal InitExpr = State->getSVal(*i, LocCtxt);
-    State = State->bindLoc(Field, InitExpr);
+    FieldDecl *FieldForCapture = *CurField;
+    SVal FieldLoc = State->getLValue(FieldForCapture, V);
+
+    SVal InitVal;
+    if (!FieldForCapture->hasCapturedVLAType()) {
+      Expr *InitExpr = *i;
+      assert(InitExpr && "Capture missing initialization expression");
+      InitVal = State->getSVal(InitExpr, LocCtxt);
+    } else {
+      // The field stores the length of a captured variable-length array.
+      // These captures don't have initialization expressions; instead we
+      // get the length from the VLAType size expression.
+      Expr *SizeExpr = FieldForCapture->getCapturedVLAType()->getSizeExpr();
+      InitVal = State->getSVal(SizeExpr, LocCtxt);
+    }
+
+    State = State->bindLoc(FieldLoc, InitVal);
   }
 
   // Decay the Loc into an RValue, because there might be a

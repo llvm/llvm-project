@@ -2893,6 +2893,58 @@ public:
   child_range children() { return child_range(&Priority, &Priority + 1); }
 };
 
+/// \brief This represents 'grainsize' clause in the '#pragma omp ...'
+/// directive.
+///
+/// \code
+/// #pragma omp taskloop grainsize(4)
+/// \endcode
+/// In this example directive '#pragma omp taskloop' has clause 'grainsize'
+/// with single expression '4'.
+///
+class OMPGrainsizeClause : public OMPClause {
+  friend class OMPClauseReader;
+  /// \brief Location of '('.
+  SourceLocation LParenLoc;
+  /// \brief Safe iteration space distance.
+  Stmt *Grainsize;
+
+  /// \brief Set safelen.
+  void setGrainsize(Expr *Size) { Grainsize = Size; }
+
+public:
+  /// \brief Build 'grainsize' clause.
+  ///
+  /// \param Size Expression associated with this clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  ///
+  OMPGrainsizeClause(Expr *Size, SourceLocation StartLoc,
+                     SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_grainsize, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Grainsize(Size) {}
+
+  /// \brief Build an empty clause.
+  ///
+  explicit OMPGrainsizeClause()
+      : OMPClause(OMPC_grainsize, SourceLocation(), SourceLocation()),
+        LParenLoc(SourceLocation()), Grainsize(nullptr) {}
+
+  /// \brief Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  /// \brief Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// \brief Return safe iteration space distance.
+  Expr *getGrainsize() const { return cast_or_null<Expr>(Grainsize); }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_grainsize;
+  }
+
+  child_range children() { return child_range(&Grainsize, &Grainsize + 1); }
+};
+
 /// \brief This represents 'nogroup' clause in the '#pragma omp ...' directive.
 ///
 /// \code

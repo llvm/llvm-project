@@ -465,6 +465,9 @@ void OMPClauseProfiler::VisitOMPThreadLimitClause(
 void OMPClauseProfiler::VisitOMPPriorityClause(const OMPPriorityClause *C) {
   Profiler->VisitStmt(C->getPriority());
 }
+void OMPClauseProfiler::VisitOMPGrainsizeClause(const OMPGrainsizeClause *C) {
+  Profiler->VisitStmt(C->getGrainsize());
+}
 }
 
 void
@@ -593,6 +596,11 @@ void StmtProfiler::VisitOMPTaskLoopDirective(const OMPTaskLoopDirective *S) {
 
 void StmtProfiler::VisitOMPTaskLoopSimdDirective(
     const OMPTaskLoopSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPDistributeDirective(
+    const OMPDistributeDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
