@@ -926,7 +926,6 @@
 		AEC6FFA01BE970A2007882C1 /* GoParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */; };
 		AEEA34051AC88A7400AB639D /* TypeSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEEA34041AC88A7400AB639D /* TypeSystem.cpp */; };
 		AF061F87182C97ED00B6A19C /* RegisterContextHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF061F85182C97ED00B6A19C /* RegisterContextHistory.cpp */; };
-		AF0639A21BEC2D2500EA1B29 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AF06398B1BEC2D2500EA1B29 /* Makefile */; };
 		AF0639A41BEC2D2500EA1B29 /* PlatformAppleSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF06398D1BEC2D2500EA1B29 /* PlatformAppleSimulator.h */; };
 		AF0639A61BEC2D2500EA1B29 /* PlatformAppleTVSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF06398F1BEC2D2500EA1B29 /* PlatformAppleTVSimulator.h */; };
 		AF0639A81BEC2D2500EA1B29 /* PlatformAppleWatchSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0639911BEC2D2500EA1B29 /* PlatformAppleWatchSimulator.h */; };
@@ -7294,7 +7293,6 @@
 				3FDFDDC6199D37ED009756A7 /* FileSystem.cpp in Sources */,
 				26744EF11338317700EF765A /* GDBRemoteCommunicationClient.cpp in Sources */,
 				26744EF31338317700EF765A /* GDBRemoteCommunicationServer.cpp in Sources */,
-				AF0639A21BEC2D2500EA1B29 /* Makefile in Sources */,
 				264A97BF133918BC0017F0BE /* PlatformRemoteGDBServer.cpp in Sources */,
 				EB8375E71B553DE800BA907D /* ThreadPlanCallFunctionUsingABI.cpp in Sources */,
 				6D95DC011B9DC057000E318A /* HashedNameToDIE.cpp in Sources */,
