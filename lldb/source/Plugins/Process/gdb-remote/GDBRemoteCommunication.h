@@ -25,6 +25,7 @@
 #include "lldb/Host/Mutex.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/TimeValue.h"
+#include "lldb/Interpreter/Args.h"
 
 #include "Utility/StringExtractorGDBRemote.h"
 
@@ -168,7 +169,8 @@ public:
     StartDebugserverProcess(const char *url,
                             Platform *platform, // If non nullptr, then check with the platform for the GDB server binary if it can't be located
                             ProcessLaunchInfo &launch_info,
-                            uint16_t *port);
+                            uint16_t *port,
+                            const Args& inferior_args = Args());
 
     void
     DumpHistory(Stream &strm);

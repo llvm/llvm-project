@@ -21,6 +21,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSpec.h"
@@ -983,4 +984,35 @@ PlatformRemoteGDBServer::MakeUrl(const char* scheme,
     if (path)
         result.Write(path, strlen(path));
     return result.GetString();
+}
+
+lldb::ProcessSP
+PlatformRemoteGDBServer::ConnectProcess(const char* connect_url,
+                                        const char* plugin_name,
+                                        lldb_private::Debugger &debugger,
+                                        lldb_private::Target *target,
+                                        lldb_private::Error &error)
+{
+    if (!IsRemote() || !IsConnected())
+    {
+        error.SetErrorString("Not connected to remote gdb server");
+        return nullptr;
+    }
+    return Platform::ConnectProcess(connect_url, plugin_name, debugger, target, error);
+}
+
+size_t
+PlatformRemoteGDBServer::GetPendingGdbServerList(std::vector<std::string>& connection_urls)
+{
+    std::vector<std::pair<uint16_t, std::string>> remote_servers;
+    m_gdb_client.QueryGDBServer(remote_servers);
+    for (const auto& gdbserver : remote_servers)
+    {
+        const char* socket_name_cstr = gdbserver.second.empty() ? nullptr : gdbserver.second.c_str();
+        connection_urls.emplace_back(MakeGdbServerUrl(m_platform_scheme,
+                                                      m_platform_hostname,
+                                                      gdbserver.first,
+                                                      socket_name_cstr));
+    }
+    return connection_urls.size();
 }

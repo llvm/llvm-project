@@ -1288,7 +1288,15 @@ SBProcess::GetNumSupportedHardwareWatchpoints (lldb::SBError &sb_error) const
 }
 
 uint32_t
-SBProcess::LoadImage (lldb::SBFileSpec &sb_image_spec, lldb::SBError &sb_error)
+SBProcess::LoadImage (lldb::SBFileSpec &sb_remote_image_spec, lldb::SBError &sb_error)
+{
+    return LoadImage(SBFileSpec(), sb_remote_image_spec, sb_error);
+}
+
+uint32_t
+SBProcess::LoadImage (const lldb::SBFileSpec &sb_local_image_spec,
+                      const lldb::SBFileSpec &sb_remote_image_spec,
+                      lldb::SBError &sb_error)
 {
     ProcessSP process_sp(GetSP());
     if (process_sp)
@@ -1298,7 +1306,10 @@ SBProcess::LoadImage (lldb::SBFileSpec &sb_image_spec, lldb::SBError &sb_error)
         {
             Mutex::Locker api_locker (process_sp->GetTarget().GetAPIMutex());
             PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
-            return platform_sp->LoadImage (process_sp.get(), *sb_image_spec, sb_error.ref());
+            return platform_sp->LoadImage (process_sp.get(),
+                                           *sb_local_image_spec,
+                                           *sb_remote_image_spec,
+                                           sb_error.ref());
         }
         else
         {

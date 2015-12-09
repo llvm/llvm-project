@@ -210,19 +210,13 @@ class LoadUnloadTestCase(TestBase):
         else:
             dylibName = 'libloadunload_a.so'
 
-        if lldb.remote_platform:
-            # Don't use os.path.join as we have to use the path separator for the target
-            dylibPath = shlib_dir + '/' + dylibName
-        else:
-            dylibPath = dylibName
-
         # Make sure that a_function does not exist at this point.
         self.expect("image lookup -n a_function", "a_function should not exist yet",
                     error=True, matching=False, patterns = ["1 match found"])
 
         # Use lldb 'process load' to load the dylib.
-        self.expect("process load %s" % dylibPath, "%s loaded correctly" % dylibPath,
-            patterns = ['Loading "%s".*ok' % dylibPath,
+        self.expect("process load %s --install" % dylibName, "%s loaded correctly" % dylibName,
+            patterns = ['Loading "%s".*ok' % dylibName,
                         'Image [0-9]+ loaded'])
 
         # Search for and match the "Image ([0-9]+) loaded" pattern.

@@ -30,6 +30,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -267,7 +268,9 @@ ProcessWinMiniDump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size, Erro
     // There's at least some overlap between the beginning of the desired range
     // (addr) and the current range.  Figure out where the overlap begins and
     // how much overlap there is, then copy it to the destination buffer.
-    const size_t offset = range.start - addr;
+    lldbassert(range.start <= addr);
+    const size_t offset = addr - range.start;
+    lldbassert(offset < range.size);
     const size_t overlap = std::min(size, range.size - offset);
     std::memcpy(buf, range.ptr + offset, overlap);
     return overlap;

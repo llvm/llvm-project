@@ -9627,10 +9627,10 @@ ClangASTContext::DeclGetFunctionArgumentType (void *opaque_decl, size_t idx)
 // CompilerDeclContext functions
 //----------------------------------------------------------------------
 
-std::vector<void *>
+std::vector<CompilerDecl>
 ClangASTContext::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name)
 {
-    std::vector<void *> found_decls;
+    std::vector<CompilerDecl> found_decls;
     if (opaque_decl_ctx)
     {
         DeclContext *root_decl_ctx = (DeclContext *)opaque_decl_ctx;
@@ -9665,7 +9665,7 @@ ClangASTContext::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString na
                             {
                                 IdentifierInfo *ii = nd->getIdentifier();
                                 if (ii != nullptr && ii->getName().equals(name.AsCString(nullptr)))
-                                    found_decls.push_back(nd);
+                                    found_decls.push_back(CompilerDecl(this, nd));
                             }
                         }
                     }
@@ -9673,7 +9673,7 @@ ClangASTContext::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString na
                     {
                         IdentifierInfo *ii = nd->getIdentifier();
                         if (ii != nullptr && ii->getName().equals(name.AsCString(nullptr)))
-                            found_decls.push_back(nd);
+                            found_decls.push_back(CompilerDecl(this, nd));
                     }
                 }
             }

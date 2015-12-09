@@ -1115,7 +1115,8 @@ Error
 GDBRemoteCommunication::StartDebugserverProcess (const char *url,
                                                  Platform *platform,
                                                  ProcessLaunchInfo &launch_info,
-                                                 uint16_t *port)
+                                                 uint16_t *port,
+                                                 const Args& inferior_args)
 {
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
     if (log)
@@ -1327,6 +1328,20 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
                     log->Printf ("GDBRemoteCommunication::%s adding env var %s contents to stub command line (%s)", __FUNCTION__, env_var_name, extra_arg);
             }
         } while (has_env_var);
+
+        if (inferior_args.GetArgumentCount() > 0)
+        {
+            debugserver_args.AppendArgument ("--");
+            debugserver_args.AppendArguments (inferior_args);
+        }
+
+        // Copy the current environment to the gdbserver/debugserver instance
+        StringList env;
+        if (Host::GetEnvironment(env))
+        {
+            for (size_t i = 0; i < env.GetSize(); ++i)
+                launch_info.GetEnvironmentEntries().AppendArgument(env[i].c_str());
+        }
 
         // Close STDIN, STDOUT and STDERR.
         launch_info.AppendCloseFileAction (STDIN_FILENO);

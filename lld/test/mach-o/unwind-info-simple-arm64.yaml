@@ -250,7 +250,7 @@ undefined-symbols:
 # CHECK:   Number of indices in array:                0x2
 # CHECK:   Common encodings: (count = 0)
 # CHECK:   Personality functions: (count = 1)
-# CHECK:     personality[1]: 0x00004018
+# CHECK:     personality[1]: 0x00004020
 # CHECK:   Top level indices: (count = 2)
 # CHECK:     [0]: function offset=0x00003e68, 2nd level page offset=0x00000040, LSDA offset=0x00000038
 # CHECK:     [1]: function offset=0x00003edc, 2nd level page offset=0x00000000, LSDA offset=0x00000040

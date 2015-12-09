@@ -27,7 +27,7 @@ def __setCrashInfoHook_Mac(text):
     from . import crashinfo
     crashinfo.setCrashReporterDescription(text)
 
-def __setupCrashInfoHook():
+def setupCrashInfoHook():
     if platform.system() == "Darwin":
         from . import lock
         test_dir = os.environ['LLDB_TEST']
@@ -48,7 +48,7 @@ def __setupCrashInfoHook():
             compile_lock.release()
             del compile_lock
 
-        setCrashInfoHook = setCrashInfoHook_Mac
+        setCrashInfoHook = __setCrashInfoHook_Mac
 
     else:
         pass
@@ -56,19 +56,9 @@ def __setupCrashInfoHook():
 # The test suite.
 suite = unittest2.TestSuite()
 
-# By default, benchmarks tests are not run.
-just_do_benchmarks_test = False
-
 dont_do_dsym_test = False
 dont_do_dwarf_test = False
 dont_do_dwo_test = False
-
-# The blacklist is optional (-b blacklistFile) and allows a central place to skip
-# testclass's and/or testclass.testmethod's.
-blacklist = None
-
-# The dictionary as a result of sourcing blacklistFile.
-blacklistConfig = {}
 
 # The list of categories we said we care about
 categoriesList = None
@@ -82,26 +72,12 @@ failuresPerCategory = {}
 # The path to LLDB.framework is optional.
 lldbFrameworkPath = None
 
-# The config file is optional.
-configFile = None
-
 # Test suite repeat count.  Can be overwritten with '-# count'.
 count = 1
 
-# The dictionary as a result of sourcing configFile.
-config = {}
-# The pre_flight and post_flight functions come from reading a config file.
-pre_flight = None
-post_flight = None
-# So do the lldbtest_remote_sandbox and lldbtest_remote_shell_template variables.
-test_remote = False
-lldbtest_remote_sandbox = None
-lldbtest_remote_shell_template = None
-
-# The 'archs' and 'compilers' can be specified via either command line or configFile,
-# with the command line overriding the configFile.  The corresponding options can be
-# specified more than once. For example, "-A x86_64 -A i386" => archs=['x86_64', 'i386']
-# and "-C gcc -C clang" => compilers=['gcc', 'clang'].
+# The 'archs' and 'compilers' can be specified via command line.  The corresponding
+# options can be specified more than once. For example, "-A x86_64 -A i386"
+# => archs=['x86_64', 'i386'] and "-C gcc -C clang" => compilers=['gcc', 'clang'].
 archs = None        # Must be initialized after option parsing
 compilers = None    # Must be initialized after option parsing
 
@@ -110,18 +86,12 @@ compilers = None    # Must be initialized after option parsing
 # just that.
 cflags_extras = ''
 
-# Dump the Python sys.path variable.  Use '-D' to dump sys.path.
-dumpSysPath = False
-
 # Full path of the benchmark executable, as specified by the '-e' option.
 bmExecutable = None
 # The breakpoint specification of bmExecutable, as specified by the '-x' option.
 bmBreakpointSpec = None
 # The benchmark iteration count, as specified by the '-y' option.
 bmIterationCount = -1
-
-# By default, don't exclude any directories.  Use '-X' to add one excluded directory.
-excluded = set(['.svn', '.git'])
 
 # By default, failfast is False.  Use '-F' to overwrite it.
 failfast = False
@@ -132,11 +102,6 @@ filters = []
 # The runhooks is a list of lldb commands specifically for the debugger.
 # Use '-k' to specify a runhook.
 runHooks = []
-
-# If '-g' is specified, the filterspec is not exclusive.  If a test module does
-# not contain testclass.testmethod which matches the filterspec, the whole test
-# module is still admitted into our test suite.  fs4all flag defaults to True.
-fs4all = True
 
 # Ignore the build search path relative to this script to locate the lldb.py module.
 ignore = False
@@ -220,7 +185,6 @@ all_tests = set()
 
 # safe default
 setCrashInfoHook = lambda x : None
-__setupCrashInfoHook()
 
 def shouldSkipBecauseOfCategories(test_categories):
     if useCategories:

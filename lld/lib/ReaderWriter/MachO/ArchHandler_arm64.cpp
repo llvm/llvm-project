@@ -50,6 +50,9 @@ public:
     case gotOffset12:
       canBypassGOT = true;
       return true;
+    case delta32ToGOT:
+      canBypassGOT = false;
+      return true;
     case imageOffsetGot:
       canBypassGOT = false;
       return true;
@@ -73,6 +76,9 @@ public:
     case gotOffset12:
       const_cast<Reference *>(ref)->setKindValue(targetNowGOT ?
                                                  offset12scale8 : addOffset12);
+      break;
+    case delta32ToGOT:
+      const_cast<Reference *>(ref)->setKindValue(delta32);
       break;
     case imageOffsetGot:
       const_cast<Reference *>(ref)->setKindValue(imageOffset);

@@ -285,6 +285,12 @@ main_platform (int argc, char *argv[])
         exit(option_error);
     }
 
+    // Skip any options we consumed with getopt_long_only.
+    argc -= optind;
+    argv += optind;
+    lldb_private::Args inferior_arguments;
+    inferior_arguments.SetArguments(argc, const_cast<const char**>(argv));
+
     const bool children_inherit_listen_socket = false;
     // the test suite makes many connections in parallel, let's not miss any.
     // The highest this should get reasonably is a function of the number
@@ -309,7 +315,7 @@ main_platform (int argc, char *argv[])
         error = save_socket_id_to_file(acceptor_up->GetLocalSocketId(), socket_file);
         if (error.Fail())
         {
-            fprintf(stderr, "failed to write socket id to %s: %s", socket_file.GetPath().c_str(), error.AsCString());
+            fprintf(stderr, "failed to write socket id to %s: %s\n", socket_file.GetPath().c_str(), error.AsCString());
             return 1;
         }
     }
@@ -317,7 +323,7 @@ main_platform (int argc, char *argv[])
     do {
         GDBRemoteCommunicationServerPlatform platform(acceptor_up->GetSocketProtocol(),
                                                       acceptor_up->GetSocketScheme());
-        
+
         if (port_offset > 0)
             platform.SetPortOffset(port_offset);
 
@@ -365,6 +371,22 @@ main_platform (int argc, char *argv[])
 
         if (platform.IsConnected())
         {
+            if (inferior_arguments.GetArgumentCount() > 0)
+            {
+                lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+                uint16_t port = 0;
+                std::string socket_name;
+                Error error = platform.LaunchGDBServer(inferior_arguments,
+                                                       "", // hostname
+                                                       pid,
+                                                       port,
+                                                       socket_name);
+                if (error.Success())
+                    platform.SetPendingGdbServer(pid, port, socket_name);
+                else
+                    fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
+            }
+
             // After we connected, we need to get an initial ack from...
             if (platform.HandshakeWithClient())
             {

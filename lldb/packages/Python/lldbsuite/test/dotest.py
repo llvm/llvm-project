@@ -278,9 +278,6 @@ def parseOptionsAndInitTestdirs():
     if args.skipCategories:
         configuration.skipCategories = test_categories.validate(args.skipCategories, False)
 
-    if args.D:
-        configuration.dumpSysPath = True
-
     if args.E:
         cflags_extras = args.E
         os.environ['CFLAGS_EXTRAS'] = cflags_extras
@@ -302,28 +299,6 @@ def parseOptionsAndInitTestdirs():
         print("Options '-m' and '+m' have been deprecated. Please use the test category\n"
               "functionality (-G lldb-mi, --skip-category lldb-mi) instead.")
         sys.exit(1)
-
-    if args.plus_b:
-        lldbsuite.test.just_do_benchmarks_test = True
-
-    if args.b:
-        if args.b.startswith('-'):
-            usage(parser)
-        blacklistFile = args.b
-        if not os.path.isfile(blacklistFile):
-            print('Blacklist file:', blacklistFile, 'does not exist!')
-            usage(parser)
-        # Now read the blacklist contents and assign it to blacklist.
-        execfile(blacklistFile, globals(), configuration.blacklistConfig)
-        configuration.blacklist = configuration.blacklistConfig.get('blacklist')
-
-    if args.c:
-        if args.c.startswith('-'):
-            usage(parser)
-        configuration.configFile = args.c
-        if not os.path.isfile(configuration.configFile):
-            print('Config file:', configuration.configFile, 'does not exist!')
-            usage(parser)
 
     if args.d:
         sys.stdout.write("Suspending the process %d to wait for debugger to attach...\n" % os.getpid())
@@ -355,9 +330,6 @@ def parseOptionsAndInitTestdirs():
         # adding a --no-output-on-success that prevents -v from setting
         # output-on-success.
         configuration.no_multiprocess_test_runner = True
-
-    if args.g:
-        configuration.fs4all = False
 
     if args.i:
         configuration.ignore = True
@@ -429,11 +401,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.w:
         os.environ['LLDB_WAIT_BETWEEN_TEST_CASES'] = 'YES'
-
-    if args.X:
-        if args.X.startswith('-'):
-            usage(parser)
-        configuration.excluded.add(args.X)
 
     if args.x:
         if args.x.startswith('-'):
@@ -570,38 +537,6 @@ def parseOptionsAndInitTestdirs():
                      ignore=ignore_patterns('.svn'))
 
     #print("testdirs:", testdirs)
-
-    # Source the configFile if specified.
-    # The side effect, if any, will be felt from this point on.  An example
-    # config file may be these simple two lines:
-    #
-    # sys.stderr = open("/tmp/lldbtest-stderr", "w")
-    # sys.stdout = open("/tmp/lldbtest-stdout", "w")
-    #
-    # which will reassign the two file objects to sys.stderr and sys.stdout,
-    # respectively.
-    #
-    # See also lldb-trunk/examples/test/usage-config.
-    if configuration.configFile:
-        # Pass config (a dictionary) as the locals namespace for side-effect.
-        execfile(configuration.configFile, globals(), configuration.config)
-        #print("config:", config)
-        if "pre_flight" in configuration.config:
-            configuration.pre_flight = configuration.config["pre_flight"]
-            if not six.callable(configuration.pre_flight):
-                print("fatal error: pre_flight is not callable, exiting.")
-                sys.exit(1)
-        if "post_flight" in configuration.config:
-            configuration.post_flight = configuration.config["post_flight"]
-            if not six.callable(configuration.post_flight):
-                print("fatal error: post_flight is not callable, exiting.")
-                sys.exit(1)
-        if "lldbtest_remote_sandbox" in configuration.config:
-            configuration.lldbtest_remote_sandbox = configuration.config["lldbtest_remote_sandbox"]
-        if "lldbtest_remote_shell_template" in configuration.config:
-            configuration.lldbtest_remote_shell_template = configuration.config["lldbtest_remote_shell_template"]
-        #print("sys.stderr:", sys.stderr)
-        #print("sys.stdout:", sys.stdout)
 
 def getXcodeOutputPaths(lldbRootDirectory):
     result = []
@@ -875,13 +810,13 @@ def setupSysPath():
 
         # This is to locate the lldb.py module.  Insert it right after sys.path[0].
         sys.path[1:1] = [lldbPythonDir]
-        if configuration.dumpSysPath:
-            print("sys.path:", sys.path)
 
 def visit(prefix, dir, names):
     """Visitor function for os.path.walk(path, visit, arg)."""
 
-    if set(dir.split(os.sep)).intersection(configuration.excluded):
+    dir_components = set(dir.split(os.sep))
+    excluded_components = set(['.svn', '.git'])
+    if dir_components.intersection(excluded_components):
         #print("Detected an excluded dir component: %s" % dir)
         return
 
@@ -934,8 +869,7 @@ def visit(prefix, dir, names):
                     continue
 
             # Forgo this module if the (base, filterspec) combo is invalid
-            # and no '-g' option is specified
-            if configuration.filters and configuration.fs4all and not filtered:
+            if configuration.filters and not filtered:
                 continue
 
             # Add either the filtered test case(s) (which is done before) or the entire test class.
@@ -1086,6 +1020,7 @@ def run_suite():
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     setupSysPath()
+    configuration.setupCrashInfoHook()
 
     #
     # If '-l' is specified, do not skip the long running tests.
@@ -1163,25 +1098,6 @@ def run_suite():
     # Now that we have loaded all the test cases, run the whole test suite.
     #
 
-    # The pre_flight and post_flight come from reading a config file.
-    def getsource_if_available(obj):
-        """
-        Return the text of the source code for an object if available.  Otherwise,
-        a print representation is returned.
-        """
-        import inspect
-        try:
-            return inspect.getsource(obj)
-        except:
-            return repr(obj)
-
-    if not configuration.noHeaders:
-        print("configuration.pre_flight:", getsource_if_available(configuration.pre_flight))
-        print("configuration.post_flight:", getsource_if_available(configuration.post_flight))
-
-    # If either pre_flight or post_flight is defined, set configuration.test_remote to True.
-    configuration.test_remote = configuration.pre_flight or configuration.post_flight
-
     # Turn on lldb loggings if necessary.
     lldbLoggings()
 
@@ -1230,14 +1146,8 @@ def run_suite():
     iterArchs = False
     iterCompilers = False
 
-    if not configuration.archs and "archs" in configuration.config:
-        configuration.archs = configuration.config["archs"]
-
     if isinstance(configuration.archs, list) and len(configuration.archs) >= 1:
         iterArchs = True
-
-    if not configuration.compilers and "compilers" in configuration.config:
-        configuration.compilers = configuration.config["compilers"]
 
     #
     # Add some intervention here to sanity check that the compilers requested are sane.
@@ -1301,19 +1211,6 @@ def run_suite():
                     tbl = str.maketrans(' ', '-')
                 configPostfix = configString.translate(tbl)
 
-                # Check whether we need to split stderr/stdout into configuration
-                # specific files.
-                if old_stderr.name != '<stderr>' and configuration.config.get('split_stderr'):
-                    if new_stderr:
-                        new_stderr.close()
-                    new_stderr = open("%s.%s" % (old_stderr.name, configPostfix), "w")
-                    sys.stderr = new_stderr
-                if old_stdout.name != '<stdout>' and configuration.config.get('split_stdout'):
-                    if new_stdout:
-                        new_stdout.close()
-                    new_stdout = open("%s.%s" % (old_stdout.name, configPostfix), "w")
-                    sys.stdout = new_stdout
-
                 # If we specified a relocated directory to run the test suite, do
                 # the extra housekeeping to copy the testdirs to a configStringified
                 # directory and to update sys.path before invoking the test runner.
@@ -1350,7 +1247,7 @@ def run_suite():
 
             # First, write out the number of collected test cases.
             if not configuration.parsable:
-                sys.stderr.write(separator + "\n")
+                sys.stderr.write(configuration.separator + "\n")
                 sys.stderr.write("Collected %d test%s\n\n"
                                  % (configuration.suite.countTestCases(),
                                     configuration.suite.countTestCases() != 1 and "s" or ""))

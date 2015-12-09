@@ -39,6 +39,16 @@ public:
     Error
     DisconnectRemote () override;
 
+    lldb::ProcessSP
+    ConnectProcess (const char* connect_url,
+                    const char* plugin_name,
+                    lldb_private::Debugger &debugger,
+                    lldb_private::Target *target,
+                    lldb_private::Error &error) override;
+
+    size_t
+    ConnectToWaitingProcesses(lldb_private::Debugger& debugger, lldb_private::Error& error) override;
+
 protected:
     std::string m_device_id;
     std::map<lldb::pid_t, uint16_t> m_port_forwards;

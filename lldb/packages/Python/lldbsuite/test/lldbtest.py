@@ -521,8 +521,7 @@ def benchmarks_test(func):
         raise Exception("@benchmarks_test can only be used to decorate a test method")
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        if not configuration.just_do_benchmarks_test:
-            self.skipTest("benchmarks tests")
+        self.skipTest("benchmarks test")
         return func(self, *args, **kwargs)
 
     # Mark this function as such to separate them from the regular tests.
@@ -618,7 +617,7 @@ def not_remote_testsuite_ready(func):
         raise Exception("@not_remote_testsuite_ready can only be used to decorate a test method")
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        if configuration.lldbtest_remote_sandbox or lldb.remote_platform:
+        if lldb.remote_platform:
             self.skipTest("not ready for remote testsuite")
         return func(self, *args, **kwargs)
 
@@ -1115,7 +1114,7 @@ def skipIfLinuxClang(func):
 # @skipIf(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), skip for gcc>=4.9 on linux with i386
 
 # TODO: refactor current code, to make skipIfxxx functions to call this function
-def skipIf(bugnumber=None, oslist=None, compiler=None, compiler_version=None, archs=None, debug_info=None, swig_version=None, py_version=None):
+def skipIf(bugnumber=None, oslist=None, compiler=None, compiler_version=None, archs=None, debug_info=None, swig_version=None, py_version=None, remote=None):
     def fn(self):
         oslist_passes = oslist is None or self.getPlatform() in oslist
         compiler_passes = compiler is None or (compiler in self.getCompiler() and self.expectedCompilerVersion(compiler_version))
@@ -1123,13 +1122,15 @@ def skipIf(bugnumber=None, oslist=None, compiler=None, compiler_version=None, ar
         debug_info_passes = debug_info is None or self.debug_info in debug_info
         swig_version_passes = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
         py_version_passes = (py_version is None) or check_expected_version(py_version[0], py_version[1], sys.version_info)
+        remote_passes = (remote is None) or (remote == (lldb.remote_platform is not None))
 
         return (oslist_passes and
                 compiler_passes and
                 arch_passes and
                 debug_info_passes and
                 swig_version_passes and
-                py_version_passes)
+                py_version_passes and
+                remote_passes)
 
     local_vars = locals()
     args = [x for x in inspect.getargspec(skipIf).args]
@@ -1454,19 +1455,6 @@ class Base(unittest2.TestCase):
         # module cacheing subsystem to be confused with executable name "a.out"
         # used for all the test cases.
         self.testMethodName = self._testMethodName
-
-        # Benchmarks test is decorated with @benchmarks_test,
-        # which also sets the "__benchmarks_test__" attribute of the
-        # function object to True.
-        try:
-            if configuration.just_do_benchmarks_test:
-                testMethod = getattr(self, self._testMethodName)
-                if getattr(testMethod, "__benchmarks_test__", False):
-                    pass
-                else:
-                    self.skipTest("non benchmarks test")
-        except AttributeError:
-            pass
 
         # This is for the case of directly spawning 'lldb'/'gdb' and interacting
         # with it using pexpect.
@@ -2432,18 +2420,6 @@ class TestBase(Base):
         # Works with the test driver to conditionally skip tests via decorators.
         Base.setUp(self)
 
-        try:
-            blacklist = configuration.blacklist
-            if blacklist:
-                className = self.__class__.__name__
-                classAndMethodName = "%s.%s" % (className, self._testMethodName)
-                if className in blacklist:
-                    self.skipTest(blacklist.get(className))
-                elif classAndMethodName in blacklist:
-                    self.skipTest(blacklist.get(classAndMethodName))
-        except AttributeError:
-            pass
-
         # Insert some delay between successive test cases if specified.
         self.doDelay()
 
@@ -2452,31 +2428,6 @@ class TestBase(Base):
 
         if "LLDB_TIME_WAIT_NEXT_LAUNCH" in os.environ:
             self.timeWaitNextLaunch = float(os.environ["LLDB_TIME_WAIT_NEXT_LAUNCH"])
-
-        #
-        # Warning: MAJOR HACK AHEAD!
-        # If we are running testsuite remotely (by checking lldb.lldbtest_remote_sandbox),
-        # redefine the self.dbg.CreateTarget(filename) method to execute a "file filename"
-        # command, instead.  See also runCmd() where it decorates the "file filename" call
-        # with additional functionality when running testsuite remotely.
-        #
-        if configuration.lldbtest_remote_sandbox:
-            def DecoratedCreateTarget(arg):
-                self.runCmd("file %s" % arg)
-                target = self.dbg.GetSelectedTarget()
-                #
-                # SBtarget.LaunchSimple () currently not working for remote platform?
-                # johnny @ 04/23/2012
-                #
-                def DecoratedLaunchSimple(argv, envp, wd):
-                    self.runCmd("run")
-                    return target.GetProcess()
-                target.LaunchSimple = DecoratedLaunchSimple
-
-                return target
-            self.dbg.CreateTarget = DecoratedCreateTarget
-            if self.TraceOn():
-                print("self.dbg.Create is redefined to:\n%s" % getsource_if_available(DecoratedCreateTarget))
 
         # We want our debugger to be synchronous.
         self.dbg.SetAsync(False)
@@ -2488,10 +2439,6 @@ class TestBase(Base):
 
         # And the result object.
         self.res = lldb.SBCommandReturnObject()
-
-        # Run global pre-flight code, if defined via the config file.
-        if configuration.pre_flight:
-            configuration.pre_flight(self)
 
         if lldb.remote_platform and configuration.lldb_platform_working_dir:
             remote_test_dir = lldbutil.join_remote_paths(
@@ -2618,10 +2565,6 @@ class TestBase(Base):
         for target in targets:
             self.dbg.DeleteTarget(target)
 
-        # Run global post-flight code, if defined via the config file.
-        if configuration.post_flight:
-            configuration.post_flight(self)
-
         # Do this last, to make sure it's in reverse order from how we setup.
         Base.tearDown(self)
 
@@ -2655,37 +2598,8 @@ class TestBase(Base):
 
         trace = (True if traceAlways else trace)
 
-        # This is an opportunity to insert the 'platform target-install' command if we are told so
-        # via the settig of lldb.lldbtest_remote_sandbox.
         if cmd.startswith("target create "):
             cmd = cmd.replace("target create ", "file ")
-        if cmd.startswith("file ") and configuration.lldbtest_remote_sandbox:
-            with recording(self, trace) as sbuf:
-                the_rest = cmd.split("file ")[1]
-                # Split the rest of the command line.
-                atoms = the_rest.split()
-                #
-                # NOTE: This assumes that the options, if any, follow the file command,
-                # instead of follow the specified target.
-                #
-                target = atoms[-1]
-                # Now let's get the absolute pathname of our target.
-                abs_target = os.path.abspath(target)
-                print("Found a file command, target (with absolute pathname)=%s" % abs_target, file=sbuf)
-                fpath, fname = os.path.split(abs_target)
-                parent_dir = os.path.split(fpath)[0]
-                platform_target_install_command = 'platform target-install %s %s' % (fpath, configuration.lldbtest_remote_sandbox)
-                print("Insert this command to be run first: %s" % platform_target_install_command, file=sbuf)
-                self.ci.HandleCommand(platform_target_install_command, self.res)
-                # And this is the file command we want to execute, instead.
-                #
-                # Warning: SIDE EFFECT AHEAD!!!
-                # Populate the remote executable pathname into the lldb namespace,
-                # so that test cases can grab this thing out of the namespace.
-                #
-                remote_sandboxed_executable = abs_target.replace(parent_dir, configuration.lldbtest_remote_sandbox)
-                cmd = "file -P %s %s %s" % (remote_sandboxed_executable, the_rest.replace(target, ''), abs_target)
-                print("And this is the replaced file command: %s" % cmd, file=sbuf)
 
         running = (cmd.startswith("run") or cmd.startswith("process launch"))
 

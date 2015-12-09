@@ -26,8 +26,8 @@ class SBDirCheckerCase(TestBase):
         """Test the SB API directory and make sure there's no unwanted stuff."""
 
         # Only proceed if this is an Apple OS, "x86_64", and local platform.
-        if not (self.platformIsDarwin() and self.getArchitecture() == "x86_64" and not configuration.test_remote):
-            self.skipTest("This test is only for LLDB.framework built 64-bit and !configuration.test_remote")
+        if not (self.platformIsDarwin() and self.getArchitecture() == "x86_64"):
+            self.skipTest("This test is only for LLDB.framework built 64-bit")
         if self.getArchitecture() == "i386":
             self.skipTest("LLDB is 64-bit and cannot be linked to 32-bit test program.")
 

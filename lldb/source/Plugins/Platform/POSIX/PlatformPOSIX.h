@@ -174,12 +174,22 @@ public:
     DisconnectRemote () override;
 
     uint32_t
-    LoadImage (lldb_private::Process* process,
-               const lldb_private::FileSpec& image_spec,
-               lldb_private::Error& error) override;
+    DoLoadImage (lldb_private::Process* process,
+                 const lldb_private::FileSpec& remote_file,
+                 lldb_private::Error& error) override;
 
     lldb_private::Error
     UnloadImage (lldb_private::Process* process, uint32_t image_token) override;
+
+    lldb::ProcessSP
+    ConnectProcess (const char* connect_url,
+                    const char* plugin_name,
+                    lldb_private::Debugger &debugger,
+                    lldb_private::Target *target,
+                    lldb_private::Error &error) override;
+                    
+    size_t
+    ConnectToWaitingProcesses(lldb_private::Debugger& debugger, lldb_private::Error& error) override;
 
 protected:
     std::unique_ptr<lldb_private::OptionGroupOptions> m_options;

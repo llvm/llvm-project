@@ -100,12 +100,6 @@ class GoASTContext : public TypeSystem
     // CompilerDeclContext functions
     //----------------------------------------------------------------------
     
-    std::vector<void *>
-    DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name) override
-    {
-        return std::vector<void *>();
-    }
-
     bool
     DeclContextIsStructUnionOrClass(void *opaque_decl_ctx) override
     {

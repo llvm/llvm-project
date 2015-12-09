@@ -25,6 +25,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/Mutex.h"
+#include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 
 class DWARFDIE;
@@ -141,8 +142,8 @@ public:
     // CompilerDeclContext functions
     //----------------------------------------------------------------------
     
-    virtual std::vector<void *>
-    DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name) = 0;
+    virtual std::vector<CompilerDecl>
+    DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name);
 
     virtual bool
     DeclContextIsStructUnionOrClass (void *opaque_decl_ctx) = 0;

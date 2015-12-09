@@ -56,7 +56,6 @@ CompilerContext::Dump() const
         case CompilerContextKind::Variable:         printf("Variable"); break;
         case CompilerContextKind::Enumeration:      printf("Enumeration"); break;
         case CompilerContextKind::Typedef:          printf("Typedef"); break;
-        default: printf("???(%u)", type);
     }
     printf("(\"%s\")\n", name.GetCString());
 }

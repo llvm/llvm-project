@@ -1597,3 +1597,29 @@ On MacOSX with debugserver, we expedite the frame pointer backchain for a thread
 (up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
 the previous FP and PC), and follow the backchain. Most backtraces on MacOSX and
 iOS now don't require us to read any memory!
+
+//----------------------------------------------------------------------
+// "qQueryGDBServer"
+//
+// BRIEF
+//  Ask the platform for the list of gdbservers we have to connect
+//
+// PRIORITY TO IMPLEMENT
+//  Low. The packet is required to support connecting to gdbserver started
+//  by the platform instance automatically.
+//----------------------------------------------------------------------
+
+If the remote platform automatically started one or more gdbserver instance (without
+lldb asking it) then it have to return the list of port number or socket name for
+each of them what can be used by lldb to connect to those instances.
+
+The data in this packet is a JSON array of JSON objects with the following keys:
+"port":        <the port number to connect>        (optional)
+"socket_name": <the name of the socket to connect> (optional)
+
+Example packet:
+[
+    { "port": 1234 },
+    { "port": 5432 },
+    { "socket_name": "foo" }
+]

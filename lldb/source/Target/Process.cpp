@@ -6400,7 +6400,7 @@ Process::ModulesDidLoad (ModuleList &module_list)
 }
 
 void
-Process::PrintWarning (uint64_t warning_type, void *repeat_key, const char *fmt, ...)
+Process::PrintWarning (uint64_t warning_type, const void *repeat_key, const char *fmt, ...)
 {
     bool print_warning = true;
 

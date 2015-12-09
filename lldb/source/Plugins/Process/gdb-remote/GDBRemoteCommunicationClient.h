@@ -119,7 +119,10 @@ public:
                      lldb::pid_t &pid,
                      uint16_t &port,
                      std::string &socket_name);
-    
+
+    size_t
+    QueryGDBServer (std::vector<std::pair<uint16_t, std::string>>& connection_urls);
+
     bool
     KillSpawnedProcess (lldb::pid_t pid);
 

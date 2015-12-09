@@ -151,6 +151,14 @@ TypeSystem::DeclGetFunctionArgumentType (void *opaque_decl, size_t arg_idx)
     return CompilerType();
 }
 
+
+std::vector<CompilerDecl>
+TypeSystem::DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name)
+{
+    return std::vector<CompilerDecl>();
+}
+
+
 #pragma mark TypeSystemMap
 
 TypeSystemMap::TypeSystemMap() :

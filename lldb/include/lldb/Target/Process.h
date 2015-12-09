@@ -3201,7 +3201,7 @@ protected:
     ///     printf style format string
     //------------------------------------------------------------------
     void
-    PrintWarning (uint64_t warning_type, void *repeat_key, const char *fmt, ...) __attribute__((format(printf, 4, 5)));
+    PrintWarning (uint64_t warning_type, const void *repeat_key, const char *fmt, ...) __attribute__((format(printf, 4, 5)));
     
     //------------------------------------------------------------------
     // NextEventAction provides a way to register an action on the next
@@ -3286,7 +3286,7 @@ protected:
     // Type definitions
     //------------------------------------------------------------------
     typedef std::map<lldb::LanguageType, lldb::LanguageRuntimeSP> LanguageRuntimeCollection;
-    typedef std::unordered_set<void *> WarningsPointerSet;
+    typedef std::unordered_set<const void *> WarningsPointerSet;
     typedef std::map<uint64_t, WarningsPointerSet> WarningsCollection;
 
     struct PreResumeCallbackAndBaton
