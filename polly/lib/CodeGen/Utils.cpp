@@ -141,17 +141,23 @@ BasicBlock *polly::executeScopConditionally(Scop &S, Pass *P, Value *RTC) {
   //      ExitBB     //
   //      /    \     //
 
-  // Create the start block.
+  // Create the start and exiting block.
   Function *F = SplitBlock->getParent();
   BasicBlock *StartBlock =
       BasicBlock::Create(F->getContext(), "polly.start", F);
+  BasicBlock *ExitingBlock =
+      BasicBlock::Create(F->getContext(), "polly.exiting", F);
   SplitBlock->getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(SplitBlock);
   Builder.CreateCondBr(RTC, StartBlock, R.getEntry());
-  if (Loop *L = LI.getLoopFor(SplitBlock))
+  if (Loop *L = LI.getLoopFor(SplitBlock)) {
     L->addBasicBlockToLoop(StartBlock, LI);
+    L->addBasicBlockToLoop(ExitingBlock, LI);
+  }
   DT.addNewBlock(StartBlock, SplitBlock);
+  DT.addNewBlock(ExitingBlock, StartBlock);
   RI.setRegionFor(StartBlock, RI.getRegionFor(SplitBlock));
+  RI.setRegionFor(ExitingBlock, RI.getRegionFor(SplitBlock));
 
   //      \   /                    //
   //    EnteringBB                 //
@@ -159,16 +165,21 @@ BasicBlock *polly::executeScopConditionally(Scop &S, Pass *P, Value *RTC) {
   //    SplitBlock---------\       //
   //   _____|_____         |       //
   //  /  EntryBB  \    StartBlock  //
-  //  |  (region) |                //
-  //  \_ExitingBB_/                //
+  //  |  (region) |        |       //
+  //  \_ExitingBB_/   ExitingBlock //
   //        |                      //
   //    MergeBlock                 //
   //        |                      //
   //      ExitBB                   //
   //      /    \                   //
 
-  // Connect start block to the join block.
+  // Connect start block to exiting block.
   Builder.SetInsertPoint(StartBlock);
+  Builder.CreateBr(ExitingBlock);
+  DT.changeImmediateDominator(ExitingBlock, StartBlock);
+
+  // Connect exiting block to join block.
+  Builder.SetInsertPoint(ExitingBlock);
   Builder.CreateBr(MergeBlock);
   DT.changeImmediateDominator(MergeBlock, SplitBlock);
 
@@ -179,7 +190,7 @@ BasicBlock *polly::executeScopConditionally(Scop &S, Pass *P, Value *RTC) {
   //   _____|_____         |       //
   //  /  EntryBB  \    StartBlock  //
   //  |  (region) |        |       //
-  //  \_ExitingBB_/        |       //
+  //  \_ExitingBB_/   ExitingBlock //
   //        |              |       //
   //    MergeBlock---------/       //
   //        |                      //

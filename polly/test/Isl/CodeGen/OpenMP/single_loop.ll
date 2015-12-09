@@ -39,7 +39,7 @@
 ; IR-NEXT:   call void @GOMP_parallel_end()
 ; IR-NEXT:   %1 = bitcast {}* %polly.par.userContext to i8*
 ; IR-NEXT:   call void @llvm.lifetime.end(i64 8, i8* %1)
-; IR-NEXT:   br label %polly.merge_new_and_old
+; IR-NEXT:   br label %polly.exiting
 
 ; IR: define internal void @single_parallel_loop_polly_subfn(i8* %polly.par.userContext) #2
 ; IR-LABEL: polly.par.setup:

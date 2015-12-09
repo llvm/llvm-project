@@ -556,6 +556,14 @@ const RenderScriptRuntime::HookDefn RenderScriptRuntime::s_runtimeHookDefns[] =
         RenderScriptRuntime::eModuleKindDriver, // type
         nullptr // handler
     },
+    {
+        "rsdAllocationDestroy", // name
+        "_Z20rsdAllocationDestroyPKN7android12renderscript7ContextEPNS0_10AllocationE", // symbol name 32bit
+        "_Z20rsdAllocationDestroyPKN7android12renderscript7ContextEPNS0_10AllocationE", // symbol name 64bit
+        0, // version
+        RenderScriptRuntime::eModuleKindDriver, // type
+        &lldb_private::RenderScriptRuntime::CaptureAllocationDestroy // handler
+    },
 };
 
 const size_t RenderScriptRuntime::s_runtimeHookCount = sizeof(s_runtimeHookDefns)/sizeof(s_runtimeHookDefns[0]);
@@ -855,6 +863,43 @@ RenderScriptRuntime::CaptureAllocationInit1(RuntimeHook* hook_info, ExecutionCon
     AllocationDetails* alloc = LookUpAllocation(rs_alloc_u64, true);
     if (alloc)
         alloc->context = rs_context_u64;
+}
+
+void
+RenderScriptRuntime::CaptureAllocationDestroy(RuntimeHook* hook_info, ExecutionContext& context)
+{
+    Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+
+    // Context, Alloc
+    uint64_t rs_context_u64 = 0U;
+    uint64_t rs_alloc_u64 = 0U;
+
+    bool success = GetArgSimple(context, 0, &rs_context_u64) && GetArgSimple(context, 1, &rs_alloc_u64);
+    if (!success) // error case
+    {
+        if (log)
+            log->Printf("RenderScriptRuntime::CaptureAllocationDestroy - Error while reading the function parameters");
+        return; // abort
+    }
+
+    if (log)
+        log->Printf("RenderScriptRuntime::CaptureAllocationDestroy - 0x%" PRIx64 ", 0x%" PRIx64 ".",
+                    rs_context_u64, rs_alloc_u64);
+
+    for (auto iter = m_allocations.begin(); iter != m_allocations.end(); ++iter)
+    {
+        auto& allocation_ap = *iter; // get the unique pointer
+        if (allocation_ap->address.isValid() && *allocation_ap->address.get() == rs_alloc_u64)
+        {
+            m_allocations.erase(iter);
+            if (log)
+                log->Printf("RenderScriptRuntime::CaptureAllocationDestroy - Deleted allocation entry");
+            return;
+        }
+    }
+
+    if (log)
+        log->Printf("RenderScriptRuntime::CaptureAllocationDestroy - Couldn't find destroyed allocation");
 }
 
 void 
@@ -2304,7 +2349,6 @@ RenderScriptRuntime::Status(Stream &strm) const
             strm.Indent(b.second->defn->name);
             strm.EOL();
         }
-        strm.EOL();
     } 
     else
     {

@@ -12,14 +12,14 @@
 ;    }
 
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK-NEXT:    %tmp.0.merge = phi float [ %tmp.0.final_reload, %polly.merge2 ], [ %tmp.0, %bb8 ]
+; CHECK-NEXT:    %tmp.0.merge = phi float [ %tmp.0.final_reload, %polly.exiting ], [ %tmp.0, %bb8 ]
 ; CHECK-NEXT:    br label %exit
 
 ; CHECK-LABEL: polly.start:
 ; CHECK-NEXT:    sext
 ; CHECK-NEXT:    store float 0.000000e+00, float* %tmp.0.phiops
 
-; CHECK-LABEL: polly.merge2:
+; CHECK-LABEL: polly.exiting:
 ; CHECK-NEXT:    %tmp.0.final_reload = load float, float* %tmp.0.s2a
 ; CHECK-NEXT:    br label %polly.merge_new_and_old
 

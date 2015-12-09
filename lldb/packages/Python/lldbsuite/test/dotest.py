@@ -27,7 +27,6 @@ import importlib
 import os
 import errno
 import platform
-import progress
 import signal
 import socket
 import subprocess
@@ -305,16 +304,6 @@ def parseOptionsAndInitTestdirs():
         sys.stdout.flush()
         os.kill(os.getpid(), signal.SIGSTOP)
 
-    if args.e:
-        if args.e.startswith('-'):
-            usage(parser)
-        configuration.bmExecutable = args.e
-        if not is_exe(configuration.bmExecutable):
-            usage(parser)
-
-    if args.F:
-        configuration.failfast = True
-
     if args.f:
         if any([x.startswith('-') for x in args.f]):
             usage(parser)
@@ -331,12 +320,6 @@ def parseOptionsAndInitTestdirs():
         # output-on-success.
         configuration.no_multiprocess_test_runner = True
 
-    if args.i:
-        configuration.ignore = True
-
-    if args.k:
-        configuration.runHooks.extend(args.k)
-
     if args.l:
         configuration.skip_long_running_test = False
 
@@ -346,24 +329,13 @@ def parseOptionsAndInitTestdirs():
     if args.executable:
         lldbtest_config.lldbExec = args.executable
 
-    if args.libcxx:
-        os.environ["LIBCXX_PATH"] = args.libcxx
-
-    if args.n:
-        configuration.noHeaders = True
-
     if args.p:
         if args.p.startswith('-'):
             usage(parser)
         configuration.regexp = args.p
 
     if args.q:
-        configuration.noHeaders = True
         configuration.parsable = True
-
-    if args.P and not args.v:
-        configuration.progress_bar = True
-        configuration.verbose = 0
 
     if args.R:
         if args.R.startswith('-'):
@@ -463,6 +435,12 @@ def parseOptionsAndInitTestdirs():
         configuration.results_formatter_name = args.results_formatter
     if args.results_formatter_options:
         configuration.results_formatter_options = args.results_formatter_options
+
+    # Default to using the BasicResultsFormatter if no formatter is specified
+    # and we're not a test inferior.
+    if not args.inferior and configuration.results_formatter_name is None:
+        configuration.results_formatter_name = (
+            "lldbsuite.test.basic_results_formatter.BasicResultsFormatter")
 
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name
@@ -710,10 +688,9 @@ def setupSysPath():
     os.environ["LLDB_LIB_DIR"] = lldbLibDir
     lldbImpLibDir = os.path.join(lldbLibDir, '..', 'lib') if sys.platform.startswith('win32') else lldbLibDir
     os.environ["LLDB_IMPLIB_DIR"] = lldbImpLibDir
-    if not configuration.noHeaders:
-        print("LLDB library dir:", os.environ["LLDB_LIB_DIR"])
-        print("LLDB import library dir:", os.environ["LLDB_IMPLIB_DIR"])
-        os.system('%s -v' % lldbtest_config.lldbExec)
+    print("LLDB library dir:", os.environ["LLDB_LIB_DIR"])
+    print("LLDB import library dir:", os.environ["LLDB_IMPLIB_DIR"])
+    os.system('%s -v' % lldbtest_config.lldbExec)
 
     # Assume lldb-mi is in same place as lldb
     # If not found, disable the lldb-mi tests
@@ -735,8 +712,7 @@ def setupSysPath():
         elif os.path.isdir(os.path.join(lldbRootDirectory, '.git')) and which("git") is not None:
             pipe = subprocess.Popen([which("git"), "svn", "info", lldbRootDirectory], stdout = subprocess.PIPE)
             configuration.svn_info = pipe.stdout.read()
-        if not configuration.noHeaders:
-            print(configuration.svn_info)
+        print(configuration.svn_info)
 
     lldbPythonDir = None # The directory that contains 'lldb/__init__.py'
     if configuration.lldbFrameworkPath:
@@ -747,10 +723,6 @@ def setupSysPath():
             print('Resources/Python/lldb/__init__.py was not found in ' + configuration.lldbFrameworkPath)
             sys.exit(-1)
     else:
-        # The '-i' option is used to skip looking for lldb.py in the build tree.
-        if configuration.ignore:
-            return
-        
         # If our lldb supports the -P option, use it to find the python path:
         init_in_python_dir = os.path.join('lldb', '__init__.py')
 
@@ -1129,10 +1101,9 @@ def run_suite():
         configuration.sdir_name = timestamp_started
     os.environ["LLDB_SESSION_DIRNAME"] = os.path.join(os.getcwd(), configuration.sdir_name)
 
-    if not configuration.noHeaders:
-        sys.stderr.write("\nSession logs for test failures/errors/unexpected successes"
-                         " will go into directory '%s'\n" % configuration.sdir_name)
-        sys.stderr.write("Command invoked: %s\n" % getMyCommandLine())
+    sys.stderr.write("\nSession logs for test failures/errors/unexpected successes"
+                        " will go into directory '%s'\n" % configuration.sdir_name)
+    sys.stderr.write("Command invoked: %s\n" % getMyCommandLine())
 
     if not os.path.isdir(configuration.sdir_name):
         try:
@@ -1263,8 +1234,6 @@ def run_suite():
 
             if configuration.parsable:
                 v = 0
-            elif configuration.progress_bar:
-                v = 1
             else:
                 v = configuration.verbose
 
@@ -1272,7 +1241,6 @@ def run_suite():
             if configuration.count == 1:
                 result = unittest2.TextTestRunner(stream=sys.stderr,
                                                   verbosity=v,
-                                                  failfast=configuration.failfast,
                                                   resultclass=test_result.LLDBTestResult).run(configuration.suite)
             else:
                 # We are invoking the same test suite more than once.  In this case,
@@ -1283,7 +1251,6 @@ def run_suite():
                
                     result = unittest2.TextTestRunner(stream=sys.stderr,
                                                       verbosity=v,
-                                                      failfast=configuration.failfast,
                                                       resultclass=test_result.LLDBTestResult).run(configuration.suite)
 
             configuration.failed = configuration.failed or not result.wasSuccessful()

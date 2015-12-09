@@ -1557,7 +1557,9 @@ def main(print_details_on_success, num_threads, test_subdir,
             results_formatter.counts_by_test_result_status(
                 EventBuilder.STATUS_FAILURE) +
             results_formatter.counts_by_test_result_status(
-                EventBuilder.STATUS_TIMEOUT)
+                EventBuilder.STATUS_TIMEOUT) +
+            results_formatter.counts_by_test_result_status(
+                EventBuilder.STATUS_EXCEPTIONAL_EXIT)
             )
 
         # Return with appropriate result code

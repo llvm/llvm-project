@@ -21,7 +21,7 @@
 ; CHECK:   store i32 %polly.access.B.load, i32* %tmp.preload.s2a
 ;
 ; CHECK: polly.merge_new_and_old:
-; CHECK:   %tmp.merge = phi i32 [ %tmp.final_reload, %polly.loop_exit ], [ %tmp, %do.cond ]
+; CHECK:   %tmp.merge = phi i32 [ %tmp.final_reload, %polly.exiting ], [ %tmp, %do.cond ]
 ; CHECK:   br label %do.end
 ;
 ; CHECK: do.end:

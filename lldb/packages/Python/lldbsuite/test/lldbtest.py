@@ -1535,30 +1535,6 @@ class Base(unittest2.TestCase):
         #Initialize debug_info
         self.debug_info = None
 
-    def runHooks(self, child=None, child_prompt=None, use_cmd_api=False):
-        """Perform the run hooks to bring lldb debugger to the desired state.
-
-        By default, expect a pexpect spawned child and child prompt to be
-        supplied (use_cmd_api=False).  If use_cmd_api is true, ignore the child
-        and child prompt and use self.runCmd() to run the hooks one by one.
-
-        Note that child is a process spawned by pexpect.spawn().  If not, your
-        test case is mostly likely going to fail.
-
-        See also dotest.py where lldb.runHooks are processed/populated.
-        """
-        if not configuration.runHooks:
-            self.skipTest("No runhooks specified for lldb, skip the test")
-        if use_cmd_api:
-            for hook in lldb.runhooks:
-                self.runCmd(hook)
-        else:
-            if not child or not child_prompt:
-                self.fail("Both child and child_prompt need to be defined.")
-            for hook in lldb.runHooks:
-                child.sendline(hook)
-                child.expect_exact(child_prompt)
-
     def setAsync(self, value):
         """ Sets async mode to True/False and ensures it is reset after the testcase completes."""
         old_async = self.dbg.GetAsync()

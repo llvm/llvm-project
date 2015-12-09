@@ -7,13 +7,13 @@
 ; CHECK-NOT:   %eps1.addr.0.ph.s2a = alloca double
 ;
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK:          %eps1.addr.0.ph.merge = phi double [ %eps1.addr.0.ph.final_reload, %polly.stmt.if.end.47.region_exiting.exit ], [ %eps1.addr.0.ph, %if.end.47.region_exiting ]
+; CHECK:          %eps1.addr.0.ph.merge = phi double [ %eps1.addr.0.ph.final_reload, %polly.exiting ], [ %eps1.addr.0.ph, %if.end.47.region_exiting ]
 ;
 ; CHECK-LABEL: polly.start:
 ; CHECK-NEXT:    store double %eps1, double* %eps1.s2a
 ;
-; CHECK-LABEL: polly.stmt.if.end.47.region_exiting.exit:
-; CEHCK-NEXT:     %eps1.addr.0.ph.final_reload = load double, double* %eps1.addr.0.s2a
+; CHECK-LABEL: polly.exiting:
+; CHECK-NEXT:     %eps1.addr.0.ph.final_reload = load double, double* %eps1.addr.0.s2a
 ;
 define void @dbisect(double* %c, double* %b, double %eps1, double* %eps2) {
 entry:

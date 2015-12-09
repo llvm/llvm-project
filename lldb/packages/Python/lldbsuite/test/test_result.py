@@ -77,16 +77,6 @@ class LLDBTestResult(unittest2.TextTestResult):
         # This counts from 1 .. suite.countTestCases().
         self.counter = 0
         (width, height) = LLDBTestResult.getTerminalSize()
-        self.progressbar = None
-        if width > 10 and not configuration.parsable and configuration.progress_bar:
-            try:
-                self.progressbar = progress.ProgressWithEvents(
-                    stdout=self.stream,
-                    start=0,
-                    end=configuration.suite.countTestCases(),
-                    width=width-10)
-            except:
-                self.progressbar = None
         self.results_formatter = configuration.results_formatter_object
 
     def _config_string(self, test):

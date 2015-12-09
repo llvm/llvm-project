@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK-NEXT: %tmp7.ph.merge = phi %struct.wibble* [ %tmp7.ph.final_reload, %polly.stmt.bb5 ], [ %tmp7.ph, %bb6.region_exiting ]
+; CHECK-NEXT: %tmp7.ph.merge = phi %struct.wibble* [ %tmp7.ph.final_reload, %polly.exiting ], [ %tmp7.ph, %bb6.region_exiting ]
 
 ; CHECK-LABEL: polly.stmt.bb3:
 ; CHECK-NEXT: %tmp2.s2a.reload = load %struct.wibble*, %struct.wibble** %tmp2.s2a

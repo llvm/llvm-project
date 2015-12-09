@@ -7,7 +7,7 @@
 ; CHECK:         %loop_carried.ph = phi float [ %newval.merge, %backedge ], [ undef, %entry ]
 ;
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK:         %newval.merge = phi float [ %newval.final_reload, %polly.stmt.polly.merge_new_and_old.exit ], [ %newval, %subregion_exit.region_exiting ]
+; CHECK:         %newval.merge = phi float [ %newval.final_reload, %polly.exiting ], [ %newval, %subregion_exit.region_exiting ]
 ;
 ; CHECK-LABEL: polly.start:
 ; CHECK:         store float %loop_carried.ph, float* %loop_carried.phiops

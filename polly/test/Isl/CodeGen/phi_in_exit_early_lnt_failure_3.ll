@@ -4,7 +4,7 @@
 ; produce the PHI node in the exit we are looking for.
 ;
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK-NEXT:     %n2ptr.2.ph.merge = phi i8* [ %n2ptr.2.ph.final_reload, %polly.merge ], [ %n2ptr.2.ph, %if.end.45.region_exiting ]
+; CHECK-NEXT:     %n2ptr.2.ph.merge = phi i8* [ %n2ptr.2.ph.final_reload, %polly.exiting ], [ %n2ptr.2.ph, %if.end.45.region_exiting ]
 ;
 ; CHECK-LABEL: if.end.45:
 ; CHECK-NEXT:     %n2ptr.2 = phi i8* [ %add.ptr25, %entry ], [ %add.ptr25, %while.cond.preheader ], [ %n2ptr.2.ph.merge, %polly.merge_new_and_old ]

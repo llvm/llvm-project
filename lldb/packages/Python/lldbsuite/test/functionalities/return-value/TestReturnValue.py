@@ -18,7 +18,7 @@ class ReturnValueTestCase(TestBase):
 
     @expectedFailureAll(oslist=["macosx","freebsd"], archs=["i386"])
     @expectedFailureAll(oslist=["linux"], compiler="clang", compiler_version=["<=", "3.6"], archs=["i386"])
-    @expectedFailureAll(bugnumber="llvm.org/pr25785", oslist=["android"], hostoslist=["windows"], compiler="gcc", archs=["i386"])
+    @expectedFailureAll(bugnumber="llvm.org/pr25785", hostoslist=["windows"], compiler="gcc", archs=["i386"], triple='.*-android')
     @expectedFailureWindows("llvm.org/pr24778")
     @add_test_categories(['pyapi'])
     def test_with_python(self):

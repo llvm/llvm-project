@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
 ; CHECK: polly.merge_new_and_old:
-; CHECK:   %result.ph.merge = phi float [ %result.ph.final_reload, %polly.merge ], [ %result.ph, %next.region_exiting ]
+; CHECK:   %result.ph.merge = phi float [ %result.ph.final_reload, %polly.exiting ], [ %result.ph, %next.region_exiting ]
 ; CHECK:   br label %next
 ;
 ; CHECK: next:

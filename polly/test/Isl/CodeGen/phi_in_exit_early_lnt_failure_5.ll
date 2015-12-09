@@ -4,7 +4,7 @@
 ; produce the PHI node in the exit we are looking for.
 ;
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK-NEXT:    %eps1.addr.0.ph.merge = phi double [ %eps1.addr.0.ph.final_reload, %polly.stmt.if.end.47.region_exiting.exit ], [ %eps1.addr.0.ph, %if.end.47.region_exiting ]
+; CHECK-NEXT:    %eps1.addr.0.ph.merge = phi double [ %eps1.addr.0.ph.final_reload, %polly.exiting ], [ %eps1.addr.0.ph, %if.end.47.region_exiting ]
 ; CHECK-NEXT:      br label %if.end.47
 ;
 ; CHECK-LABEL: if.end.47:

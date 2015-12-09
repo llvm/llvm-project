@@ -22,7 +22,7 @@ entry:
   br label %for.cond
 
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK:         %x.addr.0.merge = phi i32 [ %x.addr.0.final_reload, %polly.merge ], [ %x.addr.0, %for.cond ]
+; CHECK:         %x.addr.0.merge = phi i32 [ %x.addr.0.final_reload, %polly.exiting ], [ %x.addr.0, %for.cond ]
 ; CHECK:         ret i32 %x.addr.0.merge
 
 ; CHECK-LABEL: polly.start:

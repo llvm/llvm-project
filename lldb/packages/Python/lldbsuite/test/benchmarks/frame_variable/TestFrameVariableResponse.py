@@ -7,6 +7,7 @@ from __future__ import print_function
 import os, sys
 import lldb
 from lldbsuite.test import configuration
+from lldbsuite.test import lldbtest_config
 from lldbsuite.test.lldbbench import *
 
 class FrameVariableResponseBench(BenchBase):
@@ -15,10 +16,7 @@ class FrameVariableResponseBench(BenchBase):
 
     def setUp(self):
         BenchBase.setUp(self)
-        if configuration.bmExecutable:
-            self.exe = configuration.bmExecutable
-        else:
-            self.exe = lldbtest_config.lldbExec
+        self.exe = lldbtest_config.lldbExec
         if configuration.bmBreakpointSpec:
             self.break_spec = configuration.bmBreakpointSpec
         else:

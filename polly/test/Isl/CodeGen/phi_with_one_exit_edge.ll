@@ -2,7 +2,7 @@
 ;
 ;
 ; CHECK: polly.merge_new_and_old:
-; CHECK:   %sumA.merge = phi float [ %sumA.final_reload, %polly.loop_exit ], [ %sumA, %loopA ]
+; CHECK:   %sumA.merge = phi float [ %sumA.final_reload, %polly.exiting ], [ %sumA, %loopA ]
 ; CHECK:   br label %next
 ;
 ; CHECK: next:

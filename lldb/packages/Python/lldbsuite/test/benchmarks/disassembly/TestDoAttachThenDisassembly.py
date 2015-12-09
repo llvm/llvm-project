@@ -17,10 +17,7 @@ class AttachThenDisassemblyBench(BenchBase):
 
     def setUp(self):
         BenchBase.setUp(self)
-        if configuration.bmExecutable:
-            self.exe = configuration.bmExecutable
-        else:
-            self.exe = lldbtest_config.lldbExec
+        self.exe = lldbtest_config.lldbExec
         self.count = configuration.bmIterationCount
         if self.count <= 0:
             self.count = 10

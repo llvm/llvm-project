@@ -4,12 +4,12 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK-NEXT: %_s.sroa.343.0.ph5161118.ph.merge = phi i32 [ %_s.sroa.343.0.ph5161118.ph.final_reload, %polly.stmt.polly.merge_new_and_old.exit ], [ %_s.sroa.343.0.ph516.lcssa2357, %for.cond.981.region_exiting ]
+; CHECK-NEXT: %_s.sroa.343.0.ph5161118.ph.merge = phi i32 [ %_s.sroa.343.0.ph5161118.ph.final_reload, %polly.exiting ], [ %_s.sroa.343.0.ph516.lcssa2357, %for.cond.981.region_exiting ]
 
 ; CHECK-LABEL: for.cond.981:
 ; CHECK-NEXT:  %_s.sroa.343.0.ph5161118 = phi i32 [ undef, %for.cond ], [ %_s.sroa.343.0.ph5161118.ph.merge, %polly.merge_new_and_old ]
 
-; CHECK-LABEL: polly.stmt.polly.merge_new_and_old.exit:
+; CHECK-LABEL: polly.exiting:
 ; CHECK-NEXT: %_s.sroa.343.0.ph5161118.ph.final_reload = load i32, i32* %_s.sroa.343.0.ph5161118.s2a
 
 ; Function Attrs: nounwind uwtable

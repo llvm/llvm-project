@@ -113,6 +113,15 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
 
     @classmethod
     def _event_sort_key(cls, event):
+        """Returns the sort key to be used for a test event.
+
+        This method papers over the differences in a test method result vs. a
+        job (i.e. inferior process) result.
+
+        @param event a test result or job result event.
+        @return a key useful for sorting events by name (test name preferably,
+        then by test filename).
+        """
         if "test_name" in event:
             return event["test_name"]
         else:
@@ -142,8 +151,23 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
                 key=lambda x: self._event_sort_key(x[1]))
         return partitioned_events
 
+    def _print_banner(self, banner_text):
+        """Prints an ASCII banner around given text.
+
+        Output goes to the out file for the results formatter.
+
+        @param banner_text the text to display, with a banner
+        of '=' around the line above and line below.
+        """
+        banner_separator = "".ljust(len(banner_text), "=")
+
+        self.out_file.write("\n{}\n{}\n{}\n".format(
+            banner_separator,
+            banner_text,
+            banner_separator))
+
     def _print_summary_counts(
-        self, categories, result_events_by_status, extra_rows):
+            self, categories, result_events_by_status, extra_rows):
         """Prints summary counts for all categories.
 
         @param categories the list of categories on which to partition.
@@ -167,13 +191,7 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
                 if name_length > max_category_name_length:
                     max_category_name_length = name_length
 
-        banner_text = "Test Result Summary"
-        banner_separator = "".ljust(len(banner_text), "=")
-
-        self.out_file.write("\n{}\n{}\n{}\n".format(
-            banner_separator,
-            banner_text,
-            banner_separator))
+        self._print_banner("Test Result Summary")
 
         # Prepend extra rows
         if extra_rows is not None:
@@ -248,10 +266,11 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
                 if event["event"] == EventBuilder.TYPE_JOB_RESULT:
                     # Jobs status that couldn't be mapped to a test method
                     # doesn't have as much detail.
-                    self.out_file.write("{}: {}{} (no test method running)\n".format(
-                        detail_label,
-                        extra_info,
-                        event["test_filename"]))
+                    self.out_file.write(
+                        "{}: {}{} (no test method running)\n".format(
+                            detail_label,
+                            extra_info,
+                            event["test_filename"]))
                 else:
                     # Test-method events have richer detail, use that here.
                     test_relative_path = os.path.relpath(
@@ -298,7 +317,7 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
         have_details = self._has_printable_details(
             categories, result_events_by_status)
         if have_details:
-            self.out_file.write("\nDetails:\n")
+            self._print_banner("Issue Details")
             for category in categories:
                 self._report_category_details(
                     category, result_events_by_status)

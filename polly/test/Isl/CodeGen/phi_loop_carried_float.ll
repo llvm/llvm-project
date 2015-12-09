@@ -20,7 +20,7 @@
 ; CHECK-NEXT:    sext
 ; CHECK-NEXT:    store float 0.000000e+00, float* %tmp.0.phiops
 
-; CHECK-LABEL: polly.merge2:
+; CHECK-LABEL: polly.exiting:
 ; CHECK-NEXT:    br label %polly.merge_new_and_old
 
 ; CHECK-LABEL: polly.stmt.bb1{{[0-9]*}}:

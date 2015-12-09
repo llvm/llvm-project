@@ -40,8 +40,8 @@
 ; CODEGEN:   store float %U.load1, float* %U.f.preload.s2a
 ;
 ; CODEGEN:     polly.merge_new_and_old:
-; CODEGEN-DAG:   %U.f.merge = phi float [ %U.f.final_reload, %polly.loop_exit ], [ %U.f, %do.cond ]
-; CODEGEN-DAG:   %U.i.merge = phi i32 [ %5, %polly.loop_exit ], [ %U.i, %do.cond ]
+; CODEGEN-DAG:   %U.f.merge = phi float [ %U.f.final_reload, %polly.exiting ], [ %U.f, %do.cond ]
+; CODEGEN-DAG:   %U.i.merge = phi i32 [ %5, %polly.exiting ], [ %U.i, %do.cond ]
 ;
 ; CODEGEN: polly.loop_exit:
 ; CODEGEN-DAG:   %U.f.final_reload = load float, float* %U.f.preload.s2a

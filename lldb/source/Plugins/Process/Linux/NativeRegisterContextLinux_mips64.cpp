@@ -20,6 +20,7 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -416,14 +417,14 @@ CreateRegisterInfoInterface(const ArchSpec& target_arch)
     if (HostInfo::GetArchitecture().GetAddressByteSize() == 4)
     {
         // 32-bit hosts run with a RegisterContextLinux_mips context.
-        return new RegisterContextLinux_mips(target_arch);
+        return new RegisterContextLinux_mips(target_arch, NativeRegisterContextLinux_mips64::IsMSAAvailable());
     }
     else
     {
         assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
                "Register setting path assumes this is a 64-bit host");
         // mips64 hosts know how to work with 64-bit and 32-bit EXEs using the mips64 register context.
-        return new RegisterContextLinux_mips64 (target_arch);
+        return new RegisterContextLinux_mips64 (target_arch, NativeRegisterContextLinux_mips64::IsMSAAvailable());
     }
 }
 
@@ -1104,9 +1105,12 @@ NativeRegisterContextLinux_mips64::IsMSA(uint32_t reg_index) const
 bool
 NativeRegisterContextLinux_mips64::IsMSAAvailable()
 {
-    Error error = NativeRegisterContextLinux::ReadRegisterSet(&m_msa, sizeof(MSA_linux_mips), NT_MIPS_MSA);
+    MSA_linux_mips msa_buf;
+    unsigned int regset = NT_MIPS_MSA;
 
-    if (error.Success() && m_msa.mir)
+    Error error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, Host::GetCurrentProcessID(), static_cast<void *>(&regset), &msa_buf, sizeof(MSA_linux_mips));
+
+    if (error.Success() && msa_buf.mir)
     {
         return true;
     }

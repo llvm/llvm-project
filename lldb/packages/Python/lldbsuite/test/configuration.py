@@ -86,35 +86,19 @@ compilers = None    # Must be initialized after option parsing
 # just that.
 cflags_extras = ''
 
-# Full path of the benchmark executable, as specified by the '-e' option.
-bmExecutable = None
-# The breakpoint specification of bmExecutable, as specified by the '-x' option.
+# The breakpoint specification of the benchmark exe, as specified by the '-x' option.
 bmBreakpointSpec = None
 # The benchmark iteration count, as specified by the '-y' option.
 bmIterationCount = -1
 
-# By default, failfast is False.  Use '-F' to overwrite it.
-failfast = False
-
 # The filters (testclass.testmethod) used to admit tests into our test suite.
 filters = []
-
-# The runhooks is a list of lldb commands specifically for the debugger.
-# Use '-k' to specify a runhook.
-runHooks = []
-
-# Ignore the build search path relative to this script to locate the lldb.py module.
-ignore = False
 
 # By default, we do not skip build and cleanup.  Use '-S' option to override.
 skip_build_and_cleanup = False
 
 # By default, we skip long running test case.  Use '-l' option to override.
 skip_long_running_test = True
-
-# By default, we print the build dir, lldb version, and svn info.  Use '-n' option to
-# turn it off.
-noHeaders = False
 
 # Parsable mode silences headers, and any other output this script might generate, and instead
 # prints machine-readable output similar to what clang tests produce.
@@ -145,9 +129,6 @@ svn_silent = True
 
 # Default verbosity is 0.
 verbose = 1
-
-# Set to True only if verbose is 0 and LLDB trace mode is off.
-progress_bar = False
 
 # By default, search from the script directory.
 # We can't use sys.path[0] to determine the script directory
