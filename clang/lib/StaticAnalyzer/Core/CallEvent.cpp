@@ -605,7 +605,7 @@ void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
     Params = LambdaOperatorDecl->parameters();
 
     // For blocks converted from a C++ lambda, the callee declaration is the
-    // operator() method on the the lambda so we bind "this" to
+    // operator() method on the lambda so we bind "this" to
     // the lambda captured by the block.
     const VarRegion *CapturedLambdaRegion = getRegionStoringCapturedLambda();
     SVal ThisVal = loc::MemRegionVal(CapturedLambdaRegion);

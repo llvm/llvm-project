@@ -545,12 +545,11 @@ public:
     //
     // Here R is the return type of the lambda and P1, P2, ... are
     // its parameter types. 'Lambda' is a fake VarDecl captured by the block
-    // that is initialized to a copy of the the lambda.
+    // that is initialized to a copy of the lambda.
     //
     // Sema leaves the body of a lambda-converted block empty (it is
     // produced by CodeGen), so we can't analyze it directly. Instead, we skip
-    // the block body and analyze the operator() method on the the captured
-    // lambda.
+    // the block body and analyze the operator() method on the captured lambda.
     const VarDecl *LambdaVD = getRegionStoringCapturedLambda()->getDecl();
     const CXXRecordDecl *LambdaDecl = LambdaVD->getType()->getAsCXXRecordDecl();
     CXXMethodDecl* LambdaCallOperator = LambdaDecl->getLambdaCallOperator();

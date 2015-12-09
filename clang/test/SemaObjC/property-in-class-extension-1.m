@@ -58,6 +58,6 @@
 @property (atomic, nonatomic, readonly, readwrite) float propertyName; // expected-error {{property attributes 'readonly' and 'readwrite' are mutually exclusive}} \
 		// expected-error {{property attributes 'atomic' and 'nonatomic' are mutually exclusive}}
 
-@property (atomic, readwrite) float propertyName2; // expected-warning {{'atomic' attribute on property 'propertyName2' does not match the property inherited from radar12214070}}
+@property (atomic, readwrite) float propertyName2; // expected-warning {{'atomic' attribute on property 'propertyName2' does not match the property inherited from 'radar12214070'}}
 @end
 

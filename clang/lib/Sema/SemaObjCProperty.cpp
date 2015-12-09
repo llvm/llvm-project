@@ -339,6 +339,54 @@ static bool LocPropertyAttribute( ASTContext &Context, const char *attrName,
   
 }
 
+/// Check for a mismatch in the atomicity of the given properties.
+static void checkAtomicPropertyMismatch(Sema &S,
+                                        ObjCPropertyDecl *OldProperty,
+                                        ObjCPropertyDecl *NewProperty) {
+  // If the atomicity of both matches, we're done.
+  bool OldIsAtomic =
+    (OldProperty->getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nonatomic) == 0;
+  bool NewIsAtomic =
+    (NewProperty->getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nonatomic) == 0;
+  if (OldIsAtomic == NewIsAtomic) return;
+
+  // Determine whether the given property is readonly and implicitly
+  // atomic.
+  auto isImplicitlyReadonlyAtomic = [](ObjCPropertyDecl *Property) -> bool {
+    // Is it readonly?
+    auto Attrs = Property->getPropertyAttributes();
+    if ((Attrs & ObjCDeclSpec::DQ_PR_readonly) == 0) return false;
+
+    // Is it nonatomic?
+    if (Attrs & ObjCDeclSpec::DQ_PR_nonatomic) return false;
+
+    // Was 'atomic' specified directly?
+    if (Property->getPropertyAttributesAsWritten() & ObjCDeclSpec::DQ_PR_atomic)
+      return false;
+
+    return true;
+  };
+
+  // One of the properties is atomic; if it's a readonly property, and
+  // 'atomic' wasn't explicitly specified, we're okay.
+  if ((OldIsAtomic && isImplicitlyReadonlyAtomic(OldProperty)) ||
+      (NewIsAtomic && isImplicitlyReadonlyAtomic(NewProperty)))
+    return;
+
+  // Diagnose the conflict.
+  const IdentifierInfo *OldContextName;
+  auto *OldDC = OldProperty->getDeclContext();
+  if (auto Category = dyn_cast<ObjCCategoryDecl>(OldDC))
+    OldContextName = Category->getClassInterface()->getIdentifier();
+  else
+    OldContextName = cast<ObjCContainerDecl>(OldDC)->getIdentifier();
+
+  S.Diag(NewProperty->getLocation(), diag::warn_property_attribute)
+    << NewProperty->getDeclName() << "atomic"
+    << OldContextName;
+  S.Diag(OldProperty->getLocation(), diag::note_property_declare);
+}
+
 ObjCPropertyDecl *
 Sema::HandlePropertyInClassExtension(Scope *S,
                                      SourceLocation AtLoc,
@@ -464,20 +512,7 @@ Sema::HandlePropertyInClassExtension(Scope *S,
   
   // Check that atomicity of property in class extension matches the previous
   // declaration.
-  unsigned PDeclAtomicity =
-    PDecl->getPropertyAttributes() & (ObjCDeclSpec::DQ_PR_atomic | ObjCDeclSpec::DQ_PR_nonatomic);
-  unsigned PIDeclAtomicity =
-    PIDecl->getPropertyAttributes() & (ObjCDeclSpec::DQ_PR_atomic | ObjCDeclSpec::DQ_PR_nonatomic);
-  if (PDeclAtomicity != PIDeclAtomicity) {
-    bool PDeclAtomic = (!PDeclAtomicity || PDeclAtomicity & ObjCDeclSpec::DQ_PR_atomic);
-    bool PIDeclAtomic = (!PIDeclAtomicity || PIDeclAtomicity & ObjCDeclSpec::DQ_PR_atomic);
-    if (PDeclAtomic != PIDeclAtomic) {
-      Diag(PDecl->getLocation(), diag::warn_property_attribute)
-        << PDecl->getDeclName() << "atomic"
-        << cast<ObjCContainerDecl>(PIDecl->getDeclContext())->getName();
-      Diag(PIDecl->getLocation(), diag::note_property_declare);
-    }
-  }
+  checkAtomicPropertyMismatch(*this, PIDecl, PDecl);
 
   *isOverridingProperty = true;
 
@@ -1326,12 +1361,10 @@ Sema::DiagnosePropertyMismatch(ObjCPropertyDecl *Property,
     }
   }
 
-  if ((CAttr & ObjCPropertyDecl::OBJC_PR_nonatomic)
-      != (SAttr & ObjCPropertyDecl::OBJC_PR_nonatomic)) {
-    Diag(Property->getLocation(), diag::warn_property_attribute)
-      << Property->getDeclName() << "atomic" << inheritedName;
-    Diag(SuperProperty->getLocation(), diag::note_property_declare);
-  }
+  // Check for nonatomic; note that nonatomic is effectively
+  // meaningless for readonly properties, so don't diagnose if the
+  // atomic property is 'readonly'.
+  checkAtomicPropertyMismatch(*this, SuperProperty, Property);
   if (Property->getSetterName() != SuperProperty->getSetterName()) {
     Diag(Property->getLocation(), diag::warn_property_attribute)
       << Property->getDeclName() << "setter" << inheritedName;

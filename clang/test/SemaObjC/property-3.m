@@ -29,5 +29,5 @@ typedef signed char BOOL;
 
 @interface EKCalendar ()  <EKProtocolMutableCalendar>
 @property (nonatomic, assign) BOOL allowReminders;
-@property (nonatomic, assign) BOOL allowNonatomicProperty; // expected-warning {{'atomic' attribute on property 'allowNonatomicProperty' does not match the property inherited from EKProtocolCalendar}}
+@property (nonatomic, assign) BOOL allowNonatomicProperty; // expected-warning {{'atomic' attribute on property 'allowNonatomicProperty' does not match the property inherited from 'EKProtocolCalendar'}}
 @end
