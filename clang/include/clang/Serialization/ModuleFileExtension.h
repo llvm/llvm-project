@@ -25,7 +25,8 @@ namespace clang {
 
 class ASTReader;
 class ASTWriter;
-
+class Sema;
+  
 namespace serialization {
   class ModuleFile;
 } // end namespace serialization
@@ -79,7 +80,7 @@ public:
   /// The default implementation of this function simply returns the
   /// hash code as given, so the presence/absence of this extension
   /// does not distinguish module files.
-  virtual llvm::hash_code hashExtension(llvm::hash_code Code) const;
+  virtual llvm::hash_code hashExtension(llvm::hash_code c) const;
 
   /// Create a new module file extension writer, which will be
   /// responsible for writing the extension contents into a particular
@@ -120,7 +121,8 @@ public:
   /// Responsible for writing the contents of the extension into the
   /// given stream. All of the contents should be written into custom
   /// records with IDs >= FIRST_EXTENSION_RECORD_ID.
-  virtual void writeExtensionContents(llvm::BitstreamWriter &Stream) = 0;
+  virtual void writeExtensionContents(Sema &SemaRef,
+                                      llvm::BitstreamWriter &Stream) = 0;
 };
 
 /// Abstract base class that reads a module file extension block from

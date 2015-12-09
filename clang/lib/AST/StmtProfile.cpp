@@ -468,6 +468,9 @@ void OMPClauseProfiler::VisitOMPPriorityClause(const OMPPriorityClause *C) {
 void OMPClauseProfiler::VisitOMPGrainsizeClause(const OMPGrainsizeClause *C) {
   Profiler->VisitStmt(C->getGrainsize());
 }
+void OMPClauseProfiler::VisitOMPNumTasksClause(const OMPNumTasksClause *C) {
+  Profiler->VisitStmt(C->getNumTasks());
+}
 }
 
 void

@@ -1711,6 +1711,17 @@ public:
                                                 EndLoc);
   }
 
+  /// \brief Build a new OpenMP 'num_tasks' clause.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPNumTasksClause(Expr *NumTasks, SourceLocation StartLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPNumTasksClause(NumTasks, StartLoc, LParenLoc,
+                                               EndLoc);
+  }
+
   /// \brief Rebuild the operand to an Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -7819,6 +7830,16 @@ TreeTransform<Derived>::TransformOMPGrainsizeClause(OMPGrainsizeClause *C) {
   if (E.isInvalid())
     return nullptr;
   return getDerived().RebuildOMPGrainsizeClause(
+      E.get(), C->getLocStart(), C->getLParenLoc(), C->getLocEnd());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPNumTasksClause(OMPNumTasksClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getNumTasks());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPNumTasksClause(
       E.get(), C->getLocStart(), C->getLParenLoc(), C->getLocEnd());
 }
 

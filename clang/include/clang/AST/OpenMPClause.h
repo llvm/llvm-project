@@ -2976,6 +2976,58 @@ public:
   }
 };
 
+/// \brief This represents 'num_tasks' clause in the '#pragma omp ...'
+/// directive.
+///
+/// \code
+/// #pragma omp taskloop num_tasks(4)
+/// \endcode
+/// In this example directive '#pragma omp taskloop' has clause 'num_tasks'
+/// with single expression '4'.
+///
+class OMPNumTasksClause : public OMPClause {
+  friend class OMPClauseReader;
+  /// \brief Location of '('.
+  SourceLocation LParenLoc;
+  /// \brief Safe iteration space distance.
+  Stmt *NumTasks;
+
+  /// \brief Set safelen.
+  void setNumTasks(Expr *Size) { NumTasks = Size; }
+
+public:
+  /// \brief Build 'num_tasks' clause.
+  ///
+  /// \param Size Expression associated with this clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  ///
+  OMPNumTasksClause(Expr *Size, SourceLocation StartLoc,
+                    SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_num_tasks, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        NumTasks(Size) {}
+
+  /// \brief Build an empty clause.
+  ///
+  explicit OMPNumTasksClause()
+      : OMPClause(OMPC_num_tasks, SourceLocation(), SourceLocation()),
+        LParenLoc(SourceLocation()), NumTasks(nullptr) {}
+
+  /// \brief Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  /// \brief Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// \brief Return safe iteration space distance.
+  Expr *getNumTasks() const { return cast_or_null<Expr>(NumTasks); }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_num_tasks;
+  }
+
+  child_range children() { return child_range(&NumTasks, &NumTasks + 1); }
+};
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

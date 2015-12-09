@@ -44,6 +44,9 @@ int tmain(T argc, S **argv) {
   #pragma omp taskloop grainsize(-1) // expected-error {{argument to 'grainsize' clause must be a strictly positive integer value}}
   for (int i = 0; i < 10; ++i)
     foo();
+  #pragma omp taskloop grainsize(argc) num_tasks(argc) // expected-error {{'num_tasks' and 'grainsize' clause are mutually exclusive and may not appear on the same directive}} expected-note {{'grainsize' clause is specified here}}
+  for (int i = 0; i < 10; ++i)
+    foo();
 
   return 0;
 }
@@ -86,6 +89,9 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i)
     foo();
   #pragma omp taskloop grainsize(-1) // expected-error {{argument to 'grainsize' clause must be a strictly positive integer value}}
+  for (int i = 0; i < 10; ++i)
+    foo();
+  #pragma omp taskloop grainsize(argc) num_tasks(argc) // expected-error {{'num_tasks' and 'grainsize' clause are mutually exclusive and may not appear on the same directive}} expected-note {{'grainsize' clause is specified here}}
   for (int i = 0; i < 10; ++i)
     foo();
 

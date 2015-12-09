@@ -619,7 +619,7 @@ namespace {
     std::vector<std::string> uniques;
     std::set<std::string> unique_set(enums.begin(), enums.end());
     for (const auto &i : enums) {
-      std::set<std::string>::iterator set_i = unique_set.find(i);
+      auto set_i = unique_set.find(i);
       if (set_i != unique_set.end()) {
         uniques.push_back(i);
         unique_set.erase(set_i);
@@ -665,8 +665,7 @@ namespace {
       OS << type << " " << getUpperName();
     }
     void writeDeclarations(raw_ostream &OS) const override {
-      std::vector<std::string>::const_iterator i = uniques.begin(),
-                                               e = uniques.end();
+      auto i = uniques.cbegin(), e = uniques.cend();
       // The last one needs to not have a comma.
       --e;
 
@@ -771,8 +770,7 @@ namespace {
     bool isVariadicEnumArg() const override { return true; }
     
     void writeDeclarations(raw_ostream &OS) const override {
-      std::vector<std::string>::const_iterator i = uniques.begin(),
-                                               e = uniques.end();
+      auto i = uniques.cbegin(), e = uniques.cend();
       // The last one needs to not have a comma.
       --e;
 
@@ -958,7 +956,7 @@ namespace {
     }
 
     void writeTemplateInstantiation(raw_ostream &OS) const override {
-      OS << "      " << getType() << " *tempInst" << getUpperName()
+      OS << "      auto *tempInst" << getUpperName()
          << " = new (C, 16) " << getType()
          << "[A->" << getLowerName() << "_size()];\n";
       OS << "      {\n";
@@ -1537,7 +1535,7 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
       }
       OS << ", SourceRange Loc = SourceRange()";
       OS << ") {\n";
-      OS << "    " << R.getName() << "Attr *A = new (Ctx) " << R.getName();
+      OS << "    auto *A = new (Ctx) " << R.getName();
       OS << "Attr(Loc, Ctx, ";
       for (auto const &ai : Args) {
         if (ai->isFake() && !emitFake) continue;
@@ -1654,7 +1652,7 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
     OS << "};\n\n";
   }
 
-  OS << "#endif\n";
+  OS << "#endif // LLVM_CLANG_ATTR_CLASSES_INC\n";
 }
 
 // Emits the class method definitions for attributes.
@@ -1729,7 +1727,7 @@ void EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
 static void EmitAttrList(raw_ostream &OS, StringRef Class,
                          const std::vector<Record*> &AttrList) {
-  std::vector<Record*>::const_iterator i = AttrList.begin(), e = AttrList.end();
+  auto i = AttrList.cbegin(), e = AttrList.cend();
 
   if (i != e) {
     // Move the end iterator back to emit the last attribute.
@@ -1881,7 +1879,7 @@ void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
     OS << "  case attr::" << R.getName() << ": {\n";
     Args = R.getValueAsListOfDefs("Args");
     if (R.isSubClassOf(InhClass) || !Args.empty())
-      OS << "    const " << R.getName() << "Attr *SA = cast<" << R.getName()
+      OS << "    const auto *SA = cast<" << R.getName()
          << "Attr>(A);\n";
     if (R.isSubClassOf(InhClass))
       OS << "    Record.push_back(SA->isInherited());\n";
@@ -2045,9 +2043,7 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   GenerateHasAttrSpellingStringSwitch(Pragma, OS, "Pragma");
   OS << "case AttrSyntax::CXX: {\n";
   // C++11-style attributes are further split out based on the Scope.
-  for (std::map<std::string, std::vector<Record *>>::iterator I = CXX.begin(),
-                                                              E = CXX.end();
-       I != E; ++I) {
+  for (auto I = CXX.cbegin(), E = CXX.cend(); I != E; ++I) {
     if (I != CXX.begin())
       OS << " else ";
     if (I->first.empty())
@@ -2197,7 +2193,7 @@ void EmitClangAttrTemplateInstantiate(RecordKeeper &Records, raw_ostream &OS) {
       continue;
     }
 
-    OS << "      const " << R.getName() << "Attr *A = cast<"
+    OS << "      const auto *A = cast<"
        << R.getName() << "Attr>(At);\n";
     bool TDependent = R.getValueAsBit("TemplateDependent");
 
@@ -2405,7 +2401,7 @@ static std::string GenerateCustomAppertainsTo(const Record &Subject,
   // If this code has already been generated, simply return the previous
   // instance of it.
   static std::set<std::string> CustomSubjectSet;
-  std::set<std::string>::iterator I = CustomSubjectSet.find(FnName);
+  auto I = CustomSubjectSet.find(FnName);
   if (I != CustomSubjectSet.end())
     return *I;
 
@@ -2419,7 +2415,7 @@ static std::string GenerateCustomAppertainsTo(const Record &Subject,
   }
 
   OS << "static bool " << FnName << "(const Decl *D) {\n";
-  OS << "  if (const " << GetSubjectWithSuffix(Base) << " *S = dyn_cast<";
+  OS << "  if (const auto *S = dyn_cast<";
   OS << GetSubjectWithSuffix(Base);
   OS << ">(D))\n";
   OS << "    return " << Subject.getValueAsString("CheckCode") << ";\n";
@@ -2519,7 +2515,7 @@ static std::string GenerateLangOptRequirements(const Record &R,
   // If this code has already been generated, simply return the previous
   // instance of it.
   static std::set<std::string> CustomLangOptsSet;
-  std::set<std::string>::iterator I = CustomLangOptsSet.find(FnName);
+  auto I = CustomLangOptsSet.find(FnName);
   if (I != CustomLangOptsSet.end())
     return *I;
 
@@ -2582,7 +2578,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
   // If this code has already been generated, simply return the previous
   // instance of it.
   static std::set<std::string> CustomTargetSet;
-  std::set<std::string>::iterator I = CustomTargetSet.find(FnName);
+  auto I = CustomTargetSet.find(FnName);
   if (I != CustomTargetSet.end())
     return *I;
 
@@ -2800,13 +2796,13 @@ void EmitClangAttrDump(RecordKeeper &Records, raw_ostream &OS) {
 
     Args = R.getValueAsListOfDefs("Args");
     if (!Args.empty()) {
-      OS << "    const " << R.getName() << "Attr *SA = cast<" << R.getName()
+      OS << "    const auto *SA = cast<" << R.getName()
          << "Attr>(A);\n";
       for (const auto *Arg : Args)
         createArgument(*Arg, R.getName())->writeDump(OS);
 
-      for (auto AI = Args.begin(), AE = Args.end(); AI != AE; ++AI)
-        createArgument(**AI, R.getName())->writeDumpChildren(OS);
+      for (const auto *AI : Args)
+        createArgument(*AI, R.getName())->writeDumpChildren(OS);
     }
     OS <<
       "    break;\n"

@@ -89,7 +89,7 @@ void redecl_test(void *p) {
 __attribute__((__nonnull__))
 int evil_nonnull_func(int* pointer, void * pv)
 {
-   if (pointer == NULL) {  // expected-warning {{comparison of nonnull parameter 'pointer' equal to a null pointer is false on first encounter}}
+   if (pointer == NULL) {  // expected-warning {{comparison of nonnull parameter 'pointer' equal to a null pointer is 'false' on first encounter}}
      return 0;
    } else {
      return *pointer;
@@ -101,13 +101,13 @@ int evil_nonnull_func(int* pointer, void * pv)
    else
      return *pointer;
 
-   if (pv == NULL) {} // expected-warning {{comparison of nonnull parameter 'pv' equal to a null pointer is false on first encounter}}
+   if (pv == NULL) {} // expected-warning {{comparison of nonnull parameter 'pv' equal to a null pointer is 'false' on first encounter}}
 }
 
 void set_param_to_null(int**);
 int another_evil_nonnull_func(int* pointer, char ch, void * pv) __attribute__((nonnull(1, 3)));
 int another_evil_nonnull_func(int* pointer, char ch, void * pv) {
-   if (pointer == NULL) { // expected-warning {{comparison of nonnull parameter 'pointer' equal to a null pointer is false on first encounter}}
+   if (pointer == NULL) { // expected-warning {{comparison of nonnull parameter 'pointer' equal to a null pointer is 'false' on first encounter}}
      return 0;
    } else {
      return *pointer;
@@ -119,7 +119,7 @@ int another_evil_nonnull_func(int* pointer, char ch, void * pv) {
    else
      return *pointer;
 
-   if (pv == NULL) {} // expected-warning {{comparison of nonnull parameter 'pv' equal to a null pointer is false on first encounter}}
+   if (pv == NULL) {} // expected-warning {{comparison of nonnull parameter 'pv' equal to a null pointer is 'false' on first encounter}}
 }
 
 extern void *returns_null(void**);
@@ -152,4 +152,18 @@ void pr21668_2(__attribute__((nonnull)) const char *p) {
   p = 0;
   if (p) // No warning
     ;
+}
+
+__attribute__((returns_nonnull)) void *returns_nonnull_whee();
+
+void returns_nonnull_warning_tests() {
+  if (returns_nonnull_whee() == NULL) {} // expected-warning {{comparison of nonnull function call 'returns_nonnull_whee()' equal to a null pointer is 'false' on first encounter}}
+
+  if (returns_nonnull_whee() != NULL) {} // expected-warning {{comparison of nonnull function call 'returns_nonnull_whee()' not equal to a null pointer is 'true' on first encounter}}
+
+  if (returns_nonnull_whee()) {} // expected-warning {{nonnull function call 'returns_nonnull_whee()' will evaluate to 'true' on first encounter}}
+  if (!returns_nonnull_whee()) {} // expected-warning {{nonnull function call 'returns_nonnull_whee()' will evaluate to 'true' on first encounter}}
+
+  int and_again = !returns_nonnull_whee(); // expected-warning {{nonnull function call 'returns_nonnull_whee()' will evaluate to 'true' on first encounter}}
+  and_again = !returns_nonnull_whee(); // expected-warning {{nonnull function call 'returns_nonnull_whee()' will evaluate to 'true' on first encounter}}
 }
