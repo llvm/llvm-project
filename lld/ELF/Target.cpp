@@ -88,6 +88,20 @@ public:
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint8_t *PairedLoc = nullptr) const override;
+  bool isTlsOptimized(unsigned Type, const SymbolBody *S) const override;
+  unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                               uint64_t P, uint64_t SA,
+                               const SymbolBody &S) const override;
+
+private:
+  void relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                         uint64_t SA) const;
+  void relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                         uint64_t SA) const;
+  void relocateTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                         uint64_t SA) const;
+  void relocateTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                         uint64_t SA) const;
 };
 
 class X86_64TargetInfo final : public TargetInfo {
@@ -260,7 +274,7 @@ bool X86TargetInfo::isTlsDynReloc(unsigned Type) const {
   if (Type == R_386_TLS_LE || Type == R_386_TLS_LE_32 ||
       Type == R_386_TLS_GOTIE)
     return Config->Shared;
-  return false;
+  return Type == R_386_TLS_GD;
 }
 
 void X86TargetInfo::writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
@@ -311,8 +325,11 @@ bool X86TargetInfo::relocNeedsCopy(uint32_t Type, const SymbolBody &S) const {
 }
 
 bool X86TargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
-  return Type == R_386_TLS_GOTIE || Type == R_386_GOT32 ||
-         relocNeedsPlt(Type, S);
+  if (S.isTLS() && Type == R_386_TLS_GD)
+    return Target->isTlsOptimized(Type, &S) && canBePreempted(&S, true);
+  if (Type == R_386_TLS_GOTIE)
+    return !isTlsOptimized(Type, &S);
+  return Type == R_386_GOT32 || relocNeedsPlt(Type, S);
 }
 
 bool X86TargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
@@ -356,6 +373,121 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   default:
     error("unrecognized reloc " + Twine(Type));
   }
+}
+
+bool X86TargetInfo::isTlsOptimized(unsigned Type, const SymbolBody *S) const {
+  if (Config->Shared || (S && !S->isTLS()))
+    return false;
+  return Type == R_386_TLS_LDO_32 || Type == R_386_TLS_LDM ||
+         Type == R_386_TLS_GD ||
+         (Type == R_386_TLS_GOTIE && !canBePreempted(S, true));
+}
+
+unsigned X86TargetInfo::relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
+                                            uint32_t Type, uint64_t P,
+                                            uint64_t SA,
+                                            const SymbolBody &S) const {
+  switch (Type) {
+  case R_386_TLS_GD:
+    if (canBePreempted(&S, true))
+      relocateTlsGdToIe(Loc, BufEnd, P, SA);
+    else
+      relocateTlsGdToLe(Loc, BufEnd, P, SA);
+    // The next relocation should be against __tls_get_addr, so skip it
+    return 1;
+  case R_386_TLS_GOTIE:
+    relocateTlsIeToLe(Loc, BufEnd, P, SA);
+    return 0;
+  case R_386_TLS_LDM:
+    relocateTlsLdToLe(Loc, BufEnd, P, SA);
+    // The next relocation should be against __tls_get_addr, so skip it
+    return 1;
+  case R_386_TLS_LDO_32:
+    relocateOne(Loc, BufEnd, R_386_TLS_LE, P, SA);
+    return 0;
+  }
+  llvm_unreachable("Unknown TLS optimization");
+}
+
+// "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.1
+// IA-32 Linker Optimizations, http://www.akkadia.org/drepper/tls.pdf) shows
+// how GD can be optimized to IE:
+//   leal x@tlsgd(, %ebx, 1),
+//   call __tls_get_addr@plt
+// Is converted to:
+//   movl %gs:0, %eax
+//   addl x@gotntpoff(%ebx), %eax
+void X86TargetInfo::relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                                      uint64_t SA) const {
+  const uint8_t Inst[] = {
+      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
+      0x03, 0x83, 0x00, 0x00, 0x00, 0x00  // addl 0(%ebx), %eax
+  };
+  memcpy(Loc - 3, Inst, sizeof(Inst));
+  relocateOne(Loc + 5, BufEnd, R_386_32, P,
+              SA - Out<ELF32LE>::Got->getVA() -
+                  Out<ELF32LE>::Got->getNumEntries() * 4);
+}
+
+// GD can be optimized to LE:
+//   leal x@tlsgd(, %ebx, 1),
+//   call __tls_get_addr@plt
+// Can be converted to:
+//   movl %gs:0,%eax
+//   addl $x@ntpoff,%eax
+// But gold emits subl $foo@tpoff,%eax instead of addl.
+// These instructions are completely equal in behavior.
+// This method generates subl to be consistent with gold.
+void X86TargetInfo::relocateTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                                      uint64_t SA) const {
+  const uint8_t Inst[] = {
+      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
+      0x81, 0xe8, 0x00, 0x00, 0x00, 0x00  // subl 0(%ebx), %eax
+  };
+  memcpy(Loc - 3, Inst, sizeof(Inst));
+  relocateOne(Loc + 5, BufEnd, R_386_32, P,
+              Out<ELF32LE>::TlsPhdr->p_memsz - SA);
+}
+
+// LD can be optimized to LE:
+//   leal foo(%reg),%eax
+//   call ___tls_get_addr
+// Is converted to:
+//   movl %gs:0,%eax
+//   nop
+//   leal 0(%esi,1),%esi
+void X86TargetInfo::relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                                      uint64_t SA) const {
+  const uint8_t Inst[] = {
+      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0,%eax
+      0x90,                               // nop
+      0x8d, 0x74, 0x26, 0x00              // leal 0(%esi,1),%esi
+  };
+  memcpy(Loc - 2, Inst, sizeof(Inst));
+}
+
+// In some conditions, R_386_TLS_GOTIE relocation can be optimized to
+// R_386_TLS_LE so that it does not use GOT.
+// This function does that. Read "ELF Handling For Thread-Local Storage,
+// 5.1  IA-32 Linker Optimizations" (http://www.akkadia.org/drepper/tls.pdf)
+// by Ulrich Drepper for details.
+void X86TargetInfo::relocateTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
+                                      uint64_t SA) const {
+  // Ulrich's document section 6.2 says that @gotntpoff can be
+  // used with MOVL or ADDL instructions.
+  // "MOVL foo@GOTTPOFF(%RIP), %REG" is transformed to "MOVL $foo, %REG".
+  // "ADDL foo@GOTNTPOFF(%RIP), %REG" is transformed to "LEAL foo(%REG), %REG"
+  // Note: gold converts to ADDL instead of LEAL.
+  uint8_t *Inst = Loc - 2;
+  uint8_t *RegSlot = Loc - 1;
+  uint8_t Reg = (Loc[-1] >> 3) & 7;
+  bool IsMov = *Inst == 0x8b;
+  *Inst = IsMov ? 0xc7 : 0x8d;
+  if (IsMov)
+    *RegSlot = 0xc0 | ((*RegSlot >> 3) & 7);
+  else
+    *RegSlot = 0x80 | Reg | (Reg << 3);
+  relocateOne(Loc, BufEnd, R_386_TLS_LE, P, SA);
 }
 
 X86_64TargetInfo::X86_64TargetInfo() {

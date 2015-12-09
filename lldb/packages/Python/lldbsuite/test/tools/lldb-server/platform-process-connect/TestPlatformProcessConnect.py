@@ -28,7 +28,7 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         new_debugger = lldb.SBDebugger.Create()
         new_debugger.SetAsync(False)
-        def del_debugger():
+        def del_debugger(new_debugger=new_debugger):
             del new_debugger
         self.addTearDownHook(del_debugger)
 

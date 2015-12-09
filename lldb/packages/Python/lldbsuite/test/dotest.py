@@ -568,16 +568,25 @@ def createSocketToLocalPort(port):
 
 def setupTestResults():
     """Sets up test results-related objects based on arg settings."""
+    # Setup the results formatter configuration.
+    formatter_config = result_formatter.FormatterConfig()
+    formatter_config.filename = configuration.results_filename
+    formatter_config.formatter_name = configuration.results_formatter_name
+    formatter_config.formatter_options = (
+        configuration.results_formatter_options)
+    formatter_config.port = configuration.results_port
 
     # Create the results formatter.
-    formatter_spec = result_formatter.create_results_formatter()
+    formatter_spec = result_formatter.create_results_formatter(
+        formatter_config)
     if formatter_spec is not None and formatter_spec.formatter is not None:
         configuration.results_formatter_object = formatter_spec.formatter
 
         # Send an intialize message to the formatter.
         initialize_event = EventBuilder.bare_event("initialize")
         if isMultiprocessTestRunner():
-            if configuration.test_runner_name is not None and configuration.test_runner_name == "serial":
+            if (configuration.test_runner_name is not None and
+                    configuration.test_runner_name == "serial"):
                 # Only one worker queue here.
                 worker_count = 1
             else:

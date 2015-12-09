@@ -662,9 +662,10 @@ def check_list_or_lambda (list_or_lambda, value):
 # @expectedFailureAll, xfail for all platform/compiler/arch,
 # @expectedFailureAll(compiler='gcc'), xfail for gcc on all platform/architecture
 # @expectedFailureAll(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), xfail for gcc>=4.9 on linux with i386
-def expectedFailureAll(bugnumber=None, oslist=None, compiler=None, compiler_version=None, archs=None, triple=None, debug_info=None, swig_version=None, py_version=None):
+def expectedFailureAll(bugnumber=None, oslist=None, hostoslist=None, compiler=None, compiler_version=None, archs=None, triple=None, debug_info=None, swig_version=None, py_version=None):
     def fn(self):
         oslist_passes = check_list_or_lambda(oslist, self.getPlatform())
+        hostoslist_passes = check_list_or_lambda(hostoslist, getHostPlatform())
         compiler_passes = check_list_or_lambda(self.getCompiler(), compiler) and self.expectedCompilerVersion(compiler_version)
         arch_passes = self.expectedArch(archs)
         triple_passes = triple is None or re.match(triple, lldb.DBG.GetSelectedPlatform().GetTriple())
@@ -673,6 +674,7 @@ def expectedFailureAll(bugnumber=None, oslist=None, compiler=None, compiler_vers
         py_version_passes = (py_version is None) or check_expected_version(py_version[0], py_version[1], sys.version_info)
 
         return (oslist_passes and
+                hostoslist_passes and
                 compiler_passes and
                 arch_passes and
                 triple_passes and

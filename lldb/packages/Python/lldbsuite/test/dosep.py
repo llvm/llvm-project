@@ -55,8 +55,11 @@ from . import dotest_channels
 from . import dotest_args
 from . import result_formatter
 
-# Todo: Convert this folder layout to be relative-import friendly and don't hack up
-# sys.path like this
+from .result_formatter import EventBuilder
+
+
+# Todo: Convert this folder layout to be relative-import friendly and
+# don't hack up sys.path like this
 sys.path.append(os.path.join(os.path.dirname(__file__), "test_runner", "lib"))
 import lldb_utils
 import process_control
@@ -104,7 +107,6 @@ def setup_global_variables(
 
         global GET_WORKER_INDEX
         GET_WORKER_INDEX = get_worker_index_use_pid
-
 
 def report_test_failure(name, command, output):
     global output_lock
@@ -223,6 +225,32 @@ class DoTestProcessDriver(process_control.ProcessDriver):
             failures,
             unexpected_successes)
 
+    def is_exceptional_exit(self):
+        """Returns whether the process returned a timeout.
+
+        Not valid to call until after on_process_exited() completes.
+
+        @return True if the exit is an exceptional exit (e.g. signal on
+        POSIX); False otherwise.
+        """
+        if self.results is None:
+            raise Exception(
+                "exit status checked before results are available")
+        return self.process_helper.is_exceptional_exit(
+            self.results[1])
+
+    def exceptional_exit_details(self):
+        if self.results is None:
+            raise Exception(
+                "exit status checked before results are available")
+        return self.process_helper.exceptional_exit_details(self.results[1])
+
+    def is_timeout(self):
+        if self.results is None:
+            raise Exception(
+                "exit status checked before results are available")
+        return self.results[1] == eTimedOut
+
 
 def get_soft_terminate_timeout():
     # Defaults to 10 seconds, but can set
@@ -244,9 +272,109 @@ def want_core_on_soft_terminate():
         return False
 
 
+def send_events_to_collector(events, command):
+    """Sends the given events to the collector described in the command line.
+
+    @param events the list of events to send to the test event collector.
+    @param command the inferior command line which contains the details on
+    how to connect to the test event collector.
+    """
+    if events is None or len(events) == 0:
+        # Nothing to do.
+        return
+
+    # Find the port we need to connect to from the --results-port option.
+    try:
+        arg_index = command.index("--results-port") + 1
+    except ValueError:
+        # There is no results port, so no way to communicate back to
+        # the event collector.  This is not a problem if we're not
+        # using event aggregation.
+        # TODO flag as error once we always use the event system
+        print(
+            "INFO: no event collector, skipping post-inferior test "
+            "event reporting")
+        return
+
+    if arg_index >= len(command):
+        raise Exception(
+            "expected collector port at index {} in {}".format(
+                arg_index, command))
+    event_port = int(command[arg_index])
+
+    # Create results formatter connected back to collector via socket.
+    config = result_formatter.FormatterConfig()
+    config.port = event_port
+    formatter_spec = result_formatter.create_results_formatter(config)
+    if formatter_spec is None or formatter_spec.formatter is None:
+        raise Exception(
+            "Failed to create socket-based ResultsFormatter "
+            "back to test event collector")
+
+    # Send the events: the port-based event just pickles the content
+    # and sends over to the server side of the socket.
+    for event in events:
+        formatter_spec.formatter.handle_event(event)
+
+    # Cleanup
+    if formatter_spec.cleanup_func is not None:
+        formatter_spec.cleanup_func()
+
+
+def send_inferior_post_run_events(command, worker_index, process_driver):
+    """Sends any test events that should be generated after the inferior runs.
+
+    These events would include timeouts and exceptional (i.e. signal-returning)
+    process completion results.
+
+    @param command the list of command parameters passed to subprocess.Popen().
+    @param worker_index the worker index (possibly None) used to run
+    this process
+    @param process_driver the ProcessDriver-derived instance that was used
+    to run the inferior process.
+    """
+    if process_driver is None:
+        raise Exception("process_driver must not be None")
+    if process_driver.results is None:
+        # Invalid condition - the results should have been set one way or
+        # another, even in a timeout.
+        raise Exception("process_driver.results were not set")
+
+    # The code below fills in the post events struct.  If there are any post
+    # events to fire up, we'll try to make a connection to the socket and
+    # provide the results.
+    post_events = []
+
+    # Handle signal/exceptional exits.
+    if process_driver.is_exceptional_exit():
+        (code, desc) = process_driver.exceptional_exit_details()
+        test_filename = process_driver.results[0]
+        post_events.append(
+            EventBuilder.event_for_job_exceptional_exit(
+                process_driver.pid,
+                worker_index,
+                code,
+                desc,
+                test_filename,
+                command))
+
+    # Handle timeouts.
+    if process_driver.is_timeout():
+        test_filename = process_driver.results[0]
+        post_events.append(EventBuilder.event_for_job_timeout(
+            process_driver.pid,
+            worker_index,
+            test_filename,
+            command))
+
+    if len(post_events) > 0:
+        send_events_to_collector(post_events, command)
+
+
 def call_with_timeout(command, timeout, name, inferior_pid_events):
     # Add our worker index (if we have one) to all test events
     # from this inferior.
+    worker_index = None
     if GET_WORKER_INDEX is not None:
         try:
             worker_index = GET_WORKER_INDEX()
@@ -277,6 +405,15 @@ def call_with_timeout(command, timeout, name, inferior_pid_events):
         # This is truly exceptional.  Even a failing or timed out
         # binary should have called the results-generation code.
         raise Exception("no test results were generated whatsoever")
+
+    # Handle cases where the test inferior cannot adequately provide
+    # meaningful results to the test event system.
+    send_inferior_post_run_events(
+        command,
+        worker_index,
+        process_driver)
+
+
     return process_driver.results
 
 
@@ -487,7 +624,7 @@ def find_test_files_in_dir_tree(dir_root, found_func):
 
 def initialize_global_vars_common(num_threads, test_work_items):
     global total_tests, test_counter, test_name_len
-    
+
     total_tests = sum([len(item[1]) for item in test_work_items])
     test_counter = multiprocessing.Value('i', 0)
     test_name_len = multiprocessing.Value('i', 0)
@@ -1413,26 +1550,16 @@ def main(print_details_on_success, num_threads, test_subdir,
         print_legacy_summary = False
 
     if not print_legacy_summary:
-        # Remove this timeout handling once
-        # https://llvm.org/bugs/show_bug.cgi?id=25703
-        # is addressed.
-        #
-        # Use non-event-based structures to count timeouts.
-        timeout_count = len(timed_out)
-        if timeout_count > 0:
-            failed.sort()
-            print("Timed out test files: {}".format(len(timed_out)))
-            for f in failed:
-                if f in timed_out:
-                    print("TIMEOUT: %s (%s)" % (f, system_info))
-
         # Figure out exit code by count of test result types.
         issue_count = (
             results_formatter.counts_by_test_result_status(
-                result_formatter.EventBuilder.STATUS_ERROR) +
+                EventBuilder.STATUS_ERROR) +
             results_formatter.counts_by_test_result_status(
-                result_formatter.EventBuilder.STATUS_FAILURE) +
-            timeout_count)
+                EventBuilder.STATUS_FAILURE) +
+            results_formatter.counts_by_test_result_status(
+                EventBuilder.STATUS_TIMEOUT)
+            )
+
         # Return with appropriate result code
         if issue_count > 0:
             sys.exit(1)

@@ -14,6 +14,7 @@ import os
 
 # Our imports
 from . import result_formatter
+from .result_formatter import EventBuilder
 import lldbsuite
 
 
@@ -96,11 +97,26 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
                         self.result_events[test_key],
                         test_event)
             self.result_events[test_key] = test_event
+        elif event_type == "job_result":
+            # Build the job key.
+            test_key = test_event.get("test_filename", None)
+            if test_key is None:
+                raise Exception(
+                    "failed to find test filename for job event {}".format(
+                        test_event))
+            self.result_events[test_key] = test_event
         else:
             # This is an unknown event.
             if self.options.assert_on_unknown_events:
                 raise Exception("unknown event type {} from {}\n".format(
                     event_type, test_event))
+
+    @classmethod
+    def _event_sort_key(cls, event):
+        if "test_name" in event:
+            return event["test_name"]
+        else:
+            return event.get("test_filename", None)
 
     def _partition_results_by_status(self, categories):
         """Partitions the captured test results by event status.
@@ -123,7 +139,7 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
                 if event.get("status", "") == result_status_id]
             partitioned_events[result_status_id] = sorted(
                 matching_events,
-                key=lambda x: x[1]["test_name"])
+                key=lambda x: self._event_sort_key(x[1]))
         return partitioned_events
 
     def _print_summary_counts(
@@ -223,13 +239,29 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
         if print_matching_tests:
             # Sort by test name
             for (_, event) in result_events_by_status[result_status_id]:
-                test_relative_path = os.path.relpath(
-                    os.path.realpath(event["test_filename"]),
-                    lldbsuite.lldb_test_root)
-                self.out_file.write("{}: {} ({})\n".format(
-                    detail_label,
-                    event["test_name"],
-                    test_relative_path))
+                extra_info = ""
+                if result_status_id == EventBuilder.STATUS_EXCEPTIONAL_EXIT:
+                    extra_info = "{} ({}) ".format(
+                        event["exception_code"],
+                        event["exception_description"])
+
+                if event["event"] == EventBuilder.TYPE_JOB_RESULT:
+                    # Jobs status that couldn't be mapped to a test method
+                    # doesn't have as much detail.
+                    self.out_file.write("{}: {}{} (no test method running)\n".format(
+                        detail_label,
+                        extra_info,
+                        event["test_filename"]))
+                else:
+                    # Test-method events have richer detail, use that here.
+                    test_relative_path = os.path.relpath(
+                        os.path.realpath(event["test_filename"]),
+                        lldbsuite.lldb_test_root)
+                    self.out_file.write("{}: {}{} ({})\n".format(
+                        detail_label,
+                        extra_info,
+                        event["test_name"],
+                        test_relative_path))
 
     def _finish_output_no_lock(self):
         """Writes the test result report to the output file."""
@@ -247,10 +279,16 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
              "Expected Failure", False, None],
             [result_formatter.EventBuilder.STATUS_FAILURE,
              "Failure", True, "FAIL"],
-            [result_formatter.EventBuilder.STATUS_ERROR, "Error", True, "ERROR"],
+            [result_formatter.EventBuilder.STATUS_ERROR,
+             "Error", True, "ERROR"],
+            [result_formatter.EventBuilder.STATUS_EXCEPTIONAL_EXIT,
+             "Exceptional Exit", True, "ERROR"],
             [result_formatter.EventBuilder.STATUS_UNEXPECTED_SUCCESS,
              "Unexpected Success", True, "UNEXPECTED SUCCESS"],
-            [result_formatter.EventBuilder.STATUS_SKIP, "Skip", False, None]]
+            [result_formatter.EventBuilder.STATUS_SKIP, "Skip", False, None],
+            [result_formatter.EventBuilder.STATUS_TIMEOUT,
+             "Timeout", True, "TIMEOUT"],
+            ]
 
         # Partition all the events by test result status
         result_events_by_status = self._partition_results_by_status(
@@ -268,7 +306,6 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
         # Print the summary
         self._print_summary_counts(
             categories, result_events_by_status, extra_results)
-
 
     def _finish_output(self):
         """Prepare and write the results report as all incoming events have

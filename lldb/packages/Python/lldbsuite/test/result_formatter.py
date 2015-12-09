@@ -30,15 +30,29 @@ import six
 from six.moves import cPickle
 
 # LLDB modules
-from . import configuration
 
+
+# Ignore method count on DTOs.
+# pylint: disable=too-few-public-methods
+class FormatterConfig(object):
+    """Provides formatter configuration info to create_results_formatter()."""
+    def __init__(self):
+        self.filename = None
+        self.port = None
+        self.formatter_name = None
+        self.formatter_options = None
+
+
+# Ignore method count on DTOs.
+# pylint: disable=too-few-public-methods
 class CreatedFormatter(object):
+    """Provides transfer object for returns from create_results_formatter()."""
     def __init__(self, formatter, cleanup_func):
         self.formatter = formatter
         self.cleanup_func = cleanup_func
 
 
-def create_results_formatter():
+def create_results_formatter(config):
     """Sets up a test results formatter.
 
     @param config an instance of FormatterConfig
@@ -67,28 +81,28 @@ def create_results_formatter():
     results_file_object = None
     cleanup_func = None
 
-    if configuration.results_filename:
+    if config.filename:
         # Open the results file for writing.
-        if configuration.results_filename == 'stdout':
+        if config.filename == 'stdout':
             results_file_object = sys.stdout
             cleanup_func = None
-        elif configuration.results_filename == 'stderr':
+        elif config.filename == 'stderr':
             results_file_object = sys.stderr
             cleanup_func = None
         else:
-            results_file_object = open(configuration.results_filename, "w")
+            results_file_object = open(config.filename, "w")
             cleanup_func = results_file_object.close
         default_formatter_name = (
             "lldbsuite.test.result_formatter.XunitFormatter")
-    elif configuration.results_port:
+    elif config.port:
         # Connect to the specified localhost port.
-        results_file_object, cleanup_func = create_socket(configuration.results_port)
+        results_file_object, cleanup_func = create_socket(config.port)
         default_formatter_name = (
             "lldbsuite.test.result_formatter.RawPickledFormatter")
 
     # If we have a results formatter name specified and we didn't specify
     # a results file, we should use stdout.
-    if configuration.results_formatter_name is not None and results_file_object is None:
+    if config.formatter_name is not None and results_file_object is None:
         # Use stdout.
         results_file_object = sys.stdout
         cleanup_func = None
@@ -96,8 +110,8 @@ def create_results_formatter():
     if results_file_object:
         # We care about the formatter.  Choose user-specified or, if
         # none specified, use the default for the output type.
-        if configuration.results_formatter_name:
-            formatter_name = configuration.results_formatter_name
+        if config.formatter_name:
+            formatter_name = config.formatter_name
         else:
             formatter_name = default_formatter_name
 
@@ -111,8 +125,8 @@ def create_results_formatter():
 
         # Handle formatter options for the results formatter class.
         formatter_arg_parser = cls.arg_parser()
-        if configuration.results_formatter_options and len(configuration.results_formatter_options) > 0:
-            command_line_options = configuration.results_formatter_options
+        if config.formatter_options and len(config.formatter_options) > 0:
+            command_line_options = config.formatter_options
         else:
             command_line_options = []
 
@@ -145,13 +159,20 @@ class EventBuilder(object):
 
     BASE_DICTIONARY = None
 
-    # Test Status Tags
+    # Test Event Types
+    TYPE_JOB_RESULT = "job_result"
+    TYPE_TEST_RESULT = "test_result"
+    TYPE_TEST_START = "test_start"
+
+    # Test/Job Status Tags
+    STATUS_EXCEPTIONAL_EXIT = "exceptional_exit"
     STATUS_SUCCESS = "success"
     STATUS_FAILURE = "failure"
     STATUS_EXPECTED_FAILURE = "expected_failure"
     STATUS_UNEXPECTED_SUCCESS = "unexpected_success"
     STATUS_SKIP = "skip"
     STATUS_ERROR = "error"
+    STATUS_TIMEOUT = "timeout"
 
     @staticmethod
     def _get_test_name_info(test):
@@ -256,7 +277,8 @@ class EventBuilder(object):
 
         @return the event dictionary
         """
-        event = EventBuilder._event_dictionary_common(test, "test_result")
+        event = EventBuilder._event_dictionary_common(
+            test, EventBuilder.TYPE_TEST_RESULT)
         event["status"] = status
         return event
 
@@ -291,7 +313,8 @@ class EventBuilder(object):
 
         @return the event dictionary
         """
-        return EventBuilder._event_dictionary_common(test, "test_start")
+        return EventBuilder._event_dictionary_common(
+            test, EventBuilder.TYPE_TEST_START)
 
     @staticmethod
     def event_for_success(test):
@@ -406,6 +429,65 @@ class EventBuilder(object):
         return event
 
     @staticmethod
+    def event_for_job_exceptional_exit(
+            pid, worker_index, exception_code, exception_description,
+            test_filename, command_line):
+        """Creates an event for a job (i.e. process) exit due to signal.
+
+        @param pid the process id for the job that failed
+        @param worker_index optional id for the job queue running the process
+        @param exception_code optional code
+        (e.g. SIGTERM integer signal number)
+        @param exception_description optional string containing symbolic
+        representation of the issue (e.g. "SIGTERM")
+        @param test_filename the path to the test filename that exited
+        in some exceptional way.
+        @param command_line the Popen-style list provided as the command line
+        for the process that timed out.
+
+        @return an event dictionary coding the job completion description.
+        """
+        event = EventBuilder.bare_event(EventBuilder.TYPE_JOB_RESULT)
+        event["status"] = EventBuilder.STATUS_EXCEPTIONAL_EXIT
+        if pid is not None:
+            event["pid"] = pid
+        if worker_index is not None:
+            event["worker_index"] = int(worker_index)
+        if exception_code is not None:
+            event["exception_code"] = exception_code
+        if exception_description is not None:
+            event["exception_description"] = exception_description
+        if test_filename is not None:
+            event["test_filename"] = test_filename
+        if command_line is not None:
+            event["command_line"] = command_line
+        return event
+
+    @staticmethod
+    def event_for_job_timeout(pid, worker_index, test_filename, command_line):
+        """Creates an event for a job (i.e. process) timeout.
+
+        @param pid the process id for the job that timed out
+        @param worker_index optional id for the job queue running the process
+        @param test_filename the path to the test filename that timed out.
+        @param command_line the Popen-style list provided as the command line
+        for the process that timed out.
+
+        @return an event dictionary coding the job completion description.
+        """
+        event = EventBuilder.bare_event(EventBuilder.TYPE_JOB_RESULT)
+        event["status"] = "timeout"
+        if pid is not None:
+            event["pid"] = pid
+        if worker_index is not None:
+            event["worker_index"] = int(worker_index)
+        if test_filename is not None:
+            event["test_filename"] = test_filename
+        if command_line is not None:
+            event["command_line"] = command_line
+        return event
+
+    @staticmethod
     def add_entries_to_all_events(entries_dict):
         """Specifies a dictionary of entries to add to all test events.
 
@@ -428,7 +510,6 @@ class EventBuilder(object):
 
 
 class ResultsFormatter(object):
-
     """Provides interface to formatting test results out to a file-like object.
 
     This class allows the LLDB test framework's raw test-realted
@@ -524,14 +605,58 @@ class ResultsFormatter(object):
             EventBuilder.STATUS_SKIP: 0,
             EventBuilder.STATUS_UNEXPECTED_SUCCESS: 0,
             EventBuilder.STATUS_FAILURE: 0,
-            EventBuilder.STATUS_ERROR: 0
+            EventBuilder.STATUS_ERROR: 0,
+            EventBuilder.STATUS_TIMEOUT: 0,
+            EventBuilder.STATUS_EXCEPTIONAL_EXIT: 0
         }
+
+        # Track the most recent test start event by worker index.
+        # We'll use this to assign TIMEOUT and exceptional
+        # exits to the most recent test started on a given
+        # worker index.
+        self.started_tests_by_worker = {}
 
         # Lock that we use while mutating inner state, like the
         # total test count and the elements.  We minimize how
         # long we hold the lock just to keep inner state safe, not
         # entirely consistent from the outside.
         self.lock = threading.Lock()
+
+    def _maybe_remap_job_result_event(self, test_event):
+        """Remaps timeout/exceptional exit job results to last test method running.
+
+        @param test_event the job_result test event.  This is an in/out
+        parameter.  It will be modified if it can be mapped to a test_result
+        of the same status, using details from the last-running test method
+        known to be most recently started on the same worker index.
+        """
+        test_start = None
+
+        job_status = test_event["status"]
+        if job_status in [
+                EventBuilder.STATUS_TIMEOUT,
+                EventBuilder.STATUS_EXCEPTIONAL_EXIT]:
+            worker_index = test_event.get("worker_index", None)
+            if worker_index is not None:
+                test_start = self.started_tests_by_worker.get(
+                    worker_index, None)
+
+        # If we have a test start to remap, do it here.
+        if test_start is not None:
+            test_event["event"] = EventBuilder.TYPE_TEST_RESULT
+
+            # Fill in all fields from test start not present in
+            # job status message.
+            for (start_key, start_value) in test_start.items():
+                if start_key not in test_event:
+                    test_event[start_key] = start_value
+
+            # Always take the value of test_filename from test_start,
+            # as it was gathered by class introspections.  Job status
+            # has less refined info available to it, so might be missing
+            # path info.
+            if "test_filename" in test_start:
+                test_event["test_filename"] = test_start["test_filename"]
 
     def handle_event(self, test_event):
         """Handles the test event for collection into the formatter output.
@@ -549,12 +674,35 @@ class ResultsFormatter(object):
         # called yet".
         if test_event is not None:
             event_type = test_event.get("event", "")
+            # We intentionally allow event_type to be checked anew
+            # after this check below since this check may rewrite
+            # the event type
+            if event_type == EventBuilder.TYPE_JOB_RESULT:
+                # Possibly convert the job status (timeout, exceptional exit)
+                # to an appropriate test_result event.
+                self._maybe_remap_job_result_event(test_event)
+                event_type = test_event.get("event", "")
+
             if event_type == "terminate":
                 self.terminate_called = True
-            elif event_type == "test_result":
-                # Keep track of event counts per test result status type
+            elif (event_type == EventBuilder.TYPE_TEST_RESULT or
+                    event_type == EventBuilder.TYPE_JOB_RESULT):
+                # Keep track of event counts per test/job result status type.
+                # The only job (i.e. inferior process) results that make it
+                # here are ones that cannot be remapped to the most recently
+                # started test for the given worker index.
                 status = test_event["status"]
                 self.result_status_counts[status] += 1
+                # Clear the most recently started test for the related worker.
+                worker_index = test_event.get("worker_index", None)
+                if worker_index is not None:
+                    self.started_tests_by_worker.pop(worker_index, None)
+            elif event_type == EventBuilder.TYPE_TEST_START:
+                # Keep track of the most recent test start event
+                # for the related worker.
+                worker_index = test_event.get("worker_index", None)
+                if worker_index is not None:
+                    self.started_tests_by_worker[worker_index] = test_event
 
     def track_start_time(self, test_class, test_name, start_time):
         """tracks the start time of a test so elapsed time can be computed.
@@ -805,7 +953,7 @@ class XunitFormatter(ResultsFormatter):
                 test_event["test_class"],
                 test_event["test_name"],
                 test_event["event_time"])
-        elif event_type == "test_result":
+        elif event_type == EventBuilder.TYPE_TEST_RESULT:
             self._process_test_result(test_event)
         else:
             # This is an unknown event.
