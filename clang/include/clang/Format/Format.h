@@ -100,6 +100,13 @@ struct FormatStyle {
 
   /// \brief If \c true, horizontally align operands of binary and ternary
   /// expressions.
+  ///
+  /// Specifically, this aligns operands of a single expression that needs to be
+  /// split over multiple lines, e.g.:
+  /// \code
+  ///   int aaa = bbbbbbbbbbbbbbb +
+  ///             ccccccccccccccc;
+  /// \endcode
   bool AlignOperands;
 
   /// \brief If \c true, aligns trailing comments.

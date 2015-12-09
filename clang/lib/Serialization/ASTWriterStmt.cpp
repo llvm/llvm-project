@@ -2266,11 +2266,6 @@ void ASTStmtWriter::VisitOMPTaskLoopSimdDirective(OMPTaskLoopSimdDirective *D) {
   Code = serialization::STMT_OMP_TASKLOOP_SIMD_DIRECTIVE;
 }
 
-void ASTStmtWriter::VisitOMPDistributeDirective(OMPDistributeDirective *D) {
-  VisitOMPLoopDirective(D);
-  Code = serialization::STMT_OMP_DISTRIBUTE_DIRECTIVE;
-}
-
 //===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//
