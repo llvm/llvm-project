@@ -80,6 +80,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Platform.h"
@@ -1412,10 +1413,23 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
 
             if (!objfile || !objfile->GetArchitecture(object_arch))
                 return TypeSystemSP();
-
-            std::shared_ptr<SwiftASTContext> swift_ast_sp(new SwiftASTContext());
-
+            
+            lldb::CompUnitSP main_compile_unit_sp = module->GetCompileUnitAtIndex(0);
+            
             Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+            if (main_compile_unit_sp && !main_compile_unit_sp->Exists())
+            {
+                if (log)
+                {
+                    StreamString ss;
+                    module->GetDescription(&ss);
+                    
+                    log->Printf ("Corresponding source not found for %s, loading module %s is unlikely to succeed", main_compile_unit_sp->GetCString(), ss.GetData());
+                }
+            }
+                
+            std::shared_ptr<SwiftASTContext> swift_ast_sp(new SwiftASTContext());
 
             swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
             swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
@@ -1689,6 +1703,11 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                     log->Printf ("((Module*)%p) [%s]->GetSwiftASTContext() returning NULL - couldn't create a ClangImporter", module, module->GetFileSpec().GetFilename().AsCString("<anonymous>"));
                 }
                 
+                if (lldb::ProcessSP process_sp = target->GetProcessSP())
+                {
+                    process_sp->PrintWarningCantLoadSwift(*module);
+                }
+                
                 return TypeSystemSP();
             }
             
@@ -1756,6 +1775,8 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
 
                 if (!module_swift_ast)
                     continue;
+                
+                assert (module_swift_ast->GetClangImporter()); // if this isn't here, then the AST should not have returned as non-NULL
 
                 if (!handled_sdk_path)
                 {

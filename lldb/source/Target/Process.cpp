@@ -6838,6 +6838,13 @@ Process::PrintWarningOptimization (const SymbolContext &sc)
     }
 }
 
+void
+Process::PrintWarningCantLoadSwift (const Module &module)
+{
+    PrintWarning (Process::Warnings::eWarningsCantLoadSwift, (void*)&module, "%s had Swift information that isn't usable on the current system; its internals will be unavailable.\n", module.GetFileSpec().GetCString());
+}
+
+
 ThreadCollectionSP
 Process::GetHistoryThreads(lldb::addr_t addr)
 {
