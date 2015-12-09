@@ -316,7 +316,7 @@ private:
     // The analyzer may stop exploring if it sees a state it has previously
     // visited ("cache out"). The early return here is a defensive check to
     // prevent accidental caching out by checker API clients. Unless there is a
-    // tag or the the client checker has requested that the generated node be
+    // tag or the client checker has requested that the generated node be
     // marked as a sink, we assume that a client requesting a transition to a
     // state that is the same as the predecessor state has made a mistake. We
     // return the predecessor rather than cache out.

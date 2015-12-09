@@ -2,7 +2,7 @@
 // Test standard include paths
 // -----------------------------------------------------------------------------
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   %s 2>&1 \
@@ -12,7 +12,7 @@
 // CHECK001:   "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/hexagon/include"
 // CHECK001-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-as"
 
-// RUN: %clangxx -### -target hexagon-unknown-linux     \
+// RUN: %clangxx -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   %s 2>&1 \
@@ -27,7 +27,7 @@
 // Test -nostdinc, -nostdlibinc, -nostdinc++
 // -----------------------------------------------------------------------------
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -nostdinc \
@@ -39,7 +39,7 @@
 // CHECK003-NOT: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/hexagon/include"
 // CHECK003-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-as"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -nostdlibinc \
@@ -51,7 +51,7 @@
 // CHECK004-NOT: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/hexagon/include"
 // CHECK004-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-as"
 
-// RUN: %clangxx -### -target hexagon-unknown-linux     \
+// RUN: %clangxx -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -nostdlibinc \
@@ -64,7 +64,7 @@
 // CHECK005-NOT: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/hexagon/include"
 // CHECK005-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-as"
 
-// RUN: %clangxx -### -target hexagon-unknown-linux     \
+// RUN: %clangxx -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -nostdinc++ \
@@ -77,7 +77,7 @@
 // -----------------------------------------------------------------------------
 // Test -march=<archname> -mcpu=<archname> -mv<number>
 // -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -march=hexagonv3 \
@@ -87,7 +87,7 @@
 // CHECK007-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-as"{{.*}} "-march=v3"
 // CHECK007-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-ld"{{.*}} "-mv3"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -mcpu=hexagonv5 \
@@ -97,7 +97,7 @@
 // CHECK008-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-as"{{.*}} "-march=v5"
 // CHECK008-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-ld"{{.*}} "-mv5"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -mv2 \
@@ -107,7 +107,7 @@
 // CHECK009-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-as"{{.*}} "-march=v2"
 // CHECK009-NEXT: "{{.*}}/Inputs/hexagon_tree/qc/bin/../../gnu/bin{{/|\\\\}}hexagon-ld"{{.*}} "-mv2"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   %s 2>&1 \
@@ -139,7 +139,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Defaults for C
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   %s 2>&1 \
@@ -164,7 +164,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Defaults for C++
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clangxx -### -target hexagon-unknown-linux     \
+// RUN: %clangxx -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   %s 2>&1 \
@@ -190,7 +190,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Additional Libraries (-L)
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -Lone -L two -L three \
@@ -215,7 +215,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // -static, -shared
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -static \
@@ -237,7 +237,7 @@
 // CHECK014: "--start-group" "-lstandalone" "-lc" "-lgcc" "--end-group"
 // CHECK014: "{{.*}}/hexagon/lib/v4/fini.o"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -shared \
@@ -267,7 +267,7 @@
 // CHECK015: "--end-group"
 // CHECK015: "{{.*}}/hexagon/lib/v4/G0/finiS.o"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -shared \
@@ -301,7 +301,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // -nostdlib, -nostartfiles, -nodefaultlibs
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clangxx -### -target hexagon-unknown-linux     \
+// RUN: %clangxx -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -nostdlib \
@@ -328,7 +328,7 @@
 // CHECK017-NOT: "--end-group"
 // CHECK017-NOT: fini.o
 
-// RUN: %clangxx -### -target hexagon-unknown-linux     \
+// RUN: %clangxx -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -nostartfiles \
@@ -355,7 +355,7 @@
 // CHECK018: "--end-group"
 // CHECK018-NOT: fini.o
 
-// RUN: %clangxx -### -target hexagon-unknown-linux     \
+// RUN: %clangxx -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -nodefaultlibs \
@@ -385,7 +385,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // -moslib
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -moslib=first -moslib=second \
@@ -411,7 +411,7 @@
 // CHECK020: "-lc" "-lgcc" "--end-group"
 // CHECK020: "{{.*}}/hexagon/lib/v4/fini.o"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -moslib=first -moslib=second -moslib=standalone\
@@ -440,7 +440,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Other args to pass to linker
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clangxx -### -target hexagon-unknown-linux     \
+// RUN: %clangxx -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -s \
@@ -473,7 +473,7 @@
 // -----------------------------------------------------------------------------
 // pic, small data threshold
 // -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   %s 2>&1 \
@@ -485,13 +485,13 @@
 // CHECK023-NEXT: "{{.*}}/bin{{/|\\\\}}hexagon-ld"
 // CHECK023-NOT:    "-G{{[0-9]+}}"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -fpic \
 // RUN:   %s 2>&1 \
 // RUN:   | sed -e "s/\.exe//" -e "s/\.EXE//" | FileCheck -check-prefix=CHECK024 %s
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -fPIC \
@@ -506,19 +506,19 @@
 // CHECK024-NEXT: "{{.*}}/bin{{/|\\\\}}hexagon-ld"
 // CHECK024:        "-G0"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -G=8 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK025 %s
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -G 8 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK025 %s
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -msmall-data-threshold=8 \
@@ -535,7 +535,7 @@
 // -----------------------------------------------------------------------------
 // pie
 // -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -pie \
@@ -546,7 +546,7 @@
 // CHECK026-NEXT: "{{.*}}/bin{{/|\\\\}}hexagon-ld"
 // CHECK026:        "-pie"
 
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -pie -shared \
@@ -560,7 +560,7 @@
 // -----------------------------------------------------------------------------
 // Misc Defaults
 // -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   %s 2>&1 \
@@ -574,7 +574,7 @@
 // -----------------------------------------------------------------------------
 // Test Assembler related args
 // -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-linux     \
+// RUN: %clang -### -target hexagon-unknown-linux -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   --gcc-toolchain="" \
 // RUN:   -gdwarf-2 \

@@ -284,3 +284,28 @@ namespace ParameterPackNestedInitializerLists_PR23904c3 {
 
   void foo() { f({{0}}, {{'\0'}}); }
 }
+
+namespace update_rbrace_loc_crash {
+  // We used to crash-on-invalid on this example when updating the right brace
+  // location.
+  template <typename T, T>
+  struct A {};
+  template <typename T, typename F, int... I>
+  std::initializer_list<T> ExplodeImpl(F p1, A<int, I...>) {
+    // expected-error@+1 {{reference to type 'const update_rbrace_loc_crash::Incomplete' could not bind to an rvalue of type 'void'}}
+    return {p1(I)...};
+  }
+  template <typename T, int N, typename F>
+  void Explode(F p1) {
+    // expected-note@+1 {{in instantiation of function template specialization}}
+    ExplodeImpl<T>(p1, A<int, N>());
+  }
+  class Incomplete;
+  struct ContainsIncomplete {
+    const Incomplete &obstacle;
+  };
+  void f() {
+    // expected-note@+1 {{in instantiation of function template specialization}}
+    Explode<ContainsIncomplete, 4>([](int) {});
+  }
+}

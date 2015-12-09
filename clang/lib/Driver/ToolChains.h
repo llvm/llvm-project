@@ -871,6 +871,9 @@ public:
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
 
   StringRef GetGCCLibAndIncVersion() const { return GCCLibAndIncVersion.Text; }
+  bool IsIntegratedAssemblerDefault() const override {
+    return true;
+  }
 
   std::string GetGnuDir(const std::string &InstalledDir,
                         const llvm::opt::ArgList &Args) const;
