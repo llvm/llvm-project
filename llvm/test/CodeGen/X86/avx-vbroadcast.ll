@@ -144,7 +144,7 @@ entry:
 define <4 x float> @load_splat_4f32_4f32_1111(<4 x float>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4f32_4f32_1111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,1,1,1]
+; CHECK-NEXT:    vbroadcastss 4(%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x float>, <4 x float>* %ptr
@@ -155,8 +155,7 @@ entry:
 define <8 x float> @load_splat_8f32_4f32_33333333(<4 x float>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_8f32_4f32_33333333:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,3,3,3]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastss 12(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x float>, <4 x float>* %ptr
@@ -167,10 +166,7 @@ entry:
 define <8 x float> @load_splat_8f32_8f32_55555555(<8 x float>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_8f32_8f32_55555555:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovaps (%rdi), %ymm0
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastss 20(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <8 x float>, <8 x float>* %ptr
@@ -231,9 +227,7 @@ entry:
 define <4 x double> @load_splat_4f64_2f64_1111(<2 x double>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4f64_2f64_1111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovaps (%rdi), %xmm0
-; CHECK-NEXT:    vmovhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastsd 8(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <2 x double>, <2 x double>* %ptr
@@ -244,10 +238,7 @@ entry:
 define <4 x double> @load_splat_4f64_4f64_2222(<4 x double>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4f64_4f64_2222:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovapd (%rdi), %ymm0
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x double>, <4 x double>* %ptr

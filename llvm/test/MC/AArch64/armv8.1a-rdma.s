@@ -26,27 +26,9 @@
   sqrdmlsh v0.8s, v1.8s, v2.8s
   sqrdmlah v0.2s, v1.4h, v2.8h
   sqrdmlsh v0.4s, v1.8h, v2.2s
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlah v0.2h, v1.2h, v2.2h
-// CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlah v0.2h, v1.2h, v2.2h
-// CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlah v0.2h, v1.2h, v2.2h
-// CHECK-ERROR:                          ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:   sqrdmlah v0.2h, v1.2h, v2.2h
 // CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlsh v0.2h, v1.2h, v2.2h
-// CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlsh v0.2h, v1.2h, v2.2h
-// CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlsh v0.2h, v1.2h, v2.2h
-// CHECK-ERROR:                          ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:   sqrdmlsh v0.2h, v1.2h, v2.2h
 // CHECK-ERROR:            ^

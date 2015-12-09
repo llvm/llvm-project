@@ -177,8 +177,7 @@ entry:
 define <16 x i8> @load_splat_16i8_16i8_1111111111111111(<16 x i8>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_16i8_16i8_1111111111111111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vpbroadcastb 1(%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <16 x i8>, <16 x i8>* %ptr
@@ -189,9 +188,7 @@ entry:
 define <32 x i8> @load_splat_32i8_16i8_11111111111111111111111111111111(<16 x i8>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_32i8_16i8_11111111111111111111111111111111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpbroadcastb 1(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <16 x i8>, <16 x i8>* %ptr
@@ -202,9 +199,7 @@ entry:
 define <32 x i8> @load_splat_32i8_32i8_11111111111111111111111111111111(<32 x i8>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_32i8_32i8_11111111111111111111111111111111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpbroadcastb 1(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <32 x i8>, <32 x i8>* %ptr
@@ -215,8 +210,7 @@ entry:
 define <8 x i16> @load_splat_8i16_8i16_11111111(<8 x i16>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_8i16_8i16_11111111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3]
+; CHECK-NEXT:    vpbroadcastw 2(%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <8 x i16>, <8 x i16>* %ptr
@@ -227,9 +221,7 @@ entry:
 define <16 x i16> @load_splat_16i16_8i16_1111111111111111(<8 x i16>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_16i16_8i16_1111111111111111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3]
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpbroadcastw 2(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <8 x i16>, <8 x i16>* %ptr
@@ -240,9 +232,7 @@ entry:
 define <16 x i16> @load_splat_16i16_16i16_1111111111111111(<16 x i16>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_16i16_16i16_1111111111111111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3]
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpbroadcastw 2(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <16 x i16>, <16 x i16>* %ptr
@@ -253,7 +243,7 @@ entry:
 define <4 x i32> @load_splat_4i32_4i32_1111(<4 x i32>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4i32_4i32_1111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,1,1,1]
+; CHECK-NEXT:    vbroadcastss 4(%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x i32>, <4 x i32>* %ptr
@@ -264,9 +254,7 @@ entry:
 define <8 x i32> @load_splat_8i32_4i32_33333333(<4 x i32>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_8i32_4i32_33333333:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-NEXT:    vpbroadcastd LCPI15_0(%rip), %ymm1
-; CHECK-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vbroadcastss 12(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x i32>, <4 x i32>* %ptr
@@ -277,8 +265,7 @@ entry:
 define <8 x i32> @load_splat_8i32_8i32_55555555(<8 x i32>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_8i32_8i32_55555555:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpbroadcastd LCPI16_0(%rip), %ymm0
-; CHECK-NEXT:    vpermd (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastss 20(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <8 x i32>, <8 x i32>* %ptr
@@ -289,7 +276,7 @@ entry:
 define <4 x float> @load_splat_4f32_4f32_1111(<4 x float>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4f32_4f32_1111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,1,1,1]
+; CHECK-NEXT:    vbroadcastss 4(%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x float>, <4 x float>* %ptr
@@ -300,9 +287,7 @@ entry:
 define <8 x float> @load_splat_8f32_4f32_33333333(<4 x float>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_8f32_4f32_33333333:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovaps (%rdi), %xmm0
-; CHECK-NEXT:    vbroadcastss LCPI18_0(%rip), %ymm1
-; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vbroadcastss 12(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x float>, <4 x float>* %ptr
@@ -313,8 +298,7 @@ entry:
 define <8 x float> @load_splat_8f32_8f32_55555555(<8 x float>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_8f32_8f32_55555555:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vbroadcastss LCPI19_0(%rip), %ymm0
-; CHECK-NEXT:    vpermps (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastss 20(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <8 x float>, <8 x float>* %ptr
@@ -325,7 +309,7 @@ entry:
 define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_2i64_2i64_1111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
+; CHECK-NEXT:    vpbroadcastq 8(%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <2 x i64>, <2 x i64>* %ptr
@@ -336,8 +320,7 @@ entry:
 define <4 x i64> @load_splat_4i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4i64_2i64_1111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,1,1,1]
+; CHECK-NEXT:    vbroadcastsd 8(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <2 x i64>, <2 x i64>* %ptr
@@ -348,7 +331,7 @@ entry:
 define <4 x i64> @load_splat_4i64_4i64_2222(<4 x i64>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4i64_4i64_2222:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = mem[2,2,2,2]
+; CHECK-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x i64>, <4 x i64>* %ptr
@@ -371,8 +354,7 @@ entry:
 define <4 x double> @load_splat_4f64_2f64_1111(<2 x double>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4f64_2f64_1111:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vmovapd (%rdi), %xmm0
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
+; CHECK-NEXT:    vbroadcastsd 8(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <2 x double>, <2 x double>* %ptr
@@ -383,7 +365,7 @@ entry:
 define <4 x double> @load_splat_4f64_4f64_2222(<4 x double>* %ptr) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: load_splat_4f64_4f64_2222:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = mem[2,2,2,2]
+; CHECK-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %ld = load <4 x double>, <4 x double>* %ptr

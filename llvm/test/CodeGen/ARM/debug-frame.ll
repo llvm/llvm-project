@@ -30,11 +30,11 @@
 ; RUN:     -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP-ELIM
 
-; RUN: llc -mtriple thumb-unknown-linux-gnueabi \
+; RUN: llc -mtriple thumbv5-unknown-linux-gnueabi \
 ; RUN:     -disable-fp-elim -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-FP
 
-; RUN: llc -mtriple thumb-unknown-linux-gnueabi \
+; RUN: llc -mtriple thumbv5-unknown-linux-gnueabi \
 ; RUN:     -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-FP-ELIM
 

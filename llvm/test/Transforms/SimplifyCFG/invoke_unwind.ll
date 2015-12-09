@@ -17,4 +17,17 @@ Rethrow:
         resume { i8*, i32 } %exn
 }
 
+define i32 @test2() personality i32 (...)* @__gxx_personality_v0 {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT: call void @bar() [ "foo"(i32 100) ]
+; CHECK-NEXT: ret i32 0
+        invoke void @bar( ) [ "foo"(i32 100) ]
+                        to label %1 unwind label %Rethrow
+        ret i32 0
+Rethrow:
+        %exn = landingpad {i8*, i32}
+                 catch i8* null
+        resume { i8*, i32 } %exn
+}
+
 declare i32 @__gxx_personality_v0(...)

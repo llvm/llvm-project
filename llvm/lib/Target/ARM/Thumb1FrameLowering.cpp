@@ -406,9 +406,6 @@ bool Thumb1FrameLowering::needPopSpecialFixUp(const MachineFunction &MF) const {
   if (AFI->getArgRegsSaveSize())
     return true;
 
-  // FIXME: this doesn't make sense, and the following patch will remove it.
-  if (!STI.hasV4TOps()) return false;
-
   // LR cannot be encoded with Thumb1, i.e., it requires a special fix-up.
   for (const CalleeSavedInfo &CSI : MF.getFrameInfo()->getCalleeSavedInfo())
     if (CSI.getReg() == ARM::LR)
@@ -532,10 +529,32 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
                        .addReg(PopReg, RegState::Kill));
   }
 
+  bool AddBx = false;
   if (MBBI == MBB.end()) {
     MachineInstr& Pop = MBB.back();
     assert(Pop.getOpcode() == ARM::tPOP);
     Pop.RemoveOperand(Pop.findRegisterDefOperandIdx(ARM::LR));
+  } else if (MBBI->getOpcode() == ARM::tPOP_RET) {
+    // We couldn't use the direct restoration above, so
+    // perform the opposite conversion: tPOP_RET to tPOP.
+    MachineInstrBuilder MIB =
+        AddDefaultPred(
+            BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII.get(ARM::tPOP)));
+    unsigned Popped = 0;
+    for (auto MO: MBBI->operands())
+      if (MO.isReg() && (MO.isImplicit() || MO.isDef()) &&
+          MO.getReg() != ARM::PC) {
+        MIB.addOperand(MO);
+        if (!MO.isImplicit())
+          Popped++;
+      }
+    // Is there anything left to pop?
+    if (!Popped)
+      MBB.erase(MIB.getInstr());
+    // Erase the old instruction.
+    MBB.erase(MBBI);
+    MBBI = MBB.end();
+    AddBx = true;
   }
 
   assert(PopReg && "Do not know how to get LR");
@@ -554,14 +573,20 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
     return true;
   }
 
-  AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
-                     .addReg(ARM::LR, RegState::Define)
-                     .addReg(PopReg, RegState::Kill));
-
+  if (AddBx && !TemporaryReg) {
+    AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(ARM::tBX))
+                       .addReg(PopReg, RegState::Kill));
+  } else {
+    AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
+                       .addReg(ARM::LR, RegState::Define)
+                       .addReg(PopReg, RegState::Kill));
+  }
   if (TemporaryReg) {
     AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
                        .addReg(PopReg, RegState::Define)
                        .addReg(TemporaryReg, RegState::Kill));
+    if (AddBx)
+      AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(ARM::tBX_RET)));
   }
 
   return true;
@@ -628,7 +653,7 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
       if (isVarArg)
         continue;
       // ARMv4T requires BX, see emitEpilogue
-      if (STI.hasV4TOps() && !STI.hasV5TOps())
+      if (!STI.hasV5TOps())
         continue;
       Reg = ARM::PC;
       (*MIB).setDesc(TII.get(ARM::tPOP_RET));

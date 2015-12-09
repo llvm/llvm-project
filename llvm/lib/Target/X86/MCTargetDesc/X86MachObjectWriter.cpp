@@ -149,14 +149,19 @@ void X86MachObjectWriter::RecordX86_64Relocation(
 
     // Neither symbol can be modified.
     if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None ||
-        Target.getSymB()->getKind() != MCSymbolRefExpr::VK_None)
-      report_fatal_error("unsupported relocation of modified symbol", false);
+        Target.getSymB()->getKind() != MCSymbolRefExpr::VK_None) {
+      Asm.getContext().reportError(Fixup.getLoc(),
+                                   "unsupported relocation of modified symbol");
+      return;
+    }
 
     // We don't support PCrel relocations of differences. Darwin 'as' doesn't
     // implement most of these correctly.
-    if (IsPCRel)
-      report_fatal_error("unsupported pc-relative relocation of difference",
-                         false);
+    if (IsPCRel) {
+      Asm.getContext().reportError(
+          Fixup.getLoc(), "unsupported pc-relative relocation of difference");
+      return;
+    }
 
     // The support for the situation where one or both of the symbols would
     // require a local relocation is handled just like if the symbols were
@@ -168,8 +173,11 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     // Darwin 'as' doesn't emit correct relocations for this (it ends up with a
     // single SIGNED relocation); reject it for now.  Except the case where both
     // symbols don't have a base, equal but both NULL.
-    if (A_Base == B_Base && A_Base)
-      report_fatal_error("unsupported relocation with identical base", false);
+    if (A_Base == B_Base && A_Base) {
+      Asm.getContext().reportError(
+          Fixup.getLoc(), "unsupported relocation with identical base");
+      return;
+    }
 
     // A subtraction expression where either symbol is undefined is a
     // non-relocatable expression.
@@ -245,12 +253,16 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         FixedValue = Res;
         return;
       } else {
-        report_fatal_error("unsupported relocation of variable '" +
-                           Symbol->getName() + "'", false);
+        Asm.getContext().reportError(Fixup.getLoc(),
+                                     "unsupported relocation of variable '" +
+                                         Symbol->getName() + "'");
+        return;
       }
     } else {
-      report_fatal_error("unsupported relocation of undefined symbol '" +
-                         Symbol->getName() + "'", false);
+      Asm.getContext().reportError(
+          Fixup.getLoc(), "unsupported relocation of undefined symbol '" +
+                              Symbol->getName() + "'");
+      return;
     }
 
     MCSymbolRefExpr::VariantKind Modifier = Target.getSymA()->getKind();
@@ -267,8 +279,9 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         }  else if (Modifier == MCSymbolRefExpr::VK_TLVP) {
           Type = MachO::X86_64_RELOC_TLV;
         }  else if (Modifier != MCSymbolRefExpr::VK_None) {
-          report_fatal_error("unsupported symbol modifier in relocation",
-                             false);
+          Asm.getContext().reportError(
+              Fixup.getLoc(), "unsupported symbol modifier in relocation");
+          return;
         } else {
           Type = MachO::X86_64_RELOC_SIGNED;
 
@@ -293,9 +306,12 @@ void X86MachObjectWriter::RecordX86_64Relocation(
           }
         }
       } else {
-        if (Modifier != MCSymbolRefExpr::VK_None)
-          report_fatal_error("unsupported symbol modifier in branch "
-                             "relocation", false);
+        if (Modifier != MCSymbolRefExpr::VK_None) {
+          Asm.getContext().reportError(
+              Fixup.getLoc(),
+              "unsupported symbol modifier in branch relocation");
+          return;
+        }
 
         Type = MachO::X86_64_RELOC_BRANCH;
       }
@@ -310,16 +326,22 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         Type = MachO::X86_64_RELOC_GOT;
         IsPCRel = 1;
       } else if (Modifier == MCSymbolRefExpr::VK_TLVP) {
-        report_fatal_error("TLVP symbol modifier should have been rip-rel",
-                           false);
-      } else if (Modifier != MCSymbolRefExpr::VK_None)
-        report_fatal_error("unsupported symbol modifier in relocation", false);
-      else {
+        Asm.getContext().reportError(
+            Fixup.getLoc(), "TLVP symbol modifier should have been rip-rel");
+        return;
+      } else if (Modifier != MCSymbolRefExpr::VK_None) {
+        Asm.getContext().reportError(
+            Fixup.getLoc(), "unsupported symbol modifier in relocation");
+        return;
+      } else {
         Type = MachO::X86_64_RELOC_UNSIGNED;
         unsigned Kind = Fixup.getKind();
-        if (Kind == X86::reloc_signed_4byte)
-          report_fatal_error("32-bit absolute addressing is not supported in "
-                             "64-bit mode", false);
+        if (Kind == X86::reloc_signed_4byte) {
+          Asm.getContext().reportError(
+              Fixup.getLoc(),
+              "32-bit absolute addressing is not supported in 64-bit mode");
+          return;
+        }
       }
     }
   }
@@ -351,10 +373,13 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   // See <reloc.h>.
   const MCSymbol *A = &Target.getSymA()->getSymbol();
 
-  if (!A->getFragment())
-    report_fatal_error("symbol '" + A->getName() +
-                       "' can not be undefined in a subtraction expression",
-                       false);
+  if (!A->getFragment()) {
+    Asm.getContext().reportError(
+        Fixup.getLoc(),
+        "symbol '" + A->getName() +
+            "' can not be undefined in a subtraction expression");
+    return false;
+  }
 
   uint32_t Value = Writer->getSymbolAddress(*A, Layout);
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
@@ -364,10 +389,13 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   if (const MCSymbolRefExpr *B = Target.getSymB()) {
     const MCSymbol *SB = &B->getSymbol();
 
-    if (!SB->getFragment())
-      report_fatal_error("symbol '" + B->getSymbol().getName() +
-                         "' can not be undefined in a subtraction expression",
-                         false);
+    if (!SB->getFragment()) {
+      Asm.getContext().reportError(
+          Fixup.getLoc(),
+          "symbol '" + B->getSymbol().getName() +
+              "' can not be undefined in a subtraction expression");
+      return false;
+    }
 
     // Select the appropriate difference relocation type.
     //

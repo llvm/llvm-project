@@ -8,8 +8,8 @@ declare <4 x float> @llvm.x86.fma.vfmadd.ss(<4 x float>, <4 x float>, <4 x float
 define <4 x float> @test_x86_fmadd_baa_ss(<4 x float> %a, <4 x float> %b) #0 {
 ; CHECK-LABEL: test_x86_fmadd_baa_ss:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
 ; CHECK-NEXT: vfmadd213ss %xmm1, %xmm1, %xmm0
 ; CHECK-NEXT: retq
   %res = call <4 x float> @llvm.x86.fma.vfmadd.ss(<4 x float> %b, <4 x float> %a, <4 x float> %a) nounwind
@@ -102,8 +102,8 @@ declare <2 x double> @llvm.x86.fma.vfmadd.sd(<2 x double>, <2 x double>, <2 x do
 define <2 x double> @test_x86_fmadd_baa_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fmadd_baa_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
 ; CHECK-NEXT: vfmadd213sd %xmm1, %xmm1, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfmadd.sd(<2 x double> %b, <2 x double> %a, <2 x double> %a) nounwind
@@ -113,7 +113,7 @@ define <2 x double> @test_x86_fmadd_baa_sd(<2 x double> %a, <2 x double> %b) #0 
 define <2 x double> @test_x86_fmadd_aba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fmadd_aba_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovaps	(%rcx), %xmm0
+; CHECK-NEXT: vmovapd	(%rcx), %xmm0
 ; CHECK-NEXT: vfmadd132sd (%rdx), %xmm0, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %a) nounwind
@@ -123,7 +123,7 @@ define <2 x double> @test_x86_fmadd_aba_sd(<2 x double> %a, <2 x double> %b) #0 
 define <2 x double> @test_x86_fmadd_bba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fmadd_bba_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovaps	(%rdx), %xmm0
+; CHECK-NEXT: vmovapd	(%rdx), %xmm0
 ; CHECK-NEXT: vfmadd213sd (%rcx), %xmm0, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfmadd.sd(<2 x double> %b, <2 x double> %b, <2 x double> %a) nounwind
@@ -197,8 +197,8 @@ declare <4 x float> @llvm.x86.fma.vfnmadd.ss(<4 x float>, <4 x float>, <4 x floa
 define <4 x float> @test_x86_fnmadd_baa_ss(<4 x float> %a, <4 x float> %b) #0 {
 ; CHECK-LABEL: test_x86_fnmadd_baa_ss:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
 ; CHECK-NEXT: vfnmadd213ss %xmm1, %xmm1, %xmm0
 ; CHECK-NEXT: retq
   %res = call <4 x float> @llvm.x86.fma.vfnmadd.ss(<4 x float> %b, <4 x float> %a, <4 x float> %a) nounwind
@@ -291,8 +291,8 @@ declare <2 x double> @llvm.x86.fma.vfnmadd.sd(<2 x double>, <2 x double>, <2 x d
 define <2 x double> @test_x86_fnmadd_baa_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fnmadd_baa_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
 ; CHECK-NEXT: vfnmadd213sd %xmm1, %xmm1, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfnmadd.sd(<2 x double> %b, <2 x double> %a, <2 x double> %a) nounwind
@@ -302,7 +302,7 @@ define <2 x double> @test_x86_fnmadd_baa_sd(<2 x double> %a, <2 x double> %b) #0
 define <2 x double> @test_x86_fnmadd_aba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fnmadd_aba_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovaps	(%rcx), %xmm0
+; CHECK-NEXT: vmovapd	(%rcx), %xmm0
 ; CHECK-NEXT: vfnmadd132sd (%rdx), %xmm0, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfnmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %a) nounwind
@@ -312,7 +312,7 @@ define <2 x double> @test_x86_fnmadd_aba_sd(<2 x double> %a, <2 x double> %b) #0
 define <2 x double> @test_x86_fnmadd_bba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fnmadd_bba_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovaps	(%rdx), %xmm0
+; CHECK-NEXT: vmovapd	(%rdx), %xmm0
 ; CHECK-NEXT: vfnmadd213sd (%rcx), %xmm0, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfnmadd.sd(<2 x double> %b, <2 x double> %b, <2 x double> %a) nounwind
@@ -386,8 +386,8 @@ declare <4 x float> @llvm.x86.fma.vfmsub.ss(<4 x float>, <4 x float>, <4 x float
 define <4 x float> @test_x86_fmsub_baa_ss(<4 x float> %a, <4 x float> %b) #0 {
 ; CHECK-LABEL: test_x86_fmsub_baa_ss:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
 ; CHECK-NEXT: vfmsub213ss %xmm1, %xmm1, %xmm0
 ; CHECK-NEXT: retq
   %res = call <4 x float> @llvm.x86.fma.vfmsub.ss(<4 x float> %b, <4 x float> %a, <4 x float> %a) nounwind
@@ -480,8 +480,8 @@ declare <2 x double> @llvm.x86.fma.vfmsub.sd(<2 x double>, <2 x double>, <2 x do
 define <2 x double> @test_x86_fmsub_baa_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fmsub_baa_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
 ; CHECK-NEXT: vfmsub213sd %xmm1, %xmm1, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfmsub.sd(<2 x double> %b, <2 x double> %a, <2 x double> %a) nounwind
@@ -491,7 +491,7 @@ define <2 x double> @test_x86_fmsub_baa_sd(<2 x double> %a, <2 x double> %b) #0 
 define <2 x double> @test_x86_fmsub_aba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fmsub_aba_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovaps	(%rcx), %xmm0
+; CHECK-NEXT: vmovapd	(%rcx), %xmm0
 ; CHECK-NEXT: vfmsub132sd (%rdx), %xmm0, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfmsub.sd(<2 x double> %a, <2 x double> %b, <2 x double> %a) nounwind
@@ -501,7 +501,7 @@ define <2 x double> @test_x86_fmsub_aba_sd(<2 x double> %a, <2 x double> %b) #0 
 define <2 x double> @test_x86_fmsub_bba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fmsub_bba_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovaps	(%rdx), %xmm0
+; CHECK-NEXT: vmovapd	(%rdx), %xmm0
 ; CHECK-NEXT: vfmsub213sd (%rcx), %xmm0, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfmsub.sd(<2 x double> %b, <2 x double> %b, <2 x double> %a) nounwind
@@ -575,8 +575,8 @@ declare <4 x float> @llvm.x86.fma.vfnmsub.ss(<4 x float>, <4 x float>, <4 x floa
 define <4 x float> @test_x86_fnmsub_baa_ss(<4 x float> %a, <4 x float> %b) #0 {
 ; CHECK-LABEL: test_x86_fnmsub_baa_ss:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
 ; CHECK-NEXT: vfnmsub213ss %xmm1, %xmm1, %xmm0
 ; CHECK-NEXT: retq
   %res = call <4 x float> @llvm.x86.fma.vfnmsub.ss(<4 x float> %b, <4 x float> %a, <4 x float> %a) nounwind
@@ -669,8 +669,8 @@ declare <2 x double> @llvm.x86.fma.vfnmsub.sd(<2 x double>, <2 x double>, <2 x d
 define <2 x double> @test_x86_fnmsub_baa_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fnmsub_baa_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
-; CHECK-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
+; CHECK-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%rcx\), %xmm1}}
 ; CHECK-NEXT: vfnmsub213sd %xmm1, %xmm1, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfnmsub.sd(<2 x double> %b, <2 x double> %a, <2 x double> %a) nounwind
@@ -680,7 +680,7 @@ define <2 x double> @test_x86_fnmsub_baa_sd(<2 x double> %a, <2 x double> %b) #0
 define <2 x double> @test_x86_fnmsub_aba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fnmsub_aba_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovaps	(%rcx), %xmm0
+; CHECK-NEXT: vmovapd	(%rcx), %xmm0
 ; CHECK-NEXT: vfnmsub132sd (%rdx), %xmm0, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfnmsub.sd(<2 x double> %a, <2 x double> %b, <2 x double> %a) nounwind
@@ -690,7 +690,7 @@ define <2 x double> @test_x86_fnmsub_aba_sd(<2 x double> %a, <2 x double> %b) #0
 define <2 x double> @test_x86_fnmsub_bba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_x86_fnmsub_bba_sd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT: vmovaps	(%rdx), %xmm0
+; CHECK-NEXT: vmovapd	(%rdx), %xmm0
 ; CHECK-NEXT: vfnmsub213sd (%rcx), %xmm0, %xmm0
 ; CHECK-NEXT: retq
   %res = call <2 x double> @llvm.x86.fma.vfnmsub.sd(<2 x double> %b, <2 x double> %b, <2 x double> %a) nounwind

@@ -759,14 +759,9 @@ bool IndVarSimplify::canLoopBeDeleted(
     ++BI;
   }
 
-  for (Loop::block_iterator LI = L->block_begin(), LE = L->block_end();
-       LI != LE; ++LI) {
-    for (BasicBlock::iterator BI = (*LI)->begin(), BE = (*LI)->end(); BI != BE;
-         ++BI) {
-      if (BI->mayHaveSideEffects())
-        return false;
-    }
-  }
+  for (auto *BB : L->blocks())
+    if (any_of(*BB, [](Instruction &I) { return I.mayHaveSideEffects(); }))
+      return false;
 
   return true;
 }
@@ -1675,10 +1670,10 @@ static bool hasConcreteDefImpl(Value *V, SmallPtrSetImpl<Value*> &Visited,
     return false;
 
   // Optimistically handle other instructions.
-  for (User::op_iterator OI = I->op_begin(), E = I->op_end(); OI != E; ++OI) {
-    if (!Visited.insert(*OI).second)
+  for (Value *Op : I->operands()) {
+    if (!Visited.insert(Op).second)
       continue;
-    if (!hasConcreteDefImpl(*OI, Visited, Depth+1))
+    if (!hasConcreteDefImpl(Op, Visited, Depth+1))
       return false;
   }
   return true;

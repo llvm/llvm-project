@@ -223,9 +223,12 @@ multiclass fma3s_int_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                  string OpStr, Intrinsic IntF32, Intrinsic IntF64,
                  SDNode OpNode> {
+  let ExeDomain = SSEPackedSingle in
   defm SS : fma3s_forms<opc132, opc213, opc231, OpStr, "ss", OpNode,
                         FR32, f32mem>,
             fma3s_int_forms<opc132, opc213, opc231, OpStr, "ss", VR128, ssmem>;
+
+  let ExeDomain = SSEPackedDouble in
   defm SD : fma3s_forms<opc132, opc213, opc231, OpStr, "sd", OpNode,
                         FR64, f64mem>,
             fma3s_int_forms<opc132, opc213, opc231, OpStr, "sd", VR128, sdmem>,

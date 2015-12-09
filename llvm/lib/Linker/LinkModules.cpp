@@ -420,29 +420,6 @@ class ModuleLinker {
 
   bool HasError = false;
 
-public:
-  ModuleLinker(Module &DstM, Linker::IdentifiedStructTypeSet &Set, Module &SrcM,
-               DiagnosticHandlerFunction DiagnosticHandler, unsigned Flags,
-               const FunctionInfoIndex *Index = nullptr,
-               DenseSet<const GlobalValue *> *FunctionsToImport = nullptr)
-      : DstM(DstM), SrcM(SrcM), TypeMap(Set), ValMaterializer(this),
-        DiagnosticHandler(DiagnosticHandler), Flags(Flags), ImportIndex(Index),
-        ImportFunction(FunctionsToImport) {
-    assert((ImportIndex || !ImportFunction) &&
-           "Expect a FunctionInfoIndex when importing");
-    // If we have a FunctionInfoIndex but no function to import,
-    // then this is the primary module being compiled in a ThinLTO
-    // backend compilation, and we need to see if it has functions that
-    // may be exported to another backend compilation.
-    if (ImportIndex && !ImportFunction)
-      HasExportedFunctions = ImportIndex->hasExportedFunctions(SrcM);
-  }
-
-  bool run();
-  Value *materializeDeclFor(Value *V);
-  void materializeInitFor(GlobalValue *New, GlobalValue *Old);
-
-private:
   bool shouldOverrideFromSrc() { return Flags & Linker::OverrideFromSrc; }
   bool shouldLinkOnlyNeeded() { return Flags & Linker::LinkOnlyNeeded; }
   bool shouldInternalizeLinkedSymbols() {
@@ -556,6 +533,28 @@ private:
                      const GlobalValue *DGV = nullptr);
 
   void linkNamedMDNodes();
+
+public:
+  ModuleLinker(Module &DstM, Linker::IdentifiedStructTypeSet &Set, Module &SrcM,
+               DiagnosticHandlerFunction DiagnosticHandler, unsigned Flags,
+               const FunctionInfoIndex *Index = nullptr,
+               DenseSet<const GlobalValue *> *FunctionsToImport = nullptr)
+      : DstM(DstM), SrcM(SrcM), TypeMap(Set), ValMaterializer(this),
+        DiagnosticHandler(DiagnosticHandler), Flags(Flags), ImportIndex(Index),
+        ImportFunction(FunctionsToImport) {
+    assert((ImportIndex || !ImportFunction) &&
+           "Expect a FunctionInfoIndex when importing");
+    // If we have a FunctionInfoIndex but no function to import,
+    // then this is the primary module being compiled in a ThinLTO
+    // backend compilation, and we need to see if it has functions that
+    // may be exported to another backend compilation.
+    if (ImportIndex && !ImportFunction)
+      HasExportedFunctions = ImportIndex->hasExportedFunctions(SrcM);
+  }
+
+  bool run();
+  Value *materializeDeclFor(Value *V);
+  void materializeInitFor(GlobalValue *New, GlobalValue *Old);
 };
 }
 

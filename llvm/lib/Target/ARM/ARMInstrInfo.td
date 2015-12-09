@@ -5655,16 +5655,16 @@ def : ARMInstAlias<"mvn${s}${p} $Rd, $imm",
                    (MOVi rGPR:$Rd, mod_imm_not:$imm, pred:$p, cc_out:$s)>;
 // Same for AND <--> BIC
 def : ARMInstAlias<"bic${s}${p} $Rd, $Rn, $imm",
-                   (ANDri rGPR:$Rd, rGPR:$Rn, mod_imm_not:$imm,
+                   (ANDri GPR:$Rd, GPR:$Rn, mod_imm_not:$imm,
                           pred:$p, cc_out:$s)>;
 def : ARMInstAlias<"bic${s}${p} $Rdn, $imm",
-                   (ANDri rGPR:$Rdn, rGPR:$Rdn, mod_imm_not:$imm,
+                   (ANDri GPR:$Rdn, GPR:$Rdn, mod_imm_not:$imm,
                           pred:$p, cc_out:$s)>;
 def : ARMInstAlias<"and${s}${p} $Rd, $Rn, $imm",
-                   (BICri rGPR:$Rd, rGPR:$Rn, mod_imm_not:$imm,
+                   (BICri GPR:$Rd, GPR:$Rn, mod_imm_not:$imm,
                           pred:$p, cc_out:$s)>;
 def : ARMInstAlias<"and${s}${p} $Rdn, $imm",
-                   (BICri rGPR:$Rdn, rGPR:$Rdn, mod_imm_not:$imm,
+                   (BICri GPR:$Rdn, GPR:$Rdn, mod_imm_not:$imm,
                           pred:$p, cc_out:$s)>;
 
 // Likewise, "add Rd, mod_imm_neg" -> sub

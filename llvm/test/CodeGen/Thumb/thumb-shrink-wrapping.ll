@@ -1,7 +1,11 @@
 ; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumb-macho \
-; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE 
+; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE --check-prefix=ENABLE-V4T
+; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumbv5-macho \
+; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE --check-prefix=ENABLE-V5T
 ; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumb-macho \
-; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
+; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE --check-prefix=DISABLE-V4T
+; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumbv5-macho \
+; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE --check-prefix=DISABLE-V5T
 ;
 ; Note: Lots of tests use inline asm instead of regular calls.
 ; This allows to have a better control on what the allocation will do.
@@ -39,14 +43,20 @@
 ;
 ; With shrink-wrapping, epilogue is just after the call.
 ; ENABLE-NEXT: add sp, #8
-; ENABLE-NEXT: pop {r7, lr}
+; ENABLE-V5T-NEXT: pop {r7, pc}
+; ENABLE-V4T-NEXT: pop {r7}
+; ENABLE-V4T-NEXT: pop {r1}
+; ENABLE-V4T-NEXT: mov lr, r1
 ;
 ; CHECK: [[EXIT_LABEL]]:
 ;
 ; Without shrink-wrapping, epilogue is in the exit block.
 ; Epilogue code. (What we pop does not matter.)
 ; DISABLE: add sp, #8
-; DISABLE-NEXT: pop {r7, pc}
+; DISABLE-V5T-NEXT: pop {r7, pc}
+; DISABLE-V4T-NEXT: pop {r7}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
 ;
 ; ENABLE-NEXT: bx lr
 define i32 @foo(i32 %a, i32 %b) {
@@ -62,6 +72,42 @@ true:
 false:
   %tmp.0 = phi i32 [ %tmp4, %true ], [ %a, %0 ]
   ret i32 %tmp.0
+}
+
+
+; Same, but the final BB is non-trivial, so we don't duplicate the return inst.
+; CHECK-LABEL: bar:
+;
+; With shrink-wrapping, epilogue is just after the call.
+; CHECK: bl
+; ENABLE-NEXT: add sp, #8
+; ENABLE-NEXT: pop {r7}
+; ENABLE-NEXT: pop {r0}
+; ENABLE-NEXT: mov lr, r0
+;
+; CHECK: movs r0, #42
+;
+; Without shrink-wrapping, epilogue is in the exit block.
+; Epilogue code. (What we pop does not matter.)
+; DISABLE: add sp, #8
+; DISABLE-V5T-NEXT: pop {r7, pc}
+; DISABLE-V4T-NEXT: pop {r7}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
+;
+; ENABLE-NEXT: bx lr
+define i32 @bar(i32 %a, i32 %b) {
+  %tmp = alloca i32, align 4
+  %tmp2 = icmp slt i32 %a, %b
+  br i1 %tmp2, label %true, label %false
+
+true:
+  store i32 %a, i32* %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  br label %false
+
+false:
+  ret i32 42
 }
 
 ; Function Attrs: optsize
@@ -101,12 +147,17 @@ declare i32 @doSomething(i32, i32*)
 ; CHECK: lsls [[SUM]], [[SUM]], #3
 ;
 ; Duplicated epilogue.
-; DISABLE: pop {r4, pc}
+; DISABLE-V5T: pop {r4, pc}
+; DISABLE-V4T: b [[END_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: [[ELSE_LABEL]]: @ %if.else
 ; Shift second argument by one and store into returned register.
 ; CHECK: lsls r0, r1, #1
-; DISABLE-NEXT: pop {r4, pc}
+; DISABLE-V5T-NEXT: pop {r4, pc}
+; DISABLE-V4T-NEXT: [[END_LABEL]]: @ %if.end
+; DISABLE-V4T-NEXT: pop {r4}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
 ;
 ; ENABLE-NEXT: bx lr
 define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
@@ -222,12 +273,17 @@ for.end:                                          ; preds = %for.body
 ; ENABLE-NEXT: pop {r4, lr}
 ;
 ; Duplicated epilogue.
-; DISABLE: pop {r4, pc}
+; DISABLE-V5T: pop {r4, pc}
+; DISABLE-V4T: b [[END_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: [[ELSE_LABEL]]: @ %if.else
 ; Shift second argument by one and store into returned register.
 ; CHECK: lsls r0, r1, #1
-; DISABLE-NEXT: pop {r4, pc}
+; DISABLE-V5T-NEXT: pop {r4, pc}
+; DISABLE-V4T-NEXT: [[END_LABEL]]: @ %if.end
+; DISABLE-V4T-NEXT: pop {r4}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
 ;
 ; ENABLE-NEXT: bx lr
 define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
@@ -297,12 +353,17 @@ declare void @somethingElse(...)
 ; ENABLE: pop {r4, lr}
 ;
 ; Duplicated epilogue.
-; DISABLE: pop {r4, pc}
+; DISABLE-V5T: pop {r4, pc}
+; DISABLE-V4T: b [[END_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: [[ELSE_LABEL]]: @ %if.else
 ; Shift second argument by one and store into returned register.
 ; CHECK: lsls r0, r1, #1
-; DISABLE-NEXT: pop {r4, pc}
+; DISABLE-V5T-NEXT: pop {r4, pc}
+; DISABLE-V4T-NEXT: [[END_LABEL]]: @ %if.end
+; DISABLE-V4T-NEXT: pop {r4}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
 ;
 ; ENABLE-NEXT: bx lr
 define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
@@ -373,12 +434,17 @@ entry:
 ; ENABLE-NEXT: pop {r4, lr}
 ;
 ; Duplicated epilogue.
-; DISABLE-NEXT: pop {r4, pc}
+; DISABLE-V5T-NEXT: pop {r4, pc}
+; DISABLE-V4T-NEXT: b [[END_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: [[ELSE_LABEL]]: @ %if.else
 ; Shift second argument by one and store into returned register.
 ; CHECK: lsls r0, r1, #1
-; DISABLE-NEXT: pop {r4, pc}
+; DISABLE-V5T-NEXT: pop {r4, pc}
+; DISABLE-V4T-NEXT: [[END_LABEL]]: @ %if.end
+; DISABLE-V4T-NEXT: pop {r4}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
 ;
 ; ENABLE-NEXT: bx lr
 define i32 @inlineAsm(i32 %cond, i32 %N) {
@@ -438,12 +504,14 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK-NEXT: pop {r3}
 ; CHECK-NEXT: bl
 ; CHECK-NEXT: lsls r0, r0, #3
-; CHECK-NEXT: add sp, #16
 ;
+; ENABLE-NEXT: add sp, #16
 ; ENABLE-NEXT: pop {[[TMP]], lr}
 ;
 ; Duplicated epilogue.
-; DISABLE-NEXT: pop {[[TMP]], pc}
+; DISABLE-V5T-NEXT: add sp, #16
+; DISABLE-V5T-NEXT: pop {[[TMP]], pc}
+; DISABLE-V4T-NEXT: b [[END_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: [[ELSE_LABEL]]: @ %if.else
 ; Shift second argument by one and store into returned register.
@@ -452,8 +520,12 @@ if.end:                                           ; preds = %for.body, %if.else
 ; Epilogue code.
 ; ENABLE-NEXT: bx lr
 ;
+; DISABLE-V4T-NEXT: [[END_LABEL]]: @ %if.end
 ; DISABLE-NEXT: add sp, #16
-; DISABLE-NEXT: pop {[[TMP]], pc}
+; DISABLE-V5T-NEXT: pop {[[TMP]], pc}
+; DISABLE-V4T-NEXT: pop {[[TMP]]}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
 define i32 @callVariadicFunc(i32 %cond, i32 %N) {
 entry:
   %tobool = icmp eq i32 %cond, 0

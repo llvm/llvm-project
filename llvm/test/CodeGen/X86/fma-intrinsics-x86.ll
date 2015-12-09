@@ -10,8 +10,8 @@ define <4 x float> @test_x86_fma_vfmadd_ss(<4 x float> %a0, <4 x float> %a1, <4 
 ; CHECK-LABEL: test_x86_fma_vfmadd_ss:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfmadd132ss     (%rdx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0
@@ -27,8 +27,8 @@ define <4 x float> @test_x86_fma_vfmadd_bac_ss(<4 x float> %a0, <4 x float> %a1,
 ; CHECK-LABEL: test_x86_fma_vfmadd_bac_ss:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfmadd132ss (%rcx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfmadd213ss %xmm2, %xmm0, %xmm1
@@ -45,8 +45,8 @@ define <2 x double> @test_x86_fma_vfmadd_sd(<2 x double> %a0, <2 x double> %a1, 
 ; CHECK-LABEL: test_x86_fma_vfmadd_sd:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfmadd132sd (%rdx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0
@@ -62,12 +62,12 @@ define <2 x double> @test_x86_fma_vfmadd_bac_sd(<2 x double> %a0, <2 x double> %
 ; CHECK-LABEL: test_x86_fma_vfmadd_bac_sd:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfmadd132sd (%rcx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfmadd213sd %xmm2, %xmm0, %xmm1
-; CHECK-FMA-NEXT:    vmovaps	%xmm1, %xmm0
+; CHECK-FMA-NEXT:    vmovapd	%xmm1, %xmm0
 ;
 ; CHECK-FMA4-NEXT: vfmaddsd %xmm2, %xmm0, %xmm1, %xmm0
 ;
@@ -171,8 +171,8 @@ define <4 x float> @test_x86_fma_vfmsub_bac_ss(<4 x float> %a0, <4 x float> %a1,
 ; CHECK-LABEL: test_x86_fma_vfmsub_bac_ss:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfmsub132ss (%rcx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfmsub213ss %xmm2, %xmm0, %xmm1
@@ -190,8 +190,8 @@ define <2 x double> @test_x86_fma_vfmsub_sd(<2 x double> %a0, <2 x double> %a1, 
 ; CHECK-LABEL: test_x86_fma_vfmsub_sd:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfmsub132sd (%rdx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0
@@ -207,12 +207,12 @@ define <2 x double> @test_x86_fma_vfmsub_bac_sd(<2 x double> %a0, <2 x double> %
 ; CHECK-LABEL: test_x86_fma_vfmsub_bac_sd:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfmsub132sd (%rcx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfmsub213sd %xmm2, %xmm0, %xmm1
-; CHECK-FMA-NEXT:    vmovaps	%xmm1, %xmm0
+; CHECK-FMA-NEXT:    vmovapd	%xmm1, %xmm0
 ;
 ; CHECK-FMA4-NEXT: vfmsubsd %xmm2, %xmm0, %xmm1, %xmm0
 ;
@@ -299,8 +299,8 @@ define <4 x float> @test_x86_fma_vfnmadd_ss(<4 x float> %a0, <4 x float> %a1, <4
 ; CHECK-LABEL: test_x86_fma_vfnmadd_ss:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfnmadd132ss (%rdx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0
@@ -316,8 +316,8 @@ define <4 x float> @test_x86_fma_vfnmadd_bac_ss(<4 x float> %a0, <4 x float> %a1
 ; CHECK-LABEL: test_x86_fma_vfnmadd_bac_ss:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfnmadd132ss (%rcx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm1
@@ -335,8 +335,8 @@ define <2 x double> @test_x86_fma_vfnmadd_sd(<2 x double> %a0, <2 x double> %a1,
 ; CHECK-LABEL: test_x86_fma_vfnmadd_sd:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfnmadd132sd (%rdx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0
@@ -352,12 +352,12 @@ define <2 x double> @test_x86_fma_vfnmadd_bac_sd(<2 x double> %a0, <2 x double> 
 ; CHECK-LABEL: test_x86_fma_vfnmadd_bac_sd:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfnmadd132sd (%rcx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfnmadd213sd %xmm2, %xmm0, %xmm1
-; CHECK-FMA-NEXT:    vmovaps	%xmm1, %xmm0
+; CHECK-FMA-NEXT:    vmovapd	%xmm1, %xmm0
 ;
 ; CHECK-FMA4-NEXT: vfnmaddsd %xmm2, %xmm0, %xmm1, %xmm0
 ;
@@ -444,8 +444,8 @@ define <4 x float> @test_x86_fma_vfnmsub_ss(<4 x float> %a0, <4 x float> %a1, <4
 ; CHECK-LABEL: test_x86_fma_vfnmsub_ss:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfnmsub132ss (%rdx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0
@@ -461,8 +461,8 @@ define <4 x float> @test_x86_fma_vfnmsub_bac_ss(<4 x float> %a0, <4 x float> %a1
 ; CHECK-LABEL: test_x86_fma_vfnmsub_bac_ss:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovaps {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfnmsub132ss (%rcx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfnmsub213ss %xmm2, %xmm0, %xmm1
@@ -480,8 +480,8 @@ define <2 x double> @test_x86_fma_vfnmsub_sd(<2 x double> %a0, <2 x double> %a1,
 ; CHECK-LABEL: test_x86_fma_vfnmsub_sd:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rcx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfnmsub132sd (%rdx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0
@@ -497,12 +497,12 @@ define <2 x double> @test_x86_fma_vfnmsub_bac_sd(<2 x double> %a0, <2 x double> 
 ; CHECK-LABEL: test_x86_fma_vfnmsub_bac_sd:
 ; CHECK-NEXT:  # BB#0:
 ;
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
-; CHECK-FMA-WIN-NEXT: vmovap{{s|d}} {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
+; CHECK-FMA-WIN-NEXT: vmovapd {{\(%rdx\), %xmm0|\(%r8\), %xmm1}}
 ; CHECK-FMA-WIN-NEXT: vfnmsub132sd (%rcx), %xmm1, %xmm0
 ;
 ; CHECK-FMA-NEXT:    vfnmsub213sd %xmm2, %xmm0, %xmm1
-; CHECK-FMA-NEXT:    vmovaps	%xmm1, %xmm0
+; CHECK-FMA-NEXT:    vmovapd	%xmm1, %xmm0
 ;
 ; CHECK-FMA4-NEXT: vfnmsubsd %xmm2, %xmm0, %xmm1, %xmm0
 ;

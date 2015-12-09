@@ -1,5 +1,5 @@
-; RUN: llc -march=aarch64 -aarch64-neon-syntax=generic -lower-interleaved-accesses=true < %s | FileCheck %s -check-prefix=NEON
-; RUN: llc -march=aarch64 -mattr=-neon -lower-interleaved-accesses=true < %s | FileCheck %s -check-prefix=NONEON
+; RUN: llc -mtriple=aarch64 -lower-interleaved-accesses=true < %s | FileCheck %s -check-prefix=NEON
+; RUN: llc -mtriple=aarch64 -lower-interleaved-accesses=true -mattr=-neon < %s | FileCheck %s -check-prefix=NONEON
 
 ; NEON-LABEL: load_factor2:
 ; NEON: ld2 { v0.8b, v1.8b }, [x0]
@@ -230,5 +230,41 @@ define void @store_undef_mask_factor4(i32* %ptr, <4 x i32> %v0, <4 x i32> %v1, <
   %v2_v3 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %interleaved.vec = shufflevector <8 x i32> %v0_v1, <8 x i32> %v2_v3, <16 x i32> <i32 0, i32 4, i32 8, i32 undef, i32 undef, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
   store <16 x i32> %interleaved.vec, <16 x i32>* %base, align 4
+  ret void
+}
+
+; Check that we do something sane with illegal types.
+
+; NEON-LABEL: load_illegal_factor2:
+; NEON: BB#0:
+; NEON-NEXT: ldr q[[V:[0-9]+]], [x0]
+; NEON-NEXT: uzp1 v0.4s, v[[V]].4s, v{{.*}}.4s
+; NEON-NEXT: ret
+; NONEON-LABEL: load_illegal_factor2:
+; NONEON: BB#0:
+; NONEON-NEXT: ldr s0, [x0]
+; NONEON-NEXT: ldr s1, [x0, #8]
+; NONEON-NEXT: ret
+define <3 x float> @load_illegal_factor2(<3 x float>* %p) nounwind {
+  %tmp1 = load <3 x float>, <3 x float>* %p, align 16
+  %tmp2 = shufflevector <3 x float> %tmp1, <3 x float> undef, <3 x i32> <i32 0, i32 2, i32 undef>
+  ret <3 x float> %tmp2
+}
+
+; NEON-LABEL: store_illegal_factor2:
+; NEON: BB#0:
+; NEON-NEXT: uzp1 v0.4s, v0.4s, v{{.*}}.4s
+; NEON-NEXT: st1 { v0.d }[0], [x0]
+; NEON-NEXT: ret
+; NONEON-LABEL: store_illegal_factor2:
+; NONEON: BB#0:
+; NONEON-NEXT: fmov w[[ELT2:[0-9]+]], s2
+; NONEON-NEXT: fmov w[[RES:[0-9]+]], s0
+; NONEON-NEXT: bfi x[[RES]], x[[ELT2]], #32, #32
+; NONEON-NEXT: str x[[RES]], [x0]
+; NONEON-NEXT: ret
+define void @store_illegal_factor2(<3 x float>* %p, <3 x float> %v) nounwind {
+  %tmp1 = shufflevector <3 x float> %v, <3 x float> undef, <3 x i32> <i32 0, i32 2, i32 undef>
+  store <3 x float> %tmp1, <3 x float>* %p, align 16
   ret void
 }

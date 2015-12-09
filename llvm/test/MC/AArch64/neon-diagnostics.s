@@ -341,7 +341,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fabd v0.2s, v1.4s, v2.2d
 // CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fabd v0.4h, v1.4h, v2.4h
 // CHECK-ERROR:                 ^
 //----------------------------------------------------------------------
@@ -385,7 +385,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        frecps v0.4s, v1.2d, v2.4s
 // CHECK-ERROR:                         ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        frecps v0.8h, v1.8h, v2.8h
 // CHECK-ERROR:                  ^
 
@@ -400,7 +400,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        frsqrts v0.2d, v1.2d, v2.2s
 // CHECK-ERROR:                                 ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        frsqrts v0.4h, v1.4h, v2.4h
 // CHECK-ERROR:                   ^
 
@@ -417,7 +417,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        facge v0.2d, v1.2s, v2.2d
 // CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        facge v0.4h, v1.4h, v2.4h
 // CHECK-ERROR:                 ^
 // CHECK-ERROR: error: invalid operand for instruction
@@ -435,7 +435,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        facgt v0.2d, v1.2d, v2.4s
 // CHECK-ERROR:                               ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        facgt v0.8h, v1.8h, v2.8h
 // CHECK-ERROR:                 ^
 // CHECK-ERROR: error: invalid operand for instruction
@@ -1092,7 +1092,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        fmin v0.4s, v1.4s, v2.2d
 // CHECK-ERROR:                              ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmin v0.8h, v1.8h, v2.8h
 // CHECK-ERROR:                ^
 
@@ -1177,7 +1177,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        fminp v0.4s, v1.4s, v2.2d
 // CHECK-ERROR:                               ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fminp v0.8h, v1.8h, v2.8h
 // CHECK-ERROR:                 ^
 
@@ -1283,7 +1283,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fmulx v21.2s, v5.2s, v13.2d
 // CHECK-ERROR:                                  ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fmulx v1.4h, v25.4h, v3.4h
 // CHECK-ERROR:                  ^
 
@@ -3023,10 +3023,10 @@
       fmla v0.2d, v1.2d, v2.d[2]
       fmla v0.2d, v1.2d, v22.d[2]
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmla v0.4h, v1.4h, v2.h[2]
 // CHECK-ERROR:                ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmla v0.8h, v1.8h, v2.h[2]
 // CHECK-ERROR:                ^
 // CHECK-ERROR: vector lane must be an integer in range
@@ -3057,10 +3057,10 @@
       fmls v0.2d, v1.2d, v2.d[2]
       fmls v0.2d, v1.2d, v22.d[2]
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmls v0.4h, v1.4h, v2.h[2]
 // CHECK-ERROR:                ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmls v0.8h, v1.8h, v2.h[2]
 // CHECK-ERROR:                ^
 // CHECK-ERROR: vector lane must be an integer in range
@@ -3428,7 +3428,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        mul v0.2d, v1.2d, v2.d[1]
 // CHECK-ERROR:               ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmul v0.4h, v1.4h, v2.h[4]
 // CHECK-ERROR:                ^
 // CHECK-ERROR: vector lane must be an integer in range
@@ -3458,7 +3458,7 @@
       fmulx v0.2d, v1.2d, v2.d[2]
       fmulx v0.2d, v1.2d, v22.d[2]
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmulx v0.4h, v1.4h, v2.h[4]
 // CHECK-ERROR:                 ^
 // CHECK-ERROR: vector lane must be an integer in range
@@ -3837,16 +3837,16 @@
         fmaxv h0, v1.8h
         fminv h0, v1.8h
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmaxnmv h0, v1.8h
 // CHECK-ERROR:                ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fminnmv h0, v1.8h
 // CHECK-ERROR:                ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fmaxv h0, v1.8h
 // CHECK-ERROR:              ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:        fminv h0, v1.8h
 // CHECK-ERROR:              ^
 
@@ -5594,13 +5594,13 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fabs v0.16b, v31.16b
 // CHECK-ERROR:                 ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fabs v2.8h, v4.8h
 // CHECK-ERROR:                 ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fabs v1.8b, v9.8b
 // CHECK-ERROR:                 ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fabs v13.4h, v21.4h
 // CHECK-ERROR:                  ^
 
@@ -5616,13 +5616,13 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fneg v0.16b, v31.16b
 // CHECK-ERROR:                 ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fneg v2.8h, v4.8h
 // CHECK-ERROR:                 ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fneg v1.8b, v9.8b
 // CHECK-ERROR:                 ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fneg v13.4h, v21.4h
 // CHECK-ERROR:                  ^
 
@@ -5978,205 +5978,205 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintn v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintn v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintn v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintn v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frinta v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frinta v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frinta v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frinta v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintp v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintp v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintp v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintp v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintm v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintm v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintm v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintm v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintx v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintx v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintx v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintx v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintz v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintz v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frintz v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frintz v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frinti v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frinti v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frinti v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frinti v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtns v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtns v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtns v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtns v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtnu v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtnu v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtnu v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtnu v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtps v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtps v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtps v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtps v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtpu v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtpu v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtpu v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtpu v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtms v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtms v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtms v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtms v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtmu v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtmu v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtmu v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtmu v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtzs v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtzs v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtzs v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtzs v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtzu v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtzu v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtzu v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtzu v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtas v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtas v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtas v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtas v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtau v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtau v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fcvtau v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fcvtau v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
@@ -6212,61 +6212,61 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         scvtf v0.16b, v31.16b
 // CHECK-ERROR:                  ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         scvtf v2.8h, v4.8h
 // CHECK-ERROR:                  ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         scvtf v1.8b, v9.8b
 // CHECK-ERROR:                  ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         scvtf v13.4h, v21.4h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         ucvtf v0.16b, v31.16b
 // CHECK-ERROR:                  ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         ucvtf v2.8h, v4.8h
 // CHECK-ERROR:                  ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         ucvtf v1.8b, v9.8b
 // CHECK-ERROR:                  ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         ucvtf v13.4h, v21.4h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frecpe v0.16b, v31.16b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frecpe v2.8h, v4.8h
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frecpe v1.8b, v9.8b
 // CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frecpe v13.4h, v21.4h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frsqrte v0.16b, v31.16b
 // CHECK-ERROR:                    ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frsqrte v2.8h, v4.8h
 // CHECK-ERROR:                    ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         frsqrte v1.8b, v9.8b
 // CHECK-ERROR:                    ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         frsqrte v13.4h, v21.4h
 // CHECK-ERROR:                     ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fsqrt v0.16b, v31.16b
 // CHECK-ERROR:                  ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fsqrt v2.8h, v4.8h
 // CHECK-ERROR:                  ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         fsqrt v1.8b, v9.8b
 // CHECK-ERROR:                  ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: instruction requires: fullfp16
 // CHECK-ERROR:         fsqrt v13.4h, v21.4h
 // CHECK-ERROR:                   ^
 

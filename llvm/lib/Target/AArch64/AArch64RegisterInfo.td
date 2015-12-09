@@ -407,7 +407,7 @@ def FPR128 : RegisterClass<"AArch64",
 // The lower 16 vector registers.  Some instructions can only take registers
 // in this range.
 def FPR128_lo : RegisterClass<"AArch64",
-                              [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+                              [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16],
                               128, (trunc FPR128, 16)>;
 
 // Pairs, triples, and quads of 64-bit vector registers.

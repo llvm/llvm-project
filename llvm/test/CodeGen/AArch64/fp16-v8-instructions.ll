@@ -358,4 +358,13 @@ define <8 x half> @uitofp_i64(<8 x i64> %a) #0 {
   ret <8 x half> %1
 }
 
+define void @test_insert_at_zero(half %a, <8 x half>* %b) #0 {
+; CHECK-LABEL: test_insert_at_zero:
+; CHECK-NEXT: str q0, [x0]
+; CHECK-NEXT: ret
+  %1 = insertelement <8 x half> undef, half %a, i64 0
+  store <8 x half> %1, <8 x half>* %b, align 4
+  ret void
+}
+
 attributes #0 = { nounwind }

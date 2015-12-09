@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -26,9 +26,11 @@
 // Floating-point Multiply Extended
 //----------------------------------------------------------------------
 
+    fmulx h20, h22, h15
     fmulx s20, s22, s15
     fmulx d23, d11, d1
 
+// CHECK: fmulx   h20, h22, h15           // encoding: [0xd4,0x1e,0x4f,0x5e]
 // CHECK: fmulx s20, s22, s15   // encoding: [0xd4,0xde,0x2f,0x5e]
 // CHECK: fmulx d23, d11, d1    // encoding: [0x77,0xdd,0x61,0x5e]
 

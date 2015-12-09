@@ -1357,8 +1357,7 @@ define <4 x i64> @splat_mem_v4i64_from_v2i64(<2 x i64>* %ptr) {
 ;
 ; AVX512VL-LABEL: splat_mem_v4i64_from_v2i64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; AVX512VL-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512VL-NEXT:    vpbroadcastq (%rdi), %ymm0
 ; AVX512VL-NEXT:    retq
   %v = load <2 x i64>, <2 x i64>* %ptr
   %shuffle = shufflevector <2 x i64> %v, <2 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
@@ -1366,21 +1365,10 @@ define <4 x i64> @splat_mem_v4i64_from_v2i64(<2 x i64>* %ptr) {
 }
 
 define <4 x double> @splat_mem_v4f64_from_v2f64(<2 x double>* %ptr) {
-; AVX1-LABEL: splat_mem_v4f64_from_v2f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: splat_mem_v4f64_from_v2f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: splat_mem_v4f64_from_v2f64:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: splat_mem_v4f64_from_v2f64:
+; ALL:       # BB#0:
+; ALL-NEXT:    vbroadcastsd (%rdi), %ymm0
+; ALL-NEXT:    retq
   %v = load <2 x double>, <2 x double>* %ptr
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x double> %shuffle

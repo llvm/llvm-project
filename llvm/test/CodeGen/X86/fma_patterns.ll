@@ -1114,7 +1114,7 @@ define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y
 define double @test_f64_fneg_fmul(double %x, double %y) #0 {
 ; FMA-LABEL: test_f64_fneg_fmul:
 ; FMA:       # BB#0:
-; FMA-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; FMA-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; FMA-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0
 ; FMA-NEXT:    retq
 ;

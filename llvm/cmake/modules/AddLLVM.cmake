@@ -599,7 +599,7 @@ endmacro(add_llvm_loadable_module name)
 
 
 macro(add_llvm_executable name)
-  cmake_parse_arguments(ARG "DISABLE_LLVM_LINK_LLVM_DYLIB" "" "" ${ARGN})
+  cmake_parse_arguments(ARG "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO" "" "" ${ARGN})
   llvm_process_sources( ALL_FILES ${ARG_UNPARSED_ARGUMENTS} )
 
   # Generate objlib
@@ -660,7 +660,9 @@ macro(add_llvm_executable name)
     add_dependencies( ${name} ${LLVM_COMMON_DEPENDS} )
   endif( LLVM_COMMON_DEPENDS )
 
-  llvm_externalize_debuginfo(${name})
+  if(NOT ARG_IGNORE_EXTERNALIZE_DEBUGINFO)
+    llvm_externalize_debuginfo(${name})
+  endif()
 endmacro(add_llvm_executable name)
 
 function(export_executable_symbols target)
@@ -876,7 +878,7 @@ function(add_unittest test_suite test_name)
 
   set(LLVM_REQUIRES_RTTI OFF)
 
-  add_llvm_executable(${test_name} ${ARGN})
+  add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO ${ARGN})
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   target_link_libraries(${test_name}

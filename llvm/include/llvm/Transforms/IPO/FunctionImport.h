@@ -18,23 +18,6 @@ class LLVMContext;
 class Module;
 class FunctionInfoIndex;
 
-/// Helper to load on demand a Module from file and cache it for subsequent
-/// queries. It can be used with the FunctionImporter.
-class ModuleLazyLoaderCache {
-  /// The context that will be used for importing.
-  LLVMContext &Context;
-
-  /// Cache of lazily loaded module for import.
-  StringMap<std::unique_ptr<Module>> ModuleMap;
-
-public:
-  /// Create the loader, Module will be initialized in \p Context.
-  ModuleLazyLoaderCache(LLVMContext &Context) : Context(Context) {}
-
-  /// Retrieve a Module from the cache or lazily load it on demand.
-  Module &operator()(StringRef FileName);
-};
-
 /// The function importer is automatically importing function from other modules
 /// based on the provided summary informations.
 class FunctionImporter {
@@ -45,16 +28,17 @@ class FunctionImporter {
   /// Diagnostic will be sent to this handler.
   DiagnosticHandlerFunction DiagnosticHandler;
 
-  /// Retrieve a Module from the cache or lazily load it on demand.
-  std::function<Module &(StringRef FileName)> getLazyModule;
+  /// Factory function to load a Module for a given identifier
+  std::function<std::unique_ptr<Module>(StringRef Identifier)> ModuleLoader;
 
 public:
   /// Create a Function Importer.
-  FunctionImporter(const FunctionInfoIndex &Index,
-                   DiagnosticHandlerFunction DiagnosticHandler,
-                   std::function<Module &(StringRef FileName)> ModuleLoader)
+  FunctionImporter(
+      const FunctionInfoIndex &Index,
+      DiagnosticHandlerFunction DiagnosticHandler,
+      std::function<std::unique_ptr<Module>(StringRef Identifier)> ModuleLoader)
       : Index(Index), DiagnosticHandler(DiagnosticHandler),
-        getLazyModule(ModuleLoader) {}
+        ModuleLoader(ModuleLoader) {}
 
   /// Import functions in Module \p M based on the summary informations.
   bool importFunctions(Module &M);

@@ -66,9 +66,9 @@ class EXTBITS_DESC_BASE<string instr_asm, RegisterOperand RO, Operand PosOpnd,
 }
 class DEXT_MMR6_DESC : EXTBITS_DESC_BASE<"dext", GPR64Opnd, uimm6,
                                                  MipsExt>;
-class DEXTM_MMR6_DESC : EXTBITS_DESC_BASE<"dextm", GPR64Opnd, uimm6,
+class DEXTM_MMR6_DESC : EXTBITS_DESC_BASE<"dextm", GPR64Opnd, uimm5,
                                                   MipsExt>;
-class DEXTU_MMR6_DESC : EXTBITS_DESC_BASE<"dextu", GPR64Opnd, uimm6,
+class DEXTU_MMR6_DESC : EXTBITS_DESC_BASE<"dextu", GPR64Opnd, uimm5_plus32,
                                                   MipsExt>;
 
 class DALIGN_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,

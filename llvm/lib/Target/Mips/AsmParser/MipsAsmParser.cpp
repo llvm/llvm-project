@@ -3647,6 +3647,12 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm5_Lsl2:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected both 7-bit unsigned immediate and multiple of 4");
+  case Match_UImm6_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 6-bit unsigned immediate");
+  case Match_UImm8_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 8-bit unsigned immediate");
   }
 
   llvm_unreachable("Implement any new match types added!");

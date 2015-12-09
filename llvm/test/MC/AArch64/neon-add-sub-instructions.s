@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -44,10 +44,14 @@
 //------------------------------------------------------------------------------
 // Vector Floating-Point Add
 //------------------------------------------------------------------------------
+         fadd v0.4h, v1.4h, v2.4h
+         fadd v0.8h, v1.8h, v2.8h
          fadd v0.2s, v1.2s, v2.2s
          fadd v0.4s, v1.4s, v2.4s
          fadd v0.2d, v1.2d, v2.2d
 
+// CHECK: fadd v0.4h, v1.4h, v2.4h       // encoding: [0x20,0x14,0x42,0x0e]
+// CHECK: fadd v0.8h, v1.8h, v2.8h       // encoding: [0x20,0x14,0x42,0x4e]
 // CHECK: fadd v0.2s, v1.2s, v2.2s       // encoding: [0x20,0xd4,0x22,0x0e]
 // CHECK: fadd v0.4s, v1.4s, v2.4s       // encoding: [0x20,0xd4,0x22,0x4e]
 // CHECK: fadd v0.2d, v1.2d, v2.2d       // encoding: [0x20,0xd4,0x62,0x4e]
@@ -56,10 +60,14 @@
 //------------------------------------------------------------------------------
 // Vector Floating-Point Sub
 //------------------------------------------------------------------------------
+         fsub v0.4h, v1.4h, v2.4h
+         fsub v0.8h, v1.8h, v2.8h
          fsub v0.2s, v1.2s, v2.2s
          fsub v0.4s, v1.4s, v2.4s
          fsub v0.2d, v1.2d, v2.2d
 
+// CHECK: fsub v0.4h, v1.4h, v2.4h       // encoding: [0x20,0x14,0xc2,0x0e]
+// CHECK; fsub v0.8h, v1.8h, v2.8h       // encoding: [0x20,0x14,0xc2,0x4e]
 // CHECK: fsub v0.2s, v1.2s, v2.2s       // encoding: [0x20,0xd4,0xa2,0x0e]
 // CHECK: fsub v0.4s, v1.4s, v2.4s       // encoding: [0x20,0xd4,0xa2,0x4e]
 // CHECK: fsub v0.2d, v1.2d, v2.2d       // encoding: [0x20,0xd4,0xe2,0x4e]

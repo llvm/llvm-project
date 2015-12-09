@@ -19,7 +19,7 @@ a:
         dati $3, 4               # CHECK: dati $3, 4          # encoding: [0x42,0x03,0x00,0x04]
         dext $9, $6, 3, 7        # CHECK: dext $9, $6, 3, 7   # encoding: [0x59,0x26,0x30,0xec]
         dextm $9, $6, 3, 7       # CHECK: dextm $9, $6, 3, 7  # encoding: [0x59,0x26,0x30,0xe4]
-        dextu $9, $6, 3, 7       # CHECK: dextu $9, $6, 3, 7  # encoding: [0x59,0x26,0x30,0xd4]
+        dextu $9, $6, 35, 7      # CHECK: dextu $9, $6, 35, 7  # encoding: [0x59,0x26,0x30,0xd4]
         dalign $4, $2, $3, 5     # CHECK: dalign $4, $2, $3, 5  # encoding: [0x58,0x43,0x25,0x1c]
         lw $3, 32($gp)           # CHECK: lw $3, 32($gp)        # encoding: [0x65,0x88]
         lw $3, 24($sp)           # CHECK: lw $3, 24($sp)        # encoding: [0x48,0x66]
