@@ -20,6 +20,7 @@
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Core/ClangForward.h"
+#include "lldb/Core/SwiftForward.h"
 
 namespace lldb_private {
 

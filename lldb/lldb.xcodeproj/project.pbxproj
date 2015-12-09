@@ -2494,6 +2494,7 @@
 		495B38431489714C002708C5 /* ClangExternalASTSourceCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ClangExternalASTSourceCommon.h; path = include/lldb/Symbol/ClangExternalASTSourceCommon.h; sourceTree = "<group>"; };
 		495BBACB119A0DBE00418BEA /* PathMappingList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingList.cpp; path = source/Target/PathMappingList.cpp; sourceTree = "<group>"; };
 		495BBACF119A0DE700418BEA /* PathMappingList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PathMappingList.h; path = include/lldb/Target/PathMappingList.h; sourceTree = "<group>"; };
+		495D98F31C18F52500B9774B /* SwiftForward.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftForward.h; path = include/lldb/Core/SwiftForward.h; sourceTree = "<group>"; };
 		4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangExternalASTSourceCommon.cpp; path = source/Symbol/ClangExternalASTSourceCommon.cpp; sourceTree = "<group>"; };
 		49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MIUtilParse.cpp; path = "tools/lldb-mi/MIUtilParse.cpp"; sourceTree = SOURCE_ROOT; };
 		49684D791BAB37E400E6D5D5 /* MIUtilParse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MIUtilParse.h; path = "tools/lldb-mi/MIUtilParse.h"; sourceTree = SOURCE_ROOT; };
@@ -4588,6 +4589,7 @@
 				9A35765F116E76B900E8ED2F /* StringList.cpp */,
 				26F2F8FD1B156678007857DE /* StructuredData.h */,
 				AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */,
+				495D98F31C18F52500B9774B /* SwiftForward.h */,
 				26B167A41123BF5500DC7B4F /* ThreadSafeValue.h */,
 				263FEDA5112CC1DA00E4C208 /* ThreadSafeSTLMap.h */,
 				26BC7D7E10F1B77400F91463 /* Timer.h */,
