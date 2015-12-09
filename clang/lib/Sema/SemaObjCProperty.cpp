@@ -1372,12 +1372,11 @@ bool Sema::DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *property,
   QualType PropertyIvarType = property->getType().getNonReferenceType();
   bool compat = Context.hasSameType(PropertyIvarType, GetterType);
   if (!compat) {
-    if (isa<ObjCObjectPointerType>(PropertyIvarType) && 
-        isa<ObjCObjectPointerType>(GetterType))
-      compat =
-        Context.canAssignObjCInterfaces(
-                                      GetterType->getAs<ObjCObjectPointerType>(),
-                                      PropertyIvarType->getAs<ObjCObjectPointerType>());
+    const ObjCObjectPointerType *propertyObjCPtr = nullptr;
+    const ObjCObjectPointerType *getterObjCPtr = nullptr;
+    if ((propertyObjCPtr = PropertyIvarType->getAs<ObjCObjectPointerType>()) && 
+        (getterObjCPtr = GetterType->getAs<ObjCObjectPointerType>()))
+      compat = Context.canAssignObjCInterfaces(getterObjCPtr, propertyObjCPtr);
     else if (CheckAssignmentConstraints(Loc, GetterType, PropertyIvarType) 
               != Compatible) {
           Diag(Loc, diag::error_property_accessor_type)

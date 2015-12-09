@@ -909,7 +909,7 @@ _mm512_rsqrt14_ps(__m512 __A)
 static  __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rsqrt14_ss(__m128 __A, __m128 __B)
 {
-  return (__m128) __builtin_ia32_rsqrt14ss_mask ((__v4sf) __A,
+  return (__m128) __builtin_ia32_rsqrt14ss ((__v4sf) __A,
              (__v4sf) __B,
              (__v4sf)
              _mm_setzero_ps (),
@@ -919,7 +919,7 @@ _mm_rsqrt14_ss(__m128 __A, __m128 __B)
 static  __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_rsqrt14_sd(__m128d __A, __m128d __B)
 {
-  return (__m128d) __builtin_ia32_rsqrt14sd_mask ((__v2df) __A,
+  return (__m128d) __builtin_ia32_rsqrt14sd ((__v2df) __A,
               (__v2df) __B,
               (__v2df)
               _mm_setzero_pd (),
@@ -946,7 +946,7 @@ _mm512_rcp14_ps(__m512 __A)
 static  __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rcp14_ss(__m128 __A, __m128 __B)
 {
-  return (__m128) __builtin_ia32_rcp14ss_mask ((__v4sf) __A,
+  return (__m128) __builtin_ia32_rcp14ss ((__v4sf) __A,
                  (__v4sf) __B,
                  (__v4sf)
                  _mm_setzero_ps (),
@@ -956,7 +956,7 @@ _mm_rcp14_ss(__m128 __A, __m128 __B)
 static  __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_rcp14_sd(__m128d __A, __m128d __B)
 {
-  return (__m128d) __builtin_ia32_rcp14sd_mask ((__v2df) __A,
+  return (__m128d) __builtin_ia32_rcp14sd ((__v2df) __A,
             (__v2df) __B,
             (__v2df)
             _mm_setzero_pd (),

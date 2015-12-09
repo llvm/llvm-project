@@ -2,9 +2,10 @@ This directory contains a VSPackage project to generate a Visual Studio extensio
 for clang-format.
 
 Build prerequisites are:
-- Visual Studio 2012 Professional
-- Visual Studio 2010 Professional
-- Visual Studio 2010 SDK.
+- Visual Studio 2013 Professional
+- Visual Studio 2013 SDK
+- Visual Studio 2010 Professional (?)
+- Visual Studio 2010 SDK (?)
 
 The extension is built using CMake by setting BUILD_CLANG_FORMAT_VS_PLUGIN=ON
 when configuring a Clang build, and building the clang_format_vsix target.

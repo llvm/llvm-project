@@ -164,7 +164,7 @@ public:
   
   /// \brief A list of parameters which have the nonnull attribute and are
   /// modified in the function.
-  llvm::SmallPtrSet<const ParmVarDecl*, 8>  ModifiedNonNullParams;
+  llvm::SmallPtrSet<const ParmVarDecl*, 8> ModifiedNonNullParams;
 
 public:
   /// Represents a simple identification of a weak object.

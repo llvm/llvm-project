@@ -19,6 +19,7 @@ using namespace clang::serialization;
 TestModuleFileExtension::Writer::~Writer() { }
 
 void TestModuleFileExtension::Writer::writeExtensionContents(
+       Sema &SemaRef,
        llvm::BitstreamWriter &Stream) {
   using namespace llvm;
 

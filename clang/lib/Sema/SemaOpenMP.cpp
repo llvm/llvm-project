@@ -5367,6 +5367,30 @@ StmtResult Sema::ActOnOpenMPCancelDirective(ArrayRef<OMPClause *> Clauses,
                                     CancelRegion);
 }
 
+static bool checkGrainsizeNumTasksClauses(Sema &S,
+                                          ArrayRef<OMPClause *> Clauses) {
+  OMPClause *PrevClause = nullptr;
+  bool ErrorFound = false;
+  for (auto *C : Clauses) {
+    if (C->getClauseKind() == OMPC_grainsize ||
+        C->getClauseKind() == OMPC_num_tasks) {
+      if (!PrevClause)
+        PrevClause = C;
+      else if (PrevClause->getClauseKind() != C->getClauseKind()) {
+        S.Diag(C->getLocStart(),
+               diag::err_omp_grainsize_num_tasks_mutually_exclusive)
+            << getOpenMPClauseName(C->getClauseKind())
+            << getOpenMPClauseName(PrevClause->getClauseKind());
+        S.Diag(PrevClause->getLocStart(),
+               diag::note_omp_previous_grainsize_num_tasks)
+            << getOpenMPClauseName(PrevClause->getClauseKind());
+        ErrorFound = true;
+      }
+    }
+  }
+  return ErrorFound;
+}
+
 StmtResult Sema::ActOnOpenMPTaskLoopDirective(
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
     SourceLocation EndLoc,
@@ -5387,6 +5411,12 @@ StmtResult Sema::ActOnOpenMPTaskLoopDirective(
 
   assert((CurContext->isDependentContext() || B.builtAll()) &&
          "omp for loop exprs were not built");
+
+  // OpenMP, [2.9.2 taskloop Construct, Restrictions]
+  // The grainsize clause and num_tasks clause are mutually exclusive and may
+  // not appear on the same taskloop directive.
+  if (checkGrainsizeNumTasksClauses(*this, Clauses))
+    return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();
   return OMPTaskLoopDirective::Create(Context, StartLoc, EndLoc,
@@ -5413,6 +5443,12 @@ StmtResult Sema::ActOnOpenMPTaskLoopSimdDirective(
 
   assert((CurContext->isDependentContext() || B.builtAll()) &&
          "omp for loop exprs were not built");
+
+  // OpenMP, [2.9.2 taskloop Construct, Restrictions]
+  // The grainsize clause and num_tasks clause are mutually exclusive and may
+  // not appear on the same taskloop directive.
+  if (checkGrainsizeNumTasksClauses(*this, Clauses))
+    return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();
   return OMPTaskLoopSimdDirective::Create(Context, StartLoc, EndLoc,
@@ -5483,6 +5519,9 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
     break;
   case OMPC_grainsize:
     Res = ActOnOpenMPGrainsizeClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_num_tasks:
+    Res = ActOnOpenMPNumTasksClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_if:
   case OMPC_default:
@@ -5790,6 +5829,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_priority:
   case OMPC_grainsize:
   case OMPC_nogroup:
+  case OMPC_num_tasks:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -5925,6 +5965,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_priority:
   case OMPC_grainsize:
   case OMPC_nogroup:
+  case OMPC_num_tasks:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -6064,6 +6105,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_grainsize:
+  case OMPC_num_tasks:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -6203,6 +6245,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_priority:
   case OMPC_grainsize:
   case OMPC_nogroup:
+  case OMPC_num_tasks:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -8184,3 +8227,20 @@ OMPClause *Sema::ActOnOpenMPGrainsizeClause(Expr *Grainsize,
 
   return new (Context) OMPGrainsizeClause(ValExpr, StartLoc, LParenLoc, EndLoc);
 }
+
+OMPClause *Sema::ActOnOpenMPNumTasksClause(Expr *NumTasks,
+                                           SourceLocation StartLoc,
+                                           SourceLocation LParenLoc,
+                                           SourceLocation EndLoc) {
+  Expr *ValExpr = NumTasks;
+
+  // OpenMP [2.9.2, taskloop Constrcut]
+  // The parameter of the num_tasks clause must be a positive integer
+  // expression.
+  if (!IsNonNegativeIntegerValue(ValExpr, *this, OMPC_num_tasks,
+                                 /*StrictlyPositive=*/true))
+    return nullptr;
+
+  return new (Context) OMPNumTasksClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+}
+

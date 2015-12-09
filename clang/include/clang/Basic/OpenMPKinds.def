@@ -167,6 +167,7 @@ OPENMP_CLAUSE(thread_limit, OMPThreadLimitClause)
 OPENMP_CLAUSE(priority, OMPPriorityClause)
 OPENMP_CLAUSE(grainsize, OMPGrainsizeClause)
 OPENMP_CLAUSE(nogroup, OMPNogroupClause)
+OPENMP_CLAUSE(num_tasks, OMPNumTasksClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -357,7 +358,6 @@ OPENMP_MAP_KIND(release)
 OPENMP_MAP_KIND(always)
 
 // Clauses allowed for OpenMP directive 'taskloop'.
-// TODO: add next clauses
 OPENMP_TASKLOOP_CLAUSE(if)
 OPENMP_TASKLOOP_CLAUSE(shared)
 OPENMP_TASKLOOP_CLAUSE(private)
@@ -371,9 +371,9 @@ OPENMP_TASKLOOP_CLAUSE(mergeable)
 OPENMP_TASKLOOP_CLAUSE(priority)
 OPENMP_TASKLOOP_CLAUSE(grainsize)
 OPENMP_TASKLOOP_CLAUSE(nogroup)
+OPENMP_TASKLOOP_CLAUSE(num_tasks)
 
 // Clauses allowed for OpenMP directive 'taskloop simd'.
-// TODO: add next clauses
 OPENMP_TASKLOOP_SIMD_CLAUSE(if)
 OPENMP_TASKLOOP_SIMD_CLAUSE(shared)
 OPENMP_TASKLOOP_SIMD_CLAUSE(private)
@@ -391,6 +391,7 @@ OPENMP_TASKLOOP_SIMD_CLAUSE(safelen)
 OPENMP_TASKLOOP_SIMD_CLAUSE(simdlen)
 OPENMP_TASKLOOP_SIMD_CLAUSE(grainsize)
 OPENMP_TASKLOOP_SIMD_CLAUSE(nogroup)
+OPENMP_TASKLOOP_SIMD_CLAUSE(num_tasks)
 
 // Clauses allowed for OpenMP directive 'distribute'
 OPENMP_DISTRIBUTE_CLAUSE(private)

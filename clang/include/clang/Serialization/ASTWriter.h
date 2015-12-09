@@ -551,7 +551,8 @@ private:
   void WriteObjCCategories();
   void WriteLateParsedTemplates(Sema &SemaRef);
   void WriteOptimizePragmaOptions(Sema &SemaRef);
-  void WriteModuleFileExtension(ModuleFileExtensionWriter &Writer);
+  void WriteModuleFileExtension(Sema &SemaRef,
+                                ModuleFileExtensionWriter &Writer);
 
   unsigned DeclParmVarAbbrev;
   unsigned DeclContextLexicalAbbrev;
