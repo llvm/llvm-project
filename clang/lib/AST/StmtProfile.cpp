@@ -262,6 +262,7 @@ class OMPClauseProfiler : public ConstOMPClauseVisitor<OMPClauseProfiler> {
   /// \brief Process clauses with list of variables.
   template <typename T>
   void VisitOMPClauseList(T *Node);
+
 public:
   OMPClauseProfiler(StmtProfiler *P) : Profiler(P) { }
 #define OPENMP_CLAUSE(Name, Class)                                             \
@@ -599,11 +600,6 @@ void StmtProfiler::VisitOMPTaskLoopDirective(const OMPTaskLoopDirective *S) {
 
 void StmtProfiler::VisitOMPTaskLoopSimdDirective(
     const OMPTaskLoopSimdDirective *S) {
-  VisitOMPLoopDirective(S);
-}
-
-void StmtProfiler::VisitOMPDistributeDirective(
-    const OMPDistributeDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
@@ -1051,7 +1047,6 @@ static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
     BinaryOp = BO_Comma;
     return Stmt::BinaryOperatorClass;
 
-
   case OO_ArrowStar:
     BinaryOp = BO_PtrMemI;
     return Stmt::BinaryOperatorClass;
@@ -1062,7 +1057,6 @@ static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
   
   llvm_unreachable("Invalid overloaded operator expression");
 }
-
 
 void StmtProfiler::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *S) {
   if (S->isTypeDependent()) {
@@ -1239,7 +1233,6 @@ void StmtProfiler::VisitCXXDeleteExpr(const CXXDeleteExpr *S) {
   ID.AddBoolean(S->isArrayForm());
   VisitDecl(S->getOperatorDelete());
 }
-
 
 void StmtProfiler::VisitCXXNewExpr(const CXXNewExpr *S) {
   VisitExpr(S);

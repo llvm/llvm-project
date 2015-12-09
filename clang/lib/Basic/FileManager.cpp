@@ -59,10 +59,10 @@ FileManager::FileManager(const FileSystemOptions &FSO,
 }
 
 FileManager::~FileManager() {
-  for (unsigned i = 0, e = VirtualFileEntries.size(); i != e; ++i)
-    delete VirtualFileEntries[i];
-  for (unsigned i = 0, e = VirtualDirectoryEntries.size(); i != e; ++i)
-    delete VirtualDirectoryEntries[i];
+  for (FileEntry *FE : VirtualFileEntries)
+    delete FE;
+  for (DirectoryEntry *DE : VirtualDirectoryEntries)
+    delete DE;
 }
 
 void FileManager::addStatCache(std::unique_ptr<FileSystemStatCache> statCache,
