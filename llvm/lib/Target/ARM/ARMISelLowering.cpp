@@ -11470,7 +11470,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     // Conservatively set memVT to the entire set of vectors loaded.
     auto &DL = I.getCalledFunction()->getParent()->getDataLayout();
-    uint64_t NumElts = DL.getTypeAllocSize(I.getType()) / 8;
+    uint64_t NumElts = DL.getTypeSizeInBits(I.getType()) / 64;
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
@@ -11496,7 +11496,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Type *ArgTy = I.getArgOperand(ArgI)->getType();
       if (!ArgTy->isVectorTy())
         break;
-      NumElts += DL.getTypeAllocSize(ArgTy) / 8;
+      NumElts += DL.getTypeSizeInBits(ArgTy) / 64;
     }
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(0);
@@ -11831,8 +11831,8 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   Type *EltTy = VecTy->getVectorElementType();
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
-  unsigned VecSize = DL.getTypeAllocSizeInBits(VecTy);
-  bool EltIs64Bits = DL.getTypeAllocSizeInBits(EltTy) == 64;
+  unsigned VecSize = DL.getTypeSizeInBits(VecTy);
+  bool EltIs64Bits = DL.getTypeSizeInBits(EltTy) == 64;
 
   // Skip if we do not have NEON and skip illegal vector types and vector types
   // with i64/f64 elements (vldN doesn't support i64/f64 elements).
@@ -11921,8 +11921,8 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
   VectorType *SubVecTy = VectorType::get(EltTy, NumSubElts);
 
   const DataLayout &DL = SI->getModule()->getDataLayout();
-  unsigned SubVecSize = DL.getTypeAllocSizeInBits(SubVecTy);
-  bool EltIs64Bits = DL.getTypeAllocSizeInBits(EltTy) == 64;
+  unsigned SubVecSize = DL.getTypeSizeInBits(SubVecTy);
+  bool EltIs64Bits = DL.getTypeSizeInBits(EltTy) == 64;
 
   // Skip if we do not have NEON and skip illegal vector types and vector types
   // with i64/f64 elements (vstN doesn't support i64/f64 elements).
