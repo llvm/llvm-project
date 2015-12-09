@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=arm64 -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple=arm64 -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -298,10 +298,14 @@
 // Floating-point absolute
 //------------------------------------------------------------------------------
 
+         fabs v4.4h, v0.4h
+         fabs v6.8h, v8.8h
          fabs v6.4s, v8.4s
          fabs v6.2d, v8.2d
          fabs v4.2s, v0.2s
 
+// CHECK: fabs    v4.4h, v0.4h            // encoding: [0x04,0xf8,0xf8,0x0e]
+// CHECK: fabs    v6.8h, v8.8h            // encoding: [0x06,0xf9,0xf8,0x4e]
 // CHECK:	fabs	v6.4s, v8.4s            // encoding: [0x06,0xf9,0xa0,0x4e]
 // CHECK:	fabs	v6.2d, v8.2d            // encoding: [0x06,0xf9,0xe0,0x4e]
 // CHECK:	fabs	v4.2s, v0.2s            // encoding: [0x04,0xf8,0xa0,0x0e]
@@ -310,10 +314,14 @@
 // Floating-point negate
 //------------------------------------------------------------------------------
 
+         fneg v4.4h, v0.4h
+         fneg v6.8h, v8.8h
          fneg v6.4s, v8.4s
          fneg v6.2d, v8.2d
          fneg v4.2s, v0.2s
 
+// CHECK: fneg    v4.4h, v0.4h            // encoding: [0x04,0xf8,0xf8,0x2e]
+// CHECK: fneg    v6.8h, v8.8h            // encoding: [0x06,0xf9,0xf8,0x6e]
 // CHECK:	fneg	v6.4s, v8.4s            // encoding: [0x06,0xf9,0xa0,0x6e]
 // CHECK:	fneg	v6.2d, v8.2d            // encoding: [0x06,0xf9,0xe0,0x6e]
 // CHECK:	fneg	v4.2s, v0.2s            // encoding: [0x04,0xf8,0xa0,0x2e]
@@ -450,58 +458,86 @@
 // Floating-point round to integral
 //------------------------------------------------------------------------------
 
+         frintn v4.4h, v0.4h
+         frintn v6.8h, v8.8h
          frintn v6.4s, v8.4s
          frintn v6.2d, v8.2d
          frintn v4.2s, v0.2s
 
+// CHECK: frintn  v4.4h, v0.4h            // encoding: [0x04,0x88,0x79,0x0e]
+// CHECK: frintn  v6.8h, v8.8h            // encoding: [0x06,0x89,0x79,0x4e]
 // CHECK:	frintn	v6.4s, v8.4s            // encoding: [0x06,0x89,0x21,0x4e]
 // CHECK:	frintn	v6.2d, v8.2d            // encoding: [0x06,0x89,0x61,0x4e]
 // CHECK:	frintn	v4.2s, v0.2s            // encoding: [0x04,0x88,0x21,0x0e]
 
+         frinta v4.4h, v0.4h
+         frinta v6.8h, v8.8h
          frinta v6.4s, v8.4s
          frinta v6.2d, v8.2d
          frinta v4.2s, v0.2s
 
+// CHECK: frinta  v4.4h, v0.4h            // encoding: [0x04,0x88,0x79,0x2e]
+// CHECK: frinta  v6.8h, v8.8h            // encoding: [0x06,0x89,0x79,0x6e]
 // CHECK:	frinta	v6.4s, v8.4s            // encoding: [0x06,0x89,0x21,0x6e]
 // CHECK:	frinta	v6.2d, v8.2d            // encoding: [0x06,0x89,0x61,0x6e]
 // CHECK:	frinta	v4.2s, v0.2s            // encoding: [0x04,0x88,0x21,0x2e]
 
+         frintp v4.4h, v0.4h
+         frintp v6.8h, v8.8h
          frintp v6.4s, v8.4s
          frintp v6.2d, v8.2d
          frintp v4.2s, v0.2s
 
+// CHECK: frintp  v4.4h, v0.4h            // encoding: [0x04,0x88,0xf9,0x0e]
+// CHECK: frintp  v6.8h, v8.8h            // encoding: [0x06,0x89,0xf9,0x4e]
 // CHECK:	frintp	v6.4s, v8.4s            // encoding: [0x06,0x89,0xa1,0x4e]
 // CHECK:	frintp	v6.2d, v8.2d            // encoding: [0x06,0x89,0xe1,0x4e]
 // CHECK:	frintp	v4.2s, v0.2s            // encoding: [0x04,0x88,0xa1,0x0e]
 
+         frintm v4.4h, v0.4h
+         frintm v6.8h, v8.8h
          frintm v6.4s, v8.4s
          frintm v6.2d, v8.2d
          frintm v4.2s, v0.2s
 
+// CHECK: frintm  v4.4h, v0.4h            // encoding: [0x04,0x98,0x79,0x0e]
+// CHECK: frintm  v6.8h, v8.8h            // encoding: [0x06,0x99,0x79,0x4e]
 // CHECK:	frintm	v6.4s, v8.4s            // encoding: [0x06,0x99,0x21,0x4e]
 // CHECK:	frintm	v6.2d, v8.2d            // encoding: [0x06,0x99,0x61,0x4e]
 // CHECK:	frintm	v4.2s, v0.2s            // encoding: [0x04,0x98,0x21,0x0e]
 
+         frintx v4.4h, v0.4h
+         frintx v6.8h, v8.8h
          frintx v6.4s, v8.4s
          frintx v6.2d, v8.2d
          frintx v4.2s, v0.2s
 
+// CHECK: frintx  v4.4h, v0.4h            // encoding: [0x04,0x98,0x79,0x2e]
+// CHECK: frintx  v6.8h, v8.8h            // encoding: [0x06,0x99,0x79,0x6e]
 // CHECK:	frintx	v6.4s, v8.4s            // encoding: [0x06,0x99,0x21,0x6e]
 // CHECK:	frintx	v6.2d, v8.2d            // encoding: [0x06,0x99,0x61,0x6e]
 // CHECK:	frintx	v4.2s, v0.2s            // encoding: [0x04,0x98,0x21,0x2e]
 
+         frintz v4.4h, v0.4h
+         frintz v6.8h, v8.8h
          frintz v6.4s, v8.4s
          frintz v6.2d, v8.2d
          frintz v4.2s, v0.2s
 
+// CHECK: frintz  v4.4h, v0.4h            // encoding: [0x04,0x98,0xf9,0x0e]
+// CHECK: frintz  v6.8h, v8.8h            // encoding: [0x06,0x99,0xf9,0x4e]
 // CHECK:	frintz	v6.4s, v8.4s            // encoding: [0x06,0x99,0xa1,0x4e]
 // CHECK:	frintz	v6.2d, v8.2d            // encoding: [0x06,0x99,0xe1,0x4e]
 // CHECK:	frintz	v4.2s, v0.2s            // encoding: [0x04,0x98,0xa1,0x0e]
 
+         frinti v4.4h, v0.4h
+         frinti v6.8h, v8.8h
          frinti v6.4s, v8.4s
          frinti v6.2d, v8.2d
          frinti v4.2s, v0.2s
 
+// CHECK: frinti  v4.4h, v0.4h            // encoding: [0x04,0x98,0xf9,0x2e]
+// CHECK: frinti  v6.8h, v8.8h            // encoding: [0x06,0x99,0xf9,0x6e]
 // CHECK:	frinti	v6.4s, v8.4s            // encoding: [0x06,0x99,0xa1,0x6e]
 // CHECK:	frinti	v6.2d, v8.2d            // encoding: [0x06,0x99,0xe1,0x6e]
 // CHECK:	frinti	v4.2s, v0.2s            // encoding: [0x04,0x98,0xa1,0x2e]
@@ -510,83 +546,123 @@
 // Floating-point convert to integer
 //------------------------------------------------------------------------------
 
+         fcvtns v4.4h, v0.4h
+         fcvtns v6.8h, v8.8h
          fcvtns v6.4s, v8.4s
          fcvtns v6.2d, v8.2d
          fcvtns v4.2s, v0.2s
 
+// CHECK: fcvtns  v4.4h, v0.4h            // encoding: [0x04,0xa8,0x79,0x0e]
+// CHECK: fcvtns  v6.8h, v8.8h            // encoding: [0x06,0xa9,0x79,0x4e]
 // CHECK:	fcvtns	v6.4s, v8.4s            // encoding: [0x06,0xa9,0x21,0x4e]
 // CHECK:	fcvtns	v6.2d, v8.2d            // encoding: [0x06,0xa9,0x61,0x4e]
 // CHECK:	fcvtns	v4.2s, v0.2s            // encoding: [0x04,0xa8,0x21,0x0e]
 
+         fcvtnu v4.4h, v0.4h
+         fcvtnu v6.8h, v8.8h
          fcvtnu v6.4s, v8.4s
          fcvtnu v6.2d, v8.2d
          fcvtnu v4.2s, v0.2s
 
+// CHECK: fcvtnu  v4.4h, v0.4h            // encoding: [0x04,0xa8,0x79,0x2e]
+// CHECK: fcvtnu  v6.8h, v8.8h            // encoding: [0x06,0xa9,0x79,0x6e]
 // CHECK:	fcvtnu	v6.4s, v8.4s            // encoding: [0x06,0xa9,0x21,0x6e]
 // CHECK:	fcvtnu	v6.2d, v8.2d            // encoding: [0x06,0xa9,0x61,0x6e]
 // CHECK:	fcvtnu	v4.2s, v0.2s            // encoding: [0x04,0xa8,0x21,0x2e]
 
+         fcvtps v4.4h, v0.4h
+         fcvtps v6.8h, v8.8h
          fcvtps v6.4s, v8.4s
          fcvtps v6.2d, v8.2d
          fcvtps v4.2s, v0.2s
 
+// CHECK: fcvtps  v4.4h, v0.4h            // encoding: [0x04,0xa8,0xf9,0x0e]
+// CHECK: fcvtps  v6.8h, v8.8h            // encoding: [0x06,0xa9,0xf9,0x4e]
 // CHECK:	fcvtps	v6.4s, v8.4s            // encoding: [0x06,0xa9,0xa1,0x4e]
 // CHECK:	fcvtps	v6.2d, v8.2d            // encoding: [0x06,0xa9,0xe1,0x4e]
 // CHECK:	fcvtps	v4.2s, v0.2s            // encoding: [0x04,0xa8,0xa1,0x0e]
 
+         fcvtpu v4.4h, v0.4h
+         fcvtpu v6.8h, v8.8h
          fcvtpu v6.4s, v8.4s
          fcvtpu v6.2d, v8.2d
          fcvtpu v4.2s, v0.2s
 
+// CHECK: fcvtpu  v4.4h, v0.4h            // encoding: [0x04,0xa8,0xf9,0x2e]
+// CHECK: fcvtpu  v6.8h, v8.8h            // encoding: [0x06,0xa9,0xf9,0x6e]
 // CHECK:	fcvtpu	v6.4s, v8.4s            // encoding: [0x06,0xa9,0xa1,0x6e]
 // CHECK:	fcvtpu	v6.2d, v8.2d            // encoding: [0x06,0xa9,0xe1,0x6e]
 // CHECK:	fcvtpu	v4.2s, v0.2s            // encoding: [0x04,0xa8,0xa1,0x2e]
 
+         fcvtms v4.4h, v0.4h
+         fcvtms v6.8h, v8.8h
          fcvtms v6.4s, v8.4s
          fcvtms v6.2d, v8.2d
          fcvtms v4.2s, v0.2s
 
+// CHECK: fcvtms  v4.4h, v0.4h            // encoding: [0x04,0xb8,0x79,0x0e]
+// CHECK: fcvtms  v6.8h, v8.8h            // encoding: [0x06,0xb9,0x79,0x4e]
 // CHECK:	fcvtms	v6.4s, v8.4s            // encoding: [0x06,0xb9,0x21,0x4e]
 // CHECK:	fcvtms	v6.2d, v8.2d            // encoding: [0x06,0xb9,0x61,0x4e]
 // CHECK:	fcvtms	v4.2s, v0.2s            // encoding: [0x04,0xb8,0x21,0x0e]
 
+         fcvtmu v4.4h, v0.4h
+         fcvtmu v6.8h, v8.8h
          fcvtmu v6.4s, v8.4s
          fcvtmu v6.2d, v8.2d
          fcvtmu v4.2s, v0.2s
 
+// CHECK: fcvtmu  v4.4h, v0.4h            // encoding: [0x04,0xb8,0x79,0x2e]
+// CHECK: fcvtmu  v6.8h, v8.8h            // encoding: [0x06,0xb9,0x79,0x6e]
 // CHECK:	fcvtmu	v6.4s, v8.4s            // encoding: [0x06,0xb9,0x21,0x6e]
 // CHECK:	fcvtmu	v6.2d, v8.2d            // encoding: [0x06,0xb9,0x61,0x6e]
 // CHECK:	fcvtmu	v4.2s, v0.2s            // encoding: [0x04,0xb8,0x21,0x2e]
 
+         fcvtzs v4.4h, v0.4h
+         fcvtzs v6.8h, v8.8h
          fcvtzs v6.4s, v8.4s
          fcvtzs v6.2d, v8.2d
          fcvtzs v4.2s, v0.2s
 
+// CHECK: fcvtzs  v4.4h, v0.4h            // encoding: [0x04,0xb8,0xf9,0x0e]
+// CHECK: fcvtzs  v6.8h, v8.8h            // encoding: [0x06,0xb9,0xf9,0x4e]
 // CHECK:	fcvtzs	v6.4s, v8.4s            // encoding: [0x06,0xb9,0xa1,0x4e]
 // CHECK:	fcvtzs	v6.2d, v8.2d            // encoding: [0x06,0xb9,0xe1,0x4e]
 // CHECK:	fcvtzs	v4.2s, v0.2s            // encoding: [0x04,0xb8,0xa1,0x0e]
 
 
+         fcvtzu v4.4h, v0.4h
+         fcvtzu v6.8h, v8.8h
          fcvtzu v6.4s, v8.4s
          fcvtzu v6.2d, v8.2d
          fcvtzu v4.2s, v0.2s
 
+// CHECK: fcvtzu  v4.4h, v0.4h            // encoding: [0x04,0xb8,0xf9,0x2e]
+// CHECK: fcvtzu  v6.8h, v8.8h            // encoding: [0x06,0xb9,0xf9,0x6e]
 // CHECK:	fcvtzu	v6.4s, v8.4s            // encoding: [0x06,0xb9,0xa1,0x6e]
 // CHECK:	fcvtzu	v6.2d, v8.2d            // encoding: [0x06,0xb9,0xe1,0x6e]
 // CHECK:	fcvtzu	v4.2s, v0.2s            // encoding: [0x04,0xb8,0xa1,0x2e]
 
+         fcvtas v4.4h, v0.4h
+         fcvtas v6.8h, v8.8h
          fcvtas v6.4s, v8.4s
          fcvtas v6.2d, v8.2d
          fcvtas v4.2s, v0.2s
 
+// CHECK: fcvtas  v4.4h, v0.4h            // encoding: [0x04,0xc8,0x79,0x0e]
+// CHECK: fcvtas  v6.8h, v8.8h            // encoding: [0x06,0xc9,0x79,0x4e]
 // CHECK:	fcvtas	v6.4s, v8.4s            // encoding: [0x06,0xc9,0x21,0x4e]
 // CHECK:	fcvtas	v6.2d, v8.2d            // encoding: [0x06,0xc9,0x61,0x4e]
 // CHECK:	fcvtas	v4.2s, v0.2s            // encoding: [0x04,0xc8,0x21,0x0e]
 
+         fcvtau v4.4h, v0.4h
+         fcvtau v6.8h, v8.8h
          fcvtau v6.4s, v8.4s
          fcvtau v6.2d, v8.2d
          fcvtau v4.2s, v0.2s
 
+// CHECK: fcvtau  v4.4h, v0.4h            // encoding: [0x04,0xc8,0x79,0x2e]
+// CHECK: fcvtau  v6.8h, v8.8h            // encoding: [0x06,0xc9,0x79,0x6e]
 // CHECK:	fcvtau	v6.4s, v8.4s            // encoding: [0x06,0xc9,0x21,0x6e]
 // CHECK:	fcvtau	v6.2d, v8.2d            // encoding: [0x06,0xc9,0x61,0x6e]
 // CHECK:	fcvtau	v4.2s, v0.2s            // encoding: [0x04,0xc8,0x21,0x2e]
@@ -603,42 +679,62 @@
 // CHECK:	ursqrte	v6.4s, v8.4s            // encoding: [0x06,0xc9,0xa1,0x6e]
 // CHECK:	ursqrte	v4.2s, v0.2s            // encoding: [0x04,0xc8,0xa1,0x2e]
 
+         scvtf v4.4h, v0.4h
+         scvtf v6.8h, v8.8h
          scvtf v6.4s, v8.4s
          scvtf v6.2d, v8.2d
          scvtf v4.2s, v0.2s
 
+// CHECK: scvtf   v4.4h, v0.4h            // encoding: [0x04,0xd8,0x79,0x0e]
+// CHECK: scvtf   v6.8h, v8.8h            // encoding: [0x06,0xd9,0x79,0x4e]
 // CHECK:	scvtf	v6.4s, v8.4s            // encoding: [0x06,0xd9,0x21,0x4e]
 // CHECK:	scvtf	v6.2d, v8.2d            // encoding: [0x06,0xd9,0x61,0x4e]
 // CHECK:	scvtf	v4.2s, v0.2s            // encoding: [0x04,0xd8,0x21,0x0e]
 
+         ucvtf v4.4h, v0.4h
+         ucvtf v6.8h, v8.8h
          ucvtf v6.4s, v8.4s
          ucvtf v6.2d, v8.2d
          ucvtf v4.2s, v0.2s
 
+// CHECK: ucvtf   v4.4h, v0.4h            // encoding: [0x04,0xd8,0x79,0x2e]
+// CHECK: ucvtf   v6.8h, v8.8h            // encoding: [0x06,0xd9,0x79,0x6e]
 // CHECK:	ucvtf	v6.4s, v8.4s            // encoding: [0x06,0xd9,0x21,0x6e]
 // CHECK:	ucvtf	v6.2d, v8.2d            // encoding: [0x06,0xd9,0x61,0x6e]
 // CHECK:	ucvtf	v4.2s, v0.2s            // encoding: [0x04,0xd8,0x21,0x2e]
 
+         frecpe v4.4h, v0.4h
+         frecpe v6.8h, v8.8h
          frecpe v6.4s, v8.4s
          frecpe v6.2d, v8.2d
          frecpe v4.2s, v0.2s
 
+// CHECK: frecpe  v4.4h, v0.4h            // encoding: [0x04,0xd8,0xf9,0x0e]
+// CHECK: frecpe  v6.8h, v8.8h            // encoding: [0x06,0xd9,0xf9,0x4e]
 // CHECK:	frecpe	v6.4s, v8.4s            // encoding: [0x06,0xd9,0xa1,0x4e]
 // CHECK:	frecpe	v6.2d, v8.2d            // encoding: [0x06,0xd9,0xe1,0x4e]
 // CHECK:	frecpe	v4.2s, v0.2s            // encoding: [0x04,0xd8,0xa1,0x0e]
 
+         frsqrte v4.4h, v0.4h
+         frsqrte v6.8h, v8.8h
          frsqrte v6.4s, v8.4s
          frsqrte v6.2d, v8.2d
          frsqrte v4.2s, v0.2s
 
+// CHECK: frsqrte v4.4h, v0.4h            // encoding: [0x04,0xd8,0xf9,0x2e]
+// CHECK: frsqrte v6.8h, v8.8h            // encoding: [0x06,0xd9,0xf9,0x6e]
 // CHECK:	frsqrte	v6.4s, v8.4s            // encoding: [0x06,0xd9,0xa1,0x6e]
 // CHECK:	frsqrte	v6.2d, v8.2d            // encoding: [0x06,0xd9,0xe1,0x6e]
 // CHECK:	frsqrte	v4.2s, v0.2s            // encoding: [0x04,0xd8,0xa1,0x2e]
 
+         fsqrt v4.4h, v0.4h
+         fsqrt v6.8h, v8.8h
          fsqrt v6.4s, v8.4s
          fsqrt v6.2d, v8.2d
          fsqrt v4.2s, v0.2s
 
+// CHECK: fsqrt   v4.4h, v0.4h            // encoding: [0x04,0xf8,0xf9,0x2e]
+// CHECK: fsqrt   v6.8h, v8.8h            // encoding: [0x06,0xf9,0xf9,0x6e]
 // CHECK:	fsqrt	v6.4s, v8.4s            // encoding: [0x06,0xf9,0xa1,0x6e]
 // CHECK:	fsqrt	v6.2d, v8.2d            // encoding: [0x06,0xf9,0xe1,0x6e]
 // CHECK:	fsqrt	v4.2s, v0.2s            // encoding: [0x04,0xf8,0xa1,0x2e]

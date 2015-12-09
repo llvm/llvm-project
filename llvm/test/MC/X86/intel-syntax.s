@@ -489,10 +489,12 @@ test [ECX], AL
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
+// CHECK: fnstsw (%eax)
 fnstsw
 fnstsw AX
 fnstsw EAX
 fnstsw AL
+fnstsw WORD PTR [EAX]
 
 // CHECK: faddp %st(1)
 // CHECK: fmulp %st(1)

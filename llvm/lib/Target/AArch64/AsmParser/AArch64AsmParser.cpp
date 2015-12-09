@@ -1921,6 +1921,8 @@ static bool isValidVectorKind(StringRef Name) {
       .Case(".h", true)
       .Case(".s", true)
       .Case(".d", true)
+      // Needed for fp16 scalar pairwise reductions
+      .Case(".2h", true)
       .Default(false);
 }
 

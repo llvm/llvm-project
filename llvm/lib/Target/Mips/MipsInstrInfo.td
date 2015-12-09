@@ -394,8 +394,15 @@ class ConstantUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
   let DiagnosticType = "UImm" # Bits # "_" # Offset;
 }
 
+def ConstantUImm8AsmOperandClass
+    : ConstantUImmAsmOperandClass<8, []>;
+def ConstantUImm6AsmOperandClass
+    : ConstantUImmAsmOperandClass<6, [ConstantUImm8AsmOperandClass]>;
+def ConstantUImm5Plus32AsmOperandClass
+    : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 32>;
 def ConstantUImm5Plus32NormalizeAsmOperandClass
-    : ConstantUImmAsmOperandClass<5, [], 32> {
+    : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 32> {
+  let Name = "ConstantUImm5_32_Norm";
   // We must also subtract 32 when we render the operand.
   let RenderMethod = "addConstantUImmOperands<5, 32, -32>";
 }
@@ -403,19 +410,20 @@ def ConstantUImm5Lsl2AsmOperandClass : AsmOperandClass {
   let Name = "UImm5Lsl2";
   let RenderMethod = "addImmOperands";
   let PredicateMethod = "isScaledUImm<5, 2>";
-  let SuperClasses = [];
+  let SuperClasses = [ConstantUImm6AsmOperandClass];
   let DiagnosticType = "UImm5_Lsl2";
 }
 def ConstantUImm5ReportUImm6AsmOperandClass
-    : ConstantUImmAsmOperandClass<5, []> {
+    : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass]> {
   let Name = "ConstantUImm5_0_Report_UImm6";
   let DiagnosticType = "UImm5_0_Report_UImm6";
 }
 def ConstantUImm5AsmOperandClass
-    : ConstantUImmAsmOperandClass<5, []>;
+    : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass]>;
 def ConstantUImm4AsmOperandClass
     : ConstantUImmAsmOperandClass<
           4, [ConstantUImm5AsmOperandClass,
+              ConstantUImm5Plus32AsmOperandClass,
               ConstantUImm5Plus32NormalizeAsmOperandClass]>;
 def ConstantUImm3AsmOperandClass
     : ConstantUImmAsmOperandClass<3, [ConstantUImm4AsmOperandClass]>;
@@ -506,7 +514,7 @@ def uimmz       : Operand<i32> {
 }
 
 // Unsigned Operands
-foreach I = {1, 2, 3, 4, 5} in
+foreach I = {1, 2, 3, 4, 5, 6, 8} in
   def uimm # I : Operand<i32> {
     let PrintMethod = "printUnsignedImm";
     let ParserMatchClass =
@@ -518,6 +526,11 @@ def uimm2_plus1 : Operand<i32> {
   let EncoderMethod = "getUImmWithOffsetEncoding<2, 1>";
   let DecoderMethod = "DecodeUImmWithOffset<2, 1>";
   let ParserMatchClass = ConstantUImm2Plus1AsmOperandClass;
+}
+
+def uimm5_plus32 : Operand<i32> {
+  let PrintMethod = "printUnsignedImm";
+  let ParserMatchClass = ConstantUImm5Plus32AsmOperandClass;
 }
 
 def uimm5_plus32_normalize : Operand<i32> {
@@ -548,10 +561,6 @@ foreach I = {5} in
 def uimm5_64_report_uimm6 : Operand<i64> {
   let PrintMethod = "printUnsignedImm";
   let ParserMatchClass = ConstantUImm5ReportUImm6AsmOperandClass;
-}
-
-def uimm6 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
 }
 
 def uimm16      : Operand<i32> {

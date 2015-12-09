@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple arm64-apple-darwin -mattr=crypto -output-asm-variant=1 -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=crypto,fullfp16 -output-asm-variant=1 -show-encoding < %s | FileCheck %s
 
 foo:
 
@@ -440,6 +440,106 @@ foo:
 ; CHECK: urshl.8b	v0, v0, v0      ; encoding: [0x00,0x54,0x20,0x2e]
 ; CHECK: ushl.8b	v0, v0, v0              ; encoding: [0x00,0x44,0x20,0x2e]
 
+  fabd.4h v0, v0, v0
+  facge.4h  v0, v0, v0
+  facgt.4h  v0, v0, v0
+  faddp.4h v0, v0, v0
+  fadd.4h v0, v0, v0
+  fcmeq.4h  v0, v0, v0
+  fcmge.4h  v0, v0, v0
+  fcmgt.4h  v0, v0, v0
+  fdiv.4h v0, v0, v0
+  fmaxnmp.4h v0, v0, v0
+  fmaxnm.4h v0, v0, v0
+  fmaxp.4h v0, v0, v0
+  fmax.4h v0, v0, v0
+  fminnmp.4h v0, v0, v0
+  fminnm.4h v0, v0, v0
+  fminp.4h v0, v0, v0
+  fmin.4h v0, v0, v0
+  fmla.4h v0, v0, v0
+  fmls.4h v0, v0, v0
+  fmulx.4h v0, v0, v0
+  fmul.4h v0, v0, v0
+  frecps.4h v0, v0, v0
+  frsqrts.4h v0, v0, v0
+  fsub.4h v0, v0, v0
+
+; CHECK: fabd.4h    v0, v0, v0     ; encoding: [0x00,0x14,0xc0,0x2e]
+; CHECK: facge.4h   v0, v0, v0     ; encoding: [0x00,0x2c,0x40,0x2e]
+; CHECK: facgt.4h   v0, v0, v0     ; encoding: [0x00,0x2c,0xc0,0x2e]
+; CHECK: faddp.4h   v0, v0, v0     ; encoding: [0x00,0x14,0x40,0x2e]
+; CHECK: fadd.4h    v0, v0, v0     ; encoding: [0x00,0x14,0x40,0x0e]
+; CHECK: fcmeq.4h   v0, v0, v0     ; encoding: [0x00,0x24,0x40,0x0e]
+; CHECK: fcmge.4h   v0, v0, v0     ; encoding: [0x00,0x24,0x40,0x2e]
+; CHECK: fcmgt.4h   v0, v0, v0     ; encoding: [0x00,0x24,0xc0,0x2e]
+; CHECK: fdiv.4h    v0, v0, v0     ; encoding: [0x00,0x3c,0x40,0x2e]
+; CHECK: fmaxnmp.4h v0, v0, v0     ; encoding: [0x00,0x04,0x40,0x2e]
+; CHECK: fmaxnm.4h  v0, v0, v0     ; encoding: [0x00,0x04,0x40,0x0e]
+; CHECK: fmaxp.4h   v0, v0, v0     ; encoding: [0x00,0x34,0x40,0x2e]
+; CHECK: fmax.4h    v0, v0, v0     ; encoding: [0x00,0x34,0x40,0x0e]
+; CHECK: fminnmp.4h v0, v0, v0     ; encoding: [0x00,0x04,0xc0,0x2e]
+; CHECK: fminnm.4h  v0, v0, v0     ; encoding: [0x00,0x04,0xc0,0x0e]
+; CHECK: fminp.4h   v0, v0, v0     ; encoding: [0x00,0x34,0xc0,0x2e]
+; CHECK: fmin.4h    v0, v0, v0     ; encoding: [0x00,0x34,0xc0,0x0e]
+; CHECK: fmla.4h    v0, v0, v0     ; encoding: [0x00,0x0c,0x40,0x0e]
+; CHECK: fmls.4h    v0, v0, v0     ; encoding: [0x00,0x0c,0xc0,0x0e]
+; CHECK: fmulx.4h   v0, v0, v0     ; encoding: [0x00,0x1c,0x40,0x0e]
+; CHECK: fmul.4h    v0, v0, v0     ; encoding: [0x00,0x1c,0x40,0x2e]
+; CHECK: frecps.4h  v0, v0, v0     ; encoding: [0x00,0x3c,0x40,0x0e]
+; CHECK: frsqrts.4h v0, v0, v0     ; encoding: [0x00,0x3c,0xc0,0x0e]
+; CHECK: fsub.4h    v0, v0, v0     ; encoding: [0x00,0x14,0xc0,0x0e]
+
+  fabd.8h v0, v0, v0
+  facge.8h  v0, v0, v0
+  facgt.8h  v0, v0, v0
+  faddp.8h v0, v0, v0
+  fadd.8h v0, v0, v0
+  fcmeq.8h  v0, v0, v0
+  fcmge.8h  v0, v0, v0
+  fcmgt.8h  v0, v0, v0
+  fdiv.8h v0, v0, v0
+  fmaxnmp.8h v0, v0, v0
+  fmaxnm.8h v0, v0, v0
+  fmaxp.8h v0, v0, v0
+  fmax.8h v0, v0, v0
+  fminnmp.8h v0, v0, v0
+  fminnm.8h v0, v0, v0
+  fminp.8h v0, v0, v0
+  fmin.8h v0, v0, v0
+  fmla.8h v0, v0, v0
+  fmls.8h v0, v0, v0
+  fmulx.8h v0, v0, v0
+  fmul.8h v0, v0, v0
+  frecps.8h v0, v0, v0
+  frsqrts.8h v0, v0, v0
+  fsub.8h v0, v0, v0
+
+; CHECK: fabd.8h v0, v0, v0              ; encoding: [0x00,0x14,0xc0,0x6e]
+; CHECK: facge.8h        v0, v0, v0      ; encoding: [0x00,0x2c,0x40,0x6e]
+; CHECK: facgt.8h        v0, v0, v0      ; encoding: [0x00,0x2c,0xc0,0x6e]
+; CHECK: faddp.8h        v0, v0, v0      ; encoding: [0x00,0x14,0x40,0x6e]
+; CHECK: fadd.8h v0, v0, v0              ; encoding: [0x00,0x14,0x40,0x4e]
+; CHECK: fcmeq.8h        v0, v0, v0      ; encoding: [0x00,0x24,0x40,0x4e]
+; CHECK: fcmge.8h        v0, v0, v0      ; encoding: [0x00,0x24,0x40,0x6e]
+; CHECK: fcmgt.8h        v0, v0, v0      ; encoding: [0x00,0x24,0xc0,0x6e]
+; CHECK: fdiv.8h v0, v0, v0              ; encoding: [0x00,0x3c,0x40,0x6e]
+; CHECK: fmaxnmp.8h      v0, v0, v0      ; encoding: [0x00,0x04,0x40,0x6e]
+; CHECK: fmaxnm.8h       v0, v0, v0      ; encoding: [0x00,0x04,0x40,0x4e]
+; CHECK: fmaxp.8h        v0, v0, v0      ; encoding: [0x00,0x34,0x40,0x6e]
+; CHECK: fmax.8h v0, v0, v0              ; encoding: [0x00,0x34,0x40,0x4e]
+; CHECK: fminnmp.8h      v0, v0, v0      ; encoding: [0x00,0x04,0xc0,0x6e]
+; CHECK: fminnm.8h       v0, v0, v0      ; encoding: [0x00,0x04,0xc0,0x4e]
+; CHECK: fminp.8h        v0, v0, v0      ; encoding: [0x00,0x34,0xc0,0x6e]
+; CHECK: fmin.8h v0, v0, v0              ; encoding: [0x00,0x34,0xc0,0x4e]
+; CHECK: fmla.8h v0, v0, v0              ; encoding: [0x00,0x0c,0x40,0x4e]
+; CHECK: fmls.8h v0, v0, v0              ; encoding: [0x00,0x0c,0xc0,0x4e]
+; CHECK: fmulx.8h        v0, v0, v0      ; encoding: [0x00,0x1c,0x40,0x4e]
+; CHECK: fmul.8h v0, v0, v0              ; encoding: [0x00,0x1c,0x40,0x6e]
+; CHECK: frecps.8h       v0, v0, v0      ; encoding: [0x00,0x3c,0x40,0x4e]
+; CHECK: frsqrts.8h      v0, v0, v0      ; encoding: [0x00,0x3c,0xc0,0x4e]
+; CHECK: fsub.8h v0, v0, v0              ; encoding: [0x00,0x14,0xc0,0x4e]
+
   bif.8b v0, v0, v0
   bit.8b v0, v0, v0
   bsl.8b v0, v0, v0
@@ -568,6 +668,57 @@ foo:
 ; CHECK: shll2.4s	v1, v2, #16     ; encoding: [0x41,0x38,0x61,0x6e]
 ; CHECK: shll2.2d	v1, v2, #32     ; encoding: [0x41,0x38,0xa1,0x6e]
 
+  fabs.4h     v0, v0
+  fneg.4h     v0, v0
+  frecpe.4h   v0, v0
+  frinta.4h   v0, v0
+  frintx.4h   v0, v0
+  frinti.4h   v0, v0
+  frintm.4h   v0, v0
+  frintn.4h   v0, v0
+  frintp.4h   v0, v0
+  frintz.4h   v0, v0
+  frsqrte.4h  v0, v0
+  fsqrt.4h    v0, v0
+
+; CHECK: fabs.4h v0, v0                  ; encoding: [0x00,0xf8,0xf8,0x0e]
+; CHECK: fneg.4h v0, v0                  ; encoding: [0x00,0xf8,0xf8,0x2e]
+; CHECK: frecpe.4h       v0, v0          ; encoding: [0x00,0xd8,0xf9,0x0e]
+; CHECK: frinta.4h       v0, v0          ; encoding: [0x00,0x88,0x79,0x2e]
+; CHECK: frintx.4h       v0, v0          ; encoding: [0x00,0x98,0x79,0x2e]
+; CHECK: frinti.4h       v0, v0          ; encoding: [0x00,0x98,0xf9,0x2e]
+; CHECK: frintm.4h       v0, v0          ; encoding: [0x00,0x98,0x79,0x0e]
+; CHECK: frintn.4h       v0, v0          ; encoding: [0x00,0x88,0x79,0x0e]
+; CHECK: frintp.4h       v0, v0          ; encoding: [0x00,0x88,0xf9,0x0e]
+; CHECK: frintz.4h       v0, v0          ; encoding: [0x00,0x98,0xf9,0x0e]
+; CHECK: frsqrte.4h      v0, v0          ; encoding: [0x00,0xd8,0xf9,0x2e]
+; CHECK: fsqrt.4h        v0, v0          ; encoding: [0x00,0xf8,0xf9,0x2e]
+
+  fabs.8h     v0, v0
+  fneg.8h     v0, v0
+  frecpe.8h   v0, v0
+  frinta.8h   v0, v0
+  frintx.8h   v0, v0
+  frinti.8h   v0, v0
+  frintm.8h   v0, v0
+  frintn.8h   v0, v0
+  frintp.8h   v0, v0
+  frintz.8h   v0, v0
+  frsqrte.8h  v0, v0
+  fsqrt.8h    v0, v0
+
+; CHECK: fabs.8h v0, v0                  ; encoding: [0x00,0xf8,0xf8,0x4e]
+; CHECK: fneg.8h v0, v0                  ; encoding: [0x00,0xf8,0xf8,0x6e]
+; CHECK: frecpe.8h       v0, v0          ; encoding: [0x00,0xd8,0xf9,0x4e]
+; CHECK: frinta.8h       v0, v0          ; encoding: [0x00,0x88,0x79,0x6e]
+; CHECK: frintx.8h       v0, v0          ; encoding: [0x00,0x98,0x79,0x6e]
+; CHECK: frinti.8h       v0, v0          ; encoding: [0x00,0x98,0xf9,0x6e]
+; CHECK: frintm.8h       v0, v0          ; encoding: [0x00,0x98,0x79,0x4e]
+; CHECK: frintn.8h       v0, v0          ; encoding: [0x00,0x88,0x79,0x4e]
+; CHECK: frintp.8h       v0, v0          ; encoding: [0x00,0x88,0xf9,0x4e]
+; CHECK: frintz.8h       v0, v0          ; encoding: [0x00,0x98,0xf9,0x4e]
+; CHECK: frsqrte.8h      v0, v0          ; encoding: [0x00,0xd8,0xf9,0x6e]
+; CHECK: fsqrt.8h        v0, v0          ; encoding: [0x00,0xf8,0xf9,0x6e]
 
   cmeq.8b   v0, v0, #0
   cmeq.16b  v0, v0, #0

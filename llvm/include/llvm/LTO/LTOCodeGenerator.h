@@ -148,6 +148,8 @@ struct LTOCodeGenerator {
 
   LLVMContext &getContext() { return Context; }
 
+  void resetMergedModule() { MergedModule.reset(); }
+
 private:
   void initializeLTOPasses();
 

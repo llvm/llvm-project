@@ -176,7 +176,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
     }
   }
 
-  // We don't have a DepMatrix to check legality return false
+  // We don't have a DepMatrix to check legality return false.
   if (DepMatrix.size() == 0)
     return false;
   return true;
@@ -371,7 +371,7 @@ public:
   LoopInterchangeProfitability(Loop *Outer, Loop *Inner, ScalarEvolution *SE)
       : OuterLoop(Outer), InnerLoop(Inner), SE(SE) {}
 
-  /// Check if the loop interchange is profitable
+  /// Check if the loop interchange is profitable.
   bool isProfitable(unsigned InnerLoopId, unsigned OuterLoopId,
                     CharMatrix &DepMatrix);
 
@@ -385,7 +385,7 @@ private:
   ScalarEvolution *SE;
 };
 
-/// LoopInterchangeTransform interchanges the loop
+/// LoopInterchangeTransform interchanges the loop.
 class LoopInterchangeTransform {
 public:
   LoopInterchangeTransform(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
@@ -424,7 +424,7 @@ private:
   bool InnerLoopHasReduction;
 };
 
-// Main LoopInterchange Pass
+// Main LoopInterchange Pass.
 struct LoopInterchange : public FunctionPass {
   static char ID;
   ScalarEvolution *SE;

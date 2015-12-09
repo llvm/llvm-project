@@ -86,7 +86,7 @@ std::unique_ptr<Module>
 BugDriver::deleteInstructionFromProgram(const Instruction *I,
                                         unsigned Simplification) {
   // FIXME, use vmap?
-  Module *Clone = CloneModule(Program);
+  Module *Clone = CloneModule(Program).release();
 
   const BasicBlock *PBB = I->getParent();
   const Function *PF = PBB->getParent();
@@ -303,13 +303,8 @@ static void SplitStaticCtorDtor(const char *GlobalName, Module *M1, Module *M2,
   }
 }
 
-
-/// SplitFunctionsOutOfModule - Given a module and a list of functions in the
-/// module, split the functions OUT of the specified module, and place them in
-/// the new module.
-Module *
-llvm::SplitFunctionsOutOfModule(Module *M,
-                                const std::vector<Function*> &F,
+std::unique_ptr<Module>
+llvm::SplitFunctionsOutOfModule(Module *M, const std::vector<Function *> &F,
                                 ValueToValueMapTy &VMap) {
   // Make sure functions & globals are all external so that linkage
   // between the two modules will work.
@@ -323,7 +318,7 @@ llvm::SplitFunctionsOutOfModule(Module *M,
   }
 
   ValueToValueMapTy NewVMap;
-  Module *New = CloneModule(M, NewVMap);
+  std::unique_ptr<Module> New = CloneModule(M, NewVMap);
 
   // Remove the Test functions from the Safe module
   std::set<Function *> TestFunctions;
@@ -364,9 +359,9 @@ llvm::SplitFunctionsOutOfModule(Module *M,
 
   // Make sure that there is a global ctor/dtor array in both halves of the
   // module if they both have static ctor/dtor functions.
-  SplitStaticCtorDtor("llvm.global_ctors", M, New, NewVMap);
-  SplitStaticCtorDtor("llvm.global_dtors", M, New, NewVMap);
-  
+  SplitStaticCtorDtor("llvm.global_ctors", M, New.get(), NewVMap);
+  SplitStaticCtorDtor("llvm.global_dtors", M, New.get(), NewVMap);
+
   return New;
 }
 

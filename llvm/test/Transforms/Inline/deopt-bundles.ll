@@ -2,6 +2,7 @@
 
 declare void @f()
 declare i32 @g()
+declare fastcc i32 @g.fastcc()
 
 define i32 @callee_0() alwaysinline {
  entry:
@@ -95,3 +96,41 @@ define i32 @caller_4() {
   %x = call i32 @callee_4() [ "deopt"(i32 7) ]
   ret i32 %x
 }
+
+define i32 @callee_5() alwaysinline personality i8 3 {
+ entry:
+  %v = invoke fastcc i32 @g.fastcc() #0 [ "deopt"(i32 0, i32 1), "foo"(double 0.0) ] to label %normal unwind label %unwind
+
+ normal:
+  ret i32 %v
+
+ unwind:
+  %cleanup = landingpad i8 cleanup
+  ret i32 100
+}
+
+define i32 @caller_5() {
+; CHECK-LABEL: @caller_5(
+ entry:
+; CHECK:  invoke fastcc i32 @g.fastcc() #[[FOO_BAR_ATTR_IDX:[0-9]+]] [ "deopt"(i32 7, i32 0, i32 1), "foo"(double 0.000000e+00) ]
+  %x = call i32 @callee_5() [ "deopt"(i32 7) ]
+  ret i32 %x
+}
+
+define i32 @callee_6() alwaysinline personality i8 3 {
+ entry:
+  %v = call fastcc i32 @g.fastcc() #0 [ "deopt"(i32 0, i32 1), "foo"(double 0.0) ]
+  ret i32 %v
+}
+
+define i32 @caller_6() {
+; CHECK-LABEL: @caller_6(
+ entry:
+; CHECK: call fastcc i32 @g.fastcc() #[[FOO_BAR_ATTR_IDX]] [ "deopt"(i32 7, i32 0, i32 1), "foo"(double 0.000000e+00) ]
+  %x = call i32 @callee_6() [ "deopt"(i32 7) ]
+  ret i32 %x
+}
+
+attributes #0 = { "foo"="bar" }
+
+; CHECK: attributes #[[FOO_BAR_ATTR_IDX]] = { "foo"="bar" }

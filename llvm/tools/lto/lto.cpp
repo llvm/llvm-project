@@ -124,6 +124,10 @@ struct LibLTOCodeGenerator : LTOCodeGenerator {
       : LTOCodeGenerator(*Context), OwnedContext(std::move(Context)) {
     setDiagnosticHandler(handleLibLTODiagnostic, nullptr); }
 
+  // Reset the module first in case MergedModule is created in OwnedContext.
+  // Module must be destructed before its context gets destructed.
+  ~LibLTOCodeGenerator() { resetMergedModule(); }
+
   std::unique_ptr<MemoryBuffer> NativeObjectFile;
   std::unique_ptr<LLVMContext> OwnedContext;
 };

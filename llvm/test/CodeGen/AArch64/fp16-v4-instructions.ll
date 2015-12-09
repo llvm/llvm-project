@@ -218,4 +218,13 @@ define <4 x half> @uitofp_i64(<4 x i64> %a) #0 {
   ret <4 x half> %1
 }
 
+define void @test_insert_at_zero(half %a, <4 x half>* %b) #0 {
+; CHECK-LABEL: test_insert_at_zero:
+; CHECK-NEXT: str d0, [x0]
+; CHECK-NEXT: ret
+  %1 = insertelement <4 x half> undef, half %a, i64 0
+  store <4 x half> %1, <4 x half>* %b, align 4
+  ret void
+}
+
 attributes #0 = { nounwind }

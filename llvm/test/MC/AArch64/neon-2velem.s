@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=arm64 -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple=arm64 -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -46,6 +46,8 @@
 // CHECK: mls	v0.8h, v1.8h, v2.h[7]   // encoding: [0x20,0x48,0x72,0x6f]
 // CHECK: mls	v0.8h, v1.8h, v14.h[6]  // encoding: [0x20,0x48,0x6e,0x6f]
 
+        fmla v0.4h, v1.4h, v2.h[2]
+        fmla v3.8h, v8.8h, v2.h[1]
         fmla v0.2s, v1.2s, v2.s[2]
         fmla v0.2s, v1.2s, v22.s[2]
         fmla v3.4s, v8.4s, v2.s[1]
@@ -53,6 +55,8 @@
         fmla v0.2d, v1.2d, v2.d[1]
         fmla v0.2d, v1.2d, v22.d[1]
 
+// CHECK: fmla    v0.4h, v1.4h, v2.h[2]   // encoding: [0x20,0x10,0x22,0x0f]
+// CHECK: fmla    v3.8h, v8.8h, v2.h[1]   // encoding: [0x03,0x11,0x12,0x4f]
 // CHECK: fmla	v0.2s, v1.2s, v2.s[2]   // encoding: [0x20,0x18,0x82,0x0f]
 // CHECK: fmla	v0.2s, v1.2s, v22.s[2]  // encoding: [0x20,0x18,0x96,0x0f]
 // CHECK: fmla	v3.4s, v8.4s, v2.s[1]   // encoding: [0x03,0x11,0xa2,0x4f]
@@ -60,6 +64,8 @@
 // CHECK: fmla	v0.2d, v1.2d, v2.d[1]   // encoding: [0x20,0x18,0xc2,0x4f]
 // CHECK: fmla	v0.2d, v1.2d, v22.d[1]  // encoding: [0x20,0x18,0xd6,0x4f]
 
+        fmls v0.4h, v1.4h, v2.h[2]
+        fmls v3.8h, v8.8h, v2.h[1]
         fmls v0.2s, v1.2s, v2.s[2]
         fmls v0.2s, v1.2s, v22.s[2]
         fmls v3.4s, v8.4s, v2.s[1]
@@ -67,6 +73,8 @@
         fmls v0.2d, v1.2d, v2.d[1]
         fmls v0.2d, v1.2d, v22.d[1]
 
+// CHECK: fmls    v0.4h, v1.4h, v2.h[2]   // encoding: [0x20,0x50,0x22,0x0f]
+// CHECK: fmls    v3.8h, v8.8h, v2.h[1]   // encoding: [0x03,0x51,0x12,0x4f]
 // CHECK: fmls	v0.2s, v1.2s, v2.s[2]   // encoding: [0x20,0x58,0x82,0x0f]
 // CHECK: fmls	v0.2s, v1.2s, v22.s[2]  // encoding: [0x20,0x58,0x96,0x0f]
 // CHECK: fmls	v3.4s, v8.4s, v2.s[1]   // encoding: [0x03,0x51,0xa2,0x4f]
@@ -172,6 +180,8 @@
 // CHECK: mul	v0.4s, v1.4s, v2.s[2]   // encoding: [0x20,0x88,0x82,0x4f]
 // CHECK: mul	v0.4s, v1.4s, v22.s[2]  // encoding: [0x20,0x88,0x96,0x4f]
 
+        fmul v0.4h, v1.4h, v2.h[2]
+        fmul v0.8h, v1.8h, v2.h[2]
         fmul v0.2s, v1.2s, v2.s[2]
         fmul v0.2s, v1.2s, v22.s[2]
         fmul v0.4s, v1.4s, v2.s[2]
@@ -179,6 +189,8 @@
         fmul v0.2d, v1.2d, v2.d[1]
         fmul v0.2d, v1.2d, v22.d[1]
 
+// CHECK: fmul    v0.4h, v1.4h, v2.h[2]   // encoding: [0x20,0x90,0x22,0x0f]
+// CHECK: fmul    v0.8h, v1.8h, v2.h[2]   // encoding: [0x20,0x90,0x22,0x4f]
 // CHECK: fmul	v0.2s, v1.2s, v2.s[2]   // encoding: [0x20,0x98,0x82,0x0f]
 // CHECK: fmul	v0.2s, v1.2s, v22.s[2]  // encoding: [0x20,0x98,0x96,0x0f]
 // CHECK: fmul	v0.4s, v1.4s, v2.s[2]   // encoding: [0x20,0x98,0x82,0x4f]
@@ -186,6 +198,8 @@
 // CHECK: fmul	v0.2d, v1.2d, v2.d[1]   // encoding: [0x20,0x98,0xc2,0x4f]
 // CHECK: fmul	v0.2d, v1.2d, v22.d[1]  // encoding: [0x20,0x98,0xd6,0x4f]
 
+        fmulx v0.4h, v1.4h, v2.h[2]
+        fmulx v0.8h, v1.8h, v2.h[2]
         fmulx v0.2s, v1.2s, v2.s[2]
         fmulx v0.2s, v1.2s, v22.s[2]
         fmulx v0.4s, v1.4s, v2.s[2]
@@ -193,6 +207,8 @@
         fmulx v0.2d, v1.2d, v2.d[1]
         fmulx v0.2d, v1.2d, v22.d[1]
 
+// CHECK: fmulx   v0.4h, v1.4h, v2.h[2]   // encoding: [0x20,0x90,0x22,0x2f]
+// CHECK: fmulx   v0.8h, v1.8h, v2.h[2]   // encoding: [0x20,0x90,0x22,0x6f]
 // CHECK: fmulx	v0.2s, v1.2s, v2.s[2]   // encoding: [0x20,0x98,0x82,0x2f]
 // CHECK: fmulx	v0.2s, v1.2s, v22.s[2]  // encoding: [0x20,0x98,0x96,0x2f]
 // CHECK: fmulx	v0.4s, v1.4s, v2.s[2]   // encoding: [0x20,0x98,0x82,0x6f]

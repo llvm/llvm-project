@@ -436,7 +436,7 @@ protected:
     IBuilder.CreateRetVoid();
   }
 
-  void CreateNewModule() { NewM = llvm::CloneModule(OldM); }
+  void CreateNewModule() { NewM = llvm::CloneModule(OldM).release(); }
 
   LLVMContext C;
   Module *OldM;

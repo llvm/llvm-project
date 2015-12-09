@@ -8033,6 +8033,7 @@ static SDValue lowerVectorShuffleAsTruncBroadcast(SDLoc DL, MVT VT, SDValue V0,
 /// For convenience, this code also bundles all of the subtarget feature set
 /// filtering. While a little annoying to re-dispatch on type here, there isn't
 /// a convenient way to factor it out.
+/// FIXME: This is very similar to LowerVectorBroadcast - can we merge them?
 static SDValue lowerVectorShuffleAsBroadcast(SDLoc DL, MVT VT, SDValue V,
                                              ArrayRef<int> Mask,
                                              const X86Subtarget *Subtarget,
@@ -8105,6 +8106,20 @@ static SDValue lowerVectorShuffleAsBroadcast(SDLoc DL, MVT VT, SDValue V,
     // Only AVX2 has register broadcasts.
     if (!Subtarget->hasAVX2() && !isShuffleFoldableLoad(V))
       return SDValue();
+  } else if (MayFoldLoad(V) && !cast<LoadSDNode>(V)->isVolatile()) {
+    // If we are broadcasting a load that is only used by the shuffle
+    // then we can reduce the vector load to the broadcasted scalar load.
+    LoadSDNode *Ld = cast<LoadSDNode>(V);
+    SDValue BaseAddr = Ld->getOperand(1);
+    EVT AddrVT = BaseAddr.getValueType();
+    EVT SVT = VT.getScalarType();
+    unsigned Offset = BroadcastIdx * SVT.getStoreSize();
+    SDValue NewAddr = DAG.getNode(
+        ISD::ADD, DL, AddrVT, BaseAddr,
+        DAG.getConstant(Offset, DL, AddrVT));
+    V = DAG.getLoad(SVT, DL, Ld->getChain(), NewAddr,
+                    DAG.getMachineFunction().getMachineMemOperand(
+                        Ld->getMemOperand(), Offset, SVT.getStoreSize()));
   } else if (BroadcastIdx != 0 || !Subtarget->hasAVX2()) {
     // We can't broadcast from a vector register without AVX2, and we can only
     // broadcast from the zero-element of a vector register.

@@ -145,10 +145,7 @@ define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
 define <4 x double> @splat_load_4f64_2222(<4 x double>* %ptr) {
 ; CHECK-LABEL: splat_load_4f64_2222:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovapd (%rdi), %ymm0
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; CHECK-NEXT:    retq
   %x = load <4 x double>, <4 x double>* %ptr
   %x1 = shufflevector <4 x double> %x, <4 x double> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
@@ -158,7 +155,7 @@ define <4 x double> @splat_load_4f64_2222(<4 x double>* %ptr) {
 define <4 x float> @splat_load_4f32_0000(<4 x float>* %ptr) {
 ; CHECK-LABEL: splat_load_4f32_0000:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,0,0,0]
+; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0
 ; CHECK-NEXT:    retq
   %x = load <4 x float>, <4 x float>* %ptr
   %x1 = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
@@ -168,10 +165,7 @@ define <4 x float> @splat_load_4f32_0000(<4 x float>* %ptr) {
 define <8 x float> @splat_load_8f32_77777777(<8 x float>* %ptr) {
 ; CHECK-LABEL: splat_load_8f32_77777777:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovaps (%rdi), %ymm0
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastss 28(%rdi), %ymm0
 ; CHECK-NEXT:    retq
   %x = load <8 x float>, <8 x float>* %ptr
   %x1 = shufflevector <8 x float> %x, <8 x float> undef, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>

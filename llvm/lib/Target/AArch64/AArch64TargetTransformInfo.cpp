@@ -448,7 +448,7 @@ int AArch64TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   if (Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     unsigned NumElts = VecTy->getVectorNumElements();
     Type *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
-    unsigned SubVecSize = DL.getTypeAllocSizeInBits(SubVecTy);
+    unsigned SubVecSize = DL.getTypeSizeInBits(SubVecTy);
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize == 128))

@@ -264,3 +264,43 @@ define void @store_address_space(<2 x i32>* %A, <2 x i32>* %B, <4 x i32> addrspa
  store <4 x i32> %interleaved, <4 x i32> addrspace(1)* %C
  ret void
 }
+
+; Check that we do something sane with illegal types.
+
+; NEON-LABEL: load_illegal_factor2:
+; NEON: BB#0:
+; NEON-NEXT: vld1.64 {d16, d17}, [r0:128]
+; NEON-NEXT: vuzp.32 q8, {{.*}}
+; NEON-NEXT: vmov r0, r1, d16
+; NEON-NEXT: vmov r2, r3, {{.*}}
+; NEON-NEXT: mov pc, lr
+; NONEON-LABEL: load_illegal_factor2:
+; NONEON: BB#0:
+; NONEON-NEXT: ldr [[ELT0:r[0-9]+]], [r0]
+; NONEON-NEXT: ldr r1, [r0, #8]
+; NONEON-NEXT: mov r0, [[ELT0]]
+; NONEON-NEXT: mov pc, lr
+define <3 x float> @load_illegal_factor2(<3 x float>* %p) nounwind {
+  %tmp1 = load <3 x float>, <3 x float>* %p, align 16
+  %tmp2 = shufflevector <3 x float> %tmp1, <3 x float> undef, <3 x i32> <i32 0, i32 2, i32 undef>
+  ret <3 x float> %tmp2
+}
+
+; This lowering isn't great, but it's at least correct.
+
+; NEON-LABEL: store_illegal_factor2:
+; NEON: BB#0:
+; NEON-NEXT: vldr d17, [sp]
+; NEON-NEXT: vmov d16, r2, r3
+; NEON-NEXT: vuzp.32 q8, {{.*}}
+; NEON-NEXT: vstr d16, [r0]
+; NEON-NEXT: mov pc, lr
+; NONEON-LABEL: store_illegal_factor2:
+; NONEON: BB#0:
+; NONEON-NEXT: stm r0, {r1, r3}
+; NONEON-NEXT: mov pc, lr
+define void @store_illegal_factor2(<3 x float>* %p, <3 x float> %v) nounwind {
+  %tmp1 = shufflevector <3 x float> %v, <3 x float> undef, <3 x i32> <i32 0, i32 2, i32 undef>
+  store <3 x float> %tmp1, <3 x float>* %p, align 16
+  ret void
+}

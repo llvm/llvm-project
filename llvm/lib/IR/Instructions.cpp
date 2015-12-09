@@ -307,6 +307,7 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
   NewCI->SubclassOptionalData = CI->SubclassOptionalData;
+  NewCI->setAttributes(CI->getAttributes());
   return NewCI;
 }
 
@@ -594,6 +595,7 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
                                    II->getName(), InsertPt);
   NewII->setCallingConv(II->getCallingConv());
   NewII->SubclassOptionalData = II->SubclassOptionalData;
+  NewII->setAttributes(II->getAttributes());
   return NewII;
 }
 

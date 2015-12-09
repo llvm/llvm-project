@@ -216,7 +216,7 @@ define void @fmadd_aab_sd(double* %a, double* %b) #0 {
 ; CHECK-LABEL: fmadd_aab_sd:
 ; CHECK:      vmovsd (%rcx), %[[XMM:xmm[0-9]+]]
 ; CHECK-NEXT: vfmadd213sd (%rdx), %[[XMM]], %[[XMM]]
-; CHECK-NEXT: vmovlps %[[XMM]], (%rcx)
+; CHECK-NEXT: vmovlpd %[[XMM]], (%rcx)
 ; CHECK-NEXT: ret
   %a.val = load double, double* %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
@@ -237,7 +237,7 @@ define void @fmadd_aba_sd(double* %a, double* %b) #0 {
 ; CHECK-LABEL: fmadd_aba_sd:
 ; CHECK:      vmovsd (%rcx), %[[XMM:xmm[0-9]+]]
 ; CHECK-NEXT: vfmadd132sd (%rdx), %[[XMM]], %[[XMM]]
-; CHECK-NEXT: vmovlps %[[XMM]], (%rcx)
+; CHECK-NEXT: vmovlpd %[[XMM]], (%rcx)
 ; CHECK-NEXT: ret
   %a.val = load double, double* %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
@@ -258,7 +258,7 @@ define void @fmsub_aab_sd(double* %a, double* %b) #0 {
 ; CHECK-LABEL: fmsub_aab_sd:
 ; CHECK:      vmovsd (%rcx), %[[XMM:xmm[0-9]+]]
 ; CHECK-NEXT: vfmsub213sd (%rdx), %[[XMM]], %[[XMM]]
-; CHECK-NEXT: vmovlps %[[XMM]], (%rcx)
+; CHECK-NEXT: vmovlpd %[[XMM]], (%rcx)
 ; CHECK-NEXT: ret
   %a.val = load double, double* %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
@@ -279,7 +279,7 @@ define void @fmsub_aba_sd(double* %a, double* %b) #0 {
 ; CHECK-LABEL: fmsub_aba_sd:
 ; CHECK:      vmovsd (%rcx), %[[XMM:xmm[0-9]+]]
 ; CHECK-NEXT: vfmsub132sd (%rdx), %[[XMM]], %[[XMM]]
-; CHECK-NEXT: vmovlps %[[XMM]], (%rcx)
+; CHECK-NEXT: vmovlpd %[[XMM]], (%rcx)
 ; CHECK-NEXT: ret
   %a.val = load double, double* %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
@@ -300,7 +300,7 @@ define void @fnmadd_aab_sd(double* %a, double* %b) #0 {
 ; CHECK-LABEL: fnmadd_aab_sd:
 ; CHECK:      vmovsd (%rcx), %[[XMM:xmm[0-9]+]]
 ; CHECK-NEXT: vfnmadd213sd (%rdx), %[[XMM]], %[[XMM]]
-; CHECK-NEXT: vmovlps %[[XMM]], (%rcx)
+; CHECK-NEXT: vmovlpd %[[XMM]], (%rcx)
 ; CHECK-NEXT: ret
   %a.val = load double, double* %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
@@ -321,7 +321,7 @@ define void @fnmadd_aba_sd(double* %a, double* %b) #0 {
 ; CHECK-LABEL: fnmadd_aba_sd:
 ; CHECK:      vmovsd (%rcx), %[[XMM:xmm[0-9]+]]
 ; CHECK-NEXT: vfnmadd132sd (%rdx), %[[XMM]], %[[XMM]]
-; CHECK-NEXT: vmovlps %[[XMM]], (%rcx)
+; CHECK-NEXT: vmovlpd %[[XMM]], (%rcx)
 ; CHECK-NEXT: ret
   %a.val = load double, double* %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
@@ -342,7 +342,7 @@ define void @fnmsub_aab_sd(double* %a, double* %b) #0 {
 ; CHECK-LABEL: fnmsub_aab_sd:
 ; CHECK:      vmovsd (%rcx), %[[XMM:xmm[0-9]+]]
 ; CHECK-NEXT: vfnmsub213sd (%rdx), %[[XMM]], %[[XMM]]
-; CHECK-NEXT: vmovlps %[[XMM]], (%rcx)
+; CHECK-NEXT: vmovlpd %[[XMM]], (%rcx)
 ; CHECK-NEXT: ret
   %a.val = load double, double* %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
@@ -363,7 +363,7 @@ define void @fnmsub_aba_sd(double* %a, double* %b) #0 {
 ; CHECK-LABEL: fnmsub_aba_sd:
 ; CHECK:      vmovsd (%rcx), %[[XMM:xmm[0-9]+]]
 ; CHECK-NEXT: vfnmsub132sd (%rdx), %[[XMM]], %[[XMM]]
-; CHECK-NEXT: vmovlps %[[XMM]], (%rcx)
+; CHECK-NEXT: vmovlpd %[[XMM]], (%rcx)
 ; CHECK-NEXT: ret
   %a.val = load double, double* %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
