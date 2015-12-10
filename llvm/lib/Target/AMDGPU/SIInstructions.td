@@ -2039,8 +2039,8 @@ let Defs = [SCC] in {
 
 def SI_CONSTDATA_PTR : InstSI <
   (outs SReg_64:$dst),
-  (ins),
-  "", [(set SReg_64:$dst, (i64 SIconstdata_ptr))]
+  (ins const_ga:$ptr),
+  "", [(set SReg_64:$dst, (i64 (SIconstdata_ptr (tglobaladdr:$ptr))))]
 > {
   let SALU = 1;
 }

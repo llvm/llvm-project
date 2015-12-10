@@ -92,8 +92,6 @@ enum TargetIndex {
 };
 }
 
-#define END_OF_TEXT_LABEL_NAME "EndOfTextLabel"
-
 } // End namespace llvm
 
 namespace ShaderType {

@@ -100,16 +100,6 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
   }
 }
 
-void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
-
-  // This label is used to mark the end of the .text section.
-  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  OutStreamer->SwitchSection(TLOF.getTextSection());
-  MCSymbol *EndOfTextLabel =
-      OutContext.getOrCreateSymbol(StringRef(END_OF_TEXT_LABEL_NAME));
-  OutStreamer->EmitLabel(EndOfTextLabel);
-}
-
 void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();

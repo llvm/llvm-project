@@ -171,10 +171,10 @@ void LiveRegSet::clear() {
   Regs.clear();
 }
 
-const LiveRange *RegPressureTracker::getLiveRange(unsigned Reg) const {
+static const LiveRange *getLiveRange(const LiveIntervals &LIS, unsigned Reg) {
   if (TargetRegisterInfo::isVirtualRegister(Reg))
-    return &LIS->getInterval(Reg);
-  return LIS->getCachedRegUnit(Reg);
+    return &LIS.getInterval(Reg);
+  return LIS.getCachedRegUnit(Reg);
 }
 
 void RegPressureTracker::reset() {
@@ -323,6 +323,10 @@ public:
 
   void collect(const MachineInstr &MI, const TargetRegisterInfo &TRI,
                const MachineRegisterInfo &MRI, bool IgnoreDead = false);
+
+  /// Use liveness information to find dead defs not marked with a dead flag
+  /// and move them to the DeadDefs vector.
+  void detectDeadDefs(const MachineInstr &MI, const LiveIntervals &LIS);
 };
 
 /// Collect this instruction's unique uses and defs into SmallVectors for
@@ -391,6 +395,27 @@ void RegisterOperands::collect(const MachineInstr &MI,
                                bool IgnoreDead) {
   RegisterOperandsCollector Collector(*this, TRI, MRI, IgnoreDead);
   Collector.collectInstr(MI);
+}
+
+void RegisterOperands::detectDeadDefs(const MachineInstr &MI,
+                                      const LiveIntervals &LIS) {
+  SlotIndex SlotIdx = LIS.getInstructionIndex(&MI);
+  for (SmallVectorImpl<unsigned>::iterator RI = Defs.begin();
+       RI != Defs.end(); /*empty*/) {
+    unsigned Reg = *RI;
+    const LiveRange *LR = getLiveRange(LIS, Reg);
+    if (LR != nullptr) {
+      LiveQueryResult LRQ = LR->Query(SlotIdx);
+      if (LRQ.isDeadDef()) {
+        // LiveIntervals knows this is a dead even though it's MachineOperand is
+        // not flagged as such.
+        DeadDefs.push_back(Reg);
+        RI = Defs.erase(RI);
+        continue;
+      }
+    }
+    ++RI;
+  }
 }
 
 } // namespace
@@ -514,8 +539,11 @@ void RegPressureTracker::recede(SmallVectorImpl<unsigned> *LiveUses,
   if (RequireIntervals && isTopClosed())
     static_cast<IntervalPressure&>(P).openTop(SlotIdx);
 
+  const MachineInstr &MI = *CurrPos;
   RegisterOperands RegOpers;
-  RegOpers.collect(*CurrPos, *TRI, *MRI);
+  RegOpers.collect(MI, *TRI, *MRI);
+  if (RequireIntervals)
+    RegOpers.detectDeadDefs(MI, *LIS);
 
   if (PDiff)
     collectPDiff(*PDiff, RegOpers, MRI);
@@ -527,26 +555,10 @@ void RegPressureTracker::recede(SmallVectorImpl<unsigned> *LiveUses,
   // Kill liveness at live defs.
   // TODO: consider earlyclobbers?
   for (unsigned Reg : RegOpers.Defs) {
-    bool DeadDef = false;
-    if (RequireIntervals) {
-      const LiveRange *LR = getLiveRange(Reg);
-      if (LR) {
-        LiveQueryResult LRQ = LR->Query(SlotIdx);
-        DeadDef = LRQ.isDeadDef();
-      }
-    }
-    if (DeadDef) {
-      // LiveIntervals knows this is a dead even though it's MachineOperand is
-      // not flagged as such. Since this register will not be recorded as
-      // live-out, increase its PDiff value to avoid underflowing pressure.
-      if (PDiff)
-        PDiff->addPressureChange(Reg, false, MRI);
-    } else {
-      if (LiveRegs.erase(Reg))
-        decreaseRegPressure(Reg);
-      else
-        discoverLiveOut(Reg);
-    }
+    if (LiveRegs.erase(Reg))
+      decreaseRegPressure(Reg);
+    else
+      discoverLiveOut(Reg);
   }
 
   // Generate liveness for uses.
@@ -554,7 +566,7 @@ void RegPressureTracker::recede(SmallVectorImpl<unsigned> *LiveUses,
     if (!LiveRegs.contains(Reg)) {
       // Adjust liveouts if LiveIntervals are available.
       if (RequireIntervals) {
-        const LiveRange *LR = getLiveRange(Reg);
+        const LiveRange *LR = getLiveRange(*LIS, Reg);
         if (LR) {
           LiveQueryResult LRQ = LR->Query(SlotIdx);
           if (!LRQ.isKill() && !LRQ.valueDefined())
@@ -606,7 +618,7 @@ void RegPressureTracker::advance() {
     // Kill liveness at last uses.
     bool lastUse = false;
     if (RequireIntervals) {
-      const LiveRange *LR = getLiveRange(Reg);
+      const LiveRange *LR = getLiveRange(*LIS, Reg);
       lastUse = LR && LR->Query(SlotIdx).isKill();
     } else {
       // Allocatable physregs are always single-use before register rewriting.
@@ -726,22 +738,13 @@ void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
   RegisterOperands RegOpers;
   RegOpers.collect(*MI, *TRI, *MRI, /*IgnoreDead=*/true);
   assert(RegOpers.DeadDefs.size() == 0);
+  if (RequireIntervals)
+    RegOpers.detectDeadDefs(*MI, *LIS);
 
   // Kill liveness at live defs.
   for (unsigned Reg : RegOpers.Defs) {
-    bool DeadDef = false;
-    if (RequireIntervals) {
-      const LiveRange *LR = getLiveRange(Reg);
-      if (LR) {
-        SlotIndex SlotIdx = LIS->getInstructionIndex(MI);
-        LiveQueryResult LRQ = LR->Query(SlotIdx);
-        DeadDef = LRQ.isDeadDef();
-      }
-    }
-    if (!DeadDef) {
-      if (!containsReg(RegOpers.Uses, Reg))
-        decreaseRegPressure(Reg);
-    }
+    if (!containsReg(RegOpers.Uses, Reg))
+      decreaseRegPressure(Reg);
   }
   // Generate liveness for uses.
   for (unsigned Reg : RegOpers.Uses) {
@@ -926,7 +929,7 @@ void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
       // FIXME: allow the caller to pass in the list of vreg uses that remain
       // to be bottom-scheduled to avoid searching uses at each query.
       SlotIndex CurrIdx = getCurrSlot();
-      const LiveRange *LR = getLiveRange(Reg);
+      const LiveRange *LR = getLiveRange(*LIS, Reg);
       if (LR) {
         LiveQueryResult LRQ = LR->Query(SlotIdx);
         if (LRQ.isKill() && !findUseBetween(Reg, CurrIdx, SlotIdx, *MRI, LIS))

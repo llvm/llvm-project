@@ -121,6 +121,7 @@ public:
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
+  ConstraintType getConstraintType(StringRef Constraint) const override;
   SDValue copyToM0(SelectionDAG &DAG, SDValue Chain, SDLoc DL, SDValue V) const;
 };
 

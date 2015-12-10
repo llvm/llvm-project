@@ -99,8 +99,6 @@ public:
 
   void EmitFunctionBodyStart() override;
 
-  void EmitEndOfAsmFile(Module &M) override;
-
   void EmitFunctionEntryLabel() override;
 
   void EmitGlobalVariable(const GlobalVariable *GV) override;

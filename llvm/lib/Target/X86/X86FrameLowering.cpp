@@ -1003,7 +1003,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   else if (IsFunclet)
     Establisher = Uses64BitFramePtr ? X86::RDX : X86::EDX;
 
-  if (IsWin64Prologue && IsFunclet & !IsClrFunclet) {
+  if (IsWin64Prologue && IsFunclet && !IsClrFunclet) {
     // Immediately spill establisher into the home slot.
     // The runtime cares about this.
     // MOV64mr %rdx, 16(%rsp)

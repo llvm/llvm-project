@@ -5954,7 +5954,7 @@ _ACEOF
 if test "${with_clang_default_openmp_runtime+set}" = set; then
   withval=$with_clang_default_openmp_runtime;
 else
-  withval="libgomp"
+  withval="libomp"
 fi
 
 

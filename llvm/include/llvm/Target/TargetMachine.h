@@ -255,6 +255,13 @@ public:
     return true;
   }
 
+  /// True if subtarget inserts the final scheduling pass on its own.
+  ///
+  /// Branch relaxation, which must happen after block placement, can
+  /// on some targets (e.g. SystemZ) expose additional post-RA
+  /// scheduling opportunities.
+  virtual bool targetSchedulesPostRAScheduling() const { return false; };
+
   void getNameWithPrefix(SmallVectorImpl<char> &Name, const GlobalValue *GV,
                          Mangler &Mang, bool MayAlwaysUsePrivate = false) const;
   MCSymbol *getSymbol(const GlobalValue *GV, Mangler &Mang) const;

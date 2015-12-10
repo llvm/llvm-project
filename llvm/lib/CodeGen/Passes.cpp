@@ -96,10 +96,10 @@ PrintMachineInstrs("print-machineinstrs", cl::ValueOptional,
 
 // Temporary option to allow experimenting with MachineScheduler as a post-RA
 // scheduler. Targets can "properly" enable this with
-// substitutePass(&PostRASchedulerID, &PostMachineSchedulerID); Ideally it
-// wouldn't be part of the standard pass pipeline, and the target would just add
-// a PostRA scheduling pass wherever it wants.
-static cl::opt<bool> MISchedPostRA("misched-postra", cl::Hidden,
+// substitutePass(&PostRASchedulerID, &PostMachineSchedulerID).
+// Targets can return true in targetSchedulesPostRAScheduling() and
+// insert a PostRA scheduling pass wherever it wants.
+cl::opt<bool> MISchedPostRA("misched-postra", cl::Hidden,
   cl::desc("Run MachineScheduler post regalloc (independent of preRA sched)"));
 
 // Experimental option to run live interval analysis early.
@@ -575,7 +575,10 @@ void TargetPassConfig::addMachinePasses() {
     addPass(&ImplicitNullChecksID);
 
   // Second pass scheduler.
-  if (getOptLevel() != CodeGenOpt::None) {
+  // Let Target optionally insert this pass by itself at some other
+  // point.
+  if (getOptLevel() != CodeGenOpt::None &&
+      !TM->targetSchedulesPostRAScheduling()) {
     if (MISchedPostRA)
       addPass(&PostMachineSchedulerID);
     else

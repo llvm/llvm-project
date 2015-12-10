@@ -191,8 +191,7 @@ bool PruneEH::SimplifyFunction(Function *F) {
   for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator()))
       if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(F)) {
-        CallSite CS(II);
-        SmallVector<Value*, 8> Args(CS.arg_begin(), CS.arg_end());
+        SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
         SmallVector<OperandBundleDef, 1> OpBundles;
         II->getOperandBundlesAsDefs(OpBundles);
 

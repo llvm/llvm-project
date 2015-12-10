@@ -19,7 +19,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUAsmPrinter.cpp
   AMDGPUDiagnosticInfoUnsupported.cpp
   AMDGPUFrameLowering.cpp
-  AMDGPUHSATargetObjectFile.cpp
+  AMDGPUTargetObjectFile.cpp
   AMDGPUIntrinsicInfo.cpp
   AMDGPUISelDAGToDAG.cpp
   AMDGPUMCInstLower.cpp

@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetMachine.h"
-#include "AMDGPUHSATargetObjectFile.h"
+#include "AMDGPUTargetObjectFile.h"
 #include "AMDGPU.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "R600ISelLowering.h"
@@ -57,7 +57,7 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.getOS() == Triple::AMDHSA)
     return make_unique<AMDGPUHSATargetObjectFile>();
 
-  return make_unique<TargetLoweringObjectFileELF>();
+  return make_unique<AMDGPUTargetObjectFile>();
 }
 
 static ScheduleDAGInstrs *createR600MachineScheduler(MachineSchedContext *C) {
