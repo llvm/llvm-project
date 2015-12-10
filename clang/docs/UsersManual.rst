@@ -1108,7 +1108,7 @@ are listed below.
    This option restricts the generated code to use general registers
    only. This only applies to the AArch64 architecture.
 
-**-f[no-]max-unknown-pointer-align=[number]**
+**-f[no-]max-type-align=[number]**
    Instruct the code generator to not enforce a higher alignment than the given
    number (of bytes) when accessing memory via an opaque pointer or reference.
    This cap is ignored when directly accessing a variable or when the pointee
@@ -1136,7 +1136,7 @@ are listed below.
 
       void initialize_vector(__aligned_v16si *v) {
         // The compiler may assume that ‘v’ is 64-byte aligned, regardless of the
-        // value of -fmax-unknown-pointer-align.
+        // value of -fmax-type-align.
       }
 
 
@@ -1825,8 +1825,8 @@ directives, ``depend`` clause for ``#pragma omp task`` directive (except for
 array sections), ``#pragma omp cancel`` and ``#pragma omp cancellation point``
 directives, and ``#pragma omp taskgroup`` directive.
 
-OpenMP support is disabled by default. Use :option:`-fopenmp=libomp` to enable
-it. Support for OpenMP can be disabled with :option:`-fno-openmp`.
+Use :option:`-fopenmp` to enable OpenMP. Support for OpenMP can be disabled with
+:option:`-fno-openmp`.
 
 Controlling implementation limits
 ---------------------------------

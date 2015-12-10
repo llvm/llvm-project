@@ -1714,13 +1714,15 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
   if (!StrVal.empty()) {
     const SourceManager &SM = CGF.CGM.getContext().getSourceManager();
     const LangOptions &LangOpts = CGF.CGM.getLangOpts();
+    unsigned StartToken = 0;
+    unsigned ByteOffset = 0;
 
     // Add the location of the start of each subsequent line of the asm to the
     // MDNode.
-    for (unsigned i = 0, e = StrVal.size()-1; i != e; ++i) {
+    for (unsigned i = 0, e = StrVal.size() - 1; i != e; ++i) {
       if (StrVal[i] != '\n') continue;
-      SourceLocation LineLoc = Str->getLocationOfByte(i+1, SM, LangOpts,
-                                                      CGF.getTarget());
+      SourceLocation LineLoc = Str->getLocationOfByte(
+          i + 1, SM, LangOpts, CGF.getTarget(), &StartToken, &ByteOffset);
       Locs.push_back(llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(CGF.Int32Ty, LineLoc.getRawEncoding())));
     }
@@ -1996,6 +1998,15 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   llvm::CallInst *Result = Builder.CreateCall(IA, Args);
   Result->addAttribute(llvm::AttributeSet::FunctionIndex,
                        llvm::Attribute::NoUnwind);
+
+  if (isa<MSAsmStmt>(&S)) {
+    // If the assembly contains any labels, mark the call noduplicate to prevent
+    // defining the same ASM label twice (PR23715). This is pretty hacky, but it
+    // works.
+    if (AsmString.find("__MSASMLABEL_") != std::string::npos)
+      Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+                           llvm::Attribute::NoDuplicate);
+  }
 
   // Attach readnone and readonly attributes.
   if (!HasSideEffect) {

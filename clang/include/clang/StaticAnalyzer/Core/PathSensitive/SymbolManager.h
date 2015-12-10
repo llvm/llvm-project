@@ -639,6 +639,7 @@ public:
   }
   
   void markLive(const MemRegion *region);
+  void markElementIndicesLive(const MemRegion *region);
   
   /// \brief Set to the value of the symbolic store after
   /// StoreManager::removeDeadBindings has been called.

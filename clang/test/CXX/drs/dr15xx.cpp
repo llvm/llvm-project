@@ -101,4 +101,55 @@ namespace dr1589 {   // dr1589: 3.7 c++11
   }
 
 } // dr1589
+
+namespace dr1591 {  //dr1591. Deducing array bound and element type from initializer list 
+  template<class T, int N> int h(T const(&)[N]);
+  int X = h({1,2,3});              // T deduced to int, N deduced to 3
+  
+  template<class T> int j(T const(&)[3]);
+  int Y = j({42});                 // T deduced to int, array bound not considered
+
+  struct Aggr { int i; int j; };
+  template<int N> int k(Aggr const(&)[N]); //expected-note{{not viable}}
+  int Y0 = k({1,2,3});              //expected-error{{no matching function}}
+  int Z = k({{1},{2},{3}});        // OK, N deduced to 3
+
+  template<int M, int N> int m(int const(&)[M][N]);
+  int X0 = m({{1,2},{3,4}});        // M and N both deduced to 2
+
+  template<class T, int N> int n(T const(&)[N], T);
+  int X1 = n({{1},{2},{3}},Aggr()); // OK, T is Aggr, N is 3
+  
+  
+  namespace check_multi_dim_arrays {
+    template<class T, int N, int M, int O> int ***f(const T (&a)[N][M][O]); //expected-note{{deduced conflicting values}}
+    template<class T, int N, int M> int **f(const T (&a)[N][M]); //expected-note{{couldn't infer}}
+   
+   template<class T, int N> int *f(const T (&a)[N]); //expected-note{{couldn't infer}}
+    int ***p3 = f({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12}  } });
+    int ***p33 = f({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12, 13}  } }); //expected-error{{no matching}}
+    int **p2 = f({  {1,2,3}, {3, 4, 5}  });
+    int **p22 = f({  {1,2}, {3, 4}  });
+    int *p1 = f({1, 2, 3});
+  }
+  namespace check_multi_dim_arrays_rref {
+    template<class T, int N, int M, int O> int ***f(T (&&a)[N][M][O]); //expected-note{{deduced conflicting values}}
+    template<class T, int N, int M> int **f(T (&&a)[N][M]); //expected-note{{couldn't infer}}
+   
+    template<class T, int N> int *f(T (&&a)[N]); //expected-note{{couldn't infer}}
+    int ***p3 = f({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12}  } });
+    int ***p33 = f({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12, 13}  } }); //expected-error{{no matching}}
+    int **p2 = f({  {1,2,3}, {3, 4, 5}  });
+    int **p22 = f({  {1,2}, {3, 4}  });
+    int *p1 = f({1, 2, 3});
+  }
+  
+  namespace check_arrays_of_init_list {
+    template<class T, int N> float *f(const std::initializer_list<T> (&)[N]);
+    template<class T, int N> double *f(const T(&)[N]);
+    double *p = f({1, 2, 3});
+    float *fp = f({{1}, {1, 2}, {1, 2, 3}});
+  }
+} // dr1591
+
 #endif

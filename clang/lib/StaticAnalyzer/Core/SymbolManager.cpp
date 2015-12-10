@@ -391,6 +391,18 @@ void SymbolReaper::markLive(SymbolRef sym) {
 
 void SymbolReaper::markLive(const MemRegion *region) {
   RegionRoots.insert(region);
+  markElementIndicesLive(region);
+}
+
+void SymbolReaper::markElementIndicesLive(const MemRegion *region) {
+  for (auto SR = dyn_cast<SubRegion>(region); SR;
+       SR = dyn_cast<SubRegion>(SR->getSuperRegion())) {
+    if (auto ER = dyn_cast<ElementRegion>(SR)) {
+      SVal Idx = ER->getIndex();
+      for (auto SI = Idx.symbol_begin(), SE = Idx.symbol_end(); SI != SE; ++SI)
+        markLive(*SI);
+    }
+  }
 }
 
 void SymbolReaper::markInUse(SymbolRef sym) {

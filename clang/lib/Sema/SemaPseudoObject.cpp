@@ -229,7 +229,7 @@ namespace {
     }
 
     /// Return true if assignments have a non-void result.
-    bool CanCaptureValue(Expr *exp) {
+    static bool CanCaptureValue(Expr *exp) {
       if (exp->isGLValue())
         return true;
       QualType ty = exp->getType();
@@ -245,6 +245,20 @@ namespace {
     virtual ExprResult buildGet() = 0;
     virtual ExprResult buildSet(Expr *, SourceLocation,
                                 bool captureSetValueAsResult) = 0;
+    /// \brief Should the result of an assignment be the formal result of the
+    /// setter call or the value that was passed to the setter?
+    ///
+    /// Different pseudo-object language features use different language rules
+    /// for this.
+    /// The default is to use the set value.  Currently, this affects the
+    /// behavior of simple assignments, compound assignments, and prefix
+    /// increment and decrement.
+    /// Postfix increment and decrement always use the getter result as the
+    /// expression result.
+    ///
+    /// If this method returns true, and the set value isn't capturable for
+    /// some reason, the result of the expression will be void.
+    virtual bool captureSetValueAsResult() const { return true; }
   };
 
   /// A PseudoOpBuilder for Objective-C \@properties.
@@ -339,6 +353,7 @@ namespace {
    Expr *rebuildAndCaptureObject(Expr *) override;
    ExprResult buildGet() override;
    ExprResult buildSet(Expr *op, SourceLocation, bool) override;
+   bool captureSetValueAsResult() const override { return false; }
  };
 }
 
@@ -455,9 +470,12 @@ PseudoOpBuilder::buildAssignmentOperation(Scope *Sc, SourceLocation opcLoc,
 
   // The result of the assignment, if not void, is the value set into
   // the l-value.
-  result = buildSet(result.get(), opcLoc, /*captureSetValueAsResult*/ true);
+  result = buildSet(result.get(), opcLoc, captureSetValueAsResult());
   if (result.isInvalid()) return ExprError();
   addSemanticExpr(result.get());
+  if (!captureSetValueAsResult() && !result.get()->getType()->isVoidType() &&
+      (result.get()->isTypeDependent() || CanCaptureValue(result.get())))
+    setResultToLastSemantic();
 
   return complete(syntactic);
 }
@@ -499,9 +517,14 @@ PseudoOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
 
   // Store that back into the result.  The value stored is the result
   // of a prefix operation.
-  result = buildSet(result.get(), opcLoc, UnaryOperator::isPrefix(opcode));
+  result = buildSet(result.get(), opcLoc, UnaryOperator::isPrefix(opcode) &&
+                                              captureSetValueAsResult());
   if (result.isInvalid()) return ExprError();
   addSemanticExpr(result.get());
+  if (UnaryOperator::isPrefix(opcode) && !captureSetValueAsResult() &&
+      !result.get()->getType()->isVoidType() &&
+      (result.get()->isTypeDependent() || CanCaptureValue(result.get())))
+    setResultToLastSemantic();
 
   UnaryOperator *syntactic =
     new (S.Context) UnaryOperator(syntacticOp, opcode, resultType,

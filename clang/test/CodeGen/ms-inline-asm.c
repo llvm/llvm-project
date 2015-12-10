@@ -533,8 +533,8 @@ void label1() {
     label:
     jmp label
   }
-  // CHECK-LABEL: define void @label1
-  // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.1__label:\0A\09jmp {{.*}}__MSASMLABEL_.1__label", "~{dirflag},~{fpsr},~{flags}"()
+  // CHECK-LABEL: define void @label1()
+  // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.1__label:\0A\09jmp {{.*}}__MSASMLABEL_.1__label", "~{dirflag},~{fpsr},~{flags}"() [[ATTR1:#[0-9]+]]
 }
 
 void label2() {
@@ -581,3 +581,6 @@ int test_indirect_field(LARGE_INTEGER LargeInteger) {
 }
 // CHECK-LABEL: define i32 @test_indirect_field(
 // CHECK: call i32 asm sideeffect inteldialect "mov eax, dword ptr $1",
+
+// MS ASM containing labels must not be duplicated (PR23715).
+// CHECK: attributes [[ATTR1]] = { {{.*}}noduplicate{{.*}} }

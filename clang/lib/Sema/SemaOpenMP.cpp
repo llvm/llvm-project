@@ -565,41 +565,20 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(VarDecl *D, bool FromParent) {
   }
 
   // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
-  // in a Construct, C/C++, predetermined, p.1]
-  // Variables with automatic storage duration that are declared in a scope
-  // inside the construct are private.
-  OpenMPDirectiveKind Kind =
-      FromParent ? getParentDirective() : getCurrentDirective();
-  auto StartI = std::next(Stack.rbegin());
-  auto EndI = std::prev(Stack.rend());
-  if (FromParent && StartI != EndI) {
-    StartI = std::next(StartI);
-  }
-  if (!isParallelOrTaskRegion(Kind)) {
-    if (isOpenMPLocal(D, StartI) &&
-        ((D->isLocalVarDecl() && (D->getStorageClass() == SC_Auto ||
-                                  D->getStorageClass() == SC_None)) ||
-         isa<ParmVarDecl>(D))) {
-      DVar.CKind = OMPC_private;
+  // in a Construct, C/C++, predetermined, p.4]
+  //  Static data members are shared.
+  // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
+  // in a Construct, C/C++, predetermined, p.7]
+  //  Variables with static storage duration that are declared in a scope
+  //  inside the construct are shared.
+  if (D->isStaticDataMember()) {
+    DSAVarData DVarTemp =
+        hasDSA(D, isOpenMPPrivate, MatchesAlways(), FromParent);
+    if (DVarTemp.CKind != OMPC_unknown && DVarTemp.RefExpr)
       return DVar;
-    }
 
-    // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
-    // in a Construct, C/C++, predetermined, p.4]
-    //  Static data members are shared.
-    // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
-    // in a Construct, C/C++, predetermined, p.7]
-    //  Variables with static storage duration that are declared in a scope
-    //  inside the construct are shared.
-    if (D->isStaticDataMember()) {
-      DSAVarData DVarTemp =
-          hasDSA(D, isOpenMPPrivate, MatchesAlways(), FromParent);
-      if (DVarTemp.CKind != OMPC_unknown && DVarTemp.RefExpr)
-        return DVar;
-
-      DVar.CKind = OMPC_shared;
-      return DVar;
-    }
+    DVar.CKind = OMPC_shared;
+    return DVar;
   }
 
   QualType Type = D->getType().getNonReferenceType().getCanonicalType();
@@ -626,6 +605,11 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(VarDecl *D, bool FromParent) {
 
   // Explicitly specified attributes and local variables with predetermined
   // attributes.
+  auto StartI = std::next(Stack.rbegin());
+  auto EndI = std::prev(Stack.rend());
+  if (FromParent && StartI != EndI) {
+    StartI = std::next(StartI);
+  }
   auto I = std::prev(StartI);
   if (I->SharingMap.count(D)) {
     DVar.RefExpr = I->SharingMap[D].RefExpr;

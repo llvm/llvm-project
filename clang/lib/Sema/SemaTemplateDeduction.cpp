@@ -3212,24 +3212,63 @@ DeduceFromInitializerList(Sema &S, TemplateParameterList *TemplateParams,
                           TemplateDeductionInfo &Info,
                           SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                           unsigned TDF, Sema::TemplateDeductionResult &Result) {
-  // If the argument is an initializer list then the parameter is an undeduced
-  // context, unless the parameter type is (reference to cv)
-  // std::initializer_list<P'>, in which case deduction is done for each element
-  // of the initializer list as-if it were an argument in a function call, and
-  // the result is the deduced type if it's the same for all elements.
-  QualType X;
-  if (!S.isStdInitializerList(AdjustedParamType, &X))
+
+  // [temp.deduct.call] p1 (post CWG-1591)
+  // If removing references and cv-qualifiers from P gives
+  // std::initializer_list<P0> or P0[N] for some P0 and N and the argument is a
+  // non-empty initializer list (8.5.4), then deduction is performed instead for
+  // each element of the initializer list, taking P0 as a function template
+  // parameter type and the initializer element as its argument, and in the
+  // P0[N] case, if N is a non-type template parameter, N is deduced from the
+  // length of the initializer list. Otherwise, an initializer list argument
+  // causes the parameter to be considered a non-deduced context
+
+  const bool IsConstSizedArray = AdjustedParamType->isConstantArrayType();
+
+  const bool IsDependentSizedArray =
+      !IsConstSizedArray && AdjustedParamType->isDependentSizedArrayType();
+
+  QualType ElTy;  // The type of the std::initializer_list or the array element.
+
+  const bool IsSTDList = !IsConstSizedArray && !IsDependentSizedArray &&
+                         S.isStdInitializerList(AdjustedParamType, &ElTy);
+
+  if (!IsConstSizedArray && !IsDependentSizedArray && !IsSTDList)
     return false;
 
   Result = Sema::TDK_Success;
-
-  // Recurse down into the init list.
-  for (unsigned i = 0, e = ILE->getNumInits(); i < e; ++i) {
-    if ((Result = DeduceTemplateArgumentByListElement(
-             S, TemplateParams, X, ILE->getInit(i), Info, Deduced, TDF)))
-      return true;
+  // If we are not deducing against the 'T' in a std::initializer_list<T> then
+  // deduce against the 'T' in T[N].
+  if (ElTy.isNull()) {
+    assert(!IsSTDList);
+    ElTy = S.Context.getAsArrayType(AdjustedParamType)->getElementType();
   }
+  // Deduction only needs to be done for dependent types.
+  if (ElTy->isDependentType()) {
+    for (Expr *E : ILE->inits()) {
+      if ((Result = DeduceTemplateArgumentByListElement(S, TemplateParams, ElTy,
+                                                        E, Info, Deduced, TDF)))
+        return true;
+    }
+  }
+  if (IsDependentSizedArray) {
+    const DependentSizedArrayType *ArrTy =
+        S.Context.getAsDependentSizedArrayType(AdjustedParamType);
+    // Determine the array bound is something we can deduce.
+    if (NonTypeTemplateParmDecl *NTTP =
+            getDeducedParameterFromExpr(ArrTy->getSizeExpr())) {
+      // We can perform template argument deduction for the given non-type
+      // template parameter.
+      assert(NTTP->getDepth() == 0 &&
+             "Cannot deduce non-type template argument at depth > 0");
+      llvm::APInt Size(S.Context.getIntWidth(NTTP->getType()),
+                       ILE->getNumInits());
 
+      Result = DeduceNonTypeTemplateArgument(
+          S, NTTP, llvm::APSInt(Size), NTTP->getType(),
+          /*ArrayBound=*/true, Info, Deduced);
+    }
+  }
   return true;
 }
 

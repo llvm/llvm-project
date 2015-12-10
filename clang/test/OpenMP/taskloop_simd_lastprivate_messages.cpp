@@ -17,7 +17,7 @@ public:
   S2(S2 &s2) : a(s2.a) {}
   const S2 &operator =(const S2&) const;
   S2 &operator =(const S2&);
-  static float S2s;
+  static float S2s; // expected-note {{static data member is predetermined as shared}}
   static const float S2sc;
 };
 const float S2::S2sc = 0; // expected-note {{static data member is predetermined as shared}}
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
-#pragma omp taskloop simd lastprivate(S2::S2s)
+#pragma omp taskloop simd lastprivate(S2::S2s) // expected-error {{shared variable cannot be lastprivate}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel

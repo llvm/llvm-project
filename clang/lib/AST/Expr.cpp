@@ -1007,15 +1007,33 @@ void StringLiteral::setString(const ASTContext &C, StringRef Str,
 /// can have escape sequences in them in addition to the usual trigraph and
 /// escaped newline business.  This routine handles this complexity.
 ///
-SourceLocation StringLiteral::
-getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
-                  const LangOptions &Features, const TargetInfo &Target) const {
+/// The *StartToken sets the first token to be searched in this function and
+/// the *StartTokenByteOffset is the byte offset of the first token. Before
+/// returning, it updates the *StartToken to the TokNo of the token being found
+/// and sets *StartTokenByteOffset to the byte offset of the token in the
+/// string.
+/// Using these two parameters can reduce the time complexity from O(n^2) to
+/// O(n) if one wants to get the location of byte for all the tokens in a
+/// string.
+///
+SourceLocation
+StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
+                                 const LangOptions &Features,
+                                 const TargetInfo &Target, unsigned *StartToken,
+                                 unsigned *StartTokenByteOffset) const {
   assert((Kind == StringLiteral::Ascii || Kind == StringLiteral::UTF8) &&
          "Only narrow string literals are currently supported");
 
   // Loop over all of the tokens in this string until we find the one that
   // contains the byte we're looking for.
   unsigned TokNo = 0;
+  unsigned StringOffset = 0;
+  if (StartToken)
+    TokNo = *StartToken;
+  if (StartTokenByteOffset) {
+    StringOffset = *StartTokenByteOffset;
+    ByteNo -= StringOffset;
+  }
   while (1) {
     assert(TokNo < getNumConcatenated() && "Invalid byte number!");
     SourceLocation StrTokLoc = getStrTokenLoc(TokNo);
@@ -1024,14 +1042,20 @@ getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     // the string literal, not the identifier for the macro it is potentially
     // expanded through.
     SourceLocation StrTokSpellingLoc = SM.getSpellingLoc(StrTokLoc);
-    
+
     // Re-lex the token to get its length and original spelling.
-    std::pair<FileID, unsigned> LocInfo =SM.getDecomposedLoc(StrTokSpellingLoc);
+    std::pair<FileID, unsigned> LocInfo =
+        SM.getDecomposedLoc(StrTokSpellingLoc);
     bool Invalid = false;
     StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
-    if (Invalid)
+    if (Invalid) {
+      if (StartTokenByteOffset != nullptr)
+        *StartTokenByteOffset = StringOffset;
+      if (StartToken != nullptr)
+        *StartToken = TokNo;
       return StrTokSpellingLoc;
-    
+    }
+
     const char *StrData = Buffer.data()+LocInfo.second;
     
     // Create a lexer starting at the beginning of this token.
@@ -1047,14 +1071,19 @@ getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     // If the byte is in this token, return the location of the byte.
     if (ByteNo < TokNumBytes ||
         (ByteNo == TokNumBytes && TokNo == getNumConcatenated() - 1)) {
-      unsigned Offset = SLP.getOffsetOfStringByte(TheTok, ByteNo); 
-      
+      unsigned Offset = SLP.getOffsetOfStringByte(TheTok, ByteNo);
+
       // Now that we know the offset of the token in the spelling, use the
       // preprocessor to get the offset in the original source.
+      if (StartTokenByteOffset != nullptr)
+        *StartTokenByteOffset = StringOffset;
+      if (StartToken != nullptr)
+        *StartToken = TokNo;
       return Lexer::AdvanceToTokenCharacter(StrTokLoc, Offset, SM, Features);
     }
-    
+
     // Move to the next string token.
+    StringOffset += TokNumBytes;
     ++TokNo;
     ByteNo -= TokNumBytes;
   }

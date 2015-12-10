@@ -4025,8 +4025,7 @@ CXStringSet *clang_Cursor_getCXXManglings(CXCursor C) {
     Manglings.emplace_back(getMangledStructor(M, DL, DD, Dtor_Base));
     if (Ctx.getTargetInfo().getCXXABI().isItaniumFamily()) {
       Manglings.emplace_back(getMangledStructor(M, DL, DD, Dtor_Complete));
-
-      if (!DD->isVirtual())
+      if (DD->isVirtual())
         Manglings.emplace_back(getMangledStructor(M, DL, DD, Dtor_Deleting));
     }
   }

@@ -171,10 +171,6 @@ EnvironmentManager::removeDeadBindings(Environment Env,
       // Copy the binding to the new map.
       EBMapRef = EBMapRef.add(BlkExpr, X);
 
-      // If the block expr's value is a memory region, then mark that region.
-      if (Optional<loc::MemRegionVal> R = X.getAs<loc::MemRegionVal>())
-        SymReaper.markLive(R->getRegion());
-
       // Mark all symbols in the block expr's value live.
       RSScaner.scan(X);
       continue;

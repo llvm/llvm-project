@@ -196,7 +196,7 @@ set(GCC_INSTALL_PREFIX "" CACHE PATH "Directory where gcc is installed." )
 set(DEFAULT_SYSROOT "" CACHE PATH
   "Default <path> to all compiler invocations for --sysroot=<path>." )
 
-set(CLANG_DEFAULT_OPENMP_RUNTIME "libgomp" CACHE STRING
+set(CLANG_DEFAULT_OPENMP_RUNTIME "libomp" CACHE STRING
   "Default OpenMP runtime used by -fopenmp.")
 
 set(CLANG_VENDOR "" CACHE STRING

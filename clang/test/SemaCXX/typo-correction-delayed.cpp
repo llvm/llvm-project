@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-c++11-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 -Wno-c++11-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 struct A {};
 struct B {};
@@ -109,8 +111,10 @@ S<1> s;
 
 namespace foo {}
 void test_paren_suffix() {
-  foo::bar({5, 6});  // expected-error-re {{no member named 'bar' in namespace 'foo'{{$}}}} \
-                     // expected-error {{expected expression}}
+  foo::bar({5, 6});  // expected-error-re {{no member named 'bar' in namespace 'foo'{{$}}}}
+#if __cplusplus <= 199711L
+  // expected-error@-2 {{expected expression}}
+#endif
 }
 
 const int kNum = 10;  // expected-note {{'kNum' declared here}}

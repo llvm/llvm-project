@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile-10.5 -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile-10.5 -verify -Wno-objc-root-class -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile-10.5 -verify -Wno-objc-root-class -std=c++11 %s
+
 @interface I1
 - (int*)method;
 @end
@@ -62,15 +65,25 @@ struct identity {
   // or typename-specifiers.
   if (false) {
     if (true)
-      return [typename identity<I3>::type method]; // expected-warning{{occurs outside of a template}}
+      return [typename identity<I3>::type method];
+#if __cplusplus <= 199711L
+      // expected-warning@-2 {{'typename' occurs outside of a template}}
+#endif
 
     return [::I3 method];
   }
 
   int* ip1 = {[super method]};
   int* ip2 = {[::I3 method]};
-  int* ip3 = {[typename identity<I3>::type method]}; // expected-warning{{occurs outside of a template}}
-  int* ip4 = {[typename identity<I2_holder>::type().get() method]}; // expected-warning{{occurs outside of a template}}
+  int* ip3 = {[typename identity<I3>::type method]};
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{'typename' occurs outside of a template}}
+#endif
+
+  int* ip4 = {[typename identity<I2_holder>::type().get() method]};
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{'typename' occurs outside of a template}}
+#endif
   int array[5] = {[3] = 2};
   return [super method];
 }
