@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -pedantic -Wno-objc-root-class %s
 // RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-objc-root-class %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-objc-root-class -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-objc-root-class -std=c++11 %s
 // rdar://5707001
 
 @interface NSNumber;
@@ -36,8 +38,16 @@ void test5(NSNumber *x) {
   };
   
   struct SomeStruct z = {
-    .x = [x METH2], // ok.
+    .x = [x METH2], // ok in C++98.
+#if __cplusplus >= 201103L
+    // expected-error@-2 {{non-constant-expression cannot be narrowed from type 'unsigned int' to 'int' in initializer list}}
+    // expected-note@-3 {{insert an explicit cast to silence this issue}}
+#endif
     .x [x METH2]    // expected-error {{expected '=' or another designator}}
+#if __cplusplus >= 201103L
+    // expected-error@-2 {{non-constant-expression cannot be narrowed from type 'unsigned int' to 'int' in initializer list}}
+    // expected-note@-3 {{insert an explicit cast to silence this issue}}
+#endif
   };
 }
 

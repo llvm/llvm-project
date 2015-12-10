@@ -31,7 +31,7 @@ public:
   __declspec(property(get=GetX,put=PutX)) T x[];
   T GetX(T i, T j) { return i+j; }
   T GetX() { return 0; }
-  void PutX(T i, T j, T k) { j = i = k; }
+  T PutX(T i, T j, T k) { return j = i = k; }
   __declspec(property(get=GetY,put=PutY)) T y[];
   char GetY(char i,  Test1 j) { return i+j.get_x(); }
   void PutY(char i, int j, double k) { j = i = k; }
@@ -61,14 +61,16 @@ int main(int argc, char **argv) {
   // CHECK: call float @"\01?GetX@?$St@M@@QEAAMMM@Z"(%class.St* %{{.+}}, float 2.230000e+02, float 1.100000e+01)
   float j1 = p2->x[223][11];
   // CHECK: [[J1:%.+]] = load float, float* %
-  // CHECK-NEXT: call void @"\01?PutX@?$St@M@@QEAAXMMM@Z"(%class.St* %{{.+}}, float 2.300000e+01, float 1.000000e+00, float [[J1]])
-  p2->x[23][1] = j1;
+  // CHECK-NEXT: [[CALL:%.+]] = call float @"\01?PutX@?$St@M@@QEAAMMMM@Z"(%class.St* %{{.+}}, float 2.300000e+01, float 1.000000e+00, float [[J1]])
+  // CHECK-NEXT: [[CONV:%.+]] = fptosi float [[CALL]] to i32
+  // CHECK-NEXT: store i32 [[CONV]], i32*
+  argc = p2->x[23][1] = j1;
   // CHECK: [[IDX:%.+]] = call i32 @"\01?idx@@YAHXZ"()
   // CHECK-NEXT: [[CONV:%.+]] = sitofp i32 [[IDX]] to float
   // CHECK-NEXT: [[GET:%.+]] = call float @"\01?GetX@?$St@M@@QEAAMMM@Z"(%class.St* %{{.+}}, float [[CONV]], float 1.000000e+00)
   // CHECK-NEXT: [[INC:%.+]] = fadd float [[GET]], 1.000000e+00
   // CHECK-NEXT: [[CONV:%.+]] = sitofp i32 [[IDX]] to float
-  // CHECK-NEXT: call void @"\01?PutX@?$St@M@@QEAAXMMM@Z"(%class.St* %{{.+}}, float [[CONV]], float 1.000000e+00, float [[INC]])
+  // CHECK-NEXT: call float @"\01?PutX@?$St@M@@QEAAMMMM@Z"(%class.St* %{{.+}}, float [[CONV]], float 1.000000e+00, float [[INC]])
   ++p2->x[idx()][1];
   // CHECK: call void @"\01??$foo@H@@YAXHH@Z"(i32 %{{.+}}, i32 %{{.+}})
   foo(argc, (int)argv[0][0]);
@@ -93,7 +95,7 @@ int main(int argc, char **argv) {
   // CHECK: [[CAST1:%.+]] = sitofp i32 [[J]] to float
   // CHECK: [[J:%.+]] = load i32, i32* %
   // CHECK: [[CAST2:%.+]] = sitofp i32 [[J]] to float
-  // CHECK: call void @"\01?PutX@?$St@M@@QEAAXMMM@Z"(%class.St* [[P2_1]], float [[CAST2]], float [[CAST1]], float [[CAST]])
+  // CHECK: call float @"\01?PutX@?$St@M@@QEAAMMMM@Z"(%class.St* [[P2_1]], float [[CAST2]], float [[CAST1]], float [[CAST]])
   p2->x[j][j] = p2->y[p1->x[argc][0]][t];
   // CHECK: [[CALL:%.+]] = call %class.Test1* @"\01?GetTest1@Test1@@SAPEAV1@XZ"()
   // CHECK-NEXT: call i32 @"\01?get_x@Test1@@QEBAHXZ"(%class.Test1* [[CALL]])
@@ -102,10 +104,10 @@ int main(int argc, char **argv) {
 
 // CHECK: define linkonce_odr void @"\01??$foo@H@@YAXHH@Z"(i32 %{{.+}}, i32 %{{.+}})
 // CHECK: call i32 @"\01?GetX@?$St@H@@QEAAHHH@Z"(%class.St{{.+}}* [[BAR:%.+]], i32 %{{.+}} i32 %{{.+}})
-// CHECK: call void @"\01?PutX@?$St@H@@QEAAXHHH@Z"(%class.St{{.+}}* [[BAR]], i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+// CHECK: call i32 @"\01?PutX@?$St@H@@QEAAHHHH@Z"(%class.St{{.+}}* [[BAR]], i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
 // CHECK: call i32 @"\01?GetX@?$St@H@@QEAAHHH@Z"(%class.St{{.+}}* [[BAR]], i32 %{{.+}} i32 %{{.+}})
 // CHECK: call void @"\01?PutY@?$St@H@@QEAAXDHN@Z"(%class.St{{.+}}* [[BAR]], i8 %{{.+}}, i32 %{{.+}}, double %{{.+}}
 // CHECK: call i32 @"\01?GetX@?$St@H@@QEAAHHH@Z"(%class.St{{.+}}* [[BAR]], i32 %{{.+}} i32 %{{.+}})
 // CHECK: call i8 @"\01?GetY@?$St@H@@QEAADDVTest1@@@Z"(%class.St{{.+}}* [[BAR]], i8 %{{.+}}, %class.Test1* %{{.+}})
-// CHECK: call void @"\01?PutX@?$St@H@@QEAAXHHH@Z"(%class.St{{.+}}* [[BAR]], i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+// CHECK: call i32 @"\01?PutX@?$St@H@@QEAAHHHH@Z"(%class.St{{.+}}* [[BAR]], i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
 #endif //HEADER

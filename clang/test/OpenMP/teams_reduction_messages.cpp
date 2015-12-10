@@ -18,7 +18,7 @@ class S2 {
 public:
   S2() : a(0) {}
   S2(S2 &s2) : a(s2.a) {}
-  static float S2s;
+  static float S2s; // expected-note 2 {{static data member is predetermined as shared}}
   static const float S2sc;
 };
 const float S2::S2sc = 0; // expected-note 2 {{'S2sc' defined here}}
@@ -142,7 +142,7 @@ T tmain(T argc) {
 #pragma omp teams reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
 #pragma omp target
-#pragma omp teams reduction(&& : S2::S2s)
+#pragma omp teams reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   foo();
 #pragma omp target
 #pragma omp teams reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
 #pragma omp teams reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
 #pragma omp target
-#pragma omp teams reduction(&& : S2::S2s)
+#pragma omp teams reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   foo();
 #pragma omp target
 #pragma omp teams reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}

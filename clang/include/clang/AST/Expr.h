@@ -1631,13 +1631,15 @@ public:
   /// and can have escape sequences in them in addition to the usual trigraph
   /// and escaped newline business.  This routine handles this complexity.
   ///
-  SourceLocation getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
-                                   const LangOptions &Features,
-                                   const TargetInfo &Target) const;
+  SourceLocation
+  getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
+                    const LangOptions &Features, const TargetInfo &Target,
+                    unsigned *StartToken = nullptr,
+                    unsigned *StartTokenByteOffset = nullptr) const;
 
   typedef const SourceLocation *tokloc_iterator;
   tokloc_iterator tokloc_begin() const { return TokLocs; }
-  tokloc_iterator tokloc_end() const { return TokLocs+NumConcatenated; }
+  tokloc_iterator tokloc_end() const { return TokLocs + NumConcatenated; }
 
   SourceLocation getLocStart() const LLVM_READONLY { return TokLocs[0]; }
   SourceLocation getLocEnd() const LLVM_READONLY {

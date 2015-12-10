@@ -29,7 +29,7 @@ class St {
 public:
   __declspec(property(get=GetX,put=PutX)) T x[];
   T GetX(T i, T j) { return i+j; }
-  void PutX(T i, T j, T k) { j = i = k; }
+  T PutX(T i, T j, T k) { return j = i = k; }
   ~St() { x[0][0] = x[1][1]; }
 };
 
@@ -52,6 +52,8 @@ int main(int argc, char **argv) {
   ((p2->x)[23])[1] = j1;
   // CHECK-NEXT: ++(((p2->x)[23])[1]);
   ++(((p2->x)[23])[1]);
+  // CHECK-NEXT: j1 = ((p2->x)[23])[1] = j1;
+  j1 = ((p2->x)[23])[1] = j1;
   // CHECK-NEXT: return Test1::GetTest1()->X;
   return Test1::GetTest1()->X;
 }

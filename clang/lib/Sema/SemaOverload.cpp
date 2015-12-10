@@ -11238,8 +11238,7 @@ static bool IsOverloaded(const UnresolvedSetImpl &Functions) {
 ///
 /// \param OpLoc The location of the operator itself (e.g., '*').
 ///
-/// \param OpcIn The UnaryOperator::Opcode that describes this
-/// operator.
+/// \param Opc The UnaryOperatorKind that describes this operator.
 ///
 /// \param Fns The set of non-member functions that will be
 /// considered by overload resolution. The caller needs to build this
@@ -11250,11 +11249,9 @@ static bool IsOverloaded(const UnresolvedSetImpl &Functions) {
 ///
 /// \param Input The input argument.
 ExprResult
-Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, unsigned OpcIn,
+Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
                               const UnresolvedSetImpl &Fns,
                               Expr *Input) {
-  UnaryOperator::Opcode Opc = static_cast<UnaryOperator::Opcode>(OpcIn);
-
   OverloadedOperatorKind Op = UnaryOperator::getOverloadedOperator(Opc);
   assert(Op != OO_None && "Invalid opcode for overloaded unary operator");
   DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
@@ -11425,8 +11422,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, unsigned OpcIn,
 ///
 /// \param OpLoc The location of the operator itself (e.g., '+').
 ///
-/// \param OpcIn The BinaryOperator::Opcode that describes this
-/// operator.
+/// \param Opc The BinaryOperatorKind that describes this operator.
 ///
 /// \param Fns The set of non-member functions that will be
 /// considered by overload resolution. The caller needs to build this
@@ -11439,13 +11435,12 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, unsigned OpcIn,
 /// \param RHS Right-hand argument.
 ExprResult
 Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
-                            unsigned OpcIn,
+                            BinaryOperatorKind Opc,
                             const UnresolvedSetImpl &Fns,
                             Expr *LHS, Expr *RHS) {
   Expr *Args[2] = { LHS, RHS };
   LHS=RHS=nullptr; // Please use only Args instead of LHS/RHS couple
 
-  BinaryOperator::Opcode Opc = static_cast<BinaryOperator::Opcode>(OpcIn);
   OverloadedOperatorKind Op = BinaryOperator::getOverloadedOperator(Opc);
   DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
 

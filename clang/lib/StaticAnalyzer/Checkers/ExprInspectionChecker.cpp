@@ -17,21 +17,25 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class ExprInspectionChecker : public Checker< eval::Call > {
+class ExprInspectionChecker : public Checker<eval::Call, check::DeadSymbols> {
   mutable std::unique_ptr<BugType> BT;
 
   void analyzerEval(const CallExpr *CE, CheckerContext &C) const;
   void analyzerCheckInlined(const CallExpr *CE, CheckerContext &C) const;
   void analyzerWarnIfReached(const CallExpr *CE, CheckerContext &C) const;
   void analyzerCrash(const CallExpr *CE, CheckerContext &C) const;
+  void analyzerWarnOnDeadSymbol(const CallExpr *CE, CheckerContext &C) const;
 
   typedef void (ExprInspectionChecker::*FnCheck)(const CallExpr *,
                                                  CheckerContext &C) const;
 
 public:
   bool evalCall(const CallExpr *CE, CheckerContext &C) const;
+  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 };
 }
+
+REGISTER_SET_WITH_PROGRAMSTATE(MarkedSymbols, const void *)
 
 bool ExprInspectionChecker::evalCall(const CallExpr *CE,
                                      CheckerContext &C) const {
@@ -42,7 +46,10 @@ bool ExprInspectionChecker::evalCall(const CallExpr *CE,
     .Case("clang_analyzer_checkInlined",
           &ExprInspectionChecker::analyzerCheckInlined)
     .Case("clang_analyzer_crash", &ExprInspectionChecker::analyzerCrash)
-    .Case("clang_analyzer_warnIfReached", &ExprInspectionChecker::analyzerWarnIfReached)
+    .Case("clang_analyzer_warnIfReached",
+          &ExprInspectionChecker::analyzerWarnIfReached)
+    .Case("clang_analyzer_warnOnDeadSymbol",
+          &ExprInspectionChecker::analyzerWarnOnDeadSymbol)
     .Default(nullptr);
 
   if (!Handler)
@@ -135,6 +142,41 @@ void ExprInspectionChecker::analyzerCheckInlined(const CallExpr *CE,
     return;
   C.emitReport(
       llvm::make_unique<BugReport>(*BT, getArgumentValueString(CE, C), N));
+}
+
+void ExprInspectionChecker::analyzerWarnOnDeadSymbol(const CallExpr *CE,
+                                                     CheckerContext &C) const {
+  if (CE->getNumArgs() == 0)
+    return;
+  SVal Val = C.getSVal(CE->getArg(0));
+  SymbolRef Sym = Val.getAsSymbol();
+  if (!Sym)
+    return;
+
+  ProgramStateRef State = C.getState();
+  State = State->add<MarkedSymbols>(Sym);
+  C.addTransition(State);
+}
+
+void ExprInspectionChecker::checkDeadSymbols(SymbolReaper &SymReaper,
+                                             CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  const MarkedSymbolsTy &Syms = State->get<MarkedSymbols>();
+  for (auto I = Syms.begin(), E = Syms.end(); I != E; ++I) {
+    SymbolRef Sym = static_cast<SymbolRef>(*I);
+    if (!SymReaper.isDead(Sym))
+      continue;
+
+    if (!BT)
+      BT.reset(new BugType(this, "Checking analyzer assumptions", "debug"));
+
+    ExplodedNode *N = C.generateNonFatalErrorNode();
+    if (!N)
+      return;
+
+    C.emitReport(llvm::make_unique<BugReport>(*BT, "SYMBOL DEAD", N));
+    C.addTransition(State->remove<MarkedSymbols>(Sym), N);
+  }
 }
 
 void ExprInspectionChecker::analyzerCrash(const CallExpr *CE,

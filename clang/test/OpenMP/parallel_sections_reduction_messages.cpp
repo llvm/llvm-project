@@ -18,7 +18,7 @@ class S2 {
 public:
   S2() : a(0) {}
   S2(S2 &s2) : a(s2.a) {}
-  static float S2s;
+  static float S2s; // expected-note 2 {{static data member is predetermined as shared}}
   static const float S2sc;
 };
 const float S2::S2sc = 0; // expected-note 2 {{'S2sc' defined here}}
@@ -161,7 +161,7 @@ T tmain(T argc) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(&& : S2::S2s)
+#pragma omp parallel sections reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   {
     foo();
   }
@@ -314,7 +314,7 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(&& : S2::S2s)
+#pragma omp parallel sections reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   {
     foo();
   }

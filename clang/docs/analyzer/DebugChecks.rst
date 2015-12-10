@@ -138,6 +138,29 @@ ExprInspection checks
       clang_analyzer_warnIfReached();  // no-warning
     }
 
+- void clang_analyzer_warnOnDeadSymbol(int);
+
+  Subscribe for a delayed warning when the symbol that represents the value of
+  the argument is garbage-collected by the analyzer.
+
+  When calling 'clang_analyzer_warnOnDeadSymbol(x)', if value of 'x' is a
+  symbol, then this symbol is marked by the ExprInspection checker. Then,
+  during each garbage collection run, the checker sees if the marked symbol is
+  being collected and issues the 'SYMBOL DEAD' warning if it does.
+  This way you know where exactly, up to the line of code, the symbol dies.
+
+  It is unlikely that you call this function after the symbol is already dead,
+  because the very reference to it as the function argument prevents it from
+  dying. However, if the argument is not a symbol but a concrete value,
+  no warning would be issued.
+
+  Example usage::
+
+    do {
+      int x = generate_some_integer();
+      clang_analyzer_warnOnDeadSymbol(x);
+    } while(0);  // expected-warning{{SYMBOL DEAD}}
+
 
 Statistics
 ==========
