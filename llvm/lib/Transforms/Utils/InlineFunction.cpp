@@ -1162,7 +1162,9 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       SmallVector<OperandBundleDef, 2> OpDefs;
 
       for (auto &VH : InlinedFunctionInfo.OperandBundleCallSites) {
-        Instruction *I = VH;
+        if (!VH) continue;  // instruction was DCE'd after being cloned
+
+        Instruction *I = cast<Instruction>(VH);
 
         OpDefs.clear();
 

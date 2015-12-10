@@ -724,13 +724,12 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
 
   // Update RegUnits to reflect live registers after UseMI.
   // First kills.
-  for (unsigned i = 0, e = Kills.size(); i != e; ++i)
-    for (MCRegUnitIterator Units(Kills[i], TRI); Units.isValid(); ++Units)
+  for (unsigned Kill : Kills)
+    for (MCRegUnitIterator Units(Kill, TRI); Units.isValid(); ++Units)
       RegUnits.erase(*Units);
 
   // Second, live defs.
-  for (unsigned i = 0, e = LiveDefOps.size(); i != e; ++i) {
-    unsigned DefOp = LiveDefOps[i];
+  for (unsigned DefOp : LiveDefOps) {
     for (MCRegUnitIterator Units(UseMI->getOperand(DefOp).getReg(), TRI);
          Units.isValid(); ++Units) {
       LiveRegUnit &LRU = RegUnits[*Units];
@@ -756,8 +755,7 @@ computeCrossBlockCriticalPath(const TraceBlockInfo &TBI) {
   assert(TBI.HasValidInstrDepths && "Missing depth info");
   assert(TBI.HasValidInstrHeights && "Missing height info");
   unsigned MaxLen = 0;
-  for (unsigned i = 0, e = TBI.LiveIns.size(); i != e; ++i) {
-    const LiveInReg &LIR = TBI.LiveIns[i];
+  for (const LiveInReg &LIR : TBI.LiveIns) {
     if (!TargetRegisterInfo::isVirtualRegister(LIR.Reg))
       continue;
     const MachineInstr *DefMI = MTM.MRI->getVRegDef(LIR.Reg);

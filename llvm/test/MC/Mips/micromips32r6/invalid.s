@@ -16,8 +16,12 @@
   bnezc16 $9, 20           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   bnezc16 $6, 31           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
   bnezc16 $6, 130          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
-  break 1024               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  break 1023, 1024         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  break -1                 # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
+  break 1024               # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
+  break -1, 5              # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
+  break 1024, 5            # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
+  break 7, -1              # CHECK: :[[@LINE]]:12: error: expected 10-bit unsigned immediate
+  break 7, 1024            # CHECK: :[[@LINE]]:12: error: expected 10-bit unsigned immediate
   cache -1, 255($7)        # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   cache 32, 255($7)        # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   ext $2, $3, -1, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
@@ -68,6 +72,8 @@
   tlt $8, $9, $2           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   tltu $8, $9, $2          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   tne $8, $9, $2           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  wait -1                  # CHECK: :[[@LINE]]:8: error: expected 10-bit unsigned immediate
+  wait 1024                # CHECK: :[[@LINE]]:8: error: expected 10-bit unsigned immediate
   wrpgpr $34, $4           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   wrpgpr $3, $33           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   wsbh $34, $4             # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -109,15 +115,3 @@
   swm16 $16-$20, 8($sp)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swm16 $16, $17, $ra, 8($fp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swm16 $16, $17, $ra, 64($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lh $33, 8($4)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhe $34, 8($2)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhu $35, 8($2)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhue $36, 8($2)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lh $2, 8($34)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhe $4, 8($33)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhu $4, 8($35)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhue $4, 8($37)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lh $2, 65536($4)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhe $4, 512($2)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhu $4, 65536($2)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhue $4, 512($2)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

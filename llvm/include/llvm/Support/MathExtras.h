@@ -659,23 +659,16 @@ inline int64_t SignExtend64(uint64_t X, unsigned B) {
 /// representable value of type T.
 template <typename T>
 typename std::enable_if<std::is_unsigned<T>::value, T>::type
-SaturatingAdd(T X, T Y, bool &ResultOverflowed) {
+SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
+  bool Dummy;
+  bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
   // Hacker's Delight, p. 29
   T Z = X + Y;
-  ResultOverflowed = (Z < X || Z < Y);
-  if (ResultOverflowed)
+  Overflowed = (Z < X || Z < Y);
+  if (Overflowed)
     return std::numeric_limits<T>::max();
   else
     return Z;
-}
-
-/// \brief Add two unsigned integers, X and Y, of type T.
-/// Clamp the result to the maximum representable value of T on overflow.
-template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value, T>::type
-SaturatingAdd(T X, T Y) {
-  bool ResultOverflowed;
-  return SaturatingAdd(X, Y, ResultOverflowed);
 }
 
 /// \brief Multiply two unsigned integers, X and Y, of type T.
@@ -684,13 +677,16 @@ SaturatingAdd(T X, T Y) {
 /// representable value of type T.
 template <typename T>
 typename std::enable_if<std::is_unsigned<T>::value, T>::type
-SaturatingMultiply(T X, T Y, bool &ResultOverflowed) {
+SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
+  bool Dummy;
+  bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
+
   // Hacker's Delight, p. 30 has a different algorithm, but we don't use that
   // because it fails for uint16_t (where multiplication can have undefined
   // behavior due to promotion to int), and requires a division in addition
   // to the multiplication.
 
-  ResultOverflowed = false;
+  Overflowed = false;
 
   // Log2(Z) would be either Log2Z or Log2Z + 1.
   // Special case: if X or Y is 0, Log2_64 gives -1, and Log2Z
@@ -702,7 +698,7 @@ SaturatingMultiply(T X, T Y, bool &ResultOverflowed) {
     return X * Y;
   }
   if (Log2Z > Log2Max) {
-    ResultOverflowed = true;
+    Overflowed = true;
     return Max;
   }
 
@@ -711,7 +707,7 @@ SaturatingMultiply(T X, T Y, bool &ResultOverflowed) {
   // that on at the end.
   T Z = (X >> 1) * Y;
   if (Z & ~(Max >> 1)) {
-    ResultOverflowed = true;
+    Overflowed = true;
     return Max;
   }
   Z <<= 1;
@@ -719,15 +715,6 @@ SaturatingMultiply(T X, T Y, bool &ResultOverflowed) {
     return SaturatingAdd(Z, Y, ResultOverflowed);
 
   return Z;
-}
-
-/// \brief Multiply two unsigned integers, X and Y, of type T.
-/// Clamp the result to the maximum representable value of T on overflow.
-template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value, T>::type
-SaturatingMultiply(T X, T Y) {
-  bool ResultOverflowed;
-  return SaturatingMultiply(X, Y, ResultOverflowed);
 }
 
 extern const float huge_valf;

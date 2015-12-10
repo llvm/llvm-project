@@ -1343,6 +1343,9 @@ bool PeepholeOptimizer::foldImmediate(MachineInstr *MI, MachineBasicBlock *MBB,
     MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || MO.isDef())
       continue;
+    // Ignore dead implicit defs.
+    if (MO.isImplicit() && MO.isDead())
+      continue;
     unsigned Reg = MO.getReg();
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
       continue;
@@ -1702,6 +1705,9 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
        ++OpIdx) {
     const MachineOperand &MO = Def->getOperand(OpIdx);
     if (!MO.isReg() || !MO.getReg())
+      continue;
+    // Ignore dead implicit defs.
+    if (MO.isImplicit() && MO.isDead())
       continue;
     assert(!MO.isDef() && "We should have skipped all the definitions by now");
     if (SrcIdx != EndOpIdx)

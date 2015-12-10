@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck %s
 
 ; Test the register stackifier pass.
 

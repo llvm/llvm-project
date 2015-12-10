@@ -19,7 +19,8 @@ The backend's bringup is done using the GCC torture test suite first since it
 doesn't require C library support. Current known failures are in
 known_gcc_test_failures.txt, all other tests should pass. The waterfall will
 turn red if not. Once most of these pass, further testing will use LLVM's own
-test suite.
+test suite. The tests can be run locally using:
+  github.com/WebAssembly/experimental/blob/master/buildbot/torture_test.py
 
 Interesting work that remains to be done:
 * Write a pass to restructurize irreducible control flow. This needs to be done

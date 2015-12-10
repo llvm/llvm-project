@@ -770,84 +770,78 @@ def : MipsInstAlias<"jr $rs", (JALR ZERO, GPR32Opnd:$rs), 1>, ISA_MIPS32R6;
 //
 //===----------------------------------------------------------------------===//
 
-// f32 comparisons supported via another comparison
-def : MipsPat<(setone f32:$lhs, f32:$rhs),
-              (NOR (CMP_UEQ_S f32:$lhs, f32:$rhs), ZERO)>, ISA_MIPS32R6;
-def : MipsPat<(seto f32:$lhs, f32:$rhs),
-              (NOR (CMP_UN_S f32:$lhs, f32:$rhs), ZERO)>, ISA_MIPS32R6;
-def : MipsPat<(setune f32:$lhs, f32:$rhs),
-              (NOR (CMP_EQ_S f32:$lhs, f32:$rhs), ZERO)>, ISA_MIPS32R6;
-def : MipsPat<(seteq f32:$lhs, f32:$rhs), (CMP_EQ_S f32:$lhs, f32:$rhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setgt f32:$lhs, f32:$rhs), (CMP_LE_S f32:$rhs, f32:$lhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setge f32:$lhs, f32:$rhs), (CMP_LT_S f32:$rhs, f32:$lhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setlt f32:$lhs, f32:$rhs), (CMP_LT_S f32:$lhs, f32:$rhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setle f32:$lhs, f32:$rhs), (CMP_LE_S f32:$lhs, f32:$rhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setne f32:$lhs, f32:$rhs),
-              (NOR (CMP_EQ_S f32:$lhs, f32:$rhs), ZERO)>, ISA_MIPS32R6;
+// comparisons supported via another comparison
+multiclass Cmp_Pats<ValueType VT, Instruction NOROp, Register ZEROReg> {
+def : MipsPat<(setone VT:$lhs, VT:$rhs),
+      (NOROp (!cast<Instruction>("CMP_UEQ_"#NAME) VT:$lhs, VT:$rhs), ZEROReg)>;
+def : MipsPat<(seto VT:$lhs, VT:$rhs),
+      (NOROp (!cast<Instruction>("CMP_UN_"#NAME) VT:$lhs, VT:$rhs), ZEROReg)>;
+def : MipsPat<(setune VT:$lhs, VT:$rhs),
+      (NOROp (!cast<Instruction>("CMP_EQ_"#NAME) VT:$lhs, VT:$rhs), ZEROReg)>;
+def : MipsPat<(seteq VT:$lhs, VT:$rhs),
+      (!cast<Instruction>("CMP_EQ_"#NAME) VT:$lhs, VT:$rhs)>;
+def : MipsPat<(setgt VT:$lhs, VT:$rhs),
+      (!cast<Instruction>("CMP_LE_"#NAME) VT:$rhs, VT:$lhs)>;
+def : MipsPat<(setge VT:$lhs, VT:$rhs),
+      (!cast<Instruction>("CMP_LT_"#NAME) VT:$rhs, VT:$lhs)>;
+def : MipsPat<(setlt VT:$lhs, VT:$rhs),
+      (!cast<Instruction>("CMP_LT_"#NAME) VT:$lhs, VT:$rhs)>;
+def : MipsPat<(setle VT:$lhs, VT:$rhs),
+      (!cast<Instruction>("CMP_LE_"#NAME) VT:$lhs, VT:$rhs)>;
+def : MipsPat<(setne VT:$lhs, VT:$rhs),
+      (NOROp (!cast<Instruction>("CMP_EQ_"#NAME) VT:$lhs, VT:$rhs), ZEROReg)>;
+}
 
-// f64 comparisons supported via another comparison
-def : MipsPat<(setone f64:$lhs, f64:$rhs),
-              (NOR (CMP_UEQ_D f64:$lhs, f64:$rhs), ZERO)>, ISA_MIPS32R6;
-def : MipsPat<(seto f64:$lhs, f64:$rhs),
-              (NOR (CMP_UN_D f64:$lhs, f64:$rhs), ZERO)>, ISA_MIPS32R6;
-def : MipsPat<(setune f64:$lhs, f64:$rhs),
-              (NOR (CMP_EQ_D f64:$lhs, f64:$rhs), ZERO)>, ISA_MIPS32R6;
-def : MipsPat<(seteq f64:$lhs, f64:$rhs), (CMP_EQ_D f64:$lhs, f64:$rhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setgt f64:$lhs, f64:$rhs), (CMP_LE_D f64:$rhs, f64:$lhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setge f64:$lhs, f64:$rhs), (CMP_LT_D f64:$rhs, f64:$lhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setlt f64:$lhs, f64:$rhs), (CMP_LT_D f64:$lhs, f64:$rhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setle f64:$lhs, f64:$rhs), (CMP_LE_D f64:$lhs, f64:$rhs)>,
-      ISA_MIPS32R6;
-def : MipsPat<(setne f64:$lhs, f64:$rhs),
-              (NOR (CMP_EQ_D f64:$lhs, f64:$rhs), ZERO)>, ISA_MIPS32R6;
+defm S : Cmp_Pats<f32, NOR, ZERO>, ISA_MIPS32R6;
+defm D : Cmp_Pats<f64, NOR, ZERO>, ISA_MIPS32R6;
 
 // i32 selects
-def : MipsPat<(select i32:$cond, i32:$t, i32:$f),
-              (OR (SELNEZ i32:$t, i32:$cond), (SELEQZ i32:$f, i32:$cond))>,
-              ISA_MIPS32R6;
-def : MipsPat<(select (i32 (seteq i32:$cond, immz)), i32:$t, i32:$f),
-              (OR (SELEQZ i32:$t, i32:$cond), (SELNEZ i32:$f, i32:$cond))>,
-              ISA_MIPS32R6;
-def : MipsPat<(select (i32 (setne i32:$cond, immz)), i32:$t, i32:$f),
-              (OR (SELNEZ i32:$t, i32:$cond), (SELEQZ i32:$f, i32:$cond))>,
-              ISA_MIPS32R6;
-def : MipsPat<(select (i32 (seteq i32:$cond, immZExt16:$imm)), i32:$t, i32:$f),
-              (OR (SELEQZ i32:$t, (XORi i32:$cond, immZExt16:$imm)),
-                  (SELNEZ i32:$f, (XORi i32:$cond, immZExt16:$imm)))>,
-              ISA_MIPS32R6;
-def : MipsPat<(select (i32 (setne i32:$cond, immZExt16:$imm)), i32:$t, i32:$f),
-              (OR (SELNEZ i32:$t, (XORi i32:$cond, immZExt16:$imm)),
-                  (SELEQZ i32:$f, (XORi i32:$cond, immZExt16:$imm)))>,
-              ISA_MIPS32R6;
-def : MipsPat<(select (i32 (setgt i32:$cond, immSExt16Plus1:$imm)), i32:$t,
-                      i32:$f),
-              (OR (SELEQZ i32:$t, (SLTi i32:$cond, (Plus1 imm:$imm))),
-                  (SELNEZ i32:$f, (SLTi i32:$cond, (Plus1 imm:$imm))))>,
-              ISA_MIPS32R6;
-def : MipsPat<(select (i32 (setugt i32:$cond, immSExt16Plus1:$imm)),
-                      i32:$t, i32:$f),
-              (OR (SELEQZ i32:$t, (SLTiu i32:$cond, (Plus1 imm:$imm))),
-                  (SELNEZ i32:$f, (SLTiu i32:$cond, (Plus1 imm:$imm))))>,
-              ISA_MIPS32R6;
+multiclass SelectInt_Pats<ValueType RC, Instruction OROp, Instruction XORiOp,
+                          Instruction SLTiOp, Instruction SLTiuOp,
+                          Instruction SELEQZOp, Instruction SELNEZOp,
+                          SDPatternOperator imm_type, ValueType Opg> {
+// reg, immz
+def : MipsPat<(select (Opg (seteq RC:$cond, immz)), RC:$t, RC:$f),
+              (OROp (SELEQZOp RC:$t, RC:$cond), (SELNEZOp RC:$f, RC:$cond))>;
+def : MipsPat<(select (Opg (setne RC:$cond, immz)), RC:$t, RC:$f),
+              (OROp (SELNEZOp RC:$t, RC:$cond), (SELEQZOp RC:$f, RC:$cond))>;
 
+// reg, immZExt16[_64]
+def : MipsPat<(select (Opg (seteq RC:$cond, imm_type:$imm)), RC:$t, RC:$f),
+              (OROp (SELEQZOp RC:$t, (XORiOp RC:$cond, imm_type:$imm)),
+                    (SELNEZOp RC:$f, (XORiOp RC:$cond, imm_type:$imm)))>;
+def : MipsPat<(select (Opg (setne RC:$cond, imm_type:$imm)), RC:$t, RC:$f),
+              (OROp (SELNEZOp RC:$t, (XORiOp RC:$cond, imm_type:$imm)),
+                    (SELEQZOp RC:$f, (XORiOp RC:$cond, imm_type:$imm)))>;
+
+// reg, immSExt16Plus1
+def : MipsPat<(select (Opg (setgt RC:$cond, immSExt16Plus1:$imm)), RC:$t, RC:$f),
+              (OROp (SELEQZOp RC:$t, (SLTiOp RC:$cond, (Plus1 imm:$imm))),
+                    (SELNEZOp RC:$f, (SLTiOp RC:$cond, (Plus1 imm:$imm))))>;
+def : MipsPat<(select (Opg (setugt RC:$cond, immSExt16Plus1:$imm)), RC:$t, RC:$f),
+              (OROp (SELEQZOp RC:$t, (SLTiuOp RC:$cond, (Plus1 imm:$imm))),
+                    (SELNEZOp RC:$f, (SLTiuOp RC:$cond, (Plus1 imm:$imm))))>;
+
+def : MipsPat<(select (Opg (seteq RC:$cond, immz)), RC:$t, immz),
+              (SELEQZOp RC:$t, RC:$cond)>;
+def : MipsPat<(select (Opg (setne RC:$cond, immz)), RC:$t, immz),
+              (SELNEZOp RC:$t, RC:$cond)>;
+def : MipsPat<(select (Opg (seteq RC:$cond, immz)), immz, RC:$f),
+              (SELNEZOp RC:$f, RC:$cond)>;
+def : MipsPat<(select (Opg (setne RC:$cond, immz)), immz, RC:$f),
+              (SELEQZOp RC:$f, RC:$cond)>;
+}
+
+defm : SelectInt_Pats<i32, OR, XORi, SLTi, SLTiu, SELEQZ, SELNEZ,
+                      immZExt16, i32>, ISA_MIPS32R6;
+
+def : MipsPat<(select i32:$cond, i32:$t, i32:$f),
+              (OR (SELNEZ i32:$t, i32:$cond),
+                  (SELEQZ i32:$f, i32:$cond))>,
+              ISA_MIPS32R6;
 def : MipsPat<(select i32:$cond, i32:$t, immz),
-              (SELNEZ i32:$t, i32:$cond)>, ISA_MIPS32R6;
-def : MipsPat<(select (i32 (setne i32:$cond, immz)), i32:$t, immz),
-              (SELNEZ i32:$t, i32:$cond)>, ISA_MIPS32R6;
-def : MipsPat<(select (i32 (seteq i32:$cond, immz)), i32:$t, immz),
-              (SELEQZ i32:$t, i32:$cond)>, ISA_MIPS32R6;
+              (SELNEZ i32:$t, i32:$cond)>,
+              ISA_MIPS32R6;
 def : MipsPat<(select i32:$cond, immz, i32:$f),
-              (SELEQZ i32:$f, i32:$cond)>, ISA_MIPS32R6;
-def : MipsPat<(select (i32 (setne i32:$cond, immz)), immz, i32:$f),
-              (SELEQZ i32:$f, i32:$cond)>, ISA_MIPS32R6;
-def : MipsPat<(select (i32 (seteq i32:$cond, immz)), immz, i32:$f),
-              (SELNEZ i32:$f, i32:$cond)>, ISA_MIPS32R6;
+              (SELEQZ i32:$f, i32:$cond)>,
+              ISA_MIPS32R6;

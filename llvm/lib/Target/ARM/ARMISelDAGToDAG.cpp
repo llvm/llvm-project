@@ -548,8 +548,11 @@ bool ARMDAGToDAGISel::SelectImmShifterOperand(SDValue N,
     unsigned PowerOfTwo = 0;
     SDValue NewMulConst;
     if (canExtractShiftFromMul(N, 31, PowerOfTwo, NewMulConst)) {
+      BaseReg = SDValue(Select(CurDAG->getNode(ISD::MUL, SDLoc(N), MVT::i32,
+                                               N.getOperand(0), NewMulConst)
+                                   .getNode()),
+                        0);
       replaceDAGValue(N.getOperand(1), NewMulConst);
-      BaseReg = N;
       Opc = CurDAG->getTargetConstant(ARM_AM::getSORegOpc(ARM_AM::lsl,
                                                           PowerOfTwo),
                                       SDLoc(N), MVT::i32);

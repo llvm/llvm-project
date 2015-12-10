@@ -74,3 +74,13 @@ define i32 @test-float-Nan() {
 ; CHECK: @test-float-Nan
 ; CHECK: ret i32 2139171423
 }
+
+define i16 @test-half-Nan() {
+  %A = bitcast i16 32256 to half
+  %B = insertvalue [1 x half] undef, half %A, 0
+  %C = extractvalue [1 x half] %B, 0
+  %D = bitcast half %C to i16
+  ret i16 %D
+; CHECK: @test-half-Nan
+; CHECK: ret i16 32256
+}

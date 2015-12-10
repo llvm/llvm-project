@@ -137,9 +137,14 @@ struct UnitIndexEntry {
   DWARFUnitIndex::Entry::SectionContribution Contributions[8];
 };
 
-static void addAllTypes(std::vector<UnitIndexEntry> &TypeIndexEntries,
-                        uint32_t OutTypesOffset, StringRef Types,
-                        const UnitIndexEntry &CUEntry) {
+static void addAllTypes(MCStreamer &Out,
+                        std::vector<UnitIndexEntry> &TypeIndexEntries,
+                        MCSection *OutputTypes, StringRef Types,
+                        const UnitIndexEntry &CUEntry, uint32_t &TypesOffset) {
+  if (Types.empty())
+    return;
+
+  Out.SwitchSection(OutputTypes);
   uint32_t Offset = 0;
   DataExtractor Data(Types, true, 0);
   while (Data.isValidOffset(Offset)) {
@@ -148,10 +153,13 @@ static void addAllTypes(std::vector<UnitIndexEntry> &TypeIndexEntries,
     // Zero out the debug_info contribution
     Entry.Contributions[0] = {};
     auto &C = Entry.Contributions[DW_SECT_TYPES - DW_SECT_INFO];
-    C.Offset = OutTypesOffset + Offset;
+    C.Offset = TypesOffset + Offset;
     auto PrevOffset = Offset;
     // Length of the unit, including the 4 byte length field.
     C.Length = Data.getU32(&Offset) + 4;
+
+    Out.EmitBytes(Types.substr(Offset - 4, C.Length));
+    TypesOffset += C.Length;
 
     Data.getU16(&Offset); // Version
     Data.getU32(&Offset); // Abbrev offset
@@ -184,8 +192,11 @@ static void writeIndex(MCStreamer &Out, MCSection *Section,
   for (size_t i = 0; i != IndexEntries.size(); ++i) {
     auto S = IndexEntries[i].Signature;
     auto H = S & Mask;
-    while (Buckets[H])
+    while (Buckets[H]) {
+      assert(S != IndexEntries[Buckets[H] - 1].Signature &&
+             "Duplicate type unit");
       H += ((S >> 32) & Mask) | 1;
+    }
     Buckets[H] = i + 1;
   }
 
@@ -220,6 +231,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
   MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
+  MCSection *const TypesSection = MCOFI.getDwarfTypesDWOSection();
   const StringMap<std::pair<MCSection *, DWARFSectionKind>> KnownSections = {
       {"debug_info.dwo", {MCOFI.getDwarfInfoDWOSection(), DW_SECT_INFO}},
       {"debug_types.dwo", {MCOFI.getDwarfTypesDWOSection(), DW_SECT_TYPES}},
@@ -247,11 +259,9 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
 
     StringRef CurStrSection;
     StringRef CurStrOffsetSection;
+    StringRef CurTypesSection;
     StringRef InfoSection;
     StringRef AbbrevSection;
-    StringRef TypesSection;
-
-    auto TypesOffset = ContributionOffsets[DW_SECT_TYPES - DW_SECT_INFO];
 
     for (const auto &Section : ErrOrObj->getBinary()->sections()) {
       StringRef Name;
@@ -269,9 +279,11 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
 
       if (DWARFSectionKind Kind = SectionPair->second.second) {
         auto Index = Kind - DW_SECT_INFO;
-        CurEntry.Contributions[Index].Offset = ContributionOffsets[Index];
-        ContributionOffsets[Index] +=
-            (CurEntry.Contributions[Index].Length = Contents.size());
+        if (Kind != DW_SECT_TYPES) {
+          CurEntry.Contributions[Index].Offset = ContributionOffsets[Index];
+          ContributionOffsets[Index] +=
+              (CurEntry.Contributions[Index].Length = Contents.size());
+        }
 
         switch (Kind) {
         case DW_SECT_INFO:
@@ -279,9 +291,6 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
           break;
         case DW_SECT_ABBREV:
           AbbrevSection = Contents;
-          break;
-        case DW_SECT_TYPES:
-          TypesSection = Contents;
           break;
         default:
           break;
@@ -293,6 +302,8 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
         CurStrOffsetSection = Contents;
       else if (OutSection == StrSection)
         CurStrSection = Contents;
+      else if (OutSection == TypesSection)
+        CurTypesSection = Contents;
       else {
         Out.SwitchSection(OutSection);
         Out.EmitBytes(Contents);
@@ -302,7 +313,8 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     assert(!AbbrevSection.empty());
     assert(!InfoSection.empty());
     CurEntry.Signature = getCUSignature(AbbrevSection, InfoSection);
-    addAllTypes(TypeIndexEntries, TypesOffset, TypesSection, CurEntry);
+    addAllTypes(Out, TypeIndexEntries, TypesSection, CurTypesSection, CurEntry,
+                ContributionOffsets[DW_SECT_TYPES - DW_SECT_INFO]);
 
     if (auto Err = writeStringsAndOffsets(Out, Strings, StringOffset,
                                           StrSection, StrOffsetSection,

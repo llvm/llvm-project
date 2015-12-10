@@ -214,3 +214,42 @@ define float @f32_demote_f64(double %x) {
   %a = fptrunc double %x to float
   ret float %a
 }
+
+; If the high its are unused, LLVM will optimize sext/zext into anyext, which
+; we need to patterm-match back to a specific instruction.
+
+; CHECK-LABEL: anyext:
+; CHECK: i64.extend_u/i32 $push0=, $0{{$}}
+define i64 @anyext(i32 %x) {
+    %y = sext i32 %x to i64
+    %w = shl i64 %y, 32
+    ret i64 %w
+}
+
+; CHECK-LABEL: bitcast_i32_to_float:
+; CHECK: f32.reinterpret/i32   $push0=, $0{{$}}
+define float @bitcast_i32_to_float(i32 %a) {
+  %t = bitcast i32 %a to float
+  ret float %t
+}
+
+; CHECK-LABEL: bitcast_float_to_i32:
+; CHECK: i32.reinterpret/f32   $push0=, $0{{$}}
+define i32 @bitcast_float_to_i32(float %a) {
+  %t = bitcast float %a to i32
+  ret i32 %t
+}
+
+; CHECK-LABEL: bitcast_i64_to_double:
+; CHECK: f64.reinterpret/i64   $push0=, $0{{$}}
+define double @bitcast_i64_to_double(i64 %a) {
+  %t = bitcast i64 %a to double
+  ret double %t
+}
+
+; CHECK-LABEL: bitcast_double_to_i64:
+; CHECK: i64.reinterpret/f64   $push0=, $0{{$}}
+define i64 @bitcast_double_to_i64(double %a) {
+  %t = bitcast double %a to i64
+  ret i64 %t
+}

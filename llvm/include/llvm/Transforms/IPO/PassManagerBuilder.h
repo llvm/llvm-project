@@ -117,7 +117,7 @@ public:
   Pass *Inliner;
 
   /// The function summary index to use for function importing.
-  FunctionInfoIndex *FunctionIndex;
+  const FunctionInfoIndex *FunctionIndex;
 
   bool DisableTailCalls;
   bool DisableUnitAtATime;

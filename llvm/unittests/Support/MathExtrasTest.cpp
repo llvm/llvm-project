@@ -197,23 +197,23 @@ void SaturatingAddTestHelper()
   bool ResultOverflowed;
 
   EXPECT_EQ(T(3), SaturatingAdd(T(1), T(2)));
-  EXPECT_EQ(T(3), SaturatingAdd(T(1), T(2), ResultOverflowed));
+  EXPECT_EQ(T(3), SaturatingAdd(T(1), T(2), &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingAdd(Max, T(1)));
-  EXPECT_EQ(Max, SaturatingAdd(Max, T(1), ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(1), &ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 1)));
-  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 1), ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 1), &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingAdd(T(1), Max));
-  EXPECT_EQ(Max, SaturatingAdd(T(1), Max, ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), Max, &ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingAdd(Max, Max));
-  EXPECT_EQ(Max, SaturatingAdd(Max, Max, ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingAdd(Max, Max, &ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 }
 
@@ -232,45 +232,45 @@ void SaturatingMultiplyTestHelper()
 
   // Test basic multiplication.
   EXPECT_EQ(T(6), SaturatingMultiply(T(2), T(3)));
-  EXPECT_EQ(T(6), SaturatingMultiply(T(2), T(3), ResultOverflowed));
+  EXPECT_EQ(T(6), SaturatingMultiply(T(2), T(3), &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(T(6), SaturatingMultiply(T(3), T(2)));
-  EXPECT_EQ(T(6), SaturatingMultiply(T(3), T(2), ResultOverflowed));
+  EXPECT_EQ(T(6), SaturatingMultiply(T(3), T(2), &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   // Test multiplication by zero.
   EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(0)));
-  EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(0), ResultOverflowed));
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(0), &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(T(0), SaturatingMultiply(T(1), T(0)));
-  EXPECT_EQ(T(0), SaturatingMultiply(T(1), T(0), ResultOverflowed));
+  EXPECT_EQ(T(0), SaturatingMultiply(T(1), T(0), &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(1)));
-  EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(1), ResultOverflowed));
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(1), &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(T(0), SaturatingMultiply(Max, T(0)));
-  EXPECT_EQ(T(0), SaturatingMultiply(Max, T(0), ResultOverflowed));
+  EXPECT_EQ(T(0), SaturatingMultiply(Max, T(0), &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(T(0), SaturatingMultiply(T(0), Max));
-  EXPECT_EQ(T(0), SaturatingMultiply(T(0), Max, ResultOverflowed));
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), Max, &ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   // Test multiplication by maximum value.
   EXPECT_EQ(Max, SaturatingMultiply(Max, T(2)));
-  EXPECT_EQ(Max, SaturatingMultiply(Max, T(2), ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingMultiply(Max, T(2), &ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingMultiply(T(2), Max));
-  EXPECT_EQ(Max, SaturatingMultiply(T(2), Max, ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingMultiply(T(2), Max, &ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingMultiply(Max, Max));
-  EXPECT_EQ(Max, SaturatingMultiply(Max, Max, ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingMultiply(Max, Max, &ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 
   // Test interesting boundary conditions for algorithm -
@@ -286,11 +286,11 @@ void SaturatingMultiplyTestHelper()
 
       if(OverflowExpected) {
         EXPECT_EQ(Max, SaturatingMultiply(X, Y));
-        EXPECT_EQ(Max, SaturatingMultiply(X, Y, ResultOverflowed));
+        EXPECT_EQ(Max, SaturatingMultiply(X, Y, &ResultOverflowed));
         EXPECT_TRUE(ResultOverflowed);
       } else {
         EXPECT_EQ(X * Y, SaturatingMultiply(X, Y));
-        EXPECT_EQ(X * Y, SaturatingMultiply(X, Y, ResultOverflowed));
+        EXPECT_EQ(X * Y, SaturatingMultiply(X, Y, &ResultOverflowed));
         EXPECT_FALSE(ResultOverflowed);
       }
     }

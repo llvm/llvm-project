@@ -761,7 +761,7 @@ private:
     }
 
     // Don't distribute the loop if we need too many SCEV run-time checks.
-    const SCEVUnionPredicate &Pred = LAI.Preds;
+    const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
     if (Pred.getComplexity() > DistributeSCEVCheckThreshold) {
       DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
       return false;
@@ -790,7 +790,7 @@ private:
       DEBUG(LAI.getRuntimePointerChecking()->printChecks(dbgs(), Checks));
       LoopVersioning LVer(LAI, L, LI, DT, SE, false);
       LVer.setAliasChecks(std::move(Checks));
-      LVer.setSCEVChecks(LAI.Preds);
+      LVer.setSCEVChecks(LAI.PSE.getUnionPredicate());
       LVer.versionLoop(DefsUsedOutside);
     }
 

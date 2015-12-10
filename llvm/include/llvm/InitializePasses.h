@@ -117,6 +117,8 @@ void initializeEdgeBundlesPass(PassRegistry&);
 void initializeExpandPostRAPass(PassRegistry&);
 void initializeAAResultsWrapperPassPass(PassRegistry &);
 void initializeGCOVProfilerPass(PassRegistry&);
+void initializePGOInstrumentationGenPass(PassRegistry&);
+void initializePGOInstrumentationUsePass(PassRegistry&);
 void initializeInstrProfilingPass(PassRegistry&);
 void initializeAddressSanitizerPass(PassRegistry&);
 void initializeAddressSanitizerModulePass(PassRegistry&);
