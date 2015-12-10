@@ -59,5 +59,4 @@ licenses, and/or restrictions:
 
 Program             Directory
 -------             ---------
-<none yet>
-
+clang-tidy          clang-tidy/cert

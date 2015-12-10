@@ -289,16 +289,6 @@ def parseOptionsAndInitTestdirs():
     elif args.N == 'dsym':
         configuration.dont_do_dsym_test = True
 
-    if args.a or args.plus_a:
-        print("Options '-a' and '+a' have been deprecated. Please use the test category\n"
-              "functionality (-G pyapi, --skip-category pyapi) instead.")
-        sys.exit(1)
-
-    if args.m or args.plus_m:
-        print("Options '-m' and '+m' have been deprecated. Please use the test category\n"
-              "functionality (-G lldb-mi, --skip-category lldb-mi) instead.")
-        sys.exit(1)
-
     if args.d:
         sys.stdout.write("Suspending the process %d to wait for debugger to attach...\n" % os.getpid())
         sys.stdout.flush()
@@ -365,23 +355,8 @@ def parseOptionsAndInitTestdirs():
     if args.t:
         os.environ['LLDB_COMMAND_TRACE'] = 'YES'
 
-    if args.T:
-        configuration.svn_silent = False
-
     if args.v:
         configuration.verbose = 2
-
-    if args.w:
-        os.environ['LLDB_WAIT_BETWEEN_TEST_CASES'] = 'YES'
-
-    if args.x:
-        if args.x.startswith('-'):
-            usage(parser)
-        configuration.bmBreakpointSpec = args.x
-
-    # argparse makes sure we have a number
-    if args.y:
-        configuration.bmIterationCount = args.y
 
     # argparse makes sure we have a number
     if args.sharp:
@@ -389,7 +364,7 @@ def parseOptionsAndInitTestdirs():
 
     if sys.platform.startswith('win32'):
         os.environ['LLDB_DISABLE_CRASH_DIALOG'] = str(args.disable_crash_dialog)
-        os.environ['LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE'] = str(args.hide_inferior_console)
+        os.environ['LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE'] = str(True)
 
     if do_help == True:
         usage(parser)
@@ -399,10 +374,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.inferior:
         configuration.is_inferior_test_runner = True
-
-    # Turn on output_on_sucess if either explicitly added or -v specified.
-    if args.output_on_success or args.v:
-        configuration.output_on_success = True
 
     if args.num_threads:
         configuration.num_threads = args.num_threads
@@ -704,16 +675,6 @@ def setupSysPath():
     else:
         os.environ["LLDBMI_EXEC"] = lldbMiExec
 
-    # Skip printing svn/git information when running in parsable (lit-test compatibility) mode
-    if not configuration.svn_silent and not configuration.parsable:
-        if os.path.isdir(os.path.join(lldbRootDirectory, '.svn')) and which("svn") is not None:
-            pipe = subprocess.Popen([which("svn"), "info", lldbRootDirectory], stdout = subprocess.PIPE)
-            configuration.svn_info = pipe.stdout.read()
-        elif os.path.isdir(os.path.join(lldbRootDirectory, '.git')) and which("git") is not None:
-            pipe = subprocess.Popen([which("git"), "svn", "info", lldbRootDirectory], stdout = subprocess.PIPE)
-            configuration.svn_info = pipe.stdout.read()
-        print(configuration.svn_info)
-
     lldbPythonDir = None # The directory that contains 'lldb/__init__.py'
     if configuration.lldbFrameworkPath:
         candidatePath = os.path.join(configuration.lldbFrameworkPath, 'Resources', 'Python')
@@ -991,8 +952,7 @@ def run_suite():
     # multiprocess test runner here.
     if isMultiprocessTestRunner():
         from . import dosep
-        dosep.main(configuration.output_on_success, configuration.num_threads,
-                   configuration.multiprocess_test_subdir,
+        dosep.main(configuration.num_threads, configuration.multiprocess_test_subdir,
                    configuration.test_runner_name, configuration.results_formatter_object)
         raise Exception("should never get here")
     elif configuration.is_inferior_test_runner:

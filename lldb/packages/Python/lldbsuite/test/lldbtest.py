@@ -2073,7 +2073,7 @@ class Base(unittest2.TestCase):
                  'FRAMEWORK_INCLUDES' : "-F%s" % lib_dir,
                  'LD_EXTRAS' : "%s -Wl,-rpath,%s" % (dsym, lib_dir),
                 }
-        elif sys.platform.startswith('freebsd') or sys.platform.startswith("linux") or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
+        elif sys.platform.rstrip('0123456789') in ('freebsd', 'linux', 'netbsd') or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
             d = {'CXX_SOURCES' : sources,
                  'EXE' : exe_name,
                  'CFLAGS_EXTRAS' : "%s %s -I%s" % (stdflag, stdlibflag, os.path.join(os.environ["LLDB_SRC"], "include")),
@@ -2102,7 +2102,7 @@ class Base(unittest2.TestCase):
                  'FRAMEWORK_INCLUDES' : "-F%s" % lib_dir,
                  'LD_EXTRAS' : "%s -Wl,-rpath,%s -dynamiclib" % (dsym, lib_dir),
                 }
-        elif self.getPlatform() == 'freebsd' or self.getPlatform() == 'linux' or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
+        elif self.getPlatform() in ('freebsd', 'linux', 'netbsd') or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
             d = {'DYLIB_CXX_SOURCES' : sources,
                  'DYLIB_NAME' : lib_name,
                  'CFLAGS_EXTRAS' : "%s -I%s -fPIC" % (stdflag, os.path.join(os.environ["LLDB_SRC"], "include")),
@@ -2358,15 +2358,6 @@ class TestBase(Base):
     # Can be overridden by the LLDB_TIME_WAIT_NEXT_LAUNCH environment variable.
     timeWaitNextLaunch = 1.0;
 
-    def doDelay(self):
-        """See option -w of dotest.py."""
-        if ("LLDB_WAIT_BETWEEN_TEST_CASES" in os.environ and
-            os.environ["LLDB_WAIT_BETWEEN_TEST_CASES"] == 'YES'):
-            waitTime = 1.0
-            if "LLDB_TIME_WAIT_BETWEEN_TEST_CASES" in os.environ:
-                waitTime = float(os.environ["LLDB_TIME_WAIT_BETWEEN_TEST_CASES"])
-            time.sleep(waitTime)
-
     # Returns the list of categories to which this test case belongs
     # by default, look for a ".categories" file, and read its contents
     # if no such file exists, traverse the hierarchy - we guarantee
@@ -2397,9 +2388,6 @@ class TestBase(Base):
 
         # Works with the test driver to conditionally skip tests via decorators.
         Base.setUp(self)
-
-        # Insert some delay between successive test cases if specified.
-        self.doDelay()
 
         if "LLDB_MAX_LAUNCH_COUNT" in os.environ:
             self.maxLaunchCount = int(os.environ["LLDB_MAX_LAUNCH_COUNT"])

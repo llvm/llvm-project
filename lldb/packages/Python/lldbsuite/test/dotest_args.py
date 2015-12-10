@@ -73,7 +73,6 @@ def create_parser():
     group.add_argument('-R', metavar='dir', help='Specify a directory to relocate the tests and their intermediate files to. BE WARNED THAT the directory, if exists, will be deleted before running this test driver. No cleanup of intermediate test files is performed in this case')
     group.add_argument('-r', metavar='dir', help="Similar to '-R', except that the directory must not exist before running this test driver")
     group.add_argument('-s', metavar='name', help='Specify the name of the dir created to store the session files of tests with errored or failed status. If not specified, the test driver uses the timestamp as the session dir name')
-    group.add_argument('-x', metavar='breakpoint-spec', help='Specify the breakpoint specification for the benchmark executable')
     group.add_argument('-y', type=int, metavar='count', help="Specify the iteration count used to collect our benchmarks. An example is the number of times to do 'thread step-over' to measure stepping speed.")
     group.add_argument('-#', type=int, metavar='sharp', dest='sharp', help='Repeat the test suite for a specified number of times')
     group.add_argument('--channel', metavar='channel', dest='channels', action='append', help=textwrap.dedent("Specify the log channels (and optional categories) e.g. 'lldb all' or 'gdb-remote packets' if no categories are specified, 'default' is used"))
@@ -94,12 +93,8 @@ def create_parser():
     group.add_argument('-u', dest='unset_env_varnames', metavar='variable', action='append', help='Specify an environment variable to unset before running the test cases. e.g., -u DYLD_INSERT_LIBRARIES -u MallocScribble')
     group.add_argument('--env', dest='set_env_vars', metavar='variable', action='append', help='Specify an environment variable to set to the given value before running the test cases e.g.: --env CXXFLAGS=-O3 --env DYLD_INSERT_LIBRARIES')
     X('-v', 'Do verbose mode of unittest framework (print out each test case invocation)')
-    X('-w', 'Insert some wait time (currently 0.5 sec) between consecutive test cases')
-    X('-T', 'Obtain and dump svn information for this checkout of LLDB (off by default)')
     group.add_argument('--enable-crash-dialog', dest='disable_crash_dialog', action='store_false', help='(Windows only) When LLDB crashes, display the Windows crash dialog.')
-    group.add_argument('--show-inferior-console', dest='hide_inferior_console', action='store_false', help='(Windows only) When launching an inferior, dont hide its console window.')
     group.set_defaults(disable_crash_dialog=True)
-    group.set_defaults(hide_inferior_console=True)
 
     group = parser.add_argument_group('Parallel execution options')
     group.add_argument(
@@ -111,11 +106,6 @@ def create_parser():
         '--no-multiprocess',
         action='store_true',
         help='skip running the multiprocess test runner')
-    group.add_argument(
-        '--output-on-success',
-        action='store_true',
-        help=('print full output of the dotest.py inferior, '
-              'even when all tests succeed'))
     group.add_argument(
         '--threads',
         type=int,
@@ -175,15 +165,6 @@ def create_parser():
               'the value to an int'))
     # Remove the reference to our helper function
     del X
-
-    D = lambda optstr, **kwargs: group.add_argument(optstr, action='store_true', **kwargs)
-    group = parser.add_argument_group('Deprecated options (do not use)')
-    # Deprecated on 23.10.2015. Remove completely after a grace period.
-    D('-a')
-    D('+a', dest='plus_a')
-    D('-m')
-    D('+m', dest='plus_m')
-    del D
 
     group = parser.add_argument_group('Test directories')
     group.add_argument('args', metavar='test-dir', nargs='*', help='Specify a list of directory names to search for test modules named after Test*.py (test discovery). If empty, search from the current working directory instead.')

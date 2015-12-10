@@ -156,3 +156,6 @@ def version_script : Separate<["--"], "version-script">;
 def warn_common : Flag<["--"], "warn-common">;
 def warn_shared_textrel : Flag<["--"], "warn-shared-textrel">;
 def G : Separate<["-"], "G">;
+
+// Aliases for ignored options
+def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;

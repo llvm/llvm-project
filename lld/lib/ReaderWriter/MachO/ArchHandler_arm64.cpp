@@ -482,6 +482,9 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
     *kind = delta64;
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
+    // The offsets of the 2 relocations must match
+    if (reloc1.offset != reloc2.offset)
+      return make_dynamic_error_code("paired relocs must have the same offset");
     *addend = (int64_t)*(const little64_t *)fixupContent + offsetInAtom;
     return std::error_code();
   case ((ARM64_RELOC_SUBTRACTOR                  | rExtern | rLength4) << 16 |

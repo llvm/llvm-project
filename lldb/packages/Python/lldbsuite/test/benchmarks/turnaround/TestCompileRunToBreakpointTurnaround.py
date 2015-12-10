@@ -17,10 +17,7 @@ class CompileRunToBreakpointBench(BenchBase):
         BenchBase.setUp(self)
         self.exe = lldbtest_config.lldbExec
         self.function = 'Driver::MainLoop()'
-
-        self.count = configuration.bmIterationCount
-        if self.count <= 0:
-            self.count = 3
+        self.count = 3
 
         self.lldb_avg = None
         self.gdb_avg = None

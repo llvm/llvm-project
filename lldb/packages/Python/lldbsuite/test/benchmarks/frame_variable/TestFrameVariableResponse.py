@@ -17,14 +17,8 @@ class FrameVariableResponseBench(BenchBase):
     def setUp(self):
         BenchBase.setUp(self)
         self.exe = lldbtest_config.lldbExec
-        if configuration.bmBreakpointSpec:
-            self.break_spec = configuration.bmBreakpointSpec
-        else:
-            self.break_spec = '-n main'
-
-        self.count = configuration.bmIterationCount
-        if self.count <= 0:
-            self.count = 20
+        self.break_spec = '-n main'
+        self.count = 20
 
     @benchmarks_test
     @no_debug_info_test

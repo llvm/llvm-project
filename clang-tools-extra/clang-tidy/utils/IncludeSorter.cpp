@@ -188,10 +188,7 @@ std::vector<FixItHint> IncludeSorter::GetEdits() {
   // delete inclusions.
   for (int IncludeKind = 0; IncludeKind < IK_InvalidInclude; ++IncludeKind) {
     std::sort(IncludeBucket[IncludeKind].begin(),
-              IncludeBucket[IncludeKind].end(),
-              [](const std::string &Left, const std::string &Right) {
-                return llvm::StringRef(Left).compare_lower(Right) < 0;
-              });
+              IncludeBucket[IncludeKind].end());
     for (const auto &IncludeEntry : IncludeBucket[IncludeKind]) {
       auto &Location = IncludeLocations[IncludeEntry];
       SourceRangeVector::iterator LocationIterator = Location.begin();

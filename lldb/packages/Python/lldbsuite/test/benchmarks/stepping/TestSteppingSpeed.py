@@ -15,14 +15,8 @@ class SteppingSpeedBench(BenchBase):
     def setUp(self):
         BenchBase.setUp(self)
         self.exe = lldbtest_config.lldbExec
-        if configuration.bmBreakpointSpec:
-            self.break_spec = configuration.bmBreakpointSpec
-        else:
-            self.break_spec = '-n main'
-
-        self.count = configuration.bmIterationCount
-        if self.count <= 0:
-            self.count = 50
+        self.break_spec = '-n main'
+        self.count = 50
 
         #print("self.exe=%s" % self.exe)
         #print("self.break_spec=%s" % self.break_spec)

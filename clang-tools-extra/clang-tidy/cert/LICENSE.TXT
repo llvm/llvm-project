@@ -1,0 +1,22 @@
+------------------------------------------------------------------------------
+clang-tidy CERT Files
+------------------------------------------------------------------------------
+All clang-tidy files are licensed under the LLVM license with the following
+additions:
+
+Any file referencing a CERT Secure Coding guideline:
+Please allow this letter to serve as confirmation that open source projects on
+http://llvm.org are permitted to link via hypertext to the CERT(R) secure coding
+guidelines available at https://www.securecoding.cert.org.   
+
+The foregoing is permitted by the Terms of Use as follows:
+"Linking to the Service
+Because we update many of our Web documents regularly, we would prefer that you
+link to our Web pages whenever possible rather than reproduce them. It is not
+necessary to request permission to make referential hypertext links to The
+Service."
+http://www.sei.cmu.edu/legal/ip/index.cfm.
+
+Please allow this letter to also confirm that no formal permission is required
+to reproduce the title of the content being linked to, nor to reproduce any
+de Minimis description of such content.

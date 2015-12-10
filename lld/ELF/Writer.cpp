@@ -362,20 +362,19 @@ template <class ELFT> static bool isRelroSection(OutputSectionBase<ELFT> *Sec) {
   typename OutputSectionBase<ELFT>::uintX_t Flags = Sec->getFlags();
   if (!(Flags & SHF_ALLOC) || !(Flags & SHF_WRITE))
     return false;
+  if (Flags & SHF_TLS)
+    return true;
   uint32_t Type = Sec->getType();
-  if ((Flags & SHF_TLS) || (Type == SHT_INIT_ARRAY || Type == SHT_FINI_ARRAY ||
-                            Type == SHT_PREINIT_ARRAY))
+  if (Type == SHT_INIT_ARRAY || Type == SHT_FINI_ARRAY ||
+      Type == SHT_PREINIT_ARRAY)
     return true;
   if (Sec == Out<ELFT>::GotPlt)
     return Config->ZNow;
   if (Sec == Out<ELFT>::Dynamic || Sec == Out<ELFT>::Got)
     return true;
-
-  StringRef Name = Sec->getName();
-  StringRef WhiteList[] = {".data.rel.ro", ".ctors", ".dtors", ".jcr",
-                           ".eh_frame"};
-  return (std::find(std::begin(WhiteList), std::end(WhiteList), Name) !=
-          std::end(WhiteList));
+  StringRef S = Sec->getName();
+  return S == ".data.rel.ro" || S == ".ctors" || S == ".dtors" || S == ".jcr" ||
+         S == ".eh_frame";
 }
 
 // Output section ordering is determined by this function.
@@ -502,9 +501,10 @@ void Writer<ELFT>::addSharedCopySymbols(
     const Elf_Sym &Sym = C->Sym;
     const Elf_Shdr *Sec = C->File->getSection(Sym);
     uintX_t SecAlign = Sec->sh_addralign;
-    uintX_t Align = Sym.st_value % SecAlign;
-    if (Align == 0)
-      Align = SecAlign;
+    unsigned TrailingZeros =
+        std::min(countTrailingZeros(SecAlign),
+                 countTrailingZeros((uintX_t)Sym.st_value));
+    uintX_t Align = 1 << TrailingZeros;
     Out<ELFT>::Bss->updateAlign(Align);
     Off = RoundUpToAlignment(Off, Align);
     C->OffsetInBSS = Off;

@@ -21,9 +21,7 @@ class XCode41Vs42GDBDisassembly(BenchBase):
         self.function = 'Driver::MainLoop()'
         self.gdb_41_avg = None
         self.gdb_42_avg = None
-        self.count = configuration.bmIterationCount
-        if self.count <= 0:
-            self.count = 5
+        self.count = 5
 
     @benchmarks_test
     @no_debug_info_test

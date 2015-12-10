@@ -72,7 +72,6 @@ test_counter = None
 total_tests = None
 test_name_len = None
 dotest_options = None
-output_on_success = False
 RESULTS_FORMATTER = None
 RUNNER_PROCESS_ASYNC_MAP = None
 RESULTS_LISTENER_CHANNEL = None
@@ -120,13 +119,8 @@ def report_test_failure(name, command, output):
 
 
 def report_test_pass(name, output):
-    global output_lock, output_on_success
+    global output_lock
     with output_lock:
-        if not (RESULTS_FORMATTER and RESULTS_FORMATTER.is_using_terminal()):
-            if output_on_success:
-                print(file=sys.stderr)
-                print(output, file=sys.stderr)
-                print("[%s PASSED]" % name, file=sys.stderr)
         update_progress(name)
 
 
@@ -1425,14 +1419,8 @@ def default_test_runner_name(num_threads):
     return test_runner_name
 
 
-def main(print_details_on_success, num_threads, test_subdir,
-         test_runner_name, results_formatter):
+def main(num_threads, test_subdir, test_runner_name, results_formatter):
     """Run dotest.py in inferior mode in parallel.
-
-    @param print_details_on_success the parsed value of the output-on-success
-    command line argument.  When True, details of a successful dotest inferior
-    are printed even when everything succeeds.  The normal behavior is to
-    not print any details when all the inferior tests pass.
 
     @param num_threads the parsed value of the num-threads command line
     argument.
@@ -1460,8 +1448,7 @@ def main(print_details_on_success, num_threads, test_subdir,
 
     dotest_argv = sys.argv[1:]
 
-    global output_on_success, RESULTS_FORMATTER
-    output_on_success = print_details_on_success
+    global RESULTS_FORMATTER
     RESULTS_FORMATTER = results_formatter
 
     # We can't use sys.path[0] to determine the script directory

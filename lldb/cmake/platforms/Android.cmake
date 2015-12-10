@@ -121,6 +121,13 @@ elseif( ANDROID_ABI STREQUAL "mips" )
  endif()
 endif()
 
+# Use gold linker and enable safe ICF in case of x86, x86_64 and arm
+if ( ANDROID_ABI STREQUAL "x86"    OR
+     ANDROID_ABI STREQUAL "x86_64" OR
+     ANDROID_ABI STREQUAL "armeabi")
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -fuse-ld=gold -Wl,--icf=safe" )
+endif()
+
 if( NOT LLVM_BUILD_STATIC )
  # PIE is required for API 21+ so we enable it if we're not statically linking
  # unfortunately, it is not supported before API 16 so we need to do something

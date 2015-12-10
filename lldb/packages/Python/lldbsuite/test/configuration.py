@@ -86,11 +86,6 @@ compilers = None    # Must be initialized after option parsing
 # just that.
 cflags_extras = ''
 
-# The breakpoint specification of the benchmark exe, as specified by the '-x' option.
-bmBreakpointSpec = None
-# The benchmark iteration count, as specified by the '-y' option.
-bmIterationCount = -1
-
 # The filters (testclass.testmethod) used to admit tests into our test suite.
 filters = []
 
@@ -124,11 +119,8 @@ sdir_has_content = False
 # svn_info stores the output from 'svn info lldb.base.dir'.
 svn_info = ''
 
-# svn_silent means do not try to obtain svn status
-svn_silent = True
-
 # Default verbosity is 0.
-verbose = 1
+verbose = 0
 
 # By default, search from the script directory.
 # We can't use sys.path[0] to determine the script directory
@@ -149,7 +141,6 @@ lldb_platform_working_dir = None
 is_inferior_test_runner = False
 multiprocess_test_subdir = None
 num_threads = None
-output_on_success = False
 no_multiprocess_test_runner = False
 test_runner_name = None
 

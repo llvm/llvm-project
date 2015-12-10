@@ -36,9 +36,7 @@ class DisassembleDriverMainLoop(BenchBase):
         self.function = 'Driver::MainLoop()'
         self.lldb_avg = None
         self.gdb_avg = None
-        self.count = configuration.bmIterationCount
-        if self.count <= 0:
-            self.count = 5
+        self.count = 5
 
     @benchmarks_test
     @no_debug_info_test

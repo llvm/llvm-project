@@ -22,14 +22,8 @@ class StartupDelaysBench(BenchBase):
         # Create self.stopwatch3 for measuring "run to breakpoint".
         self.stopwatch3 = Stopwatch()
         self.exe = lldbtest_config.lldbExec
-        if configuration.bmBreakpointSpec:
-            self.break_spec = configuration.bmBreakpointSpec
-        else:
-            self.break_spec = '-n main'
-
-        self.count = configuration.bmIterationCount
-        if self.count <= 0:
-            self.count = 30
+        self.break_spec = '-n main'
+        self.count = 30
 
     @benchmarks_test
     @no_debug_info_test

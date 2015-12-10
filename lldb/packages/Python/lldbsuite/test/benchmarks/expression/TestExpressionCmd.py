@@ -17,9 +17,7 @@ class ExpressionEvaluationCase(BenchBase):
         BenchBase.setUp(self)
         self.source = 'main.cpp'
         self.line_to_break = line_number(self.source, '// Set breakpoint here.')
-        self.count = configuration.bmIterationCount
-        if self.count <= 0:
-            self.count = 25
+        self.count = 25
 
     @benchmarks_test
     @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")

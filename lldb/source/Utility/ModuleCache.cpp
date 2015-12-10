@@ -11,6 +11,7 @@
 
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
@@ -234,7 +235,7 @@ ModuleCache::Get (const FileSpec &root_dir_spec,
         return Error ("Module %s has invalid file size", module_file_path.GetPath ().c_str ());
 
     // We may have already cached module but downloaded from an another host - in this case let's create a link to it.
-    const auto error = CreateHostSysRootModuleLink(root_dir_spec, hostname, module_spec.GetFileSpec(), module_file_path, false);
+    auto error = CreateHostSysRootModuleLink(root_dir_spec, hostname, module_spec.GetFileSpec(), module_file_path, false);
     if (error.Fail ())
         return Error ("Failed to create link to %s: %s", module_file_path.GetPath().c_str(), error.AsCString());
 
@@ -242,14 +243,19 @@ ModuleCache::Get (const FileSpec &root_dir_spec,
     cached_module_spec.GetUUID ().Clear ();  // Clear UUID since it may contain md5 content hash instead of real UUID.
     cached_module_spec.GetFileSpec () = module_file_path;
     cached_module_spec.GetPlatformFileSpec () = module_spec.GetFileSpec ();
-    cached_module_sp.reset (new Module (cached_module_spec));
+    
+    error = ModuleList::GetSharedModule(cached_module_spec,
+                                        cached_module_sp,
+                                        nullptr,
+                                        nullptr,
+                                        did_create_ptr,
+                                        false);
+    if (error.Fail())
+        return error;
 
     FileSpec symfile_spec = GetSymbolFileSpec(cached_module_sp->GetFileSpec ());
     if (symfile_spec.Exists ())
         cached_module_sp->SetSymbolFileFileSpec (symfile_spec);
-
-    if (did_create_ptr)
-        *did_create_ptr = true;
 
     m_loaded_modules.insert (std::make_pair (module_spec.GetUUID ().GetAsString (), cached_module_sp));
 

@@ -13,6 +13,7 @@ from __future__ import print_function
 import os
 
 # Our imports
+from . import configuration
 from . import result_formatter
 from .result_formatter import EventBuilder
 import lldbsuite
@@ -272,6 +273,13 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
                             extra_info,
                             event["test_filename"]))
                 else:
+                    # Figure out the identity we will use for this test.
+                    if configuration.verbose and ("test_class" in event):
+                        test_id = "{}.{}".format(
+                            event["test_class"], event["test_name"])
+                    else:
+                        test_id = event["test_name"]
+
                     # Test-method events have richer detail, use that here.
                     test_relative_path = os.path.relpath(
                         os.path.realpath(event["test_filename"]),
@@ -279,7 +287,7 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
                     self.out_file.write("{}: {}{} ({})\n".format(
                         detail_label,
                         extra_info,
-                        event["test_name"],
+                        test_id,
                         test_relative_path))
 
     def _finish_output_no_lock(self):
