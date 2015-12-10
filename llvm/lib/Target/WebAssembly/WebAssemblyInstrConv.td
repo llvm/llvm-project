@@ -26,6 +26,15 @@ def I64_EXTEND_U_I32 : I<(outs I64:$dst), (ins I32:$src),
                          [(set I64:$dst, (zext I32:$src))],
                          "i64.extend_u/i32\t$dst, $src">;
 
+} // defs = [ARGUMENTS]
+
+// Expand a "don't care" extend into zero-extend (chosen over sign-extend
+// somewhat arbitrarily, although it favors popular hardware architectures
+// and is conceptually a simpler operation).
+def : Pat<(i64 (anyext I32:$src)), (I64_EXTEND_U_I32 I32:$src)>;
+
+let Defs = [ARGUMENTS] in {
+
 // Conversion from floating point to integer traps on overflow and invalid.
 let hasSideEffects = 1 in {
 def I32_TRUNC_S_F32 : I<(outs I32:$dst), (ins F32:$src),

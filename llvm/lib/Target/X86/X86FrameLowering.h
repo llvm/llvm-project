@@ -136,6 +136,9 @@ public:
   /// \p MBB will be correctly handled by the target.
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
 
+  /// Returns true if the target will correctly handle shrink wrapping.
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
+
   /// convertArgMovsToPushes - This method tries to convert a call sequence
   /// that uses sub and mov instructions to put the argument onto the stack
   /// into a series of pushes.

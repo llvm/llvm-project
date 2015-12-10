@@ -75,11 +75,6 @@
   movep   $8, $6, $2, $3  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   movep   $5, $6, $5, $3  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   movep   $5, $6, $2, $9  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  break 1024        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  break 1024, 5     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  break 7, 1024     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  break 1024, 1024  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  wait 1024         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   prefx -1, $8($5)  # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   prefx 32, $8($5)  # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   jraddiusp 1       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
@@ -91,15 +86,3 @@
   jraddiusp 33      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
   jraddiusp 125     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
   jraddiusp 132     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
-  lh $33, 8($4)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhe $34, 8($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhu $35, 8($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhue $36, 8($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lh $2, 8($34)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhe $4, 8($33)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhu $4, 8($35)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhue $4, 8($37)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lh $2, 65536($4)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhe $4, 512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhu $4, 65536($2) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lhue $4, 512($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

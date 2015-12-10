@@ -2523,7 +2523,7 @@ Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<double> Elts) {
 /// object.
 Constant *ConstantDataArray::getFP(LLVMContext &Context,
                                    ArrayRef<uint16_t> Elts) {
-  Type *Ty = VectorType::get(Type::getHalfTy(Context), Elts.size());
+  Type *Ty = ArrayType::get(Type::getHalfTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 2), Ty);
 }

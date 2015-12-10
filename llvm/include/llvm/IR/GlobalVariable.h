@@ -105,18 +105,13 @@ public:
   /// hasUniqueInitializer - Whether the global variable has an initializer, and
   /// any changes made to the initializer will turn up in the final executable.
   inline bool hasUniqueInitializer() const {
-    return hasInitializer() &&
-      // It's not safe to modify initializers of global variables with weak
-      // linkage, because the linker might choose to discard the initializer and
-      // use the initializer from another instance of the global variable
-      // instead. It is wrong to modify the initializer of a global variable
-      // with *_odr linkage because then different instances of the global may
-      // have different initializers, breaking the One Definition Rule.
-      !isWeakForLinker() &&
-      // It is not safe to modify initializers of global variables with the
-      // external_initializer marker since the value may be changed at runtime
-      // before C++ initializers are evaluated.
-      !isExternallyInitialized();
+    return
+        // We need to be sure this is the definition that will actually be used
+        isStrongDefinitionForLinker() &&
+        // It is not safe to modify initializers of global variables with the
+        // external_initializer marker since the value may be changed at runtime
+        // before C++ initializers are evaluated.
+        !isExternallyInitialized();
   }
 
   /// getInitializer - Return the initializer for this global variable.  It is

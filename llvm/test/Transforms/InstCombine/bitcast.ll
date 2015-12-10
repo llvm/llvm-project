@@ -64,7 +64,7 @@ define float @test3(<2 x float> %A, <2 x i64> %B) {
 ; CHECK-NEXT:  ret float %add
 }
 
-; TODO: Both bitcasts are unnecessary; change the extractelement.
+; Both bitcasts are unnecessary; change the extractelement.
 
 define float @bitcast_extelt1(<2 x float> %A) {
   %bc1 = bitcast <2 x float> %A to <2 x i32>
@@ -73,13 +73,11 @@ define float @bitcast_extelt1(<2 x float> %A) {
   ret float %bc2
 
 ; CHECK-LABEL: @bitcast_extelt1(
-; CHECK-NEXT:  %bc1 = bitcast <2 x float> %A to <2 x i32>
-; CHECK-NEXT:  %ext = extractelement <2 x i32> %bc1, i32 0
-; CHECK-NEXT:  %bc2 = bitcast i32 %ext to float
+; CHECK-NEXT:  %bc2 = extractelement <2 x float> %A, i32 0
 ; CHECK-NEXT:  ret float %bc2
 }
 
-; TODO: Second bitcast can be folded into the first.
+; Second bitcast can be folded into the first.
 
 define i64 @bitcast_extelt2(<4 x float> %A) {
   %bc1 = bitcast <4 x float> %A to <2 x double>
@@ -88,10 +86,24 @@ define i64 @bitcast_extelt2(<4 x float> %A) {
   ret i64 %bc2
 
 ; CHECK-LABEL: @bitcast_extelt2(
-; CHECK-NEXT:  %bc1 = bitcast <4 x float> %A to <2 x double>
-; CHECK-NEXT:  %ext = extractelement <2 x double> %bc1, i32 1
-; CHECK-NEXT:  %bc2 = bitcast double %ext to i64
+; CHECK-NEXT:  %bc = bitcast <4 x float> %A to <2 x i64>
+; CHECK-NEXT:  %bc2 = extractelement <2 x i64> %bc, i32 1
 ; CHECK-NEXT:  ret i64 %bc2
+}
+
+; TODO: This should return %A. 
+
+define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
+  %bc1 = bitcast <2 x i32> %A to <1 x i64>
+  %ext = extractelement <1 x i64> %bc1, i32 0
+  %bc2 = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc2
+
+; CHECK-LABEL: @bitcast_extelt3(
+; CHECK-NEXT:  %bc1 = bitcast <2 x i32> %A to <1 x i64>
+; CHECK-NEXT:  %ext = extractelement <1 x i64> %bc1, i32 0
+; CHECK-NEXT:  %bc2 = bitcast i64 %ext to <2 x i32>
+; CHECK-NEXT:  ret <2 x i32> %bc2
 }
 
 define <2 x i32> @test4(i32 %A, i32 %B){

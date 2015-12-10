@@ -32,7 +32,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
   assert(L->getLoopPreheader() && "No preheader");
   if (UseLAIChecks) {
     setAliasChecks(LAI.getRuntimePointerChecking()->getChecks());
-    setSCEVChecks(LAI.Preds);
+    setSCEVChecks(LAI.PSE.getUnionPredicate());
   }
 }
 
@@ -58,7 +58,7 @@ void LoopVersioning::versionLoop(
       LAI.addRuntimeChecks(RuntimeCheckBB->getTerminator(), AliasChecks);
   assert(MemRuntimeCheck && "called even though needsAnyChecking = false");
 
-  const SCEVUnionPredicate &Pred = LAI.Preds;
+  const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
   SCEVExpander Exp(*SE, RuntimeCheckBB->getModule()->getDataLayout(),
                    "scev.check");
   SCEVRuntimeCheck =

@@ -6855,11 +6855,11 @@ multiclass SIMDFPIndexed<bit U, bits<4> opc, string asm,
 
   let Predicates = [HasNEON, HasFullFP16] in {
   def v1i16_indexed : BaseSIMDIndexed<1, U, 1, 0b00, opc,
-                                      FPR16Op, FPR16Op, V128, VectorIndexH,
+                                      FPR16Op, FPR16Op, V128_lo, VectorIndexH,
                                       asm, ".h", "", "", ".h",
     [(set (f16 FPR16Op:$Rd),
           (OpNode (f16 FPR16Op:$Rn),
-                  (f16 (vector_extract (v8f16 V128:$Rm),
+                  (f16 (vector_extract (v8f16 V128_lo:$Rm),
                                        VectorIndexH:$idx))))]> {
     bits<3> idx;
     let Inst{11} = idx{2};
@@ -6995,7 +6995,7 @@ multiclass SIMDFPIndexedTied<bit U, bits<4> opc, string asm> {
 
   let Predicates = [HasNEON, HasFullFP16] in {
   def v1i16_indexed : BaseSIMDIndexedTied<1, U, 1, 0b00, opc,
-                                      FPR16Op, FPR16Op, V128, VectorIndexH,
+                                      FPR16Op, FPR16Op, V128_lo, VectorIndexH,
                                       asm, ".h", "", "", ".h", []> {
     bits<3> idx;
     let Inst{11} = idx{2};

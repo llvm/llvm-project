@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-block-placement | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-block-placement -verify-machineinstrs | FileCheck %s
 
 ; Test switch instructions. Block placement is disabled because it reorders
 ; the blocks in a way that isn't interesting here.

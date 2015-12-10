@@ -1324,6 +1324,59 @@ namespace llvm {
     void print(raw_ostream &OS, const Module * = nullptr) const override;
     void verifyAnalysis() const override;
   };
+
+  /// An interface layer with SCEV used to manage how we see SCEV expressions
+  /// for values in the context of existing predicates. We can add new
+  /// predicates, but we cannot remove them.
+  ///
+  /// This layer has multiple purposes:
+  ///   - provides a simple interface for SCEV versioning.
+  ///   - guarantees that the order of transformations applied on a SCEV
+  ///     expression for a single Value is consistent across two different
+  ///     getSCEV calls. This means that, for example, once we've obtained
+  ///     an AddRec expression for a certain value through expression
+  ///     rewriting, we will continue to get an AddRec expression for that
+  ///     Value.
+  ///   - lowers the number of expression rewrites.
+  class PredicatedScalarEvolution {
+  public:
+    PredicatedScalarEvolution(ScalarEvolution &SE);
+    const SCEVUnionPredicate &getUnionPredicate() const;
+    /// \brief Returns the SCEV expression of V, in the context of the current
+    /// SCEV predicate.
+    /// The order of transformations applied on the expression of V returned
+    /// by ScalarEvolution is guaranteed to be preserved, even when adding new
+    /// predicates.
+    const SCEV *getSCEV(Value *V);
+    /// \brief Adds a new predicate.
+    void addPredicate(const SCEVPredicate &Pred);
+    /// \brief Returns the ScalarEvolution analysis used.
+    ScalarEvolution *getSE() const { return &SE; }
+
+  private:
+    /// \brief Increments the version number of the predicate.
+    /// This needs to be called every time the SCEV predicate changes.
+    void updateGeneration();
+    /// Holds a SCEV and the version number of the SCEV predicate used to
+    /// perform the rewrite of the expression.
+    typedef std::pair<unsigned, const SCEV *> RewriteEntry;
+    /// Maps a SCEV to the rewrite result of that SCEV at a certain version
+    /// number. If this number doesn't match the current Generation, we will
+    /// need to do a rewrite. To preserve the transformation order of previous
+    /// rewrites, we will rewrite the previous result instead of the original
+    /// SCEV.
+    DenseMap<const SCEV *, RewriteEntry> RewriteMap;
+    /// The ScalarEvolution analysis.
+    ScalarEvolution &SE;
+    /// The SCEVPredicate that forms our context. We will rewrite all
+    /// expressions assuming that this predicate true.
+    SCEVUnionPredicate Preds;
+    /// Marks the version of the SCEV predicate used. When rewriting a SCEV
+    /// expression we mark it with the version of the predicate. We use this to
+    /// figure out if the predicate has changed from the last rewrite of the
+    /// SCEV. If so, we need to perform a new rewrite.
+    unsigned Generation;
+  };
 }
 
 #endif

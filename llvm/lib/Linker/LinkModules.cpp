@@ -1050,7 +1050,12 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
       return false;
     }
     // If the Dest is weak, use the source linkage.
-    LinkFromSrc = Dest.hasExternalWeakLinkage();
+    if (Dest.hasExternalWeakLinkage()) {
+      LinkFromSrc = true;
+      return false;
+    }
+    // Link an available_externally over a declaration.
+    LinkFromSrc = !Src.isDeclaration() && Dest.isDeclaration();
     return false;
   }
 

@@ -60,6 +60,7 @@ enum DiagnosticKind {
   DK_OptimizationRemarkAnalysisAliasing,
   DK_OptimizationFailure,
   DK_MIRParser,
+  DK_PGOProfile,
   DK_FirstPluginKind
 };
 
@@ -245,6 +246,31 @@ private:
   /// Line number where the diagnostic occurred. If 0, no line number will
   /// be emitted in the message.
   unsigned LineNum;
+
+  /// Message to report.
+  const Twine &Msg;
+};
+
+/// Diagnostic information for the PGO profiler.
+class DiagnosticInfoPGOProfile : public DiagnosticInfo {
+public:
+  DiagnosticInfoPGOProfile(const char *FileName, const Twine &Msg,
+                           DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_PGOProfile, Severity), FileName(FileName), Msg(Msg) {}
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_PGOProfile;
+  }
+
+  const char *getFileName() const { return FileName; }
+  const Twine &getMsg() const { return Msg; }
+
+private:
+  /// Name of the input file associated with this diagnostic.
+  const char *FileName;
 
   /// Message to report.
   const Twine &Msg;

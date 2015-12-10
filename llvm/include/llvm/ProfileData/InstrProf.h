@@ -435,7 +435,7 @@ instrprof_error InstrProfRecord::merge(InstrProfRecord &Other) {
 
   for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
     bool ResultOverflowed;
-    Counts[I] = SaturatingAdd(Counts[I], Other.Counts[I], ResultOverflowed);
+    Counts[I] = SaturatingAdd(Counts[I], Other.Counts[I], &ResultOverflowed);
     if (ResultOverflowed)
       Result = instrprof_error::counter_overflow;
   }

@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -fast-isel | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -fast-isel -verify-machineinstrs | FileCheck %s
 
 ; Test that LLVM unreachable instruction and trap intrinsic are lowered to
 ; wasm unreachable

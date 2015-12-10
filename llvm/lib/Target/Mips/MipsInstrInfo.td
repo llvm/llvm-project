@@ -394,8 +394,10 @@ class ConstantUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
   let DiagnosticType = "UImm" # Bits # "_" # Offset;
 }
 
+def ConstantUImm10AsmOperandClass
+    : ConstantUImmAsmOperandClass<10, []>;
 def ConstantUImm8AsmOperandClass
-    : ConstantUImmAsmOperandClass<8, []>;
+    : ConstantUImmAsmOperandClass<8, [ConstantUImm10AsmOperandClass]>;
 def ConstantUImm6AsmOperandClass
     : ConstantUImmAsmOperandClass<6, [ConstantUImm8AsmOperandClass]>;
 def ConstantUImm5Plus32AsmOperandClass
@@ -492,17 +494,6 @@ def simm32      : Operand<i32>;
 def uimm20      : Operand<i32> {
 }
 
-def MipsUImm10AsmOperand : AsmOperandClass {
-  let Name = "UImm10";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseImm";
-  let PredicateMethod = "isUImm<10>";
-}
-
-def uimm10      : Operand<i32> {
-  let ParserMatchClass = MipsUImm10AsmOperand;
-}
-
 def simm16_64   : Operand<i64> {
   let DecoderMethod = "DecodeSimm16";
 }
@@ -514,7 +505,7 @@ def uimmz       : Operand<i32> {
 }
 
 // Unsigned Operands
-foreach I = {1, 2, 3, 4, 5, 6, 8} in
+foreach I = {1, 2, 3, 4, 5, 6, 8, 10} in
   def uimm # I : Operand<i32> {
     let PrintMethod = "printUnsignedImm";
     let ParserMatchClass =
@@ -607,14 +598,6 @@ def MipsMemSimm16AsmOperand : AsmOperandClass {
   let PredicateMethod = "isMemWithSimmOffset<16>";
 }
 
-def MipsMemSimm16GPRAsmOperand : AsmOperandClass {
-  let Name = "MemOffsetSimm16GPR";
-  let SuperClasses = [MipsMemAsmOperand];
-  let RenderMethod = "addMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithSimmOffsetGPR<16>";
-}
-
 def MipsInvertedImmoperand : AsmOperandClass {
   let Name = "InvNum";
   let RenderMethod = "addImmOperands";
@@ -668,12 +651,6 @@ def mem_simm16 : mem_generic {
   let MIOperandInfo = (ops ptr_rc, simm16);
   let EncoderMethod = "getMemEncoding";
   let ParserMatchClass = MipsMemSimm16AsmOperand;
-}
-
-def mem_simm16gpr : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm16);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemSimm16GPRAsmOperand;
 }
 
 def mem_ea : Operand<iPTR> {
@@ -843,20 +820,14 @@ class LoadUpper<string opstr, RegisterOperand RO, Operand Imm>:
 }
 
 // Memory Load/Store
-class LoadMemory<string opstr, DAGOperand RO, DAGOperand MO,
-                 SDPatternOperator OpNode = null_frag,
-                 InstrItinClass Itin = NoItinerary,
-                 ComplexPattern Addr = addr> :
-  InstSE<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
+class Load<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
+           InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr> :
+  InstSE<(outs RO:$rt), (ins mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
          [(set RO:$rt, (OpNode Addr:$addr))], Itin, FrmI, opstr> {
   let DecoderMethod = "DecodeMem";
   let canFoldAsLoad = 1;
   let mayLoad = 1;
 }
-
-class Load<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
-           InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr> :
-  LoadMemory<opstr, RO, mem, OpNode, Itin, Addr>;
 
 class StoreMemory<string opstr, DAGOperand RO, DAGOperand MO,
             SDPatternOperator OpNode = null_frag,
@@ -1403,12 +1374,9 @@ def ROTRV : MMRel, shift_rotate_reg<"rotrv", GPR32Opnd, II_ROTRV, rotr>,
 def LB  : Load<"lb", GPR32Opnd, sextloadi8, II_LB>, MMRel, LW_FM<0x20>;
 def LBu : Load<"lbu", GPR32Opnd, zextloadi8, II_LBU, addrDefault>, MMRel,
           LW_FM<0x24>;
-let AdditionalPredicates = [NotInMicroMips] in {
-  def LH  : LoadMemory<"lh", GPR32Opnd, mem_simm16gpr, sextloadi16, II_LH,
-                       addrDefault>, MMRel, LW_FM<0x21>;
-  def LHu : LoadMemory<"lhu", GPR32Opnd, mem_simm16gpr, zextloadi16, II_LHU>,
-            MMRel, LW_FM<0x25>;
-}
+def LH  : Load<"lh", GPR32Opnd, sextloadi16, II_LH, addrDefault>, MMRel,
+          LW_FM<0x21>;
+def LHu : Load<"lhu", GPR32Opnd, zextloadi16, II_LHU>, MMRel, LW_FM<0x25>;
 let AdditionalPredicates = [NotInMicroMips] in {
 def LW  : StdMMR6Rel, Load<"lw", GPR32Opnd, load, II_LW, addrDefault>, MMRel,
           LW_FM<0x23>;

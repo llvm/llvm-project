@@ -2596,6 +2596,12 @@ bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   return !flagsNeedToBePreservedBeforeTheTerminators(MBB);
 }
 
+bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
+  // If we may need to emit frameless compact unwind information, give
+  // up as this is currently broken: PR25614.
+  return MF.getFunction()->hasFnAttribute(Attribute::NoUnwind) || hasFP(MF);
+}
+
 MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     DebugLoc DL, bool RestoreSP) const {

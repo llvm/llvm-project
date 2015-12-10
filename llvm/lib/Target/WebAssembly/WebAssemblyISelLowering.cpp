@@ -159,7 +159,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
-  for (auto T : {MVT::i1, MVT::i8, MVT::i16})
+  for (auto T : {MVT::i1, MVT::i8, MVT::i16, MVT::i32})
     setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
 
   // Dynamic stack allocation: use the default expansion.
@@ -202,7 +202,13 @@ bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
 
 MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
                                                       EVT VT) const {
-  return VT.getSimpleVT();
+  unsigned BitWidth = NextPowerOf2(VT.getSizeInBits() - 1);
+  if (BitWidth > 1 && BitWidth < 8)
+    BitWidth = 8;
+  MVT Result = MVT::getIntegerVT(BitWidth);
+  assert(Result != MVT::INVALID_SIMPLE_VALUE_TYPE &&
+         "Unable to represent scalar shift amount type");
+  return Result;
 }
 
 const char *
@@ -313,14 +319,16 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
   for (const ISD::OutputArg &Out : Outs) {
-    assert(!Out.Flags.isByVal() && "byval is not valid for return values");
-    assert(!Out.Flags.isNest() && "nest is not valid for return values");
+    if (Out.Flags.isByVal())
+      fail(DL, DAG, "WebAssembly hasn't implemented byval arguments");
+    if (Out.Flags.isNest())
+      fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
     if (Out.Flags.isInAlloca())
-      fail(DL, DAG, "WebAssembly hasn't implemented inalloca results");
+      fail(DL, DAG, "WebAssembly hasn't implemented inalloca arguments");
     if (Out.Flags.isInConsecutiveRegs())
-      fail(DL, DAG, "WebAssembly hasn't implemented cons regs results");
+      fail(DL, DAG, "WebAssembly hasn't implemented cons regs arguments");
     if (Out.Flags.isInConsecutiveRegsLast())
-      fail(DL, DAG, "WebAssembly hasn't implemented cons regs last results");
+      fail(DL, DAG, "WebAssembly hasn't implemented cons regs last arguments");
   }
 
   bool IsVarArg = CLI.IsVarArg;
@@ -388,16 +396,14 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SmallVector<EVT, 8> Tys;
   for (const auto &In : Ins) {
-    if (In.Flags.isByVal())
-      fail(DL, DAG, "WebAssembly hasn't implemented byval arguments");
+    assert(!In.Flags.isByVal() && "byval is not valid for return values");
+    assert(!In.Flags.isNest() && "nest is not valid for return values");
     if (In.Flags.isInAlloca())
-      fail(DL, DAG, "WebAssembly hasn't implemented inalloca arguments");
-    if (In.Flags.isNest())
-      fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
+      fail(DL, DAG, "WebAssembly hasn't implemented inalloca return values");
     if (In.Flags.isInConsecutiveRegs())
-      fail(DL, DAG, "WebAssembly hasn't implemented cons regs arguments");
+      fail(DL, DAG, "WebAssembly hasn't implemented cons regs return values");
     if (In.Flags.isInConsecutiveRegsLast())
-      fail(DL, DAG, "WebAssembly hasn't implemented cons regs last arguments");
+      fail(DL, DAG, "WebAssembly hasn't implemented cons regs last return values");
     // Ignore In.getOrigAlign() because all our arguments are passed in
     // registers.
     Tys.push_back(In.VT);
