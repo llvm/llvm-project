@@ -163,6 +163,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
   Config->GcSections = Args.hasArg(OPT_gc_sections);
   Config->NoInhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->NoUndefined = Args.hasArg(OPT_no_undefined);
+  Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->Verbose = Args.hasArg(OPT_verbose);

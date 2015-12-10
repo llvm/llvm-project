@@ -79,6 +79,9 @@ def no_undefined : Flag<["--"], "no-undefined">,
 def o : Separate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
+def print_gc_sections: Flag<["--"], "print-gc-sections">,
+  HelpText<"List removed unused sections">;
+
 def rpath : Separate<["-"], "rpath">,
   HelpText<"Add a DT_RUNPATH to the output">;
 

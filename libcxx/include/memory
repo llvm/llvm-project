@@ -3995,6 +3995,7 @@ public:
             is_convertible<_Yp*, element_type*>::value,
             shared_ptr&
         >::type
+        _LIBCPP_INLINE_VISIBILITY
         operator=(auto_ptr<_Yp> __r);
 #endif
     template <class _Yp, class _Dp>
@@ -4008,6 +4009,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         operator=(unique_ptr<_Yp, _Dp>&& __r);
 #else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+        _LIBCPP_INLINE_VISIBILITY
         operator=(unique_ptr<_Yp, _Dp> __r);
 #endif
 

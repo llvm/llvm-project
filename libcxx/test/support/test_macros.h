@@ -26,6 +26,12 @@
 #define TEST_HAS_EXTENSION(X) 0
 #endif
 
+#ifdef __has_builtin
+#define TEST_HAS_BUILTIN(X) __has_builtin(X)
+#else
+#define TEST_HAS_BUILTIN(X) 0
+#endif
+
 /* Make a nice name for the standard version */
 #if  __cplusplus <= 199711L
 # define TEST_STD_VER 3

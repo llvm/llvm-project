@@ -202,6 +202,7 @@ protected:
 private:
 #ifdef _LIBCPP_HAS_NO_CONSTEXPR
     void __init(unsigned long long __v, false_type) _NOEXCEPT;
+    _LIBCPP_INLINE_VISIBILITY
     void __init(unsigned long long __v, true_type) _NOEXCEPT;
 #endif  // _LIBCPP_HAS_NO_CONSTEXPR
     unsigned long to_ulong(false_type) const;

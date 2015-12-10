@@ -1269,7 +1269,7 @@ void MachOFileLayout::computeSymbolTableSizes() {
   _symbolTableSize = nlistSize * (_file.localSymbols.size()
                                 + _file.globalSymbols.size()
                                 + _file.undefinedSymbols.size());
-  _symbolStringPoolSize = 0;
+  _symbolStringPoolSize = 1; // Always reserve 1-byte for the empty string.
   for (const Symbol &sym : _file.localSymbols) {
     _symbolStringPoolSize += (sym.name.size()+1);
   }

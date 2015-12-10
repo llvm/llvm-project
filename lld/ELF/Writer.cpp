@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
@@ -532,6 +533,15 @@ StringRef Writer<ELFT>::getOutputSectionName(StringRef S) const {
 }
 
 template <class ELFT>
+void reportDiscarded(InputSectionBase<ELFT> *IS,
+                     const std::unique_ptr<ObjectFile<ELFT>> &File) {
+  if (!Config->PrintGcSections || !IS || IS->isLive())
+    return;
+  llvm::errs() << "removing unused section from '" << IS->getSectionName()
+               << "' in file '" << File->getName() << "'\n";
+}
+
+template <class ELFT>
 bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *IS) const {
   if (!IS || !IS->isLive() || IS == &InputSection<ELFT>::Discarded)
     return true;
@@ -564,8 +574,10 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
-      if (isDiscarded(C))
+      if (isDiscarded(C)) {
+        reportDiscarded(C, F);
         continue;
+      }
       const Elf_Shdr *H = C->getSectionHdr();
       uintX_t OutFlags = H->sh_flags & ~SHF_GROUP;
       // For SHF_MERGE we create different output sections for each sh_entsize.

@@ -16,7 +16,7 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_EXECINSTR
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x11010
+// CHECK-NEXT: Address: 0x11020
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 48
 // CHECK-NEXT: Link: 0
@@ -54,10 +54,15 @@
 // (0x11010 + 16) - (0x11005 + 1) - 4 = 22
 // (0x11020 + 16) - (0x1100a + 1) - 4 = 33
 
-// DISASM:      _start:
-// DISASM-NEXT:   11000:  e9 1b 00 00 00  jmp  27
-// DISASM-NEXT:   11005:  e9 16 00 00 00  jmp  22
-// DISASM-NEXT:   1100a:  e9 21 00 00 00  jmp  33
+// DISASM:       local:
+// DISASM-NEXT:  11000: {{.*}}
+// DISASM-NEXT:  11002: {{.*}}
+// DISASM:       _start:
+// 0x11013 + 5 - 24 = 0x11000
+// DISASM-NEXT: 11004: e9 27 00 00 00 jmp 39
+// DISASM-NEXT: 11009: e9 22 00 00 00 jmp 34
+// DISASM-NEXT: 1100e: e9 2d 00 00 00 jmp 45
+// DISASM-NEXT: 11013: e9 e8 ff ff ff jmp -24
 
 // 0x11010 - 0x1102b - 5 = -32
 // 0x11010 - 0x1103b - 5 = -48
@@ -67,18 +72,18 @@
 // 73832 = 0x12068 = .got.plt (0x12058) + got.plt.reserved(12) + 4
 // DISASM:      Disassembly of section .plt:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:    11010: ff 35 5c 20 01 00 pushl 73820
-// DISASM-NEXT:    11016: ff 25 60 20 01 00 jmpl *73824
-// DISASM-NEXT:    1101c: 90 nop
-// DISASM-NEXT:    1101d: 90 nop
-// DISASM-NEXT:    1101e: 90 nop
-// DISASM-NEXT:    1101f: 90 nop
-// DISASM-NEXT:    11020: ff 25 64 20 01 00 jmpl *73828
-// DISASM-NEXT:    11026: 68 00 00 00 00 pushl $0
-// DISASM-NEXT:    1102b: e9 e0 ff ff ff jmp -32 <.plt>
-// DISASM-NEXT:    11030: ff 25 68 20 01 00 jmpl *73832
-// DISASM-NEXT:    11036: 68 08 00 00 00 pushl $8
-// DISASM-NEXT:    1103b: e9 d0 ff ff ff jmp -48 <.plt>
+// DISASM-NEXT:    11020: ff 35 5c 20 01 00 pushl 73820
+// DISASM-NEXT:    11026: ff 25 60 20 01 00 jmpl *73824
+// DISASM-NEXT:    1102c: 90 nop
+// DISASM-NEXT:    1102d: 90 nop
+// DISASM-NEXT:    1102e: 90 nop
+// DISASM-NEXT:    1102f: 90 nop
+// DISASM-NEXT:    11030: ff 25 64 20 01 00 jmpl *73828
+// DISASM-NEXT:    11036: 68 00 00 00 00 pushl $0
+// DISASM-NEXT:    1103b: e9 e0 ff ff ff jmp -32 <.plt>
+// DISASM-NEXT:    11040: ff 25 68 20 01 00 jmpl *73832
+// DISASM-NEXT:    11046: 68 08 00 00 00 pushl $8
+// DISASM-NEXT:    1104b: e9 d0 ff ff ff jmp -48 <.plt>
 
 // CHECKSHARED:        Name: .plt
 // CHECKSHARED-NEXT:   Type: SHT_PROGBITS
@@ -86,8 +91,8 @@
 // CHECKSHARED-NEXT:     SHF_ALLOC
 // CHECKSHARED-NEXT:     SHF_EXECINSTR
 // CHECKSHARED-NEXT:   ]
-// CHECKSHARED-NEXT:   Address: 0x1010
-// CHECKSHARED-NEXT:   Offset: 0x1010
+// CHECKSHARED-NEXT:   Address: 0x1020
+// CHECKSHARED-NEXT:   Offset: 0x1020
 // CHECKSHARED-NEXT:   Size: 48
 // CHECKSHARED-NEXT:   Link: 0
 // CHECKSHARED-NEXT:   Info: 0
@@ -118,27 +123,36 @@
 // CHECKSHARED-NEXT:     }
 // CHECKSHARED-NEXT:   ]
 
+// DISASMSHARED:       local:
+// DISASMSHARED-NEXT:  1000: {{.*}}
+// DISASMSHARED-NEXT:  1002: {{.*}}
 // DISASMSHARED:       _start:
-// DISASMSHARED-NEXT:  1000: e9 1b 00 00 00 jmp 27
-// DISASMSHARED-NEXT:  1005: e9 16 00 00 00 jmp 22
-// DISASMSHARED-NEXT:  100a: e9 21 00 00 00 jmp 33
+// 0x1013 + 5 - 24 = 0x1000
+// DISASMSHARED-NEXT:  1004: e9 27 00 00 00 jmp 39
+// DISASMSHARED-NEXT:  1009: e9 22 00 00 00 jmp 34
+// DISASMSHARED-NEXT:  100e: e9 2d 00 00 00 jmp 45
+// DISASMSHARED-NEXT:  1013: e9 e8 ff ff ff jmp -24
 // DISASMSHARED-NEXT:  Disassembly of section .plt:
 // DISASMSHARED-NEXT:  .plt:
-// DISASMSHARED-NEXT:  1010: ff b3 04 00 00 00  pushl 4(%ebx)
-// DISASMSHARED-NEXT:  1016: ff a3 08 00 00 00  jmpl *8(%ebx)
-// DISASMSHARED-NEXT:  101c: 90 nop
-// DISASMSHARED-NEXT:  101d: 90 nop
-// DISASMSHARED-NEXT:  101e: 90 nop
-// DISASMSHARED-NEXT:  101f: 90 nop
-// DISASMSHARED-NEXT:  1020: ff a3 0c 00 00 00  jmpl *12(%ebx)
-// DISASMSHARED-NEXT:  1026: 68 00 00 00 00     pushl $0
-// DISASMSHARED-NEXT:  102b: e9 e0 ff ff ff     jmp -32 <.plt>
-// DISASMSHARED-NEXT:  1030: ff a3 10 00 00 00  jmpl *16(%ebx)
-// DISASMSHARED: 1036: 68 08 00 00 00     pushl $8
-// DISASMSHARED: 103b: e9 d0 ff ff ff     jmp -48 <.plt>
+// DISASMSHARED-NEXT:  1020: ff b3 04 00 00 00  pushl 4(%ebx)
+// DISASMSHARED-NEXT:  1026: ff a3 08 00 00 00  jmpl *8(%ebx)
+// DISASMSHARED-NEXT:  102c: 90 nop
+// DISASMSHARED-NEXT:  102d: 90 nop
+// DISASMSHARED-NEXT:  102e: 90 nop
+// DISASMSHARED-NEXT:  102f: 90 nop
+// DISASMSHARED-NEXT:  1030: ff a3 0c 00 00 00  jmpl *12(%ebx)
+// DISASMSHARED-NEXT:  1036: 68 00 00 00 00     pushl $0
+// DISASMSHARED-NEXT:  103b: e9 e0 ff ff ff     jmp -32 <.plt>
+// DISASMSHARED-NEXT:  1040: ff a3 10 00 00 00  jmpl *16(%ebx)
+// DISASMSHARED-NEXT:  1046: 68 08 00 00 00     pushl $8
+// DISASMSHARED-NEXT:  104b: e9 d0 ff ff ff     jmp -48 <.plt>
+
+local:
+.long 0
 
 .global _start
 _start:
   jmp bar@PLT
   jmp bar@PLT
   jmp zed@PLT
+  jmp local@plt

@@ -14,6 +14,7 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <math.h>
 
 #include "clang/AST/ASTContext.h"
 
@@ -1405,24 +1406,21 @@ DumpAPInt (Stream *s, const DataExtractor &data, lldb::offset_t offset, lldb::of
     return offset;
 }
 
-static float half2float (uint16_t half)
+static float
+half2float (uint16_t half)
 {
-#ifdef _MSC_VER
-    llvm_unreachable("half2float not implemented for MSVC");
-#else
-    union{ float       f; uint32_t    u;}u;
+    union { float f; uint32_t u; } u;
     int32_t v = (int16_t) half;
-    
-    if( 0 == (v & 0x7c00))
+
+    if (0 == (v & 0x7c00))
     {
         u.u = v & 0x80007FFFU;
         return u.f * ldexpf(1, 125);
     }
-    
+
     v <<= 13;
     u.u = v | 0x70000000U;
     return u.f * ldexpf(1, -112);
-#endif
 }
 
 lldb::offset_t

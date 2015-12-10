@@ -680,6 +680,16 @@ struct _LIBCPP_TYPE_VIS_ONLY integer_sequence
 template<size_t... _Ip>
     using index_sequence = integer_sequence<size_t, _Ip...>;
 
+#if __has_builtin(__make_integer_seq) && !defined(_LIBCPP_TESTING_FALLBACK_MAKE_INTEGER_SEQUENCE)
+
+template <class _Tp, _Tp _Ep>
+struct __make_integer_sequence
+{
+    typedef __make_integer_seq<integer_sequence, _Tp, _Ep> type;
+};
+
+#else
+
 namespace __detail {
 
 template<typename _Tp, size_t ..._Extra> struct __repeat;
@@ -733,9 +743,11 @@ struct __make_integer_sequence
 {
     static_assert(is_integral<_Tp>::value,
                   "std::make_integer_sequence can only be instantiated with an integral type" );
-    static_assert(0 <= _Ep, "std::make_integer_sequence input shall not be negative");
+    static_assert(0 <= _Ep, "std::make_integer_sequence must have a non-negative sequence length");
     typedef __make_integer_sequence_unchecked<_Tp, _Ep> type;
 };
+
+#endif
 
 template<class _Tp, _Tp _Np>
     using make_integer_sequence = typename __make_integer_sequence<_Tp, _Np>::type;

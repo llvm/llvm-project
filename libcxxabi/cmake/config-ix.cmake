@@ -39,7 +39,7 @@ check_cxx_compiler_flag(/EHa-                 LIBCXXABI_HAS_NO_EHA_FLAG)
 check_cxx_compiler_flag(/GR-                  LIBCXXABI_HAS_NO_GR_FLAG)
 
 # Check libraries
-check_library_exists(c printf "" LIBCXXABI_HAS_C_LIB)
+check_library_exists(c fopen "" LIBCXXABI_HAS_C_LIB)
 check_library_exists(dl dladdr "" LIBCXXABI_HAS_DL_LIB)
 check_library_exists(pthread pthread_once "" LIBCXXABI_HAS_PTHREAD_LIB)
 check_library_exists(gcc_eh _Unwind_GetRegionStart "" LIBCXXABI_HAS_GCC_EH_LIB)

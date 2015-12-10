@@ -184,6 +184,13 @@ struct RenderScriptRuntime::Element
 
     static const ConstString &GetFallbackStructName();   // Print this as the type name of a struct Element
                                                          // If we can't resolve the actual struct name
+
+    bool shouldRefresh() const
+    {
+        const bool valid_ptr = element_ptr.isValid() && *element_ptr.get() != 0x0;
+        const bool valid_type = type.isValid() && type_vec_size.isValid() && type_kind.isValid();
+        return !valid_ptr || !valid_type || !datum_size.isValid();
+    }
 };
 
 // This AllocationDetails class collects data associated with a single
@@ -247,6 +254,13 @@ struct RenderScriptRuntime::AllocationDetails
     // Give each allocation an id, so we can reference it in user commands.
     AllocationDetails(): id(ID++)
     {
+    }
+
+    bool shouldRefresh() const
+    {
+        bool valid_ptrs = data_ptr.isValid() && *data_ptr.get() != 0x0;
+        valid_ptrs = valid_ptrs && type_ptr.isValid() && *type_ptr.get() != 0x0;
+        return !valid_ptrs || !dimension.isValid() || !size.isValid() || element.shouldRefresh();
     }
 };
 
@@ -1871,8 +1885,7 @@ RenderScriptRuntime::GetAllocationData(AllocationDetails* allocation, StackFrame
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
     // JIT all the allocation details
-    if (!allocation->data_ptr.isValid() || !allocation->element.type.isValid()
-        || !allocation->element.type_vec_size.isValid() || !allocation->size.isValid())
+    if (allocation->shouldRefresh())
     {
         if (log)
             log->Printf("RenderScriptRuntime::GetAllocationData - Allocation details not calculated yet, jitting info");
@@ -1930,8 +1943,7 @@ RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const
         log->Printf("RenderScriptRuntime::LoadAllocation - Found allocation 0x%" PRIx64, *alloc->address.get());
 
     // JIT all the allocation details
-    if (!alloc->data_ptr.isValid() || !alloc->element.type.isValid() || !alloc->element.datum_size.isValid()
-        || !alloc->element.type_vec_size.isValid() || !alloc->size.isValid())
+    if (alloc->shouldRefresh())
     {
         if (log)
             log->Printf("RenderScriptRuntime::LoadAllocation - Allocation details not calculated yet, jitting info");
@@ -2044,8 +2056,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
         log->Printf("RenderScriptRuntime::SaveAllocation - Found allocation 0x%" PRIx64, *alloc->address.get());
 
      // JIT all the allocation details
-    if (!alloc->data_ptr.isValid() || !alloc->element.type.isValid() || !alloc->element.type_vec_size.isValid()
-        || !alloc->element.type_kind.isValid() || !alloc->dimension.isValid())
+    if (alloc->shouldRefresh())
     {
         if (log)
             log->Printf("RenderScriptRuntime::SaveAllocation - Allocation details not calculated yet, jitting info");
@@ -2458,8 +2469,7 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
         log->Printf("RenderScriptRuntime::DumpAllocation - Found allocation 0x%" PRIx64, *alloc->address.get());
 
     // Check we have information about the allocation, if not calculate it
-    if (!alloc->data_ptr.isValid() || !alloc->element.type.isValid() ||
-        !alloc->element.type_vec_size.isValid() || !alloc->dimension.isValid() || !alloc->element.datum_size.isValid())
+    if (alloc->shouldRefresh())
     {
         if (log)
             log->Printf("RenderScriptRuntime::DumpAllocation - Allocation details not calculated yet, jitting info");
@@ -2602,7 +2612,7 @@ RenderScriptRuntime::ListAllocations(Stream &strm, StackFrame* frame_ptr, bool r
     for (auto &alloc : m_allocations)
     {
         // JIT the allocation info if we haven't done it, or the user forces us to.
-        bool do_refresh = !alloc->data_ptr.isValid() || recompute;
+        bool do_refresh = alloc->shouldRefresh() || recompute;
 
         // JIT current allocation information
         if (do_refresh && !RefreshAllocation(alloc.get(), frame_ptr))

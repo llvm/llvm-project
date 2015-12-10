@@ -333,7 +333,8 @@ bool X86TargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
 }
 
 bool X86TargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
-  return Type == R_386_PLT32 || (Type == R_386_PC32 && S.isShared());
+  return (Type == R_386_PLT32 && canBePreempted(&S, true)) ||
+         (Type == R_386_PC32 && S.isShared());
 }
 
 void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
@@ -350,6 +351,7 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     add32le(Loc, SA + Out<ELF32LE>::Got->getVA() - P);
     break;
   case R_386_PC32:
+  case R_386_PLT32:
     add32le(Loc, SA - P);
     break;
   case R_386_TLS_GD:
