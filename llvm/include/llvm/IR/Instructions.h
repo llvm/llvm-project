@@ -1555,16 +1555,32 @@ public:
     setOperand(i, v);
   }
 
-  /// arg_operands - iteration adapter for range-for loops.
+  /// \brief Return the iterator pointing to the beginning of the argument list.
+  op_iterator arg_begin() { return op_begin(); }
+
+  /// \brief Return the iterator pointing to the end of the argument list.
+  op_iterator arg_end() {
+    // [ call args ], [ operand bundles ], callee
+    return op_end() - getNumTotalBundleOperands() - 1;
+  };
+
+  /// \brief Iteration adapter for range-for loops.
   iterator_range<op_iterator> arg_operands() {
-    // The last operand in the op list is the callee - it's not one of the args
-    // so we don't want to iterate over it.
-    return make_range(op_begin(), op_end() - getNumTotalBundleOperands() - 1);
+    return make_range(arg_begin(), arg_end());
   }
 
-  /// arg_operands - iteration adapter for range-for loops.
+  /// \brief Return the iterator pointing to the beginning of the argument list.
+  const_op_iterator arg_begin() const { return op_begin(); }
+
+  /// \brief Return the iterator pointing to the end of the argument list.
+  const_op_iterator arg_end() const {
+    // [ call args ], [ operand bundles ], callee
+    return op_end() - getNumTotalBundleOperands() - 1;
+  };
+
+  /// \brief Iteration adapter for range-for loops.
   iterator_range<const_op_iterator> arg_operands() const {
-    return make_range(op_begin(), op_end() - getNumTotalBundleOperands() - 1);
+    return make_range(arg_begin(), arg_end());
   }
 
   /// \brief Wrappers for getting the \c Use of a call argument.
@@ -3462,14 +3478,32 @@ public:
     setOperand(i, v);
   }
 
-  /// arg_operands - iteration adapter for range-for loops.
+  /// \brief Return the iterator pointing to the beginning of the argument list.
+  op_iterator arg_begin() { return op_begin(); }
+
+  /// \brief Return the iterator pointing to the end of the argument list.
+  op_iterator arg_end() {
+    // [ invoke args ], [ operand bundles ], normal dest, unwind dest, callee
+    return op_end() - getNumTotalBundleOperands() - 3;
+  };
+
+  /// \brief Iteration adapter for range-for loops.
   iterator_range<op_iterator> arg_operands() {
-    return make_range(op_begin(), op_end() - getNumTotalBundleOperands() - 3);
+    return make_range(arg_begin(), arg_end());
   }
 
-  /// arg_operands - iteration adapter for range-for loops.
+  /// \brief Return the iterator pointing to the beginning of the argument list.
+  const_op_iterator arg_begin() const { return op_begin(); }
+
+  /// \brief Return the iterator pointing to the end of the argument list.
+  const_op_iterator arg_end() const {
+    // [ invoke args ], [ operand bundles ], normal dest, unwind dest, callee
+    return op_end() - getNumTotalBundleOperands() - 3;
+  };
+
+  /// \brief Iteration adapter for range-for loops.
   iterator_range<const_op_iterator> arg_operands() const {
-    return make_range(op_begin(), op_end() - getNumTotalBundleOperands() - 3);
+    return make_range(arg_begin(), arg_end());
   }
 
   /// \brief Wrappers for getting the \c Use of a invoke argument.

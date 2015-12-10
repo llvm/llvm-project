@@ -31,3 +31,23 @@ define i64 @sext_in_reg_i32_i64(i64 %a) {
   %c = ashr i64 %b, 32
   ret i64 %c
 }
+
+; CHECK-LABEL: fpext_f32_f64:
+; CHECK: f32.load $push0=, 0($0){{$}}
+; CHECK: f64.promote/f32 $push1=, $pop0
+; CHECK: return $pop1{{$}}
+define double @fpext_f32_f64(float *%p) {
+  %v = load float, float* %p
+  %e = fpext float %v to double
+  ret double %e
+}
+
+; CHECK-LABEL: fpconv_f64_f32:
+; CHECK: f64.load $push0=, 0($0){{$}}
+; CHECK: f32.demote/f64 $push1=, $pop0
+; CHECK: return $pop1{{$}}
+define float @fpconv_f64_f32(double *%p) {
+  %v = load double, double* %p
+  %e = fptrunc double %v to float
+  ret float %e
+}

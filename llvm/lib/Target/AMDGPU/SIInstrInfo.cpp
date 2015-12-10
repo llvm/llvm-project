@@ -762,26 +762,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
   switch (MI->getOpcode()) {
   default: return AMDGPUInstrInfo::expandPostRAPseudo(MI);
 
-  case AMDGPU::SI_CONSTDATA_PTR: {
-    unsigned Reg = MI->getOperand(0).getReg();
-    unsigned RegLo = RI.getSubReg(Reg, AMDGPU::sub0);
-    unsigned RegHi = RI.getSubReg(Reg, AMDGPU::sub1);
-
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_GETPC_B64), Reg);
-
-    // Add 32-bit offset from this instruction to the start of the constant data.
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_ADD_U32), RegLo)
-            .addReg(RegLo)
-            .addTargetIndex(AMDGPU::TI_CONSTDATA_START)
-            .addReg(AMDGPU::SCC, RegState::Define | RegState::Implicit);
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_ADDC_U32), RegHi)
-            .addReg(RegHi)
-            .addImm(0)
-            .addReg(AMDGPU::SCC, RegState::Define | RegState::Implicit)
-            .addReg(AMDGPU::SCC, RegState::Implicit);
-    MI->eraseFromParent();
-    break;
-  }
   case AMDGPU::SGPR_USE:
     // This is just a placeholder for register allocation.
     MI->eraseFromParent();
@@ -832,6 +812,34 @@ bool SIInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
         .addReg(RI.getSubReg(Src0, AMDGPU::sub1))
         .addReg(RI.getSubReg(Src1, AMDGPU::sub1))
         .addOperand(SrcCond);
+    MI->eraseFromParent();
+    break;
+  }
+
+  case AMDGPU::SI_CONSTDATA_PTR: {
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(ST.getRegisterInfo());
+    MachineFunction &MF = *MBB.getParent();
+    unsigned Reg = MI->getOperand(0).getReg();
+    unsigned RegLo = TRI->getSubReg(Reg, AMDGPU::sub0);
+    unsigned RegHi = TRI->getSubReg(Reg, AMDGPU::sub1);
+
+    // Create a bundle so these instructions won't be re-ordered by the
+    // post-RA scheduler.
+    MIBundleBuilder Bundler(MBB, MI);
+    Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_GETPC_B64), Reg));
+
+    // Add 32-bit offset from this instruction to the start of the
+    // constant data.
+    Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_ADD_U32), RegLo)
+                           .addReg(RegLo)
+                           .addOperand(MI->getOperand(1)));
+    Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_ADDC_U32), RegHi)
+                           .addReg(RegHi)
+                           .addImm(0));
+
+    llvm::finalizeBundle(MBB, Bundler.begin());
+
     MI->eraseFromParent();
     break;
   }

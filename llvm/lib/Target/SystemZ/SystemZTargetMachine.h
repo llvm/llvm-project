@@ -43,6 +43,9 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  bool targetSchedulesPostRAScheduling() const override { return true; };
+
 };
 
 } // end namespace llvm

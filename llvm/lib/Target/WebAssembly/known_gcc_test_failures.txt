@@ -202,6 +202,7 @@ pr31448.c
 pr33142.c
 pr33870-1.c
 pr33870.c
+pr33992.c
 pr34176.c
 pr35472.c
 pr36339.c
@@ -295,16 +296,6 @@ vfprintf-1.c
 vfprintf-chk-1.c
 vprintf-1.c
 vprintf-chk-1.c
-
-# Cannot select sign_extend_inreg.
-20001108-1.c
-20060110-1.c
-20060110-2.c
-pr33992.c
-
-
-
-
 
 # Cannot select callseq_end.
 20040811-1.c

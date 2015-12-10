@@ -361,7 +361,7 @@ static int readPrefixes(struct InternalInstruction* insn) {
        * then it should be disassembled as a xacquire/xrelease not repne/rep.
        */
       if ((byte == 0xf2 || byte == 0xf3) &&
-          ((nextByte == 0xf0) |
+          ((nextByte == 0xf0) ||
           ((nextByte & 0xfe) == 0x86 || (nextByte & 0xf8) == 0x90)))
         insn->xAcquireRelease = true;
       /*

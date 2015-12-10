@@ -1210,8 +1210,7 @@ static void changeToUnreachable(Instruction *I, bool UseLLVMTrap) {
 
 /// changeToCall - Convert the specified invoke into a normal call.
 static void changeToCall(InvokeInst *II) {
-  CallSite CS(II);
-  SmallVector<Value*, 8> Args(CS.arg_begin(), CS.arg_end());
+  SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
   CallInst *NewCall = CallInst::Create(II->getCalledValue(), Args, OpBundles,

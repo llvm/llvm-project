@@ -38,6 +38,12 @@ defm NEAREST : UnaryFP<fnearbyint, "nearest">;
 
 } // Defs = [ARGUMENTS]
 
+// DAGCombine oddly folds casts into the rhs of copysign. Unfold them.
+def : Pat<(fcopysign F64:$lhs, F32:$rhs),
+          (COPYSIGN_F64 F64:$lhs, (F64_PROMOTE_F32 F32:$rhs))>;
+def : Pat<(fcopysign F32:$lhs, F64:$rhs),
+          (COPYSIGN_F32 F32:$lhs, (F32_DEMOTE_F64 F64:$rhs))>;
+
 // WebAssembly doesn't expose inexact exceptions, so map frint to fnearbyint.
 def : Pat<(frint f32:$src), (NEAREST_F32 f32:$src)>;
 def : Pat<(frint f64:$src), (NEAREST_F64 f64:$src)>;

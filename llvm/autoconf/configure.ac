@@ -1343,7 +1343,7 @@ AC_DEFINE_UNQUOTED(DEFAULT_SYSROOT,"$withval",
 AC_ARG_WITH(clang-default-openmp-runtime,
   AS_HELP_STRING([--with-clang-default-openmp-runtime],
     [The default OpenMP runtime for Clang.]),,
-    withval="libgomp")
+    withval="libomp")
 AC_DEFINE_UNQUOTED(CLANG_DEFAULT_OPENMP_RUNTIME,"$withval",
                    [Default OpenMP runtime used by -fopenmp.])
 

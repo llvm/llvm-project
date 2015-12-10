@@ -55,6 +55,12 @@ Here's the short story for getting up and running quickly with LLVM:
    * ``cd llvm/projects``
    * ``svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt``
 
+#. Checkout Libomp (required for OpenMP support):
+
+   * ``cd where-you-want-llvm-to-live``
+   * ``cd llvm/projects``
+   * ``svn co http://llvm.org/svn/llvm-project/openmp/trunk openmp``
+
 #. Checkout libcxx and libcxxabi **[Optional]**:
 
    * ``cd where-you-want-llvm-to-live``
@@ -535,6 +541,13 @@ If you want to check out compiler-rt (required to build the sanitizers), run:
   % cd llvm/projects
   % git clone http://llvm.org/git/compiler-rt.git
 
+If you want to check out libomp (required for OpenMP support), run:
+
+.. code-block:: console
+
+  % cd llvm/projects
+  % git clone http://llvm.org/git/openmp.git
+
 If you want to check out libcxx and libcxxabi (optional), run:
 
 .. code-block:: console
@@ -634,7 +647,7 @@ To set up clone from which you can submit code using ``git-svn``, run:
   % git config svn-remote.svn.fetch :refs/remotes/origin/master
   % git svn rebase -l
 
-Likewise for compiler-rt and test-suite.
+Likewise for compiler-rt, libomp and test-suite.
 
 To update this clone without generating git-svn tags that conflict with the
 upstream Git repo, run:
@@ -648,7 +661,7 @@ upstream Git repo, run:
      git checkout master &&
      git svn rebase -l)
 
-Likewise for compiler-rt and test-suite.
+Likewise for compiler-rt, libomp and test-suite.
 
 This leaves your working directories on their master branches, so you'll need to
 ``checkout`` each working branch individually and ``rebase`` it on top of its

@@ -36,7 +36,6 @@ class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
   void operator=(const SIMCCodeEmitter &) = delete;
   const MCInstrInfo &MCII;
   const MCRegisterInfo &MRI;
-  MCContext &Ctx;
 
   /// \brief Can this operand also contain immediate values?
   bool isSrcOperand(const MCInstrDesc &Desc, unsigned OpNo) const;
@@ -47,7 +46,7 @@ class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
 public:
   SIMCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
                   MCContext &ctx)
-    : MCII(mcii), MRI(mri), Ctx(ctx) { }
+    : MCII(mcii), MRI(mri) { }
 
   ~SIMCCodeEmitter() override {}
 
@@ -250,17 +249,7 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   if (MO.isExpr()) {
     const MCSymbolRefExpr *Expr = cast<MCSymbolRefExpr>(MO.getExpr());
-    MCFixupKind Kind;
-    const MCSymbol *Sym =
-        Ctx.getOrCreateSymbol(StringRef(END_OF_TEXT_LABEL_NAME));
-
-    if (&Expr->getSymbol() == Sym) {
-      // Add the offset to the beginning of the constant values.
-      Kind = (MCFixupKind)AMDGPU::fixup_si_end_of_text;
-    } else {
-      // This is used for constant data stored in .rodata.
-     Kind = (MCFixupKind)AMDGPU::fixup_si_rodata;
-    }
+    MCFixupKind Kind = (MCFixupKind)AMDGPU::fixup_si_rodata;
     Fixups.push_back(MCFixup::create(4, Expr, Kind, MI.getLoc()));
   }
 

@@ -441,8 +441,6 @@ protected:
   /// after the current position.
   SlotIndex getCurrSlot() const;
 
-  const LiveRange *getLiveRange(unsigned Reg) const;
-
   void increaseRegPressure(ArrayRef<unsigned> Regs);
   void decreaseRegPressure(ArrayRef<unsigned> Regs);
 

@@ -21,9 +21,6 @@ enum Fixups {
   /// fixup for global addresses with constant initializers
   fixup_si_rodata,
 
-  /// fixup for offset from instruction to end of text section
-  fixup_si_end_of_text,
-
   // Marker
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

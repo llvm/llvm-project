@@ -1094,20 +1094,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   const GlobalValue *GV = GSD->getGlobal();
   MVT PtrVT = getPointerTy(DAG.getDataLayout(), GSD->getAddressSpace());
 
-  SDValue Ptr = DAG.getNode(AMDGPUISD::CONST_DATA_PTR, DL, PtrVT);
   SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32);
-
-  SDValue PtrLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Ptr,
-                              DAG.getConstant(0, DL, MVT::i32));
-  SDValue PtrHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Ptr,
-                              DAG.getConstant(1, DL, MVT::i32));
-
-  SDValue Lo = DAG.getNode(ISD::ADDC, DL, DAG.getVTList(MVT::i32, MVT::Glue),
-                           PtrLo, GA);
-  SDValue Hi = DAG.getNode(ISD::ADDE, DL, DAG.getVTList(MVT::i32, MVT::Glue),
-                           PtrHi, DAG.getConstant(0, DL, MVT::i32),
-                           SDValue(Lo.getNode(), 1));
-  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
+  return DAG.getNode(AMDGPUISD::CONST_DATA_PTR, DL, PtrVT, GA);
 }
 
 SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
@@ -2436,13 +2424,41 @@ std::pair<unsigned, const TargetRegisterClass *>
 SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                StringRef Constraint,
                                                MVT VT) const {
-  if (Constraint == "r") {
-    switch(VT.SimpleTy) {
-      default: llvm_unreachable("Unhandled type for 'r' inline asm constraint");
-      case MVT::i64:
-        return std::make_pair(0U, &AMDGPU::SGPR_64RegClass);
-      case MVT::i32:
+
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    case 's':
+    case 'r':
+      switch (VT.getSizeInBits()) {
+      default:
+        return std::make_pair(0U, nullptr);
+      case 32:
         return std::make_pair(0U, &AMDGPU::SGPR_32RegClass);
+      case 64:
+        return std::make_pair(0U, &AMDGPU::SGPR_64RegClass);
+      case 128:
+        return std::make_pair(0U, &AMDGPU::SReg_128RegClass);
+      case 256:
+        return std::make_pair(0U, &AMDGPU::SReg_256RegClass);
+      }
+
+    case 'v':
+      switch (VT.getSizeInBits()) {
+      default:
+        return std::make_pair(0U, nullptr);
+      case 32:
+        return std::make_pair(0U, &AMDGPU::VGPR_32RegClass);
+      case 64:
+        return std::make_pair(0U, &AMDGPU::VReg_64RegClass);
+      case 96:
+        return std::make_pair(0U, &AMDGPU::VReg_96RegClass);
+      case 128:
+        return std::make_pair(0U, &AMDGPU::VReg_128RegClass);
+      case 256:
+        return std::make_pair(0U, &AMDGPU::VReg_256RegClass);
+      case 512:
+        return std::make_pair(0U, &AMDGPU::VReg_512RegClass);
+      }
     }
   }
 
@@ -2462,4 +2478,17 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
   }
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
+SITargetLowering::ConstraintType
+SITargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default: break;
+    case 's':
+    case 'v':
+      return C_RegisterClass;
+    }
+  }
+  return TargetLowering::getConstraintType(Constraint);
 }

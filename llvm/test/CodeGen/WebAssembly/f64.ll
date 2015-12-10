@@ -13,6 +13,7 @@ declare double @llvm.floor.f64(double)
 declare double @llvm.trunc.f64(double)
 declare double @llvm.nearbyint.f64(double)
 declare double @llvm.rint.f64(double)
+declare double @llvm.fma.f64(double, double, double)
 
 ; CHECK-LABEL: fadd64:
 ; CHECK-NEXT: .param f64, f64{{$}}
@@ -142,4 +143,12 @@ define double @fmax64(double %x) {
   %a = fcmp ugt double %x, 0.0
   %b = select i1 %a, double %x, double 0.0
   ret double %b
+}
+
+; CHECK-LABEL: fma64:
+; CHECK: call $push0=, fma, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define double @fma64(double %a, double %b, double %c) {
+  %d = call double @llvm.fma.f64(double %a, double %b, double %c)
+  ret double %d
 }

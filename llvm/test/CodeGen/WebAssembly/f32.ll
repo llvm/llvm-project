@@ -13,6 +13,7 @@ declare float @llvm.floor.f32(float)
 declare float @llvm.trunc.f32(float)
 declare float @llvm.nearbyint.f32(float)
 declare float @llvm.rint.f32(float)
+declare float @llvm.fma.f32(float, float, float)
 
 ; CHECK-LABEL: fadd32:
 ; CHECK-NEXT: .param f32, f32{{$}}
@@ -142,4 +143,12 @@ define float @fmax32(float %x) {
   %a = fcmp ugt float %x, 0.0
   %b = select i1 %a, float %x, float 0.0
   ret float %b
+}
+
+; CHECK-LABEL: fma32:
+; CHECK: call $push0=, fmaf, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define float @fma32(float %a, float %b, float %c) {
+  %d = call float @llvm.fma.f32(float %a, float %b, float %c)
+  ret float %d
 }

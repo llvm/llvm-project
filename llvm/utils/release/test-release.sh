@@ -34,7 +34,7 @@ do_rt="yes"
 do_libs="yes"
 do_libunwind="yes"
 do_test_suite="yes"
-do_openmp="no"
+do_openmp="yes"
 BuildDir="`pwd`"
 use_autoconf="no"
 ExtraConfigureFlags=""
@@ -62,7 +62,7 @@ function usage() {
     echo " -no-libs             Disable check-out & build libcxx/libcxxabi/libunwind"
     echo " -no-libunwind        Disable check-out & build libunwind"
     echo " -no-test-suite       Disable check-out & build test-suite"
-    echo " -openmp              Check out and build the OpenMP run-time (experimental)"
+    echo " -no-openmp           Disable check-out & build libomp"
 }
 
 if [ `uname -s` = "Darwin" ]; then
@@ -143,8 +143,8 @@ while [ $# -gt 0 ]; do
         -no-test-suite )
             do_test_suite="no"
             ;;
-        -openmp )
-            do_openmp="yes"
+        -no-openmp )
+            do_openmp="no"
             ;;
         -help | --help | -h | --h | -\? )
             usage
@@ -292,6 +292,9 @@ function export_sources() {
     fi
     if [ -d $BuildDir/compiler-rt.src ] && [ ! -h compiler-rt ]; then
         ln -s ../../compiler-rt.src compiler-rt
+    fi
+    if [ -d $BuildDir/openmp.src ] && [ ! -h openmp ]; then
+        ln -s ../../openmp.src openmp
     fi
     if [ -d $BuildDir/libcxx.src ] && [ ! -h libcxx ]; then
         ln -s ../../libcxx.src libcxx
@@ -443,46 +446,6 @@ function package_release() {
     cd $cwd
 }
 
-# Build and package the OpenMP run-time. This is still experimental and not
-# meant for official testing in the release, but as a way for providing
-# binaries as a convenience to those who want to try it out.
-function build_OpenMP() {
-    cwd=`pwd`
-
-    rm -rf $BuildDir/Phase3/openmp
-    rm -rf $BuildDir/Phase3/openmp.install
-    mkdir -p $BuildDir/Phase3/openmp
-    cd $BuildDir/Phase3/openmp
-    clang=$BuildDir/Phase3/Release/llvmCore-$Release-$RC.install/usr/local/bin/clang
-
-    echo "#" cmake -DCMAKE_C_COMPILER=${clang} -DCMAKE_CXX_COMPILER=${clang}++ \
-            -DCMAKE_BUILD_TYPE=Release -DLIBOMP_MICRO_TESTS=on \
-            $BuildDir/openmp.src/runtime
-    cmake -DCMAKE_C_COMPILER=${clang} -DCMAKE_CXX_COMPILER=${clang}++ \
-            -DCMAKE_BUILD_TYPE=Release -DLIBOMP_MICRO_TESTS=on \
-            $BuildDir/openmp.src/runtime
-
-    echo "# Building OpenMP run-time"
-    echo "# ${MAKE} -j $NumJobs VERBOSE=1"
-    ${MAKE} -j $NumJobs VERBOSE=1
-    echo "# ${MAKE} libomp-micro-tests VERBOSE=1"
-    ${MAKE} libomp-micro-tests VERBOSE=1
-    echo "# ${MAKE} install DESTDIR=$BuildDir/Phase3/openmp.install"
-    ${MAKE} install DESTDIR=$BuildDir/Phase3/openmp.install
-
-    OpenMPPackage=OpenMP-$Release
-    if [ $RC != "final" ]; then
-        OpenMPPackage=$OpenMPPackage-$RC
-    fi
-    OpenMPPackage=$OpenMPPackage-$Triple
-
-    mv $BuildDir/Phase3/openmp.install/usr/local $BuildDir/$OpenMPPackage
-    cd $BuildDir
-    tar cvfJ $BuildDir/$OpenMPPackage.tar.xz $OpenMPPackage
-    mv $OpenMPPackage $BuildDir/Phase3/openmp.install/usr/local
-    cd $cwd
-}
-
 # Exit if any command fails
 # Note: pipefail is necessary for running build commands through
 # a pipe (i.e. it changes the output of ``false | tee /dev/null ; echo $?``)
@@ -593,10 +556,6 @@ for Flavor in $Flavors ; do
         done
     fi
 done
-
-if [ $do_openmp = "yes" ]; then
-  build_OpenMP
-fi
 
 ) 2>&1 | tee $LogDir/testing.$Release-$RC.log
 

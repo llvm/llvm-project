@@ -1,4 +1,4 @@
-//===-- AMDGPUHSATargetObjectFile.h - AMDGPU HSA Object Info ----*- C++ -*-===//
+//===-- AMDGPUTargetObjectFile.h - AMDGPU  Object Info ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,19 +9,26 @@
 ///
 /// \file
 /// \brief This file declares the AMDGPU-specific subclass of
-/// TargetLoweringObjectFile use for targeting the HSA-runtime.
+/// TargetLoweringObjectFile.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUHSATARGETOBJECTFILE_H
-#define LLVM_LIB_TARGET_AMDGPU_AMDGPUHSATARGETOBJECTFILE_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETOBJECTFILE_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETOBJECTFILE_H
 
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
-class AMDGPUHSATargetObjectFile final : public TargetLoweringObjectFileELF {
+class AMDGPUTargetObjectFile : public TargetLoweringObjectFileELF {
+  public:
+    MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+                                      Mangler &Mang,
+                                      const TargetMachine &TM) const override;
+};
+
+class AMDGPUHSATargetObjectFile final : public AMDGPUTargetObjectFile {
 private:
   MCSection *DataGlobalAgentSection;
   MCSection *DataGlobalProgramSection;
