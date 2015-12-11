@@ -3284,9 +3284,6 @@ public:
   bool hasFlexibleArrayMember() const { return HasFlexibleArrayMember; }
   void setHasFlexibleArrayMember(bool V) { HasFlexibleArrayMember = V; }
 
-  bool hasLoadedFieldsFromExternalStorage() const { return LoadedFieldsFromExternalStorage; }
-  void setHasLoadedFieldsFromExternalStorage(bool V) { LoadedFieldsFromExternalStorage = V; }
-
   /// isAnonymousStructOrUnion - Whether this is an anonymous struct
   /// or union. To be an anonymous struct or union, it must have been
   /// declared without a name and there must be no objects of this
