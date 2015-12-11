@@ -8,8 +8,8 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: single_block:
 ; CHECK-NOT: .local
-; CHECK: i32.const $push{{[0-9]+}}=, 0
-; CHECK: i32.store $push[[STORE:[0-9]+]]=, 0($0), $pop{{[0-9]+}}
+; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
+; CHECK: i32.store $push[[STORE:[0-9]+]]=, 0($0), $pop{{[0-9]+}}{{$}}
 ; CHECK: return $pop[[STORE]]{{$}}
 define i32 @single_block(i32* %p) {
 entry:
@@ -26,7 +26,7 @@ entry:
 @pos = global %class.Vec3 zeroinitializer, align 4
 
 ; CHECK-LABEL: foo:
-; CHECK: i32.store $discard=, 0($pop0), $0
+; CHECK: i32.store $discard=, 0($pop0), $0{{$}}
 define void @foo() {
 for.body.i:
   br label %for.body5.i
@@ -44,7 +44,7 @@ for.cond.cleanup4.i:
 }
 
 ; CHECK-LABEL: bar:
-; CHECK: i32.store $discard=, 0($0), $pop0
+; CHECK: i32.store $discard=, 0($0), $pop0{{$}}
 define void @bar() {
 for.body.i:
   br label %for.body5.i

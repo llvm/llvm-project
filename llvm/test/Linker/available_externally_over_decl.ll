@@ -2,8 +2,14 @@
 
 declare void @f()
 
+define available_externally void @g() {
+  ret void
+}
+
 define void ()* @main() {
+  call void @g()
   ret void ()* @f
 }
 
-; CHECK: define available_externally void @f() {
+; CHECK-DAG: define available_externally void @g() {
+; CHECK-DAG: define available_externally void @f() {

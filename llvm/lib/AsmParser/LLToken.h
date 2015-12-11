@@ -218,6 +218,7 @@ namespace lltok {
     DwarfLang,         // DW_LANG_foo
     DwarfOp,           // DW_OP_foo
     DIFlag,            // DIFlagFoo
+    DwarfMacinfo,      // DW_MACINFO_foo
 
     // Type valued tokens (TyVal).
     Type,

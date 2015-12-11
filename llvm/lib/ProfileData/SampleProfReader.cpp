@@ -693,15 +693,27 @@ SampleProfileReader::create(StringRef Filename, LLVMContext &C) {
   auto BufferOrError = setupMemoryBuffer(Filename);
   if (std::error_code EC = BufferOrError.getError())
     return EC;
+  return create(BufferOrError.get(), C);
+}
 
-  auto Buffer = std::move(BufferOrError.get());
+/// \brief Create a sample profile reader based on the format of the input data.
+///
+/// \param B The memory buffer to create the reader from (assumes ownership).
+///
+/// \param Reader The reader to instantiate according to \p Filename's format.
+///
+/// \param C The LLVM context to use to emit diagnostics.
+///
+/// \returns an error code indicating the status of the created reader.
+ErrorOr<std::unique_ptr<SampleProfileReader>>
+SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C) {
   std::unique_ptr<SampleProfileReader> Reader;
-  if (SampleProfileReaderBinary::hasFormat(*Buffer))
-    Reader.reset(new SampleProfileReaderBinary(std::move(Buffer), C));
-  else if (SampleProfileReaderGCC::hasFormat(*Buffer))
-    Reader.reset(new SampleProfileReaderGCC(std::move(Buffer), C));
-  else if (SampleProfileReaderText::hasFormat(*Buffer))
-    Reader.reset(new SampleProfileReaderText(std::move(Buffer), C));
+  if (SampleProfileReaderBinary::hasFormat(*B))
+    Reader.reset(new SampleProfileReaderBinary(std::move(B), C));
+  else if (SampleProfileReaderGCC::hasFormat(*B))
+    Reader.reset(new SampleProfileReaderGCC(std::move(B), C));
+  else if (SampleProfileReaderText::hasFormat(*B))
+    Reader.reset(new SampleProfileReaderText(std::move(B), C));
   else
     return sampleprof_error::unrecognized_format;
 

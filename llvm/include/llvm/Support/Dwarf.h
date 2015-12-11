@@ -625,6 +625,7 @@ const char *GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
 ///
 /// \li \a getTag() returns \a DW_TAG_invalid on invalid input.
 /// \li \a getVirtuality() returns \a DW_VIRTUALITY_invalid on invalid input.
+/// \li \a getMacinfo() returns \a DW_MACINFO_invalid on invalid input.
 ///
 /// @{
 unsigned getTag(StringRef TagString);
@@ -632,6 +633,7 @@ unsigned getOperationEncoding(StringRef OperationEncodingString);
 unsigned getVirtuality(StringRef VirtualityString);
 unsigned getLanguage(StringRef LanguageString);
 unsigned getAttributeEncoding(StringRef EncodingString);
+unsigned getMacinfo(StringRef MacinfoString);
 /// @}
 
 /// \brief Returns the symbolic string representing Val when used as a value

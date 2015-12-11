@@ -367,4 +367,58 @@ define void @test_insert_at_zero(half %a, <8 x half>* %b) #0 {
   ret void
 }
 
+define <8 x i8> @fptosi_i8(<8 x half> %a) #0 {
+; CHECK-LABEL: fptosi_i8:
+; CHECK-DAG: fcvtl   [[LO:v[0-9]+\.4s]], v0.4h
+; CHECK-DAG: fcvtl2  [[HI:v[0-9]+\.4s]], v0.8h
+; CHECK-DAG: fcvtzs  [[LOF32:v[0-9]+\.4s]], [[LO]]
+; CHECK-DAG: xtn     [[I16:v[0-9]+]].4h, [[LOF32]]
+; CHECK-DAG: fcvtzs  [[HIF32:v[0-9]+\.4s]], [[HI]]
+; CHECK-DAG: xtn2    [[I16]].8h, [[HIF32]]
+; CHECK-NEXT: xtn     v0.8b, [[I16]].8h
+; CHECK-NEXT: ret
+  %1 = fptosi<8 x half> %a to <8 x i8>
+  ret <8 x i8> %1
+}
+
+define <8 x i16> @fptosi_i16(<8 x half> %a) #0 {
+; CHECK-LABEL: fptosi_i16:
+; CHECK-DAG: fcvtl   [[LO:v[0-9]+\.4s]], v0.4h
+; CHECK-DAG: fcvtl2  [[HI:v[0-9]+\.4s]], v0.8h
+; CHECK-DAG: fcvtzs  [[LOF32:v[0-9]+\.4s]], [[LO]]
+; CHECK-DAG: xtn     [[I16:v[0-9]+]].4h, [[LOF32]]
+; CHECK-DAG: fcvtzs  [[HIF32:v[0-9]+\.4s]], [[HI]]
+; CHECK-NEXT: xtn2    [[I16]].8h, [[HIF32]]
+; CHECK-NEXT: ret
+  %1 = fptosi<8 x half> %a to <8 x i16>
+  ret <8 x i16> %1
+}
+
+define <8 x i8> @fptoui_i8(<8 x half> %a) #0 {
+; CHECK-LABEL: fptoui_i8:
+; CHECK-DAG: fcvtl   [[LO:v[0-9]+\.4s]], v0.4h
+; CHECK-DAG: fcvtl2  [[HI:v[0-9]+\.4s]], v0.8h
+; CHECK-DAG: fcvtzu  [[LOF32:v[0-9]+\.4s]], [[LO]]
+; CHECK-DAG: xtn     [[I16:v[0-9]+]].4h, [[LOF32]]
+; CHECK-DAG: fcvtzu  [[HIF32:v[0-9]+\.4s]], [[HI]]
+; CHECK-DAG: xtn2    [[I16]].8h, [[HIF32]]
+; CHECK-NEXT: xtn     v0.8b, [[I16]].8h
+; CHECK-NEXT: ret
+  %1 = fptoui<8 x half> %a to <8 x i8>
+  ret <8 x i8> %1
+}
+
+define <8 x i16> @fptoui_i16(<8 x half> %a) #0 {
+; CHECK-LABEL: fptoui_i16:
+; CHECK-DAG: fcvtl   [[LO:v[0-9]+\.4s]], v0.4h
+; CHECK-DAG: fcvtl2  [[HI:v[0-9]+\.4s]], v0.8h
+; CHECK-DAG: fcvtzu  [[LOF32:v[0-9]+\.4s]], [[LO]]
+; CHECK-DAG: xtn     [[I16:v[0-9]+]].4h, [[LOF32]]
+; CHECK-DAG: fcvtzu  [[HIF32:v[0-9]+\.4s]], [[HI]]
+; CHECK-NEXT: xtn2    [[I16]].8h, [[HIF32]]
+; CHECK-NEXT: ret
+  %1 = fptoui<8 x half> %a to <8 x i16>
+  ret <8 x i16> %1
+}
+
 attributes #0 = { nounwind }

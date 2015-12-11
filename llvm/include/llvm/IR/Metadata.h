@@ -83,7 +83,9 @@ public:
     DIImportedEntityKind,
     ConstantAsMetadataKind,
     LocalAsMetadataKind,
-    MDStringKind
+    MDStringKind,
+    DIMacroKind,
+    DIMacroFileKind
   };
 
 protected:

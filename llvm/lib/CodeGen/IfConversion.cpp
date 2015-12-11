@@ -1679,15 +1679,6 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
         BranchProbability::getZero());
   }
 
-  if (AddEdges && ToBBI.BB->isSuccessor(FromBBI.BB)) {
-    // Set the edge probability from ToBBI.BB to FromBBI.BB to zero to avoid the
-    // edge probability being merged to other edges when this edge is removed
-    // later.
-    ToBBI.BB->setSuccProbability(
-        std::find(ToBBI.BB->succ_begin(), ToBBI.BB->succ_end(), FromBBI.BB),
-        BranchProbability::getZero());
-  }
-
   for (unsigned i = 0, e = FromSuccs.size(); i != e; ++i) {
     MachineBasicBlock *Succ = FromSuccs[i];
     // Fallthrough edge can't be transferred.

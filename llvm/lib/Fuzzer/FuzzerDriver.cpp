@@ -32,23 +32,30 @@ struct FlagDescription {
   int   Default;
   int   *IntFlag;
   const char **StrFlag;
+  unsigned int *UIntFlag;
 };
 
 struct {
 #define FUZZER_FLAG_INT(Name, Default, Description) int Name;
+#define FUZZER_FLAG_UNSIGNED(Name, Default, Description) unsigned int Name;
 #define FUZZER_FLAG_STRING(Name, Description) const char *Name;
 #include "FuzzerFlags.def"
 #undef FUZZER_FLAG_INT
+#undef FUZZER_FLAG_UNSIGNED
 #undef FUZZER_FLAG_STRING
 } Flags;
 
 static const FlagDescription FlagDescriptions [] {
 #define FUZZER_FLAG_INT(Name, Default, Description)                            \
-  { #Name, Description, Default, &Flags.Name, nullptr},
+  {#Name, Description, Default, &Flags.Name, nullptr, nullptr},
+#define FUZZER_FLAG_UNSIGNED(Name, Default, Description)                       \
+  {#Name,   Description, static_cast<int>(Default),                            \
+   nullptr, nullptr, &Flags.Name},
 #define FUZZER_FLAG_STRING(Name, Description)                                  \
-  { #Name, Description, 0, nullptr, &Flags.Name },
+  {#Name, Description, 0, nullptr, &Flags.Name, nullptr},
 #include "FuzzerFlags.def"
 #undef FUZZER_FLAG_INT
+#undef FUZZER_FLAG_UNSIGNED
 #undef FUZZER_FLAG_STRING
 };
 
@@ -106,6 +113,12 @@ static bool ParseOneFlag(const char *Param) {
         if (Flags.verbosity >= 2)
           Printf("Flag: %s %d\n", Name, Val);;
         return true;
+      } else if (FlagDescriptions[F].UIntFlag) {
+        unsigned int Val = std::stoul(Str);
+        *FlagDescriptions[F].UIntFlag = Val;
+        if (Flags.verbosity >= 2)
+          Printf("Flag: %s %u\n", Name, Val);
+        return true;
       } else if (FlagDescriptions[F].StrFlag) {
         *FlagDescriptions[F].StrFlag = Str;
         if (Flags.verbosity >= 2)
@@ -123,6 +136,9 @@ static void ParseFlags(const std::vector<std::string> &Args) {
   for (size_t F = 0; F < kNumFlags; F++) {
     if (FlagDescriptions[F].IntFlag)
       *FlagDescriptions[F].IntFlag = FlagDescriptions[F].Default;
+    if (FlagDescriptions[F].UIntFlag)
+      *FlagDescriptions[F].UIntFlag =
+          static_cast<unsigned int>(FlagDescriptions[F].Default);
     if (FlagDescriptions[F].StrFlag)
       *FlagDescriptions[F].StrFlag = nullptr;
   }

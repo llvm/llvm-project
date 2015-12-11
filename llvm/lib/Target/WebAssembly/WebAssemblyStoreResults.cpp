@@ -71,6 +71,7 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
+  bool Changed = false;
 
   assert(MRI.isSSA() && "StoreResults depends on SSA form");
 
@@ -108,6 +109,7 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
             if (&MI == Where || !MDT.dominates(&MI, Where))
               continue;
           }
+          Changed = true;
           DEBUG(dbgs() << "Setting operand " << O << " in " << *Where
                        << " from " << MI << "\n");
           O.setReg(ToReg);
@@ -115,5 +117,5 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
       }
   }
 
-  return true;
+  return Changed;
 }

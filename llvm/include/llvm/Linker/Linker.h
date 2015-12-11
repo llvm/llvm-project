@@ -10,11 +10,9 @@
 #ifndef LLVM_LINKER_LINKER_H
 #define LLVM_LINKER_LINKER_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/FunctionInfo.h"
+#include "llvm/Linker/IRMover.h"
 
 namespace llvm {
 class Module;
@@ -26,41 +24,9 @@ class Type;
 /// module since it is assumed that the user of this class will want to do
 /// something with it after the linking.
 class Linker {
+  IRMover Mover;
+
 public:
-  struct StructTypeKeyInfo {
-    struct KeyTy {
-      ArrayRef<Type *> ETypes;
-      bool IsPacked;
-      KeyTy(ArrayRef<Type *> E, bool P);
-      KeyTy(const StructType *ST);
-      bool operator==(const KeyTy &that) const;
-      bool operator!=(const KeyTy &that) const;
-    };
-    static StructType *getEmptyKey();
-    static StructType *getTombstoneKey();
-    static unsigned getHashValue(const KeyTy &Key);
-    static unsigned getHashValue(const StructType *ST);
-    static bool isEqual(const KeyTy &LHS, const StructType *RHS);
-    static bool isEqual(const StructType *LHS, const StructType *RHS);
-  };
-
-  typedef DenseSet<StructType *, StructTypeKeyInfo> NonOpaqueStructTypeSet;
-  typedef DenseSet<StructType *> OpaqueStructTypeSet;
-
-  struct IdentifiedStructTypeSet {
-    // The set of opaque types is the composite module.
-    OpaqueStructTypeSet OpaqueStructTypes;
-
-    // The set of identified but non opaque structures in the composite module.
-    NonOpaqueStructTypeSet NonOpaqueStructTypes;
-
-    void addNonOpaque(StructType *Ty);
-    void switchToNonOpaque(StructType *Ty);
-    void addOpaque(StructType *Ty);
-    StructType *findNonOpaque(ArrayRef<Type *> ETypes, bool IsPacked);
-    bool hasType(StructType *Ty);
-  };
-
   enum Flags {
     None = 0,
     OverrideFromSrc = (1 << 0),
@@ -88,15 +54,8 @@ public:
                           unsigned Flags = Flags::None);
 
   DiagnosticHandlerFunction getDiagnosticHandler() const {
-    return DiagnosticHandler;
+    return Mover.getDiagnosticHandler();
   }
-
-private:
-  Module &Composite;
-
-  IdentifiedStructTypeSet IdentifiedStructTypes;
-
-  DiagnosticHandlerFunction DiagnosticHandler;
 };
 
 /// Create a new module with exported local functions renamed and promoted

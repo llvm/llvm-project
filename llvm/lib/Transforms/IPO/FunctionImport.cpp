@@ -126,7 +126,7 @@ static void findExternalCalls(const Module &DestModule, Function &F,
         if (SrcGV) {
           assert(isa<Function>(SrcGV) && "Name collision during import");
           if (!cast<Function>(SrcGV)->isDeclaration()) {
-            DEBUG(dbgs() << DestModule.getModuleIdentifier() << "Ignoring "
+            DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": Ignoring "
                          << ImportedName << " already in DestinationModule\n");
             continue;
           }
@@ -134,7 +134,7 @@ static void findExternalCalls(const Module &DestModule, Function &F,
 
         Worklist.push_back(It.first->getKey());
         DEBUG(dbgs() << DestModule.getModuleIdentifier()
-                     << " Adding callee for : " << ImportedName << " : "
+                     << ": Adding callee for : " << ImportedName << " : "
                      << F.getName() << "\n");
       }
     }
@@ -157,13 +157,13 @@ static void GetImportList(
     const FunctionInfoIndex &Index, ModuleLazyLoaderCache &ModuleLoaderCache) {
   while (!Worklist.empty()) {
     auto CalledFunctionName = Worklist.pop_back_val();
-    DEBUG(dbgs() << DestModule.getModuleIdentifier() << "Process import for "
+    DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": Process import for "
                  << CalledFunctionName << "\n");
 
     // Try to get a summary for this function call.
     auto InfoList = Index.findFunctionInfoList(CalledFunctionName);
     if (InfoList == Index.end()) {
-      DEBUG(dbgs() << DestModule.getModuleIdentifier() << "No summary for "
+      DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": No summary for "
                    << CalledFunctionName << " Ignoring.\n");
       continue;
     }
@@ -177,13 +177,13 @@ static void GetImportList(
     if (!Summary) {
       // FIXME: in case we are lazyloading summaries, we can do it now.
       DEBUG(dbgs() << DestModule.getModuleIdentifier()
-                   << " Missing summary for  " << CalledFunctionName
+                   << ": Missing summary for  " << CalledFunctionName
                    << ", error at import?\n");
       llvm_unreachable("Missing summary");
     }
 
     if (Summary->instCount() > ImportInstrLimit) {
-      DEBUG(dbgs() << DestModule.getModuleIdentifier() << " Skip import of "
+      DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": Skip import of "
                    << CalledFunctionName << " with " << Summary->instCount()
                    << " instructions (limit " << ImportInstrLimit << ")\n");
       continue;
@@ -191,7 +191,7 @@ static void GetImportList(
 
     // Get the module path from the summary.
     auto ModuleIdentifier = Summary->modulePath();
-    DEBUG(dbgs() << DestModule.getModuleIdentifier() << " Importing "
+    DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": Importing "
                  << CalledFunctionName << " from " << ModuleIdentifier << "\n");
 
     auto &SrcModule = ModuleLoaderCache(ModuleIdentifier);
@@ -229,7 +229,7 @@ static void GetImportList(
     // semantics.
     if (SGV->hasWeakAnyLinkage()) {
       DEBUG(dbgs() << DestModule.getModuleIdentifier()
-                   << " Ignoring import request for weak-any "
+                   << ": Ignoring import request for weak-any "
                    << (isa<Function>(SGV) ? "function " : "alias ")
                    << CalledFunctionName << " from "
                    << SrcModule.getModuleIdentifier() << "\n");

@@ -58,6 +58,8 @@ public:
     insert(Start, End);
   }
 
+  ArrayRef<T> getArrayRef() const { return vector_; }
+
   /// \brief Determine if the SetVector is empty or not.
   bool empty() const {
     return vector_.empty();

@@ -792,6 +792,49 @@ template <> struct MDNodeKeyImpl<DIImportedEntity> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIMacro> {
+  unsigned MIType;
+  unsigned Line;
+  StringRef Name;
+  StringRef Value;
+
+  MDNodeKeyImpl(unsigned MIType, unsigned Line, StringRef Name, StringRef Value)
+      : MIType(MIType), Line(Line), Name(Name), Value(Value) {}
+  MDNodeKeyImpl(const DIMacro *N)
+      : MIType(N->getMacinfoType()), Line(N->getLine()), Name(N->getName()),
+        Value(N->getValue()) {}
+
+  bool isKeyOf(const DIMacro *RHS) const {
+    return MIType == RHS->getMacinfoType() && Line == RHS->getLine() &&
+           Name == RHS->getName() && Value == RHS->getValue();
+  }
+  unsigned getHashValue() const {
+    return hash_combine(MIType, Line, Name, Value);
+  }
+};
+
+template <> struct MDNodeKeyImpl<DIMacroFile> {
+  unsigned MIType;
+  unsigned Line;
+  Metadata *File;
+  Metadata *Elements;
+
+  MDNodeKeyImpl(unsigned MIType, unsigned Line, Metadata *File,
+                Metadata *Elements)
+      : MIType(MIType), Line(Line), File(File), Elements(Elements) {}
+  MDNodeKeyImpl(const DIMacroFile *N)
+      : MIType(N->getMacinfoType()), Line(N->getLine()), File(N->getRawFile()),
+        Elements(N->getRawElements()) {}
+
+  bool isKeyOf(const DIMacroFile *RHS) const {
+    return MIType == RHS->getMacinfoType() && Line == RHS->getLine() &&
+           File == RHS->getRawFile() && File == RHS->getRawElements();
+  }
+  unsigned getHashValue() const {
+    return hash_combine(MIType, Line, File, Elements);
+  }
+};
+
 /// \brief DenseMapInfo for MDNode subclasses.
 template <class NodeTy> struct MDNodeInfo {
   typedef MDNodeKeyImpl<NodeTy> KeyTy;

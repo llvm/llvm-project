@@ -267,6 +267,10 @@ public:
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(StringRef Filename, LLVMContext &C);
 
+  /// \brief Create a sample profile reader from the supplied memory buffer.
+  static ErrorOr<std::unique_ptr<SampleProfileReader>>
+  create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C);
+
 protected:
   /// \brief Map every function to its associated profile.
   ///

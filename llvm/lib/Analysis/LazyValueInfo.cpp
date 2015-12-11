@@ -105,7 +105,12 @@ public:
     Res.markConstantRange(CR);
     return Res;
   }
-
+  static LVILatticeVal getOverdefined() {
+    LVILatticeVal Res;
+    Res.markOverdefined();
+    return Res;
+  }
+  
   bool isUndefined() const     { return Tag == undefined; }
   bool isConstant() const      { return Tag == constant; }
   bool isNotConstant() const   { return Tag == notconstant; }
@@ -316,6 +321,8 @@ namespace {
     /// This is all of the cached block information for exactly one Value*.
     /// The entries are sorted by the BasicBlock* of the
     /// entries, allowing us to do a lookup with a binary search.
+    /// Over-defined lattice values are recorded in OverDefinedCache to reduce
+    /// memory overhead.
     typedef SmallDenseMap<AssertingVH<BasicBlock>, LVILatticeVal, 4>
         ValueCacheEntryTy;
 
@@ -324,8 +331,7 @@ namespace {
     std::map<LVIValueHandle, ValueCacheEntryTy> ValueCache;
 
     /// This tracks, on a per-block basis, the set of values that are
-    /// over-defined at the end of that block.  This is required
-    /// for cache updating.
+    /// over-defined at the end of that block.
     typedef DenseMap<AssertingVH<BasicBlock>, SmallPtrSet<Value *, 4>>
         OverDefinedCacheTy;
     OverDefinedCacheTy OverDefinedCache;
@@ -360,9 +366,13 @@ namespace {
 
     void insertResult(Value *Val, BasicBlock *BB, const LVILatticeVal &Result) {
       SeenBlocks.insert(BB);
-      lookup(Val)[BB] = Result;
+
+      // Insert over-defined values into their own cache to reduce memory
+      // overhead.
       if (Result.isOverdefined())
         OverDefinedCache[BB].insert(Val);
+      else
+        lookup(Val)[BB] = Result;
     }
 
     LVILatticeVal getBlockValue(Value *Val, BasicBlock *BB);
@@ -390,6 +400,34 @@ namespace {
       return ValueCache[LVIValueHandle(V, this)];
     }
 
+    bool isOverdefined(Value *V, BasicBlock *BB) const {
+      auto ODI = OverDefinedCache.find(BB);
+
+      if (ODI == OverDefinedCache.end())
+        return false;
+
+      return ODI->second.count(V);
+    }
+
+    bool hasCachedValueInfo(Value *V, BasicBlock *BB) {
+      if (isOverdefined(V, BB))
+        return true;
+
+      LVIValueHandle ValHandle(V, this);
+      auto I = ValueCache.find(ValHandle);
+      if (I == ValueCache.end())
+        return false;
+
+      return I->second.count(BB);
+    }
+
+    LVILatticeVal getCachedValueInfo(Value *V, BasicBlock *BB) {
+      if (isOverdefined(V, BB))
+        return LVILatticeVal::getOverdefined();
+
+      return lookup(V)[BB];
+    }
+    
   public:
     /// This is the query interface to determine the lattice
     /// value for the specified Value* at the end of the specified block.
@@ -467,7 +505,8 @@ void LazyValueInfoCache::solve() {
     if (solveBlockValue(e.second, e.first)) {
       // The work item was completely processed.
       assert(BlockValueStack.top() == e && "Nothing should have been pushed!");
-      assert(lookup(e.second).count(e.first) && "Result should be in cache!");
+      assert(hasCachedValueInfo(e.second, e.first) &&
+             "Result should be in cache!");
 
       BlockValueStack.pop();
       BlockValueSet.erase(e);
@@ -483,10 +522,7 @@ bool LazyValueInfoCache::hasBlockValue(Value *Val, BasicBlock *BB) {
   if (isa<Constant>(Val))
     return true;
 
-  LVIValueHandle ValHandle(Val, this);
-  auto I = ValueCache.find(ValHandle);
-  if (I == ValueCache.end()) return false;
-  return I->second.count(BB);
+  return hasCachedValueInfo(Val, BB);
 }
 
 LVILatticeVal LazyValueInfoCache::getBlockValue(Value *Val, BasicBlock *BB) {
@@ -495,7 +531,7 @@ LVILatticeVal LazyValueInfoCache::getBlockValue(Value *Val, BasicBlock *BB) {
     return LVILatticeVal::get(VC);
 
   SeenBlocks.insert(BB);
-  return lookup(Val)[BB];
+  return getCachedValueInfo(Val, BB);
 }
 
 static LVILatticeVal getFromRangeMetadata(Instruction *BBI) {
@@ -521,10 +557,10 @@ bool LazyValueInfoCache::solveBlockValue(Value *Val, BasicBlock *BB) {
   if (isa<Constant>(Val))
     return true;
 
-  if (lookup(Val).count(BB)) {
+  if (hasCachedValueInfo(Val, BB)) {
     // If we have a cached value, use that.
     DEBUG(dbgs() << "  reuse BB '" << BB->getName()
-                 << "' val=" << lookup(Val)[BB] << '\n');
+                 << "' val=" << getCachedValueInfo(Val, BB) << '\n');
 
     // Since we're reusing a cached value, we don't need to update the
     // OverDefinedCache. The cache will have been properly updated whenever the
@@ -1106,12 +1142,6 @@ void LazyValueInfoCache::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
       if (!ValueSet.count(V))
         continue;
 
-      // Remove it from the caches.
-      ValueCacheEntryTy &Entry = ValueCache[LVIValueHandle(V, this)];
-      ValueCacheEntryTy::iterator CI = Entry.find(ToUpdate);
-
-      assert(CI != Entry.end() && "Couldn't find entry to update?");
-      Entry.erase(CI);
       ValueSet.erase(V);
       if (ValueSet.empty())
         OverDefinedCache.erase(OI);

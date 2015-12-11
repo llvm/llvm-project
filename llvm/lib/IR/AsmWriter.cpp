@@ -1397,6 +1397,7 @@ struct MDFieldPrinter {
       : Out(Out), TypePrinter(TypePrinter), Machine(Machine), Context(Context) {
   }
   void printTag(const DINode *N);
+  void printMacinfoType(const DIMacroNode *N);
   void printString(StringRef Name, StringRef Value,
                    bool ShouldSkipEmpty = true);
   void printMetadata(StringRef Name, const Metadata *MD,
@@ -1417,6 +1418,14 @@ void MDFieldPrinter::printTag(const DINode *N) {
     Out << Tag;
   else
     Out << N->getTag();
+}
+
+void MDFieldPrinter::printMacinfoType(const DIMacroNode *N) {
+  Out << FS << "type: ";
+  if (const char *Type = dwarf::MacinfoString(N->getMacinfoType()))
+    Out << Type;
+  else
+    Out << N->getMacinfoType();
 }
 
 void MDFieldPrinter::printString(StringRef Name, StringRef Value,
@@ -1644,6 +1653,7 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printMetadata("subprograms", N->getRawSubprograms());
   Printer.printMetadata("globals", N->getRawGlobalVariables());
   Printer.printMetadata("imports", N->getRawImportedEntities());
+  Printer.printMetadata("macros", N->getRawMacros());
   Printer.printInt("dwoId", N->getDWOId());
   Out << ")";
 }
@@ -1709,6 +1719,29 @@ static void writeDINamespace(raw_ostream &Out, const DINamespace *N,
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
+  Out << ")";
+}
+
+static void writeDIMacro(raw_ostream &Out, const DIMacro *N,
+                         TypePrinting *TypePrinter, SlotTracker *Machine,
+                         const Module *Context) {
+  Out << "!DIMacro(";
+  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
+  Printer.printMacinfoType(N);
+  Printer.printInt("line", N->getLine());
+  Printer.printString("name", N->getName());
+  Printer.printString("value", N->getValue());
+  Out << ")";
+}
+
+static void writeDIMacroFile(raw_ostream &Out, const DIMacroFile *N,
+                             TypePrinting *TypePrinter, SlotTracker *Machine,
+                             const Module *Context) {
+  Out << "!DIMacroFile(";
+  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
+  Printer.printInt("line", N->getLine());
+  Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
+  Printer.printMetadata("nodes", N->getRawElements());
   Out << ")";
 }
 

@@ -15,7 +15,7 @@
 
 namespace fuzzer {
 
-void FuzzerRandomLibc::ResetSeed(int seed) { srand(seed); }
+void FuzzerRandomLibc::ResetSeed(unsigned int seed) { srand(seed); }
 
 size_t FuzzerRandomLibc::Rand() { return rand(); }
 

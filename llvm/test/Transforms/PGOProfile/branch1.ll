@@ -1,6 +1,6 @@
 ; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
-; RUN: llvm-profdata merge %S/Inputs/branch1.proftext -o %T/branch1.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%T/branch1.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: llvm-profdata merge %S/Inputs/branch1.proftext -o %t.profdata
+; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

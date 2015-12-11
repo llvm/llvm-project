@@ -130,7 +130,6 @@ define <4 x i16> @bitcast_h_to_i(float, <4 x half> %a) {
   ret <4 x i16> %2
 }
 
-
 define <4 x half> @sitofp_i8(<4 x i8> %a) #0 {
 ; CHECK-LABEL: sitofp_i8:
 ; CHECK-NEXT: shl [[OP1:v[0-9]+\.4h]], v0.4h, #8
@@ -225,6 +224,47 @@ define void @test_insert_at_zero(half %a, <4 x half>* %b) #0 {
   %1 = insertelement <4 x half> undef, half %a, i64 0
   store <4 x half> %1, <4 x half>* %b, align 4
   ret void
+}
+
+define <4 x i8> @fptosi_i8(<4 x half> %a) #0 {
+; CHECK-LABEL: fptosi_i8:
+; CHECK-NEXT: fcvtl  [[REG1:v[0-9]+\.4s]], v0.4h
+; CHECK-NEXT: fcvtzs [[REG2:v[0-9]+\.4s]], [[REG1]]
+; CHECK-NEXT: xtn    v0.4h, [[REG2]]
+; CHECK-NEXT: ret
+  %1 = fptosi<4 x half> %a to <4 x i8>
+  ret <4 x i8> %1
+}
+
+define <4 x i16> @fptosi_i16(<4 x half> %a) #0 {
+; CHECK-LABEL: fptosi_i16:
+; CHECK-NEXT: fcvtl  [[REG1:v[0-9]+\.4s]], v0.4h
+; CHECK-NEXT: fcvtzs [[REG2:v[0-9]+\.4s]], [[REG1]]
+; CHECK-NEXT: xtn    v0.4h, [[REG2]]
+; CHECK-NEXT: ret
+  %1 = fptosi<4 x half> %a to <4 x i16>
+  ret <4 x i16> %1
+}
+
+define <4 x i8> @fptoui_i8(<4 x half> %a) #0 {
+; CHECK-LABEL: fptoui_i8:
+; CHECK-NEXT: fcvtl  [[REG1:v[0-9]+\.4s]], v0.4h
+; NOTE: fcvtzs selected here because the xtn shaves the sign bit
+; CHECK-NEXT: fcvtzs [[REG2:v[0-9]+\.4s]], [[REG1]]
+; CHECK-NEXT: xtn    v0.4h, [[REG2]]
+; CHECK-NEXT: ret
+  %1 = fptoui<4 x half> %a to <4 x i8>
+  ret <4 x i8> %1
+}
+
+define <4 x i16> @fptoui_i16(<4 x half> %a) #0 {
+; CHECK-LABEL: fptoui_i16:
+; CHECK-NEXT: fcvtl  [[REG1:v[0-9]+\.4s]], v0.4h
+; CHECK-NEXT: fcvtzu [[REG2:v[0-9]+\.4s]], [[REG1]]
+; CHECK-NEXT: xtn    v0.4h, [[REG2]]
+; CHECK-NEXT: ret
+  %1 = fptoui<4 x half> %a to <4 x i16>
+  ret <4 x i16> %1
 }
 
 attributes #0 = { nounwind }

@@ -315,7 +315,7 @@ DICompileUnit *DICompileUnit::getImpl(
     unsigned RuntimeVersion, MDString *SplitDebugFilename,
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
     Metadata *Subprograms, Metadata *GlobalVariables,
-    Metadata *ImportedEntities, uint64_t DWOId,
+    Metadata *ImportedEntities, Metadata *Macros, uint64_t DWOId,
     StorageType Storage, bool ShouldCreate) {
   assert(Storage != Uniqued && "Cannot unique DICompileUnit");
   assert(isCanonical(Producer) && "Expected canonical MDString");
@@ -324,7 +324,7 @@ DICompileUnit *DICompileUnit::getImpl(
 
   Metadata *Ops[] = {File, Producer, Flags, SplitDebugFilename, EnumTypes,
                      RetainedTypes, Subprograms, GlobalVariables,
-                     ImportedEntities};
+                     ImportedEntities, Macros};
   return storeImpl(new (ArrayRef<Metadata *>(Ops).size()) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, Ops),
@@ -557,3 +557,24 @@ DIImportedEntity *DIImportedEntity::getImpl(LLVMContext &Context, unsigned Tag,
   Metadata *Ops[] = {Scope, Entity, Name};
   DEFINE_GETIMPL_STORE(DIImportedEntity, (Tag, Line), Ops);
 }
+
+DIMacro *DIMacro::getImpl(LLVMContext &Context, unsigned MIType,
+                          unsigned Line, MDString *Name, MDString *Value,
+                          StorageType Storage, bool ShouldCreate) {
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DIMacro,
+                        (MIType, Line, getString(Name), getString(Value)));
+  Metadata *Ops[] = { Name, Value };
+  DEFINE_GETIMPL_STORE(DIMacro, (MIType, Line), Ops);
+}
+
+DIMacroFile *DIMacroFile::getImpl(LLVMContext &Context, unsigned MIType,
+                                  unsigned Line, Metadata *File,
+                                  Metadata *Elements, StorageType Storage,
+                                  bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIMacroFile,
+                        (MIType, Line, File, Elements));
+  Metadata *Ops[] = { File, Elements };
+  DEFINE_GETIMPL_STORE(DIMacroFile, (MIType, Line), Ops);
+}
+

@@ -50,7 +50,7 @@ class FuzzerRandomBase {
  public:
   FuzzerRandomBase(){}
   virtual ~FuzzerRandomBase(){};
-  virtual void ResetSeed(int seed) = 0;
+  virtual void ResetSeed(unsigned int seed) = 0;
   // Return a random number.
   virtual size_t Rand() = 0;
   // Return a random number in range [0,n).
@@ -60,8 +60,8 @@ class FuzzerRandomBase {
 
 class FuzzerRandomLibc : public FuzzerRandomBase {
  public:
-  FuzzerRandomLibc(int seed) { ResetSeed(seed); }
-  void ResetSeed(int seed) override;
+  FuzzerRandomLibc(unsigned int seed) { ResetSeed(seed); }
+  void ResetSeed(unsigned int seed) override;
   ~FuzzerRandomLibc() override {}
   size_t Rand() override;
 };
