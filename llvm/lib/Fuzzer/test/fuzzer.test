@@ -48,8 +48,8 @@ RUN: not LLVMFuzzer-SimpleCmpTest -use_traces=1 -seed=1 -runs=1000000 -timeout=5
 
 RUN: not LLVMFuzzer-UserSuppliedFuzzerTest -seed=1 -timeout=15 2>&1 | FileCheck %s
 
-RUN: not LLVMFuzzer-MemcmpTest -use_traces=1 -seed=1 -runs=100000   2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-MemcmpTest               -seed=1 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
+RUN: not LLVMFuzzer-MemcmpTest -use_traces=1 -seed=4294967295 -runs=100000   2>&1 | FileCheck %s
+RUN:     LLVMFuzzer-MemcmpTest               -seed=4294967295 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
 Done1000000: Done 1000000 runs in
 
 RUN: not LLVMFuzzer-StrncmpTest -use_traces=1 -seed=1 -runs=100000   2>&1 | FileCheck %s

@@ -473,6 +473,16 @@ const char *llvm::dwarf::MacinfoString(unsigned Encoding) {
   return nullptr;
 }
 
+unsigned llvm::dwarf::getMacinfo(StringRef MacinfoString) {
+  return StringSwitch<unsigned>(MacinfoString)
+      .Case("DW_MACINFO_define", DW_MACINFO_define)
+      .Case("DW_MACINFO_undef", DW_MACINFO_undef)
+      .Case("DW_MACINFO_start_file", DW_MACINFO_start_file)
+      .Case("DW_MACINFO_end_file", DW_MACINFO_end_file)
+      .Case("DW_MACINFO_vendor_ext", DW_MACINFO_vendor_ext)
+      .Default(DW_MACINFO_invalid);
+}
+
 const char *llvm::dwarf::CallFrameString(unsigned Encoding) {
   switch (Encoding) {
   case DW_CFA_nop:                       return "DW_CFA_nop";

@@ -66,7 +66,7 @@ define void @X_i16(i16 * %t) {
 
 ; CHECK-LABEL: X_ptr:
 ; CHECK: foo $1{{$}}
-; CHECK: i32.store $discard=, 0($0), $1
+; CHECK: i32.store $discard=, 0($0), $1{{$}}
 define void @X_ptr(i16 ** %t) {
   call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16** %t)
   ret void

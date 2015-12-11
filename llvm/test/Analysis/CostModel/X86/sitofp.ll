@@ -248,13 +248,13 @@ define <2 x double> @sitofpv2i64v2double(<2 x i64> %a) {
   ; SSE2: cost of 20 {{.*}} sitofp
   ;
   ; AVX1-LABEL: sitofpv2i64v2double
-  ; AVX1: cost of 4 {{.*}} sitofp
+  ; AVX1: cost of 20 {{.*}} sitofp
   ;
   ; AVX2-LABEL: sitofpv2i64v2double
-  ; AVX2: cost of 4 {{.*}} sitofp
+  ; AVX2: cost of 20 {{.*}} sitofp
   ;
   ; AVX512F-LABEL: sitofpv2i64v2double
-  ; AVX512F: cost of 4 {{.*}} sitofp
+  ; AVX512F: cost of 20 {{.*}} sitofp
   %1 = sitofp <2 x i64> %a to <2 x double>
   ret <2 x double> %1
 }

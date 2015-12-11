@@ -1036,7 +1036,7 @@ entry:
 ; CHECK-DAG: mfvsrd [[MOV:[0-9]+]],
 ; CHECK-DAG: li [[IMM3:[0-9]+]], 3
 ; CHECK-DAG: andc [[ANDC:[0-9]+]], [[IMM3]]
-; CHECK-DAG: rldicr [[SHL:[0-9]+]], [[ANDC]], 4, 60
+; CHECK-DAG: sldi [[SHL:[0-9]+]], [[ANDC]], 4
 ; CHECK-DAG: srd 3, [[MOV]], [[SHL]]
 ; CHECK-DAG: extsh 3, 3
 ; CHECK-LE-LABEL: @getvelss
@@ -1072,7 +1072,7 @@ entry:
 ; CHECK-DAG: mfvsrd [[MOV:[0-9]+]],
 ; CHECK-DAG: li [[IMM3:[0-9]+]], 3
 ; CHECK-DAG: andc [[ANDC:[0-9]+]], [[IMM3]]
-; CHECK-DAG: rldicr [[SHL:[0-9]+]], [[ANDC]], 4, 60
+; CHECK-DAG: sldi [[SHL:[0-9]+]], [[ANDC]], 4
 ; CHECK-DAG: srd 3, [[MOV]], [[SHL]]
 ; CHECK-DAG: clrldi   3, 3, 48
 ; CHECK-LE-LABEL: @getvelus

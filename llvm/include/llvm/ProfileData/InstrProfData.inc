@@ -362,6 +362,7 @@ uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record);
 ValueProfData *
 serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
                              ValueProfData *Dst);
+uint32_t getNumValueKindsRT(const void *R);
 
 #undef INSTR_PROF_VALUE_PROF_DATA
 #endif  /* INSTR_PROF_VALUE_PROF_DATA */ 

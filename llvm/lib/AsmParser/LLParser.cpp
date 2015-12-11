@@ -3287,6 +3287,11 @@ struct DwarfTagField : public MDUnsignedField {
   DwarfTagField(dwarf::Tag DefaultTag)
       : MDUnsignedField(DefaultTag, dwarf::DW_TAG_hi_user) {}
 };
+struct DwarfMacinfoTypeField : public MDUnsignedField {
+  DwarfMacinfoTypeField() : MDUnsignedField(0, dwarf::DW_MACINFO_vendor_ext) {}
+  DwarfMacinfoTypeField(dwarf::MacinfoRecordType DefaultType)
+    : MDUnsignedField(DefaultType, dwarf::DW_MACINFO_vendor_ext) {}
+};
 struct DwarfAttEncodingField : public MDUnsignedField {
   DwarfAttEncodingField() : MDUnsignedField(0, dwarf::DW_ATE_hi_user) {}
 };
@@ -3374,6 +3379,26 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name, DwarfTagField &Result) {
   assert(Tag <= Result.Max && "Expected valid DWARF tag");
 
   Result.assign(Tag);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
+                            DwarfMacinfoTypeField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return ParseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfMacinfo)
+    return TokError("expected DWARF macinfo type");
+
+  unsigned Macinfo = dwarf::getMacinfo(Lex.getStrVal());
+  if (Macinfo == dwarf::DW_MACINFO_invalid)
+    return TokError(
+        "invalid DWARF macinfo type" + Twine(" '") + Lex.getStrVal() + "'");
+  assert(Macinfo <= Result.Max && "Expected valid DWARF macinfo type");
+
+  Result.assign(Macinfo);
   Lex.Lex();
   return false;
 }
@@ -3790,7 +3815,7 @@ bool LLParser::ParseDIFile(MDNode *&Result, bool IsDistinct) {
 ///                      isOptimized: true, flags: "-O2", runtimeVersion: 1,
 ///                      splitDebugFilename: "abc.debug", emissionKind: 1,
 ///                      enums: !1, retainedTypes: !2, subprograms: !3,
-///                      globals: !4, imports: !5, dwoId: 0x0abcd)
+///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd)
 bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return Lex.Error("missing 'distinct', required for !DICompileUnit");
@@ -3809,6 +3834,7 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(subprograms, MDField, );                                            \
   OPTIONAL(globals, MDField, );                                                \
   OPTIONAL(imports, MDField, );                                                \
+  OPTIONAL(macros, MDField, );                                                 \
   OPTIONAL(dwoId, MDUnsignedField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
@@ -3816,7 +3842,8 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   Result = DICompileUnit::getDistinct(
       Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
       runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
-      retainedTypes.Val, subprograms.Val, globals.Val, imports.Val, dwoId.Val);
+      retainedTypes.Val, subprograms.Val, globals.Val, imports.Val, macros.Val,
+      dwoId.Val);
   return false;
 }
 
@@ -3911,6 +3938,39 @@ bool LLParser::ParseDINamespace(MDNode *&Result, bool IsDistinct) {
                            (Context, scope.Val, file.Val, name.Val, line.Val));
   return false;
 }
+
+/// ParseDIMacro:
+///   ::= !DIMacro(macinfo: type, line: 9, name: "SomeMacro", value: "SomeValue")
+bool LLParser::ParseDIMacro(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(type, DwarfMacinfoTypeField, );                                     \
+  REQUIRED(line, LineField, );                                                 \
+  REQUIRED(name, MDStringField, );                                             \
+  OPTIONAL(value, MDStringField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIMacro,
+                           (Context, type.Val, line.Val, name.Val, value.Val));
+  return false;
+}
+
+/// ParseDIMacroFile:
+///   ::= !DIMacroFile(line: 9, file: !2, nodes: !3)
+bool LLParser::ParseDIMacroFile(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(type, DwarfMacinfoTypeField, (dwarf::DW_MACINFO_start_file));       \
+  REQUIRED(line, LineField, );                                                 \
+  REQUIRED(file, MDField, );                                                   \
+  OPTIONAL(nodes, MDField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIMacroFile,
+                           (Context, type.Val, line.Val, file.Val, nodes.Val));
+  return false;
+}
+
 
 /// ParseDIModule:
 ///   ::= !DIModule(scope: !0, name: "SomeModule", configMacros: "-DNDEBUG",

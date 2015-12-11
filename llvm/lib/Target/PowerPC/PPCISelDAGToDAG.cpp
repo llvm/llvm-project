@@ -4180,14 +4180,22 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       break;
     }
 
-    // If this is a load or store with a zero offset, we may be able to
-    // fold an add-immediate into the memory operation.
-    if (!isa<ConstantSDNode>(N->getOperand(FirstOp)) ||
-        N->getConstantOperandVal(FirstOp) != 0)
+    // If this is a load or store with a zero offset, or within the alignment,
+    // we may be able to fold an add-immediate into the memory operation.
+    // The check against alignment is below, as it can't occur until we check
+    // the arguments to N
+    if (!isa<ConstantSDNode>(N->getOperand(FirstOp)))
       continue;
 
     SDValue Base = N->getOperand(FirstOp + 1);
     if (!Base.isMachineOpcode())
+      continue;
+
+    // On targets with fusion, we don't want this to fire and remove a fusion
+    // opportunity, unless a) it results in another fusion opportunity or
+    // b) optimizing for size.
+    if (PPCSubTarget->hasFusion() &&
+        (!MF->getFunction()->optForSize() && !Base.hasOneUse()))
       continue;
 
     unsigned Flags = 0;
@@ -4233,6 +4241,17 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       break;
     }
 
+    SDValue ImmOpnd = Base.getOperand(1);
+    int MaxDisplacement = 0;
+    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
+      const GlobalValue *GV = GA->getGlobal();
+      MaxDisplacement = GV->getAlignment() - 1;
+    }
+
+    int Offset = N->getConstantOperandVal(FirstOp);
+    if (Offset < 0 || Offset > MaxDisplacement)
+      continue;
+
     // We found an opportunity.  Reverse the operands from the add
     // immediate and substitute them into the load or store.  If
     // needed, update the target flags for the immediate operand to
@@ -4242,8 +4261,6 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     DEBUG(dbgs() << "\nN: ");
     DEBUG(N->dump(CurDAG));
     DEBUG(dbgs() << "\n");
-
-    SDValue ImmOpnd = Base.getOperand(1);
 
     // If the relocation information isn't already present on the
     // immediate operand, add it now.
@@ -4255,17 +4272,17 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         // is insufficient for the instruction encoding.
         if (GV->getAlignment() < 4 &&
             (StorageOpcode == PPC::LD || StorageOpcode == PPC::STD ||
-             StorageOpcode == PPC::LWA)) {
+             StorageOpcode == PPC::LWA || (Offset % 4) != 0)) {
           DEBUG(dbgs() << "Rejected this candidate for alignment.\n\n");
           continue;
         }
-        ImmOpnd = CurDAG->getTargetGlobalAddress(GV, dl, MVT::i64, 0, Flags);
+        ImmOpnd = CurDAG->getTargetGlobalAddress(GV, dl, MVT::i64, Offset, Flags);
       } else if (ConstantPoolSDNode *CP =
                  dyn_cast<ConstantPoolSDNode>(ImmOpnd)) {
         const Constant *C = CP->getConstVal();
         ImmOpnd = CurDAG->getTargetConstantPool(C, MVT::i64,
                                                 CP->getAlignment(),
-                                                0, Flags);
+                                                Offset, Flags);
       }
     }
 

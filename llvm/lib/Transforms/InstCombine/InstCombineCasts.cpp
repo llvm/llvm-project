@@ -1715,6 +1715,42 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   return Result;
 }
 
+/// Given a bitcasted source operand fed into an extract element instruction and
+/// then bitcasted again to a scalar type, eliminate at least one bitcast by
+/// changing the vector type of the extractelement instruction.
+/// Example:
+///   bitcast (extractelement (bitcast <2 x float> %X to <2 x i32>), 1) to float
+///    --->
+///   extractelement <2 x float> %X, i32 1
+static Instruction *foldBitCastExtElt(BitCastInst &BitCast, InstCombiner &IC,
+                                      const DataLayout &DL) {
+  Type *DestType = BitCast.getType();
+  if (DestType->isVectorTy())
+    return nullptr;
+
+  // TODO: Create and use a pattern matcher for ExtractElementInst.
+  auto *ExtElt = dyn_cast<ExtractElementInst>(BitCast.getOperand(0));
+  if (!ExtElt || !ExtElt->hasOneUse())
+    return nullptr;
+
+  Value *InnerBitCast = nullptr;
+  if (!match(ExtElt->getOperand(0), m_BitCast(m_Value(InnerBitCast))))
+    return nullptr;
+
+  // If the source is not a vector or its element type doesn't match the result
+  // type, bitcast it to a vector type that we can extract from.
+  Type *SourceType = InnerBitCast->getType();
+  if (SourceType->getScalarType() != DestType) {
+    unsigned VecWidth = SourceType->getPrimitiveSizeInBits();
+    unsigned DestWidth = DestType->getPrimitiveSizeInBits();
+    unsigned NumElts = VecWidth / DestWidth;
+    SourceType = VectorType::get(DestType, NumElts);
+    InnerBitCast = IC.Builder->CreateBitCast(InnerBitCast, SourceType, "bc");
+  }
+
+  return ExtractElementInst::Create(InnerBitCast, ExtElt->getOperand(1));
+}
+
 static Instruction *foldVecTruncToExtElt(Value *VecInput, Type *DestTy,
                                          unsigned ShiftAmt, InstCombiner &IC,
                                          const DataLayout &DL) {
@@ -1885,6 +1921,9 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
       }
     }
   }
+
+  if (Instruction *I = foldBitCastExtElt(CI, *this, DL))
+    return I;
 
   if (SrcTy->isPointerTy())
     return commonPointerCastTransforms(CI);

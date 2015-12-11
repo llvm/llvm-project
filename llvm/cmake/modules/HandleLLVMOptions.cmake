@@ -587,6 +587,14 @@ if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
 endif()
 
+option(LLVM_BUILD_INSTRUMENTED "Build LLVM and tools with PGO instrumentation (experimental)" Off)
+mark_as_advanced(LLVM_BUILD_INSTRUMENTED)
+append_if(LLVM_BUILD_INSTRUMENTED "-fprofile-instr-generate"
+  CMAKE_CXX_FLAGS
+  CMAKE_C_FLAGS
+  CMAKE_EXE_LINKER_FLAGS
+  CMAKE_SHARED_LINKER_FLAGS)
+
 # Plugin support
 # FIXME: Make this configurable.
 if(WIN32 OR CYGWIN)

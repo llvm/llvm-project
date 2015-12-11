@@ -61,7 +61,7 @@ struct StoreToLoadForwardingCandidate {
 
   /// \brief Return true if the dependence from the store to the load has a
   /// distance of one.  E.g. A[i+1] = A[i]
-  bool isDependenceDistanceOfOne(ScalarEvolution *SE) const {
+  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE) const {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
     Type *LoadPtrType = LoadPtr->getType();
@@ -75,13 +75,13 @@ struct StoreToLoadForwardingCandidate {
     auto &DL = Load->getParent()->getModule()->getDataLayout();
     unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
 
-    auto *LoadPtrSCEV = cast<SCEVAddRecExpr>(SE->getSCEV(LoadPtr));
-    auto *StorePtrSCEV = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
+    auto *LoadPtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(LoadPtr));
+    auto *StorePtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(StorePtr));
 
     // We don't need to check non-wrapping here because forward/backward
     // dependence wouldn't be valid if these weren't monotonic accesses.
-    auto *Dist =
-        cast<SCEVConstant>(SE->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
+    auto *Dist = cast<SCEVConstant>(
+        PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
     const APInt &Val = Dist->getValue()->getValue();
     return Val.abs() == TypeByteSize;
   }
@@ -114,8 +114,8 @@ bool doesStoreDominatesAllLatches(BasicBlock *StoreBlock, Loop *L,
 class LoadEliminationForLoop {
 public:
   LoadEliminationForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
-                         DominatorTree *DT, ScalarEvolution *SE)
-      : L(L), LI(LI), LAI(LAI), DT(DT), SE(SE) {}
+                         DominatorTree *DT)
+      : L(L), LI(LI), LAI(LAI), DT(DT), PSE(LAI.PSE) {}
 
   /// \brief Look through the loop-carried and loop-independent dependences in
   /// this loop and find store->load dependences.
@@ -223,8 +223,8 @@ public:
         // block so deciding which one forwards is easy.  The later one forwards
         // as long as they both have a dependence distance of one to the load.
         if (Cand.Store->getParent() == OtherCand->Store->getParent() &&
-            Cand.isDependenceDistanceOfOne(SE) &&
-            OtherCand->isDependenceDistanceOfOne(SE)) {
+            Cand.isDependenceDistanceOfOne(PSE) &&
+            OtherCand->isDependenceDistanceOfOne(PSE)) {
           // They are in the same block, the later one will forward to the load.
           if (getInstrIndex(OtherCand->Store) < getInstrIndex(Cand.Store))
             OtherCand = &Cand;
@@ -372,7 +372,7 @@ public:
     //      store %y, %gep_i_plus_1
 
     Value *Ptr = Cand.Load->getPointerOperand();
-    auto *PtrSCEV = cast<SCEVAddRecExpr>(SE->getSCEV(Ptr));
+    auto *PtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(Ptr));
     auto *PH = L->getLoopPreheader();
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
@@ -436,7 +436,7 @@ public:
 
       // Check whether the SCEV difference is the same as the induction step,
       // thus we load the value in the next iteration.
-      if (!Cand.isDependenceDistanceOfOne(SE))
+      if (!Cand.isDependenceDistanceOfOne(PSE))
         continue;
 
       ++NumForwarding;
@@ -468,7 +468,7 @@ public:
     // Point of no-return, start the transformation.  First, version the loop if
     // necessary.
     if (!Checks.empty() || !LAI.PSE.getUnionPredicate().isAlwaysTrue()) {
-      LoopVersioning LV(LAI, L, LI, DT, SE, false);
+      LoopVersioning LV(LAI, L, LI, DT, PSE.getSE(), false);
       LV.setAliasChecks(std::move(Checks));
       LV.setSCEVChecks(LAI.PSE.getUnionPredicate());
       LV.versionLoop();
@@ -476,7 +476,7 @@ public:
 
     // Next, propagate the value stored by the store to the users of the load.
     // Also for the first iteration, generate the initial value of the load.
-    SCEVExpander SEE(*SE, L->getHeader()->getModule()->getDataLayout(),
+    SCEVExpander SEE(*PSE.getSE(), L->getHeader()->getModule()->getDataLayout(),
                      "storeforward");
     for (const auto &Cand : Candidates)
       propagateStoredValueToLoadUsers(Cand, SEE);
@@ -496,7 +496,7 @@ private:
   LoopInfo *LI;
   const LoopAccessInfo &LAI;
   DominatorTree *DT;
-  ScalarEvolution *SE;
+  PredicatedScalarEvolution PSE;
 };
 
 /// \brief The pass.  Most of the work is delegated to the per-loop
@@ -511,7 +511,6 @@ public:
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *LAA = &getAnalysis<LoopAccessAnalysis>();
     auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
     // Build up a worklist of inner-loops to vectorize. This is necessary as the
     // act of distributing a loop creates new loops and can invalidate iterators
@@ -529,7 +528,7 @@ public:
     for (Loop *L : Worklist) {
       const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
       // The actual work is performed by LoadEliminationForLoop.
-      LoadEliminationForLoop LEL(L, LI, LAI, DT, SE);
+      LoadEliminationForLoop LEL(L, LI, LAI, DT);
       Changed |= LEL.processLoop();
     }
 

@@ -148,7 +148,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
   CUNode = DICompileUnit::getDistinct(
       VMContext, Lang, DIFile::get(VMContext, Filename, Directory), Producer,
       isOptimized, Flags, RunTimeVer, SplitName, Kind, nullptr,
-      nullptr, nullptr, nullptr, nullptr, DWOId);
+      nullptr, nullptr, nullptr, nullptr, nullptr, DWOId);
 
   // Create a named metadata so that it is easier to find cu in a module.
   // Note that we only generate this when the caller wants to actually

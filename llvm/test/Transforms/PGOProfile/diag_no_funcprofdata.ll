@@ -1,5 +1,5 @@
-; RUN: llvm-profdata merge %S/Inputs/diag.proftext -o %T/diag2.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%T/diag2.profdata -S 2>&1 | FileCheck %s
+; RUN: llvm-profdata merge %S/Inputs/diag.proftext -o %t.profdata
+; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s
 
 ; CHECK: No profile data available for function bar
 

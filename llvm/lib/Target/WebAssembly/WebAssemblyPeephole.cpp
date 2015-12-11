@@ -26,6 +26,11 @@ class WebAssemblyPeephole final : public MachineFunctionPass {
     return "WebAssembly late peephole optimizer";
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
@@ -65,6 +70,7 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
         MachineOperand &MO = MI.getOperand(0);
         unsigned OldReg = MO.getReg();
         if (OldReg == MI.getOperand(3).getReg()) {
+          Changed = true;
           unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
           MO.setReg(NewReg);
           MO.setIsDead();

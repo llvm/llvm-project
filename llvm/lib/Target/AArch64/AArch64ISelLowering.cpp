@@ -1850,6 +1850,16 @@ static SDValue LowerVectorFP_TO_INT(SDValue Op, SelectionDAG &DAG) {
   // in the cost tables.
   EVT InVT = Op.getOperand(0).getValueType();
   EVT VT = Op.getValueType();
+  unsigned NumElts = InVT.getVectorNumElements();
+
+  // f16 vectors are promoted to f32 before a conversion.
+  if (InVT.getVectorElementType() == MVT::f16) {
+    MVT NewVT = MVT::getVectorVT(MVT::f32, NumElts);
+    SDLoc dl(Op);
+    return DAG.getNode(
+        Op.getOpcode(), dl, Op.getValueType(),
+        DAG.getNode(ISD::FP_EXTEND, dl, NewVT, Op.getOperand(0)));
+  }
 
   if (VT.getSizeInBits() < InVT.getSizeInBits()) {
     SDLoc dl(Op);

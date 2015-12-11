@@ -2235,10 +2235,10 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       break;
     }
     case bitc::METADATA_COMPILE_UNIT: {
-      if (Record.size() < 14 || Record.size() > 15)
+      if (Record.size() < 14 || Record.size() > 16)
         return error("Invalid record");
 
-      // Ignore Record[1], which indicates whether this compile unit is
+      // Ignore Record[0], which indicates whether this compile unit is
       // distinct.  It's always distinct.
       MDValueList.assignValue(
           DICompileUnit::getDistinct(
@@ -2247,7 +2247,9 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
               Record[6], getMDString(Record[7]), Record[8],
               getMDOrNull(Record[9]), getMDOrNull(Record[10]),
               getMDOrNull(Record[11]), getMDOrNull(Record[12]),
-              getMDOrNull(Record[13]), Record.size() == 14 ? 0 : Record[14]),
+              getMDOrNull(Record[13]),
+              Record.size() <= 15 ? 0 : getMDOrNull(Record[15]),
+              Record.size() <= 14 ? 0 : Record[14]),
           NextMDValueNo++);
       break;
     }
@@ -2312,6 +2314,28 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
                           (Context, getMDOrNull(Record[1]),
                            getMDOrNull(Record[2]), getMDString(Record[3]),
                            Record[4])),
+          NextMDValueNo++);
+      break;
+    }
+    case bitc::METADATA_MACRO: {
+      if (Record.size() != 5)
+        return error("Invalid record");
+
+      MDValueList.assignValue(
+          GET_OR_DISTINCT(DIMacro, Record[0],
+                          (Context, Record[1], Record[2],
+                           getMDString(Record[3]), getMDString(Record[4]))),
+          NextMDValueNo++);
+      break;
+    }
+    case bitc::METADATA_MACRO_FILE: {
+      if (Record.size() != 5)
+        return error("Invalid record");
+
+      MDValueList.assignValue(
+          GET_OR_DISTINCT(DIMacroFile, Record[0],
+                          (Context, Record[1], Record[2],
+                           getMDOrNull(Record[3]), getMDOrNull(Record[4]))),
           NextMDValueNo++);
       break;
     }

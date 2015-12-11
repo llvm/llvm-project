@@ -57,10 +57,6 @@ private:
   // MachineFunctionPass Implementation.
   //===------------------------------------------------------------------===//
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AsmPrinter::getAnalysisUsage(AU);
-  }
-
   bool runOnMachineFunction(MachineFunction &MF) override {
     MRI = &MF.getRegInfo();
     MFI = MF.getInfo<WebAssemblyFunctionInfo>();
