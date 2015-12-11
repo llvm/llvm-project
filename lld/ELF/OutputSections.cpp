@@ -1168,15 +1168,26 @@ bool lld::elf2::shouldKeepInSymtab(const ObjectFile<ELFT> &File,
   if (Sym.getType() == STT_SECTION)
     return false;
 
+  InputSectionBase<ELFT> *Sec = File.getSection(Sym);
   // If sym references a section in a discarded group, don't keep it.
-  if (File.getSection(Sym) == &InputSection<ELFT>::Discarded)
+  if (Sec == &InputSection<ELFT>::Discarded)
     return false;
 
   if (Config->DiscardNone)
     return true;
 
-  // ELF defines dynamic locals as symbols which name starts with ".L".
-  return !(Config->DiscardLocals && SymName.startswith(".L"));
+  // In ELF assembly .L symbols are normally discarded by the assembler.
+  // If the assembler fails to do so, the linker discards them if
+  // * --discard-locals is used.
+  // * The symbol is in a SHF_MERGE section, which is normally the reason for
+  //   the assembler keeping the .L symbol.
+  if (!SymName.startswith(".L") && !SymName.empty())
+    return true;
+
+  if (Config->DiscardLocals)
+    return false;
+
+  return !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
 }
 
 template <class ELFT>

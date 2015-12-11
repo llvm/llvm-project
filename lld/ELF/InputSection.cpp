@@ -123,6 +123,14 @@ InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t Type,
 }
 
 template <class ELFT>
+static typename llvm::object::ELFFile<ELFT>::uintX_t
+getSymSize(SymbolBody &Body) {
+  if (auto *SS = dyn_cast<Defined<ELFT>>(&Body))
+    return SS->Sym.st_size;
+  return 0;
+}
+
+template <class ELFT>
 template <bool isRela>
 void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
                                       RelIteratorRange<isRela> Rels) {
@@ -153,7 +161,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     const Elf_Shdr *SymTab = File->getSymbolTable();
     if (SymIndex < SymTab->sh_info) {
       uintX_t SymVA = getLocalRelTarget(*File, RI);
-      Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA,
+      Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA, 0,
                           findMipsPairedReloc(Buf, Type, NextRelocs));
       continue;
     }
@@ -191,11 +199,13 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     } else if (!Target->relocNeedsCopy(Type, Body) &&
                isa<SharedSymbol<ELFT>>(Body)) {
       continue;
-    } else if (Target->isTlsDynReloc(Type)) {
+    } else if (Target->isTlsDynReloc(Type) ||
+               Target->isSizeDynReloc(Type, Body)) {
       continue;
     }
-    Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
-                        SymVA + getAddend<ELFT>(RI),
+    uintX_t A = getAddend<ELFT>(RI);
+    uintX_t Size = getSymSize<ELFT>(Body);
+    Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA + A, Size + A,
                         findMipsPairedReloc(Buf, Type, NextRelocs));
   }
 }

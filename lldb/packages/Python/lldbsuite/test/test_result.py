@@ -13,10 +13,6 @@ from __future__ import print_function
 
 # System modules
 import inspect
-import os
-import platform
-import subprocess
-
 
 # Third-party modules
 import unittest2

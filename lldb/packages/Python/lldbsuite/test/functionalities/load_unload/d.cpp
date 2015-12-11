@@ -1,4 +1,4 @@
-//===-- a.c -----------------------------------------------------*- C++ -*-===//
+//===-- c.c -----------------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,16 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-extern int b_function ();
+
+int d_init()
+{
+    return 123;
+}
+
+int d_global = d_init();
 
 int
-a_function ()
-{
-    return b_function ();
+d_function ()
+{ // Find this line number within d_dunction().
+    return 700;
 }

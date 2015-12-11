@@ -70,6 +70,8 @@ strErrMsgCreatePyPkgMissingSlash = "Parameter 3 fn create_py_pkg() missing slash
 strErrMsgMkLinkExecute = "Command mklink failed: %s"
 strErrMsgMakeSymlink = "creating symbolic link"
 strErrMsgUnexpected = "Unexpected error: %s"
+strMsgCopySixPy = "Copying six.py from '%s' to '%s'"
+strErrMsgCopySixPyFailed = "Unable to copy '%s' to '%s'"
 
 def is_debug_interpreter():
     return hasattr(sys, 'gettotalrefcount')
@@ -336,14 +338,6 @@ def make_symlink(vDictArgs, vstrFrameworkPythonDir, vstrSrcFile, vstrTargetFile)
 
     return make_symlink_native(vDictArgs, strSrc, strTarget)
 
-def make_symlink_six(vDictArgs, vstrFrameworkPythonDir):
-    dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink_six()")
-    site_packages_dir = os.path.dirname(vstrFrameworkPythonDir)
-    six_module_filename = "six.py"
-    src_file = os.path.join(vDictArgs['--srcRoot'], "third_party", "Python", "module", "six", six_module_filename)
-    src_file = os.path.normpath(src_file)
-    target = os.path.join(site_packages_dir, six_module_filename)
-    return make_symlink_native(vDictArgs, src_file, target)
 
 #++---------------------------------------------------------------------------
 # Details:  Make the symbolic that the script bridge for Python will need in
@@ -472,9 +466,6 @@ def create_symlinks(vDictArgs, vstrFrameworkPythonDir):
                                               vstrFrameworkPythonDir,
                                               strLibLldbFileName)
 
-    if bOk:
-        bOk, strErrMsg = make_symlink_six(vDictArgs, vstrFrameworkPythonDir)
-
     # Make symlink for darwin-debug on Darwin
     strDarwinDebugFileName = "darwin-debug"
     if bOk and eOSType == utilsOsType.EnumOsType.Darwin:
@@ -490,6 +481,27 @@ def create_symlinks(vDictArgs, vstrFrameworkPythonDir):
                                                      strArgdumperFileName)
 
     return (bOk, strErrMsg)
+
+def copy_six(vDictArgs, vstrFrameworkPythonDir):
+    dbg = utilsDebug.CDebugFnVerbose("Python script copy_six()")
+    bDbg = "-d" in vDictArgs
+    bOk = True
+    strMsg = ""
+    site_packages_dir = os.path.dirname(vstrFrameworkPythonDir)
+    six_module_filename = "six.py"
+    src_file = os.path.join(vDictArgs['--srcRoot'], "third_party", "Python", "module", "six", six_module_filename)
+    src_file = os.path.normpath(src_file)
+    target = os.path.join(site_packages_dir, six_module_filename)
+
+    if bDbg:
+        print((strMsgCopySixPy % (src_file, target)))
+    try:
+        shutil.copyfile(src_file, target)
+    except:
+        bOk = False
+        strMsg = strErrMsgCopySixPyFailed % (src_file, target)
+
+    return (bOk, strMsg)
 
 #++---------------------------------------------------------------------------
 # Details:  Look for the directory in which to put the Python files if it
@@ -706,6 +718,9 @@ def main(vDictArgs):
 
     if bOk:
         bOk, strMsg = create_symlinks(vDictArgs, strFrameworkPythonDir)
+
+    if bOk:
+        bOk, strMsg = copy_six(vDictArgs, strFrameworkPythonDir)
 
     if bOk:
         bOk, strMsg = copy_lldbpy_file_to_lldb_pkg_dir(vDictArgs,

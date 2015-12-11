@@ -407,12 +407,6 @@ def parseOptionsAndInitTestdirs():
     if args.results_formatter_options:
         configuration.results_formatter_options = args.results_formatter_options
 
-    # Default to using the BasicResultsFormatter if no formatter is specified
-    # and we're not a test inferior.
-    if not args.inferior and configuration.results_formatter_name is None:
-        configuration.results_formatter_name = (
-            "lldbsuite.test.basic_results_formatter.BasicResultsFormatter")
-
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name
     if args.lldb_platform_url:

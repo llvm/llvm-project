@@ -63,6 +63,8 @@ from . import lldbtest_config
 from . import lldbutil
 from . import test_categories
 
+from .result_formatter import EventBuilder
+
 # dosep.py starts lots and lots of dotest instances
 # This option helps you find if two (or more) dotest instances are using the same
 # directory at the same time
@@ -784,6 +786,12 @@ def expectedFlakey(expected_fn, bugnumber=None):
         def wrapper(*args, **kwargs):
             from unittest2 import case
             self = args[0]
+            if expected_fn(self):
+                # Send event marking test as explicitly eligible for rerunning.
+                if configuration.results_formatter_object is not None:
+                    # Mark this test as rerunnable.
+                    configuration.results_formatter_object.handle_event(
+                        EventBuilder.event_for_mark_test_rerun_eligible(self))
             try:
                 func(*args, **kwargs)
             # don't retry if the test case is already decorated with xfail or skip

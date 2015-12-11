@@ -280,7 +280,8 @@ public:
 
         if (m_opcode.GetData(data))
         {
-            char out_string[512];
+            std::string out_string;
+            std::string comment_string;
 
             DisassemblerLLVMC &llvm_disasm = GetDisassemblerLLVMC();
 
@@ -331,7 +332,12 @@ public:
             if (inst_size > 0)
             {
                 mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
-                mc_disasm_ptr->PrintMCInst(inst, out_string, sizeof(out_string));
+                mc_disasm_ptr->PrintMCInst(inst, out_string, comment_string);
+                
+                if (!comment_string.empty())
+                {
+                    AppendComment(comment_string);
+                }
             }
 
             llvm_disasm.Unlock();
@@ -413,10 +419,10 @@ public:
 
             RegularExpression::Match matches(3);
 
-            if (s_regex.Execute(out_string, &matches))
+            if (s_regex.Execute(out_string.c_str(), &matches))
             {
-                matches.GetMatchAtIndex(out_string, 1, m_opcode_name);
-                matches.GetMatchAtIndex(out_string, 2, m_mnemonics);
+                matches.GetMatchAtIndex(out_string.c_str(), 1, m_opcode_name);
+                matches.GetMatchAtIndex(out_string.c_str(), 2, m_mnemonics);
             }
         }
     }
@@ -543,21 +549,25 @@ DisassemblerLLVMC::LLVMCDisassembler::GetMCInst (const uint8_t *opcode_data,
         return 0;
 }
 
-uint64_t
+void
 DisassemblerLLVMC::LLVMCDisassembler::PrintMCInst (llvm::MCInst &mc_inst,
-                                                   char *dst,
-                                                   size_t dst_len)
+                                                   std::string &inst_string,
+                                                   std::string &comments_string)
 {
-    llvm::StringRef unused_annotations;
-    llvm::SmallString<64> inst_string;
-    llvm::raw_svector_ostream inst_stream(inst_string);
-    m_instr_printer_ap->printInst (&mc_inst, inst_stream, unused_annotations,
-                                   *m_subtarget_info_ap);
-    const size_t output_size = std::min(dst_len - 1, inst_string.size());
-    std::memcpy(dst, inst_string.data(), output_size);
-    dst[output_size] = '\0';
+    llvm::raw_string_ostream inst_stream(inst_string);
+    llvm::raw_string_ostream comments_stream(comments_string);
 
-    return output_size;
+    m_instr_printer_ap->setCommentStream(comments_stream);
+    m_instr_printer_ap->printInst (&mc_inst, inst_stream, llvm::StringRef(), *m_subtarget_info_ap);
+    m_instr_printer_ap->setCommentStream(llvm::nulls());
+    comments_stream.flush();
+    
+    static std::string g_newlines("\r\n");
+    
+    for (size_t newline_pos = 0; (newline_pos = comments_string.find_first_of(g_newlines, newline_pos)) != comments_string.npos; /**/)
+    {
+        comments_string.replace(comments_string.begin() + newline_pos, comments_string.begin() + newline_pos + 1, 1, ' ');
+    }
 }
 
 void

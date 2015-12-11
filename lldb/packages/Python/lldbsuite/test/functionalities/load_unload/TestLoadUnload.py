@@ -24,9 +24,9 @@ class LoadUnloadTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break for main.cpp.
-        self.line = line_number('main.c',
+        self.line = line_number('main.cpp',
                                 '// Set break point at this line for test_lldb_process_load_and_unload_commands().')
-        self.line_d_function = line_number('d.c',
+        self.line_d_function = line_number('d.cpp',
                                            '// Find this line number within d_dunction().')
         if not self.platformIsDarwin():
             if not lldb.remote_platform and "LD_LIBRARY_PATH" in os.environ:
@@ -164,7 +164,7 @@ class LoadUnloadTestCase(TestBase):
                     substrs = [os.path.basename(old_dylib)],
                     matching=True)
 
-        lldbutil.run_break_set_by_file_and_line (self, "d.c", self.line_d_function, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line (self, "d.cpp", self.line_d_function, num_expected_locations=1)
         # After run, make sure the non-hidden library is picked up.
         self.expect("run", substrs=["return", "700"])
 
@@ -180,6 +180,7 @@ class LoadUnloadTestCase(TestBase):
         # This time, the hidden library should be picked up.
         self.expect("run", substrs=["return", "12345"])
 
+    @expectedFailureAll(bugnumber="llvm.org/pr25805", hostoslist=["windows"], compiler="gcc", archs=["i386"], triple='.*-android')
     @skipIfFreeBSD # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipUnlessListedRemote(['android'])
     @skipIfWindows # Windows doesn't have dlopen and friends, dynamic libraries work differently
@@ -193,10 +194,10 @@ class LoadUnloadTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        # Break at main.c before the call to dlopen().
+        # Break at main.cpp before the call to dlopen().
         # Use lldb's process load command to load the dylib, instead.
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -295,7 +296,7 @@ class LoadUnloadTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break by function name a_function (not yet loaded).
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -310,3 +311,47 @@ class LoadUnloadTestCase(TestBase):
         self.expect("thread list", "step over succeeded.", 
             substrs = ['stopped',
                       'stop reason = step over'])
+
+    @skipIfFreeBSD # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
+    @skipUnlessListedRemote(['android'])
+    @skipIfWindows # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @unittest2.expectedFailure("llvm.org/pr25806")
+    def test_static_init_during_load (self):
+        """Test that we can set breakpoints correctly in static initializers"""
+
+        self.build()
+        self.copy_shlibs_to_remote()
+
+        exe = os.path.join(os.getcwd(), "a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        a_init_bp_num = lldbutil.run_break_set_by_symbol(self, "a_init", num_expected_locations=0)
+        b_init_bp_num = lldbutil.run_break_set_by_symbol(self, "b_init", num_expected_locations=0)
+        d_init_bp_num = lldbutil.run_break_set_by_symbol(self, "d_init", num_expected_locations=1)
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'd_init',
+                       'stop reason = breakpoint %d' % d_init_bp_num])
+
+        self.runCmd("continue")
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'a_init',
+                       'stop reason = breakpoint %d' % a_init_bp_num])
+        self.expect("thread backtrace",
+            substrs = ['a_init',
+                       'dlopen',
+                        'main'])
+
+        self.runCmd("continue")
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'b_init',
+                       'stop reason = breakpoint %d' % b_init_bp_num])
+        self.expect("thread backtrace",
+            substrs = ['b_init',
+                       'dlopen',
+                        'main'])

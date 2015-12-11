@@ -6,8 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-int
-d_function ()
-{ // Find this line number within d_dunction().
-    return 12345;
+extern "C" int
+c_function ()
+{
+    return 600;
 }

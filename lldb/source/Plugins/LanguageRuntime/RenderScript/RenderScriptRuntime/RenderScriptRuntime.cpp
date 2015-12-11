@@ -612,6 +612,16 @@ RenderScriptRuntime::HookCallback(RuntimeHook* hook_info, ExecutionContext& cont
 bool
 RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint64_t *data)
 {
+    // Get a positional integer argument.
+    // Given an ExecutionContext, ``context`` which should be a RenderScript
+    // frame, get the value of the positional argument ``arg`` and save its value
+    // to the address pointed to by ``data``.
+    // returns true on success, false otherwise.
+    // If unsuccessful, the value pointed to by ``data`` is undefined. Otherwise,
+    // ``data`` will be set to the value of the the given ``arg``.
+    // NOTE: only natural width integer arguments for the machine are supported.
+    // Behaviour with non primitive arguments is undefined.
+
     if (!data)
         return false;
 
@@ -640,7 +650,7 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
             if (error.Fail())
             {
                 if (log)
-                    log->Printf ("RenderScriptRuntime:: GetArgSimple - error reading X86 stack: %s.", error.AsCString());
+                    log->Printf("RenderScriptRuntime::GetArgSimple - error reading X86 stack: %s.", error.AsCString());
             }
             else
             {
@@ -648,6 +658,35 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 success = true;
             }
 
+            break;
+        }
+        case llvm::Triple::ArchType::x86_64:
+        {
+            // amd64 has 6 integer registers, and 8 XMM registers for parameter passing.
+            // Surplus args are spilled onto the stack.
+            // rdi, rsi, rdx, rcx, r8, r9, (zmm0 - 7 for vectors)
+            // ref: AMD64 ABI Draft 0.99.6 – October 7, 2013 – 10:35; Figure 3.4. Retrieved from
+            // http://www.x86-64.org/documentation/abi.pdf
+            if (arg > 5)
+            {
+                if (log)
+                    log->Warning("X86_64 register spill is not supported.");
+                break;
+            }
+            const char * regnames[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+            assert((sizeof(regnames) / sizeof(const char *)) > arg);
+            const RegisterInfo *rArg = reg_ctx->GetRegisterInfoByName(regnames[arg]);
+            RegisterValue rVal;
+            success = reg_ctx->ReadRegister(rArg, rVal);
+            if (success)
+            {
+                *data = rVal.GetAsUInt64(0u, &success);
+            }
+            else
+            {
+                if (log)
+                    log->Printf("RenderScriptRuntime::GetArgSimple - error reading x86_64 register: %d.", arg);
+            }
             break;
         }
         case llvm::Triple::ArchType::arm:
@@ -660,12 +699,12 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 success = reg_ctx->ReadRegister(rArg, rVal);
                 if (success)
                 {
-                    (*data) = rVal.GetAsUInt32();
+                    (*data) = rVal.GetAsUInt32(0u, &success);
                 }
                 else
                 {
                     if (log)
-                        log->Printf ("RenderScriptRuntime:: GetArgSimple - error reading ARM register: %d.", arg);
+                        log->Printf("RenderScriptRuntime::GetArgSimple - error reading ARM register: %d.", arg);
                 }
             }
             else
@@ -676,7 +715,7 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 if (error.Fail())
                 {
                     if (log)
-                        log->Printf ("RenderScriptRuntime:: GetArgSimple - error reading ARM stack: %s.", error.AsCString());
+                        log->Printf("RenderScriptRuntime::GetArgSimple - error reading ARM stack: %s.", error.AsCString());
                 }
                 else
                 {
@@ -697,7 +736,7 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 success = reg_ctx->ReadRegister(rArg, rVal);
                 if (success)
                 {
-                    *data = rVal.GetAsUInt64();
+                    *data = rVal.GetAsUInt64(0u, &success);
                 }
                 else
                 {
@@ -723,7 +762,7 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 success = reg_ctx->ReadRegister(rArg, rVal);
                 if (success)
                 {
-                    *data = rVal.GetAsUInt64();
+                    *data = rVal.GetAsUInt64(0u, &success);
                 }
                 else
                 {
@@ -742,7 +781,7 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 if (error.Fail())
                 {
                     if (log)
-                        log->Printf ("RenderScriptRuntime::GetArgSimple - error reading Mips stack: %s.", error.AsCString());
+                        log->Printf("RenderScriptRuntime::GetArgSimple - error reading Mips stack: %s.", error.AsCString());
                 }
                 else
                 {
@@ -762,7 +801,7 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 success = reg_ctx->ReadRegister(rArg, rVal);
                 if (success)
                 {
-                    (*data) = rVal.GetAsUInt64();
+                    (*data) = rVal.GetAsUInt64(0u, &success);
                 }
                 else
                 {
@@ -780,7 +819,7 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 if (error.Fail())
                 {
                     if (log)
-                        log->Printf ("RenderScriptRuntime::GetArgSimple - Mips64 - Error reading Mips64 stack: %s.", error.AsCString());
+                        log->Printf("RenderScriptRuntime::GetArgSimple - Mips64 - Error reading Mips64 stack: %s.", error.AsCString());
                 }
                 else
                 {
@@ -799,6 +838,11 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
         }
     }
 
+    if (!success)
+    {
+        if (log)
+            log->Printf("RenderScriptRuntime::GetArgSimple - failed to get argument at index %" PRIu32, arg);
+    }
     return success;
 }
 
@@ -1009,6 +1053,7 @@ RenderScriptRuntime::LoadRuntimeHooks(lldb::ModuleSP module, ModuleKind kind)
         && targetArchType != llvm::Triple::ArchType::aarch64
         && targetArchType != llvm::Triple::ArchType::mipsel
         && targetArchType != llvm::Triple::ArchType::mips64el
+        && targetArchType != llvm::Triple::ArchType::x86_64
     )
     {
         if (log)

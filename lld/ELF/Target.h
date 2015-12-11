@@ -53,11 +53,12 @@ public:
                              uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                              int32_t Index, unsigned RelOff) const = 0;
   virtual bool isRelRelative(uint32_t Type) const;
+  virtual bool isSizeDynReloc(uint32_t Type, const SymbolBody &S) const;
   virtual bool relocNeedsCopy(uint32_t Type, const SymbolBody &S) const;
   virtual bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const = 0;
   virtual bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                           uint64_t P, uint64_t SA,
+                           uint64_t P, uint64_t SA, uint64_t ZA = 0,
                            uint8_t *PairedLoc = nullptr) const = 0;
   virtual bool isTlsOptimized(unsigned Type, const SymbolBody *S) const;
   virtual unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,

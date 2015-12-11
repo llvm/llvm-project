@@ -161,6 +161,7 @@ class EventBuilder(object):
     TYPE_JOB_RESULT = "job_result"
     TYPE_TEST_RESULT = "test_result"
     TYPE_TEST_START = "test_start"
+    TYPE_MARK_TEST_RERUN_ELIGIBLE = "test_eligible_for_rerun"
 
     # Test/Job Status Tags
     STATUS_EXCEPTIONAL_EXIT = "exceptional_exit"
@@ -226,6 +227,7 @@ class EventBuilder(object):
             "test_name": test_name,
             "test_filename": inspect.getfile(test.__class__)
         })
+
         return event
 
     @staticmethod
@@ -486,6 +488,26 @@ class EventBuilder(object):
         return event
 
     @staticmethod
+    def event_for_mark_test_rerun_eligible(test):
+        """Creates an event that indicates the specified test is explicitly
+        eligible for rerun.
+
+        Note there is a mode that will enable test rerun eligibility at the
+        global level.  These markings for explicit rerun eligibility are
+        intended for the mode of running where only explicitly rerunnable
+        tests are rerun upon hitting an issue.
+
+        @param test the TestCase instance to which this pertains.
+
+        @return an event that specifies the given test as being eligible to
+        be rerun.
+        """
+        event = EventBuilder._event_dictionary_common(
+            test,
+            EventBuilder.TYPE_MARK_TEST_RERUN_ELIGIBLE)
+        return event
+
+    @staticmethod
     def add_entries_to_all_events(entries_dict):
         """Specifies a dictionary of entries to add to all test events.
 
@@ -683,9 +705,8 @@ class ResultsFormatter(object):
 
             if event_type == "terminate":
                 self.terminate_called = True
-            elif event_type in [
-                    EventBuilder.TYPE_TEST_RESULT,
-                    EventBuilder.TYPE_JOB_RESULT]:
+            elif (event_type == EventBuilder.TYPE_TEST_RESULT or
+                    event_type == EventBuilder.TYPE_JOB_RESULT):
                 # Keep track of event counts per test/job result status type.
                 # The only job (i.e. inferior process) results that make it
                 # here are ones that cannot be remapped to the most recently
