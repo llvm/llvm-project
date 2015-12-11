@@ -51,7 +51,7 @@ class DisassemblerLLVMC : public lldb_private::Disassembler
         ~LLVMCDisassembler();
 
         uint64_t GetMCInst (const uint8_t *opcode_data, size_t opcode_data_len, lldb::addr_t pc, llvm::MCInst &mc_inst);
-        uint64_t PrintMCInst (llvm::MCInst &mc_inst, char *output_buffer, size_t out_buffer_len);
+        void PrintMCInst (llvm::MCInst &mc_inst, std::string &inst_string, std::string &comments_string);
         void     SetStyle (bool use_hex_immed, HexImmediateStyle hex_style);
         bool     CanBranch (llvm::MCInst &mc_inst);
         bool     HasDelaySlot (llvm::MCInst &mc_inst);
