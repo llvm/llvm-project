@@ -1180,7 +1180,7 @@ static bool EvaluatePointer(const Expr *E, LValue &Result, EvalInfo &Info);
 static bool EvaluateMemberPointer(const Expr *E, MemberPtr &Result,
                                   EvalInfo &Info);
 static bool EvaluateTemporary(const Expr *E, LValue &Result, EvalInfo &Info);
-static bool EvaluateInteger(const Expr *E, APSInt  &Result, EvalInfo &Info);
+static bool EvaluateInteger(const Expr *E, APSInt &Result, EvalInfo &Info);
 static bool EvaluateIntegerOrLValue(const Expr *E, APValue &Result,
                                     EvalInfo &Info);
 static bool EvaluateFloat(const Expr *E, APFloat &Result, EvalInfo &Info);
@@ -1607,7 +1607,7 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
 
 static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
                                  QualType DestType, QualType SrcType,
-                                 APSInt &Value) {
+                                 const APSInt &Value) {
   unsigned DestWidth = Info.Ctx.getIntWidth(DestType);
   APSInt Result = Value;
   // Figure out if this is a truncate, extend or noop cast.
@@ -5655,7 +5655,7 @@ static bool EvaluateVector(const Expr* E, APValue& Result, EvalInfo &Info) {
   return VectorExprEvaluator(Info, Result).Visit(E);
 }
 
-bool VectorExprEvaluator::VisitCastExpr(const CastExpr* E) {
+bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
   const VectorType *VTy = E->getType()->castAs<VectorType>();
   unsigned NElts = VTy->getNumElements();
 
@@ -5668,13 +5668,13 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr* E) {
     if (SETy->isIntegerType()) {
       APSInt IntResult;
       if (!EvaluateInteger(SE, IntResult, Info))
-         return false;
-      Val = APValue(IntResult);
+        return false;
+      Val = APValue(std::move(IntResult));
     } else if (SETy->isRealFloatingType()) {
-       APFloat F(0.0);
-       if (!EvaluateFloat(SE, F, Info))
-         return false;
-       Val = APValue(F);
+      APFloat FloatResult(0.0);
+      if (!EvaluateFloat(SE, FloatResult, Info))
+        return false;
+      Val = APValue(std::move(FloatResult));
     } else {
       return Error(E);
     }

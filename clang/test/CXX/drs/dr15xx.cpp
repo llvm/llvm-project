@@ -150,6 +150,26 @@ namespace dr1591 {  //dr1591. Deducing array bound and element type from initial
     double *p = f({1, 2, 3});
     float *fp = f({{1}, {1, 2}, {1, 2, 3}});
   }
+  namespace core_reflector_28543 {
+    
+    template<class T, int N> int *f(T (&&)[N]);  // #1
+    template<class T> char *f(std::initializer_list<T> &&);  //#2
+    template<class T, int N, int M> int **f(T (&&)[N][M]); //#3 expected-note{{candidate}}
+    template<class T, int N> char **f(std::initializer_list<T> (&&)[N]); //#4 expected-note{{candidate}}
+
+    template<class T> short *f(T (&&)[2]);  //#5
+
+    template<class T> using Arr = T[];
+     
+    char *pc = f({1, 2, 3}); // OK prefer #2 via 13.3.3.2 [over.ics.rank]
+    char *pc2 = f({1, 2}); // #2 also 
+    int *pi = f(Arr<int>{1, 2, 3}); // OK prefer #1
+
+    void *pv1 = f({ {1, 2, 3}, {4, 5, 6} }); // expected-error{{ambiguous}} btw 3 & 4
+    char **pcc = f({ {1}, {2, 3} }); // OK #4
+
+    short *ps = f(Arr<int>{1, 2});  // OK #5
+  }
 } // dr1591
 
 #endif

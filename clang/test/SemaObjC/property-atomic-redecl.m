@@ -22,15 +22,15 @@
 @end
 
 @interface AtomicInheritanceSub2 : AtomicInheritanceSuper2
-@property (nonatomic, readwrite, retain) A *property; // FIXME: should be okay
+@property (nonatomic, readwrite, retain) A *property;
 @end
 
 @interface ReadonlyAtomic
-@property (readonly, nonatomic) A *property; // expected-note{{property declared here}}
+@property (readonly, nonatomic) A *property;
 @end
 
 @interface ReadonlyAtomic ()
-@property (readwrite) A *property; // expected-warning{{'atomic' attribute on property 'property' does not match the property inherited from 'ReadonlyAtomic'}}
+@property (readwrite) A *property;
 @end
 
 // Readonly, atomic public redeclaration of property in subclass.

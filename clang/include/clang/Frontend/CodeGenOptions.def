@@ -166,6 +166,10 @@ CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
 CODEGENOPT(DebugTypeExtRefs, 1, 0) ///< Whether or not debug info should contain
                                    ///< external references to a PCH or module.
 
+CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should 
+                                       ///< contain explicit imports for 
+                                       ///< anonymous namespaces
+
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 
 /// The user specified number of registers to be used for integral arguments,

@@ -3954,6 +3954,10 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       "/usr/include/arm-linux-gnueabi"};
   const StringRef ARMHFMultiarchIncludeDirs[] = {
       "/usr/include/arm-linux-gnueabihf"};
+  const StringRef ARMEBMultiarchIncludeDirs[] = {
+      "/usr/include/armeb-linux-gnueabi"};
+  const StringRef ARMEBHFMultiarchIncludeDirs[] = {
+      "/usr/include/armeb-linux-gnueabihf"};
   const StringRef MIPSMultiarchIncludeDirs[] = {"/usr/include/mips-linux-gnu"};
   const StringRef MIPSELMultiarchIncludeDirs[] = {
       "/usr/include/mipsel-linux-gnu"};
@@ -3987,10 +3991,18 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     MultiarchIncludeDirs = AArch64MultiarchIncludeDirs;
     break;
   case llvm::Triple::arm:
+  case llvm::Triple::thumb:
     if (getTriple().getEnvironment() == llvm::Triple::GNUEABIHF)
       MultiarchIncludeDirs = ARMHFMultiarchIncludeDirs;
     else
       MultiarchIncludeDirs = ARMMultiarchIncludeDirs;
+    break;
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumbeb:
+    if (getTriple().getEnvironment() == llvm::Triple::GNUEABIHF)
+      MultiarchIncludeDirs = ARMEBHFMultiarchIncludeDirs;
+    else
+      MultiarchIncludeDirs = ARMEBMultiarchIncludeDirs;
     break;
   case llvm::Triple::mips:
     MultiarchIncludeDirs = MIPSMultiarchIncludeDirs;

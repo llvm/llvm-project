@@ -109,7 +109,7 @@ follows:</p>
       the best version of libstdc++ headers available and use them - it will
       look both for system installations of libstdc++ as well as installations
       adjacent to Clang itself. If your configuration fits neither of these
-      scenarios, you can use the <tt>--with-gcc-toolchain</tt> configure option
+      scenarios, you can use the <tt>-DGCC_INSTALL_PREFIX</tt> cmake option
       to tell Clang where the gcc containing the desired libstdc++ is installed.
   </li>
   <li>Try it out (assuming you add llvm/Debug+Asserts/bin to your path):

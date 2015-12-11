@@ -70,5 +70,6 @@
 #ifndef WITH_PREFIX
 #import <SomeFramework/public_header.h> // expected-warning{{treating}}
 #import <SomeFramework/public_header2.h> // expected-warning{{treating}}
+#import <SomeFramework/public_header3.h> // expected-warning{{treating}}
 @import SomeFramework.public_header2;
 #endif
