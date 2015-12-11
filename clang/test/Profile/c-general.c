@@ -4,7 +4,7 @@
 
 // RUN: llvm-profdata merge %S/Inputs/c-general.proftext -o %t.profdata
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instr-use=%t.profdata | FileCheck -check-prefix=PGOUSE %s
-
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instr-use=%S/Inputs/c-general.profdata.v3 | FileCheck -check-prefix=PGOUSE %s
 // Also check compatibility with older profiles.
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instr-use=%S/Inputs/c-general.profdata.v1 | FileCheck -check-prefix=PGOUSE %s
 

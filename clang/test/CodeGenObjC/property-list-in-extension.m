@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-weak -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck %s
 
 // Checks metadata for properties in a few cases.
 
 
 // Property from a class extension:
+__attribute__((objc_root_class))
 @interface Foo
 @end
 
@@ -20,12 +21,17 @@
 // CHECK: @"\01l_OBJC_$_PROP_LIST_Foo" = private global { i32, i32, [1 x %struct._prop_t] }
 
 // Readonly property in interface made readwrite in a category:
+__attribute__((objc_root_class))
 @interface FooRO
 @property (readonly) int evolvingprop;
+@property (nonatomic,readonly,getter=isBooleanProp) int booleanProp;
+@property (nonatomic,readonly,weak) Foo *weakProp;
 @end
 
 @interface FooRO ()
 @property int evolvingprop;
+@property int booleanProp;
+@property Foo *weakProp;
 @end
 
 @implementation FooRO
@@ -34,6 +40,8 @@
 // Metadata for _evolvingprop should be present, and PROP_LIST for FooRO should
 // still have only one entry, and the one entry should point to the version of
 // the property with a getter and setter.
-// CHECK: [[getter:@OBJC_PROP_NAME_ATTR[^ ]+]] = private global [13 x i8] c"evolvingprop\00"
-// CHECK: [[setter:@OBJC_PROP_NAME_ATTR[^ ]+]] = private global [18 x i8] c"Ti,V_evolvingprop\00",
-// CHECK: @"\01l_OBJC_$_PROP_LIST_FooRO" = private global { i32, i32, [1 x %struct._prop_t] }{{.*}}[[getter]]{{.*}}[[setter]]
+// CHECK: [[evolvinggetter:@OBJC_PROP_NAME_ATTR[^ ]+]] = private global [13 x i8] c"evolvingprop\00"
+// CHECK: [[evolvingsetter:@OBJC_PROP_NAME_ATTR[^ ]+]] = private global [18 x i8] c"Ti,V_evolvingprop\00",
+// CHECK: [[booleanmetadata:@OBJC_PROP_NAME_ATTR[^ ]+]] = private global [34 x i8] c"Ti,N,GisBooleanProp,V_booleanProp\00"
+// CHECK: [[weakmetadata:@OBJC_PROP_NAME_ATTR[^ ]+]] = private global [23 x i8] c"T@\22Foo\22,W,N,V_weakProp\00"
+// CHECK: @"\01l_OBJC_$_PROP_LIST_FooRO" = private global { i32, i32, [3 x %struct._prop_t] }{{.*}}[[evolvinggetter]]{{.*}}[[evolvingsetter]]{{.*}}[[booleanmetadata]]

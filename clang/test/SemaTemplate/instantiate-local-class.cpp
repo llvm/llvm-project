@@ -448,3 +448,30 @@ namespace PR21332 {
   }
   template void f7<int>();
 }
+
+// rdar://23721638: Ensure that we correctly perform implicit
+// conversions when instantiating the default arguments of local functions.
+namespace rdar23721638 {
+  struct A {
+    A(const char *) = delete;  // expected-note 2 {{explicitly marked deleted here}}
+  };
+
+  template <typename T> void foo() {
+    struct Inner { // expected-note {{in instantiation}}
+      void operator()(T a = "") {} // expected-error {{conversion function from 'const char [1]' to 'rdar23721638::A' invokes a deleted function}}
+      // expected-note@-1 {{passing argument to parameter 'a' here}}
+      // expected-note@-2 {{candidate function not viable}}
+    };
+    Inner()(); // expected-error {{no matching function}}
+  }
+  template void foo<A>(); // expected-note 2 {{in instantiation}}
+
+  template <typename T> void bar() {
+    auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char [1]' to 'rdar23721638::A' invokes a deleted function}}
+      // expected-note@-1 {{passing argument to parameter 'a' here}}
+      // expected-note@-2 {{candidate function not viable}}
+      // expected-note@-3 {{conversion candidate of type}}
+    lambda(); // expected-error {{no matching function}}
+  }
+  template void bar<A>(); // expected-note {{in instantiation}}
+}

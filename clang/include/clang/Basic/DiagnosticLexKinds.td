@@ -293,6 +293,9 @@ def warn_pp_macro_hides_keyword : Extension<
 def warn_pp_macro_is_reserved_id : Warning<
   "macro name is a reserved identifier">, DefaultIgnore,
   InGroup<ReservedIdAsMacro>;
+def warn_pp_objc_macro_redef_ignored : Warning<
+  "ignoring redefinition of Objective-C qualifier macro">,
+  InGroup<DiagGroup<"objc-macro-redefinition">>;
 
 def pp_invalid_string_literal : Warning<
   "invalid string literal, ignoring final '\\'">;

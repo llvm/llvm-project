@@ -1339,20 +1339,16 @@ class UninitValsDiagReporter : public UninitVariablesHandler {
   // the same as insertion order. This is needed to obtain a deterministic
   // order of diagnostics when calling flushDiagnostics().
   typedef llvm::MapVector<const VarDecl *, MappedType> UsesMap;
-  UsesMap *uses;
+  UsesMap uses;
   
 public:
-  UninitValsDiagReporter(Sema &S) : S(S), uses(nullptr) {}
+  UninitValsDiagReporter(Sema &S) : S(S) {}
   ~UninitValsDiagReporter() override { flushDiagnostics(); }
 
   MappedType &getUses(const VarDecl *vd) {
-    if (!uses)
-      uses = new UsesMap();
-
-    MappedType &V = (*uses)[vd];
+    MappedType &V = uses[vd];
     if (!V.getPointer())
       V.setPointer(new UsesVec());
-    
     return V;
   }
 
@@ -1366,10 +1362,7 @@ public:
   }
   
   void flushDiagnostics() {
-    if (!uses)
-      return;
-
-    for (const auto &P : *uses) {
+    for (const auto &P : uses) {
       const VarDecl *vd = P.first;
       const MappedType &V = P.second;
 
@@ -1410,7 +1403,8 @@ public:
       // Release the uses vector.
       delete vec;
     }
-    delete uses;
+
+    uses.clear();
   }
 
 private:

@@ -3228,7 +3228,7 @@ DeduceFromInitializerList(Sema &S, TemplateParameterList *TemplateParams,
   const bool IsDependentSizedArray =
       !IsConstSizedArray && AdjustedParamType->isDependentSizedArrayType();
 
-  QualType ElTy;  // The type of the std::initializer_list or the array element.
+  QualType ElTy;  // The element type of the std::initializer_list or the array.
 
   const bool IsSTDList = !IsConstSizedArray && !IsDependentSizedArray &&
                          S.isStdInitializerList(AdjustedParamType, &ElTy);

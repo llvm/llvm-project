@@ -1102,6 +1102,9 @@ CursorKind.CUDASHARED_ATTR = CursorKind(416)
 
 CursorKind.VISIBILITY_ATTR = CursorKind(417)
 
+CursorKind.DLLEXPORT_ATTR = CursorKind(418)
+CursorKind.DLLIMPORT_ATTR = CursorKind(419)
+
 ###
 # Preprocessing
 CursorKind.PREPROCESSING_DIRECTIVE = CursorKind(500)

@@ -2509,15 +2509,12 @@ public:
   void setPropertyAttributes(PropertyAttributeKind PRVal) {
     PropertyAttributes |= PRVal;
   }
+  void overwritePropertyAttributes(unsigned PRVal) {
+    PropertyAttributes = PRVal;
+  }
 
   PropertyAttributeKind getPropertyAttributesAsWritten() const {
     return PropertyAttributeKind(PropertyAttributesAsWritten);
-  }
-
-  bool hasWrittenStorageAttribute() const {
-    return PropertyAttributesAsWritten & (OBJC_PR_assign | OBJC_PR_copy |
-        OBJC_PR_unsafe_unretained | OBJC_PR_retain | OBJC_PR_strong |
-        OBJC_PR_weak);
   }
 
   void setPropertyAttributesAsWritten(PropertyAttributeKind PRVal) {

@@ -1680,8 +1680,11 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
       Sema::ContextRAII SavedContext(*this, OwningFunc);
       LocalInstantiationScope Local(*this);
       ExprResult NewArg = SubstExpr(Arg, TemplateArgs);
-      if (NewArg.isUsable())
-        NewParm->setDefaultArg(NewArg.get());
+      if (NewArg.isUsable()) {
+        // It would be nice if we still had this.
+        SourceLocation EqualLoc = NewArg.get()->getLocStart();
+        SetParamDefaultArgument(NewParm, NewArg.get(), EqualLoc);
+      }
     } else {
       // FIXME: if we non-lazily instantiated non-dependent default args for
       // non-dependent parameter types we could remove a bunch of duplicate

@@ -1266,20 +1266,27 @@ RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
   return make_error_code(llvm::errc::no_such_file_or_directory);
 }
 
+static Status getRedirectedFileStatus(const Twine &Path, bool UseExternalNames,
+                                      Status ExternalStatus) {
+  Status S = ExternalStatus;
+  if (!UseExternalNames)
+    S = Status::copyWithNewName(S, Path.str());
+  S.IsVFSMapped = true;
+  return S;
+}
+
 ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path, Entry *E) {
   assert(E != nullptr);
-  std::string PathStr(Path.str());
   if (auto *F = dyn_cast<RedirectingFileEntry>(E)) {
     ErrorOr<Status> S = ExternalFS->status(F->getExternalContentsPath());
     assert(!S || S->getName() == F->getExternalContentsPath());
-    if (S && !F->useExternalName(UseExternalNames))
-      *S = Status::copyWithNewName(*S, PathStr);
     if (S)
-      S->IsVFSMapped = true;
+      return getRedirectedFileStatus(Path, F->useExternalName(UseExternalNames),
+                                     *S);
     return S;
   } else { // directory
     auto *DE = cast<RedirectingDirectoryEntry>(E);
-    return Status::copyWithNewName(DE->getStatus(), PathStr);
+    return Status::copyWithNewName(DE->getStatus(), Path.str());
   }
 }
 
@@ -1291,22 +1298,17 @@ ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path) {
 }
 
 namespace {
-/// Provide a file wrapper that returns the external name when asked.
-class NamedFileAdaptor : public File {
+/// Provide a file wrapper with an overriden status.
+class FileWithFixedStatus : public File {
   std::unique_ptr<File> InnerFile;
-  std::string NewName;
+  Status S;
 
 public:
-  NamedFileAdaptor(std::unique_ptr<File> InnerFile, std::string NewName)
-      : InnerFile(std::move(InnerFile)), NewName(std::move(NewName)) {}
+  FileWithFixedStatus(std::unique_ptr<File> InnerFile, Status S)
+      : InnerFile(std::move(InnerFile)), S(S) {}
 
-  llvm::ErrorOr<Status> status() override {
-    auto InnerStatus = InnerFile->status();
-    if (InnerStatus)
-      return Status::copyWithNewName(*InnerStatus, NewName);
-    return InnerStatus.getError();
-  }
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  ErrorOr<Status> status() override { return S; }
+  ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
             bool IsVolatile) override {
     return InnerFile->getBuffer(Name, FileSize, RequiresNullTerminator,
@@ -1330,11 +1332,15 @@ RedirectingFileSystem::openFileForRead(const Twine &Path) {
   if (!Result)
     return Result;
 
-  if (!F->useExternalName(UseExternalNames))
-    return std::unique_ptr<File>(
-        new NamedFileAdaptor(std::move(*Result), Path.str()));
+  auto ExternalStatus = (*Result)->status();
+  if (!ExternalStatus)
+    return ExternalStatus.getError();
 
-  return Result;
+  // FIXME: Update the status with the name and VFSMapped.
+  Status S = getRedirectedFileStatus(Path, F->useExternalName(UseExternalNames),
+                                     *ExternalStatus);
+  return std::unique_ptr<File>(
+      llvm::make_unique<FileWithFixedStatus>(std::move(*Result), S));
 }
 
 IntrusiveRefCntPtr<FileSystem>

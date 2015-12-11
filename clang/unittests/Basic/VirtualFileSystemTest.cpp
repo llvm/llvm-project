@@ -20,6 +20,18 @@ using namespace llvm;
 using llvm::sys::fs::UniqueID;
 
 namespace {
+struct DummyFile : public vfs::File {
+  vfs::Status S;
+  explicit DummyFile(vfs::Status S) : S(S) {}
+  llvm::ErrorOr<vfs::Status> status() override { return S; }
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
+            bool IsVolatile) override {
+    llvm_unreachable("unimplemented");
+  }
+  virtual std::error_code close() override { return std::error_code(); }
+};
+
 class DummyFileSystem : public vfs::FileSystem {
   int FSID;   // used to produce UniqueIDs
   int FileID; // used to produce UniqueIDs
@@ -42,7 +54,10 @@ public:
   }
   ErrorOr<std::unique_ptr<vfs::File>>
   openFileForRead(const Twine &Path) override {
-    llvm_unreachable("unimplemented");
+    auto S = status(Path);
+    if (S)
+      return std::unique_ptr<vfs::File>(new DummyFile{*S});
+    return S.getError();
   }
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
     return std::string();
@@ -718,10 +733,20 @@ TEST_F(VFSFromYAMLTest, MappedFiles) {
   ErrorOr<vfs::Status> S = O->status("//root/file1");
   ASSERT_FALSE(S.getError());
   EXPECT_EQ("//root/foo/bar/a", S->getName());
+  EXPECT_TRUE(S->IsVFSMapped);
 
   ErrorOr<vfs::Status> SLower = O->status("//root/foo/bar/a");
   EXPECT_EQ("//root/foo/bar/a", SLower->getName());
   EXPECT_TRUE(S->equivalent(*SLower));
+  EXPECT_FALSE(SLower->IsVFSMapped);
+
+  // file after opening
+  auto OpenedF = O->openFileForRead("//root/file1");
+  ASSERT_FALSE(OpenedF.getError());
+  auto OpenedS = (*OpenedF)->status();
+  ASSERT_FALSE(OpenedS.getError());
+  EXPECT_EQ("//root/foo/bar/a", OpenedS->getName());
+  EXPECT_TRUE(OpenedS->IsVFSMapped);
 
   // directory
   S = O->status("//root/");

@@ -4389,6 +4389,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("attribute(shared)");
   case CXCursor_VisibilityAttr:
     return cxstring::createRef("attribute(visibility)");
+  case CXCursor_DLLExport:
+    return cxstring::createRef("attribute(dllexport)");
+  case CXCursor_DLLImport:
+    return cxstring::createRef("attribute(dllimport)");
   case CXCursor_PreprocessingDirective:
     return cxstring::createRef("preprocessing directive");
   case CXCursor_MacroDefinition:

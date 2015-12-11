@@ -932,6 +932,9 @@ def warn_missing_explicit_synthesis : Warning <
 def warn_property_getter_owning_mismatch : Warning<
   "property declared as returning non-retained objects"
   "; getter returning retained objects">;
+def warn_property_redecl_getter_mismatch : Warning<
+  "getter name mismatch between property redeclaration (%1) and its original "
+  "declaration (%0)">, InGroup<PropertyAttr>;
 def error_property_setter_ambiguous_use : Error<
   "synthesized properties %0 and %1 both claim setter %2 -"
   " use of this setter will cause unexpected behavior">;
