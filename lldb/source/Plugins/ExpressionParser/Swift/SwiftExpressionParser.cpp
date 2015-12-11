@@ -67,7 +67,7 @@
 #include "swift/SIL/SILExternalSource.h"
 #include "swift/SIL/SILFunction.h"
 #include "swift/SIL/SILModule.h"
-#include "swift/SILPasses/Passes.h"
+#include "swift/SILOptimizer/PassManager/Passes.h"
 #include "swift/Basic/DiagnosticConsumer.h"
 
 using namespace lldb_private;
