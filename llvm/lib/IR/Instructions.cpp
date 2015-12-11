@@ -2458,7 +2458,7 @@ bool CastInst::isNoopCast(const DataLayout &DL) const {
 /// *  %S = secondOpcode MidTy %F to DstTy
 /// The function returns a resultOpcode so these two casts can be replaced with:
 /// *  %Replacement = resultOpcode %SrcTy %x to DstTy
-/// If no such cast is permited, the function returns 0.
+/// If no such cast is permitted, the function returns 0.
 unsigned CastInst::isEliminableCastPair(
   Instruction::CastOps firstOp, Instruction::CastOps secondOp,
   Type *SrcTy, Type *MidTy, Type *DstTy, Type *SrcIntPtrTy, Type *MidIntPtrTy,
@@ -2466,7 +2466,7 @@ unsigned CastInst::isEliminableCastPair(
   // Define the 144 possibilities for these two cast instructions. The values
   // in this matrix determine what to do in a given situation and select the
   // case in the switch below.  The rows correspond to firstOp, the columns 
-  // correspond to secondOp.  In looking at the table below, keep in  mind
+  // correspond to secondOp.  In looking at the table below, keep in mind
   // the following cast properties:
   //
   //          Size Compare       Source               Destination
@@ -2525,7 +2525,7 @@ unsigned CastInst::isEliminableCastPair(
   // Check if any of the bitcasts convert scalars<->vectors.
   if ((isFirstBitcast  && isa<VectorType>(SrcTy) != isa<VectorType>(MidTy)) ||
       (isSecondBitcast && isa<VectorType>(MidTy) != isa<VectorType>(DstTy)))
-    // Unless we are bitcasing to the original type, disallow optimizations.
+    // Unless we are bitcasting to the original type, disallow optimizations.
     if (!chainedBitcast) return 0;
 
   int ElimCase = CastResults[firstOp-Instruction::CastOpsBegin]

@@ -1,0 +1,16 @@
+RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path %p %p/Inputs/absolute_sym.macho.i386 | FileCheck %s
+
+The tested object file has been created by the dummy Objective-C code:
+@interface Foo
+@end
+
+@implementation Foo
+@end
+
+int main() { return 0; }
+
+compiled for i386. This create an absolute symbol .objc_class_name_Foo
+We must not consider this symbol for debug info linking as its address
+might conflict with other real symbols in the same file.
+
+CHECK-NOT: objc_class_name_Foo
