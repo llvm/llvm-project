@@ -315,7 +315,8 @@ def send_events_to_collector(events, command):
         formatter_spec.cleanup_func()
 
 
-def send_inferior_post_run_events(command, worker_index, process_driver):
+def send_inferior_post_run_events(
+        command, worker_index, process_driver, test_filename):
     """Sends any test events that should be generated after the inferior runs.
 
     These events would include timeouts and exceptional (i.e. signal-returning)
@@ -326,6 +327,8 @@ def send_inferior_post_run_events(command, worker_index, process_driver):
     this process
     @param process_driver the ProcessDriver-derived instance that was used
     to run the inferior process.
+    @param test_filename the full path to the Python test file that is being
+    run.
     """
     if process_driver is None:
         raise Exception("process_driver must not be None")
@@ -342,7 +345,6 @@ def send_inferior_post_run_events(command, worker_index, process_driver):
     # Handle signal/exceptional exits.
     if process_driver.is_exceptional_exit():
         (code, desc) = process_driver.exceptional_exit_details()
-        test_filename = process_driver.results[0]
         post_events.append(
             EventBuilder.event_for_job_exceptional_exit(
                 process_driver.pid,
@@ -354,7 +356,6 @@ def send_inferior_post_run_events(command, worker_index, process_driver):
 
     # Handle timeouts.
     if process_driver.is_timeout():
-        test_filename = process_driver.results[0]
         post_events.append(EventBuilder.event_for_job_timeout(
             process_driver.pid,
             worker_index,
@@ -365,7 +366,8 @@ def send_inferior_post_run_events(command, worker_index, process_driver):
         send_events_to_collector(post_events, command)
 
 
-def call_with_timeout(command, timeout, name, inferior_pid_events):
+def call_with_timeout(
+        command, timeout, name, inferior_pid_events, test_filename):
     # Add our worker index (if we have one) to all test events
     # from this inferior.
     worker_index = None
@@ -405,8 +407,8 @@ def call_with_timeout(command, timeout, name, inferior_pid_events):
     send_inferior_post_run_events(
         command,
         worker_index,
-        process_driver)
-
+        process_driver,
+        test_filename)
 
     return process_driver.results
 
@@ -426,8 +428,9 @@ def process_dir(root, files, dotest_argv, inferior_pid_events):
         timeout = (os.getenv("LLDB_%s_TIMEOUT" % timeout_name) or
                    getDefaultTimeout(dotest_options.lldb_platform_name))
 
+        test_filename = os.path.join(root, name)
         results.append(call_with_timeout(
-            command, timeout, name, inferior_pid_events))
+            command, timeout, name, inferior_pid_events, test_filename))
 
     # result = (name, status, passes, failures, unexpected_successes)
     timed_out = [name for name, status, _, _, _ in results
@@ -436,13 +439,15 @@ def process_dir(root, files, dotest_argv, inferior_pid_events):
               if status == ePassed]
     failed = [name for name, status, _, _, _ in results
               if status != ePassed]
-    unexpected_passes = [name for name, _, _, _, unexpected_successes in results
-                         if unexpected_successes > 0]
+    unexpected_passes = [
+        name for name, _, _, _, unexpected_successes in results
+        if unexpected_successes > 0]
 
     pass_count = sum([result[2] for result in results])
     fail_count = sum([result[3] for result in results])
 
-    return (timed_out, passed, failed, unexpected_passes, pass_count, fail_count)
+    return (
+        timed_out, passed, failed, unexpected_passes, pass_count, fail_count)
 
 in_q = None
 out_q = None
@@ -1509,6 +1514,16 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
 
     (timed_out, passed, failed, unexpected_successes, pass_count,
      fail_count) = summary_results
+
+    # Check if we have any tests to rerun.
+    if results_formatter is not None:
+        tests_for_rerun = results_formatter.tests_for_rerun
+        results_formatter.tests_for_rerun = None
+
+        if tests_for_rerun is not None and len(tests_for_rerun) > 0:
+            # Here's where we trigger the re-run in a future change.
+            # Make sure the rest of the changes don't break anything.
+            pass
 
     # The results formatter - if present - is done now.  Tell it to
     # terminate.

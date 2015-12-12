@@ -143,6 +143,9 @@ results_formatter_object = None
 results_formatter_options = None
 test_result = None
 
+# Test rerun configuration vars
+rerun_all_issues = False
+
 # The names of all tests. Used to assert we don't have two tests with the same base name.
 all_tests = set()
 

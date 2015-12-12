@@ -1534,6 +1534,17 @@ public:
   void addAssumption(AssumptionKind Kind, __isl_take isl_set *Set,
                      DebugLoc Loc);
 
+  /// @brief Mark the scop as invalid.
+  ///
+  /// This method adds an assumption to the scop that is always invalid. As a
+  /// result, the scop will not be optimized later on. This function is commonly
+  /// called when a condition makes it impossible (or too compile time
+  /// expensive) to process this scop any further.
+  ///
+  /// @param Kind The assumption kind describing the underlying cause.
+  /// @param Loc  The location in the source that triggered .
+  void invalidate(AssumptionKind Kind, DebugLoc Loc);
+
   /// @brief Get the boundary context for this Scop.
   ///
   /// @return The boundary context of this Scop.

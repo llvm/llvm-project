@@ -28,6 +28,7 @@ import six
 from six.moves import cPickle
 
 # LLDB modules
+from . import configuration
 
 
 # Ignore method count on DTOs.
@@ -165,7 +166,8 @@ class EventBuilder(object):
 
     RESULT_TYPES = set([
         TYPE_JOB_RESULT,
-        TYPE_TEST_RESULT])
+        TYPE_TEST_RESULT
+        ])
 
     # Test/Job Status Tags
     STATUS_EXCEPTIONAL_EXIT = "exceptional_exit"
@@ -177,6 +179,16 @@ class EventBuilder(object):
     STATUS_SKIP = "skip"
     STATUS_ERROR = "error"
     STATUS_TIMEOUT = "timeout"
+
+    """Test methods or jobs with a status matching any of these
+    status values will cause a testrun failure, unless
+    the test methods rerun and do not trigger an issue when rerun."""
+    TESTRUN_ERROR_STATUS_VALUES = set([
+        STATUS_ERROR,
+        STATUS_EXCEPTIONAL_EXIT,
+        STATUS_FAILURE,
+        STATUS_TIMEOUT
+        ])
 
     @staticmethod
     def _get_test_name_info(test):
@@ -655,6 +667,61 @@ class ResultsFormatter(object):
         # timeout test status for this.
         self.expected_timeouts_by_basename = set()
 
+        # Keep track of rerun-eligible tests.
+        # This is a set that contains tests saved as:
+        # {test_filename}:{test_class}:{test_name}
+        self.rerun_eligible_tests = set()
+
+        # A dictionary of test files that had a failing
+        # test, in the format of:
+        # key = test path, value = array of test methods that need rerun
+        self.tests_for_rerun = {}
+
+    @classmethod
+    def _make_rerun_eligibility_key(cls, test_result_event):
+        if test_result_event is None:
+            return None
+        component_count = 0
+        if "test_filename" in test_result_event:
+            key = test_result_event["test_filename"]
+            component_count += 1
+        if "test_class" in test_result_event:
+            if component_count > 0:
+                key += "."
+            key += test_result_event["test_class"]
+            component_count += 1
+        if "test_name" in test_result_event:
+            if component_count > 0:
+                key += "."
+            key += test_result_event["test_name"]
+            component_count += 1
+        return key
+
+    def _mark_test_for_rerun_eligibility(self, test_result_event):
+        key = self._make_rerun_eligibility_key(test_result_event)
+        if key is not None:
+            self.rerun_eligible_tests.add(key)
+        else:
+            sys.stderr.write(
+                "\nerror: test marked for re-run eligibility but "
+                "failed to create key.\n")
+
+    def _maybe_add_test_to_rerun_list(self, result_event):
+        key = self._make_rerun_eligibility_key(result_event)
+        if key is not None:
+            if key in self.rerun_eligible_tests or configuration.rerun_all_issues:
+                test_filename = result_event.get("test_filename", None)
+                if test_filename is not None:
+                    test_name = result_event.get("test_name", None)
+                    if not test_filename in self.tests_for_rerun:
+                        self.tests_for_rerun[test_filename] = []
+                    if test_name is not None:
+                        self.tests_for_rerun[test_filename].append(test_name)
+        else:
+            sys.stderr.write(
+                "\nerror: couldn't add testrun-failing test to rerun "
+                "list because no eligibility key could be created.\n")
+
     def _maybe_remap_job_result_event(self, test_event):
         """Remaps timeout/exceptional exit job results to last test method running.
 
@@ -683,13 +750,6 @@ class ResultsFormatter(object):
             for (start_key, start_value) in test_start.items():
                 if start_key not in test_event:
                     test_event[start_key] = start_value
-
-            # Always take the value of test_filename from test_start,
-            # as it was gathered by class introspections.  Job status
-            # has less refined info available to it, so might be missing
-            # path info.
-            if "test_filename" in test_start:
-                test_event["test_filename"] = test_start["test_filename"]
 
     def _maybe_remap_expected_timeout(self, event):
         if event is None:
@@ -749,12 +809,21 @@ class ResultsFormatter(object):
                 worker_index = test_event.get("worker_index", None)
                 if worker_index is not None:
                     self.started_tests_by_worker.pop(worker_index, None)
+
+                if status in EventBuilder.TESTRUN_ERROR_STATUS_VALUES:
+                    # A test/job status value in any of those status values
+                    # causes a testrun failure.  If such a test fails, check
+                    # whether it can be rerun.  If it can be rerun, add it
+                    # to the rerun job.
+                    self._maybe_add_test_to_rerun_list(test_event)
             elif event_type == EventBuilder.TYPE_TEST_START:
                 # Keep track of the most recent test start event
                 # for the related worker.
                 worker_index = test_event.get("worker_index", None)
                 if worker_index is not None:
                     self.started_tests_by_worker[worker_index] = test_event
+            elif event_type == EventBuilder.TYPE_MARK_TEST_RERUN_ELIGIBLE:
+                self._mark_test_for_rerun_eligibility(test_event)
 
     def set_expected_timeouts_by_basename(self, basenames):
         """Specifies a list of test file basenames that are allowed to timeout

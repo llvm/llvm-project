@@ -15,24 +15,22 @@
 using namespace clang::ast_matchers;
 
 static bool isContainer(llvm::StringRef ClassName) {
-  static const char *const ContainerNames[] = {
-    "std::array",
-    "std::deque",
-    "std::forward_list",
-    "std::list",
-    "std::map",
-    "std::multimap",
-    "std::multiset",
-    "std::priority_queue",
-    "std::queue",
-    "std::set",
-    "std::stack",
-    "std::unordered_map",
-    "std::unordered_multimap",
-    "std::unordered_multiset",
-    "std::unordered_set",
-    "std::vector"
-  };
+  static const char *const ContainerNames[] = {"std::array",
+                                               "std::deque",
+                                               "std::forward_list",
+                                               "std::list",
+                                               "std::map",
+                                               "std::multimap",
+                                               "std::multiset",
+                                               "std::priority_queue",
+                                               "std::queue",
+                                               "std::set",
+                                               "std::stack",
+                                               "std::unordered_map",
+                                               "std::unordered_multimap",
+                                               "std::unordered_multiset",
+                                               "std::unordered_set",
+                                               "std::vector"};
   return std::binary_search(std::begin(ContainerNames),
                             std::end(ContainerNames), ClassName);
 }
@@ -65,7 +63,8 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
               anyOf(has(integerLiteral(equals(0))),
                     allOf(anyOf(hasOperatorName("<"), hasOperatorName(">="),
                                 hasOperatorName(">"), hasOperatorName("<=")),
-                          hasEitherOperand(integerLiteral(equals(1))))))
+                          hasEitherOperand(
+                              ignoringImpCasts(integerLiteral(equals(1)))))))
               .bind("SizeBinaryOp")),
       hasParent(implicitCastExpr(
           hasImplicitDestinationType(isBoolType()),
@@ -101,19 +100,21 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (BinaryOp) { // Determine the correct transformation.
     bool Negation = false;
-    const bool ContainerIsLHS = !llvm::isa<IntegerLiteral>(BinaryOp->getLHS());
+    const bool ContainerIsLHS =
+        !llvm::isa<IntegerLiteral>(BinaryOp->getLHS()->IgnoreImpCasts());
     const auto OpCode = BinaryOp->getOpcode();
     uint64_t Value = 0;
     if (ContainerIsLHS) {
-      if (const auto *Literal =
-              llvm::dyn_cast<IntegerLiteral>(BinaryOp->getRHS()))
+      if (const auto *Literal = llvm::dyn_cast<IntegerLiteral>(
+              BinaryOp->getRHS()->IgnoreImpCasts()))
         Value = Literal->getValue().getLimitedValue();
       else
         return;
     } else {
-      Value = llvm::dyn_cast<IntegerLiteral>(BinaryOp->getLHS())
-                  ->getValue()
-                  .getLimitedValue();
+      Value =
+          llvm::dyn_cast<IntegerLiteral>(BinaryOp->getLHS()->IgnoreImpCasts())
+              ->getValue()
+              .getLimitedValue();
     }
 
     // Constant that is not handled.

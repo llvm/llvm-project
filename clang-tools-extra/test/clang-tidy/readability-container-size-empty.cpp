@@ -3,7 +3,7 @@
 namespace std {
 template <typename T> struct vector {
   vector() {}
-  int size() const {}
+  unsigned long size() const {}
   bool empty() const {}
 };
 }

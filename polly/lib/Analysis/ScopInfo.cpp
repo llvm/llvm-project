@@ -674,8 +674,7 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
       Affine = isl_pw_aff_scale_down_val(Affine, v);
 
       if (!isDivisible(Subscripts[0], getElemSizeInBytes(), *S.getSE()))
-        S.addAssumption(ALIGNMENT, isl_set_empty(S.getParamSpace()),
-                        AccessInstruction->getDebugLoc());
+        S.invalidate(ALIGNMENT, AccessInstruction->getDebugLoc());
     }
 
     isl_map *SubscriptMap = isl_map_from_pw_aff(Affine);
@@ -2426,7 +2425,7 @@ void Scop::buildAliasChecks(AliasAnalysis &AA) {
   // If a problem occurs while building the alias groups we need to delete
   // this SCoP and pretend it wasn't valid in the first place. To this end
   // we make the assumed context infeasible.
-  addAssumption(ALIASING, isl_set_empty(getParamSpace()), DebugLoc());
+  invalidate(ALIASING, DebugLoc());
 
   DEBUG(dbgs() << "\n\nNOTE: Run time checks for " << getNameStr()
                << " could not be created as the number of parameters involved "
@@ -2949,8 +2948,7 @@ void Scop::hoistInvariantLoads() {
                    << ") is required to be invariant but was not marked as "
                       "such. SCoP for "
                    << getRegion() << " will be dropped\n\n");
-      addAssumption(INVARIANTLOAD, isl_set_empty(getParamSpace()),
-                    LI->getDebugLoc());
+      invalidate(INVARIANTLOAD, LI->getDebugLoc());
       return;
     }
   }
@@ -2969,8 +2967,7 @@ Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *AccessType,
     // In case of mismatching array sizes, we bail out by setting the run-time
     // context to false.
     if (!SAI->updateSizes(Sizes))
-      addAssumption(DELINEARIZATION, isl_set_empty(getParamSpace()),
-                    DebugLoc());
+      invalidate(DELINEARIZATION, DebugLoc());
   }
   return SAI.get();
 }
@@ -3080,6 +3077,10 @@ void Scop::addAssumption(AssumptionKind Kind, __isl_take isl_set *Set,
   }
 
   AssumedContext = isl_set_coalesce(AssumedContext);
+}
+
+void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc) {
+  addAssumption(Kind, isl_set_empty(getParamSpace()), Loc);
 }
 
 __isl_give isl_set *Scop::getBoundaryContext() const {

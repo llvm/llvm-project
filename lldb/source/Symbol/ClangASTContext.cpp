@@ -9682,6 +9682,123 @@ ClangASTContext::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString na
     return found_decls;
 }
 
+// Look for child_decl_ctx's lookup scope in frame_decl_ctx and its parents,
+// and return the number of levels it took to find it, or LLDB_INVALID_DECL_LEVEL
+// if not found.  If the decl was imported via a using declaration, its name and/or
+// type, if set, will be used to check that the decl found in the scope is a match.
+//
+// The optional name is required by languages (like C++) to handle using declarations
+// like:
+//
+//     void poo();
+//     namespace ns {
+//         void foo();
+//         void goo();
+//     }
+//     void bar() {
+//         using ns::foo;
+//         // CountDeclLevels returns 0 for 'foo', 1 for 'poo', and
+//         // LLDB_INVALID_DECL_LEVEL for 'goo'.
+//     }
+//
+// The optional type is useful in the case that there's a specific overload
+// that we're looking for that might otherwise be shadowed, like:
+//
+//     void foo(int);
+//     namespace ns {
+//         void foo();
+//     }
+//     void bar() {
+//         using ns::foo;
+//         // CountDeclLevels returns 0 for { 'foo', void() },
+//         // 1 for { 'foo', void(int) }, and
+//         // LLDB_INVALID_DECL_LEVEL for { 'foo', void(int, int) }.
+//     }
+//
+// NOTE: Because file statics are at the TranslationUnit along with globals, a
+// function at file scope will return the same level as a function at global scope.
+// Ideally we'd like to treat the file scope as an additional scope just below the
+// global scope.  More work needs to be done to recognise that, if the decl we're
+// trying to look up is static, we should compare its source file with that of the
+// current scope and return a lower number for it.
+uint32_t
+ClangASTContext::CountDeclLevels (clang::DeclContext *frame_decl_ctx,
+                                  clang::DeclContext *child_decl_ctx,
+                                  ConstString *child_name,
+                                  CompilerType *child_type)
+{
+    if (frame_decl_ctx)
+    {
+        std::set<DeclContext *> searched;
+        std::multimap<DeclContext *, DeclContext *> search_queue;
+        SymbolFile *symbol_file = GetSymbolFile();
+
+        // Get the lookup scope for the decl we're trying to find.
+        clang::DeclContext *parent_decl_ctx = child_decl_ctx->getParent();
+
+        // Look for it in our scope's decl context and its parents.
+        uint32_t level = 0;
+        for (clang::DeclContext *decl_ctx = frame_decl_ctx; decl_ctx != nullptr; decl_ctx = decl_ctx->getParent())
+        {
+            if (!decl_ctx->isLookupContext())
+                continue;
+            if (decl_ctx == parent_decl_ctx)
+                // Found it!
+                return level;
+            search_queue.insert(std::make_pair(decl_ctx, decl_ctx));
+            for (auto it = search_queue.find(decl_ctx); it != search_queue.end(); it++)
+            {
+                if (searched.find(it->second) != searched.end())
+                    continue;
+                searched.insert(it->second);
+                symbol_file->ParseDeclsForContext(CompilerDeclContext(this, it->second));
+
+                for (clang::Decl *child : it->second->decls())
+                {
+                    if (clang::UsingDirectiveDecl *ud = llvm::dyn_cast<clang::UsingDirectiveDecl>(child))
+                    {
+                        clang::DeclContext *ns = ud->getNominatedNamespace();
+                        if (ns == parent_decl_ctx)
+                            // Found it!
+                            return level;
+                        clang::DeclContext *from = ud->getCommonAncestor();
+                        if (searched.find(ns) == searched.end())
+                            search_queue.insert(std::make_pair(from, ns));
+                    }
+                    else if (child_name)
+                    {
+                        if (clang::UsingDecl *ud = llvm::dyn_cast<clang::UsingDecl>(child))
+                        {
+                            for (clang::UsingShadowDecl *usd : ud->shadows())
+                            {
+                                clang::Decl *target = usd->getTargetDecl();
+                                clang::NamedDecl *nd = llvm::dyn_cast<clang::NamedDecl>(target);
+                                if (!nd)
+                                    continue;
+                                // Check names.
+                                IdentifierInfo *ii = nd->getIdentifier();
+                                if (ii == nullptr || !ii->getName().equals(child_name->AsCString(nullptr)))
+                                    continue;
+                                // Check types, if one was provided.
+                                if (child_type)
+                                {
+                                    CompilerType clang_type = ClangASTContext::GetTypeForDecl(nd);
+                                    if (!AreTypesSame(clang_type, *child_type, /*ignore_qualifiers=*/true))
+                                        continue;
+                                }
+                                // Found it!
+                                return level;
+                            }
+                        }
+                    }
+                }
+            }
+            ++level;
+        }
+    }
+    return LLDB_INVALID_DECL_LEVEL;
+}
+
 bool
 ClangASTContext::DeclContextIsStructUnionOrClass (void *opaque_decl_ctx)
 {

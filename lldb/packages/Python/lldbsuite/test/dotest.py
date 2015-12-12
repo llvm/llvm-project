@@ -393,6 +393,9 @@ def parseOptionsAndInitTestdirs():
         configuration.results_formatter_name = (
             "lldbsuite.test.basic_results_formatter.BasicResultsFormatter")
 
+    # rerun-related arguments
+    configuration.rerun_all_issues = args.rerun_all_issues
+
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name
     if args.lldb_platform_url:

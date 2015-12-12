@@ -1424,6 +1424,128 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                                                   sc_list);
             }
 
+            // If we found more than one function, see if we can use the
+            // frame's decl context to remove functions that are shadowed
+            // by other functions which match in type but are nearer in scope.
+            //
+            // AddOneFunction will not add a function whose type has already been
+            // added, so if there's another function in the list with a matching
+            // type, check to see if their decl context is a parent of the current
+            // frame's or was imported via a and using statement, and pick the
+            // best match according to lookup rules.
+            if (sc_list.GetSize() > 1)
+            {
+                // Collect some info about our frame's context.
+                StackFrame *frame = m_parser_vars->m_exe_ctx.GetFramePtr();
+                SymbolContext frame_sym_ctx;
+                if (frame != nullptr)
+                    frame_sym_ctx = frame->GetSymbolContext(lldb::eSymbolContextFunction|lldb::eSymbolContextBlock);
+                CompilerDeclContext frame_decl_context = frame_sym_ctx.block != nullptr ? frame_sym_ctx.block->GetDeclContext() : CompilerDeclContext();
+
+                // We can't do this without a compiler decl context for our frame.
+                if (frame_decl_context)
+                {
+                    clang::DeclContext *frame_decl_ctx = (clang::DeclContext *)frame_decl_context.GetOpaqueDeclContext();
+                    ClangASTContext *ast = llvm::dyn_cast_or_null<ClangASTContext>(frame_decl_context.GetTypeSystem());
+
+                    // Structure to hold the info needed when comparing function
+                    // declarations.
+                    struct FuncDeclInfo
+                    {
+                        ConstString m_name;
+                        CompilerType m_copied_type;
+                        uint32_t m_decl_lvl;
+                        SymbolContext m_sym_ctx;
+                    };
+
+                    // First, symplify things by looping through the symbol contexts
+                    // to remove unwanted functions and separate out the functions we
+                    // want to compare and prune into a separate list.
+                    // Cache the info needed about the function declarations in a
+                    // vector for efficiency.
+                    SymbolContextList sc_sym_list;
+                    uint32_t num_indices = sc_list.GetSize();
+                    std::vector<FuncDeclInfo> fdi_cache;
+                    fdi_cache.reserve(num_indices);
+                    for (uint32_t index = 0; index < num_indices; ++index)
+                    {
+                        FuncDeclInfo fdi;
+                        SymbolContext sym_ctx;
+                        sc_list.GetContextAtIndex(index, sym_ctx);
+
+                        // We don't know enough about symbols to compare them,
+                        // but we should keep them in the list.
+                        Function *function = sym_ctx.function;
+                        if (!function)
+                        {
+                            sc_sym_list.Append(sym_ctx);
+                            continue;
+                        }
+                        // Filter out functions without declaration contexts, as well as
+                        // class/instance methods, since they'll be skipped in the
+                        // code that follows anyway.
+                        CompilerDeclContext func_decl_context = function->GetDeclContext();
+                        if (!func_decl_context || func_decl_context.IsClassMethod(nullptr, nullptr, nullptr))
+                            continue;
+                        // We can only prune functions for which we can copy the type.
+                        CompilerType func_clang_type = function->GetType()->GetFullCompilerType();
+                        CompilerType copied_func_type = GuardedCopyType(func_clang_type);
+                        if (!copied_func_type)
+                        {
+                            sc_sym_list.Append(sym_ctx);
+                            continue;
+                        }
+
+                        fdi.m_sym_ctx = sym_ctx;
+                        fdi.m_name = function->GetName();
+                        fdi.m_copied_type = copied_func_type;
+                        fdi.m_decl_lvl = LLDB_INVALID_DECL_LEVEL;
+                        if (fdi.m_copied_type && func_decl_context)
+                        {
+                            // Call CountDeclLevels to get the number of parent scopes we
+                            // have to look through before we find the function declaration.
+                            // When comparing functions of the same type, the one with a
+                            // lower count will be closer to us in the lookup scope and
+                            // shadows the other.
+                            clang::DeclContext *func_decl_ctx = (clang::DeclContext *)func_decl_context.GetOpaqueDeclContext();
+                            fdi.m_decl_lvl = ast->CountDeclLevels(frame_decl_ctx,
+                                                                  func_decl_ctx,
+                                                                  &fdi.m_name,
+                                                                  &fdi.m_copied_type);
+                        }
+                        fdi_cache.emplace_back(fdi);
+                    }
+
+                    // Loop through the functions in our cache looking for matching types,
+                    // then compare their scope levels to see which is closer.
+                    std::multimap<CompilerType, const FuncDeclInfo*> matches;
+                    for (const FuncDeclInfo &fdi : fdi_cache)
+                    {
+                        const CompilerType t = fdi.m_copied_type;
+                        auto q = matches.find(t);
+                        if (q != matches.end())
+                        {
+                            if (q->second->m_decl_lvl > fdi.m_decl_lvl)
+                                // This function is closer; remove the old set.
+                                matches.erase(t);
+                            else if (q->second->m_decl_lvl < fdi.m_decl_lvl)
+                                // The functions in our set are closer - skip this one.
+                                continue;
+                        }
+                        matches.insert(std::make_pair(t, &fdi));
+                    }
+
+                    // Loop through our matches and add their symbol contexts to our list.
+                    SymbolContextList sc_func_list;
+                    for (const auto &q : matches)
+                        sc_func_list.Append(q.second->m_sym_ctx);
+
+                    // Rejoin the lists with the functions in front.
+                    sc_list = sc_func_list;
+                    sc_list.Append(sc_sym_list);
+                }
+            }
+
             if (sc_list.GetSize())
             {
                 Symbol *extern_symbol = NULL;

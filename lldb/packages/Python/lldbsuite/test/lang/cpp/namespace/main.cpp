@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdarg>
+#include "ns.h"
 
 namespace {
     typedef unsigned int my_uint_t;
@@ -80,7 +81,6 @@ namespace ns2 {
     int value = 200;
 }
 
-#include <stdio.h>
 void test_namespace_scopes() {
     do {
         using namespace ns1;
@@ -113,5 +113,12 @@ int Foo::myfunc(int a)
 int
 main (int argc, char const *argv[])
 {
+    test_lookup_at_global_scope();
+    test_lookup_at_file_scope();
+    A::test_lookup_at_ns_scope();
+    A::B::test_lookup_at_nested_ns_scope();
+    A::B::test_lookup_at_nested_ns_scope_after_using();
+    test_lookup_before_using_directive();
+    test_lookup_after_using_directive();
     return Foo::myfunc(12);
 }

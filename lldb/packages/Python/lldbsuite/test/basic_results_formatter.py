@@ -258,37 +258,34 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
         if print_matching_tests:
             # Sort by test name
             for (_, event) in result_events_by_status[result_status_id]:
-                extra_info = ""
+                # Convert full test path into test-root-relative.
+                test_relative_path = os.path.relpath(
+                    os.path.realpath(event["test_filename"]),
+                    lldbsuite.lldb_test_root)
+
+                # Create extra info component (used for exceptional exit info)
                 if result_status_id == EventBuilder.STATUS_EXCEPTIONAL_EXIT:
-                    extra_info = "{} ({}) ".format(
+                    extra_info = "[EXCEPTIONAL EXIT {} ({})] ".format(
                         event["exception_code"],
                         event["exception_description"])
-
-                if event["event"] == EventBuilder.TYPE_JOB_RESULT:
-                    # Jobs status that couldn't be mapped to a test method
-                    # doesn't have as much detail.
-                    self.out_file.write(
-                        "{}: {}{} (no test method running)\n".format(
-                            detail_label,
-                            extra_info,
-                            event["test_filename"]))
                 else:
-                    # Figure out the identity we will use for this test.
-                    if configuration.verbose and ("test_class" in event):
-                        test_id = "{}.{}".format(
-                            event["test_class"], event["test_name"])
-                    else:
-                        test_id = event["test_name"]
+                    extra_info = ""
 
-                    # Test-method events have richer detail, use that here.
-                    test_relative_path = os.path.relpath(
-                        os.path.realpath(event["test_filename"]),
-                        lldbsuite.lldb_test_root)
-                    self.out_file.write("{}: {}{} ({})\n".format(
-                        detail_label,
-                        extra_info,
-                        test_id,
-                        test_relative_path))
+                # Figure out the identity we will use for this test.
+                if configuration.verbose and ("test_class" in event):
+                    test_id = "{}.{}".format(
+                        event["test_class"], event["test_name"])
+                elif "test_name" in event:
+                    test_id = event["test_name"]
+                else:
+                    test_id = "<no_running_test_method>"
+
+                # Display the info.
+                self.out_file.write("{}: {}{} ({})\n".format(
+                    detail_label,
+                    extra_info,
+                    test_id,
+                    test_relative_path))
 
     def _finish_output_no_lock(self):
         """Writes the test result report to the output file."""

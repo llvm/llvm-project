@@ -944,6 +944,15 @@ public:
     CompilerType
     GetTypeForFormatters (void* type) override;
     
+#define LLDB_INVALID_DECL_LEVEL            UINT32_MAX
+    // LLDB_INVALID_DECL_LEVEL is returned by CountDeclLevels if
+    // child_decl_ctx could not be found in decl_ctx.
+    uint32_t
+    CountDeclLevels (clang::DeclContext *frame_decl_ctx,
+                     clang::DeclContext *child_decl_ctx,
+                     ConstString *child_name = nullptr,
+                     CompilerType *child_type = nullptr);
+
     //----------------------------------------------------------------------
     // Modifying RecordType
     //----------------------------------------------------------------------
