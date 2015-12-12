@@ -45,13 +45,6 @@ entry:
   %call = invoke i32 @do_div(i32 1, i32 0) #4
           to label %__try.cont.12 unwind label %catch.dispatch
 
-catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [i8* null]
-          to label %__except unwind label %catchendblock
-
-__except:                                         ; preds = %catch.dispatch
-  catchret %0 to label %__except.2
-
 __except.2:                                       ; preds = %__except
   %call4 = invoke i32 @do_div(i32 1, i32 0) #4
           to label %invoke.cont.3 unwind label %ehcleanup
@@ -60,24 +53,6 @@ invoke.cont.3:                                    ; preds = %__except.2
   invoke fastcc void @"\01?fin$0@0@main@@"() #4
           to label %__try.cont.12 unwind label %catch.dispatch.7
 
-catchendblock:                                    ; preds = %catch.dispatch
-  catchendpad unwind label %catch.dispatch.7
-
-ehcleanup:                                        ; preds = %__except.2
-  %1 = cleanuppad []
-  invoke fastcc void @"\01?fin$0@0@main@@"() #4
-          to label %invoke.cont.6 unwind label %ehcleanup.end
-
-invoke.cont.6:                                    ; preds = %ehcleanup
-  cleanupret %1 unwind label %catch.dispatch.7
-
-catch.dispatch.7:                                 ; preds = %invoke.cont.3, %invoke.cont.6, %ehcleanup.end, %catchendblock
-  %2 = catchpad [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@main@@" to i8*)]
-          to label %__except.ret unwind label %catchendblock.8
-
-__except.ret:                                     ; preds = %catch.dispatch.7
-  catchret %2 to label %__except.9
-
 __except.9:                                       ; preds = %__except.ret
   %call11 = tail call i32 @puts(i8* nonnull getelementptr inbounds ([7 x i8], [7 x i8]* @"\01??_C@_06IBDBCMGJ@caught?$AA@", i64 0, i64 0))
   br label %__try.cont.12
@@ -85,11 +60,27 @@ __except.9:                                       ; preds = %__except.ret
 __try.cont.12:                                    ; preds = %invoke.cont.3, %entry, %__except.9
   ret i32 0
 
-catchendblock.8:                                  ; preds = %catch.dispatch.7
-  catchendpad unwind to caller
+catch.dispatch:                                   ; preds = %entry
+  %cs1 = catchswitch within none [label %__except] unwind label %catch.dispatch.7
 
-ehcleanup.end:                                    ; preds = %ehcleanup
-  cleanupendpad %1 unwind label %catch.dispatch.7
+__except:                                         ; preds = %catch.dispatch
+  %cp1 = catchpad within %cs1 [i8* null]
+  catchret from %cp1 to label %__except.2
+
+ehcleanup:                                        ; preds = %__except.2
+  %cp2 = cleanuppad within none []
+  invoke fastcc void @"\01?fin$0@0@main@@"() #4
+          to label %invoke.cont.6 unwind label %catch.dispatch.7
+
+invoke.cont.6:                                    ; preds = %ehcleanup
+  cleanupret from %cp2 unwind label %catch.dispatch.7
+
+catch.dispatch.7:
+  %cs2 = catchswitch within none [label %__except.ret] unwind to caller
+
+__except.ret:                                     ; preds = %catch.dispatch.7
+  %cp3 = catchpad within %cs2 [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@main@@" to i8*)]
+  catchret from %cp3 to label %__except.9
 }
 
 ; CHECK: main:                                   # @main
@@ -112,7 +103,7 @@ ehcleanup.end:                                    ; preds = %ehcleanup
 ; CHECK:         addq    $32, %rsp
 ; CHECK:         popq    %rbp
 ; CHECK:         retq
-; CHECK: .LBB1_[[except1bb:[0-9]+]]:                                # %catch.dispatch
+; CHECK: .LBB1_[[except1bb:[0-9]+]]:                                # %__except
 ; CHECK: .Ltmp2:
 ; CHECK:         movl    $1, %ecx
 ; CHECK:         xorl    %edx, %edx
@@ -120,7 +111,7 @@ ehcleanup.end:                                    ; preds = %ehcleanup
 ; CHECK: .Ltmp3:
 ; CHECK:         callq   "?fin$0@0@main@@"
 ; CHECK:         jmp     .LBB1_[[epilogue]]
-; CHECK: .LBB1_[[except2bb:[0-9]+]]:                                # %catch.dispatch.7
+; CHECK: .LBB1_[[except2bb:[0-9]+]]:                                # %__except.ret
 ; CHECK:         leaq    "??_C@_06IBDBCMGJ@caught?$AA@"(%rip), %rcx
 ; CHECK:         callq   puts
 ; CHECK:         jmp     .LBB1_[[epilogue]]
@@ -143,18 +134,18 @@ ehcleanup.end:                                    ; preds = %ehcleanup
 ; CHECK-NEXT:         .long   .Ltmp2@IMGREL+1
 ; CHECK-NEXT:         .long   .Ltmp3@IMGREL+1
 ; CHECK-NEXT:         .long   "?filt$0@0@main@@"@IMGREL
-; CHECK-NEXT:         .long   .LBB1_5@IMGREL
+; CHECK-NEXT:         .long   .LBB1_3@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp6@IMGREL+1
 ; CHECK-NEXT:         .long   .Ltmp7@IMGREL+1
 ; CHECK-NEXT:         .long   "?filt$0@0@main@@"@IMGREL
-; CHECK-NEXT:         .long   .LBB1_5@IMGREL
+; CHECK-NEXT:         .long   .LBB1_3@IMGREL
 ; CHECK-NEXT: .Llsda_end0:
 
 ; CHECK:         .text
 ; CHECK:         .seh_endproc
 
-; CHECK: "?dtor$3@?0?main@4HA":
-; CHECK: .seh_proc "?dtor$3@?0?main@4HA"
+; CHECK: "?dtor$[[finbb]]@?0?main@4HA":
+; CHECK: .seh_proc "?dtor$[[finbb]]@?0?main@4HA"
 ; CHECK:         .seh_handler __C_specific_handler, @unwind, @except
 ; CHECK: .LBB1_[[finbb]]:                                # %ehcleanup
 ; CHECK:         movq    %rdx, 16(%rsp)

@@ -304,7 +304,7 @@ def MMX_MOVDQ2Qrr : MMXSDIi8<0xD6, MRMSrcReg, (outs VR64:$dst),
                              (ins VR128:$src), "movdq2q\t{$src, $dst|$dst, $src}",
                              [(set VR64:$dst,
                                (x86mmx (bitconvert
-                               (i64 (vector_extract (v2i64 VR128:$src),
+                               (i64 (extractelt (v2i64 VR128:$src),
                                      (iPTR 0))))))],
                              IIC_MMX_MOVQ_RR>;
 

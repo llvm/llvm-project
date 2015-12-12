@@ -8,21 +8,23 @@ entry:
           to label %try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [i8* null, i32 64, i8* null]
-          to label %catch unwind label %catchendblock
+  %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
+  %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
   invoke void @dtor()
-          to label %invoke.cont.1 unwind label %catchendblock
+          to label %invoke.cont.1 unwind label %ehcleanup
 
 invoke.cont.1:                                    ; preds = %catch
-  catchret %0 to label %try.cont
+  catchret from %0 to label %try.cont
 
 try.cont:                                         ; preds = %entry, %invoke.cont.1
   ret void
 
-catchendblock:                                    ; preds = %catch, %catch.dispatch
-  catchendpad unwind to caller
+ehcleanup:
+  %cp2 = cleanuppad within none []
+  call void @g()
+  cleanupret from %cp2 unwind to caller
 }
 
 ; CHECK-LABEL:  define void @f(
@@ -31,10 +33,7 @@ catchendblock:                                    ; preds = %catch, %catch.dispa
 ; CHECK:                 to label %dtor.exit unwind label %terminate.i
 
 ; CHECK:       terminate.i:
-; CHECK-NEXT:    terminatepad [void ()* @terminate] unwind label %catchendblock
-
-; CHECK:       catchendblock:
-; CHECK-NEXT:    catchendpad unwind to caller
+; CHECK-NEXT:    terminatepad within %0 [void ()* @terminate] unwind label %ehcleanup
 
 declare i32 @__CxxFrameHandler3(...)
 
@@ -47,7 +46,7 @@ invoke.cont:                                      ; preds = %entry
   ret void
 
 terminate:                                        ; preds = %entry
-  terminatepad [void ()* @terminate] unwind to caller
+  terminatepad within none [void ()* @terminate] unwind to caller
 }
 
 declare void @g()

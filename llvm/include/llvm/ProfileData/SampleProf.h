@@ -15,12 +15,13 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROF_H_
 #define LLVM_PROFILEDATA_SAMPLEPROF_H_
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <map>
 #include <system_error>
 
 namespace llvm {
@@ -105,57 +106,6 @@ struct CallsiteLocation : public LineLocation {
 
 raw_ostream &operator<<(raw_ostream &OS, const CallsiteLocation &Loc);
 
-} // End namespace sampleprof
-
-template <> struct DenseMapInfo<sampleprof::LineLocation> {
-  typedef DenseMapInfo<uint32_t> OffsetInfo;
-  typedef DenseMapInfo<uint32_t> DiscriminatorInfo;
-  static inline sampleprof::LineLocation getEmptyKey() {
-    return sampleprof::LineLocation(OffsetInfo::getEmptyKey(),
-                                    DiscriminatorInfo::getEmptyKey());
-  }
-  static inline sampleprof::LineLocation getTombstoneKey() {
-    return sampleprof::LineLocation(OffsetInfo::getTombstoneKey(),
-                                    DiscriminatorInfo::getTombstoneKey());
-  }
-  static inline unsigned getHashValue(sampleprof::LineLocation Val) {
-    return DenseMapInfo<std::pair<uint32_t, uint32_t>>::getHashValue(
-        std::pair<uint32_t, uint32_t>(Val.LineOffset, Val.Discriminator));
-  }
-  static inline bool isEqual(sampleprof::LineLocation LHS,
-                             sampleprof::LineLocation RHS) {
-    return LHS.LineOffset == RHS.LineOffset &&
-           LHS.Discriminator == RHS.Discriminator;
-  }
-};
-
-template <> struct DenseMapInfo<sampleprof::CallsiteLocation> {
-  typedef DenseMapInfo<uint32_t> OffsetInfo;
-  typedef DenseMapInfo<uint32_t> DiscriminatorInfo;
-  typedef DenseMapInfo<StringRef> CalleeNameInfo;
-  static inline sampleprof::CallsiteLocation getEmptyKey() {
-    return sampleprof::CallsiteLocation(OffsetInfo::getEmptyKey(),
-                                        DiscriminatorInfo::getEmptyKey(), "");
-  }
-  static inline sampleprof::CallsiteLocation getTombstoneKey() {
-    return sampleprof::CallsiteLocation(OffsetInfo::getTombstoneKey(),
-                                        DiscriminatorInfo::getTombstoneKey(),
-                                        "");
-  }
-  static inline unsigned getHashValue(sampleprof::CallsiteLocation Val) {
-    return DenseMapInfo<std::pair<uint32_t, uint32_t>>::getHashValue(
-        std::pair<uint32_t, uint32_t>(Val.LineOffset, Val.Discriminator));
-  }
-  static inline bool isEqual(sampleprof::CallsiteLocation LHS,
-                             sampleprof::CallsiteLocation RHS) {
-    return LHS.LineOffset == RHS.LineOffset &&
-           LHS.Discriminator == RHS.Discriminator &&
-           LHS.CalleeName.equals(RHS.CalleeName);
-  }
-};
-
-namespace sampleprof {
-
 /// Representation of a single sample record.
 ///
 /// A sample record is represented by a positive integer value, which
@@ -176,9 +126,7 @@ public:
   ///
   /// Sample counts accumulate using saturating arithmetic, to avoid wrapping
   /// around unsigned integers.
-  void addSamples(uint64_t S) {
-    NumSamples = SaturatingAdd(NumSamples, S);
-  }
+  void addSamples(uint64_t S) { NumSamples = SaturatingAdd(NumSamples, S); }
 
   /// Add called function \p F with samples \p S.
   ///
@@ -212,9 +160,9 @@ private:
 
 raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
 
-typedef DenseMap<LineLocation, SampleRecord> BodySampleMap;
+typedef std::map<LineLocation, SampleRecord> BodySampleMap;
 class FunctionSamples;
-typedef DenseMap<CallsiteLocation, FunctionSamples> CallsiteSampleMap;
+typedef std::map<CallsiteLocation, FunctionSamples> CallsiteSampleMap;
 
 /// Representation of the samples collected for a function.
 ///
@@ -345,10 +293,10 @@ raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 /// order of LocationT.
 template <class LocationT, class SampleT> class SampleSorter {
 public:
-  typedef detail::DenseMapPair<LocationT, SampleT> SamplesWithLoc;
+  typedef std::pair<const LocationT, SampleT> SamplesWithLoc;
   typedef SmallVector<const SamplesWithLoc *, 20> SamplesWithLocList;
 
-  SampleSorter(const DenseMap<LocationT, SampleT> &Samples) {
+  SampleSorter(const std::map<LocationT, SampleT> &Samples) {
     for (const auto &I : Samples)
       V.push_back(&I);
     std::stable_sort(V.begin(), V.end(),

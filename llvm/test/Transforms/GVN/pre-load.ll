@@ -399,7 +399,7 @@ define void @test12(i32* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test12(
 block1:
   invoke void @f()
-          to label %block2 unwind label %catch
+          to label %block2 unwind label %catch.dispatch
 
 block2:
   invoke void @f()
@@ -408,31 +408,25 @@ block2:
 block3:
   ret void
 
-catch:
-  %c = catchpad []
-    to label %catch.dispatch unwind label %catchend
-
 catch.dispatch:
-  catchret %c to label %block2
+  %cs1 = catchswitch within none [label %catch] unwind label %cleanup2
 
-; CHECK: catchend:
-; CHECK-NOT: load
-; CHECK-NEXT: catchendpad
-catchend:
-  catchendpad unwind label %cleanup2
+catch:
+  %c = catchpad within %cs1 []
+  catchret from %c to label %block2
 
 cleanup:
-  %c1 = cleanuppad []
+  %c1 = cleanuppad within none []
   store i32 0, i32* %p
-  cleanupret %c1 unwind label %cleanup2
+  cleanupret from %c1 unwind label %cleanup2
 
 ; CHECK: cleanup2:
 ; CHECK-NOT: phi
-; CHECK-NEXT: %c2 = cleanuppad []
+; CHECK-NEXT: %c2 = cleanuppad within none []
 ; CHECK-NEXT: %NOTPRE = load i32, i32* %p
 cleanup2:
-  %c2 = cleanuppad []
+  %c2 = cleanuppad within none []
   %NOTPRE = load i32, i32* %p
   call void @g(i32 %NOTPRE)
-  cleanupret %c2 unwind to caller
+  cleanupret from %c2 unwind to caller
 }

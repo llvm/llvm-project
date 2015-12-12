@@ -835,9 +835,9 @@ let Predicates = [IsBigEndian] in {
 def : Pat<(v2f64 (scalar_to_vector f64:$A)),
           (v2f64 (SUBREG_TO_REG (i64 1), $A, sub_64))>;
 
-def : Pat<(f64 (vector_extract v2f64:$S, 0)),
+def : Pat<(f64 (extractelt v2f64:$S, 0)),
           (f64 (EXTRACT_SUBREG $S, sub_64))>;
-def : Pat<(f64 (vector_extract v2f64:$S, 1)),
+def : Pat<(f64 (extractelt v2f64:$S, 1)),
           (f64 (EXTRACT_SUBREG (XXPERMDI $S, $S, 2), sub_64))>;
 }
 
@@ -846,9 +846,9 @@ def : Pat<(v2f64 (scalar_to_vector f64:$A)),
           (v2f64 (XXPERMDI (SUBREG_TO_REG (i64 1), $A, sub_64),
                            (SUBREG_TO_REG (i64 1), $A, sub_64), 0))>;
 
-def : Pat<(f64 (vector_extract v2f64:$S, 0)),
+def : Pat<(f64 (extractelt v2f64:$S, 0)),
           (f64 (EXTRACT_SUBREG (XXPERMDI $S, $S, 2), sub_64))>;
-def : Pat<(f64 (vector_extract v2f64:$S, 1)),
+def : Pat<(f64 (extractelt v2f64:$S, 1)),
           (f64 (EXTRACT_SUBREG $S, sub_64))>;
 }
 

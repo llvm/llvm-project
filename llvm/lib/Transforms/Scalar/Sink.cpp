@@ -169,7 +169,8 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
         return false;
   }
 
-  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst) || Inst->isEHPad())
+  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst) || Inst->isEHPad() ||
+      Inst->mayThrow())
     return false;
 
   // Convergent operations cannot be made control-dependent on additional
@@ -192,6 +193,11 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
   // It is not possible to sink an instruction into its own block.  This can
   // happen with loops.
   if (Inst->getParent() == SuccToSinkTo)
+    return false;
+
+  // It's never legal to sink an instruction into a block which terminates in an
+  // EH-pad.
+  if (SuccToSinkTo->getTerminator()->isExceptional())
     return false;
 
   // If the block has multiple predecessors, this would introduce computation

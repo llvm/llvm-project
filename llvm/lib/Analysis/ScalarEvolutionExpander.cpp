@@ -91,22 +91,16 @@ static BasicBlock::iterator findInsertPointAfter(Instruction *I,
   BasicBlock::iterator IP = ++I->getIterator();
   if (auto *II = dyn_cast<InvokeInst>(I))
     IP = II->getNormalDest()->begin();
-  if (auto *CPI = dyn_cast<CatchPadInst>(I))
-    IP = CPI->getNormalDest()->begin();
 
   while (isa<PHINode>(IP))
     ++IP;
 
   while (IP->isEHPad()) {
-    if (isa<LandingPadInst>(IP) || isa<CleanupPadInst>(IP)) {
+    if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
       ++IP;
     } else if (auto *TPI = dyn_cast<TerminatePadInst>(IP)) {
       IP = TPI->getUnwindDest()->getFirstNonPHI()->getIterator();
-    } else if (auto *CEPI = dyn_cast<CatchEndPadInst>(IP)) {
-      IP = CEPI->getUnwindDest()->getFirstNonPHI()->getIterator();
-    } else if (auto *CEPI = dyn_cast<CleanupEndPadInst>(IP)) {
-      IP = CEPI->getUnwindDest()->getFirstNonPHI()->getIterator();
-    } else if (isa<CatchPadInst>(IP)) {
+    } else if (isa<CatchSwitchInst>(IP)) {
       IP = MustDominate->getFirstInsertionPt();
     } else {
       llvm_unreachable("unexpected eh pad!");

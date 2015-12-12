@@ -147,10 +147,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     Res = PromoteIntRes_AtomicCmpSwap(cast<AtomicSDNode>(N), ResNo);
     break;
-  case ISD::UABSDIFF:
-  case ISD::SABSDIFF:
-    Res = PromoteIntRes_SimpleIntBinOp(N);
-    break;
   }
 
   // If the result is null then the sub-method took care of registering it.

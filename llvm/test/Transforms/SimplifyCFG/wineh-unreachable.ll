@@ -12,7 +12,7 @@ entry:
 exit:
   ret void
 unreachable.unwind:
-  cleanuppad []
+  cleanuppad within none []
   unreachable  
 }
 
@@ -22,24 +22,21 @@ entry:
   invoke void @f()
     to label %exit unwind label %catch.pad
 catch.pad:
-  ; CHECK: catchpad []
-  ; CHECK-NEXT: to label %catch.body unwind label %catch.end
-  %catch = catchpad []
-    to label %catch.body unwind label %catch.end
+  %cs1 = catchswitch within none [label %catch.body] unwind label %unreachable.unwind
+  ; CHECK: catch.pad:
+  ; CHECK-NEXT: catchswitch within none [label %catch.body] unwind to caller
 catch.body:
   ; CHECK:      catch.body:
+  ; CHECK-NEXT:   catchpad within %cs1
   ; CHECK-NEXT:   call void @f()
   ; CHECK-NEXT:   unreachable
+  %catch = catchpad within %cs1 []
   call void @f()
-  catchret %catch to label %unreachable
-catch.end:
-  ; CHECK: catch.end:
-  ; CHECK-NEXT: catchendpad unwind to caller
-  catchendpad unwind label %unreachable.unwind
+  catchret from %catch to label %unreachable
 exit:
   ret void
 unreachable.unwind:
-  cleanuppad []
+  cleanuppad within none []
   unreachable
 unreachable:
   unreachable
@@ -51,24 +48,20 @@ entry:
   invoke void @f()
     to label %exit unwind label %cleanup.pad
 cleanup.pad:
-  ; CHECK: %cleanup = cleanuppad []
+  ; CHECK: %cleanup = cleanuppad within none []
   ; CHECK-NEXT: call void @f()
   ; CHECK-NEXT: unreachable
-  %cleanup = cleanuppad []
+  %cleanup = cleanuppad within none []
   invoke void @f()
-    to label %cleanup.ret unwind label %cleanup.end
+    to label %cleanup.ret unwind label %unreachable.unwind
 cleanup.ret:
   ; This cleanupret should be rewritten to unreachable,
   ; and merged into the pred block.
-  cleanupret %cleanup unwind label %unreachable.unwind
-cleanup.end:
-  ; This cleanupendpad should be rewritten to unreachable,
-  ; causing the invoke to be rewritten to a call.
-  cleanupendpad %cleanup unwind label %unreachable.unwind
+  cleanupret from %cleanup unwind label %unreachable.unwind
 exit:
   ret void
 unreachable.unwind:
-  cleanuppad []
+  cleanuppad within none []
   unreachable
 }
 
@@ -78,12 +71,12 @@ entry:
   invoke void @f()
     to label %exit unwind label %terminate.pad
 terminate.pad:
-  ; CHECK: terminatepad [] unwind to caller
-  terminatepad [] unwind label %unreachable.unwind
+  ; CHECK: terminatepad within none [] unwind to caller
+  terminatepad within none [] unwind label %unreachable.unwind
 exit:
   ret void
 unreachable.unwind:
-  cleanuppad []
+  cleanuppad within none []
   unreachable
 }
 
@@ -94,14 +87,11 @@ entry:
           to label %exit unwind label %catch.pad
 
 catch.pad:
-  %catch = catchpad []
-          to label %catch.body unwind label %catch.end
+  %cs1 = catchswitch within none [label %catch.body] unwind to caller
 
 catch.body:
-  catchret %catch to label %exit
-
-catch.end:
-  catchendpad unwind to caller
+  %catch = catchpad within %cs1 []
+  catchret from %catch to label %exit
 
 exit:
   unreachable

@@ -2,6 +2,8 @@
 
 declare i32 @__CxxFrameHandler3(...)
 
+declare i32 @__C_specific_handler(...)
+
 declare void @f()
 
 declare i32 @g()
@@ -9,7 +11,7 @@ declare i32 @g()
 declare void @h(i32)
 
 ; CHECK-LABEL: @test1(
-define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1() personality i32 (...)* @__C_specific_handler {
 entry:
   invoke void @f()
           to label %invoke.cont1 unwind label %left
@@ -23,11 +25,11 @@ invoke.cont2:
           to label %exit unwind label %inner
 
 left:
-  %0 = cleanuppad []
+  %0 = cleanuppad within none []
   br label %shared
 
 right:
-  %1 = cleanuppad []
+  %1 = cleanuppad within none []
   br label %shared
 
 shared:
@@ -40,25 +42,20 @@ shared.cont:
 
 inner:
   %phi = phi i32 [ %x, %shared ], [ 0, %invoke.cont2 ]
-  %i = cleanuppad []
+  %i = cleanuppad within none []
   call void @h(i32 %phi)
   unreachable
 
-; CHECK [[INNER_INVOKE_CONT2:inner.*]]:
-  ; CHECK: call void @h(i32 0)
-
-; CHECK [[INNER_RIGHT:inner.*]]:
-  ; CHECK: call void @h(i32 %x)
-
-; CHECK [[INNER_LEFT:inner.*]]:
-  ; CHECK: call void @h(i32 %x.for.left)
+; CHECK: %phi = phi i32 [ %x, %right ], [ 0, %invoke.cont2 ], [ %x.for.left, %left ]
+; CHECK: %i = cleanuppad within none []
+; CHECK: call void @h(i32 %phi)
 
 exit:
   unreachable
 }
 
 ; CHECK-LABEL: @test2(
-define void @test2() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test2() personality i32 (...)* @__C_specific_handler {
 entry:
   invoke void @f()
           to label %invoke.cont unwind label %left
@@ -68,11 +65,11 @@ invoke.cont:
           to label %exit unwind label %right
 
 left:
-  cleanuppad []
+  cleanuppad within none []
   br label %shared
 
 right:
-  cleanuppad []
+  cleanuppad within none []
   br label %shared
 
 shared:
@@ -84,15 +81,13 @@ shared.cont:
   unreachable
 
 inner:
-  %i = cleanuppad []
+  %i = cleanuppad within none []
   call void @h(i32 %x)
   unreachable
 
-; CHECK [[INNER_RIGHT:inner.*]]:
-  ; CHECK: call void @h(i32 %x)
-
-; CHECK [[INNER_LEFT:inner.*]]:
-  ; CHECK: call void @h(i32 %x.for.left)
+; CHECK:  %x1 = phi i32 [ %x.for.left, %left ], [ %x, %right ]
+; CHECK:  %i = cleanuppad within none []
+; CHECK:  call void @h(i32 %x1)
 
 exit:
   unreachable
@@ -108,10 +103,47 @@ invoke.cont:
   ret void
 
 terminate:
-; CHECK:  cleanuppad []
+; CHECK:  cleanuppad within none []
 ; CHECK:  call void @__std_terminate()
 ; CHECK:  unreachable
-  terminatepad [void ()* @__std_terminate] unwind to caller
+  terminatepad within none [void ()* @__std_terminate] unwind to caller
+}
+
+; CHECK-LABEL: @test4(
+define void @test4(i1 %x) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  invoke void @f()
+          to label %invoke.cont1 unwind label %left
+
+invoke.cont1:
+  invoke void @f()
+          to label %exit unwind label %right
+
+left:
+  %0 = cleanuppad within none []
+  br label %shared
+
+right:
+  %1 = cleanuppad within none []
+  br i1 %x, label %shared, label %right.other
+
+right.other:
+  br label %shared
+
+shared:
+  %phi = phi i32 [ 1, %left ], [ 0, %right ], [ -1, %right.other ]
+  call void @h(i32 %phi)
+  unreachable
+
+; CHECK: %0 = cleanuppad within none []
+; CHECK: call void @h(i32 1)
+
+; CHECK: %1 = cleanuppad within none []
+; CHECK: %phi = phi i32 [ 0, %right ], [ -1, %right.other ]
+; CHECK: call void @h(i32 %phi)
+
+exit:
+  unreachable
 }
 
 declare void @__std_terminate()

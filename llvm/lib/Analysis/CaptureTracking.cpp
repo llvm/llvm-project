@@ -80,12 +80,11 @@ namespace {
       if (BB == BeforeHere->getParent()) {
         // 'I' dominates 'BeforeHere' => not safe to prune.
         //
-        // The value defined by an invoke/catchpad dominates an instruction only
+        // The value defined by an invoke dominates an instruction only
         // if it dominates every instruction in UseBB. A PHI is dominated only
         // if the instruction dominates every possible use in the UseBB. Since
         // UseBB == BB, avoid pruning.
-        if (isa<InvokeInst>(BeforeHere) || isa<CatchPadInst>(BeforeHere) ||
-            isa<PHINode>(I) || I == BeforeHere)
+        if (isa<InvokeInst>(BeforeHere) || isa<PHINode>(I) || I == BeforeHere)
           return false;
         if (!OrderedBB->dominates(BeforeHere, I))
           return false;

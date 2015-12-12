@@ -4439,22 +4439,17 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // first frame index. See X86FrameLowering.cpp - clobbersTheStack.
 
 
-    bool AXDead = (Reg == AX);
-    // FIXME: The above could figure out that AX is dead in more cases with:
-    //          || (MachineBasicBlock::LQR_Dead ==
-    //            MBB.computeRegisterLiveness(&getRegisterInfo(), AX, MI));
-    //
-    //        Unfortunately this is slightly broken, see PR24535 and the likely
-    //        related PR25033 PR24991 PR24992 PR25201. These issues seem to
-    //        showcase sub-register / super-register confusion: a previous kill
-    //        of AH but no kill of AL leads computeRegisterLiveness to
-    //        erroneously conclude that AX is dead.
-    //
-    //        Once fixed, also update cmpxchg-clobber-flags.ll and
-    //        peephole-na-phys-copy-folding.ll.
-
-    if (!AXDead)
+    bool AXDead = (Reg == AX) ||
+                  (MachineBasicBlock::LQR_Dead ==
+                   MBB.computeRegisterLiveness(&getRegisterInfo(), AX, MI));
+    if (!AXDead) {
+      // FIXME: If computeRegisterLiveness() reported LQR_Unknown then AX may
+      // actually be dead. This is not a problem for correctness as we are just
+      // (unnecessarily) saving+restoring a dead register. However the
+      // MachineVerifier expects operands that read from dead registers
+      // to be marked with the "undef" flag.
       BuildMI(MBB, MI, DL, get(Push)).addReg(AX, getKillRegState(true));
+    }
     if (FromEFLAGS) {
       BuildMI(MBB, MI, DL, get(X86::SETOr), X86::AL);
       BuildMI(MBB, MI, DL, get(X86::LAHF));

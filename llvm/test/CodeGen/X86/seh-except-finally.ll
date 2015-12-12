@@ -49,37 +49,24 @@ invoke.cont2:                                     ; preds = %invoke.cont
   br label %__try.cont
 
 __finally:                                             ; preds = %entry
-  %cleanuppad = cleanuppad []
+  %cleanuppad = cleanuppad within none []
   %locals = call i8* @llvm.localaddress()
   invoke void @"\01?fin$0@0@use_both@@"(i1 zeroext true, i8* %locals) #5
-          to label %invoke.cont3 unwind label %cleanupendpad
+          to label %invoke.cont3 unwind label %catch.dispatch
 
 invoke.cont3:                                     ; preds = %__finally
-  cleanupret %cleanuppad unwind label %catch.dispatch
-
-cleanupendpad:
-  cleanupendpad %cleanuppad unwind label %catch.dispatch
+  cleanupret from %cleanuppad unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %invoke.cont3, %lpad1
-  %catchpad = catchpad [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@use_both@@" to i8*)]
-          to label %__except unwind label %catchendpad
+  %cs1 = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %catch.dispatch
+  %catchpad = catchpad within %cs1 [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@use_both@@" to i8*)]
   %call = call i32 @puts(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @"\01??_C@_08MLCMLGHM@__except?$AA@", i32 0, i32 0))
-  catchret %catchpad to label %__try.cont
-
-catchendpad:
-  catchendpad unwind to caller
+  catchret from %catchpad to label %__try.cont
 
 __try.cont:                                       ; preds = %__except, %invoke.cont2
   ret void
-
-eh.resume:                                        ; preds = %catch.dispatch
-  %exn = load i8*, i8** %exn.slot
-  %sel4 = load i32, i32* %ehselector.slot
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn, 0
-  %lpad.val5 = insertvalue { i8*, i32 } %lpad.val, i32 %sel4, 1
-  resume { i8*, i32 } %lpad.val5
 }
 
 ; CHECK-LABEL: use_both:

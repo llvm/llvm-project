@@ -17,15 +17,9 @@ invoke.cont:                                      ; preds = %entry
   ret i32 0
 
 lpad:                                             ; preds = %entry
-  %p = cleanuppad []
-  %call2 = invoke i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @str_recovered, i64 0, i64 0))
-          to label %invoke.cont1 unwind label %endpad
-
-invoke.cont1:                                     ; preds = %lpad
-  cleanupret %p unwind to caller
-
-endpad:                                   ; preds = %lpad
-  cleanupendpad %p unwind to caller
+  %p = cleanuppad within none []
+  %call2 = call i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @str_recovered, i64 0, i64 0))
+  cleanupret from %p unwind to caller
 }
 
 ; X64-LABEL: main:

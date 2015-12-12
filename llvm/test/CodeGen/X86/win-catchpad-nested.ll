@@ -7,26 +7,25 @@ declare void @f()
 define void @test1() personality void ()* @ProcessCLRException {
 entry:
   invoke void @f()
-          to label %exit unwind label %outer.pad
-outer.pad:
-  %outer = catchpad [i32 1]
-          to label %outer.catch unwind label %outer.end
-outer.catch:
-  invoke void @f()
-          to label %outer.ret unwind label %inner.pad
-inner.pad:
-  %inner = catchpad [i32 2]
-          to label %inner.ret unwind label %inner.end
-inner.ret:
-  catchret %inner to label %outer.ret
-inner.end:
-  catchendpad unwind label %outer.end
-outer.ret:
-  catchret %outer to label %exit
-outer.end:
-  catchendpad unwind to caller
+          to label %exit unwind label %catch.dispatch.1
 exit:
   ret void
+
+catch.dispatch.1:
+  %cs1 = catchswitch within none [label %outer.catch] unwind to caller
+
+outer.catch:
+  %cp1 = catchpad within %cs1 [i32 1]
+  invoke void @f()
+          to label %outer.ret unwind label %catch.dispatch.2
+outer.ret:
+  catchret from %cp1 to label %exit
+
+catch.dispatch.2:
+  %cs2 = catchswitch within %cp1 [label %inner.catch] unwind to caller
+inner.catch:
+  %cp2 = catchpad within %cs2 [i32 2]
+  catchret from %cp2 to label %outer.ret
 }
 
 ; Check the catchret targets
@@ -37,7 +36,7 @@ exit:
 ; CHECK-NEXT:                  # %outer.ret
 ; CHECK-NEXT: leaq [[Exit]](%rip), %rax
 ; CHECK:      retq   # CATCHRET
-; CHECK: {{^[^: ]+}}: # %inner.pad
+; CHECK: {{^[^: ]+}}: # %inner.catch
 ; CHECK: .seh_endprolog
 ; CHECK-NEXT: leaq [[OuterRet]](%rip), %rax
 ; CHECK:      retq   # CATCHRET

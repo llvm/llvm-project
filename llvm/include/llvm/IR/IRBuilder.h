@@ -708,29 +708,29 @@ public:
     return Insert(CleanupReturnInst::Create(CleanupPad, UnwindBB));
   }
 
-  CleanupEndPadInst *CreateCleanupEndPad(CleanupPadInst *CleanupPad,
-                                         BasicBlock *UnwindBB = nullptr) {
-    return Insert(CleanupEndPadInst::Create(CleanupPad, UnwindBB));
+  CatchSwitchInst *CreateCatchSwitch(Value *ParentPad, BasicBlock *UnwindBB,
+                                     unsigned NumHandlers,
+                                     const Twine &Name = "") {
+    return Insert(CatchSwitchInst::Create(ParentPad, UnwindBB, NumHandlers),
+                  Name);
   }
 
-  CatchPadInst *CreateCatchPad(BasicBlock *NormalDest, BasicBlock *UnwindDest,
-                               ArrayRef<Value *> Args, const Twine &Name = "") {
-    return Insert(CatchPadInst::Create(NormalDest, UnwindDest, Args), Name);
+  CatchPadInst *CreateCatchPad(Value *ParentPad, ArrayRef<Value *> Args,
+                               const Twine &Name = "") {
+    return Insert(CatchPadInst::Create(ParentPad, Args), Name);
   }
 
-  CatchEndPadInst *CreateCatchEndPad(BasicBlock *UnwindBB = nullptr) {
-    return Insert(CatchEndPadInst::Create(Context, UnwindBB));
-  }
-
-  TerminatePadInst *CreateTerminatePad(BasicBlock *UnwindBB = nullptr,
-                                       ArrayRef<Value *> Args = {},
+  TerminatePadInst *CreateTerminatePad(Value *ParentPad,
+                                       BasicBlock *UnwindBB = nullptr,
+                                       ArrayRef<Value *> Args = None,
                                        const Twine &Name = "") {
-    return Insert(TerminatePadInst::Create(Context, UnwindBB, Args), Name);
+    return Insert(TerminatePadInst::Create(ParentPad, UnwindBB, Args), Name);
   }
 
-  CleanupPadInst *CreateCleanupPad(ArrayRef<Value *> Args,
+  CleanupPadInst *CreateCleanupPad(Value *ParentPad,
+                                   ArrayRef<Value *> Args = None,
                                    const Twine &Name = "") {
-    return Insert(CleanupPadInst::Create(Context, Args), Name);
+    return Insert(CleanupPadInst::Create(ParentPad, Args), Name);
   }
 
   CatchReturnInst *CreateCatchRet(CatchPadInst *CatchPad, BasicBlock *BB) {

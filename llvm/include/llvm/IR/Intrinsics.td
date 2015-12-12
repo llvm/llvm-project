@@ -631,12 +631,6 @@ def int_convertuu  : Intrinsic<[llvm_anyint_ty],
 def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
                                 [], "llvm.clear_cache">;
 
-// Calculate the Absolute Differences of the two input vectors.
-def int_sabsdiff : Intrinsic<[llvm_anyvector_ty],
-                        [ LLVMMatchType<0>, LLVMMatchType<0> ], [IntrNoMem]>;
-def int_uabsdiff : Intrinsic<[llvm_anyvector_ty],
-                        [ LLVMMatchType<0>, LLVMMatchType<0> ], [IntrNoMem]>;
-
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
 def int_masked_store : Intrinsic<[], [llvm_anyvector_ty, LLVMPointerTo<0>,

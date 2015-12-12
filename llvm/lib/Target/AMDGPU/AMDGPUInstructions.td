@@ -514,7 +514,7 @@ class POW_Common <AMDGPUInst log_ieee, AMDGPUInst exp_ieee, AMDGPUInst mul>
 class Extract_Element <ValueType sub_type, ValueType vec_type, int sub_idx,
                        SubRegIndex sub_reg>
   : Pat<
-  (sub_type (vector_extract vec_type:$src, sub_idx)),
+  (sub_type (extractelt vec_type:$src, sub_idx)),
   (EXTRACT_SUBREG $src, sub_reg)
 >;
 
@@ -522,7 +522,7 @@ class Extract_Element <ValueType sub_type, ValueType vec_type, int sub_idx,
 class Insert_Element <ValueType elem_type, ValueType vec_type,
                       int sub_idx, SubRegIndex sub_reg>
   : Pat <
-  (vector_insert vec_type:$vec, elem_type:$elem, sub_idx),
+  (insertelt vec_type:$vec, elem_type:$elem, sub_idx),
   (INSERT_SUBREG $vec, $elem, sub_reg)
 >;
 

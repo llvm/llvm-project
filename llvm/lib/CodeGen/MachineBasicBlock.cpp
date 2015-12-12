@@ -1178,33 +1178,33 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
     do {
       --I;
 
-      MachineOperandIteratorBase::PhysRegInfo Analysis =
+      MachineOperandIteratorBase::PhysRegInfo Info =
         ConstMIOperands(I).analyzePhysReg(Reg, TRI);
 
-      if (Analysis.Defines)
-        // Outputs happen after inputs so they take precedence if both are
-        // present.
-        return Analysis.DefinesDead ? LQR_Dead : LQR_Live;
+      // Defs happen after uses so they take precedence if both are present.
 
-      if (Analysis.Kills || Analysis.Clobbers)
-        // Register killed, so isn't live.
+      // Register is dead after a dead def of the full register.
+      if (Info.DeadDef)
         return LQR_Dead;
-
-      else if (Analysis.ReadsOverlap)
-        // Defined or read without a previous kill - live.
-        return Analysis.Reads ? LQR_Live : LQR_OverlappingLive;
-
+      // Register is (at least partially) live after a def.
+      if (Info.Defined)
+        return LQR_Live;
+      // Register is dead after a full kill or clobber and no def.
+      if (Info.Killed || Info.Clobbered)
+        return LQR_Dead;
+      // Register must be live if we read it.
+      if (Info.Read)
+        return LQR_Live;
     } while (I != begin() && --N > 0);
   }
 
   // Did we get to the start of the block?
   if (I == begin()) {
     // If so, the register's state is definitely defined by the live-in state.
-    for (MCRegAliasIterator RAI(Reg, TRI, /*IncludeSelf=*/true);
-         RAI.isValid(); ++RAI) {
+    for (MCRegAliasIterator RAI(Reg, TRI, /*IncludeSelf=*/true); RAI.isValid();
+         ++RAI)
       if (isLiveIn(*RAI))
-        return (*RAI == Reg) ? LQR_Live : LQR_OverlappingLive;
-    }
+        return LQR_Live;
 
     return LQR_Dead;
   }
@@ -1216,16 +1216,14 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
   // If this is the last insn in the block, don't search forwards.
   if (I != end()) {
     for (++I; I != end() && N > 0; ++I, --N) {
-      MachineOperandIteratorBase::PhysRegInfo Analysis =
+      MachineOperandIteratorBase::PhysRegInfo Info =
         ConstMIOperands(I).analyzePhysReg(Reg, TRI);
 
-      if (Analysis.ReadsOverlap)
-        // Used, therefore must have been live.
-        return (Analysis.Reads) ?
-          LQR_Live : LQR_OverlappingLive;
-
-      else if (Analysis.Clobbers || Analysis.Defines)
-        // Defined (but not read) therefore cannot have been live.
+      // Register is live when we read it here.
+      if (Info.Read)
+        return LQR_Live;
+      // Register is dead if we can fully overwrite or clobber it here.
+      if (Info.FullyDefined || Info.Clobbered)
         return LQR_Dead;
     }
   }

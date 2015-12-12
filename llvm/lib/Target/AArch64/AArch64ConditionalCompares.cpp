@@ -353,7 +353,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     MIOperands::PhysRegInfo PRI =
         MIOperands(I).analyzePhysReg(AArch64::NZCV, TRI);
 
-    if (PRI.Reads) {
+    if (PRI.Read) {
       // The ccmp doesn't produce exactly the same flags as the original
       // compare, so reject the transform if there are uses of the flags
       // besides the terminators.
@@ -362,7 +362,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
       return nullptr;
     }
 
-    if (PRI.Clobbers) {
+    if (PRI.Defined || PRI.Clobbered) {
       DEBUG(dbgs() << "Not convertible compare: " << *I);
       ++NumUnknNZCVDefs;
       return nullptr;

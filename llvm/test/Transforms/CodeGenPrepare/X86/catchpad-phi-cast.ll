@@ -18,9 +18,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
 
 ; CHECK-LABEL: @test(
 define void @test(i32* %addr) personality i32 (...)* @__CxxFrameHandler3 {
-; CHECK: entry:
-; CHECK-NEXT: %x = getelementptr i32, i32* %addr, i32 1
-; CHECK-NEXT: %p1 = bitcast i32* %x to i8*
 entry:
   %x = getelementptr i32, i32* %addr, i32 1
   %p1 = bitcast i32* %x to i8*
@@ -29,7 +26,6 @@ entry:
 
 ; CHECK: invoke.cont:
 ; CHECK-NEXT: %y = getelementptr i32, i32* %addr, i32 2
-; CHECK-NEXT: %p2 = bitcast i32* %y to i8*
 invoke.cont:
   %y = getelementptr i32, i32* %addr, i32 2
   %p2 = bitcast i32* %y to i8*
@@ -40,23 +36,31 @@ done:
   ret void
 
 catch1:
-  %cp1 = catchpad [] to label %catch.dispatch unwind label %catchend1
+  %cs1 = catchswitch within none [label %handler1] unwind to caller
+
+handler1:
+  %cp1 = catchpad within %cs1 []
+  br label %catch.shared
+; CHECK: handler1:
+; CHECK-NEXT: catchpad within %cs1
+; CHECK: %[[p1:[0-9]+]] = bitcast i32* %x to i8*
 
 catch2:
-  %cp2 = catchpad [] to label %catch.dispatch unwind label %catchend2
+  %cs2 = catchswitch within none [label %handler2] unwind to caller
 
-; CHECK: catch.dispatch:
-; CHECK-NEXT: %p = phi i8* [ %p1, %catch1 ], [ %p2, %catch2 ]
-catch.dispatch:
-  %p = phi i8* [ %p1, %catch1 ], [ %p2, %catch2 ]
+handler2:
+  %cp2 = catchpad within %cs2 []
+  br label %catch.shared
+; CHECK: handler2:
+; CHECK: catchpad within %cs2
+; CHECK: %[[p2:[0-9]+]] = bitcast i32* %y to i8*
+
+; CHECK: catch.shared:
+; CHECK-NEXT: %p = phi i8* [ %[[p1]], %handler1 ], [ %[[p2]], %handler2 ]
+catch.shared:
+  %p = phi i8* [ %p1, %handler1 ], [ %p2, %handler2 ]
   call void @g(i8* %p)
   unreachable
-
-catchend1:
-  catchendpad unwind to caller
-
-catchend2:
-  catchendpad unwind to caller
 }
 
 ; CodeGenPrepare will want to hoist these llvm.dbg.value calls to the phi, but
@@ -75,24 +79,22 @@ ret:
 
 catch.dispatch:
   %p = phi i8* [%a, %entry], [%b, %next]
-  %cp1 = catchpad [] to label %catch unwind label %catchend
+  %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:
+  %cp1 = catchpad within %cs1 []
   tail call void @llvm.dbg.value(metadata i8* %p, i64 0, metadata !11, metadata !13), !dbg !14
-  invoke void @g(i8* %p) to label %catchret unwind label %catchend
-catchret:
-  catchret %cp1 to label %ret
+  call void @g(i8* %p)
+  catchret from %cp1 to label %ret
 
 ; CHECK: catch.dispatch:
 ; CHECK-NEXT: phi i8
-; CHECK-NEXT: catchpad
+; CHECK-NEXT: catchswitch
 ; CHECK-NOT: llvm.dbg.value
 
 ; CHECK: catch:
+; CHECK-NEXT: catchpad
 ; CHECK-NEXT: call void @llvm.dbg.value
-
-catchend:
-  catchendpad unwind to caller
 }
 
 !llvm.dbg.cu = !{!0}

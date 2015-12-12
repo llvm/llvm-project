@@ -560,8 +560,8 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
           // Restore values just before we exit
           Function::arg_iterator OAI = OutputArgBegin;
           for (unsigned out = 0, e = outputs.size(); out != e; ++out) {
-            // For an invoke/catchpad, the normal destination is the only one
-            // that is dominated by the result of the invocation
+            // For an invoke, the normal destination is the only one that is
+            // dominated by the result of the invocation
             BasicBlock *DefBlock = cast<Instruction>(outputs[out])->getParent();
 
             bool DominatesDef = true;
@@ -569,8 +569,6 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
             BasicBlock *NormalDest = nullptr;
             if (auto *Invoke = dyn_cast<InvokeInst>(outputs[out]))
               NormalDest = Invoke->getNormalDest();
-            if (auto *CatchPad = dyn_cast<CatchPadInst>(outputs[out]))
-              NormalDest = CatchPad->getNormalDest();
 
             if (NormalDest) {
               DefBlock = NormalDest;

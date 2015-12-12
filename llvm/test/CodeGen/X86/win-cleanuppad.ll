@@ -14,9 +14,9 @@ invoke.cont:                                      ; preds = %entry
   ret void
 
 ehcleanup:                                        ; preds = %entry
-  %0 = cleanuppad []
+  %0 = cleanuppad within none []
   call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o) #2
-  cleanupret %0 unwind to caller
+  cleanupret from %0 unwind to caller
 }
 
 ; CHECK: simple_cleanup:                         # @simple_cleanup
@@ -77,14 +77,14 @@ invoke.cont.2:                                    ; preds = %invoke.cont.1
   ret void
 
 cleanup.inner:                                        ; preds = %invoke.cont
-  %0 = cleanuppad []
+  %0 = cleanuppad within none []
   call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o2) #2
-  cleanupret %0 unwind label %cleanup.outer
+  cleanupret from %0 unwind label %cleanup.outer
 
 cleanup.outer:                                      ; preds = %invoke.cont.1, %cleanup.inner, %entry
-  %1 = cleanuppad []
+  %1 = cleanuppad within none []
   call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o1) #2
-  cleanupret %1 unwind to caller
+  cleanupret from %1 unwind to caller
 }
 
 ; X86-LABEL: _nested_cleanup:

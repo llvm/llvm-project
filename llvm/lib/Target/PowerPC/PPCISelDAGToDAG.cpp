@@ -16,6 +16,8 @@
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -50,6 +52,11 @@ static cl::opt<bool> BPermRewriterNoMasking(
     "ppc-bit-perm-rewriter-stress-rotates",
     cl::desc("stress rotate selection in aggressive ppc isel for "
              "bit permutations"),
+    cl::Hidden);
+
+static cl::opt<bool> EnableBranchHint(
+  "ppc-use-branch-hint", cl::init(true),
+    cl::desc("Enable static hinting of branches on ppc"),
     cl::Hidden);
 
 namespace llvm {
@@ -393,6 +400,57 @@ static bool isInt32Immediate(SDValue N, unsigned &Imm) {
   return isInt32Immediate(N.getNode(), Imm);
 }
 
+static unsigned getBranchHint(unsigned PCC, FunctionLoweringInfo *FuncInfo,
+                              const SDValue &DestMBB) {
+  assert(isa<BasicBlockSDNode>(DestMBB));
+
+  if (!FuncInfo->BPI) return PPC::BR_NO_HINT;
+
+  const BasicBlock *BB = FuncInfo->MBB->getBasicBlock();
+  const TerminatorInst *BBTerm = BB->getTerminator();
+
+  if (BBTerm->getNumSuccessors() != 2) return PPC::BR_NO_HINT;
+
+  const BasicBlock *TBB = BBTerm->getSuccessor(0);
+  const BasicBlock *FBB = BBTerm->getSuccessor(1);
+
+  uint32_t TWeight = FuncInfo->BPI->getEdgeWeight(BB, TBB);
+  uint32_t FWeight = FuncInfo->BPI->getEdgeWeight(BB, FBB);
+
+  // We only want to handle cases which are easy to predict at static time, e.g.
+  // C++ throw statement, that is very likely not taken, or calling never
+  // returned function, e.g. stdlib exit(). So we set Threshold to filter
+  // unwanted cases.
+  //
+  // Below is LLVM branch weight table, we only want to handle case 1, 2
+  //
+  // Case                  Taken:Nontaken  Example
+  // 1. Unreachable        1048575:1       C++ throw, stdlib exit(),
+  // 2. Invoke-terminating 1:1048575
+  // 3. Coldblock          4:64            __builtin_expect
+  // 4. Loop Branch        124:4           For loop
+  // 5. PH/ZH/FPH          20:12
+  const uint32_t Threshold = 10000;
+
+  // Minimal weight should be at least 1
+  if (std::max(TWeight, FWeight) /
+      std::max(1u, std::min(TWeight, FWeight)) < Threshold)
+    return PPC::BR_NO_HINT;
+
+  DEBUG(dbgs() << "Use branch hint for '" << FuncInfo->Fn->getName() << "::"
+               << BB->getName() << "'\n"
+               << " -> " << TBB->getName() << ": " << TWeight << "\n"
+               << " -> " << FBB->getName() << ": " << FWeight << "\n");
+
+  const BasicBlockSDNode *BBDN = cast<BasicBlockSDNode>(DestMBB);
+
+  // If Dest BasicBlock is False-BasicBlock (FBB), swap branch weight,
+  // because we want 'TWeight' stands for 'branch weight' to Dest BasicBlock
+  if (BBDN->getBasicBlock()->getBasicBlock() != TBB)
+    std::swap(TWeight, FWeight);
+
+  return (TWeight > FWeight) ? PPC::BR_TAKEN_HINT : PPC::BR_NONTAKEN_HINT;
+}
 
 // isOpcWithIntImmediate - This method tests to see if the node is a specific
 // opcode and that it has a immediate integer right operand.
@@ -2840,8 +2898,11 @@ SDNode *PPCDAGToDAGISel::Select(SDNode *N) {
     // Op #3 is the Dest MBB
     // Op #4 is the Flag.
     // Prevent PPC::PRED_* from being selected into LI.
-    SDValue Pred =
-      getI32Imm(cast<ConstantSDNode>(N->getOperand(1))->getZExtValue(), dl);
+    unsigned PCC = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    if (EnableBranchHint)
+      PCC |= getBranchHint(PCC, FuncInfo, N->getOperand(3));
+
+    SDValue Pred = getI32Imm(PCC, dl);
     SDValue Ops[] = { Pred, N->getOperand(2), N->getOperand(3),
       N->getOperand(0), N->getOperand(4) };
     return CurDAG->SelectNodeTo(N, PPC::BCC, MVT::Other, Ops);
@@ -2869,6 +2930,9 @@ SDNode *PPCDAGToDAGISel::Select(SDNode *N) {
       return CurDAG->SelectNodeTo(N, PPC::BC, MVT::Other,
                                   BitComp, N->getOperand(4), N->getOperand(0));
     }
+
+    if (EnableBranchHint)
+      PCC |= getBranchHint(PCC, FuncInfo, N->getOperand(4));
 
     SDValue CondCode = SelectCC(N->getOperand(2), N->getOperand(3), CC, dl);
     SDValue Ops[] = { getI32Imm(PCC, dl), CondCode,

@@ -143,15 +143,10 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT,
   setOperationAction(ISD::UREM, VT, Expand);
   setOperationAction(ISD::FREM, VT, Expand);
 
-  if (VT.isInteger()) {
-    setOperationAction(ISD::SABSDIFF, VT, Legal);
-    setOperationAction(ISD::UABSDIFF, VT, Legal);
-  }
   if (!VT.isFloatingPoint() &&
       VT != MVT::v2i64 && VT != MVT::v1i64)
     for (unsigned Opcode : {ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX})
       setOperationAction(Opcode, VT, Legal);
-
 }
 
 void ARMTargetLowering::addDRTypeForNEON(MVT VT) {
@@ -10148,15 +10143,6 @@ static SDValue PerformIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
   default:
     // Don't do anything for most intrinsics.
     break;
-
-  case Intrinsic::arm_neon_vabds:
-    if (!N->getValueType(0).isInteger())
-      return SDValue();
-    return DAG.getNode(ISD::SABSDIFF, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
-  case Intrinsic::arm_neon_vabdu:
-    return DAG.getNode(ISD::UABSDIFF, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
 
   // Vector shifts: check for immediate versions and lower them.
   // Note: This is done during DAG combining instead of DAG legalizing because

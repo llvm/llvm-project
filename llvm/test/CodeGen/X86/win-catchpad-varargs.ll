@@ -13,20 +13,17 @@ entry:
           to label %return unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [i8* null, i32 64, i8* null]
-          to label %catch unwind label %catchendblock
+  %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
+  %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
   %ap1 = bitcast i8** %ap to i8*
   call void @llvm.va_start(i8* %ap1)
   %argp.cur = load i8*, i8** %ap
   %1 = bitcast i8* %argp.cur to i32*
   %arg2 = load i32, i32* %1
   call void @llvm.va_end(i8* %ap1)
-  catchret %0 to label %return
-
-catchendblock:                                    ; preds = %catch.dispatch
-  catchendpad unwind to caller
+  catchret from %0 to label %return
 
 return:                                           ; preds = %entry, %catch
   %retval.0 = phi i32 [ %arg2, %catch ], [ -1, %entry ]

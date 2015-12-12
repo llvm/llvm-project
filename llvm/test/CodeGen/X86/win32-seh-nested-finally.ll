@@ -17,26 +17,17 @@ invoke.cont.1:                                    ; preds = %invoke.cont
   ret void
 
 ehcleanup:                                        ; preds = %entry
-  %0 = cleanuppad []
+  %0 = cleanuppad within none []
   invoke void @f(i32 2) #3
-          to label %invoke.cont.2 unwind label %ehcleanup.end
+          to label %invoke.cont.2 unwind label %ehcleanup.3
 
 invoke.cont.2:                                    ; preds = %ehcleanup
-  cleanupret %0 unwind label %ehcleanup.3
-
-ehcleanup.end:                                    ; preds = %ehcleanup
-  cleanupendpad %0 unwind label %ehcleanup.3
+  cleanupret from %0 unwind label %ehcleanup.3
 
 ehcleanup.3:                                      ; preds = %invoke.cont.2, %ehcleanup.end, %invoke.cont
-  %1 = cleanuppad []
-  invoke void @f(i32 3) #3
-          to label %invoke.cont.4 unwind label %ehcleanup.end.5
-
-invoke.cont.4:                                    ; preds = %ehcleanup.3
-  cleanupret %1 unwind to caller
-
-ehcleanup.end.5:                                  ; preds = %ehcleanup.3
-  cleanupendpad %1 unwind to caller
+  %1 = cleanuppad within none []
+  call void @f(i32 3) #3
+  cleanupret from %1 unwind to caller
 }
 
 declare void @f(i32) #0

@@ -1,18 +1,11 @@
-; RUN: llc -mtriple=i386-linux-gnu %s -o - | FileCheck %s -check-prefix=i386
-; RUN: llc -mtriple=i386-linux-gnu -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=i386f
+; RUN: llc -verify-machineinstrs -mtriple=i386-linux-gnu %s -o - | FileCheck %s -check-prefix=i386
+; RUN: llc -verify-machineinstrs -mtriple=i386-linux-gnu -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=i386f
 
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s -check-prefix=x8664
-; RUN: llc -mtriple=x86_64-linux-gnu -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=x8664
-; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s -check-prefix=x8664-sahf
-; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sahf -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=x8664-sahf
-; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=corei7 %s -o - | FileCheck %s -check-prefix=x8664-sahf
-
-; FIXME: X86InstrInfo::copyPhysReg had code which figured out whether AX was
-;        live or not to avoid save / restore when it's not needed. See FIXME in
-;        that function for more details on which the code is currently
-;        disabled. The extra push/pop are marked below and can be removed once
-;        the issue is fixed.
-;        -verify-machineinstrs should also be added back in the RUN lines above.
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s -check-prefix=x8664
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=x8664
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s -check-prefix=x8664-sahf
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -mattr=+sahf -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=x8664-sahf
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -mcpu=corei7 %s -o - | FileCheck %s -check-prefix=x8664-sahf
 
 declare i32 @foo()
 declare i32 @bar(i64)
@@ -28,34 +21,22 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) {
 ; i386-NEXT: movl %edx, 4(%esp)
 ; i386-NEXT: movl %eax, (%esp)
 ; i386-NEXT: calll bar
-; ** FIXME Next line isn't actually necessary. **
-; i386-NEXT: pushl %eax
 ; i386-NEXT: movl [[FLAGS]], %eax
 ; i386-NEXT: addb $127, %al
 ; i386-NEXT: sahf
-; ** FIXME Next line isn't actually necessary. **
-; i386-NEXT: popl %eax
 ; i386-NEXT: jne
 
 ; i386f-LABEL: test_intervening_call:
 ; i386f: cmpxchg8b
 ; i386f-NEXT: movl %eax, (%esp)
 ; i386f-NEXT: movl %edx, 4(%esp)
-; ** FIXME Next line isn't actually necessary. **
-; i386f-NEXT: pushl %eax
 ; i386f-NEXT: seto %al
 ; i386f-NEXT: lahf
 ; i386f-NEXT: movl %eax, [[FLAGS:%.*]]
-; ** FIXME Next line isn't actually necessary. **
-; i386f-NEXT: popl %eax
 ; i386f-NEXT: calll bar
-; ** FIXME Next line isn't actually necessary. **
-; i386f-NEXT: pushl %eax
 ; i386f-NEXT: movl [[FLAGS]], %eax
 ; i386f-NEXT: addb $127, %al
 ; i386f-NEXT: sahf
-; ** FIXME Next line isn't actually necessary. **
-; i386f-NEXT: popl %eax
 ; i386f-NEXT: jne
 
 ; x8664-LABEL: test_intervening_call:
@@ -77,13 +58,9 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) {
 ; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: movq %rax, %rdi
 ; x8664-sahf-NEXT: callq bar
-; ** FIXME Next line isn't actually necessary. **
-; x8664-sahf-NEXT: pushq %rax
 ; x8664-sahf-NEXT: movq [[FLAGS]], %rax
 ; x8664-sahf-NEXT: addb $127, %al
 ; x8664-sahf-NEXT: sahf
-; ** FIXME Next line isn't actually necessary. **
-; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: jne
 
   %cx = cmpxchg i64* %foo, i64 %bar, i64 %baz seq_cst seq_cst
@@ -152,13 +129,9 @@ cond.end:
 define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) {
 ; i386-LABEL: test_feed_cmov:
 ; i386: cmpxchgl
-; ** FIXME Next line isn't actually necessary. **
-; i386-NEXT: pushl %eax
 ; i386-NEXT: seto %al
 ; i386-NEXT: lahf
 ; i386-NEXT: movl %eax, [[FLAGS:%.*]]
-; ** FIXME Next line isn't actually necessary. **
-; i386-NEXT: popl %eax
 ; i386-NEXT: calll foo
 ; i386-NEXT: pushl %eax
 ; i386-NEXT: movl [[FLAGS]], %eax
@@ -168,13 +141,9 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) {
 
 ; i386f-LABEL: test_feed_cmov:
 ; i386f: cmpxchgl
-; ** FIXME Next line isn't actually necessary. **
-; i386f-NEXT: pushl %eax
 ; i386f-NEXT: seto %al
 ; i386f-NEXT: lahf
 ; i386f-NEXT: movl %eax, [[FLAGS:%.*]]
-; ** FIXME Next line isn't actually necessary. **
-; i386f-NEXT: popl %eax
 ; i386f-NEXT: calll foo
 ; i386f-NEXT: pushl %eax
 ; i386f-NEXT: movl [[FLAGS]], %eax
@@ -192,13 +161,9 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) {
 
 ; x8664-sahf-LABEL: test_feed_cmov:
 ; x8664-sahf: cmpxchgl
-; ** FIXME Next line isn't actually necessary. **
-; x8664-sahf: pushq %rax
 ; x8664-sahf: seto %al
 ; x8664-sahf-NEXT: lahf
 ; x8664-sahf-NEXT: movq %rax, [[FLAGS:%.*]]
-; ** FIXME Next line isn't actually necessary. **
-; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: callq foo
 ; x8664-sahf-NEXT: pushq %rax
 ; x8664-sahf-NEXT: movq [[FLAGS]], %rax

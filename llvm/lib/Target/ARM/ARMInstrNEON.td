@@ -4994,10 +4994,10 @@ def  VBITq    : N3VX<1, 0, 0b10, 0b0001, 1, 1,
 //   VABD     : Vector Absolute Difference
 defm VABDs    : N3VInt_QHS<0, 0, 0b0111, 0, N3RegFrm,
                            IIC_VSUBi4D, IIC_VSUBi4D, IIC_VSUBi4Q, IIC_VSUBi4Q,
-                           "vabd", "s", sabsdiff, 1>;
+                           "vabd", "s", int_arm_neon_vabds, 1>;
 defm VABDu    : N3VInt_QHS<1, 0, 0b0111, 0, N3RegFrm,
                            IIC_VSUBi4D, IIC_VSUBi4D, IIC_VSUBi4Q, IIC_VSUBi4Q,
-                           "vabd", "u", uabsdiff, 1>;
+                           "vabd", "u", int_arm_neon_vabdu, 1>;
 def  VABDfd   : N3VDInt<1, 0, 0b10, 0b1101, 0, N3RegFrm, IIC_VBIND,
                         "vabd", "f32", v2f32, v2f32, int_arm_neon_vabds, 1>;
 def  VABDfq   : N3VQInt<1, 0, 0b10, 0b1101, 0, N3RegFrm, IIC_VBINQ,
@@ -5005,9 +5005,9 @@ def  VABDfq   : N3VQInt<1, 0, 0b10, 0b1101, 0, N3RegFrm, IIC_VBINQ,
 
 //   VABDL    : Vector Absolute Difference Long (Q = | D - D |)
 defm VABDLs   : N3VLIntExt_QHS<0,1,0b0111,0, IIC_VSUBi4Q,
-                               "vabdl", "s", sabsdiff, zext, 1>;
+                               "vabdl", "s", int_arm_neon_vabds, zext, 1>;
 defm VABDLu   : N3VLIntExt_QHS<1,1,0b0111,0, IIC_VSUBi4Q,
-                               "vabdl", "u", uabsdiff, zext, 1>;
+                               "vabdl", "u", int_arm_neon_vabdu, zext, 1>;
 
 def abd_shr :
     PatFrag<(ops node:$in1, node:$in2, node:$shift),
@@ -5034,15 +5034,15 @@ def : Pat<(xor (v4i32 (bitconvert (v2i64 (abd_shr (v2i32 DPR:$opA), (v2i32 DPR:$
 
 //   VABA     : Vector Absolute Difference and Accumulate
 defm VABAs    : N3VIntOp_QHS<0,0,0b0111,1, IIC_VABAD, IIC_VABAQ,
-                             "vaba", "s", sabsdiff, add>;
+                             "vaba", "s", int_arm_neon_vabds, add>;
 defm VABAu    : N3VIntOp_QHS<1,0,0b0111,1, IIC_VABAD, IIC_VABAQ,
-                             "vaba", "u", uabsdiff, add>;
+                             "vaba", "u", int_arm_neon_vabdu, add>;
 
 //   VABAL    : Vector Absolute Difference and Accumulate Long (Q += | D - D |)
 defm VABALs   : N3VLIntExtOp_QHS<0,1,0b0101,0, IIC_VABAD,
-                                 "vabal", "s", sabsdiff, zext, add>;
+                                 "vabal", "s", int_arm_neon_vabds, zext, add>;
 defm VABALu   : N3VLIntExtOp_QHS<1,1,0b0101,0, IIC_VABAD,
-                                 "vabal", "u", uabsdiff, zext, add>;
+                                 "vabal", "u", int_arm_neon_vabdu, zext, add>;
 
 // Vector Maximum and Minimum.
 
