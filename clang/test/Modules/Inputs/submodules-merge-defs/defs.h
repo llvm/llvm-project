@@ -131,3 +131,10 @@ namespace ClassTemplatePartialSpec {
   };
   template<typename A, int B> template<typename C> F<A[B]>::F() {}
 }
+
+struct MemberClassTemplate {
+  template<typename T> struct A;
+};
+template<typename T> struct MemberClassTemplate::A {};
+template<typename T> struct MemberClassTemplate::A<T*> {};
+template<> struct MemberClassTemplate::A<int> {};

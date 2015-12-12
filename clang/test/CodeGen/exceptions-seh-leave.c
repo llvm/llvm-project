@@ -160,19 +160,16 @@ int nested___except___finally() {
 // CHECK-NEXT: cleanuppad
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
 // CHECK-NEXT: invoke void @"\01?fin$0@0@nested___except___finally@@"(i8 1, i8* %[[fp]])
-// CHECK-NEXT:       to label %[[g1_resume:.*]] unwind label %[[cleanupend:[^ ]*]]
+// CHECK-NEXT:       to label %[[g1_resume:.*]] unwind label %[[g2_lpad]]
 // CHECK: cleanupret {{.*}} unwind label %[[g2_lpad]]
 
 // CHECK: [[g2_lpad]]
-// CHECK: catchpad [i8* null]
+// CHECK: catchpad {{.*}} [i8* null]
 // CHECK: catchret
 // CHECK: br label %[[trycont]]
 
 // CHECK: [[trycont]]
 // CHECK-NEXT: ret i32 1
-
-// CHECK: [[cleanupend]]
-// CHECK-NEXT: cleanupendpad {{.*}} unwind label %[[g2_lpad]]
 
 // CHECK-LABEL: define internal void @"\01?fin$0@0@nested___except___finally@@"(i8 %abnormal_termination, i8* %frame_pointer)
 // CHECK: call void @g()
@@ -203,14 +200,14 @@ int nested___except___except() {
 // CHECK-NEXT:       to label %[[g1_cont:.*]] unwind label %[[g1_lpad:.*]]
 
 // CHECK: [[g1_lpad]]
-// CHECK: catchpad [i8* null]
+// CHECK: catchpad {{.*}} [i8* null]
 // CHECK: catchret {{.*}} to label %[[except:[^ ]*]]
 // CHECK: [[except]]
 // CHECK: invoke void @g()
 // CHECK-NEXT:       to label %[[g2_cont:.*]] unwind label %[[g2_lpad:.*]]
 
 // CHECK: [[g2_lpad]]
-// CHECK: catchpad [i8* null]
+// CHECK: catchpad {{.*}} [i8* null]
 // CHECK: catchret
 // CHECK: br label %[[trycont4:[^ ]*]]
 
@@ -280,7 +277,7 @@ int nested___finally___except() {
 // CHECK: [[g2_lpad]]
 // CHECK: cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: invoke void @"\01?fin$0@0@nested___finally___except@@"(i8 1, i8* %[[fp]])
+// CHECK-NEXT: call void @"\01?fin$0@0@nested___finally___except@@"(i8 1, i8* %[[fp]])
 // CHECK: cleanupret {{.*}} unwind to caller
 
 // CHECK-LABEL: define internal void @"\01?fin$0@0@nested___finally___except@@"(i8 %abnormal_termination, i8* %frame_pointer)
@@ -323,21 +320,18 @@ int nested___finally___finally() {
 // CHECK-NEXT: ret i32 1
 
 // CHECK: [[g1_lpad]]
-// CHECK-NEXT: %[[padtoken:[^ ]*]] = cleanuppad []
+// CHECK-NEXT: %[[padtoken:[^ ]*]] = cleanuppad within none []
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
 // CHECK-NEXT: invoke void @"\01?fin$1@0@nested___finally___finally@@"(i8 1, i8* %[[fp]])
-// CHECK-NEXT:       to label %[[finally_cont2:.*]] unwind label %[[endcleanup:[^ ]*]]
+// CHECK-NEXT:       to label %[[finally_cont2:.*]] unwind label %[[g2_lpad]]
 // CHECK: [[finally_cont2]]
-// CHECK: cleanupret %[[padtoken]] unwind label %[[g2_lpad]]
-
-// CHECK: [[endcleanup]]
-// CHECK-NEXT: cleanupendpad %[[padtoken]] unwind label %[[g2_lpad]]
+// CHECK: cleanupret from %[[padtoken]] unwind label %[[g2_lpad]]
 
 // CHECK: [[g2_lpad]]
-// CHECK-NEXT: %[[padtoken:[^ ]*]] = cleanuppad []
+// CHECK-NEXT: %[[padtoken:[^ ]*]] = cleanuppad within none []
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: invoke void @"\01?fin$0@0@nested___finally___finally@@"(i8 1, i8* %[[fp]])
-// CHECK: cleanupret %[[padtoken]] unwind to caller
+// CHECK-NEXT: call void @"\01?fin$0@0@nested___finally___finally@@"(i8 1, i8* %[[fp]])
+// CHECK: cleanupret from %[[padtoken]] unwind to caller
 
 // CHECK-LABEL: define internal void @"\01?fin$0@0@nested___finally___finally@@"(i8 %abnormal_termination, i8* %frame_pointer)
 // CHECK: ret void

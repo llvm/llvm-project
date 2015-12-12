@@ -871,58 +871,50 @@ llvm::BasicBlock *CodeGenFunction::EmitLandingPad() {
   return lpad;
 }
 
-static llvm::BasicBlock *emitCatchPadBlock(CodeGenFunction &CGF,
-                                           EHCatchScope &CatchScope) {
+static void emitCatchPadBlock(CodeGenFunction &CGF, EHCatchScope &CatchScope) {
   llvm::BasicBlock *DispatchBlock = CatchScope.getCachedEHDispatchBlock();
   assert(DispatchBlock);
 
   CGBuilderTy::InsertPoint SavedIP = CGF.Builder.saveIP();
   CGF.EmitBlockAfterUses(DispatchBlock);
 
-  // Figure out the next block.
-  llvm::BasicBlock *NextBlock = nullptr;
+  llvm::Value *ParentPad = CGF.CurrentFuncletPad;
+  if (!ParentPad)
+    ParentPad = llvm::ConstantTokenNone::get(CGF.getLLVMContext());
+  llvm::BasicBlock *UnwindBB =
+      CGF.getEHDispatchBlock(CatchScope.getEnclosingEHScope());
+
+  unsigned NumHandlers = CatchScope.getNumHandlers();
+  llvm::CatchSwitchInst *CatchSwitch =
+      CGF.Builder.CreateCatchSwitch(ParentPad, UnwindBB, NumHandlers);
 
   // Test against each of the exception types we claim to catch.
-  for (unsigned I = 0, E = CatchScope.getNumHandlers(); I < E; ++I) {
+  for (unsigned I = 0; I < NumHandlers; ++I) {
     const EHCatchScope::Handler &Handler = CatchScope.getHandler(I);
 
     CatchTypeInfo TypeInfo = Handler.Type;
     if (!TypeInfo.RTTI)
       TypeInfo.RTTI = llvm::Constant::getNullValue(CGF.VoidPtrTy);
 
-    // If this is the last handler, we're at the end, and the next
-    // block is the block for the enclosing EH scope.
-    if (I + 1 == E) {
-      NextBlock = CGF.createBasicBlock("catchendblock");
-      CGBuilderTy(CGF, NextBlock).CreateCatchEndPad(
-          CGF.getEHDispatchBlock(CatchScope.getEnclosingEHScope()));
-    } else {
-      NextBlock = CGF.createBasicBlock("catch.dispatch");
-    }
+    CGF.Builder.SetInsertPoint(Handler.Block);
 
     if (EHPersonality::get(CGF).isMSVCXXPersonality()) {
-      CGF.Builder.CreateCatchPad(Handler.Block, NextBlock,
-                                 {TypeInfo.RTTI,
-                                  CGF.Builder.getInt32(TypeInfo.Flags),
-                                  llvm::Constant::getNullValue(CGF.VoidPtrTy)});
+      CGF.Builder.CreateCatchPad(
+          CatchSwitch, {TypeInfo.RTTI, CGF.Builder.getInt32(TypeInfo.Flags),
+                        llvm::Constant::getNullValue(CGF.VoidPtrTy)});
     } else {
-      CGF.Builder.CreateCatchPad(Handler.Block, NextBlock, {TypeInfo.RTTI});
+      CGF.Builder.CreateCatchPad(CatchSwitch, {TypeInfo.RTTI});
     }
 
-    // Otherwise we need to emit and continue at that block.
-    CGF.EmitBlock(NextBlock);
+    CatchSwitch->addHandler(Handler.Block);
   }
   CGF.Builder.restoreIP(SavedIP);
-
-  return NextBlock;
 }
 
 /// Emit the structure of the dispatch block for the given catch scope.
 /// It is an invariant that the dispatch block already exists.
-/// If the catchblock instructions are used for EH dispatch, then the basic
-/// block holding the final catchendblock instruction is returned.
-static llvm::BasicBlock *emitCatchDispatchBlock(CodeGenFunction &CGF,
-                                                EHCatchScope &catchScope) {
+static void emitCatchDispatchBlock(CodeGenFunction &CGF,
+                                   EHCatchScope &catchScope) {
   if (EHPersonality::get(CGF).usesFuncletPads())
     return emitCatchPadBlock(CGF, catchScope);
 
@@ -934,7 +926,7 @@ static llvm::BasicBlock *emitCatchDispatchBlock(CodeGenFunction &CGF,
   if (catchScope.getNumHandlers() == 1 &&
       catchScope.getHandler(0).isCatchAll()) {
     assert(dispatchBlock == catchScope.getHandler(0).Block);
-    return nullptr;
+    return;
   }
 
   CGBuilderTy::InsertPoint savedIP = CGF.Builder.saveIP();
@@ -992,12 +984,11 @@ static llvm::BasicBlock *emitCatchDispatchBlock(CodeGenFunction &CGF,
     // If the next handler is a catch-all, we're completely done.
     if (nextIsEnd) {
       CGF.Builder.restoreIP(savedIP);
-      return nullptr;
+      return;
     }
     // Otherwise we need to emit and continue at that block.
     CGF.EmitBlock(nextBlock);
   }
-  return nullptr;
 }
 
 void CodeGenFunction::popCatchScope() {
@@ -1020,7 +1011,7 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   }
 
   // Emit the structure of the EH dispatch for this catch.
-  llvm::BasicBlock *CatchEndBlockBB = emitCatchDispatchBlock(*this, CatchScope);
+  emitCatchDispatchBlock(*this, CatchScope);
 
   // Copy the handler blocks off before we pop the EH stack.  Emitting
   // the handlers might scribble on this memory.
@@ -1043,9 +1034,6 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     doImplicitRethrow = isa<CXXDestructorDecl>(CurCodeDecl) ||
                         isa<CXXConstructorDecl>(CurCodeDecl);
 
-  if (CatchEndBlockBB)
-    EHStack.pushPadEnd(CatchEndBlockBB);
-
   // Perversely, we emit the handlers backwards precisely because we
   // want them to appear in source order.  In all of these cases, the
   // catch block will have exactly one predecessor, which will be a
@@ -1065,6 +1053,8 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     RunCleanupsScope CatchScope(*this);
 
     // Initialize the catch variable and set up the cleanups.
+    SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
+        CurrentFuncletPad);
     CGM.getCXXABI().emitBeginCatch(*this, C);
 
     // Emit the PGO counter increment.
@@ -1098,8 +1088,6 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
 
   EmitBlock(ContBB);
   incrementProfileCounter(&S);
-  if (CatchEndBlockBB)
-    EHStack.popPadEnd();
 }
 
 namespace {
@@ -1338,7 +1326,11 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
   TerminateHandler = createBasicBlock("terminate.handler");
   Builder.SetInsertPoint(TerminateHandler);
   if (EHPersonality::get(*this).usesFuncletPads()) {
-    Builder.CreateTerminatePad(/*UnwindBB=*/nullptr, CGM.getTerminateFn());
+    llvm::Value *ParentPad = CurrentFuncletPad;
+    if (!ParentPad)
+      ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
+    Builder.CreateTerminatePad(ParentPad, /*UnwindBB=*/nullptr,
+                               {CGM.getTerminateFn()});
   } else {
     llvm::Value *Exn = nullptr;
     if (getLangOpts().CPlusPlus)
@@ -1857,18 +1849,16 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   emitCatchDispatchBlock(*this, CatchScope);
 
   // Grab the block before we pop the handler.
-  llvm::BasicBlock *ExceptBB = CatchScope.getHandler(0).Block;
+  llvm::BasicBlock *CatchPadBB = CatchScope.getHandler(0).Block;
   EHStack.popCatch();
 
-  EmitBlockAfterUses(ExceptBB);
+  EmitBlockAfterUses(CatchPadBB);
 
   // __except blocks don't get outlined into funclets, so immediately do a
   // catchret.
-  llvm::BasicBlock *CatchPadBB = ExceptBB->getSinglePredecessor();
-  assert(CatchPadBB && "only ExceptBB pred should be catchpad");
   llvm::CatchPadInst *CPI =
       cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHI());
-  ExceptBB = createBasicBlock("__except");
+  llvm::BasicBlock *ExceptBB = createBasicBlock("__except");
   Builder.CreateCatchRet(CPI, ExceptBB);
   EmitBlock(ExceptBB);
 

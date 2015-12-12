@@ -893,10 +893,10 @@ void MicrosoftCXXABI::emitBeginCatch(CodeGenFunction &CGF,
   // In the MS ABI, the runtime handles the copy, and the catch handler is
   // responsible for destruction.
   VarDecl *CatchParam = S->getExceptionDecl();
-  llvm::BasicBlock *CatchPadBB =
-      CGF.Builder.GetInsertBlock()->getSinglePredecessor();
+  llvm::BasicBlock *CatchPadBB = CGF.Builder.GetInsertBlock();
   llvm::CatchPadInst *CPI =
       cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHI());
+  CGF.CurrentFuncletPad = CPI;
 
   // If this is a catch-all or the catch parameter is unnamed, we don't need to
   // emit an alloca to the object.

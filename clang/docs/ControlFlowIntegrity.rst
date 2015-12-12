@@ -61,6 +61,24 @@ checking.
 Remember that you have to provide ``-flto`` if at least one CFI scheme is
 enabled.
 
+Trapping and Diagnostics
+========================
+
+By default, CFI will abort the program immediately upon detecting a control
+flow integrity violation. You can use the :ref:`-fno-sanitize-trap=
+<controlling-code-generation>` flag to cause CFI to print a diagnostic
+similar to the one below before the program aborts.
+
+.. code-block:: console
+
+    bad-cast.cpp:109:7: runtime error: control flow integrity check for type 'B' failed during base-to-derived cast (vtable address 0x000000425a50)
+    0x000000425a50: note: vtable is of type 'A'
+     00 00 00 00  f0 f1 41 00 00 00 00 00  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  20 5a 42 00
+                  ^ 
+
+If diagnostics are enabled, you can also configure CFI to continue program
+execution instead of aborting by using the :ref:`-fsanitize-recover=
+<controlling-code-generation>` flag.
 
 Forward-Edge CFI for Virtual Calls
 ==================================

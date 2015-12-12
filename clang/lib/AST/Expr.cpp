@@ -3293,9 +3293,20 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
       // Check that it is a cast to void*.
       if (const PointerType *PT = CE->getType()->getAs<PointerType>()) {
         QualType Pointee = PT->getPointeeType();
-        if (!Pointee.hasQualifiers() &&
-            Pointee->isVoidType() &&                              // to void*
-            CE->getSubExpr()->getType()->isIntegerType())         // from int.
+        Qualifiers Q = Pointee.getQualifiers();
+        // In OpenCL v2.0 generic address space acts as a placeholder
+        // and should be ignored.
+        bool IsASValid = true;
+        if (Ctx.getLangOpts().OpenCLVersion >= 200) {
+          if (Pointee.getAddressSpace() == LangAS::opencl_generic)
+            Q.removeAddressSpace();
+          else
+            IsASValid = false;
+        }
+
+        if (IsASValid && !Q.hasQualifiers() &&
+            Pointee->isVoidType() &&                      // to void*
+            CE->getSubExpr()->getType()->isIntegerType()) // from int.
           return CE->getSubExpr()->isNullPointerConstant(Ctx, NPC);
       }
     }

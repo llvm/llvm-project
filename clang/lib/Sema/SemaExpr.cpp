@@ -8806,7 +8806,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       diagnoseDistinctPointerComparison(*this, Loc, LHS, RHS, /*isError*/false);
     }
     if (LCanPointeeTy != RCanPointeeTy) {
-      if (getLangOpts().OpenCL) {
+      // Treat NULL constant as a special case in OpenCL.
+      if (getLangOpts().OpenCL && !LHSIsNull && !RHSIsNull) {
         const PointerType *LHSPtr = LHSType->getAs<PointerType>();
         if (!LHSPtr->isAddressSpaceOverlapping(*RHSType->getAs<PointerType>())) {
           Diag(Loc,
@@ -10473,17 +10474,17 @@ static void DiagnoseBitwisePrecedence(Sema &Self, BinaryOperatorKind Opc,
   BinaryOperator *LHSBO = dyn_cast<BinaryOperator>(LHSExpr);
   BinaryOperator *RHSBO = dyn_cast<BinaryOperator>(RHSExpr);
 
-  // Check that one of the sides is a comparison operator.
+  // Check that one of the sides is a comparison operator and the other isn't.
   bool isLeftComp = LHSBO && LHSBO->isComparisonOp();
   bool isRightComp = RHSBO && RHSBO->isComparisonOp();
-  if (!isLeftComp && !isRightComp)
+  if (isLeftComp == isRightComp)
     return;
 
   // Bitwise operations are sometimes used as eager logical ops.
   // Don't diagnose this.
   bool isLeftBitwise = LHSBO && LHSBO->isBitwiseOp();
   bool isRightBitwise = RHSBO && RHSBO->isBitwiseOp();
-  if ((isLeftComp || isLeftBitwise) && (isRightComp || isRightBitwise))
+  if (isLeftBitwise || isRightBitwise)
     return;
 
   SourceRange DiagRange = isLeftComp ? SourceRange(LHSExpr->getLocStart(),
@@ -10590,7 +10591,7 @@ static void DiagnoseLogicalAndInLogicalOrRHS(Sema &S, SourceLocation OpLoc,
 
 /// \brief Look for '&' in the left or right hand of a '|' expr.
 static void DiagnoseBitwiseAndInBitwiseOr(Sema &S, SourceLocation OpLoc,
-                                             Expr *OrArg) {
+                                          Expr *OrArg) {
   if (BinaryOperator *Bop = dyn_cast<BinaryOperator>(OrArg)) {
     if (Bop->getOpcode() == BO_And)
       return EmitDiagnosticForBitwiseAndInBitwiseOr(S, OpLoc, Bop);
