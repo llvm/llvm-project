@@ -17,9 +17,9 @@ invoke.cont:                                      ; preds = %entry
   ret void
 
 ehcleanup:                                        ; preds = %entry
-  %0 = cleanuppad []
+  %0 = cleanuppad within none []
   call void @Dtor(i64* %o)
-  cleanupret %0 unwind to caller
+  cleanupret from %0 unwind to caller
 }
 
 ; X86-LABEL: _realigned_cleanup: # @realigned_cleanup

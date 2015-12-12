@@ -21,6 +21,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
@@ -192,8 +193,6 @@ HandleCallsInBlockInlinedThroughInvoke(BasicBlock *BB, BasicBlock *UnwindEdge) {
     // instructions require no special handling.
     CallInst *CI = dyn_cast<CallInst>(I);
 
-    // If this call cannot unwind, don't convert it to an invoke.
-    // Inline asm calls cannot throw.
     if (!CI || CI->doesNotThrow() || isa<InlineAsm>(CI->getCalledValue()))
       continue;
 
@@ -327,46 +326,50 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
     }
   };
 
-  // Forward EH terminator instructions to the caller's invoke destination.
-  // This is as simple as connect all the instructions which 'unwind to caller'
-  // to the invoke destination.
+  // This connects all the instructions which 'unwind to caller' to the invoke
+  // destination.
   for (Function::iterator BB = FirstNewBlock->getIterator(), E = Caller->end();
        BB != E; ++BB) {
-    Instruction *I = BB->getFirstNonPHI();
-    if (I->isEHPad()) {
-      if (auto *CEPI = dyn_cast<CatchEndPadInst>(I)) {
-        if (CEPI->unwindsToCaller()) {
-          CatchEndPadInst::Create(CEPI->getContext(), UnwindDest, CEPI);
-          CEPI->eraseFromParent();
-          UpdatePHINodes(&*BB);
-        }
-      } else if (auto *CEPI = dyn_cast<CleanupEndPadInst>(I)) {
-        if (CEPI->unwindsToCaller()) {
-          CleanupEndPadInst::Create(CEPI->getCleanupPad(), UnwindDest, CEPI);
-          CEPI->eraseFromParent();
-          UpdatePHINodes(&*BB);
-        }
-      } else if (auto *TPI = dyn_cast<TerminatePadInst>(I)) {
-        if (TPI->unwindsToCaller()) {
-          SmallVector<Value *, 3> TerminatePadArgs;
-          for (Value *ArgOperand : TPI->arg_operands())
-            TerminatePadArgs.push_back(ArgOperand);
-          TerminatePadInst::Create(TPI->getContext(), UnwindDest,
-                                   TerminatePadArgs, TPI);
-          TPI->eraseFromParent();
-          UpdatePHINodes(&*BB);
-        }
-      } else {
-        assert(isa<CatchPadInst>(I) || isa<CleanupPadInst>(I));
-      }
-    }
-
     if (auto *CRI = dyn_cast<CleanupReturnInst>(BB->getTerminator())) {
       if (CRI->unwindsToCaller()) {
         CleanupReturnInst::Create(CRI->getCleanupPad(), UnwindDest, CRI);
         CRI->eraseFromParent();
         UpdatePHINodes(&*BB);
       }
+    }
+
+    Instruction *I = BB->getFirstNonPHI();
+    if (!I->isEHPad())
+      continue;
+
+    Instruction *Replacement = nullptr;
+    if (auto *TPI = dyn_cast<TerminatePadInst>(I)) {
+      if (TPI->unwindsToCaller()) {
+        SmallVector<Value *, 3> TerminatePadArgs;
+        for (Value *ArgOperand : TPI->arg_operands())
+          TerminatePadArgs.push_back(ArgOperand);
+        Replacement = TerminatePadInst::Create(TPI->getParentPad(), UnwindDest,
+                                               TerminatePadArgs, TPI);
+      }
+    } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I)) {
+      if (CatchSwitch->unwindsToCaller()) {
+        auto *NewCatchSwitch = CatchSwitchInst::Create(
+            CatchSwitch->getParentPad(), UnwindDest,
+            CatchSwitch->getNumHandlers(), CatchSwitch->getName(),
+            CatchSwitch);
+        for (BasicBlock *PadBB : CatchSwitch->handlers())
+          NewCatchSwitch->addHandler(PadBB);
+        Replacement = NewCatchSwitch;
+      }
+    } else if (!isa<FuncletPadInst>(I)) {
+      llvm_unreachable("unexpected EHPad!");
+    }
+
+    if (Replacement) {
+      Replacement->takeName(I);
+      I->replaceAllUsesWith(Replacement);
+      I->eraseFromParent();
+      UpdatePHINodes(&*BB);
     }
   }
 
@@ -1090,6 +1093,53 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       return false;
   }
 
+  // We need to figure out which funclet the callsite was in so that we may
+  // properly nest the callee.
+  Instruction *CallSiteEHPad = nullptr;
+  if (CalledPersonality && CallerPersonality) {
+    EHPersonality Personality = classifyEHPersonality(CalledPersonality);
+    if (isFuncletEHPersonality(Personality)) {
+      DenseMap<BasicBlock *, ColorVector> CallerBlockColors =
+          colorEHFunclets(*Caller);
+      ColorVector &CallSiteColors = CallerBlockColors[OrigBB];
+      size_t NumColors = CallSiteColors.size();
+      // There is no single parent, inlining will not succeed.
+      if (NumColors > 1)
+        return false;
+      if (NumColors == 1) {
+        BasicBlock *CallSiteFuncletBB = CallSiteColors.front();
+        if (CallSiteFuncletBB != Caller->begin()) {
+          CallSiteEHPad = CallSiteFuncletBB->getFirstNonPHI();
+          assert(CallSiteEHPad->isEHPad() && "Expected an EHPad!");
+        }
+      }
+
+      // OK, the inlining site is legal.  What about the target function?
+
+      if (CallSiteEHPad) {
+        if (Personality == EHPersonality::MSVC_CXX) {
+          // The MSVC personality cannot tolerate catches getting inlined into
+          // cleanup funclets.
+          if (isa<CleanupPadInst>(CallSiteEHPad)) {
+            // Ok, the call site is within a cleanuppad.  Let's check the callee
+            // for catchpads.
+            for (const BasicBlock &CalledBB : *CalledFunc) {
+              if (isa<CatchPadInst>(CalledBB.getFirstNonPHI()))
+                return false;
+            }
+          }
+        } else if (isAsynchronousEHPersonality(Personality)) {
+          // SEH is even less tolerant, there may not be any sort of exceptional
+          // funclet in the callee.
+          for (const BasicBlock &CalledBB : *CalledFunc) {
+            if (CalledBB.isEHPad())
+              return false;
+          }
+        }
+      }
+    }
+  }
+
   // Get an iterator to the last basic block in the function, which will have
   // the new function inlined after it.
   Function::iterator LastBlock = --Caller->end();
@@ -1378,6 +1428,30 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       if (InlinedMustTailCalls && RI->getParent()->getTerminatingMustTailCall())
         continue;
       IRBuilder<>(RI).CreateCall(StackRestore, SavedPtr);
+    }
+  }
+
+  // Update the lexical scopes of the new funclets.  Anything that had 'none' as
+  // its parent is now nested inside the callsite's EHPad.
+  if (CallSiteEHPad) {
+    for (Function::iterator BB = FirstNewBlock->getIterator(),
+                            E = Caller->end();
+         BB != E; ++BB) {
+      Instruction *I = BB->getFirstNonPHI();
+      if (!I->isEHPad())
+        continue;
+
+      if (auto *TPI = dyn_cast<TerminatePadInst>(I)) {
+        if (isa<ConstantTokenNone>(TPI->getParentPad()))
+          TPI->setParentPad(CallSiteEHPad);
+      } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I)) {
+        if (isa<ConstantTokenNone>(CatchSwitch->getParentPad()))
+          CatchSwitch->setParentPad(CallSiteEHPad);
+      } else {
+        auto *FPI = cast<FuncletPadInst>(I);
+        if (isa<ConstantTokenNone>(FPI->getParentPad()))
+          FPI->setParentPad(CallSiteEHPad);
+      }
     }
   }
 

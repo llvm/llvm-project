@@ -176,7 +176,8 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   // virtual registers. Consider removing their restrictions and re-enabling
   // them.
   //
-  // Fails with: Regalloc must assign all vregs.
+  // We use our own PrologEpilogInserter which is very slightly modified to
+  // tolerate virtual registers.
   disablePass(&PrologEpilogCodeInserterID);
   // Fails with: should be run after register allocation.
   disablePass(&MachineCopyPropagationID);
@@ -185,6 +186,11 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   addPass(createWebAssemblyRegColoring());
 
   TargetPassConfig::addPostRegAlloc();
+
+  // Run WebAssembly's version of the PrologEpilogInserter. Target-independent
+  // PEI runs after PostRegAlloc and after ShrinkWrap. Putting it here will run
+  // PEI before ShrinkWrap but otherwise in the same position in the order.
+  addPass(createWebAssemblyPEI());
 }
 
 void WebAssemblyPassConfig::addPreEmitPass() {

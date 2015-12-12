@@ -839,31 +839,31 @@ def : Pat<(v4f64 (scalar_to_vector f64:$A)),
 def : Pat<(v4f32 (scalar_to_vector f32:$A)),
           (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), $A, sub_64)>;
 
-def : Pat<(f64 (vector_extract v4f64:$S, 0)),
+def : Pat<(f64 (extractelt v4f64:$S, 0)),
           (EXTRACT_SUBREG $S, sub_64)>;
-def : Pat<(f32 (vector_extract v4f32:$S, 0)),
+def : Pat<(f32 (extractelt v4f32:$S, 0)),
           (EXTRACT_SUBREG $S, sub_64)>;
 
-def : Pat<(f64 (vector_extract v4f64:$S, 1)),
+def : Pat<(f64 (extractelt v4f64:$S, 1)),
           (EXTRACT_SUBREG (QVESPLATI $S, 1), sub_64)>;
-def : Pat<(f64 (vector_extract v4f64:$S, 2)),
+def : Pat<(f64 (extractelt v4f64:$S, 2)),
           (EXTRACT_SUBREG (QVESPLATI $S, 2), sub_64)>;
-def : Pat<(f64 (vector_extract v4f64:$S, 3)),
+def : Pat<(f64 (extractelt v4f64:$S, 3)),
           (EXTRACT_SUBREG (QVESPLATI $S, 3), sub_64)>;
 
-def : Pat<(f32 (vector_extract v4f32:$S, 1)),
+def : Pat<(f32 (extractelt v4f32:$S, 1)),
           (EXTRACT_SUBREG (QVESPLATIs $S, 1), sub_64)>;
-def : Pat<(f32 (vector_extract v4f32:$S, 2)),
+def : Pat<(f32 (extractelt v4f32:$S, 2)),
           (EXTRACT_SUBREG (QVESPLATIs $S, 2), sub_64)>;
-def : Pat<(f32 (vector_extract v4f32:$S, 3)),
+def : Pat<(f32 (extractelt v4f32:$S, 3)),
           (EXTRACT_SUBREG (QVESPLATIs $S, 3), sub_64)>;
 
-def : Pat<(f64 (vector_extract v4f64:$S, i64:$F)),
+def : Pat<(f64 (extractelt v4f64:$S, i64:$F)),
           (EXTRACT_SUBREG (QVFPERM $S, $S,
                                    (QVLPCLSXint (RLDICR $F, 2,
                                                         /* 63-2 = */ 61))),
                           sub_64)>;
-def : Pat<(f32 (vector_extract v4f32:$S, i64:$F)),
+def : Pat<(f32 (extractelt v4f32:$S, i64:$F)),
           (EXTRACT_SUBREG (QVFPERMs $S, $S,
                                     (QVLPCLSXint (RLDICR $F, 2,
                                                          /* 63-2 = */ 61))),

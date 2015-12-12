@@ -9,7 +9,12 @@
 
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 /// See if the given exception handling personality function is one that we
@@ -38,4 +43,65 @@ bool llvm::canSimplifyInvokeNoUnwind(const Function *F) {
   // function wants to catch asynch exceptions.  The nounwind attribute only
   // implies that the function does not throw synchronous exceptions.
   return !isAsynchronousEHPersonality(Personality);
+}
+
+DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
+  SmallVector<std::pair<BasicBlock *, BasicBlock *>, 16> Worklist;
+  BasicBlock *EntryBlock = &F.getEntryBlock();
+  DenseMap<BasicBlock *, ColorVector> BlockColors;
+
+  // Build up the color map, which maps each block to its set of 'colors'.
+  // For any block B the "colors" of B are the set of funclets F (possibly
+  // including a root "funclet" representing the main function) such that
+  // F will need to directly contain B or a copy of B (where the term "directly
+  // contain" is used to distinguish from being "transitively contained" in
+  // a nested funclet).
+  //
+  // Note: Despite not being funclets in the truest sense, terminatepad and
+  // catchswitch are considered to belong to their own funclet for the purposes
+  // of coloring.
+
+  DEBUG_WITH_TYPE("winehprepare-coloring", dbgs() << "\nColoring funclets for "
+                                                  << F.getName() << "\n");
+
+  Worklist.push_back({EntryBlock, EntryBlock});
+
+  while (!Worklist.empty()) {
+    BasicBlock *Visiting;
+    BasicBlock *Color;
+    std::tie(Visiting, Color) = Worklist.pop_back_val();
+    DEBUG_WITH_TYPE("winehprepare-coloring",
+                    dbgs() << "Visiting " << Visiting->getName() << ", "
+                           << Color->getName() << "\n");
+    Instruction *VisitingHead = Visiting->getFirstNonPHI();
+    if (VisitingHead->isEHPad()) {
+      // Mark this funclet head as a member of itself.
+      Color = Visiting;
+    }
+    // Note that this is a member of the given color.
+    ColorVector &Colors = BlockColors[Visiting];
+    if (std::find(Colors.begin(), Colors.end(), Color) == Colors.end())
+      Colors.push_back(Color);
+    else
+      continue;
+
+    DEBUG_WITH_TYPE("winehprepare-coloring",
+                    dbgs() << "  Assigned color \'" << Color->getName()
+                           << "\' to block \'" << Visiting->getName()
+                           << "\'.\n");
+
+    BasicBlock *SuccColor = Color;
+    TerminatorInst *Terminator = Visiting->getTerminator();
+    if (auto *CatchRet = dyn_cast<CatchReturnInst>(Terminator)) {
+      Value *ParentPad = CatchRet->getParentPad();
+      if (isa<ConstantTokenNone>(ParentPad))
+        SuccColor = EntryBlock;
+      else
+        SuccColor = cast<Instruction>(ParentPad)->getParent();
+    }
+
+    for (BasicBlock *Succ : successors(Visiting))
+      Worklist.push_back({Succ, SuccColor});
+  }
+  return BlockColors;
 }

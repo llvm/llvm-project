@@ -105,7 +105,6 @@ class VectorLegalizer {
   SDValue ExpandLoad(SDValue Op);
   SDValue ExpandStore(SDValue Op);
   SDValue ExpandFNEG(SDValue Op);
-  SDValue ExpandABSDIFF(SDValue Op);
 
   /// \brief Implements vector promotion.
   ///
@@ -330,8 +329,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-  case ISD::UABSDIFF:
-  case ISD::SABSDIFF:
     QueryType = Node->getValueType(0);
     break;
   case ISD::FP_ROUND_INREG:
@@ -718,40 +715,9 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
     return ExpandFNEG(Op);
   case ISD::SETCC:
     return UnrollVSETCC(Op);
-  case ISD::UABSDIFF:
-  case ISD::SABSDIFF:
-    return ExpandABSDIFF(Op);
   default:
     return DAG.UnrollVectorOp(Op.getNode());
   }
-}
-
-SDValue VectorLegalizer::ExpandABSDIFF(SDValue Op) {
-  SDLoc dl(Op);
-  SDValue Op0 = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
-  EVT VT = Op.getValueType();
-
-  // For unsigned intrinsic, promote the type to handle unsigned overflow.
-  bool isUabsdiff = (Op->getOpcode() == ISD::UABSDIFF);
-  if (isUabsdiff) {
-    VT = VT.widenIntegerVectorElementType(*DAG.getContext());
-    Op0 = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Op0);
-    Op1 = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Op1);
-  }
-
-  SDNodeFlags Flags;
-  Flags.setNoSignedWrap(!isUabsdiff);
-  SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, Op0, Op1, &Flags);
-  if (isUabsdiff)
-    return DAG.getNode(ISD::TRUNCATE, dl, Op.getValueType(), Sub);
-
-  SDValue Cmp =
-      DAG.getNode(ISD::SETCC, dl, TLI.getSetCCResultType(DAG.getDataLayout(),
-                                                         *DAG.getContext(), VT),
-                  Sub, DAG.getConstant(0, dl, VT), DAG.getCondCode(ISD::SETGE));
-  SDValue Neg = DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT), Sub, &Flags);
-  return DAG.getNode(ISD::VSELECT, dl, VT, Cmp, Sub, Neg);
 }
 
 SDValue VectorLegalizer::ExpandSELECT(SDValue Op) {

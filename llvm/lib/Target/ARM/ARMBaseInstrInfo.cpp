@@ -2029,15 +2029,6 @@ void llvm::emitARMRegPlusImmediate(MachineBasicBlock &MBB,
   }
 }
 
-static bool isAnySubRegLive(unsigned Reg, const TargetRegisterInfo *TRI,
-                      MachineInstr *MI) {
-  for (MCSubRegIterator Subreg(Reg, TRI, /* IncludeSelf */ true);
-       Subreg.isValid(); ++Subreg)
-    if (MI->getParent()->computeRegisterLiveness(TRI, *Subreg, MI) !=
-        MachineBasicBlock::LQR_Dead)
-      return true;
-  return false;
-}
 bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
                                       MachineFunction &MF, MachineInstr *MI,
                                       unsigned NumBytes) {
@@ -2112,11 +2103,9 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
     // registers live within the function we might clobber a return value
     // register; the other way a register can be live here is if it's
     // callee-saved.
-    // TODO: Currently, computeRegisterLiveness() does not report "live" if a
-    // sub reg is live. When computeRegisterLiveness() works for sub reg, it
-    // can replace isAnySubRegLive().
     if (isCalleeSavedRegister(CurReg, CSRegs) ||
-        isAnySubRegLive(CurReg, TRI, MI)) {
+        MI->getParent()->computeRegisterLiveness(TRI, CurReg, MI) !=
+        MachineBasicBlock::LQR_Dead) {
       // VFP pops don't allow holes in the register list, so any skip is fatal
       // for our transformation. GPR pops do, so we should just keep looking.
       if (IsVFPPushPop)

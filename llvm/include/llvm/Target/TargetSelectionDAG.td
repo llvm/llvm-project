@@ -396,8 +396,6 @@ def smax       : SDNode<"ISD::SMAX"      , SDTIntBinOp>;
 def umin       : SDNode<"ISD::UMIN"      , SDTIntBinOp>;
 def umax       : SDNode<"ISD::UMAX"      , SDTIntBinOp>;
 
-def sabsdiff   : SDNode<"ISD::SABSDIFF"   , SDTIntBinOp>;
-def uabsdiff   : SDNode<"ISD::UABSDIFF"   , SDTIntBinOp>;
 def sext_inreg : SDNode<"ISD::SIGN_EXTEND_INREG", SDTExtInreg>;
 def bitreverse : SDNode<"ISD::BITREVERSE" , SDTIntUnaryOp>;
 def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
@@ -534,6 +532,9 @@ def vector_shuffle : SDNode<"ISD::VECTOR_SHUFFLE", SDTVecShuffle, []>;
 def build_vector : SDNode<"ISD::BUILD_VECTOR", SDTypeProfile<1, -1, []>, []>;
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
+
+// vector_extract/vector_insert are deprecated. extractelt/insertelt
+// are preferred.
 def vector_extract : SDNode<"ISD::EXTRACT_VECTOR_ELT",
     SDTypeProfile<1, 2, [SDTCisPtrTy<2>]>, []>;
 def vector_insert : SDNode<"ISD::INSERT_VECTOR_ELT",
@@ -544,7 +545,7 @@ def concat_vectors : SDNode<"ISD::CONCAT_VECTORS",
 // This operator does not do subvector type checking.  The ARM
 // backend, at least, needs it.
 def vector_extract_subvec : SDNode<"ISD::EXTRACT_SUBVECTOR",
-    SDTypeProfile<1, 2, [SDTCisInt<2>, SDTCisVec<1>, SDTCisVec<0>]>, 
+    SDTypeProfile<1, 2, [SDTCisInt<2>, SDTCisVec<1>, SDTCisVec<0>]>,
     []>;
 
 // This operator does subvector type checking.

@@ -3254,8 +3254,8 @@ bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
   // updated to continue to the unwind destination of the cleanup pad being
   // simplified.
   BasicBlock *BB = RI->getParent();
-  Instruction *CPInst = dyn_cast<CleanupPadInst>(BB->getFirstNonPHI());
-  if (!CPInst)
+  CleanupPadInst *CPInst = RI->getCleanupPad();
+  if (CPInst->getParent() != BB)
     // This isn't an empty cleanup.
     return false;
 
@@ -3265,9 +3265,10 @@ bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
     if (!isa<DbgInfoIntrinsic>(I))
       return false;
 
-  // If the cleanup return we are simplifying unwinds to the caller, this
-  // will set UnwindDest to nullptr.
+  // If the cleanup return we are simplifying unwinds to the caller, this will
+  // set UnwindDest to nullptr.
   BasicBlock *UnwindDest = RI->getUnwindDest();
+  Instruction *DestEHPad = UnwindDest ? UnwindDest->getFirstNonPHI() : nullptr;
 
   // We're about to remove BB from the control flow.  Before we do, sink any
   // PHINodes into the unwind destination.  Doing this before changing the
@@ -3278,7 +3279,7 @@ bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
     // First, go through the PHI nodes in UnwindDest and update any nodes that
     // reference the block we are removing
     for (BasicBlock::iterator I = UnwindDest->begin(),
-                              IE = UnwindDest->getFirstNonPHI()->getIterator();
+                              IE = DestEHPad->getIterator();
          I != IE; ++I) {
       PHINode *DestPN = cast<PHINode>(I);
 
@@ -3322,7 +3323,7 @@ bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
     }
 
     // Sink any remaining PHI nodes directly into UnwindDest.
-    Instruction *InsertPt = UnwindDest->getFirstNonPHI();
+    Instruction *InsertPt = DestEHPad;
     for (BasicBlock::iterator I = BB->begin(),
                               IE = BB->getFirstNonPHI()->getIterator();
          I != IE;) {
@@ -3492,18 +3493,16 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
         }
     } else if ((isa<InvokeInst>(TI) &&
                 cast<InvokeInst>(TI)->getUnwindDest() == BB) ||
-               isa<CatchEndPadInst>(TI) || isa<TerminatePadInst>(TI)) {
+               isa<TerminatePadInst>(TI) || isa<CatchSwitchInst>(TI)) {
       removeUnwindEdge(TI->getParent());
       Changed = true;
-    } else if (isa<CleanupReturnInst>(TI) || isa<CleanupEndPadInst>(TI)) {
+    } else if (isa<CleanupReturnInst>(TI)) {
       new UnreachableInst(TI->getContext(), TI);
       TI->eraseFromParent();
       Changed = true;
     }
-    // TODO: If TI is a CatchPadInst, then (BB must be its normal dest and)
-    // we can eliminate it, redirecting its preds to its unwind successor,
-    // or to the next outer handler if the removed catch is the last for its
-    // catchendpad.
+    // TODO: We can remove a catchswitch if all it's catchpads end in
+    // unreachable.
   }
 
   // If this block is now dead, remove it.

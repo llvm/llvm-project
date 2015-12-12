@@ -2879,13 +2879,13 @@ def VMOVDI2SSZrm  : AVX512BI<0x6E, MRMSrcMem, (outs FR32X:$dst), (ins i32mem:$sr
 //
 def VMOVPDI2DIZrr  : AVX512BI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128X:$src),
                        "vmovd\t{$src, $dst|$dst, $src}",
-                       [(set GR32:$dst, (vector_extract (v4i32 VR128X:$src),
+                       [(set GR32:$dst, (extractelt (v4i32 VR128X:$src),
                                         (iPTR 0)))], IIC_SSE_MOVD_ToGP>,
                        EVEX, VEX_LIG;
 def VMOVPDI2DIZmr  : AVX512BI<0x7E, MRMDestMem, (outs),
                        (ins i32mem:$dst, VR128X:$src),
                        "vmovd\t{$src, $dst|$dst, $src}",
-                       [(store (i32 (vector_extract (v4i32 VR128X:$src),
+                       [(store (i32 (extractelt (v4i32 VR128X:$src),
                                      (iPTR 0))), addr:$dst)], IIC_SSE_MOVDQ>,
                        EVEX, VEX_LIG, EVEX_CD8<32, CD8VT1>;
 
@@ -3090,10 +3090,10 @@ let Predicates = [HasAVX512] in {
                        (EXTRACT_SUBREG (v4i64 VR256X:$src), sub_xmm)), sub_xmm)>;
 
   // Extract and store.
-  def : Pat<(store (f32 (vector_extract (v4f32 VR128X:$src), (iPTR 0))),
+  def : Pat<(store (f32 (extractelt (v4f32 VR128X:$src), (iPTR 0))),
                    addr:$dst),
             (VMOVSSZmr addr:$dst, (COPY_TO_REGCLASS (v4f32 VR128X:$src), FR32X))>;
-  def : Pat<(store (f64 (vector_extract (v2f64 VR128X:$src), (iPTR 0))),
+  def : Pat<(store (f64 (extractelt (v2f64 VR128X:$src), (iPTR 0))),
                    addr:$dst),
             (VMOVSDZmr addr:$dst, (COPY_TO_REGCLASS (v2f64 VR128X:$src), FR64X))>;
 

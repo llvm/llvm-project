@@ -28,17 +28,10 @@ define void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind 
 }
 
 ; FUNC-LABEL: {{^}}s_abs_v2i32:
-; TODO: this should use s_abs_i32
-; GCNX: s_abs_i32
-; GCNX: s_abs_i32
-; GCN: s_sub
-; GCN: s_sub
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cndmask_b32
-; GCN-DAG: v_cndmask_b32
-; GCN: v_add_i32
-; GCN: v_add_i32
+; GCN: s_abs_i32
+; GCN: s_abs_i32
+; GCN: s_add_i32
+; GCN: s_add_i32
 define void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %val) nounwind {
   %z0 = insertelement <2 x i32> undef, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
@@ -55,13 +48,10 @@ define void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %val) nounwind 
 ; FUNC-LABEL: {{^}}v_abs_v2i32:
 ; GCN: v_sub_i32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
 ; GCN: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
-; TODO: this should use v_max_i32
-; GCNX: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
-; GCNX: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cndmask_b32
-; GCN-DAG: v_cndmask_b32
+
+; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
+; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
+
 ; GCN: v_add_i32
 ; GCN: v_add_i32
 define void @v_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %src) nounwind {
@@ -80,24 +70,15 @@ define void @v_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %
 
 ; FUNC-LABEL: {{^}}s_abs_v4i32:
 ; TODO: this should use s_abs_i32
-; GCNX: s_abs_i32
-; GCNX: s_abs_i32
-; GCNX: s_abs_i32
-; GCNX: s_abs_i32
-; GCN: s_sub
-; GCN: s_sub
-; GCN: s_sub
-; GCN: s_sub
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cndmask_b32
-; GCN-DAG: v_cndmask_b32
-; GCN-DAG: v_cndmask_b32
-; GCN-DAG: v_cndmask_b32
-; GCN: v_add_i32
-; GCN: v_add_i32
+; GCN: s_abs_i32
+; GCN: s_abs_i32
+; GCN: s_abs_i32
+; GCN: s_abs_i32
+
+; GCN: s_add_i32
+; GCN: s_add_i32
+; GCN: s_add_i32
+; GCN: s_add_i32
 define void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %val) nounwind {
   %z0 = insertelement <4 x i32> undef, i32 0, i32 0
   %z1 = insertelement <4 x i32> %z0, i32 0, i32 1
@@ -120,19 +101,12 @@ define void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %val) nounwind 
 ; GCN: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
 ; GCN: v_sub_i32_e32 [[NEG2:v[0-9]+]], vcc, 0, [[SRC2:v[0-9]+]]
 ; GCN: v_sub_i32_e32 [[NEG3:v[0-9]+]], vcc, 0, [[SRC3:v[0-9]+]]
-; TODO: this should use v_max_i32
-; GCNX: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
-; GCNX: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
-; GCNX: v_max_i32_e32 {{v[0-9]+}}, [[NEG2]], [[SRC2]]
-; GCNX: v_max_i32_e32 {{v[0-9]+}}, [[NEG3]], [[SRC3]]
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cmp_gt
-; GCN-DAG: v_cndmask_b32
-; GCN-DAG: v_cndmask_b32
-; GCN-DAG: v_cndmask_b32
-; GCN-DAG: v_cndmask_b32
+
+; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
+; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
+; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG2]], [[SRC2]]
+; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG3]], [[SRC3]]
+
 ; GCN: v_add_i32
 ; GCN: v_add_i32
 ; GCN: v_add_i32

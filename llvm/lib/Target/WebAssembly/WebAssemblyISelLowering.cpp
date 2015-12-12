@@ -167,6 +167,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVTPtr, Expand);
 
+  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
+
   // Expand these forms; we pattern-match the forms that we can handle in isel.
   for (auto T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
     for (auto Op : {ISD::BR_CC, ISD::SELECT_CC})
@@ -359,8 +361,11 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned NumBytes = CCInfo.getAlignedCallFrameSize();
 
-  auto NB = DAG.getConstant(NumBytes, DL, PtrVT, true);
-  Chain = DAG.getCALLSEQ_START(Chain, NB, DL);
+  SDValue NB;
+  if (NumBytes) {
+    NB = DAG.getConstant(NumBytes, DL, PtrVT, true);
+    Chain = DAG.getCALLSEQ_START(Chain, NB, DL);
+  }
 
   if (IsVarArg) {
     // For non-fixed arguments, next emit stores to store the argument values
@@ -420,8 +425,10 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = Res.getValue(1);
   }
 
-  SDValue Unused = DAG.getUNDEF(PtrVT);
-  Chain = DAG.getCALLSEQ_END(Chain, NB, Unused, SDValue(), DL);
+  if (NumBytes) {
+    SDValue Unused = DAG.getUNDEF(PtrVT);
+    Chain = DAG.getCALLSEQ_END(Chain, NB, Unused, SDValue(), DL);
+  }
 
   return Chain;
 }
@@ -515,6 +522,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   default:
     llvm_unreachable("unimplemented operation lowering");
     return SDValue();
+  case ISD::FrameIndex:
+    return LowerFrameIndex(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::ExternalSymbol:
@@ -526,6 +535,12 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::VASTART:
     return LowerVASTART(Op, DAG);
   }
+}
+
+SDValue WebAssemblyTargetLowering::LowerFrameIndex(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  int FI = cast<FrameIndexSDNode>(Op)->getIndex();
+  return DAG.getTargetFrameIndex(FI, Op.getValueType());
 }
 
 SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,

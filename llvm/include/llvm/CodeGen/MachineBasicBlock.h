@@ -696,12 +696,9 @@ public:
 
   /// Possible outcome of a register liveness query to computeRegisterLiveness()
   enum LivenessQueryResult {
-    LQR_Live,            ///< Register is known to be live.
-    LQR_OverlappingLive, ///< Register itself is not live, but some overlapping
-                         ///< register is.
-    LQR_Dead,            ///< Register is known to be dead.
-    LQR_Unknown          ///< Register liveness not decidable from local
-                         ///< neighborhood.
+    LQR_Live,   ///< Register is known to be (at least partially) live.
+    LQR_Dead,   ///< Register is known to be fully dead.
+    LQR_Unknown ///< Register liveness not decidable from local neighborhood.
   };
 
   /// Return whether (physical) register \p Reg has been <def>ined and not

@@ -95,10 +95,8 @@ public:
 
     void EmitEndOfAsmFile(Module &M) override;
 
-    void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
-                       const MachineInstr &MI);
-    void LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
-                         const MachineInstr &MI);
+    void LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI);
+    void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
     void EmitTlsCall(const MachineInstr *MI, MCSymbolRefExpr::VariantKind VK);
     bool runOnMachineFunction(MachineFunction &MF) override {
       Subtarget = &MF.getSubtarget<PPCSubtarget>();
@@ -330,8 +328,7 @@ void PPCAsmPrinter::EmitEndOfAsmFile(Module &M) {
   SM.serializeToStackMapSection();
 }
 
-void PPCAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
-                                  const MachineInstr &MI) {
+void PPCAsmPrinter::LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI) {
   unsigned NumNOPBytes = MI.getOperand(1).getImm();
 
   SM.recordStackMap(MI);
@@ -353,13 +350,12 @@ void PPCAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 
   // Emit nops.
   for (unsigned i = 0; i < NumNOPBytes; i += 4)
-    EmitToStreamer(OutStreamer, MCInstBuilder(PPC::NOP));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
 }
 
 // Lower a patchpoint of the form:
 // [<def>], <id>, <numBytes>, <target>, <numArgs>
-void PPCAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
-                                    const MachineInstr &MI) {
+void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
   SM.recordPatchPoint(MI);
   PatchPointOpers Opers(&MI);
 
@@ -375,28 +371,28 @@ void PPCAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
       unsigned ScratchReg = MI.getOperand(Opers.getNextScratchIdx()).getReg();
       EncodedBytes = 0;
       // Materialize the jump address:
-      EmitToStreamer(OutStreamer, MCInstBuilder(PPC::LI8)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LI8)
                                       .addReg(ScratchReg)
                                       .addImm((CallTarget >> 32) & 0xFFFF));
       ++EncodedBytes;
-      EmitToStreamer(OutStreamer, MCInstBuilder(PPC::RLDIC)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::RLDIC)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm(32).addImm(16));
       ++EncodedBytes;
-      EmitToStreamer(OutStreamer, MCInstBuilder(PPC::ORIS8)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ORIS8)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm((CallTarget >> 16) & 0xFFFF));
       ++EncodedBytes;
-      EmitToStreamer(OutStreamer, MCInstBuilder(PPC::ORI8)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ORI8)
                                       .addReg(ScratchReg)
                                       .addReg(ScratchReg)
                                       .addImm(CallTarget & 0xFFFF));
 
       // Save the current TOC pointer before the remote call.
       int TOCSaveOffset = Subtarget->isELFv2ABI() ? 24 : 40;
-      EmitToStreamer(OutStreamer, MCInstBuilder(PPC::STD)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::STD)
                                       .addReg(PPC::X2)
                                       .addImm(TOCSaveOffset)
                                       .addReg(PPC::X1));
@@ -408,26 +404,26 @@ void PPCAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
         // Load the new TOC pointer and the function address, but not r11
         // (needing this is rare, and loading it here would prevent passing it
         // via a 'nest' parameter.
-        EmitToStreamer(OutStreamer, MCInstBuilder(PPC::LD)
+        EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LD)
                                         .addReg(PPC::X2)
                                         .addImm(8)
                                         .addReg(ScratchReg));
         ++EncodedBytes;
-        EmitToStreamer(OutStreamer, MCInstBuilder(PPC::LD)
+        EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LD)
                                         .addReg(ScratchReg)
                                         .addImm(0)
                                         .addReg(ScratchReg));
         ++EncodedBytes;
       }
 
-      EmitToStreamer(OutStreamer, MCInstBuilder(PPC::MTCTR8)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTCTR8)
                                       .addReg(ScratchReg));
       ++EncodedBytes;
-      EmitToStreamer(OutStreamer, MCInstBuilder(PPC::BCTRL8));
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BCTRL8));
       ++EncodedBytes;
 
       // Restore the TOC pointer after the call.
-      EmitToStreamer(OutStreamer, MCInstBuilder(PPC::LD)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LD)
                                       .addReg(PPC::X2)
                                       .addImm(TOCSaveOffset)
                                       .addReg(PPC::X1));
@@ -438,7 +434,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *SymVar = MCSymbolRefExpr::create(MOSymbol, OutContext);
 
-    EmitToStreamer(OutStreamer, MCInstBuilder(PPC::BL8_NOP)
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BL8_NOP)
                                     .addExpr(SymVar));
     EncodedBytes += 2;
   }
@@ -453,7 +449,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   assert((NumBytes - EncodedBytes) % 4 == 0 &&
          "Invalid number of NOP bytes requested!");
   for (unsigned i = EncodedBytes; i < NumBytes; i += 4)
-    EmitToStreamer(OutStreamer, MCInstBuilder(PPC::NOP));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
 }
 
 /// EmitTlsCall -- Given a GETtls[ld]ADDR[32] instruction, print a
@@ -505,9 +501,9 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case TargetOpcode::DBG_VALUE:
     llvm_unreachable("Should be handled target independently");
   case TargetOpcode::STACKMAP:
-    return LowerSTACKMAP(*OutStreamer, SM, *MI);
+    return LowerSTACKMAP(SM, *MI);
   case TargetOpcode::PATCHPOINT:
-    return LowerPATCHPOINT(*OutStreamer, SM, *MI);
+    return LowerPATCHPOINT(SM, *MI);
 
   case PPC::MoveGOTtoLR: {
     // Transform %LR = MoveGOTtoLR

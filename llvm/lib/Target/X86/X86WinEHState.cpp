@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -416,20 +417,33 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     calculateWinCXXEHStateNumbers(&F, FuncInfo);
 
   // Iterate all the instructions and emit state number stores.
+  DenseMap<BasicBlock *, ColorVector> BlockColors = colorEHFunclets(F);
   for (BasicBlock &BB : F) {
+    // Figure out what state we should assign calls in this block.
+    int BaseState = -1;
+    auto &BBColors = BlockColors[&BB];
+
+    assert(BBColors.size() == 1 &&
+           "multi-color BB not removed by preparation");
+    BasicBlock *FuncletEntryBB = BBColors.front();
+    if (auto *FuncletPad =
+            dyn_cast<FuncletPadInst>(FuncletEntryBB->getFirstNonPHI())) {
+      auto BaseStateI = FuncInfo.FuncletBaseStateMap.find(FuncletPad);
+      if (BaseStateI != FuncInfo.FuncletBaseStateMap.end())
+        BaseState = BaseStateI->second;
+    }
+
     for (Instruction &I : BB) {
       if (auto *CI = dyn_cast<CallInst>(&I)) {
         // Possibly throwing call instructions have no actions to take after
         // an unwind. Ensure they are in the -1 state.
         if (CI->doesNotThrow())
           continue;
-        insertStateNumberStore(RegNode, CI, -1);
+        insertStateNumberStore(RegNode, CI, BaseState);
       } else if (auto *II = dyn_cast<InvokeInst>(&I)) {
         // Look up the state number of the landingpad this unwinds to.
-        Instruction *PadInst = II->getUnwindDest()->getFirstNonPHI();
-        // FIXME: Why does this assertion fail?
-        //assert(FuncInfo.EHPadStateMap.count(PadInst) && "EH Pad has no state!");
-        int State = FuncInfo.EHPadStateMap[PadInst];
+        assert(FuncInfo.InvokeStateMap.count(II) && "invoke has no state!");
+        int State = FuncInfo.InvokeStateMap[II];
         insertStateNumberStore(RegNode, II, State);
       }
     }

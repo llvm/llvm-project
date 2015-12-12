@@ -223,7 +223,7 @@ public:
   }
 
 private:
-  typedef DenseMap<LineLocation, unsigned> BodySampleCoverageMap;
+  typedef std::map<LineLocation, unsigned> BodySampleCoverageMap;
   typedef DenseMap<const FunctionSamples *, BodySampleCoverageMap>
       FunctionSamplesCoverageMap;
 

@@ -947,8 +947,6 @@ static Value *NegateValue(Value *V, Instruction *BI,
     if (Instruction *InstInput = dyn_cast<Instruction>(V)) {
       if (InvokeInst *II = dyn_cast<InvokeInst>(InstInput)) {
         InsertPt = II->getNormalDest()->begin();
-      } else if (auto *CPI = dyn_cast<CatchPadInst>(InstInput)) {
-        InsertPt = CPI->getNormalDest()->begin();
       } else {
         InsertPt = ++InstInput->getIterator();
       }

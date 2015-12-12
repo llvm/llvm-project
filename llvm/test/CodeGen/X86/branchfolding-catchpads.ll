@@ -19,24 +19,18 @@ if.else:
           to label %cleanup unwind label %catch.dispatch
 
 catch.dispatch:
-  catchpad [i8* null, i32 8, i8* null]
-          to label %catch unwind label %catch.dispatch.2
+  %cs = catchswitch within none [ label %catch, label %catch.2 ] unwind to caller
 
 catch:
-  invoke void @throw() noreturn
-          to label %unreachable unwind label %catchendblock
-
-catch.dispatch.2:
-  catchpad [i8* null, i32 64, i8* null]
-          to label %catch.2 unwind label %catchendblock
+  catchpad within %cs [i8* null, i32 8, i8* null]
+  call void @throw() noreturn
+  br label %unreachable
 
 catch.2:
+  catchpad within %cs [i8* null, i32 64, i8* null]
   store i8 1, i8* %b
-  invoke void @throw() noreturn
-          to label %unreachable unwind label %catchendblock
-
-catchendblock:
-  catchendpad unwind to caller
+  call void @throw() noreturn
+  br label %unreachable
 
 cleanup:
   %retval = phi i16 [ %call1, %if.then ], [ %call2, %if.else ]
@@ -67,31 +61,22 @@ if.else:
           to label %cleanup unwind label %catch.dispatch
 
 catch.dispatch:
-  catchpad [i8* null, i32 8, i8* null]
-          to label %catch unwind label %catch.dispatch.2
+  %cs = catchswitch within none [ label %catch, label %catch.2, label %catch.3 ] unwind to caller
 
 catch:
-  invoke void @throw() noreturn
-          to label %unreachable unwind label %catchendblock
-
-catch.dispatch.2:
-  %c2 = catchpad [i8* null, i32 32, i8* null]
-          to label %catch.2 unwind label %catch.dispatch.3
+  catchpad within %cs [i8* null, i32 8, i8* null]
+  call void @throw() noreturn
+  br label %unreachable
 
 catch.2:
+  %c2 = catchpad within %cs [i8* null, i32 32, i8* null]
   store i8 1, i8* %b
-  catchret %c2 to label %cleanup
-
-catch.dispatch.3:
-  %c3 = catchpad [i8* null, i32 64, i8* null]
-          to label %catch.3 unwind label %catchendblock
+  catchret from %c2 to label %cleanup
 
 catch.3:
+  %c3 = catchpad within %cs [i8* null, i32 64, i8* null]
   store i8 2, i8* %b
-  catchret %c3 to label %cleanup
-
-catchendblock:
-  catchendpad unwind to caller
+  catchret from %c3 to label %cleanup
 
 cleanup:
   %retval = phi i16 [ %call1, %if.then ], [ %call2, %if.else ], [ -1, %catch.2 ], [ -1, %catch.3 ]

@@ -19,6 +19,7 @@
 #include "WebAssemblySubtarget.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -60,6 +61,7 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
 
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const MachineFrameInfo &FrameInfo = *MF.getFrameInfo();
 
   MFI.initWARegs();
 
@@ -98,6 +100,9 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
     if (MFI.getWAReg(VReg) == WebAssemblyFunctionInfo::UnusedReg)
       MFI.setWAReg(VReg, NumArgRegs + CurReg++);
   }
+  // Allocate locals for used physical registers
+  if (FrameInfo.getStackSize() > 0)
+    MFI.addPReg(WebAssembly::SP32, CurReg++);
 
   return true;
 }

@@ -82,10 +82,8 @@ public:
   // \brief Returns true if this terminator relates to exception handling.
   bool isExceptional() const {
     switch (getOpcode()) {
-    case Instruction::CatchPad:
-    case Instruction::CatchEndPad:
+    case Instruction::CatchSwitch:
     case Instruction::CatchRet:
-    case Instruction::CleanupEndPad:
     case Instruction::CleanupRet:
     case Instruction::Invoke:
     case Instruction::Resume:
@@ -1111,6 +1109,75 @@ struct OperandTraits<CmpInst> : public FixedNumOperandTraits<CmpInst, 2> {
 };
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CmpInst, Value)
+
+//===----------------------------------------------------------------------===//
+//                           FuncletPadInst Class
+//===----------------------------------------------------------------------===//
+class FuncletPadInst : public Instruction {
+private:
+  void init(Value *ParentPad, ArrayRef<Value *> Args, const Twine &NameStr);
+
+  FuncletPadInst(const FuncletPadInst &CPI);
+
+  explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
+                          ArrayRef<Value *> Args, unsigned Values,
+                          const Twine &NameStr, Instruction *InsertBefore);
+  explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
+                          ArrayRef<Value *> Args, unsigned Values,
+                          const Twine &NameStr, BasicBlock *InsertAtEnd);
+
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  friend class CatchPadInst;
+  friend class CleanupPadInst;
+  FuncletPadInst *cloneImpl() const;
+
+public:
+  /// Provide fast operand accessors
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  /// getNumArgOperands - Return the number of funcletpad arguments.
+  ///
+  unsigned getNumArgOperands() const { return getNumOperands() - 1; }
+
+  /// Convenience accessors
+
+  /// \brief Return the outer EH-pad this funclet is nested within.
+  ///
+  /// Note: This returns the associated CatchSwitchInst if this FuncletPadInst
+  /// is a CatchPadInst.
+  Value *getParentPad() const { return Op<-1>(); }
+  void setParentPad(Value *ParentPad) {
+    assert(ParentPad);
+    Op<-1>() = ParentPad;
+  }
+
+  /// getArgOperand/setArgOperand - Return/set the i-th funcletpad argument.
+  ///
+  Value *getArgOperand(unsigned i) const { return getOperand(i); }
+  void setArgOperand(unsigned i, Value *v) { setOperand(i, v); }
+
+  /// arg_operands - iteration adapter for range-for loops.
+  op_range arg_operands() { return op_range(op_begin(), op_end() - 1); }
+
+  /// arg_operands - iteration adapter for range-for loops.
+  const_op_range arg_operands() const {
+    return const_op_range(op_begin(), op_end() - 1);
+  }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const Instruction *I) { return I->isFuncletPad(); }
+  static inline bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+template <>
+struct OperandTraits<FuncletPadInst>
+    : public VariadicOperandTraits<FuncletPadInst, /*MINARITY=*/1> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(FuncletPadInst, Value)
 
 /// \brief A lightweight accessor for an operand bundle meant to be passed
 /// around by value.

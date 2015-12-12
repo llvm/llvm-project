@@ -1420,9 +1420,9 @@ def : Pat<(atomic_store ADDRrr:$dst, i32:$val), (STrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store ADDRri:$dst, i32:$val), (STri ADDRri:$dst, $val)>;
 
 // extract_vector
-def : Pat<(vector_extract (v2i32 IntPair:$Rn), 0),
+def : Pat<(extractelt (v2i32 IntPair:$Rn), 0),
           (i32 (EXTRACT_SUBREG IntPair:$Rn, sub_even))>;
-def : Pat<(vector_extract (v2i32 IntPair:$Rn), 1),
+def : Pat<(extractelt (v2i32 IntPair:$Rn), 1),
           (i32 (EXTRACT_SUBREG IntPair:$Rn, sub_odd))>;
 
 // build_vector

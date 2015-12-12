@@ -23,16 +23,13 @@ entry:
           to label %__try.cont unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %p = catchpad [i8* bitcast (i32 ()* @"filt$main" to i8*)]
-          to label %__except unwind label %endpad
+  %cs1 = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %lpad
+  %p = catchpad within %cs1 [i8* bitcast (i32 ()* @"filt$main" to i8*)]
   %code = load i32, i32* %__exceptioncode, align 4
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i32 0, i32 0), i32 %code) #4
-  catchret %p to label %__try.cont
-
-endpad:
-  catchendpad unwind to caller
+  catchret from %p to label %__try.cont
 
 __try.cont:                                       ; preds = %entry, %__except
   ret i32 0
@@ -63,7 +60,7 @@ entry:
 ; CHECK: movl $0, 40(%esi)
 ; CHECK: calll _crash
 ; CHECK: retl
-; CHECK: LBB0_[[lpbb:[0-9]+]]: # %lpad
+; CHECK: LBB0_[[lpbb:[0-9]+]]: # %__except
 ;       Restore ESP
 ; CHECK: movl -24(%ebp), %esp
 ;       Restore ESI

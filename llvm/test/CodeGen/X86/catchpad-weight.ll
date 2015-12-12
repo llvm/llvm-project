@@ -2,7 +2,7 @@
 
 ; Check if the edge weight to the catchpad is calculated correctly.
 
-; CHECK: Successors according to CFG: BB#3(0x7ffff100 / 0x80000000 = 100.00%) BB#1(0x00000800 / 0x80000000 = 0.00%) BB#4(0x00000400 / 0x80000000 = 0.00%) BB#6(0x00000200 / 0x80000000 = 0.00%) BB#8(0x00000100 / 0x80000000 = 0.00%)
+; CHECK: Successors according to CFG: BB#2(0x7ffff100 / 0x80000000 = 100.00%) BB#1(0x00000800 / 0x80000000 = 0.00%) BB#3(0x00000400 / 0x80000000 = 0.00%) BB#4(0x00000200 / 0x80000000 = 0.00%) BB#5(0x00000100 / 0x80000000 = 0.00%)
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--windows-msvc18.0.0"
@@ -31,11 +31,11 @@ entry:
           to label %try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %1 = catchpad [%rtti.TypeDescriptor7* @"\01??_R0?AUA@@@8", i32 0, i8* null]
-          to label %catch.5 unwind label %catch.dispatch.1
+  %cs1 = catchswitch within none [label %catch.5] unwind label %catch.dispatch.1
 
 catch.5:                                          ; preds = %catch.dispatch
-  catchret %1 to label %try.cont
+  %1 = catchpad within %cs1 [%rtti.TypeDescriptor7* @"\01??_R0?AUA@@@8", i32 0, i8* null]
+  catchret from %1 to label %try.cont
 
 try.cont:                                         ; preds = %entry, %catch, %catch.3, %catch.5
   call void @"\01??1HasDtor@@QEAA@XZ"(%struct.HasDtor* nonnull %o) #4
@@ -43,26 +43,23 @@ try.cont:                                         ; preds = %entry, %catch, %cat
   ret i32 0
 
 catch.dispatch.1:                                 ; preds = %catch.dispatch
-  %2 = catchpad [%rtti.TypeDescriptor7* @"\01??_R0?AUB@@@8", i32 0, i8* null]
-          to label %catch.3 unwind label %catch.dispatch.2
+  %cs2 = catchswitch within none [label %catch.3] unwind label %catch.dispatch.2
 
 catch.3:                                          ; preds = %catch.dispatch.1
-  catchret %2 to label %try.cont
+  %2 = catchpad within %cs2 [%rtti.TypeDescriptor7* @"\01??_R0?AUB@@@8", i32 0, i8* null]
+  catchret from %2 to label %try.cont
 
 catch.dispatch.2:                                 ; preds = %catch.dispatch.1
-  %3 = catchpad [%rtti.TypeDescriptor7* @"\01??_R0?AUC@@@8", i32 0, i8* null]
-          to label %catch unwind label %catchendblock
+  %cs3 = catchswitch within none [label %catch] unwind label %ehcleanup
 
 catch:                                            ; preds = %catch.dispatch.2
-  catchret %3 to label %try.cont
-
-catchendblock:                                    ; preds = %catch.dispatch.2
-  catchendpad unwind label %ehcleanup
+  %3 = catchpad within %cs3 [%rtti.TypeDescriptor7* @"\01??_R0?AUC@@@8", i32 0, i8* null]
+  catchret from %3 to label %try.cont
 
 ehcleanup:                                        ; preds = %catchendblock
-  %4 = cleanuppad []
+  %4 = cleanuppad within none []
   call void @"\01??1HasDtor@@QEAA@XZ"(%struct.HasDtor* nonnull %o) #4
-  cleanupret %4 unwind to caller
+  cleanupret from %4 unwind to caller
 }
 
 ; Function Attrs: nounwind argmemonly

@@ -16,7 +16,7 @@ declare void @useints(...)
 declare void @f(i32 %p)
 declare i32 @__CxxFrameHandler3(...)
 
-define i32 @try_catch_catch() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define i32 @try_catch_catch() personality i32 (...)* @__CxxFrameHandler3 {
 entry:
   %a = call i32 @getint()
   %b = call i32 @getint()
@@ -26,22 +26,16 @@ entry:
   invoke void @f(i32 1)
           to label %try.cont unwind label %catch.dispatch
 
-catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-          to label %catch unwind label %catchendblock
-
-catch:
-  invoke void @f(i32 2)
-          to label %invoke.cont.2 unwind label %catchendblock
-
-invoke.cont.2:                                    ; preds = %catch
-  catchret %0 to label %try.cont
-
-try.cont:                                         ; preds = %entry, %invoke.cont.2, %invoke.cont.3
+try.cont:
   ret i32 0
 
-catchendblock:                                    ; preds = %catch,
-  catchendpad unwind to caller
+catch.dispatch:
+  %cs = catchswitch within none [label %handler1] unwind to caller
+
+handler1:
+  %h1 = catchpad within %cs [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+  call void @f(i32 2)
+  catchret from %h1 to label %try.cont
 }
 
 ; X86-LABEL: _try_catch_catch:
@@ -71,7 +65,7 @@ catchendblock:                                    ; preds = %catch,
 ; X86: jmp [[contbb]]
 
 ; X86: "?catch$[[catch1bb:[0-9]+]]@?0?try_catch_catch@4HA":
-; X86: LBB0_[[catch1bb]]: # %catch.dispatch{{$}}
+; X86: LBB0_[[catch1bb]]: # %handler1{{$}}
 ; X86: pushl %ebp
 ; X86-NOT: pushl
 ; X86: subl $16, %esp
@@ -120,7 +114,7 @@ catchendblock:                                    ; preds = %catch,
 ; X64: retq
 
 ; X64: "?catch$[[catch1bb:[0-9]+]]@?0?try_catch_catch@4HA":
-; X64: LBB0_[[catch1bb]]: # %catch.dispatch{{$}}
+; X64: LBB0_[[catch1bb]]: # %handler1{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
 ; X64: .seh_pushreg 5
@@ -159,18 +153,15 @@ entry:
   invoke void @f(i32 1)
           to label %try.cont unwind label %catch.dispatch
 
-catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-          to label %catch unwind label %catchendblock
+catch.dispatch:
+  %cs = catchswitch within none [label %handler1] unwind to caller
 
-catch:
-  catchret %0 to label %try.cont
+handler1:
+  %0 = catchpad within %cs [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+  catchret from %0 to label %try.cont
 
-try.cont:                                         ; preds = %entry, %invoke.cont.2, %invoke.cont.3
+try.cont:
   ret i32 0
-
-catchendblock:                                    ; preds = %catch,
-  catchendpad unwind to caller
 }
 
 ; X64-LABEL: try_one_csr:
@@ -198,7 +189,7 @@ catchendblock:                                    ; preds = %catch,
 ; X64: retq
 
 ; X64: "?catch$[[catch1bb:[0-9]+]]@?0?try_one_csr@4HA":
-; X64: LBB1_[[catch1bb]]: # %catch.dispatch{{$}}
+; X64: LBB1_[[catch1bb]]: # %handler1{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
 ; X64: .seh_pushreg 5
@@ -226,18 +217,15 @@ entry:
   invoke void @f(i32 1)
           to label %try.cont unwind label %catch.dispatch
 
-catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-          to label %catch unwind label %catchendblock
+catch.dispatch:
+  %cs = catchswitch within none [label %handler1] unwind to caller
 
-catch:
-  catchret %0 to label %try.cont
+handler1:
+  %cp1 = catchpad within %cs [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+  catchret from %cp1 to label %try.cont
 
-try.cont:                                         ; preds = %entry, %invoke.cont.2, %invoke.cont.3
+try.cont:
   ret i32 0
-
-catchendblock:                                    ; preds = %catch,
-  catchendpad unwind to caller
 }
 
 ; X64-LABEL: try_no_csr:
@@ -259,7 +247,7 @@ catchendblock:                                    ; preds = %catch,
 ; X64: retq
 
 ; X64: "?catch$[[catch1bb:[0-9]+]]@?0?try_no_csr@4HA":
-; X64: LBB2_[[catch1bb]]: # %catch.dispatch{{$}}
+; X64: LBB2_[[catch1bb]]: # %handler1{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
 ; X64: .seh_pushreg 5

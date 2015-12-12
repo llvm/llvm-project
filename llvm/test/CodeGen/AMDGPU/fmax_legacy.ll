@@ -87,6 +87,46 @@ define void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, float addrspace(
   ret void
 }
 
+; FUNC-LABEL: {{^}}test_fmax_legacy_ogt_v1f32:
+; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; EG: MAX
+define void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %gep.0 = getelementptr <1 x float>, <1 x float> addrspace(1)* %in, i32 %tid
+  %gep.1 = getelementptr <1 x float>, <1 x float> addrspace(1)* %gep.0, i32 1
+
+  %a = load <1 x float>, <1 x float> addrspace(1)* %gep.0
+  %b = load <1 x float>, <1 x float> addrspace(1)* %gep.1
+
+  %cmp = fcmp ogt <1 x float> %a, %b
+  %val = select <1 x i1> %cmp, <1 x float> %a, <1 x float> %b
+  store <1 x float> %val, <1 x float> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}test_fmax_legacy_ogt_v3f32:
+; SI-SAFE: v_max_legacy_f32_e32
+; SI-SAFE: v_max_legacy_f32_e32
+; SI-SAFE: v_max_legacy_f32_e32
+; SI-NONAN: v_max_f32_e32
+; SI-NONAN: v_max_f32_e32
+; SI-NONAN: v_max_f32_e32
+define void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %gep.0 = getelementptr <3 x float>, <3 x float> addrspace(1)* %in, i32 %tid
+  %gep.1 = getelementptr <3 x float>, <3 x float> addrspace(1)* %gep.0, i32 1
+
+  %a = load <3 x float>, <3 x float> addrspace(1)* %gep.0
+  %b = load <3 x float>, <3 x float> addrspace(1)* %gep.1
+
+  %cmp = fcmp ogt <3 x float> %a, %b
+  %val = select <3 x i1> %cmp, <3 x float> %a, <3 x float> %b
+  store <3 x float> %val, <3 x float> addrspace(1)* %out
+  ret void
+}
 
 ; FUNC-LABEL: @test_fmax_legacy_ogt_f32_multi_use
 ; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}

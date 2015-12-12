@@ -24738,9 +24738,11 @@ static SDValue PerformMulCombine(SDNode *N, SelectionDAG &DAG,
     MulAmt1 = 3;
     MulAmt2 = MulAmt / 3;
   }
+
+  SDLoc DL(N);
+  SDValue NewMul;
   if (MulAmt2 &&
       (isPowerOf2_64(MulAmt2) || MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9)){
-    SDLoc DL(N);
 
     if (isPowerOf2_64(MulAmt2) &&
         !(N->hasOneUse() && N->use_begin()->getOpcode() == ISD::ADD))
@@ -24749,7 +24751,6 @@ static SDValue PerformMulCombine(SDNode *N, SelectionDAG &DAG,
       // is an add.
       std::swap(MulAmt1, MulAmt2);
 
-    SDValue NewMul;
     if (isPowerOf2_64(MulAmt1))
       NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
                            DAG.getConstant(Log2_64(MulAmt1), DL, MVT::i8));
@@ -24763,10 +24764,31 @@ static SDValue PerformMulCombine(SDNode *N, SelectionDAG &DAG,
     else
       NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, NewMul,
                            DAG.getConstant(MulAmt2, DL, VT));
+  }
 
+  if (!NewMul) {
+    assert(MulAmt != 0 && MulAmt != (VT == MVT::i64 ? UINT64_MAX : UINT32_MAX)
+           && "Both cases that could cause potential overflows should have "
+              "already been handled.");
+    if (isPowerOf2_64(MulAmt - 1))
+      // (mul x, 2^N + 1) => (add (shl x, N), x)
+      NewMul = DAG.getNode(ISD::ADD, DL, VT, N->getOperand(0),
+                                DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                                DAG.getConstant(Log2_64(MulAmt - 1), DL,
+                                MVT::i8)));
+
+    else if (isPowerOf2_64(MulAmt + 1))
+      // (mul x, 2^N - 1) => (sub (shl x, N), x)
+      NewMul = DAG.getNode(ISD::SUB, DL, VT, DAG.getNode(ISD::SHL, DL, VT,
+                                N->getOperand(0),
+                                DAG.getConstant(Log2_64(MulAmt + 1),
+                                DL, MVT::i8)), N->getOperand(0));
+  }
+
+  if (NewMul)
     // Do not add new nodes to DAG combiner worklist.
     DCI.CombineTo(N, NewMul, false);
-  }
+
   return SDValue();
 }
 

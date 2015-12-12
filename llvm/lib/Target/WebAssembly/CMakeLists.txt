@@ -24,6 +24,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyMCInstLower.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp
+  WebAssemblyPEI.cpp
   WebAssemblyRegisterInfo.cpp
   WebAssemblyRegColoring.cpp
   WebAssemblyRegNumbering.cpp

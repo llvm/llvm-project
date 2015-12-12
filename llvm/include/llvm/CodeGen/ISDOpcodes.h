@@ -338,10 +338,6 @@ namespace ISD {
     /// Byte Swap and Counting operators.
     BSWAP, CTTZ, CTLZ, CTPOP, BITREVERSE,
 
-    /// [SU]ABSDIFF - Signed/Unsigned absolute difference of two input integer
-    /// vector. These nodes are generated from llvm.*absdiff* intrinsics.
-    SABSDIFF, UABSDIFF,
-
     /// Bit counting operators with an undefined result for zero inputs.
     CTTZ_ZERO_UNDEF, CTLZ_ZERO_UNDEF,
 

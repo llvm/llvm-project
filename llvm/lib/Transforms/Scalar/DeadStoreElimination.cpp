@@ -7,8 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements dead store elimination that considers redundant stores
-// within a basic-block as well as across basic blocks in a reverse CFG order.
+// This file implements a trivial dead store elimination that only considers
+// basic-block local redundant stores.
+//
+// FIXME: This should eventually be extended to be a post-dominator tree
+// traversal.  Doing so would be pretty trivial.
 //
 //===----------------------------------------------------------------------===//
 
@@ -41,13 +44,6 @@ using namespace llvm;
 STATISTIC(NumRedundantStores, "Number of redundant stores deleted");
 STATISTIC(NumFastStores, "Number of stores deleted");
 STATISTIC(NumFastOther , "Number of other instrs removed");
-STATISTIC(NumNonLocalStores, "Number of non-local stores deleted");
-
-static cl::opt<bool> EnableNonLocalDSE("enable-nonlocal-dse", cl::init(false));
-
-/// MaxNonLocalAttempts is an arbitrary threshold that provides
-/// an early opportunitiy for bail out to control compile time.
-static const unsigned MaxNonLocalAttempts = 100;
 
 namespace {
   struct DSE : public FunctionPass {
@@ -84,7 +80,6 @@ namespace {
     bool runOnBasicBlock(BasicBlock &BB);
     bool MemoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI);
     bool HandleFree(CallInst *F);
-    bool handleNonLocalDependency(Instruction *Inst);
     bool handleEndBlock(BasicBlock &BB);
     void RemoveAccessedObjects(const MemoryLocation &LoadedLoc,
                                SmallSetVector<Value *, 16> &DeadStackObjects,
@@ -490,7 +485,6 @@ static bool isPossibleSelfRead(Instruction *Inst,
 bool DSE::runOnBasicBlock(BasicBlock &BB) {
   const DataLayout &DL = BB.getModule()->getDataLayout();
   bool MadeChange = false;
-  unsigned NumNonLocalAttempts = 0;
 
   // Do a top-down walk on the BB.
   for (BasicBlock::iterator BBI = BB.begin(), BBE = BB.end(); BBI != BBE; ) {
@@ -560,101 +554,99 @@ bool DSE::runOnBasicBlock(BasicBlock &BB) {
 
     MemDepResult InstDep = MD->getDependency(Inst);
 
-    if (InstDep.isDef() || InstDep.isClobber()) {
-      // Figure out what location is being stored to.
-      MemoryLocation Loc = getLocForWrite(Inst, *AA);
+    // Ignore any store where we can't find a local dependence.
+    // FIXME: cross-block DSE would be fun. :)
+    if (!InstDep.isDef() && !InstDep.isClobber())
+      continue;
 
-      // If we didn't get a useful location, fail.
-      if (!Loc.Ptr)
-        continue;
+    // Figure out what location is being stored to.
+    MemoryLocation Loc = getLocForWrite(Inst, *AA);
 
-      while (InstDep.isDef() || InstDep.isClobber()) {
-        // Get the memory clobbered by the instruction we depend on.  MemDep
-        // will skip any instructions that 'Loc' clearly doesn't interact with.
-        // If we end up depending on a may- or must-aliased load, then we can't
-        // optimize away the store and we bail out.  However, if we depend on on
-        // something that overwrites the memory location we *can* potentially
-        // optimize it.
-        //
-        // Find out what memory location the dependent instruction stores.
-        Instruction *DepWrite = InstDep.getInst();
-        MemoryLocation DepLoc = getLocForWrite(DepWrite, *AA);
-        // If we didn't get a useful location, or if it isn't a size, bail out.
-        if (!DepLoc.Ptr)
+    // If we didn't get a useful location, fail.
+    if (!Loc.Ptr)
+      continue;
+
+    while (InstDep.isDef() || InstDep.isClobber()) {
+      // Get the memory clobbered by the instruction we depend on.  MemDep will
+      // skip any instructions that 'Loc' clearly doesn't interact with.  If we
+      // end up depending on a may- or must-aliased load, then we can't optimize
+      // away the store and we bail out.  However, if we depend on on something
+      // that overwrites the memory location we *can* potentially optimize it.
+      //
+      // Find out what memory location the dependent instruction stores.
+      Instruction *DepWrite = InstDep.getInst();
+      MemoryLocation DepLoc = getLocForWrite(DepWrite, *AA);
+      // If we didn't get a useful location, or if it isn't a size, bail out.
+      if (!DepLoc.Ptr)
+        break;
+
+      // If we find a write that is a) removable (i.e., non-volatile), b) is
+      // completely obliterated by the store to 'Loc', and c) which we know that
+      // 'Inst' doesn't load from, then we can remove it.
+      if (isRemovable(DepWrite) &&
+          !isPossibleSelfRead(Inst, Loc, DepWrite, *TLI, *AA)) {
+        int64_t InstWriteOffset, DepWriteOffset;
+        OverwriteResult OR =
+            isOverwrite(Loc, DepLoc, DL, *TLI, DepWriteOffset, InstWriteOffset);
+        if (OR == OverwriteComplete) {
+          DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
+                << *DepWrite << "\n  KILLER: " << *Inst << '\n');
+
+          // Delete the store and now-dead instructions that feed it.
+          DeleteDeadInstruction(DepWrite, *MD, *TLI);
+          ++NumFastStores;
+          MadeChange = true;
+
+          // DeleteDeadInstruction can delete the current instruction in loop
+          // cases, reset BBI.
+          BBI = Inst->getIterator();
+          if (BBI != BB.begin())
+            --BBI;
           break;
+        } else if (OR == OverwriteEnd && isShortenable(DepWrite)) {
+          // TODO: base this on the target vector size so that if the earlier
+          // store was too small to get vector writes anyway then its likely
+          // a good idea to shorten it
+          // Power of 2 vector writes are probably always a bad idea to optimize
+          // as any store/memset/memcpy is likely using vector instructions so
+          // shortening it to not vector size is likely to be slower
+          MemIntrinsic* DepIntrinsic = cast<MemIntrinsic>(DepWrite);
+          unsigned DepWriteAlign = DepIntrinsic->getAlignment();
+          if (llvm::isPowerOf2_64(InstWriteOffset) ||
+              ((DepWriteAlign != 0) && InstWriteOffset % DepWriteAlign == 0)) {
 
-        // If we find a write that is a) removable (i.e., non-volatile), b) is
-        // completely obliterated by the store to 'Loc', and c) which we know
-        // that 'Inst' doesn't load from, then we can remove it.
-        if (isRemovable(DepWrite) &&
-            !isPossibleSelfRead(Inst, Loc, DepWrite, *TLI, *AA)) {
-          int64_t InstWriteOffset, DepWriteOffset;
-          OverwriteResult OR = isOverwrite(Loc, DepLoc, DL, *TLI,
-                                           DepWriteOffset, InstWriteOffset);
-          if (OR == OverwriteComplete) {
-            DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *DepWrite
-                         << "\n  KILLER: " << *Inst << '\n');
+            DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW END: "
+                  << *DepWrite << "\n  KILLER (offset "
+                  << InstWriteOffset << ", "
+                  << DepLoc.Size << ")"
+                  << *Inst << '\n');
 
-            // Delete the store and now-dead instructions that feed it.
-            DeleteDeadInstruction(DepWrite, *MD, *TLI);
-            ++NumFastStores;
+            Value* DepWriteLength = DepIntrinsic->getLength();
+            Value* TrimmedLength = ConstantInt::get(DepWriteLength->getType(),
+                                                    InstWriteOffset -
+                                                    DepWriteOffset);
+            DepIntrinsic->setLength(TrimmedLength);
             MadeChange = true;
-
-            // DeleteDeadInstruction can delete the current instruction in loop
-            // cases, reset BBI.
-            BBI = Inst->getIterator();
-            if (BBI != BB.begin())
-              --BBI;
-            break;
-          } else if (OR == OverwriteEnd && isShortenable(DepWrite)) {
-            // TODO: base this on the target vector size so that if the earlier
-            // store was too small to get vector writes anyway then its likely a
-            // good idea to shorten it.
-
-            // Power of 2 vector writes are probably always a bad idea to
-            // optimize as any store/memset/memcpy is likely using vector
-            // instructions so shortening it to not vector size is likely to be
-            // slower.
-            MemIntrinsic *DepIntrinsic = cast<MemIntrinsic>(DepWrite);
-            unsigned DepWriteAlign = DepIntrinsic->getAlignment();
-            if (llvm::isPowerOf2_64(InstWriteOffset) ||
-                ((DepWriteAlign != 0) &&
-                 InstWriteOffset % DepWriteAlign == 0)) {
-
-              DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW END: " << *DepWrite
-                           << "\n  KILLER (offset " << InstWriteOffset << ", "
-                           << DepLoc.Size << ")" << *Inst << '\n');
-
-              Value *DepWriteLength = DepIntrinsic->getLength();
-              Value *TrimmedLength = ConstantInt::get(
-                  DepWriteLength->getType(), InstWriteOffset - DepWriteOffset);
-              DepIntrinsic->setLength(TrimmedLength);
-              MadeChange = true;
-            }
           }
         }
-
-        // If this is a may-aliased store that is clobbering the store value, we
-        // can keep searching past it for another must-aliased pointer that
-        // stores to the same location.  For example, in
-        //   store -> P
-        //   store -> Q
-        //   store -> P
-        // we can remove the first store to P even though we don't know if P and
-        // Q alias.
-        if (DepWrite == &BB.front())
-          break;
-
-        // Can't look past this instruction if it might read 'Loc'.
-        if (AA->getModRefInfo(DepWrite, Loc) & MRI_Ref)
-          break;
-
-        InstDep = MD->getPointerDependencyFrom(Loc, false,
-                                               DepWrite->getIterator(), &BB);
       }
-    } else if (EnableNonLocalDSE && InstDep.isNonLocal()) { // DSE across BB
-      if (++NumNonLocalAttempts < MaxNonLocalAttempts)
-        MadeChange |= handleNonLocalDependency(Inst);
+
+      // If this is a may-aliased store that is clobbering the store value, we
+      // can keep searching past it for another must-aliased pointer that stores
+      // to the same location.  For example, in:
+      //   store -> P
+      //   store -> Q
+      //   store -> P
+      // we can remove the first store to P even though we don't know if P and Q
+      // alias.
+      if (DepWrite == &BB.front()) break;
+
+      // Can't look past this instruction if it might read 'Loc'.
+      if (AA->getModRefInfo(DepWrite, Loc) & MRI_Ref)
+        break;
+
+      InstDep = MD->getPointerDependencyFrom(Loc, false,
+                                             DepWrite->getIterator(), &BB);
     }
   }
 
@@ -662,147 +654,6 @@ bool DSE::runOnBasicBlock(BasicBlock &BB) {
   // dead at its end, which means stores to them are also dead.
   if (BB.getTerminator()->getNumSuccessors() == 0)
     MadeChange |= handleEndBlock(BB);
-
-  return MadeChange;
-}
-
-/// A helper for handleNonLocalDependency() function to find all blocks
-/// that lead to the input block BB and append them to the output PredBlocks.
-/// PredBlocks will include not only predecessors of BB that unconditionally
-/// lead to BB but also:
-///   - single-block loops that lead to BB, and
-///   - if-blocks for which one edge goes to BB and the other edge goes to
-///     a block in the input SafeBlocks.
-/// PredBlocks will not include blocks unreachable from the entry block, nor
-/// blocks that form cycles with BB.
-static void findSafePreds(SmallVectorImpl<BasicBlock *> &PredBlocks,
-                          SmallSetVector<BasicBlock *, 8> &SafeBlocks,
-                          BasicBlock *BB, DominatorTree *DT) {
-  for (auto *Pred : predecessors(BB)) {
-    if (Pred == BB)
-      continue;
-    // The second check below prevents adding blocks that form a cycle with BB
-    // in order to avoid potential problems due to MemoryDependenceAnalysis,
-    // isOverwrite, etc. being not loop-aware.
-    if (!DT->isReachableFromEntry(Pred) || DT->dominates(BB, Pred))
-      continue;
-
-    bool PredIsSafe = true;
-    for (auto *Succ : successors(Pred)) {
-      if (Succ == BB || Succ == Pred) // shortcut, BB should be in SafeBlocks
-        continue;
-      if (!SafeBlocks.count(Succ)) {
-        PredIsSafe = false;
-        break;
-      }
-    }
-    if (PredIsSafe)
-      PredBlocks.push_back(Pred);
-  }
-}
-
-static bool underlyingObjectsDoNotAlias(StoreInst *SI, LoadInst *LI,
-                                        const DataLayout &DL,
-                                        AliasAnalysis &AA) {
-  Value *AObj = GetUnderlyingObject(SI->getPointerOperand(), DL);
-  SmallVector<Value *, 4> Pointers;
-  GetUnderlyingObjects(LI->getPointerOperand(), Pointers, DL);
-
-  for (auto *BObj : Pointers) {
-    if (!AA.isNoAlias(AObj, DL.getTypeStoreSize(AObj->getType()), BObj,
-                      DL.getTypeStoreSize(BObj->getType())))
-      return false;
-  }
-  return true;
-}
-
-/// handleNonLocalDependency - Handle a non-local dependency on
-/// the input instruction Inst located in BB in attempt to remove
-/// redundant stores outside BB.
-bool DSE::handleNonLocalDependency(Instruction *Inst) {
-  auto *SI = dyn_cast<StoreInst>(Inst);
-  if (!SI)
-    return false;
-  // Get the location being stored to.
-  // If we don't get a useful location, bail out.
-  MemoryLocation Loc = getLocForWrite(SI, *AA);
-  if (!Loc.Ptr)
-    return false;
-
-  bool MadeChange = false;
-  BasicBlock *BB = Inst->getParent();
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-
-  // Worklist of predecessor blocks of BB
-  SmallVector<BasicBlock *, 8> Blocks;
-  // Keep track of all predecessor blocks that are safe to search through
-  SmallSetVector<BasicBlock *, 8> SafeBlocks;
-  SafeBlocks.insert(BB);
-  findSafePreds(Blocks, SafeBlocks, BB, DT);
-
-  while (!Blocks.empty()) {
-    BasicBlock *PB = Blocks.pop_back_val();
-    MemDepResult Dep =
-        MD->getPointerDependencyFrom(Loc, false, PB->end(), PB, SI);
-    while (Dep.isDef() || Dep.isClobber()) {
-      Instruction *Dependency = Dep.getInst();
-
-      // Filter out false dependency from a load to SI looking through phis.
-      if (auto *LI = dyn_cast<LoadInst>(Dependency)) {
-        if (underlyingObjectsDoNotAlias(SI, LI, DL, *AA)) {
-          Dep = MD->getPointerDependencyFrom(Loc, false,
-                                             Dependency->getIterator(), PB, SI);
-          continue;
-        }
-      }
-
-      // If we don't get a useful location for the dependent instruction,
-      // it doesn't write memory, it is not removable, or it might read Loc,
-      // then bail out.
-      MemoryLocation DepLoc = getLocForWrite(Dependency, *AA);
-      if (!DepLoc.Ptr || !hasMemoryWrite(Dependency, *TLI) ||
-          !isRemovable(Dependency) ||
-          (AA->getModRefInfo(Dependency, Loc) & MRI_Ref))
-        break;
-
-      // Don't remove a store within single-block loops;
-      // we need more analysis: e.g. looking for an interferring load
-      // above the store within the loop, etc.
-      bool SingleBlockLoop = false;
-      for (auto I = succ_begin(PB), E = succ_end(PB); I != E; ++I) {
-        BasicBlock *Succ = *I;
-        if (Succ == PB) {
-          SingleBlockLoop = true;
-          break;
-        }
-      }
-      if (SingleBlockLoop)
-        break;
-
-      int64_t InstWriteOffset, DepWriteOffset;
-      OverwriteResult OR =
-          isOverwrite(Loc, DepLoc, DL, *TLI, DepWriteOffset, InstWriteOffset);
-      if (OR == OverwriteComplete) {
-        DEBUG(dbgs() << "DSE: Remove Non-Local Dead Store:\n  DEAD: "
-                     << *Dependency << "\n  KILLER: " << *SI << '\n');
-
-        // Delete redundant store and now-dead instructions that feed it.
-        auto Next = std::next(Dependency->getIterator());
-        DeleteDeadInstruction(Dependency, *MD, *TLI);
-        ++NumNonLocalStores;
-        MadeChange = true;
-        Dep = MD->getPointerDependencyFrom(Loc, false, Next, PB, SI);
-        continue;
-      }
-      // TODO: attempt shortening of Dependency inst as in the local case
-      break;
-    }
-
-    if (Dep.isNonLocal()) {
-      SafeBlocks.insert(PB);
-      findSafePreds(Blocks, SafeBlocks, PB, DT);
-    }
-  }
 
   return MadeChange;
 }
@@ -855,10 +706,10 @@ bool DSE::MemoryIsNotModifiedBetween(Instruction *FirstI,
     if (B != FirstBB) {
       assert(B != &FirstBB->getParent()->getEntryBlock() &&
           "Should not hit the entry block because SI must be dominated by LI");
-      for (auto *PredI : predecessors(B)) {
-        if (!Visited.insert(PredI).second)
+      for (auto PredI = pred_begin(B), PE = pred_end(B); PredI != PE; ++PredI) {
+        if (!Visited.insert(*PredI).second)
           continue;
-        WorkList.push_back(PredI);
+        WorkList.push_back(*PredI);
       }
     }
   }

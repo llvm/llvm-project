@@ -14,11 +14,11 @@ entry:
           to label %__try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %pad = catchpad [i8* null]
-          to label %__except unwind label %catchendblock
+  %cs = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %catch.dispatch
-  catchret %pad to label %__except.1
+  %pad = catchpad within %cs [i8* null]
+  catchret from %pad to label %__except.1
 
 __except.1:                                       ; preds = %__except
   %code = call i32 @llvm.eh.exceptioncode(token %pad)
@@ -27,15 +27,12 @@ __except.1:                                       ; preds = %__except
 
 __try.cont:                                       ; preds = %entry, %__except.1
   ret void
-
-catchendblock:                                    ; preds = %catch.dispatch
-  catchendpad unwind to caller
 }
 
 ; CHECK-LABEL: ehcode:
 ; CHECK: xorl %ecx, %ecx
 ; CHECK: callq f
 
-; CHECK: # %catch.dispatch
+; CHECK: # %__except
 ; CHECK: movl %eax, %ecx
 ; CHECK-NEXT: callq f

@@ -30,28 +30,22 @@ entry:
           to label %__try.cont unwind label %lpad0
 
 lpad0:
-  %p0 = catchpad [i8* bitcast (i32 (i8*, i8*)* @safe_div_filt0 to i8*)]
-          to label %handler0 unwind label %endpad0
+  %cs0 = catchswitch within none [label %handler0] unwind label %lpad1
 
 handler0:
+  %p0 = catchpad within %cs0 [i8* bitcast (i32 (i8*, i8*)* @safe_div_filt0 to i8*)]
   call void @puts(i8* getelementptr ([27 x i8], [27 x i8]* @str1, i32 0, i32 0))
   store i32 -1, i32* %r, align 4
-  catchret %p0 to label %__try.cont
-
-endpad0:
-  catchendpad unwind label %lpad1
+  catchret from %p0 to label %__try.cont
 
 lpad1:
-  %p1 = catchpad [i8* bitcast (i32 (i8*, i8*)* @safe_div_filt1 to i8*)]
-          to label %handler1 unwind label %endpad1
+  %cs1 = catchswitch within none [label %handler1] unwind to caller
 
 handler1:
+  %p1 = catchpad within %cs1 [i8* bitcast (i32 (i8*, i8*)* @safe_div_filt1 to i8*)]
   call void @puts(i8* getelementptr ([29 x i8], [29 x i8]* @str2, i32 0, i32 0))
   store i32 -2, i32* %r, align 4
-  catchret %p1 to label %__try.cont
-
-endpad1:
-  catchendpad unwind to caller
+  catchret from %p1 to label %__try.cont
 
 __try.cont:
   %safe_ret = load i32, i32* %r, align 4
@@ -73,12 +67,12 @@ __try.cont:
 
 ; Landing pad code
 
-; CHECK: [[lpad0:\.LBB0_[0-9]+]]: # %lpad0
+; CHECK: [[handler0:\.LBB0_[0-9]+]]: # %handler0
 ; CHECK: callq puts
 ; CHECK: movl $-1, [[rloc]]
 ; CHECK: jmp [[cont_bb]]
 
-; CHECK: [[lpad1:\.LBB0_[0-9]+]]: # %lpad1
+; CHECK: [[handler1:\.LBB0_[0-9]+]]: # %handler1
 ; CHECK: callq puts
 ; CHECK: movl $-2, [[rloc]]
 ; CHECK: jmp [[cont_bb]]
@@ -89,11 +83,11 @@ __try.cont:
 ; CHECK-NEXT: .long .Ltmp0@IMGREL+1
 ; CHECK-NEXT: .long .Ltmp1@IMGREL+1
 ; CHECK-NEXT: .long safe_div_filt0@IMGREL
-; CHECK-NEXT: .long [[lpad0]]@IMGREL
+; CHECK-NEXT: .long [[handler0]]@IMGREL
 ; CHECK-NEXT: .long .Ltmp0@IMGREL+1
 ; CHECK-NEXT: .long .Ltmp1@IMGREL+1
 ; CHECK-NEXT: .long safe_div_filt1@IMGREL
-; CHECK-NEXT: .long [[lpad1]]@IMGREL
+; CHECK-NEXT: .long [[handler1]]@IMGREL
 ; CHECK-NEXT: .Llsda_end0:
 ; CHECK: .text
 ; CHECK: .seh_endproc

@@ -12,10 +12,10 @@ for.cond.i:                                       ; preds = %for.inc.i, %entry
           to label %for.inc.i unwind label %catch.dispatch.i
 
 catch.dispatch.i:                                 ; preds = %for.cond.i
-  %0 = catchpad [i8* null, i32 64, i8* null]
-          to label %for.cond.1.preheader.i unwind label %catchendblock.i
+  %cs = catchswitch within none [label %for.cond.1.preheader.i] unwind to caller
 
 for.cond.1.preheader.i:                           ; preds = %catch.dispatch.i
+  %0 = catchpad within %cs [i8* null, i32 64, i8* null]
   %cmp.i = icmp eq i32* %_First.addr.0.i, null
   br label %for.cond.1.i
 
@@ -23,18 +23,15 @@ for.cond.1.i:                                     ; preds = %for.body.i, %for.co
   br i1 %cmp.i, label %for.end.i, label %for.body.i
 
 for.body.i:                                       ; preds = %for.cond.1.i
-  invoke void @g()
-          to label %for.cond.1.i unwind label %catchendblock.i
-
-catchendblock.i:                                  ; preds = %for.body.i, %catch.dispatch.i
-  catchendpad unwind to caller
+  call void @g()
+  br label %for.cond.1.i
 
 for.inc.i:                                        ; preds = %for.cond.i
   %incdec.ptr.i = getelementptr inbounds i32, i32* %_First.addr.0.i, i64 1
   br label %for.cond.i
 
 for.end.i:                                        ; preds = %for.cond.1.i
-  catchret %0 to label %leave
+  catchret from %0 to label %leave
 
 leave:                                            ; preds = %for.end.i
   ret void

@@ -16,16 +16,13 @@ __try.cont:
   ret i32 0
 
 lpad:
-  %p = catchpad [i8* null, i32 64, i8* null]
-          to label %catchall unwind label %endpad
+  %cs1 = catchswitch within none [label %catchall] unwind to caller
 
 catchall:
+  %p = catchpad within %cs1 [i8* null, i32 64, i8* null]
   %code = call i32 @llvm.eh.exceptioncode(token %p)
   call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i64 0, i64 0), i32 %code)
-  catchret %p to label %__try.cont
-
-endpad:
-  catchendpad unwind to caller
+  catchret from %p to label %__try.cont
 }
 
 ; Check that we can get the exception code from eax to the printf.
@@ -33,7 +30,7 @@ endpad:
 ; CHECK-LABEL: main:
 ; CHECK: callq crash
 ; CHECK: retq
-; CHECK: .LBB0_2: # %lpad
+; CHECK: .LBB0_2: # %catchall
 ; CHECK: leaq str(%rip), %rcx
 ; CHECK: movl %eax, %edx
 ; CHECK: callq printf

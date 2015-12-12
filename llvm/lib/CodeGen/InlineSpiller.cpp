@@ -1139,7 +1139,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
       continue;
     MIBundleOperands::PhysRegInfo RI =
       MIBundleOperands(FoldMI).analyzePhysReg(Reg, &TRI);
-    if (RI.Defines)
+    if (RI.FullyDefined)
       continue;
     // FoldMI does not define this physreg. Remove the LI segment.
     assert(MO->isDead() && "Cannot fold physreg def");

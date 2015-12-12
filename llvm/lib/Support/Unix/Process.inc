@@ -430,13 +430,18 @@ const char *Process::ResetColor() {
 #if !defined(HAVE_DECL_ARC4RANDOM) || !HAVE_DECL_ARC4RANDOM
 static unsigned GetRandomNumberSeed() {
   // Attempt to get the initial seed from /dev/urandom, if possible.
-  if (FILE *RandomSource = ::fopen("/dev/urandom", "r")) {
+  int urandomFD = open("/dev/urandom", O_RDONLY);
+
+  if (urandomFD != -1) {
     unsigned seed;
-    int count = ::fread((void *)&seed, sizeof(seed), 1, RandomSource);
-    ::fclose(RandomSource);
+    // Don't use a buffered read to avoid reading more data
+    // from /dev/urandom than we need.
+    int count = read(urandomFD, (void *)&seed, sizeof(seed));
+
+    close(urandomFD);
 
     // Return the seed if the read was successful.
-    if (count == 1)
+    if (count == sizeof(seed))
       return seed;
   }
 

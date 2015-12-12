@@ -344,42 +344,32 @@ class InvokeStateChangeIterator {
   InvokeStateChangeIterator(const WinEHFuncInfo &EHInfo,
                             MachineFunction::const_iterator MFI,
                             MachineFunction::const_iterator MFE,
-                            MachineBasicBlock::const_iterator MBBI)
-      : EHInfo(EHInfo), MFI(MFI), MFE(MFE), MBBI(MBBI) {
+                            MachineBasicBlock::const_iterator MBBI,
+                            int BaseState)
+      : EHInfo(EHInfo), MFI(MFI), MFE(MFE), MBBI(MBBI), BaseState(BaseState) {
     LastStateChange.PreviousEndLabel = nullptr;
     LastStateChange.NewStartLabel = nullptr;
-    LastStateChange.NewState = NullState;
+    LastStateChange.NewState = BaseState;
     scan();
   }
 
 public:
   static iterator_range<InvokeStateChangeIterator>
-  range(const WinEHFuncInfo &EHInfo, const MachineFunction &MF) {
-    // Reject empty MFs to simplify bookkeeping by ensuring that we can get the
-    // end of the last block.
-    assert(!MF.empty());
-    auto FuncBegin = MF.begin();
-    auto FuncEnd = MF.end();
-    auto BlockBegin = FuncBegin->begin();
-    auto BlockEnd = MF.back().end();
-    return make_range(
-        InvokeStateChangeIterator(EHInfo, FuncBegin, FuncEnd, BlockBegin),
-        InvokeStateChangeIterator(EHInfo, FuncEnd, FuncEnd, BlockEnd));
-  }
-  static iterator_range<InvokeStateChangeIterator>
   range(const WinEHFuncInfo &EHInfo, MachineFunction::const_iterator Begin,
-        MachineFunction::const_iterator End) {
+        MachineFunction::const_iterator End, int BaseState = NullState) {
     // Reject empty ranges to simplify bookkeeping by ensuring that we can get
     // the end of the last block.
     assert(Begin != End);
     auto BlockBegin = Begin->begin();
     auto BlockEnd = std::prev(End)->end();
-    return make_range(InvokeStateChangeIterator(EHInfo, Begin, End, BlockBegin),
-                      InvokeStateChangeIterator(EHInfo, End, End, BlockEnd));
+    return make_range(
+        InvokeStateChangeIterator(EHInfo, Begin, End, BlockBegin, BaseState),
+        InvokeStateChangeIterator(EHInfo, End, End, BlockEnd, BaseState));
   }
 
   // Iterator methods.
   bool operator==(const InvokeStateChangeIterator &O) const {
+    assert(BaseState == O.BaseState);
     // Must be visiting same block.
     if (MFI != O.MFI)
       return false;
@@ -410,6 +400,7 @@ private:
   MachineBasicBlock::const_iterator MBBI;
   InvokeStateChange LastStateChange;
   bool VisitingInvoke = false;
+  int BaseState;
 };
 
 } // end anonymous namespace
@@ -421,14 +412,14 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
       MBBI = MFI->begin();
     for (auto MBBE = MFI->end(); MBBI != MBBE; ++MBBI) {
       const MachineInstr &MI = *MBBI;
-      if (!VisitingInvoke && LastStateChange.NewState != NullState &&
+      if (!VisitingInvoke && LastStateChange.NewState != BaseState &&
           MI.isCall() && !EHStreamer::callToNoUnwindFunction(&MI)) {
         // Indicate a change of state to the null state.  We don't have
         // start/end EH labels handy but the caller won't expect them for
         // null state regions.
         LastStateChange.PreviousEndLabel = CurrentEndLabel;
         LastStateChange.NewStartLabel = nullptr;
-        LastStateChange.NewState = NullState;
+        LastStateChange.NewState = BaseState;
         CurrentEndLabel = nullptr;
         // Don't re-visit this instr on the next scan
         ++MBBI;
@@ -443,18 +434,12 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
         VisitingInvoke = false;
         continue;
       }
-      auto InvokeMapIter = EHInfo.InvokeToStateMap.find(Label);
+      auto InvokeMapIter = EHInfo.LabelToStateMap.find(Label);
       // Ignore EH labels that aren't the ones inserted before an invoke
-      if (InvokeMapIter == EHInfo.InvokeToStateMap.end())
+      if (InvokeMapIter == EHInfo.LabelToStateMap.end())
         continue;
       auto &StateAndEnd = InvokeMapIter->second;
       int NewState = StateAndEnd.first;
-      // Ignore EH labels explicitly annotated with the null state (which
-      // can happen for invokes that unwind to a chain of endpads the last
-      // of which unwinds to caller).  We'll see the subsequent invoke and
-      // report a transition to the null state same as we do for calls.
-      if (NewState == NullState)
-        continue;
       // Keep track of the fact that we're between EH start/end labels so
       // we know not to treat the inoke we'll see as unwinding to caller.
       VisitingInvoke = true;
@@ -476,11 +461,11 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
     }
   }
   // Iteration hit the end of the block range.
-  if (LastStateChange.NewState != NullState) {
+  if (LastStateChange.NewState != BaseState) {
     // Report the end of the last new state
     LastStateChange.PreviousEndLabel = CurrentEndLabel;
     LastStateChange.NewStartLabel = nullptr;
-    LastStateChange.NewState = NullState;
+    LastStateChange.NewState = BaseState;
     // Leave CurrentEndLabel non-null to distinguish this state from end.
     assert(CurrentEndLabel != nullptr);
     return *this;
@@ -775,26 +760,54 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
 void WinException::computeIP2StateTable(
     const MachineFunction *MF, const WinEHFuncInfo &FuncInfo,
     SmallVectorImpl<std::pair<const MCExpr *, int>> &IPToStateTable) {
-  // Indicate that all calls from the prologue to the first invoke unwind to
-  // caller. We handle this as a special case since other ranges starting at end
-  // labels need to use LtmpN+1.
-  MCSymbol *StartLabel = Asm->getFunctionBegin();
-  assert(StartLabel && "need local function start label");
-  IPToStateTable.push_back(std::make_pair(create32bitRef(StartLabel), -1));
 
-  // FIXME: Do we need to emit entries for funclet base states?
-  for (const auto &StateChange :
-       InvokeStateChangeIterator::range(FuncInfo, *MF)) {
-    // Compute the label to report as the start of this entry; use the EH start
-    // label for the invoke if we have one, otherwise (this is a call which may
-    // unwind to our caller and does not have an EH start label, so) use the
-    // previous end label.
-    const MCSymbol *ChangeLabel = StateChange.NewStartLabel;
-    if (!ChangeLabel)
-      ChangeLabel = StateChange.PreviousEndLabel;
-    // Emit an entry indicating that PCs after 'Label' have this EH state.
+  for (MachineFunction::const_iterator FuncletStart = MF->begin(),
+                                       FuncletEnd = MF->begin(),
+                                       End = MF->end();
+       FuncletStart != End; FuncletStart = FuncletEnd) {
+    // Find the end of the funclet
+    while (++FuncletEnd != End) {
+      if (FuncletEnd->isEHFuncletEntry()) {
+        break;
+      }
+    }
+
+    // Don't emit ip2state entries for cleanup funclets. Any interesting
+    // exceptional actions in cleanups must be handled in a separate IR
+    // function.
+    if (FuncletStart->isCleanupFuncletEntry())
+      continue;
+
+    MCSymbol *StartLabel;
+    int BaseState;
+    if (FuncletStart == MF->begin()) {
+      BaseState = NullState;
+      StartLabel = Asm->getFunctionBegin();
+    } else {
+      auto *FuncletPad =
+          cast<FuncletPadInst>(FuncletStart->getBasicBlock()->getFirstNonPHI());
+      assert(FuncInfo.FuncletBaseStateMap.count(FuncletPad) != 0);
+      BaseState = FuncInfo.FuncletBaseStateMap.find(FuncletPad)->second;
+      StartLabel = getMCSymbolForMBB(Asm, &*FuncletStart);
+    }
+    assert(StartLabel && "need local function start label");
     IPToStateTable.push_back(
-        std::make_pair(getLabelPlusOne(ChangeLabel), StateChange.NewState));
+        std::make_pair(create32bitRef(StartLabel), BaseState));
+
+    for (const auto &StateChange : InvokeStateChangeIterator::range(
+             FuncInfo, FuncletStart, FuncletEnd, BaseState)) {
+      // Compute the label to report as the start of this entry; use the EH
+      // start label for the invoke if we have one, otherwise (this is a call
+      // which may unwind to our caller and does not have an EH start label, so)
+      // use the previous end label.
+      const MCSymbol *ChangeLabel = StateChange.NewStartLabel;
+      if (!ChangeLabel)
+        ChangeLabel = StateChange.PreviousEndLabel;
+      // Emit an entry indicating that PCs after 'Label' have this EH state.
+      IPToStateTable.push_back(
+          std::make_pair(getLabelPlusOne(ChangeLabel), StateChange.NewState));
+      // FIXME: assert that NewState is between CatchLow and CatchHigh.
+    }
   }
 }
 

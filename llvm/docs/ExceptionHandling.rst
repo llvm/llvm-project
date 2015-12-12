@@ -522,16 +522,12 @@ table.
 Exception Handling using the Windows Runtime
 =================================================
 
-(Note: Windows C++ exception handling support is a work in progress and is not
-yet fully implemented.  The text below describes how it will work when
-completed.)
-
 Background on Windows exceptions
 ---------------------------------
 
-Interacting with exceptions on Windows is significantly more complicated than on
-Itanium C++ ABI platforms. The fundamental difference between the two models is
-that Itanium EH is designed around the idea of "successive unwinding," while
+Interacting with exceptions on Windows is significantly more complicated than
+on Itanium C++ ABI platforms. The fundamental difference between the two models
+is that Itanium EH is designed around the idea of "successive unwinding," while
 Windows EH is not.
 
 Under Itanium, throwing an exception typically involes allocating thread local
@@ -618,10 +614,11 @@ purposes.
 
 The following new instructions are considered "exception handling pads", in that
 they must be the first non-phi instruction of a basic block that may be the
-unwind destination of an invoke: ``catchpad``, ``cleanuppad``, and
-``terminatepad``. As with landingpads, when entering a try scope, if the
+unwind destination of an EH flow edge:
+``catchswitch``, ``catchpad``, ``cleanuppad``, and ``terminatepad``.
+As with landingpads, when entering a try scope, if the
 frontend encounters a call site that may throw an exception, it should emit an
-invoke that unwinds to a ``catchpad`` block. Similarly, inside the scope of a
+invoke that unwinds to a ``catchswitch`` block. Similarly, inside the scope of a
 C++ object with a destructor, invokes should unwind to a ``cleanuppad``. The
 ``terminatepad`` instruction exists to represent ``noexcept`` and throw
 specifications with one combined instruction. All potentially throwing calls in
@@ -634,26 +631,20 @@ generated funclet).  A catch handler which reaches its end by normal execution
 executes a ``catchret`` instruction, which is a terminator indicating where in
 the function control is returned to.  A cleanup handler which reaches its end
 by normal execution executes a ``cleanupret`` instruction, which is a terminator
-indicating where the active exception will unwind to next.  A catch or cleanup
-handler which is exited by another exception being raised during its execution will
-unwind through a ``catchendpad`` or ``cleanuupendpad`` (respectively).  The
-``catchendpad`` and ``cleanupendpad`` instructions are considered "exception
-handling pads" in the same sense that ``catchpad``, ``cleanuppad``, and
-``terminatepad`` are.
+indicating where the active exception will unwind to next.
 
-Each of these new EH pad instructions has a way to identify which
-action should be considered after this action. The ``catchpad`` and
-``terminatepad`` instructions are terminators, and have a label operand considered
-to be an unwind destination analogous to the unwind destination of an invoke. The
-``cleanuppad`` instruction is different from the other two in that it is not a
-terminator. The code inside a cleanuppad runs before transferring control to the
-next action, so the ``cleanupret`` and ``cleanupendpad`` instructions are the
-instructions that hold a label operand and unwind to the next EH pad. All of
-these "unwind edges" may refer to a basic block that contains an EH pad instruction,
-or they may simply unwind to the caller. Unwinding to the caller has roughly the
-same semantics as the ``resume`` instruction in the ``landingpad`` model. When
-inlining through an invoke, instructions that unwind to the caller are hooked
-up to unwind to the unwind destination of the call site.
+Each of these new EH pad instructions has a way to identify which action should
+be considered after this action. The ``catchswitch`` and ``terminatepad``
+instructions are terminators, and have a unwind destination operand analogous
+to the unwind destination of an invoke.  The ``cleanuppad`` instruction is not
+a terminator, so the unwind destination is stored on the ``cleanupret``
+instruction instead. Successfully executing a catch handler should resume
+normal control flow, so neither ``catchpad`` nor ``catchret`` instructions can
+unwind. All of these "unwind edges" may refer to a basic block that contains an
+EH pad instruction, or they may unwind to the caller.  Unwinding to the caller
+has roughly the same semantics as the ``resume`` instruction in the landingpad
+model. When inlining through an invoke, instructions that unwind to the caller
+are hooked up to unwind to the unwind destination of the call site.
 
 Putting things together, here is a hypothetical lowering of some C++ that uses
 all of the new IR instructions:
@@ -694,33 +685,96 @@ all of the new IR instructions:
     call void @"\01??_DCleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj) nounwind
     br label %return
 
-  return:                                           ; preds = %invoke.cont.2, %invoke.cont.3
-    %retval.0 = phi i32 [ 0, %invoke.cont.2 ], [ %9, %catch ]
+  return:                                           ; preds = %invoke.cont.3, %invoke.cont.2
+    %retval.0 = phi i32 [ 0, %invoke.cont.2 ], [ %3, %invoke.cont.3 ]
     ret i32 %retval.0
 
-  ; EH scope code, ordered innermost to outermost:
+  lpad.cleanup:                                     ; preds = %invoke.cont.2
+    %0 = cleanuppad within none []
+    call void @"\01??1Cleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj) nounwind
+    cleanupret %0 unwind label %lpad.catch
 
-  lpad.cleanup:                                     ; preds = %invoke.cont
-    %cleanup = cleanuppad []
-    call void @"\01??_DCleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj) nounwind
-    cleanupret %cleanup unwind label %lpad.catch
-
-  lpad.catch:                                       ; preds = %entry, %lpad.cleanup
-    %catch = catchpad [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %e]
-            to label %catch.body unwind label %catchend
+  lpad.catch:                                       ; preds = %lpad.cleanup, %entry
+    %1 = catchswitch within none [label %catch.body] unwind label %lpad.terminate
 
   catch.body:                                       ; preds = %lpad.catch
+    %catch = catchpad within %1 [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %e]
     invoke void @"\01?may_throw@@YAXXZ"()
-            to label %invoke.cont.3 unwind label %catchend
+            to label %invoke.cont.3 unwind label %lpad.terminate
 
   invoke.cont.3:                                    ; preds = %catch.body
-    %9 = load i32, i32* %e, align 4
-    catchret %catch to label %return
+    %3 = load i32, i32* %e, align 4
+    catchret from %catch to label %return
 
-  catchend:                                         ; preds = %lpad.catch, %catch.body
-    catchendpad unwind label %lpad.terminate
-
-  lpad.terminate:                                   ; preds = %catchend
-    terminatepad [void ()* @"\01?terminate@@YAXXZ"]
-            unwind to caller
+  lpad.terminate:                                   ; preds = %catch.body, %lpad.catch
+    terminatepad within none [void ()* @"\01?terminate@@YAXXZ"] unwind to caller
   }
+
+Funclet parent tokens
+-----------------------
+
+In order to produce tables for EH personalities that use funclets, it is
+necessary to recover the nesting that was present in the source. This funclet
+parent relationship is encoded in the IR using tokens produced by the new "pad"
+instructions. The token operand of a "pad" or "ret" instruction indicates which
+funclet it is in, or "none" if it is not nested within another funclet.
+
+The ``catchpad`` and ``cleanuppad`` instructions establish new funclets, and
+their tokens are consumed by other "pad" instructions to establish membership.
+The ``catchswitch`` instruction does not create a funclet, but it produces a
+token that is always consumed by its immediate successor ``catchpad``
+instructions. This ensures that every catch handler modelled by a ``catchpad``
+belongs to exactly one ``catchswitch``, which models the dispatch point after a
+C++ try. The ``terminatepad`` instruction cannot contain lexically nested
+funclets inside the termination action, so it does not produce a token.
+
+Here is an example of what this nesting looks like using some hypothetical
+C++ code:
+
+.. code-block:: c
+
+  void f() {
+    try {
+      throw;
+    } catch (...) {
+      try {
+        throw;
+      } catch (...) {
+      }
+    }
+  }
+
+.. code-block:: llvm
+
+  define void @f() #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+  entry:
+    invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1
+            to label %unreachable unwind label %catch.dispatch
+
+  catch.dispatch:                                   ; preds = %entry
+    %0 = catchswitch within none [label %catch] unwind to caller
+
+  catch:                                            ; preds = %catch.dispatch
+    %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+    invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1
+            to label %unreachable unwind label %catch.dispatch2
+
+  catch.dispatch2:                                  ; preds = %catch
+    %2 = catchswitch within %1 [label %catch3] unwind to caller
+
+  catch3:                                           ; preds = %catch.dispatch2
+    %3 = catchpad within %2 [i8* null, i32 64, i8* null]
+    catchret from %3 to label %try.cont
+
+  try.cont:                                         ; preds = %catch3
+    catchret from %1 to label %try.cont6
+
+  try.cont6:                                        ; preds = %try.cont
+    ret void
+
+  unreachable:                                      ; preds = %catch, %entry
+    unreachable
+  }
+
+The "inner" ``catchswitch`` consumes ``%1`` which is produced by the outer
+catchswitch.
