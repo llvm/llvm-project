@@ -386,3 +386,10 @@ module TypedefTag {
     header "typedef-tag-hidden.h"
   }
 }
+
+module ElaboratedTypeStructs {
+  module Empty {}
+  module Structs {
+    header "elaborated-type-structs.h"
+  }
+}

@@ -15,6 +15,7 @@
 #include "CGCall.h"
 #include "ABIInfo.h"
 #include "CGCXXABI.h"
+#include "CGCleanup.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
@@ -3472,11 +3473,21 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   llvm::AttributeSet Attrs = llvm::AttributeSet::get(getLLVMContext(),
                                                      AttributeList);
 
-  llvm::BasicBlock *InvokeDest = nullptr;
-  if (!Attrs.hasAttribute(llvm::AttributeSet::FunctionIndex,
-                          llvm::Attribute::NoUnwind) ||
-      currentFunctionUsesSEHTry())
-    InvokeDest = getInvokeDest();
+  bool CannotThrow;
+  if (currentFunctionUsesSEHTry()) {
+    // SEH cares about asynchronous exceptions, everything can "throw."
+    CannotThrow = false;
+  } else if (isCleanupPadScope() &&
+             EHPersonality::get(*this).isMSVCXXPersonality()) {
+    // The MSVC++ personality will implicitly terminate the program if an
+    // exception is thrown.  An unwind edge cannot be reached.
+    CannotThrow = true;
+  } else {
+    // Otherwise, nowunind callsites will never throw.
+    CannotThrow = Attrs.hasAttribute(llvm::AttributeSet::FunctionIndex,
+                                     llvm::Attribute::NoUnwind);
+  }
+  llvm::BasicBlock *InvokeDest = CannotThrow ? nullptr : getInvokeDest();
 
   llvm::CallSite CS;
   if (!InvokeDest) {
@@ -3495,14 +3506,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Attrs.addAttribute(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
                            llvm::Attribute::AlwaysInline);
 
-  // Disable inlining inside SEH __try blocks and cleanup funclets. None of the
-  // funclet EH personalities that clang supports have tables that are
-  // expressive enough to describe catching an exception inside a cleanup.
-  // __CxxFrameHandler3, for example, will terminate the program without
-  // catching it.
-  // FIXME: Move this decision to the LLVM inliner. Before we can do that, the
-  // inliner needs to know if a given call site is part of a cleanuppad.
-  if (isSEHTryScope() || isCleanupPadScope())
+  // Disable inlining inside SEH __try blocks.
+  if (isSEHTryScope())
     Attrs =
         Attrs.addAttribute(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
                            llvm::Attribute::NoInline);

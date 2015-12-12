@@ -279,8 +279,6 @@ public:
   /// finally block or filter expression.
   bool IsOutlinedSEHHelper;
 
-  bool IsCleanupPadScope = false;
-
   const CodeGen::CGBlockInfo *BlockInfo;
   llvm::Value *BlockPointer;
 
@@ -294,6 +292,8 @@ public:
   EHScopeStack EHStack;
   llvm::SmallVector<char, 256> LifetimeExtendedCleanupStack;
   llvm::SmallVector<const JumpDest *, 2> SEHTryEpilogueStack;
+
+  llvm::Instruction *CurrentFuncletPad = nullptr;
 
   /// Header for data within LifetimeExtendedCleanupStack.
   struct LifetimeExtendedCleanupHeader {
@@ -375,7 +375,9 @@ public:
   bool isSEHTryScope() const { return !SEHTryEpilogueStack.empty(); }
 
   /// Returns true while emitting a cleanuppad.
-  bool isCleanupPadScope() const { return IsCleanupPadScope; }
+  bool isCleanupPadScope() const {
+    return CurrentFuncletPad && isa<llvm::CleanupPadInst>(CurrentFuncletPad);
+  }
 
   /// pushFullExprCleanup - Push a cleanup to be run at the end of the
   /// current full-expression.  Safe against the possibility that

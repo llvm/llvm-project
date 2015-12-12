@@ -2980,10 +2980,15 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
     if (BaseType.isNull()) {
       BaseType = Context.getTypeDeclType(TyD);
       MarkAnyDeclReferenced(TyD->getLocation(), TyD, /*OdrUse=*/false);
-      if (SS.isSet())
-        // FIXME: preserve source range information
+      if (SS.isSet()) {
         BaseType = Context.getElaboratedType(ETK_None, SS.getScopeRep(),
                                              BaseType);
+        TInfo = Context.CreateTypeSourceInfo(BaseType);
+        ElaboratedTypeLoc TL = TInfo->getTypeLoc().castAs<ElaboratedTypeLoc>();
+        TL.getNamedTypeLoc().castAs<TypeSpecTypeLoc>().setNameLoc(IdLoc);
+        TL.setElaboratedKeywordLoc(SourceLocation());
+        TL.setQualifierLoc(SS.getWithLocInContext(Context));
+      }
     }
   }
 

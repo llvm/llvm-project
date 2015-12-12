@@ -1174,6 +1174,8 @@ def err_type_defined_in_param_type : Error<
   "%0 cannot be defined in a parameter type">;
 def err_type_defined_in_alias_template : Error<
   "%0 cannot be defined in a type alias template">;
+def err_type_defined_in_condition : Error<
+  "%0 cannot be defined in a condition">;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -4284,6 +4286,9 @@ def err_tag_definition_of_typedef : Error<
 def err_conflicting_types : Error<"conflicting types for %0">;
 def err_different_pass_object_size_params : Error<
   "conflicting pass_object_size attributes on parameters">;
+def err_late_asm_label_name : Error<
+  "cannot apply asm label to %select{variable|function}0 after its first use">;
+def err_different_asm_label : Error<"conflicting asm label">;
 def err_nested_redefinition : Error<"nested redefinition of %0">;
 def err_use_with_wrong_tag : Error<
   "use of %0 with tag type that does not match previous declaration">;
@@ -5983,8 +5988,6 @@ def err_pseudo_dtor_destructor_non_type : Error<
 def err_invalid_use_of_function_type : Error<
   "a function type is not allowed here">;
 def err_invalid_use_of_array_type : Error<"an array type is not allowed here">;
-def err_type_defined_in_condition : Error<
-  "types may not be defined in conditions">;
 def err_typecheck_bool_condition : Error<
   "value of type %0 is not contextually convertible to 'bool'">;
 def err_typecheck_ambiguous_condition : Error<

@@ -295,6 +295,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
   HelpText<"Pass the comma separated arguments in <arg> to the assembler">,
   MetaVarName<"<arg>">;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[CC1Option]>;
+def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[CC1Option]>;
 def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>, Flags<[CC1Option]>;
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>, Flags<[CC1Option]>;
 def Wextra : Flag<["-"], "Wextra">, Group<W_Group>, Flags<[CC1Option]>;

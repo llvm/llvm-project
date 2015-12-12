@@ -25,12 +25,8 @@ void basic_finally(void) {
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: invoke void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
-// CHECK-NEXT: to label %{{.*}} unwind label %[[end:[^ ]*]]
-// CHECK: cleanupret %[[pad]] unwind to caller
-//
-// CHECK: [[end]]
-// CHECK: cleanupendpad %[[pad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
+// CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK: define internal void @"\01?fin$0@0@basic_finally@@"({{.*}})
 // CHECK: call void @cleanup()
@@ -95,12 +91,8 @@ void use_abnormal_termination(void) {
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: invoke void @"\01?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
-// CHECK-NEXT: to label %{{.*}} unwind label %[[end:[^ ]*]]
-// CHECK: cleanupret %[[pad]] unwind to caller
-//
-// CHECK: [[end]]
-// CHECK: cleanupendpad %[[pad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
+// CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK: define internal void @"\01?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} %[[abnormal:abnormal_termination]], i8* %frame_pointer)
 // CHECK: %[[abnormal_zext:[^ ]*]] = zext i8 %[[abnormal]] to i32
@@ -141,12 +133,8 @@ void noreturn_finally() {
 //
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
-// CHECK: invoke void @"\01?fin$0@0@noreturn_finally@@"({{.*}})
-// CHECK-NEXT: to label %{{.*}} unwind label %[[end:[^ ]*]]
-// CHECK: cleanupret %[[pad]] unwind to caller
-//
-// CHECK: [[end]]
-// CHECK: cleanupendpad %[[pad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@noreturn_finally@@"({{.*}})
+// CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK: define internal void @"\01?fin$0@0@noreturn_finally@@"({{.*}})
 // CHECK: call void @abort()
@@ -189,12 +177,8 @@ int nested___finally___finally() {
 //
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
-// CHECK: invoke void @"\01?fin$0@0@nested___finally___finally@@"({{.*}})
-// CHECK-NEXT: to label %{{.*}} unwind label %[[end:[^ ]*]]
-// CHECK: cleanupret %[[pad]] unwind to caller
-//
-// CHECK: [[end]]
-// CHECK: cleanupendpad %[[pad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@nested___finally___finally@@"({{.*}})
+// CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK-LABEL: define internal void @"\01?fin$0@0@nested___finally___finally@@"({{.*}})
 // CHECK: ret void
@@ -231,24 +215,15 @@ int nested___finally___finally_with_eh_edge() {
 // CHECK: [[lpad1]]
 // CHECK-NEXT: %[[innerpad:[^ ]*]] = cleanuppad
 // CHECK: invoke void @"\01?fin$1@0@nested___finally___finally_with_eh_edge@@"({{.*}})
-// CHECK-NEXT:     to label %[[innercleanupretbb:[^ ]*]] unwind label %[[innerend:[^ ]*]]
+// CHECK-NEXT:    label %[[innercleanupretbb:[^ ]*]] unwind label %[[lpad2:[^ ]*]]
 //
 // CHECK: [[innercleanupretbb]]
-// CHECK-NEXT: cleanupret %[[innerpad]] unwind label %[[lpad2]]
-//
-// CHECK: [[innerend]]
-// CHECK-NEXT: cleanupendpad %[[innerpad]] unwind label %[[lpad2:[^ ]*]]
+// CHECK-NEXT: cleanupret from %[[innerpad]] unwind label %[[lpad2]]
 //
 // CHECK: [[lpad2]]
 // CHECK-NEXT: %[[outerpad:[^ ]*]] = cleanuppad
-// CHECK: invoke void @"\01?fin$0@0@nested___finally___finally_with_eh_edge@@"({{.*}})
-// CHECK-NEXT:     to label %[[outercleanupretbb:[^ ]*]] unwind label %[[outerend:[^ ]*]]
-//
-// CHECK: [[outercleanupretbb]]
-// CHECK-NEXT: cleanupret %[[outerpad]] unwind to caller
-//
-// CHECK: [[outerend]]
-// CHECK-NEXT: cleanupendpad %[[outerpad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@nested___finally___finally_with_eh_edge@@"({{.*}})
+// CHECK-NEXT: cleanupret from %[[outerpad]] unwind to caller
 
 // CHECK-LABEL: define internal void @"\01?fin$0@0@nested___finally___finally_with_eh_edge@@"({{.*}})
 // CHECK: ret void

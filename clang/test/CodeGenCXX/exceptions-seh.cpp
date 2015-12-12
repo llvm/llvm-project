@@ -61,7 +61,10 @@ extern "C" void use_seh() {
 // CHECK:       to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
 // CHECK: [[lpad]]
-// CHECK-NEXT: catchpad
+// CHECK-NEXT: %[[switch:.*]] = catchswitch within none [label %[[cpad:.*]]] unwind to caller
+//
+// CHECK: [[cpad]]
+// CHECK-NEXT: catchpad within %[[switch]]
 // CHECK: catchret {{.*}} label %[[except:[^ ]*]]
 //
 // CHECK: [[except]]
@@ -119,7 +122,7 @@ void use_inline() {
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
 //
-// CHECK: catchpad [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@use_seh_in_inline_func@@" to i8*)]
+// CHECK: catchpad {{.*}} [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@use_seh_in_inline_func@@" to i8*)]
 //
 // CHECK: invoke void @might_throw()
 //
@@ -129,7 +132,7 @@ void use_inline() {
 //
 // CHECK: cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: invoke void @"\01?fin$0@0@use_seh_in_inline_func@@"(i8 1, i8* %[[fp]])
+// CHECK: call void @"\01?fin$0@0@use_seh_in_inline_func@@"(i8 1, i8* %[[fp]])
 
 // CHECK-LABEL: define internal i32 @"\01?filt$0@0@use_seh_in_inline_func@@"(i8* %exception_pointers, i8* %frame_pointer) #{{[0-9]+}} comdat($use_seh_in_inline_func)
 // CHECK: icmp eq i32 %{{.*}}, 424242

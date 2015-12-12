@@ -52,7 +52,7 @@ void call_foo() {
 // X86: ret void
 //
 //   lpad2:
-// X86: cleanuppad []
+// X86: cleanuppad within none []
 // X86: call x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A* %[[arg2]])
 // X86: cleanupret
 //
@@ -68,7 +68,7 @@ void call_foo() {
 // X64: ret void
 //
 //   lpad2:
-// X64: cleanuppad []
+// X64: cleanuppad within none []
 // X64: call void @"\01??1A@@QEAA@XZ"(%struct.A* %[[arg2]])
 // X64: cleanupret
 //

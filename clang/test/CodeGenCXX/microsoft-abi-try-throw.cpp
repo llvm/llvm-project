@@ -19,7 +19,7 @@ int main() {
     external(); // TRY: invoke void @"\01?external@@YAXXZ"
   } catch (int) {
     rv = 1;
-    // TRY: catchpad [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+    // TRY: catchpad within {{.*}} [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
     // TRY: catchret
   }
 #endif
@@ -39,7 +39,7 @@ void qual_catch() {
     external();
   } catch (const int *) {
   }
-  // TRY: catchpad [%rtti.TypeDescriptor4* @"\01??_R0PAH@8", i32 1, i8* null]
+  // TRY: catchpad within {{.*}} [%rtti.TypeDescriptor4* @"\01??_R0PAH@8", i32 1, i8* null]
   // TRY: catchret
 }
 #endif

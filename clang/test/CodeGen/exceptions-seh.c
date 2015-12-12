@@ -34,12 +34,9 @@ int safe_div(int numerator, int denominator, int *res) {
 // CHECK:       to label %{{.*}} unwind label %[[catchpad:[^ ]*]]
 //
 // CHECK: [[catchpad]]
-// X64: %[[padtoken:[^ ]*]] = catchpad [i8* null]
-// X86: %[[padtoken:[^ ]*]] = catchpad [i8* bitcast (i32 ()* @"\01?filt$0@0@safe_div@@" to i8*)]
-// CHECK-NEXT:    to label %[[exceptret:[^ ]*]] unwind label
-//
-// CHECK: [[exceptret]]
-// CHECK: catchret %[[padtoken]] to label %[[except:[^ ]*]]
+// X64: %[[padtoken:[^ ]*]] = catchpad within %{{[^ ]*}} [i8* null]
+// X86: %[[padtoken:[^ ]*]] = catchpad within %{{[^ ]*}} [i8* bitcast (i32 ()* @"\01?filt$0@0@safe_div@@" to i8*)]
+// CHECK-NEXT: catchret from %[[padtoken]] to label %[[except:[^ ]*]]
 //
 // CHECK: [[except]]
 // CHECK: store i32 -42, i32* %[[success:[^ ]*]]
@@ -85,7 +82,7 @@ int filter_expr_capture(void) {
 // CHECK: store i32 42, i32* %[[r]]
 // CHECK: invoke void @j() #[[NOINLINE]]
 //
-// CHECK: catchpad [i8* bitcast (i32 ({{.*}})* @"\01?filt$0@0@filter_expr_capture@@" to i8*)]
+// CHECK: catchpad within %{{[^ ]*}} [i8* bitcast (i32 ({{.*}})* @"\01?filt$0@0@filter_expr_capture@@" to i8*)]
 // CHECK: store i32 13, i32* %[[r]]
 //
 // CHECK: %[[rv:[^ ]*]] = load i32, i32* %[[r]]
@@ -121,36 +118,36 @@ int nested_try(void) {
 // X86-SAME: personality i8* bitcast (i32 (...)* @_except_handler3 to i8*)
 // CHECK: store i32 42, i32* %[[r:[^ ,]*]]
 // CHECK: invoke void @j() #[[NOINLINE]]
-// CHECK:       to label %[[cont:[^ ]*]] unwind label %[[cpad_inner:[^ ]*]]
+// CHECK:       to label %[[cont:[^ ]*]] unwind label %[[cswitch_inner:[^ ]*]]
+//
+// CHECK: [[cswitch_inner]]
+// CHECK: %[[cs_inner:[^ ]*]] = catchswitch within none [label %[[cpad_inner:[^ ]*]]] unwind label %[[cswitch_outer:[^ ]*]]
+//
+// CHECK: [[cswitch_outer]]
+// CHECK: %[[cs_outer:[^ ]*]] = catchswitch within none [label %[[cpad_outer:[^ ]*]]] unwind to caller
+//
+// CHECK: [[cpad_outer]]
+// CHECK: catchpad within %{{[^ ]*}} [i8* bitcast (i32 ({{.*}})* @"\01?filt$0@0@nested_try@@" to i8*)]
+// CHECK-NEXT: catchret {{.*}} to label %[[except_outer:[^ ]*]]
+//
+// CHECK: [[except_outer]]
+// CHECK: store i32 456, i32* %[[r]]
+// CHECK: br label %[[outer_try_cont:[^ ]*]]
+//
+// CHECK: [[outer_try_cont]]
+// CHECK: %[[r_load:[^ ]*]] = load i32, i32* %[[r]]
+// CHECK: ret i32 %[[r_load]]
 //
 // CHECK: [[cpad_inner]]
-// CHECK: catchpad [i8* bitcast (i32 ({{.*}})* @"\01?filt$1@0@nested_try@@" to i8*)]
-// CHECK-NEXT: to label %[[exceptret_inner:[^ ]*]] unwind label %[[cpad_outer:[^ ]*]]
-//
-// CHECK: [[exceptret_inner]]
-// CHECK: catchret {{.*}} to label %[[except_inner:[^ ]*]]
+// CHECK: catchpad within %[[cs_inner]] [i8* bitcast (i32 ({{.*}})* @"\01?filt$1@0@nested_try@@" to i8*)]
+// CHECK-NEXT: catchret {{.*}} to label %[[except_inner:[^ ]*]]
 //
 // CHECK: [[except_inner]]
 // CHECK: store i32 123, i32* %[[r]]
 // CHECK: br label %[[inner_try_cont:[^ ]*]]
 //
 // CHECK: [[inner_try_cont]]
-// CHECK: br label %[[outer_try_cont:[^ ]*]]
-//
-// CHECK: [[cpad_outer]]
-// CHECK: catchpad [i8* bitcast (i32 ({{.*}})* @"\01?filt$0@0@nested_try@@" to i8*)]
-// CHECK-NEXT: to label %[[exceptret_outer:[^ ]*]] unwind label
-//
-// CHECK: [[exceptret_outer]]
-// CHECK: catchret {{.*}} to label %[[except_outer:[^ ]*]]
-//
-// CHECK: [[except_outer]]
-// CHECK: store i32 456, i32* %[[r]]
 // CHECK: br label %[[outer_try_cont]]
-//
-// CHECK: [[outer_try_cont]]
-// CHECK: %[[r_load:[^ ]*]] = load i32, i32* %[[r]]
-// CHECK: ret i32 %[[r_load]]
 //
 // CHECK: [[cont]]
 // CHECK: store i32 0, i32* %[[r]]
@@ -193,14 +190,10 @@ int basic_finally(int g) {
 // CHECK: ret i32
 //
 // CHECK: [[cleanuppad]]
-// CHECK: %[[padtoken:[^ ]*]] = cleanuppad []
+// CHECK: %[[padtoken:[^ ]*]] = cleanuppad within none []
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: invoke void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
-// CHECK:     to label %[[cleanupcont:[^ ]*]] unwind label %[[cleanupend:[^ ]*]]
-// CHECK: [[cleanupcont]]
-// CHECK: cleanupret %[[padtoken]] unwind to caller
-// CHECK: [[cleanupend]]
-// CHECK: cleanupendpad %[[padtoken]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
+// CHECK: cleanupret from %[[padtoken]] unwind to caller
 
 // CHECK: define internal void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} %abnormal_termination, i8* %frame_pointer)
 // CHECK:   call i8* @llvm.localrecover(i8* bitcast (i32 (i32)* @basic_finally to i8*), i8* %frame_pointer, i32 0)
@@ -278,7 +271,7 @@ int exception_code_in_except(void) {
 // CHECK: %[[code_slot:[^ ]*]] = alloca i32
 // CHECK: invoke void @try_body(i32 0, i32 0, i32* null)
 // CHECK: %[[pad:[^ ]*]] = catchpad
-// CHECK: catchret %[[pad]]
+// CHECK: catchret from %[[pad]]
 // X64: %[[code:[^ ]*]] = call i32 @llvm.eh.exceptioncode(token %[[pad]])
 // X64: store i32 %[[code]], i32* %[[code_slot]]
 // CHECK: %[[ret1:[^ ]*]] = load i32, i32* %[[code_slot]]

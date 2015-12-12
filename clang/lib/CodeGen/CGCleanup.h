@@ -587,14 +587,6 @@ inline void EHScopeStack::popTerminate() {
   deallocate(EHTerminateScope::getSize());
 }
 
-inline void EHScopeStack::popPadEnd() {
-  assert(!empty() && "popping exception stack when not empty");
-
-  EHPadEndScope &scope = cast<EHPadEndScope>(*begin());
-  InnermostEHScope = scope.getEnclosingEHScope();
-  deallocate(EHPadEndScope::getSize());
-}
-
 inline EHScopeStack::iterator EHScopeStack::find(stable_iterator sp) const {
   assert(sp.isValid() && "finding invalid savepoint");
   assert(sp.Size <= stable_begin().Size && "finding savepoint after pop");

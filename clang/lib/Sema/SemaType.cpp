@@ -2749,6 +2749,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       OwnedTagDecl && OwnedTagDecl->isCompleteDefinition()) {
     // Check the contexts where C++ forbids the declaration of a new class
     // or enumeration in a type-specifier-seq.
+    unsigned DiagID = 0;
     switch (D.getContext()) {
     case Declarator::TrailingReturnContext:
       // Class and enumeration definitions are syntactically not allowed in
@@ -2768,10 +2769,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::AliasDeclContext:
       break;
     case Declarator::AliasTemplateContext:
-      SemaRef.Diag(OwnedTagDecl->getLocation(),
-             diag::err_type_defined_in_alias_template)
-        << SemaRef.Context.getTypeDeclType(OwnedTagDecl);
-      D.setInvalidType(true);
+      DiagID = diag::err_type_defined_in_alias_template;
       break;
     case Declarator::TypeNameContext:
     case Declarator::ConversionIdContext:
@@ -2780,10 +2778,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::CXXCatchContext:
     case Declarator::ObjCCatchContext:
     case Declarator::TemplateTypeArgContext:
-      SemaRef.Diag(OwnedTagDecl->getLocation(),
-             diag::err_type_defined_in_type_specifier)
-        << SemaRef.Context.getTypeDeclType(OwnedTagDecl);
-      D.setInvalidType(true);
+      DiagID = diag::err_type_defined_in_type_specifier;
       break;
     case Declarator::PrototypeContext:
     case Declarator::LambdaExprParameterContext:
@@ -2792,19 +2787,20 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::KNRTypeListContext:
       // C++ [dcl.fct]p6:
       //   Types shall not be defined in return or parameter types.
-      SemaRef.Diag(OwnedTagDecl->getLocation(),
-                   diag::err_type_defined_in_param_type)
-        << SemaRef.Context.getTypeDeclType(OwnedTagDecl);
-      D.setInvalidType(true);
+      DiagID = diag::err_type_defined_in_param_type;
       break;
     case Declarator::ConditionContext:
       // C++ 6.4p2:
       // The type-specifier-seq shall not contain typedef and shall not declare
       // a new class or enumeration.
-      SemaRef.Diag(OwnedTagDecl->getLocation(),
-                   diag::err_type_defined_in_condition);
-      D.setInvalidType(true);
+      DiagID = diag::err_type_defined_in_condition;
       break;
+    }
+
+    if (DiagID != 0) {
+      SemaRef.Diag(OwnedTagDecl->getLocation(), DiagID)
+          << SemaRef.Context.getTypeDeclType(OwnedTagDecl);
+      D.setInvalidType(true);
     }
   }
 

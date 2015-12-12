@@ -17,9 +17,9 @@ void test() {
   switch (s) {} // expected-error {{statement requires expression of integer type ('struct S' invalid)}}
 
   while (struct NewS *x=0) ;
-  while (struct S {} *x=0) ; // expected-error {{types may not be defined in conditions}}
-  while (struct {} *x=0) ; // expected-error {{types may not be defined in conditions}}
-  switch (enum {E} x=0) ; // expected-error {{types may not be defined in conditions}}
+  while (struct S {} *x=0) ; // expected-error {{'S' cannot be defined in a condition}}
+  while (struct {} *x=0) ; // expected-error-re {{'(anonymous struct at {{.*}})' cannot be defined in a condition}}
+  switch (enum {E} x=0) ; // expected-error-re {{'(anonymous enum at {{.*}})' cannot be defined in a condition}}
 
   if (int x=0) { // expected-note 2 {{previous definition is here}}
     int x;  // expected-error {{redefinition of 'x'}}
@@ -59,7 +59,7 @@ void test4(bool (&x)(void)) {
 
 template <class>
 void test5() {
-  if (struct S {}* p = 0) // expected-error {{types may not be defined in conditions}}
+  if (struct S {}* p = 0) // expected-error {{'S' cannot be defined in a condition}}
     ;
 }
 void test5_inst() {
