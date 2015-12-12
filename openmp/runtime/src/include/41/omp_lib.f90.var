@@ -27,7 +27,7 @@
         integer, parameter :: kmp_size_t_kind        = c_size_t
         integer, parameter :: kmp_affinity_mask_kind = c_intptr_t
         integer, parameter :: kmp_cancel_kind        = omp_integer_kind
-        integer, parameter :: kmp_lock_hint_kind     = omp_integer_kind
+        integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
 
       end module omp_lib_kinds
 
@@ -59,12 +59,14 @@
         integer (kind=kmp_cancel_kind), parameter :: kmp_cancel_sections = 3
         integer (kind=kmp_cancel_kind), parameter :: kmp_cancel_taskgroup = 4
 
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_none           = 0
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_uncontended    = 1
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_contended      = 2
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_nonspeculative = 3
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_speculative    = 4
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 5
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_none           = 0
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_uncontended    = 1
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_contended      = 2
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_nonspeculative = 4
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_speculative    = 8
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle            = 65536
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm            = 131072
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 262144
 
         interface
 
@@ -451,17 +453,17 @@
             logical (kind=omp_logical_kind) kmp_get_cancellation_status
           end function kmp_get_cancellation_status
 
-          subroutine kmp_init_lock_hinted(lockvar, lockhint) bind(c)
+          subroutine omp_init_lock_with_hint(lockvar, lockhint) bind(c)
             use omp_lib_kinds
             integer (kind=omp_lock_kind) lockvar
-            integer (kind=kmp_lock_hint_kind), value :: lockhint
-          end subroutine kmp_init_lock_hinted
+            integer (kind=omp_lock_hint_kind), value :: lockhint
+          end subroutine omp_init_lock_with_hint
 
-          subroutine kmp_init_nest_lock_hinted(lockvar, lockhint) bind(c)
+          subroutine omp_init_nest_lock_with_hint(lockvar, lockhint) bind(c)
             use omp_lib_kinds
             integer (kind=omp_lock_kind) lockvar
-            integer (kind=kmp_lock_hint_kind), value :: lockhint
-          end subroutine kmp_init_nest_lock_hinted
+            integer (kind=omp_lock_hint_kind), value :: lockhint
+          end subroutine omp_init_nest_lock_with_hint
 
         end interface
 

@@ -1349,7 +1349,7 @@ class Base(unittest2.TestCase):
         Do class-wide cleanup.
         """
 
-        if doCleanup and not configuration.skip_build_and_cleanup:
+        if doCleanup:
             # First, let's do the platform-specific cleanup.
             module = builder_module()
             module.cleanup()
@@ -2133,8 +2133,6 @@ class Base(unittest2.TestCase):
 
     def buildDefault(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build the default binaries."""
-        if configuration.skip_build_and_cleanup:
-            return
         module = builder_module()
         if target_is_android():
             dictionary = append_android_envs(dictionary)
@@ -2143,16 +2141,12 @@ class Base(unittest2.TestCase):
 
     def buildDsym(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build binaries with dsym info."""
-        if configuration.skip_build_and_cleanup:
-            return
         module = builder_module()
         if not module.buildDsym(self, architecture, compiler, dictionary, clean):
             raise Exception("Don't know how to build binary with dsym")
 
     def buildDwarf(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build binaries with dwarf maps."""
-        if configuration.skip_build_and_cleanup:
-            return
         module = builder_module()
         if target_is_android():
             dictionary = append_android_envs(dictionary)
@@ -2161,8 +2155,6 @@ class Base(unittest2.TestCase):
 
     def buildDwo(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build binaries with dwarf maps."""
-        if configuration.skip_build_and_cleanup:
-            return
         module = builder_module()
         if target_is_android():
             dictionary = append_android_envs(dictionary)
@@ -2238,8 +2230,6 @@ class Base(unittest2.TestCase):
 
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
-        if configuration.skip_build_and_cleanup:
-            return
         module = builder_module()
         if not module.cleanup(self, dictionary):
             raise Exception("Don't know how to do cleanup with dictionary: "+dictionary)
@@ -2755,8 +2745,6 @@ class TestBase(Base):
 
     def build(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build the default binaries."""
-        if configuration.skip_build_and_cleanup:
-            return
         module = builder_module()
         if target_is_android():
             dictionary = append_android_envs(dictionary)

@@ -1067,16 +1067,16 @@ def inprocess_exec_test_runner(test_work_items):
 
     return test_results
 
-def walk_and_invoke(test_directory, test_subdir, dotest_argv,
-                    num_workers, test_runner_func):
-    """Look for matched files and invoke test driver on each one.
-    In single-threaded mode, each test driver is invoked directly.
-    In multi-threaded mode, submit each test driver to a worker
-    queue, and then wait for all to complete.
+def walk_and_invoke(test_files, dotest_argv, num_workers, test_runner_func):
+    """Invokes the test runner on each test file specified by test_files.
 
-    test_directory - lldb/test/ directory
-    test_subdir - lldb/test/ or a subfolder with the tests we're interested in
-                  running
+    @param test_files a list of (test_subdir, list_of_test_files_in_dir)
+    @param num_workers the number of worker queues working on these test files
+    @param test_runner_func the test runner configured to run the tests
+
+    @return a tuple of results from the running of the specified tests,
+    of the form (timed_out, passed, failed, unexpected_successes, pass_count,
+    fail_count)
     """
     # The async_map is important to keep all thread-related asyncore
     # channels distinct when we call asyncore.loop() later on.
@@ -1095,11 +1095,10 @@ def walk_and_invoke(test_directory, test_subdir, dotest_argv,
         dotest_argv.append("--results-port")
         dotest_argv.append(str(RESULTS_LISTENER_CHANNEL.address[1]))
 
-    # Collect the test files that we'll run.
+    # Build the test work items out of the (dir, file_list) entries passed in.
     test_work_items = []
-    find_test_files_in_dir_tree(
-        test_subdir, lambda testdir, test_files: test_work_items.append([
-            test_subdir, test_files, dotest_argv, None]))
+    for entry in test_files:
+        test_work_items.append((entry[0], entry[1], dotest_argv, None))
 
     # Convert test work items into test results using whatever
     # was provided as the test run function.
@@ -1128,6 +1127,7 @@ def getExpectedTimeouts(platform_name):
         target = m.group(1)
 
     expected_timeout = set()
+    expected_timeout.add("TestExpectedTimeout.py")
 
     if target.startswith("linux"):
         expected_timeout |= {
@@ -1475,6 +1475,12 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
 
     system_info = " ".join(platform.uname())
 
+    # Figure out which test files should be enabled for expected
+    # timeout
+    expected_timeout = getExpectedTimeouts(dotest_options.lldb_platform_name)
+    if results_formatter is not None:
+        results_formatter.set_expected_timeouts_by_basename(expected_timeout)
+
     # Figure out which testrunner strategy we'll use.
     runner_strategies_by_name = get_test_runner_strategies(num_threads)
 
@@ -1490,9 +1496,16 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
                 list(runner_strategies_by_name.keys())))
     test_runner_func = runner_strategies_by_name[test_runner_name]
 
+    test_files = []
+    find_test_files_in_dir_tree(
+        test_subdir, lambda tdir, tfiles: test_files.append(
+            (test_subdir, tfiles)))
+
     summary_results = walk_and_invoke(
-        test_directory, test_subdir, dotest_argv,
-        num_threads, test_runner_func)
+        test_files,
+        dotest_argv,
+        num_threads,
+        test_runner_func)
 
     (timed_out, passed, failed, unexpected_successes, pass_count,
      fail_count) = summary_results
@@ -1514,7 +1527,6 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
         os.rename(core, os.path.join(session_dir, dst))
 
     # remove expected timeouts from failures
-    expected_timeout = getExpectedTimeouts(dotest_options.lldb_platform_name)
     for xtime in expected_timeout:
         if xtime in timed_out:
             timed_out.remove(xtime)

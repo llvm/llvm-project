@@ -253,6 +253,8 @@ const MachOFinalSectionFromAtomType sectsToAtomType[] = {
                                                           typeTLVInitialData),
   ENTRY("__DATA", "__thread_ptrs",    S_THREAD_LOCAL_VARIABLE_POINTERS,
                                                           typeTLVInitializerPtr),
+  ENTRY("__DATA", "__thread_bss",     S_THREAD_LOCAL_ZEROFILL,
+                                                         typeTLVInitialZeroFill),
   ENTRY("__DATA", "__bss",            S_ZEROFILL,         typeZeroFill),
   ENTRY("__DATA", "__interposing",    S_INTERPOSING,      typeInterposingTuples),
 };
@@ -582,7 +584,7 @@ void Util::copySectionContent(NormalizedFile &file) {
 
   for (SectionInfo *si : _sectionInfos) {
     Section *normSect = &file.sections[si->normalizedSectionIndex];
-    if (si->type == llvm::MachO::S_ZEROFILL) {
+    if (isZeroFillSection(si->type)) {
       const uint8_t *empty = nullptr;
       normSect->content = llvm::makeArrayRef(empty, si->size);
       continue;

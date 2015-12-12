@@ -28,7 +28,6 @@
       integer, parameter :: kmp_pointer_kind       = int_ptr_kind()
       integer, parameter :: kmp_size_t_kind        = int_ptr_kind()
       integer, parameter :: kmp_affinity_mask_kind = int_ptr_kind()
-      integer, parameter :: kmp_lock_hint_kind     = omp_integer_kind
 
       integer (kind=omp_integer_kind), parameter :: openmp_version    = @LIBOMP_OMP_YEAR_MONTH@
       integer (kind=omp_integer_kind), parameter :: kmp_version_major = @LIBOMP_VERSION_MAJOR@
@@ -47,13 +46,6 @@
       integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_master = 2
       integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_close = 3
       integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_spread = 4
-
-      integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_none           = 0
-      integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_uncontended    = 1
-      integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_contended      = 2
-      integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_nonspeculative = 3
-      integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_speculative    = 4
-      integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 5
 
       interface
 
@@ -426,18 +418,6 @@
         subroutine kmp_set_warnings_off() bind(c)
         end subroutine kmp_set_warnings_off
 
-        subroutine kmp_init_lock_hinted(lockvar, lockhint) bind(c)
-          import
-          integer (kind=omp_lock_kind) lockvar
-          integer (kind=kmp_lock_hint_kind), value :: lockhint
-        end subroutine kmp_init_lock_hinted
-
-        subroutine kmp_init_nest_lock_hinted(lockvar, lockhint) bind(c)
-          import
-          integer (kind=omp_lock_kind) lockvar
-          integer (kind=kmp_lock_hint_kind), value :: lockhint
-        end subroutine kmp_init_nest_lock_hinted
-
       end interface
 
 !DIR$ IF DEFINED (__INTEL_OFFLOAD)
@@ -506,8 +486,6 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_free
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_warnings_on
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_warnings_off
-!DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_init_lock_hinted
-!DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_init_nest_lock_hinted
 
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !$omp declare target(omp_set_num_threads )
@@ -575,8 +553,6 @@
 !$omp declare target(kmp_free )
 !$omp declare target(kmp_set_warnings_on )
 !$omp declare target(kmp_set_warnings_off )
-!$omp declare target(kmp_init_lock_hinted )
-!$omp declare target(kmp_init_nest_lock_hinted )
 !DIR$ ENDIF
 !DIR$ ENDIF
 

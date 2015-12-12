@@ -89,9 +89,6 @@ cflags_extras = ''
 # The filters (testclass.testmethod) used to admit tests into our test suite.
 filters = []
 
-# By default, we do not skip build and cleanup.  Use '-S' option to override.
-skip_build_and_cleanup = False
-
 # By default, we skip long running test case.  Use '-l' option to override.
 skip_long_running_test = True
 
@@ -101,12 +98,6 @@ parsable = False
 
 # The regular expression pattern to match against eligible filenames as our test cases.
 regexp = None
-
-# By default, tests are executed in place and cleanups are performed afterwards.
-# Use '-r dir' option to relocate the tests and their intermediate files to a
-# different directory and to forgo any cleanups.  The directory specified must
-# not exist yet.
-rdir = None
 
 # By default, recorded session info for errored/failed test are dumped into its
 # own file under a session directory named after the timestamp of the test suite

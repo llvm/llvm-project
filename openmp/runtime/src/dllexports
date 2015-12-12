@@ -493,6 +493,13 @@ kmp_set_warnings_off                        780
     omp_is_initial_device                   869
 %endif # OMP_40
 
+# OpenMP 41
+
+%ifdef OMP_41
+    omp_init_lock_with_hint                 870
+    omp_init_nest_lock_with_hint            871
+%endif # OMP_41
+
 %ifndef stub
     # Ordinals between 900 and 999 are reserved
 

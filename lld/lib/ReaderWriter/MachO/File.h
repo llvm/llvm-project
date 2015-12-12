@@ -87,9 +87,22 @@ public:
     DefinedAtom::Alignment align(
         inSection->alignment,
         sectionOffset % inSection->alignment);
+
+    DefinedAtom::ContentType type = DefinedAtom::typeUnknown;
+    switch (inSection->type) {
+    case llvm::MachO::S_ZEROFILL:
+      type = DefinedAtom::typeZeroFill;
+      break;
+    case llvm::MachO::S_THREAD_LOCAL_ZEROFILL:
+      type = DefinedAtom::typeTLVInitialZeroFill;
+      break;
+    default:
+      llvm_unreachable("Unrecognized zero-fill section");
+    }
+
     auto *atom =
-       new (allocator()) MachODefinedAtom(*this, name, scope, size, noDeadStrip,
-                                          align);
+        new (allocator()) MachODefinedAtom(*this, name, scope, type, size,
+                                           noDeadStrip, align);
     addAtomForSection(inSection, atom, sectionOffset);
   }
 

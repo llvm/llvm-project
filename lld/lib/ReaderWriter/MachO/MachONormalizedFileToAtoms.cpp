@@ -82,6 +82,8 @@ const MachORelocatableSectionToAtomType sectsToAtomType[] = {
   ENTRY("__DATA", "__thread_vars",    S_THREAD_LOCAL_VARIABLES,
                                                           typeThunkTLV),
   ENTRY("__DATA", "__thread_data", S_THREAD_LOCAL_REGULAR, typeTLVInitialData),
+  ENTRY("__DATA", "__thread_bss",     S_THREAD_LOCAL_ZEROFILL,
+                                                        typeTLVInitialZeroFill),
   ENTRY("",       "",                 S_INTERPOSING,      typeInterposingTuples),
   ENTRY("__LD",   "__compact_unwind", S_REGULAR,
                                                          typeCompactUnwindInfo),
@@ -232,7 +234,7 @@ void atomFromSymbol(DefinedAtom::ContentType atomType, const Section &section,
   uint64_t size = nextSymbolAddr - symbolAddr;
   uint64_t offset = symbolAddr - section.address;
   bool noDeadStrip = (symbolDescFlags & N_NO_DEAD_STRIP) || !scatterable;
-  if (section.type == llvm::MachO::S_ZEROFILL) {
+  if (isZeroFillSection(section.type)) {
     file.addZeroFillDefinedAtom(symbolName, symbolScope, offset, size,
                                 noDeadStrip, copyRefs, &section);
   } else {

@@ -80,8 +80,8 @@
 #endif
     #define FTN_INIT_LOCK                        omp_init_lock
 #if KMP_USE_DYNAMIC_LOCK
-    #define FTN_INIT_LOCK_HINTED                 kmp_init_lock_hinted
-    #define FTN_INIT_NEST_LOCK_HINTED            kmp_init_nest_lock_hinted
+    #define FTN_INIT_LOCK_WITH_HINT              omp_init_lock_with_hint
+    #define FTN_INIT_NEST_LOCK_WITH_HINT         omp_init_nest_lock_with_hint
 #endif
     #define FTN_DESTROY_LOCK                     omp_destroy_lock
     #define FTN_SET_LOCK                         omp_set_lock
@@ -176,8 +176,8 @@
 #endif
     #define FTN_INIT_LOCK                        omp_init_lock_
 #if KMP_USE_DYNAMIC_LOCK
-    #define FTN_INIT_LOCK_HINTED                 kmp_init_lock_hinted_
-    #define FTN_INIT_NEST_LOCK_HINTED            kmp_init_nest_lock_hinted_
+    #define FTN_INIT_LOCK_WITH_HINT              omp_init_lock_with_hint_
+    #define FTN_INIT_NEST_LOCK_WITH_HINT         omp_init_nest_lock_with_hint_
 #endif
     #define FTN_DESTROY_LOCK                     omp_destroy_lock_
     #define FTN_SET_LOCK                         omp_set_lock_
@@ -273,8 +273,8 @@
 #endif
     #define FTN_INIT_LOCK                        OMP_INIT_LOCK
 #if KMP_USE_DYNAMIC_LOCK
-    #define FTN_INIT_LOCK_HINTED                 KMP_INIT_LOCK_HINTED
-    #define FTN_INIT_NEST_LOCK_HINTED            KMP_INIT_NEST_LOCK_HINTED
+    #define FTN_INIT_LOCK_WITH_HINT              OMP_INIT_LOCK_WITH_HINT
+    #define FTN_INIT_NEST_LOCK_WITH_HINT         OMP_INIT_NEST_LOCK_WITH_HINT
 #endif
     #define FTN_DESTROY_LOCK                     OMP_DESTROY_LOCK
     #define FTN_SET_LOCK                         OMP_SET_LOCK
@@ -370,8 +370,8 @@
 #endif
     #define FTN_INIT_LOCK                        OMP_INIT_LOCK_
 #if KMP_USE_DYNAMIC_LOCK
-    #define FTN_INIT_LOCK_HINTED                 KMP_INIT_LOCK_HINTED_
-    #define FTN_INIT_NEST_LOCK_HINTED            KMP_INIT_NEST_LOCK_HINTED_
+    #define FTN_INIT_LOCK_WITH_HINT              OMP_INIT_LOCK_WITH_HINT_
+    #define FTN_INIT_NEST_LOCK_WITH_HINT         OMP_INIT_NEST_LOCK_WITH_HINT_
 #endif
     #define FTN_DESTROY_LOCK                     OMP_DESTROY_LOCK_
     #define FTN_SET_LOCK                         OMP_SET_LOCK_

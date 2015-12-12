@@ -327,26 +327,6 @@ def parseOptionsAndInitTestdirs():
     if args.q:
         configuration.parsable = True
 
-    if args.R:
-        if args.R.startswith('-'):
-            usage(parser)
-        configuration.rdir = os.path.abspath(args.R)
-        if os.path.exists(configuration.rdir):
-            import shutil
-            print('Removing tree:', configuration.rdir)
-            shutil.rmtree(configuration.rdir)
-
-    if args.r:
-        if args.r.startswith('-'):
-            usage(parser)
-        configuration.rdir = os.path.abspath(args.r)
-        if os.path.exists(configuration.rdir):
-            print('Relocated directory:', configuration.rdir, 'must not exist!')
-            usage(parser)
-
-    if args.S:
-        configuration.skip_build_and_cleanup = True
-
     if args.s:
         if args.s.startswith('-'):
             usage(parser)
@@ -407,6 +387,12 @@ def parseOptionsAndInitTestdirs():
     if args.results_formatter_options:
         configuration.results_formatter_options = args.results_formatter_options
 
+    # Default to using the BasicResultsFormatter if no formatter is specified
+    # and we're not a test inferior.
+    if not args.inferior and configuration.results_formatter_name is None:
+        configuration.results_formatter_name = (
+            "lldbsuite.test.basic_results_formatter.BasicResultsFormatter")
+
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name
     if args.lldb_platform_url:
@@ -437,47 +423,6 @@ def parseOptionsAndInitTestdirs():
         configuration.testdirs = list(map(os.path.abspath, args.args))
         # Shut off multiprocessing mode when test directories are specified.
         configuration.no_multiprocess_test_runner = True
-
-    # If '-r dir' is specified, the tests should be run under the relocated
-    # directory.  Let's copy the testdirs over.
-    if configuration.rdir:
-        from shutil import copytree, ignore_patterns
-
-        tmpdirs = []
-        orig_testdirs = configuration.testdirs[:]
-        for srcdir in configuration.testdirs:
-            # For example, /Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/hello_watchpoint
-            # shall be split into ['/Volumes/data/lldb/svn/ToT/', 'functionalities/watchpoint/hello_watchpoint'].
-            # Utilize the relative path to the 'test' directory to make our destination dir path.
-            if ("test" + os.sep) in srcdir:
-                to_split_on = "test" + os.sep
-            else:
-                to_split_on = "test"
-            dstdir = os.path.join(configuration.rdir, srcdir.split(to_split_on)[1])
-            dstdir = dstdir.rstrip(os.sep)
-            # Don't copy the *.pyc and .svn stuffs.
-            copytree(srcdir, dstdir, ignore=ignore_patterns('*.pyc', '.svn'))
-            tmpdirs.append(dstdir)
-
-        # This will be our modified testdirs.
-        configuration.testdirs = tmpdirs
-
-        # With '-r dir' specified, there's no cleanup of intermediate test files.
-        os.environ["LLDB_DO_CLEANUP"] = 'NO'
-
-        # If the original testdirs is ['test'], the make directory has already been copied
-        # recursively and is contained within the rdir/test dir.  For anything
-        # else, we would need to copy over the make directory and its contents,
-        # so that, os.listdir(rdir) looks like, for example:
-        #
-        #     array_types conditional_break make
-        #
-        # where the make directory contains the Makefile.rules file.
-        if len(configuration.testdirs) != 1 or os.path.basename(orig_testdirs[0]) != 'test':
-            scriptdir = os.path.dirname(__file__)
-            # Don't copy the .svn stuffs.
-            copytree(os.path.join(scriptdir, 'make'), os.path.join(rdir, 'make'),
-                     ignore=ignore_patterns('.svn'))
 
     #print("testdirs:", testdirs)
 
@@ -585,17 +530,7 @@ def setupSysPath():
         print("This script expects to reside in lldb's test directory.")
         sys.exit(-1)
 
-    if configuration.rdir:
-        # Set up the LLDB_TEST environment variable appropriately, so that the
-        # individual tests can be located relatively.
-        #
-        # See also lldbtest.TestBase.setUpClass(cls).
-        if len(configuration.testdirs) == 1 and os.path.basename(configuration.testdirs[0]) == 'test':
-            os.environ["LLDB_TEST"] = os.path.join(configuration.rdir, 'test')
-        else:
-            os.environ["LLDB_TEST"] = configuration.rdir
-    else:
-        os.environ["LLDB_TEST"] = scriptPath
+    os.environ["LLDB_TEST"] = scriptPath
 
     # Set up the LLDB_SRC environment variable, so that the tests can locate
     # the LLDB source code.
@@ -1112,10 +1047,6 @@ def run_suite():
     if isinstance(configuration.compilers, list) and len(configuration.compilers) >= 1:
         iterCompilers = True
 
-    # Make a shallow copy of sys.path, we need to manipulate the search paths later.
-    # This is only necessary if we are relocated and with different configurations.
-    if configuration.rdir:
-        old_sys_path = sys.path[:]
     # If we iterate on archs or compilers, there is a chance we want to split stderr/stdout.
     if iterArchs or iterCompilers:
         old_stderr = sys.stderr
@@ -1144,33 +1075,6 @@ def run_suite():
                 else:
                     tbl = str.maketrans(' ', '-')
                 configPostfix = configString.translate(tbl)
-
-                # If we specified a relocated directory to run the test suite, do
-                # the extra housekeeping to copy the testdirs to a configStringified
-                # directory and to update sys.path before invoking the test runner.
-                # The purpose is to separate the configuration-specific directories
-                # from each other.
-                if configuration.rdir:
-                    from shutil import copytree, rmtree, ignore_patterns
-
-                    newrdir = "%s.%s" % (rdir, configPostfix)
-
-                    # Copy the tree to a new directory with postfix name configPostfix.
-                    if os.path.exists(newrdir):
-                        rmtree(newrdir)
-                    copytree(rdir, newrdir, ignore=ignore_patterns('*.pyc', '*.o', '*.d'))
-
-                    # Update the LLDB_TEST environment variable to reflect new top
-                    # level test directory.
-                    #
-                    # See also lldbtest.TestBase.setUpClass(cls).
-                    if len(configuration.testdirs) == 1 and os.path.basename(configuration.testdirs[0]) == 'test':
-                        os.environ["LLDB_TEST"] = os.path.join(newrdir, 'test')
-                    else:
-                        os.environ["LLDB_TEST"] = newrdir
-
-                    # And update the Python search paths for modules.
-                    sys.path = [x.replace(rdir, newrdir, 1) for x in old_sys_path]
 
                 # Output the configuration.
                 if not configuration.parsable:

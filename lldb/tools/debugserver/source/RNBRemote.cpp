@@ -2812,7 +2812,7 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
         // Add expedited stack memory so stack backtracing doesn't need to read anything from the
         // frame pointer chain.
         StackMemoryMap stack_mmap;
-        ReadStackMemory (pid, tid, stack_mmap, 1);
+        ReadStackMemory (pid, tid, stack_mmap, 2);
         if (!stack_mmap.empty())
         {
             for (const auto &stack_memory : stack_mmap)

@@ -25,11 +25,11 @@ public:
 
   // Constructor for zero-fill content
   MachODefinedAtom(const File &f, const StringRef name, Scope scope,
-                   uint64_t size, bool noDeadStrip, Alignment align)
+                   ContentType type, uint64_t size, bool noDeadStrip,
+                   Alignment align)
       : SimpleDefinedAtom(f), _name(name),
         _content(ArrayRef<uint8_t>(nullptr, size)), _align(align),
-        _contentType(DefinedAtom::typeZeroFill),
-        _scope(scope), _merge(mergeNo), _thumb(false),
+        _contentType(type), _scope(scope), _merge(mergeNo), _thumb(false),
         _noDeadStrip(noDeadStrip) {}
 
   uint64_t size() const override { return _content.size(); }

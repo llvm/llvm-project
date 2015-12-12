@@ -278,7 +278,7 @@ struct MappingTraits<Section> {
     io.mapOptional("attributes",      sect.attributes);
     io.mapOptional("alignment",       sect.alignment, (uint16_t)1);
     io.mapRequired("address",         sect.address);
-    if (sect.type == llvm::MachO::S_ZEROFILL) {
+    if (isZeroFillSection(sect.type)) {
       // S_ZEROFILL sections use "size:" instead of "content:"
       uint64_t size = sect.content.size();
       io.mapOptional("size",          size);

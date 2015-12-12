@@ -142,6 +142,14 @@ struct Symbol {
   Hex64         value;
 };
 
+/// Check whether the given section type indicates a zero-filled section.
+// FIXME: Utility functions of this kind should probably be moved into
+//        llvm/Support.
+inline bool isZeroFillSection(SectionType T) {
+  return (T == llvm::MachO::S_ZEROFILL ||
+          T == llvm::MachO::S_THREAD_LOCAL_ZEROFILL);
+}
+
 /// A typedef so that YAML I/O can (de/en)code the protection bits of a segment.
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, VMProtect)
 

@@ -31,7 +31,7 @@
         integer, parameter :: kmp_size_t_kind        = int_ptr_kind()
         integer, parameter :: kmp_affinity_mask_kind = int_ptr_kind()
         integer, parameter :: kmp_cancel_kind        = omp_integer_kind
-        integer, parameter :: kmp_lock_hint_kind     = omp_integer_kind
+        integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
 
       end module omp_lib_kinds
 
@@ -61,12 +61,14 @@
         integer (kind=kmp_cancel_kind), parameter :: kmp_cancel_sections = 3
         integer (kind=kmp_cancel_kind), parameter :: kmp_cancel_taskgroup = 4
 
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_none           = 0
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_uncontended    = 1
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_contended      = 2
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_nonspeculative = 3
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_speculative    = 4
-        integer (kind=kmp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 5
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_none           = 0
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_uncontended    = 1
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_contended      = 2
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_nonspeculative = 4
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_speculative    = 8
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle            = 65536
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm            = 131072
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 262144
 
         interface
 
@@ -445,17 +447,17 @@
             logical (kind=omp_logical_kind) kmp_get_cancellation_status
           end function kmp_get_cancellation_status
 
-          subroutine kmp_init_lock_hinted(lockvar, lockhint)
+          subroutine kmp_init_lock_with_hint(lockvar, lockhint)
             use omp_lib_kinds
             integer (kind=omp_lock_kind) lockvar
-            integer (kind=kmp_lock_hint_kind) lockhint
-          end subroutine kmp_init_lock_hinted
+            integer (kind=omp_lock_hint_kind) lockhint
+          end subroutine kmp_init_lock_with_hint
 
-          subroutine kmp_init_nest_lock_hinted(lockvar, lockhint)
+          subroutine kmp_init_nest_lock_with_hint(lockvar, lockhint)
             use omp_lib_kinds
             integer (kind=omp_nest_lock_kind) lockvar
-            integer (kind=kmp_lock_hint_kind) lockhint
-          end subroutine kmp_init_nest_lock_hinted
+            integer (kind=omp_lock_hint_kind) lockhint
+          end subroutine kmp_init_nest_lock_with_hint
 
         end interface
 
@@ -503,11 +505,13 @@
 !dec$ attributes alias:'OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
 
 !dec$ attributes alias:'omp_init_lock' :: omp_init_lock
+!dec$ attributes alias:'omp_init_lock_with_hint' :: omp_init_lock_with_hint
 !dec$ attributes alias:'omp_destroy_lock' :: omp_destroy_lock
 !dec$ attributes alias:'omp_set_lock' :: omp_set_lock
 !dec$ attributes alias:'omp_unset_lock' :: omp_unset_lock
 !dec$ attributes alias:'omp_test_lock' :: omp_test_lock
 !dec$ attributes alias:'omp_init_nest_lock' :: omp_init_nest_lock
+!dec$ attributes alias:'omp_init_nest_lock_with_hint' :: omp_init_nest_lock_with_hint
 !dec$ attributes alias:'omp_destroy_nest_lock' :: omp_destroy_nest_lock
 !dec$ attributes alias:'omp_set_nest_lock' :: omp_set_nest_lock
 !dec$ attributes alias:'omp_unset_nest_lock' :: omp_unset_nest_lock
@@ -541,9 +545,6 @@
 !dec$ attributes alias:'KMP_SET_WARNINGS_OFF'::kmp_set_warnings_off
 
 !dec$ attributes alias:'KMP_GET_CANCELLATION_STATUS' :: kmp_get_cancellation_status
-
-!dec$ attributes alias:'KMP_INIT_LOCK_HINTED'::kmp_init_lock_hinted
-!dec$ attributes alias:'KMP_INIT_NEST_LOCK_HINTED'::kmp_init_nest_lock_hinted
 
 !dec$   else
 
@@ -582,11 +583,13 @@
 !dec$ attributes alias:'_OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
 
 !dec$ attributes alias:'_omp_init_lock' :: omp_init_lock
+!dec$ attributes alias:'_omp_init_lock_with_hint' :: omp_init_lock_with_hint
 !dec$ attributes alias:'_omp_destroy_lock' :: omp_destroy_lock
 !dec$ attributes alias:'_omp_set_lock' :: omp_set_lock
 !dec$ attributes alias:'_omp_unset_lock' :: omp_unset_lock
 !dec$ attributes alias:'_omp_test_lock' :: omp_test_lock
 !dec$ attributes alias:'_omp_init_nest_lock' :: omp_init_nest_lock
+!dec$ attributes alias:'_omp_init_nest_lock_with_hint' :: omp_init_nest_lock_with_hint
 !dec$ attributes alias:'_omp_destroy_nest_lock' :: omp_destroy_nest_lock
 !dec$ attributes alias:'_omp_set_nest_lock' :: omp_set_nest_lock
 !dec$ attributes alias:'_omp_unset_nest_lock' :: omp_unset_nest_lock
@@ -620,9 +623,6 @@
 !dec$ attributes alias:'_KMP_SET_WARNINGS_OFF'::kmp_set_warnings_off
 
 !dec$ attributes alias:'_KMP_GET_CANCELLATION_STATUS' :: kmp_get_cancellation_status
-
-!dec$ attributes alias:'_KMP_INIT_LOCK_HINTED'::kmp_init_lock_hinted
-!dec$ attributes alias:'_KMP_INIT_NEST_LOCK_HINTED'::kmp_init_nest_lock_hinted
 
 !dec$   endif
 !dec$ endif
@@ -664,11 +664,13 @@
 !dec$ attributes alias:'omp_is_initial_device_'::omp_is_initial_device
 
 !dec$ attributes alias:'omp_init_lock_'::omp_init_lock
+!dec$ attributes alias:'omp_init_lock_with_hint_'::omp_init_lock_with_hint
 !dec$ attributes alias:'omp_destroy_lock_'::omp_destroy_lock
 !dec$ attributes alias:'omp_set_lock_'::omp_set_lock
 !dec$ attributes alias:'omp_unset_lock_'::omp_unset_lock
 !dec$ attributes alias:'omp_test_lock_'::omp_test_lock
 !dec$ attributes alias:'omp_init_nest_lock_'::omp_init_nest_lock
+!dec$ attributes alias:'omp_init_nest_lock_with_hint_'::omp_init_nest_lock_with_hint
 !dec$ attributes alias:'omp_destroy_nest_lock_'::omp_destroy_nest_lock
 !dec$ attributes alias:'omp_set_nest_lock_'::omp_set_nest_lock
 !dec$ attributes alias:'omp_unset_nest_lock_'::omp_unset_nest_lock
@@ -701,9 +703,6 @@
 !dec$ attributes alias:'kmp_set_warnings_on_'::kmp_set_warnings_on
 !dec$ attributes alias:'kmp_set_warnings_off_'::kmp_set_warnings_off
 !dec$ attributes alias:'kmp_get_cancellation_status_'::kmp_get_cancellation_status
-
-!dec$ attributes alias:'kmp_init_lock_hinted_'::kmp_init_lock_hinted
-!dec$ attributes alias:'kmp_init_nest_lock_hinted_'::kmp_init_nest_lock_hinted
 
 !dec$ endif
 
@@ -742,11 +741,13 @@
 !dec$ attributes alias:'_omp_is_initial_device_'::omp_is_initial_device
 
 !dec$ attributes alias:'_omp_init_lock_'::omp_init_lock
+!dec$ attributes alias:'_omp_init_lock_with_hint_'::omp_init_lock_with_hint
 !dec$ attributes alias:'_omp_destroy_lock_'::omp_destroy_lock
 !dec$ attributes alias:'_omp_set_lock_'::omp_set_lock
 !dec$ attributes alias:'_omp_unset_lock_'::omp_unset_lock
 !dec$ attributes alias:'_omp_test_lock_'::omp_test_lock
 !dec$ attributes alias:'_omp_init_nest_lock_'::omp_init_nest_lock
+!dec$ attributes alias:'_omp_init_nest_lock_with_hint_'::omp_init_nest_lock_with_hint
 !dec$ attributes alias:'_omp_destroy_nest_lock_'::omp_destroy_nest_lock
 !dec$ attributes alias:'_omp_set_nest_lock_'::omp_set_nest_lock
 !dec$ attributes alias:'_omp_unset_nest_lock_'::omp_unset_nest_lock
@@ -780,9 +781,6 @@
 !dec$ attributes alias:'_kmp_set_warnings_off_'::kmp_set_warnings_off
 
 !dec$ attributes alias:'_kmp_get_cancellation_status_'::kmp_get_cancellation_status
-
-!dec$ attributes alias:'_kmp_init_lock_hinted_'::kmp_init_lock_hinted
-!dec$ attributes alias:'_kmp_init_nest_lock_hinted_'::kmp_init_nest_lock_hinted
 
 !dec$ endif
 

@@ -315,6 +315,11 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
             [result_formatter.EventBuilder.STATUS_SKIP, "Skip", False, None],
             [result_formatter.EventBuilder.STATUS_TIMEOUT,
              "Timeout", True, "TIMEOUT"],
+            [result_formatter.EventBuilder.STATUS_EXPECTED_TIMEOUT,
+             # Intentionally using the unusual hyphenation in TIME-OUT to
+             # prevent buildbots from thinking it is an issue when scanning
+             # for TIMEOUT.
+             "Expected Timeout", True, "EXPECTED TIME-OUT"]
             ]
 
         # Partition all the events by test result status

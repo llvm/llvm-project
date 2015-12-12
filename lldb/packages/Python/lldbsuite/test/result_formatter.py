@@ -163,11 +163,16 @@ class EventBuilder(object):
     TYPE_TEST_START = "test_start"
     TYPE_MARK_TEST_RERUN_ELIGIBLE = "test_eligible_for_rerun"
 
+    RESULT_TYPES = set([
+        TYPE_JOB_RESULT,
+        TYPE_TEST_RESULT])
+
     # Test/Job Status Tags
     STATUS_EXCEPTIONAL_EXIT = "exceptional_exit"
     STATUS_SUCCESS = "success"
     STATUS_FAILURE = "failure"
     STATUS_EXPECTED_FAILURE = "expected_failure"
+    STATUS_EXPECTED_TIMEOUT = "expected_timeout"
     STATUS_UNEXPECTED_SUCCESS = "unexpected_success"
     STATUS_SKIP = "skip"
     STATUS_ERROR = "error"
@@ -622,6 +627,7 @@ class ResultsFormatter(object):
         self.result_status_counts = {
             EventBuilder.STATUS_SUCCESS: 0,
             EventBuilder.STATUS_EXPECTED_FAILURE: 0,
+            EventBuilder.STATUS_EXPECTED_TIMEOUT: 0,
             EventBuilder.STATUS_SKIP: 0,
             EventBuilder.STATUS_UNEXPECTED_SUCCESS: 0,
             EventBuilder.STATUS_FAILURE: 0,
@@ -641,6 +647,13 @@ class ResultsFormatter(object):
         # long we hold the lock just to keep inner state safe, not
         # entirely consistent from the outside.
         self.lock = threading.Lock()
+
+        # Keeps track of the test base filenames for tests that
+        # are expected to timeout.  If a timeout occurs in any test
+        # basename that matches this list, that result should be
+        # converted into a non-issue.  We'll create an expected
+        # timeout test status for this.
+        self.expected_timeouts_by_basename = set()
 
     def _maybe_remap_job_result_event(self, test_event):
         """Remaps timeout/exceptional exit job results to last test method running.
@@ -678,6 +691,21 @@ class ResultsFormatter(object):
             if "test_filename" in test_start:
                 test_event["test_filename"] = test_start["test_filename"]
 
+    def _maybe_remap_expected_timeout(self, event):
+        if event is None:
+            return
+
+        status = event.get("status", None)
+        if status is None or status != EventBuilder.STATUS_TIMEOUT:
+            return
+
+        # Check if the timeout test's basename is in the expected timeout
+        # list.  If so, convert to an expected timeout.
+        basename = os.path.basename(event.get("test_filename", ""))
+        if basename in self.expected_timeouts_by_basename:
+            # Convert to an expected timeout.
+            event["status"] = EventBuilder.STATUS_EXPECTED_TIMEOUT
+
     def handle_event(self, test_event):
         """Handles the test event for collection into the formatter output.
 
@@ -703,10 +731,14 @@ class ResultsFormatter(object):
                 self._maybe_remap_job_result_event(test_event)
                 event_type = test_event.get("event", "")
 
+            # Remap timeouts to expected timeouts.
+            if event_type in EventBuilder.RESULT_TYPES:
+                self._maybe_remap_expected_timeout(test_event)
+                event_type = test_event.get("event", "")
+
             if event_type == "terminate":
                 self.terminate_called = True
-            elif (event_type == EventBuilder.TYPE_TEST_RESULT or
-                    event_type == EventBuilder.TYPE_JOB_RESULT):
+            elif event_type in EventBuilder.RESULT_TYPES:
                 # Keep track of event counts per test/job result status type.
                 # The only job (i.e. inferior process) results that make it
                 # here are ones that cannot be remapped to the most recently
@@ -723,6 +755,16 @@ class ResultsFormatter(object):
                 worker_index = test_event.get("worker_index", None)
                 if worker_index is not None:
                     self.started_tests_by_worker[worker_index] = test_event
+
+    def set_expected_timeouts_by_basename(self, basenames):
+        """Specifies a list of test file basenames that are allowed to timeout
+        without being called out as a timeout issue.
+
+        These fall into a new status category called STATUS_EXPECTED_TIMEOUT.
+        """
+        if basenames is not None:
+            for basename in basenames:
+                self.expected_timeouts_by_basename.add(basename)
 
     def track_start_time(self, test_class, test_name, start_time):
         """tracks the start time of a test so elapsed time can be computed.

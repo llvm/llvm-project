@@ -3330,6 +3330,10 @@ KMP_EXPORT void   __kmpc_end_ordered        ( ident_t *, kmp_int32 global_tid );
 KMP_EXPORT void   __kmpc_critical           ( ident_t *, kmp_int32 global_tid, kmp_critical_name * );
 KMP_EXPORT void   __kmpc_end_critical       ( ident_t *, kmp_int32 global_tid, kmp_critical_name * );
 
+#if OMP_41_ENABLED
+KMP_EXPORT void   __kmpc_critical_with_hint ( ident_t *, kmp_int32 global_tid, kmp_critical_name *, uintptr_t hint );
+#endif
+
 KMP_EXPORT kmp_int32  __kmpc_barrier_master ( ident_t *, kmp_int32 global_tid );
 KMP_EXPORT void   __kmpc_end_barrier_master ( ident_t *, kmp_int32 global_tid );
 
@@ -3436,6 +3440,11 @@ KMP_EXPORT void __kmpc_unset_lock( ident_t *loc, kmp_int32 gtid, void **user_loc
 KMP_EXPORT void __kmpc_unset_nest_lock( ident_t *loc, kmp_int32 gtid, void **user_lock );
 KMP_EXPORT int __kmpc_test_lock( ident_t *loc, kmp_int32 gtid, void **user_lock );
 KMP_EXPORT int __kmpc_test_nest_lock( ident_t *loc, kmp_int32 gtid, void **user_lock );
+
+#if OMP_41_ENABLED
+KMP_EXPORT void __kmpc_init_lock_with_hint( ident_t *loc, kmp_int32 gtid, void **user_lock, uintptr_t hint );
+KMP_EXPORT void __kmpc_init_nest_lock_with_hint( ident_t *loc, kmp_int32 gtid, void **user_lock, uintptr_t hint );
+#endif
 
 /* ------------------------------------------------------------------------ */
 
