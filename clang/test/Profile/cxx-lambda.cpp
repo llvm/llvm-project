@@ -11,7 +11,7 @@
 
 // PGOGEN: @[[LWC:__llvm_profile_counters__Z7lambdasv]] = private global [4 x i64] zeroinitializer
 // PGOGEN: @[[MAC:__llvm_profile_counters_main]] = private global [1 x i64] zeroinitializer
-// LMBGEN: @[[LFC:"__llvm_profile_counters_cxx-lambda.cpp:_ZZ7lambdasvENK3\$_0clEi"]] = private global [3 x i64] zeroinitializer
+// LMBGEN: @[[LFC:"__llvm_profile_counters_cxx_lambda.cpp__ZZ7lambdasvENK3\$_0clEi"]] = private global [3 x i64] zeroinitializer
 
 // PGOGEN-LABEL: define {{.*}}void @_Z7lambdasv()
 // PGOUSE-LABEL: define {{.*}}void @_Z7lambdasv()

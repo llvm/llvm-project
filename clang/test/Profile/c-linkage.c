@@ -4,7 +4,7 @@
 // CHECK: @__llvm_profile_name_foo = private constant [3 x i8] c"foo"
 // CHECK: @__llvm_profile_name_foo_weak = weak hidden constant [8 x i8] c"foo_weak"
 // CHECK: @__llvm_profile_name_main = private constant [4 x i8] c"main"
-// CHECK: @"__llvm_profile_name_c-linkage.c:foo_internal" = private constant [24 x i8] c"c-linkage.c:foo_internal"
+// CHECK: @__llvm_profile_name_c_linkage.c_foo_internal = private constant [24 x i8] c"c-linkage.c:foo_internal"
 
 void foo(void) { }
 

@@ -5002,8 +5002,8 @@ def note_logical_instead_of_bitwise_change_operator : Note<
 def note_logical_instead_of_bitwise_remove_constant : Note<
   "remove constant to silence this warning">;
 
-def warn_bitwise_and_in_bitwise_or : Warning<
-  "'&' within '|'">, InGroup<BitwiseOpParentheses>;
+def warn_bitwise_op_in_bitwise_op : Warning<
+  "'%0' within '%1'">, InGroup<BitwiseOpParentheses>;
 
 def warn_logical_and_in_logical_or : Warning<
   "'&&' within '||'">, InGroup<LogicalOpParentheses>;
