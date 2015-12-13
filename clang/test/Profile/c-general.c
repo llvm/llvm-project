@@ -19,7 +19,7 @@
 // PGOGEN: @[[COC:__llvm_profile_counters_conditional_operator]] = private global [3 x i64] zeroinitializer
 // PGOGEN: @[[DFC:__llvm_profile_counters_do_fallthrough]] = private global [4 x i64] zeroinitializer
 // PGOGEN: @[[MAC:__llvm_profile_counters_main]] = private global [1 x i64] zeroinitializer
-// PGOGEN: @[[STC:"__llvm_profile_counters_c-general.c:static_func"]] = private global [2 x i64] zeroinitializer
+// PGOGEN: @[[STC:__llvm_profile_counters_c_general.c_static_func]] = private global [2 x i64] zeroinitializer
 
 // PGOGEN-LABEL: @simple_loops()
 // PGOUSE-LABEL: @simple_loops()
