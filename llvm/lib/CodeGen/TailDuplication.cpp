@@ -751,6 +751,7 @@ TailDuplicatePass::duplicateSimpleBB(MachineBasicBlock *TailBB,
     assert(NumSuccessors <= 1);
     if (NumSuccessors == 0 || *PredBB->succ_begin() != NewTarget)
       PredBB->addSuccessor(NewTarget, Prob);
+    PredBB->normalizeSuccProbs();
 
     TDBBs.push_back(PredBB);
   }

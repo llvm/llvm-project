@@ -102,6 +102,26 @@ std::string getPGOFuncName(const Function &F, uint64_t Version) {
                         Version);
 }
 
+// \p FuncName is the string used as profile lookup key for the function. A
+// symbol is created to hold the name. Return the legalized symbol name.
+static std::string getPGOFuncNameVarName(StringRef FuncName,
+                                         GlobalValue::LinkageTypes Linkage) {
+  std::string VarName = getInstrProfNameVarPrefix();
+  VarName += FuncName;
+
+  if (!GlobalValue::isLocalLinkage(Linkage))
+    return VarName;
+
+  // Now fix up illegal chars in local VarName that may upset the assembler.
+  const char *InvalidChars = "-:<>\"'";
+  size_t found = VarName.find_first_of(InvalidChars);
+  while (found != std::string::npos) {
+    VarName[found] = '_';
+    found = VarName.find_first_of(InvalidChars, found + 1);
+  }
+  return VarName;
+}
+
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef FuncName) {
@@ -120,7 +140,7 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
   auto *Value = ConstantDataArray::getString(M.getContext(), FuncName, false);
   auto FuncNameVar =
       new GlobalVariable(M, Value->getType(), true, Linkage, Value,
-                         Twine(getInstrProfNameVarPrefix()) + FuncName);
+                         getPGOFuncNameVarName(FuncName, Linkage));
 
   // Hide the symbol so that we correctly get a copy for each executable.
   if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))

@@ -5,8 +5,8 @@ define double @a(<1 x i64> %y) {
   ret double %c
  
 ; CHECK-LABEL: @a(
-; CHECK-NEXT:  extractelement <1 x i64> %y, i32 0
-; CHECK-NEXT:  bitcast i64 {{.*}} to double
+; CHECK-NEXT:  bitcast <1 x i64> %y to <1 x double>
+; CHECK-NEXT:  extractelement <1 x double> {{.*}}, i32 0
 ; CHECK-NEXT:  ret double
 }
 
