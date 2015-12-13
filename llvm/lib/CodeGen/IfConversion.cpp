@@ -1113,7 +1113,7 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
 
     // RemoveExtraEdges won't work if the block has an unanalyzable branch, so
     // explicitly remove CvtBBI as a successor.
-    BBI.BB->removeSuccessor(CvtBBI->BB);
+    BBI.BB->removeSuccessor(CvtBBI->BB, true);
   } else {
     RemoveKills(CvtBBI->BB->begin(), CvtBBI->BB->end(), DontKill, *TRI);
     PredicateBlock(*CvtBBI, CvtBBI->BB->end(), Cond);
@@ -1226,7 +1226,7 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
 
     // RemoveExtraEdges won't work if the block has an unanalyzable branch, so
     // explicitly remove CvtBBI as a successor.
-    BBI.BB->removeSuccessor(CvtBBI->BB);
+    BBI.BB->removeSuccessor(CvtBBI->BB, true);
   } else {
     // Predicate the 'true' block after removing its branch.
     CvtBBI->NonPredSize -= TII->RemoveBranch(*CvtBBI->BB);
@@ -1512,7 +1512,7 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   // which can happen here if TailBB is unanalyzable and is merged, so
   // explicitly remove BBI1 and BBI2 as successors.
   BBI.BB->removeSuccessor(BBI1->BB);
-  BBI.BB->removeSuccessor(BBI2->BB);
+  BBI.BB->removeSuccessor(BBI2->BB, true);
   RemoveExtraEdges(BBI);
 
   // Update block info.
@@ -1706,7 +1706,7 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
 
     if (AddEdges) {
       // If the edge from ToBBI.BB to Succ already exists, update the
-      // probability of this edge by adding NewWeight to it. An example is shown
+      // probability of this edge by adding NewProb to it. An example is shown
       // below, in which A is ToBBI.BB and B is FromBBI.BB. In this case we
       // don't have to set C as A's successor as it already is. We only need to
       // update the edge probability on A->C. Note that B will not be
@@ -1739,6 +1739,10 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   // Now FromBBI always falls through to the next block!
   if (NBB && !FromBBI.BB->isSuccessor(NBB))
     FromBBI.BB->addSuccessor(NBB);
+
+  // Normalize the probabilities of ToBBI.BB's successors with all adjustment
+  // we've done above.
+  ToBBI.BB->normalizeSuccProbs();
 
   ToBBI.Predicate.append(FromBBI.Predicate.begin(), FromBBI.Predicate.end());
   FromBBI.Predicate.clear();

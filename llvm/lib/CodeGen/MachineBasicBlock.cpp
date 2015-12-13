@@ -27,6 +27,7 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
@@ -506,6 +507,20 @@ void MachineBasicBlock::updateTerminator() {
   }
 }
 
+void MachineBasicBlock::validateSuccProbs() const {
+#ifndef NDEBUG
+  int64_t Sum = 0;
+  for (auto Prob : Probs)
+    Sum += Prob.getNumerator();
+  // Due to precision issue, we assume that the sum of probabilities is one if
+  // the difference between the sum of their numerators and the denominator is
+  // no greater than the number of successors.
+  assert(std::abs<uint64_t>(Sum - BranchProbability::getDenominator()) <=
+             Probs.size() &&
+         "The sum of successors's probabilities exceeds one.");
+#endif // NDEBUG
+}
+
 void MachineBasicBlock::addSuccessor(MachineBasicBlock *Succ,
                                      BranchProbability Prob) {
   // Probability list is either empty (if successor list isn't empty, this means
@@ -525,13 +540,14 @@ void MachineBasicBlock::addSuccessorWithoutProb(MachineBasicBlock *Succ) {
   Succ->addPredecessor(this);
 }
 
-void MachineBasicBlock::removeSuccessor(MachineBasicBlock *Succ) {
+void MachineBasicBlock::removeSuccessor(MachineBasicBlock *Succ,
+                                        bool NormalizeSuccProbs) {
   succ_iterator I = std::find(Successors.begin(), Successors.end(), Succ);
-  removeSuccessor(I);
+  removeSuccessor(I, NormalizeSuccProbs);
 }
 
 MachineBasicBlock::succ_iterator
-MachineBasicBlock::removeSuccessor(succ_iterator I) {
+MachineBasicBlock::removeSuccessor(succ_iterator I, bool NormalizeSuccProbs) {
   assert(I != Successors.end() && "Not a current successor!");
 
   // If probability list is empty it means we don't use it (disabled
@@ -539,6 +555,8 @@ MachineBasicBlock::removeSuccessor(succ_iterator I) {
   if (!Probs.empty()) {
     probability_iterator WI = getProbabilityIterator(I);
     Probs.erase(WI);
+    if (NormalizeSuccProbs)
+      normalizeSuccProbs();
   }
 
   (*I)->removePredecessor(this);
@@ -636,6 +654,7 @@ MachineBasicBlock::transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB) {
           MO.setMBB(this);
       }
   }
+  normalizeSuccProbs();
 }
 
 bool MachineBasicBlock::isPredecessor(const MachineBasicBlock *MBB) const {
@@ -1088,6 +1107,8 @@ bool MachineBasicBlock::CorrectExtraCFGEdges(MachineBasicBlock *DestA,
     }
   }
 
+  if (Changed)
+    normalizeSuccProbs();
   return Changed;
 }
 

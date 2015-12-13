@@ -939,7 +939,7 @@ void HexagonEarlyIfConversion::removeBlock(MachineBasicBlock *B) {
     B->removeSuccessor(B->succ_begin());
 
   for (auto I = B->pred_begin(), E = B->pred_end(); I != E; ++I)
-    (*I)->removeSuccessor(B);
+    (*I)->removeSuccessor(B, true);
 
   Deleted.insert(B);
   MDT->eraseNode(B);
@@ -1001,6 +1001,7 @@ void HexagonEarlyIfConversion::mergeBlocks(MachineBasicBlock *PredB,
   MachineBasicBlock::succ_iterator I, E = SuccB->succ_end();
   for (I = SuccB->succ_begin(); I != E; ++I)
     PredB->addSuccessor(*I);
+  PredB->normalizeSuccProbs();
   replacePhiEdges(SuccB, PredB);
   removeBlock(SuccB);
   if (!TermOk)

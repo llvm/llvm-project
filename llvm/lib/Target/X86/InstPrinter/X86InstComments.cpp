@@ -675,6 +675,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::MOVZPQILo2PQIrr:
   case X86::VMOVPQI2QIrr:
   case X86::VMOVZPQILo2PQIrr:
+  case X86::VMOVZPQILo2PQIZrr:
     Src1Name = getRegName(MI->getOperand(1).getReg());
   // FALL THROUGH.
   case X86::MOVQI2PQIrm:
@@ -683,6 +684,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VMOVQI2PQIrm:
   case X86::VMOVZQI2PQIrm:
   case X86::VMOVZPQILo2PQIrm:
+  case X86::VMOVZPQILo2PQIZrm:
     DecodeZeroMoveLowMask(MVT::v2i64, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;

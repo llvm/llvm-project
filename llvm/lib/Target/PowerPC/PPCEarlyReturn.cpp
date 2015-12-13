@@ -153,7 +153,7 @@ protected:
       }
 
       for (unsigned i = 0, ie = PredToRemove.size(); i != ie; ++i)
-        PredToRemove[i]->removeSuccessor(&ReturnMBB);
+        PredToRemove[i]->removeSuccessor(&ReturnMBB, true);
 
       if (Changed && !ReturnMBB.hasAddressTaken()) {
         // We now might be able to merge this blr-only block into its
@@ -163,7 +163,7 @@ protected:
           if (PrevMBB.isLayoutSuccessor(&ReturnMBB) && PrevMBB.canFallThrough()) {
             // Move the blr into the preceding block.
             PrevMBB.splice(PrevMBB.end(), &ReturnMBB, I);
-            PrevMBB.removeSuccessor(&ReturnMBB);
+            PrevMBB.removeSuccessor(&ReturnMBB, true);
           }
         }
 
