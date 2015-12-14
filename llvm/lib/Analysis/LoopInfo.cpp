@@ -193,15 +193,6 @@ bool Loop::isLCSSAForm(DominatorTree &DT) const {
   return true;
 }
 
-bool Loop::isRecursivelyLCSSAForm(DominatorTree &DT) const {
-  if (!isLCSSAForm(DT))
-    return false;
-
-  return std::all_of(begin(), end(), [&](const Loop *L) {
-    return L->isRecursivelyLCSSAForm(DT);
-  });
-}
-
 /// isLoopSimplifyForm - Return true if the Loop is in the form that
 /// the LoopSimplify form transforms loops to, which is sometimes called
 /// normal form.
