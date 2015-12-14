@@ -515,7 +515,7 @@ void MachineBasicBlock::validateSuccProbs() const {
   // Due to precision issue, we assume that the sum of probabilities is one if
   // the difference between the sum of their numerators and the denominator is
   // no greater than the number of successors.
-  assert(std::abs<uint64_t>(Sum - BranchProbability::getDenominator()) <=
+  assert((uint64_t)std::abs(Sum - BranchProbability::getDenominator()) <=
              Probs.size() &&
          "The sum of successors's probabilities exceeds one.");
 #endif // NDEBUG
