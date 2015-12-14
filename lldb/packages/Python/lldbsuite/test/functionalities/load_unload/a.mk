@@ -17,7 +17,7 @@ include $(LEVEL)/Makefile.rules
 $(DYLIB_FILENAME): lib_b
 
 lib_b:
-	$(MAKE) -f b.mk
+	"$(MAKE)" -f b.mk
 
 clean::
-	$(MAKE) -f b.mk clean
+	"$(MAKE)" -f b.mk clean
