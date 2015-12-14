@@ -57,9 +57,8 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
   // contain" is used to distinguish from being "transitively contained" in
   // a nested funclet).
   //
-  // Note: Despite not being funclets in the truest sense, terminatepad and
-  // catchswitch are considered to belong to their own funclet for the purposes
-  // of coloring.
+  // Note: Despite not being a funclet in the truest sense, a catchswitch is
+  // considered to belong to its own funclet for the purposes of coloring.
 
   DEBUG_WITH_TYPE("winehprepare-coloring", dbgs() << "\nColoring funclets for "
                                                   << F.getName() << "\n");

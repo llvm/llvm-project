@@ -219,61 +219,6 @@ ehcleanup:
   cleanupret from %cp2 unwind to caller
 }
 
-; This tests the case where a terminatepad unwinds to a cleanuppad.
-; I'm not sure how this case would arise, but it seems to be syntactically
-; legal so I'm testing it.
-;
-; CHECK-LABEL: define void @f5()
-; CHECK: entry:
-; CHECK:   invoke void @g()
-; CHECK:           to label %try.cont unwind label %terminate
-; CHECK: terminate:
-; CHECK:   terminatepad within none [i7 4] unwind to caller
-; CHECK-NOT: cleanuppad
-; CHECK: try.cont:
-; CHECK:   invoke void @g()
-; CHECK:           to label %try.cont.1 unwind label %terminate.1
-; CHECK: terminate.1:
-; CHECK:   terminatepad within none [i7 4] unwind label %ehcleanup.2
-; CHECK-NOT: ehcleanup.1:
-; CHECK: ehcleanup.2:
-; CHECK:   [[TMP:\%.+]] = cleanuppad
-; CHECK:   call void @"\01??1S2@@QEAA@XZ"(%struct.S2* %a)
-; CHECK:   cleanupret from [[TMP]] unwind to caller
-; CHECK: }
-define void @f5() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
-entry:
-  %a = alloca %struct.S2, align 1
-  invoke void @g()
-          to label %try.cont unwind label %terminate
-
-terminate:                                        ; preds = %entry
-  terminatepad within none [i7 4] unwind label %ehcleanup
-
-ehcleanup:                                        ; preds = %terminate
-  %0 = cleanuppad within none []
-  cleanupret from %0 unwind to caller
-
-try.cont:                                         ; preds = %entry
-  invoke void @g()
-          to label %try.cont.1 unwind label %terminate.1
-
-terminate.1:                                      ; preds = %try.cont
-  terminatepad within none [i7 4] unwind label %ehcleanup.1
-
-ehcleanup.1:                                      ; preds = %terminate.1
-  %1 = cleanuppad within none []
-  cleanupret from %1 unwind label %ehcleanup.2
-
-ehcleanup.2:                                      ; preds = %ehcleanup.1
-  %2 = cleanuppad within none []
-  call void @"\01??1S2@@QEAA@XZ"(%struct.S2* %a)
-  cleanupret from %2 unwind to caller
-
-try.cont.1:                                       ; preds = %try.cont
-  ret void
-}
-
 ; This case tests simplification of an otherwise empty cleanup pad that contains
 ; a PHI node.
 ;

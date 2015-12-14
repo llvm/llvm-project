@@ -30,7 +30,7 @@ def ArchV60: SubtargetFeature<"v60", "HexagonArchVersion", "V60", "Hexagon V60">
 // Hexagon ISA Extensions
 def ExtensionHVX: SubtargetFeature<"hvx", "UseHVXOps",
                                    "true", "Hexagon HVX instructions">;
-def ExtensionHVXDbl: SubtargetFeature<"hvxDbl", "UseHVXDblOps",
+def ExtensionHVXDbl: SubtargetFeature<"hvx-double", "UseHVXDblOps",
                                    "true", "Hexagon HVX Double instructions">;
 
 //===----------------------------------------------------------------------===//

@@ -289,8 +289,8 @@ bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                 DIBuilder &Builder, bool Deref, int Offset = 0);
 
 /// Replace 'BB's terminator with one that does not have an unwind successor
-/// block.  Rewrites `invoke` to `call`, `terminatepad unwind label %foo` to
-/// `terminatepad unwind to caller`, etc.  Updates any PHIs in unwind successor.
+/// block.  Rewrites `invoke` to `call`, etc.  Updates any PHIs in unwind
+/// successor.
 ///
 /// \param BB  Block whose terminator will be replaced.  Its terminator must
 ///            have an unwind successor.

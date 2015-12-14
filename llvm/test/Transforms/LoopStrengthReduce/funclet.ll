@@ -20,9 +20,6 @@ throw:                                            ; preds = %throw, %entry
 
 pad:                                              ; preds = %throw
   %phi2 = phi i8* [ %tmp96, %throw ]
-  terminatepad within none [] unwind label %blah
-
-blah:
   %cs = catchswitch within none [label %unreachable] unwind label %blah2
 
 unreachable:

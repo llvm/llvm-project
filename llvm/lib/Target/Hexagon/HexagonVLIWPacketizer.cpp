@@ -125,12 +125,12 @@ namespace {
     void initPacketizerState() override;
 
     // ignorePseudoInstruction - Ignore bundling of pseudo instructions.
-    bool ignorePseudoInstruction(MachineInstr *MI,
-                                 MachineBasicBlock *MBB) override;
+    bool ignorePseudoInstruction(const MachineInstr *MI,
+                                 const MachineBasicBlock *MBB) override;
 
     // isSoloInstruction - return true if instruction MI can not be packetized
     // with any other instruction, which means that MI itself is a packet.
-    bool isSoloInstruction(MachineInstr *MI) override;
+    bool isSoloInstruction(const MachineInstr *MI) override;
 
     // isLegalToPacketizeTogether - Is it legal to packetize SUI and SUJ
     // together.
@@ -186,7 +186,7 @@ INITIALIZE_PASS_END(HexagonPacketizer, "packets", "Hexagon Packetizer",
 HexagonPacketizerList::HexagonPacketizerList(
     MachineFunction &MF, MachineLoopInfo &MLI,
     const MachineBranchProbabilityInfo *MBPI)
-    : VLIWPacketizerList(MF, MLI) {
+    : VLIWPacketizerList(MF, MLI, nullptr) {
   this->MBPI = MBPI;
 }
 
@@ -366,7 +366,7 @@ static bool IsDirectJump(MachineInstr* MI) {
   return (MI->getOpcode() == Hexagon::J2_jump);
 }
 
-static bool IsSchedBarrier(MachineInstr* MI) {
+static bool IsSchedBarrier(const MachineInstr* MI) {
   switch (MI->getOpcode()) {
   case Hexagon::Y2_barrier:
     return true;
@@ -943,8 +943,8 @@ void HexagonPacketizerList::initPacketizerState() {
 }
 
 // ignorePseudoInstruction - Ignore bundling of pseudo instructions.
-bool HexagonPacketizerList::ignorePseudoInstruction(MachineInstr *MI,
-                                                    MachineBasicBlock *MBB) {
+bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr *MI,
+      const MachineBasicBlock *MBB) {
   if (MI->isDebugValue())
     return true;
 
@@ -967,7 +967,7 @@ bool HexagonPacketizerList::ignorePseudoInstruction(MachineInstr *MI,
 
 // isSoloInstruction: - Returns true for instructions that must be
 // scheduled in their own packet.
-bool HexagonPacketizerList::isSoloInstruction(MachineInstr *MI) {
+bool HexagonPacketizerList::isSoloInstruction(const MachineInstr *MI) {
   if (MI->isEHLabel() || MI->isCFIInstruction())
     return true;
 

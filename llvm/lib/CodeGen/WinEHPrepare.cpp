@@ -70,7 +70,6 @@ private:
   void replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
                           DenseMap<BasicBlock *, Value *> &Loads, Function &F);
   bool prepareExplicitEH(Function &F);
-  void replaceTerminatePadWithCleanup(Function &F);
   void colorFunclets(Function &F);
 
   void demotePHIsOnFunclets(Function &F);
@@ -523,45 +522,6 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
   calculateStateNumbersForInvokes(Fn, FuncInfo);
 }
 
-void WinEHPrepare::replaceTerminatePadWithCleanup(Function &F) {
-  if (Personality != EHPersonality::MSVC_CXX)
-    return;
-  for (BasicBlock &BB : F) {
-    Instruction *First = BB.getFirstNonPHI();
-    auto *TPI = dyn_cast<TerminatePadInst>(First);
-    if (!TPI)
-      continue;
-
-    if (TPI->getNumArgOperands() != 1)
-      report_fatal_error(
-          "Expected a unary terminatepad for MSVC C++ personalities!");
-
-    auto *TerminateFn = dyn_cast<Function>(TPI->getArgOperand(0));
-    if (!TerminateFn)
-      report_fatal_error("Function operand expected in terminatepad for MSVC "
-                         "C++ personalities!");
-
-    // Insert the cleanuppad instruction.
-    auto *CPI =
-        CleanupPadInst::Create(TPI->getParentPad(), {},
-                               Twine("terminatepad.for.", BB.getName()), &BB);
-
-    // Insert the call to the terminate instruction.
-    auto *CallTerminate = CallInst::Create(TerminateFn, {}, &BB);
-    CallTerminate->setDoesNotThrow();
-    CallTerminate->setDoesNotReturn();
-    CallTerminate->setCallingConv(TerminateFn->getCallingConv());
-
-    // Insert a new terminator for the cleanuppad using the same successor as
-    // the terminatepad.
-    CleanupReturnInst::Create(CPI, TPI->getUnwindDest(), &BB);
-
-    // Let's remove the terminatepad now that we've inserted the new
-    // instructions.
-    TPI->eraseFromParent();
-  }
-}
-
 void WinEHPrepare::colorFunclets(Function &F) {
   BlockColors = colorEHFunclets(F);
 
@@ -884,8 +844,6 @@ bool WinEHPrepare::prepareExplicitEH(Function &F) {
   // their existence can trick us into thinking values are alive when they are
   // not.
   removeUnreachableBlocks(F);
-
-  replaceTerminatePadWithCleanup(F);
 
   // Determine which blocks are reachable from which funclet entries.
   colorFunclets(F);

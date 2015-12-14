@@ -4731,7 +4731,6 @@ int LLParser::ParseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_catchret:    return ParseCatchRet(Inst, PFS);
   case lltok::kw_catchswitch: return ParseCatchSwitch(Inst, PFS);
   case lltok::kw_catchpad:    return ParseCatchPad(Inst, PFS);
-  case lltok::kw_terminatepad:return ParseTerminatePad(Inst, PFS);
   case lltok::kw_cleanuppad:  return ParseCleanupPad(Inst, PFS);
   // Binary Operators.
   case lltok::kw_add:
@@ -5290,43 +5289,6 @@ bool LLParser::ParseCatchPad(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   Inst = CatchPadInst::Create(CatchSwitch, Args);
-  return false;
-}
-
-/// ParseTerminatePad
-///   ::= 'terminatepad' within Parent ParamList 'to' TypeAndValue
-bool LLParser::ParseTerminatePad(Instruction *&Inst, PerFunctionState &PFS) {
-  Value *ParentPad = nullptr;
-
-  if (ParseToken(lltok::kw_within, "expected 'within' after terminatepad"))
-    return true;
-
-  if (Lex.getKind() != lltok::kw_none && Lex.getKind() != lltok::LocalVar &&
-      Lex.getKind() != lltok::LocalVarID)
-    return TokError("expected scope value for terminatepad");
-
-  if (ParseValue(Type::getTokenTy(Context), ParentPad, PFS))
-    return true;
-
-  SmallVector<Value *, 8> Args;
-  if (ParseExceptionArgs(Args, PFS))
-    return true;
-
-  if (ParseToken(lltok::kw_unwind, "expected 'unwind' in terminatepad"))
-    return true;
-
-  BasicBlock *UnwindBB = nullptr;
-  if (Lex.getKind() == lltok::kw_to) {
-    Lex.Lex();
-    if (ParseToken(lltok::kw_caller, "expected 'caller' in terminatepad"))
-      return true;
-  } else {
-    if (ParseTypeAndBasicBlock(UnwindBB, PFS)) {
-      return true;
-    }
-  }
-
-  Inst = TerminatePadInst::Create(ParentPad, UnwindBB, Args);
   return false;
 }
 

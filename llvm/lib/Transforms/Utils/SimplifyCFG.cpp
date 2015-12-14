@@ -2385,6 +2385,11 @@ static Value *ensureValueAvailableInSuccessor(Value *V, BasicBlock *BB,
   // If AlternativeV is not nullptr, we care about both incoming values in PHI.
   // PHI must be exactly: phi <ty> [ %BB, %V ], [ %OtherBB, %AlternativeV]
   // where OtherBB is the single other predecessor of BB's only successor.
+
+  // If V is not an instruction defined in BB, just return it.
+  if (!isa<Instruction>(V) || cast<Instruction>(V)->getParent() != BB)
+    return V;
+
   PHINode *PHI = nullptr;
   BasicBlock *Succ = BB->getSingleSuccessor();
   
@@ -3493,7 +3498,7 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
         }
     } else if ((isa<InvokeInst>(TI) &&
                 cast<InvokeInst>(TI)->getUnwindDest() == BB) ||
-               isa<TerminatePadInst>(TI) || isa<CatchSwitchInst>(TI)) {
+               isa<CatchSwitchInst>(TI)) {
       removeUnwindEdge(TI->getParent());
       Changed = true;
     } else if (isa<CleanupReturnInst>(TI)) {

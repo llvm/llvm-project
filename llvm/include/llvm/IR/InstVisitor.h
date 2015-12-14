@@ -172,7 +172,6 @@ public:
   RetTy visitCleanupReturnInst(CleanupReturnInst &I) { DELEGATE(TerminatorInst);}
   RetTy visitCatchReturnInst(CatchReturnInst &I)  { DELEGATE(TerminatorInst); }
   RetTy visitCatchSwitchInst(CatchSwitchInst &I)  { DELEGATE(TerminatorInst);}
-  RetTy visitTerminatePadInst(TerminatePadInst &I) { DELEGATE(TerminatorInst);}
   RetTy visitICmpInst(ICmpInst &I)                { DELEGATE(CmpInst);}
   RetTy visitFCmpInst(FCmpInst &I)                { DELEGATE(CmpInst);}
   RetTy visitAllocaInst(AllocaInst &I)            { DELEGATE(UnaryInstruction);}

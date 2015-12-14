@@ -50,6 +50,8 @@ def DirectivePwr8: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR8", "">;
 
 def Feature64Bit     : SubtargetFeature<"64bit","Has64BitSupport", "true",
                                         "Enable 64-bit instructions">;
+def FeatureSoftFloat : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
+                              "Use software emulation for floating point">;                                        
 def Feature64BitRegs : SubtargetFeature<"64bitregs","Use64BitRegs", "true",
                               "Enable 64-bit registers usage for ppc32 [beta]">;
 def FeatureCRBits    : SubtargetFeature<"crbits", "UseCRBits", "true",

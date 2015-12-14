@@ -126,8 +126,9 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                            const TargetOptions &Options,
                                            Reloc::Model RM, CodeModel::Model CM,
                                            CodeGenOpt::Level OL)
-    : LLVMTargetMachine(T, "e-m:e-p:32:32-i1:32-i64:64-a:0-n32", TT, CPU, FS,
-                        Options, RM, CM, OL),
+    : LLVMTargetMachine(T, "e-m:e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-"
+                        "i1:8:8-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a:0-"
+                        "n16:32", TT, CPU, FS, Options, RM, CM, OL),
       TLOF(make_unique<HexagonTargetObjectFile>()) {
   initAsmInfo();
 }

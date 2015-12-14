@@ -150,8 +150,7 @@ Value *InstCombiner::SimplifyBSwap(BinaryOperator &I) {
   else //if (Op == Instruction::Xor)
     BinOp = Builder->CreateXor(NewLHS, NewRHS);
 
-  Module *M = I.getParent()->getParent()->getParent();
-  Function *F = Intrinsic::getDeclaration(M, Intrinsic::bswap, ITy);
+  Function *F = Intrinsic::getDeclaration(I.getModule(), Intrinsic::bswap, ITy);
   return Builder->CreateCall(F, BinOp);
 }
 
@@ -1528,7 +1527,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     ConstantInt *CI;
     if (isa<BitCastInst>(Op0C) && SrcTy->isFloatingPointTy() &&
         match(Op1, m_ConstantInt(CI)) && CI->isMaxValue(true)) {
-      Module *M = I.getParent()->getParent()->getParent();
+      Module *M = I.getModule();
       Function *Fabs = Intrinsic::getDeclaration(M, Intrinsic::fabs, SrcTy);
       Value *Call = Builder->CreateCall(Fabs, Op0COp, "fabs");
       return CastInst::CreateBitOrPointerCast(Call, I.getType());
@@ -1747,9 +1746,8 @@ Instruction *InstCombiner::MatchBSwapOrBitReverse(BinaryOperator &I) {
     Intrin = Intrinsic::bitreverse;
   else
     return nullptr;
-  
-  Module *M = I.getParent()->getParent()->getParent();
-  Function *F = Intrinsic::getDeclaration(M, Intrin, ITy);
+
+  Function *F = Intrinsic::getDeclaration(I.getModule(), Intrin, ITy);
   return CallInst::Create(F, V);
 }
 

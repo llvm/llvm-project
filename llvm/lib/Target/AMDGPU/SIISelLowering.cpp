@@ -107,6 +107,7 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::v4i1, Expand);
 
   setOperationAction(ISD::BSWAP, MVT::i32, Legal);
+  setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i1, Custom);

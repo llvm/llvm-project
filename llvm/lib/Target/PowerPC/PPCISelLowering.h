@@ -428,6 +428,8 @@ namespace llvm {
     /// DAG node.
     const char *getTargetNodeName(unsigned Opcode) const override;
 
+    bool useSoftFloat() const override;
+
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
       return MVT::i32;
     }

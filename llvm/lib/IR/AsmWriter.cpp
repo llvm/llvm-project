@@ -2918,21 +2918,6 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       writeOperand(FPI->getArgOperand(Op), /*PrintType=*/true);
     }
     Out << ']';
-  } else if (const auto *TPI = dyn_cast<TerminatePadInst>(&I)) {
-    Out << " within ";
-    writeOperand(TPI->getParentPad(), /*PrintType=*/false);
-    Out << " [";
-    for (unsigned Op = 0, NumOps = TPI->getNumArgOperands(); Op < NumOps;
-         ++Op) {
-      if (Op > 0)
-        Out << ", ";
-      writeOperand(TPI->getArgOperand(Op), /*PrintType=*/true);
-    }
-    Out << "] unwind ";
-    if (TPI->hasUnwindDest())
-      writeOperand(TPI->getUnwindDest(), /*PrintType=*/true);
-    else
-      Out << "to caller";
   } else if (isa<ReturnInst>(I) && !Operand) {
     Out << " void";
   } else if (const auto *CRI = dyn_cast<CatchReturnInst>(&I)) {

@@ -65,21 +65,6 @@ unreachable.unwind:
   unreachable
 }
 
-; CHECK-LABEL: define void @test4()
-define void @test4() personality i8* bitcast (void ()* @Personality to i8*) {
-entry:
-  invoke void @f()
-    to label %exit unwind label %terminate.pad
-terminate.pad:
-  ; CHECK: terminatepad within none [] unwind to caller
-  terminatepad within none [] unwind label %unreachable.unwind
-exit:
-  ret void
-unreachable.unwind:
-  cleanuppad within none []
-  unreachable
-}
-
 ; CHECK-LABEL: define void @test5()
 define void @test5() personality i8* bitcast (void ()* @Personality to i8*) {
 entry:

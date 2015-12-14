@@ -32,8 +32,7 @@ using namespace llvm;
 
 enum ProfileFormat { PF_None = 0, PF_Text, PF_Binary, PF_GCC };
 
-static void exitWithError(const Twine &Message,
-                          StringRef Whence = "",
+static void exitWithError(const Twine &Message, StringRef Whence = "",
                           StringRef Hint = "") {
   errs() << "error: ";
   if (!Whence.empty())
@@ -58,14 +57,13 @@ static void exitWithErrorCode(const std::error_code &Error,
 }
 
 namespace {
-    enum ProfileKinds { instr, sample };
+enum ProfileKinds { instr, sample };
 }
 
 static void handleMergeWriterError(std::error_code &Error,
                                    StringRef WhenceFile = "",
                                    StringRef WhenceFunction = "",
-                                   bool ShowHint = true)
-{
+                                   bool ShowHint = true) {
   if (!WhenceFile.empty())
     errs() << WhenceFile << ": ";
   if (!WhenceFunction.empty())
@@ -80,7 +78,7 @@ static void handleMergeWriterError(std::error_code &Error,
       case instrprof_error::hash_mismatch:
       case instrprof_error::count_mismatch:
       case instrprof_error::value_site_count_mismatch:
-        Hint = "Make sure that all profile data to be merged is generated " \
+        Hint = "Make sure that all profile data to be merged is generated "
                "from the same binary.";
         break;
       default:
@@ -381,8 +379,7 @@ int main(int argc, const char *argv[]) {
       return func(argc - 1, argv + 1);
     }
 
-    if (strcmp(argv[1], "-h") == 0 ||
-        strcmp(argv[1], "-help") == 0 ||
+    if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0 ||
         strcmp(argv[1], "--help") == 0) {
 
       errs() << "OVERVIEW: LLVM profile data tools\n\n"

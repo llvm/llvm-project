@@ -263,7 +263,6 @@ enum NodeType : unsigned {
   BFE_I32, // Extract range of bits with sign extension to 32-bits.
   BFI, // (src0 & src1) | (~src0 & src2)
   BFM, // Insert a range of bits into a 32-bit word.
-  BREV, // Reverse bits.
   MUL_U24,
   MUL_I24,
   MAD_U24,

@@ -832,8 +832,7 @@ InsertSafepointPoll(Instruction *InsertBefore,
 /// NOT do explicit relocation for GC support.
 static Value *ReplaceWithStatepoint(const CallSite &CS, /* to replace */
                                     Pass *P) {
-  assert(CS.getInstruction()->getParent()->getParent()->getParent() &&
-         "must be set");
+  assert(CS.getInstruction()->getModule() && "must be set");
 
   // TODO: technically, a pass is not allowed to get functions from within a
   // function pass since it might trigger a new function addition.  Refactor

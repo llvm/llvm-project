@@ -433,5 +433,22 @@ TEST(ConstantsTest, BuildConstantDataVectors) {
   }
 }
 
+TEST(ConstantsTest, BitcastToGEP) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+
+  auto *i32 = Type::getInt32Ty(Context);
+  auto *U = StructType::create(Context, "Unsized");
+  Type *EltTys[] = {i32, U};
+  auto *S = StructType::create(EltTys);
+
+  auto *G = new GlobalVariable(*M, S, false,
+                               GlobalValue::ExternalLinkage, nullptr);
+  auto *PtrTy = PointerType::get(i32, 0);
+  auto *C = ConstantExpr::getBitCast(G, PtrTy);
+  ASSERT_EQ(dyn_cast<ConstantExpr>(C)->getOpcode(),
+            Instruction::BitCast);
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

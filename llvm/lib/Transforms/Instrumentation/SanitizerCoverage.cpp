@@ -431,8 +431,7 @@ void SanitizerCoverageModule::InjectTraceForCmp(
 
 void SanitizerCoverageModule::SetNoSanitizeMetadata(Instruction *I) {
   I->setMetadata(
-      I->getParent()->getParent()->getParent()->getMDKindID("nosanitize"),
-      MDNode::get(*C, None));
+      I->getModule()->getMDKindID("nosanitize"), MDNode::get(*C, None));
 }
 
 void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,

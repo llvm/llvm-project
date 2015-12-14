@@ -851,6 +851,8 @@ class GetElementPtrInst : public Instruction {
   Type *SourceElementType;
   Type *ResultElementType;
 
+  void anchor() override;
+
   GetElementPtrInst(const GetElementPtrInst &GEPI);
   void init(Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr);
 
@@ -1109,6 +1111,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrInst, Value)
 /// must be identical types.
 /// \brief Represent an integer comparison operator.
 class ICmpInst: public CmpInst {
+  void anchor() override;
+
   void AssertOK() {
     assert(getPredicate() >= CmpInst::FIRST_ICMP_PREDICATE &&
            getPredicate() <= CmpInst::LAST_ICMP_PREDICATE &&
@@ -2438,6 +2442,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertValueInst, Value)
 // scientist's overactive imagination.
 //
 class PHINode : public Instruction {
+  void anchor() override;
+
   void *operator new(size_t, unsigned) = delete;
   /// ReservedSpace - The number of operands actually allocated.  NumOperands is
   /// the number actually in use.
@@ -4002,143 +4008,6 @@ template <>
 struct OperandTraits<CatchSwitchInst> : public HungoffOperandTraits<2> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CatchSwitchInst, Value)
-
-//===----------------------------------------------------------------------===//
-//                           TerminatePadInst Class
-//===----------------------------------------------------------------------===//
-
-class TerminatePadInst : public TerminatorInst {
-private:
-  void init(Value *ParentPad, BasicBlock *BB, ArrayRef<Value *> Args);
-
-  TerminatePadInst(const TerminatePadInst &TPI);
-
-  explicit TerminatePadInst(Value *ParentPad, BasicBlock *BB,
-                            ArrayRef<Value *> Args, unsigned Values,
-                            Instruction *InsertBefore);
-  explicit TerminatePadInst(Value *ParentPad, BasicBlock *BB,
-                            ArrayRef<Value *> Args, unsigned Values,
-                            BasicBlock *InsertAtEnd);
-
-protected:
-  // Note: Instruction needs to be a friend here to call cloneImpl.
-  friend class Instruction;
-  TerminatePadInst *cloneImpl() const;
-
-public:
-  static TerminatePadInst *Create(Value *ParentPad, BasicBlock *BB = nullptr,
-                                  ArrayRef<Value *> Args = None,
-                                  Instruction *InsertBefore = nullptr) {
-    unsigned Values = unsigned(Args.size()) + 1;
-    if (BB)
-      ++Values;
-    return new (Values)
-        TerminatePadInst(ParentPad, BB, Args, Values, InsertBefore);
-  }
-  static TerminatePadInst *Create(Value *ParentPad, BasicBlock *BB,
-                                  ArrayRef<Value *> Args,
-                                  BasicBlock *InsertAtEnd) {
-    unsigned Values = unsigned(Args.size()) + 1;
-    if (BB)
-      ++Values;
-    return new (Values)
-        TerminatePadInst(ParentPad, BB, Args, Values, InsertAtEnd);
-  }
-
-  /// Provide fast operand accessors
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  bool hasUnwindDest() const { return getSubclassDataFromInstruction() & 1; }
-  bool unwindsToCaller() const { return !hasUnwindDest(); }
-
-  /// getNumArgOperands - Return the number of terminatepad arguments.
-  ///
-  unsigned getNumArgOperands() const {
-    unsigned NumOperands = getNumOperands();
-    if (hasUnwindDest())
-      return NumOperands - 2;
-    return NumOperands - 1;
-  }
-
-  /// Convenience accessors
-  Value *getParentPad() const { return Op<-1>(); }
-  void setParentPad(Value *ParentPad) {
-    assert(ParentPad);
-    Op<-1>() = ParentPad;
-  }
-
-  /// getArgOperand/setArgOperand - Return/set the i-th terminatepad argument.
-  ///
-  Value *getArgOperand(unsigned i) const { return getOperand(i); }
-  void setArgOperand(unsigned i, Value *v) { setOperand(i, v); }
-
-  const_op_iterator arg_begin() const { return op_begin(); }
-  op_iterator arg_begin() { return op_begin(); }
-
-  const_op_iterator arg_end() const {
-    if (hasUnwindDest())
-      return op_end() - 2;
-    return op_end() - 1;
-  }
-
-  op_iterator arg_end() {
-    if (hasUnwindDest())
-      return op_end() - 2;
-    return op_end() - 1;
-  }
-
-  /// arg_operands - iteration adapter for range-for loops.
-  iterator_range<op_iterator> arg_operands() {
-    return make_range(arg_begin(), arg_end());
-  }
-
-  /// arg_operands - iteration adapter for range-for loops.
-  iterator_range<const_op_iterator> arg_operands() const {
-    return make_range(arg_begin(), arg_end());
-  }
-
-  /// \brief Wrappers for getting the \c Use of a terminatepad argument.
-  const Use &getArgOperandUse(unsigned i) const { return getOperandUse(i); }
-  Use &getArgOperandUse(unsigned i) { return getOperandUse(i); }
-
-  // get*Dest - Return the destination basic blocks...
-  BasicBlock *getUnwindDest() const {
-    if (!hasUnwindDest())
-      return nullptr;
-    return cast<BasicBlock>(Op<-2>());
-  }
-  void setUnwindDest(BasicBlock *B) {
-    assert(B && hasUnwindDest());
-    Op<-2>() = B;
-  }
-
-  unsigned getNumSuccessors() const { return hasUnwindDest() ? 1 : 0; }
-
-  // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::TerminatePad;
-  }
-  static inline bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
-  }
-
-private:
-  BasicBlock *getSuccessorV(unsigned idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned idx, BasicBlock *B) override;
-
-  // Shadow Instruction::setInstructionSubclassData with a private forwarding
-  // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
-  }
-};
-
-template <>
-struct OperandTraits<TerminatePadInst>
-    : public VariadicOperandTraits<TerminatePadInst, /*MINARITY=*/1> {};
-
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(TerminatePadInst, Value)
 
 //===----------------------------------------------------------------------===//
 //                               CleanupPadInst Class

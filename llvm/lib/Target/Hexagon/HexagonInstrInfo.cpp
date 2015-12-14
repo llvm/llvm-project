@@ -1776,7 +1776,7 @@ bool HexagonInstrInfo::isDuplexPair(const MachineInstr *MIa,
 }
 
 
-bool HexagonInstrInfo::isEarlySourceInstr(MachineInstr *MI) const {
+bool HexagonInstrInfo::isEarlySourceInstr(const MachineInstr *MI) const {
   if (!MI)
     return false;
 
@@ -1850,7 +1850,7 @@ bool HexagonInstrInfo::isExtended(const MachineInstr *MI) const {
 }
 
 
-bool HexagonInstrInfo::isFloat(MachineInstr *MI) const {
+bool HexagonInstrInfo::isFloat(const MachineInstr *MI) const {
   unsigned Opcode = MI->getOpcode();
   const uint64_t F = get(Opcode).TSFlags;
   return (F >> HexagonII::FPPos) & HexagonII::FPMask;
@@ -1943,8 +1943,8 @@ bool HexagonInstrInfo::isJumpWithinBranchRange(const MachineInstr *MI,
 }
 
 
-bool HexagonInstrInfo::isLateInstrFeedsEarlyInstr(MachineInstr *LRMI,
-      MachineInstr *ESMI) const {
+bool HexagonInstrInfo::isLateInstrFeedsEarlyInstr(const MachineInstr *LRMI,
+      const MachineInstr *ESMI) const {
   if (!LRMI || !ESMI)
     return false;
 
@@ -1965,7 +1965,7 @@ bool HexagonInstrInfo::isLateInstrFeedsEarlyInstr(MachineInstr *LRMI,
 }
 
 
-bool HexagonInstrInfo::isLateResultInstr(MachineInstr *MI) const {
+bool HexagonInstrInfo::isLateResultInstr(const MachineInstr *MI) const {
   if (!MI)
     return false;
 
@@ -2015,15 +2015,16 @@ bool HexagonInstrInfo::isLateSourceInstr(const MachineInstr *MI) const {
 }
 
 
-bool HexagonInstrInfo::isLoopN(unsigned Opcode) const {
-  return (Opcode == Hexagon::J2_loop0i ||
-          Opcode == Hexagon::J2_loop0r ||
-          Opcode == Hexagon::J2_loop0iext ||
-          Opcode == Hexagon::J2_loop0rext ||
-          Opcode == Hexagon::J2_loop1i ||
-          Opcode == Hexagon::J2_loop1r ||
-          Opcode == Hexagon::J2_loop1iext ||
-          Opcode == Hexagon::J2_loop1rext);
+bool HexagonInstrInfo::isLoopN(const MachineInstr *MI) const {
+  unsigned Opcode = MI->getOpcode();
+  return Opcode == Hexagon::J2_loop0i    ||
+         Opcode == Hexagon::J2_loop0r    ||
+         Opcode == Hexagon::J2_loop0iext ||
+         Opcode == Hexagon::J2_loop0rext ||
+         Opcode == Hexagon::J2_loop1i    ||
+         Opcode == Hexagon::J2_loop1r    ||
+         Opcode == Hexagon::J2_loop1iext ||
+         Opcode == Hexagon::J2_loop1rext;
 }
 
 
@@ -2537,7 +2538,7 @@ bool HexagonInstrInfo::hasNonExtEquivalent(const MachineInstr *MI) const {
 }
 
 
-bool HexagonInstrInfo::hasPseudoInstrPair(MachineInstr *MI) const {
+bool HexagonInstrInfo::hasPseudoInstrPair(const MachineInstr *MI) const {
   return Hexagon::getRealHWInstr(MI->getOpcode(),
                                  Hexagon::InstrType_Pseudo) >= 0;
 }
@@ -2617,10 +2618,10 @@ bool HexagonInstrInfo::producesStall(const MachineInstr *MI,
 }
 
 
-bool HexagonInstrInfo::predCanBeUsedAsDotNew(MachineInstr *MI,
+bool HexagonInstrInfo::predCanBeUsedAsDotNew(const MachineInstr *MI,
       unsigned PredReg) const {
   for (unsigned opNum = 0; opNum < MI->getNumOperands(); opNum++) {
-    MachineOperand &MO = MI->getOperand(opNum);
+    const MachineOperand &MO = MI->getOperand(opNum);
     if (MO.isReg() && MO.isDef() && MO.isImplicit() && (MO.getReg() == PredReg))
       return false; // Predicate register must be explicitly defined.
   }
@@ -3067,13 +3068,13 @@ int HexagonInstrInfo::getDotNewOp(const MachineInstr* MI) const {
 // Returns the opcode to use when converting MI, which is a conditional jump,
 // into a conditional instruction which uses the .new value of the predicate.
 // We also use branch probabilities to add a hint to the jump.
-int HexagonInstrInfo::getDotNewPredJumpOp(MachineInstr *MI,
+int HexagonInstrInfo::getDotNewPredJumpOp(const MachineInstr *MI,
       const MachineBranchProbabilityInfo *MBPI) const {
   // We assume that block can have at most two successors.
   bool taken = false;
-  MachineBasicBlock *Src = MI->getParent();
-  MachineOperand *BrTarget = &MI->getOperand(1);
-  MachineBasicBlock *Dst = BrTarget->getMBB();
+  const MachineBasicBlock *Src = MI->getParent();
+  const MachineOperand *BrTarget = &MI->getOperand(1);
+  const MachineBasicBlock *Dst = BrTarget->getMBB();
 
   const BranchProbability Prediction = MBPI->getEdgeProbability(Src, Dst);
   if (Prediction >= BranchProbability(1,2))
@@ -3092,7 +3093,7 @@ int HexagonInstrInfo::getDotNewPredJumpOp(MachineInstr *MI,
 
 
 // Return .new predicate version for an instruction.
-int HexagonInstrInfo::getDotNewPredOp(MachineInstr *MI,
+int HexagonInstrInfo::getDotNewPredOp(const MachineInstr *MI,
       const MachineBranchProbabilityInfo *MBPI) const {
   int NewOpcode = Hexagon::getPredNewOpcode(MI->getOpcode());
   if (NewOpcode >= 0) // Valid predicate new instruction
@@ -3471,7 +3472,7 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
 }
 
 
-short HexagonInstrInfo::getEquivalentHWInstr(MachineInstr *MI) const {
+short HexagonInstrInfo::getEquivalentHWInstr(const MachineInstr *MI) const {
   return Hexagon::getRealHWInstr(MI->getOpcode(), Hexagon::InstrType_Real);
 }
 
@@ -3618,7 +3619,7 @@ bool HexagonInstrInfo::getPredReg(ArrayRef<MachineOperand> Cond,
 }
 
 
-short HexagonInstrInfo::getPseudoInstrPair(MachineInstr *MI) const {
+short HexagonInstrInfo::getPseudoInstrPair(const MachineInstr *MI) const {
   return Hexagon::getRealHWInstr(MI->getOpcode(), Hexagon::InstrType_Pseudo);
 }
 

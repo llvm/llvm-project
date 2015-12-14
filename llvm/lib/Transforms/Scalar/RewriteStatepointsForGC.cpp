@@ -1917,7 +1917,7 @@ static void insertUseHolderAfter(CallSite &CS, const ArrayRef<Value *> Values,
     // No values to hold live, might as well not insert the empty holder
     return;
 
-  Module *M = CS.getInstruction()->getParent()->getParent()->getParent();
+  Module *M = CS.getInstruction()->getModule();
   // Use a dummy vararg function to actually hold the values live
   Function *Func = cast<Function>(M->getOrInsertFunction(
       "__tmp_use", FunctionType::get(Type::getVoidTy(M->getContext()), true)));

@@ -2029,21 +2029,6 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
       Vals.push_back(VE.getValueID(CatchSwitch.getUnwindDest()));
     break;
   }
-  case Instruction::TerminatePad: {
-    Code = bitc::FUNC_CODE_INST_TERMINATEPAD;
-    const auto &TPI = cast<TerminatePadInst>(I);
-
-    pushValue(TPI.getParentPad(), InstID, Vals, VE);
-
-    unsigned NumArgOperands = TPI.getNumArgOperands();
-    Vals.push_back(NumArgOperands);
-    for (unsigned Op = 0; Op != NumArgOperands; ++Op)
-      PushValueAndType(TPI.getArgOperand(Op), InstID, Vals, VE);
-
-    if (TPI.hasUnwindDest())
-      Vals.push_back(VE.getValueID(TPI.getUnwindDest()));
-    break;
-  }
   case Instruction::Unreachable:
     Code = bitc::FUNC_CODE_INST_UNREACHABLE;
     AbbrevToUse = FUNCTION_INST_UNREACHABLE_ABBREV;

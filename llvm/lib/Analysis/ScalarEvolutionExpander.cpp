@@ -98,8 +98,6 @@ static BasicBlock::iterator findInsertPointAfter(Instruction *I,
   while (IP->isEHPad()) {
     if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
       ++IP;
-    } else if (auto *TPI = dyn_cast<TerminatePadInst>(IP)) {
-      IP = TPI->getUnwindDest()->getFirstNonPHI()->getIterator();
     } else if (isa<CatchSwitchInst>(IP)) {
       IP = MustDominate->getFirstInsertionPt();
     } else {

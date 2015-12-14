@@ -87,6 +87,8 @@ const char *SelectInst::areInvalidOperands(Value *Op0, Value *Op1, Value *Op2) {
 //                               PHINode Class
 //===----------------------------------------------------------------------===//
 
+void PHINode::anchor() {}
+
 PHINode::PHINode(const PHINode &PN)
     : Instruction(PN.getType(), Instruction::PHI, nullptr, PN.getNumOperands()),
       ReservedSpace(PN.getNumOperands()) {
@@ -981,60 +983,6 @@ FuncletPadInst::FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
 }
 
 //===----------------------------------------------------------------------===//
-//                        TerminatePadInst Implementation
-//===----------------------------------------------------------------------===//
-void TerminatePadInst::init(Value *ParentPad, BasicBlock *BB,
-                            ArrayRef<Value *> Args) {
-  if (BB) {
-    setInstructionSubclassData(getSubclassDataFromInstruction() | 1);
-    setUnwindDest(BB);
-  }
-  std::copy(Args.begin(), Args.end(), arg_begin());
-  setParentPad(ParentPad);
-}
-
-TerminatePadInst::TerminatePadInst(const TerminatePadInst &TPI)
-    : TerminatorInst(TPI.getType(), Instruction::TerminatePad,
-                     OperandTraits<TerminatePadInst>::op_end(this) -
-                         TPI.getNumOperands(),
-                     TPI.getNumOperands()) {
-  setInstructionSubclassData(TPI.getSubclassDataFromInstruction());
-  std::copy(TPI.op_begin(), TPI.op_end(), op_begin());
-}
-
-TerminatePadInst::TerminatePadInst(Value *ParentPad, BasicBlock *BB,
-                                   ArrayRef<Value *> Args, unsigned Values,
-                                   Instruction *InsertBefore)
-    : TerminatorInst(Type::getVoidTy(ParentPad->getContext()),
-                     Instruction::TerminatePad,
-                     OperandTraits<TerminatePadInst>::op_end(this) - Values,
-                     Values, InsertBefore) {
-  init(ParentPad, BB, Args);
-}
-
-TerminatePadInst::TerminatePadInst(Value *ParentPad, BasicBlock *BB,
-                                   ArrayRef<Value *> Args, unsigned Values,
-                                   BasicBlock *InsertAtEnd)
-    : TerminatorInst(Type::getVoidTy(ParentPad->getContext()),
-                     Instruction::TerminatePad,
-                     OperandTraits<TerminatePadInst>::op_end(this) - Values,
-                     Values, InsertAtEnd) {
-  init(ParentPad, BB, Args);
-}
-
-BasicBlock *TerminatePadInst::getSuccessorV(unsigned Idx) const {
-  assert(Idx == 0);
-  return getUnwindDest();
-}
-unsigned TerminatePadInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-void TerminatePadInst::setSuccessorV(unsigned Idx, BasicBlock *B) {
-  assert(Idx == 0);
-  return setUnwindDest(B);
-}
-
-//===----------------------------------------------------------------------===//
 //                      UnreachableInst Implementation
 //===----------------------------------------------------------------------===//
 
@@ -1556,6 +1504,8 @@ FenceInst::FenceInst(LLVMContext &C, AtomicOrdering Ordering,
 //===----------------------------------------------------------------------===//
 //                       GetElementPtrInst Implementation
 //===----------------------------------------------------------------------===//
+
+void GetElementPtrInst::anchor() {}
 
 void GetElementPtrInst::init(Value *Ptr, ArrayRef<Value *> IdxList,
                              const Twine &Name) {
@@ -3443,6 +3393,8 @@ CmpInst::Predicate CmpInst::getInversePredicate(Predicate pred) {
   }
 }
 
+void ICmpInst::anchor() {}
+
 ICmpInst::Predicate ICmpInst::getSignedPredicate(Predicate pred) {
   switch (pred) {
     default: llvm_unreachable("Unknown icmp predicate!");
@@ -4024,10 +3976,6 @@ CatchSwitchInst *CatchSwitchInst::cloneImpl() const {
 
 FuncletPadInst *FuncletPadInst::cloneImpl() const {
   return new (getNumOperands()) FuncletPadInst(*this);
-}
-
-TerminatePadInst *TerminatePadInst::cloneImpl() const {
-  return new (getNumOperands()) TerminatePadInst(*this);
 }
 
 UnreachableInst *UnreachableInst::cloneImpl() const {

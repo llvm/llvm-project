@@ -2338,11 +2338,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   }
 }
 
-/// getFunctionAlignment - Return the Log2 alignment of this function.
-unsigned AArch64TargetLowering::getFunctionAlignment(const Function *F) const {
-  return 2;
-}
-
 //===----------------------------------------------------------------------===//
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//

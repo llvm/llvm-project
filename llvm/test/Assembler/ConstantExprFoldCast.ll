@@ -15,3 +15,7 @@
 
 ; Address space cast AS0 null-> AS1 null
 @H = global i32 addrspace(1)* addrspacecast(i32* null to i32 addrspace(1)*)
+
+; Bitcast -> GEP
+@I = external global { i32 }
+@J = global i32* bitcast ({ i32 }* @I to i32*)

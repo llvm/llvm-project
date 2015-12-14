@@ -343,15 +343,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
       continue;
 
     Instruction *Replacement = nullptr;
-    if (auto *TPI = dyn_cast<TerminatePadInst>(I)) {
-      if (TPI->unwindsToCaller()) {
-        SmallVector<Value *, 3> TerminatePadArgs;
-        for (Value *ArgOperand : TPI->arg_operands())
-          TerminatePadArgs.push_back(ArgOperand);
-        Replacement = TerminatePadInst::Create(TPI->getParentPad(), UnwindDest,
-                                               TerminatePadArgs, TPI);
-      }
-    } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I)) {
+    if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I)) {
       if (CatchSwitch->unwindsToCaller()) {
         auto *NewCatchSwitch = CatchSwitchInst::Create(
             CatchSwitch->getParentPad(), UnwindDest,
@@ -1441,10 +1433,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       if (!I->isEHPad())
         continue;
 
-      if (auto *TPI = dyn_cast<TerminatePadInst>(I)) {
-        if (isa<ConstantTokenNone>(TPI->getParentPad()))
-          TPI->setParentPad(CallSiteEHPad);
-      } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I)) {
+      if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I)) {
         if (isa<ConstantTokenNone>(CatchSwitch->getParentPad()))
           CatchSwitch->setParentPad(CallSiteEHPad);
       } else {

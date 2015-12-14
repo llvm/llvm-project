@@ -254,9 +254,8 @@ typedef enum {
   LLVMCleanupRet     = 61,
   LLVMCatchRet       = 62,
   LLVMCatchPad       = 63,
-  LLVMTerminatePad   = 64,
-  LLVMCleanupPad     = 65,
-  LLVMCatchSwitch    = 66
+  LLVMCleanupPad     = 64,
+  LLVMCatchSwitch    = 65
 } LLVMOpcode;
 
 typedef enum {
@@ -1226,7 +1225,6 @@ LLVMTypeRef LLVMX86MMXType(void);
         macro(ResumeInst)                   \
         macro(CleanupReturnInst)            \
         macro(CatchReturnInst)              \
-        macro(TerminatePadInst)             \
       macro(FuncletPadInst)                 \
         macro(CatchPadInst)                 \
         macro(CleanupPadInst)               \

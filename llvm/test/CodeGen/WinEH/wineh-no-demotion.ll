@@ -93,22 +93,6 @@ exit:
   unreachable
 }
 
-; CHECK-LABEL: @test3(
-define void @test3() personality i32 (...)* @__CxxFrameHandler3 {
-entry:
-  invoke void @f()
-          to label %invoke.cont unwind label %terminate
-
-invoke.cont:
-  ret void
-
-terminate:
-; CHECK:  cleanuppad within none []
-; CHECK:  call void @__std_terminate()
-; CHECK:  unreachable
-  terminatepad within none [void ()* @__std_terminate] unwind to caller
-}
-
 ; CHECK-LABEL: @test4(
 define void @test4(i1 %x) personality i32 (...)* @__CxxFrameHandler3 {
 entry:
