@@ -1338,13 +1338,6 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
   if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
     NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI);
     UnwindDest = CRI->getUnwindDest();
-  } else if (auto *TPI = dyn_cast<TerminatePadInst>(TI)) {
-    SmallVector<Value *, 3> TerminatePadArgs;
-    for (Value *Operand : TPI->arg_operands())
-      TerminatePadArgs.push_back(Operand);
-    NewTI = TerminatePadInst::Create(TPI->getParentPad(), nullptr,
-                                     TerminatePadArgs, TPI);
-    UnwindDest = TPI->getUnwindDest();
   } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(TI)) {
     auto *NewCatchSwitch = CatchSwitchInst::Create(
         CatchSwitch->getParentPad(), nullptr, CatchSwitch->getNumHandlers(),

@@ -204,14 +204,15 @@ linkage:
     (``STB_LOCAL`` in the case of ELF) in the object file. This
     corresponds to the notion of the '``static``' keyword in C.
 ``available_externally``
-    Globals with "``available_externally``" linkage are never emitted
-    into the object file corresponding to the LLVM module. They exist to
-    allow inlining and other optimizations to take place given knowledge
-    of the definition of the global, which is known to be somewhere
-    outside the module. Globals with ``available_externally`` linkage
-    are allowed to be discarded at will, and are otherwise the same as
-    ``linkonce_odr``. This linkage type is only allowed on definitions,
-    not declarations.
+    Globals with "``available_externally``" linkage are never emitted into
+    the object file corresponding to the LLVM module. From the linker's
+    perspective, an ``available_externally`` global is equivalent to
+    an external declaration. They exist to allow inlining and other
+    optimizations to take place given knowledge of the definition of the
+    global, which is known to be somewhere outside the module. Globals
+    with ``available_externally`` linkage are allowed to be discarded at
+    will, and allow inlining and other optimizations. This linkage type is
+    only allowed on definitions, not declarations.
 ``linkonce``
     Globals with "``linkonce``" linkage are merged with other globals of
     the same name when linkage occurs. This can be used to implement
@@ -5015,7 +5016,6 @@ The terminator instructions are: ':ref:`ret <i_ret>`',
 ':ref:`resume <i_resume>`', ':ref:`catchswitch <i_catchswitch>`',
 ':ref:`catchret <i_catchret>`',
 ':ref:`cleanupret <i_cleanupret>`',
-':ref:`terminatepad <i_terminatepad>`',
 and ':ref:`unreachable <i_unreachable>`'.
 
 .. _i_ret:
@@ -5399,8 +5399,7 @@ The ``parent`` argument is the token of the funclet that contains the
 this operand may be the token ``none``.
 
 The ``default`` argument is the label of another basic block beginning with a
-"pad" instruction, one of ``cleanuppad``, ``terminatepad``, or
-``catchswitch``.
+"pad" instruction, one of ``cleanuppad`` or ``catchswitch``.
 
 The ``handlers`` are a list of successor blocks that each begin with a
 :ref:`catchpad <i_catchpad>` instruction.
@@ -5484,7 +5483,7 @@ The pad may then be "exited" in one of three ways:
     is undefined behavior if any descendant pads have been entered but not yet
     exited.
 2)  implicitly via a call (which unwinds all the way to the current function's caller),
-    or via a ``catchswitch``, ``cleanupret``, or ``terminatepad`` that unwinds to caller.
+    or via a ``catchswitch`` or a ``cleanupret`` that unwinds to caller.
 3)  implicitly via an unwind edge whose destination EH pad isn't a descendant of
     the ``catchpad``.  When the ``catchpad`` is exited in this manner, it is
     undefined behavior if the destination EH pad has a parent which is not an
@@ -5599,62 +5598,6 @@ Example:
 
       cleanupret from %cleanup unwind to caller
       cleanupret from %cleanup unwind label %continue
-
-.. _i_terminatepad:
-
-'``terminatepad``' Instruction
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      terminatepad within <token> [<args>*] unwind label <exception label>
-      terminatepad within <token> [<args>*] unwind to caller
-
-Overview:
-"""""""""
-
-The '``terminatepad``' instruction is used by `LLVM's exception handling
-system <ExceptionHandling.html#overview>`_ to specify that a basic block
-is a terminate block --- one where a personality routine may decide to
-terminate the program.
-The ``args`` correspond to whatever information the personality
-routine requires to know if this is an appropriate place to terminate the
-program. Control is transferred to the ``exception`` label if the
-personality routine decides not to terminate the program for the
-in-flight exception.
-
-Arguments:
-""""""""""
-
-The instruction takes a list of arbitrary values which are interpreted
-by the :ref:`personality function <personalityfn>`.
-
-The ``terminatepad`` may be given an ``exception`` label to
-transfer control to if the in-flight exception matches the ``args``.
-
-Semantics:
-""""""""""
-
-When the call stack is being unwound due to an exception being thrown,
-the exception is compared against the ``args``. If it matches,
-then control is transfered to the ``exception`` basic block. Otherwise,
-the program is terminated via personality-specific means. Typically,
-the first argument to ``terminatepad`` specifies what function the
-personality should defer to in order to terminate the program.
-
-The ``terminatepad`` instruction is both a terminator and a "pad" instruction,
-meaning that is always the only non-phi instruction in the basic block.
-
-Example:
-""""""""
-
-.. code-block:: llvm
-
-      ;; A terminate block which only permits integers.
-      terminatepad within none [i8** @_ZTIi] unwind label %continue
 
 .. _i_unreachable:
 
@@ -8697,7 +8640,7 @@ The pad may then be "exited" in one of three ways:
     is undefined behavior if any descendant pads have been entered but not yet
     exited.
 2)  implicitly via a call (which unwinds all the way to the current function's caller),
-    or via a ``catchswitch``, ``cleanupret``, or ``terminatepad`` that unwinds to caller.
+    or via a ``catchswitch`` or a ``cleanupret`` that unwinds to caller.
 3)  implicitly via an unwind edge whose destination EH pad isn't a descendant of
     the ``cleanuppad``.  When the ``cleanuppad`` is exited in this manner, it is
     undefined behavior if the destination EH pad has a parent which is not an

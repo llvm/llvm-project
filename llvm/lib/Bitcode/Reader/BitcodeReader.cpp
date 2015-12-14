@@ -4505,40 +4505,6 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       InstructionList.push_back(I);
       break;
     }
-    case bitc::FUNC_CODE_INST_TERMINATEPAD: { // TERMINATEPAD: [tok,bb#,num,(ty,val)*]
-      // We must have, at minimum, the outer scope and the number of arguments.
-      if (Record.size() < 2)
-        return error("Invalid record");
-
-      unsigned Idx = 0;
-
-      Value *ParentPad =
-          getValue(Record, Idx++, NextValueNo, Type::getTokenTy(Context));
-
-      unsigned NumArgOperands = Record[Idx++];
-
-      SmallVector<Value *, 2> Args;
-      for (unsigned Op = 0; Op != NumArgOperands; ++Op) {
-        Value *Val;
-        if (getValueTypePair(Record, Idx, NextValueNo, Val))
-          return error("Invalid record");
-        Args.push_back(Val);
-      }
-
-      BasicBlock *UnwindDest = nullptr;
-      if (Idx + 1 == Record.size()) {
-        UnwindDest = getBasicBlock(Record[Idx++]);
-        if (!UnwindDest)
-          return error("Invalid record");
-      }
-
-      if (Record.size() != Idx)
-        return error("Invalid record");
-
-      I = TerminatePadInst::Create(ParentPad, UnwindDest, Args);
-      InstructionList.push_back(I);
-      break;
-    }
     case bitc::FUNC_CODE_INST_CATCHPAD:
     case bitc::FUNC_CODE_INST_CLEANUPPAD: { // [tok,num,(ty,val)*]
       // We must have, at minimum, the outer scope and the number of arguments.

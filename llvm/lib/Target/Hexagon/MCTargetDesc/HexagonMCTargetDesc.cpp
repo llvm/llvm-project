@@ -48,6 +48,12 @@ cl::opt<bool> llvm::HexagonDisableDuplex
   ("mno-pairing",
    cl::desc("Disable looking for duplex instructions for Hexagon"));
 
+StringRef HEXAGON_MC::selectHexagonCPU(const Triple &TT, StringRef CPU) {
+  if (CPU.empty())
+    CPU = "hexagonv60";
+  return CPU;
+}
+
 MCInstrInfo *llvm::createHexagonMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
   InitHexagonMCInstrInfo(X);
@@ -62,10 +68,8 @@ static MCRegisterInfo *createHexagonMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *
 createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-  StringRef CPUName = CPU;
-  if (CPU.empty())
-    CPUName = "hexagonv5";
-  return createHexagonMCSubtargetInfoImpl(TT, CPUName, FS);
+  CPU = HEXAGON_MC::selectHexagonCPU(TT, CPU);
+  return createHexagonMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
 namespace {

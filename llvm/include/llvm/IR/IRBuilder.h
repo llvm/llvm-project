@@ -720,13 +720,6 @@ public:
     return Insert(CatchPadInst::Create(ParentPad, Args), Name);
   }
 
-  TerminatePadInst *CreateTerminatePad(Value *ParentPad,
-                                       BasicBlock *UnwindBB = nullptr,
-                                       ArrayRef<Value *> Args = None,
-                                       const Twine &Name = "") {
-    return Insert(TerminatePadInst::Create(ParentPad, UnwindBB, Args), Name);
-  }
-
   CleanupPadInst *CreateCleanupPad(Value *ParentPad,
                                    ArrayRef<Value *> Args = None,
                                    const Twine &Name = "") {

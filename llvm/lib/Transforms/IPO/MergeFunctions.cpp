@@ -407,6 +407,7 @@ private:
   int cmpMem(StringRef L, StringRef R) const;
   int cmpAttrs(const AttributeSet L, const AttributeSet R) const;
   int cmpRangeMetadata(const MDNode* L, const MDNode* R) const;
+  int cmpOperandBundlesSchema(const Instruction *L, const Instruction *R) const;
 
   // The two functions undergoing comparison.
   const Function *FnL, *FnR;
@@ -561,6 +562,32 @@ int FunctionComparator::cmpRangeMetadata(const MDNode* L,
     if (int Res = cmpAPInts(LLow->getValue(), RLow->getValue()))
       return Res;
   }
+  return 0;
+}
+
+int FunctionComparator::cmpOperandBundlesSchema(const Instruction *L,
+                                                const Instruction *R) const {
+  ImmutableCallSite LCS(L);
+  ImmutableCallSite RCS(R);
+
+  assert(LCS && RCS && "Must be calls or invokes!");
+  assert(LCS.isCall() == RCS.isCall() && "Can't compare otherwise!");
+
+  if (int Res =
+          cmpNumbers(LCS.getNumOperandBundles(), RCS.getNumOperandBundles()))
+    return Res;
+
+  for (unsigned i = 0, e = LCS.getNumOperandBundles(); i != e; ++i) {
+    auto OBL = LCS.getOperandBundleAt(i);
+    auto OBR = RCS.getOperandBundleAt(i);
+
+    if (int Res = OBL.getTagName().compare(OBR.getTagName()))
+      return Res;
+
+    if (int Res = cmpNumbers(OBL.Inputs.size(), OBR.Inputs.size()))
+      return Res;
+  }
+
   return 0;
 }
 
@@ -941,19 +968,23 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res =
             cmpAttrs(CI->getAttributes(), cast<CallInst>(R)->getAttributes()))
       return Res;
+    if (int Res = cmpOperandBundlesSchema(CI, R))
+      return Res;
     return cmpRangeMetadata(
         CI->getMetadata(LLVMContext::MD_range),
         cast<CallInst>(R)->getMetadata(LLVMContext::MD_range));
   }
-  if (const InvokeInst *CI = dyn_cast<InvokeInst>(L)) {
-    if (int Res = cmpNumbers(CI->getCallingConv(),
+  if (const InvokeInst *II = dyn_cast<InvokeInst>(L)) {
+    if (int Res = cmpNumbers(II->getCallingConv(),
                              cast<InvokeInst>(R)->getCallingConv()))
       return Res;
     if (int Res =
-            cmpAttrs(CI->getAttributes(), cast<InvokeInst>(R)->getAttributes()))
+            cmpAttrs(II->getAttributes(), cast<InvokeInst>(R)->getAttributes()))
+      return Res;
+    if (int Res = cmpOperandBundlesSchema(II, R))
       return Res;
     return cmpRangeMetadata(
-        CI->getMetadata(LLVMContext::MD_range),
+        II->getMetadata(LLVMContext::MD_range),
         cast<InvokeInst>(R)->getMetadata(LLVMContext::MD_range));
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {

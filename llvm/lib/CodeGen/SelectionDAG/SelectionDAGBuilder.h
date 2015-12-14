@@ -740,7 +740,6 @@ private:
   void visitCatchSwitch(const CatchSwitchInst &I);
   void visitCatchRet(const CatchReturnInst &I);
   void visitCatchPad(const CatchPadInst &I);
-  void visitTerminatePad(const TerminatePadInst &TPI);
   void visitCleanupPad(const CleanupPadInst &CPI);
 
   BranchProbability getEdgeProbability(const MachineBasicBlock *Src,

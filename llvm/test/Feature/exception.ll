@@ -123,28 +123,6 @@ exit:
   ret i8 0
 }
 
-define void @terminatepad0() personality i32 (...)* @__gxx_personality_v0 {
-entry:
-  br label %try.cont
-
-try.cont:
-  invoke void @_Z3quxv() optsize
-          to label %try.cont unwind label %bb
-bb:
-  terminatepad within none [i7 4] unwind label %bb
-}
-
-define void @terminatepad1() personality i32 (...)* @__gxx_personality_v0 {
-entry:
-  br label %try.cont
-
-try.cont:
-  invoke void @_Z3quxv() optsize
-          to label %try.cont unwind label %bb
-bb:
-  terminatepad within none [i7 4] unwind to caller
-}
-
 define void @cleanuppad() personality i32 (...)* @__gxx_personality_v0 {
 entry:
   br label %try.cont

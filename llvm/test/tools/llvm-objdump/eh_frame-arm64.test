@@ -1,0 +1,18 @@
+# RUN: llvm-objdump -unwind-info %p/Inputs/eh_frame.macho-arm64 2>/dev/null | FileCheck %s
+
+# CHECK: Contents of __eh_frame section:
+# CHECK: CIE:
+# CHECK:   Length: 16
+# CHECK:   CIE ID: 0
+# CHECK:   Version: 1
+# CHECK:   Augmentation String: zR
+# CHECK:   Code Alignment Factor: 1
+# CHECK:   Data Alignment Factor: -8
+# CHECK:   Return Address Register: 30
+# CHECK:   Augmentation Data Length: 1
+# CHECK:   FDE Address Pointer Encoding: 16
+# CHECK:   Instructions:
+# CHECK:   0c 1f 00 
+# CHECK: FDE:
+# CHECK:   Length: 32
+# CHECK:   e4 ff ff ff ff ff ff ff 20 00 00 00 00 00 00 00 00 48 0e 10 9e 01 9d 02 00 00 00 00 

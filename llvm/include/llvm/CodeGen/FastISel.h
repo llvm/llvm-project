@@ -562,6 +562,9 @@ private:
   /// across heavy instructions like calls.
   void flushLocalValueMap();
 
+  /// \brief Removes dead local value instructions after SavedLastLocalvalue.
+  void removeDeadLocalValueCode(MachineInstr *SavedLastLocalValue);
+
   /// \brief Insertion point before trying to select the current instruction.
   MachineBasicBlock::iterator SavedInsertPt;
 

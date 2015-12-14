@@ -118,11 +118,6 @@ bool IsStackReg(unsigned Reg) { return Reg == X86::RSP || Reg == X86::ESP; }
 
 bool IsSmallMemAccess(unsigned AccessSize) { return AccessSize < 8; }
 
-std::string FuncName(unsigned AccessSize, bool IsWrite) {
-  return std::string("__asan_report_") + (IsWrite ? "store" : "load") +
-         utostr(AccessSize);
-}
-
 class X86AddressSanitizer : public X86AsmInstrumentation {
 public:
   struct RegisterContext {
@@ -612,8 +607,9 @@ private:
     EmitInstruction(
         Out, MCInstBuilder(X86::PUSH32r).addReg(RegCtx.AddressReg(MVT::i32)));
 
-    const std::string &Fn = FuncName(AccessSize, IsWrite);
-    MCSymbol *FnSym = Ctx.getOrCreateSymbol(StringRef(Fn));
+    MCSymbol *FnSym = Ctx.getOrCreateSymbol(llvm::Twine("__asan_report_") +
+                                            (IsWrite ? "store" : "load") +
+                                            llvm::Twine(AccessSize));
     const MCSymbolRefExpr *FnExpr =
         MCSymbolRefExpr::create(FnSym, MCSymbolRefExpr::VK_PLT, Ctx);
     EmitInstruction(Out, MCInstBuilder(X86::CALLpcrel32).addExpr(FnExpr));
@@ -882,8 +878,9 @@ private:
       EmitInstruction(Out, MCInstBuilder(X86::MOV64rr).addReg(X86::RDI).addReg(
                                RegCtx.AddressReg(MVT::i64)));
     }
-    const std::string &Fn = FuncName(AccessSize, IsWrite);
-    MCSymbol *FnSym = Ctx.getOrCreateSymbol(StringRef(Fn));
+    MCSymbol *FnSym = Ctx.getOrCreateSymbol(llvm::Twine("__asan_report_") +
+                                            (IsWrite ? "store" : "load") +
+                                            llvm::Twine(AccessSize));
     const MCSymbolRefExpr *FnExpr =
         MCSymbolRefExpr::create(FnSym, MCSymbolRefExpr::VK_PLT, Ctx);
     EmitInstruction(Out, MCInstBuilder(X86::CALL64pcrel32).addExpr(FnExpr));

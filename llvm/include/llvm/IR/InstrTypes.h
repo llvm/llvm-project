@@ -87,7 +87,6 @@ public:
     case Instruction::CleanupRet:
     case Instruction::Invoke:
     case Instruction::Resume:
-    case Instruction::TerminatePad:
       return true;
     default:
       return false;
@@ -1448,6 +1447,18 @@ public:
     return OBU.operandHasAttr(OpIdx - BOI.Begin, A);
   }
 
+  /// \brief Return true if \p Other has the same sequence of operand bundle
+  /// tags with the same number of operands on each one of them as this
+  /// OperandBundleUser.
+  bool hasIdenticalOperandBundleSchema(
+      const OperandBundleUser<InstrTy, OpIteratorTy> &Other) const {
+    if (getNumOperandBundles() != Other.getNumOperandBundles())
+      return false;
+
+    return std::equal(bundle_op_info_begin(), bundle_op_info_end(),
+                      Other.bundle_op_info_begin());
+  };
+
 protected:
   /// \brief Is the function attribute S disallowed by some operand bundle on
   /// this operand bundle user?
@@ -1491,6 +1502,10 @@ protected:
     /// \brief The index in the Use& vector where operands for this operand
     /// bundle ends.
     uint32_t End;
+
+    bool operator==(const BundleOpInfo &Other) const {
+      return Tag == Other.Tag && Begin == Other.Begin && End == Other.End;
+    }
   };
 
   /// \brief Simple helper function to map a BundleOpInfo to an

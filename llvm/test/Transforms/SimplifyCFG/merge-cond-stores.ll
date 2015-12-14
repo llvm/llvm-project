@@ -2,10 +2,8 @@
 
 ; CHECK-LABEL: @test_simple
 ; This test should succeed and end up if-converted.
-; CHECK: icmp eq i32 %b, 0
-; CHECK-NEXT: icmp ne i32 %a, 0
-; CHECK-NEXT: xor i1 %x2, true
-; CHECK-NEXT: %[[x:.*]] = or i1 %{{.*}}, %{{.*}}
+; CHECK: %[[A:.*]] = or i32 %a, %b
+; CHECK-NEXT: %[[x:.*]] = icmp eq i32 %[[A]], 0
 ; CHECK-NEXT: br i1 %[[x]]
 ; CHECK: store
 ; CHECK-NOT: store

@@ -112,7 +112,7 @@ public:
     return Hexagon_SMALL_DATA_THRESHOLD;
   }
   const HexagonArchEnum &getHexagonArchVersion() const {
-    return  HexagonArchVersion;
+    return HexagonArchVersion;
   }
 };
 

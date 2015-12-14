@@ -4023,8 +4023,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   if (DbgDeclareInst *DbgDecl = FindAllocaDbgDeclare(&AI)) {
     auto *Var = DbgDecl->getVariable();
     auto *Expr = DbgDecl->getExpression();
-    DIBuilder DIB(*AI.getParent()->getParent()->getParent(),
-                  /*AllowUnresolved*/ false);
+    DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
     bool IsSplit = Pieces.size() > 1;
     for (auto Piece : Pieces) {
       // Create a piece expression describing the new partition or reuse AI's

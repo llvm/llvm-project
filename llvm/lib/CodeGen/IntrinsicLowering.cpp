@@ -67,7 +67,7 @@ static CallInst *ReplaceCallWith(const char *NewFn, CallInst *CI,
                                  Type *RetTy) {
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
-  Module *M = CI->getParent()->getParent()->getParent();
+  Module *M = CI->getModule();
   // Get or insert the definition now.
   std::vector<Type *> ParamTys;
   for (ArgIt I = ArgBegin; I != ArgEnd; ++I)
@@ -596,7 +596,7 @@ bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
     return false;
 
   // Okay, we can do this xform, do so now.
-  Module *M = CI->getParent()->getParent()->getParent();
+  Module *M = CI->getModule();
   Constant *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
 
   Value *Op = CI->getArgOperand(0);

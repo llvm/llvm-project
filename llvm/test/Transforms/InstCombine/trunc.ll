@@ -121,7 +121,7 @@ define i8 @test10(i32 %X) {
 
 ; PR25543
 ; https://llvm.org/bugs/show_bug.cgi?id=25543
-; TODO: This could be extractelement.
+; This is an extractelement.
 
 define i32 @trunc_bitcast1(<4 x i32> %v) {
   %bc = bitcast <4 x i32> %v to i128
@@ -130,13 +130,11 @@ define i32 @trunc_bitcast1(<4 x i32> %v) {
   ret i32 %ext
 
 ; CHECK-LABEL: @trunc_bitcast1(
-; CHECK-NEXT:  %bc = bitcast <4 x i32> %v to i128
-; CHECK-NEXT:  %shr = lshr i128 %bc, 32
-; CHECK-NEXT:  %ext = trunc i128 %shr to i32
+; CHECK-NEXT:  %ext = extractelement <4 x i32> %v, i32 1
 ; CHECK-NEXT:  ret i32 %ext
 }
 
-; TODO: This could be bitcast + extractelement.
+; A bitcast may still be required.
 
 define i32 @trunc_bitcast2(<2 x i64> %v) {
   %bc = bitcast <2 x i64> %v to i128
@@ -145,13 +143,12 @@ define i32 @trunc_bitcast2(<2 x i64> %v) {
   ret i32 %ext
 
 ; CHECK-LABEL: @trunc_bitcast2(
-; CHECK-NEXT:  %bc = bitcast <2 x i64> %v to i128
-; CHECK-NEXT:  %shr = lshr i128 %bc, 64
-; CHECK-NEXT:  %ext = trunc i128 %shr to i32
+; CHECK-NEXT:  %bc1 = bitcast <2 x i64> %v to <4 x i32>
+; CHECK-NEXT:  %ext = extractelement <4 x i32> %bc1, i32 2
 ; CHECK-NEXT:  ret i32 %ext
 }
 
-; TODO: The shift is optional. This could be extractelement.
+; The right shift is optional.
 
 define i32 @trunc_bitcast3(<4 x i32> %v) {
   %bc = bitcast <4 x i32> %v to i128
@@ -159,8 +156,7 @@ define i32 @trunc_bitcast3(<4 x i32> %v) {
   ret i32 %ext
 
 ; CHECK-LABEL: @trunc_bitcast3(
-; CHECK-NEXT:  %bc = bitcast <4 x i32> %v to i128
-; CHECK-NEXT:  %ext = trunc i128 %bc to i32
+; CHECK-NEXT:  %ext = extractelement <4 x i32> %v, i32 0
 ; CHECK-NEXT:  ret i32 %ext
 }
 

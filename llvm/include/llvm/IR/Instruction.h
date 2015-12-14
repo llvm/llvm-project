@@ -396,7 +396,6 @@ public:
     case Instruction::CatchPad:
     case Instruction::CleanupPad:
     case Instruction::LandingPad:
-    case Instruction::TerminatePad:
       return true;
     default:
       return false;

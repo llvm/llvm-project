@@ -403,7 +403,6 @@ private:
   void visitCleanupPadInst(CleanupPadInst &CPI);
   void visitCatchSwitchInst(CatchSwitchInst &CatchSwitch);
   void visitCleanupReturnInst(CleanupReturnInst &CRI);
-  void visitTerminatePadInst(TerminatePadInst &TPI);
 
   void VerifyCallSite(CallSite CS);
   void verifyMustTailCall(CallInst &CI);
@@ -2926,8 +2925,7 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       Assert(II->getUnwindDest() == BB && II->getNormalDest() != BB,
              "EH pad must be jumped to via an unwind edge", &I, II);
-    } else if (!isa<CleanupReturnInst>(TI) && !isa<TerminatePadInst>(TI) &&
-               !isa<CatchSwitchInst>(TI)) {
+    } else if (!isa<CleanupReturnInst>(TI) && !isa<CatchSwitchInst>(TI)) {
       Assert(false, "EH pad must be jumped to via an unwind edge", &I, TI);
     }
   }
@@ -3029,8 +3027,7 @@ void Verifier::visitCleanupPadInst(CleanupPadInst &CPI) {
     BasicBlock *UnwindDest;
     if (CleanupReturnInst *CRI = dyn_cast<CleanupReturnInst>(U)) {
       UnwindDest = CRI->getUnwindDest();
-    } else if (isa<CleanupPadInst>(U) || isa<CatchSwitchInst>(U) ||
-               isa<TerminatePadInst>(U)) {
+    } else if (isa<CleanupPadInst>(U) || isa<CatchSwitchInst>(U)) {
       continue;
     } else {
       Assert(false, "bogus cleanuppad use", &CPI);
@@ -3097,37 +3094,6 @@ void Verifier::visitCleanupReturnInst(CleanupReturnInst &CRI) {
   }
 
   visitTerminatorInst(CRI);
-}
-
-void Verifier::visitTerminatePadInst(TerminatePadInst &TPI) {
-  visitEHPadPredecessors(TPI);
-
-  BasicBlock *BB = TPI.getParent();
-  Function *F = BB->getParent();
-  Assert(F->hasPersonalityFn(),
-         "TerminatePadInst needs to be in a function with a personality.",
-         &TPI);
-
-  // The terminatepad instruction must be the first non-PHI instruction in the
-  // block.
-  Assert(BB->getFirstNonPHI() == &TPI,
-         "TerminatePadInst not the first non-PHI instruction in the block.",
-         &TPI);
-
-  if (BasicBlock *UnwindDest = TPI.getUnwindDest()) {
-    Instruction *I = UnwindDest->getFirstNonPHI();
-    Assert(I->isEHPad() && !isa<LandingPadInst>(I),
-           "TerminatePadInst must unwind to an EH block which is not a "
-           "landingpad.",
-           &TPI);
-  }
-
-  auto *ParentPad = TPI.getParentPad();
-  Assert(isa<CatchSwitchInst>(ParentPad) || isa<ConstantTokenNone>(ParentPad) ||
-             isa<CleanupPadInst>(ParentPad) || isa<CatchPadInst>(ParentPad),
-         "TerminatePadInst has an invalid parent.", ParentPad);
-
-  visitTerminatorInst(TPI);
 }
 
 void Verifier::verifyDominatesUse(Instruction &I, unsigned i) {

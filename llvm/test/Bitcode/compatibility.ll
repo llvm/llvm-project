@@ -774,7 +774,7 @@ entry:
   invoke void @f.ccc() to label %normal unwind label %catchswitch3
 
 catchswitch1:
-  %cs1 = catchswitch within none [label %catchpad1] unwind label %terminate.1
+  %cs1 = catchswitch within none [label %catchpad1] unwind to caller
 
 catchpad1:
   catchpad within %cs1 []
@@ -802,20 +802,9 @@ catchpad3:
 
 cleanuppad1:
   %clean.1 = cleanuppad within none []
+  unreachable
   ; CHECK: %clean.1 = cleanuppad within none []
-  invoke void @f.ccc() to label %normal unwind label %terminate.2
-
-terminate.1:
-  terminatepad within none [] unwind to caller
-  ; CHECK: terminatepad within none [] unwind to caller
-
-terminate.2:
-  terminatepad within %clean.1 [i32* %arg1] unwind label %normal.pre
-  ; CHECK: terminatepad within %clean.1 [i32* %arg1] unwind label %normal.pre
-
-normal.pre:
-  terminatepad within %clean.1 [i32* %arg1, i32* %arg2] unwind to caller
-  ; CHECK: terminatepad within %clean.1 [i32* %arg1, i32* %arg2] unwind to caller
+  ; CHECK-NEXT: unreachable
 
 normal:
   ret i32 0
@@ -852,8 +841,10 @@ return:
   ret i32 0
 
 terminate:
-  terminatepad within %cs [] unwind to caller
-  ; CHECK: terminatepad within %cs [] unwind to caller
+  cleanuppad within %cs []
+  unreachable
+  ; CHECK: cleanuppad within %cs []
+  ; CHECK-NEXT: unreachable
 
 continue:
   ret i32 0

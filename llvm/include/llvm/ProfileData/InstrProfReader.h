@@ -106,8 +106,13 @@ private:
   /// Iterator over the profile data.
   line_iterator Line;
 
+  // String table for holding a unique copy of all the strings in the profile.
+  InstrProfStringTable StringTable;
+
   TextInstrProfReader(const TextInstrProfReader &) = delete;
   TextInstrProfReader &operator=(const TextInstrProfReader &) = delete;
+  std::error_code readValueProfileData(InstrProfRecord &Record);
+
 public:
   TextInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer_)
       : DataBuffer(std::move(DataBuffer_)), Line(*DataBuffer, true, '#') {}

@@ -61,9 +61,7 @@ void HexagonSubtarget::initializeEnvironment() {
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  // Default architecture.
-  if (CPUString.empty())
-    CPUString = "hexagonv60";
+  CPUString = HEXAGON_MC::selectHexagonCPU(getTargetTriple(), CPU);
 
   static std::map<StringRef, HexagonArchEnum> CpuTable {
     { "hexagonv4", V4 },

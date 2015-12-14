@@ -128,6 +128,7 @@ class VLIWPacketizerList {
 protected:
   MachineFunction &MF;
   const TargetInstrInfo *TII;
+  AliasAnalysis *AA;
 
   // The VLIW Scheduler.
   DefaultVLIWScheduler *VLIWScheduler;
@@ -141,7 +142,9 @@ protected:
   std::map<MachineInstr*, SUnit*> MIToSUnit;
 
 public:
-  VLIWPacketizerList(MachineFunction &MF, MachineLoopInfo &MLI);
+  // The AliasAnalysis parameter can be nullptr.
+  VLIWPacketizerList(MachineFunction &MF, MachineLoopInfo &MLI,
+                     AliasAnalysis *AA);
 
   virtual ~VLIWPacketizerList();
 
@@ -161,8 +164,10 @@ public:
     return MII;
   }
 
-  // endPacket - End the current packet.
-  void endPacket(MachineBasicBlock *MBB, MachineInstr *MI);
+  // End the current packet and reset the state of the packetizer.
+  // Overriding this function allows the target-specific packetizer
+  // to perform custom finalization.
+  virtual void endPacket(MachineBasicBlock *MBB, MachineInstr *MI);
 
   // initPacketizerState - perform initialization before packetizing
   // an instruction. This function is supposed to be overrided by
@@ -170,14 +175,14 @@ public:
   virtual void initPacketizerState() { return; }
 
   // ignorePseudoInstruction - Ignore bundling of pseudo instructions.
-  virtual bool ignorePseudoInstruction(MachineInstr *I,
-                                       MachineBasicBlock *MBB) {
+  virtual bool ignorePseudoInstruction(const MachineInstr *I,
+                                       const MachineBasicBlock *MBB) {
     return false;
   }
 
   // isSoloInstruction - return true if instruction MI can not be packetized
   // with any other instruction, which means that MI itself is a packet.
-  virtual bool isSoloInstruction(MachineInstr *MI) {
+  virtual bool isSoloInstruction(const MachineInstr *MI) {
     return true;
   }
 

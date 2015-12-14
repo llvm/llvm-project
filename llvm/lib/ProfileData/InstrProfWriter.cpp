@@ -172,14 +172,46 @@ void InstrProfWriter::write(raw_fd_ostream &OS) {
   endian::Writer<little>(OS).write<uint64_t>(TableStart.second);
 }
 
+static const char *ValueProfKindStr[] = {
+#define VALUE_PROF_KIND(Enumerator, Value) #Enumerator,
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
 void InstrProfWriter::writeRecordInText(const InstrProfRecord &Func,
                                         raw_fd_ostream &OS) {
   OS << Func.Name << "\n";
   OS << "# Func Hash:\n" << Func.Hash << "\n";
-  OS << "# Num Counters:\n" <<Func.Counts.size() << "\n";
+  OS << "# Num Counters:\n" << Func.Counts.size() << "\n";
   OS << "# Counter Values:\n";
   for (uint64_t Count : Func.Counts)
     OS << Count << "\n";
+
+  uint32_t NumValueKinds = Func.getNumValueKinds();
+  if (!NumValueKinds) {
+    OS << "\n";
+    return;
+  }
+
+  OS << "# Num Value Kinds:\n" << Func.getNumValueKinds() << "\n";
+  for (uint32_t VK = 0; VK < IPVK_Last + 1; VK++) {
+    uint32_t NS = Func.getNumValueSites(VK);
+    if (!NS)
+      continue;
+    OS << "# ValueKind = " << ValueProfKindStr[VK] << ":\n" << VK << "\n";
+    OS << "# NumValueSites:\n" << NS << "\n";
+    for (uint32_t S = 0; S < NS; S++) {
+      uint32_t ND = Func.getNumValueDataForSite(VK, S);
+      OS << ND << "\n";
+      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
+      for (uint32_t I = 0; I < ND; I++) {
+        if (VK == IPVK_IndirectCallTarget)
+          OS << reinterpret_cast<const char *>(VD[I].Value) << ":"
+             << VD[I].Count << "\n";
+        else
+          OS << VD[I].Value << ":" << VD[I].Count << "\n";
+      }
+    }
+  }
 
   OS << "\n";
 }

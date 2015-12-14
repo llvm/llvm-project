@@ -274,20 +274,21 @@ public:
   bool isDotCurInst(const MachineInstr* MI) const;
   bool isDotNewInst(const MachineInstr* MI) const;
   bool isDuplexPair(const MachineInstr *MIa, const MachineInstr *MIb) const;
-  bool isEarlySourceInstr(MachineInstr *MI) const;
+  bool isEarlySourceInstr(const MachineInstr *MI) const;
   bool isEndLoopN(unsigned Opcode) const;
   bool isExpr(unsigned OpType) const;
   bool isExtendable(const MachineInstr* MI) const;
   bool isExtended(const MachineInstr* MI) const;
-  bool isFloat(MachineInstr *MI) const;
+  bool isFloat(const MachineInstr *MI) const;
   bool isIndirectCall(const MachineInstr *MI) const;
   bool isIndirectL4Return(const MachineInstr *MI) const;
   bool isJumpR(const MachineInstr *MI) const;
   bool isJumpWithinBranchRange(const MachineInstr *MI, unsigned offset) const;
-  bool isLateInstrFeedsEarlyInstr(MachineInstr *LRMI, MachineInstr *ESMI) const;
-  bool isLateResultInstr(MachineInstr *MI) const;
+  bool isLateInstrFeedsEarlyInstr(const MachineInstr *LRMI,
+                                  const MachineInstr *ESMI) const;
+  bool isLateResultInstr(const MachineInstr *MI) const;
   bool isLateSourceInstr(const MachineInstr *MI) const;
-  bool isLoopN(unsigned Opcode) const;
+  bool isLoopN(const MachineInstr *MI) const;
   bool isMemOp(const MachineInstr *MI) const;
   bool isNewValue(const MachineInstr* MI) const;
   bool isNewValue(unsigned Opcode) const;
@@ -323,7 +324,7 @@ public:
 
   bool hasEHLabel(const MachineBasicBlock *B) const;
   bool hasNonExtEquivalent(const MachineInstr *MI) const;
-  bool hasPseudoInstrPair(MachineInstr *MI) const;
+  bool hasPseudoInstrPair(const MachineInstr *MI) const;
   bool hasUncondBranch(const MachineBasicBlock *B) const;
   bool mayBeCurLoad(const MachineInstr* MI) const;
   bool mayBeNewStore(const MachineInstr* MI) const;
@@ -331,7 +332,7 @@ public:
                      const MachineInstr *ConsMI) const;
   bool producesStall(const MachineInstr *MI,
                      MachineBasicBlock::const_instr_iterator MII) const;
-  bool predCanBeUsedAsDotNew(MachineInstr *MI, unsigned PredReg) const;
+  bool predCanBeUsedAsDotNew(const MachineInstr *MI, unsigned PredReg) const;
   bool PredOpcodeHasJMP_c(unsigned Opcode) const;
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
 
@@ -350,14 +351,14 @@ public:
   int getCondOpcode(int Opc, bool sense) const;
   int getDotCurOp(const MachineInstr* MI) const;
   int getDotNewOp(const MachineInstr* MI) const;
-  int getDotNewPredJumpOp(MachineInstr *MI,
+  int getDotNewPredJumpOp(const MachineInstr *MI,
                           const MachineBranchProbabilityInfo *MBPI) const;
-  int getDotNewPredOp(MachineInstr *MI,
+  int getDotNewPredOp(const MachineInstr *MI,
                       const MachineBranchProbabilityInfo *MBPI) const;
   int getDotOldOp(const int opc) const;
   HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr *MI)
                                                          const;
-  short getEquivalentHWInstr(MachineInstr *MI) const;
+  short getEquivalentHWInstr(const MachineInstr *MI) const;
   MachineInstr *getFirstNonDbgInst(MachineBasicBlock *BB) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr *MI) const;
@@ -369,7 +370,7 @@ public:
   short getNonExtOpcode(const MachineInstr *MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, unsigned &PredReg,
                   unsigned &PredRegPos, unsigned &PredRegFlags) const;
-  short getPseudoInstrPair(MachineInstr *MI) const;
+  short getPseudoInstrPair(const MachineInstr *MI) const;
   short getRegForm(const MachineInstr *MI) const;
   unsigned getSize(const MachineInstr *MI) const;
   uint64_t getType(const MachineInstr* MI) const;

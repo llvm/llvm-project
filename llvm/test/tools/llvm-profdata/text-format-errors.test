@@ -18,3 +18,12 @@ NO-COUNTS: error: {{.*}}no-counts.proftext: Malformed instrumentation profile da
 RUN: not llvm-profdata show %p/Inputs/text-format-errors.text.bin 2>&1 | FileCheck %s --check-prefix=BINARY
 BINARY: error: {{.+}}: Unrecognized instrumentation profile encoding format
 BINARY: Perhaps you forgot to use the -sample option?
+
+5- Detect malformed value profile data
+RUN: not llvm-profdata show %p/Inputs/vp-malform.proftext 2>&1 | FileCheck %s --check-prefix=VP
+RUN: not llvm-profdata show %p/Inputs/vp-malform2.proftext 2>&1 | FileCheck %s --check-prefix=VP
+VP: Malformed instrumentation profile data
+
+6- Detect truncated value profile data
+RUN: not llvm-profdata show %p/Inputs/vp-truncate.proftext 2>&1 | FileCheck %s --check-prefix=VPTRUNC
+VPTRUNC: Truncated profile data

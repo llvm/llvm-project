@@ -615,15 +615,11 @@ purposes.
 The following new instructions are considered "exception handling pads", in that
 they must be the first non-phi instruction of a basic block that may be the
 unwind destination of an EH flow edge:
-``catchswitch``, ``catchpad``, ``cleanuppad``, and ``terminatepad``.
+``catchswitch``, ``catchpad``, and ``cleanuppad``.
 As with landingpads, when entering a try scope, if the
 frontend encounters a call site that may throw an exception, it should emit an
 invoke that unwinds to a ``catchswitch`` block. Similarly, inside the scope of a
-C++ object with a destructor, invokes should unwind to a ``cleanuppad``. The
-``terminatepad`` instruction exists to represent ``noexcept`` and throw
-specifications with one combined instruction. All potentially throwing calls in
-a ``noexcept`` function should transitively unwind to a terminateblock. Throw
-specifications are not implemented by MSVC, and are not yet supported.
+C++ object with a destructor, invokes should unwind to a ``cleanuppad``.
 
 New instructions are also used to mark the points where control is transferred
 out of a catch/cleanup handler (which will correspond to exits from the
@@ -634,9 +630,9 @@ by normal execution executes a ``cleanupret`` instruction, which is a terminator
 indicating where the active exception will unwind to next.
 
 Each of these new EH pad instructions has a way to identify which action should
-be considered after this action. The ``catchswitch`` and ``terminatepad``
-instructions are terminators, and have a unwind destination operand analogous
-to the unwind destination of an invoke.  The ``cleanuppad`` instruction is not
+be considered after this action. The ``catchswitch`` instruction is a terminator
+and has an unwind destination operand analogous to the unwind destination of an
+invoke.  The ``cleanuppad`` instruction is not
 a terminator, so the unwind destination is stored on the ``cleanupret``
 instruction instead. Successfully executing a catch handler should resume
 normal control flow, so neither ``catchpad`` nor ``catchret`` instructions can
@@ -707,7 +703,9 @@ all of the new IR instructions:
     catchret from %catch to label %return
 
   lpad.terminate:                                   ; preds = %catch.body, %lpad.catch
-    terminatepad within none [void ()* @"\01?terminate@@YAXXZ"] unwind to caller
+    cleanuppad within none []
+    call void @"\01?terminate@@YAXXZ"
+    unreachable
   }
 
 Funclet parent tokens
@@ -725,8 +723,7 @@ The ``catchswitch`` instruction does not create a funclet, but it produces a
 token that is always consumed by its immediate successor ``catchpad``
 instructions. This ensures that every catch handler modelled by a ``catchpad``
 belongs to exactly one ``catchswitch``, which models the dispatch point after a
-C++ try. The ``terminatepad`` instruction cannot contain lexically nested
-funclets inside the termination action, so it does not produce a token.
+C++ try.
 
 Here is an example of what this nesting looks like using some hypothetical
 C++ code:
