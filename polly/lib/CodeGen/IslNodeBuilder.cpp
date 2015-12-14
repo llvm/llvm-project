@@ -219,7 +219,7 @@ static isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
   }
 
   for (auto &Access : *Stmt) {
-    if (Access->isExplicit()) {
+    if (Access->isArrayKind()) {
       auto *BasePtr = Access->getScopArrayInfo()->getBasePtr();
       if (Instruction *OpInst = dyn_cast<Instruction>(BasePtr))
         if (Stmt->getParent()->getRegion().contains(OpInst))
@@ -1008,7 +1008,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
     return true;
 
   MemoryAccess *MA = MAs.front();
-  assert(MA->isExplicit() && MA->isRead());
+  assert(MA->isArrayKind() && MA->isRead());
 
   // If the access function was already mapped, the preload of this equivalence
   // class was triggered earlier already and doesn't need to be done again.
@@ -1023,7 +1023,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
 
   // If the base pointer of this class is dependent on another one we have to
   // make sure it was preloaded already.
-  auto *SAI = S.getScopArrayInfo(MA->getBaseAddr(), ScopArrayInfo::KIND_ARRAY);
+  auto *SAI = S.getScopArrayInfo(MA->getBaseAddr(), ScopArrayInfo::MK_Array);
   if (const auto *BaseIAClass = S.lookupInvariantEquivClass(SAI->getBasePtr()))
     if (!preloadInvariantEquivClass(*BaseIAClass))
       return false;
@@ -1075,7 +1075,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
 
       // For scalar derived SAIs we remap the alloca used for the derived value.
       if (BasePtr == MA->getAccessInstruction()) {
-        if (DerivedSAI->isPHI())
+        if (DerivedSAI->isPHIKind())
           PHIOpMap[BasePtr] = Alloca;
         else
           ScalarMap[BasePtr] = Alloca;

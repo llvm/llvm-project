@@ -332,14 +332,14 @@ Value *BlockGenerator::getOrCreateAlloca(Value *ScalarBase,
 }
 
 Value *BlockGenerator::getOrCreateAlloca(MemoryAccess &Access) {
-  if (Access.isPHI())
+  if (Access.isPHIKind())
     return getOrCreatePHIAlloca(Access.getBaseAddr());
   else
     return getOrCreateScalarAlloca(Access.getBaseAddr());
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
-  if (Array->isPHI())
+  if (Array->isPHIKind())
     return getOrCreatePHIAlloca(Array->getBasePtr());
   else
     return getOrCreateScalarAlloca(Array->getBasePtr());
@@ -388,7 +388,7 @@ void BlockGenerator::handleOutsideUsers(const Region &R, Instruction *Inst,
 
 void BlockGenerator::generateScalarLoads(ScopStmt &Stmt, ValueMapT &BBMap) {
   for (MemoryAccess *MA : Stmt) {
-    if (MA->isExplicit() || MA->isWrite())
+    if (MA->isArrayKind() || MA->isWrite())
       continue;
 
     auto *Address = getOrCreateAlloca(*MA);
@@ -453,7 +453,7 @@ void BlockGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
                                "RegionGenerator");
 
   for (MemoryAccess *MA : Stmt) {
-    if (MA->isExplicit() || MA->isRead())
+    if (MA->isArrayKind() || MA->isRead())
       continue;
 
     Value *Val = MA->getAccessValue();
@@ -484,7 +484,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
     auto &Array = Pair.second;
     if (Array->getNumberOfDimensions() != 0)
       continue;
-    if (Array->isPHI()) {
+    if (Array->isPHIKind()) {
       // For PHI nodes, the only values we need to store are the ones that
       // reach the PHI node from outside the region. In general there should
       // only be one such incoming edge and this edge should enter through
@@ -578,7 +578,7 @@ void BlockGenerator::findOutsideUsers(Scop &S) {
     if (Array->getNumberOfDimensions() != 0)
       continue;
 
-    if (Array->isPHI())
+    if (Array->isPHIKind())
       continue;
 
     auto *Inst = dyn_cast<Instruction>(Array->getBasePtr());
@@ -1188,7 +1188,7 @@ void RegionGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
          "function in the BlockGenerator");
 
   for (MemoryAccess *MA : Stmt) {
-    if (MA->isExplicit() || MA->isRead())
+    if (MA->isArrayKind() || MA->isRead())
       continue;
 
     Instruction *ScalarInst = MA->getAccessInstruction();
@@ -1200,8 +1200,8 @@ void RegionGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
     auto SavedInsertionPoint = Builder.GetInsertPoint();
     ValueMapT *LocalBBMap = &BBMap;
 
-    // Implicit writes induced by PHIs must be written in the incoming blocks.
-    if (MA->isPHI() || MA->isExitPHI()) {
+    // Scalar writes induced by PHIs must be written in the incoming blocks.
+    if (MA->isPHIKind() || MA->isExitPHIKind()) {
       BasicBlock *ExitingBB = ScalarInst->getParent();
       BasicBlock *ExitingBBCopy = BlockMap[ExitingBB];
       Builder.SetInsertPoint(ExitingBBCopy->getTerminator());
@@ -1217,7 +1217,7 @@ void RegionGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
     Builder.CreateStore(Val, Address);
 
     // Restore the insertion point if necessary.
-    if (MA->isPHI() || MA->isExitPHI())
+    if (MA->isPHIKind() || MA->isExitPHIKind())
       Builder.SetInsertPoint(SavedInsertBB, SavedInsertionPoint);
   }
 }

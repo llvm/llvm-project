@@ -7,6 +7,7 @@ List of clang-tidy Checks
    cert-thrown-exception-type
    cert-variadic-function-def
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
+   cppcoreguidelines-pro-bounds-constant-array-index
    cppcoreguidelines-pro-bounds-pointer-arithmetic
    cppcoreguidelines-pro-type-const-cast
    cppcoreguidelines-pro-type-cstyle-cast

@@ -1287,6 +1287,8 @@ bool MipsTargetInfo<ELFT>::relocNeedsPlt(uint32_t Type,
   return false;
 }
 
+static uint16_t mipsHigh(uint64_t V) { return ((V + 0x8000) >> 16) & 0xffff; }
+
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
                                        uint32_t Type, uint64_t P, uint64_t SA,
@@ -1309,13 +1311,16 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     if (PairedLoc) {
       uint64_t AHL = ((Instr & 0xffff) << 16) +
                      SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
-      write32<E>(Loc, (Instr & 0xffff0000) | (((SA + AHL) >> 16) & 0xffff));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA + AHL));
     } else {
       warning("Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16");
-      write32<E>(Loc, (Instr & 0xffff0000) | ((SA >> 16) & 0xffff));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA));
     }
     break;
   }
+  case R_MIPS_JALR:
+    // Ignore this optimization relocation for now
+    break;
   case R_MIPS_LO16: {
     uint32_t Instr = read32<E>(Loc);
     int64_t AHL = SignExtend64<16>(Instr & 0xffff);

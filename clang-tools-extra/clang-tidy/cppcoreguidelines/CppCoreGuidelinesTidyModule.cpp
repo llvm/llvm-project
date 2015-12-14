@@ -12,6 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../misc/AssignOperatorSignatureCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
+#include "ProBoundsConstantArrayIndexCheck.h"
 #include "ProBoundsPointerArithmeticCheck.h"
 #include "ProTypeConstCastCheck.h"
 #include "ProTypeCstyleCastCheck.h"
@@ -30,6 +31,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
         "cppcoreguidelines-pro-bounds-array-to-pointer-decay");
+    CheckFactories.registerCheck<ProBoundsConstantArrayIndexCheck>(
+        "cppcoreguidelines-pro-bounds-constant-array-index");
     CheckFactories.registerCheck<ProBoundsPointerArithmeticCheck>(
         "cppcoreguidelines-pro-bounds-pointer-arithmetic");
     CheckFactories.registerCheck<ProTypeConstCastCheck>(

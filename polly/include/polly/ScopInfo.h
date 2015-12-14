@@ -97,20 +97,125 @@ typedef std::map<const BasicBlock *, AccFuncSetType> AccFuncMapType;
 ///
 class ScopArrayInfo {
 public:
-  /// @brief The type of a memory access.
-  enum ARRAYKIND {
-    // Scalar references to SSA values.
-    KIND_SCALAR,
+  /// @brief The kind of a ScopArrayInfo memory object.
+  ///
+  /// We distinguish between arrays and various scalar memory objects. We use
+  /// the term ``array'' to describe memory objects that consist of a set of
+  /// individual data elements arranged in a multi-dimensional grid. A scalar
+  /// memory object describes an individual data element and is used to model
+  /// the definition and uses of llvm::Values.
+  ///
+  /// The polyhedral model does traditionally not reason about SSA values. To
+  /// reason about llvm::Values we model them "as if" they were zero-dimensional
+  /// memory objects, even though they were not actually allocated in (main)
+  /// memory.  Memory for such objects is only alloca[ed] at CodeGeneration
+  /// time. To relate the memory slots used during code generation with the
+  /// llvm::Values they belong to the new names for these corresponding stack
+  /// slots are derived by appending suffixes (currently ".s2a" and ".phiops")
+  /// to the name of the original llvm::Value. To describe how def/uses are
+  /// modeled exactly we use these suffixes here as well.
+  ///
+  /// There are currently four different kinds of memory objects:
+  enum MemoryKind {
+    /// MK_Array: Models a one or multi-dimensional array
+    ///
+    /// A memory object that can be described by a multi-dimensional array.
+    /// Memory objects of this type are used to model actual multi-dimensional
+    /// arrays as they exist in LLVM-IR, but they are also used to describe
+    /// other objects:
+    ///   - A single data element allocated on the stack using 'alloca' is
+    ///     modeled as a one-dimensional, single-element array.
+    ///   - A single data element allocated as a global variable is modeled as
+    ///     one-dimensional, single-element array.
+    ///   - Certain multi-dimensional arrays with variable size, which in
+    ///     LLVM-IR are commonly expressed as a single-dimensional access with a
+    ///     complicated access function, are modeled as multi-dimensional
+    ///     memory objects (grep for "delinearization").
+    MK_Array,
 
-    // Scalar references used to model PHI nodes
-    KIND_PHI,
+    /// MK_Value: Models an llvm::Value
+    ///
+    /// Memory objects of type MK_Value are used to model the data flow
+    /// induced by llvm::Values. For each llvm::Value that is used across
+    /// BasicBocks one ScopArrayInfo object is created. A single memory WRITE
+    /// stores the llvm::Value at its definition into the memory object and at
+    /// each use of the llvm::Value (ignoring trivial intra-block uses) a
+    /// corresponding READ is added. For instance, the use/def chain of a
+    /// llvm::Value %V depicted below
+    ///              ______________________
+    ///              |DefBB:              |
+    ///              |  %V = float op ... |
+    ///              ----------------------
+    ///               |                  |
+    /// _________________               _________________
+    /// |UseBB1:        |               |UseBB2:        |
+    /// |  use float %V |               |  use float %V |
+    /// -----------------               -----------------
+    ///
+    /// is modeled as if the following memory accesses occured:
+    ///
+    ///                        __________________________
+    ///                        |entry:                  |
+    ///                        |  %V.s2a = alloca float |
+    ///                        --------------------------
+    ///                                     |
+    ///                    ___________________________________
+    ///                    |DefBB:                           |
+    ///                    |  store %float %V, float* %V.sa2 |
+    ///                    -----------------------------------
+    ///                           |                   |
+    /// ____________________________________ ___________________________________
+    /// |UseBB1:                           | |UseBB2:                          |
+    /// |  %V.reload1 = load float* %V.s2a | |  %V.reload2 = load float* %V.s2a|
+    /// |  use float %V.reload1            | |  use float %V.reload2           |
+    /// ------------------------------------ -----------------------------------
+    ///
+    MK_Value,
 
-    // Like KIND_PHI, but for PHIs in the exit node. Depending on context, these
-    // are handled like KIND_SCALAR.
-    KIND_EXIT_PHI,
+    /// MK_PHI: Models PHI nodes within the SCoP
+    ///
+    /// Besides the MK_Value memory object used to model the normal
+    /// llvm::Value dependences described above, PHI nodes require an additional
+    /// memory object of type MK_PHI to describe the forwarding of values to
+    /// the PHI node.
+    ///
+    /// As an example, a PHIInst instructions
+    ///
+    /// %PHI = phi float [ %Val1, %IncomingBlock1 ], [ %Val2, %IncomingBlock2 ]
+    ///
+    /// is modeled as if the accesses occured this way:
+    ///
+    ///                    _______________________________
+    ///                    |entry:                       |
+    ///                    |  %PHI.phiops = alloca float |
+    ///                    -------------------------------
+    ///                           |              |
+    /// __________________________________  __________________________________
+    /// |IncomingBlock1:                 |  |IncomingBlock2:                 |
+    /// |  ...                           |  |  ...                           |
+    /// |  store float %Val1 %PHI.phiops |  |  store float %Val2 %PHI.phiops |
+    /// |  br label % JoinBlock          |  |  br label %JoinBlock           |
+    /// ----------------------------------  ----------------------------------
+    ///                             \            /
+    ///                              \          /
+    ///               _________________________________________
+    ///               |JoinBlock:                             |
+    ///               |  %PHI = load float, float* PHI.phiops |
+    ///               -----------------------------------------
+    ///
+    /// Note that there can also be a scalar write access for %PHI if used in a
+    /// different BasicBlock, i.e. there can be a memory object %PHI.phiops as
+    /// well as a memory object %PHI.s2a.
+    MK_PHI,
 
-    // References to (multi-dimensional) arrays
-    KIND_ARRAY,
+    /// MK_ExitPHI: Models PHI nodes in the SCoP's exit block
+    ///
+    /// For PHI nodes in the Scop's exit block a special memory object kind is
+    /// used. The modeling used is identical to MK_PHI, with the exception
+    /// that there are no READs from these memory objects. The PHINode's
+    /// llvm::Value is treated as a value escaping the SCoP. WRITE accesses
+    /// write directly to the escaping value's ".s2a" alloca.
+    MK_ExitPHI
   };
 
   /// @brief Construct a ScopArrayInfo object.
@@ -123,7 +228,7 @@ public:
   /// @param DL             The data layout of the module.
   /// @param S              The scop this array object belongs to.
   ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *IslCtx,
-                ArrayRef<const SCEV *> DimensionSizes, enum ARRAYKIND Kind,
+                ArrayRef<const SCEV *> DimensionSizes, enum MemoryKind Kind,
                 const DataLayout &DL, Scop *S);
 
   ///  @brief Update the sizes of the ScopArrayInfo object.
@@ -201,7 +306,7 @@ public:
   /// original PHI node as virtual base pointer, we have this additional
   /// attribute to distinguish the PHI node specific array modeling from the
   /// normal scalar array modeling.
-  bool isPHI() const { return Kind == KIND_PHI; };
+  bool isPHIKind() const { return Kind == MK_PHI; };
 
   /// @brief Dump a readable representation to stderr.
   void dump() const;
@@ -250,7 +355,7 @@ private:
   /// @brief The type of this scop array info object.
   ///
   /// We distinguish between SCALAR, PHI and ARRAY objects.
-  enum ARRAYKIND Kind;
+  enum MemoryKind Kind;
 
   /// @brief The data layout of the module.
   const DataLayout &DL;
@@ -265,114 +370,6 @@ class MemoryAccess {
   friend class ScopStmt;
 
 public:
-  /// @brief Description of the cause of a MemoryAccess being added.
-  ///
-  /// We distinguish between explicit and implicit accesses. Explicit are those
-  /// for which there is a load or store instruction in the analyzed IR.
-  /// Implicit accesses are derived from defintions and uses of llvm::Values.
-  /// The polyhedral model has no notion of such values or SSA form, hence they
-  /// are modeled "as if" they were accesses to zero-dimensional arrays even if
-  /// they do represent accesses to (main) memory in the analyzed IR code. The
-  /// actual memory for the zero-dimensional arrays is only created using
-  /// allocas at CodeGeneration, with suffixes (currently ".s2a" and ".phiops")
-  /// added to the value's name. To describe how def/uses are modeled using
-  /// accesses we use these these suffixes here as well.
-  /// There are currently three separate kinds of access origins:
-  ///
-  ///
-  /// * Explicit access
-  ///
-  /// Memory is accessed by either a load (READ) or store (*_WRITE) found in the
-  /// IR. #AccessInst is the LoadInst respectively StoreInst. The #BaseAddr is
-  /// the array pointer being accesses without subscript. #AccessValue is the
-  /// llvm::Value the StoreInst writes, respectively the result of the LoadInst
-  /// (the LoadInst itself).
-  ///
-  ///
-  /// * Accessing an llvm::Value (a scalar)
-  ///
-  /// This is either a *_WRITE for the value's definition (i.e. exactly one per
-  /// llvm::Value) or a READ when the scalar is used in a different
-  /// BasicBlock. For instance, a use/def chain of such as %V in
-  ///              ______________________
-  ///              |DefBB:              |
-  ///              |  %V = float op ... |
-  ///              ----------------------
-  ///               |                  |
-  /// _________________               _________________
-  /// |UseBB1:        |               |UseBB2:        |
-  /// |  use float %V |               |  use float %V |
-  /// -----------------               -----------------
-  ///
-  /// is modeled as if the accesses had occured this way:
-  ///
-  ///                        __________________________
-  ///                        |entry:                  |
-  ///                        |  %V.s2a = alloca float |
-  ///                        --------------------------
-  ///                                     |
-  ///                    ___________________________________
-  ///                    |DefBB:                           |
-  ///                    |  store %float %V, float* %V.sa2 |
-  ///                    -----------------------------------
-  ///                           |                   |
-  /// ____________________________________  ____________________________________
-  /// |UseBB1:                           |  |UseBB2:                           |
-  /// |  %V.reload1 = load float* %V.s2a |  |  %V.reload2 = load float* %V.s2a |
-  /// |  use float %V.reload1            |  |  use float %V.reload2            |
-  /// ------------------------------------  ------------------------------------
-  ///
-  /// #AccessInst is either the llvm::Value for WRITEs or the value's user for
-  /// READS. The #BaseAddr is represented by the value's definition (i.e. the
-  /// llvm::Value itself) as no such alloca yet exists before CodeGeneration.
-  /// #AccessValue is also the llvm::Value itself.
-  ///
-  ///
-  /// * Accesses to emulate PHI nodes within the SCoP
-  ///
-  /// PHIInst instructions such as
-  ///
-  /// %PHI = phi float [ %Val1, %IncomingBlock1 ], [ %Val2, %IncomingBlock2 ]
-  ///
-  /// are modeled as if the accesses occured this way:
-  ///
-  ///                    _______________________________
-  ///                    |entry:                       |
-  ///                    |  %PHI.phiops = alloca float |
-  ///                    -------------------------------
-  ///                           |              |
-  /// __________________________________  __________________________________
-  /// |IncomingBlock1:                 |  |IncomingBlock2:                 |
-  /// |  ...                           |  |  ...                           |
-  /// |  store float %Val1 %PHI.phiops |  |  store float %Val2 %PHI.phiops |
-  /// |  br label % JoinBlock          |  |  br label %JoinBlock           |
-  /// ----------------------------------  ----------------------------------
-  ///                             \            /
-  ///                              \          /
-  ///               _________________________________________
-  ///               |JoinBlock:                             |
-  ///               |  %PHI = load float, float* PHI.phiops |
-  ///               -----------------------------------------
-  ///
-  /// Since the stores and loads do not exist in the analyzed code, the
-  /// #AccessInst of a load is the PHIInst and a incoming block's terminator for
-  /// stores. The #BaseAddr is represented through the PHINode because there
-  /// also such alloca in the analyzed code. The #AccessValue is represented by
-  /// the PHIInst itself.
-  ///
-  /// Note that there can also be a scalar write access for %PHI if used in a
-  /// different BasicBlock, i.e. there can be a %PHI.phiops as well as a
-  /// %PHI.s2a.
-  ///
-  ///
-  /// * Accesses to emulate PHI nodes that are in the SCoP's exit block
-  ///
-  /// Like the previous, but the PHI itself is not located in the SCoP itself.
-  /// There will be no READ type MemoryAccess for such values. The PHINode's
-  /// llvm::Value is treated as a value escaping the SCoP. WRITE accesses write
-  /// directly to the escaping value's ".s2a" alloca.
-  enum AccessOrigin { EXPLICIT, SCALAR, PHI, EXIT_PHI };
-
   /// @brief The access type of a memory access
   ///
   /// There are three kind of access types:
@@ -421,9 +418,9 @@ private:
   /// scop statement.
   isl_id *Id;
 
-  /// @brief What is modeled by this MemoetyAccess.
-  /// @see AccessOrigin
-  enum AccessOrigin Origin;
+  /// @brief What is modeled by this MemoryAccess.
+  /// @see ScopArrayInfo::MemoryKind
+  ScopArrayInfo::MemoryKind Kind;
 
   /// @brief Whether it a reading or writing access, and if writing, whether it
   /// is conditional (MAY_WRITE).
@@ -463,6 +460,13 @@ private:
   // @{
 
   /// @brief The base address (e.g., A for A[i+j]).
+  ///
+  /// The #BaseAddr of a memory access of kind MK_Array is the base pointer
+  /// of the memory access.
+  /// The #BaseAddr of a memory access of kind MK_PHI or MK_ExitPHI is the
+  /// PHI node itself.
+  /// The #BaseAddr of a memory access of kind MK_Value is the instruction
+  /// defining the value.
   AssertingVH<Value> BaseAddr;
 
   /// @brief An unique name of the accessed array.
@@ -479,13 +483,27 @@ private:
   // @{
 
   /// @brief The access instruction of this memory access.
+  ///
+  /// For memory accesses of kind MK_Array the access instruction is the
+  /// Load or Store instruction performing the access.
+  ///
+  /// For memory accesses of kind MK_PHI or MK_ExitPHI the access
+  /// instruction of a load access is the PHI instruction. The access
+  /// instruction of a PHI-store is the incoming's block's terminator
+  /// intruction.
+  ///
+  /// For memory accesses of kind MK_Value the access instruction of a load
+  /// access is the instruction that uses the load. The access instruction of
+  /// a write access is the intruction that defines the llvm::Value.
   Instruction *AccessInstruction;
 
   /// @brief The value associated with this memory access.
   ///
-  ///  - For real memory accesses it is the loaded result or the stored value.
-  ///  - For straight line scalar accesses it is the access instruction itself.
-  ///  - For PHI operand accesses it is the operand value.
+  ///  - For array memory accesses (MK_Array) it is the loaded result or the
+  ///    stored value.
+  ///  - For accesses of kind MK_Value it is the access instruction itself.
+  ///  - For accesses of kind MK_PHI or MK_ExitPHI it is the operand value
+  ///    of the PHI node.
   ///
   AssertingVH<Value> AccessValue;
 
@@ -572,14 +590,15 @@ public:
   /// @param ElemBytes  Number of accessed bytes.
   /// @param AccType    Whether read or write access.
   /// @param IsAffine   Whether the subscripts are affine expressions.
-  /// @param Origin     What is the purpose of this access?
+  /// @param Kind       The kind of memory accessed.
   /// @param Subscripts Subscipt expressions
   /// @param Sizes      Dimension lengths of the accessed array.
   /// @param BaseName   Name of the acessed array.
   MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst, AccessType Type,
                Value *BaseAddress, unsigned ElemBytes, bool Affine,
                ArrayRef<const SCEV *> Subscripts, ArrayRef<const SCEV *> Sizes,
-               Value *AccessValue, AccessOrigin Origin, StringRef BaseName);
+               Value *AccessValue, ScopArrayInfo::MemoryKind Kind,
+               StringRef BaseName);
   ~MemoryAccess();
 
   /// @brief Get the type of a memory access.
@@ -674,21 +693,22 @@ public:
   bool isStrideZero(__isl_take const isl_map *Schedule) const;
 
   /// @brief Whether this is an access of an explicit load or store in the IR.
-  bool isExplicit() const { return Origin == EXPLICIT; }
+  bool isArrayKind() const { return Kind == ScopArrayInfo::MK_Array; }
 
-  /// @brief Whether this access represents a register access or models PHI
-  /// nodes.
-  bool isImplicit() const { return !isExplicit(); }
+  /// @brief Whether this access is an array to a scalar memory object.
+  ///
+  /// Scalar accesses are accesses to MK_Value, MK_PHI or MK_ExitPHI.
+  bool isScalarKind() const { return !isArrayKind(); }
 
   /// @brief Is this MemoryAccess modeling scalar dependences?
-  bool isScalar() const { return Origin == SCALAR; }
+  bool isValueKind() const { return Kind == ScopArrayInfo::MK_Value; }
 
   /// @brief Is this MemoryAccess modeling special PHI node accesses?
-  bool isPHI() const { return Origin == PHI; }
+  bool isPHIKind() const { return Kind == ScopArrayInfo::MK_PHI; }
 
   /// @brief Is this MemoryAccess modeling the accesses of a PHI node in the
   /// SCoP's exit block?
-  bool isExitPHI() const { return Origin == EXIT_PHI; }
+  bool isExitPHIKind() const { return Kind == ScopArrayInfo::MK_ExitPHI; }
 
   /// @brief Get the statement that contains this memory access.
   ScopStmt *getStatement() const { return Statement; }
@@ -1282,6 +1302,31 @@ private:
   /// invariant location.
   void buildInvariantEquivalenceClasses();
 
+  /// @brief Check if a memory access can be hoisted.
+  ///
+  /// @param Access The access to verify.
+  /// @param Writes The set of all memory writes in the scop.
+  ///
+  /// @return Return true if a memory access can be hoisted.
+  bool isHoistableAccess(MemoryAccess *Access,
+                         __isl_keep isl_union_map *Writes);
+
+  /// @brief Verify that all required invariant loads have been hoisted.
+  ///
+  /// Invariant load hoisting is not guaranteed to hoist all loads that were
+  /// assumed to be scop invariant during scop detection. This function checks
+  /// for cases where the hoisting failed, but where it would have been
+  /// necessary for our scop modeling to be correct. In case of insufficent
+  /// hoisting the scop is marked as invalid.
+  ///
+  /// In the example below Bound[1] is required to be invariant:
+  ///
+  /// for (int i = 1; i < Bound[0]; i++)
+  ///   for (int j = 1; j < Bound[1]; j++)
+  ///     ...
+  ///
+  void verifyInvariantLoads();
+
   /// @brief Hoist invariant memory loads and check for required ones.
   ///
   /// We first identify "common" invariant loads, thus loads that are invariant
@@ -1575,6 +1620,11 @@ public:
   /// @brief Return the stmt for the given @p BB or nullptr if none.
   ScopStmt *getStmtForBasicBlock(BasicBlock *BB) const;
 
+  /// @brief Return the ScopStmt that represents @p RN; can return nullptr if
+  /// the RegionNode is not within the SCoP or has been removed due to
+  /// simplifications.
+  ScopStmt *getStmtForRegionNode(RegionNode *RN) const;
+
   /// @brief Return the number of statements in the SCoP.
   size_t getSize() const { return Stmts.size(); }
 
@@ -1602,18 +1652,18 @@ public:
   /// @brief Return the (possibly new) ScopArrayInfo object for @p Access.
   ///
   /// @param ElementType The type of the elements stored in this array.
-  /// @param Kind The kind of array info object.
+  /// @param Kind        The kind of the array info object.
   const ScopArrayInfo *getOrCreateScopArrayInfo(Value *BasePtr,
                                                 Type *ElementType,
                                                 ArrayRef<const SCEV *> Sizes,
-                                                ScopArrayInfo::ARRAYKIND Kind);
+                                                ScopArrayInfo::MemoryKind Kind);
 
   /// @brief Return the cached ScopArrayInfo object for @p BasePtr.
   ///
-  /// @param BasePtr  The base pointer the object has been stored for.
-  /// @param Kind The kind of array info object.
+  /// @param BasePtr   The base pointer the object has been stored for.
+  /// @param Kind      The kind of array info object.
   const ScopArrayInfo *getScopArrayInfo(Value *BasePtr,
-                                        ScopArrayInfo::ARRAYKIND Kind);
+                                        ScopArrayInfo::MemoryKind Kind);
 
   void setContext(isl_set *NewContext);
 
@@ -1733,6 +1783,9 @@ class ScopInfo : public RegionPass {
   // Target data for element size computing.
   const DataLayout *TD;
 
+  // DominatorTree to reason about guaranteed execution.
+  DominatorTree *DT;
+
   // Access function of statements (currently BasicBlocks) .
   //
   // This owns all the MemoryAccess objects of the Scop created in this pass. It
@@ -1754,7 +1807,7 @@ class ScopInfo : public RegionPass {
   void clear();
 
   // Build the SCoP for Region @p R.
-  void buildScop(Region &R, DominatorTree &DT, AssumptionCache &AC);
+  void buildScop(Region &R, AssumptionCache &AC);
 
   /// @brief Build an instance of MemoryAccess from the Load/Store instruction.
   ///
@@ -1822,13 +1875,13 @@ class ScopInfo : public RegionPass {
   /// @param AccessValue Value read or written.
   /// @param Subscripts  Access subscripts per dimension.
   /// @param Sizes       The array diminsion's sizes.
-  /// @param Origin      Purpose of this access.
+  /// @param Kind        The kind of memory accessed.
   void addMemoryAccess(BasicBlock *BB, Instruction *Inst,
                        MemoryAccess::AccessType Type, Value *BaseAddress,
                        unsigned ElemBytes, bool Affine, Value *AccessValue,
                        ArrayRef<const SCEV *> Subscripts,
                        ArrayRef<const SCEV *> Sizes,
-                       MemoryAccess::AccessOrigin Origin);
+                       ScopArrayInfo::MemoryKind Kind);
 
   /// @brief Create a MemoryAccess that represents either a LoadInst or
   /// StoreInst.
@@ -1841,20 +1894,20 @@ class ScopInfo : public RegionPass {
   /// @param Subscripts  Access subscripts per dimension.
   /// @param Sizes       The array dimension's sizes.
   /// @param AccessValue Value read or written.
-  /// @see AccessOrigin
-  void addExplicitAccess(Instruction *MemAccInst, MemoryAccess::AccessType Type,
-                         Value *BaseAddress, unsigned ElemBytes, bool IsAffine,
-                         ArrayRef<const SCEV *> Subscripts,
-                         ArrayRef<const SCEV *> Sizes, Value *AccessValue);
+  /// @see ScopArrayInfo::MemoryKind
+  void addArrayAccess(Instruction *MemAccInst, MemoryAccess::AccessType Type,
+                      Value *BaseAddress, unsigned ElemBytes, bool IsAffine,
+                      ArrayRef<const SCEV *> Subscripts,
+                      ArrayRef<const SCEV *> Sizes, Value *AccessValue);
 
   /// @brief Create a MemoryAccess for writing an llvm::Value.
   ///
   /// The access will be created at the @p Value's definition.
   ///
   /// @param Value The value to be written.
-  /// @see addScalarReadAccess()
-  /// @see AccessOrigin
-  void addScalarWriteAccess(Instruction *Value);
+  /// @see addValueReadAccess()
+  /// @see ScopArrayInfo::MemoryKind
+  void addValueWriteAccess(Instruction *Value);
 
   /// @brief Create a MemoryAccess for reloading an llvm::Value.
   ///
@@ -1862,9 +1915,9 @@ class ScopInfo : public RegionPass {
   ///
   /// @param Value The scalar expected to be loaded.
   /// @param User  User of the scalar; this is where the access is added.
-  /// @see addScalarWriteAccess()
-  /// @see AccessOrigin
-  void addScalarReadAccess(Value *Value, Instruction *User);
+  /// @see addValueWriteAccess()
+  /// @see ScopArrayInfo::MemoryKind
+  void addValueReadAccess(Value *Value, Instruction *User);
 
   /// @brief Create a MemoryAccess for reloading an llvm::Value.
   ///
@@ -1876,9 +1929,9 @@ class ScopInfo : public RegionPass {
   /// @param User   The PHI node referencing @p Value.
   /// @param UserBB Incoming block for the incoming @p Value.
   /// @see addPHIWriteAccess()
-  /// @see addScalarWriteAccess()
-  /// @see AccessOrigin
-  void addScalarReadAccess(Value *Value, PHINode *User, BasicBlock *UserBB);
+  /// @see addValueWriteAccess()
+  /// @see ScopArrayInfo::MemoryKind
+  void addValueReadAccess(Value *Value, PHINode *User, BasicBlock *UserBB);
 
   /// @brief Create a write MemoryAccess for the incoming block of a phi node.
   ///
@@ -1892,7 +1945,7 @@ class ScopInfo : public RegionPass {
   ///                      .phiops one. Required for values escaping through a
   ///                      PHINode in the SCoP region's exit block.
   /// @see addPHIReadAccess()
-  /// @see AccessOrigin
+  /// @see ScopArrayInfo::MemoryKind
   void addPHIWriteAccess(PHINode *PHI, BasicBlock *IncomingBlock,
                          Value *IncomingValue, bool IsExitBlock);
 
@@ -1905,7 +1958,7 @@ class ScopInfo : public RegionPass {
   /// @param PHI PHINode under consideration; the READ access will be added
   /// here.
   /// @see addPHIWriteAccess()
-  /// @see AccessOrigin
+  /// @see ScopArrayInfo::MemoryKind
   void addPHIReadAccess(PHINode *PHI);
 
 public:

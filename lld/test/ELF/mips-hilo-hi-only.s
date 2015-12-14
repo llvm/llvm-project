@@ -10,6 +10,9 @@
   .globl  __start
 __start:
   lui    $t0,%hi(__start+0x10000)
+  addi   $t0,$t0,%lo(_label)
+_label:
+  nop
 
 # WARN: Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16
 
@@ -17,6 +20,9 @@ __start:
 # CHECK-NEXT: __start:
 # CHECK-NEXT:  20000:   3c 08 00 02   lui    $8, 2
 #                                                ^-- %hi(__start) w/o addend
+# CHECK-NEXT   20004:   21 08 00 08   addi   $8, $8, 8
+#                                                    ^-- %lo(_label)
 
 # CHECK: SYMBOL TABLE:
-# CHECK: 0020000     .text   00000000 __start
+# CHECK: 00020008    .text   00000000 _label
+# CHECK: 00020000    .text   00000000 __start

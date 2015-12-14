@@ -95,7 +95,8 @@ bool InputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 template <class ELFT>
 template <bool isRela>
 uint8_t *
-InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t Type,
+InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t SymIndex,
+                                            uint32_t Type,
                                             RelIteratorRange<isRela> Rels) {
   // Some MIPS relocations use addend calculated from addend of the relocation
   // itself and addend of paired relocation. ABI requires to compute such
@@ -113,6 +114,8 @@ InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t Type,
     return nullptr;
   for (const auto &RI : Rels) {
     if (RI.getType(Config->Mips64EL) != Type)
+      continue;
+    if (RI.getSymbol(Config->Mips64EL) != SymIndex)
       continue;
     uintX_t Offset = getOffset(RI.r_offset);
     if (Offset == (uintX_t)-1)
@@ -162,7 +165,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     if (SymIndex < SymTab->sh_info) {
       uintX_t SymVA = getLocalRelTarget(*File, RI);
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA, 0,
-                          findMipsPairedReloc(Buf, Type, NextRelocs));
+                          findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
       continue;
     }
 
@@ -206,7 +209,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uintX_t A = getAddend<ELFT>(RI);
     uintX_t Size = getSymSize<ELFT>(Body);
     Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA + A, Size + A,
-                        findMipsPairedReloc(Buf, Type, NextRelocs));
+                        findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
   }
 }
 
