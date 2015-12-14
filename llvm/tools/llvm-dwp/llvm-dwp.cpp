@@ -148,24 +148,30 @@ static void addAllTypes(MCStreamer &Out,
   uint32_t Offset = 0;
   DataExtractor Data(Types, true, 0);
   while (Data.isValidOffset(Offset)) {
-    TypeIndexEntries.push_back(CUEntry);
-    auto &Entry = TypeIndexEntries.back();
+    UnitIndexEntry Entry = CUEntry;
     // Zero out the debug_info contribution
     Entry.Contributions[0] = {};
     auto &C = Entry.Contributions[DW_SECT_TYPES - DW_SECT_INFO];
-    C.Offset = TypesOffset + Offset;
+    C.Offset = TypesOffset;
     auto PrevOffset = Offset;
     // Length of the unit, including the 4 byte length field.
     C.Length = Data.getU32(&Offset) + 4;
-
-    Out.EmitBytes(Types.substr(Offset - 4, C.Length));
-    TypesOffset += C.Length;
 
     Data.getU16(&Offset); // Version
     Data.getU32(&Offset); // Abbrev offset
     Data.getU8(&Offset);  // Address size
     Entry.Signature = Data.getU64(&Offset);
     Offset = PrevOffset + C.Length;
+
+    if (any_of(TypeIndexEntries, [&](const UnitIndexEntry &E) {
+          return E.Signature == Entry.Signature;
+        }))
+      continue;
+
+    Out.EmitBytes(Types.substr(PrevOffset, C.Length));
+    TypesOffset += C.Length;
+
+    TypeIndexEntries.push_back(Entry);
   }
 }
 

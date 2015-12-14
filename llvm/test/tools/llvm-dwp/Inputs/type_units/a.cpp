@@ -1,2 +1,0 @@
-struct foo { };
-foo a;

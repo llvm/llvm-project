@@ -154,12 +154,12 @@ public:
                                           sys::Memory::MF_WRITE, EC));
     assert(!EC && "Failed to allocate resolver block");
 
-    TargetT::writeResolverCode(static_cast<uint8_t*>(ResolverBlock.base()),
-			       &reenter, this);
+    TargetT::writeResolverCode(static_cast<uint8_t *>(ResolverBlock.base()),
+                               &reenter, this);
 
     EC = sys::Memory::protectMappedMemory(ResolverBlock.getMemoryBlock(),
-					  sys::Memory::MF_READ |
-					  sys::Memory::MF_EXEC);
+                                          sys::Memory::MF_READ |
+                                              sys::Memory::MF_EXEC);
     assert(!EC && "Failed to mprotect resolver block");
   }
 
@@ -190,17 +190,16 @@ private:
 
     uint8_t *TrampolineMem = static_cast<uint8_t*>(TrampolineBlock.base());
     TargetT::writeTrampolines(TrampolineMem, ResolverBlock.base(),
-			      NumTrampolines);
+                              NumTrampolines);
 
     for (unsigned I = 0; I < NumTrampolines; ++I)
       this->AvailableTrampolines.push_back(
-        static_cast<TargetAddress>(
-	  reinterpret_cast<uintptr_t>(
-				      TrampolineMem + (I * TargetT::TrampolineSize))));
+          static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(
+              TrampolineMem + (I * TargetT::TrampolineSize))));
 
     EC = sys::Memory::protectMappedMemory(TrampolineBlock.getMemoryBlock(),
-					  sys::Memory::MF_READ |
-					  sys::Memory::MF_EXEC);
+                                          sys::Memory::MF_READ |
+                                              sys::Memory::MF_EXEC);
     assert(!EC && "Failed to mprotect trampoline block");
 
     TrampolineBlocks.push_back(std::move(TrampolineBlock));
