@@ -1722,6 +1722,16 @@ public:
                                                EndLoc);
   }
 
+  /// \brief Build a new OpenMP 'hint' clause.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPHintClause(Expr *Hint, SourceLocation StartLoc,
+                                  SourceLocation LParenLoc,
+                                  SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPHintClause(Hint, StartLoc, LParenLoc, EndLoc);
+  }
+
   /// \brief Rebuild the operand to an Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -7397,6 +7407,17 @@ StmtResult TreeTransform<Derived>::TransformOMPTaskLoopSimdDirective(
   return Res;
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPDistributeDirective(
+    OMPDistributeDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(OMPD_distribute, DirName, nullptr,
+                                             D->getLocStart());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMP clause transformation
 //===----------------------------------------------------------------------===//
@@ -7830,6 +7851,15 @@ TreeTransform<Derived>::TransformOMPNumTasksClause(OMPNumTasksClause *C) {
     return nullptr;
   return getDerived().RebuildOMPNumTasksClause(
       E.get(), C->getLocStart(), C->getLParenLoc(), C->getLocEnd());
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPHintClause(OMPHintClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getHint());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPHintClause(E.get(), C->getLocStart(),
+                                           C->getLParenLoc(), C->getLocEnd());
 }
 
 //===----------------------------------------------------------------------===//

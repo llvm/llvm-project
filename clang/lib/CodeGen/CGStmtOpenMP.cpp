@@ -1831,8 +1831,12 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
     CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
     CGF.EnsureInsertPoint();
   };
-  CGM.getOpenMPRuntime().emitCriticalRegion(
-      *this, S.getDirectiveName().getAsString(), CodeGen, S.getLocStart());
+  Expr *Hint = nullptr;
+  if (auto *HintClause = S.getSingleClause<OMPHintClause>())
+    Hint = HintClause->getHint();
+  CGM.getOpenMPRuntime().emitCriticalRegion(*this,
+                                            S.getDirectiveName().getAsString(),
+                                            CodeGen, S.getLocStart(), Hint);
 }
 
 void CodeGenFunction::EmitOMPParallelForDirective(
@@ -2043,6 +2047,11 @@ void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
     }
     return llvm::None;
   }(), S.getLocStart());
+}
+
+void CodeGenFunction::EmitOMPDistributeDirective(
+    const OMPDistributeDirective &S) {
+  llvm_unreachable("CodeGen for 'omp distribute' is not supported yet.");
 }
 
 static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
@@ -2484,6 +2493,7 @@ static void EmitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_grainsize:
   case OMPC_nogroup:
   case OMPC_num_tasks:
+  case OMPC_hint:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }

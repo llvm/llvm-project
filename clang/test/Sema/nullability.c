@@ -112,4 +112,7 @@ _Nonnull int *returns_int_ptr(int x) {
 void nullable_to_nonnull(_Nullable int *ptr) {
   int *a = ptr; // okay
   _Nonnull int *b = ptr; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  b = ptr; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+
+  accepts_nonnull_1(ptr); // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
 }

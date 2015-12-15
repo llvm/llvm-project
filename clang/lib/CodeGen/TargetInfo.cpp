@@ -3413,8 +3413,10 @@ Address WinX86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 namespace {
 /// PPC32_SVR4_ABIInfo - The 32-bit PowerPC ELF (SVR4) ABI information.
 class PPC32_SVR4_ABIInfo : public DefaultABIInfo {
+bool IsSoftFloatABI;
 public:
-  PPC32_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+  PPC32_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, bool SoftFloatABI)
+      : DefaultABIInfo(CGT), IsSoftFloatABI(SoftFloatABI) {}
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
@@ -3422,8 +3424,8 @@ public:
 
 class PPC32TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  PPC32TargetCodeGenInfo(CodeGenTypes &CGT)
-      : TargetCodeGenInfo(new PPC32_SVR4_ABIInfo(CGT)) {}
+  PPC32TargetCodeGenInfo(CodeGenTypes &CGT, bool SoftFloatABI)
+      : TargetCodeGenInfo(new PPC32_SVR4_ABIInfo(CGT, SoftFloatABI)) {}
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
     // This is recovered from gcc output.
@@ -3455,6 +3457,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   bool isI64 = Ty->isIntegerType() && getContext().getTypeSize(Ty) == 64;
   bool isInt =
       Ty->isIntegerType() || Ty->isPointerType() || Ty->isAggregateType();
+  bool isF64 = Ty->isFloatingType() && getContext().getTypeSize(Ty) == 64;
 
   // All aggregates are passed indirectly?  That doesn't seem consistent
   // with the argument-lowering code.
@@ -3464,7 +3467,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
   // The calling convention either uses 1-2 GPRs or 1 FPR.
   Address NumRegsAddr = Address::invalid();
-  if (isInt) {
+  if (isInt || IsSoftFloatABI) {
     NumRegsAddr = Builder.CreateStructGEP(VAList, 0, CharUnits::Zero(), "gpr");
   } else {
     NumRegsAddr = Builder.CreateStructGEP(VAList, 1, CharUnits::One(), "fpr");
@@ -3473,7 +3476,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   llvm::Value *NumRegs = Builder.CreateLoad(NumRegsAddr, "numUsedRegs");
 
   // "Align" the register count when TY is i64.
-  if (isI64) {
+  if (isI64 || (isF64 && IsSoftFloatABI)) {
     NumRegs = Builder.CreateAdd(NumRegs, Builder.getInt8(1));
     NumRegs = Builder.CreateAnd(NumRegs, Builder.getInt8((uint8_t) ~1U));
   }
@@ -3502,14 +3505,14 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     assert(RegAddr.getElementType() == CGF.Int8Ty);
 
     // Floating-point registers start after the general-purpose registers.
-    if (!isInt) {
+    if (!(isInt || IsSoftFloatABI)) {
       RegAddr = Builder.CreateConstInBoundsByteGEP(RegAddr,
                                                    CharUnits::fromQuantity(32));
     }
 
     // Get the address of the saved value by scaling the number of
     // registers we've used by the number of 
-    CharUnits RegSize = CharUnits::fromQuantity(isInt ? 4 : 8);
+    CharUnits RegSize = CharUnits::fromQuantity((isInt || IsSoftFloatABI) ? 4 : 8);
     llvm::Value *RegOffset =
       Builder.CreateMul(NumRegs, Builder.getInt8(RegSize.getQuantity()));
     RegAddr = Address(Builder.CreateInBoundsGEP(CGF.Int8Ty,
@@ -3518,7 +3521,9 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     RegAddr = Builder.CreateElementBitCast(RegAddr, DirectTy);
 
     // Increase the used-register count.
-    NumRegs = Builder.CreateAdd(NumRegs, Builder.getInt8(isI64 ? 2 : 1));
+    NumRegs =
+      Builder.CreateAdd(NumRegs, 
+                        Builder.getInt8((isI64 || (isF64 && IsSoftFloatABI)) ? 2 : 1));
     Builder.CreateStore(NumRegs, NumRegsAddr);
 
     CGF.EmitBranch(Cont);
@@ -7471,7 +7476,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     }
 
   case llvm::Triple::ppc:
-    return *(TheTargetCodeGenInfo = new PPC32TargetCodeGenInfo(Types));
+    return *(TheTargetCodeGenInfo = 
+             new PPC32TargetCodeGenInfo(Types, CodeGenOpts.FloatABI == "soft"));
   case llvm::Triple::ppc64:
     if (Triple.isOSBinFormatELF()) {
       PPC64_SVR4_ABIInfo::ABIKind Kind = PPC64_SVR4_ABIInfo::ELFv1;

@@ -1469,6 +1469,14 @@ TEST(IsInteger, ReportsNoFalsePositives) {
                           to(varDecl(hasType(isInteger()))))))));
 }
 
+TEST(IsAnyCharacter, MatchesCharacters) {
+  EXPECT_TRUE(matches("char i = 0;", varDecl(hasType(isAnyCharacter()))));
+}
+
+TEST(IsAnyCharacter, ReportsNoFalsePositives) {
+  EXPECT_TRUE(notMatches("int i;", varDecl(hasType(isAnyCharacter()))));
+}
+
 TEST(IsArrow, MatchesMemberVariablesViaArrow) {
   EXPECT_TRUE(matches("class Y { void x() { this->y; } int y; };",
               memberExpr(isArrow())));

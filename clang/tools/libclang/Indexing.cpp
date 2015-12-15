@@ -601,6 +601,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   bool Persistent = requestedToGetTU;
   bool OnlyLocalDecls = false;
   bool PrecompilePreamble = false;
+  bool CreatePreambleOnFirstParse = false;
   bool CacheCodeCompletionResults = false;
   PreprocessorOptions &PPOpts = CInvok->getPreprocessorOpts(); 
   PPOpts.AllowPCHWithCompilerErrors = true;
@@ -608,6 +609,8 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (requestedToGetTU) {
     OnlyLocalDecls = CXXIdx->getOnlyLocalDecls();
     PrecompilePreamble = TU_options & CXTranslationUnit_PrecompiledPreamble;
+    CreatePreambleOnFirstParse =
+        TU_options & CXTranslationUnit_CreatePreambleOnFirstParse;
     // FIXME: Add a flag for modules.
     CacheCodeCompletionResults
       = TU_options & CXTranslationUnit_CacheCompletionResults;
@@ -620,11 +623,16 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (!requestedToGetTU && !CInvok->getLangOpts()->Modules)
     PPOpts.DetailedRecord = false;
 
+  // Unless the user specified that they want the preamble on the first parse
+  // set it up to be created on the first reparse. This makes the first parse
+  // faster, trading for a slower (first) reparse.
+  unsigned PrecompilePreambleAfterNParses =
+      !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
   DiagnosticErrorTrap DiagTrap(*Diags);
   bool Success = ASTUnit::LoadFromCompilerInvocationAction(
       CInvok.get(), CXXIdx->getPCHContainerOperations(), Diags,
       IndexAction.get(), Unit, Persistent, CXXIdx->getClangResourcesPath(),
-      OnlyLocalDecls, CaptureDiagnostics, PrecompilePreamble,
+      OnlyLocalDecls, CaptureDiagnostics, PrecompilePreambleAfterNParses,
       CacheCodeCompletionResults,
       /*IncludeBriefCommentsInCodeCompletion=*/false,
       /*UserFilesAreVolatile=*/true);

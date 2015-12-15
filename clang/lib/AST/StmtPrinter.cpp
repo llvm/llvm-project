@@ -743,6 +743,12 @@ void OMPClausePrinter::VisitOMPNumTasksClause(OMPNumTasksClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPHintClause(OMPHintClause *Node) {
+  OS << "hint(";
+  Node->getHint()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
 template<typename T>
 void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
   for (typename T::varlist_iterator I = Node->varlist_begin(),
@@ -964,6 +970,7 @@ void StmtPrinter::VisitOMPCriticalDirective(OMPCriticalDirective *Node) {
     Node->getDirectiveName().printName(OS);
     OS << ")";
   }
+  OS << " ";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1060,6 +1067,11 @@ void StmtPrinter::VisitOMPTaskLoopDirective(OMPTaskLoopDirective *Node) {
 void StmtPrinter::VisitOMPTaskLoopSimdDirective(
     OMPTaskLoopSimdDirective *Node) {
   Indent() << "#pragma omp taskloop simd ";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPDistributeDirective(OMPDistributeDirective *Node) {
+  Indent() << "#pragma omp distribute ";
   PrintOMPExecutableDirective(Node);
 }
 

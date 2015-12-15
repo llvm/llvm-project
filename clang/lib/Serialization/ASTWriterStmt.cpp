@@ -2028,6 +2028,11 @@ void OMPClauseWriter::VisitOMPNumTasksClause(OMPNumTasksClause *C) {
   Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
 }
 
+void OMPClauseWriter::VisitOMPHintClause(OMPHintClause *C) {
+  Writer->Writer.AddStmt(C->getHint());
+  Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMP Directives.
 //===----------------------------------------------------------------------===//
@@ -2134,6 +2139,7 @@ void ASTStmtWriter::VisitOMPMasterDirective(OMPMasterDirective *D) {
 
 void ASTStmtWriter::VisitOMPCriticalDirective(OMPCriticalDirective *D) {
   VisitStmt(D);
+  Record.push_back(D->getNumClauses());
   VisitOMPExecutableDirective(D);
   Writer.AddDeclarationNameInfo(D->getDirectiveName(), Record);
   Code = serialization::STMT_OMP_CRITICAL_DIRECTIVE;
@@ -2264,6 +2270,11 @@ void ASTStmtWriter::VisitOMPTaskLoopDirective(OMPTaskLoopDirective *D) {
 void ASTStmtWriter::VisitOMPTaskLoopSimdDirective(OMPTaskLoopSimdDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_TASKLOOP_SIMD_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPDistributeDirective(OMPDistributeDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_DISTRIBUTE_DIRECTIVE;
 }
 
 //===----------------------------------------------------------------------===//

@@ -3523,6 +3523,11 @@ public:
   void DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
                         SourceLocation OpLoc);
 
+  /// \brief Warn if we're implicitly casting from a _Nullable pointer type to a
+  /// _Nonnull one.
+  void diagnoseNullableToNonnullConversion(QualType DstType, QualType SrcType,
+                                           SourceLocation Loc);
+
   ParsingDeclState PushParsingDeclaration(sema::DelayedDiagnosticPool &pool) {
     return DelayedDiagnostics.push(pool);
   }
@@ -7888,6 +7893,7 @@ public:
   /// \brief Called on well-formed '\#pragma omp critical' after parsing of the
   /// associated statement.
   StmtResult ActOnOpenMPCriticalDirective(const DeclarationNameInfo &DirName,
+                                          ArrayRef<OMPClause *> Clauses,
                                           Stmt *AStmt, SourceLocation StartLoc,
                                           SourceLocation EndLoc);
   /// \brief Called on well-formed '\#pragma omp parallel for' after parsing
@@ -7976,6 +7982,12 @@ public:
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
       llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+  /// \brief Called on well-formed '\#pragma omp distribute' after parsing
+  /// of the associated statement.
+  StmtResult ActOnOpenMPDistributeDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc,
+      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
 
   OMPClause *ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
                                          Expr *Expr,
@@ -8025,6 +8037,10 @@ public:
   OMPClause *ActOnOpenMPNumTasksClause(Expr *NumTasks, SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
+  /// \brief Called on well-formed 'hint' clause.
+  OMPClause *ActOnOpenMPHintClause(Expr *Hint, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc);
 
   OMPClause *ActOnOpenMPSimpleClause(OpenMPClauseKind Kind,
                                      unsigned Argument,

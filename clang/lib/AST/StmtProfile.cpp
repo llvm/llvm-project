@@ -472,6 +472,9 @@ void OMPClauseProfiler::VisitOMPGrainsizeClause(const OMPGrainsizeClause *C) {
 void OMPClauseProfiler::VisitOMPNumTasksClause(const OMPNumTasksClause *C) {
   Profiler->VisitStmt(C->getNumTasks());
 }
+void OMPClauseProfiler::VisitOMPHintClause(const OMPHintClause *C) {
+  Profiler->VisitStmt(C->getHint());
+}
 }
 
 void
@@ -600,6 +603,11 @@ void StmtProfiler::VisitOMPTaskLoopDirective(const OMPTaskLoopDirective *S) {
 
 void StmtProfiler::VisitOMPTaskLoopSimdDirective(
     const OMPTaskLoopSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPDistributeDirective(
+    const OMPDistributeDirective *S) {
   VisitOMPLoopDirective(S);
 }
 

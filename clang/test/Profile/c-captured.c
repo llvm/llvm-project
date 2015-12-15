@@ -3,9 +3,9 @@
 // RUN: llvm-profdata merge %S/Inputs/c-captured.proftext -o %t.profdata
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-captured.c %s -o - -emit-llvm -fprofile-instr-use=%t.profdata | FileCheck -check-prefix=PGOUSE -check-prefix=PGOALL %s
 
-// PGOGEN: @[[DCC:__llvm_profile_counters_debug_captured]] = private global [3 x i64] zeroinitializer
-// PGOGEN: @[[CSC:__llvm_profile_counters_c_captured.c___captured_stmt]] = private global [2 x i64] zeroinitializer
-// PGOGEN: @[[C1C:__llvm_profile_counters_c_captured.c___captured_stmt.1]] = private global [3 x i64] zeroinitializer
+// PGOGEN: @[[DCC:__profc_debug_captured]] = private global [3 x i64] zeroinitializer
+// PGOGEN: @[[CSC:__profc_c_captured.c___captured_stmt]] = private global [2 x i64] zeroinitializer
+// PGOGEN: @[[C1C:__profc_c_captured.c___captured_stmt.1]] = private global [3 x i64] zeroinitializer
 
 // PGOALL-LABEL: define void @debug_captured()
 // PGOGEN: store {{.*}} @[[DCC]], i64 0, i64 0

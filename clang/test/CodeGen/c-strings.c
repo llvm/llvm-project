@@ -15,6 +15,11 @@
 // MSABI: @f4.x = internal global %struct.s { i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"\01??_C@_05CJBACGMB@hello?$AA@", i32 0, i32 0) }
 // CHECK: @x = global [3 x i8] c"ola", align [[ALIGN]]
 
+// XFAIL: hexagon
+// Hexagon aligns arrays of size 8+ bytes to a 64-bit boundary, which
+// fails the check for "@f3.x = ... align [ALIGN]", since ALIGN is derived
+// from the alignment of a single i8, which is still 1.
+
 #if defined(__s390x__)
 unsigned char align = 2;
 #else

@@ -72,5 +72,6 @@ void test_cleanup() {
 // CHECK:   ret void
 
 // CHECK: [[TERMINATE]]
-// CHECK:   terminatepad within none [void ()* @"\01?terminate@@YAXXZ"] unwind to caller
+// CHECK:   cleanuppad within none []
+// CHECK-NEXT:   call void @"\01?terminate@@YAXXZ"()
 
