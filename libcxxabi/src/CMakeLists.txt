@@ -40,17 +40,19 @@ if (LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
   add_definitions(-DHAVE___CXA_THREAD_ATEXIT_IMPL)
 endif()
 
-# Generate library list.
+# Generate library list
 set(libraries ${LIBCXXABI_CXX_ABI_LIBRARIES})
-append_if(libraries LIBCXXABI_HAS_C_LIB c)
+
 if (LIBCXXABI_ENABLE_THREADS)
   append_if(libraries LIBCXXABI_HAS_PTHREAD_LIB pthread)
 endif()
 
+append_if(libraries LIBCXXABI_HAS_C_LIB c)
+
 if (LIBCXXABI_USE_LLVM_UNWINDER)
   list(APPEND libraries unwind)
 else()
-  append_if(libraries LIBCXXABI_HAS_GCC_EH_LIB gcc_eh)
+  append_if(libraries LIBCXXABI_HAS_GCC_S_LIB gcc_s)
 endif()
 
 # Setup flags.

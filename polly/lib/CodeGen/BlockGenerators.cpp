@@ -91,10 +91,13 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
 
 Value *BlockGenerator::getNewValue(ScopStmt &Stmt, Value *Old, ValueMapT &BBMap,
                                    LoopToScevMapT &LTS, Loop *L) const {
-  // We assume constants never change.
-  // This avoids map lookups for many calls to this function.
-  if (isa<Constant>(Old))
-    return const_cast<Value *>(Old);
+  // Constants that do not reference any named value can always remain
+  // unchanged. Handle them early to avoid expensive map lookups. We do not take
+  // the fast-path for external constants which are referenced through globals
+  // as these may need to be rewritten when distributing code accross different
+  // LLVM modules.
+  if (isa<Constant>(Old) && !isa<GlobalValue>(Old))
+    return Old;
 
   if (Value *New = GlobalMap.lookup(Old)) {
     if (Value *NewRemapped = GlobalMap.lookup(New))
@@ -114,12 +117,12 @@ Value *BlockGenerator::getNewValue(ScopStmt &Stmt, Value *Old, ValueMapT &BBMap,
 
   // A scop-constant value defined by a global or a function parameter.
   if (isa<GlobalValue>(Old) || isa<Argument>(Old))
-    return const_cast<Value *>(Old);
+    return Old;
 
   // A scop-constant value defined by an instruction executed outside the scop.
   if (const Instruction *Inst = dyn_cast<Instruction>(Old))
     if (!Stmt.getParent()->getRegion().contains(Inst->getParent()))
-      return const_cast<Value *>(Old);
+      return Old;
 
   // The scalar dependence is neither available nor SCEVCodegenable.
   llvm_unreachable("Unexpected scalar dependence in region!");

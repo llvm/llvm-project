@@ -31,6 +31,11 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
             action="store_true",
             help=('cause unknown test events to generate '
                   'a python assert.  Default is to ignore.'))
+        parser.add_argument(
+            "--dump-results",
+            action="store_true",
+            help=('dump the raw results data after printing '
+                  'the summary output.'))
         return parser
 
     def __init__(self, out_file, options):
@@ -56,21 +61,21 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
         if event_type is None:
             return
 
-        if event_type == "terminate":
+        if event_type == EventBuilder.TYPE_SESSION_TERMINATE:
             self._finish_output()
-        elif event_type == "test_start":
+        elif event_type == EventBuilder.TYPE_TEST_START:
             self.track_start_time(
                 test_event["test_class"],
                 test_event["test_name"],
                 test_event["event_time"])
-        elif event_type == "test_result":
+        elif event_type == EventBuilder.TYPE_TEST_RESULT:
             # Build the test key.
             test_key = test_event.get("test_filename", None)
             if test_key is None:
                 raise Exception(
                     "failed to find test filename for test event {}".format(
                         test_event))
-            test_key += ".{}.{}".format(
+            test_key += ":{}.{}".format(
                 test_event.get("test_class", ""),
                 test_event.get("test_name", ""))
 
@@ -91,14 +96,8 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
                 self.result_status_counts[old_status] -= 1
 
                 self.test_method_rerun_count += 1
-                if self.options.warn_on_multiple_results:
-                    print(
-                        "WARNING: test key {} already has a result: "
-                        "old:{} new:{}",
-                        self.result_events[test_key],
-                        test_event)
             self.result_events[test_key] = test_event
-        elif event_type == "job_result":
+        elif event_type == EventBuilder.TYPE_JOB_RESULT:
             # Build the job key.
             test_key = test_event.get("test_filename", None)
             if test_key is None:
@@ -335,6 +334,15 @@ class BasicResultsFormatter(result_formatter.ResultsFormatter):
         # Print the summary
         self._print_summary_counts(
             categories, result_events_by_status, extra_results)
+
+        if self.options.dump_results:
+            # Debug dump of the key/result info for all categories.
+            self._print_banner("Results Dump")
+            for status, events_by_key in result_events_by_status.items():
+                print("\nSTATUS: {}".format(status))
+                for key, event in events_by_key:
+                    print("key:   {}".format(key))
+                    print("event: {}".format(event))
 
     def _finish_output(self):
         """Prepare and write the results report as all incoming events have

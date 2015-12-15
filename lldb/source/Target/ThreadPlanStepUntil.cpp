@@ -6,17 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//m_should_stop
-
-//
-//===----------------------------------------------------------------------===//
-
-#include "lldb/Target/ThreadPlanStepUntil.h"
 
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Target/ThreadPlanStepUntil.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
@@ -68,7 +63,7 @@ ThreadPlanStepUntil::ThreadPlanStepUntil
             // TODO: add inline functionality
             m_return_addr = return_frame_sp->GetStackID().GetPC();
             Breakpoint *return_bp = target_sp->CreateBreakpoint (m_return_addr, true, false).get();
-            if (return_bp != NULL)
+            if (return_bp != nullptr)
             {
                 return_bp->SetThreadID(thread_id);
                 m_return_bp_id = return_bp->GetID();
@@ -82,7 +77,7 @@ ThreadPlanStepUntil::ThreadPlanStepUntil
         for (size_t i = 0; i < num_addresses; i++)
         {
             Breakpoint *until_bp = target_sp->CreateBreakpoint (address_list[i], true, false).get();
-            if (until_bp != NULL)
+            if (until_bp != nullptr)
             {
                 until_bp->SetThreadID(thread_id);
                 m_until_points[address_list[i]] = until_bp->GetID();
@@ -206,10 +201,7 @@ ThreadPlanStepUntil::AnalyzeStop()
                 bool done;
                 StackID cur_frame_zero_id;
                 
-                if (m_stack_id < cur_frame_zero_id)
-                    done = true;
-                else 
-                    done = false;
+                done = (m_stack_id < cur_frame_zero_id);
                 
                 if (done)
                 {
@@ -254,10 +246,7 @@ ThreadPlanStepUntil::AnalyzeStop()
                                 SymbolContext stack_context;
                                 m_stack_id.GetSymbolContextScope()->CalculateSymbolContext(&stack_context);
                                 
-                                if (older_context == stack_context)
-                                    done = true;
-                                else
-                                    done = false;
+                                done = (older_context == stack_context);
                             }
                             else
                                 done = false;
@@ -343,14 +332,14 @@ ThreadPlanStepUntil::DoWillResume (StateType resume_state, bool current_plan)
         if (target_sp)
         {
             Breakpoint *return_bp = target_sp->GetBreakpointByID(m_return_bp_id).get();
-            if (return_bp != NULL)
+            if (return_bp != nullptr)
                 return_bp->SetEnabled (true);
 
             until_collection::iterator pos, end = m_until_points.end();
             for (pos = m_until_points.begin(); pos != end; pos++)
             {
                 Breakpoint *until_bp = target_sp->GetBreakpointByID((*pos).second).get();
-                if (until_bp != NULL)
+                if (until_bp != nullptr)
                     until_bp->SetEnabled (true);
             }
         }
@@ -369,14 +358,14 @@ ThreadPlanStepUntil::WillStop ()
     if (target_sp)
     {
         Breakpoint *return_bp = target_sp->GetBreakpointByID(m_return_bp_id).get();
-        if (return_bp != NULL)
+        if (return_bp != nullptr)
             return_bp->SetEnabled (false);
 
         until_collection::iterator pos, end = m_until_points.end();
         for (pos = m_until_points.begin(); pos != end; pos++)
         {
             Breakpoint *until_bp = target_sp->GetBreakpointByID((*pos).second).get();
-            if (until_bp != NULL)
+            if (until_bp != nullptr)
                 until_bp->SetEnabled (false);
         }
     }
@@ -386,7 +375,6 @@ ThreadPlanStepUntil::WillStop ()
 bool
 ThreadPlanStepUntil::MischiefManaged ()
 {
-
     // I'm letting "PlanExplainsStop" do all the work, and just reporting that here.
     bool done = false;
     if (IsPlanComplete())
@@ -402,6 +390,4 @@ ThreadPlanStepUntil::MischiefManaged ()
         ThreadPlan::MischiefManaged ();
 
     return done;
-
 }
-

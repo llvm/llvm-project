@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/ThreadPlan.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Target/ThreadPlan.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
@@ -48,9 +47,7 @@ ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread, Vo
 //----------------------------------------------------------------------
 // Destructor
 //----------------------------------------------------------------------
-ThreadPlan::~ThreadPlan()
-{
-}
+ThreadPlan::~ThreadPlan() = default;
 
 bool
 ThreadPlan::PlanExplainsStop (Event *event_ptr)
@@ -130,10 +127,7 @@ ThreadPlan::StopOthers ()
 {
     ThreadPlan *prev_plan;
     prev_plan = GetPreviousPlan ();
-    if (prev_plan == NULL)
-        return false;
-    else
-        return prev_plan->StopOthers();
+    return (prev_plan == nullptr) ? false : prev_plan->StopOthers();
 }
 
 void
@@ -191,10 +185,7 @@ ThreadPlan::WillPop()
 bool
 ThreadPlan::OkayToDiscard()
 {
-    if (!IsMasterPlan())
-        return true;
-    else
-        return m_okay_to_discard;
+    return IsMasterPlan() ? m_okay_to_discard : true;
 }
 
 lldb::StateType
@@ -223,7 +214,6 @@ ThreadPlan::IsUsuallyUnexplainedStopReason(lldb::StopReason reason)
     }
 }
 
-
 //----------------------------------------------------------------------
 // ThreadPlanNull
 //----------------------------------------------------------------------
@@ -237,9 +227,7 @@ ThreadPlanNull::ThreadPlanNull (Thread &thread) :
 {
 }
 
-ThreadPlanNull::~ThreadPlanNull ()
-{
-}
+ThreadPlanNull::~ThreadPlanNull() = default;
 
 void
 ThreadPlanNull::GetDescription (Stream *s,

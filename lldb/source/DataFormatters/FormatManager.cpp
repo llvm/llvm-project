@@ -123,6 +123,19 @@ GetFormatFromFormatName (const char *format_name, bool partial_match_ok, Format 
     return false;
 }
 
+void
+FormatManager::Changed ()
+{
+    ++m_last_revision;
+    m_format_cache.Clear ();
+    Mutex::Locker lang_locker(m_language_categories_mutex);
+    for (auto& iter : m_language_categories_map)
+    {
+        if (iter.second)
+            iter.second->GetFormatCache().Clear();
+    }
+}
+
 bool
 FormatManager::GetFormatFromCString (const char *format_cstr,
                                      bool partial_match_ok,
@@ -1043,12 +1056,12 @@ FormatManager::GetHardcodedValidator (FormattersMatchData& match_data)
 }
 
 FormatManager::FormatManager() :
-    m_format_cache(),
-    m_named_summaries_map(this),
     m_last_revision(0),
-    m_categories_map(this),
-    m_language_categories_map(),
+    m_format_cache(),
     m_language_categories_mutex(Mutex::eMutexTypeRecursive),
+    m_language_categories_map(),
+    m_named_summaries_map(this),
+    m_categories_map(this),
     m_default_category_name(ConstString("default")),
     m_system_category_name(ConstString("system")), 
     m_vectortypes_category_name(ConstString("VectorTypes"))
@@ -1063,7 +1076,6 @@ FormatManager::FormatManager() :
 void
 FormatManager::LoadSystemFormatters()
 {
-    
     TypeSummaryImpl::Flags string_flags;
     string_flags.SetCascades(true)
     .SetSkipPointers(true)

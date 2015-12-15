@@ -472,7 +472,9 @@ namespace std {
 #endif
 
 // GCC 5 will support variable templates
+#if !defined(__cpp_variable_templates) || __cpp_variable_templates < 201304L
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
+#endif
 
 #define _NOEXCEPT throw()
 #define _NOEXCEPT_(x)
@@ -494,7 +496,6 @@ namespace std {
 
 #else  // __GXX_EXPERIMENTAL_CXX0X__
 
-#define _LIBCPP_HAS_NO_TRAILING_RETURN
 #define _LIBCPP_HAS_NO_ALWAYS_INLINE_VARIADICS
 
 #if _GNUC_VER < 403
@@ -508,6 +509,7 @@ namespace std {
 #if _GNUC_VER < 404
 #define _LIBCPP_HAS_NO_DECLTYPE
 #define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#define _LIBCPP_HAS_NO_TRAILING_RETURN
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_NO_VARIADICS
 #define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS

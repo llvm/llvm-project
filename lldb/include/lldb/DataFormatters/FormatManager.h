@@ -238,11 +238,7 @@ public:
     ShouldPrintAsOneLiner (ValueObject& valobj);
     
     void
-    Changed () override
-    {
-        ++m_last_revision;
-        m_format_cache.Clear ();
-    }
+    Changed () override;
     
     uint32_t
     GetCurrentRevision () override
@@ -290,13 +286,13 @@ private:
                         bool did_strip_ref,
                         bool did_strip_typedef,
                         bool root_level = false);
-    
-    FormatCache m_format_cache;
-    NamedSummariesMap m_named_summaries_map;
+
     std::atomic<uint32_t> m_last_revision;
-    TypeCategoryMap m_categories_map;
-    LanguageCategories m_language_categories_map;
+    FormatCache m_format_cache;
     Mutex m_language_categories_mutex;
+    LanguageCategories m_language_categories_map;
+    NamedSummariesMap m_named_summaries_map;
+    TypeCategoryMap m_categories_map;
     
     ConstString m_default_category_name;
     ConstString m_system_category_name;

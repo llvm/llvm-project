@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
@@ -15,19 +19,14 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-
 //----------------------------------------------------------------------
 // ThreadPlanShouldStopHere constructor
 //----------------------------------------------------------------------
 ThreadPlanShouldStopHere::ThreadPlanShouldStopHere(ThreadPlan *owner) :
-    m_callbacks (),
-    m_baton (NULL),
-    m_owner (owner),
-    m_flags (ThreadPlanShouldStopHere::eNone)
+    m_callbacks(),
+    m_baton(nullptr),
+    m_owner(owner),
+    m_flags(ThreadPlanShouldStopHere::eNone)
 {
     m_callbacks.should_stop_here_callback = ThreadPlanShouldStopHere::DefaultShouldStopHereCallback;
     m_callbacks.step_from_here_callback = ThreadPlanShouldStopHere::DefaultStepFromHereCallback;
@@ -42,12 +41,7 @@ ThreadPlanShouldStopHere::ThreadPlanShouldStopHere(ThreadPlan *owner, const Thre
     SetShouldStopHereCallbacks(callbacks, baton);
 }
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-ThreadPlanShouldStopHere::~ThreadPlanShouldStopHere()
-{
-}
+ThreadPlanShouldStopHere::~ThreadPlanShouldStopHere() = default;
 
 bool
 ThreadPlanShouldStopHere::InvokeShouldStopHereCallback (FrameComparison operation)
@@ -135,13 +129,13 @@ ThreadPlanShouldStopHere::DefaultStepFromHereCallback (ThreadPlan *current_plan,
     }
     
     if (!return_plan_sp)
-        return_plan_sp = current_plan->GetThread().QueueThreadPlanForStepOutNoShouldStop (false,
-                                                                                          NULL,
-                                                                                          true,
-                                                                                          stop_others,
-                                                                                          eVoteNo,
-                                                                                          eVoteNoOpinion,
-                                                                                          frame_index);
+        return_plan_sp = current_plan->GetThread().QueueThreadPlanForStepOutNoShouldStop(false,
+                                                                                         nullptr,
+                                                                                         true,
+                                                                                         stop_others,
+                                                                                         eVoteNo,
+                                                                                         eVoteNoOpinion,
+                                                                                         frame_index);
     return return_plan_sp;
 }
 
@@ -154,7 +148,6 @@ ThreadPlanShouldStopHere::QueueStepOutFromHerePlan(lldb_private::Flags &flags, l
          return_plan_sp = m_callbacks.step_from_here_callback (m_owner, flags, operation, m_baton);
     }
     return return_plan_sp;
-
 }
 
 lldb::ThreadPlanSP
@@ -165,4 +158,3 @@ ThreadPlanShouldStopHere::CheckShouldStopHereAndQueueStepOut (lldb::FrameCompari
     else
         return ThreadPlanSP();
 }
-

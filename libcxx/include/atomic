@@ -552,6 +552,12 @@ typedef enum memory_order
 namespace __gcc_atomic {
 template <typename _Tp>
 struct __gcc_atomic_t {
+
+#if _GNUC_VER >= 501
+    static_assert(is_trivially_copyable<_Tp>::value,
+      "std::atomic<Tp> requires that 'Tp' be a trivially copyable type");
+#endif
+
   _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
     __gcc_atomic_t() _NOEXCEPT = default;

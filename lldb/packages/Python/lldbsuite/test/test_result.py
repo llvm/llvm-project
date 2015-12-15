@@ -97,22 +97,17 @@ class LLDBTestResult(unittest2.TextTestResult):
         else:
             return str(test)
 
-    def getCategoriesForTest(self,test):
-        if hasattr(test,"_testMethodName"):
-            test_method = getattr(test,"_testMethodName")
-            test_method = getattr(test,test_method)
-        else:
-            test_method = None
-        if test_method != None and hasattr(test_method,"getCategories"):
-            test_categories = test_method.getCategories(test)
-        elif hasattr(test,"getCategories"):
-            test_categories = test.getCategories()
-        elif inspect.ismethod(test) and test.__self__ != None and hasattr(test.__self__,"getCategories"):
-            test_categories = test.__self__.getCategories()
-        else:
-            test_categories = []
-        if test_categories == None:
-            test_categories = []
+    def getCategoriesForTest(self, test):
+        """
+        Gets all the categories for the currently running test method in test case
+        """
+        test_categories = []
+        test_method = getattr(test, test._testMethodName)
+        if test_method != None and hasattr(test_method, "categories"):
+            test_categories.extend(test_method.categories)
+
+        test_categories.extend(test.getCategories())
+
         return test_categories
 
     def hardMarkAsSkipped(self,test):

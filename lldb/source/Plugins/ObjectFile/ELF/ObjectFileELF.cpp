@@ -328,6 +328,11 @@ mipsVariantFromElfFlags(const elf::elf_word e_flags, uint32_t endian)
 
     switch (mips_arch)
     {
+        case llvm::ELF::EF_MIPS_ARCH_1:
+        case llvm::ELF::EF_MIPS_ARCH_2:
+        case llvm::ELF::EF_MIPS_ARCH_3:
+        case llvm::ELF::EF_MIPS_ARCH_4:
+        case llvm::ELF::EF_MIPS_ARCH_5:
         case llvm::ELF::EF_MIPS_ARCH_32:
             return (endian == ELFDATA2LSB) ? ArchSpec::eMIPSSubType_mips32el : ArchSpec::eMIPSSubType_mips32;
         case llvm::ELF::EF_MIPS_ARCH_32R2:

@@ -1,0 +1,22 @@
+"""Tests that a timeout is detected by the testbot."""
+from __future__ import print_function
+
+import time
+
+import lldbsuite.test.lldbtest as lldbtest
+import rerun_base
+
+
+class RerunTimeoutTestCase(rerun_base.RerunBaseTestCase):
+    @lldbtest.no_debug_info_test
+    def test_timeout_rerun_succeeds(self):
+        """Tests that timeout logic kicks in and is picked up."""
+        if not self.should_generate_issue():
+            # We pass this time.
+            return
+        # We time out this time.
+        while True:
+            try:
+                time.sleep(1)
+            except:
+                print("ignoring exception during sleep")

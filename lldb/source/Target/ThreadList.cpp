@@ -6,10 +6,15 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// C Includes
 #include <stdlib.h>
 
+// C++ Includes
 #include <algorithm>
 
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
 #include "lldb/Target/RegisterContext.h"

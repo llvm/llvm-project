@@ -281,14 +281,6 @@ def parseOptionsAndInitTestdirs():
         cflags_extras = args.E
         os.environ['CFLAGS_EXTRAS'] = cflags_extras
 
-    # argparse makes sure we have correct options
-    if args.N == 'dwarf':
-        configuration.dont_do_dwarf_test = True
-    elif args.N == 'dwo':
-        configuration.dont_do_dwo_test = True
-    elif args.N == 'dsym':
-        configuration.dont_do_dsym_test = True
-
     if args.d:
         sys.stdout.write("Suspending the process %d to wait for debugger to attach...\n" % os.getpid())
         sys.stdout.flush()
@@ -395,6 +387,7 @@ def parseOptionsAndInitTestdirs():
 
     # rerun-related arguments
     configuration.rerun_all_issues = args.rerun_all_issues
+    configuration.rerun_max_file_threshold = args.rerun_max_file_threshold
 
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name
@@ -944,15 +937,6 @@ def run_suite():
         configuration.lldb_platform_url = None
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
-
-    # By default, both dsym, dwarf and dwo tests are performed.
-    # Use @dsym_test, @dwarf_test or @dwo_test decorators, defined in lldbtest.py, to mark a test as
-    # a dsym, dwarf or dwo test.  Use '-N dsym', '-N dwarf' or '-N dwo' to exclude dsym, dwarf or
-    # dwo tests from running.
-    configuration.dont_do_dsym_test = configuration.dont_do_dsym_test \
-        or any(platform in target_platform for platform in ["linux", "freebsd", "windows"])
-    configuration.dont_do_dwo_test = configuration.dont_do_dwo_test \
-        or any(platform in target_platform for platform in ["darwin", "macosx", "ios"])
 
     # Don't do debugserver tests on everything except OS X.
     configuration.dont_do_debugserver_test = "linux" in target_platform or "freebsd" in target_platform or "windows" in target_platform

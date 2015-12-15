@@ -161,7 +161,7 @@ public:
     ///                                     |
     ///                    ___________________________________
     ///                    |DefBB:                           |
-    ///                    |  store %float %V, float* %V.sa2 |
+    ///                    |  store %float %V, float* %V.s2a |
     ///                    -----------------------------------
     ///                           |                   |
     /// ____________________________________ ___________________________________
@@ -494,7 +494,7 @@ private:
   ///
   /// For memory accesses of kind MK_Value the access instruction of a load
   /// access is the instruction that uses the load. The access instruction of
-  /// a write access is the intruction that defines the llvm::Value.
+  /// a write access is the instruction that defines the llvm::Value.
   Instruction *AccessInstruction;
 
   /// @brief The value associated with this memory access.

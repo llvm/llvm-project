@@ -572,15 +572,16 @@ class Configuration(object):
         if target_platform == 'darwin':
             self.cxx.link_flags += ['-lSystem']
         elif target_platform == 'linux':
+            self.cxx.link_flags += ['-lm']
             if not llvm_unwinder:
-                self.cxx.link_flags += ['-lgcc_eh']
-            self.cxx.link_flags += ['-lc', '-lm']
+                self.cxx.link_flags += ['-lgcc_s', '-lgcc']
             if enable_threads:
                 self.cxx.link_flags += ['-lpthread']
+            self.cxx.link_flags += ['-lc']
             if llvm_unwinder:
                 self.cxx.link_flags += ['-lunwind', '-ldl']
             else:
-                self.cxx.link_flags += ['-lgcc_s']
+                self.cxx.link_flags += ['-lgcc_s', '-lgcc']
         elif target_platform.startswith('freebsd'):
             self.cxx.link_flags += ['-lc', '-lm', '-lpthread', '-lgcc_s', '-lcxxrt']
         else:

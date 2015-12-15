@@ -1,0 +1,23 @@
+"""Tests that a flakey fail is rerun, and will pass on the rerun.
+Run this test with --rerun-all-issues specified to test that
+the tests fail on the first run, then pass on the second.
+Do not mark them as flakey as, at this time, flakey tests will
+run twice, thus causing the second run to succeed."""
+
+from __future__ import print_function
+
+import rerun_base
+
+import lldbsuite.test.lldbtest as lldbtest
+
+
+class RerunFailTestCase(rerun_base.RerunBaseTestCase):
+    """Forces test failure on first run, success on rerun."""
+    @lldbtest.no_debug_info_test
+    def test_buildbot_catches_failure(self):
+        """Issues a failing test assertion."""
+        if self.should_generate_issue():
+            self.assertTrue(
+                False,
+                "This will fail on the first call, succeed on rerun, and "
+                "alternate thereafter.")

@@ -163,6 +163,7 @@ class EventBuilder(object):
     TYPE_TEST_RESULT = "test_result"
     TYPE_TEST_START = "test_start"
     TYPE_MARK_TEST_RERUN_ELIGIBLE = "test_eligible_for_rerun"
+    TYPE_SESSION_TERMINATE = "terminate"
 
     RESULT_TYPES = set([
         TYPE_JOB_RESULT,
@@ -687,7 +688,7 @@ class ResultsFormatter(object):
             component_count += 1
         if "test_class" in test_result_event:
             if component_count > 0:
-                key += "."
+                key += ":"
             key += test_result_event["test_class"]
             component_count += 1
         if "test_name" in test_result_event:

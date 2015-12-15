@@ -39,7 +39,7 @@
 ; CHECK:                [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_A[i0] };
 ; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 1]
 ; CHECK:                [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_smax[] };
-; CHECK:            MustWriteAccess := [Reduction Type: NONE] [Scalar: 1]
+; CHECK:            MayWriteAccess := [Reduction Type: NONE] [Scalar: 1]
 ; CHECK:                [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_j_2__phi[] };
 ; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 1]
 ; CHECK:                [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_j_0[] };

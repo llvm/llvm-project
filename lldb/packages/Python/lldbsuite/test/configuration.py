@@ -56,10 +56,6 @@ def setupCrashInfoHook():
 # The test suite.
 suite = unittest2.TestSuite()
 
-dont_do_dsym_test = False
-dont_do_dwarf_test = False
-dont_do_dwo_test = False
-
 # The list of categories we said we care about
 categoriesList = None
 # set to true if we are going to use categories for cherry-picking test cases
@@ -145,6 +141,7 @@ test_result = None
 
 # Test rerun configuration vars
 rerun_all_issues = False
+rerun_max_file_threhold = 0
 
 # The names of all tests. Used to assert we don't have two tests with the same base name.
 all_tests = set()

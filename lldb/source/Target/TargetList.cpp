@@ -10,6 +10,8 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+#include "llvm/ADT/SmallString.h"
+
 // Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Debugger.h"
@@ -26,8 +28,6 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/TargetList.h"
-
-#include "llvm/ADT/SmallString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -227,7 +227,7 @@ TargetList::CreateTargetInternal (Debugger &debugger,
                             // since the user may have specified it.
                             if (platform_sp)
                             {
-                                if (platform_sp->IsCompatibleArchitecture(module_spec.GetArchitecture(), false, NULL))
+                                if (platform_sp->IsCompatibleArchitecture(module_spec.GetArchitecture(), false, nullptr))
                                 {
                                     platforms.push_back(platform_sp);
                                     continue;
@@ -237,7 +237,7 @@ TargetList::CreateTargetInternal (Debugger &debugger,
                             // Next check the host platform it if wasn't already checked above
                             if (host_platform_sp && (!platform_sp || host_platform_sp->GetName() != platform_sp->GetName()))
                             {
-                                if (host_platform_sp->IsCompatibleArchitecture(module_spec.GetArchitecture(), false, NULL))
+                                if (host_platform_sp->IsCompatibleArchitecture(module_spec.GetArchitecture(), false, nullptr))
                                 {
                                     platforms.push_back(host_platform_sp);
                                     continue;
@@ -253,7 +253,7 @@ TargetList::CreateTargetInternal (Debugger &debugger,
                         }
                     }
                     
-                    Platform *platform_ptr = NULL;
+                    Platform *platform_ptr = nullptr;
                     bool more_than_one_platforms = false;
                     for (const auto &the_platform_sp : platforms)
                     {
@@ -262,7 +262,7 @@ TargetList::CreateTargetInternal (Debugger &debugger,
                             if (platform_ptr->GetName() != the_platform_sp->GetName())
                             {
                                 more_than_one_platforms = true;
-                                platform_ptr = NULL;
+                                platform_ptr = nullptr;
                                 break;
                             }
                         }
@@ -386,7 +386,6 @@ TargetList::CreateTargetInternal (Debugger &debugger,
                                   lldb::TargetSP &target_sp,
                                   bool is_dummy_target)
 {
-
     Timer scoped_timer (__PRETTY_FUNCTION__,
                         "TargetList::CreateTarget (file = '%s', arch = '%s')",
                         user_exe_path,
@@ -397,7 +396,7 @@ TargetList::CreateTargetInternal (Debugger &debugger,
 
     if (arch.IsValid())
     {
-        if (!platform_sp || !platform_sp->IsCompatibleArchitecture(arch, false, NULL))
+        if (!platform_sp || !platform_sp->IsCompatibleArchitecture(arch, false, nullptr))
             platform_sp = Platform::GetPlatformForArchitecture(specified_arch, &arch);
     }
     
@@ -453,14 +452,14 @@ TargetList::CreateTargetInternal (Debugger &debugger,
         {
             FileSpecList executable_search_paths (Target::GetDefaultExecutableSearchPaths());
             ModuleSpec module_spec(file, arch);
-            error = platform_sp->ResolveExecutable (module_spec,
-                                                    exe_module_sp, 
-                                                    executable_search_paths.GetSize() ? &executable_search_paths : NULL);
+            error = platform_sp->ResolveExecutable(module_spec,
+                                                   exe_module_sp,
+                                                   executable_search_paths.GetSize() ? &executable_search_paths : nullptr);
         }
 
         if (error.Success() && exe_module_sp)
         {
-            if (exe_module_sp->GetObjectFile() == NULL)
+            if (exe_module_sp->GetObjectFile() == nullptr)
             {
                 if (arch.IsValid())
                 {
@@ -548,13 +547,9 @@ TargetList::DeleteTarget (TargetSP &target_sp)
     return false;
 }
 
-
 TargetSP
-TargetList::FindTargetWithExecutableAndArchitecture
-(
-    const FileSpec &exe_file_spec,
-    const ArchSpec *exe_arch_ptr
-) const
+TargetList::FindTargetWithExecutableAndArchitecture(const FileSpec &exe_file_spec,
+                                                    const ArchSpec *exe_arch_ptr) const
 {
     Mutex::Locker locker (m_target_list_mutex);
     TargetSP target_sp;
@@ -599,7 +594,6 @@ TargetList::FindTargetWithProcessID (lldb::pid_t pid) const
     }
     return target_sp;
 }
-
 
 TargetSP
 TargetList::FindTargetWithProcess (Process *process) const
@@ -649,7 +643,7 @@ TargetList::SendAsyncInterrupt (lldb::pid_t pid)
     if (pid != LLDB_INVALID_PROCESS_ID)
     {
         TargetSP target_sp(FindTargetWithProcessID (pid));
-        if (target_sp.get())
+        if (target_sp)
         {
             Process* process = target_sp->GetProcessSP().get();
             if (process)
@@ -663,7 +657,7 @@ TargetList::SendAsyncInterrupt (lldb::pid_t pid)
     {
         // We don't have a valid pid to broadcast to, so broadcast to the target
         // list's async broadcaster...
-        BroadcastEvent (Process::eBroadcastBitInterrupt, NULL);
+        BroadcastEvent(Process::eBroadcastBitInterrupt, nullptr);
     }
 
     return num_async_interrupts_sent;
@@ -673,7 +667,7 @@ uint32_t
 TargetList::SignalIfRunning (lldb::pid_t pid, int signo)
 {
     uint32_t num_signals_sent = 0;
-    Process *process = NULL;
+    Process *process = nullptr;
     if (pid == LLDB_INVALID_PROCESS_ID)
     {
         // Signal all processes with signal
@@ -696,7 +690,7 @@ TargetList::SignalIfRunning (lldb::pid_t pid, int signo)
     {
         // Signal a specific process with signal
         TargetSP target_sp(FindTargetWithProcessID (pid));
-        if (target_sp.get())
+        if (target_sp)
         {
             process = target_sp->GetProcessSP().get();
             if (process)

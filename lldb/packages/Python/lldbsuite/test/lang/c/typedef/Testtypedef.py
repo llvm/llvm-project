@@ -13,20 +13,11 @@ class TypedefTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
-    @dsym_test
-    @expectedFailureClang("llvm.org/pr19238")
-    def test_with_dsym(self):
+    @expectedFailureAll(bugnumber="llvm.org/pr19238", compiler="clang")
+    @expectedFailureAll(bugnumber="llvm.org/pr25626 expectedFailureClang fails on FreeBSD", oslist=["freebsd"])
+    def test_typedef(self):
         """Test 'image lookup -t a' and check for correct display at different scopes."""
-        self.buildDsym()
-        self.image_lookup_for_multiple_typedefs()
-
-    @dwarf_test
-    @expectedFailureClang("llvm.org/pr19238")
-    @expectedFailureFreeBSD("llvm.org/pr25626 expectedFailureClang fails on FreeBSD")
-    def test_with_dwarf(self):
-        """Test 'image lookup -t a' and check for correct display at different scopes."""
-        self.buildDwarf()
+        self.build()
         self.image_lookup_for_multiple_typedefs()
 
     def image_lookup_for_multiple_typedefs(self):

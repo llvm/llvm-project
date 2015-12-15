@@ -33,6 +33,7 @@ class NamespaceLookupTestCase(TestBase):
             substrs = ['stopped',
                        'stop reason = breakpoint'])
 
+    @expectedFailureLinux("llvm.org/pr25819")
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -142,6 +143,7 @@ class NamespaceLookupTestCase(TestBase):
         # finds the global ::func().
         self.expect("expr -- func()", startstr = "(int) $0 = 2")
 
+    @expectedFailureLinux("llvm.org/pr25819")
     def test_scope_lookup_before_using_with_run_command(self):
         """Test scope lookup before using in lldb."""
         self.build()
@@ -156,6 +158,7 @@ class NamespaceLookupTestCase(TestBase):
 
     # NOTE: this test may fail on older systems that don't emit import
     # emtries in DWARF - may need to add checks for compiler versions here.
+    @expectedFailureLinux("llvm.org/pr25819")
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""
         self.build()
@@ -198,6 +201,7 @@ class NamespaceLookupTestCase(TestBase):
         # the same type.
         self.expect("expr -- func()", startstr = "error")
 
+    @expectedFailureLinux("llvm.org/pr25819")
     def test_scope_lookup_shadowed_by_using_with_run_command(self):
         """Test scope lookup shadowed by using in lldb."""
         self.build()

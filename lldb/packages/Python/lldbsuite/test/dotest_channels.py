@@ -27,6 +27,7 @@ from six.moves import cPickle
 
 # LLDB modules
 
+
 class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
     """Provides an unpickling, forwarding asyncore dispatch channel reader.
 
@@ -71,7 +72,7 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
 
         full_header_len = 4
 
-        assert(len(self.header_contents) < full_header_len)
+        assert len(self.header_contents) < full_header_len
 
         bytes_avail = len(data)
         bytes_needed = full_header_len - len(self.header_contents)
@@ -80,7 +81,8 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
         if len(self.header_contents) == full_header_len:
             import struct
             # End of header.
-            self.packet_bytes_remaining = struct.unpack("!I", self.header_contents)[0]
+            self.packet_bytes_remaining = struct.unpack(
+                "!I", self.header_contents)[0]
             self.header_contents = b""
             self.reading_header = False
             return data[header_bytes_avail:]
@@ -130,9 +132,23 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
             return data
 
     def handle_read(self):
-        data = self.recv(8192)
-        # print('driver socket READ: %d bytes' % len(data))
+        # Read some data from the socket.
+        try:
+            data = self.recv(8192)
+            # print('driver socket READ: %d bytes' % len(data))
+        except socket.error as socket_error:
+            print(
+                "\nINFO: received socket error when reading data "
+                "from test inferior:\n{}".format(socket_error))
+            # Should be good to return here.
+            return
+        except Exception as general_exception:
+            print(
+                "\nERROR: received non-socket error when reading data "
+                "from the test inferior:\n{}".format(general_exception))
+            return
 
+        # Consume the message content.
         while data and (len(data) > 0):
             # If we're reading the header, gather header bytes.
             if self.reading_header:

@@ -747,7 +747,7 @@ SBThread::StepOver (lldb::RunMode stop_other_threads)
                 const LazyBool avoid_no_debug = eLazyBoolCalculate;
                 SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
                 new_plan_sp = thread->QueueThreadPlanForStepOverRange (abort_other_plans,
-                                                                    sc.line_entry.range,
+                                                                    sc.line_entry,
                                                                     sc,
                                                                     stop_other_threads,
                                                                     avoid_no_debug);
@@ -799,7 +799,7 @@ SBThread::StepInto (const char *target_name, lldb::RunMode stop_other_threads)
             const LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate;
             SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
             new_plan_sp = thread->QueueThreadPlanForStepInRange (abort_other_plans,
-                                                              sc.line_entry.range,
+                                                              sc.line_entry,
                                                               sc,
                                                               target_name,
                                                               stop_other_threads,

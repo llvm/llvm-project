@@ -3885,14 +3885,22 @@ void ScopInfo::addMemoryAccess(BasicBlock *BB, Instruction *Inst,
   Value *BaseAddr = BaseAddress;
   std::string BaseName = getIslCompatibleName("MemRef_", BaseAddr, "");
 
-  // The execution of a store is not guaranteed if its parent block is not
-  // guaranteed to executed, here tested by checking whether it dominates the
-  // exit block. However, implicit writes (llvm::Value definitions or one of a
-  // PHI's incoming values) must occur in well-formed IR code.
-  bool isApproximated = (Kind == ScopArrayInfo::MK_Array) &&
-                        Stmt->isRegionStmt() &&
-                        !DT->dominates(BB, Stmt->getRegion()->getExit());
-  if (isApproximated && Type == MemoryAccess::MUST_WRITE)
+  bool isKnownMustAccess = false;
+
+  // Accesses in single-basic block statements are always excuted.
+  if (Stmt->isBlockStmt())
+    isKnownMustAccess = true;
+
+  if (Stmt->isRegionStmt()) {
+    // Accesses that dominate the exit block of a non-affine region are always
+    // executed. In non-affine regions there may exist MK_Values that do not
+    // dominate the exit. MK_Values will always dominate the exit and MK_PHIs
+    // only if there is at most one PHI_WRITE in the non-affine region.
+    if (DT->dominates(BB, Stmt->getRegion()->getExit()))
+      isKnownMustAccess = true;
+  }
+
+  if (!isKnownMustAccess && Type == MemoryAccess::MUST_WRITE)
     Type = MemoryAccess::MAY_WRITE;
 
   AccList.emplace_back(Stmt, Inst, Type, BaseAddress, ElemBytes, Affine,

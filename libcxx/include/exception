@@ -235,7 +235,7 @@ rethrow_if_nested(const _Ep& __e, typename enable_if<
                                    is_polymorphic<_Ep>::value
                                                    >::type* = 0)
 {
-    const nested_exception* __nep = dynamic_cast<const nested_exception*>(&__e);
+    const nested_exception* __nep = dynamic_cast<const nested_exception*>(_VSTD::addressof(__e));
     if (__nep)
         __nep->rethrow_nested();
 }

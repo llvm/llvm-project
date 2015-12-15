@@ -7,13 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/ThreadPlanCallFunction.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
-
 // Project includes
+#include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Address.h"
@@ -76,7 +74,7 @@ ThreadPlanCallFunction::ConstructorSetup (Thread &thread,
 
     Module *exe_module = GetTarget().GetExecutableModulePointer();
 
-    if (exe_module == NULL)
+    if (exe_module == nullptr)
     {
         m_constructor_errors.Printf ("Can't execute code without an executable module.");
         if (log)
@@ -190,7 +188,6 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(Thread &thread,
     m_stop_address(LLDB_INVALID_ADDRESS),
     m_return_type(CompilerType())
 {
-
 }
 
 ThreadPlanCallFunction::~ThreadPlanCallFunction ()
@@ -263,7 +260,6 @@ ThreadPlanCallFunction::DoTakedown (bool success)
         ClearBreakpoints();
         if (log && log->GetVerbose())
             ReportRegisterState ("Restoring thread state after function call.  Restored register state:");
-
     }
     else
     {
@@ -312,7 +308,6 @@ ThreadPlanCallFunction::ValidatePlan (Stream *error)
     return true;
 }
 
-
 Vote
 ThreadPlanCallFunction::ShouldReportStop(Event *event_ptr)
 {
@@ -330,7 +325,7 @@ ThreadPlanCallFunction::DoPlanExplainsStop (Event *event_ptr)
     
     // If our subplan knows why we stopped, even if it's done (which would forward the question to us)
     // we answer yes.
-    if (m_subplan_sp.get() != NULL && m_subplan_sp->PlanExplainsStop(event_ptr))
+    if (m_subplan_sp && m_subplan_sp->PlanExplainsStop(event_ptr))
     {
         SetPlanComplete();
         return true;
@@ -360,8 +355,7 @@ ThreadPlanCallFunction::DoPlanExplainsStop (Event *event_ptr)
     // We control breakpoints separately from other "stop reasons."  So first,
     // check the case where we stopped for an internal breakpoint, in that case, continue on.
     // If it is not an internal breakpoint, consult m_ignore_breakpoints.
-    
-    
+
     if (stop_reason == eStopReasonBreakpoint)
     {
         ProcessSP process_sp (m_thread.CalculateProcess());
@@ -426,15 +420,7 @@ ThreadPlanCallFunction::DoPlanExplainsStop (Event *event_ptr)
         if (m_real_stop_info_sp && m_real_stop_info_sp->ShouldStopSynchronous(event_ptr))
         {
             SetPlanComplete(false);
-            if (m_subplan_sp)
-            {
-                if (m_unwind_on_error)
-                    return true;
-                else
-                    return false;
-            }
-            else
-                return false;
+            return m_subplan_sp ? m_unwind_on_error : false;
         }
         else
             return true;
@@ -583,19 +569,17 @@ ThreadPlanCallFunction::SetStopOthers (bool new_value)
     m_subplan_sp->SetStopOthers(new_value);
 }
 
-
 bool
 ThreadPlanCallFunction::RestoreThreadState()
 {
     return GetThread().RestoreThreadStateFromCheckpoint(m_stored_thread_state);
 }
 
-
 void
 ThreadPlanCallFunction::SetReturnValue()
 {
     ProcessSP process_sp(m_thread.GetProcess());
-    const ABI *abi = process_sp ? process_sp->GetABI().get() : NULL;
+    const ABI *abi = process_sp ? process_sp->GetABI().get() : nullptr;
     if (abi && m_return_type.IsValid())
     {
         const bool persistent = false;

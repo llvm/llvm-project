@@ -586,7 +586,7 @@ protected:
             if (frame->HasDebugInformation ())
             {
                 new_plan_sp = thread->QueueThreadPlanForStepInRange (abort_other_plans,
-                                                                frame->GetSymbolContext(eSymbolContextEverything).line_entry.range, 
+                                                                frame->GetSymbolContext(eSymbolContextEverything).line_entry,
                                                                 frame->GetSymbolContext(eSymbolContextEverything),
                                                                 m_options.m_step_in_target.c_str(),
                                                                 stop_other_threads,
@@ -609,7 +609,7 @@ protected:
 
             if (frame->HasDebugInformation())
                 new_plan_sp = thread->QueueThreadPlanForStepOverRange (abort_other_plans,
-                                                                    frame->GetSymbolContext(eSymbolContextEverything).line_entry.range, 
+                                                                    frame->GetSymbolContext(eSymbolContextEverything).line_entry,
                                                                     frame->GetSymbolContext(eSymbolContextEverything), 
                                                                     stop_other_threads,
                                                                     m_options.m_step_out_avoid_no_debug);

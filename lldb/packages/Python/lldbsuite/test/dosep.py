@@ -49,8 +49,10 @@ import threading
 from six.moves import queue
 
 # Our packages and modules
+import lldbsuite
 import lldbsuite.support.seven as seven
 
+from . import configuration
 from . import dotest_channels
 from . import dotest_args
 from . import result_formatter
@@ -416,21 +418,20 @@ def call_with_timeout(
 def process_dir(root, files, dotest_argv, inferior_pid_events):
     """Examine a directory for tests, and invoke any found within it."""
     results = []
-    for name in files:
+    for (base_name, full_test_path) in files:
         import __main__ as main
         script_file = main.__file__
         command = ([sys.executable, script_file] +
                    dotest_argv +
-                   ["--inferior", "-p", name, root])
+                   ["--inferior", "-p", base_name, root])
 
-        timeout_name = os.path.basename(os.path.splitext(name)[0]).upper()
+        timeout_name = os.path.basename(os.path.splitext(base_name)[0]).upper()
 
         timeout = (os.getenv("LLDB_%s_TIMEOUT" % timeout_name) or
                    getDefaultTimeout(dotest_options.lldb_platform_name))
 
-        test_filename = os.path.join(root, name)
         results.append(call_with_timeout(
-            command, timeout, name, inferior_pid_events, test_filename))
+            command, timeout, base_name, inferior_pid_events, full_test_path))
 
     # result = (name, status, passes, failures, unexpected_successes)
     timed_out = [name for name, status, _, _, _ in results
@@ -615,8 +616,10 @@ def find_test_files_in_dir_tree(dir_root, found_func):
             return (base_filename.startswith("Test") and
                     base_filename.endswith(".py"))
 
-        tests = [filename for filename in files
-                 if is_test_filename(root, filename)]
+        tests = [
+            (filename, os.path.join(root, filename))
+            for filename in files
+            if is_test_filename(root, filename)]
         if tests:
             found_func(root, tests)
 
@@ -1097,8 +1100,16 @@ def walk_and_invoke(test_files, dotest_argv, num_workers, test_runner_func):
             dotest_channels.UnpicklingForwardingListenerChannel(
                 RUNNER_PROCESS_ASYNC_MAP, "localhost", 0,
                 2 * num_workers, forwarding_func))
-        dotest_argv.append("--results-port")
-        dotest_argv.append(str(RESULTS_LISTENER_CHANNEL.address[1]))
+        # Set the results port command line arg.  Might have been
+        # inserted previous, so first try to replace.
+        listener_port = str(RESULTS_LISTENER_CHANNEL.address[1])
+        try:
+            port_value_index = dotest_argv.index("--results-port") + 1
+            dotest_argv[port_value_index] = listener_port
+        except ValueError:
+            # --results-port doesn't exist (yet), add it
+            dotest_argv.append("--results-port")
+            dotest_argv.append(listener_port)
 
     # Build the test work items out of the (dir, file_list) entries passed in.
     test_work_items = []
@@ -1424,6 +1435,58 @@ def default_test_runner_name(num_threads):
     return test_runner_name
 
 
+def rerun_tests(test_subdir, tests_for_rerun, dotest_argv):
+    # Build the list of test files to rerun.  Some future time we'll
+    # enable re-run by test method so we can constrain the rerun set
+    # to just the method(s) that were in issued within a file.
+
+    # Sort rerun files into subdirectories.
+    print("\nRerunning the following files:")
+    rerun_files_by_subdir = {}
+    for test_filename in tests_for_rerun.keys():
+        # Print the file we'll be rerunning
+        test_relative_path = os.path.relpath(
+            test_filename, lldbsuite.lldb_test_root)
+        print("  {}".format(test_relative_path))
+
+        # Store test filenames by subdir.
+        test_dir = os.path.dirname(test_filename)
+        test_basename = os.path.basename(test_filename)
+        if test_dir in rerun_files_by_subdir:
+            rerun_files_by_subdir[test_dir].append(
+                (test_basename, test_filename))
+        else:
+            rerun_files_by_subdir[test_dir] = [(test_basename, test_filename)]
+
+    # Break rerun work up by subdirectory.  We do this since
+    # we have an invariant that states only one test file can
+    # be run at a time in any given subdirectory (related to
+    # rules around built inferior test program lifecycle).
+    rerun_work = []
+    for files_by_subdir in rerun_files_by_subdir.values():
+        rerun_work.append((test_subdir, files_by_subdir))
+
+    # Run the work with the serial runner.
+    # Do not update legacy counts, I am getting rid of
+    # them so no point adding complicated merge logic here.
+    rerun_thread_count = 1
+    rerun_runner_name = default_test_runner_name(rerun_thread_count)
+    runner_strategies_by_name = get_test_runner_strategies(rerun_thread_count)
+    rerun_runner_func = runner_strategies_by_name[
+        rerun_runner_name]
+    if rerun_runner_func is None:
+        raise Exception(
+            "failed to find rerun test runner "
+            "function named '{}'".format(rerun_runner_name))
+
+    walk_and_invoke(
+        rerun_work,
+        dotest_argv,
+        rerun_thread_count,
+        rerun_runner_func)
+    print("\nTest rerun complete\n")
+
+
 def main(num_threads, test_subdir, test_runner_name, results_formatter):
     """Run dotest.py in inferior mode in parallel.
 
@@ -1501,11 +1564,13 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
                 list(runner_strategies_by_name.keys())))
     test_runner_func = runner_strategies_by_name[test_runner_name]
 
+    # Collect the files on which we'll run the first test run phase.
     test_files = []
     find_test_files_in_dir_tree(
         test_subdir, lambda tdir, tfiles: test_files.append(
             (test_subdir, tfiles)))
 
+    # Do the first test run phase.
     summary_results = walk_and_invoke(
         test_files,
         dotest_argv,
@@ -1515,15 +1580,24 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
     (timed_out, passed, failed, unexpected_successes, pass_count,
      fail_count) = summary_results
 
-    # Check if we have any tests to rerun.
+    # Check if we have any tests to rerun as phase 2.
     if results_formatter is not None:
         tests_for_rerun = results_formatter.tests_for_rerun
-        results_formatter.tests_for_rerun = None
+        results_formatter.tests_for_rerun = {}
 
         if tests_for_rerun is not None and len(tests_for_rerun) > 0:
-            # Here's where we trigger the re-run in a future change.
-            # Make sure the rest of the changes don't break anything.
-            pass
+            rerun_file_count = len(tests_for_rerun)
+            print("\n{} test files marked for rerun\n".format(
+                rerun_file_count))
+
+            # Check if the number of files exceeds the max cutoff.  If so,
+            # we skip the rerun step.
+            if rerun_file_count > configuration.rerun_max_file_threshold:
+                print("Skipping rerun: max rerun file threshold ({}) "
+                      "exceeded".format(
+                          configuration.rerun_max_file_threshold))
+            else:
+                rerun_tests(test_subdir, tests_for_rerun, dotest_argv)
 
     # The results formatter - if present - is done now.  Tell it to
     # terminate.

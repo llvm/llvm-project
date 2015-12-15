@@ -145,7 +145,7 @@ namespace lldb_private {
         uint64_t
         GetAsUnsigned() const;
 
-        uint64_t
+        int64_t
         GetAsSigned() const;
 
         double

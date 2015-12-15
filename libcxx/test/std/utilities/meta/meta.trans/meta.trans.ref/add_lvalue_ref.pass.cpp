@@ -22,6 +22,26 @@ void test_add_lvalue_reference()
 #endif
 }
 
+template <class F>
+void test_function0()
+{
+    static_assert((std::is_same<typename std::add_lvalue_reference<F>::type, F&>::value), "");
+#if _LIBCPP_STD_VER > 11
+    static_assert((std::is_same<std::add_lvalue_reference_t<F>, F&>::value), "");
+#endif
+}
+
+template <class F>
+void test_function1()
+{
+    static_assert((std::is_same<typename std::add_lvalue_reference<F>::type, F>::value), "");
+#if _LIBCPP_STD_VER > 11
+    static_assert((std::is_same<std::add_lvalue_reference_t<F>, F>::value), "");
+#endif
+}
+
+struct Foo {};
+
 int main()
 {
     test_add_lvalue_reference<void, void>();
@@ -31,4 +51,20 @@ int main()
     test_add_lvalue_reference<const int&, const int&>();
     test_add_lvalue_reference<int*, int*&>();
     test_add_lvalue_reference<const int*, const int*&>();
+
+//  LWG 2101 specifically talks about add_lvalue_reference and functions.
+//  The term of art is "a referenceable type", which a cv- or ref-qualified function is not.
+    test_function0<void()>();
+//     test_function1<void() const>();
+//     test_function1<void() &>();
+//     test_function1<void() &&>();
+//     test_function1<void() const &>();
+//     test_function1<void() const &&>();
+
+    test_function0<void (Foo::*)()>();
+    test_function0<void (Foo::*)() const>();
+    test_function0<void (Foo::*)() &>();
+    test_function0<void (Foo::*)() &&>();
+    test_function0<void (Foo::*)() const &>();
+    test_function0<void (Foo::*)() const &&>();
 }

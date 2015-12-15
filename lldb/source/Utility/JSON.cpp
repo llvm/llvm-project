@@ -12,6 +12,7 @@
 #include <limits.h>
 #include "lldb/Core/StreamString.h"
 #include "lldb/Host/StringConvert.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace lldb_private;
 
@@ -72,9 +73,10 @@ JSONNumber::GetAsUnsigned() const
         case DataType::Double:
             return (uint64_t)m_data.m_double;
     }
+    llvm_unreachable("Unhandled data type");
 }
 
-uint64_t
+int64_t
 JSONNumber::GetAsSigned() const
 {
     switch (m_data_type)
@@ -86,6 +88,7 @@ JSONNumber::GetAsSigned() const
         case DataType::Double:
             return (int64_t)m_data.m_double;
     }
+    llvm_unreachable("Unhandled data type");
 }
 
 double
@@ -100,6 +103,7 @@ JSONNumber::GetAsDouble() const
         case DataType::Double:
             return m_data.m_double;
     }
+    llvm_unreachable("Unhandled data type");
 }
 
 void

@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/ThreadPlanStepInRange.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Stream.h"
@@ -76,9 +75,7 @@ ThreadPlanStepInRange::ThreadPlanStepInRange
     SetupAvoidNoDebug(step_in_avoids_code_without_debug_info, step_out_avoids_code_without_debug_info);
 }
 
-ThreadPlanStepInRange::~ThreadPlanStepInRange ()
-{
-}
+ThreadPlanStepInRange::~ThreadPlanStepInRange() = default;
 
 void
 ThreadPlanStepInRange::SetupAvoidNoDebug(LazyBool step_in_avoids_code_without_debug_info,
@@ -193,11 +190,7 @@ ThreadPlanStepInRange::ShouldStop (Event *event_ptr)
         // Stepping through should be done running other threads in general, since we're setting a breakpoint and
         // continuing.  So only stop others if we are explicitly told to do so.
         
-        bool stop_others;
-        if (m_stop_others == lldb::eOnlyThisThread)
-            stop_others = true;
-        else
-            stop_others = false;
+        bool stop_others = (m_stop_others == lldb::eOnlyThisThread);
             
         FrameComparison frame_order = CompareCurrentFrameToStartFrame();
         
@@ -220,7 +213,6 @@ ThreadPlanStepInRange::ShouldStop (Event *event_ptr)
             {
                 log->Printf("Thought I stepped out, but in fact arrived at a trampoline.");
             }
-
         }
         else if (frame_order == eFrameCompareEqual && InSymbol())
         {
@@ -322,7 +314,7 @@ ThreadPlanStepInRange::ShouldStop (Event *event_ptr)
 void 
 ThreadPlanStepInRange::SetAvoidRegexp(const char *name)
 {
-    if (m_avoid_regexp_ap.get() == NULL)
+    if (!m_avoid_regexp_ap)
         m_avoid_regexp_ap.reset (new RegularExpression(name));
 
     m_avoid_regexp_ap->Compile (name);
@@ -367,13 +359,13 @@ ThreadPlanStepInRange::FrameMatchesAvoidCriteria ()
         return true;
     
     const RegularExpression *avoid_regexp_to_use = m_avoid_regexp_ap.get();
-    if (avoid_regexp_to_use == NULL)
+    if (avoid_regexp_to_use == nullptr)
         avoid_regexp_to_use = GetThread().GetSymbolsToAvoidRegexp();
         
-    if (avoid_regexp_to_use != NULL)
+    if (avoid_regexp_to_use != nullptr)
     {
         SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction|eSymbolContextBlock|eSymbolContextSymbol);
-        if (sc.symbol != NULL)
+        if (sc.symbol != nullptr)
         {
             const char *frame_function_name = sc.GetFunctionName(Mangled::ePreferDemangledWithoutArguments).GetCString();
             if (frame_function_name)
@@ -424,7 +416,7 @@ ThreadPlanStepInRange::DefaultShouldStopHereCallback (ThreadPlan *current_plan, 
         if (step_in_range_plan->m_step_into_target)
         {
             SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction|eSymbolContextBlock|eSymbolContextSymbol);
-            if (sc.symbol != NULL)
+            if (sc.symbol != nullptr)
             {
                 // First try an exact match, since that's cheap with ConstStrings.  Then do a strstr compare.
                 if (step_in_range_plan->m_step_into_target == sc.GetFunctionName())
@@ -436,9 +428,9 @@ ThreadPlanStepInRange::DefaultShouldStopHereCallback (ThreadPlan *current_plan, 
                     const char *target_name = step_in_range_plan->m_step_into_target.AsCString();
                     const char *function_name = sc.GetFunctionName().AsCString();
                     
-                    if (function_name == NULL)
+                    if (function_name == nullptr)
                         should_stop_here = false;
-                    else if (strstr (function_name, target_name) == NULL)
+                    else if (strstr(function_name, target_name) == nullptr)
                         should_stop_here = false;
                 }
                 if (log && !should_stop_here)
@@ -543,5 +535,5 @@ ThreadPlanStepInRange::DoWillResume (lldb::StateType resume_state, bool current_
 bool
 ThreadPlanStepInRange::IsVirtualStep()
 {
-  return m_virtual_step;
+    return m_virtual_step;
 }

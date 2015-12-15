@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/ThreadPlanStepThrough.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -39,7 +38,6 @@ ThreadPlanStepThrough::ThreadPlanStepThrough (Thread &thread, StackID &m_stack_i
     m_return_stack_id (m_stack_id),
     m_stop_others (stop_others)
 {
-
     LookForPlanToStepThroughFromCurrentPC();
     
     // If we don't get a valid step through plan, don't bother to set up a backstop.
@@ -56,7 +54,7 @@ ThreadPlanStepThrough::ThreadPlanStepThrough (Thread &thread, StackID &m_stack_i
         {
             m_backstop_addr = return_frame_sp->GetFrameCodeAddress().GetLoadAddress(m_thread.CalculateTarget().get());
             Breakpoint *return_bp = m_thread.GetProcess()->GetTarget().CreateBreakpoint (m_backstop_addr, true, false).get();
-            if (return_bp != NULL)
+            if (return_bp != nullptr)
             {
                 return_bp->SetThreadID(m_thread.GetID());
                 m_backstop_bkpt_id = return_bp->GetID();
@@ -137,7 +135,7 @@ ThreadPlanStepThrough::GetDescription (Stream *s, lldb::DescriptionLevel level)
 bool
 ThreadPlanStepThrough::ValidatePlan (Stream *error)
 {
-    return m_sub_plan_sp.get() != NULL;
+    return m_sub_plan_sp.get() != nullptr;
 }
 
 bool
@@ -147,10 +145,7 @@ ThreadPlanStepThrough::DoPlanExplainsStop (Event *event_ptr)
     // we won't get asked.  The only time we would be the one directly asked this question
     // is if we hit our backstop breakpoint.
     
-    if (HitOurBackstopBreakpoint())
-        return true;
-    else
-        return false;
+    return HitOurBackstopBreakpoint();
 }
 
 bool
@@ -289,4 +284,3 @@ ThreadPlanStepThrough::HitOurBackstopBreakpoint()
     }
     return false;
 }
-

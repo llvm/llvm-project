@@ -593,8 +593,8 @@
 		26BF51F61B3C754400016294 /* ABISysV_i386.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BF51EF1B3C754400016294 /* ABISysV_i386.cpp */; };
 		26C72C94124322890068DC16 /* SBStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 26C72C93124322890068DC16 /* SBStream.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		26C72C961243229A0068DC16 /* SBStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C72C951243229A0068DC16 /* SBStream.cpp */; };
-		26C7C4831BFFEA7E009BD01F /* WindowsMiniDump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C7C4811BFFEA7E009BD01F /* WindowsMiniDump.cpp */; settings = {ASSET_TAGS = (); }; };
-		26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */ = {isa = PBXBuildFile; fileRef = 26C7C4821BFFEA7E009BD01F /* WindowsMiniDump.h */; settings = {ASSET_TAGS = (); }; };
+		26C7C4831BFFEA7E009BD01F /* WindowsMiniDump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C7C4811BFFEA7E009BD01F /* WindowsMiniDump.cpp */; };
+		26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */ = {isa = PBXBuildFile; fileRef = 26C7C4821BFFEA7E009BD01F /* WindowsMiniDump.h */; };
 		26CA97A1172B1FD5005DC71B /* RegisterContextThreadMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26CA979F172B1FD5005DC71B /* RegisterContextThreadMemory.cpp */; };
 		26CEB5EF18761CB2008F575A /* libedit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 26F5C32A10F3DFDD009D5894 /* libedit.dylib */; };
 		26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26CEB5F018762056008F575A /* CommandObjectGUI.cpp */; };
@@ -634,8 +634,8 @@
 		26E152261419CAD4007967D0 /* ObjectFilePECOFF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26E152231419CACA007967D0 /* ObjectFilePECOFF.cpp */; };
 		26ECA04313665FED008D1F18 /* ARM_DWARF_Registers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26ECA04213665FED008D1F18 /* ARM_DWARF_Registers.cpp */; };
 		26ED3D6D13C563810017D45E /* OptionGroupVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26ED3D6C13C563810017D45E /* OptionGroupVariable.cpp */; };
-		26EFB61B1BFE8D3E00544801 /* PlatformNetBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26EFB6181BFE8D3E00544801 /* PlatformNetBSD.cpp */; settings = {ASSET_TAGS = (); }; };
-		26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */ = {isa = PBXBuildFile; fileRef = 26EFB6191BFE8D3E00544801 /* PlatformNetBSD.h */; settings = {ASSET_TAGS = (); }; };
+		26EFB61B1BFE8D3E00544801 /* PlatformNetBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26EFB6181BFE8D3E00544801 /* PlatformNetBSD.cpp */; };
+		26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */ = {isa = PBXBuildFile; fileRef = 26EFB6191BFE8D3E00544801 /* PlatformNetBSD.h */; };
 		26EFC4CD18CFAF0D00865D87 /* ObjectFileJIT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26EFC4CA18CFAF0D00865D87 /* ObjectFileJIT.cpp */; };
 		26F006561B4DD86700B872E5 /* DynamicLoaderWindowsDYLD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26F006541B4DD86700B872E5 /* DynamicLoaderWindowsDYLD.cpp */; };
 		26F4A21C13FBA31A0064B613 /* ThreadMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26F4A21A13FBA31A0064B613 /* ThreadMemory.cpp */; };
@@ -884,6 +884,8 @@
 		AF26703B1852D01E00B6CC36 /* QueueList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2670391852D01E00B6CC36 /* QueueList.cpp */; };
 		AF2BA6EC1A707E3400C5248A /* UriParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33064C991A5C7A330033D415 /* UriParser.cpp */; };
 		AF2BCA6C18C7EFDE005B4526 /* JITLoaderGDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */; };
+		AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */; };
+		AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */; };
 		AF37E10A17C861F20061E18E /* ProcessRunLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF37E10917C861F20061E18E /* ProcessRunLock.cpp */; };
 		AF45E1FE1BF57C8D000563EB /* PythonTestSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45E1FC1BF57C8D000563EB /* PythonTestSuite.cpp */; };
 		AF45FDE518A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */; };
@@ -2782,6 +2784,8 @@
 		AF2670391852D01E00B6CC36 /* QueueList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = QueueList.cpp; path = source/Target/QueueList.cpp; sourceTree = "<group>"; };
 		AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JITLoaderGDB.cpp; sourceTree = "<group>"; };
 		AF2BCA6A18C7EFDE005B4526 /* JITLoaderGDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JITLoaderGDB.h; sourceTree = "<group>"; };
+		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
+		AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetBSDSignals.h; path = Utility/NetBSDSignals.h; sourceTree = "<group>"; };
 		AF37E10917C861F20061E18E /* ProcessRunLock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessRunLock.cpp; sourceTree = "<group>"; };
 		AF3F54AE1B3BA59C00186E73 /* CrashReason.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CrashReason.cpp; sourceTree = "<group>"; };
 		AF3F54AF1B3BA59C00186E73 /* CrashReason.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CrashReason.h; sourceTree = "<group>"; };
@@ -4123,6 +4127,8 @@
 				23173F8B192BA93F005C708F /* lldb-x86-register-enums.h */,
 				26B75B421AD6E29A001F7A57 /* MipsLinuxSignals.cpp */,
 				26B75B431AD6E29A001F7A57 /* MipsLinuxSignals.h */,
+				AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */,
+				AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */,
 				26474C9E18D0CAEC0073DEBA /* RegisterContext_mips64.h */,
 				AF77E0991A033D360096C0EA /* RegisterContext_powerpc.h */,
 				26474C9F18D0CAEC0073DEBA /* RegisterContext_x86.h */,
@@ -5923,6 +5929,7 @@
 			files = (
 				AF8AD6381BEC28C400150209 /* PlatformRemoteAppleTV.h in Headers */,
 				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
+				AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
 				AF8AD62F1BEC28A400150209 /* PlatformAppleTVSimulator.h in Headers */,
@@ -6685,6 +6692,7 @@
 				AF1729D6182C907200E0AB97 /* HistoryThread.cpp in Sources */,
 				268900AF13353E5000698AC0 /* UnwindLLDB.cpp in Sources */,
 				268900B013353E5000698AC0 /* RegisterContextLLDB.cpp in Sources */,
+				AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */,
 				949EEDA31BA76577008C63CF /* Cocoa.cpp in Sources */,
 				3FDFE56C19AF9C44009756A7 /* HostProcessPosix.cpp in Sources */,
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
