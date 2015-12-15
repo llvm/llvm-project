@@ -349,6 +349,20 @@ void Sema::PrintStats() const {
   AnalysisWarnings.PrintStats();
 }
 
+void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
+                                               QualType SrcType,
+                                               SourceLocation Loc) {
+  Optional<NullabilityKind> ExprNullability = SrcType->getNullability(Context);
+  if (!ExprNullability || *ExprNullability != NullabilityKind::Nullable)
+    return;
+
+  Optional<NullabilityKind> TypeNullability = DstType->getNullability(Context);
+  if (!TypeNullability || *TypeNullability != NullabilityKind::NonNull)
+    return;
+
+  Diag(Loc, diag::warn_nullability_lost) << SrcType << DstType;
+}
+
 /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit cast.
 /// If there is already an implicit cast, merge into the existing one.
 /// The result is of the given category.
@@ -372,18 +386,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   assert((VK == VK_RValue || !E->isRValue()) && "can't cast rvalue to lvalue");
 #endif
 
-  // Check whether we're implicitly casting from a nullable type to a nonnull
-  // type.
-  if (auto exprNullability = E->getType()->getNullability(Context)) {
-    if (*exprNullability == NullabilityKind::Nullable) {
-      if (auto typeNullability = Ty->getNullability(Context)) {
-        if (*typeNullability == NullabilityKind::NonNull) {
-          Diag(E->getLocStart(), diag::warn_nullability_lost)
-            << E->getType() << Ty;
-        }
-      }
-    }
-  }
+  diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getLocStart());
 
   QualType ExprTy = Context.getCanonicalType(E->getType());
   QualType TypeTy = Context.getCanonicalType(Ty);

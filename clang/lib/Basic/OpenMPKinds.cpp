@@ -141,6 +141,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_grainsize:
   case OMPC_nogroup:
   case OMPC_num_tasks:
+  case OMPC_hint:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -245,6 +246,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_grainsize:
   case OMPC_nogroup:
   case OMPC_num_tasks:
+  case OMPC_hint:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -438,11 +440,30 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
       break;
     }
     break;
+  case OMPD_critical:
+    switch (CKind) {
+#define OPENMP_CRITICAL_CLAUSE(Name)                                           \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
+    break;
+  case OMPD_distribute:
+    switch (CKind) {
+#define OPENMP_DISTRIBUTE_CLAUSE(Name)                                         \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
+    break;
   case OMPD_unknown:
   case OMPD_threadprivate:
   case OMPD_section:
   case OMPD_master:
-  case OMPD_critical:
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:
@@ -457,7 +478,8 @@ bool clang::isOpenMPLoopDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_simd || DKind == OMPD_for || DKind == OMPD_for_simd ||
          DKind == OMPD_parallel_for || DKind == OMPD_parallel_for_simd ||
          DKind == OMPD_taskloop ||
-         DKind == OMPD_taskloop_simd; // TODO add next directives.
+         DKind == OMPD_taskloop_simd ||
+         DKind == OMPD_distribute; // TODO add next directives.
 }
 
 bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
@@ -490,6 +512,10 @@ bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_simd || DKind == OMPD_for_simd ||
          DKind == OMPD_parallel_for_simd ||
          DKind == OMPD_taskloop_simd; // TODO add next directives.
+}
+
+bool clang::isOpenMPDistributeDirective(OpenMPDirectiveKind Kind) {
+  return Kind == OMPD_distribute; // TODO add next directives.
 }
 
 bool clang::isOpenMPPrivate(OpenMPClauseKind Kind) {

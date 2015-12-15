@@ -2458,14 +2458,14 @@ void Sema::diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
     return;
 
   struct Qual {
-    unsigned Mask;
     const char *Name;
+    unsigned Mask;
     SourceLocation Loc;
   } const QualKinds[4] = {
-    { DeclSpec::TQ_const, "const", ConstQualLoc },
-    { DeclSpec::TQ_volatile, "volatile", VolatileQualLoc },
-    { DeclSpec::TQ_restrict, "restrict", RestrictQualLoc },
-    { DeclSpec::TQ_atomic, "_Atomic", AtomicQualLoc }
+    { "const", DeclSpec::TQ_const, ConstQualLoc },
+    { "volatile", DeclSpec::TQ_volatile, VolatileQualLoc },
+    { "restrict", DeclSpec::TQ_restrict, RestrictQualLoc },
+    { "_Atomic", DeclSpec::TQ_atomic, AtomicQualLoc }
   };
 
   SmallString<32> QualStr;

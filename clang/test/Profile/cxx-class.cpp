@@ -18,7 +18,7 @@ class Simple {
 public:
   // CTRGEN-LABEL: define {{.*}} @_ZN6SimpleC2Ei(
   // CTRUSE-LABEL: define {{.*}} @_ZN6SimpleC2Ei(
-  // CTRGEN: store {{.*}} @[[SCC:__llvm_profile_counters__ZN6SimpleC2Ei]], i64 0, i64 0
+  // CTRGEN: store {{.*}} @[[SCC:__profc__ZN6SimpleC2Ei]], i64 0, i64 0
   explicit Simple(int Member) : Member(Member) {
     // CTRGEN: store {{.*}} @[[SCC]], i64 0, i64 1
     // CTRUSE: br {{.*}} !prof ![[SC1:[0-9]+]]
@@ -31,7 +31,7 @@ public:
 
   // DTRGEN-LABEL: define {{.*}} @_ZN6SimpleD2Ev(
   // DTRUSE-LABEL: define {{.*}} @_ZN6SimpleD2Ev(
-  // DTRGEN: store {{.*}} @[[SDC:__llvm_profile_counters__ZN6SimpleD2Ev]], i64 0, i64 0
+  // DTRGEN: store {{.*}} @[[SDC:__profc__ZN6SimpleD2Ev]], i64 0, i64 0
   ~Simple() {
     // DTRGEN: store {{.*}} @[[SDC]], i64 0, i64 1
     // DTRUSE: br {{.*}} !prof ![[SD1:[0-9]+]]
@@ -44,7 +44,7 @@ public:
 
   // MTHGEN-LABEL: define {{.*}} @_ZN6Simple6methodEv(
   // MTHUSE-LABEL: define {{.*}} @_ZN6Simple6methodEv(
-  // MTHGEN: store {{.*}} @[[SMC:__llvm_profile_counters__ZN6Simple6methodEv]], i64 0, i64 0
+  // MTHGEN: store {{.*}} @[[SMC:__profc__ZN6Simple6methodEv]], i64 0, i64 0
   void method() {
     // MTHGEN: store {{.*}} @[[SMC]], i64 0, i64 1
     // MTHUSE: br {{.*}} !prof ![[SM1:[0-9]+]]
@@ -58,7 +58,7 @@ public:
 
 // WRPGEN-LABEL: define {{.*}} @_Z14simple_wrapperv(
 // WRPUSE-LABEL: define {{.*}} @_Z14simple_wrapperv(
-// WRPGEN: store {{.*}} @[[SWC:__llvm_profile_counters__Z14simple_wrapperv]], i64 0, i64 0
+// WRPGEN: store {{.*}} @[[SWC:__profc__Z14simple_wrapperv]], i64 0, i64 0
 void simple_wrapper() {
   // WRPGEN: store {{.*}} @[[SWC]], i64 0, i64 1
   // WRPUSE: br {{.*}} !prof ![[SW1:[0-9]+]]

@@ -62,6 +62,9 @@ private:
     // Call to void __kmpc_critical(ident_t *loc, kmp_int32 global_tid,
     // kmp_critical_name *crit);
     OMPRTL__kmpc_critical,
+    // Call to void __kmpc_critical_with_hint(ident_t *loc, kmp_int32
+    // global_tid, kmp_critical_name *crit, uintptr_t hint);
+    OMPRTL__kmpc_critical_with_hint,
     // Call to void __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid,
     // kmp_critical_name *crit);
     OMPRTL__kmpc_end_critical,
@@ -420,9 +423,11 @@ public:
   /// \param CriticalName Name of the critical region.
   /// \param CriticalOpGen Generator for the statement associated with the given
   /// critical region.
+  /// \param Hint Value of the 'hint' clause (optional).
   virtual void emitCriticalRegion(CodeGenFunction &CGF, StringRef CriticalName,
                                   const RegionCodeGenTy &CriticalOpGen,
-                                  SourceLocation Loc);
+                                  SourceLocation Loc,
+                                  const Expr *Hint = nullptr);
 
   /// \brief Emits a master region.
   /// \param MasterOpGen Generator for the statement associated with the given

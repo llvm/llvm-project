@@ -10,9 +10,9 @@
 // RUN: %clang %s -o - -emit-llvm -S -fprofile-instr-use=%t.profdata -fcxx-exceptions -target %itanium_abi_triple | FileCheck -check-prefix=PGOUSE %s
 // RUN: %clang %s -o - -emit-llvm -S -fprofile-instr-use=%t.profdata -fcxx-exceptions -target %itanium_abi_triple | FileCheck -check-prefix=PGOUSE-EXC %s
 
-// PGOGEN: @[[THC:__llvm_profile_counters__Z6throwsv]] = private global [9 x i64] zeroinitializer
-// PGOGEN-EXC: @[[THC:__llvm_profile_counters__Z6throwsv]] = private global [9 x i64] zeroinitializer
-// PGOGEN: @[[UNC:__llvm_profile_counters__Z11unreachablei]] = private global [3 x i64] zeroinitializer
+// PGOGEN: @[[THC:__profc__Z6throwsv]] = private global [9 x i64] zeroinitializer
+// PGOGEN-EXC: @[[THC:__profc__Z6throwsv]] = private global [9 x i64] zeroinitializer
+// PGOGEN: @[[UNC:__profc__Z11unreachablei]] = private global [3 x i64] zeroinitializer
 
 // PGOGEN-LABEL: @_Z6throwsv()
 // PGOUSE-LABEL: @_Z6throwsv()

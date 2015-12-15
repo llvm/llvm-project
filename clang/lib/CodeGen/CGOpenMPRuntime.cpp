@@ -557,6 +557,17 @@ CGOpenMPRuntime::createRuntimeFunction(OpenMPRTLFunction Function) {
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_critical");
     break;
   }
+  case OMPRTL__kmpc_critical_with_hint: {
+    // Build void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
+    // kmp_critical_name *crit, uintptr_t hint);
+    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty,
+                                llvm::PointerType::getUnqual(KmpCriticalNameTy),
+                                CGM.IntPtrTy};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_critical_with_hint");
+    break;
+  }
   case OMPRTL__kmpc_threadprivate_register: {
     // Build void __kmpc_threadprivate_register(ident_t *, void *data,
     // kmpc_ctor ctor, kmpc_cctor cctor, kmpc_dtor dtor);
@@ -1369,22 +1380,29 @@ public:
 void CGOpenMPRuntime::emitCriticalRegion(CodeGenFunction &CGF,
                                          StringRef CriticalName,
                                          const RegionCodeGenTy &CriticalOpGen,
-                                         SourceLocation Loc) {
-  // __kmpc_critical(ident_t *, gtid, Lock);
+                                         SourceLocation Loc, const Expr *Hint) {
+  // __kmpc_critical[_with_hint](ident_t *, gtid, Lock[, hint]);
   // CriticalOpGen();
   // __kmpc_end_critical(ident_t *, gtid, Lock);
   // Prepare arguments and build a call to __kmpc_critical
-  {
-    CodeGenFunction::RunCleanupsScope Scope(CGF);
-    llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
-                           getCriticalRegionLock(CriticalName)};
+  CodeGenFunction::RunCleanupsScope Scope(CGF);
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
+                         getCriticalRegionLock(CriticalName)};
+  if (Hint) {
+    llvm::SmallVector<llvm::Value *, 8> ArgsWithHint(std::begin(Args),
+                                                     std::end(Args));
+    auto *HintVal = CGF.EmitScalarExpr(Hint);
+    ArgsWithHint.push_back(
+        CGF.Builder.CreateIntCast(HintVal, CGM.IntPtrTy, /*isSigned=*/false));
+    CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_critical_with_hint),
+                        ArgsWithHint);
+  } else
     CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_critical), Args);
-    // Build a call to __kmpc_end_critical
-    CGF.EHStack.pushCleanup<CallEndCleanup<std::extent<decltype(Args)>::value>>(
-        NormalAndEHCleanup, createRuntimeFunction(OMPRTL__kmpc_end_critical),
-        llvm::makeArrayRef(Args));
-    emitInlinedDirective(CGF, OMPD_critical, CriticalOpGen);
-  }
+  // Build a call to __kmpc_end_critical
+  CGF.EHStack.pushCleanup<CallEndCleanup<std::extent<decltype(Args)>::value>>(
+      NormalAndEHCleanup, createRuntimeFunction(OMPRTL__kmpc_end_critical),
+      llvm::makeArrayRef(Args));
+  emitInlinedDirective(CGF, OMPD_critical, CriticalOpGen);
 }
 
 static void emitIfStmt(CodeGenFunction &CGF, llvm::Value *IfCond,

@@ -3028,6 +3028,59 @@ public:
   child_range children() { return child_range(&NumTasks, &NumTasks + 1); }
 };
 
+/// \brief This represents 'hint' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp critical (name) hint(6)
+/// \endcode
+/// In this example directive '#pragma omp critical' has name 'name' and clause
+/// 'hint' with argument '6'.
+///
+class OMPHintClause : public OMPClause {
+  friend class OMPClauseReader;
+  /// \brief Location of '('.
+  SourceLocation LParenLoc;
+  /// \brief Hint expression of the 'hint' clause.
+  Stmt *Hint;
+
+  /// \brief Set hint expression.
+  ///
+  void setHint(Expr *H) { Hint = H; }
+
+public:
+  /// \brief Build 'hint' clause with expression \a Hint.
+  ///
+  /// \param Hint Hint expression.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  ///
+  OMPHintClause(Expr *Hint, SourceLocation StartLoc, SourceLocation LParenLoc,
+                SourceLocation EndLoc)
+      : OMPClause(OMPC_hint, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Hint(Hint) {}
+
+  /// \brief Build an empty clause.
+  ///
+  OMPHintClause()
+      : OMPClause(OMPC_hint, SourceLocation(), SourceLocation()),
+        LParenLoc(SourceLocation()), Hint(nullptr) {}
+
+  /// \brief Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  /// \brief Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// \brief Returns number of threads.
+  Expr *getHint() const { return cast_or_null<Expr>(Hint); }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_hint;
+  }
+
+  child_range children() { return child_range(&Hint, &Hint + 1); }
+};
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

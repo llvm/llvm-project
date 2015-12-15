@@ -46,6 +46,8 @@ def CplusplusAlpha : Package<"cplusplus">, InPackage<Alpha>, Hidden;
 def DeadCode : Package<"deadcode">;
 def DeadCodeAlpha : Package<"deadcode">, InPackage<Alpha>, Hidden;
 
+def Performance : Package<"performance">, InPackage<OptIn>;
+
 def Security : Package <"security">;
 def InsecureAPI : Package<"insecureAPI">, InPackage<Security>;
 def SecurityAlpha : Package<"security">, InPackage<Alpha>, Hidden;
@@ -271,6 +273,18 @@ def UnreachableCodeChecker : Checker<"UnreachableCode">,
   DescFile<"UnreachableCodeChecker.cpp">;
 
 } // end "alpha.deadcode"
+
+//===----------------------------------------------------------------------===//
+// Performance checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = Performance in {
+
+def PaddingChecker : Checker<"Padding">,
+  HelpText<"Check for excessively padded structs.">,
+  DescFile<"PaddingChecker.cpp">;
+
+} // end: "padding"
 
 //===----------------------------------------------------------------------===//
 // Security checkers.

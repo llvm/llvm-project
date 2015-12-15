@@ -2236,10 +2236,10 @@ enum {
 
 namespace {
 struct NeonIntrinsicInfo {
+  const char *NameHint;
   unsigned BuiltinID;
   unsigned LLVMIntrinsic;
   unsigned AltLLVMIntrinsic;
-  const char *NameHint;
   unsigned TypeModifier;
 
   bool operator<(unsigned RHSBuiltinID) const {
@@ -2252,16 +2252,16 @@ struct NeonIntrinsicInfo {
 } // end anonymous namespace
 
 #define NEONMAP0(NameBase) \
-  { NEON::BI__builtin_neon_ ## NameBase, 0, 0, #NameBase, 0 }
+  { #NameBase, NEON::BI__builtin_neon_ ## NameBase, 0, 0, 0 }
 
 #define NEONMAP1(NameBase, LLVMIntrinsic, TypeModifier) \
-  { NEON:: BI__builtin_neon_ ## NameBase, \
-      Intrinsic::LLVMIntrinsic, 0, #NameBase, TypeModifier }
+  { #NameBase, NEON:: BI__builtin_neon_ ## NameBase, \
+      Intrinsic::LLVMIntrinsic, 0, TypeModifier }
 
 #define NEONMAP2(NameBase, LLVMIntrinsic, AltLLVMIntrinsic, TypeModifier) \
-  { NEON:: BI__builtin_neon_ ## NameBase, \
+  { #NameBase, NEON:: BI__builtin_neon_ ## NameBase, \
       Intrinsic::LLVMIntrinsic, Intrinsic::AltLLVMIntrinsic, \
-      #NameBase, TypeModifier }
+      TypeModifier }
 
 static const NeonIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP2(vabd_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),

@@ -76,7 +76,9 @@ static unsigned getDefaultParsingOptions() {
     options |= CXTranslationUnit_SkipFunctionBodies;
   if (getenv("CINDEXTEST_COMPLETION_BRIEF_COMMENTS"))
     options |= CXTranslationUnit_IncludeBriefCommentsInCodeCompletion;
-  
+  if (getenv("CINDEXTEST_CREATE_PREAMBLE_ON_FIRST_PARSE"))
+    options |= CXTranslationUnit_CreatePreambleOnFirstParse;
+
   return options;
 }
 

@@ -4,11 +4,11 @@
 
 // Since foo is never emitted, there should not be a profile name for it.
 
-// CHECK-DAG: @__llvm_profile_name_bar = {{.*}} [3 x i8] c"bar", section "{{.*}}__llvm_prf_names"
-// CHECK-DAG: @__llvm_profile_name_baz = {{.*}} [3 x i8] c"baz", section "{{.*}}__llvm_prf_names"
-// CHECK-DAG: @__llvm_profile_name_unused_names.c_qux = {{.*}} [18 x i8] c"unused_names.c:qux", section "{{.*}}__llvm_prf_names"
+// CHECK-DAG: @__profn_bar = {{.*}} [3 x i8] c"bar", section "{{.*}}__llvm_prf_names"
+// CHECK-DAG: @__profn_baz = {{.*}} [3 x i8] c"baz", section "{{.*}}__llvm_prf_names"
+// CHECK-DAG: @__profn_unused_names.c_qux = {{.*}} [18 x i8] c"unused_names.c:qux", section "{{.*}}__llvm_prf_names"
 
-// SYSHEADER-NOT: @__llvm_profile_name_foo =
+// SYSHEADER-NOT: @__profn_foo =
 
 
 #ifdef IS_SYSHEADER

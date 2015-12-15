@@ -41,24 +41,6 @@ using namespace clang;
 using namespace llvm;
 
 namespace clang {
-/// Diagnostic handler used by invocations of Linker::LinkModules
-static void linkerDiagnosticHandler(const DiagnosticInfo &DI,
-                                    const llvm::Module *LinkModule,
-                                    DiagnosticsEngine &Diags) {
-  if (DI.getSeverity() != DS_Error)
-    return;
-
-  std::string MsgStorage;
-  {
-    raw_string_ostream Stream(MsgStorage);
-    DiagnosticPrinterRawOStream DP(Stream);
-    DI.print(DP);
-  }
-
-  Diags.Report(diag::err_fe_cannot_link_module)
-      << LinkModule->getModuleIdentifier() << MsgStorage;
-}
-
   class BackendConsumer : public ASTConsumer {
     virtual void anchor();
     DiagnosticsEngine &Diags;
@@ -76,6 +58,10 @@ static void linkerDiagnosticHandler(const DiagnosticInfo &DI,
     std::unique_ptr<llvm::Module> TheModule;
     SmallVector<std::pair<unsigned, std::unique_ptr<llvm::Module>>, 4>
         LinkModules;
+
+    // This is here so that the diagnostic printer knows the module a diagnostic
+    // refers to.
+    llvm::Module *CurLinkModule = nullptr;
 
   public:
     BackendConsumer(
@@ -181,18 +167,6 @@ static void linkerDiagnosticHandler(const DiagnosticInfo &DI,
       assert(TheModule.get() == M &&
              "Unexpected module change during IR generation");
 
-      // Link LinkModule into this module if present, preserving its validity.
-      for (auto &I : LinkModules) {
-        unsigned LinkFlags = I.first;
-        llvm::Module *LinkModule = I.second.get();
-        if (Linker::linkModules(*M, *LinkModule,
-                                [=](const DiagnosticInfo &DI) {
-                                  linkerDiagnosticHandler(DI, LinkModule, Diags);
-                                },
-                                LinkFlags))
-          return;
-      }
-
       // Install an inline asm handler so that diagnostics get printed through
       // our diagnostics hooks.
       LLVMContext &Ctx = TheModule->getContext();
@@ -205,6 +179,14 @@ static void linkerDiagnosticHandler(const DiagnosticInfo &DI,
           Ctx.getDiagnosticHandler();
       void *OldDiagnosticContext = Ctx.getDiagnosticContext();
       Ctx.setDiagnosticHandler(DiagnosticHandler, this);
+
+      // Link LinkModule into this module if present, preserving its validity.
+      for (auto &I : LinkModules) {
+        unsigned LinkFlags = I.first;
+        CurLinkModule = I.second.get();
+        if (Linker::linkModules(*M, *CurLinkModule, LinkFlags))
+          return;
+      }
 
       EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
                         C.getTargetInfo().getDataLayoutString(),
@@ -579,6 +561,13 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
       return;
     ComputeDiagID(Severity, backend_frame_larger_than, DiagID);
     break;
+  case DK_Linker:
+    assert(CurLinkModule);
+    // FIXME: stop eating the warnings and notes.
+    if (Severity != DS_Error)
+      return;
+    DiagID = diag::err_fe_cannot_link_module;
+    break;
   case llvm::DK_OptimizationRemark:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
@@ -622,6 +611,12 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
     raw_string_ostream Stream(MsgStorage);
     DiagnosticPrinterRawOStream DP(Stream);
     DI.print(DP);
+  }
+
+  if (DiagID == diag::err_fe_cannot_link_module) {
+    Diags.Report(diag::err_fe_cannot_link_module)
+        << CurLinkModule->getModuleIdentifier() << MsgStorage;
+    return;
   }
 
   // Report the backend message using the usual diagnostic mechanism.
@@ -787,8 +782,7 @@ void CodeGenAction::ExecuteAction() {
     }
 
     auto DiagHandler = [&](const DiagnosticInfo &DI) {
-      linkerDiagnosticHandler(DI, TheModule.get(),
-                              getCompilerInstance().getDiagnostics());
+      TheModule->getContext().diagnose(DI);
     };
 
     // If we are performing ThinLTO importing compilation (indicated by
@@ -812,7 +806,7 @@ void CodeGenAction::ExecuteAction() {
       assert(Index);
       // Currently this requires creating a new Module object.
       std::unique_ptr<llvm::Module> RenamedModule =
-          renameModuleForThinLTO(TheModule, Index.get(), DiagHandler);
+          renameModuleForThinLTO(TheModule, Index.get());
       if (!RenamedModule)
         return;
 

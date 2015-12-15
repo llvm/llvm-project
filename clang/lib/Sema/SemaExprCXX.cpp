@@ -3118,6 +3118,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     ToType = ToAtomic->getValueType();
   }
 
+  QualType InitialFromType = FromType;
   // Perform the first implicit conversion.
   switch (SCS.First) {
   case ICK_Identity:
@@ -3487,6 +3488,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     From = ImpCastExprToType(From, ToAtomicType, CK_NonAtomicToAtomic,
                              VK_RValue, nullptr, CCK).get();
   }
+
+  // If this conversion sequence succeeded and involved implicitly converting a
+  // _Nullable type to a _Nonnull one, complain.
+  if (CCK == CCK_ImplicitConversion)
+    diagnoseNullableToNonnullConversion(ToType, InitialFromType,
+                                        From->getLocStart());
 
   return From;
 }
@@ -5736,9 +5743,14 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   //
   // This also indicates that we could be parsing a pseudo-destructor-name.
   // Note that Objective-C class and object types can be pseudo-destructor
-  // expressions or normal member (ivar or property) access expressions.
+  // expressions or normal member (ivar or property) access expressions, and
+  // it's legal for the type to be incomplete if this is a pseudo-destructor
+  // call.  We'll do more incomplete-type checks later in the lookup process,
+  // so just skip this check for ObjC types.
   if (BaseType->isObjCObjectOrInterfaceType()) {
+    ObjectType = ParsedType::make(BaseType);
     MayBePseudoDestructor = true;
+    return Base;
   } else if (!BaseType->isRecordType()) {
     ObjectType = ParsedType();
     MayBePseudoDestructor = true;

@@ -1944,6 +1944,7 @@ public:
   void VisitOMPTeamsDirective(const OMPTeamsDirective *D);
   void VisitOMPTaskLoopDirective(const OMPTaskLoopDirective *D);
   void VisitOMPTaskLoopSimdDirective(const OMPTaskLoopSimdDirective *D);
+  void VisitOMPDistributeDirective(const OMPDistributeDirective *D);
 
 private:
   void AddDeclarationNameInfo(const Stmt *S);
@@ -2097,6 +2098,10 @@ void OMPClauseEnqueue::VisitOMPGrainsizeClause(const OMPGrainsizeClause *C) {
 
 void OMPClauseEnqueue::VisitOMPNumTasksClause(const OMPNumTasksClause *C) {
   Visitor->AddStmt(C->getNumTasks());
+}
+
+void OMPClauseEnqueue::VisitOMPHintClause(const OMPHintClause *C) {
+  Visitor->AddStmt(C->getHint());
 }
 
 template<typename T>
@@ -2632,6 +2637,11 @@ void EnqueueVisitor::VisitOMPTaskLoopSimdDirective(
   VisitOMPLoopDirective(D);
 }
 
+void EnqueueVisitor::VisitOMPDistributeDirective(
+    const OMPDistributeDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
 void CursorVisitor::EnqueueWorkList(VisitorWorkList &WL, const Stmt *S) {
   EnqueueVisitor(WL, MakeCXCursor(S, StmtParent, TU,RegionOfInterest)).Visit(S);
 }
@@ -3073,6 +3083,8 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
     setThreadBackgroundPriority();
 
   bool PrecompilePreamble = options & CXTranslationUnit_PrecompiledPreamble;
+  bool CreatePreambleOnFirstParse =
+      options & CXTranslationUnit_CreatePreambleOnFirstParse;
   // FIXME: Add a flag for modules.
   TranslationUnitKind TUKind
     = (options & CXTranslationUnit_Incomplete)? TU_Prefix : TU_Complete;
@@ -3147,13 +3159,18 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   
   unsigned NumErrors = Diags->getClient()->getNumErrors();
   std::unique_ptr<ASTUnit> ErrUnit;
+  // Unless the user specified that they want the preamble on the first parse
+  // set it up to be created on the first reparse. This makes the first parse
+  // faster, trading for a slower (first) reparse.
+  unsigned PrecompilePreambleAfterNParses =
+      !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,
       CXXIdx->getClangResourcesPath(), CXXIdx->getOnlyLocalDecls(),
       /*CaptureDiagnostics=*/true, *RemappedFiles.get(),
-      /*RemappedFilesKeepOriginalName=*/true, PrecompilePreamble, TUKind,
-      CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
+      /*RemappedFilesKeepOriginalName=*/true, PrecompilePreambleAfterNParses,
+      TUKind, CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
       /*AllowPCHWithCompilerErrors=*/true, SkipFunctionBodies,
       /*UserFilesAreVolatile=*/true, ForSerialization,
       CXXIdx->getPCHContainerOperations()->getRawReader().getFormat(),
@@ -4495,6 +4512,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPTaskLoopDirective");
   case CXCursor_OMPTaskLoopSimdDirective:
     return cxstring::createRef("OMPTaskLoopSimdDirective");
+  case CXCursor_OMPDistributeDirective:
+    return cxstring::createRef("OMPDistributeDirective");
   case CXCursor_OverloadCandidate:
       return cxstring::createRef("OverloadCandidate");
   case CXCursor_TypeAliasTemplateDecl:

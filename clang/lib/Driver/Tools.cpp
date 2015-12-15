@@ -1407,7 +1407,8 @@ static std::string getPPCTargetCPU(const ArgList &Args) {
   return "";
 }
 
-static void getPPCTargetFeatures(const ArgList &Args,
+static void getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                                 const ArgList &Args,
                                  std::vector<const char *> &Features) {
   for (const Arg *A : Args.filtered(options::OPT_m_ppc_Features_Group)) {
     StringRef Name = A->getOption().getName();
@@ -1431,9 +1432,49 @@ static void getPPCTargetFeatures(const ArgList &Args,
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
+  ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);
+  if (FloatABI == ppc::FloatABI::Soft &&
+      !(Triple.getArch() == llvm::Triple::ppc64 ||
+        Triple.getArch() == llvm::Triple::ppc64le))
+    Features.push_back("+soft-float");
+  else if (FloatABI == ppc::FloatABI::Soft &&
+           (Triple.getArch() == llvm::Triple::ppc64 ||
+            Triple.getArch() == llvm::Triple::ppc64le))
+    D.Diag(diag::err_drv_invalid_mfloat_abi) 
+        << "soft float is not supported for ppc64";
+
   // Altivec is a bit weird, allow overriding of the Altivec feature here.
   AddTargetFeature(Args, Features, options::OPT_faltivec,
                    options::OPT_fno_altivec, "altivec");
+}
+
+ppc::FloatABI ppc::getPPCFloatABI(const Driver &D, const ArgList &Args) {
+  ppc::FloatABI ABI = ppc::FloatABI::Invalid;
+  if (Arg *A =
+          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
+                          options::OPT_mfloat_abi_EQ)) {
+    if (A->getOption().matches(options::OPT_msoft_float))
+      ABI = ppc::FloatABI::Soft;
+    else if (A->getOption().matches(options::OPT_mhard_float))
+      ABI = ppc::FloatABI::Hard;
+    else {
+      ABI = llvm::StringSwitch<ppc::FloatABI>(A->getValue())
+                .Case("soft", ppc::FloatABI::Soft)
+                .Case("hard", ppc::FloatABI::Hard)
+                .Default(ppc::FloatABI::Invalid);
+      if (ABI == ppc::FloatABI::Invalid && !StringRef(A->getValue()).empty()) {
+        D.Diag(diag::err_drv_invalid_mfloat_abi) << A->getAsString(Args);
+        ABI = ppc::FloatABI::Hard;
+      }
+    }
+  }
+
+  // If unspecified, choose the default based on the platform.
+  if (ABI == ppc::FloatABI::Invalid) {
+    ABI = ppc::FloatABI::Hard;
+  }
+
+  return ABI;
 }
 
 void Clang::AddPPCTargetArgs(const ArgList &Args,
@@ -1471,6 +1512,21 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
     // that don't use the altivec abi.
     if (StringRef(A->getValue()) != "altivec")
       ABIName = A->getValue();
+
+  ppc::FloatABI FloatABI =
+      ppc::getPPCFloatABI(getToolChain().getDriver(), Args);
+
+  if (FloatABI == ppc::FloatABI::Soft) {
+    // Floating point operations and argument passing are soft.
+    CmdArgs.push_back("-msoft-float");
+    CmdArgs.push_back("-mfloat-abi");
+    CmdArgs.push_back("soft");
+  } else {
+    // Floating point operations and argument passing are hard.
+    assert(FloatABI == ppc::FloatABI::Hard && "Invalid float abi!");
+    CmdArgs.push_back("-mfloat-abi");
+    CmdArgs.push_back("hard");
+  }
 
   if (ABIName) {
     CmdArgs.push_back("-target-abi");
@@ -1714,7 +1770,8 @@ static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
     return getX86TargetCPU(Args, T);
 
   case llvm::Triple::hexagon:
-    return "hexagon" + toolchains::HexagonToolChain::GetTargetCPU(Args).str();
+    return "hexagon" +
+           toolchains::HexagonToolChain::GetTargetCPUVersion(Args).str();
 
   case llvm::Triple::systemz:
     return getSystemZTargetCPU(Args);
@@ -1997,12 +2054,11 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   CmdArgs.push_back("-mqdsp6-compat");
   CmdArgs.push_back("-Wreturn-type");
 
-  if (const char *v =
-          toolchains::HexagonToolChain::GetSmallDataThreshold(Args)) {
-    std::string SmallDataThreshold = "-hexagon-small-data-threshold=";
-    SmallDataThreshold += v;
+  if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
+    std::string N = llvm::utostr(G.getValue());
+    std::string Opt = std::string("-hexagon-small-data-threshold=") + N;
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(Args.MakeArgString(SmallDataThreshold));
+    CmdArgs.push_back(Args.MakeArgString(Opt));
   }
 
   if (!Args.hasArg(options::OPT_fno_short_enums))
@@ -2182,6 +2238,29 @@ static void getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
     Features.push_back("+reserve-x18");
 }
 
+static void getHexagonTargetFeatures(const ArgList &Args,
+                                     std::vector<const char *> &Features) {
+  bool HasHVX = false, HasHVXD = false;
+
+  for (auto &A : Args) {
+    auto &Opt = A->getOption();
+    if (Opt.matches(options::OPT_mhexagon_hvx))
+      HasHVX = true;
+    else if (Opt.matches(options::OPT_mno_hexagon_hvx))
+      HasHVXD = HasHVX = false;
+    else if (Opt.matches(options::OPT_mhexagon_hvx_double))
+      HasHVXD = HasHVX = true;
+    else if (Opt.matches(options::OPT_mno_hexagon_hvx_double))
+      HasHVXD = false;
+    else
+      continue;
+    A->claim();
+  }
+
+  Features.push_back(HasHVX  ? "+hvx" : "-hvx");
+  Features.push_back(HasHVXD ? "+hvx-double" : "-hvx-double");
+}
+
 static void getWebAssemblyTargetFeatures(const ArgList &Args,
                                          std::vector<const char *> &Features) {
   for (const Arg *A : Args.filtered(options::OPT_m_wasm_Features_Group)) {
@@ -2225,7 +2304,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    getPPCTargetFeatures(Args, Features);
+    getPPCTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::systemz:
     getSystemZTargetFeatures(Args, Features);
@@ -2237,6 +2316,9 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     getX86TargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::hexagon:
+    getHexagonTargetFeatures(Args, Features);
     break;
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
@@ -6076,7 +6158,9 @@ void gcc::Linker::RenderExtraToolArgs(const JobAction &JA,
 
 // Hexagon tools start.
 void hexagon::Assembler::RenderExtraToolArgs(const JobAction &JA,
-                                             ArgStringList &CmdArgs) const {}
+                                             ArgStringList &CmdArgs) const {
+}
+
 void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                       const InputInfo &Output,
                                       const InputInfoList &Inputs,
@@ -6084,14 +6168,20 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                       const char *LinkingOutput) const {
   claimNoWarnArgs(Args);
 
-  const Driver &D = getToolChain().getDriver();
+  auto &HTC = static_cast<const toolchains::HexagonToolChain&>(getToolChain());
+  const Driver &D = HTC.getDriver();
   ArgStringList CmdArgs;
 
-  std::string MarchString = "-march=";
-  MarchString += toolchains::HexagonToolChain::GetTargetCPU(Args);
-  CmdArgs.push_back(Args.MakeArgString(MarchString));
+  std::string MArchString = "-march=hexagon";
+  CmdArgs.push_back(Args.MakeArgString(MArchString));
 
   RenderExtraToolArgs(JA, CmdArgs);
+
+  std::string AsName = "hexagon-llvm-mc";
+  std::string MCpuString = "-mcpu=hexagon" +
+        toolchains::HexagonToolChain::GetTargetCPUVersion(Args).str();
+  CmdArgs.push_back("-filetype=obj");
+  CmdArgs.push_back(Args.MakeArgString(MCpuString));
 
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
@@ -6101,8 +6191,10 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fsyntax-only");
   }
 
-  if (const char *v = toolchains::HexagonToolChain::GetSmallDataThreshold(Args))
-    CmdArgs.push_back(Args.MakeArgString(std::string("-G") + v));
+  if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
+    std::string N = llvm::utostr(G.getValue());
+    CmdArgs.push_back(Args.MakeArgString(std::string("-gpsize=") + N));
+  }
 
   Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
 
@@ -6118,13 +6210,13 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     // Don't try to pass LLVM or AST inputs to a generic gcc.
     if (types::isLLVMIR(II.getType()))
       D.Diag(clang::diag::err_drv_no_linker_llvm_support)
-          << getToolChain().getTripleString();
+          << HTC.getTripleString();
     else if (II.getType() == types::TY_AST)
       D.Diag(clang::diag::err_drv_no_ast_support)
-          << getToolChain().getTripleString();
+          << HTC.getTripleString();
     else if (II.getType() == types::TY_ModuleFile)
       D.Diag(diag::err_drv_no_module_support)
-          << getToolChain().getTripleString();
+          << HTC.getTripleString();
 
     if (II.isFilename())
       CmdArgs.push_back(II.getFilename());
@@ -6134,41 +6226,38 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       II.getInputArg().render(Args, CmdArgs);
   }
 
-  const char *GCCName = "hexagon-as";
-  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath(GCCName));
+  auto *Exec = Args.MakeArgString(HTC.GetProgramPath(AsName.c_str()));
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
 void hexagon::Linker::RenderExtraToolArgs(const JobAction &JA,
                                           ArgStringList &CmdArgs) const {
-  // The types are (hopefully) good enough.
 }
 
 static void
 constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
-                         const toolchains::HexagonToolChain &ToolChain,
+                         const toolchains::HexagonToolChain &HTC,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, ArgStringList &CmdArgs,
                          const char *LinkingOutput) {
 
-  const Driver &D = ToolChain.getDriver();
+  const Driver &D = HTC.getDriver();
 
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
-  bool hasStaticArg = Args.hasArg(options::OPT_static);
-  bool buildingLib = Args.hasArg(options::OPT_shared);
-  bool buildPIE = Args.hasArg(options::OPT_pie);
-  bool incStdLib = !Args.hasArg(options::OPT_nostdlib);
-  bool incStartFiles = !Args.hasArg(options::OPT_nostartfiles);
-  bool incDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
-  bool useG0 = false;
-  bool useShared = buildingLib && !hasStaticArg;
+  bool IsStatic = Args.hasArg(options::OPT_static);
+  bool IsShared = Args.hasArg(options::OPT_shared);
+  bool IsPIE = Args.hasArg(options::OPT_pie);
+  bool IncStdLib = !Args.hasArg(options::OPT_nostdlib);
+  bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
+  bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
+  bool UseG0 = false;
+  bool UseShared = IsShared && !IsStatic;
 
   //----------------------------------------------------------------------------
   // Silence warnings for various options
   //----------------------------------------------------------------------------
-
   Args.ClaimAllArgs(options::OPT_g_Group);
   Args.ClaimAllArgs(options::OPT_emit_llvm);
   Args.ClaimAllArgs(options::OPT_w); // Other warning options are already
@@ -6178,28 +6267,37 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
-  for (const auto &Opt : ToolChain.ExtraOpts)
+  if (Args.hasArg(options::OPT_s))
+    CmdArgs.push_back("-s");
+
+  if (Args.hasArg(options::OPT_r))
+    CmdArgs.push_back("-r");
+
+  for (const auto &Opt : HTC.ExtraOpts)
     CmdArgs.push_back(Opt.c_str());
 
-  std::string MarchString = toolchains::HexagonToolChain::GetTargetCPU(Args);
-  CmdArgs.push_back(Args.MakeArgString("-m" + MarchString));
+  CmdArgs.push_back("-march=hexagon");
+  std::string CpuVer =
+        toolchains::HexagonToolChain::GetTargetCPUVersion(Args).str();
+  std::string MCpuString = "-mcpu=hexagon" + CpuVer;
+  CmdArgs.push_back(Args.MakeArgString(MCpuString));
 
-  if (buildingLib) {
+  if (IsShared) {
     CmdArgs.push_back("-shared");
-    CmdArgs.push_back("-call_shared"); // should be the default, but doing as
-                                       // hexagon-gcc does
+    // The following should be the default, but doing as hexagon-gcc does.
+    CmdArgs.push_back("-call_shared");
   }
 
-  if (hasStaticArg)
+  if (IsStatic)
     CmdArgs.push_back("-static");
 
-  if (buildPIE && !buildingLib)
+  if (IsPIE && !IsShared)
     CmdArgs.push_back("-pie");
 
-  if (const char *v =
-          toolchains::HexagonToolChain::GetSmallDataThreshold(Args)) {
-    CmdArgs.push_back(Args.MakeArgString(std::string("-G") + v));
-    useG0 = toolchains::HexagonToolChain::UsesG0(v);
+  if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
+    std::string N = llvm::utostr(G.getValue());
+    CmdArgs.push_back(Args.MakeArgString(std::string("-G") + N));
+    UseG0 = G.getValue() == 0;
   }
 
   //----------------------------------------------------------------------------
@@ -6208,49 +6306,62 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  const std::string MarchSuffix = "/" + MarchString;
-  const std::string G0Suffix = "/G0";
-  const std::string MarchG0Suffix = MarchSuffix + G0Suffix;
-  const std::string RootDir = ToolChain.GetGnuDir(D.InstalledDir, Args) + "/";
-  const std::string StartFilesDir =
-      RootDir + "hexagon/lib" + (useG0 ? MarchG0Suffix : MarchSuffix);
-
   //----------------------------------------------------------------------------
   // moslib
   //----------------------------------------------------------------------------
-  std::vector<std::string> oslibs;
-  bool hasStandalone = false;
+  std::vector<std::string> OsLibs;
+  bool HasStandalone = false;
 
   for (const Arg *A : Args.filtered(options::OPT_moslib_EQ)) {
     A->claim();
-    oslibs.emplace_back(A->getValue());
-    hasStandalone = hasStandalone || (oslibs.back() == "standalone");
+    OsLibs.emplace_back(A->getValue());
+    HasStandalone = HasStandalone || (OsLibs.back() == "standalone");
   }
-  if (oslibs.empty()) {
-    oslibs.push_back("standalone");
-    hasStandalone = true;
+  if (OsLibs.empty()) {
+    OsLibs.push_back("standalone");
+    HasStandalone = true;
   }
 
   //----------------------------------------------------------------------------
   // Start Files
   //----------------------------------------------------------------------------
-  if (incStdLib && incStartFiles) {
+  const std::string MCpuSuffix = "/" + CpuVer;
+  const std::string MCpuG0Suffix = MCpuSuffix + "/G0";
+  const std::string RootDir =
+      HTC.getHexagonTargetDir(D.InstalledDir, D.PrefixDirs) + "/";
+  const std::string StartSubDir =
+      "hexagon/lib" + (UseG0 ? MCpuG0Suffix : MCpuSuffix);
 
-    if (!buildingLib) {
-      if (hasStandalone) {
-        CmdArgs.push_back(
-            Args.MakeArgString(StartFilesDir + "/crt0_standalone.o"));
+  auto Find = [&HTC] (const std::string &RootDir, const std::string &SubDir,
+                      const char *Name) -> std::string {
+    std::string RelName = SubDir + Name;
+    std::string P = HTC.GetFilePath(RelName.c_str());
+    if (llvm::sys::fs::exists(P))
+      return P;
+    return RootDir + RelName;
+  };
+
+  if (IncStdLib && IncStartFiles) {
+    if (!IsShared) {
+      if (HasStandalone) {
+        std::string Crt0SA = Find(RootDir, StartSubDir, "/crt0_standalone.o");
+        CmdArgs.push_back(Args.MakeArgString(Crt0SA));
       }
-      CmdArgs.push_back(Args.MakeArgString(StartFilesDir + "/crt0.o"));
+      std::string Crt0 = Find(RootDir, StartSubDir, "/crt0.o");
+      CmdArgs.push_back(Args.MakeArgString(Crt0));
     }
-    std::string initObj = useShared ? "/initS.o" : "/init.o";
-    CmdArgs.push_back(Args.MakeArgString(StartFilesDir + initObj));
+    std::string Init = UseShared
+          ? Find(RootDir, StartSubDir + "/pic", "/initS.o")
+          : Find(RootDir, StartSubDir, "/init.o");
+    CmdArgs.push_back(Args.MakeArgString(Init));
   }
 
   //----------------------------------------------------------------------------
   // Library Search Paths
   //----------------------------------------------------------------------------
-  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
+  const ToolChain::path_list &LibPaths = HTC.getFilePaths();
+  for (const auto &LibPath : LibPaths)
+    CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
 
   //----------------------------------------------------------------------------
   //
@@ -6259,21 +6370,21 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                   {options::OPT_T_Group, options::OPT_e, options::OPT_s,
                    options::OPT_t, options::OPT_u_Group});
 
-  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs);
+  AddLinkerInputs(HTC, Inputs, Args, CmdArgs);
 
   //----------------------------------------------------------------------------
   // Libraries
   //----------------------------------------------------------------------------
-  if (incStdLib && incDefLibs) {
+  if (IncStdLib && IncDefLibs) {
     if (D.CCCIsCXX()) {
-      ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+      HTC.AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 
     CmdArgs.push_back("--start-group");
 
-    if (!buildingLib) {
-      for (const std::string &Lib : oslibs)
+    if (!IsShared) {
+      for (const std::string &Lib : OsLibs)
         CmdArgs.push_back(Args.MakeArgString("-l" + Lib));
       CmdArgs.push_back("-lc");
     }
@@ -6285,9 +6396,11 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   // End files
   //----------------------------------------------------------------------------
-  if (incStdLib && incStartFiles) {
-    std::string finiObj = useShared ? "/finiS.o" : "/fini.o";
-    CmdArgs.push_back(Args.MakeArgString(StartFilesDir + finiObj));
+  if (IncStdLib && IncStartFiles) {
+    std::string Fini = UseShared
+          ? Find(RootDir, StartSubDir + "/pic", "/finiS.o")
+          : Find(RootDir, StartSubDir, "/fini.o");
+    CmdArgs.push_back(Args.MakeArgString(Fini));
   }
 }
 
@@ -6296,15 +6409,13 @@ void hexagon::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
-
-  const toolchains::HexagonToolChain &ToolChain =
-      static_cast<const toolchains::HexagonToolChain &>(getToolChain());
+  auto &HTC = static_cast<const toolchains::HexagonToolChain&>(getToolChain());
 
   ArgStringList CmdArgs;
-  constructHexagonLinkArgs(C, JA, ToolChain, Output, Inputs, Args, CmdArgs,
+  constructHexagonLinkArgs(C, JA, HTC, Output, Inputs, Args, CmdArgs,
                            LinkingOutput);
 
-  std::string Linker = ToolChain.GetProgramPath("hexagon-ld");
+  std::string Linker = HTC.GetProgramPath("hexagon-link");
   C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
                                           CmdArgs, Inputs));
 }

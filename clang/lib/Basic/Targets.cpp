@@ -5645,14 +5645,27 @@ class HexagonTargetInfo : public TargetInfo {
   static const char * const GCCRegNames[];
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   std::string CPU;
+  bool HasHVX, HasHVXDouble;
+
 public:
   HexagonTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {
     BigEndian = false;
-    DataLayoutString = "e-m:e-p:32:32-i1:32-i64:64-a:0-n32";
+    DataLayoutString = "e-m:e-p:32:32:32-"
+                       "i64:64:64-i32:32:32-i16:16:16-i1:8:8-"
+                       "f64:64:64-f32:32:32-v64:64:64-v32:32:32-a:0-n16:32";
+    SizeType    = UnsignedInt;
+    PtrDiffType = SignedInt;
+    IntPtrType  = SignedInt;
 
     // {} in inline assembly are packet specifiers, not assembly variant
     // specifiers.
     NoAsmVariants = true;
+
+    LargeArrayMinWidth = 64;
+    LargeArrayAlign = 64;
+    UseBitFieldTypeAlignment = true;
+    ZeroLengthBitfieldBoundary = 32;
+    HasHVX = HasHVXDouble = false;
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
@@ -5668,9 +5681,22 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
+  bool isCLZForZeroUndef() const override { return false; }
+
   bool hasFeature(StringRef Feature) const override {
-    return Feature == "hexagon";
+    return llvm::StringSwitch<bool>(Feature)
+      .Case("hexagon", true)
+      .Case("hvx", HasHVX)
+      .Case("hvx-double", HasHVXDouble)
+      .Default(false);
   }
+
+  bool initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+        StringRef CPU, const std::vector<std::string> &FeaturesVec)
+        const override;
+
+  bool handleTargetFeatures(std::vector<std::string> &Features,
+                            DiagnosticsEngine &Diags) override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::CharPtrBuiltinVaList;
@@ -5685,71 +5711,77 @@ public:
     return llvm::StringSwitch<const char*>(Name)
       .Case("hexagonv4", "4")
       .Case("hexagonv5", "5")
+      .Case("hexagonv55", "55")
+      .Case("hexagonv60", "60")
       .Default(nullptr);
   }
 
   bool setCPU(const std::string &Name) override {
     if (!getHexagonCPUSuffix(Name))
       return false;
-
     CPU = Name;
     return true;
+  }
+
+  int getEHDataRegisterNumber(unsigned RegNo) const override {
+    return RegNo < 2 ? RegNo : -1;
   }
 };
 
 void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
-                                MacroBuilder &Builder) const {
-  Builder.defineMacro("qdsp6");
-  Builder.defineMacro("__qdsp6", "1");
+                                         MacroBuilder &Builder) const {
   Builder.defineMacro("__qdsp6__", "1");
-
-  Builder.defineMacro("hexagon");
-  Builder.defineMacro("__hexagon", "1");
   Builder.defineMacro("__hexagon__", "1");
 
-  if(CPU == "hexagonv1") {
-    Builder.defineMacro("__HEXAGON_V1__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "1");
-    if(Opts.HexagonQdsp6Compat) {
-      Builder.defineMacro("__QDSP6_V1__");
-      Builder.defineMacro("__QDSP6_ARCH__", "1");
-    }
-  }
-  else if(CPU == "hexagonv2") {
-    Builder.defineMacro("__HEXAGON_V2__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "2");
-    if(Opts.HexagonQdsp6Compat) {
-      Builder.defineMacro("__QDSP6_V2__");
-      Builder.defineMacro("__QDSP6_ARCH__", "2");
-    }
-  }
-  else if(CPU == "hexagonv3") {
-    Builder.defineMacro("__HEXAGON_V3__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "3");
-    if(Opts.HexagonQdsp6Compat) {
-      Builder.defineMacro("__QDSP6_V3__");
-      Builder.defineMacro("__QDSP6_ARCH__", "3");
-    }
-  }
-  else if(CPU == "hexagonv4") {
+  if (CPU == "hexagonv4") {
     Builder.defineMacro("__HEXAGON_V4__");
     Builder.defineMacro("__HEXAGON_ARCH__", "4");
-    if(Opts.HexagonQdsp6Compat) {
+    if (Opts.HexagonQdsp6Compat) {
       Builder.defineMacro("__QDSP6_V4__");
       Builder.defineMacro("__QDSP6_ARCH__", "4");
     }
-  }
-  else if(CPU == "hexagonv5") {
+  } else if (CPU == "hexagonv5") {
     Builder.defineMacro("__HEXAGON_V5__");
     Builder.defineMacro("__HEXAGON_ARCH__", "5");
     if(Opts.HexagonQdsp6Compat) {
       Builder.defineMacro("__QDSP6_V5__");
       Builder.defineMacro("__QDSP6_ARCH__", "5");
     }
+  } else if (CPU == "hexagonv60") {
+    Builder.defineMacro("__HEXAGON_V60__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "60");
+    Builder.defineMacro("__QDSP6_V60__");
+    Builder.defineMacro("__QDSP6_ARCH__", "60");
   }
 }
 
-const char * const HexagonTargetInfo::GCCRegNames[] = {
+bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
+                                             DiagnosticsEngine &Diags) {
+  for (auto &F : Features) {
+    if (F == "+hvx")
+      HasHVX = true;
+    else if (F == "-hvx")
+      HasHVX = HasHVXDouble = false;
+    else if (F == "+hvx-double")
+      HasHVX = HasHVXDouble = true;
+    else if (F == "-hvx-double")
+      HasHVXDouble = false;
+  }
+  return true;
+}
+
+bool HexagonTargetInfo::initFeatureMap(llvm::StringMap<bool> &Features,
+      DiagnosticsEngine &Diags, StringRef CPU,
+      const std::vector<std::string> &FeaturesVec) const {
+  // Default for v60: -hvx, -hvx-double.
+  Features["hvx"] = false;
+  Features["hvx-double"] = false;
+
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+}
+
+
+const char *const HexagonTargetInfo::GCCRegNames[] = {
   "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
   "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
   "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
@@ -5758,16 +5790,15 @@ const char * const HexagonTargetInfo::GCCRegNames[] = {
   "sa0", "lc0", "sa1", "lc1", "m0", "m1", "usr", "ugp"
 };
 
-ArrayRef<const char *> HexagonTargetInfo::getGCCRegNames() const {
+ArrayRef<const char*> HexagonTargetInfo::getGCCRegNames() const {
   return llvm::makeArrayRef(GCCRegNames);
 }
-
 
 const TargetInfo::GCCRegAlias HexagonTargetInfo::GCCRegAliases[] = {
   { { "sp" }, "r29" },
   { { "fp" }, "r30" },
   { { "lr" }, "r31" },
- };
+};
 
 ArrayRef<TargetInfo::GCCRegAlias> HexagonTargetInfo::getGCCRegAliases() const {
   return llvm::makeArrayRef(GCCRegAliases);

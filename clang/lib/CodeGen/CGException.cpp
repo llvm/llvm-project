@@ -1325,21 +1325,20 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
   // end of the function by FinishFunction.
   TerminateHandler = createBasicBlock("terminate.handler");
   Builder.SetInsertPoint(TerminateHandler);
+  llvm::Value *Exn = nullptr;
   if (EHPersonality::get(*this).usesFuncletPads()) {
     llvm::Value *ParentPad = CurrentFuncletPad;
     if (!ParentPad)
       ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
-    Builder.CreateTerminatePad(ParentPad, /*UnwindBB=*/nullptr,
-                               {CGM.getTerminateFn()});
+    Builder.CreateCleanupPad(ParentPad);
   } else {
-    llvm::Value *Exn = nullptr;
     if (getLangOpts().CPlusPlus)
       Exn = getExceptionFromSlot();
-    llvm::CallInst *terminateCall =
-        CGM.getCXXABI().emitTerminateForUnexpectedException(*this, Exn);
-    terminateCall->setDoesNotReturn();
-    Builder.CreateUnreachable();
   }
+  llvm::CallInst *terminateCall =
+      CGM.getCXXABI().emitTerminateForUnexpectedException(*this, Exn);
+  terminateCall->setDoesNotReturn();
+  Builder.CreateUnreachable();
 
   // Restore the saved insertion state.
   Builder.restoreIP(SavedIP);

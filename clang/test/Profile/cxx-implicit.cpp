@@ -4,7 +4,7 @@
 
 // An implicit constructor is generated for Base. We should not emit counters
 // for it.
-// CHECK-NOT: @__llvm_profile_counters__ZN4BaseC2Ev =
+// CHECK-NOT: @__profc__ZN4BaseC2Ev =
 
 struct Base {
   virtual void foo();
