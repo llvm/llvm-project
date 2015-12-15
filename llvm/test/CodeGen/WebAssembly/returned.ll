@@ -8,8 +8,8 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-LABEL: _Z3foov:
 ; CHECK-NEXT: .result   i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 1{{$}}
-; CHECK-NEXT: call      $push1=, _Znwm, $pop0{{$}}
-; CHECK-NEXT: call      $push2=, _ZN5AppleC1Ev, $pop1{{$}}
+; CHECK-NEXT: {{^}} i32.call      $push1=, _Znwm, $pop0{{$}}
+; CHECK-NEXT: {{^}} i32.call      $push2=, _ZN5AppleC1Ev, $pop1{{$}}
 ; CHECK-NEXT: return    $pop2{{$}}
 %class.Apple = type { i8 }
 declare noalias i8* @_Znwm(i32)
@@ -25,7 +25,7 @@ entry:
 ; CHECK-LABEL: _Z3barPvS_l:
 ; CHECK-NEXT: .param   i32, i32, i32{{$}}
 ; CHECK-NEXT: .result  i32{{$}}
-; CHECK-NEXT: call     $push0=, memcpy, $0, $1, $2{{$}}
+; CHECK-NEXT: {{^}} i32.call     $push0=, memcpy, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 declare i8* @memcpy(i8* returned, i8*, i32)
 define i8* @_Z3barPvS_l(i8* %p, i8* %s, i32 %n) {
@@ -38,7 +38,7 @@ entry:
 
 ; CHECK-LABEL: test_constant_arg:
 ; CHECK-NEXT: i32.const   $push0=, global{{$}}
-; CHECK-NEXT: call        $discard=, returns_arg, $pop0{{$}}
+; CHECK-NEXT: {{^}} i32.call        $discard=, returns_arg, $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 @global = external global i32
 @addr = global i32* @global

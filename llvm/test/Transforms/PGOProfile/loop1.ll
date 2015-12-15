@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; GEN: @__llvm_profile_name_test_simple_for = private constant [15 x i8] c"test_simple_for"
+; GEN: @__profn_test_simple_for = private constant [15 x i8] c"test_simple_for"
 
 define i32 @test_simple_for(i32 %n) {
 entry:
@@ -31,12 +31,12 @@ for.body:
 
 for.inc:
 ; GEN: for.inc:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__llvm_profile_name_test_simple_for, i32 0, i32 0), i64 34137660316, i32 2, i32 0)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_simple_for, i32 0, i32 0), i64 34137660316, i32 2, i32 0)
   %inc1 = add nsw i32 %i, 1
   br label %for.cond
 
 for.end:
 ; GEN: for.end:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__llvm_profile_name_test_simple_for, i32 0, i32 0), i64 34137660316, i32 2, i32 1)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_simple_for, i32 0, i32 0), i64 34137660316, i32 2, i32 1)
   ret i32 %sum
 }

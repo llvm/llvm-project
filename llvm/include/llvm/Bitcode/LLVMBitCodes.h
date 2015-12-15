@@ -348,7 +348,8 @@ enum { BITCODE_CURRENT_EPOCH = 0 };
     CALL_CCONV = 1,
     CALL_MUSTTAIL = 14,
     CALL_EXPLICIT_TYPE = 15,
-    CALL_NOTAIL = 16
+    CALL_NOTAIL = 16,
+    CALL_FMF = 17  // Call has optional fast-math-flags.
   };
 
   // The function body block (FUNCTION_BLOCK_ID) describes function bodies.  It

@@ -70,19 +70,17 @@ inline StringRef getInstrProfCoverageSectionName(bool AddSegment) {
 }
 
 /// Return the name prefix of variables containing instrumented function names.
-inline StringRef getInstrProfNameVarPrefix() { return "__llvm_profile_name_"; }
+inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 
 /// Return the name prefix of variables containing per-function control data.
-inline StringRef getInstrProfDataVarPrefix() { return "__llvm_profile_data_"; }
+inline StringRef getInstrProfDataVarPrefix() { return "__profd_"; }
 
 /// Return the name prefix of profile counter variables.
-inline StringRef getInstrProfCountersVarPrefix() {
-  return "__llvm_profile_counters_";
-}
+inline StringRef getInstrProfCountersVarPrefix() { return "__profc_"; }
 
 /// Return the name prefix of the COMDAT group for instrumentation variables
 /// associated with a COMDAT function.
-inline StringRef getInstrProfComdatPrefix() { return "__llvm_profile_vars_"; }
+inline StringRef getInstrProfComdatPrefix() { return "__profv_"; }
 
 /// Return the name of a covarage mapping variable (internal linkage)
 /// for each instrumented source module. Such variables are allocated

@@ -8,7 +8,7 @@ entry:
 }
 
 ; CHECK-LABEL: define double @mylog(
-; CHECK:   %log = call double @log(double %x) #0
+; CHECK:   %log = call fast double @log(double %x) #0
 ; CHECK:   %mul = fmul fast double %log, %y
 ; CHECK:   ret double %mul
 ; CHECK: }

@@ -271,7 +271,7 @@ bool FunctionImporter::importFunctions(Module &DestModule) {
   /// Second step: for every call to an external function, try to import it.
 
   // Linker that will be used for importing function
-  Linker TheLinker(DestModule, DiagnosticHandler);
+  Linker TheLinker(DestModule);
 
   // Map of Module -> List of Function to import from the Module
   std::map<StringRef, std::pair<Module *, DenseSet<const GlobalValue *>>>
@@ -380,7 +380,7 @@ public:
     auto ModuleLoader = [&M](StringRef Identifier) {
       return loadFile(Identifier, M.getContext());
     };
-    FunctionImporter Importer(*Index, diagnosticHandler, ModuleLoader);
+    FunctionImporter Importer(*Index, ModuleLoader);
     return Importer.importFunctions(M);
 
     return false;

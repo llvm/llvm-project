@@ -6,8 +6,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @val = global i32 0, align 4
 @_ZTIi = external constant i8*
-; GEN: @__llvm_profile_name_bar = private constant [3 x i8] c"bar"
-; GEN: @__llvm_profile_name_foo = private constant [3 x i8] c"foo"
+; GEN: @__profn_bar = private constant [3 x i8] c"bar"
+; GEN: @__profn_foo = private constant [3 x i8] c"foo"
 
 define i32 @bar(i32 %i) {
 entry:
@@ -21,7 +21,7 @@ entry:
 
 if.then:
 ; GEN: if.then:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__llvm_profile_name_bar, i32 0, i32 0), i64 24868915205, i32 2, i32 1)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_bar, i32 0, i32 0), i64 24868915205, i32 2, i32 1)
   %exception = call i8* @__cxa_allocate_exception(i64 4)
   %tmp = bitcast i8* %exception to i32*
   store i32 %i, i32* %tmp, align 16
@@ -30,7 +30,7 @@ if.then:
 
 if.end:
 ; GEN: if.end:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__llvm_profile_name_bar, i32 0, i32 0), i64 24868915205, i32 2, i32 0)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_bar, i32 0, i32 0), i64 24868915205, i32 2, i32 0)
   ret i32 0
 }
 
@@ -57,7 +57,7 @@ if.then:
 
 invoke.cont:
 ; GEN: invoke.cont:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__llvm_profile_name_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 1)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 1)
   br label %if.end
 
 lpad:
@@ -80,7 +80,7 @@ catch.dispatch:
 
 catch:
 ; GEN: catch:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__llvm_profile_name_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 2)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 2)
   %tmp4 = call i8* @__cxa_begin_catch(i8* %tmp1)
   %tmp5 = bitcast i8* %tmp4 to i32*
   %tmp6 = load i32, i32* %tmp5, align 4
@@ -97,7 +97,7 @@ try.cont:
 
 if.end:
 ; GEN: if.end:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__llvm_profile_name_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 0)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 0)
   %tmp8 = load i32, i32* @val, align 4
   %add = add nsw i32 %tmp8, %i
   store i32 %add, i32* @val, align 4
@@ -105,7 +105,7 @@ if.end:
 
 eh.resume:
 ; GEN: eh.resume:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__llvm_profile_name_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 3)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 3)
   %lpad.val = insertvalue { i8*, i32 } undef, i8* %tmp1, 0
   %lpad.val3 = insertvalue { i8*, i32 } %lpad.val, i32 %tmp2, 1
   resume { i8*, i32 } %lpad.val3

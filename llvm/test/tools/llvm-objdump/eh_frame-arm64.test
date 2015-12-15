@@ -15,4 +15,9 @@
 # CHECK:   0c 1f 00 
 # CHECK: FDE:
 # CHECK:   Length: 32
-# CHECK:   e4 ff ff ff ff ff ff ff 20 00 00 00 00 00 00 00 00 48 0e 10 9e 01 9d 02 00 00 00 00 
+# CHECK:   CIE Offset: 0
+# CHECK:   PC Begin: ffffffffffffffe4
+# CHECK:   PC Range: 0000000000000020
+# CHECK:   Augmentation Data Length: 0
+# CHECK:   Instructions:
+# CHECK:   48 0e 10 9e 01 9d 02 00 00 00 00

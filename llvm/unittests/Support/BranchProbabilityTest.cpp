@@ -287,44 +287,40 @@ TEST(BranchProbabilityTest, scaleBruteForce) {
   }
 }
 
-TEST(BranchProbabilityTest, NormalizeEdgeWeights) {
+TEST(BranchProbabilityTest, NormalizeProbabilities) {
   {
-    SmallVector<uint32_t, 2> Weights{0, 0};
-    BranchProbability::normalizeEdgeWeights(Weights.begin(), Weights.end());
-    EXPECT_EQ(1u, Weights[0]);
-    EXPECT_EQ(1u, Weights[1]);
+    SmallVector<BranchProbability, 2> Probs{{0, 1}, {0, 1}};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(BranchProbability::getDenominator() / 2, Probs[0].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator() / 2, Probs[1].getNumerator());
   }
   {
-    SmallVector<uint32_t, 2> Weights{0, UINT32_MAX};
-    BranchProbability::normalizeEdgeWeights(Weights.begin(), Weights.end());
-    EXPECT_EQ(1u, Weights[0]);
-    EXPECT_EQ(UINT32_MAX - 1u, Weights[1]);
+    SmallVector<BranchProbability, 2> Probs{{0, 1}, {1, 1}};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(0u, Probs[0].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator(), Probs[1].getNumerator());
   }
   {
-    SmallVector<uint32_t, 2> Weights{1, UINT32_MAX};
-    BranchProbability::normalizeEdgeWeights(Weights.begin(), Weights.end());
-    EXPECT_EQ(1u, Weights[0]);
-    EXPECT_EQ(UINT32_MAX - 1u, Weights[1]);
+    SmallVector<BranchProbability, 2> Probs{{1, 100}, {1, 100}};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(BranchProbability::getDenominator() / 2, Probs[0].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator() / 2, Probs[1].getNumerator());
   }
   {
-    SmallVector<uint32_t, 3> Weights{0, 0, UINT32_MAX};
-    BranchProbability::normalizeEdgeWeights(Weights.begin(), Weights.end());
-    EXPECT_EQ(1u, Weights[0]);
-    EXPECT_EQ(1u, Weights[1]);
-    EXPECT_EQ(UINT32_MAX / 2u, Weights[2]);
+    SmallVector<BranchProbability, 2> Probs{{1, 1}, {1, 1}};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(BranchProbability::getDenominator() / 2, Probs[0].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator() / 2, Probs[1].getNumerator());
   }
   {
-    SmallVector<uint32_t, 2> Weights{UINT32_MAX, UINT32_MAX};
-    BranchProbability::normalizeEdgeWeights(Weights.begin(), Weights.end());
-    EXPECT_EQ(UINT32_MAX / 3u, Weights[0]);
-    EXPECT_EQ(UINT32_MAX / 3u, Weights[1]);
-  }
-  {
-    SmallVector<uint32_t, 3> Weights{UINT32_MAX, UINT32_MAX, UINT32_MAX};
-    BranchProbability::normalizeEdgeWeights(Weights.begin(), Weights.end());
-    EXPECT_EQ(UINT32_MAX / 4u, Weights[0]);
-    EXPECT_EQ(UINT32_MAX / 4u, Weights[1]);
-    EXPECT_EQ(UINT32_MAX / 4u, Weights[2]);
+    SmallVector<BranchProbability, 3> Probs{{1, 1}, {1, 1}, {1, 1}};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(BranchProbability::getDenominator() / 3 + 1,
+              Probs[0].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator() / 3 + 1,
+              Probs[1].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator() / 3 + 1,
+              Probs[2].getNumerator());
   }
 }
 

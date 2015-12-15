@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/DataLayout.h"
@@ -524,12 +525,42 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
 
   if (auto *ST = dyn_cast<StructType>(T)) {
     // If the struct only have one element, we unpack.
-    if (ST->getNumElements() == 1) {
+    unsigned Count = ST->getNumElements();
+    if (Count == 1) {
       LoadInst *NewLoad = combineLoadToNewType(IC, LI, ST->getTypeAtIndex(0U),
                                                ".unpack");
       return IC.ReplaceInstUsesWith(LI, IC.Builder->CreateInsertValue(
         UndefValue::get(T), NewLoad, 0, LI.getName()));
     }
+
+    // We don't want to break loads with padding here as we'd loose
+    // the knowledge that padding exists for the rest of the pipeline.
+    const DataLayout &DL = IC.getDataLayout();
+    auto *SL = DL.getStructLayout(ST);
+    if (SL->hasPadding())
+      return nullptr;
+
+    auto Name = LI.getName();
+    SmallString<16> LoadName = Name;
+    LoadName += ".unpack";
+    SmallString<16> EltName = Name;
+    EltName += ".elt";
+    auto *Addr = LI.getPointerOperand();
+    Value *V = UndefValue::get(T);
+    auto *IdxType = Type::getInt32Ty(ST->getContext());
+    auto *Zero = ConstantInt::get(IdxType, 0);
+    for (unsigned i = 0; i < Count; i++) {
+      Value *Indices[2] = {
+        Zero,
+        ConstantInt::get(IdxType, i),
+      };
+      auto *Ptr = IC.Builder->CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices), EltName);
+      auto *L = IC.Builder->CreateLoad(ST->getTypeAtIndex(i), Ptr, LoadName);
+      V = IC.Builder->CreateInsertValue(V, L, i);
+    }
+
+    V->setName(Name);
+    return IC.ReplaceInstUsesWith(LI, V);
   }
 
   if (auto *AT = dyn_cast<ArrayType>(T)) {
@@ -902,11 +933,38 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
 
   if (auto *ST = dyn_cast<StructType>(T)) {
     // If the struct only have one element, we unpack.
-    if (ST->getNumElements() == 1) {
+    unsigned Count = ST->getNumElements();
+    if (Count == 1) {
       V = IC.Builder->CreateExtractValue(V, 0);
       combineStoreToNewValue(IC, SI, V);
       return true;
     }
+
+    // We don't want to break loads with padding here as we'd loose
+    // the knowledge that padding exists for the rest of the pipeline.
+    const DataLayout &DL = IC.getDataLayout();
+    auto *SL = DL.getStructLayout(ST);
+    if (SL->hasPadding())
+      return false;
+
+    SmallString<16> EltName = V->getName();
+    EltName += ".elt";
+    auto *Addr = SI.getPointerOperand();
+    SmallString<16> AddrName = Addr->getName();
+    AddrName += ".repack";
+    auto *IdxType = Type::getInt32Ty(ST->getContext());
+    auto *Zero = ConstantInt::get(IdxType, 0);
+    for (unsigned i = 0; i < Count; i++) {
+      Value *Indices[2] = {
+        Zero,
+        ConstantInt::get(IdxType, i),
+      };
+      auto *Ptr = IC.Builder->CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices), AddrName);
+      auto *Val = IC.Builder->CreateExtractValue(V, i, EltName);
+      IC.Builder->CreateStore(Val, Ptr);
+    }
+
+    return true;
   }
 
   if (auto *AT = dyn_cast<ArrayType>(T)) {

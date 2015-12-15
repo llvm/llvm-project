@@ -2311,9 +2311,10 @@ Instruction *InstCombiner::visitExtractValueInst(ExtractValueInst &EV) {
   }
   if (LoadInst *L = dyn_cast<LoadInst>(Agg))
     // If the (non-volatile) load only has one use, we can rewrite this to a
-    // load from a GEP. This reduces the size of the load.
-    // FIXME: If a load is used only by extractvalue instructions then this
-    //        could be done regardless of having multiple uses.
+    // load from a GEP. This reduces the size of the load. If a load is used
+    // only by extractvalue instructions then this either must have been
+    // optimized before, or it is a struct with padding, in which case we
+    // don't want to do the transformation as it loses padding knowledge.
     if (L->isSimple() && L->hasOneUse()) {
       // extractvalue has integer indices, getelementptr has Value*s. Convert.
       SmallVector<Value*, 4> Indices;

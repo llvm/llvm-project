@@ -664,6 +664,28 @@ define void @fastmathflags(float %op1, float %op2) {
   ret void
 }
 
+; Check various fast math flags and floating-point types on calls.
+
+declare float @fmf1()
+declare double @fmf2()
+declare <4 x double> @fmf3()
+
+; CHECK-LABEL: fastMathFlagsForCalls(
+define void @fastMathFlagsForCalls(float %f, double %d1, <4 x double> %d2) {
+  %call.fast = call fast float @fmf1()
+  ; CHECK: %call.fast = call fast float @fmf1()
+
+  ; Throw in some other attributes to make sure those stay in the right places.
+
+  %call.nsz.arcp = notail call nsz arcp double @fmf2()
+  ; CHECK: %call.nsz.arcp = notail call nsz arcp double @fmf2()
+
+  %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf3()
+  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf3()
+
+  ret void
+}
+
 ;; Type System
 %opaquety = type opaque
 define void @typesystem() {

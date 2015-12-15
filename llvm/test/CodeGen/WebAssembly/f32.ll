@@ -146,7 +146,7 @@ define float @fmax32(float %x) {
 }
 
 ; CHECK-LABEL: fma32:
-; CHECK: call $push0=, fmaf, $0, $1, $2{{$}}
+; CHECK: {{^}} f32.call $push0=, fmaf, $0, $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define float @fma32(float %a, float %b, float %c) {
   %d = call float @llvm.fma.f32(float %a, float %b, float %c)

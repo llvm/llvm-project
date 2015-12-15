@@ -151,63 +151,67 @@ class GTestFlagSaver {
  public:
   // The c'tor.
   GTestFlagSaver() {
+    color_ = GTEST_FLAG(color);
+    death_test_style_ = GTEST_FLAG(death_test_style);
+    filter_ = GTEST_FLAG(filter);
+    internal_run_death_test_ = GTEST_FLAG(internal_run_death_test);
+    output_ = GTEST_FLAG(output);
+    stream_result_to_ = GTEST_FLAG(stream_result_to);
+
+    random_seed_ = GTEST_FLAG(random_seed);
+    repeat_ = GTEST_FLAG(repeat);
+    stack_trace_depth_ = GTEST_FLAG(stack_trace_depth);
+
     also_run_disabled_tests_ = GTEST_FLAG(also_run_disabled_tests);
     break_on_failure_ = GTEST_FLAG(break_on_failure);
     catch_exceptions_ = GTEST_FLAG(catch_exceptions);
-    color_ = GTEST_FLAG(color);
-    death_test_style_ = GTEST_FLAG(death_test_style);
     death_test_use_fork_ = GTEST_FLAG(death_test_use_fork);
-    filter_ = GTEST_FLAG(filter);
-    internal_run_death_test_ = GTEST_FLAG(internal_run_death_test);
     list_tests_ = GTEST_FLAG(list_tests);
-    output_ = GTEST_FLAG(output);
     print_time_ = GTEST_FLAG(print_time);
-    random_seed_ = GTEST_FLAG(random_seed);
-    repeat_ = GTEST_FLAG(repeat);
     shuffle_ = GTEST_FLAG(shuffle);
-    stack_trace_depth_ = GTEST_FLAG(stack_trace_depth);
-    stream_result_to_ = GTEST_FLAG(stream_result_to);
     throw_on_failure_ = GTEST_FLAG(throw_on_failure);
   }
 
   // The d'tor is not virtual.  DO NOT INHERIT FROM THIS CLASS.
   ~GTestFlagSaver() {
+    GTEST_FLAG(color) = color_;
+    GTEST_FLAG(death_test_style) = death_test_style_;
+    GTEST_FLAG(filter) = filter_;
+    GTEST_FLAG(internal_run_death_test) = internal_run_death_test_;
+    GTEST_FLAG(output) = output_;
+    GTEST_FLAG(stream_result_to) = stream_result_to_;
+
+    GTEST_FLAG(random_seed) = random_seed_;
+    GTEST_FLAG(repeat) = repeat_;
+    GTEST_FLAG(stack_trace_depth) = stack_trace_depth_;
+
     GTEST_FLAG(also_run_disabled_tests) = also_run_disabled_tests_;
     GTEST_FLAG(break_on_failure) = break_on_failure_;
     GTEST_FLAG(catch_exceptions) = catch_exceptions_;
-    GTEST_FLAG(color) = color_;
-    GTEST_FLAG(death_test_style) = death_test_style_;
     GTEST_FLAG(death_test_use_fork) = death_test_use_fork_;
-    GTEST_FLAG(filter) = filter_;
-    GTEST_FLAG(internal_run_death_test) = internal_run_death_test_;
     GTEST_FLAG(list_tests) = list_tests_;
-    GTEST_FLAG(output) = output_;
     GTEST_FLAG(print_time) = print_time_;
-    GTEST_FLAG(random_seed) = random_seed_;
-    GTEST_FLAG(repeat) = repeat_;
     GTEST_FLAG(shuffle) = shuffle_;
-    GTEST_FLAG(stack_trace_depth) = stack_trace_depth_;
-    GTEST_FLAG(stream_result_to) = stream_result_to_;
     GTEST_FLAG(throw_on_failure) = throw_on_failure_;
   }
  private:
   // Fields for saving the original values of flags.
+  String color_;
+  String death_test_style_;
+  String filter_;
+  String internal_run_death_test_;
+  String output_;
+  String stream_result_to_;
+  internal::Int32 random_seed_;
+  internal::Int32 repeat_;
+  internal::Int32 stack_trace_depth_;
   bool also_run_disabled_tests_;
   bool break_on_failure_;
   bool catch_exceptions_;
-  String color_;
-  String death_test_style_;
   bool death_test_use_fork_;
-  String filter_;
-  String internal_run_death_test_;
   bool list_tests_;
-  String output_;
   bool print_time_;
-  internal::Int32 random_seed_;
-  internal::Int32 repeat_;
   bool shuffle_;
-  internal::Int32 stack_trace_depth_;
-  String stream_result_to_;
   bool throw_on_failure_;
 } GTEST_ATTRIBUTE_UNUSED_;
 

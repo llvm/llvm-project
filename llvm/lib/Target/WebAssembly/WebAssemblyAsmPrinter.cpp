@@ -71,7 +71,6 @@ private:
   void EmitConstantPool() override;
   void EmitFunctionBodyStart() override;
   void EmitInstruction(const MachineInstr *MI) override;
-  void EmitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        unsigned AsmVariant, const char *ExtraCode,
                        raw_ostream &OS) override;
@@ -211,63 +210,6 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     break;
   }
   }
-}
-
-void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
-  const DataLayout &DL = M.getDataLayout();
-
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
-  for (const Function &F : M)
-    if (F.isDeclarationForLinker()) {
-      assert(F.hasName() && "imported functions must have a name");
-      if (F.isIntrinsic())
-        continue;
-      if (Str.empty())
-        OS << "\t.imports\n";
-
-      MCSymbol *Sym = OutStreamer->getContext().getOrCreateSymbol(F.getName());
-      OS << "\t.import " << *Sym << " \"\" " << *Sym;
-
-      const WebAssemblyTargetLowering &TLI =
-          *TM.getSubtarget<WebAssemblySubtarget>(F).getTargetLowering();
-
-      // If we need to legalize the return type, it'll get converted into
-      // passing a pointer.
-      bool SawParam = false;
-      SmallVector<MVT, 4> ResultVTs;
-      ComputeLegalValueVTs(F, TM, F.getReturnType(), ResultVTs);
-      if (ResultVTs.size() > 1) {
-        ResultVTs.clear();
-        OS << " (param " << toString(TLI.getPointerTy(DL));
-        SawParam = true;
-      }
-
-      for (const Argument &A : F.args()) {
-        SmallVector<MVT, 4> ParamVTs;
-        ComputeLegalValueVTs(F, TM, A.getType(), ParamVTs);
-        for (MVT VT : ParamVTs) {
-          if (!SawParam) {
-            OS << " (param";
-            SawParam = true;
-          }
-          OS << ' ' << toString(VT);
-        }
-      }
-      if (SawParam)
-        OS << ')';
-
-      for (MVT VT : ResultVTs)
-        OS << " (result " << toString(VT) << ')';
-
-      OS << '\n';
-    }
-
-  StringRef Text = OS.str();
-  if (!Text.empty())
-    OutStreamer->EmitRawText(Text.substr(0, Text.size() - 1));
-
-  AsmPrinter::EmitEndOfAsmFile(M);
 }
 
 bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,

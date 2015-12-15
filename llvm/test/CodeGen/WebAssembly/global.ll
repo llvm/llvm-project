@@ -156,3 +156,12 @@ define i8* @call_memcpy(i8* %p, i8* nocapture readonly %q, i32 %n) {
 ; CHECK-NEXT: .int64 4611686018427387904{{$}}
 ; CHECK-NEXT: .size f64two, 8{{$}}
 @f64two = internal global double 2.0
+
+; Indexing into a global array produces a relocation.
+; CHECK:      .type arr,@object
+; CHECK:      .type ptr,@object
+; CHECK:      ptr:
+; CHECK-NEXT: .int32 arr+80
+; CHECK-NEXT: .size ptr, 4
+@arr = global [128 x i32] zeroinitializer, align 16
+@ptr = global i32* getelementptr inbounds ([128 x i32], [128 x i32]* @arr, i32 0, i32 20), align 4

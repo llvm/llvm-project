@@ -745,12 +745,12 @@ TailDuplicatePass::duplicateSimpleBB(MachineBasicBlock *TailBB,
     if (PredTBB)
       TII->InsertBranch(*PredBB, PredTBB, PredFBB, PredCond, DebugLoc());
 
-    auto Prob = MBPI->getEdgeProbability(PredBB, TailBB);
-    PredBB->removeSuccessor(TailBB);
-    unsigned NumSuccessors = PredBB->succ_size();
-    assert(NumSuccessors <= 1);
-    if (NumSuccessors == 0 || *PredBB->succ_begin() != NewTarget)
-      PredBB->addSuccessor(NewTarget, Prob);
+    if (!PredBB->isSuccessor(NewTarget))
+      PredBB->replaceSuccessor(TailBB, NewTarget);
+    else {
+      PredBB->removeSuccessor(TailBB, 0);
+      assert(PredBB->succ_size() <= 1);
+    }
 
     TDBBs.push_back(PredBB);
   }

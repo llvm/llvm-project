@@ -413,6 +413,8 @@ let Predicates = [HasSSE2] in {
   def : Pat<(v2f64 (bitconvert (v8i16 VR128:$src))), (v2f64 VR128:$src)>;
   def : Pat<(v2f64 (bitconvert (v16i8 VR128:$src))), (v2f64 VR128:$src)>;
   def : Pat<(v2f64 (bitconvert (v4f32 VR128:$src))), (v2f64 VR128:$src)>;
+  def : Pat<(f128  (bitconvert (i128  FR128:$src))), (f128  FR128:$src)>;
+  def : Pat<(i128  (bitconvert (f128  FR128:$src))), (i128  FR128:$src)>;
 }
 
 // Bitcasts between 256-bit vector types. Return the original type since
@@ -8851,3 +8853,59 @@ let mayLoad = 1, Constraints
     defm VGATHERQPS : avx2_gather<0x93, "vgatherqps", VR128, vx32mem, vy32mem>;
   }
 }
+
+//===----------------------------------------------------------------------===//
+// Extra selection patterns for FR128, f128, f128mem
+
+// movaps is shorter than movdqa. movaps is in SSE and movdqa is in SSE2.
+def : Pat<(store (f128 FR128:$src), addr:$dst),
+          (MOVAPSmr addr:$dst, (COPY_TO_REGCLASS (f128 FR128:$src), VR128))>;
+
+def : Pat<(loadf128 addr:$src),
+          (COPY_TO_REGCLASS (MOVAPSrm addr:$src), FR128)>;
+
+// andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
+def : Pat<(X86fand FR128:$src1, (loadf128 addr:$src2)),
+          (COPY_TO_REGCLASS
+           (ANDPSrm (COPY_TO_REGCLASS FR128:$src1, VR128), f128mem:$src2),
+           FR128)>;
+
+def : Pat<(X86fand FR128:$src1, FR128:$src2),
+          (COPY_TO_REGCLASS
+           (ANDPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
+                    (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
+
+def : Pat<(and FR128:$src1, FR128:$src2),
+          (COPY_TO_REGCLASS
+           (ANDPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
+                    (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
+
+def : Pat<(X86for FR128:$src1, (loadf128 addr:$src2)),
+          (COPY_TO_REGCLASS
+           (ORPSrm (COPY_TO_REGCLASS FR128:$src1, VR128), f128mem:$src2),
+           FR128)>;
+
+def : Pat<(X86for FR128:$src1, FR128:$src2),
+          (COPY_TO_REGCLASS
+           (ORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
+                   (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
+
+def : Pat<(or FR128:$src1, FR128:$src2),
+          (COPY_TO_REGCLASS
+           (ORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
+                   (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
+
+def : Pat<(X86fxor FR128:$src1, (loadf128 addr:$src2)),
+          (COPY_TO_REGCLASS
+           (XORPSrm (COPY_TO_REGCLASS FR128:$src1, VR128), f128mem:$src2),
+           FR128)>;
+
+def : Pat<(X86fxor FR128:$src1, FR128:$src2),
+          (COPY_TO_REGCLASS
+           (XORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
+                    (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
+
+def : Pat<(xor FR128:$src1, FR128:$src2),
+          (COPY_TO_REGCLASS
+           (XORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
+                    (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;

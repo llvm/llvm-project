@@ -879,7 +879,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
   Context.setDiagnosticHandler(diagnosticHandlerForContext, nullptr, true);
 
   std::unique_ptr<Module> Combined(new Module("ld-temp.o", Context));
-  IRMover L(*Combined, diagnosticHandler);
+  IRMover L(*Combined);
 
   std::string DefaultTriple = sys::getDefaultTargetTriple();
 

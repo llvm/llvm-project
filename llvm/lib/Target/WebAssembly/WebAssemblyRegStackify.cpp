@@ -78,9 +78,10 @@ static void ImposeStackOrdering(MachineInstr *MI, MachineRegisterInfo &MRI) {
   ImposeStackInputOrdering(MI);
 
   // Also read the opaque EXPR_STACK register.
-  MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
-                                           /*isDef=*/false,
-                                           /*isImp=*/true));
+  if (!MI->readsRegister(WebAssembly::EXPR_STACK))
+    MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
+                                             /*isDef=*/false,
+                                             /*isImp=*/true));
 
   // Also, mark any inputs to this instruction as being consumed by an
   // instruction on the expression stack.

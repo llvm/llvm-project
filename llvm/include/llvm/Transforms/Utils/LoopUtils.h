@@ -302,7 +302,7 @@ BasicBlock *InsertPreheaderForLoop(Loop *L, Pass *P);
 /// will optionally update \c AliasAnalysis and \c ScalarEvolution analyses if
 /// passed into it.
 bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, Pass *PP,
-                  ScalarEvolution *SE = nullptr, AssumptionCache *AC = nullptr);
+                  ScalarEvolution *SE, AssumptionCache *AC);
 
 /// \brief Put loop into LCSSA form.
 ///
@@ -316,7 +316,7 @@ bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, Pass *PP,
 ///
 /// Returns true if any modifications are made to the loop.
 bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
-               ScalarEvolution *SE = nullptr);
+               ScalarEvolution *SE);
 
 /// \brief Put a loop nest into LCSSA form.
 ///
@@ -328,7 +328,7 @@ bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
 ///
 /// Returns true if any modifications are made to the loop.
 bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
-                          ScalarEvolution *SE = nullptr);
+                          ScalarEvolution *SE);
 
 /// \brief Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in

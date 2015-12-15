@@ -423,6 +423,8 @@ def FR32 : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 15)>;
 
 def FR64 : RegisterClass<"X86", [f64], 64, (add FR32)>;
 
+def FR128 : RegisterClass<"X86", [i128, f128], 128, (add FR32)>;
+
 
 // FIXME: This sets up the floating point register files as though they are f64
 // values, though they really are f80 values.  This will cause us to spill
