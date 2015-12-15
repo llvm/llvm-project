@@ -2156,11 +2156,17 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
     Code = bitc::FUNC_CODE_INST_CALL;
 
     Vals.push_back(VE.getAttributeID(CI.getAttributes()));
+
+    unsigned Flags = GetOptimizationFlags(&I);
     Vals.push_back(CI.getCallingConv() << bitc::CALL_CCONV |
                    unsigned(CI.isTailCall()) << bitc::CALL_TAIL |
                    unsigned(CI.isMustTailCall()) << bitc::CALL_MUSTTAIL |
                    1 << bitc::CALL_EXPLICIT_TYPE |
-                   unsigned(CI.isNoTailCall()) << bitc::CALL_NOTAIL);
+                   unsigned(CI.isNoTailCall()) << bitc::CALL_NOTAIL |
+                   unsigned(Flags != 0) << bitc::CALL_FMF);
+    if (Flags != 0)
+      Vals.push_back(Flags);
+
     Vals.push_back(VE.getTypeID(FTy));
     PushValueAndType(CI.getCalledValue(), InstID, Vals, VE);  // Callee
 

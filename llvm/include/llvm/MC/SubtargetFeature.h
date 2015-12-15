@@ -30,7 +30,7 @@ namespace llvm {
 // A container class for subtarget features.
 // This is convenient because std::bitset does not have a constructor
 // with an initializer list of set bits.
-const unsigned MAX_SUBTARGET_FEATURES = 96;
+const unsigned MAX_SUBTARGET_FEATURES = 128;
 class FeatureBitset : public std::bitset<MAX_SUBTARGET_FEATURES> {
 public:
   // Cannot inherit constructors because it's not supported by VC++..

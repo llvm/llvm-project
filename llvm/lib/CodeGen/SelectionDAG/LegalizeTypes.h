@@ -187,6 +187,11 @@ private:
   std::pair<SDValue, SDValue> ExpandAtomic(SDNode *Node);
 
   SDValue PromoteTargetBoolean(SDValue Bool, EVT ValVT);
+
+  /// Modify Bit Vector to match SetCC result type of ValVT.
+  /// The bit vector is widened with zeroes when WithZeroes is true.
+  SDValue WidenTargetBoolean(SDValue Bool, EVT ValVT, bool WithZeroes = false);
+
   void ReplaceValueWith(SDValue From, SDValue To);
   void SplitInteger(SDValue Op, SDValue &Lo, SDValue &Hi);
   void SplitInteger(SDValue Op, EVT LoVT, EVT HiVT,
@@ -261,6 +266,7 @@ private:
   SDValue PromoteIntRes_INT_EXTEND(SDNode *N);
   SDValue PromoteIntRes_LOAD(LoadSDNode *N);
   SDValue PromoteIntRes_MLOAD(MaskedLoadSDNode *N);
+  SDValue PromoteIntRes_MGATHER(MaskedGatherSDNode *N);
   SDValue PromoteIntRes_Overflow(SDNode *N);
   SDValue PromoteIntRes_SADDSUBO(SDNode *N, unsigned ResNo);
   SDValue PromoteIntRes_SDIV(SDNode *N);
@@ -307,6 +313,8 @@ private:
   SDValue PromoteIntOp_ZERO_EXTEND(SDNode *N);
   SDValue PromoteIntOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_MGATHER(MaskedGatherSDNode *N, unsigned OpNo);
 
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
 
@@ -710,6 +718,7 @@ private:
   SDValue WidenVecRes_INSERT_VECTOR_ELT(SDNode* N);
   SDValue WidenVecRes_LOAD(SDNode* N);
   SDValue WidenVecRes_MLOAD(MaskedLoadSDNode* N);
+  SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
   SDValue WidenVecRes_SCALAR_TO_VECTOR(SDNode* N);
   SDValue WidenVecRes_SELECT(SDNode* N);
   SDValue WidenVecRes_SELECT_CC(SDNode* N);
@@ -737,6 +746,7 @@ private:
   SDValue WidenVecOp_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue WidenVecOp_STORE(SDNode* N);
   SDValue WidenVecOp_MSTORE(SDNode* N, unsigned OpNo);
+  SDValue WidenVecOp_MSCATTER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_SETCC(SDNode* N);
 
   SDValue WidenVecOp_Convert(SDNode *N);
@@ -776,8 +786,10 @@ private:
 
   /// Modifies a vector input (widen or narrows) to a vector of NVT.  The
   /// input vector must have the same element type as NVT.
-  SDValue ModifyToType(SDValue InOp, EVT WidenVT);
-
+  /// When FillWithZeroes is "on" the vector will be widened with
+  /// zeroes.
+  /// By default, the vector will be widened with undefined values.
+  SDValue ModifyToType(SDValue InOp, EVT NVT, bool FillWithZeroes = false);
 
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp

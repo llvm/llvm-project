@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-block-placement | FileCheck %s
-; RUN: llc < %s -asm-verbose=false | FileCheck -check-prefix=OPT %s
+; RUN: llc < %s -asm-verbose=false -disable-block-placement -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck -check-prefix=OPT %s
 
 ; Test the CFG stackifier pass.
 
@@ -12,18 +12,20 @@ declare void @something()
 
 ; CHECK-LABEL: test0:
 ; CHECK: loop
-; CHECK: i32.add
 ; CHECK-NOT: br
-; CHECK: br_if
+; CHECK: i32.add
+; CHECK-NEXT: i32.ge_s
+; CHECK-NEXT: br_if
 ; CHECK-NOT: br
 ; CHECK: call
 ; CHECK: br BB0_1{{$}}
 ; CHECK: return{{$}}
 ; OPT-LABEL: test0:
 ; OPT: loop
-; OPT: i32.add
 ; OPT-NOT: br
-; OPT: br_if
+; OPT: i32.add
+; OPT-NEXT: i32.ge_s
+; OPT-NEXT: br_if
 ; OPT-NOT: br
 ; OPT: call
 ; OPT: br BB0_1{{$}}
@@ -51,18 +53,20 @@ back:
 
 ; CHECK-LABEL: test1:
 ; CHECK: loop
-; CHECK: i32.add
 ; CHECK-NOT: br
-; CHECK: br_if
+; CHECK: i32.add
+; CHECK-NEXT: i32.ge_s
+; CHECK-NEXT: br_if
 ; CHECK-NOT: br
 ; CHECK: call
 ; CHECK: br BB1_1{{$}}
 ; CHECK: return{{$}}
 ; OPT-LABEL: test1:
 ; OPT: loop
-; OPT: i32.add
 ; OPT-NOT: br
-; OPT: br_if
+; OPT: i32.add
+; OPT-NEXT: i32.ge_s
+; OPT-NEXT: br_if
 ; OPT-NOT: br
 ; OPT: call
 ; OPT: br BB1_1{{$}}
@@ -416,8 +420,17 @@ exit:
 
 ; Test that nested loops are handled.
 
+; CHECK-LABEL: test3:
+; CHECK: loop
+; CHECK-NEXT: br_if
+; CHECK-NEXT: BB{{[0-9]+}}_{{[0-9]+}}:
+; CHECK-NEXT: loop
+; OPT-LABEL: test3:
+; OPT: loop
+; OPT-NEXT: br_if
+; OPT-NEXT: BB{{[0-9]+}}_{{[0-9]+}}:
+; OPT-NEXT: loop
 declare void @bar()
-
 define void @test3(i32 %w)  {
 entry:
   br i1 undef, label %outer.ph, label %exit
@@ -442,4 +455,602 @@ exit:
 if.end:
   call void @bar()
   br label %outer
+}
+
+; Test switch lowering and block placement.
+
+; CHECK-LABEL: test4:
+; CHECK-NEXT: .param      i32{{$}}
+; CHECK:      block       BB13_8{{$}}
+; CHECK-NEXT: block       BB13_7{{$}}
+; CHECK-NEXT: block       BB13_4{{$}}
+; CHECK-NEXT: br_if       $pop{{[0-9]*}}, BB13_4{{$}}
+; CHECK-NEXT: block       BB13_3{{$}}
+; CHECK:      br_if       $pop{{[0-9]*}}, BB13_3{{$}}
+; CHECK:      br_if       $pop{{[0-9]*}}, BB13_7{{$}}
+; CHECK-NEXT: BB13_3:
+; CHECK-NEXT: return{{$}}
+; CHECK-NEXT: BB13_4:
+; CHECK:      br_if       $pop{{[0-9]*}}, BB13_8{{$}}
+; CHECK:      br_if       $pop{{[0-9]*}}, BB13_7{{$}}
+; CHECK-NEXT: return{{$}}
+; CHECK-NEXT: BB13_7:
+; CHECK-NEXT: return{{$}}
+; CHECK-NEXT: BB13_8:
+; CHECK-NEXT: return{{$}}
+; OPT-LABEL: test4:
+; OPT-NEXT: .param      i32{{$}}
+; OPT:      block       BB13_8{{$}}
+; OPT-NEXT: block       BB13_7{{$}}
+; OPT-NEXT: block       BB13_4{{$}}
+; OPT-NEXT: br_if       $pop{{[0-9]*}}, BB13_4{{$}}
+; OPT-NEXT: block       BB13_3{{$}}
+; OPT:      br_if       $pop{{[0-9]*}}, BB13_3{{$}}
+; OPT:      br_if       $pop{{[0-9]*}}, BB13_7{{$}}
+; OPT-NEXT: BB13_3:
+; OPT-NEXT: return{{$}}
+; OPT-NEXT: BB13_4:
+; OPT:      br_if       $pop{{[0-9]*}}, BB13_8{{$}}
+; OPT:      br_if       $pop{{[0-9]*}}, BB13_7{{$}}
+; OPT-NEXT: return{{$}}
+; OPT-NEXT: BB13_7:
+; OPT-NEXT: return{{$}}
+; OPT-NEXT: BB13_8:
+; OPT-NEXT: return{{$}}
+define void @test4(i32 %t) {
+entry:
+  switch i32 %t, label %default [
+    i32 0, label %bb2
+    i32 2, label %bb2
+    i32 4, label %bb1
+    i32 622, label %bb0
+  ]
+
+bb0:
+  ret void
+
+bb1:
+  ret void
+
+bb2:
+  ret void
+
+default:
+  ret void
+}
+
+; Test a case where the BLOCK needs to be placed before the LOOP in the
+; same basic block.
+
+; CHECK-LABEL: test5:
+; CHECK:       BB14_1:
+; CHECK-NEXT:  block BB14_4{{$}}
+; CHECK-NEXT:  loop BB14_3{{$}}
+; CHECK:       br_if {{[^,]*}}, BB14_4{{$}}
+; CHECK:       br_if {{[^,]*}}, BB14_1{{$}}
+; CHECK-NEXT:  BB14_3:
+; CHECK:       return{{$}}
+; CHECK-NEXT:  BB14_4:
+; CHECK:       return{{$}}
+; OPT-LABEL: test5:
+; OPT:       BB14_1:
+; OPT-NEXT:  block BB14_4{{$}}
+; OPT-NEXT:  loop BB14_3{{$}}
+; OPT:       br_if {{[^,]*}}, BB14_4{{$}}
+; OPT:       br_if {{[^,]*}}, BB14_1{{$}}
+; OPT-NEXT:  BB14_3:
+; OPT:       return{{$}}
+; OPT-NEXT:  BB14_4:
+; OPT:       return{{$}}
+define void @test5(i1 %p, i1 %q) {
+entry:
+  br label %header
+
+header:
+  store volatile i32 0, i32* null
+  br i1 %p, label %more, label %alt
+
+more:
+  store volatile i32 1, i32* null
+  br i1 %q, label %header, label %return
+
+alt:
+  store volatile i32 2, i32* null
+  ret void
+
+return:
+  store volatile i32 3, i32* null
+  ret void
+}
+
+; Test an interesting case of a loop with multiple exits, which
+; aren't to layout successors of the loop, and one of which is to a successors
+; which has another predecessor.
+
+; CHECK-LABEL: test6:
+; CHECK:       BB15_1:
+; CHECK-NEXT:  block BB15_6{{$}}
+; CHECK-NEXT:  block BB15_5{{$}}
+; CHECK-NEXT:  loop  BB15_4{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if {{[^,]*}}, BB15_6{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if {{[^,]*}}, BB15_5{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if {{[^,]*}}, BB15_1{{$}}
+; CHECK-NEXT:  BB15_4:
+; CHECK-NOT:   block
+; CHECK:       return{{$}}
+; CHECK-NEXT:  BB15_5:
+; CHECK-NOT:   block
+; CHECK:       BB15_6:
+; CHECK-NOT:   block
+; CHECK:       return{{$}}
+; OPT-LABEL: test6:
+; OPT:       BB15_1:
+; OPT-NEXT:  block BB15_6{{$}}
+; OPT-NEXT:  block BB15_5{{$}}
+; OPT-NEXT:  loop  BB15_4{{$}}
+; OPT-NOT:   block
+; OPT:       br_if {{[^,]*}}, BB15_6{{$}}
+; OPT-NOT:   block
+; OPT:       br_if {{[^,]*}}, BB15_5{{$}}
+; OPT-NOT:   block
+; OPT:       br_if {{[^,]*}}, BB15_1{{$}}
+; OPT-NEXT:  BB15_4:
+; OPT-NOT:   block
+; OPT:       return{{$}}
+; OPT-NEXT:  BB15_5:
+; OPT-NOT:   block
+; OPT:       BB15_6:
+; OPT-NOT:   block
+; OPT:       return{{$}}
+define void @test6(i1 %p, i1 %q) {
+entry:
+  br label %header
+
+header:
+  store volatile i32 0, i32* null
+  br i1 %p, label %more, label %second
+
+more:
+  store volatile i32 1, i32* null
+  br i1 %q, label %evenmore, label %first
+
+evenmore:
+  store volatile i32 1, i32* null
+  br i1 %q, label %header, label %return
+
+return:
+  store volatile i32 2, i32* null
+  ret void
+
+first:
+  store volatile i32 3, i32* null
+  br label %second
+
+second:
+  store volatile i32 4, i32* null
+  ret void
+}
+
+; Test a case where there are multiple backedges and multiple loop exits
+; that end in unreachable.
+
+; CHECK-LABEL: test7:
+; CHECK:       BB16_1:
+; CHECK-NEXT:  loop BB16_5{{$}}
+; CHECK-NOT:   block
+; CHECK:       block BB16_4{{$}}
+; CHECK-NEXT:  br_if {{[^,]*}}, BB16_4{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if {{[^,]*}}, BB16_1{{$}}
+; CHECK-NOT:   block
+; CHECK:       unreachable
+; CHECK_NEXT:  BB16_4:
+; CHECK-NOT:   block
+; CHECK:       br_if {{[^,]*}}, BB16_1{{$}}
+; CHECK-NEXT:  BB16_5:
+; CHECK-NOT:   block
+; CHECK:       unreachable
+; OPT-LABEL: test7:
+; OPT:       BB16_1:
+; OPT-NEXT:  loop BB16_5{{$}}
+; OPT-NOT:   block
+; OPT:       block BB16_4{{$}}
+; OPT-NOT:   block
+; OPT:       br_if {{[^,]*}}, BB16_4{{$}}
+; OPT-NOT:   block
+; OPT:       br_if {{[^,]*}}, BB16_1{{$}}
+; OPT-NOT:   block
+; OPT:       unreachable
+; OPT_NEXT:  BB16_4:
+; OPT-NOT:   block
+; OPT:       br_if {{[^,]*}}, BB16_1{{$}}
+; OPT-NEXT:  BB16_5:
+; OPT-NOT:   block
+; OPT:       unreachable
+define void @test7(i1 %tobool2, i1 %tobool9) {
+entry:
+  store volatile i32 0, i32* null
+  br label %loop
+
+loop:
+  store volatile i32 1, i32* null
+  br i1 %tobool2, label %l1, label %l0
+
+l0:
+  store volatile i32 2, i32* null
+  br i1 %tobool9, label %loop, label %u0
+
+l1:
+  store volatile i32 3, i32* null
+  br i1 %tobool9, label %loop, label %u1
+
+u0:
+  store volatile i32 4, i32* null
+  unreachable
+
+u1:
+  store volatile i32 5, i32* null
+  unreachable
+}
+
+; Test an interesting case using nested loops and switches.
+
+; CHECK-LABEL: test8:
+; CHECK:       BB17_1:
+; CHECK-NEXT:  loop     BB17_4{{$}}
+; CHECK-NEXT:  block    BB17_3{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if    {{[^,]*}}, BB17_3{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if    {{[^,]*}}, BB17_1{{$}}
+; CHECK-NEXT:  BB17_3:
+; CHECK-NEXT:  loop     BB17_4{{$}}
+; CHECK-NEXT:  br_if    {{[^,]*}}, BB17_3{{$}}
+; CHECK-NEXT:  br       BB17_1{{$}}
+; CHECK-NEXT:  BB17_4:
+; OPT-LABEL: test8:
+; OPT:       BB17_1:
+; OPT-NEXT:  loop     BB17_4{{$}}
+; OPT-NEXT:  block    BB17_3{{$}}
+; OPT-NOT:   block
+; OPT:       br_if    {{[^,]*}}, BB17_3{{$}}
+; OPT-NOT:   block
+; OPT:       br_if    {{[^,]*}}, BB17_1{{$}}
+; OPT-NEXT:  BB17_3:
+; OPT-NEXT:  loop     BB17_4{{$}}
+; OPT-NEXT:  br_if    {{[^,]*}}, BB17_3{{$}}
+; OPT-NEXT:  br       BB17_1{{$}}
+; OPT-NEXT:  BB17_4:
+define i32 @test8() {
+bb:
+  br label %bb1
+
+bb1:
+  br i1 undef, label %bb2, label %bb3
+
+bb2:
+  switch i8 undef, label %bb1 [
+    i8 44, label %bb2
+  ]
+
+bb3:
+  switch i8 undef, label %bb1 [
+    i8 44, label %bb2
+  ]
+}
+
+; Test an interesting case using nested loops that share a bottom block.
+
+; CHECK-LABEL: test9:
+; CHECK:       BB18_1:
+; CHECK-NEXT:  loop      BB18_5{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if     {{[^,]*}}, BB18_5{{$}}
+; CHECK-NEXT:  BB18_2:
+; CHECK-NEXT:  loop      BB18_5{{$}}
+; CHECK-NOT:   block
+; CHECK:       block     BB18_4{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if     {{[^,]*}}, BB18_4{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if     {{[^,]*}}, BB18_2{{$}}
+; CHECK-NEXT:  br        BB18_1{{$}}
+; CHECK-NEXT:  BB18_4:
+; CHECK-NOT:   block
+; CHECK:       br_if     {{[^,]*}}, BB18_2{{$}}
+; CHECK-NEXT:  br        BB18_1{{$}}
+; CHECK-NEXT:  BB18_5:
+; CHECK-NOT:   block
+; CHECK:       return{{$}}
+; OPT-LABEL: test9:
+; OPT:       BB18_1:
+; OPT-NEXT:  loop      BB18_5{{$}}
+; OPT-NOT:   block
+; OPT:       br_if     {{[^,]*}}, BB18_5{{$}}
+; OPT-NEXT:  BB18_2:
+; OPT-NEXT:  loop      BB18_5{{$}}
+; OPT-NOT:   block
+; OPT:       block     BB18_4{{$}}
+; OPT-NOT:   block
+; OPT:       br_if     {{[^,]*}}, BB18_4{{$}}
+; OPT-NOT:   block
+; OPT:       br_if     {{[^,]*}}, BB18_2{{$}}
+; OPT-NEXT:  br        BB18_1{{$}}
+; OPT-NEXT:  BB18_4:
+; OPT-NOT:   block
+; OPT:       br_if     {{[^,]*}}, BB18_2{{$}}
+; OPT-NEXT:  br        BB18_1{{$}}
+; OPT-NEXT:  BB18_5:
+; OPT-NOT:   block
+; OPT:       return{{$}}
+declare i1 @a()
+define void @test9() {
+entry:
+  store volatile i32 0, i32* null
+  br label %header
+
+header:
+  store volatile i32 1, i32* null
+  %call4 = call i1 @a()
+  br i1 %call4, label %header2, label %end
+
+header2:
+  store volatile i32 2, i32* null
+  %call = call i1 @a()
+  br i1 %call, label %if.then, label %if.else
+
+if.then:
+  store volatile i32 3, i32* null
+  %call3 = call i1 @a()
+  br i1 %call3, label %header2, label %header
+
+if.else:
+  store volatile i32 4, i32* null
+  %call2 = call i1 @a()
+  br i1 %call2, label %header2, label %header
+
+end:
+  store volatile i32 5, i32* null
+  ret void
+}
+
+; Test an interesting case involving nested loops sharing a loop bottom,
+; and loop exits to a block with unreachable.
+
+; CHECK-LABEL: test10:
+; CHECK:       BB19_1:
+; CHECK-NEXT:  loop     BB19_7{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if    {{[^,]*}}, BB19_1{{$}}
+; CHECK-NEXT:  BB19_2:
+; CHECK-NEXT:  block    BB19_6{{$}}
+; CHECK-NEXT:  loop     BB19_5{{$}}
+; CHECK-NOT:   block
+; CHECK:       BB19_3:
+; CHECK-NEXT:  loop     BB19_5{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if    {{[^,]*}}, BB19_1{{$}}
+; CHECK-NOT:   block
+; CHECK:       tableswitch  {{[^,]*}}, BB19_3, BB19_3, BB19_5, BB19_1, BB19_2, BB19_6{{$}}
+; CHECK-NEXT:  BB19_5:
+; CHECK-NEXT:  return{{$}}
+; CHECK-NEXT:  BB19_6:
+; CHECK-NOT:   block
+; CHECK:       br       BB19_1{{$}}
+; CHECK-NEXT:  BB19_7:
+; OPT-LABEL: test10:
+; OPT:       BB19_1:
+; OPT-NEXT:  loop     BB19_7{{$}}
+; OPT-NOT:   block
+; OPT:       br_if    {{[^,]*}}, BB19_1{{$}}
+; OPT-NEXT:  BB19_2:
+; OPT-NEXT:  block    BB19_6{{$}}
+; OPT-NEXT:  loop     BB19_5{{$}}
+; OPT-NOT:   block
+; OPT:       BB19_3:
+; OPT-NEXT:  loop     BB19_5{{$}}
+; OPT-NOT:   block
+; OPT:       br_if    {{[^,]*}}, BB19_1{{$}}
+; OPT-NOT:   block
+; OPT:       tableswitch  {{[^,]*}}, BB19_3, BB19_3, BB19_5, BB19_1, BB19_2, BB19_6{{$}}
+; OPT-NEXT:  BB19_5:
+; OPT-NEXT:  return{{$}}
+; OPT-NEXT:  BB19_6:
+; OPT-NOT:   block
+; OPT:       br       BB19_1{{$}}
+; OPT-NEXT:  BB19_7:
+define void @test10() {
+bb0:
+  br label %bb1
+
+bb1:
+  %tmp = phi i32 [ 2, %bb0 ], [ 3, %bb3 ]
+  %tmp3 = phi i32 [ undef, %bb0 ], [ %tmp11, %bb3 ]
+  %tmp4 = icmp eq i32 %tmp3, 0
+  br i1 %tmp4, label %bb4, label %bb2
+
+bb2:
+  br label %bb3
+
+bb3:
+  %tmp11 = phi i32 [ 1, %bb5 ], [ 0, %bb2 ]
+  br label %bb1
+
+bb4:
+  %tmp6 = phi i32 [ %tmp9, %bb5 ], [ 4, %bb1 ]
+  %tmp7 = phi i32 [ %tmp6, %bb5 ], [ %tmp, %bb1 ]
+  br label %bb5
+
+bb5:
+  %tmp9 = phi i32 [ %tmp6, %bb5 ], [ %tmp7, %bb4 ]
+  switch i32 %tmp9, label %bb2 [
+    i32 0, label %bb5
+    i32 1, label %bb6
+    i32 3, label %bb4
+    i32 4, label %bb3
+  ]
+
+bb6:
+  ret void
+}
+
+; Test a CFG DAG with interesting merging.
+
+; CHECK-LABEL: test11:
+; CHECK:       block        BB20_8{{$}}
+; CHECK-NEXT:  block        BB20_7{{$}}
+; CHECK-NEXT:  block        BB20_6{{$}}
+; CHECK-NEXT:  block        BB20_4{{$}}
+; CHECK-NEXT:  br_if        {{[^,]*}}, BB20_4{{$}}
+; CHECK-NOT:   block
+; CHECK:       block        BB20_3{{$}}
+; CHECK-NEXT:  br_if        {{[^,]*}}, BB20_3{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if        {{[^,]*}}, BB20_6{{$}}
+; CHECK-NEXT:  BB20_3:
+; CHECK-NOT:   block
+; CHECK:       return{{$}}
+; CHECK-NEXT:  BB20_4:
+; CHECK-NOT:   block
+; CHECK:       br_if        {{[^,]*}}, BB20_8{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if        {{[^,]*}}, BB20_7{{$}}
+; CHECK-NEXT:  BB20_6:
+; CHECK-NOT:   block
+; CHECK:       return{{$}}
+; CHECK-NEXT:  BB20_7:
+; CHECK-NOT:   block
+; CHECK:       return{{$}}
+; CHECK-NEXT:  BB20_8:
+; CHECK-NOT:   block
+; CHECK:       return{{$}}
+; OPT-LABEL: test11:
+; OPT:       block        BB20_8{{$}}
+; OPT-NEXT:  block        BB20_4{{$}}
+; OPT-NEXT:  br_if        $0, BB20_4{{$}}
+; OPT-NOT:   block
+; OPT:       block        BB20_3{{$}}
+; OPT-NEXT:  br_if        $0, BB20_3{{$}}
+; OPT-NOT:   block
+; OPT:       br_if        $0, BB20_8{{$}}
+; OPT-NEXT:  BB20_3:
+; OPT-NOT:   block
+; OPT:       return{{$}}
+; OPT-NEXT:  BB20_4:
+; OPT-NOT:   block
+; OPT:       block        BB20_6{{$}}
+; OPT-NOT:   block
+; OPT:       br_if        $pop9, BB20_6{{$}}
+; OPT-NOT:   block
+; OPT:       return{{$}}
+; OPT-NEXT:  BB20_6:
+; OPT-NOT:   block
+; OPT:       br_if        $0, BB20_8{{$}}
+; OPT-NOT:   block
+; OPT:       return{{$}}
+; OPT-NEXT:  BB20_8:
+; OPT-NOT:   block
+; OPT:       return{{$}}
+define void @test11() {
+bb0:
+  store volatile i32 0, i32* null
+  br i1 undef, label %bb1, label %bb4
+bb1:
+  store volatile i32 1, i32* null
+  br i1 undef, label %bb3, label %bb2
+bb2:
+  store volatile i32 2, i32* null
+  br i1 undef, label %bb3, label %bb7
+bb3:
+  store volatile i32 3, i32* null
+  ret void
+bb4:
+  store volatile i32 4, i32* null
+  br i1 undef, label %bb8, label %bb5
+bb5:
+  store volatile i32 5, i32* null
+  br i1 undef, label %bb6, label %bb7
+bb6:
+  store volatile i32 6, i32* null
+  ret void
+bb7:
+  store volatile i32 7, i32* null
+  ret void
+bb8:
+  store volatile i32 8, i32* null
+  ret void
+}
+
+; CHECK-LABEL: test12:
+; CHECK:       BB21_1:
+; CHECK-NEXT:  loop        BB21_8{{$}}
+; CHECK-NOT:   block
+; CHECK:       block       BB21_7{{$}}
+; CHECK-NEXT:  block       BB21_6{{$}}
+; CHECK-NEXT:  block       BB21_4{{$}}
+; CHECK-NEXT:  br_if       {{[^,]*}}, BB21_4{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if       {{[^,]*}}, BB21_7{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if       {{[^,]*}}, BB21_7{{$}}
+; CHECK-NEXT:  br          BB21_6{{$}}
+; CHECK-NEXT:  BB21_4:
+; CHECK-NOT:   block
+; CHECK:       br_if       {{[^,]*}}, BB21_7{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if       {{[^,]*}}, BB21_7{{$}}
+; CHECK-NEXT:  BB21_6:
+; CHECK-NEXT:  return{{$}}
+; CHECK-NEXT:  BB21_7:
+; CHECK-NOT:   block
+; CHECK:       br          BB21_1{{$}}
+; CHECK-NEXT:  BB21_8:
+; OPT-LABEL: test12:
+; OPT:       BB21_1:
+; OPT-NEXT:  loop        BB21_8{{$}}
+; OPT-NOT:   block
+; OPT:       block       BB21_7{{$}}
+; OPT-NEXT:  block       BB21_6{{$}}
+; OPT-NEXT:  block       BB21_4{{$}}
+; OPT-NEXT:  br_if       {{[^,]*}}, BB21_4{{$}}
+; OPT-NOT:   block
+; OPT:       br_if       {{[^,]*}}, BB21_7{{$}}
+; OPT-NOT:   block
+; OPT:       br_if       {{[^,]*}}, BB21_7{{$}}
+; OPT-NEXT:  br          BB21_6{{$}}
+; OPT-NEXT:  BB21_4:
+; OPT-NOT:   block
+; OPT:       br_if       {{[^,]*}}, BB21_7{{$}}
+; OPT-NOT:   block
+; OPT:       br_if       {{[^,]*}}, BB21_7{{$}}
+; OPT-NEXT:  BB21_6:
+; OPT-NEXT:  return{{$}}
+; OPT-NEXT:  BB21_7:
+; OPT-NOT:   block
+; OPT:       br          BB21_1{{$}}
+; OPT-NEXT:  BB21_8:
+define void @test12(i8* %arg) {
+bb:
+  br label %bb1
+
+bb1:
+  %tmp = phi i32 [ 0, %bb ], [ %tmp5, %bb4 ]
+  %tmp2 = getelementptr i8, i8* %arg, i32 %tmp
+  %tmp3 = load i8, i8* %tmp2
+  switch i8 %tmp3, label %bb7 [
+    i8 42, label %bb4
+    i8 76, label %bb4
+    i8 108, label %bb4
+    i8 104, label %bb4
+  ]
+
+bb4:
+  %tmp5 = add i32 %tmp, 1
+  br label %bb1
+
+bb7:
+  ret void
 }

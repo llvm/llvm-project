@@ -8325,7 +8325,7 @@ Syntax:
 
 ::
 
-      <result> = [tail | musttail | notail ] call [cconv] [ret attrs] <ty> [<fnty>*] <fnptrval>(<function args>) [fn attrs]
+      <result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret attrs] <ty> [<fnty>*] <fnptrval>(<function args>) [fn attrs]
                    [ operand bundles ]
 
 Overview:
@@ -8381,6 +8381,11 @@ This instruction requires several arguments:
 #. The optional ``notail`` marker indicates that the optimizers should not add
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
    call optimization from being performed on the call.
+
+#. The optional ``fast-math flags`` marker indicates that the call has one or more 
+   :ref:`fast-math flags <fastmath>`, which are optimization hints to enable
+   otherwise unsafe floating-point optimizations. Fast-math flags are only valid
+   for calls that return a floating-point scalar or vector type.
 
 #. The optional "cconv" marker indicates which :ref:`calling
    convention <callingconv>` the call should use. If none is

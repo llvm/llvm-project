@@ -874,20 +874,6 @@ public:
 /// This class is the base class for the comparison instructions.
 /// @brief Abstract base class of comparison instructions.
 class CmpInst : public Instruction {
-  void *operator new(size_t, unsigned) = delete;
-  CmpInst() = delete;
-
-protected:
-  CmpInst(Type *ty, Instruction::OtherOps op, unsigned short pred,
-          Value *LHS, Value *RHS, const Twine &Name = "",
-          Instruction *InsertBefore = nullptr);
-
-  CmpInst(Type *ty, Instruction::OtherOps op, unsigned short pred,
-          Value *LHS, Value *RHS, const Twine &Name,
-          BasicBlock *InsertAtEnd);
-
-  void anchor() override; // Out of line virtual method.
-
 public:
   /// This enumeration lists the possible predicates for CmpInst subclasses.
   /// Values in the range 0-31 are reserved for FCmpInst, while values in the
@@ -929,6 +915,22 @@ public:
     BAD_ICMP_PREDICATE = ICMP_SLE + 1
   };
 
+private:
+  void *operator new(size_t, unsigned) = delete;
+  CmpInst() = delete;
+
+protected:
+  CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
+          Value *LHS, Value *RHS, const Twine &Name = "",
+          Instruction *InsertBefore = nullptr);
+
+  CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
+          Value *LHS, Value *RHS, const Twine &Name,
+          BasicBlock *InsertAtEnd);
+
+  void anchor() override; // Out of line virtual method.
+
+public:
   // allocate space for exactly two operands
   void *operator new(size_t s) {
     return User::operator new(s, 2);
@@ -939,7 +941,7 @@ public:
   /// The specified Instruction is allowed to be a dereferenced end iterator.
   /// @brief Create a CmpInst
   static CmpInst *Create(OtherOps Op,
-                         unsigned short predicate, Value *S1,
+                         Predicate predicate, Value *S1,
                          Value *S2, const Twine &Name = "",
                          Instruction *InsertBefore = nullptr);
 
@@ -947,7 +949,7 @@ public:
   /// two operands.  Also automatically insert this instruction to the end of
   /// the BasicBlock specified.
   /// @brief Create a CmpInst
-  static CmpInst *Create(OtherOps Op, unsigned short predicate, Value *S1,
+  static CmpInst *Create(OtherOps Op, Predicate predicate, Value *S1,
                          Value *S2, const Twine &Name, BasicBlock *InsertAtEnd);
 
   /// @brief Get the opcode casted to the right type
@@ -1058,23 +1060,23 @@ public:
 
   /// @returns true if the predicate is unsigned, false otherwise.
   /// @brief Determine if the predicate is an unsigned operation.
-  static bool isUnsigned(unsigned short predicate);
+  static bool isUnsigned(Predicate predicate);
 
   /// @returns true if the predicate is signed, false otherwise.
   /// @brief Determine if the predicate is an signed operation.
-  static bool isSigned(unsigned short predicate);
+  static bool isSigned(Predicate predicate);
 
   /// @brief Determine if the predicate is an ordered operation.
-  static bool isOrdered(unsigned short predicate);
+  static bool isOrdered(Predicate predicate);
 
   /// @brief Determine if the predicate is an unordered operation.
-  static bool isUnordered(unsigned short predicate);
+  static bool isUnordered(Predicate predicate);
 
   /// Determine if the predicate is true when comparing a value with itself.
-  static bool isTrueWhenEqual(unsigned short predicate);
+  static bool isTrueWhenEqual(Predicate predicate);
 
   /// Determine if the predicate is false when comparing a value with itself.
-  static bool isFalseWhenEqual(unsigned short predicate);
+  static bool isFalseWhenEqual(Predicate predicate);
 
   /// @brief Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {

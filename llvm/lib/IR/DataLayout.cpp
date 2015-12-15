@@ -41,6 +41,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
   assert(!ST->isOpaque() && "Cannot get layout of opaque structs");
   StructAlignment = 0;
   StructSize = 0;
+  IsPadded = false;
   NumElements = ST->getNumElements();
 
   // Loop over each of the elements, placing them in memory.
@@ -49,8 +50,10 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
     unsigned TyAlign = ST->isPacked() ? 1 : DL.getABITypeAlignment(Ty);
 
     // Add padding if necessary to align the data element properly.
-    if ((StructSize & (TyAlign-1)) != 0)
+    if ((StructSize & (TyAlign-1)) != 0) {
+      IsPadded = true;
       StructSize = RoundUpToAlignment(StructSize, TyAlign);
+    }
 
     // Keep track of maximum alignment constraint.
     StructAlignment = std::max(TyAlign, StructAlignment);
@@ -64,8 +67,10 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
 
   // Add padding to the end of the struct so that it could be put in an array
   // and all array elements would be aligned correctly.
-  if ((StructSize & (StructAlignment-1)) != 0)
+  if ((StructSize & (StructAlignment-1)) != 0) {
+    IsPadded = true;
     StructSize = RoundUpToAlignment(StructSize, StructAlignment);
+  }
 }
 
 

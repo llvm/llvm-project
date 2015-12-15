@@ -207,21 +207,30 @@ std::set<FunctionLoc> computeFunctionLocs(const std::set<uint64_t> &Addrs) {
   return result;
 }
 
-// Locate __sanitizer_cov function address.
-static uint64_t findSanitizerCovFunction(const object::ObjectFile &O) {
+// Locate __sanitizer_cov* function addresses that are used for coverage
+// reporting.
+static std::set<uint64_t>
+findSanitizerCovFunctions(const object::ObjectFile &O) {
+  std::set<uint64_t> Result;
+
   for (const object::SymbolRef &Symbol : O.symbols()) {
     ErrorOr<uint64_t> AddressOrErr = Symbol.getAddress();
     FailIfError(AddressOrErr);
 
-    ErrorOr<StringRef> Name = Symbol.getName();
-    FailIfError(Name);
+    ErrorOr<StringRef> NameOrErr = Symbol.getName();
+    FailIfError(NameOrErr);
+    StringRef Name = NameOrErr.get();
 
-    if (Name.get() == "__sanitizer_cov") {
-      return AddressOrErr.get();
+    if (Name == "__sanitizer_cov" || Name == "__sanitizer_cov_with_check" ||
+        Name == "__sanitizer_cov_trace_func_enter") {
+      Result.insert(AddressOrErr.get());
     }
   }
-  FailIfNotEmpty("__sanitizer_cov not found");
-  return 0; // not reachable.
+
+  if (Result.empty())
+    FailIfNotEmpty("__sanitizer_cov* functions not found");
+
+  return Result;
 }
 
 // Locate addresses of all coverage points in a file. Coverage point
@@ -262,7 +271,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
       TheTarget->createMCInstrAnalysis(MII.get()));
   FailIfEmpty(MIA, "no instruction analysis info for target " + TripleName);
 
-  uint64_t SanCovAddr = findSanitizerCovFunction(O);
+  auto SanCovAddrs = findSanitizerCovFunctions(O);
 
   for (const auto Section : O.sections()) {
     if (Section.isVirtual() || !Section.isText()) // llvm-objdump does the same.
@@ -292,7 +301,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
       uint64_t Target;
       if (MIA->isCall(Inst) &&
           MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target)) {
-        if (Target == SanCovAddr) {
+        if (SanCovAddrs.find(Target) != SanCovAddrs.end()) {
           // Sanitizer coverage uses the address of the next instruction - 1.
           Addrs->insert(Index + SectionAddr + Size - 1);
         }

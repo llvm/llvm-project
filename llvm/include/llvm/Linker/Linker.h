@@ -10,7 +10,6 @@
 #ifndef LLVM_LINKER_LINKER_H
 #define LLVM_LINKER_LINKER_H
 
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/FunctionInfo.h"
 #include "llvm/Linker/IRMover.h"
 
@@ -34,7 +33,7 @@ public:
     InternalizeLinkedSymbols = (1 << 2)
   };
 
-  Linker(Module &M, DiagnosticHandlerFunction DiagnosticHandler);
+  Linker(Module &M);
 
   /// \brief Link \p Src into the composite. The source is destroyed.
   ///
@@ -50,20 +49,14 @@ public:
                     DenseSet<const GlobalValue *> *FunctionsToImport = nullptr);
 
   static bool linkModules(Module &Dest, Module &Src,
-                          DiagnosticHandlerFunction DiagnosticHandler,
                           unsigned Flags = Flags::None);
 
-  DiagnosticHandlerFunction getDiagnosticHandler() const {
-    return Mover.getDiagnosticHandler();
-  }
 };
 
 /// Create a new module with exported local functions renamed and promoted
 /// for ThinLTO.
-std::unique_ptr<Module>
-renameModuleForThinLTO(std::unique_ptr<Module> &M,
-                       const FunctionInfoIndex *Index,
-                       DiagnosticHandlerFunction DiagnosticHandler);
+std::unique_ptr<Module> renameModuleForThinLTO(std::unique_ptr<Module> &M,
+                                               const FunctionInfoIndex *Index);
 
 } // End llvm namespace
 

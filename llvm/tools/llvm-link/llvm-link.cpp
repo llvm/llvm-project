@@ -141,6 +141,10 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
   errs() << '\n';
 }
 
+static void diagnosticHandlerWithContext(const DiagnosticInfo &DI, void *C) {
+  diagnosticHandler(DI);
+}
+
 /// Import any functions requested via the -import option.
 static bool importFunctions(const char *argv0, LLVMContext &Context,
                             Linker &L) {
@@ -265,11 +269,13 @@ int main(int argc, char **argv) {
   PrettyStackTraceProgram X(argc, argv);
 
   LLVMContext &Context = getGlobalContext();
+  Context.setDiagnosticHandler(diagnosticHandlerWithContext, nullptr, true);
+
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 
   auto Composite = make_unique<Module>("llvm-link", Context);
-  Linker L(*Composite, diagnosticHandler);
+  Linker L(*Composite);
 
   unsigned Flags = Linker::Flags::None;
   if (Internalize)

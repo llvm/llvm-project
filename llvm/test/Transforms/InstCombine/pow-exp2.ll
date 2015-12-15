@@ -9,7 +9,7 @@ entry:
 
 ; CHECK-LABEL: define double @mypow(
 ; CHECK:   %mul = fmul fast double %x, %y
-; CHECK:   %exp2 = call double @exp2(double %mul) #0
+; CHECK:   %exp2 = call fast double @exp2(double %mul) #0
 ; CHECK:   ret double %exp2
 ; CHECK: }
 

@@ -6771,6 +6771,22 @@ static unsigned getSizeForEncoding(bool is64Bit,
   }
 }
 
+static uint64_t readPointer(const char *&Pos, bool is64Bit, unsigned Encoding) {
+  switch (getSizeForEncoding(is64Bit, Encoding)) {
+    case 2:
+      return readNext<uint16_t>(Pos);
+      break;
+    case 4:
+      return readNext<uint32_t>(Pos);
+      break;
+    case 8:
+      return readNext<uint64_t>(Pos);
+      break;
+    default:
+      llvm_unreachable("Illegal data size");
+  }
+}
+
 static void printMachOEHFrameSection(const MachOObjectFile *Obj,
                                      std::map<uint64_t, SymbolRef> &Symbols,
                                      const SectionRef &EHFrame) {
@@ -6786,12 +6802,21 @@ static void printMachOEHFrameSection(const MachOObjectFile *Obj,
   StringRef Contents;
   EHFrame.getContents(Contents);
 
+  /// A few fields of the CIE are used when decoding the FDE's.  This struct
+  /// will cache those fields we need so that we don't have to decode it
+  /// repeatedly for each FDE that references it.
+  struct DecodedCIE {
+    Optional<uint32_t> FDEPointerEncoding;
+    Optional<uint32_t> LSDAPointerEncoding;
+    bool hasAugmentationLength;
+  };
 
-  //===----------------------------------
-  // Entry header
-  //===----------------------------------
+  // Map from the start offset of the CIE to the cached data for that CIE.
+  DenseMap<uint64_t, DecodedCIE> CachedCIEs;
 
   for (const char *Pos = Contents.data(), *End = Contents.end(); Pos != End; ) {
+
+    const char *EntryStartPos = Pos;
 
     uint64_t Length = readNext<uint32_t>(Pos);
     if (Length == 0xffffffff)
@@ -6858,19 +6883,7 @@ static void printMachOEHFrameSection(const MachOObjectFile *Obj,
             case 'P': {
               assert(!Personality && "Duplicate personality");
               PersonalityEncoding = readNext<uint8_t>(Pos);
-              switch (getSizeForEncoding(is64Bit, *PersonalityEncoding)) {
-                case 2:
-                  Personality = readNext<uint16_t>(Pos);
-                  break;
-                case 4:
-                  Personality = readNext<uint32_t>(Pos);
-                  break;
-                case 8:
-                  Personality = readNext<uint64_t>(Pos);
-                  break;
-                default:
-                  llvm_unreachable("Illegal data size");
-              }
+              Personality = readPointer(Pos, is64Bit, *PersonalityEncoding);
               break;
             }
             case 'R':
@@ -6915,17 +6928,82 @@ static void printMachOEHFrameSection(const MachOObjectFile *Obj,
                 outs());
       outs() << "\n";
       Pos = EntryEndPos;
+
+      // Cache this entry.
+      uint64_t Offset = EntryStartPos - Contents.data();
+      CachedCIEs[Offset] = { FDEPointerEncoding, LSDAPointerEncoding,
+                             AugmentationLength.hasValue() };
       continue;
     }
+
     // This is an FDE.
+    // The CIE pointer for an FDE is the same location as the ID which we
+    // already read.
+    uint32_t CIEPointer = ID;
+
+    const char *CIEStart = PosAfterLength - CIEPointer;
+    assert(CIEStart >= Contents.data() &&
+           "FDE points to CIE before the __eh_frame start");
+
+    uint64_t CIEOffset = CIEStart - Contents.data();
+    auto CIEIt = CachedCIEs.find(CIEOffset);
+    if (CIEIt == CachedCIEs.end())
+      llvm_unreachable("Couldn't find CIE at offset in to __eh_frame section");
+
+    const DecodedCIE &CIE = CIEIt->getSecond();
+    assert(CIE.FDEPointerEncoding &&
+           "FDE references CIE which did not set pointer encoding");
+
+    uint64_t PCPointerSize = getSizeForEncoding(is64Bit,
+                                                *CIE.FDEPointerEncoding);
+
+    uint64_t PCBegin = readPointer(Pos, is64Bit, *CIE.FDEPointerEncoding);
+    uint64_t PCRange = readPointer(Pos, is64Bit, *CIE.FDEPointerEncoding);
+
+    Optional<uint64_t> AugmentationLength;
+    uint32_t LSDAPointerSize;
+    Optional<uint64_t> LSDAPointer;
+    if (CIE.hasAugmentationLength) {
+      unsigned ULEBByteCount;
+      AugmentationLength = decodeULEB128((const uint8_t *)Pos,
+                                         &ULEBByteCount);
+      Pos += ULEBByteCount;
+
+      // Decode the LSDA if the CIE augmentation string said we should.
+      if (CIE.LSDAPointerEncoding) {
+        LSDAPointerSize = getSizeForEncoding(is64Bit, *CIE.LSDAPointerEncoding);
+        LSDAPointer = readPointer(Pos, is64Bit, *CIE.LSDAPointerEncoding);
+      }
+    }
+
     outs() << "FDE:\n";
     outs() << "  Length: " << Length << "\n";
-    outs() << "  ";
+    outs() << "  CIE Offset: " << CIEOffset << "\n";
+
+    if (PCPointerSize == 8) {
+      outs() << format("  PC Begin: %016" PRIx64, PCBegin) << "\n";
+      outs() << format("  PC Range: %016" PRIx64, PCRange) << "\n";
+    } else {
+      outs() << format("  PC Begin: %08" PRIx64, PCBegin) << "\n";
+      outs() << format("  PC Range: %08" PRIx64, PCRange) << "\n";
+    }
+    if (AugmentationLength) {
+      outs() << "  Augmentation Data Length: " << *AugmentationLength << "\n";
+      if (LSDAPointer) {
+        if (LSDAPointerSize == 8)
+          outs() << format("  LSDA Pointer: %016\n" PRIx64, *LSDAPointer);
+        else
+          outs() << format("  LSDA Pointer: %08\n" PRIx64, *LSDAPointer);
+      }
+    }
+
+    // FIXME: Handle instructions.
+    // For now just emit some bytes
+    outs() << "  Instructions:\n  ";
     dumpBytes(makeArrayRef((const uint8_t*)Pos, (const uint8_t*)EntryEndPos),
               outs());
     outs() << "\n";
     Pos = EntryEndPos;
-
   }
 }
 

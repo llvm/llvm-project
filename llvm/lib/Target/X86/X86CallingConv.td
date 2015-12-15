@@ -158,6 +158,7 @@ def RetCC_X86_64_C : CallingConv<[
   // The X86-64 calling convention always returns FP values in XMM0.
   CCIfType<[f32], CCAssignToReg<[XMM0, XMM1]>>,
   CCIfType<[f64], CCAssignToReg<[XMM0, XMM1]>>,
+  CCIfType<[f128], CCAssignToReg<[XMM0, XMM1]>>,
 
   // MMX vector types are always returned in XMM0.
   CCIfType<[x86mmx], CCAssignToReg<[XMM0, XMM1]>>,
@@ -319,7 +320,7 @@ def CC_X86_64_C : CallingConv<[
   CCIfType<[v64i1], CCPromoteToType<v64i8>>,
 
   // The first 8 FP/Vector arguments are passed in XMM registers.
-  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+  CCIfType<[f32, f64, f128, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
             CCIfSubtarget<"hasSSE1()",
             CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>>,
 
@@ -344,7 +345,7 @@ def CC_X86_64_C : CallingConv<[
 
   // Long doubles get stack slots whose size and alignment depends on the
   // subtarget.
-  CCIfType<[f80], CCAssignToStack<0, 0>>,
+  CCIfType<[f80, f128], CCAssignToStack<0, 0>>,
 
   // Vectors get 16-byte stack slots that are 16-byte aligned.
   CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], CCAssignToStack<16, 16>>,

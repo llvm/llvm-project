@@ -50,7 +50,7 @@ MFUN32:        ]
 MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     Type: 0xF2
 MFUN32-NEXT:     PayloadSize: 0x30
-MFUN32:          FunctionName: _x
+MFUN32:          LinkageName: _x
 MFUN32-NEXT:   ]
 MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     Type: 0xF5
@@ -69,7 +69,7 @@ MFUN32:        ]
 MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     Type: 0xF2
 MFUN32-NEXT:     PayloadSize: 0x30
-MFUN32:          FunctionName: _y
+MFUN32:          LinkageName: _y
 MFUN32-NEXT:   ]
 MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     Type: 0xF5
@@ -88,7 +88,7 @@ MFUN32:        ]
 MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     Type: 0xF2
 MFUN32-NEXT:     PayloadSize: 0x40
-MFUN32:          FunctionName: _f
+MFUN32:          LinkageName: _f
 MFUN32-NEXT:   ]
 MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     Type: 0xF4
@@ -103,7 +103,7 @@ MFUN32-NEXT:     Type: 0xF1
 MFUN32-NEXT:     PayloadSize: 0x8
 MFUN32:        ]
 MFUN32-NEXT:   FunctionLineTable [
-MFUN32-NEXT:     FunctionName: _x
+MFUN32-NEXT:     LinkageName: _x
 MFUN32-NEXT:     Flags: 0x0
 MFUN32-NEXT:     CodeSize: 0xA
 MFUN32-NEXT:     FilenameSegment [
@@ -114,7 +114,7 @@ MFUN32-NEXT:       +0x8: 5
 MFUN32-NEXT:     ]
 MFUN32-NEXT:   ]
 MFUN32-NEXT:   FunctionLineTable [
-MFUN32-NEXT:     FunctionName: _y
+MFUN32-NEXT:     LinkageName: _y
 MFUN32-NEXT:     Flags: 0x0
 MFUN32-NEXT:     CodeSize: 0xA
 MFUN32-NEXT:     FilenameSegment [
@@ -125,7 +125,7 @@ MFUN32-NEXT:       +0x8: 9
 MFUN32-NEXT:     ]
 MFUN32-NEXT:   ]
 MFUN32-NEXT:   FunctionLineTable [
-MFUN32-NEXT:     FunctionName: _f
+MFUN32-NEXT:     LinkageName: _f
 MFUN32-NEXT:     Flags: 0x0
 MFUN32-NEXT:     CodeSize: 0x14
 MFUN32-NEXT:     FilenameSegment [
@@ -158,7 +158,7 @@ MFUN64:        ]
 MFUN64-NEXT:   Subsection [
 MFUN64-NEXT:     Type: 0xF2
 MFUN64-NEXT:     PayloadSize: 0x30
-MFUN64:          FunctionName: x
+MFUN64:          LinkageName: x
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   Subsection [
 MFUN64-NEXT:     Type: 0xF1
@@ -173,7 +173,7 @@ MFUN64:        ]
 MFUN64-NEXT:   Subsection [
 MFUN64-NEXT:     Type: 0xF2
 MFUN64-NEXT:     PayloadSize: 0x30
-MFUN64:          FunctionName: y
+MFUN64:          LinkageName: y
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   Subsection [
 MFUN64-NEXT:     Type: 0xF1
@@ -188,7 +188,7 @@ MFUN64:        ]
 MFUN64-NEXT:   Subsection [
 MFUN64-NEXT:     Type: 0xF2
 MFUN64-NEXT:     PayloadSize: 0x40
-MFUN64:          FunctionName: f
+MFUN64:          LinkageName: f
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   Subsection [
 MFUN64-NEXT:     Type: 0xF4
@@ -203,7 +203,7 @@ MFUN64-NEXT:     Type: 0xF1
 MFUN64-NEXT:     PayloadSize: 0x8
 MFUN64:        ]
 MFUN64-NEXT:   FunctionLineTable [
-MFUN64-NEXT:     FunctionName: x
+MFUN64-NEXT:     LinkageName: x
 MFUN64-NEXT:     Flags: 0x0
 MFUN64-NEXT:     CodeSize: 0xE
 MFUN64-NEXT:     FilenameSegment [
@@ -214,7 +214,7 @@ MFUN64-NEXT:       +0x9: 5
 MFUN64-NEXT:     ]
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   FunctionLineTable [
-MFUN64-NEXT:     FunctionName: y
+MFUN64-NEXT:     LinkageName: y
 MFUN64-NEXT:     Flags: 0x0
 MFUN64-NEXT:     CodeSize: 0xE
 MFUN64-NEXT:     FilenameSegment [
@@ -225,7 +225,7 @@ MFUN64-NEXT:       +0x9: 9
 MFUN64-NEXT:     ]
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   FunctionLineTable [
-MFUN64-NEXT:     FunctionName: f
+MFUN64-NEXT:     LinkageName: f
 MFUN64-NEXT:     Flags: 0x0
 MFUN64-NEXT:     CodeSize: 0x18
 MFUN64-NEXT:     FilenameSegment [
@@ -286,7 +286,7 @@ MFILE32:        ]
 MFILE32-NEXT:   Subsection [
 MFILE32-NEXT:     Type: 0xF2
 MFILE32-NEXT:     PayloadSize: 0x64
-MFILE32:          FunctionName: _f
+MFILE32:          LinkageName: _f
 MFILE32-NEXT:   ]
 MFILE32-NEXT:   Subsection [
 MFILE32-NEXT:     Type: 0xF4
@@ -301,7 +301,7 @@ MFILE32-NEXT:     Type: 0xF1
 MFILE32-NEXT:     PayloadSize: 0x8
 MFILE32:        ]
 MFILE32-NEXT:   FunctionLineTable [
-MFILE32-NEXT:     FunctionName: _f
+MFILE32-NEXT:     LinkageName: _f
 MFILE32-NEXT:     Flags: 0x0
 MFILE32-NEXT:     CodeSize: 0x14
 MFILE32-NEXT:     FilenameSegment [
@@ -343,7 +343,7 @@ MFILE64:        ]
 MFILE64-NEXT:   Subsection [
 MFILE64-NEXT:     Type: 0xF2
 MFILE64-NEXT:     PayloadSize: 0x64
-MFILE64:          FunctionName: f
+MFILE64:          LinkageName: f
 MFILE64-NEXT:   ]
 MFILE64-NEXT:   Subsection [
 MFILE64-NEXT:     Type: 0xF4
@@ -358,7 +358,7 @@ MFILE64-NEXT:     Type: 0xF1
 MFILE64-NEXT:     PayloadSize: 0x8
 MFILE64:        ]
 MFILE64-NEXT:   FunctionLineTable [
-MFILE64-NEXT:     FunctionName: f
+MFILE64-NEXT:     LinkageName: f
 MFILE64-NEXT:     Flags: 0x0
 MFILE64-NEXT:     CodeSize: 0x18
 MFILE64-NEXT:     FilenameSegment [
@@ -406,7 +406,7 @@ MCOMDAT-NEXT:   Section: ?f@@YAHXZ
 MCOMDAT-NEXT:   CodeSize: 0x7
 MCOMDAT-NEXT: }
 MCOMDAT:      FunctionLineTable [
-MCOMDAT-NEXT:   FunctionName: ?f@@YAHXZ
+MCOMDAT-NEXT:   LinkageName: ?f@@YAHXZ
 MCOMDAT-NEXT:   Flags: 0x0
 MCOMDAT-NEXT:   CodeSize: 0x7
 MCOMDAT-NEXT:   FilenameSegment [
@@ -422,7 +422,7 @@ MCOMDAT-NEXT:   Section: ?g@@YAHXZ
 MCOMDAT-NEXT:   CodeSize: 0x7
 MCOMDAT-NEXT: }
 MCOMDAT:      FunctionLineTable [
-MCOMDAT-NEXT:   FunctionName: ?g@@YAHXZ
+MCOMDAT-NEXT:   LinkageName: ?g@@YAHXZ
 MCOMDAT-NEXT:   Flags: 0x0
 MCOMDAT-NEXT:   CodeSize: 0x7
 MCOMDAT-NEXT:   FilenameSegment [

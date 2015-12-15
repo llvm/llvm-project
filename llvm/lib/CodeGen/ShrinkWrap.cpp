@@ -319,7 +319,24 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
   while (Save && Restore &&
          (!(SaveDominatesRestore = MDT->dominates(Save, Restore)) ||
           !(RestorePostDominatesSave = MPDT->dominates(Restore, Save)) ||
-          MLI->getLoopFor(Save) != MLI->getLoopFor(Restore))) {
+          // Post-dominance is not enough in loops to ensure that all uses/defs
+          // are after the prologue and before the epilogue at runtime.
+          // E.g.,
+          // while(1) {
+          //  Save
+          //  Restore
+          //   if (...)
+          //     break;
+          //  use/def CSRs
+          // }
+          // All the uses/defs of CSRs are dominated by Save and post-dominated
+          // by Restore. However, the CSRs uses are still reachable after
+          // Restore and before Save are executed.
+          //
+          // For now, just push the restore/save points outside of loops.
+          // FIXME: Refine the criteria to still find interesting cases
+          // for loops.
+          MLI->getLoopFor(Save) || MLI->getLoopFor(Restore))) {
     // Fix (A).
     if (!SaveDominatesRestore) {
       Save = MDT->findNearestCommonDominator(Save, Restore);
@@ -330,8 +347,8 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
       Restore = MPDT->findNearestCommonDominator(Restore, Save);
 
     // Fix (C).
-    if (Save && Restore && Save != Restore &&
-        MLI->getLoopFor(Save) != MLI->getLoopFor(Restore)) {
+    if (Save && Restore &&
+        (MLI->getLoopFor(Save) || MLI->getLoopFor(Restore))) {
       if (MLI->getLoopDepth(Save) > MLI->getLoopDepth(Restore)) {
         // Push Save outside of this loop if immediate dominator is different
         // from save block. If immediate dominator is not different, bail out.
@@ -342,8 +359,7 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
           Save = nullptr;
           break;
         }
-      }
-      else {
+      } else {
         // If the loop does not exit, there is no point in looking
         // for a post-dominator outside the loop.
         SmallVector<MachineBasicBlock*, 4> ExitBlocks;

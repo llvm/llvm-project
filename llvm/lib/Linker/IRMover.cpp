@@ -387,8 +387,6 @@ class IRLinker {
       Worklist.push_back(GV);
   }
 
-  DiagnosticHandlerFunction DiagnosticHandler;
-
   /// Set to true when all global value body linking is complete (including
   /// lazy linking). Used to prevent metadata linking from creating new
   /// references.
@@ -402,13 +400,13 @@ class IRLinker {
 
   /// Helper method for setting a message and returning an error code.
   bool emitError(const Twine &Message) {
-    DiagnosticHandler(LinkDiagnosticInfo(DS_Error, Message));
+    SrcM.getContext().diagnose(LinkDiagnosticInfo(DS_Error, Message));
     HasError = true;
     return true;
   }
 
   void emitWarning(const Twine &Message) {
-    DiagnosticHandler(LinkDiagnosticInfo(DS_Warning, Message));
+    SrcM.getContext().diagnose(LinkDiagnosticInfo(DS_Warning, Message));
   }
 
   /// Given a global in the source module, return the global in the
@@ -458,12 +456,10 @@ class IRLinker {
 
 public:
   IRLinker(Module &DstM, IRMover::IdentifiedStructTypeSet &Set, Module &SrcM,
-           DiagnosticHandlerFunction DiagnosticHandler,
            ArrayRef<GlobalValue *> ValuesToLink,
            std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor)
       : DstM(DstM), SrcM(SrcM), AddLazyFor(AddLazyFor), TypeMap(Set),
-        GValMaterializer(this), LValMaterializer(this),
-        DiagnosticHandler(DiagnosticHandler) {
+        GValMaterializer(this), LValMaterializer(this) {
     for (GlobalValue *GV : ValuesToLink)
       maybeAdd(GV);
   }
@@ -1375,8 +1371,7 @@ bool IRMover::IdentifiedStructTypeSet::hasType(StructType *Ty) {
   return *I == Ty;
 }
 
-IRMover::IRMover(Module &M, DiagnosticHandlerFunction DiagnosticHandler)
-    : Composite(M), DiagnosticHandler(DiagnosticHandler) {
+IRMover::IRMover(Module &M) : Composite(M) {
   TypeFinder StructTypes;
   StructTypes.run(M, true);
   for (StructType *Ty : StructTypes) {
@@ -1390,8 +1385,8 @@ IRMover::IRMover(Module &M, DiagnosticHandlerFunction DiagnosticHandler)
 bool IRMover::move(
     Module &Src, ArrayRef<GlobalValue *> ValuesToLink,
     std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor) {
-  IRLinker TheLinker(Composite, IdentifiedStructTypes, Src, DiagnosticHandler,
-                     ValuesToLink, AddLazyFor);
+  IRLinker TheLinker(Composite, IdentifiedStructTypes, Src, ValuesToLink,
+                     AddLazyFor);
   bool RetCode = TheLinker.run();
   Composite.dropTriviallyDeadConstantArrays();
   return RetCode;

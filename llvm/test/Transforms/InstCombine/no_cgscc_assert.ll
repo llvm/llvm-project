@@ -10,7 +10,7 @@ define float @bar(float %f) #0 {
   ret float %call1
 
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT: call float @llvm.fabs.f32
+; CHECK-NEXT: call fast float @llvm.fabs.f32
 ; CHECK-NEXT: ret float
 }
 

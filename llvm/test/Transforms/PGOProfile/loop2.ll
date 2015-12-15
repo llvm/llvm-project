@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; GEN: @__llvm_profile_name_test_nested_for = private constant [15 x i8] c"test_nested_for"
+; GEN: @__profn_test_nested_for = private constant [15 x i8] c"test_nested_for"
 
 define i32 @test_nested_for(i32 %r, i32 %s) {
 entry:
@@ -45,7 +45,7 @@ for.body.inner:
 
 for.inc.inner:
 ; GEN: for.inc.inner:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__llvm_profile_name_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 0)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 0)
   %inc.1 = add nsw i32 %j.0, 1
   br label %for.cond.inner
 
@@ -55,13 +55,13 @@ for.end.inner:
 
 for.inc.outer:
 ; GEN: for.inc.outer:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__llvm_profile_name_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 1)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 1)
   %inc.2 = add nsw i32 %i.0, 1
   br label %for.cond.outer
 
 for.end.outer:
 ; GEN: for.end.outer:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__llvm_profile_name_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 2)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 2)
   ret i32 %sum.0
 }
 

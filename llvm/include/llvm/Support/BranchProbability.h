@@ -117,6 +117,14 @@ public:
     return *this;
   }
 
+  BranchProbability &operator/=(uint32_t RHS) {
+    assert(N != UnknownN &&
+           "Unknown probability cannot participate in arithmetics.");
+    assert(RHS > 0 && "The divider cannot be zero.");
+    N /= RHS;
+    return *this;
+  }
+
   BranchProbability operator+(BranchProbability RHS) const {
     BranchProbability Prob(*this);
     return Prob += RHS;
@@ -130,6 +138,11 @@ public:
   BranchProbability operator*(BranchProbability RHS) const {
     BranchProbability Prob(*this);
     return Prob *= RHS;
+  }
+
+  BranchProbability operator/(uint32_t RHS) const {
+    BranchProbability Prob(*this);
+    return Prob /= RHS;
   }
 
   bool operator==(BranchProbability RHS) const { return N == RHS.N; }
@@ -162,12 +175,6 @@ public:
 
 inline raw_ostream &operator<<(raw_ostream &OS, BranchProbability Prob) {
   return Prob.print(OS);
-}
-
-inline BranchProbability operator/(BranchProbability LHS, uint32_t RHS) {
-  assert(LHS != BranchProbability::getUnknown() &&
-         "Unknown probability cannot participate in arithmetics.");
-  return BranchProbability::getRaw(LHS.getNumerator() / RHS);
 }
 
 template <class ProbabilityIter>

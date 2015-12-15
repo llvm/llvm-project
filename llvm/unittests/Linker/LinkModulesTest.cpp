@@ -71,7 +71,9 @@ protected:
   BasicBlock *ExitBB;
 };
 
-static void expectNoDiags(const DiagnosticInfo &DI) { EXPECT_TRUE(false); }
+static void expectNoDiags(const DiagnosticInfo &DI, void *C) {
+  EXPECT_TRUE(false);
+}
 
 TEST_F(LinkModuleTest, BlockAddress) {
   IRBuilder<> Builder(EntryBB);
@@ -95,7 +97,8 @@ TEST_F(LinkModuleTest, BlockAddress) {
   Builder.CreateRet(ConstantPointerNull::get(Type::getInt8PtrTy(Ctx)));
 
   Module *LinkedModule = new Module("MyModuleLinked", Ctx);
-  Linker::linkModules(*LinkedModule, *M, expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
+  Linker::linkModules(*LinkedModule, *M);
 
   // Delete the original module.
   M.reset();
@@ -171,13 +174,15 @@ static Module *getInternal(LLVMContext &Ctx) {
 TEST_F(LinkModuleTest, EmptyModule) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
-  Linker::linkModules(*EmptyM, *InternalM, expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
+  Linker::linkModules(*EmptyM, *InternalM);
 }
 
 TEST_F(LinkModuleTest, EmptyModule2) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
-  Linker::linkModules(*InternalM, *EmptyM, expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
+  Linker::linkModules(*InternalM, *EmptyM);
 }
 
 TEST_F(LinkModuleTest, TypeMerge) {
@@ -192,7 +197,8 @@ TEST_F(LinkModuleTest, TypeMerge) {
                       "@t2 = weak global %t zeroinitializer\n";
   std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, C);
 
-  Linker::linkModules(*M1, *M2, [](const llvm::DiagnosticInfo &) {});
+  Ctx.setDiagnosticHandler(expectNoDiags);
+  Linker::linkModules(*M1, *M2);
 
   EXPECT_EQ(M1->getNamedGlobal("t1")->getType(),
             M1->getNamedGlobal("t2")->getType());
@@ -269,7 +275,8 @@ TEST_F(LinkModuleTest, MoveDistinctMDs) {
   // Link into destination module.
   auto Dst = llvm::make_unique<Module>("Linked", C);
   ASSERT_TRUE(Dst.get());
-  Linker::linkModules(*Dst, *Src, [](const llvm::DiagnosticInfo &) {});
+  Ctx.setDiagnosticHandler(expectNoDiags);
+  Linker::linkModules(*Dst, *Src);
 
   // Check that distinct metadata was moved, not cloned.  Even !4, the uniqued
   // node, should effectively be moved, since its only operand hasn't changed.

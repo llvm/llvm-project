@@ -2176,17 +2176,19 @@ let Predicates = [HasAVX512] in {
             (EXTRACT_SUBREG
              (AND32ri (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)), (i32 1)),
               sub_16bit)>;
-  def : Pat<(v16i1 (scalar_to_vector VK1:$src)),
-            (COPY_TO_REGCLASS VK1:$src, VK16)>;
-  def : Pat<(v8i1 (scalar_to_vector VK1:$src)),
-            (COPY_TO_REGCLASS VK1:$src, VK8)>;
 }
-let Predicates = [HasBWI] in {
-  def : Pat<(v32i1 (scalar_to_vector VK1:$src)),
-            (COPY_TO_REGCLASS VK1:$src, VK32)>;
-  def : Pat<(v64i1 (scalar_to_vector VK1:$src)),
-            (COPY_TO_REGCLASS VK1:$src, VK64)>;
-}
+def : Pat<(v16i1 (scalar_to_vector VK1:$src)),
+          (COPY_TO_REGCLASS VK1:$src, VK16)>;
+def : Pat<(v8i1 (scalar_to_vector VK1:$src)),
+          (COPY_TO_REGCLASS VK1:$src, VK8)>;
+def : Pat<(v4i1 (scalar_to_vector VK1:$src)),
+          (COPY_TO_REGCLASS VK1:$src, VK4)>;
+def : Pat<(v2i1 (scalar_to_vector VK1:$src)),
+          (COPY_TO_REGCLASS VK1:$src, VK2)>;
+def : Pat<(v32i1 (scalar_to_vector VK1:$src)),
+          (COPY_TO_REGCLASS VK1:$src, VK32)>;
+def : Pat<(v64i1 (scalar_to_vector VK1:$src)),
+          (COPY_TO_REGCLASS VK1:$src, VK64)>;
 
 
 // With AVX-512 only, 8-bit mask is promoted to 16-bit mask.
@@ -2489,6 +2491,9 @@ def : Pat<(v8i1 (extract_subvector (v16i1 VK16:$src), (iPTR 8))),
 def : Pat<(v16i1 (extract_subvector (v32i1 VK32:$src), (iPTR 0))),
           (v16i1 (COPY_TO_REGCLASS VK32:$src, VK16))>;
 
+def : Pat<(v16i1 (extract_subvector (v32i1 VK32:$src), (iPTR 16))),
+          (v16i1 (COPY_TO_REGCLASS (KSHIFTRDri VK32:$src, (i8 16)), VK16))>;
+
 def : Pat<(v32i1 (extract_subvector (v64i1 VK64:$src), (iPTR 0))),
           (v32i1 (COPY_TO_REGCLASS VK64:$src, VK32))>;
 
@@ -2497,6 +2502,7 @@ def : Pat<(v32i1 (extract_subvector (v64i1 VK64:$src), (iPTR 32))),
 
 def : Pat<(v4i1 (extract_subvector (v8i1 VK8:$src), (iPTR 0))),
           (v4i1 (COPY_TO_REGCLASS VK8:$src, VK4))>;
+
 def : Pat<(v2i1 (extract_subvector (v8i1 VK8:$src), (iPTR 0))),
           (v2i1 (COPY_TO_REGCLASS VK8:$src, VK2))>;
 

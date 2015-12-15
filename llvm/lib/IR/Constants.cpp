@@ -1154,8 +1154,7 @@ ArrayRef<unsigned> ConstantExpr::getIndices() const {
 }
 
 unsigned ConstantExpr::getPredicate() const {
-  assert(isCompare());
-  return ((const CompareConstantExpr*)this)->predicate;
+  return cast<CompareConstantExpr>(this)->predicate;
 }
 
 /// getWithOperandReplaced - Return a constant expression identical to this
@@ -3021,7 +3020,7 @@ Instruction *ConstantExpr::getAsInstruction() {
   case Instruction::ICmp:
   case Instruction::FCmp:
     return CmpInst::Create((Instruction::OtherOps)getOpcode(),
-                           getPredicate(), Ops[0], Ops[1]);
+                           (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1]);
 
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");

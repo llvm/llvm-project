@@ -722,7 +722,7 @@ define i1 @test67(i1 %a, i32 %b) {
 ; CHECK: ret i1 false
 }
 
-%s = type { i32, i32, i32 }
+%s = type { i32, i32, i16 }
 
 define %s @test68(%s *%p, i64 %i) {
 ; CHECK-LABEL: @test68(

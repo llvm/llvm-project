@@ -570,7 +570,7 @@ define double @sqrt_intrinsic_arg_squared(double %x) #0 {
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_squared(
-; CHECK-NEXT: %fabs = call double @llvm.fabs.f64(double %x)
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %x)
 ; CHECK-NEXT: ret double %fabs
 }
 
@@ -584,8 +584,8 @@ define double @sqrt_intrinsic_three_args1(double %x, double %y) #0 {
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args1(
-; CHECK-NEXT: %fabs = call double @llvm.fabs.f64(double %x)
-; CHECK-NEXT: %sqrt1 = call double @llvm.sqrt.f64(double %y)
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %x)
+; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %y)
 ; CHECK-NEXT: %1 = fmul fast double %fabs, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
@@ -597,8 +597,8 @@ define double @sqrt_intrinsic_three_args2(double %x, double %y) #0 {
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args2(
-; CHECK-NEXT: %fabs = call double @llvm.fabs.f64(double %x)
-; CHECK-NEXT: %sqrt1 = call double @llvm.sqrt.f64(double %y)
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %x)
+; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %y)
 ; CHECK-NEXT: %1 = fmul fast double %fabs, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
@@ -610,8 +610,8 @@ define double @sqrt_intrinsic_three_args3(double %x, double %y) #0 {
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args3(
-; CHECK-NEXT: %fabs = call double @llvm.fabs.f64(double %x)
-; CHECK-NEXT: %sqrt1 = call double @llvm.sqrt.f64(double %y)
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %x)
+; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %y)
 ; CHECK-NEXT: %1 = fmul fast double %fabs, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
@@ -623,8 +623,8 @@ define double @sqrt_intrinsic_three_args4(double %x, double %y) #0 {
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args4(
-; CHECK-NEXT: %fabs = call double @llvm.fabs.f64(double %x)
-; CHECK-NEXT: %sqrt1 = call double @llvm.sqrt.f64(double %y)
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %x)
+; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %y)
 ; CHECK-NEXT: %1 = fmul fast double %fabs, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
@@ -636,8 +636,8 @@ define double @sqrt_intrinsic_three_args5(double %x, double %y) #0 {
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args5(
-; CHECK-NEXT: %fabs = call double @llvm.fabs.f64(double %x)
-; CHECK-NEXT: %sqrt1 = call double @llvm.sqrt.f64(double %y)
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %x)
+; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %y)
 ; CHECK-NEXT: %1 = fmul fast double %fabs, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
@@ -649,8 +649,8 @@ define double @sqrt_intrinsic_three_args6(double %x, double %y) #0 {
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args6(
-; CHECK-NEXT: %fabs = call double @llvm.fabs.f64(double %x)
-; CHECK-NEXT: %sqrt1 = call double @llvm.sqrt.f64(double %y)
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %x)
+; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %y)
 ; CHECK-NEXT: %1 = fmul fast double %fabs, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
@@ -675,7 +675,7 @@ define double @sqrt_intrinsic_arg_5th(double %x) #0 {
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_5th(
 ; CHECK-NEXT: %mul = fmul fast double %x, %x
-; CHECK-NEXT: %sqrt1 = call double @llvm.sqrt.f64(double %x)
+; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %x)
 ; CHECK-NEXT: %1 = fmul fast double %mul, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
@@ -692,7 +692,7 @@ define float @sqrt_call_squared_f32(float %x) #0 {
   ret float %sqrt
 
 ; CHECK-LABEL: sqrt_call_squared_f32(
-; CHECK-NEXT: %fabs = call float @llvm.fabs.f32(float %x)
+; CHECK-NEXT: %fabs = call fast float @llvm.fabs.f32(float %x)
 ; CHECK-NEXT: ret float %fabs
 }
 
@@ -702,7 +702,7 @@ define double @sqrt_call_squared_f64(double %x) #0 {
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_call_squared_f64(
-; CHECK-NEXT: %fabs = call double @llvm.fabs.f64(double %x)
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %x)
 ; CHECK-NEXT: ret double %fabs
 }
 
@@ -712,7 +712,7 @@ define fp128 @sqrt_call_squared_f128(fp128 %x) #0 {
   ret fp128 %sqrt
 
 ; CHECK-LABEL: sqrt_call_squared_f128(
-; CHECK-NEXT: %fabs = call fp128 @llvm.fabs.f128(fp128 %x)
+; CHECK-NEXT: %fabs = call fast fp128 @llvm.fabs.f128(fp128 %x)
 ; CHECK-NEXT: ret fp128 %fabs
 }
 

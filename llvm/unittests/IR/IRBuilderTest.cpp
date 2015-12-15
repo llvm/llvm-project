@@ -131,7 +131,7 @@ TEST_F(IRBuilderTest, GetIntTy) {
 TEST_F(IRBuilderTest, FastMathFlags) {
   IRBuilder<> Builder(BB);
   Value *F, *FC;
-  Instruction *FDiv, *FAdd, *FCmp;
+  Instruction *FDiv, *FAdd, *FCmp, *FCall;
 
   F = Builder.CreateLoad(GV);
   F = Builder.CreateFAdd(F, F);
@@ -205,6 +205,26 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   ASSERT_TRUE(isa<Instruction>(FC));
   FCmp = cast<Instruction>(FC);
   EXPECT_TRUE(FCmp->hasAllowReciprocal());
+
+  Builder.clearFastMathFlags();
+ 
+  // Test a call with FMF.
+  auto CalleeTy = FunctionType::get(Type::getFloatTy(Ctx),
+                                    /*isVarArg=*/false);
+  auto Callee =
+      Function::Create(CalleeTy, Function::ExternalLinkage, "", M.get());
+
+  FCall = Builder.CreateCall(Callee, None);
+  EXPECT_FALSE(FCall->hasNoNaNs());
+
+  FMF.clear();
+  FMF.setNoNaNs();
+  Builder.SetFastMathFlags(FMF);
+
+  FCall = Builder.CreateCall(Callee, None);
+  EXPECT_TRUE(Builder.getFastMathFlags().any());
+  EXPECT_TRUE(Builder.getFastMathFlags().NoNaNs);
+  EXPECT_TRUE(FCall->hasNoNaNs());
 
   Builder.clearFastMathFlags();
 

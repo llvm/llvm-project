@@ -85,8 +85,8 @@ static void PrintMask(unsigned i, std::ostream &OS) {
 
 /// ShuffleVal - This represents a shufflevector operation.
 struct ShuffleVal {
-  unsigned Cost;  // Number of instrs used to generate this value.
   Operator *Op;   // The Operation used to generate this value.
+  unsigned Cost;  // Number of instrs used to generate this value.
   unsigned short Arg0, Arg1;  // Input operands for this value.
 
   ShuffleVal() : Cost(1000000) {}
@@ -102,14 +102,14 @@ static std::vector<Operator*> TheOperators;
 
 /// Operator - This is a vector operation that is available for use.
 struct Operator {
+  const char *Name;
   unsigned short ShuffleMask;
   unsigned short OpNum;
-  const char *Name;
   unsigned Cost;
 
   Operator(unsigned short shufflemask, const char *name, unsigned opnum,
            unsigned cost = 1)
-    : ShuffleMask(shufflemask), OpNum(opnum), Name(name), Cost(cost) {
+    :  Name(name), ShuffleMask(shufflemask), OpNum(opnum),Cost(cost) {
     TheOperators.push_back(this);
   }
   ~Operator() {

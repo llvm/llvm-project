@@ -25,35 +25,35 @@
 let Defs = [ARGUMENTS] in {
 
 // Basic load.
-def LOAD_I32 : I<(outs I32:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD_I32 : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr), [],
                  "i32.load\t$dst, $off($addr)">;
-def LOAD_I64 : I<(outs I64:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr), [],
                  "i64.load\t$dst, $off($addr)">;
-def LOAD_F32 : I<(outs F32:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD_F32 : I<(outs F32:$dst), (ins i32imm:$off, I32:$addr), [],
                  "f32.load\t$dst, $off($addr)">;
-def LOAD_F64 : I<(outs F64:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD_F64 : I<(outs F64:$dst), (ins i32imm:$off, I32:$addr), [],
                  "f64.load\t$dst, $off($addr)">;
 
 // Extending load.
-def LOAD8_S_I32  : I<(outs I32:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD8_S_I32  : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i32.load8_s\t$dst, $off($addr)">;
-def LOAD8_U_I32  : I<(outs I32:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD8_U_I32  : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i32.load8_u\t$dst, $off($addr)">;
-def LOAD16_S_I32 : I<(outs I32:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD16_S_I32 : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i32.load16_s\t$dst, $off($addr)">;
-def LOAD16_U_I32 : I<(outs I32:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD16_U_I32 : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i32.load16_u\t$dst, $off($addr)">;
-def LOAD8_S_I64  : I<(outs I64:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD8_S_I64  : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i64.load8_s\t$dst, $off($addr)">;
-def LOAD8_U_I64  : I<(outs I64:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD8_U_I64  : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i64.load8_u\t$dst, $off($addr)">;
-def LOAD16_S_I64 : I<(outs I64:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD16_S_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i64.load16_s\t$dst, $off($addr)">;
-def LOAD16_U_I64 : I<(outs I64:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD16_U_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i64.load16_u\t$dst, $off($addr)">;
-def LOAD32_S_I64 : I<(outs I64:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD32_S_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i64.load32_s\t$dst, $off($addr)">;
-def LOAD32_U_I64 : I<(outs I64:$dst), (ins I32:$off, I32:$addr), [],
+def LOAD32_U_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr), [],
                      "i64.load32_u\t$dst, $off($addr)">;
 
 } // Defs = [ARGUMENTS]
@@ -91,13 +91,13 @@ let Defs = [ARGUMENTS] in {
 // instruction definition patterns that don't reference all of the output
 // operands.
 // Note: WebAssembly inverts SelectionDAG's usual operand order.
-def STORE_I32  : I<(outs I32:$dst), (ins I32:$off, I32:$addr, I32:$val), [],
+def STORE_I32  : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr, I32:$val), [],
                    "i32.store\t$dst, $off($addr), $val">;
-def STORE_I64  : I<(outs I64:$dst), (ins I32:$off, I32:$addr, I64:$val), [],
+def STORE_I64  : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr, I64:$val), [],
                    "i64.store\t$dst, $off($addr), $val">;
-def STORE_F32  : I<(outs F32:$dst), (ins I32:$off, I32:$addr, F32:$val), [],
+def STORE_F32  : I<(outs F32:$dst), (ins i32imm:$off, I32:$addr, F32:$val), [],
                    "f32.store\t$dst, $off($addr), $val">;
-def STORE_F64  : I<(outs F64:$dst), (ins I32:$off, I32:$addr, F64:$val), [],
+def STORE_F64  : I<(outs F64:$dst), (ins i32imm:$off, I32:$addr, F64:$val), [],
                    "f64.store\t$dst, $off($addr), $val">;
 
 } // Defs = [ARGUMENTS]
@@ -117,15 +117,15 @@ def : Pat<(store F64:$val, I32:$addr), (STORE_F64 0, I32:$addr, F64:$val)>;
 let Defs = [ARGUMENTS] in {
 
 // Truncating store.
-def STORE8_I32  : I<(outs I32:$dst), (ins I32:$off, I32:$addr, I32:$val), [],
+def STORE8_I32  : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr, I32:$val), [],
                     "i32.store8\t$dst, $off($addr), $val">;
-def STORE16_I32 : I<(outs I32:$dst), (ins I32:$off, I32:$addr, I32:$val), [],
+def STORE16_I32 : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr, I32:$val), [],
                     "i32.store16\t$dst, $off($addr), $val">;
-def STORE8_I64  : I<(outs I64:$dst), (ins I32:$off, I32:$addr, I64:$val), [],
+def STORE8_I64  : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr, I64:$val), [],
                     "i64.store8\t$dst, $off($addr), $val">;
-def STORE16_I64 : I<(outs I64:$dst), (ins I32:$off, I32:$addr, I64:$val), [],
+def STORE16_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr, I64:$val), [],
                     "i64.store16\t$dst, $off($addr), $val">;
-def STORE32_I64 : I<(outs I64:$dst), (ins I32:$off, I32:$addr, I64:$val), [],
+def STORE32_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr, I64:$val), [],
                     "i64.store32\t$dst, $off($addr), $val">;
 
 } // Defs = [ARGUMENTS]

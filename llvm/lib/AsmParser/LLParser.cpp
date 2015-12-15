@@ -5611,14 +5611,14 @@ bool LLParser::ParseLandingPad(Instruction *&Inst, PerFunctionState &PFS) {
 }
 
 /// ParseCall
-///   ::= 'call' OptionalCallingConv OptionalAttrs Type Value
-///       ParameterList OptionalAttrs
-///   ::= 'tail' 'call' OptionalCallingConv OptionalAttrs Type Value
-///       ParameterList OptionalAttrs
-///   ::= 'musttail' 'call' OptionalCallingConv OptionalAttrs Type Value
-///       ParameterList OptionalAttrs
-///   ::= 'notail' 'call'  OptionalCallingConv OptionalAttrs Type Value
-///       ParameterList OptionalAttrs
+///   ::= 'call' OptionalFastMathFlags OptionalCallingConv
+///           OptionalAttrs Type Value ParameterList OptionalAttrs
+///   ::= 'tail' 'call' OptionalFastMathFlags OptionalCallingConv
+///           OptionalAttrs Type Value ParameterList OptionalAttrs
+///   ::= 'musttail' 'call' OptionalFastMathFlags OptionalCallingConv
+///           OptionalAttrs Type Value ParameterList OptionalAttrs
+///   ::= 'notail' 'call'  OptionalFastMathFlags OptionalCallingConv
+///           OptionalAttrs Type Value ParameterList OptionalAttrs
 bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
                          CallInst::TailCallKind TCK) {
   AttrBuilder RetAttrs, FnAttrs;
@@ -5632,10 +5632,14 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
   SmallVector<OperandBundleDef, 2> BundleList;
   LocTy CallLoc = Lex.getLoc();
 
-  if ((TCK != CallInst::TCK_None &&
-       ParseToken(lltok::kw_call,
-                  "expected 'tail call', 'musttail call', or 'notail call'")) ||
-      ParseOptionalCallingConv(CC) || ParseOptionalReturnAttrs(RetAttrs) ||
+  if (TCK != CallInst::TCK_None &&
+      ParseToken(lltok::kw_call,
+                 "expected 'tail call', 'musttail call', or 'notail call'"))
+    return true;
+
+  FastMathFlags FMF = EatFastMathFlagsIfPresent();
+
+  if (ParseOptionalCallingConv(CC) || ParseOptionalReturnAttrs(RetAttrs) ||
       ParseType(RetType, RetTypeLoc, true /*void allowed*/) ||
       ParseValID(CalleeID) ||
       ParseParameterList(ArgList, PFS, TCK == CallInst::TCK_MustTail,
@@ -5643,6 +5647,10 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
       ParseFnAttributeValuePairs(FnAttrs, FwdRefAttrGrps, false, BuiltinLoc) ||
       ParseOptionalOperandBundles(BundleList, PFS))
     return true;
+
+  if (FMF.any() && !RetType->isFPOrFPVectorTy())
+    return Error(CallLoc, "fast-math-flags specified for call without "
+                          "floating-point scalar or vector return type");
 
   // If RetType is a non-function pointer type, then this is the short syntax
   // for the call, which means that RetType is just the return type.  Infer the
@@ -5716,6 +5724,8 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
   CallInst *CI = CallInst::Create(Ty, Callee, Args, BundleList);
   CI->setTailCallKind(TCK);
   CI->setCallingConv(CC);
+  if (FMF.any())
+    CI->setFastMathFlags(FMF);
   CI->setAttributes(PAL);
   ForwardRefAttrGroups[CI] = FwdRefAttrGrps;
   Inst = CI;

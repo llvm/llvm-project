@@ -17,6 +17,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/LLVMContext.h"
 using namespace llvm;
 
 namespace {
@@ -67,7 +68,7 @@ class ModuleLinker {
 
   /// Should we have mover and linker error diag info?
   bool emitError(const Twine &Message) {
-    Mover.getDiagnosticHandler()(LinkDiagnosticInfo(DS_Error, Message));
+    SrcM.getContext().diagnose(LinkDiagnosticInfo(DS_Error, Message));
     return true;
   }
 
@@ -786,8 +787,7 @@ bool ModuleLinker::run() {
   return false;
 }
 
-Linker::Linker(Module &M, DiagnosticHandlerFunction DiagnosticHandler)
-    : Mover(M, DiagnosticHandler) {}
+Linker::Linker(Module &M) : Mover(M) {}
 
 bool Linker::linkInModule(Module &Src, unsigned Flags,
                           const FunctionInfoIndex *Index,
@@ -805,20 +805,17 @@ bool Linker::linkInModule(Module &Src, unsigned Flags,
 /// true is returned and ErrorMsg (if not null) is set to indicate the problem.
 /// Upon failure, the Dest module could be in a modified state, and shouldn't be
 /// relied on to be consistent.
-bool Linker::linkModules(Module &Dest, Module &Src,
-                         DiagnosticHandlerFunction DiagnosticHandler,
-                         unsigned Flags) {
-  Linker L(Dest, DiagnosticHandler);
+bool Linker::linkModules(Module &Dest, Module &Src, unsigned Flags) {
+  Linker L(Dest);
   return L.linkInModule(Src, Flags);
 }
 
 std::unique_ptr<Module>
 llvm::renameModuleForThinLTO(std::unique_ptr<Module> &M,
-                             const FunctionInfoIndex *Index,
-                             DiagnosticHandlerFunction DiagnosticHandler) {
+                             const FunctionInfoIndex *Index) {
   std::unique_ptr<llvm::Module> RenamedModule(
       new llvm::Module(M->getModuleIdentifier(), M->getContext()));
-  Linker L(*RenamedModule.get(), DiagnosticHandler);
+  Linker L(*RenamedModule.get());
   if (L.linkInModule(*M.get(), llvm::Linker::Flags::None, Index))
     return nullptr;
   return RenamedModule;
@@ -828,19 +825,29 @@ llvm::renameModuleForThinLTO(std::unique_ptr<Module> &M,
 // C API.
 //===----------------------------------------------------------------------===//
 
+static void diagnosticHandler(const DiagnosticInfo &DI, void *C) {
+  auto *Message = reinterpret_cast<std::string *>(C);
+  raw_string_ostream Stream(*Message);
+  DiagnosticPrinterRawOStream DP(Stream);
+  DI.print(DP);
+}
+
 LLVMBool LLVMLinkModules(LLVMModuleRef Dest, LLVMModuleRef Src,
                          LLVMLinkerMode Unused, char **OutMessages) {
   Module *D = unwrap(Dest);
+  LLVMContext &Ctx = D->getContext();
+
+  LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
+      Ctx.getDiagnosticHandler();
+  void *OldDiagnosticContext = Ctx.getDiagnosticContext();
   std::string Message;
-  raw_string_ostream Stream(Message);
-  DiagnosticPrinterRawOStream DP(Stream);
+  Ctx.setDiagnosticHandler(diagnosticHandler, &Message, true);
 
-  LLVMBool Result = Linker::linkModules(
-      *D, *unwrap(Src), [&](const DiagnosticInfo &DI) { DI.print(DP); });
+  LLVMBool Result = Linker::linkModules(*D, *unwrap(Src));
 
-  if (OutMessages && Result) {
-    Stream.flush();
+  Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
+
+  if (OutMessages && Result)
     *OutMessages = strdup(Message.c_str());
-  }
   return Result;
 }
