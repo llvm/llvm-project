@@ -16,6 +16,7 @@
 #include <map>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 // Other libraries and framework includes
@@ -28,6 +29,7 @@
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 
@@ -125,6 +127,9 @@ public:
     ParseCompileUnitLineTable (const lldb_private::SymbolContext& sc) override;
 
     bool
+    ParseCompileUnitDebugMacros (const lldb_private::SymbolContext& sc) override;
+
+    bool
     ParseCompileUnitSupportFiles (const lldb_private::SymbolContext& sc,
                                   lldb_private::FileSpecList& support_files) override;
 
@@ -212,6 +217,11 @@ public:
                uint32_t max_matches,
                lldb_private::TypeMap& types) override;
 
+    size_t
+    FindTypes (const std::vector<lldb_private::CompilerContext> &context,
+               bool append,
+               lldb_private::TypeMap& types) override;
+
     lldb_private::TypeList *
     GetTypeList () override;
 
@@ -253,6 +263,7 @@ public:
     const lldb_private::DWARFDataExtractor&     get_debug_frame_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_info_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_line_data ();
+    const lldb_private::DWARFDataExtractor&     get_debug_macro_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_loc_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_ranges_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_str_data ();
@@ -308,6 +319,9 @@ public:
     bool
     Supports_DW_AT_APPLE_objc_complete_type (DWARFCompileUnit *cu);
 
+    lldb_private::DebugMacrosSP
+    ParseDebugMacros(lldb::offset_t *offset);
+
     static DWARFDIE
     GetParentSymbolContextDIE(const DWARFDIE &die);
 
@@ -316,6 +330,9 @@ public:
 
     virtual lldb_private::DWARFExpression::LocationListFormat
     GetLocationListFormat() const;
+
+    lldb::ModuleSP
+    GetDWOModule (lldb_private::ConstString name);
 
 protected:
     typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *> DIEToTypePtr;
@@ -494,12 +511,7 @@ protected:
 
     typedef std::set<lldb_private::Type *> TypeSet;
     
-    typedef struct {
-        lldb_private::ConstString   m_name;
-        lldb::ModuleSP              m_module_sp;
-    } ClangModuleInfo;
-    
-    typedef std::map<uint64_t, ClangModuleInfo> ExternalTypeModuleMap;
+    typedef std::map<lldb_private::ConstString, lldb::ModuleSP> ExternalTypeModuleMap;
 
     void
     GetTypes (const DWARFDIE &die,
@@ -519,9 +531,6 @@ protected:
     lldb_private::ClangASTImporter &
     GetClangASTImporter();
 
-    lldb::ModuleSP
-    GetExternalModule (uint64_t strp);
-    
     lldb_private::SwiftASTContext *
     GetSwiftASTContextForCU (lldb_private::Error *error, DWARFCompileUnit &cu);
     
@@ -553,6 +562,7 @@ protected:
     DWARFDataSegment                      m_data_debug_frame;
     DWARFDataSegment                      m_data_debug_info;
     DWARFDataSegment                      m_data_debug_line;
+    DWARFDataSegment                      m_data_debug_macro;
     DWARFDataSegment                      m_data_debug_loc;
     DWARFDataSegment                      m_data_debug_ranges;
     DWARFDataSegment                      m_data_debug_str;
@@ -575,6 +585,10 @@ protected:
     std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_objc_ap;
     std::unique_ptr<GlobalVariableMap>  m_global_aranges_ap;
     std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_ap;
+
+    typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP> DebugMacrosMap;
+    DebugMacrosMap m_debug_macros_map;
+
     ExternalTypeModuleMap               m_external_type_modules;
     NameToDIE                           m_function_basename_index;  // All concrete functions
     NameToDIE                           m_function_fullname_index;  // All concrete functions

@@ -241,6 +241,7 @@ ABISysV_mips::PrepareTrivialCall (Thread &thread,
     const RegisterInfo *pc_reg_info = reg_ctx->GetRegisterInfo (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
     const RegisterInfo *sp_reg_info = reg_ctx->GetRegisterInfo (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
     const RegisterInfo *ra_reg_info = reg_ctx->GetRegisterInfo (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
+    const RegisterInfo *r25_info = reg_ctx->GetRegisterInfoByName("r25", 0);
 
     if (log)
     log->Printf("Writing SP: 0x%" PRIx64, (uint64_t)sp);
@@ -262,7 +263,14 @@ ABISysV_mips::PrepareTrivialCall (Thread &thread,
     // Set pc to the address of the called function.
     if (!reg_ctx->WriteRegisterFromUnsigned (pc_reg_info, func_addr))
         return false;
-
+    
+    if (log)
+        log->Printf("Writing r25: 0x%" PRIx64, (uint64_t)func_addr);
+    
+    // All callers of position independent functions must place the address of the called function in t9 (r25)
+    if (!reg_ctx->WriteRegisterFromUnsigned (r25_info, func_addr))
+        return false;
+  
     return true;
 }
 
@@ -546,13 +554,36 @@ ABISysV_mips::RegisterIsCalleeSaved (const RegisterInfo *reg_info)
     {
         // Preserved registers are :
         // r16-r23, r28, r29, r30, r31
+        const char *name = reg_info->name;
 
-        int reg = ((reg_info->byte_offset) / 4);
+        if (name[0] == 'r')
+        {
+            switch (name[1])
+            {
+                case '1': 
+                    if (name[2] == '6' || name[2] == '7' || name[2] == '8' || name[2] == '9') // r16-r19
+                        return name[3] == '\0';
+                break;
+                case '2': 
+                    if (name[2] == '0' || name[2] == '1' || name[2] == '2' || name[2] == '3'  // r20-r23
+                        || name[2] == '8' || name[2] == '9')                                  // r28 and r29
+                        return name[3] == '\0';
+                break;
+                case '3': 
+                    if (name[2] == '0' || name[2] == '1')       // r30 and r31
+                        return name[3] == '\0';
+                break;
+            }
 
-        bool save  = (reg >= 16) && (reg <= 23);
-             save |= (reg >= 28) && (reg <= 31);
-
-        return save;
+            if (name[0] == 'g' && name[1] == 'p' && name[2] == '\0')   // gp (r28)
+                return true;
+            if (name[0] == 's' && name[1] == 'p' && name[2] == '\0')   // sp (r29)
+                return true;
+            if (name[0] == 'f' && name[1] == 'p' && name[2] == '\0')   // fp (r30)
+                return true;
+            if (name[0] == 'r' && name[1] == 'a' && name[2] == '\0')   // ra (r31)
+                return true;
+        }
     }
     return false;
 }

@@ -13,7 +13,9 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Scalar.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/ValueObject.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "Utility/UriParser.h"
@@ -373,4 +375,15 @@ PlatformAndroid::GetRemoteOSVersion ()
     m_minor_os_version = 0;
     m_update_os_version = 0;
     return m_major_os_version != 0;
+}
+
+const char*
+PlatformAndroid::GetLibdlFunctionDeclarations() const
+{
+    return R"(
+              extern "C" void* dlopen(const char*, int) asm("__dl_dlopen");
+              extern "C" void* dlsym(void*, const char*) asm("__dl_dlsym");
+              extern "C" int   dlclose(void*) asm("__dl_dlclose");
+              extern "C" char* dlerror(void) asm("__dl_dlerror");
+             )";
 }

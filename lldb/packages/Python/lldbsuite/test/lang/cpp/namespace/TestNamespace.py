@@ -26,6 +26,16 @@ class NamespaceTestCase(TestBase):
         # And the line number to break at.
         self.line_break = line_number('main.cpp',
                 '// Set break point at this line.')
+        # Break inside do {} while and evaluate value
+        self.line_break_ns1 = line_number('main.cpp', '// Evaluate ns1::value')
+        self.line_break_ns2 = line_number('main.cpp', '// Evaluate ns2::value')
+
+    def runToBkpt(self, command):
+        self.runCmd(command, RUN_SUCCEEDED)
+        # The stop reason of the thread should be breakpoint.
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'stop reason = breakpoint'])
 
     # rdar://problem/8668674
     @expectedFailureWindows("llvm.org/pr24764")
@@ -34,15 +44,19 @@ class NamespaceTestCase(TestBase):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
+        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line_break_ns1, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line_break_ns2, num_expected_locations=1, loc_exact=True)
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line_break, num_expected_locations=1, loc_exact=True)
 
-        self.runCmd("run", RUN_SUCCEEDED)
+        self.runToBkpt("run")
+        # Evaluate ns1::value
+        self.expect("expression -- value", startstr = "(int) $0 = 100")
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
-
+        self.runToBkpt("continue")
+        # Evaluate ns2::value
+        self.expect("expression -- value", startstr = "(int) $1 = 200")
+        
+        self.runToBkpt("continue")
         # On Mac OS X, gcc 4.2 emits the wrong debug info with respect to types.
         slist = ['(int) a = 12', 'anon_uint', 'a_uint', 'b_uint', 'y_uint']
         if self.platformIsDarwin() and self.getCompiler() in ['clang', 'llvm-gcc']:
@@ -83,8 +97,8 @@ class NamespaceTestCase(TestBase):
         # test/namespace: 'expression -- i+j' not working
         # This has been fixed.
         self.expect("expression -- i + j",
-            startstr = "(int) $0 = 7")
-        # (int) $0 = 7
+            startstr = "(int) $2 = 7")
+        # (int) $2 = 7
 
         self.runCmd("expression -- i")
         self.runCmd("expression -- j")

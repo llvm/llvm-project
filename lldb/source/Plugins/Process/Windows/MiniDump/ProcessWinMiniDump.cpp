@@ -14,24 +14,26 @@
 
 #include <assert.h>
 #include <stdlib.h>
-
+#include <memory>
 #include <mutex>
 
-#include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/Section.h"
-#include "lldb/Core/State.h"
+#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Log.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
+#include "lldb/Core/State.h"
+#include "lldb/Target/DynamicLoader.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBAssert.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 
 #include "ExceptionRecord.h"
 #include "ThreadWinMiniDump.h"
@@ -189,7 +191,13 @@ ProcessWinMiniDump::UpdateThreadList(ThreadList &old_thread_list, ThreadList &ne
     {
         const ULONG32 thread_count = thread_list_ptr->NumberOfThreads;
         for (ULONG32 i = 0; i < thread_count; ++i) {
-            std::shared_ptr<ThreadWinMiniDump> thread_sp(new ThreadWinMiniDump(*this, thread_list_ptr->Threads[i].ThreadId));
+            const auto &mini_dump_thread = thread_list_ptr->Threads[i];
+            auto thread_sp = std::make_shared<ThreadWinMiniDump>(*this, mini_dump_thread.ThreadId);
+            if (mini_dump_thread.ThreadContext.DataSize >= sizeof(CONTEXT))
+            {
+                const CONTEXT *context = reinterpret_cast<const CONTEXT *>(static_cast<const char *>(m_data_up->m_base_addr) + mini_dump_thread.ThreadContext.Rva);
+                thread_sp->SetContext(context);
+            }
             new_thread_list.AddThread(thread_sp);
         }
     }
@@ -260,10 +268,57 @@ ProcessWinMiniDump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size, Erro
     // There's at least some overlap between the beginning of the desired range
     // (addr) and the current range.  Figure out where the overlap begins and
     // how much overlap there is, then copy it to the destination buffer.
-    const size_t offset = range.start - addr;
+    lldbassert(range.start <= addr);
+    const size_t offset = addr - range.start;
+    lldbassert(offset < range.size);
     const size_t overlap = std::min(size, range.size - offset);
     std::memcpy(buf, range.ptr + offset, overlap);
     return overlap;
+}
+
+Error
+ProcessWinMiniDump::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &info)
+{
+    Error error;
+    size_t size;
+    const auto list = reinterpret_cast<const MINIDUMP_MEMORY_INFO_LIST *>(FindDumpStream(MemoryInfoListStream, &size));
+    if (list == nullptr || size < sizeof(MINIDUMP_MEMORY_INFO_LIST))
+    {
+        error.SetErrorString("the mini dump contains no memory range information");
+        return error;
+    }
+
+    if (list->SizeOfEntry < sizeof(MINIDUMP_MEMORY_INFO))
+    {
+        error.SetErrorString("the entries in the mini dump memory info list are smaller than expected");
+        return error;
+    }
+
+    if (size < list->SizeOfHeader + list->SizeOfEntry * list->NumberOfEntries)
+    {
+        error.SetErrorString("the mini dump memory info list is incomplete");
+        return error;
+    }
+
+    for (int i = 0; i < list->NumberOfEntries; ++i)
+    {
+        const auto entry = reinterpret_cast<const MINIDUMP_MEMORY_INFO *>(reinterpret_cast<const char *>(list) +
+                                                                          list->SizeOfHeader + i * list->SizeOfEntry);
+        const auto head = entry->BaseAddress;
+        const auto tail = head + entry->RegionSize;
+        if (head <= load_addr && load_addr < tail)
+        {
+            info.SetReadable(IsPageReadable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+            info.SetWritable(IsPageWritable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+            info.SetExecutable(IsPageExecutable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+            return error;
+        }
+    }
+    // Note that the memory info list doesn't seem to contain ranges in kernel space,
+    // so if you're walking a stack that has kernel frames, the stack may appear
+    // truncated.
+    error.SetErrorString("address is not in a known range");
+    return error;
 }
 
 void

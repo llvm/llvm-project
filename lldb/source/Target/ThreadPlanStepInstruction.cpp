@@ -7,13 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#include "lldb/Target/ThreadPlanStepInstruction.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Target/Process.h"
@@ -46,9 +44,7 @@ ThreadPlanStepInstruction::ThreadPlanStepInstruction
     SetUpState();
 }
 
-ThreadPlanStepInstruction::~ThreadPlanStepInstruction ()
-{
-}
+ThreadPlanStepInstruction::~ThreadPlanStepInstruction() = default;
 
 void
 ThreadPlanStepInstruction::SetUpState()
@@ -57,7 +53,7 @@ ThreadPlanStepInstruction::SetUpState()
     StackFrameSP start_frame_sp(m_thread.GetStackFrameAtIndex(0));
     m_stack_id = start_frame_sp->GetStackID();
     
-    m_start_has_symbol = start_frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol != NULL;
+    m_start_has_symbol = start_frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol != nullptr;
     
     StackFrameSP parent_frame_sp = m_thread.GetStackFrameAtIndex(1);
     if (parent_frame_sp)
@@ -103,10 +99,7 @@ ThreadPlanStepInstruction::DoPlanExplainsStop (Event *event_ptr)
     if (stop_info_sp)
     {
         StopReason reason = stop_info_sp->GetStopReason();
-        if (reason == eStopReasonTrace || reason == eStopReasonNone)
-            return true;
-        else
-            return false;
+        return (reason == eStopReasonTrace || reason == eStopReasonNone);
     }
     return false;
 }
@@ -118,19 +111,13 @@ ThreadPlanStepInstruction::IsPlanStale ()
     StackID cur_frame_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
     if (cur_frame_id == m_stack_id)
     {
-        if (m_thread.GetRegisterContext()->GetPC(0) != m_instruction_addr)
-            return true;
-        else
-            return false;
+        return (m_thread.GetRegisterContext()->GetPC(0) != m_instruction_addr);
     }
     else if (cur_frame_id < m_stack_id)
     {
         // If the current frame is younger than the start frame and we are stepping over, then we need to continue,
         // but if we are doing just one step, we're done.
-        if (m_step_over)
-            return false;
-        else
-            return true;
+        return !m_step_over;
     }
     else
     {
@@ -222,7 +209,7 @@ ThreadPlanStepInstruction::ShouldStop (Event *event_ptr)
                     // run others.
                     const bool stop_others = false;
                     m_thread.QueueThreadPlanForStepOutNoShouldStop(false,
-                                                                   NULL,
+                                                                   nullptr,
                                                                    true,
                                                                    stop_others,
                                                                    eVoteNo,
@@ -248,9 +235,7 @@ ThreadPlanStepInstruction::ShouldStop (Event *event_ptr)
                 SetPlanComplete();
                 return true;
             }
-
         }
-
     }
     else
     {
@@ -308,4 +293,3 @@ ThreadPlanStepInstruction::MischiefManaged ()
         return false;
     }
 }
-

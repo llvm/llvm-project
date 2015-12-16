@@ -3383,6 +3383,43 @@ GDBRemoteCommunicationClient::LaunchGDBServer (const char *remote_accept_hostnam
     return false;
 }
 
+size_t
+GDBRemoteCommunicationClient::QueryGDBServer (std::vector<std::pair<uint16_t, std::string>>& connection_urls)
+{
+    connection_urls.clear();
+
+    StringExtractorGDBRemote response;
+    if (SendPacketAndWaitForResponse("qQueryGDBServer", response, false) != PacketResult::Success)
+        return 0;
+
+    StructuredData::ObjectSP data = StructuredData::ParseJSON(response.GetStringRef());
+    if (!data)
+        return 0;
+
+    StructuredData::Array* array = data->GetAsArray();
+    if (!array)
+        return 0;
+
+    for (size_t i = 0, count = array->GetSize(); i < count; ++i)
+    {
+        StructuredData::Dictionary* element = nullptr;
+        if (!array->GetItemAtIndexAsDictionary(i, element))
+            continue;
+
+        uint16_t port = 0;
+        if (StructuredData::ObjectSP port_osp = element->GetValueForKey(llvm::StringRef("port")))
+            port = port_osp->GetIntegerValue(0);
+
+        std::string socket_name;
+        if (StructuredData::ObjectSP socket_name_osp = element->GetValueForKey(llvm::StringRef("socket_name")))
+            socket_name = socket_name_osp->GetStringValue();
+
+        if (port != 0 || !socket_name.empty())
+            connection_urls.emplace_back(port, socket_name);
+    }
+    return connection_urls.size();
+}
+
 bool
 GDBRemoteCommunicationClient::KillSpawnedProcess (lldb::pid_t pid)
 {

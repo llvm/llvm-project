@@ -14,6 +14,7 @@
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/UserID.h"
+#include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Declaration.h"
 
@@ -22,6 +23,31 @@
 #include <set>
 
 namespace lldb_private {
+
+//----------------------------------------------------------------------
+// CompilerContext allows an array of these items to be passed to
+// perform detailed lookups in SymbolVendor and SymbolFile functions.
+//----------------------------------------------------------------------
+struct CompilerContext
+{
+    CompilerContext (CompilerContextKind t, const ConstString &n) :
+        type(t),
+        name(n)
+    {
+    }
+
+    bool
+    operator == (const CompilerContext &rhs) const
+    {
+        return type == rhs.type && name == rhs.name;
+    }
+
+    void
+    Dump () const;
+
+    CompilerContextKind type;
+    ConstString name;
+};
 
 class SymbolFileType :
     public std::enable_shared_from_this<SymbolFileType>,
@@ -34,7 +60,7 @@ class SymbolFileType :
         {
         }
 
-        SymbolFileType (SymbolFile &symbol_file, lldb::TypeSP type_sp);
+        SymbolFileType (SymbolFile &symbol_file, const lldb::TypeSP &type_sp);
 
         ~SymbolFileType ()
         {
@@ -828,50 +854,33 @@ class TypeMemberFunctionImpl
 {
 public:
     TypeMemberFunctionImpl() :
-        m_type(),
-        m_objc_method_decl(nullptr),
+        m_type (),
+        m_decl (),
         m_name(),
-        m_kind(lldb::eMemberFunctionKindUnknown)
+        m_kind (lldb::eMemberFunctionKindUnknown)
     {
     }
     
     TypeMemberFunctionImpl (const CompilerType& type,
+                            const CompilerDecl& decl,
                             const std::string& name,
                             const lldb::MemberFunctionKind& kind) :
-        m_type(type),
-        m_objc_method_decl(nullptr),
+        m_type (type),
+        m_decl (decl),
         m_name(name),
-        m_kind(kind)
+        m_kind (kind)
     {
     }
-    
-    TypeMemberFunctionImpl (clang::ObjCMethodDecl *method,
-                            const std::string& name,
-                            const lldb::MemberFunctionKind& kind) :
-    m_type(),
-    m_objc_method_decl(method),
-    m_name(name),
-    m_kind(kind)
-    {
-    }
-    
-    TypeMemberFunctionImpl (const TypeMemberFunctionImpl& rhs) :
-        m_type(rhs.m_type),
-        m_objc_method_decl(rhs.m_objc_method_decl),
-        m_name(rhs.m_name),
-        m_kind(rhs.m_kind)
-    {
-    }
-    
-    TypeMemberFunctionImpl&
-    operator = (const TypeMemberFunctionImpl& rhs);
     
     bool
     IsValid ();
     
     ConstString
     GetName () const;
-    
+
+    ConstString
+    GetMangledName () const;
+
     CompilerType
     GetType () const;
     
@@ -896,7 +905,7 @@ protected:
 
 private:
     CompilerType m_type;
-    clang::ObjCMethodDecl *m_objc_method_decl;
+    CompilerDecl m_decl;
     ConstString m_name;
     lldb::MemberFunctionKind m_kind;
 };

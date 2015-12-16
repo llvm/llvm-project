@@ -268,6 +268,37 @@ CompileUnit::SetLineTable(LineTable* line_table)
     m_line_table_ap.reset(line_table);
 }
 
+DebugMacros*
+CompileUnit::GetDebugMacros()
+{
+    if (m_debug_macros_sp.get() == nullptr)
+    {
+        if (m_flags.IsClear(flagsParsedDebugMacros))
+        {
+            m_flags.Set(flagsParsedDebugMacros);
+            SymbolVendor* symbol_vendor = GetModule()->GetSymbolVendor();
+            if (symbol_vendor)
+            {
+                SymbolContext sc;
+                CalculateSymbolContext(&sc);
+                symbol_vendor->ParseCompileUnitDebugMacros(sc);
+            }
+        }
+    }
+
+    return m_debug_macros_sp.get();
+}
+
+void
+CompileUnit::SetDebugMacros(const DebugMacrosSP &debug_macros_sp)
+{
+    if (debug_macros_sp.get() == nullptr)
+        m_flags.Clear(flagsParsedDebugMacros);
+    else
+        m_flags.Set(flagsParsedDebugMacros);
+    m_debug_macros_sp = debug_macros_sp;
+}
+
 VariableListSP
 CompileUnit::GetVariableList(bool can_create)
 {

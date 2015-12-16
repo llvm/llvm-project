@@ -44,6 +44,11 @@ else:
 # print "output_name is '" + output_name + "'"
 
 #
+# Version string
+# 
+version_line = "swig_version = %s"
+
+#
 # Residues to be removed.
 #
 c_endif_swig = "#endif"
@@ -308,6 +313,9 @@ new_content = NewContent()
 with open(output_name, 'r') as f_in:
     content = f_in.read()
 
+# The pattern for recognizing the SWIG Version string
+version_pattern = re.compile("^# Version:? (.*)$")
+
 # The pattern for recognizing the beginning of an SB class definition.
 class_pattern = re.compile("^class (SB.*)\(_object\):$")
 
@@ -318,10 +326,11 @@ init_pattern = re.compile("^    def __init__\(self.*\):")
 isvalid_pattern = re.compile("^    def IsValid\(")
 
 # These define the states of our finite state machine.
-NORMAL = 0
-DEFINING_ITERATOR = 1
-DEFINING_EQUALITY = 2
-CLEANUP_DOCSTRING = 4
+EXPECTING_VERSION = 0
+NORMAL = 1
+DEFINING_ITERATOR = 2
+DEFINING_EQUALITY = 4
+CLEANUP_DOCSTRING = 8
 
 # The lldb_iter_def only needs to be inserted once.
 lldb_iter_defined = False;
@@ -343,13 +352,16 @@ lldb_iter_defined = False;
 # The FSM, in all possible states, also checks the current input for IsValid()
 # definition, and inserts a __nonzero__() method definition to implement truth
 # value testing and the built-in operation bool().
-state = NORMAL
+state = EXPECTING_VERSION
+
+swig_version_tuple = None
 for line in content.splitlines():
     # Handle the state transition into CLEANUP_DOCSTRING state as it is possible
     # to enter this state from either NORMAL or DEFINING_ITERATOR/EQUALITY.
     #
     # If '        """' is the sole line, prepare to transition to the
     # CLEANUP_DOCSTRING state or out of it.
+    
     if line == toggle_docstring_cleanup_line:
         if state & CLEANUP_DOCSTRING:
             # Special handling of the trailing blank line right before the '"""'
@@ -358,6 +370,19 @@ for line in content.splitlines():
             state ^= CLEANUP_DOCSTRING
         else:
             state |= CLEANUP_DOCSTRING
+
+    if state == EXPECTING_VERSION:
+        # We haven't read the version yet, read it now.
+        if swig_version_tuple is None:
+            match = version_pattern.search(line)
+            if match:
+                v = match.group(1)
+                swig_version_tuple = tuple(map(int, (v.split("."))))
+        elif not line.startswith('#'):
+            # This is the first non-comment line after the header.  Inject the version
+            new_line = version_line % str(swig_version_tuple)
+            new_content.add_line(new_line)
+            state = NORMAL
 
     if state == NORMAL:
         match = class_pattern.search(line)

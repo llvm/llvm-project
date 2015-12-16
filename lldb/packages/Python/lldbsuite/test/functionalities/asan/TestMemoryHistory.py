@@ -15,17 +15,13 @@ class AsanTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # The default compiler ("clang") may not support Address Sanitizer or it
-    # may not have the debugging API which was recently added, so we're calling
-    # self.useBuiltClang() to use clang from the llvm-build directory instead
-
     @expectedFailureLinux # non-core functionality, need to reenable and fix later (DES 2014.11.07)
     @skipIfFreeBSD # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessCompilerRt
+    @expectedFailureDarwin
     def test (self):
-        compiler = self.findBuiltClang ()
-        self.build (None, compiler)
+        self.build ()
         self.asan_tests ()
 
     def setUp(self):
@@ -51,7 +47,7 @@ class AsanTestCase(TestBase):
 
         # ASan will relaunch the process to insert its library.
         self.expect("thread list", "Process should be stopped due to exec.",
-            substrs = ['stopped', 'stop reason = exec'])
+            substrs = ['stopped', 'stop reason = '])
 
         self.runCmd("continue")
 

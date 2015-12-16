@@ -217,6 +217,16 @@ public:
     const lldb::UnixSignalsSP &
     GetRemoteUnixSignals() override;
 
+    lldb::ProcessSP
+    ConnectProcess (const char* connect_url,
+                    const char* plugin_name,
+                    lldb_private::Debugger &debugger,
+                    lldb_private::Target *target,
+                    lldb_private::Error &error) override;
+
+    virtual size_t
+    GetPendingGdbServerList(std::vector<std::string>& connection_urls);
+
 protected:
     process_gdb_remote::GDBRemoteCommunicationClient m_gdb_client;
     std::string m_platform_description; // After we connect we can get a more complete description of what we are connected to

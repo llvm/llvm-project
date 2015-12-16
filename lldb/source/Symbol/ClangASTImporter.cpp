@@ -481,7 +481,7 @@ ClangASTImporter::CompleteAndFetchChildren (clang::QualType type)
         {
             record_decl->setHasLoadedFieldsFromExternalStorage(true);
         }
-        
+
         return true;
     }
 
@@ -510,9 +510,10 @@ ClangASTImporter::CompleteAndFetchChildren (clang::QualType type)
             return false;
         }
     }
-
+    
     return true;
 }
+
 
 bool
 ClangASTImporter::RequireCompleteType (clang::QualType type)
@@ -879,10 +880,14 @@ ClangASTImporter::Minion::Imported (clang::Decl *from, clang::Decl *to)
             {
                 if (isa<TagDecl>(to) || isa<ObjCInterfaceDecl>(to))
                 {
-                    NamedDecl *to_named_decl = dyn_cast<NamedDecl>(to);
+                    RecordDecl *from_record_decl = dyn_cast<RecordDecl>(from);
+                    if (from_record_decl == nullptr || from_record_decl->isInjectedClassName() == false)
+                    {
+                        NamedDecl *to_named_decl = dyn_cast<NamedDecl>(to);
 
-                    if (!m_decls_already_deported->count(to_named_decl))
-                        m_decls_to_deport->insert(to_named_decl);
+                        if (!m_decls_already_deported->count(to_named_decl))
+                            m_decls_to_deport->insert(to_named_decl);
+                    }
                 }
             }
             

@@ -16,6 +16,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 
@@ -216,6 +217,24 @@ SBFunction::GetEndAddress ()
     return addr;
 }
 
+const char *
+SBFunction::GetArgumentName (uint32_t arg_idx)
+{
+    if (m_opaque_ptr)
+    {
+        Block &block = m_opaque_ptr->GetBlock(true);
+        VariableListSP variable_list_sp = block.GetBlockVariableList(true);
+        if (variable_list_sp)
+        {
+            VariableList arguments;
+            variable_list_sp->AppendVariablesWithScope (eValueTypeVariableArgument, arguments, true);
+            lldb::VariableSP variable_sp = arguments.GetVariableAtIndex(arg_idx);
+            if (variable_sp)
+                return variable_sp->GetName().GetCString();
+        }
+    }
+    return nullptr;
+}
 
 uint32_t
 SBFunction::GetPrologueByteSize ()

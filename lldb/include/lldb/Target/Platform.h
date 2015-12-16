@@ -487,6 +487,13 @@ class ModuleCache;
                       Target *target,       // Can be nullptr, if nullptr create a new target, else use existing one
                       Error &error);
 
+        virtual lldb::ProcessSP
+        ConnectProcess (const char* connect_url,
+                        const char* plugin_name,
+                        lldb_private::Debugger &debugger,
+                        lldb_private::Target *target,
+                        lldb_private::Error &error);
+
         //------------------------------------------------------------------
         /// Attach to an existing process using a process ID.
         ///
@@ -987,9 +994,75 @@ class ModuleCache;
         virtual uint32_t
         GetDefaultMemoryCacheLineSize() { return 0; }
 
+        //------------------------------------------------------------------
+        /// Load a shared library into this process.
+        ///
+        /// Try and load a shared library into the current process. This
+        /// call might fail in the dynamic loader plug-in says it isn't safe
+        /// to try and load shared libraries at the moment.
+        ///
+        /// @param[in] process
+        ///     The process to load the image.
+        ///
+        /// @param[in] local_file
+        ///     The file spec that points to the shared library that you want
+        ///     to load if the library is located on the host. The library will
+        ///     be copied over to the location specified by remote_file or into
+        ///     the current working directory with the same filename if the
+        ///     remote_file isn't specified.
+        ///
+        /// @param[in] remote_file
+        ///     If local_file is specified then the location where the library
+        ///     should be copied over from the host. If local_file isn't
+        ///     specified, then the path for the shared library on the target
+        ///     what you want to load.
+        ///
+        /// @param[out] error
+        ///     An error object that gets filled in with any errors that
+        ///     might occur when trying to load the shared library.
+        ///
+        /// @return
+        ///     A token that represents the shared library that can be
+        ///     later used to unload the shared library. A value of
+        ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+        ///     library can't be opened.
+        //------------------------------------------------------------------
+        uint32_t
+        LoadImage (lldb_private::Process* process,
+                   const lldb_private::FileSpec& local_file,
+                   const lldb_private::FileSpec& remote_file,
+                   lldb_private::Error& error);
+
+        virtual uint32_t
+        DoLoadImage (lldb_private::Process* process,
+                     const lldb_private::FileSpec& remote_file,
+                     lldb_private::Error& error);
+
+        virtual Error
+        UnloadImage (lldb_private::Process* process, uint32_t image_token);
+
+        //------------------------------------------------------------------
+        /// Connect to all processes waiting for a debugger to attach
+        ///
+        /// If the platform have a list of processes waiting for a debugger
+        /// to connect to them then connect to all of these pending processes.
+        ///
+        /// @param[in] debugger
+        ///     The debugger used for the connect.
+        ///
+        /// @param[out] error
+        ///     If an error occurred during the connect then this object will
+        ///     contain the error message.
+        ///
+        /// @return
+        ///     The number of processes we are succesfully connected to.
+        //------------------------------------------------------------------
+        virtual size_t
+        ConnectToWaitingProcesses(lldb_private::Debugger& debugger, lldb_private::Error& error);
+
     protected:
         bool m_is_host;
-        // Set to true when we are able to actually set the OS version while 
+        // Set to true when we are able to actually set the OS version while
         // being connected. For remote platforms, we might set the version ahead
         // of time before we actually connect and this version might change when
         // we actually connect to a remote platform. For the host platform this

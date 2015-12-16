@@ -162,9 +162,9 @@ ClangExternalASTSourceCallbacks::layoutRecordType(
 }
 
 void
-ClangExternalASTSourceCallbacks::FindExternalLexicalDecls(const clang::DeclContext *decl_ctx,
-                         llvm::function_ref<bool(clang::Decl::Kind)> isKindWeWant,
-                         llvm::SmallVectorImpl<clang::Decl *> &decls)
+ClangExternalASTSourceCallbacks::FindExternalLexicalDecls (const clang::DeclContext *decl_ctx,
+                                                           llvm::function_ref<bool(clang::Decl::Kind)> IsKindWeWant,
+                                                           llvm::SmallVectorImpl<clang::Decl *> &decls)
 {
     if (m_callback_tag_decl && decl_ctx)
     {

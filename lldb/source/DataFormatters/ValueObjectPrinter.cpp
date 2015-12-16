@@ -469,14 +469,14 @@ ValueObjectPrinter::PrintValueAndSummaryIfNeeded (bool& value_printed,
         {
             // we need to support scenarios in which it is actually fine for a value to have no type
             // but - on the other hand - if we get an error *AND* have no type, we try to get out
-            // gracefully, since most often that combination means "could not resolve a Swift type"
+            // gracefully, since most often that combination means "could not resolve a type"
             // and the default failure mode is quite ugly
             if (!m_compiler_type.IsValid())
             {
                 m_stream->Printf(" <could not resolve type>");
                 return false;
             }
-
+            
             error_printed = true;
             m_stream->Printf (" <%s>\n", m_error.c_str());
         }
@@ -588,7 +588,7 @@ ValueObjectPrinter::ShouldPrintChildren (bool is_failed_description,
         return false;
     
     TypeSummaryImpl* entry = GetSummaryFormatter();
-
+   
     if (m_options.m_use_objc)
         return false;
     
@@ -634,10 +634,10 @@ bool
 ValueObjectPrinter::ShouldExpandEmptyAggregates ()
 {
     TypeSummaryImpl* entry = GetSummaryFormatter();
-
+    
     if (!entry)
         return true;
-
+    
     return entry->DoesPrintEmptyAggregates();
 }
 
@@ -733,7 +733,7 @@ ValueObjectPrinter::ShouldPrintEmptyBrackets (bool value_printed,
         if (value_printed || summary_printed)
             return false;
     }
-
+   
     if (synth_m_valobj->MightHaveChildren())
         return true;
     
@@ -839,7 +839,7 @@ ValueObjectPrinter::PrintChildrenOneLiner (bool hide_names)
                 }
                 child_sp->DumpPrintableRepresentation(*m_stream,
                                                       ValueObject::eValueObjectRepresentationStyleSummary,
-                                                      lldb::eFormatInvalid,
+                                                      m_options.m_format,
                                                       ValueObject::ePrintableRepresentationSpecialCasesDisable);
             }
         }
@@ -898,7 +898,7 @@ ValueObjectPrinter::PrintChildrenIfNeeded (bool value_printed,
     }
     else if (m_curr_depth >= m_options.m_max_depth && IsAggregate() && ShouldPrintValueObject())
     {
-            m_stream->PutCString("{...}\n");
+        m_stream->PutCString("{...}\n");
     }
     else
         m_stream->EOL();

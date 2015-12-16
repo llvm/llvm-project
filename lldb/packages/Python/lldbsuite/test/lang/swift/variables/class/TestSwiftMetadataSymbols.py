@@ -21,11 +21,10 @@ class TestSwiftMetadataSymbols(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @dwarf_test
     @swiftTest
-    def test_with_dwarf_and_run_command(self):
+    def test_swift_metadata_symbols(self):
         """Test swift Class types"""
-        self.buildDwarf()
+        self.build()
         self.do_test()
 
     def setUp(self):

@@ -19,6 +19,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -107,6 +108,20 @@ PlatformRemoteAppleTV::Terminate ()
 PlatformSP
 PlatformRemoteAppleTV::CreateInstance (bool force, const ArchSpec *arch)
 {
+    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
+    if (log)
+    {
+        const char *arch_name;
+        if (arch && arch->GetArchitectureName ())
+            arch_name = arch->GetArchitectureName ();
+        else
+            arch_name = "<null>";
+
+        const char *triple_cstr = arch ? arch->GetTriple ().getTriple ().c_str() : "<null>";
+
+        log->Printf ("PlatformRemoteAppleTV::%s(force=%s, arch={%s,%s})", __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
+    }
+
     bool create = force;
     if (!create && arch && arch->IsValid())
     {
@@ -164,7 +179,16 @@ PlatformRemoteAppleTV::CreateInstance (bool force, const ArchSpec *arch)
     }
 
     if (create)
+    {
+        if (log)
+            log->Printf ("PlatformRemoteAppleTV::%s() creating platform", __FUNCTION__);
+
         return lldb::PlatformSP(new PlatformRemoteAppleTV ());
+    }
+
+    if (log)
+        log->Printf ("PlatformRemoteAppleTV::%s() aborting creation of platform", __FUNCTION__);
+
     return lldb::PlatformSP();
 }
 

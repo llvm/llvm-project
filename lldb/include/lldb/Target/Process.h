@@ -1236,33 +1236,6 @@ public:
     GetImageInfoAddress ();
 
     //------------------------------------------------------------------
-    /// Load a shared library into this process.
-    ///
-    /// Try and load a shared library into the current process. This
-    /// call might fail in the dynamic loader plug-in says it isn't safe
-    /// to try and load shared libraries at the moment.
-    ///
-    /// @param[in] image_spec
-    ///     The image file spec that points to the shared library that
-    ///     you want to load.
-    ///
-    /// @param[out] error
-    ///     An error object that gets filled in with any errors that
-    ///     might occur when trying to load the shared library.
-    ///
-    /// @return
-    ///     A token that represents the shared library that can be
-    ///     later used to unload the shared library. A value of
-    ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
-    ///     library can't be opened.
-    //------------------------------------------------------------------
-    virtual uint32_t
-    LoadImage (const FileSpec &image_spec, Error &error);
-
-    virtual Error
-    UnloadImage (uint32_t image_token);
-
-    //------------------------------------------------------------------
     /// Called when the process is about to broadcast a public stop.
     ///
     /// There are public and private stops. Private stops are when the
@@ -1356,6 +1329,7 @@ public:
 
     Error
     ResumeSynchronous (Stream *stream);
+
     //------------------------------------------------------------------
     /// Halts a running process.
     ///
@@ -1368,12 +1342,15 @@ public:
     /// @param[in] clear_thread_plans
     ///     If true, when the process stops, clear all thread plans.
     ///
+    /// @param[in] use_run_lock
+    ///     Whether to release the run lock after the stop.
+    ///
     /// @return
     ///     Returns an error object.  If the error is empty, the process is halted.
     ///     otherwise the halt has failed.
     //------------------------------------------------------------------
     Error
-    Halt (bool clear_thread_plans = false);
+    Halt (bool clear_thread_plans = false, bool use_run_lock = true);
 
     //------------------------------------------------------------------
     /// Detaches from a running or stopped process.
@@ -1684,9 +1661,8 @@ public:
     /// DoHalt must produce one and only one stop StateChanged event if it actually
     /// stops the process.  If the stop happens through some natural event (for
     /// instance a SIGSTOP), then forwarding that event will do.  Otherwise, you must 
-    /// generate the event manually.  Note also, the private event thread is stopped when 
-    /// DoHalt is run to prevent the events generated while halting to trigger
-    /// other state changes before the halt is complete.
+    /// generate the event manually. This function is called from the context of the
+    /// private state thread.
     ///
     /// @param[out] caused_stop
     ///     If true, then this Halt caused the stop, otherwise, the 
@@ -2875,12 +2851,16 @@ public:
     // Returns the process state when it is stopped. If specified, event_sp_ptr
     // is set to the event which triggered the stop. If wait_always = false,
     // and the process is already stopped, this function returns immediately.
+    // If the process is hijacked and use_run_lock is true (the default), then this
+    // function releases the run lock after the stop. Setting use_run_lock to false
+    // will avoid this behavior.
     lldb::StateType
     WaitForProcessToStop(const TimeValue *timeout,
                          lldb::EventSP *event_sp_ptr = nullptr,
                          bool wait_always = true,
                          Listener *hijack_listener = nullptr,
-                         Stream *stream = nullptr);
+                         Stream *stream = nullptr,
+                         bool use_run_lock = true);
 
     uint32_t
     GetIOHandlerID () const
@@ -3182,6 +3162,15 @@ public:
         return Error("Not supported");
     }
 
+    size_t
+    AddImageToken(lldb::addr_t image_ptr);
+
+    lldb::addr_t
+    GetImagePtrFromToken(size_t token) const;
+
+    void
+    ResetImageToken(size_t token);
+
 protected:
     void
     SetState (lldb::EventSP &event_sp);
@@ -3303,12 +3292,6 @@ protected:
         std::string m_exit_string;
     };
 
-    bool 
-    HijackPrivateProcessEvents (Listener *listener);
-    
-    void 
-    RestorePrivateProcessEvents ();
-    
     bool
     PrivateStateThreadIsValid () const
     {
@@ -3394,7 +3377,6 @@ protected:
     std::vector<PreResumeCallbackAndBaton> m_pre_resume_actions;
     ProcessRunLock              m_public_run_lock;
     ProcessRunLock              m_private_run_lock;
-    Predicate<bool>             m_currently_handling_event; // This predicate is set in HandlePrivateEvent while all its business is being done.
     ArchSpec::StopInfoOverrideCallbackType m_stop_info_override_callback;
     bool                        m_currently_handling_do_on_removals;
     bool                        m_resume_requested;         // If m_currently_handling_event or m_currently_handling_do_on_removals are true, Resume will only request a resume, using this flag to check.
@@ -3458,6 +3440,9 @@ protected:
 
     void
     HandlePrivateEvent (lldb::EventSP &event_sp);
+
+    Error
+    HaltPrivate();
 
     lldb::StateType
     WaitForProcessStopPrivate (const TimeValue *timeout, lldb::EventSP &event_sp);

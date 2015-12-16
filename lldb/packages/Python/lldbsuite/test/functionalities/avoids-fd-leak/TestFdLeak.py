@@ -23,12 +23,14 @@ class AvoidsFdLeakTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailure(python_leaky_fd_version, "bugs.freebsd.org/197376")
+    @expectedFailureFreeBSD("llvm.org/pr25624 still failing with Python 2.7.10")
     @skipIfWindows # The check for descriptor leakage needs to be implemented differently here.
     @skipIfTargetAndroid() # Android have some other file descriptors open by the shell
     def test_fd_leak_basic (self):
         self.do_test([])
 
     @expectedFailure(python_leaky_fd_version, "bugs.freebsd.org/197376")
+    @expectedFailureFreeBSD("llvm.org/pr25624 still failing with Python 2.7.10")
     @skipIfWindows # The check for descriptor leakage needs to be implemented differently here.
     @skipIfTargetAndroid() # Android have some other file descriptors open by the shell
     def test_fd_leak_log (self):
@@ -51,6 +53,7 @@ class AvoidsFdLeakTestCase(TestBase):
                 "Process returned non-zero status. Were incorrect file descriptors passed?")
 
     @expectedFailure(python_leaky_fd_version, "bugs.freebsd.org/197376")
+    @expectedFailureFreeBSD("llvm.org/pr25624 still failing with Python 2.7.10")
     @expectedFlakeyLinux
     @skipIfWindows # The check for descriptor leakage needs to be implemented differently here.
     @skipIfTargetAndroid() # Android have some other file descriptors open by the shell

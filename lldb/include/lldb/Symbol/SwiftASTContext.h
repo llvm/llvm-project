@@ -526,7 +526,7 @@ public:
     // CompilerDeclContext functions
     //----------------------------------------------------------------------
     
-    std::vector<void *>
+    std::vector<CompilerDecl>
     DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name) override { return {}; }
     
     bool

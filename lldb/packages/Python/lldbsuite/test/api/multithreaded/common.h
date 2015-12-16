@@ -56,9 +56,9 @@ public:
   }
 };
 
-/// Allocates a char buffer with the current working directory on Linux/Darwin
+/// Allocates a char buffer with the current working directory
 inline char* get_working_dir() {
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
     return getwd(0);
 #else
     return get_current_dir_name();

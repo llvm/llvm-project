@@ -294,8 +294,56 @@ public:
     uint32_t
     GetNumSupportedHardwareWatchpoints (lldb::SBError &error) const;
 
+    //------------------------------------------------------------------
+    /// Load a shared library into this process.
+    ///
+    /// @param[in] remote_image_spec
+    ///     The path for the shared library on the target what you want
+    ///     to load.
+    ///
+    /// @param[out] error
+    ///     An error object that gets filled in with any errors that
+    ///     might occur when trying to load the shared library.
+    ///
+    /// @return
+    ///     A token that represents the shared library that can be
+    ///     later used to unload the shared library. A value of
+    ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+    ///     library can't be opened.
+    //------------------------------------------------------------------
     uint32_t
-    LoadImage (lldb::SBFileSpec &image_spec, lldb::SBError &error);
+    LoadImage (lldb::SBFileSpec &remote_image_spec, lldb::SBError &error);
+
+    //------------------------------------------------------------------
+    /// Load a shared library into this process.
+    ///
+    /// @param[in] local_image_spec
+    ///     The file spec that points to the shared library that you
+    ///     want to load if the library is located on the host. The
+    ///     library will be copied over to the location specified by
+    ///     remote_image_spec or into the current working directory with
+    ///     the same filename if the remote_image_spec isn't specified.
+    ///
+    /// @param[in] remote_image_spec
+    ///     If local_image_spec is specified then the location where the
+    ///     library should be copied over from the host. If
+    ///     local_image_spec isn't specified, then the path for the
+    ///     shared library on the target what you want to load.
+    ///
+    /// @param[out] error
+    ///     An error object that gets filled in with any errors that
+    ///     might occur when trying to load the shared library.
+    ///
+    /// @return
+    ///     A token that represents the shared library that can be
+    ///     later used to unload the shared library. A value of
+    ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+    ///     library can't be opened.
+    //------------------------------------------------------------------
+    uint32_t
+    LoadImage (const lldb::SBFileSpec &local_image_spec,
+               const lldb::SBFileSpec &remote_image_spec,
+               lldb::SBError &error);
     
     lldb::SBError
     UnloadImage (uint32_t image_token);
@@ -340,6 +388,10 @@ public:
     
     bool
     IsInstrumentationRuntimePresent(InstrumentationRuntimeType type);
+
+    // Save the state of the process in a core file (or mini dump on Windows).
+    lldb::SBError
+    SaveCore(const char *file_name);
 
 protected:
     friend class SBAddress;

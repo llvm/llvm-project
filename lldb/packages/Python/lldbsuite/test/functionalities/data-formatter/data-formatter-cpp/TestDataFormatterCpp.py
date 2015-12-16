@@ -84,7 +84,7 @@ class CppDataFormatterTestCase(TestBase):
 
         # Delete type format for 'Speed', we should expect an error message.
         self.expect("type format delete Speed", error=True,
-            substrs = ['no custom format for Speed'])
+            substrs = ['no custom formatter for Speed'])
         
         self.runCmd("type summary add --summary-string \"arr = ${var%s}\" -x \"char \\[[0-9]+\\]\" -v")
         

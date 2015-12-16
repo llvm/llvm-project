@@ -80,9 +80,12 @@ class FrameAPITestCase(TestBase):
                 gpr_reg_set = lldbutil.get_GPRs(frame)
                 pc_value = gpr_reg_set.GetChildMemberWithName("pc")
                 self.assertTrue (pc_value, "We should have a valid PC.")
-                pc_value_str = pc_value.GetValue()
-                self.assertTrue (pc_value_str, "We should have a valid PC string.")
-                self.assertTrue (int(pc_value_str, 0) == frame.GetPC(), "PC gotten as a value should equal frame's GetPC")
+                pc_value_int = int(pc_value.GetValue(), 0)
+                # Make sure on arm targets we dont mismatch PC value on the basis of thumb bit.
+                # Frame PC will not have thumb bit set in case of a thumb instruction as PC.
+                if self.getArchitecture() in ['arm']:
+                    pc_value_int &= ~1
+                self.assertTrue (pc_value_int == frame.GetPC(), "PC gotten as a value should equal frame's GetPC")
                 sp_value = gpr_reg_set.GetChildMemberWithName("sp")
                 self.assertTrue (sp_value, "We should have a valid Stack Pointer.")
                 self.assertTrue (int(sp_value.GetValue(), 0) == frame.GetSP(), "SP gotten as a value should equal frame's GetSP")

@@ -1,4 +1,4 @@
-//===-- c.c -----------------------------------------------------*- C++ -*-===//
+//===-- main.cpp ------------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,8 +6,18 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-int
-d_function ()
-{ // Find this line number within d_dunction().
-    return 700;
+
+int main() {
+  union {
+    int i;
+    char c;
+  };
+  struct {
+    int x;
+    char y;
+    short z;
+  } s{3,'B',14};
+  i = 0xFFFFFF00;
+  c = 'A';
+  return c; // break here
 }

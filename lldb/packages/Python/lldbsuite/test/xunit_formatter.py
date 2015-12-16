@@ -4,465 +4,24 @@
 This file is distributed under the University of Illinois Open Source
 License. See LICENSE.TXT for details.
 
-Provides classes used by the test results reporting infrastructure
-within the LLDB test suite.
+Provides an xUnit ResultsFormatter for integrating the LLDB
+test suite with the Jenkins xUnit aggregator and other xUnit-compliant
+test output processors.
 """
-
 from __future__ import print_function
 from __future__ import absolute_import
 
 # System modules
-import argparse
-import inspect
-import os
-import pprint
 import re
 import sys
-import threading
-import time
-import traceback
 import xml.sax.saxutils
 
 # Third-party modules
 import six
-from six.moves import cPickle
 
-# LLDB modules
-
-class EventBuilder(object):
-    """Helper class to build test result event dictionaries."""
-
-    BASE_DICTIONARY = None
-
-    @staticmethod
-    def _get_test_name_info(test):
-        """Returns (test-class-name, test-method-name) from a test case instance.
-
-        @param test a unittest.TestCase instance.
-
-        @return tuple containing (test class name, test method name)
-        """
-        test_class_components = test.id().split(".")
-        test_class_name = ".".join(test_class_components[:-1])
-        test_name = test_class_components[-1]
-        return (test_class_name, test_name)
-
-    @staticmethod
-    def bare_event(event_type):
-        """Creates an event with default additions, event type and timestamp.
-
-        @param event_type the value set for the "event" key, used
-        to distinguish events.
-
-        @returns an event dictionary with all default additions, the "event"
-        key set to the passed in event_type, and the event_time value set to
-        time.time().
-        """
-        if EventBuilder.BASE_DICTIONARY is not None:
-            # Start with a copy of the "always include" entries.
-            event = dict(EventBuilder.BASE_DICTIONARY)
-        else:
-            event = {}
-
-        event.update({
-            "event": event_type,
-            "event_time": time.time()
-            })
-        return event
-
-    @staticmethod
-    def _event_dictionary_common(test, event_type):
-        """Returns an event dictionary setup with values for the given event type.
-
-        @param test the unittest.TestCase instance
-
-        @param event_type the name of the event type (string).
-
-        @return event dictionary with common event fields set.
-        """
-        test_class_name, test_name = EventBuilder._get_test_name_info(test)
-
-        event = EventBuilder.bare_event(event_type)
-        event.update({
-            "test_class": test_class_name,
-            "test_name": test_name,
-            "test_filename": inspect.getfile(test.__class__)
-        })
-        return event
-
-    @staticmethod
-    def _error_tuple_class(error_tuple):
-        """Returns the unittest error tuple's error class as a string.
-
-        @param error_tuple the error tuple provided by the test framework.
-
-        @return the error type (typically an exception) raised by the
-        test framework.
-        """
-        type_var = error_tuple[0]
-        module = inspect.getmodule(type_var)
-        if module:
-            return "{}.{}".format(module.__name__, type_var.__name__)
-        else:
-            return type_var.__name__
-
-    @staticmethod
-    def _error_tuple_message(error_tuple):
-        """Returns the unittest error tuple's error message.
-
-        @param error_tuple the error tuple provided by the test framework.
-
-        @return the error message provided by the test framework.
-        """
-        return str(error_tuple[1])
-
-    @staticmethod
-    def _error_tuple_traceback(error_tuple):
-        """Returns the unittest error tuple's error message.
-
-        @param error_tuple the error tuple provided by the test framework.
-
-        @return the error message provided by the test framework.
-        """
-        return error_tuple[2]
-
-    @staticmethod
-    def _event_dictionary_test_result(test, status):
-        """Returns an event dictionary with common test result fields set.
-
-        @param test a unittest.TestCase instance.
-
-        @param status the status/result of the test
-        (e.g. "success", "failure", etc.)
-
-        @return the event dictionary
-        """
-        event = EventBuilder._event_dictionary_common(test, "test_result")
-        event["status"] = status
-        return event
-
-    @staticmethod
-    def _event_dictionary_issue(test, status, error_tuple):
-        """Returns an event dictionary with common issue-containing test result
-        fields set.
-
-        @param test a unittest.TestCase instance.
-
-        @param status the status/result of the test
-        (e.g. "success", "failure", etc.)
-
-        @param error_tuple the error tuple as reported by the test runner.
-        This is of the form (type<error>, error).
-
-        @return the event dictionary
-        """
-        event = EventBuilder._event_dictionary_test_result(test, status)
-        event["issue_class"] = EventBuilder._error_tuple_class(error_tuple)
-        event["issue_message"] = EventBuilder._error_tuple_message(error_tuple)
-        backtrace = EventBuilder._error_tuple_traceback(error_tuple)
-        if backtrace is not None:
-            event["issue_backtrace"] = traceback.format_tb(backtrace)
-        return event
-
-    @staticmethod
-    def event_for_start(test):
-        """Returns an event dictionary for the test start event.
-
-        @param test a unittest.TestCase instance.
-
-        @return the event dictionary
-        """
-        return EventBuilder._event_dictionary_common(test, "test_start")
-
-    @staticmethod
-    def event_for_success(test):
-        """Returns an event dictionary for a successful test.
-
-        @param test a unittest.TestCase instance.
-
-        @return the event dictionary
-        """
-        return EventBuilder._event_dictionary_test_result(test, "success")
-
-    @staticmethod
-    def event_for_unexpected_success(test, bugnumber):
-        """Returns an event dictionary for a test that succeeded but was
-        expected to fail.
-
-        @param test a unittest.TestCase instance.
-
-        @param bugnumber the issue identifier for the bug tracking the
-        fix request for the test expected to fail (but is in fact
-        passing here).
-
-        @return the event dictionary
-
-        """
-        event = EventBuilder._event_dictionary_test_result(
-            test, "unexpected_success")
-        if bugnumber:
-            event["bugnumber"] = str(bugnumber)
-        return event
-
-    @staticmethod
-    def event_for_failure(test, error_tuple):
-        """Returns an event dictionary for a test that failed.
-
-        @param test a unittest.TestCase instance.
-
-        @param error_tuple the error tuple as reported by the test runner.
-        This is of the form (type<error>, error).
-
-        @return the event dictionary
-        """
-        return EventBuilder._event_dictionary_issue(
-            test, "failure", error_tuple)
-
-    @staticmethod
-    def event_for_expected_failure(test, error_tuple, bugnumber):
-        """Returns an event dictionary for a test that failed as expected.
-
-        @param test a unittest.TestCase instance.
-
-        @param error_tuple the error tuple as reported by the test runner.
-        This is of the form (type<error>, error).
-
-        @param bugnumber the issue identifier for the bug tracking the
-        fix request for the test expected to fail.
-
-        @return the event dictionary
-
-        """
-        event = EventBuilder._event_dictionary_issue(
-            test, "expected_failure", error_tuple)
-        if bugnumber:
-            event["bugnumber"] = str(bugnumber)
-        return event
-
-    @staticmethod
-    def event_for_skip(test, reason):
-        """Returns an event dictionary for a test that was skipped.
-
-        @param test a unittest.TestCase instance.
-
-        @param reason the reason why the test is being skipped.
-
-        @return the event dictionary
-        """
-        event = EventBuilder._event_dictionary_test_result(test, "skip")
-        event["skip_reason"] = reason
-        return event
-
-    @staticmethod
-    def event_for_error(test, error_tuple):
-        """Returns an event dictionary for a test that hit a test execution error.
-
-        @param test a unittest.TestCase instance.
-
-        @param error_tuple the error tuple as reported by the test runner.
-        This is of the form (type<error>, error).
-
-        @return the event dictionary
-        """
-        return EventBuilder._event_dictionary_issue(test, "error", error_tuple)
-
-    @staticmethod
-    def event_for_cleanup_error(test, error_tuple):
-        """Returns an event dictionary for a test that hit a test execution error
-        during the test cleanup phase.
-
-        @param test a unittest.TestCase instance.
-
-        @param error_tuple the error tuple as reported by the test runner.
-        This is of the form (type<error>, error).
-
-        @return the event dictionary
-        """
-        event = EventBuilder._event_dictionary_issue(
-            test, "error", error_tuple)
-        event["issue_phase"] = "cleanup"
-        return event
-
-    @staticmethod
-    def add_entries_to_all_events(entries_dict):
-        """Specifies a dictionary of entries to add to all test events.
-
-        This provides a mechanism for, say, a parallel test runner to
-        indicate to each inferior dotest.py that it should add a
-        worker index to each.
-
-        Calling this method replaces all previous entries added
-        by a prior call to this.
-
-        Event build methods will overwrite any entries that collide.
-        Thus, the passed in dictionary is the base, which gets merged
-        over by event building when keys collide.
-
-        @param entries_dict a dictionary containing key and value
-        pairs that should be merged into all events created by the
-        event generator.  May be None to clear out any extra entries.
-        """
-        EventBuilder.BASE_DICTIONARY = dict(entries_dict)
-
-
-class ResultsFormatter(object):
-
-    """Provides interface to formatting test results out to a file-like object.
-
-    This class allows the LLDB test framework's raw test-realted
-    events to be processed and formatted in any manner desired.
-    Test events are represented by python dictionaries, formatted
-    as in the EventBuilder class above.
-
-    ResultFormatter instances are given a file-like object in which
-    to write their results.
-
-    ResultFormatter lifetime looks like the following:
-
-    # The result formatter is created.
-    # The argparse options dictionary is generated from calling
-    # the SomeResultFormatter.arg_parser() with the options data
-    # passed to dotest.py via the "--results-formatter-options"
-    # argument.  See the help on that for syntactic requirements
-    # on getting that parsed correctly.
-    formatter = SomeResultFormatter(file_like_object, argpared_options_dict)
-
-    # Single call to session start, before parsing any events.
-    formatter.begin_session()
-
-    formatter.handle_event({"event":"initialize",...})
-
-    # Zero or more calls specified for events recorded during the test session.
-    # The parallel test runner manages getting results from all the inferior
-    # dotest processes, so from a new format perspective, don't worry about
-    # that.  The formatter will be presented with a single stream of events
-    # sandwiched between a single begin_session()/end_session() pair in the
-    # parallel test runner process/thread.
-    for event in zero_or_more_test_events():
-        formatter.handle_event(event)
-
-    # Single call to terminate/wrap-up. Formatters that need all the
-    # data before they can print a correct result (e.g. xUnit/JUnit),
-    # this is where the final report can be generated.
-    formatter.handle_event({"event":"terminate",...})
-
-    It is not the formatter's responsibility to close the file_like_object.
-    (i.e. do not close it).
-
-    The lldb test framework passes these test events in real time, so they
-    arrive as they come in.
-
-    In the case of the parallel test runner, the dotest inferiors
-    add a 'pid' field to the dictionary that indicates which inferior
-    pid generated the event.
-
-    Note more events may be added in the future to support richer test
-    reporting functionality. One example: creating a true flaky test
-    result category so that unexpected successes really mean the test
-    is marked incorrectly (either should be marked flaky, or is indeed
-    passing consistently now and should have the xfail marker
-    removed). In this case, a flaky_success and flaky_fail event
-    likely will be added to capture these and support reporting things
-    like percentages of flaky test passing so we can see if we're
-    making some things worse/better with regards to failure rates.
-
-    Another example: announcing all the test methods that are planned
-    to be run, so we can better support redo operations of various kinds
-    (redo all non-run tests, redo non-run tests except the one that
-    was running [perhaps crashed], etc.)
-
-    Implementers are expected to override all the public methods
-    provided in this class. See each method's docstring to see
-    expectations about when the call should be chained.
-
-    """
-
-    @classmethod
-    def arg_parser(cls):
-        """@return arg parser used to parse formatter-specific options."""
-        parser = argparse.ArgumentParser(
-            description='{} options'.format(cls.__name__),
-            usage=('dotest.py --results-formatter-options='
-                   '"--option1 value1 [--option2 value2 [...]]"'))
-        return parser
-
-    def __init__(self, out_file, options):
-        super(ResultsFormatter, self).__init__()
-        self.out_file = out_file
-        self.options = options
-        self.using_terminal = False
-        if not self.out_file:
-            raise Exception("ResultsFormatter created with no file object")
-        self.start_time_by_test = {}
-        self.terminate_called = False
-
-        # Lock that we use while mutating inner state, like the
-        # total test count and the elements.  We minimize how
-        # long we hold the lock just to keep inner state safe, not
-        # entirely consistent from the outside.
-        self.lock = threading.Lock()
-
-    def handle_event(self, test_event):
-        """Handles the test event for collection into the formatter output.
-
-        Derived classes may override this but should call down to this
-        implementation first.
-
-        @param test_event the test event as formatted by one of the
-        event_for_* calls.
-        """
-        # Keep track of whether terminate was received.  We do this so
-        # that a process can call the 'terminate' event on its own, to
-        # close down a formatter at the appropriate time.  Then the
-        # atexit() cleanup can call the "terminate if it hasn't been
-        # called yet".
-        if test_event is not None:
-            if test_event.get("event", "") == "terminate":
-                self.terminate_called = True
-
-    def track_start_time(self, test_class, test_name, start_time):
-        """Tracks the start time of a test so elapsed time can be computed.
-
-        This alleviates the need for test results to be processed serially
-        by test.  It will save the start time for the test so that
-        elapsed_time_for_test() can compute the elapsed time properly.
-        """
-        if test_class is None or test_name is None:
-            return
-
-        test_key = "{}.{}".format(test_class, test_name)
-        with self.lock:
-            self.start_time_by_test[test_key] = start_time
-
-    def elapsed_time_for_test(self, test_class, test_name, end_time):
-        """Returns the elapsed time for a test.
-
-        This function can only be called once per test and requires that
-        the track_start_time() method be called sometime prior to calling
-        this method.
-        """
-        if test_class is None or test_name is None:
-            return -2.0
-
-        test_key = "{}.{}".format(test_class, test_name)
-        with self.lock:
-            if test_key not in self.start_time_by_test:
-                return -1.0
-            else:
-                start_time = self.start_time_by_test[test_key]
-            del self.start_time_by_test[test_key]
-        return end_time - start_time
-
-    def is_using_terminal(self):
-        """Returns True if this results formatter is using the terminal and
-        output should be avoided."""
-        return self.using_terminal
-
-    def send_terminate_as_needed(self):
-        """Sends the terminate event if it hasn't been received yet."""
-        if not self.terminate_called:
-            terminate_event = EventBuilder.bare_event("terminate")
-            self.handle_event(terminate_event)
+# Local modules
+from .result_formatter import EventBuilder
+from .result_formatter import ResultsFormatter
 
 
 class XunitFormatter(ResultsFormatter):
@@ -527,7 +86,8 @@ class XunitFormatter(ResultsFormatter):
             unicode_content = str_or_unicode.decode('utf-8')
         else:
             unicode_content = str_or_unicode
-        return self.invalid_xml_re.sub(six.u('?'), unicode_content).encode('utf-8')
+        return self.invalid_xml_re.sub(
+            six.u('?'), unicode_content).encode('utf-8')
 
     @classmethod
     def arg_parser(cls):
@@ -622,13 +182,25 @@ class XunitFormatter(ResultsFormatter):
             }
 
         self.status_handlers = {
-            "success": self._handle_success,
-            "failure": self._handle_failure,
-            "error": self._handle_error,
-            "skip": self._handle_skip,
-            "expected_failure": self._handle_expected_failure,
-            "unexpected_success": self._handle_unexpected_success
+            EventBuilder.STATUS_SUCCESS: self._handle_success,
+            EventBuilder.STATUS_FAILURE: self._handle_failure,
+            EventBuilder.STATUS_ERROR: self._handle_error,
+            EventBuilder.STATUS_SKIP: self._handle_skip,
+            EventBuilder.STATUS_EXPECTED_FAILURE:
+                self._handle_expected_failure,
+            EventBuilder.STATUS_EXPECTED_TIMEOUT:
+                self._handle_expected_timeout,
+            EventBuilder.STATUS_UNEXPECTED_SUCCESS:
+                self._handle_unexpected_success,
+            EventBuilder.STATUS_EXCEPTIONAL_EXIT:
+                self._handle_exceptional_exit,
+            EventBuilder.STATUS_TIMEOUT:
+                self._handle_timeout
             }
+
+    RESULT_TYPES = set(
+        [EventBuilder.TYPE_TEST_RESULT,
+         EventBuilder.TYPE_JOB_RESULT])
 
     def handle_event(self, test_event):
         super(XunitFormatter, self).handle_event(test_event)
@@ -638,14 +210,11 @@ class XunitFormatter(ResultsFormatter):
             return
 
         if event_type == "terminate":
+            # Process all the final result events into their
+            # XML counterparts.
+            for result_event in self.result_events.values():
+                self._process_test_result(result_event)
             self._finish_output()
-        elif event_type == "test_start":
-            self.track_start_time(
-                test_event["test_class"],
-                test_event["test_name"],
-                test_event["event_time"])
-        elif event_type == "test_result":
-            self._process_test_result(test_event)
         else:
             # This is an unknown event.
             if self.options.assert_on_unknown_events:
@@ -694,6 +263,53 @@ class XunitFormatter(ResultsFormatter):
                     XunitFormatter._quote_attribute(test_event["issue_class"]),
                     XunitFormatter._quote_attribute(message),
                     backtrace)
+            ))
+        with self.lock:
+            self.elements["errors"].append(result)
+
+    def _handle_exceptional_exit(self, test_event):
+        """Handles an exceptional exit.
+        @param test_event the test method or job result event to handle.
+        """
+        if "test_name" in test_event:
+            name = test_event["test_name"]
+        else:
+            name = test_event.get("test_filename", "<unknown test/filename>")
+
+        message_text = "ERROR: {} ({}): {}".format(
+            test_event.get("exception_code", 0),
+            test_event.get("exception_description", ""),
+            name)
+        message = self._replace_invalid_xml(message_text)
+
+        result = self._common_add_testcase_entry(
+            test_event,
+            inner_content=(
+                '<error type={} message={}></error>'.format(
+                    "exceptional_exit",
+                    XunitFormatter._quote_attribute(message))
+            ))
+        with self.lock:
+            self.elements["errors"].append(result)
+
+    def _handle_timeout(self, test_event):
+        """Handles a test method or job timeout.
+        @param test_event the test method or job result event to handle.
+        """
+        if "test_name" in test_event:
+            name = test_event["test_name"]
+        else:
+            name = test_event.get("test_filename", "<unknown test/filename>")
+
+        message_text = "TIMEOUT: {}".format(name)
+        message = self._replace_invalid_xml(message_text)
+
+        result = self._common_add_testcase_entry(
+            test_event,
+            inner_content=(
+                '<error type={} message={}></error>'.format(
+                    "timeout",
+                    XunitFormatter._quote_attribute(message))
             ))
         with self.lock:
             self.elements["errors"].append(result)
@@ -784,6 +400,13 @@ class XunitFormatter(ResultsFormatter):
         else:
             raise Exception(
                 "unknown xfail option: {}".format(self.options.xfail))
+
+    def _handle_expected_timeout(self, test_event):
+        """Handles expected_timeout.
+        @param test_event the test event to handle.
+        """
+        # We don't do anything with expected timeouts, not even report.
+        pass
 
     def _handle_unexpected_success(self, test_event):
         """Handles a test that passed but was expected to fail.
@@ -940,51 +563,3 @@ class XunitFormatter(ResultsFormatter):
         """Finish writing output as all incoming events have arrived."""
         with self.lock:
             self._finish_output_no_lock()
-
-
-class RawPickledFormatter(ResultsFormatter):
-    """Formats events as a pickled stream.
-
-    The parallel test runner has inferiors pickle their results and send them
-    over a socket back to the parallel test.  The parallel test runner then
-    aggregates them into the final results formatter (e.g. xUnit).
-    """
-
-    @classmethod
-    def arg_parser(cls):
-        """@return arg parser used to parse formatter-specific options."""
-        parser = super(RawPickledFormatter, cls).arg_parser()
-        return parser
-
-    def __init__(self, out_file, options):
-        super(RawPickledFormatter, self).__init__(out_file, options)
-        self.pid = os.getpid()
-
-    def handle_event(self, test_event):
-        super(RawPickledFormatter, self).handle_event(test_event)
-
-        # Convert initialize/terminate events into job_begin/job_end events.
-        event_type = test_event["event"]
-        if event_type is None:
-            return
-
-        if event_type == "initialize":
-            test_event["event"] = "job_begin"
-        elif event_type == "terminate":
-            test_event["event"] = "job_end"
-
-        # Tack on the pid.
-        test_event["pid"] = self.pid
-
-        # Send it as {serialized_length_of_serialized_bytes}#{serialized_bytes}
-        pickled_message = cPickle.dumps(test_event)
-        self.out_file.send(
-            "{}#{}".format(len(pickled_message), pickled_message))
-
-
-class DumpFormatter(ResultsFormatter):
-    """Formats events to the file as their raw python dictionary format."""
-
-    def handle_event(self, test_event):
-        super(DumpFormatter, self).handle_event(test_event)
-        self.out_file.write("\n" + pprint.pformat(test_event) + "\n")

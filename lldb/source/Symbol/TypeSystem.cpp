@@ -130,6 +130,44 @@ TypeSystem::IsCompatible ()
     return Error();
 }
 
+ConstString
+TypeSystem::DeclGetMangledName (void *opaque_decl)
+{
+    return ConstString();
+}
+
+CompilerDeclContext
+TypeSystem::DeclGetDeclContext (void *opaque_decl)
+{
+    return CompilerDeclContext();
+}
+
+CompilerType
+TypeSystem::DeclGetFunctionReturnType(void *opaque_decl)
+{
+    return CompilerType();
+}
+
+size_t
+TypeSystem::DeclGetFunctionNumArguments(void *opaque_decl)
+{
+    return 0;
+}
+
+CompilerType
+TypeSystem::DeclGetFunctionArgumentType (void *opaque_decl, size_t arg_idx)
+{
+    return CompilerType();
+}
+
+
+std::vector<CompilerDecl>
+TypeSystem::DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name)
+{
+    return std::vector<CompilerDecl>();
+}
+
+
 #pragma mark TypeSystemMap
 
 TypeSystemMap::TypeSystemMap() :

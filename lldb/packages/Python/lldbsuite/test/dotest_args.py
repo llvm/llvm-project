@@ -58,33 +58,20 @@ def create_parser():
     # FIXME? This won't work for different extra flags according to each arch.
     group.add_argument('-E', metavar='extra-flags', help=textwrap.dedent('''Specify the extra flags to be passed to the toolchain when building the inferior programs to be debugged
                                                            suggestions: do not lump the "-A arch1 -A arch2" together such that the -E option applies to only one of the architectures'''))
-    X('-D', 'Dump the Python sys.path variable')
 
     # Test filtering options
     group = parser.add_argument_group('Test filtering options')
-    group.add_argument('-N', choices=['dwarf', 'dwo', 'dsym'], help="Don't do test cases marked with the @dsym_test/@dwarf_test/@dwo_test decorator by passing dsym/dwarf/dwo as the option arg")
-    X('+b', 'Just do benchmark tests', dest='plus_b')
-    group.add_argument('-b', metavar='blacklist', help='Read a blacklist file specified after this option')
     group.add_argument('-f', metavar='filterspec', action='append', help='Specify a filter, which consists of the test class name, a dot, followed by the test method, to only admit such test into the test suite')  # FIXME: Example?
-    X('-g', 'If specified, the filterspec by -f is not exclusive, i.e., if a test module does not match the filterspec (testclass.testmethod), the whole module is still admitted to the test suite')
     X('-l', "Don't skip long running tests")
     group.add_argument('-p', metavar='pattern', help='Specify a regexp filename pattern for inclusion in the test suite')
-    group.add_argument('-X', metavar='directory', help="Exclude a directory from consideration for test discovery. -X types => if 'types' appear in the pathname components of a potential testfile, it will be ignored")
     group.add_argument('-G', '--category', metavar='category', action='append', dest='categoriesList', help=textwrap.dedent('''Specify categories of test cases of interest. Can be specified more than once.'''))
     group.add_argument('--skip-category', metavar='category', action='append', dest='skipCategories', help=textwrap.dedent('''Specify categories of test cases to skip. Takes precedence over -G. Can be specified more than once.'''))
 
     # Configuration options
     group = parser.add_argument_group('Configuration options')
-    group.add_argument('-c', metavar='config-file', help='Read a config file specified after this option')  # FIXME: additional doc.
     group.add_argument('--framework', metavar='framework-path', help='The path to LLDB.framework')
     group.add_argument('--executable', metavar='executable-path', help='The path to the lldb executable')
-    group.add_argument('--libcxx', metavar='directory', help='The path to custom libc++ library')
-    group.add_argument('-e', metavar='benchmark-exe', help='Specify the full path of an executable used for benchmark purposes (see also: -x)')
-    group.add_argument('-k', metavar='command', action='append', help="Specify a runhook, which is an lldb command to be executed by the debugger; The option can occur multiple times. The commands are executed one after the other to bring the debugger to a desired state, so that, for example, further benchmarking can be done")
-    group.add_argument('-R', metavar='dir', help='Specify a directory to relocate the tests and their intermediate files to. BE WARNED THAT the directory, if exists, will be deleted before running this test driver. No cleanup of intermediate test files is performed in this case')
-    group.add_argument('-r', metavar='dir', help="Similar to '-R', except that the directory must not exist before running this test driver")
     group.add_argument('-s', metavar='name', help='Specify the name of the dir created to store the session files of tests with errored or failed status. If not specified, the test driver uses the timestamp as the session dir name')
-    group.add_argument('-x', metavar='breakpoint-spec', help='Specify the breakpoint specification for the benchmark executable')
     group.add_argument('-y', type=int, metavar='count', help="Specify the iteration count used to collect our benchmarks. An example is the number of times to do 'thread step-over' to measure stepping speed.")
     group.add_argument('-#', type=int, metavar='sharp', dest='sharp', help='Repeat the test suite for a specified number of times')
     group.add_argument('--channel', metavar='channel', dest='channels', action='append', help=textwrap.dedent("Specify the log channels (and optional categories) e.g. 'lldb all' or 'gdb-remote packets' if no categories are specified, 'default' is used"))
@@ -99,22 +86,13 @@ def create_parser():
     # Test-suite behaviour
     group = parser.add_argument_group('Runtime behaviour options')
     X('-d', 'Suspend the process after launch to wait indefinitely for a debugger to attach')
-    X('-F', 'Fail fast. Stop the test suite on the first error/failure')
-    X('-i', "Ignore (don't bailout) if 'lldb.py' module cannot be located in the build tree relative to this script; use PYTHONPATH to locate the module")
-    X('-n', "Don't print the headers like build dir, lldb version, and svn info at all")
-    X('-P', "Use the graphic progress bar.")
     X('-q', "Don't print extra output from this script.")
-    X('-S', "Skip the build and cleanup while running the test. Use this option with care as you would need to build the inferior(s) by hand and build the executable(s) with the correct name(s). This can be used with '-# n' to stress test certain test cases for n number of times")
     X('-t', 'Turn on tracing of lldb command and other detailed test executions')
     group.add_argument('-u', dest='unset_env_varnames', metavar='variable', action='append', help='Specify an environment variable to unset before running the test cases. e.g., -u DYLD_INSERT_LIBRARIES -u MallocScribble')
     group.add_argument('--env', dest='set_env_vars', metavar='variable', action='append', help='Specify an environment variable to set to the given value before running the test cases e.g.: --env CXXFLAGS=-O3 --env DYLD_INSERT_LIBRARIES')
     X('-v', 'Do verbose mode of unittest framework (print out each test case invocation)')
-    X('-w', 'Insert some wait time (currently 0.5 sec) between consecutive test cases')
-    X('-T', 'Obtain and dump svn information for this checkout of LLDB (off by default)')
     group.add_argument('--enable-crash-dialog', dest='disable_crash_dialog', action='store_false', help='(Windows only) When LLDB crashes, display the Windows crash dialog.')
-    group.add_argument('--show-inferior-console', dest='hide_inferior_console', action='store_false', help='(Windows only) When launching an inferior, dont hide its console window.')
     group.set_defaults(disable_crash_dialog=True)
-    group.set_defaults(hide_inferior_console=True)
 
     group = parser.add_argument_group('Parallel execution options')
     group.add_argument(
@@ -126,11 +104,6 @@ def create_parser():
         '--no-multiprocess',
         action='store_true',
         help='skip running the multiprocess test runner')
-    group.add_argument(
-        '--output-on-success',
-        action='store_true',
-        help=('print full output of the dotest.py inferior, '
-              'even when all tests succeed'))
     group.add_argument(
         '--threads',
         type=int,
@@ -188,17 +161,28 @@ def create_parser():
               'pairs to all test events generated by this test run.  VAL may '
               'be specified as VAL:TYPE, where TYPE may be int to convert '
               'the value to an int'))
+
+    # Re-run related arguments
+    group = parser.add_argument_group('Test Re-run Options')
+    group.add_argument(
+        '--rerun-all-issues',
+        action='store_true',
+        help=('Re-run all issues that occurred during the test run '
+              'irrespective of the test method\'s marking as flakey. '
+              'Default behavior is to apply re-runs only to flakey '
+              'tests that generate issues.'))
+    group.add_argument(
+        '--rerun-max-file-threshold',
+        action='store',
+        type=int,
+        default=50,
+        help=('Maximum number of files requiring a rerun beyond '
+              'which the rerun will not occur.  This is meant to '
+              'stop a catastrophically failing test suite from forcing '
+              'all tests to be rerun in the single-worker phase.'))
+
     # Remove the reference to our helper function
     del X
-
-    D = lambda optstr, **kwargs: group.add_argument(optstr, action='store_true', **kwargs)
-    group = parser.add_argument_group('Deprecated options (do not use)')
-    # Deprecated on 23.10.2015. Remove completely after a grace period.
-    D('-a')
-    D('+a', dest='plus_a')
-    D('-m')
-    D('+m', dest='plus_m')
-    del D
 
     group = parser.add_argument_group('Test directories')
     group.add_argument('args', metavar='test-dir', nargs='*', help='Specify a list of directory names to search for test modules named after Test*.py (test discovery). If empty, search from the current working directory instead.')

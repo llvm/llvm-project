@@ -24,6 +24,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -667,7 +668,8 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
             {
                 var_path.erase (0, name_const_string.GetLength ());
             }
-            else if (options & eExpressionPathOptionsAllowDirectIVarAccess)
+            
+            if (!var_sp && (options & eExpressionPathOptionsAllowDirectIVarAccess))
             {
                 // Check for direct ivars access which helps us with implicit
                 // access to ivars with the "this->" or "self->"
@@ -689,13 +691,43 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
                     }
                 }
             }
+            
+            if (!var_sp && (options & eExpressionPathOptionsInspectAnonymousUnions))
+            {
+                // Check if any anonymous unions are there which contain a variable with the name we need
+                for (size_t i = 0;
+                     i < variable_list->GetSize();
+                     i++)
+                {
+                    if (VariableSP variable_sp = variable_list->GetVariableAtIndex(i))
+                    {
+                        if (variable_sp->GetName().IsEmpty())
+                        {
+                            if (Type *var_type = variable_sp->GetType())
+                            {
+                                if (var_type->GetForwardCompilerType().IsAnonymousType())
+                                {
+                                    valobj_sp = GetValueObjectForFrameVariable (variable_sp, use_dynamic);
+                                    if (!valobj_sp)
+                                        return valobj_sp;
+                                    valobj_sp = valobj_sp->GetChildMemberWithName(name_const_string, true);
+                                    if (valobj_sp)
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-            if (var_sp)
+            if (var_sp && !valobj_sp)
             {
                 valobj_sp = GetValueObjectForFrameVariable (var_sp, use_dynamic);
                 if (!valobj_sp)
                     return valobj_sp;
-                    
+            }
+            if (valobj_sp)
+            {
                 // We are dumping at least one child
                 while (separator_idx != std::string::npos)
                 {
@@ -1515,7 +1547,7 @@ StackFrame::GetStatus (Stream& strm,
     if (show_source)
     {
         ExecutionContext exe_ctx (shared_from_this());
-        bool have_source = false;
+        bool have_source = false, have_debuginfo = false;
         Debugger::StopDisassemblyType disasm_display = Debugger::eStopDisassemblyTypeNever;
         Target *target = exe_ctx.GetTargetPtr();
         if (target)
@@ -1528,26 +1560,35 @@ StackFrame::GetStatus (Stream& strm,
             GetSymbolContext(eSymbolContextCompUnit | eSymbolContextLineEntry);
             if (m_sc.comp_unit && m_sc.line_entry.IsValid())
             {
-                have_source = true;
+                have_debuginfo = true;
                 if (source_lines_before > 0 || source_lines_after > 0)
                 {
-                    target->GetSourceManager().DisplaySourceLinesWithLineNumbers (m_sc.line_entry.file,
+                    size_t num_lines = target->GetSourceManager().DisplaySourceLinesWithLineNumbers (m_sc.line_entry.file,
                                                                                       m_sc.line_entry.line,
                                                                                       source_lines_before,
                                                                                       source_lines_after,
                                                                                       "->",
                                                                                       &strm);
+                    if (num_lines != 0)
+                        have_source = true;
+                    // TODO: Give here a one time warning if source file is missing.
                 }
             }
             switch (disasm_display)
             {
             case Debugger::eStopDisassemblyTypeNever:
                 break;
-                
+
+            case Debugger::eStopDisassemblyTypeNoDebugInfo:
+                if (have_debuginfo)
+                    break;
+                // Fall through to next case
+
             case Debugger::eStopDisassemblyTypeNoSource:
                 if (have_source)
                     break;
                 // Fall through to next case
+
             case Debugger::eStopDisassemblyTypeAlways:
                 if (target)
                 {

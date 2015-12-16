@@ -41,11 +41,14 @@ o SBLineEntry: Specifies an association with a contiguous range of instructions
 import uuid
 import re
 import os
+
+import six
 %}
 %include "./Python/python-typemaps.swig"
 
 /* C++ headers to be included. */
 %{
+#include <algorithm>
 #include <string>
 %}
 

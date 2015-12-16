@@ -69,6 +69,9 @@ public:
     lldb::TypeCategoryImplSP
     GetCategory () const;
     
+    FormatCache&
+    GetFormatCache ();
+    
     void
     Enable ();
     

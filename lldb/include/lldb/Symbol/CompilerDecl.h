@@ -12,6 +12,7 @@
 
 #include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
+#include "lldb/Symbol/CompilerType.h"
 
 namespace lldb_private {
 
@@ -101,6 +102,24 @@ public:
 
     ConstString
     GetName () const;
+
+    ConstString
+    GetMangledName () const;
+
+    CompilerDeclContext
+    GetDeclContext() const;
+
+    // If this decl represents a function, return the return type
+    CompilerType
+    GetFunctionReturnType() const;
+
+    // If this decl represents a function, return the number of arguments for the function
+    size_t
+    GetNumFunctionArguments() const;
+
+    // If this decl represents a function, return the argument type given a zero based argument index
+    CompilerType
+    GetFunctionArgumentType (size_t arg_idx) const;
 
 private:
     TypeSystem *m_type_system;

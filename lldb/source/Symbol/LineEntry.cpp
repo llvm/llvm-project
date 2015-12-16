@@ -244,3 +244,42 @@ LineEntry::Compare (const LineEntry& a, const LineEntry& b)
     return FileSpec::Compare (a.file, b.file, true);
 }
 
+AddressRange
+LineEntry::GetSameLineContiguousAddressRange () const
+{
+    // Add each LineEntry's range to complete_line_range until we find
+    // a different file / line number.
+    AddressRange complete_line_range = range;
+
+    while (true)
+    {
+        SymbolContext next_line_sc;
+        Address range_end (complete_line_range.GetBaseAddress());
+        range_end.Slide (complete_line_range.GetByteSize());
+        range_end.CalculateSymbolContext (&next_line_sc, lldb::eSymbolContextLineEntry);
+
+        if (next_line_sc.line_entry.IsValid() 
+            && next_line_sc.line_entry.range.GetByteSize() > 0
+            && file == next_line_sc.line_entry.file)
+        {
+            // Include any line 0 entries - they indicate that this is compiler-generated code 
+            // that does not correspond to user source code.
+            if (next_line_sc.line_entry.line == 0)
+            {
+                complete_line_range.SetByteSize (complete_line_range.GetByteSize() + next_line_sc.line_entry.range.GetByteSize());
+                continue;
+            }
+
+            if (line == next_line_sc.line_entry.line)
+            {
+                // next_line_sc is the same file & line as this LineEntry, so extend our
+                // AddressRange by its size and continue to see if there are more LineEntries
+                // that we can combine.
+                complete_line_range.SetByteSize (complete_line_range.GetByteSize() + next_line_sc.line_entry.range.GetByteSize());
+                continue;
+            }
+        }
+        break;
+    }
+    return complete_line_range;
+}

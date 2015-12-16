@@ -242,6 +242,12 @@ LanguageCategory::GetCategory () const
     return m_category_sp;
 }
 
+FormatCache&
+LanguageCategory::GetFormatCache ()
+{
+    return m_format_cache;
+}
+
 void
 LanguageCategory::Enable ()
 {

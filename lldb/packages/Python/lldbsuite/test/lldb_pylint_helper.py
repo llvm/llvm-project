@@ -44,9 +44,9 @@ def add_lldb_test_paths(check_dir):
     .pylintrc file in your home directory:
 
     [Master]
-    init-hook='import os; import sys; sys.path.append(os.path.expanduser("~/path/to/lldb/test")); import lldb_pylint_helper; lldb_pylint_helper.add_lldb_test_paths(os.getcwd()); print("sys.path={}\n".format(sys.path))'
+    init-hook='import os; import sys; sys.path.append(os.path.expanduser("~/path/to/lldb/packages/Python/lldbsuite/test")); import lldb_pylint_helper; lldb_pylint_helper.add_lldb_test_paths(os.getcwd()); print("sys.path={}\n".format(sys.path))'
 
-    Replace ~/path/to/lldb/test with a valid path to your local lldb source
+    Replace ~/path/to/lldb with a valid path to your local lldb source
     tree.  Note you can have multiple lldb source trees on your system, and
     this will work just fine.  The path in your .pylintrc is just needed to
     find the paths needed for pylint in whatever lldb source tree you're in.
@@ -144,21 +144,33 @@ def add_lldb_test_package_paths(check_dir):
 
     @param check_dir the directory of the test.
     """
+
+    def child_dirs(parent_dir):
+        return [os.path.join(parent_dir, child)
+                for child in os.listdir(parent_dir)
+                if os.path.isdir(os.path.join(parent_dir, child))]
+
     check_dir = os.path.realpath(check_dir)
     while check_dir and len(check_dir) > 0:
-        # If the current directory is test, it might be the lldb/test
-        # directory. If so, we've found an anchor that will allow us
-        # to add the relevant lldb-sourcetree-relative python lib
-        # dirs.
-        if os.path.basename(check_dir) == 'test':
-            # If this directory has a dotest.py file in it,
-            # then this is an lldb test tree.  Add the
-            # test directories to the python path.
-            if os.path.exists(os.path.join(check_dir, "dotest.py")):
-                sys.path.insert(0, check_dir)
-                sys.path.insert(0, os.path.join(
-                    check_dir, "test_runner", "lib"))
-                break
+        # If the current directory contains a packages/Python
+        # directory, add that directory to the path.
+        packages_python_child_dir = os.path.join(
+            check_dir, "packages", "Python")
+        if os.path.exists(packages_python_child_dir):
+            sys.path.insert(0, packages_python_child_dir)
+            sys.path.insert(0, os.path.join(
+                packages_python_child_dir, "test_runner", "lib"))
+
+            # Handle third_party module/package directory.
+            third_party_module_dir = os.path.join(
+                check_dir, "third_party", "Python", "module")
+            for child_dir in child_dirs(third_party_module_dir):
+                # Yes, we embed the module in the module parent dir
+                sys.path.insert(0, child_dir)
+
+            # We're done.
+            break
+
         # Continue looking up the parent chain until we have no more
         # directories to check.
         new_check_dir = os.path.dirname(check_dir)

@@ -6,6 +6,8 @@ from __future__ import print_function
 
 import os, sys
 import lldb
+from lldbsuite.test import configuration
+from lldbsuite.test import lldbtest_config
 from lldbsuite.test.lldbbench import *
 
 class StartupDelaysBench(BenchBase):
@@ -19,18 +21,9 @@ class StartupDelaysBench(BenchBase):
         self.stopwatch2 = Stopwatch()
         # Create self.stopwatch3 for measuring "run to breakpoint".
         self.stopwatch3 = Stopwatch()
-        if lldb.bmExecutable:
-            self.exe = lldb.bmExecutable
-        else:
-            self.exe = lldbtest_config.lldbExec
-        if lldb.bmBreakpointSpec:
-            self.break_spec = lldb.bmBreakpointSpec
-        else:
-            self.break_spec = '-n main'
-
-        self.count = lldb.bmIterationCount
-        if self.count <= 0:
-            self.count = 30
+        self.exe = lldbtest_config.lldbExec
+        self.break_spec = '-n main'
+        self.count = 30
 
     @benchmarks_test
     @no_debug_info_test

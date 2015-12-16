@@ -22,7 +22,7 @@ ifeq ($(HOST_OS),Darwin)
 	LLVMLibsOptions += -Wl,-sectcreate -Wl,__TEXT -Wl,__info_plist -Wl,"$(PROJ_SRC_DIR)/lldb-Info.plist"
 endif
 
-ifneq (,$(filter $(HOST_OS), Linux GNU/kFreeBSD))
+ifneq (,$(filter $(HOST_OS), Linux GNU/kFreeBSD NetBSD))
 	LLVMLibsOptions += -Wl,-rpath,$(LibDir) -lpthread
 endif
 
@@ -30,4 +30,3 @@ ifeq ($(HOST_OS),FreeBSD)
 	CPP.Flags += -I/usr/include/edit #-v
 	LLVMLibsOptions += -Wl,-rpath,$(LibDir) -lpthread
 endif
-

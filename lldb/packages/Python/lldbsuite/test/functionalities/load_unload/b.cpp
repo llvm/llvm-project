@@ -1,4 +1,4 @@
-//===-- a.c -----------------------------------------------------*- C++ -*-===//
+//===-- b.c -----------------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,16 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-extern int b_function ();
+
+int b_init()
+{
+    return 345;
+}
+
+int b_global = b_init();
 
 int
-a_function ()
+b_function ()
 {
-    return b_function ();
+    return 500;
 }

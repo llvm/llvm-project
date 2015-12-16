@@ -21,25 +21,16 @@ class TestSwiftTypeAliasFormatters(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
-    @dsym_test
-    @swiftTest
-    def test_with_dsym(self):
-        """Test that Swift typealiases get formatted properly"""
-        self.buildDsym()
-        self.do_test()
-
-    @dwarf_test
-    @swiftTest
-    def test_with_dwarf(self):
-        """Test that Swift typealiases get formatted properly"""
-        self.buildDwarf()
-        self.do_test()
-
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec (self.main_source)
+
+    @swiftTest
+    def test_swift_type_alias_formatters(self):
+        """Test that Swift typealiases get formatted properly"""
+        self.build()
+        self.do_test()
 
     def do_test(self):
         """Test that Swift typealiases get formatted properly"""

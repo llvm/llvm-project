@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Run the test suite using a separate process for each test file.
 
@@ -51,13 +49,19 @@ import threading
 from six.moves import queue
 
 # Our packages and modules
+import lldbsuite
 import lldbsuite.support.seven as seven
 
+from . import configuration
 from . import dotest_channels
 from . import dotest_args
+from . import result_formatter
 
-# Todo: Convert this folder layout to be relative-import friendly and don't hack up
-# sys.path like this
+from .result_formatter import EventBuilder
+
+
+# Todo: Convert this folder layout to be relative-import friendly and
+# don't hack up sys.path like this
 sys.path.append(os.path.join(os.path.dirname(__file__), "test_runner", "lib"))
 import lldb_utils
 import process_control
@@ -70,7 +74,6 @@ test_counter = None
 total_tests = None
 test_name_len = None
 dotest_options = None
-output_on_success = False
 RESULTS_FORMATTER = None
 RUNNER_PROCESS_ASYNC_MAP = None
 RESULTS_LISTENER_CHANNEL = None
@@ -106,7 +109,6 @@ def setup_global_variables(
         global GET_WORKER_INDEX
         GET_WORKER_INDEX = get_worker_index_use_pid
 
-
 def report_test_failure(name, command, output):
     global output_lock
     with output_lock:
@@ -119,13 +121,8 @@ def report_test_failure(name, command, output):
 
 
 def report_test_pass(name, output):
-    global output_lock, output_on_success
+    global output_lock
     with output_lock:
-        if not (RESULTS_FORMATTER and RESULTS_FORMATTER.is_using_terminal()):
-            if output_on_success:
-                print(file=sys.stderr)
-                print(output, file=sys.stderr)
-                print("[%s PASSED]" % name, file=sys.stderr)
         update_progress(name)
 
 
@@ -224,6 +221,32 @@ class DoTestProcessDriver(process_control.ProcessDriver):
             failures,
             unexpected_successes)
 
+    def is_exceptional_exit(self):
+        """Returns whether the process returned a timeout.
+
+        Not valid to call until after on_process_exited() completes.
+
+        @return True if the exit is an exceptional exit (e.g. signal on
+        POSIX); False otherwise.
+        """
+        if self.results is None:
+            raise Exception(
+                "exit status checked before results are available")
+        return self.process_helper.is_exceptional_exit(
+            self.results[1])
+
+    def exceptional_exit_details(self):
+        if self.results is None:
+            raise Exception(
+                "exit status checked before results are available")
+        return self.process_helper.exceptional_exit_details(self.results[1])
+
+    def is_timeout(self):
+        if self.results is None:
+            raise Exception(
+                "exit status checked before results are available")
+        return self.results[1] == eTimedOut
+
 
 def get_soft_terminate_timeout():
     # Defaults to 10 seconds, but can set
@@ -245,9 +268,111 @@ def want_core_on_soft_terminate():
         return False
 
 
-def call_with_timeout(command, timeout, name, inferior_pid_events):
+def send_events_to_collector(events, command):
+    """Sends the given events to the collector described in the command line.
+
+    @param events the list of events to send to the test event collector.
+    @param command the inferior command line which contains the details on
+    how to connect to the test event collector.
+    """
+    if events is None or len(events) == 0:
+        # Nothing to do.
+        return
+
+    # Find the port we need to connect to from the --results-port option.
+    try:
+        arg_index = command.index("--results-port") + 1
+    except ValueError:
+        # There is no results port, so no way to communicate back to
+        # the event collector.  This is not a problem if we're not
+        # using event aggregation.
+        # TODO flag as error once we always use the event system
+        print(
+            "INFO: no event collector, skipping post-inferior test "
+            "event reporting")
+        return
+
+    if arg_index >= len(command):
+        raise Exception(
+            "expected collector port at index {} in {}".format(
+                arg_index, command))
+    event_port = int(command[arg_index])
+
+    # Create results formatter connected back to collector via socket.
+    config = result_formatter.FormatterConfig()
+    config.port = event_port
+    formatter_spec = result_formatter.create_results_formatter(config)
+    if formatter_spec is None or formatter_spec.formatter is None:
+        raise Exception(
+            "Failed to create socket-based ResultsFormatter "
+            "back to test event collector")
+
+    # Send the events: the port-based event just pickles the content
+    # and sends over to the server side of the socket.
+    for event in events:
+        formatter_spec.formatter.handle_event(event)
+
+    # Cleanup
+    if formatter_spec.cleanup_func is not None:
+        formatter_spec.cleanup_func()
+
+
+def send_inferior_post_run_events(
+        command, worker_index, process_driver, test_filename):
+    """Sends any test events that should be generated after the inferior runs.
+
+    These events would include timeouts and exceptional (i.e. signal-returning)
+    process completion results.
+
+    @param command the list of command parameters passed to subprocess.Popen().
+    @param worker_index the worker index (possibly None) used to run
+    this process
+    @param process_driver the ProcessDriver-derived instance that was used
+    to run the inferior process.
+    @param test_filename the full path to the Python test file that is being
+    run.
+    """
+    if process_driver is None:
+        raise Exception("process_driver must not be None")
+    if process_driver.results is None:
+        # Invalid condition - the results should have been set one way or
+        # another, even in a timeout.
+        raise Exception("process_driver.results were not set")
+
+    # The code below fills in the post events struct.  If there are any post
+    # events to fire up, we'll try to make a connection to the socket and
+    # provide the results.
+    post_events = []
+
+    # Handle signal/exceptional exits.
+    if process_driver.is_exceptional_exit():
+        (code, desc) = process_driver.exceptional_exit_details()
+        post_events.append(
+            EventBuilder.event_for_job_exceptional_exit(
+                process_driver.pid,
+                worker_index,
+                code,
+                desc,
+                test_filename,
+                command))
+
+    # Handle timeouts.
+    if process_driver.is_timeout():
+        post_events.append(EventBuilder.event_for_job_timeout(
+            process_driver.pid,
+            worker_index,
+            test_filename,
+            command))
+
+    if len(post_events) > 0:
+        send_events_to_collector(post_events, command)
+
+
+def call_with_timeout(
+        command, timeout, name, inferior_pid_events, test_filename):
     # Add our worker index (if we have one) to all test events
     # from this inferior.
+    worker_index = None
     if GET_WORKER_INDEX is not None:
         try:
             worker_index = GET_WORKER_INDEX()
@@ -278,26 +403,35 @@ def call_with_timeout(command, timeout, name, inferior_pid_events):
         # This is truly exceptional.  Even a failing or timed out
         # binary should have called the results-generation code.
         raise Exception("no test results were generated whatsoever")
+
+    # Handle cases where the test inferior cannot adequately provide
+    # meaningful results to the test event system.
+    send_inferior_post_run_events(
+        command,
+        worker_index,
+        process_driver,
+        test_filename)
+
     return process_driver.results
 
 
 def process_dir(root, files, dotest_argv, inferior_pid_events):
     """Examine a directory for tests, and invoke any found within it."""
     results = []
-    for name in files:
+    for (base_name, full_test_path) in files:
         import __main__ as main
         script_file = main.__file__
         command = ([sys.executable, script_file] +
                    dotest_argv +
-                   ["--inferior", "-p", name, root])
+                   ["--inferior", "-p", base_name, root])
 
-        timeout_name = os.path.basename(os.path.splitext(name)[0]).upper()
+        timeout_name = os.path.basename(os.path.splitext(base_name)[0]).upper()
 
         timeout = (os.getenv("LLDB_%s_TIMEOUT" % timeout_name) or
                    getDefaultTimeout(dotest_options.lldb_platform_name))
 
         results.append(call_with_timeout(
-            command, timeout, name, inferior_pid_events))
+            command, timeout, base_name, inferior_pid_events, full_test_path))
 
     # result = (name, status, passes, failures, unexpected_successes)
     timed_out = [name for name, status, _, _, _ in results
@@ -306,13 +440,15 @@ def process_dir(root, files, dotest_argv, inferior_pid_events):
               if status == ePassed]
     failed = [name for name, status, _, _, _ in results
               if status != ePassed]
-    unexpected_passes = [name for name, _, _, _, unexpected_successes in results
-                         if unexpected_successes > 0]
+    unexpected_passes = [
+        name for name, _, _, _, unexpected_successes in results
+        if unexpected_successes > 0]
 
     pass_count = sum([result[2] for result in results])
     fail_count = sum([result[3] for result in results])
 
-    return (timed_out, passed, failed, unexpected_passes, pass_count, fail_count)
+    return (
+        timed_out, passed, failed, unexpected_passes, pass_count, fail_count)
 
 in_q = None
 out_q = None
@@ -480,15 +616,17 @@ def find_test_files_in_dir_tree(dir_root, found_func):
             return (base_filename.startswith("Test") and
                     base_filename.endswith(".py"))
 
-        tests = [filename for filename in files
-                 if is_test_filename(root, filename)]
+        tests = [
+            (filename, os.path.join(root, filename))
+            for filename in files
+            if is_test_filename(root, filename)]
         if tests:
             found_func(root, tests)
 
 
 def initialize_global_vars_common(num_threads, test_work_items):
     global total_tests, test_counter, test_name_len
-    
+
     total_tests = sum([len(item[1]) for item in test_work_items])
     test_counter = multiprocessing.Value('i', 0)
     test_name_len = multiprocessing.Value('i', 0)
@@ -937,16 +1075,16 @@ def inprocess_exec_test_runner(test_work_items):
 
     return test_results
 
-def walk_and_invoke(test_directory, test_subdir, dotest_argv,
-                    num_workers, test_runner_func):
-    """Look for matched files and invoke test driver on each one.
-    In single-threaded mode, each test driver is invoked directly.
-    In multi-threaded mode, submit each test driver to a worker
-    queue, and then wait for all to complete.
+def walk_and_invoke(test_files, dotest_argv, num_workers, test_runner_func):
+    """Invokes the test runner on each test file specified by test_files.
 
-    test_directory - lldb/test/ directory
-    test_subdir - lldb/test/ or a subfolder with the tests we're interested in
-                  running
+    @param test_files a list of (test_subdir, list_of_test_files_in_dir)
+    @param num_workers the number of worker queues working on these test files
+    @param test_runner_func the test runner configured to run the tests
+
+    @return a tuple of results from the running of the specified tests,
+    of the form (timed_out, passed, failed, unexpected_successes, pass_count,
+    fail_count)
     """
     # The async_map is important to keep all thread-related asyncore
     # channels distinct when we call asyncore.loop() later on.
@@ -962,14 +1100,21 @@ def walk_and_invoke(test_directory, test_subdir, dotest_argv,
             dotest_channels.UnpicklingForwardingListenerChannel(
                 RUNNER_PROCESS_ASYNC_MAP, "localhost", 0,
                 2 * num_workers, forwarding_func))
-        dotest_argv.append("--results-port")
-        dotest_argv.append(str(RESULTS_LISTENER_CHANNEL.address[1]))
+        # Set the results port command line arg.  Might have been
+        # inserted previous, so first try to replace.
+        listener_port = str(RESULTS_LISTENER_CHANNEL.address[1])
+        try:
+            port_value_index = dotest_argv.index("--results-port") + 1
+            dotest_argv[port_value_index] = listener_port
+        except ValueError:
+            # --results-port doesn't exist (yet), add it
+            dotest_argv.append("--results-port")
+            dotest_argv.append(listener_port)
 
-    # Collect the test files that we'll run.
+    # Build the test work items out of the (dir, file_list) entries passed in.
     test_work_items = []
-    find_test_files_in_dir_tree(
-        test_subdir, lambda testdir, test_files: test_work_items.append([
-            test_subdir, test_files, dotest_argv, None]))
+    for entry in test_files:
+        test_work_items.append((entry[0], entry[1], dotest_argv, None))
 
     # Convert test work items into test results using whatever
     # was provided as the test run function.
@@ -1048,6 +1193,9 @@ def getDefaultTimeout(platform_name):
 
     if platform_name.startswith("remote-"):
         return "10m"
+    elif platform_name == 'darwin':
+        # We are consistently needing more time on a few tests.
+        return "6m"
     else:
         return "5m"
 
@@ -1286,14 +1434,60 @@ def default_test_runner_name(num_threads):
     return test_runner_name
 
 
-def main(print_details_on_success, num_threads, test_subdir,
-         test_runner_name, results_formatter):
-    """Run dotest.py in inferior mode in parallel.
+def rerun_tests(test_subdir, tests_for_rerun, dotest_argv):
+    # Build the list of test files to rerun.  Some future time we'll
+    # enable re-run by test method so we can constrain the rerun set
+    # to just the method(s) that were in issued within a file.
 
-    @param print_details_on_success the parsed value of the output-on-success
-    command line argument.  When True, details of a successful dotest inferior
-    are printed even when everything succeeds.  The normal behavior is to
-    not print any details when all the inferior tests pass.
+    # Sort rerun files into subdirectories.
+    print("\nRerunning the following files:")
+    rerun_files_by_subdir = {}
+    for test_filename in tests_for_rerun.keys():
+        # Print the file we'll be rerunning
+        test_relative_path = os.path.relpath(
+            test_filename, lldbsuite.lldb_test_root)
+        print("  {}".format(test_relative_path))
+
+        # Store test filenames by subdir.
+        test_dir = os.path.dirname(test_filename)
+        test_basename = os.path.basename(test_filename)
+        if test_dir in rerun_files_by_subdir:
+            rerun_files_by_subdir[test_dir].append(
+                (test_basename, test_filename))
+        else:
+            rerun_files_by_subdir[test_dir] = [(test_basename, test_filename)]
+
+    # Break rerun work up by subdirectory.  We do this since
+    # we have an invariant that states only one test file can
+    # be run at a time in any given subdirectory (related to
+    # rules around built inferior test program lifecycle).
+    rerun_work = []
+    for files_by_subdir in rerun_files_by_subdir.values():
+        rerun_work.append((test_subdir, files_by_subdir))
+
+    # Run the work with the serial runner.
+    # Do not update legacy counts, I am getting rid of
+    # them so no point adding complicated merge logic here.
+    rerun_thread_count = 1
+    rerun_runner_name = default_test_runner_name(rerun_thread_count)
+    runner_strategies_by_name = get_test_runner_strategies(rerun_thread_count)
+    rerun_runner_func = runner_strategies_by_name[
+        rerun_runner_name]
+    if rerun_runner_func is None:
+        raise Exception(
+            "failed to find rerun test runner "
+            "function named '{}'".format(rerun_runner_name))
+
+    walk_and_invoke(
+        rerun_work,
+        dotest_argv,
+        rerun_thread_count,
+        rerun_runner_func)
+    print("\nTest rerun complete\n")
+
+
+def main(num_threads, test_subdir, test_runner_name, results_formatter):
+    """Run dotest.py in inferior mode in parallel.
 
     @param num_threads the parsed value of the num-threads command line
     argument.
@@ -1321,8 +1515,7 @@ def main(print_details_on_success, num_threads, test_subdir,
 
     dotest_argv = sys.argv[1:]
 
-    global output_on_success, RESULTS_FORMATTER
-    output_on_success = print_details_on_success
+    global RESULTS_FORMATTER
     RESULTS_FORMATTER = results_formatter
 
     # We can't use sys.path[0] to determine the script directory
@@ -1349,6 +1542,12 @@ def main(print_details_on_success, num_threads, test_subdir,
 
     system_info = " ".join(platform.uname())
 
+    # Figure out which test files should be enabled for expected
+    # timeout
+    expected_timeout = getExpectedTimeouts(dotest_options.lldb_platform_name)
+    if results_formatter is not None:
+        results_formatter.set_expected_timeouts_by_basename(expected_timeout)
+
     # Figure out which testrunner strategy we'll use.
     runner_strategies_by_name = get_test_runner_strategies(num_threads)
 
@@ -1364,12 +1563,40 @@ def main(print_details_on_success, num_threads, test_subdir,
                 list(runner_strategies_by_name.keys())))
     test_runner_func = runner_strategies_by_name[test_runner_name]
 
+    # Collect the files on which we'll run the first test run phase.
+    test_files = []
+    find_test_files_in_dir_tree(
+        test_subdir, lambda tdir, tfiles: test_files.append(
+            (test_subdir, tfiles)))
+
+    # Do the first test run phase.
     summary_results = walk_and_invoke(
-        test_directory, test_subdir, dotest_argv,
-        num_threads, test_runner_func)
+        test_files,
+        dotest_argv,
+        num_threads,
+        test_runner_func)
 
     (timed_out, passed, failed, unexpected_successes, pass_count,
      fail_count) = summary_results
+
+    # Check if we have any tests to rerun as phase 2.
+    if results_formatter is not None:
+        tests_for_rerun = results_formatter.tests_for_rerun
+        results_formatter.tests_for_rerun = {}
+
+        if tests_for_rerun is not None and len(tests_for_rerun) > 0:
+            rerun_file_count = len(tests_for_rerun)
+            print("\n{} test files marked for rerun\n".format(
+                rerun_file_count))
+
+            # Check if the number of files exceeds the max cutoff.  If so,
+            # we skip the rerun step.
+            if rerun_file_count > configuration.rerun_max_file_threshold:
+                print("Skipping rerun: max rerun file threshold ({}) "
+                      "exceeded".format(
+                          configuration.rerun_max_file_threshold))
+            else:
+                rerun_tests(test_subdir, tests_for_rerun, dotest_argv)
 
     # The results formatter - if present - is done now.  Tell it to
     # terminate.
@@ -1388,7 +1615,6 @@ def main(print_details_on_success, num_threads, test_subdir,
         os.rename(core, os.path.join(session_dir, dst))
 
     # remove expected timeouts from failures
-    expected_timeout = getExpectedTimeouts(dotest_options.lldb_platform_name)
     for xtime in expected_timeout:
         if xtime in timed_out:
             timed_out.remove(xtime)
@@ -1403,33 +1629,55 @@ def main(print_details_on_success, num_threads, test_subdir,
             test_name = os.path.splitext(xtime)[0]
             touch(os.path.join(session_dir, "{}-{}".format(result, test_name)))
 
-    print()
-    sys.stdout.write("Ran %d test suites" % num_test_files)
-    if num_test_files > 0:
-        sys.stdout.write(" (%d failed) (%f%%)" % (
-            len(failed), 100.0 * len(failed) / num_test_files))
-    print()
-    sys.stdout.write("Ran %d test cases" % num_test_cases)
-    if num_test_cases > 0:
-        sys.stdout.write(" (%d failed) (%f%%)" % (
-            fail_count, 100.0 * fail_count / num_test_cases))
-    print()
-    exit_code = 0
+    # Only run the old summary logic if we don't have a results formatter
+    # that already prints the summary.
+    print_legacy_summary = results_formatter is None
+    if not print_legacy_summary:
+        # Print summary results.  Summarized results at the end always
+        # get printed to stdout, even if --results-file specifies a different
+        # file for, say, xUnit output.
+        results_formatter.print_results(sys.stdout)
 
-    if len(failed) > 0:
-        failed.sort()
-        print("Failing Tests (%d)" % len(failed))
-        for f in failed:
-            print("%s: LLDB (suite) :: %s (%s)" % (
-                "TIMEOUT" if f in timed_out else "FAIL", f, system_info
-            ))
-        exit_code = 1
+        # Figure out exit code by count of test result types.
+        issue_count = 0
+        for issue_status in EventBuilder.TESTRUN_ERROR_STATUS_VALUES:
+            issue_count += results_formatter.counts_by_test_result_status(
+                issue_status)
 
-    if len(unexpected_successes) > 0:
-        unexpected_successes.sort()
-        print("\nUnexpected Successes (%d)" % len(unexpected_successes))
-        for u in unexpected_successes:
-            print("UNEXPECTED SUCCESS: LLDB (suite) :: %s (%s)" % (u, system_info))
+        # Return with appropriate result code
+        if issue_count > 0:
+            sys.exit(1)
+        else:
+            sys.exit(0)
+    else:
+        # Print the legacy test results summary.
+        print()
+        sys.stdout.write("Ran %d test suites" % num_test_files)
+        if num_test_files > 0:
+            sys.stdout.write(" (%d failed) (%f%%)" % (
+                len(failed), 100.0 * len(failed) / num_test_files))
+        print()
+        sys.stdout.write("Ran %d test cases" % num_test_cases)
+        if num_test_cases > 0:
+            sys.stdout.write(" (%d failed) (%f%%)" % (
+                fail_count, 100.0 * fail_count / num_test_cases))
+        print()
+        exit_code = 0
+
+        if len(failed) > 0:
+            failed.sort()
+            print("Failing Tests (%d)" % len(failed))
+            for f in failed:
+                print("%s: LLDB (suite) :: %s (%s)" % (
+                    "TIMEOUT" if f in timed_out else "FAIL", f, system_info
+                ))
+            exit_code = 1
+
+        if len(unexpected_successes) > 0:
+            unexpected_successes.sort()
+            print("\nUnexpected Successes (%d)" % len(unexpected_successes))
+            for u in unexpected_successes:
+                print("UNEXPECTED SUCCESS: LLDB (suite) :: %s (%s)" % (u, system_info))
 
     sys.exit(exit_code)
 

@@ -362,6 +362,7 @@ ObjectFile::GetAddressClass (addr_t file_addr)
                     case eSectionTypeDWARFDebugLine:
                     case eSectionTypeDWARFDebugLoc:
                     case eSectionTypeDWARFDebugMacInfo:
+                    case eSectionTypeDWARFDebugMacro:
                     case eSectionTypeDWARFDebugPubNames:
                     case eSectionTypeDWARFDebugPubTypes:
                     case eSectionTypeDWARFDebugRanges:
@@ -542,6 +543,7 @@ ObjectFile::ReadSectionData (const Section *section, DataExtractor& section_data
                 }
             }
         }
+        return GetData(section->GetFileOffset(), section->GetFileSize(), section_data);
     }
     else
     {

@@ -62,6 +62,9 @@ public:
     ParseCompileUnitLineTable (const SymbolContext& sc);
 
     virtual bool
+    ParseCompileUnitDebugMacros (const SymbolContext& sc);
+
+    virtual bool
     ParseCompileUnitSupportFiles (const SymbolContext& sc,
                                   FileSpecList& support_files);
     
@@ -127,6 +130,9 @@ public:
                bool append, 
                size_t max_matches,
                TypeMap& types);
+
+    virtual size_t
+    FindTypes (const std::vector<CompilerContext> &context, bool append, TypeMap& types);
 
     virtual CompilerDeclContext
     FindNamespace (const SymbolContext& sc, 

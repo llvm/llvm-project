@@ -19,6 +19,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -73,6 +74,20 @@ PlatformMacOSX::Terminate ()
 PlatformSP
 PlatformMacOSX::CreateInstance (bool force, const ArchSpec *arch)
 {
+    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
+    if (log)
+    {
+        const char *arch_name;
+        if (arch && arch->GetArchitectureName ())
+            arch_name = arch->GetArchitectureName ();
+        else
+            arch_name = "<null>";
+
+        const char *triple_cstr = arch ? arch->GetTriple ().getTriple ().c_str() : "<null>";
+
+        log->Printf ("PlatformMacOSX::%s(force=%s, arch={%s,%s})", __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
+    }
+
     // The only time we create an instance is when we are creating a remote
     // macosx platform
     const bool is_host = false;
@@ -121,7 +136,15 @@ PlatformMacOSX::CreateInstance (bool force, const ArchSpec *arch)
         }
     }
     if (create)
+    {
+        if (log)
+            log->Printf ("PlatformMacOSX::%s() creating platform", __FUNCTION__);
         return PlatformSP(new PlatformMacOSX (is_host));
+    }
+
+    if (log)
+        log->Printf ("PlatformMacOSX::%s() aborting creation of platform", __FUNCTION__);
+
     return PlatformSP();
 }
 

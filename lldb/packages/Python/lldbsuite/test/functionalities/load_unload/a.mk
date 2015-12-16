@@ -6,8 +6,10 @@ CFLAGS_EXTRAS := -fPIC
 LD_EXTRAS := -L. -l$(LIB_PREFIX)b
 
 DYLIB_NAME := $(LIB_PREFIX)a
-DYLIB_C_SOURCES := a.c
+DYLIB_CXX_SOURCES := a.cpp
 DYLIB_ONLY := YES
+
+CXXFLAGS += -fPIC
 
 include $(LEVEL)/Makefile.rules
 

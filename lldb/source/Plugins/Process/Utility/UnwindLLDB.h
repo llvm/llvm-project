@@ -136,6 +136,15 @@ private:
  
     std::vector<ConstString> m_user_supplied_trap_handler_functions;
 
+    //-----------------------------------------------------------------
+    // Check if Full UnwindPlan of First frame is valid or not.
+    // If not then try Fallback UnwindPlan of the frame. If Fallback
+    // UnwindPlan succeeds then update the Full UnwindPlan with the
+    // Fallback UnwindPlan.
+    //-----------------------------------------------------------------
+    void
+    UpdateUnwindPlanForFirstFrameIfInvalid (ABI* abi);
+
     CursorSP
     GetOneMoreFrame (ABI* abi);
 

@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from lldbsuite.test import configuration
 from lldbsuite.test.lldbtest import *
 from lldbgdbserverutils import *
 import logging
@@ -61,9 +62,13 @@ class GdbRemoteTestCaseBase(TestBase):
         self.named_pipe = None
         self.named_pipe_fd = None
         self.stub_sends_two_stop_notifications_on_kill = False
-        if lldb.platform_url:
-            scheme, host = re.match('(.+)://(.+):\d+', lldb.platform_url).groups()
-            if scheme == 'adb':
+        if configuration.lldb_platform_url:
+            if configuration.lldb_platform_url.startswith('unix-'):
+                url_pattern = '(.+)://\[?(.+?)\]?/.*'
+            else:
+                url_pattern = '(.+)://(.+):\d+'
+            scheme, host = re.match(url_pattern, configuration.lldb_platform_url).groups()
+            if configuration.lldb_platform_name == 'remote-android' and host != 'localhost':
                 self.stub_device = host
                 self.stub_hostname = 'localhost'
             else:
@@ -143,29 +148,30 @@ class GdbRemoteTestCaseBase(TestBase):
 
         return stub_port
 
+    def run_shell_cmd(self, cmd):
+        platform = self.dbg.GetSelectedPlatform()
+        shell_cmd = lldb.SBPlatformShellCommand(cmd)
+        err = platform.Run(shell_cmd)
+        if err.Fail() or shell_cmd.GetStatus():
+            m = "remote_platform.RunShellCommand('%s') failed:\n" % cmd
+            m += ">>> return code: %d\n" % shell_cmd.GetStatus()
+            if err.Fail():
+                m += ">>> %s\n" % str(err).strip()
+            m += ">>> %s\n" % (shell_cmd.GetOutput() or
+                               "Command generated no output.")
+            raise Exception(m)
+        return shell_cmd.GetOutput().strip()
+
     def init_llgs_test(self, use_named_pipe=True):
         if lldb.remote_platform:
-            def run_shell_cmd(cmd):
-                platform = self.dbg.GetSelectedPlatform()
-                shell_cmd = lldb.SBPlatformShellCommand(cmd)
-                err = platform.Run(shell_cmd)
-                if err.Fail() or shell_cmd.GetStatus():
-                    m = "remote_platform.RunShellCommand('%s') failed:\n" % cmd
-                    m += ">>> return code: %d\n" % shell_cmd.GetStatus()
-                    if err.Fail():
-                        m += ">>> %s\n" % str(err).strip()
-                    m += ">>> %s\n" % (shell_cmd.GetOutput() or
-                                       "Command generated no output.")
-                    raise Exception(m)
-                return shell_cmd.GetOutput().strip()
             # Remote platforms don't support named pipe based port negotiation
             use_named_pipe = False
 
             # Grab the ppid from /proc/[shell pid]/stat
-            shell_stat = run_shell_cmd("cat /proc/$$/stat")
+            shell_stat = self.run_shell_cmd("cat /proc/$$/stat")
             # [pid] ([executable]) [state] [*ppid*]
             pid = re.match(r"^\d+ \(.+\) . (\d+)", shell_stat).group(1)
-            ls_output = run_shell_cmd("ls -l /proc/%s/exe" % pid)
+            ls_output = self.run_shell_cmd("ls -l /proc/%s/exe" % pid)
             exe = ls_output.split()[-1]
 
             # If the binary has been deleted, the link name has " (deleted)" appended.
@@ -1270,19 +1276,25 @@ class GdbRemoteTestCaseBase(TestBase):
         args["expected_g_c2"] = "0"
         (state_reached, step_count) = self.count_single_steps_until_true(main_thread_id, self.g_c1_c2_contents_are, args, max_step_count=5, use_Hc_packet=use_Hc_packet, step_instruction=step_instruction)
         self.assertTrue(state_reached)
-        self.assertEqual(step_count, 1)
+        expected_step_count = 1
+        arch = self.getArchitecture()
+
+        #MIPS required "3" (ADDIU, SB, LD) machine instructions for updation of variable value
+        if re.match("mips",arch):
+           expected_step_count = 3
+        self.assertEqual(step_count, expected_step_count)
 
         # Verify we hit the next state.
         args["expected_g_c1"] = "0"
         args["expected_g_c2"] = "0"
         (state_reached, step_count) = self.count_single_steps_until_true(main_thread_id, self.g_c1_c2_contents_are, args, max_step_count=5, use_Hc_packet=use_Hc_packet, step_instruction=step_instruction)
         self.assertTrue(state_reached)
-        self.assertEqual(step_count, 1)
+        self.assertEqual(step_count, expected_step_count)
 
         # Verify we hit the next state.
         args["expected_g_c1"] = "0"
         args["expected_g_c2"] = "1"
         (state_reached, step_count) = self.count_single_steps_until_true(main_thread_id, self.g_c1_c2_contents_are, args, max_step_count=5, use_Hc_packet=use_Hc_packet, step_instruction=step_instruction)
         self.assertTrue(state_reached)
-        self.assertEqual(step_count, 1)
+        self.assertEqual(step_count, expected_step_count)
 

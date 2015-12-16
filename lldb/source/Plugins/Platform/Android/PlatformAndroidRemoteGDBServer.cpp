@@ -223,3 +223,53 @@ PlatformAndroidRemoteGDBServer::MakeConnectURL(const lldb::pid_t pid,
 
     return error;
 }
+
+lldb::ProcessSP
+PlatformAndroidRemoteGDBServer::ConnectProcess(const char* connect_url,
+                                               const char* plugin_name,
+                                               lldb_private::Debugger &debugger,
+                                               lldb_private::Target *target,
+                                               lldb_private::Error &error)
+{
+    // We don't have the pid of the remote gdbserver when it isn't started by us but we still want
+    // to store the list of port forwards we set up in our port forward map. Generate a fake pid for
+    // these cases what won't collide with any other valid pid on android.
+    static lldb::pid_t s_remote_gdbserver_fake_pid = 0xffffffffffffffffULL;
+
+    int remote_port;
+    std::string scheme, host, path;
+    if (!UriParser::Parse(connect_url, scheme, host, remote_port, path))
+    {
+        error.SetErrorStringWithFormat("Invalid URL: %s", connect_url);
+        return nullptr;
+    }
+
+    std::string new_connect_url;
+    error = MakeConnectURL(s_remote_gdbserver_fake_pid--,
+                           (remote_port < 0) ? 0 : remote_port,
+                           path.c_str(),
+                           new_connect_url);
+    if (error.Fail())
+        return nullptr;
+
+    return PlatformRemoteGDBServer::ConnectProcess(new_connect_url.c_str(),
+                                                   plugin_name,
+                                                   debugger,
+                                                   target,
+                                                   error);
+}
+
+size_t
+PlatformAndroidRemoteGDBServer::ConnectToWaitingProcesses(Debugger& debugger, Error& error)
+{
+    std::vector<std::string> connection_urls;
+    GetPendingGdbServerList(connection_urls);
+
+    for (size_t i = 0; i < connection_urls.size(); ++i)
+    {
+        ConnectProcess(connection_urls[i].c_str(), nullptr, debugger, nullptr, error);
+        if (error.Fail())
+            return i; // We already connected to i process succsessfully
+    }
+    return connection_urls.size();
+}

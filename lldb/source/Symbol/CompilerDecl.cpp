@@ -25,10 +25,40 @@ CompilerDecl::GetName() const
     return m_type_system->DeclGetName(m_opaque_decl);
 }
 
+ConstString
+CompilerDecl::GetMangledName () const
+{
+    return m_type_system->DeclGetMangledName(m_opaque_decl);
+}
+
 lldb::VariableSP
 CompilerDecl::GetAsVariable ()
 {
     return m_type_system->DeclGetVariable(m_opaque_decl);
+}
+
+CompilerDeclContext
+CompilerDecl::GetDeclContext() const
+{
+    return m_type_system->DeclGetDeclContext(m_opaque_decl);
+}
+
+CompilerType
+CompilerDecl::GetFunctionReturnType() const
+{
+    return m_type_system->DeclGetFunctionReturnType(m_opaque_decl);
+}
+
+size_t
+CompilerDecl::GetNumFunctionArguments() const
+{
+    return m_type_system->DeclGetFunctionNumArguments(m_opaque_decl);
+}
+
+CompilerType
+CompilerDecl::GetFunctionArgumentType (size_t arg_idx) const
+{
+    return m_type_system->DeclGetFunctionArgumentType(m_opaque_decl, arg_idx);
 }
 
 bool

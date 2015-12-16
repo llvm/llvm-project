@@ -212,7 +212,11 @@ public:
         kCore_mips64_last   = eCore_mips64r6,
 
         kCore_mips64el_first  = eCore_mips64el,
-        kCore_mips64el_last   = eCore_mips64r6el
+        kCore_mips64el_last   = eCore_mips64r6el,
+
+        kCore_mips_first  = eCore_mips32,
+        kCore_mips_last   = eCore_mips64r6el
+
     };
 
     typedef void (* StopInfoOverrideCallbackType)(lldb_private::Thread &thread);

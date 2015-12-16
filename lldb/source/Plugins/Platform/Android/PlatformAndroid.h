@@ -98,6 +98,9 @@ namespace platform_android {
         DownloadSymbolFile (const lldb::ModuleSP& module_sp,
                             const FileSpec& dst_file_spec) override;
 
+        const char*
+        GetLibdlFunctionDeclarations() const override;
+
     private:
         std::string m_device_id;
         uint32_t m_sdk_version;

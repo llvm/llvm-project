@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os, sys
 import lldb
+from lldbsuite.test import configuration
 from lldbsuite.test.lldbbench import *
 
 def is_exe(fpath):
@@ -35,9 +36,7 @@ class DisassembleDriverMainLoop(BenchBase):
         self.function = 'Driver::MainLoop()'
         self.lldb_avg = None
         self.gdb_avg = None
-        self.count = lldb.bmIterationCount
-        if self.count <= 0:
-            self.count = 5
+        self.count = 5
 
     @benchmarks_test
     @no_debug_info_test

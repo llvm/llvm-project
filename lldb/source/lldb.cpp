@@ -83,6 +83,21 @@ std::string ExtractSwiftRevision(const std::string &fullVersion)
     return fullVersion.substr(prefix_start_pos + search_prefix.length(), revision_end_pos - prefix_start_pos - search_prefix.length());
 }
 
+static std::string
+GetBuildDate()
+{
+    // The following code helps distinguish between a defined preprocessor
+    // value that gets the default value assigned vs. one with an explicit value.
+#define LLDB_DO_MACRO_EXPAND(macro_value) macro_value ## 1
+#define LLDB_MACRO_EXPAND(macro_value) LLDB_DO_MACRO_EXPAND(macro_value)
+
+#if defined(LLDB_BUILD_DATE)
+    return std::string(LLDB_BUILD_DATE);
+#else
+    return std::string();
+#endif
+}
+
 static const char*
 _GetVersionOSS ()
 {
@@ -100,11 +115,11 @@ _GetVersionOSS ()
 #endif
         out << "lldb-" << build_flavor;
 
-#if defined (LLDB_BUILD_DATE)
-        const std::string build_date(LLDB_BUILD_DATE);
+        // We only run this code when the build date is both set and non-default.
+        // Otherwise this code doesn't compile.
+        const std::string build_date(GetBuildDate());
         if (!build_date.empty())
             out << "-" << build_date;
-#endif
 
         out << " (";
 

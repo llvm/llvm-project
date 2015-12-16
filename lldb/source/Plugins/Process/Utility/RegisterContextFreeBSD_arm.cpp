@@ -23,6 +23,7 @@ using namespace lldb_private;
 // http://svnweb.freebsd.org/base/head/sys/arm/include/reg.h
 #define GPR_OFFSET(idx) ((idx) * 4)
 #define FPU_OFFSET(idx) ((idx) * 4 + sizeof (RegisterContextFreeBSD_arm::GPR))
+#define FPSCR_OFFSET (LLVM_EXTENSION offsetof (RegisterContextFreeBSD_arm::FPU, fpscr) + sizeof (RegisterContextFreeBSD_arm::GPR))
 #define EXC_OFFSET(idx) ((idx) * 4 + sizeof (RegisterContextFreeBSD_arm::GPR) + sizeof (RegisterContextFreeBSD_arm::FPU))
 #define DBG_OFFSET(reg) ((LLVM_EXTENSION offsetof (RegisterContextFreeBSD_arm::DBG, reg) + sizeof (RegisterContextFreeBSD_arm::GPR) + sizeof (RegisterContextFreeBSD_arm::FPU) + sizeof (RegisterContextFreeBSD_arm::EXC)))
 

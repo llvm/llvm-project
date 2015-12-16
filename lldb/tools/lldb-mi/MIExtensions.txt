@@ -98,7 +98,7 @@ For example:
 Synopsis
 
 Additional syntax provided by lldb-mi:
-	-target-attach -n <executable-name> [--waitfor]
+    -target-attach -n <executable-name> [--waitfor]
 
 Attach to an executable. Using -n allows specifying an executable name to attach to. 
 Using this with --watifor can do a deffered attach. The flags -n and --waitfor match the syntax of lldb proper's 'process attach' command.

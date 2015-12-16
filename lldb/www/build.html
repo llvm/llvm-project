@@ -35,6 +35,8 @@
               </li>
               <li> <a href="http://lab.llvm.org:8011/builders/lldb-x86_64-freebsd">LLDB FreeBSD x86_64 (CMake)</a>
               </li>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-amd64-ninja-netbsd7">LLDB NetBSD-7.0 amd64 (GCC 4.8.5, Ninja)</a>
+              </li>
             </ul>
           </p>
         </div>
@@ -44,7 +46,7 @@
           <ul>
             <li><a href="#BuildingLldbOnWindows">Building LLDB on Windows</a></li>
             <li><a href="#BuildingLldbOnMacOSX">Building LLDB on Mac OSX</a></li>
-            <li><a href="#BuildingLldbOnLinux">Building LLDB on Linux and FreeBSD</a></li>
+            <li><a href="#BuildingLldbOnLinux">Building LLDB on Linux, FreeBSD and NetBSD</a></li>
           </ul>
         </div>
         <div class="postfooter"></div>
@@ -165,9 +167,9 @@
           <div class="postfooter"></div>
         </div>
         <div class="post" id="BuildingLldbOnLinux">
-          <h1 class="postheader">Building LLDB on Linux and FreeBSD</h1>
+          <h1 class="postheader">Building LLDB on Linux, FreeBSD and NetBSD</h1>
           <div class="postcontent">
-            <p>This document describes the steps needed to compile LLDB on most Linux systems, and FreeBSD.</a></p>
+            <p>This document describes the steps needed to compile LLDB on most Linux systems, FreeBSD and NetBSD.</a></p>
           </div>
           <div class="postcontent">
             <h2>Preliminaries</h2>
@@ -192,6 +194,10 @@
               or the GCC port or package.
             </p>
             <p>
+              On NetBSD the base system GCC and libstdc++ are used to build LLDB,
+              Clang/LLVM and libc++ should also work.
+            </p>
+            <p>
               In addition to any dependencies required by LLVM and Clang, LLDB needs a few
               development packages that may also need to be installed depending on your
               system.  The current list of dependencies are:
@@ -209,6 +215,8 @@
             <code>&gt; sudo apt-get build-dep lldb-3.3 # or lldb-3.4</code>
             <p>On FreeBSD one might run:</p>
             <code>&gt; pkg install swig python</code>
+            <p>On NetBSD one might run:</p>
+            <code>&gt; pkgin install swig python27 cmake ninja-build</code>
             <p>If you wish to build the optional reference documentation, additional dependencies are required:</p>
             <ul>
               <li> Graphviz (for the 'dot' tool).
@@ -347,6 +355,11 @@
               is made available automatically.  However, if a script is to be run by a Python interpreter
               outside the command line application, the <tt>PYTHONPATH</tt> environment variable can be used
               to let the Python interpreter find the <tt>lldb</tt> module.
+            </p>
+            <p>
+              Current stable NetBSD release doesn't ship with libpanel(3), therefore it's required to disable curses(3) support with
+              the <tt>-DLLDB_DISABLE_CURSES:BOOL=TRUE</tt> option. To make sure check if <tt>/usr/include/panel.h</tt> exists in your
+              system.
             </p>
             <p>The correct path can be obtained by invoking the command line <tt>lldb</tt> tool with the -P flag:</p>
             <code>&gt; export PYTHONPATH=`$llvm/build/Debug+Asserts/bin/lldb -P`</code>

@@ -9,6 +9,7 @@ from __future__ import print_function
 import os, sys
 import lldb
 from lldbsuite.test.lldbbench import *
+from lldbsuite.test import configuration
 
 class AttachThenDisassemblyBench(BenchBase):
 
@@ -16,13 +17,8 @@ class AttachThenDisassemblyBench(BenchBase):
 
     def setUp(self):
         BenchBase.setUp(self)
-        if lldb.bmExecutable:
-            self.exe = lldb.bmExecutable
-        else:
-            self.exe = lldbtest_config.lldbExec
-        self.count = lldb.bmIterationCount
-        if self.count <= 0:
-            self.count = 10
+        self.exe = lldbtest_config.lldbExec
+        self.count = 10
 
     @benchmarks_test
     @no_debug_info_test

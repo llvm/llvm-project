@@ -26,6 +26,7 @@ class ModulesInlineFunctionsTestCase(TestBase):
 
     @skipUnlessDarwin
     @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion('12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
+    @expectedFailureDarwin("llvm.org/pr25743")
     def test_expr(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

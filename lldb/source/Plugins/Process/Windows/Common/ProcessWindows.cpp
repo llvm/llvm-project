@@ -15,6 +15,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/State.h"
+#include "lldb/Host/windows/windows.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
@@ -72,6 +73,28 @@ ProcessWindows::GetImageInfoAddress()
         return addr.GetLoadAddress(&target);
     else
         return LLDB_INVALID_ADDRESS;
+}
+
+// The Windows page protection bits are NOT independent masks that can be bitwise-ORed
+// together.  For example, PAGE_EXECUTE_READ is not (PAGE_EXECUTE | PAGE_READ).
+// To test for an access type, it's necessary to test for any of the bits that provide
+// that access type.
+bool
+ProcessWindows::IsPageReadable(uint32_t protect)
+{
+    return (protect & PAGE_NOACCESS) == 0;
+}
+
+bool
+ProcessWindows::IsPageWritable(uint32_t protect)
+{
+    return (protect & (PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY | PAGE_READWRITE | PAGE_WRITECOPY)) != 0;
+}
+
+bool
+ProcessWindows::IsPageExecutable(uint32_t protect)
+{
+    return (protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0;
 }
 
 }

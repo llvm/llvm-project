@@ -22,6 +22,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 @skipIfWindows
+@expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB. 
 class ConcurrentEventsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

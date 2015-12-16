@@ -21,24 +21,15 @@ class TestSwiftSubmoduleImport(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
-    @dsym_test
+    @skipUnlessDarwin
     @swiftTest
-    def test_with_dsym_and_run_command(self):
+    def test_swift_submodule_import(self):
         """Tests that swift expressions can import sub-modules correctly"""
-        self.buildDsym()
+        self.build()
         self.do_test()
 
     # Have to find some submodule that is present on both Darwin & Linux for this
     # test to run on both systems...
-
-    @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
-    @dwarf_test
-    @swiftTest
-    def test_with_dwarf_and_run_command(self):
-        """Tests that swift expressions can import sub-modules correctly"""
-        self.buildDwarf()
-        self.do_test()
 
     def setUp(self):
         TestBase.setUp(self)

@@ -42,6 +42,8 @@
               <br />&gt; ninja check-lldb
             </code>
             <p>Note that multiple -A and -C flags can be specified to <tt>LLDB_TEST_USER_ARGS</tt>.</p>
+            <p>Note that on NetBSD you must export <tt>LD_LIBRARY_PATH=$PWD/lib</tt> in your environment. This is due to lack of
+               the <tt>$ORIGIN</tt> linker feature.</p>
             <p>
               In addition to running all the LLDB test suites with the "check-lldb" CMake target above, it is possible to
               run individual LLDB tests. For example, to run the test cases defined in TestInferiorCrashing.py, run:

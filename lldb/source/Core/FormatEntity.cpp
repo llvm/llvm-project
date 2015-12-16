@@ -1883,6 +1883,7 @@ FormatEntity::Format (const Entry &entry,
                                                                                       ValueObject::PrintableRepresentationSpecialCases::ePrintableRepresentationSpecialCasesAllow,
                                                                                       false);
                                     }
+                                    
                                     if (ss.GetData() && ss.GetSize())
                                         var_representation = ss.GetData();
                                     if (arg_idx > 0)

@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test import configuration
 from lldbsuite.test.lldbtest import *
 
 class StopHookForMultipleThreadsTestCase(TestBase):
@@ -49,9 +50,9 @@ class StopHookForMultipleThreadsTestCase(TestBase):
             child.expect_exact(prompt)
             child.sendline('platform select %s' % lldb.remote_platform.GetName())
             child.expect_exact(prompt)
-            child.sendline('platform connect %s' % lldb.platform_url)
+            child.sendline('platform connect %s' % configuration.lldb_platform_url)
             child.expect_exact(prompt)
-            child.sendline('platform settings -w %s' % lldb.remote_platform_working_dir)
+            child.sendline('platform settings -w %s' % configuration.lldb_platform_working_dir)
 
         child.expect_exact(prompt)
         child.sendline('target create %s' % exe)

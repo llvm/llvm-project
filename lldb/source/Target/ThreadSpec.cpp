@@ -1,4 +1,4 @@
-//===-- ThreadSpec.cpp ----------------------------------------------*- C++ -*-===//
+//===-- ThreadSpec.cpp ------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 
@@ -21,7 +25,7 @@ ThreadSpec::ThreadSpec() :
 {
 }
 
-ThreadSpec::ThreadSpec (const ThreadSpec &rhs) :
+ThreadSpec::ThreadSpec(const ThreadSpec &rhs) :
     m_index(rhs.m_index),
     m_tid(rhs.m_tid),
     m_name(rhs.m_name),
@@ -42,19 +46,13 @@ ThreadSpec::operator=(const ThreadSpec &rhs)
 const char *
 ThreadSpec::GetName () const
 {
-    if (m_name.empty())
-        return NULL;
-    else
-        return m_name.c_str();
+    return m_name.empty() ? nullptr : m_name.c_str();
 }
 
 const char *
 ThreadSpec::GetQueueName () const
 {
-    if (m_queue_name.empty())
-        return NULL;
-    else
-        return m_queue_name.c_str();
+    return m_queue_name.empty() ? nullptr : m_queue_name.c_str();
 }
 
 bool
@@ -66,6 +64,7 @@ ThreadSpec::TIDMatches (Thread &thread) const
     lldb::tid_t thread_id = thread.GetID();
     return TIDMatches (thread_id);
 }
+
 bool 
 ThreadSpec::IndexMatches (Thread &thread) const
 {
@@ -74,6 +73,7 @@ ThreadSpec::IndexMatches (Thread &thread) const
     uint32_t index = thread.GetIndexID();
     return IndexMatches (index);
 }
+
 bool 
 ThreadSpec::NameMatches (Thread &thread) const
 {
@@ -83,6 +83,7 @@ ThreadSpec::NameMatches (Thread &thread) const
     const char *name = thread.GetName();
     return NameMatches (name);
 }
+
 bool 
 ThreadSpec::QueueNameMatches (Thread &thread) const
 {
@@ -96,7 +97,6 @@ ThreadSpec::QueueNameMatches (Thread &thread) const
 bool
 ThreadSpec::ThreadPassesBasicTests (Thread &thread) const
 {
-
     if (!HasSpecification())
         return true;
         
@@ -113,7 +113,6 @@ ThreadSpec::ThreadPassesBasicTests (Thread &thread) const
         return false;
         
     return true;
-
 }
 
 bool
@@ -121,6 +120,7 @@ ThreadSpec::HasSpecification() const
 {
     return (m_index != UINT32_MAX || m_tid != LLDB_INVALID_THREAD_ID || !m_name.empty() || !m_queue_name.empty());
 }
+
 void
 ThreadSpec::GetDescription (Stream *s, lldb::DescriptionLevel level) const
 {

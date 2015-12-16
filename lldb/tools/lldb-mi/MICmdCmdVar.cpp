@@ -945,7 +945,7 @@ bool
 CMICmdCmdVarListChildren::ParseArgs()
 {
     m_setCmdArgs.Add(new CMICmdArgValPrintValues(m_constStrArgPrintValues, false, true));
-    m_setCmdArgs.Add(new CMICmdArgValString(m_constStrArgName, true, true));
+    m_setCmdArgs.Add(new CMICmdArgValString(m_constStrArgName, true, true, true));
     m_setCmdArgs.Add(new CMICmdArgValNumber(m_constStrArgFrom, false, true));
     m_setCmdArgs.Add(new CMICmdArgValNumber(m_constStrArgTo, false, true));
     return ParseValidateCmdOptions();

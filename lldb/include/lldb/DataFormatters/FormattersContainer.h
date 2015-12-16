@@ -80,7 +80,7 @@ public:
     typedef typename ValueType::SharedPointer ValueSP;
     typedef std::map<KeyType, ValueSP> MapType;
     typedef typename MapType::iterator MapIterator;
-    typedef std::function<bool(void*, KeyType, const ValueSP&)> CallbackType;
+    typedef std::function<bool(KeyType, const ValueSP&)> ForEachCallback;
     
     FormatMap(IFormatChangeListener* lst) :
     m_map(),
@@ -139,7 +139,7 @@ public:
     }
     
     void
-    LoopThrough (CallbackType callback, void* param)
+    ForEach (ForEachCallback callback)
     {
         if (callback)
         {
@@ -148,7 +148,7 @@ public:
             for (pos = m_map.begin(); pos != end; pos++)
             {
                 KeyType type = pos->first;
-                if (!callback(param, type, pos->second))
+                if (!callback(type, pos->second))
                     break;
             }
         }
@@ -224,7 +224,7 @@ public:
     typedef typename MapType::iterator MapIterator;
     typedef typename MapType::key_type MapKeyType;
     typedef typename MapType::mapped_type MapValueType;
-    typedef typename BackEndType::CallbackType CallbackType;
+    typedef typename BackEndType::ForEachCallback ForEachCallback;
     typedef typename std::shared_ptr<FormattersContainer<KeyType, ValueType> > SharedPointer;
     
     friend class TypeCategoryImpl;
@@ -297,9 +297,9 @@ public:
     }
     
     void
-    LoopThrough (CallbackType callback, void* param)
+    ForEach (ForEachCallback callback)
     {
-        m_format_map.LoopThrough(callback,param);
+        m_format_map.ForEach(callback);
     }
     
     uint32_t

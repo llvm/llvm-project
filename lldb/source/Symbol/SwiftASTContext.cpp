@@ -3564,7 +3564,12 @@ SwiftASTContext::LoadOneImage (Process &process, FileSpec &link_lib_spec, Error 
     VALID_OR_RETURN(false);
 
     error.Clear();
-    return process.LoadImage(link_lib_spec, error) != LLDB_INVALID_IMAGE_TOKEN;
+
+    PlatformSP platform_sp = process.GetTarget().GetPlatform();
+    if (platform_sp)
+        return platform_sp->LoadImage(&process, FileSpec(), link_lib_spec, error) != LLDB_INVALID_IMAGE_TOKEN;
+    else
+        return false;
 }
 
 static void
@@ -9146,6 +9151,7 @@ SwiftASTContext::GetMemberFunctionAtIndex (void* type, size_t idx)
     std::string name("");
     CompilerType result_type;
     MemberFunctionKind kind(MemberFunctionKind::eMemberFunctionKindUnknown);
+    swift::AbstractFunctionDecl *the_decl_we_care_about = nullptr;
     if (type)
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -9184,23 +9190,29 @@ SwiftASTContext::GetMemberFunctionAtIndex (void* type, size_t idx)
                                                 case swift::DeclKind::Constructor:
                                                     name.clear();
                                                     kind = lldb::eMemberFunctionKindConstructor;
+                                                    the_decl_we_care_about = abstract_func_decl;
                                                     break;
                                                 case swift::DeclKind::Destructor:
                                                     name.clear();
                                                     kind = lldb::eMemberFunctionKindDestructor;
+                                                    the_decl_we_care_about = abstract_func_decl;
                                                     break;
                                                 case swift::DeclKind::Func:
                                                 default:    // I know that this can only be one of three kinds since I am here..
                                                 {
                                                     swift::FuncDecl *func_decl = llvm::dyn_cast<swift::FuncDecl>(*iter);
-                                                    if (func_decl->getName().empty())
-                                                        name.clear();
-                                                    else
-                                                        name.assign(func_decl->getName().get());
-                                                    if (func_decl->isStatic())
-                                                        kind = lldb::eMemberFunctionKindStaticMethod;
-                                                    else
-                                                        kind = lldb::eMemberFunctionKindInstanceMethod;
+                                                    if (func_decl)
+                                                    {
+                                                        if (func_decl->getName().empty())
+                                                            name.clear();
+                                                        else
+                                                            name.assign(func_decl->getName().get());
+                                                        if (func_decl->isStatic())
+                                                            kind = lldb::eMemberFunctionKindStaticMethod;
+                                                        else
+                                                            kind = lldb::eMemberFunctionKindInstanceMethod;
+                                                        the_decl_we_care_about = func_decl;
+                                                    }
                                                 }
                                             }
                                             result_type = CompilerType(GetASTContext(),abstract_func_decl->getType().getPointer());
@@ -9249,23 +9261,29 @@ SwiftASTContext::GetMemberFunctionAtIndex (void* type, size_t idx)
                                                 case swift::DeclKind::Constructor:
                                                     name.clear();
                                                     kind = lldb::eMemberFunctionKindConstructor;
+                                                    the_decl_we_care_about = abstract_func_decl;
                                                     break;
                                                 case swift::DeclKind::Destructor:
                                                     name.clear();
                                                     kind = lldb::eMemberFunctionKindDestructor;
+                                                    the_decl_we_care_about = abstract_func_decl;
                                                     break;
                                                 case swift::DeclKind::Func:
                                                 default:    // I know that this can only be one of three kinds since I am here..
                                                 {
                                                     swift::FuncDecl *func_decl = llvm::dyn_cast<swift::FuncDecl>(*iter);
-                                                    if (func_decl->getName().empty())
-                                                        name.clear();
-                                                    else
-                                                        name.assign(func_decl->getName().get());
-                                                    if (func_decl->isStatic())
-                                                        kind = lldb::eMemberFunctionKindStaticMethod;
-                                                    else
-                                                        kind = lldb::eMemberFunctionKindInstanceMethod;
+                                                    if (func_decl)
+                                                    {
+                                                        if (func_decl->getName().empty())
+                                                            name.clear();
+                                                        else
+                                                            name.assign(func_decl->getName().get());
+                                                        if (func_decl->isStatic())
+                                                            kind = lldb::eMemberFunctionKindStaticMethod;
+                                                        else
+                                                            kind = lldb::eMemberFunctionKindInstanceMethod;
+                                                        the_decl_we_care_about = func_decl;
+                                                    }
                                                 }
                                             }
                                             result_type = CompilerType(GetASTContext(),abstract_func_decl->getType().getPointer());
@@ -9288,10 +9306,8 @@ SwiftASTContext::GetMemberFunctionAtIndex (void* type, size_t idx)
         }
     }
 
-    if (kind == eMemberFunctionKindUnknown)
-        return TypeMemberFunctionImpl();
-    if (type)
-        return TypeMemberFunctionImpl(result_type, name, kind);
+    if (type && the_decl_we_care_about && (kind != eMemberFunctionKindUnknown))
+        return TypeMemberFunctionImpl(result_type, CompilerDecl(this, the_decl_we_care_about), name, kind);
 
     return TypeMemberFunctionImpl();
 }

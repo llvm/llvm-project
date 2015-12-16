@@ -34,6 +34,17 @@ public:
     size_t PutSTDIN(const char *buf, size_t buf_size, lldb_private::Error &error) override;
 
     lldb::addr_t GetImageInfoAddress() override;
+
+protected:
+    // These decode the page protection bits.
+    static bool
+    IsPageReadable(uint32_t protect);
+
+    static bool
+    IsPageWritable(uint32_t protect);
+
+    static bool
+    IsPageExecutable(uint32_t protect);
 };
 
 }

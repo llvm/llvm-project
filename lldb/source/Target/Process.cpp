@@ -760,7 +760,6 @@ Process::Process(lldb::TargetSP target_sp, Listener &listener, const UnixSignals
     m_next_event_action_ap(),
     m_public_run_lock (),
     m_private_run_lock (),
-    m_currently_handling_event(false),
     m_stop_info_override_callback (NULL),
     m_finalizing (false),
     m_finalize_called (false),
@@ -994,7 +993,8 @@ Process::WaitForProcessToStop (const TimeValue *timeout,
                                EventSP *event_sp_ptr,
                                bool wait_always,
                                Listener *hijack_listener,
-                               Stream *stream)
+                               Stream *stream,
+                               bool use_run_lock)
 {
     // We can't just wait for a "stopped" event, because the stopped event may have restarted the target.
     // We have to actually check each event, and in the case of a stopped event check the restarted flag
@@ -1021,7 +1021,7 @@ Process::WaitForProcessToStop (const TimeValue *timeout,
                         __FUNCTION__);
         // We need to toggle the run lock as this won't get done in
         // SetPublicState() if the process is hijacked.
-        if (hijack_listener)
+        if (hijack_listener && use_run_lock)
             m_public_run_lock.SetStopped();
         return state;
     }
@@ -1045,7 +1045,7 @@ Process::WaitForProcessToStop (const TimeValue *timeout,
         case eStateUnloaded:
             // We need to toggle the run lock as this won't get done in
             // SetPublicState() if the process is hijacked.
-            if (hijack_listener)
+            if (hijack_listener && use_run_lock)
                 m_public_run_lock.SetStopped();
             return state;
         case eStateStopped:
@@ -1055,7 +1055,7 @@ Process::WaitForProcessToStop (const TimeValue *timeout,
             {
                 // We need to toggle the run lock as this won't get done in
                 // SetPublicState() if the process is hijacked.
-                if (hijack_listener)
+                if (hijack_listener && use_run_lock)
                     m_public_run_lock.SetStopped();
                 return state;
             }
@@ -1415,23 +1415,6 @@ void
 Process::RestoreProcessEvents ()
 {
     RestoreBroadcaster();
-}
-
-bool
-Process::HijackPrivateProcessEvents (Listener *listener)
-{
-    if (listener != NULL)
-    {
-        return m_private_state_broadcaster.HijackBroadcaster(listener, eBroadcastBitStateChanged | eBroadcastBitInterrupt);
-    }
-    else
-        return false;
-}
-
-void
-Process::RestorePrivateProcessEvents ()
-{
-    m_private_state_broadcaster.RestoreBroadcaster();
 }
 
 StateType
@@ -1993,223 +1976,6 @@ addr_t
 Process::GetImageInfoAddress()
 {
     return LLDB_INVALID_ADDRESS;
-}
-
-//----------------------------------------------------------------------
-// LoadImage
-//
-// This function provides a default implementation that works for most
-// unix variants. Any Process subclasses that need to do shared library
-// loading differently should override LoadImage and UnloadImage and
-// do what is needed.
-//----------------------------------------------------------------------
-uint32_t
-Process::LoadImage (const FileSpec &image_spec, Error &error)
-{
-    if (m_finalizing)
-    {
-        error.SetErrorString("process is tearing itself down");
-        return LLDB_INVALID_IMAGE_TOKEN;
-    }
-
-    char path[PATH_MAX];
-    image_spec.GetPath(path, sizeof(path));
-
-    DynamicLoader *loader = GetDynamicLoader();
-    if (loader)
-    {
-        error = loader->CanLoadImage();
-        if (error.Fail())
-            return LLDB_INVALID_IMAGE_TOKEN;
-    }
-    
-    if (error.Success())
-    {
-        ThreadSP thread_sp(GetThreadList ().GetSelectedThread());
-        
-        if (thread_sp)
-        {
-            StackFrameSP frame_sp (thread_sp->GetStackFrameAtIndex (0));
-            
-            if (frame_sp)
-            {
-                ExecutionContext exe_ctx;
-                frame_sp->CalculateExecutionContext (exe_ctx);
-                EvaluateExpressionOptions expr_options;
-                expr_options.SetUnwindOnError(true);
-                expr_options.SetIgnoreBreakpoints(true);
-                expr_options.SetExecutionPolicy(eExecutionPolicyAlways);
-                expr_options.SetLanguage (eLanguageTypeC_plus_plus);
-                expr_options.SetResultIsInternal(true);
-                expr_options.SetLanguage(eLanguageTypeC_plus_plus);
-                
-                StreamString expr;
-                expr.Printf(R"(
-                               struct __lldb_dlopen_result { void *image_ptr; const char *error_str; } the_result;
-                               the_result.image_ptr = dlopen ("%s", 2);
-                               if (the_result.image_ptr == (void *) 0x0)
-                               {
-                                   the_result.error_str = dlerror();
-                               }
-                               else
-                               {
-                                   the_result.error_str = (const char *) 0x0;
-                               }
-                               the_result;
-                              )",
-                              path);
-                const char *prefix = R"(
-                                        extern "C" void* dlopen (const char *path, int mode);
-                                        extern "C" const char *dlerror (void);
-                                        )";
-                lldb::ValueObjectSP result_valobj_sp;
-                Error expr_error;
-                UserExpression::Evaluate (exe_ctx,
-                                          expr_options,
-                                          expr.GetData(),
-                                          prefix,
-                                          result_valobj_sp,
-                                          expr_error);
-                if (expr_error.Success())
-                {
-                    error = result_valobj_sp->GetError();
-                    if (error.Success())
-                    {
-                        Scalar scalar;
-                        ValueObjectSP image_ptr_sp = result_valobj_sp->GetChildAtIndex(0, true);
-                        if (image_ptr_sp && image_ptr_sp->ResolveValue (scalar))
-                        {
-                            addr_t image_ptr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
-                            if (image_ptr != 0 && image_ptr != LLDB_INVALID_ADDRESS)
-                            {
-                                uint32_t image_token = m_image_tokens.size();
-                                m_image_tokens.push_back (image_ptr);
-                                return image_token;
-                            }
-                            else if (image_ptr == 0)
-                            {
-                                ValueObjectSP error_str_sp = result_valobj_sp->GetChildAtIndex(1, true);
-                                if (error_str_sp)
-                                {
-                                    if (error_str_sp->IsCStringContainer(true))
-                                    {
-                                        DataBufferSP buffer_sp(new DataBufferHeap(10240,0));
-                                        size_t num_chars = error_str_sp->ReadPointedString (buffer_sp, error, 10240).first;
-                                        if (error.Success() && num_chars > 0)
-                                        {
-                                            error.Clear();
-                                            error.SetErrorStringWithFormat("dlopen error: %s", buffer_sp->GetBytes());
-                                        }
-                                        else
-                                        {
-                                            error.Clear();
-                                            error.SetErrorStringWithFormat("dlopen failed for unknown reasons.");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                    error = expr_error;
-            }
-        }
-    }
-    if (!error.AsCString())
-        error.SetErrorStringWithFormat("unable to load '%s'", path);
-    return LLDB_INVALID_IMAGE_TOKEN;
-}
-
-//----------------------------------------------------------------------
-// UnloadImage
-//
-// This function provides a default implementation that works for most
-// unix variants. Any Process subclasses that need to do shared library
-// loading differently should override LoadImage and UnloadImage and
-// do what is needed.
-//----------------------------------------------------------------------
-Error
-Process::UnloadImage (uint32_t image_token)
-{
-    Error error;
-    if (m_finalizing)
-    {
-        error.SetErrorString("process is tearing itself down");
-        return error;
-    }
-
-    if (image_token < m_image_tokens.size())
-    {
-        const addr_t image_addr = m_image_tokens[image_token];
-        if (image_addr == LLDB_INVALID_ADDRESS)
-        {
-            error.SetErrorString("image already unloaded");
-        }
-        else
-        {
-            DynamicLoader *loader = GetDynamicLoader();
-            if (loader)
-                error = loader->CanLoadImage();
-            
-            if (error.Success())
-            {
-                ThreadSP thread_sp(GetThreadList ().GetSelectedThread());
-                
-                if (thread_sp)
-                {
-                    StackFrameSP frame_sp (thread_sp->GetStackFrameAtIndex (0));
-                    
-                    if (frame_sp)
-                    {
-                        ExecutionContext exe_ctx;
-                        frame_sp->CalculateExecutionContext (exe_ctx);
-                        EvaluateExpressionOptions expr_options;
-                        expr_options.SetUnwindOnError(true);
-                        expr_options.SetIgnoreBreakpoints(true);
-                        expr_options.SetExecutionPolicy(eExecutionPolicyAlways);
-                        expr_options.SetLanguage(eLanguageTypeC_plus_plus);
-                        
-                        StreamString expr;
-                        expr.Printf("dlclose ((void *)0x%" PRIx64 ")", image_addr);
-                        const char *prefix = "extern \"C\" int dlclose(void* handle);\n";
-                        lldb::ValueObjectSP result_valobj_sp;
-                        Error expr_error;
-                        UserExpression::Evaluate (exe_ctx,
-                                                  expr_options,
-                                                  expr.GetData(),
-                                                  prefix,
-                                                  result_valobj_sp,
-                                                  expr_error);
-                        if (result_valobj_sp->GetError().Success())
-                        {
-                            Scalar scalar;
-                            if (result_valobj_sp->ResolveValue (scalar))
-                            {
-                                if (scalar.UInt(1))
-                                {
-                                    error.SetErrorStringWithFormat("expression failed: \"%s\"", expr.GetData());
-                                }
-                                else
-                                {
-                                    m_image_tokens[image_token] = LLDB_INVALID_ADDRESS;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            error = result_valobj_sp->GetError();
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        error.SetErrorString("invalid image token");
-    }
-    return error;
 }
 
 const lldb::ABISP &
@@ -3970,101 +3736,50 @@ Process::PrivateResume ()
 }
 
 Error
-Process::Halt (bool clear_thread_plans)
+Process::Halt (bool clear_thread_plans, bool use_run_lock)
 {
+    if (! StateIsRunningState(m_public_state.GetValue()))
+        return Error("Process is not running.");
+
     // Don't clear the m_clear_thread_plans_on_stop, only set it to true if
     // in case it was already set and some thread plan logic calls halt on its
     // own.
     m_clear_thread_plans_on_stop |= clear_thread_plans;
     
-    // First make sure we aren't in the middle of handling an event, or we might restart.  This is pretty weak, since
-    // we could just straightaway get another event.  It just narrows the window...
-    m_currently_handling_event.WaitForValueEqualTo(false);
-
-    
-    // Pause our private state thread so we can ensure no one else eats
-    // the stop event out from under us.
     Listener halt_listener ("lldb.process.halt_listener");
-    HijackPrivateProcessEvents(&halt_listener);
+    HijackProcessEvents(&halt_listener);
 
     EventSP event_sp;
-    Error error (WillHalt());
     
-    bool restored_process_events = false;
-    if (error.Success())
+    SendAsyncInterrupt();
+
+    if (m_public_state.GetValue() == eStateAttaching)
     {
-        
-        bool caused_stop = false;
-        
-        // Ask the process subclass to actually halt our process
-        error = DoHalt(caused_stop);
-        if (error.Success())
-        {
-            if (m_public_state.GetValue() == eStateAttaching)
-            {
-                // Don't hijack and eat the eStateExited as the code that was doing
-                // the attach will be waiting for this event...
-                RestorePrivateProcessEvents();
-                restored_process_events = true;
-                SetExitStatus(SIGKILL, "Cancelled async attach.");
-                Destroy (false);
-            }
-            else
-            {
-                // If "caused_stop" is true, then DoHalt stopped the process. If
-                // "caused_stop" is false, the process was already stopped.
-                // If the DoHalt caused the process to stop, then we want to catch
-                // this event and set the interrupted bool to true before we pass
-                // this along so clients know that the process was interrupted by
-                // a halt command.
-                if (caused_stop)
-                {
-                    // Wait for 1 second for the process to stop.
-                    TimeValue timeout_time;
-                    timeout_time = TimeValue::Now();
-                    timeout_time.OffsetWithSeconds(10);
-                    bool got_event = halt_listener.WaitForEvent (&timeout_time, event_sp);
-                    StateType state = ProcessEventData::GetStateFromEvent(event_sp.get());
-                    
-                    if (!got_event || state == eStateInvalid)
-                    {
-                        // We timeout out and didn't get a stop event...
-                        error.SetErrorStringWithFormat ("Halt timed out. State = %s", StateAsCString(GetState()));
-                    }
-                    else
-                    {
-                        if (StateIsStoppedState (state, false))
-                        {
-                            // We caused the process to interrupt itself, so mark this
-                            // as such in the stop event so clients can tell an interrupted
-                            // process from a natural stop
-                            ProcessEventData::SetInterruptedInEvent (event_sp.get(), true);
-                        }
-                        else
-                        {
-                            Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
-                            if (log)
-                                log->Printf("Process::Halt() failed to stop, state is: %s", StateAsCString(state));
-                            error.SetErrorString ("Did not get stopped event after halt.");
-                        }
-                    }
-                }
-                DidHalt();
-            }
-        }
+        // Don't hijack and eat the eStateExited as the code that was doing
+        // the attach will be waiting for this event...
+        RestoreProcessEvents();
+        SetExitStatus(SIGKILL, "Cancelled async attach.");
+        Destroy (false);
+        return Error();
     }
-    // Resume our private state thread before we post the event (if any)
-    if (!restored_process_events)
-        RestorePrivateProcessEvents();
 
-    // Post any event we might have consumed. If all goes well, we will have
-    // stopped the process, intercepted the event and set the interrupted
-    // bool in the event.  Post it to the private event queue and that will end up
-    // correctly setting the state.
-    if (event_sp)
-        m_private_state_broadcaster.BroadcastEvent(event_sp);
+    // Wait for 10 second for the process to stop.
+    TimeValue timeout_time;
+    timeout_time = TimeValue::Now();
+    timeout_time.OffsetWithSeconds(10);
+    StateType state = WaitForProcessToStop(&timeout_time, &event_sp, true, &halt_listener,
+                                           nullptr, use_run_lock);
+    RestoreProcessEvents();
 
-    return error;
+    if (state == eStateInvalid || ! event_sp)
+    {
+        // We timed out and didn't get a stop event...
+        return Error("Halt timed out. State = %s", StateAsCString(GetState()));
+    }
+
+    BroadcastEvent(event_sp);
+
+    return Error();
 }
 
 Error
@@ -4183,7 +3898,7 @@ Process::Detach (bool keep_stopped)
 Error
 Process::Destroy (bool force_kill)
 {
-    
+
     // Tell ourselves we are in the process of destroying the process, so that we don't do any unnecessary work
     // that might hinder the destruction.  Remember to set this back to false when we are done.  That way if the attempt
     // failed and the process stays around for some reason it won't be in a confused state.
@@ -4601,8 +4316,6 @@ Process::HandlePrivateEvent (EventSP &event_sp)
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
     m_resume_requested = false;
     
-    m_currently_handling_event.SetValue(true, eBroadcastNever);
-    
     const StateType new_state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
     
     // First check to see if anybody wants a shot at this event:
@@ -4629,7 +4342,6 @@ Process::HandlePrivateEvent (EventSP &event_sp)
                 {
                     // FIXME: should cons up an exited event, and discard this one.
                     SetExitStatus(0, m_next_event_action_ap->GetExitString());
-                    m_currently_handling_event.SetValue(false, eBroadcastAlways);
                     SetNextEventAction(NULL);
                     return;
                 }
@@ -4719,7 +4431,22 @@ Process::HandlePrivateEvent (EventSP &event_sp)
                          StateAsCString (GetState ()));
         }
     }
-    m_currently_handling_event.SetValue(false, eBroadcastAlways);
+}
+
+Error
+Process::HaltPrivate()
+{
+    EventSP event_sp;
+    Error error (WillHalt());
+    if (error.Fail())
+        return error;
+
+    // Ask the process subclass to actually halt our process
+    bool caused_stop;
+    error = DoHalt(caused_stop);
+
+    DidHalt();
+    return error;
 }
 
 thread_result_t
@@ -4742,6 +4469,7 @@ Process::RunPrivateStateThread (bool is_secondary_thread)
                      __FUNCTION__, static_cast<void*>(this), GetID());
 
     bool exit_now = false;
+    bool interrupt_requested = false;
     while (!exit_now)
     {
         EventSP event_sp;
@@ -4781,13 +4509,32 @@ Process::RunPrivateStateThread (bool is_secondary_thread)
                                  GetID());
                 BroadcastEvent (eBroadcastBitInterrupt, NULL);
             }
-            else
+            else if(StateIsRunningState(m_last_broadcast_state))
             {
                 if (log)
                     log->Printf ("Process::%s (arg = %p, pid = %" PRIu64 ") woke up with an interrupt - Halting.",
                                  __FUNCTION__, static_cast<void*>(this),
                                  GetID());
-                Halt();
+                Error error = HaltPrivate();
+                if (error.Fail() && log)
+                    log->Printf ("Process::%s (arg = %p, pid = %" PRIu64 ") failed to halt the process: %s",
+                                 __FUNCTION__, static_cast<void*>(this),
+                                 GetID(), error.AsCString());
+                // Halt should generate a stopped event. Make a note of the fact that we were
+                // doing the interrupt, so we can set the interrupted flag after we receive the
+                // event. We deliberately set this to true even if HaltPrivate failed, so that we
+                // can interrupt on the next natural stop.
+                interrupt_requested = true;
+            }
+            else
+            {
+                // This can happen when someone (e.g. Process::Halt) sees that we are running and
+                // sends an interrupt request, but the process actually stops before we receive
+                // it. In that case, we can just ignore the request. We use
+                // m_last_broadcast_state, because the Stopped event may not have been popped of
+                // the event queue yet, which is when the public state gets updated.
+                if (log)
+                    log->Printf("Process::%s ignoring interrupt as we have already stopped.", __FUNCTION__);
             }
             continue;
         }
@@ -4802,6 +4549,23 @@ Process::RunPrivateStateThread (bool is_secondary_thread)
                 m_clear_thread_plans_on_stop = false;
                 m_thread_list.DiscardThreadPlans();
             }
+
+            if (interrupt_requested)
+            {
+                if (StateIsStoppedState (internal_state, true))
+                {
+                    // We requested the interrupt, so mark this as such in the stop event so
+                    // clients can tell an interrupted process from a natural stop
+                    ProcessEventData::SetInterruptedInEvent (event_sp.get(), true);
+                    interrupt_requested = false;
+                }
+                else if (log)
+                {
+                    log->Printf("Process::%s interrupt_requested, but a non-stopped state '%s' received.",
+                            __FUNCTION__, StateAsCString(internal_state));
+                }
+            }
+
             HandlePrivateEvent (event_sp);
         }
 
@@ -5896,7 +5660,9 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                     {
                         // This is probably an overabundance of caution, I don't think I should ever get a stopped & restarted
                         // event here.  But if I do, the best thing is to Halt and then get out of here.
-                        Halt();
+                        const bool clear_thread_plans = false;
+                        const bool use_run_lock = false;
+                        Halt(clear_thread_plans, use_run_lock);
                     }
 
                     errors.Printf("Didn't get running event after initial resume, got %s instead.",
@@ -5990,7 +5756,9 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                     bool keep_going = false;
                     if (event_sp->GetType() == eBroadcastBitInterrupt)
                     {
-                        Halt();
+                        const bool clear_thread_plans = false;
+                        const bool use_run_lock = false;
+                        Halt(clear_thread_plans, use_run_lock);
                         return_value = eExpressionInterrupted;
                         errors.Printf ("Execution halted by user interrupt.");
                         if (log)
@@ -6167,7 +5935,9 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                     {
                         if (log)
                             log->Printf ("Process::RunThreadPlan(): Running Halt.");
-                        halt_error = Halt();
+                        const bool clear_thread_plans = false;
+                        const bool use_run_lock = false;
+                        Halt(clear_thread_plans, use_run_lock);
                     }
                     if (halt_error.Success())
                     {
@@ -6881,4 +6651,26 @@ Process::GetModuleSpec(const FileSpec& module_file_spec,
 {
     module_spec.Clear();
     return false;
+}
+
+size_t
+Process::AddImageToken(lldb::addr_t image_ptr)
+{
+    m_image_tokens.push_back(image_ptr);
+    return m_image_tokens.size() - 1;
+}
+
+lldb::addr_t
+Process::GetImagePtrFromToken(size_t token) const
+{
+    if (token < m_image_tokens.size())
+        return m_image_tokens[token];
+    return LLDB_INVALID_IMAGE_TOKEN;
+}
+
+void
+Process::ResetImageToken(size_t token)
+{
+    if (token < m_image_tokens.size())
+        m_image_tokens[token] = LLDB_INVALID_IMAGE_TOKEN;
 }

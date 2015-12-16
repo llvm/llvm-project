@@ -180,6 +180,9 @@ public:
             bool stop_at_entry,
             lldb::SBError& error);
 
+    SBProcess
+    LoadCore (const char *core_file);
+
     //------------------------------------------------------------------
     /// Launch a new process with sensible defaults.
     ///
@@ -214,9 +217,6 @@ public:
     SBProcess
     Launch (SBLaunchInfo &launch_info, SBError& error);
     
-    SBProcess
-    LoadCore (const char *core_file);
-
     SBProcess
     Attach (SBAttachInfo &attach_info, SBError& error);
 
@@ -698,6 +698,9 @@ public:
 
     lldb::SBBreakpoint
     BreakpointCreateByAddress (addr_t address);
+
+    lldb::SBBreakpoint
+    BreakpointCreateBySBAddress (SBAddress &address);
 
     uint32_t
     GetNumBreakpoints () const;

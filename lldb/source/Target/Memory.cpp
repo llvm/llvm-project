@@ -164,24 +164,16 @@ MemoryCache::Read (addr_t addr,
     if (!m_L1_cache.empty())
     {
         AddrRange read_range(addr, dst_len);
-        BlockMap::iterator pos = m_L1_cache.lower_bound(addr);
-        if (pos != m_L1_cache.end())
+        BlockMap::iterator pos = m_L1_cache.upper_bound(addr);
+        if (pos != m_L1_cache.begin ())
         {
-            AddrRange chunk_range(pos->first, pos->second->GetByteSize());
-            bool match = chunk_range.Contains(read_range);
-            if (!match && pos != m_L1_cache.begin())
-            {
-                --pos;
-                chunk_range.SetRangeBase(pos->first);
-                chunk_range.SetByteSize(pos->second->GetByteSize());
-                match = chunk_range.Contains(read_range);
-            }
-
-            if (match)
-            {
-                memcpy(dst, pos->second->GetBytes() + addr - chunk_range.GetRangeBase(), dst_len);
-                return dst_len;
-            }
+            --pos;
+        }
+        AddrRange chunk_range(pos->first, pos->second->GetByteSize());
+        if (chunk_range.Contains(read_range))
+        {
+            memcpy(dst, pos->second->GetBytes() + addr - chunk_range.GetRangeBase(), dst_len);
+            return dst_len;
         }
     }
 

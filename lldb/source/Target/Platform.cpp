@@ -26,6 +26,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
@@ -1982,4 +1983,107 @@ Platform::GetUnixSignals()
     if (IsHost())
         return Host::GetUnixSignals();
     return GetRemoteUnixSignals();
+}
+
+uint32_t
+Platform::LoadImage(lldb_private::Process* process,
+                    const lldb_private::FileSpec& local_file,
+                    const lldb_private::FileSpec& remote_file,
+                    lldb_private::Error& error)
+{
+    if (local_file && remote_file)
+    {
+        // Both local and remote file was specified. Install the local file to the given location.
+        if (IsRemote() || local_file != remote_file)
+        {
+            error = Install(local_file, remote_file);
+            if (error.Fail())
+                return LLDB_INVALID_IMAGE_TOKEN;
+        }
+        return DoLoadImage(process, remote_file, error);
+    }
+
+    if (local_file)
+    {
+        // Only local file was specified. Install it to the current working directory.
+        FileSpec target_file = GetWorkingDirectory();
+        target_file.AppendPathComponent(local_file.GetFilename().AsCString());
+        if (IsRemote() || local_file != target_file)
+        {
+            error = Install(local_file, target_file);
+            if (error.Fail())
+                return LLDB_INVALID_IMAGE_TOKEN;
+        }
+        return DoLoadImage(process, target_file, error);
+    }
+
+    if (remote_file)
+    {
+        // Only remote file was specified so we don't have to do any copying
+        return DoLoadImage(process, remote_file, error);
+    }
+
+    error.SetErrorString("Neither local nor remote file was specified");
+    return LLDB_INVALID_IMAGE_TOKEN;
+}
+
+uint32_t
+Platform::DoLoadImage (lldb_private::Process* process,
+                       const lldb_private::FileSpec& remote_file,
+                       lldb_private::Error& error)
+{
+    error.SetErrorString("LoadImage is not supported on the current platform");
+    return LLDB_INVALID_IMAGE_TOKEN;
+}
+
+Error
+Platform::UnloadImage(lldb_private::Process* process, uint32_t image_token)
+{
+    return Error("UnloadImage is not supported on the current platform");
+}
+
+lldb::ProcessSP
+Platform::ConnectProcess(const char* connect_url,
+                         const char* plugin_name,
+                         lldb_private::Debugger &debugger,
+                         lldb_private::Target *target,
+                         lldb_private::Error &error)
+{
+    error.Clear();
+
+    if (!target)
+    {
+        TargetSP new_target_sp;
+        error = debugger.GetTargetList().CreateTarget(debugger,
+                                                      nullptr,
+                                                      nullptr,
+                                                      false,
+                                                      nullptr,
+                                                      new_target_sp);
+        target = new_target_sp.get();
+    }
+
+    if (!target || error.Fail())
+        return nullptr;
+
+    debugger.GetTargetList().SetSelectedTarget(target);
+
+    lldb::ProcessSP process_sp = target->CreateProcess(debugger.GetListener(),
+                                                       plugin_name,
+                                                       nullptr);
+    if (!process_sp)
+        return nullptr;
+
+    error = process_sp->ConnectRemote(debugger.GetOutputFile().get(), connect_url);
+    if (error.Fail())
+        return nullptr;
+
+    return process_sp;
+}
+
+size_t
+Platform::ConnectToWaitingProcesses(lldb_private::Debugger& debugger, lldb_private::Error& error)
+{
+    error.Clear();
+    return 0;
 }

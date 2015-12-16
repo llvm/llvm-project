@@ -1,0 +1,20 @@
+"""Tests that a timeout is detected by the testbot."""
+from __future__ import print_function
+
+import time
+
+import lldbsuite.test.lldbtest as lldbtest
+
+
+class ExpectedTimeoutTestCase(lldbtest.TestBase):
+    """Forces test timeout."""
+    mydir = lldbtest.TestBase.compute_mydir(__file__)
+
+    @lldbtest.expectedFailureAll()
+    def test_buildbot_sees_expected_timeout(self):
+        """Tests that expected timeout logic kicks in and is picked up."""
+        while True:
+            try:
+                time.sleep(1)
+            except:
+                print("ignoring exception during sleep")

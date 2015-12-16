@@ -6,10 +6,15 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// C Includes
 #include <stdlib.h>
 
+// C++ Includes
 #include <algorithm>
 
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
 #include "lldb/Target/RegisterContext.h"
@@ -18,6 +23,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConvertEnum.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -538,6 +544,7 @@ ThreadList::WillResume ()
     
     for (pos = m_threads.begin(); pos != end; ++pos)
     {
+        lldbassert((*pos)->GetCurrentPlan() && "thread should not have null thread plan");
         if ((*pos)->GetResumeState() != eStateSuspended &&
                  (*pos)->GetCurrentPlan()->StopOthers())
         {

@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <functional>
 #include <list>
 #include <map>
 
@@ -36,7 +37,8 @@ namespace lldb_private {
     public:
         typedef std::map<KeyType, ValueSP> MapType;
         typedef MapType::iterator MapIterator;
-        typedef bool(*CallbackType)(void*, const ValueSP&);
+        typedef std::function<bool(const ValueSP&)> ForEachCallback;
+        
         typedef uint32_t Position;
         
         static const Position First = 0;
@@ -84,7 +86,7 @@ namespace lldb_private {
              ValueSP& entry);
         
         void
-        LoopThrough (CallbackType callback, void* param);
+        ForEach (ForEachCallback callback);
         
         lldb::TypeCategoryImplSP
         GetAtIndex (uint32_t);

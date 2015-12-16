@@ -42,7 +42,7 @@ namespace {
         {
             if (!m_entry_sp)
                 return ListEntry();
-            return ListEntry(m_entry_sp->GetChildMemberWithName(ConstString("__next_"), true));
+            return ListEntry(m_entry_sp->GetChildAtIndexPath({0,1}));
         }
 
         ListEntry
@@ -50,7 +50,7 @@ namespace {
         {
             if (!m_entry_sp)
                 return ListEntry();
-            return ListEntry(m_entry_sp->GetChildMemberWithName(ConstString("__prev_"), true));
+            return ListEntry(m_entry_sp->GetChildAtIndexPath({0,0}));
         }
 
         uint64_t
@@ -99,6 +99,64 @@ namespace {
     private:
         ValueObjectSP m_entry_sp;
     };
+    
+    class ListIterator
+    {
+    public:
+        ListIterator() = default;
+        ListIterator (ListEntry entry) : m_entry(entry) {}
+        ListIterator (ValueObjectSP entry) : m_entry(entry) {}
+        ListIterator (const ListIterator& rhs) : m_entry(rhs.m_entry) {}
+        ListIterator (ValueObject* entry) : m_entry(entry) {}
+        
+        ValueObjectSP
+        value ()
+        {
+            return m_entry.GetEntry();
+        }
+        
+        ValueObjectSP
+        advance (size_t count)
+        {
+            if (count == 0)
+                return m_entry.GetEntry();
+            if (count == 1)
+            {
+                next ();
+                return m_entry.GetEntry();
+            }
+            while (count > 0)
+            {
+                next ();
+                count--;
+                if (m_entry.null())
+                    return lldb::ValueObjectSP();
+            }
+            return m_entry.GetEntry();
+        }
+        
+        bool
+        operator == (const ListIterator& rhs) const
+        {
+            return (rhs.m_entry == m_entry);
+        }
+        
+    protected:
+        void
+        next ()
+        {
+            m_entry = m_entry.next();
+        }
+        
+        void
+        prev ()
+        {
+            m_entry = m_entry.prev();
+        }
+        
+    private:
+        ListEntry m_entry;
+    };
 
 } // end anonymous namespace
 
@@ -143,67 +201,10 @@ namespace lldb_private {
             CompilerType m_element_type;
             size_t m_count;
             std::map<size_t,lldb::ValueObjectSP> m_children;
+            std::map<size_t, ListIterator> m_iterators;
         };
     } // namespace formatters
 } // namespace lldb_private
-
-class ListIterator
-{
-public:
-    ListIterator() = default;
-    ListIterator (ListEntry entry) : m_entry(entry) {}
-    ListIterator (ValueObjectSP entry) : m_entry(entry) {}
-    ListIterator (const ListIterator& rhs) : m_entry(rhs.m_entry) {}
-    ListIterator (ValueObject* entry) : m_entry(entry) {}
-
-    ValueObjectSP
-    value ()
-    {
-        return m_entry.GetEntry();
-    }
-    
-    ValueObjectSP
-    advance (size_t count)
-    {
-        if (count == 0)
-            return m_entry.GetEntry();
-        if (count == 1)
-        {
-            next ();
-            return m_entry.GetEntry();
-        }
-        while (count > 0)
-        {
-            next ();
-            count--;
-            if (m_entry.null())
-                return lldb::ValueObjectSP();
-        }
-        return m_entry.GetEntry();
-    }
-    
-    bool
-    operator == (const ListIterator& rhs) const
-    {
-        return (rhs.m_entry == m_entry);
-    }
-    
-protected:
-    void
-    next ()
-    {
-        m_entry = m_entry.next();
-    }
-    
-    void
-    prev ()
-    {
-        m_entry = m_entry.prev();
-    }
-
-private:
-    ListEntry m_entry;
-};
 
 lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::LibcxxStdListSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
 SyntheticChildrenFrontEnd(*valobj_sp.get()),
@@ -214,7 +215,8 @@ m_head(NULL),
 m_tail(NULL),
 m_element_type(),
 m_count(UINT32_MAX),
-m_children()
+m_children(),
+m_iterators()
 {
     if (valobj_sp)
         Update();
@@ -316,12 +318,27 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::GetChildAtIndex (size_
     
     if (HasLoop(idx+1))
         return lldb::ValueObjectSP();
-        
+    
+    size_t actual_advance = idx;
+    
     ListIterator current(m_head);
-    ValueObjectSP current_sp(current.advance(idx));
+    if (idx > 0)
+    {
+        auto cached_iterator = m_iterators.find(idx-1);
+        if (cached_iterator != m_iterators.end())
+        {
+            current = cached_iterator->second;
+            actual_advance = 1;
+        }
+    }
+    
+    ValueObjectSP current_sp(current.advance(actual_advance));
     if (!current_sp)
         return lldb::ValueObjectSP();
-    current_sp = current_sp->GetChildMemberWithName(ConstString("__value_"), true);
+    
+    m_iterators[idx] = current;
+    
+    current_sp = current_sp->GetChildAtIndex(1, true); // get the __value_ child
     if (!current_sp)
         return lldb::ValueObjectSP();
     // we need to copy current_sp into a new object otherwise we will end up with all items named __value_
@@ -340,6 +357,7 @@ bool
 lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::Update()
 {
     m_children.clear();
+    m_iterators.clear();
     m_head = m_tail = NULL;
     m_node_address = 0;
     m_count = UINT32_MAX;

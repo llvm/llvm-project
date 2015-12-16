@@ -743,12 +743,13 @@ ProcessWindowsLive::GetMemoryRegionInfo(lldb::addr_t vm_addr, MemoryRegionInfo &
                      error.GetError(), vm_addr);
         return error;
     }
-    bool readable = !(mem_info.Protect & PAGE_NOACCESS);
-    bool executable = mem_info.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
-    bool writable = mem_info.Protect & (PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY | PAGE_READWRITE | PAGE_WRITECOPY);
+    const bool readable = IsPageReadable(mem_info.Protect);
+    const bool executable = IsPageExecutable(mem_info.Protect);
+    const bool writable = IsPageWritable(mem_info.Protect);
     info.SetReadable(readable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
     info.SetExecutable(executable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
     info.SetWritable(writable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+
     error.SetError(::GetLastError(), eErrorTypeWin32);
     WINLOGV_IFALL(WINDOWS_LOG_MEMORY, "Memory region info for address 0x%I64u: readable=%s, executable=%s, writable=%s",
                   BOOL_STR(readable), BOOL_STR(executable), BOOL_STR(writable));
