@@ -88,10 +88,12 @@ void SymbolTable<ELFT>::addSyntheticSym(StringRef Name,
   resolve(Sym);
 }
 
-template <class ELFT> void SymbolTable<ELFT>::addIgnoredSym(StringRef Name) {
+template <class ELFT>
+SymbolBody *SymbolTable<ELFT>::addIgnoredSym(StringRef Name) {
   auto Sym = new (Alloc)
       DefinedAbsolute<ELFT>(Name, DefinedAbsolute<ELFT>::IgnoreUndef);
   resolve(Sym);
+  return Sym;
 }
 
 template <class ELFT> bool SymbolTable<ELFT>::isUndefined(StringRef Name) {

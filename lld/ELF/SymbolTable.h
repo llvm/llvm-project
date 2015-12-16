@@ -54,7 +54,7 @@ public:
                       typename llvm::object::ELFFile<ELFT>::Elf_Sym &ESym);
   void addSyntheticSym(StringRef Name, OutputSectionBase<ELFT> &Section,
                        typename llvm::object::ELFFile<ELFT>::uintX_t Value);
-  void addIgnoredSym(StringRef Name);
+  SymbolBody *addIgnoredSym(StringRef Name);
   bool isUndefined(StringRef Name);
   void scanShlibUndefined();
   SymbolBody *find(StringRef Name);

@@ -26,3 +26,15 @@ namespace short2 {
 
 }
 }
+
+namespace n3 {
+
+
+
+
+
+
+
+
+
+}; // namespace n3

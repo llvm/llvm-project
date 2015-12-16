@@ -205,6 +205,11 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     } else if (Target->isTlsDynReloc(Type) ||
                Target->isSizeDynReloc(Type, Body)) {
       continue;
+    } else if (Config->EMachine == EM_MIPS) {
+      if (Type == R_MIPS_HI16 && &Body == Config->MipsGpDisp)
+        SymVA = getMipsGpAddr<ELFT>() - AddrLoc;
+      else if (Type == R_MIPS_LO16 && &Body == Config->MipsGpDisp)
+        SymVA = getMipsGpAddr<ELFT>() - AddrLoc + 4;
     }
     uintX_t A = getAddend<ELFT>(RI);
     uintX_t Size = getSymSize<ELFT>(Body);

@@ -75,7 +75,8 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation Loc = AfterRBrace;
   Token Tok;
   // Skip whitespace until we find the next token.
-  while (Lexer::getRawToken(Loc, Tok, Sources, Result.Context->getLangOpts())) {
+  while (Lexer::getRawToken(Loc, Tok, Sources, Result.Context->getLangOpts()) ||
+         Tok.is(tok::semi)) {
     Loc = Loc.getLocWithOffset(1);
   }
   if (!locationsInSameFile(Sources, ND->getRBraceLoc(), Loc))

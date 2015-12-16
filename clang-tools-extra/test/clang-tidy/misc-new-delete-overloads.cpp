@@ -75,3 +75,7 @@ struct H : G {
   // CHECK-MESSAGES: :[[@LINE+1]]:9: warning: declaration of 'operator new' has no matching declaration of 'operator delete' at the same scope
   void *operator new(size_t) noexcept; // base class operator is inaccessible
 };
+
+template <typename Base> struct Derived : Base {
+  void operator delete(void *);
+};

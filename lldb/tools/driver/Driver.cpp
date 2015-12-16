@@ -346,21 +346,27 @@ ShowUsage (FILE *out, OptionDefinition *option_table, Driver::OptionData data)
              indent_level, "");
     indent_level += 5;
     
-    fprintf (out, "\n%*sMultiple \"-s\" and \"-o\" options can be provided.  They will be processed from left to right in order, "
-                  "\n%*swith the source files and commands interleaved.  The same is true of the \"-S\" and \"-O\" options."
-                  "\n%*sThe before file and after file sets can intermixed freely, the command parser will sort them out."
-                  "\n%*sThe order of the file specifiers (\"-c\", \"-f\", etc.) is not significant in this regard.\n\n",
+    fprintf (out, "\n%*sMultiple \"-s\" and \"-o\" options can be provided.  They will be processed"
+                  "\n%*sfrom left to right in order, with the source files and commands"
+                  "\n%*sinterleaved.  The same is true of the \"-S\" and \"-O\" options.  The before"
+                  "\n%*sfile and after file sets can intermixed freely, the command parser will"
+                  "\n%*ssort them out.  The order of the file specifiers (\"-c\", \"-f\", etc.) is"
+                  "\n%*snot significant in this regard.\n\n",
              indent_level, "", 
              indent_level, "", 
+             indent_level, "",
+             indent_level, "",
              indent_level, "",
              indent_level, "");
     
-    fprintf (out, "\n%*sIf you don't provide -f then the first argument will be the file to be debugged"
-                  "\n%*swhich means that '%s -- <filename> [<ARG1> [<ARG2>]]' also works."
-                  "\n%*sBut remember to end the options with \"--\" if any of your arguments have a \"-\" in them.\n\n",
+    fprintf (out, "\n%*sIf you don't provide -f then the first argument will be the file to be"
+                  "\n%*sdebugged which means that '%s -- <filename> [<ARG1> [<ARG2>]]' also"
+                  "\n%*sworks.  But remember to end the options with \"--\" if any of your"
+                  "\n%*sarguments have a \"-\" in them.\n\n",
              indent_level, "", 
              indent_level, "",
              name, 
+             indent_level, "",
              indent_level, "");
 }
 

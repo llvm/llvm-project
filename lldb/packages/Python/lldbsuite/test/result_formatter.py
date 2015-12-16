@@ -165,6 +165,7 @@ class EventBuilder(object):
     TYPE_TEST_RESULT = "test_result"
     TYPE_TEST_START = "test_start"
     TYPE_MARK_TEST_RERUN_ELIGIBLE = "test_eligible_for_rerun"
+    TYPE_MARK_TEST_EXPECTED_FAILURE = "test_expected_failure"
     TYPE_SESSION_TERMINATE = "terminate"
 
     RESULT_TYPES = set([
@@ -528,6 +529,20 @@ class EventBuilder(object):
         return event
 
     @staticmethod
+    def event_for_mark_test_expected_failure(test):
+        """Creates an event that indicates the specified test is expected
+        to fail.
+
+        @param test the TestCase instance to which this pertains.
+
+        @return an event that specifies the given test is expected to fail.
+        """
+        event = EventBuilder._event_dictionary_common(
+            test,
+            EventBuilder.TYPE_MARK_TEST_EXPECTED_FAILURE)
+        return event
+
+    @staticmethod
     def add_entries_to_all_events(entries_dict):
         """Specifies a dictionary of entries to add to all test events.
 
@@ -681,6 +696,11 @@ class ResultsFormatter(object):
         # timeout test status for this.
         self.expected_timeouts_by_basename = set()
 
+        # Tests which have reported that they are expecting to fail. These will
+        # be marked as expected failures even if they return a failing status,
+        # probably because they crashed or deadlocked.
+        self.expected_failures = set()
+
         # Keep track of rerun-eligible tests.
         # This is a set that contains tests saved as:
         # {test_filename}:{test_class}:{test_name}
@@ -720,6 +740,15 @@ class ResultsFormatter(object):
             key += result_event["test_name"]
             component_count += 1
         return key
+
+    def _mark_test_as_expected_failure(self, test_result_event):
+        key = self._make_key(test_result_event)
+        if key is not None:
+            self.expected_failures.add(key)
+        else:
+            sys.stderr.write(
+                "\nerror: test marked as expected failure but "
+                "failed to create key.\n")
 
     def _mark_test_for_rerun_eligibility(self, test_result_event):
         key = self._make_key(test_result_event)
@@ -796,6 +825,20 @@ class ResultsFormatter(object):
             # Convert to an expected timeout.
             event["status"] = EventBuilder.STATUS_EXPECTED_TIMEOUT
 
+    def _maybe_remap_expected_failure(self, event):
+        if event is None:
+            return
+
+        key = self._make_key(event)
+        if key not in self.expected_failures:
+            return
+
+        status = event.get("status", None)
+        if status in EventBuilder.TESTRUN_ERROR_STATUS_VALUES:
+            event["status"] = EventBuilder.STATUS_EXPECTED_FAILURE
+        elif status == EventBuilder.STATUS_SUCCESS:
+            event["status"] = EventBuilder.STATUS_UNEXPECTED_SUCCESS
+
     def handle_event(self, test_event):
         """Handles the test event for collection into the formatter output.
 
@@ -824,6 +867,7 @@ class ResultsFormatter(object):
             # Remap timeouts to expected timeouts.
             if event_type in EventBuilder.RESULT_TYPES:
                 self._maybe_remap_expected_timeout(test_event)
+                self._maybe_remap_expected_failure(test_event)
                 event_type = test_event.get("event", "")
 
             if event_type == "terminate":
@@ -887,6 +931,8 @@ class ResultsFormatter(object):
 
             elif event_type == EventBuilder.TYPE_MARK_TEST_RERUN_ELIGIBLE:
                 self._mark_test_for_rerun_eligibility(test_event)
+            elif event_type == EventBuilder.TYPE_MARK_TEST_EXPECTED_FAILURE:
+                self._mark_test_as_expected_failure(test_event)
 
     def set_expected_timeouts_by_basename(self, basenames):
         """Specifies a list of test file basenames that are allowed to timeout

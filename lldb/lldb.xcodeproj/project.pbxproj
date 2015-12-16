@@ -7,18 +7,6 @@
 	objects = {
 
 /* Begin PBXAggregateTarget section */
-		235AFBBB199BC6FD00897A4B /* MacOSX and Linux */ = {
-			isa = PBXAggregateTarget;
-			buildConfigurationList = 235AFBBC199BC6FD00897A4B /* Build configuration list for PBXAggregateTarget "MacOSX and Linux" */;
-			buildPhases = (
-			);
-			dependencies = (
-				235AFBC4199BC70B00897A4B /* PBXTargetDependency */,
-				235AFBC2199BC70700897A4B /* PBXTargetDependency */,
-			);
-			name = "MacOSX and Linux";
-			productName = "MacOSX and Linux";
-		};
 		26CEF3A914FD58BF007286B2 /* desktop_no_xpc */ = {
 			isa = PBXAggregateTarget;
 			buildConfigurationList = 26CEF3AD14FD58BF007286B2 /* Build configuration list for PBXAggregateTarget "desktop_no_xpc" */;
@@ -940,20 +928,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		235AFBC1199BC70700897A4B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 26F5C26910F3D9A4009D5894;
-			remoteInfo = "lldb-tool";
-		};
-		235AFBC3199BC70B00897A4B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 235AFBB5199BC6AD00897A4B;
-			remoteInfo = Linux;
-		};
 		239504C41BDD3FD700963CEA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 265E9BE1115C2BAA00D0DCCB /* debugserver.xcodeproj */;
@@ -5952,20 +5926,6 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXLegacyTarget section */
-		235AFBB5199BC6AD00897A4B /* Linux */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u scripts/Python/remote-build.py -x $(ACTION)";
-			buildConfigurationList = 235AFBBA199BC6AD00897A4B /* Build configuration list for PBXLegacyTarget "Linux" */;
-			buildPhases = (
-			);
-			buildToolPath = python;
-			buildWorkingDirectory = .;
-			dependencies = (
-			);
-			name = Linux;
-			passBuildSettingsInEnvironment = 1;
-			productName = Linux;
-		};
 		2687EAC51508110B00DD8C2E /* install-headers */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "$(ACTION)";
@@ -6180,8 +6140,6 @@
 				2689FFC913353D7A00698AC0 /* lldb-core */,
 				26DC6A0F1337FE6900FF7998 /* lldb-server */,
 				2687EAC51508110B00DD8C2E /* install-headers */,
-				235AFBB5199BC6AD00897A4B /* Linux */,
-				235AFBBB199BC6FD00897A4B /* MacOSX and Linux */,
 				2690CD161A6DC0D000E717C8 /* lldb-mi */,
 				942829BF1A89835300521B30 /* lldb-argdumper */,
 				239504D31BDD451400963CEA /* lldb-gtest */,
@@ -7151,16 +7109,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		235AFBC2199BC70700897A4B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 26F5C26910F3D9A4009D5894 /* lldb-tool */;
-			targetProxy = 235AFBC1199BC70700897A4B /* PBXContainerItemProxy */;
-		};
-		235AFBC4199BC70B00897A4B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 235AFBB5199BC6AD00897A4B /* Linux */;
-			targetProxy = 235AFBC3199BC70B00897A4B /* PBXContainerItemProxy */;
-		};
 		23AB8B6B1BDF513B008BF3B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 2689FFC913353D7A00698AC0 /* lldb-core */;
@@ -7430,162 +7378,6 @@
 				WARNING_CFLAGS = "-Wreorder";
 			};
 			name = Release;
-		};
-		235AFBB6199BC6AD00897A4B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				DEBUGGING_SYMBOLS = YES;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = Debug;
-		};
-		235AFBB7199BC6AD00897A4B /* DebugClang */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				DEBUGGING_SYMBOLS = YES;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = DebugClang;
-		};
-		235AFBB8199BC6AD00897A4B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = Release;
-		};
-		235AFBB9199BC6AD00897A4B /* BuildAndIntegration */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = BuildAndIntegration;
-		};
-		235AFBBD199BC6FD00897A4B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		235AFBBE199BC6FD00897A4B /* DebugClang */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = DebugClang;
-		};
-		235AFBBF199BC6FD00897A4B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
-		235AFBC0199BC6FD00897A4B /* BuildAndIntegration */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = BuildAndIntegration;
 		};
 		239504D81BDD451400963CEA /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -9487,28 +9279,6 @@
 				49BB8F341611172B00BDD462 /* DebugClang */,
 				1DEB91F108733DB70010E9CD /* Release */,
 				268A89B211963ECA00D953EB /* BuildAndIntegration */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = BuildAndIntegration;
-		};
-		235AFBBA199BC6AD00897A4B /* Build configuration list for PBXLegacyTarget "Linux" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				235AFBB6199BC6AD00897A4B /* Debug */,
-				235AFBB7199BC6AD00897A4B /* DebugClang */,
-				235AFBB8199BC6AD00897A4B /* Release */,
-				235AFBB9199BC6AD00897A4B /* BuildAndIntegration */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = BuildAndIntegration;
-		};
-		235AFBBC199BC6FD00897A4B /* Build configuration list for PBXAggregateTarget "MacOSX and Linux" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				235AFBBD199BC6FD00897A4B /* Debug */,
-				235AFBBE199BC6FD00897A4B /* DebugClang */,
-				235AFBBF199BC6FD00897A4B /* Release */,
-				235AFBC0199BC6FD00897A4B /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;

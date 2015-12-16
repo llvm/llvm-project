@@ -1143,7 +1143,6 @@ def getExpectedTimeouts(platform_name):
         target = m.group(1)
 
     expected_timeout = set()
-    expected_timeout.add("TestExpectedTimeout.py")
 
     if target.startswith("linux"):
         expected_timeout |= {

@@ -263,6 +263,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab.addIgnoredSym("_GLOBAL_OFFSET_TABLE_");
   }
 
+  // On MIPS O32 ABI _gp_disp is a magic symbol designates offset between
+  // start of function and gp pointer into GOT.
+  if (Config->EMachine == EM_MIPS)
+    Config->MipsGpDisp = Symtab.addIgnoredSym("_gp_disp");
+
   if (!Config->Entry.empty()) {
     // Set either EntryAddr (if S is a number) or EntrySym (otherwise).
     StringRef S = Config->Entry;
