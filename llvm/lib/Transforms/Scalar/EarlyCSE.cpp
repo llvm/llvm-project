@@ -687,6 +687,33 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         continue;
       }
 
+    // write back DSE - If we write back the same value we just loaded from
+    // the same location and haven't passed any intervening writes or ordering
+    // operations, we can remove the write.  The primary benefit is in allowing
+    // the available load table to remain valid and value forward past where
+    // the store originally was.
+    if (MemInst.isValid() && MemInst.isStore()) {
+      LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
+      if (InVal.Data &&
+          InVal.Data == getOrCreateResult(Inst, InVal.Data->getType()) &&
+          InVal.Generation == CurrentGeneration &&
+          InVal.MatchingId == MemInst.getMatchingId() &&
+          // We don't yet handle removing stores with ordering of any kind.
+          !MemInst.isVolatile() && MemInst.isUnordered()) {
+        assert((!LastStore ||
+                ParseMemoryInst(LastStore, TTI).getPointerOperand() ==
+                MemInst.getPointerOperand()) &&
+               "can't have an intervening store!");
+        DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << *Inst << '\n');
+        Inst->eraseFromParent();
+        Changed = true;
+        ++NumDSE;
+        // We can avoid incrementing the generation count since we were able
+        // to eliminate this store.
+        continue;
+      }
+    }
+
     // Okay, this isn't something we can CSE at all.  Check to see if it is
     // something that could modify memory.  If so, our available memory values
     // cannot be used so bump the generation count.

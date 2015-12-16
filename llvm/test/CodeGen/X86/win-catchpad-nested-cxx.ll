@@ -31,7 +31,7 @@ catch.dispatch.1:
   %cs1 = catchswitch within none [label %handler1] unwind to caller
 handler1:
   %h1 = catchpad within %cs1 [i8* null, i32 64, i8* null]
-  invoke void @f(i32 2)
+  invoke void @f(i32 2) [ "funclet"(token %h1) ]
           to label %catchret1 unwind label %catch.dispatch.2
 catchret1:
   catchret from %h1 to label %try.cont

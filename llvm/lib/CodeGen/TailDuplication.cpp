@@ -748,7 +748,7 @@ TailDuplicatePass::duplicateSimpleBB(MachineBasicBlock *TailBB,
     if (!PredBB->isSuccessor(NewTarget))
       PredBB->replaceSuccessor(TailBB, NewTarget);
     else {
-      PredBB->removeSuccessor(TailBB, 0);
+      PredBB->removeSuccessor(TailBB, true);
       assert(PredBB->succ_size() <= 1);
     }
 

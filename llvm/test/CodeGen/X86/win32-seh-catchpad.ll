@@ -193,7 +193,7 @@ catch.dispatch:                                   ; preds = %entry
 
 __except.ret:                                     ; preds = %catch.dispatch
   %0 = catchpad within %cs1 [i8* bitcast (i32 ()* @try_except_filter_catchall to i8*)]
-  call void @f(i32 2)
+  call void @f(i32 2) [ "funclet"(token %0) ]
   catchret from %0 to label %__except
 
 __except:

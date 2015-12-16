@@ -1,7 +1,7 @@
 ; RUN: llc -march=hexagon -disable-hsdr -hexagon-expand-condsets=0 -hexagon-bit=0 < %s | FileCheck %s
 
-; CHECK: r{{[0-9]+:[0-9]+}} = #1
-; CHECK: r{{[0-9]+:[0-9]+}} = #0
+; CHECK: r{{[0-9]+:[0-9]+}} = combine(#0, #1)
+; CHECK: r{{[0-9]+:[0-9]+}} = combine(#0, #0)
 ; CHECK: p{{[0-9]+}} = cmp.gtu(r{{[0-9]+:[0-9]+}}, r{{[0-9]+:[0-9]+}})
 ; CHECK: r{{[0-9]+:[0-9]+}} = sub(r{{[0-9]+:[0-9]+}}, r{{[0-9]+:[0-9]+}})
 ; CHECK: r{{[0-9]+}} = mux(p{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}})

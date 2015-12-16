@@ -1035,12 +1035,17 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // The inliner does not know how to inline through calls with operand bundles
   // in general ...
   if (CS.hasOperandBundles()) {
-    // ... but it knows how to inline through "deopt" operand bundles.
-    bool CanInline =
-        CS.getNumOperandBundles() == 1 &&
-        CS.getOperandBundleAt(0).getTagID() == LLVMContext::OB_deopt;
-    if (!CanInline)
+    for (int i = 0, e = CS.getNumOperandBundles(); i != e; ++i) {
+      uint32_t Tag = CS.getOperandBundleAt(i).getTagID();
+      // ... but it knows how to inline through "deopt" operand bundles ...
+      if (Tag == LLVMContext::OB_deopt)
+        continue;
+      // ... and "funclet" operand bundles.
+      if (Tag == LLVMContext::OB_funclet)
+        continue;
+
       return false;
+    }
   }
 
   // If the call to the callee cannot throw, set the 'nounwind' flag on any
@@ -1088,23 +1093,13 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // We need to figure out which funclet the callsite was in so that we may
   // properly nest the callee.
   Instruction *CallSiteEHPad = nullptr;
-  if (CalledPersonality && CallerPersonality) {
-    EHPersonality Personality = classifyEHPersonality(CalledPersonality);
+  if (CallerPersonality) {
+    EHPersonality Personality = classifyEHPersonality(CallerPersonality);
     if (isFuncletEHPersonality(Personality)) {
-      DenseMap<BasicBlock *, ColorVector> CallerBlockColors =
-          colorEHFunclets(*Caller);
-      ColorVector &CallSiteColors = CallerBlockColors[OrigBB];
-      size_t NumColors = CallSiteColors.size();
-      // There is no single parent, inlining will not succeed.
-      if (NumColors > 1)
-        return false;
-      if (NumColors == 1) {
-        BasicBlock *CallSiteFuncletBB = CallSiteColors.front();
-        if (CallSiteFuncletBB != Caller->begin()) {
-          CallSiteEHPad = CallSiteFuncletBB->getFirstNonPHI();
-          assert(CallSiteEHPad->isEHPad() && "Expected an EHPad!");
-        }
-      }
+      Optional<OperandBundleUse> ParentFunclet =
+          CS.getOperandBundle(LLVMContext::OB_funclet);
+      if (ParentFunclet)
+        CallSiteEHPad = cast<FuncletPadInst>(ParentFunclet->Inputs.front());
 
       // OK, the inlining site is legal.  What about the target function?
 
@@ -1116,7 +1111,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
             // Ok, the call site is within a cleanuppad.  Let's check the callee
             // for catchpads.
             for (const BasicBlock &CalledBB : *CalledFunc) {
-              if (isa<CatchPadInst>(CalledBB.getFirstNonPHI()))
+              if (isa<CatchSwitchInst>(CalledBB.getFirstNonPHI()))
                 return false;
             }
           }
@@ -1195,11 +1190,9 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       HandleByValArgumentInit(Init.first, Init.second, Caller->getParent(),
                               &*FirstNewBlock, IFI);
 
-    if (CS.hasOperandBundles()) {
-      auto ParentDeopt = CS.getOperandBundleAt(0);
-      assert(ParentDeopt.getTagID() == LLVMContext::OB_deopt &&
-             "Checked on entry!");
-
+    Optional<OperandBundleUse> ParentDeopt =
+        CS.getOperandBundle(LLVMContext::OB_deopt);
+    if (ParentDeopt) {
       SmallVector<OperandBundleDef, 2> OpDefs;
 
       for (auto &VH : InlinedFunctionInfo.OperandBundleCallSites) {
@@ -1225,12 +1218,12 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           // Prepend the parent's deoptimization continuation to the newly
           // inlined call's deoptimization continuation.
           std::vector<Value *> MergedDeoptArgs;
-          MergedDeoptArgs.reserve(ParentDeopt.Inputs.size() +
+          MergedDeoptArgs.reserve(ParentDeopt->Inputs.size() +
                                   ChildOB.Inputs.size());
 
           MergedDeoptArgs.insert(MergedDeoptArgs.end(),
-                                 ParentDeopt.Inputs.begin(),
-                                 ParentDeopt.Inputs.end());
+                                 ParentDeopt->Inputs.begin(),
+                                 ParentDeopt->Inputs.end());
           MergedDeoptArgs.insert(MergedDeoptArgs.end(), ChildOB.Inputs.begin(),
                                  ChildOB.Inputs.end());
 
@@ -1423,12 +1416,48 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     }
   }
 
-  // Update the lexical scopes of the new funclets.  Anything that had 'none' as
-  // its parent is now nested inside the callsite's EHPad.
+  // Update the lexical scopes of the new funclets and callsites.
+  // Anything that had 'none' as its parent is now nested inside the callsite's
+  // EHPad.
+
   if (CallSiteEHPad) {
     for (Function::iterator BB = FirstNewBlock->getIterator(),
                             E = Caller->end();
          BB != E; ++BB) {
+      // Add bundle operands to any top-level call sites.
+      SmallVector<OperandBundleDef, 1> OpBundles;
+      for (BasicBlock::iterator BBI = BB->begin(), E = BB->end(); BBI != E;) {
+        Instruction *I = &*BBI++;
+        CallSite CS(I);
+        if (!CS)
+          continue;
+
+        // Skip call sites which are nounwind intrinsics.
+        auto *CalledFn =
+            dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
+        if (CalledFn && CalledFn->isIntrinsic() && CS.doesNotThrow())
+          continue;
+
+        // Skip call sites which already have a "funclet" bundle.
+        if (CS.getOperandBundle(LLVMContext::OB_funclet))
+          continue;
+
+        CS.getOperandBundlesAsDefs(OpBundles);
+        OpBundles.emplace_back("funclet", CallSiteEHPad);
+
+        Instruction *NewInst;
+        if (CS.isCall())
+          NewInst = CallInst::Create(cast<CallInst>(I), OpBundles, I);
+        else
+          NewInst = InvokeInst::Create(cast<InvokeInst>(I), OpBundles, I);
+        NewInst->setDebugLoc(I->getDebugLoc());
+        NewInst->takeName(I);
+        I->replaceAllUsesWith(NewInst);
+        I->eraseFromParent();
+
+        OpBundles.clear();
+      }
+
       Instruction *I = BB->getFirstNonPHI();
       if (!I->isEHPad())
         continue;

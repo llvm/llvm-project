@@ -132,6 +132,11 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   assert(DeoptEntry->second == LLVMContext::OB_deopt &&
          "deopt operand bundle id drifted!");
   (void)DeoptEntry;
+
+  auto *FuncletEntry = pImpl->getOrInsertBundleTag("funclet");
+  assert(FuncletEntry->second == LLVMContext::OB_funclet &&
+         "funclet operand bundle id drifted!");
+  (void)FuncletEntry;
 }
 LLVMContext::~LLVMContext() { delete pImpl; }
 

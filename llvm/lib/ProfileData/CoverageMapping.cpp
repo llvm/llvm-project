@@ -181,18 +181,6 @@ void FunctionRecordIterator::skipOtherFiles() {
     *this = FunctionRecordIterator();
 }
 
-/// Get the function name from the record, removing the filename prefix if
-/// necessary.
-static StringRef getFuncNameWithoutPrefix(const CoverageMappingRecord &Record) {
-  StringRef FunctionName = Record.FunctionName;
-  if (Record.Filenames.empty())
-    return FunctionName;
-  StringRef Filename = sys::path::filename(Record.Filenames[0]);
-  if (FunctionName.startswith(Filename))
-    FunctionName = FunctionName.drop_front(Filename.size() + 1);
-  return FunctionName;
-}
-
 ErrorOr<std::unique_ptr<CoverageMapping>>
 CoverageMapping::load(CoverageMappingReader &CoverageReader,
                       IndexedInstrProfReader &ProfileReader) {
@@ -216,7 +204,11 @@ CoverageMapping::load(CoverageMappingReader &CoverageReader,
 
     assert(!Record.MappingRegions.empty() && "Function has no regions");
 
-    FunctionRecord Function(getFuncNameWithoutPrefix(Record), Record.Filenames);
+    StringRef OrigFuncName = Record.FunctionName;
+    if (!Record.Filenames.empty())
+      OrigFuncName =
+          getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
+    FunctionRecord Function(OrigFuncName, Record.Filenames);
     for (const auto &Region : Record.MappingRegions) {
       ErrorOr<int64_t> ExecutionCount = Ctx.evaluate(Region.Count);
       if (!ExecutionCount)

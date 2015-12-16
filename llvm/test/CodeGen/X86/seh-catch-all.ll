@@ -21,7 +21,7 @@ lpad:
 catchall:
   %p = catchpad within %cs1 [i8* null, i32 64, i8* null]
   %code = call i32 @llvm.eh.exceptioncode(token %p)
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i64 0, i64 0), i32 %code)
+  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i64 0, i64 0), i32 %code) [ "funclet"(token %p) ]
   catchret from %p to label %__try.cont
 }
 
@@ -36,6 +36,7 @@ catchall:
 ; CHECK: callq printf
 
 ; CHECK: .seh_handlerdata
+; CHECK-NEXT: .Lmain$parent_frame_offset
 ; CHECK-NEXT: .long (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
 ; CHECK-NEXT: .long .Ltmp{{[0-9]+}}@IMGREL

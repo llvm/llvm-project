@@ -84,6 +84,11 @@ static cl::opt<bool> MergeCondStoresAggressively(
     cl::desc("When merging conditional stores, do so even if the resultant "
              "basic blocks are unlikely to be if-converted as a result"));
 
+static cl::opt<bool> SpeculateOneExpensiveInst(
+    "speculate-one-expensive-inst", cl::Hidden, cl::init(true),
+    cl::desc("Allow exactly one expensive instruction to be speculatively "
+             "executed"));
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps, "Number of switch instructions turned into linear mapping");
 STATISTIC(NumLookupTables, "Number of switch instructions turned into lookup tables");
@@ -259,7 +264,8 @@ static unsigned ComputeSpeculationCost(const User *I,
 static bool DominatesMergePoint(Value *V, BasicBlock *BB,
                                 SmallPtrSetImpl<Instruction*> *AggressiveInsts,
                                 unsigned &CostRemaining,
-                                const TargetTransformInfo &TTI) {
+                                const TargetTransformInfo &TTI,
+                                unsigned Depth = 0) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) {
     // Non-instructions all dominate instructions, but not all constantexprs
@@ -297,15 +303,24 @@ static bool DominatesMergePoint(Value *V, BasicBlock *BB,
 
   unsigned Cost = ComputeSpeculationCost(I, TTI);
 
-  if (Cost > CostRemaining)
+  // Allow exactly one instruction to be speculated regardless of its cost
+  // (as long as it is safe to do so).
+  // This is intended to flatten the CFG even if the instruction is a division
+  // or other expensive operation. The speculation of an expensive instruction
+  // is expected to be undone in CodeGenPrepare if the speculation has not
+  // enabled further IR optimizations.
+  if (Cost > CostRemaining &&
+      (!SpeculateOneExpensiveInst || !AggressiveInsts->empty() || Depth > 0))
     return false;
 
-  CostRemaining -= Cost;
+  // Avoid unsigned wrap.
+  CostRemaining = (Cost > CostRemaining) ? 0 : CostRemaining - Cost;
 
   // Okay, we can only really hoist these out if their operands do
   // not take us over the cost threshold.
   for (User::op_iterator i = I->op_begin(), e = I->op_end(); i != e; ++i)
-    if (!DominatesMergePoint(*i, BB, AggressiveInsts, CostRemaining, TTI))
+    if (!DominatesMergePoint(*i, BB, AggressiveInsts, CostRemaining, TTI,
+                             Depth + 1))
       return false;
   // Okay, it's safe to do this!  Remember this instruction.
   AggressiveInsts->insert(I);

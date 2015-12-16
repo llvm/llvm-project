@@ -84,8 +84,8 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// of pushes to pass function parameters.
   bool HasPushSequences = false;
 
-  /// True if the function uses llvm.x86.seh.restoreframe, and it needed a spill
-  /// slot for the frame pointer.
+  /// True if the function recovers from an SEH exception, and therefore needs
+  /// to spill and restore the frame pointer.
   bool HasSEHFramePtrSave = false;
 
   /// The frame index of a stack object containing the original frame pointer

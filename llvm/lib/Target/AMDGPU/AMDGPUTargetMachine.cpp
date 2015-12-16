@@ -51,6 +51,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIFixControlFlowLiveIntervalsPass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
+  initializeAMDGPUAnnotateUniformValuesPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -279,6 +280,8 @@ bool GCNPassConfig::addPreISel() {
   addPass(createSinkingPass());
   addPass(createSITypeRewriter());
   addPass(createSIAnnotateControlFlowPass());
+  addPass(createAMDGPUAnnotateUniformValues());
+
   return false;
 }
 

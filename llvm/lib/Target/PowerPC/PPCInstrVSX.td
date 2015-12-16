@@ -1759,3 +1759,27 @@ let Predicates = [IsLittleEndian, HasDirectMove] in {
   def : Pat<(i64 (vector_extract v2i64:$S, i64:$Idx)),
             (i64 VectorExtractions.LE_VARIABLE_DWORD)>;
 } // IsLittleEndian, HasDirectMove
+
+let Predicates = [HasDirectMove, HasVSX] in {
+// bitconvert f32 -> i32
+// (convert to 32-bit fp single, shift right 1 word, move to GPR)
+def : Pat<(i32 (bitconvert f32:$S)),
+          (i32 (MFVSRWZ (EXTRACT_SUBREG
+                          (XXSLDWI (XSCVDPSPN $S),(XSCVDPSPN $S), 3),
+                          sub_64)))>;
+// bitconvert i32 -> f32
+// (move to FPR, shift left 1 word, convert to 64-bit fp single)
+def : Pat<(f32 (bitconvert i32:$A)),
+          (f32 (XSCVSPDPN
+                 (XXSLDWI MovesToVSR.LE_WORD_1, MovesToVSR.LE_WORD_1, 1)))>;
+
+// bitconvert f64 -> i64
+// (move to GPR, nothing else needed)
+def : Pat<(i64 (bitconvert f64:$S)),
+          (i64 (MFVSRD $S))>;
+
+// bitconvert i64 -> f64
+// (move to FPR, nothing else needed)
+def : Pat<(f64 (bitconvert i64:$S)),
+          (f64 (MTVSRD $S))>;
+}

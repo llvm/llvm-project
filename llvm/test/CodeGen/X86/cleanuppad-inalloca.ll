@@ -30,7 +30,7 @@ invoke.cont:                                      ; preds = %entry
 
 ehcleanup:                                        ; preds = %entry
   %2 = cleanuppad within none []
-  call x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A* %0)
+  call x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A* %0) [ "funclet"(token %2) ]
   cleanupret from %2 unwind to caller
 }
 

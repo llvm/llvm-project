@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s -check-prefix=PPC64
+; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s -check-prefix=PPC64-P8
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr7 < %s | FileCheck %s -check-prefix=PPC64
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s -check-prefix=PPC64
+; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s -check-prefix=PPC64-P8
 ; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s | FileCheck %s -check-prefix=PPC64
 ; RUN: llc -mtriple=powerpc-unknown-linux-gnu < %s | FileCheck %s -check-prefix=PPC32
 
@@ -19,6 +19,16 @@ entry:
 ; PPC64-DAG: xor 3, [[HI]], [[FLIP_BIT]]
 ; PPC64-DAG: xor 4, [[LO]], [[FLIP_BIT]]
 ; PPC64: blr
+
+; PPC64-P8-LABEL: test_abs:
+; PPC64-P8-DAG: mfvsrd [[LO:[0-9]+]], 2
+; PPC64-P8-DAG: mfvsrd [[HI:[0-9]+]], 1
+; PPC64-P8-DAG: li [[MASK_REG:[0-9]+]], 1
+; PPC64-P8-DAG: sldi [[SHIFT_REG:[0-9]+]], [[MASK_REG]], 63
+; PPC64-P8: and [[FLIP_BIT:[0-9]+]], [[HI]], [[SHIFT_REG]]
+; PPC64-P8-DAG: xor 3, [[HI]], [[FLIP_BIT]]
+; PPC64-P8-DAG: xor 4, [[LO]], [[FLIP_BIT]]
+; PPC64-P8: blr
 
 ; PPC32-DAG: stfd 1, 24(1)
 ; PPC32-DAG: stfd 2, 16(1)
@@ -51,6 +61,16 @@ entry:
 ; PPC64-DAG: xor 3, [[HI]], [[FLIP_BIT]]
 ; PPC64-DAG: xor 4, [[LO]], [[FLIP_BIT]]
 ; PPC64: blr
+
+; PPC64-P8-LABEL: test_neg:
+; PPC64-P8-DAG: mfvsrd [[LO:[0-9]+]], 2
+; PPC64-P8-DAG: mfvsrd [[HI:[0-9]+]], 1
+; PPC64-P8-DAG: li [[IMM1:[0-9]+]], 1
+; PPC64-P8-DAG: sldi [[FLIP_BIT]], [[IMM1]], 63
+; PPC64-P8-NOT: BARRIER
+; PPC64-P8-DAG: xor 3, [[HI]], [[FLIP_BIT]]
+; PPC64-P8-DAG: xor 4, [[LO]], [[FLIP_BIT]]
+; PPC64-P8: blr
 
 ; PPC32-DAG: stfd 1, 24(1)
 ; PPC32-DAG: stfd 2, 16(1)
@@ -85,6 +105,20 @@ entry:
 ; PPC64-DAG: or 3, [[NEW_HI_TMP]], [[CST_HI]]
 ; PPC64-DAG: xor 4, [[SIGN]], [[CST_LO]]
 ; PPC64: blr
+
+; PPC64-P8-LABEL: test_copysign:
+; PPC64-P8-DAG: mfvsrd [[X_HI:[0-9]+]], 1
+; PPC64-P8-DAG: li [[SIGN:[0-9]+]], 1
+; PPC64-P8-DAG: sldi [[SIGN]], [[SIGN]], 63
+; PPC64-P8-DAG: li [[HI_TMP:[0-9]+]], 16399
+; PPC64-P8-DAG: sldi [[CST_HI:[0-9]+]], [[HI_TMP]], 48
+; PPC64-P8-DAG: li [[LO_TMP:[0-9]+]], 3019
+; PPC64-P8-DAG: sldi [[CST_LO:[0-9]+]], [[LO_TMP]], 52
+; PPC64-P8-NOT: BARRIER
+; PPC64-P8-DAG: and [[NEW_HI_TMP:[0-9]+]], [[X_HI]], [[SIGN]]
+; PPC64-P8-DAG: or 3, [[NEW_HI_TMP]], [[CST_HI]]
+; PPC64-P8-DAG: xor 4, [[NEW_HI_TMP]], [[CST_LO]]
+; PPC64-P8: blr
 
 ; PPC32: stfd 1, [[STACK:[0-9]+]](1)
 ; PPC32: nop

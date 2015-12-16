@@ -1219,6 +1219,11 @@ struct OperandBundleUse {
     return getTagID() == LLVMContext::OB_deopt;
   }
 
+  /// \brief Return true if this is a "funclet" operand bundle.
+  bool isFuncletOperandBundle() const {
+    return getTagID() == LLVMContext::OB_funclet;
+  }
+
 private:
   /// \brief Pointer to an entry in LLVMContextImpl::getOrInsertBundleTag.
   StringMapEntry<uint32_t> *Tag;
@@ -1237,6 +1242,8 @@ template <typename InputTy> class OperandBundleDefT {
 public:
   explicit OperandBundleDefT(std::string Tag, std::vector<InputTy> Inputs)
       : Tag(std::move(Tag)), Inputs(std::move(Inputs)) {}
+  explicit OperandBundleDefT(std::string Tag, ArrayRef<InputTy> Inputs)
+      : Tag(std::move(Tag)), Inputs(Inputs) {}
 
   explicit OperandBundleDefT(const OperandBundleUse &OBU) {
     Tag = OBU.getTagName();
@@ -1430,11 +1437,12 @@ public:
   /// may write to the heap.
   bool hasClobberingOperandBundles() const {
     for (auto &BOI : bundle_op_infos()) {
-      if (BOI.Tag->second == LLVMContext::OB_deopt)
+      if (BOI.Tag->second == LLVMContext::OB_deopt ||
+          BOI.Tag->second == LLVMContext::OB_funclet)
         continue;
 
-      // This instruction has an operand bundle that is not a "deopt" operand
-      // bundle.  Assume the worst.
+      // This instruction has an operand bundle that is not known to us.
+      // Assume the worst.
       return true;
     }
 

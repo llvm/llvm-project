@@ -77,7 +77,8 @@ endif:                                            ; preds = %else, %if
 ; Test moving an SMRD with an immediate offset to the VALU
 
 ; GCN-LABEL: {{^}}smrd_valu2:
-; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16{{$}}
 define void @smrd_valu2(i32 addrspace(1)* %out, [8 x i32] addrspace(2)* %in) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -90,8 +91,10 @@ entry:
 
 ; Use a big offset that will use the SMRD literal offset on CI
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset:
-; GCN: s_movk_i32 s[[OFFSET:[0-9]+]], 0x4e20{{$}}
-; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_movk_i32 [[OFFSET:s[0-9]+]], 0x4e20{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET]] addr64{{$}}
 ; GCN: v_add_i32_e32
 ; GCN: buffer_store_dword
 define void @smrd_valu_ci_offset(i32 addrspace(1)* %out, i32 addrspace(2)* %in, i32 %c) #1 {
@@ -106,8 +109,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x2:
-; GCN: s_mov_b32 s[[OFFSET:[0-9]+]], 0x9c40{{$}}
-; GCN: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_mov_b32 [[OFFSET:s[0-9]+]], 0x9c40{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET]] addr64{{$}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN: buffer_store_dwordx2
@@ -123,8 +128,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x4:
-; GCN: s_movk_i32 s[[OFFSET:[0-9]+]], 0x4d20{{$}}
-; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_movk_i32 [[OFFSET:s[0-9]+]], 0x4d20{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET]] addr64{{$}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
@@ -145,14 +152,14 @@ entry:
 ; CI.
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x8:
-; GCN: s_mov_b32 s[[OFFSET0:[0-9]+]], 0x9a40{{$}}
-; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET0]]:{{[0-9]+}}], 0 addr64{{$}}
-
-; SI: s_add_i32 s[[OFFSET1:[0-9]+]], s[[OFFSET0]], 16
-; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET1]]:{{[0-9]+}}], 0 addr64{{$}}
-
-; CI: s_mov_b32 s[[OFFSET1:[0-9]+]], 0x9a50{{$}}
-; CI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET1]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x9a40{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
 
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
@@ -175,22 +182,24 @@ entry:
   ret void
 }
 
-; FIXME: should use immediate offset instead of using s_add_i32 for adding to constant.
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x16:
 
-; GCN-DAG: s_mov_b32 s[[OFFSET0:[0-9]+]], 0x13480{{$}}
-; SI-DAG: s_add_i32 s[[OFFSET1:[0-9]+]], s[[OFFSET0]], 16
-; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET0]]:{{[0-9]+}}], 0 addr64{{$}}
-
-; CI-DAG: s_mov_b32 s[[OFFSET1:[0-9]+]], 0x13490{{$}}
-; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET1]]:{{[0-9]+}}], 0 addr64{{$}}
-
-; SI-DAG: s_add_i32 s[[OFFSET2:[0-9]+]], s[[OFFSET0]], 32
-; CI-DAG: s_mov_b32 s[[OFFSET2:[0-9]+]], 0x134a0
-
-; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET2]]:{{[0-9]+}}], 0 addr64{{$}}
-; GCN-DAG: s_add_i32 s[[OFFSET3:[0-9]+]], s[[OFFSET2]], 16
-; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET3]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x13480{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x13490{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_mov_b32 [[OFFSET2:s[0-9]+]], 0x134a0{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET2]] addr64{{$}}
+; GCN-NOT: v_add
+; GCN: s_mov_b32 [[OFFSET3:s[0-9]+]], 0x134b0{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET3]] addr64{{$}}
 
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
@@ -244,15 +253,9 @@ entry:
   ret void
 }
 
-; Offset is too big to fit in SMRD 8-bit offset, but small enough to
-; fit in MUBUF offset.
-; FIXME: We should be using the offset but we don't
-
 ; GCN-LABEL: {{^}}smrd_valu2_mubuf_offset:
-; SI: s_movk_i32 s[[OFFSET:[0-9]+]], 0x400{{$}}
-; SI: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET]]:{{[0-9]+\]}}, 0 addr64{{$}}
-
-; CI: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1024{{$}}
+; GCN-NOT: v_add
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1024{{$}}
 define void @smrd_valu2_mubuf_offset(i32 addrspace(1)* %out, [1024 x i32] addrspace(2)* %in) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0

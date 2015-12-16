@@ -288,6 +288,10 @@ bool replaceDbgDeclare(Value *Address, Value *NewAddress,
 bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                 DIBuilder &Builder, bool Deref, int Offset = 0);
 
+/// \brief Insert an unreachable instruction before the specified
+/// instruction, making it and the rest of the code in the block dead.
+void changeToUnreachable(Instruction *I, bool UseLLVMTrap);
+
 /// Replace 'BB's terminator with one that does not have an unwind successor
 /// block.  Rewrites `invoke` to `call`, etc.  Updates any PHIs in unwind
 /// successor.

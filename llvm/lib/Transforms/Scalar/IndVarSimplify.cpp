@@ -129,7 +129,7 @@ private:
   void handleFloatingPointIV(Loop *L, PHINode *PH);
   void rewriteNonIntegerIVs(Loop *L);
 
-  void simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LPPassManager &LPM);
+  void simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
 
   bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet);
   void rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter);
@@ -1480,7 +1480,7 @@ public:
 ///
 void IndVarSimplify::simplifyAndExtend(Loop *L,
                                        SCEVExpander &Rewriter,
-                                       LPPassManager &LPM) {
+                                       LoopInfo *LI) {
   SmallVector<WideIVInfo, 8> WideIVs;
 
   SmallVector<PHINode*, 8> LoopPhis;
@@ -1504,7 +1504,7 @@ void IndVarSimplify::simplifyAndExtend(Loop *L,
       // Information about sign/zero extensions of CurrIV.
       IndVarSimplifyVisitor Visitor(CurrIV, SE, TTI, DT);
 
-      Changed |= simplifyUsersOfIV(CurrIV, SE, DT, &LPM, DeadInsts, &Visitor);
+      Changed |= simplifyUsersOfIV(CurrIV, SE, DT, LI, DeadInsts, &Visitor);
 
       if (Visitor.WI.WidestNativeType) {
         WideIVs.push_back(Visitor.WI);
@@ -2120,7 +2120,7 @@ bool IndVarSimplify::runOnLoop(Loop *L, LPPassManager &LPM) {
   // other expressions involving loop IVs have been evaluated. This helps SCEV
   // set no-wrap flags before normalizing sign/zero extension.
   Rewriter.disableCanonicalMode();
-  simplifyAndExtend(L, Rewriter, LPM);
+  simplifyAndExtend(L, Rewriter, LI);
 
   // Check to see if this loop has a computable loop-invariant execution count.
   // If so, this means that we can compute the final value of any expressions

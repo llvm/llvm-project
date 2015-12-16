@@ -400,6 +400,7 @@ LowerFormalArguments_32(SDValue Chain,
   CCInfo.AnalyzeFormalArguments(Ins, CC_Sparc32);
 
   const unsigned StackOffset = 92;
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
 
   unsigned InIdx = 0;
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i, ++InIdx) {
@@ -442,6 +443,10 @@ LowerFormalArguments_32(SDValue Chain,
                                         &SP::IntRegsRegClass);
           LoVal = DAG.getCopyFromReg(Chain, dl, loReg, MVT::i32);
         }
+
+        if (IsLittleEndian)
+          std::swap(LoVal, HiVal);
+
         SDValue WholeValue =
           DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, LoVal, HiVal);
         WholeValue = DAG.getNode(ISD::BITCAST, dl, VA.getLocVT(), WholeValue);
@@ -498,6 +503,9 @@ LowerFormalArguments_32(SDValue Chain,
                                   MachinePointerInfo(),
                                   false, false, false, 0);
 
+      if (IsLittleEndian)
+        std::swap(LoVal, HiVal);
+
       SDValue WholeValue =
         DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, LoVal, HiVal);
       WholeValue = DAG.getNode(ISD::BITCAST, dl, VA.getValVT(), WholeValue);
@@ -514,16 +522,12 @@ LowerFormalArguments_32(SDValue Chain,
       Load = DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr,
                          MachinePointerInfo(),
                          false, false, false, 0);
+    } else if (VA.getValVT() == MVT::f128) {
+      report_fatal_error("SPARCv8 does not handle f128 in calls; "
+                         "pass indirectly");
     } else {
-      ISD::LoadExtType LoadOp = ISD::SEXTLOAD;
-      // Sparc is big endian, so add an offset based on the ObjectVT.
-      unsigned Offset = 4-std::max(1U, VA.getValVT().getSizeInBits()/8);
-      FIPtr = DAG.getNode(ISD::ADD, dl, MVT::i32, FIPtr,
-                          DAG.getConstant(Offset, dl, MVT::i32));
-      Load = DAG.getExtLoad(LoadOp, dl, MVT::i32, Chain, FIPtr,
-                            MachinePointerInfo(),
-                            VA.getValVT(), false, false, false,0);
-      Load = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), Load);
+      // We shouldn't see any other value types here.
+      llvm_unreachable("Unexpected ValVT encountered in frame lowering.");
     }
     InVals.push_back(Load);
   }

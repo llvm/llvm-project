@@ -84,8 +84,10 @@ namespace {
 
   private:
     PPCTargetMachine *TM;
+    DominatorTree *DT;
     LoopInfo *LI;
     ScalarEvolution *SE;
+    bool PreserveLCSSA;
   };
 }
 
@@ -144,6 +146,9 @@ static Value *GetPointerOperand(Value *MemI) {
 bool PPCLoopPreIncPrep::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   bool MadeChange = false;
 
@@ -240,7 +245,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
   // iteration space), insert a new preheader for the loop.
   if (!LoopPredecessor ||
       !LoopPredecessor->getTerminator()->getType()->isVoidTy()) {
-    LoopPredecessor = InsertPreheaderForLoop(L, this);
+    LoopPredecessor = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
     if (LoopPredecessor)
       MadeChange = true;
   }

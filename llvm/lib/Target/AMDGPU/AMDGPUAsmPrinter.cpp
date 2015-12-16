@@ -126,8 +126,12 @@ static bool isModuleLinkage(const GlobalValue *GV) {
 
 void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA ||
-      GV->isDeclaration()) {
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA) {
+    AsmPrinter::EmitGlobalVariable(GV);
+    return;
+  }
+
+  if (GV->isDeclaration() || GV->getLinkage() == GlobalValue::PrivateLinkage) {
     AsmPrinter::EmitGlobalVariable(GV);
     return;
   }
@@ -615,6 +619,8 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
   header.kernarg_segment_byte_size = MFI->ABIArgOffset;
   header.wavefront_sgpr_count = KernelInfo.NumSGPR;
   header.workitem_vgpr_count = KernelInfo.NumVGPR;
+  header.workitem_private_segment_byte_size = KernelInfo.ScratchSize;
+  header.workgroup_group_segment_byte_size = KernelInfo.LDSSize;
 
   AMDGPUTargetStreamer *TS =
       static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());

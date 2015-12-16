@@ -478,8 +478,7 @@ private:
   SDValue SoftenFloatOp_BR_CC(SDNode *N);
   SDValue SoftenFloatOp_FP_EXTEND(SDNode *N);
   SDValue SoftenFloatOp_FP_ROUND(SDNode *N);
-  SDValue SoftenFloatOp_FP_TO_SINT(SDNode *N);
-  SDValue SoftenFloatOp_FP_TO_UINT(SDNode *N);
+  SDValue SoftenFloatOp_FP_TO_XINT(SDNode *N);
   SDValue SoftenFloatOp_SELECT_CC(SDNode *N);
   SDValue SoftenFloatOp_SETCC(SDNode *N);
   SDValue SoftenFloatOp_STORE(SDNode *N, unsigned OpNo);

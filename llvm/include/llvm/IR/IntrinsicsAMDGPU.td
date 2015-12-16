@@ -131,4 +131,27 @@ def int_amdgcn_dispatch_ptr :
   GCCBuiltin<"__builtin_amdgcn_dispatch_ptr">,
   Intrinsic<[LLVMQualPointerType<llvm_i8_ty, 2>], [], [IntrNoMem]>;
 
+// __builtin_amdgcn_interp_p1 <i>, <attr_chan>, <attr>, <m0>
+def int_amdgcn_interp_p1 :
+  GCCBuiltin<"__builtin_amdgcn_interp_p1">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem]>;  // This intrinsic reads from lds, but the memory
+                           // values are constant, so it behaves like IntrNoMem.
+
+// __builtin_amdgcn_interp_p2 <p1>, <j>, <attr_chan>, <attr>, <m0>
+def int_amdgcn_interp_p2 :
+  GCCBuiltin<"__builtin_amdgcn_interp_p2">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem]>;  // See int_amdgcn_v_interp_p1 for why this is
+                           // IntrNoMem.
+
+def int_amdgcn_mbcnt_lo :
+  GCCBuiltin<"__builtin_amdgcn_mbcnt_lo">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+def int_amdgcn_mbcnt_hi :
+  GCCBuiltin<"__builtin_amdgcn_mbcnt_hi">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 }

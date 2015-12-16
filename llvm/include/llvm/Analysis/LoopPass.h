@@ -155,7 +155,6 @@ public:
 
 private:
   std::deque<Loop *> LQ;
-  bool skipThisLoop;
   LoopInfo *LI;
   Loop *CurrentLoop;
 };

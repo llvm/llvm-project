@@ -83,8 +83,5 @@ MCSection *AMDGPUHSATargetObjectFile::SelectSectionForGlobal(
       return DataGlobalProgramSection;
   }
 
-  if (Kind.isReadOnly() && AMDGPU::isReadOnlySegment(GV))
-    return RodataReadonlyAgentSection;
-
-  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, Mang, TM);
+  return AMDGPUTargetObjectFile::SelectSectionForGlobal(GV, Kind, Mang, TM);
 }

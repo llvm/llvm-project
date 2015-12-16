@@ -58,37 +58,14 @@ char LPPassManager::ID = 0;
 
 LPPassManager::LPPassManager()
   : FunctionPass(ID), PMDataManager() {
-  skipThisLoop = false;
   LI = nullptr;
   CurrentLoop = nullptr;
 }
 
 /// Delete loop from the loop queue and loop hierarchy (LoopInfo).
 void LPPassManager::deleteLoopFromQueue(Loop *L) {
-
+  assert(CurrentLoop == L && "deleting a loop that is not being operated on");
   LI->updateUnloop(L);
-
-  // Notify passes that the loop is being deleted.
-  deleteSimpleAnalysisLoop(L);
-
-  // If L is current loop then skip rest of the passes and let
-  // runOnFunction remove L from LQ. Otherwise, remove L from LQ now
-  // and continue applying other passes on CurrentLoop.
-  if (CurrentLoop == L)
-    skipThisLoop = true;
-
-  delete L;
-
-  if (skipThisLoop)
-    return;
-
-  for (std::deque<Loop *>::iterator I = LQ.begin(),
-         E = LQ.end(); I != E; ++I) {
-    if (*I == L) {
-      LQ.erase(I);
-      break;
-    }
-  }
 }
 
 // Inset loop into loop nest (LoopInfo) and loop queue (LQ).
@@ -204,9 +181,7 @@ bool LPPassManager::runOnFunction(Function &F) {
   // Walk Loops
   while (!LQ.empty()) {
 
-    CurrentLoop  = LQ.back();
-    skipThisLoop = false;
-
+    CurrentLoop = LQ.back();
     // Run all passes on the current Loop.
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
       LoopPass *P = getContainedPass(Index);
@@ -226,11 +201,15 @@ bool LPPassManager::runOnFunction(Function &F) {
 
       if (Changed)
         dumpPassInfo(P, MODIFICATION_MSG, ON_LOOP_MSG,
-                     skipThisLoop ? "<deleted>" :
-                                    CurrentLoop->getHeader()->getName());
+                     CurrentLoop->isUnloop()
+                         ? "<deleted>"
+                         : CurrentLoop->getHeader()->getName());
       dumpPreservedSet(P);
 
-      if (!skipThisLoop) {
+      if (CurrentLoop->isUnloop()) {
+        // Notify passes that the loop is being deleted.
+        deleteSimpleAnalysisLoop(CurrentLoop);
+      } else {
         // Manually check that this loop is still healthy. This is done
         // instead of relying on LoopInfo::verifyLoop since LoopInfo
         // is a function pass and it's really expensive to verify every
@@ -249,12 +228,12 @@ bool LPPassManager::runOnFunction(Function &F) {
 
       removeNotPreservedAnalysis(P);
       recordAvailableAnalysis(P);
-      removeDeadPasses(P,
-                       skipThisLoop ? "<deleted>" :
-                                      CurrentLoop->getHeader()->getName(),
+      removeDeadPasses(P, CurrentLoop->isUnloop()
+                              ? "<deleted>"
+                              : CurrentLoop->getHeader()->getName(),
                        ON_LOOP_MSG);
 
-      if (skipThisLoop)
+      if (CurrentLoop->isUnloop())
         // Do not run other passes on this loop.
         break;
     }
@@ -262,11 +241,13 @@ bool LPPassManager::runOnFunction(Function &F) {
     // If the loop was deleted, release all the loop passes. This frees up
     // some memory, and avoids trouble with the pass manager trying to call
     // verifyAnalysis on them.
-    if (skipThisLoop)
+    if (CurrentLoop->isUnloop()) {
       for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
         Pass *P = getContainedPass(Index);
         freePass(P, "<deleted>", ON_LOOP_MSG);
       }
+      delete CurrentLoop;
+    }
 
     // Pop the loop from queue after running all passes.
     LQ.pop_back();

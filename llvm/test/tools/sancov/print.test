@@ -1,11 +1,11 @@
 REQUIRES: x86_64-linux
 RUN: sancov -obj %p/Inputs/test-linux_x86_64 -print %p/Inputs/test-linux_x86_64.sancov | FileCheck %s
 
-CHECK: 0x4db18b
-CHECK: 0x4db2d2
-CHECK: 0x4db322
-CHECK: 0x4db376
-CHECK: 0x4db3bd
-CHECK: 0x4db3f4
-CHECK: 0x4db427
-CHECK: 0x4db45a
+CHECK: 0x4dbe2b
+CHECK: 0x4dbf72
+CHECK: 0x4dbfec
+CHECK: 0x4dc033
+CHECK: 0x4dc06a
+CHECK: 0x4dc09d
+CHECK: 0x4dc0d0
+

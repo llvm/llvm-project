@@ -1799,6 +1799,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::FSUB);
   setTargetDAGCombine(ISD::FNEG);
   setTargetDAGCombine(ISD::FMA);
+  setTargetDAGCombine(ISD::FMAXNUM);
   setTargetDAGCombine(ISD::SUB);
   setTargetDAGCombine(ISD::LOAD);
   setTargetDAGCombine(ISD::MLOAD);
@@ -16168,15 +16169,16 @@ static int getSEHRegistrationNodeSize(const Function *Fn) {
   case EHPersonality::MSVC_CXX: return 16;
   default: break;
   }
-  report_fatal_error("can only recover FP for MSVC EH personality functions");
+  report_fatal_error(
+      "can only recover FP for 32-bit MSVC EH personality functions");
 }
 
-/// When the 32-bit MSVC runtime transfers control to us, either to an outlined
+/// When the MSVC runtime transfers control to us, either to an outlined
 /// function or when returning to a parent frame after catching an exception, we
 /// recover the parent frame pointer by doing arithmetic on the incoming EBP.
 /// Here's the math:
 ///   RegNodeBase = EntryEBP - RegNodeSize
-///   ParentFP = RegNodeBase - RegNodeFrameOffset
+///   ParentFP = RegNodeBase - ParentFrameOffset
 /// Subtracting RegNodeSize takes us to the offset of the registration node, and
 /// subtracting the offset (negative on x86) takes us back to the parent FP.
 static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
@@ -16193,22 +16195,28 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   if (!Fn->hasPersonalityFn())
     return EntryEBP;
 
-  int RegNodeSize = getSEHRegistrationNodeSize(Fn);
-
   // Get an MCSymbol that will ultimately resolve to the frame offset of the EH
-  // registration.
+  // registration, or the .set_setframe offset.
   MCSymbol *OffsetSym =
       MF.getMMI().getContext().getOrCreateParentFrameOffsetSymbol(
           GlobalValue::getRealLinkageName(Fn->getName()));
   SDValue OffsetSymVal = DAG.getMCSymbol(OffsetSym, PtrVT);
-  SDValue RegNodeFrameOffset =
+  SDValue ParentFrameOffset =
       DAG.getNode(ISD::LOCAL_RECOVER, dl, PtrVT, OffsetSymVal);
 
+  // Return EntryEBP + ParentFrameOffset for x64. This adjusts from RSP after
+  // prologue to RBP in the parent function.
+  const X86Subtarget &Subtarget =
+      static_cast<const X86Subtarget &>(DAG.getSubtarget());
+  if (Subtarget.is64Bit())
+    return DAG.getNode(ISD::ADD, dl, PtrVT, EntryEBP, ParentFrameOffset);
+
+  int RegNodeSize = getSEHRegistrationNodeSize(Fn);
   // RegNodeBase = EntryEBP - RegNodeSize
-  // ParentFP = RegNodeBase - RegNodeFrameOffset
+  // ParentFP = RegNodeBase - ParentFrameOffset
   SDValue RegNodeBase = DAG.getNode(ISD::SUB, dl, PtrVT, EntryEBP,
                                     DAG.getConstant(RegNodeSize, dl, PtrVT));
-  return DAG.getNode(ISD::SUB, dl, PtrVT, RegNodeBase, RegNodeFrameOffset);
+  return DAG.getNode(ISD::SUB, dl, PtrVT, RegNodeBase, ParentFrameOffset);
 }
 
 static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
@@ -17077,66 +17085,6 @@ static SDValue LowerREADCYCLECOUNTER(SDValue Op, const X86Subtarget *Subtarget,
   return DAG.getMergeValues(Results, DL);
 }
 
-static SDValue LowerSEHRESTOREFRAME(SDValue Op, const X86Subtarget *Subtarget,
-                                    SelectionDAG &DAG) {
-  MachineFunction &MF = DAG.getMachineFunction();
-  const Function *Fn = MF.getFunction();
-  SDLoc dl(Op);
-  SDValue Chain = Op.getOperand(0);
-
-  assert(Subtarget->getFrameLowering()->hasFP(MF) &&
-         "using llvm.x86.seh.restoreframe requires a frame pointer");
-
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  MVT VT = TLI.getPointerTy(DAG.getDataLayout());
-
-  const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
-  unsigned FrameReg =
-      RegInfo->getPtrSizedFrameRegister(DAG.getMachineFunction());
-  unsigned SPReg = RegInfo->getStackRegister();
-  unsigned SlotSize = RegInfo->getSlotSize();
-
-  // Get incoming EBP.
-  SDValue IncomingEBP =
-      DAG.getCopyFromReg(Chain, dl, FrameReg, VT);
-
-  // SP is saved in the first field of every registration node, so load
-  // [EBP-RegNodeSize] into SP.
-  int RegNodeSize = getSEHRegistrationNodeSize(Fn);
-  SDValue SPAddr = DAG.getNode(ISD::ADD, dl, VT, IncomingEBP,
-                               DAG.getConstant(-RegNodeSize, dl, VT));
-  SDValue NewSP =
-      DAG.getLoad(VT, dl, Chain, SPAddr, MachinePointerInfo(), false, false,
-                  false, VT.getScalarSizeInBits() / 8);
-  Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP);
-
-  if (!RegInfo->needsStackRealignment(MF)) {
-    // Adjust EBP to point back to the original frame position.
-    SDValue NewFP = recoverFramePointer(DAG, Fn, IncomingEBP);
-    Chain = DAG.getCopyToReg(Chain, dl, FrameReg, NewFP);
-  } else {
-    assert(RegInfo->hasBasePointer(MF) &&
-           "functions with Win32 EH must use frame or base pointer register");
-
-    // Reload the base pointer (ESI) with the adjusted incoming EBP.
-    SDValue NewBP = recoverFramePointer(DAG, Fn, IncomingEBP);
-    Chain = DAG.getCopyToReg(Chain, dl, RegInfo->getBaseRegister(), NewBP);
-
-    // Reload the spilled EBP value, now that the stack and base pointers are
-    // set up.
-    X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-    X86FI->setHasSEHFramePtrSave(true);
-    int FI = MF.getFrameInfo()->CreateSpillStackObject(SlotSize, SlotSize);
-    X86FI->setSEHFramePtrSaveIndex(FI);
-    SDValue NewFP = DAG.getLoad(VT, dl, Chain, DAG.getFrameIndex(FI, VT),
-                                MachinePointerInfo(), false, false, false,
-                                VT.getScalarSizeInBits() / 8);
-    Chain = DAG.getCopyToReg(NewFP, dl, FrameReg, NewFP);
-  }
-
-  return Chain;
-}
-
 static SDValue MarkEHRegistrationNode(SDValue Op, SelectionDAG &DAG) {
   MachineFunction &MF = DAG.getMachineFunction();
   SDValue Chain = Op.getOperand(0);
@@ -17198,9 +17146,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
 
   const IntrinsicData* IntrData = getIntrinsicWithChain(IntNo);
   if (!IntrData) {
-    if (IntNo == llvm::Intrinsic::x86_seh_restoreframe)
-      return LowerSEHRESTOREFRAME(Op, Subtarget, DAG);
-    else if (IntNo == llvm::Intrinsic::x86_seh_ehregnode)
+    if (IntNo == llvm::Intrinsic::x86_seh_ehregnode)
       return MarkEHRegistrationNode(Op, DAG);
     return SDValue();
   }
@@ -26594,6 +26540,56 @@ static SDValue PerformFMinFMaxCombine(SDNode *N, SelectionDAG &DAG) {
                      N->getOperand(0), N->getOperand(1));
 }
 
+static SDValue performFMaxNumCombine(SDNode *N, SelectionDAG &DAG,
+                                     const X86Subtarget *Subtarget) {
+  // This takes at least 3 instructions, so favor a library call when
+  // minimizing code size.
+  if (DAG.getMachineFunction().getFunction()->optForMinSize())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+
+  // TODO: Check for global or instruction-level "nnan". In that case, we
+  //       should be able to lower to FMAX/FMIN alone.
+  // TODO: If an operand is already known to be a NaN or not a NaN, this
+  //       should be an optional swap and FMAX/FMIN.
+  // TODO: Allow f64, vectors, and fminnum.
+
+  if (VT != MVT::f32 || !Subtarget->hasSSE1() || Subtarget->useSoftFloat())
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDLoc DL(N);
+  EVT SetCCType = DAG.getTargetLoweringInfo().getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  // There are 4 possibilities involving NaN inputs, and these are the required
+  // outputs:
+  //                   Op1
+  //               Num     NaN
+  //            ----------------
+  //       Num  |  Max  |  Op0 |
+  // Op0        ----------------
+  //       NaN  |  Op1  |  NaN |
+  //            ----------------
+  //
+  // The SSE FP max/min instructions were not designed for this case, but rather
+  // to implement:
+  //   Max = Op1 > Op0 ? Op1 : Op0
+  //
+  // So they always return Op0 if either input is a NaN. However, we can still
+  // use those instructions for fmaxnum by selecting away a NaN input.
+
+  // If either operand is NaN, the 2nd source operand (Op0) is passed through.
+  SDValue Max = DAG.getNode(X86ISD::FMAX, DL, VT, Op1, Op0);
+  SDValue IsOp0Nan = DAG.getSetCC(DL, SetCCType , Op0, Op0, ISD::SETUO);
+
+  // If Op0 is a NaN, select Op1. Otherwise, select the max. If both operands
+  // are NaN, the NaN value of Op1 is the result.
+  return DAG.getNode(ISD::SELECT, DL, VT, IsOp0Nan, Op1, Max);
+}
+
 /// Do target-specific dag combines on X86ISD::FAND nodes.
 static SDValue PerformFANDCombine(SDNode *N, SelectionDAG &DAG,
                                   const X86Subtarget *Subtarget) {
@@ -27453,6 +27449,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FOR:         return PerformFORCombine(N, DAG, Subtarget);
   case X86ISD::FMIN:
   case X86ISD::FMAX:        return PerformFMinFMaxCombine(N, DAG);
+  case ISD::FMAXNUM:        return performFMaxNumCombine(N, DAG, Subtarget);
   case X86ISD::FAND:        return PerformFANDCombine(N, DAG, Subtarget);
   case X86ISD::FANDN:       return PerformFANDNCombine(N, DAG, Subtarget);
   case X86ISD::BT:          return PerformBTCombine(N, DAG, DCI);

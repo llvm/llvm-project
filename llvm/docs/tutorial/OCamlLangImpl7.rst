@@ -118,7 +118,7 @@ that @G defines *space* for an i32 in the global data area, but its
 *name* actually refers to the address for that space. Stack variables
 work the same way, except that instead of being declared with global
 variable definitions, they are declared with the `LLVM alloca
-instruction <../LangRef.html#i_alloca>`_:
+instruction <../LangRef.html#alloca-instruction>`_:
 
 .. code-block:: llvm
 
@@ -221,7 +221,7 @@ variables in certain circumstances:
    funny pointer arithmetic is involved, the alloca will not be
    promoted.
 #. mem2reg only works on allocas of `first
-   class <../LangRef.html#t_classifications>`_ values (such as pointers,
+   class <../LangRef.html#first-class-types>`_ values (such as pointers,
    scalars and vectors), and only if the array size of the allocation is
    1 (or missing in the .ll file). mem2reg is not capable of promoting
    structs or arrays to registers. Note that the "scalarrepl" pass is
@@ -367,7 +367,7 @@ from the stack slot:
 
 As you can see, this is pretty straightforward. Now we need to update
 the things that define the variables to set up the alloca. We'll start
-with ``codegen_expr Ast.For ...`` (see the `full code listing <#code>`_
+with ``codegen_expr Ast.For ...`` (see the `full code listing <#id1>`_
 for the unabridged code):
 
 .. code-block:: ocaml
@@ -407,7 +407,7 @@ for the unabridged code):
           ...
 
 This code is virtually identical to the code `before we allowed mutable
-variables <OCamlLangImpl5.html#forcodegen>`_. The big difference is that
+variables <OCamlLangImpl5.html#code-generation-for-the-for-loop>`_. The big difference is that
 we no longer have to construct a PHI node, and we use load/store to
 access the variable as needed.
 

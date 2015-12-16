@@ -47,12 +47,12 @@ define void @test() {
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_module_global internal_readonly
-; ASM: .hsarodata_readonly_agent
+; ASM: .hsatext
 ; ASM: internal_readonly:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_program_global external_readonly
-; ASM: .hsarodata_readonly_agent
+; ASM: .hsatext
 ; ASM: external_readonly:
 ; ASM: .long 0
 
@@ -76,15 +76,6 @@ define void @test() {
 ; ELF: SHF_WRITE (0x1)
 ; ELF: ]
 ; ELF: }
-
-; ELF: Section {
-; ELF: Name: .hsarodata_readonly_agent
-; ELF: Type: SHT_PROGBITS (0x1)
-; ELF: Flags [ (0xA00002)
-; ELF: SHF_ALLOC (0x2)
-; ELF: SHF_AMDGPU_HSA_AGENT (0x800000)
-; ELF: SHF_AMDGPU_HSA_READONLY (0x200000)
-; ELF: ]
 
 ; ELF: Symbol {
 ; ELF: Name: common_global_agent
@@ -116,7 +107,7 @@ define void @test() {
 ; ELF: Name: internal_readonly
 ; ELF: Binding: Local
 ; ELF: Type: Object
-; ELF: Section: .hsarodata_readonly_agent
+; ELF: Section: .hsatext
 ; ELF: }
 
 ; ELF: Symbol {
@@ -137,5 +128,5 @@ define void @test() {
 ; ELF: Name: external_readonly
 ; ELF: Binding: Global
 ; ELF: Type: Object
-; ELF: Section: .hsarodata_readonly_agent
+; ELF: Section: .hsatext
 ; ELF: }

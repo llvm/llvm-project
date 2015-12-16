@@ -914,10 +914,7 @@ static void DumpInitTermPointerSection(MachOObjectFile *O, const char *sect,
                                        SymbolAddressMap *AddrMap,
                                        bool verbose) {
   uint32_t stride;
-  if (O->is64Bit())
-    stride = sizeof(uint64_t);
-  else
-    stride = sizeof(uint32_t);
+  stride = (O->is64Bit()) ? sizeof(uint64_t) : sizeof(uint32_t);
   for (uint32_t i = 0; i < sect_size; i += stride) {
     const char *SymbolName = nullptr;
     if (O->is64Bit()) {

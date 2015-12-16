@@ -1,6 +1,8 @@
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 ; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE
 ; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA
 ; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
 ; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
 
@@ -13,10 +15,20 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; R600: LDS_READ
 ; R600: LDS_READ
 
+; HSA-PROMOTE: .amd_kernel_code_t
+; HSA-PROMOTE: workgroup_group_segment_byte_size = 5120
+; HSA-PROMOTE: .end_amd_kernel_code_t
+
 ; SI-PROMOTE: ds_write_b32
 ; SI-PROMOTE: ds_write_b32
 ; SI-PROMOTE: ds_read_b32
 ; SI-PROMOTE: ds_read_b32
+
+; HSA-ALLOCA: .amd_kernel_code_t
+; FIXME: Creating the emergency stack slots causes us to over-estimate scratch
+; by 4 bytes.
+; HSA-ALLOCA: workitem_private_segment_byte_size = 24
+; HSA-ALLOCA: .end_amd_kernel_code_t
 
 ; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x70,0xe0
 ; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x70,0xe0

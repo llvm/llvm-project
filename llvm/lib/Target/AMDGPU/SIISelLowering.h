@@ -80,6 +80,7 @@ public:
                           bool MemcpyStrSrc,
                           MachineFunction &MF) const override;
 
+  bool isMemOpUniform(const SDNode *N) const;
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 
   TargetLoweringBase::LegalizeTypeAction

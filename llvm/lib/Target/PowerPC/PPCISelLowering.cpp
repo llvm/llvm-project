@@ -255,10 +255,17 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::SINT_TO_FP, MVT::i32, Expand);
   setOperationAction(ISD::UINT_TO_FP, MVT::i32, Expand);
 
-  setOperationAction(ISD::BITCAST, MVT::f32, Expand);
-  setOperationAction(ISD::BITCAST, MVT::i32, Expand);
-  setOperationAction(ISD::BITCAST, MVT::i64, Expand);
-  setOperationAction(ISD::BITCAST, MVT::f64, Expand);
+  if (Subtarget.hasDirectMove()) {
+    setOperationAction(ISD::BITCAST, MVT::f32, Legal);
+    setOperationAction(ISD::BITCAST, MVT::i32, Legal);
+    setOperationAction(ISD::BITCAST, MVT::i64, Legal);
+    setOperationAction(ISD::BITCAST, MVT::f64, Legal);
+  } else {
+    setOperationAction(ISD::BITCAST, MVT::f32, Expand);
+    setOperationAction(ISD::BITCAST, MVT::i32, Expand);
+    setOperationAction(ISD::BITCAST, MVT::i64, Expand);
+    setOperationAction(ISD::BITCAST, MVT::f64, Expand);
+  }
 
   // We cannot sextinreg(i1).  Expand to shifts.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);

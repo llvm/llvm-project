@@ -34,7 +34,7 @@
 ; GCNHSA: enable_sgpr_grid_workgroup_count_x = 0
 ; GCNHSA: enable_sgpr_grid_workgroup_count_y = 0
 ; GCNHSA: enable_sgpr_grid_workgroup_count_z = 0
-; GCNHSA: workitem_private_segment_byte_size = 0
+; GCNHSA: workitem_private_segment_byte_size = 32772
 ; GCNHSA: private_segment_alignment = 4
 ; GCNHSA: .end_amd_kernel_code_t
 

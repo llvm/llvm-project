@@ -953,13 +953,13 @@ defm BUFFER_LOAD_SSHORT : MUBUF_Load_Helper <
   mubuf<0x0b, 0x13>, "buffer_load_sshort", VGPR_32, i32, sextloadi16_global
 >;
 defm BUFFER_LOAD_DWORD : MUBUF_Load_Helper <
-  mubuf<0x0c, 0x14>, "buffer_load_dword", VGPR_32, i32, global_load
+  mubuf<0x0c, 0x14>, "buffer_load_dword", VGPR_32, i32, mubuf_load
 >;
 defm BUFFER_LOAD_DWORDX2 : MUBUF_Load_Helper <
-  mubuf<0x0d, 0x15>, "buffer_load_dwordx2", VReg_64, v2i32, global_load
+  mubuf<0x0d, 0x15>, "buffer_load_dwordx2", VReg_64, v2i32, mubuf_load
 >;
 defm BUFFER_LOAD_DWORDX4 : MUBUF_Load_Helper <
-  mubuf<0x0e, 0x17>, "buffer_load_dwordx4", VReg_128, v4i32, global_load
+  mubuf<0x0e, 0x17>, "buffer_load_dwordx4", VReg_128, v4i32, mubuf_load
 >;
 
 defm BUFFER_STORE_BYTE : MUBUF_Store_Helper <
@@ -1590,10 +1590,10 @@ defm V_BCNT_U32_B32 : VOP2_VI3_Inst <vop23<0x22, 0x28b>, "v_bcnt_u32_b32",
   VOP_I32_I32_I32
 >;
 defm V_MBCNT_LO_U32_B32 : VOP2_VI3_Inst <vop23<0x23, 0x28c>, "v_mbcnt_lo_u32_b32",
-  VOP_I32_I32_I32
+  VOP_I32_I32_I32, int_amdgcn_mbcnt_lo
 >;
 defm V_MBCNT_HI_U32_B32 : VOP2_VI3_Inst <vop23<0x24, 0x28d>, "v_mbcnt_hi_u32_b32",
-  VOP_I32_I32_I32
+  VOP_I32_I32_I32, int_amdgcn_mbcnt_hi
 >;
 defm V_LDEXP_F32 : VOP2_VI3_Inst <vop23<0x2b, 0x288>, "v_ldexp_f32",
   VOP_F32_F32_I32, AMDGPUldexp
@@ -2087,23 +2087,28 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
 
   // 1. IMM offset
   def : Pat <
-    (constant_load (SMRDImm i64:$sbase, i32:$offset)),
+    (smrd_load (SMRDImm i64:$sbase, i32:$offset)),
     (vt (!cast<SMRD>(Instr#"_IMM") $sbase, $offset))
   >;
 
   // 2. SGPR offset
   def : Pat <
-    (constant_load (SMRDSgpr i64:$sbase, i32:$offset)),
+    (smrd_load (SMRDSgpr i64:$sbase, i32:$offset)),
     (vt (!cast<SMRD>(Instr#"_SGPR") $sbase, $offset))
   >;
 
   def : Pat <
-    (constant_load (SMRDImm32 i64:$sbase, i32:$offset)),
+    (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
     (vt (!cast<SMRD>(Instr#"_IMM_ci") $sbase, $offset))
   > {
     let Predicates = [isCIOnly];
   }
 }
+
+// Global and constant loads can be selected to either MUBUF or SMRD
+// instructions, but SMRD instructions are faster so we want the instruction
+// selector to prefer those.
+let AddedComplexity = 100 in {
 
 defm : SMRD_Pattern <"S_LOAD_DWORD", i32>;
 defm : SMRD_Pattern <"S_LOAD_DWORDX2", v2i32>;
@@ -2132,6 +2137,8 @@ def : Pat <
 >;
 
 } // End Predicates = [isCI]
+
+} // End let AddedComplexity = 10000
 
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
@@ -2561,7 +2568,9 @@ def : BitConvert <v2i32, i64, VReg_64>;
 def : BitConvert <i64, v2i32, VReg_64>;
 def : BitConvert <v2f32, i64, VReg_64>;
 def : BitConvert <i64, v2f32, VReg_64>;
+def : BitConvert <v2f32, f64, VReg_64>;
 def : BitConvert <v2i32, f64, VReg_64>;
+def : BitConvert <f64, v2f32, VReg_64>;
 def : BitConvert <f64, v2i32, VReg_64>;
 def : BitConvert <v4f32, v4i32, VReg_128>;
 def : BitConvert <v4i32, v4f32, VReg_128>;
@@ -2570,7 +2579,9 @@ def : BitConvert <v4i32, v4f32, VReg_128>;
 def : BitConvert <v2i64, v4i32, SReg_128>;
 def : BitConvert <v4i32, v2i64, SReg_128>;
 
+def : BitConvert <v2f64, v4f32, VReg_128>;
 def : BitConvert <v2f64, v4i32, VReg_128>;
+def : BitConvert <v4f32, v2f64, VReg_128>;
 def : BitConvert <v4i32, v2f64, VReg_128>;
 
 

@@ -1388,7 +1388,7 @@ bool FastISel::selectInstruction(const Instruction *I) {
         LibInfo->hasOptimizedCodeGen(Func))
       return false;
 
-    // Don't handle Intrinsic::trap if a trap funciton is specified.
+    // Don't handle Intrinsic::trap if a trap function is specified.
     if (F && F->getIntrinsicID() == Intrinsic::trap &&
         Call->hasFnAttr("trap-func-name"))
       return false;

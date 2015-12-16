@@ -214,7 +214,7 @@ Kaleidoscope looks like this:
 To visualize the control flow graph, you can use a nifty feature of the
 LLVM '`opt <http://llvm.org/cmds/opt.html>`_' tool. If you put this LLVM
 IR into "t.ll" and run "``llvm-as < t.ll | opt -analyze -view-cfg``", `a
-window will pop up <../ProgrammersManual.html#ViewGraph>`_ and you'll
+window will pop up <../ProgrammersManual.html#viewing-graphs-while-debugging-code>`_ and you'll
 see this graph:
 
 .. figure:: LangImpl5-cfg.png

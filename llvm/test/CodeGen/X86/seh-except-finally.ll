@@ -51,7 +51,7 @@ invoke.cont2:                                     ; preds = %invoke.cont
 __finally:                                             ; preds = %entry
   %cleanuppad = cleanuppad within none []
   %locals = call i8* @llvm.localaddress()
-  invoke void @"\01?fin$0@0@use_both@@"(i1 zeroext true, i8* %locals) #5
+  invoke void @"\01?fin$0@0@use_both@@"(i1 zeroext true, i8* %locals) #5 [ "funclet"(token %cleanuppad) ]
           to label %invoke.cont3 unwind label %catch.dispatch
 
 invoke.cont3:                                     ; preds = %__finally
@@ -62,7 +62,7 @@ catch.dispatch:                                   ; preds = %invoke.cont3, %lpad
 
 __except:                                         ; preds = %catch.dispatch
   %catchpad = catchpad within %cs1 [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@use_both@@" to i8*)]
-  %call = call i32 @puts(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @"\01??_C@_08MLCMLGHM@__except?$AA@", i32 0, i32 0))
+  %call = call i32 @puts(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @"\01??_C@_08MLCMLGHM@__except?$AA@", i32 0, i32 0)) [ "funclet"(token %catchpad) ]
   catchret from %catchpad to label %__try.cont
 
 __try.cont:                                       ; preds = %__except, %invoke.cont2
@@ -79,6 +79,7 @@ __try.cont:                                       ; preds = %__except, %invoke.c
 ; CHECK: retq
 ;
 ; CHECK: .seh_handlerdata
+; CHECK-NEXT: .Luse_both$parent_frame_offset
 ; CHECK-NEXT: .long (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
 ; CHECK-NEXT: .long .Ltmp0@IMGREL+1

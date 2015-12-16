@@ -16,7 +16,7 @@ catch.dispatch.1:
 
 outer.catch:
   %cp1 = catchpad within %cs1 [i32 1]
-  invoke void @f()
+  invoke void @f() [ "funclet"(token %cp1) ]
           to label %outer.ret unwind label %catch.dispatch.2
 outer.ret:
   catchret from %cp1 to label %exit

@@ -102,6 +102,15 @@ std::string getPGOFuncName(const Function &F, uint64_t Version) {
                         Version);
 }
 
+StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
+  if (FileName.empty())
+    return PGOFuncName;
+  // Drop the file name including ':'. See also getPGOFuncName.
+  if (PGOFuncName.startswith(FileName))
+    PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
+  return PGOFuncName;
+}
+
 // \p FuncName is the string used as profile lookup key for the function. A
 // symbol is created to hold the name. Return the legalized symbol name.
 static std::string getPGOFuncNameVarName(StringRef FuncName,
@@ -202,8 +211,10 @@ uint64_t stringToHash(uint32_t ValueKind, uint64_t Value) {
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
-  return (ValueProfData *)(new (::operator new(TotalSizeInBytes))
-                               ValueProfData());
+  ValueProfData *VD =
+      (ValueProfData *)(new (::operator new(TotalSizeInBytes)) ValueProfData());
+  memset(VD, 0, TotalSizeInBytes);
+  return VD;
 }
 
 static ValueProfRecordClosure InstrProfRecordClosure = {
@@ -214,8 +225,7 @@ static ValueProfRecordClosure InstrProfRecordClosure = {
     getNumValueDataForSiteInstrProf,
     stringToHash,
     getValueForSiteInstrProf,
-    allocValueProfDataInstrProf
-};
+    allocValueProfDataInstrProf};
 
 // Wrapper implementation using the closure mechanism.
 uint32_t ValueProfData::getSize(const InstrProfRecord &Record) {

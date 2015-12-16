@@ -65,12 +65,12 @@ catch1.body:
 ;             ^ exception pointer passed in rdx
 ; CHECK-NEXT: callq g
   %exn1 = call i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token %catch1)
-  call void @g(i8 addrspace(1)* %exn1)
+  call void @g(i8 addrspace(1)* %exn1) [ "funclet"(token %catch1) ]
 ; CHECK: [[L_before_f3:.+]]:
 ; CHECK-NEXT: movl $3, %ecx
 ; CHECK-NEXT: callq f
 ; CHECK-NEXT: [[L_after_f3:.+]]:
-  invoke void @f(i32 3)
+  invoke void @f(i32 3) [ "funclet"(token %catch1) ]
     to label %catch1.ret unwind label %finally.pad
 catch1.ret:
   catchret from %catch1 to label %finally.clone
@@ -88,12 +88,12 @@ catch2.body:
 ;             ^ exception pointer passed in rdx
 ; CHECK-NEXT: callq g
   %exn2 = call i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token %catch2)
-  call void @g(i8 addrspace(1)* %exn2)
+  call void @g(i8 addrspace(1)* %exn2) [ "funclet"(token %catch2) ]
 ; CHECK: [[L_before_f4:.+]]:
 ; CHECK-NEXT: movl $4, %ecx
 ; CHECK-NEXT: callq f
 ; CHECK-NEXT: [[L_after_f4:.+]]:
-  invoke void @f(i32 4)
+  invoke void @f(i32 4) [ "funclet"(token %catch2) ]
     to label %try_in_catch unwind label %finally.pad
 try_in_catch:
 ; CHECK: # %try_in_catch
@@ -101,7 +101,7 @@ try_in_catch:
 ; CHECK-NEXT: movl $5, %ecx
 ; CHECK-NEXT: callq f
 ; CHECK-NEXT: [[L_after_f5:.+]]:
-  invoke void @f(i32 5)
+  invoke void @f(i32 5) [ "funclet"(token %catch2) ]
     to label %catch2.ret unwind label %fault.pad
 fault.pad:
 ; CHECK: .seh_proc [[L_fault:[^ ]+]]
@@ -117,7 +117,7 @@ fault.pad:
 ; CHECK-NEXT: movl $6, %ecx
 ; CHECK-NEXT: callq f
 ; CHECK-NEXT: [[L_after_f6:.+]]:
-  invoke void @f(i32 6)
+  invoke void @f(i32 6) [ "funclet"(token %fault) ]
     to label %fault.ret unwind label %finally.pad
 fault.ret:
   cleanupret from %fault unwind label %finally.pad
@@ -138,7 +138,7 @@ finally.pad:
 ; CHECK: .seh_endprologue
 ; CHECK-NEXT: movl $7, %ecx
 ; CHECK-NEXT: callq f
-  call void @f(i32 7)
+  call void @f(i32 7) [ "funclet"(token %finally) ]
   cleanupret from %finally unwind to caller
 tail:
   call void @f(i32 8)

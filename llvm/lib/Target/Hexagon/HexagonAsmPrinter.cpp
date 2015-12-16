@@ -40,11 +40,13 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -66,6 +68,16 @@ namespace llvm {
 static cl::opt<bool> AlignCalls(
          "hexagon-align-calls", cl::Hidden, cl::init(true),
           cl::desc("Insert falign after call instruction for Hexagon target"));
+
+// Given a scalar register return its pair.
+inline static unsigned getHexagonRegisterPair(unsigned Reg,
+      const MCRegisterInfo *RI) {
+  assert(Hexagon::IntRegsRegClass.contains(Reg));
+  MCSuperRegIterator SR(Reg, RI, false);
+  unsigned Pair = *SR;
+  assert(Hexagon::DoubleRegsRegClass.contains(Pair));
+  return Pair;
+}
 
 HexagonAsmPrinter::HexagonAsmPrinter(TargetMachine &TM,
                                      std::unique_ptr<MCStreamer> Streamer)
@@ -107,9 +119,8 @@ void HexagonAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 //
 bool HexagonAsmPrinter::
 isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
-  if (MBB->hasAddressTaken()) {
+  if (MBB->hasAddressTaken())
     return false;
-  }
   return AsmPrinter::isBlockOnlyReachableByFallthrough(MBB);
 }
 
@@ -122,7 +133,8 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         raw_ostream &OS) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return true; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
@@ -176,6 +188,377 @@ bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     llvm_unreachable("Unimplemented");
 
   return false;
+}
+
+MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
+		    MCStreamer &OutStreamer,
+                    const MCOperand &Imm, int AlignSize) {
+  MCSymbol *Sym;
+  int64_t Value;
+  if (Imm.getExpr()->evaluateAsAbsolute(Value)) {
+    StringRef sectionPrefix;
+    std::string ImmString;
+    StringRef Name;
+    if (AlignSize == 8) {
+       Name = ".CONST_0000000000000000";
+       sectionPrefix = ".gnu.linkonce.l8";
+       ImmString = utohexstr(Value);
+    } else {
+       Name = ".CONST_00000000";
+       sectionPrefix = ".gnu.linkonce.l4";
+       ImmString = utohexstr(static_cast<uint32_t>(Value));
+    }
+
+    std::string symbolName =   // Yes, leading zeros are kept.
+      Name.drop_back(ImmString.size()).str() + ImmString;
+    std::string sectionName = sectionPrefix.str() + symbolName;
+
+    MCSectionELF *Section = OutStreamer.getContext().getELFSection(
+        sectionName, ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
+    OutStreamer.SwitchSection(Section);
+
+    Sym = AP.OutContext.getOrCreateSymbol(Twine(symbolName));
+    if (Sym->isUndefined()) {
+      OutStreamer.EmitLabel(Sym);
+      OutStreamer.EmitSymbolAttribute(Sym, MCSA_Global);
+      OutStreamer.EmitIntValue(Value, AlignSize);
+      OutStreamer.EmitCodeAlignment(AlignSize);
+    }
+  } else {
+    assert(Imm.isExpr() && "Expected expression and found none");
+    const MachineOperand &MO = MI.getOperand(1);
+    assert(MO.isGlobal() || MO.isCPI() || MO.isJTI());
+    MCSymbol *MOSymbol = nullptr;
+    if (MO.isGlobal())
+      MOSymbol = AP.getSymbol(MO.getGlobal());
+    else if (MO.isCPI())
+      MOSymbol = AP.GetCPISymbol(MO.getIndex());
+    else if (MO.isJTI())
+      MOSymbol = AP.GetJTISymbol(MO.getIndex());
+    else
+      llvm_unreachable("Unknown operand type!");
+
+    StringRef SymbolName = MOSymbol->getName();
+    std::string LitaName = ".CONST_" + SymbolName.str();
+
+    MCSectionELF *Section = OutStreamer.getContext().getELFSection(
+        ".lita", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
+
+    OutStreamer.SwitchSection(Section);
+    Sym = AP.OutContext.getOrCreateSymbol(Twine(LitaName));
+    if (Sym->isUndefined()) {
+      OutStreamer.EmitLabel(Sym);
+      OutStreamer.EmitSymbolAttribute(Sym, MCSA_Local);
+      OutStreamer.EmitValue(Imm.getExpr(), AlignSize);
+      OutStreamer.EmitCodeAlignment(AlignSize);
+    }
+  }
+  return Sym;
+}
+
+void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
+                                                  const MachineInstr &MI) {
+  MCInst &MappedInst = static_cast <MCInst &>(Inst);
+  const MCRegisterInfo *RI = OutStreamer->getContext().getRegisterInfo();
+
+  switch (Inst.getOpcode()) {
+  default: return;
+
+  // "$dst = CONST64(#$src1)",
+  case Hexagon::CONST64_Float_Real:
+  case Hexagon::CONST64_Int_Real:
+    if (!OutStreamer->hasRawTextSupport()) {
+      const MCOperand &Imm = MappedInst.getOperand(1);
+      MCSectionSubPair Current = OutStreamer->getCurrentSection();
+
+      MCSymbol *Sym = smallData(*this, MI, *OutStreamer, Imm, 8);
+
+      OutStreamer->SwitchSection(Current.first, Current.second);
+      MCInst TmpInst;
+      MCOperand &Reg = MappedInst.getOperand(0);
+      TmpInst.setOpcode(Hexagon::L2_loadrdgp);
+      TmpInst.addOperand(Reg);
+      TmpInst.addOperand(MCOperand::createExpr(
+                         MCSymbolRefExpr::create(Sym, OutContext)));
+      MappedInst = TmpInst;
+
+    }
+    break;
+  case Hexagon::CONST32:
+  case Hexagon::CONST32_Float_Real:
+  case Hexagon::CONST32_Int_Real:
+  case Hexagon::FCONST32_nsdata:
+    if (!OutStreamer->hasRawTextSupport()) {
+      MCOperand &Imm = MappedInst.getOperand(1);
+      MCSectionSubPair Current = OutStreamer->getCurrentSection();
+      MCSymbol *Sym = smallData(*this, MI, *OutStreamer, Imm, 4);
+      OutStreamer->SwitchSection(Current.first, Current.second);
+      MCInst TmpInst;
+      MCOperand &Reg = MappedInst.getOperand(0);
+      TmpInst.setOpcode(Hexagon::L2_loadrigp);
+      TmpInst.addOperand(Reg);
+      TmpInst.addOperand(MCOperand::createExpr(
+                         MCSymbolRefExpr::create(Sym, OutContext)));
+      MappedInst = TmpInst;
+    }
+    break;
+
+  // C2_pxfer_map maps to C2_or instruction. Though, it's possible to use
+  // C2_or during instruction selection itself but it results
+  // into suboptimal code.
+  case Hexagon::C2_pxfer_map: {
+    MCOperand &Ps = Inst.getOperand(1);
+    MappedInst.setOpcode(Hexagon::C2_or);
+    MappedInst.addOperand(Ps);
+    return;
+  }
+
+  // Vector reduce complex multiply by scalar, Rt & 1 map to :hi else :lo
+  // The insn is mapped from the 4 operand to the 3 operand raw form taking
+  // 3 register pairs.
+  case Hexagon::M2_vrcmpys_acc_s1: {
+    MCOperand &Rt = Inst.getOperand(3);
+    assert (Rt.isReg() && "Expected register and none was found");
+    unsigned Reg = RI->getEncodingValue(Rt.getReg());
+    if (Reg & 1)
+      MappedInst.setOpcode(Hexagon::M2_vrcmpys_acc_s1_h);
+    else
+      MappedInst.setOpcode(Hexagon::M2_vrcmpys_acc_s1_l);
+    Rt.setReg(getHexagonRegisterPair(Rt.getReg(), RI));
+    return;
+  }
+  case Hexagon::M2_vrcmpys_s1: {
+    MCOperand &Rt = Inst.getOperand(2);
+    assert (Rt.isReg() && "Expected register and none was found");
+    unsigned Reg = RI->getEncodingValue(Rt.getReg());
+    if (Reg & 1)
+      MappedInst.setOpcode(Hexagon::M2_vrcmpys_s1_h);
+    else
+      MappedInst.setOpcode(Hexagon::M2_vrcmpys_s1_l);
+    Rt.setReg(getHexagonRegisterPair(Rt.getReg(), RI));
+    return;
+  }
+
+  case Hexagon::M2_vrcmpys_s1rp: {
+    MCOperand &Rt = Inst.getOperand(2);
+    assert (Rt.isReg() && "Expected register and none was found");
+    unsigned Reg = RI->getEncodingValue(Rt.getReg());
+    if (Reg & 1)
+      MappedInst.setOpcode(Hexagon::M2_vrcmpys_s1rp_h);
+    else
+      MappedInst.setOpcode(Hexagon::M2_vrcmpys_s1rp_l);
+    Rt.setReg(getHexagonRegisterPair(Rt.getReg(), RI));
+    return;
+  }
+
+  case Hexagon::A4_boundscheck: {
+    MCOperand &Rs = Inst.getOperand(1);
+    assert (Rs.isReg() && "Expected register and none was found");
+    unsigned Reg = RI->getEncodingValue(Rs.getReg());
+    if (Reg & 1) // Odd mapped to raw:hi, regpair is rodd:odd-1, like r3:2
+      MappedInst.setOpcode(Hexagon::A4_boundscheck_hi);
+    else         // raw:lo
+      MappedInst.setOpcode(Hexagon::A4_boundscheck_lo);
+    Rs.setReg(getHexagonRegisterPair(Rs.getReg(), RI));
+    return;
+  }
+  case Hexagon::S5_asrhub_rnd_sat_goodsyntax: {
+    MCOperand &MO = MappedInst.getOperand(2);
+    int64_t Imm;
+    MCExpr const *Expr = MO.getExpr();
+    bool Success = Expr->evaluateAsAbsolute(Imm);
+    assert (Success && "Expected immediate and none was found");(void)Success;
+    MCInst TmpInst;
+    if (Imm == 0) {
+      TmpInst.setOpcode(Hexagon::S2_vsathub);
+      TmpInst.addOperand(MappedInst.getOperand(0));
+      TmpInst.addOperand(MappedInst.getOperand(1));
+      MappedInst = TmpInst;
+      return;
+    }
+    TmpInst.setOpcode(Hexagon::S5_asrhub_rnd_sat);
+    TmpInst.addOperand(MappedInst.getOperand(0));
+    TmpInst.addOperand(MappedInst.getOperand(1));
+    const MCExpr *One = MCConstantExpr::create(1, OutContext);
+    const MCExpr *Sub = MCBinaryExpr::createSub(Expr, One, OutContext);
+    TmpInst.addOperand(MCOperand::createExpr(Sub));
+    MappedInst = TmpInst;
+    return;
+  }
+  case Hexagon::S5_vasrhrnd_goodsyntax:
+  case Hexagon::S2_asr_i_p_rnd_goodsyntax: {
+    MCOperand &MO2 = MappedInst.getOperand(2);
+    MCExpr const *Expr = MO2.getExpr();
+    int64_t Imm;
+    bool Success = Expr->evaluateAsAbsolute(Imm);
+    assert (Success && "Expected immediate and none was found");(void)Success;
+    MCInst TmpInst;
+    if (Imm == 0) {
+      TmpInst.setOpcode(Hexagon::A2_combinew);
+      TmpInst.addOperand(MappedInst.getOperand(0));
+      MCOperand &MO1 = MappedInst.getOperand(1);
+      unsigned High = RI->getSubReg(MO1.getReg(), Hexagon::subreg_hireg);
+      unsigned Low = RI->getSubReg(MO1.getReg(), Hexagon::subreg_loreg);
+      // Add a new operand for the second register in the pair.
+      TmpInst.addOperand(MCOperand::createReg(High));
+      TmpInst.addOperand(MCOperand::createReg(Low));
+      MappedInst = TmpInst;
+      return;
+    }
+
+    if (Inst.getOpcode() == Hexagon::S2_asr_i_p_rnd_goodsyntax)
+      TmpInst.setOpcode(Hexagon::S2_asr_i_p_rnd);
+    else
+      TmpInst.setOpcode(Hexagon::S5_vasrhrnd);
+    TmpInst.addOperand(MappedInst.getOperand(0));
+    TmpInst.addOperand(MappedInst.getOperand(1));
+    const MCExpr *One = MCConstantExpr::create(1, OutContext);
+    const MCExpr *Sub = MCBinaryExpr::createSub(Expr, One, OutContext);
+    TmpInst.addOperand(MCOperand::createExpr(Sub));
+    MappedInst = TmpInst;
+    return;
+  }
+  // if ("#u5==0") Assembler mapped to: "Rd=Rs"; else Rd=asr(Rs,#u5-1):rnd
+  case Hexagon::S2_asr_i_r_rnd_goodsyntax: {
+    MCOperand &MO = Inst.getOperand(2);
+    MCExpr const *Expr = MO.getExpr();
+    int64_t Imm;
+    bool Success = Expr->evaluateAsAbsolute(Imm);
+    assert (Success && "Expected immediate and none was found");(void)Success;
+    MCInst TmpInst;
+    if (Imm == 0) {
+      TmpInst.setOpcode(Hexagon::A2_tfr);
+      TmpInst.addOperand(MappedInst.getOperand(0));
+      TmpInst.addOperand(MappedInst.getOperand(1));
+      MappedInst = TmpInst;
+      return;
+    }
+    TmpInst.setOpcode(Hexagon::S2_asr_i_r_rnd);
+    TmpInst.addOperand(MappedInst.getOperand(0));
+    TmpInst.addOperand(MappedInst.getOperand(1));
+    const MCExpr *One = MCConstantExpr::create(1, OutContext);
+    const MCExpr *Sub = MCBinaryExpr::createSub(Expr, One, OutContext);
+    TmpInst.addOperand(MCOperand::createExpr(Sub));
+    MappedInst = TmpInst;
+    return;
+  }
+  case Hexagon::TFRI_f:
+    MappedInst.setOpcode(Hexagon::A2_tfrsi);
+    return;
+  case Hexagon::TFRI_cPt_f:
+    MappedInst.setOpcode(Hexagon::C2_cmoveit);
+    return;
+  case Hexagon::TFRI_cNotPt_f:
+    MappedInst.setOpcode(Hexagon::C2_cmoveif);
+    return;
+  case Hexagon::MUX_ri_f:
+    MappedInst.setOpcode(Hexagon::C2_muxri);
+    return;
+  case Hexagon::MUX_ir_f:
+    MappedInst.setOpcode(Hexagon::C2_muxir);
+    return;
+
+  // Translate a "$Rdd = #imm" to "$Rdd = combine(#[-1,0], #imm)"
+  case Hexagon::A2_tfrpi: {
+    MCInst TmpInst;
+    MCOperand &Rdd = MappedInst.getOperand(0);
+    MCOperand &MO = MappedInst.getOperand(1);
+
+    TmpInst.setOpcode(Hexagon::A2_combineii);
+    TmpInst.addOperand(Rdd);
+    int64_t Imm;
+    bool Success = MO.getExpr()->evaluateAsAbsolute(Imm);
+    if (Success && Imm < 0) {
+      const MCExpr *MOne = MCConstantExpr::create(-1, OutContext);
+      TmpInst.addOperand(MCOperand::createExpr(MOne));
+    } else {
+      const MCExpr *Zero = MCConstantExpr::create(0, OutContext);
+      TmpInst.addOperand(MCOperand::createExpr(Zero));
+    }
+    TmpInst.addOperand(MO);
+    MappedInst = TmpInst;
+    return;
+  }
+  // Translate a "$Rdd = $Rss" to "$Rdd = combine($Rs, $Rt)"
+  case Hexagon::A2_tfrp: {
+    MCOperand &MO = MappedInst.getOperand(1);
+    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::subreg_hireg);
+    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::subreg_loreg);
+    MO.setReg(High);
+    // Add a new operand for the second register in the pair.
+    MappedInst.addOperand(MCOperand::createReg(Low));
+    MappedInst.setOpcode(Hexagon::A2_combinew);
+    return;
+  }
+
+  case Hexagon::A2_tfrpt:
+  case Hexagon::A2_tfrpf: {
+    MCOperand &MO = MappedInst.getOperand(2);
+    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::subreg_hireg);
+    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::subreg_loreg);
+    MO.setReg(High);
+    // Add a new operand for the second register in the pair.
+    MappedInst.addOperand(MCOperand::createReg(Low));
+    MappedInst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrpt)
+                          ? Hexagon::C2_ccombinewt
+                          : Hexagon::C2_ccombinewf);
+    return;
+  }
+  case Hexagon::A2_tfrptnew:
+  case Hexagon::A2_tfrpfnew: {
+    MCOperand &MO = MappedInst.getOperand(2);
+    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::subreg_hireg);
+    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::subreg_loreg);
+    MO.setReg(High);
+    // Add a new operand for the second register in the pair.
+    MappedInst.addOperand(MCOperand::createReg(Low));
+    MappedInst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrptnew)
+                          ? Hexagon::C2_ccombinewnewt
+                          : Hexagon::C2_ccombinewnewf);
+    return;
+  }
+
+  case Hexagon::M2_mpysmi: {
+    MCOperand &Imm = MappedInst.getOperand(2);
+    MCExpr const *Expr = Imm.getExpr();
+    int64_t Value;
+    bool Success = Expr->evaluateAsAbsolute(Value);
+    assert(Success);(void)Success;
+    if (Value < 0 && Value > -256) {
+      MappedInst.setOpcode(Hexagon::M2_mpysin);
+      Imm.setExpr(MCUnaryExpr::createMinus(Expr, OutContext));
+    }
+    else
+      MappedInst.setOpcode(Hexagon::M2_mpysip);
+    return;
+  }
+
+  case Hexagon::A2_addsp: {
+    MCOperand &Rt = Inst.getOperand(1);
+    assert (Rt.isReg() && "Expected register and none was found");
+    unsigned Reg = RI->getEncodingValue(Rt.getReg());
+    if (Reg & 1)
+      MappedInst.setOpcode(Hexagon::A2_addsph);
+    else
+      MappedInst.setOpcode(Hexagon::A2_addspl);
+    Rt.setReg(getHexagonRegisterPair(Rt.getReg(), RI));
+    return;
+  }
+  case Hexagon::HEXAGON_V6_vd0_pseudo:
+  case Hexagon::HEXAGON_V6_vd0_pseudo_128B: {
+    MCInst TmpInst;
+    assert (Inst.getOperand(0).isReg() &&
+            "Expected register and none was found");
+
+    TmpInst.setOpcode(Hexagon::V6_vxor);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(0));
+    MappedInst = TmpInst;
+    return;
+  }
+
+  }
 }
 
 

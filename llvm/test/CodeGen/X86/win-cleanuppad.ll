@@ -15,7 +15,7 @@ invoke.cont:                                      ; preds = %entry
 
 ehcleanup:                                        ; preds = %entry
   %0 = cleanuppad within none []
-  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o) #2
+  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o) #2 [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
 }
 
@@ -78,12 +78,12 @@ invoke.cont.2:                                    ; preds = %invoke.cont.1
 
 cleanup.inner:                                        ; preds = %invoke.cont
   %0 = cleanuppad within none []
-  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o2) #2
+  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o2) #2 [ "funclet"(token %0) ]
   cleanupret from %0 unwind label %cleanup.outer
 
 cleanup.outer:                                      ; preds = %invoke.cont.1, %cleanup.inner, %entry
   %1 = cleanuppad within none []
-  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o1) #2
+  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o1) #2 [ "funclet"(token %1) ]
   cleanupret from %1 unwind to caller
 }
 

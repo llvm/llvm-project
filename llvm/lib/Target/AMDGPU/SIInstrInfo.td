@@ -137,6 +137,16 @@ def SIconstdata_ptr : SDNode<
                                                      SDTCisVT<0, i64>]>
 >;
 
+def mubuf_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
+	return isGlobalLoad(cast<LoadSDNode>(N)) ||
+         isConstantLoad(cast<LoadSDNode>(N), -1);
+}]>;
+
+def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
+  return isConstantLoad(cast<LoadSDNode>(N), -1) &&
+  static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpUniform(N);
+}]>;
+
 //===----------------------------------------------------------------------===//
 // SDNodes and PatFrag for local loads and stores to enable s_mov_b32 m0, -1
 // to be glued to the memory instructions.

@@ -630,14 +630,8 @@ LoopInfo::LoopInfo(const DominatorTreeBase<BasicBlock> &DomTree) {
   analyze(DomTree);
 }
 
-/// updateUnloop - The last backedge has been removed from a loop--now the
-/// "unloop". Find a new parent for the blocks contained within unloop and
-/// update the loop tree. We don't necessarily have valid dominators at this
-/// point, but LoopInfo is still valid except for the removal of this loop.
-///
-/// Note that Unloop may now be an empty loop. Calling Loop::getHeader without
-/// checking first is illegal.
 void LoopInfo::updateUnloop(Loop *Unloop) {
+  Unloop->markUnlooped();
 
   // First handle the special case of no parent loop to simplify the algorithm.
   if (!Unloop->getParentLoop()) {

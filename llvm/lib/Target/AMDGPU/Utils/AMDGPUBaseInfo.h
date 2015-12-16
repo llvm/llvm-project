@@ -15,6 +15,7 @@
 namespace llvm {
 
 class FeatureBitset;
+class Function;
 class GlobalValue;
 class MCContext;
 class MCSection;
@@ -41,6 +42,8 @@ MCSection *getHSARodataReadonlyAgentSection(MCContext &Ctx);
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
+
+unsigned getShaderType(const Function &F);
 
 } // end namespace AMDGPU
 } // end namespace llvm

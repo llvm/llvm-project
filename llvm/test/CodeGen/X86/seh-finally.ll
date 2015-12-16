@@ -18,7 +18,7 @@ invoke.cont:                                      ; preds = %entry
 
 lpad:                                             ; preds = %entry
   %p = cleanuppad within none []
-  %call2 = call i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @str_recovered, i64 0, i64 0))
+  %call2 = call i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @str_recovered, i64 0, i64 0)) [ "funclet"(token %p) ]
   cleanupret from %p unwind to caller
 }
 
@@ -26,6 +26,7 @@ lpad:                                             ; preds = %entry
 ; X64: retq
 
 ; X64: .seh_handlerdata
+; X64-NEXT: .Lmain$parent_frame_offset = 32
 ; X64-NEXT: .long   (.Llsda_end0-.Llsda_begin0)/16
 ; X64-NEXT: .Llsda_begin0:
 ; X64-NEXT: .long   .Ltmp0@IMGREL+1
