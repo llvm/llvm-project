@@ -49,7 +49,7 @@ For example, try adding:
    extending the type system in all sorts of interesting ways. Simple
    arrays are very easy and are quite useful for many different
    applications. Adding them is mostly an exercise in learning how the
-   LLVM `getelementptr <../LangRef.html#i_getelementptr>`_ instruction
+   LLVM `getelementptr <../LangRef.html#getelementptr-instruction>`_ instruction
    works: it is so nifty/unconventional, it `has its own
    FAQ <../GetElementPtr.html>`_! If you add support for recursive types
    (e.g. linked lists), make sure to read the `section in the LLVM

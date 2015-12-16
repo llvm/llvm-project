@@ -1145,11 +1145,12 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     bool hasFP = FrameLowering->hasFP(*MF);
     
     // TODO: This is needed only if we require precise CFA.
-    bool NeedsDwarfCFI = 
-         (MMI->hasDebugInfo() || MF->getFunction()->needsUnwindTableEntry());
+    bool HasActiveDwarfFrame = OutStreamer->getNumFrameInfos() &&
+                               !OutStreamer->getDwarfFrameInfos().back().End;
+
     int stackGrowth = -RI->getSlotSize();
 
-    if (NeedsDwarfCFI && !hasFP) {
+    if (HasActiveDwarfFrame && !hasFP) {
       OutStreamer->EmitCFIAdjustCfaOffset(-stackGrowth);
     }
 
@@ -1160,7 +1161,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     EmitAndCountInstruction(MCInstBuilder(X86::POP32r)
                             .addReg(MI->getOperand(0).getReg()));
 
-    if (NeedsDwarfCFI && !hasFP) {
+    if (HasActiveDwarfFrame && !hasFP) {
       OutStreamer->EmitCFIAdjustCfaOffset(stackGrowth);
     }
     return;

@@ -120,7 +120,7 @@ exactly the code we have now, except that we would defer running the
 optimizer until the entire file has been parsed.
 
 In order to get per-function optimizations going, we need to set up a
-`FunctionPassManager <../WritingAnLLVMPass.html#passmanager>`_ to hold
+`FunctionPassManager <../WritingAnLLVMPass.html#what-passmanager-doesr>`_ to hold
 and organize the LLVM optimizations that we want to run. Once we have
 that, we can add a set of optimizations to run. We'll need a new
 FunctionPassManager for each module that we want to optimize, so we'll
@@ -152,7 +152,7 @@ for us:
     }
 
 This code initializes the global module ``TheModule``, and the function pass
-manager ``TheFPM``, which is attached to ``TheModule``. One the pass manager is
+manager ``TheFPM``, which is attached to ``TheModule``. Once the pass manager is
 set up, we use a series of "add" calls to add a bunch of LLVM passes.
 
 In this case, we choose to add five passes: one analysis pass (alias analysis),

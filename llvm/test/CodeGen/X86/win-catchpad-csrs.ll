@@ -34,7 +34,7 @@ catch.dispatch:
 
 handler1:
   %h1 = catchpad within %cs [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-  call void @f(i32 2)
+  call void @f(i32 2) [ "funclet"(token %h1) ]
   catchret from %h1 to label %try.cont
 }
 

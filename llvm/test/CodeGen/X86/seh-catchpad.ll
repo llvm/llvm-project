@@ -69,7 +69,7 @@ __except:                                         ; preds = %catch.dispatch
 
 ehcleanup:                                        ; preds = %__except.2
   %cp2 = cleanuppad within none []
-  invoke fastcc void @"\01?fin$0@0@main@@"() #4
+  invoke fastcc void @"\01?fin$0@0@main@@"() #4 [ "funclet"(token %cp2) ]
           to label %invoke.cont.6 unwind label %catch.dispatch.7
 
 invoke.cont.6:                                    ; preds = %ehcleanup
@@ -117,6 +117,7 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 ; CHECK:         jmp     .LBB1_[[epilogue]]
 
 ; CHECK:         .seh_handlerdata
+; CHECK-NEXT:         .Lmain$parent_frame_offset = 32
 ; CHECK-NEXT:         .long   (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
 ; CHECK-NEXT:         .long   .Ltmp0@IMGREL+1

@@ -41,12 +41,12 @@ catch.dispatch:                                   ; preds = %entry
 handler1:
   %h1 = catchpad within %cs [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %e.addr]
   %e = load i32, i32* %e.addr
-  call void @f(i32 %e, i32* %local)
+  call void @f(i32 %e, i32* %local) [ "funclet"(token %h1) ]
   catchret from %h1 to label %try.cont
 
 handler2:
   %h2 = catchpad within %cs [i8* null, i32 64, i8* null]
-  call void @f(i32 3, i32* %local)
+  call void @f(i32 3, i32* %local) [ "funclet"(token %h2) ]
   catchret from %h2 to label %try.cont
 
 try.cont:
@@ -229,7 +229,7 @@ catch:
   br label %loop
 
 loop:
-  %V = call i1 @getbool()
+  %V = call i1 @getbool() [ "funclet"(token %cp1) ]
   br i1 %V, label %loop, label %catch.done
 
 catch.done:

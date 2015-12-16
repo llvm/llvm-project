@@ -61,6 +61,13 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   }
 #endif // !NDEBUG
 
+  if (T.getArch() == Triple::r600 ||
+      T.getArch() == Triple::amdgcn) {
+    TLI.setUnavailable(LibFunc::ldexp);
+    TLI.setUnavailable(LibFunc::ldexpf);
+    TLI.setUnavailable(LibFunc::ldexpl);
+  }
+
   // There are no library implementations of mempcy and memset for AMD gpus and
   // these can be difficult to lower in the backend.
   if (T.getArch() == Triple::r600 ||

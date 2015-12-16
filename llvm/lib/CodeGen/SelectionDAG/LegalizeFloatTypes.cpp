@@ -739,8 +739,8 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_EXTEND:   Res = SoftenFloatOp_FP_EXTEND(N); break;
   case ISD::FP_TO_FP16:  // Same as FP_ROUND for softening purposes
   case ISD::FP_ROUND:    Res = SoftenFloatOp_FP_ROUND(N); break;
-  case ISD::FP_TO_SINT:  Res = SoftenFloatOp_FP_TO_SINT(N); break;
-  case ISD::FP_TO_UINT:  Res = SoftenFloatOp_FP_TO_UINT(N); break;
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:  Res = SoftenFloatOp_FP_TO_XINT(N); break;
   case ISD::SELECT_CC:   Res = SoftenFloatOp_SELECT_CC(N); break;
   case ISD::SETCC:       Res = SoftenFloatOp_SETCC(N); break;
   case ISD::STORE:
@@ -865,20 +865,33 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_BR_CC(SDNode *N) {
                  0);
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_SINT(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
+  bool Signed = N->getOpcode() == ISD::FP_TO_SINT;
+  EVT SVT = N->getOperand(0).getValueType();
   EVT RVT = N->getValueType(0);
-  RTLIB::Libcall LC = RTLIB::getFPTOSINT(N->getOperand(0).getValueType(), RVT);
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_SINT!");
-  SDValue Op = GetSoftenedFloat(N->getOperand(0));
-  return TLI.makeLibCall(DAG, LC, RVT, Op, false, SDLoc(N)).first;
-}
+  EVT NVT = EVT();
+  SDLoc dl(N);
 
-SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_UINT(SDNode *N) {
-  EVT RVT = N->getValueType(0);
-  RTLIB::Libcall LC = RTLIB::getFPTOUINT(N->getOperand(0).getValueType(), RVT);
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_UINT!");
+  // If the result is not legal, eg: fp -> i1, then it needs to be promoted to
+  // a larger type, eg: fp -> i32. Even if it is legal, no libcall may exactly
+  // match, eg. we don't have fp -> i8 conversions.
+  // Look for an appropriate libcall.
+  RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+  for (unsigned IntVT = MVT::FIRST_INTEGER_VALUETYPE;
+       IntVT <= MVT::LAST_INTEGER_VALUETYPE && LC == RTLIB::UNKNOWN_LIBCALL;
+       ++IntVT) {
+    NVT = (MVT::SimpleValueType)IntVT;
+    // The type needs to big enough to hold the result.
+    if (NVT.bitsGE(RVT))
+      LC = Signed ? RTLIB::getFPTOSINT(SVT, NVT):RTLIB::getFPTOUINT(SVT, NVT);
+  }
+  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_XINT!");
+
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
-  return TLI.makeLibCall(DAG, LC, RVT, Op, false, SDLoc(N)).first;
+  SDValue Res = TLI.makeLibCall(DAG, LC, NVT, Op, false, dl).first;
+
+  // Truncate the result if the libcall returns a larger type.
+  return DAG.getNode(ISD::TRUNCATE, dl, RVT, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_SELECT_CC(SDNode *N) {

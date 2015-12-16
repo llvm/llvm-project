@@ -59,7 +59,7 @@ catch.dispatch:                                   ; preds = %entry
 
 catch:                                            ; preds = %catch.dispatch
   %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1
+  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1 ["funclet"(token %0)]
           to label %unreachable unwind label %catch.dispatch.1
 
 catch.dispatch.1:                                 ; preds = %catch
@@ -110,7 +110,7 @@ catch.dispatch:                                   ; preds = %entry
 
 catch.2:                                          ; preds = %catch.dispatch
   %0 = catchpad within %cs1 [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-  tail call void @exit(i32 0) #2
+  tail call void @exit(i32 0) #2 [ "funclet"(token %0) ]
   unreachable
 
 catch.dispatch.1:                                 ; preds = %catch.dispatch
@@ -118,7 +118,7 @@ catch.dispatch.1:                                 ; preds = %catch.dispatch
 
 catch:                                            ; preds = %catch.dispatch.1
   %1 = catchpad within %cs2 [i8* null, i32 64, i8* null]
-  tail call void @exit(i32 0) #2
+  tail call void @exit(i32 0) #2 [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %entry

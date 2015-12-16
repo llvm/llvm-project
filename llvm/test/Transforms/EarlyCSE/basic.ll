@@ -203,3 +203,77 @@ define i32 @test12(i1 %B, i32* %P1, i32* %P2) {
   ; CHECK: load i32, i32* %P1
   ; CHECK: load i32, i32* %P1
 }
+
+define void @dse1(i32 *%P) {
+; CHECK-LABEL: @dse1
+; CHECK-NOT: store
+  %v = load i32, i32* %P
+  store i32 %v, i32* %P
+  ret void
+}
+
+define void @dse2(i32 *%P) {
+; CHECK-LABEL: @dse2
+; CHECK-NOT: store
+  %v = load atomic i32, i32* %P seq_cst, align 4
+  store i32 %v, i32* %P
+  ret void
+}
+
+define void @dse3(i32 *%P) {
+; CHECK-LABEL: @dse3
+; CHECK-NOT: store
+  %v = load atomic i32, i32* %P seq_cst, align 4
+  store atomic i32 %v, i32* %P unordered, align 4
+  ret void
+}
+
+define i32 @dse4(i32 *%P, i32 *%Q) {
+; CHECK-LABEL: @dse4
+; CHECK-NOT: store
+; CHECK: ret i32 0
+  %a = load i32, i32* %Q
+  %v = load atomic i32, i32* %P unordered, align 4
+  store atomic i32 %v, i32* %P unordered, align 4
+  %b = load i32, i32* %Q
+  %res = sub i32 %a, %b
+  ret i32 %res
+}
+
+; Note that in this example, %P and %Q could in fact be the same
+; pointer.  %v could be different than the value observed for %a
+; and that's okay because we're using relaxed memory ordering.  
+; The only guarantee we have to provide is that each of the loads 
+; has to observe some value written to that location.  We  do 
+; not have to respect the order in which those writes were done.  
+define i32 @dse5(i32 *%P, i32 *%Q) {
+; CHECK-LABEL: @dse5
+; CHECK-NOT: store
+; CHECK: ret i32 0
+  %v = load atomic i32, i32* %P unordered, align 4
+  %a = load atomic i32, i32* %Q unordered, align 4
+  store atomic i32 %v, i32* %P unordered, align 4
+  %b = load atomic i32, i32* %Q unordered, align 4
+  %res = sub i32 %a, %b
+  ret i32 %res
+}
+
+
+define void @dse_neg1(i32 *%P) {
+; CHECK-LABEL: @dse_neg1
+; CHECK: store
+  %v = load i32, i32* %P
+  store i32 5, i32* %P
+  ret void
+}
+
+; Could remove the store, but only if ordering was somehow
+; encoded.
+define void @dse_neg2(i32 *%P) {
+; CHECK-LABEL: @dse_neg2
+; CHECK: store
+  %v = load i32, i32* %P
+  store atomic i32 %v, i32* %P seq_cst, align 4
+  ret void
+}
+

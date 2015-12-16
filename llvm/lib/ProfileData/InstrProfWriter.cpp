@@ -98,7 +98,8 @@ void InstrProfWriter::updateStringTableReferences(InstrProfRecord &I) {
   I.updateStrings(&StringTable);
 }
 
-std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I) {
+std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
+                                           uint64_t Weight) {
   updateStringTableReferences(I);
   auto &ProfileDataMap = FunctionData[I.Name];
 
@@ -113,9 +114,18 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I) {
     // We've never seen a function with this name and hash, add it.
     Dest = std::move(I);
     Result = instrprof_error::success;
+    if (Weight > 1) {
+      for (auto &Count : Dest.Counts) {
+        bool Overflowed;
+        Count = SaturatingMultiply(Count, Weight, &Overflowed);
+        if (Overflowed && Result == instrprof_error::success) {
+          Result = instrprof_error::counter_overflow;
+        }
+      }
+    }
   } else {
     // We're updating a function we've seen before.
-    Result = Dest.merge(I);
+    Result = Dest.merge(I, Weight);
   }
 
   // We keep track of the max function count as we go for simplicity.

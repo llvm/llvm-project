@@ -35,7 +35,7 @@ lpad0:
 
 handler0:
   %p0 = catchpad within %cs0 [i8* bitcast (i32 ()* @safe_div_filt0 to i8*)]
-  call void @puts(i8* getelementptr ([27 x i8], [27 x i8]* @str1, i32 0, i32 0))
+  call void @puts(i8* getelementptr ([27 x i8], [27 x i8]* @str1, i32 0, i32 0)) [ "funclet"(token %p0) ]
   store i32 -1, i32* %r, align 4
   catchret from %p0 to label %__try.cont
 
@@ -44,7 +44,7 @@ lpad1:
 
 handler1:
   %p1 = catchpad within %cs1 [i8* bitcast (i32 ()* @safe_div_filt1 to i8*)]
-  call void @puts(i8* getelementptr ([29 x i8], [29 x i8]* @str2, i32 0, i32 0))
+  call void @puts(i8* getelementptr ([29 x i8], [29 x i8]* @str2, i32 0, i32 0)) [ "funclet"(token %p1) ]
   store i32 -2, i32* %r, align 4
   catchret from %p1 to label %__try.cont
 

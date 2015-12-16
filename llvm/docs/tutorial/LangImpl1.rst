@@ -146,7 +146,7 @@ useful for mutually recursive functions). For example:
 
 A more interesting example is included in Chapter 6 where we write a
 little Kaleidoscope application that `displays a Mandelbrot
-Set <LangImpl6.html#example>`_ at various levels of magnification.
+Set <LangImpl6.html#kicking-the-tires>`_ at various levels of magnification.
 
 Lets dive into the implementation of this language!
 
@@ -280,7 +280,7 @@ file. These are handled with this code:
     }
 
 With this, we have the complete lexer for the basic Kaleidoscope
-language (the `full code listing <LangImpl2.html#code>`_ for the Lexer
+language (the `full code listing <LangImpl2.html#full-code-listing>`_ for the Lexer
 is available in the `next chapter <LangImpl2.html>`_ of the tutorial).
 Next we'll `build a simple parser that uses this to build an Abstract
 Syntax Tree <LangImpl2.html>`_. When we have that, we'll include a

@@ -48,7 +48,7 @@ lpad:                                             ; preds = %catch, %entry
 
 catch:                                            ; preds = %lpad.1
   %p1 = catchpad within %cs1 [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-  invoke void @may_throw(i32 3)
+  invoke void @may_throw(i32 3) [ "funclet"(token %p1) ]
           to label %invoke.cont.3 unwind label %lpad.1
 
 invoke.cont.3:                                    ; preds = %catch
@@ -59,7 +59,7 @@ lpad.1:                                           ; preds = %invoke.cont
 
 catch.7:
   %p2 = catchpad within %cs2 [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-  call void @may_throw(i32 4)
+  call void @may_throw(i32 4) [ "funclet"(token %p2) ]
   catchret from %p2 to label %try.cont.9
 }
 
@@ -131,19 +131,19 @@ catch.dispatch:                                   ; preds = %entry
 
 catch:                                            ; preds = %catch.dispatch
   %1 = catchpad within %0 [i8* null, i32 64, i8* null]
-  invoke void @may_throw(i32 0)
+  invoke void @may_throw(i32 0) [ "funclet"(token %1) ]
           to label %invoke.cont unwind label %ehcleanup5
 
 invoke.cont:                                      ; preds = %catch
-  invoke void @may_throw(i32 1)
+  invoke void @may_throw(i32 1) [ "funclet"(token %1) ]
           to label %invoke.cont2 unwind label %ehcleanup
 
 invoke.cont2:                                     ; preds = %invoke.cont
-  invoke void @"\01??1S@@QEAA@XZ"(%struct.S* nonnull %y)
+  invoke void @"\01??1S@@QEAA@XZ"(%struct.S* nonnull %y) [ "funclet"(token %1) ]
           to label %invoke.cont3 unwind label %ehcleanup5
 
 invoke.cont3:                                     ; preds = %invoke.cont2
-  invoke void @may_throw(i32 2)
+  invoke void @may_throw(i32 2) [ "funclet"(token %1) ]
           to label %invoke.cont4 unwind label %ehcleanup5
 
 invoke.cont4:                                     ; preds = %invoke.cont3
@@ -155,12 +155,12 @@ try.cont:                                         ; preds = %invoke.cont4
 
 ehcleanup:                                        ; preds = %invoke.cont
   %2 = cleanuppad within %1 []
-  call void @"\01??1S@@QEAA@XZ"(%struct.S* nonnull %y)
+  call void @"\01??1S@@QEAA@XZ"(%struct.S* nonnull %y) [ "funclet"(token %2) ]
   cleanupret from %2 unwind label %ehcleanup5
 
 ehcleanup5:                                       ; preds = %invoke.cont2, %invoke.cont3, %ehcleanup, %catch, %catch.dispatch
   %3 = cleanuppad within none []
-  call void @"\01??1S@@QEAA@XZ"(%struct.S* nonnull %x)
+  call void @"\01??1S@@QEAA@XZ"(%struct.S* nonnull %x) [ "funclet"(token %3) ]
   cleanupret from %3 unwind to caller
 
 unreachable:                                      ; preds = %entry

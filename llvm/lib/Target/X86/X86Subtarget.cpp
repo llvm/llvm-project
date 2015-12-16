@@ -270,6 +270,7 @@ void X86Subtarget::initializeEnvironment() {
   HasBWI = false;
   HasVLX = false;
   HasADX = false;
+  HasPKU = false;
   HasSHA = false;
   HasPRFCHW = false;
   HasRDSEED = false;

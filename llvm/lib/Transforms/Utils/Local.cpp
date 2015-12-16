@@ -1180,9 +1180,7 @@ bool llvm::replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                            Deref, Offset);
 }
 
-/// changeToUnreachable - Insert an unreachable instruction before the specified
-/// instruction, making it and the rest of the code in the block dead.
-static void changeToUnreachable(Instruction *I, bool UseLLVMTrap) {
+void llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap) {
   BasicBlock *BB = I->getParent();
   // Loop over all of the successors, removing BB's entry from any PHI
   // nodes.

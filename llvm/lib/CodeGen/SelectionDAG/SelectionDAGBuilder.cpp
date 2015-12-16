@@ -2230,6 +2230,13 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
       TLI.getExceptionSelectorRegister(PersonalityFn) == 0)
     return;
 
+  // If landingpad's return type is token type, we don't create DAG nodes
+  // for its exception pointer and selector value. The extraction of exception
+  // pointer or selector value from token type landingpads is not currently
+  // supported.
+  if (LP.getType()->isTokenTy())
+    return;
+
   SmallVector<EVT, 2> ValueVTs;
   SDLoc dl = getCurSDLoc();
   ComputeValueVTs(TLI, DAG.getDataLayout(), LP.getType(), ValueVTs);

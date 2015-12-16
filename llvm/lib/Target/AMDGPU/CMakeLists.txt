@@ -16,6 +16,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDILCFGStructurizer.cpp
   AMDGPUAlwaysInlinePass.cpp
   AMDGPUAnnotateKernelFeatures.cpp
+  AMDGPUAnnotateUniformValues.cpp
   AMDGPUAsmPrinter.cpp
   AMDGPUDiagnosticInfoUnsupported.cpp
   AMDGPUFrameLowering.cpp

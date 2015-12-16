@@ -114,15 +114,9 @@ static void placeSplitBlockCarefully(BasicBlock *NewBB,
 /// preheader, this method is called to insert one.  This method has two phases:
 /// preheader insertion and analysis updating.
 ///
-BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, Pass *PP) {
+BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
+                                         LoopInfo *LI, bool PreserveLCSSA) {
   BasicBlock *Header = L->getHeader();
-
-  // Get analyses that we try to update.
-  auto *DTWP = PP->getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  auto *LIWP = PP->getAnalysisIfAvailable<LoopInfoWrapperPass>();
-  auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
-  bool PreserveLCSSA = PP->mustPreserveAnalysisID(LCSSAID);
 
   // Compute the set of predecessors of the loop that are not in the loop.
   SmallVector<BasicBlock*, 8> OutsideBlocks;
@@ -163,7 +157,7 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, Pass *PP) {
 /// the loop.
 static BasicBlock *rewriteLoopExitBlock(Loop *L, BasicBlock *Exit,
                                         DominatorTree *DT, LoopInfo *LI,
-                                        Pass *PP) {
+                                        bool PreserveLCSSA) {
   SmallVector<BasicBlock*, 8> LoopBlocks;
   for (pred_iterator I = pred_begin(Exit), E = pred_end(Exit); I != E; ++I) {
     BasicBlock *P = *I;
@@ -177,8 +171,6 @@ static BasicBlock *rewriteLoopExitBlock(Loop *L, BasicBlock *Exit,
 
   assert(!LoopBlocks.empty() && "No edges coming in from outside the loop?");
   BasicBlock *NewExitBB = nullptr;
-
-  bool PreserveLCSSA = PP->mustPreserveAnalysisID(LCSSAID);
 
   NewExitBB = SplitBlockPredecessors(Exit, LoopBlocks, ".loopexit", DT, LI,
                                      PreserveLCSSA);
@@ -255,7 +247,7 @@ static PHINode *findPHIToPartitionLoops(Loop *L, DominatorTree *DT,
 ///
 static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
                                 DominatorTree *DT, LoopInfo *LI,
-                                ScalarEvolution *SE, Pass *PP,
+                                ScalarEvolution *SE, bool PreserveLCSSA,
                                 AssumptionCache *AC) {
   // Don't try to separate loops without a preheader.
   if (!Preheader)
@@ -288,8 +280,6 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   // substantially change it.
   if (SE)
     SE->forgetLoop(L);
-
-  bool PreserveLCSSA = PP->mustPreserveAnalysisID(LCSSAID);
 
   BasicBlock *NewBB = SplitBlockPredecessors(Header, OuterLoopPreds, ".outer",
                                              DT, LI, PreserveLCSSA);
@@ -470,15 +460,10 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 }
 
 /// \brief Simplify one loop and queue further loops for simplification.
-///
-/// FIXME: Currently this accepts both lots of analyses that it uses and a raw
-/// Pass pointer. The Pass pointer is used by numerous utilities to update
-/// specific analyses. Rather than a pass it would be much cleaner and more
-/// explicit if they accepted the analysis directly and then updated it.
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
-                            ScalarEvolution *SE, Pass *PP,
-                            AssumptionCache *AC) {
+                            ScalarEvolution *SE, AssumptionCache *AC,
+                            bool PreserveLCSSA) {
   bool Changed = false;
 ReprocessLoop:
 
@@ -544,7 +529,7 @@ ReprocessLoop:
   // Does the loop already have a preheader?  If so, don't insert one.
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
-    Preheader = InsertPreheaderForLoop(L, PP);
+    Preheader = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
     if (Preheader) {
       ++NumInserted;
       Changed = true;
@@ -568,7 +553,7 @@ ReprocessLoop:
       // Must be exactly this loop: no subloops, parent loops, or non-loop preds
       // allowed.
       if (!L->contains(*PI)) {
-        if (rewriteLoopExitBlock(L, ExitBlock, DT, LI, PP)) {
+        if (rewriteLoopExitBlock(L, ExitBlock, DT, LI, PreserveLCSSA)) {
           ++NumInserted;
           Changed = true;
         }
@@ -584,7 +569,8 @@ ReprocessLoop:
     // this for loops with a giant number of backedges, just factor them into a
     // common backedge instead.
     if (L->getNumBackEdges() < 8) {
-      if (Loop *OuterL = separateNestedLoop(L, Preheader, DT, LI, SE, PP, AC)) {
+      if (Loop *OuterL =
+              separateNestedLoop(L, Preheader, DT, LI, SE, PreserveLCSSA, AC)) {
         ++NumNested;
         // Enqueue the outer loop as it should be processed next in our
         // depth-first nest walk.
@@ -714,8 +700,9 @@ ReprocessLoop:
   return Changed;
 }
 
-bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, Pass *PP,
-                        ScalarEvolution *SE, AssumptionCache *AC) {
+bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                        ScalarEvolution *SE, AssumptionCache *AC,
+                        bool PreserveLCSSA) {
   bool Changed = false;
 
   // Worklist maintains our depth-first queue of loops in this nest to process.
@@ -731,8 +718,8 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, Pass *PP,
   }
 
   while (!Worklist.empty())
-    Changed |=
-        simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE, PP, AC);
+    Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
+                               AC, PreserveLCSSA);
 
   return Changed;
 }
@@ -801,10 +788,11 @@ bool LoopSimplify::runOnFunction(Function &F) {
   auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
   SE = SEWP ? &SEWP->getSE() : nullptr;
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   // Simplify each loop nest in the function.
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
-    Changed |= simplifyLoop(*I, DT, LI, this, SE, AC);
+    Changed |= simplifyLoop(*I, DT, LI, SE, AC, PreserveLCSSA);
 
   return Changed;
 }

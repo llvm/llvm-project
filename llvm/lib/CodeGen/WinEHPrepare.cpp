@@ -74,7 +74,7 @@ private:
 
   void demotePHIsOnFunclets(Function &F);
   void cloneCommonBlocks(Function &F);
-  void removeImplausibleTerminators(Function &F);
+  void removeImplausibleInstructions(Function &F);
   void cleanupPreparedFunclets(Function &F);
   void verifyPreparedFunclets(Function &F);
 
@@ -765,19 +765,56 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
   }
 }
 
-void WinEHPrepare::removeImplausibleTerminators(Function &F) {
+void WinEHPrepare::removeImplausibleInstructions(Function &F) {
   // Remove implausible terminators and replace them with UnreachableInst.
   for (auto &Funclet : FuncletBlocks) {
     BasicBlock *FuncletPadBB = Funclet.first;
     std::vector<BasicBlock *> &BlocksInFunclet = Funclet.second;
-    Instruction *FuncletPadInst = FuncletPadBB->getFirstNonPHI();
-    auto *CatchPad = dyn_cast<CatchPadInst>(FuncletPadInst);
-    auto *CleanupPad = dyn_cast<CleanupPadInst>(FuncletPadInst);
+    Instruction *FirstNonPHI = FuncletPadBB->getFirstNonPHI();
+    auto *FuncletPad = dyn_cast<FuncletPadInst>(FirstNonPHI);
+    auto *CatchPad = dyn_cast_or_null<CatchPadInst>(FuncletPad);
+    auto *CleanupPad = dyn_cast_or_null<CleanupPadInst>(FuncletPad);
 
     for (BasicBlock *BB : BlocksInFunclet) {
+      for (Instruction &I : *BB) {
+        CallSite CS(&I);
+        if (!CS)
+          continue;
+
+        Value *FuncletBundleOperand = nullptr;
+        if (auto BU = CS.getOperandBundle(LLVMContext::OB_funclet))
+          FuncletBundleOperand = BU->Inputs.front();
+
+        if (FuncletBundleOperand == FuncletPad)
+          continue;
+
+        // Skip call sites which are nounwind intrinsics.
+        auto *CalledFn =
+            dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
+        if (CalledFn && CalledFn->isIntrinsic() && CS.doesNotThrow())
+          continue;
+
+        // This call site was not part of this funclet, remove it.
+        if (CS.isInvoke()) {
+          // Remove the unwind edge if it was an invoke.
+          removeUnwindEdge(BB);
+          // Get a pointer to the new call.
+          BasicBlock::iterator CallI =
+              std::prev(BB->getTerminator()->getIterator());
+          auto *CI = cast<CallInst>(&*CallI);
+          changeToUnreachable(CI, /*UseLLVMTrap=*/false);
+        } else {
+          changeToUnreachable(&I, /*UseLLVMTrap=*/false);
+        }
+
+        // There are no more instructions in the block (except for unreachable),
+        // we are done.
+        break;
+      }
+
       TerminatorInst *TI = BB->getTerminator();
       // CatchPadInst and CleanupPadInst can't transfer control to a ReturnInst.
-      bool IsUnreachableRet = isa<ReturnInst>(TI) && (CatchPad || CleanupPad);
+      bool IsUnreachableRet = isa<ReturnInst>(TI) && FuncletPad;
       // The token consumed by a CatchReturnInst must match the funclet token.
       bool IsUnreachableCatchret = false;
       if (auto *CRI = dyn_cast<CatchReturnInst>(TI))
@@ -788,19 +825,14 @@ void WinEHPrepare::removeImplausibleTerminators(Function &F) {
         IsUnreachableCleanupret = CRI->getCleanupPad() != CleanupPad;
       if (IsUnreachableRet || IsUnreachableCatchret ||
           IsUnreachableCleanupret) {
-        // Loop through all of our successors and make sure they know that one
-        // of their predecessors is going away.
-        for (BasicBlock *SuccBB : TI->successors())
-          SuccBB->removePredecessor(BB);
-
-        new UnreachableInst(BB->getContext(), TI);
-        TI->eraseFromParent();
+        changeToUnreachable(TI, /*UseLLVMTrap=*/false);
       } else if (isa<InvokeInst>(TI)) {
-        // Invokes within a cleanuppad for the MSVC++ personality never
-        // transfer control to their unwind edge: the personality will
-        // terminate the program.
-        if (Personality == EHPersonality::MSVC_CXX && CleanupPad)
+        if (Personality == EHPersonality::MSVC_CXX && CleanupPad) {
+          // Invokes within a cleanuppad for the MSVC++ personality never
+          // transfer control to their unwind edge: the personality will
+          // terminate the program.
           removeUnwindEdge(BB);
+        }
       }
     }
   }
@@ -854,7 +886,7 @@ bool WinEHPrepare::prepareExplicitEH(Function &F) {
     demotePHIsOnFunclets(F);
 
   if (!DisableCleanups) {
-    removeImplausibleTerminators(F);
+    removeImplausibleInstructions(F);
 
     cleanupPreparedFunclets(F);
   }

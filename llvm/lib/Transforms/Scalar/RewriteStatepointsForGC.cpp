@@ -1226,7 +1226,7 @@ static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,
                                   PartiallyConstructedSafepointRecord &result);
 
 static void recomputeLiveInValues(
-    Function &F, DominatorTree &DT, Pass *P, ArrayRef<CallSite> toUpdate,
+    Function &F, DominatorTree &DT, ArrayRef<CallSite> toUpdate,
     MutableArrayRef<struct PartiallyConstructedSafepointRecord> records) {
   // TODO-PERF: reuse the original liveness, then simply run the dataflow
   // again.  The old values are still live and will help it stabilize quickly.
@@ -1937,7 +1937,7 @@ static void insertUseHolderAfter(CallSite &CS, const ArrayRef<Value *> Values,
 }
 
 static void findLiveReferences(
-    Function &F, DominatorTree &DT, Pass *P, ArrayRef<CallSite> toUpdate,
+    Function &F, DominatorTree &DT, ArrayRef<CallSite> toUpdate,
     MutableArrayRef<struct PartiallyConstructedSafepointRecord> records) {
   GCPtrLivenessData OriginalLivenessData;
   computeLiveInValues(DT, F, OriginalLivenessData);
@@ -2276,7 +2276,8 @@ static void rematerializeLiveValues(CallSite CS,
   }
 }
 
-static bool insertParsePoints(Function &F, DominatorTree &DT, Pass *P,
+static bool insertParsePoints(Function &F, DominatorTree &DT,
+                              TargetTransformInfo &TTI,
                               SmallVectorImpl<CallSite> &ToUpdate) {
 #ifndef NDEBUG
   // sanity check the input
@@ -2333,7 +2334,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT, Pass *P,
 
   // A) Identify all gc pointers which are statically live at the given call
   // site.
-  findLiveReferences(F, DT, P, ToUpdate, Records);
+  findLiveReferences(F, DT, ToUpdate, Records);
 
   // B) Find the base pointers for each live pointer
   /* scope for caching */ {
@@ -2375,7 +2376,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT, Pass *P,
   // By selecting base pointers, we've effectively inserted new uses. Thus, we
   // need to rerun liveness.  We may *also* have inserted new defs, but that's
   // not the key issue.
-  recomputeLiveInValues(F, DT, P, ToUpdate, Records);
+  recomputeLiveInValues(F, DT, ToUpdate, Records);
 
   if (PrintBasePointers) {
     for (auto &Info : Records) {
@@ -2406,9 +2407,6 @@ static bool insertParsePoints(Function &F, DominatorTree &DT, Pass *P,
   // In order to reduce live set of statepoint we might choose to rematerialize
   // some values instead of relocating them. This is purely an optimization and
   // does not influence correctness.
-  TargetTransformInfo &TTI =
-    P->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-
   for (size_t i = 0; i < Records.size(); i++)
     rematerializeLiveValues(ToUpdate[i], Records[i], TTI);
 
@@ -2596,6 +2594,8 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F) {
     return false;
 
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+  TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   auto NeedsRewrite = [](Instruction &I) {
     if (UseDeoptBundles) {
@@ -2676,7 +2676,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F) {
       }
   }
 
-  MadeChange |= insertParsePoints(F, DT, this, ParsePointNeeded);
+  MadeChange |= insertParsePoints(F, DT, TTI, ParsePointNeeded);
   return MadeChange;
 }
 

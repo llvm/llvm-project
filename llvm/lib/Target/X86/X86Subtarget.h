@@ -223,6 +223,9 @@ protected:
   /// Processor has AVX-512 Vector Length eXtenstions
   bool HasVLX;
 
+  /// Processor has PKU extenstions
+  bool HasPKU;
+
   /// Processot supports MPX - Memory Protection Extensions
   bool HasMPX;
 
@@ -398,6 +401,7 @@ public:
   bool hasDQI() const { return HasDQI; }
   bool hasBWI() const { return HasBWI; }
   bool hasVLX() const { return HasVLX; }
+  bool hasPKU() const { return HasPKU; }
   bool hasMPX() const { return HasMPX; }
 
   bool isAtom() const { return X86ProcFamily == IntelAtom; }

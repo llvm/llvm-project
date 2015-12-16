@@ -5,11 +5,6 @@
 pr38151.c
 va-arg-22.c
 
-# ValueTypes.h:222: llvm::MVT llvm::EVT::getSimpleVT() const: Assertion `isSimple() && "Expected a SimpleValueType!"' failed.
-loop-12.c
-
-
-
 # TargetRegisterInfo.h:315: static unsigned int llvm::TargetRegisterInfo::virtReg2Index(unsigned int): Assertion `isVirtualRegister(Reg) && "Not a virtual register"' failed.
 20021120-3.c
 20070201-1.c
@@ -27,37 +22,11 @@ va-arg-21.c
 va-arg-24.c
 va-arg-trap-1.c
 
-
 # WebAssemblyCFGStackify.cpp:211: void SortBlocks(llvm::MachineFunction&, const llvm::MachineLoopInfo&): Assertion `L->contains( MLI.getLoopFor(&*prev(MachineFunction::iterator(&MBB)))) && "Loop isn't contiguous"' failed.
 20000815-1.c
 20010129-1.c
-20120427-1.c
-20120427-2.c
 930628-1.c
 980707-1.c
-990524-1.c
-arith-rand-ll.c
-arith-rand.c
-builtin-bitops-1.c
-memcpy-2.c
-memset-1.c
-memset-3.c
-pending-4.c
-pr20601-1.c
-pr34415.c
-pr49073.c
-pr53465.c
-strcpy-1.c
-switch-1.c
-
-# WebAssemblyCFGStackify.cpp:374: virtual bool {anonymous}::WebAssemblyCFGStackify::runOnMachineFunction(llvm::MachineFunction&): Assertion `Stack.empty()' failed.
-20020506-1.c
-20020510-1.c
-20071120-1.c
-compare-1.c
-pr15296.c
-pr17133.c
-pr19005.c
 
 # WebAssemblyISelLowering.cpp:316: virtual llvm::SDValue llvm::WebAssemblyTargetLowering::LowerCall(llvm::TargetLowering::CallLoweringInfo&, llvm::SmallVectorImpl<llvm::SDValue>&) const: Assertion `!Out.Flags.isByVal() && "byval is not valid for return values"' failed.
 20030914-2.c
@@ -90,7 +59,6 @@ pr57130.c
 
 20020529-1.c
 20021024-1.c
-20021219-1.c
 
 20030828-1.c
 20030914-1.c
@@ -177,7 +145,6 @@ pr43987.c
 pr44575.c
 
 pr44942.c
-pr45070.c
 pr46309.c
 pr47538.c
 pr47925.c

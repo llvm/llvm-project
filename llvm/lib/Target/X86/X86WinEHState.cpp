@@ -87,7 +87,6 @@ private:
   Function *FrameRecover = nullptr;
   Function *FrameAddress = nullptr;
   Function *FrameEscape = nullptr;
-  Function *RestoreFrame = nullptr;
 
   // Per-function state
   EHPersonality Personality = EHPersonality::Unknown;
@@ -120,8 +119,6 @@ bool WinEHStatePass::doInitialization(Module &M) {
   FrameEscape = Intrinsic::getDeclaration(TheModule, Intrinsic::localescape);
   FrameRecover = Intrinsic::getDeclaration(TheModule, Intrinsic::localrecover);
   FrameAddress = Intrinsic::getDeclaration(TheModule, Intrinsic::frameaddress);
-  RestoreFrame =
-      Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_restoreframe);
   return false;
 }
 

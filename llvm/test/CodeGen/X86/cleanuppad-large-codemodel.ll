@@ -10,7 +10,7 @@ entry:
     to label %exit unwind label %cleanup
 cleanup:
   %c = cleanuppad within none []
-  call void @bar()
+  call void @bar() [ "funclet"(token %c) ]
   cleanupret from %c unwind to caller
 exit:
   ret void

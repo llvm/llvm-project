@@ -130,4 +130,40 @@ entry:
   ret i32 %conv
 }
 
+; CHECK-LABEL: f_to_s8:
+; CHECK: call{{l|q}} __fixsfsi
+define i8 @f_to_s8(float %f, i8 %i) #0 {
+entry:
+  %conv = fptosi float %f to i8
+  %add = add i8 %conv, %i
+  ret i8 %add
+}
+
+; CHECK-LABEL: f_to_u8:
+; CHECK: call{{l|q}} __fixunssfsi
+define i8 @f_to_u8(float %f, i8 %i) #0 {
+entry:
+  %conv = fptoui float %f to i8
+  %add = add i8 %conv, %i
+  ret i8 %add
+}
+
+; CHECK-LABEL: f_to_s16:
+; CHECK: call{{l|q}} __fixsfsi
+define i16 @f_to_s16(float %f, i16 %i) #0 {
+entry:
+  %conv = fptosi float %f to i16
+  %add = add i16 %conv, %i
+  ret i16 %add
+}
+
+; CHECK-LABEL: f_to_u16:
+; CHECK: call{{l|q}} __fixunssfsi
+define i16 @f_to_u16(float %f, i16 %i) #0 {
+entry:
+  %conv = fptoui float %f to i16
+  %add = add i16 %conv, %i
+  ret i16 %add
+}
+
 attributes #0 = { nounwind "use-soft-float"="true" }

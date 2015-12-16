@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 #include "AMDGPUBaseInfo.h"
 #include "AMDGPU.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -97,6 +99,22 @@ bool isGlobalSegment(const GlobalValue *GV) {
 
 bool isReadOnlySegment(const GlobalValue *GV) {
   return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
+}
+
+static const char ShaderTypeAttribute[] = "ShaderType";
+
+unsigned getShaderType(const Function &F) {
+  Attribute A = F.getFnAttribute(ShaderTypeAttribute);
+  unsigned ShaderType = ShaderType::COMPUTE;
+
+  if (A.isStringAttribute()) {
+    StringRef Str = A.getValueAsString();
+    if (Str.getAsInteger(0, ShaderType)) {
+      LLVMContext &Ctx = F.getContext();
+      Ctx.emitError("can't parse shader type");
+    }
+  }
+  return ShaderType;
 }
 
 } // End namespace AMDGPU

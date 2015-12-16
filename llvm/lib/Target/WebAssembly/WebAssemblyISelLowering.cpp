@@ -261,6 +261,24 @@ bool WebAssemblyTargetLowering::isCheapToSpeculateCtlz() const {
   return true;
 }
 
+bool WebAssemblyTargetLowering::isLegalAddressingMode(const DataLayout &DL,
+                                                      const AddrMode &AM,
+                                                      Type *Ty,
+                                                      unsigned AS) const {
+  // WebAssembly offsets are added as unsigned without wrapping. The
+  // isLegalAddressingMode gives us no way to determine if wrapping could be
+  // happening, so we approximate this by accepting only non-negative offsets.
+  if (AM.BaseOffs < 0)
+    return false;
+
+  // WebAssembly has no scale register operands.
+  if (AM.Scale != 0)
+    return false;
+
+  // Everything else is legal.
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // WebAssembly Lowering private implementation.
 //===----------------------------------------------------------------------===//
@@ -408,7 +426,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (In.Flags.isInConsecutiveRegs())
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs return values");
     if (In.Flags.isInConsecutiveRegsLast())
-      fail(DL, DAG, "WebAssembly hasn't implemented cons regs last return values");
+      fail(DL, DAG,
+           "WebAssembly hasn't implemented cons regs last return values");
     // Ignore In.getOrigAlign() because all our arguments are passed in
     // registers.
     Tys.push_back(In.VT);
@@ -551,9 +570,9 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   assert(GA->getTargetFlags() == 0 && "WebAssembly doesn't set target flags");
   if (GA->getAddressSpace() != 0)
     fail(DL, DAG, "WebAssembly only expects the 0 address space");
-  return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
-                     DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT,
-                                                GA->getOffset()));
+  return DAG.getNode(
+      WebAssemblyISD::Wrapper, DL, VT,
+      DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT, GA->getOffset()));
 }
 
 SDValue

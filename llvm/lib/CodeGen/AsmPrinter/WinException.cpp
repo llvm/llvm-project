@@ -506,8 +506,18 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
 void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   auto &OS = *Asm->OutStreamer;
   MCContext &Ctx = Asm->OutContext;
-
   const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
+
+  // Emit a label assignment with the SEH frame offset so we can use it for
+  // llvm.x86.seh.recoverfp.
+  StringRef FLinkageName =
+      GlobalValue::getRealLinkageName(MF->getFunction()->getName());
+  MCSymbol *ParentFrameOffset =
+      Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
+  const MCExpr *MCOffset =
+      MCConstantExpr::create(FuncInfo.SEHSetFrameOffset, Ctx);
+  Asm->OutStreamer->EmitAssignment(ParentFrameOffset, MCOffset);
+
   // Use the assembler to compute the number of table entries through label
   // difference and division.
   MCSymbol *TableBegin =

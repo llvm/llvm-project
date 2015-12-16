@@ -206,7 +206,7 @@ static bool needsStatepoint(const CallSite &CS) {
   return true;
 }
 
-static Value *ReplaceWithStatepoint(const CallSite &CS, Pass *P);
+static Value *ReplaceWithStatepoint(const CallSite &CS);
 
 /// Returns true if this loop is known to contain a call safepoint which
 /// must unconditionally execute on any iteration of the loop which returns
@@ -704,7 +704,7 @@ bool PlaceSafepoints::runOnFunction(Function &F) {
                                   Invoke->getParent());
     }
 
-    Value *GCResult = ReplaceWithStatepoint(CS, nullptr);
+    Value *GCResult = ReplaceWithStatepoint(CS);
     Results.push_back(GCResult);
   }
   assert(Results.size() == ParsePointNeeded.size());
@@ -830,8 +830,7 @@ InsertSafepointPoll(Instruction *InsertBefore,
 /// Replaces the given call site (Call or Invoke) with a gc.statepoint
 /// intrinsic with an empty deoptimization arguments list.  This does
 /// NOT do explicit relocation for GC support.
-static Value *ReplaceWithStatepoint(const CallSite &CS, /* to replace */
-                                    Pass *P) {
+static Value *ReplaceWithStatepoint(const CallSite &CS /* to replace */) {
   assert(CS.getInstruction()->getModule() && "must be set");
 
   // TODO: technically, a pass is not allowed to get functions from within a

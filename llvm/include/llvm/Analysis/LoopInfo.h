@@ -73,6 +73,10 @@ class LoopBase {
 
   SmallPtrSet<const BlockT*, 8> DenseBlockSet;
 
+  /// Indicator that this loops has been "unlooped", so there's no loop here
+  /// anymore.
+  bool IsUnloop = false;
+
   LoopBase(const LoopBase<BlockT, LoopT> &) = delete;
   const LoopBase<BlockT, LoopT>&
     operator=(const LoopBase<BlockT, LoopT> &) = delete;
@@ -149,6 +153,13 @@ public:
   unsigned getNumBlocks() const {
     return Blocks.size();
   }
+
+  /// Mark this loop as having been unlooped - the last backedge was removed and
+  /// we no longer have a loop.
+  void markUnlooped() { IsUnloop = true; }
+
+  /// Return true if this no longer represents a loop.
+  bool isUnloop() const { return IsUnloop; }
 
   /// isLoopExiting - True if terminator in the block can branch to another
   /// block that is outside of the current loop.
@@ -663,8 +674,9 @@ public:
 
   /// updateUnloop - Update LoopInfo after removing the last backedge from a
   /// loop--now the "unloop". This updates the loop forest and parent loops for
-  /// each block so that Unloop is no longer referenced, but the caller must
-  /// actually delete the Unloop object.
+  /// each block so that Unloop is no longer referenced, but does not actually
+  /// delete the Unloop object. Generally, the loop pass manager should manage
+  /// deleting the Unloop.
   void updateUnloop(Loop *Unloop);
 
   /// replacementPreservesLCSSAForm - Returns true if replacing From with To

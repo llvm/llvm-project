@@ -898,6 +898,7 @@ bool LoopUnroll::runOnLoop(Loop *L, LPPassManager &LPM) {
   const TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   BasicBlock *Header = L->getHeader();
   DEBUG(dbgs() << "Loop Unroll: F[" << Header->getParent()->getName()
@@ -1080,7 +1081,7 @@ bool LoopUnroll::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   // Unroll the loop.
   if (!UnrollLoop(L, Count, TripCount, AllowRuntime, UP.AllowExpensiveTripCount,
-                  TripMultiple, LI, this, &LPM, &AC))
+                  TripMultiple, LI, SE, &DT, &AC, PreserveLCSSA, &LPM))
     return false;
 
   return true;

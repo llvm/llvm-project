@@ -120,28 +120,28 @@ Attribute::AttrKind Attribute::getKindAsEnum() const {
   if (!pImpl) return None;
   assert((isEnumAttribute() || isIntAttribute()) &&
          "Invalid attribute type to get the kind as an enum!");
-  return pImpl ? pImpl->getKindAsEnum() : None;
+  return pImpl->getKindAsEnum();
 }
 
 uint64_t Attribute::getValueAsInt() const {
   if (!pImpl) return 0;
   assert(isIntAttribute() &&
          "Expected the attribute to be an integer attribute!");
-  return pImpl ? pImpl->getValueAsInt() : 0;
+  return pImpl->getValueAsInt();
 }
 
 StringRef Attribute::getKindAsString() const {
   if (!pImpl) return StringRef();
   assert(isStringAttribute() &&
          "Invalid attribute type to get the kind as a string!");
-  return pImpl ? pImpl->getKindAsString() : StringRef();
+  return pImpl->getKindAsString();
 }
 
 StringRef Attribute::getValueAsString() const {
   if (!pImpl) return StringRef();
   assert(isStringAttribute() &&
          "Invalid attribute type to get the value as a string!");
-  return pImpl ? pImpl->getValueAsString() : StringRef();
+  return pImpl->getValueAsString();
 }
 
 bool Attribute::hasAttribute(AttrKind Kind) const {
@@ -481,9 +481,8 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
   SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
   array_pod_sort(SortedAttrs.begin(), SortedAttrs.end());
 
-  for (SmallVectorImpl<Attribute>::iterator I = SortedAttrs.begin(),
-         E = SortedAttrs.end(); I != E; ++I)
-    I->Profile(ID);
+  for (Attribute Attr : SortedAttrs)
+    Attr.Profile(ID);
 
   void *InsertPoint;
   AttributeSetNode *PA =
@@ -691,22 +690,26 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
     if (!B.contains(Kind))
       continue;
 
-    if (Kind == Attribute::Alignment)
-      Attrs.push_back(std::make_pair(Index, Attribute::
-                                     getWithAlignment(C, B.getAlignment())));
-    else if (Kind == Attribute::StackAlignment)
-      Attrs.push_back(std::make_pair(Index, Attribute::
-                              getWithStackAlignment(C, B.getStackAlignment())));
-    else if (Kind == Attribute::Dereferenceable)
-      Attrs.push_back(std::make_pair(Index,
-                                     Attribute::getWithDereferenceableBytes(C,
-                                       B.getDereferenceableBytes())));
-    else if (Kind == Attribute::DereferenceableOrNull)
-      Attrs.push_back(
-          std::make_pair(Index, Attribute::getWithDereferenceableOrNullBytes(
-                                    C, B.getDereferenceableOrNullBytes())));
-    else
-      Attrs.push_back(std::make_pair(Index, Attribute::get(C, Kind)));
+    Attribute Attr;
+    switch (Kind) {
+    case Attribute::Alignment:
+      Attr = Attribute::getWithAlignment(C, B.getAlignment());
+      break;
+    case Attribute::StackAlignment:
+      Attr = Attribute::getWithStackAlignment(C, B.getStackAlignment());
+      break;
+    case Attribute::Dereferenceable:
+      Attr = Attribute::getWithDereferenceableBytes(
+          C, B.getDereferenceableBytes());
+      break;
+    case Attribute::DereferenceableOrNull:
+      Attr = Attribute::getWithDereferenceableOrNullBytes(
+          C, B.getDereferenceableOrNullBytes());
+      break;
+    default:
+      Attr = Attribute::get(C, Kind);
+    }
+    Attrs.push_back(std::make_pair(Index, Attr));
   }
 
   // Add target-dependent (string) attributes.
@@ -720,9 +723,8 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
 AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
                                ArrayRef<Attribute::AttrKind> Kind) {
   SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
-  for (ArrayRef<Attribute::AttrKind>::iterator I = Kind.begin(),
-         E = Kind.end(); I != E; ++I)
-    Attrs.push_back(std::make_pair(Index, Attribute::get(C, *I)));
+  for (Attribute::AttrKind K : Kind)
+    Attrs.push_back(std::make_pair(Index, Attribute::get(C, K)));
   return get(C, Attrs);
 }
 
@@ -991,17 +993,17 @@ AttributeSet AttributeSet::getFnAttributes() const {
 
 bool AttributeSet::hasAttribute(unsigned Index, Attribute::AttrKind Kind) const{
   AttributeSetNode *ASN = getAttributes(Index);
-  return ASN ? ASN->hasAttribute(Kind) : false;
+  return ASN && ASN->hasAttribute(Kind);
 }
 
 bool AttributeSet::hasAttribute(unsigned Index, StringRef Kind) const {
   AttributeSetNode *ASN = getAttributes(Index);
-  return ASN ? ASN->hasAttribute(Kind) : false;
+  return ASN && ASN->hasAttribute(Kind);
 }
 
 bool AttributeSet::hasAttributes(unsigned Index) const {
   AttributeSetNode *ASN = getAttributes(Index);
-  return ASN ? ASN->hasAttributes() : false;
+  return ASN && ASN->hasAttributes();
 }
 
 /// \brief Return true if the specified attribute is set for at least one
@@ -1214,23 +1216,10 @@ AttrBuilder &AttrBuilder::removeAttributes(AttributeSet A, uint64_t Index) {
   for (AttributeSet::iterator I = A.begin(Slot), E = A.end(Slot); I != E; ++I) {
     Attribute Attr = *I;
     if (Attr.isEnumAttribute() || Attr.isIntAttribute()) {
-      Attribute::AttrKind Kind = I->getKindAsEnum();
-      Attrs[Kind] = false;
-
-      if (Kind == Attribute::Alignment)
-        Alignment = 0;
-      else if (Kind == Attribute::StackAlignment)
-        StackAlignment = 0;
-      else if (Kind == Attribute::Dereferenceable)
-        DerefBytes = 0;
-      else if (Kind == Attribute::DereferenceableOrNull)
-        DerefOrNullBytes = 0;
+      removeAttribute(Attr.getKindAsEnum());
     } else {
       assert(Attr.isStringAttribute() && "Invalid attribute type!");
-      std::map<std::string, std::string>::iterator
-        Iter = TargetDepAttrs.find(Attr.getKindAsString());
-      if (Iter != TargetDepAttrs.end())
-        TargetDepAttrs.erase(Iter);
+      removeAttribute(Attr.getKindAsString());
     }
   }
 
@@ -1359,8 +1348,7 @@ bool AttrBuilder::hasAttributes(AttributeSet A, uint64_t Index) const {
 
   assert(Slot != ~0U && "Couldn't find the index!");
 
-  for (AttributeSet::iterator I = A.begin(Slot), E = A.end(Slot);
-       I != E; ++I) {
+  for (AttributeSet::iterator I = A.begin(Slot), E = A.end(Slot); I != E; ++I) {
     Attribute Attr = *I;
     if (Attr.isEnumAttribute() || Attr.isIntAttribute()) {
       if (Attrs[I->getKindAsEnum()])

@@ -595,10 +595,8 @@ void IVVisitor::anchor() { }
 /// Simplify instructions that use this induction variable
 /// by using ScalarEvolution to analyze the IV's recurrence.
 bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LPPassManager *LPM, SmallVectorImpl<WeakVH> &Dead, IVVisitor *V)
-{
-  LoopInfo *LI = &LPM->getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-
+                       LoopInfo *LI, SmallVectorImpl<WeakVH> &Dead,
+                       IVVisitor *V) {
   SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, Dead);
   SIV.simplifyUsers(CurrIV, V);
   return SIV.hasChanged();
@@ -607,10 +605,10 @@ bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
 /// Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.
 bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
-                     LPPassManager *LPM, SmallVectorImpl<WeakVH> &Dead) {
+                     LoopInfo *LI, SmallVectorImpl<WeakVH> &Dead) {
   bool Changed = false;
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
-    Changed |= simplifyUsersOfIV(cast<PHINode>(I), SE, DT, LPM, Dead);
+    Changed |= simplifyUsersOfIV(cast<PHINode>(I), SE, DT, LI, Dead);
   }
   return Changed;
 }

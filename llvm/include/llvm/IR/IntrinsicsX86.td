@@ -25,11 +25,6 @@ let TargetPrefix = "x86" in {
   // Marks the EH registration node created in LLVM IR prior to code generation.
   def int_x86_seh_ehregnode : Intrinsic<[], [llvm_ptr_ty], []>;
 
-  // Restores the frame, base, and stack pointers as necessary after recovering
-  // from an exception. Any block resuming control flow in the parent function
-  // should call this before accessing any stack memory.
-  def int_x86_seh_restoreframe : Intrinsic<[], [], []>;
-
   // Given a pointer to the end of an EH registration object, returns the true
   // parent frame address that can be used with llvm.localrecover.
   def int_x86_seh_recoverfp : Intrinsic<[llvm_ptr_ty],

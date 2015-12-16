@@ -312,7 +312,7 @@ Now that we have all of our simple expression-parsing logic in place, we
 can define a helper function to wrap it together into one entry point.
 We call this class of expressions "primary" expressions, for reasons
 that will become more clear `later in the
-tutorial <LangImpl6.html#unary>`_. In order to parse an arbitrary
+tutorial <LangImpl6.html#user-defined-unary-operators>`_. In order to parse an arbitrary
 primary expression, we need to determine what sort of expression it is:
 
 .. code-block:: c++
@@ -644,7 +644,7 @@ The Driver
 
 The driver for this simply invokes all of the parsing pieces with a
 top-level dispatch loop. There isn't much interesting here, so I'll just
-include the top-level loop. See `below <#code>`_ for full code in the
+include the top-level loop. See `below <#full-code-listing>`_ for full code in the
 "Top-Level Parsing" section.
 
 .. code-block:: c++

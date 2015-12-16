@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 
@@ -61,14 +62,7 @@ bool SITypeRewriter::doInitialization(Module &M) {
 }
 
 bool SITypeRewriter::runOnFunction(Function &F) {
-  Attribute A = F.getFnAttribute("ShaderType");
-
-  unsigned ShaderType = ShaderType::COMPUTE;
-  if (A.isStringAttribute()) {
-    StringRef Str = A.getValueAsString();
-    Str.getAsInteger(0, ShaderType);
-  }
-  if (ShaderType == ShaderType::COMPUTE)
+  if (AMDGPU::getShaderType(F) == ShaderType::COMPUTE)
     return false;
 
   visit(F);

@@ -139,6 +139,7 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
 
     MCI->addOperand(MCO);
   }
+  AP.HexagonProcessInstruction(*MCI, *MI);
   HexagonMCInstrInfo::extendIfNeeded(AP.OutContext, MCII, MCB, *MCI,
                                      MustExtend);
   MCB.addOperand(MCOperand::createInst(MCI));

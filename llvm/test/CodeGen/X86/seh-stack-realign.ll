@@ -28,7 +28,7 @@ lpad:                                             ; preds = %entry
 __except:                                         ; preds = %lpad
   %p = catchpad within %cs1 [i8* bitcast (i32 ()* @"filt$main" to i8*)]
   %code = load i32, i32* %__exceptioncode, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i32 0, i32 0), i32 %code) #4
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i32 0, i32 0), i32 %code) #4 [ "funclet"(token %p) ]
   catchret from %p to label %__try.cont
 
 __try.cont:                                       ; preds = %entry, %__except

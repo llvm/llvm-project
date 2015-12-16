@@ -18,7 +18,7 @@ invoke.cont:                                      ; preds = %entry
 
 ehcleanup:                                        ; preds = %entry
   %0 = cleanuppad within none []
-  call void @Dtor(i64* %o)
+  call void @Dtor(i64* %o) [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
 }
 

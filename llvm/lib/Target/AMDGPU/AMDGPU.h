@@ -71,6 +71,7 @@ Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &tm);
 ModulePass *createAMDGPUAlwaysInlinePass();
 ModulePass *createAMDGPUOpenCLImageTypeLoweringPass();
+FunctionPass *createAMDGPUAnnotateUniformValues();
 
 void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
 extern char &SIFixControlFlowLiveIntervalsID;
@@ -78,6 +79,8 @@ extern char &SIFixControlFlowLiveIntervalsID;
 void initializeSIFixSGPRLiveRangesPass(PassRegistry&);
 extern char &SIFixSGPRLiveRangesID;
 
+void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
+extern char &AMDGPUAnnotateUniformValuesPassID;
 
 extern Target TheAMDGPUTarget;
 extern Target TheGCNTarget;

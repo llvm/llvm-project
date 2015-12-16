@@ -1776,18 +1776,16 @@ class LSRInstance {
   void RewriteForPHI(PHINode *PN, const LSRFixup &LF,
                      const Formula &F,
                      SCEVExpander &Rewriter,
-                     SmallVectorImpl<WeakVH> &DeadInsts,
-                     Pass *P) const;
+                     SmallVectorImpl<WeakVH> &DeadInsts) const;
   void Rewrite(const LSRFixup &LF,
                const Formula &F,
                SCEVExpander &Rewriter,
-               SmallVectorImpl<WeakVH> &DeadInsts,
-               Pass *P) const;
-  void ImplementSolution(const SmallVectorImpl<const Formula *> &Solution,
-                         Pass *P);
+               SmallVectorImpl<WeakVH> &DeadInsts) const;
+  void ImplementSolution(const SmallVectorImpl<const Formula *> &Solution);
 
 public:
-  LSRInstance(Loop *L, Pass *P);
+  LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE, DominatorTree &DT,
+              LoopInfo &LI, const TargetTransformInfo &TTI);
 
   bool getChanged() const { return Changed; }
 
@@ -4634,8 +4632,7 @@ void LSRInstance::RewriteForPHI(PHINode *PN,
                                 const LSRFixup &LF,
                                 const Formula &F,
                                 SCEVExpander &Rewriter,
-                                SmallVectorImpl<WeakVH> &DeadInsts,
-                                Pass *P) const {
+                                SmallVectorImpl<WeakVH> &DeadInsts) const {
   DenseMap<BasicBlock *, Value *> Inserted;
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
     if (PN->getIncomingValue(i) == LF.OperandValToReplace) {
@@ -4709,12 +4706,11 @@ void LSRInstance::RewriteForPHI(PHINode *PN,
 void LSRInstance::Rewrite(const LSRFixup &LF,
                           const Formula &F,
                           SCEVExpander &Rewriter,
-                          SmallVectorImpl<WeakVH> &DeadInsts,
-                          Pass *P) const {
+                          SmallVectorImpl<WeakVH> &DeadInsts) const {
   // First, find an insertion point that dominates UserInst. For PHI nodes,
   // find the nearest block which dominates all the relevant uses.
   if (PHINode *PN = dyn_cast<PHINode>(LF.UserInst)) {
-    RewriteForPHI(PN, LF, F, Rewriter, DeadInsts, P);
+    RewriteForPHI(PN, LF, F, Rewriter, DeadInsts);
   } else {
     Value *FullV =
         Expand(LF, F, LF.UserInst->getIterator(), Rewriter, DeadInsts);
@@ -4744,9 +4740,8 @@ void LSRInstance::Rewrite(const LSRFixup &LF,
 
 /// Rewrite all the fixup locations with new values, following the chosen
 /// solution.
-void
-LSRInstance::ImplementSolution(const SmallVectorImpl<const Formula *> &Solution,
-                               Pass *P) {
+void LSRInstance::ImplementSolution(
+    const SmallVectorImpl<const Formula *> &Solution) {
   // Keep track of instructions we may have made dead, so that
   // we can remove them after we are done working.
   SmallVector<WeakVH, 16> DeadInsts;
@@ -4768,7 +4763,7 @@ LSRInstance::ImplementSolution(const SmallVectorImpl<const Formula *> &Solution,
 
   // Expand the new value definitions and update the users.
   for (const LSRFixup &Fixup : Fixups) {
-    Rewrite(Fixup, *Solution[Fixup.LUIdx], Rewriter, DeadInsts, P);
+    Rewrite(Fixup, *Solution[Fixup.LUIdx], Rewriter, DeadInsts);
 
     Changed = true;
   }
@@ -4784,14 +4779,11 @@ LSRInstance::ImplementSolution(const SmallVectorImpl<const Formula *> &Solution,
   Changed |= DeleteTriviallyDeadInstructions(DeadInsts);
 }
 
-LSRInstance::LSRInstance(Loop *L, Pass *P)
-    : IU(P->getAnalysis<IVUsers>()),
-      SE(P->getAnalysis<ScalarEvolutionWrapperPass>().getSE()),
-      DT(P->getAnalysis<DominatorTreeWrapperPass>().getDomTree()),
-      LI(P->getAnalysis<LoopInfoWrapperPass>().getLoopInfo()),
-      TTI(P->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
-          *L->getHeader()->getParent())),
-      L(L), Changed(false), IVIncInsertPos(nullptr) {
+LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
+                         DominatorTree &DT, LoopInfo &LI,
+                         const TargetTransformInfo &TTI)
+    : IU(IU), SE(SE), DT(DT), LI(LI), TTI(TTI), L(L), Changed(false),
+      IVIncInsertPos(nullptr) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
@@ -4882,7 +4874,7 @@ LSRInstance::LSRInstance(Loop *L, Pass *P)
 #endif
 
   // Now that we've decided what we want, make it so.
-  ImplementSolution(Solution, P);
+  ImplementSolution(Solution);
 }
 
 void LSRInstance::print_factors_and_types(raw_ostream &OS) const {
@@ -4998,10 +4990,16 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   if (skipOptnoneFunction(L))
     return false;
 
+  auto &IU = getAnalysis<IVUsers>();
+  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  const auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
+      *L->getHeader()->getParent());
   bool Changed = false;
 
   // Run the main LSR transformation.
-  Changed |= LSRInstance(L, this).getChanged();
+  Changed |= LSRInstance(L, IU, SE, DT, LI, TTI).getChanged();
 
   // Remove any extra phis created by processing inner loops.
   Changed |= DeleteDeadPHIs(L->getHeader());

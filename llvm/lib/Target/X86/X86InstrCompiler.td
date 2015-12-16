@@ -262,6 +262,22 @@ def : Pat<(i64 0), (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit)> {
   let AddedComplexity = 20;
 }
 
+let Predicates = [OptForSize, NotSlowIncDec, Not64BitMode],
+    AddedComplexity = 1 in {
+  // Pseudo instructions for materializing 1 and -1 using XOR+INC/DEC,
+  // which only require 3 bytes compared to MOV32ri which requires 5.
+  let Defs = [EFLAGS], isReMaterializable = 1, isPseudo = 1 in {
+    def MOV32r1 : I<0, Pseudo, (outs GR32:$dst), (ins), "",
+                        [(set GR32:$dst, 1)]>;
+    def MOV32r_1 : I<0, Pseudo, (outs GR32:$dst), (ins), "",
+                        [(set GR32:$dst, -1)]>;
+  }
+
+  // MOV16ri is 4 bytes, so the instructions above are smaller.
+  def : Pat<(i16 1), (EXTRACT_SUBREG (MOV32r1), sub_16bit)>;
+  def : Pat<(i16 -1), (EXTRACT_SUBREG (MOV32r_1), sub_16bit)>;
+}
+
 // Materialize i64 constant where top 32-bits are zero. This could theoretically
 // use MOV32ri with a SUBREG_TO_REG to represent the zero-extension, however
 // that would make it more difficult to rematerialize.

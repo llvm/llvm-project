@@ -331,9 +331,9 @@ static PHINode *getInductionVariable(Loop *L, ScalarEvolution *SE) {
 class LoopInterchangeLegality {
 public:
   LoopInterchangeLegality(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
-                          LoopInterchange *Pass)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), CurrentPass(Pass),
-        InnerLoopHasReduction(false) {}
+                          LoopInfo *LI, DominatorTree *DT, bool PreserveLCSSA)
+      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT),
+        PreserveLCSSA(PreserveLCSSA), InnerLoopHasReduction(false) {}
 
   /// Check if the loops can be interchanged.
   bool canInterchangeLoops(unsigned InnerLoopId, unsigned OuterLoopId,
@@ -357,9 +357,10 @@ private:
   Loop *OuterLoop;
   Loop *InnerLoop;
 
-  /// Scev analysis.
   ScalarEvolution *SE;
-  LoopInterchange *CurrentPass;
+  LoopInfo *LI;
+  DominatorTree *DT;
+  bool PreserveLCSSA;
 
   bool InnerLoopHasReduction;
 };
@@ -390,7 +391,7 @@ class LoopInterchangeTransform {
 public:
   LoopInterchangeTransform(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
                            LoopInfo *LI, DominatorTree *DT,
-                           LoopInterchange *Pass, BasicBlock *LoopNestExit,
+                           BasicBlock *LoopNestExit,
                            bool InnerLoopContainsReductions)
       : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT),
         LoopExit(LoopNestExit),
@@ -431,6 +432,7 @@ struct LoopInterchange : public FunctionPass {
   LoopInfo *LI;
   DependenceAnalysis *DA;
   DominatorTree *DT;
+  bool PreserveLCSSA;
   LoopInterchange()
       : FunctionPass(ID), SE(nullptr), LI(nullptr), DA(nullptr), DT(nullptr) {
     initializeLoopInterchangePass(*PassRegistry::getPassRegistry());
@@ -452,6 +454,8 @@ struct LoopInterchange : public FunctionPass {
     DA = &getAnalysis<DependenceAnalysis>();
     auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
     DT = DTWP ? &DTWP->getDomTree() : nullptr;
+    PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
+
     // Build up a worklist of loop pairs to analyze.
     SmallVector<LoopVector, 8> Worklist;
 
@@ -574,7 +578,8 @@ struct LoopInterchange : public FunctionPass {
     Loop *InnerLoop = LoopList[InnerLoopId];
     Loop *OuterLoop = LoopList[OuterLoopId];
 
-    LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, this);
+    LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, LI, DT,
+                                PreserveLCSSA);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       DEBUG(dbgs() << "Not interchanging Loops. Cannot prove legality\n");
       return false;
@@ -586,7 +591,7 @@ struct LoopInterchange : public FunctionPass {
       return false;
     }
 
-    LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT, this,
+    LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT,
                                  LoopNestExit, LIL.hasInnerLoopReduction());
     LIT.transform();
     DEBUG(dbgs() << "Loops interchanged\n");
@@ -867,12 +872,14 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   if (!OuterLoopPreHeader || OuterLoopPreHeader == OuterLoop->getHeader() ||
       isa<PHINode>(OuterLoopPreHeader->begin()) ||
       !OuterLoopPreHeader->getUniquePredecessor()) {
-    OuterLoopPreHeader = InsertPreheaderForLoop(OuterLoop, CurrentPass);
+    OuterLoopPreHeader =
+        InsertPreheaderForLoop(OuterLoop, DT, LI, PreserveLCSSA);
   }
 
   if (!InnerLoopPreHeader || InnerLoopPreHeader == InnerLoop->getHeader() ||
       InnerLoopPreHeader == OuterLoop->getHeader()) {
-    InnerLoopPreHeader = InsertPreheaderForLoop(InnerLoop, CurrentPass);
+    InnerLoopPreHeader =
+        InsertPreheaderForLoop(InnerLoop, DT, LI, PreserveLCSSA);
   }
 
   // TODO: The loops could not be interchanged due to current limitations in the

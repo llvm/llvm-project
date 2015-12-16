@@ -39,8 +39,8 @@ public:
   void updateStringTableReferences(InstrProfRecord &I);
   /// Add function counts for the given function. If there are already counts
   /// for this function and the hash and number of counts match, each counter is
-  /// summed.
-  std::error_code addRecord(InstrProfRecord &&I);
+  /// summed. Optionally scale counts by \p Weight.
+  std::error_code addRecord(InstrProfRecord &&I, uint64_t Weight = 1);
   /// Write the profile to \c OS
   void write(raw_fd_ostream &OS);
   /// Write the profile in text format to \c OS

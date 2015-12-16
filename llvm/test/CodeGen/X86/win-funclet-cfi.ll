@@ -10,7 +10,7 @@ entry:
 
 cleanupblock:
   %cleanp = cleanuppad within none []
-  call void @g()
+  call void @g() [ "funclet"(token %cleanp) ]
   cleanupret from %cleanp unwind label %catch.dispatch
 
 catch.dispatch:
@@ -18,7 +18,7 @@ catch.dispatch:
 
 catch:
   %cp = catchpad within %cs1 [i8* null, i32 64, i8* null]
-  call void @g()
+  call void @g() [ "funclet"(token %cp) ]
   catchret from %cp to label %try.cont
 
 try.cont:

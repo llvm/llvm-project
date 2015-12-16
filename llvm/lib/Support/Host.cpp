@@ -812,6 +812,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["rdseed"]   = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]      = HasLeaf7 && ((EBX >> 19) & 1);
   Features["sha"]      = HasLeaf7 && ((EBX >> 29) & 1);
+  // Enable protection keys
+  Features["pku"]    = HasLeaf7 && ((ECX >> 4) & 1);
 
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]  = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;

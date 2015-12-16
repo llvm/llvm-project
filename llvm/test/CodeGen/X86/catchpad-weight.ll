@@ -58,7 +58,7 @@ catch:                                            ; preds = %catch.dispatch.2
 
 ehcleanup:                                        ; preds = %catchendblock
   %4 = cleanuppad within none []
-  call void @"\01??1HasDtor@@QEAA@XZ"(%struct.HasDtor* nonnull %o) #4
+  call void @"\01??1HasDtor@@QEAA@XZ"(%struct.HasDtor* nonnull %o) #4 [ "funclet"(token %4) ]
   cleanupret from %4 unwind to caller
 }
 

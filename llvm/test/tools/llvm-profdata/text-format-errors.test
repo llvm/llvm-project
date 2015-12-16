@@ -2,7 +2,7 @@ Tests for instrumentation profile bad encoding.
 
 1- Detect invalid count
 RUN: not llvm-profdata show %p/Inputs/invalid-count-later.proftext 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER
-RUN: not llvm-profdata merge %p/Inputs/invalid-count-later.proftext %p/Inputs/invalid-count-later.profdata -o %t.out 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER
+RUN: not llvm-profdata merge %p/Inputs/invalid-count-later.proftext %p/Inputs/invalid-count-later.proftext -o %t.out 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER
 INVALID-COUNT-LATER: error: {{.*}}invalid-count-later.proftext: Malformed instrumentation profile data
 
 2- Detect bad hash

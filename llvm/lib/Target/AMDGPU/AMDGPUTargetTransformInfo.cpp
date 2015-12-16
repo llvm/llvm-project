@@ -91,3 +91,80 @@ int AMDGPUTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
   }
 }
+
+static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
+                                          const IntrinsicInst *I) {
+  switch (I->getIntrinsicID()) {
+  default:
+    return false;
+  case Intrinsic::not_intrinsic:
+    // This means we have an intrinsic that isn't defined in
+    // IntrinsicsAMDGPU.td
+    break;
+
+  case Intrinsic::amdgcn_interp_p1:
+  case Intrinsic::amdgcn_interp_p2:
+  case Intrinsic::amdgcn_mbcnt_hi:
+  case Intrinsic::amdgcn_mbcnt_lo:
+  case Intrinsic::r600_read_tidig_x:
+  case Intrinsic::r600_read_tidig_y:
+  case Intrinsic::r600_read_tidig_z:
+    return true;
+  }
+
+  StringRef Name = I->getCalledFunction()->getName();
+  switch (TII->lookupName((const char *)Name.bytes_begin(), Name.size())) {
+  default:
+    return false;
+  case AMDGPUIntrinsic::SI_tid:
+  case AMDGPUIntrinsic::SI_fs_interp:
+    return true;
+  }
+}
+
+static bool isArgPassedInSGPR(const Argument *A) {
+  const Function *F = A->getParent();
+  unsigned ShaderType = AMDGPU::getShaderType(*F);
+
+  // Arguments to compute shaders are never a source of divergence.
+  if (ShaderType == ShaderType::COMPUTE)
+    return true;
+
+  // For non-compute shaders, the inreg attribute is used to mark inputs,
+  // which pre-loaded into SGPRs.
+  if (F->getAttributes().hasAttribute(A->getArgNo(), Attribute::InReg))
+    return true;
+
+  // For non-compute shaders, 32-bit values are pre-loaded into vgprs, all
+  // other value types use SGPRS.
+  return !A->getType()->isIntegerTy(32) && !A->getType()->isFloatTy();
+}
+
+///
+/// \returns true if the result of the value could potentially be
+/// different across workitems in a wavefront.
+bool AMDGPUTTIImpl::isSourceOfDivergence(const Value *V) const {
+
+  if (const Argument *A = dyn_cast<Argument>(V))
+    return !isArgPassedInSGPR(A);
+
+  // Loads from the private address space are divergent, because threads
+  // can execute the load instruction with the same inputs and get different
+  // results.
+  //
+  // All other loads are not divergent, because if threads issue loads with the
+  // same arguments, they will always get the same result.
+  if (const LoadInst *Load = dyn_cast<LoadInst>(V))
+    return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS;
+
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
+    const TargetMachine &TM = getTLI()->getTargetMachine();
+    return isIntrinsicSourceOfDivergence(TM.getIntrinsicInfo(), Intrinsic);
+  }
+
+  // Assume all function calls are a source of divergence.
+  if (isa<CallInst>(V) || isa<InvokeInst>(V))
+    return true;
+
+  return false;
+}

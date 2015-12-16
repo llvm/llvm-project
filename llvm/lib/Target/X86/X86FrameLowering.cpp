@@ -912,9 +912,11 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI->getStackSize();    // Number of bytes to allocate.
   bool IsFunclet = MBB.isEHFuncletEntry();
+  EHPersonality Personality = EHPersonality::Unknown;
+  if (Fn->hasPersonalityFn())
+    Personality = classifyEHPersonality(Fn->getPersonalityFn());
   bool FnHasClrFunclet =
-      MMI.hasEHFunclets() &&
-      classifyEHPersonality(Fn->getPersonalityFn()) == EHPersonality::CoreCLR;
+      MMI.hasEHFunclets() && Personality == EHPersonality::CoreCLR;
   bool IsClrFunclet = IsFunclet && FnHasClrFunclet;
   bool HasFP = hasFP(MF);
   bool IsWin64CC = STI.isCallingConvWin64(Fn->getCallingConv());
@@ -1250,19 +1252,21 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(SPOrEstablisher);
 
     // If this is not a funclet, emit the CFI describing our frame pointer.
-    if (NeedsWinCFI && !IsFunclet)
+    if (NeedsWinCFI && !IsFunclet) {
       BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_SetFrame))
           .addImm(FramePtr)
           .addImm(SEHFrameOffset)
           .setMIFlag(MachineInstr::FrameSetup);
+      if (isAsynchronousEHPersonality(Personality))
+        MF.getWinEHFuncInfo()->SEHSetFrameOffset = SEHFrameOffset;
+    }
   } else if (IsFunclet && STI.is32Bit()) {
     // Reset EBP / ESI to something good for funclets.
     MBBI = restoreWin32EHStackPointers(MBB, MBBI, DL);
     // If we're a catch funclet, we can be returned to via catchret. Save ESP
     // into the registration node so that the runtime will restore it for us.
     if (!MBB.isCleanupFuncletEntry()) {
-      assert(classifyEHPersonality(Fn->getPersonalityFn()) ==
-             EHPersonality::MSVC_CXX);
+      assert(Personality == EHPersonality::MSVC_CXX);
       unsigned FrameReg;
       int FI = MF.getWinEHFuncInfo()->EHRegNodeFrameIndex;
       int64_t EHRegOffset = getFrameIndexReference(MF, FI, FrameReg);
