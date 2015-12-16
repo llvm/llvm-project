@@ -24950,6 +24950,59 @@ static SDValue PerformSHLCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue PerformSRACombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N0.getValueType();
+  unsigned Size = VT.getSizeInBits();
+
+  // fold (ashr (shl, a, [56,48,32,24,16]), SarConst)
+  // into (shl, (sext (a), [56,48,32,24,16] - SarConst)) or
+  // into (lshr, (sext (a), SarConst - [56,48,32,24,16]))
+  // depending on sign of (SarConst - [56,48,32,24,16])
+
+  // sexts in X86 are MOVs. The MOVs have the same code size
+  // as above SHIFTs (only SHIFT on 1 has lower code size).
+  // However the MOVs have 2 advantages to a SHIFT:
+  // 1. MOVs can write to a register that differs from source
+  // 2. MOVs accept memory operands
+
+  if (!VT.isInteger() || VT.isVector() || N1.getOpcode() != ISD::Constant ||
+      N0.getOpcode() != ISD::SHL || !N0.hasOneUse() ||
+      N0.getOperand(1).getOpcode() != ISD::Constant)
+    return SDValue();
+
+  SDValue N00 = N0.getOperand(0);
+  SDValue N01 = N0.getOperand(1);
+  APInt ShlConst = (cast<ConstantSDNode>(N01))->getAPIntValue();
+  APInt SarConst = (cast<ConstantSDNode>(N1))->getAPIntValue();
+  EVT CVT = N1.getValueType();
+
+  if (SarConst.isNegative())
+    return SDValue();
+
+  for (MVT SVT : MVT::integer_valuetypes()) {
+    unsigned ShiftSize = SVT.getSizeInBits();
+    // skipping types without corresponding sext/zext and
+    // ShlConst that is not one of [56,48,32,24,16]
+    if (ShiftSize < 8 || ShiftSize > 64 || ShlConst != Size - ShiftSize)
+      continue;
+    SDLoc DL(N);
+    SDValue NN =
+        DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N00, DAG.getValueType(SVT));
+    SarConst = SarConst - (Size - ShiftSize);
+    if (SarConst == 0)
+      return NN;
+    else if (SarConst.isNegative())
+      return DAG.getNode(ISD::SHL, DL, VT, NN,
+                         DAG.getConstant(-SarConst, DL, CVT));
+    else
+      return DAG.getNode(ISD::SRA, DL, VT, NN,
+                         DAG.getConstant(SarConst, DL, CVT));
+  }
+  return SDValue();
+}
+
 /// \brief Returns a vector of 0s if the node in input is a vector logical
 /// shift by a constant amount which is known to be bigger than or equal
 /// to the vector element size in bits.
@@ -24987,6 +25040,10 @@ static SDValue PerformShiftCombine(SDNode* N, SelectionDAG &DAG,
                                    const X86Subtarget *Subtarget) {
   if (N->getOpcode() == ISD::SHL)
     if (SDValue V = PerformSHLCombine(N, DAG))
+      return V;
+
+  if (N->getOpcode() == ISD::SRA)
+    if (SDValue V = PerformSRACombine(N, DAG))
       return V;
 
   // Try to fold this logical shift into a zero vector.

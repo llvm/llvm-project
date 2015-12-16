@@ -2419,6 +2419,11 @@ static Value *ensureValueAvailableInSuccessor(Value *V, BasicBlock *BB,
   if (PHI)
     return PHI;
 
+  // If V is not an instruction defined in BB, just return it.
+  if (!AlternativeV &&
+      (!isa<Instruction>(V) || cast<Instruction>(V)->getParent() != BB))
+    return V;
+
   PHI = PHINode::Create(V->getType(), 2, "simplifycfg.merge", &Succ->front());
   PHI->addIncoming(V, BB);
   for (BasicBlock *PredBB : predecessors(Succ))

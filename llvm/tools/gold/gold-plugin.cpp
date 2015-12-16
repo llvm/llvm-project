@@ -57,10 +57,36 @@
 
 using namespace llvm;
 
+static ld_plugin_status discard_message(int level, const char *format, ...) {
+  // Die loudly. Recent versions of Gold pass ld_plugin_message as the first
+  // callback in the transfer vector. This should never be called.
+  abort();
+}
+
+static ld_plugin_release_input_file release_input_file = nullptr;
+static ld_plugin_get_input_file get_input_file = nullptr;
+static ld_plugin_message message = discard_message;
+
 namespace {
 struct claimed_file {
   void *handle;
   std::vector<ld_plugin_symbol> syms;
+};
+
+/// RAII wrapper to manage opening and releasing of a ld_plugin_input_file.
+struct PluginInputFile {
+  void *handle;
+  ld_plugin_input_file File;
+
+  PluginInputFile(void *handle) : handle(handle) {
+    if (get_input_file(handle, &File) != LDPS_OK)
+      message(LDPL_FATAL, "Failed to get file information");
+  }
+  ~PluginInputFile() {
+    if (release_input_file(handle) != LDPS_OK)
+      message(LDPL_FATAL, "Failed to release file information");
+  }
+  ld_plugin_input_file &file() { return File; }
 };
 
 struct ResolutionInfo {
@@ -75,20 +101,11 @@ struct ResolutionInfo {
 };
 }
 
-static ld_plugin_status discard_message(int level, const char *format, ...) {
-  // Die loudly. Recent versions of Gold pass ld_plugin_message as the first
-  // callback in the transfer vector. This should never be called.
-  abort();
-}
-
-static ld_plugin_get_input_file get_input_file = nullptr;
-static ld_plugin_release_input_file release_input_file = nullptr;
 static ld_plugin_add_symbols add_symbols = nullptr;
 static ld_plugin_get_symbols get_symbols = nullptr;
 static ld_plugin_add_input_file add_input_file = nullptr;
 static ld_plugin_set_extra_library_path set_extra_library_path = nullptr;
 static ld_plugin_get_view get_view = nullptr;
-static ld_plugin_message message = discard_message;
 static Reloc::Model RelocationModel = Reloc::Default;
 static std::string output_name = "";
 static std::list<claimed_file> Modules;
@@ -847,19 +864,14 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
     FunctionInfoIndex CombinedIndex;
     uint64_t NextModuleId = 0;
     for (claimed_file &F : Modules) {
-      ld_plugin_input_file File;
-      if (get_input_file(F.handle, &File) != LDPS_OK)
-        message(LDPL_FATAL, "Failed to get file information");
+      PluginInputFile InputFile(F.handle);
 
       std::unique_ptr<FunctionInfoIndex> Index =
-          getFunctionIndexForFile(F, File);
+          getFunctionIndexForFile(F, InputFile.file());
 
       // Skip files without a function summary.
       if (Index)
         CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
-
-      if (release_input_file(F.handle) != LDPS_OK)
-        message(LDPL_FATAL, "Failed to release file information");
     }
 
     std::error_code EC;
@@ -886,12 +898,10 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
   StringSet<> Internalize;
   StringSet<> Maybe;
   for (claimed_file &F : Modules) {
-    ld_plugin_input_file File;
-    if (get_input_file(F.handle, &File) != LDPS_OK)
-      message(LDPL_FATAL, "Failed to get file information");
+    PluginInputFile InputFile(F.handle);
     std::vector<GlobalValue *> Keep;
-    std::unique_ptr<Module> M =
-        getModuleForFile(Context, F, File, ApiFile, Internalize, Maybe, Keep);
+    std::unique_ptr<Module> M = getModuleForFile(
+        Context, F, InputFile.file(), ApiFile, Internalize, Maybe, Keep);
     if (!options::triple.empty())
       M->setTargetTriple(options::triple.c_str());
     else if (M->getTargetTriple().empty())
@@ -899,8 +909,6 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
 
     if (L.move(*M, Keep, [](GlobalValue &, IRMover::ValueAdder) {}))
       message(LDPL_FATAL, "Failed to link module");
-    if (release_input_file(F.handle) != LDPS_OK)
-      message(LDPL_FATAL, "Failed to release file information");
   }
 
   for (const auto &Name : Internalize) {

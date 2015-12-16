@@ -1254,6 +1254,14 @@ example:
     thread execution pattern under certain parallel execution models.
     Transformations that are execution model agnostic may not make the execution
     of a convergent operation control dependent on any additional values.
+``inaccessiblememonly``
+    This attribute indicates that the function may only access memory that
+    is not accessible by the module being compiled. This is a weaker form
+    of ``readnone``.
+``inaccessiblemem_or_argmemonly``
+    This attribute indicates that the function may only access memory that is
+    either not accessible by the module being compiled, or is pointed to
+    by its pointer arguments. This is a weaker form of  ``argmemonly``
 ``inlinehint``
     This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in

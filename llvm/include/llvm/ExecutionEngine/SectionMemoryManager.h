@@ -83,25 +83,28 @@ public:
   virtual void invalidateInstructionCache();
 
 private:
+  struct FreeMemBlock {
+    // The actual block of free memory
+    sys::MemoryBlock Free;
+    // If there is a pending allocation from the same reservation right before
+    // this block, store it's index in PendingMem, to be able to update the
+    // pending region if part of this block is allocated, rather than having to
+    // create a new one
+    unsigned PendingPrefixIndex;
+  };
+
   struct MemoryGroup {
-      // PendingMem contains all allocated memory blocks
-      // which have not yet had their permissions set. Note
-      // that this tracks memory blocks that have been given to
-      // this memory manager by the system, not those
-      // given out to the user. In particular, the memory manager
-      // will give out subblocks of these MemoryBlocks in response
-      // to user requests. We track which subblocks have not beeen
-      // given out yet in `FreeMem`.
-      SmallVector<sys::MemoryBlock, 16> PendingMem;
-      SmallVector<sys::MemoryBlock, 16> FreeMem;
+    // PendingMem contains all blocks of memory (subblocks of AllocatedMem)
+    // which have not yet had their permissions applied, but have been given
+    // out to the user. FreeMem contains all block of memory, which have
+    // neither had their permissions applied, nor been given out to the user.
+    SmallVector<sys::MemoryBlock, 16> PendingMem;
+    SmallVector<FreeMemBlock, 16> FreeMem;
 
-      // All allocated memory blocks that have had their permissions
-      // set (i.e. that have been finalized). Because of this, we may
-      // not give out subblocks of this memory to the user anymore,
-      // even if those subblocks have not been previously given out.
-      SmallVector<sys::MemoryBlock, 16> AllocatedMem;
+    // All memory blocks that have been requested from the system
+    SmallVector<sys::MemoryBlock, 16> AllocatedMem;
 
-      sys::MemoryBlock Near;
+    sys::MemoryBlock Near;
   };
 
   uint8_t *allocateSection(MemoryGroup &MemGroup, uintptr_t Size,
@@ -118,4 +121,3 @@ private:
 }
 
 #endif // LLVM_EXECUTION_ENGINE_SECTION_MEMORY_MANAGER_H
-

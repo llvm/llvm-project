@@ -186,6 +186,16 @@ public:
     return true;
   }
 
+  // Check if the packetizer should try to add the given instruction to
+  // the current packet. One reasons for which it may not be desirable
+  // to include an instruction in the current packet could be that it
+  // would cause a stall.
+  // If this function returns "false", the current packet will be ended,
+  // and the instruction will be added to the next packet.
+  virtual bool shouldAddToPacket(const MachineInstr *MI) {
+    return true;
+  }
+
   // isLegalToPacketizeTogether - Is it legal to packetize SUI and SUJ
   // together.
   virtual bool isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {

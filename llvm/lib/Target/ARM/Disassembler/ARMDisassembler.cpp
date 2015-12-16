@@ -222,6 +222,8 @@ static DecodeStatus DecodeAddrModeImm12Operand(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeAddrMode5Operand(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeAddrMode5FP16Operand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeAddrMode7Operand(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeT2BInstruction(MCInst &Inst, unsigned Insn,
@@ -2183,6 +2185,7 @@ static DecodeStatus DecodeAddrMode5Operand(MCInst &Inst, unsigned Val,
   DecodeStatus S = MCDisassembler::Success;
 
   unsigned Rn = fieldFromInstruction(Val, 9, 4);
+  // U == 1 to add imm, 0 to subtract it.
   unsigned U = fieldFromInstruction(Val, 8, 1);
   unsigned imm = fieldFromInstruction(Val, 0, 8);
 
@@ -2193,6 +2196,26 @@ static DecodeStatus DecodeAddrMode5Operand(MCInst &Inst, unsigned Val,
     Inst.addOperand(MCOperand::createImm(ARM_AM::getAM5Opc(ARM_AM::add, imm)));
   else
     Inst.addOperand(MCOperand::createImm(ARM_AM::getAM5Opc(ARM_AM::sub, imm)));
+
+  return S;
+}
+
+static DecodeStatus DecodeAddrMode5FP16Operand(MCInst &Inst, unsigned Val,
+                                   uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 9, 4);
+  // U == 1 to add imm, 0 to subtract it.
+  unsigned U = fieldFromInstruction(Val, 8, 1);
+  unsigned imm = fieldFromInstruction(Val, 0, 8);
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (U)
+    Inst.addOperand(MCOperand::createImm(ARM_AM::getAM5FP16Opc(ARM_AM::add, imm)));
+  else
+    Inst.addOperand(MCOperand::createImm(ARM_AM::getAM5FP16Opc(ARM_AM::sub, imm)));
 
   return S;
 }
@@ -5050,6 +5073,10 @@ static DecodeStatus DecodeSwap(MCInst &Inst, unsigned Insn,
 
 static DecodeStatus DecodeVCVTD(MCInst &Inst, unsigned Insn,
                                 uint64_t Address, const void *Decoder) {
+  const FeatureBitset &featureBits =
+      ((const MCDisassembler *)Decoder)->getSubtargetInfo().getFeatureBits();
+  bool hasFullFP16 = featureBits[ARM::FeatureFullFP16];
+
   unsigned Vd = (fieldFromInstruction(Insn, 12, 4) << 0);
   Vd |= (fieldFromInstruction(Insn, 22, 1) << 4);
   unsigned Vm = (fieldFromInstruction(Insn, 0, 4) << 0);
@@ -5060,10 +5087,35 @@ static DecodeStatus DecodeVCVTD(MCInst &Inst, unsigned Insn,
 
   DecodeStatus S = MCDisassembler::Success;
 
-  // VMOVv2f32 is ambiguous with these decodings.
-  if (!(imm & 0x38) && cmode == 0xF) {
-    if (op == 1) return MCDisassembler::Fail;
-    Inst.setOpcode(ARM::VMOVv2f32);
+  // If the top 3 bits of imm are clear, this is a VMOV (immediate)
+  if (!(imm & 0x38)) {
+    if (cmode == 0xF) {
+      if (op == 1) return MCDisassembler::Fail;
+      Inst.setOpcode(ARM::VMOVv2f32);
+    }
+    if (hasFullFP16) {
+      if (cmode == 0xE) {
+        if (op == 1) {
+          Inst.setOpcode(ARM::VMOVv1i64);
+        } else {
+          Inst.setOpcode(ARM::VMOVv8i8);
+        }
+      }
+      if (cmode == 0xD) {
+        if (op == 1) {
+          Inst.setOpcode(ARM::VMVNv2i32);
+        } else {
+          Inst.setOpcode(ARM::VMOVv2i32);
+        }
+      }
+      if (cmode == 0xC) {
+        if (op == 1) {
+          Inst.setOpcode(ARM::VMVNv2i32);
+        } else {
+          Inst.setOpcode(ARM::VMOVv2i32);
+        }
+      }
+    }
     return DecodeNEONModImmInstruction(Inst, Insn, Address, Decoder);
   }
 
@@ -5080,6 +5132,10 @@ static DecodeStatus DecodeVCVTD(MCInst &Inst, unsigned Insn,
 
 static DecodeStatus DecodeVCVTQ(MCInst &Inst, unsigned Insn,
                                 uint64_t Address, const void *Decoder) {
+  const FeatureBitset &featureBits =
+      ((const MCDisassembler *)Decoder)->getSubtargetInfo().getFeatureBits();
+  bool hasFullFP16 = featureBits[ARM::FeatureFullFP16];
+
   unsigned Vd = (fieldFromInstruction(Insn, 12, 4) << 0);
   Vd |= (fieldFromInstruction(Insn, 22, 1) << 4);
   unsigned Vm = (fieldFromInstruction(Insn, 0, 4) << 0);
@@ -5090,10 +5146,35 @@ static DecodeStatus DecodeVCVTQ(MCInst &Inst, unsigned Insn,
 
   DecodeStatus S = MCDisassembler::Success;
 
-  // VMOVv4f32 is ambiguous with these decodings.
-  if (!(imm & 0x38) && cmode == 0xF) {
-    if (op == 1) return MCDisassembler::Fail;
-    Inst.setOpcode(ARM::VMOVv4f32);
+  // If the top 3 bits of imm are clear, this is a VMOV (immediate)
+  if (!(imm & 0x38)) {
+    if (cmode == 0xF) {
+      if (op == 1) return MCDisassembler::Fail;
+      Inst.setOpcode(ARM::VMOVv4f32);
+    }
+    if (hasFullFP16) {
+      if (cmode == 0xE) {
+        if (op == 1) {
+          Inst.setOpcode(ARM::VMOVv2i64);
+        } else {
+          Inst.setOpcode(ARM::VMOVv16i8);
+        }
+      }
+      if (cmode == 0xD) {
+        if (op == 1) {
+          Inst.setOpcode(ARM::VMVNv4i32);
+        } else {
+          Inst.setOpcode(ARM::VMOVv4i32);
+        }
+      }
+      if (cmode == 0xC) {
+        if (op == 1) {
+          Inst.setOpcode(ARM::VMVNv4i32);
+        } else {
+          Inst.setOpcode(ARM::VMOVv4i32);
+        }
+      }
+    }
     return DecodeNEONModImmInstruction(Inst, Insn, Address, Decoder);
   }
 
