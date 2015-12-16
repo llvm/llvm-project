@@ -206,6 +206,10 @@ $builtin_logger_initialize()
         {
             func_decorator = "final";
         }
+        else
+        {
+            func_decorator = "mutating";
+        }
 
         if (generic_info.class_bindings.size())
         {
