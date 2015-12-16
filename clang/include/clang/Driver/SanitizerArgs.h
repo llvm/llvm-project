@@ -31,6 +31,7 @@ class SanitizerArgs {
   int CoverageFeatures;
   int MsanTrackOrigins;
   bool MsanUseAfterDtor;
+  bool CfiCrossDso;
   int AsanFieldPadding;
   bool AsanSharedRuntime;
   bool LinkCXXRuntimes;
@@ -53,6 +54,8 @@ class SanitizerArgs {
   bool needsSafeStackRt() const {
     return Sanitizers.has(SanitizerKind::SafeStack);
   }
+  bool needsCfiRt() const;
+  bool needsCfiDiagRt() const;
 
   bool requiresPIE() const;
   bool needsUnwindTables() const;

@@ -89,7 +89,8 @@ int filter_expr_capture(void) {
 // CHECK: ret i32 %[[rv]]
 
 // X64-LABEL: define internal i32 @"\01?filt$0@0@filter_expr_capture@@"(i8* %exception_pointers, i8* %frame_pointer)
-// X64: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %frame_pointer, i32 0)
+// X64: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %frame_pointer)
+// X64: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[fp]], i32 0)
 //
 // X86-LABEL: define internal i32 @"\01?filt$0@0@filter_expr_capture@@"()
 // X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress(i32 1)

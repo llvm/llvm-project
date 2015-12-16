@@ -128,10 +128,12 @@ def _SLASH_WX_ : CLFlag<"WX-">, HelpText<"Do not treat warnings as errors">,
 def _SLASH_w_flag : CLFlag<"w">, HelpText<"Disable all warnings">, Alias<w>;
 def _SLASH_wd4005 : CLFlag<"wd4005">, Alias<W_Joined>,
   AliasArgs<["no-macro-redefined"]>;
-def _SLASH_wd4996 : CLFlag<"wd4996">, Alias<W_Joined>,
-  AliasArgs<["no-deprecated-declarations"]>;
+def _SLASH_wd4100 : CLFlag<"wd4100">, Alias<W_Joined>,
+  AliasArgs<["no-unused-parameter"]>;
 def _SLASH_wd4910 : CLFlag<"wd4910">, Alias<W_Joined>,
   AliasArgs<["no-dllexport-explicit-instantiation-decl"]>;
+def _SLASH_wd4996 : CLFlag<"wd4996">, Alias<W_Joined>,
+  AliasArgs<["no-deprecated-declarations"]>;
 def _SLASH_vd : CLJoined<"vd">, HelpText<"Control vtordisp placement">,
   Alias<vtordisp_mode_EQ>;
 def _SLASH_Zc_sizedDealloc : CLFlag<"Zc:sizedDealloc">,

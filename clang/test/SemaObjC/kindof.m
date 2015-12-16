@@ -302,3 +302,19 @@ void testNullability() {
   void processCopyable(__typeof(getSomeCopyable()) string);
   processCopyable(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
+
+// Check that clang doesn't crash when a type parameter is illegal.
+@interface Array1<T> : NSObject
+@end
+
+@interface I1 : NSObject
+@end
+
+@interface Array1<__kindof I1*>(extensions1) // expected-error{{expected type parameter name}}
+@end
+
+@interface Array2<T1, T2, T3> : NSObject
+@end
+
+@interface Array2<T, T, __kindof I1*>(extensions2) // expected-error{{expected type parameter name}} expected-error{{redeclaration of type parameter 'T'}}
+@end

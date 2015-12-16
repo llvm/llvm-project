@@ -523,8 +523,9 @@ public:
 #undef HANDLEBINOP
 
   // Comparisons.
-  Value *EmitCompare(const BinaryOperator *E, unsigned UICmpOpc,
-                     unsigned SICmpOpc, unsigned FCmpOpc);
+  Value *EmitCompare(const BinaryOperator *E, llvm::CmpInst::Predicate UICmpOpc,
+                     llvm::CmpInst::Predicate SICmpOpc,
+                     llvm::CmpInst::Predicate FCmpOpc);
 #define VISITCOMP(CODE, UI, SI, FP) \
     Value *VisitBin##CODE(const BinaryOperator *E) { \
       return EmitCompare(E, llvm::ICmpInst::UI, llvm::ICmpInst::SI, \
@@ -2832,8 +2833,10 @@ static llvm::Intrinsic::ID GetIntrinsic(IntrinsicType IT,
   }
 }
 
-Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,unsigned UICmpOpc,
-                                      unsigned SICmpOpc, unsigned FCmpOpc) {
+Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
+                                      llvm::CmpInst::Predicate UICmpOpc,
+                                      llvm::CmpInst::Predicate SICmpOpc,
+                                      llvm::CmpInst::Predicate FCmpOpc) {
   TestAndClearIgnoreResultAssign();
   Value *Result;
   QualType LHSTy = E->getLHS()->getType();
@@ -2916,15 +2919,12 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,unsigned UICmpOpc,
     }
 
     if (LHS->getType()->isFPOrFPVectorTy()) {
-      Result = Builder.CreateFCmp((llvm::CmpInst::Predicate)FCmpOpc,
-                                  LHS, RHS, "cmp");
+      Result = Builder.CreateFCmp(FCmpOpc, LHS, RHS, "cmp");
     } else if (LHSTy->hasSignedIntegerRepresentation()) {
-      Result = Builder.CreateICmp((llvm::ICmpInst::Predicate)SICmpOpc,
-                                  LHS, RHS, "cmp");
+      Result = Builder.CreateICmp(SICmpOpc, LHS, RHS, "cmp");
     } else {
       // Unsigned integers and pointers.
-      Result = Builder.CreateICmp((llvm::ICmpInst::Predicate)UICmpOpc,
-                                  LHS, RHS, "cmp");
+      Result = Builder.CreateICmp(UICmpOpc, LHS, RHS, "cmp");
     }
 
     // If this is a vector comparison, sign extend the result to the appropriate
@@ -2959,17 +2959,13 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,unsigned UICmpOpc,
 
     Value *ResultR, *ResultI;
     if (CETy->isRealFloatingType()) {
-      ResultR = Builder.CreateFCmp((llvm::FCmpInst::Predicate)FCmpOpc,
-                                   LHS.first, RHS.first, "cmp.r");
-      ResultI = Builder.CreateFCmp((llvm::FCmpInst::Predicate)FCmpOpc,
-                                   LHS.second, RHS.second, "cmp.i");
+      ResultR = Builder.CreateFCmp(FCmpOpc, LHS.first, RHS.first, "cmp.r");
+      ResultI = Builder.CreateFCmp(FCmpOpc, LHS.second, RHS.second, "cmp.i");
     } else {
       // Complex comparisons can only be equality comparisons.  As such, signed
       // and unsigned opcodes are the same.
-      ResultR = Builder.CreateICmp((llvm::ICmpInst::Predicate)UICmpOpc,
-                                   LHS.first, RHS.first, "cmp.r");
-      ResultI = Builder.CreateICmp((llvm::ICmpInst::Predicate)UICmpOpc,
-                                   LHS.second, RHS.second, "cmp.i");
+      ResultR = Builder.CreateICmp(UICmpOpc, LHS.first, RHS.first, "cmp.r");
+      ResultI = Builder.CreateICmp(UICmpOpc, LHS.second, RHS.second, "cmp.i");
     }
 
     if (E->getOpcode() == BO_EQ) {

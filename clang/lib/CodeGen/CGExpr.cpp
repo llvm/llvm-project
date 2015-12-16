@@ -2532,6 +2532,34 @@ void CodeGenFunction::EmitCheck(
   EmitBlock(Cont);
 }
 
+void CodeGenFunction::EmitCfiSlowPathCheck(llvm::Value *Cond,
+                                           llvm::ConstantInt *TypeId,
+                                           llvm::Value *Ptr) {
+  auto &Ctx = getLLVMContext();
+  llvm::BasicBlock *Cont = createBasicBlock("cfi.cont");
+
+  llvm::BasicBlock *CheckBB = createBasicBlock("cfi.slowpath");
+  llvm::BranchInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
+
+  llvm::MDBuilder MDHelper(getLLVMContext());
+  llvm::MDNode *Node = MDHelper.createBranchWeights((1U << 20) - 1, 1);
+  BI->setMetadata(llvm::LLVMContext::MD_prof, Node);
+
+  EmitBlock(CheckBB);
+
+  llvm::Constant *SlowPathFn = CGM.getModule().getOrInsertFunction(
+      "__cfi_slowpath",
+      llvm::FunctionType::get(
+          llvm::Type::getVoidTy(Ctx),
+          {llvm::Type::getInt64Ty(Ctx),
+           llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(Ctx))},
+          false));
+  llvm::CallInst *CheckCall = Builder.CreateCall(SlowPathFn, {TypeId, Ptr});
+  CheckCall->setDoesNotThrow();
+
+  EmitBlock(Cont);
+}
+
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
@@ -3823,21 +3851,25 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
     SanitizerScope SanScope(this);
 
-    llvm::Value *BitSetName = llvm::MetadataAsValue::get(
-        getLLVMContext(),
-        CGM.CreateMetadataIdentifierForType(QualType(FnType, 0)));
+    llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(QualType(FnType, 0));
+    llvm::Value *BitSetName = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
     llvm::Value *CastedCallee = Builder.CreateBitCast(Callee, Int8PtrTy);
     llvm::Value *BitSetTest =
         Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::bitset_test),
                            {CastedCallee, BitSetName});
 
-    llvm::Constant *StaticData[] = {
-      EmitCheckSourceLocation(E->getLocStart()),
-      EmitCheckTypeDescriptor(QualType(FnType, 0)),
-    };
-    EmitCheck(std::make_pair(BitSetTest, SanitizerKind::CFIICall),
-              "cfi_bad_icall", StaticData, CastedCallee);
+    auto TypeId = CGM.CreateCfiIdForTypeMetadata(MD);
+    if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && TypeId) {
+      EmitCfiSlowPathCheck(BitSetTest, TypeId, CastedCallee);
+    } else {
+      llvm::Constant *StaticData[] = {
+          EmitCheckSourceLocation(E->getLocStart()),
+          EmitCheckTypeDescriptor(QualType(FnType, 0)),
+      };
+      EmitCheck(std::make_pair(BitSetTest, SanitizerKind::CFIICall),
+                "cfi_bad_icall", StaticData, CastedCallee);
+    }
   }
 
   CallArgList Args;

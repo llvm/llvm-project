@@ -1684,7 +1684,7 @@ struct IncludeDirective {
   StringRef Filename;
   StringRef Text;
   unsigned Offset;
-  unsigned Category;
+  int Category;
 };
 
 } // end anonymous namespace
@@ -1807,11 +1807,11 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
     if (!FormattingOff && !Line.endswith("\\")) {
       if (IncludeRegex.match(Line, &Matches)) {
         StringRef IncludeName = Matches[2];
-        unsigned Category;
+        int Category;
         if (LookForMainHeader && !IncludeName.startswith("<")) {
           Category = 0;
         } else {
-          Category = UINT_MAX;
+          Category = INT_MAX;
           for (unsigned i = 0, e = CategoryRegexs.size(); i != e; ++i) {
             if (CategoryRegexs[i].match(IncludeName)) {
               Category = Style.IncludeCategories[i].Priority;

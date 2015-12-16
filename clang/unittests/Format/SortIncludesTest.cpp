@@ -185,6 +185,14 @@ TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
                  "some_header.h"));
 }
 
+TEST_F(SortIncludesTest, NegativePriorities) {
+  Style.IncludeCategories = {{".*important_os_header.*", -1}, {".*", 1}};
+  EXPECT_EQ("#include \"important_os_header.h\"\n"
+            "#include \"a.h\"\n",
+            sort("#include \"a.h\"\n"
+                 "#include \"important_os_header.h\"\n"));
+}
+
 TEST_F(SortIncludesTest, CalculatesCorrectCursorPosition) {
   std::string Code = "#include <ccc>\n"    // Start of line: 0
                      "#include <bbbbbb>\n" // Start of line: 15

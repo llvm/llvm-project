@@ -1042,6 +1042,12 @@ are listed below.
 
    Deprecated alias for ``-fsanitize-trap=undefined``.
 
+.. option:: -fsanitize-cfi-cross-dso
+
+   Enable cross-DSO control flow integrity checks. This flag modifies
+   the behavior of sanitizers in the ``cfi`` group to allow checking
+   of cross-DSO virtual and indirect calls.
+
 .. option:: -fno-assume-sane-operator-new
 
    Don't assume that the C++'s new operator is sane.

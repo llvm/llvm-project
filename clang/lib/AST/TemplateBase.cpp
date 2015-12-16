@@ -53,7 +53,7 @@ static void printIntegral(const TemplateArgument &TemplArg,
     }
   }
 
-  if (T->isBooleanType()) {
+  if (T->isBooleanType() && !Policy.MSVCFormatting) {
     Out << (Val.getBoolValue() ? "true" : "false");
   } else if (T->isCharType()) {
     const char Ch = Val.getZExtValue();

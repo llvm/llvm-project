@@ -934,6 +934,7 @@ void CodeGenModule::EmitVTableBitSetEntries(llvm::GlobalVariable *VTable,
   llvm::NamedMDNode *BitsetsMD =
       getModule().getOrInsertNamedMetadata("llvm.bitsets");
   for (auto BitsetEntry : BitsetEntries)
-    BitsetsMD->addOperand(CreateVTableBitSetEntry(
-        VTable, PointerWidth * BitsetEntry.second, BitsetEntry.first));
+    CreateVTableBitSetEntry(BitsetsMD, VTable,
+                            PointerWidth * BitsetEntry.second,
+                            BitsetEntry.first);
 }

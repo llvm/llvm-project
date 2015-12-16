@@ -291,6 +291,46 @@
 // CHECK-LSAN-ASAN-LINUX: libclang_rt.asan-x86_64
 // CHECK-LSAN-ASAN-LINUX-NOT: libclang_rt.lsan
 
+// CFI by itself does not link runtime libraries.
+// RUN: %clang -fsanitize=cfi %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-LINUX %s
+// CHECK-CFI-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-LINUX-NOT: libclang_rt.
+
+// CFI with diagnostics links the UBSan runtime.
+// RUN: %clang -fsanitize=cfi -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
+// RUN:     %s -### -o %t.o 2>&1\
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-DIAG-LINUX %s
+// CHECK-CFI-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-CROSS-DSO-LINUX-NOT: libclang_rt.
+// CHECK-CFI-DIAG-LINUX: libclang_rt.ubsan
+// CHECK-CFI-CROSS-DSO-LINUX-NOT: libclang_rt.
+
+// Cross-DSO CFI links the CFI runtime.
+// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-CROSS-DSO-LINUX %s
+// CHECK-CFI-CROSS-DSO-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-CROSS-DSO-LINUX-NOT: libclang_rt.
+// CHECK-CFI-CROSS-DSO-LINUX: libclang_rt.cfi-
+// CHECK-CFI-CROSS-DSO-LINUX-NOT: libclang_rt.
+
+// Cross-DSO CFI with diagnostics links just the CFI runtime.
+// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso %s -### -o %t.o 2>&1 \
+// RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-CROSS-DSO-DIAG-LINUX %s
+// CHECK-CFI-CROSS-DSO-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-CROSS-DSO-DIAG-LINUX-NOT: libclang_rt.
+// CHECK-CFI-CROSS-DSO-DIAG-LINUX: libclang_rt.cfi_diag-
+// CHECK-CFI-CROSS-DSO-DIAG-LINUX-NOT: libclang_rt.
+
 // RUN: %clangxx -fsanitize=address %s -### -o %t.o 2>&1 \
 // RUN:     -mmacosx-version-min=10.6 \
 // RUN:     -target x86_64-apple-darwin13.4.0 \

@@ -605,7 +605,7 @@ ObjCTypeParamList *Parser::parseObjCTypeParamListOrProtocolRefs(
   // whether there are any protocol references.
   lAngleLoc = SourceLocation();
   rAngleLoc = SourceLocation();
-  return list;
+  return invalid ? nullptr : list;
 }
 
 /// Parse an objc-type-parameter-list.

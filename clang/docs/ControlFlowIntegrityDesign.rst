@@ -366,3 +366,134 @@ Because the addresses of ``f``, ``g``, ``h`` are evenly spaced at a power of
 we can normally apply the `Alignment`_ and `Eliminating Bit Vector Checks
 for All-Ones Bit Vectors`_ optimizations thus simplifying the check at each
 call site to a range and alignment check.
+
+Shared library support
+======================
+
+**EXPERIMENTAL**
+
+The basic CFI mode described above assumes that the application is a
+monolithic binary; at least that all possible virtual/indirect call
+targets and the entire class hierarchy are known at link time. The
+cross-DSO mode, enabled with **-f[no-]sanitize-cfi-cross-dso** relaxes
+this requirement by allowing virtual and indirect calls to cross the
+DSO boundary.
+
+Assuming the following setup: the binary consists of several
+instrumented and several uninstrumented DSOs. Some of them may be
+dlopen-ed/dlclose-d periodically, even frequently.
+
+  - Calls made from uninstrumented DSOs are not checked and just work.
+  - Calls inside any instrumented DSO are fully protected.
+  - Calls between different instrumented DSOs are also protected, with
+     a performance penalty (in addition to the monolithic CFI
+     overhead).
+  - Calls from an instrumented DSO to an uninstrumented one are
+     unchecked and just work, with performance penalty.
+  - Calls from an instrumented DSO outside of any known DSO are
+     detected as CFI violations.
+
+In the monolithic scheme a call site is instrumented as
+
+.. code-block:: none
+
+   if (!InlinedFastCheck(f))
+     abort();
+   call *f
+
+In the cross-DSO scheme it becomes
+
+.. code-block:: none
+
+   if (!InlinedFastCheck(f))
+     __cfi_slowpath(CallSiteTypeId, f);
+   call *f
+
+CallSiteTypeId
+--------------
+
+``CallSiteTypeId`` is a stable process-wide identifier of the
+call-site type. For a virtual call site, the type in question is the class
+type; for an indirect function call it is the function signature. The
+mapping from a type to an identifier is an ABI detail. In the current,
+experimental, implementation the identifier of type T is calculated as
+follows:
+
+  -  Obtain the mangled name for "typeinfo name for T".
+  -  Calculate MD5 hash of the name as a string.
+  -  Reinterpret the first 8 bytes of the hash as a little-endian
+     64-bit integer.
+
+It is possible, but unlikely, that collisions in the
+``CallSiteTypeId`` hashing will result in weaker CFI checks that would
+still be conservatively correct.
+
+CFI_Check
+---------
+
+In the general case, only the target DSO knows whether the call to
+function ``f`` with type ``CallSiteTypeId`` is valid or not.  To
+export this information, every DSO implements
+
+.. code-block:: none
+
+   void __cfi_check(uint64 CallSiteTypeId, void *TargetAddr)
+
+This function provides external modules with access to CFI checks for
+the targets inside this DSO.  For each known ``CallSiteTypeId``, this
+functions performs an ``llvm.bitset.test`` with the corresponding bit
+set. It aborts if the type is unknown, or if the check fails.
+
+The basic implementation is a large switch statement over all values
+of CallSiteTypeId supported by this DSO, and each case is similar to
+the InlinedFastCheck() in the basic CFI mode.
+
+CFI Shadow
+----------
+
+To route CFI checks to the target DSO's __cfi_check function, a
+mapping from possible virtual / indirect call targets to
+the corresponding __cfi_check functions is maintained. This mapping is
+implemented as a sparse array of 2 bytes for every possible page (4096
+bytes) of memory. The table is kept readonly (FIXME: not yet) most of
+the time.
+
+There are 3 types of shadow values:
+
+  -  Address in a CFI-instrumented DSO.
+  -  Unchecked address (a “trusted” non-instrumented DSO). Encoded as
+     value 0xFFFF.
+  -  Invalid address (everything else). Encoded as value 0.
+
+For a CFI-instrumented DSO, a shadow value encodes the address of the
+__cfi_check function for all call targets in the corresponding memory
+page. If Addr is the target address, and V is the shadow value, then
+the address of __cfi_check is calculated as
+
+.. code-block:: none
+
+  __cfi_check = AlignUpTo(Addr, 4096) - (V + 1) * 4096
+
+This works as long as __cfi_check is aligned by 4096 bytes and located
+below any call targets in its DSO, but not more than 256MB apart from
+them.
+
+CFI_SlowPath
+------------
+
+The slow path check is implemented in compiler-rt library as
+
+.. code-block:: none
+
+  void __cfi_slowpath(uint64 CallSiteTypeId, void *TargetAddr)
+
+This functions loads a shadow value for ``TargetAddr``, finds the
+address of __cfi_check as described above and calls that.
+
+Position-independent executable requirement
+-------------------------------------------
+
+Cross-DSO CFI mode requires that the main executable is built as PIE.
+In non-PIE executables the address of an external function (taken from
+the main executable) is the address of that function’s PLT record in
+the main executable. This would break the CFI checks.

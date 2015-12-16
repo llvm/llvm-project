@@ -1696,7 +1696,8 @@ llvm::Value* CodeGenFunction::EmitAsmInput(
   if (Info.allowsRegister() || !Info.allowsMemory())
     if (CodeGenFunction::hasScalarEvaluationKind(InputExpr->getType()))
       return EmitScalarExpr(InputExpr);
-
+  if (InputExpr->getStmtClass() == Expr::CXXThisExprClass)
+    return EmitScalarExpr(InputExpr);
   InputExpr = InputExpr->IgnoreParenNoopCasts(getContext());
   LValue Dest = EmitLValue(InputExpr);
   return EmitAsmInputLValue(Info, Dest, InputExpr->getType(), ConstraintStr,

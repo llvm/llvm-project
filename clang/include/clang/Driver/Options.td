@@ -628,6 +628,12 @@ def fno_sanitize_undefined_trap_on_error : Flag<["-"], "fno-sanitize-undefined-t
                                            Group<f_clang_Group>;
 def fsanitize_link_cxx_runtime : Flag<["-"], "fsanitize-link-c++-runtime">,
                                  Group<f_clang_Group>;
+def fsanitize_cfi_cross_dso : Flag<["-"], "fsanitize-cfi-cross-dso">,
+                              Group<f_clang_Group>, Flags<[CC1Option]>,
+                              HelpText<"Enable control flow integrity (CFI) checks for cross-DSO calls.">;
+def fno_sanitize_cfi_cross_dso : Flag<["-"], "fno-sanitize-cfi-cross-dso">,
+                                 Group<f_clang_Group>, Flags<[CC1Option]>,
+                                 HelpText<"Disable control flow integrity (CFI) checks for cross-DSO calls.">;
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
   Group<f_Group>;
 def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">,

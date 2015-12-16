@@ -1434,8 +1434,10 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
       if (P.SuppressUnwrittenScope &&
           (ND->isAnonymousNamespace() || ND->isInline()))
         continue;
-      if (ND->isAnonymousNamespace())
-        OS << "(anonymous namespace)";
+      if (ND->isAnonymousNamespace()) {
+        OS << (P.MSVCFormatting ? "`anonymous namespace\'"
+                                : "(anonymous namespace)");
+      }
       else
         OS << *ND;
     } else if (const auto *RD = dyn_cast<RecordDecl>(*I)) {
