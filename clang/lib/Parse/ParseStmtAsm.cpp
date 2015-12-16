@@ -215,17 +215,22 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
   // Require an identifier here.
   SourceLocation TemplateKWLoc;
   UnqualifiedId Id;
-  bool Invalid =
-      ParseUnqualifiedId(SS,
-                         /*EnteringContext=*/false,
-                         /*AllowDestructorName=*/false,
-                         /*AllowConstructorName=*/false,
-                         /*ObjectType=*/ParsedType(), TemplateKWLoc, Id);
-
-  // Perform the lookup.
-  ExprResult Result = Actions.LookupInlineAsmIdentifier(
-      SS, TemplateKWLoc, Id, Info, IsUnevaluatedContext);
-
+  bool Invalid = true;
+  ExprResult Result;
+  if (Tok.is(tok::kw_this)) {
+    Result = ParseCXXThis();
+    Invalid = false;
+  } else {
+    Invalid =
+        ParseUnqualifiedId(SS,
+                           /*EnteringContext=*/false,
+                           /*AllowDestructorName=*/false,
+                           /*AllowConstructorName=*/false,
+                           /*ObjectType=*/ParsedType(), TemplateKWLoc, Id);
+    // Perform the lookup.
+    Result = Actions.LookupInlineAsmIdentifier(SS, TemplateKWLoc, Id, Info,
+                                               IsUnevaluatedContext);
+  }
   // While the next two tokens are 'period' 'identifier', repeatedly parse it as
   // a field access. We have to avoid consuming assembler directives that look
   // like '.' 'else'.

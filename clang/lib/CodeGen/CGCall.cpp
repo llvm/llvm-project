@@ -3058,19 +3058,41 @@ CodeGenFunction::EmitRuntimeCall(llvm::Value *callee,
   return call;
 }
 
+// Calls which may throw must have operand bundles indicating which funclet
+// they are nested within.
+static void
+getBundlesForFunclet(llvm::Value *Callee,
+                     llvm::Instruction *CurrentFuncletPad,
+                     SmallVectorImpl<llvm::OperandBundleDef> &BundleList) {
+  // There is no need for a funclet operand bundle if we aren't inside a funclet.
+  if (!CurrentFuncletPad)
+    return;
+
+  // Skip intrinsics which cannot throw.
+  auto *CalleeFn = dyn_cast<llvm::Function>(Callee->stripPointerCasts());
+  if (CalleeFn && CalleeFn->isIntrinsic() && CalleeFn->doesNotThrow())
+    return;
+
+  BundleList.emplace_back("funclet", CurrentFuncletPad);
+}
+
 /// Emits a call or invoke to the given noreturn runtime function.
 void CodeGenFunction::EmitNoreturnRuntimeCallOrInvoke(llvm::Value *callee,
                                                ArrayRef<llvm::Value*> args) {
+  SmallVector<llvm::OperandBundleDef, 1> BundleList;
+  getBundlesForFunclet(callee, CurrentFuncletPad, BundleList);
+
   if (getInvokeDest()) {
     llvm::InvokeInst *invoke = 
       Builder.CreateInvoke(callee,
                            getUnreachableBlock(),
                            getInvokeDest(),
-                           args);
+                           args,
+                           BundleList);
     invoke->setDoesNotReturn();
     invoke->setCallingConv(getRuntimeCC());
   } else {
-    llvm::CallInst *call = Builder.CreateCall(callee, args);
+    llvm::CallInst *call = Builder.CreateCall(callee, args, BundleList);
     call->setDoesNotReturn();
     call->setCallingConv(getRuntimeCC());
     Builder.CreateUnreachable();
@@ -3489,12 +3511,16 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   }
   llvm::BasicBlock *InvokeDest = CannotThrow ? nullptr : getInvokeDest();
 
+  SmallVector<llvm::OperandBundleDef, 1> BundleList;
+  getBundlesForFunclet(Callee, CurrentFuncletPad, BundleList);
+
   llvm::CallSite CS;
   if (!InvokeDest) {
-    CS = Builder.CreateCall(Callee, IRCallArgs);
+    CS = Builder.CreateCall(Callee, IRCallArgs, BundleList);
   } else {
     llvm::BasicBlock *Cont = createBasicBlock("invoke.cont");
-    CS = Builder.CreateInvoke(Callee, Cont, InvokeDest, IRCallArgs);
+    CS = Builder.CreateInvoke(Callee, Cont, InvokeDest, IRCallArgs,
+                              BundleList);
     EmitBlock(Cont);
   }
   if (callOrInvoke)

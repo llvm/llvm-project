@@ -1523,15 +1523,14 @@ void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
 
   if (Info->PathToBaseWithVPtr.empty()) {
     if (!CGM.IsCFIBlacklistedRecord(RD))
-      BitsetsMD->addOperand(
-          CGM.CreateVTableBitSetEntry(VTable, AddressPoint, RD));
+      CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, RD);
     return;
   }
 
   // Add a bitset entry for the least derived base belonging to this vftable.
   if (!CGM.IsCFIBlacklistedRecord(Info->PathToBaseWithVPtr.back()))
-    BitsetsMD->addOperand(CGM.CreateVTableBitSetEntry(
-        VTable, AddressPoint, Info->PathToBaseWithVPtr.back()));
+    CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint,
+                                Info->PathToBaseWithVPtr.back());
 
   // Add a bitset entry for each derived class that is laid out at the same
   // offset as the least derived base.
@@ -1550,14 +1549,12 @@ void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
     if (!Offset.isZero())
       return;
     if (!CGM.IsCFIBlacklistedRecord(DerivedRD))
-      BitsetsMD->addOperand(
-          CGM.CreateVTableBitSetEntry(VTable, AddressPoint, DerivedRD));
+      CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, DerivedRD);
   }
 
   // Finally do the same for the most derived class.
   if (Info->FullOffsetInMDC.isZero() && !CGM.IsCFIBlacklistedRecord(RD))
-    BitsetsMD->addOperand(
-        CGM.CreateVTableBitSetEntry(VTable, AddressPoint, RD));
+    CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, RD);
 }
 
 void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,

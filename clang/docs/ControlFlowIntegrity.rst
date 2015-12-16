@@ -24,10 +24,14 @@ You can also enable a subset of available :ref:`schemes <cfi-schemes>`.
 As currently implemented, all schemes rely on link-time optimization (LTO);
 so it is required to specify ``-flto``, and the linker used must support LTO,
 for example via the `gold plugin`_.
-To allow the checks to be implemented efficiently, the program must
-be structured such that certain object files are compiled with CFI enabled,
-and are statically linked into the program. This may preclude the use of
-shared libraries in some cases.
+
+To allow the checks to be implemented efficiently, the program must be
+structured such that certain object files are compiled with CFI
+enabled, and are statically linked into the program. This may preclude
+the use of shared libraries in some cases. Experimental support for
+:ref:`cross-DSO control flow integrity <cfi-cross-dso>` exists that
+does not have these requirements. This cross-DSO support has unstable
+ABI at this time.
 
 .. _gold plugin: http://llvm.org/docs/GoldPlugin.html
 
@@ -244,6 +248,16 @@ are typically defined outside of the linked program.
     type:std::*
     # Ignore all types with a uuid attribute.
     type:attr:uuid
+
+.. _cfi-cross-dso:
+
+Shared library support
+======================
+
+Use **-f[no-]sanitize-cfi-cross-dso** to enable the cross-DSO control
+flow integrity mode, which allows all CFI schemes listed above to
+apply across DSO boundaries. As in the regular CFI, each DSO must be
+built with ``-flto``.
 
 Design
 ======

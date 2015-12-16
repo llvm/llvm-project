@@ -1106,15 +1106,21 @@ public:
   void EmitVTableBitSetEntries(llvm::GlobalVariable *VTable,
                                const VTableLayout &VTLayout);
 
+  /// Generate a cross-DSO type identifier for type.
+  llvm::ConstantInt *CreateCfiIdForTypeMetadata(llvm::Metadata *MD);
+
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
   /// internal identifiers).
   llvm::Metadata *CreateMetadataIdentifierForType(QualType T);
 
-  /// Create a bitset entry for the given vtable.
-  llvm::MDTuple *CreateVTableBitSetEntry(llvm::GlobalVariable *VTable,
-                                         CharUnits Offset,
-                                         const CXXRecordDecl *RD);
+  /// Create a bitset entry for the given function and add it to BitsetsMD.
+  void CreateFunctionBitSetEntry(const FunctionDecl *FD, llvm::Function *F);
+
+  /// Create a bitset entry for the given vtable and add it to BitsetsMD.
+  void CreateVTableBitSetEntry(llvm::NamedMDNode *BitsetsMD,
+                               llvm::GlobalVariable *VTable, CharUnits Offset,
+                               const CXXRecordDecl *RD);
 
   /// \breif Get the declaration of std::terminate for the platform.
   llvm::Constant *getTerminateFn();

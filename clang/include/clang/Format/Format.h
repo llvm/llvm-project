@@ -343,7 +343,7 @@ struct FormatStyle {
     /// \brief The regular expression that this category matches.
     std::string Regex;
     /// \brief The priority to assign to this category.
-    unsigned Priority;
+    int Priority;
     bool operator==(const IncludeCategory &Other) const {
       return Regex == Other.Regex && Priority == Other.Priority;
     }
@@ -358,10 +358,12 @@ struct FormatStyle {
   /// according to increasing category number and then alphabetically within
   /// each category.
   ///
-  /// If none of the regular expressions match, UINT_MAX is assigned as
-  /// category. The main header for a source file automatically gets category 0,
-  /// so that it is kept at the beginning of the #includes
-  /// (http://llvm.org/docs/CodingStandards.html#include-style).
+  /// If none of the regular expressions match, INT_MAX is assigned as
+  /// category. The main header for a source file automatically gets category 0.
+  /// so that it is generally kept at the beginning of the #includes
+  /// (http://llvm.org/docs/CodingStandards.html#include-style). However, you
+  /// can also assign negative priorities if you have certain headers that
+  /// always need to be first.
   ///
   /// To configure this in the .clang-format file, use:
   /// \code

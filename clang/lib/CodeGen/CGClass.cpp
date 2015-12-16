@@ -2552,14 +2552,21 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
 
   SanitizerScope SanScope(this);
 
-  llvm::Value *BitSetName = llvm::MetadataAsValue::get(
-      getLLVMContext(),
-      CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0)));
+  llvm::Metadata *MD =
+      CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
+  llvm::Value *BitSetName = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
   llvm::Value *CastedVTable = Builder.CreateBitCast(VTable, Int8PtrTy);
   llvm::Value *BitSetTest =
       Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::bitset_test),
                          {CastedVTable, BitSetName});
+
+  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso) {
+    if (auto TypeId = CGM.CreateCfiIdForTypeMetadata(MD)) {
+      EmitCfiSlowPathCheck(BitSetTest, TypeId, CastedVTable);
+      return;
+    }
+  }
 
   SanitizerMask M;
   switch (TCK) {
@@ -2578,9 +2585,9 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   }
 
   llvm::Constant *StaticData[] = {
-    EmitCheckSourceLocation(Loc),
-    EmitCheckTypeDescriptor(QualType(RD->getTypeForDecl(), 0)),
-    llvm::ConstantInt::get(Int8Ty, TCK),
+      EmitCheckSourceLocation(Loc),
+      EmitCheckTypeDescriptor(QualType(RD->getTypeForDecl(), 0)),
+      llvm::ConstantInt::get(Int8Ty, TCK),
   };
   EmitCheck(std::make_pair(BitSetTest, M), "cfi_bad_type", StaticData,
             CastedVTable);

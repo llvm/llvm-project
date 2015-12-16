@@ -570,6 +570,7 @@ if( CLANG_INCLUDE_TESTS )
       ARGS ${LLVM_LIT_EXTRA_ARGS}
       )
   endif()
+  add_subdirectory(utils/perf-training)
 endif()
 
 option(CLANG_INCLUDE_DOCS "Generate build targets for the Clang docs."
