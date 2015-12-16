@@ -1287,7 +1287,7 @@ bool MipsTargetInfo<ELFT>::relocNeedsPlt(uint32_t Type,
   return false;
 }
 
-static uint16_t mipsHigh(uint64_t V) { return ((V + 0x8000) >> 16) & 0xffff; }
+static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,

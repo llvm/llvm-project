@@ -11,6 +11,7 @@
 #define liblldb_CompUnit_h_
 
 #include "lldb/lldb-enumerations.h"
+#include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/ModuleChild.h"
@@ -250,6 +251,9 @@ public:
     LineTable*
     GetLineTable ();
 
+    DebugMacros*
+    GetDebugMacros ();
+
     //------------------------------------------------------------------
     /// Get the compile unit's support file list.
     ///
@@ -344,6 +348,9 @@ public:
     void
     SetLineTable(LineTable* line_table);
 
+    void
+    SetDebugMacros(const DebugMacrosSP &debug_macros);
+
     //------------------------------------------------------------------
     /// Set accessor for the variable list.
     ///
@@ -437,6 +444,7 @@ protected:
                                                  ///< compile unit.
     FileSpecList m_support_files; ///< Files associated with this compile unit's line table and declarations.
     std::unique_ptr<LineTable> m_line_table_ap; ///< Line table that will get parsed on demand.
+    DebugMacrosSP m_debug_macros_sp; ///< Debug macros that will get parsed on demand.
     lldb::VariableListSP m_variables; ///< Global and static variable list that will get parsed on demand.
     bool       m_is_optimized; /// eLazyBoolYes if this compile unit was compiled with optimization.
 
@@ -448,7 +456,8 @@ private:
         flagsParsedSupportFiles     = (1u << 2), ///< Have we already parsed the support files for this compile unit?
         flagsParsedLineTable        = (1u << 3), ///< Have we parsed the line table already?
         flagsParsedLanguage         = (1u << 4), ///< Have we parsed the language already?
-        flagsParsedImportedModules  = (1u << 5)  ///< Have we parsed the imported modules already?
+        flagsParsedImportedModules  = (1u << 5), ///< Have we parsed the imported modules already?
+        flagsParsedDebugMacros      = (1u << 6)  ///< Have we parsed the debug macros already?
     };
 
     DISALLOW_COPY_AND_ASSIGN (CompileUnit);

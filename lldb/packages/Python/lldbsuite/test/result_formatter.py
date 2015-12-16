@@ -30,6 +30,8 @@ from six.moves import cPickle
 # LLDB modules
 from . import configuration
 
+import lldbsuite
+
 
 # Ignore method count on DTOs.
 # pylint: disable=too-few-public-methods
@@ -624,6 +626,11 @@ class ResultsFormatter(object):
             description='{} options'.format(cls.__name__),
             usage=('dotest.py --results-formatter-options='
                    '"--option1 value1 [--option2 value2 [...]]"'))
+        parser.add_argument(
+            "--dump-results",
+            action="store_true",
+            help=('dump the raw results data after printing '
+                  'the summary output.'))
         return parser
 
     def __init__(self, out_file, options):
@@ -655,11 +662,17 @@ class ResultsFormatter(object):
         # worker index.
         self.started_tests_by_worker = {}
 
+        # Store the most recent test_method/job status.
+        self.result_events = {}
+
+        # Track the number of test method reruns.
+        self.test_method_rerun_count = 0
+
         # Lock that we use while mutating inner state, like the
         # total test count and the elements.  We minimize how
         # long we hold the lock just to keep inner state safe, not
         # entirely consistent from the outside.
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         # Keeps track of the test base filenames for tests that
         # are expected to timeout.  If a timeout occurs in any test
@@ -679,27 +692,37 @@ class ResultsFormatter(object):
         self.tests_for_rerun = {}
 
     @classmethod
-    def _make_rerun_eligibility_key(cls, test_result_event):
-        if test_result_event is None:
+    def _make_key(cls, result_event):
+        """Creates a key from a test or job result event.
+
+        This key attempts to be as unique as possible.  For
+        test result events, it will be unique per test method.
+        For job events (ones not promoted to a test result event),
+        it will be unique per test case file.
+
+        @return a string-based key of the form
+        {test_filename}:{test_class}.{test_name}
+        """
+        if result_event is None:
             return None
         component_count = 0
-        if "test_filename" in test_result_event:
-            key = test_result_event["test_filename"]
+        if "test_filename" in result_event:
+            key = result_event["test_filename"]
             component_count += 1
-        if "test_class" in test_result_event:
+        if "test_class" in result_event:
             if component_count > 0:
                 key += ":"
-            key += test_result_event["test_class"]
+            key += result_event["test_class"]
             component_count += 1
-        if "test_name" in test_result_event:
+        if "test_name" in result_event:
             if component_count > 0:
                 key += "."
-            key += test_result_event["test_name"]
+            key += result_event["test_name"]
             component_count += 1
         return key
 
     def _mark_test_for_rerun_eligibility(self, test_result_event):
-        key = self._make_rerun_eligibility_key(test_result_event)
+        key = self._make_key(test_result_event)
         if key is not None:
             self.rerun_eligible_tests.add(key)
         else:
@@ -708,13 +731,19 @@ class ResultsFormatter(object):
                 "failed to create key.\n")
 
     def _maybe_add_test_to_rerun_list(self, result_event):
-        key = self._make_rerun_eligibility_key(result_event)
+        key = self._make_key(result_event)
         if key is not None:
-            if key in self.rerun_eligible_tests or configuration.rerun_all_issues:
+            test_is_directly_eligible = (
+                key in self.rerun_eligible_tests and
+                # llvm.org/pr25844 workaround: temporarily prevent
+                # rerun eligibility when building for Android.
+                "aarch64" not in configuration.archs and
+                "arm" not in configuration.archs)
+            if (test_is_directly_eligible or configuration.rerun_all_issues):
                 test_filename = result_event.get("test_filename", None)
                 if test_filename is not None:
                     test_name = result_event.get("test_name", None)
-                    if not test_filename in self.tests_for_rerun:
+                    if test_filename not in self.tests_for_rerun:
                         self.tests_for_rerun[test_filename] = []
                     if test_name is not None:
                         self.tests_for_rerun[test_filename].append(test_name)
@@ -817,12 +846,45 @@ class ResultsFormatter(object):
                     # whether it can be rerun.  If it can be rerun, add it
                     # to the rerun job.
                     self._maybe_add_test_to_rerun_list(test_event)
+
+                # Build the test key.
+                test_key = self._make_key(test_event)
+                if test_key is None:
+                    raise Exception(
+                        "failed to find test filename for "
+                        "test event {}".format(test_event))
+
+                # Save the most recent test event for the test key.
+                # This allows a second test phase to overwrite the most
+                # recent result for the test key (unique per method).
+                # We do final reporting at the end, so we'll report based
+                # on final results.
+                # We do this so that a re-run caused by, perhaps, the need
+                # to run a low-load, single-worker test run can have the final
+                # run's results to always be used.
+                if test_key in self.result_events:
+                    # We are replacing the result of something that was
+                    # already counted by the base class.  Remove the double
+                    # counting by reducing by one the count for the test
+                    # result status.
+                    old_status = self.result_events[test_key]["status"]
+                    self.result_status_counts[old_status] -= 1
+                    self.test_method_rerun_count += 1
+                self.result_events[test_key] = test_event
             elif event_type == EventBuilder.TYPE_TEST_START:
-                # Keep track of the most recent test start event
-                # for the related worker.
+                # Track the start time for the test method.
+                self.track_start_time(
+                    test_event["test_class"],
+                    test_event["test_name"],
+                    test_event["event_time"])
+                # Track of the most recent test method start event
+                # for the related worker.  This allows us to figure
+                # out whether a process timeout or exceptional exit
+                # can be charged (i.e. assigned) to a test method.
                 worker_index = test_event.get("worker_index", None)
                 if worker_index is not None:
                     self.started_tests_by_worker[worker_index] = test_event
+
             elif event_type == EventBuilder.TYPE_MARK_TEST_RERUN_ELIGIBLE:
                 self._mark_test_for_rerun_eligibility(test_event)
 
@@ -901,6 +963,249 @@ class ResultsFormatter(object):
         the given test result status.
         """
         return self.result_status_counts[status]
+
+    @classmethod
+    def _event_sort_key(cls, event):
+        """Returns the sort key to be used for a test event.
+
+        This method papers over the differences in a test method result vs. a
+        job (i.e. inferior process) result.
+
+        @param event a test result or job result event.
+        @return a key useful for sorting events by name (test name preferably,
+        then by test filename).
+        """
+        if "test_name" in event:
+            return event["test_name"]
+        else:
+            return event.get("test_filename", None)
+
+    def _partition_results_by_status(self, categories):
+        """Partitions the captured test results by event status.
+
+        This permits processing test results by the category ids.
+
+        @param categories the list of categories on which to partition.
+        Follows the format described in _report_category_details().
+
+        @return a dictionary where each key is the test result status,
+        and each entry is a list containing all the test result events
+        that matched that test result status.  Result status IDs with
+        no matching entries will have a zero-length list.
+        """
+        partitioned_events = {}
+        for category in categories:
+            result_status_id = category[0]
+            matching_events = [
+                [key, event] for (key, event) in self.result_events.items()
+                if event.get("status", "") == result_status_id]
+            partitioned_events[result_status_id] = sorted(
+                matching_events,
+                key=lambda x: self._event_sort_key(x[1]))
+        return partitioned_events
+
+    def _print_banner(self, out_file, banner_text):
+        """Prints an ASCII banner around given text.
+
+        Output goes to the out file for the results formatter.
+
+        @param out_file a file-like object where output will be written.
+        @param banner_text the text to display, with a banner
+        of '=' around the line above and line below.
+        """
+        banner_separator = "".ljust(len(banner_text), "=")
+
+        out_file.write("\n{}\n{}\n{}\n".format(
+            banner_separator,
+            banner_text,
+            banner_separator))
+
+    def _print_summary_counts(
+            self, out_file, categories, result_events_by_status, extra_rows):
+        """Prints summary counts for all categories.
+
+        @param out_file a file-like object used to print output.
+
+        @param categories the list of categories on which to partition.
+        Follows the format described in _report_category_details().
+
+        @param result_events_by_status the partitioned list of test
+        result events in a dictionary, with the key set to the test
+        result status id and the value set to the list of test method
+        results that match the status id.
+        """
+
+        # Get max length for category printed name
+        category_with_max_printed_name = max(
+            categories, key=lambda x: len(x[1]))
+        max_category_name_length = len(category_with_max_printed_name[1])
+
+        # If we are provided with extra rows, consider these row name lengths.
+        if extra_rows is not None:
+            for row in extra_rows:
+                name_length = len(row[0])
+                if name_length > max_category_name_length:
+                    max_category_name_length = name_length
+
+        self._print_banner(out_file, "Test Result Summary")
+
+        # Prepend extra rows
+        if extra_rows is not None:
+            for row in extra_rows:
+                extra_label = "{}:".format(row[0]).ljust(
+                    max_category_name_length + 1)
+                out_file.write("{} {:4}\n".format(extra_label, row[1]))
+
+        for category in categories:
+            result_status_id = category[0]
+            result_label = "{}:".format(category[1]).ljust(
+                max_category_name_length + 1)
+            count = len(result_events_by_status[result_status_id])
+            out_file.write("{} {:4}\n".format(
+                result_label,
+                count))
+
+    @classmethod
+    def _has_printable_details(cls, categories, result_events_by_status):
+        """Returns whether there are any test result details that need to be printed.
+
+        This will spin through the results and see if any result in a category
+        that is printable has any results to print.
+
+        @param categories the list of categories on which to partition.
+        Follows the format described in _report_category_details().
+
+        @param result_events_by_status the partitioned list of test
+        result events in a dictionary, with the key set to the test
+        result status id and the value set to the list of test method
+        results that match the status id.
+
+        @return True if there are any details (i.e. test results
+        for failures, errors, unexpected successes); False otherwise.
+        """
+        for category in categories:
+            result_status_id = category[0]
+            print_matching_tests = category[2]
+            if print_matching_tests:
+                if len(result_events_by_status[result_status_id]) > 0:
+                    # We found a printable details test result status
+                    # that has details to print.
+                    return True
+        # We didn't find any test result category with printable
+        # details.
+        return False
+
+    def _report_category_details(self, out_file, category, result_events_by_status):
+        """Reports all test results matching the given category spec.
+
+        @param out_file a file-like object used to print output.
+
+        @param category a category spec of the format [test_event_name,
+        printed_category_name, print_matching_entries?]
+
+        @param result_events_by_status the partitioned list of test
+        result events in a dictionary, with the key set to the test
+        result status id and the value set to the list of test method
+        results that match the status id.
+        """
+        result_status_id = category[0]
+        print_matching_tests = category[2]
+        detail_label = category[3]
+
+        if print_matching_tests:
+            # Sort by test name
+            for (_, event) in result_events_by_status[result_status_id]:
+                # Convert full test path into test-root-relative.
+                test_relative_path = os.path.relpath(
+                    os.path.realpath(event["test_filename"]),
+                    lldbsuite.lldb_test_root)
+
+                # Create extra info component (used for exceptional exit info)
+                if result_status_id == EventBuilder.STATUS_EXCEPTIONAL_EXIT:
+                    extra_info = "[EXCEPTIONAL EXIT {} ({})] ".format(
+                        event["exception_code"],
+                        event["exception_description"])
+                else:
+                    extra_info = ""
+
+                # Figure out the identity we will use for this test.
+                if configuration.verbose and ("test_class" in event):
+                    test_id = "{}.{}".format(
+                        event["test_class"], event["test_name"])
+                elif "test_name" in event:
+                    test_id = event["test_name"]
+                else:
+                    test_id = "<no_running_test_method>"
+
+                # Display the info.
+                out_file.write("{}: {}{} ({})\n".format(
+                    detail_label,
+                    extra_info,
+                    test_id,
+                    test_relative_path))
+
+    def print_results(self, out_file):
+        """Writes the test result report to the output file.
+
+        @param out_file a file-like object used for printing summary
+        results.  This is different than self.out_file, which might
+        be something else for non-summary data.
+        """
+        extra_results = [
+            # Total test methods processed, excluding reruns.
+            ["Test Methods", len(self.result_events)],
+            ["Reruns", self.test_method_rerun_count]]
+
+        # Output each of the test result entries.
+        categories = [
+            # result id, printed name, print matching tests?, detail label
+            [EventBuilder.STATUS_SUCCESS,
+             "Success", False, None],
+            [EventBuilder.STATUS_EXPECTED_FAILURE,
+             "Expected Failure", False, None],
+            [EventBuilder.STATUS_FAILURE,
+             "Failure", True, "FAIL"],
+            [EventBuilder.STATUS_ERROR,
+             "Error", True, "ERROR"],
+            [EventBuilder.STATUS_EXCEPTIONAL_EXIT,
+             "Exceptional Exit", True, "ERROR"],
+            [EventBuilder.STATUS_UNEXPECTED_SUCCESS,
+             "Unexpected Success", True, "UNEXPECTED SUCCESS"],
+            [EventBuilder.STATUS_SKIP, "Skip", False, None],
+            [EventBuilder.STATUS_TIMEOUT,
+             "Timeout", True, "TIMEOUT"],
+            [EventBuilder.STATUS_EXPECTED_TIMEOUT,
+             # Intentionally using the unusual hyphenation in TIME-OUT to
+             # prevent buildbots from thinking it is an issue when scanning
+             # for TIMEOUT.
+             "Expected Timeout", True, "EXPECTED TIME-OUT"]
+            ]
+
+        # Partition all the events by test result status
+        result_events_by_status = self._partition_results_by_status(
+            categories)
+
+        # Print the details
+        have_details = self._has_printable_details(
+            categories, result_events_by_status)
+        if have_details:
+            self._print_banner(out_file, "Issue Details")
+            for category in categories:
+                self._report_category_details(
+                    out_file, category, result_events_by_status)
+
+        # Print the summary
+        self._print_summary_counts(
+            out_file, categories, result_events_by_status, extra_results)
+
+        if self.options.dump_results:
+            # Debug dump of the key/result info for all categories.
+            self._print_banner("Results Dump")
+            for status, events_by_key in result_events_by_status.items():
+                out_file.write("\nSTATUS: {}\n".format(status))
+                for key, event in events_by_key:
+                    out_file.write("key:   {}\n".format(key))
+                    out_file.write("event: {}\n".format(event))
 
 
 class RawPickledFormatter(ResultsFormatter):

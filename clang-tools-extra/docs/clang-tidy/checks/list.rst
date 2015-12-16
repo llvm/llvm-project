@@ -48,6 +48,7 @@ List of clang-tidy Checks
    misc-non-copyable-objects
    misc-sizeof-container
    misc-static-assert
+   misc-string-integer-assignment
    misc-swapped-arguments
    misc-throw-by-value-catch-by-reference
    misc-undelegated-constructor

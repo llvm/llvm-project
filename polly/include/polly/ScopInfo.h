@@ -957,13 +957,6 @@ public:
   /// @brief Return true if this statement does not contain any accesses.
   bool isEmpty() const { return MemAccs.empty(); }
 
-  /// @brief Return the (scalar) memory accesses for @p Inst.
-  const MemoryAccessList &getAccessesFor(const Instruction *Inst) const {
-    MemoryAccessList *MAL = lookupAccessesFor(Inst);
-    assert(MAL && "Cannot get memory accesses because they do not exist!");
-    return *MAL;
-  }
-
   /// @brief Return the (scalar) memory accesses for @p Inst if any.
   MemoryAccessList *lookupAccessesFor(const Instruction *Inst) const {
     auto It = InstructionToAccess.find(Inst);
@@ -972,11 +965,31 @@ public:
     return It->getSecond()->empty() ? nullptr : It->getSecond();
   }
 
-  /// @brief Return the __first__ (scalar) memory access for @p Inst.
-  const MemoryAccess &getAccessFor(const Instruction *Inst) const {
-    MemoryAccess *MA = lookupAccessFor(Inst);
-    assert(MA && "Cannot get memory access because it does not exist!");
-    return *MA;
+  /// @brief Return the only array access for @p Inst.
+  ///
+  /// @param Inst The instruction for which to look up the access.
+  /// @returns The unique array memory access related to Inst.
+  MemoryAccess &getArrayAccessFor(const Instruction *Inst) const {
+    auto It = InstructionToAccess.find(Inst);
+    assert(It != InstructionToAccess.end() &&
+           "No memory accesses found for instruction");
+    auto *Accesses = It->getSecond();
+
+    assert(Accesses && "No memory accesses found for instruction");
+
+    MemoryAccess *ArrayAccess = nullptr;
+
+    for (auto Access : *Accesses) {
+      if (!Access->isArrayKind())
+        continue;
+
+      assert(!ArrayAccess && "More then one array access for instruction");
+
+      ArrayAccess = Access;
+    }
+
+    assert(ArrayAccess && "No array access found for instruction!");
+    return *ArrayAccess;
   }
 
   /// @brief Return the __first__ (scalar) memory access for @p Inst if any.

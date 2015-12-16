@@ -12,6 +12,8 @@
 #include "lldb/Core/StreamString.h"
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
+#include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -57,6 +59,121 @@ extern "C"
 }
 )";
 
+namespace {
+
+class AddMacroState
+{
+    enum State
+    {
+        CURRENT_FILE_NOT_YET_PUSHED,
+        CURRENT_FILE_PUSHED,
+        CURRENT_FILE_POPPED
+    };
+
+public:
+    AddMacroState(const FileSpec &current_file, const uint32_t current_file_line)
+        : m_state(CURRENT_FILE_NOT_YET_PUSHED),
+          m_current_file(current_file),
+          m_current_file_line(current_file_line)
+    { }
+
+    void
+    StartFile(const FileSpec &file)
+    {
+        m_file_stack.push_back(file);
+        if (file == m_current_file)
+            m_state = CURRENT_FILE_PUSHED;
+    }
+
+    void
+    EndFile()
+    {
+        if (m_file_stack.size() == 0)
+            return;
+
+        FileSpec old_top = m_file_stack.back();
+        m_file_stack.pop_back();
+        if (old_top == m_current_file)
+            m_state = CURRENT_FILE_POPPED;
+    }
+
+    // An entry is valid if it occurs before the current line in
+    // the current file.
+    bool
+    IsValidEntry(uint32_t line)
+    {
+        switch (m_state)
+        {
+            case CURRENT_FILE_NOT_YET_PUSHED:
+                return true;
+            case CURRENT_FILE_POPPED:
+                return false;
+            case CURRENT_FILE_PUSHED:
+                // If we are in file included in the current file,
+                // the entry should be added.
+                if (m_file_stack.back() != m_current_file)
+                    return true;
+
+                if (line >= m_current_file_line)
+                    return false;
+                else
+                    return true;
+        }
+    }
+
+private:
+    std::vector<FileSpec> m_file_stack;
+    State m_state;
+    FileSpec m_current_file;
+    uint32_t m_current_file_line;
+};
+
+} // anonymous namespace
+
+static void
+AddMacros(const DebugMacros *dm, CompileUnit *comp_unit, AddMacroState &state, StreamString &stream)
+{
+    if (dm == nullptr)
+        return;
+
+    for (size_t i = 0; i < dm->GetNumMacroEntries(); i++)
+    {
+        const DebugMacroEntry &entry = dm->GetMacroEntryAtIndex(i);
+        uint32_t line;
+
+        switch (entry.GetType())
+        {
+            case DebugMacroEntry::DEFINE:
+                if (state.IsValidEntry(entry.GetLineNumber()))
+                    stream.Printf("#define %s\n", entry.GetMacroString().AsCString());
+                else
+                    return;
+                break;
+            case DebugMacroEntry::UNDEF:
+                if (state.IsValidEntry(entry.GetLineNumber()))
+                    stream.Printf("#undef %s\n", entry.GetMacroString().AsCString());
+                else
+                    return;
+                break;
+            case DebugMacroEntry::START_FILE:
+                line = entry.GetLineNumber();
+                if (state.IsValidEntry(line))
+                    state.StartFile(entry.GetFileSpec(comp_unit));
+                else
+                    return;
+                break;
+            case DebugMacroEntry::END_FILE:
+                state.EndFile();
+                break;
+            case DebugMacroEntry::INDIRECT:
+                AddMacros(entry.GetIndirectDebugMacros(), comp_unit, state, stream);
+                break;
+            default:
+                // This is an unknown/invalid entry. Ignore.
+                break;
+        }
+    }
+}
 
 bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrapping_language, bool const_object, bool static_method, ExecutionContext &exe_ctx) const
 {
@@ -120,6 +237,23 @@ bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrappi
         }
 
     }
+
+    StreamString debug_macros_stream;
+    if (StackFrame *frame = exe_ctx.GetFramePtr())
+    {
+        const SymbolContext &sc = frame->GetSymbolContext(
+           lldb:: eSymbolContextCompUnit | lldb::eSymbolContextLineEntry);
+
+        if (sc.comp_unit && sc.line_entry.IsValid())
+        {
+            DebugMacros *dm = sc.comp_unit->GetDebugMacros();
+            if (dm)
+            {
+                AddMacroState state(sc.line_entry.file, sc.line_entry.line);
+                AddMacros(dm, sc.comp_unit, state, debug_macros_stream);
+            }
+        }
+    }
     
     if (m_wrap)
     {
@@ -135,8 +269,9 @@ bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrappi
         
         StreamString wrap_stream;
         
-        wrap_stream.Printf("%s\n%s\n%s\n%s\n",
+        wrap_stream.Printf("%s\n%s\n%s\n%s\n%s\n",
                            module_macros.c_str(),
+                           debug_macros_stream.GetData(),
                            g_expression_prefix,
                            target_specific_defines,
                            m_prefix.c_str());

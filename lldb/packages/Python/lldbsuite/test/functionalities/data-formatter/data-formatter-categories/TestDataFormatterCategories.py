@@ -320,7 +320,10 @@ class CategoriesDataFormatterTestCase(TestBase):
         # Now delete all categories
         self.runCmd("type category delete CircleCategory RectangleStarCategory BaseCategory RectangleCategory")
 
-        # last of all, check that a deleted category with filter does not blow us up
+        # check that a deleted category with filter does not blow us up
         self.expect('frame variable r2',
                     substrs = ['w = 9',
                                'h = 16'])
+
+        # and also validate that one can print formatters for a language
+        self.expect('type summary list -l c++', substrs=['vector', 'map', 'list', 'string'])

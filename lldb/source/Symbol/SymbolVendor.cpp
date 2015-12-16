@@ -186,6 +186,18 @@ SymbolVendor::ParseCompileUnitLineTable (const SymbolContext &sc)
 }
 
 bool
+SymbolVendor::ParseCompileUnitDebugMacros (const SymbolContext &sc)
+{
+    ModuleSP module_sp(GetModule());
+    if (module_sp)
+    {
+        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        if (m_sym_file_ap.get())
+            return m_sym_file_ap->ParseCompileUnitDebugMacros(sc);
+    }
+    return false;
+}
+bool
 SymbolVendor::ParseCompileUnitSupportFiles (const SymbolContext& sc, FileSpecList& support_files)
 {
     ModuleSP module_sp(GetModule());

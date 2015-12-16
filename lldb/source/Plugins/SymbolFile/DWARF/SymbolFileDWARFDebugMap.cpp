@@ -707,6 +707,15 @@ SymbolFileDWARFDebugMap::ParseCompileUnitLineTable (const SymbolContext& sc)
 }
 
 bool
+SymbolFileDWARFDebugMap::ParseCompileUnitDebugMacros (const SymbolContext& sc)
+{
+    SymbolFileDWARF *oso_dwarf = GetSymbolFile (sc);
+    if (oso_dwarf)
+        return oso_dwarf->ParseCompileUnitDebugMacros (sc);
+    return false;
+}
+
+bool
 SymbolFileDWARFDebugMap::ParseCompileUnitSupportFiles (const SymbolContext& sc, FileSpecList &support_files)
 {
     SymbolFileDWARF *oso_dwarf = GetSymbolFile (sc);

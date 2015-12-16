@@ -188,6 +188,8 @@ class XunitFormatter(ResultsFormatter):
             EventBuilder.STATUS_SKIP: self._handle_skip,
             EventBuilder.STATUS_EXPECTED_FAILURE:
                 self._handle_expected_failure,
+            EventBuilder.STATUS_EXPECTED_TIMEOUT:
+                self._handle_expected_timeout,
             EventBuilder.STATUS_UNEXPECTED_SUCCESS:
                 self._handle_unexpected_success,
             EventBuilder.STATUS_EXCEPTIONAL_EXIT:
@@ -208,14 +210,11 @@ class XunitFormatter(ResultsFormatter):
             return
 
         if event_type == "terminate":
+            # Process all the final result events into their
+            # XML counterparts.
+            for result_event in self.result_events.values():
+                self._process_test_result(result_event)
             self._finish_output()
-        elif event_type == "test_start":
-            self.track_start_time(
-                test_event["test_class"],
-                test_event["test_name"],
-                test_event["event_time"])
-        elif event_type in self.RESULT_TYPES:
-            self._process_test_result(test_event)
         else:
             # This is an unknown event.
             if self.options.assert_on_unknown_events:
@@ -401,6 +400,13 @@ class XunitFormatter(ResultsFormatter):
         else:
             raise Exception(
                 "unknown xfail option: {}".format(self.options.xfail))
+
+    def _handle_expected_timeout(self, test_event):
+        """Handles expected_timeout.
+        @param test_event the test event to handle.
+        """
+        # We don't do anything with expected timeouts, not even report.
+        pass
 
     def _handle_unexpected_success(self, test_event):
         """Handles a test that passed but was expected to fail.

@@ -362,6 +362,7 @@ ObjectFile::GetAddressClass (addr_t file_addr)
                     case eSectionTypeDWARFDebugLine:
                     case eSectionTypeDWARFDebugLoc:
                     case eSectionTypeDWARFDebugMacInfo:
+                    case eSectionTypeDWARFDebugMacro:
                     case eSectionTypeDWARFDebugPubNames:
                     case eSectionTypeDWARFDebugPubTypes:
                     case eSectionTypeDWARFDebugRanges:

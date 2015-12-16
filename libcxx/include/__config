@@ -401,14 +401,8 @@ typedef __char32_t char32_t;
 #endif // __linux__
 #endif
 
-#if (__has_feature(cxx_noexcept))
-#  define _NOEXCEPT noexcept
-#  define _NOEXCEPT_(x) noexcept(x)
-#  define _NOEXCEPT_OR_FALSE(x) noexcept(x)
-#else
-#  define _NOEXCEPT throw()
-#  define _NOEXCEPT_(x)
-#  define _NOEXCEPT_OR_FALSE(x) false
+#if !(__has_feature(cxx_noexcept))
+#define _LIBCPP_HAS_NO_NOEXCEPT
 #endif
 
 #if __has_feature(underlying_type)
@@ -476,10 +470,6 @@ namespace std {
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #endif
 
-#define _NOEXCEPT throw()
-#define _NOEXCEPT_(x)
-#define _NOEXCEPT_OR_FALSE(x) false
-
 #ifndef __GXX_EXPERIMENTAL_CXX0X__
 
 #define _LIBCPP_HAS_NO_ADVANCED_SFINAE
@@ -491,12 +481,10 @@ namespace std {
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_NO_VARIADICS
 #define _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#define _LIBCPP_HAS_NO_ALWAYS_INLINE_VARIADICS
 #define _LIBCPP_HAS_NO_STRONG_ENUMS
+#define _LIBCPP_HAS_NO_NOEXCEPT
 
 #else  // __GXX_EXPERIMENTAL_CXX0X__
-
-#define _LIBCPP_HAS_NO_ALWAYS_INLINE_VARIADICS
 
 #if _GNUC_VER < 403
 #define _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -516,6 +504,7 @@ namespace std {
 #endif  // _GNUC_VER < 404
 
 #if _GNUC_VER < 406
+#define _LIBCPP_HAS_NO_NOEXCEPT
 #define _LIBCPP_HAS_NO_NULLPTR
 #endif
 
@@ -549,15 +538,14 @@ using namespace _LIBCPP_NAMESPACE __attribute__((__strong__));
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 #define _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#define _LIBCPP_HAS_NO_NOEXCEPT
 #define __alignof__ __alignof
 #define _LIBCPP_NORETURN __declspec(noreturn)
 #define _LIBCPP_UNUSED
 #define _ALIGNAS(x) __declspec(align(x))
 #define _LIBCPP_HAS_NO_VARIADICS
 
-#define _NOEXCEPT throw ()
-#define _NOEXCEPT_(x)
-#define _NOEXCEPT_OR_FALSE(x) false
+
 
 #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std {
 #define _LIBCPP_END_NAMESPACE_STD  }
@@ -577,14 +565,10 @@ namespace std {
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 #define _LIBCPP_UNUSED
 
-#define _NOEXCEPT throw()
-#define _NOEXCEPT_(x)
-#define _NOEXCEPT_OR_FALSE(x) false
-
 #define _LIBCPP_HAS_NO_TEMPLATE_ALIASES
 #define _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#define _LIBCPP_HAS_NO_ALWAYS_INLINE_VARIADICS
 #define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#define _LIBCPP_HAS_NO_NOEXCEPT
 #define _LIBCPP_HAS_NO_NULLPTR
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_IS_BASE_OF
@@ -607,6 +591,14 @@ namespace std {
 #define _LIBCPP_HAS_NO_ASAN
 
 #endif // __clang__ || __GNUC__ || _MSC_VER || __IBMCPP__
+
+#ifndef _LIBCPP_HAS_NO_NOEXCEPT
+#  define _NOEXCEPT noexcept
+#  define _NOEXCEPT_(x) noexcept(x)
+#else
+#  define _NOEXCEPT throw()
+#  define _NOEXCEPT_(x)
+#endif
 
 #ifdef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef unsigned short char16_t;

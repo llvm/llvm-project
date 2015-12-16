@@ -140,13 +140,12 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
             print(
                 "\nINFO: received socket error when reading data "
                 "from test inferior:\n{}".format(socket_error))
-            # Should be good to return here.
-            return
+            raise
         except Exception as general_exception:
             print(
                 "\nERROR: received non-socket error when reading data "
                 "from the test inferior:\n{}".format(general_exception))
-            return
+            raise
 
         # Consume the message content.
         while data and (len(data) > 0):

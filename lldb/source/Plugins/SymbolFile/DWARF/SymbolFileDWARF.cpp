@@ -39,6 +39,7 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
+#include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -58,6 +59,7 @@
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugLine.h"
+#include "DWARFDebugMacro.h"
 #include "DWARFDebugPubnames.h"
 #include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
@@ -436,6 +438,7 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFile* objfile) :
     m_data_debug_frame (),
     m_data_debug_info (),
     m_data_debug_line (),
+    m_data_debug_macro (),
     m_data_debug_loc (),
     m_data_debug_ranges (),
     m_data_debug_str (),
@@ -706,6 +709,12 @@ const DWARFDataExtractor&
 SymbolFileDWARF::get_debug_line_data()
 {
     return GetCachedSectionData (eSectionTypeDWARFDebugLine, m_data_debug_line);
+}
+
+const DWARFDataExtractor&
+SymbolFileDWARF::get_debug_macro_data()
+{
+    return GetCachedSectionData (eSectionTypeDWARFDebugMacro, m_data_debug_macro);
 }
 
 const DWARFDataExtractor&
@@ -1202,6 +1211,51 @@ SymbolFileDWARF::ParseCompileUnitLineTable (const SymbolContext &sc)
         }
     }
     return false;
+}
+
+lldb_private::DebugMacrosSP
+SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset)
+{
+    auto iter = m_debug_macros_map.find(*offset);
+    if (iter != m_debug_macros_map.end())
+        return iter->second;
+
+    const DWARFDataExtractor &debug_macro_data = get_debug_macro_data();
+    if (debug_macro_data.GetByteSize() == 0)
+        return DebugMacrosSP();
+
+    lldb_private::DebugMacrosSP debug_macros_sp(new lldb_private::DebugMacros());
+    m_debug_macros_map[*offset] = debug_macros_sp;
+
+    const DWARFDebugMacroHeader &header = DWARFDebugMacroHeader::ParseHeader(debug_macro_data, offset);
+    DWARFDebugMacroEntry::ReadMacroEntries(
+        debug_macro_data, get_debug_str_data(), header.OffsetIs64Bit(), offset, this, debug_macros_sp);
+
+    return debug_macros_sp;
+}
+
+bool
+SymbolFileDWARF::ParseCompileUnitDebugMacros(const SymbolContext& sc)
+{
+    assert (sc.comp_unit);
+
+    DWARFCompileUnit* dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+    if (dwarf_cu == nullptr)
+        return false;
+
+    const DWARFDIE dwarf_cu_die = dwarf_cu->GetCompileUnitDIEOnly();
+    if (!dwarf_cu_die)
+        return false;
+
+    lldb::offset_t sect_offset = dwarf_cu_die.GetAttributeValueAsUnsigned(DW_AT_macros, DW_INVALID_OFFSET);
+    if (sect_offset == DW_INVALID_OFFSET)
+        sect_offset = dwarf_cu_die.GetAttributeValueAsUnsigned(DW_AT_GNU_macros, DW_INVALID_OFFSET);
+    if (sect_offset == DW_INVALID_OFFSET)
+        return false;
+
+    sc.comp_unit->SetDebugMacros(ParseDebugMacros(&sect_offset));
+
+    return true;
 }
 
 size_t

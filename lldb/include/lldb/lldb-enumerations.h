@@ -603,6 +603,7 @@ namespace lldb {
         eSectionTypeDWARFDebugLine,
         eSectionTypeDWARFDebugLoc,
         eSectionTypeDWARFDebugMacInfo,
+        eSectionTypeDWARFDebugMacro,
         eSectionTypeDWARFDebugPubNames,
         eSectionTypeDWARFDebugPubTypes,
         eSectionTypeDWARFDebugRanges,

@@ -182,7 +182,9 @@ ifneq (,$(findstring clang,$(CC)))
    LIMIT_DEBUG_INFO_FLAGS += -flimit-debug-info
 endif
 
-CFLAGS ?= -g -O0 -fno-builtin
+DEBUG_INFO_FLAG ?= -g
+
+CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
 ifeq "$(OS)" "Darwin"
 	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 else
@@ -208,7 +210,7 @@ LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS)
 ifeq (,$(filter $(OS), Windows_NT Android))
-	ifneq (,$(filter YES,$(ENABLE_THREADS) $(ENABLE_STD_THREADS)))
+	ifneq (,$(filter YES,$(ENABLE_THREADS)))
 		LDFLAGS += -pthread
 	endif
 endif

@@ -191,6 +191,24 @@ read packet: OK
 This packet must be sent  _prior_ to sending a "A" packet.
 
 //----------------------------------------------------------------------
+// QListThreadsInStopReply
+//
+// BRIEF
+//  Enable the threads: and thread-pcs: data in the question-mark packet
+//  ("T packet") responses when the stub reports that a program has 
+//  stopped executing.
+//
+// PRIORITY TO IMPLEMENT
+//  Performance.  This is a performance benefit to lldb if the thread id's
+//  and thread pc values are provided to lldb in the T stop packet -- if
+//  they are not provided to lldb, lldb will likely need to send one to
+//  two packets per thread to fetch the data at every private stop.
+//----------------------------------------------------------------------
+
+send packet: QListThreadsInStopReply
+read packet: OK
+
+//----------------------------------------------------------------------
 // "qRegisterInfo<hex-reg-id>"
 //
 // BRIEF
@@ -201,6 +219,12 @@ This packet must be sent  _prior_ to sending a "A" packet.
 //  This means if new registers are ever added to a remote target, they
 //  will get picked up automatically, and allows registers to change
 //  depending on the actual CPU type that is used.
+//
+//  NB: As of summer 2015, lldb can get register information from the 
+//  "qXfer:features:read:target.xml" FSF gdb standard register packet
+//  where the stub provides register definitions in an XML file.
+//  If qXfer:features:read:target.xml is supported, qRegisterInfo does
+//  not need to be implemented.
 //----------------------------------------------------------------------
 
 With LLDB, for register information, remote GDB servers can add
@@ -1116,6 +1140,32 @@ for this region.
 //                          reason that the thread stopped. This is only needed
 //                          if none of the key/value pairs are enough to
 //                          describe why something stopped.
+//
+//  "threads"     comma-sep-base16  A list of thread ids for all threads (including
+//                                  the thread that we're reporting as stopped) that
+//                                  are live in the process right now.  lldb may
+//                                  request that this be included in the T packet via
+//                                  the QListThreadsInStopReply packet earlier in
+//                                  the debug session.
+//                                  
+//                                  Example:
+//                                  threads:63387,633b2,63424,63462,63486;
+//
+//  "thread-pcs"  comma-sep-base16  A list of pc values for all threads that currently
+//                                  exist in the process, including the thread that
+//                                  this T packet is reporting as stopped.
+//                                  This key-value pair will only be emitted when the
+//                                  "threads" key is already included in the T packet.
+//                                  The pc values correspond to the threads reported
+//                                  in the "threads" list.  The number of pcs in the
+//                                  "thread-pcs" list will be the same as the number of 
+//                                  threads in the "threads" list.
+//                                  lldb may request that this be included in the T 
+//                                  packet via the QListThreadsInStopReply packet 
+//                                  earlier in the debug session.
+//                                  
+//                                  Example:
+//                                  thread-pcs:dec14,2cf872b0,2cf8681c,2d02d68c,2cf716a8;
 //
 // BEST PRACTICES:
 //  Since register values can be supplied with this packet, it is often useful

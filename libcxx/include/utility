@@ -744,7 +744,9 @@ struct __make_integer_sequence
     static_assert(is_integral<_Tp>::value,
                   "std::make_integer_sequence can only be instantiated with an integral type" );
     static_assert(0 <= _Ep, "std::make_integer_sequence must have a non-negative sequence length");
-    typedef __make_integer_sequence_unchecked<_Tp, _Ep> type;
+    // Workaround GCC bug by preventing bad installations when 0 <= _Ep
+    // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68929
+    typedef __make_integer_sequence_unchecked<_Tp, 0 <= _Ep ? _Ep : 0> type;
 };
 
 #endif

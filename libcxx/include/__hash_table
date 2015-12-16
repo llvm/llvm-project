@@ -1143,6 +1143,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table()
     _NOEXCEPT_(
         is_nothrow_default_constructible<__bucket_list>::value &&
         is_nothrow_default_constructible<__first_node>::value &&
+        is_nothrow_default_constructible<__node_allocator>::value &&
         is_nothrow_default_constructible<hasher>::value &&
         is_nothrow_default_constructible<key_equal>::value)
     : __p2_(0),
@@ -1211,6 +1212,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u)
         _NOEXCEPT_(
             is_nothrow_move_constructible<__bucket_list>::value &&
             is_nothrow_move_constructible<__first_node>::value &&
+            is_nothrow_move_constructible<__node_allocator>::value &&
             is_nothrow_move_constructible<hasher>::value &&
             is_nothrow_move_constructible<key_equal>::value)
     : __bucket_list_(_VSTD::move(__u.__bucket_list_)),

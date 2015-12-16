@@ -10,6 +10,7 @@ add_lldb_library(lldbSymbol
   CompilerType.cpp
   CompileUnit.cpp
   CompactUnwindInfo.cpp
+  DebugMacros.cpp
   Declaration.cpp
   DWARFCallFrameInfo.cpp
   Function.cpp

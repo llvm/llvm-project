@@ -17,6 +17,7 @@ add_clang_library(clangTidyMiscModule
   NonCopyableObjects.cpp
   SizeofContainerCheck.cpp
   StaticAssertCheck.cpp
+  StringIntegerAssignmentCheck.cpp
   SwappedArgumentsCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
   UndelegatedConstructor.cpp

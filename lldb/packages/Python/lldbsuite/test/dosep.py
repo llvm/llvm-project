@@ -1632,23 +1632,18 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
 
     # Only run the old summary logic if we don't have a results formatter
     # that already prints the summary.
-    if results_formatter is None or not results_formatter.replaces_summary():
-        print_legacy_summary = True
-    else:
-        print_legacy_summary = False
-
+    print_legacy_summary = results_formatter is None
     if not print_legacy_summary:
+        # Print summary results.  Summarized results at the end always
+        # get printed to stdout, even if --results-file specifies a different
+        # file for, say, xUnit output.
+        results_formatter.print_results(sys.stdout)
+
         # Figure out exit code by count of test result types.
-        issue_count = (
-            results_formatter.counts_by_test_result_status(
-                EventBuilder.STATUS_ERROR) +
-            results_formatter.counts_by_test_result_status(
-                EventBuilder.STATUS_FAILURE) +
-            results_formatter.counts_by_test_result_status(
-                EventBuilder.STATUS_TIMEOUT) +
-            results_formatter.counts_by_test_result_status(
-                EventBuilder.STATUS_EXCEPTIONAL_EXIT)
-            )
+        issue_count = 0
+        for issue_status in EventBuilder.TESTRUN_ERROR_STATUS_VALUES:
+            issue_count += results_formatter.counts_by_test_result_status(
+                issue_status)
 
         # Return with appropriate result code
         if issue_count > 0:

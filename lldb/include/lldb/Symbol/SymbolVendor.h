@@ -62,6 +62,9 @@ public:
     ParseCompileUnitLineTable (const SymbolContext& sc);
 
     virtual bool
+    ParseCompileUnitDebugMacros (const SymbolContext& sc);
+
+    virtual bool
     ParseCompileUnitSupportFiles (const SymbolContext& sc,
                                   FileSpecList& support_files);
     

@@ -92,6 +92,8 @@
 		239504E31BDD454B00963CEA /* StringExtractorTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */; };
 		239504E41BDD454B00963CEA /* TaskPoolTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */; };
 		239504E51BDD454B00963CEA /* UriParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9461BDD346100BA9A93 /* UriParserTest.cpp */; };
+		23D4007D1C2101F2000C3885 /* DWARFDebugMacro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E77CD61C20F29F007192AD /* DWARFDebugMacro.cpp */; };
+		23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */; };
 		23DDF226196C3EE600BB8417 /* CommandOptionValidators.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23DDF224196C3EE600BB8417 /* CommandOptionValidators.cpp */; };
 		23EFE389193D1ABC00E54E54 /* SBTypeEnumMember.h in Headers */ = {isa = PBXBuildFile; fileRef = 23EFE388193D1ABC00E54E54 /* SBTypeEnumMember.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		23EFE38B193D1AEC00E54E54 /* SBTypeEnumMember.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23EFE38A193D1AEC00E54E54 /* SBTypeEnumMember.cpp */; };
@@ -1221,6 +1223,9 @@
 		23AB0531199FF639003B8084 /* ProcessMonitor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessMonitor.cpp; sourceTree = "<group>"; };
 		23AB0532199FF639003B8084 /* ProcessMonitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProcessMonitor.h; sourceTree = "<group>"; };
 		23DDF224196C3EE600BB8417 /* CommandOptionValidators.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandOptionValidators.cpp; path = source/Interpreter/CommandOptionValidators.cpp; sourceTree = "<group>"; };
+		23E77CD61C20F29F007192AD /* DWARFDebugMacro.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFDebugMacro.cpp; sourceTree = "<group>"; };
+		23E77CD71C20F29F007192AD /* DWARFDebugMacro.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFDebugMacro.h; sourceTree = "<group>"; };
+		23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DebugMacros.cpp; path = source/Symbol/DebugMacros.cpp; sourceTree = "<group>"; };
 		23EDE3301926839700F6A132 /* NativeRegisterContext.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = NativeRegisterContext.cpp; path = source/Host/common/NativeRegisterContext.cpp; sourceTree = "<group>"; };
 		23EDE3311926843600F6A132 /* NativeRegisterContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NativeRegisterContext.h; path = include/lldb/Host/common/NativeRegisterContext.h; sourceTree = "<group>"; };
 		23EDE3371926AAD500F6A132 /* RegisterInfoInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RegisterInfoInterface.h; path = Utility/RegisterInfoInterface.h; sourceTree = "<group>"; };
@@ -3365,6 +3370,8 @@
 				260C89C610F57C5600BB2B04 /* DWARFDebugMacinfo.h */,
 				260C89C710F57C5600BB2B04 /* DWARFDebugMacinfoEntry.cpp */,
 				260C89C810F57C5600BB2B04 /* DWARFDebugMacinfoEntry.h */,
+				23E77CD61C20F29F007192AD /* DWARFDebugMacro.cpp */,
+				23E77CD71C20F29F007192AD /* DWARFDebugMacro.h */,
 				260C89C910F57C5600BB2B04 /* DWARFDebugPubnames.cpp */,
 				260C89CA10F57C5600BB2B04 /* DWARFDebugPubnames.h */,
 				260C89CB10F57C5600BB2B04 /* DWARFDebugPubnamesSet.cpp */,
@@ -4428,6 +4435,7 @@
 				964463EB1A330C0500154ED8 /* CompactUnwindInfo.cpp */,
 				26BC7C5710F1B6E900F91463 /* CompileUnit.h */,
 				26BC7F1510F1B8EC00F91463 /* CompileUnit.cpp */,
+				23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */,
 				26BC7C5810F1B6E900F91463 /* Declaration.h */,
 				26BC7F1610F1B8EC00F91463 /* Declaration.cpp */,
 				49B01A2D15F67B1700666829 /* DeclVendor.h */,
@@ -6803,6 +6811,7 @@
 				8CF02AEF19DD16B100B14BE0 /* InstrumentationRuntimeStopInfo.cpp in Sources */,
 				268900FC13353E6F00698AC0 /* ThreadPlanBase.cpp in Sources */,
 				268900FD13353E6F00698AC0 /* ThreadPlanCallFunction.cpp in Sources */,
+				23D4007D1C2101F2000C3885 /* DWARFDebugMacro.cpp in Sources */,
 				94B6385D1B8FB178004FE1E4 /* CPlusPlusLanguage.cpp in Sources */,
 				268900FE13353E6F00698AC0 /* ThreadPlanCallUserExpression.cpp in Sources */,
 				268900FF13353E6F00698AC0 /* ThreadPlanShouldStopHere.cpp in Sources */,
@@ -6912,6 +6921,7 @@
 				26ED3D6D13C563810017D45E /* OptionGroupVariable.cpp in Sources */,
 				2642FBAE13D003B400ED6808 /* CommunicationKDP.cpp in Sources */,
 				2642FBB013D003B400ED6808 /* ProcessKDP.cpp in Sources */,
+				23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */,
 				2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */,
 				263641191B34AEE200145B2F /* ABISysV_mips64.cpp in Sources */,
 				26957D9813D381C900670048 /* RegisterContextDarwin_arm.cpp in Sources */,

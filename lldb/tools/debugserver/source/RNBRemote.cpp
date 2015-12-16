@@ -2743,6 +2743,7 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
             const nub_size_t numthreads = DNBProcessGetNumThreads (pid);
             if (numthreads > 0)
             {
+                std::vector<uint64_t> pc_values;
                 ostrm << std::hex << "threads:";
                 for (nub_size_t i = 0; i < numthreads; ++i)
                 {
@@ -2750,8 +2751,43 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
                     if (i > 0)
                         ostrm << ',';
                     ostrm << std::hex << th;
+                    DNBRegisterValue pc_regval;
+                    if (DNBThreadGetRegisterValueByID (pid, th, REGISTER_SET_GENERIC, GENERIC_REGNUM_PC, &pc_regval))
+                    {
+                        uint64_t pc = INVALID_NUB_ADDRESS;
+                        if (pc_regval.value.uint64 != INVALID_NUB_ADDRESS)
+                        {
+                            if (pc_regval.info.size == 4)
+                            {
+                                pc = pc_regval.value.uint32;
+                            }
+                            else if (pc_regval.info.size == 8)
+                            {
+                                pc = pc_regval.value.uint64;
+                            }
+                            if (pc != INVALID_NUB_ADDRESS)
+                            {
+                                pc_values.push_back (pc);
+                            }
+                        }
+                    }
                 }
                 ostrm << ';';
+
+                // If we failed to get any of the thread pc values, the size of our vector will not
+                // be the same as the # of threads.  Don't provide any expedited thread pc values in
+                // that case.  This should not happen.
+                if (pc_values.size() == numthreads)
+                {
+                    ostrm << std::hex << "thread-pcs:";
+                    for (nub_size_t i = 0; i < numthreads; ++i)
+                    {
+                        if (i > 0)
+                            ostrm << ',';
+                        ostrm << std::hex << pc_values[i];
+                    }
+                    ostrm << ';';
+                }
             }
 
             // Include JSON info that describes the stop reason for any threads

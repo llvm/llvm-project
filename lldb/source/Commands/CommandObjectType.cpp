@@ -32,6 +32,7 @@
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
+#include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
@@ -1263,7 +1264,9 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
     public:
         
         CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        Options (interpreter),
+        m_category_regex("",""),
+        m_category_language(lldb::eLanguageTypeUnknown, lldb::eLanguageTypeUnknown)
         {
         }
         
@@ -1278,7 +1281,10 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
             switch (short_option)
             {
                 case 'w':
-                    m_category_regex = std::string(option_arg);
+                    m_category_regex.SetCurrentValue(option_arg);
+                    break;
+                case 'l':
+                    error = m_category_language.SetValueFromString(option_arg);
                     break;
                 default:
                     error.SetErrorStringWithFormat ("unrecognized option '%c'", short_option);
@@ -1291,7 +1297,8 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
         void
         OptionParsingStarting () override
         {
-            m_category_regex = "";
+            m_category_regex.Clear();
+            m_category_language.Clear();
         }
         
         const OptionDefinition*
@@ -1299,7 +1306,8 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
         {
             static OptionDefinition g_option_table[] =
             {
-                { LLDB_OPT_SET_ALL, false, "category-regex", 'w', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeName,  "Only show categories matching this filter."},
+                { LLDB_OPT_SET_1, false, "category-regex", 'w', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeName,  "Only show categories matching this filter."},
+                { LLDB_OPT_SET_2, false, "language", 'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLanguage,  "Only show the category for a specific language."},
                 { 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
             };
 
@@ -1312,8 +1320,8 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
         
         // Instance variables to hold the values for command options.
         
-        std::string m_category_regex;
-        
+        OptionValueString m_category_regex;
+        OptionValueLanguage m_category_language;
     };
     
     CommandOptions m_options;
@@ -1363,12 +1371,12 @@ protected:
         std::unique_ptr<RegularExpression> category_regex;
         std::unique_ptr<RegularExpression> formatter_regex;
         
-        if (m_options.m_category_regex.size() > 0)
+        if (m_options.m_category_regex.OptionWasSet())
         {
             category_regex.reset(new RegularExpression());
-            if (!category_regex->Compile(m_options.m_category_regex.c_str()))
+            if (!category_regex->Compile(m_options.m_category_regex.GetCurrentValue()))
             {
-                result.AppendErrorWithFormat("syntax error in category regular expression '%s'", m_options.m_category_regex.c_str());
+                result.AppendErrorWithFormat("syntax error in category regular expression '%s'", m_options.m_category_regex.GetCurrentValue());
                 result.SetStatus(eReturnStatusFailed);
                 return false;
             }
@@ -1386,29 +1394,13 @@ protected:
             }
         }
         
-        DataVisualization::Categories::ForEach( [this, &command, &result, &category_regex, &formatter_regex] (const lldb::TypeCategoryImplSP& category) -> bool {
-            if (category_regex)
-            {
-                bool escape = true;
-                if (0 == strcmp(category->GetName(), category_regex->GetText()))
-                {
-                    escape = false;
-                }
-                else if (category_regex->Execute(category->GetName()))
-                {
-                    escape = false;
-                }
-                
-                if (escape)
-                    return true;
-            }
-
+        auto category_closure = [&result, &formatter_regex] (const lldb::TypeCategoryImplSP& category) -> void {
             result.GetOutputStream().Printf("-----------------------\nCategory: %s\n-----------------------\n", category->GetName());
             
             typedef const std::shared_ptr<FormatterType> Bar;
             typedef std::function<bool(ConstString,Bar)> Func1Type;
             typedef std::function<bool(RegularExpressionSP,Bar)> Func2Type;
-
+            
             TypeCategoryImpl::ForEachCallbacks<FormatterType> foreach;
             foreach.SetExact([&result, &formatter_regex] (ConstString name, const FormatterSharedPointer& format_sp) -> bool {
                 if (formatter_regex)
@@ -1426,12 +1418,12 @@ protected:
                     if (escape)
                         return true;
                 }
-
+                
                 result.GetOutputStream().Printf ("%s: %s\n", name.AsCString(), format_sp->GetDescription().c_str());
                 
                 return true;
             });
-
+            
             foreach.SetWithRegex( [&result, &formatter_regex] (RegularExpressionSP regex_sp, const FormatterSharedPointer& format_sp) -> bool {
                 if (formatter_regex)
                 {
@@ -1453,14 +1445,44 @@ protected:
                 
                 return true;
             });
-
-            category->ForEach(foreach);
             
-            return true;
-        });
+            category->ForEach(foreach);
+        };
         
-        FormatterSpecificList(result);
-
+        if (m_options.m_category_language.OptionWasSet())
+        {
+            lldb::TypeCategoryImplSP category_sp;
+            DataVisualization::Categories::GetCategory(m_options.m_category_language.GetCurrentValue(), category_sp);
+            if (category_sp)
+                category_closure(category_sp);
+        }
+        else
+        {
+            DataVisualization::Categories::ForEach( [this, &command, &result, &category_regex, &formatter_regex, &category_closure] (const lldb::TypeCategoryImplSP& category) -> bool {
+                if (category_regex)
+                {
+                    bool escape = true;
+                    if (0 == strcmp(category->GetName(), category_regex->GetText()))
+                    {
+                        escape = false;
+                    }
+                    else if (category_regex->Execute(category->GetName()))
+                    {
+                        escape = false;
+                    }
+                    
+                    if (escape)
+                        return true;
+                }
+                
+                category_closure(category);
+                
+                return true;
+            });
+            
+            FormatterSpecificList(result);
+        }
+        
         result.SetStatus(eReturnStatusSuccessFinishResult);
         return result.Succeeded();
     }

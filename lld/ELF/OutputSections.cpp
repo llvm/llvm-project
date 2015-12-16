@@ -264,21 +264,19 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     bool LazyReloc = Body && Target->supportsLazyRelocations() &&
                      Target->relocNeedsPlt(Type, *Body);
 
-    if (CanBePreempted) {
-      unsigned GotReloc =
-          Body->isTLS() ? Target->getTlsGotReloc() : Target->getGotReloc();
-      if (NeedsGot)
-        P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
-                            LazyReloc ? Target->getPltReloc() : GotReloc,
-                            Config->Mips64EL);
-      else
-        P->setSymbolAndType(Body->getDynamicSymbolTableIndex(),
-                            NeedsCopy ? Target->getCopyReloc()
-                                      : Target->getDynReloc(Type),
-                            Config->Mips64EL);
-    } else {
-      P->setSymbolAndType(0, Target->getRelativeReloc(), Config->Mips64EL);
-    }
+    unsigned Sym = CanBePreempted ? Body->getDynamicSymbolTableIndex() : 0;
+    unsigned Reloc;
+    if (!CanBePreempted)
+      Reloc = Target->getRelativeReloc();
+    else if (LazyReloc)
+      Reloc = Target->getPltReloc();
+    else if (NeedsGot)
+      Reloc = Body->isTLS() ? Target->getTlsGotReloc() : Target->getGotReloc();
+    else if (NeedsCopy)
+      Reloc = Target->getCopyReloc();
+    else
+      Reloc = Target->getDynReloc(Type);
+    P->setSymbolAndType(Sym, Reloc, Config->Mips64EL);
 
     if (NeedsGot) {
       if (LazyReloc)
@@ -1025,7 +1023,7 @@ template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
 
     for (const EHRegion<ELFT> &F : C.Fdes) {
       StringRef FdeData = F.data();
-      memcpy(Buf + Offset, FdeData.data(), 4);              // Legnth
+      memcpy(Buf + Offset, FdeData.data(), 4);              // Length
       write32<E>(Buf + Offset + 4, Offset + 4 - CieOffset); // Pointer
       memcpy(Buf + Offset + 8, FdeData.data() + 8, FdeData.size() - 8);
       F.S->Offsets[F.Index].second = Offset;

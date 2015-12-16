@@ -25,6 +25,7 @@
 #include "NonCopyableObjects.h"
 #include "SizeofContainerCheck.h"
 #include "StaticAssertCheck.h"
+#include "StringIntegerAssignmentCheck.h"
 #include "SwappedArgumentsCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UndelegatedConstructor.h"
@@ -68,6 +69,8 @@ public:
     CheckFactories.registerCheck<SizeofContainerCheck>("misc-sizeof-container");
     CheckFactories.registerCheck<StaticAssertCheck>(
         "misc-static-assert");
+    CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
+        "misc-string-integer-assignment");
     CheckFactories.registerCheck<SwappedArgumentsCheck>(
         "misc-swapped-arguments");
     CheckFactories.registerCheck<ThrowByValueCatchByReferenceCheck>(

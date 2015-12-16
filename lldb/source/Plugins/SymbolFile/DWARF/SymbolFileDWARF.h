@@ -16,6 +16,7 @@
 #include <map>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 // Other libraries and framework includes
@@ -28,6 +29,7 @@
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 
@@ -122,6 +124,9 @@ public:
 
     bool
     ParseCompileUnitLineTable (const lldb_private::SymbolContext& sc) override;
+
+    bool
+    ParseCompileUnitDebugMacros (const lldb_private::SymbolContext& sc) override;
 
     bool
     ParseCompileUnitSupportFiles (const lldb_private::SymbolContext& sc,
@@ -248,6 +253,7 @@ public:
     const lldb_private::DWARFDataExtractor&     get_debug_frame_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_info_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_line_data ();
+    const lldb_private::DWARFDataExtractor&     get_debug_macro_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_loc_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_ranges_data ();
     const lldb_private::DWARFDataExtractor&     get_debug_str_data ();
@@ -301,6 +307,9 @@ public:
 
     bool
     Supports_DW_AT_APPLE_objc_complete_type (DWARFCompileUnit *cu);
+
+    lldb_private::DebugMacrosSP
+    ParseDebugMacros(lldb::offset_t *offset);
 
     static DWARFDIE
     GetParentSymbolContextDIE(const DWARFDIE &die);
@@ -530,6 +539,7 @@ protected:
     DWARFDataSegment                      m_data_debug_frame;
     DWARFDataSegment                      m_data_debug_info;
     DWARFDataSegment                      m_data_debug_line;
+    DWARFDataSegment                      m_data_debug_macro;
     DWARFDataSegment                      m_data_debug_loc;
     DWARFDataSegment                      m_data_debug_ranges;
     DWARFDataSegment                      m_data_debug_str;
@@ -549,6 +559,10 @@ protected:
     std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_namespaces_ap;
     std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_objc_ap;
     std::unique_ptr<GlobalVariableMap>  m_global_aranges_ap;
+
+    typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP> DebugMacrosMap;
+    DebugMacrosMap m_debug_macros_map;
+
     ExternalTypeModuleMap               m_external_type_modules;
     NameToDIE                           m_function_basename_index;  // All concrete functions
     NameToDIE                           m_function_fullname_index;  // All concrete functions

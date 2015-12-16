@@ -709,6 +709,18 @@ private:
 
   bool hasVectorOperands(const Instruction *Inst, ValueMapT &VectorMap);
 
+  /// @brief Generate vector loads for scalars.
+  ///
+  /// @param Stmt           The scop statement for which to generate the loads.
+  /// @param VectorBlockMap A map that will be updated to relate the original
+  ///                       values with the newly generated vector loads.
+  void generateScalarVectorLoads(ScopStmt &Stmt, ValueMapT &VectorBlockMap);
+
+  /// @brief Verify absence of scalar stores.
+  ///
+  /// @param Stmt The scop statement to check for scalar stores.
+  void verifyNoScalarStores(ScopStmt &Stmt);
+
   /// @param NewAccesses A map from memory access ids to new ast expressions,
   ///                    which may contain new access expressions for certain
   ///                    memory accesses.

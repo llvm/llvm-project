@@ -1323,10 +1323,10 @@ void ScopStmt::collectCandiateReductionLoads(
   // A load is only a candidate if it cannot escape (thus has only this use)
   if (PossibleLoad0 && PossibleLoad0->getNumUses() == 1)
     if (PossibleLoad0->getParent() == Store->getParent())
-      Loads.push_back(lookupAccessFor(PossibleLoad0));
+      Loads.push_back(&getArrayAccessFor(PossibleLoad0));
   if (PossibleLoad1 && PossibleLoad1->getNumUses() == 1)
     if (PossibleLoad1->getParent() == Store->getParent())
-      Loads.push_back(lookupAccessFor(PossibleLoad1));
+      Loads.push_back(&getArrayAccessFor(PossibleLoad1));
 }
 
 /// @brief Check for reductions in this ScopStmt
