@@ -239,7 +239,7 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
 
     // Ask DFA if machine resource is available for MI.
     bool ResourceAvail = ResourceTracker->canReserveResources(MI);
-    if (ResourceAvail) {
+    if (ResourceAvail && shouldAddToPacket(MI)) {
       // Dependency check for MI with instructions in CurrentPacketMIs.
       for (std::vector<MachineInstr*>::iterator VI = CurrentPacketMIs.begin(),
            VE = CurrentPacketMIs.end(); VI != VE; ++VI) {
@@ -258,7 +258,8 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
         } // !isLegalToPacketizeTogether.
       } // For all instructions in CurrentPacketMIs.
     } else {
-      // End the packet if resource is not available.
+      // End the packet if resource is not available, or if the instruction
+      // shoud not be added to the current packet.
       endPacket(MBB, MI);
     }
 

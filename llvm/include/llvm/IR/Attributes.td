@@ -41,6 +41,13 @@ def Dereferenceable : EnumAttr<"dereferenceable">;
 /// Pointer is either null or dereferenceable.
 def DereferenceableOrNull : EnumAttr<"dereferenceable_or_null">;
 
+/// Function may only access memory that is inaccessible from IR.
+def InaccessibleMemOnly : EnumAttr<"inaccessiblememonly">;
+
+/// Function may only access memory that is either inaccessible from the IR,
+/// or pointed to by its pointer arguments.
+def InaccessibleMemOrArgMemOnly : EnumAttr<"inaccessiblemem_or_argmemonly">;
+
 /// Pass structure in an alloca.
 def InAlloca : EnumAttr<"inalloca">;
 

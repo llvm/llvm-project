@@ -67,6 +67,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeSlotIndexesPass(Registry);
   initializeStackColoringPass(Registry);
   initializeStackMapLivenessPass(Registry);
+  initializeLiveDebugValuesPass(Registry);
   initializeStackProtectorPass(Registry);
   initializeStackSlotColoringPass(Registry);
   initializeTailDuplicatePassPass(Registry);
