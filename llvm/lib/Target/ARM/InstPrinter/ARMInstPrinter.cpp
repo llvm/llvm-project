@@ -644,34 +644,6 @@ void ARMInstPrinter::printAddrMode5Operand(const MCInst *MI, unsigned OpNum,
   O << "]" << markup(">");
 }
 
-template <bool AlwaysPrintImm0>
-void ARMInstPrinter::printAddrMode5FP16Operand(const MCInst *MI, unsigned OpNum,
-                                               const MCSubtargetInfo &STI,
-                                               raw_ostream &O) {
-  const MCOperand &MO1 = MI->getOperand(OpNum);
-  const MCOperand &MO2 = MI->getOperand(OpNum+1);
-
-  if (!MO1.isReg()) {   // FIXME: This is for CP entries, but isn't right.
-    printOperand(MI, OpNum, STI, O);
-    return;
-  }
-
-  O << markup("<mem:") << "[";
-  printRegName(O, MO1.getReg());
-
-  unsigned ImmOffs = ARM_AM::getAM5FP16Offset(MO2.getImm());
-  unsigned Op = ARM_AM::getAM5FP16Op(MO2.getImm());
-  if (AlwaysPrintImm0 || ImmOffs || Op == ARM_AM::sub) {
-    O << ", "
-      << markup("<imm:")
-      << "#"
-      << ARM_AM::getAddrOpcStr(ARM_AM::getAM5FP16Op(MO2.getImm()))
-      << ImmOffs * 2
-      << markup(">");
-  }
-  O << "]" << markup(">");
-}
-
 void ARMInstPrinter::printAddrMode6Operand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {

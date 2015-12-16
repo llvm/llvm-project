@@ -251,6 +251,19 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI) {
 #endif
 }
 
+/// Test whether Pred has any terminators explicitly branching to MBB, as
+/// opposed to falling through. Note that it's possible (eg. in unoptimized
+/// code) for a branch instruction to both branch to a block and fallthrough
+/// to it, so we check the actual branch operands to see if there are any
+/// explicit mentions.
+static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred, MachineBasicBlock *MBB) {
+  for (MachineInstr &MI : Pred->terminators())
+    for (MachineOperand &MO : MI.explicit_operands())
+      if (MO.isMBB() && MO.getMBB() == MBB)
+        return true;
+  return false;
+}
+
 /// Insert a BLOCK marker for branches to MBB (if needed).
 static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
                              SmallVectorImpl<MachineBasicBlock *> &ScopeTops,
@@ -266,8 +279,7 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
   for (MachineBasicBlock *Pred : MBB.predecessors())
     if (Pred->getNumber() < MBBNumber) {
       Header = Header ? MDT.findNearestCommonDominator(Header, Pred) : Pred;
-      if (!Pred->isLayoutSuccessor(&MBB) ||
-          !(Pred->empty() || !Pred->back().isBarrier()))
+      if (ExplicitlyBranchesTo(Pred, &MBB))
         IsBranchedTo = true;
     }
   if (!Header)

@@ -6,6 +6,8 @@ target datalayout = "e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: alloca32:
+; Check that there is an extra local for the stack pointer.
+; CHECK: .local i32, i32, i32, i32{{$}}
 define void @alloca32() {
  ; CHECK: i32.const [[L1:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.load [[L1]]=, 0([[L1]])
@@ -23,6 +25,7 @@ define void @alloca32() {
 }
 
 ; CHECK-LABEL: alloca3264:
+; CHECK: .local i32, i32, i32, i32{{$}}
 define void @alloca3264() {
  ; CHECK: i32.const [[L1:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.load [[L1]]=, 0([[L1]])
@@ -43,6 +46,8 @@ define void @alloca3264() {
  ret void
 }
 
+; CHECK-LABEL: allocarray:
+; CHECK: .local i32, i32, i32, i32, i32, i32{{$}}
 define void @allocarray() {
  ; CHECK: i32.const [[L1:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.load [[L1]]=, 0([[L1]])

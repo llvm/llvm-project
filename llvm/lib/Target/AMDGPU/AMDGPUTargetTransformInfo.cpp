@@ -81,6 +81,17 @@ unsigned AMDGPUTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return 64;
 }
 
+unsigned AMDGPUTTIImpl::getCFInstrCost(unsigned Opcode) {
+  // XXX - For some reason this isn't called for switch.
+  switch (Opcode) {
+  case Instruction::Br:
+  case Instruction::Ret:
+    return 10;
+  default:
+    return BaseT::getCFInstrCost(Opcode);
+  }
+}
+
 int AMDGPUTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                       unsigned Index) {
   switch (Opcode) {

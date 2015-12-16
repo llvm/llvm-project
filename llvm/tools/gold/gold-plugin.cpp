@@ -75,15 +75,15 @@ struct claimed_file {
 
 /// RAII wrapper to manage opening and releasing of a ld_plugin_input_file.
 struct PluginInputFile {
-  void *handle;
+  void *Handle;
   ld_plugin_input_file File;
 
-  PluginInputFile(void *handle) : handle(handle) {
-    if (get_input_file(handle, &File) != LDPS_OK)
+  PluginInputFile(void *Handle) : Handle(Handle) {
+    if (get_input_file(Handle, &File) != LDPS_OK)
       message(LDPL_FATAL, "Failed to get file information");
   }
   ~PluginInputFile() {
-    if (release_input_file(handle) != LDPS_OK)
+    if (release_input_file(Handle) != LDPS_OK)
       message(LDPL_FATAL, "Failed to release file information");
   }
   ld_plugin_input_file &file() { return File; }

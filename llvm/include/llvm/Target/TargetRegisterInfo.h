@@ -668,6 +668,15 @@ public:
     return 0;
   }
 
+  /// Return a heuristic for the machine scheduler to compare the profitability
+  /// of increasing one register pressure set versus another.  The scheduler
+  /// will prefer increasing the register pressure of the set which returns
+  /// the largest value for this function.
+  virtual unsigned getRegPressureSetScore(const MachineFunction &MF,
+                                          unsigned PSetID) const {
+    return PSetID;
+  }
+
   /// Get the weight in units of pressure for this register class.
   virtual const RegClassWeight &getRegClassWeight(
     const TargetRegisterClass *RC) const = 0;

@@ -89,6 +89,7 @@ public:
     assert(WAReg < -1U);
     PhysRegs[PReg] = WAReg;
   }
+  const std::vector<unsigned> &getPhysRegs() const { return PhysRegs; }
 };
 
 } // end namespace llvm

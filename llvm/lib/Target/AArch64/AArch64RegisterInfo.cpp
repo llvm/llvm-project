@@ -15,6 +15,7 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64FrameLowering.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/BitVector.h"
@@ -47,7 +48,9 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction()->getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
   if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS)
-    return CSR_AArch64_CXX_TLS_Darwin_SaveList;
+    return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR() ?
+           CSR_AArch64_CXX_TLS_Darwin_PE_SaveList :
+           CSR_AArch64_CXX_TLS_Darwin_SaveList;
   if (MF->getFunction()->getAttributes().hasAttrSomewhere(
       Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
@@ -66,9 +69,20 @@ AArch64RegisterInfo::getCalleeSavedRegsForLayout(
   if (MF->getFunction()->getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
   if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS)
-    return CSR_AArch64_CXX_TLS_Darwin_SaveList;
+    return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR() ?
+           CSR_AArch64_CXX_TLS_Darwin_PE_SaveList :
+           CSR_AArch64_CXX_TLS_Darwin_SaveList;
   else
     return CSR_AArch64_AAPCS_SaveList;
+}
+
+const MCPhysReg *AArch64RegisterInfo::getCalleeSavedRegsViaCopy(
+    const MachineFunction *MF) const {
+  assert(MF && "Invalid MachineFunction pointer.");
+  if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
+      MF->getInfo<AArch64FunctionInfo>()->isSplitCSR())
+    return CSR_AArch64_CXX_TLS_Darwin_ViaCopy_SaveList;
+  return nullptr;
 }
 
 const uint32_t *

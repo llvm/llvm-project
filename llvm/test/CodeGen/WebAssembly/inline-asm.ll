@@ -21,7 +21,7 @@ entry:
 ; CHECK-LABEL: bar:
 ; CHECK-NEXT: .param i32, i32{{$}}
 ; CHECK-NEXT: #APP{{$}}
-; CHECK-NEXT: # $1 = bbb($0){{$}}
+; CHECK-NEXT: # 0($1) = bbb(0($0)){{$}}
 ; CHECK-NEXT: #NO_APP{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @bar(i32* %r, i32* %s) {
@@ -69,6 +69,21 @@ define void @X_i16(i16 * %t) {
 ; CHECK: i32.store $discard=, 0($0), $1{{$}}
 define void @X_ptr(i16 ** %t) {
   call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16** %t)
+  ret void
+}
+
+; CHECK-LABEL: funcname:
+; CHECK: foo funcname{{$}}
+define void @funcname() {
+  tail call void asm sideeffect "foo $0", "i"(void ()* nonnull @funcname) #0, !srcloc !0
+  ret void
+}
+
+; CHECK-LABEL: varname:
+; CHECK: foo gv+37{{$}}
+@gv = global [0 x i8] zeroinitializer
+define void @varname() {
+  tail call void asm sideeffect "foo $0", "i"(i8* getelementptr inbounds ([0 x i8], [0 x i8]* @gv, i64 0, i64 37)) #0, !srcloc !0
   ret void
 }
 

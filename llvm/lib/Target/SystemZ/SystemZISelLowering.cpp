@@ -1603,8 +1603,8 @@ static void adjustSubwordCmp(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
   } else if (Load->getExtensionType() == ISD::ZEXTLOAD) {
     if (Value > Mask)
       return;
-    assert(C.ICmpType == SystemZICMP::Any &&
-           "Signedness shouldn't matter here.");
+    // If the constant is in range, we can use any comparison.
+    C.ICmpType = SystemZICMP::Any;
   } else
     return;
 

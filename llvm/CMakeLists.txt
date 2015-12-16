@@ -86,6 +86,10 @@ set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
 
+# Generate a CompilationDatabase (compile_commands.json file) for our build,
+# for use by clang_complete, YouCompleteMe, etc.
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
 option(LLVM_INSTALL_UTILS "Include utility binaries in the 'install' target." OFF)
 
 option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)

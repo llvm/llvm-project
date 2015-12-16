@@ -353,41 +353,50 @@ TEST_F(InstrProfTest, get_icall_data_merge1) {
 TEST_F(InstrProfTest, get_icall_data_merge1_saturation) {
   const uint64_t Max = std::numeric_limits<uint64_t>::max();
 
-  InstrProfRecord Record1("caller", 0x1234, {1});
-  InstrProfRecord Record2("caller", 0x1234, {Max});
-  InstrProfRecord Record3("callee1", 0x1235, {3, 4});
+  InstrProfRecord Record1("foo", 0x1234, {1});
+  auto Result1 = Writer.addRecord(std::move(Record1));
+  ASSERT_EQ(Result1, instrprof_error::success);
 
-  Record1.reserveSites(IPVK_IndirectCallTarget, 1);
-  InstrProfValueData VD1[] = {{(uint64_t) "callee1", 1}};
-  Record1.addValueData(IPVK_IndirectCallTarget, 0, VD1, 1, nullptr);
+  // Verify counter overflow.
+  InstrProfRecord Record2("foo", 0x1234, {Max});
+  auto Result2 = Writer.addRecord(std::move(Record2));
+  ASSERT_EQ(Result2, instrprof_error::counter_overflow);
 
-  Record2.reserveSites(IPVK_IndirectCallTarget, 1);
-  // FIXME: Improve handling of counter overflow. ValueData asserts on overflow.
-  //  InstrProfValueData VD2[] = {{(uint64_t) "callee1", Max}};
-  InstrProfValueData VD2[] = {{(uint64_t) "callee1", 1}};
-  Record2.addValueData(IPVK_IndirectCallTarget, 0, VD2, 1, nullptr);
+  InstrProfRecord Record3("bar", 0x9012, {8});
+  auto Result3 = Writer.addRecord(std::move(Record3));
+  ASSERT_EQ(Result3, instrprof_error::success);
 
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
+  InstrProfRecord Record4("baz", 0x5678, {3, 4});
+  Record4.reserveSites(IPVK_IndirectCallTarget, 1);
+  InstrProfValueData VD4[] = {{(uint64_t) "bar", 1}};
+  Record4.addValueData(IPVK_IndirectCallTarget, 0, VD4, 1, nullptr);
+  auto Result4 = Writer.addRecord(std::move(Record4));
+  ASSERT_EQ(Result4, instrprof_error::success);
+
+  // Verify value data counter overflow.
+  InstrProfRecord Record5("baz", 0x5678, {5, 6});
+  Record5.reserveSites(IPVK_IndirectCallTarget, 1);
+  InstrProfValueData VD5[] = {{(uint64_t) "bar", Max}};
+  Record5.addValueData(IPVK_IndirectCallTarget, 0, VD5, 1, nullptr);
+  auto Result5 = Writer.addRecord(std::move(Record5));
+  ASSERT_EQ(Result5, instrprof_error::counter_overflow);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
   // Verify saturation of counts.
-  ErrorOr<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
-  ASSERT_TRUE(NoError(R.getError()));
+  ErrorOr<InstrProfRecord> ReadRecord1 =
+      Reader->getInstrProfRecord("foo", 0x1234);
+  ASSERT_TRUE(NoError(ReadRecord1.getError()));
+  ASSERT_EQ(Max, ReadRecord1.get().Counts[0]);
 
-  ASSERT_EQ(Max, R.get().Counts[0]);
-
-  ASSERT_EQ(1U, R.get().getNumValueSites(IPVK_IndirectCallTarget));
+  ErrorOr<InstrProfRecord> ReadRecord2 =
+      Reader->getInstrProfRecord("baz", 0x5678);
+  ASSERT_EQ(1U, ReadRecord2.get().getNumValueSites(IPVK_IndirectCallTarget));
   std::unique_ptr<InstrProfValueData[]> VD =
-          R.get().getValueForSite(IPVK_IndirectCallTarget, 0);
-  ASSERT_EQ(StringRef("callee1"), StringRef((const char *)VD[0].Value, 7));
-
-  // FIXME: Improve handling of counter overflow. ValueData asserts on overflow.
-  //  ASSERT_EQ(Max, VD[0].Count);
-  ASSERT_EQ(2U, VD[0].Count);
+      ReadRecord2.get().getValueForSite(IPVK_IndirectCallTarget, 0);
+  ASSERT_EQ(StringRef("bar"), StringRef((const char *)VD[0].Value, 3));
+  ASSERT_EQ(Max, VD[0].Count);
 }
 
 // Synthesize runtime value profile data.

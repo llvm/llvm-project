@@ -184,6 +184,16 @@ inline std::error_code make_error_code(instrprof_error E) {
   return std::error_code(static_cast<int>(E), instrprof_category());
 }
 
+inline instrprof_error MergeResult(instrprof_error &Accumulator,
+                                   instrprof_error Result) {
+  // Prefer first error encountered as later errors may be secondary effects of
+  // the initial problem.
+  if (Accumulator == instrprof_error::success &&
+      Result != instrprof_error::success)
+    Accumulator = Result;
+  return Accumulator;
+}
+
 enum InstrProfValueKind : uint32_t {
 #define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
 #include "llvm/ProfileData/InstrProfData.inc"
@@ -224,30 +234,34 @@ struct InstrProfValueSiteRecord {
 
   /// Merge data from another InstrProfValueSiteRecord
   /// Optionally scale merged counts by \p Weight.
-  void mergeValueData(InstrProfValueSiteRecord &Input, uint64_t Weight = 1) {
+  instrprof_error mergeValueData(InstrProfValueSiteRecord &Input,
+                                 uint64_t Weight = 1) {
     this->sortByTargetValues();
     Input.sortByTargetValues();
     auto I = ValueData.begin();
     auto IE = ValueData.end();
+    instrprof_error Result = instrprof_error::success;
     for (auto J = Input.ValueData.begin(), JE = Input.ValueData.end(); J != JE;
          ++J) {
       while (I != IE && I->Value < J->Value)
         ++I;
       if (I != IE && I->Value == J->Value) {
-        // FIXME: Improve handling of counter overflow.
         uint64_t JCount = J->Count;
         bool Overflowed;
         if (Weight > 1) {
           JCount = SaturatingMultiply(JCount, Weight, &Overflowed);
-          assert(!Overflowed && "Value data counter overflowed!");
+          if (Overflowed)
+            Result = instrprof_error::counter_overflow;
         }
         I->Count = SaturatingAdd(I->Count, JCount, &Overflowed);
-        assert(!Overflowed && "Value data counter overflowed!");
+        if (Overflowed)
+          Result = instrprof_error::counter_overflow;
         ++I;
         continue;
       }
       ValueData.insert(I, *J);
     }
+    return Result;
   }
 };
 
@@ -352,9 +366,11 @@ private:
         getValueSitesForKind(ValueKind);
     std::vector<InstrProfValueSiteRecord> &OtherSiteRecords =
         Src.getValueSitesForKind(ValueKind);
+    instrprof_error Result = instrprof_error::success;
     for (uint32_t I = 0; I < ThisNumValueSites; I++)
-      ThisSiteRecords[I].mergeValueData(OtherSiteRecords[I], Weight);
-    return instrprof_error::success;
+      MergeResult(Result, ThisSiteRecords[I].mergeValueData(OtherSiteRecords[I],
+                                                            Weight));
+    return Result;
   }
 };
 
@@ -461,11 +477,8 @@ instrprof_error InstrProfRecord::merge(InstrProfRecord &Other,
       Result = instrprof_error::counter_overflow;
   }
 
-  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
-    instrprof_error MergeValueResult = mergeValueProfData(Kind, Other, Weight);
-    if (MergeValueResult != instrprof_error::success)
-      Result = MergeValueResult;
-  }
+  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+    MergeResult(Result, mergeValueProfData(Kind, Other, Weight));
 
   return Result;
 }
@@ -480,7 +493,7 @@ inline support::endianness getHostEndianness() {
 #include "llvm/ProfileData/InstrProfData.inc"
 
  /*
- * Initialize the record for runtime value profile data. 
+ * Initialize the record for runtime value profile data.
  * Return 0 if the initialization is successful, otherwise
  * return 1.
  */

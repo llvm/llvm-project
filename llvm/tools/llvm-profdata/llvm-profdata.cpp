@@ -180,7 +180,11 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
          I != E; ++I) {
       StringRef FName = I->first();
       FunctionSamples &Samples = I->second;
-      ProfileMap[FName].merge(Samples, Input.Weight);
+      sampleprof_error Result = ProfileMap[FName].merge(Samples, Input.Weight);
+      if (Result != sampleprof_error::success) {
+        std::error_code EC = make_error_code(Result);
+        handleMergeWriterError(EC, Input.Filename, FName);
+      }
     }
   }
   Writer->write(ProfileMap);

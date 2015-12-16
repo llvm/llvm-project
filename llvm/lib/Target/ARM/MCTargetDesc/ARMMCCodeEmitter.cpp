@@ -255,13 +255,8 @@ public:
                                 SmallVectorImpl<MCFixup> &Fixups,
                                 const MCSubtargetInfo &STI) const;
 
-  /// getAddrMode5OpValue - Return encoding info for 'reg +/- (imm8 << 2)' operand.
+  /// getAddrMode5OpValue - Return encoding info for 'reg +/- imm8' operand.
   uint32_t getAddrMode5OpValue(const MCInst &MI, unsigned OpIdx,
-                               SmallVectorImpl<MCFixup> &Fixups,
-                               const MCSubtargetInfo &STI) const;
-
-  /// getAddrMode5FP16OpValue - Return encoding info for 'reg +/- (imm8 << 1)' operand.
-  uint32_t getAddrMode5FP16OpValue(const MCInst &MI, unsigned OpIdx,
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const;
 
@@ -1257,7 +1252,7 @@ getAddrModePCOpValue(const MCInst &MI, unsigned OpIdx,
   return (MO.getImm() >> 2);
 }
 
-/// getAddrMode5OpValue - Return encoding info for 'reg +/- (imm8 << 2)' operand.
+/// getAddrMode5OpValue - Return encoding info for 'reg +/- imm10' operand.
 uint32_t ARMMCCodeEmitter::
 getAddrMode5OpValue(const MCInst &MI, unsigned OpIdx,
                     SmallVectorImpl<MCFixup> &Fixups,
@@ -1281,46 +1276,6 @@ getAddrMode5OpValue(const MCInst &MI, unsigned OpIdx,
       Kind = MCFixupKind(ARM::fixup_t2_pcrel_10);
     else
       Kind = MCFixupKind(ARM::fixup_arm_pcrel_10);
-    Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
-
-    ++MCNumCPRelocations;
-  } else {
-    EncodeAddrModeOpValues(MI, OpIdx, Reg, Imm8, Fixups, STI);
-    isAdd = ARM_AM::getAM5Op(Imm8) == ARM_AM::add;
-  }
-
-  uint32_t Binary = ARM_AM::getAM5Offset(Imm8);
-  // Immediate is always encoded as positive. The 'U' bit controls add vs sub.
-  if (isAdd)
-    Binary |= (1 << 8);
-  Binary |= (Reg << 9);
-  return Binary;
-}
-
-/// getAddrMode5FP16OpValue - Return encoding info for 'reg +/- (imm8 << 1)' operand.
-uint32_t ARMMCCodeEmitter::
-getAddrMode5FP16OpValue(const MCInst &MI, unsigned OpIdx,
-                    SmallVectorImpl<MCFixup> &Fixups,
-                    const MCSubtargetInfo &STI) const {
-  // {12-9} = reg
-  // {8}    = (U)nsigned (add == '1', sub == '0')
-  // {7-0}  = imm8
-  unsigned Reg, Imm8;
-  bool isAdd;
-  // If The first operand isn't a register, we have a label reference.
-  const MCOperand &MO = MI.getOperand(OpIdx);
-  if (!MO.isReg()) {
-    Reg = CTX.getRegisterInfo()->getEncodingValue(ARM::PC);   // Rn is PC.
-    Imm8 = 0;
-    isAdd = false; // 'U' bit is handled as part of the fixup.
-
-    assert(MO.isExpr() && "Unexpected machine operand type!");
-    const MCExpr *Expr = MO.getExpr();
-    MCFixupKind Kind;
-    if (isThumb2(STI))
-      Kind = MCFixupKind(ARM::fixup_t2_pcrel_9);
-    else
-      Kind = MCFixupKind(ARM::fixup_arm_pcrel_9);
     Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
 
     ++MCNumCPRelocations;

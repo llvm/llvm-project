@@ -301,6 +301,14 @@ def CSR_AArch64_CXX_TLS_Darwin
                            (sub (sequence "X%u", 1, 28), X15, X16, X17, X18),
                            (sequence "D%u", 0, 31))>;
 
+// CSRs that are handled by prologue, epilogue.
+def CSR_AArch64_CXX_TLS_Darwin_PE
+    : CalleeSavedRegs<(add LR, FP)>;
+
+// CSRs that are handled explicitly via copies.
+def CSR_AArch64_CXX_TLS_Darwin_ViaCopy
+    : CalleeSavedRegs<(sub CSR_AArch64_CXX_TLS_Darwin, LR, FP)>;
+
 // The ELF stub used for TLS-descriptor access saves every feasible
 // register. Only X0 and LR are clobbered.
 def CSR_AArch64_TLS_ELF

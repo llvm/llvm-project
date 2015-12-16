@@ -99,4 +99,34 @@ TEST_F(SampleProfTest, roundtrip_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Binary);
 }
 
+TEST_F(SampleProfTest, sample_overflow_saturation) {
+  const uint64_t Max = std::numeric_limits<uint64_t>::max();
+  sampleprof_error Result;
+
+  StringRef FooName("_Z3fooi");
+  FunctionSamples FooSamples;
+  Result = FooSamples.addTotalSamples(1);
+  ASSERT_EQ(Result, sampleprof_error::success);
+
+  Result = FooSamples.addHeadSamples(1);
+  ASSERT_EQ(Result, sampleprof_error::success);
+
+  Result = FooSamples.addBodySamples(10, 0, 1);
+  ASSERT_EQ(Result, sampleprof_error::success);
+
+  Result = FooSamples.addTotalSamples(Max);
+  ASSERT_EQ(Result, sampleprof_error::counter_overflow);
+  ASSERT_EQ(FooSamples.getTotalSamples(), Max);
+
+  Result = FooSamples.addHeadSamples(Max);
+  ASSERT_EQ(Result, sampleprof_error::counter_overflow);
+  ASSERT_EQ(FooSamples.getHeadSamples(), Max);
+
+  Result = FooSamples.addBodySamples(10, 0, Max);
+  ASSERT_EQ(Result, sampleprof_error::counter_overflow);
+  ErrorOr<uint64_t> BodySamples = FooSamples.findSamplesAt(10, 0);
+  ASSERT_FALSE(BodySamples.getError());
+  ASSERT_EQ(BodySamples.get(), Max);
+}
+
 } // end anonymous namespace

@@ -36,7 +36,7 @@ namespace {
     }
 
     // Possibly eliminate loop L if it is dead.
-    bool runOnLoop(Loop *L, LPPassManager &LPM) override;
+    bool runOnLoop(Loop *L, LPPassManager &) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<DominatorTreeWrapperPass>();
@@ -132,7 +132,7 @@ bool LoopDeletion::isLoopDead(Loop *L,
 /// so could change the halting/non-halting nature of a program.
 /// NOTE: This entire process relies pretty heavily on LoopSimplify and LCSSA
 /// in order to make various safety checks work.
-bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &LPM) {
+bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &) {
   if (skipOptnoneFunction(L))
     return false;
 
@@ -244,9 +244,8 @@ bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &LPM) {
   for (BasicBlock *BB : blocks)
     loopInfo.removeBlock(BB);
 
-  // The last step is to inform the loop pass manager that we've
-  // eliminated this loop.
-  LPM.deleteLoopFromQueue(L);
+  // The last step is to update LoopInfo now that we've eliminated this loop.
+  loopInfo.updateUnloop(L);
   Changed = true;
 
   ++NumDeleted;
