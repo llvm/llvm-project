@@ -44,8 +44,6 @@ public:
   }
 };
 
-extern bool flag_aligned_memcpy;
-
 } // end namespace llvm
 
 #endif

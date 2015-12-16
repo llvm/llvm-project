@@ -981,21 +981,6 @@ def addrmode5_pre : AddrMode5 {
    let PrintMethod = "printAddrMode5Operand<true>";
 }
 
-// addrmode5fp16 := reg +/- imm8*2
-//
-def AddrMode5FP16AsmOperand : AsmOperandClass { let Name = "AddrMode5FP16"; }
-class AddrMode5FP16 : Operand<i32>,
-                      ComplexPattern<i32, 2, "SelectAddrMode5FP16", []> {
-  let EncoderMethod = "getAddrMode5FP16OpValue";
-  let DecoderMethod = "DecodeAddrMode5FP16Operand";
-  let ParserMatchClass = AddrMode5FP16AsmOperand;
-  let MIOperandInfo = (ops GPR:$base, i32imm);
-}
-
-def addrmode5fp16 : AddrMode5FP16 {
-   let PrintMethod = "printAddrMode5FP16Operand<false>";
-}
-
 // addrmode6 := reg with optional alignment
 //
 def AddrMode6AsmOperand : AsmOperandClass { let Name = "AlignedMemory"; }

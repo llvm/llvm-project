@@ -307,7 +307,6 @@
 ; OBJ32-NEXT:     ColEnd: 73
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT: ]
-; OBJ32:    }
 
 ; X64-LABEL: x:
 ; X64-NEXT: .L{{.*}}:
@@ -627,7 +626,6 @@
 ; OBJ64-NEXT:     ColEnd: 73
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT: ]
-; OBJ64:    }
 
 ; Function Attrs: nounwind
 define void @x() #0 !dbg !4 {

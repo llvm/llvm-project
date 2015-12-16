@@ -280,6 +280,8 @@ public:
   bool isExtendable(const MachineInstr* MI) const;
   bool isExtended(const MachineInstr* MI) const;
   bool isFloat(const MachineInstr *MI) const;
+  bool isHVXMemWithAIndirect(const MachineInstr *I,
+                             const MachineInstr *J) const;
   bool isIndirectCall(const MachineInstr *MI) const;
   bool isIndirectL4Return(const MachineInstr *MI) const;
   bool isJumpR(const MachineInstr *MI) const;
@@ -322,6 +324,8 @@ public:
                              const MachineInstr *ConsMI) const;
 
 
+  bool canExecuteInBundle(const MachineInstr *First,
+                          const MachineInstr *Second) const;
   bool hasEHLabel(const MachineBasicBlock *B) const;
   bool hasNonExtEquivalent(const MachineInstr *MI) const;
   bool hasPseudoInstrPair(const MachineInstr *MI) const;

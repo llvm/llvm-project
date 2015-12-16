@@ -2269,8 +2269,8 @@ public:
   }
 
   /// Return true if the target supports that a subset of CSRs for the given
-  /// calling convention is handled explicitly via copies.
-  virtual bool supportSplitCSR(CallingConv::ID CC) const {
+  /// machine function is handled explicitly via copies.
+  virtual bool supportSplitCSR(MachineFunction *MF) const {
     return false;
   }
 

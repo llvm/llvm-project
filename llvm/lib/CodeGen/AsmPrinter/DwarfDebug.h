@@ -33,6 +33,7 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Target/TargetOptions.h"
 #include <memory>
 
 namespace llvm {
@@ -184,30 +185,6 @@ struct SymbolCU {
   SymbolCU(DwarfCompileUnit *CU, const MCSymbol *Sym) : Sym(Sym), CU(CU) {}
   const MCSymbol *Sym;
   DwarfCompileUnit *CU;
-};
-
-/// Identify a debugger for "tuning" the debug info.
-///
-/// The "debugger tuning" concept allows us to present a more intuitive
-/// interface that unpacks into different sets of defaults for the various
-/// individual feature-flag settings, that suit the preferences of the
-/// various debuggers.  However, it's worth remembering that debuggers are
-/// not the only consumers of debug info, and some variations in DWARF might
-/// better be treated as target/platform issues. Fundamentally,
-/// o if the feature is useful (or not) to a particular debugger, regardless
-///   of the target, that's a tuning decision;
-/// o if the feature is useful (or not) on a particular platform, regardless
-///   of the debugger, that's a target decision.
-/// It's not impossible to see both factors in some specific case.
-///
-/// The "tuning" should be used to set defaults for individual feature flags
-/// in DwarfDebug; if a given feature has a more specific command-line option,
-/// that option should take precedence over the tuning.
-enum class DebuggerKind {
-  Default,  // No specific tuning requested.
-  GDB,      // Tune debug info for gdb.
-  LLDB,     // Tune debug info for lldb.
-  SCE       // Tune debug info for SCE targets (e.g. PS4).
 };
 
 /// Collects and handles dwarf debug information.

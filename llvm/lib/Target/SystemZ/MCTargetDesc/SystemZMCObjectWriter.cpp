@@ -26,6 +26,8 @@ protected:
   // Override MCELFObjectTargetWriter.
   unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
                         bool IsPCRel) const override;
+  void sortRelocs(const MCAssembler &Asm,
+                  std::vector<ELFRelocationEntry> &Relocs) override;
 };
 } // end anonymous namespace
 
@@ -149,6 +151,23 @@ unsigned SystemZObjectWriter::GetRelocType(const MCValue &Target,
 
   default:
     llvm_unreachable("Modifier not supported");
+  }
+}
+
+void SystemZObjectWriter::sortRelocs(const MCAssembler &Asm,
+                                     std::vector<ELFRelocationEntry> &Relocs) {
+  // The default function sorts entries by Offset in descending order.
+  MCELFObjectTargetWriter::sortRelocs(Asm, Relocs);
+
+  // This is OK for SystemZ, except for R_390_TLS_GDCALL/LDCALL relocs.
+  // There is typically another reloc, a R_390_PLT32DBL, on the same
+  // instruction.  This other reloc must come *before* the GDCALL reloc,
+  // or else the TLS linker optimization may generate incorrect code.
+  for (unsigned i = 0, e = Relocs.size(); i + 1 < e; ++i) {
+    if ((Relocs[i + 1].Type == ELF::R_390_TLS_GDCALL ||
+         Relocs[i + 1].Type == ELF::R_390_TLS_LDCALL) &&
+        Relocs[i].Offset == Relocs[i + 1].Offset + 2)
+      std::swap(Relocs[i], Relocs[i + 1]);
   }
 }
 

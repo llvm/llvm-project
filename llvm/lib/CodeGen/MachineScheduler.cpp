@@ -2579,11 +2579,13 @@ static bool tryPressure(const PressureChange &TryP,
                         const PressureChange &CandP,
                         GenericSchedulerBase::SchedCandidate &TryCand,
                         GenericSchedulerBase::SchedCandidate &Cand,
-                        GenericSchedulerBase::CandReason Reason) {
-  int TryRank = TryP.getPSetOrMax();
-  int CandRank = CandP.getPSetOrMax();
+                        GenericSchedulerBase::CandReason Reason,
+                        const TargetRegisterInfo *TRI,
+                        const MachineFunction &MF) {
+  unsigned TryPSet = TryP.getPSetOrMax();
+  unsigned CandPSet = CandP.getPSetOrMax();
   // If both candidates affect the same set, go with the smallest increase.
-  if (TryRank == CandRank) {
+  if (TryPSet == CandPSet) {
     return tryLess(TryP.getUnitInc(), CandP.getUnitInc(), TryCand, Cand,
                    Reason);
   }
@@ -2593,6 +2595,13 @@ static bool tryPressure(const PressureChange &TryP,
                  Reason)) {
     return true;
   }
+
+  int TryRank = TryP.isValid() ? TRI->getRegPressureSetScore(MF, TryPSet) :
+                                 std::numeric_limits<int>::max();
+
+  int CandRank = CandP.isValid() ? TRI->getRegPressureSetScore(MF, CandPSet) :
+                                   std::numeric_limits<int>::max();
+
   // If the candidates are decreasing pressure, reverse priority.
   if (TryP.getUnitInc() < 0)
     std::swap(TryRank, CandRank);
@@ -2695,13 +2704,15 @@ void GenericScheduler::tryCandidate(SchedCandidate &Cand,
   // Avoid exceeding the target's limit.
   if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.Excess,
                                                Cand.RPDelta.Excess,
-                                               TryCand, Cand, RegExcess))
+                                               TryCand, Cand, RegExcess, TRI,
+                                               DAG->MF))
     return;
 
   // Avoid increasing the max critical pressure in the scheduled region.
   if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.CriticalMax,
                                                Cand.RPDelta.CriticalMax,
-                                               TryCand, Cand, RegCritical))
+                                               TryCand, Cand, RegCritical, TRI,
+                                               DAG->MF))
     return;
 
   // For loops that are acyclic path limited, aggressively schedule for latency.
@@ -2737,7 +2748,8 @@ void GenericScheduler::tryCandidate(SchedCandidate &Cand,
   // Avoid increasing the max pressure of the entire region.
   if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.CurrentMax,
                                                Cand.RPDelta.CurrentMax,
-                                               TryCand, Cand, RegMax))
+                                               TryCand, Cand, RegMax, TRI,
+                                               DAG->MF))
     return;
 
   // Avoid critical resource consumption and balance the schedule.

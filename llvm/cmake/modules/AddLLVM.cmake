@@ -541,9 +541,11 @@ macro(add_llvm_library name)
     set_target_properties( ${name} PROPERTIES EXCLUDE_FROM_ALL ON)
   elseif(NOT _is_gtest)
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LTO")
+      set(install_dir lib${LLVM_LIBDIR_SUFFIX})
       if(ARG_SHARED OR BUILD_SHARED_LIBS)
-        if(WIN32 OR CYGWIN)
+        if(WIN32 OR CYGWIN OR MINGW)
           set(install_type RUNTIME)
+          set(install_dir bin)
         else()
           set(install_type LIBRARY)
         endif()
@@ -553,7 +555,7 @@ macro(add_llvm_library name)
 
       install(TARGETS ${name}
             EXPORT LLVMExports
-            ${install_type} DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+            ${install_type} DESTINATION ${install_dir}
             COMPONENT ${name})
 
       if (NOT CMAKE_CONFIGURATION_TYPES)

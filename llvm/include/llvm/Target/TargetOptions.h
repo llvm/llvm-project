@@ -66,6 +66,30 @@ namespace llvm {
     GNU
   };
 
+  /// Identify a debugger for "tuning" the debug info.
+  ///
+  /// The "debugger tuning" concept allows us to present a more intuitive
+  /// interface that unpacks into different sets of defaults for the various
+  /// individual feature-flag settings, that suit the preferences of the
+  /// various debuggers.  However, it's worth remembering that debuggers are
+  /// not the only consumers of debug info, and some variations in DWARF might
+  /// better be treated as target/platform issues. Fundamentally,
+  /// o if the feature is useful (or not) to a particular debugger, regardless
+  ///   of the target, that's a tuning decision;
+  /// o if the feature is useful (or not) on a particular platform, regardless
+  ///   of the debugger, that's a target decision.
+  /// It's not impossible to see both factors in some specific case.
+  ///
+  /// The "tuning" should be used to set defaults for individual feature flags
+  /// in DwarfDebug; if a given feature has a more specific command-line option,
+  /// that option should take precedence over the tuning.
+  enum class DebuggerKind {
+    Default,  // No specific tuning requested.
+    GDB,      // Tune debug info for gdb.
+    LLDB,     // Tune debug info for lldb.
+    SCE       // Tune debug info for SCE targets (e.g. PS4).
+  };
+
   class TargetOptions {
   public:
     TargetOptions()
@@ -80,7 +104,7 @@ namespace llvm {
           EmulatedTLS(false), FloatABIType(FloatABI::Default),
           AllowFPOpFusion(FPOpFusion::Standard), Reciprocals(TargetRecip()),
           JTType(JumpTable::Single), ThreadModel(ThreadModel::POSIX),
-          EABIVersion(EABI::Default) {}
+          EABIVersion(EABI::Default), DebuggerTuning(DebuggerKind::Default) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -221,6 +245,9 @@ namespace llvm {
     /// EABIVersion - This flag specifies the EABI version
     EABI EABIVersion;
 
+    /// Which debugger to tune for.
+    DebuggerKind DebuggerTuning;
+
     /// Machine level options.
     MCTargetOptions MCOptions;
   };
@@ -250,6 +277,7 @@ inline bool operator==(const TargetOptions &LHS,
     ARE_EQUAL(JTType) &&
     ARE_EQUAL(ThreadModel) &&
     ARE_EQUAL(EABIVersion) &&
+    ARE_EQUAL(DebuggerTuning) &&
     ARE_EQUAL(MCOptions);
 #undef ARE_EQUAL
 }

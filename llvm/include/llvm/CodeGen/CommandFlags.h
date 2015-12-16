@@ -256,6 +256,17 @@ cl::opt<llvm::EABI> EABIVersion(
                clEnumValN(EABI::EABI5, "5", "EABI version 5"),
                clEnumValN(EABI::GNU, "gnu", "EABI GNU"), clEnumValEnd));
 
+cl::opt<DebuggerKind>
+DebuggerTuningOpt("debugger-tune",
+                  cl::desc("Tune debug info for a particular debugger"),
+                  cl::init(DebuggerKind::Default),
+                  cl::values(
+                      clEnumValN(DebuggerKind::GDB, "gdb", "gdb"),
+                      clEnumValN(DebuggerKind::LLDB, "lldb", "lldb"),
+                      clEnumValN(DebuggerKind::SCE, "sce",
+                                 "SCE targets (e.g. PS4)"),
+                      clEnumValEnd));
+
 // Common utility function tightly tied to the options listed here. Initializes
 // a TargetOptions object with CodeGen flags and returns it.
 static inline TargetOptions InitTargetOptionsFromCodeGenFlags() {
@@ -285,6 +296,7 @@ static inline TargetOptions InitTargetOptionsFromCodeGenFlags() {
 
   Options.ThreadModel = TMModel;
   Options.EABIVersion = EABIVersion;
+  Options.DebuggerTuning = DebuggerTuningOpt;
 
   return Options;
 }

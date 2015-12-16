@@ -37,16 +37,16 @@
 # CHECK: brasl %r14, target@PLT:tls_gdcall:sym  # encoding: [0xc0,0xe5,A,A,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@PLT+2, kind: FK_390_PC32DBL
 # CHECK-NEXT:                                   # fixup B - offset: 0, value: sym@TLSGD, kind: FK_390_TLS_CALL
-# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_GDCALL sym 0x0
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_PLT32DBL target 0x2
+# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_GDCALL sym 0x0
 	.align 16
 	brasl %r14, target@plt:tls_gdcall:sym
 
 # CHECK: brasl %r14, target@PLT:tls_ldcall:sym  # encoding: [0xc0,0xe5,A,A,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@PLT+2, kind: FK_390_PC32DBL
 # CHECK-NEXT:                                   # fixup B - offset: 0, value: sym@TLSLDM, kind: FK_390_TLS_CALL
-# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL sym 0x0
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_PLT32DBL target 0x2
+# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL sym 0x0
 	.align 16
 	brasl %r14, target@plt:tls_ldcall:sym
 
@@ -65,16 +65,16 @@
 # CHECK: bras %r14, target@PLT:tls_gdcall:sym   # encoding: [0xa7,0xe5,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@PLT+2, kind: FK_390_PC16DBL
 # CHECK-NEXT:                                   # fixup B - offset: 0, value: sym@TLSGD, kind: FK_390_TLS_CALL
-# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_GDCALL sym 0x0
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_PLT16DBL target 0x2
+# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_GDCALL sym 0x0
 	.align 16
 	bras %r14, target@plt:tls_gdcall:sym
 
 # CHECK: bras %r14, target@PLT:tls_ldcall:sym   # encoding: [0xa7,0xe5,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@PLT+2, kind: FK_390_PC16DBL
 # CHECK-NEXT:                                   # fixup B - offset: 0, value: sym@TLSLDM, kind: FK_390_TLS_CALL
-# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL sym 0x0
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_PLT16DBL target 0x2
+# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL sym 0x0
 	.align 16
 	bras %r14, target@plt:tls_ldcall:sym
 

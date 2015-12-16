@@ -151,6 +151,7 @@ static bool ParseLine(const StringRef &Input, bool &IsCallsite, uint32_t &Depth,
 /// \returns true if the file was loaded successfully, false otherwise.
 std::error_code SampleProfileReaderText::read() {
   line_iterator LineIt(*Buffer, /*SkipBlanks=*/true, '#');
+  sampleprof_error Result = sampleprof_error::success;
 
   InlineCallStack InlineStack;
 
@@ -179,8 +180,8 @@ std::error_code SampleProfileReaderText::read() {
       }
       Profiles[FName] = FunctionSamples();
       FunctionSamples &FProfile = Profiles[FName];
-      FProfile.addTotalSamples(NumSamples);
-      FProfile.addHeadSamples(NumHeadSamples);
+      MergeResult(Result, FProfile.addTotalSamples(NumSamples));
+      MergeResult(Result, FProfile.addHeadSamples(NumHeadSamples));
       InlineStack.clear();
       InlineStack.push_back(&FProfile);
     } else {
@@ -202,7 +203,7 @@ std::error_code SampleProfileReaderText::read() {
         }
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
             CallsiteLocation(LineOffset, Discriminator, FName));
-        FSamples.addTotalSamples(NumSamples);
+        MergeResult(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
       } else {
         while (InlineStack.size() > Depth) {
@@ -210,15 +211,17 @@ std::error_code SampleProfileReaderText::read() {
         }
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
-          FProfile.addCalledTargetSamples(LineOffset, Discriminator,
-                                          name_count.first, name_count.second);
+          MergeResult(Result, FProfile.addCalledTargetSamples(
+                                  LineOffset, Discriminator, name_count.first,
+                                  name_count.second));
         }
-        FProfile.addBodySamples(LineOffset, Discriminator, NumSamples);
+        MergeResult(Result, FProfile.addBodySamples(LineOffset, Discriminator,
+                                                    NumSamples));
       }
     }
   }
 
-  return sampleprof_error::success;
+  return Result;
 }
 
 bool SampleProfileReaderText::hasFormat(const MemoryBuffer &Buffer) {

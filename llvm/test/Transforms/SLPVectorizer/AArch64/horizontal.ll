@@ -1,4 +1,4 @@
-; RUN: opt -slp-vectorizer -slp-threshold=-6 -slp-vectorize-hor -S <  %s | FileCheck %s
+; RUN: opt -slp-vectorizer -slp-threshold=-6 -S <  %s | FileCheck %s
 
 ; FIXME: The threshold is changed to keep this test case a bit smaller.
 ; The AArch64 cost model should not give such high costs to select statements.

@@ -153,16 +153,13 @@ FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo* LI, ScalarEvolution *SE,
 ///
 /// The LoopInfo Analysis that is passed will be kept consistent.
 ///
-/// If a LoopPassManager is passed in, and the loop is fully removed, it will be
-/// removed from the LoopPassManager as well. LPM can also be NULL.
-///
 /// This utility preserves LoopInfo. It will also preserve ScalarEvolution and
 /// DominatorTree if they are non-null.
 bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
                       bool AllowRuntime, bool AllowExpensiveTripCount,
                       unsigned TripMultiple, LoopInfo *LI, ScalarEvolution *SE,
                       DominatorTree *DT, AssumptionCache *AC,
-                      bool PreserveLCSSA, LPPassManager *LPM) {
+                      bool PreserveLCSSA) {
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
     DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
@@ -529,9 +526,9 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   ++NumUnrolled;
 
   Loop *OuterL = L->getParentLoop();
-  // Remove the loop from the LoopPassManager if it's completely removed.
-  if (CompletelyUnroll && LPM != nullptr)
-    LPM->deleteLoopFromQueue(L);
+  // Update LoopInfo if the loop is completely removed.
+  if (CompletelyUnroll)
+    LI->updateUnloop(L);;
 
   // If we have a pass and a DominatorTree we should re-simplify impacted loops
   // to ensure subsequent analyses can rely on this form. We want to simplify
@@ -545,7 +542,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
       // loop's last loop latch is guaranteed to be in the outermost loop after
-      // deleteLoopFromQueue updates LoopInfo.
+      // LoopInfo's been updated by updateUnloop.
       Loop *LatchLoop = LI->getLoopFor(Latches.back());
       if (!OuterL->contains(LatchLoop))
         while (OuterL->getParentLoop() != LatchLoop)

@@ -72,16 +72,22 @@ class AArch64FunctionInfo : public MachineFunctionInfo {
   /// registers.
   unsigned VarArgsFPRSize;
 
+  /// True if this function has a subset of CSRs that is handled explicitly via
+  /// copies.
+  bool IsSplitCSR;
+
 public:
   AArch64FunctionInfo()
       : BytesInStackArgArea(0), ArgumentStackToRestore(0), HasStackFrame(false),
         NumLocalDynamicTLSAccesses(0), VarArgsStackIndex(0), VarArgsGPRIndex(0),
-        VarArgsGPRSize(0), VarArgsFPRIndex(0), VarArgsFPRSize(0) {}
+        VarArgsGPRSize(0), VarArgsFPRIndex(0), VarArgsFPRSize(0),
+        IsSplitCSR(false) {}
 
   explicit AArch64FunctionInfo(MachineFunction &MF)
       : BytesInStackArgArea(0), ArgumentStackToRestore(0), HasStackFrame(false),
         NumLocalDynamicTLSAccesses(0), VarArgsStackIndex(0), VarArgsGPRIndex(0),
-        VarArgsGPRSize(0), VarArgsFPRIndex(0), VarArgsFPRSize(0) {
+        VarArgsGPRSize(0), VarArgsFPRIndex(0), VarArgsFPRSize(0),
+        IsSplitCSR(false) {
     (void)MF;
   }
 
@@ -95,6 +101,9 @@ public:
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
+
+  bool isSplitCSR() const { return IsSplitCSR; }
+  void setIsSplitCSR(bool s) { IsSplitCSR = s; }
 
   void setLocalStackSize(unsigned Size) { LocalStackSize = Size; }
   unsigned getLocalStackSize() const { return LocalStackSize; }

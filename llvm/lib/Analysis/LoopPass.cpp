@@ -62,12 +62,6 @@ LPPassManager::LPPassManager()
   CurrentLoop = nullptr;
 }
 
-/// Delete loop from the loop queue and loop hierarchy (LoopInfo).
-void LPPassManager::deleteLoopFromQueue(Loop *L) {
-  assert(CurrentLoop == L && "deleting a loop that is not being operated on");
-  LI->updateUnloop(L);
-}
-
 // Inset loop into loop nest (LoopInfo) and loop queue (LQ).
 Loop &LPPassManager::addLoop(Loop *ParentLoop) {
   // Create a new loop. LI will take ownership.

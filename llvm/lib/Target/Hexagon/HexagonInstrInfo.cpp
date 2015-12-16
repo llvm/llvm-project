@@ -40,12 +40,16 @@ using namespace llvm;
 
 using namespace llvm;
 
-static cl::opt<bool> ScheduleInlineAsm("hexagon-sched-inline-asm", cl::Hidden,
+cl::opt<bool> ScheduleInlineAsm("hexagon-sched-inline-asm", cl::Hidden,
   cl::init(false), cl::desc("Do not consider inline-asm a scheduling/"
                             "packetization boundary."));
 
 static cl::opt<bool> EnableBranchPrediction("hexagon-enable-branch-prediction",
   cl::Hidden, cl::init(true), cl::desc("Enable branch prediction"));
+
+static cl::opt<bool> DisableNVSchedule("disable-hexagon-nv-schedule",
+  cl::Hidden, cl::ZeroOrMore, cl::init(false),
+  cl::desc("Disable schedule adjustment for new value stores."));
 
 static cl::opt<bool> EnableTimingClassLatency(
   "enable-timing-class-latency", cl::Hidden, cl::init(false),
@@ -1857,6 +1861,17 @@ bool HexagonInstrInfo::isFloat(const MachineInstr *MI) const {
 }
 
 
+// No V60 HVX VMEM with A_INDIRECT.
+bool HexagonInstrInfo::isHVXMemWithAIndirect(const MachineInstr *I,
+      const MachineInstr *J) const {
+  if (!isV60VectorInstruction(I))
+    return false;
+  if (!I->mayLoad() && !I->mayStore())
+    return false;
+  return J->isIndirectBranch() || isIndirectCall(J) || isIndirectL4Return(J);
+}
+
+
 bool HexagonInstrInfo::isIndirectCall(const MachineInstr *MI) const {
   switch (MI->getOpcode()) {
   case Hexagon::J2_callr :
@@ -2488,6 +2503,28 @@ bool HexagonInstrInfo::isVecUsableNextPacket(const MachineInstr *ProdMI,
   if (mayBeNewStore(ConsMI))
     return true;
 
+  return false;
+}
+
+
+/// \brief Can these instructions execute at the same time in a bundle.
+bool HexagonInstrInfo::canExecuteInBundle(const MachineInstr *First,
+      const MachineInstr *Second) const {
+  if (DisableNVSchedule)
+    return false;
+  if (mayBeNewStore(Second)) {
+    // Make sure the definition of the first instruction is the value being
+    // stored.
+    const MachineOperand &Stored =
+      Second->getOperand(Second->getNumOperands() - 1);
+    if (!Stored.isReg())
+      return false;
+    for (unsigned i = 0, e = First->getNumOperands(); i < e; ++i) {
+      const MachineOperand &Op = First->getOperand(i);
+      if (Op.isReg() && Op.isDef() && Op.getReg() == Stored.getReg())
+        return true;
+    }
+  }
   return false;
 }
 

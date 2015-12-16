@@ -3675,6 +3675,9 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
       TLI.supportSwiftError())
     return false;
 
+  if (TLI.supportSplitCSR(FuncInfo.MF))
+    return false;
+
   // Build a list of return value registers.
   SmallVector<unsigned, 4> RetRegs;
 

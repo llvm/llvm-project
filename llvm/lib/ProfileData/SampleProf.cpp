@@ -45,6 +45,8 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Truncated function name table";
     case sampleprof_error::not_implemented:
       return "Unimplemented feature";
+    case sampleprof_error::counter_overflow:
+      return "Counter overflow";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }

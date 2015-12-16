@@ -32,7 +32,7 @@ class ScalarEvolution;
 bool UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool AllowRuntime,
                 bool AllowExpensiveTripCount, unsigned TripMultiple,
                 LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-                AssumptionCache *AC, bool PreserveLCSSA, LPPassManager *LPM);
+                AssumptionCache *AC, bool PreserveLCSSA);
 
 bool UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
                              bool AllowExpensiveTripCount, LoopInfo *LI,

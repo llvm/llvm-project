@@ -3940,8 +3940,17 @@ static bool PhiTypeSorterFunc(Value *V, Value *V2) {
 ///
 /// \returns A candidate reduction value if possible, or \code nullptr \endcode
 /// if not possible.
-static Value *getReductionValue(PHINode *P, BasicBlock *ParentBB,
-                                LoopInfo *LI) {
+static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
+                                BasicBlock *ParentBB, LoopInfo *LI) {
+  // There are situations where the reduction value is not dominated by the
+  // reduction phi. Vectorizing such cases has been reported to cause
+  // miscompiles. See PR25787.
+  auto DominatedReduxValue = [&](Value *R) {
+    return (
+        dyn_cast<Instruction>(R) &&
+        DT->dominates(P->getParent(), dyn_cast<Instruction>(R)->getParent()));
+  };
+
   Value *Rdx = nullptr;
 
   // Return the incoming value if it comes from the same BB as the phi node.
@@ -3951,16 +3960,16 @@ static Value *getReductionValue(PHINode *P, BasicBlock *ParentBB,
     Rdx = P->getIncomingValue(1);
   }
 
-  if (Rdx)
+  if (Rdx && DominatedReduxValue(Rdx))
     return Rdx;
 
   // Otherwise, check whether we have a loop latch to look at.
   Loop *BBL = LI->getLoopFor(ParentBB);
   if (!BBL)
-    return Rdx;
+    return nullptr;
   BasicBlock *BBLatch = BBL->getLoopLatch();
   if (!BBLatch)
-    return Rdx;
+    return nullptr;
 
   // There is a loop latch, return the incoming value if it comes from
   // that. This reduction pattern occassionaly turns up.
@@ -3970,7 +3979,10 @@ static Value *getReductionValue(PHINode *P, BasicBlock *ParentBB,
     Rdx = P->getIncomingValue(1);
   }
 
-  return Rdx;
+  if (Rdx && DominatedReduxValue(Rdx))
+    return Rdx;
+
+  return nullptr;
 }
 
 /// \brief Attempt to reduce a horizontal reduction.
@@ -4065,7 +4077,7 @@ bool SLPVectorizer::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (P->getNumIncomingValues() != 2)
         return Changed;
 
-      Value *Rdx = getReductionValue(P, BB, LI);
+      Value *Rdx = getReductionValue(DT, P, BB, LI);
 
       // Check if this is a Binary Operator.
       BinaryOperator *BI = dyn_cast_or_null<BinaryOperator>(Rdx);

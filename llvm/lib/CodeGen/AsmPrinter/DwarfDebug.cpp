@@ -77,17 +77,6 @@ static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::desc("Generate dwarf aranges"),
                                            cl::init(false));
 
-static cl::opt<DebuggerKind>
-DebuggerTuningOpt("debugger-tune",
-                  cl::desc("Tune debug info for a particular debugger"),
-                  cl::init(DebuggerKind::Default),
-                  cl::values(
-                      clEnumValN(DebuggerKind::GDB, "gdb", "gdb"),
-                      clEnumValN(DebuggerKind::LLDB, "lldb", "lldb"),
-                      clEnumValN(DebuggerKind::SCE, "sce",
-                                 "SCE targets (e.g. PS4)"),
-                      clEnumValEnd));
-
 namespace {
 enum DefaultOnOff { Default, Enable, Disable };
 }
@@ -228,10 +217,10 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   CurMI = nullptr;
   Triple TT(Asm->getTargetTriple());
 
-  // Make sure we know our "debugger tuning."  The command-line option takes
+  // Make sure we know our "debugger tuning."  The target option takes
   // precedence; fall back to triple-based defaults.
-  if (DebuggerTuningOpt != DebuggerKind::Default)
-    DebuggerTuning = DebuggerTuningOpt;
+  if (Asm->TM.Options.DebuggerTuning != DebuggerKind::Default)
+    DebuggerTuning = Asm->TM.Options.DebuggerTuning;
   else if (IsDarwin || TT.isOSFreeBSD())
     DebuggerTuning = DebuggerKind::LLDB;
   else if (TT.isPS4CPU())

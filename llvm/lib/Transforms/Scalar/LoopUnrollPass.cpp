@@ -131,7 +131,7 @@ namespace {
     bool UserAllowPartial;
     bool UserRuntime;
 
-    bool runOnLoop(Loop *L, LPPassManager &LPM) override;
+    bool runOnLoop(Loop *L, LPPassManager &) override;
 
     /// This transformation requires natural loop information & requires that
     /// loop preheaders be inserted into the CFG...
@@ -886,7 +886,7 @@ unsigned LoopUnroll::selectUnrollCount(
   return Count;
 }
 
-bool LoopUnroll::runOnLoop(Loop *L, LPPassManager &LPM) {
+bool LoopUnroll::runOnLoop(Loop *L, LPPassManager &) {
   if (skipOptnoneFunction(L))
     return false;
 
@@ -1081,7 +1081,7 @@ bool LoopUnroll::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   // Unroll the loop.
   if (!UnrollLoop(L, Count, TripCount, AllowRuntime, UP.AllowExpensiveTripCount,
-                  TripMultiple, LI, SE, &DT, &AC, PreserveLCSSA, &LPM))
+                  TripMultiple, LI, SE, &DT, &AC, PreserveLCSSA))
     return false;
 
   return true;

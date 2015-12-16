@@ -90,7 +90,10 @@ private:
 //===----------------------------------------------------------------------===//
 
 MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
-  const TargetRegisterClass *TRC = MRI->getRegClass(RegNo);
+  const TargetRegisterClass *TRC =
+      TargetRegisterInfo::isVirtualRegister(RegNo) ?
+      MRI->getRegClass(RegNo) :
+      MRI->getTargetRegisterInfo()->getMinimalPhysRegClass(RegNo);
   for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
     if (TRC->hasType(T))
       return T;
@@ -181,6 +184,13 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
     Local.addOperand(MCOperand::createImm(getRegType(VReg).SimpleTy));
     AnyWARegs = true;
   }
+  auto &PhysRegs = MFI->getPhysRegs();
+  for (unsigned PReg = 0; PReg < PhysRegs.size(); ++PReg) {
+    if (PhysRegs[PReg] == -1U)
+      continue;
+    Local.addOperand(MCOperand::createImm(getRegType(PReg).SimpleTy));
+    AnyWARegs = true;
+  }
   if (AnyWARegs)
     EmitToStreamer(*OutStreamer, Local);
 
@@ -219,16 +229,36 @@ bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
   if (AsmVariant != 0)
     report_fatal_error("There are no defined alternate asm variants");
 
+  // First try the generic code, which knows about modifiers like 'c' and 'n'.
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, AsmVariant, ExtraCode, OS))
+    return false;
+
   if (!ExtraCode) {
     const MachineOperand &MO = MI->getOperand(OpNo);
-    if (MO.isImm())
+    switch (MO.getType()) {
+    case MachineOperand::MO_Immediate:
       OS << MO.getImm();
-    else
+      return false;
+    case MachineOperand::MO_Register:
       OS << regToString(MO);
-    return false;
+      return false;
+    case MachineOperand::MO_GlobalAddress:
+      getSymbol(MO.getGlobal())->print(OS, MAI);
+      printOffset(MO.getOffset(), OS);
+      return false;
+    case MachineOperand::MO_ExternalSymbol:
+      GetExternalSymbolSymbol(MO.getSymbolName())->print(OS, MAI);
+      printOffset(MO.getOffset(), OS);
+      return false;
+    case MachineOperand::MO_MachineBasicBlock:
+      MO.getMBB()->getSymbol()->print(OS, MAI);
+      return false;
+    default:
+      break;
+    }
   }
 
-  return AsmPrinter::PrintAsmOperand(MI, OpNo, AsmVariant, ExtraCode, OS);
+  return true;
 }
 
 bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
@@ -240,7 +270,9 @@ bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     report_fatal_error("There are no defined alternate asm variants");
 
   if (!ExtraCode) {
-    OS << regToString(MI->getOperand(OpNo));
+    // TODO: For now, we just hard-code 0 as the constant offset; teach
+    // SelectInlineAsmMemoryOperand how to do address mode matching.
+    OS << "0(" + regToString(MI->getOperand(OpNo)) + ')';
     return false;
   }
 

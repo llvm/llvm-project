@@ -470,9 +470,9 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   FuncInfo->SplitCSR = false;
   SmallVector<MachineBasicBlock*, 4> Returns;
 
-  // We split CSR if the target supports it for the given calling convention
+  // We split CSR if the target supports it for the given function
   // and the function has only return exits.
-  if (TLI->supportSplitCSR(Fn.getCallingConv())) {
+  if (TLI->supportSplitCSR(MF)) {
     FuncInfo->SplitCSR = true;
 
     // Collect all the return blocks.

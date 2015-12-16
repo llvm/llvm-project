@@ -486,7 +486,7 @@ namespace ARM_AM {
   // addrmode5 := reg +/- imm8*4
   //
   // The first operand is always a Reg.  The second operand encodes the
-  // operation (add or subtract) in bit 8 and the immediate in bits 0-7.
+  // operation in bit 8 and the immediate in bits 0-7.
 
   /// getAM5Opc - This function encodes the addrmode5 opc field.
   static inline unsigned getAM5Opc(AddrOpc Opc, unsigned char Offset) {
@@ -497,29 +497,6 @@ namespace ARM_AM {
     return AM5Opc & 0xFF;
   }
   static inline AddrOpc getAM5Op(unsigned AM5Opc) {
-    return ((AM5Opc >> 8) & 1) ? sub : add;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Addressing Mode #5 FP16
-  //===--------------------------------------------------------------------===//
-  //
-  // This is used for coprocessor instructions, such as 16-bit FP load/stores.
-  //
-  // addrmode5fp16 := reg +/- imm8*2
-  //
-  // The first operand is always a Reg.  The second operand encodes the
-  // operation (add or subtract) in bit 8 and the immediate in bits 0-7.
-
-  /// getAM5FP16Opc - This function encodes the addrmode5fp16 opc field.
-  static inline unsigned getAM5FP16Opc(AddrOpc Opc, unsigned char Offset) {
-    bool isSub = Opc == sub;
-    return ((int)isSub << 8) | Offset;
-  }
-  static inline unsigned char getAM5FP16Offset(unsigned AM5Opc) {
-    return AM5Opc & 0xFF;
-  }
-  static inline AddrOpc getAM5FP16Op(unsigned AM5Opc) {
     return ((AM5Opc >> 8) & 1) ? sub : add;
   }
 
@@ -671,32 +648,6 @@ namespace ARM_AM {
     FPUnion.I |= (Exp & 0x3) << 23;
     FPUnion.I |= Mantissa << 19;
     return FPUnion.F;
-  }
-
-  /// getFP16Imm - Return an 8-bit floating-point version of the 16-bit
-  /// floating-point value. If the value cannot be represented as an 8-bit
-  /// floating-point value, then return -1.
-  static inline int getFP16Imm(const APInt &Imm) {
-    uint32_t Sign = Imm.lshr(15).getZExtValue() & 1;
-    int32_t Exp = (Imm.lshr(10).getSExtValue() & 0x1f) - 15;  // -14 to 15
-    int64_t Mantissa = Imm.getZExtValue() & 0x3ff;  // 10 bits
-
-    // We can handle 4 bits of mantissa.
-    // mantissa = (16+UInt(e:f:g:h))/16.
-    if (Mantissa & 0x3f)
-      return -1;
-    Mantissa >>= 6;
-
-    // We can handle 3 bits of exponent: exp == UInt(NOT(b):c:d)-3
-    if (Exp < -3 || Exp > 4)
-      return -1;
-    Exp = ((Exp+3) & 0x7) ^ 4;
-
-    return ((int)Sign << 7) | (Exp << 4) | Mantissa;
-  }
-
-  static inline int getFP16Imm(const APFloat &FPImm) {
-    return getFP16Imm(FPImm.bitcastToAPInt());
   }
 
   /// getFP32Imm - Return an 8-bit floating-point version of the 32-bit

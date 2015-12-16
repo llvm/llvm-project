@@ -385,6 +385,14 @@ public:
   bool isCheapToSpeculateCtlz() const override {
     return true;
   }
+  bool supportSplitCSR(MachineFunction *MF) const override {
+    return MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
+           MF->getFunction()->hasFnAttribute(Attribute::NoUnwind);
+  }
+  void initializeSplitCSR(MachineBasicBlock *Entry) const override;
+  void insertCopiesSplitCSR(
+      MachineBasicBlock *Entry,
+      const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
 
 private:
   bool isExtFreeImpl(const Instruction *Ext) const override;
