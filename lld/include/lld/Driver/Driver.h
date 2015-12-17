@@ -46,6 +46,9 @@ protected:
   static bool link(LinkingContext &context,
                    raw_ostream &diag = llvm::errs());
 
+  /// Parses the LLVM options from the context.
+  static void parseLLVMOptions(const LinkingContext &context);
+
 private:
   Driver() = delete;
 };

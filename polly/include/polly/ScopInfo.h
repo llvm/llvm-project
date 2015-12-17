@@ -827,7 +827,7 @@ private:
   MemoryAccessVec MemAccs;
 
   /// @brief Mapping from instructions to (scalar) memory accesses.
-  DenseMap<const Instruction *, MemoryAccessList *> InstructionToAccess;
+  DenseMap<const Instruction *, MemoryAccessList> InstructionToAccess;
 
   //@}
 
@@ -957,14 +957,6 @@ public:
   /// @brief Return true if this statement does not contain any accesses.
   bool isEmpty() const { return MemAccs.empty(); }
 
-  /// @brief Return the (scalar) memory accesses for @p Inst if any.
-  MemoryAccessList *lookupAccessesFor(const Instruction *Inst) const {
-    auto It = InstructionToAccess.find(Inst);
-    if (It == InstructionToAccess.end())
-      return nullptr;
-    return It->getSecond()->empty() ? nullptr : It->getSecond();
-  }
-
   /// @brief Return the only array access for @p Inst.
   ///
   /// @param Inst The instruction for which to look up the access.
@@ -973,13 +965,10 @@ public:
     auto It = InstructionToAccess.find(Inst);
     assert(It != InstructionToAccess.end() &&
            "No memory accesses found for instruction");
-    auto *Accesses = It->getSecond();
-
-    assert(Accesses && "No memory accesses found for instruction");
 
     MemoryAccess *ArrayAccess = nullptr;
 
-    for (auto Access : *Accesses) {
+    for (auto Access : It->getSecond()) {
       if (!Access->isArrayKind())
         continue;
 
@@ -992,12 +981,22 @@ public:
     return *ArrayAccess;
   }
 
-  /// @brief Return the __first__ (scalar) memory access for @p Inst if any.
-  MemoryAccess *lookupAccessFor(const Instruction *Inst) const {
+  /// @brief Get the number of array accesses associated with an instruction.
+  ///
+  /// @param Inst The instruction for which to obtain the access count.
+  /// @returns The number of array accesses associated with this instruction.
+  size_t getNumberOfArrayAccessesFor(const Instruction *Inst) const {
+    size_t NumAccesses = 0;
     auto It = InstructionToAccess.find(Inst);
     if (It == InstructionToAccess.end())
-      return nullptr;
-    return It->getSecond()->empty() ? nullptr : It->getSecond()->front();
+      return 0;
+
+    for (auto Access : It->getSecond()) {
+      if (Access->isArrayKind())
+        NumAccesses++;
+    }
+
+    return NumAccesses;
   }
 
   void setBasicBlock(BasicBlock *Block) {

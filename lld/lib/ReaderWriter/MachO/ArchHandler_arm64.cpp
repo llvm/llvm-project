@@ -674,7 +674,7 @@ void ArchHandler_arm64::applyFixupRelocatable(const Reference &ref,
     *loc32 = ref.addend() + inAtomAddress - fixupAddress;
     return;
   case negDelta32:
-    *loc32 = fixupAddress - inAtomAddress + ref.addend();
+    *loc32 = fixupAddress - targetAddress + ref.addend();
     return;
   case pointer64ToGOT:
     *loc64 = 0;

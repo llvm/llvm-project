@@ -4217,7 +4217,7 @@ ClangASTContext::GetFunctionArgumentTypeAtIndex (lldb::opaque_compiler_type_t ty
 {
     if (type)
     {
-        const clang::FunctionProtoType* func = llvm::dyn_cast<clang::FunctionProtoType>(GetCanonicalQualType(type));
+        const clang::FunctionProtoType* func = llvm::dyn_cast<clang::FunctionProtoType>(GetQualType(type));
         if (func)
         {
             const uint32_t num_args = func->getNumParams();
@@ -4233,7 +4233,7 @@ ClangASTContext::GetFunctionReturnType (lldb::opaque_compiler_type_t type)
 {
     if (type)
     {
-        clang::QualType qual_type(GetCanonicalQualType(type));
+        clang::QualType qual_type(GetQualType(type));
         const clang::FunctionProtoType* func = llvm::dyn_cast<clang::FunctionProtoType>(qual_type.getTypePtr());
         if (func)
             return CompilerType(getASTContext(), func->getReturnType());

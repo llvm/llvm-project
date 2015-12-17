@@ -637,6 +637,10 @@ bool GnuLdDriver::parse(llvm::ArrayRef<const char *> args,
   if (ctx->allowLinkWithDynamicLibraries())
     ctx->registry().addSupportELFDynamicSharedObjects(*ctx);
 
+  // Parse the LLVM options before we process files in case the file handling
+  // makes use of things like DEBUG().
+  parseLLVMOptions(*ctx);
+
   std::stack<int> groupStack;
   int numfiles = 0;
   bool asNeeded = false;

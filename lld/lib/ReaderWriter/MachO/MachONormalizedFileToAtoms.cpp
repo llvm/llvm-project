@@ -27,12 +27,16 @@
 #include "MachONormalizedFileBinaryUtils.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm::MachO;
 using namespace lld::mach_o::normalized;
+
+#define DEBUG_TYPE "normalized-file-to-atoms"
 
 namespace lld {
 namespace mach_o {
@@ -892,10 +896,13 @@ std::error_code
 normalizedObjectToAtoms(MachOFile *file,
                         const NormalizedFile &normalizedFile,
                         bool copyRefs) {
+  DEBUG(llvm::dbgs() << "******** Normalizing file to atoms: "
+                    << file->path() << "\n");
   bool scatterable = ((normalizedFile.flags & MH_SUBSECTIONS_VIA_SYMBOLS) != 0);
 
   // Create atoms from each section.
   for (auto &sect : normalizedFile.sections) {
+    DEBUG(llvm::dbgs() << "Creating atoms: "; sect.dump());
     if (isDebugInfoSection(sect))
       continue;
     bool customSectionName;
@@ -1060,6 +1067,14 @@ normalizedToAtoms(const NormalizedFile &normalizedFile, StringRef path,
     llvm_unreachable("unhandled MachO file type!");
   }
 }
+
+#ifndef NDEBUG
+void Section::dump(llvm::raw_ostream &OS) const {
+  OS << "Section (\"" << segmentName << ", " << sectionName << "\"";
+  OS << ", addr: " << llvm::format_hex(address, 16, true);
+  OS << ", size: " << llvm::format_hex(content.size(), 8, true) << ")\n";
+}
+#endif
 
 } // namespace normalized
 } // namespace mach_o

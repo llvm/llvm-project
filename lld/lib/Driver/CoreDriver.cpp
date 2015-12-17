@@ -159,6 +159,8 @@ bool CoreDriver::parse(llvm::ArrayRef<const char *> args,
     }
   }
 
+  parseLLVMOptions(ctx);
+
   if (ctx.getNodes().empty()) {
     diagnostics << "No input files\n";
     return false;

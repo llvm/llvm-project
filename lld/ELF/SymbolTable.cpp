@@ -28,32 +28,54 @@ using namespace lld::elf2;
 
 template <class ELFT> SymbolTable<ELFT>::SymbolTable() {}
 
-template <class ELFT> bool SymbolTable<ELFT>::shouldUseRela() const {
-  ELFKind K = cast<ELFFileBase<ELFT>>(Config->FirstElf)->getELFKind();
-  return K == ELF64LEKind || K == ELF64BEKind;
+template <class ELFT>
+static void checkCompatibility(InputFile *FileP) {
+  auto *F = dyn_cast<ELFFileBase<ELFT>>(FileP);
+  if (!F)
+    return;
+  if (F->getELFKind() == Config->EKind && F->getEMachine() == Config->EMachine)
+    return;
+  StringRef A = F->getName();
+  StringRef B = Config->Emulation;
+  if (B.empty())
+    B = Config->FirstElf->getName();
+  error(A + " is incompatible with " + B);
 }
 
 template <class ELFT>
 void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
-  checkCompatibility(File);
+  InputFile *FileP = File.release();
+  checkCompatibility<ELFT>(FileP);
 
-  if (auto *AF = dyn_cast<ArchiveFile>(File.get())) {
-    ArchiveFiles.emplace_back(std::move(File));
-    AF->parse();
-    for (Lazy &Sym : AF->getLazySymbols())
+  // .a file
+  if (auto *F = dyn_cast<ArchiveFile>(FileP)) {
+    ArchiveFiles.emplace_back(F);
+    F->parse();
+    for (Lazy &Sym : F->getLazySymbols())
       addLazy(&Sym);
     return;
   }
 
-  if (auto *S = dyn_cast<SharedFile<ELFT>>(File.get())) {
-    S->parseSoName();
-    if (!IncludedSoNames.insert(S->getSoName()).second)
+  // .so file
+  if (auto *F = dyn_cast<SharedFile<ELFT>>(FileP)) {
+    // DSOs are uniquified not by filename but by soname.
+    F->parseSoName();
+    if (!IncludedSoNames.insert(F->getSoName()).second)
       return;
-    S->parse();
-  } else {
-    cast<ObjectFile<ELFT>>(File.get())->parse(Comdats);
+
+    SharedFiles.emplace_back(F);
+    F->parse();
+    for (SharedSymbol<ELFT> &B : F->getSharedSymbols())
+      resolve(&B);
+    return;
   }
-  addELFFile(cast<ELFFileBase<ELFT>>(File.release()));
+
+  // .o file
+  auto *F = cast<ObjectFile<ELFT>>(FileP);
+  ObjectFiles.emplace_back(F);
+  F->parse(Comdats);
+  for (SymbolBody *B : F->getSymbols())
+    resolve(B);
 }
 
 template <class ELFT>
@@ -71,26 +93,26 @@ SymbolBody *SymbolTable<ELFT>::addUndefinedOpt(StringRef Name) {
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addAbsoluteSym(StringRef Name,
-                                       typename ELFFile<ELFT>::Elf_Sym &ESym) {
+void SymbolTable<ELFT>::addAbsolute(StringRef Name,
+                                    typename ELFFile<ELFT>::Elf_Sym &ESym) {
   resolve(new (Alloc) DefinedAbsolute<ELFT>(Name, ESym));
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addSyntheticSym(StringRef Name,
-                                        OutputSectionBase<ELFT> &Section,
-                                        typename ELFFile<ELFT>::uintX_t Value) {
+void SymbolTable<ELFT>::addSynthetic(StringRef Name,
+                                     OutputSectionBase<ELFT> &Section,
+                                     typename ELFFile<ELFT>::uintX_t Value) {
   typedef typename DefinedSynthetic<ELFT>::Elf_Sym Elf_Sym;
-  auto ESym = new (Alloc) Elf_Sym;
+  auto *ESym = new (Alloc) Elf_Sym;
   memset(ESym, 0, sizeof(Elf_Sym));
   ESym->st_value = Value;
-  auto Sym = new (Alloc) DefinedSynthetic<ELFT>(Name, *ESym, Section);
+  auto *Sym = new (Alloc) DefinedSynthetic<ELFT>(Name, *ESym, Section);
   resolve(Sym);
 }
 
 template <class ELFT>
-SymbolBody *SymbolTable<ELFT>::addIgnoredSym(StringRef Name) {
-  auto Sym = new (Alloc)
+SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
+  auto *Sym = new (Alloc)
       DefinedAbsolute<ELFT>(Name, DefinedAbsolute<ELFT>::IgnoreUndef);
   resolve(Sym);
   return Sym;
@@ -102,52 +124,33 @@ template <class ELFT> bool SymbolTable<ELFT>::isUndefined(StringRef Name) {
   return false;
 }
 
+// Returns a file from which symbol B was created.
+// If B does not belong to any file in ObjectFiles, returns a nullptr.
 template <class ELFT>
-void SymbolTable<ELFT>::addELFFile(ELFFileBase<ELFT> *File) {
-  if (auto *O = dyn_cast<ObjectFile<ELFT>>(File))
-    ObjectFiles.emplace_back(O);
-  else if (auto *S = dyn_cast<SharedFile<ELFT>>(File))
-    SharedFiles.emplace_back(S);
-
-  if (auto *O = dyn_cast<ObjectFile<ELFT>>(File)) {
-    for (SymbolBody *Body : O->getSymbols())
-      resolve(Body);
-  }
-
-  if (auto *S = dyn_cast<SharedFile<ELFT>>(File)) {
-    for (SharedSymbol<ELFT> &Body : S->getSharedSymbols())
-      resolve(&Body);
-  }
-}
-
-template <class ELFT>
-void SymbolTable<ELFT>::reportConflict(const Twine &Message,
-                                       const SymbolBody &Old,
-                                       const SymbolBody &New, bool Warning) {
+static ELFFileBase<ELFT> *
+findFile(std::vector<std::unique_ptr<ObjectFile<ELFT>>> &ObjectFiles,
+         SymbolBody *B) {
   typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
   typedef typename ELFFile<ELFT>::Elf_Sym_Range Elf_Sym_Range;
 
-  const Elf_Sym &OldE = cast<ELFSymbolBody<ELFT>>(Old).Sym;
-  const Elf_Sym &NewE = cast<ELFSymbolBody<ELFT>>(New).Sym;
-  ELFFileBase<ELFT> *OldFile = nullptr;
-  ELFFileBase<ELFT> *NewFile = nullptr;
-
-  for (const std::unique_ptr<ObjectFile<ELFT>> &File : ObjectFiles) {
-    Elf_Sym_Range Syms = File->getObj().symbols(File->getSymbolTable());
-    if (&OldE > Syms.begin() && &OldE < Syms.end())
-      OldFile = File.get();
-    if (&NewE > Syms.begin() && &NewE < Syms.end())
-      NewFile = File.get();
+  const Elf_Sym *Sym = &cast<ELFSymbolBody<ELFT>>(*B).Sym;
+  for (const std::unique_ptr<ObjectFile<ELFT>> &F : ObjectFiles) {
+    Elf_Sym_Range R = F->getObj().symbols(F->getSymbolTable());
+    if (R.begin() <= Sym && Sym < R.end())
+      return F.get();
   }
+  return nullptr;
+}
 
-  std::string Msg = (Message + ": " + Old.getName() + " in " +
-                     (OldFile ? OldFile->getName() : "(internal)") + " and " +
-                     (NewFile ? NewFile->getName() : "(internal)"))
-                        .str();
-  if (Warning)
-    warning(Msg);
-  else
-    error(Msg);
+template <class ELFT>
+std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Old, SymbolBody *New) {
+  ELFFileBase<ELFT> *OldFile = findFile(ObjectFiles, Old);
+  ELFFileBase<ELFT> *NewFile = findFile(ObjectFiles, New);
+
+  StringRef Sym = Old->getName();
+  StringRef F1 = OldFile ? OldFile->getName() : "(internal)";
+  StringRef F2 = NewFile ? NewFile->getName() : "(internal)";
+  return (Sym + " in " + F1 + " and " + F2).str();
 }
 
 // This function resolves conflicts if there's an existing symbol with
@@ -160,45 +163,39 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
   SymbolBody *Existing = Sym->Body;
 
   if (Lazy *L = dyn_cast<Lazy>(Existing)) {
-    if (New->isUndefined()) {
-      if (New->isWeak()) {
-        // See the explanation in SymbolTable::addLazy
-        L->setUsedInRegularObj();
-        L->setWeak();
-        return;
-      }
-      addMemberFile(L);
+    if (auto *Undef = dyn_cast<Undefined<ELFT>>(New)) {
+      addMemberFile(Undef, L);
       return;
     }
-
-    // Found a definition for something also in an archive. Ignore the archive
-    // definition.
+    // Found a definition for something also in an archive.
+    // Ignore the archive definition.
     Sym->Body = New;
     return;
   }
 
-  if (New->isTLS() != Existing->isTLS())
-    reportConflict("TLS attribute mismatch for symbol", *Existing, *New, false);
+  if (New->isTls() != Existing->isTls())
+    error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
 
   // compare() returns -1, 0, or 1 if the lhs symbol is less preferable,
   // equivalent (conflicting), or more preferable, respectively.
   int comp = Existing->compare<ELFT>(New);
+  if (comp == 0) {
+    std::string S = "duplicate symbol: " + conflictMsg(Existing, New);
+    if (!Config->AllowMultipleDefinition)
+      error(S);
+    warning(S);
+    return;
+  }
   if (comp < 0)
     Sym->Body = New;
-  else if (comp == 0)
-    reportConflict("duplicate symbol", *Existing, *New,
-                   Config->AllowMultipleDefinition);
 }
 
 template <class ELFT> Symbol *SymbolTable<ELFT>::insert(SymbolBody *New) {
   // Find an existing Symbol or create and insert a new one.
   StringRef Name = New->getName();
   Symbol *&Sym = Symtab[Name];
-  if (!Sym) {
-    Sym = new (Alloc) Symbol(New);
-    New->setBackref(Sym);
-    return Sym;
-  }
+  if (!Sym)
+    Sym = new (Alloc) Symbol{New};
   New->setBackref(Sym);
   return Sym;
 }
@@ -210,16 +207,18 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
   return It->second->Body;
 }
 
-template <class ELFT> void SymbolTable<ELFT>::addLazy(Lazy *New) {
-  Symbol *Sym = insert(New);
-  if (Sym->Body == New)
+template <class ELFT> void SymbolTable<ELFT>::addLazy(Lazy *L) {
+  Symbol *Sym = insert(L);
+  if (Sym->Body == L)
     return;
-  SymbolBody *Existing = Sym->Body;
-  if (Existing->isDefined() || Existing->isLazy())
-    return;
-  Sym->Body = New;
-  assert(Existing->isUndefined() && "Unexpected symbol kind.");
+  if (auto *Undef = dyn_cast<Undefined<ELFT>>(Sym->Body)) {
+    Sym->Body = L;
+    addMemberFile(Undef, L);
+  }
+}
 
+template <class ELFT>
+void SymbolTable<ELFT>::addMemberFile(Undefined<ELFT> *Undef, Lazy *L) {
   // Weak undefined symbols should not fetch members from archives.
   // If we were to keep old symbol we would not know that an archive member was
   // available if a strong undefined symbol shows up afterwards in the link.
@@ -227,31 +226,15 @@ template <class ELFT> void SymbolTable<ELFT>::addLazy(Lazy *New) {
   // get to the end of the link and must be treated as the weak undefined one.
   // We set UsedInRegularObj in a similar way to what is done with shared
   // symbols and mark it as weak to reduce how many special cases are needed.
-  if (Existing->isWeak()) {
-    New->setUsedInRegularObj();
-    New->setWeak();
+  if (Undef->isWeak()) {
+    L->setUsedInRegularObj();
+    L->setWeak();
     return;
   }
-  addMemberFile(New);
-}
 
-template <class ELFT>
-void SymbolTable<ELFT>::checkCompatibility(std::unique_ptr<InputFile> &File) {
-  auto *E = dyn_cast<ELFFileBase<ELFT>>(File.get());
-  if (!E)
-    return;
-  if (E->getELFKind() == Config->EKind && E->getEMachine() == Config->EMachine)
-    return;
-  StringRef A = E->getName();
-  StringRef B = Config->Emulation;
-  if (B.empty())
-    B = Config->FirstElf->getName();
-  error(A + " is incompatible with " + B);
-}
-
-template <class ELFT> void SymbolTable<ELFT>::addMemberFile(Lazy *Body) {
+  // Fetch a member file that has the definition for L.
   // getMember returns nullptr if the member was already read from the library.
-  if (std::unique_ptr<InputFile> File = Body->getMember())
+  if (std::unique_ptr<InputFile> File = L->getMember())
     addFile(std::move(File));
 }
 

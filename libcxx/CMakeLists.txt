@@ -42,7 +42,6 @@ if (LIBCXX_BUILT_STANDALONE AND NOT LLVM_FOUND)
                   "or -DLLVM_PATH=path/to/llvm-source-root.")
 endif()
 
-
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
@@ -149,6 +148,13 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT LIBCXX_OVERRIDE_DARWIN_INSTALL
     set(LIBCXX_INSTALL_LIBRARY OFF)
   endif()
 endif()
+
+set(LIBCXX_CONFIGURE_IDE_DEFAULT OFF)
+if (XCODE OR MSVC_IDE)
+  set(LIBCXX_CONFIGURE_IDE_DEFAULT ON)
+endif()
+option(LIBCXX_CONFIGURE_IDE "Configure libcxx for use within an IDE"
+      ${LIBCXX_CONFIGURE_IDE_DEFAULT})
 
 #===============================================================================
 # Check option configurations

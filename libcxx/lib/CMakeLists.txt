@@ -11,7 +11,7 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
 endif()
 
 # Add all the headers to the project for IDEs.
-if (MSVC_IDE OR XCODE)
+if (LIBCXX_CONFIGURE_IDE)
   file(GLOB_RECURSE LIBCXX_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/*)
   if(WIN32)
     file( GLOB LIBCXX_WIN32_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/support/win32/*.h)

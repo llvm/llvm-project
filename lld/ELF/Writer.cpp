@@ -95,6 +95,11 @@ private:
 };
 } // anonymous namespace
 
+template <class ELFT> static bool shouldUseRela() {
+  ELFKind K = cast<ELFFileBase<ELFT>>(Config->FirstElf)->getELFKind();
+  return K == ELF64LEKind || K == ELF64BEKind;
+}
+
 template <class ELFT> void lld::elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   // Initialize output sections that are handled by Writer specially.
   // Don't reorder because the order of initialization matters.
@@ -127,7 +132,7 @@ template <class ELFT> void lld::elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   GnuHashTableSection<ELFT> GnuHashTab;
   if (Config->GnuHash)
     Out<ELFT>::GnuHashTab = &GnuHashTab;
-  bool IsRela = Symtab->shouldUseRela();
+  bool IsRela = shouldUseRela<ELFT>();
   RelocationSection<ELFT> RelaDyn(IsRela ? ".rela.dyn" : ".rel.dyn", IsRela);
   Out<ELFT>::RelaDyn = &RelaDyn;
   RelocationSection<ELFT> RelaPlt(IsRela ? ".rela.plt" : ".rel.plt", IsRela);
@@ -219,7 +224,7 @@ void Writer<ELFT>::scanRelocs(
     if (Body)
       Body = Body->repl();
 
-    if (Body && Body->isTLS() && Target->isTlsGlobalDynamicReloc(Type)) {
+    if (Body && Body->isTls() && Target->isTlsGlobalDynamicReloc(Type)) {
       bool Opt = Target->isTlsOptimized(Type, Body);
       if (!Opt && Out<ELFT>::Got->addDynTlsEntry(Body)) {
         Out<ELFT>::RelaDyn->addReloc({&C, &RI});
@@ -231,17 +236,17 @@ void Writer<ELFT>::scanRelocs(
         continue;
     }
 
-    if (Body && Body->isTLS() && !Target->isTlsDynReloc(Type))
+    if (Body && Body->isTls() && !Target->isTlsDynReloc(Type))
       continue;
 
     bool NeedsGot = false;
     bool NeedsPlt = false;
     if (Body) {
       if (auto *E = dyn_cast<SharedSymbol<ELFT>>(Body)) {
-        if (E->needsCopy())
+        if (E->NeedsCopy)
           continue;
-        if (Target->relocNeedsCopy(Type, *Body))
-          E->OffsetInBSS = 0;
+        if (Target->needsCopyRel(Type, *Body))
+          E->NeedsCopy = true;
       }
       NeedsPlt = Target->relocNeedsPlt(Type, *Body);
       if (NeedsPlt) {
@@ -418,10 +423,10 @@ static bool compareOutputSections(OutputSectionBase<ELFT> *A,
   // PT_LOAD, so stick TLS sections directly before R/W sections. The TLS NOBITS
   // sections are placed here as they don't take up virtual address space in the
   // PT_LOAD.
-  bool AIsTLS = AFlags & SHF_TLS;
-  bool BIsTLS = BFlags & SHF_TLS;
-  if (AIsTLS != BIsTLS)
-    return AIsTLS;
+  bool AIsTls = AFlags & SHF_TLS;
+  bool BIsTls = BFlags & SHF_TLS;
+  if (AIsTls != BIsTls)
+    return AIsTls;
 
   // The next requirement we have is to put nobits sections last. The
   // reason is that the only thing the dynamic linker will see about
@@ -640,11 +645,11 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   auto AddStartEnd = [&](StringRef Start, StringRef End,
                          OutputSectionBase<ELFT> *OS) {
     if (OS) {
-      Symtab.addSyntheticSym(Start, *OS, 0);
-      Symtab.addSyntheticSym(End, *OS, OS->getSize());
+      Symtab.addSynthetic(Start, *OS, 0);
+      Symtab.addSynthetic(End, *OS, OS->getSize());
     } else {
-      Symtab.addIgnoredSym(Start);
-      Symtab.addIgnoredSym(End);
+      Symtab.addIgnored(Start);
+      Symtab.addIgnored(End);
     }
   };
 
@@ -663,7 +668,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
   // to avoid the undefined symbol error.
   if (!isOutputDynamic())
-    Symtab.addIgnoredSym("__tls_get_addr");
+    Symtab.addIgnored("__tls_get_addr");
 
   // If the "_end" symbol is referenced, it is expected to point to the address
   // right after the data segment. Usually, this symbol points to the end
@@ -673,14 +678,14 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   // So, if this symbol is referenced, we just add the placeholder here
   // and update its value later.
   if (Symtab.find("_end"))
-    Symtab.addAbsoluteSym("_end", DefinedAbsolute<ELFT>::End);
+    Symtab.addAbsolute("_end", DefinedAbsolute<ELFT>::End);
 
   // If there is an undefined symbol "end", we should initialize it
   // with the same value as "_end". In any other case it should stay intact,
   // because it is an allowable name for a user symbol.
   if (SymbolBody *B = Symtab.find("end"))
     if (B->isUndefined())
-      Symtab.addAbsoluteSym("end", DefinedAbsolute<ELFT>::End);
+      Symtab.addAbsolute("end", DefinedAbsolute<ELFT>::End);
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
@@ -707,7 +712,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (auto *C = dyn_cast<DefinedCommon<ELFT>>(Body))
       CommonSymbols.push_back(C);
     if (auto *SC = dyn_cast<SharedSymbol<ELFT>>(Body))
-      if (SC->needsCopy())
+      if (SC->NeedsCopy)
         SharedCopySymbols.push_back(SC);
 
     if (!includeInSymtab<ELFT>(*Body))
@@ -819,9 +824,9 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
   StringRef Start = Saver.save("__start_" + S);
   StringRef Stop = Saver.save("__stop_" + S);
   if (Symtab.isUndefined(Start))
-    Symtab.addSyntheticSym(Start, *Sec, 0);
+    Symtab.addSynthetic(Start, *Sec, 0);
   if (Symtab.isUndefined(Stop))
-    Symtab.addSyntheticSym(Stop, *Sec, Sec->getSize());
+    Symtab.addSynthetic(Stop, *Sec, Sec->getSize());
 }
 
 template <class ELFT> static bool needsPhdr(OutputSectionBase<ELFT> *Sec) {

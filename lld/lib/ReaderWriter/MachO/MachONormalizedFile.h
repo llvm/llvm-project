@@ -45,6 +45,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -119,6 +120,15 @@ struct Section {
   ArrayRef<uint8_t> content;
   Relocations     relocations;
   IndirectSymbols indirectSymbols;
+
+#ifndef NDEBUG
+  raw_ostream& operator<<(raw_ostream &OS) const {
+    dump(OS);
+    return OS;
+  }
+
+  void dump(raw_ostream &OS = llvm::dbgs()) const;
+#endif
 };
 
 

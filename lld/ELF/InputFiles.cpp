@@ -318,10 +318,11 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
   if (!Seen.insert(C.getChildOffset()).second)
     return MemoryBufferRef();
 
-  ErrorOr<MemoryBufferRef> Ret = C.getMemoryBufferRef();
-  error(Ret, "Could not get the buffer for the member defining symbol " +
-                 Sym->getName());
-  return *Ret;
+  ErrorOr<MemoryBufferRef> RefOrErr = C.getMemoryBufferRef();
+  if (!RefOrErr)
+    error(RefOrErr, "Could not get the buffer for the member defining symbol " +
+          Sym->getName());
+  return *RefOrErr;
 }
 
 std::vector<MemoryBufferRef> ArchiveFile::getMembers() {
@@ -333,8 +334,9 @@ std::vector<MemoryBufferRef> ArchiveFile::getMembers() {
           "Could not get the child of the archive " + File->getFileName());
     const Archive::Child Child(*ChildOrErr);
     ErrorOr<MemoryBufferRef> MbOrErr = Child.getMemoryBufferRef();
-    error(MbOrErr, "Could not get the buffer for a child of the archive " +
-                       File->getFileName());
+    if (!MbOrErr)
+      error(MbOrErr, "Could not get the buffer for a child of the archive " +
+            File->getFileName());
     Result.push_back(MbOrErr.get());
   }
   return Result;

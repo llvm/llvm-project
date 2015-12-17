@@ -345,28 +345,3 @@ LanguageRuntime::CreateExceptionSearchFilter ()
 {
     return m_process->GetTarget().GetSearchFilterForModule(NULL);
 }
-
-lldb::LanguageType
-LanguageRuntime::GuessLanguageForSymbolByName (Target &target, const char *symbol_name)
-{
-    // We "guess" the language because we can't determine a symbol's language from it's name.
-    // For example, a Pascal symbol can be mangled using the C++ Itanium scheme, and defined
-    // in a compilation unit within the same module as other C++ units.
-    //
-    // In addition, different targets could have different ways of mangling names from a given
-    // language, likewise compilation units within those targets.  It would help to be able to
-    // ask the various LanguageRuntime plugin instances for this target to recognize the name,
-    // but right now the plugin instances depend on the process, not the target.  That is
-    // unfortunate, because to use this for filtering breakpoints by language, we need to know
-    // the "language for symbol-name" prior to running.  So we'd have to make a
-    // "LanguageRuntimeTarget" and "LanguageRuntimeProcess", and direct the questions that don't
-    // need a running process to the former, and that do to the latter.
-    //
-    // That's more work than I want to do for this feature.
-    if (CPlusPlusLanguage::IsCPPMangledName (symbol_name))
-        return eLanguageTypeC_plus_plus;
-    else if (ObjCLanguage::IsPossibleObjCMethodName (symbol_name))
-        return eLanguageTypeObjC;
-    else
-        return eLanguageTypeUnknown;
-}

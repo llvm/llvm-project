@@ -64,8 +64,7 @@ FileVector loadFile(LinkingContext &ctx, StringRef path, bool wholeArchive) {
   return files;
 }
 
-/// This is where the link is actually performed.
-bool Driver::link(LinkingContext &ctx, raw_ostream &diagnostics) {
+void Driver::parseLLVMOptions(const LinkingContext &ctx) {
   // Honor -mllvm
   if (!ctx.llvmOptions().empty()) {
     unsigned numArgs = ctx.llvmOptions().size();
@@ -76,6 +75,10 @@ bool Driver::link(LinkingContext &ctx, raw_ostream &diagnostics) {
     args[numArgs + 1] = nullptr;
     llvm::cl::ParseCommandLineOptions(numArgs + 1, args);
   }
+}
+
+/// This is where the link is actually performed.
+bool Driver::link(LinkingContext &ctx, raw_ostream &diagnostics) {
   if (ctx.getNodes().empty())
     return false;
 

@@ -39,6 +39,7 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/Timer.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
@@ -361,6 +362,9 @@ Mangled::NameMatches (const RegularExpression& regex, lldb::LanguageType languag
 ConstString
 Mangled::GetName (lldb::LanguageType language, Mangled::NamePreference preference) const
 {
+    if (preference == ePreferMangled && m_mangled)
+        return m_mangled;
+
     ConstString demangled = GetDemangledName(language);
 
     if (preference == ePreferDemangledWithoutArguments)
@@ -375,12 +379,7 @@ Mangled::GetName (lldb::LanguageType language, Mangled::NamePreference preferenc
             return demangled;
         return m_mangled;
     }
-    else
-    {
-        if (m_mangled)
-            return m_mangled;
-        return demangled;
-    }
+    return demangled;
 }
 
 //----------------------------------------------------------------------
@@ -426,6 +425,14 @@ Mangled::MemorySize () const
     return m_mangled.MemorySize() + m_demangled.MemorySize();
 }
 
+//----------------------------------------------------------------------
+// We "guess" the language because we can't determine a symbol's language
+// from it's name.  For example, a Pascal symbol can be mangled using the
+// C++ Itanium scheme, and defined in a compilation unit within the same
+// module as other C++ units.  In addition, different targets could have
+// different ways of mangling names from a given language, likewise the
+// compilation units within those targets.
+//----------------------------------------------------------------------
 lldb::LanguageType
 Mangled::GuessLanguage () const
 {
@@ -434,11 +441,14 @@ Mangled::GuessLanguage () const
     {
         if (GetDemangledName(lldb::eLanguageTypeUnknown))
         {
-            if (cstring_is_mangled(mangled.GetCString()))
+            const char *mangled_name = mangled.GetCString();
+            if (CPlusPlusLanguage::IsCPPMangledName(mangled_name))
                 return lldb::eLanguageTypeC_plus_plus;
+            else if (ObjCLanguage::IsPossibleObjCMethodName(mangled_name))
+                return lldb::eLanguageTypeObjC;
         }
     }
-    return  lldb::eLanguageTypeUnknown;
+    return lldb::eLanguageTypeUnknown;
 }
 
 //----------------------------------------------------------------------

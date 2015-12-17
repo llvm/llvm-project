@@ -173,6 +173,10 @@ public:
     static bool
     LanguageIsPascal (lldb::LanguageType language);
     
+    // return the primary language, so if LanguageIsC(l), return eLanguageTypeC, etc.
+    static lldb::LanguageType
+    GetPrimaryLanguage (lldb::LanguageType language);
+
     static void
     GetLanguagesSupportingTypeSystems (std::set<lldb::LanguageType> &languages,
                                        std::set<lldb::LanguageType> &languages_for_expressions);

@@ -179,6 +179,8 @@ void Resolver::doDefinedAtom(const DefinedAtom &atom) {
                     << atom.ordinal()
                     << ", name="
                     << atom.name()
+                    << ", type="
+                    << atom.contentType()
                     << "\n");
 
   // add to list of known atoms
@@ -294,11 +296,15 @@ void Resolver::updatePreloadArchiveMap() {
 // Keep adding atoms until _ctx.getNextFile() returns an error. This
 // function is where undefined atoms are resolved.
 bool Resolver::resolveUndefines() {
+  DEBUG_WITH_TYPE("resolver",
+                  llvm::dbgs() << "******** Resolving undefines:\n");
   ScopedTask task(getDefaultDomain(), "resolveUndefines");
   int index = 0;
   std::set<File *> seen;
   for (;;) {
     bool undefAdded = false;
+    DEBUG_WITH_TYPE("resolver",
+                    llvm::dbgs() << "Loading file #" << index << "\n");
     File *file = getFile(index);
     if (!file)
       return true;
@@ -307,6 +313,8 @@ bool Resolver::resolveUndefines() {
                    << ": " << ec.message() << "\n";
       return false;
     }
+    DEBUG_WITH_TYPE("resolver",
+                    llvm::dbgs() << "Loaded file: " << file->path() << "\n");
     file->beforeLink();
     updatePreloadArchiveMap();
     switch (file->kind()) {
@@ -339,6 +347,8 @@ bool Resolver::resolveUndefines() {
 // switch all references to undefined or coalesced away atoms
 // to the new defined atom
 void Resolver::updateReferences() {
+  DEBUG_WITH_TYPE("resolver",
+                  llvm::dbgs() << "******** Updating references:\n");
   ScopedTask task(getDefaultDomain(), "updateReferences");
   for (const Atom *atom : _atoms) {
     if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom)) {
@@ -387,6 +397,8 @@ static bool isBackref(const Reference *ref) {
 
 // remove all atoms not actually used
 void Resolver::deadStripOptimize() {
+  DEBUG_WITH_TYPE("resolver",
+                  llvm::dbgs() << "******** Dead stripping unused atoms:\n");
   ScopedTask task(getDefaultDomain(), "deadStripOptimize");
   // only do this optimization with -dead_strip
   if (!_ctx.deadStrip())
@@ -432,6 +444,9 @@ void Resolver::deadStripOptimize() {
 
 // error out if some undefines remain
 bool Resolver::checkUndefines() {
+  DEBUG_WITH_TYPE("resolver",
+                  llvm::dbgs() << "******** Checking for undefines:\n");
+
   // build vector of remaining undefined symbols
   std::vector<const UndefinedAtom *> undefinedAtoms = _symbolTable.undefines();
   if (_ctx.deadStrip()) {
@@ -478,6 +493,8 @@ bool Resolver::checkUndefines() {
 
 // remove from _atoms all coaleseced away atoms
 void Resolver::removeCoalescedAwayAtoms() {
+  DEBUG_WITH_TYPE("resolver",
+                  llvm::dbgs() << "******** Removing coalesced away atoms:\n");
   ScopedTask task(getDefaultDomain(), "removeCoalescedAwayAtoms");
   _atoms.erase(std::remove_if(_atoms.begin(), _atoms.end(), [&](const Atom *a) {
                  return _symbolTable.isCoalescedAway(a) || _deadAtoms.count(a);
@@ -486,28 +503,53 @@ void Resolver::removeCoalescedAwayAtoms() {
 }
 
 bool Resolver::resolve() {
+  DEBUG_WITH_TYPE("resolver",
+                  llvm::dbgs() << "******** Resolving atom references:\n");
   updatePreloadArchiveMap();
   if (!resolveUndefines())
     return false;
   updateReferences();
   deadStripOptimize();
-  if (checkUndefines())
-    if (!_ctx.allowRemainingUndefines())
+  if (checkUndefines()) {
+    DEBUG_WITH_TYPE("resolver", llvm::dbgs() << "Found undefines... ");
+    if (!_ctx.allowRemainingUndefines()) {
+      DEBUG_WITH_TYPE("resolver", llvm::dbgs() << "which we don't allow\n");
       return false;
+    }
+    DEBUG_WITH_TYPE("resolver", llvm::dbgs() << "which we are ok with\n");
+  }
   removeCoalescedAwayAtoms();
   _result->addAtoms(_atoms);
+  DEBUG_WITH_TYPE("resolver", llvm::dbgs() << "******** Finished resolver\n");
   return true;
 }
 
 void Resolver::MergedFile::addAtoms(std::vector<const Atom *> &all) {
   ScopedTask task(getDefaultDomain(), "addAtoms");
   DEBUG_WITH_TYPE("resolver", llvm::dbgs() << "Resolver final atom list:\n");
+
   for (const Atom *atom : all) {
-    DEBUG_WITH_TYPE("resolver", llvm::dbgs()
-                    << llvm::format("    0x%09lX", atom)
-                    << ", name="
-                    << atom->name()
-                    << "\n");
+#ifndef NDEBUG
+    if (auto *definedAtom = dyn_cast<DefinedAtom>(atom)) {
+      DEBUG_WITH_TYPE("resolver", llvm::dbgs()
+                      << llvm::format("    0x%09lX", atom)
+                      << ", file=#"
+                      << definedAtom->file().ordinal()
+                      << ", atom=#"
+                      << definedAtom->ordinal()
+                      << ", name="
+                      << definedAtom->name()
+                      << ", type="
+                      << definedAtom->contentType()
+                      << "\n");
+    } else {
+      DEBUG_WITH_TYPE("resolver", llvm::dbgs()
+                      << llvm::format("    0x%09lX", atom)
+                      << ", name="
+                      << atom->name()
+                      << "\n");
+    }
+#endif
     addAtom(*atom);
   }
 }

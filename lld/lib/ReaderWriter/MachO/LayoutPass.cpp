@@ -438,6 +438,7 @@ void LayoutPass::undecorate(SimpleFile::DefinedAtomRange &atomRange,
 
 /// Perform the actual pass
 std::error_code LayoutPass::perform(SimpleFile &mergedFile) {
+  DEBUG(llvm::dbgs() << "******** Laying out atoms:\n");
   // sort the atoms
   ScopedTask task(getDefaultDomain(), "LayoutPass");
   SimpleFile::DefinedAtomRange atomRange = mergedFile.definedAtoms();
@@ -469,6 +470,7 @@ std::error_code LayoutPass::perform(SimpleFile &mergedFile) {
     printDefinedAtoms(atomRange);
   });
 
+  DEBUG(llvm::dbgs() << "******** Finished laying out atoms\n");
   return std::error_code();
 }
 

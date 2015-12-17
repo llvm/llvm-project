@@ -15,8 +15,10 @@
 
 namespace lld {
 namespace elf2 {
-template <class ELFT> class OutputSectionBase;
+class Lazy;
 struct Symbol;
+template <class ELFT> class OutputSectionBase;
+template <class ELFT> class Undefined;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
@@ -34,8 +36,6 @@ public:
 
   void addFile(std::unique_ptr<InputFile> File);
 
-  bool shouldUseRela() const;
-
   const llvm::MapVector<StringRef, Symbol *> &getSymbols() const {
     return Symtab;
   }
@@ -50,24 +50,21 @@ public:
 
   SymbolBody *addUndefined(StringRef Name);
   SymbolBody *addUndefinedOpt(StringRef Name);
-  void addAbsoluteSym(StringRef Name,
-                      typename llvm::object::ELFFile<ELFT>::Elf_Sym &ESym);
-  void addSyntheticSym(StringRef Name, OutputSectionBase<ELFT> &Section,
-                       typename llvm::object::ELFFile<ELFT>::uintX_t Value);
-  SymbolBody *addIgnoredSym(StringRef Name);
+  void addAbsolute(StringRef Name,
+                   typename llvm::object::ELFFile<ELFT>::Elf_Sym &ESym);
+  void addSynthetic(StringRef Name, OutputSectionBase<ELFT> &Section,
+                    typename llvm::object::ELFFile<ELFT>::uintX_t Value);
+  SymbolBody *addIgnored(StringRef Name);
   bool isUndefined(StringRef Name);
   void scanShlibUndefined();
   SymbolBody *find(StringRef Name);
 
 private:
   Symbol *insert(SymbolBody *New);
-  void addELFFile(ELFFileBase<ELFT> *File);
   void addLazy(Lazy *New);
-  void addMemberFile(Lazy *Body);
-  void checkCompatibility(std::unique_ptr<InputFile> &File);
+  void addMemberFile(Undefined<ELFT> *Undef, Lazy *L);
   void resolve(SymbolBody *Body);
-  void reportConflict(const Twine &Message, const SymbolBody &Old,
-                      const SymbolBody &New, bool Warning);
+  std::string conflictMsg(SymbolBody *Old, SymbolBody *New);
 
   std::vector<std::unique_ptr<InputFile>> ArchiveFiles;
 

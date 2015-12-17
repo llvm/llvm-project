@@ -32,6 +32,7 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 // Returns 1, 0 or -1 if this symbol should take precedence
 // over the Other, tie or lose, respectively.
 template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
+  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
   assert(!isLazy() && !Other->isLazy());
   std::pair<bool, bool> L(isDefined(), !isWeak());
   std::pair<bool, bool> R(Other->isDefined(), !Other->isWeak());
@@ -59,13 +60,12 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
       return -1;
     auto *ThisC = cast<DefinedCommon<ELFT>>(this);
     auto *OtherC = cast<DefinedCommon<ELFT>>(Other);
-    typename DefinedCommon<ELFT>::uintX_t MaxAlign =
-        std::max(ThisC->MaxAlignment, OtherC->MaxAlignment);
+    uintX_t Align = std::max(ThisC->MaxAlignment, OtherC->MaxAlignment);
     if (ThisC->Sym.st_size >= OtherC->Sym.st_size) {
-      ThisC->MaxAlignment = MaxAlign;
+      ThisC->MaxAlignment = Align;
       return 1;
     }
-    OtherC->MaxAlignment = MaxAlign;
+    OtherC->MaxAlignment = Align;
     return -1;
   }
   if (Other->isCommon())

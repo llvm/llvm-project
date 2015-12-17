@@ -4070,7 +4070,7 @@ Process::StartPrivateStateThread (bool is_secondary_thread)
 
     // Create the private state thread, and start it running.
     PrivateStateThreadArgs args = {this, is_secondary_thread};
-    m_private_state_thread = ThreadLauncher::LaunchThread(thread_name, Process::PrivateStateThread, (void *) &args, NULL);
+    m_private_state_thread = ThreadLauncher::LaunchThread(thread_name, Process::PrivateStateThread, (void *) &args, NULL, 8 * 1024 * 1024);
     if (m_private_state_thread.IsJoinable())
     {
         ResumePrivateStateThread();

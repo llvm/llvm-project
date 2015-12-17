@@ -83,7 +83,7 @@ public:
   void writePltEntry(uint8_t *Buf, uint64_t GotAddr, uint64_t GotEntryAddr,
                      uint64_t PltEntryAddr, int32_t Index,
                      unsigned RelOff) const override;
-  bool relocNeedsCopy(uint32_t Type, const SymbolBody &S) const override;
+  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -117,7 +117,7 @@ public:
   void writePltEntry(uint8_t *Buf, uint64_t GotAddr, uint64_t GotEntryAddr,
                      uint64_t PltEntryAddr, int32_t Index,
                      unsigned RelOff) const override;
-  bool relocNeedsCopy(uint32_t Type, const SymbolBody &S) const override;
+  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -169,7 +169,7 @@ public:
   void writePltEntry(uint8_t *Buf, uint64_t GotAddr, uint64_t GotEntryAddr,
                      uint64_t PltEntryAddr, int32_t Index,
                      unsigned RelOff) const override;
-  bool relocNeedsCopy(uint32_t Type, const SymbolBody &S) const override;
+  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -226,7 +226,7 @@ bool TargetInfo::isTlsOptimized(unsigned Type, const SymbolBody *S) const {
 
 uint64_t TargetInfo::getVAStart() const { return Config->Shared ? 0 : VAStart; }
 
-bool TargetInfo::relocNeedsCopy(uint32_t Type, const SymbolBody &S) const {
+bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   return false;
 }
 
@@ -327,7 +327,7 @@ void X86TargetInfo::writePltEntry(uint8_t *Buf, uint64_t GotAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroEntrySize - 16);
 }
 
-bool X86TargetInfo::relocNeedsCopy(uint32_t Type, const SymbolBody &S) const {
+bool X86TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   if (Type == R_386_32 || Type == R_386_16 || Type == R_386_8)
     if (auto *SS = dyn_cast<SharedSymbol<ELF32LE>>(&S))
       return SS->Sym.getType() == STT_OBJECT;
@@ -335,7 +335,7 @@ bool X86TargetInfo::relocNeedsCopy(uint32_t Type, const SymbolBody &S) const {
 }
 
 bool X86TargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
-  if (S.isTLS() && Type == R_386_TLS_GD)
+  if (S.isTls() && Type == R_386_TLS_GD)
     return Target->isTlsOptimized(Type, &S) && canBePreempted(&S, true);
   if (Type == R_386_TLS_GOTIE)
     return !isTlsOptimized(Type, &S);
@@ -388,7 +388,7 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 }
 
 bool X86TargetInfo::isTlsOptimized(unsigned Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTLS()))
+  if (Config->Shared || (S && !S->isTls()))
     return false;
   return Type == R_386_TLS_LDO_32 || Type == R_386_TLS_LDM ||
          Type == R_386_TLS_GD ||
@@ -555,8 +555,7 @@ void X86_64TargetInfo::writePltEntry(uint8_t *Buf, uint64_t GotAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroEntrySize - 16);
 }
 
-bool X86_64TargetInfo::relocNeedsCopy(uint32_t Type,
-                                      const SymbolBody &S) const {
+bool X86_64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   if (Type == R_X86_64_32S || Type == R_X86_64_32 || Type == R_X86_64_PC32 ||
       Type == R_X86_64_64)
     if (auto *SS = dyn_cast<SharedSymbol<ELF64LE>>(&S))
@@ -583,7 +582,7 @@ unsigned X86_64TargetInfo::getPltRefReloc(unsigned Type) const {
 }
 
 bool X86_64TargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
-  if (relocNeedsCopy(Type, S))
+  if (needsCopyRel(Type, S))
     return false;
 
   switch (Type) {
@@ -647,7 +646,7 @@ bool X86_64TargetInfo::isSizeDynReloc(uint32_t Type,
 
 bool X86_64TargetInfo::isTlsOptimized(unsigned Type,
                                       const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTLS()))
+  if (Config->Shared || (S && !S->isTls()))
     return false;
   return Type == R_X86_64_TLSGD || Type == R_X86_64_TLSLD ||
          Type == R_X86_64_DTPOFF32 ||
@@ -1122,8 +1121,7 @@ void AArch64TargetInfo::writePltEntry(uint8_t *Buf, uint64_t GotAddr,
               GotEntryAddr);
 }
 
-bool AArch64TargetInfo::relocNeedsCopy(uint32_t Type,
-                                       const SymbolBody &S) const {
+bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   if (Config->Shared)
     return false;
   switch (Type) {

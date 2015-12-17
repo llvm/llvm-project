@@ -899,11 +899,9 @@ void ScopStmt::buildAccessRelations() {
 void ScopStmt::addAccess(MemoryAccess *Access) {
   Instruction *AccessInst = Access->getAccessInstruction();
 
-  MemoryAccessList *&MAL = InstructionToAccess[AccessInst];
-  if (!MAL)
-    MAL = new MemoryAccessList();
-  MAL->emplace_front(Access);
-  MemAccs.push_back(MAL->front());
+  MemoryAccessList &MAL = InstructionToAccess[AccessInst];
+  MAL.emplace_front(Access);
+  MemAccs.push_back(MAL.front());
 }
 
 void ScopStmt::realignParams() {
@@ -1435,10 +1433,7 @@ __isl_give isl_id *ScopStmt::getDomainId() const {
   return isl_set_get_tuple_id(Domain);
 }
 
-ScopStmt::~ScopStmt() {
-  DeleteContainerSeconds(InstructionToAccess);
-  isl_set_free(Domain);
-}
+ScopStmt::~ScopStmt() { isl_set_free(Domain); }
 
 void ScopStmt::print(raw_ostream &OS) const {
   OS << "\t" << getBaseName() << "\n";
@@ -1472,7 +1467,6 @@ void ScopStmt::removeMemoryAccesses(MemoryAccessList &InvMAs) {
     MemAccs.erase(std::remove_if(MemAccs.begin(), MemAccs.end(), Predicate),
                   MemAccs.end());
     InstructionToAccess.erase(MA->getAccessInstruction());
-    delete lookupAccessesFor(MA->getAccessInstruction());
   }
 }
 
@@ -2923,7 +2917,7 @@ void Scop::verifyInvariantLoads() {
   for (LoadInst *LI : RIL) {
     assert(LI && getRegion().contains(LI));
     ScopStmt *Stmt = getStmtForBasicBlock(LI->getParent());
-    if (Stmt && Stmt->lookupAccessesFor(LI)) {
+    if (Stmt && Stmt->getNumberOfArrayAccessesFor(LI) > 0) {
       invalidate(INVARIANTLOAD, LI->getDebugLoc());
       return;
     }

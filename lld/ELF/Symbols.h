@@ -48,7 +48,6 @@ void initSymbols();
 // through a Symbol. There's always one Symbol for each symbol name.
 // The resolver updates SymbolBody pointers as it resolves symbols.
 struct Symbol {
-  explicit Symbol(SymbolBody *P) : Body(P) {}
   SymbolBody *Body;
 };
 
@@ -78,18 +77,14 @@ public:
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
   bool isUsedInDynamicReloc() const { return IsUsedInDynamicReloc; }
   void setUsedInDynamicReloc() { IsUsedInDynamicReloc = true; }
-  bool isTLS() const { return IsTLS; }
+  bool isTls() const { return IsTls; }
 
   // Returns the symbol name.
   StringRef getName() const { return Name; }
 
   uint8_t getVisibility() const { return Visibility; }
 
-  unsigned getDynamicSymbolTableIndex() const {
-    return DynamicSymbolTableIndex;
-  }
-  void setDynamicSymbolTableIndex(unsigned V) { DynamicSymbolTableIndex = V; }
-
+  unsigned DynamicSymbolTableIndex = 0;
   uint32_t GlobalDynIndex = -1;
   uint32_t GotIndex = -1;
   uint32_t GotPltIndex = -1;
@@ -115,8 +110,8 @@ public:
 
 protected:
   SymbolBody(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
-             bool IsTLS)
-      : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility), IsTLS(IsTLS),
+             bool IsTls)
+      : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility), IsTls(IsTls),
         Name(Name) {
     IsUsedInRegularObj = K != SharedKind && K != LazyKind;
     IsUsedInDynamicReloc = 0;
@@ -127,8 +122,7 @@ protected:
   unsigned Visibility : 2;
   unsigned IsUsedInRegularObj : 1;
   unsigned IsUsedInDynamicReloc : 1;
-  unsigned IsTLS : 1;
-  unsigned DynamicSymbolTableIndex = 0;
+  unsigned IsTls : 1;
   StringRef Name;
   Symbol *Backref = nullptr;
 };
@@ -246,6 +240,10 @@ public:
   InputSectionBase<ELFT> &Section;
 };
 
+// DefinedSynthetic is a class to represent linker-generated ELF symbols.
+// The difference from the regular symbol is that DefinedSynthetic symbols
+// don't belong to any input files or sections. Thus, its constructor
+// takes an output section to calculate output VA, etc.
 template <class ELFT> class DefinedSynthetic : public Defined<ELFT> {
   typedef Defined<ELFT> Base;
 
@@ -301,9 +299,10 @@ public:
 
   SharedFile<ELFT> *File;
 
-  // Can have offset if requires copy relocation.
-  uintX_t OffsetInBSS = -1;
-  bool needsCopy() const { return OffsetInBSS != (uintX_t)-1; }
+  // True if the linker has to generate a copy relocation for this shared
+  // symbol. OffsetInBSS is significant only when NeedsCopy is true.
+  bool NeedsCopy = false;
+  uintX_t OffsetInBSS = 0;
 };
 
 // This class represents a symbol defined in an archive file. It is

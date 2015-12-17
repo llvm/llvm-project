@@ -6,3 +6,4 @@ AlwaysBreakAfterDefinitionReturnType: true
 AllowShortFunctionsOnASingleLine: Inline
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 IndentCaseLabels: true
+AccessModifierOffset: -4

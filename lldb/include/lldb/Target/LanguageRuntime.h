@@ -117,9 +117,6 @@ public:
         return m_process;
     }
     
-    static lldb::LanguageType
-    GuessLanguageForSymbolByName (Target &target, const char *symbol_name);
-    
     Target&
     GetTargetRef()
     {

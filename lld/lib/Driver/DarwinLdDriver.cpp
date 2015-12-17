@@ -822,6 +822,10 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
     }
   }
 
+  // Parse the LLVM options before we process files in case the file handling
+  // makes use of things like DEBUG().
+  parseLLVMOptions(ctx);
+
   // Handle input files and sectcreate.
   for (auto &arg : parsedArgs) {
     bool upward;
