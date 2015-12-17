@@ -1,4 +1,4 @@
-/*===---- cuda_runtime.h - CUDA runtime support ----------------------------===
+/*===---- __clang_cuda_runtime_wrapper.h - CUDA runtime support -------------===
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +21,24 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef __CLANG_CUDA_RUNTIME_H__
-#define __CLANG_CUDA_RUNTIME_H__
+/*
+ * WARNING: This header is intended to be directly -include'd by
+ * the compiler and is not supposed to be included by users.
+ *
+ * CUDA headers are implemented in a way that currently makes it
+ * impossible for user code to #include directly when compiling with
+ * Clang. They present different view of CUDA-supplied functions
+ * depending on where in NVCC's compilation pipeline the headers are
+ * included. Neither of these modes provides function definitions with
+ * correct attributes, so we use preprocessor to force the headers
+ * into a form that Clang can use.
+ *
+ * Similarly to NVCC which -include's cuda_runtime.h, Clang -include's
+ * this file during every CUDA compilation.
+ */
+
+#ifndef __CLANG_CUDA_RUNTIME_WRAPPER_H__
+#define __CLANG_CUDA_RUNTIME_WRAPPER_H__
 
 #if defined(__CUDA__) && defined(__clang__)
 
@@ -35,9 +51,9 @@
 #pragma push_macro("__THROW")
 #pragma push_macro("__CUDA_ARCH__")
 
-// WARNING: Preprocessor hacks below are based on specific of
-// implementation of CUDA-7.x headers and are expected to break with
-// any other version of CUDA headers.
+// WARNING: Preprocessor hacks below are based on specific details of
+// CUDA-7.x headers and are not expected to work with any other
+// version of CUDA headers.
 #include "cuda.h"
 #if !defined(CUDA_VERSION)
 #error "cuda.h did not define CUDA_VERSION"
@@ -76,12 +92,12 @@
 
 #undef __CUDABE__
 #define __CUDACC__
-#include_next "cuda_runtime.h"
+#include "cuda_runtime.h"
 
 #undef __CUDACC__
 #define __CUDABE__
 
-// CUDA headers use __nvvm_memcpy and __nvvm_memset which clang does
+// CUDA headers use __nvvm_memcpy and __nvvm_memset which Clang does
 // not have at the moment. Emulate them with a builtin memcpy/memset.
 #define __nvvm_memcpy(s,d,n,a) __builtin_memcpy(s,d,n)
 #define __nvvm_memset(d,c,n,a) __builtin_memset(d,c,n)
@@ -176,4 +192,4 @@ static __device__ __attribute__((used)) int __nvvm_reflect_anchor() {
 #endif
 
 #endif // __CUDA__
-#endif // __CLANG_CUDA_RUNTIME_H__
+#endif // __CLANG_CUDA_RUNTIME_WRAPPER_H__

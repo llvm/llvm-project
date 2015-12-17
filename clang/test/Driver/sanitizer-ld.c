@@ -306,9 +306,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-DIAG-LINUX %s
 // CHECK-CFI-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-CFI-CROSS-DSO-LINUX-NOT: libclang_rt.
-// CHECK-CFI-DIAG-LINUX: libclang_rt.ubsan
-// CHECK-CFI-CROSS-DSO-LINUX-NOT: libclang_rt.
+// CHECK-CFI-DIAG-LINUX: "-whole-archive" "{{[^"]*}}libclang_rt.ubsan_standalone-x86_64.a" "-no-whole-archive"
 
 // Cross-DSO CFI links the CFI runtime.
 // RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso %s -### -o %t.o 2>&1 \
@@ -316,9 +314,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-CROSS-DSO-LINUX %s
 // CHECK-CFI-CROSS-DSO-LINUX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-CFI-CROSS-DSO-LINUX-NOT: libclang_rt.
-// CHECK-CFI-CROSS-DSO-LINUX: libclang_rt.cfi-
-// CHECK-CFI-CROSS-DSO-LINUX-NOT: libclang_rt.
+// CHECK-CFI-CROSS-DSO-LINUX: "-whole-archive" "{{[^"]*}}libclang_rt.cfi-x86_64.a" "-no-whole-archive"
 
 // Cross-DSO CFI with diagnostics links just the CFI runtime.
 // RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso %s -### -o %t.o 2>&1 \
@@ -327,9 +323,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-CROSS-DSO-DIAG-LINUX %s
 // CHECK-CFI-CROSS-DSO-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-CFI-CROSS-DSO-DIAG-LINUX-NOT: libclang_rt.
-// CHECK-CFI-CROSS-DSO-DIAG-LINUX: libclang_rt.cfi_diag-
-// CHECK-CFI-CROSS-DSO-DIAG-LINUX-NOT: libclang_rt.
+// CHECK-CFI-CROSS-DSO-DIAG-LINUX: "-whole-archive" "{{[^"]*}}libclang_rt.cfi_diag-x86_64.a" "-no-whole-archive"
 
 // RUN: %clangxx -fsanitize=address %s -### -o %t.o 2>&1 \
 // RUN:     -mmacosx-version-min=10.6 \
@@ -379,19 +373,19 @@
 // RUN:     -target x86_64-scei-ps4 \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-PS4 %s
-// CHECK-UBSAN-PS4: "{{.*}}ld{{(.exe)?}}"
+// CHECK-UBSAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-UBSAN-PS4: -lSceDbgUBSanitizer_stub_weak
 
 // RUN: %clang -fsanitize=address %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-scei-ps4 \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-PS4 %s
-// CHECK-ASAN-PS4: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ASAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-ASAN-PS4: -lSceDbgAddressSanitizer_stub_weak
 
 // RUN: %clang -fsanitize=address,undefined %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-scei-ps4 \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-AUBSAN-PS4 %s
-// CHECK-AUBSAN-PS4: "{{.*}}ld{{(.exe)?}}"
+// CHECK-AUBSAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-AUBSAN-PS4: -lSceDbgAddressSanitizer_stub_weak

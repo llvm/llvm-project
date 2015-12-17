@@ -271,6 +271,10 @@ public:
     if (!NodeKind.isSame(Other.NodeKind))
       return NodeKind < Other.NodeKind;
 
+    if (ASTNodeKind::getFromNodeKind<QualType>().isSame(NodeKind))
+      return getUnchecked<QualType>().getAsOpaquePtr() ==
+             Other.getUnchecked<QualType>().getAsOpaquePtr();
+
     if (ASTNodeKind::getFromNodeKind<TypeLoc>().isSame(NodeKind)) {
       auto TLA = getUnchecked<TypeLoc>();
       auto TLB = Other.getUnchecked<TypeLoc>();

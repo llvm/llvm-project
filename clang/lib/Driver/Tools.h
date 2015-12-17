@@ -245,6 +245,21 @@ public:
 
 } // end namespace amdgpu
 
+namespace wasm {
+
+class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+public:
+  explicit Linker(const ToolChain &TC);
+  bool isLinkJob() const override;
+  bool hasIntegratedCPP() const override;
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
+} // end namespace wasm
+
 namespace arm {
 std::string getARMTargetCPU(StringRef CPU, StringRef Arch,
                             const llvm::Triple &Triple);

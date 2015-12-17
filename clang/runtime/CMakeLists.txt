@@ -56,6 +56,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
   endforeach()
 
   ExternalProject_Add(compiler-rt
+    DEPENDS llvm-config clang
     PREFIX ${COMPILER_RT_PREFIX}
     SOURCE_DIR ${COMPILER_RT_SRC_ROOT}
     STAMP_DIR ${STAMP_DIR}
@@ -86,8 +87,6 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
     DEPENDS clang
     WORKING_DIRECTORY ${BINARY_DIR}
     )
-
-  add_dependencies(compiler-rt-configure clang llvm-config)
 
   install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${BINARY_DIR}/cmake_install.cmake \)"
     COMPONENT compiler-rt)

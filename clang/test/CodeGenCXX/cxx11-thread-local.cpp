@@ -91,7 +91,8 @@ int f() {
 }
 
 // CHECK: define {{.*}} @[[C_INIT:.*]]()
-// CHECK: call i32* @_ZTW1b()
+// LINUX: call i32* @_ZTW1b()
+// DARWIN: call cxx_fast_tlscc i32* @_ZTW1b()
 // CHECK-NEXT: load i32, i32* %{{.*}}, align 4
 // CHECK-NEXT: store i32 %{{.*}}, i32* @c, align 4
 
@@ -102,7 +103,7 @@ int f() {
 // LINUX: br label
 // finally:
 // LINUX: ret i32* @b
-// DARWIN-LABEL: declare i32* @_ZTW1b()
+// DARWIN-LABEL: declare cxx_fast_tlscc i32* @_ZTW1b()
 // There is no definition of the thread wrapper on Darwin for external TLV.
 
 // CHECK: define {{.*}} @[[D_INIT:.*]]()
@@ -114,11 +115,13 @@ int f() {
 // CHECK-NEXT: store i32 %{{.*}}, i32* @_ZN1U1mE, align 4
 
 // CHECK: define {{.*}} @[[E_INIT:.*]]()
-// CHECK: call i32* @_ZTWN1VIiE1mE()
+// LINUX: call i32* @_ZTWN1VIiE1mE()
+// DARWIN: call cxx_fast_tlscc i32* @_ZTWN1VIiE1mE()
 // CHECK-NEXT: load i32, i32* %{{.*}}, align 4
 // CHECK-NEXT: store i32 %{{.*}}, i32* @e, align 4
 
-// CHECK-LABEL: define weak_odr hidden i32* @_ZTWN1VIiE1mE()
+// LINUX-LABEL: define weak_odr hidden i32* @_ZTWN1VIiE1mE()
+// DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc i32* @_ZTWN1VIiE1mE()
 // CHECK: call void @_ZTHN1VIiE1mE()
 // CHECK: ret i32* @_ZN1VIiE1mE
 
@@ -167,7 +170,7 @@ struct PR19254 {
 // CHECK: define {{.*}} @_ZN7PR192541fEv(
 int PR19254::f() {
   // LINUX: call void @_ZTHN7PR192541nE(
-  // DARWIN: call i32* @_ZTWN7PR192541nE(
+  // DARWIN: call cxx_fast_tlscc i32* @_ZTWN7PR192541nE(
   return this->n;
 }
 
@@ -177,7 +180,8 @@ thread_local int anon_i{1};
 void set_anon_i() {
   anon_i = 2;
 }
-// CHECK-LABEL: define internal i32* @_ZTWN12_GLOBAL__N_16anon_iE()
+// LINUX-LABEL: define internal i32* @_ZTWN12_GLOBAL__N_16anon_iE()
+// DARWIN-LABEL: define internal cxx_fast_tlscc i32* @_ZTWN12_GLOBAL__N_16anon_iE()
 
 // CHECK: define {{.*}} @[[V_M_INIT:.*]]()
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
@@ -207,7 +211,7 @@ void set_anon_i() {
 
 
 // LIUNX: define weak_odr hidden i32* @_ZTW1a() {
-// DARWIN: define i32* @_ZTW1a() {
+// DARWIN: define cxx_fast_tlscc i32* @_ZTW1a()
 // CHECK:   call void @_ZTH1a()
 // CHECK:   ret i32* @a
 // CHECK: }
@@ -216,11 +220,12 @@ void set_anon_i() {
 // LINUX: declare extern_weak void @_ZTH1b()
 
 
-// CHECK-LABEL: define internal i32* @_ZTWL1d()
+// LINUX-LABEL: define internal i32* @_ZTWL1d()
+// DARWIN-LABEL: define internal cxx_fast_tlscc i32* @_ZTWL1d()
 // CHECK: call void @_ZTHL1d()
 // CHECK: ret i32* @_ZL1d
 
 // LINUX-LABEL: define weak_odr hidden i32* @_ZTWN1U1mE()
-// DARWIN-LABEL: define i32* @_ZTWN1U1mE()
+// DARWIN-LABEL: define cxx_fast_tlscc i32* @_ZTWN1U1mE()
 // CHECK: call void @_ZTHN1U1mE()
 // CHECK: ret i32* @_ZN1U1mE

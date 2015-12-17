@@ -102,4 +102,22 @@ int main (int argc, char **argv) {
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
 
+template <class T>
+struct Foo {
+  int foo;
+};
+
+void foo(const Foo<int> &arg) {
+// CHECK: #pragma omp parallel
+#pragma omp parallel
+  {
+// CHECK: #pragma omp for schedule(static)
+#pragma omp for schedule(static)
+    for (int idx = 0; idx < 1234; ++idx) {
+      //arg.foo = idx;
+      idx = arg.foo;
+    }
+  }
+}
+
 #endif

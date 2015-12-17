@@ -604,6 +604,28 @@ private:
                                                 const LocationContext *LC,
                                                 const Expr *E,
                                                 const Expr *ResultE = nullptr);
+
+  /// For a DeclStmt or CXXInitCtorInitializer, walk backward in the current CFG
+  /// block to find the constructor expression that directly constructed into
+  /// the storage for this statement. Returns null if the constructor for this
+  /// statement created a temporary object region rather than directly
+  /// constructing into an existing region.
+  const CXXConstructExpr *findDirectConstructorForCurrentCFGElement();
+
+  /// For a CXXConstructExpr, walk forward in the current CFG block to find the
+  /// CFGElement for the DeclStmt or CXXInitCtorInitializer for which is
+  /// directly constructed by this constructor. Returns None if the current
+  /// constructor expression did not directly construct into an existing
+  /// region.
+  Optional<CFGElement> findElementDirectlyInitializedByCurrentConstructor();
+
+  /// For a given constructor, look forward in the current CFG block to
+  /// determine the region into which an object will be constructed by \p CE.
+  /// Returns either a field or local variable region if the object will be
+  /// directly constructed in an existing region or a temporary object region
+  /// if not.
+  const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
+                                                 ExplodedNode *Pred);
 };
 
 /// Traits for storing the call processing policy inside GDM.

@@ -4116,7 +4116,7 @@ void Linux::AddCudaIncludeArgs(const ArgList &DriverArgs,
   if (CudaInstallation.isValid()) {
     addSystemInclude(DriverArgs, CC1Args, CudaInstallation.getIncludePath());
     CC1Args.push_back("-include");
-    CC1Args.push_back("cuda_runtime.h");
+    CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
   }
 }
 
@@ -4418,6 +4418,13 @@ Tool *MyriadToolChain::buildLinker() const {
   return new tools::Myriad::Linker(*this);
 }
 
+WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
+                         const llvm::opt::ArgList &Args)
+  : ToolChain(D, Triple, Args) {
+  // Use LLD by default.
+  DefaultLinker = "lld";
+}
+
 bool WebAssembly::IsMathErrnoDefault() const { return false; }
 
 bool WebAssembly::IsObjCNonFragileABIDefault() const { return true; }
@@ -4440,11 +4447,17 @@ bool WebAssembly::hasBlocksRuntime() const { return false; }
 // TODO: Support profiling.
 bool WebAssembly::SupportsProfiling() const { return false; }
 
+bool WebAssembly::HasNativeLLVMSupport() const { return true; }
+
 void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
   if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
                          options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fuse-init-array");
+}
+
+Tool *WebAssembly::buildLinker() const {
+  return new tools::wasm::Linker(*this);
 }
 
 PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)

@@ -17,14 +17,17 @@ int &g() { return r; }
 // CHECK: store i32* %{{.*}}, i32** @r, align 8
 
 // CHECK-LABEL: define dereferenceable({{[0-9]+}}) i32* @_Z1gv()
-// CHECK: call i32* @_ZTW1r()
+// LINUX: call i32* @_ZTW1r()
+// DARWIN: call cxx_fast_tlscc i32* @_ZTW1r()
 // CHECK: ret i32* %{{.*}}
 
 // LINUX: define weak_odr hidden i32* @_ZTW1r() {
-// DARWIN: define i32* @_ZTW1r() {
+// DARWIN: define cxx_fast_tlscc i32* @_ZTW1r() [[ATTR:#[0-9]+]] {
 // CHECK: call void @_ZTH1r()
 // CHECK: load i32*, i32** @r, align 8
 // CHECK: ret i32* %{{.*}}
 
 // CHECK-LABEL: define internal void @__tls_init()
 // CHECK: call void @[[R_INIT]]()
+
+// DARWIN: attributes [[ATTR]] = { nounwind }
