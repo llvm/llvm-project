@@ -1469,7 +1469,11 @@ def rerun_tests(test_subdir, tests_for_rerun, dotest_argv):
     # Do not update legacy counts, I am getting rid of
     # them so no point adding complicated merge logic here.
     rerun_thread_count = 1
-    rerun_runner_name = default_test_runner_name(rerun_thread_count)
+    # Force the parallel test runner to choose a multi-worker strategy.
+    rerun_runner_name = default_test_runner_name(rerun_thread_count + 1)
+    print("rerun will use the '{}' test runner strategy".format(
+        rerun_runner_name))
+
     runner_strategies_by_name = get_test_runner_strategies(rerun_thread_count)
     rerun_runner_func = runner_strategies_by_name[
         rerun_runner_name]
