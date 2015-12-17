@@ -4,6 +4,7 @@
 # Do not make changes to this file unless you know what you are doing--modify
 # the SWIG interface file instead.
 # This file is compatible with both classic and new-style classes.
+swig_version = (1, 3, 40)
 
 """
 The lldb module contains the public APIs for Python binding.
@@ -93,6 +94,8 @@ except AttributeError:
 import uuid
 import re
 import os
+
+import six
 
 INT32_MAX = _lldb.INT32_MAX
 UINT32_MAX = _lldb.UINT32_MAX
@@ -524,6 +527,7 @@ eSectionTypeDWARFDebugInfo = _lldb.eSectionTypeDWARFDebugInfo
 eSectionTypeDWARFDebugLine = _lldb.eSectionTypeDWARFDebugLine
 eSectionTypeDWARFDebugLoc = _lldb.eSectionTypeDWARFDebugLoc
 eSectionTypeDWARFDebugMacInfo = _lldb.eSectionTypeDWARFDebugMacInfo
+eSectionTypeDWARFDebugMacro = _lldb.eSectionTypeDWARFDebugMacro
 eSectionTypeDWARFDebugPubNames = _lldb.eSectionTypeDWARFDebugPubNames
 eSectionTypeDWARFDebugPubTypes = _lldb.eSectionTypeDWARFDebugPubTypes
 eSectionTypeDWARFDebugRanges = _lldb.eSectionTypeDWARFDebugRanges
@@ -2756,7 +2760,7 @@ class SBData(_object):
                 for x in range(*key.indices(self.__len__())):
                     list.append(self.__getitem__(x))
                 return list
-            if not (isinstance(key,(int,long))):
+            if not (isinstance(key,six.integer_types)):
                 raise TypeError('must be int')
             key = key * self.item_size # SBData uses byte-based indexes, but we want to use itemsize-based indexes here
             error = SBError()
@@ -4813,6 +4817,10 @@ class SBFunction(_object):
     def GetEndAddress(self):
         """GetEndAddress(self) -> SBAddress"""
         return _lldb.SBFunction_GetEndAddress(self)
+
+    def GetArgumentName(self, *args):
+        """GetArgumentName(self, uint32_t arg_idx) -> str"""
+        return _lldb.SBFunction_GetArgumentName(self, *args)
 
     def GetPrologueByteSize(self):
         """GetPrologueByteSize(self) -> uint32_t"""
@@ -7067,6 +7075,10 @@ class SBProcess(_object):
         """IsInstrumentationRuntimePresent(self, InstrumentationRuntimeType type) -> bool"""
         return _lldb.SBProcess_IsInstrumentationRuntimePresent(self, *args)
 
+    def SaveCore(self, *args):
+        """SaveCore(self, str file_name) -> SBError"""
+        return _lldb.SBProcess_SaveCore(self, *args)
+
     def __get_is_alive__(self):
         '''Returns "True" if the process is currently alive, "False" otherwise'''
         s = self.GetState()
@@ -8763,6 +8775,10 @@ class SBTarget(_object):
         """BreakpointCreateByAddress(self, addr_t address) -> SBBreakpoint"""
         return _lldb.SBTarget_BreakpointCreateByAddress(self, *args)
 
+    def BreakpointCreateBySBAddress(self, *args):
+        """BreakpointCreateBySBAddress(self, SBAddress sb_address) -> SBBreakpoint"""
+        return _lldb.SBTarget_BreakpointCreateBySBAddress(self, *args)
+
     def GetNumBreakpoints(self):
         """GetNumBreakpoints(self) -> uint32_t"""
         return _lldb.SBTarget_GetNumBreakpoints(self)
@@ -8828,7 +8844,24 @@ class SBTarget(_object):
         return _lldb.SBTarget_GetBroadcaster(self)
 
     def CreateValueFromAddress(self, *args):
-        """CreateValueFromAddress(self, str name, SBAddress addr, SBType type) -> SBValue"""
+        """
+        CreateValueFromAddress(self, str name, SBAddress addr, SBType type) -> SBValue
+
+        Create an SBValue with the given name by treating the memory starting at addr as an entity of type.
+        
+        @param[in] name
+            The name of the resultant SBValue
+        
+        @param[in] addr
+            The address of the start of the memory region to be used.
+        
+        @param[in] type
+            The type to use to interpret the memory starting at addr.
+        
+        @return
+            An SBValue of the given type, may be invalid if there was an error reading
+            the underlying memory.
+        """
         return _lldb.SBTarget_CreateValueFromAddress(self, *args)
 
     def CreateValueFromData(self, *args):
@@ -9755,6 +9788,14 @@ class SBTypeMemberFunction(_object):
         """GetName(self) -> str"""
         return _lldb.SBTypeMemberFunction_GetName(self)
 
+    def GetDemangledName(self):
+        """GetDemangledName(self) -> str"""
+        return _lldb.SBTypeMemberFunction_GetDemangledName(self)
+
+    def GetMangledName(self):
+        """GetMangledName(self) -> str"""
+        return _lldb.SBTypeMemberFunction_GetMangledName(self)
+
     def GetType(self):
         """GetType(self) -> SBType"""
         return _lldb.SBTypeMemberFunction_GetType(self)
@@ -9778,6 +9819,10 @@ class SBTypeMemberFunction(_object):
     def GetDescription(self, *args):
         """GetDescription(self, SBStream description, DescriptionLevel description_level) -> bool"""
         return _lldb.SBTypeMemberFunction_GetDescription(self, *args)
+
+    def __str__(self):
+        """__str__(self) -> PyObject"""
+        return _lldb.SBTypeMemberFunction___str__(self)
 
 SBTypeMemberFunction_swigregister = _lldb.SBTypeMemberFunction_swigregister
 SBTypeMemberFunction_swigregister(SBTypeMemberFunction)
@@ -11496,6 +11541,11 @@ class SBValue(_object):
         pointer to a 'Point' type, then the child at index zero will be
         the 'x' member, and the child at index 1 will be the 'y' member
         (the child at index zero won't be a 'Point' instance).
+        
+        If you actually need an SBValue that represents the type pointed
+        to by a SBValue for which GetType().IsPointeeType() returns true,
+        regardless of the pointee type, you can do that with the SBValue.Dereference
+        method (or the equivalent deref property).
         
         Arrays have a preset number of children that can be accessed by
         index and will returns invalid child values for indexes that are
