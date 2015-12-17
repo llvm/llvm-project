@@ -1662,6 +1662,12 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   ToBBI.BB->splice(ToBBI.BB->end(),
                    FromBBI.BB, FromBBI.BB->begin(), FromBBI.BB->end());
 
+  // Force normalizing the successors' probabilities of ToBBI.BB to convert all
+  // unknown probabilities into known ones.
+  // FIXME: This usage is too tricky and in the future we would like to
+  // eliminate all unknown probabilities in MBB.
+  ToBBI.BB->normalizeSuccProbs();
+
   SmallVector<MachineBasicBlock *, 4> FromSuccs(FromBBI.BB->succ_begin(),
                                                 FromBBI.BB->succ_end());
   MachineBasicBlock *NBB = getNextBlock(FromBBI.BB);

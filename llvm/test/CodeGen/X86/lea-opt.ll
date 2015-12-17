@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-linux -enable-x86-lea-opt | FileCheck %s
 
 %struct.anon1 = type { i32, i32, i32 }
 %struct.anon2 = type { i32, [32 x i32], i32 }

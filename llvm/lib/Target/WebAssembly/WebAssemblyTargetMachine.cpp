@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
-#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -169,6 +168,9 @@ void WebAssemblyPassConfig::addPreRegAlloc() {
 
   // Mark registers as representing wasm's expression stack.
   addPass(createWebAssemblyRegStackify());
+  // The register coalescing pass has a bad interaction with COPY MIs which have
+  // EXPR_STACK as an extra operand
+  // disablePass(&RegisterCoalescerID);
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
@@ -195,7 +197,7 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 
 void WebAssemblyPassConfig::addPreEmitPass() {
   TargetPassConfig::addPreEmitPass();
-    
+
   // Put the CFG in structured form; insert BLOCK and LOOP markers.
   addPass(createWebAssemblyCFGStackify());
 

@@ -35,7 +35,7 @@ public:
 
   Linker(Module &M);
 
-  /// \brief Link \p Src into the composite. The source is destroyed.
+  /// \brief Link \p Src into the composite.
   ///
   /// Passing OverrideSymbols as true will have symbols from Src
   /// shadow those in the Dest.
@@ -44,18 +44,21 @@ public:
   /// are part of the set will be imported from the source module.
   ///
   /// Returns true on error.
-  bool linkInModule(Module &Src, unsigned Flags = Flags::None,
+  bool linkInModule(std::unique_ptr<Module> Src, unsigned Flags = Flags::None,
                     const FunctionInfoIndex *Index = nullptr,
                     DenseSet<const GlobalValue *> *FunctionsToImport = nullptr);
 
-  static bool linkModules(Module &Dest, Module &Src,
-                          unsigned Flags = Flags::None);
+  /// This exists to implement the deprecated LLVMLinkModules C api. Don't use
+  /// for anything else.
+  bool linkInModuleForCAPI(Module &Src);
 
+  static bool linkModules(Module &Dest, std::unique_ptr<Module> Src,
+                          unsigned Flags = Flags::None);
 };
 
 /// Create a new module with exported local functions renamed and promoted
 /// for ThinLTO.
-std::unique_ptr<Module> renameModuleForThinLTO(std::unique_ptr<Module> &M,
+std::unique_ptr<Module> renameModuleForThinLTO(std::unique_ptr<Module> M,
                                                const FunctionInfoIndex *Index);
 
 } // End llvm namespace

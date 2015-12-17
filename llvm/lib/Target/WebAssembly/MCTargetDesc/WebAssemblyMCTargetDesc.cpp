@@ -46,6 +46,14 @@ static MCInstrInfo *createWebAssemblyMCInstrInfo() {
   return X;
 }
 
+static MCStreamer *createWebAssemblyMCStreamer(const Triple &T, MCContext &Ctx,
+                                               MCAsmBackend &MAB,
+                                               raw_pwrite_stream &OS,
+                                               MCCodeEmitter *Emitter,
+                                               bool RelaxAll) {
+  return createELFStreamer(Ctx, MAB, OS, Emitter, RelaxAll);
+}
+
 static MCInstPrinter *
 createWebAssemblyMCInstPrinter(const Triple & /*T*/, unsigned SyntaxVariant,
                                const MCAsmInfo &MAI, const MCInstrInfo &MII,
@@ -63,7 +71,16 @@ extern "C" void LLVMInitializeWebAssemblyTargetMC() {
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createWebAssemblyMCInstrInfo);
 
+    // Register the object streamer
+    TargetRegistry::RegisterELFStreamer(*T, createWebAssemblyMCStreamer);
+
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createWebAssemblyMCInstPrinter);
+
+    // Register the MC code emitter
+    TargetRegistry::RegisterMCCodeEmitter(*T, createWebAssemblyMCCodeEmitter);
+
+    // Register the ASM Backend
+    TargetRegistry::RegisterMCAsmBackend(*T, createWebAssemblyAsmBackend);
   }
 }

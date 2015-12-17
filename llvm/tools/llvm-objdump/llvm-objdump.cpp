@@ -815,42 +815,28 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   std::unique_ptr<const MCRegisterInfo> MRI(
       TheTarget->createMCRegInfo(TripleName));
-  if (!MRI) {
-    errs() << "error: no register info for target " << TripleName << "\n";
-    return;
-  }
+  if (!MRI)
+    report_fatal_error("error: no register info for target " + TripleName);
 
   // Set up disassembler.
   std::unique_ptr<const MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TripleName));
-  if (!AsmInfo) {
-    errs() << "error: no assembly info for target " << TripleName << "\n";
-    return;
-  }
-
+  if (!AsmInfo)
+    report_fatal_error("error: no assembly info for target " + TripleName);
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
-  if (!STI) {
-    errs() << "error: no subtarget info for target " << TripleName << "\n";
-    return;
-  }
-
+  if (!STI)
+    report_fatal_error("error: no subtarget info for target " + TripleName);
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
-  if (!MII) {
-    errs() << "error: no instruction info for target " << TripleName << "\n";
-    return;
-  }
-
+  if (!MII)
+    report_fatal_error("error: no instruction info for target " + TripleName);
   std::unique_ptr<const MCObjectFileInfo> MOFI(new MCObjectFileInfo);
   MCContext Ctx(AsmInfo.get(), MRI.get(), MOFI.get());
 
   std::unique_ptr<MCDisassembler> DisAsm(
     TheTarget->createMCDisassembler(*STI, Ctx));
-
-  if (!DisAsm) {
-    errs() << "error: no disassembler for target " << TripleName << "\n";
-    return;
-  }
+  if (!DisAsm)
+    report_fatal_error("error: no disassembler for target " + TripleName);
 
   std::unique_ptr<const MCInstrAnalysis> MIA(
       TheTarget->createMCInstrAnalysis(MII.get()));
@@ -858,11 +844,9 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
       Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
-  if (!IP) {
-    errs() << "error: no instruction printer for target " << TripleName
-      << '\n';
-    return;
-  }
+  if (!IP)
+    report_fatal_error("error: no instruction printer for target " +
+                       TripleName);
   IP->setPrintImmHex(PrintImmHex);
   PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
 

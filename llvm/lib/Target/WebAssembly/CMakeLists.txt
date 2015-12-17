@@ -33,6 +33,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyStoreResults.cpp
   WebAssemblySubtarget.cpp
   WebAssemblyTargetMachine.cpp
+  WebAssemblyTargetObjectFile.cpp
   WebAssemblyTargetTransformInfo.cpp
 )
 

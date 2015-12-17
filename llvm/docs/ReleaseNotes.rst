@@ -41,6 +41,14 @@ Non-comprehensive list of changes in this release
   in the 3.9 release. Please migrate to using CMake. For more information see:
   `Building LLVM with CMake <CMake.html>`_
 
+* The C API function LLVMLinkModules is deprecated. It will be removed in the
+  3.9 release. Please migrate to LLVMLinkModules2. Unlike the old function the
+  new one
+
+   * Doesn't take an unused parameter.
+   * Destroys the source instead of only damaging it.
+   * Does not record a message. Use the diagnostic handler instead.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
@@ -82,6 +90,9 @@ Changes to the OCaml bindings
 -----------------------------
 
  During this release ...
+
+* The ocaml function link_modules has been replaced with link_modules' which
+  uses LLVMLinkModules2.
 
 
 External Open Source Projects Using LLVM 3.8

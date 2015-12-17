@@ -290,36 +290,25 @@ std::error_code RawCoverageMappingReader::read() {
   return std::error_code();
 }
 
-namespace {
+std::error_code InstrProfSymtab::create(SectionRef &Section) {
+  if (auto Err = Section.getContents(Data))
+    return Err;
+  Address = Section.getAddress();
+  return std::error_code();
+}
 
-/// \brief A helper structure to access the data from a section
-/// in an object file.
-struct SectionData {
-  StringRef Data;
-  uint64_t Address;
-
-  std::error_code load(SectionRef &Section) {
-    if (auto Err = Section.getContents(Data))
-      return Err;
-    Address = Section.getAddress();
-    return std::error_code();
-  }
-
-  std::error_code get(uint64_t Pointer, size_t Size, StringRef &Result) {
-    if (Pointer < Address)
-      return coveragemap_error::malformed;
-    auto Offset = Pointer - Address;
-    if (Offset + Size > Data.size())
-      return coveragemap_error::malformed;
-    Result = Data.substr(Pointer - Address, Size);
-    return std::error_code();
-  }
-};
+StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) {
+  if (Pointer < Address)
+    return StringRef();
+  auto Offset = Pointer - Address;
+  if (Offset + Size > Data.size())
+    return StringRef();
+  return Data.substr(Pointer - Address, Size);
 }
 
 template <typename T, support::endianness Endian>
 std::error_code readCoverageMappingData(
-    SectionData &ProfileNames, StringRef Data,
+    InstrProfSymtab &ProfileNames, StringRef Data,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records,
     std::vector<StringRef> &Filenames) {
   using namespace support;
@@ -389,9 +378,9 @@ std::error_code readCoverageMappingData(
         continue;
 
       // Finally, grab the name and create a record.
-      StringRef FuncName;
-      if (std::error_code EC = ProfileNames.get(NamePtr, NameSize, FuncName))
-        return EC;
+      StringRef FuncName = ProfileNames.getFuncName(NamePtr, NameSize);
+      if (NameSize && FuncName.empty())
+        return coveragemap_error::malformed;
       Records.push_back(BinaryCoverageReader::ProfileMappingRecord(
           CoverageMappingVersion(Version), FuncName, FuncHash, Mapping,
           FilenamesBegin, Filenames.size() - FilenamesBegin));
@@ -404,7 +393,7 @@ std::error_code readCoverageMappingData(
 static const char *TestingFormatMagic = "llvmcovmtestdata";
 
 static std::error_code loadTestingFormat(StringRef Data,
-                                         SectionData &ProfileNames,
+                                         InstrProfSymtab &ProfileNames,
                                          StringRef &CoverageMapping,
                                          uint8_t &BytesInAddress,
                                          support::endianness &Endian) {
@@ -423,14 +412,14 @@ static std::error_code loadTestingFormat(StringRef Data,
   if (Data.size() < 1)
     return coveragemap_error::truncated;
   N = 0;
-  ProfileNames.Address =
+  uint64_t Address =
       decodeULEB128(reinterpret_cast<const uint8_t *>(Data.data()), &N);
   if (N > Data.size())
     return coveragemap_error::malformed;
   Data = Data.substr(N);
   if (Data.size() < ProfileNamesSize)
     return coveragemap_error::malformed;
-  ProfileNames.Data = Data.substr(0, ProfileNamesSize);
+  ProfileNames.create(Data.substr(0, ProfileNamesSize), Address);
   CoverageMapping = Data.substr(ProfileNamesSize);
   return std::error_code();
 }
@@ -446,12 +435,10 @@ static ErrorOr<SectionRef> lookupSection(ObjectFile &OF, StringRef Name) {
   return coveragemap_error::no_data_found;
 }
 
-static std::error_code loadBinaryFormat(MemoryBufferRef ObjectBuffer,
-                                        SectionData &ProfileNames,
-                                        StringRef &CoverageMapping,
-                                        uint8_t &BytesInAddress,
-                                        support::endianness &Endian,
-                                        StringRef Arch) {
+static std::error_code
+loadBinaryFormat(MemoryBufferRef ObjectBuffer, InstrProfSymtab &ProfileNames,
+                 StringRef &CoverageMapping, uint8_t &BytesInAddress,
+                 support::endianness &Endian, StringRef Arch) {
   auto BinOrErr = object::createBinary(ObjectBuffer);
   if (std::error_code EC = BinOrErr.getError())
     return EC;
@@ -491,7 +478,7 @@ static std::error_code loadBinaryFormat(MemoryBufferRef ObjectBuffer,
   // Get the contents of the given sections.
   if (std::error_code EC = CoverageSection->getContents(CoverageMapping))
     return EC;
-  if (std::error_code EC = ProfileNames.load(*NamesSection))
+  if (std::error_code EC = ProfileNames.create(*NamesSection))
     return EC;
 
   return std::error_code();
@@ -502,33 +489,33 @@ BinaryCoverageReader::create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
                              StringRef Arch) {
   std::unique_ptr<BinaryCoverageReader> Reader(new BinaryCoverageReader());
 
-  SectionData Profile;
+  InstrProfSymtab ProfileNames;
   StringRef Coverage;
   uint8_t BytesInAddress;
   support::endianness Endian;
   std::error_code EC;
   if (ObjectBuffer->getBuffer().startswith(TestingFormatMagic))
     // This is a special format used for testing.
-    EC = loadTestingFormat(ObjectBuffer->getBuffer(), Profile, Coverage,
+    EC = loadTestingFormat(ObjectBuffer->getBuffer(), ProfileNames, Coverage,
                            BytesInAddress, Endian);
   else
-    EC = loadBinaryFormat(ObjectBuffer->getMemBufferRef(), Profile, Coverage,
-                          BytesInAddress, Endian, Arch);
+    EC = loadBinaryFormat(ObjectBuffer->getMemBufferRef(), ProfileNames,
+                          Coverage, BytesInAddress, Endian, Arch);
   if (EC)
     return EC;
 
   if (BytesInAddress == 4 && Endian == support::endianness::little)
     EC = readCoverageMappingData<uint32_t, support::endianness::little>(
-        Profile, Coverage, Reader->MappingRecords, Reader->Filenames);
+        ProfileNames, Coverage, Reader->MappingRecords, Reader->Filenames);
   else if (BytesInAddress == 4 && Endian == support::endianness::big)
     EC = readCoverageMappingData<uint32_t, support::endianness::big>(
-        Profile, Coverage, Reader->MappingRecords, Reader->Filenames);
+        ProfileNames, Coverage, Reader->MappingRecords, Reader->Filenames);
   else if (BytesInAddress == 8 && Endian == support::endianness::little)
     EC = readCoverageMappingData<uint64_t, support::endianness::little>(
-        Profile, Coverage, Reader->MappingRecords, Reader->Filenames);
+        ProfileNames, Coverage, Reader->MappingRecords, Reader->Filenames);
   else if (BytesInAddress == 8 && Endian == support::endianness::big)
     EC = readCoverageMappingData<uint64_t, support::endianness::big>(
-        Profile, Coverage, Reader->MappingRecords, Reader->Filenames);
+        ProfileNames, Coverage, Reader->MappingRecords, Reader->Filenames);
   else
     return coveragemap_error::malformed;
   if (EC)

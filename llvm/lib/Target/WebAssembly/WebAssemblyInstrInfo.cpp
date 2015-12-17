@@ -36,8 +36,12 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        DebugLoc DL, unsigned DestReg,
                                        unsigned SrcReg, bool KillSrc) const {
-  const TargetRegisterClass *RC =
-      MBB.getParent()->getRegInfo().getRegClass(SrcReg);
+  // This method is called by post-RA expansion, which expects only pregs to
+  // exist. However we need to handle both here.
+  auto &MRI = MBB.getParent()->getRegInfo();
+  const TargetRegisterClass *RC = TargetRegisterInfo::isVirtualRegister(DestReg) ?
+      MRI.getRegClass(DestReg) :
+      MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(SrcReg);
 
   unsigned CopyLocalOpcode;
   if (RC == &WebAssembly::I32RegClass)

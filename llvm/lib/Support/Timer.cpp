@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Timer.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -21,9 +22,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
-
-// CreateInfoOutputFile - Return a file stream to print our output on.
-namespace llvm { extern raw_ostream *CreateInfoOutputFile(); }
 
 // getLibSupportInfoOutputFilename - This ugly hack is brought to you courtesy
 // of constructor/destructor ordering being unspecified by C++.  Basically the
@@ -52,28 +50,27 @@ namespace {
                    cl::Hidden, cl::location(getLibSupportInfoOutputFilename()));
 }
 
-// CreateInfoOutputFile - Return a file stream to print our output on.
-raw_ostream *llvm::CreateInfoOutputFile() {
+// Return a file stream to print our output on.
+std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
   const std::string &OutputFilename = getLibSupportInfoOutputFilename();
   if (OutputFilename.empty())
-    return new raw_fd_ostream(2, false); // stderr.
+    return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
   if (OutputFilename == "-")
-    return new raw_fd_ostream(1, false); // stdout.
-  
+    return llvm::make_unique<raw_fd_ostream>(1, false); // stdout.
+
   // Append mode is used because the info output file is opened and closed
   // each time -stats or -time-passes wants to print output to it. To
   // compensate for this, the test-suite Makefiles have code to delete the
   // info output file before running commands which write to it.
   std::error_code EC;
-  raw_ostream *Result = new raw_fd_ostream(OutputFilename, EC,
-                                           sys::fs::F_Append | sys::fs::F_Text);
+  auto Result = llvm::make_unique<raw_fd_ostream>(
+      OutputFilename, EC, sys::fs::F_Append | sys::fs::F_Text);
   if (!EC)
     return Result;
-  
+
   errs() << "Error opening info-output-file '"
     << OutputFilename << " for appending!\n";
-  delete Result;
-  return new raw_fd_ostream(2, false); // stderr.
+  return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
 }
 
 
@@ -292,10 +289,9 @@ void TimerGroup::removeTimer(Timer &T) {
   // them were started.
   if (FirstTimer || TimersToPrint.empty())
     return;
-  
-  raw_ostream *OutStream = CreateInfoOutputFile();
+
+  std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
   PrintQueuedTimers(*OutStream);
-  delete OutStream;   // Close the file.
 }
 
 void TimerGroup::addTimer(Timer &T) {

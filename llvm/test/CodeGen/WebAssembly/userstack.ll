@@ -72,4 +72,10 @@ define void @allocarray() {
  ret void
 }
 
+define void @dynamic_alloca(i32 %alloc) {
+ ; TODO: Support frame pointers
+ ;%r = alloca i32, i32 %alloc
+ ;store i32 0, i32* %r
+ ret void
+}
 ; TODO: test aligned alloc

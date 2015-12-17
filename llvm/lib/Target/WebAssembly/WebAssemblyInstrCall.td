@@ -21,8 +21,8 @@ let Defs = [ARGUMENTS] in {
 let Uses = [SP32, SP64], Defs = [SP32, SP64], isCodeGenOnly = 1 in {
 def ADJCALLSTACKDOWN : I<(outs), (ins i32imm:$amt),
                          [(WebAssemblycallseq_start timm:$amt)]>;
-def ADJCALLSTACKUP : I<(outs), (ins i32imm:$amt),
-                       [(WebAssemblycallseq_end timm:$amt, undef)]>;
+def ADJCALLSTACKUP : I<(outs), (ins i32imm:$amt, i32imm:$amt2),
+                       [(WebAssemblycallseq_end timm:$amt, timm:$amt2)]>;
 } // isCodeGenOnly = 1
 
 multiclass CALL<WebAssemblyRegClass vt, string prefix> {

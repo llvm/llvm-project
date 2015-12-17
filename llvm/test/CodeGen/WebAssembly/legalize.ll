@@ -51,3 +51,12 @@ define float @fpconv_f64_f32(double *%p) {
   %e = fptrunc double %v to float
   ret float %e
 }
+
+; Check that big shifts work. This generates a big pile of code from the
+; legalizer; the main thing here is that we don't abort.
+
+; CHECK-LABEL: bigshift:
+define i1024 @bigshift(i1024 %a, i1024 %b) {
+    %c = shl i1024 %a, %b
+    ret i1024 %c
+}

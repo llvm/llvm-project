@@ -21,11 +21,9 @@ import "C"
 import "errors"
 
 func LinkModules(Dest, Src Module) error {
-	var cmsg *C.char
-	failed := C.LLVMLinkModules(Dest.C, Src.C, C.LLVMLinkerDestroySource, &cmsg)
+	failed := C.LLVMLinkModules2(Dest.C, Src.C)
 	if failed != 0 {
-		err := errors.New(C.GoString(cmsg))
-		C.LLVMDisposeMessage(cmsg)
+		err := errors.New("Linking failed")
 		return err
 	}
 	return nil

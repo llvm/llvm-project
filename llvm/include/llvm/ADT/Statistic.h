@@ -28,9 +28,11 @@
 
 #include "llvm/Support/Atomic.h"
 #include "llvm/Support/Valgrind.h"
+#include <memory>
 
 namespace llvm {
 class raw_ostream;
+class raw_fd_ostream;
 
 class Statistic {
 public:
@@ -169,6 +171,9 @@ void EnableStatistics();
 
 /// \brief Check if statistics are enabled.
 bool AreStatisticsEnabled();
+
+/// \brief Return a file stream to print our output on.
+std::unique_ptr<raw_fd_ostream> CreateInfoOutputFile();
 
 /// \brief Print statistics to the file returned by CreateInfoOutputFile().
 void PrintStatistics();

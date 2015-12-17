@@ -63,9 +63,6 @@ MCContext::~MCContext() {
 
   // NOTE: The symbols are all allocated out of a bump pointer allocator,
   // we don't need to free them here.
-
-  // If the stream for the .secure_log_unique directive was created free it.
-  delete (raw_ostream *)SecureLog;
 }
 
 //===----------------------------------------------------------------------===//

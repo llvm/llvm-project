@@ -280,9 +280,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   const MachineFrameInfo *MFI = MF.getFrameInfo();
   const Function *Fn = MF.getFunction();
-  const AArch64RegisterInfo *RegInfo = static_cast<const AArch64RegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool needsFrameMoves = MMI.hasDebugInfo() || Fn->needsUnwindTableEntry();
@@ -515,33 +515,33 @@ static bool isCalleeSavedRegister(unsigned Reg, const MCPhysReg *CSRegs) {
   return false;
 }
 
-static bool isCSRestore(MachineInstr *MI, const MCPhysReg *CSRegs) {
+/// Checks whether the given instruction restores callee save registers
+/// and if so returns how many.
+static unsigned getNumCSRestores(MachineInstr &MI, const MCPhysReg *CSRegs) {
   unsigned RtIdx = 0;
-  if (MI->getOpcode() == AArch64::LDPXpost ||
-      MI->getOpcode() == AArch64::LDPDpost)
+  switch (MI.getOpcode()) {
+  case AArch64::LDPXpost:
+  case AArch64::LDPDpost:
     RtIdx = 1;
-
-  if (MI->getOpcode() == AArch64::LDPXpost ||
-      MI->getOpcode() == AArch64::LDPDpost ||
-      MI->getOpcode() == AArch64::LDPXi || MI->getOpcode() == AArch64::LDPDi) {
-    if (!isCalleeSavedRegister(MI->getOperand(RtIdx).getReg(), CSRegs) ||
-        !isCalleeSavedRegister(MI->getOperand(RtIdx + 1).getReg(), CSRegs) ||
-        MI->getOperand(RtIdx + 2).getReg() != AArch64::SP)
-      return false;
-    return true;
+    // FALLTHROUGH
+  case AArch64::LDPXi:
+  case AArch64::LDPDi:
+    if (!isCalleeSavedRegister(MI.getOperand(RtIdx).getReg(), CSRegs) ||
+        !isCalleeSavedRegister(MI.getOperand(RtIdx + 1).getReg(), CSRegs) ||
+        MI.getOperand(RtIdx + 2).getReg() != AArch64::SP)
+      return 0;
+    return 2;
   }
-
-  return false;
+  return 0;
 }
 
 void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   MachineFrameInfo *MFI = MF.getFrameInfo();
-  const AArch64InstrInfo *TII =
-      static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
-  const AArch64RegisterInfo *RegInfo = static_cast<const AArch64RegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL;
   bool IsTailCallReturn = false;
   if (MBB.end() != MBBI) {
@@ -587,7 +587,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   //      ---------------------|        ---           |
   //      |                    |         |            |
   //      |   CalleeSavedReg   |         |            |
-  //      | (NumRestores * 16) |         |            |
+  //      | (NumRestores * 8)  |         |            |
   //      |                    |         |            |
   //      ---------------------|         |         NumBytes
   //      |                    |     StackSize  (StackAdjustUp)
@@ -608,17 +608,17 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // Move past the restores of the callee-saved registers.
   MachineBasicBlock::iterator LastPopI = MBB.getFirstTerminator();
   const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
-  if (LastPopI != MBB.begin()) {
-    do {
-      ++NumRestores;
-      --LastPopI;
-    } while (LastPopI != MBB.begin() && isCSRestore(LastPopI, CSRegs));
-    if (!isCSRestore(LastPopI, CSRegs)) {
+  MachineBasicBlock::iterator Begin = MBB.begin();
+  while (LastPopI != Begin) {
+    --LastPopI;
+    unsigned Restores = getNumCSRestores(*LastPopI, CSRegs);
+    NumRestores += Restores;
+    if (Restores == 0) {
       ++LastPopI;
-      --NumRestores;
+      break;
     }
   }
-  NumBytes -= NumRestores * 16;
+  NumBytes -= NumRestores * 8;
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
   if (!hasFP(MF)) {
@@ -636,7 +636,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // be able to save any instructions.
   if (NumBytes || MFI->hasVarSizedObjects())
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
-                    -(NumRestores - 1) * 16, TII, MachineInstr::NoFlags);
+                    -(NumRestores - 2) * 8, TII, MachineInstr::NoFlags);
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for

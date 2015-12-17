@@ -61,31 +61,16 @@ bool WebAssemblyFrameLowering::hasReservedCallFrame(
   return !MF.getFrameInfo()->hasVarSizedObjects();
 }
 
-void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
-    MachineFunction & /*MF*/, MachineBasicBlock & /*MBB*/,
-    MachineBasicBlock::iterator /*I*/) const {
-  llvm_unreachable("TODO: implement eliminateCallFramePseudoInstr");
-}
 
-void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
-                                            MachineBasicBlock &MBB) const {
-  // TODO: Do ".setMIFlag(MachineInstr::FrameSetup)" on emitted instructions
-  auto *MFI = MF.getFrameInfo();
-  assert(MFI->getCalleeSavedInfo().empty() &&
-         "WebAssembly should not have callee-saved registers");
-  assert(!hasFP(MF) && "Functions needing frame pointers not yet supported");
-  assert(!MFI->adjustsStack() && "Dynamic stack adjustmet not yet supported");
-  uint64_t StackSize = MFI->getStackSize();
-  if (!StackSize)
-    return;
-
-  const auto *TII = MF.getSubtarget().getInstrInfo();
+/// Adjust the stack pointer by a constant amount.
+static void adjustStackPointer(unsigned StackSize,
+                               bool AdjustUp,
+                               MachineFunction& MF,
+                               MachineBasicBlock& MBB,
+                               const TargetInstrInfo* TII,
+                               MachineBasicBlock::iterator InsertPt,
+                               const DebugLoc& DL) {
   auto &MRI = MF.getRegInfo();
-  auto InsertPt = MBB.begin();
-  DebugLoc DL;
-
-  // Get the current stacktop
-  // TODO: To support dynamic alloc, also copy to FP
   unsigned SPReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
   auto *SPSymbol = MF.createExternalSymbolName("__stack_pointer");
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), SPReg)
@@ -100,11 +85,13 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
       .addImm(0)
       .addReg(SPReg)
       .addMemOperand(LoadMMO);
-  // Subtract the frame size
+  // Add/Subtract the frame size
   unsigned OffsetReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), OffsetReg)
       .addImm(StackSize);
-  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::SUB_I32), WebAssembly::SP32)
+  BuildMI(MBB, InsertPt, DL,
+          TII->get(AdjustUp ? WebAssembly::ADD_I32 : WebAssembly::SUB_I32),
+          WebAssembly::SP32)
       .addReg(SPReg)
       .addReg(OffsetReg);
   // The SP32 register now has the new stacktop. Also write it back to memory.
@@ -117,6 +104,40 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
       .addReg(OffsetReg)
       .addReg(WebAssembly::SP32)
       .addMemOperand(MMO);
+}
+
+void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator I) const {
+  const auto *TII =
+      static_cast<const WebAssemblyInstrInfo*>(MF.getSubtarget().getInstrInfo());
+  DebugLoc DL = I->getDebugLoc();
+  unsigned Opc = I->getOpcode();
+  bool IsDestroy = Opc == TII->getCallFrameDestroyOpcode();
+  unsigned Amount = I->getOperand(0).getImm();
+  if (Amount)
+    adjustStackPointer(Amount, IsDestroy, MF, MBB,
+                       TII, I, DL);
+  MBB.erase(I);
+}
+
+void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
+                                            MachineBasicBlock &MBB) const {
+  // TODO: Do ".setMIFlag(MachineInstr::FrameSetup)" on emitted instructions
+  auto *MFI = MF.getFrameInfo();
+  assert(MFI->getCalleeSavedInfo().empty() &&
+         "WebAssembly should not have callee-saved registers");
+  assert(!hasFP(MF) && "Functions needing frame pointers not yet supported");
+  uint64_t StackSize = MFI->getStackSize();
+  if (!StackSize && (!MFI->adjustsStack() || MFI->getMaxCallFrameSize() == 0))
+    return;
+
+  const auto *TII = MF.getSubtarget().getInstrInfo();
+
+  auto InsertPt = MBB.begin();
+  DebugLoc DL;
+
+  adjustStackPointer(StackSize, false, MF, MBB, TII, InsertPt, DL);
 }
 
 void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
