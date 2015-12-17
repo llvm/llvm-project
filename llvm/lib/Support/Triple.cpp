@@ -550,6 +550,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::sparc:
   case Triple::sparcv9:
   case Triple::systemz:
+  case Triple::wasm32:
+  case Triple::wasm64:
   case Triple::xcore:
   case Triple::ppc64le:
     return Triple::ELF;
@@ -559,11 +561,6 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
     if (T.isOSDarwin())
       return Triple::MachO;
     return Triple::ELF;
-
-  case Triple::wasm32:
-  case Triple::wasm64:
-    // Unknown for now, until an object format is specified.
-    return Triple::UnknownObjectFormat;
   }
 
   if (T.isOSDarwin())

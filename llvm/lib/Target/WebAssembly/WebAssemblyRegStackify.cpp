@@ -136,7 +136,6 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : reverse(MBB)) {
       MachineInstr *Insert = &MI;
-
       // Don't nest anything inside a phi.
       if (Insert->getOpcode() == TargetOpcode::PHI)
         break;

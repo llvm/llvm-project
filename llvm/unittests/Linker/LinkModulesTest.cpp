@@ -98,10 +98,7 @@ TEST_F(LinkModuleTest, BlockAddress) {
 
   Module *LinkedModule = new Module("MyModuleLinked", Ctx);
   Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*LinkedModule, *M);
-
-  // Delete the original module.
-  M.reset();
+  Linker::linkModules(*LinkedModule, std::move(M));
 
   // Check that the global "@switch.bas" is well-formed.
   const GlobalVariable *LinkedGV = LinkedModule->getNamedGlobal("switch.bas");
@@ -175,14 +172,14 @@ TEST_F(LinkModuleTest, EmptyModule) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
   Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*EmptyM, *InternalM);
+  Linker::linkModules(*EmptyM, std::move(InternalM));
 }
 
 TEST_F(LinkModuleTest, EmptyModule2) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
   Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*InternalM, *EmptyM);
+  Linker::linkModules(*InternalM, std::move(EmptyM));
 }
 
 TEST_F(LinkModuleTest, TypeMerge) {
@@ -198,7 +195,7 @@ TEST_F(LinkModuleTest, TypeMerge) {
   std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, C);
 
   Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*M1, *M2);
+  Linker::linkModules(*M1, std::move(M2));
 
   EXPECT_EQ(M1->getNamedGlobal("t1")->getType(),
             M1->getNamedGlobal("t2")->getType());
@@ -226,6 +223,37 @@ TEST_F(LinkModuleTest, CAPIFailure) {
   EXPECT_EQ(1, result);
   EXPECT_STREQ("Linking globals named 'foo': symbol multiply defined!", errout);
   LLVMDisposeMessage(errout);
+}
+
+TEST_F(LinkModuleTest, NewCAPISuccess) {
+  std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
+  std::unique_ptr<Module> SourceM(getExternal(Ctx, "bar"));
+  LLVMBool Result =
+      LLVMLinkModules2(wrap(DestM.get()), wrap(SourceM.release()));
+  EXPECT_EQ(0, Result);
+  // "bar" is present in destination module
+  EXPECT_NE(nullptr, DestM->getFunction("bar"));
+}
+
+static void diagnosticHandler(LLVMDiagnosticInfoRef DI, void *C) {
+  auto *Err = reinterpret_cast<std::string *>(C);
+  char *CErr = LLVMGetDiagInfoDescription(DI);
+  *Err = CErr;
+  LLVMDisposeMessage(CErr);
+}
+
+TEST_F(LinkModuleTest, NewCAPIFailure) {
+  // Symbol clash between two modules
+  LLVMContext Ctx;
+  std::string Err;
+  LLVMContextSetDiagnosticHandler(wrap(&Ctx), diagnosticHandler, &Err);
+
+  std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
+  std::unique_ptr<Module> SourceM(getExternal(Ctx, "foo"));
+  LLVMBool Result =
+      LLVMLinkModules2(wrap(DestM.get()), wrap(SourceM.release()));
+  EXPECT_EQ(1, Result);
+  EXPECT_EQ("Linking globals named 'foo': symbol multiply defined!", Err);
 }
 
 TEST_F(LinkModuleTest, MoveDistinctMDs) {
@@ -276,7 +304,7 @@ TEST_F(LinkModuleTest, MoveDistinctMDs) {
   auto Dst = llvm::make_unique<Module>("Linked", C);
   ASSERT_TRUE(Dst.get());
   Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*Dst, *Src);
+  Linker::linkModules(*Dst, std::move(Src));
 
   // Check that distinct metadata was moved, not cloned.  Even !4, the uniqued
   // node, should effectively be moved, since its only operand hasn't changed.

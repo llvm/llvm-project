@@ -17,7 +17,6 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
-#include "WebAssemblyTargetObjectFile.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -207,6 +206,13 @@ MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
   unsigned BitWidth = NextPowerOf2(VT.getSizeInBits() - 1);
   if (BitWidth > 1 && BitWidth < 8)
     BitWidth = 8;
+
+  if (BitWidth > 64) {
+    BitWidth = 64;
+    assert(BitWidth >= Log2_32_Ceil(VT.getSizeInBits()) &&
+           "64-bit shift counts ought to be enough for anyone");
+  }
+
   MVT Result = MVT::getIntegerVT(BitWidth);
   assert(Result != MVT::INVALID_SIMPLE_VALUE_TYPE &&
          "Unable to represent scalar shift amount type");
@@ -445,7 +451,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (NumBytes) {
-    SDValue Unused = DAG.getUNDEF(PtrVT);
+    SDValue Unused = DAG.getTargetConstant(0, DL, PtrVT);
     Chain = DAG.getCALLSEQ_END(Chain, NB, Unused, SDValue(), DL);
   }
 
@@ -643,10 +649,3 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
 //===----------------------------------------------------------------------===//
 //                          WebAssembly Optimization Hooks
 //===----------------------------------------------------------------------===//
-
-MCSection *WebAssemblyTargetObjectFile::SelectSectionForGlobal(
-    const GlobalValue *GV, SectionKind /*Kind*/, Mangler & /*Mang*/,
-    const TargetMachine & /*TM*/) const {
-  // TODO: Be more sophisticated than this.
-  return isa<Function>(GV) ? getTextSection() : getDataSection();
-}

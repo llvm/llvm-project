@@ -6,16 +6,6 @@ pr38151.c
 va-arg-22.c
 
 # TargetRegisterInfo.h:315: static unsigned int llvm::TargetRegisterInfo::virtReg2Index(unsigned int): Assertion `isVirtualRegister(Reg) && "Not a virtual register"' failed.
-20021120-3.c
-20070201-1.c
-920501-9.c
-930513-1.c
-941014-2.c
-980605-1.c
-fprintf-1.c
-gofast.c
-pr41239.c
-printf-1.c
 struct-ret-1.c
 va-arg-11.c
 va-arg-21.c
@@ -42,10 +32,6 @@ pr38969.c
 pr51323.c
 pr52129.c
 pr57130.c
-
-# TODO: implement eliminateCallFramePseudoInstr
-20121108-1.c
-20020406-1.c
 
 # These were previously "Cannot select FrameIndex." Now most of them fail
 # because they contain call frame pseudos (e.g. call a vararg func),

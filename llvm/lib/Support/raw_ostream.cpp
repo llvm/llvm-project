@@ -517,7 +517,7 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 /// closes the file when the stream is destroyed.
 raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
     : raw_pwrite_stream(unbuffered), FD(fd), ShouldClose(shouldClose),
-      Error(false), UseAtomicWrites(false) {
+      Error(false) {
   if (FD < 0 ) {
     ShouldClose = false;
     return;
@@ -568,21 +568,7 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   pos += Size;
 
   do {
-    ssize_t ret;
-
-    // Check whether we should attempt to use atomic writes.
-    if (LLVM_LIKELY(!UseAtomicWrites)) {
-      ret = ::write(FD, Ptr, Size);
-    } else {
-      // Use ::writev() where available.
-#if defined(HAVE_WRITEV)
-      const void *Addr = static_cast<const void *>(Ptr);
-      struct iovec IOV = {const_cast<void *>(Addr), Size };
-      ret = ::writev(FD, &IOV, 1);
-#else
-      ret = ::write(FD, Ptr, Size);
-#endif
-    }
+    ssize_t ret = ::write(FD, Ptr, Size);
 
     if (ret < 0) {
       // If it's a recoverable error, swallow it and retry the write.

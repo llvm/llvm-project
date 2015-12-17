@@ -106,7 +106,7 @@ bool LTOCodeGenerator::addModule(LTOModule *Mod) {
   assert(&Mod->getModule().getContext() == &Context &&
          "Expected module in same context");
 
-  bool ret = IRLinker->linkInModule(Mod->getModule());
+  bool ret = IRLinker->linkInModule(Mod->takeModule());
 
   const std::vector<const char *> &undefs = Mod->getAsmUndefinedRefs();
   for (int i = 0, e = undefs.size(); i != e; ++i)

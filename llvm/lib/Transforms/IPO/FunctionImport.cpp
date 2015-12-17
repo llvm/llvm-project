@@ -71,6 +71,14 @@ public:
 
   /// Retrieve a Module from the cache or lazily load it on demand.
   Module &operator()(StringRef FileName);
+
+  std::unique_ptr<Module> takeModule(StringRef FileName) {
+    auto I = ModuleMap.find(FileName);
+    assert(I != ModuleMap.end());
+    std::unique_ptr<Module> Ret = std::move(I->second);
+    ModuleMap.erase(I);
+    return Ret;
+  }
 };
 
 // Get a Module for \p FileName from the cache, or load it lazily.
@@ -149,12 +157,13 @@ static void findExternalCalls(const Module &DestModule, Function &F,
 //
 // \p ModuleToFunctionsToImportMap is filled with the set of Function to import
 // per Module.
-static void GetImportList(
-    Module &DestModule, SmallVector<StringRef, 64> &Worklist,
-    StringSet<> &CalledFunctions,
-    std::map<StringRef, std::pair<Module *, DenseSet<const GlobalValue *>>> &
-        ModuleToFunctionsToImportMap,
-    const FunctionInfoIndex &Index, ModuleLazyLoaderCache &ModuleLoaderCache) {
+static void GetImportList(Module &DestModule,
+                          SmallVector<StringRef, 64> &Worklist,
+                          StringSet<> &CalledFunctions,
+                          std::map<StringRef, DenseSet<const GlobalValue *>>
+                              &ModuleToFunctionsToImportMap,
+                          const FunctionInfoIndex &Index,
+                          ModuleLazyLoaderCache &ModuleLoaderCache) {
   while (!Worklist.empty()) {
     auto CalledFunctionName = Worklist.pop_back_val();
     DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": Process import for "
@@ -238,8 +247,7 @@ static void GetImportList(
 
     // Add the function to the import list
     auto &Entry = ModuleToFunctionsToImportMap[SrcModule.getModuleIdentifier()];
-    Entry.first = &SrcModule;
-    Entry.second.insert(F);
+    Entry.insert(F);
 
     // Process the newly imported functions and add callees to the worklist.
     F->materialize();
@@ -274,7 +282,7 @@ bool FunctionImporter::importFunctions(Module &DestModule) {
   Linker TheLinker(DestModule);
 
   // Map of Module -> List of Function to import from the Module
-  std::map<StringRef, std::pair<Module *, DenseSet<const GlobalValue *>>>
+  std::map<StringRef, DenseSet<const GlobalValue *>>
       ModuleToFunctionsToImportMap;
 
   // Analyze the summaries and get the list of functions to import by
@@ -287,14 +295,15 @@ bool FunctionImporter::importFunctions(Module &DestModule) {
   // Do the actual import of functions now, one Module at a time
   for (auto &FunctionsToImportPerModule : ModuleToFunctionsToImportMap) {
     // Get the module for the import
-    auto &FunctionsToImport = FunctionsToImportPerModule.second.second;
-    auto *SrcModule = FunctionsToImportPerModule.second.first;
+    auto &FunctionsToImport = FunctionsToImportPerModule.second;
+    std::unique_ptr<Module> SrcModule =
+        ModuleLoaderCache.takeModule(FunctionsToImportPerModule.first);
     assert(&DestModule.getContext() == &SrcModule->getContext() &&
            "Context mismatch");
 
     // Link in the specified functions.
-    if (TheLinker.linkInModule(*SrcModule, Linker::Flags::None, &Index,
-                               &FunctionsToImport))
+    if (TheLinker.linkInModule(std::move(SrcModule), Linker::Flags::None,
+                               &Index, &FunctionsToImport))
       report_fatal_error("Function Import: link error");
 
     ImportedCount += FunctionsToImport.size();

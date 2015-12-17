@@ -789,10 +789,15 @@ bool ModuleLinker::run() {
 
 Linker::Linker(Module &M) : Mover(M) {}
 
-bool Linker::linkInModule(Module &Src, unsigned Flags,
+bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags,
                           const FunctionInfoIndex *Index,
                           DenseSet<const GlobalValue *> *FunctionsToImport) {
-  ModuleLinker TheLinker(Mover, Src, Flags, Index, FunctionsToImport);
+  ModuleLinker TheLinker(Mover, *Src, Flags, Index, FunctionsToImport);
+  return TheLinker.run();
+}
+
+bool Linker::linkInModuleForCAPI(Module &Src) {
+  ModuleLinker TheLinker(Mover, Src, 0, nullptr, nullptr);
   return TheLinker.run();
 }
 
@@ -805,18 +810,19 @@ bool Linker::linkInModule(Module &Src, unsigned Flags,
 /// true is returned and ErrorMsg (if not null) is set to indicate the problem.
 /// Upon failure, the Dest module could be in a modified state, and shouldn't be
 /// relied on to be consistent.
-bool Linker::linkModules(Module &Dest, Module &Src, unsigned Flags) {
+bool Linker::linkModules(Module &Dest, std::unique_ptr<Module> Src,
+                         unsigned Flags) {
   Linker L(Dest);
-  return L.linkInModule(Src, Flags);
+  return L.linkInModule(std::move(Src), Flags);
 }
 
 std::unique_ptr<Module>
-llvm::renameModuleForThinLTO(std::unique_ptr<Module> &M,
+llvm::renameModuleForThinLTO(std::unique_ptr<Module> M,
                              const FunctionInfoIndex *Index) {
   std::unique_ptr<llvm::Module> RenamedModule(
       new llvm::Module(M->getModuleIdentifier(), M->getContext()));
   Linker L(*RenamedModule.get());
-  if (L.linkInModule(*M.get(), llvm::Linker::Flags::None, Index))
+  if (L.linkInModule(std::move(M), llvm::Linker::Flags::None, Index))
     return nullptr;
   return RenamedModule;
 }
@@ -843,11 +849,19 @@ LLVMBool LLVMLinkModules(LLVMModuleRef Dest, LLVMModuleRef Src,
   std::string Message;
   Ctx.setDiagnosticHandler(diagnosticHandler, &Message, true);
 
-  LLVMBool Result = Linker::linkModules(*D, *unwrap(Src));
+  Linker L(*D);
+  Module *M = unwrap(Src);
+  LLVMBool Result = L.linkInModuleForCAPI(*M);
 
   Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
 
   if (OutMessages && Result)
     *OutMessages = strdup(Message.c_str());
   return Result;
+}
+
+LLVMBool LLVMLinkModules2(LLVMModuleRef Dest, LLVMModuleRef Src) {
+  Module *D = unwrap(Dest);
+  std::unique_ptr<Module> M(unwrap(Src));
+  return Linker::linkModules(*D, std::move(M));
 }

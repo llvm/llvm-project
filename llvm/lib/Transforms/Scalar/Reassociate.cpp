@@ -1229,7 +1229,7 @@ static Value *OptimizeAndOrXor(unsigned Opcode,
   return nullptr;
 }
 
-/// Helper funciton of CombineXorOpnd(). It creates a bitwise-and
+/// Helper function of CombineXorOpnd(). It creates a bitwise-and
 /// instruction with the given two operands, and return the resulting
 /// instruction. There are two special cases: 1) if the constant operand is 0,
 /// it will return NULL. 2) if the constant is ~0, the symbolic operand will

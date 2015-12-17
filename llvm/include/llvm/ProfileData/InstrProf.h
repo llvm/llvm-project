@@ -199,6 +199,37 @@ enum InstrProfValueKind : uint32_t {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
+namespace object {
+class SectionRef;
+}
+/// A symbol table used for function PGO name look-up with keys
+/// (such as pointers, md5hash values) to the function. A function's
+/// PGO name or name's md5hash are used in retrieving the profile
+/// data of the function. See \c getPGOFuncName() method for details
+/// on how PGO name is formed.
+class InstrProfSymtab {
+private:
+  StringRef Data;
+  uint64_t Address;
+
+public:
+  InstrProfSymtab() : Data(), Address(0) {}
+
+  /// Create InstrProfSymtab from a object file section which
+  /// contains function PGO names that are uncompressed.
+  std::error_code create(object::SectionRef &Section);
+  std::error_code create(StringRef D, uint64_t BaseAddr) {
+    Data = D;
+    Address = BaseAddr;
+    return std::error_code();
+  }
+
+  /// Return function's PGO name from the function name's symabol
+  /// address in the object file. If an error occurs, Return
+  /// an empty string.
+  StringRef getFuncName(uint64_t FuncNameAddress, size_t NameSize);
+};
+
 struct InstrProfStringTable {
   // Set of string values in profiling data.
   StringSet<> StringValueSet;

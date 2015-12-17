@@ -46,6 +46,9 @@ MCAsmBackend *createWebAssemblyAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
                                           const Triple &TT, StringRef CPU);
 
+MCObjectWriter *createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
+                                                 bool Is64Bit, uint8_t OSABI);
+
 } // end namespace llvm
 
 // Defines symbolic names for WebAssembly registers. This defines a mapping from

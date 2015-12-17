@@ -221,7 +221,7 @@ static std::unique_ptr<Module> testMergedProgram(const BugDriver &BD,
                                                  std::unique_ptr<Module> M2,
                                                  std::string &Error,
                                                  bool &Broken) {
-  if (Linker::linkModules(*M1, *M2))
+  if (Linker::linkModules(*M1, std::move(M2)))
     exit(1);
 
   // Execute the program.
@@ -387,7 +387,8 @@ static bool ExtractLoops(BugDriver &BD,
         MisCompFunctions.emplace_back(F->getName(), F->getFunctionType());
       }
 
-      if (Linker::linkModules(*ToNotOptimize, *ToOptimizeLoopExtracted))
+      if (Linker::linkModules(*ToNotOptimize,
+                              std::move(ToOptimizeLoopExtracted)))
         exit(1);
 
       MiscompiledFunctions.clear();
@@ -414,7 +415,7 @@ static bool ExtractLoops(BugDriver &BD,
     // extraction both didn't break the program, and didn't mask the problem.
     // Replace the current program with the loop extracted version, and try to
     // extract another loop.
-    if (Linker::linkModules(*ToNotOptimize, *ToOptimizeLoopExtracted))
+    if (Linker::linkModules(*ToNotOptimize, std::move(ToOptimizeLoopExtracted)))
       exit(1);
 
     // All of the Function*'s in the MiscompiledFunctions list are in the old
@@ -582,7 +583,7 @@ static bool ExtractBlocks(BugDriver &BD,
     if (!I->isDeclaration())
       MisCompFunctions.emplace_back(I->getName(), I->getFunctionType());
 
-  if (Linker::linkModules(*ProgClone, *Extracted))
+  if (Linker::linkModules(*ProgClone, std::move(Extracted)))
     exit(1);
 
   // Set the new program and delete the old one.

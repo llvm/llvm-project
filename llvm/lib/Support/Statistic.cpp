@@ -34,9 +34,6 @@
 #include <cstring>
 using namespace llvm;
 
-// CreateInfoOutputFile - Return a file stream to print our output on.
-namespace llvm { extern raw_ostream *CreateInfoOutputFile(); }
-
 /// -stats - Command line option to cause transformations to emit stats about
 /// what they did.
 ///
@@ -145,20 +142,18 @@ void llvm::PrintStatistics() {
   if (Stats.Stats.empty()) return;
 
   // Get the stream to write to.
-  raw_ostream &OutStream = *CreateInfoOutputFile();
-  PrintStatistics(OutStream);
-  delete &OutStream;   // Close the file.
+  std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
+  PrintStatistics(*OutStream);
+
 #else
   // Check if the -stats option is set instead of checking
   // !Stats.Stats.empty().  In release builds, Statistics operators
   // do nothing, so stats are never Registered.
   if (Enabled) {
     // Get the stream to write to.
-    raw_ostream &OutStream = *CreateInfoOutputFile();
-    OutStream << "Statistics are disabled.  "
-            << "Build with asserts or with -DLLVM_ENABLE_STATS\n";
-    OutStream.flush();
-    delete &OutStream;   // Close the file.
+    std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
+    (*OutStream) << "Statistics are disabled.  "
+                 << "Build with asserts or with -DLLVM_ENABLE_STATS\n";
   }
 #endif
 }

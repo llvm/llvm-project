@@ -11,5 +11,5 @@ exception Error of string
 
 let () = Callback.register_exception "Llvm_linker.Error" (Error "")
 
-external link_modules : Llvm.llmodule -> Llvm.llmodule -> unit
-                      = "llvm_link_modules"
+external link_modules' : Llvm.llmodule -> Llvm.llmodule -> unit
+                       = "llvm_link_modules"

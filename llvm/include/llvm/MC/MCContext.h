@@ -113,7 +113,7 @@ namespace llvm {
     /// directive is used or it is an error.
     char *SecureLogFile;
     /// The stream that gets written to for the .secure_log_unique directive.
-    raw_ostream *SecureLog;
+    std::unique_ptr<raw_fd_ostream> SecureLog;
     /// Boolean toggled when .secure_log_unique / .secure_log_reset is seen to
     /// catch errors if .secure_log_unique appears twice without
     /// .secure_log_reset appearing between them.
@@ -506,9 +506,11 @@ namespace llvm {
     /// @}
 
     char *getSecureLogFile() { return SecureLogFile; }
-    raw_ostream *getSecureLog() { return SecureLog; }
+    raw_fd_ostream *getSecureLog() { return SecureLog.get(); }
     bool getSecureLogUsed() { return SecureLogUsed; }
-    void setSecureLog(raw_ostream *Value) { SecureLog = Value; }
+    void setSecureLog(std::unique_ptr<raw_fd_ostream> Value) {
+      SecureLog = std::move(Value);
+    }
     void setSecureLogUsed(bool Value) { SecureLogUsed = Value; }
 
     void *allocate(unsigned Size, unsigned Align = 8) {

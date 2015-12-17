@@ -110,12 +110,13 @@ define void @caller_none() {
   ret void
 }
 
-; TODO: Test a varargs call with actual arguments.
-
-;define void @caller_some() {
-;  call void (...) @callee(i32 0, double 2.0)
-;  ret void
-;}
+; CHECK-LABEL: caller_some
+define void @caller_some() {
+  ; TODO: Fix interaction between register coalescer and reg stackifier,
+  ; or disable coalescer.
+  ;call void (...) @callee(i32 0, double 2.0)
+  ret void
+}
 
 declare void @llvm.va_start(i8*)
 declare void @llvm.va_end(i8*)
