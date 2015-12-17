@@ -492,7 +492,10 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
       ExplodedNode *UpdatedN = N;
       SVal InitVal = state->getSVal(InitEx, LC);
 
-      if (isa<CXXConstructExpr>(InitEx->IgnoreImplicit())) {
+      assert(DS->isSingleDecl());
+      if (auto *CtorExpr = findDirectConstructorForCurrentCFGElement()) {
+        assert(InitEx->IgnoreImplicit() == CtorExpr);
+        (void)CtorExpr;
         // We constructed the object directly in the variable.
         // No need to bind anything.
         B.generateNode(DS, UpdatedN, state);

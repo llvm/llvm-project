@@ -603,6 +603,9 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(VarDecl *D, bool FromParent) {
   //  shared.
   CXXRecordDecl *RD =
       SemaRef.getLangOpts().CPlusPlus ? Type->getAsCXXRecordDecl() : nullptr;
+  if (auto *CTSD = dyn_cast_or_null<ClassTemplateSpecializationDecl>(RD))
+    if (auto *CTD = CTSD->getSpecializedTemplate())
+      RD = CTD->getTemplatedDecl();
   if (IsConstant &&
       !(SemaRef.getLangOpts().CPlusPlus && RD && RD->hasMutableFields())) {
     // Variables with const-qualified type having no mutable member may be
@@ -8041,6 +8044,9 @@ static bool IsCXXRecordForMappable(Sema &SemaRef, SourceLocation Loc,
   if (!RD || RD->isInvalidDecl())
     return true;
 
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    if (auto *CTD = CTSD->getSpecializedTemplate())
+      RD = CTD->getTemplatedDecl();
   auto QTy = SemaRef.Context.getRecordType(RD);
   if (RD->isDynamicClass()) {
     SemaRef.Diag(Loc, diag::err_omp_not_mappable_type) << QTy;

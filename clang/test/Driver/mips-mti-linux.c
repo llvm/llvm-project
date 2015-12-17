@@ -4,6 +4,7 @@
 //        it here to test that we are producing the correct paths/flags.
 //        Ideally, we'd like to have an --llvm-toolchain option similar to
 //        the --gcc-toolchain one.
+// REQUIRES: mips-registered-target
 
 // = Big-endian, mips32r2, hard float
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \

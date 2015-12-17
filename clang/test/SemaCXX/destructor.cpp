@@ -217,8 +217,8 @@ class simple_ptr {
 public:
   simple_ptr(T* t): _ptr(t) {}
   ~simple_ptr() { delete _ptr; } // \
-    // expected-warning {{delete called on 'dnvd::B' that has virtual functions but non-virtual destructor}} \
-    // expected-warning {{delete called on 'dnvd::D' that has virtual functions but non-virtual destructor}}
+    // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} \
+    // expected-warning {{delete called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}}
   T& operator*() const { return *_ptr; }
 private:
   T* _ptr;
@@ -228,7 +228,7 @@ template <typename T>
 class simple_ptr2 {
 public:
   simple_ptr2(T* t): _ptr(t) {}
-  ~simple_ptr2() { delete _ptr; } // expected-warning {{delete called on 'dnvd::B' that has virtual functions but non-virtual destructor}}
+  ~simple_ptr2() { delete _ptr; } // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}}
   T& operator*() const { return *_ptr; }
 private:
   T* _ptr;
@@ -314,15 +314,15 @@ void nowarn0() {
 void warn0() {
   {
     B* b = new B();
-    delete b; // expected-warning {{delete called on 'dnvd::B' that has virtual functions but non-virtual destructor}}
+    delete b; // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}}
   }
   {
     B* b = new D();
-    delete b; // expected-warning {{delete called on 'dnvd::B' that has virtual functions but non-virtual destructor}}
+    delete b; // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}}
   }
   {
     D* d = new D();
-    delete d; // expected-warning {{delete called on 'dnvd::D' that has virtual functions but non-virtual destructor}}
+    delete d; // expected-warning {{delete called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}}
   }
 }
 

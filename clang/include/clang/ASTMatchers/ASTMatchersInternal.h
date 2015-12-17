@@ -188,8 +188,11 @@ class ASTMatchFinder;
 /// Used by the implementation of Matcher<T> and DynTypedMatcher.
 /// In general, implement MatcherInterface<T> or SingleNodeMatcherInterface<T>
 /// instead.
-class DynMatcherInterface : public RefCountedBaseVPTR {
+class DynMatcherInterface
+    : public llvm::ThreadSafeRefCountedBase<DynMatcherInterface> {
 public:
+  virtual ~DynMatcherInterface() {}
+
   /// \brief Returns true if \p DynNode can be matched.
   ///
   /// May bind \p DynNode to an ID via \p Builder, or recurse into
@@ -209,8 +212,6 @@ public:
 template <typename T>
 class MatcherInterface : public DynMatcherInterface {
 public:
-  ~MatcherInterface() override {}
-
   /// \brief Returns true if 'Node' can be matched.
   ///
   /// May bind 'Node' to an ID via 'Builder', or recurse into

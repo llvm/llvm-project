@@ -103,49 +103,32 @@ static SVal makeZeroElementRegion(ProgramStateRef State, SVal LValue,
 }
 
 
-static const MemRegion *getRegionForConstructedObject(
-    const CXXConstructExpr *CE, ExplodedNode *Pred, ExprEngine &Eng,
-    unsigned int CurrStmtIdx) {
+const MemRegion *
+ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
+                                          ExplodedNode *Pred) {
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
-  const NodeBuilderContext &CurrBldrCtx = Eng.getBuilderContext();
 
   // See if we're constructing an existing region by looking at the next
   // element in the CFG.
-  const CFGBlock *B = CurrBldrCtx.getBlock();
-  unsigned int NextStmtIdx = CurrStmtIdx + 1;
-  if (NextStmtIdx < B->size()) {
-    CFGElement Next = (*B)[NextStmtIdx];
 
-    // Is this a destructor? If so, we might be in the middle of an assignment
-    // to a local or member: look ahead one more element to see what we find.
-    while (Next.getAs<CFGImplicitDtor>() && NextStmtIdx + 1 < B->size()) {
-      ++NextStmtIdx;
-      Next = (*B)[NextStmtIdx];
-    }
-
-    // Is this a constructor for a local variable?
-    if (Optional<CFGStmt> StmtElem = Next.getAs<CFGStmt>()) {
-      if (const DeclStmt *DS = dyn_cast<DeclStmt>(StmtElem->getStmt())) {
-        if (const VarDecl *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
-          if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
-            SVal LValue = State->getLValue(Var, LCtx);
-            QualType Ty = Var->getType();
-            LValue = makeZeroElementRegion(State, LValue, Ty);
-            return LValue.getAsRegion();
-          }
+  if (auto Elem = findElementDirectlyInitializedByCurrentConstructor()) {
+    if (Optional<CFGStmt> StmtElem = Elem->getAs<CFGStmt>()) {
+      auto *DS = cast<DeclStmt>(StmtElem->getStmt());
+      if (const auto *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
+        if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
+          SVal LValue = State->getLValue(Var, LCtx);
+          QualType Ty = Var->getType();
+          LValue = makeZeroElementRegion(State, LValue, Ty);
+          return LValue.getAsRegion();
         }
       }
-    }
-
-    // Is this a constructor for a member?
-    if (Optional<CFGInitializer> InitElem = Next.getAs<CFGInitializer>()) {
+    } else if (Optional<CFGInitializer> InitElem = Elem->getAs<CFGInitializer>()) {
       const CXXCtorInitializer *Init = InitElem->getInitializer();
       assert(Init->isAnyMemberInitializer());
-
       const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(LCtx->getDecl());
-      Loc ThisPtr = Eng.getSValBuilder().getCXXThis(CurCtor,
-          LCtx->getCurrentStackFrame());
+      Loc ThisPtr =
+      getSValBuilder().getCXXThis(CurCtor, LCtx->getCurrentStackFrame());
       SVal ThisVal = State->getSVal(ThisPtr);
 
       const ValueDecl *Field;
@@ -167,11 +150,84 @@ static const MemRegion *getRegionForConstructedObject(
     // Don't forget to update the pre-constructor initialization code in
     // ExprEngine::VisitCXXConstructExpr.
   }
-
   // If we couldn't find an existing region to construct into, assume we're
   // constructing a temporary.
-  MemRegionManager &MRMgr = Eng.getSValBuilder().getRegionManager();
+  MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
   return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+}
+
+/// Returns true if the initializer for \Elem can be a direct
+/// constructor.
+static bool canHaveDirectConstructor(CFGElement Elem){
+  // DeclStmts and CXXCtorInitializers for fields can be directly constructed.
+
+  if (Optional<CFGStmt> StmtElem = Elem.getAs<CFGStmt>()) {
+    if (isa<DeclStmt>(StmtElem->getStmt())) {
+      return true;
+    }
+  }
+
+  if (Elem.getKind() == CFGElement::Initializer) {
+    return true;
+  }
+
+  return false;
+}
+
+Optional<CFGElement>
+ExprEngine::findElementDirectlyInitializedByCurrentConstructor() {
+  const NodeBuilderContext &CurrBldrCtx = getBuilderContext();
+  // See if we're constructing an existing region by looking at the next
+  // element in the CFG.
+  const CFGBlock *B = CurrBldrCtx.getBlock();
+  assert(isa<CXXConstructExpr>(((*B)[currStmtIdx]).castAs<CFGStmt>().getStmt()));
+  unsigned int NextStmtIdx = currStmtIdx + 1;
+  if (NextStmtIdx >= B->size())
+    return None;
+
+  CFGElement Next = (*B)[NextStmtIdx];
+
+  // Is this a destructor? If so, we might be in the middle of an assignment
+  // to a local or member: look ahead one more element to see what we find.
+  while (Next.getAs<CFGImplicitDtor>() && NextStmtIdx + 1 < B->size()) {
+    ++NextStmtIdx;
+    Next = (*B)[NextStmtIdx];
+  }
+
+  if (canHaveDirectConstructor(Next))
+    return Next;
+
+  return None;
+}
+
+const CXXConstructExpr *
+ExprEngine::findDirectConstructorForCurrentCFGElement() {
+  // Go backward in the CFG to see if the previous element (ignoring
+  // destructors) was a CXXConstructExpr. If so, that constructor
+  // was constructed directly into an existing region.
+  // This process is essentially the inverse of that performed in
+  // findElementDirectlyInitializedByCurrentConstructor().
+  if (currStmtIdx == 0)
+    return nullptr;
+
+  const CFGBlock *B = getBuilderContext().getBlock();
+  assert(canHaveDirectConstructor((*B)[currStmtIdx]));
+
+  unsigned int PreviousStmtIdx = currStmtIdx - 1;
+  CFGElement Previous = (*B)[PreviousStmtIdx];
+
+  while (Previous.getAs<CFGImplicitDtor>() && PreviousStmtIdx > 0) {
+    --PreviousStmtIdx;
+    Previous = (*B)[PreviousStmtIdx];
+  }
+
+  if (Optional<CFGStmt> PrevStmtElem = Previous.getAs<CFGStmt>()) {
+    if (auto *CtorExpr = dyn_cast<CXXConstructExpr>(PrevStmtElem->getStmt())) {
+      return CtorExpr;
+    }
+  }
+
+  return nullptr;
 }
 
 void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
@@ -188,7 +244,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
 
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
-    Target = getRegionForConstructedObject(CE, Pred, *this, currStmtIdx);
+    Target = getRegionForConstructedObject(CE, Pred);
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:

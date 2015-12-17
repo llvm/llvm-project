@@ -15,9 +15,9 @@ set(files
   avxintrin.h
   bmi2intrin.h
   bmiintrin.h
+  __clang_cuda_runtime_wrapper.h
   cpuid.h
   cuda_builtin_vars.h
-  cuda_runtime.h
   emmintrin.h
   f16cintrin.h
   float.h

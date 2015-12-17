@@ -184,7 +184,7 @@ namespace clang {
       for (auto &I : LinkModules) {
         unsigned LinkFlags = I.first;
         CurLinkModule = I.second.get();
-        if (Linker::linkModules(*M, *CurLinkModule, LinkFlags))
+        if (Linker::linkModules(*M, std::move(I.second), LinkFlags))
           return;
       }
 
@@ -806,7 +806,7 @@ void CodeGenAction::ExecuteAction() {
       assert(Index);
       // Currently this requires creating a new Module object.
       std::unique_ptr<llvm::Module> RenamedModule =
-          renameModuleForThinLTO(TheModule, Index.get());
+          renameModuleForThinLTO(std::move(TheModule), Index.get());
       if (!RenamedModule)
         return;
 

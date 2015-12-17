@@ -2194,6 +2194,11 @@ ItaniumCXXABI::getOrCreateThreadLocalWrapper(const VarDecl *VD,
       !llvm::GlobalVariable::isLinkOnceLinkage(Wrapper->getLinkage()) &&
       !llvm::GlobalVariable::isWeakODRLinkage(Wrapper->getLinkage())))
     Wrapper->setVisibility(llvm::GlobalValue::HiddenVisibility);
+
+  if (isThreadWrapperReplaceable(VD, CGM)) {
+    Wrapper->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
+    Wrapper->addFnAttr(llvm::Attribute::NoUnwind);
+  }
   return Wrapper;
 }
 
@@ -2305,13 +2310,16 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Value *Val = CGF.CGM.GetAddrOfGlobalVar(VD);
   llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Val);
 
-  Val = CGF.Builder.CreateCall(Wrapper);
+  llvm::CallInst *CallVal = CGF.Builder.CreateCall(Wrapper);
+  if (isThreadWrapperReplaceable(VD, CGF.CGM))
+    CallVal->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
 
   LValue LV;
   if (VD->getType()->isReferenceType())
-    LV = CGF.MakeNaturalAlignAddrLValue(Val, LValType);
+    LV = CGF.MakeNaturalAlignAddrLValue(CallVal, LValType);
   else
-    LV = CGF.MakeAddrLValue(Val, LValType, CGF.getContext().getDeclAlign(VD));
+    LV = CGF.MakeAddrLValue(CallVal, LValType,
+                            CGF.getContext().getDeclAlign(VD));
   // FIXME: need setObjCGCLValueClass?
   return LV;
 }

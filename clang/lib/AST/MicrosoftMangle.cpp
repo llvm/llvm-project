@@ -422,7 +422,7 @@ void MicrosoftCXXNameMangler::mangleFunctionEncoding(const FunctionDecl *FD,
     // We would like to mangle all extern "C" functions using this additional
     // component but this would break compatibility with MSVC's behavior.
     // Instead, do this when we know that compatibility isn't important (in
-    // other words, when it is an overloaded extern "C" funciton).
+    // other words, when it is an overloaded extern "C" function).
     if (FD->isExternC() && FD->hasAttr<OverloadableAttr>())
       Out << "$$J0";
 
