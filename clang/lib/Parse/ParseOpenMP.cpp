@@ -215,7 +215,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed) {
   case OMPD_cancel:
     if (!StandAloneAllowed) {
       Diag(Tok, diag::err_omp_immediate_directive)
-          << getOpenMPDirectiveName(DKind);
+          << getOpenMPDirectiveName(DKind) << 0;
     }
     HasAssociatedStatement = false;
     // Fall through for further analysis.
@@ -294,6 +294,18 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed) {
     EndLoc = Tok.getLocation();
     // Consume final annot_pragma_openmp_end.
     ConsumeToken();
+
+    // OpenMP [2.13.8, ordered Construct, Syntax]
+    // If the depend clause is specified, the ordered construct is a stand-alone
+    // directive.
+    if (DKind == OMPD_ordered && FirstClauses[OMPC_depend].getInt()) {
+      if (!StandAloneAllowed) {
+        Diag(Loc, diag::err_omp_immediate_directive)
+            << getOpenMPDirectiveName(DKind) << 1
+            << getOpenMPClauseName(OMPC_depend);
+      }
+      HasAssociatedStatement = false;
+    }
 
     StmtResult AssociatedStmt;
     if (HasAssociatedStatement) {
@@ -524,7 +536,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_flush:
   case OMPC_depend:
   case OMPC_map:
-    Clause = ParseOpenMPVarListClause(CKind);
+    Clause = ParseOpenMPVarListClause(DKind, CKind);
     break;
   case OMPC_unknown:
     Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
@@ -793,7 +805,7 @@ static bool ParseReductionId(Parser &P, CXXScopeSpec &ReductionIdScopeSpec,
 ///    flush-clause:
 ///       'flush' '(' list ')'
 ///    depend-clause:
-///       'depend' '(' in | out | inout : list ')'
+///       'depend' '(' in | out | inout : list | source ')'
 ///    map-clause:
 ///       'map' '(' [ [ always , ]
 ///          to | from | tofrom | alloc | release | delete ':' ] list ')';
@@ -802,7 +814,8 @@ static bool ParseReductionId(Parser &P, CXXScopeSpec &ReductionIdScopeSpec,
 ///  list
 ///  modifier(list)
 /// where modifier is 'val' (C) or 'ref', 'val' or 'uval'(C++).
-OMPClause *Parser::ParseOpenMPVarListClause(OpenMPClauseKind Kind) {
+OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
+                                            OpenMPClauseKind Kind) {
   SourceLocation Loc = Tok.getLocation();
   SourceLocation LOpen = ConsumeToken();
   SourceLocation ColonLoc = SourceLocation();
@@ -858,11 +871,23 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPClauseKind Kind) {
                 StopBeforeMatch);
     } else {
       ConsumeToken();
+      // Special processing for depend(source) clause.
+      if (DKind == OMPD_ordered && DepKind == OMPC_DEPEND_source) {
+        // Parse ')'.
+        T.consumeClose();
+        return Actions.ActOnOpenMPVarListClause(
+            Kind, llvm::None, /*TailExpr=*/nullptr, Loc, LOpen,
+            /*ColonLoc=*/SourceLocation(), Tok.getLocation(),
+            ReductionIdScopeSpec, DeclarationNameInfo(), DepKind,
+            LinearModifier, MapTypeModifier, MapType, DepLinMapLoc);
+      }
     }
     if (Tok.is(tok::colon)) {
       ColonLoc = ConsumeToken();
     } else {
-      Diag(Tok, diag::warn_pragma_expected_colon) << "dependency type";
+      Diag(Tok, DKind == OMPD_ordered ? diag::warn_pragma_expected_colon_r_paren
+                                      : diag::warn_pragma_expected_colon)
+          << "dependency type";
     }
   } else if (Kind == OMPC_linear) {
     // Try to parse modifier if any.

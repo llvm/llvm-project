@@ -772,8 +772,8 @@ __mmask16 test_mm512_mask_cmp_round_ps_mask(__mmask16 m, __m512 a, __m512 b) {
 }
 
 __mmask16 test_mm512_cmp_ps_mask(__m512 a, __m512 b) {
-  // check-label: @test_mm512_cmp_ps_mask
-  // check: @llvm.x86.avx512.mask.cmp.ps.512
+  // CHECK-LABEL: @test_mm512_cmp_ps_mask
+  // CHECKn: @llvm.x86.avx512.mask.cmp.ps.512
   return _mm512_cmp_ps_mask(a, b, 0);
 }
 
@@ -796,8 +796,8 @@ __mmask8 test_mm512_mask_cmp_round_pd_mask(__mmask8 m, __m512d a, __m512d b) {
 }
 
 __mmask8 test_mm512_cmp_pd_mask(__m512d a, __m512d b) {
-  // check-label: @test_mm512_cmp_pd_mask
-  // check: @llvm.x86.avx512.mask.cmp.pd.512
+  // CHECK-LABEL: @test_mm512_cmp_pd_mask
+  // CHECK: @llvm.x86.avx512.mask.cmp.pd.512
   return _mm512_cmp_pd_mask(a, b, 0);
 }
 

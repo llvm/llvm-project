@@ -278,6 +278,8 @@ LValue CGOpenMPRegionInfo::getThreadIDVariableLValue(CodeGenFunction &CGF) {
 }
 
 void CGOpenMPRegionInfo::EmitBody(CodeGenFunction &CGF, const Stmt * /*S*/) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // 1.2.2 OpenMP Language Terminology
   // Structured block - An executable statement with a single entry at the
   // top and a single exit at the bottom.
@@ -1263,6 +1265,8 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                                        llvm::Value *OutlinedFn,
                                        ArrayRef<llvm::Value *> CapturedVars,
                                        const Expr *IfCond) {
+  if (!CGF.HaveInsertPoint())
+    return;
   auto *RTLoc = emitUpdateLocation(CGF, Loc);
   auto &&ThenGen = [this, OutlinedFn, CapturedVars,
                     RTLoc](CodeGenFunction &CGF) {
@@ -1372,6 +1376,8 @@ public:
     std::copy(CleanupArgs.begin(), CleanupArgs.end(), std::begin(Args));
   }
   void Emit(CodeGenFunction &CGF, Flags /*flags*/) override {
+    if (!CGF.HaveInsertPoint())
+      return;
     CGF.EmitRuntimeCall(Callee, Args);
   }
 };
@@ -1385,6 +1391,8 @@ void CGOpenMPRuntime::emitCriticalRegion(CodeGenFunction &CGF,
   // CriticalOpGen();
   // __kmpc_end_critical(ident_t *, gtid, Lock);
   // Prepare arguments and build a call to __kmpc_critical
+  if (!CGF.HaveInsertPoint())
+    return;
   CodeGenFunction::RunCleanupsScope Scope(CGF);
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
                          getCriticalRegionLock(CriticalName)};
@@ -1427,6 +1435,8 @@ static void emitIfStmt(CodeGenFunction &CGF, llvm::Value *IfCond,
 void CGOpenMPRuntime::emitMasterRegion(CodeGenFunction &CGF,
                                        const RegionCodeGenTy &MasterOpGen,
                                        SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // if(__kmpc_master(ident_t *, gtid)) {
   //   MasterOpGen();
   //   __kmpc_end_master(ident_t *, gtid);
@@ -1449,6 +1459,8 @@ void CGOpenMPRuntime::emitMasterRegion(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::emitTaskyieldCall(CodeGenFunction &CGF,
                                         SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Build call __kmpc_omp_taskyield(loc, thread_id, 0);
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
@@ -1459,6 +1471,8 @@ void CGOpenMPRuntime::emitTaskyieldCall(CodeGenFunction &CGF,
 void CGOpenMPRuntime::emitTaskgroupRegion(CodeGenFunction &CGF,
                                           const RegionCodeGenTy &TaskgroupOpGen,
                                           SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // __kmpc_taskgroup(ident_t *, gtid);
   // TaskgroupOpGen();
   // __kmpc_end_taskgroup(ident_t *, gtid);
@@ -1546,6 +1560,8 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
                                        ArrayRef<const Expr *> SrcExprs,
                                        ArrayRef<const Expr *> DstExprs,
                                        ArrayRef<const Expr *> AssignmentOps) {
+  if (!CGF.HaveInsertPoint())
+    return;
   assert(CopyprivateVars.size() == SrcExprs.size() &&
          CopyprivateVars.size() == DstExprs.size() &&
          CopyprivateVars.size() == AssignmentOps.size());
@@ -1627,6 +1643,8 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
 void CGOpenMPRuntime::emitOrderedRegion(CodeGenFunction &CGF,
                                         const RegionCodeGenTy &OrderedOpGen,
                                         SourceLocation Loc, bool IsThreads) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // __kmpc_ordered(ident_t *, gtid);
   // OrderedOpGen();
   // __kmpc_end_ordered(ident_t *, gtid);
@@ -1646,6 +1664,8 @@ void CGOpenMPRuntime::emitOrderedRegion(CodeGenFunction &CGF,
 void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
                                       OpenMPDirectiveKind Kind, bool EmitChecks,
                                       bool ForceSimpleCall) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Build call __kmpc_cancel_barrier(loc, thread_id);
   // Build call __kmpc_barrier(loc, thread_id);
   OpenMPLocationFlags Flags = OMP_IDENT_KMPC;
@@ -1761,6 +1781,8 @@ void CGOpenMPRuntime::emitForDispatchInit(CodeGenFunction &CGF,
                                           unsigned IVSize, bool IVSigned,
                                           bool Ordered, llvm::Value *UB,
                                           llvm::Value *Chunk) {
+  if (!CGF.HaveInsertPoint())
+    return;
   OpenMPSchedType Schedule =
       getRuntimeSchedule(ScheduleKind, Chunk != nullptr, Ordered);
   assert(Ordered ||
@@ -1793,6 +1815,8 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
                                         bool Ordered, Address IL, Address LB,
                                         Address UB, Address ST,
                                         llvm::Value *Chunk) {
+  if (!CGF.HaveInsertPoint())
+    return;
   OpenMPSchedType Schedule =
     getRuntimeSchedule(ScheduleKind, Chunk != nullptr, Ordered);
   assert(!Ordered);
@@ -1830,6 +1854,8 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
                                           SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Call __kmpc_for_static_fini(ident_t *loc, kmp_int32 tid);
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc, OMP_IDENT_KMPC),
                          getThreadID(CGF, Loc)};
@@ -1841,6 +1867,8 @@ void CGOpenMPRuntime::emitForOrderedIterationEnd(CodeGenFunction &CGF,
                                                  SourceLocation Loc,
                                                  unsigned IVSize,
                                                  bool IVSigned) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Call __kmpc_for_dynamic_fini_(4|8)[u](ident_t *loc, kmp_int32 tid);
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc, OMP_IDENT_KMPC),
                          getThreadID(CGF, Loc)};
@@ -1873,6 +1901,8 @@ llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
 void CGOpenMPRuntime::emitNumThreadsClause(CodeGenFunction &CGF,
                                            llvm::Value *NumThreads,
                                            SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Build call __kmpc_push_num_threads(&loc, global_tid, num_threads)
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
@@ -1884,6 +1914,8 @@ void CGOpenMPRuntime::emitNumThreadsClause(CodeGenFunction &CGF,
 void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
                                          OpenMPProcBindClauseKind ProcBind,
                                          SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Constants for proc bind value accepted by the runtime.
   enum ProcBindTy {
     ProcBindFalse = 0,
@@ -1916,6 +1948,8 @@ void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
                                 SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Build call void __kmpc_flush(ident_t *loc)
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_flush),
                       emitUpdateLocation(CGF, Loc));
@@ -2252,6 +2286,8 @@ void CGOpenMPRuntime::emitTaskCall(
     ArrayRef<const Expr *> FirstprivateCopies,
     ArrayRef<const Expr *> FirstprivateInits,
     ArrayRef<std::pair<OpenMPDependClauseKind, const Expr *>> Dependences) {
+  if (!CGF.HaveInsertPoint())
+    return;
   auto &C = CGM.getContext();
   llvm::SmallVector<PrivateDataTy, 8> Privates;
   // Aggregate privates and sort them by the alignment.
@@ -2519,6 +2555,7 @@ void CGOpenMPRuntime::emitTaskCall(
       case OMPC_DEPEND_inout:
         DepKind = DepInOut;
         break;
+      case OMPC_DEPEND_source:
       case OMPC_DEPEND_unknown:
         llvm_unreachable("Unknown task dependence type");
       }
@@ -2784,6 +2821,8 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
                                     ArrayRef<const Expr *> RHSExprs,
                                     ArrayRef<const Expr *> ReductionOps,
                                     bool WithNowait, bool SimpleReduction) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Next code should be emitted for reduction:
   //
   // static kmp_critical_name lock = { 0 };
@@ -3073,6 +3112,8 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
 void CGOpenMPRuntime::emitTaskwaitCall(CodeGenFunction &CGF,
                                        SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Build call kmp_int32 __kmpc_omp_taskwait(ident_t *loc, kmp_int32
   // global_tid);
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc)};
@@ -3084,6 +3125,8 @@ void CGOpenMPRuntime::emitInlinedDirective(CodeGenFunction &CGF,
                                            OpenMPDirectiveKind InnerKind,
                                            const RegionCodeGenTy &CodeGen,
                                            bool HasCancel) {
+  if (!CGF.HaveInsertPoint())
+    return;
   InlinedOpenMPRegionRAII Region(CGF, CodeGen, InnerKind, HasCancel);
   CGF.CapturedStmtInfo->EmitBody(CGF, /*S=*/nullptr);
 }
@@ -3116,6 +3159,8 @@ static RTCancelKind getCancellationKind(OpenMPDirectiveKind CancelRegion) {
 void CGOpenMPRuntime::emitCancellationPointCall(
     CodeGenFunction &CGF, SourceLocation Loc,
     OpenMPDirectiveKind CancelRegion) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Build call kmp_int32 __kmpc_cancellationpoint(ident_t *loc, kmp_int32
   // global_tid, kmp_int32 cncl_kind);
   if (auto *OMPRegionInfo =
@@ -3152,6 +3197,8 @@ void CGOpenMPRuntime::emitCancellationPointCall(
 void CGOpenMPRuntime::emitCancelCall(CodeGenFunction &CGF, SourceLocation Loc,
                                      const Expr *IfCond,
                                      OpenMPDirectiveKind CancelRegion) {
+  if (!CGF.HaveInsertPoint())
+    return;
   // Build call kmp_int32 __kmpc_cancel(ident_t *loc, kmp_int32 global_tid,
   // kmp_int32 cncl_kind);
   if (auto *OMPRegionInfo =
@@ -3206,6 +3253,8 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
                                      llvm::Value *OutlinedFn,
                                      const Expr *IfCond, const Expr *Device,
                                      ArrayRef<llvm::Value *> CapturedVars) {
+  if (!CGF.HaveInsertPoint())
+    return;
   /// \brief Values for bit flags used to specify the mapping type for
   /// offloading.
   enum OpenMPOffloadMappingFlags {

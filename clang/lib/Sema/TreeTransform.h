@@ -7071,10 +7071,7 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
     }
   }
   StmtResult AssociatedStmt;
-  if (D->hasAssociatedStmt()) {
-    if (!D->getAssociatedStmt()) {
-      return StmtError();
-    }
+  if (D->hasAssociatedStmt() && D->getAssociatedStmt()) {
     getDerived().getSema().ActOnOpenMPRegionStart(D->getDirectiveKind(),
                                                   /*CurScope=*/nullptr);
     StmtResult Body;

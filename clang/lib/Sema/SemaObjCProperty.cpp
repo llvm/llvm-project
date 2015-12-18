@@ -868,6 +868,13 @@ static bool hasWrittenStorageAttribute(ObjCPropertyDecl *Prop) {
       return OrigProp->getPropertyAttributesAsWritten() & OwnershipMask;
   }
 
+  // Look through all of the protocols.
+  for (const auto *Proto : OrigClass->all_referenced_protocols()) {
+    if (ObjCPropertyDecl *OrigProp =
+          Proto->FindPropertyDeclaration(Prop->getIdentifier()))
+      return OrigProp->getPropertyAttributesAsWritten() & OwnershipMask;
+  }
+
   return false;
 }
 

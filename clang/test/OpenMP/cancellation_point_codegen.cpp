@@ -129,7 +129,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: call i32 @__kmpc_single(
 // CHECK-NOT: @__kmpc_cancellationpoint
 // CHECK: call void @__kmpc_end_single(
-// CHECK: call void @__kmpc_barrier(%ident_t*
 // CHECK: ret void
 
 // CHECK: define internal void @{{[^(]+}}(i32* {{[^,]+}}, i32* {{[^,]+}})
@@ -164,7 +163,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CONTINUE]]
 // CHECK: br label
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_barrier(%ident_t*
 // CHECK: ret void
 
 #endif

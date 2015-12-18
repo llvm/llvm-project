@@ -470,6 +470,18 @@ typedef struct {
   int b;
 } A;
 
+typedef struct {
+  int b1;
+  A   b2;
+} B;
+
+typedef struct {
+  int c1;
+  A   c2;
+  int c3;
+  B   c4;
+} C;
+
 void t39() {
 // CHECK-LABEL: define void @t39
   __asm mov eax, [eax].A.b
@@ -478,6 +490,14 @@ void t39() {
 // CHECK: mov eax, [eax] .4
   __asm mov eax, fs:[0] A.b
 // CHECK: mov eax, fs:[$$0] .4
+  __asm mov eax, [eax].B.b2.a
+// CHECK: mov eax, [eax].4
+  __asm mov eax, [eax] B.b2.b
+// CHECK: mov eax, [eax] .8
+  __asm mov eax, fs:[0] C.c2.b
+// CHECK: mov eax, fs:[$$0] .8
+  __asm mov eax, [eax]C.c4.b2.b
+// CHECK: mov eax, [eax].24
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 

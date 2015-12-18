@@ -4574,36 +4574,59 @@ StmtResult Sema::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
                                              Stmt *AStmt,
                                              SourceLocation StartLoc,
                                              SourceLocation EndLoc) {
-  if (!AStmt)
-    return StmtError();
-
-  assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
-
-  getCurFunction()->setHasBranchProtectedScope();
-
+  OMPClause *DependFound = nullptr;
+  OMPClause *DependSourceClause = nullptr;
+  bool ErrorFound = false;
   OMPThreadsClause *TC = nullptr;
   OMPSIMDClause *SC = nullptr;
-  for (auto *C: Clauses) {
-    if (C->getClauseKind() == OMPC_threads)
+  for (auto *C : Clauses) {
+    if (auto *DC = dyn_cast<OMPDependClause>(C)) {
+      DependFound = C;
+      if (DC->getDependencyKind() == OMPC_DEPEND_source) {
+        if (DependSourceClause) {
+          Diag(C->getLocStart(), diag::err_omp_more_one_clause)
+              << getOpenMPDirectiveName(OMPD_ordered)
+              << getOpenMPClauseName(OMPC_depend) << 2;
+          ErrorFound = true;
+        } else
+          DependSourceClause = C;
+      }
+    } else if (C->getClauseKind() == OMPC_threads)
       TC = cast<OMPThreadsClause>(C);
     else if (C->getClauseKind() == OMPC_simd)
       SC = cast<OMPSIMDClause>(C);
   }
-
-  // TODO: this must happen only if 'threads' clause specified or if no clauses
-  // is specified.
-  if (auto *Param = DSAStack->getParentOrderedRegionParam()) {
-    SourceLocation ErrLoc = TC ? TC->getLocStart() : StartLoc;
-    Diag(ErrLoc, diag::err_omp_ordered_directive_with_param) << (TC != nullptr);
-    Diag(Param->getLocStart(), diag::note_omp_ordered_param);
-    return StmtError();
-  }
-  if (!SC && isOpenMPSimdDirective(DSAStack->getParentDirective())) {
+  if (!ErrorFound && !SC &&
+      isOpenMPSimdDirective(DSAStack->getParentDirective())) {
     // OpenMP [2.8.1,simd Construct, Restrictions]
     // An ordered construct with the simd clause is the only OpenMP construct
     // that can appear in the simd region.
     Diag(StartLoc, diag::err_omp_prohibited_region_simd);
+    ErrorFound = true;
+  } else if (DependFound && (TC || SC)) {
+    Diag(DependFound->getLocStart(), diag::err_omp_depend_clause_thread_simd)
+        << getOpenMPClauseName(TC ? TC->getClauseKind() : SC->getClauseKind());
+    ErrorFound = true;
+  } else if (DependFound && !DSAStack->getParentOrderedRegionParam()) {
+    Diag(DependFound->getLocStart(),
+         diag::err_omp_ordered_directive_without_param);
+    ErrorFound = true;
+  } else if (TC || Clauses.empty()) {
+    if (auto *Param = DSAStack->getParentOrderedRegionParam()) {
+      SourceLocation ErrLoc = TC ? TC->getLocStart() : StartLoc;
+      Diag(ErrLoc, diag::err_omp_ordered_directive_with_param)
+          << (TC != nullptr);
+      Diag(Param->getLocStart(), diag::note_omp_ordered_param);
+      ErrorFound = true;
+    }
+  }
+  if ((!AStmt && !DependFound) || ErrorFound)
     return StmtError();
+
+  if (AStmt) {
+    assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+
+    getCurFunction()->setHasBranchProtectedScope();
   }
 
   return OMPOrderedDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt);
@@ -7966,18 +7989,30 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
                               SourceLocation DepLoc, SourceLocation ColonLoc,
                               ArrayRef<Expr *> VarList, SourceLocation StartLoc,
                               SourceLocation LParenLoc, SourceLocation EndLoc) {
-  if (DepKind == OMPC_DEPEND_unknown) {
+  if (DSAStack->getCurrentDirective() == OMPD_ordered &&
+      DepKind != OMPC_DEPEND_source) {
+    std::string Values = "'";
+    Values += getOpenMPSimpleClauseTypeName(OMPC_depend, OMPC_DEPEND_source);
+    Values += "'";
+    Diag(DepLoc, diag::err_omp_unexpected_clause_value)
+        << Values << getOpenMPClauseName(OMPC_depend);
+    return nullptr;
+  }
+  if (DSAStack->getCurrentDirective() != OMPD_ordered &&
+      (DepKind == OMPC_DEPEND_unknown || DepKind == OMPC_DEPEND_source)) {
     std::string Values;
     std::string Sep(", ");
     for (unsigned i = 0; i < OMPC_DEPEND_unknown; ++i) {
+      if (i == OMPC_DEPEND_source)
+        continue;
       Values += "'";
       Values += getOpenMPSimpleClauseTypeName(OMPC_depend, i);
       Values += "'";
       switch (i) {
-      case OMPC_DEPEND_unknown - 2:
+      case OMPC_DEPEND_unknown - 3:
         Values += " or ";
         break;
-      case OMPC_DEPEND_unknown - 1:
+      case OMPC_DEPEND_unknown - 2:
         break;
       default:
         Values += Sep;
@@ -8018,7 +8053,7 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
     Vars.push_back(RefExpr->IgnoreParenImpCasts());
   }
 
-  if (Vars.empty())
+  if (DepKind != OMPC_DEPEND_source && Vars.empty())
     return nullptr;
 
   return OMPDependClause::Create(Context, StartLoc, LParenLoc, EndLoc, DepKind,

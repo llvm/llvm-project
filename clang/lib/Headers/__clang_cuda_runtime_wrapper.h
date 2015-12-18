@@ -45,6 +45,7 @@
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
 #include <stdlib.h>
+#include <cmath>
 
 // Preserve common macros that will be changed below by us or by CUDA
 // headers.
@@ -117,7 +118,7 @@
 #undef __cxa_vec_delete3
 #undef __cxa_pure_virtual
 
-// We need decls for functions in CUDA's libdevice woth __device__
+// We need decls for functions in CUDA's libdevice with __device__
 // attribute only. Alas they come either as __host__ __device__ or
 // with no attributes at all. To work around that, define __CUDA_RTC__
 // which produces HD variant and undef __host__ which gives us desided
@@ -142,6 +143,26 @@
 #include "math_functions.hpp"
 #include "math_functions_dbl_ptx3.hpp"
 #pragma pop_macro("__forceinline__")
+
+// Pull in host-only functions that are only available when neither
+// __CUDACC__ nor __CUDABE__ are defined.
+#undef __MATH_FUNCTIONS_HPP__
+#undef __CUDABE__
+#include "math_functions.hpp"
+// Alas, additional overloads for these functions are hard to get to.
+// Considering that we only need these overloads for a few functions,
+// we can provide them here.
+static inline float rsqrt(float a) { return rsqrtf(a); }
+static inline float rcbrt(float a) { return rcbrtf(a); }
+static inline float sinpi(float a) { return sinpif(a); }
+static inline float cospi(float a) { return cospif(a); }
+static inline void sincospi(float a, float *b, float *c) {
+  return sincospi(a, b, c);
+}
+static inline float erfcinv(float a) { return erfcinvf(a); }
+static inline float normcdfinv(float a) { return normcdfinvf(a); }
+static inline float normcdf(float a) { return normcdff(a); }
+static inline float erfcx(float a) { return erfcxf(a); }
 
 // For some reason single-argument variant is not always declared by
 // CUDA headers. Alas, device_functions.hpp included below needs it.
@@ -182,9 +203,9 @@ static inline __device__ void __brkpt(int c) { __brkpt(); }
 #define __NVCC__
 
 #if defined(__CUDA_ARCH__)
-// We need to emit IR declaration for non-existing __nvvm_reflect to
+// We need to emit IR declaration for non-existing __nvvm_reflect() to
 // let backend know that it should be treated as const nothrow
-// function which is implicitly assumed by NVVMReflect pass.
+// function which is what NVVMReflect pass expects to see.
 extern "C" __device__ __attribute__((const)) int __nvvm_reflect(const void *);
 static __device__ __attribute__((used)) int __nvvm_reflect_anchor() {
   return __nvvm_reflect("NONE");
