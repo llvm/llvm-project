@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_CBINDINGWRAPPING_H
 
 #include "llvm/Support/Casting.h"
+#include "llvm-c/Types.h"
 
 #define DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ty, ref)     \
   inline ty *unwrap(ref P) {                            \

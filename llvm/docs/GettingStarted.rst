@@ -88,7 +88,7 @@ Here's the short story for getting up and running quickly with LLVM:
 
      * ``Unix Makefiles`` --- for generating make-compatible parallel makefiles.
      * ``Ninja`` --- for generating `Ninja <http://martine.github.io/ninja/>`
-        build files.
+        build files. Most llvm developers use Ninja.
      * ``Visual Studio`` --- for generating Visual Studio projects and
         solutions.
      * ``Xcode`` --- for generating Xcode projects.

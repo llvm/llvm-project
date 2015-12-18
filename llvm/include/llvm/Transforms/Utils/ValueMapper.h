@@ -55,6 +55,12 @@ namespace llvm {
     /// It is called after the mapping is recorded, so it doesn't need to worry
     /// about recursion.
     virtual void materializeInitFor(GlobalValue *New, GlobalValue *Old);
+
+    /// If the client needs to handle temporary metadata it must implement
+    /// these methods.
+    virtual Metadata *mapTemporaryMetadata(Metadata *MD) { return nullptr; }
+    virtual void replaceTemporaryMetadata(const Metadata *OrigMD,
+                                          Metadata *NewMD) {}
   };
 
   /// RemapFlags - These are flags that the value mapping APIs allow.
@@ -78,6 +84,11 @@ namespace llvm {
     /// Any global values not in value map are mapped to null instead of
     /// mapping to self. Illegal if RF_IgnoreMissingEntries is also set.
     RF_NullMapMissingGlobalValues = 8,
+
+    /// Set when there is still temporary metadata that must be handled,
+    /// such as when we are doing function importing and will materialize
+    /// and link metadata as a postpass.
+    RF_HaveUnmaterializedMetadata = 16,
   };
 
   static inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {

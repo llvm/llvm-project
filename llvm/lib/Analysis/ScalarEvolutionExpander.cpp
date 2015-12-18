@@ -246,19 +246,15 @@ static bool FactorOutConstant(const SCEV *&S, const SCEV *&Remainder,
     // Check for divisibility.
     if (const SCEVConstant *FC = dyn_cast<SCEVConstant>(Factor)) {
       ConstantInt *CI =
-        ConstantInt::get(SE.getContext(),
-                         C->getValue()->getValue().sdiv(
-                                                   FC->getValue()->getValue()));
+          ConstantInt::get(SE.getContext(), C->getAPInt().sdiv(FC->getAPInt()));
       // If the quotient is zero and the remainder is non-zero, reject
       // the value at this scale. It will be considered for subsequent
       // smaller scales.
       if (!CI->isZero()) {
         const SCEV *Div = SE.getConstant(CI);
         S = Div;
-        Remainder =
-          SE.getAddExpr(Remainder,
-                        SE.getConstant(C->getValue()->getValue().srem(
-                                                  FC->getValue()->getValue())));
+        Remainder = SE.getAddExpr(
+            Remainder, SE.getConstant(C->getAPInt().srem(FC->getAPInt())));
         return true;
       }
     }
@@ -271,10 +267,9 @@ static bool FactorOutConstant(const SCEV *&S, const SCEV *&Remainder,
     // of the given factor. If so, we can factor it.
     const SCEVConstant *FC = cast<SCEVConstant>(Factor);
     if (const SCEVConstant *C = dyn_cast<SCEVConstant>(M->getOperand(0)))
-      if (!C->getValue()->getValue().srem(FC->getValue()->getValue())) {
+      if (!C->getAPInt().srem(FC->getAPInt())) {
         SmallVector<const SCEV *, 4> NewMulOps(M->op_begin(), M->op_end());
-        NewMulOps[0] = SE.getConstant(
-            C->getValue()->getValue().sdiv(FC->getValue()->getValue()));
+        NewMulOps[0] = SE.getConstant(C->getAPInt().sdiv(FC->getAPInt()));
         S = SE.getMulExpr(NewMulOps);
         return true;
       }
@@ -793,7 +788,7 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
 
   Value *LHS = expandCodeFor(S->getLHS(), Ty);
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(S->getRHS())) {
-    const APInt &RHS = SC->getValue()->getValue();
+    const APInt &RHS = SC->getAPInt();
     if (RHS.isPowerOf2())
       return InsertBinop(Instruction::LShr, LHS,
                          ConstantInt::get(Ty, RHS.logBase2()));
@@ -1892,7 +1887,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // integer, consider the division cheap irrespective of whether it occurs in
     // the user code since it can be lowered into a right shift.
     if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS()))
-      if (SC->getValue()->getValue().isPowerOf2()) {
+      if (SC->getAPInt().isPowerOf2()) {
         const DataLayout &DL =
             L->getHeader()->getParent()->getParent()->getDataLayout();
         unsigned Width = cast<IntegerType>(UDivExpr->getType())->getBitWidth();

@@ -288,6 +288,7 @@ TEST(BranchProbabilityTest, scaleBruteForce) {
 }
 
 TEST(BranchProbabilityTest, NormalizeProbabilities) {
+  const auto UnknownProb = BranchProbability::getUnknown();
   {
     SmallVector<BranchProbability, 2> Probs{{0, 1}, {0, 1}};
     BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
@@ -321,6 +322,36 @@ TEST(BranchProbabilityTest, NormalizeProbabilities) {
               Probs[1].getNumerator());
     EXPECT_EQ(BranchProbability::getDenominator() / 3 + 1,
               Probs[2].getNumerator());
+  }
+  {
+    SmallVector<BranchProbability, 2> Probs{{0, 1}, UnknownProb};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(0U, Probs[0].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator(), Probs[1].getNumerator());
+  }
+  {
+    SmallVector<BranchProbability, 2> Probs{{1, 1}, UnknownProb};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(BranchProbability::getDenominator(), Probs[0].getNumerator());
+    EXPECT_EQ(0U, Probs[1].getNumerator());
+  }
+  {
+    SmallVector<BranchProbability, 2> Probs{{1, 2}, UnknownProb};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(BranchProbability::getDenominator() / 2, Probs[0].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator() / 2, Probs[1].getNumerator());
+  }
+  {
+    SmallVector<BranchProbability, 4> Probs{
+        {1, 2}, {1, 2}, {1, 2}, UnknownProb};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    EXPECT_EQ(BranchProbability::getDenominator() / 3 + 1,
+              Probs[0].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator() / 3 + 1,
+              Probs[1].getNumerator());
+    EXPECT_EQ(BranchProbability::getDenominator() / 3 + 1,
+              Probs[2].getNumerator());
+    EXPECT_EQ(0U, Probs[3].getNumerator());
   }
 }
 

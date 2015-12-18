@@ -16,6 +16,7 @@
 
 namespace llvm {
 class GlobalValue;
+class MDNode;
 class Module;
 class StructType;
 class Type;
@@ -60,7 +61,9 @@ public:
   /// Move in the provide values. The source is destroyed.
   /// Returns true on error.
   bool move(Module &Src, ArrayRef<GlobalValue *> ValuesToLink,
-            std::function<void(GlobalValue &GV, ValueAdder Add)> AddLazyFor);
+            std::function<void(GlobalValue &GV, ValueAdder Add)> AddLazyFor,
+            DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr,
+            bool IsMetadataLinkingPostpass = false);
   Module &getModule() { return Composite; }
 
 private:

@@ -6858,17 +6858,16 @@ then the optimizer is not allowed to modify the number or order of
 execution of this ``load`` with other :ref:`volatile
 operations <volatile>`.
 
-If the ``load`` is marked as ``atomic``, it takes an extra
-:ref:`ordering <ordering>` and optional ``singlethread`` argument. The
-``release`` and ``acq_rel`` orderings are not valid on ``load``
-instructions. Atomic loads produce :ref:`defined <memmodel>` results
-when they may see multiple atomic stores. The type of the pointee must
-be an integer or floating point type whose bit width is a power of two,
-greater than or equal to eight, and less than or equal to a 
-target-specific size limit. ``align`` must be explicitly specified on
-atomic loads, and the load has undefined behavior if the alignment is 
-not set to a value which is at least the size in bytes of the pointee.
-``!nontemporal`` does not have any defined semantics for atomic loads.
+If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
+<ordering>` and optional ``singlethread`` argument. The ``release`` and
+``acq_rel`` orderings are not valid on ``load`` instructions. Atomic loads
+produce :ref:`defined <memmodel>` results when they may see multiple atomic
+stores. The type of the pointee must be an integer, pointer, or floating-point
+type whose bit width is a power of two greater than or equal to eight and less
+than or equal to a target-specific size limit.  ``align`` must be explicitly
+specified on atomic loads, and the load has undefined behavior if the alignment
+is not set to a value which is at least the size in bytes of the
+pointee. ``!nontemporal`` does not have any defined semantics for atomic loads.
 
 The optional constant ``align`` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). A value of 0
@@ -6983,18 +6982,16 @@ then the optimizer is not allowed to modify the number or order of
 execution of this ``store`` with other :ref:`volatile
 operations <volatile>`.
 
-If the ``store`` is marked as ``atomic``, it takes an extra
-:ref:`ordering <ordering>` and optional ``singlethread`` argument. The
-``acquire`` and ``acq_rel`` orderings aren't valid on ``store``
-instructions. Atomic loads produce :ref:`defined <memmodel>` results
-when they may see multiple atomic stores. The type of the pointee must
-be an integer or floating point type whose bit width is a power of two,
-greater than or equal to eight, and less than or equal to a 
-target-specific size limit.  ``align`` must be explicitly specified 
-on atomic stores, and the store has undefined behavior if the alignment
-is not set to a value which is at least the size in bytes of the 
-pointee. ``!nontemporal`` does not have any defined semantics for 
-atomic stores.
+If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
+<ordering>` and optional ``singlethread`` argument. The ``acquire`` and
+``acq_rel`` orderings aren't valid on ``store`` instructions. Atomic loads
+produce :ref:`defined <memmodel>` results when they may see multiple atomic
+stores. The type of the pointee must be an integer, pointer, or floating-point
+type whose bit width is a power of two greater than or equal to eight and less
+than or equal to a target-specific size limit.  ``align`` must be explicitly
+specified on atomic stores, and the store has undefined behavior if the
+alignment is not set to a value which is at least the size in bytes of the
+pointee. ``!nontemporal`` does not have any defined semantics for atomic stores.
 
 The optional constant ``align`` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). A value of 0

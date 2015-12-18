@@ -167,13 +167,21 @@ Value *llvm::MapValue(const Value *V, ValueToValueMapTy &VM, RemapFlags Flags,
 }
 
 static Metadata *mapToMetadata(ValueToValueMapTy &VM, const Metadata *Key,
-                     Metadata *Val) {
+                               Metadata *Val, ValueMaterializer *Materializer,
+                               RemapFlags Flags) {
   VM.MD()[Key].reset(Val);
+  if (Materializer && !(Flags & RF_HaveUnmaterializedMetadata)) {
+    auto *N = dyn_cast_or_null<MDNode>(Val);
+    // Need to invoke this once we have non-temporary MD.
+    if (!N || !N->isTemporary())
+      Materializer->replaceTemporaryMetadata(Key, Val);
+  }
   return Val;
 }
 
-static Metadata *mapToSelf(ValueToValueMapTy &VM, const Metadata *MD) {
-  return mapToMetadata(VM, MD, const_cast<Metadata *>(MD));
+static Metadata *mapToSelf(ValueToValueMapTy &VM, const Metadata *MD,
+                           ValueMaterializer *Materializer, RemapFlags Flags) {
+  return mapToMetadata(VM, MD, const_cast<Metadata *>(MD), Materializer, Flags);
 }
 
 static Metadata *MapMetadataImpl(const Metadata *MD,
@@ -206,10 +214,13 @@ static Metadata *mapMetadataOp(Metadata *Op,
 }
 
 /// Resolve uniquing cycles involving the given metadata.
-static void resolveCycles(Metadata *MD) {
-  if (auto *N = dyn_cast_or_null<MDNode>(MD))
+static void resolveCycles(Metadata *MD, bool MDMaterialized) {
+  if (auto *N = dyn_cast_or_null<MDNode>(MD)) {
+    if (!MDMaterialized && N->isTemporary())
+      return;
     if (!N->isResolved())
-      N->resolveCycles();
+      N->resolveCycles(MDMaterialized);
+  }
 }
 
 /// Remap the operands of an MDNode.
@@ -238,7 +249,7 @@ static bool remapOperands(MDNode &Node,
       // Resolve uniquing cycles underneath distinct nodes on the fly so they
       // don't infect later operands.
       if (IsDistinct)
-        resolveCycles(New);
+        resolveCycles(New, !(Flags & RF_HaveUnmaterializedMetadata));
     }
   }
 
@@ -266,7 +277,7 @@ static Metadata *mapDistinctNode(const MDNode *Node,
 
   // Remap operands later.
   DistinctWorklist.push_back(NewMD);
-  return mapToMetadata(VM, Node, NewMD);
+  return mapToMetadata(VM, Node, NewMD, Materializer, Flags);
 }
 
 /// \brief Map a uniqued MDNode.
@@ -277,22 +288,29 @@ static Metadata *mapUniquedNode(const MDNode *Node,
                                 ValueToValueMapTy &VM, RemapFlags Flags,
                                 ValueMapTypeRemapper *TypeMapper,
                                 ValueMaterializer *Materializer) {
-  assert(Node->isUniqued() && "Expected uniqued node");
+  assert(((Flags & RF_HaveUnmaterializedMetadata) || Node->isUniqued()) &&
+         "Expected uniqued node");
 
   // Create a temporary node and map it upfront in case we have a uniquing
   // cycle.  If necessary, this mapping will get updated by RAUW logic before
   // returning.
   auto ClonedMD = Node->clone();
-  mapToMetadata(VM, Node, ClonedMD.get());
+  mapToMetadata(VM, Node, ClonedMD.get(), Materializer, Flags);
   if (!remapOperands(*ClonedMD, DistinctWorklist, VM, Flags, TypeMapper,
                      Materializer)) {
     // No operands changed, so use the original.
     ClonedMD->replaceAllUsesWith(const_cast<MDNode *>(Node));
-    return const_cast<MDNode *>(Node);
+    // Even though replaceAllUsesWith would have replaced the value map
+    // entry, we need to explictly map with the final non-temporary node
+    // to replace any temporary metadata via the callback.
+    return mapToSelf(VM, Node, Materializer, Flags);
   }
 
-  // Uniquify the cloned node.
-  return MDNode::replaceWithUniqued(std::move(ClonedMD));
+  // Uniquify the cloned node. Explicitly map it with the final non-temporary
+  // node so that replacement of temporary metadata via the callback occurs.
+  return mapToMetadata(VM, Node,
+                       MDNode::replaceWithUniqued(std::move(ClonedMD)),
+                       Materializer, Flags);
 }
 
 static Metadata *MapMetadataImpl(const Metadata *MD,
@@ -305,18 +323,18 @@ static Metadata *MapMetadataImpl(const Metadata *MD,
     return NewMD;
 
   if (isa<MDString>(MD))
-    return mapToSelf(VM, MD);
+    return mapToSelf(VM, MD, Materializer, Flags);
 
   if (isa<ConstantAsMetadata>(MD))
     if ((Flags & RF_NoModuleLevelChanges))
-      return mapToSelf(VM, MD);
+      return mapToSelf(VM, MD, Materializer, Flags);
 
   if (const auto *VMD = dyn_cast<ValueAsMetadata>(MD)) {
     Value *MappedV =
         MapValue(VMD->getValue(), VM, Flags, TypeMapper, Materializer);
     if (VMD->getValue() == MappedV ||
         (!MappedV && (Flags & RF_IgnoreMissingEntries)))
-      return mapToSelf(VM, MD);
+      return mapToSelf(VM, MD, Materializer, Flags);
 
     // FIXME: This assert crashes during bootstrap, but I think it should be
     // correct.  For now, just match behaviour from before the metadata/value
@@ -325,7 +343,8 @@ static Metadata *MapMetadataImpl(const Metadata *MD,
     //    assert((MappedV || (Flags & RF_NullMapMissingGlobalValues)) &&
     //           "Referenced metadata not in value map!");
     if (MappedV)
-      return mapToMetadata(VM, MD, ValueAsMetadata::get(MappedV));
+      return mapToMetadata(VM, MD, ValueAsMetadata::get(MappedV), Materializer,
+                           Flags);
     return nullptr;
   }
 
@@ -336,10 +355,25 @@ static Metadata *MapMetadataImpl(const Metadata *MD,
   // If this is a module-level metadata and we know that nothing at the
   // module level is changing, then use an identity mapping.
   if (Flags & RF_NoModuleLevelChanges)
-    return mapToSelf(VM, MD);
+    return mapToSelf(VM, MD, Materializer, Flags);
 
   // Require resolved nodes whenever metadata might be remapped.
-  assert(Node->isResolved() && "Unexpected unresolved node");
+  assert(((Flags & RF_HaveUnmaterializedMetadata) || Node->isResolved()) &&
+         "Unexpected unresolved node");
+
+  if (Materializer && Node->isTemporary()) {
+    assert(Flags & RF_HaveUnmaterializedMetadata);
+    Metadata *TempMD =
+        Materializer->mapTemporaryMetadata(const_cast<Metadata *>(MD));
+    // If the above callback returned an existing temporary node, use it
+    // instead of the current temporary node. This happens when earlier
+    // function importing passes already created and saved a temporary
+    // metadata node for the same value id.
+    if (TempMD) {
+      mapToMetadata(VM, MD, TempMD, Materializer, Flags);
+      return TempMD;
+    }
+  }
 
   if (Node->isDistinct())
     return mapDistinctNode(Node, DistinctWorklist, VM, Flags, TypeMapper,
@@ -363,7 +397,7 @@ Metadata *llvm::MapMetadata(const Metadata *MD, ValueToValueMapTy &VM,
     return NewMD;
 
   // Resolve cycles involving the entry metadata.
-  resolveCycles(NewMD);
+  resolveCycles(NewMD, !(Flags & RF_HaveUnmaterializedMetadata));
 
   // Remap the operands of distinct MDNodes.
   while (!DistinctWorklist.empty())

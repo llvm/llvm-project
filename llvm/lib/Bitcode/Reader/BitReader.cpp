@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/BitReader.h"
+#include "llvm-c/Core.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -94,22 +95,4 @@ LLVMBool LLVMGetBitcodeModule(LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
                               char **OutMessage) {
   return LLVMGetBitcodeModuleInContext(LLVMGetGlobalContext(), MemBuf, OutM,
                                        OutMessage);
-}
-
-/* Deprecated: Use LLVMGetBitcodeModuleInContext instead. */
-LLVMBool LLVMGetBitcodeModuleProviderInContext(LLVMContextRef ContextRef,
-                                               LLVMMemoryBufferRef MemBuf,
-                                               LLVMModuleProviderRef *OutMP,
-                                               char **OutMessage) {
-  return LLVMGetBitcodeModuleInContext(ContextRef, MemBuf,
-                                       reinterpret_cast<LLVMModuleRef*>(OutMP),
-                                       OutMessage);
-}
-
-/* Deprecated: Use LLVMGetBitcodeModule instead. */
-LLVMBool LLVMGetBitcodeModuleProvider(LLVMMemoryBufferRef MemBuf,
-                                      LLVMModuleProviderRef *OutMP,
-                                      char **OutMessage) {
-  return LLVMGetBitcodeModuleProviderInContext(LLVMGetGlobalContext(), MemBuf,
-                                               OutMP, OutMessage);
 }

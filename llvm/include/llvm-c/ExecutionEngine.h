@@ -19,7 +19,7 @@
 #ifndef LLVM_C_EXECUTIONENGINE_H
 #define LLVM_C_EXECUTIONENGINE_H
 
-#include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 

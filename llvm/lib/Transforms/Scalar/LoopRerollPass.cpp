@@ -480,7 +480,7 @@ void LoopReroll::collectPossibleIVs(Loop *L,
         continue;
       if (const SCEVConstant *IncSCEV =
           dyn_cast<SCEVConstant>(PHISCEV->getStepRecurrence(*SE))) {
-        const APInt &AInt = IncSCEV->getValue()->getValue().abs();
+        const APInt &AInt = IncSCEV->getAPInt().abs();
         if (IncSCEV->getValue()->isZero() || AInt.uge(MaxInc))
           continue;
         IVToIncMap[&*I] = IncSCEV->getValue()->getSExtValue();

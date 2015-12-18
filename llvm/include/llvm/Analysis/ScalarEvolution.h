@@ -183,7 +183,7 @@ namespace llvm {
 
   protected:
     SCEVPredicateKind Kind;
-    virtual ~SCEVPredicate();
+    ~SCEVPredicate() = default;
     SCEVPredicate(const SCEVPredicate&) = default;
     SCEVPredicate &operator=(const SCEVPredicate&) = default;
 

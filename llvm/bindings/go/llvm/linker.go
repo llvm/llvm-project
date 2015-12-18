@@ -14,6 +14,7 @@
 package llvm
 
 /*
+#include "llvm-c/Core.h"
 #include "llvm-c/Linker.h"
 #include <stdlib.h>
 */

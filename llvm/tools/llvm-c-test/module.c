@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static LLVMModuleRef load_module(void) {
+static LLVMModuleRef load_module(bool Lazy) {
   LLVMMemoryBufferRef MB;
   LLVMModuleRef M;
   char *msg = NULL;
@@ -29,18 +29,26 @@ static LLVMModuleRef load_module(void) {
     exit(1);
   }
 
-  if (LLVMParseBitcode(MB, &M, &msg)) {
+  LLVMBool Ret;
+  if (Lazy)
+    Ret = LLVMGetBitcodeModule(MB, &M, &msg);
+  else
+    Ret = LLVMParseBitcode(MB, &M, &msg);
+
+  if (Ret) {
     fprintf(stderr, "Error parsing bitcode: %s\n", msg);
     LLVMDisposeMemoryBuffer(MB);
     exit(1);
   }
 
-  LLVMDisposeMemoryBuffer(MB);
+  if (!Lazy)
+    LLVMDisposeMemoryBuffer(MB);
+
   return M;
 }
 
-int module_dump(void) {
-  LLVMModuleRef M = load_module();
+int module_dump(bool Lazy) {
+  LLVMModuleRef M = load_module(Lazy);
 
   char *irstr = LLVMPrintModuleToString(M);
   puts(irstr);
@@ -52,7 +60,7 @@ int module_dump(void) {
 }
 
 int module_list_functions(void) {
-  LLVMModuleRef M = load_module();
+  LLVMModuleRef M = load_module(false);
   LLVMValueRef f;
 
   f = LLVMGetFirstFunction(M);
@@ -93,7 +101,7 @@ int module_list_functions(void) {
 }
 
 int module_list_globals(void) {
-  LLVMModuleRef M = load_module();
+  LLVMModuleRef M = load_module(false);
   LLVMValueRef g;
 
   g = LLVMGetFirstGlobal(M);

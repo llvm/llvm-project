@@ -544,7 +544,7 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
   // Handle a few RHS special cases.
   const SCEVConstant *RC = dyn_cast<SCEVConstant>(RHS);
   if (RC) {
-    const APInt &RA = RC->getValue()->getValue();
+    const APInt &RA = RC->getAPInt();
     // Handle x /s -1 as x * -1, to give ScalarEvolution a chance to do
     // some folding.
     if (RA.isAllOnesValue())
@@ -558,8 +558,8 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
   if (const SCEVConstant *C = dyn_cast<SCEVConstant>(LHS)) {
     if (!RC)
       return nullptr;
-    const APInt &LA = C->getValue()->getValue();
-    const APInt &RA = RC->getValue()->getValue();
+    const APInt &LA = C->getAPInt();
+    const APInt &RA = RC->getAPInt();
     if (LA.srem(RA) != 0)
       return nullptr;
     return SE.getConstant(LA.sdiv(RA));
@@ -623,7 +623,7 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
 /// value, and mutate S to point to a new SCEV with that value excluded.
 static int64_t ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
   if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S)) {
-    if (C->getValue()->getValue().getMinSignedBits() <= 64) {
+    if (C->getAPInt().getMinSignedBits() <= 64) {
       S = SE.getConstant(C->getType(), 0);
       return C->getValue()->getSExtValue();
     }
@@ -2401,14 +2401,14 @@ void LSRInstance::CollectInterestingTypesAndFactors() {
       if (const SCEVConstant *Factor =
             dyn_cast_or_null<SCEVConstant>(getExactSDiv(NewStride, OldStride,
                                                         SE, true))) {
-        if (Factor->getValue()->getValue().getMinSignedBits() <= 64)
-          Factors.insert(Factor->getValue()->getValue().getSExtValue());
+        if (Factor->getAPInt().getMinSignedBits() <= 64)
+          Factors.insert(Factor->getAPInt().getSExtValue());
       } else if (const SCEVConstant *Factor =
                    dyn_cast_or_null<SCEVConstant>(getExactSDiv(OldStride,
                                                                NewStride,
                                                                SE, true))) {
-        if (Factor->getValue()->getValue().getMinSignedBits() <= 64)
-          Factors.insert(Factor->getValue()->getValue().getSExtValue());
+        if (Factor->getAPInt().getMinSignedBits() <= 64)
+          Factors.insert(Factor->getAPInt().getSExtValue());
       }
     }
 
@@ -2831,7 +2831,7 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
   if (!IncConst || !isAddressUse(UserInst, Operand))
     return false;
 
-  if (IncConst->getValue()->getValue().getMinSignedBits() > 64)
+  if (IncConst->getAPInt().getMinSignedBits() > 64)
     return false;
 
   MemAccessTy AccessTy = getAccessType(UserInst);
@@ -3773,10 +3773,9 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
         // value to the immediate would produce a value closer to zero than the
         // immediate itself, then the formula isn't worthwhile.
         if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewF.ScaledReg))
-          if (C->getValue()->isNegative() !=
-                (NewF.BaseOffset < 0) &&
-              (C->getValue()->getValue().abs() * APInt(BitWidth, F.Scale))
-                .ule(std::abs(NewF.BaseOffset)))
+          if (C->getValue()->isNegative() != (NewF.BaseOffset < 0) &&
+              (C->getAPInt().abs() * APInt(BitWidth, F.Scale))
+                  .ule(std::abs(NewF.BaseOffset)))
             continue;
 
         // OK, looks good.
@@ -3804,11 +3803,11 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           // zero than the immediate itself, then the formula isn't worthwhile.
           for (const SCEV *NewReg : NewF.BaseRegs)
             if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewReg))
-              if ((C->getValue()->getValue() + NewF.BaseOffset).abs().slt(
-                   std::abs(NewF.BaseOffset)) &&
-                  (C->getValue()->getValue() +
-                   NewF.BaseOffset).countTrailingZeros() >=
-                   countTrailingZeros<uint64_t>(NewF.BaseOffset))
+              if ((C->getAPInt() + NewF.BaseOffset)
+                      .abs()
+                      .slt(std::abs(NewF.BaseOffset)) &&
+                  (C->getAPInt() + NewF.BaseOffset).countTrailingZeros() >=
+                      countTrailingZeros<uint64_t>(NewF.BaseOffset))
                 goto skip_formula;
 
           // Ok, looks good.

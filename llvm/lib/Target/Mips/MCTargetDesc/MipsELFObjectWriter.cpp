@@ -327,13 +327,24 @@ static void setMatch(MipsRelocationEntry &Hi, MipsRelocationEntry &Lo) {
 //   matching LO;
 // - prefer LOs without a pair;
 // - prefer LOs with higher offset;
+
+static int cmpRel(const ELFRelocationEntry *AP, const ELFRelocationEntry *BP) {
+  const ELFRelocationEntry &A = *AP;
+  const ELFRelocationEntry &B = *BP;
+  if (A.Offset != B.Offset)
+    return B.Offset - A.Offset;
+  if (B.Type != A.Type)
+    return A.Type - B.Type;
+  return 0;
+}
+
 void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
                                      std::vector<ELFRelocationEntry> &Relocs) {
   if (Relocs.size() < 2)
     return;
 
-  // The default function sorts entries by Offset in descending order.
-  MCELFObjectTargetWriter::sortRelocs(Asm, Relocs);
+  // Sorts entries by Offset in descending order.
+  array_pod_sort(Relocs.begin(), Relocs.end(), cmpRel);
 
   // Init MipsRelocs from Relocs.
   std::vector<MipsRelocationEntry> MipsRelocs;

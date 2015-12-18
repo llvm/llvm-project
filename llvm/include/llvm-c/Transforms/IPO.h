@@ -15,7 +15,7 @@
 #ifndef LLVM_C_TRANSFORMS_IPO_H
 #define LLVM_C_TRANSFORMS_IPO_H
 
-#include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 
 #ifdef __cplusplus
 extern "C" {

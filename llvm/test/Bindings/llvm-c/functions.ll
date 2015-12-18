@@ -1,4 +1,13 @@
-; RUN: llvm-as < %s | llvm-c-test --module-list-functions | FileCheck %s
+; RUN: llvm-as %s -o %t.bc
+; RUN: llvm-c-test --module-list-functions < %t.bc| FileCheck %s
+; RUN: llvm-c-test --module-dump < %t.bc| FileCheck --check-prefix=MOD %s
+; RUN: llvm-c-test --lazy-module-dump < %t.bc| FileCheck --check-prefix=LMOD %s
+
+; MOD:      define i32 @X() {
+; MOD-NEXT:   entry:
+
+; LMOD:      ; Materializable
+; LMOD-NEXT: define i32 @X() {}
 
 define i32 @X() {
 entry:

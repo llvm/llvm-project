@@ -15,7 +15,6 @@
 #ifndef LLVM_IR_DIAGNOSTICINFO_H
 #define LLVM_IR_DIAGNOSTICINFO_H
 
-#include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Module.h"
