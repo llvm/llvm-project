@@ -388,9 +388,9 @@ Language::GetExceptionResolverDescription(bool catch_on, bool throw_on, Stream &
 void
 Language::GetDefaultExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s)
 {
-       s.Printf ("Exception breakpoint (catch: %s throw: %s)",
-                 catch_on ? "on" : "off",
-                 throw_on ? "on" : "off");
+     s.Printf ("Exception breakpoint (catch: %s throw: %s)",
+               catch_on ? "on" : "off",
+               throw_on ? "on" : "off");
 }
 //----------------------------------------------------------------------
 // Constructor
