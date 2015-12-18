@@ -204,7 +204,7 @@ public:
         ~ObjCExceptionPrecondition() override = default;
 
         bool EvaluatePrecondition(StoppointCallbackContext &context) override;
-        void DescribePrecondition(Stream &stream, lldb::DescriptionLevel level) override;
+        void GetDescription(Stream &stream, lldb::DescriptionLevel level) override;
         Error ConfigurePrecondition(Args &args) override;
 
     protected:

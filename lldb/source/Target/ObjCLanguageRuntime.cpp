@@ -426,7 +426,7 @@ ObjCLanguageRuntime::ObjCExceptionPrecondition::EvaluatePrecondition(StoppointCa
 }
 
 void
-ObjCLanguageRuntime::ObjCExceptionPrecondition::DescribePrecondition(Stream &stream, lldb::DescriptionLevel level)
+ObjCLanguageRuntime::ObjCExceptionPrecondition::GetDescription(Stream &stream, lldb::DescriptionLevel level)
 {
 }
 
