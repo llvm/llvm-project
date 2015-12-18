@@ -873,14 +873,14 @@ void OMPClausePrinter::VisitOMPFlushClause(OMPFlushClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPDependClause(OMPDependClause *Node) {
+  OS << "depend(";
+  OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                      Node->getDependencyKind());
   if (!Node->varlist_empty()) {
-    OS << "depend(";
-    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
-                                        Node->getDependencyKind())
-       << " :";
+    OS << " :";
     VisitOMPClauseList(Node, ' ');
-    OS << ")";
   }
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {

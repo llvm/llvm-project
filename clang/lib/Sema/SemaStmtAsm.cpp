@@ -617,45 +617,57 @@ ExprResult Sema::LookupInlineAsmIdentifier(CXXScopeSpec &SS,
 bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
                                 unsigned &Offset, SourceLocation AsmLoc) {
   Offset = 0;
+  SmallVector<StringRef, 2> Members;
+  Member.split(Members, ".");
+
   LookupResult BaseResult(*this, &Context.Idents.get(Base), SourceLocation(),
                           LookupOrdinaryName);
 
   if (!LookupName(BaseResult, getCurScope()))
     return true;
 
-  if (!BaseResult.isSingleResult())
-    return true;
+  LookupResult CurrBaseResult(BaseResult);
 
-  const RecordType *RT = nullptr;
-  NamedDecl *FoundDecl = BaseResult.getFoundDecl();
-  if (VarDecl *VD = dyn_cast<VarDecl>(FoundDecl))
-    RT = VD->getType()->getAs<RecordType>();
-  else if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(FoundDecl)) {
-    MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
-    RT = TD->getUnderlyingType()->getAs<RecordType>();
-  } else if (TypeDecl *TD = dyn_cast<TypeDecl>(FoundDecl))
-    RT = TD->getTypeForDecl()->getAs<RecordType>();
-  if (!RT)
-    return true;
+  for (StringRef NextMember : Members) {
 
-  if (RequireCompleteType(AsmLoc, QualType(RT, 0), 0))
-    return true;
+    if (!CurrBaseResult.isSingleResult())
+      return true;
 
-  LookupResult FieldResult(*this, &Context.Idents.get(Member), SourceLocation(),
-                           LookupMemberName);
+    const RecordType *RT = nullptr;
+    NamedDecl *FoundDecl = CurrBaseResult.getFoundDecl();
+    if (VarDecl *VD = dyn_cast<VarDecl>(FoundDecl))
+      RT = VD->getType()->getAs<RecordType>();
+    else if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(FoundDecl)) {
+      MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+      RT = TD->getUnderlyingType()->getAs<RecordType>();
+    } else if (TypeDecl *TD = dyn_cast<TypeDecl>(FoundDecl))
+      RT = TD->getTypeForDecl()->getAs<RecordType>();
+    else if (FieldDecl *TD = dyn_cast<FieldDecl>(FoundDecl))
+      RT = TD->getType()->getAs<RecordType>();
+    if (!RT)
+      return true;
 
-  if (!LookupQualifiedName(FieldResult, RT->getDecl()))
-    return true;
+    if (RequireCompleteType(AsmLoc, QualType(RT, 0), 0))
+      return true;
 
-  // FIXME: Handle IndirectFieldDecl?
-  FieldDecl *FD = dyn_cast<FieldDecl>(FieldResult.getFoundDecl());
-  if (!FD)
-    return true;
+    LookupResult FieldResult(*this, &Context.Idents.get(NextMember),
+                             SourceLocation(), LookupMemberName);
 
-  const ASTRecordLayout &RL = Context.getASTRecordLayout(RT->getDecl());
-  unsigned i = FD->getFieldIndex();
-  CharUnits Result = Context.toCharUnitsFromBits(RL.getFieldOffset(i));
-  Offset = (unsigned)Result.getQuantity();
+    if (!LookupQualifiedName(FieldResult, RT->getDecl()))
+      return true;
+
+    // FIXME: Handle IndirectFieldDecl?
+    FieldDecl *FD = dyn_cast<FieldDecl>(FieldResult.getFoundDecl());
+    if (!FD)
+      return true;
+
+    CurrBaseResult = FieldResult;
+
+    const ASTRecordLayout &RL = Context.getASTRecordLayout(RT->getDecl());
+    unsigned i = FD->getFieldIndex();
+    CharUnits Result = Context.toCharUnitsFromBits(RL.getFieldOffset(i));
+    Offset += (unsigned)Result.getQuantity();
+  }
 
   return false;
 }

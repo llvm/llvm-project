@@ -276,7 +276,6 @@ int main() {
 // CHECK: call void @__kmpc_end_single(
 
 // CHECK: call void @__kmpc_barrier(%{{.+}}* [[SINGLE_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
-// CHECK: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 // CHECK: ret void
 #endif
 

@@ -272,7 +272,7 @@ public:
       return NodeKind < Other.NodeKind;
 
     if (ASTNodeKind::getFromNodeKind<QualType>().isSame(NodeKind))
-      return getUnchecked<QualType>().getAsOpaquePtr() ==
+      return getUnchecked<QualType>().getAsOpaquePtr() <
              Other.getUnchecked<QualType>().getAsOpaquePtr();
 
     if (ASTNodeKind::getFromNodeKind<TypeLoc>().isSame(NodeKind)) {

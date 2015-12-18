@@ -63,7 +63,6 @@ void simple(float *a, float *b, float *c, float *d) {
   }
 // CHECK: [[SIMPLE_LOOP1_END]]
 // CHECK: call void @__kmpc_for_static_fini(%ident_t* {{.+}}, i32 %{{.+}})
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 
   long long k = get_val();
 
@@ -112,7 +111,6 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
 // CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
 // CHECK-NEXT: store i64 [[LIN_ADD2]], i64* %{{.+}}
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 
   int lin = 12;
   #pragma omp parallel for simd linear(lin : get_val()), linear(g_ptr)
@@ -183,7 +181,6 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: store i32 {{.+}}, i32* [[LIN_VAR]],
 // CHECK: [[GLINSTART:.+]] = load double*, double** [[GLIN_START]]
 // CHECK: store double* {{.*}}[[GLIN_VAR]]
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 
   #pragma omp parallel for simd
 // CHECK: call void @__kmpc_for_static_init_4(%ident_t* {{[^,]+}}, i32 %{{[^,]+}}, i32 34, i32* %{{[^,]+}}, i32* [[LB:%[^,]+]], i32* [[UB:%[^,]+]], i32* [[STRIDE:%[^,]+]], i32 1, i32 1)
@@ -220,7 +217,6 @@ void simple(float *a, float *b, float *c, float *d) {
   }
 // CHECK: [[SIMPLE_LOOP4_END]]
 // CHECK: call void @__kmpc_for_static_fini(%ident_t* {{.+}}, i32 %{{.+}})
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 
   #pragma omp parallel for simd
 // CHECK: call void @__kmpc_for_static_init_4(%ident_t* {{[^,]+}}, i32 %{{[^,]+}}, i32 34, i32* %{{[^,]+}}, i32* [[LB:%[^,]+]], i32* [[UB:%[^,]+]], i32* [[STRIDE:%[^,]+]], i32 1, i32 1)
@@ -257,7 +253,6 @@ void simple(float *a, float *b, float *c, float *d) {
   }
 // CHECK: [[SIMPLE_LOOP5_END]]
 // CHECK: call void @__kmpc_for_static_fini(%ident_t* {{.+}}, i32 %{{.+}})
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 
 // CHECK-NOT: mul i32 %{{.+}}, 10
   #pragma omp parallel for simd
@@ -312,7 +307,6 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: [[A_PRIV_VAL:%.+]] = load i32, i32* [[A_PRIV]],
 // CHECK-NEXT: store i32 [[A_PRIV_VAL]], i32* %{{.+}},
 // CHECK-NEXT: br label
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
   }
   int R;
   {
@@ -361,7 +355,6 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: [[RED:%.+]] = mul nsw i32 %{{.+}}, [[R_PRIV_VAL]]
 // CHECK-NEXT: store i32 [[RED]], i32* %{{.+}},
 // CHECK-NEXT: call void @__kmpc_end_reduce_nowait(
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
   }
 }
 
@@ -470,7 +463,6 @@ void iter_simple(IterDouble ia, IterDouble ib, IterDouble ic) {
   }
 // CHECK: [[IT_END]]
 // CHECK: call void @__kmpc_for_static_fini(%ident_t* {{.+}}, i32 %{{.+}})
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 // CHECK: ret void
 }
 
@@ -549,7 +541,6 @@ void collapsed(float *a, float *b, float *c, float *d) {
 // CHECK: store i32 3, i32* [[I:%[^,]+]]
 // CHECK: store i32 5, i32* [[I:%[^,]+]]
 // CHECK: store i16 9, i16* [[I:%[^,]+]]
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 // CHECK: ret void
 }
 
@@ -669,7 +660,6 @@ void widened(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: br label {{%.+}}
 // CHECK: [[T1_END]]
 // CHECK: call void @__kmpc_for_static_fini(%ident_t* {{.+}}, i32 %{{.+}})
-// CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 // CHECK: ret void
 //
 // TERM_DEBUG-LABEL: bar

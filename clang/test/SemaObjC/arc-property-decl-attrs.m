@@ -105,3 +105,19 @@
 @property(nonatomic, weak, nonnull, readonly) id ROdelegate; // expected-error {{property attributes 'nonnull' and 'weak' are mutually exclusive}}
 @end
 
+// rdar://problem/23931441
+@protocol P
+@property(readonly, retain) id prop;
+@end
+
+__attribute__((objc_root_class))
+@interface I2<P>
+@end
+
+@interface I2()
+@property (readwrite) id prop;
+@end
+
+@implementation I2
+@synthesize prop;
+@end

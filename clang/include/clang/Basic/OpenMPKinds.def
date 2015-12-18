@@ -254,6 +254,7 @@ OPENMP_SCHEDULE_KIND(runtime)
 OPENMP_DEPEND_KIND(in)
 OPENMP_DEPEND_KIND(out)
 OPENMP_DEPEND_KIND(inout)
+OPENMP_DEPEND_KIND(source)
 
 // Modifiers for 'linear' clause.
 OPENMP_LINEAR_KIND(val)
@@ -351,6 +352,7 @@ OPENMP_TEAMS_CLAUSE(thread_limit)
 // TODO More clauses for 'ordered' directive.
 OPENMP_ORDERED_CLAUSE(threads)
 OPENMP_ORDERED_CLAUSE(simd)
+OPENMP_ORDERED_CLAUSE(depend)
 
 // Map types and map type modifier for 'map' clause.
 OPENMP_MAP_KIND(alloc)

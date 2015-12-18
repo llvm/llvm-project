@@ -38,6 +38,14 @@ int main() {
 // CHECK:       call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK1]])
 #pragma omp critical(the_name1) hint(23)
   foo();
+// CHECK:       call {{.*}}void @__kmpc_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK]])
+// CHECK-NOT:   call {{.*}}void @__kmpc_end_critical(
+  if (a)
+#pragma omp critical(the_name)
+    while (1)
+      ;
+// CHECK:  call {{.*}}void [[FOO]]()
+  foo();
 // CHECK-NOT:   call void @__kmpc_critical
 // CHECK-NOT:   call void @__kmpc_end_critical
   return a;

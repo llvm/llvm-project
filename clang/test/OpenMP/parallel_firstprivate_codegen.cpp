@@ -204,9 +204,6 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[SIVAR_REF_ADDR]], i{{[0-9]+}}* [[SIVAR7_PRIV]],
 // CHECK: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[SIVAR7_PRIV]],
 
-// CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_ADDR]]
-// CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
-// CHECK: call {{.*}}void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 // CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
 // CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]*
 // CHECK: ret void

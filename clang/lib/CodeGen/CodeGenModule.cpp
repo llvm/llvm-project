@@ -375,8 +375,11 @@ void CodeGenModule::Release() {
     if (llvm::Function *CudaDtorFunction = CUDARuntime->makeModuleDtorFunction())
       AddGlobalDtor(CudaDtorFunction);
   }
-  if (PGOReader && PGOStats.hasDiagnostics())
-    PGOStats.reportDiagnostics(getDiags(), getCodeGenOpts().MainFileName);
+  if (PGOReader) {
+    getModule().setMaximumFunctionCount(PGOReader->getMaximumFunctionCount());
+    if (PGOStats.hasDiagnostics())
+      PGOStats.reportDiagnostics(getDiags(), getCodeGenOpts().MainFileName);
+  }
   EmitCtorList(GlobalCtors, "llvm.global_ctors");
   EmitCtorList(GlobalDtors, "llvm.global_dtors");
   EmitGlobalAnnotations();

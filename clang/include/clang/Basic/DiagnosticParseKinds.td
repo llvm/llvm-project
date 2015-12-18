@@ -916,6 +916,8 @@ def warn_pragma_omp_ignored : Warning<
 def warn_omp_extra_tokens_at_eol : Warning<
   "extra tokens at the end of '#pragma omp %0' are ignored">,
   InGroup<ExtraTokens>;
+def warn_pragma_expected_colon_r_paren : Warning<
+  "missing ':' or ')' after %0 - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unknown_directive : Error<
   "expected an OpenMP directive">;
 def err_omp_unexpected_directive : Error<
@@ -925,7 +927,7 @@ def err_omp_expected_punc : Error<
 def err_omp_unexpected_clause : Error<
   "unexpected OpenMP clause '%0' in directive '#pragma omp %1'">;
 def err_omp_immediate_directive : Error<
-  "'#pragma omp %0' cannot be an immediate substatement">;
+  "'#pragma omp %0' %select{|with '%2' clause }1cannot be an immediate substatement">;
 def err_omp_expected_identifier_for_critical : Error<
   "expected identifier specifying the name of the 'omp critical' directive">;
 def err_omp_unknown_map_type : Error<

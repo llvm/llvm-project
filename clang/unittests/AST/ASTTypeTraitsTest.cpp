@@ -162,5 +162,12 @@ TEST(DynTypedNode, StmtPrint) {
   EXPECT_TRUE(Verifier.match("void f() {}", stmt()));
 }
 
+TEST(DynTypedNode, QualType) {
+  QualType Q;
+  DynTypedNode Node = DynTypedNode::create(Q);
+  EXPECT_TRUE(Node == Node);
+  EXPECT_FALSE(Node < Node);
+}
+
 }  // namespace ast_type_traits
 }  // namespace clang

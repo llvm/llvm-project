@@ -2025,6 +2025,21 @@ static const CXXMethodDecl *computeKeyFunction(ASTContext &Context,
         continue;
     }
 
+    if (Context.getLangOpts().CUDA) {
+      // While compiler may see key method in this TU, during CUDA
+      // compilation we should ignore methods that are not accessible
+      // on this side of compilation.
+      if (Context.getLangOpts().CUDAIsDevice) {
+        // In device mode ignore methods without __device__ attribute.
+        if (!MD->hasAttr<CUDADeviceAttr>())
+          continue;
+      } else {
+        // In host mode ignore __device__-only methods.
+        if (!MD->hasAttr<CUDAHostAttr>() && MD->hasAttr<CUDADeviceAttr>())
+          continue;
+      }
+    }
+
     // If the key function is dllimport but the class isn't, then the class has
     // no key function. The DLL that exports the key function won't export the
     // vtable in this case.
