@@ -4053,7 +4053,7 @@ SwiftLanguageRuntime::SwiftExceptionPrecondition::EvaluatePrecondition(Stoppoint
         if (!error_valobj_sp || error_valobj_sp->GetError().Fail())
             return true;
 
-                    // This shouldn't fail, since at worst it will return me the object I just successfully got.
+        // This shouldn't fail, since at worst it will return me the object I just successfully got.
         std::string found_type_name(error_valobj_sp->GetCompilerType().GetTypeName().AsCString());
         
         for (auto type_name : m_type_names)
@@ -4070,8 +4070,22 @@ SwiftLanguageRuntime::SwiftExceptionPrecondition::EvaluatePrecondition(Stoppoint
 }
 
 void
-SwiftLanguageRuntime::SwiftExceptionPrecondition::DescribePrecondition(Stream &stream, lldb::DescriptionLevel level)
+SwiftLanguageRuntime::SwiftExceptionPrecondition::GetDescription(Stream &stream, lldb::DescriptionLevel level)
 {
+    if (level == eDescriptionLevelFull
+        || level == eDescriptionLevelVerbose)
+    {
+        if (m_type_names.size() > 0)
+        {
+            stream.Printf("\nType Filters:");
+            for (std::string name : m_type_names)
+            {
+                stream.Printf(" %s", name.c_str());
+            }
+            stream.Printf("\n");
+        }
+    }
+
 }
 
 Error

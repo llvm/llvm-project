@@ -76,6 +76,9 @@ public:
                             const ExecutionContext *exe_ctx,
                             FunctionNameRepresentation representation,
                             Stream& s) override;
+
+    void
+    GetExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s) override;
     
     //------------------------------------------------------------------
     // Static Functions

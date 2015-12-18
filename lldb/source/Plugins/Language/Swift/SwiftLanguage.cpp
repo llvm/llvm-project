@@ -1279,6 +1279,12 @@ SwiftLanguage::GetFunctionDisplayName (const SymbolContext *sc,
     return false;
 }
 
+void
+SwiftLanguage::GetExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s)
+{
+     s.Printf ("Swift Error breakpoint");
+}
+
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
