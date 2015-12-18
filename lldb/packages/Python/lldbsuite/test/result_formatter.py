@@ -762,13 +762,8 @@ class ResultsFormatter(object):
     def _maybe_add_test_to_rerun_list(self, result_event):
         key = self._make_key(result_event)
         if key is not None:
-            test_is_directly_eligible = (
-                key in self.rerun_eligible_tests and
-                # llvm.org/pr25844 workaround: temporarily prevent
-                # rerun eligibility when building for Android.
-                "aarch64" not in configuration.archs and
-                "arm" not in configuration.archs)
-            if (test_is_directly_eligible or configuration.rerun_all_issues):
+            if (key in self.rerun_eligible_tests or
+                    configuration.rerun_all_issues):
                 test_filename = result_event.get("test_filename", None)
                 if test_filename is not None:
                     test_name = result_event.get("test_name", None)
@@ -848,91 +843,92 @@ class ResultsFormatter(object):
         @param test_event the test event as formatted by one of the
         event_for_* calls.
         """
-        # Keep track of whether terminate was received.  We do this so
-        # that a process can call the 'terminate' event on its own, to
-        # close down a formatter at the appropriate time.  Then the
-        # atexit() cleanup can call the "terminate if it hasn't been
-        # called yet".
-        if test_event is not None:
-            event_type = test_event.get("event", "")
-            # We intentionally allow event_type to be checked anew
-            # after this check below since this check may rewrite
-            # the event type
-            if event_type == EventBuilder.TYPE_JOB_RESULT:
-                # Possibly convert the job status (timeout, exceptional exit)
-                # to an appropriate test_result event.
-                self._maybe_remap_job_result_event(test_event)
+        with self.lock:
+            # Keep track of whether terminate was received.  We do this so
+            # that a process can call the 'terminate' event on its own, to
+            # close down a formatter at the appropriate time.  Then the
+            # atexit() cleanup can call the "terminate if it hasn't been
+            # called yet".
+            if test_event is not None:
                 event_type = test_event.get("event", "")
+                # We intentionally allow event_type to be checked anew
+                # after this check below since this check may rewrite
+                # the event type
+                if event_type == EventBuilder.TYPE_JOB_RESULT:
+                    # Possibly convert the job status (timeout, exceptional exit)
+                    # to an appropriate test_result event.
+                    self._maybe_remap_job_result_event(test_event)
+                    event_type = test_event.get("event", "")
 
-            # Remap timeouts to expected timeouts.
-            if event_type in EventBuilder.RESULT_TYPES:
-                self._maybe_remap_expected_timeout(test_event)
-                self._maybe_remap_expected_failure(test_event)
-                event_type = test_event.get("event", "")
+                # Remap timeouts to expected timeouts.
+                if event_type in EventBuilder.RESULT_TYPES:
+                    self._maybe_remap_expected_timeout(test_event)
+                    self._maybe_remap_expected_failure(test_event)
+                    event_type = test_event.get("event", "")
 
-            if event_type == "terminate":
-                self.terminate_called = True
-            elif event_type in EventBuilder.RESULT_TYPES:
-                # Keep track of event counts per test/job result status type.
-                # The only job (i.e. inferior process) results that make it
-                # here are ones that cannot be remapped to the most recently
-                # started test for the given worker index.
-                status = test_event["status"]
-                self.result_status_counts[status] += 1
-                # Clear the most recently started test for the related worker.
-                worker_index = test_event.get("worker_index", None)
-                if worker_index is not None:
-                    self.started_tests_by_worker.pop(worker_index, None)
+                if event_type == "terminate":
+                    self.terminate_called = True
+                elif event_type in EventBuilder.RESULT_TYPES:
+                    # Keep track of event counts per test/job result status type.
+                    # The only job (i.e. inferior process) results that make it
+                    # here are ones that cannot be remapped to the most recently
+                    # started test for the given worker index.
+                    status = test_event["status"]
+                    self.result_status_counts[status] += 1
+                    # Clear the most recently started test for the related worker.
+                    worker_index = test_event.get("worker_index", None)
+                    if worker_index is not None:
+                        self.started_tests_by_worker.pop(worker_index, None)
 
-                if status in EventBuilder.TESTRUN_ERROR_STATUS_VALUES:
-                    # A test/job status value in any of those status values
-                    # causes a testrun failure.  If such a test fails, check
-                    # whether it can be rerun.  If it can be rerun, add it
-                    # to the rerun job.
-                    self._maybe_add_test_to_rerun_list(test_event)
+                    if status in EventBuilder.TESTRUN_ERROR_STATUS_VALUES:
+                        # A test/job status value in any of those status values
+                        # causes a testrun failure.  If such a test fails, check
+                        # whether it can be rerun.  If it can be rerun, add it
+                        # to the rerun job.
+                        self._maybe_add_test_to_rerun_list(test_event)
 
-                # Build the test key.
-                test_key = self._make_key(test_event)
-                if test_key is None:
-                    raise Exception(
-                        "failed to find test filename for "
-                        "test event {}".format(test_event))
+                    # Build the test key.
+                    test_key = self._make_key(test_event)
+                    if test_key is None:
+                        raise Exception(
+                            "failed to find test filename for "
+                            "test event {}".format(test_event))
 
-                # Save the most recent test event for the test key.
-                # This allows a second test phase to overwrite the most
-                # recent result for the test key (unique per method).
-                # We do final reporting at the end, so we'll report based
-                # on final results.
-                # We do this so that a re-run caused by, perhaps, the need
-                # to run a low-load, single-worker test run can have the final
-                # run's results to always be used.
-                if test_key in self.result_events:
-                    # We are replacing the result of something that was
-                    # already counted by the base class.  Remove the double
-                    # counting by reducing by one the count for the test
-                    # result status.
-                    old_status = self.result_events[test_key]["status"]
-                    self.result_status_counts[old_status] -= 1
-                    self.test_method_rerun_count += 1
-                self.result_events[test_key] = test_event
-            elif event_type == EventBuilder.TYPE_TEST_START:
-                # Track the start time for the test method.
-                self.track_start_time(
-                    test_event["test_class"],
-                    test_event["test_name"],
-                    test_event["event_time"])
-                # Track of the most recent test method start event
-                # for the related worker.  This allows us to figure
-                # out whether a process timeout or exceptional exit
-                # can be charged (i.e. assigned) to a test method.
-                worker_index = test_event.get("worker_index", None)
-                if worker_index is not None:
-                    self.started_tests_by_worker[worker_index] = test_event
+                    # Save the most recent test event for the test key.
+                    # This allows a second test phase to overwrite the most
+                    # recent result for the test key (unique per method).
+                    # We do final reporting at the end, so we'll report based
+                    # on final results.
+                    # We do this so that a re-run caused by, perhaps, the need
+                    # to run a low-load, single-worker test run can have the final
+                    # run's results to always be used.
+                    if test_key in self.result_events:
+                        # We are replacing the result of something that was
+                        # already counted by the base class.  Remove the double
+                        # counting by reducing by one the count for the test
+                        # result status.
+                        old_status = self.result_events[test_key]["status"]
+                        self.result_status_counts[old_status] -= 1
+                        self.test_method_rerun_count += 1
+                    self.result_events[test_key] = test_event
+                elif event_type == EventBuilder.TYPE_TEST_START:
+                    # Track the start time for the test method.
+                    self.track_start_time(
+                        test_event["test_class"],
+                        test_event["test_name"],
+                        test_event["event_time"])
+                    # Track of the most recent test method start event
+                    # for the related worker.  This allows us to figure
+                    # out whether a process timeout or exceptional exit
+                    # can be charged (i.e. assigned) to a test method.
+                    worker_index = test_event.get("worker_index", None)
+                    if worker_index is not None:
+                        self.started_tests_by_worker[worker_index] = test_event
 
-            elif event_type == EventBuilder.TYPE_MARK_TEST_RERUN_ELIGIBLE:
-                self._mark_test_for_rerun_eligibility(test_event)
-            elif event_type == EventBuilder.TYPE_MARK_TEST_EXPECTED_FAILURE:
-                self._mark_test_as_expected_failure(test_event)
+                elif event_type == EventBuilder.TYPE_MARK_TEST_RERUN_ELIGIBLE:
+                    self._mark_test_for_rerun_eligibility(test_event)
+                elif event_type == EventBuilder.TYPE_MARK_TEST_EXPECTED_FAILURE:
+                    self._mark_test_as_expected_failure(test_event)
 
     def set_expected_timeouts_by_basename(self, basenames):
         """Specifies a list of test file basenames that are allowed to timeout
@@ -955,8 +951,7 @@ class ResultsFormatter(object):
             return
 
         test_key = "{}.{}".format(test_class, test_name)
-        with self.lock:
-            self.start_time_by_test[test_key] = start_time
+        self.start_time_by_test[test_key] = start_time
 
     def elapsed_time_for_test(self, test_class, test_name, end_time):
         """returns the elapsed time for a test.
@@ -969,12 +964,11 @@ class ResultsFormatter(object):
             return -2.0
 
         test_key = "{}.{}".format(test_class, test_name)
-        with self.lock:
-            if test_key not in self.start_time_by_test:
-                return -1.0
-            else:
-                start_time = self.start_time_by_test[test_key]
-            del self.start_time_by_test[test_key]
+        if test_key not in self.start_time_by_test:
+            return -1.0
+        else:
+            start_time = self.start_time_by_test[test_key]
+        del self.start_time_by_test[test_key]
         return end_time - start_time
 
     def is_using_terminal(self):

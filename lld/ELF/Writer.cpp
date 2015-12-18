@@ -236,8 +236,15 @@ void Writer<ELFT>::scanRelocs(
         continue;
     }
 
-    if (Body && Body->isTls() && !Target->isTlsDynReloc(Type))
+    if (Body && Body->isTls() && !Target->isTlsDynReloc(Type, *Body))
       continue;
+
+    if (Target->relocNeedsDynRelative(Type)) {
+      RelType *Rel = new (Alloc) RelType;
+      Rel->setSymbolAndType(0, Target->getRelativeReloc(), Config->Mips64EL);
+      Rel->r_offset = RI.r_offset;
+      Out<ELFT>::RelaDyn->addReloc({&C, Rel});
+    }
 
     bool NeedsGot = false;
     bool NeedsPlt = false;

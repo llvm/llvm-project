@@ -390,6 +390,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, Listener &listener)
     m_async_listener("lldb.process.gdb-remote.async-listener"),
     m_async_thread_state_mutex(Mutex::eMutexTypeRecursive),
     m_thread_ids (),
+    m_thread_pcs (),
     m_jstopinfo_sp (),
     m_jthreadsinfo_sp (),
     m_continue_c_tids (),
@@ -1751,12 +1752,14 @@ ProcessGDBRemote::ClearThreadIDList ()
 {
     Mutex::Locker locker(m_thread_list_real.GetMutex());
     m_thread_ids.clear();
+    m_thread_pcs.clear();
 }
 
 size_t
 ProcessGDBRemote::UpdateThreadIDsFromStopReplyThreadsValue (std::string &value)
 {
     m_thread_ids.clear();
+    m_thread_pcs.clear();
     size_t comma_pos;
     lldb::tid_t tid;
     while ((comma_pos = value.find(',')) != std::string::npos)
@@ -1774,6 +1777,26 @@ ProcessGDBRemote::UpdateThreadIDsFromStopReplyThreadsValue (std::string &value)
     return m_thread_ids.size();
 }
 
+size_t
+ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue (std::string &value)
+{
+    m_thread_pcs.clear();
+    size_t comma_pos;
+    lldb::addr_t pc;
+    while ((comma_pos = value.find(',')) != std::string::npos)
+    {
+        value[comma_pos] = '\0';
+        pc = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_ADDRESS, 16);
+        if (pc != LLDB_INVALID_ADDRESS)
+            m_thread_pcs.push_back (pc);
+        value.erase(0, comma_pos + 1);
+    }
+    pc = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_ADDRESS, 16);
+    if (pc != LLDB_INVALID_THREAD_ID)
+        m_thread_pcs.push_back (pc);
+    return m_thread_pcs.size();
+}
+
 bool
 ProcessGDBRemote::UpdateThreadIDList ()
 {
@@ -1786,6 +1809,7 @@ ProcessGDBRemote::UpdateThreadIDList ()
         if (thread_infos && thread_infos->GetSize() > 0)
         {
             m_thread_ids.clear();
+            m_thread_pcs.clear();
             thread_infos->ForEach([this](StructuredData::Object* object) -> bool {
                 StructuredData::Dictionary *thread_dict = object->GetAsDictionary();
                 if (thread_dict)
@@ -1820,6 +1844,20 @@ ProcessGDBRemote::UpdateThreadIDList ()
                 // Get the thread stop info
                 StringExtractorGDBRemote &stop_info = m_stop_packet_stack[i];
                 const std::string &stop_info_str = stop_info.GetStringRef();
+
+                m_thread_pcs.clear();
+                const size_t thread_pcs_pos = stop_info_str.find(";thread-pcs:");
+                if (thread_pcs_pos != std::string::npos)
+                {
+                    const size_t start = thread_pcs_pos + strlen(";thread-pcs:");
+                    const size_t end = stop_info_str.find(';', start);
+                    if (end != std::string::npos)
+                    {
+                        std::string value = stop_info_str.substr(start, end - start);
+                        UpdateThreadPCsFromStopReplyThreadsValue(value);
+                    }
+                }
+
                 const size_t threads_pos = stop_info_str.find(";threads:");
                 if (threads_pos != std::string::npos)
                 {
@@ -1886,6 +1924,25 @@ ProcessGDBRemote::UpdateThreadList (ThreadList &old_thread_list, ThreadList &new
                            "ProcessGDBRemote::%s Found old thread: %p for thread ID: 0x%" PRIx64 ".\n",
                            __FUNCTION__, static_cast<void*>(thread_sp.get()),
                            thread_sp->GetID());
+            }
+            // The m_thread_pcs vector has pc values in big-endian order, not target-endian, unlike most
+            // of the register read/write packets in gdb-remote protocol.  
+            // Early in the process startup, we may not yet have set the process ByteOrder so we ignore these;
+            // they are a performance improvement over fetching thread register values individually, the
+            // method we will fall back to if needed.
+            if (m_thread_ids.size() == m_thread_pcs.size() && thread_sp.get() && GetByteOrder() != eByteOrderInvalid)
+            {
+                ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *> (thread_sp.get());
+                RegisterContextSP reg_ctx_sp (thread_sp->GetRegisterContext());
+                if (reg_ctx_sp)
+                {
+                    uint32_t pc_regnum = reg_ctx_sp->ConvertRegisterKindToRegisterNumber 
+                                                                   (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+                    if (pc_regnum != LLDB_INVALID_REGNUM)
+                    {
+                        gdb_thread->PrivateSetRegisterValue (pc_regnum, m_thread_pcs[i]);
+                    }
+                }
             }
             new_thread_list.AddThread(thread_sp);
         }
@@ -2447,6 +2504,27 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                     if (tid != LLDB_INVALID_THREAD_ID)
                         m_thread_ids.push_back (tid);
                 }
+                else if (key.compare("thread-pcs") == 0)
+                {
+                    m_thread_pcs.clear();
+                    // A comma separated list of all threads in the current
+                    // process that includes the thread for this stop reply
+                    // packet
+                    size_t comma_pos;
+                    lldb::addr_t pc;
+                    while ((comma_pos = value.find(',')) != std::string::npos)
+                    {
+                        value[comma_pos] = '\0';
+                        // thread in big endian hex
+                        pc = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_ADDRESS, 16);
+                        if (pc != LLDB_INVALID_ADDRESS)
+                            m_thread_pcs.push_back (pc);
+                        value.erase(0, comma_pos + 1);
+                    }
+                    pc = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_ADDRESS, 16);
+                    if (pc != LLDB_INVALID_ADDRESS)
+                        m_thread_pcs.push_back (pc);
+                }
                 else if (key.compare("jstopinfo") == 0)
                 {
                     StringExtractor json_extractor;
@@ -2624,6 +2702,7 @@ ProcessGDBRemote::RefreshStateAfterStop ()
 {
     Mutex::Locker locker(m_thread_list_real.GetMutex());
     m_thread_ids.clear();
+    m_thread_pcs.clear();
     // Set the thread stop info. It might have a "threads" key whose value is
     // a list of all thread IDs in the current process, so m_thread_ids might
     // get set.

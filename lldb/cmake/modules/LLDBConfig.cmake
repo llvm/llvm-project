@@ -71,8 +71,8 @@ function(find_python_libs_windows)
   if(EXISTS "${PYTHON_INCLUDE_DIRS}/patchlevel.h")
     file(STRINGS "${PYTHON_INCLUDE_DIRS}/patchlevel.h" python_version_str
          REGEX "^#define[ \t]+PY_VERSION[ \t]+\"[^\"]+\"")
-    string(REGEX REPLACE "^#define[ \t]+PY_VERSION[ \t]+\"([^\"]+)\".*" "\\1"
-                         PYTHONLIBS_VERSION_STRING "${python_version_str}")
+    string(REGEX REPLACE "^#define[ \t]+PY_VERSION[ \t]+\"([^\"+]+)[+]?\".*" "\\1"
+         PYTHONLIBS_VERSION_STRING "${python_version_str}")
     message("-- Found Python version ${PYTHONLIBS_VERSION_STRING}")
     string(REGEX REPLACE "([0-9]+)[.]([0-9]+)[.][0-9]+" "python\\1\\2" PYTHONLIBS_BASE_NAME "${PYTHONLIBS_VERSION_STRING}")
     unset(python_version_str)

@@ -8,6 +8,7 @@ class TestMacros(TestBase):
 
     @expectedFailureClang("clang does not emit .debug_macro[.dwo] sections.")
     @expectedFailureDwo("GCC produces multiple .debug_macro.dwo sections and the spec is unclear as to what it means")
+    @expectedFailureAll(hostoslist=["windows"], compiler="gcc", triple='.*-android')
     def test_expr_with_macros(self):
         self.build()
 

@@ -4260,7 +4260,10 @@ SymbolFileDWARF::ParseVariableDIE
                 }
                 else
                 {
-                    scope = eValueTypeVariableLocal;
+                    if (location_is_const_value_data)
+                        scope = eValueTypeVariableStatic;
+                    else
+                        scope = eValueTypeVariableLocal;
                 }
             }
 

@@ -263,10 +263,11 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     bool CanBePreempted = canBePreempted(Body, NeedsGot);
     bool LazyReloc = Body && Target->supportsLazyRelocations() &&
                      Target->relocNeedsPlt(Type, *Body);
+    bool IsDynRelative = Type == Target->getRelativeReloc();
 
     unsigned Sym = CanBePreempted ? Body->DynamicSymbolTableIndex : 0;
     unsigned Reloc;
-    if (!CanBePreempted)
+    if (!CanBePreempted || IsDynRelative)
       Reloc = Target->getRelativeReloc();
     else if (LazyReloc)
       Reloc = Target->getPltReloc();
@@ -297,7 +298,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     uintX_t Addend;
     if (NeedsCopy)
       Addend = 0;
-    else if (CanBePreempted)
+    else if (CanBePreempted || IsDynRelative)
       Addend = OrigAddend;
     else if (Body)
       Addend = getSymVA<ELFT>(cast<ELFSymbolBody<ELFT>>(*Body)) + OrigAddend;
@@ -943,16 +944,10 @@ void EHOutputSection<ELFT>::addSectionAux(
 
   DenseMap<unsigned, unsigned> OffsetToIndex;
   while (!D.empty()) {
-    if (D.size() < 4)
-      error("Truncated CIE/FDE length");
-    uint32_t Length = read32<E>(D.data());
-    Length += 4;
-
     unsigned Index = S->Offsets.size();
     S->Offsets.push_back(std::make_pair(Offset, -1));
 
-    if (Length > D.size())
-      error("CIE/FIE ends past the end of the section");
+    uintX_t Length = readEntryLength(D);
     StringRef Entry((const char *)D.data(), Length);
 
     while (RelI != RelE && RelI->r_offset < Offset)
@@ -996,6 +991,32 @@ void EHOutputSection<ELFT>::addSectionAux(
     Offset = NextOffset;
     D = D.slice(Length);
   }
+}
+
+template <class ELFT>
+typename EHOutputSection<ELFT>::uintX_t
+EHOutputSection<ELFT>::readEntryLength(ArrayRef<uint8_t> D) {
+  const endianness E = ELFT::TargetEndianness;
+
+  if (D.size() < 4)
+    error("Truncated CIE/FDE length");
+  uint64_t Len = read32<E>(D.data());
+  if (Len < UINT32_MAX) {
+    if (Len > (UINT32_MAX - 4))
+      error("CIE/FIE size is too large");
+    if (Len + 4 > D.size())
+      error("CIE/FIE ends past the end of the section");
+    return Len + 4;
+  }
+
+  if (D.size() < 12)
+    error("Truncated CIE/FDE length");
+  Len = read64<E>(D.data() + 4);
+  if (Len > (UINT64_MAX - 12))
+    error("CIE/FIE size is too large");
+  if (Len + 12 > D.size())
+    error("CIE/FIE ends past the end of the section");
+  return Len + 12;
 }
 
 template <class ELFT>

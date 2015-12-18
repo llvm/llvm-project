@@ -288,6 +288,7 @@ protected:
     typedef std::map<lldb::addr_t, lldb::addr_t> MMapMap;
     typedef std::map<uint32_t, std::string> ExpeditedRegisterMap;
     tid_collection m_thread_ids; // Thread IDs for all threads. This list gets updated after stopping
+    std::vector<lldb::addr_t> m_thread_pcs; // PC values for all the threads.
     StructuredData::ObjectSP m_jstopinfo_sp; // Stop info only for any threads that have valid stop infos
     StructuredData::ObjectSP m_jthreadsinfo_sp; // Full stop info, expedited registers and memory for all threads if "jThreadsInfo" packet is supported
     tid_collection m_continue_c_tids;                  // 'c' for continue
@@ -382,6 +383,9 @@ protected:
 
     bool
     CalculateThreadStopInfo (ThreadGDBRemote *thread);
+
+    size_t
+    UpdateThreadPCsFromStopReplyThreadsValue (std::string &value);
 
     size_t
     UpdateThreadIDsFromStopReplyThreadsValue (std::string &value);

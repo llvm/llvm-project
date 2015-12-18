@@ -198,11 +198,11 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     } else if (Target->relocNeedsGot(Type, Body)) {
       SymVA = Out<ELFT>::Got->getEntryAddr(Body);
       if (Body.isTls())
-        Type = Target->getTlsGotReloc();
+        Type = Target->getTlsGotReloc(Type);
     } else if (!Target->needsCopyRel(Type, Body) &&
                isa<SharedSymbol<ELFT>>(Body)) {
       continue;
-    } else if (Target->isTlsDynReloc(Type) ||
+    } else if (Target->isTlsDynReloc(Type, Body) ||
                Target->isSizeDynReloc(Type, Body)) {
       continue;
     } else if (Config->EMachine == EM_MIPS) {

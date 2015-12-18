@@ -52,6 +52,7 @@ class GlobalVariablesTestCase(TestBase):
         # Check that GLOBAL scopes are indicated for the variables.
         self.expect("frame variable --show-types --scope --show-globals --no-args", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ['GLOBAL: (int) g_file_global_int = 42',
+                       'STATIC: (const int) g_file_static_int = 2',
                        'GLOBAL: (const char *) g_file_global_cstr',
                        '"g_file_global_cstr"',
                        'STATIC: (const char *) g_file_static_cstr',

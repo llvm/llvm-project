@@ -430,6 +430,19 @@ Language::GetFunctionDisplayName (const SymbolContext *sc,
     return false;
 }
 
+void
+Language::GetExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s)
+{
+    GetDefaultExceptionResolverDescription(catch_on, throw_on, s);
+}
+
+void
+Language::GetDefaultExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s)
+{
+     s.Printf ("Exception breakpoint (catch: %s throw: %s)",
+               catch_on ? "on" : "off",
+               throw_on ? "on" : "off");
+}
 //----------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------

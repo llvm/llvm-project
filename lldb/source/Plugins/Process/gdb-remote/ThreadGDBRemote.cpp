@@ -313,6 +313,14 @@ ThreadGDBRemote::PrivateSetRegisterValue (uint32_t reg, StringExtractor &respons
 }
 
 bool
+ThreadGDBRemote::PrivateSetRegisterValue (uint32_t reg, uint64_t regval)
+{
+    GDBRemoteRegisterContext *gdb_reg_ctx = static_cast<GDBRemoteRegisterContext *>(GetRegisterContext ().get());
+    assert (gdb_reg_ctx);
+    return gdb_reg_ctx->PrivateSetRegisterValue (reg, regval);
+}
+
+bool
 ThreadGDBRemote::CalculateStopInfo ()
 {
     ProcessSP process_sp (GetProcess());

@@ -22,7 +22,7 @@ kmp_cpuinfo_t   __kmp_cpuinfo = { 0 }; // Not initialized
 #if KMP_STATS_ENABLED
 #include "kmp_stats.h"
 // lock for modifying the global __kmp_stats_list
-kmp_tas_lock_t __kmp_stats_lock = KMP_TAS_LOCK_INITIALIZER(__kmp_stats_lock);
+kmp_tas_lock_t __kmp_stats_lock;
 
 // global list of per thread stats, the head is a sentinel node which accumulates all stats produced before __kmp_create_worker is called.
 kmp_stats_list __kmp_stats_list;

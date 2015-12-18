@@ -146,6 +146,12 @@ public:
                             FunctionNameRepresentation representation,
                             Stream& s);
     
+    virtual void
+    GetExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s);
+    
+    static void
+    GetDefaultExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s);
+    
     // These are accessors for general information about the Languages lldb knows about:
     
     static lldb::LanguageType

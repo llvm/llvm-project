@@ -211,6 +211,7 @@ else()
     libomp_append(libomp_expected_library_deps libhwloc.so.5 LIBOMP_USE_HWLOC)
   endif()
   libomp_append(libomp_expected_library_deps libstdc++.so.6 LIBOMP_USE_STDCPPLIB)
+  libomp_append(libomp_expected_library_deps libm.so.6 LIBOMP_STATS)
 endif()
 # Perl script expects comma separated list
 string(REPLACE ";" "," libomp_expected_library_deps "${libomp_expected_library_deps}")

@@ -1135,6 +1135,7 @@ ValueObject::GetData (DataExtractor& data, Error &error)
         if (m_data.GetByteSize())
         {
             data = m_data;
+            error.Clear();
             return data.GetByteSize();
         }
         else

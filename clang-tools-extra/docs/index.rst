@@ -15,7 +15,6 @@ Contents
 .. toctree::
    :maxdepth: 1
 
-   clang-modernize
    clang-tidy/index
    modularize
    pp-trace

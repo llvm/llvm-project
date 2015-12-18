@@ -27,7 +27,6 @@ public:
   unsigned getGotReloc() const { return GotReloc; }
   unsigned getPltReloc() const { return PltReloc; }
   unsigned getRelativeReloc() const { return RelativeReloc; }
-  unsigned getTlsGotReloc() const { return TlsGotReloc; }
   bool isTlsLocalDynamicReloc(unsigned Type) const {
     return Type == TlsLocalDynamicReloc;
   }
@@ -42,8 +41,13 @@ public:
   unsigned getGotHeaderEntriesNum() const { return GotHeaderEntriesNum; }
   unsigned getGotPltHeaderEntriesNum() const { return GotPltHeaderEntriesNum; }
   virtual unsigned getDynReloc(unsigned Type) const { return Type; }
-  virtual bool isTlsDynReloc(unsigned Type) const { return false; }
+  virtual bool isTlsDynReloc(unsigned Type, const SymbolBody &S) const {
+    return false;
+  }
   virtual unsigned getPltRefReloc(unsigned Type) const;
+  virtual unsigned getTlsGotReloc(unsigned Type = -1) const {
+    return TlsGotReloc;
+  }
   virtual void writeGotHeaderEntries(uint8_t *Buf) const;
   virtual void writeGotPltHeaderEntries(uint8_t *Buf) const;
   virtual void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const = 0;
@@ -54,6 +58,7 @@ public:
                              int32_t Index, unsigned RelOff) const = 0;
   virtual bool isRelRelative(uint32_t Type) const;
   virtual bool isSizeDynReloc(uint32_t Type, const SymbolBody &S) const;
+  virtual bool relocNeedsDynRelative(unsigned Type) const { return false; }
   virtual bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const = 0;
   virtual bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,

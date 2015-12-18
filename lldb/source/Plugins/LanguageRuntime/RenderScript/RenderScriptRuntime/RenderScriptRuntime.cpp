@@ -168,7 +168,29 @@ struct RenderScriptRuntime::Element
         RS_TYPE_UNSIGNED_16,
         RS_TYPE_UNSIGNED_32,
         RS_TYPE_UNSIGNED_64,
-        RS_TYPE_BOOLEAN
+        RS_TYPE_BOOLEAN,
+
+        RS_TYPE_UNSIGNED_5_6_5,
+        RS_TYPE_UNSIGNED_5_5_5_1,
+        RS_TYPE_UNSIGNED_4_4_4_4,
+
+        RS_TYPE_MATRIX_4X4,
+        RS_TYPE_MATRIX_3X3,
+        RS_TYPE_MATRIX_2X2,
+
+        RS_TYPE_ELEMENT = 1000,
+        RS_TYPE_TYPE,
+        RS_TYPE_ALLOCATION,
+        RS_TYPE_SAMPLER,
+        RS_TYPE_SCRIPT,
+        RS_TYPE_MESH,
+        RS_TYPE_PROGRAM_FRAGMENT,
+        RS_TYPE_PROGRAM_VERTEX,
+        RS_TYPE_PROGRAM_RASTER,
+        RS_TYPE_PROGRAM_STORE,
+        RS_TYPE_FONT,
+
+        RS_TYPE_INVALID = 10000
     };
 
     std::vector<Element> children;                       // Child Element fields for structs
@@ -302,7 +324,28 @@ const char* RenderScriptRuntime::AllocationDetails::RsDataTypeToString[][4] =
     {"ushort", "ushort2", "ushort3", "ushort4"},
     {"uint", "uint2", "uint3", "uint4"},
     {"ulong", "ulong2", "ulong3", "ulong4"},
-    {"bool", "bool2", "bool3", "bool4"}
+    {"bool", "bool2", "bool3", "bool4"},
+    {"packed_565", "packed_565", "packed_565", "packed_565"},
+    {"packed_5551", "packed_5551", "packed_5551", "packed_5551"},
+    {"packed_4444", "packed_4444", "packed_4444", "packed_4444"},
+    {"rs_matrix4x4", "rs_matrix4x4", "rs_matrix4x4", "rs_matrix4x4"},
+    {"rs_matrix3x3", "rs_matrix3x3", "rs_matrix3x3", "rs_matrix3x3"},
+    {"rs_matrix2x2", "rs_matrix2x2", "rs_matrix2x2", "rs_matrix2x2"},
+
+    // Handlers
+    {"RS Element", "RS Element", "RS Element", "RS Element"},
+    {"RS Type", "RS Type", "RS Type", "RS Type"},
+    {"RS Allocation", "RS Allocation", "RS Allocation", "RS Allocation"},
+    {"RS Sampler", "RS Sampler", "RS Sampler", "RS Sampler"},
+    {"RS Script", "RS Script", "RS Script", "RS Script"},
+
+    // Deprecated
+    {"RS Mesh", "RS Mesh", "RS Mesh", "RS Mesh"},
+    {"RS Program Fragment", "RS Program Fragment", "RS Program Fragment", "RS Program Fragment"},
+    {"RS Program Vertex", "RS Program Vertex", "RS Program Vertex", "RS Program Vertex"},
+    {"RS Program Raster", "RS Program Raster", "RS Program Raster", "RS Program Raster"},
+    {"RS Program Store", "RS Program Store", "RS Program Store", "RS Program Store"},
+    {"RS Font", "RS Font", "RS Font", "RS Font"}
 };
 
 // Used as an index into the RSTypeToFormat array elements
@@ -327,7 +370,13 @@ const unsigned int RenderScriptRuntime::AllocationDetails::RSTypeToFormat[][3] =
     {eFormatDecimal, eFormatVectorOfUInt16, sizeof(uint16_t)}, // RS_TYPE_UNSIGNED_16
     {eFormatDecimal, eFormatVectorOfUInt32, sizeof(uint32_t)}, // RS_TYPE_UNSIGNED_32
     {eFormatDecimal, eFormatVectorOfUInt64, sizeof(uint64_t)}, // RS_TYPE_UNSIGNED_64
-    {eFormatBoolean, eFormatBoolean, sizeof(bool)} // RS_TYPE_BOOL
+    {eFormatBoolean, eFormatBoolean, 1}, // RS_TYPE_BOOL
+    {eFormatHex, eFormatHex, sizeof(uint16_t)}, // RS_TYPE_UNSIGNED_5_6_5
+    {eFormatHex, eFormatHex, sizeof(uint16_t)}, // RS_TYPE_UNSIGNED_5_5_5_1
+    {eFormatHex, eFormatHex, sizeof(uint16_t)}, // RS_TYPE_UNSIGNED_4_4_4_4
+    {eFormatVectorOfFloat32, eFormatVectorOfFloat32, sizeof(float) * 16}, // RS_TYPE_MATRIX_4X4
+    {eFormatVectorOfFloat32, eFormatVectorOfFloat32, sizeof(float) * 9}, // RS_TYPE_MATRIX_3X3
+    {eFormatVectorOfFloat32, eFormatVectorOfFloat32, sizeof(float) * 4} // RS_TYPE_MATRIX_2X2
 };
 
 //------------------------------------------------------------------
@@ -1896,12 +1945,12 @@ RenderScriptRuntime::SetElementSize(Element& elem)
 {
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
     const Element::DataType type = *elem.type.get();
-    assert(type >= Element::RS_TYPE_NONE && type <= Element::RS_TYPE_BOOLEAN
+    assert(type >= Element::RS_TYPE_NONE && type <= Element::RS_TYPE_FONT
                                                    && "Invalid allocation type");
 
     const unsigned int vec_size = *elem.type_vec_size.get();
     unsigned int data_size = 0;
-    const unsigned int padding = vec_size == 3 ? AllocationDetails::RSTypeToFormat[type][eElementSize] : 0;
+    unsigned int padding = 0;
 
     // Element is of a struct type, calculate size recursively.
     if ((type == Element::RS_TYPE_NONE) && (elem.children.size() > 0))
@@ -1913,8 +1962,19 @@ RenderScriptRuntime::SetElementSize(Element& elem)
             data_size += *child.datum_size.get() * array_size;
         }
     }
-    else
+    else if (type == Element::RS_TYPE_UNSIGNED_5_6_5 || type == Element::RS_TYPE_UNSIGNED_5_5_5_1 ||
+             type == Element::RS_TYPE_UNSIGNED_4_4_4_4) // These have been packed already
+    {
+        data_size = AllocationDetails::RSTypeToFormat[type][eElementSize];
+    }
+    else if (type < Element::RS_TYPE_ELEMENT)
+    {
         data_size = vec_size * AllocationDetails::RSTypeToFormat[type][eElementSize];
+        if (vec_size == 3)
+            padding = AllocationDetails::RSTypeToFormat[type][eElementSize];
+    }
+    else
+        data_size = GetProcess()->GetTarget().GetArchitecture().GetAddressByteSize();
 
     elem.padding = padding;
     elem.datum_size = data_size + padding;
@@ -2046,11 +2106,22 @@ RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const
     const unsigned int type = static_cast<unsigned int>(*alloc->element.type.get());
     if (type != head->type)
     {
-        const char* file_type_cstr = AllocationDetails::RsDataTypeToString[head->type][0];
-        const char* alloc_type_cstr = AllocationDetails::RsDataTypeToString[type][0];
+        // Enum value isn't monotonous, so doesn't always index RsDataTypeToString array
+        unsigned int printable_target_type_index = type;
+        unsigned int printable_head_type_index = head->type;
+        if (type >= Element::RS_TYPE_ELEMENT && type <= Element::RS_TYPE_FONT)
+            printable_target_type_index = static_cast<Element::DataType>(
+                                         (type - Element::RS_TYPE_ELEMENT) + Element::RS_TYPE_MATRIX_2X2 + 1);
+
+        if (head->type >= Element::RS_TYPE_ELEMENT && head->type <= Element::RS_TYPE_FONT)
+            printable_head_type_index = static_cast<Element::DataType>(
+                                        (head->type - Element::RS_TYPE_ELEMENT) + Element::RS_TYPE_MATRIX_2X2 + 1);
+
+        const char* file_type_cstr = AllocationDetails::RsDataTypeToString[printable_head_type_index][0];
+        const char* target_type_cstr = AllocationDetails::RsDataTypeToString[printable_target_type_index][0];
 
         strm.Printf("Warning: Mismatched Types - file '%s' type, allocation '%s' type",
-                    file_type_cstr, alloc_type_cstr);
+                    file_type_cstr, target_type_cstr);
         strm.EOL();
     }
 
@@ -2532,11 +2603,15 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
     const unsigned int vec_size = *alloc->element.type_vec_size.get();
     const Element::DataType type = *alloc->element.type.get();
 
-    assert(type >= Element::RS_TYPE_NONE && type <= Element::RS_TYPE_BOOLEAN
+    assert(type >= Element::RS_TYPE_NONE && type <= Element::RS_TYPE_FONT
                                                    && "Invalid allocation type");
 
-    lldb::Format format = vec_size == 1 ? static_cast<lldb::Format>(AllocationDetails::RSTypeToFormat[type][eFormatSingle])
-                                        : static_cast<lldb::Format>(AllocationDetails::RSTypeToFormat[type][eFormatVector]);
+    lldb::Format format;
+    if (type >= Element::RS_TYPE_ELEMENT)
+        format = eFormatHex;
+    else
+        format = vec_size == 1 ? static_cast<lldb::Format>(AllocationDetails::RSTypeToFormat[type][eFormatSingle])
+                               : static_cast<lldb::Format>(AllocationDetails::RSTypeToFormat[type][eFormatVector]);
 
     const unsigned int data_size = *alloc->element.datum_size.get();
 
@@ -2547,7 +2622,7 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
     std::shared_ptr<uint8_t> buffer = GetAllocationData(alloc, frame_ptr);
     if (!buffer)
     {
-        strm.Printf("Error: Couldn't allocate a read allocation data into memory");
+        strm.Printf("Error: Couldn't read allocation data");
         strm.EOL();
         return false;
     }
@@ -2701,15 +2776,22 @@ RenderScriptRuntime::ListAllocations(Stream &strm, StackFrame* frame_ptr, bool r
         else
         {
             const int vector_size = *alloc->element.type_vec_size.get();
-            const Element::DataType type = *alloc->element.type.get();
+            Element::DataType type = *alloc->element.type.get();
 
             if (!alloc->element.type_name.IsEmpty())
                 strm.Printf("%s\n", alloc->element.type_name.AsCString());
-            else if (vector_size > 4 || vector_size < 1 ||
-                type < Element::RS_TYPE_NONE || type > Element::RS_TYPE_BOOLEAN)
-                strm.Printf("invalid type\n");
             else
-                strm.Printf("%s\n", AllocationDetails::RsDataTypeToString[static_cast<unsigned int>(type)][vector_size-1]);
+            {
+                // Enum value isn't monotonous, so doesn't always index RsDataTypeToString array
+                if (type >= Element::RS_TYPE_ELEMENT && type <= Element::RS_TYPE_FONT)
+                    type = static_cast<Element::DataType>((type - Element::RS_TYPE_ELEMENT) +  Element::RS_TYPE_MATRIX_2X2 + 1);
+
+                if (type >= (sizeof(AllocationDetails::RsDataTypeToString) / sizeof(AllocationDetails::RsDataTypeToString[0]))
+                    || vector_size > 4 || vector_size < 1)
+                    strm.Printf("invalid type\n");
+                else
+                    strm.Printf("%s\n", AllocationDetails::RsDataTypeToString[static_cast<unsigned int>(type)][vector_size-1]);
+            }
         }
 
         strm.Indent("Data Kind: ");

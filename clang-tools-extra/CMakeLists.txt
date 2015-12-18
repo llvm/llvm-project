@@ -1,5 +1,4 @@
 add_subdirectory(clang-apply-replacements)
-add_subdirectory(clang-modernize)
 add_subdirectory(clang-rename)
 add_subdirectory(modularize)
 if(CLANG_ENABLE_STATIC_ANALYZER)

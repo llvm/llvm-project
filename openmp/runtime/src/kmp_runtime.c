@@ -6333,6 +6333,9 @@ __kmp_do_serial_initialize( void )
     __kmp_init_speculative_stats();
 #endif
 #endif
+#if KMP_STATS_ENABLED
+    __kmp_init_tas_lock( & __kmp_stats_lock );
+#endif
     __kmp_init_lock( & __kmp_global_lock     );
     __kmp_init_queuing_lock( & __kmp_dispatch_lock );
     __kmp_init_lock( & __kmp_debug_lock      );

@@ -117,6 +117,10 @@ protected:
                              StringExtractor &response);
 
     bool
+    PrivateSetRegisterValue (uint32_t reg, 
+                             uint64_t regval);
+
+    bool
     CachedQueueInfoIsValid() const
     {
         return m_queue_kind != lldb::eQueueKindUnknown;

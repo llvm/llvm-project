@@ -301,6 +301,8 @@ public:
   void addSection(EHInputSection<ELFT> *S);
 
 private:
+  uintX_t readEntryLength(ArrayRef<uint8_t> D);
+
   std::vector<EHInputSection<ELFT> *> Sections;
   std::vector<Cie<ELFT>> Cies;
 

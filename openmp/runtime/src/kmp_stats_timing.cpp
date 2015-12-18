@@ -20,18 +20,19 @@
 #include <iomanip>
 #include <sstream>
 
+#include "kmp.h"
 #include "kmp_stats_timing.h"
 
 using namespace std;
 
-#if KMP_OS_LINUX
+#if KMP_HAVE_TICK_TIME
 # if KMP_MIC
 double tsc_tick_count::tick_time()
 {
     // pretty bad assumption of 1GHz clock for MIC
     return 1/((double)1000*1.e6);
 }
-# else
+# elif KMP_ARCH_X86 || KMP_ARCH_X86_64
 #  include <string.h>
 // Extract the value from the CPUID information
 double tsc_tick_count::tick_time()
@@ -40,15 +41,15 @@ double tsc_tick_count::tick_time()
 
     if (result == 0.0)
     {
-        int cpuinfo[4];
+        kmp_cpuid_t cpuinfo;
         char brand[256];
 
-        __cpuid(cpuinfo, 0x80000000);
+        __kmp_x86_cpuid(0x80000000, 0, &cpuinfo);
         memset(brand, 0, sizeof(brand));
-        int ids = cpuinfo[0];
+        int ids = cpuinfo.eax;
 
         for (unsigned int i=2; i<(ids^0x80000000)+2; i++)
-            __cpuid(brand+(i-2)*sizeof(cpuinfo), i | 0x80000000);
+            __kmp_x86_cpuid(i | 0x80000000, 0, (kmp_cpuid_t*)(brand+(i-2)*sizeof(kmp_cpuid_t)));
 
         char * start = &brand[0];
         for (;*start == ' '; start++)

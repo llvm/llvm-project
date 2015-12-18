@@ -524,7 +524,7 @@ public:
   const SCEV *visitUDivExpr(const SCEVUDivExpr *Expr) { return Expr; }
 
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-    if (Expr->getOperand(0)->isZero()) {
+    if ((Expr->getNumOperands() == 2) and Expr->getOperand(0)->isZero()) {
       auto Res = visit(Expr->getOperand(1));
       if (Terms)
         (*Terms).push_back(Res);
@@ -534,7 +534,7 @@ public:
     return Expr;
   }
 
-  const SCEV *visitUMaxExpr(const SCEVUMaxExpr *Expr) { return visit(Expr); }
+  const SCEV *visitUMaxExpr(const SCEVUMaxExpr *Expr) { return Expr; }
 
   const SCEV *visitUnknown(const SCEVUnknown *Expr) { return Expr; }
 

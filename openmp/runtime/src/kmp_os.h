@@ -703,6 +703,11 @@ typedef void    (*microtask_t)( int *gtid, int *npr, ... );
 # define KMP_USE_ADAPTIVE_LOCKS KMP_USE_TSX
 #endif
 
+// Enable tick time conversion of ticks to seconds
+#if KMP_STATS_ENABLED
+# define KMP_HAVE_TICK_TIME (KMP_OS_LINUX && (KMP_MIC || KMP_ARCH_X86 || KMP_ARCH_X86_64))
+#endif
+
 // Warning levels
 enum kmp_warnings_level {
     kmp_warnings_off = 0,		/* No warnings */

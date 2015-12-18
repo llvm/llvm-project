@@ -109,6 +109,9 @@ protected:
     bool
     PrivateSetRegisterValue (uint32_t reg, StringExtractor &response);
     
+    bool
+    PrivateSetRegisterValue (uint32_t reg, uint64_t val);
+
     void
     SetAllRegisterValid (bool b);
 

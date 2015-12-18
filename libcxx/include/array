@@ -95,6 +95,7 @@ template <size_t I, class T, size_t N> struct tuple_element<I, array<T, N>>;
 template <size_t I, class T, size_t N> T& get(array<T, N>&) noexcept; // constexpr in C++14
 template <size_t I, class T, size_t N> const T& get(const array<T, N>&) noexcept; // constexpr in C++14
 template <size_t I, class T, size_t N> T&& get(array<T, N>&&) noexcept; // constexpr in C++14
+template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexcept; // constexpr in C++14
 
 }  // std
 
@@ -321,6 +322,15 @@ _Tp&&
 get(array<_Tp, _Size>&& __a) _NOEXCEPT
 {
     static_assert(_Ip < _Size, "Index out of bounds in std::get<> (std::array &&)");
+    return _VSTD::move(__a.__elems_[_Ip]);
+}
+
+template <size_t _Ip, class _Tp, size_t _Size>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+const _Tp&&
+get(const array<_Tp, _Size>&& __a) _NOEXCEPT
+{
+    static_assert(_Ip < _Size, "Index out of bounds in std::get<> (const std::array &&)");
     return _VSTD::move(__a.__elems_[_Ip]);
 }
 

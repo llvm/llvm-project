@@ -95,6 +95,9 @@ template <size_t I, class... T>
 template <size_t I, class... T>
     typename tuple_element<I, tuple<T...>>::type&&
     get(tuple<T...>&&) noexcept; // constexpr in C++14
+template <size_t I, class... T>
+    const typename tuple_element<I, tuple<T...>>::type&&
+    get(const tuple<T...>&&) noexcept; // constexpr in C++14
 
 template <class T1, class... T>
     constexpr T1& get(tuple<T...>&) noexcept;  // C++14
@@ -102,6 +105,8 @@ template <class T1, class... T>
     constexpr const T1& get(const tuple<T...>&) noexcept;   // C++14
 template <class T1, class... T>
     constexpr T1&& get(tuple<T...>&&) noexcept;   // C++14
+template <class T1, class... T>
+    constexpr const T1&& get(const tuple<T...>&&) noexcept;   // C++14
 
 // 20.4.1.6, relational operators:
 template<class... T, class... U> bool operator==(const tuple<T...>&, const tuple<U...>&); // constexpr in C++14
@@ -507,6 +512,8 @@ class _LIBCPP_TYPE_VIS_ONLY tuple
         const typename tuple_element<_Jp, tuple<_Up...> >::type& get(const tuple<_Up...>&) _NOEXCEPT;
     template <size_t _Jp, class ..._Up> friend _LIBCPP_CONSTEXPR_AFTER_CXX11
         typename tuple_element<_Jp, tuple<_Up...> >::type&& get(tuple<_Up...>&&) _NOEXCEPT;
+    template <size_t _Jp, class ..._Up> friend _LIBCPP_CONSTEXPR_AFTER_CXX11
+        const typename tuple_element<_Jp, tuple<_Up...> >::type&& get(const tuple<_Up...>&&) _NOEXCEPT;
 public:
 
     template <bool _Dummy = true, class = typename enable_if<
@@ -766,6 +773,16 @@ get(tuple<_Tp...>&& __t) _NOEXCEPT
              static_cast<__tuple_leaf<_Ip, type>&&>(__t.base_).get());
 }
 
+template <size_t _Ip, class ..._Tp>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+const typename tuple_element<_Ip, tuple<_Tp...> >::type&&
+get(const tuple<_Tp...>&& __t) _NOEXCEPT
+{
+    typedef typename tuple_element<_Ip, tuple<_Tp...> >::type type;
+    return static_cast<const type&&>(
+             static_cast<const __tuple_leaf<_Ip, type>&&>(__t.base_).get());
+}
+
 #if _LIBCPP_STD_VER > 11
 // get by type
 template <typename _T1, size_t _Idx, typename... _Args>
@@ -818,6 +835,13 @@ constexpr _T1 const& get(tuple<_Args...> const& __tup) noexcept
 template <class _T1, class... _Args>
 inline _LIBCPP_INLINE_VISIBILITY
 constexpr _T1&& get(tuple<_Args...>&& __tup) noexcept
+{
+    return _VSTD::get<__find_exactly_one_t<_T1, _Args...>::value>(_VSTD::move(__tup));
+}
+
+template <class _T1, class... _Args>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr _T1 const&& get(tuple<_Args...> const&& __tup) noexcept
 {
     return _VSTD::get<__find_exactly_one_t<_T1, _Args...>::value>(_VSTD::move(__tup));
 }
