@@ -19,3 +19,7 @@
   shra_r.w $3, $4, -1      # -CHECK: :[[@LINE]]:20: error: expected 5-bit unsigned immediate
   shrl.qb $3, $4, 8        # CHECK: :[[@LINE]]:19: error: expected 3-bit unsigned immediate
   shrl.qb $3, $4, -1       # CHECK: :[[@LINE]]:19: error: expected 3-bit unsigned immediate
+  shilo $ac1, 64           # CHECK: :[[@LINE]]:15: error: expected 6-bit signed immediate
+  shilo $ac1, -64          # CHECK: :[[@LINE]]:15: error: expected 6-bit signed immediate
+  wrdsp $5, 1024           # CHECK: :[[@LINE]]:13: error: expected 10-bit unsigned immediate
+  wrdsp $5, -1             # CHECK: :[[@LINE]]:13: error: expected 10-bit unsigned immediate

@@ -294,7 +294,7 @@ bool SCEV::isNonConstantNegative() const {
   if (!SC) return false;
 
   // Return true if the value is negative, this matches things like (-42 * V).
-  return SC->getValue()->getValue().isNegative();
+  return SC->getAPInt().isNegative();
 }
 
 SCEVCouldNotCompute::SCEVCouldNotCompute() :
@@ -533,8 +533,8 @@ public:
       const SCEVConstant *RC = cast<SCEVConstant>(RHS);
 
       // Compare constant values.
-      const APInt &LA = LC->getValue()->getValue();
-      const APInt &RA = RC->getValue()->getValue();
+      const APInt &LA = LC->getAPInt();
+      const APInt &RA = RC->getAPInt();
       unsigned LBitWidth = LA.getBitWidth(), RBitWidth = RA.getBitWidth();
       if (LBitWidth != RBitWidth)
         return (int)LBitWidth - (int)RBitWidth;
@@ -760,8 +760,8 @@ public:
 
   void visitConstant(const SCEVConstant *Numerator) {
     if (const SCEVConstant *D = dyn_cast<SCEVConstant>(Denominator)) {
-      APInt NumeratorVal = Numerator->getValue()->getValue();
-      APInt DenominatorVal = D->getValue()->getValue();
+      APInt NumeratorVal = Numerator->getAPInt();
+      APInt DenominatorVal = D->getAPInt();
       uint32_t NumeratorBW = NumeratorVal.getBitWidth();
       uint32_t DenominatorBW = DenominatorVal.getBitWidth();
 
@@ -1371,7 +1371,7 @@ bool ScalarEvolution::proveNoWrapByVaryingStart(const SCEV *Start,
   if (!StartC)
     return false;
 
-  APInt StartAI = StartC->getValue()->getValue();
+  APInt StartAI = StartC->getAPInt();
 
   for (unsigned Delta : {-2, -1, 1, 2}) {
     const SCEV *PreStart = getConstant(StartAI - Delta);
@@ -1632,8 +1632,8 @@ const SCEV *ScalarEvolution::getSignExtendExpr(const SCEV *Op,
       auto *SMul = dyn_cast<SCEVMulExpr>(SA->getOperand(1));
       if (SMul && SC1) {
         if (auto *SC2 = dyn_cast<SCEVConstant>(SMul->getOperand(0))) {
-          const APInt &C1 = SC1->getValue()->getValue();
-          const APInt &C2 = SC2->getValue()->getValue();
+          const APInt &C1 = SC1->getAPInt();
+          const APInt &C2 = SC2->getAPInt();
           if (C1.isStrictlyPositive() && C2.isStrictlyPositive() &&
               C2.ugt(C1) && C2.isPowerOf2())
             return getAddExpr(getSignExtendExpr(SC1, Ty),
@@ -1758,8 +1758,8 @@ const SCEV *ScalarEvolution::getSignExtendExpr(const SCEV *Op,
       auto *SC1 = dyn_cast<SCEVConstant>(Start);
       auto *SC2 = dyn_cast<SCEVConstant>(Step);
       if (SC1 && SC2) {
-        const APInt &C1 = SC1->getValue()->getValue();
-        const APInt &C2 = SC2->getValue()->getValue();
+        const APInt &C1 = SC1->getAPInt();
+        const APInt &C2 = SC2->getAPInt();
         if (C1.isStrictlyPositive() && C2.isStrictlyPositive() && C2.ugt(C1) &&
             C2.isPowerOf2()) {
           Start = getSignExtendExpr(Start, Ty);
@@ -1799,7 +1799,7 @@ const SCEV *ScalarEvolution::getAnyExtendExpr(const SCEV *Op,
 
   // Sign-extend negative constants.
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(Op))
-    if (SC->getValue()->getValue().isNegative())
+    if (SC->getAPInt().isNegative())
       return getSignExtendExpr(Op, Ty);
 
   // Peel off a truncate cast.
@@ -1877,7 +1877,7 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
     // Pull a buried constant out to the outside.
     if (Scale != 1 || AccumulatedConstant != 0 || C->getValue()->isZero())
       Interesting = true;
-    AccumulatedConstant += Scale * C->getValue()->getValue();
+    AccumulatedConstant += Scale * C->getAPInt();
   }
 
   // Next comes everything else. We're especially interested in multiplies
@@ -1886,7 +1886,7 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
     const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(Ops[i]);
     if (Mul && isa<SCEVConstant>(Mul->getOperand(0))) {
       APInt NewScale =
-        Scale * cast<SCEVConstant>(Mul->getOperand(0))->getValue()->getValue();
+          Scale * cast<SCEVConstant>(Mul->getOperand(0))->getAPInt();
       if (Mul->getNumOperands() == 2 && isa<SCEVAddExpr>(Mul->getOperand(1))) {
         // A multiplication of a constant with another add; recurse.
         const SCEVAddExpr *Add = cast<SCEVAddExpr>(Mul->getOperand(1));
@@ -1963,7 +1963,7 @@ StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
     // (A + C) --> (A + C)<nsw> if the addition does not sign overflow
     // (A + C) --> (A + C)<nuw> if the addition does not unsign overflow
 
-    const APInt &C = cast<SCEVConstant>(Ops[0])->getValue()->getValue();
+    const APInt &C = cast<SCEVConstant>(Ops[0])->getAPInt();
     if (!(SignOrUnsignWrap & SCEV::FlagNSW)) {
       auto NSWRegion =
         ConstantRange::makeNoWrapRegion(Instruction::Add, C, OBO::NoSignedWrap);
@@ -2009,8 +2009,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     assert(Idx < Ops.size());
     while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
       // We found two constants, fold them together!
-      Ops[0] = getConstant(LHSC->getValue()->getValue() +
-                           RHSC->getValue()->getValue());
+      Ops[0] = getConstant(LHSC->getAPInt() + RHSC->getAPInt());
       if (Ops.size() == 2) return Ops[0];
       Ops.erase(Ops.begin()+1);  // Erase the folded element
       LHSC = cast<SCEVConstant>(Ops[0]);
@@ -2429,9 +2428,8 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
     ++Idx;
     while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
       // We found two constants, fold them together!
-      ConstantInt *Fold = ConstantInt::get(getContext(),
-                                           LHSC->getValue()->getValue() *
-                                           RHSC->getValue()->getValue());
+      ConstantInt *Fold =
+          ConstantInt::get(getContext(), LHSC->getAPInt() * RHSC->getAPInt());
       Ops[0] = getConstant(Fold);
       Ops.erase(Ops.begin()+1);  // Erase the folded element
       if (Ops.size() == 1) return Ops[0];
@@ -2653,11 +2651,11 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
       // its operands.
       // TODO: Generalize this to non-constants by using known-bits information.
       Type *Ty = LHS->getType();
-      unsigned LZ = RHSC->getValue()->getValue().countLeadingZeros();
+      unsigned LZ = RHSC->getAPInt().countLeadingZeros();
       unsigned MaxShiftAmt = getTypeSizeInBits(Ty) - LZ - 1;
       // For non-power-of-two values, effectively round the value up to the
       // nearest power of two.
-      if (!RHSC->getValue()->getValue().isPowerOf2())
+      if (!RHSC->getAPInt().isPowerOf2())
         ++MaxShiftAmt;
       IntegerType *ExtTy =
         IntegerType::get(getContext(), getTypeSizeInBits(Ty) + MaxShiftAmt);
@@ -2665,8 +2663,8 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
         if (const SCEVConstant *Step =
             dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this))) {
           // {X,+,N}/C --> {X/C,+,N/C} if safe and N/C can be folded.
-          const APInt &StepInt = Step->getValue()->getValue();
-          const APInt &DivInt = RHSC->getValue()->getValue();
+          const APInt &StepInt = Step->getAPInt();
+          const APInt &DivInt = RHSC->getAPInt();
           if (!StepInt.urem(DivInt) &&
               getZeroExtendExpr(AR, ExtTy) ==
               getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
@@ -2686,7 +2684,7 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
               getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
                             getZeroExtendExpr(Step, ExtTy),
                             AR->getLoop(), SCEV::FlagAnyWrap)) {
-            const APInt &StartInt = StartC->getValue()->getValue();
+            const APInt &StartInt = StartC->getAPInt();
             const APInt &StartRem = StartInt.urem(StepInt);
             if (StartRem != 0)
               LHS = getAddRecExpr(getConstant(StartInt - StartRem), Step,
@@ -2753,8 +2751,8 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
 }
 
 static const APInt gcd(const SCEVConstant *C1, const SCEVConstant *C2) {
-  APInt A = C1->getValue()->getValue().abs();
-  APInt B = C2->getValue()->getValue().abs();
+  APInt A = C1->getAPInt().abs();
+  APInt B = C2->getAPInt().abs();
   uint32_t ABW = A.getBitWidth();
   uint32_t BBW = B.getBitWidth();
 
@@ -2795,10 +2793,10 @@ const SCEV *ScalarEvolution::getUDivExactExpr(const SCEV *LHS,
       // check.
       APInt Factor = gcd(LHSCst, RHSCst);
       if (!Factor.isIntN(1)) {
-        LHSCst = cast<SCEVConstant>(
-            getConstant(LHSCst->getValue()->getValue().udiv(Factor)));
-        RHSCst = cast<SCEVConstant>(
-            getConstant(RHSCst->getValue()->getValue().udiv(Factor)));
+        LHSCst =
+            cast<SCEVConstant>(getConstant(LHSCst->getAPInt().udiv(Factor)));
+        RHSCst =
+            cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
         SmallVector<const SCEV *, 2> Operands;
         Operands.push_back(LHSCst);
         Operands.append(Mul->op_begin() + 1, Mul->op_end());
@@ -3014,9 +3012,8 @@ ScalarEvolution::getSMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
     assert(Idx < Ops.size());
     while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
       // We found two constants, fold them together!
-      ConstantInt *Fold = ConstantInt::get(getContext(),
-                              APIntOps::smax(LHSC->getValue()->getValue(),
-                                             RHSC->getValue()->getValue()));
+      ConstantInt *Fold = ConstantInt::get(
+          getContext(), APIntOps::smax(LHSC->getAPInt(), RHSC->getAPInt()));
       Ops[0] = getConstant(Fold);
       Ops.erase(Ops.begin()+1);  // Erase the folded element
       if (Ops.size() == 1) return Ops[0];
@@ -3118,9 +3115,8 @@ ScalarEvolution::getUMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
     assert(Idx < Ops.size());
     while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
       // We found two constants, fold them together!
-      ConstantInt *Fold = ConstantInt::get(getContext(),
-                              APIntOps::umax(LHSC->getValue()->getValue(),
-                                             RHSC->getValue()->getValue()));
+      ConstantInt *Fold = ConstantInt::get(
+          getContext(), APIntOps::umax(LHSC->getAPInt(), RHSC->getAPInt()));
       Ops[0] = getConstant(Fold);
       Ops.erase(Ops.begin()+1);  // Erase the folded element
       if (Ops.size() == 1) return Ops[0];
@@ -4110,7 +4106,7 @@ const SCEV *ScalarEvolution::createNodeForGEP(GEPOperator *GEP) {
 uint32_t
 ScalarEvolution::GetMinTrailingZeros(const SCEV *S) {
   if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S))
-    return C->getValue()->getValue().countTrailingZeros();
+    return C->getAPInt().countTrailingZeros();
 
   if (const SCEVTruncateExpr *T = dyn_cast<SCEVTruncateExpr>(S))
     return std::min(GetMinTrailingZeros(T->getOperand()),
@@ -4211,7 +4207,7 @@ ScalarEvolution::getRange(const SCEV *S,
     return I->second;
 
   if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S))
-    return setRange(C, SignHint, ConstantRange(C->getValue()->getValue()));
+    return setRange(C, SignHint, ConstantRange(C->getAPInt()));
 
   unsigned BitWidth = getTypeSizeInBits(S->getType());
   ConstantRange ConservativeResult(BitWidth, /*isFullSet=*/true);
@@ -4289,9 +4285,8 @@ ScalarEvolution::getRange(const SCEV *S,
     if (AddRec->getNoWrapFlags(SCEV::FlagNUW))
       if (const SCEVConstant *C = dyn_cast<SCEVConstant>(AddRec->getStart()))
         if (!C->getValue()->isZero())
-          ConservativeResult =
-            ConservativeResult.intersectWith(
-              ConstantRange(C->getValue()->getValue(), APInt(BitWidth, 0)));
+          ConservativeResult = ConservativeResult.intersectWith(
+              ConstantRange(C->getAPInt(), APInt(BitWidth, 0)));
 
     // If there's no signed wrap, and all the operands have the same sign or
     // zero, the value won't ever change sign.
@@ -5487,7 +5482,7 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
       if (AddRec->getLoop() == L) {
         // Form the constant range.
         ConstantRange CompRange(
-            ICmpInst::makeConstantRange(Cond, RHSC->getValue()->getValue()));
+            ICmpInst::makeConstantRange(Cond, RHSC->getAPInt()));
 
         const SCEV *Ret = AddRec->getNumIterationsInRange(CompRange, *this);
         if (!isa<SCEVCouldNotCompute>(Ret)) return Ret;
@@ -6254,9 +6249,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
               // Okay, we know how many times the containing loop executes.  If
               // this is a constant evolving PHI node, get the final value at
               // the specified iteration number.
-              Constant *RV = getConstantEvolutionLoopExitValue(PN,
-                                                   BTCC->getValue()->getValue(),
-                                                               LI);
+              Constant *RV =
+                  getConstantEvolutionLoopExitValue(PN, BTCC->getAPInt(), LI);
               if (RV) return getSCEV(RV);
             }
           }
@@ -6497,10 +6491,10 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
     return std::make_pair(CNC, CNC);
   }
 
-  uint32_t BitWidth = LC->getValue()->getValue().getBitWidth();
-  const APInt &L = LC->getValue()->getValue();
-  const APInt &M = MC->getValue()->getValue();
-  const APInt &N = NC->getValue()->getValue();
+  uint32_t BitWidth = LC->getAPInt().getBitWidth();
+  const APInt &L = LC->getAPInt();
+  const APInt &M = MC->getAPInt();
+  const APInt &N = NC->getAPInt();
   APInt Two(BitWidth, 2);
   APInt Four(BitWidth, 4);
 
@@ -6632,7 +6626,7 @@ ScalarEvolution::HowFarToZero(const SCEV *V, const Loop *L, bool ControlsExit) {
   // For negative steps (counting down to zero):
   //   N = Start/-Step
   // First compute the unsigned distance from zero in the direction of Step.
-  bool CountDown = StepC->getValue()->getValue().isNegative();
+  bool CountDown = StepC->getAPInt().isNegative();
   const SCEV *Distance = CountDown ? Start : getNegativeSCEV(Start);
 
   // Handle unitary steps, which cannot wraparound.
@@ -6657,7 +6651,7 @@ ScalarEvolution::HowFarToZero(const SCEV *V, const Loop *L, bool ControlsExit) {
   // done by counting and comparing the number of trailing zeros of Step and
   // Distance.
   if (!CountDown) {
-    const APInt &StepV = StepC->getValue()->getValue();
+    const APInt &StepV = StepC->getAPInt();
     // StepV.isPowerOf2() returns true if StepV is an positive power of two.  It
     // also returns true if StepV is maximally negative (eg, INT_MIN), but that
     // case is not handled as this code is guarded by !CountDown.
@@ -6719,8 +6713,7 @@ ScalarEvolution::HowFarToZero(const SCEV *V, const Loop *L, bool ControlsExit) {
 
   // Then, try to solve the above equation provided that Start is constant.
   if (const SCEVConstant *StartC = dyn_cast<SCEVConstant>(Start))
-    return SolveLinEquationWithOverflow(StepC->getValue()->getValue(),
-                                        -StartC->getValue()->getValue(),
+    return SolveLinEquationWithOverflow(StepC->getAPInt(), -StartC->getAPInt(),
                                         *this);
   return getCouldNotCompute();
 }
@@ -6843,7 +6836,7 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
   // If there's a constant operand, canonicalize comparisons with boundary
   // cases, and canonicalize *-or-equal comparisons to regular comparisons.
   if (const SCEVConstant *RC = dyn_cast<SCEVConstant>(RHS)) {
-    const APInt &RA = RC->getValue()->getValue();
+    const APInt &RA = RC->getAPInt();
     switch (Pred) {
     default: llvm_unreachable("Unexpected ICmpInst::Predicate value!");
     case ICmpInst::ICMP_EQ:
@@ -7353,7 +7346,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(ICmpInst::Predicate Pred,
         !isa<SCEVConstant>(ConstOp) || NonConstOp != X)
       return false;
 
-    OutY = cast<SCEVConstant>(ConstOp)->getValue()->getValue();
+    OutY = cast<SCEVConstant>(ConstOp)->getAPInt();
     return (FlagsPresent & ExpectedFlags) == ExpectedFlags;
   };
 
@@ -7715,7 +7708,7 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
     APInt Min = ICmpInst::isSigned(Pred) ?
         getSignedRange(V).getSignedMin() : getUnsignedRange(V).getUnsignedMin();
 
-    if (Min == C->getValue()->getValue()) {
+    if (Min == C->getAPInt()) {
       // Given (V >= Min && V != Min) we conclude V >= (Min + 1).
       // This is true even if (Min + 1) wraps around -- in case of
       // wraparound, (Min + 1) < Min, so (V >= Min => V >= (Min + 1)).
@@ -7807,8 +7800,8 @@ bool ScalarEvolution::computeConstantDifference(const SCEV *Less,
   }
 
   if (isa<SCEVConstant>(Less) && isa<SCEVConstant>(More)) {
-    const auto &M = cast<SCEVConstant>(More)->getValue()->getValue();
-    const auto &L = cast<SCEVConstant>(Less)->getValue()->getValue();
+    const auto &M = cast<SCEVConstant>(More)->getAPInt();
+    const auto &L = cast<SCEVConstant>(Less)->getAPInt();
     C = M - L;
     return true;
   }
@@ -7818,14 +7811,14 @@ bool ScalarEvolution::computeConstantDifference(const SCEV *Less,
   if (splitBinaryAdd(Less, L, R, Flags))
     if (const auto *LC = dyn_cast<SCEVConstant>(L))
       if (R == More) {
-        C = -(LC->getValue()->getValue());
+        C = -(LC->getAPInt());
         return true;
       }
 
   if (splitBinaryAdd(More, L, R, Flags))
     if (const auto *LC = dyn_cast<SCEVConstant>(L))
       if (R == Less) {
-        C = LC->getValue()->getValue();
+        C = LC->getAPInt();
         return true;
       }
 
@@ -8105,7 +8098,7 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
       !isa<SCEVConstant>(AddLHS->getOperand(0)))
     return false;
 
-  APInt ConstFoundRHS = cast<SCEVConstant>(FoundRHS)->getValue()->getValue();
+  APInt ConstFoundRHS = cast<SCEVConstant>(FoundRHS)->getAPInt();
 
   // `FoundLHSRange` is the range we know `FoundLHS` to be in by virtue of the
   // antecedent "`FoundLHS` `Pred` `FoundRHS`".
@@ -8114,13 +8107,12 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
 
   // Since `LHS` is `FoundLHS` + `AddLHS->getOperand(0)`, we can compute a range
   // for `LHS`:
-  APInt Addend =
-      cast<SCEVConstant>(AddLHS->getOperand(0))->getValue()->getValue();
+  APInt Addend = cast<SCEVConstant>(AddLHS->getOperand(0))->getAPInt();
   ConstantRange LHSRange = FoundLHSRange.add(ConstantRange(Addend));
 
   // We can also compute the range of values for `LHS` that satisfy the
   // consequent, "`LHS` `Pred` `RHS`":
-  APInt ConstRHS = cast<SCEVConstant>(RHS)->getValue()->getValue();
+  APInt ConstRHS = cast<SCEVConstant>(RHS)->getAPInt();
   ConstantRange SatisfyingLHSRange =
       ConstantRange::makeSatisfyingICmpRegion(Pred, ConstRHS);
 
@@ -8244,7 +8236,7 @@ ScalarEvolution::HowManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // overflow, in which case if RHS - Start is a constant, we don't need to
     // do a max operation since we can just figure it out statically
     if (NoWrap && isa<SCEVConstant>(Diff)) {
-      APInt D = dyn_cast<const SCEVConstant>(Diff)->getValue()->getValue();
+      APInt D = dyn_cast<const SCEVConstant>(Diff)->getAPInt();
       if (D.isNegative())
         End = Start;
     } else
@@ -8325,7 +8317,7 @@ ScalarEvolution::HowManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
     // overflow, in which case if RHS - Start is a constant, we don't need to
     // do a max operation since we can just figure it out statically
     if (NoWrap && isa<SCEVConstant>(Diff)) {
-      APInt D = dyn_cast<const SCEVConstant>(Diff)->getValue()->getValue();
+      APInt D = dyn_cast<const SCEVConstant>(Diff)->getAPInt();
       if (!D.isNegative())
         End = Start;
     } else
@@ -8385,7 +8377,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(ConstantRange Range,
                                              getNoWrapFlags(FlagNW));
       if (const auto *ShiftedAddRec = dyn_cast<SCEVAddRecExpr>(Shifted))
         return ShiftedAddRec->getNumIterationsInRange(
-                           Range.subtract(SC->getValue()->getValue()), SE);
+            Range.subtract(SC->getAPInt()), SE);
       // This is strange and shouldn't happen.
       return SE.getCouldNotCompute();
     }
@@ -8413,7 +8405,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(ConstantRange Range,
     // If A is negative then the lower of the range is the last possible loop
     // value.  Also note that we already checked for a full range.
     APInt One(BitWidth,1);
-    APInt A     = cast<SCEVConstant>(getOperand(1))->getValue()->getValue();
+    APInt A = cast<SCEVConstant>(getOperand(1))->getAPInt();
     APInt End = A.sge(One) ? (Range.getUpper() - One) : Range.getLower();
 
     // The exit value should be (End+A)/A.
@@ -8464,7 +8456,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(ConstantRange Range,
         if (Range.contains(R1Val->getValue())) {
           // The next iteration must be out of the range...
           ConstantInt *NextVal =
-                ConstantInt::get(SE.getContext(), R1->getValue()->getValue()+1);
+              ConstantInt::get(SE.getContext(), R1->getAPInt() + 1);
 
           R1Val = EvaluateConstantChrecAtConstant(this, NextVal, SE);
           if (!Range.contains(R1Val->getValue()))
@@ -8475,7 +8467,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(ConstantRange Range,
         // If R1 was not in the range, then it is a good return value.  Make
         // sure that R1-1 WAS in the range though, just in case.
         ConstantInt *NextVal =
-               ConstantInt::get(SE.getContext(), R1->getValue()->getValue()-1);
+            ConstantInt::get(SE.getContext(), R1->getAPInt() - 1);
         R1Val = EvaluateConstantChrecAtConstant(this, NextVal, SE);
         if (Range.contains(R1Val->getValue()))
           return R1;
@@ -9627,8 +9619,6 @@ const SCEV *ScalarEvolution::rewriteUsingPredicate(const SCEV *Scev,
 SCEVPredicate::SCEVPredicate(const FoldingSetNodeIDRef ID,
                              SCEVPredicateKind Kind)
     : FastID(ID), Kind(Kind) {}
-
-SCEVPredicate::~SCEVPredicate() {}
 
 SCEVEqualPredicate::SCEVEqualPredicate(const FoldingSetNodeIDRef ID,
                                        const SCEVUnknown *LHS,

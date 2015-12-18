@@ -82,7 +82,7 @@ struct StoreToLoadForwardingCandidate {
     // dependence wouldn't be valid if these weren't monotonic accesses.
     auto *Dist = cast<SCEVConstant>(
         PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
-    const APInt &Val = Dist->getValue()->getValue();
+    const APInt &Val = Dist->getAPInt();
     return Val.abs() == TypeByteSize;
   }
 

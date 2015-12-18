@@ -517,7 +517,7 @@ void MDNode::decrementUnresolvedOperandCount() {
     resolve();
 }
 
-void MDNode::resolveCycles() {
+void MDNode::resolveCycles(bool MDMaterialized) {
   if (isResolved())
     return;
 
@@ -530,6 +530,8 @@ void MDNode::resolveCycles() {
     if (!N)
       continue;
 
+    if (N->isTemporary() && !MDMaterialized)
+      continue;
     assert(!N->isTemporary() &&
            "Expected all forward declarations to be resolved");
     if (!N->isResolved())

@@ -1003,8 +1003,8 @@ public:
   template <unsigned Bits, int Offset = 0> bool isConstantUImm() const {
     return isConstantImm() && isUInt<Bits>(getConstantImm() - Offset);
   }
-  template <unsigned Bits> bool isUImm() const {
-    return isImm() && isConstantImm() && isUInt<Bits>(getConstantImm());
+  template <unsigned Bits> bool isConstantSImm() const {
+    return isConstantImm() && isInt<Bits>(getConstantImm());
   }
   bool isToken() const override {
     // Note: It's not possible to pretend that other operand kinds are tokens.
@@ -3650,6 +3650,12 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm6_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 6-bit unsigned immediate");
+  case Match_SImm6:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 6-bit signed immediate");
+  case Match_UImm7_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 7-bit unsigned immediate");
   case Match_UImm8_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 8-bit unsigned immediate");

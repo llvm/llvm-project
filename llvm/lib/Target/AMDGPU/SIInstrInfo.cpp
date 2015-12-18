@@ -742,8 +742,8 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(MachineBasicBlock &MBB,
   return TmpReg;
 }
 
-void SIInstrInfo::insertNOPs(MachineBasicBlock::iterator MI,
-                             int Count) const {
+void SIInstrInfo::insertWaitStates(MachineBasicBlock::iterator MI,
+                                   int Count) const {
   while (Count > 0) {
     int Arg;
     if (Count >= 8)

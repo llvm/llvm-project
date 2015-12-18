@@ -16,6 +16,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm-c/Core.h"
 #include "llvm-c/Linker.h"
 #include "gtest/gtest.h"
 

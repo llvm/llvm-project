@@ -417,11 +417,15 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     }
   }
 
-  if (VCCUsed)
+  if (VCCUsed || FlatUsed)
     MaxSGPR += 2;
 
-  if (FlatUsed)
+  if (FlatUsed) {
     MaxSGPR += 2;
+    // 2 additional for VI+.
+    if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      MaxSGPR += 2;
+  }
 
   // We found the maximum register index. They start at 0, so add one to get the
   // number of registers.

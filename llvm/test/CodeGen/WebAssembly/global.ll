@@ -165,3 +165,13 @@ define i8* @call_memcpy(i8* %p, i8* nocapture readonly %q, i32 %n) {
 ; CHECK-NEXT: .size ptr, 4
 @arr = global [128 x i32] zeroinitializer, align 16
 @ptr = global i32* getelementptr inbounds ([128 x i32], [128 x i32]* @arr, i32 0, i32 20), align 4
+
+; Constant global.
+; CHECK: .type    rom,@object{{$}}
+; CHECK: .section .rodata,"a",@progbits{{$}}
+; CHECK: .globl   rom{{$}}
+; CHECK: .align   4{{$}}
+; CHECK: rom:
+; CHECK: .zero    512{{$}}
+; CHECK: .size    rom, 512{{$}}
+@rom = constant [128 x i32] zeroinitializer, align 16

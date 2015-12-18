@@ -149,6 +149,12 @@ class REPL_QB_MM_ENC : POOL32A_1RIMM8_FMT<"repl.qb", 0b010111>;
 class REPLV_PH_MM_ENC : POOL32A_2R_FMT<"replv.ph", 0b0000001100>;
 class REPLV_QB_MM_ENC : POOL32A_2R_FMT<"replv.qb", 0b0001001100>;
 class MTHLIP_MM_ENC : POOL32A_1RAC_FMT<"mthlip", 0b00001001>;
+class PACKRL_PH_MM_ENC : POOL32A_3RB0_FMT<"packrl.ph", 0b0110101101>;
+class PICK_PH_MM_ENC : POOL32A_3RB0_FMT<"pick.ph", 0b1000101101>;
+class PICK_QB_MM_ENC : POOL32A_3RB0_FMT<"pick.qb", 0b0111101101>;
+class SHILO_MM_ENC : POOL32A_4B0SHIFT6AC4B0_FMT<"shilo", 0b0000011101>;
+class SHILOV_MM_ENC : POOL32A_5B01RAC_FMT<"shilov", 0b01001001>;
+class WRDSP_MM_ENC : POOL32A_1RMASK7_FMT<"wrdsp", 0b01011001>;
 
 // Instruction desc.
 class ABSQ_S_PH_MM_R2_DESC_BASE<string opstr, SDPatternOperator OpNode,
@@ -354,6 +360,15 @@ class REPLV_QB_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<"replv.qb", int_mips_repl_qb,
                                                    NoItinerary, DSPROpnd,
                                                    GPR32Opnd>;
 
+class WRDSP_MM_DESC {
+  dag OutOperandList = (outs);
+  dag InOperandList = (ins GPR32Opnd:$rt, uimm7:$mask);
+  string AsmString = !strconcat("wrdsp", "\t$rt, $mask");
+  list<dag> Pattern = [(int_mips_wrdsp GPR32Opnd:$rt, immZExt7:$mask)];
+  InstrItinClass Itinerary = NoItinerary;
+}
+
+// Instruction defs.
 // microMIPS DSP Rev 1
 def ADDQ_PH_MM : DspMMRel, ADDQ_PH_MM_ENC, ADDQ_PH_DESC;
 def ADDQ_S_PH_MM : DspMMRel, ADDQ_S_PH_MM_ENC, ADDQ_S_PH_DESC;
@@ -451,6 +466,12 @@ def REPL_QB_MM : DspMMRel, REPL_QB_MM_ENC, REPL_QB_MM_DESC;
 def REPLV_PH_MM : DspMMRel, REPLV_PH_MM_ENC, REPLV_PH_MM_DESC;
 def REPLV_QB_MM : DspMMRel, REPLV_QB_MM_ENC, REPLV_QB_MM_DESC;
 def MTHLIP_MM : DspMMRel, MTHLIP_MM_ENC, MTHLIP_DESC;
+def PACKRL_PH_MM : DspMMRel, PACKRL_PH_MM_ENC, PACKRL_PH_DESC;
+def PICK_PH_MM : DspMMRel, PICK_PH_MM_ENC, PICK_PH_DESC;
+def PICK_QB_MM : DspMMRel, PICK_QB_MM_ENC, PICK_QB_DESC;
+def SHILO_MM : DspMMRel, SHILO_MM_ENC, SHILO_DESC;
+def SHILOV_MM : DspMMRel, SHILOV_MM_ENC, SHILOV_DESC;
+def WRDSP_MM : DspMMRel, WRDSP_MM_ENC, WRDSP_MM_DESC;
 // microMIPS DSP Rev 2
 def ABSQ_S_QB_MMR2 : DspMMRel, ABSQ_S_QB_MMR2_ENC, ABSQ_S_QB_MMR2_DESC,
                      ISA_DSPR2;
@@ -502,3 +523,6 @@ def PRECR_SRA_PH_W_MMR2 : DspMMRel, PRECR_SRA_PH_W_MMR2_ENC,
 def PRECR_SRA_R_PH_W_MMR2 : DspMMRel, PRECR_SRA_R_PH_W_MMR2_ENC,
                             PRECR_SRA_R_PH_W_DESC, ISA_DSPR2;
 def PREPEND_MMR2 : DspMMRel, PREPEND_MMR2_ENC, PREPEND_DESC, ISA_DSPR2;
+
+// Instruction alias.
+def : MMDSPInstAlias<"wrdsp $rt", (WRDSP_MM GPR32Opnd:$rt, 0x1F), 1>;

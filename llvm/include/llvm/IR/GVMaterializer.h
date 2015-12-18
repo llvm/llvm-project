@@ -18,12 +18,14 @@
 #ifndef LLVM_IR_GVMATERIALIZER_H
 #define LLVM_IR_GVMATERIALIZER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include <system_error>
 #include <vector>
 
 namespace llvm {
 class Function;
 class GlobalValue;
+class Metadata;
 class Module;
 class StructType;
 
@@ -55,6 +57,14 @@ public:
 
   virtual std::error_code materializeMetadata() = 0;
   virtual void setStripDebugInfo() = 0;
+
+  /// Client should define this interface if the mapping between metadata
+  /// values and value ids needs to be preserved, e.g. across materializer
+  /// instantiations. If OnlyTempMD is true, only those that have remained
+  /// temporary metadata are recorded in the map.
+  virtual void
+  saveMDValueList(DenseMap<const Metadata *, unsigned> &MDValueToValIDMap,
+                  bool OnlyTempMD) {}
 
   virtual std::vector<StructType *> getIdentifiedStructTypes() const = 0;
 };

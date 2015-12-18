@@ -97,6 +97,7 @@ public:
 class BitcodeReaderMDValueList {
   unsigned NumFwdRefs;
   bool AnyFwdRefs;
+  bool SavedFwdRefs;
   unsigned MinFwdRef;
   unsigned MaxFwdRef;
   std::vector<TrackingMDRef> MDValuePtrs;
@@ -104,7 +105,12 @@ class BitcodeReaderMDValueList {
   LLVMContext &Context;
 public:
   BitcodeReaderMDValueList(LLVMContext &C)
-      : NumFwdRefs(0), AnyFwdRefs(false), Context(C) {}
+      : NumFwdRefs(0), AnyFwdRefs(false), SavedFwdRefs(false), Context(C) {}
+  ~BitcodeReaderMDValueList() {
+    // Assert that we either replaced all forward references, or saved
+    // them for later replacement.
+    assert(!NumFwdRefs || SavedFwdRefs);
+  }
 
   // vector compatibility methods
   unsigned size() const       { return MDValuePtrs.size(); }
@@ -114,6 +120,8 @@ public:
   Metadata *back() const      { return MDValuePtrs.back(); }
   void pop_back()             { MDValuePtrs.pop_back(); }
   bool empty() const          { return MDValuePtrs.empty(); }
+
+  void savedFwdRefs() { SavedFwdRefs = true; }
 
   Metadata *operator[](unsigned i) const {
     assert(i < MDValuePtrs.size());
@@ -273,6 +281,14 @@ public:
   std::error_code materializeMetadata() override;
 
   void setStripDebugInfo() override;
+
+  /// Save the mapping between the metadata values and the corresponding
+  /// value id that were recorded in the MDValueList during parsing. If
+  /// OnlyTempMD is true, then only record those entries that are still
+  /// temporary metadata. This interface is used when metadata linking is
+  /// performed as a postpass, such as during function importing.
+  void saveMDValueList(DenseMap<const Metadata *, unsigned> &MDValueToValIDMap,
+                       bool OnlyTempMD) override;
 
 private:
   /// Parse the "IDENTIFICATION_BLOCK_ID" block, populate the
@@ -1069,6 +1085,9 @@ Metadata *BitcodeReaderMDValueList::getValueFwdRef(unsigned Idx) {
     MinFwdRef = MaxFwdRef = Idx;
   }
   ++NumFwdRefs;
+  // Reset flag to ensure that we save this forward reference if we
+  // are delaying metadata mapping (e.g. for function importing).
+  SavedFwdRefs = false;
 
   // Create and return a placeholder, which will later be RAUW'd.
   Metadata *MD = MDNode::getTemporary(Context, None).release();
@@ -3082,6 +3101,30 @@ std::error_code BitcodeReader::materializeMetadata() {
 }
 
 void BitcodeReader::setStripDebugInfo() { StripDebugInfo = true; }
+
+void BitcodeReader::saveMDValueList(
+    DenseMap<const Metadata *, unsigned> &MDValueToValIDMap, bool OnlyTempMD) {
+  for (unsigned ValID = 0; ValID < MDValueList.size(); ++ValID) {
+    Metadata *MD = MDValueList[ValID];
+    auto *N = dyn_cast_or_null<MDNode>(MD);
+    // Save all values if !OnlyTempMD, otherwise just the temporary metadata.
+    if (!OnlyTempMD || (N && N->isTemporary())) {
+      // Will call this after materializing each function, in order to
+      // handle remapping of the function's instructions/metadata.
+      // See if we already have an entry in that case.
+      if (OnlyTempMD && MDValueToValIDMap.count(MD)) {
+        assert(MDValueToValIDMap[MD] == ValID &&
+               "Inconsistent metadata value id");
+        continue;
+      }
+      MDValueToValIDMap[MD] = ValID;
+      // Flag that we saved the forward refs (temporary metadata) for error
+      // checking during MDValueList destruction.
+      if (OnlyTempMD)
+        MDValueList.savedFwdRefs();
+    }
+  }
+}
 
 /// When we see the block for a function body, remember where it is and then
 /// skip it.  This lets us lazily deserialize the functions.

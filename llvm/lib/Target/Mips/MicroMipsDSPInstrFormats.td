@@ -16,6 +16,12 @@ class MMDSPInst<string opstr = "">
   let DecoderNamespace = "MicroMips";
 }
 
+class MMDSPInstAlias<string Asm, dag Result, bit Emit = 0b1>
+    : InstAlias<Asm, Result, Emit>, PredicateControl {
+  let InsnPredicates = [HasDSP];
+  let AdditionalPredicates = [InMicroMips];
+}
+
 class POOL32A_3R_FMT<string opstr, bits<11> op> : MMDSPInst<opstr> {
   bits<5> rd;
   bits<5> rs;
@@ -210,5 +216,29 @@ class POOL32A_1RIMM8_FMT<string opstr, bits<6> op> : MMDSPInst<opstr> {
   let Inst{20-13} = imm;
   let Inst{12}    = 0;
   let Inst{11-6}  = op;
+  let Inst{5-0}   = 0b111100;
+}
+
+class POOL32A_4B0SHIFT6AC4B0_FMT<string opstr, bits<10> op> : MMDSPInst<opstr> {
+  bits<6> shift;
+  bits<2> ac;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-22} = 0b0000;
+  let Inst{21-16} = shift;
+  let Inst{15-14} = ac;
+  let Inst{13-10} = 0b0000;
+  let Inst{9-0}   = op;
+}
+
+class POOL32A_5B01RAC_FMT<string opstr, bits<8> op> : MMDSPInst<opstr> {
+  bits<5> rs;
+  bits<2> ac;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-21} = 0b00000;
+  let Inst{20-16} = rs;
+  let Inst{15-14} = ac;
+  let Inst{13-6}  = op;
   let Inst{5-0}   = 0b111100;
 }

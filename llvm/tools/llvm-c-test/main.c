@@ -23,6 +23,9 @@ static void print_usage(void) {
   fprintf(stderr, " Commands:\n");
   fprintf(stderr, "  * --module-dump\n");
   fprintf(stderr, "    Read bytecode from stdin - print disassembly\n\n");
+  fprintf(stderr, "  * --lazy-module-dump\n");
+  fprintf(stderr,
+          "    Lazily read bytecode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --module-list-functions\n");
   fprintf(stderr,
           "    Read bytecode from stdin - list summary of functions\n\n");
@@ -49,8 +52,10 @@ int main(int argc, char **argv) {
 
   LLVMInitializeCore(pr);
 
-  if (argc == 2 && !strcmp(argv[1], "--module-dump")) {
-    return module_dump();
+  if (argc == 2 && !strcmp(argv[1], "--lazy-module-dump")) {
+    return module_dump(true);
+  } else if (argc == 2 && !strcmp(argv[1], "--module-dump")) {
+    return module_dump(false);
   } else if (argc == 2 && !strcmp(argv[1], "--module-list-functions")) {
     return module_list_functions();
   } else if (argc == 2 && !strcmp(argv[1], "--module-list-globals")) {

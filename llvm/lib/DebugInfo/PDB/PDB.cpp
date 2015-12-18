@@ -31,7 +31,7 @@ PDB_ErrorCode llvm::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
 
 PDB_ErrorCode llvm::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
                                    std::unique_ptr<IPDBSession> &Session) {
-// Create the correct concrete instance type based on the value of Type.
+  // Create the correct concrete instance type based on the value of Type.
 #if HAVE_DIA_SDK
   return DIASession::createFromExe(Path, Session);
 #endif

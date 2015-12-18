@@ -181,5 +181,79 @@ define void @test22(i1 %B, i32* %P1, i32* %P2) {
   ret void
 }
 
+; Can also DSE a unordered store in favor of a normal one
+define void @test23(i1 %B, i32* %P1, i32* %P2) {
+; CHECK-LABEL: @test23
+; CHECK-NEXT: store i32 0
+  store atomic i32 3, i32* %P1 unordered, align 4
+  store i32 0, i32* %P1, align 4
+  ret void
+}
 
+; As an implementation limitation, can't remove ordered stores
+; Note that we could remove the earlier store if we could
+; represent the required ordering.
+define void @test24(i1 %B, i32* %P1, i32* %P2) {
+; CHECK-LABEL: @test24
+; CHECK-NEXT: store atomic
+; CHECK-NEXT: store i32 0
+  store atomic i32 3, i32* %P1 release, align 4
+  store i32 0, i32* %P1, align 4
+  ret void
+}
 
+; Can't remove volatile stores - each is independently observable and
+; the count of such stores is an observable program side effect.
+define void @test25(i1 %B, i32* %P1, i32* %P2) {
+; CHECK-LABEL: @test25
+; CHECK-NEXT: store volatile
+; CHECK-NEXT: store volatile
+  store volatile i32 3, i32* %P1, align 4
+  store volatile i32 0, i32* %P1, align 4
+  ret void
+}
+
+; Can DSE a unordered store in favor of a unordered one
+define void @test26(i1 %B, i32* %P1, i32* %P2) {
+; CHECK-LABEL: @test26
+; CHECK-NEXT: store atomic i32 3, i32* %P1 unordered, align 4
+; CHECK-NEXT: ret
+  store atomic i32 0, i32* %P1 unordered, align 4
+  store atomic i32 3, i32* %P1 unordered, align 4
+  ret void
+}
+
+; Can DSE a unordered store in favor of a ordered one,
+; but current don't due to implementation limits
+define void @test27(i1 %B, i32* %P1, i32* %P2) {
+; CHECK-LABEL: @test27
+; CHECK-NEXT: store atomic i32 0, i32* %P1 unordered, align 4
+; CHECK-NEXT: store atomic i32 3, i32* %P1 release, align 4
+; CHECK-NEXT: ret
+  store atomic i32 0, i32* %P1 unordered, align 4
+  store atomic i32 3, i32* %P1 release, align 4
+  ret void
+}
+
+; Can DSE an unordered atomic store in favor of an
+; ordered one, but current don't due to implementation limits
+define void @test28(i1 %B, i32* %P1, i32* %P2) {
+; CHECK-LABEL: @test28
+; CHECK-NEXT: store atomic i32 0, i32* %P1 unordered, align 4
+; CHECK-NEXT: store atomic i32 3, i32* %P1 release, align 4
+; CHECK-NEXT: ret
+  store atomic i32 0, i32* %P1 unordered, align 4
+  store atomic i32 3, i32* %P1 release, align 4
+  ret void
+}
+
+; As an implementation limitation, can't remove ordered stores
+; see also: @test24
+define void @test29(i1 %B, i32* %P1, i32* %P2) {
+; CHECK-LABEL: @test29
+; CHECK-NEXT: store atomic
+; CHECK-NEXT: store atomic
+  store atomic i32 3, i32* %P1 release, align 4
+  store atomic i32 0, i32* %P1 unordered, align 4
+  ret void
+}

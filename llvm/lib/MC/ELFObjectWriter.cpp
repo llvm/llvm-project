@@ -1050,8 +1050,13 @@ void ELFObjectWriter::writeRelocations(const MCAssembler &Asm,
                                        const MCSectionELF &Sec) {
   std::vector<ELFRelocationEntry> &Relocs = Relocations[&Sec];
 
-  // Sort the relocation entries. Most targets just sort by Offset, but some
-  // (e.g., MIPS) have additional constraints.
+  // We record relocations by pushing to the end of a vector. Reverse the vector
+  // to get the relocations in the order they were created.
+  // In most cases that is not important, but it can be for special sections
+  // (.eh_frame) or specific relocations (TLS optimizations on SystemZ).
+  std::reverse(Relocs.begin(), Relocs.end());
+
+  // Sort the relocation entries. MIPS needs this.
   TargetObjectWriter->sortRelocs(Asm, Relocs);
 
   for (unsigned i = 0, e = Relocs.size(); i != e; ++i) {

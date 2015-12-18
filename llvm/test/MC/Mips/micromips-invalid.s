@@ -75,6 +75,11 @@
   movep   $8, $6, $2, $3  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   movep   $5, $6, $5, $3  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   movep   $5, $6, $2, $9  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  break 1024        # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
+  break 1024, 5     # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
+  break 7, 1024     # CHECK: :[[@LINE]]:12: error: expected 10-bit unsigned immediate
+  break 1024, 1024  # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
+  wait 1024         # CHECK: :[[@LINE]]:8: error: expected 10-bit unsigned immediate
   prefx -1, $8($5)  # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   prefx 32, $8($5)  # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   jraddiusp 1       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4

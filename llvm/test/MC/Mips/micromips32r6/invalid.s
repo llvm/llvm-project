@@ -22,6 +22,7 @@
   break 1024, 5            # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
   break 7, -1              # CHECK: :[[@LINE]]:12: error: expected 10-bit unsigned immediate
   break 7, 1024            # CHECK: :[[@LINE]]:12: error: expected 10-bit unsigned immediate
+  break 1023, 1024         # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
   cache -1, 255($7)        # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   cache 32, 255($7)        # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   ext $2, $3, -1, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate

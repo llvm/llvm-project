@@ -13,11 +13,13 @@
 #ifndef LLVM_C_TEST_H
 #define LLVM_C_TEST_H
 
+#include <stdbool.h>
+
 // helpers.c
 void tokenize_stdin(void (*cb)(char **tokens, int ntokens));
 
 // module.c
-int module_dump(void);
+int module_dump(bool Lazy);
 int module_list_functions(void);
 int module_list_globals(void);
 

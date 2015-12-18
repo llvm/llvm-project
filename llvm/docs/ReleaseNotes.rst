@@ -49,6 +49,15 @@ Non-comprehensive list of changes in this release
    * Destroys the source instead of only damaging it.
    * Does not record a message. Use the diagnostic handler instead.
 
+* The deprecated C APIs LLVMGetBitcodeModuleProviderInContext and
+  LLVMGetBitcodeModuleProvider have been removed.
+
+* With this release, the C API headers have been reorganized to improve build
+  time. Type specific declarations have been moved to Type.h, and error
+  handling routines have been moved to ErrorHandling.h. Both are included in
+  Core.h so nothing should change for projects directly including the headers,
+  but transitive dependencies may be affected.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet

@@ -17,7 +17,6 @@
 #ifndef LLVM_PASSREGISTRY_H
 #define LLVM_PASSREGISTRY_H
 
-#include "llvm-c/Core.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"

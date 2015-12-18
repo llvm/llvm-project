@@ -15,6 +15,7 @@ package llvm
 
 /*
 #include "llvm-c/BitReader.h"
+#include "llvm-c/Core.h"
 #include <stdlib.h>
 */
 import "C"

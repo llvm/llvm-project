@@ -16,6 +16,7 @@ def immZExt1 : ImmLeaf<i32, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<i32, [{return isUInt<2>(Imm);}]>;
 def immZExt3 : ImmLeaf<i32, [{return isUInt<3>(Imm);}]>;
 def immZExt4 : ImmLeaf<i32, [{return isUInt<4>(Imm);}]>;
+def immZExt7 : ImmLeaf<i32, [{return isUInt<7>(Imm);}]>;
 def immZExt8 : ImmLeaf<i32, [{return isUInt<8>(Imm);}]>;
 def immZExt10 : ImmLeaf<i32, [{return isUInt<10>(Imm);}]>;
 def immSExt6 : ImmLeaf<i32, [{return isInt<6>(Imm);}]>;
@@ -408,11 +409,12 @@ class EXTR_W_TY1_R1_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
 
 class SHILO_R1_DESC_BASE<string instr_asm, SDPatternOperator OpNode> {
   dag OutOperandList = (outs ACC64DSPOpnd:$ac);
-  dag InOperandList = (ins simm16:$shift, ACC64DSPOpnd:$acin);
+  dag InOperandList = (ins simm6:$shift, ACC64DSPOpnd:$acin);
   string AsmString = !strconcat(instr_asm, "\t$ac, $shift");
   list<dag> Pattern = [(set ACC64DSPOpnd:$ac,
                         (OpNode immSExt6:$shift, ACC64DSPOpnd:$acin))];
   string Constraints = "$acin = $ac";
+  string BaseOpcode = instr_asm;
 }
 
 class SHILO_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode> {
@@ -422,6 +424,7 @@ class SHILO_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode> {
   list<dag> Pattern = [(set ACC64DSPOpnd:$ac,
                         (OpNode GPR32Opnd:$rs, ACC64DSPOpnd:$acin))];
   string Constraints = "$acin = $ac";
+  string BaseOpcode = instr_asm;
 }
 
 class MTHLIP_DESC_BASE<string instr_asm, SDPatternOperator OpNode> {
@@ -447,10 +450,11 @@ class RDDSP_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
 class WRDSP_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                       InstrItinClass itin> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins GPR32Opnd:$rs, uimm16:$mask);
+  dag InOperandList = (ins GPR32Opnd:$rs, uimm10:$mask);
   string AsmString = !strconcat(instr_asm, "\t$rs, $mask");
   list<dag> Pattern = [(OpNode GPR32Opnd:$rs, immZExt10:$mask)];
   InstrItinClass Itinerary = itin;
+  string BaseOpcode = instr_asm;
 }
 
 class DPA_W_PH_DESC_BASE<string instr_asm, SDPatternOperator OpNode> {
@@ -1183,13 +1187,13 @@ def CMP_EQ_PH : CMP_EQ_PH_ENC, CMP_EQ_PH_DESC;
 def CMP_LT_PH : CMP_LT_PH_ENC, CMP_LT_PH_DESC;
 def CMP_LE_PH : CMP_LE_PH_ENC, CMP_LE_PH_DESC;
 def BITREV : BITREV_ENC, BITREV_DESC;
-def PACKRL_PH : PACKRL_PH_ENC, PACKRL_PH_DESC;
+def PACKRL_PH : DspMMRel, PACKRL_PH_ENC, PACKRL_PH_DESC;
 def REPL_QB : DspMMRel, REPL_QB_ENC, REPL_QB_DESC;
 def REPL_PH : DspMMRel, REPL_PH_ENC, REPL_PH_DESC;
 def REPLV_QB : DspMMRel, REPLV_QB_ENC, REPLV_QB_DESC;
 def REPLV_PH : DspMMRel, REPLV_PH_ENC, REPLV_PH_DESC;
-def PICK_QB : PICK_QB_ENC, PICK_QB_DESC;
-def PICK_PH : PICK_PH_ENC, PICK_PH_DESC;
+def PICK_QB : DspMMRel, PICK_QB_ENC, PICK_QB_DESC;
+def PICK_PH : DspMMRel, PICK_PH_ENC, PICK_PH_DESC;
 def LWX : DspMMRel, LWX_ENC, LWX_DESC;
 def LHX : DspMMRel, LHX_ENC, LHX_DESC;
 def LBUX : DspMMRel, LBUX_ENC, LBUX_DESC;
@@ -1207,63 +1211,61 @@ def EXTR_RS_W : DspMMRel, EXTR_RS_W_ENC, EXTR_RS_W_DESC;
 def EXTRV_RS_W : DspMMRel, EXTRV_RS_W_ENC, EXTRV_RS_W_DESC;
 def EXTR_S_H : DspMMRel, EXTR_S_H_ENC, EXTR_S_H_DESC;
 def EXTRV_S_H : DspMMRel, EXTRV_S_H_ENC, EXTRV_S_H_DESC;
-def SHILO : SHILO_ENC, SHILO_DESC;
-def SHILOV : SHILOV_ENC, SHILOV_DESC;
+def SHILO : DspMMRel, SHILO_ENC, SHILO_DESC;
+def SHILOV : DspMMRel, SHILOV_ENC, SHILOV_DESC;
 def MTHLIP : DspMMRel, MTHLIP_ENC, MTHLIP_DESC;
 def RDDSP : DspMMRel, RDDSP_ENC, RDDSP_DESC;
-def WRDSP : WRDSP_ENC, WRDSP_DESC;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def WRDSP : WRDSP_ENC, WRDSP_DESC;
+}
 
 // MIPS DSP Rev 2
-let Predicates = [HasDSPR2] in {
-
-def ADDU_PH : DspMMRel, ADDU_PH_ENC, ADDU_PH_DESC;
-def ADDU_S_PH : DspMMRel, ADDU_S_PH_ENC, ADDU_S_PH_DESC;
-def SUBU_PH : DspMMRel, SUBU_PH_ENC, SUBU_PH_DESC;
-def SUBU_S_PH : DspMMRel, SUBU_S_PH_ENC, SUBU_S_PH_DESC;
-def CMPGDU_EQ_QB : CMPGDU_EQ_QB_ENC, CMPGDU_EQ_QB_DESC;
-def CMPGDU_LT_QB : CMPGDU_LT_QB_ENC, CMPGDU_LT_QB_DESC;
-def CMPGDU_LE_QB : CMPGDU_LE_QB_ENC, CMPGDU_LE_QB_DESC;
-def ABSQ_S_QB : DspMMRel, ABSQ_S_QB_ENC, ABSQ_S_QB_DESC;
-def ADDUH_QB : DspMMRel, ADDUH_QB_ENC, ADDUH_QB_DESC;
-def ADDUH_R_QB : DspMMRel, ADDUH_R_QB_ENC, ADDUH_R_QB_DESC;
-def SUBUH_QB : DspMMRel, SUBUH_QB_ENC, SUBUH_QB_DESC;
-def SUBUH_R_QB : DspMMRel, SUBUH_R_QB_ENC, SUBUH_R_QB_DESC;
-def ADDQH_PH : DspMMRel, ADDQH_PH_ENC, ADDQH_PH_DESC;
-def ADDQH_R_PH : DspMMRel, ADDQH_R_PH_ENC, ADDQH_R_PH_DESC;
-def SUBQH_PH : DspMMRel, SUBQH_PH_ENC, SUBQH_PH_DESC;
-def SUBQH_R_PH : DspMMRel, SUBQH_R_PH_ENC, SUBQH_R_PH_DESC;
-def ADDQH_W : DspMMRel, ADDQH_W_ENC, ADDQH_W_DESC;
-def ADDQH_R_W : DspMMRel, ADDQH_R_W_ENC, ADDQH_R_W_DESC;
-def SUBQH_W : DspMMRel, SUBQH_W_ENC, SUBQH_W_DESC;
-def SUBQH_R_W : DspMMRel, SUBQH_R_W_ENC, SUBQH_R_W_DESC;
-def MUL_PH : DspMMRel, MUL_PH_ENC, MUL_PH_DESC;
-def MUL_S_PH : DspMMRel, MUL_S_PH_ENC, MUL_S_PH_DESC;
-def MULQ_S_W : DspMMRel, MULQ_S_W_ENC, MULQ_S_W_DESC;
-def MULQ_RS_W : DspMMRel, MULQ_RS_W_ENC, MULQ_RS_W_DESC;
-def MULQ_S_PH : DspMMRel, MULQ_S_PH_ENC, MULQ_S_PH_DESC;
-def DPA_W_PH : DspMMRel, DPA_W_PH_ENC, DPA_W_PH_DESC;
-def DPS_W_PH : DspMMRel, DPS_W_PH_ENC, DPS_W_PH_DESC;
-def DPAQX_S_W_PH : DspMMRel, DPAQX_S_W_PH_ENC, DPAQX_S_W_PH_DESC;
-def DPAQX_SA_W_PH : DspMMRel, DPAQX_SA_W_PH_ENC, DPAQX_SA_W_PH_DESC;
-def DPAX_W_PH : DspMMRel, DPAX_W_PH_ENC, DPAX_W_PH_DESC;
-def DPSX_W_PH : DspMMRel, DPSX_W_PH_ENC, DPSX_W_PH_DESC;
-def DPSQX_S_W_PH : DspMMRel, DPSQX_S_W_PH_ENC, DPSQX_S_W_PH_DESC;
-def DPSQX_SA_W_PH : DspMMRel, DPSQX_SA_W_PH_ENC, DPSQX_SA_W_PH_DESC;
-def MULSA_W_PH : MULSA_W_PH_ENC, MULSA_W_PH_DESC;
-def PRECR_QB_PH : DspMMRel, PRECR_QB_PH_ENC, PRECR_QB_PH_DESC;
-def PRECR_SRA_PH_W : DspMMRel, PRECR_SRA_PH_W_ENC, PRECR_SRA_PH_W_DESC;
-def PRECR_SRA_R_PH_W : DspMMRel, PRECR_SRA_R_PH_W_ENC, PRECR_SRA_R_PH_W_DESC;
-def SHRA_QB : DspMMRel, SHRA_QB_ENC, SHRA_QB_DESC;
-def SHRAV_QB : DspMMRel, SHRAV_QB_ENC, SHRAV_QB_DESC;
-def SHRA_R_QB : DspMMRel, SHRA_R_QB_ENC, SHRA_R_QB_DESC;
-def SHRAV_R_QB : DspMMRel, SHRAV_R_QB_ENC, SHRAV_R_QB_DESC;
-def SHRL_PH : DspMMRel, SHRL_PH_ENC, SHRL_PH_DESC;
-def SHRLV_PH : DspMMRel, SHRLV_PH_ENC, SHRLV_PH_DESC;
-def APPEND : APPEND_ENC, APPEND_DESC;
-def BALIGN : BALIGN_ENC, BALIGN_DESC;
-def PREPEND : DspMMRel, PREPEND_ENC, PREPEND_DESC;
-
-}
+def ADDU_PH : DspMMRel, ADDU_PH_ENC, ADDU_PH_DESC, ISA_DSPR2;
+def ADDU_S_PH : DspMMRel, ADDU_S_PH_ENC, ADDU_S_PH_DESC, ISA_DSPR2;
+def SUBU_PH : DspMMRel, SUBU_PH_ENC, SUBU_PH_DESC, ISA_DSPR2;
+def SUBU_S_PH : DspMMRel, SUBU_S_PH_ENC, SUBU_S_PH_DESC, ISA_DSPR2;
+def CMPGDU_EQ_QB : CMPGDU_EQ_QB_ENC, CMPGDU_EQ_QB_DESC, ISA_DSPR2;
+def CMPGDU_LT_QB : CMPGDU_LT_QB_ENC, CMPGDU_LT_QB_DESC, ISA_DSPR2;
+def CMPGDU_LE_QB : CMPGDU_LE_QB_ENC, CMPGDU_LE_QB_DESC, ISA_DSPR2;
+def ABSQ_S_QB : DspMMRel, ABSQ_S_QB_ENC, ABSQ_S_QB_DESC, ISA_DSPR2;
+def ADDUH_QB : DspMMRel, ADDUH_QB_ENC, ADDUH_QB_DESC, ISA_DSPR2;
+def ADDUH_R_QB : DspMMRel, ADDUH_R_QB_ENC, ADDUH_R_QB_DESC, ISA_DSPR2;
+def SUBUH_QB : DspMMRel, SUBUH_QB_ENC, SUBUH_QB_DESC, ISA_DSPR2;
+def SUBUH_R_QB : DspMMRel, SUBUH_R_QB_ENC, SUBUH_R_QB_DESC, ISA_DSPR2;
+def ADDQH_PH : DspMMRel, ADDQH_PH_ENC, ADDQH_PH_DESC, ISA_DSPR2;
+def ADDQH_R_PH : DspMMRel, ADDQH_R_PH_ENC, ADDQH_R_PH_DESC, ISA_DSPR2;
+def SUBQH_PH : DspMMRel, SUBQH_PH_ENC, SUBQH_PH_DESC, ISA_DSPR2;
+def SUBQH_R_PH : DspMMRel, SUBQH_R_PH_ENC, SUBQH_R_PH_DESC, ISA_DSPR2;
+def ADDQH_W : DspMMRel, ADDQH_W_ENC, ADDQH_W_DESC, ISA_DSPR2;
+def ADDQH_R_W : DspMMRel, ADDQH_R_W_ENC, ADDQH_R_W_DESC, ISA_DSPR2;
+def SUBQH_W : DspMMRel, SUBQH_W_ENC, SUBQH_W_DESC, ISA_DSPR2;
+def SUBQH_R_W : DspMMRel, SUBQH_R_W_ENC, SUBQH_R_W_DESC, ISA_DSPR2;
+def MUL_PH : DspMMRel, MUL_PH_ENC, MUL_PH_DESC, ISA_DSPR2;
+def MUL_S_PH : DspMMRel, MUL_S_PH_ENC, MUL_S_PH_DESC, ISA_DSPR2;
+def MULQ_S_W : DspMMRel, MULQ_S_W_ENC, MULQ_S_W_DESC, ISA_DSPR2;
+def MULQ_RS_W : DspMMRel, MULQ_RS_W_ENC, MULQ_RS_W_DESC, ISA_DSPR2;
+def MULQ_S_PH : DspMMRel, MULQ_S_PH_ENC, MULQ_S_PH_DESC, ISA_DSPR2;
+def DPA_W_PH : DspMMRel, DPA_W_PH_ENC, DPA_W_PH_DESC, ISA_DSPR2;
+def DPS_W_PH : DspMMRel, DPS_W_PH_ENC, DPS_W_PH_DESC, ISA_DSPR2;
+def DPAQX_S_W_PH : DspMMRel, DPAQX_S_W_PH_ENC, DPAQX_S_W_PH_DESC, ISA_DSPR2;
+def DPAQX_SA_W_PH : DspMMRel, DPAQX_SA_W_PH_ENC, DPAQX_SA_W_PH_DESC, ISA_DSPR2;
+def DPAX_W_PH : DspMMRel, DPAX_W_PH_ENC, DPAX_W_PH_DESC, ISA_DSPR2;
+def DPSX_W_PH : DspMMRel, DPSX_W_PH_ENC, DPSX_W_PH_DESC, ISA_DSPR2;
+def DPSQX_S_W_PH : DspMMRel, DPSQX_S_W_PH_ENC, DPSQX_S_W_PH_DESC, ISA_DSPR2;
+def DPSQX_SA_W_PH : DspMMRel, DPSQX_SA_W_PH_ENC, DPSQX_SA_W_PH_DESC, ISA_DSPR2;
+def MULSA_W_PH : MULSA_W_PH_ENC, MULSA_W_PH_DESC, ISA_DSPR2;
+def PRECR_QB_PH : DspMMRel, PRECR_QB_PH_ENC, PRECR_QB_PH_DESC, ISA_DSPR2;
+def PRECR_SRA_PH_W : DspMMRel, PRECR_SRA_PH_W_ENC, PRECR_SRA_PH_W_DESC, ISA_DSPR2;
+def PRECR_SRA_R_PH_W : DspMMRel, PRECR_SRA_R_PH_W_ENC, PRECR_SRA_R_PH_W_DESC, ISA_DSPR2;
+def SHRA_QB : DspMMRel, SHRA_QB_ENC, SHRA_QB_DESC, ISA_DSPR2;
+def SHRAV_QB : DspMMRel, SHRAV_QB_ENC, SHRAV_QB_DESC, ISA_DSPR2;
+def SHRA_R_QB : DspMMRel, SHRA_R_QB_ENC, SHRA_R_QB_DESC, ISA_DSPR2;
+def SHRAV_R_QB : DspMMRel, SHRAV_R_QB_ENC, SHRAV_R_QB_DESC, ISA_DSPR2;
+def SHRL_PH : DspMMRel, SHRL_PH_ENC, SHRL_PH_DESC, ISA_DSPR2;
+def SHRLV_PH : DspMMRel, SHRLV_PH_ENC, SHRLV_PH_DESC, ISA_DSPR2;
+def APPEND : APPEND_ENC, APPEND_DESC, ISA_DSPR2;
+def BALIGN : BALIGN_ENC, BALIGN_DESC, ISA_DSPR2;
+def PREPEND : DspMMRel, PREPEND_ENC, PREPEND_DESC, ISA_DSPR2;
 
 // Pseudos.
 let isPseudo = 1, isCodeGenOnly = 1 in {
@@ -1441,4 +1443,9 @@ let AddedComplexity = 20 in {
   def : IndexedLoadPat<zextloadi8, LBUX>;
   def : IndexedLoadPat<sextloadi16, LHX>;
   def : IndexedLoadPat<load, LWX>;
+}
+
+// Instruction alias.
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : DSPInstAlias<"wrdsp $rt", (WRDSP GPR32Opnd:$rt, 0x1F), 1>;
 }

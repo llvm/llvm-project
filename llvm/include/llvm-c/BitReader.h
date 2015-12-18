@@ -19,7 +19,7 @@
 #ifndef LLVM_C_BITREADER_H
 #define LLVM_C_BITREADER_H
 
-#include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,8 +35,8 @@ extern "C" {
 /* Builds a module from the bitcode in the specified memory buffer, returning a
    reference to the module via the OutModule parameter. Returns 0 on success.
    Optionally returns a human-readable error message via OutMessage. */
-LLVMBool LLVMParseBitcode(LLVMMemoryBufferRef MemBuf,
-                          LLVMModuleRef *OutModule, char **OutMessage);
+LLVMBool LLVMParseBitcode(LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutModule,
+                          char **OutMessage);
 
 LLVMBool LLVMParseBitcodeInContext(LLVMContextRef ContextRef,
                                    LLVMMemoryBufferRef MemBuf,
@@ -47,23 +47,10 @@ LLVMBool LLVMParseBitcodeInContext(LLVMContextRef ContextRef,
     Optionally returns a human-readable error message via OutMessage. */
 LLVMBool LLVMGetBitcodeModuleInContext(LLVMContextRef ContextRef,
                                        LLVMMemoryBufferRef MemBuf,
-                                       LLVMModuleRef *OutM,
-                                       char **OutMessage);
+                                       LLVMModuleRef *OutM, char **OutMessage);
 
 LLVMBool LLVMGetBitcodeModule(LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
                               char **OutMessage);
-
-
-/** Deprecated: Use LLVMGetBitcodeModuleInContext instead. */
-LLVMBool LLVMGetBitcodeModuleProviderInContext(LLVMContextRef ContextRef,
-                                               LLVMMemoryBufferRef MemBuf,
-                                               LLVMModuleProviderRef *OutMP,
-                                               char **OutMessage);
-
-/** Deprecated: Use LLVMGetBitcodeModule instead. */
-LLVMBool LLVMGetBitcodeModuleProvider(LLVMMemoryBufferRef MemBuf,
-                                      LLVMModuleProviderRef *OutMP,
-                                      char **OutMessage);
 
 /**
  * @}

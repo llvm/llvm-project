@@ -183,17 +183,32 @@ void BranchProbability::normalizeProbabilities(ProbabilityIter Begin,
   if (Begin == End)
     return;
 
-  auto UnknownProbCount =
-      std::count(Begin, End, BranchProbability::getUnknown());
-  assert((UnknownProbCount == 0 ||
-          UnknownProbCount == std::distance(Begin, End)) &&
-         "Cannot normalize probabilities with known and unknown ones.");
-  (void)UnknownProbCount;
+  unsigned UnknownProbCount = 0;
+  uint64_t Sum = std::accumulate(Begin, End, uint64_t(0),
+                                 [&](uint64_t S, const BranchProbability &BP) {
+                                   if (!BP.isUnknown())
+                                     return S + BP.N;
+                                   UnknownProbCount++;
+                                   return S;
+                                 });
 
-  uint64_t Sum = std::accumulate(
-      Begin, End, uint64_t(0),
-      [](uint64_t S, const BranchProbability &BP) { return S + BP.N; });
+  if (UnknownProbCount > 0) {
+    BranchProbability ProbForUnknown = BranchProbability::getZero();
+    // If the sum of all known probabilities is less than one, evenly distribute
+    // the complement of sum to unknown probabilities. Otherwise, set unknown
+    // probabilities to zeros and continue to normalize known probabilities.
+    if (Sum < BranchProbability::getDenominator())
+      ProbForUnknown = BranchProbability::getRaw(
+          (BranchProbability::getDenominator() - Sum) / UnknownProbCount);
 
+    std::replace_if(Begin, End,
+                    [](const BranchProbability &BP) { return BP.isUnknown(); },
+                    ProbForUnknown);
+
+    if (Sum <= BranchProbability::getDenominator())
+      return;
+  }
+ 
   if (Sum == 0) {
     BranchProbability BP(1, std::distance(Begin, End));
     std::fill(Begin, End, BP);

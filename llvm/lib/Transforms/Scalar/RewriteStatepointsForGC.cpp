@@ -641,7 +641,7 @@ public:
 
 private:
   Status status;
-  Value *base; // non null only if status == base
+  AssertingVH<Value> base; // non null only if status == base
 };
 }
 
@@ -1098,10 +1098,10 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &cache) {
     NewInsts.erase(BaseI);
     ReverseMap.erase(BaseI);
     BaseI->replaceAllUsesWith(Replacement);
-    BaseI->eraseFromParent();
     assert(States.count(BDV));
     assert(States[BDV].isConflict() && States[BDV].getBase() == BaseI);
     States[BDV] = BDVState(BDVState::Conflict, Replacement);
+    BaseI->eraseFromParent();
   };
   const DataLayout &DL = cast<Instruction>(def)->getModule()->getDataLayout();
   while (!Worklist.empty()) {

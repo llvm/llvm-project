@@ -14,7 +14,7 @@
 #ifndef LLVM_C_LINKER_H
 #define LLVM_C_LINKER_H
 
-#include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -832,10 +832,11 @@ public:
   /// \brief Resolve cycles.
   ///
   /// Once all forward declarations have been resolved, force cycles to be
-  /// resolved.
+  /// resolved. If \p MDMaterialized is true, then any temporary metadata
+  /// is ignored, otherwise it asserts when encountering temporary metadata.
   ///
   /// \pre No operands (or operands' operands, etc.) have \a isTemporary().
-  void resolveCycles();
+  void resolveCycles(bool MDMaterialized = true);
 
   /// \brief Replace a temporary node with a permanent one.
   ///

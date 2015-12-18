@@ -1943,8 +1943,8 @@ linearFunctionTestReplace(Loop *L,
     const SCEV *ARStep = AR->getStepRecurrence(*SE);
     // For constant IVCount, avoid truncation.
     if (isa<SCEVConstant>(ARStart) && isa<SCEVConstant>(IVCount)) {
-      const APInt &Start = cast<SCEVConstant>(ARStart)->getValue()->getValue();
-      APInt Count = cast<SCEVConstant>(IVCount)->getValue()->getValue();
+      const APInt &Start = cast<SCEVConstant>(ARStart)->getAPInt();
+      APInt Count = cast<SCEVConstant>(IVCount)->getAPInt();
       // Note that the post-inc value of BackedgeTakenCount may have overflowed
       // above such that IVCount is now zero.
       if (IVCount != BackedgeTakenCount && Count == 0) {

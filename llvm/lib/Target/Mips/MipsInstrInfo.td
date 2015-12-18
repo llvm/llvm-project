@@ -385,6 +385,15 @@ include "MipsInstrFormats.td"
 // Mips Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
+class ConstantSImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = []>
+    : AsmOperandClass {
+  let Name = "ConstantSImm" # Bits;
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isConstantSImm<" # Bits # ">";
+  let SuperClasses = Supers;
+  let DiagnosticType = "SImm" # Bits;
+}
+
 class ConstantUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
                                   int Offset = 0> : AsmOperandClass {
   let Name = "ConstantUImm" # Bits # "_" # Offset;
@@ -398,8 +407,12 @@ def ConstantUImm10AsmOperandClass
     : ConstantUImmAsmOperandClass<10, []>;
 def ConstantUImm8AsmOperandClass
     : ConstantUImmAsmOperandClass<8, [ConstantUImm10AsmOperandClass]>;
+def ConstantUImm7AsmOperandClass
+    : ConstantUImmAsmOperandClass<7, [ConstantUImm8AsmOperandClass]>;
 def ConstantUImm6AsmOperandClass
-    : ConstantUImmAsmOperandClass<6, [ConstantUImm8AsmOperandClass]>;
+    : ConstantUImmAsmOperandClass<6, [ConstantUImm7AsmOperandClass]>;
+def ConstantSImm6AsmOperandClass
+    : ConstantSImmAsmOperandClass<6, [ConstantUImm7AsmOperandClass]>;
 def ConstantUImm5Plus32AsmOperandClass
     : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 32>;
 def ConstantUImm5Plus32NormalizeAsmOperandClass
@@ -468,6 +481,10 @@ def calltarget  : Operand<iPTR> {
 
 def imm64: Operand<i64>;
 
+def simm6 : Operand<i32> {
+  let ParserMatchClass = ConstantSImm6AsmOperandClass;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 def simm9 : Operand<i32>;
 def simm10 : Operand<i32>;
 def simm11 : Operand<i32>;
@@ -505,7 +522,7 @@ def uimmz       : Operand<i32> {
 }
 
 // Unsigned Operands
-foreach I = {1, 2, 3, 4, 5, 6, 8, 10} in
+foreach I = {1, 2, 3, 4, 5, 6, 7, 8, 10} in
   def uimm # I : Operand<i32> {
     let PrintMethod = "printUnsignedImm";
     let ParserMatchClass =

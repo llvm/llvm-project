@@ -9,6 +9,7 @@
 
 #include "OrcTestCommon.h"
 #include "gtest/gtest.h"
+#include "llvm-c/Core.h"
 #include "llvm-c/OrcBindings.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"

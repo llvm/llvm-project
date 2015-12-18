@@ -253,8 +253,7 @@ bool AlignmentFromAssumptions::extractAlignmentInfo(CallInst *I,
 
   // The mask must have some trailing ones (otherwise the condition is
   // trivial and tells us nothing about the alignment of the left operand).
-  unsigned TrailingOnes =
-    MaskSCEV->getValue()->getValue().countTrailingOnes();
+  unsigned TrailingOnes = MaskSCEV->getAPInt().countTrailingOnes();
   if (!TrailingOnes)
     return false;
 
