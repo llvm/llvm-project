@@ -227,9 +227,6 @@ class BitcodeReader : public GVMaterializer {
   /// (e.g.) blockaddress forward references.
   bool WillMaterializeAllForwardRefs = false;
 
-  /// Functions that have block addresses taken.  This is usually empty.
-  SmallPtrSet<const Function *, 4> BlockAddressesTaken;
-
   /// True if any Metadata block has been materialized.
   bool IsMetadataMaterialized = false;
 
@@ -256,11 +253,9 @@ public:
 
   void releaseBuffer();
 
-  bool isDematerializable(const GlobalValue *GV) const override;
   std::error_code materialize(GlobalValue *GV) override;
-  std::error_code materializeModule(Module *M) override;
+  std::error_code materializeModule() override;
   std::vector<StructType *> getIdentifiedStructTypes() const override;
-  void dematerialize(GlobalValue *GV) override;
 
   /// \brief Main interface to parsing a bitcode buffer.
   /// \returns true if an error occurred.
@@ -2972,9 +2967,6 @@ std::error_code BitcodeReader::parseConstants() {
       if (!Fn)
         return error("Invalid record");
 
-      // Don't let Fn get dematerialized.
-      BlockAddressesTaken.insert(Fn);
-
       // If the function is already parsed we can insert the block address right
       // away.
       BasicBlock *BB;
@@ -5314,36 +5306,7 @@ std::error_code BitcodeReader::materialize(GlobalValue *GV) {
   return materializeForwardReferencedFunctions();
 }
 
-bool BitcodeReader::isDematerializable(const GlobalValue *GV) const {
-  const Function *F = dyn_cast<Function>(GV);
-  if (!F || F->isDeclaration())
-    return false;
-
-  // Dematerializing F would leave dangling references that wouldn't be
-  // reconnected on re-materialization.
-  if (BlockAddressesTaken.count(F))
-    return false;
-
-  return DeferredFunctionInfo.count(const_cast<Function*>(F));
-}
-
-void BitcodeReader::dematerialize(GlobalValue *GV) {
-  Function *F = dyn_cast<Function>(GV);
-  // If this function isn't dematerializable, this is a noop.
-  if (!F || !isDematerializable(F))
-    return;
-
-  assert(DeferredFunctionInfo.count(F) && "No info to read function later?");
-
-  // Just forget the function body, we can remat it later.
-  F->dropAllReferences();
-  F->setIsMaterializable(true);
-}
-
-std::error_code BitcodeReader::materializeModule(Module *M) {
-  assert(M == TheModule &&
-         "Can only Materialize the Module this BitcodeReader is attached to.");
-
+std::error_code BitcodeReader::materializeModule() {
   if (std::error_code EC = materializeMetadata())
     return EC;
 
@@ -5386,7 +5349,7 @@ std::error_code BitcodeReader::materializeModule(Module *M) {
   for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
     UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
 
-  UpgradeDebugInfo(*M);
+  UpgradeDebugInfo(*TheModule);
   return std::error_code();
 }
 
@@ -5904,7 +5867,7 @@ getBitcodeModuleImpl(std::unique_ptr<DataStreamer> Streamer, StringRef Name,
 
   if (MaterializeAll) {
     // Read in the entire module, and destroy the BitcodeReader.
-    if (std::error_code EC = M->materializeAllPermanently())
+    if (std::error_code EC = M->materializeAll())
       return cleanupOnError(EC);
   } else {
     // Resolve forward references from blockaddresses.

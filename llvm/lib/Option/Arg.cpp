@@ -13,6 +13,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -43,22 +44,24 @@ Arg::~Arg() {
   }
 }
 
-void Arg::dump() const {
-  llvm::errs() << "<";
+void Arg::print(raw_ostream& O) const {
+  O << "<";
 
-  llvm::errs() << " Opt:";
-  Opt.dump();
+  O << " Opt:";
+  Opt.print(O);
 
-  llvm::errs() << " Index:" << Index;
+  O << " Index:" << Index;
 
-  llvm::errs() << " Values: [";
+  O << " Values: [";
   for (unsigned i = 0, e = Values.size(); i != e; ++i) {
-    if (i) llvm::errs() << ", ";
-    llvm::errs() << "'" << Values[i] << "'";
+    if (i) O << ", ";
+    O << "'" << Values[i] << "'";
   }
 
-  llvm::errs() << "]>\n";
+  O << "]>\n";
 }
+
+LLVM_DUMP_METHOD void Arg::dump() const { print(dbgs()); }
 
 std::string Arg::getAsString(const ArgList &Args) const {
   SmallString<256> Res;

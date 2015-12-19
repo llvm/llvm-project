@@ -421,7 +421,7 @@ int main(int argc, char **argv, char * const *envp) {
 
   // If not jitting lazily, load the whole bitcode file eagerly too.
   if (NoLazyCompilation) {
-    if (std::error_code EC = Mod->materializeAllPermanently()) {
+    if (std::error_code EC = Mod->materializeAll()) {
       errs() << argv[0] << ": bitcode didn't read correctly.\n";
       errs() << "Reason: " << EC.message() << "\n";
       exit(1);

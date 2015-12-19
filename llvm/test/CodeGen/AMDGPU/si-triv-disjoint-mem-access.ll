@@ -234,4 +234,4 @@ define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrsp
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
 attributes #1 = { "ShaderType"="1" nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #2 = { nounwind noduplicate }
+attributes #2 = { nounwind convergent }

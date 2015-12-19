@@ -320,12 +320,8 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
     return;
   PrintStats("NEW   ", "");
   if (Options.Verbosity) {
-    Printf(" L: %zd", U.size());
-    if (U.size() < 30) {
-      Printf(" ");
-      PrintUnitInASCII(U, "\t");
-      Print(U);
-    }
+    Printf(" L: %zd ", U.size());
+    USF.PrintMutationSequence();
     Printf("\n");
   }
 }
@@ -371,29 +367,34 @@ void Fuzzer::Merge(const std::vector<std::string> &Corpora) {
   Printf("Merge: written %zd out of %zd units\n", NumMerged, NumTried);
 }
 
-void Fuzzer::MutateAndTestOne(Unit *U) {
+void Fuzzer::MutateAndTestOne() {
+  auto &U = CurrentUnit;
+  USF.StartMutationSequence();
+
+  U = ChooseUnitToMutate();
+
   for (int i = 0; i < Options.MutateDepth; i++) {
     StartTraceRecording();
-    size_t Size = U->size();
-    U->resize(Options.MaxLen);
-    size_t NewSize = USF.Mutate(U->data(), Size, U->size());
+    size_t Size = U.size();
+    U.resize(Options.MaxLen);
+    size_t NewSize = USF.Mutate(U.data(), Size, U.size());
     assert(NewSize > 0 && "Mutator returned empty unit");
     assert(NewSize <= (size_t)Options.MaxLen &&
            "Mutator return overisized unit");
-    U->resize(NewSize);
-    RunOneAndUpdateCorpus(*U);
+    U.resize(NewSize);
+    RunOneAndUpdateCorpus(U);
     size_t NumTraceBasedMutations = StopTraceRecording();
     size_t TBMWidth =
         std::min((size_t)Options.TBMWidth, NumTraceBasedMutations);
     size_t TBMDepth =
         std::min((size_t)Options.TBMDepth, NumTraceBasedMutations);
-    Unit BackUp = *U;
+    Unit BackUp = U;
     for (size_t w = 0; w < TBMWidth; w++) {
-      *U = BackUp;
+      U = BackUp;
       for (size_t d = 0; d < TBMDepth; d++) {
         TotalNumberOfExecutedTraceBasedMutations++;
-        ApplyTraceBasedMutation(USF.GetRand()(NumTraceBasedMutations), U);
-        RunOneAndUpdateCorpus(*U);
+        ApplyTraceBasedMutation(USF.GetRand()(NumTraceBasedMutations), &U);
+        RunOneAndUpdateCorpus(U);
       }
     }
   }
@@ -469,8 +470,9 @@ void Fuzzer::Drill() {
 
 void Fuzzer::Loop() {
   system_clock::time_point LastCorpusReload = system_clock::now();
+  if (Options.DoCrossOver)
+    USF.SetCorpus(&Corpus);
   while (true) {
-    size_t J1 = ChooseUnitIdxToMutate();;
     SyncCorpus();
     auto Now = system_clock::now();
     if (duration_cast<seconds>(Now - LastCorpusReload).count()) {
@@ -483,24 +485,8 @@ void Fuzzer::Loop() {
         secondsSinceProcessStartUp() >
         static_cast<size_t>(Options.MaxTotalTimeSec))
       break;
-    CurrentUnit = Corpus[J1];
-    // Optionally, cross with another unit.
-    if (Options.DoCrossOver && USF.GetRand().RandBool()) {
-      size_t J2 = ChooseUnitIdxToMutate();
-      if (!Corpus[J1].empty() && !Corpus[J2].empty()) {
-        assert(!Corpus[J2].empty());
-        CurrentUnit.resize(Options.MaxLen);
-        size_t NewSize = USF.CrossOver(
-            Corpus[J1].data(), Corpus[J1].size(), Corpus[J2].data(),
-            Corpus[J2].size(), CurrentUnit.data(), CurrentUnit.size());
-        assert(NewSize > 0 && "CrossOver returned empty unit");
-        assert(NewSize <= (size_t)Options.MaxLen &&
-               "CrossOver returned overisized unit");
-        CurrentUnit.resize(NewSize);
-      }
-    }
     // Perform several mutations and runs.
-    MutateAndTestOne(&CurrentUnit);
+    MutateAndTestOne();
   }
 
   PrintStats("DONE  ", "\n");

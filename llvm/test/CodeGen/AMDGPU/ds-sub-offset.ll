@@ -122,4 +122,4 @@ define void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #1 {
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
-attributes #2 = { nounwind noduplicate convergent }
+attributes #2 = { nounwind convergent }

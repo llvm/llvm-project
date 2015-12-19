@@ -1426,9 +1426,6 @@ def retflag : SDNode<"HexagonISD::RET_FLAG", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def eh_return: SDNode<"HexagonISD::EH_RETURN", SDTNone, [SDNPHasChain]>;
 
-def SDHexagonBR_JT: SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
-def HexagonBR_JT: SDNode<"HexagonISD::BR_JT", SDHexagonBR_JT, [SDNPHasChain]>;
-
 class CondStr<string CReg, bit True, bit New> {
   string S = "if (" # !if(True,"","!") # CReg # !if(New,".new","") # ") ";
 }
@@ -1606,8 +1603,6 @@ def EH_RETURN_JMPR : T_JMPr;
 
 def: Pat<(eh_return),
          (EH_RETURN_JMPR (i32 R31))>;
-def: Pat<(HexagonBR_JT (i32 IntRegs:$dst)),
-         (J2_jumpr IntRegs:$dst)>;
 def: Pat<(brind (i32 IntRegs:$dst)),
          (J2_jumpr IntRegs:$dst)>;
 

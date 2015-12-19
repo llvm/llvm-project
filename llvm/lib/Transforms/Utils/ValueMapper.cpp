@@ -197,6 +197,10 @@ static Metadata *mapMetadataOp(Metadata *Op,
                                ValueMaterializer *Materializer) {
   if (!Op)
     return nullptr;
+
+  if (Materializer && !Materializer->isMetadataNeeded(Op))
+    return nullptr;
+
   if (Metadata *MappedOp = MapMetadataImpl(Op, DistinctWorklist, VM, Flags,
                                            TypeMapper, Materializer))
     return MappedOp;

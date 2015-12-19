@@ -708,4 +708,4 @@ define void @copy_v3f64_align4(<3 x double> addrspace(1)* noalias %out, <3 x dou
 declare void @llvm.AMDGPU.barrier.local() #1
 
 attributes #0 = { nounwind }
-attributes #1 = { noduplicate nounwind }
+attributes #1 = { convergent nounwind }

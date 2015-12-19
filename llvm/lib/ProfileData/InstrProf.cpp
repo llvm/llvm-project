@@ -162,11 +162,100 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), FuncName);
 }
 
+// Merge Value Profile data from Src record to this record for ValueKind.
+// Scale merged value counts by \p Weight.
+instrprof_error InstrProfRecord::mergeValueProfData(uint32_t ValueKind,
+                                                    InstrProfRecord &Src,
+                                                    uint64_t Weight) {
+  uint32_t ThisNumValueSites = getNumValueSites(ValueKind);
+  uint32_t OtherNumValueSites = Src.getNumValueSites(ValueKind);
+  if (ThisNumValueSites != OtherNumValueSites)
+    return instrprof_error::value_site_count_mismatch;
+  std::vector<InstrProfValueSiteRecord> &ThisSiteRecords =
+      getValueSitesForKind(ValueKind);
+  std::vector<InstrProfValueSiteRecord> &OtherSiteRecords =
+      Src.getValueSitesForKind(ValueKind);
+  instrprof_error Result = instrprof_error::success;
+  for (uint32_t I = 0; I < ThisNumValueSites; I++)
+    MergeResult(Result,
+                ThisSiteRecords[I].mergeValueData(OtherSiteRecords[I], Weight));
+  return Result;
+}
+
+instrprof_error InstrProfRecord::merge(InstrProfRecord &Other,
+                                       uint64_t Weight) {
+  // If the number of counters doesn't match we either have bad data
+  // or a hash collision.
+  if (Counts.size() != Other.Counts.size())
+    return instrprof_error::count_mismatch;
+
+  instrprof_error Result = instrprof_error::success;
+
+  for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
+    bool Overflowed;
+    uint64_t OtherCount = Other.Counts[I];
+    if (Weight > 1) {
+      OtherCount = SaturatingMultiply(OtherCount, Weight, &Overflowed);
+      if (Overflowed)
+        Result = instrprof_error::counter_overflow;
+    }
+    Counts[I] = SaturatingAdd(Counts[I], OtherCount, &Overflowed);
+    if (Overflowed)
+      Result = instrprof_error::counter_overflow;
+  }
+
+  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+    MergeResult(Result, mergeValueProfData(Kind, Other, Weight));
+
+  return Result;
+}
+// Map indirect call target name hash to name string.
+uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
+                                     ValueMapType *HashKeys) {
+  if (!HashKeys)
+    return Value;
+  switch (ValueKind) {
+  case IPVK_IndirectCallTarget: {
+    auto Result =
+        std::lower_bound(HashKeys->begin(), HashKeys->end(), Value,
+                         [](const std::pair<uint64_t, const char *> &LHS,
+                            uint64_t RHS) { return LHS.first < RHS; });
+    if (Result != HashKeys->end())
+      Value = (uint64_t)Result->second;
+    break;
+  }
+  }
+  return Value;
+}
+
+void InstrProfRecord::updateStrings(InstrProfStringTable *StrTab) {
+  if (!StrTab)
+    return;
+
+  Name = StrTab->insertString(Name);
+  for (auto &VSite : IndirectCallSites)
+    for (auto &VData : VSite.ValueData)
+      VData.Value = (uint64_t)StrTab->insertString((const char *)VData.Value);
+}
+
+void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
+                                   InstrProfValueData *VData, uint32_t N,
+                                   ValueMapType *HashKeys) {
+  for (uint32_t I = 0; I < N; I++) {
+    VData[I].Value = remapValue(VData[I].Value, ValueKind, HashKeys);
+  }
+  std::vector<InstrProfValueSiteRecord> &ValueSites =
+      getValueSitesForKind(ValueKind);
+  if (N == 0)
+    ValueSites.push_back(InstrProfValueSiteRecord());
+  else
+    ValueSites.emplace_back(VData, VData + N);
+}
+
 #define INSTR_PROF_COMMON_API_IMPL
 #include "llvm/ProfileData/InstrProfData.inc"
 
-
-/*! 
+/*!
  * \brief ValueProfRecordClosure Interface implementation for  InstrProfRecord
  *  class. These C wrappers are used as adaptors so that C++ code can be
  *  invoked as callbacks.
@@ -201,8 +290,7 @@ void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
 uint64_t stringToHash(uint32_t ValueKind, uint64_t Value) {
   switch (ValueKind) {
   case IPVK_IndirectCallTarget:
-    return IndexedInstrProf::ComputeHash(IndexedInstrProf::HashType,
-                                         (const char *)Value);
+    return IndexedInstrProf::ComputeHash((const char *)Value);
     break;
   default:
     llvm_unreachable("value kind not handled !");

@@ -49,6 +49,12 @@ Non-comprehensive list of changes in this release
    * Destroys the source instead of only damaging it.
    * Does not record a message. Use the diagnostic handler instead.
 
+* The C API functions LLVMParseBitcode, LLVMParseBitcodeInContext,
+  LLVMGetBitcodeModuleInContext and LLVMGetBitcodeModule have been deprecated.
+  They will be removed in 3.9. Please migrate to the versions with a 2 suffix.
+  Unlike the old ones the new ones do not record a diagnostic message. Use
+  the diagnostic handler instead.
+
 * The deprecated C APIs LLVMGetBitcodeModuleProviderInContext and
   LLVMGetBitcodeModuleProvider have been removed.
 

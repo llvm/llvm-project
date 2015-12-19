@@ -17,7 +17,6 @@ set(Tests
   CounterTest
   FourIndependentBranchesTest
   FullCoverageSetTest
-  InfiniteTest
   MemcmpTest
   NullDerefTest
   SimpleCmpTest

@@ -276,6 +276,7 @@ private:
   SDValue PromoteIntRes_SETCC(SDNode *N);
   SDValue PromoteIntRes_SHL(SDNode *N);
   SDValue PromoteIntRes_SimpleIntBinOp(SDNode *N);
+  SDValue PromoteIntRes_SExtOrZExtIntBinOp(SDNode *N, bool Signed);
   SDValue PromoteIntRes_SIGN_EXTEND_INREG(SDNode *N);
   SDValue PromoteIntRes_SRA(SDNode *N);
   SDValue PromoteIntRes_SRL(SDNode *N);

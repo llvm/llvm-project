@@ -24,7 +24,6 @@
 #include "FuzzerInterface.h"
 
 namespace fuzzer {
-typedef std::vector<uint8_t> Unit;
 using namespace std::chrono;
 
 std::string FileToString(const std::string &Path);
@@ -132,7 +131,7 @@ class Fuzzer {
 
  private:
   void AlarmCallback();
-  void MutateAndTestOne(Unit *U);
+  void MutateAndTestOne();
   void ReportNewCoverage(const Unit &U);
   bool RunOne(const Unit &U);
   void RunOneAndUpdateCorpus(Unit &U);

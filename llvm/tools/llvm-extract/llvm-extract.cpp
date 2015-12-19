@@ -222,35 +222,23 @@ int main(int argc, char **argv) {
     }
   }
 
-  // Materialize requisite global values.
-  if (!DeleteFn)
-    for (size_t i = 0, e = GVs.size(); i != e; ++i) {
-      GlobalValue *GV = GVs[i];
-      if (std::error_code EC = GV->materialize()) {
-        errs() << argv[0] << ": error reading input: " << EC.message() << "\n";
-        return 1;
-      }
+  auto Materialize = [&](GlobalValue &GV) {
+    if (std::error_code EC = GV.materialize()) {
+      errs() << argv[0] << ": error reading input: " << EC.message() << "\n";
+      exit(1);
     }
-  else {
+  };
+
+  // Materialize requisite global values.
+  if (!DeleteFn) {
+    for (size_t i = 0, e = GVs.size(); i != e; ++i)
+      Materialize(*GVs[i]);
+  } else {
     // Deleting. Materialize every GV that's *not* in GVs.
     SmallPtrSet<GlobalValue *, 8> GVSet(GVs.begin(), GVs.end());
-    for (auto &G : M->globals()) {
-      if (!GVSet.count(&G)) {
-        if (std::error_code EC = G.materialize()) {
-          errs() << argv[0] << ": error reading input: " << EC.message()
-                 << "\n";
-          return 1;
-        }
-      }
-    }
     for (auto &F : *M) {
-      if (!GVSet.count(&F)) {
-        if (std::error_code EC = F.materialize()) {
-          errs() << argv[0] << ": error reading input: " << EC.message()
-                 << "\n";
-          return 1;
-        }
-      }
+      if (!GVSet.count(&F))
+        Materialize(F);
     }
   }
 

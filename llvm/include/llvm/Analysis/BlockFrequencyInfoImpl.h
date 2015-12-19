@@ -1173,6 +1173,13 @@ void BlockFrequencyInfoImpl<BT>::computeIrreducibleMass(
   updateLoopWithIrreducible(*OuterLoop);
 }
 
+namespace {
+// A helper function that converts a branch probability into weight.
+inline uint32_t getWeightFromBranchProb(const BranchProbability Prob) {
+  return Prob.getNumerator();
+}
+} // namespace
+
 template <class BT>
 bool
 BlockFrequencyInfoImpl<BT>::propagateMassToSuccessors(LoopData *OuterLoop,
@@ -1189,10 +1196,8 @@ BlockFrequencyInfoImpl<BT>::propagateMassToSuccessors(LoopData *OuterLoop,
     const BlockT *BB = getBlock(Node);
     for (auto SI = Successor::child_begin(BB), SE = Successor::child_end(BB);
          SI != SE; ++SI)
-      // Do not dereference SI, or getEdgeWeight() is linear in the number of
-      // successors.
       if (!addToDist(Dist, OuterLoop, Node, getNode(*SI),
-                     BPI->getEdgeWeight(BB, SI)))
+                     getWeightFromBranchProb(BPI->getEdgeProbability(BB, SI))))
         // Irreducible backedge.
         return false;
   }

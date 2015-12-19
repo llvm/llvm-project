@@ -1,28 +1,12 @@
 CHECK: BINGO
+Done1000000: Done 1000000 runs in
 
 RUN: LLVMFuzzer-SimpleTest 2>&1 | FileCheck %s
 RUN: not LLVMFuzzer-NullDerefTest -test_single_input=%S/hi.txt 2>&1 | FileCheck %s --check-prefix=SingleInput
 SingleInput-NOT: Test unit written to ./crash-
 
-RUN: not LLVMFuzzer-InfiniteTest -timeout=2 2>&1 | FileCheck %s --check-prefix=InfiniteTest
-InfiniteTest: ALARM: working on the last Unit for
-InfiniteTest: Test unit written to ./timeout-
-
 RUN: LLVMFuzzer-SimpleCmpTest -max_total_time=1 2>&1 | FileCheck %s --check-prefix=MaxTotalTime
 MaxTotalTime: Done {{.*}} runs in {{.}} second(s)
-
-RUN: not LLVMFuzzer-TimeoutTest -timeout=5 2>&1 | FileCheck %s --check-prefix=TimeoutTest
-TimeoutTest: ALARM: working on the last Unit for
-TimeoutTest: Test unit written to ./timeout-
-TimeoutTest: == ERROR: libFuzzer: timeout after
-TimeoutTest: #0
-TimeoutTest: #1
-TimeoutTest: #2
-TimeoutTest: SUMMARY: libFuzzer: timeout
-
-RUN: not LLVMFuzzer-TimeoutTest -timeout=5 -test_single_input=%S/hi.txt 2>&1 | FileCheck %s --check-prefix=SingleInputTimeoutTest
-SingleInputTimeoutTest: ALARM: working on the last Unit for
-SingleInputTimeoutTest-NOT: Test unit written to ./timeout-
 
 RUN: not LLVMFuzzer-NullDerefTest 2>&1 | FileCheck %s --check-prefix=NullDerefTest
 NullDerefTest: Test unit written to ./crash-
@@ -33,39 +17,16 @@ NullDerefTestExactPath: Test unit written to FOOBAR
 
 #not LLVMFuzzer-FullCoverageSetTest -timeout=15 -seed=1 -mutate_depth=2 -use_full_coverage_set=1 2>&1 | FileCheck %s
 
-RUN: rm -rf FourIndependentBranchesTestCORPUS
-RUN: mkdir FourIndependentBranchesTestCORPUS
-RUN:     LLVMFuzzer-FourIndependentBranchesTest -seed=1 -runs=1000000 FourIndependentBranchesTestCORPUS
-RUN: not LLVMFuzzer-FourIndependentBranchesTest         -runs=100000 -drill=1 -jobs=200 FourIndependentBranchesTestCORPUS 2>&1 | FileCheck %s
-RUN: rm -rf FourIndependentBranchesTestCORPUS
-
 RUN: not LLVMFuzzer-CounterTest -use_counters=1 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
 
-RUN: not LLVMFuzzer-CallerCalleeTest                     -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-CallerCalleeTest  -use_indir_calls=0 -max_len=6 -seed=1 -runs=1000000 2>&1 | FileCheck %s  --check-prefix=Done1000000
+RUN: not LLVMFuzzer-CallerCalleeTest                     -cross_over=0 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
+RUN:     LLVMFuzzer-CallerCalleeTest  -use_indir_calls=0 -cross_over=0 -max_len=6 -seed=1 -runs=1000000 2>&1 | FileCheck %s  --check-prefix=Done1000000
 
-RUN: not LLVMFuzzer-SimpleCmpTest -use_traces=1 -seed=1 -runs=1000000 -timeout=5 2>&1 | FileCheck %s
 
 RUN: not LLVMFuzzer-UserSuppliedFuzzerTest -seed=1 -timeout=15 2>&1 | FileCheck %s
 
-RUN: not LLVMFuzzer-MemcmpTest -use_traces=1 -seed=4294967295 -runs=100000   2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-MemcmpTest               -seed=4294967295 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
-Done1000000: Done 1000000 runs in
-
-RUN: not LLVMFuzzer-StrncmpTest -use_traces=1 -seed=1 -runs=100000   2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-StrncmpTest               -seed=1 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
-
-RUN: not LLVMFuzzer-StrcmpTest -use_traces=1 -seed=1 -runs=100000   2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-StrcmpTest               -seed=1 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
-
-RUN: not LLVMFuzzer-SwitchTest -use_traces=1 -seed=1 -runs=1000000  2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-SwitchTest               -seed=1 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
-
-RUN: not LLVMFuzzer-SimpleDictionaryTest -dict=%S/dict1.txt -seed=1 -runs=1000000  2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-SimpleDictionaryTest -dict=%S/dict1.txt -seed=1 -runs=1000003  2>&1 | FileCheck %s
 RUN:     LLVMFuzzer-SimpleDictionaryTest                    -seed=1 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
-
-RUN: not LLVMFuzzer-SimpleHashTest -use_traces=1 -seed=1 -runs=100000  2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-SimpleHashTest               -seed=1 -runs=1000000 2>&1 | FileCheck %s --check-prefix=Done1000000
 
 RUN: not LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
 UNINSTRUMENTED: ERROR: __sanitizer_set_death_callback is not defined. Exiting.

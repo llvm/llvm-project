@@ -803,14 +803,14 @@ bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags,
                           const FunctionInfoIndex *Index,
                           DenseSet<const GlobalValue *> *FunctionsToImport,
                           DenseMap<unsigned, MDNode *> *ValIDToTempMDMap) {
-  ModuleLinker TheLinker(Mover, *Src, Flags, Index, FunctionsToImport,
+  ModuleLinker ModLinker(Mover, *Src, Flags, Index, FunctionsToImport,
                          ValIDToTempMDMap);
-  return TheLinker.run();
+  return ModLinker.run();
 }
 
 bool Linker::linkInModuleForCAPI(Module &Src) {
-  ModuleLinker TheLinker(Mover, Src, 0, nullptr, nullptr);
-  return TheLinker.run();
+  ModuleLinker ModLinker(Mover, Src, 0, nullptr, nullptr);
+  return ModLinker.run();
 }
 
 bool Linker::linkInMetadata(Module &Src,

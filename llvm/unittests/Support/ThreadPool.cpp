@@ -18,18 +18,6 @@
 #include "gtest/gtest.h"
 
 using namespace llvm;
-using namespace std::chrono;
-
-/// Try best to make this thread not progress faster than the main thread
-static void yield() {
-#ifdef LLVM_ENABLE_THREADS
-  std::this_thread::yield();
-#endif
-  std::this_thread::sleep_for(milliseconds(200));
-#ifdef LLVM_ENABLE_THREADS
-  std::this_thread::yield();
-#endif
-}
 
 // Fixture for the unittests, allowing to *temporarily* disable the unittests
 // on a particular platform
@@ -66,6 +54,24 @@ protected:
     UnsupportedArchs.push_back(Triple::ppc64le);
     UnsupportedArchs.push_back(Triple::ppc64);
   }
+
+  /// Make sure this thread not progress faster than the main thread.
+  void waitForMainThread() {
+    std::unique_lock<std::mutex> LockGuard(WaitMainThreadMutex);
+    WaitMainThread.wait(LockGuard, [&] { return MainThreadReady; });
+  }
+
+  /// Set the readiness of the main thread.
+  void setMainThreadReadyState(bool Ready) {
+    std::unique_lock<std::mutex> LockGuard(WaitMainThreadMutex);
+    MainThreadReady = Ready;
+    WaitMainThread.notify_all();
+  }
+
+  std::condition_variable WaitMainThread;
+  std::mutex WaitMainThreadMutex;
+  bool MainThreadReady;
+
 };
 
 #define CHECK_UNSUPPORTED() \
@@ -80,14 +86,16 @@ TEST_F(ThreadPoolTest, AsyncBarrier) {
 
   std::atomic_int checked_in{0};
 
+  setMainThreadReadyState(false);
   ThreadPool Pool;
   for (size_t i = 0; i < 5; ++i) {
-    Pool.async([&checked_in, i] {
-      yield();
+    Pool.async([this, &checked_in, i] {
+      waitForMainThread();
       ++checked_in;
     });
   }
   ASSERT_EQ(0, checked_in);
+  setMainThreadReadyState(true);
   Pool.wait();
   ASSERT_EQ(5, checked_in);
 }
@@ -111,13 +119,14 @@ TEST_F(ThreadPoolTest, Async) {
   CHECK_UNSUPPORTED();
   ThreadPool Pool;
   std::atomic_int i{0};
-  // sleep here just to ensure that the not-equal is correct.
-  Pool.async([&i] {
-    yield();
+  setMainThreadReadyState(false);
+  Pool.async([this, &i] {
+    waitForMainThread();
     ++i;
   });
   Pool.async([&i] { ++i; });
   ASSERT_NE(2, i.load());
+  setMainThreadReadyState(true);
   Pool.wait();
   ASSERT_EQ(2, i.load());
 }
@@ -126,14 +135,15 @@ TEST_F(ThreadPoolTest, GetFuture) {
   CHECK_UNSUPPORTED();
   ThreadPool Pool;
   std::atomic_int i{0};
-  // sleep here just to ensure that the not-equal is correct.
-  Pool.async([&i] {
-    yield();
+  setMainThreadReadyState(false);
+  Pool.async([this, &i] {
+    waitForMainThread();
     ++i;
   });
   // Force the future using get()
   Pool.async([&i] { ++i; }).get();
   ASSERT_NE(2, i.load());
+  setMainThreadReadyState(true);
   Pool.wait();
   ASSERT_EQ(2, i.load());
 }
@@ -142,16 +152,17 @@ TEST_F(ThreadPoolTest, PoolDestruction) {
   CHECK_UNSUPPORTED();
   // Test that we are waiting on destruction
   std::atomic_int checked_in{0};
-
   {
+    setMainThreadReadyState(false);
     ThreadPool Pool;
     for (size_t i = 0; i < 5; ++i) {
-      Pool.async([&checked_in, i] {
-        yield();
+      Pool.async([this, &checked_in, i] {
+        waitForMainThread();
         ++checked_in;
       });
     }
     ASSERT_EQ(0, checked_in);
+    setMainThreadReadyState(true);
   }
   ASSERT_EQ(5, checked_in);
 }

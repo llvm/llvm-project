@@ -229,9 +229,9 @@ declare i32 @llvm.r600.read.tidig.x() #1
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.r600.read.tidig.y() #1
 
-; Function Attrs: noduplicate nounwind
+; Function Attrs: convergent nounwind
 declare void @llvm.AMDGPU.barrier.local() #2
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { noduplicate nounwind }
+attributes #2 = { convergent nounwind }

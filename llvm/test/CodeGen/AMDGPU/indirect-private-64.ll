@@ -4,7 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
 
 
-declare void @llvm.AMDGPU.barrier.local() noduplicate nounwind
+declare void @llvm.AMDGPU.barrier.local() convergent nounwind
 
 ; SI-LABEL: {{^}}private_access_f64_alloca:
 
@@ -18,7 +18,7 @@ define void @private_access_f64_alloca(double addrspace(1)* noalias %out, double
   %array = alloca double, i32 16, align 8
   %ptr = getelementptr double, double* %array, i32 %b
   store double %val, double* %ptr, align 8
-  call void @llvm.AMDGPU.barrier.local() noduplicate nounwind
+  call void @llvm.AMDGPU.barrier.local() convergent nounwind
   %result = load double, double* %ptr, align 8
   store double %result, double addrspace(1)* %out, align 8
   ret void
@@ -38,7 +38,7 @@ define void @private_access_v2f64_alloca(<2 x double> addrspace(1)* noalias %out
   %array = alloca <2 x double>, i32 16, align 16
   %ptr = getelementptr <2 x double>, <2 x double>* %array, i32 %b
   store <2 x double> %val, <2 x double>* %ptr, align 16
-  call void @llvm.AMDGPU.barrier.local() noduplicate nounwind
+  call void @llvm.AMDGPU.barrier.local() convergent nounwind
   %result = load <2 x double>, <2 x double>* %ptr, align 16
   store <2 x double> %result, <2 x double> addrspace(1)* %out, align 16
   ret void
@@ -56,7 +56,7 @@ define void @private_access_i64_alloca(i64 addrspace(1)* noalias %out, i64 addrs
   %array = alloca i64, i32 16, align 8
   %ptr = getelementptr i64, i64* %array, i32 %b
   store i64 %val, i64* %ptr, align 8
-  call void @llvm.AMDGPU.barrier.local() noduplicate nounwind
+  call void @llvm.AMDGPU.barrier.local() convergent nounwind
   %result = load i64, i64* %ptr, align 8
   store i64 %result, i64 addrspace(1)* %out, align 8
   ret void
@@ -76,7 +76,7 @@ define void @private_access_v2i64_alloca(<2 x i64> addrspace(1)* noalias %out, <
   %array = alloca <2 x i64>, i32 16, align 16
   %ptr = getelementptr <2 x i64>, <2 x i64>* %array, i32 %b
   store <2 x i64> %val, <2 x i64>* %ptr, align 16
-  call void @llvm.AMDGPU.barrier.local() noduplicate nounwind
+  call void @llvm.AMDGPU.barrier.local() convergent nounwind
   %result = load <2 x i64>, <2 x i64>* %ptr, align 16
   store <2 x i64> %result, <2 x i64> addrspace(1)* %out, align 16
   ret void

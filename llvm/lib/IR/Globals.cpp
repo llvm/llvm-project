@@ -32,14 +32,8 @@ bool GlobalValue::isMaterializable() const {
     return F->isMaterializable();
   return false;
 }
-bool GlobalValue::isDematerializable() const {
-  return getParent() && getParent()->isDematerializable(this);
-}
 std::error_code GlobalValue::materialize() {
   return getParent()->materialize(this);
-}
-void GlobalValue::dematerialize() {
-  getParent()->dematerialize(this);
 }
 
 /// Override destroyConstantImpl to make sure it doesn't get called on

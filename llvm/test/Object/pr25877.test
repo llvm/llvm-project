@@ -1,0 +1,9 @@
+; RUN: echo create %t.a > %t.mri
+; RUN: echo addlib %p/Inputs/pr25877.lib >> %t.mri
+; RUN: echo save >> %t.mri
+; RUN: echo end >> %t.mri
+
+; RUN: llvm-ar -M  < %t.mri
+; RUN: llvm-ar t %t.a | FileCheck %s
+
+; CHECK: foo.obj

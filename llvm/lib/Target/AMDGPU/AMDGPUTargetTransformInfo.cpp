@@ -141,14 +141,13 @@ static bool isArgPassedInSGPR(const Argument *A) {
   if (ShaderType == ShaderType::COMPUTE)
     return true;
 
-  // For non-compute shaders, the inreg attribute is used to mark inputs,
-  // which pre-loaded into SGPRs.
-  if (F->getAttributes().hasAttribute(A->getArgNo(), Attribute::InReg))
+  // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
+  if (F->getAttributes().hasAttribute(A->getArgNo() + 1, Attribute::InReg) ||
+      F->getAttributes().hasAttribute(A->getArgNo() + 1, Attribute::ByVal))
     return true;
 
-  // For non-compute shaders, 32-bit values are pre-loaded into vgprs, all
-  // other value types use SGPRS.
-  return !A->getType()->isIntegerTy(32) && !A->getType()->isFloatTy();
+  // Everything else is in VGPRs.
+  return false;
 }
 
 ///

@@ -28,19 +28,6 @@ char MachineBranchProbabilityInfo::ID = 0;
 
 void MachineBranchProbabilityInfo::anchor() { }
 
-uint32_t MachineBranchProbabilityInfo::getEdgeWeight(
-    const MachineBasicBlock *Src,
-    MachineBasicBlock::const_succ_iterator Dst) const {
-  return Src->getSuccProbability(Dst).getNumerator();
-}
-
-uint32_t MachineBranchProbabilityInfo::getEdgeWeight(
-    const MachineBasicBlock *Src, const MachineBasicBlock *Dst) const {
-  // This is a linear search. Try to use the const_succ_iterator version when
-  // possible.
-  return getEdgeWeight(Src, std::find(Src->succ_begin(), Src->succ_end(), Dst));
-}
-
 BranchProbability MachineBranchProbabilityInfo::getEdgeProbability(
     const MachineBasicBlock *Src,
     MachineBasicBlock::const_succ_iterator Dst) const {

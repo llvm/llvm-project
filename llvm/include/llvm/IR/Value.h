@@ -273,14 +273,14 @@ public:
   //----------------------------------------------------------------------
   // Methods for handling the chain of uses of this Value.
   //
-  bool               use_empty() const { return UseList == nullptr; }
+  bool use_empty() const { return UseList == nullptr; }
 
-  typedef use_iterator_impl<Use>       use_iterator;
+  typedef use_iterator_impl<Use> use_iterator;
   typedef use_iterator_impl<const Use> const_use_iterator;
-  use_iterator       use_begin()       { return use_iterator(UseList); }
+  use_iterator use_begin() { return use_iterator(UseList); }
   const_use_iterator use_begin() const { return const_use_iterator(UseList); }
-  use_iterator       use_end()         { return use_iterator();   }
-  const_use_iterator use_end()   const { return const_use_iterator();   }
+  use_iterator use_end() { return use_iterator(); }
+  const_use_iterator use_end() const { return const_use_iterator(); }
   iterator_range<use_iterator> uses() {
     return make_range(use_begin(), use_end());
   }
@@ -288,16 +288,18 @@ public:
     return make_range(use_begin(), use_end());
   }
 
-  bool               user_empty() const { return UseList == nullptr; }
+  bool user_empty() const { return UseList == nullptr; }
 
-  typedef user_iterator_impl<User>       user_iterator;
+  typedef user_iterator_impl<User> user_iterator;
   typedef user_iterator_impl<const User> const_user_iterator;
-  user_iterator       user_begin()       { return user_iterator(UseList); }
-  const_user_iterator user_begin() const { return const_user_iterator(UseList); }
-  user_iterator       user_end()         { return user_iterator();   }
-  const_user_iterator user_end()   const { return const_user_iterator();   }
-  User               *user_back()        { return *user_begin(); }
-  const User         *user_back()  const { return *user_begin(); }
+  user_iterator user_begin() { return user_iterator(UseList); }
+  const_user_iterator user_begin() const {
+    return const_user_iterator(UseList);
+  }
+  user_iterator user_end() { return user_iterator(); }
+  const_user_iterator user_end() const { return const_user_iterator(); }
+  User *user_back() { return *user_begin(); }
+  const User *user_back() const { return *user_begin(); }
   iterator_range<user_iterator> users() {
     return make_range(user_begin(), user_end());
   }

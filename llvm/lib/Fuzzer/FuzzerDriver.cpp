@@ -296,6 +296,11 @@ int FuzzerDriver(const std::vector<std::string> &Args,
     exit(0);
   }
 
+  if (Flags.save_minimized_corpus) {
+    Printf("The flag -save_minimized_corpus is deprecated; use -merge=1\n");
+    exit(1);
+  }
+
   if (Flags.merge) {
     F.Merge(*Inputs);
     exit(0);
@@ -317,9 +322,7 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   if (F.CorpusSize() == 0)
     F.AddToCorpus(Unit());  // Can't fuzz empty corpus, so add an empty input.
   F.ShuffleAndMinimize();
-  if (Flags.save_minimized_corpus)
-    F.SaveCorpus();
-  else if (Flags.drill)
+  if (Flags.drill)
     F.Drill();
   else
     F.Loop();

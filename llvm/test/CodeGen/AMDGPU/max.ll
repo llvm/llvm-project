@@ -53,6 +53,23 @@ define void @s_test_imax_sge_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
   ret void
 }
 
+; FUNC-LABEL: {{^}}v_test_imax_sge_i8:
+; SI: buffer_load_sbyte
+; SI: buffer_load_sbyte
+; SI: v_max_i32_e32
+define void @v_test_imax_sge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %gep0 = getelementptr i8, i8 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i8, i8 addrspace(1)* %bptr, i32 %tid
+  %outgep = getelementptr i8, i8 addrspace(1)* %out, i32 %tid
+  %a = load i8, i8 addrspace(1)* %gep0, align 1
+  %b = load i8, i8 addrspace(1)* %gep1, align 1
+  %cmp = icmp sge i8 %a, %b
+  %val = select i1 %cmp, i8 %a, i8 %b
+  store i8 %val, i8 addrspace(1)* %outgep, align 1
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}s_test_imax_sgt_imm_i32:
 ; SI: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
 define void @s_test_imax_sgt_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
@@ -132,6 +149,23 @@ define void @s_test_umax_uge_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a, <
   ret void
 }
 
+; FUNC-LABEL: {{^}}v_test_umax_uge_i8:
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: v_max_u32_e32
+define void @v_test_umax_uge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %gep0 = getelementptr i8, i8 addrspace(1)* %aptr, i32 %tid
+  %gep1 = getelementptr i8, i8 addrspace(1)* %bptr, i32 %tid
+  %outgep = getelementptr i8, i8 addrspace(1)* %out, i32 %tid
+  %a = load i8, i8 addrspace(1)* %gep0, align 1
+  %b = load i8, i8 addrspace(1)* %gep1, align 1
+  %cmp = icmp uge i8 %a, %b
+  %val = select i1 %cmp, i8 %a, i8 %b
+  store i8 %val, i8 addrspace(1)* %outgep, align 1
+  ret void
+}
+
 ; FUNC-LABEL: @v_test_umax_ugt_i32
 ; SI: v_max_u32_e32
 define void @v_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
@@ -203,6 +237,10 @@ define void @simplify_demanded_bits_test_max_slt_i16(i32 addrspace(1)* %out, i16
 }
 
 ; FUNC-LABEL: {{^}}s_test_imax_sge_i16:
+; SI: s_load_dword
+; SI: s_load_dword
+; SI: s_sext_i32_i16
+; SI: s_sext_i32_i16
 ; SI: s_max_i32
 define void @s_test_imax_sge_i16(i16 addrspace(1)* %out, i16 %a, i16 %b) nounwind {
   %cmp = icmp sge i16 %a, %b

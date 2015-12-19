@@ -775,6 +775,28 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   bool Deref = MI->getOperand(0).isReg() && MI->getOperand(1).isImm();
   int64_t Offset = Deref ? MI->getOperand(1).getImm() : 0;
 
+  for (unsigned i = 0; i < Expr->getNumElements(); ++i) {
+    if (Deref) {
+      // We currently don't support extra Offsets or derefs after the first
+      // one. Bail out early instead of emitting an incorrect comment
+      OS << " [complex expression]";
+      AP.OutStreamer->emitRawComment(OS.str());
+      return true;
+    }
+    uint64_t Op = Expr->getElement(i);
+    if (Op == dwarf::DW_OP_deref) {
+      Deref = true;
+      continue;
+    }
+    uint64_t ExtraOffset = Expr->getElement(i++);
+    if (Op == dwarf::DW_OP_plus)
+      Offset += ExtraOffset;
+    else {
+      assert(Op == dwarf::DW_OP_minus);
+      Offset -= ExtraOffset;
+    }
+  }
+
   // Register or immediate value. Register 0 means undef.
   if (MI->getOperand(0).isFPImm()) {
     APFloat APF = APFloat(MI->getOperand(0).getFPImm()->getValueAPF());

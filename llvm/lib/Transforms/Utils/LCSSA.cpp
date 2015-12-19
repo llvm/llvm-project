@@ -66,6 +66,13 @@ static bool processInstruction(Loop &L, Instruction &Inst, DominatorTree &DT,
                                PredIteratorCache &PredCache, LoopInfo *LI) {
   SmallVector<Use *, 16> UsesToRewrite;
 
+  // Tokens cannot be used in PHI nodes, so we skip over them.
+  // We can run into tokens which are live out of a loop with catchswitch
+  // instructions in Windows EH if the catchswitch has one catchpad which
+  // is inside the loop and another which is not.
+  if (Inst.getType()->isTokenTy())
+    return false;
+
   BasicBlock *InstBB = Inst.getParent();
 
   for (Use &U : Inst.uses()) {
