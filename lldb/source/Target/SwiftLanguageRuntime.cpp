@@ -4054,13 +4054,31 @@ SwiftLanguageRuntime::SwiftExceptionPrecondition::EvaluatePrecondition(Stoppoint
             return true;
 
         // This shouldn't fail, since at worst it will return me the object I just successfully got.
-        std::string found_type_name(error_valobj_sp->GetCompilerType().GetTypeName().AsCString());
-        
-        for (auto type_name : m_type_names)
+        std::string full_error_name (error_valobj_sp->GetCompilerType().GetTypeName().AsCString());
+        size_t last_dot_pos = full_error_name.rfind('.');
+        std::string type_name_base;
+        if (last_dot_pos == std::string::npos)
+            type_name_base = full_error_name;
+        else
         {
-            if (found_type_name.find(type_name) != std::string::npos)
+            if (last_dot_pos + 1 <= full_error_name.size())
+                type_name_base = full_error_name.substr(last_dot_pos + 1, full_error_name.size());
+        }
+        
+        // The type name will be the module and then the type.  If the match name has a dot, we require a complete
+        // match against the type, if the type name has no dot, we match it against the base.
+        
+        for (std::string name : m_type_names)
+        {
+            if (name.rfind('.') != std::string::npos)
             {
-                return true;
+                if (name == full_error_name)
+                    return true;
+            }
+            else
+            {
+                if (name == type_name_base)
+                    return true;
             }
         }
         return false;

@@ -853,7 +853,10 @@ CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
         "Set the breakpoint on exception catcH." },
 
     { LLDB_OPT_SET_10, false, "exception-typename", 'O', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeTypeName,
-        "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop for multiple object types.  Only supported for Swift at present." },
+        "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop "
+        "for multiple object types.  If you just specify the type's base name it will match against that type in all modules,"
+        " or you can specify the full type name including modules.  Other submatches are not supported at present."
+        "Only supported for Swift at present."},
 
     { LLDB_OPT_EXPR_LANGUAGE, false, "language", 'L', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLanguage,
         "Specifies the Language to use when interpreting the breakpoint's expression (note: currently only implemented for setting breakpoints on identifiers).  If not set the target.language setting is used." },
