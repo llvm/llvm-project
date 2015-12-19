@@ -45,3 +45,16 @@
 //
 // CHECK-SPLIT-OVER-GMLT: "-split-dwarf=Enable" "-debug-info-kind=limited"
 // CHECK-SPLIT-OVER-GMLT: "-split-dwarf-file"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -g0 -S -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-G0-OVER-SPLIT < %t %s
+//
+// CHECK-G0-OVER-SPLIT-NOT: "-debug-info-kind
+// CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf=Enable"
+// CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf-file"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -g0 -gsplit-dwarf -S -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-SPLIT-OVER-G0 < %t %s
+//
+// CHECK-SPLIT-OVER-G0: "-split-dwarf=Enable" "-debug-info-kind=limited"
+// CHECK-SPLIT-OVER-G0: "-split-dwarf-file"
