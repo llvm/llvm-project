@@ -10615,9 +10615,12 @@ EmulateInstructionARM::EmulateSTRDImm (const uint32_t opcode, const ARMEncoding 
         //if wback then R[n] = offset_addr;
         if (wback)
         {
-            context.type = eContextAdjustBaseRegister;
+            if (n == 13)
+                context.type = eContextAdjustStackPointer;
+            else
+                context.type = eContextAdjustBaseRegister;
             context.SetAddress (offset_addr);
-                  
+
             if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_r0 + n, offset_addr))
                 return false;
         }

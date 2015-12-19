@@ -21,6 +21,9 @@
 #include <string>
 #include <limits>
 #include "kmp_os.h"
+#if KMP_HAVE_X86INTRIN_H
+# include <x86intrin.h>
+#endif
 
 class tsc_tick_count {
   private:
@@ -44,7 +47,13 @@ class tsc_tick_count {
         const tsc_tick_count t1, const tsc_tick_count t0);
     };
 
+#if KMP_HAVE___BUILTIN_READCYCLECOUNTER
+    tsc_tick_count() : my_count(static_cast<int64_t>(__builtin_readcyclecounter())) {}
+#elif KMP_HAVE___RDTSC
     tsc_tick_count() : my_count(static_cast<int64_t>(__rdtsc())) {};
+#else
+# error Must have high resolution timer defined
+#endif
     tsc_tick_count(int64_t value) : my_count(value) {};
     int64_t getValue() const { return my_count; }
     tsc_tick_count later (tsc_tick_count const other) const { 

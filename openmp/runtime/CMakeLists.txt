@@ -267,7 +267,6 @@ endif()
 
 # - stats-gathering enables OpenMP stats where things like the number of
 # parallel regions, clock ticks spent in particular openmp regions are recorded.
-# TODO: Make this a real feature check
 set(LIBOMP_STATS FALSE CACHE BOOL
   "Stats-Gathering functionality?")
 if(LIBOMP_STATS AND (NOT LIBOMP_HAVE_STATS))

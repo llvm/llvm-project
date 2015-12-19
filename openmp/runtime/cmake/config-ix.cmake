@@ -182,10 +182,33 @@ else()
 endif()
 
 # Check if stats-gathering is available
-if(NOT (WIN32 OR APPLE) AND (${IA32} OR ${INTEL64} OR ${MIC}))
-  set(LIBOMP_HAVE_STATS TRUE)
-else()
-  set(LIBOMP_HAVE_STATS FALSE)
+if(${LIBOMP_STATS})
+  check_c_source_compiles(
+     "__thread int x;
+     int main(int argc, char** argv) 
+     { x = argc; return x; }"
+     LIBOMP_HAVE___THREAD)
+  check_c_source_compiles(
+     "int main(int argc, char** argv) 
+     { unsigned long long t = __builtin_readcyclecounter(); return 0; }"
+     LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
+  if(NOT LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
+    if(${IA32} OR ${INTEL64})
+      check_include_file(x86intrin.h LIBOMP_HAVE_X86INTRIN_H)
+      libomp_append(CMAKE_REQUIRED_DEFINITIONS -DLIBOMP_HAVE_X86INTRIN_H LIBOMP_HAVE_X86INTRIN_H)
+      check_c_source_compiles(
+        "#ifdef LIBOMP_HAVE_X86INTRIN_H
+         # include <x86intrin.h>
+         #endif
+         int main(int argc, char** argv) { unsigned long long t = __rdtsc(); return 0; }" LIBOMP_HAVE___RDTSC)
+      set(CMAKE_REQUIRED_DEFINITIONS)
+    endif()
+  endif()
+  if(LIBOMP_HAVE___THREAD AND (LIBOMP_HAVE___RDTSC OR LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER))
+    set(LIBOMP_HAVE_STATS TRUE)
+  else()
+    set(LIBOMP_HAVE_STATS FALSE)
+  endif()
 endif()
 
 # Check if OMPT support is available

@@ -1269,6 +1269,16 @@ SBDebugger::GetCategory (const char* category_name)
 }
 
 SBTypeCategory
+SBDebugger::GetCategory (lldb::LanguageType lang_type)
+{
+    TypeCategoryImplSP category_sp;
+    if (DataVisualization::Categories::GetCategory(lang_type, category_sp))
+        return SBTypeCategory(category_sp);
+    else
+        return SBTypeCategory();
+}
+
+SBTypeCategory
 SBDebugger::CreateCategory (const char* category_name)
 {
     if (!category_name || *category_name == 0)

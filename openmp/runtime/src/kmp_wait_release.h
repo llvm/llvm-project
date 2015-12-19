@@ -290,11 +290,11 @@ static inline void __kmp_release_template(C *flag)
     KF_TRACE(20, ("__kmp_release: T#%d releasing flag(%x)\n", gtid, flag->get()));
     KMP_DEBUG_ASSERT(flag->get());
     KMP_FSYNC_RELEASING(flag->get());
-    
+
     flag->internal_release();
-    
+
     KF_TRACE(100, ("__kmp_release: T#%d set new spin=%d\n", gtid, flag->get(), *(flag->get())));
-    
+
     if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
         // Only need to check sleep stuff if infinite block time not set
         if (flag->is_any_sleeping()) { // Are *any* of the threads that wait on this flag sleeping?

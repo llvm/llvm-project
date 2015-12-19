@@ -1123,6 +1123,13 @@ __kmp_create_monitor( kmp_info_t *th )
     int                 status;
     int                 auto_adj_size = FALSE;
 
+    if( __kmp_dflt_blocktime == KMP_MAX_BLOCKTIME ) {
+        // We don't need monitor thread in case of MAX_BLOCKTIME
+        KA_TRACE( 10, ("__kmp_create_monitor: skipping monitor thread because of MAX blocktime\n" ) );
+        th->th.th_info.ds.ds_tid  = 0; // this makes reap_monitor no-op
+        th->th.th_info.ds.ds_gtid = 0;
+        return;
+    }
     KA_TRACE( 10, ("__kmp_create_monitor: try to create monitor\n" ) );
 
     KMP_MB();       /* Flush all pending memory write invalidates.  */
@@ -1291,6 +1298,7 @@ __kmp_reap_monitor( kmp_info_t *th )
     // If both tid and gtid are KMP_GTID_DNE, the monitor has been shut down.
     KMP_DEBUG_ASSERT( th->th.th_info.ds.ds_tid == th->th.th_info.ds.ds_gtid );
     if ( th->th.th_info.ds.ds_gtid != KMP_GTID_MONITOR ) {
+        KA_TRACE( 10, ("__kmp_reap_monitor: monitor did not start, returning\n") );
         return;
     }; // if
 

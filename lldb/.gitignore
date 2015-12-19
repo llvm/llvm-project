@@ -32,7 +32,6 @@ build/
 pyproj/
 llvm-build/
 *xcuserdata
-xcshareddata/
 test/20*
 __pycache__/
 
@@ -40,4 +39,3 @@ __pycache__/
 # Do not add trailing '/'s, they skip symlinks.
 /llvm
 /DerivedData
-/lldb.xcworkspace/xcshareddata

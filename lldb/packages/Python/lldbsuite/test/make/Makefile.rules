@@ -178,8 +178,10 @@ else
 endif
 
 LIMIT_DEBUG_INFO_FLAGS =
+NO_LIMIT_DEBUG_INFO_FLAGS =
 ifneq (,$(findstring clang,$(CC)))
    LIMIT_DEBUG_INFO_FLAGS += -flimit-debug-info
+   NO_LIMIT_DEBUG_INFO_FLAGS += -fno-limit-debug-info
 endif
 
 DEBUG_INFO_FLAG ?= -g
