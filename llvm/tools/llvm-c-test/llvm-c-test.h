@@ -19,7 +19,7 @@
 void tokenize_stdin(void (*cb)(char **tokens, int ntokens));
 
 // module.c
-int module_dump(bool Lazy);
+int module_dump(bool Lazy, bool New);
 int module_list_functions(void);
 int module_list_globals(void);
 

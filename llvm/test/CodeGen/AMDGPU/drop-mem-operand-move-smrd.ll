@@ -49,4 +49,4 @@ declare i32 @llvm.r600.read.tgid.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { noduplicate nounwind }
+attributes #2 = { convergent nounwind }

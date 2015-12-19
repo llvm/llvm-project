@@ -76,9 +76,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SELECT_CC:   Res = PromoteIntRes_SELECT_CC(N); break;
   case ISD::SETCC:       Res = PromoteIntRes_SETCC(N); break;
   case ISD::SMIN:
-  case ISD::SMAX:
+  case ISD::SMAX:        Res = PromoteIntRes_SExtOrZExtIntBinOp(N, true); break;
   case ISD::UMIN:
-  case ISD::UMAX:        Res = PromoteIntRes_SimpleIntBinOp(N); break;
+  case ISD::UMAX:        Res = PromoteIntRes_SExtOrZExtIntBinOp(N, false); break;
+
   case ISD::SHL:         Res = PromoteIntRes_SHL(N); break;
   case ISD::SIGN_EXTEND_INREG:
                          Res = PromoteIntRes_SIGN_EXTEND_INREG(N); break;
@@ -656,6 +657,22 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SimpleIntBinOp(SDNode *N) {
   // that too is okay if they are integer operations.
   SDValue LHS = GetPromotedInteger(N->getOperand(0));
   SDValue RHS = GetPromotedInteger(N->getOperand(1));
+  return DAG.getNode(N->getOpcode(), SDLoc(N),
+                     LHS.getValueType(), LHS, RHS);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_SExtOrZExtIntBinOp(SDNode *N,
+                                                           bool Signed) {
+  SDValue LHS, RHS;
+
+  if (Signed) {
+    LHS = SExtPromotedInteger(N->getOperand(0));
+    RHS = SExtPromotedInteger(N->getOperand(1));
+  } else {
+    LHS = ZExtPromotedInteger(N->getOperand(0));
+    RHS = ZExtPromotedInteger(N->getOperand(1));
+  }
+
   return DAG.getNode(N->getOpcode(), SDLoc(N),
                      LHS.getValueType(), LHS, RHS);
 }

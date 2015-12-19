@@ -444,16 +444,11 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
   if (isa<Constant>(I)) {
     assert(!isa<GlobalVariable>(I) && !isa<UndefValue>(I) &&
            "order of checks wrong!");
-    // Note: Finding a constant base for something marked for relocation
-    // doesn't really make sense.  The most likely case is either a) some
-    // screwed up the address space usage or b) your validating against
-    // compiled C++ code w/o the proper separation.  The only real exception
-    // is a null pointer.  You could have generic code written to index of
-    // off a potentially null value and have proven it null.  We also use
-    // null pointers in dead paths of relocation phis (which we might later
-    // want to find a base pointer for).
-    assert(isa<ConstantPointerNull>(I) &&
-           "null is the only case which makes sense");
+    // Note: Even for frontends which don't have constant references, we can
+    // see constants appearing after optimizations.  A simple example is
+    // specialization of an address computation on null feeding into a merge
+    // point where the actual use of the now-constant input is protected by
+    // another null check.  (e.g. test4 in constants.ll)
     return BaseDefiningValueResult(I, true);
   }
 

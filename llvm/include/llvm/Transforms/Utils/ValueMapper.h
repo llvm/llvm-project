@@ -61,6 +61,11 @@ namespace llvm {
     virtual Metadata *mapTemporaryMetadata(Metadata *MD) { return nullptr; }
     virtual void replaceTemporaryMetadata(const Metadata *OrigMD,
                                           Metadata *NewMD) {}
+
+    /// The client should implement this method if some metadata need
+    /// not be mapped, for example DISubprogram metadata for functions not
+    /// linked into the destination module.
+    virtual bool isMetadataNeeded(Metadata *MD) { return true; }
   };
 
   /// RemapFlags - These are flags that the value mapping APIs allow.

@@ -1,0 +1,13 @@
+RUN: not LLVMFuzzer-TimeoutTest -timeout=1 2>&1 | FileCheck %s --check-prefix=TimeoutTest
+TimeoutTest: ALARM: working on the last Unit for
+TimeoutTest: Test unit written to ./timeout-
+TimeoutTest: == ERROR: libFuzzer: timeout after
+TimeoutTest: #0
+TimeoutTest: #1
+TimeoutTest: #2
+TimeoutTest: SUMMARY: libFuzzer: timeout
+
+RUN: not LLVMFuzzer-TimeoutTest -timeout=1 -test_single_input=%S/hi.txt 2>&1 | FileCheck %s --check-prefix=SingleInputTimeoutTest
+SingleInputTimeoutTest: ALARM: working on the last Unit for
+SingleInputTimeoutTest-NOT: Test unit written to ./timeout-
+

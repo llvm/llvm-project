@@ -195,6 +195,7 @@ public:
   ///                start.
   Arg *accept(const ArgList &Args, unsigned &Index, unsigned ArgSize) const;
 
+  void print(raw_ostream &O) const;
   void dump() const;
 };
 

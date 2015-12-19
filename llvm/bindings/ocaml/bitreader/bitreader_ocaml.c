@@ -23,10 +23,9 @@ void llvm_raise(value Prototype, char *Message);
 /* Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule */
 CAMLprim LLVMModuleRef llvm_get_module(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
   LLVMModuleRef M;
-  char *Message;
 
-  if (LLVMGetBitcodeModuleInContext(C, MemBuf, &M, &Message))
-    llvm_raise(*caml_named_value("Llvm_bitreader.Error"), Message);
+  if (LLVMGetBitcodeModuleInContext2(C, MemBuf, &M))
+    llvm_raise(*caml_named_value("Llvm_bitreader.Error"), "");
 
   return M;
 }
@@ -34,10 +33,9 @@ CAMLprim LLVMModuleRef llvm_get_module(LLVMContextRef C, LLVMMemoryBufferRef Mem
 /* Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule */
 CAMLprim LLVMModuleRef llvm_parse_bitcode(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
   LLVMModuleRef M;
-  char *Message;
 
-  if (LLVMParseBitcodeInContext(C, MemBuf, &M, &Message))
-    llvm_raise(*caml_named_value("Llvm_bitreader.Error"), Message);
+  if (LLVMParseBitcodeInContext2(C, MemBuf, &M))
+    llvm_raise(*caml_named_value("Llvm_bitreader.Error"), "");
 
   return M;
 }

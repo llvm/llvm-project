@@ -239,7 +239,7 @@ TEST(FuzzerMutate, ShuffleBytes1) {
   TestShuffleBytes(&MutationDispatcher::Mutate_ShuffleBytes, 1 << 15);
 }
 TEST(FuzzerMutate, ShuffleBytes2) {
-  TestShuffleBytes(&MutationDispatcher::Mutate, 1 << 16);
+  TestShuffleBytes(&MutationDispatcher::Mutate, 1 << 19);
 }
 
 void TestAddWordFromDictionary(Mutator M, int NumIter) {

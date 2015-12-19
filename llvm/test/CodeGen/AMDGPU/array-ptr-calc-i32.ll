@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI -mattr=+promote-alloca < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
 
 declare i32 @llvm.SI.tid() nounwind readnone
-declare void @llvm.AMDGPU.barrier.local() nounwind noduplicate
+declare void @llvm.AMDGPU.barrier.local() nounwind convergent
 
 ; The required pointer calculations for the alloca'd actually requires
 ; an add and won't be folded into the addressing, which fails with a
@@ -35,7 +35,7 @@ define void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 add
   %alloca_ptr = getelementptr [4 x i32], [4 x i32]* %alloca, i32 1, i32 %b
   store i32 %result, i32* %alloca_ptr, align 4
   ; Dummy call
-  call void @llvm.AMDGPU.barrier.local() nounwind noduplicate
+  call void @llvm.AMDGPU.barrier.local() nounwind convergent
   %reload = load i32, i32* %alloca_ptr, align 4
   %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   store i32 %reload, i32 addrspace(1)* %out_ptr, align 4

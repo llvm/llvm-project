@@ -123,4 +123,21 @@ define void @reassociate_gep_128(float* %a, i128 %i, i128 %j) {
   ret void
 }
 
+%struct.complex = type { float, float }
+
+declare void @bar(%struct.complex*)
+
+define void @different_types(%struct.complex* %input, i64 %i) {
+; CHECK-LABEL: @different_types(
+  %t1 = getelementptr %struct.complex, %struct.complex* %input, i64 %i
+  call void @bar(%struct.complex* %t1)
+  %j = add i64 %i, 5
+  %t2 = getelementptr %struct.complex, %struct.complex* %input, i64 %j, i32 0
+; CHECK: [[cast:[^ ]+]] = bitcast %struct.complex* %t1 to float*
+; CHECK-NEXT: %t2 = getelementptr float, float* [[cast]], i64 10
+; CHECK-NEXT: call void @foo(float* %t2)
+  call void @foo(float* %t2)
+  ret void
+}
+
 declare void @llvm.assume(i1)

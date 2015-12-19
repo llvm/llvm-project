@@ -164,9 +164,9 @@ static MCCodeGenInfo *createHexagonMCCodeGenInfo(const Triple &TT,
                                                  CodeModel::Model CM,
                                                  CodeGenOpt::Level OL) {
   MCCodeGenInfo *X = new MCCodeGenInfo();
-  // For the time being, use static relocations, since there's really no
-  // support for PIC yet.
-  X->initMCCodeGenInfo(Reloc::Static, CM, OL);
+  if (RM == Reloc::Default)
+    RM = Reloc::Static;
+  X->initMCCodeGenInfo(RM, CM, OL);
   return X;
 }
 

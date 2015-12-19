@@ -3,7 +3,7 @@
 ; RUN: llc -O0 -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck %s -check-prefix=SI
 ; RUN: llc -O0 -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck %s -check-prefix=SI
 
-declare void @llvm.AMDGPU.barrier.local() nounwind noduplicate
+declare void @llvm.AMDGPU.barrier.local() nounwind convergent
 
 
 ; SI-LABEL: {{^}}main(

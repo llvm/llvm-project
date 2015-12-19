@@ -13,6 +13,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -327,6 +328,15 @@ const char *ArgList::GetOrMakeJoinedArgString(unsigned Index,
 
   return MakeArgString(LHS + RHS);
 }
+
+void ArgList::print(raw_ostream &O) const {
+  for (Arg *A : *this) {
+    O << "* ";
+    A->print(O);
+  }
+}
+
+LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 
 //
 

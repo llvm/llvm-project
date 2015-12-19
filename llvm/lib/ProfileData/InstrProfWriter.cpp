@@ -35,7 +35,7 @@ public:
   typedef uint64_t offset_type;
 
   static hash_value_type ComputeHash(key_type_ref K) {
-    return IndexedInstrProf::ComputeHash(IndexedInstrProf::HashType, K);
+    return IndexedInstrProf::ComputeHash(K);
   }
 
   static std::pair<offset_type, offset_type>

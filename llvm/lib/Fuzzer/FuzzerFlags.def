@@ -32,10 +32,7 @@ FUZZER_FLAG_INT(
 FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
                                    "time in seconds to run the fuzzer.")
 FUZZER_FLAG_INT(help, 0, "Print help.")
-FUZZER_FLAG_INT(
-    save_minimized_corpus, 0,
-    "If 1, the minimized corpus is saved into the first input directory. "
-    "Example: ./fuzzer -save_minimized_corpus=1 NEW_EMPTY_DIR OLD_CORPUS")
+FUZZER_FLAG_INT(save_minimized_corpus, 0, "Deprecated. Use -merge=1")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken.")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")

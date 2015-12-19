@@ -524,4 +524,28 @@ TEST_F(InstrProfTest, get_weighted_function_counts) {
   ASSERT_EQ(20U, Counts[1]);
 }
 
+TEST_F(InstrProfTest, instr_prof_symtab_test) {
+  std::vector<StringRef> FuncNames;
+  FuncNames.push_back("func1");
+  FuncNames.push_back("func2");
+  FuncNames.push_back("func3");
+  FuncNames.push_back("bar1");
+  FuncNames.push_back("bar2");
+  FuncNames.push_back("bar3");
+  InstrProfSymtab Symtab;
+  Symtab.create(FuncNames);
+  StringRef R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("func1"));
+  ASSERT_EQ(StringRef("func1"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("func2"));
+  ASSERT_EQ(StringRef("func2"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("func3"));
+  ASSERT_EQ(StringRef("func3"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar1"));
+  ASSERT_EQ(StringRef("bar1"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar2"));
+  ASSERT_EQ(StringRef("bar2"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar3"));
+  ASSERT_EQ(StringRef("bar3"), R);
+}
+
 } // end anonymous namespace

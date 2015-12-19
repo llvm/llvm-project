@@ -57,4 +57,39 @@ entry:
   ret i8 %res
 }
 
+; Even for source languages without constant references, we can
+; see constants can show up along paths where the value is dead.
+; This is particular relevant when computing bases of PHIs.  
+define i8 addrspace(1)* @test4(i8 addrspace(1)* %p) gc "statepoint-example" {
+; CHECK-LABEL: @test4
+entry:
+  %is_null = icmp eq i8 addrspace(1)* %p, null
+  br i1 %is_null, label %split, label %join
+
+split:
+  call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+  %arg_value_addr.i = getelementptr inbounds i8, i8 addrspace(1)* %p, i64 8
+  %arg_value_addr_casted.i = bitcast i8 addrspace(1)* %arg_value_addr.i to i8 addrspace(1)* addrspace(1)*
+  br label %join
+
+join:
+; CHECK-LABEL: join
+; CHECK: %addr2.base =
+  %addr2 = phi i8 addrspace(1)* addrspace(1)* [ %arg_value_addr_casted.i, %split ], [ inttoptr (i64 8 to i8 addrspace(1)* addrspace(1)*), %entry ]
+  ;; NOTE: This particular example can be jump-threaded, but in general,
+  ;; we can't, and have to deal with the resulting IR.
+  br i1 %is_null, label %early-exit, label %use
+
+early-exit:
+  ret i8 addrspace(1)* null
+
+use:
+; CHECK-LABEL: use:
+; CHECK: gc.statepoint
+; CHECK: gc.relocate
+  call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+  %res = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %addr2, align 1
+  ret i8 addrspace(1)* %res
+}
+
 

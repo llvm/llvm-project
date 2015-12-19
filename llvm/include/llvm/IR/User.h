@@ -170,19 +170,6 @@ public:
     NumUserOperands = NumOps;
   }
 
-  /// Set the number of operands on a Function.
-  ///
-  /// Function always allocates space for a single operands, but
-  /// doesn't always use it.
-  ///
-  /// FIXME: As that the number of operands is used to find the start of
-  /// the allocated memory in operator delete, we need to always think we have
-  /// 1 operand before delete.
-  void setFunctionNumOperands(unsigned NumOps) {
-    assert(NumOps <= 1 && "Function can only have 0 or 1 operands");
-    NumUserOperands = NumOps;
-  }
-
   /// \brief Subclasses with hung off uses need to manage the operand count
   /// themselves.  In these instances, the operand count isn't used to find the
   /// OperandList, so there's no issue in having the operand count change.

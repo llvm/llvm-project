@@ -140,30 +140,6 @@ TEST(BitReaderTest, MateralizeForwardRefWithStream) {
   EXPECT_FALSE(M->getFunction("func")->empty());
 }
 
-TEST(BitReaderTest, DematerializeFunctionPreservesLinkageType) {
-  SmallString<1024> Mem;
-
-  LLVMContext Context;
-  std::unique_ptr<Module> M = getLazyModuleFromAssembly(
-      Context, Mem, "define internal i32 @func() {\n"
-                      "ret i32 0\n"
-                    "}\n");
-
-  EXPECT_FALSE(verifyModule(*M, &dbgs()));
-
-  M->getFunction("func")->materialize();
-  EXPECT_FALSE(M->getFunction("func")->empty());
-  EXPECT_TRUE(M->getFunction("func")->getLinkage() ==
-              GlobalValue::InternalLinkage);
-
-  // Check that the linkage type is preserved after dematerialization.
-  M->getFunction("func")->dematerialize();
-  EXPECT_TRUE(M->getFunction("func")->empty());
-  EXPECT_TRUE(M->getFunction("func")->getLinkage() ==
-              GlobalValue::InternalLinkage);
-  EXPECT_FALSE(verifyModule(*M, &dbgs()));
-}
-
 // Tests that lazy evaluation can parse functions out of order.
 TEST(BitReaderTest, MaterializeFunctionsOutOfOrder) {
   SmallString<1024> Mem;
@@ -240,10 +216,6 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddr) { // PR11677
                     "  unreachable\n"
                     "}\n");
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
-
-  // Try (and fail) to dematerialize @func.
-  M->getFunction("func")->dematerialize();
-  EXPECT_FALSE(M->getFunction("func")->empty());
 }
 
 TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionBefore) {
@@ -271,11 +243,6 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionBefore) {
   EXPECT_FALSE(M->getFunction("func")->empty());
   EXPECT_TRUE(M->getFunction("other")->empty());
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
-
-  // Try (and fail) to dematerialize @func.
-  M->getFunction("func")->dematerialize();
-  EXPECT_FALSE(M->getFunction("func")->empty());
-  EXPECT_FALSE(verifyModule(*M, &dbgs()));
 }
 
 TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionAfter) {
@@ -302,11 +269,6 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionAfter) {
   EXPECT_FALSE(M->getFunction("after")->materialize());
   EXPECT_FALSE(M->getFunction("func")->empty());
   EXPECT_TRUE(M->getFunction("other")->empty());
-  EXPECT_FALSE(verifyModule(*M, &dbgs()));
-
-  // Try (and fail) to dematerialize @func.
-  M->getFunction("func")->dematerialize();
-  EXPECT_FALSE(M->getFunction("func")->empty());
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
 }
 

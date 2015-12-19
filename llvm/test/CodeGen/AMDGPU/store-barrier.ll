@@ -36,7 +36,7 @@ bb:
   ret void
 }
 
-; Function Attrs: noduplicate nounwind
+; Function Attrs: convergent nounwind
 declare void @llvm.AMDGPU.barrier.local() #2
 
-attributes #2 = { noduplicate nounwind }
+attributes #2 = { convergent nounwind }

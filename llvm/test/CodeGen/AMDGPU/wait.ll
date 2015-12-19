@@ -70,7 +70,7 @@ main_body:
 }
 
 
-; Function Attrs: noduplicate nounwind
+; Function Attrs: convergent nounwind
 declare void @llvm.AMDGPU.barrier.global() #1
 
 ; Function Attrs: nounwind readnone
@@ -79,7 +79,7 @@ declare <4 x float> @llvm.SI.vs.load.input(<16 x i8>, i32, i32) #2
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
 attributes #0 = { "ShaderType"="1" }
-attributes #1 = { noduplicate nounwind }
+attributes #1 = { convergent nounwind }
 attributes #2 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0, i32 1}

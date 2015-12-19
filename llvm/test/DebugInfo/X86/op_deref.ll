@@ -20,11 +20,11 @@
 ; right now, so we check the asm output:
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o - -filetype=asm | FileCheck %s -check-prefix=ASM-CHECK
 ; vla should have a register-indirect address at one point.
-; ASM-CHECK: DEBUG_VALUE: vla <- %RCX
+; ASM-CHECK: DEBUG_VALUE: vla <- [%RCX+0]
 ; ASM-CHECK: DW_OP_breg2
 
 ; RUN: llvm-as %s -o - | llvm-dis - | FileCheck %s --check-prefix=PRETTY-PRINT
-; PRETTY-PRINT: DIExpression(DW_OP_deref, DW_OP_deref)
+; PRETTY-PRINT: DIExpression(DW_OP_deref)
 
 define void @testVLAwithSize(i32 %s) nounwind uwtable ssp !dbg !5 {
 entry:
@@ -108,4 +108,4 @@ declare void @llvm.stackrestore(i8*) nounwind
 !27 = !DILocation(line: 8, column: 1, scope: !13)
 !28 = !DIFile(filename: "bar.c", directory: "/Users/echristo/tmp")
 !29 = !{i32 1, !"Debug Info Version", i32 3}
-!30 = !DIExpression(DW_OP_deref, DW_OP_deref)
+!30 = !DIExpression(DW_OP_deref)

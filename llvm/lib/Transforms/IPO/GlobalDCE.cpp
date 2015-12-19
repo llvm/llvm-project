@@ -215,14 +215,8 @@ void GlobalDCE::GlobalIsNeeded(GlobalValue *G) {
     // any globals used will be marked as needed.
     Function *F = cast<Function>(G);
 
-    if (F->hasPrefixData())
-      MarkUsedGlobalsAsNeeded(F->getPrefixData());
-
-    if (F->hasPrologueData())
-      MarkUsedGlobalsAsNeeded(F->getPrologueData());
-
-    if (F->hasPersonalityFn())
-      MarkUsedGlobalsAsNeeded(F->getPersonalityFn());
+    for (Use &U : F->operands())
+      MarkUsedGlobalsAsNeeded(cast<Constant>(U.get()));
 
     for (BasicBlock &BB : *F)
       for (Instruction &I : BB)

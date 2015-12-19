@@ -22,6 +22,7 @@
 #include <string>
 
 namespace fuzzer {
+typedef std::vector<uint8_t> Unit;
 
 /// Returns an int 0. Values other than zero are reserved for future.
 typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
@@ -70,6 +71,10 @@ class MutationDispatcher {
  public:
   MutationDispatcher(FuzzerRandomBase &Rand);
   ~MutationDispatcher();
+  /// Indicate that we are about to start a new sequence of mutations.
+  void StartMutationSequence();
+  /// Print the current sequence of mutations.
+  void PrintMutationSequence();
   /// Mutates data by shuffling bytes.
   size_t Mutate_ShuffleBytes(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by erasing a byte.
@@ -85,7 +90,11 @@ class MutationDispatcher {
   size_t Mutate_AddWordFromDictionary(uint8_t *Data, size_t Size,
                                       size_t MaxSize);
 
+  /// Tries to find an ASCII integer in Data, changes it to another ASCII int.
   size_t Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size, size_t MaxSize);
+
+  /// CrossOver Data with some other element of the corpus.
+  size_t Mutate_CrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
 
   /// Applies one of the above mutations.
   /// Returns the new size of data which could be up to MaxSize.
@@ -96,6 +105,7 @@ class MutationDispatcher {
                    size_t Size2, uint8_t *Out, size_t MaxOutSize);
 
   void AddWordToDictionary(const uint8_t *Word, size_t Size);
+  void SetCorpus(const std::vector<Unit> *Corpus);
 
  private:
   FuzzerRandomBase &Rand;
@@ -138,6 +148,11 @@ class UserSuppliedFuzzer {
   UserSuppliedFuzzer(FuzzerRandomBase *Rand);
   /// Executes the target function on 'Size' bytes of 'Data'.
   virtual int TargetFunction(const uint8_t *Data, size_t Size) = 0;
+  virtual void StartMutationSequence() { MD.StartMutationSequence(); }
+  virtual void PrintMutationSequence() { MD.PrintMutationSequence(); }
+  virtual void SetCorpus(const std::vector<Unit> *Corpus) {
+    MD.SetCorpus(Corpus);
+  }
   /// Mutates 'Size' bytes of data in 'Data' inplace into up to 'MaxSize' bytes,
   /// returns the new size of the data, which should be positive.
   virtual size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize) {

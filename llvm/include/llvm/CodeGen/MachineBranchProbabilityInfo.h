@@ -45,16 +45,6 @@ public:
     AU.setPreservesAll();
   }
 
-  // Return edge weight. If we don't have any informations about it - return
-  // DEFAULT_WEIGHT.
-  uint32_t getEdgeWeight(const MachineBasicBlock *Src,
-                         const MachineBasicBlock *Dst) const;
-
-  // Same thing, but using a const_succ_iterator from Src. This is faster when
-  // the iterator is already available.
-  uint32_t getEdgeWeight(const MachineBasicBlock *Src,
-                         MachineBasicBlock::const_succ_iterator Dst) const;
-
   // Return edge probability.
   BranchProbability getEdgeProbability(const MachineBasicBlock *Src,
                                        const MachineBasicBlock *Dst) const;

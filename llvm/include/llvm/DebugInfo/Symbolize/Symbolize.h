@@ -13,13 +13,9 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
-#include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -63,6 +59,8 @@ public:
                                   const SymbolizableModule *ModInfo);
 
 private:
+  // Bundles together object file with code/data and object file with
+  // corresponding debug info. These objects can be the same.
   typedef std::pair<ObjectFile*, ObjectFile*> ObjectPair;
 
   ErrorOr<SymbolizableModule *>
@@ -75,29 +73,28 @@ private:
                                     const std::string &ArchName);
 
   /// \brief Returns pair of pointers to object and debug object.
-  ErrorOr<ObjectPair> getOrCreateObjects(const std::string &Path,
-                                         const std::string &ArchName);
-  /// \brief Returns a parsed object file for a given architecture in a
-  /// universal binary (or the binary itself if it is an object file).
-  ErrorOr<ObjectFile *> getObjectFileFromBinary(Binary *Bin,
-                                                const std::string &ArchName);
+  ErrorOr<ObjectPair> getOrCreateObjectPair(const std::string &Path,
+                                            const std::string &ArchName);
 
-  // Owns all the parsed binaries and object files.
-  SmallVector<std::unique_ptr<Binary>, 4> ParsedBinariesAndObjects;
-  SmallVector<std::unique_ptr<MemoryBuffer>, 4> MemoryBuffers;
-  void addOwningBinary(OwningBinary<Binary> OwningBin) {
-    std::unique_ptr<Binary> Bin;
-    std::unique_ptr<MemoryBuffer> MemBuf;
-    std::tie(Bin, MemBuf) = OwningBin.takeBinary();
-    ParsedBinariesAndObjects.push_back(std::move(Bin));
-    MemoryBuffers.push_back(std::move(MemBuf));
-  }
+  /// \brief Return a pointer to object file at specified path, for a specified
+  /// architecture (e.g. if path refers to a Mach-O universal binary, only one
+  /// object file from it will be returned).
+  ErrorOr<ObjectFile *> getOrCreateObject(const std::string &Path,
+                                          const std::string &ArchName);
 
   std::map<std::string, ErrorOr<std::unique_ptr<SymbolizableModule>>> Modules;
-  std::map<std::pair<MachOUniversalBinary *, std::string>,
-           ErrorOr<ObjectFile *>> ObjectFileForArch;
+
+  /// \brief Contains cached results of getOrCreateObjectPair().
   std::map<std::pair<std::string, std::string>, ErrorOr<ObjectPair>>
       ObjectPairForPathArch;
+
+  /// \brief Contains parsed binary for each path, or parsing error.
+  std::map<std::string, ErrorOr<OwningBinary<Binary>>> BinaryForPath;
+
+  /// \brief Parsed object file for path/architecture pair, where "path" refers
+  /// to Mach-O universal binary.
+  std::map<std::pair<std::string, std::string>, ErrorOr<std::unique_ptr<ObjectFile>>>
+      ObjectForUBPathAndArch;
 
   Options Opts;
 };

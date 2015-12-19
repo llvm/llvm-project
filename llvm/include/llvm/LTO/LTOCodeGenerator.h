@@ -171,7 +171,7 @@ private:
 
   LLVMContext &Context;
   std::unique_ptr<Module> MergedModule;
-  std::unique_ptr<Linker> IRLinker;
+  std::unique_ptr<Linker> TheLinker;
   std::unique_ptr<TargetMachine> TargetMach;
   bool EmitDwarfDebugInfo = false;
   bool ScopeRestrictionsDone = false;

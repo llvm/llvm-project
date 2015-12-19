@@ -37,13 +37,13 @@ define i32 @main(i32 %argc, i8** nocapture readnone %argv) #0 !dbg !12 {
   %array = alloca [4 x i32], align 16
   tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !19, metadata !DIExpression()), !dbg !35
   tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !20, metadata !DIExpression()), !dbg !35
-  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression()), !dbg !36
+  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !36
   %1 = bitcast [4 x i32]* %array to i8*, !dbg !36
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast ([4 x i32]* @main.array to i8*), i64 16, i32 16, i1 false), !dbg !36
-  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression()), !dbg !36
+  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !36
   %2 = getelementptr inbounds [4 x i32], [4 x i32]* %array, i64 0, i64 0, !dbg !37
   call void @f(i32* %2), !dbg !37
-  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression()), !dbg !36
+  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !36
   %3 = load i32, i32* %2, align 16, !dbg !38, !tbaa !30
   ret i32 %3, !dbg !38
 }

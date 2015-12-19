@@ -1,9 +1,9 @@
 ; RUN: llc -march=arm64 -mcpu=cyclone < %s | FileCheck %s
 
 ; CHECK: foo
-; CHECK: ldr w[[REG:[0-9]+]], [x19, #264]
-; CHECK: str w[[REG]], [x19, #132]
-; CHECK: ldr w{{[0-9]+}}, [x19, #264]
+; CHECK: str w[[REG0:[0-9]+]], [x19, #264]
+; CHECK: mov w[[REG1:[0-9]+]], w[[REG0]]
+; CHECK: str w[[REG1]], [x19, #132]
 
 define i32 @foo(i32 %a) nounwind {
   %retval = alloca i32, align 4

@@ -1071,8 +1071,13 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   if (LdStHasDebugValue(DIVar, LI))
     return true;
 
-  Builder.insertDbgValueIntrinsic(LI->getOperand(0), 0, DIVar, DIExpr,
-                                  DDI->getDebugLoc(), LI);
+  // We are now tracking the loaded value instead of the address. In the
+  // future if multi-location support is added to the IR, it might be
+  // preferable to keep tracking both the loaded value and the original
+  // address in case the alloca can not be elided.
+  Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
+      LI, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
+  DbgValue->insertAfter(LI);
   return true;
 }
 
@@ -1114,9 +1119,13 @@ bool llvm::LowerDbgDeclare(Function &F) {
           // This is a call by-value or some other instruction that
           // takes a pointer to the variable. Insert a *value*
           // intrinsic that describes the alloca.
+          SmallVector<uint64_t, 1> NewDIExpr;
+          auto *DIExpr = DDI->getExpression();
+          NewDIExpr.push_back(dwarf::DW_OP_deref);
+          NewDIExpr.append(DIExpr->elements_begin(), DIExpr->elements_end());
           DIB.insertDbgValueIntrinsic(AI, 0, DDI->getVariable(),
-                                      DDI->getExpression(), DDI->getDebugLoc(),
-                                      CI);
+                                      DIB.createExpression(NewDIExpr),
+                                      DDI->getDebugLoc(), CI);
         }
       DDI->eraseFromParent();
     }

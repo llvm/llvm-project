@@ -323,28 +323,45 @@ SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3,
     AMDGPU::sub4, AMDGPU::sub5, AMDGPU::sub6, AMDGPU::sub7,
     AMDGPU::sub8, AMDGPU::sub9, AMDGPU::sub10, AMDGPU::sub11,
-    AMDGPU::sub12, AMDGPU::sub13, AMDGPU::sub14, AMDGPU::sub15, 0
+    AMDGPU::sub12, AMDGPU::sub13, AMDGPU::sub14, AMDGPU::sub15,
+  };
+
+  static const int16_t Sub0_15_64[] = {
+    AMDGPU::sub0_sub1, AMDGPU::sub2_sub3,
+    AMDGPU::sub4_sub5, AMDGPU::sub6_sub7,
+    AMDGPU::sub8_sub9, AMDGPU::sub10_sub11,
+    AMDGPU::sub12_sub13, AMDGPU::sub14_sub15,
   };
 
   static const int16_t Sub0_7[] = {
     AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3,
-    AMDGPU::sub4, AMDGPU::sub5, AMDGPU::sub6, AMDGPU::sub7, 0
+    AMDGPU::sub4, AMDGPU::sub5, AMDGPU::sub6, AMDGPU::sub7,
+  };
+
+  static const int16_t Sub0_7_64[] = {
+    AMDGPU::sub0_sub1, AMDGPU::sub2_sub3,
+    AMDGPU::sub4_sub5, AMDGPU::sub6_sub7,
   };
 
   static const int16_t Sub0_3[] = {
-    AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3, 0
+    AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3,
+  };
+
+  static const int16_t Sub0_3_64[] = {
+    AMDGPU::sub0_sub1, AMDGPU::sub2_sub3,
   };
 
   static const int16_t Sub0_2[] = {
-    AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, 0
+    AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2,
   };
 
   static const int16_t Sub0_1[] = {
-    AMDGPU::sub0, AMDGPU::sub1, 0
+    AMDGPU::sub0, AMDGPU::sub1,
   };
 
   unsigned Opcode;
-  const int16_t *SubIndices;
+  ArrayRef<int16_t> SubIndices;
+  bool Forward;
 
   if (AMDGPU::SReg_32RegClass.contains(DestReg)) {
     assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
@@ -375,18 +392,18 @@ SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   } else if (AMDGPU::SReg_128RegClass.contains(DestReg)) {
     assert(AMDGPU::SReg_128RegClass.contains(SrcReg));
-    Opcode = AMDGPU::S_MOV_B32;
-    SubIndices = Sub0_3;
+    Opcode = AMDGPU::S_MOV_B64;
+    SubIndices = Sub0_3_64;
 
   } else if (AMDGPU::SReg_256RegClass.contains(DestReg)) {
     assert(AMDGPU::SReg_256RegClass.contains(SrcReg));
-    Opcode = AMDGPU::S_MOV_B32;
-    SubIndices = Sub0_7;
+    Opcode = AMDGPU::S_MOV_B64;
+    SubIndices = Sub0_7_64;
 
   } else if (AMDGPU::SReg_512RegClass.contains(DestReg)) {
     assert(AMDGPU::SReg_512RegClass.contains(SrcReg));
-    Opcode = AMDGPU::S_MOV_B32;
-    SubIndices = Sub0_15;
+    Opcode = AMDGPU::S_MOV_B64;
+    SubIndices = Sub0_15_64;
 
   } else if (AMDGPU::VGPR_32RegClass.contains(DestReg)) {
     assert(AMDGPU::VGPR_32RegClass.contains(SrcReg) ||
@@ -428,13 +445,27 @@ SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     llvm_unreachable("Can't copy register!");
   }
 
-  while (unsigned SubIdx = *SubIndices++) {
+  if (RI.getHWRegIndex(DestReg) <= RI.getHWRegIndex(SrcReg))
+    Forward = true;
+  else
+    Forward = false;
+
+  for (unsigned Idx = 0; Idx < SubIndices.size(); ++Idx) {
+    unsigned SubIdx;
+    if (Forward)
+      SubIdx = SubIndices[Idx];
+    else
+      SubIdx = SubIndices[SubIndices.size() - Idx - 1];
+
     MachineInstrBuilder Builder = BuildMI(MBB, MI, DL,
       get(Opcode), RI.getSubReg(DestReg, SubIdx));
 
-    Builder.addReg(RI.getSubReg(SrcReg, SubIdx), getKillRegState(KillSrc));
+    Builder.addReg(RI.getSubReg(SrcReg, SubIdx));
 
-    if (*SubIndices)
+    if (Idx == SubIndices.size() - 1)
+      Builder.addReg(SrcReg, RegState::Kill | RegState::Implicit);
+
+    if (Idx == 0)
       Builder.addReg(DestReg, RegState::Define | RegState::Implicit);
   }
 }
@@ -1433,7 +1464,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr *MI,
      return false;
   }
 
-  // Make sure the register classes are correct
+  // Make sure the register classes are correct.
   for (int i = 0, e = Desc.getNumOperands(); i != e; ++i) {
     if (MI->getOperand(i).isFPImm()) {
       ErrInfo = "FPImm Machine Operands are not supported. ISel should bitcast "

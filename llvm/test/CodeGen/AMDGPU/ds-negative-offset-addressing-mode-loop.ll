@@ -66,5 +66,5 @@ for.end:                                          ; preds = %for.body
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { noduplicate nounwind }
+attributes #1 = { convergent nounwind }
 attributes #2 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

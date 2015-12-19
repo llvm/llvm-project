@@ -3,13 +3,22 @@
 ; RUN: llvm-as -function-summary %p/Inputs/thinlto_funcimport_debug.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
-; Confirm that we link the metadata for the imported module.
+; If we import func1 and not func2 we should only link DISubprogram for func1
 ; RUN: llvm-link %t2.bc -functionindex=%t3.thinlto.bc -import=func1:%t.bc -S | FileCheck %s
 
 ; CHECK: declare i32 @func2
 ; CHECK: define available_externally i32 @func1
+
+; Extract out the list of subprograms from each compile unit and ensure
+; that neither contains null.
+; CHECK: !{{[0-9]+}} = distinct !DICompileUnit({{.*}} subprograms: ![[SPs1:[0-9]+]]
+; CHECK-NOT: ![[SPs1]] = !{{{.*}}null{{.*}}}
+; CHECK: !{{[0-9]+}} = distinct !DICompileUnit({{.*}} subprograms: ![[SPs2:[0-9]+]]
+; CHECK-NOT: ![[SPs2]] = !{{{.*}}null{{.*}}}
+
 ; CHECK: distinct !DISubprogram(name: "func1"
-; CHECK: distinct !DISubprogram(name: "func2"
+; CHECK-NOT: distinct !DISubprogram(name: "func2"
+
 
 ; ModuleID = 'dbg.o'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
