@@ -308,7 +308,7 @@ template <typename T> struct B { struct NameFromBase { T m; }; }; // expected-no
 template <typename T> struct C : A<T>, B<T> {
   NameFromBase m; // expected-error {{member 'NameFromBase' found in multiple base classes of different types}} expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
 };
-static_assert(sizeof(C<int>) == 4, ""); // expected-note {{in instantiation of template class 'two_types_in_base::C<int>' requested here}}
+static_assert(sizeof(C<int>) != 0, ""); // expected-note {{in instantiation of template class 'two_types_in_base::C<int>' requested here}}
 }
 
 namespace type_and_decl_in_base {

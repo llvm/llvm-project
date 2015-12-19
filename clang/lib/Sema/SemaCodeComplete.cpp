@@ -4052,7 +4052,7 @@ void Sema::CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args) {
       // If expression's type is CXXRecordDecl, it may overload the function
       // call operator, so we check if it does and add them as candidates.
       // A complete type is needed to lookup for member function call operators.
-      if (!RequireCompleteType(Loc, NakedFn->getType(), 0)) {
+      if (isCompleteType(Loc, NakedFn->getType())) {
         DeclarationName OpName = Context.DeclarationNames
                                  .getCXXOperatorName(OO_Call);
         LookupResult R(*this, OpName, Loc, LookupOrdinaryName);
@@ -4094,7 +4094,7 @@ void Sema::CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
     return;
 
   // A complete type is needed to lookup for constructors.
-  if (RequireCompleteType(Loc, Type, 0))
+  if (!isCompleteType(Loc, Type))
     return;
 
   CXXRecordDecl *RD = Type->getAsCXXRecordDecl();

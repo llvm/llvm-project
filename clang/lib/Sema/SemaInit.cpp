@@ -3328,7 +3328,7 @@ static bool TryInitializerListConstruction(Sema &S,
   if (!S.isStdInitializerList(DestType, &E))
     return false;
 
-  if (S.RequireCompleteType(List->getExprLoc(), E, 0)) {
+  if (!S.isCompleteType(List->getExprLoc(), E)) {
     Sequence.setIncompleteTypeFailure(E);
     return true;
   }
@@ -3438,7 +3438,7 @@ static void TryConstructorInitialization(Sema &S,
          "IsListInit must come with a single initializer list argument.");
 
   // The type we're constructing needs to be complete.
-  if (S.RequireCompleteType(Kind.getLocation(), DestType, 0)) {
+  if (!S.isCompleteType(Kind.getLocation(), DestType)) {
     Sequence.setIncompleteTypeFailure(DestType);
     return;
   }
@@ -3679,7 +3679,7 @@ static void TryListInitialization(Sema &S,
   }
 
   if (DestType->isRecordType() &&
-      S.RequireCompleteType(InitList->getLocStart(), DestType, 0)) {
+      !S.isCompleteType(InitList->getLocStart(), DestType)) {
     Sequence.setIncompleteTypeFailure(DestType);
     return;
   }
@@ -3699,7 +3699,7 @@ static void TryListInitialization(Sema &S,
     if (DestType->isRecordType()) {
       QualType InitType = InitList->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, DestType) ||
-          S.IsDerivedFrom(InitType, DestType)) {
+          S.IsDerivedFrom(InitList->getLocStart(), InitType, DestType)) {
         Expr *InitAsExpr = InitList->getInit(0);
         TryConstructorInitialization(S, Entity, Kind, InitAsExpr, DestType,
                                      Sequence, /*InitListSyntax*/ false,
@@ -3841,7 +3841,7 @@ static OverloadingResult TryRefInitWithConversionFunction(Sema &S,
 
   const RecordType *T1RecordType = nullptr;
   if (AllowRValues && (T1RecordType = T1->getAs<RecordType>()) &&
-      !S.RequireCompleteType(Kind.getLocation(), T1, 0)) {
+      S.isCompleteType(Kind.getLocation(), T1)) {
     // The type we're converting to is a class type. Enumerate its constructors
     // to see if there is a suitable conversion.
     CXXRecordDecl *T1RecordDecl = cast<CXXRecordDecl>(T1RecordType->getDecl());
@@ -3877,7 +3877,7 @@ static OverloadingResult TryRefInitWithConversionFunction(Sema &S,
 
   const RecordType *T2RecordType = nullptr;
   if ((T2RecordType = T2->getAs<RecordType>()) &&
-      !S.RequireCompleteType(Kind.getLocation(), T2, 0)) {
+      S.isCompleteType(Kind.getLocation(), T2)) {
     // The type we're converting from is a class type, enumerate its conversion
     // functions.
     CXXRecordDecl *T2RecordDecl = cast<CXXRecordDecl>(T2RecordType->getDecl());
@@ -4462,7 +4462,7 @@ static void TryUserDefinedConversion(Sema &S,
       = cast<CXXRecordDecl>(DestRecordType->getDecl());
 
     // Try to complete the type we're converting to.
-    if (!S.RequireCompleteType(Kind.getLocation(), DestType, 0)) {
+    if (S.isCompleteType(Kind.getLocation(), DestType)) {
       DeclContext::lookup_result R = S.LookupConstructors(DestRecordDecl);
       // The container holding the constructors can under certain conditions
       // be changed while iterating. To be safe we copy the lookup results
@@ -4508,7 +4508,7 @@ static void TryUserDefinedConversion(Sema &S,
 
     // We can only enumerate the conversion functions for a complete type; if
     // the type isn't complete, simply skip this step.
-    if (!S.RequireCompleteType(DeclLoc, SourceType, 0)) {
+    if (S.isCompleteType(DeclLoc, SourceType)) {
       CXXRecordDecl *SourceRecordDecl
         = cast<CXXRecordDecl>(SourceRecordType->getDecl());
 
@@ -5007,7 +5007,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
     if (Kind.getKind() == InitializationKind::IK_Direct ||
         (Kind.getKind() == InitializationKind::IK_Copy &&
          (Context.hasSameUnqualifiedType(SourceType, DestType) ||
-          S.IsDerivedFrom(SourceType, DestType))))
+          S.IsDerivedFrom(Initializer->getLocStart(), SourceType, DestType))))
       TryConstructorInitialization(S, Entity, Kind, Args,
                                    DestType, *this);
     //     - Otherwise (i.e., for the remaining copy-initialization cases),
@@ -5036,7 +5036,8 @@ void InitializationSequence::InitializeFrom(Sema &S,
     bool NeedAtomicConversion = false;
     if (const AtomicType *Atomic = DestType->getAs<AtomicType>()) {
       if (Context.hasSameUnqualifiedType(SourceType, Atomic->getValueType()) ||
-          S.IsDerivedFrom(SourceType, Atomic->getValueType())) {
+          S.IsDerivedFrom(Initializer->getLocStart(), SourceType,
+                          Atomic->getValueType())) {
         DestType = Atomic->getValueType();
         NeedAtomicConversion = true;
       }
@@ -6378,7 +6379,7 @@ InitializationSequence::Perform(Sema &S,
         CastKind = CK_ConstructorConversion;
         QualType Class = S.Context.getTypeDeclType(Constructor->getParent());
         if (S.Context.hasSameUnqualifiedType(SourceType, Class) ||
-            S.IsDerivedFrom(SourceType, Class))
+            S.IsDerivedFrom(Loc, SourceType, Class))
           IsCopy = true;
 
         CreatedObject = true;

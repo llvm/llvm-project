@@ -89,7 +89,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 
 
 static ImplicitConversionSequence::CompareKind
-CompareStandardConversionSequences(Sema &S,
+CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
                                    const StandardConversionSequence& SCS1,
                                    const StandardConversionSequence& SCS2);
 
@@ -99,7 +99,7 @@ CompareQualificationConversions(Sema &S,
                                 const StandardConversionSequence& SCS2);
 
 static ImplicitConversionSequence::CompareKind
-CompareDerivedToBaseConversions(Sema &S,
+CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2);
 
@@ -1164,7 +1164,8 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       QualType ToCanon
         = S.Context.getCanonicalType(ToType).getUnqualifiedType();
       if (Constructor->isCopyConstructor() &&
-          (FromCanon == ToCanon || S.IsDerivedFrom(FromCanon, ToCanon))) {
+          (FromCanon == ToCanon ||
+           S.IsDerivedFrom(From->getLocStart(), FromCanon, ToCanon))) {
         // Turn this into a "standard" conversion sequence, so that it
         // gets ranked with standard conversion sequences.
         ICS.setStandard();
@@ -1254,7 +1255,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
   QualType FromType = From->getType();
   if (ToType->getAs<RecordType>() && FromType->getAs<RecordType>() &&
       (S.Context.hasSameUnqualifiedType(FromType, ToType) ||
-       S.IsDerivedFrom(FromType, ToType))) {
+       S.IsDerivedFrom(From->getLocStart(), FromType, ToType))) {
     ICS.setStandard();
     ICS.Standard.setAsIdentityConversion();
     ICS.Standard.setFromType(FromType);
@@ -1821,7 +1822,7 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
 
     // We have already pre-calculated the promotion type, so this is trivial.
     if (ToType->isIntegerType() &&
-        !RequireCompleteType(From->getLocStart(), FromType, 0))
+        isCompleteType(From->getLocStart(), FromType))
       return Context.hasSameUnqualifiedType(
           ToType, FromEnumType->getDecl()->getPromotionType());
   }
@@ -2152,8 +2153,7 @@ bool Sema::IsPointerConversion(Expr *From, QualType FromType, QualType ToType,
   if (getLangOpts().CPlusPlus &&
       FromPointeeType->isRecordType() && ToPointeeType->isRecordType() &&
       !Context.hasSameUnqualifiedType(FromPointeeType, ToPointeeType) &&
-      !RequireCompleteType(From->getLocStart(), FromPointeeType, 0) &&
-      IsDerivedFrom(FromPointeeType, ToPointeeType)) {
+      IsDerivedFrom(From->getLocStart(), FromPointeeType, ToPointeeType)) {
     ConvertedType = BuildSimilarlyQualifiedPointerType(FromTypePtr,
                                                        ToPointeeType,
                                                        ToType, Context);
@@ -2759,8 +2759,7 @@ bool Sema::IsMemberPointerConversion(Expr *From, QualType FromType,
   QualType ToClass(ToTypePtr->getClass(), 0);
 
   if (!Context.hasSameUnqualifiedType(FromClass, ToClass) &&
-      !RequireCompleteType(From->getLocStart(), ToClass, 0) &&
-      IsDerivedFrom(ToClass, FromClass)) {
+      IsDerivedFrom(From->getLocStart(), ToClass, FromClass)) {
     ConvertedType = Context.getMemberPointerType(FromTypePtr->getPointeeType(),
                                                  ToClass.getTypePtr());
     return true;
@@ -2803,7 +2802,8 @@ bool Sema::CheckMemberPointerConversion(Expr *From, QualType ToType,
 
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/true);
-  bool DerivationOkay = IsDerivedFrom(ToClass, FromClass, Paths);
+  bool DerivationOkay =
+      IsDerivedFrom(From->getLocStart(), ToClass, FromClass, Paths);
   assert(DerivationOkay &&
          "Should not have been called if derivation isn't OK.");
   (void)DerivationOkay;
@@ -3082,14 +3082,10 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     //   the parentheses of the initializer.
     if (S.Context.hasSameUnqualifiedType(ToType, From->getType()) ||
         (From->getType()->getAs<RecordType>() &&
-         S.IsDerivedFrom(From->getType(), ToType)))
+         S.IsDerivedFrom(From->getLocStart(), From->getType(), ToType)))
       ConstructorsOnly = true;
 
-    S.RequireCompleteType(From->getExprLoc(), ToType, 0);
-    // RequireCompleteType may have returned true due to some invalid decl
-    // during template instantiation, but ToType may be complete enough now
-    // to try to recover.
-    if (ToType->isIncompleteType()) {
+    if (!S.isCompleteType(From->getExprLoc(), ToType)) {
       // We're not going to find any constructors.
     } else if (CXXRecordDecl *ToRecordDecl
                  = dyn_cast<CXXRecordDecl>(ToRecordType->getDecl())) {
@@ -3163,7 +3159,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 
   // Enumerate conversion functions, if we're allowed to.
   if (ConstructorsOnly || isa<InitListExpr>(From)) {
-  } else if (S.RequireCompleteType(From->getLocStart(), From->getType(), 0)) {
+  } else if (!S.isCompleteType(From->getLocStart(), From->getType())) {
     // No conversion functions from incomplete types.
   } else if (const RecordType *FromRecordType
                                    = From->getType()->getAs<RecordType>()) {
@@ -3342,7 +3338,7 @@ static bool hasDeprecatedStringLiteralToCharPtrConversion(
 /// conversion sequences to determine whether one is better than the
 /// other or if they are indistinguishable (C++ 13.3.3.2).
 static ImplicitConversionSequence::CompareKind
-CompareImplicitConversionSequences(Sema &S,
+CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
                                    const ImplicitConversionSequence& ICS1,
                                    const ImplicitConversionSequence& ICS2)
 {
@@ -3422,7 +3418,7 @@ CompareImplicitConversionSequences(Sema &S,
   if (ICS1.isStandard())
     // Standard conversion sequence S1 is a better conversion sequence than
     // standard conversion sequence S2 if [...]
-    Result = CompareStandardConversionSequences(S,
+    Result = CompareStandardConversionSequences(S, Loc,
                                                 ICS1.Standard, ICS2.Standard);
   else if (ICS1.isUserDefined()) {
     // User-defined conversion sequence U1 is a better conversion
@@ -3433,7 +3429,7 @@ CompareImplicitConversionSequences(Sema &S,
     // U2 (C++ 13.3.3.2p3).
     if (ICS1.UserDefined.ConversionFunction ==
           ICS2.UserDefined.ConversionFunction)
-      Result = CompareStandardConversionSequences(S,
+      Result = CompareStandardConversionSequences(S, Loc,
                                                   ICS1.UserDefined.After,
                                                   ICS2.UserDefined.After);
     else
@@ -3531,7 +3527,7 @@ isBetterReferenceBindingKind(const StandardConversionSequence &SCS1,
 /// conversion sequences to determine whether one is better than the
 /// other or if they are indistinguishable (C++ 13.3.3.2p3).
 static ImplicitConversionSequence::CompareKind
-CompareStandardConversionSequences(Sema &S,
+CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
                                    const StandardConversionSequence& SCS1,
                                    const StandardConversionSequence& SCS2)
 {
@@ -3587,7 +3583,7 @@ CompareStandardConversionSequences(Sema &S,
     // Neither conversion sequence converts to a void pointer; compare
     // their derived-to-base conversions.
     if (ImplicitConversionSequence::CompareKind DerivedCK
-          = CompareDerivedToBaseConversions(S, SCS1, SCS2))
+          = CompareDerivedToBaseConversions(S, Loc, SCS1, SCS2))
       return DerivedCK;
   } else if (SCS1ConvertsToVoid && SCS2ConvertsToVoid &&
              !S.Context.hasSameType(SCS1.getFromType(), SCS2.getFromType())) {
@@ -3607,9 +3603,9 @@ CompareStandardConversionSequences(Sema &S,
     QualType FromPointee1 = FromType1->getPointeeType().getUnqualifiedType();
     QualType FromPointee2 = FromType2->getPointeeType().getUnqualifiedType();
 
-    if (S.IsDerivedFrom(FromPointee2, FromPointee1))
+    if (S.IsDerivedFrom(Loc, FromPointee2, FromPointee1))
       return ImplicitConversionSequence::Better;
-    else if (S.IsDerivedFrom(FromPointee1, FromPointee2))
+    else if (S.IsDerivedFrom(Loc, FromPointee1, FromPointee2))
       return ImplicitConversionSequence::Worse;
 
     // Objective-C++: If one interface is more specific than the
@@ -3817,7 +3813,7 @@ CompareQualificationConversions(Sema &S,
 /// [over.ics.rank]p4b3).  As part of these checks, we also look at
 /// conversions between Objective-C interface types.
 static ImplicitConversionSequence::CompareKind
-CompareDerivedToBaseConversions(Sema &S,
+CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2) {
   QualType FromType1 = SCS1.getFromType();
@@ -3860,17 +3856,17 @@ CompareDerivedToBaseConversions(Sema &S,
 
     //   -- conversion of C* to B* is better than conversion of C* to A*,
     if (FromPointee1 == FromPointee2 && ToPointee1 != ToPointee2) {
-      if (S.IsDerivedFrom(ToPointee1, ToPointee2))
+      if (S.IsDerivedFrom(Loc, ToPointee1, ToPointee2))
         return ImplicitConversionSequence::Better;
-      else if (S.IsDerivedFrom(ToPointee2, ToPointee1))
+      else if (S.IsDerivedFrom(Loc, ToPointee2, ToPointee1))
         return ImplicitConversionSequence::Worse;
     }
 
     //   -- conversion of B* to A* is better than conversion of C* to A*,
     if (FromPointee1 != FromPointee2 && ToPointee1 == ToPointee2) {
-      if (S.IsDerivedFrom(FromPointee2, FromPointee1))
+      if (S.IsDerivedFrom(Loc, FromPointee2, FromPointee1))
         return ImplicitConversionSequence::Better;
-      else if (S.IsDerivedFrom(FromPointee1, FromPointee2))
+      else if (S.IsDerivedFrom(Loc, FromPointee1, FromPointee2))
         return ImplicitConversionSequence::Worse;
     }
   } else if (SCS1.Second == ICK_Pointer_Conversion &&
@@ -3967,16 +3963,16 @@ CompareDerivedToBaseConversions(Sema &S,
     QualType ToPointee2 = QualType(ToPointeeType2, 0).getUnqualifiedType();
     // conversion of A::* to B::* is better than conversion of A::* to C::*,
     if (FromPointee1 == FromPointee2 && ToPointee1 != ToPointee2) {
-      if (S.IsDerivedFrom(ToPointee1, ToPointee2))
+      if (S.IsDerivedFrom(Loc, ToPointee1, ToPointee2))
         return ImplicitConversionSequence::Worse;
-      else if (S.IsDerivedFrom(ToPointee2, ToPointee1))
+      else if (S.IsDerivedFrom(Loc, ToPointee2, ToPointee1))
         return ImplicitConversionSequence::Better;
     }
     // conversion of B::* to C::* is better than conversion of A::* to C::*
     if (ToPointee1 == ToPointee2 && FromPointee1 != FromPointee2) {
-      if (S.IsDerivedFrom(FromPointee1, FromPointee2))
+      if (S.IsDerivedFrom(Loc, FromPointee1, FromPointee2))
         return ImplicitConversionSequence::Better;
-      else if (S.IsDerivedFrom(FromPointee2, FromPointee1))
+      else if (S.IsDerivedFrom(Loc, FromPointee2, FromPointee1))
         return ImplicitConversionSequence::Worse;
     }
   }
@@ -3988,9 +3984,9 @@ CompareDerivedToBaseConversions(Sema &S,
     //      reference of type A&,
     if (S.Context.hasSameUnqualifiedType(FromType1, FromType2) &&
         !S.Context.hasSameUnqualifiedType(ToType1, ToType2)) {
-      if (S.IsDerivedFrom(ToType1, ToType2))
+      if (S.IsDerivedFrom(Loc, ToType1, ToType2))
         return ImplicitConversionSequence::Better;
-      else if (S.IsDerivedFrom(ToType2, ToType1))
+      else if (S.IsDerivedFrom(Loc, ToType2, ToType1))
         return ImplicitConversionSequence::Worse;
     }
 
@@ -4000,9 +3996,9 @@ CompareDerivedToBaseConversions(Sema &S,
     //      reference of type A&,
     if (!S.Context.hasSameUnqualifiedType(FromType1, FromType2) &&
         S.Context.hasSameUnqualifiedType(ToType1, ToType2)) {
-      if (S.IsDerivedFrom(FromType2, FromType1))
+      if (S.IsDerivedFrom(Loc, FromType2, FromType1))
         return ImplicitConversionSequence::Better;
-      else if (S.IsDerivedFrom(FromType1, FromType2))
+      else if (S.IsDerivedFrom(Loc, FromType1, FromType2))
         return ImplicitConversionSequence::Worse;
     }
   }
@@ -4051,9 +4047,9 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   ObjCLifetimeConversion = false;
   if (UnqualT1 == UnqualT2) {
     // Nothing to do.
-  } else if (!RequireCompleteType(Loc, OrigT2, 0) &&
+  } else if (isCompleteType(Loc, OrigT2) &&
              isTypeValid(UnqualT1) && isTypeValid(UnqualT2) &&
-             IsDerivedFrom(UnqualT2, UnqualT1))
+             IsDerivedFrom(Loc, UnqualT2, UnqualT1))
     DerivedToBase = true;
   else if (UnqualT1->isObjCObjectOrInterfaceType() &&
            UnqualT2->isObjCObjectOrInterfaceType() &&
@@ -4318,7 +4314,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     //          conversion functions (13.3.1.6) and choosing the best
     //          one through overload resolution (13.3)),
     if (!SuppressUserConversions && T2->isRecordType() &&
-        !S.RequireCompleteType(DeclLoc, T2, 0) &&
+        S.isCompleteType(DeclLoc, T2) &&
         RefRelationship == Sema::Ref_Incompatible) {
       if (FindConversionForRefInit(S, ICS, DeclType, DeclLoc,
                                    Init, T2, /*AllowRvalues=*/false,
@@ -4381,7 +4377,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //          in the second case (or, in either case, to an appropriate base
   //          class subobject).
   if (!SuppressUserConversions && RefRelationship == Sema::Ref_Incompatible &&
-      T2->isRecordType() && !S.RequireCompleteType(DeclLoc, T2, 0) &&
+      T2->isRecordType() && S.isCompleteType(DeclLoc, T2) &&
       FindConversionForRefInit(S, ICS, DeclType, DeclLoc,
                                Init, T2, /*AllowRvalues=*/true,
                                AllowExplicit)) {
@@ -4519,7 +4515,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
 
   // We need a complete type for what follows. Incomplete types can never be
   // initialized from init lists.
-  if (S.RequireCompleteType(From->getLocStart(), ToType, 0))
+  if (!S.isCompleteType(From->getLocStart(), ToType))
     return Result;
 
   // Per DR1467:
@@ -4536,7 +4532,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     if (ToType->isRecordType()) {
       QualType InitType = From->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, ToType) ||
-          S.IsDerivedFrom(InitType, ToType))
+          S.IsDerivedFrom(From->getLocStart(), InitType, ToType))
         return TryCopyInitialization(S, From->getInit(0), ToType,
                                      SuppressUserConversions,
                                      InOverloadResolution,
@@ -4593,7 +4589,8 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       }
       // Otherwise, look for the worst conversion.
       if (Result.isBad() ||
-          CompareImplicitConversionSequences(S, ICS, Result) ==
+          CompareImplicitConversionSequences(S, From->getLocStart(), ICS,
+                                             Result) ==
               ImplicitConversionSequence::Worse)
         Result = ICS;
     }
@@ -4800,7 +4797,7 @@ static bool TryCopyInitialization(const CanQualType FromQTy,
 /// parameter of the given member function (@c Method) from the
 /// expression @p From.
 static ImplicitConversionSequence
-TryObjectArgumentInitialization(Sema &S, QualType FromType,
+TryObjectArgumentInitialization(Sema &S, SourceLocation Loc, QualType FromType,
                                 Expr::Classification FromClassification,
                                 CXXMethodDecl *Method,
                                 CXXRecordDecl *ActingContext) {
@@ -4860,7 +4857,7 @@ TryObjectArgumentInitialization(Sema &S, QualType FromType,
   ImplicitConversionKind SecondKind;
   if (ClassTypeCanon == FromTypeCanon.getLocalUnqualifiedType()) {
     SecondKind = ICK_Identity;
-  } else if (S.IsDerivedFrom(FromType, ClassType))
+  } else if (S.IsDerivedFrom(Loc, FromType, ClassType))
     SecondKind = ICK_Derived_To_Base;
   else {
     ICS.setBad(BadConversionSequence::unrelated_class,
@@ -4935,7 +4932,8 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
   // Note that we always use the true parent context when performing
   // the actual argument initialization.
   ImplicitConversionSequence ICS = TryObjectArgumentInitialization(
-      *this, From->getType(), FromClassification, Method, Method->getParent());
+      *this, From->getLocStart(), From->getType(), FromClassification, Method,
+      Method->getParent());
   if (ICS.isBad()) {
     if (ICS.Bad.Kind == BadConversionSequence::bad_qualifiers) {
       Qualifiers FromQs = FromRecordType.getQualifiers();
@@ -5451,14 +5449,15 @@ ExprResult Sema::PerformContextualImplicitConversion(
     Expr *From;
 
     TypeDiagnoserPartialDiag(ContextualImplicitConverter &Converter, Expr *From)
-        : TypeDiagnoser(Converter.Suppress), Converter(Converter), From(From) {}
+        : Converter(Converter), From(From) {}
 
     void diagnose(Sema &S, SourceLocation Loc, QualType T) override {
       Converter.diagnoseIncomplete(S, Loc, T) << From->getSourceRange();
     }
   } IncompleteDiagnoser(Converter, From);
 
-  if (RequireCompleteType(Loc, T, IncompleteDiagnoser))
+  if (Converter.Suppress ? !isCompleteType(Loc, T)
+                         : RequireCompleteType(Loc, T, IncompleteDiagnoser))
     return From;
 
   // Look for a conversion to an integral or enumeration type.
@@ -5716,10 +5715,10 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
     //   A member function template is never instantiated to perform the copy
     //   of a class object to an object of its class type.
     QualType ClassType = Context.getTypeDeclType(Constructor->getParent());
-    if (Args.size() == 1 &&
-        Constructor->isSpecializationCopyingObject() &&
+    if (Args.size() == 1 && Constructor->isSpecializationCopyingObject() &&
         (Context.hasSameUnqualifiedType(ClassType, Args[0]->getType()) ||
-         IsDerivedFrom(Args[0]->getType(), ClassType))) {
+         IsDerivedFrom(Args[0]->getLocStart(), Args[0]->getType(),
+                       ClassType))) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_illegal_constructor;
       return;
@@ -6136,9 +6135,9 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
   else {
     // Determine the implicit conversion sequence for the object
     // parameter.
-    Candidate.Conversions[0]
-      = TryObjectArgumentInitialization(*this, ObjectType, ObjectClassification,
-                                        Method, ActingContext);
+    Candidate.Conversions[0] = TryObjectArgumentInitialization(
+        *this, CandidateSet.getLocation(), ObjectType, ObjectClassification,
+        Method, ActingContext);
     if (Candidate.Conversions[0].isBad()) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_bad_conversion;
@@ -6395,10 +6394,9 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
   CXXRecordDecl *ConversionContext
     = cast<CXXRecordDecl>(ImplicitParamType->getAs<RecordType>()->getDecl());
 
-  Candidate.Conversions[0]
-    = TryObjectArgumentInitialization(*this, From->getType(),
-                                      From->Classify(Context),
-                                      Conversion, ConversionContext);
+  Candidate.Conversions[0] = TryObjectArgumentInitialization(
+      *this, CandidateSet.getLocation(), From->getType(),
+      From->Classify(Context), Conversion, ConversionContext);
 
   if (Candidate.Conversions[0].isBad()) {
     Candidate.Viable = false;
@@ -6412,7 +6410,8 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
   QualType FromCanon
     = Context.getCanonicalType(From->getType().getUnqualifiedType());
   QualType ToCanon = Context.getCanonicalType(ToType).getUnqualifiedType();
-  if (FromCanon == ToCanon || IsDerivedFrom(FromCanon, ToCanon)) {
+  if (FromCanon == ToCanon ||
+      IsDerivedFrom(CandidateSet.getLocation(), FromCanon, ToCanon)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_trivial_conversion;
     return;
@@ -6434,7 +6433,7 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
                                 &ConversionRef, VK_RValue);
 
   QualType ConversionType = Conversion->getConversionType();
-  if (RequireCompleteType(From->getLocStart(), ConversionType, 0)) {
+  if (!isCompleteType(From->getLocStart(), ConversionType)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_bad_final_conversion;
     return;
@@ -6572,10 +6571,9 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
 
   // Determine the implicit conversion sequence for the implicit
   // object parameter.
-  ImplicitConversionSequence ObjectInit
-    = TryObjectArgumentInitialization(*this, Object->getType(),
-                                      Object->Classify(Context),
-                                      Conversion, ActingContext);
+  ImplicitConversionSequence ObjectInit = TryObjectArgumentInitialization(
+      *this, CandidateSet.getLocation(), Object->getType(),
+      Object->Classify(Context), Conversion, ActingContext);
   if (ObjectInit.isBad()) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_bad_conversion;
@@ -6684,7 +6682,8 @@ void Sema::AddMemberOperatorCandidates(OverloadedOperatorKind Op,
   //        the set of member candidates is empty.
   if (const RecordType *T1Rec = T1->getAs<RecordType>()) {
     // Complete the type if it can be completed.
-    RequireCompleteType(OpLoc, T1, 0);
+    if (!isCompleteType(OpLoc, T1) && !T1Rec->isBeingDefined())
+      return;
     // If the type is neither complete nor being defined, bail out now.
     if (!T1Rec->getDecl()->getDefinition())
       return;
@@ -7033,7 +7032,7 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     HasNullPtrType = true;
   } else if (AllowUserConversions && TyRec) {
     // No conversion functions in incomplete types.
-    if (SemaRef.RequireCompleteType(Loc, Ty, 0))
+    if (!SemaRef.isCompleteType(Loc, Ty))
       return;
 
     CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
@@ -8122,7 +8121,7 @@ public:
         const MemberPointerType *mptr = cast<MemberPointerType>(*MemPtr);
         QualType C2 = QualType(mptr->getClass(), 0);
         C2 = C2.getUnqualifiedType();
-        if (C1 != C2 && !S.IsDerivedFrom(C1, C2))
+        if (C1 != C2 && !S.IsDerivedFrom(CandidateSet.getLocation(), C1, C2))
           break;
         QualType ParamTypes[2] = { *Ptr, *MemPtr };
         // build CV12 T&
@@ -8508,7 +8507,7 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
   assert(Cand2.NumConversions == NumArgs && "Overload candidate mismatch");
   bool HasBetterConversion = false;
   for (unsigned ArgIdx = StartArg; ArgIdx < NumArgs; ++ArgIdx) {
-    switch (CompareImplicitConversionSequences(S,
+    switch (CompareImplicitConversionSequences(S, Loc,
                                                Cand1.Conversions[ArgIdx],
                                                Cand2.Conversions[ArgIdx])) {
     case ImplicitConversionSequence::Better:
@@ -8547,7 +8546,7 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
     ImplicitConversionSequence::CompareKind Result =
         compareConversionFunctions(S, Cand1.Function, Cand2.Function);
     if (Result == ImplicitConversionSequence::Indistinguishable)
-      Result = CompareStandardConversionSequences(S,
+      Result = CompareStandardConversionSequences(S, Loc,
                                                   Cand1.FinalConversion,
                                                   Cand2.FinalConversion);
 
@@ -9083,7 +9082,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
                                                FromPtrTy->getPointeeType()) &&
           !FromPtrTy->getPointeeType()->isIncompleteType() &&
           !ToPtrTy->getPointeeType()->isIncompleteType() &&
-          S.IsDerivedFrom(ToPtrTy->getPointeeType(),
+          S.IsDerivedFrom(SourceLocation(), ToPtrTy->getPointeeType(),
                           FromPtrTy->getPointeeType()))
         BaseToDerivedConversion = 1;
     }
@@ -9101,7 +9100,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     if (ToRefTy->getPointeeType().isAtLeastAsQualifiedAs(FromTy) &&
         !FromTy->isIncompleteType() &&
         !ToRefTy->getPointeeType()->isIncompleteType() &&
-        S.IsDerivedFrom(ToRefTy->getPointeeType(), FromTy)) {
+        S.IsDerivedFrom(SourceLocation(), ToRefTy->getPointeeType(), FromTy)) {
       BaseToDerivedConversion = 3;
     } else if (ToTy->isLValueReferenceType() && !FromExpr->isLValue() &&
                ToTy.getNonReferenceType().getCanonicalType() ==
@@ -9708,9 +9707,10 @@ static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
 namespace {
 struct CompareOverloadCandidatesForDisplay {
   Sema &S;
+  SourceLocation Loc;
   size_t NumArgs;
 
-  CompareOverloadCandidatesForDisplay(Sema &S, size_t nArgs)
+  CompareOverloadCandidatesForDisplay(Sema &S, SourceLocation Loc, size_t nArgs)
       : S(S), NumArgs(nArgs) {}
 
   bool operator()(const OverloadCandidate *L,
@@ -9781,7 +9781,7 @@ struct CompareOverloadCandidatesForDisplay {
         int leftBetter = 0;
         unsigned I = (L->IgnoreObjectArgument || R->IgnoreObjectArgument);
         for (unsigned E = L->NumConversions; I != E; ++I) {
-          switch (CompareImplicitConversionSequences(S,
+          switch (CompareImplicitConversionSequences(S, Loc,
                                                      L->Conversions[I],
                                                      R->Conversions[I])) {
           case ImplicitConversionSequence::Better:
@@ -9936,7 +9936,7 @@ void OverloadCandidateSet::NoteCandidates(Sema &S,
   }
 
   std::sort(Cands.begin(), Cands.end(),
-            CompareOverloadCandidatesForDisplay(S, Args.size()));
+            CompareOverloadCandidatesForDisplay(S, OpLoc, Args.size()));
 
   bool ReportedAmbiguousConversions = false;
 

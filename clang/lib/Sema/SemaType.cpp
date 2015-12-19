@@ -1998,7 +1998,7 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>())
         if (!MPTy->getClass()->isDependentType())
-          RequireCompleteType(Loc, T, 0);
+          (void)isCompleteType(Loc, T);
 
   } else {
     // C99 6.7.5.2p1: If the element type is an incomplete or function type,
@@ -2126,12 +2126,9 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     if (T->isVariableArrayType()) {
       // Prohibit the use of non-POD types in VLAs.
       QualType BaseT = Context.getBaseElementType(T);
-      if (!T->isDependentType() &&
-          !RequireCompleteType(Loc, BaseT, 0) &&
-          !BaseT.isPODType(Context) &&
-          !BaseT->isObjCLifetimeType()) {
-        Diag(Loc, diag::err_vla_non_pod)
-          << BaseT;
+      if (!T->isDependentType() && isCompleteType(Loc, BaseT) &&
+          !BaseT.isPODType(Context) && !BaseT->isObjCLifetimeType()) {
+        Diag(Loc, diag::err_vla_non_pod) << BaseT;
         return QualType();
       }
       // Prohibit the use of VLAs during template argument deduction.
@@ -6379,6 +6376,50 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
   }
 }
 
+void Sema::completeExprArrayBound(Expr *E) {
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
+    if (VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (isTemplateInstantiation(Var->getTemplateSpecializationKind())) {
+        SourceLocation PointOfInstantiation = E->getExprLoc();
+
+        if (MemberSpecializationInfo *MSInfo =
+                Var->getMemberSpecializationInfo()) {
+          // If we don't already have a point of instantiation, this is it.
+          if (MSInfo->getPointOfInstantiation().isInvalid()) {
+            MSInfo->setPointOfInstantiation(PointOfInstantiation);
+
+            // This is a modification of an existing AST node. Notify
+            // listeners.
+            if (ASTMutationListener *L = getASTMutationListener())
+              L->StaticDataMemberInstantiated(Var);
+          }
+        } else {
+          VarTemplateSpecializationDecl *VarSpec =
+              cast<VarTemplateSpecializationDecl>(Var);
+          if (VarSpec->getPointOfInstantiation().isInvalid())
+            VarSpec->setPointOfInstantiation(PointOfInstantiation);
+        }
+
+        InstantiateVariableDefinition(PointOfInstantiation, Var);
+
+        // Update the type to the newly instantiated definition's type both
+        // here and within the expression.
+        if (VarDecl *Def = Var->getDefinition()) {
+          DRE->setDecl(Def);
+          QualType T = Def->getType();
+          DRE->setType(T);
+          // FIXME: Update the type on all intervening expressions.
+          E->setType(T);
+        }
+
+        // We still go on to try to complete the type independently, as it
+        // may also require instantiations or diagnostics if it remains
+        // incomplete.
+      }
+    }
+  }
+}
+
 /// \brief Ensure that the type of the given expression is complete.
 ///
 /// This routine checks whether the expression \p E has a complete type. If the
@@ -6393,87 +6434,26 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 ///
 /// \returns \c true if the type of \p E is incomplete and diagnosed, \c false
 /// otherwise.
-bool Sema::RequireCompleteExprType(Expr *E, TypeDiagnoser &Diagnoser){
+bool Sema::RequireCompleteExprType(Expr *E, TypeDiagnoser &Diagnoser) {
   QualType T = E->getType();
-
-  // Fast path the case where the type is already complete.
-  if (!T->isIncompleteType())
-    // FIXME: The definition might not be visible.
-    return false;
 
   // Incomplete array types may be completed by the initializer attached to
   // their definitions. For static data members of class templates and for
   // variable templates, we need to instantiate the definition to get this
   // initializer and complete the type.
   if (T->isIncompleteArrayType()) {
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
-      if (VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
-        if (isTemplateInstantiation(Var->getTemplateSpecializationKind())) {
-          SourceLocation PointOfInstantiation = E->getExprLoc();
-
-          if (MemberSpecializationInfo *MSInfo =
-                  Var->getMemberSpecializationInfo()) {
-            // If we don't already have a point of instantiation, this is it.
-            if (MSInfo->getPointOfInstantiation().isInvalid()) {
-              MSInfo->setPointOfInstantiation(PointOfInstantiation);
-
-              // This is a modification of an existing AST node. Notify
-              // listeners.
-              if (ASTMutationListener *L = getASTMutationListener())
-                L->StaticDataMemberInstantiated(Var);
-            }
-          } else {
-            VarTemplateSpecializationDecl *VarSpec =
-                cast<VarTemplateSpecializationDecl>(Var);
-            if (VarSpec->getPointOfInstantiation().isInvalid())
-              VarSpec->setPointOfInstantiation(PointOfInstantiation);
-          }
-
-          InstantiateVariableDefinition(PointOfInstantiation, Var);
-
-          // Update the type to the newly instantiated definition's type both
-          // here and within the expression.
-          if (VarDecl *Def = Var->getDefinition()) {
-            DRE->setDecl(Def);
-            T = Def->getType();
-            DRE->setType(T);
-            E->setType(T);
-          }
-
-          // We still go on to try to complete the type independently, as it
-          // may also require instantiations or diagnostics if it remains
-          // incomplete.
-        }
-      }
-    }
+    completeExprArrayBound(E);
+    T = E->getType();
   }
 
   // FIXME: Are there other cases which require instantiating something other
   // than the type to complete the type of an expression?
 
-  // Look through reference types and complete the referred type.
-  if (const ReferenceType *Ref = T->getAs<ReferenceType>())
-    T = Ref->getPointeeType();
-
   return RequireCompleteType(E->getExprLoc(), T, Diagnoser);
 }
 
-namespace {
-  struct TypeDiagnoserDiag : Sema::TypeDiagnoser {
-    unsigned DiagID;
-
-    TypeDiagnoserDiag(unsigned DiagID)
-      : Sema::TypeDiagnoser(DiagID == 0), DiagID(DiagID) {}
-
-    void diagnose(Sema &S, SourceLocation Loc, QualType T) override {
-      if (Suppressed) return;
-      S.Diag(Loc, DiagID) << T;
-    }
-  };
-}
-
 bool Sema::RequireCompleteExprType(Expr *E, unsigned DiagID) {
-  TypeDiagnoserDiag Diagnoser(DiagID);
+  BoundTypeDiagnoser<> Diagnoser(DiagID);
   return RequireCompleteExprType(E, Diagnoser);
 }
 
@@ -6496,7 +6476,7 @@ bool Sema::RequireCompleteExprType(Expr *E, unsigned DiagID) {
 /// @c false otherwise.
 bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
                                TypeDiagnoser &Diagnoser) {
-  if (RequireCompleteTypeImpl(Loc, T, Diagnoser))
+  if (RequireCompleteTypeImpl(Loc, T, &Diagnoser))
     return true;
   if (const TagType *Tag = T->getAs<TagType>()) {
     if (!Tag->getDecl()->isCompleteDefinitionRequired()) {
@@ -6600,7 +6580,7 @@ static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
 
 /// \brief The implementation of RequireCompleteType
 bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
-                                   TypeDiagnoser &Diagnoser) {
+                                   TypeDiagnoser *Diagnoser) {
   // FIXME: Add this assertion to make sure we always get instantiation points.
   //  assert(!Loc.isInvalid() && "Invalid location in RequireCompleteType");
   // FIXME: Add this assertion to help us flush out problems with
@@ -6614,7 +6594,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
     if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
       if (!MPTy->getClass()->isDependentType()) {
-        RequireCompleteType(Loc, QualType(MPTy->getClass(), 0), 0);
+        (void)isCompleteType(Loc, QualType(MPTy->getClass(), 0));
         assignInheritanceModel(*this, MPTy->getMostRecentCXXRecordDecl());
       }
     }
@@ -6625,9 +6605,16 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   if (!T->isIncompleteType(&Def)) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
-    if (!Diagnoser.Suppressed && Def &&
-        !hasVisibleDefinition(Def, &SuggestedDef, /*OnlyNeedComplete*/true))
-      diagnoseMissingImport(Loc, SuggestedDef, /*NeedDefinition*/true);
+    if (Def &&
+        !hasVisibleDefinition(Def, &SuggestedDef, /*OnlyNeedComplete*/true)) {
+      // If the user is going to see an error here, recover by making the
+      // definition visible.
+      bool TreatAsComplete = Diagnoser && !isSFINAEContext();
+      if (Diagnoser)
+        diagnoseMissingImport(Loc, SuggestedDef, /*NeedDefinition*/true,
+                              /*Recover*/TreatAsComplete);
+      return !TreatAsComplete;
+    }
 
     return false;
   }
@@ -6643,6 +6630,9 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   // chain for a declaration that can be accessed through a mechanism other
   // than name lookup (eg, referenced in a template, or a variable whose type
   // could be completed by the module)?
+  //
+  // FIXME: Should we map through to the base array element type before
+  // checking for a tag type?
   if (Tag || IFace) {
     NamedDecl *D =
         Tag ? static_cast<NamedDecl *>(Tag->getDecl()) : IFace->getDecl();
@@ -6673,12 +6663,16 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
            = Context.getAsConstantArrayType(MaybeTemplate))
     MaybeTemplate = Array->getElementType();
   if (const RecordType *Record = MaybeTemplate->getAs<RecordType>()) {
+    bool Instantiated = false;
+    bool Diagnosed = false;
     if (ClassTemplateSpecializationDecl *ClassTemplateSpec
           = dyn_cast<ClassTemplateSpecializationDecl>(Record->getDecl())) {
-      if (ClassTemplateSpec->getSpecializationKind() == TSK_Undeclared)
-        return InstantiateClassTemplateSpecialization(Loc, ClassTemplateSpec,
-                                                      TSK_ImplicitInstantiation,
-                                            /*Complain=*/!Diagnoser.Suppressed);
+      if (ClassTemplateSpec->getSpecializationKind() == TSK_Undeclared) {
+        Diagnosed = InstantiateClassTemplateSpecialization(
+            Loc, ClassTemplateSpec, TSK_ImplicitInstantiation,
+            /*Complain=*/Diagnoser);
+        Instantiated = true;
+      }
     } else if (CXXRecordDecl *Rec
                  = dyn_cast<CXXRecordDecl>(Record->getDecl())) {
       CXXRecordDecl *Pattern = Rec->getInstantiatedFromMemberClass();
@@ -6686,16 +6680,31 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         MemberSpecializationInfo *MSI = Rec->getMemberSpecializationInfo();
         assert(MSI && "Missing member specialization information?");
         // This record was instantiated from a class within a template.
-        if (MSI->getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
-          return InstantiateClass(Loc, Rec, Pattern,
-                                  getTemplateInstantiationArgs(Rec),
-                                  TSK_ImplicitInstantiation,
-                                  /*Complain=*/!Diagnoser.Suppressed);
+        if (MSI->getTemplateSpecializationKind() !=
+            TSK_ExplicitSpecialization) {
+          Diagnosed = InstantiateClass(Loc, Rec, Pattern,
+                                       getTemplateInstantiationArgs(Rec),
+                                       TSK_ImplicitInstantiation,
+                                       /*Complain=*/Diagnoser);
+          Instantiated = true;
+        }
       }
+    }
+
+    if (Instantiated) {
+      // Instantiate* might have already complained that the template is not
+      // defined, if we asked it to.
+      if (Diagnoser && Diagnosed)
+        return true;
+      // If we instantiated a definition, check that it's usable, even if
+      // instantiation produced an error, so that repeated calls to this
+      // function give consistent answers.
+      if (!T->isIncompleteType())
+        return RequireCompleteTypeImpl(Loc, T, Diagnoser);
     }
   }
 
-  if (Diagnoser.Suppressed)
+  if (!Diagnoser)
     return true;
 
   // We have an incomplete type. Produce a diagnostic.
@@ -6705,7 +6714,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
     return true;
   }
 
-  Diagnoser.diagnose(*this, Loc, T);
+  Diagnoser->diagnose(*this, Loc, T);
 
   // If the type was a forward declaration of a class/struct/union
   // type, produce a note.
@@ -6729,7 +6738,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
 
 bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
                                unsigned DiagID) {
-  TypeDiagnoserDiag Diagnoser(DiagID);
+  BoundTypeDiagnoser<> Diagnoser(DiagID);
   return RequireCompleteType(Loc, T, Diagnoser);
 }
 
@@ -6770,13 +6779,9 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   assert(!T->isDependentType() && "type should not be dependent");
 
   QualType ElemType = Context.getBaseElementType(T);
-  RequireCompleteType(Loc, ElemType, 0);
-
-  if (T->isLiteralType(Context))
+  if ((isCompleteType(Loc, ElemType) || ElemType->isVoidType()) &&
+      T->isLiteralType(Context))
     return false;
-
-  if (Diagnoser.Suppressed)
-    return true;
 
   Diagnoser.diagnose(*this, Loc, T);
 
@@ -6792,10 +6797,8 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   // A partially-defined class type can't be a literal type, because a literal
   // class type must have a trivial destructor (which can't be checked until
   // the class definition is complete).
-  if (!RD->isCompleteDefinition()) {
-    RequireCompleteType(Loc, ElemType, diag::note_non_literal_incomplete, T);
+  if (RequireCompleteType(Loc, ElemType, diag::note_non_literal_incomplete, T))
     return true;
-  }
 
   // If the class has virtual base classes, then it's not an aggregate, and
   // cannot have any constexpr constructors or a trivial default constructor,
@@ -6847,7 +6850,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
 }
 
 bool Sema::RequireLiteralType(SourceLocation Loc, QualType T, unsigned DiagID) {
-  TypeDiagnoserDiag Diagnoser(DiagID);
+  BoundTypeDiagnoser<> Diagnoser(DiagID);
   return RequireLiteralType(Loc, T, Diagnoser);
 }
 

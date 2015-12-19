@@ -82,6 +82,13 @@ public:
     FullDebugInfo         /// Generate complete debug info.
   };
 
+  enum DebuggerKind {
+    DebuggerKindDefault,
+    DebuggerKindGDB,
+    DebuggerKindLLDB,
+    DebuggerKindSCE
+  };
+
   enum TLSModel {
     GeneralDynamicTLSModel,
     LocalDynamicTLSModel,

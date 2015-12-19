@@ -152,3 +152,10 @@ void DontCrashOnThis() {
   T &pT = T();
   pT;
 }
+
+namespace abstract_dependent_class {
+  template<typename T> struct A {
+    virtual A<T> *clone() = 0; // expected-note {{pure virtual}}
+  };
+  template<typename T> A<T> *A<T>::clone() { return new A<T>; } // expected-error {{abstract class type 'A<T>'}}
+}

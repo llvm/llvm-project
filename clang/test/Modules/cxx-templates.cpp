@@ -105,8 +105,8 @@ void g() {
 
   TemplateInstantiationVisibility<char[1]> tiv1;
   TemplateInstantiationVisibility<char[2]> tiv2;
-  TemplateInstantiationVisibility<char[3]> tiv3; // expected-error {{must be imported from module 'cxx_templates_b_impl'}}
-  // expected-note@cxx-templates-b-impl.h:10 {{previous definition is here}}
+  TemplateInstantiationVisibility<char[3]> tiv3; // expected-error 2{{must be imported from module 'cxx_templates_b_impl'}}
+  // expected-note@cxx-templates-b-impl.h:10 2{{previous definition is here}}
   TemplateInstantiationVisibility<char[4]> tiv4;
 
   int &p = WithPartialSpecializationUse().f();
