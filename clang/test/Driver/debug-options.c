@@ -2,30 +2,37 @@
 // rdar://10383444
 
 // RUN: %clang -### -c -g %s -target x86_64-linux-gnu 2>&1 \
-// RUN:             | FileCheck -check-prefix=G %s
+// RUN:             | FileCheck -check-prefix=G -check-prefix=G_GDB %s
 // RUN: %clang -### -c -g2 %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G %s
 // RUN: %clang -### -c -g3 %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G %s
 // RUN: %clang -### -c -ggdb %s -target x86_64-linux-gnu 2>&1 \
-// RUN:             | FileCheck -check-prefix=G %s
+// RUN:             | FileCheck -check-prefix=G -check-prefix=G_GDB %s
 // RUN: %clang -### -c -ggdb1 %s -target x86_64-linux-gnu 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
+// RUN:             | FileCheck -check-prefix=GLTO_ONLY -check-prefix=G_GDB %s
 // RUN: %clang -### -c -ggdb3 %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G %s
+// RUN: %clang -### -c -glldb %s -target x86_64-linux-gnu 2>&1 \
+// RUN:             | FileCheck -check-prefix=G -check-prefix=G_LLDB %s
+// RUN: %clang -### -c -gsce %s -target x86_64-linux-gnu 2>&1 \
+// RUN:             | FileCheck -check-prefix=G -check-prefix=G_SCE %s
 
 // RUN: %clang -### -c -g %s -target x86_64-apple-darwin 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_DARWIN %s
+// RUN:             | FileCheck -check-prefix=G_DARWIN -check-prefix=G_LLDB %s
 // RUN: %clang -### -c -g2 %s -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_DARWIN %s
 // RUN: %clang -### -c -g3 %s -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_DARWIN %s
 // RUN: %clang -### -c -ggdb %s -target x86_64-apple-darwin 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_DARWIN %s
+// RUN:             | FileCheck -check-prefix=G_DARWIN -check-prefix=G_GDB %s
 // RUN: %clang -### -c -ggdb1 %s -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -ggdb3 %s -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_DARWIN %s
+
+// RUN: %clang -### -c -g %s -target x86_64-pc-freebsd10.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_LLDB %s
 
 // On the PS4, -g defaults to -gno-column-info, and we always generate the
 // arange section.
@@ -33,6 +40,8 @@
 // RUN:             | FileCheck -check-prefix=NOG_PS4 %s
 // RUN: %clang -### -c %s -g -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_PS4 %s
+// RUN: %clang -### -c %s -g -target x86_64-scei-ps4 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_SCE %s
 // RUN: %clang -### -c %s -g -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOCI %s
 // RUN: %clang -### -c %s -g -gcolumn-info -target x86_64-scei-ps4 2>&1 \
@@ -43,6 +52,14 @@
 // RUN: %clang -### -c -gfoo %s 2>&1 | FileCheck -check-prefix=G_NO %s
 // RUN: %clang -### -c -g -g0 %s 2>&1 | FileCheck -check-prefix=G_NO %s
 // RUN: %clang -### -c -ggdb0 %s 2>&1 | FileCheck -check-prefix=G_NO %s
+// RUN: %clang -### -c -glldb -g0 %s 2>&1 | FileCheck -check-prefix=G_NO %s
+// RUN: %clang -### -c -glldb -g1 %s 2>&1 \
+// RUN:             | FileCheck -check-prefix=GLTO_ONLY -check-prefix=G_LLDB %s
+//
+// PS4 defaults to sce; -ggdb0 changes tuning but turns off debug info,
+// then -g turns it back on without affecting tuning.
+// RUN: %clang -### -c -ggdb0 -g -target x86_64-scei-ps4 %s 2>&1 \
+// RUN:             | FileCheck -check-prefix=G -check-prefix=G_GDB %s
 //
 // RUN: %clang -### -c -g1 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
@@ -122,6 +139,10 @@
 //
 // G_ONLY: "-cc1"
 // G_ONLY: "-debug-info-kind=limited"
+//
+// G_GDB:  "-debugger-tuning=gdb"
+// G_LLDB: "-debugger-tuning=lldb"
+// G_SCE:  "-debugger-tuning=sce"
 //
 // These tests assert that "-gline-tables-only" "-g" uses the latter,
 // but otherwise not caring about the DebugInfoKind.
