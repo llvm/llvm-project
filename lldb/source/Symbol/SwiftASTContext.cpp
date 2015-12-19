@@ -1703,11 +1703,6 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                     log->Printf ("((Module*)%p) [%s]->GetSwiftASTContext() returning NULL - couldn't create a ClangImporter", module, module->GetFileSpec().GetFilename().AsCString("<anonymous>"));
                 }
                 
-                if (lldb::ProcessSP process_sp = target->GetProcessSP())
-                {
-                    process_sp->PrintWarningCantLoadSwift(*module);
-                }
-                
                 return TypeSystemSP();
             }
             
