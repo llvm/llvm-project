@@ -1665,10 +1665,10 @@ void Sema::ActOnBaseSpecifiers(Decl *ClassDecl, CXXBaseSpecifier **Bases,
 
 /// \brief Determine whether the type \p Derived is a C++ class that is
 /// derived from the type \p Base.
-bool Sema::IsDerivedFrom(QualType Derived, QualType Base) {
+bool Sema::IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base) {
   if (!getLangOpts().CPlusPlus)
     return false;
-  
+
   CXXRecordDecl *DerivedRD = Derived->getAsCXXRecordDecl();
   if (!DerivedRD)
     return false;
@@ -1682,13 +1682,18 @@ bool Sema::IsDerivedFrom(QualType Derived, QualType Base) {
   if (BaseRD->isInvalidDecl() || DerivedRD->isInvalidDecl())
     return false;
 
-  // FIXME: instantiate DerivedRD if necessary.  We need a PoI for this.
-  return DerivedRD->hasDefinition() && DerivedRD->isDerivedFrom(BaseRD);
+  // FIXME: In a modules build, do we need the entire path to be visible for us
+  // to be able to use the inheritance relationship?
+  if (!isCompleteType(Loc, Derived) && !DerivedRD->isBeingDefined())
+    return false;
+  
+  return DerivedRD->isDerivedFrom(BaseRD);
 }
 
 /// \brief Determine whether the type \p Derived is a C++ class that is
 /// derived from the type \p Base.
-bool Sema::IsDerivedFrom(QualType Derived, QualType Base, CXXBasePaths &Paths) {
+bool Sema::IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
+                         CXXBasePaths &Paths) {
   if (!getLangOpts().CPlusPlus)
     return false;
   
@@ -1698,6 +1703,9 @@ bool Sema::IsDerivedFrom(QualType Derived, QualType Base, CXXBasePaths &Paths) {
   
   CXXRecordDecl *BaseRD = Base->getAsCXXRecordDecl();
   if (!BaseRD)
+    return false;
+  
+  if (!isCompleteType(Loc, Derived) && !DerivedRD->isBeingDefined())
     return false;
   
   return DerivedRD->isDerivedFrom(BaseRD, Paths);
@@ -1747,7 +1755,7 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
   // explore multiple paths to determine if there is an ambiguity.
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/false);
-  bool DerivationOkay = IsDerivedFrom(Derived, Base, Paths);
+  bool DerivationOkay = IsDerivedFrom(Loc, Derived, Base, Paths);
   assert(DerivationOkay &&
          "Can only be used with a derived-to-base conversion");
   (void)DerivationOkay;
@@ -1781,7 +1789,7 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
     // performance isn't as much of an issue.
     Paths.clear();
     Paths.setRecordingPaths(true);
-    bool StillOkay = IsDerivedFrom(Derived, Base, Paths);
+    bool StillOkay = IsDerivedFrom(Loc, Derived, Base, Paths);
     assert(StillOkay && "Can only be used with a derived-to-base conversion");
     (void)StillOkay;
 
@@ -2757,7 +2765,8 @@ static bool FindBaseInitializer(Sema &SemaRef,
     // virtual base class.
     CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                        /*DetectVirtual=*/false);
-    if (SemaRef.IsDerivedFrom(SemaRef.Context.getTypeDeclType(ClassDecl), 
+    if (SemaRef.IsDerivedFrom(ClassDecl->getLocation(),
+                              SemaRef.Context.getTypeDeclType(ClassDecl),
                               BaseType, Paths)) {
       for (CXXBasePaths::paths_iterator Path = Paths.begin();
            Path != Paths.end(); ++Path) {
@@ -4411,64 +4420,35 @@ void Sema::ActOnDefaultCtorInitializers(Decl *CDtorDecl) {
   }
 }
 
-bool Sema::RequireNonAbstractType(SourceLocation Loc, QualType T,
-                                  unsigned DiagID, AbstractDiagSelID SelID) {
-  class NonAbstractTypeDiagnoser : public TypeDiagnoser {
-    unsigned DiagID;
-    AbstractDiagSelID SelID;
-    
-  public:
-    NonAbstractTypeDiagnoser(unsigned DiagID, AbstractDiagSelID SelID)
-      : TypeDiagnoser(DiagID == 0), DiagID(DiagID), SelID(SelID) { }
-
-    void diagnose(Sema &S, SourceLocation Loc, QualType T) override {
-      if (Suppressed) return;
-      if (SelID == -1)
-        S.Diag(Loc, DiagID) << T;
-      else
-        S.Diag(Loc, DiagID) << SelID << T;
-    }
-  } Diagnoser(DiagID, SelID);
-  
-  return RequireNonAbstractType(Loc, T, Diagnoser);
-}
-
-bool Sema::RequireNonAbstractType(SourceLocation Loc, QualType T,
-                                  TypeDiagnoser &Diagnoser) {
+bool Sema::isAbstractType(SourceLocation Loc, QualType T) {
   if (!getLangOpts().CPlusPlus)
     return false;
 
-  if (const ArrayType *AT = Context.getAsArrayType(T))
-    return RequireNonAbstractType(Loc, AT->getElementType(), Diagnoser);
-
-  if (const PointerType *PT = T->getAs<PointerType>()) {
-    // Find the innermost pointer type.
-    while (const PointerType *T = PT->getPointeeType()->getAs<PointerType>())
-      PT = T;
-
-    if (const ArrayType *AT = Context.getAsArrayType(PT->getPointeeType()))
-      return RequireNonAbstractType(Loc, AT->getElementType(), Diagnoser);
-  }
-
-  const RecordType *RT = T->getAs<RecordType>();
-  if (!RT)
+  const auto *RD = Context.getBaseElementType(T)->getAsCXXRecordDecl();
+  if (!RD)
     return false;
 
-  const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+  // FIXME: Per [temp.inst]p1, we are supposed to trigger instantiation of a
+  // class template specialization here, but doing so breaks a lot of code.
 
   // We can't answer whether something is abstract until it has a
-  // definition.  If it's currently being defined, we'll walk back
+  // definition. If it's currently being defined, we'll walk back
   // over all the declarations when we have a full definition.
   const CXXRecordDecl *Def = RD->getDefinition();
   if (!Def || Def->isBeingDefined())
     return false;
 
-  if (!RD->isAbstract())
+  return RD->isAbstract();
+}
+
+bool Sema::RequireNonAbstractType(SourceLocation Loc, QualType T,
+                                  TypeDiagnoser &Diagnoser) {
+  if (!isAbstractType(Loc, T))
     return false;
 
+  T = Context.getBaseElementType(T);
   Diagnoser.diagnose(*this, Loc, T);
-  DiagnoseAbstractType(RD);
-
+  DiagnoseAbstractType(T->getAsCXXRecordDecl());
   return true;
 }
 
@@ -7123,7 +7103,7 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
     if (ConvType == ClassType)
       Diag(Conversion->getLocation(), diag::warn_conv_to_self_not_used)
         << ClassType;
-    else if (IsDerivedFrom(ClassType, ConvType))
+    else if (IsDerivedFrom(Conversion->getLocation(), ClassType, ConvType))
       Diag(Conversion->getLocation(), diag::warn_conv_to_base_not_used)
         <<  ClassType << ConvType;
   } else if (ConvType->isVoidType()) {
@@ -13024,7 +13004,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
 
   if (!Context.hasSameUnqualifiedType(NewClassTy, OldClassTy)) {
     // Check if the new class derives from the old class.
-    if (!IsDerivedFrom(NewClassTy, OldClassTy)) {
+    if (!IsDerivedFrom(New->getLocation(), NewClassTy, OldClassTy)) {
       Diag(New->getLocation(), diag::err_covariant_return_not_derived)
           << New->getDeclName() << NewTy << OldTy
           << New->getReturnTypeSourceRange();

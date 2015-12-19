@@ -42,7 +42,7 @@ bool ConversionFixItGenerator::compareTypesSimple(CanQualType From,
   const CanQualType FromUnq = From.getUnqualifiedType();
   const CanQualType ToUnq = To.getUnqualifiedType();
 
-  if ((FromUnq == ToUnq || (S.IsDerivedFrom(FromUnq, ToUnq)) ) &&
+  if ((FromUnq == ToUnq || (S.IsDerivedFrom(Loc, FromUnq, ToUnq)) ) &&
       To.isAtLeastAsQualifiedAs(From))
     return true;
   return false;

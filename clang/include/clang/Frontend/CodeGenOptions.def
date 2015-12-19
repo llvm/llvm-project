@@ -183,6 +183,9 @@ VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
 /// The kind of generated debug info.
 ENUM_CODEGENOPT(DebugInfo, DebugInfoKind, 3, NoDebugInfo)
 
+/// Tune the debug info for this debugger.
+ENUM_CODEGENOPT(DebuggerTuning, DebuggerKind, 2, DebuggerKindDefault)
+
 /// Dwarf version. Version zero indicates to LLVM that no DWARF should be
 /// emitted.
 VALUE_CODEGENOPT(DwarfVersion, 3, 0)

@@ -647,7 +647,8 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
     if (!RT)
       return true;
 
-    if (RequireCompleteType(AsmLoc, QualType(RT, 0), 0))
+    if (RequireCompleteType(AsmLoc, QualType(RT, 0),
+                            diag::err_asm_incomplete_type))
       return true;
 
     LookupResult FieldResult(*this, &Context.Idents.get(NextMember),

@@ -1562,6 +1562,29 @@ static bool isFunctionDeclarationName(const FormatToken &Current) {
   return false;
 }
 
+bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
+  assert(Line.MightBeFunctionDecl);
+
+  if ((Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_TopLevel ||
+       Style.AlwaysBreakAfterReturnType ==
+           FormatStyle::RTBS_TopLevelDefinitions) &&
+      Line.Level > 0)
+    return false;
+
+  switch (Style.AlwaysBreakAfterReturnType) {
+  case FormatStyle::RTBS_None:
+    return false;
+  case FormatStyle::RTBS_All:
+  case FormatStyle::RTBS_TopLevel:
+    return true;
+  case FormatStyle::RTBS_AllDefinitions:
+  case FormatStyle::RTBS_TopLevelDefinitions:
+    return Line.mightBeFunctionDefinition();
+  }
+
+  return false;
+}
+
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
   for (SmallVectorImpl<AnnotatedLine *>::iterator I = Line.Children.begin(),
                                                   E = Line.Children.end();
@@ -1613,15 +1636,9 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
     Current->MustBreakBefore =
         Current->MustBreakBefore || mustBreakBefore(Line, *Current);
 
-    if ((Style.AlwaysBreakAfterDefinitionReturnType == FormatStyle::DRTBS_All ||
-         (Style.AlwaysBreakAfterDefinitionReturnType ==
-              FormatStyle::DRTBS_TopLevel &&
-          Line.Level == 0)) &&
-        InFunctionDecl && Current->is(TT_FunctionDeclarationName) &&
-        !Line.Last->isOneOf(tok::semi, tok::comment)) // Only for definitions.
-      // FIXME: Line.Last points to other characters than tok::semi
-      // and tok::lbrace.
-      Current->MustBreakBefore = true;
+    if (!Current->MustBreakBefore && InFunctionDecl &&
+        Current->is(TT_FunctionDeclarationName))
+      Current->MustBreakBefore = mustBreakForReturnType(Line);
 
     Current->CanBreakBefore =
         Current->MustBreakBefore || canBreakBefore(Line, *Current);

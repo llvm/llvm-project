@@ -254,7 +254,8 @@ the configuration (without a prefix: ``Auto``).
   single line.
 
 **AlwaysBreakAfterDefinitionReturnType** (``DefinitionReturnTypeBreakingStyle``)
-  The function definition return type breaking style to use.
+  The function definition return type breaking style to use.  This
+  option is deprecated and is retained for backwards compatibility.
 
   Possible values:
 
@@ -264,7 +265,25 @@ the configuration (without a prefix: ``Auto``).
   * ``DRTBS_All`` (in configuration: ``All``)
     Always break after the return type.
   * ``DRTBS_TopLevel`` (in configuration: ``TopLevel``)
-    Always break after the return types of top level functions.
+    Always break after the return types of top-level functions.
+
+
+**AlwaysBreakAfterReturnType** (``ReturnTypeBreakingStyle``)
+  The function declaration return type breaking style to use.
+
+  Possible values:
+
+  * ``RTBS_None`` (in configuration: ``None``)
+    Break after return type automatically.
+    ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+  * ``RTBS_All`` (in configuration: ``All``)
+    Always break after the return type.
+  * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
+    Always break after the return types of top-level functions.
+  * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
+    Always break after the return type of function definitions.
+  * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
+    Always break after the return type of top-level definitions.
 
 
 **AlwaysBreakBeforeMultilineStrings** (``bool``)

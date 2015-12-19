@@ -3443,11 +3443,13 @@ void CGDebugInfo::EmitUsingDecl(const UsingDecl &UD) {
 }
 
 void CGDebugInfo::EmitImportDecl(const ImportDecl &ID) {
-  auto Info = ExternalASTSource::ASTSourceDescriptor(*ID.getImportedModule());
-  DBuilder.createImportedDeclaration(
-      getCurrentContextDescriptor(cast<Decl>(ID.getDeclContext())),
-      getOrCreateModuleRef(Info, DebugTypeExtRefs),
-      getLineNumber(ID.getLocation()));
+  if (Module *M = ID.getImportedModule()) {
+    auto Info = ExternalASTSource::ASTSourceDescriptor(*M);
+    DBuilder.createImportedDeclaration(
+        getCurrentContextDescriptor(cast<Decl>(ID.getDeclContext())),
+        getOrCreateModuleRef(Info, DebugTypeExtRefs),
+        getLineNumber(ID.getLocation()));
+  }
 }
 
 llvm::DIImportedEntity *

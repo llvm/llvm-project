@@ -22,9 +22,9 @@ void foo() {
 }
 
 #ifdef PR21815
-// expected-error@+4{{C++ requires a type specifier for all declarations}}
-// expected-error@+3{{expected unqualified-id}}
-// expected-error@+3{{expected expression}}
-// expected-error@+1{{expected ';' after top level declarator}}
-a (::(
+// expected-error@+2{{C++ requires a type specifier for all declarations}}
+// expected-error@+1{{expected unqualified-id}}
+a (::( ));
+
+::((c )); // expected-error{{expected unqualified-id}}
 #endif

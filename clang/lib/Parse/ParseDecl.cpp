@@ -5198,6 +5198,15 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       }
       goto PastIdentifier;
     }
+
+    if (D.getCXXScopeSpec().isNotEmpty()) {
+      // We have a scope specifier but no following unqualified-id.
+      Diag(PP.getLocForEndOfToken(D.getCXXScopeSpec().getEndLoc()),
+           diag::err_expected_unqualified_id)
+          << /*C++*/1;
+      D.SetIdentifier(nullptr, Tok.getLocation());
+      goto PastIdentifier;
+    }
   } else if (Tok.is(tok::identifier) && D.mayHaveIdentifier()) {
     assert(!getLangOpts().CPlusPlus &&
            "There's a C++-specific check for tok::identifier above");

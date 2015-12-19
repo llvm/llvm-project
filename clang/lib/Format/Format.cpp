@@ -105,6 +105,18 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BraceBreakingStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
+  static void enumeration(IO &IO, FormatStyle::ReturnTypeBreakingStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::RTBS_None);
+    IO.enumCase(Value, "All", FormatStyle::RTBS_All);
+    IO.enumCase(Value, "TopLevel", FormatStyle::RTBS_TopLevel);
+    IO.enumCase(Value, "TopLevelDefinitions",
+                FormatStyle::RTBS_TopLevelDefinitions);
+    IO.enumCase(Value, "AllDefinitions", FormatStyle::RTBS_AllDefinitions);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::DefinitionReturnTypeBreakingStyle> {
   static void
   enumeration(IO &IO, FormatStyle::DefinitionReturnTypeBreakingStyle &Value) {
@@ -233,6 +245,21 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortLoopsOnASingleLine);
     IO.mapOptional("AlwaysBreakAfterDefinitionReturnType",
                    Style.AlwaysBreakAfterDefinitionReturnType);
+    IO.mapOptional("AlwaysBreakAfterReturnType",
+                   Style.AlwaysBreakAfterReturnType);
+    // If AlwaysBreakAfterDefinitionReturnType was specified but
+    // AlwaysBreakAfterReturnType was not, initialize the latter from the
+    // former for backwards compatibility.
+    if (Style.AlwaysBreakAfterDefinitionReturnType != FormatStyle::DRTBS_None &&
+        Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None) {
+      if (Style.AlwaysBreakAfterDefinitionReturnType == FormatStyle::DRTBS_All)
+        Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
+      else if (Style.AlwaysBreakAfterDefinitionReturnType ==
+               FormatStyle::DRTBS_TopLevel)
+        Style.AlwaysBreakAfterReturnType =
+            FormatStyle::RTBS_TopLevelDefinitions;
+    }
+
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
                    Style.AlwaysBreakBeforeMultilineStrings);
     IO.mapOptional("AlwaysBreakTemplateDeclarations",
@@ -449,6 +476,7 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
   LLVMStyle.AllowShortIfStatementsOnASingleLine = false;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
+  LLVMStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AlwaysBreakTemplateDeclarations = false;
@@ -585,6 +613,8 @@ FormatStyle getMozillaStyle() {
   FormatStyle MozillaStyle = getLLVMStyle();
   MozillaStyle.AllowAllParametersOfDeclarationOnNextLine = false;
   MozillaStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  MozillaStyle.AlwaysBreakAfterReturnType =
+      FormatStyle::RTBS_TopLevelDefinitions;
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
   MozillaStyle.AlwaysBreakTemplateDeclarations = true;
@@ -624,6 +654,7 @@ FormatStyle getWebKitStyle() {
 FormatStyle getGNUStyle() {
   FormatStyle Style = getLLVMStyle();
   Style.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_All;
+  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   Style.BreakBeforeBraces = FormatStyle::BS_GNU;
   Style.BreakBeforeTernaryOperators = true;

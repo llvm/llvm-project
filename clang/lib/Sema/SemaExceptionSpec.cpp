@@ -713,7 +713,7 @@ bool Sema::CheckExceptionSpecSubset(
         continue;
 
       Paths.clear();
-      if (!IsDerivedFrom(CanonicalSubT, CanonicalSuperT, Paths))
+      if (!IsDerivedFrom(SubLoc, CanonicalSubT, CanonicalSuperT, Paths))
         continue;
 
       if (Paths.isAmbiguous(Context.getCanonicalType(CanonicalSuperT)))

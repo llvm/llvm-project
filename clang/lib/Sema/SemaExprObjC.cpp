@@ -2726,6 +2726,8 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
 
         // Try to complete the type. Under ARC, this is a hard error from which
         // we don't try to recover.
+        // FIXME: In the non-ARC case, this will still be a hard error if the
+        // definition is found in a module that's not visible.
         const ObjCInterfaceDecl *forwardClass = nullptr;
         if (RequireCompleteType(Loc, OCIType->getPointeeType(),
               getLangOpts().ObjCAutoRefCount

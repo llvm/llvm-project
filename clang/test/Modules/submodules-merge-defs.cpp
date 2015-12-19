@@ -22,7 +22,7 @@ A pre_a;
 #endif
 // expected-note@defs.h:1 +{{here}}
 extern class A pre_a2;
-int pre_use_a = use_a(pre_a2); // expected-error {{'A' must be imported}} expected-error {{'use_a' must be imported}}
+int pre_use_a = use_a(pre_a2); // expected-error 2{{'A' must be imported}} expected-error {{'use_a' must be imported}}
 // expected-note@defs.h:2 +{{here}}
 
 B::Inner2 pre_bi; // expected-error +{{must be imported}}
@@ -48,7 +48,7 @@ int pre_e = E(0); // expected-error {{must be imported}}
 // expected-note@defs.h:32 +{{here}}
 
 int pre_ff = F<int>().f(); // expected-error +{{must be imported}}
-int pre_fg = F<int>().g<int>(); // expected-error +{{must be imported}}
+int pre_fg = F<int>().g<int>(); // expected-error +{{must be imported}} expected-error 2{{expected}}
 // expected-note@defs.h:34 +{{here}}
 
 G::A pre_ga // expected-error +{{must be imported}}

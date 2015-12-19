@@ -1440,7 +1440,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
           // We cannot inspect base classes as part of deduction when the type
           // is incomplete, so either instantiate any templates necessary to
           // complete the type, or skip over it if it cannot be completed.
-          if (S.RequireCompleteType(Info.getLocation(), Arg, 0))
+          if (!S.isCompleteType(Info.getLocation(), Arg))
             return Result;
 
           // Use data recursion to crawl through the list of base classes.
@@ -2738,7 +2738,7 @@ CheckOriginalCallArgDeduction(Sema &S, Sema::OriginalCallArg OriginalArg,
     return false;
   
   if (A->isRecordType() && isSimpleTemplateIdType(OriginalParamType) &&
-      S.IsDerivedFrom(A, DeducedA))
+      S.IsDerivedFrom(SourceLocation(), A, DeducedA))
     return false;
   
   return true;
@@ -3132,8 +3132,10 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(Sema &S,
 
   if (ParamRefType) {
     // If the argument has incomplete array type, try to complete its type.
-    if (ArgType->isIncompleteArrayType() && !S.RequireCompleteExprType(Arg, 0))
+    if (ArgType->isIncompleteArrayType()) {
+      S.completeExprArrayBound(Arg);
       ArgType = Arg->getType();
+    }
 
     // C++0x [temp.deduct.call]p3:
     //   If P is an rvalue reference to a cv-unqualified template

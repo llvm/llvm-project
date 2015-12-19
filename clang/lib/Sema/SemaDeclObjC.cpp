@@ -1871,6 +1871,8 @@ Decl *Sema::ActOnStartClassImplementation(
     Diag(ClassLoc, diag::err_redefinition_different_kind) << ClassName;
     Diag(PrevDecl->getLocation(), diag::note_previous_definition);
   } else if ((IDecl = dyn_cast_or_null<ObjCInterfaceDecl>(PrevDecl))) {
+    // FIXME: This will produce an error if the definition of the interface has
+    // been imported from a module but is not visible.
     RequireCompleteType(ClassLoc, Context.getObjCInterfaceType(IDecl),
                         diag::warn_undef_interface);
   } else {

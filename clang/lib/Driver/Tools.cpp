@@ -1421,14 +1421,6 @@ static void getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     bool IsNegative = Name.startswith("no-");
     if (IsNegative)
       Name = Name.substr(3);
-
-    // Note that gcc calls this mfcrf and LLVM calls this mfocrf so we
-    // pass the correct option to the backend while calling the frontend
-    // option the same.
-    // TODO: Change the LLVM backend option maybe?
-    if (Name == "mfcrf")
-      Name = "mfocrf";
-
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
@@ -3226,6 +3218,9 @@ ParsePICArgs(const ToolChain &ToolChain, const llvm::Triple &Triple,
   // ToolChain.getTriple() and Triple?
   bool PIE = ToolChain.isPIEDefault();
   bool PIC = PIE || ToolChain.isPICDefault();
+  // The Darwin default to use PIC does not apply when using -static.
+  if (ToolChain.getTriple().isOSDarwin() && Args.hasArg(options::OPT_static))
+    PIE = PIC = false;
   bool IsPICLevelTwo = PIC;
 
   bool KernelOrKext =

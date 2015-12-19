@@ -1706,11 +1706,10 @@ Sema::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection) {
   // If we have a forward-declared type, we can't do this check.
   // Under ARC, it is an error not to have a forward-declared class.
   if (iface &&
-      RequireCompleteType(forLoc, QualType(objectType, 0),
-                          getLangOpts().ObjCAutoRefCount
-                            ? diag::err_arc_collection_forward
-                            : 0,
-                          collection)) {
+      (getLangOpts().ObjCAutoRefCount
+           ? RequireCompleteType(forLoc, QualType(objectType, 0),
+                                 diag::err_arc_collection_forward, collection)
+           : !isCompleteType(forLoc, QualType(objectType, 0)))) {
     // Otherwise, if we have any useful type information, check that
     // the type declares the appropriate method.
   } else if (iface || !objectType->qual_empty()) {

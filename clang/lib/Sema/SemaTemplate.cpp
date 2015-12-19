@@ -4283,7 +4283,7 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
   if (Arg->isValueDependent() || Arg->isTypeDependent())
     return NPV_NotNullPointer;
 
-  if (S.RequireCompleteType(Arg->getExprLoc(), ParamType, 0))
+  if (!S.isCompleteType(Arg->getExprLoc(), ParamType))
     llvm_unreachable(
         "Incomplete parameter type in isNullPointerValueTemplateArgument!");
 
