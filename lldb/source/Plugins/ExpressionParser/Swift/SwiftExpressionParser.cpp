@@ -64,7 +64,6 @@
 #include "swift/Parse/PersistentParserState.h"
 #include "swift/Serialization/SerializedModuleLoader.h"
 #include "swift/SIL/SILDebuggerClient.h"
-#include "swift/SIL/SILExternalSource.h"
 #include "swift/SIL/SILFunction.h"
 #include "swift/SIL/SILModule.h"
 #include "swift/SILOptimizer/PassManager/Passes.h"
