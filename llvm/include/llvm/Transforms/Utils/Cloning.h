@@ -75,8 +75,8 @@ struct ClonedCodeInfo {
   bool ContainsDynamicAllocas;
 
   /// All cloned call sites that have operand bundles attached are appended to
-  /// this vector.  This vector may contain nulls if some of the originally
-  /// inserted callsites were DCE'ed after they were cloned.
+  /// this vector.  This vector may contain nulls or undefs if some of the
+  /// originally inserted callsites were DCE'ed after they were cloned.
   std::vector<WeakVH> OperandBundleCallSites;
 
   ClonedCodeInfo() : ContainsCalls(false), ContainsDynamicAllocas(false) {}

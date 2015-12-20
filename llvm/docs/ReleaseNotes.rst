@@ -58,6 +58,10 @@ Non-comprehensive list of changes in this release
 * The deprecated C APIs LLVMGetBitcodeModuleProviderInContext and
   LLVMGetBitcodeModuleProvider have been removed.
 
+* The deprecated C APIs LLVMCreateExecutionEngine, LLVMCreateInterpreter,
+  LLVMCreateJITCompiler, LLVMAddModuleProvider and LLVMRemoveModuleProvider
+  have been removed.
+
 * With this release, the C API headers have been reorganized to improve build
   time. Type specific declarations have been moved to Type.h, and error
   handling routines have been moved to ErrorHandling.h. Both are included in

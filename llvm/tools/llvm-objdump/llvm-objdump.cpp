@@ -1247,60 +1247,11 @@ void llvm::PrintSectionContents(const ObjectFile *Obj) {
   }
 }
 
-static void PrintCOFFSymbolTable(const COFFObjectFile *coff) {
-  for (unsigned SI = 0, SE = coff->getNumberOfSymbols(); SI != SE; ++SI) {
-    ErrorOr<COFFSymbolRef> Symbol = coff->getSymbol(SI);
-    StringRef Name;
-    error(Symbol.getError());
-    error(coff->getSymbolName(*Symbol, Name));
-
-    outs() << "[" << format("%2d", SI) << "]"
-           << "(sec " << format("%2d", int(Symbol->getSectionNumber())) << ")"
-           << "(fl 0x00)" // Flag bits, which COFF doesn't have.
-           << "(ty " << format("%3x", unsigned(Symbol->getType())) << ")"
-           << "(scl " << format("%3x", unsigned(Symbol->getStorageClass())) << ") "
-           << "(nx " << unsigned(Symbol->getNumberOfAuxSymbols()) << ") "
-           << "0x" << format("%08x", unsigned(Symbol->getValue())) << " "
-           << Name << "\n";
-
-    for (unsigned AI = 0, AE = Symbol->getNumberOfAuxSymbols(); AI < AE; ++AI, ++SI) {
-      if (Symbol->isSectionDefinition()) {
-        const coff_aux_section_definition *asd;
-        error(coff->getAuxSymbol<coff_aux_section_definition>(SI + 1, asd));
-
-        int32_t AuxNumber = asd->getNumber(Symbol->isBigObj());
-
-        outs() << "AUX "
-               << format("scnlen 0x%x nreloc %d nlnno %d checksum 0x%x "
-                         , unsigned(asd->Length)
-                         , unsigned(asd->NumberOfRelocations)
-                         , unsigned(asd->NumberOfLinenumbers)
-                         , unsigned(asd->CheckSum))
-               << format("assoc %d comdat %d\n"
-                         , unsigned(AuxNumber)
-                         , unsigned(asd->Selection));
-      } else if (Symbol->isFileRecord()) {
-        const char *FileName;
-        error(coff->getAuxSymbol<char>(SI + 1, FileName));
-
-        StringRef Name(FileName, Symbol->getNumberOfAuxSymbols() *
-                                     coff->getSymbolTableEntrySize());
-        outs() << "AUX " << Name.rtrim(StringRef("\0", 1))  << '\n';
-
-        SI = SI + Symbol->getNumberOfAuxSymbols();
-        break;
-      } else {
-        outs() << "AUX Unknown\n";
-      }
-    }
-  }
-}
-
 void llvm::PrintSymbolTable(const ObjectFile *o) {
   outs() << "SYMBOL TABLE:\n";
 
   if (const COFFObjectFile *coff = dyn_cast<const COFFObjectFile>(o)) {
-    PrintCOFFSymbolTable(coff);
+    printCOFFSymbolTable(coff);
     return;
   }
   for (const SymbolRef &Symbol : o->symbols()) {
@@ -1527,13 +1478,14 @@ static void printFaultMaps(const ObjectFile *Obj) {
 }
 
 static void printPrivateFileHeader(const ObjectFile *o) {
-  if (o->isELF()) {
+  if (o->isELF())
     printELFFileHeader(o);
-  } else if (o->isCOFF()) {
+  else if (o->isCOFF())
     printCOFFFileHeader(o);
-  } else if (o->isMachO()) {
+  else if (o->isMachO())
     printMachOFileHeader(o);
-  }
+  else
+    report_fatal_error("Invalid/Unsupported object file format");
 }
 
 static void DumpObject(const ObjectFile *o) {

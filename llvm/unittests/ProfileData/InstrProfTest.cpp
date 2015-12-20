@@ -546,6 +546,33 @@ TEST_F(InstrProfTest, instr_prof_symtab_test) {
   ASSERT_EQ(StringRef("bar2"), R);
   R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar3"));
   ASSERT_EQ(StringRef("bar3"), R);
+
+  // Now incrementally update the symtab
+  Symtab.addFuncName("blah_1");
+  Symtab.addFuncName("blah_2");
+  Symtab.addFuncName("blah_3");
+  // Finalize it
+  Symtab.finalizeSymtab();
+
+  // Check again
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("blah_1"));
+  ASSERT_EQ(StringRef("blah_1"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("blah_2"));
+  ASSERT_EQ(StringRef("blah_2"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("blah_3"));
+  ASSERT_EQ(StringRef("blah_3"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("func1"));
+  ASSERT_EQ(StringRef("func1"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("func2"));
+  ASSERT_EQ(StringRef("func2"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("func3"));
+  ASSERT_EQ(StringRef("func3"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar1"));
+  ASSERT_EQ(StringRef("bar1"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar2"));
+  ASSERT_EQ(StringRef("bar2"), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar3"));
+  ASSERT_EQ(StringRef("bar3"), R);
 }
 
 } // end anonymous namespace

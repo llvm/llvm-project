@@ -94,13 +94,8 @@ void InstrProfWriter::setValueProfDataEndianness(
   ValueProfDataEndianness = Endianness;
 }
 
-void InstrProfWriter::updateStringTableReferences(InstrProfRecord &I) {
-  I.updateStrings(&StringTable);
-}
-
 std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
                                            uint64_t Weight) {
-  updateStringTableReferences(I);
   auto &ProfileDataMap = FunctionData[I.Name];
 
   bool NewFunc;
@@ -113,6 +108,8 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
   if (NewFunc) {
     // We've never seen a function with this name and hash, add it.
     Dest = std::move(I);
+    // Fix up the name to avoid dangling reference.
+    Dest.Name = FunctionData.find(Dest.Name)->getKey();
     Result = instrprof_error::success;
     if (Weight > 1) {
       for (auto &Count : Dest.Counts) {
@@ -188,6 +185,7 @@ static const char *ValueProfKindStr[] = {
 };
 
 void InstrProfWriter::writeRecordInText(const InstrProfRecord &Func,
+                                        InstrProfSymtab &Symtab,
                                         raw_fd_ostream &OS) {
   OS << Func.Name << "\n";
   OS << "# Func Hash:\n" << Func.Hash << "\n";
@@ -215,8 +213,7 @@ void InstrProfWriter::writeRecordInText(const InstrProfRecord &Func,
       std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       for (uint32_t I = 0; I < ND; I++) {
         if (VK == IPVK_IndirectCallTarget)
-          OS << reinterpret_cast<const char *>(VD[I].Value) << ":"
-             << VD[I].Count << "\n";
+          OS << Symtab.getFuncName(VD[I].Value) << ":" << VD[I].Count << "\n";
         else
           OS << VD[I].Value << ":" << VD[I].Count << "\n";
       }
@@ -227,9 +224,14 @@ void InstrProfWriter::writeRecordInText(const InstrProfRecord &Func,
 }
 
 void InstrProfWriter::writeText(raw_fd_ostream &OS) {
+  InstrProfSymtab Symtab;
+  for (const auto &I : FunctionData)
+    Symtab.addFuncName(I.getKey());
+  Symtab.finalizeSymtab();
+
   for (const auto &I : FunctionData)
     for (const auto &Func : I.getValue())
-      writeRecordInText(Func.second, OS);
+      writeRecordInText(Func.second, Symtab, OS);
 }
 
 std::unique_ptr<MemoryBuffer> InstrProfWriter::writeBuffer() {

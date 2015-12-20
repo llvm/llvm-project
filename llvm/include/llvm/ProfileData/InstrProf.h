@@ -213,78 +213,89 @@ uint64_t ComputeHash(StringRef K);
 /// data of the function. See \c getPGOFuncName() method for details
 /// on how PGO name is formed.
 class InstrProfSymtab {
+public:
+  typedef std::vector<std::pair<uint64_t, uint64_t>> AddrHashMap;
+
 private:
   StringRef Data;
   uint64_t Address;
+  // A map from MD5 hash keys to function name strings.
   std::vector<std::pair<uint64_t, std::string>> HashNameMap;
+  // A map from function runtime address to function name MD5 hash.
+  // This map is only populated and used by raw instr profile reader.
+  AddrHashMap AddrToMD5Map;
 
 public:
-  InstrProfSymtab() : Data(), Address(0) {}
+  InstrProfSymtab() : Data(), Address(0), HashNameMap(), AddrToMD5Map() {}
 
-  /// Create InstrProfSymtab from a object file section which
+  /// Create InstrProfSymtab from an object file section which
   /// contains function PGO names that are uncompressed.
+  /// This interface is used by CoverageMappingReader.
   std::error_code create(object::SectionRef &Section);
-  std::error_code create(StringRef D, uint64_t BaseAddr) {
-    Data = D;
-    Address = BaseAddr;
-    return std::error_code();
-  }
-  template <typename NameIterRange> void create(NameIterRange &IterRange) {
-    for (auto Name : IterRange)
-      HashNameMap.push_back(
-          std::make_pair(IndexedInstrProf::ComputeHash(Name), Name.str()));
-    finalizeSymtab();
-  }
-
-  // If the symtab is created by a series calls to \c addFuncName, \c
-  // finalizeSymtab needs to
-  // be called before function name/symbol lookup using MD5 hash. This is
-  // required because
-  // the underlying map is vector (for space efficiency) which needs to be
-  // sorted.
-  void finalizeSymtab() {
-    std::sort(HashNameMap.begin(), HashNameMap.end(), less_first());
-    HashNameMap.erase(std::unique(HashNameMap.begin(), HashNameMap.end()),
-                      HashNameMap.end());
-  }
-
+  /// This interface is used by reader of CoverageMapping test
+  /// format.
+  inline std::error_code create(StringRef D, uint64_t BaseAddr);
+  /// Create InstrProfSymtab from a set of names iteratable from
+  /// \p IterRange. This interface is used by IndexedProfReader.
+  template <typename NameIterRange> void create(const NameIterRange &IterRange);
+  // If the symtab is created by a series of calls to \c addFuncName, \c
+  // finalizeSymtab needs to be called before looking up function names.
+  // This is required because the underlying map is a vector (for space
+  // efficiency) which needs to be sorted.
+  inline void finalizeSymtab();
+  /// Update the symtab by adding \p FuncName to the table. This interface
+  /// is used by the raw and text profile readers.
   void addFuncName(StringRef FuncName) {
     HashNameMap.push_back(std::make_pair(
         IndexedInstrProf::ComputeHash(FuncName), FuncName.str()));
   }
-
+  /// Map a function address to its name's MD5 hash. This interface
+  /// is only used by the raw profiler reader.
+  void mapAddress(uint64_t Addr, uint64_t MD5Val) {
+    AddrToMD5Map.push_back(std::make_pair(Addr, MD5Val));
+  }
+  AddrHashMap &getAddrHashMap() { return AddrToMD5Map; }
   /// Return function's PGO name from the function name's symabol
   /// address in the object file. If an error occurs, Return
   /// an empty string.
   StringRef getFuncName(uint64_t FuncNameAddress, size_t NameSize);
   /// Return function's PGO name from the name's md5 hash value.
   /// If not found, return an empty string.
-  StringRef getFuncName(uint64_t FuncMD5Hash) {
-    auto Result =
-        std::lower_bound(HashNameMap.begin(), HashNameMap.end(), FuncMD5Hash,
-                         [](const std::pair<uint64_t, std::string> &LHS,
-                            uint64_t RHS) { return LHS.first < RHS; });
-    if (Result != HashNameMap.end())
-      return Result->second;
-    return StringRef();
-  }
+  inline StringRef getFuncName(uint64_t FuncMD5Hash);
 };
 
-struct InstrProfStringTable {
-  // Set of string values in profiling data.
-  StringSet<> StringValueSet;
-  InstrProfStringTable() { StringValueSet.clear(); }
-  // Get a pointer to internal storage of a string in set
-  const char *getStringData(StringRef Str) {
-    auto Result = StringValueSet.find(Str);
-    return (Result == StringValueSet.end()) ? nullptr : Result->first().data();
-  }
-  // Insert a string to StringTable
-  const char *insertString(StringRef Str) {
-    auto Result = StringValueSet.insert(Str);
-    return Result.first->first().data();
-  }
-};
+std::error_code InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
+  Data = D;
+  Address = BaseAddr;
+  return std::error_code();
+}
+
+template <typename NameIterRange>
+void InstrProfSymtab::create(const NameIterRange &IterRange) {
+  for (auto Name : IterRange)
+    HashNameMap.push_back(
+        std::make_pair(IndexedInstrProf::ComputeHash(Name), Name.str()));
+  finalizeSymtab();
+}
+
+void InstrProfSymtab::finalizeSymtab() {
+  std::sort(HashNameMap.begin(), HashNameMap.end(), less_first());
+  HashNameMap.erase(std::unique(HashNameMap.begin(), HashNameMap.end()),
+                    HashNameMap.end());
+  std::sort(AddrToMD5Map.begin(), AddrToMD5Map.end(), less_first());
+  AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
+                     AddrToMD5Map.end());
+}
+
+StringRef InstrProfSymtab::getFuncName(uint64_t FuncMD5Hash) {
+  auto Result =
+      std::lower_bound(HashNameMap.begin(), HashNameMap.end(), FuncMD5Hash,
+                       [](const std::pair<uint64_t, std::string> &LHS,
+                          uint64_t RHS) { return LHS.first < RHS; });
+  if (Result != HashNameMap.end())
+    return Result->second;
+  return StringRef();
+}
 
 struct InstrProfValueSiteRecord {
   /// Value profiling data pairs at a given value site.
@@ -306,34 +317,7 @@ struct InstrProfValueSiteRecord {
   /// Merge data from another InstrProfValueSiteRecord
   /// Optionally scale merged counts by \p Weight.
   instrprof_error mergeValueData(InstrProfValueSiteRecord &Input,
-                                 uint64_t Weight = 1) {
-    this->sortByTargetValues();
-    Input.sortByTargetValues();
-    auto I = ValueData.begin();
-    auto IE = ValueData.end();
-    instrprof_error Result = instrprof_error::success;
-    for (auto J = Input.ValueData.begin(), JE = Input.ValueData.end(); J != JE;
-         ++J) {
-      while (I != IE && I->Value < J->Value)
-        ++I;
-      if (I != IE && I->Value == J->Value) {
-        uint64_t JCount = J->Count;
-        bool Overflowed;
-        if (Weight > 1) {
-          JCount = SaturatingMultiply(JCount, Weight, &Overflowed);
-          if (Overflowed)
-            Result = instrprof_error::counter_overflow;
-        }
-        I->Count = SaturatingAdd(I->Count, JCount, &Overflowed);
-        if (Overflowed)
-          Result = instrprof_error::counter_overflow;
-        ++I;
-        continue;
-      }
-      ValueData.insert(I, *J);
-    }
-    return Result;
-  }
+                                 uint64_t Weight = 1);
 };
 
 /// Profiling information for a single function.
@@ -345,7 +329,7 @@ struct InstrProfRecord {
   uint64_t Hash;
   std::vector<uint64_t> Counts;
 
-  typedef std::vector<std::pair<uint64_t, const char *>> ValueMapType;
+  typedef std::vector<std::pair<uint64_t, uint64_t>> ValueMapType;
 
   /// Return the number of value profile kinds with non-zero number
   /// of profile sites.
@@ -370,15 +354,11 @@ struct InstrProfRecord {
   /// Add ValueData for ValueKind at value Site.
   void addValueData(uint32_t ValueKind, uint32_t Site,
                     InstrProfValueData *VData, uint32_t N,
-                    ValueMapType *HashKeys);
+                    ValueMapType *ValueMap);
 
   /// Merge the counts in \p Other into this one.
   /// Optionally scale merged counts by \p Weight.
   instrprof_error merge(InstrProfRecord &Other, uint64_t Weight = 1);
-
-  /// Used by InstrProfWriter: update the value strings to commoned strings in
-  /// the writer instance.
-  void updateStrings(InstrProfStringTable *StrTab);
 
   /// Clear value data entries
   void clearValueData() {

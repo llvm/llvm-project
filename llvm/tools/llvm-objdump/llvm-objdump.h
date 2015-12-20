@@ -67,6 +67,7 @@ void printMachOLazyBindTable(const object::MachOObjectFile* o);
 void printMachOWeakBindTable(const object::MachOObjectFile* o);
 void printELFFileHeader(const object::ObjectFile *o);
 void printCOFFFileHeader(const object::ObjectFile *o);
+void printCOFFSymbolTable(const object::COFFObjectFile *o);
 void printMachOFileHeader(const object::ObjectFile *o);
 void printExportsTrie(const object::ObjectFile *o);
 void printRebaseTable(const object::ObjectFile *o);

@@ -29,14 +29,12 @@ public:
   typedef SmallDenseMap<uint64_t, InstrProfRecord, 1> ProfilingData;
 
 private:
-  InstrProfStringTable StringTable;
   StringMap<ProfilingData> FunctionData;
   uint64_t MaxFunctionCount;
+
 public:
   InstrProfWriter() : MaxFunctionCount(0) {}
 
-  /// Update string entries in profile data with references to StringTable.
-  void updateStringTableReferences(InstrProfRecord &I);
   /// Add function counts for the given function. If there are already counts
   /// for this function and the hash and number of counts match, each counter is
   /// summed. Optionally scale counts by \p Weight.
@@ -47,7 +45,7 @@ public:
   void writeText(raw_fd_ostream &OS);
   /// Write \c Record in text format to \c OS
   static void writeRecordInText(const InstrProfRecord &Record,
-                                raw_fd_ostream &OS);
+                                InstrProfSymtab &Symtab, raw_fd_ostream &OS);
   /// Write the profile, returning the raw data. For testing.
   std::unique_ptr<MemoryBuffer> writeBuffer();
 
