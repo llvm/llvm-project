@@ -267,7 +267,8 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
     bool doTextFormatDump = (Show && ShowCounts && TextFormat);
 
     if (doTextFormatDump) {
-      InstrProfWriter::writeRecordInText(Func, OS);
+      InstrProfSymtab &Symtab = Reader->getSymtab();
+      InstrProfWriter::writeRecordInText(Func, Symtab, OS);
       continue;
     }
 
@@ -306,6 +307,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
       }
 
       if (ShowIndirectCallTargets) {
+        InstrProfSymtab &Symtab = Reader->getSymtab();
         uint32_t NS = Func.getNumValueSites(IPVK_IndirectCallTarget);
         OS << "    Indirect Target Results: \n";
         for (size_t I = 0; I < NS; ++I) {
@@ -314,7 +316,8 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
               Func.getValueForSite(IPVK_IndirectCallTarget, I);
           for (uint32_t V = 0; V < NV; V++) {
             OS << "\t[ " << I << ", ";
-            OS << (const char *)VD[V].Value << ", " << VD[V].Count << " ]\n";
+            OS << Symtab.getFuncName(VD[V].Value) << ", " << VD[V].Count
+               << " ]\n";
           }
         }
       }

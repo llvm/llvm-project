@@ -138,13 +138,13 @@ N: Krzysztof Parzyszek
 E: kparzysz@codeaurora.org
 D: Hexagon Backend
 
+N: Paul Robinson
+E: paul_robinson@playstation.sony.com
+D: Sony PlayStation®4 support
+
 N: Chad Rosier
 E: mcrosier@codeaurora.org
 D: Fast-Isel
-
-N: Alex Rosenberg
-E: alexr@leftfield.org
-D: Sony PlayStation®4 support
 
 N: Nadav Rotem
 E: nrotem@apple.com

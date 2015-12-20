@@ -62,11 +62,15 @@ protected:
   }
 
   /// Set the readiness of the main thread.
-  void setMainThreadReadyState(bool Ready) {
-    std::unique_lock<std::mutex> LockGuard(WaitMainThreadMutex);
-    MainThreadReady = Ready;
+  void setMainThreadReady() {
+    {
+      std::unique_lock<std::mutex> LockGuard(WaitMainThreadMutex);
+      MainThreadReady = true;
+    }
     WaitMainThread.notify_all();
   }
+
+  void SetUp() override { MainThreadReady = false; }
 
   std::condition_variable WaitMainThread;
   std::mutex WaitMainThreadMutex;
@@ -86,7 +90,6 @@ TEST_F(ThreadPoolTest, AsyncBarrier) {
 
   std::atomic_int checked_in{0};
 
-  setMainThreadReadyState(false);
   ThreadPool Pool;
   for (size_t i = 0; i < 5; ++i) {
     Pool.async([this, &checked_in, i] {
@@ -95,7 +98,7 @@ TEST_F(ThreadPoolTest, AsyncBarrier) {
     });
   }
   ASSERT_EQ(0, checked_in);
-  setMainThreadReadyState(true);
+  setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(5, checked_in);
 }
@@ -119,14 +122,13 @@ TEST_F(ThreadPoolTest, Async) {
   CHECK_UNSUPPORTED();
   ThreadPool Pool;
   std::atomic_int i{0};
-  setMainThreadReadyState(false);
   Pool.async([this, &i] {
     waitForMainThread();
     ++i;
   });
   Pool.async([&i] { ++i; });
   ASSERT_NE(2, i.load());
-  setMainThreadReadyState(true);
+  setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(2, i.load());
 }
@@ -135,7 +137,6 @@ TEST_F(ThreadPoolTest, GetFuture) {
   CHECK_UNSUPPORTED();
   ThreadPool Pool;
   std::atomic_int i{0};
-  setMainThreadReadyState(false);
   Pool.async([this, &i] {
     waitForMainThread();
     ++i;
@@ -143,7 +144,7 @@ TEST_F(ThreadPoolTest, GetFuture) {
   // Force the future using get()
   Pool.async([&i] { ++i; }).get();
   ASSERT_NE(2, i.load());
-  setMainThreadReadyState(true);
+  setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(2, i.load());
 }
@@ -153,7 +154,6 @@ TEST_F(ThreadPoolTest, PoolDestruction) {
   // Test that we are waiting on destruction
   std::atomic_int checked_in{0};
   {
-    setMainThreadReadyState(false);
     ThreadPool Pool;
     for (size_t i = 0; i < 5; ++i) {
       Pool.async([this, &checked_in, i] {
@@ -162,7 +162,7 @@ TEST_F(ThreadPoolTest, PoolDestruction) {
       });
     }
     ASSERT_EQ(0, checked_in);
-    setMainThreadReadyState(true);
+    setMainThreadReady();
   }
   ASSERT_EQ(5, checked_in);
 }

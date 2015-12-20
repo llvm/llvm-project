@@ -638,21 +638,20 @@ simplifyRelocatesOffABase(IntrinsicInst *RelocatedBase,
     // In this case, we can not find the bitcast any more. So we insert a new bitcast
     // no matter there is already one or not. In this way, we can handle all cases, and
     // the extra bitcast should be optimized away in later passes.
-    Instruction *ActualRelocatedBase = RelocatedBase;
+    Value *ActualRelocatedBase = RelocatedBase;
     if (RelocatedBase->getType() != Base->getType()) {
       ActualRelocatedBase =
-          cast<Instruction>(Builder.CreateBitCast(RelocatedBase, Base->getType()));
+          Builder.CreateBitCast(RelocatedBase, Base->getType());
     }
     Value *Replacement = Builder.CreateGEP(
         Derived->getSourceElementType(), ActualRelocatedBase, makeArrayRef(OffsetV));
-    Instruction *ReplacementInst = cast<Instruction>(Replacement);
     Replacement->takeName(ToReplace);
     // If the newly generated derived pointer's type does not match the original derived
     // pointer's type, cast the new derived pointer to match it. Same reasoning as above.
-    Instruction *ActualReplacement = ReplacementInst;
-    if (ReplacementInst->getType() != ToReplace->getType()) {
+    Value *ActualReplacement = Replacement;
+    if (Replacement->getType() != ToReplace->getType()) {
       ActualReplacement =
-          cast<Instruction>(Builder.CreateBitCast(ReplacementInst, ToReplace->getType()));
+          Builder.CreateBitCast(Replacement, ToReplace->getType());
     }
     ToReplace->replaceAllUsesWith(ActualReplacement);
     ToReplace->eraseFromParent();

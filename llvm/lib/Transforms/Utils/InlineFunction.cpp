@@ -1196,9 +1196,8 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       SmallVector<OperandBundleDef, 2> OpDefs;
 
       for (auto &VH : InlinedFunctionInfo.OperandBundleCallSites) {
-        if (!VH) continue;  // instruction was DCE'd after being cloned
-
-        Instruction *I = cast<Instruction>(VH);
+        Instruction *I = dyn_cast_or_null<Instruction>(VH);
+        if (!I) continue;  // instruction was DCE'd or RAUW'ed to undef
 
         OpDefs.clear();
 
