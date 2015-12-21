@@ -413,8 +413,12 @@ def ConstantUImm6AsmOperandClass
     : ConstantUImmAsmOperandClass<6, [ConstantUImm7AsmOperandClass]>;
 def ConstantSImm6AsmOperandClass
     : ConstantSImmAsmOperandClass<6, [ConstantUImm7AsmOperandClass]>;
+def ConstantUImm5Plus1AsmOperandClass
+    : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 1>;
 def ConstantUImm5Plus32AsmOperandClass
     : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 32>;
+def ConstantUImm5Plus33AsmOperandClass
+    : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 33>;
 def ConstantUImm5Plus32NormalizeAsmOperandClass
     : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 32> {
   let Name = "ConstantUImm5_32_Norm";
@@ -536,9 +540,23 @@ def uimm2_plus1 : Operand<i32> {
   let ParserMatchClass = ConstantUImm2Plus1AsmOperandClass;
 }
 
+def uimm5_plus1 : Operand<i32> {
+  let PrintMethod = "printUnsignedImm";
+  let EncoderMethod = "getUImmWithOffsetEncoding<5, 1>";
+  let DecoderMethod = "DecodeUImmWithOffset<5, 1>";
+  let ParserMatchClass = ConstantUImm5Plus1AsmOperandClass;
+}
+
 def uimm5_plus32 : Operand<i32> {
   let PrintMethod = "printUnsignedImm";
   let ParserMatchClass = ConstantUImm5Plus32AsmOperandClass;
+}
+
+def uimm5_plus33 : Operand<i32> {
+  let PrintMethod = "printUnsignedImm";
+  let EncoderMethod = "getUImmWithOffsetEncoding<5, 1>";
+  let DecoderMethod = "DecodeUImmWithOffset<5, 1>";
+  let ParserMatchClass = ConstantUImm5Plus33AsmOperandClass;
 }
 
 def uimm5_plus32_normalize : Operand<i32> {
@@ -681,12 +699,6 @@ def PtrRC : Operand<iPTR> {
   let MIOperandInfo = (ops ptr_rc);
   let DecoderMethod = "DecodePtrRegisterClass";
   let ParserMatchClass = GPR32AsmOperand;
-}
-
-// size operand of ext instruction
-def size_ext : Operand<i32> {
-  let EncoderMethod = "getSizeExtEncoding";
-  let DecoderMethod = "DecodeExtSize";
 }
 
 // size operand of ins instruction
@@ -1187,8 +1199,8 @@ class ReadHardware<RegisterOperand CPURegOperand, RegisterOperand RO> :
 
 // Ext and Ins
 class ExtBase<string opstr, RegisterOperand RO, Operand PosOpnd,
-              SDPatternOperator Op = null_frag>:
-  InstSE<(outs RO:$rt), (ins RO:$rs, PosOpnd:$pos, size_ext:$size),
+              Operand SizeOpnd, SDPatternOperator Op = null_frag> :
+  InstSE<(outs RO:$rt), (ins RO:$rs, PosOpnd:$pos, SizeOpnd:$size),
          !strconcat(opstr, " $rt, $rs, $pos, $size"),
          [(set RO:$rt, (Op RO:$rs, imm:$pos, imm:$size))], II_EXT,
          FrmR, opstr>, ISA_MIPS32R2;
@@ -1473,15 +1485,15 @@ def TRAP : TrapBase<BREAK>;
 def SDBBP : MMRel, SYS_FT<"sdbbp">, SDBBP_FM, ISA_MIPS32_NOT_32R6_64R6;
 
 let AdditionalPredicates = [NotInMicroMips] in {
-def ERET : MMRel, ER_FT<"eret">, ER_FM<0x18, 0x0>, INSN_MIPS3_32;
-def ERETNC : MMRel, ER_FT<"eretnc">, ER_FM<0x18, 0x1>, ISA_MIPS32R5;
+  def ERET : MMRel, ER_FT<"eret">, ER_FM<0x18, 0x0>, INSN_MIPS3_32;
+  def ERETNC : MMRel, ER_FT<"eretnc">, ER_FM<0x18, 0x1>, ISA_MIPS32R5;
+  def DERET : MMRel, ER_FT<"deret">, ER_FM<0x1f, 0x0>, ISA_MIPS32;
 }
-def DERET : MMRel, ER_FT<"deret">, ER_FM<0x1f, 0x0>, ISA_MIPS32;
 
 let AdditionalPredicates = [NotInMicroMips] in {
-def EI : MMRel, StdMMR6Rel, DEI_FT<"ei", GPR32Opnd>, EI_FM<1>, ISA_MIPS32R2;
+  def EI : MMRel, StdMMR6Rel, DEI_FT<"ei", GPR32Opnd>, EI_FM<1>, ISA_MIPS32R2;
+  def DI : MMRel, StdMMR6Rel, DEI_FT<"di", GPR32Opnd>, EI_FM<0>, ISA_MIPS32R2;
 }
-def DI : MMRel, DEI_FT<"di", GPR32Opnd>, EI_FM<0>, ISA_MIPS32R2;
 
 let EncodingPredicates = []<Predicate>, // FIXME: Lack of HasStdEnc is probably a bug
     AdditionalPredicates = [NotInMicroMips] in {
@@ -1676,7 +1688,9 @@ def PseudoUDIV : MultDivPseudo<UDIV, ACC64, GPR32Opnd, MipsDivRemU, II_DIVU,
 let AdditionalPredicates = [NotInMicroMips] in {
 def RDHWR : MMRel, ReadHardware<GPR32Opnd, HWRegsOpnd>, RDHWR_FM;
 }
-def EXT : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, MipsExt>, EXT_FM<0>;
+// TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
+def EXT : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1, MipsExt>,
+          EXT_FM<0>;
 def INS : MMRel, InsBase<"ins", GPR32Opnd, uimm5, MipsIns>, EXT_FM<4>;
 
 /// Move Control Registers From/To CPU Registers
@@ -1871,9 +1885,9 @@ def : MipsInstAlias<"syscall", (SYSCALL 0), 1>;
 def : MipsInstAlias<"break", (BREAK 0, 0), 1>;
 def : MipsInstAlias<"break $imm", (BREAK uimm10:$imm, 0), 1>;
 let AdditionalPredicates = [NotInMicroMips] in {
-def : MipsInstAlias<"ei", (EI ZERO), 1>, ISA_MIPS32R2;
+  def : MipsInstAlias<"ei", (EI ZERO), 1>, ISA_MIPS32R2;
+  def : MipsInstAlias<"di", (DI ZERO), 1>, ISA_MIPS32R2;
 }
-def : MipsInstAlias<"di", (DI ZERO), 1>, ISA_MIPS32R2;
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"teq $rs, $rt",
                       (TEQ GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>, ISA_MIPS2;

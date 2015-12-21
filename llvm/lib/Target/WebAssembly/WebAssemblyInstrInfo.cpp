@@ -66,8 +66,7 @@ bool WebAssemblyInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
                                          SmallVectorImpl<MachineOperand> &Cond,
                                          bool /*AllowModify*/) const {
   bool HaveCond = false;
-  for (MachineInstr &MI : iterator_range<MachineBasicBlock::instr_iterator>(
-           MBB.getFirstInstrTerminator(), MBB.instr_end())) {
+  for (MachineInstr &MI : MBB.terminators()) {
     switch (MI.getOpcode()) {
     default:
       // Unhandled instruction; bail out.

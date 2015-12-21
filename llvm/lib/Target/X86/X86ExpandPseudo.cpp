@@ -20,9 +20,9 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/Analysis/EHPersonalities.h"
-#include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
 #include "llvm/IR/GlobalValue.h"
 using namespace llvm;
 
@@ -142,7 +142,16 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     // The EH_RETURN pseudo is really removed during the MC Lowering.
     return true;
   }
-
+  case X86::IRET: {
+    // Adjust stack to erase error code
+    int64_t StackAdj = MBBI->getOperand(0).getImm();
+    X86FL->emitSPUpdate(MBB, MBBI, StackAdj, true);
+    // Replace pseudo with machine iret
+    BuildMI(MBB, MBBI, DL,
+            TII->get(STI->is64Bit() ? X86::IRET64 : X86::IRET32));
+    MBB.erase(MBBI);
+    return true;
+  }
   case X86::EH_RESTORE: {
     // Restore ESP and EBP, and optionally ESI if required.
     bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(

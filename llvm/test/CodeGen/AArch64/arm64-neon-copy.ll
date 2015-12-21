@@ -320,21 +320,20 @@ define i32 @smovw8h(<8 x i16> %tmp1) {
   ret i32 %tmp5
 }
 
-define i32 @smovx16b(<16 x i8> %tmp1) {
+define i64 @smovx16b(<16 x i8> %tmp1) {
 ; CHECK-LABEL: smovx16b:
-; CHECK: smov {{[xw][0-9]+}}, {{v[0-9]+}}.b[8]
+; CHECK: smov {{x[0-9]+}}, {{v[0-9]+}}.b[8]
   %tmp3 = extractelement <16 x i8> %tmp1, i32 8
-  %tmp4 = sext i8 %tmp3 to i32
-  %tmp5 = add i32 %tmp4, %tmp4
-  ret i32 %tmp5
+  %tmp4 = sext i8 %tmp3 to i64
+  ret i64 %tmp4
 }
 
-define i32 @smovx8h(<8 x i16> %tmp1) {
+define i64 @smovx8h(<8 x i16> %tmp1) {
 ; CHECK-LABEL: smovx8h:
-; CHECK: smov {{[xw][0-9]+}}, {{v[0-9]+}}.h[2]
+; CHECK: smov {{x[0-9]+}}, {{v[0-9]+}}.h[2]
   %tmp3 = extractelement <8 x i16> %tmp1, i32 2
-  %tmp4 = sext i16 %tmp3 to i32
-  ret i32 %tmp4
+  %tmp4 = sext i16 %tmp3 to i64
+  ret i64 %tmp4
 }
 
 define i64 @smovx4s(<4 x i32> %tmp1) {

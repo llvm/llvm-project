@@ -9069,7 +9069,7 @@ static SDValue PerformXORCombine(SDNode *N,
 // their position in "to" (Rd).
 static SDValue ParseBFI(SDNode *N, APInt &ToMask, APInt &FromMask) {
   assert(N->getOpcode() == ARMISD::BFI);
-  
+
   SDValue From = N->getOperand(1);
   ToMask = ~cast<ConstantSDNode>(N->getOperand(2))->getAPIntValue();
   FromMask = APInt::getLowBitsSet(ToMask.getBitWidth(), ToMask.countPopulation());
@@ -9130,7 +9130,7 @@ static SDValue FindBFIToCombineWith(SDNode *N) {
     if (BitsProperlyConcatenate(NewToMask, ToMask) &&
         BitsProperlyConcatenate(NewFromMask, FromMask))
       return V;
-    
+
     // We've seen a write to some bits, so track it.
     CombinedToMask |= NewToMask;
     // Keep going...
@@ -9177,7 +9177,7 @@ static SDValue PerformBFICombine(SDNode *N,
     SDValue From2 = ParseBFI(CombineBFI.getNode(), ToMask2, FromMask2);
     assert(From1 == From2);
     (void)From2;
-  
+
     // First, unlink CombineBFI.
     DCI.DAG.ReplaceAllUsesWith(CombineBFI, CombineBFI.getOperand(0));
     // Then create a new BFI, combining the two together.

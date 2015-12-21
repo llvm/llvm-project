@@ -237,7 +237,7 @@ define void @sext_v4i8_to_v4i16(<4 x i8>* %a) {
 
 define void @truncate_v16i32_to_v16i16(<16 x i32>* %a) {
 ; SSE2: truncate_v16i32_to_v16i16
-; SSE2: cost of 14 {{.*}} trunc
+; SSE2: cost of 10 {{.*}} trunc
 ;
 ; SSE41: truncate_v16i32_to_v16i16
 ; SSE41: cost of 6 {{.*}} trunc
@@ -250,7 +250,7 @@ define void @truncate_v16i32_to_v16i16(<16 x i32>* %a) {
 
 define void @truncate_v8i32_to_v8i16(<8 x i32>* %a) {
 ; SSE2: truncate_v8i32_to_v8i16
-; SSE2: cost of 7 {{.*}} trunc
+; SSE2: cost of 5 {{.*}} trunc
 ;
 ; SSE41: truncate_v8i32_to_v8i16
 ; SSE41: cost of 3 {{.*}} trunc
@@ -276,7 +276,7 @@ define void @truncate_v4i32_to_v4i16(<4 x i32>* %a) {
 
 define void @truncate_v16i32_to_v16i8(<16 x i32>* %a) {
 ; SSE2: truncate_v16i32_to_v16i8
-; SSE2: cost of 31 {{.*}} trunc
+; SSE2: cost of 7 {{.*}} trunc
 ;
 ; SSE41: truncate_v16i32_to_v16i8
 ; SSE41: cost of 30 {{.*}} trunc

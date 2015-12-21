@@ -1,5 +1,5 @@
-; RUN: llc %s -o - -enable-shrink-wrap=true | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
-; RUN: llc %s -o - -enable-shrink-wrap=false | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
+; RUN: llc %s -o - -enable-shrink-wrap=true -disable-post-ra | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
+; RUN: llc %s -o - -enable-shrink-wrap=false -disable-post-ra | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios"
 

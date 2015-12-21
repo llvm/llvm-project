@@ -164,7 +164,8 @@ TEST(TrailingObjects, ThreeArg) {
             sizeof(double) + sizeof(short) + 3 * sizeof(bool));
   EXPECT_EQ(sizeof(Class3),
             llvm::RoundUpToAlignment(1, llvm::alignOf<double>()));
-  Class3 *C = reinterpret_cast<Class3 *>(::operator new(1000));
+  std::unique_ptr<char[]> P(new char[1000]);
+  Class3 *C = reinterpret_cast<Class3 *>(P.get());
   EXPECT_EQ(C->getTrailingObjects<double>(), reinterpret_cast<double *>(C + 1));
   EXPECT_EQ(C->getTrailingObjects<short>(),
             reinterpret_cast<short *>(reinterpret_cast<double *>(C + 1) + 1));

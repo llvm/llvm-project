@@ -85,6 +85,7 @@ public:
     unsigned RegNo;
     int Modifiers;
     const MCRegisterInfo *TRI;
+    const MCSubtargetInfo *STI;
     bool IsForcedVOP3;
   };
 
@@ -104,7 +105,7 @@ public:
   }
 
   void addRegOperands(MCInst &Inst, unsigned N) const {
-    Inst.addOperand(MCOperand::createReg(getReg()));
+    Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(getReg(), *Reg.STI)));
   }
 
   void addRegOrImmOperands(MCInst &Inst, unsigned N) const {
@@ -299,10 +300,12 @@ public:
   static std::unique_ptr<AMDGPUOperand> CreateReg(unsigned RegNo, SMLoc S,
                                                   SMLoc E,
                                                   const MCRegisterInfo *TRI,
+                                                  const MCSubtargetInfo *STI,
                                                   bool ForceVOP3) {
     auto Op = llvm::make_unique<AMDGPUOperand>(Register);
     Op->Reg.RegNo = RegNo;
     Op->Reg.TRI = TRI;
+    Op->Reg.STI = STI;
     Op->Reg.Modifiers = -1;
     Op->Reg.IsForcedVOP3 = ForceVOP3;
     Op->StartLoc = S;
@@ -333,15 +336,15 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   unsigned ForcedEncodingSize;
 
   bool isSI() const {
-    return STI->getFeatureBits()[AMDGPU::FeatureSouthernIslands];
+    return AMDGPU::isSI(getSTI());
   }
 
   bool isCI() const {
-    return STI->getFeatureBits()[AMDGPU::FeatureSeaIslands];
+    return AMDGPU::isCI(getSTI());
   }
 
   bool isVI() const {
-    return getSTI().getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
+    return AMDGPU::isVI(getSTI());
   }
 
   bool hasSGPR102_SGPR103() const {
@@ -1178,7 +1181,7 @@ AMDGPUAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
 
         Operands.push_back(AMDGPUOperand::CreateReg(
-            RegNo, S, E, getContext().getRegisterInfo(),
+            RegNo, S, E, getContext().getRegisterInfo(), &getSTI(),
             isForcedVOP3()));
 
         if (HasModifiers || Modifiers) {

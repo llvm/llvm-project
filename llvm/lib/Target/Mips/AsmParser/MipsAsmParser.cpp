@@ -3636,9 +3636,15 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm5_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 5-bit unsigned immediate");
+  case Match_UImm5_1:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range 1 .. 32");
   case Match_UImm5_32:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range 32 .. 63");
+  case Match_UImm5_33:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range 33 .. 64");
   case Match_UImm5_0_Report_UImm6:
     // This is used on UImm5 operands that have a corresponding UImm5_32
     // operand to avoid confusing the user.

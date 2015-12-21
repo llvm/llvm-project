@@ -23,6 +23,8 @@ void MCOperand::print(raw_ostream &OS) const {
     OS << "Reg:" << getReg();
   else if (isImm())
     OS << "Imm:" << getImm();
+  else if (isFPImm())
+    OS << "FPImm:" << getFPImm();
   else if (isExpr()) {
     OS << "Expr:(" << *getExpr() << ")";
   } else if (isInst()) {

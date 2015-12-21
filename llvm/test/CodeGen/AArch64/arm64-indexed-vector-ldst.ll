@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-apple-ios7.0 -o - %s | FileCheck %s
+; RUN: llc -mtriple=arm64-apple-ios7.0 -disable-post-ra -o - %s | FileCheck %s
 
 @ptr = global i8* null
 

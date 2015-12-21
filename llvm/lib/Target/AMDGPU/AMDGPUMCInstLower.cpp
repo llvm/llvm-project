@@ -61,7 +61,7 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
       MCOp = MCOperand::createImm(MO.getImm());
       break;
     case MachineOperand::MO_Register:
-      MCOp = MCOperand::createReg(MO.getReg());
+      MCOp = MCOperand::createReg(AMDGPU::getMCReg(MO.getReg(), ST));
       break;
     case MachineOperand::MO_MachineBasicBlock:
       MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(

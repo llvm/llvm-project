@@ -865,15 +865,6 @@ getMemEncodingMMImm4sp(const MCInst &MI, unsigned OpNo,
   return ((OffBits >> 2) & 0x0F);
 }
 
-unsigned
-MipsMCCodeEmitter::getSizeExtEncoding(const MCInst &MI, unsigned OpNo,
-                                      SmallVectorImpl<MCFixup> &Fixups,
-                                      const MCSubtargetInfo &STI) const {
-  assert(MI.getOperand(OpNo).isImm());
-  unsigned SizeEncoding = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
-  return SizeEncoding - 1;
-}
-
 // FIXME: should be called getMSBEncoding
 //
 unsigned

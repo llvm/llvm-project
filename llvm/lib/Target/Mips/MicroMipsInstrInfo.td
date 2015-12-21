@@ -844,9 +844,9 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   /// Word Swap Bytes Within Halfwords
   def WSBH_MM : MMRel, SubwordSwap<"wsbh", GPR32Opnd, II_WSBH>,
                 SEB_FM_MM<0x1ec>, ISA_MIPS32R2;
-
-  def EXT_MM : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, MipsExt>,
-               EXT_FM_MM<0x2c>;
+  // TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
+  def EXT_MM : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1,
+                              MipsExt>, EXT_FM_MM<0x2c>;
   def INS_MM : MMRel, InsBase<"ins", GPR32Opnd, uimm5, MipsIns>,
                EXT_FM_MM<0x0c>;
 
@@ -1018,6 +1018,7 @@ def B_MM_Pseudo : UncondBranchMMPseudo<"b">, ISA_MICROMIPS;
 
 let Predicates = [InMicroMips] in {
 def : MipsInstAlias<"ei", (EI_MM ZERO), 1>, ISA_MIPS32R2;
+def : MipsInstAlias<"di", (DI_MM ZERO), 1>, ISA_MIPS32R2;
 def : MipsInstAlias<"teq $rs, $rt",
                     (TEQ_MM GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>;
 def : MipsInstAlias<"tge $rs, $rt",

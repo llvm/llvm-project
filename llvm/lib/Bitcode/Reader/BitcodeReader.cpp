@@ -97,7 +97,6 @@ public:
 class BitcodeReaderMDValueList {
   unsigned NumFwdRefs;
   bool AnyFwdRefs;
-  bool SavedFwdRefs;
   unsigned MinFwdRef;
   unsigned MaxFwdRef;
   std::vector<TrackingMDRef> MDValuePtrs;
@@ -105,12 +104,7 @@ class BitcodeReaderMDValueList {
   LLVMContext &Context;
 public:
   BitcodeReaderMDValueList(LLVMContext &C)
-      : NumFwdRefs(0), AnyFwdRefs(false), SavedFwdRefs(false), Context(C) {}
-  ~BitcodeReaderMDValueList() {
-    // Assert that we either replaced all forward references, or saved
-    // them for later replacement.
-    assert(!NumFwdRefs || SavedFwdRefs);
-  }
+      : NumFwdRefs(0), AnyFwdRefs(false), Context(C) {}
 
   // vector compatibility methods
   unsigned size() const       { return MDValuePtrs.size(); }
@@ -120,8 +114,6 @@ public:
   Metadata *back() const      { return MDValuePtrs.back(); }
   void pop_back()             { MDValuePtrs.pop_back(); }
   bool empty() const          { return MDValuePtrs.empty(); }
-
-  void savedFwdRefs() { SavedFwdRefs = true; }
 
   Metadata *operator[](unsigned i) const {
     assert(i < MDValuePtrs.size());
@@ -1080,9 +1072,6 @@ Metadata *BitcodeReaderMDValueList::getValueFwdRef(unsigned Idx) {
     MinFwdRef = MaxFwdRef = Idx;
   }
   ++NumFwdRefs;
-  // Reset flag to ensure that we save this forward reference if we
-  // are delaying metadata mapping (e.g. for function importing).
-  SavedFwdRefs = false;
 
   // Create and return a placeholder, which will later be RAUW'd.
   Metadata *MD = MDNode::getTemporary(Context, None).release();
@@ -3110,10 +3099,6 @@ void BitcodeReader::saveMDValueList(
         continue;
       }
       MDValueToValIDMap[MD] = ValID;
-      // Flag that we saved the forward refs (temporary metadata) for error
-      // checking during MDValueList destruction.
-      if (OnlyTempMD)
-        MDValueList.savedFwdRefs();
     }
   }
 }

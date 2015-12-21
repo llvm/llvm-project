@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-linux-gnu -enable-misched=false < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-linux-gnu -enable-misched=false -disable-post-ra < %s | FileCheck %s
 
 @var = global i32 0, align 4
 

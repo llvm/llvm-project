@@ -273,9 +273,15 @@ let isCodeGenOnly = 1 in
 def RDHWR64 : ReadHardware<GPR64Opnd, HWRegsOpnd>, RDHWR_FM;
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def DEXT : ExtBase<"dext", GPR64Opnd, uimm6, MipsExt>, EXT_FM<3>;
-  def DEXTM : ExtBase<"dextm", GPR64Opnd, uimm5>, EXT_FM<1>;
-  def DEXTU : ExtBase<"dextu", GPR64Opnd, uimm5_plus32>, EXT_FM<2>;
+  // TODO: Add 'pos + size' constraint check to dext* instructions
+  //       DEXT: 0 < pos + size <= 63
+  //       DEXTM, DEXTU: 32 < pos + size <= 64
+  def DEXT : ExtBase<"dext", GPR64Opnd, uimm5, uimm5_plus1, MipsExt>,
+             EXT_FM<3>;
+  def DEXTM : ExtBase<"dextm", GPR64Opnd, uimm5, uimm5_plus33, MipsExt>,
+              EXT_FM<1>;
+  def DEXTU : ExtBase<"dextu", GPR64Opnd, uimm5_plus32, uimm5_plus1,
+                      MipsExt>, EXT_FM<2>;
 }
 
 def DINS : InsBase<"dins", GPR64Opnd, uimm6, MipsIns>, EXT_FM<7>;

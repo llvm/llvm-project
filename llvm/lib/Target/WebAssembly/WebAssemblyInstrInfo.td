@@ -79,7 +79,7 @@ include "WebAssemblyInstrFormats.td"
 //===----------------------------------------------------------------------===//
 
 multiclass ARGUMENT<WebAssemblyRegClass vt> {
-  let hasSideEffects = 1, Uses = [ARGUMENTS] in
+  let hasSideEffects = 1, Uses = [ARGUMENTS], isCodeGenOnly = 1 in
   def ARGUMENT_#vt : I<(outs vt:$res), (ins i32imm:$argno),
                        [(set vt:$res, (WebAssemblyargument timm:$argno))]>;
 }

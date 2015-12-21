@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -disable-post-ra < %s | FileCheck %s
 
 ; This test aims to check basic correctness of frame layout &
 ; frame access code. There are 8 functions in this test file,

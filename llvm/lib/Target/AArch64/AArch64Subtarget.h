@@ -102,7 +102,7 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override {
-    return isCortexA53() || isCortexA57();
+    return isGeneric() || isCortexA53() || isCortexA57();
   }
 
   bool hasV8_1aOps() const { return HasV8_1aOps; }
@@ -139,6 +139,7 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
+  bool isGeneric() const { return CPUString == "generic"; }
   bool isCyclone() const { return CPUString == "cyclone"; }
   bool isCortexA57() const { return CPUString == "cortex-a57"; }
   bool isCortexA53() const { return CPUString == "cortex-a53"; }

@@ -24,8 +24,6 @@ class WebAssemblyELFObjectWriter final : public MCELFObjectTargetWriter {
 public:
   WebAssemblyELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
-  ~WebAssemblyELFObjectWriter() override;
-
 protected:
   unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
                         bool IsPCRel) const override;
@@ -39,8 +37,6 @@ WebAssemblyELFObjectWriter::WebAssemblyELFObjectWriter(bool Is64Bit,
                                                        uint8_t OSABI)
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_NONE,
                               /*HasRelocationAddend=*/true) {}
-
-WebAssemblyELFObjectWriter::~WebAssemblyELFObjectWriter() {}
 
 unsigned WebAssemblyELFObjectWriter::GetRelocType(const MCValue &Target,
                                                   const MCFixup &Fixup,

@@ -8,9 +8,11 @@
         .set noreorder
         cache -1, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
-        # FIXME: Check size on ext
+        # FIXME: Check '0 < pos + size <= 32' constraint on ext
         ext $2, $3, -1, 1    # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         ext $2, $3, 32, 1    # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
+        ext $2, $3, 1, 0     # CHECK: :[[@LINE]]:24: error: expected immediate in range 1 .. 32
+        ext $2, $3, 1, 33    # CHECK: :[[@LINE]]:24: error: expected immediate in range 1 .. 32
         # FIXME: Check size on ins
         ins $2, $3, -1, 1    # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         ins $2, $3, 32, 1    # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
