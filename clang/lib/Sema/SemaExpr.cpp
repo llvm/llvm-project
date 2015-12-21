@@ -327,18 +327,16 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
   if (getLangOpts().CPlusPlus && isa<FunctionDecl>(D)) {
     // If there were any diagnostics suppressed by template argument deduction,
     // emit them now.
-    SuppressedDiagnosticsMap::iterator
-      Pos = SuppressedDiagnostics.find(D->getCanonicalDecl());
+    auto Pos = SuppressedDiagnostics.find(D->getCanonicalDecl());
     if (Pos != SuppressedDiagnostics.end()) {
-      SmallVectorImpl<PartialDiagnosticAt> &Suppressed = Pos->second;
-      for (unsigned I = 0, N = Suppressed.size(); I != N; ++I)
-        Diag(Suppressed[I].first, Suppressed[I].second);
+      for (const PartialDiagnosticAt &Suppressed : Pos->second)
+        Diag(Suppressed.first, Suppressed.second);
 
       // Clear out the list of suppressed diagnostics, so that we don't emit
       // them again for this specialization. However, we don't obsolete this
       // entry from the table, because we want to avoid ever emitting these
       // diagnostics again.
-      Suppressed.clear();
+      Pos->second.clear();
     }
 
     // C++ [basic.start.main]p3:
@@ -1462,12 +1460,11 @@ Sema::CreateGenericSelectionExpr(SourceLocation KeyLoc,
     Diag(ControllingExpr->getLocStart(), diag::err_generic_sel_multi_match)
       << ControllingExpr->getSourceRange() << ControllingExpr->getType()
       << (unsigned) CompatIndices.size();
-    for (SmallVectorImpl<unsigned>::iterator I = CompatIndices.begin(),
-         E = CompatIndices.end(); I != E; ++I) {
-      Diag(Types[*I]->getTypeLoc().getBeginLoc(),
+    for (unsigned I : CompatIndices) {
+      Diag(Types[I]->getTypeLoc().getBeginLoc(),
            diag::note_compat_assoc)
-        << Types[*I]->getTypeLoc().getSourceRange()
-        << Types[*I]->getType();
+        << Types[I]->getTypeLoc().getSourceRange()
+        << Types[I]->getType();
     }
     return ExprError();
   }
@@ -1550,8 +1547,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     return ExprError();
 
   SmallVector<SourceLocation, 4> StringTokLocs;
-  for (unsigned i = 0; i != StringToks.size(); ++i)
-    StringTokLocs.push_back(StringToks[i].getLocation());
+  for (const Token &Tok : StringToks)
+    StringTokLocs.push_back(Tok.getLocation());
 
   QualType CharTy = Context.CharTy;
   StringLiteral::StringKind Kind = StringLiteral::Ascii;
@@ -1850,8 +1847,8 @@ Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
         }
 
         // Do we really want to note all of these?
-        for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I)
-          Diag((*I)->getLocation(), diag::note_dependent_var_use);
+        for (NamedDecl *D : R)
+          Diag(D->getLocation(), diag::note_dependent_var_use);
 
         // Return true if we are inside a default argument instantiation
         // and the found name refers to an instance member function, otherwise
@@ -1912,15 +1909,13 @@ Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
         OverloadCandidateSet OCS(R.getNameLoc(),
                                  OverloadCandidateSet::CSK_Normal);
         OverloadCandidateSet::iterator Best;
-        for (TypoCorrection::decl_iterator CD = Corrected.begin(),
-                                        CDEnd = Corrected.end();
-             CD != CDEnd; ++CD) {
+        for (NamedDecl *CD : Corrected) {
           if (FunctionTemplateDecl *FTD =
-                   dyn_cast<FunctionTemplateDecl>(*CD))
+                   dyn_cast<FunctionTemplateDecl>(CD))
             AddTemplateOverloadCandidate(
                 FTD, DeclAccessPair::make(FTD, AS_none), ExplicitTemplateArgs,
                 Args, OCS);
-          else if (FunctionDecl *FD = dyn_cast<FunctionDecl>(*CD))
+          else if (FunctionDecl *FD = dyn_cast<FunctionDecl>(CD))
             if (!ExplicitTemplateArgs || ExplicitTemplateArgs->size() == 0)
               AddOverloadCandidate(FD, DeclAccessPair::make(FD, AS_none),
                                    Args, OCS);
@@ -2679,9 +2674,7 @@ bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
 
   // Turn off ADL when we find certain kinds of declarations during
   // normal lookup:
-  for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I) {
-    NamedDecl *D = *I;
-
+  for (NamedDecl *D : R) {
     // C++0x [basic.lookup.argdep]p3:
     //     -- a declaration of a class member
     // Since using decls preserve this property, we check this on the
@@ -4413,10 +4406,8 @@ static TypoCorrection TryTypoCorrectionForCall(Sema &S, Expr *Fn,
       if (Corrected.isOverloaded()) {
         OverloadCandidateSet OCS(NameLoc, OverloadCandidateSet::CSK_Normal);
         OverloadCandidateSet::iterator Best;
-        for (TypoCorrection::decl_iterator CD = Corrected.begin(),
-                                           CDEnd = Corrected.end();
-             CD != CDEnd; ++CD) {
-          if (FunctionDecl *FD = dyn_cast<FunctionDecl>(*CD))
+        for (NamedDecl *CD : Corrected) {
+          if (FunctionDecl *FD = dyn_cast<FunctionDecl>(CD))
             S.AddOverloadCandidate(FD, DeclAccessPair::make(FD, AS_none), Args,
                                    OCS);
         }
@@ -4567,7 +4558,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   bool IsListInitialization) {
   unsigned NumParams = Proto->getNumParams();
   bool Invalid = false;
-  unsigned ArgIx = 0;
+  size_t ArgIx = 0;
   // Continue to check argument types (even if we have too few/many args).
   for (unsigned i = FirstParam; i < NumParams; i++) {
     QualType ProtoArgType = Proto->getParamType(i);
@@ -4637,26 +4628,25 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     // return __unknown_anytype aren't *really* variadic.
     if (Proto->getReturnType() == Context.UnknownAnyTy && FDecl &&
         FDecl->isExternC()) {
-      for (unsigned i = ArgIx, e = Args.size(); i != e; ++i) {
+      for (Expr *A : Args.slice(ArgIx)) {
         QualType paramType; // ignored
-        ExprResult arg = checkUnknownAnyArg(CallLoc, Args[i], paramType);
+        ExprResult arg = checkUnknownAnyArg(CallLoc, A, paramType);
         Invalid |= arg.isInvalid();
         AllArgs.push_back(arg.get());
       }
 
     // Otherwise do argument promotion, (C99 6.5.2.2p7).
     } else {
-      for (unsigned i = ArgIx, e = Args.size(); i != e; ++i) {
-        ExprResult Arg = DefaultVariadicArgumentPromotion(Args[i], CallType,
-                                                          FDecl);
+      for (Expr *A : Args.slice(ArgIx)) {
+        ExprResult Arg = DefaultVariadicArgumentPromotion(A, CallType, FDecl);
         Invalid |= Arg.isInvalid();
         AllArgs.push_back(Arg.get());
       }
     }
 
     // Check for array bounds violations.
-    for (unsigned i = ArgIx, e = Args.size(); i != e; ++i)
-      CheckArrayAccess(Args[i]);
+    for (Expr *A : Args.slice(ArgIx))
+      CheckArrayAccess(A);
   }
   return Invalid;
 }
@@ -10983,10 +10973,8 @@ static bool isQualifiedMemberAccess(Expr *E) {
     if (!ULE->getQualifier())
       return false;
     
-    for (UnresolvedLookupExpr::decls_iterator D = ULE->decls_begin(),
-                                           DEnd = ULE->decls_end();
-         D != DEnd; ++D) {
-      if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(*D)) {
+    for (NamedDecl *D : ULE->decls()) {
+      if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D)) {
         if (Method->isInstance())
           return true;
       } else {
@@ -11326,9 +11314,8 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
       }
 
       CXXBasePath &Path = Paths.front();
-      for (CXXBasePath::iterator B = Path.begin(), BEnd = Path.end();
-           B != BEnd; ++B)
-        Comps.push_back(OffsetOfNode(B->Base));
+      for (const CXXBasePathElement &B : Path)
+        Comps.push_back(OffsetOfNode(B.Base));
     }
 
     if (IndirectMemberDecl) {
@@ -11596,8 +11583,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   // Set the captured variables on the block.
   // FIXME: Share capture structure between BlockDecl and CapturingScopeInfo!
   SmallVector<BlockDecl::Capture, 4> Captures;
-  for (unsigned i = 0, e = BSI->Captures.size(); i != e; i++) {
-    CapturingScopeInfo::Capture &Cap = BSI->Captures[i];
+  for (CapturingScopeInfo::Capture &Cap : BSI->Captures) {
     if (Cap.isThisCapture())
       continue;
     BlockDecl::Capture NewCap(Cap.getVariable(), Cap.isBlockCapture(),
@@ -12037,9 +12023,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   // If we can fix the conversion, suggest the FixIts.
   assert(ConvHints.isNull() || Hint.isNull());
   if (!ConvHints.isNull()) {
-    for (std::vector<FixItHint>::iterator HI = ConvHints.Hints.begin(),
-         HE = ConvHints.Hints.end(); HI != HE; ++HI)
-      FDiag << *HI;
+    for (FixItHint &H : ConvHints.Hints)
+      FDiag << H;
   } else {
     FDiag << Hint;
   }
@@ -12214,16 +12199,16 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   if (!Folded || !AllowFold) {
     if (!Diagnoser.Suppress) {
       Diagnoser.diagnoseNotICE(*this, DiagLoc, E->getSourceRange());
-      for (unsigned I = 0, N = Notes.size(); I != N; ++I)
-        Diag(Notes[I].first, Notes[I].second);
+      for (const PartialDiagnosticAt &Note : Notes)
+        Diag(Note.first, Note.second);
     }
 
     return ExprError();
   }
 
   Diagnoser.diagnoseFold(*this, DiagLoc, E->getSourceRange());
-  for (unsigned I = 0, N = Notes.size(); I != N; ++I)
-    Diag(Notes[I].first, Notes[I].second);
+  for (const PartialDiagnosticAt &Note : Notes)
+    Diag(Note.first, Note.second);
 
   if (Result)
     *Result = EvalResult.Val.getInt();
@@ -13413,15 +13398,13 @@ ExprResult Sema::ActOnConstantExpression(ExprResult Res) {
 }
 
 void Sema::CleanupVarDeclMarking() {
-  for (llvm::SmallPtrSetIterator<Expr*> i = MaybeODRUseExprs.begin(),
-                                        e = MaybeODRUseExprs.end();
-       i != e; ++i) {
+  for (Expr *E : MaybeODRUseExprs) {
     VarDecl *Var;
     SourceLocation Loc;
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(*i)) {
+    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
       Var = cast<VarDecl>(DRE->getDecl());
       Loc = DRE->getLocation();
-    } else if (MemberExpr *ME = dyn_cast<MemberExpr>(*i)) {
+    } else if (MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
       Var = cast<VarDecl>(ME->getMemberDecl());
       Loc = ME->getMemberLoc();
     } else {

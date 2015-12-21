@@ -33,9 +33,21 @@ _mm_popcnt_u32(unsigned int __A)
   return __builtin_popcount(__A);
 }
 
+static __inline__ int __DEFAULT_FN_ATTRS
+_popcnt32(int __A)
+{
+  return __builtin_popcount(__A);
+}
+
 #ifdef __x86_64__
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm_popcnt_u64(unsigned long long __A)
+{
+  return __builtin_popcountll(__A);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS
+_popcnt64(long long __A)
 {
   return __builtin_popcountll(__A);
 }

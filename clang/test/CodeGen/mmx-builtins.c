@@ -223,6 +223,12 @@ __m64 test_m_from_int(int a) {
   return _m_from_int(a);
 }
 
+__m64 test_m_from_int64(long long a) {
+  // CHECK-LABEL: test_m_from_int64
+  // CHECK: bitcast
+  return _m_from_int64(a);
+}
+
 __m64 test_mm_hadd_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_hadd_pi16
   // CHECK: call x86_mmx @llvm.x86.ssse3.phadd.w
@@ -551,6 +557,12 @@ int test_m_to_int(__m64 a) {
   // CHECK-LABEL: test_m_to_int
   // CHECK: extractelement <2 x i32>
   return _m_to_int(a);
+}
+
+long long test_m_to_int64(__m64 a) {
+  // CHECK-LABEL: test_m_to_int64
+  // CHECK: bitcast
+  return _m_to_int64(a);
 }
 
 __m64 test_mm_unpackhi_pi8(__m64 a, __m64 b) {
