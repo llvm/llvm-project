@@ -1118,8 +1118,8 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
       // (X + signbit) + C could have gotten canonicalized to (X ^ signbit) + C,
       // transform them into (X + (signbit ^ C))
       if (XorRHS->getValue().isSignBit())
-          return BinaryOperator::CreateAdd(XorLHS,
-                                           ConstantExpr::getXor(XorRHS, CI));
+        return BinaryOperator::CreateAdd(XorLHS,
+                                         ConstantExpr::getXor(XorRHS, CI));
     }
   }
 

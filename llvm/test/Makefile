@@ -148,6 +148,7 @@ lit.site.cfg: FORCE
 	@$(ECHOPATH) s=@HAVE_LIBZ@=$(HAVE_LIBZ)=g >> lit.tmp
 	@$(ECHOPATH) s=@HAVE_DIA_SDK@=0=g >> lit.tmp
 	@$(ECHOPATH) s=@ENABLE_EXAMPLES@=$(BUILD_EXAMPLES)=g >> lit.tmp
+	@$(ECHOPATH) s=@ENABLE_TIMESTAMPS@=$(ENABLE_TIMESTAMPS)=g >> lit.tmp
 	@sed -f lit.tmp $(PROJ_SRC_DIR)/lit.site.cfg.in > $@
 	@-rm -f lit.tmp
 

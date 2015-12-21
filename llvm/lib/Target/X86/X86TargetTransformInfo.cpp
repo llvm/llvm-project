@@ -1199,6 +1199,19 @@ int X86TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
   case Instruction::Store:
     ImmIdx = 0;
     break;
+  case Instruction::ICmp:
+    // This is an imperfect hack to prevent constant hoisting of
+    // compares that might be trying to check if a 64-bit value fits in
+    // 32-bits. The backend can optimize these cases using a right shift by 32.
+    // Ideally we would check the compare predicate here. There also other
+    // similar immediates the backend can use shifts for.
+    if (Idx == 1 && Imm.getBitWidth() == 64) {
+      uint64_t ImmVal = Imm.getZExtValue();
+      if (ImmVal == 0x100000000ULL || ImmVal == 0xffffffff)
+        return TTI::TCC_Free;
+    }
+    ImmIdx = 1;
+    break;
   case Instruction::And:
     // We support 64-bit ANDs with immediates with 32-bits of leading zeroes
     // by using a 32-bit operation with implicit zero extension. Detect such
@@ -1215,7 +1228,6 @@ int X86TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
   case Instruction::SRem:
   case Instruction::Or:
   case Instruction::Xor:
-  case Instruction::ICmp:
     ImmIdx = 1;
     break;
   // Always return TCC_Free for the shift value of a shift instruction.
