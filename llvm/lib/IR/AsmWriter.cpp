@@ -314,6 +314,7 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::SPIR_FUNC:     Out << "spir_func"; break;
   case CallingConv::SPIR_KERNEL:   Out << "spir_kernel"; break;
   case CallingConv::Swift:         Out << "swiftcc"; break;
+  case CallingConv::X86_INTR:      Out << "x86_intrcc"; break;
   case CallingConv::HHVM:          Out << "hhvmcc"; break;
   case CallingConv::HHVM_C:        Out << "hhvm_ccc"; break;
   }

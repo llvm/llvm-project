@@ -1689,6 +1689,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::BUILD_VECTOR,        VT, Custom);
       setOperationAction(ISD::VSELECT,             VT, Legal);
+
+      setOperationAction(ISD::AND,    VT, Promote);
+      AddPromotedToType (ISD::AND,    VT, MVT::v8i64);
+      setOperationAction(ISD::OR,     VT, Promote);
+      AddPromotedToType (ISD::OR,     VT, MVT::v8i64);
+      setOperationAction(ISD::XOR,    VT, Promote);
+      AddPromotedToType (ISD::XOR,    VT, MVT::v8i64);
     }
   }
 
@@ -2188,6 +2195,9 @@ X86TargetLowering::LowerReturn(SDValue Chain,
   MachineFunction &MF = DAG.getMachineFunction();
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
+  if (CallConv == CallingConv::X86_INTR && !Outs.empty())
+    report_fatal_error("X86 interrupts may not return any value");
+
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, *DAG.getContext());
   CCInfo.AnalyzeReturn(Outs, RetCC_X86);
@@ -2301,7 +2311,10 @@ X86TargetLowering::LowerReturn(SDValue Chain,
   if (Flag.getNode())
     RetOps.push_back(Flag);
 
-  return DAG.getNode(X86ISD::RET_FLAG, dl, MVT::Other, RetOps);
+  X86ISD::NodeType opcode = X86ISD::RET_FLAG;
+  if (CallConv == CallingConv::X86_INTR)
+    opcode = X86ISD::IRET;
+  return DAG.getNode(opcode, dl, MVT::Other, RetOps);
 }
 
 bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
@@ -2541,6 +2554,19 @@ X86TargetLowering::LowerMemArgument(SDValue Chain,
   else
     ValVT = VA.getValVT();
 
+  // Calculate SP offset of interrupt parameter, re-arrange the slot normally
+  // taken by a return address.
+  int Offset = 0;
+  if (CallConv == CallingConv::X86_INTR) {
+    const X86Subtarget& Subtarget =
+        static_cast<const X86Subtarget&>(DAG.getSubtarget());
+    // X86 interrupts may take one or two arguments.
+    // On the stack there will be no return address as in regular call.
+    // Offset of last argument need to be set to -4/-8 bytes.
+    // Where offset of the first argument out of two, should be set to 0 bytes.
+    Offset = (Subtarget.is64Bit() ? 8 : 4) * ((i + 1) % Ins.size() - 1);
+  }
+
   // FIXME: For now, all byval parameter objects are marked mutable. This can be
   // changed with more analysis.
   // In case of tail call optimization mark all arguments mutable. Since they
@@ -2549,10 +2575,19 @@ X86TargetLowering::LowerMemArgument(SDValue Chain,
     unsigned Bytes = Flags.getByValSize();
     if (Bytes == 0) Bytes = 1; // Don't create zero-sized stack objects.
     int FI = MFI->CreateFixedObject(Bytes, VA.getLocMemOffset(), isImmutable);
+    // Adjust SP offset of interrupt parameter.
+    if (CallConv == CallingConv::X86_INTR) {
+      MFI->setObjectOffset(FI, Offset);
+    }
     return DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
   } else {
     int FI = MFI->CreateFixedObject(ValVT.getSizeInBits()/8,
                                     VA.getLocMemOffset(), isImmutable);
+    // Adjust SP offset of interrupt parameter.
+    if (CallConv == CallingConv::X86_INTR) {
+      MFI->setObjectOffset(FI, Offset);
+    }
+
     SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue Val = DAG.getLoad(
         ValVT, dl, Chain, FIN,
@@ -2631,6 +2666,14 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
          "Var args not supported with calling convention fastcc, ghc or hipe");
+
+  if (CallConv == CallingConv::X86_INTR) {
+    bool isLegal = Ins.size() == 1 ||
+                   (Ins.size() == 2 && ((Is64Bit && Ins[1].VT == MVT::i64) ||
+                                        (!Is64Bit && Ins[1].VT == MVT::i32)));
+    if (!isLegal)
+      report_fatal_error("X86 interrupts may take one or two arguments");
+  }
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2891,6 +2934,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
   if (X86::isCalleePop(CallConv, Is64Bit, isVarArg,
                        MF.getTarget().Options.GuaranteedTailCallOpt)) {
     FuncInfo->setBytesToPopOnReturn(StackSize); // Callee pops everything.
+  } else if (CallConv == CallingConv::X86_INTR && Ins.size() == 2) {
+    // X86 interrupts must pop the error code if present
+    FuncInfo->setBytesToPopOnReturn(Is64Bit ? 8 : 4);
   } else {
     FuncInfo->setBytesToPopOnReturn(0); // Callee pops nothing.
     // If this is an sret function, the return should pop the hidden pointer.
@@ -3020,6 +3066,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsSibcall      = false;
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   auto Attr = MF.getFunction()->getFnAttribute("disable-tail-calls");
+
+  if (CallConv == CallingConv::X86_INTR)
+    report_fatal_error("X86 interrupts may not be called directly");
 
   if (Attr.getValueAsString() == "true")
     isTailCall = false;
@@ -13242,7 +13291,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
         && InVT.getScalarSizeInBits() >= 32 &&
         Subtarget->hasDQI() && Subtarget->hasVLX())
       return Op; // legal, will go to VPMOVB2M, VPMOVQ2M
-  }
+    }
 
   if (VT.getVectorElementType() == MVT::i1) {
     assert(VT.getVectorElementType() == MVT::i1 && "Unexpected vector type");
@@ -20392,6 +20441,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CMOV:               return "X86ISD::CMOV";
   case X86ISD::BRCOND:             return "X86ISD::BRCOND";
   case X86ISD::RET_FLAG:           return "X86ISD::RET_FLAG";
+  case X86ISD::IRET:               return "X86ISD::IRET";
   case X86ISD::REP_STOS:           return "X86ISD::REP_STOS";
   case X86ISD::REP_MOVS:           return "X86ISD::REP_MOVS";
   case X86ISD::GlobalBaseReg:      return "X86ISD::GlobalBaseReg";
@@ -25847,12 +25897,6 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue PerformTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
-                                      const X86Subtarget *Subtarget) {
-  return detectAVGPattern(N->getOperand(0), N->getValueType(0), DAG, Subtarget,
-                          SDLoc(N));
-}
-
 /// PerformLOADCombine - Do target-specific dag combines on LOAD nodes.
 static SDValue PerformLOADCombine(SDNode *N, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -26494,6 +26538,163 @@ static SDValue PerformFSUBCombine(SDNode *N, SelectionDAG &DAG,
       isHorizontalBinOp(LHS, RHS, false))
     return DAG.getNode(X86ISD::FHSUB, SDLoc(N), VT, LHS, RHS);
   return SDValue();
+}
+
+/// Truncate a group of v4i32 into v16i8/v8i16 using X86ISD::PACKUS.
+static SDValue
+combineVectorTruncationWithPACKUS(SDNode *N, SelectionDAG &DAG,
+                                  SmallVector<SDValue, 8> &Regs) {
+  assert(Regs.size() > 0 && (Regs[0].getValueType() == MVT::v4i32 ||
+                             Regs[0].getValueType() == MVT::v2i64));
+  EVT OutVT = N->getValueType(0);
+  EVT OutSVT = OutVT.getVectorElementType();
+  EVT InVT = Regs[0].getValueType();
+  EVT InSVT = InVT.getVectorElementType();
+  SDLoc DL(N);
+
+  // First, use mask to unset all bits that won't appear in the result.
+  assert((OutSVT == MVT::i8 || OutSVT == MVT::i16) &&
+         "OutSVT can only be either i8 or i16.");
+  SDValue MaskVal =
+      DAG.getConstant(OutSVT == MVT::i8 ? 0xFF : 0xFFFF, DL, InSVT);
+  SDValue MaskVec = DAG.getNode(
+      ISD::BUILD_VECTOR, DL, InVT,
+      SmallVector<SDValue, 8>(InVT.getVectorNumElements(), MaskVal));
+  for (auto &Reg : Regs)
+    Reg = DAG.getNode(ISD::AND, DL, InVT, MaskVec, Reg);
+
+  MVT UnpackedVT, PackedVT;
+  if (OutSVT == MVT::i8) {
+    UnpackedVT = MVT::v8i16;
+    PackedVT = MVT::v16i8;
+  } else {
+    UnpackedVT = MVT::v4i32;
+    PackedVT = MVT::v8i16;
+  }
+
+  // In each iteration, truncate the type by a half size.
+  auto RegNum = Regs.size();
+  for (unsigned j = 1, e = InSVT.getSizeInBits() / OutSVT.getSizeInBits();
+       j < e; j *= 2, RegNum /= 2) {
+    for (unsigned i = 0; i < RegNum; i++)
+      Regs[i] = DAG.getNode(ISD::BITCAST, DL, UnpackedVT, Regs[i]);
+    for (unsigned i = 0; i < RegNum / 2; i++)
+      Regs[i] = DAG.getNode(X86ISD::PACKUS, DL, PackedVT, Regs[i * 2],
+                            Regs[i * 2 + 1]);
+  }
+
+  // If the type of the result is v8i8, we need do one more X86ISD::PACKUS, and
+  // then extract a subvector as the result since v8i8 is not a legal type.
+  if (OutVT == MVT::v8i8) {
+    Regs[0] = DAG.getNode(X86ISD::PACKUS, DL, PackedVT, Regs[0], Regs[0]);
+    Regs[0] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, Regs[0],
+                          DAG.getIntPtrConstant(0, DL));
+    return Regs[0];
+  } else if (RegNum > 1) {
+    Regs.resize(RegNum);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Regs);
+  } else
+    return Regs[0];
+}
+
+/// Truncate a group of v4i32 into v8i16 using X86ISD::PACKSS.
+static SDValue
+combineVectorTruncationWithPACKSS(SDNode *N, SelectionDAG &DAG,
+                                  SmallVector<SDValue, 8> &Regs) {
+  assert(Regs.size() > 0 && Regs[0].getValueType() == MVT::v4i32);
+  EVT OutVT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Shift left by 16 bits, then arithmetic-shift right by 16 bits.
+  SDValue ShAmt = DAG.getConstant(16, DL, MVT::i32);
+  for (auto &Reg : Regs) {
+    Reg = getTargetVShiftNode(X86ISD::VSHLI, DL, MVT::v4i32, Reg, ShAmt, DAG);
+    Reg = getTargetVShiftNode(X86ISD::VSRAI, DL, MVT::v4i32, Reg, ShAmt, DAG);
+  }
+
+  for (unsigned i = 0, e = Regs.size() / 2; i < e; i++)
+    Regs[i] = DAG.getNode(X86ISD::PACKSS, DL, MVT::v8i16, Regs[i * 2],
+                          Regs[i * 2 + 1]);
+
+  if (Regs.size() > 2) {
+    Regs.resize(Regs.size() / 2);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Regs);
+  } else
+    return Regs[0];
+}
+
+/// This function transforms truncation from vXi32/vXi64 to vXi8/vXi16 into
+/// X86ISD::PACKUS/X86ISD::PACKSS operations. We do it here because after type
+/// legalization the truncation will be translated into a BUILD_VECTOR with each
+/// element that is extracted from a vector and then truncated, and it is
+/// diffcult to do this optimization based on them.
+static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
+                                       const X86Subtarget *Subtarget) {
+  EVT OutVT = N->getValueType(0);
+  if (!OutVT.isVector())
+    return SDValue();
+
+  SDValue In = N->getOperand(0);
+  if (!In.getValueType().isSimple())
+    return SDValue();
+
+  EVT InVT = In.getValueType();
+  unsigned NumElems = OutVT.getVectorNumElements();
+
+  // TODO: On AVX2, the behavior of X86ISD::PACKUS is different from that on
+  // SSE2, and we need to take care of it specially.
+  // AVX512 provides vpmovdb.
+  if (!Subtarget->hasSSE2() || Subtarget->hasAVX2())
+    return SDValue();
+
+  EVT OutSVT = OutVT.getVectorElementType();
+  EVT InSVT = InVT.getVectorElementType();
+  if (!((InSVT == MVT::i32 || InSVT == MVT::i64) &&
+        (OutSVT == MVT::i8 || OutSVT == MVT::i16) && isPowerOf2_32(NumElems) &&
+        NumElems >= 8))
+    return SDValue();
+
+  // SSSE3's pshufb results in less instructions in the cases below.
+  if (Subtarget->hasSSSE3() && NumElems == 8 &&
+      ((OutSVT == MVT::i8 && InSVT != MVT::i64) ||
+       (InSVT == MVT::i32 && OutSVT == MVT::i16)))
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // Split a long vector into vectors of legal type.
+  unsigned RegNum = InVT.getSizeInBits() / 128;
+  SmallVector<SDValue, 8> SubVec(RegNum);
+  if (InSVT == MVT::i32) {
+    for (unsigned i = 0; i < RegNum; i++)
+      SubVec[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i32, In,
+                              DAG.getIntPtrConstant(i * 4, DL));
+  } else {
+    for (unsigned i = 0; i < RegNum; i++)
+      SubVec[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, In,
+                              DAG.getIntPtrConstant(i * 2, DL));
+  }
+
+  // SSE2 provides PACKUS for only 2 x v8i16 -> v16i8 and SSE4.1 provides PAKCUS
+  // for 2 x v4i32 -> v8i16. For SSSE3 and below, we need to use PACKSS to
+  // truncate 2 x v4i32 to v8i16.
+  if (Subtarget->hasSSE41() || OutSVT == MVT::i8)
+    return combineVectorTruncationWithPACKUS(N, DAG, SubVec);
+  else if (InSVT == MVT::i32)
+    return combineVectorTruncationWithPACKSS(N, DAG, SubVec);
+  else
+    return SDValue();
+}
+
+static SDValue PerformTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
+                                      const X86Subtarget *Subtarget) {
+  // Try to detect AVG pattern first.
+  SDValue Avg = detectAVGPattern(N->getOperand(0), N->getValueType(0), DAG,
+                                 Subtarget, SDLoc(N));
+  if (Avg.getNode())
+    return Avg;
+
+  return combineVectorTruncation(N, DAG, Subtarget);
 }
 
 /// Do target-specific dag combines on floating point negations.

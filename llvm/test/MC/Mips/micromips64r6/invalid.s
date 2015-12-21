@@ -18,13 +18,21 @@
   bnezc16 $6, 130          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
   cache -1, 255($7)        # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   cache 32, 255($7)        # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
-  # FIXME: Check size on dext*
-  dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
-  dext $2, $3, 64, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
+  # FIXME: Check various 'pos + size' constraints on dext*
+  dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:16: error: expected 5-bit unsigned immediate
+  dext $2, $3, 32, 1   # CHECK: :[[@LINE]]:16: error: expected 5-bit unsigned immediate
+  dext $2, $3, 1, 0    # CHECK: :[[@LINE]]:19: error: expected immediate in range 1 .. 32
+  dext $2, $3, 1, 33   # CHECK: :[[@LINE]]:19: error: expected immediate in range 1 .. 32
   dextm $2, $3, -1, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
   dextm $2, $3, 32, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
+  dextm $2, $3, -1, 33 # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
+  dextm $2, $3, 32, 33 # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
+  dextm $2, $3, 1, 32  # CHECK: :[[@LINE]]:20: error: expected immediate in range 33 .. 64
+  dextm $2, $3, 1, 65  # CHECK: :[[@LINE]]:20: error: expected immediate in range 33 .. 64
   dextu $2, $3, 31, 1  # CHECK: :[[@LINE]]:17: error: expected immediate in range 32 .. 63
   dextu $2, $3, 64, 1  # CHECK: :[[@LINE]]:17: error: expected immediate in range 32 .. 63
+  dextu $2, $3, 32, 0  # CHECK: :[[@LINE]]:21: error: expected immediate in range 1 .. 32
+  dextu $2, $3, 32, 33 # CHECK: :[[@LINE]]:21: error: expected immediate in range 1 .. 32
   # FIXME: Check size on dins*
   dins $2, $3, -1, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
   dins $2, $3, 64, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
@@ -32,8 +40,11 @@
   dinsm $2, $3, 32, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
   dinsu $2, $3, 31, 1  # CHECK: :[[@LINE]]:17: error: expected immediate in range 32 .. 63
   dinsu $2, $3, 64, 1  # CHECK: :[[@LINE]]:17: error: expected immediate in range 32 .. 63
+  # FIXME: Check '0 < pos + size <= 32' constraint on ext
   ext $2, $3, -1, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   ext $2, $3, 32, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  ext $2, $3, 1, 0         # CHECK: :[[@LINE]]:18: error: expected immediate in range 1 .. 32
+  ext $2, $3, 1, 33        # CHECK: :[[@LINE]]:18: error: expected immediate in range 1 .. 32
   ins $2, $3, -1, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   ins $2, $3, 32, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   dalign  $4, $2, $3, -1   # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate

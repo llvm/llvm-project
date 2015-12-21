@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=CHECK
-; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOFP-ARM64 %s
+; RUN: llc -mtriple=aarch64-linux-gnu -disable-post-ra -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -mattr=-fp-armv8 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOFP-ARM64 %s
 
 declare void @use_addr(i8*)
 

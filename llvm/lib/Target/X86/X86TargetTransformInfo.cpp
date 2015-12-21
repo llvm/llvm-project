@@ -780,10 +780,10 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
     { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i8,   1 },
     { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i8,   6 },
 
-    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 14 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  7 },
+    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 10 },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  5 },
     { ISD::TRUNCATE,    MVT::v4i16,  MVT::v4i32,  3 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, 31 },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, 7 },
     { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i32,  4 },
     { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i32,  3 },
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 3 },

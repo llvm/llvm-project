@@ -55,21 +55,25 @@ class DAHI_MMR6_DESC : DAHI_DATI_DESC_BASE<"dahi", GPR64Opnd>;
 class DATI_MMR6_DESC : DAHI_DATI_DESC_BASE<"dati", GPR64Opnd>;
 
 class EXTBITS_DESC_BASE<string instr_asm, RegisterOperand RO, Operand PosOpnd,
-    SDPatternOperator Op = null_frag> : MMR6Arch<instr_asm>, MipsR6Inst {
+                        Operand SizeOpnd, SDPatternOperator Op = null_frag>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
   dag OutOperandList = (outs RO:$rt);
-  dag InOperandList = (ins RO:$rs, PosOpnd:$pos, size_ext:$size);
+  dag InOperandList = (ins RO:$rs, PosOpnd:$pos, SizeOpnd:$size);
   string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $pos, $size");
   list<dag> Pattern = [(set RO:$rt, (Op RO:$rs, imm:$pos, imm:$size))];
   InstrItinClass Itinerary = II_EXT;
   Format Form = FrmR;
   string BaseOpcode = instr_asm;
 }
-class DEXT_MMR6_DESC : EXTBITS_DESC_BASE<"dext", GPR64Opnd, uimm6,
-                                                 MipsExt>;
+// TODO: Add 'pos + size' constraint check to dext* instructions
+//       DEXT: 0 < pos + size <= 63
+//       DEXTM, DEXTU: 32 < pos + size <= 64
+class DEXT_MMR6_DESC : EXTBITS_DESC_BASE<"dext", GPR64Opnd, uimm5,
+                                         uimm5_plus1, MipsExt>;
 class DEXTM_MMR6_DESC : EXTBITS_DESC_BASE<"dextm", GPR64Opnd, uimm5,
-                                                  MipsExt>;
+                                          uimm5_plus33, MipsExt>;
 class DEXTU_MMR6_DESC : EXTBITS_DESC_BASE<"dextu", GPR64Opnd, uimm5_plus32,
-                                                  MipsExt>;
+                                          uimm5_plus1, MipsExt>;
 
 class DALIGN_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                       Operand ImmOpnd> : MMR6Arch<instr_asm>, MipsR6Inst {

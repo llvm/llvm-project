@@ -13,11 +13,16 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 
 #define GET_SUBTARGETINFO_ENUM
 #include "AMDGPUGenSubtargetInfo.inc"
 #undef GET_SUBTARGETINFO_ENUM
+
+#define GET_REGINFO_ENUM
+#include "AMDGPUGenRegisterInfo.inc"
+#undef GET_REGINFO_ENUM
 
 namespace llvm {
 namespace AMDGPU {
@@ -115,6 +120,37 @@ unsigned getShaderType(const Function &F) {
     }
   }
   return ShaderType;
+}
+
+bool isSI(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureSouthernIslands];
+}
+
+bool isCI(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureSeaIslands];
+}
+
+bool isVI(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
+}
+
+unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
+
+  switch(Reg) {
+  default: break;
+  case AMDGPU::FLAT_SCR:
+    assert(!isSI(STI));
+    return isCI(STI) ? AMDGPU::FLAT_SCR_ci : AMDGPU::FLAT_SCR_vi;
+
+  case AMDGPU::FLAT_SCR_LO:
+    assert(!isSI(STI));
+    return isCI(STI) ? AMDGPU::FLAT_SCR_LO_ci : AMDGPU::FLAT_SCR_LO_vi;
+
+  case AMDGPU::FLAT_SCR_HI:
+    assert(!isSI(STI));
+    return isCI(STI) ? AMDGPU::FLAT_SCR_HI_ci : AMDGPU::FLAT_SCR_HI_vi;
+  }
+  return Reg;
 }
 
 } // End namespace AMDGPU

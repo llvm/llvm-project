@@ -44,16 +44,26 @@ def EXEC : RegisterWithSubRegs<"EXEC", [EXEC_LO, EXEC_HI]>,
 def SCC : SIReg<"scc", 253>;
 def M0 : SIReg <"m0", 124>;
 
-def FLAT_SCR_LO : SIReg<"flat_scr_lo", 104>; // Offset in units of 256-bytes.
-def FLAT_SCR_HI : SIReg<"flat_scr_hi", 105>; // Size is the per-thread scratch size, in bytes.
+multiclass FLAT_SCR_LOHI_m <string n, bits<16> ci_e, bits<16> vi_e> {
+  def _ci : SIReg<n, ci_e>;
+  def _vi : SIReg<n, vi_e>;
+  def "" : SIReg<"", 0>;
+}
 
-// Pair to indicate location of scratch space for flat accesses.
-def FLAT_SCR : RegisterWithSubRegs <"flat_scr", [FLAT_SCR_LO, FLAT_SCR_HI]>,
-               DwarfRegAlias<FLAT_SCR_LO> {
+class FlatReg <Register lo, Register hi, bits<16> encoding> :
+    RegisterWithSubRegs<"flat_scratch", [lo, hi]>,
+    DwarfRegAlias<lo> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 104;
+  let HWEncoding = encoding;
 }
+
+defm FLAT_SCR_LO : FLAT_SCR_LOHI_m<"flat_scratch_lo", 104, 102>; // Offset in units of 256-bytes.
+defm FLAT_SCR_HI : FLAT_SCR_LOHI_m<"flat_scratch_hi", 105, 103>; // Size is the per-thread scratch size, in bytes.
+
+def FLAT_SCR_ci : FlatReg<FLAT_SCR_LO_ci, FLAT_SCR_HI_ci, 104>;
+def FLAT_SCR_vi : FlatReg<FLAT_SCR_LO_vi, FLAT_SCR_HI_vi, 102>;
+def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 
 // SGPR registers
 foreach Index = 0-103 in {

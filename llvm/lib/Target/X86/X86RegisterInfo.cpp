@@ -229,6 +229,7 @@ X86RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 const MCPhysReg *
 X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const X86Subtarget &Subtarget = MF->getSubtarget<X86Subtarget>();
+  bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
   bool CallsEHReturn = MF->getMMI().callsEHReturn();
@@ -277,6 +278,18 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
     return CSR_64_SaveList;
+  case CallingConv::X86_INTR:
+    if (Is64Bit) {
+      if (HasAVX)
+        return CSR_64_AllRegs_AVX_SaveList;
+      else
+        return CSR_64_AllRegs_SaveList;
+    } else {
+      if (HasSSE)
+        return CSR_32_AllRegs_SSE_SaveList;
+      else
+        return CSR_32_AllRegs_SaveList;
+    }
   default:
     break;
   }
@@ -300,6 +313,7 @@ const uint32_t *
 X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID CC) const {
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+  bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
 
@@ -340,12 +354,24 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (Is64Bit)
       return CSR_64_MostRegs_RegMask;
     break;
-  default:
-    break;
   case CallingConv::X86_64_Win64:
     return CSR_Win64_RegMask;
   case CallingConv::X86_64_SysV:
     return CSR_64_RegMask;
+  case CallingConv::X86_INTR:
+    if (Is64Bit) {
+      if (HasAVX)
+        return CSR_64_AllRegs_AVX_RegMask;
+      else
+        return CSR_64_AllRegs_RegMask;
+    } else {
+      if (HasSSE)
+        return CSR_32_AllRegs_SSE_RegMask;
+      else
+        return CSR_32_AllRegs_RegMask;
+    }
+    default:
+      break;
   }
 
   // Unlike getCalleeSavedRegs(), we don't have MMI so we can't check

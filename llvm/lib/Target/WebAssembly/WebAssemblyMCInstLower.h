@@ -16,36 +16,30 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYMCINSTLOWER_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYMCINSTLOWER_H
 
+#include "llvm/MC/MCInst.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AsmPrinter;
 class MCContext;
-class MCInst;
-class MCOperand;
 class MCSymbol;
 class MachineInstr;
-class MachineModuleInfoMachO;
 class MachineOperand;
-class Mangler;
 
-// WebAssemblyMCInstLower - This class is used to lower an MachineInstr into an
-// MCInst.
+/// This class is used to lower an MachineInstr into an MCInst.
 class LLVM_LIBRARY_VISIBILITY WebAssemblyMCInstLower {
   MCContext &Ctx;
-
   AsmPrinter &Printer;
+
+  MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
+  MCSymbol *GetGlobalAddressSymbol(const MachineOperand &MO) const;
+  MCSymbol *GetExternalSymbolSymbol(const MachineOperand &MO) const;
 
 public:
   WebAssemblyMCInstLower(MCContext &ctx, AsmPrinter &printer)
       : Ctx(ctx), Printer(printer) {}
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
-
-  MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
-
-  MCSymbol *GetGlobalAddressSymbol(const MachineOperand &MO) const;
-  MCSymbol *GetExternalSymbolSymbol(const MachineOperand &MO) const;
 };
-}
+} // end namespace llvm
 
 #endif

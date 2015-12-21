@@ -1800,7 +1800,11 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
       (MBBI->getOpcode() == ARM::BX_RET ||
        MBBI->getOpcode() == ARM::tBX_RET ||
        MBBI->getOpcode() == ARM::MOVPCLR)) {
-    MachineInstr *PrevMI = std::prev(MBBI);
+    MachineBasicBlock::iterator PrevI = std::prev(MBBI);
+    // Ignore any DBG_VALUE instructions.
+    while (PrevI->isDebugValue() && PrevI != MBB.begin())
+      --PrevI;
+    MachineInstr *PrevMI = PrevI;
     unsigned Opcode = PrevMI->getOpcode();
     if (Opcode == ARM::LDMIA_UPD || Opcode == ARM::LDMDA_UPD ||
         Opcode == ARM::LDMDB_UPD || Opcode == ARM::LDMIB_UPD ||

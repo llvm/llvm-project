@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK
-; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK-REG
+; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK-REG
 
 
 ; Point of CHECK-REG is to make sure UNPREDICTABLE instructions aren't created

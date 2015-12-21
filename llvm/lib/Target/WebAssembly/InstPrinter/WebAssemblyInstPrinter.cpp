@@ -24,7 +24,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -46,17 +45,19 @@ void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
 void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                        StringRef Annot,
                                        const MCSubtargetInfo & /*STI*/) {
+  // Print the instruction (this uses the AsmStrings from the .td files).
   printInstruction(MI, OS);
 
+  // Print any additional variadic operands.
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
   if (Desc.isVariadic())
-    for (unsigned i = Desc.getNumOperands(), e = MI->getNumOperands(); i < e;
-         ++i) {
+    for (auto i = Desc.getNumOperands(), e = MI->getNumOperands(); i < e; ++i) {
       if (i != 0)
         OS << ", ";
       printOperand(MI, i, OS);
     }
 
+  // Print any added annotation.
   printAnnotation(OS, Annot);
 }
 

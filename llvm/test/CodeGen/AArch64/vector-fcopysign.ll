@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple aarch64-apple-darwin -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple aarch64-apple-darwin -asm-verbose=false -disable-post-ra | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple aarch64-apple-darwin -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple aarch64-apple-darwin -asm-verbose=false -disable-post-ra | FileCheck %s
 
 define void @test_stnp_v4i64(<4 x i64>* %p, <4 x i64> %v) #0 {
 ; CHECK-LABEL: test_stnp_v4i64:

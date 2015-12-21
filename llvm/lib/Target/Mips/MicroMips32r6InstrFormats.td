@@ -473,12 +473,13 @@ class CMP_BRANCH_1R_BOTH_OFF16_FM_MMR6<bits<6> funct> : MipsR6Inst {
   let Inst{15-0}  = offset;
 }
 
-class ERET_FM_MMR6<string instr_asm> : MMR6Arch<instr_asm> {
+class POOL32A_ERET_FM_MMR6<string instr_asm, bits<10> funct>
+    : MMR6Arch<instr_asm> {
   bits<32> Inst;
 
   let Inst{31-26} = 0x00;
   let Inst{25-16} = 0x00;
-  let Inst{15-6}  = 0x3cd;
+  let Inst{15-6}  = funct;
   let Inst{5-0}   = 0x3c;
 }
 
@@ -513,7 +514,8 @@ class BARRIER_MMR6_ENC<string instr_asm, bits<5> op> : MMR6Arch<instr_asm> {
   let Inst{5-0}   = 0x0;
 }
 
-class EIDI_MMR6_ENC<string instr_asm, bits<10> funct> : MMR6Arch<instr_asm> {
+class POOL32A_EIDI_MMR6_ENC<string instr_asm, bits<10> funct>
+    : MMR6Arch<instr_asm> {
   bits<32> Inst;
   bits<5> rt; // Actually rs but we're sharing code with the standard encodings which call it rt
 

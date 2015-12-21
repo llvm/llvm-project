@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=arm64-linux-gnu -pre-RA-sched=linearize -enable-misched=false < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=arm64-linux-gnu -pre-RA-sched=linearize -enable-misched=false -disable-post-ra < %s | FileCheck %s
 
 %va_list = type {i8*, i8*, i8*, i32, i32}
 

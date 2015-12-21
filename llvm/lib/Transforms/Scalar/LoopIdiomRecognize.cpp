@@ -256,6 +256,47 @@ static unsigned getStoreStride(const SCEVAddRecExpr *StoreEv) {
   return ConstStride->getAPInt().getZExtValue();
 }
 
+/// getMemSetPatternValue - If a strided store of the specified value is safe to
+/// turn into a memset_pattern16, return a ConstantArray of 16 bytes that should
+/// be passed in.  Otherwise, return null.
+///
+/// Note that we don't ever attempt to use memset_pattern8 or 4, because these
+/// just replicate their input array and then pass on to memset_pattern16.
+static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
+  // If the value isn't a constant, we can't promote it to being in a constant
+  // array.  We could theoretically do a store to an alloca or something, but
+  // that doesn't seem worthwhile.
+  Constant *C = dyn_cast<Constant>(V);
+  if (!C)
+    return nullptr;
+
+  // Only handle simple values that are a power of two bytes in size.
+  uint64_t Size = DL->getTypeSizeInBits(V->getType());
+  if (Size == 0 || (Size & 7) || (Size & (Size - 1)))
+    return nullptr;
+
+  // Don't care enough about darwin/ppc to implement this.
+  if (DL->isBigEndian())
+    return nullptr;
+
+  // Convert to size in bytes.
+  Size /= 8;
+
+  // TODO: If CI is larger than 16-bytes, we can try slicing it in half to see
+  // if the top and bottom are the same (e.g. for vectors and large integers).
+  if (Size > 16)
+    return nullptr;
+
+  // If the constant is exactly 16 bytes, just use it.
+  if (Size == 16)
+    return C;
+
+  // Otherwise, we'll use an array of the constants.
+  unsigned ArraySize = 16 / Size;
+  ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
+  return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
+}
+
 bool LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   // Don't touch volatile stores.
   if (!SI->isSimple())
@@ -434,47 +475,6 @@ static bool mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
         return true;
 
   return false;
-}
-
-/// getMemSetPatternValue - If a strided store of the specified value is safe to
-/// turn into a memset_pattern16, return a ConstantArray of 16 bytes that should
-/// be passed in.  Otherwise, return null.
-///
-/// Note that we don't ever attempt to use memset_pattern8 or 4, because these
-/// just replicate their input array and then pass on to memset_pattern16.
-static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
-  // If the value isn't a constant, we can't promote it to being in a constant
-  // array.  We could theoretically do a store to an alloca or something, but
-  // that doesn't seem worthwhile.
-  Constant *C = dyn_cast<Constant>(V);
-  if (!C)
-    return nullptr;
-
-  // Only handle simple values that are a power of two bytes in size.
-  uint64_t Size = DL->getTypeSizeInBits(V->getType());
-  if (Size == 0 || (Size & 7) || (Size & (Size - 1)))
-    return nullptr;
-
-  // Don't care enough about darwin/ppc to implement this.
-  if (DL->isBigEndian())
-    return nullptr;
-
-  // Convert to size in bytes.
-  Size /= 8;
-
-  // TODO: If CI is larger than 16-bytes, we can try slicing it in half to see
-  // if the top and bottom are the same (e.g. for vectors and large integers).
-  if (Size > 16)
-    return nullptr;
-
-  // If the constant is exactly 16 bytes, just use it.
-  if (Size == 16)
-    return C;
-
-  // Otherwise, we'll use an array of the constants.
-  unsigned ArraySize = 16 / Size;
-  ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
-  return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
 }
 
 // If we have a negative stride, Start refers to the end of the memory location

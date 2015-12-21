@@ -1,5 +1,5 @@
-; RUN: llc -march=arm64 -aarch64-atomic-cfg-tidy=0                             -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=arm64 -aarch64-atomic-cfg-tidy=0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=arm64 -aarch64-atomic-cfg-tidy=0 -disable-post-ra -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=arm64 -aarch64-atomic-cfg-tidy=0 -fast-isel -fast-isel-abort=1 -disable-post-ra -verify-machineinstrs < %s | FileCheck %s
 
 ;
 ; Get the actual value of the overflow bit.

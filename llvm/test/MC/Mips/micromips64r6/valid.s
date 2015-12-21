@@ -18,7 +18,7 @@ a:
         dahi $3, 4               # CHECK: dahi $3, 4          # encoding: [0x42,0x23,0x00,0x04]
         dati $3, 4               # CHECK: dati $3, 4          # encoding: [0x42,0x03,0x00,0x04]
         dext $9, $6, 3, 7        # CHECK: dext $9, $6, 3, 7   # encoding: [0x59,0x26,0x30,0xec]
-        dextm $9, $6, 3, 7       # CHECK: dextm $9, $6, 3, 7  # encoding: [0x59,0x26,0x30,0xe4]
+        dextm $9, $6, 3, 39      # CHECK: dextm $9, $6, 3, 39 # encoding: [0x59,0x26,0x30,0xe4]
         dextu $9, $6, 35, 7      # CHECK: dextu $9, $6, 35, 7  # encoding: [0x59,0x26,0x30,0xd4]
         dalign $4, $2, $3, 5     # CHECK: dalign $4, $2, $3, 5  # encoding: [0x58,0x43,0x25,0x1c]
         lw $3, 32($gp)           # CHECK: lw $3, 32($gp)        # encoding: [0x65,0x88]
@@ -146,5 +146,9 @@ a:
         selnez.d $f2, $f4, $f8   # CHECK: selnez.d $f2, $f4, $f8  # encoding: [0x55,0x04,0x12,0x78]
         class.s $f2, $f3         # CHECK: class.s $f2, $f3        # encoding: [0x54,0x62,0x00,0x60]
         class.d $f2, $f4         # CHECK: class.d $f2, $f4        # encoding: [0x54,0x82,0x02,0x60]
+        deret                    # CHECK: deret                   # encoding: [0x00,0x00,0xe3,0x7c]
+        di                       # CHECK: di                      # encoding: [0x00,0x00,0x47,0x7c]
+        di $0                    # CHECK: di                      # encoding: [0x00,0x00,0x47,0x7c]
+        di $15                   # CHECK: di $15                  # encoding: [0x00,0x0f,0x47,0x7c]
 
 1:

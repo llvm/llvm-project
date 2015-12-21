@@ -53,6 +53,19 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
                     "{l}ret{|f}q\t$amt", [], IIC_RET>, Requires<[In64BitMode]>;
   def LRETIW : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
                     "{l}ret{w|f}\t$amt", [], IIC_RET>, OpSize16;
+
+  // The machine return from interrupt instruction, but sometimes we need to
+  // perform a post-epilogue stack adjustment. Codegen emits the pseudo form
+  // which expands to include an SP adjustment if necessary.
+  def IRET16 : I   <0xcf, RawFrm, (outs), (ins), "iret{w}", [], IIC_IRET>,
+               OpSize16;
+  def IRET32 : I   <0xcf, RawFrm, (outs), (ins), "iret{l|d}", [],
+                    IIC_IRET>, OpSize32;
+  def IRET64 : RI  <0xcf, RawFrm, (outs), (ins), "iretq", [],
+                    IIC_IRET>, Requires<[In64BitMode]>;
+  let isCodeGenOnly = 1 in
+  def IRET : PseudoI<(outs), (ins i16imm:$adj), [(X86iret timm:$adj)]>;
+  
 }
 
 // Unconditional branches.

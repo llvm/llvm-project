@@ -5,6 +5,8 @@
 
 target datalayout = "e"
 
+%TypeOpaque = type opaque
+
 declare zeroext i1 @return_i1()
 
 declare i32* @foo()
@@ -17,6 +19,7 @@ declare i32* @foo()
 @globalptr.align1 = external global i8, align 1
 @globalptr.align16 = external global i8, align 16
 
+; CHECK-LABEL: 'test'
 define void @test(i32 addrspace(1)* dereferenceable(8) %dparam,
                   i8 addrspace(1)* dereferenceable(32) align 1 %dparam.align1,
                   i8 addrspace(1)* dereferenceable(32) align 16 %dparam.align16)
@@ -131,6 +134,23 @@ entry:
     %load27 = load i32, i32* %d4_aligned_load, align 16
 
     ret void
+}
+
+; Just check that we don't crash.
+; CHECK-LABEL: 'opaque_type_crasher'
+define void @opaque_type_crasher(%TypeOpaque* dereferenceable(16) %a) {
+entry:
+  %bc = bitcast %TypeOpaque* %a to i8*
+  %ptr8 = getelementptr inbounds i8, i8* %bc, i32 8
+  %ptr32 = bitcast i8* %ptr8 to i32*
+  br i1 undef, label %if.then, label %if.end
+
+if.then:
+  %res = load i32, i32* %ptr32, align 4
+  br label %if.end
+
+if.end:
+  ret void
 }
 
 declare i32 @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)

@@ -1,4 +1,4 @@
-; RUN: llc -o - %s | FileCheck %s
+; RUN: llc -disable-post-ra -o - %s | FileCheck %s
 target triple = "arm64--"
 
 @out = internal global i32 0, align 4
