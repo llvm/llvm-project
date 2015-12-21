@@ -1,11 +1,10 @@
 ;; Check that data associated with linkonce odr functions are placed in
 ;; the same comdat section as their associated function.
 
+
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-pc-win64-coff -instrprof -S | FileCheck %s --check-prefix=COFF
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | llc -mtriple=x86_64-unknown-linux
-; RUN: opt < %s -mtriple=x86_64-pc-win64-coff -instrprof -S | llc -mtriple=x86_64-pc-win64-coff
 
 $_Z3barIvEvv = comdat any
 
