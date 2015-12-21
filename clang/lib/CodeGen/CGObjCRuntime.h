@@ -275,8 +275,11 @@ public:
                                   const CodeGen::CGBlockInfo &blockInfo) = 0;
   virtual llvm::Constant *BuildRCBlockLayout(CodeGen::CodeGenModule &CGM,
                                   const CodeGen::CGBlockInfo &blockInfo) = 0;
+
+  /// Returns an i8* which points to the byref layout information.
   virtual llvm::Constant *BuildByrefLayout(CodeGen::CodeGenModule &CGM,
                                            QualType T) = 0;
+
   virtual llvm::Constant *GetClassGlobal(const std::string &Name,
                                          bool ForDefinition,
                                          bool Weak) = 0;

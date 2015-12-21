@@ -166,11 +166,19 @@ TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
             "#include \"c.h\"\n",
             sort("#include \"llvm/a.h\"\n"
                  "#include \"c.h\"\n"
-                 "#include \"b.h\"\n"));
+                 "#include \"b.h\"\n",
+                 "a.cc"));
   EXPECT_EQ("#include \"llvm/a.h\"\n"
             "#include \"b.h\"\n"
             "#include \"c.h\"\n",
             sort("#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "a_main.cc"));
+  EXPECT_EQ("#include \"llvm/input.h\"\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n",
+            sort("#include \"llvm/input.h\"\n"
                  "#include \"c.h\"\n"
                  "#include \"b.h\"\n",
                  "input.mm"));
@@ -182,15 +190,51 @@ TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
             sort("#include \"llvm/a.h\"\n"
                  "#include \"c.h\"\n"
                  "#include \"b.h\"\n",
-                 "some_header.h"));
+                 "a.h"));
+
+  // Only do this in the first #include block.
+  EXPECT_EQ("#include <a>\n"
+            "\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n"
+            "#include \"llvm/a.h\"\n",
+            sort("#include <a>\n"
+                 "\n"
+                 "#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "a.cc"));
+
+  // Only recognize the first #include with a matching basename as main include.
+  EXPECT_EQ("#include \"a.h\"\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n"
+            "#include \"llvm/a.h\"\n",
+            sort("#include \"b.h\"\n"
+                 "#include \"a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"llvm/a.h\"\n",
+                 "a.cc"));
 }
 
 TEST_F(SortIncludesTest, NegativePriorities) {
   Style.IncludeCategories = {{".*important_os_header.*", -1}, {".*", 1}};
   EXPECT_EQ("#include \"important_os_header.h\"\n"
-            "#include \"a.h\"\n",
-            sort("#include \"a.h\"\n"
-                 "#include \"important_os_header.h\"\n"));
+            "#include \"c_main.h\"\n"
+            "#include \"a_other.h\"\n",
+            sort("#include \"c_main.h\"\n"
+                 "#include \"a_other.h\"\n"
+                 "#include \"important_os_header.h\"\n",
+                 "c_main.cc"));
+
+  // check stable when re-run
+  EXPECT_EQ("#include \"important_os_header.h\"\n"
+            "#include \"c_main.h\"\n"
+            "#include \"a_other.h\"\n",
+            sort("#include \"important_os_header.h\"\n"
+                 "#include \"c_main.h\"\n"
+                 "#include \"a_other.h\"\n",
+                 "c_main.cc"));
 }
 
 TEST_F(SortIncludesTest, CalculatesCorrectCursorPosition) {
