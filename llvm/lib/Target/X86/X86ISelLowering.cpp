@@ -12258,6 +12258,12 @@ SDValue
 X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
   GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+
+  // Cygwin uses emutls.
+  // FIXME: It may be EmulatedTLS-generic also for X86-Android.
+  if (Subtarget->isTargetWindowsCygwin())
+    return LowerToTLSEmulatedModel(GA, DAG);
+
   const GlobalValue *GV = GA->getGlobal();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 

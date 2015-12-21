@@ -12,7 +12,7 @@ LIBRARYNAME = LLVMAVRCodeGen
 TARGET = AVR
 
 # Make sure that tblgen is run, first thing.
-BUILT_SOURCES =
+BUILT_SOURCES = AVRGenRegisterInfo.inc
 
 DIRS = TargetInfo
 

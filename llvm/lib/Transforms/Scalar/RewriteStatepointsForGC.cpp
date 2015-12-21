@@ -454,6 +454,11 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
 
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Def = CI->stripPointerCasts();
+    // If stripping pointer casts changes the address space there is an
+    // addrspacecast in between.
+    assert(cast<PointerType>(Def->getType())->getAddressSpace() ==
+               cast<PointerType>(CI->getType())->getAddressSpace() &&
+           "unsupported addrspacecast");
     // If we find a cast instruction here, it means we've found a cast which is
     // not simply a pointer cast (i.e. an inttoptr).  We don't know how to
     // handle int->ptr conversion.

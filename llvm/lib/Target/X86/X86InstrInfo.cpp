@@ -2425,9 +2425,8 @@ bool X86InstrInfo::isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
   // It is safe to clobber EFLAGS at the end of a block of no successor has it
   // live in.
   if (Iter == E) {
-    for (MachineBasicBlock::succ_iterator SI = MBB.succ_begin(),
-           SE = MBB.succ_end(); SI != SE; ++SI)
-      if ((*SI)->isLiveIn(X86::EFLAGS))
+    for (MachineBasicBlock *S : MBB.successors())
+      if (S->isLiveIn(X86::EFLAGS))
         return false;
     return true;
   }
