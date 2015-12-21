@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-apple-ios | FileCheck --check-prefix=CHECK-APPLE %s
-; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=aarch64-apple-ios | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-APPLE %s
+; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-O0 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
