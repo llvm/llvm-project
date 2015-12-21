@@ -443,7 +443,9 @@ _mm_setr_pi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
 /* Aliases for compatibility. */
 #define _m_empty _mm_empty
 #define _m_from_int _mm_cvtsi32_si64
+#define _m_from_int64 _mm_cvtsi64_m64
 #define _m_to_int _mm_cvtsi64_si32
+#define _m_to_int64 _mm_cvtm64_si64
 #define _m_packsswb _mm_packs_pi16
 #define _m_packssdw _mm_packs_pi32
 #define _m_packuswb _mm_packs_pu16

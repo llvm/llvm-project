@@ -3834,7 +3834,6 @@ class CygwinX86_32TargetInfo : public X86_32TargetInfo {
 public:
   CygwinX86_32TargetInfo(const llvm::Triple &Triple)
       : X86_32TargetInfo(Triple) {
-    TLSSupported = false;
     WCharType = UnsignedShort;
     DoubleAlign = LongLongAlign = 64;
     DataLayoutString = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32";

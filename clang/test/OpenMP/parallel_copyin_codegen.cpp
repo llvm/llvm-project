@@ -11,7 +11,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DLAMBDA -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck -check-prefix=TLS-LAMBDA %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -fblocks -DBLOCKS -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck -check-prefix=TLS-BLOCKS %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DARRAY -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefix=TLS-ARRAY %s
-// REQUIRES: tls
 // expected-no-diagnostics
 #ifndef ARRAY
 #ifndef HEADER

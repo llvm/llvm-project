@@ -1796,6 +1796,19 @@ static void AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
   if (!CPU.empty())
     CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=mcpu=") + CPU));
 
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    StringRef OOpt;
+    if (A->getOption().matches(options::OPT_O4) ||
+        A->getOption().matches(options::OPT_Ofast))
+      OOpt = "3";
+    else if (A->getOption().matches(options::OPT_O))
+      OOpt = A->getValue();
+    else if (A->getOption().matches(options::OPT_O0))
+      OOpt = "0";
+    if (!OOpt.empty())
+      CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=O") + OOpt));
+  }
+
   if (IsThinLTO)
     CmdArgs.push_back("-plugin-opt=thinlto");
 }
