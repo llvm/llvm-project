@@ -75,6 +75,9 @@ CODEGENOPT(PrepareForLTO     , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
 CODEGENOPT(EmitFunctionSummary, 1, 0) ///< Set when -flto=thin is enabled on the
                                       ///< compile step.
+CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
+                                              ///< be used with an incremental
+                                              ///< linker.
 CODEGENOPT(MergeAllConstants , 1, 1) ///< Merge identical constants.
 CODEGENOPT(MergeFunctions    , 1, 0) ///< Set when -fmerge-functions is enabled.
 CODEGENOPT(MSVolatile        , 1, 0) ///< Set when /volatile:ms is enabled.

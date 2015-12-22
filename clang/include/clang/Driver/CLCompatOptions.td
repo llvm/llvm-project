@@ -52,6 +52,12 @@ class CLRemainingArgs<string name> : Option<["/", "-"], name,
 // (We don't put any of these in cl_compile_Group as the options they alias are
 // already in the right group.)
 
+def _SLASH_Brepro : CLFlag<"Brepro">,
+  HelpText<"Emit an object file which can be reproduced over time">,
+  Alias<mincremental_linker_compatible>;
+def _SLASH_Brepro_ : CLFlag<"Brepro-">,
+  HelpText<"Emit an object file which cannot be reproduced over time">,
+  Alias<mno_incremental_linker_compatible>;
 def _SLASH_C : CLFlag<"C">,
   HelpText<"Don't discard comments when preprocessing">, Alias<C>;
 def _SLASH_c : CLFlag<"c">, HelpText<"Compile only">, Alias<c>;

@@ -125,6 +125,7 @@ struct AssemblerInvocation {
   unsigned RelaxAll : 1;
   unsigned NoExecStack : 1;
   unsigned FatalWarnings : 1;
+  unsigned IncrementalLinkerCompatible : 1;
 
   /// The name of the relocation model to use.
   std::string RelocationModel;
@@ -144,6 +145,7 @@ public:
     RelaxAll = 0;
     NoExecStack = 0;
     FatalWarnings = 0;
+    IncrementalLinkerCompatible = 0;
     DwarfVersion = 0;
   }
 
@@ -248,6 +250,8 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.NoExecStack = Args.hasArg(OPT_mno_exec_stack);
   Opts.FatalWarnings = Args.hasArg(OPT_massembler_fatal_warnings);
   Opts.RelocationModel = Args.getLastArgValue(OPT_mrelocation_model, "pic");
+  Opts.IncrementalLinkerCompatible =
+      Args.hasArg(OPT_mincremental_linker_compatible);
 
   return Success;
 }
@@ -394,9 +398,10 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, Opts.Triple,
                                                       Opts.CPU);
     Triple T(Opts.Triple);
-    Str.reset(TheTarget->createMCObjectStreamer(T, Ctx, *MAB, *Out, CE, *STI,
-                                                Opts.RelaxAll,
-                                                /*DWARFMustBeAtTheEnd*/ true));
+    Str.reset(TheTarget->createMCObjectStreamer(
+        T, Ctx, *MAB, *Out, CE, *STI, Opts.RelaxAll,
+        Opts.IncrementalLinkerCompatible,
+        /*DWARFMustBeAtTheEnd*/ true));
     Str.get()->InitSections(Opts.NoExecStack);
   }
 

@@ -571,6 +571,8 @@ TargetMachine *EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
   Options.MCOptions.MCUseDwarfDirectory = !CodeGenOpts.NoDwarfDirectoryAsm;
   Options.MCOptions.MCNoExecStack = CodeGenOpts.NoExecStack;
+  Options.MCOptions.MCIncrementalLinkerCompatible =
+      CodeGenOpts.IncrementalLinkerCompatible;
   Options.MCOptions.MCFatalWarnings = CodeGenOpts.FatalWarnings;
   Options.MCOptions.AsmVerbose = CodeGenOpts.AsmVerbose;
   Options.MCOptions.ABIName = TargetOpts.ABI;

@@ -52,6 +52,24 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+static void handleTargetFeaturesGroup(const ArgList &Args,
+                                      std::vector<const char *> &Features,
+                                      OptSpecifier Group) {
+  for (const Arg *A : Args.filtered(Group)) {
+    StringRef Name = A->getOption().getName();
+    A->claim();
+
+    // Skip over "-m".
+    assert(Name.startswith("m") && "Invalid feature name.");
+    Name = Name.substr(1);
+
+    bool IsNegative = Name.startswith("no-");
+    if (IsNegative)
+      Name = Name.substr(3);
+    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+  }
+}
+
 static const char *getSparcAsmModeForCPU(StringRef Name,
                                          const llvm::Triple &Triple) {
   if (Triple.getArch() == llvm::Triple::sparcv9) {
@@ -1410,19 +1428,7 @@ static std::string getPPCTargetCPU(const ArgList &Args) {
 static void getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args,
                                  std::vector<const char *> &Features) {
-  for (const Arg *A : Args.filtered(options::OPT_m_ppc_Features_Group)) {
-    StringRef Name = A->getOption().getName();
-    A->claim();
-
-    // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
-    Name = Name.substr(1);
-
-    bool IsNegative = Name.startswith("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
-    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
-  }
+  handleTargetFeaturesGroup(Args, Features, options::OPT_m_ppc_Features_Group);
 
   ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);
   if (FloatABI == ppc::FloatABI::Soft &&
@@ -2005,20 +2011,7 @@ static void getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
-  for (const Arg *A : Args.filtered(options::OPT_m_x86_Features_Group)) {
-    StringRef Name = A->getOption().getName();
-    A->claim();
-
-    // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
-    Name = Name.substr(1);
-
-    bool IsNegative = Name.startswith("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
-
-    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
-  }
+  handleTargetFeaturesGroup(Args, Features, options::OPT_m_x86_Features_Group);
 }
 
 void Clang::AddX86TargetArgs(const ArgList &Args,
@@ -2247,6 +2240,9 @@ static void getHexagonTargetFeatures(const ArgList &Args,
                                      std::vector<const char *> &Features) {
   bool HasHVX = false, HasHVXD = false;
 
+  // FIXME: This should be able to use handleTargetFeaturesGroup except it is
+  // doing dependent option handling here rather than in initFeatureMap or a
+  // similar handler.
   for (auto &A : Args) {
     auto &Opt = A->getOption();
     if (Opt.matches(options::OPT_mhexagon_hvx))
@@ -2268,20 +2264,7 @@ static void getHexagonTargetFeatures(const ArgList &Args,
 
 static void getWebAssemblyTargetFeatures(const ArgList &Args,
                                          std::vector<const char *> &Features) {
-  for (const Arg *A : Args.filtered(options::OPT_m_wasm_Features_Group)) {
-    StringRef Name = A->getOption().getName();
-    A->claim();
-
-    // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
-    Name = Name.substr(1);
-
-    bool IsNegative = Name.startswith("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
-
-    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
-  }
+  handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
 }
 
 static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
@@ -2566,6 +2549,15 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                               const Driver &D) {
   if (UseRelaxAll(C, Args))
     CmdArgs.push_back("-mrelax-all");
+
+  // Only default to -mincremental-linker-compatible if we think we are
+  // targeting the MSVC linker.
+  bool DefaultIncrementalLinkerCompatible =
+      C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment();
+  if (Args.hasFlag(options::OPT_mincremental_linker_compatible,
+                   options::OPT_mno_incremental_linker_compatible,
+                   DefaultIncrementalLinkerCompatible))
+    CmdArgs.push_back("-mincremental-linker-compatible");
 
   // When passing -I arguments to the assembler we sometimes need to
   // unconditionally take the next argument.  For example, when parsing
@@ -6534,8 +6526,6 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   CmdArgs.push_back("-flavor");
   CmdArgs.push_back("ld");
-  CmdArgs.push_back("-target");
-  CmdArgs.push_back(Args.MakeArgString(getToolChain().getTripleString()));
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs);
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
