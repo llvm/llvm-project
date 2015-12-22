@@ -232,6 +232,9 @@ void elf2::ObjectFile<ELFT>::initializeSections(DenseSet<StringRef> &Comdats) {
         Sections[I] = &InputSection<ELFT>::Discarded;
       else if (Name == ".eh_frame")
         Sections[I] = new (this->Alloc) EHInputSection<ELFT>(this, &Sec);
+      else if (Name == ".reginfo")
+        Sections[I] =
+            new (this->Alloc) MipsReginfoInputSection<ELFT>(this, &Sec);
       else if (shouldMerge<ELFT>(Sec))
         Sections[I] = new (this->Alloc) MergeInputSection<ELFT>(this, &Sec);
       else

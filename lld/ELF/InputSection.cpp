@@ -51,6 +51,8 @@ InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
     return cast<EHInputSection<ELFT>>(this)->getOffset(Offset);
   case Merge:
     return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
+  case MipsReginfo:
+    return cast<MipsReginfoInputSection<ELFT>>(this)->getOffset(Offset);
   }
   llvm_unreachable("Invalid section kind");
 }
@@ -159,60 +161,66 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
       continue;
     }
 
+    const Elf_Shdr *SymTab = File->getSymbolTable();
+    SymbolBody *Body = nullptr;
+    if (SymIndex >= SymTab->sh_info)
+      Body = File->getSymbolBody(SymIndex)->repl();
+
+    if (Target->isTlsOptimized(Type, Body)) {
+      uintX_t SymVA;
+      if (!Body)
+        SymVA = getLocalRelTarget(*File, RI, 0);
+      else if (Target->relocNeedsGot(Type, *Body))
+        SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
+      else
+        SymVA = getSymVA<ELFT>(*Body);
+      // By optimizing TLS relocations, it is sometimes needed to skip
+      // relocations that immediately follow TLS relocations. This function
+      // knows how many slots we need to skip.
+      I += Target->relocateTlsOptimize(BufLoc, BufEnd, Type, AddrLoc, SymVA,
+                                       *Body);
+      continue;
+    }
+
     // Handle relocations for local symbols -- they never get
     // resolved so we don't allocate a SymbolBody.
-    const Elf_Shdr *SymTab = File->getSymbolTable();
-    if (SymIndex < SymTab->sh_info) {
-      uintX_t SymVA = getLocalRelTarget(*File, RI);
+    uintX_t A = getAddend<ELFT>(RI);
+    if (!Body) {
+      uintX_t SymVA = getLocalRelTarget(*File, RI, A);
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA, 0,
                           findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
       continue;
     }
 
-    SymbolBody &Body = *File->getSymbolBody(SymIndex)->repl();
-
     if (Target->isTlsGlobalDynamicReloc(Type) &&
-        !Target->isTlsOptimized(Type, &Body)) {
+        !Target->isTlsOptimized(Type, Body)) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
-                          Out<ELFT>::Got->getGlobalDynAddr(Body) +
+                          Out<ELFT>::Got->getGlobalDynAddr(*Body) +
                               getAddend<ELFT>(RI));
       continue;
     }
 
-    if (Target->isTlsOptimized(Type, &Body)) {
-      uintX_t SymVA = Target->relocNeedsGot(Type, Body)
-                          ? Out<ELFT>::Got->getEntryAddr(Body)
-                          : getSymVA<ELFT>(Body);
-      // By optimizing TLS relocations, it is sometimes needed to skip
-      // relocations that immediately follow TLS relocations. This function
-      // knows how many slots we need to skip.
-      I += Target->relocateTlsOptimize(BufLoc, BufEnd, Type, AddrLoc, SymVA,
-                                       Body);
-      continue;
-    }
-
-    uintX_t SymVA = getSymVA<ELFT>(Body);
-    if (Target->relocNeedsPlt(Type, Body)) {
-      SymVA = Out<ELFT>::Plt->getEntryAddr(Body);
+    uintX_t SymVA = getSymVA<ELFT>(*Body);
+    if (Target->relocNeedsPlt(Type, *Body)) {
+      SymVA = Out<ELFT>::Plt->getEntryAddr(*Body);
       Type = Target->getPltRefReloc(Type);
-    } else if (Target->relocNeedsGot(Type, Body)) {
-      SymVA = Out<ELFT>::Got->getEntryAddr(Body);
-      if (Body.isTls())
+    } else if (Target->relocNeedsGot(Type, *Body)) {
+      SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
+      if (Body->isTls())
         Type = Target->getTlsGotReloc(Type);
-    } else if (!Target->needsCopyRel(Type, Body) &&
-               isa<SharedSymbol<ELFT>>(Body)) {
+    } else if (!Target->needsCopyRel(Type, *Body) &&
+               isa<SharedSymbol<ELFT>>(*Body)) {
       continue;
-    } else if (Target->isTlsDynReloc(Type, Body) ||
-               Target->isSizeDynReloc(Type, Body)) {
+    } else if (Target->isTlsDynReloc(Type, *Body) ||
+               Target->isSizeDynReloc(Type, *Body)) {
       continue;
     } else if (Config->EMachine == EM_MIPS) {
-      if (Type == R_MIPS_HI16 && &Body == Config->MipsGpDisp)
+      if (Type == R_MIPS_HI16 && Body == Config->MipsGpDisp)
         SymVA = getMipsGpAddr<ELFT>() - AddrLoc;
-      else if (Type == R_MIPS_LO16 && &Body == Config->MipsGpDisp)
+      else if (Type == R_MIPS_LO16 && Body == Config->MipsGpDisp)
         SymVA = getMipsGpAddr<ELFT>() - AddrLoc + 4;
     }
-    uintX_t A = getAddend<ELFT>(RI);
-    uintX_t Size = getSymSize<ELFT>(Body);
+    uintX_t Size = getSymSize<ELFT>(*Body);
     Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA + A, Size + A,
                         findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
   }
@@ -320,6 +328,24 @@ MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
   return Base + Addend;
 }
 
+template <class ELFT>
+MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(ObjectFile<ELFT> *F,
+                                                       const Elf_Shdr *Header)
+    : InputSectionBase<ELFT>(F, Header, InputSectionBase<ELFT>::MipsReginfo) {}
+
+template <class ELFT>
+uint32_t MipsReginfoInputSection<ELFT>::getGeneralMask() const {
+  ArrayRef<uint8_t> D = this->getSectionData();
+  if (D.size() != sizeof(Elf_Mips_RegInfo))
+    error("Invalid size of .reginfo section");
+  return reinterpret_cast<const Elf_Mips_RegInfo *>(D.data())->ri_gprmask;
+}
+
+template <class ELFT>
+bool MipsReginfoInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+  return S->SectionKind == InputSectionBase<ELFT>::MipsReginfo;
+}
+
 namespace lld {
 namespace elf2 {
 template class InputSectionBase<object::ELF32LE>;
@@ -341,5 +367,10 @@ template class MergeInputSection<object::ELF32LE>;
 template class MergeInputSection<object::ELF32BE>;
 template class MergeInputSection<object::ELF64LE>;
 template class MergeInputSection<object::ELF64BE>;
+
+template class MipsReginfoInputSection<object::ELF32LE>;
+template class MipsReginfoInputSection<object::ELF32BE>;
+template class MipsReginfoInputSection<object::ELF64LE>;
+template class MipsReginfoInputSection<object::ELF64BE>;
 }
 }

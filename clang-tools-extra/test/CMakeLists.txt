@@ -34,6 +34,9 @@ set(CLANG_TOOLS_TEST_DEPS
   # Base line deps.
   FileCheck count not
 
+  # clang-tidy tests require it.
+  clang-headers
+
   # Individual tools we test.
   clang-apply-replacements
   clang-rename

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "polly/ScopDetection.h"
 #include "polly/CodeGen/LoopGenerators.h"
+#include "polly/ScopDetection.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"

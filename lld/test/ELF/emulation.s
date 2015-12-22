@@ -112,7 +112,10 @@
 # MIPS-NEXT:   Entry:
 # MIPS-NEXT:   ProgramHeaderOffset: 0x34
 # MIPS-NEXT:   SectionHeaderOffset:
-# MIPS-NEXT:   Flags [ (0x0)
+# MIPS-NEXT:   Flags [
+# MIPS-NEXT:     EF_MIPS_ABI_O32
+# MIPS-NEXT:     EF_MIPS_ARCH_32R2
+# MIPS-NEXT:     EF_MIPS_CPIC
 # MIPS-NEXT:   ]
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %tmipsel
@@ -138,7 +141,10 @@
 # MIPSEL-NEXT:   Entry:
 # MIPSEL-NEXT:   ProgramHeaderOffset: 0x34
 # MIPSEL-NEXT:   SectionHeaderOffset:
-# MIPSEL-NEXT:   Flags [ (0x0)
+# MIPSEL-NEXT:   Flags [
+# MIPSEL-NEXT:     EF_MIPS_ABI_O32
+# MIPSEL-NEXT:     EF_MIPS_ARCH_32R2
+# MIPSEL-NEXT:     EF_MIPS_CPIC
 # MIPSEL-NEXT:   ]
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %s -o %taarch64

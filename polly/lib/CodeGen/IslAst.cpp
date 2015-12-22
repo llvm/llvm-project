@@ -27,8 +27,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "polly/CodeGen/CodeGeneration.h"
 #include "polly/CodeGen/IslAst.h"
+#include "polly/CodeGen/CodeGeneration.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"

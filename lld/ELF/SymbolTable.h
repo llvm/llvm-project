@@ -87,6 +87,11 @@ private:
   llvm::DenseSet<StringRef> IncludedSoNames;
 };
 
+template <class ELFT>
+ELFFileBase<ELFT> *
+findFile(ArrayRef<std::unique_ptr<ObjectFile<ELFT>>> ObjectFiles,
+         const SymbolBody *B);
+
 } // namespace elf2
 } // namespace lld
 

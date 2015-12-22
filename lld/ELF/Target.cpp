@@ -70,6 +70,17 @@ template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   error("Improper alignment for relocation " + S);
 }
 
+template <class ELFT> bool isGnuIFunc(const SymbolBody &S) {
+  if (auto *SS = dyn_cast<Defined<ELFT>>(&S))
+    return SS->Sym.getType() == STT_GNU_IFUNC;
+  return false;
+}
+
+template bool isGnuIFunc<ELF32LE>(const SymbolBody &S);
+template bool isGnuIFunc<ELF32BE>(const SymbolBody &S);
+template bool isGnuIFunc<ELF64LE>(const SymbolBody &S);
+template bool isGnuIFunc<ELF64BE>(const SymbolBody &S);
+
 namespace {
 class X86TargetInfo final : public TargetInfo {
 public:
@@ -95,6 +106,7 @@ public:
   unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                                uint64_t P, uint64_t SA,
                                const SymbolBody &S) const override;
+  bool isGotRelative(uint32_t Type) const override;
 
 private:
   void relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
@@ -194,6 +206,7 @@ public:
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
+  bool isRelRelative(uint32_t Type) const override;
 };
 } // anonymous namespace
 
@@ -232,6 +245,8 @@ bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   return false;
 }
 
+bool TargetInfo::isGotRelative(uint32_t Type) const { return false; }
+
 unsigned TargetInfo::getPltRefReloc(unsigned Type) const { return PCRelReloc; }
 
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
@@ -255,6 +270,7 @@ X86TargetInfo::X86TargetInfo() {
   PCRelReloc = R_386_PC32;
   GotReloc = R_386_GLOB_DAT;
   PltReloc = R_386_JUMP_SLOT;
+  IRelativeReloc = R_386_IRELATIVE;
   RelativeReloc = R_386_RELATIVE;
   TlsGotReloc = R_386_TLS_TPOFF;
   TlsGlobalDynamicReloc = R_386_TLS_GD;
@@ -354,8 +370,16 @@ bool X86TargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
 }
 
 bool X86TargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
-  return (Type == R_386_PLT32 && canBePreempted(&S, true)) ||
+  return isGnuIFunc<ELF32LE>(S) ||
+         (Type == R_386_PLT32 && canBePreempted(&S, true)) ||
          (Type == R_386_PC32 && S.isShared());
+}
+
+bool X86TargetInfo::isGotRelative(uint32_t Type) const {
+  // This relocation does not require got entry,
+  // but it is relative to got and needs it to be created.
+  // Here we request for that.
+  return Type == R_386_GOTOFF;
 }
 
 void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
@@ -366,6 +390,7 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     add32le(Loc, SA);
     break;
   case R_386_GOT32:
+  case R_386_GOTOFF:
     add32le(Loc, SA - Out<ELF32LE>::Got->getVA());
     break;
   case R_386_GOTPC:
@@ -546,6 +571,7 @@ X86_64TargetInfo::X86_64TargetInfo() {
   GotReloc = R_X86_64_GLOB_DAT;
   PltReloc = R_X86_64_JUMP_SLOT;
   RelativeReloc = R_X86_64_RELATIVE;
+  IRelativeReloc = R_X86_64_IRELATIVE;
   TlsGotReloc = R_X86_64_TPOFF64;
   TlsLocalDynamicReloc = R_X86_64_TLSLD;
   TlsGlobalDynamicReloc = R_X86_64_TLSGD;
@@ -622,6 +648,8 @@ unsigned X86_64TargetInfo::getPltRefReloc(unsigned Type) const {
 bool X86_64TargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
   if (needsCopyRel(Type, S))
     return false;
+  if (isGnuIFunc<ELF64LE>(S))
+    return true;
 
   switch (Type) {
   default:
@@ -1325,6 +1353,18 @@ bool MipsTargetInfo<ELFT>::relocNeedsPlt(uint32_t Type,
 
 static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
 
+template <endianness E, uint8_t BSIZE>
+static void applyMipsPcReloc(uint8_t *Loc, uint32_t Type, uint64_t P,
+                             uint64_t SA) {
+  uint32_t Mask = ~(0xffffffff << BSIZE);
+  uint32_t Instr = read32<E>(Loc);
+  int64_t A = SignExtend64<BSIZE + 2>((Instr & Mask) << 2);
+  checkAlignment<4>(SA + A, Type);
+  int64_t V = SA + A - P;
+  checkInt<BSIZE + 2>(V, Type);
+  write32<E>(Loc, (Instr & ~Mask) | ((V >> 2) & Mask));
+}
+
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
                                        uint32_t Type, uint64_t P, uint64_t SA,
@@ -1363,8 +1403,53 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     write32<E>(Loc, (Instr & 0xffff0000) | ((SA + AHL) & 0xffff));
     break;
   }
+  case R_MIPS_PC16:
+    applyMipsPcReloc<E, 16>(Loc, Type, P, SA);
+    break;
+  case R_MIPS_PC19_S2:
+    applyMipsPcReloc<E, 19>(Loc, Type, P, SA);
+    break;
+  case R_MIPS_PC21_S2:
+    applyMipsPcReloc<E, 21>(Loc, Type, P, SA);
+    break;
+  case R_MIPS_PC26_S2:
+    applyMipsPcReloc<E, 26>(Loc, Type, P, SA);
+    break;
+  case R_MIPS_PCHI16: {
+    uint32_t Instr = read32<E>(Loc);
+    if (PairedLoc) {
+      uint64_t AHL = ((Instr & 0xffff) << 16) +
+                     SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA + AHL - P));
+    } else {
+      warning("Can't find matching R_MIPS_PCLO16 relocation for R_MIPS_PCHI16");
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA - P));
+    }
+    break;
+  }
+  case R_MIPS_PCLO16: {
+    uint32_t Instr = read32<E>(Loc);
+    int64_t AHL = SignExtend64<16>(Instr & 0xffff);
+    write32<E>(Loc, (Instr & 0xffff0000) | ((SA + AHL - P) & 0xffff));
+    break;
+  }
   default:
     error("unrecognized reloc " + Twine(Type));
+  }
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
+  switch (Type) {
+  default:
+    return false;
+  case R_MIPS_PC16:
+  case R_MIPS_PC19_S2:
+  case R_MIPS_PC21_S2:
+  case R_MIPS_PC26_S2:
+  case R_MIPS_PCHI16:
+  case R_MIPS_PCLO16:
+    return true;
   }
 }
 

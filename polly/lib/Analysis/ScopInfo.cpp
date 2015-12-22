@@ -17,9 +17,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "polly/ScopInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
-#include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
@@ -61,6 +61,11 @@ using namespace polly;
 
 STATISTIC(ScopFound, "Number of valid Scops");
 STATISTIC(RichScopFound, "Number of Scops containing a loop");
+
+// The maximal number of basic sets we allow during domain construction to
+// be created. More complex scops will result in very high compile time and
+// are also unlikely to result in good code
+static int const MaxConjunctsInDomain = 20;
 
 static cl::opt<bool> ModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
@@ -2176,6 +2181,12 @@ void Scop::buildDomainsWithBranchConstraints(Region *R) {
         SuccDomain = isl_set_union(SuccDomain, CondSet);
 
       SuccDomain = isl_set_coalesce(SuccDomain);
+      if (isl_set_n_basic_set(SuccDomain) > MaxConjunctsInDomain) {
+        auto *Empty = isl_set_empty(isl_set_get_space(SuccDomain));
+        isl_set_free(SuccDomain);
+        SuccDomain = Empty;
+        invalidate(ERROR_DOMAINCONJUNCTS, DebugLoc());
+      }
       DEBUG(dbgs() << "\tSet SuccBB: " << SuccBB->getName() << " : "
                    << SuccDomain << "\n");
     }
@@ -2917,7 +2928,7 @@ void Scop::verifyInvariantLoads() {
   for (LoadInst *LI : RIL) {
     assert(LI && getRegion().contains(LI));
     ScopStmt *Stmt = getStmtForBasicBlock(LI->getParent());
-    if (Stmt && Stmt->getNumberOfArrayAccessesFor(LI) > 0) {
+    if (Stmt && Stmt->getArrayAccessOrNULLFor(LI)) {
       invalidate(INVARIANTLOAD, LI->getDebugLoc());
       return;
     }
@@ -3043,6 +3054,8 @@ static std::string toString(AssumptionKind Kind) {
     return "Invariant load";
   case DELINEARIZATION:
     return "Delinearization";
+  case ERROR_DOMAINCONJUNCTS:
+    return "Low number of domain conjuncts";
   }
   llvm_unreachable("Unknown AssumptionKind!");
 }
@@ -3340,14 +3353,13 @@ struct MapToDimensionDataTy {
 };
 
 // @brief Create a function that maps the elements of 'Set' to its N-th
-//        dimension.
+//        dimension and add it to User->Res.
 //
-// The result is added to 'User->Res'.
+// @param Set        The input set.
+// @param User->N    The dimension to map to.
+// @param User->Res  The isl_union_pw_multi_aff to which to add the result.
 //
-// @param Set The input set.
-// @param N   The dimension to map to.
-//
-// @returns   Zero if no error occurred, non-zero otherwise.
+// @returns   isl_stat_ok if no error occured, othewise isl_stat_error.
 static isl_stat mapToDimension_AddSet(__isl_take isl_set *Set, void *User) {
   struct MapToDimensionDataTy *Data = (struct MapToDimensionDataTy *)User;
   int Dim;
@@ -3367,28 +3379,38 @@ static isl_stat mapToDimension_AddSet(__isl_take isl_set *Set, void *User) {
   return isl_stat_ok;
 }
 
-// @brief Create a function that maps the elements of Domain to their Nth
-//        dimension.
+// @brief Create an isl_multi_union_aff that defines an identity mapping
+//        from the elements of USet to their N-th dimension.
 //
-// @param Domain The set of elements to map.
+// # Example:
+//
+//            Domain: { A[i,j]; B[i,j,k] }
+//                 N: 1
+//
+// Resulting Mapping: { {A[i,j] -> [(j)]; B[i,j,k] -> [(j)] }
+//
+// @param USet   A union set describing the elements for which to generate a
+//               mapping.
 // @param N      The dimension to map to.
+// @returns      A mapping from USet to its N-th dimension.
 static __isl_give isl_multi_union_pw_aff *
-mapToDimension(__isl_take isl_union_set *Domain, int N) {
-  if (N <= 0 || isl_union_set_is_empty(Domain)) {
-    isl_union_set_free(Domain);
-    return nullptr;
-  }
+mapToDimension(__isl_take isl_union_set *USet, int N) {
+  assert(N >= 0);
+  assert(USet);
+  assert(!isl_union_set_is_empty(USet));
 
   struct MapToDimensionDataTy Data;
-  isl_space *Space;
 
-  Space = isl_union_set_get_space(Domain);
-  Data.N = N;
-  Data.Res = isl_union_pw_multi_aff_empty(Space);
-  if (isl_union_set_foreach_set(Domain, &mapToDimension_AddSet, &Data) < 0)
-    Data.Res = isl_union_pw_multi_aff_free(Data.Res);
+  auto *Space = isl_union_set_get_space(USet);
+  auto *PwAff = isl_union_pw_multi_aff_empty(Space);
 
-  isl_union_set_free(Domain);
+  Data = {N, PwAff};
+
+  auto Res = isl_union_set_foreach_set(USet, &mapToDimension_AddSet, &Data);
+
+  assert(Res == isl_stat_ok);
+
+  isl_union_set_free(USet);
   return isl_multi_union_pw_aff_from_union_pw_multi_aff(Data.Res);
 }
 
@@ -3449,13 +3471,9 @@ void Scop::buildSchedule(
           combineInSequence(LSchedulePair.first, StmtSchedule);
     }
 
+    isl_schedule *LSchedule = LSchedulePair.first;
     unsigned NumVisited = LSchedulePair.second;
     while (L && NumVisited == L->getNumBlocks()) {
-      auto *LDomain = isl_schedule_get_domain(LSchedulePair.first);
-      if (auto *MUPA = mapToDimension(LDomain, LD + 1))
-        LSchedulePair.first =
-            isl_schedule_insert_partial_schedule(LSchedulePair.first, MUPA);
-
       auto *PL = L->getParentLoop();
 
       // Either we have a proper loop and we also build a schedule for the
@@ -3463,17 +3481,25 @@ void Scop::buildSchedule(
       // parent loop. In the former case this conditional will be skipped, in
       // the latter case however we will break here as we do not build a domain
       // nor a schedule for a infinite loop.
-      assert(LoopSchedules.count(PL) || LSchedulePair.first == nullptr);
+      assert(LoopSchedules.count(PL) || LSchedule == nullptr);
       if (!LoopSchedules.count(PL))
         break;
 
       auto &PSchedulePair = LoopSchedules[PL];
-      PSchedulePair.first =
-          combineInSequence(PSchedulePair.first, LSchedulePair.first);
+
+      if (LSchedule) {
+        auto *LDomain = isl_schedule_get_domain(LSchedule);
+        auto *MUPA = mapToDimension(LDomain, LD + 1);
+        LSchedule = isl_schedule_insert_partial_schedule(LSchedule, MUPA);
+        PSchedulePair.first = combineInSequence(PSchedulePair.first, LSchedule);
+      }
+
       PSchedulePair.second += NumVisited;
 
       L = PL;
+      LD--;
       NumVisited = PSchedulePair.second;
+      LSchedule = PSchedulePair.first;
     }
   }
 }

@@ -44,10 +44,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "polly/ScopDetection.h"
 #include "polly/CodeGen/CodeGeneration.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
-#include "polly/ScopDetection.h"
 #include "polly/ScopDetectionDiagnostic.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopLocation.h"
@@ -70,6 +70,16 @@ using namespace llvm;
 using namespace polly;
 
 #define DEBUG_TYPE "polly-detect"
+
+// This option is set to a very high value, as analyzing such loops increases
+// compile time on several cases. For experiments that enable this option,
+// a value of around 40 has been working to avoid run-time regressions with
+// Polly while still exposing interesting optimization opportunities.
+static cl::opt<int> ProfitabilityMinPerLoopInstructions(
+    "polly-detect-profitability-min-per-loop-insts",
+    cl::desc("The minimal number of per-loop instructions before a single loop "
+             "region is considered profitable"),
+    cl::Hidden, cl::ValueRequired, cl::init(100000000), cl::cat(PollyCategory));
 
 bool polly::PollyProcessUnprofitable;
 static cl::opt<bool, true> XPollyProcessUnprofitable(
@@ -524,7 +534,7 @@ public:
   const SCEV *visitUDivExpr(const SCEVUDivExpr *Expr) { return Expr; }
 
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-    if ((Expr->getNumOperands() == 2) and Expr->getOperand(0)->isZero()) {
+    if ((Expr->getNumOperands() == 2) && Expr->getOperand(0)->isZero()) {
       auto Res = visit(Expr->getOperand(1));
       if (Terms)
         (*Terms).push_back(Res);
@@ -643,7 +653,7 @@ bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
       }
     }
     if (hasScalarDepsInsideRegion(DelinearizedSize, &CurRegion))
-      invalid<ReportNonAffineAccess>(
+      return invalid<ReportNonAffineAccess>(
           Context, /*Assert=*/true, DelinearizedSize,
           Context.Accesses[BasePointer].front().first, BaseValue);
   }
@@ -1134,6 +1144,50 @@ bool ScopDetection::allBlocksValid(DetectionContext &Context) const {
   return true;
 }
 
+bool ScopDetection::hasSufficientCompute(DetectionContext &Context,
+                                         int NumLoops) const {
+  int InstCount = 0;
+
+  for (auto *BB : Context.CurRegion.blocks())
+    if (Context.CurRegion.contains(LI->getLoopFor(BB)))
+      InstCount += std::distance(BB->begin(), BB->end());
+
+  InstCount = InstCount / NumLoops;
+
+  return InstCount >= ProfitabilityMinPerLoopInstructions;
+}
+
+bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
+  Region &CurRegion = Context.CurRegion;
+
+  if (PollyProcessUnprofitable)
+    return true;
+
+  // We can probably not do a lot on scops that only write or only read
+  // data.
+  if (!Context.hasStores || !Context.hasLoads)
+    return invalid<ReportUnprofitable>(Context, /*Assert=*/true, &CurRegion);
+
+  int NumLoops = countBeneficialLoops(&CurRegion);
+  int NumAffineLoops = NumLoops - Context.BoxedLoopsSet.size();
+
+  // Scops with at least two loops may allow either loop fusion or tiling and
+  // are consequently interesting to look at.
+  if (NumAffineLoops >= 2)
+    return true;
+
+  // Scops that contain a loop with a non-trivial amount of computation per
+  // loop-iteration are interesting as we may be able to parallelize such
+  // loops. Individual loops that have only a small amount of computation
+  // per-iteration are performance-wise very fragile as any change to the
+  // loop induction variables may affect performance. To not cause spurious
+  // performance regressions, we do not consider such loops.
+  if (NumAffineLoops == 1 && hasSufficientCompute(Context, NumLoops))
+    return true;
+
+  return invalid<ReportUnprofitable>(Context, /*Assert=*/true, &CurRegion);
+}
+
 bool ScopDetection::isValidRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
@@ -1158,22 +1212,11 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
       &(CurRegion.getEntry()->getParent()->getEntryBlock()))
     return invalid<ReportEntry>(Context, /*Assert=*/true, CurRegion.getEntry());
 
-  int NumLoops = countBeneficialLoops(&CurRegion);
-  if (!PollyProcessUnprofitable && NumLoops < 2)
-    invalid<ReportUnprofitable>(Context, /*Assert=*/true, &CurRegion);
-
   if (!allBlocksValid(Context))
     return false;
 
-  // We can probably not do a lot on scops that only write or only read
-  // data.
-  if (!PollyProcessUnprofitable && (!Context.hasStores || !Context.hasLoads))
-    invalid<ReportUnprofitable>(Context, /*Assert=*/true, &CurRegion);
-
-  // Check if there are sufficent non-overapproximated loops.
-  int NumAffineLoops = NumLoops - Context.BoxedLoopsSet.size();
-  if (!PollyProcessUnprofitable && NumAffineLoops < 2)
-    invalid<ReportUnprofitable>(Context, /*Assert=*/true, &CurRegion);
+  if (!isProfitableRegion(Context))
+    return false;
 
   DEBUG(dbgs() << "OK\n");
   return true;

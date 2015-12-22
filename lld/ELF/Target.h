@@ -27,6 +27,7 @@ public:
   unsigned getGotReloc() const { return GotReloc; }
   unsigned getPltReloc() const { return PltReloc; }
   unsigned getRelativeReloc() const { return RelativeReloc; }
+  unsigned getIRelativeReloc() const { return IRelativeReloc; }
   bool isTlsLocalDynamicReloc(unsigned Type) const {
     return Type == TlsLocalDynamicReloc;
   }
@@ -64,6 +65,7 @@ public:
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                            uint64_t P, uint64_t SA, uint64_t ZA = 0,
                            uint8_t *PairedLoc = nullptr) const = 0;
+  virtual bool isGotRelative(uint32_t Type) const;
   virtual bool isTlsOptimized(unsigned Type, const SymbolBody *S) const;
   virtual bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
   virtual unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
@@ -87,6 +89,7 @@ protected:
   unsigned GotReloc;
   unsigned PltReloc;
   unsigned RelativeReloc;
+  unsigned IRelativeReloc;
   unsigned TlsGotReloc = 0;
   unsigned TlsLocalDynamicReloc = 0;
   unsigned TlsGlobalDynamicReloc = 0;
@@ -103,6 +106,8 @@ uint64_t getPPC64TocBase();
 
 template <class ELFT>
 typename llvm::object::ELFFile<ELFT>::uintX_t getMipsGpAddr();
+
+template <class ELFT> bool isGnuIFunc(const SymbolBody &S);
 
 extern std::unique_ptr<TargetInfo> Target;
 TargetInfo *createTarget();

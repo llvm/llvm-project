@@ -31,10 +31,15 @@ template <class ELFT> class EHInputSection;
 template <class ELFT> class InputSection;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class MergeInputSection;
+template <class ELFT> class MipsReginfoInputSection;
 template <class ELFT> class OutputSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class DefinedRegular;
 template <class ELFT> class ELFSymbolBody;
+
+// Flag to force GOT to be in output if we have relocations
+// that relies on its address.
+extern bool HasGotOffRel;
 
 template <class ELFT>
 static inline typename llvm::object::ELFFile<ELFT>::uintX_t
@@ -54,7 +59,8 @@ typename llvm::object::ELFFile<ELFT>::uintX_t getSymVA(const SymbolBody &S);
 template <class ELFT, bool IsRela>
 typename llvm::object::ELFFile<ELFT>::uintX_t
 getLocalRelTarget(const ObjectFile<ELFT> &File,
-                  const llvm::object::Elf_Rel_Impl<ELFT, IsRela> &Rel);
+                  const llvm::object::Elf_Rel_Impl<ELFT, IsRela> &Rel,
+                  typename llvm::object::ELFFile<ELFT>::uintX_t Addend);
 bool canBePreempted(const SymbolBody *Body, bool NeedsGot);
 template <class ELFT> bool includeInSymtab(const SymbolBody &B);
 
@@ -226,6 +232,8 @@ public:
   void writeTo(uint8_t *Buf) override;
   bool hasRelocs() const { return !Relocs.empty(); }
   bool isRela() const { return IsRela; }
+
+  bool Static = false;
 
 private:
   bool applyTlsDynamicReloc(SymbolBody *Body, uint32_t Type, Elf_Rel *P,
@@ -406,10 +414,24 @@ public:
 
 private:
   SymbolTable<ELFT> &SymTab;
-  const ELFSymbolBody<ELFT> *InitSym = nullptr;
-  const ELFSymbolBody<ELFT> *FiniSym = nullptr;
+  const SymbolBody *InitSym = nullptr;
+  const SymbolBody *FiniSym = nullptr;
   uint32_t DtFlags = 0;
   uint32_t DtFlags1 = 0;
+};
+
+template <class ELFT>
+class MipsReginfoOutputSection final : public OutputSectionBase<ELFT> {
+  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
+
+public:
+  MipsReginfoOutputSection();
+  void writeTo(uint8_t *Buf) override;
+
+  void addSection(MipsReginfoInputSection<ELFT> *S);
+
+private:
+  uint32_t GeneralMask = 0;
 };
 
 // All output sections that are hadnled by the linker specially are

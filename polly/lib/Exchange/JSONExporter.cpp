@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "polly/LinkAllPasses.h"
 #include "polly/DependenceInfo.h"
+#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"

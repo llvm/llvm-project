@@ -601,40 +601,16 @@ ValueObjectSP
 ValueObject::GetChildAtIndexPath (const std::initializer_list<size_t>& idxs,
                                   size_t* index_of_error)
 {
-    if (idxs.size() == 0)
-        return GetSP();
-    ValueObjectSP root(GetSP());
-    for (size_t idx : idxs)
-    {
-        root = root->GetChildAtIndex(idx, true);
-        if (!root)
-        {
-            if (index_of_error)
-                *index_of_error = idx;
-            return root;
-        }
-    }
-    return root;
+    return GetChildAtIndexPath( std::vector<size_t>(idxs),
+                               index_of_error );
 }
 
 ValueObjectSP
 ValueObject::GetChildAtIndexPath (const std::initializer_list< std::pair<size_t, bool> >& idxs,
                                   size_t* index_of_error)
 {
-    if (idxs.size() == 0)
-        return GetSP();
-    ValueObjectSP root(GetSP());
-    for (std::pair<size_t, bool> idx : idxs)
-    {
-        root = root->GetChildAtIndex(idx.first, idx.second);
-        if (!root)
-        {
-            if (index_of_error)
-                *index_of_error = idx.first;
-            return root;
-        }
-    }
-    return root;
+    return GetChildAtIndexPath( std::vector<std::pair<size_t,bool>>(idxs),
+                               index_of_error );
 }
 
 lldb::ValueObjectSP
@@ -681,20 +657,16 @@ lldb::ValueObjectSP
 ValueObject::GetChildAtNamePath (const std::initializer_list<ConstString> &names,
                                  ConstString* name_of_error)
 {
-    if (names.size() == 0)
-        return GetSP();
-    ValueObjectSP root(GetSP());
-    for (ConstString name : names)
-    {
-        root = root->GetChildMemberWithName(name, true);
-        if (!root)
-        {
-            if (name_of_error)
-                *name_of_error = name;
-            return root;
-        }
-    }
-    return root;
+    return GetChildAtNamePath( std::vector<ConstString>(names),
+                              name_of_error );
+}
+
+lldb::ValueObjectSP
+ValueObject::GetChildAtNamePath (const std::initializer_list< std::pair<ConstString, bool> > &names,
+                                 ConstString* name_of_error)
+{
+    return GetChildAtNamePath( std::vector<std::pair<ConstString,bool>>(names),
+                              name_of_error );
 }
 
 lldb::ValueObjectSP
@@ -718,7 +690,7 @@ ValueObject::GetChildAtNamePath (const std::vector<ConstString> &names,
 }
 
 lldb::ValueObjectSP
-ValueObject::GetChildAtNamePath (const std::initializer_list< std::pair<ConstString, bool> > &names,
+ValueObject::GetChildAtNamePath (const std::vector< std::pair<ConstString, bool> > &names,
                                  ConstString* name_of_error)
 {
     if (names.size() == 0)
@@ -731,29 +703,9 @@ ValueObject::GetChildAtNamePath (const std::initializer_list< std::pair<ConstStr
         {
             if (name_of_error)
                 *name_of_error = name.first;
-            return root;
+                return root;
         }
     }
-    return root;
-}
-
-lldb::ValueObjectSP
-ValueObject::GetChildAtNamePath (const std::vector< std::pair<ConstString, bool> > &names,
-                                 ConstString* name_of_error)
-{
-    if (names.size() == 0)
-        return GetSP();
-        ValueObjectSP root(GetSP());
-        for (std::pair<ConstString, bool> name : names)
-        {
-            root = root->GetChildMemberWithName(name.first, name.second);
-            if (!root)
-            {
-                if (name_of_error)
-                    *name_of_error = name.first;
-                    return root;
-            }
-        }
     return root;
 }
 
@@ -1226,31 +1178,6 @@ ValueObject::SetData (DataExtractor &data, Error &error)
     return true;
 }
 
-// will compute strlen(str), but without consuming more than
-// maxlen bytes out of str (this serves the purpose of reading
-// chunks of a string without having to worry about
-// missing NULL terminators in the chunk)
-// of course, if strlen(str) > maxlen, the function will return
-// maxlen_value (which should be != maxlen, because that allows you
-// to know whether strlen(str) == maxlen or strlen(str) > maxlen)
-static uint32_t
-strlen_or_inf (const char* str,
-               uint32_t maxlen,
-               uint32_t maxlen_value)
-{
-    uint32_t len = 0;
-    if (str)
-    {
-        while(*str)
-        {
-            len++;str++;
-            if (len >= maxlen)
-                return maxlen_value;
-        }
-    }
-    return len;
-}
-
 static bool
 CopyStringDataToBufferSP(const StreamString& source,
                          lldb::DataBufferSP& destination)
@@ -1358,10 +1285,7 @@ ValueObject::ReadPointedString (lldb::DataBufferSP& buffer_sp,
             {
                 total_bytes_read += bytes_read;
                 const char *cstr = data.PeekCStr(0);
-                size_t len = strlen_or_inf (cstr, k_max_buf_size, k_max_buf_size+1);
-                if (len > k_max_buf_size)
-                    len = k_max_buf_size;
-                
+                size_t len = strnlen (cstr, k_max_buf_size);
                 if (cstr_len_displayed < 0)
                     cstr_len_displayed = len;
                 

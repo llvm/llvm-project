@@ -127,9 +127,9 @@ template <class ELFT> bool SymbolTable<ELFT>::isUndefined(StringRef Name) {
 // Returns a file from which symbol B was created.
 // If B does not belong to any file in ObjectFiles, returns a nullptr.
 template <class ELFT>
-static ELFFileBase<ELFT> *
-findFile(std::vector<std::unique_ptr<ObjectFile<ELFT>>> &ObjectFiles,
-         SymbolBody *B) {
+ELFFileBase<ELFT> *
+elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELFT>>> ObjectFiles,
+               const SymbolBody *B) {
   typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
   typedef typename ELFFile<ELFT>::Elf_Sym_Range Elf_Sym_Range;
 
@@ -144,8 +144,8 @@ findFile(std::vector<std::unique_ptr<ObjectFile<ELFT>>> &ObjectFiles,
 
 template <class ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Old, SymbolBody *New) {
-  ELFFileBase<ELFT> *OldFile = findFile(ObjectFiles, Old);
-  ELFFileBase<ELFT> *NewFile = findFile(ObjectFiles, New);
+  ELFFileBase<ELFT> *OldFile = findFile<ELFT>(ObjectFiles, Old);
+  ELFFileBase<ELFT> *NewFile = findFile<ELFT>(ObjectFiles, New);
 
   StringRef Sym = Old->getName();
   StringRef F1 = OldFile ? OldFile->getName() : "(internal)";
@@ -257,3 +257,16 @@ template class lld::elf2::SymbolTable<ELF32LE>;
 template class lld::elf2::SymbolTable<ELF32BE>;
 template class lld::elf2::SymbolTable<ELF64LE>;
 template class lld::elf2::SymbolTable<ELF64BE>;
+
+template ELFFileBase<ELF32LE> *
+lld::elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELF32LE>>>,
+                    const SymbolBody *);
+template ELFFileBase<ELF32BE> *
+lld::elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELF32BE>>>,
+                    const SymbolBody *);
+template ELFFileBase<ELF64LE> *
+lld::elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELF64LE>>>,
+                    const SymbolBody *);
+template ELFFileBase<ELF64BE> *
+lld::elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELF64BE>>>,
+                    const SymbolBody *);

@@ -28,7 +28,10 @@ __start:
 # CHECK-NEXT:   Entry: 0x20000
 # CHECK-NEXT:   ProgramHeaderOffset: 0x34
 # CHECK-NEXT:   SectionHeaderOffset: 0x20084
-# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     EF_MIPS_ABI_O32
+# CHECK-NEXT:     EF_MIPS_ARCH_32R2
+# CHECK-NEXT:     EF_MIPS_CPIC
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 52
 # CHECK-NEXT:   ProgramHeaderEntrySize: 32
@@ -65,7 +68,7 @@ __start:
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
 # CHECK-NEXT:     AddressAlignment: 4
-# CHECK-NEXT:     EntrySize: 0
+# CHECK-NEXT:     EntrySize: 24
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 2

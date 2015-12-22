@@ -77,6 +77,7 @@ enum AssumptionKind {
   INFINITELOOP,
   INVARIANTLOAD,
   DELINEARIZATION,
+  ERROR_DOMAINCONJUNCTS,
 };
 
 /// Maps from a loop to the affine function expressing its backedge taken count.
@@ -957,14 +958,15 @@ public:
   /// @brief Return true if this statement does not contain any accesses.
   bool isEmpty() const { return MemAccs.empty(); }
 
-  /// @brief Return the only array access for @p Inst.
+  /// @brief Return the only array access for @p Inst, if existing.
   ///
   /// @param Inst The instruction for which to look up the access.
-  /// @returns The unique array memory access related to Inst.
-  MemoryAccess &getArrayAccessFor(const Instruction *Inst) const {
+  /// @returns The unique array memory access related to Inst or nullptr if
+  ///          no array access exists
+  MemoryAccess *getArrayAccessOrNULLFor(const Instruction *Inst) const {
     auto It = InstructionToAccess.find(Inst);
-    assert(It != InstructionToAccess.end() &&
-           "No memory accesses found for instruction");
+    if (It == InstructionToAccess.end())
+      return nullptr;
 
     MemoryAccess *ArrayAccess = nullptr;
 
@@ -977,26 +979,18 @@ public:
       ArrayAccess = Access;
     }
 
-    assert(ArrayAccess && "No array access found for instruction!");
-    return *ArrayAccess;
+    return ArrayAccess;
   }
 
-  /// @brief Get the number of array accesses associated with an instruction.
+  /// @brief Return the only array access for @p Inst.
   ///
-  /// @param Inst The instruction for which to obtain the access count.
-  /// @returns The number of array accesses associated with this instruction.
-  size_t getNumberOfArrayAccessesFor(const Instruction *Inst) const {
-    size_t NumAccesses = 0;
-    auto It = InstructionToAccess.find(Inst);
-    if (It == InstructionToAccess.end())
-      return 0;
+  /// @param Inst The instruction for which to look up the access.
+  /// @returns The unique array memory access related to Inst.
+  MemoryAccess &getArrayAccessFor(const Instruction *Inst) const {
+    MemoryAccess *ArrayAccess = getArrayAccessOrNULLFor(Inst);
 
-    for (auto Access : It->getSecond()) {
-      if (Access->isArrayKind())
-        NumAccesses++;
-    }
-
-    return NumAccesses;
+    assert(ArrayAccess && "No array access found for instruction!");
+    return *ArrayAccess;
   }
 
   void setBasicBlock(BasicBlock *Block) {
