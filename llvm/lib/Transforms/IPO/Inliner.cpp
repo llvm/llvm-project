@@ -288,18 +288,42 @@ unsigned Inliner::getInlineThreshold(CallSite CS) const {
       OptSizeThreshold < Threshold)
     Threshold = OptSizeThreshold;
 
-  // Listen to the inlinehint attribute when it would increase the threshold
-  // and the caller does not need to minimize its size.
   Function *Callee = CS.getCalledFunction();
-  bool InlineHint = Callee && !Callee->isDeclaration() &&
-                    Callee->hasFnAttribute(Attribute::InlineHint);
+  if (!Callee || Callee->isDeclaration())
+    return Threshold;
+
+  // If profile information is available, use that to adjust threshold of hot
+  // and cold functions.
+  // FIXME: The heuristic used below for determining hotness and coldness are
+  // based on preliminary SPEC tuning and may not be optimal. Replace this with
+  // a well-tuned heuristic based on *callsite* hotness and not callee hotness.
+  uint64_t FunctionCount = 0, MaxFunctionCount = 0;
+  bool HasPGOCounts = false;
+  if (Callee->getEntryCount() &&
+      Callee->getParent()->getMaximumFunctionCount()) {
+    HasPGOCounts = true;
+    FunctionCount = Callee->getEntryCount().getValue();
+    MaxFunctionCount =
+        Callee->getParent()->getMaximumFunctionCount().getValue();
+  }
+
+  // Listen to the inlinehint attribute or profile based hotness information
+  // when it would increase the threshold and the caller does not need to
+  // minimize its size.
+  bool InlineHint =
+      Callee->hasFnAttribute(Attribute::InlineHint) ||
+      (HasPGOCounts &&
+       FunctionCount >= (uint64_t)(0.3 * (double)MaxFunctionCount));
   if (InlineHint && HintThreshold > Threshold &&
       !Caller->hasFnAttribute(Attribute::MinSize))
     Threshold = HintThreshold;
 
-  // Listen to the cold attribute when it would decrease the threshold.
-  bool ColdCallee = Callee && !Callee->isDeclaration() &&
-                    Callee->hasFnAttribute(Attribute::Cold);
+  // Listen to the cold attribute or profile based coldness information
+  // when it would decrease the threshold.
+  bool ColdCallee =
+      Callee->hasFnAttribute(Attribute::Cold) ||
+      (HasPGOCounts &&
+       FunctionCount <= (uint64_t)(0.01 * (double)MaxFunctionCount));
   // Command line argument for InlineLimit will override the default
   // ColdThreshold. If we have -inline-threshold but no -inlinecold-threshold,
   // do not use the default cold threshold even if it is smaller.

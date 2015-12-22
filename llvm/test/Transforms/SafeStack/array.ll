@@ -1,8 +1,13 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -safe-stack -safe-stack-usp-storage=single-thread -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck -check-prefix=SINGLE-THREAD %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -safe-stack -safe-stack-usp-storage=single-thread -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck -check-prefix=SINGLE-THREAD %s
 
 ; array [4 x i8]
 ; Requires protector.
+
+; CHECK: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global i8*
+; SINGLE-THREAD: @__safestack_unsafe_stack_ptr = external global i8*
 
 define void @foo(i8* %a) nounwind uwtable safestack {
 entry:

@@ -50,9 +50,11 @@ void X86WinCOFFStreamer::FinishImpl() {
 
 MCStreamer *llvm::createX86WinCOFFStreamer(MCContext &C, MCAsmBackend &AB,
                                            raw_pwrite_stream &OS,
-                                           MCCodeEmitter *CE, bool RelaxAll) {
+                                           MCCodeEmitter *CE, bool RelaxAll,
+                                           bool IncrementalLinkerCompatible) {
   X86WinCOFFStreamer *S = new X86WinCOFFStreamer(C, AB, CE, OS);
   S->getAssembler().setRelaxAll(RelaxAll);
+  S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
   return S;
 }
 

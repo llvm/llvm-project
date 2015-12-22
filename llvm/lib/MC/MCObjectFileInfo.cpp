@@ -606,7 +606,6 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
   // though it contains relocatable pointers.  In PIC mode, this is probably a
   // big runtime hit for C++ apps.  Either the contents of the LSDA need to be
   // adjusted or this should be a data section.
-  assert(T.isOSWindows() && "Windows is the only supported COFF target");
   if (T.getArch() == Triple::x86_64) {
     // On Windows 64 with SEH, the LSDA is emitted into the .xdata section
     LSDASection = nullptr;
@@ -810,25 +809,26 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple,
 
   TT = TheTriple;
 
-  Triple::ArchType Arch = TT.getArch();
-  // FIXME: Checking for Arch here to filter out bogus triples such as
-  // cellspu-apple-darwin. Perhaps we should fix in Triple?
-  if ((Arch == Triple::x86 || Arch == Triple::x86_64 ||
-       Arch == Triple::arm || Arch == Triple::thumb ||
-       Arch == Triple::aarch64 ||
-       Arch == Triple::ppc || Arch == Triple::ppc64 ||
-       Arch == Triple::UnknownArch) &&
-      TT.isOSBinFormatMachO()) {
+  switch (TT.getObjectFormat()) {
+  case Triple::MachO:
     Env = IsMachO;
     initMachOMCObjectFileInfo(TT);
-  } else if ((Arch == Triple::x86 || Arch == Triple::x86_64 ||
-              Arch == Triple::arm || Arch == Triple::thumb) &&
-             (TT.isOSWindows() && TT.getObjectFormat() == Triple::COFF)) {
+    break;
+  case Triple::COFF:
+    if (!TT.isOSWindows())
+      report_fatal_error(
+          "Cannot initialize MC for non-Windows COFF object files.");
+
     Env = IsCOFF;
     initCOFFMCObjectFileInfo(TT);
-  } else {
+    break;
+  case Triple::ELF:
     Env = IsELF;
     initELFMCObjectFileInfo(TT);
+    break;
+  case Triple::UnknownObjectFormat:
+    report_fatal_error("Cannot initialize MC for unknown object file format.");
+    break;
   }
 }
 

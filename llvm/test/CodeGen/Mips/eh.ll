@@ -24,7 +24,7 @@ entry:
 
 lpad:                                             ; preds = %entry
 ; CHECK-EL:  # %lpad
-; CHECK-EL:  bne $5
+; CHECK-EL:  beq $5
 
   %exn.val = landingpad { i8*, i32 }
            cleanup

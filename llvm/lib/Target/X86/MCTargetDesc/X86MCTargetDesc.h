@@ -79,7 +79,7 @@ MCAsmBackend *createX86_64AsmBackend(const Target &T, const MCRegisterInfo &MRI,
 /// Takes ownership of \p AB and \p CE.
 MCStreamer *createX86WinCOFFStreamer(MCContext &C, MCAsmBackend &AB,
                                      raw_pwrite_stream &OS, MCCodeEmitter *CE,
-                                     bool RelaxAll);
+                                     bool RelaxAll, bool IncrementalLinkerCompatible);
 
 /// Construct an X86 Mach-O object writer.
 MCObjectWriter *createX86MachObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,

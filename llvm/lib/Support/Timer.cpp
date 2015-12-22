@@ -96,11 +96,7 @@ static TimerGroup *getDefaultTimerGroup() {
 //===----------------------------------------------------------------------===//
 
 void Timer::init(StringRef N) {
-  assert(!TG && "Timer already initialized");
-  Name.assign(N.begin(), N.end());
-  Started = false;
-  TG = getDefaultTimerGroup();
-  TG->addTimer(*this);
+  init(N, *getDefaultTimerGroup());
 }
 
 void Timer::init(StringRef N, TimerGroup &tg) {
@@ -276,7 +272,7 @@ void TimerGroup::removeTimer(Timer &T) {
   
   // If the timer was started, move its data to TimersToPrint.
   if (T.Started)
-    TimersToPrint.push_back(std::make_pair(T.Time, T.Name));
+    TimersToPrint.emplace_back(T.Time, T.Name);
 
   T.TG = nullptr;
   
@@ -310,8 +306,8 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   std::sort(TimersToPrint.begin(), TimersToPrint.end());
   
   TimeRecord Total;
-  for (unsigned i = 0, e = TimersToPrint.size(); i != e; ++i)
-    Total += TimersToPrint[i].first;
+  for (auto &RecordNamePair : TimersToPrint)
+    Total += RecordNamePair.first;
   
   // Print out timing header.
   OS << "===" << std::string(73, '-') << "===\n";
@@ -362,7 +358,7 @@ void TimerGroup::print(raw_ostream &OS) {
   // reset them.
   for (Timer *T = FirstTimer; T; T = T->Next) {
     if (!T->Started) continue;
-    TimersToPrint.push_back(std::make_pair(T->Time, T->Name));
+    TimersToPrint.emplace_back(T->Time, T->Name);
     
     // Clear out the time.
     T->Started = 0;

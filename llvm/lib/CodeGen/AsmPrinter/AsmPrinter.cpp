@@ -787,6 +787,9 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     if (Op == dwarf::DW_OP_deref) {
       Deref = true;
       continue;
+    } else if (Op == dwarf::DW_OP_bit_piece) {
+      // There can't be any operands after this in a valid expression
+      break;
     }
     uint64_t ExtraOffset = Expr->getElement(i++);
     if (Op == dwarf::DW_OP_plus)
