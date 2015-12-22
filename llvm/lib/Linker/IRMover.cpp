@@ -1193,7 +1193,7 @@ void IRLinker::findNeededSubprograms(ValueToValueMapTy &ValueMap) {
   for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
     auto *CU = cast<DICompileUnit>(CompileUnits->getOperand(I));
     assert(CU && "Expected valid compile unit");
-    for (const Metadata *Op : CU->getSubprograms()->operands()) {
+    for (auto *Op : CU->getSubprograms()) {
       // Unless we were doing function importing and deferred metadata linking,
       // any needed SPs should have been mapped as they would be reached
       // from the function linked in (either on the function itself for linked

@@ -147,6 +147,16 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(BasicBlock *BB) {
   if (TI->getNumSuccessors() == 1 || UnreachableEdges.empty())
     return false;
 
+  // If the terminator is an InvokeInst, check only the normal destination block
+  // as the unwind edge of InvokeInst is also very unlikely taken.
+  if (auto *II = dyn_cast<InvokeInst>(TI))
+    if (PostDominatedByUnreachable.count(II->getNormalDest())) {
+      PostDominatedByUnreachable.insert(BB);
+      // Return false here so that edge weights for InvokeInst could be decided
+      // in calcInvokeHeuristics().
+      return false;
+    }
+
   uint32_t UnreachableWeight =
     std::max(UR_TAKEN_WEIGHT / (unsigned)UnreachableEdges.size(), MIN_WEIGHT);
   for (SmallVectorImpl<unsigned>::iterator I = UnreachableEdges.begin(),

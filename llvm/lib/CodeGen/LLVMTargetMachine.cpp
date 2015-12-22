@@ -203,6 +203,7 @@ bool LLVMTargetMachine::addPassesToEmitFile(
     Triple T(getTargetTriple().str());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
         T, *Context, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
+        Options.MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ true));
     break;
   }
@@ -255,6 +256,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
       T, *Ctx, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
+      Options.MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ true));
 
   // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.

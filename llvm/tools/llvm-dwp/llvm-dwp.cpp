@@ -10,6 +10,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/FileSystem.h"
@@ -404,8 +405,10 @@ int main(int argc, char **argv) {
   if (EC)
     return error(Twine(OutputFilename) + ": " + EC.message(), Context);
 
+  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
-      TheTriple, MC, *MAB, OutFile, MCE, *MSTI, false,
+      TheTriple, MC, *MAB, OutFile, MCE, *MSTI, MCOptions.MCRelaxAll,
+      MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false));
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);

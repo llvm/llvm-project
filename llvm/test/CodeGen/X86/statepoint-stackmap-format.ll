@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple="x86_64-pc-linux-gnu" | FileCheck %s
-; RUN: llc < %s -mtriple="x86_64-pc-win64-coff" | FileCheck %s
+; RUN: llc < %s -mtriple="x86_64-pc-unknown-elf" | FileCheck %s
 
 ; This test is a sanity check to ensure statepoints are generating StackMap
 ; sections correctly.  This is not intended to be a rigorous test of the 

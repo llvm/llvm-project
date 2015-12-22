@@ -15,8 +15,9 @@ namespace llvm {
 MCTargetOptions::MCTargetOptions()
     : SanitizeAddress(false), MCRelaxAll(false), MCNoExecStack(false),
       MCFatalWarnings(false), MCNoWarn(false), MCSaveTempLabels(false),
-      MCUseDwarfDirectory(false), ShowMCEncoding(false), ShowMCInst(false),
-      AsmVerbose(false), DwarfVersion(0), ABIName() {}
+      MCUseDwarfDirectory(false), MCIncrementalLinkerCompatible(false),
+      ShowMCEncoding(false), ShowMCInst(false), AsmVerbose(false),
+      DwarfVersion(0), ABIName() {}
 
 StringRef MCTargetOptions::getABIName() const {
   return ABIName;

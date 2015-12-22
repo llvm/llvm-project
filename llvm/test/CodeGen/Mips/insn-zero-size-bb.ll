@@ -14,7 +14,7 @@ entry:
           to label %unreachable unwind label %return
 
 unreachable:
-; CHECK:          ${{.*}}: # %unreachable
+; CHECK:          {{.*}}: # %unreachable
 ; CHECK-NEXT:         .insn
   unreachable
 

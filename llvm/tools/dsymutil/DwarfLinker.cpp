@@ -31,6 +31,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/LEB128.h"
@@ -618,9 +619,11 @@ bool DwarfStreamer::init(Triple TheTriple, StringRef OutputFilename) {
   if (EC)
     return error(Twine(OutputFilename) + ": " + EC.message(), Context);
 
-  MS = TheTarget->createMCObjectStreamer(TheTriple, *MC, *MAB, *OutFile, MCE,
-                                         *MSTI, false,
-                                         /*DWARFMustBeAtTheEnd*/ false);
+  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  MS = TheTarget->createMCObjectStreamer(
+      TheTriple, *MC, *MAB, *OutFile, MCE, *MSTI, MCOptions.MCRelaxAll,
+      MCOptions.MCIncrementalLinkerCompatible,
+      /*DWARFMustBeAtTheEnd*/ false);
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 

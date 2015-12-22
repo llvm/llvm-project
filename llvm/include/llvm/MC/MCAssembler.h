@@ -609,6 +609,7 @@ private:
 
   unsigned RelaxAll : 1;
   unsigned SubsectionsViaSymbols : 1;
+  unsigned IncrementalLinkerCompatible : 1;
 
   /// ELF specific e_header flags
   // It would be good if there were an MCELFAssembler class to hold this.
@@ -749,6 +750,13 @@ public:
   // FIXME: This does not belong here.
   bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
   void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
+
+  bool isIncrementalLinkerCompatible() const {
+    return IncrementalLinkerCompatible;
+  }
+  void setIncrementalLinkerCompatible(bool Value) {
+    IncrementalLinkerCompatible = Value;
+  }
 
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }

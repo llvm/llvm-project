@@ -683,7 +683,7 @@ Constant *LowerBitSets::createJumpTableEntry(GlobalObject *Src, Function *Dest,
   ConstantInt *DispOffset =
       ConstantInt::get(IntPtrTy, Distance * kX86JumpTableEntrySize + 5);
   Constant *OffsetedDisp = ConstantExpr::getSub(Disp, DispOffset);
-  OffsetedDisp = ConstantExpr::getTrunc(OffsetedDisp, Int32Ty);
+  OffsetedDisp = ConstantExpr::getTruncOrBitCast(OffsetedDisp, Int32Ty);
 
   ConstantInt *Int3 = ConstantInt::get(Int8Ty, kInt3Code);
 

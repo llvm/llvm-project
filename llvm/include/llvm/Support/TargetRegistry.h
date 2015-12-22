@@ -141,7 +141,8 @@ public:
   typedef MCStreamer *(*COFFStreamerCtorTy)(MCContext &Ctx, MCAsmBackend &TAB,
                                             raw_pwrite_stream &OS,
                                             MCCodeEmitter *Emitter,
-                                            bool RelaxAll);
+                                            bool RelaxAll,
+                                            bool IncrementalLinkerCompatible);
   typedef MCTargetStreamer *(*NullTargetStreamerCtorTy)(MCStreamer &S);
   typedef MCTargetStreamer *(*AsmTargetStreamerCtorTy)(
       MCStreamer &S, formatted_raw_ostream &OS, MCInstPrinter *InstPrint,
@@ -437,6 +438,7 @@ public:
                                      MCAsmBackend &TAB, raw_pwrite_stream &OS,
                                      MCCodeEmitter *Emitter,
                                      const MCSubtargetInfo &STI, bool RelaxAll,
+                                     bool IncrementalLinkerCompatible,
                                      bool DWARFMustBeAtTheEnd) const {
     MCStreamer *S;
     switch (T.getObjectFormat()) {
@@ -444,7 +446,8 @@ public:
       llvm_unreachable("Unknown object format");
     case Triple::COFF:
       assert(T.isOSWindows() && "only Windows COFF is supported");
-      S = COFFStreamerCtorFn(Ctx, TAB, OS, Emitter, RelaxAll);
+      S = COFFStreamerCtorFn(Ctx, TAB, OS, Emitter, RelaxAll,
+                             IncrementalLinkerCompatible);
       break;
     case Triple::MachO:
       if (MachOStreamerCtorFn)

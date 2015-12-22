@@ -337,7 +337,7 @@ MCAssembler::MCAssembler(MCContext &Context_, MCAsmBackend &Backend_,
                          MCCodeEmitter &Emitter_, MCObjectWriter &Writer_)
     : Context(Context_), Backend(Backend_), Emitter(Emitter_), Writer(Writer_),
       BundleAlignSize(0), RelaxAll(false), SubsectionsViaSymbols(false),
-      ELFHeaderEFlags(0) {
+      IncrementalLinkerCompatible(false), ELFHeaderEFlags(0) {
   VersionMinInfo.Major = 0; // Major version == 0 for "none specified"
 }
 
@@ -355,6 +355,7 @@ void MCAssembler::reset() {
   BundleAlignSize = 0;
   RelaxAll = false;
   SubsectionsViaSymbols = false;
+  IncrementalLinkerCompatible = false;
   ELFHeaderEFlags = 0;
   LOHContainer.reset();
   VersionMinInfo.Major = 0;
