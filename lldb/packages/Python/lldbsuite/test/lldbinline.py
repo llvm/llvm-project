@@ -208,5 +208,7 @@ def MakeInlineTest(__file, __globals, decorators=None):
     # Add the test case to the globals, and hide InlineTest
     __globals.update({test_name : test})
 
+    # Store the name of the originating file.o
+    test.test_filename = __file
     return test
 

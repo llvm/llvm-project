@@ -1,0 +1,13 @@
+"""Tests that the rerun mechanism respects lldbinline-created tests.
+
+The current implementation of this test is expected to fail both on
+the initial run and on the rerun, assuming --rerun-all-issues is provided
+to the dotest.py run.
+
+This test could be improved by doing something in the test inferior
+C++ program that could look for the "should an issue be raised" marker
+file, and then really pass on the rerun.
+"""
+import lldbsuite.test.lldbinline as lldbinline
+
+lldbinline.MakeInlineTest(__file__, globals())

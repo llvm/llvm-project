@@ -242,11 +242,18 @@ class EventBuilder(object):
         """
         test_class_name, test_name = EventBuilder._get_test_name_info(test)
 
+        # Determine the filename for the test case.  If there is an attribute
+        # for it, use it.  Otherwise, determine from the TestCase class path.
+        if hasattr(test, "test_filename"):
+            test_filename = test.test_filename
+        else:
+            test_filename = inspect.getfile(test.__class__)
+
         event = EventBuilder.bare_event(event_type)
         event.update({
             "test_class": test_class_name,
             "test_name": test_name,
-            "test_filename": inspect.getfile(test.__class__)
+            "test_filename": test_filename
         })
 
         return event
