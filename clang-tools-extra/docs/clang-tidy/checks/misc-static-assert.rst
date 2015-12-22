@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-static-assert
+
 misc-static-assert
 ==================
 

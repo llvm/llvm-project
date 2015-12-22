@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-redundant-string-cstr
+
 readability-redundant-string-cstr
 =================================
 

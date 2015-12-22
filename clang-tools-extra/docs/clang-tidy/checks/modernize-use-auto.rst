@@ -1,3 +1,5 @@
+.. title:: clang-tidy - modernize-use-auto
+
 modernize-use-auto
 ==================
 

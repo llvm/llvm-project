@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-simplify-boolean-expr
+
 readability-simplify-boolean-expr
 =================================
 

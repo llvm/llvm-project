@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-inaccurate-erase
+
 misc-inaccurate-erase
 =====================
 

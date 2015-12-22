@@ -1,3 +1,5 @@
+.. title:: clang-tidy - llvm-namespace-comment
+
 llvm-namespace-comment
 ======================
 

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-explicit-constructor
+
 google-explicit-constructor
 ===========================
 

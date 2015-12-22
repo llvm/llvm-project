@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-string-integer-assignment
+
 misc-string-integer-assignment
 ==============================
 
@@ -6,11 +8,13 @@ The check finds assignments of an integer to ``std::basic_string<CharT>``
 following assignment operator of ``std::basic_string<CharT>``:
 
 .. code:: c++
+
   basic_string& operator=( CharT ch );
 
 Numeric types can be implicity casted to character types.
 
 .. code:: c++
+
   std::string s;
   int x = 5965;
   s = 6;
@@ -19,6 +23,7 @@ Numeric types can be implicity casted to character types.
 Use the appropriate conversion functions or character literals.
 
 .. code:: c++
+
   std::string s;
   int x = 5965;
   s = '6';
@@ -27,5 +32,6 @@ Use the appropriate conversion functions or character literals.
 In order to suppress false positives, use an explicit cast.
 
 .. code:: c++
+
   std::string s;
   s = static_cast<char>(6);

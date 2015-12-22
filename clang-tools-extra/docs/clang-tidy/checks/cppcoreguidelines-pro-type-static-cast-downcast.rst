@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cppcoreguidelines-pro-type-static-cast-downcast
+
 cppcoreguidelines-pro-type-static-cast-downcast
 ===============================================
 

@@ -244,7 +244,9 @@ def write_docs(module_path, module, check_name):
   print('Creating %s...' % filename)
   with open(filename, 'wb') as f:
     f.write(
-"""%(check_name_dashes)s
+""".. title:: clang-tidy - %(check_name_dashes)s
+
+%(check_name_dashes)s
 %(underline)s
 
 FIXME: Describe what patterns does the check detect and why. Give examples.

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cert-err60-cpp
+
 cert-err60-cpp
 ==============
 

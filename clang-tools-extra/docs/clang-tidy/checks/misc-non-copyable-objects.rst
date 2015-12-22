@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-non-copyable-objects
+
 misc-non-copyable-objects
 =========================
 

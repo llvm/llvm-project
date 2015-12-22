@@ -623,7 +623,12 @@ def not_in(iterable):
 def check_list_or_lambda(list_or_lambda, value):
     if six.callable(list_or_lambda):
         return list_or_lambda(value)
-    elif isinstance(list_or_lambda, list) or isinstance(list_or_lambda, str):
+    elif isinstance(list_or_lambda, list):
+        for item in list_or_lambda:
+            if value in item:
+                return True
+        return False
+    elif isinstance(list_or_lambda, str):
         return value is None or value in list_or_lambda
     else:
         return list_or_lambda is None or value is None or list_or_lambda == value
@@ -639,7 +644,7 @@ def expectedFailureAll(bugnumber=None, oslist=None, hostoslist=None, compiler=No
         oslist_passes = check_list_or_lambda(oslist, self.getPlatform())
         hostoslist_passes = check_list_or_lambda(hostoslist, getHostPlatform())
         compiler_passes = check_list_or_lambda(self.getCompiler(), compiler) and self.expectedCompilerVersion(compiler_version)
-        arch_passes = self.expectedArch(archs)
+        arch_passes = check_list_or_lambda(archs, self.getArchitecture())
         triple_passes = triple is None or re.match(triple, lldb.DBG.GetSelectedPlatform().GetTriple())
         debug_info_passes = check_list_or_lambda(debug_info, self.debug_info)
         swig_version_passes = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
@@ -1098,7 +1103,7 @@ def skipIf(bugnumber=None, oslist=None, compiler=None, compiler_version=None, ar
     def fn(self):
         oslist_passes = check_list_or_lambda(oslist, self.getPlatform())
         compiler_passes = check_list_or_lambda(self.getCompiler(), compiler) and self.expectedCompilerVersion(compiler_version)
-        arch_passes = self.expectedArch(archs)
+        arch_passes = check_list_or_lambda(archs, self.getArchitecture())
         debug_info_passes = check_list_or_lambda(debug_info, self.debug_info)
         swig_version_passes = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
         py_version_passes = (py_version is None) or check_expected_version(py_version[0], py_version[1], sys.version_info)

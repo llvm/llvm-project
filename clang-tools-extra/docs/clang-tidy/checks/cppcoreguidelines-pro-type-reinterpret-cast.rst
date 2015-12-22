@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cppcoreguidelines-pro-type-reinterpret-cast
+
 cppcoreguidelines-pro-type-reinterpret-cast
 ===========================================
 

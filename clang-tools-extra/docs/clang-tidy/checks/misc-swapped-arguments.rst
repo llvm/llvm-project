@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-swapped-arguments
+
 misc-swapped-arguments
 ======================
 

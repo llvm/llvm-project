@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-unused-parameters
+
 misc-unused-parameters
 ======================
 

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-uniqueptr-delete-release
+
 readability-uniqueptr-delete-release
 ====================================
 

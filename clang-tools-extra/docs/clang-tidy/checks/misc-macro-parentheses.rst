@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-macro-parentheses
+
 misc-macro-parentheses
 ======================
 

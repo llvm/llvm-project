@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Extra Clang Tools'
-copyright = u'2007-2014, The Clang Team'
+copyright = u'2007-2015, The Clang Team'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

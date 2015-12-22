@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-else-after-return
+
 readability-else-after-return
 =============================
 

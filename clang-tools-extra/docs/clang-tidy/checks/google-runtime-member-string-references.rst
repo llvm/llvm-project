@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-runtime-member-string-references
+
 google-runtime-member-string-references
 =======================================
 

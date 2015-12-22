@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-throw-by-value-catch-by-reference
+
 misc-throw-by-value-catch-by-reference
 ======================================
 

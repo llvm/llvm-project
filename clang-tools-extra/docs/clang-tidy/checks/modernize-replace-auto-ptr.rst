@@ -1,3 +1,5 @@
+.. title:: clang-tidy - modernize-replace-auto-ptr
+
 modernize-replace-auto-ptr
 ==========================
 

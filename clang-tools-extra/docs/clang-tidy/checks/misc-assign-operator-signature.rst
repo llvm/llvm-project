@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-assign-operator-signature
+
 misc-assign-operator-signature
 ==============================
 

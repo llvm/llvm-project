@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cppcoreguidelines-pro-type-const-cast
+
 cppcoreguidelines-pro-type-const-cast
 =====================================
 

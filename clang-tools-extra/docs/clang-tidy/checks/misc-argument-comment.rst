@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-argument-comment
+
 misc-argument-comment
 =====================
 

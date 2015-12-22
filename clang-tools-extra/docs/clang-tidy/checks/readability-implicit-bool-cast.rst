@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-implicit-bool-cast
+
 readability-implicit-bool-cast
 ==============================
 

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-new-delete-overloads
+
 misc-new-delete-overloads
 =========================
 

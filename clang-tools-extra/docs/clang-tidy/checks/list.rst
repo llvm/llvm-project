@@ -1,4 +1,6 @@
-List of clang-tidy Checks
+.. title:: clang-tidy - Clang-Tidy Checks
+
+Clang-Tidy Checks
 =========================
 
 .. toctree::   
@@ -59,6 +61,7 @@ List of clang-tidy Checks
    modernize-loop-convert
    modernize-make-unique
    modernize-pass-by-value
+   modernize-redundant-void-arg
    modernize-replace-auto-ptr
    modernize-shrink-to-fit
    modernize-use-auto

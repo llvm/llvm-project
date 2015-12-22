@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-move-constructor-init
+
 misc-move-constructor-init
 ==========================
 

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cppcoreguidelines-pro-bounds-constant-array-index
+
 cppcoreguidelines-pro-bounds-constant-array-index
 =================================================
 

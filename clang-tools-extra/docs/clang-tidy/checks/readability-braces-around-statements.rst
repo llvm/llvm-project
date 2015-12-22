@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-braces-around-statements
+
 readability-braces-around-statements
 ====================================
 

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-readability-namespace-comments
+
 google-readability-namespace-comments
 =====================================
 

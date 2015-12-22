@@ -1150,7 +1150,7 @@ bool ScopDetection::hasSufficientCompute(DetectionContext &Context,
 
   for (auto *BB : Context.CurRegion.blocks())
     if (Context.CurRegion.contains(LI->getLoopFor(BB)))
-      InstCount += std::distance(BB->begin(), BB->end());
+      InstCount += BB->size();
 
   InstCount = InstCount / NumLoops;
 

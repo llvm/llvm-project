@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cppcoreguidelines-pro-bounds-pointer-arithmetic
+
 cppcoreguidelines-pro-bounds-pointer-arithmetic
 ===============================================
 

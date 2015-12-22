@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cppcoreguidelines-pro-type-cstyle-cast
+
 cppcoreguidelines-pro-type-cstyle-cast
 ======================================
 

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-readability-redundant-smartptr-get
+
 google-readability-redundant-smartptr-get
 =========================================
 

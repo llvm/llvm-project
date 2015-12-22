@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-inconsistent-declaration-parameter-name
+
 readability-inconsistent-declaration-parameter-name
 ===================================================
 

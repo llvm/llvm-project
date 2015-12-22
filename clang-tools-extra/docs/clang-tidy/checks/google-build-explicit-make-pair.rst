@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-build-explicit-make-pair
+
 google-build-explicit-make-pair
 ===============================
 

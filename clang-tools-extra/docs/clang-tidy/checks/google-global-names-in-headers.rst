@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-global-names-in-headers
+
 google-global-names-in-headers
 ==============================
 

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - modernize-make-unique
+
 modernize-make-unique
 =====================
 
@@ -12,4 +14,3 @@ to ``std::make_unique``, introduced in C++14.
   // becomes
 
   auto my_ptr = std::make_unique<MyPair>(1, 2);
-

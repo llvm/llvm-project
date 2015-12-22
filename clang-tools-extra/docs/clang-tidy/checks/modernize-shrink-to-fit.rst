@@ -1,3 +1,5 @@
+.. title:: clang-tidy - modernize-shrink-to-fit
+
 modernize-shrink-to-fit
 =======================
 

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-undelegated-constructor
+
 misc-undelegated-constructor
 ============================
 

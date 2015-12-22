@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-inefficient-algorithm
+
 misc-inefficient-algorithm
 ==========================
 

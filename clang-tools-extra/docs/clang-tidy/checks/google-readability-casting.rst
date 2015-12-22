@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-readability-casting
+
 google-readability-casting
 ==========================
 

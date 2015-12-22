@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-identifier-naming
+
 readability-identifier-naming
 =============================
 

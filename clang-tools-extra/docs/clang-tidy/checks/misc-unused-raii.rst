@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-unused-raii
+
 misc-unused-raii
 ================
 

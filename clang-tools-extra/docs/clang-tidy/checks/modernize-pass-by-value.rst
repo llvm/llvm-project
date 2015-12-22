@@ -1,3 +1,5 @@
+.. title:: clang-tidy - modernize-pass-by-value
+
 modernize-pass-by-value
 =======================
 

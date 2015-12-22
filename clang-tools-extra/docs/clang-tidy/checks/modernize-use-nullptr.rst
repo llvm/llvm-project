@@ -1,3 +1,5 @@
+.. title:: clang-tidy - modernize-use-nullptr
+
 modernize-use-nullptr
 =====================
 

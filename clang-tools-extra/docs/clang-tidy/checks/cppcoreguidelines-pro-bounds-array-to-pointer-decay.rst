@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cppcoreguidelines-pro-bounds-array-to-pointer-decay
+
 cppcoreguidelines-pro-bounds-array-to-pointer-decay
 ===================================================
 

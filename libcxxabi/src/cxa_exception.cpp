@@ -334,7 +334,7 @@ __cxa_end_cleanup_impl()
 }
 
 asm (
-    "	.pushsection	.text.__cxa_end_cleanup\n"
+    "	.pushsection	.text.__cxa_end_cleanup,\"ax\",%progbits\n"
     "	.globl	__cxa_end_cleanup\n"
     "	.type	__cxa_end_cleanup,%function\n"
     "__cxa_end_cleanup:\n"

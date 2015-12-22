@@ -1,3 +1,5 @@
+.. title:: clang-tidy - modernize-loop-convert
+
 modernize-loop-convert
 ======================
 

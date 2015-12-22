@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-unused-alias-decls
+
 misc-unused-alias-decls
 =======================
 

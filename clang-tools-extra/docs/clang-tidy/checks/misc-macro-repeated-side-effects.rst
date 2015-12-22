@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-macro-repeated-side-effects
+
 misc-macro-repeated-side-effects
 ================================
 

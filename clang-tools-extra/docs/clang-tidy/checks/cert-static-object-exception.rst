@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cert-err58-cpp
+
 cert-err58-cpp
 ==============
 

@@ -27,6 +27,7 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin('llvm.org/pr23669')
+    @expectedFailureFreeBSD('llvm.org/pr15824')
     @expectedFailureWindows("llvm.org/pr24660")
     def test_state_after_continue(self):
         """Test thread state after continue."""

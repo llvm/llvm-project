@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-uniqueptr-reset-release
+
 misc-uniqueptr-reset-release
 ============================
 

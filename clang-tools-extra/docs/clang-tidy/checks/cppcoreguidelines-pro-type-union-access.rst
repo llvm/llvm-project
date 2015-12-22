@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cppcoreguidelines-pro-type-union-access
+
 cppcoreguidelines-pro-type-union-access
 =======================================
 

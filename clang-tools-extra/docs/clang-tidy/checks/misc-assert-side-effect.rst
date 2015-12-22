@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-assert-side-effect
+
 misc-assert-side-effect
 =======================
 

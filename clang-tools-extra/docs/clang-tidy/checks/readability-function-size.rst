@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-function-size
+
 readability-function-size
 =========================
 

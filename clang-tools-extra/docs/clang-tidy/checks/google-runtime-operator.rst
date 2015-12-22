@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-runtime-operator
+
 google-runtime-operator
 =======================
 

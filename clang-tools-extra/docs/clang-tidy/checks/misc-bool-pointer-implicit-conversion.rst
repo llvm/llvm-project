@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-bool-pointer-implicit-conversion
+
 misc-bool-pointer-implicit-conversion
 =====================================
 

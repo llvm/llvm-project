@@ -63,30 +63,33 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
                                              ValueMapT &BBMap,
                                              LoopToScevMapT &LTS,
                                              Loop *L) const {
-  if (SE.isSCEVable(Old->getType()))
-    if (const SCEV *Scev = SE.getSCEVAtScope(const_cast<Value *>(Old), L)) {
-      if (!isa<SCEVCouldNotCompute>(Scev)) {
-        const SCEV *NewScev = apply(Scev, LTS, SE);
-        ValueMapT VTV;
-        VTV.insert(BBMap.begin(), BBMap.end());
-        VTV.insert(GlobalMap.begin(), GlobalMap.end());
+  if (!SE.isSCEVable(Old->getType()))
+    return nullptr;
 
-        Scop &S = *Stmt.getParent();
-        const DataLayout &DL =
-            S.getRegion().getEntry()->getParent()->getParent()->getDataLayout();
-        auto IP = Builder.GetInsertPoint();
+  const SCEV *Scev = SE.getSCEVAtScope(Old, L);
+  if (!Scev)
+    return nullptr;
 
-        assert(IP != Builder.GetInsertBlock()->end() &&
-               "Only instructions can be insert points for SCEVExpander");
-        Value *Expanded = expandCodeFor(S, SE, DL, "polly", NewScev,
-                                        Old->getType(), &*IP, &VTV);
+  if (isa<SCEVCouldNotCompute>(Scev))
+    return nullptr;
 
-        BBMap[Old] = Expanded;
-        return Expanded;
-      }
-    }
+  const SCEV *NewScev = apply(Scev, LTS, SE);
+  ValueMapT VTV;
+  VTV.insert(BBMap.begin(), BBMap.end());
+  VTV.insert(GlobalMap.begin(), GlobalMap.end());
 
-  return nullptr;
+  Scop &S = *Stmt.getParent();
+  const DataLayout &DL =
+      S.getRegion().getEntry()->getParent()->getParent()->getDataLayout();
+  auto IP = Builder.GetInsertPoint();
+
+  assert(IP != Builder.GetInsertBlock()->end() &&
+         "Only instructions can be insert points for SCEVExpander");
+  Value *Expanded =
+      expandCodeFor(S, SE, DL, "polly", NewScev, Old->getType(), &*IP, &VTV);
+
+  BBMap[Old] = Expanded;
+  return Expanded;
 }
 
 Value *BlockGenerator::getNewValue(ScopStmt &Stmt, Value *Old, ValueMapT &BBMap,
@@ -97,6 +100,10 @@ Value *BlockGenerator::getNewValue(ScopStmt &Stmt, Value *Old, ValueMapT &BBMap,
   // as these may need to be rewritten when distributing code accross different
   // LLVM modules.
   if (isa<Constant>(Old) && !isa<GlobalValue>(Old))
+    return Old;
+
+  // Inline asm is like a constant to us.
+  if (isa<InlineAsm>(Old))
     return Old;
 
   if (Value *New = GlobalMap.lookup(Old)) {
@@ -231,6 +238,12 @@ void BlockGenerator::generateScalarStore(ScopStmt &Stmt, StoreInst *Store,
   Builder.CreateAlignedStore(ValueOperand, NewPointer, Store->getAlignment());
 }
 
+bool BlockGenerator::canSyntheziseInStmt(ScopStmt &Stmt, Instruction *Inst) {
+  Loop *L = getLoopForInst(Inst);
+  return (Stmt.isBlockStmt() || !Stmt.getRegion()->contains(L)) &&
+         canSynthesize(Inst, &LI, &SE, &Stmt.getParent()->getRegion());
+}
+
 void BlockGenerator::copyInstruction(ScopStmt &Stmt, Instruction *Inst,
                                      ValueMapT &BBMap, LoopToScevMapT &LTS,
                                      isl_id_to_ast_expr *NewAccesses) {
@@ -239,12 +252,9 @@ void BlockGenerator::copyInstruction(ScopStmt &Stmt, Instruction *Inst,
   if (Inst->isTerminator())
     return;
 
-  Loop *L = getLoopForInst(Inst);
-  if ((Stmt.isBlockStmt() || !Stmt.getRegion()->contains(L)) &&
-      canSynthesize(Inst, &LI, &SE, &Stmt.getParent()->getRegion())) {
-    // Synthesizable statements will be generated on-demand.
+  // Synthesizable statements will be generated on-demand.
+  if (canSyntheziseInStmt(Stmt, Inst))
     return;
-  }
 
   if (auto *Load = dyn_cast<LoadInst>(Inst)) {
     Value *NewLoad = generateScalarLoad(Stmt, Load, BBMap, LTS, NewAccesses);
@@ -935,7 +945,7 @@ void VectorBlockGenerator::copyInstruction(
   if (Inst->isTerminator())
     return;
 
-  if (canSynthesize(Inst, &LI, &SE, &Stmt.getParent()->getRegion()))
+  if (canSyntheziseInStmt(Stmt, Inst))
     return;
 
   if (auto *Load = dyn_cast<LoadInst>(Inst)) {

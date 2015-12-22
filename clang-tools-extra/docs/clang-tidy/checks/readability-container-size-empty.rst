@@ -1,3 +1,5 @@
+.. title:: clang-tidy - readability-container-size-empty
+
 readability-container-size-empty
 ================================
 

@@ -550,6 +550,11 @@ protected:
   /// @returns The newest version (e.g., reloaded) of the scalar value.
   Value *getNewScalarValue(Value *ScalarValue, const Region &R, ScopStmt &,
                            LoopToScevMapT &LTS, ValueMapT &BBMap);
+
+  /// @brief Helper to determine if @p Inst can be synthezised in @p Stmt.
+  ///
+  /// @returns false, iff @p Inst can be synthesized in @p Stmt.
+  bool canSyntheziseInStmt(ScopStmt &Stmt, Instruction *Inst);
 };
 
 /// @brief Generate a new vector basic block for a polyhedral statement.

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cert-err52-cpp
+
 cert-err52-cpp
 ==============
 
