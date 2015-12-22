@@ -12,6 +12,7 @@ import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
+@skipIfDarwin  # llvm.org/pr25924, sometimes generating SIGSEGV
 class EventAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
