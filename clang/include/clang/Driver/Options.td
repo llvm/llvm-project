@@ -1467,6 +1467,11 @@ def mred_zone : Flag<["-"], "mred-zone">, Group<m_Group>;
 def mregparm_EQ : Joined<["-"], "mregparm=">, Group<m_Group>;
 def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>, Flags<[CC1Option,CC1AsOption]>,
   HelpText<"(integrated-as) Relax all machine instructions">;
+def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
+  Flags<[CC1Option,CC1AsOption]>,
+  HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">;
+def mno_incremental_linker_compatible : Flag<["-"], "mno-incremental-linker-compatible">, Group<m_Group>,
+  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Make StdCall calling convention the default">;
 def msmall_data_threshold_EQ : Joined <["-"], "msmall-data-threshold=">, Group<m_Group>;

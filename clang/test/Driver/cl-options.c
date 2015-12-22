@@ -376,6 +376,15 @@
 // Z7: "-gcodeview"
 // Z7: "-debug-info-kind=line-tables-only"
 
+// RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=BreproDefault %s
+// BreproDefault: "-mincremental-linker-compatible"
+
+// RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
+// Brepro: "-mincremental-linker-compatible"
+
+// RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
+// Brepro_-NOT: "-mincremental-linker-compatible"
+
 // This test was super sneaky: "/Z7" means "line-tables", but "-gdwarf" occurs
 // later on the command line, so it should win. Interestingly the cc1 arguments
 // came out right, but had wrong semantics, because an invariant assumed by
