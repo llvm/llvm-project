@@ -353,12 +353,12 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
     } else if (auto CS = CallSite(I)) {
       // Make sure that this is just the function being called, not that it is
       // passing into the function.
-      if (!CS.isCallee(&U)) {
+      if (CS.isDataOperand(&U)) {
         // Detect calls to free.
-        if (isFreeCall(I, &TLI)) {
+        if (CS.isArgOperand(&U) && isFreeCall(I, &TLI)) {
           if (Writers)
             Writers->insert(CS->getParent()->getParent());
-        } else if (CS.doesNotCapture(CS.getArgumentNo(&U))) {
+        } else if (CS.doesNotCapture(CS.getDataOperandNo(&U))) {
           Function *ParentF = CS->getParent()->getParent();
           // A nocapture argument may be read from or written to, but does not
           // escape unless the call can somehow recurse.

@@ -5530,3 +5530,184 @@ define <4 x double>@test_int_x86_avx512_mask_movddup_256(<4 x double> %x0, <4 x 
   %res4 = fadd <4 x double> %res2, %res3
   ret <4 x double> %res4
 }
+
+define <8 x float> @test_rsqrt_ps_256_rr(<8 x float> %a0) {
+; CHECK-LABEL: test_rsqrt_ps_256_rr:
+; CHECK: vrsqrt14ps %ymm0, %ymm0
+  %res = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 -1)
+  ret <8 x float> %res
+}
+
+define <8 x float> @test_rsqrt_ps_256_rrkz(<8 x float> %a0, i8 %mask) {
+; CHECK-LABEL: test_rsqrt_ps_256_rrkz:
+; CHECK: vrsqrt14ps %ymm0, %ymm0 {%k1} {z}
+  %res = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 %mask)
+  ret <8 x float> %res
+}
+
+define <8 x float> @test_rsqrt_ps_256_rrk(<8 x float> %a0, <8 x float> %a1, i8 %mask) {
+; CHECK-LABEL: test_rsqrt_ps_256_rrk:
+; CHECK: vrsqrt14ps %ymm0, %ymm1 {%k1}
+  %res = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %a0, <8 x float> %a1, i8 %mask)
+  ret <8 x float> %res
+}
+
+define <4 x float> @test_rsqrt_ps_128_rr(<4 x float> %a0) {
+; CHECK-LABEL: test_rsqrt_ps_128_rr:
+; CHECK: vrsqrt14ps %xmm0, %xmm0
+  %res = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %a0, <4 x float> zeroinitializer, i8 -1)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_rsqrt_ps_128_rrkz(<4 x float> %a0, i8 %mask) {
+; CHECK-LABEL: test_rsqrt_ps_128_rrkz:
+; CHECK: vrsqrt14ps %xmm0, %xmm0 {%k1} {z}
+  %res = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %a0, <4 x float> zeroinitializer, i8 %mask)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_rsqrt_ps_128_rrk(<4 x float> %a0, <4 x float> %a1, i8 %mask) {
+; CHECK-LABEL: test_rsqrt_ps_128_rrk:
+; CHECK: vrsqrt14ps %xmm0, %xmm1 {%k1}
+  %res = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %a0, <4 x float> %a1, i8 %mask)
+  ret <4 x float> %res
+}
+
+declare <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
+declare <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float>, <4 x float>, i8) nounwind readnone
+
+define <8 x float> @test_rcp_ps_256_rr(<8 x float> %a0) {
+; CHECK-LABEL: test_rcp_ps_256_rr:
+; CHECK: vrcp14ps %ymm0, %ymm0
+  %res = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 -1)
+  ret <8 x float> %res
+}
+
+define <8 x float> @test_rcp_ps_256_rrkz(<8 x float> %a0, i8 %mask) {
+; CHECK-LABEL: test_rcp_ps_256_rrkz:
+; CHECK: vrcp14ps %ymm0, %ymm0 {%k1} {z}
+  %res = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 %mask)
+  ret <8 x float> %res
+}
+
+define <8 x float> @test_rcp_ps_256_rrk(<8 x float> %a0, <8 x float> %a1, i8 %mask) {
+; CHECK-LABEL: test_rcp_ps_256_rrk:
+; CHECK: vrcp14ps %ymm0, %ymm1 {%k1}
+  %res = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %a0, <8 x float> %a1, i8 %mask)
+  ret <8 x float> %res
+}
+
+define <4 x float> @test_rcp_ps_128_rr(<4 x float> %a0) {
+; CHECK-LABEL: test_rcp_ps_128_rr:
+; CHECK: vrcp14ps %xmm0, %xmm0
+  %res = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %a0, <4 x float> zeroinitializer, i8 -1)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_rcp_ps_128_rrkz(<4 x float> %a0, i8 %mask) {
+; CHECK-LABEL: test_rcp_ps_128_rrkz:
+; CHECK: vrcp14ps %xmm0, %xmm0 {%k1} {z}
+  %res = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %a0, <4 x float> zeroinitializer, i8 %mask)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_rcp_ps_128_rrk(<4 x float> %a0, <4 x float> %a1, i8 %mask) {
+; CHECK-LABEL: test_rcp_ps_128_rrk:
+; CHECK: vrcp14ps %xmm0, %xmm1 {%k1}
+  %res = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %a0, <4 x float> %a1, i8 %mask)
+  ret <4 x float> %res
+}
+
+declare <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
+declare <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float>, <4 x float>, i8) nounwind readnone
+
+
+define <4 x double> @test_rsqrt_pd_256_rr(<4 x double> %a0) {
+; CHECK-LABEL: test_rsqrt_pd_256_rr:
+; CHECK: vrsqrt14pd %ymm0, %ymm0
+  %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %a0, <4 x double> zeroinitializer, i8 -1)
+  ret <4 x double> %res
+}
+
+define <4 x double> @test_rsqrt_pd_256_rrkz(<4 x double> %a0, i8 %mask) {
+; CHECK-LABEL: test_rsqrt_pd_256_rrkz:
+; CHECK: vrsqrt14pd %ymm0, %ymm0 {%k1} {z}
+  %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %a0, <4 x double> zeroinitializer, i8 %mask)
+  ret <4 x double> %res
+}
+
+define <4 x double> @test_rsqrt_pd_256_rrk(<4 x double> %a0, <4 x double> %a1, i8 %mask) {
+; CHECK-LABEL: test_rsqrt_pd_256_rrk:
+; CHECK: vrsqrt14pd %ymm0, %ymm1 {%k1}
+  %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %a0, <4 x double> %a1, i8 %mask)
+  ret <4 x double> %res
+}
+
+define <2 x double> @test_rsqrt_pd_128_rr(<2 x double> %a0) {
+; CHECK-LABEL: test_rsqrt_pd_128_rr:
+; CHECK: vrsqrt14pd %xmm0, %xmm0
+  %res = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> %a0, <2 x double> zeroinitializer, i8 -1)
+  ret <2 x double> %res
+}
+
+define <2 x double> @test_rsqrt_pd_128_rrkz(<2 x double> %a0, i8 %mask) {
+; CHECK-LABEL: test_rsqrt_pd_128_rrkz:
+; CHECK: vrsqrt14pd %xmm0, %xmm0 {%k1} {z}
+  %res = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> %a0, <2 x double> zeroinitializer, i8 %mask)
+  ret <2 x double> %res
+}
+
+define <2 x double> @test_rsqrt_pd_128_rrk(<2 x double> %a0, <2 x double> %a1, i8 %mask) {
+; CHECK-LABEL: test_rsqrt_pd_128_rrk:
+; CHECK: vrsqrt14pd %xmm0, %xmm1 {%k1}
+  %res = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> %a0, <2 x double> %a1, i8 %mask)
+  ret <2 x double> %res
+}
+
+declare <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
+declare <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double>, <2 x double>, i8) nounwind readnone
+
+define <4 x double> @test_rcp_pd_256_rr(<4 x double> %a0) {
+; CHECK-LABEL: test_rcp_pd_256_rr:
+; CHECK: vrcp14pd %ymm0, %ymm0
+  %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %a0, <4 x double> zeroinitializer, i8 -1)
+  ret <4 x double> %res
+}
+
+define <4 x double> @test_rcp_pd_256_rrkz(<4 x double> %a0, i8 %mask) {
+; CHECK-LABEL: test_rcp_pd_256_rrkz:
+; CHECK: vrcp14pd %ymm0, %ymm0 {%k1} {z}
+  %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %a0, <4 x double> zeroinitializer, i8 %mask)
+  ret <4 x double> %res
+}
+
+define <4 x double> @test_rcp_pd_256_rrk(<4 x double> %a0, <4 x double> %a1, i8 %mask) {
+; CHECK-LABEL: test_rcp_pd_256_rrk:
+; CHECK: vrcp14pd %ymm0, %ymm1 {%k1}
+  %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %a0, <4 x double> %a1, i8 %mask)
+  ret <4 x double> %res
+}
+
+define <2 x double> @test_rcp_pd_128_rr(<2 x double> %a0) {
+; CHECK-LABEL: test_rcp_pd_128_rr:
+; CHECK: vrcp14pd %xmm0, %xmm0
+  %res = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> %a0, <2 x double> zeroinitializer, i8 -1)
+  ret <2 x double> %res
+}
+
+define <2 x double> @test_rcp_pd_128_rrkz(<2 x double> %a0, i8 %mask) {
+; CHECK-LABEL: test_rcp_pd_128_rrkz:
+; CHECK: vrcp14pd %xmm0, %xmm0 {%k1} {z}
+  %res = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> %a0, <2 x double> zeroinitializer, i8 %mask)
+  ret <2 x double> %res
+}
+
+define <2 x double> @test_rcp_pd_128_rrk(<2 x double> %a0, <2 x double> %a1, i8 %mask) {
+; CHECK-LABEL: test_rcp_pd_128_rrk:
+; CHECK: vrcp14pd %xmm0, %xmm1 {%k1}
+  %res = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> %a0, <2 x double> %a1, i8 %mask)
+  ret <2 x double> %res
+}
+
+declare <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
+declare <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double>, <2 x double>, i8) nounwind readnone

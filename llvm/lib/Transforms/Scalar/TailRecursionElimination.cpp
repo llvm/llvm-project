@@ -197,8 +197,8 @@ struct AllocaDerivedValueTracker {
       case Instruction::Call:
       case Instruction::Invoke: {
         CallSite CS(I);
-        bool IsNocapture = !CS.isCallee(U) &&
-                           CS.doesNotCapture(CS.getArgumentNo(U));
+        bool IsNocapture =
+            CS.isDataOperand(U) && CS.doesNotCapture(CS.getDataOperandNo(U));
         callUsesLocalStack(CS, IsNocapture);
         if (IsNocapture) {
           // If the alloca-derived argument is passed in as nocapture, then it

@@ -43,6 +43,7 @@ STATISTIC(NumUnscaledPairCreated,
           "Number of load/store from unscaled generated");
 STATISTIC(NumNarrowLoadsPromoted, "Number of narrow loads promoted");
 STATISTIC(NumZeroStoresPromoted, "Number of narrow zero stores promoted");
+STATISTIC(NumLoadsFromStoresPromoted, "Number of loads from stores promoted");
 
 static cl::opt<unsigned> ScanLimit("aarch64-load-store-scan-limit",
                                    cl::init(20), cl::Hidden);
@@ -93,6 +94,12 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   MachineBasicBlock::iterator findMatchingInsn(MachineBasicBlock::iterator I,
                                                LdStPairFlags &Flags,
                                                unsigned Limit);
+
+  // Scan the instructions looking for a store that writes to the address from
+  // which the current load instruction reads. Return true if one is found.
+  bool findMatchingStore(MachineBasicBlock::iterator I, unsigned Limit,
+                         MachineBasicBlock::iterator &StoreI);
+
   // Merge the two instructions indicated into a single pair-wise instruction.
   // If MergeForward is true, erase the first instruction and fold its
   // operation into the second. If false, the reverse. Return the instruction
@@ -101,6 +108,11 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   mergePairedInsns(MachineBasicBlock::iterator I,
                    MachineBasicBlock::iterator Paired,
                    const LdStPairFlags &Flags);
+
+  // Promote the load that reads directly from the address stored to.
+  MachineBasicBlock::iterator
+  promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
+                       MachineBasicBlock::iterator StoreI);
 
   // Scan the instruction list to find a base register update that can
   // be combined with the current instruction (a load or store) using
@@ -127,6 +139,9 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
 
   // Find and merge foldable ldr/str instructions.
   bool tryToMergeLdStInst(MachineBasicBlock::iterator &MBBI);
+
+  // Find and promote load instructions which read directly from store.
+  bool tryToPromoteLoadFromStore(MachineBasicBlock::iterator &MBBI);
 
   // Check if converting two narrow loads into a single wider load with
   // bitfield extracts could be enabled.
@@ -399,6 +414,36 @@ static unsigned getMatchingPairOpcode(unsigned Opc) {
   }
 }
 
+static unsigned isMatchingStore(MachineInstr *LoadInst,
+                                MachineInstr *StoreInst) {
+  unsigned LdOpc = LoadInst->getOpcode();
+  unsigned StOpc = StoreInst->getOpcode();
+  switch (LdOpc) {
+  default:
+    llvm_unreachable("Unsupported load instruction!");
+  case AArch64::LDRBBui:
+    return StOpc == AArch64::STRBBui || StOpc == AArch64::STRHHui ||
+           StOpc == AArch64::STRWui || StOpc == AArch64::STRXui;
+  case AArch64::LDURBBi:
+    return StOpc == AArch64::STURBBi || StOpc == AArch64::STURHHi ||
+           StOpc == AArch64::STURWi || StOpc == AArch64::STURXi;
+  case AArch64::LDRHHui:
+    return StOpc == AArch64::STRHHui || StOpc == AArch64::STRWui ||
+           StOpc == AArch64::STRXui;
+  case AArch64::LDURHHi:
+    return StOpc == AArch64::STURHHi || StOpc == AArch64::STURWi ||
+           StOpc == AArch64::STURXi;
+  case AArch64::LDRWui:
+    return StOpc == AArch64::STRWui || StOpc == AArch64::STRXui;
+  case AArch64::LDURWi:
+    return StOpc == AArch64::STURWi || StOpc == AArch64::STURXi;
+  case AArch64::LDRXui:
+    return StOpc == AArch64::STRXui;
+  case AArch64::LDURXi:
+    return StOpc == AArch64::STURXi;
+  }
+}
+
 static unsigned getPreIndexedOpcode(unsigned Opc) {
   switch (Opc) {
   default:
@@ -551,6 +596,21 @@ static const MachineOperand &getLdStBaseOp(const MachineInstr *MI) {
 static const MachineOperand &getLdStOffsetOp(const MachineInstr *MI) {
   unsigned Idx = isPairedLdSt(MI) ? 3 : 2;
   return MI->getOperand(Idx);
+}
+
+static bool isLdOffsetInRangeOfSt(MachineInstr *LoadInst,
+                                  MachineInstr *StoreInst) {
+  assert(isMatchingStore(LoadInst, StoreInst) && "Expect only matched ld/st.");
+  int LoadSize = getMemScale(LoadInst);
+  int StoreSize = getMemScale(StoreInst);
+  int UnscaledStOffset = isUnscaledLdSt(StoreInst)
+                             ? getLdStOffsetOp(StoreInst).getImm()
+                             : getLdStOffsetOp(StoreInst).getImm() * StoreSize;
+  int UnscaledLdOffset = isUnscaledLdSt(LoadInst)
+                             ? getLdStOffsetOp(LoadInst).getImm()
+                             : getLdStOffsetOp(LoadInst).getImm() * LoadSize;
+  return (UnscaledStOffset <= UnscaledLdOffset) &&
+         (UnscaledLdOffset + LoadSize <= (UnscaledStOffset + StoreSize));
 }
 
 // Copy MachineMemOperands from Op0 and Op1 to a new array assigned to MI.
@@ -800,6 +860,106 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   return NextI;
 }
 
+MachineBasicBlock::iterator
+AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
+                                          MachineBasicBlock::iterator StoreI) {
+  MachineBasicBlock::iterator NextI = LoadI;
+  ++NextI;
+
+  int LoadSize = getMemScale(LoadI);
+  int StoreSize = getMemScale(StoreI);
+  unsigned LdRt = getLdStRegOp(LoadI).getReg();
+  unsigned StRt = getLdStRegOp(StoreI).getReg();
+  bool IsStoreXReg = TRI->getRegClass(AArch64::GPR64RegClassID)->contains(StRt);
+
+  assert((IsStoreXReg ||
+          TRI->getRegClass(AArch64::GPR32RegClassID)->contains(StRt)) &&
+         "Unexpected RegClass");
+
+  MachineInstr *BitExtMI;
+  if (LoadSize == StoreSize && (LoadSize == 4 || LoadSize == 8)) {
+    // Remove the load, if the destination register of the loads is the same
+    // register for stored value.
+    if (StRt == LdRt && LoadSize == 8) {
+      DEBUG(dbgs() << "Remove load instruction:\n    ");
+      DEBUG(LoadI->print(dbgs()));
+      DEBUG(dbgs() << "\n");
+      LoadI->eraseFromParent();
+      return NextI;
+    }
+    // Replace the load with a mov if the load and store are in the same size.
+    BitExtMI =
+        BuildMI(*LoadI->getParent(), LoadI, LoadI->getDebugLoc(),
+                TII->get(IsStoreXReg ? AArch64::ORRXrs : AArch64::ORRWrs), LdRt)
+            .addReg(IsStoreXReg ? AArch64::XZR : AArch64::WZR)
+            .addReg(StRt)
+            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+  } else {
+    // FIXME: Currently we disable this transformation in big-endian targets as
+    // performance and correctness are verified only in little-endian.
+    if (!Subtarget->isLittleEndian())
+      return NextI;
+    bool IsUnscaled = isUnscaledLdSt(LoadI);
+    assert(IsUnscaled == isUnscaledLdSt(StoreI) && "Unsupported ld/st match");
+    assert(LoadSize <= StoreSize && "Invalid load size");
+    int UnscaledLdOffset = IsUnscaled
+                               ? getLdStOffsetOp(LoadI).getImm()
+                               : getLdStOffsetOp(LoadI).getImm() * LoadSize;
+    int UnscaledStOffset = IsUnscaled
+                               ? getLdStOffsetOp(StoreI).getImm()
+                               : getLdStOffsetOp(StoreI).getImm() * StoreSize;
+    int Width = LoadSize * 8;
+    int Immr = 8 * (UnscaledLdOffset - UnscaledStOffset);
+    int Imms = Immr + Width - 1;
+    unsigned DestReg = IsStoreXReg
+                           ? TRI->getMatchingSuperReg(LdRt, AArch64::sub_32,
+                                                      &AArch64::GPR64RegClass)
+                           : LdRt;
+
+    assert((UnscaledLdOffset >= UnscaledStOffset &&
+            (UnscaledLdOffset + LoadSize) <= UnscaledStOffset + StoreSize) &&
+           "Invalid offset");
+
+    Immr = 8 * (UnscaledLdOffset - UnscaledStOffset);
+    Imms = Immr + Width - 1;
+    if (UnscaledLdOffset == UnscaledStOffset) {
+      uint32_t AndMaskEncoded = ((IsStoreXReg ? 1 : 0) << 12) // N
+                                | ((Immr) << 6)               // immr
+                                | ((Imms) << 0)               // imms
+          ;
+
+      BitExtMI =
+          BuildMI(*LoadI->getParent(), LoadI, LoadI->getDebugLoc(),
+                  TII->get(IsStoreXReg ? AArch64::ANDXri : AArch64::ANDWri),
+                  DestReg)
+              .addReg(StRt)
+              .addImm(AndMaskEncoded);
+    } else {
+      BitExtMI =
+          BuildMI(*LoadI->getParent(), LoadI, LoadI->getDebugLoc(),
+                  TII->get(IsStoreXReg ? AArch64::UBFMXri : AArch64::UBFMWri),
+                  DestReg)
+              .addReg(StRt)
+              .addImm(Immr)
+              .addImm(Imms);
+    }
+  }
+
+  DEBUG(dbgs() << "Promoting load by replacing :\n    ");
+  DEBUG(StoreI->print(dbgs()));
+  DEBUG(dbgs() << "    ");
+  DEBUG(LoadI->print(dbgs()));
+  DEBUG(dbgs() << "  with instructions:\n    ");
+  DEBUG(StoreI->print(dbgs()));
+  DEBUG(dbgs() << "    ");
+  DEBUG((BitExtMI)->print(dbgs()));
+  DEBUG(dbgs() << "\n");
+
+  // Erase the old instructions.
+  LoadI->eraseFromParent();
+  return NextI;
+}
+
 /// trackRegDefsUses - Remember what registers the specified instruction uses
 /// and modifies.
 static void trackRegDefsUses(const MachineInstr *MI, BitVector &ModifiedRegs,
@@ -860,6 +1020,60 @@ static bool mayAlias(MachineInstr *MIa,
     if (mayAlias(MIa, MIb, TII))
       return true;
 
+  return false;
+}
+
+bool AArch64LoadStoreOpt::findMatchingStore(
+    MachineBasicBlock::iterator I, unsigned Limit,
+    MachineBasicBlock::iterator &StoreI) {
+  MachineBasicBlock::iterator E = I->getParent()->begin();
+  MachineBasicBlock::iterator MBBI = I;
+  MachineInstr *FirstMI = I;
+  unsigned BaseReg = getLdStBaseOp(FirstMI).getReg();
+
+  // Track which registers have been modified and used between the first insn
+  // and the second insn.
+  BitVector ModifiedRegs, UsedRegs;
+  ModifiedRegs.resize(TRI->getNumRegs());
+  UsedRegs.resize(TRI->getNumRegs());
+
+  for (unsigned Count = 0; MBBI != E && Count < Limit;) {
+    --MBBI;
+    MachineInstr *MI = MBBI;
+    // Skip DBG_VALUE instructions. Otherwise debug info can affect the
+    // optimization by changing how far we scan.
+    if (MI->isDebugValue())
+      continue;
+    // Now that we know this is a real instruction, count it.
+    ++Count;
+
+    // If the load instruction reads directly from the address to which the
+    // store instruction writes and the stored value is not modified, we can
+    // promote the load. Since we do not handle stores with pre-/post-index,
+    // it's unnecessary to check if BaseReg is modified by the store itself.
+    if (MI->mayStore() && isMatchingStore(FirstMI, MI) &&
+        BaseReg == getLdStBaseOp(MI).getReg() &&
+        isLdOffsetInRangeOfSt(FirstMI, MI) &&
+        !ModifiedRegs[getLdStRegOp(MI).getReg()]) {
+      StoreI = MBBI;
+      return true;
+    }
+
+    if (MI->isCall())
+      return false;
+
+    // Update modified / uses register lists.
+    trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+
+    // Otherwise, if the base register is modified, we have no match, so
+    // return early.
+    if (ModifiedRegs[BaseReg])
+      return false;
+
+    // If we encounter a store aliased with the load, return early.
+    if (MI->mayStore() && mayAlias(FirstMI, MI, TII))
+      return false;
+  }
   return false;
 }
 
@@ -1263,6 +1477,31 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   return E;
 }
 
+bool AArch64LoadStoreOpt::tryToPromoteLoadFromStore(
+    MachineBasicBlock::iterator &MBBI) {
+  MachineInstr *MI = MBBI;
+  // If this is a volatile load, don't mess with it.
+  if (MI->hasOrderedMemoryRef())
+    return false;
+
+  // Make sure this is a reg+imm.
+  // FIXME: It is possible to extend it to handle reg+reg cases.
+  if (!getLdStOffsetOp(MI).isImm())
+    return false;
+
+  // Look backward up to ScanLimit instructions.
+  MachineBasicBlock::iterator StoreI;
+  if (findMatchingStore(MBBI, ScanLimit, StoreI)) {
+    ++NumLoadsFromStoresPromoted;
+    // Promote the load. Keeping the iterator straight is a
+    // pain, so we let the merge routine tell us what the next instruction
+    // is after it's done mucking about.
+    MBBI = promoteLoadFromStore(MBBI, StoreI);
+    return true;
+  }
+  return false;
+}
+
 bool AArch64LoadStoreOpt::tryToMergeLdStInst(
     MachineBasicBlock::iterator &MBBI) {
   MachineInstr *MI = MBBI;
@@ -1307,7 +1546,16 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool enableNarrowLdOpt) {
   bool Modified = false;
   // Three tranformations to do here:
-  // 1) Find narrow loads that can be converted into a single wider load
+  // 1) Find loads that directly read from stores and promote them by
+  //    replacing with mov instructions. If the store is wider than the load,
+  //    the load will be replaced with a bitfield extract.
+  //      e.g.,
+  //        str w1, [x0, #4]
+  //        ldrh w2, [x0, #6]
+  //        ; becomes
+  //        str w1, [x0, #4]
+  //        lsr	w2, w1, #16
+  // 2) Find narrow loads that can be converted into a single wider load
   //    with bitfield extract instructions.
   //      e.g.,
   //        ldrh w0, [x2]
@@ -1316,20 +1564,49 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   //        ldr w0, [x2]
   //        ubfx w1, w0, #16, #16
   //        and w0, w0, #ffff
-  // 2) Find loads and stores that can be merged into a single load or store
+  // 3) Find loads and stores that can be merged into a single load or store
   //    pair instruction.
   //      e.g.,
   //        ldr x0, [x2]
   //        ldr x1, [x2, #8]
   //        ; becomes
   //        ldp x0, x1, [x2]
-  // 3) Find base register updates that can be merged into the load or store
+  // 4) Find base register updates that can be merged into the load or store
   //    as a base-reg writeback.
   //      e.g.,
   //        ldr x0, [x2]
   //        add x2, x2, #4
   //        ; becomes
   //        ldr x0, [x2], #4
+
+  for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+       MBBI != E;) {
+    MachineInstr *MI = MBBI;
+    switch (MI->getOpcode()) {
+    default:
+      // Just move on to the next instruction.
+      ++MBBI;
+      break;
+    // Scaled instructions.
+    case AArch64::LDRBBui:
+    case AArch64::LDRHHui:
+    case AArch64::LDRWui:
+    case AArch64::LDRXui:
+    // Unscaled instructions.
+    case AArch64::LDURBBi:
+    case AArch64::LDURHHi:
+    case AArch64::LDURWi:
+    case AArch64::LDURXi: {
+      if (tryToPromoteLoadFromStore(MBBI)) {
+        Modified = true;
+        break;
+      }
+      ++MBBI;
+      break;
+    }
+      // FIXME: Do the other instructions.
+    }
+  }
 
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        enableNarrowLdOpt && MBBI != E;) {

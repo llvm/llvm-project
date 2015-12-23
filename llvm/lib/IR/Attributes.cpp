@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Function.h"
 #include "AttributeImpl.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1436,4 +1437,81 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
       .addAttribute(Attribute::InAlloca);
 
   return Incompatible;
+}
+
+template<typename AttrClass>
+static bool isEqual(const Function &Caller, const Function &Callee) {
+  return Caller.getFnAttribute(AttrClass::getKind()) ==
+         Callee.getFnAttribute(AttrClass::getKind());
+}
+
+/// \brief Compute the logical AND of the attributes of the caller and the
+/// callee.
+///
+/// This function sets the caller's attribute to false if the callee's attribute
+/// is false.
+template<typename AttrClass>
+static void setAND(Function &Caller, const Function &Callee) {
+  if (AttrClass::isSet(Caller, AttrClass::getKind()) &&
+      !AttrClass::isSet(Callee, AttrClass::getKind()))
+    AttrClass::set(Caller, AttrClass::getKind(), false);
+}
+
+/// \brief Compute the logical OR of the attributes of the caller and the
+/// callee.
+///
+/// This function sets the caller's attribute to true if the callee's attribute
+/// is true.
+template<typename AttrClass>
+static void setOR(Function &Caller, const Function &Callee) {
+  if (!AttrClass::isSet(Caller, AttrClass::getKind()) &&
+      AttrClass::isSet(Callee, AttrClass::getKind()))
+    AttrClass::set(Caller, AttrClass::getKind(), true);
+}
+
+/// \brief If the inlined function had a higher stack protection level than the
+/// calling function, then bump up the caller's stack protection level.
+static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
+  // If upgrading the SSP attribute, clear out the old SSP Attributes first.
+  // Having multiple SSP attributes doesn't actually hurt, but it adds useless
+  // clutter to the IR.
+  AttrBuilder B;
+  B.addAttribute(Attribute::StackProtect)
+    .addAttribute(Attribute::StackProtectStrong)
+    .addAttribute(Attribute::StackProtectReq);
+  AttributeSet OldSSPAttr = AttributeSet::get(Caller.getContext(),
+                                              AttributeSet::FunctionIndex,
+                                              B);
+
+  if (Callee.hasFnAttribute(Attribute::SafeStack)) {
+    Caller.removeAttributes(AttributeSet::FunctionIndex, OldSSPAttr);
+    Caller.addFnAttr(Attribute::SafeStack);
+  } else if (Callee.hasFnAttribute(Attribute::StackProtectReq) &&
+             !Caller.hasFnAttribute(Attribute::SafeStack)) {
+    Caller.removeAttributes(AttributeSet::FunctionIndex, OldSSPAttr);
+    Caller.addFnAttr(Attribute::StackProtectReq);
+  } else if (Callee.hasFnAttribute(Attribute::StackProtectStrong) &&
+             !Caller.hasFnAttribute(Attribute::SafeStack) &&
+             !Caller.hasFnAttribute(Attribute::StackProtectReq)) {
+    Caller.removeAttributes(AttributeSet::FunctionIndex, OldSSPAttr);
+    Caller.addFnAttr(Attribute::StackProtectStrong);
+  } else if (Callee.hasFnAttribute(Attribute::StackProtect) &&
+             !Caller.hasFnAttribute(Attribute::SafeStack) &&
+             !Caller.hasFnAttribute(Attribute::StackProtectReq) &&
+             !Caller.hasFnAttribute(Attribute::StackProtectStrong))
+    Caller.addFnAttr(Attribute::StackProtect);
+}
+
+#define GET_ATTR_COMPAT_FUNC
+#include "AttributesCompatFunc.inc"
+
+bool AttributeFuncs::areInlineCompatible(const Function &Caller,
+                                         const Function &Callee) {
+  return hasCompatibleFnAttrs(Caller, Callee);
+}
+
+
+void AttributeFuncs::mergeAttributesForInlining(Function &Caller,
+                                                const Function &Callee) {
+  mergeFnAttrs(Caller, Callee);
 }

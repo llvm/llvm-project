@@ -165,8 +165,7 @@ static void calculateStateNumbersForInvokes(const Function *Fn,
       continue;
 
     auto &BBColors = BlockColors[&BB];
-    assert(BBColors.size() == 1 &&
-           "multi-color BB not removed by preparation");
+    assert(BBColors.size() == 1 && "multi-color BB not removed by preparation");
     BasicBlock *FuncletEntryBB = BBColors.front();
 
     BasicBlock *FuncletUnwindDest;
@@ -249,8 +248,13 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
       FuncInfo.FuncletBaseStateMap[CatchPad] = CatchLow;
       for (const User *U : CatchPad->users()) {
         const auto *UserI = cast<Instruction>(U);
-        if (UserI->isEHPad())
-          calculateCXXStateNumbers(FuncInfo, UserI, CatchLow);
+        if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI))
+          if (InnerCatchSwitch->getUnwindDest() == CatchSwitch->getUnwindDest())
+            calculateCXXStateNumbers(FuncInfo, UserI, CatchLow);
+        if (auto *InnerCleanupPad = dyn_cast<CleanupPadInst>(UserI))
+          if (getCleanupRetUnwindDest(InnerCleanupPad) ==
+              CatchSwitch->getUnwindDest())
+            calculateCXXStateNumbers(FuncInfo, UserI, CatchLow);
       }
     }
     int CatchHigh = FuncInfo.getLastStateNumber();
@@ -347,9 +351,13 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
     // outside the __try.
     for (const User *U : CatchPad->users()) {
       const auto *UserI = cast<Instruction>(U);
-      if (UserI->isEHPad()) {
-        calculateSEHStateNumbers(FuncInfo, UserI, ParentState);
-      }
+      if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI))
+        if (InnerCatchSwitch->getUnwindDest() == CatchSwitch->getUnwindDest())
+          calculateSEHStateNumbers(FuncInfo, UserI, ParentState);
+      if (auto *InnerCleanupPad = dyn_cast<CleanupPadInst>(UserI))
+        if (getCleanupRetUnwindDest(InnerCleanupPad) ==
+            CatchSwitch->getUnwindDest())
+          calculateSEHStateNumbers(FuncInfo, UserI, ParentState);
     }
   } else {
     auto *CleanupPad = cast<CleanupPadInst>(FirstNonPHI);

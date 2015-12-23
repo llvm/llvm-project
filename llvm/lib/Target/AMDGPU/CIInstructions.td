@@ -234,3 +234,63 @@ def : Pat <
 >;
 
 } // End Predicates = [isCI]
+
+
+//===----------------------------------------------------------------------===//
+// Patterns to generate flat for global
+//===----------------------------------------------------------------------===//
+
+def useFlatForGlobal : Predicate <
+  "Subtarget->useFlatForGlobal() || "
+  "Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">;
+
+let Predicates = [useFlatForGlobal] in {
+
+// 1. Offset as 20bit DWORD immediate
+def : Pat <
+  (SIload_constant v4i32:$sbase, IMM20bit:$offset),
+  (S_BUFFER_LOAD_DWORD_IMM $sbase, (as_i32imm $offset))
+>;
+
+// Patterns for global loads with no offset
+class FlatLoadPat <FLAT inst, SDPatternOperator node, ValueType vt> : Pat <
+  (vt (node i64:$addr)),
+  (inst $addr, 0, 0, 0)
+>;
+
+def : FlatLoadPat <FLAT_LOAD_UBYTE, az_extloadi8_global, i32>;
+def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_global, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, az_extloadi16_global, i32>;
+def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_global, i32>;
+def : FlatLoadPat <FLAT_LOAD_DWORD, global_load, i32>;
+def : FlatLoadPat <FLAT_LOAD_DWORDX2, global_load, v2i32>;
+def : FlatLoadPat <FLAT_LOAD_DWORDX4, global_load, v4i32>;
+
+class FlatStorePat <FLAT inst, SDPatternOperator node, ValueType vt> : Pat <
+  (node vt:$data, i64:$addr),
+  (inst $data, $addr, 0, 0, 0)
+>;
+
+def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_global, i32>;
+def : FlatStorePat <FLAT_STORE_SHORT, truncstorei16_global, i32>;
+def : FlatStorePat <FLAT_STORE_DWORD, global_store, i32>;
+def : FlatStorePat <FLAT_STORE_DWORDX2, global_store, v2i32>;
+def : FlatStorePat <FLAT_STORE_DWORDX4, global_store, v4i32>;
+
+class FlatAtomicPat <FLAT inst, SDPatternOperator node, ValueType vt> : Pat <
+  (vt (node i64:$addr, vt:$data)),
+  (inst $addr, $data, 0, 0)
+>;
+
+def : FlatAtomicPat <FLAT_ATOMIC_ADD_RTN, atomic_add_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_AND_RTN, atomic_and_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_SUB_RTN, atomic_sub_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_SMAX_RTN, atomic_max_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_UMAX_RTN, atomic_umax_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_SMIN_RTN, atomic_min_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_UMIN_RTN, atomic_umin_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_OR_RTN, atomic_or_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_SWAP_RTN, atomic_swap_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_XOR_RTN, atomic_xor_global, i32>;
+
+} // End Predicates = [useFlatForGlobal]

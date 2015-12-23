@@ -480,6 +480,10 @@ DAE::Liveness DAE::SurveyUse(const Use *U,
       if (F) {
         // Used in a direct call.
 
+        // The function argument is live if it is used as a bundle operand.
+        if (CS.isBundleOperand(U))
+          return Live;
+
         // Find the argument number. We know for sure that this use is an
         // argument, since if it was the function argument this would be an
         // indirect call and the we know can't be looking at a value of the

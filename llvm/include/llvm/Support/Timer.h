@@ -62,8 +62,8 @@ public:
     MemUsed    -= RHS.MemUsed;
   }
 
-  /// print - Print the current timer to standard error, and reset the "Started"
-  /// flag.
+  /// Print the current time record to \p OS, with a breakdown showing
+  /// contributions to the \p Total time record.
   void print(const TimeRecord &Total, raw_ostream &OS) const;
 };
 
@@ -76,9 +76,11 @@ public:
 /// if they are never started.
 ///
 class Timer {
-  TimeRecord Time;
+  TimeRecord Time;       // The total time captured
+  TimeRecord StartTime;  // The time startTimer() was last called
   std::string Name;      // The name of this time variable.
-  bool Started;          // Has this time variable ever been started?
+  bool Running;          // Is the timer currently running?
+  bool Triggered;        // Has the timer ever been triggered?
   TimerGroup *TG;        // The TimerGroup this Timer is in.
 
   Timer **Prev, *Next;   // Doubly linked list of timers in the group.
@@ -102,15 +104,22 @@ public:
   const std::string &getName() const { return Name; }
   bool isInitialized() const { return TG != nullptr; }
 
-  /// startTimer - Start the timer running.  Time between calls to
-  /// startTimer/stopTimer is counted by the Timer class.  Note that these calls
-  /// must be correctly paired.
-  ///
+  /// Check if startTimer() has ever been called on this timer.
+  bool hasTriggered() const { return Triggered; }
+
+  /// Start the timer running.  Time between calls to startTimer/stopTimer is
+  /// counted by the Timer class.  Note that these calls must be correctly
+  /// paired.
   void startTimer();
 
-  /// stopTimer - Stop the timer.
-  ///
+  /// Stop the timer.
   void stopTimer();
+
+  /// Clear the timer state.
+  void clear();
+
+  /// Return the duration for which this timer has been running.
+  TimeRecord getTotalTime() const { return Time; }
 
 private:
   friend class TimerGroup;

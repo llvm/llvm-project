@@ -44,7 +44,7 @@
 // Property #3 is ensured via the MachineBlockFrequencyInfo.
 //
 // If this pass found points matching all these properties, then
-// MachineFrameInfo is updated this that information.
+// MachineFrameInfo is updated with this information.
 //===----------------------------------------------------------------------===//
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SetVector.h"

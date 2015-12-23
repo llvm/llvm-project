@@ -129,7 +129,8 @@ entry:
 
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s2{{$}}
 ; HSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s6{{$}}
-; GCN: buffer_store_dword [[VVAL]]
+; GCN-NOHSA: buffer_store_dword [[VVAL]]
+; HSA: flat_store_dword [[VVAL]]
 
 ; HSA: COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; GCN-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2
@@ -155,7 +156,8 @@ entry:
 ; HSA: enable_sgpr_grid_workgroup_count_z = 0
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s3
 ; GCN-HSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s7
-; GCN: buffer_store_dword [[VVAL]]
+; GCN-NOHSA: buffer_store_dword [[VVAL]]
+; HSA: flat_store_dword [[VVAL]]
 
 ; HSA: COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; GCN-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2
@@ -190,7 +192,8 @@ entry:
 
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s3{{$}}
 ; HSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s7{{$}}
-; GCN: buffer_store_dword [[VVAL]]
+; GCN-NOHSA: buffer_store_dword [[VVAL]]
+; HSA: flat_store_dword [[VVAL]]
 
 ; HSA: COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; GCN-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2
@@ -211,7 +214,8 @@ entry:
 
 ; FUNC-LABEL: {{^}}tidig_x:
 ; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 0
-; GCN: buffer_store_dword v0
+; GCN-NOHSA: buffer_store_dword v0
+; HSA: flat_store_dword v0
 define void @tidig_x(i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.r600.read.tidig.x() #0
@@ -226,7 +230,8 @@ entry:
 ; FUNC-LABEL: {{^}}tidig_y:
 
 ; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 1
-; GCN: buffer_store_dword v1
+; GCN-NOHSA: buffer_store_dword v1
+; HSA: flat_store_dword v1
 define void @tidig_y(i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.r600.read.tidig.y() #0
@@ -240,7 +245,8 @@ entry:
 
 ; FUNC-LABEL: {{^}}tidig_z:
 ; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 2
-; GCN: buffer_store_dword v2
+; GCN-NOHSA: buffer_store_dword v2
+; HSA: flat_store_dword v2
 define void @tidig_z(i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.r600.read.tidig.z() #0

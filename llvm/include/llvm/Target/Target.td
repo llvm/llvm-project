@@ -620,6 +620,7 @@ class Operand<ValueType ty> : DAGOperand {
   string EncoderMethod = "";
   string DecoderMethod = "";
   bit hasCompleteDecoder = 1;
+  string OperandNamespace = "MCOI";
   string OperandType = "OPERAND_UNKNOWN";
   dag MIOperandInfo = (ops);
 

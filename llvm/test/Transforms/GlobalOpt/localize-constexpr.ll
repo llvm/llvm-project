@@ -13,7 +13,7 @@ define i8 @f() norecurse {
 }
 
 @H = internal global i32 42
-@Halias = internal alias i32, i32* @H
+@Halias = alias i32, i32* @H
 
 ; @H can't be localized because @Halias uses it, and @Halias can't be converted to an instruction.
 define i8 @g() norecurse {

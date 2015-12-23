@@ -108,13 +108,6 @@ static const uint32_t IH_TAKEN_WEIGHT = 1024 * 1024 - 1;
 /// instruction. This is essentially never taken.
 static const uint32_t IH_NONTAKEN_WEIGHT = 1;
 
-// Standard weight value. Used when none of the heuristics set weight for
-// the edge.
-static const uint32_t NORMAL_WEIGHT = 16;
-
-// Minimum weight of an edge. Please note, that weight is NEVER 0.
-static const uint32_t MIN_WEIGHT = 1;
-
 /// \brief Calculate edge weights for successors lead to unreachable.
 ///
 /// Predict that a successor which leads necessarily to an
@@ -157,22 +150,24 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(BasicBlock *BB) {
       return false;
     }
 
-  uint32_t UnreachableWeight =
-    std::max(UR_TAKEN_WEIGHT / (unsigned)UnreachableEdges.size(), MIN_WEIGHT);
-  for (SmallVectorImpl<unsigned>::iterator I = UnreachableEdges.begin(),
-                                           E = UnreachableEdges.end();
-       I != E; ++I)
-    setEdgeWeight(BB, *I, UnreachableWeight);
-
-  if (ReachableEdges.empty())
+  if (ReachableEdges.empty()) {
+    BranchProbability Prob(1, UnreachableEdges.size());
+    for (unsigned SuccIdx : UnreachableEdges)
+      setEdgeProbability(BB, SuccIdx, Prob);
     return true;
-  uint32_t ReachableWeight =
-    std::max(UR_NONTAKEN_WEIGHT / (unsigned)ReachableEdges.size(),
-             NORMAL_WEIGHT);
-  for (SmallVectorImpl<unsigned>::iterator I = ReachableEdges.begin(),
-                                           E = ReachableEdges.end();
-       I != E; ++I)
-    setEdgeWeight(BB, *I, ReachableWeight);
+  }
+
+  BranchProbability UnreachableProb(UR_TAKEN_WEIGHT,
+                                    (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) *
+                                        UnreachableEdges.size());
+  BranchProbability ReachableProb(UR_NONTAKEN_WEIGHT,
+                                  (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) *
+                                      ReachableEdges.size());
+
+  for (unsigned SuccIdx : UnreachableEdges)
+    setEdgeProbability(BB, SuccIdx, UnreachableProb);
+  for (unsigned SuccIdx : ReachableEdges)
+    setEdgeProbability(BB, SuccIdx, ReachableProb);
 
   return true;
 }
@@ -223,10 +218,18 @@ bool BranchProbabilityInfo::calcMetadataWeights(BasicBlock *BB) {
 
   WeightSum = 0;
   for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-    uint32_t W = Weights[i] / ScalingFactor;
-    WeightSum += W;
-    setEdgeWeight(BB, i, W);
+    Weights[i] /= ScalingFactor;
+    WeightSum += Weights[i];
   }
+
+  if (WeightSum == 0) {
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
+      setEdgeProbability(BB, i, {1, e});
+  } else {
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
+      setEdgeProbability(BB, i, {Weights[i], static_cast<uint32_t>(WeightSum)});
+  }
+
   assert(WeightSum <= UINT32_MAX &&
          "Expected weights to scale down to 32 bits");
 
@@ -275,21 +278,24 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(BasicBlock *BB) {
   if (TI->getNumSuccessors() == 1 || ColdEdges.empty())
     return false;
 
-  uint32_t ColdWeight =
-      std::max(CC_TAKEN_WEIGHT / (unsigned) ColdEdges.size(), MIN_WEIGHT);
-  for (SmallVectorImpl<unsigned>::iterator I = ColdEdges.begin(),
-                                           E = ColdEdges.end();
-       I != E; ++I)
-    setEdgeWeight(BB, *I, ColdWeight);
-
-  if (NormalEdges.empty())
+  if (NormalEdges.empty()) {
+    BranchProbability Prob(1, ColdEdges.size());
+    for (unsigned SuccIdx : ColdEdges)
+      setEdgeProbability(BB, SuccIdx, Prob);
     return true;
-  uint32_t NormalWeight = std::max(
-      CC_NONTAKEN_WEIGHT / (unsigned) NormalEdges.size(), NORMAL_WEIGHT);
-  for (SmallVectorImpl<unsigned>::iterator I = NormalEdges.begin(),
-                                           E = NormalEdges.end();
-       I != E; ++I)
-    setEdgeWeight(BB, *I, NormalWeight);
+  }
+
+  BranchProbability ColdProb(CC_TAKEN_WEIGHT,
+                             (CC_TAKEN_WEIGHT + CC_NONTAKEN_WEIGHT) *
+                                 ColdEdges.size());
+  BranchProbability NormalProb(CC_NONTAKEN_WEIGHT,
+                               (CC_TAKEN_WEIGHT + CC_NONTAKEN_WEIGHT) *
+                                   NormalEdges.size());
+
+  for (unsigned SuccIdx : ColdEdges)
+    setEdgeProbability(BB, SuccIdx, ColdProb);
+  for (unsigned SuccIdx : NormalEdges)
+    setEdgeProbability(BB, SuccIdx, NormalProb);
 
   return true;
 }
@@ -322,8 +328,10 @@ bool BranchProbabilityInfo::calcPointerHeuristics(BasicBlock *BB) {
   if (!isProb)
     std::swap(TakenIdx, NonTakenIdx);
 
-  setEdgeWeight(BB, TakenIdx, PH_TAKEN_WEIGHT);
-  setEdgeWeight(BB, NonTakenIdx, PH_NONTAKEN_WEIGHT);
+  BranchProbability TakenProb(PH_TAKEN_WEIGHT,
+                              PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
+  setEdgeProbability(BB, TakenIdx, TakenProb);
+  setEdgeProbability(BB, NonTakenIdx, TakenProb.getCompl());
   return true;
 }
 
@@ -351,37 +359,35 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(BasicBlock *BB,
   if (BackEdges.empty() && ExitingEdges.empty())
     return false;
 
-  if (uint32_t numBackEdges = BackEdges.size()) {
-    uint32_t backWeight = LBH_TAKEN_WEIGHT / numBackEdges;
-    if (backWeight < NORMAL_WEIGHT)
-      backWeight = NORMAL_WEIGHT;
+  // Collect the sum of probabilities of back-edges/in-edges/exiting-edges, and
+  // normalize them so that they sum up to one.
+  SmallVector<BranchProbability, 4> Probs(3, BranchProbability::getZero());
+  unsigned Denom = (BackEdges.empty() ? 0 : LBH_TAKEN_WEIGHT) +
+                   (InEdges.empty() ? 0 : LBH_TAKEN_WEIGHT) +
+                   (ExitingEdges.empty() ? 0 : LBH_NONTAKEN_WEIGHT);
+  if (!BackEdges.empty())
+    Probs[0] = BranchProbability(LBH_TAKEN_WEIGHT, Denom);
+  if (!InEdges.empty())
+    Probs[1] = BranchProbability(LBH_TAKEN_WEIGHT, Denom);
+  if (!ExitingEdges.empty())
+    Probs[2] = BranchProbability(LBH_NONTAKEN_WEIGHT, Denom);
 
-    for (SmallVectorImpl<unsigned>::iterator EI = BackEdges.begin(),
-         EE = BackEdges.end(); EI != EE; ++EI) {
-      setEdgeWeight(BB, *EI, backWeight);
-    }
+  if (uint32_t numBackEdges = BackEdges.size()) {
+    auto Prob = Probs[0] / numBackEdges;
+    for (unsigned SuccIdx : BackEdges)
+      setEdgeProbability(BB, SuccIdx, Prob);
   }
 
   if (uint32_t numInEdges = InEdges.size()) {
-    uint32_t inWeight = LBH_TAKEN_WEIGHT / numInEdges;
-    if (inWeight < NORMAL_WEIGHT)
-      inWeight = NORMAL_WEIGHT;
-
-    for (SmallVectorImpl<unsigned>::iterator EI = InEdges.begin(),
-         EE = InEdges.end(); EI != EE; ++EI) {
-      setEdgeWeight(BB, *EI, inWeight);
-    }
+    auto Prob = Probs[1] / numInEdges;
+    for (unsigned SuccIdx : InEdges)
+      setEdgeProbability(BB, SuccIdx, Prob);
   }
 
   if (uint32_t numExitingEdges = ExitingEdges.size()) {
-    uint32_t exitWeight = LBH_NONTAKEN_WEIGHT / numExitingEdges;
-    if (exitWeight < MIN_WEIGHT)
-      exitWeight = MIN_WEIGHT;
-
-    for (SmallVectorImpl<unsigned>::iterator EI = ExitingEdges.begin(),
-         EE = ExitingEdges.end(); EI != EE; ++EI) {
-      setEdgeWeight(BB, *EI, exitWeight);
-    }
+    auto Prob = Probs[2] / numExitingEdges;
+    for (unsigned SuccIdx : ExitingEdges)
+      setEdgeProbability(BB, SuccIdx, Prob);
   }
 
   return true;
@@ -463,9 +469,10 @@ bool BranchProbabilityInfo::calcZeroHeuristics(BasicBlock *BB) {
   if (!isProb)
     std::swap(TakenIdx, NonTakenIdx);
 
-  setEdgeWeight(BB, TakenIdx, ZH_TAKEN_WEIGHT);
-  setEdgeWeight(BB, NonTakenIdx, ZH_NONTAKEN_WEIGHT);
-
+  BranchProbability TakenProb(ZH_TAKEN_WEIGHT,
+                              ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
+  setEdgeProbability(BB, TakenIdx, TakenProb);
+  setEdgeProbability(BB, NonTakenIdx, TakenProb.getCompl());
   return true;
 }
 
@@ -499,9 +506,10 @@ bool BranchProbabilityInfo::calcFloatingPointHeuristics(BasicBlock *BB) {
   if (!isProb)
     std::swap(TakenIdx, NonTakenIdx);
 
-  setEdgeWeight(BB, TakenIdx, FPH_TAKEN_WEIGHT);
-  setEdgeWeight(BB, NonTakenIdx, FPH_NONTAKEN_WEIGHT);
-
+  BranchProbability TakenProb(FPH_TAKEN_WEIGHT,
+                              FPH_TAKEN_WEIGHT + FPH_NONTAKEN_WEIGHT);
+  setEdgeProbability(BB, TakenIdx, TakenProb);
+  setEdgeProbability(BB, NonTakenIdx, TakenProb.getCompl());
   return true;
 }
 
@@ -510,13 +518,15 @@ bool BranchProbabilityInfo::calcInvokeHeuristics(BasicBlock *BB) {
   if (!II)
     return false;
 
-  setEdgeWeight(BB, 0/*Index for Normal*/, IH_TAKEN_WEIGHT);
-  setEdgeWeight(BB, 1/*Index for Unwind*/, IH_NONTAKEN_WEIGHT);
+  BranchProbability TakenProb(IH_TAKEN_WEIGHT,
+                              IH_TAKEN_WEIGHT + IH_NONTAKEN_WEIGHT);
+  setEdgeProbability(BB, 0 /*Index for Normal*/, TakenProb);
+  setEdgeProbability(BB, 1 /*Index for Unwind*/, TakenProb.getCompl());
   return true;
 }
 
 void BranchProbabilityInfo::releaseMemory() {
-  Weights.clear();
+  Probs.clear();
 }
 
 void BranchProbabilityInfo::print(raw_ostream &OS) const {
@@ -532,20 +542,6 @@ void BranchProbabilityInfo::print(raw_ostream &OS) const {
   }
 }
 
-uint32_t BranchProbabilityInfo::getSumForBlock(const BasicBlock *BB) const {
-  uint32_t Sum = 0;
-
-  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
-    uint32_t Weight = getEdgeWeight(BB, I.getSuccessorIndex());
-    uint32_t PrevSum = Sum;
-
-    Sum += Weight;
-    assert(Sum >= PrevSum); (void) PrevSum;
-  }
-
-  return Sum;
-}
-
 bool BranchProbabilityInfo::
 isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const {
   // Hot probability is at least 4/5 = 80%
@@ -554,113 +550,74 @@ isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const {
 }
 
 BasicBlock *BranchProbabilityInfo::getHotSucc(BasicBlock *BB) const {
-  uint32_t Sum = 0;
-  uint32_t MaxWeight = 0;
+  auto MaxProb = BranchProbability::getZero();
   BasicBlock *MaxSucc = nullptr;
 
   for (succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
     BasicBlock *Succ = *I;
-    uint32_t Weight = getEdgeWeight(BB, Succ);
-    uint32_t PrevSum = Sum;
-
-    Sum += Weight;
-    assert(Sum > PrevSum); (void) PrevSum;
-
-    if (Weight > MaxWeight) {
-      MaxWeight = Weight;
+    auto Prob = getEdgeProbability(BB, Succ);
+    if (Prob > MaxProb) {
+      MaxProb = Prob;
       MaxSucc = Succ;
     }
   }
 
   // Hot probability is at least 4/5 = 80%
-  if (BranchProbability(MaxWeight, Sum) > BranchProbability(4, 5))
+  if (MaxProb > BranchProbability(4, 5))
     return MaxSucc;
 
   return nullptr;
 }
 
-/// Get the raw edge weight for the edge. If can't find it, return
-/// DEFAULT_WEIGHT value. Here an edge is specified using PredBlock and an index
-/// to the successors.
-uint32_t BranchProbabilityInfo::
-getEdgeWeight(const BasicBlock *Src, unsigned IndexInSuccessors) const {
-  DenseMap<Edge, uint32_t>::const_iterator I =
-      Weights.find(std::make_pair(Src, IndexInSuccessors));
+/// Get the raw edge probability for the edge. If can't find it, return a
+/// default probability 1/N where N is the number of successors. Here an edge is
+/// specified using PredBlock and an
+/// index to the successors.
+BranchProbability
+BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
+                                          unsigned IndexInSuccessors) const {
+  auto I = Probs.find(std::make_pair(Src, IndexInSuccessors));
 
-  if (I != Weights.end())
+  if (I != Probs.end())
     return I->second;
 
-  return DEFAULT_WEIGHT;
-}
-
-uint32_t BranchProbabilityInfo::getEdgeWeight(const BasicBlock *Src,
-                                              succ_const_iterator Dst) const {
-  return getEdgeWeight(Src, Dst.getSuccessorIndex());
-}
-
-/// Get the raw edge weight calculated for the block pair. This returns the sum
-/// of all raw edge weights from Src to Dst.
-uint32_t BranchProbabilityInfo::
-getEdgeWeight(const BasicBlock *Src, const BasicBlock *Dst) const {
-  uint32_t Weight = 0;
-  bool FoundWeight = false;
-  DenseMap<Edge, uint32_t>::const_iterator MapI;
-  for (succ_const_iterator I = succ_begin(Src), E = succ_end(Src); I != E; ++I)
-    if (*I == Dst) {
-      MapI = Weights.find(std::make_pair(Src, I.getSuccessorIndex()));
-      if (MapI != Weights.end()) {
-        FoundWeight = true;
-        Weight += MapI->second;
-      }
-    }
-  return (!FoundWeight) ? DEFAULT_WEIGHT : Weight;
-}
-
-/// Set the edge weight for a given edge specified by PredBlock and an index
-/// to the successors.
-void BranchProbabilityInfo::
-setEdgeWeight(const BasicBlock *Src, unsigned IndexInSuccessors,
-              uint32_t Weight) {
-  Weights[std::make_pair(Src, IndexInSuccessors)] = Weight;
-  DEBUG(dbgs() << "set edge " << Src->getName() << " -> "
-               << IndexInSuccessors << " successor weight to "
-               << Weight << "\n");
-}
-
-/// Get an edge's probability, relative to other out-edges from Src.
-BranchProbability BranchProbabilityInfo::
-getEdgeProbability(const BasicBlock *Src, unsigned IndexInSuccessors) const {
-  uint32_t N = getEdgeWeight(Src, IndexInSuccessors);
-  uint32_t D = getSumForBlock(Src);
-
-  // It is possible that the edge weight on the only successor edge of Src is
-  // zero, in which case we return 100%.
-  if (N == 0 && D == 0)
-    return BranchProbability::getOne();
-
-  return BranchProbability(N, D);
-}
-
-/// Get the probability of going from Src to Dst. It returns the sum of all
-/// probabilities for edges from Src to Dst.
-BranchProbability BranchProbabilityInfo::
-getEdgeProbability(const BasicBlock *Src, const BasicBlock *Dst) const {
-
-  uint32_t N = getEdgeWeight(Src, Dst);
-  uint32_t D = getSumForBlock(Src);
-
-  // It is possible that the edge weight on the only successor edge of Src is
-  // zero, in which case we return 100%.
-  if (N == 0 && D == 0)
-    return BranchProbability::getOne();
-
-  return BranchProbability(N, D);
+  return {1,
+          static_cast<uint32_t>(std::distance(succ_begin(Src), succ_end(Src)))};
 }
 
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           succ_const_iterator Dst) const {
   return getEdgeProbability(Src, Dst.getSuccessorIndex());
+}
+
+/// Get the raw edge probability calculated for the block pair. This returns the
+/// sum of all raw edge probabilities from Src to Dst.
+BranchProbability
+BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
+                                          const BasicBlock *Dst) const {
+  auto Prob = BranchProbability::getZero();
+  bool FoundProb = false;
+  for (succ_const_iterator I = succ_begin(Src), E = succ_end(Src); I != E; ++I)
+    if (*I == Dst) {
+      auto MapI = Probs.find(std::make_pair(Src, I.getSuccessorIndex()));
+      if (MapI != Probs.end()) {
+        FoundProb = true;
+        Prob += MapI->second;
+      }
+    }
+  uint32_t succ_num = std::distance(succ_begin(Src), succ_end(Src));
+  return FoundProb ? Prob : BranchProbability(1, succ_num);
+}
+
+/// Set the edge probability for a given edge specified by PredBlock and an
+/// index to the successors.
+void BranchProbabilityInfo::setEdgeProbability(const BasicBlock *Src,
+                                               unsigned IndexInSuccessors,
+                                               BranchProbability Prob) {
+  Probs[std::make_pair(Src, IndexInSuccessors)] = Prob;
+  DEBUG(dbgs() << "set edge " << Src->getName() << " -> " << IndexInSuccessors
+               << " successor probability to " << Prob << "\n");
 }
 
 raw_ostream &

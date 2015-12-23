@@ -66,7 +66,7 @@ To upload a new patch:
 * Leave the drop down on *Create a new Revision...* and click *Continue*.
 * Enter a descriptive title and summary.  The title and summary are usually
   in the form of a :ref:`commit message <commit messages>`.
-* Add reviewers and mailing
+* Add reviewers (see below for advice) and subscribe mailing
   lists that you want to be included in the review. If your patch is
   for LLVM, add llvm-commits as a Subscriber; if your patch is for Clang,
   add cfe-commits.
@@ -82,6 +82,24 @@ To submit an updated patch:
   *Continue*.
 * Leave the Repository and Project fields blank.
 * Add comments about the changes in the new diff. Click *Save*.
+
+Choosing reviewers: You typically pick one or two people as initial reviewers.
+This choice is not crucial, because you are merely suggesting and not requiring
+them to participate. Many people will see the email notification on cfe-commits
+or llvm-commits, and if the subject line suggests the patch is something they
+should look at, they will.
+
+Here are a couple of ways to pick the initial reviewer(s):
+
+* Use ``svn blame`` and the commit log to find names of people who have
+  recently modified the same area of code that you are modifying.
+* Look in CODE_OWNERS.TXT to see who might be responsible for that area.
+* If you've discussed the change on a dev list, the people who participated
+  might be appropriate reviewers.
+
+Even if you think the code owner is the busiest person in the world, it's still
+okay to put them as a reviewer. Being the code owner means they have accepted
+responsibility for making sure the review happens.
 
 Reviewing code with Phabricator
 -------------------------------

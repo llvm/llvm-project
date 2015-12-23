@@ -108,6 +108,11 @@ def FeatureEnableUnsafeDSOffsetFolding : SubtargetFeature <"unsafe-ds-offset-fol
         "true",
         "Force using DS instruction immediate offsets on SI">;
 
+def FeatureFlatForGlobal : SubtargetFeature<"flat-for-global",
+        "FlatForGlobal",
+        "true",
+        "Force to generate flat instruction for global">;
+
 def FeatureFlatAddressSpace : SubtargetFeature<"flat-address-space",
         "FlatAddressSpace",
         "true",

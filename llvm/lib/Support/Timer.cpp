@@ -102,7 +102,7 @@ void Timer::init(StringRef N) {
 void Timer::init(StringRef N, TimerGroup &tg) {
   assert(!TG && "Timer already initialized");
   Name.assign(N.begin(), N.end());
-  Started = false;
+  Running = Triggered = false;
   TG = &tg;
   TG->addTimer(*this);
 }
@@ -135,25 +135,22 @@ TimeRecord TimeRecord::getCurrentTime(bool Start) {
   return Result;
 }
 
-static ManagedStatic<std::vector<Timer*> > ActiveTimers;
-
 void Timer::startTimer() {
-  Started = true;
-  ActiveTimers->push_back(this);
-  Time -= TimeRecord::getCurrentTime(true);
+  assert(!Running && "Cannot start a running timer");
+  Running = Triggered = true;
+  StartTime = TimeRecord::getCurrentTime(true);
 }
 
 void Timer::stopTimer() {
+  assert(Running && "Cannot stop a paused timer");
+  Running = false;
   Time += TimeRecord::getCurrentTime(false);
+  Time -= StartTime;
+}
 
-  if (ActiveTimers->back() == this) {
-    ActiveTimers->pop_back();
-  } else {
-    std::vector<Timer*>::iterator I =
-      std::find(ActiveTimers->begin(), ActiveTimers->end(), this);
-    assert(I != ActiveTimers->end() && "stop but no startTimer?");
-    ActiveTimers->erase(I);
-  }
+void Timer::clear() {
+  Running = Triggered = false;
+  Time = StartTime = TimeRecord();
 }
 
 static void printVal(double Val, double Total, raw_ostream &OS) {
@@ -271,7 +268,7 @@ void TimerGroup::removeTimer(Timer &T) {
   sys::SmartScopedLock<true> L(*TimerLock);
   
   // If the timer was started, move its data to TimersToPrint.
-  if (T.Started)
+  if (T.hasTriggered())
     TimersToPrint.emplace_back(T.Time, T.Name);
 
   T.TG = nullptr;
@@ -357,12 +354,11 @@ void TimerGroup::print(raw_ostream &OS) {
   // See if any of our timers were started, if so add them to TimersToPrint and
   // reset them.
   for (Timer *T = FirstTimer; T; T = T->Next) {
-    if (!T->Started) continue;
+    if (!T->hasTriggered()) continue;
     TimersToPrint.emplace_back(T->Time, T->Name);
     
     // Clear out the time.
-    T->Started = 0;
-    T->Time = TimeRecord();
+    T->clear();
   }
 
   // If any timers were started, print the group.

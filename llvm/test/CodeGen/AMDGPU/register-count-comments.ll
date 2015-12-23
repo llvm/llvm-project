@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs -asm-verbose < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs -asm-verbose < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs -asm-verbose -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI %s
 
 declare i32 @llvm.SI.tid() nounwind readnone
 

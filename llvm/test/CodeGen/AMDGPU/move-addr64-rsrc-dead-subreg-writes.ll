@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=kaveri -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=kaveri -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; Check that when mubuf addr64 instruction is handled in moveToVALU
 ; from the pointer, dead register writes are not emitted.

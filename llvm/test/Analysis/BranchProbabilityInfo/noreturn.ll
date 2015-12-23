@@ -26,11 +26,11 @@ entry:
                               i32 2, label %case_b
                               i32 3, label %case_c
                               i32 4, label %case_d]
-; CHECK: edge entry -> exit probability is 0x7fffe000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge entry -> case_a probability is 0x00000800 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_b probability is 0x00000800 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_c probability is 0x00000800 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_d probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK: edge entry -> exit probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge entry -> case_a probability is 0x00000200 / 0x80000000 = 0.00%
+; CHECK: edge entry -> case_b probability is 0x00000200 / 0x80000000 = 0.00%
+; CHECK: edge entry -> case_c probability is 0x00000200 / 0x80000000 = 0.00%
+; CHECK: edge entry -> case_d probability is 0x00000200 / 0x80000000 = 0.00%
 
 case_a:
   br label %case_b

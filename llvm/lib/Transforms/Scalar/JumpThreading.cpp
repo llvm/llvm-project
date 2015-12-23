@@ -1636,7 +1636,7 @@ void JumpThreading::UpdateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   BFI->setBlockFreq(BB, BBNewFreq.getFrequency());
 
   // Collect updated outgoing edges' frequencies from BB and use them to update
-  // edge weights.
+  // edge probabilities.
   SmallVector<uint64_t, 4> BBSuccFreq;
   for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
     auto SuccFreq = (*I == SuccBB)
@@ -1645,18 +1645,31 @@ void JumpThreading::UpdateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
     BBSuccFreq.push_back(SuccFreq.getFrequency());
   }
 
-  // Normalize edge weights in Weights64 so that the sum of them can fit in
-  BranchProbability::normalizeEdgeWeights(BBSuccFreq.begin(), BBSuccFreq.end());
+  uint64_t MaxBBSuccFreq =
+      *std::max_element(BBSuccFreq.begin(), BBSuccFreq.end());
 
-  SmallVector<uint32_t, 4> Weights;
-  for (auto Freq : BBSuccFreq)
-    Weights.push_back(static_cast<uint32_t>(Freq));
+  SmallVector<BranchProbability, 4> BBSuccProbs;
+  if (MaxBBSuccFreq == 0)
+    BBSuccProbs.assign(BBSuccFreq.size(),
+                       {1, static_cast<unsigned>(BBSuccFreq.size())});
+  else {
+    for (uint64_t Freq : BBSuccFreq)
+      BBSuccProbs.push_back(
+          BranchProbability::getBranchProbability(Freq, MaxBBSuccFreq));
+    // Normalize edge probabilities so that they sum up to one.
+    BranchProbability::normalizeProbabilities(BBSuccProbs.begin(),
+                                              BBSuccProbs.end());
+  }
 
-  // Update edge weights in BPI.
-  for (int I = 0, E = Weights.size(); I < E; I++)
-    BPI->setEdgeWeight(BB, I, Weights[I]);
+  // Update edge probabilities in BPI.
+  for (int I = 0, E = BBSuccProbs.size(); I < E; I++)
+    BPI->setEdgeProbability(BB, I, BBSuccProbs[I]);
 
-  if (Weights.size() >= 2) {
+  if (BBSuccProbs.size() >= 2) {
+    SmallVector<uint32_t, 4> Weights;
+    for (auto Prob : BBSuccProbs)
+      Weights.push_back(Prob.getNumerator());
+
     auto TI = BB->getTerminator();
     TI->setMetadata(
         LLVMContext::MD_prof,

@@ -2,7 +2,7 @@
 
 ; Test if edge weights are properly updated after jump threading.
 
-; CHECK: !2 = !{!"branch_weights", i32 22, i32 7}
+; CHECK: !2 = !{!"branch_weights", i32 1629125526, i32 518358122}
 
 define void @foo(i32 %n) !prof !0 {
 entry:

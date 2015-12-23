@@ -429,3 +429,142 @@ define <4 x double> @shuffle_v4f64_0022(<4 x double> %a, <4 x double> %b) {
   ret <4 x double> %shuffle
 }
 
+define <8 x i32> @ashr_v8i32(<8 x i32> %a, <8 x i32> %b) {
+  %shift = ashr <8 x i32> %a, %b
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @lshr_v8i32(<8 x i32> %a, <8 x i32> %b) {
+  %shift = lshr <8 x i32> %a, %b
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @shl_v8i32(<8 x i32> %a, <8 x i32> %b) {
+  %shift = shl <8 x i32> %a, %b
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @ashr_const_v8i32(<8 x i32> %a) {
+  %shift = ashr <8 x i32> %a,  <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @lshr_const_v8i32(<8 x i32> %a) {
+  %shift = lshr <8 x i32> %a,  <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @shl_const_v8i32(<8 x i32> %a) {
+  %shift = shl <8 x i32> %a,  <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <8 x i32> %shift
+}
+
+define <4 x i64> @ashr_v4i64(<4 x i64> %a, <4 x i64> %b) {
+  %shift = ashr <4 x i64> %a, %b
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @lshr_v4i64(<4 x i64> %a, <4 x i64> %b) {
+  %shift = lshr <4 x i64> %a, %b
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @shl_v4i64(<4 x i64> %a, <4 x i64> %b) {
+  %shift = shl <4 x i64> %a, %b
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @ashr_const_v4i64(<4 x i64> %a) {
+  %shift = ashr <4 x i64> %a,  <i64 3, i64 3, i64 3, i64 3>
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @lshr_const_v4i64(<4 x i64> %a) {
+  %shift = lshr <4 x i64> %a,  <i64 3, i64 3, i64 3, i64 3>
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @shl_const_v4i64(<4 x i64> %a) {
+  %shift = shl <4 x i64> %a,  <i64 3, i64 3, i64 3, i64 3>
+  ret <4 x i64> %shift
+}
+
+define <16 x i16> @ashr_v16i16(<16 x i16> %a, <16 x i16> %b) {
+  %shift = ashr <16 x i16> %a, %b
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @lshr_v16i16(<16 x i16> %a, <16 x i16> %b) {
+  %shift = lshr <16 x i16> %a, %b
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @shl_v16i16(<16 x i16> %a, <16 x i16> %b) {
+  %shift = shl <16 x i16> %a, %b
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @ashr_const_v16i16(<16 x i16> %a) {
+  %shift = ashr <16 x i16> %a,  <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @lshr_const_v16i16(<16 x i16> %a) {
+  %shift = lshr <16 x i16> %a,  <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @shl_const_v16i16(<16 x i16> %a) {
+  %shift = shl <16 x i16> %a,  <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <16 x i16> %shift
+}
+
+define <4 x i32> @ashr_v4i32(<4 x i32> %a, <4 x i32> %b) {
+  %shift = ashr <4 x i32> %a, %b
+  ret <4 x i32> %shift
+}
+
+define <4 x i32> @shl_const_v4i32(<4 x i32> %a) {
+  %shift = shl <4 x i32> %a,  <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %shift
+}
+
+define <2 x i64> @ashr_v2i64(<2 x i64> %a, <2 x i64> %b) {
+  %shift = ashr <2 x i64> %a, %b
+  ret <2 x i64> %shift
+}
+
+define <2 x i64> @shl_const_v2i64(<2 x i64> %a) {
+  %shift = shl <2 x i64> %a,  <i64 3, i64 3>
+  ret <2 x i64> %shift
+}
+
+define <8 x i16> @ashr_v8i16(<8 x i16> %a, <8 x i16> %b) {
+  %shift = ashr <8 x i16> %a, %b
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @lshr_v8i16(<8 x i16> %a, <8 x i16> %b) {
+  %shift = lshr <8 x i16> %a, %b
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @shl_v8i16(<8 x i16> %a, <8 x i16> %b) {
+  %shift = shl <8 x i16> %a, %b
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @ashr_const_v8i16(<8 x i16> %a) {
+  %shift = ashr <8 x i16> %a,<i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @lshr_const_v8i16(<8 x i16> %a) {
+  %shift = lshr <8 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @shl_const_v8i16(<8 x i16> %a) {
+  %shift = shl <8 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <8 x i16> %shift
+}
