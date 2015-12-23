@@ -1801,8 +1801,17 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
           Ty = ByValType;
         else if (Form == Arithmetic)
           Ty = Context.getPointerDiffType();
-        else
-          Ty = Context.getPointerType(ValType.getUnqualifiedType());
+        else {
+          Expr *ValArg = TheCall->getArg(i);
+          unsigned AS = 0;
+          // Keep address space of non-atomic pointer type.
+          if (const PointerType *PtrTy =
+                  ValArg->getType()->getAs<PointerType>()) {
+            AS = PtrTy->getPointeeType().getAddressSpace();
+          }
+          Ty = Context.getPointerType(
+              Context.getAddrSpaceQualType(ValType.getUnqualifiedType(), AS));
+        }
         break;
       case 2:
         // The third argument to compare_exchange / GNU exchange is a
@@ -7561,12 +7570,6 @@ void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC) {
 
 } // end anonymous namespace
 
-enum {
-  AddressOf,
-  FunctionPointer,
-  ArrayPointer
-};
-
 // Helper function for Sema::DiagnoseAlwaysNonNullPointer.
 // Returns true when emitting a warning about taking the address of a reference.
 static bool CheckForReference(Sema &SemaRef, const Expr *E,
@@ -7748,7 +7751,11 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
 
   unsigned DiagID = IsCompare ? diag::warn_null_pointer_compare
                               : diag::warn_impcast_pointer_to_bool;
-  unsigned DiagType;
+  enum {
+    AddressOf,
+    FunctionPointer,
+    ArrayPointer
+  } DiagType;
   if (IsAddressOf)
     DiagType = AddressOf;
   else if (IsFunction)

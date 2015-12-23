@@ -255,6 +255,7 @@ OPENMP_DEPEND_KIND(in)
 OPENMP_DEPEND_KIND(out)
 OPENMP_DEPEND_KIND(inout)
 OPENMP_DEPEND_KIND(source)
+OPENMP_DEPEND_KIND(sink)
 
 // Modifiers for 'linear' clause.
 OPENMP_LINEAR_KIND(val)

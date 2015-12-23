@@ -2502,6 +2502,18 @@ i is const-qualified but the qualifier is not local.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isAnyCharacter0')"><a name="isAnyCharacter0Anchor">isAnyCharacter</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isAnyCharacter0"><pre>Matches QualType nodes that are of character type.
+
+Given
+  void a(char);
+  void b(wchar_t);
+  void c(double);
+functionDecl(hasAnyParameter(hasType(isAnyCharacter())))
+matches "a(char)", "b(wchar_t)", but not "c(double)".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isConstQualified0')"><a name="isConstQualified0Anchor">isConstQualified</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isConstQualified0"><pre>Matches QualType nodes that are const-qualified, i.e., that
 include "top-level" const.
@@ -2739,6 +2751,16 @@ SystemHeader.h:
   class Y {};
 
 Usable as: Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;, Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;, Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('booleanType0')"><a name="booleanType0Anchor">booleanType</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="booleanType0"><pre>Matches type bool.
+
+Given
+ struct S { bool func(); };
+functionDecl(returns(booleanType()))
+  matches "bool func();"
 </pre></td></tr>
 
 

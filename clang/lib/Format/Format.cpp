@@ -607,6 +607,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     ChromiumStyle.BinPackParameters = false;
     ChromiumStyle.DerivePointerAlignment = false;
   }
+  ChromiumStyle.SortIncludes = false;
   return ChromiumStyle;
 }
 
@@ -1274,11 +1275,13 @@ private:
       FormatTok->Tok.setIdentifierInfo(&Info);
       FormatTok->Tok.setKind(Info.getTokenID());
       if (Style.Language == FormatStyle::LK_Java &&
-          FormatTok->isOneOf(tok::kw_struct, tok::kw_union, tok::kw_delete)) {
+          FormatTok->isOneOf(tok::kw_struct, tok::kw_union, tok::kw_delete,
+                             tok::kw_operator)) {
         FormatTok->Tok.setKind(tok::identifier);
         FormatTok->Tok.setIdentifierInfo(nullptr);
       } else if (Style.Language == FormatStyle::LK_JavaScript &&
-                 FormatTok->isOneOf(tok::kw_struct, tok::kw_union)) {
+                 FormatTok->isOneOf(tok::kw_struct, tok::kw_union,
+                                    tok::kw_operator)) {
         FormatTok->Tok.setKind(tok::identifier);
         FormatTok->Tok.setIdentifierInfo(nullptr);
       }

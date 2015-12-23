@@ -115,6 +115,11 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("var union = 2;");
 }
 
+TEST_F(FormatTestJS, CppKeywords) {
+  // Make sure we don't mess stuff up because of C++ keywords.
+  verifyFormat("return operator && (aa);");
+}
+
 TEST_F(FormatTestJS, ES6DestructuringAssignment) {
   verifyFormat("var [a, b, c] = [1, 2, 3];");
   verifyFormat("let [a, b, c] = [1, 2, 3];");
@@ -307,6 +312,17 @@ TEST_F(FormatTestJS, ArrayLiterals) {
                "    aaaa);");
 
   verifyFormat("someFunction([], {a: a});");
+}
+
+TEST_F(FormatTestJS, ColumnLayoutForArrayLiterals) {
+  verifyFormat("var array = [\n"
+               "  a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,\n"
+               "  a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,\n"
+               "];");
+  verifyFormat("var array = someFunction([\n"
+               "  a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,\n"
+               "  a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,\n"
+               "]);");
 }
 
 TEST_F(FormatTestJS, FunctionLiterals) {
@@ -752,6 +768,11 @@ TEST_F(FormatTestJS, InterfaceDeclarations) {
   verifyFormat("interface a {}\n"
                "export function b() {}\n"
                "var x;");
+
+  // Arrays of object type literals.
+  verifyFormat("interface I {\n"
+               "  o: {}[];\n"
+               "}");
 }
 
 TEST_F(FormatTestJS, EnumDeclarations) {
