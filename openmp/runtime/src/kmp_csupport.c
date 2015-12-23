@@ -2202,6 +2202,12 @@ __kmpc_set_nest_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
     __kmp_itt_lock_acquired((kmp_user_lock_p)user_lock);
 #endif
 
+#if OMPT_SUPPORT && OMPT_TRACE
+    if (ompt_enabled) {
+        // missing support here: need to know whether acquired first or not
+    }
+#endif
+
 #else // KMP_USE_DYNAMIC_LOCK
     int acquire_status;
     kmp_user_lock_p lck;
@@ -2230,7 +2236,6 @@ __kmpc_set_nest_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
 #if USE_ITT_BUILD
     __kmp_itt_lock_acquired( lck );
 #endif /* USE_ITT_BUILD */
-#endif // KMP_USE_DYNAMIC_LOCK
 
 #if OMPT_SUPPORT && OMPT_TRACE
     if (ompt_enabled) {
@@ -2243,6 +2248,8 @@ __kmpc_set_nest_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
         }
     }
 #endif
+
+#endif // KMP_USE_DYNAMIC_LOCK
 }
 
 void

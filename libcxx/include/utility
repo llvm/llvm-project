@@ -288,6 +288,12 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
     // pair(const pair&) = default;
     // pair(pair&&) = default;
 
+#ifndef _LIBCPP_HAS_NO_DEFAULT_FUNCTION_TEMPLATE_ARGS
+    template <bool _Dummy = true, class = typename enable_if<
+        __dependent_type<is_default_constructible<_T1>, _Dummy>::value &&
+        __dependent_type<is_default_constructible<_T2>, _Dummy>::value
+      >::type>
+#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR pair() : first(), second() {}
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11

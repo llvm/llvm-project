@@ -305,6 +305,10 @@ typedef __char32_t char32_t;
 
 #define _LIBCPP_UNUSED __attribute__((__unused__))
 
+#if !(__has_feature(cxx_default_function_template_args))
+#define _LIBCPP_HAS_NO_DEFAULT_FUNCTION_TEMPLATE_ARGS
+#endif
+
 #if !(__has_feature(cxx_defaulted_functions))
 #define _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
 #endif  // !(__has_feature(cxx_defaulted_functions))
@@ -474,6 +478,7 @@ namespace std {
 
 #define _LIBCPP_HAS_NO_ADVANCED_SFINAE
 #define _LIBCPP_HAS_NO_DECLTYPE
+#define _LIBCPP_HAS_NO_DEFAULT_FUNCTION_TEMPLATE_ARGS
 #define _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
 #define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 #define _LIBCPP_HAS_NO_NULLPTR
@@ -487,12 +492,11 @@ namespace std {
 #else  // __GXX_EXPERIMENTAL_CXX0X__
 
 #if _GNUC_VER < 403
+#define _LIBCPP_HAS_NO_DEFAULT_FUNCTION_TEMPLATE_ARGS
 #define _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#endif
-
-#if _GNUC_VER < 403
 #define _LIBCPP_HAS_NO_STATIC_ASSERT
 #endif
+
 
 #if _GNUC_VER < 404
 #define _LIBCPP_HAS_NO_DECLTYPE
@@ -565,6 +569,7 @@ namespace std {
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 #define _LIBCPP_UNUSED
 
+#define _LIBCPP_HAS_NO_DEFAULT_FUNCTION_TEMPLATE_ARGS
 #define _LIBCPP_HAS_NO_TEMPLATE_ALIASES
 #define _LIBCPP_HAS_NO_ADVANCED_SFINAE
 #define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS

@@ -34,9 +34,12 @@
 // 
 // _LIBCXX_DYNAMIC_FALLBACK is currently off by default.
 
+
+#include <string.h>
+
+
 #ifdef _LIBCXX_DYNAMIC_FALLBACK
 #include "abort_message.h"
-#include <string.h>
 #include <sys/syslog.h>
 #endif
 
@@ -57,31 +60,19 @@ namespace __cxxabiv1
 
 #pragma GCC visibility push(hidden)
 
-#ifdef _LIBCXX_DYNAMIC_FALLBACK
-
 inline
 bool
 is_equal(const std::type_info* x, const std::type_info* y, bool use_strcmp)
 {
+#ifndef _WIN32
     if (!use_strcmp)
         return x == y;
     return strcmp(x->name(), y->name()) == 0;
-}
-
-#else  // !_LIBCXX_DYNAMIC_FALLBACK
-
-inline
-bool
-is_equal(const std::type_info* x, const std::type_info* y, bool)
-{
-#ifndef _WIN32
-    return x == y;
 #else
     return (x == y) || (strcmp(x->name(), y->name()) == 0);
-#endif    
+#endif
 }
 
-#endif  // _LIBCXX_DYNAMIC_FALLBACK
 
 // __shim_type_info
 
@@ -351,8 +342,17 @@ bool
 __pbase_type_info::can_catch(const __shim_type_info* thrown_type,
                              void*&) const
 {
-    return is_equal(this, thrown_type, false) ||
-           is_equal(thrown_type, &typeid(std::nullptr_t), false);
+    if (is_equal(thrown_type, &typeid(std::nullptr_t), false)) return true;
+    bool use_strcmp = this->__flags & (__incomplete_class_mask |
+                                       __incomplete_mask);
+    if (!use_strcmp) {
+        const __pbase_type_info* thrown_pbase = dynamic_cast<const __pbase_type_info*>(
+                thrown_type);
+        if (!thrown_pbase) return false;
+        use_strcmp = thrown_pbase->__flags & (__incomplete_class_mask |
+                                              __incomplete_mask);
+    }
+    return is_equal(this, thrown_type, use_strcmp);
 }
 
 #ifdef __clang__

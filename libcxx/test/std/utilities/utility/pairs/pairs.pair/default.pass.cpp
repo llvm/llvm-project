@@ -13,8 +13,14 @@
 
 // constexpr pair();
 
+// NOTE: The SFINAE on the default constructor is tested in
+//       default-sfinae.pass.cpp
+
 #include <utility>
+#include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 int main()
 {
@@ -24,13 +30,12 @@ int main()
     assert(p.first == 0.0f);
     assert(p.second == nullptr);
     }
-    
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER >= 11
     {
-    typedef std::pair<float, short*> P;
-    constexpr P p;
-    static_assert(p.first == 0.0f, "");
-    static_assert(p.second == nullptr, "");
+        typedef std::pair<float, short*> P;
+        constexpr P p;
+        static_assert(p.first == 0.0f, "");
+        static_assert(p.second == nullptr, "");
     }
 #endif
 }

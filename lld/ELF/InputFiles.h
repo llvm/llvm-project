@@ -35,6 +35,7 @@ class InputFile {
 public:
   enum Kind { ObjectKind, SharedKind, ArchiveKind };
   Kind kind() const { return FileKind; }
+  virtual ~InputFile();
 
   StringRef getName() const { return MB.getBufferIdentifier(); }
 
@@ -134,6 +135,8 @@ private:
   std::vector<SymbolBody *> SymbolBodies;
 
   llvm::BumpPtrAllocator Alloc;
+  llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
+  llvm::SpecificBumpPtrAllocator<EHInputSection<ELFT>> EHAlloc;
 };
 
 class ArchiveFile : public InputFile {

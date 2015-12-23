@@ -16,9 +16,9 @@
 namespace lld {
 namespace elf2 {
 class Lazy;
-struct Symbol;
 template <class ELFT> class OutputSectionBase;
-template <class ELFT> class Undefined;
+struct Symbol;
+class Undefined;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
@@ -62,7 +62,7 @@ public:
 private:
   Symbol *insert(SymbolBody *New);
   void addLazy(Lazy *New);
-  void addMemberFile(Undefined<ELFT> *Undef, Lazy *L);
+  void addMemberFile(Undefined *Undef, Lazy *L);
   void resolve(SymbolBody *Body);
   std::string conflictMsg(SymbolBody *Old, SymbolBody *New);
 

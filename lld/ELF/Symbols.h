@@ -62,6 +62,7 @@ public:
     DefinedSyntheticKind,
     SharedKind,
     DefinedLast = SharedKind,
+    UndefinedElfKind,
     UndefinedKind,
     LazyKind
   };
@@ -69,7 +70,9 @@ public:
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
 
   bool isWeak() const { return IsWeak; }
-  bool isUndefined() const { return SymbolKind == UndefinedKind; }
+  bool isUndefined() const {
+    return SymbolKind == UndefinedKind || SymbolKind == UndefinedElfKind;
+  }
   bool isDefined() const { return SymbolKind <= DefinedLast; }
   bool isCommon() const { return SymbolKind == DefinedCommonKind; }
   bool isLazy() const { return SymbolKind == LazyKind; }
@@ -127,40 +130,18 @@ protected:
   Symbol *Backref = nullptr;
 };
 
-// This is for symbols created from elf files and not from the command line.
-// Since they come from object files, they have a Elf_Sym.
-//
-// FIXME: Another alternative is to give every symbol an Elf_Sym. To do that
-// we have to delay creating the symbol table until the output format is
-// known and some of its methods will be templated. We should experiment with
-// that once we have a bit more code.
-template <class ELFT> class ELFSymbolBody : public SymbolBody {
-protected:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  ELFSymbolBody(Kind K, StringRef Name, const Elf_Sym &Sym)
-      : SymbolBody(K, Name, Sym.getBinding() == llvm::ELF::STB_WEAK,
-                   Sym.getVisibility(), Sym.getType() == llvm::ELF::STT_TLS),
-        Sym(Sym) {}
-
-public:
-  const Elf_Sym &Sym;
-
-  static bool classof(const SymbolBody *S) {
-    Kind K = S->kind();
-    return K >= DefinedFirst && K <= UndefinedKind;
-  }
-};
-
 // The base class for any defined symbols, including absolute symbols, etc.
-template <class ELFT> class Defined : public ELFSymbolBody<ELFT> {
+template <class ELFT> class Defined : public SymbolBody {
 protected:
-  typedef typename SymbolBody::Kind Kind;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
 
 public:
   Defined(Kind K, StringRef N, const Elf_Sym &Sym)
-      : ELFSymbolBody<ELFT>(K, N, Sym) {}
+      : SymbolBody(K, N, Sym.getBinding() == llvm::ELF::STB_WEAK,
+                   Sym.getVisibility(), Sym.getType() == llvm::ELF::STT_TLS),
+        Sym(Sym) {}
 
+  const Elf_Sym &Sym;
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
@@ -267,27 +248,33 @@ public:
 };
 
 // Undefined symbol.
-template <class ELFT> class Undefined : public ELFSymbolBody<ELFT> {
+class Undefined : public SymbolBody {
+  typedef SymbolBody::Kind Kind;
+  bool CanKeepUndefined;
+
+protected:
+  Undefined(Kind K, StringRef N, bool IsWeak, uint8_t Visibility, bool IsTls);
+
+public:
+  Undefined(StringRef N, bool IsWeak, uint8_t Visibility,
+            bool CanKeepUndefined);
+
+  static bool classof(const SymbolBody *S) { return S->isUndefined(); }
+
+  bool canKeepUndefined() const { return CanKeepUndefined; }
+};
+
+template <class ELFT> class UndefinedElf : public Undefined {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
 
 public:
-  static Elf_Sym Required;
-  static Elf_Sym Optional;
-
-  Undefined(StringRef N, const Elf_Sym &Sym)
-      : ELFSymbolBody<ELFT>(SymbolBody::UndefinedKind, N, Sym) {}
+  UndefinedElf(StringRef N, const Elf_Sym &Sym);
+  const Elf_Sym &Sym;
 
   static bool classof(const SymbolBody *S) {
-    return S->kind() == SymbolBody::UndefinedKind;
+    return S->kind() == SymbolBody::UndefinedElfKind;
   }
-
-  bool canKeepUndefined() const { return &this->Sym == &Optional; }
 };
-
-template <class ELFT>
-typename Undefined<ELFT>::Elf_Sym Undefined<ELFT>::Required;
-template <class ELFT>
-typename Undefined<ELFT>::Elf_Sym Undefined<ELFT>::Optional;
 
 template <class ELFT> class SharedSymbol : public Defined<ELFT> {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;

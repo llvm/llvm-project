@@ -904,9 +904,12 @@ void ScopStmt::buildAccessRelations() {
 void ScopStmt::addAccess(MemoryAccess *Access) {
   Instruction *AccessInst = Access->getAccessInstruction();
 
-  MemoryAccessList &MAL = InstructionToAccess[AccessInst];
-  MAL.emplace_front(Access);
-  MemAccs.push_back(MAL.front());
+  if (Access->isArrayKind()) {
+    MemoryAccessList &MAL = InstructionToAccess[AccessInst];
+    MAL.emplace_front(Access);
+  }
+
+  MemAccs.push_back(Access);
 }
 
 void ScopStmt::realignParams() {

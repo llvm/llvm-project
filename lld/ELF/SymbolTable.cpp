@@ -60,8 +60,10 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   if (auto *F = dyn_cast<SharedFile<ELFT>>(FileP)) {
     // DSOs are uniquified not by filename but by soname.
     F->parseSoName();
-    if (!IncludedSoNames.insert(F->getSoName()).second)
+    if (!IncludedSoNames.insert(F->getSoName()).second) {
+      delete FileP;
       return;
+    }
 
     SharedFiles.emplace_back(F);
     F->parse();
@@ -80,14 +82,14 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
 
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addUndefined(StringRef Name) {
-  auto *Sym = new (Alloc) Undefined<ELFT>(Name, Undefined<ELFT>::Required);
+  auto *Sym = new (Alloc) Undefined(Name, false, STV_DEFAULT, false);
   resolve(Sym);
   return Sym;
 }
 
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addUndefinedOpt(StringRef Name) {
-  auto *Sym = new (Alloc) Undefined<ELFT>(Name, Undefined<ELFT>::Optional);
+  auto *Sym = new (Alloc) Undefined(Name, false, STV_HIDDEN, true);
   resolve(Sym);
   return Sym;
 }
@@ -130,13 +132,9 @@ template <class ELFT>
 ELFFileBase<ELFT> *
 elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELFT>>> ObjectFiles,
                const SymbolBody *B) {
-  typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename ELFFile<ELFT>::Elf_Sym_Range Elf_Sym_Range;
-
-  const Elf_Sym *Sym = &cast<ELFSymbolBody<ELFT>>(*B).Sym;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : ObjectFiles) {
-    Elf_Sym_Range R = F->getObj().symbols(F->getSymbolTable());
-    if (R.begin() <= Sym && Sym < R.end())
+    ArrayRef<SymbolBody *> Syms = F->getSymbols();
+    if (std::find(Syms.begin(), Syms.end(), B) != Syms.end())
       return F.get();
   }
   return nullptr;
@@ -163,7 +161,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
   SymbolBody *Existing = Sym->Body;
 
   if (Lazy *L = dyn_cast<Lazy>(Existing)) {
-    if (auto *Undef = dyn_cast<Undefined<ELFT>>(New)) {
+    if (auto *Undef = dyn_cast<Undefined>(New)) {
       addMemberFile(Undef, L);
       return;
     }
@@ -211,14 +209,14 @@ template <class ELFT> void SymbolTable<ELFT>::addLazy(Lazy *L) {
   Symbol *Sym = insert(L);
   if (Sym->Body == L)
     return;
-  if (auto *Undef = dyn_cast<Undefined<ELFT>>(Sym->Body)) {
+  if (auto *Undef = dyn_cast<Undefined>(Sym->Body)) {
     Sym->Body = L;
     addMemberFile(Undef, L);
   }
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addMemberFile(Undefined<ELFT> *Undef, Lazy *L) {
+void SymbolTable<ELFT>::addMemberFile(Undefined *Undef, Lazy *L) {
   // Weak undefined symbols should not fetch members from archives.
   // If we were to keep old symbol we would not know that an archive member was
   // available if a strong undefined symbol shows up afterwards in the link.

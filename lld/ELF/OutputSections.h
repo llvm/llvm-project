@@ -35,7 +35,6 @@ template <class ELFT> class MipsReginfoInputSection;
 template <class ELFT> class OutputSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class DefinedRegular;
-template <class ELFT> class ELFSymbolBody;
 
 // Flag to force GOT to be in output if we have relocations
 // that relies on its address.

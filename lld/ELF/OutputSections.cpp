@@ -807,6 +807,7 @@ typename ELFFile<ELFT>::uintX_t lld::elf2::getSymVA(const SymbolBody &S) {
       return Out<ELFT>::Bss->getVA() + SS.OffsetInBSS;
     return 0;
   }
+  case SymbolBody::UndefinedElfKind:
   case SymbolBody::UndefinedKind:
     return 0;
   case SymbolBody::LazyKind:
@@ -1329,6 +1330,16 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
 }
 
 template <class ELFT>
+static const typename llvm::object::ELFFile<ELFT>::Elf_Sym *
+getElfSym(SymbolBody &Body) {
+  if (auto *EBody = dyn_cast<Defined<ELFT>>(&Body))
+    return &EBody->Sym;
+  if (auto *EBody = dyn_cast<UndefinedElf<ELFT>>(&Body))
+    return &EBody->Sym;
+  return nullptr;
+}
+
+template <class ELFT>
 void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
   // Write the internal symbol table contents to the output symbol table
   // pointed by Buf.
@@ -1355,6 +1366,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
         OutSec = Out<ELFT>::Bss;
       break;
     }
+    case SymbolBody::UndefinedElfKind:
     case SymbolBody::UndefinedKind:
     case SymbolBody::DefinedAbsoluteKind:
     case SymbolBody::LazyKind:
@@ -1366,10 +1378,9 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
 
     unsigned char Type = STT_NOTYPE;
     uintX_t Size = 0;
-    if (const auto *EBody = dyn_cast<ELFSymbolBody<ELFT>>(Body)) {
-      const Elf_Sym &InputSym = EBody->Sym;
-      Type = InputSym.getType();
-      Size = InputSym.st_size;
+    if (const Elf_Sym *InputSym = getElfSym<ELFT>(*Body)) {
+      Type = InputSym->getType();
+      Size = InputSym->st_size;
     }
 
     ESym->setBindingAndType(getSymbolBinding(Body), Type);
@@ -1391,8 +1402,8 @@ uint8_t SymbolTableSection<ELFT>::getSymbolBinding(SymbolBody *Body) {
   uint8_t Visibility = Body->getVisibility();
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  if (const auto *EBody = dyn_cast<ELFSymbolBody<ELFT>>(Body))
-    return EBody->Sym.getBinding();
+  if (const Elf_Sym *ESym = getElfSym<ELFT>(*Body))
+    return ESym->getBinding();
   return Body->isWeak() ? STB_WEAK : STB_GLOBAL;
 }
 

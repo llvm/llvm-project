@@ -73,6 +73,24 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
   return 0;
 }
 
+Undefined::Undefined(SymbolBody::Kind K, StringRef N, bool IsWeak,
+                     uint8_t Visibility, bool IsTls)
+    : SymbolBody(K, N, IsWeak, Visibility, IsTls), CanKeepUndefined(false) {}
+
+Undefined::Undefined(StringRef N, bool IsWeak, uint8_t Visibility,
+                     bool CanKeepUndefined)
+    : Undefined(SymbolBody::UndefinedKind, N, IsWeak, Visibility,
+                /*IsTls*/ false) {
+  this->CanKeepUndefined = CanKeepUndefined;
+}
+
+template <typename ELFT>
+UndefinedElf<ELFT>::UndefinedElf(StringRef N, const Elf_Sym &Sym)
+    : Undefined(SymbolBody::UndefinedElfKind, N,
+                Sym.getBinding() == llvm::ELF::STB_WEAK, Sym.getVisibility(),
+                Sym.getType() == llvm::ELF::STT_TLS),
+      Sym(Sym) {}
+
 std::unique_ptr<InputFile> Lazy::getMember() {
   MemoryBufferRef MBRef = File->getMember(&Sym);
 
@@ -88,7 +106,6 @@ template <class ELFT> static void doInitSymbols() {
   DefinedAbsolute<ELFT>::End.setBinding(STB_GLOBAL);
   DefinedAbsolute<ELFT>::IgnoreUndef.setBinding(STB_WEAK);
   DefinedAbsolute<ELFT>::IgnoreUndef.setVisibility(STV_HIDDEN);
-  Undefined<ELFT>::Optional.setVisibility(STV_HIDDEN);
 }
 
 void lld::elf2::initSymbols() {
@@ -102,3 +119,8 @@ template int SymbolBody::compare<ELF32LE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF32BE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF64LE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF64BE>(SymbolBody *Other);
+
+template class lld::elf2::UndefinedElf<ELF32LE>;
+template class lld::elf2::UndefinedElf<ELF32BE>;
+template class lld::elf2::UndefinedElf<ELF64LE>;
+template class lld::elf2::UndefinedElf<ELF64BE>;

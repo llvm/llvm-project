@@ -745,7 +745,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   std::vector<SharedSymbol<ELFT> *> SharedCopySymbols;
   for (auto &P : Symtab.getSymbols()) {
     SymbolBody *Body = P.second->Body;
-    if (auto *U = dyn_cast<Undefined<ELFT>>(Body))
+    if (auto *U = dyn_cast<Undefined>(Body))
       if (!U->isWeak() && !U->canKeepUndefined())
         reportUndefined<ELFT>(Symtab, *Body);
 
