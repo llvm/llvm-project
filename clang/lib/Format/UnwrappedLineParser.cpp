@@ -357,7 +357,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
             ProbablyBracedList =
                 NextTok->isOneOf(tok::comma, tok::period, tok::colon,
                                  tok::r_paren, tok::r_square, tok::l_brace,
-                                 tok::l_paren, tok::ellipsis) ||
+                                 tok::l_square, tok::l_paren, tok::ellipsis) ||
                 (NextTok->is(tok::semi) &&
                  (!ExpectClassBody || LBraceStack.size() != 1)) ||
                 (NextTok->isBinaryOperator() && !NextIsObjCMethod);

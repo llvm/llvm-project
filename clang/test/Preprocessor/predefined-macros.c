@@ -134,3 +134,15 @@
 // RUN: %clang_cc1 %s -E -dM -o - -triple armv6 -target-cpu cortex-m0 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-SYNC_CAS_ARMv6
 // CHECK-SYNC_CAS_ARMv6-NOT: __GCC_HAVE_SYNC_COMPARE_AND_SWAP
+//
+// RUN: %clang_cc1 %s -E -dM -o - -triple mips -target-cpu mips2 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SYNC_CAS_MIPS \
+// RUN:         --check-prefix=CHECK-SYNC_CAS_MIPS32
+// RUN: %clang_cc1 %s -E -dM -o - -triple mips64 -target-cpu mips3 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SYNC_CAS_MIPS \
+// RUN:         --check-prefix=CHECK-SYNC_CAS_MIPS64
+// CHECK-SYNC_CAS_MIPS:       __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1
+// CHECK-SYNC_CAS_MIPS:       __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2
+// CHECK-SYNC_CAS_MIPS:       __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
+// CHECK-SYNC_CAS_MIPS32-NOT: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
+// CHECK-SYNC_CAS_MIPS64:     __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8

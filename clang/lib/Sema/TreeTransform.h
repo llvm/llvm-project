@@ -6275,6 +6275,11 @@ TreeTransform<Derived>::TransformForStmt(ForStmt *S) {
   if (Init.isInvalid())
     return StmtError();
 
+  // In OpenMP loop region loop control variable must be captured and be
+  // private. Perform analysis of first part (if any).
+  if (getSema().getLangOpts().OpenMP && Init.isUsable())
+    getSema().ActOnOpenMPLoopInitialization(S->getForLoc(), Init.get());
+
   // Transform the condition
   ExprResult Cond;
   VarDecl *ConditionVar = nullptr;

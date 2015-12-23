@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -ffreestanding -triple=i686-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 | FileCheck %s
 // REQUIRES: x86-registered-target
 
 // Also test serialization of atomic operations here, to avoid duplicating the
 // test.
-// RUN: %clang_cc1 %s -emit-pch -o %t -ffreestanding -triple=i686-apple-darwin9
-// RUN: %clang_cc1 %s -include-pch %t -ffreestanding -triple=i686-apple-darwin9 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-pch -o %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9
+// RUN: %clang_cc1 %s -include-pch %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 -emit-llvm -o - | FileCheck %s
 #ifndef ALREADY_INCLUDED
 #define ALREADY_INCLUDED
 
@@ -153,6 +153,14 @@ _Bool fi4c(atomic_int *i) {
   // CHECK: cmpxchg i32*
   int cmp = 0;
   return atomic_compare_exchange_strong(i, &cmp, 1);
+}
+
+#define _AS1 __attribute__((address_space(1)))
+_Bool fi4d(_Atomic(int) *i, int _AS1 *ptr2) {
+  // CHECK-LABEL: @fi4d(
+  // CHECK: [[EXPECTED:%[.0-9A-Z_a-z]+]] = load i32, i32 addrspace(1)* %{{[0-9]+}}
+  // CHECK: cmpxchg i32* %{{[0-9]+}}, i32 [[EXPECTED]], i32 %{{[0-9]+}} acquire acquire
+  return __c11_atomic_compare_exchange_strong(i, ptr2, 1, memory_order_acquire, memory_order_acquire);
 }
 
 float ff1(_Atomic(float) *d) {

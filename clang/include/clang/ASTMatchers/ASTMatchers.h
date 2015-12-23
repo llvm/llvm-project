@@ -3762,6 +3762,18 @@ AST_MATCHER_FUNCTION_P_OVERLOAD(internal::BindableMatcher<TypeLoc>, loc,
       new internal::TypeLocTypeMatcher(InnerMatcher));
 }
 
+/// \brief Matches type \c bool.
+///
+/// Given
+/// \code
+///  struct S { bool func(); };
+/// \endcode
+/// functionDecl(returns(booleanType()))
+///   matches "bool func();"
+AST_MATCHER(Type, booleanType) {
+  return Node.isBooleanType();
+}
+
 /// \brief Matches type \c void.
 ///
 /// Given

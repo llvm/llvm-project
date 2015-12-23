@@ -4146,6 +4146,13 @@ TEST(TypeMatching, MatchesTypes) {
   EXPECT_TRUE(matches("struct S {};", qualType().bind("loc")));
 }
 
+TEST(TypeMatching, MatchesBool) {
+  EXPECT_TRUE(matches("struct S { bool func(); };",
+                      cxxMethodDecl(returns(booleanType()))));
+  EXPECT_TRUE(notMatches("struct S { void func(); };",
+                         cxxMethodDecl(returns(booleanType()))));
+}
+
 TEST(TypeMatching, MatchesVoid) {
   EXPECT_TRUE(matches("struct S { void func(); };",
                       cxxMethodDecl(returns(voidType()))));

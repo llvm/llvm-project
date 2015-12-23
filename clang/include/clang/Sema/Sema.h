@@ -7778,8 +7778,10 @@ private:
   /// \brief Initialization of data-sharing attributes stack.
   void InitDataSharingAttributesStack();
   void DestroyDataSharingAttributesStack();
-  ExprResult VerifyPositiveIntegerConstantInClause(Expr *Op,
-                                                   OpenMPClauseKind CKind);
+  ExprResult
+  VerifyPositiveIntegerConstantInClause(Expr *Op, OpenMPClauseKind CKind,
+                                        bool StrictlyPositive = true);
+
 public:
   /// \brief Return true if the provided declaration \a VD should be captured by
   /// reference in the provided scope \a RSI. This will take into account the

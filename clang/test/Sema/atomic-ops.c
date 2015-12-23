@@ -85,6 +85,9 @@ _Static_assert(__atomic_always_lock_free(4, &i64), "");
 _Static_assert(!__atomic_always_lock_free(8, &i32), "");
 _Static_assert(__atomic_always_lock_free(8, &i64), "");
 
+#define _AS1 __attribute__((address_space(1)))
+#define _AS2 __attribute__((address_space(2)))
+
 void f(_Atomic(int) *i, const _Atomic(int) *ci,
        _Atomic(int*) *p, _Atomic(float) *d,
        int *I, const int *CI,
@@ -189,6 +192,9 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   _Bool cmpexch_9 = __atomic_compare_exchange(I, I, I, 0, memory_order_seq_cst, memory_order_seq_cst);
   (void)__atomic_compare_exchange(CI, I, I, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
   (void)__atomic_compare_exchange(I, CI, I, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
+
+  // Pointers to different address spaces are allowed.
+  _Bool cmpexch_10 = __c11_atomic_compare_exchange_strong((_Atomic int _AS1 *)0x308, (int _AS2 *)0x309, 1, memory_order_seq_cst, memory_order_seq_cst);
 
   const volatile int flag_k = 0;
   volatile int flag = 0;
