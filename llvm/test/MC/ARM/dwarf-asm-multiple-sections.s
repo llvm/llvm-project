@@ -1,6 +1,8 @@
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -fdebug-compilation-dir=/tmp
-// RUN: llvm-dwarfdump %t | FileCheck -check-prefix DWARF %s
+// RUN: llvm-dwarfdump %t | FileCheck -check-prefix DWARF -check-prefix DWARF4 %s
 // RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC %s
+// RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 3 -fdebug-compilation-dir=/tmp
+// RUN: llvm-dwarfdump %t | FileCheck -check-prefix DWARF -check-prefix DWARF3 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 2 2>&1 | FileCheck -check-prefix VERSION %s
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 1 2>&1 | FileCheck -check-prefix DWARF1 %s
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 5 2>&1 | FileCheck -check-prefix DWARF5 %s
@@ -15,8 +17,10 @@ b:
 // DWARF: .debug_abbrev contents:
 // DWARF: Abbrev table for offset: 0x00000000
 // DWARF: [1] DW_TAG_compile_unit DW_CHILDREN_yes
-// DWARF:         DW_AT_stmt_list DW_FORM_data4
-// DWARF:         DW_AT_ranges    DW_FORM_data4
+// DWARF3:        DW_AT_stmt_list DW_FORM_data4
+// DWARF4:        DW_AT_stmt_list DW_FORM_sec_offset
+// DWARF3:        DW_AT_ranges    DW_FORM_data4
+// DWARF4:        DW_AT_ranges    DW_FORM_sec_offset
 // DWARF:         DW_AT_name      DW_FORM_string
 // DWARF:         DW_AT_comp_dir  DW_FORM_string
 // DWARF:         DW_AT_producer  DW_FORM_string
@@ -24,8 +28,9 @@ b:
 
 // DWARF: .debug_info contents:
 // DWARF: 0x{{[0-9a-f]+}}: DW_TAG_compile_unit [1]
-// CHECK-NOT-DWARF: DW_TAG_
-// DWARF: DW_AT_ranges [DW_FORM_data4]      (0x00000000
+// DWARF-NOT: DW_TAG_
+// DWARF3: DW_AT_ranges [DW_FORM_data4]           (0x00000000
+// DWARF4: DW_AT_ranges [DW_FORM_sec_offset]      (0x00000000
 
 // DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2] *
 // DWARF-NEXT: DW_AT_name [DW_FORM_string]     ("a")
@@ -41,10 +46,10 @@ b:
 
 
 // DWARF: .debug_line contents:
-// DWARF:      0x0000000000000000      9      0      1   0   0  is_stmt
-// DWARF-NEXT: 0x0000000000000004      9      0      1   0   0  is_stmt end_sequence
-// DWARF-NEXT: 0x0000000000000000     13      0      1   0   0  is_stmt
-// DWARF-NEXT: 0x0000000000000004     13      0      1   0   0  is_stmt end_sequence
+// DWARF:      0x0000000000000000     11      0      1   0   0  is_stmt
+// DWARF-NEXT: 0x0000000000000004     11      0      1   0   0  is_stmt end_sequence
+// DWARF-NEXT: 0x0000000000000000     15      0      1   0   0  is_stmt
+// DWARF-NEXT: 0x0000000000000004     15      0      1   0   0  is_stmt end_sequence
 
 
 // DWARF: .debug_ranges contents:

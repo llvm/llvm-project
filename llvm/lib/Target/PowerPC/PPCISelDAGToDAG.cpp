@@ -414,8 +414,8 @@ static unsigned getBranchHint(unsigned PCC, FunctionLoweringInfo *FuncInfo,
   const BasicBlock *TBB = BBTerm->getSuccessor(0);
   const BasicBlock *FBB = BBTerm->getSuccessor(1);
 
-  uint32_t TWeight = FuncInfo->BPI->getEdgeWeight(BB, TBB);
-  uint32_t FWeight = FuncInfo->BPI->getEdgeWeight(BB, FBB);
+  auto TProb = FuncInfo->BPI->getEdgeProbability(BB, TBB);
+  auto FProb = FuncInfo->BPI->getEdgeProbability(BB, FBB);
 
   // We only want to handle cases which are easy to predict at static time, e.g.
   // C++ throw statement, that is very likely not taken, or calling never
@@ -432,24 +432,22 @@ static unsigned getBranchHint(unsigned PCC, FunctionLoweringInfo *FuncInfo,
   // 5. PH/ZH/FPH          20:12
   const uint32_t Threshold = 10000;
 
-  // Minimal weight should be at least 1
-  if (std::max(TWeight, FWeight) /
-      std::max(1u, std::min(TWeight, FWeight)) < Threshold)
+  if (std::max(TProb, FProb) / Threshold < std::min(TProb, FProb))
     return PPC::BR_NO_HINT;
 
   DEBUG(dbgs() << "Use branch hint for '" << FuncInfo->Fn->getName() << "::"
                << BB->getName() << "'\n"
-               << " -> " << TBB->getName() << ": " << TWeight << "\n"
-               << " -> " << FBB->getName() << ": " << FWeight << "\n");
+               << " -> " << TBB->getName() << ": " << TProb << "\n"
+               << " -> " << FBB->getName() << ": " << FProb << "\n");
 
   const BasicBlockSDNode *BBDN = cast<BasicBlockSDNode>(DestMBB);
 
-  // If Dest BasicBlock is False-BasicBlock (FBB), swap branch weight,
-  // because we want 'TWeight' stands for 'branch weight' to Dest BasicBlock
+  // If Dest BasicBlock is False-BasicBlock (FBB), swap branch probabilities,
+  // because we want 'TProb' stands for 'branch probability' to Dest BasicBlock
   if (BBDN->getBasicBlock()->getBasicBlock() != TBB)
-    std::swap(TWeight, FWeight);
+    std::swap(TProb, FProb);
 
-  return (TWeight > FWeight) ? PPC::BR_TAKEN_HINT : PPC::BR_NONTAKEN_HINT;
+  return (TProb > FProb) ? PPC::BR_TAKEN_HINT : PPC::BR_NONTAKEN_HINT;
 }
 
 // isOpcWithIntImmediate - This method tests to see if the node is a specific

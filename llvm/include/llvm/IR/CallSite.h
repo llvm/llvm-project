@@ -118,6 +118,41 @@ public:
   /// Determine whether this Use is the callee operand's Use.
   bool isCallee(const Use *U) const { return getCallee() == U; }
 
+  /// \brief Determine whether the passed iterator points to an argument
+  /// operand.
+  bool isArgOperand(Value::const_user_iterator UI) const {
+    return isArgOperand(&UI.getUse());
+  }
+
+  /// \brief Determine whether the passed use points to an argument operand.
+  bool isArgOperand(const Use *U) const {
+    return arg_begin() <= U && U < arg_end();
+  }
+
+  /// \brief Determine whether the passed iterator points to a bundle operand.
+  bool isBundleOperand(Value::const_user_iterator UI) const {
+    return isBundleOperand(&UI.getUse());
+  }
+
+  /// \brief Determine whether the passed use points to a bundle operand.
+  bool isBundleOperand(const Use *U) const {
+    if (!hasOperandBundles())
+      return false;
+    unsigned OperandNo = U->getOperandNo();
+    return getBundleOperandsStartIndex() <= OperandNo &&
+           OperandNo < getBundleOperandsEndIndex();
+  }
+
+  /// \brief Determine whether the passed iterator points to a data operand.
+  bool isDataOperand(Value::const_user_iterator UI) const {
+    return isDataOperand(&UI.getUse());
+  }
+
+  /// \brief Determine whether the passed use points to a data operand.
+  bool isDataOperand(const Use *U) const {
+    return data_operands_begin() <= U && U < data_operands_end();
+  }
+
   ValTy *getArgument(unsigned ArgNo) const {
     assert(arg_begin() + ArgNo < arg_end() && "Argument # out of range!");
     return *(arg_begin() + ArgNo);
@@ -139,8 +174,7 @@ public:
   /// it.
   unsigned getArgumentNo(const Use *U) const {
     assert(getInstruction() && "Not a call or invoke instruction!");
-    assert(arg_begin() <= U && U < arg_end()
-           && "Argument # out of range!");
+    assert(isArgOperand(U) && "Argument # out of range!");
     return U - arg_begin();
   }
 
@@ -153,6 +187,21 @@ public:
   }
   bool arg_empty() const { return arg_end() == arg_begin(); }
   unsigned arg_size() const { return unsigned(arg_end() - arg_begin()); }
+
+  /// Given a value use iterator, returns the data operand that corresponds to
+  /// it.
+  /// Iterator must actually correspond to a data operand.
+  unsigned getDataOperandNo(Value::const_user_iterator UI) const {
+    return getDataOperandNo(&UI.getUse());
+  }
+
+  /// Given a use for a data operand, get the data operand number that
+  /// corresponds to it.
+  unsigned getDataOperandNo(const Use *U) const {
+    assert(getInstruction() && "Not a call or invoke instruction!");
+    assert(isDataOperand(U) && "Data operand # out of range!");
+    return U - data_operands_begin();
+  }
 
   /// Type of iterator to use when looping over data operands at this call site
   /// (see below).
@@ -354,7 +403,7 @@ public:
     CALLSITE_DELEGATE_SETTER(setDoesNotThrow());
   }
 
-  int getNumOperandBundles() const {
+  unsigned getNumOperandBundles() const {
     CALLSITE_DELEGATE_GETTER(getNumOperandBundles());
   }
 
@@ -362,7 +411,15 @@ public:
     CALLSITE_DELEGATE_GETTER(hasOperandBundles());
   }
 
-  int getNumTotalBundleOperands() const {
+  unsigned getBundleOperandsStartIndex() const {
+    CALLSITE_DELEGATE_GETTER(getBundleOperandsStartIndex());
+  }
+
+  unsigned getBundleOperandsEndIndex() const {
+    CALLSITE_DELEGATE_GETTER(getBundleOperandsEndIndex());
+  }
+
+  unsigned getNumTotalBundleOperands() const {
     CALLSITE_DELEGATE_GETTER(getNumTotalBundleOperands());
   }
 

@@ -33,6 +33,7 @@ class AttributeSetImpl;
 class AttributeSetNode;
 class Constant;
 template<typename T> struct DenseMapInfo;
+class Function;
 class LLVMContext;
 class Type;
 
@@ -531,6 +532,13 @@ namespace AttributeFuncs {
 
 /// \brief Which attributes cannot be applied to a type.
 AttrBuilder typeIncompatible(Type *Ty);
+
+/// \returns Return true if the two functions have compatible target-independent
+/// attributes for inlining purposes.
+bool areInlineCompatible(const Function &Caller, const Function &Callee);
+
+/// \brief Merge caller's and callee's attributes.
+void mergeAttributesForInlining(Function &Caller, const Function &Callee);
 
 } // end AttributeFuncs namespace
 

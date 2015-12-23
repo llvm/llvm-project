@@ -125,7 +125,7 @@ define void @test4() gc "statepoint-example" {
 ; CHECK: gc.relocate
 ; CHECK: @use(i8 addrspace(1)* %res.relocated)
   %safepoint_token2 = tail call i32 (i64, i32, i8 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8f(i64 0, i32 0, i8 addrspace(1)* ()* undef, i32 0, i32 0, i32 0, i32 0)
-  %res = call i8 addrspace(1)* @llvm.experimental.gc.result.ptr.p1i8(i32 %safepoint_token2)
+  %res = call i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(i32 %safepoint_token2)
   call i32 (i64, i32, i8 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8f(i64 0, i32 0, i8 addrspace(1)* ()* undef, i32 0, i32 0, i32 0, i32 0)
   call void (...) @use(i8 addrspace(1)* %res)
   unreachable
@@ -289,7 +289,7 @@ declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32
 declare i32 @llvm.experimental.gc.statepoint.p0f_p1i8f(i64, i32, i8 addrspace(1)* ()*, i32, i32, ...)
 declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidi64f(i64, i32, void (i64)*, i32, i32, ...)
 declare i32 @llvm.experimental.gc.statepoint.p0f_i32p1i64f(i64, i32, i32 (i64 addrspace(1)*)*, i32, i32, ...)
-declare i8 addrspace(1)* @llvm.experimental.gc.result.ptr.p1i8(i32) #3
+declare i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(i32) #3
 
 
 

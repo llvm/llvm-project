@@ -79,7 +79,62 @@ define i32 @nopads() #0 personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT: ret i32 0
 ; CHECK-NOT: __ehhandler$nopads
 
+; CHECK-LABEL: define void @PR25926()
+define void @PR25926() personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  ; CHECK: entry:
+  ; CHECK:   store i32 -1
+  ; CHECK:   store i32 0
+  ; CHECK:   invoke void @_CxxThrowException(
+  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null)
+          to label %unreachable unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch] unwind to caller
+
+catch:                                            ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+  ; CHECK: catch:
+  ; CHECK:   store i32 3
+  ; CHECK:   invoke void @_CxxThrowException(
+  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) [ "funclet"(token %1) ]
+          to label %unreachable1 unwind label %catch.dispatch1
+
+catch.dispatch1:                                  ; preds = %catch
+  %2 = catchswitch within %1 [label %catch2] unwind label %ehcleanup
+
+catch2:                                           ; preds = %catch.dispatch1
+  %3 = catchpad within %2 [i8* null, i32 64, i8* null]
+  catchret from %3 to label %try.cont
+
+try.cont:                                         ; preds = %catch2
+  ; CHECK: try.cont:
+  ; CHECK:   store i32 1
+  ; CHECK:   call void @dtor()
+  call void @dtor() #3 [ "funclet"(token %1) ]
+  catchret from %1 to label %try.cont4
+
+try.cont4:                                        ; preds = %try.cont
+  ret void
+
+ehcleanup:                                        ; preds = %catch.dispatch1
+  %4 = cleanuppad within %1 []
+  ; CHECK: ehcleanup:
+  ; CHECK:   store i32 -1
+  ; CHECK:   call void @dtor()
+  call void @dtor() #3 [ "funclet"(token %4) ]
+  cleanupret from %4 unwind to caller
+
+unreachable:                                      ; preds = %entry
+  unreachable
+
+unreachable1:                                     ; preds = %catch
+  unreachable
+}
+
 declare void @g(i32) #0
+
+declare void @dtor()
 
 declare x86_stdcallcc void @_CxxThrowException(i8*, %eh.ThrowInfo*)
 

@@ -1689,6 +1689,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::BUILD_VECTOR,        VT, Custom);
       setOperationAction(ISD::VSELECT,             VT, Legal);
+      setOperationAction(ISD::SRL,                 VT, Custom);
+      setOperationAction(ISD::SHL,                 VT, Custom);
+      setOperationAction(ISD::SRA,                 VT, Custom);
 
       setOperationAction(ISD::AND,    VT, Promote);
       AddPromotedToType (ISD::AND,    VT, MVT::v8i64);
@@ -18358,7 +18361,9 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
           Op.getOpcode() == ISD::SRA && !Subtarget->hasXOP())
         return ArithmeticShiftRight64(ShiftAmt);
 
-      if (VT == MVT::v16i8 || (Subtarget->hasInt256() && VT == MVT::v32i8)) {
+      if (VT == MVT::v16i8 ||
+          (Subtarget->hasInt256() && VT == MVT::v32i8) ||
+          VT == MVT::v64i8) {
         unsigned NumElts = VT.getVectorNumElements();
         MVT ShiftVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
@@ -18382,10 +18387,8 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
                                                    R, ShiftAmt, DAG);
           SHL = DAG.getBitcast(VT, SHL);
           // Zero out the rightmost bits.
-          SmallVector<SDValue, 32> V(
-              NumElts, DAG.getConstant(uint8_t(-1U << ShiftAmt), dl, MVT::i8));
           return DAG.getNode(ISD::AND, dl, VT, SHL,
-                             DAG.getNode(ISD::BUILD_VECTOR, dl, VT, V));
+                             DAG.getConstant(uint8_t(-1U << ShiftAmt), dl, VT));
         }
         if (Op.getOpcode() == ISD::SRL) {
           // Make a large shift.
@@ -18393,18 +18396,14 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
                                                    R, ShiftAmt, DAG);
           SRL = DAG.getBitcast(VT, SRL);
           // Zero out the leftmost bits.
-          SmallVector<SDValue, 32> V(
-              NumElts, DAG.getConstant(uint8_t(-1U) >> ShiftAmt, dl, MVT::i8));
           return DAG.getNode(ISD::AND, dl, VT, SRL,
-                             DAG.getNode(ISD::BUILD_VECTOR, dl, VT, V));
+                             DAG.getConstant(uint8_t(-1U) >> ShiftAmt, dl, VT));
         }
         if (Op.getOpcode() == ISD::SRA) {
           // ashr(R, Amt) === sub(xor(lshr(R, Amt), Mask), Mask)
           SDValue Res = DAG.getNode(ISD::SRL, dl, VT, R, Amt);
-          SmallVector<SDValue, 32> V(NumElts,
-                                     DAG.getConstant(128 >> ShiftAmt, dl,
-                                                     MVT::i8));
-          SDValue Mask = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, V);
+
+          SDValue Mask = DAG.getConstant(128 >> ShiftAmt, dl, VT);
           Res = DAG.getNode(ISD::XOR, dl, VT, Res, Mask);
           Res = DAG.getNode(ISD::SUB, dl, VT, Res, Mask);
           return Res;

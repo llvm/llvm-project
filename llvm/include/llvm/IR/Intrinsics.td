@@ -579,12 +579,6 @@ def int_experimental_gc_relocate : Intrinsic<[llvm_anyptr_ty],
                                 [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                                 [IntrReadMem]>;
 
-// Deprecated: will be removed in a couple of weeks
-def int_experimental_gc_result_int : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty]>;
-def int_experimental_gc_result_float : Intrinsic<[llvm_anyfloat_ty],
-                                                 [llvm_i32_ty]>;
-def int_experimental_gc_result_ptr : Intrinsic<[llvm_anyptr_ty], [llvm_i32_ty]>;
-
 //===-------------------------- Other Intrinsics --------------------------===//
 //
 def int_flt_rounds : Intrinsic<[llvm_i32_ty]>,

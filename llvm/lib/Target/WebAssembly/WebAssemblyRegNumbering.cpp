@@ -82,7 +82,8 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Then assign regular WebAssembly registers for all remaining used
-  // virtual registers.
+  // virtual registers. TODO: Consider sorting the registers by frequency of
+  // use, to maximize usage of small immediate fields.
   unsigned NumArgRegs = MFI.getParams().size();
   unsigned NumVRegs = MF.getRegInfo().getNumVirtRegs();
   unsigned NumStackRegs = 0;

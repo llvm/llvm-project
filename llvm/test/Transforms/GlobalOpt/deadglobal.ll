@@ -1,10 +1,13 @@
 ; RUN: opt < %s -globalopt -S | FileCheck %s
 
 @G1 = internal global i32 123            ; <i32*> [#uses=1]
+@A1 = internal alias i32, i32* @G1
 
 ; CHECK-NOT: @G1
 ; CHECK: @G2
 ; CHECK-NOT: @G3
+
+; CHECK-NOT: @A1
 
 define void @foo1() {
 ; CHECK: define void @foo

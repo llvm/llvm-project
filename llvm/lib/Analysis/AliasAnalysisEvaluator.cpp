@@ -167,10 +167,9 @@ bool AAEval::runOnFunction(Function &F) {
       if (!isa<Function>(Callee) && isInterestingPointer(Callee))
         Pointers.insert(Callee);
       // Consider formals.
-      for (CallSite::arg_iterator AI = CS.arg_begin(), AE = CS.arg_end();
-           AI != AE; ++AI)
-        if (isInterestingPointer(*AI))
-          Pointers.insert(*AI);
+      for (Use &DataOp : CS.data_ops())
+        if (isInterestingPointer(DataOp))
+          Pointers.insert(DataOp);
       CallSites.insert(CS);
     } else {
       // Consider all operands.

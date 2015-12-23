@@ -124,7 +124,7 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       assert(Inverted);
       BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::BR_IF))
           .addReg(Cond)
-          .addMBB(MI->getOperand(1).getMBB());
+          .addOperand(MI->getOperand(1));
       MBB.erase(MI);
     }
   }

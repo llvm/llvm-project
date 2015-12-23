@@ -11,16 +11,19 @@ LIBRARYNAME = LLVMCore
 BUILD_ARCHIVE = 1
 
 BUILT_SOURCES = $(PROJ_OBJ_ROOT)/include/llvm/IR/Intrinsics.gen \
-		 $(PROJ_OBJ_ROOT)/include/llvm/IR/Attributes.inc
+		 $(PROJ_OBJ_ROOT)/include/llvm/IR/Attributes.inc \
+		 $(PROJ_OBJ_ROOT)/lib/IR/AttributesCompatFunc.inc
 
 include $(LEVEL)/Makefile.common
 
 GENFILE:=$(PROJ_OBJ_ROOT)/include/llvm/IR/Intrinsics.gen
 ATTRINCFILE:=$(PROJ_OBJ_ROOT)/include/llvm/IR/Attributes.inc
+ATTRCOMPATFUNCINCFILE:=$(PROJ_OBJ_ROOT)/lib/IR/AttributesCompatFunc.inc
 
 INTRINSICTD  := $(PROJ_SRC_ROOT)/include/llvm/IR/Intrinsics.td
 INTRINSICTDS := $(wildcard $(PROJ_SRC_ROOT)/include/llvm/IR/Intrinsics*.td)
 ATTRIBUTESTD  := $(PROJ_SRC_ROOT)/include/llvm/IR/Attributes.td
+ATTRCOMPATFUNCTD  := $(PROJ_SRC_ROOT)/lib/IR/AttributesCompatFunc.td
 
 $(ObjDir)/Intrinsics.gen.tmp: $(ObjDir)/.dir $(INTRINSICTDS) $(LLVM_TBLGEN)
 	$(Echo) Building Intrinsics.gen.tmp from Intrinsics.td
@@ -38,6 +41,15 @@ $(ObjDir)/Attributes.inc.tmp: $(ObjDir)/.dir $(ATTRIBUTESTD) $(LLVM_TBLGEN)
 $(ATTRINCFILE): $(ObjDir)/Attributes.inc.tmp $(PROJ_OBJ_ROOT)/include/llvm/IR/.dir
 	$(Verb) $(CMP) -s $@ $< || ( $(CP) $< $@ && \
 	  $(EchoCmd) Updated Attributes.inc because Attributes.inc.tmp \
+	    changed significantly. )
+
+$(ObjDir)/AttributesCompatFunc.inc.tmp: $(ObjDir)/.dir $(ATTRCOMPATFUNCTD) $(LLVM_TBLGEN)
+	$(Echo) Building AttributesCompatFunc.inc.tmp from $(ATTRCOMPATFUNCTD)
+	$(Verb) $(LLVMTableGen) $(call SYSPATH, $(ATTRCOMPATFUNCTD)) -o $(call SYSPATH, $@) -gen-attrs
+
+$(ATTRCOMPATFUNCINCFILE): $(ObjDir)/AttributesCompatFunc.inc.tmp $(PROJ_OBJ_ROOT)/include/llvm/IR/.dir
+	$(Verb) $(CMP) -s $@ $< || ( $(CP) $< $@ && \
+	  $(EchoCmd) Updated AttributesCompatFunc.inc because AttributesCompatFunc.inc.tmp \
 	    changed significantly. )
 
 install-local:: $(GENFILE)

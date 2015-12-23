@@ -171,3 +171,28 @@ def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
 def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
+
+class CompatRule<string F> {
+  // The name of the function called to check the attribute of the caller and
+  // callee and decide whether inlining should be allowed. The function's
+  // signature must match "bool(const Function&, const Function &)", where the
+  // first parameter is the reference to the caller and the second parameter is
+  // the reference to the callee. It must return false if the attributes of the
+  // caller and callee are incompatible, and true otherwise.
+  string CompatFunc = F;
+}
+
+def : CompatRule<"isEqual<SanitizeAddressAttr>">;
+def : CompatRule<"isEqual<SanitizeThreadAttr>">;
+def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
+
+class MergeRule<string F> {
+  // The name of the function called to merge the attributes of the caller and
+  // callee. The function's signature must match
+  // "void(Function&, const Function &)", where the first parameter is the
+  // reference to the caller and the second parameter is the reference to the
+  // callee.
+  string MergeFunc = F;
+}
+
+def : MergeRule<"adjustCallerSSPLevel">;

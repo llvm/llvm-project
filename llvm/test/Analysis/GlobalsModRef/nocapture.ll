@@ -1,4 +1,4 @@
-; RUN: opt < %s -globals-aa -aa-eval -print-all-alias-modref-info -S 2>&1 | FileCheck %s
+; RUN: opt < %s -globals-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
@@ -44,4 +44,14 @@ entry:
   %add = add nsw i32 %z2, %z1
   store i32 %add, i32* %q, align 4
   ret i32 4
+}
+
+declare void @g3()
+
+; CHECK-LABEL: Function: f3
+; CHECK: NoAlias: i32* %p, i32* @b
+define void @f3(i32* nocapture readonly %p) {
+entry:
+  tail call void @g3() [ "deopt"(i32* @b, i32 *%p) ]
+  unreachable
 }
