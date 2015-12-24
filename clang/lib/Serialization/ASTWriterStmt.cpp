@@ -51,7 +51,7 @@ namespace clang {
 
 void ASTStmtWriter::
 AddTemplateKWAndArgsInfo(const ASTTemplateKWAndArgsInfo &Args) {
-  Writer.AddSourceLocation(Args.getTemplateKeywordLoc(), Record);
+  Writer.AddSourceLocation(Args.TemplateKWLoc, Record);
   Writer.AddSourceLocation(Args.LAngleLoc, Record);
   Writer.AddSourceLocation(Args.RAngleLoc, Record);
   for (unsigned i=0; i != Args.NumTemplateArgs; ++i)

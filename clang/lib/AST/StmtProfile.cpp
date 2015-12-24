@@ -1275,8 +1275,7 @@ void StmtProfiler::VisitOverloadExpr(const OverloadExpr *S) {
   VisitName(S->getName());
   ID.AddBoolean(S->hasExplicitTemplateArgs());
   if (S->hasExplicitTemplateArgs())
-    VisitTemplateArguments(S->getExplicitTemplateArgs().getTemplateArgs(),
-                           S->getExplicitTemplateArgs().NumTemplateArgs);
+    VisitTemplateArguments(S->getTemplateArgs(), S->getNumTemplateArgs());
 }
 
 void

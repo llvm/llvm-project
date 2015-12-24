@@ -1097,7 +1097,7 @@ public:
   /// this name, if any.
   SourceLocation getTemplateKeywordLoc() const {
     if (!hasTemplateKWAndArgsInfo()) return SourceLocation();
-    return getTemplateKWAndArgsInfo()->getTemplateKeywordLoc();
+    return getTemplateKWAndArgsInfo()->TemplateKWLoc;
   }
 
   /// \brief Retrieve the location of the left angle bracket starting the
@@ -1122,32 +1122,11 @@ public:
   /// explicit template argument list.
   bool hasExplicitTemplateArgs() const { return getLAngleLoc().isValid(); }
 
-  /// \brief Retrieve the explicit template argument list that followed the
-  /// member template name.
-  ASTTemplateArgumentListInfo &getExplicitTemplateArgs() {
-    assert(hasExplicitTemplateArgs());
-    return *getTemplateKWAndArgsInfo();
-  }
-
-  /// \brief Retrieve the explicit template argument list that followed the
-  /// member template name.
-  const ASTTemplateArgumentListInfo &getExplicitTemplateArgs() const {
-    return const_cast<DeclRefExpr *>(this)->getExplicitTemplateArgs();
-  }
-
-  /// \brief Retrieves the optional explicit template arguments.
-  /// This points to the same data as getExplicitTemplateArgs(), but
-  /// returns null if there are no explicit template arguments.
-  const ASTTemplateArgumentListInfo *getOptionalExplicitTemplateArgs() const {
-    if (!hasExplicitTemplateArgs()) return nullptr;
-    return &getExplicitTemplateArgs();
-  }
-
   /// \brief Copies the template arguments (if present) into the given
   /// structure.
   void copyTemplateArgumentsInto(TemplateArgumentListInfo &List) const {
     if (hasExplicitTemplateArgs())
-      getExplicitTemplateArgs().copyInto(List);
+      getTemplateKWAndArgsInfo()->copyInto(List);
   }
 
   /// \brief Retrieve the template arguments provided as part of this
@@ -1156,7 +1135,7 @@ public:
     if (!hasExplicitTemplateArgs())
       return nullptr;
 
-    return getExplicitTemplateArgs().getTemplateArgs();
+    return getTemplateKWAndArgsInfo()->getTemplateArgs();
   }
 
   /// \brief Retrieve the number of template arguments provided as part of this
@@ -1165,7 +1144,7 @@ public:
     if (!hasExplicitTemplateArgs())
       return 0;
 
-    return getExplicitTemplateArgs().NumTemplateArgs;
+    return getTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
   /// \brief Returns true if this expression refers to a function that
@@ -2502,7 +2481,7 @@ public:
   /// the member name, if any.
   SourceLocation getTemplateKeywordLoc() const {
     if (!HasTemplateKWAndArgsInfo) return SourceLocation();
-    return getTemplateKWAndArgsInfo()->getTemplateKeywordLoc();
+    return getTemplateKWAndArgsInfo()->TemplateKWLoc;
   }
 
   /// \brief Retrieve the location of the left angle bracket starting the
@@ -2530,30 +2509,7 @@ public:
   /// structure.
   void copyTemplateArgumentsInto(TemplateArgumentListInfo &List) const {
     if (hasExplicitTemplateArgs())
-      getExplicitTemplateArgs().copyInto(List);
-  }
-
-  /// \brief Retrieve the explicit template argument list that
-  /// follow the member template name.  This must only be called on an
-  /// expression with explicit template arguments.
-  ASTTemplateArgumentListInfo &getExplicitTemplateArgs() {
-    assert(hasExplicitTemplateArgs());
-    return *getTemplateKWAndArgsInfo();
-  }
-
-  /// \brief Retrieve the explicit template argument list that
-  /// followed the member template name.  This must only be called on
-  /// an expression with explicit template arguments.
-  const ASTTemplateArgumentListInfo &getExplicitTemplateArgs() const {
-    return const_cast<MemberExpr *>(this)->getExplicitTemplateArgs();
-  }
-
-  /// \brief Retrieves the optional explicit template arguments.
-  /// This points to the same data as getExplicitTemplateArgs(), but
-  /// returns null if there are no explicit template arguments.
-  const ASTTemplateArgumentListInfo *getOptionalExplicitTemplateArgs() const {
-    if (!hasExplicitTemplateArgs()) return nullptr;
-    return &getExplicitTemplateArgs();
+      getTemplateKWAndArgsInfo()->copyInto(List);
   }
 
   /// \brief Retrieve the template arguments provided as part of this
@@ -2562,7 +2518,7 @@ public:
     if (!hasExplicitTemplateArgs())
       return nullptr;
 
-    return getExplicitTemplateArgs().getTemplateArgs();
+    return getTemplateKWAndArgsInfo()->getTemplateArgs();
   }
 
   /// \brief Retrieve the number of template arguments provided as part of this
@@ -2571,7 +2527,7 @@ public:
     if (!hasExplicitTemplateArgs())
       return 0;
 
-    return getExplicitTemplateArgs().NumTemplateArgs;
+    return getTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
   /// \brief Retrieve the member declaration name info.
