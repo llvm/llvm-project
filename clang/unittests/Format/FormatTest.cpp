@@ -5613,6 +5613,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   Left.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("x = *a(x) = *a(y);", Left);
   verifyFormat("for (;; * = b) {\n}", Left);
+  verifyFormat("return *this += 1;", Left);
 
   verifyIndependentOfContext("a = *(x + y);");
   verifyIndependentOfContext("a = &(x + y);");
@@ -6043,6 +6044,8 @@ TEST_F(FormatTest, BreaksLongDeclarations) {
 TEST_F(FormatTest, FormatsArrays) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaa[aaaaaaaaaaaaaaaaaaaaaaaaa]\n"
                "                         [bbbbbbbbbbbbbbbbbbbbbbbbb] = c;");
+  verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaa[aaaaaaaaaaa(aaaaaaaaaaaa)]\n"
+               "                         [bbbbbbbbbbb(bbbbbbbbbbbb)] = c;");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    [bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb] = ccccccccccc;");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"

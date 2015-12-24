@@ -295,7 +295,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
   const SourceManager* SM = nullptr;
 
   if (!Diags.empty())
-    SM = &(*(*Diags.begin())->path.begin())->getLocation().getManager();
+    SM = &Diags.front()->path.front()->getLocation().getManager();
 
 
   for (std::vector<const PathDiagnostic*>::iterator DI = Diags.begin(),

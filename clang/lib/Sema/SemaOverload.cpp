@@ -10176,7 +10176,7 @@ public:
     }
     
     if (OvlExpr->hasExplicitTemplateArgs())
-      OvlExpr->getExplicitTemplateArgs().copyInto(OvlExplicitTemplateArgs);
+      OvlExpr->copyTemplateArgumentsInto(OvlExplicitTemplateArgs);
 
     if (FindAllFunctionsThatMatchTargetTypeExactly()) {
       // C++ [over.over]p4:
@@ -10576,7 +10576,7 @@ Sema::ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
     return nullptr;
 
   TemplateArgumentListInfo ExplicitTemplateArgs;
-  ovl->getExplicitTemplateArgs().copyInto(ExplicitTemplateArgs);
+  ovl->copyTemplateArgumentsInto(ExplicitTemplateArgs);
   TemplateSpecCandidateSet FailedCandidates(ovl->getNameLoc());
 
   // Look through all of the overloaded functions, searching for one

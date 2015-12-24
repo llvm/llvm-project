@@ -1979,9 +1979,8 @@ DEF_TRAVERSE_STMT(DependentScopeDeclRefExpr, {
   TRY_TO(TraverseNestedNameSpecifierLoc(S->getQualifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
   if (S->hasExplicitTemplateArgs()) {
-    TRY_TO(TraverseTemplateArgumentLocsHelper(
-        S->getExplicitTemplateArgs().getTemplateArgs(),
-        S->getNumTemplateArgs()));
+    TRY_TO(TraverseTemplateArgumentLocsHelper(S->getTemplateArgs(),
+                                              S->getNumTemplateArgs()));
   }
 })
 

@@ -4700,7 +4700,7 @@ public:
 
     // ACLE 6.4.1 ARM/Thumb instruction set architecture
     // __ARM_ARCH is defined as an integer value indicating the current ARM ISA
-    Builder.defineMacro("__ARM_ARCH", llvm::utostr(ArchVersion));
+    Builder.defineMacro("__ARM_ARCH", Twine(ArchVersion));
 
     if (ArchVersion >= 8) {
       // ACLE 6.5.7 Crypto Extension

@@ -4928,14 +4928,10 @@ Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
     // We aren't supposed to apply this logic for if there's an '&' involved.
     if (!find.HasFormOfMemberPointer) {
       OverloadExpr *ovl = find.Expression;
-      if (isa<UnresolvedLookupExpr>(ovl)) {
-        UnresolvedLookupExpr *ULE = cast<UnresolvedLookupExpr>(ovl);
+      if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(ovl))
         return BuildOverloadedCallExpr(S, Fn, ULE, LParenLoc, ArgExprs,
                                        RParenLoc, ExecConfig);
-      } else {
-        return BuildCallToMemberFunction(S, Fn, LParenLoc, ArgExprs,
-                                         RParenLoc);
-      }
+      return BuildCallToMemberFunction(S, Fn, LParenLoc, ArgExprs, RParenLoc);
     }
   }
 
