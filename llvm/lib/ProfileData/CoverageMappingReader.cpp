@@ -307,7 +307,7 @@ StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) {
 }
 
 template <typename T, support::endianness Endian>
-std::error_code readCoverageMappingData(
+static std::error_code readCoverageMappingData(
     InstrProfSymtab &ProfileNames, StringRef Data,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records,
     std::vector<StringRef> &Filenames) {

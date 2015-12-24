@@ -99,7 +99,7 @@ define <8 x float> @funcF(i32 %val) nounwind {
 ; CHECK-LABEL: funcF:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovd %edi, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,0]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %ret6 = insertelement <8 x i32> undef, i32 %val, i32 6

@@ -92,6 +92,12 @@ private:
                                         // information to AsmPrinter.
 
   uint8_t NumMemRefs;                   // Information on memory references.
+  // Note that MemRefs == nullptr,  means 'don't know', not 'no memory access'.
+  // Calling code must treat missing information conservatively.  If the number
+  // of memory operands required to be precise exceeds the maximum value of
+  // NumMemRefs - currently 256 - we remove the operands entirely. Note also
+  // that this is a non-owning reference to a shared copy on write buffer owned
+  // by the MachineFunction and created via MF.allocateMemRefsArray. 
   mmo_iterator MemRefs;
 
   DebugLoc debugLoc;                    // Source line information.
@@ -346,6 +352,9 @@ public:
   /// Access to memory operands of the instruction
   mmo_iterator memoperands_begin() const { return MemRefs; }
   mmo_iterator memoperands_end() const { return MemRefs + NumMemRefs; }
+  /// Return true if we don't have any memory operands which described the the
+  /// memory access done by this instruction.  If this is true, calling code
+  /// must be conservative.    
   bool memoperands_empty() const { return NumMemRefs == 0; }
 
   iterator_range<mmo_iterator>  memoperands() {
@@ -1176,8 +1185,11 @@ public:
     assert(NumMemRefs == NewMemRefsEnd - NewMemRefs && "Too many memrefs");
   }
 
-  /// Clear this MachineInstr's memory reference descriptor list.
-  void clearMemRefs() {
+  /// Clear this MachineInstr's memory reference descriptor list.  This resets
+  /// the memrefs to their most conservative state.  This should be used only
+  /// as a last resort since it greatly pessimizes our knowledge of the memory
+  /// access performed by the instruction.
+  void dropMemRefs() {
     MemRefs = nullptr;
     NumMemRefs = 0;
   }

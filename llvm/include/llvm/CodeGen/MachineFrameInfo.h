@@ -101,6 +101,13 @@ class MachineFrameInfo {
     // cannot alias any other memory objects.
     bool isSpillSlot;
 
+    /// If true, this stack slot is used to spill a value (could be deopt
+    /// and/or GC related) over a statepoint. We know that the address of the
+    /// slot can't alias any LLVM IR value.  This is very similiar to a Spill
+    /// Slot, but is created by statepoint lowering is SelectionDAG, not the
+    /// register allocator. 
+    bool isStatepointSpillSlot;
+
     /// If this stack object is originated from an Alloca instruction
     /// this value saves the original IR allocation. Can be NULL.
     const AllocaInst *Alloca;
@@ -118,7 +125,8 @@ class MachineFrameInfo {
     StackObject(uint64_t Sz, unsigned Al, int64_t SP, bool IM,
                 bool isSS, const AllocaInst *Val, bool A)
       : SPOffset(SP), Size(Sz), Alignment(Al), isImmutable(IM),
-        isSpillSlot(isSS), Alloca(Val), PreAllocated(false), isAliased(A) {}
+        isSpillSlot(isSS), isStatepointSpillSlot(false), Alloca(Val),
+        PreAllocated(false), isAliased(A) {}
   };
 
   /// The alignment of the stack.
@@ -547,6 +555,12 @@ public:
     return Objects[ObjectIdx+NumFixedObjects].isSpillSlot;
   }
 
+  bool isStatepointSpillSlotObjectIndex(int ObjectIdx) const {
+    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    return Objects[ObjectIdx+NumFixedObjects].isStatepointSpillSlot;
+  }
+
   /// Returns true if the specified index corresponds to a dead object.
   bool isDeadObjectIndex(int ObjectIdx) const {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
@@ -560,6 +574,13 @@ public:
     assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx + NumFixedObjects].Size == 0;
+  }
+
+  void markAsStatepointSpillSlotObjectIndex(int ObjectIdx) {
+    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx+NumFixedObjects].isStatepointSpillSlot = true;
+    assert(isStatepointSpillSlotObjectIndex(ObjectIdx) && "inconsistent");
   }
 
   /// Create a new statically sized stack object, returning

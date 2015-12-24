@@ -207,7 +207,7 @@ namespace llvm {
                           const TargetLibraryInfo *TLI = nullptr,
                           const DominatorTree *DT = nullptr,
                           AssumptionCache *AC = nullptr,
-                          Instruction *CxtI = nullptr);
+                          const Instruction *CxtI = nullptr);
 
   /// SimplifyFCmpInst - Given operands for an FCmpInst, see if we can
   /// fold the result.  If not, this returns null.

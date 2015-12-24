@@ -209,8 +209,8 @@ define <8 x double>@test_int_x86_avx512_mask_reduce_pd_512(<8 x double> %x0, <8 
 
 declare <16 x float> @llvm.x86.avx512.mask.reduce.ps.512(<16 x float>, i32, <16 x float>, i16, i32)
 ; CHECK-LABEL: @test_int_x86_avx512_mask_reduce_ps_512
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vreduceps
 ; CHECK: {sae}
 ; CKECK: {%k1}
@@ -224,8 +224,8 @@ define <16 x float>@test_int_x86_avx512_mask_reduce_ps_512(<16 x float> %x0, <16
 
 declare <8 x double> @llvm.x86.avx512.mask.range.pd.512(<8 x double>, <8 x double>, i32, <8 x double>, i8, i32)
 ; CHECK-LABEL: @test_int_x86_avx512_mask_range_pd_512
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vrangepd
 ; CKECK: {%k1}
 ; CHECK: vrangepd
@@ -240,8 +240,8 @@ define <8 x double>@test_int_x86_avx512_mask_range_pd_512(<8 x double> %x0, <8 x
 declare <16 x float> @llvm.x86.avx512.mask.range.ps.512(<16 x float>, <16 x float>, i32, <16 x float>, i16, i32)
 
 ; CHECK-LABEL: @test_int_x86_avx512_mask_range_ps_512
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vrangeps
 ; CKECK: {%k1}
 ; CHECK: vrangeps
@@ -256,8 +256,8 @@ define <16 x float>@test_int_x86_avx512_mask_range_ps_512(<16 x float> %x0, <16 
 declare <4 x float> @llvm.x86.avx512.mask.reduce.ss(<4 x float>, <4 x float>,<4 x float>, i8, i32, i32)
 
 ; CHECK-LABEL: @test_int_x86_avx512_mask_reduce_ss
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vreducess
 ; CKECK: {%k1}
 ; CHECK: vreducess
@@ -271,13 +271,13 @@ define <4 x float>@test_int_x86_avx512_mask_reduce_ss(<4 x float> %x0, <4 x floa
 
 declare <4 x float> @llvm.x86.avx512.mask.range.ss(<4 x float>, <4 x float>,<4 x float>, i8, i32, i32)
 ; CHECK-LABEL: @test_int_x86_avx512_mask_range_ss
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vrangess
 ; CHECK: {sae}
 ; CKECK: {%k1}
 ; CHECK: vrangess
-; CHECK: {sae} 
+; CHECK: {sae}
 define <4 x float>@test_int_x86_avx512_mask_range_ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x3, i8 %x4) {
   %res = call <4 x float> @llvm.x86.avx512.mask.range.ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x3, i8 %x4, i32 4, i32 8)
   %res1 = call <4 x float> @llvm.x86.avx512.mask.range.ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x3, i8 -1, i32 4, i32 8)
@@ -288,12 +288,12 @@ define <4 x float>@test_int_x86_avx512_mask_range_ss(<4 x float> %x0, <4 x float
 declare <2 x double> @llvm.x86.avx512.mask.reduce.sd(<2 x double>, <2 x double>,<2 x double>, i8, i32, i32)
 
 ; CHECK-LABEL: @test_int_x86_avx512_mask_reduce_sd
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vreducesd
 ; CKECK: {%k1}
 ; CHECK: vreducesd
-; CHECK: {sae} 
+; CHECK: {sae}
 define <2 x double>@test_int_x86_avx512_mask_reduce_sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 %x4) {
   %res = call <2 x double> @llvm.x86.avx512.mask.reduce.sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 %x4, i32 4, i32 4)
   %res1 = call <2 x double> @llvm.x86.avx512.mask.reduce.sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 -1, i32 4, i32 8)
@@ -303,12 +303,12 @@ define <2 x double>@test_int_x86_avx512_mask_reduce_sd(<2 x double> %x0, <2 x do
 
 declare <2 x double> @llvm.x86.avx512.mask.range.sd(<2 x double>, <2 x double>,<2 x double>, i8, i32, i32)
 ; CHECK-LABEL: @test_int_x86_avx512_mask_range_sd
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vrangesd
 ; CKECK: {%k1}
 ; CHECK: vrangesd
-; CHECK: {sae} 
+; CHECK: {sae}
 define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 %x4) {
   %res = call <2 x double> @llvm.x86.avx512.mask.range.sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 %x4, i32 4, i32 4)
   %res1 = call <2 x double> @llvm.x86.avx512.mask.range.sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 -1, i32 4, i32 8)
@@ -440,39 +440,39 @@ define <8 x i64>@test_int_x86_avx512_mask_inserti64x2_512(<8 x i64> %x0, <2 x i6
 declare i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double>, i32, i8)
 
 ; CHECK-LABEL: @test_int_x86_avx512_mask_fpclass_pd_512
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vfpclasspd
-; CHECK: {%k1} 
+; CHECK: {%k1}
 ; CHECK: vfpclasspd
 ; CHECK: kmovb   %k0
 define i8 @test_int_x86_avx512_mask_fpclass_pd_512(<8 x double> %x0, i8 %x1) {
-	%res = call i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %x0, i32 2, i8 %x1)
-	%res1 = call i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %x0, i32 4, i8 -1)
-	%res2 = add i8 %res, %res1
-	ret i8 %res2
+    %res = call i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %x0, i32 2, i8 %x1)
+    %res1 = call i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %x0, i32 4, i8 -1)
+    %res2 = add i8 %res, %res1
+    ret i8 %res2
 }
 declare i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float>, i32, i16)
 
 ; CHECK-LABEL: @test_int_x86_avx512_mask_fpclass_ps_512
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vfpclassps
 ; CHECK: vfpclassps
-; CHECK: {%k1} 
+; CHECK: {%k1}
 ; CHECK: kmov
 define i16@test_int_x86_avx512_mask_fpclass_ps_512(<16 x float> %x0, i16 %x1) {
-	%res = call i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %x0, i32 4, i16 %x1)
-	%res1 = call i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %x0, i32 4, i16 -1)
-	%res2 = add i16 %res, %res1
-	ret i16 %res2
+    %res = call i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %x0, i32 4, i16 %x1)
+    %res1 = call i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %x0, i32 4, i16 -1)
+    %res2 = add i16 %res, %res1
+    ret i16 %res2
 }
 
 declare i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
 
 ; CHECK-LABEL: @test_int_x86_avx512_mask_fpclass_sd
-; CHECK-NOT: call 
-; CHECK: kmov 
+; CHECK-NOT: call
+; CHECK: kmov
 ; CHECK: vfpclasssd
 ; CHECK: %k0 {%k1}
 ; CHECK: vfpclasssd
@@ -487,8 +487,8 @@ define i8 @test_int_x86_avx512_mask_fpclass_sd(<2 x double> %x0, i8 %x1) {
 declare i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float>, i32, i8)
 
 ; CHECK-LABEL: @test_int_x86_avx512_mask_fpclass_ss
-; CHECK-NOT: call 
-; CHECK: kmovw 
+; CHECK-NOT: call
+; CHECK: kmovw
 ; CHECK: vfpclassss
 ; CHECK: %k0
 ; CHECK: {%k1}
@@ -541,3 +541,28 @@ define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x2_512(<4 x i32> %x0, <16
   %res4 = add <16 x i32> %res3, %res2
   ret <16 x i32> %res4
 }
+
+declare <16 x i32> @llvm.x86.avx512.cvtmask2d.512(i16)
+
+define <16 x i32>@test_int_x86_avx512_cvtmask2d_512(i16 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    vpmovm2d %k0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.cvtmask2d.512(i16 %x0)
+  ret <16 x i32> %res
+}
+
+declare <8 x i64> @llvm.x86.avx512.cvtmask2q.512(i8)
+
+define <8 x i64>@test_int_x86_avx512_cvtmask2q_512(i8 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovb %edi, %k0
+; CHECK-NEXT:    vpmovm2q %k0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.cvtmask2q.512(i8 %x0)
+  ret <8 x i64> %res
+}
+

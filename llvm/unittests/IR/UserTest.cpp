@@ -93,4 +93,28 @@ TEST(UserTest, ValueOpIteration) {
   EXPECT_EQ(P.value_op_end(), (I - 2) + 8);
 }
 
+TEST(UserTest, PersonalityUser) {
+  Module M("", getGlobalContext());
+  FunctionType *RetVoidTy =
+      FunctionType::get(Type::getVoidTy(getGlobalContext()), false);
+  Function *PersonalityF = Function::Create(
+      RetVoidTy, GlobalValue::ExternalLinkage, "PersonalityFn", &M);
+  Function *TestF =
+      Function::Create(RetVoidTy, GlobalValue::ExternalLinkage, "TestFn", &M);
+
+  // Set up the personality function
+  TestF->setPersonalityFn(PersonalityF);
+  auto PersonalityUsers = PersonalityF->user_begin();
+
+  // One user and that user is the Test function
+  EXPECT_EQ(*PersonalityUsers, TestF);
+  EXPECT_EQ(++PersonalityUsers, PersonalityF->user_end());
+
+  // Reset the personality function
+  TestF->setPersonalityFn(nullptr);
+
+  // No users should remain
+  EXPECT_TRUE(TestF->user_empty());
+}
+
 } // end anonymous namespace

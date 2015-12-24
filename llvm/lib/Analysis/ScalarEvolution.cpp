@@ -9439,23 +9439,22 @@ static void replaceSubString(std::string &Str, StringRef From, StringRef To) {
 /// getLoopBackedgeTakenCounts - Helper method for verifyAnalysis.
 static void
 getLoopBackedgeTakenCounts(Loop *L, VerifyMap &Map, ScalarEvolution &SE) {
-  for (Loop::reverse_iterator I = L->rbegin(), E = L->rend(); I != E; ++I) {
-    getLoopBackedgeTakenCounts(*I, Map, SE); // recurse.
+  std::string &S = Map[L];
+  if (S.empty()) {
+    raw_string_ostream OS(S);
+    SE.getBackedgeTakenCount(L)->print(OS);
 
-    std::string &S = Map[L];
-    if (S.empty()) {
-      raw_string_ostream OS(S);
-      SE.getBackedgeTakenCount(L)->print(OS);
-
-      // false and 0 are semantically equivalent. This can happen in dead loops.
-      replaceSubString(OS.str(), "false", "0");
-      // Remove wrap flags, their use in SCEV is highly fragile.
-      // FIXME: Remove this when SCEV gets smarter about them.
-      replaceSubString(OS.str(), "<nw>", "");
-      replaceSubString(OS.str(), "<nsw>", "");
-      replaceSubString(OS.str(), "<nuw>", "");
-    }
+    // false and 0 are semantically equivalent. This can happen in dead loops.
+    replaceSubString(OS.str(), "false", "0");
+    // Remove wrap flags, their use in SCEV is highly fragile.
+    // FIXME: Remove this when SCEV gets smarter about them.
+    replaceSubString(OS.str(), "<nw>", "");
+    replaceSubString(OS.str(), "<nsw>", "");
+    replaceSubString(OS.str(), "<nuw>", "");
   }
+
+  for (auto *R : reverse(*L))
+    getLoopBackedgeTakenCounts(R, Map, SE); // recurse.
 }
 
 void ScalarEvolution::verify() const {

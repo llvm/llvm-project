@@ -707,12 +707,12 @@ namespace X86II {
     case X86II::MRM_E3: case X86II::MRM_E4: case X86II::MRM_E5:
     case X86II::MRM_E8: case X86II::MRM_E9: case X86II::MRM_EA:
     case X86II::MRM_EB: case X86II::MRM_EC: case X86II::MRM_ED:
-    case X86II::MRM_EE: case X86II::MRM_F0: case X86II::MRM_F1:
-    case X86II::MRM_F2: case X86II::MRM_F3: case X86II::MRM_F4:
-    case X86II::MRM_F5: case X86II::MRM_F6: case X86II::MRM_F7:
-    case X86II::MRM_F8: case X86II::MRM_F9: case X86II::MRM_FA:
-    case X86II::MRM_FB: case X86II::MRM_FC: case X86II::MRM_FD:
-    case X86II::MRM_FE: case X86II::MRM_FF:
+    case X86II::MRM_EE: case X86II::MRM_EF: case X86II::MRM_F0:
+    case X86II::MRM_F1: case X86II::MRM_F2: case X86II::MRM_F3:
+    case X86II::MRM_F4: case X86II::MRM_F5: case X86II::MRM_F6:
+    case X86II::MRM_F7: case X86II::MRM_F8: case X86II::MRM_F9:
+    case X86II::MRM_FA: case X86II::MRM_FB: case X86II::MRM_FC:
+    case X86II::MRM_FD: case X86II::MRM_FE: case X86II::MRM_FF:
       return -1;
     }
   }

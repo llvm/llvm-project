@@ -1094,6 +1094,19 @@ MachineBasicBlock*
 TargetLoweringBase::emitPatchPoint(MachineInstr *MI,
                                    MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MI->getParent()->getParent();
+  MachineFrameInfo &MFI = *MF.getFrameInfo();
+
+  // We're handling multiple types of operands here:
+  // PATCHPOINT MetaArgs - live-in, read only, direct
+  // STATEPOINT Deopt Spill - live-through, read only, indirect
+  // STATEPOINT Deopt Alloca - live-through, read only, direct
+  // (We're currently conservative and mark the deopt slots read/write in
+  // practice.) 
+  // STATEPOINT GC Spill - live-through, read/write, indirect
+  // STATEPOINT GC Alloca - live-through, read/write, direct
+  // The live-in vs live-through is handled already (the live through ones are
+  // all stack slots), but we need to handle the different type of stackmap
+  // operands and memory effects here.
 
   // MI changes inside this loop as we grow operands.
   for(unsigned OperIdx = 0; OperIdx != MI->getNumOperands(); ++OperIdx) {
@@ -1109,10 +1122,24 @@ TargetLoweringBase::emitPatchPoint(MachineInstr *MI,
     // Copy operands before the frame-index.
     for (unsigned i = 0; i < OperIdx; ++i)
       MIB.addOperand(MI->getOperand(i));
-    // Add frame index operands: direct-mem-ref tag, #FI, offset.
-    MIB.addImm(StackMaps::DirectMemRefOp);
-    MIB.addOperand(MI->getOperand(OperIdx));
-    MIB.addImm(0);
+    // Add frame index operands recognized by stackmaps.cpp
+    if (MFI.isStatepointSpillSlotObjectIndex(FI)) {
+      // indirect-mem-ref tag, size, #FI, offset.
+      // Used for spills inserted by StatepointLowering.  This codepath is not
+      // used for patchpoints/stackmaps at all, for these spilling is done via
+      // foldMemoryOperand callback only.
+      assert(MI->getOpcode() == TargetOpcode::STATEPOINT && "sanity");
+      MIB.addImm(StackMaps::IndirectMemRefOp);
+      MIB.addImm(MFI.getObjectSize(FI));
+      MIB.addOperand(MI->getOperand(OperIdx));
+      MIB.addImm(0);
+    } else {
+      // direct-mem-ref tag, #FI, offset.
+      // Used by patchpoint, and direct alloca arguments to statepoints
+      MIB.addImm(StackMaps::DirectMemRefOp);
+      MIB.addOperand(MI->getOperand(OperIdx));
+      MIB.addImm(0);
+    }
     // Copy the operands after the frame index.
     for (unsigned i = OperIdx + 1; i != MI->getNumOperands(); ++i)
       MIB.addOperand(MI->getOperand(i));
@@ -1122,7 +1149,6 @@ TargetLoweringBase::emitPatchPoint(MachineInstr *MI,
     assert(MIB->mayLoad() && "Folded a stackmap use to a non-load!");
 
     // Add a new memory operand for this FI.
-    const MachineFrameInfo &MFI = *MF.getFrameInfo();
     assert(MFI.getObjectOffset(FI) != -1);
 
     unsigned Flags = MachineMemOperand::MOLoad;

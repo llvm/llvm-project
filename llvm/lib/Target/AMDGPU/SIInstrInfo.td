@@ -11,9 +11,6 @@ def isCI : Predicate<"Subtarget->getGeneration() "
 def isCIOnly : Predicate<"Subtarget->getGeneration() =="
                          "AMDGPUSubtarget::SEA_ISLANDS">,
   AssemblerPredicate <"FeatureSeaIslands">;
-def isVI : Predicate <
-  "Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
-  AssemblerPredicate<"FeatureGCN3Encoding">;
 
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
@@ -2557,48 +2554,104 @@ multiclass MUBUF_Invalidate <mubuf op, string opName, SDPatternOperator node> {
   } // End hasSideEffects = 1, mayStore = 1, AsmMatchConverter = ""
 }
 
-class FLAT_Load_Helper <bits<7> op, string asm, RegisterClass regClass> :
-      FLAT <op, (outs regClass:$vdst),
-                (ins VReg_64:$addr, glc_flat:$glc, slc_flat:$slc, tfe_flat:$tfe),
-            asm#" $vdst, $addr"#"$glc"#"$slc"#"$tfe", []> {
-  let data = 0;
-  let mayLoad = 1;
+//===----------------------------------------------------------------------===//
+// FLAT classes
+//===----------------------------------------------------------------------===//
+
+class flat <bits<7> ci, bits<7> vi = ci> {
+  field bits<7> CI = ci;
+  field bits<7> VI = vi;
 }
 
-class FLAT_Store_Helper <bits<7> op, string name, RegisterClass vdataClass> :
-      FLAT <op, (outs), (ins vdataClass:$data, VReg_64:$addr,
-                             glc_flat:$glc, slc_flat:$slc, tfe_flat:$tfe),
-          name#" $data, $addr"#"$glc"#"$slc"#"$tfe",
-         []> {
-
-  let mayLoad = 0;
-  let mayStore = 1;
-
-  // Encoding
-  let vdst = 0;
+class FLAT_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
+     FLAT <0, outs, ins, "", pattern>,
+      SIMCInstr<opName, SISubtarget.NONE> {
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
 }
 
-multiclass FLAT_ATOMIC <bits<7> op, string name, RegisterClass vdst_rc,
-                        RegisterClass data_rc = vdst_rc> {
+class FLAT_Real_ci <bits<7> op, string opName, dag outs, dag ins, string asm> :
+    FLAT <op, outs, ins, asm, []>,
+    SIMCInstr<opName, SISubtarget.SI> {
+  let AssemblerPredicate = isCIOnly;
+}
 
-  let mayLoad = 1, mayStore = 1 in {
-    def "" : FLAT <op, (outs),
-                  (ins VReg_64:$addr, data_rc:$data, slc_flat_atomic:$slc,
-                       tfe_flat_atomic:$tfe),
-                   name#" $addr, $data"#"$slc"#"$tfe", []>,
-             AtomicNoRet <NAME, 0> {
-      let glc = 0;
-      let vdst = 0;
-    }
+class FLAT_Real_vi <bits<7> op, string opName, dag outs, dag ins, string asm> :
+    FLAT <op, outs, ins, asm, []>,
+    SIMCInstr<opName, SISubtarget.VI> {
+  let AssemblerPredicate = VIAssemblerPredicate;
+}
 
-    def _RTN : FLAT <op, (outs vdst_rc:$vdst),
-                     (ins VReg_64:$addr, data_rc:$data, slc_flat_atomic:$slc,
-                          tfe_flat_atomic:$tfe),
-                     name#" $vdst, $addr, $data glc"#"$slc"#"$tfe", []>,
-               AtomicNoRet <NAME, 1> {
-      let glc = 1;
-      let hasPostISelHook = 1;
-    }
+multiclass FLAT_AtomicRet_m <flat op, dag outs, dag ins, string asm,
+                   list<dag> pattern> {
+  def "" : FLAT_Pseudo <NAME#"_RTN", outs, ins, pattern>,
+               AtomicNoRet <NAME, 1>;
+
+  def _ci : FLAT_Real_ci <op.CI, NAME#"_RTN", outs, ins, asm>;
+
+  def _vi : FLAT_Real_vi <op.VI, NAME#"_RTN", outs, ins, asm>;
+}
+
+multiclass FLAT_Load_Helper <flat op, string asm_name,
+    RegisterClass regClass,
+    dag outs = (outs regClass:$vdst),
+    dag ins = (ins VReg_64:$addr, glc_flat:$glc, slc_flat:$slc, tfe_flat:$tfe),
+    string asm = asm_name#" $vdst, $addr"#"$glc"#"$slc"#"$tfe"> {
+
+  let data = 0, mayLoad = 1 in {
+
+    def "" : FLAT_Pseudo <NAME, outs, ins, []>;
+
+    def _ci : FLAT_Real_ci <op.CI, NAME, outs, ins, asm>;
+
+    def _vi : FLAT_Real_vi <op.VI, NAME, outs, ins, asm>;
+  }
+}
+
+multiclass FLAT_Store_Helper <flat op, string asm_name,
+    RegisterClass vdataClass,
+    dag outs = (outs),
+    dag ins = (ins vdataClass:$data, VReg_64:$addr, glc_flat:$glc,
+                   slc_flat:$slc, tfe_flat:$tfe),
+    string asm = asm_name#" $data, $addr"#"$glc"#"$slc"#"$tfe"> {
+
+  let mayLoad = 0, mayStore = 1, vdst = 0 in {
+
+    def "" : FLAT_Pseudo <NAME, outs, ins, []>;
+
+    def _ci : FLAT_Real_ci <op.CI, NAME, outs, ins, asm>;
+
+    def _vi : FLAT_Real_vi <op.VI, NAME, outs, ins, asm>;
+  }
+}
+
+multiclass FLAT_ATOMIC <flat op, string asm_name, RegisterClass vdst_rc,
+    RegisterClass data_rc = vdst_rc,
+    dag outs_noret = (outs),
+    string asm_noret = asm_name#" $addr, $data"#"$slc"#"$tfe"> {
+
+  let mayLoad = 1, mayStore = 1, glc = 0, vdst = 0 in {
+    def "" : FLAT_Pseudo <NAME, outs_noret,
+                          (ins VReg_64:$addr, data_rc:$data,
+                               slc_flat_atomic:$slc, tfe_flat_atomic:$tfe), []>,
+             AtomicNoRet <NAME, 0>;
+
+    def _ci : FLAT_Real_ci <op.CI, NAME, outs_noret,
+                            (ins VReg_64:$addr, data_rc:$data,
+                                 slc_flat_atomic:$slc, tfe_flat_atomic:$tfe),
+                            asm_noret>;
+
+    def _vi : FLAT_Real_vi <op.VI, NAME, outs_noret,
+                            (ins VReg_64:$addr, data_rc:$data,
+                                 slc_flat_atomic:$slc, tfe_flat_atomic:$tfe),
+                            asm_noret>;
+  }
+
+  let glc = 1, hasPostISelHook = 1 in {
+    defm _RTN : FLAT_AtomicRet_m <op, (outs vdst_rc:$vdst),
+                        (ins VReg_64:$addr, data_rc:$data, slc_flat_atomic:$slc,
+                             tfe_flat_atomic:$tfe),
+                        asm_name#" $vdst, $addr, $data glc"#"$slc"#"$tfe", []>;
   }
 }
 
