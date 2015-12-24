@@ -1167,7 +1167,7 @@ define <4 x i64> @shuf_zext_16i8_to_4i64_offset11(<16 x i8> %A) nounwind uwtable
 ;
 ; AVX2-LABEL: shuf_zext_16i8_to_4i64_offset11:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpsrldq {{.*#+}} ymm0 = ymm0[11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm0[27,28,29,30,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    retq
 entry:
@@ -1251,7 +1251,7 @@ define <4 x i64> @shuf_zext_8i16_to_4i64_offset2(<8 x i16> %A) nounwind uwtable 
 ;
 ; AVX2-LABEL: shuf_zext_8i16_to_4i64_offset2:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,2,2,3,5,6,6,7]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,2,2,3]
 ; AVX2-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX2-NEXT:    retq
 entry:
@@ -1319,7 +1319,7 @@ define <8 x i32> @shuf_zext_8i16_to_8i32_offset3(<8 x i16> %A) nounwind uwtable 
 ;
 ; AVX2-LABEL: shuf_zext_8i16_to_8i32_offset3:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpsrldq {{.*#+}} ymm0 = ymm0[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,ymm0[22,23,24,25,26,27,28,29,30,31],zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    retq
 entry:
@@ -1366,7 +1366,7 @@ define <8 x i32> @shuf_zext_16i16_to_8i32_offset8(<16 x i16> %A) nounwind uwtabl
 ;
 ; AVX2-LABEL: shuf_zext_16i16_to_8i32_offset8:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    retq
 entry:
@@ -1428,7 +1428,7 @@ define <4 x i64> @shuf_zext_4i32_to_4i64_offset1(<4 x i32> %A) nounwind uwtable 
 ;
 ; AVX2-LABEL: shuf_zext_4i32_to_4i64_offset1:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,2,3,3,5,6,7,7]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,2,3,3]
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX2-NEXT:    retq
 entry:

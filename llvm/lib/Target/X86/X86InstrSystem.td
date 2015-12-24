@@ -549,6 +549,12 @@ let Defs = [RAX, RSI, RDI], Uses = [RAX, RSI, RDI] in {
 }
 let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
   def MONTMUL : I<0xa6, MRM_C0, (outs), (ins), "montmul", []>, TB;
+//==-----------------------------------------------------------------------===//
+// PKU  - enable protection key
+let Defs = [EAX, EDX], Uses = [ECX] in 
+  def RDPKRU : I<0x01, MRM_EE, (outs), (ins), "rdpkru", []>, TB;
+let Uses = [EAX, ECX, EDX] in
+  def WRPKRU : I<0x01, MRM_EF, (outs), (ins), "wrpkru", []>, TB;
 
 //===----------------------------------------------------------------------===//
 // FS/GS Base Instructions

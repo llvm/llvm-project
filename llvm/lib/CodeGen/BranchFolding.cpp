@@ -793,7 +793,7 @@ removeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
 
     if (MBBICommon->mayLoad() || MBBICommon->mayStore())
       if (!hasIdenticalMMOs(&*MBBI, &*MBBICommon))
-        MBBICommon->clearMemRefs();
+        MBBICommon->dropMemRefs();
 
     ++MBBI;
     ++MBBICommon;

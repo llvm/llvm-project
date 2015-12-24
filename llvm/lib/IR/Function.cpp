@@ -952,8 +952,7 @@ Constant *Function::getPersonalityFn() const {
 }
 
 void Function::setPersonalityFn(Constant *Fn) {
-  if (Fn)
-    setHungoffOperand<0>(Fn);
+  setHungoffOperand<0>(Fn);
   setValueSubclassDataBit(3, Fn != nullptr);
 }
 
@@ -963,8 +962,7 @@ Constant *Function::getPrefixData() const {
 }
 
 void Function::setPrefixData(Constant *PrefixData) {
-  if (PrefixData)
-    setHungoffOperand<1>(PrefixData);
+  setHungoffOperand<1>(PrefixData);
   setValueSubclassDataBit(1, PrefixData != nullptr);
 }
 
@@ -974,8 +972,7 @@ Constant *Function::getPrologueData() const {
 }
 
 void Function::setPrologueData(Constant *PrologueData) {
-  if (PrologueData)
-    setHungoffOperand<2>(PrologueData);
+  setHungoffOperand<2>(PrologueData);
   setValueSubclassDataBit(2, PrologueData != nullptr);
 }
 
@@ -996,9 +993,13 @@ void Function::allocHungoffUselist() {
 
 template <int Idx>
 void Function::setHungoffOperand(Constant *C) {
-  assert(C && "Cannot set hungoff operand to nullptr");
-  allocHungoffUselist();
-  Op<Idx>().set(C);
+  if (C) {
+    allocHungoffUselist();
+    Op<Idx>().set(C);
+  } else if (getNumOperands()) {
+    Op<Idx>().set(
+        ConstantPointerNull::get(Type::getInt1PtrTy(getContext(), 0)));
+  }
 }
 
 void Function::setValueSubclassDataBit(unsigned Bit, bool On) {

@@ -126,6 +126,7 @@ public:
 
   /// \brief Determine whether the passed use points to an argument operand.
   bool isArgOperand(const Use *U) const {
+    assert(getInstruction() == U->getUser());
     return arg_begin() <= U && U < arg_end();
   }
 
@@ -136,9 +137,10 @@ public:
 
   /// \brief Determine whether the passed use points to a bundle operand.
   bool isBundleOperand(const Use *U) const {
+    assert(getInstruction() == U->getUser());
     if (!hasOperandBundles())
       return false;
-    unsigned OperandNo = U->getOperandNo();
+    unsigned OperandNo = U - (*this)->op_begin();
     return getBundleOperandsStartIndex() <= OperandNo &&
            OperandNo < getBundleOperandsEndIndex();
   }

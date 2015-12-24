@@ -329,8 +329,8 @@ static raw_ostream &operator<<(raw_ostream &OS,
   if (SVI.KillsSource)
     OS << " kill";
   OS << " deps[";
-  for (unsigned i = 0, e = SVI.Deps.size(); i != e; ++i)
-    OS << ' ' << SVI.Deps[i]->id << '@' << SVI.Deps[i]->def;
+  for (VNInfo *Dep : SVI.Deps)
+    OS << ' ' << Dep->id << '@' << Dep->def;
   OS << " ]";
   if (SVI.DefMI)
     OS << " def: " << *SVI.DefMI;
@@ -383,9 +383,8 @@ void InlineSpiller::propagateSiblingValue(SibValueMap::iterator SVIIter,
     bool PropSpill = !DisableHoisting && !isRegToSpill(SV.SpillReg);
     unsigned SpillDepth = ~0u;
 
-    for (TinyPtrVector<VNInfo*>::iterator DepI = Deps->begin(),
-         DepE = Deps->end(); DepI != DepE; ++DepI) {
-      SibValueMap::iterator DepSVI = SibValues.find(*DepI);
+    for (VNInfo *Dep : *Deps) {
+      SibValueMap::iterator DepSVI = SibValues.find(Dep);
       assert(DepSVI != SibValues.end() && "Dependent value not in SibValues");
       SibValueInfo &DepSV = DepSVI->second;
       if (!DepSV.SpillMBB)
@@ -566,12 +565,11 @@ MachineInstr *InlineSpiller::traceSiblingValue(unsigned UseReg, VNInfo *UseVNI,
 
       // Create entries for all the PHIs.  Don't add them to the worklist, we
       // are processing all of them in one go here.
-      for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
-        SibValues.insert(std::make_pair(PHIs[i], SibValueInfo(Reg, PHIs[i])));
+      for (VNInfo *PHI : PHIs)
+        SibValues.insert(std::make_pair(PHI, SibValueInfo(Reg, PHI)));
 
       // Add every PHI as a dependent of all the non-PHIs.
-      for (unsigned i = 0, e = NonPHIs.size(); i != e; ++i) {
-        VNInfo *NonPHI = NonPHIs[i];
+      for (VNInfo *NonPHI : NonPHIs) {
         // Known value? Try an insertion.
         std::tie(SVI, Inserted) =
           SibValues.insert(std::make_pair(NonPHI, SibValueInfo(Reg, NonPHI)));
@@ -654,8 +652,7 @@ void InlineSpiller::analyzeSiblingValues() {
     return;
 
   LiveInterval &OrigLI = LIS.getInterval(Original);
-  for (unsigned i = 0, e = RegsToSpill.size(); i != e; ++i) {
-    unsigned Reg = RegsToSpill[i];
+  for (unsigned Reg : RegsToSpill) {
     LiveInterval &LI = LIS.getInterval(Reg);
     for (LiveInterval::const_vni_iterator VI = LI.vni_begin(),
          VE = LI.vni_end(); VI != VE; ++VI) {
@@ -831,9 +828,8 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
 
     if (VNI->isPHIDef()) {
       MachineBasicBlock *MBB = LIS.getMBBFromIndex(VNI->def);
-      for (MachineBasicBlock::pred_iterator PI = MBB->pred_begin(),
-             PE = MBB->pred_end(); PI != PE; ++PI) {
-        VNInfo *PVNI = LI->getVNInfoBefore(LIS.getMBBEndIdx(*PI));
+      for (MachineBasicBlock *P : MBB->predecessors()) {
+        VNInfo *PVNI = LI->getVNInfoBefore(LIS.getMBBEndIdx(P));
         if (PVNI)
           WorkList.push_back(std::make_pair(LI, PVNI));
       }
@@ -920,8 +916,8 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg,
                << *LIS.getInstructionFromIndex(DefIdx));
 
   // Replace operands
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-    MachineOperand &MO = Ops[i].first->getOperand(Ops[i].second);
+  for (const auto &OpPair : Ops) {
+    MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
     if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg) {
       MO.setReg(NewVReg);
       MO.setIsKill();
@@ -944,8 +940,7 @@ void InlineSpiller::reMaterializeAll() {
 
   // Try to remat before all uses of snippets.
   bool anyRemat = false;
-  for (unsigned i = 0, e = RegsToSpill.size(); i != e; ++i) {
-    unsigned Reg = RegsToSpill[i];
+  for (unsigned Reg : RegsToSpill) {
     LiveInterval &LI = LIS.getInterval(Reg);
     for (MachineRegisterInfo::reg_bundle_iterator
            RegI = MRI.reg_bundle_begin(Reg), E = MRI.reg_bundle_end();
@@ -963,8 +958,7 @@ void InlineSpiller::reMaterializeAll() {
     return;
 
   // Remove any values that were completely rematted.
-  for (unsigned i = 0, e = RegsToSpill.size(); i != e; ++i) {
-    unsigned Reg = RegsToSpill[i];
+  for (unsigned Reg : RegsToSpill) {
     LiveInterval &LI = LIS.getInterval(Reg);
     for (LiveInterval::vni_iterator I = LI.vni_begin(), E = LI.vni_end();
          I != E; ++I) {
@@ -989,8 +983,7 @@ void InlineSpiller::reMaterializeAll() {
 
   // Get rid of deleted and empty intervals.
   unsigned ResultPos = 0;
-  for (unsigned i = 0, e = RegsToSpill.size(); i != e; ++i) {
-    unsigned Reg = RegsToSpill[i];
+  for (unsigned Reg : RegsToSpill) {
     if (!LIS.hasInterval(Reg))
       continue;
 
@@ -1098,9 +1091,9 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
   // TargetInstrInfo::foldMemoryOperand only expects explicit, non-tied
   // operands.
   SmallVector<unsigned, 8> FoldOps;
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-    unsigned Idx = Ops[i].second;
-    assert(MI == Ops[i].first && "Instruction conflict during operand folding");
+  for (const auto &OpPair : Ops) {
+    unsigned Idx = OpPair.second;
+    assert(MI == OpPair.first && "Instruction conflict during operand folding");
     MachineOperand &MO = MI->getOperand(Idx);
     if (MO.isImplicit()) {
       ImpReg = MO.getReg();
@@ -1152,10 +1145,9 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
 
   // Insert any new instructions other than FoldMI into the LIS maps.
   assert(!MIS.empty() && "Unexpected empty span of instructions!");
-  for (MachineBasicBlock::iterator MII = MIS.begin(), End = MIS.end();
-       MII != End; ++MII)
-    if (&*MII != FoldMI)
-      LIS.InsertMachineInstrInMaps(&*MII);
+  for (MachineInstr &MI : MIS)
+    if (&MI != FoldMI)
+      LIS.InsertMachineInstrInMaps(&MI);
 
   // TII.foldMemoryOperand may have left some implicit operands on the
   // instruction.  Strip them.
@@ -1301,11 +1293,11 @@ void InlineSpiller::spillAroundUses(unsigned Reg) {
 
     // Rewrite instruction operands.
     bool hasLiveDef = false;
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-      MachineOperand &MO = Ops[i].first->getOperand(Ops[i].second);
+    for (const auto &OpPair : Ops) {
+      MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
       MO.setReg(NewVReg);
       if (MO.isUse()) {
-        if (!Ops[i].first->isRegTiedToDefOperand(Ops[i].second))
+        if (!OpPair.first->isRegTiedToDefOperand(OpPair.second))
           MO.setIsKill();
       } else {
         if (!MO.isDead())
@@ -1335,14 +1327,14 @@ void InlineSpiller::spillAll() {
     VRM.assignVirt2StackSlot(Edit->getReg(), StackSlot);
 
   assert(StackInt->getNumValNums() == 1 && "Bad stack interval values");
-  for (unsigned i = 0, e = RegsToSpill.size(); i != e; ++i)
-    StackInt->MergeSegmentsInAsValue(LIS.getInterval(RegsToSpill[i]),
+  for (unsigned Reg : RegsToSpill)
+    StackInt->MergeSegmentsInAsValue(LIS.getInterval(Reg),
                                      StackInt->getValNumInfo(0));
   DEBUG(dbgs() << "Merged spilled regs: " << *StackInt << '\n');
 
   // Spill around uses of all RegsToSpill.
-  for (unsigned i = 0, e = RegsToSpill.size(); i != e; ++i)
-    spillAroundUses(RegsToSpill[i]);
+  for (unsigned Reg : RegsToSpill)
+    spillAroundUses(Reg);
 
   // Hoisted spills may cause dead code.
   if (!DeadDefs.empty()) {
@@ -1351,9 +1343,9 @@ void InlineSpiller::spillAll() {
   }
 
   // Finally delete the SnippetCopies.
-  for (unsigned i = 0, e = RegsToSpill.size(); i != e; ++i) {
+  for (unsigned Reg : RegsToSpill) {
     for (MachineRegisterInfo::reg_instr_iterator
-         RI = MRI.reg_instr_begin(RegsToSpill[i]), E = MRI.reg_instr_end();
+         RI = MRI.reg_instr_begin(Reg), E = MRI.reg_instr_end();
          RI != E; ) {
       MachineInstr *MI = &*(RI++);
       assert(SnippetCopies.count(MI) && "Remaining use wasn't a snippet copy");
@@ -1364,8 +1356,8 @@ void InlineSpiller::spillAll() {
   }
 
   // Delete all spilled registers.
-  for (unsigned i = 0, e = RegsToSpill.size(); i != e; ++i)
-    Edit->eraseVirtReg(RegsToSpill[i]);
+  for (unsigned Reg : RegsToSpill)
+    Edit->eraseVirtReg(Reg);
 }
 
 void InlineSpiller::spill(LiveRangeEdit &edit) {

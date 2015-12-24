@@ -323,7 +323,7 @@ define <16 x i1> @test15(i32 %x, i32 %y)  {
 }
 
 ; SKX-LABEL: test16
-; SKX: kxnorw  %k1, %k1, %k1
+; SKX: kxnorw  %k0, %k0, %k1
 ; SKX: kshiftrw        $15, %k1, %k1
 ; SKX: kshiftlq        $5, %k1, %k1
 ; SKX: korq    %k1, %k0, %k0

@@ -371,6 +371,7 @@ getFunctionIndexForFile(StringRef Path, std::string &Error,
   return (*ObjOrErr)->takeIndex();
 }
 
+namespace {
 /// Pass that performs cross-module function import provided a summary file.
 class FunctionImportPass : public ModulePass {
   /// Optional function summary index to use for importing, otherwise
@@ -417,6 +418,7 @@ public:
     return false;
   }
 };
+} // anonymous namespace
 
 char FunctionImportPass::ID = 0;
 INITIALIZE_PASS_BEGIN(FunctionImportPass, "function-import",

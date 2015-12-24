@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCStrategy.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -95,6 +96,9 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
 
       SDValue SpillSlot = Builder.DAG.CreateStackTemporary(ValueType);
       const unsigned FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
+      auto *MFI = Builder.DAG.getMachineFunction().getFrameInfo();
+      MFI->markAsStatepointSpillSlotObjectIndex(FI);
+
       Builder.FuncInfo.StatepointStackSlots.push_back(FI);
       AllocatedStackSlots.push_back(true);
       return SpillSlot;

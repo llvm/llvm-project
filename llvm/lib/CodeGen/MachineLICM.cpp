@@ -330,6 +330,10 @@ bool MachineLICM::runOnMachineFunction(MachineFunction &MF) {
 
 /// Return true if instruction stores to the specified frame.
 static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
+  // If we lost memory operands, conservatively assume that the instruction
+  // writes to all slots. 
+  if (MI->memoperands_empty())
+    return true;
   for (MachineInstr::mmo_iterator o = MI->memoperands_begin(),
          oe = MI->memoperands_end(); o != oe; ++o) {
     if (!(*o)->isStore() || !(*o)->getPseudoValue())
@@ -846,8 +850,14 @@ MachineLICM::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
 
 /// Return true if this machine instruction loads from global offset table or
 /// constant pool.
-static bool isLoadFromGOTOrConstantPool(MachineInstr &MI) {
+static bool mayLoadFromGOTOrConstantPool(MachineInstr &MI) {
   assert (MI.mayLoad() && "Expected MI that loads!");
+  
+  // If we lost memory operands, conservatively assume that the instruction
+  // reads from everything.. 
+  if (MI.memoperands_empty())
+    return true;
+
   for (MachineInstr::mmo_iterator I = MI.memoperands_begin(),
          E = MI.memoperands_end(); I != E; ++I) {
     if (const PseudoSourceValue *PSV = (*I)->getPseudoValue()) {
@@ -872,7 +882,7 @@ bool MachineLICM::IsLICMCandidate(MachineInstr &I) {
   // from constant memory are not safe to speculate all the time, for example
   // indexed load from a jump table.
   // Stores and side effects are already checked by isSafeToMove.
-  if (I.mayLoad() && !isLoadFromGOTOrConstantPool(I) &&
+  if (I.mayLoad() && !mayLoadFromGOTOrConstantPool(I) &&
       !IsGuaranteedToExecute(I.getParent()))
     return false;
 

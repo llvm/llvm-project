@@ -5279,6 +5279,20 @@ static bool Expand2AddrUndef(MachineInstrBuilder &MIB,
   return true;
 }
 
+/// Expand a single-def pseudo instruction to a two-addr
+/// instruction with two %k0 reads.
+/// This is used for mapping:
+///   %k4 = K_SET1
+/// to:
+///   %k4 = KXNORrr %k0, %k0
+static bool Expand2AddrKreg(MachineInstrBuilder &MIB,
+                            const MCInstrDesc &Desc, unsigned Reg) {
+  assert(Desc.getNumOperands() == 3 && "Expected two-addr instruction.");
+  MIB->setDesc(Desc);
+  MIB.addReg(Reg, RegState::Undef).addReg(Reg, RegState::Undef);
+  return true;
+}
+
 static bool expandMOV32r1(MachineInstrBuilder &MIB, const TargetInstrInfo &TII,
                           bool MinusOne) {
   MachineBasicBlock &MBB = *MIB->getParent();
@@ -5400,14 +5414,22 @@ bool X86InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
   case X86::TEST8ri_NOREX:
     MI->setDesc(get(X86::TEST8ri));
     return true;
+ 
+  // KNL does not recognize dependency-breaking idioms for mask registers,
+  // so kxnor %k1, %k1, %k2 has a RAW dependence on %k1.
+  // Using %k0 as the undef input register is a performance heuristic based
+  // on the assumption that %k0 is used less frequently than the other mask
+  // registers, since it is not usable as a write mask.
+  // FIXME: A more advanced approach would be to choose the best input mask
+  // register based on context.
   case X86::KSET0B:
-  case X86::KSET0W: return Expand2AddrUndef(MIB, get(X86::KXORWrr));
-  case X86::KSET0D: return Expand2AddrUndef(MIB, get(X86::KXORDrr));
-  case X86::KSET0Q: return Expand2AddrUndef(MIB, get(X86::KXORQrr));
+  case X86::KSET0W: return Expand2AddrKreg(MIB, get(X86::KXORWrr), X86::K0);
+  case X86::KSET0D: return Expand2AddrKreg(MIB, get(X86::KXORDrr), X86::K0);
+  case X86::KSET0Q: return Expand2AddrKreg(MIB, get(X86::KXORQrr), X86::K0);
   case X86::KSET1B:
-  case X86::KSET1W: return Expand2AddrUndef(MIB, get(X86::KXNORWrr));
-  case X86::KSET1D: return Expand2AddrUndef(MIB, get(X86::KXNORDrr));
-  case X86::KSET1Q: return Expand2AddrUndef(MIB, get(X86::KXNORQrr));
+  case X86::KSET1W: return Expand2AddrKreg(MIB, get(X86::KXNORWrr), X86::K0);
+  case X86::KSET1D: return Expand2AddrKreg(MIB, get(X86::KXNORDrr), X86::K0);
+  case X86::KSET1Q: return Expand2AddrKreg(MIB, get(X86::KXNORQrr), X86::K0);
   case TargetOpcode::LOAD_STACK_GUARD:
     expandLoadStackGuard(MIB, *this);
     return true;

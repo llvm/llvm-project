@@ -277,9 +277,14 @@ def isSICI : Predicate<
   "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS"
 >, AssemblerPredicate<"FeatureGCN1Encoding">;
 
+def isVI : Predicate <
+  "Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate<"FeatureGCN3Encoding">;
+
 class PredicateControl {
   Predicate SubtargetPredicate;
   Predicate SIAssemblerPredicate = isSICI;
+  Predicate VIAssemblerPredicate = isVI;
   list<Predicate> AssemblerPredicates = [];
   Predicate AssemblerPredicate = TruePredicate;
   list<Predicate> OtherPredicates = [];

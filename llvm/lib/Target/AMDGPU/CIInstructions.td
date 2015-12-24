@@ -116,70 +116,153 @@ defm BUFFER_WBINVL1_VOL : MUBUF_Invalidate <mubuf<0x70, 0x3f>,
 // Flat Instructions
 //===----------------------------------------------------------------------===//
 
-def FLAT_LOAD_UBYTE : FLAT_Load_Helper <0x8, "flat_load_ubyte", VGPR_32>;
-def FLAT_LOAD_SBYTE : FLAT_Load_Helper <0x9, "flat_load_sbyte", VGPR_32>;
-def FLAT_LOAD_USHORT : FLAT_Load_Helper <0xa, "flat_load_ushort", VGPR_32>;
-def FLAT_LOAD_SSHORT : FLAT_Load_Helper <0xb, "flat_load_sshort", VGPR_32>;
-def FLAT_LOAD_DWORD : FLAT_Load_Helper <0xc, "flat_load_dword", VGPR_32>;
-def FLAT_LOAD_DWORDX2 : FLAT_Load_Helper <0xd, "flat_load_dwordx2", VReg_64>;
-def FLAT_LOAD_DWORDX4 : FLAT_Load_Helper <0xe, "flat_load_dwordx4", VReg_128>;
-def FLAT_LOAD_DWORDX3 : FLAT_Load_Helper <0xf, "flat_load_dwordx3", VReg_96>;
-def FLAT_STORE_BYTE : FLAT_Store_Helper <0x18, "flat_store_byte", VGPR_32>;
-def FLAT_STORE_SHORT : FLAT_Store_Helper <0x1a, "flat_store_short", VGPR_32>;
-def FLAT_STORE_DWORD : FLAT_Store_Helper <0x1c, "flat_store_dword", VGPR_32>;
-def FLAT_STORE_DWORDX2 : FLAT_Store_Helper <
-  0x1d, "flat_store_dwordx2", VReg_64
+defm FLAT_LOAD_UBYTE : FLAT_Load_Helper <
+  flat<0x8, 0x10>, "flat_load_ubyte", VGPR_32
 >;
-def FLAT_STORE_DWORDX4 : FLAT_Store_Helper <
-  0x1e, "flat_store_dwordx4", VReg_128
+defm FLAT_LOAD_SBYTE : FLAT_Load_Helper <
+  flat<0x9, 0x11>, "flat_load_sbyte", VGPR_32
 >;
-def FLAT_STORE_DWORDX3 : FLAT_Store_Helper <
-  0x1f, "flat_store_dwordx3", VReg_96
+defm FLAT_LOAD_USHORT : FLAT_Load_Helper <
+  flat<0xa, 0x12>, "flat_load_ushort", VGPR_32
 >;
-defm FLAT_ATOMIC_SWAP : FLAT_ATOMIC <0x30, "flat_atomic_swap", VGPR_32>;
+defm FLAT_LOAD_SSHORT : FLAT_Load_Helper <
+  flat<0xb, 0x13>, "flat_load_sshort", VGPR_32>
+;
+defm FLAT_LOAD_DWORD : FLAT_Load_Helper <
+  flat<0xc, 0x14>, "flat_load_dword", VGPR_32
+>;
+defm FLAT_LOAD_DWORDX2 : FLAT_Load_Helper <
+  flat<0xd, 0x15>, "flat_load_dwordx2", VReg_64
+>;
+defm FLAT_LOAD_DWORDX4 : FLAT_Load_Helper <
+  flat<0xe, 0x17>, "flat_load_dwordx4", VReg_128
+>;
+defm FLAT_LOAD_DWORDX3 : FLAT_Load_Helper <
+  flat<0xf, 0x16>, "flat_load_dwordx3", VReg_96
+>;
+defm FLAT_STORE_BYTE : FLAT_Store_Helper <
+  flat<0x18>, "flat_store_byte", VGPR_32
+>;
+defm FLAT_STORE_SHORT : FLAT_Store_Helper <
+  flat <0x1a>, "flat_store_short", VGPR_32
+>;
+defm FLAT_STORE_DWORD : FLAT_Store_Helper <
+  flat<0x1c>, "flat_store_dword", VGPR_32
+>;
+defm FLAT_STORE_DWORDX2 : FLAT_Store_Helper <
+  flat<0x1d>, "flat_store_dwordx2", VReg_64
+>;
+defm FLAT_STORE_DWORDX4 : FLAT_Store_Helper <
+  flat<0x1e, 0x1f>, "flat_store_dwordx4", VReg_128
+>;
+defm FLAT_STORE_DWORDX3 : FLAT_Store_Helper <
+  flat<0x1f, 0x1e>, "flat_store_dwordx3", VReg_96
+>;
+defm FLAT_ATOMIC_SWAP : FLAT_ATOMIC <
+  flat<0x30, 0x40>, "flat_atomic_swap", VGPR_32
+>;
 defm FLAT_ATOMIC_CMPSWAP : FLAT_ATOMIC <
-  0x31, "flat_atomic_cmpswap", VGPR_32, VReg_64
+  flat<0x31, 0x41>, "flat_atomic_cmpswap", VGPR_32, VReg_64
 >;
-defm FLAT_ATOMIC_ADD : FLAT_ATOMIC <0x32, "flat_atomic_add", VGPR_32>;
-defm FLAT_ATOMIC_SUB : FLAT_ATOMIC <0x33, "flat_atomic_sub", VGPR_32>;
-defm FLAT_ATOMIC_RSUB : FLAT_ATOMIC <0x34, "flat_atomic_rsub", VGPR_32>;
-defm FLAT_ATOMIC_SMIN : FLAT_ATOMIC <0x35, "flat_atomic_smin", VGPR_32>;
-defm FLAT_ATOMIC_UMIN : FLAT_ATOMIC <0x36, "flat_atomic_umin", VGPR_32>;
-defm FLAT_ATOMIC_SMAX : FLAT_ATOMIC <0x37, "flat_atomic_smax", VGPR_32>;
-defm FLAT_ATOMIC_UMAX : FLAT_ATOMIC <0x38, "flat_atomic_umax", VGPR_32>;
-defm FLAT_ATOMIC_AND : FLAT_ATOMIC <0x39, "flat_atomic_and", VGPR_32>;
-defm FLAT_ATOMIC_OR : FLAT_ATOMIC <0x3a, "flat_atomic_or", VGPR_32>;
-defm FLAT_ATOMIC_XOR : FLAT_ATOMIC <0x3b, "flat_atomic_xor", VGPR_32>;
-defm FLAT_ATOMIC_INC : FLAT_ATOMIC <0x3c, "flat_atomic_inc", VGPR_32>;
-defm FLAT_ATOMIC_DEC : FLAT_ATOMIC <0x3d, "flat_atomic_dec", VGPR_32>;
-defm FLAT_ATOMIC_FCMPSWAP : FLAT_ATOMIC <
-  0x3e, "flat_atomic_fcmpswap", VGPR_32, VReg_64
+defm FLAT_ATOMIC_ADD : FLAT_ATOMIC <
+  flat<0x32, 0x42>, "flat_atomic_add", VGPR_32
 >;
-defm FLAT_ATOMIC_FMIN : FLAT_ATOMIC <0x3f, "flat_atomic_fmin", VGPR_32>;
-defm FLAT_ATOMIC_FMAX : FLAT_ATOMIC <0x40, "flat_atomic_fmax", VGPR_32>;
-defm FLAT_ATOMIC_SWAP_X2 : FLAT_ATOMIC <0x50, "flat_atomic_swap_x2", VReg_64>;
+defm FLAT_ATOMIC_SUB : FLAT_ATOMIC <
+  flat<0x33, 0x43>, "flat_atomic_sub", VGPR_32
+>;
+defm FLAT_ATOMIC_SMIN : FLAT_ATOMIC <
+  flat<0x35, 0x44>, "flat_atomic_smin", VGPR_32
+>;
+defm FLAT_ATOMIC_UMIN : FLAT_ATOMIC <
+  flat<0x36, 0x45>, "flat_atomic_umin", VGPR_32
+>;
+defm FLAT_ATOMIC_SMAX : FLAT_ATOMIC <
+  flat<0x37, 0x46>, "flat_atomic_smax", VGPR_32
+>;
+defm FLAT_ATOMIC_UMAX : FLAT_ATOMIC <
+  flat<0x38, 0x47>, "flat_atomic_umax", VGPR_32
+>;
+defm FLAT_ATOMIC_AND : FLAT_ATOMIC <
+  flat<0x39, 0x48>, "flat_atomic_and", VGPR_32
+>;
+defm FLAT_ATOMIC_OR : FLAT_ATOMIC <
+  flat<0x3a, 0x49>, "flat_atomic_or", VGPR_32
+>;
+defm FLAT_ATOMIC_XOR : FLAT_ATOMIC <
+  flat<0x3b, 0x4a>, "flat_atomic_xor", VGPR_32
+>;
+defm FLAT_ATOMIC_INC : FLAT_ATOMIC <
+  flat<0x3c, 0x4b>, "flat_atomic_inc", VGPR_32
+>;
+defm FLAT_ATOMIC_DEC : FLAT_ATOMIC <
+  flat<0x3d, 0x4c>, "flat_atomic_dec", VGPR_32
+>;
+defm FLAT_ATOMIC_SWAP_X2 : FLAT_ATOMIC <
+  flat<0x50, 0x60>, "flat_atomic_swap_x2", VReg_64
+>;
 defm FLAT_ATOMIC_CMPSWAP_X2 : FLAT_ATOMIC <
-  0x51, "flat_atomic_cmpswap_x2", VReg_64, VReg_128
+  flat<0x51, 0x61>, "flat_atomic_cmpswap_x2", VReg_64, VReg_128
 >;
-defm FLAT_ATOMIC_ADD_X2 : FLAT_ATOMIC <0x52, "flat_atomic_add_x2", VReg_64>;
-defm FLAT_ATOMIC_SUB_X2 : FLAT_ATOMIC <0x53, "flat_atomic_sub_x2", VReg_64>;
-defm FLAT_ATOMIC_RSUB_X2 : FLAT_ATOMIC <0x54, "flat_atomic_rsub_x2", VReg_64>;
-defm FLAT_ATOMIC_SMIN_X2 : FLAT_ATOMIC <0x55, "flat_atomic_smin_x2", VReg_64>;
-defm FLAT_ATOMIC_UMIN_X2 : FLAT_ATOMIC <0x56, "flat_atomic_umin_x2", VReg_64>;
-defm FLAT_ATOMIC_SMAX_X2 : FLAT_ATOMIC <0x57, "flat_atomic_smax_x2", VReg_64>;
-defm FLAT_ATOMIC_UMAX_X2 : FLAT_ATOMIC <0x58, "flat_atomic_umax_x2", VReg_64>;
-defm FLAT_ATOMIC_AND_X2 : FLAT_ATOMIC <0x59, "flat_atomic_and_x2", VReg_64>;
-defm FLAT_ATOMIC_OR_X2 : FLAT_ATOMIC <0x5a, "flat_atomic_or_x2", VReg_64>;
-defm FLAT_ATOMIC_XOR_X2 : FLAT_ATOMIC <0x5b, "flat_atomic_xor_x2", VReg_64>;
-defm FLAT_ATOMIC_INC_X2 : FLAT_ATOMIC <0x5c, "flat_atomic_inc_x2", VReg_64>;
-defm FLAT_ATOMIC_DEC_X2 : FLAT_ATOMIC <0x5d, "flat_atomic_dec_x2", VReg_64>;
-defm FLAT_ATOMIC_FCMPSWAP_X2 : FLAT_ATOMIC <
-  0x5e, "flat_atomic_fcmpswap_x2", VReg_64, VReg_128
+defm FLAT_ATOMIC_ADD_X2 : FLAT_ATOMIC <
+  flat<0x52, 0x62>, "flat_atomic_add_x2", VReg_64
 >;
-defm FLAT_ATOMIC_FMIN_X2 : FLAT_ATOMIC <0x5f, "flat_atomic_fmin_x2", VReg_64>;
-defm FLAT_ATOMIC_FMAX_X2 : FLAT_ATOMIC <0x60, "flat_atomic_fmax_x2", VReg_64>;
+defm FLAT_ATOMIC_SUB_X2 : FLAT_ATOMIC <
+  flat<0x53, 0x63>, "flat_atomic_sub_x2", VReg_64
+>;
+defm FLAT_ATOMIC_SMIN_X2 : FLAT_ATOMIC <
+  flat<0x55, 0x64>, "flat_atomic_smin_x2", VReg_64
+>;
+defm FLAT_ATOMIC_UMIN_X2 : FLAT_ATOMIC <
+  flat<0x56, 0x65>, "flat_atomic_umin_x2", VReg_64
+>;
+defm FLAT_ATOMIC_SMAX_X2 : FLAT_ATOMIC <
+  flat<0x57, 0x66>, "flat_atomic_smax_x2", VReg_64
+>;
+defm FLAT_ATOMIC_UMAX_X2 : FLAT_ATOMIC <
+  flat<0x58, 0x67>, "flat_atomic_umax_x2", VReg_64
+>;
+defm FLAT_ATOMIC_AND_X2 : FLAT_ATOMIC <
+  flat<0x59, 0x68>, "flat_atomic_and_x2", VReg_64
+>;
+defm FLAT_ATOMIC_OR_X2 : FLAT_ATOMIC <
+  flat<0x5a, 0x69>, "flat_atomic_or_x2", VReg_64
+>;
+defm FLAT_ATOMIC_XOR_X2 : FLAT_ATOMIC <
+  flat<0x5b, 0x6a>, "flat_atomic_xor_x2", VReg_64
+>;
+defm FLAT_ATOMIC_INC_X2 : FLAT_ATOMIC <
+  flat<0x5c, 0x6b>, "flat_atomic_inc_x2", VReg_64
+>;
+defm FLAT_ATOMIC_DEC_X2 : FLAT_ATOMIC <
+  flat<0x5d, 0x6c>, "flat_atomic_dec_x2", VReg_64
+>;
 
 } // End SubtargetPredicate = isCIVI
+
+// CI Only flat instructions
+
+let SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst in {
+
+defm FLAT_ATOMIC_FCMPSWAP : FLAT_ATOMIC <
+  flat<0x3e>, "flat_atomic_fcmpswap", VGPR_32, VReg_64
+>;
+defm FLAT_ATOMIC_FMIN : FLAT_ATOMIC <
+  flat<0x3f>, "flat_atomic_fmin", VGPR_32
+>;
+defm FLAT_ATOMIC_FMAX : FLAT_ATOMIC <
+  flat<0x40>, "flat_atomic_fmax", VGPR_32
+>;
+defm FLAT_ATOMIC_FCMPSWAP_X2 : FLAT_ATOMIC <
+  flat<0x5e>, "flat_atomic_fcmpswap_x2", VReg_64, VReg_128
+>;
+defm FLAT_ATOMIC_FMIN_X2 : FLAT_ATOMIC <
+  flat<0x5f>, "flat_atomic_fmin_x2", VReg_64
+>;
+defm FLAT_ATOMIC_FMAX_X2 : FLAT_ATOMIC <
+  flat<0x60>, "flat_atomic_fmax_x2", VReg_64
+>;
+
+} // End let SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst
 
 //===----------------------------------------------------------------------===//
 // Flat Patterns

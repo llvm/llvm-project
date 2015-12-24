@@ -11,7 +11,7 @@ declare zeroext i1 @return_i1()
 
 define i1 @test(i32 addrspace(1)* %ptr_base, i32 %arg)
   gc "statepoint-example" {
-; CHECK-LABEL: test
+; CHECK-LABEL: test:
 ; Do we see two spills for the local values and the store to the
 ; alloca?
 ; CHECK: subq	$40, %rsp
@@ -94,18 +94,19 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32) #3
 ; CHECK-NEXT:   .quad 40
 ; CHECK-NEXT:   .quad test_derived_arg
 ; CHECK-NEXT:   .quad 40
+; CHECK-NEXT:   .quad test_id
+; CHECK-NEXT:   .quad 8
 
 ;
 ; test
 ;
 
-; Large Constants
-; Statepoint ID only
-; CHECK: .quad	0
+; Statepoint ID
+; CHECK-NEXT: .quad	0
 
 ; Callsites
 ; Constant arguments
-; CHECK: .long	.Ltmp1-test
+; CHECK-NEXT: .long	.Ltmp1-test
 ; CHECK: .short	0
 ; CHECK: .short	11
 ; SmallConstant (0)
@@ -123,8 +124,8 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32) #3
 ; CHECK: .byte	8
 ; CHECK: .short	0
 ; CHECK: .long	2
-; Direct Spill Slot [RSP+0]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+0]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	16
@@ -143,23 +144,23 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32) #3
 ; CHECK: .byte	8
 ; CHECK: .short	0
 ; CHECK: .long	0
-; Direct Spill Slot [RSP+16]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+16]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	16
-; Direct Spill Slot [RSP+8]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+8]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	8
-; Direct Spill Slot [RSP+16]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+16]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	16
-; Direct Spill Slot [RSP+16]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+16]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	16
@@ -171,15 +172,13 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32) #3
 
 ;
 ; test_derived_arg
-;
 
-; Large Constants
-; Statepoint ID only
-; CHECK: .quad	0
+; Statepoint ID
+; CHECK-NEXT: .quad	0
 
 ; Callsites
 ; Constant arguments
-; CHECK: .long	.Ltmp3-test_derived_arg
+; CHECK-NEXT: .long	.Ltmp3-test_derived_arg
 ; CHECK: .short	0
 ; CHECK: .short	11
 ; SmallConstant (0)
@@ -192,8 +191,8 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32) #3
 ; CHECK: .byte	8
 ; CHECK: .short	0
 ; CHECK: .long	2
-; Direct Spill Slot [RSP+0]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+0]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	16
@@ -212,23 +211,23 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32) #3
 ; CHECK: .byte	8
 ; CHECK: .short	0
 ; CHECK: .long	0
-; Direct Spill Slot [RSP+16]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+16]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	16
-; Direct Spill Slot [RSP+8]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+8]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	8
-; Direct Spill Slot [RSP+16]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+16]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	16
-; Direct Spill Slot [RSP+16]
-; CHECK: .byte	2
+; Indirect Spill Slot [RSP+16]
+; CHECK: .byte	3
 ; CHECK: .byte	8
 ; CHECK: .short	7
 ; CHECK: .long	16
@@ -239,13 +238,12 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32) #3
 ; CHECK: .align	8
 
 ; Records for the test_id function:
-; No large constants
 
 ; The Statepoint ID:
-; CHECK: .quad	237
+; CHECK-NEXT: .quad	237
 
 ; Instruction Offset
-; CHECK: .long	.Ltmp5-test_id
+; CHECK-NEXT: .long	.Ltmp5-test_id
 
 ; Reserved:
 ; CHECK: .short	0

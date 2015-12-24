@@ -4413,3 +4413,51 @@ define <32 x i16>@test_int_x86_avx512_pbroadcastw_512(<8 x i16> %x0, <32 x i16> 
   ret <32 x i16> %res4
 }
 
+declare <16 x i8> @llvm.x86.avx512.cvtmask2b.128(i16)
+
+define <16 x i8>@test_int_x86_avx512_cvtmask2b_128(i16 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2b_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    vpmovm2b %k0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i8> @llvm.x86.avx512.cvtmask2b.128(i16 %x0)
+  ret <16 x i8> %res
+}
+
+declare <32 x i8> @llvm.x86.avx512.cvtmask2b.256(i32)
+
+define <32 x i8>@test_int_x86_avx512_cvtmask2b_256(i32 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2b_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k0
+; CHECK-NEXT:    vpmovm2b %k0, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <32 x i8> @llvm.x86.avx512.cvtmask2b.256(i32 %x0)
+  ret <32 x i8> %res
+}
+
+declare <8 x i16> @llvm.x86.avx512.cvtmask2w.128(i8)
+
+define <8 x i16>@test_int_x86_avx512_cvtmask2w_128(i8 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2w_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    vpmovm2w %k0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i16> @llvm.x86.avx512.cvtmask2w.128(i8 %x0)
+  ret <8 x i16> %res
+}
+
+declare <16 x i16> @llvm.x86.avx512.cvtmask2w.256(i16)
+
+define <16 x i16>@test_int_x86_avx512_cvtmask2w_256(i16 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    vpmovm2w %k0, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i16> @llvm.x86.avx512.cvtmask2w.256(i16 %x0)
+  ret <16 x i16> %res
+}
