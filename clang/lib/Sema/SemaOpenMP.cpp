@@ -3494,14 +3494,12 @@ static bool CheckOpenMPIterationSpace(
           ? ((NestedLoopCount == 1) ? OMPC_linear : OMPC_lastprivate)
           : OMPC_private;
   if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-        DVar.CKind != OMPC_threadprivate && DVar.CKind != PredeterminedCKind) ||
+        DVar.CKind != PredeterminedCKind) ||
        ((isOpenMPWorksharingDirective(DKind) || DKind == OMPD_taskloop ||
-        isOpenMPDistributeDirective(DKind)) &&
+         isOpenMPDistributeDirective(DKind)) &&
         !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-        DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate &&
-        DVar.CKind != OMPC_threadprivate)) &&
-      ((DVar.CKind != OMPC_private && DVar.CKind != OMPC_threadprivate) ||
-       DVar.RefExpr != nullptr)) {
+        DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
+      (DVar.CKind != OMPC_private || DVar.RefExpr != nullptr)) {
     SemaRef.Diag(Init->getLocStart(), diag::err_omp_loop_var_dsa)
         << getOpenMPClauseName(DVar.CKind) << getOpenMPDirectiveName(DKind)
         << getOpenMPClauseName(PredeterminedCKind);

@@ -7010,8 +7010,6 @@ public:
   ///
   /// \param Exprs The list of expressions to substitute into.
   ///
-  /// \param NumExprs The number of expressions in \p Exprs.
-  ///
   /// \param IsCall Whether this is some form of call, in which case
   /// default arguments will be dropped.
   ///
