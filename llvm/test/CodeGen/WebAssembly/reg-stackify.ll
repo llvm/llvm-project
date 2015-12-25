@@ -53,8 +53,9 @@ define i32 @yes1(i32* %q) {
 ; CHECK-NEXT: .param i32, i32, i32, i32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: .local i32, i32{{$}}
-; CHECK-NEXT: i32.const   $4=, 1{{$}}
 ; CHECK-NEXT: i32.const   $5=, 2{{$}}
+; CHECK-NEXT: i32.const   $4=, 1{{$}}
+; CHECK-NEXT: block       BB4_2{{$}}
 ; CHECK-NEXT: i32.lt_s    $push0=, $0, $4{{$}}
 ; CHECK-NEXT: i32.lt_s    $push1=, $1, $5{{$}}
 ; CHECK-NEXT: i32.xor     $push4=, $pop0, $pop1{{$}}
@@ -63,7 +64,6 @@ define i32 @yes1(i32* %q) {
 ; CHECK-NEXT: i32.xor     $push5=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.xor     $push6=, $pop4, $pop5{{$}}
 ; CHECK-NEXT: i32.ne      $push7=, $pop6, $4{{$}}
-; CHECK-NEXT: block       BB4_2{{$}}
 ; CHECK-NEXT: br_if       $pop7, BB4_2{{$}}
 ; CHECK-NEXT: i32.const   $push8=, 0{{$}}
 ; CHECK-NEXT: return      $pop8{{$}}
@@ -83,6 +83,44 @@ true:
   ret i32 0
 false:
   ret i32 1
+}
+
+; Test an interesting case where the load has multiple uses and cannot
+; be trivially stackified.
+
+; CHECK-LABEL: multiple_uses:
+; CHECK-NEXT: .param      i32, i32, i32{{$}}
+; CHECK-NEXT: .local      i32{{$}}
+; CHECK-NEXT: i32.load    $3=, 0($2){{$}}
+; CHECK-NEXT: block       BB5_3{{$}}
+; CHECK-NEXT: i32.ge_u    $push0=, $3, $1{{$}}
+; CHECK-NEXT: br_if       $pop0, BB5_3{{$}}
+; CHECK-NEXT: i32.lt_u    $push1=, $3, $0{{$}}
+; CHECK-NEXT: br_if       $pop1, BB5_3{{$}}
+; CHECK-NEXT: i32.store   $discard=, 0($2), $3{{$}}
+; CHECK-NEXT: BB5_3:
+; CHECK-NEXT: return{{$}}
+define void @multiple_uses(i32* %arg0, i32* %arg1, i32* %arg2) nounwind {
+bb:
+  br label %loop
+
+loop:
+  %tmp7 = load i32, i32* %arg2
+  %tmp8 = inttoptr i32 %tmp7 to i32*
+  %tmp9 = icmp uge i32* %tmp8, %arg1
+  %tmp10 = icmp ult i32* %tmp8, %arg0
+  %tmp11 = or i1 %tmp9, %tmp10
+  br i1 %tmp11, label %back, label %then
+
+then:
+  store i32 %tmp7, i32* %arg2
+  br label %back
+
+back:
+  br i1 undef, label %return, label %loop
+
+return:
+  ret void
 }
 
 !0 = !{}

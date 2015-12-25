@@ -1,4 +1,4 @@
-;===- ./lib/DebugInfo/LLVMBuild.txt ----------------------------*- Conf -*--===;
+;===- ./lib/DebugInfo/CodeView/LLVMBuild.txt -------------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,10 +15,8 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = CodeView DWARF PDB Symbolize
-
 [component_0]
-type = Group
-name = DebugInfo
-parent = $ROOT
+type = Library
+name = DebugInfoCodeView
+parent = DebugInfo
+required_libraries = Support

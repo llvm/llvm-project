@@ -337,28 +337,28 @@ public:
   // only intended to cover the core methods that are frequently used, helper
   // methods should not be added here.
 
-  unsigned getIntegerBitWidth() const;
+  inline unsigned getIntegerBitWidth() const;
 
-  Type *getFunctionParamType(unsigned i) const;
-  unsigned getFunctionNumParams() const;
-  bool isFunctionVarArg() const;
+  inline Type *getFunctionParamType(unsigned i) const;
+  inline unsigned getFunctionNumParams() const;
+  inline bool isFunctionVarArg() const;
 
-  StringRef getStructName() const;
-  unsigned getStructNumElements() const;
-  Type *getStructElementType(unsigned N) const;
+  inline StringRef getStructName() const;
+  inline unsigned getStructNumElements() const;
+  inline Type *getStructElementType(unsigned N) const;
 
-  Type *getSequentialElementType() const;
+  inline Type *getSequentialElementType() const;
 
-  uint64_t getArrayNumElements() const;
+  inline uint64_t getArrayNumElements() const;
   Type *getArrayElementType() const { return getSequentialElementType(); }
 
-  unsigned getVectorNumElements() const;
+  inline unsigned getVectorNumElements() const;
   Type *getVectorElementType() const { return getSequentialElementType(); }
 
   Type *getPointerElementType() const { return getSequentialElementType(); }
 
   /// \brief Get the address space of this pointer or pointer vector type.
-  unsigned getPointerAddressSpace() const;
+  inline unsigned getPointerAddressSpace() const;
 
   //===--------------------------------------------------------------------===//
   // Static members exported by the Type class itself.  Useful for getting
