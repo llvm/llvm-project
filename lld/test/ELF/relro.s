@@ -56,8 +56,8 @@
 // FULLRELRO-NEXT:     SHF_ALLOC
 // FULLRELRO-NEXT:     SHF_WRITE
 // FULLRELRO-NEXT:   ]
-// FULLRELRO-NEXT:   Address: 0x12128
-// FULLRELRO-NEXT:   Offset: 0x2128
+// FULLRELRO-NEXT:   Address: 0x13000
+// FULLRELRO-NEXT:   Offset: 0x3000
 // FULLRELRO-NEXT:   Size: 12
 // FULLRELRO-NEXT:   Link: 0
 // FULLRELRO-NEXT:   Info: 0
@@ -75,8 +75,8 @@
 // FULLRELRO-NEXT:     SHF_ALLOC
 // FULLRELRO-NEXT:     SHF_WRITE
 // FULLRELRO-NEXT:   ]
-// FULLRELRO-NEXT:   Address: 0x12134
-// FULLRELRO-NEXT:   Offset: 0x2134
+// FULLRELRO-NEXT:   Address: 0x1300C
+// FULLRELRO-NEXT:   Offset: 0x300C
 // FULLRELRO-NEXT:   Size: 0
 // FULLRELRO-NEXT:   Link: 0
 // FULLRELRO-NEXT:   Info: 0
@@ -91,8 +91,8 @@
 // FULLRELRO:       Offset: 0x2000
 // FULLRELRO-NEXT:  VirtualAddress: [[RWADDR:.*]]
 // FULLRELRO-NEXT:  PhysicalAddress:
-// FULLRELRO-NEXT:  FileSize: 308
-// FULLRELRO-NEXT:  MemSize: 308
+// FULLRELRO-NEXT:  FileSize: 4108
+// FULLRELRO-NEXT:  MemSize: 4108
 // FULLRELRO-NEXT:  Flags [
 // FULLRELRO-NEXT:    PF_R
 // FULLRELRO-NEXT:    PF_W
@@ -138,8 +138,8 @@
 // PARTRELRO-NEXT:    SHF_ALLOC
 // PARTRELRO-NEXT:    SHF_WRITE
 // PARTRELRO-NEXT:  ]
-// PARTRELRO-NEXT:  Address: 0x120E8
-// PARTRELRO-NEXT:  Offset: 0x20E8
+// PARTRELRO-NEXT:  Address: 0x13000
+// PARTRELRO-NEXT:  Offset: 0x3000
 // PARTRELRO-NEXT:  Size: 12
 // PARTRELRO-NEXT:  Link: 0
 // PARTRELRO-NEXT:  Info: 0
@@ -157,8 +157,8 @@
 // PARTRELRO-NEXT:      SHF_ALLOC
 // PARTRELRO-NEXT:      SHF_WRITE
 // PARTRELRO-NEXT:    ]
-// PARTRELRO-NEXT:    Address: 0x120F4
-// PARTRELRO-NEXT:    Offset: 0x20F4
+// PARTRELRO-NEXT:    Address: 0x1300C
+// PARTRELRO-NEXT:    Offset: 0x300C
 // PARTRELRO-NEXT:    Size: 0
 // PARTRELRO-NEXT:    Link: 0
 // PARTRELRO-NEXT:    Info: 0
@@ -175,8 +175,8 @@
 // PARTRELRO-NEXT:      SHF_ALLOC
 // PARTRELRO-NEXT:      SHF_WRITE
 // PARTRELRO-NEXT:    ]
-// PARTRELRO-NEXT:    Address: 0x120F8
-// PARTRELRO-NEXT:    Offset: 0x20F8
+// PARTRELRO-NEXT:    Address: 0x13010
+// PARTRELRO-NEXT:    Offset: 0x3010
 // PARTRELRO-NEXT:    Size: 32
 // PARTRELRO-NEXT:    Link: 0
 // PARTRELRO-NEXT:    Info: 0
@@ -195,22 +195,21 @@
 // PARTRELRO-NEXT:      SHF_ALLOC
 // PARTRELRO-NEXT:      SHF_WRITE
 // PARTRELRO-NEXT:    ]
-// PARTRELRO-NEXT:    Address: 0x12118
-// PARTRELRO-NEXT:    Offset: 0x2118
+// PARTRELRO-NEXT:    Address: 0x13030
+// PARTRELRO-NEXT:    Offset: 0x3030
 // PARTRELRO-NEXT:    Size: 0
 // PARTRELRO-NEXT:    Link: 0
 // PARTRELRO-NEXT:    Info: 0
 // PARTRELRO-NEXT:    AddressAlignment: 1
 // PARTRELRO-NEXT:    EntrySize: 0
 // PARTRELRO-NEXT:  }
-// 232 + sizeof(.data)(12) + align(4) + sizeof(.got.plt)(32) = 280
 // PARTRELRO:       ProgramHeader {
 // PARTRELRO:       Type: PT_LOAD
 // PARTRELRO:       Offset: 0x2000
 // PARTRELRO-NEXT:  VirtualAddress: [[RWADDR:.*]]
 // PARTRELRO-NEXT:  PhysicalAddress:
-// PARTRELRO-NEXT:  FileSize: 280
-// PARTRELRO-NEXT:  MemSize: 280
+// PARTRELRO-NEXT:  FileSize: 4144
+// PARTRELRO-NEXT:  MemSize: 4144
 // PARTRELRO-NEXT:  Flags [
 // PARTRELRO-NEXT:    PF_R (0x4)
 // PARTRELRO-NEXT:    PF_W (0x2)

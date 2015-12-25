@@ -58,10 +58,10 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
   if (isCommon()) {
     if (!Other->isCommon())
       return -1;
-    auto *ThisC = cast<DefinedCommon<ELFT>>(this);
-    auto *OtherC = cast<DefinedCommon<ELFT>>(Other);
+    auto *ThisC = cast<DefinedCommon>(this);
+    auto *OtherC = cast<DefinedCommon>(Other);
     uintX_t Align = std::max(ThisC->MaxAlignment, OtherC->MaxAlignment);
-    if (ThisC->Sym.st_size >= OtherC->Sym.st_size) {
+    if (ThisC->Size >= OtherC->Size) {
       ThisC->MaxAlignment = Align;
       return 1;
     }
@@ -72,6 +72,10 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
     return 1;
   return 0;
 }
+
+Defined::Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
+                 bool IsTls)
+    : SymbolBody(K, Name, IsWeak, Visibility, IsTls) {}
 
 Undefined::Undefined(SymbolBody::Kind K, StringRef N, bool IsWeak,
                      uint8_t Visibility, bool IsTls)
@@ -91,6 +95,19 @@ UndefinedElf<ELFT>::UndefinedElf(StringRef N, const Elf_Sym &Sym)
                 Sym.getType() == llvm::ELF::STT_TLS),
       Sym(Sym) {}
 
+template <typename ELFT>
+DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
+                                         OutputSectionBase<ELFT> &Section)
+    : Defined(SymbolBody::DefinedSyntheticKind, N, false, STV_DEFAULT, false),
+      Value(Value), Section(Section) {}
+
+DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
+                             bool IsWeak, uint8_t Visibility)
+    : Defined(SymbolBody::DefinedCommonKind, N, IsWeak, Visibility, false) {
+  MaxAlignment = Alignment;
+  this->Size = Size;
+}
+
 std::unique_ptr<InputFile> Lazy::getMember() {
   MemoryBufferRef MBRef = File->getMember(&Sym);
 
@@ -103,9 +120,9 @@ std::unique_ptr<InputFile> Lazy::getMember() {
 }
 
 template <class ELFT> static void doInitSymbols() {
-  DefinedAbsolute<ELFT>::End.setBinding(STB_GLOBAL);
-  DefinedAbsolute<ELFT>::IgnoreUndef.setBinding(STB_WEAK);
-  DefinedAbsolute<ELFT>::IgnoreUndef.setVisibility(STV_HIDDEN);
+  DefinedRegular<ELFT>::End.setBinding(STB_GLOBAL);
+  DefinedRegular<ELFT>::IgnoreUndef.setBinding(STB_WEAK);
+  DefinedRegular<ELFT>::IgnoreUndef.setVisibility(STV_HIDDEN);
 }
 
 void lld::elf2::initSymbols() {
@@ -124,3 +141,8 @@ template class lld::elf2::UndefinedElf<ELF32LE>;
 template class lld::elf2::UndefinedElf<ELF32BE>;
 template class lld::elf2::UndefinedElf<ELF64LE>;
 template class lld::elf2::UndefinedElf<ELF64BE>;
+
+template class lld::elf2::DefinedSynthetic<ELF32LE>;
+template class lld::elf2::DefinedSynthetic<ELF32BE>;
+template class lld::elf2::DefinedSynthetic<ELF64LE>;
+template class lld::elf2::DefinedSynthetic<ELF64BE>;

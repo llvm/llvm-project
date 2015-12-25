@@ -8,7 +8,7 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:     0x120C8 R_X86_64_JUMP_SLOT bar 0x0
+// CHECK-NEXT:     0x13018 R_X86_64_JUMP_SLOT bar 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 

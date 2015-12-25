@@ -19,9 +19,9 @@ foo:                                    # @foo
 .Lfunc_begin0:
         blr
 
-// CHECK: 0x20090 R_PPC64_RELATIVE - 0x10000
-// CHECK: 0x20098 R_PPC64_RELATIVE - 0x8000
+// CHECK: 0x30000 R_PPC64_RELATIVE - 0x10000
+// CHECK: 0x30008 R_PPC64_RELATIVE - 0x8000
 
 // CHECK: Name: foo
-// CHECK-NEXT: Value: 0x20090
+// CHECK-NEXT: Value: 0x30000
 

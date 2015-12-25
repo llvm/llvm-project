@@ -10,6 +10,8 @@
 
 # NOGC: Name: .eh_frame
 # NOGC: Name: .text
+# NOGC: Name: .ctors
+# NOGC: Name: .dtors
 # NOGC: Name: .init
 # NOGC: Name: .fini
 # NOGC: Name: a
@@ -23,6 +25,8 @@
 
 # GC1:     Name: .eh_frame
 # GC1:     Name: .text
+# GC1:     Name: .ctors
+# GC1:     Name: .dtors
 # GC1:     Name: .init
 # GC1:     Name: .fini
 # GC1:     Name: a
@@ -36,6 +40,8 @@
 
 # GC2:     Name: .eh_frame
 # GC2:     Name: .text
+# GC2:     Name: .ctors
+# GC2:     Name: .dtors
 # GC2:     Name: .init
 # GC2:     Name: .fini
 # GC2:     Name: a
@@ -76,6 +82,12 @@ x:
 .section .text.y,"ax",@progbits
 y:
   call x
+
+.section .ctors,"aw",@progbits
+  .quad 0
+
+.section .dtors,"aw",@progbits
+  .quad 0
 
 .section .init,"aw",@init_array
   .quad 0

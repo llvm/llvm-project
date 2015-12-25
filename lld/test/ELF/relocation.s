@@ -37,8 +37,8 @@
 // SEC-NEXT:     SHF_ALLOC
 // SEC-NEXT:     SHF_WRITE
 // SEC-NEXT:   ]
-// SEC-NEXT:   Address: 0x120E8
-// SEC-NEXT:   Offset: 0x20E8
+// SEC-NEXT:   Address: 0x13000
+// SEC-NEXT:   Offset: 0x3000
 // SEC-NEXT:   Size: 32
 // SEC-NEXT:   Link: 0
 // SEC-NEXT:   Info: 0

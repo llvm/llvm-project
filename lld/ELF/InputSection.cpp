@@ -71,7 +71,7 @@ InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) {
   uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
   if (SymbolBody *B = File->getSymbolBody(SymIndex))
     if (auto *D = dyn_cast<DefinedRegular<ELFT>>(B->repl()))
-      return &D->Section;
+      return D->Section;
   // Local symbol
   if (const Elf_Sym *Sym = File->getLocalSymbol(SymIndex))
     if (InputSectionBase<ELFT> *Sec = File->getSection(*Sym))
@@ -130,7 +130,7 @@ InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t SymIndex,
 template <class ELFT>
 static typename llvm::object::ELFFile<ELFT>::uintX_t
 getSymSize(SymbolBody &Body) {
-  if (auto *SS = dyn_cast<Defined<ELFT>>(&Body))
+  if (auto *SS = dyn_cast<DefinedElf<ELFT>>(&Body))
     return SS->Sym.st_size;
   return 0;
 }
@@ -253,7 +253,12 @@ SplitInputSection<ELFT>::SplitInputSection(
 template <class ELFT>
 EHInputSection<ELFT>::EHInputSection(ObjectFile<ELFT> *F,
                                      const Elf_Shdr *Header)
-    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::EHFrame) {}
+    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::EHFrame) {
+  // Mark .eh_frame sections as live by default because there are
+  // usually no relocations that point to .eh_frames. Otherwise,
+ // the garbage collector would drop all .eh_frame sections.
+  this->Live = true;
+}
 
 template <class ELFT>
 bool EHInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {

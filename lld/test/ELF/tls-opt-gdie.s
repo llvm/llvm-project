@@ -27,7 +27,7 @@
 //RELOC-NEXT:     0x120E8 R_X86_64_TPOFF64 tlsshared1 0x0
 //RELOC-NEXT:   }
 //RELOC-NEXT:   Section (5) .rela.plt {
-//RELOC-NEXT:     0x12108 R_X86_64_JUMP_SLOT __tls_get_addr 0x0
+//RELOC-NEXT:     0x13018 R_X86_64_JUMP_SLOT __tls_get_addr 0x0
 //RELOC-NEXT:   }
 //RELOC-NEXT: ]
 

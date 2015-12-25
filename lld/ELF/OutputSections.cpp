@@ -787,20 +787,20 @@ typename ELFFile<ELFT>::uintX_t lld::elf2::getSymVA(const SymbolBody &S) {
   switch (S.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
     auto &D = cast<DefinedSynthetic<ELFT>>(S);
-    return D.Section.getVA() + D.Sym.st_value;
+    return D.Section.getVA() + D.Value;
   }
-  case SymbolBody::DefinedAbsoluteKind:
-    return cast<DefinedAbsolute<ELFT>>(S).Sym.st_value;
   case SymbolBody::DefinedRegularKind: {
     const auto &DR = cast<DefinedRegular<ELFT>>(S);
-    InputSectionBase<ELFT> &SC = DR.Section;
+    InputSectionBase<ELFT> *SC = DR.Section;
+    if (!SC)
+      return DR.Sym.st_value;
     if (DR.Sym.getType() == STT_TLS)
-      return SC.OutSec->getVA() + SC.getOffset(DR.Sym) -
+      return SC->OutSec->getVA() + SC->getOffset(DR.Sym) -
              Out<ELFT>::TlsPhdr->p_vaddr;
-    return SC.OutSec->getVA() + SC.getOffset(DR.Sym);
+    return SC->OutSec->getVA() + SC->getOffset(DR.Sym);
   }
   case SymbolBody::DefinedCommonKind:
-    return Out<ELFT>::Bss->getVA() + cast<DefinedCommon<ELFT>>(S).OffsetInBSS;
+    return Out<ELFT>::Bss->getVA() + cast<DefinedCommon>(S).OffsetInBSS;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol<ELFT>>(S);
     if (SS.NeedsCopy)
@@ -860,8 +860,7 @@ lld::elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
     Offset += Addend;
     Addend = 0;
   }
-  return VA + cast<MergeInputSection<ELFT>>(Section)->getOffset(Offset) +
-         Addend;
+  return VA + Section->getOffset(Offset) + Addend;
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -1038,23 +1037,30 @@ void EHOutputSection<ELFT>::addSection(EHInputSection<ELFT> *S) {
   return addSectionAux(S, Obj.rels(RelSec));
 }
 
+template <class ELFT>
+static typename ELFFile<ELFT>::uintX_t writeAlignedCieOrFde(StringRef Data,
+                                                            uint8_t *Buf) {
+  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  const endianness E = ELFT::TargetEndianness;
+  uint64_t Len = RoundUpToAlignment(Data.size(), sizeof(uintX_t));
+  write32<E>(Buf, Len - 4);
+  memcpy(Buf + 4, Data.data() + 4, Data.size() - 4);
+  return Len;
+}
+
 template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   const endianness E = ELFT::TargetEndianness;
   size_t Offset = 0;
   for (const Cie<ELFT> &C : Cies) {
     size_t CieOffset = Offset;
 
-    StringRef CieData = C.data();
-    memcpy(Buf + Offset, CieData.data(), CieData.size());
+    uintX_t CIELen = writeAlignedCieOrFde<ELFT>(C.data(), Buf + Offset);
     C.S->Offsets[C.Index].second = Offset;
-    Offset += RoundUpToAlignment(CieData.size(), sizeof(uintX_t));
+    Offset += CIELen;
 
     for (const EHRegion<ELFT> &F : C.Fdes) {
-      StringRef FdeData = F.data();
-      uintX_t Len = RoundUpToAlignment(FdeData.size(), sizeof(uintX_t));
-      write32<E>(Buf + Offset, Len - 4);                    // Length
+      uintX_t Len = writeAlignedCieOrFde<ELFT>(F.data(), Buf + Offset);
       write32<E>(Buf + Offset + 4, Offset + 4 - CieOffset); // Pointer
-      memcpy(Buf + Offset + 8, FdeData.data() + 8, FdeData.size() - 8);
       F.S->Offsets[F.Index].second = Offset;
       Offset += Len;
     }
@@ -1164,18 +1170,6 @@ StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
 template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
   StringRef Data = StrTabBuilder.data();
   memcpy(Buf, Data.data(), Data.size());
-}
-
-template <class ELFT> bool lld::elf2::includeInSymtab(const SymbolBody &B) {
-  if (!B.isUsedInRegularObj())
-    return false;
-
-  // Don't include synthetic symbols like __init_array_start in every output.
-  if (auto *U = dyn_cast<DefinedAbsolute<ELFT>>(&B))
-    if (&U->Sym == &DefinedAbsolute<ELFT>::IgnoreUndef)
-      return false;
-
-  return true;
 }
 
 bool lld::elf2::includeInDynamicSymtab(const SymbolBody &B) {
@@ -1332,7 +1326,7 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
 template <class ELFT>
 static const typename llvm::object::ELFFile<ELFT>::Elf_Sym *
 getElfSym(SymbolBody &Body) {
-  if (auto *EBody = dyn_cast<Defined<ELFT>>(&Body))
+  if (auto *EBody = dyn_cast<DefinedElf<ELFT>>(&Body))
     return &EBody->Sym;
   if (auto *EBody = dyn_cast<UndefinedElf<ELFT>>(&Body))
     return &EBody->Sym;
@@ -1353,9 +1347,11 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
       break;
     case SymbolBody::DefinedRegularKind: {
       auto *Sym = cast<DefinedRegular<ELFT>>(Body->repl());
-      if (!Sym->Section.isLive())
-        continue;
-      OutSec = Sym->Section.OutSec;
+      if (InputSectionBase<ELFT> *Sec = Sym->Section) {
+        if (!Sec->isLive())
+          continue;
+        OutSec = Sec->OutSec;
+      }
       break;
     }
     case SymbolBody::DefinedCommonKind:
@@ -1368,7 +1364,6 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     }
     case SymbolBody::UndefinedElfKind:
     case SymbolBody::UndefinedKind:
-    case SymbolBody::DefinedAbsoluteKind:
     case SymbolBody::LazyKind:
       break;
     }
@@ -1381,6 +1376,9 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     if (const Elf_Sym *InputSym = getElfSym<ELFT>(*Body)) {
       Type = InputSym->getType();
       Size = InputSym->st_size;
+    } else if (auto *C = dyn_cast<DefinedCommon>(Body)) {
+      Type = STT_OBJECT;
+      Size = C->Size;
     }
 
     ESym->setBindingAndType(getSymbolBinding(Body), Type);
@@ -1388,10 +1386,10 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     ESym->setVisibility(Body->getVisibility());
     ESym->st_value = getSymVA<ELFT>(*Body);
 
-    if (isa<DefinedAbsolute<ELFT>>(Body))
-      ESym->st_shndx = SHN_ABS;
-    else if (OutSec)
+    if (OutSec)
       ESym->st_shndx = OutSec->SectionIndex;
+    else if (isa<DefinedRegular<ELFT>>(Body))
+      ESym->st_shndx = SHN_ABS;
 
     ++ESym;
   }
@@ -1404,6 +1402,8 @@ uint8_t SymbolTableSection<ELFT>::getSymbolBinding(SymbolBody *Body) {
     return STB_LOCAL;
   if (const Elf_Sym *ESym = getElfSym<ELFT>(*Body))
     return ESym->getBinding();
+  if (isa<DefinedSynthetic<ELFT>>(Body))
+    return STB_LOCAL;
   return Body->isWeak() ? STB_WEAK : STB_GLOBAL;
 }
 
@@ -1526,11 +1526,6 @@ template ELFFile<ELF64BE>::uintX_t
 getLocalRelTarget(const ObjectFile<ELF64BE> &,
                   const ELFFile<ELF64BE>::Elf_Rel &,
                   ELFFile<ELF64BE>::uintX_t Addend);
-
-template bool includeInSymtab<ELF32LE>(const SymbolBody &);
-template bool includeInSymtab<ELF32BE>(const SymbolBody &);
-template bool includeInSymtab<ELF64LE>(const SymbolBody &);
-template bool includeInSymtab<ELF64BE>(const SymbolBody &);
 
 template bool shouldKeepInSymtab<ELF32LE>(const ObjectFile<ELF32LE> &,
                                           StringRef,

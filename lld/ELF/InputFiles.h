@@ -35,7 +35,6 @@ class InputFile {
 public:
   enum Kind { ObjectKind, SharedKind, ArchiveKind };
   Kind kind() const { return FileKind; }
-  virtual ~InputFile();
 
   StringRef getName() const { return MB.getBufferIdentifier(); }
 
@@ -125,6 +124,7 @@ public:
 private:
   void initializeSections(llvm::DenseSet<StringRef> &Comdats);
   void initializeSymbols();
+  InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec);
 
   SymbolBody *createSymbolBody(StringRef StringTable, const Elf_Sym *Sym);
 

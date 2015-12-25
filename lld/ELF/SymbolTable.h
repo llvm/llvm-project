@@ -66,7 +66,7 @@ private:
   void resolve(SymbolBody *Body);
   std::string conflictMsg(SymbolBody *Old, SymbolBody *New);
 
-  std::vector<std::unique_ptr<InputFile>> ArchiveFiles;
+  std::vector<std::unique_ptr<ArchiveFile>> ArchiveFiles;
 
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.

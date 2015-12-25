@@ -25,9 +25,9 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:     0x20C8 R_X86_64_JUMP_SLOT bar 0x0
-// CHECK-NEXT:     0x20D0 R_X86_64_JUMP_SLOT zed 0x0
-// CHECK-NEXT:     0x20D8 R_X86_64_JUMP_SLOT _start 0x0
+// CHECK-NEXT:     0x3018 R_X86_64_JUMP_SLOT bar 0x0
+// CHECK-NEXT:     0x3020 R_X86_64_JUMP_SLOT zed 0x0
+// CHECK-NEXT:     0x3028 R_X86_64_JUMP_SLOT _start 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -46,8 +46,8 @@
 
 // CHECK2:      Relocations [
 // CHECK2-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK2-NEXT:     0x120C8 R_X86_64_JUMP_SLOT bar 0x0
-// CHECK2-NEXT:     0x120D0 R_X86_64_JUMP_SLOT zed 0x0
+// CHECK2-NEXT:     0x13018 R_X86_64_JUMP_SLOT bar 0x0
+// CHECK2-NEXT:     0x13020 R_X86_64_JUMP_SLOT zed 0x0
 // CHECK2-NEXT:   }
 // CHECK2-NEXT: ]
 
@@ -65,22 +65,22 @@
 // DISASM-NEXT:   100a:  e9 {{.*}}       jmp  49
 // DISASM-NEXT:   100f:  e9 {{.*}}       jmp  60
 
-// 0x20C8 - 0x1036  = 4242
-// 0x20D0 - 0x1046  = 4234
-// 0x20D8 - 0x1056  = 4226
+// 0x3018 - 0x1036  = 8162
+// 0x3020 - 0x1046  = 4234
+// 0x3028 - 0x1056  = 4226
 
 // DISASM:      Disassembly of section .plt:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:   1020:  ff 35 92 10 00 00  pushq 4242(%rip)
-// DISASM-NEXT:   1026:  ff 25 94 10 00 00  jmpq *4244(%rip)
+// DISASM-NEXT:   1020:  ff 35 e2 1f 00 00  pushq 8162(%rip)
+// DISASM-NEXT:   1026:  ff 25 e4 1f 00 00  jmpq *8164(%rip)
 // DISASM-NEXT:   102c:  0f 1f 40 00        nopl (%rax)
-// DISASM-NEXT:   1030:  ff 25 92 10 00 00  jmpq *4242(%rip)
+// DISASM-NEXT:   1030:  ff 25 e2 1f 00 00  jmpq *8162(%rip)
 // DISASM-NEXT:   1036:  68 00 00 00 00     pushq $0
 // DISASM-NEXT:   103b:  e9 e0 ff ff ff     jmp -32 <.plt>
-// DISASM-NEXT:   1040:  ff 25 8a 10 00 00  jmpq *4234(%rip)
+// DISASM-NEXT:   1040:  ff 25 da 1f 00 00  jmpq *8154(%rip)
 // DISASM-NEXT:   1046:  68 01 00 00 00     pushq $1
 // DISASM-NEXT:   104b:  e9 d0 ff ff ff     jmp -48 <.plt>
-// DISASM-NEXT:   1050:  ff 25 82 10 00 00  jmpq *4226(%rip)
+// DISASM-NEXT:   1050:  ff 25 d2 1f 00 00  jmpq *8146(%rip)
 // DISASM-NEXT:   1056:  68 02 00 00 00     pushq $2
 // DISASM-NEXT:   105b:  e9 c0 ff ff ff     jmp -64 <.plt>
 
@@ -95,18 +95,18 @@
 // DISASM2-NEXT:   1100a:  e9 {{.*}}     jmp  49
 // DISASM2-NEXT:   1100f:  e9 {{.*}}     jmp  -20
 
-// 0x120C8 - 0x11036  = 4242
-// 0x120D0 - 0x11046  = 4234
+// 0x13018 - 0x11036  = 4242
+// 0x13020 - 0x11046  = 4234
 
 // DISASM2:      Disassembly of section .plt:
 // DISASM2-NEXT: .plt:
-// DISASM2-NEXT:  11020:  ff 35 92 10 00 00   pushq 4242(%rip)
-// DISASM2-NEXT:  11026:  ff 25 94 10 00 00   jmpq *4244(%rip)
+// DISASM2-NEXT:  11020:  ff 35 e2 1f 00 00   pushq 8162(%rip)
+// DISASM2-NEXT:  11026:  ff 25 e4 1f 00 00   jmpq *8164(%rip)
 // DISASM2-NEXT:  1102c:  0f 1f 40 00         nopl  (%rax)
-// DISASM2-NEXT:  11030:  ff 25 92 10 00 00   jmpq *4242(%rip)
+// DISASM2-NEXT:  11030:  ff 25 e2 1f 00 00   jmpq *8162(%rip)
 // DISASM2-NEXT:  11036:  68 00 00 00 00      pushq $0
 // DISASM2-NEXT:  1103b:  e9 e0 ff ff ff      jmp -32 <.plt>
-// DISASM2-NEXT:  11040:  ff 25 8a 10 00 00   jmpq *4234(%rip)
+// DISASM2-NEXT:  11040:  ff 25 da 1f 00 00   jmpq *8154(%rip)
 // DISASM2-NEXT:  11046:  68 01 00 00 00      pushq $1
 // DISASM2-NEXT:  1104b:  e9 d0 ff ff ff      jmp -48 <.plt>
 // DISASM2-NEXT-NOT: 110C0

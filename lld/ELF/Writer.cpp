@@ -48,8 +48,7 @@ private:
                   iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels);
   void scanRelocs(InputSection<ELFT> &C);
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
-  void updateRelro(Elf_Phdr *Cur, Elf_Phdr *GnuRelroPhdr,
-                   OutputSectionBase<ELFT> *Sec, uintX_t VA);
+  void updateRelro(Elf_Phdr *Cur, Elf_Phdr *GnuRelroPhdr, uintX_t VA);
   void assignAddresses();
   void buildSectionMap();
   void openFile(StringRef OutputPath);
@@ -63,11 +62,10 @@ private:
   bool isOutputDynamic() const {
     return !Symtab.getSharedFiles().empty() || Config->Shared;
   }
-  uintX_t getEntryAddr() const;
   int getPhdrsNum() const;
 
   OutputSection<ELFT> *getBSS();
-  void addCommonSymbols(std::vector<DefinedCommon<ELFT> *> &Syms);
+  void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
   void addSharedCopySymbols(std::vector<SharedSymbol<ELFT> *> &Syms);
 
   std::unique_ptr<llvm::FileOutputBuffer> Buffer;
@@ -474,27 +472,24 @@ template <class ELFT> OutputSection<ELFT> *Writer<ELFT>::getBSS() {
 // Until this function is called, common symbols do not belong to any section.
 // This function adds them to end of BSS section.
 template <class ELFT>
-void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon<ELFT> *> &Syms) {
+void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
   typedef typename ELFFile<ELFT>::uintX_t uintX_t;
-  typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
 
   if (Syms.empty())
     return;
 
   // Sort the common symbols by alignment as an heuristic to pack them better.
-  std::stable_sort(
-    Syms.begin(), Syms.end(),
-    [](const DefinedCommon<ELFT> *A, const DefinedCommon<ELFT> *B) {
-      return A->MaxAlignment > B->MaxAlignment;
-    });
+  std::stable_sort(Syms.begin(), Syms.end(),
+                   [](const DefinedCommon *A, const DefinedCommon *B) {
+                     return A->MaxAlignment > B->MaxAlignment;
+                   });
 
   uintX_t Off = getBSS()->getSize();
-  for (DefinedCommon<ELFT> *C : Syms) {
-    const Elf_Sym &Sym = C->Sym;
+  for (DefinedCommon *C : Syms) {
     uintX_t Align = C->MaxAlignment;
     Off = RoundUpToAlignment(Off, Align);
     C->OffsetInBSS = Off;
-    Off += Sym.st_size;
+    Off += C->Size;
   }
 
   Out<ELFT>::Bss->setSize(Off);
@@ -592,9 +587,21 @@ static void addIRelocMarkers(SymbolTable<ELFT> &Symtab, bool IsDynamic) {
         Symtab.addAbsolute(Name, Sym);
   };
   AddMarker(IsRela ? "__rela_iplt_start" : "__rel_iplt_start",
-            DefinedAbsolute<ELFT>::RelaIpltStart);
+            DefinedRegular<ELFT>::RelaIpltStart);
   AddMarker(IsRela ? "__rela_iplt_end" : "__rel_iplt_end",
-            DefinedAbsolute<ELFT>::RelaIpltEnd);
+            DefinedRegular<ELFT>::RelaIpltEnd);
+}
+
+template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
+  if (!B.isUsedInRegularObj())
+    return false;
+
+  // Don't include synthetic symbols like __init_array_start in every output.
+  if (auto *U = dyn_cast<DefinedRegular<ELFT>>(&B))
+    if (&U->Sym == &DefinedRegular<ELFT>::IgnoreUndef)
+      return false;
+
+  return true;
 }
 
 // Create output section objects and add them to OutputSections.
@@ -716,14 +723,14 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   // So, if this symbol is referenced, we just add the placeholder here
   // and update its value later.
   if (Symtab.find("_end"))
-    Symtab.addAbsolute("_end", DefinedAbsolute<ELFT>::End);
+    Symtab.addAbsolute("_end", DefinedRegular<ELFT>::End);
 
   // If there is an undefined symbol "end", we should initialize it
   // with the same value as "_end". In any other case it should stay intact,
   // because it is an allowable name for a user symbol.
   if (SymbolBody *B = Symtab.find("end"))
     if (B->isUndefined())
-      Symtab.addAbsolute("end", DefinedAbsolute<ELFT>::End);
+      Symtab.addAbsolute("end", DefinedRegular<ELFT>::End);
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
@@ -741,7 +748,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 
   addIRelocMarkers<ELFT>(Symtab, isOutputDynamic());
 
-  std::vector<DefinedCommon<ELFT> *> CommonSymbols;
+  std::vector<DefinedCommon *> CommonSymbols;
   std::vector<SharedSymbol<ELFT> *> SharedCopySymbols;
   for (auto &P : Symtab.getSymbols()) {
     SymbolBody *Body = P.second->Body;
@@ -749,7 +756,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       if (!U->isWeak() && !U->canKeepUndefined())
         reportUndefined<ELFT>(Symtab, *Body);
 
-    if (auto *C = dyn_cast<DefinedCommon<ELFT>>(Body))
+    if (auto *C = dyn_cast<DefinedCommon>(Body))
       CommonSymbols.push_back(C);
     if (auto *SC = dyn_cast<SharedSymbol<ELFT>>(Body))
       if (SC->NeedsCopy)
@@ -896,9 +903,7 @@ static uint32_t toPhdrFlags(uint64_t Flags) {
 
 template <class ELFT>
 void Writer<ELFT>::updateRelro(Elf_Phdr *Cur, Elf_Phdr *GnuRelroPhdr,
-                               OutputSectionBase<ELFT> *Sec, uintX_t VA) {
-  if (!Config->ZRelro || !(Cur->p_flags & PF_W) || !isRelroSection(Sec))
-    return;
+                               uintX_t VA) {
   if (!GnuRelroPhdr->p_type)
     setPhdr(GnuRelroPhdr, PT_GNU_RELRO, PF_R, Cur->p_offset, Cur->p_vaddr,
             VA - Cur->p_vaddr, 1 /*p_align*/);
@@ -934,16 +939,25 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 
   Elf_Phdr GnuRelroPhdr = {};
   Elf_Phdr TlsPhdr{};
+  bool RelroAligned = false;
   uintX_t ThreadBSSOffset = 0;
   // Create phdrs as we assign VAs and file offsets to all output sections.
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
+    Elf_Phdr *PH = &Phdrs[PhdrIdx];
     if (needsPhdr<ELFT>(Sec)) {
       uintX_t Flags = toPhdrFlags(Sec->getFlags());
-      if (Phdrs[PhdrIdx].p_flags != Flags) {
-        // Flags changed. Create a new PT_LOAD.
+      bool InRelRo = Config->ZRelro && (Flags & PF_W) && isRelroSection(Sec);
+      bool FirstNonRelRo = GnuRelroPhdr.p_type && !InRelRo && !RelroAligned;
+      if (FirstNonRelRo || PH->p_flags != Flags) {
         VA = RoundUpToAlignment(VA, Target->getPageSize());
         FileOff = RoundUpToAlignment(FileOff, Target->getPageSize());
-        Elf_Phdr *PH = &Phdrs[++PhdrIdx];
+        if (FirstNonRelRo)
+          RelroAligned = true;
+      }
+
+      if (PH->p_flags != Flags) {
+        // Flags changed. Create a new PT_LOAD.
+        PH = &Phdrs[++PhdrIdx];
         setPhdr(PH, PT_LOAD, Flags, FileOff, VA, 0, Target->getPageSize());
       }
 
@@ -966,7 +980,8 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
         VA = RoundUpToAlignment(VA, Sec->getAlign());
         Sec->setVA(VA);
         VA += Sec->getSize();
-        updateRelro(&Phdrs[PhdrIdx], &GnuRelroPhdr, Sec, VA);
+        if (InRelRo)
+          updateRelro(PH, &GnuRelroPhdr, VA);
       }
     }
 
@@ -975,9 +990,8 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     if (Sec->getType() != SHT_NOBITS)
       FileOff += Sec->getSize();
     if (needsPhdr<ELFT>(Sec)) {
-      Elf_Phdr *Cur = &Phdrs[PhdrIdx];
-      Cur->p_filesz = FileOff - Cur->p_offset;
-      Cur->p_memsz = VA - Cur->p_vaddr;
+      PH->p_filesz = FileOff - PH->p_offset;
+      PH->p_memsz = VA - PH->p_vaddr;
     }
   }
 
@@ -1021,20 +1035,20 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 
   // Update "_end" and "end" symbols so that they
   // point to the end of the data segment.
-  DefinedAbsolute<ELFT>::End.st_value = VA;
+  DefinedRegular<ELFT>::End.st_value = VA;
 
   // Update __rel_iplt_start/__rel_iplt_end to wrap the
   // rela.plt section.
   if (Out<ELFT>::RelaPlt) {
     uintX_t Start = Out<ELFT>::RelaPlt->getVA();
-    DefinedAbsolute<ELFT>::RelaIpltStart.st_value = Start;
-    DefinedAbsolute<ELFT>::RelaIpltEnd.st_value =
+    DefinedRegular<ELFT>::RelaIpltStart.st_value = Start;
+    DefinedRegular<ELFT>::RelaIpltEnd.st_value =
         Start + Out<ELFT>::RelaPlt->getSize();
   }
 
   // Update MIPS _gp absolute symbol so that it points to the static data.
   if (Config->EMachine == EM_MIPS)
-    DefinedAbsolute<ELFT>::MipsGp.st_value = getMipsGpAddr<ELFT>();
+    DefinedRegular<ELFT>::MipsGp.st_value = getMipsGpAddr<ELFT>();
 }
 
 // Returns the number of PHDR entries.
@@ -1077,6 +1091,18 @@ static uint32_t getELFFlags() {
   return V;
 }
 
+template <class ELFT>
+static typename ELFFile<ELFT>::uintX_t getEntryAddr() {
+  if (Config->EntrySym) {
+    if (SymbolBody *E = Config->EntrySym->repl())
+      return getSymVA<ELFT>(*E);
+    return 0;
+  }
+  if (Config->EntryAddr != uint64_t(-1))
+    return Config->EntryAddr;
+  return 0;
+}
+
 template <class ELFT> void Writer<ELFT>::writeHeader() {
   uint8_t *Buf = Buffer->getBufferStart();
   memcpy(Buf, "\177ELF", 4);
@@ -1095,7 +1121,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_type = Config->Shared ? ET_DYN : ET_EXEC;
   EHdr->e_machine = FirstObj.getEMachine();
   EHdr->e_version = EV_CURRENT;
-  EHdr->e_entry = getEntryAddr();
+  EHdr->e_entry = getEntryAddr<ELFT>();
   EHdr->e_phoff = sizeof(Elf_Ehdr);
   EHdr->e_shoff = SectionHeaderOff;
   EHdr->e_flags = getELFFlags();
@@ -1118,7 +1144,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 template <class ELFT> void Writer<ELFT>::openFile(StringRef Path) {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Path, FileSize, FileOutputBuffer::F_executable);
-  error(BufferOrErr, Twine("failed to open ") + Path);
+  error(BufferOrErr, "failed to open " + Path);
   Buffer = std::move(*BufferOrErr);
 }
 
@@ -1136,18 +1162,6 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     if (Sec != Out<ELFT>::Opd)
       Sec->writeTo(Buf + Sec->getFileOff());
-}
-
-template <class ELFT>
-typename ELFFile<ELFT>::uintX_t Writer<ELFT>::getEntryAddr() const {
-  if (Config->EntrySym) {
-    if (SymbolBody *E = Config->EntrySym->repl())
-      return getSymVA<ELFT>(*E);
-    return 0;
-  }
-  if (Config->EntryAddr != uint64_t(-1))
-    return Config->EntryAddr;
-  return 0;
 }
 
 template <class ELFT>

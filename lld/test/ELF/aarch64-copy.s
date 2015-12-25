@@ -22,7 +22,7 @@ _start:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x120B0
+// CHECK-NEXT:     Address: 0x13010
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 24
 // CHECK-NEXT:     Link:
@@ -32,19 +32,19 @@ _start:
 // CHECK: Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
 // CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x120B0
+// CHECK-NEXT:       Offset: 0x13010
 // CHECK-NEXT:       Type: R_AARCH64_COPY
 // CHECK-NEXT:       Symbol: x
 // CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x120C0
+// CHECK-NEXT:       Offset: 0x13020
 // CHECK-NEXT:       Type: R_AARCH64_COPY
 // CHECK-NEXT:       Symbol: y
 // CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x120C4
+// CHECK-NEXT:       Offset: 0x13024
 // CHECK-NEXT:       Type: R_AARCH64_COPY
 // CHECK-NEXT:       Symbol: z
 // CHECK-NEXT:       Addend: 0x0
@@ -54,21 +54,21 @@ _start:
 
 // CHECK: Symbols [
 // CHECK:     Name: x
-// CHECK-NEXT:     Value: 0x120B0
+// CHECK-NEXT:     Value: 0x13010
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
 // CHECK-NEXT:     Other:
 // CHECK-NEXT:     Section: .bss
 // CHECK:     Name: y
-// CHECK-NEXT:     Value: 0x120C0
+// CHECK-NEXT:     Value: 0x13020
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
 // CHECK-NEXT:     Other:
 // CHECK-NEXT:     Section: .bss
 // CHECK:     Name: z
-// CHECK-NEXT:     Value: 0x120C4
+// CHECK-NEXT:     Value: 0x13024
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
@@ -78,16 +78,16 @@ _start:
 
 // CODE: Disassembly of section .text:
 // CODE-NEXT: _start:
-// S(x) = 0x120B0, A = 0, P = 0x11000
-// S + A - P = 0x10B0 = 4272
-// CODE-NEXT:  11000: {{.*}} adr  x1, #4272
-// S(y) = 0x120C0, A = 0, P = 0x11004
-// Page(S + A) - Page(P) = 0x12000 - 0x11000 = 0x1000 - 4096
-// CODE-NEXT:  11004: {{.*}} adrp x2, #4096
-// S(y) = 0x120C0, A = 0
-// (S + A) & 0xFFF = 0xC0 = 192
-// CODE-NEXT:  11008: {{.*}} add  x2, x2, #192
+// S(x) = 0x13010, A = 0, P = 0x11000
+// S + A - P = 0x10B0 = 8208
+// CODE-NEXT:  11000: {{.*}} adr  x1, #8208
+// S(y) = 0x13020, A = 0, P = 0x11004
+// Page(S + A) - Page(P) = 0x13000 - 0x11000 = 0x2000 = 8192
+// CODE-NEXT:  11004: {{.*}} adrp x2, #8192
+// S(y) = 0x13020, A = 0
+// (S + A) & 0xFFF = 0x20 = 32
+// CODE-NEXT:  11008: {{.*}} add  x2, x2, #32
 
 // DATA: Contents of section .data:
-// S(z) = 0x120c4
-// DATA-NEXT:  120a0 c4200100
+// S(z) = 0x13024
+// DATA-NEXT:  13000 24300100

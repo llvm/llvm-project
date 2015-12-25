@@ -33,7 +33,7 @@
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
 // CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x120C8
+// CHECK-NEXT:       Offset: 0x13018
 // CHECK-NEXT:       Type: R_X86_64_JUMP_SLOT
 // CHECK-NEXT:       Symbol: bar
 // CHECK-NEXT:       Addend: 0x0

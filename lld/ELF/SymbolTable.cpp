@@ -44,12 +44,12 @@ static void checkCompatibility(InputFile *FileP) {
 
 template <class ELFT>
 void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
-  InputFile *FileP = File.release();
+  InputFile *FileP = File.get();
   checkCompatibility<ELFT>(FileP);
 
   // .a file
   if (auto *F = dyn_cast<ArchiveFile>(FileP)) {
-    ArchiveFiles.emplace_back(F);
+    ArchiveFiles.emplace_back(cast<ArchiveFile>(File.release()));
     F->parse();
     for (Lazy &Sym : F->getLazySymbols())
       addLazy(&Sym);
@@ -60,12 +60,10 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   if (auto *F = dyn_cast<SharedFile<ELFT>>(FileP)) {
     // DSOs are uniquified not by filename but by soname.
     F->parseSoName();
-    if (!IncludedSoNames.insert(F->getSoName()).second) {
-      delete FileP;
+    if (!IncludedSoNames.insert(F->getSoName()).second)
       return;
-    }
 
-    SharedFiles.emplace_back(F);
+    SharedFiles.emplace_back(cast<SharedFile<ELFT>>(File.release()));
     F->parse();
     for (SharedSymbol<ELFT> &B : F->getSharedSymbols())
       resolve(&B);
@@ -74,12 +72,13 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
 
   // .o file
   auto *F = cast<ObjectFile<ELFT>>(FileP);
-  ObjectFiles.emplace_back(F);
+  ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(File.release()));
   F->parse(Comdats);
   for (SymbolBody *B : F->getSymbols())
     resolve(B);
 }
 
+// Add an undefined symbol.
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addUndefined(StringRef Name) {
   auto *Sym = new (Alloc) Undefined(Name, false, STV_DEFAULT, false);
@@ -87,6 +86,8 @@ SymbolBody *SymbolTable<ELFT>::addUndefined(StringRef Name) {
   return Sym;
 }
 
+// Add an undefined symbol. Unlike addUndefined, that symbol
+// doesn't have to be resolved, thus "opt" (optional).
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addUndefinedOpt(StringRef Name) {
   auto *Sym = new (Alloc) Undefined(Name, false, STV_HIDDEN, true);
@@ -97,25 +98,21 @@ SymbolBody *SymbolTable<ELFT>::addUndefinedOpt(StringRef Name) {
 template <class ELFT>
 void SymbolTable<ELFT>::addAbsolute(StringRef Name,
                                     typename ELFFile<ELFT>::Elf_Sym &ESym) {
-  resolve(new (Alloc) DefinedAbsolute<ELFT>(Name, ESym));
+  resolve(new (Alloc) DefinedRegular<ELFT>(Name, ESym, nullptr));
 }
 
 template <class ELFT>
 void SymbolTable<ELFT>::addSynthetic(StringRef Name,
                                      OutputSectionBase<ELFT> &Section,
                                      typename ELFFile<ELFT>::uintX_t Value) {
-  typedef typename DefinedSynthetic<ELFT>::Elf_Sym Elf_Sym;
-  auto *ESym = new (Alloc) Elf_Sym;
-  memset(ESym, 0, sizeof(Elf_Sym));
-  ESym->st_value = Value;
-  auto *Sym = new (Alloc) DefinedSynthetic<ELFT>(Name, *ESym, Section);
+  auto *Sym = new (Alloc) DefinedSynthetic<ELFT>(Name, Value, Section);
   resolve(Sym);
 }
 
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
   auto *Sym = new (Alloc)
-      DefinedAbsolute<ELFT>(Name, DefinedAbsolute<ELFT>::IgnoreUndef);
+      DefinedRegular<ELFT>(Name, DefinedRegular<ELFT>::IgnoreUndef, nullptr);
   resolve(Sym);
   return Sym;
 }

@@ -61,7 +61,6 @@ getLocalRelTarget(const ObjectFile<ELFT> &File,
                   const llvm::object::Elf_Rel_Impl<ELFT, IsRela> &Rel,
                   typename llvm::object::ELFFile<ELFT>::uintX_t Addend);
 bool canBePreempted(const SymbolBody *Body, bool NeedsGot);
-template <class ELFT> bool includeInSymtab(const SymbolBody &B);
 
 bool includeInDynamicSymtab(const SymbolBody &B);
 

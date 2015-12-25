@@ -49,17 +49,17 @@ v1:
 # EXE_SYM: SYMBOL TABLE:
 # EXE_SYM: 00037ff0         *ABS*		 00000000 _gp
 #          ^-- .got + GP offset (0x7ff0)
-# EXE_SYM: 00030010 g       .data		 00000004 v1
+# EXE_SYM: 00040000 g       .data		 00000004 v1
 
 # EXE_GOT_BE: Contents of section .got:
-# EXE_GOT_BE:  30000 00000000 80000000 00030010
-#                    ^        ^        ^-- v1 (0x30010)
+# EXE_GOT_BE:  30000 00000000 80000000 00040000
+#                    ^        ^        ^-- v1 (0x40000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
 
 # EXE_GOT_EL: Contents of section .got:
-# EXE_GOT_EL:  30000 00000000 00000080 10000300
-#                    ^        ^        ^-- v1 (0x30010)
+# EXE_GOT_EL:  30000 00000000 00000080 00000400
+#                    ^        ^        ^-- v1 (0x40000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
 
@@ -72,17 +72,17 @@ v1:
 # DSO_SYM: SYMBOL TABLE:
 # DSO_SYM: 00027ff0         *ABS*		 00000000 _gp
 #          ^-- .got + GP offset (0x7ff0)
-# DSO_SYM: 00020010 g       .data		 00000004 v1
+# DSO_SYM: 00030000 g       .data		 00000004 v1
 
 # DSO_GOT_BE: Contents of section .got:
-# DSO_GOT_BE:  20000 00000000 80000000 00020010
-#                    ^        ^        ^-- v1 (0x20010)
+# DSO_GOT_BE:  20000 00000000 80000000 00030000
+#                    ^        ^        ^-- v1 (0x30000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
 
 # DSO_GOT_EL: Contents of section .got:
-# DSO_GOT_EL:  20000 00000000 00000080 10000200
-#                    ^        ^        ^-- v1 (0x20010)
+# DSO_GOT_EL:  20000 00000000 00000080 00000300
+#                    ^        ^        ^-- v1 (0x30000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
 
