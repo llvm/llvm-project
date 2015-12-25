@@ -1,3 +1,6 @@
+// FIXME: This is a front-end test that depends on LLVM optimizations (-O3). 
+// It should be split into separate files for front/middle/back-end testing.
+
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:  -ffp-contract=fast -S -O3 -o - %s | FileCheck %s --check-prefix=CHECK \
@@ -77,7 +80,7 @@ poly64x1_t test_vcopy_lane_p64(poly64x1_t a, poly64x1_t b) {
 poly64x2_t test_vcopyq_lane_p64(poly64x2_t a, poly64x1_t b) {
   // CHECK-LABEL: test_vcopyq_lane_p64
   return vcopyq_lane_p64(a, 1, b, 0);
-  // CHECK: ins  {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+  // CHECK: zip1 v0.2d, v0.2d, v1.2d
 }
 
 poly64x2_t test_vcopyq_laneq_p64(poly64x2_t a, poly64x2_t b) {

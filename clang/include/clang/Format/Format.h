@@ -427,7 +427,9 @@ struct FormatStyle {
     LK_JavaScript,
     /// Should be used for Protocol Buffers
     /// (https://developers.google.com/protocol-buffers/).
-    LK_Proto
+    LK_Proto,
+    /// Should be used for TableGen code.
+    LK_TableGen
   };
 
   /// \brief Language, this format style is targeted at.

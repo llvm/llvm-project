@@ -391,7 +391,7 @@ public:
   /// due to transformation.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool TransformExprs(Expr **Inputs, unsigned NumInputs, bool IsCall,
+  bool TransformExprs(Expr *const *Inputs, unsigned NumInputs, bool IsCall,
                       SmallVectorImpl<Expr *> &Outputs,
                       bool *ArgChanged = nullptr);
 
@@ -2765,9 +2765,8 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildObjCDictionaryLiteral(SourceRange Range,
-                                          ObjCDictionaryElement *Elements,
-                                          unsigned NumElements) {
-    return getSema().BuildObjCDictionaryLiteral(Range, Elements, NumElements);
+                              MutableArrayRef<ObjCDictionaryElement> Elements) {
+    return getSema().BuildObjCDictionaryLiteral(Range, Elements);
   }
 
   /// \brief Build a new Objective-C \@encode expression.
@@ -3201,7 +3200,7 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
 }
 
 template<typename Derived>
-bool TreeTransform<Derived>::TransformExprs(Expr **Inputs,
+bool TreeTransform<Derived>::TransformExprs(Expr *const *Inputs,
                                             unsigned NumInputs,
                                             bool IsCall,
                                       SmallVectorImpl<Expr *> &Outputs,
@@ -10728,8 +10727,7 @@ TreeTransform<Derived>::TransformObjCDictionaryLiteral(
     return SemaRef.MaybeBindToTemporary(E);
 
   return getDerived().RebuildObjCDictionaryLiteral(E->getSourceRange(),
-                                                   Elements.data(),
-                                                   Elements.size());
+                                                   Elements);
 }
 
 template<typename Derived>

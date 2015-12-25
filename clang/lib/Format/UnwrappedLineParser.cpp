@@ -650,7 +650,15 @@ static bool tokenCanStartNewLine(const clang::Token &Tok) {
 }
 
 void UnwrappedLineParser::parseStructuralElement() {
-  assert(!FormatTok->Tok.is(tok::l_brace));
+  assert(!FormatTok->is(tok::l_brace));
+  if (Style.Language == FormatStyle::LK_TableGen &&
+      FormatTok->is(tok::pp_include)) {
+    nextToken();
+    if (FormatTok->is(tok::string_literal))
+      nextToken();
+    addUnwrappedLine();
+    return;
+  }
   switch (FormatTok->Tok.getKind()) {
   case tok::at:
     nextToken();

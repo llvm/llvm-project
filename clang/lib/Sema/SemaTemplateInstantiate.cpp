@@ -2666,16 +2666,17 @@ ExprResult Sema::SubstInitializer(Expr *Init,
   return Instantiator.TransformInitializer(Init, CXXDirectInit);
 }
 
-bool Sema::SubstExprs(Expr **Exprs, unsigned NumExprs, bool IsCall,
+bool Sema::SubstExprs(ArrayRef<Expr *> Exprs, bool IsCall,
                       const MultiLevelTemplateArgumentList &TemplateArgs,
                       SmallVectorImpl<Expr *> &Outputs) {
-  if (NumExprs == 0)
+  if (Exprs.empty())
     return false;
 
   TemplateInstantiator Instantiator(*this, TemplateArgs,
                                     SourceLocation(),
                                     DeclarationName());
-  return Instantiator.TransformExprs(Exprs, NumExprs, IsCall, Outputs);
+  return Instantiator.TransformExprs(Exprs.data(), Exprs.size(),
+                                     IsCall, Outputs);
 }
 
 NestedNameSpecifierLoc

@@ -5926,8 +5926,8 @@ static void AddProtocolResults(DeclContext *Ctx, DeclContext *CurContext,
   }
 }
 
-void Sema::CodeCompleteObjCProtocolReferences(IdentifierLocPair *Protocols,
-                                              unsigned NumProtocols) {
+void Sema::CodeCompleteObjCProtocolReferences(
+                                        ArrayRef<IdentifierLocPair> Protocols) {
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_ObjCProtocolName);
@@ -5938,9 +5938,9 @@ void Sema::CodeCompleteObjCProtocolReferences(IdentifierLocPair *Protocols,
     // Tell the result set to ignore all of the protocols we have
     // already seen.
     // FIXME: This doesn't work when caching code-completion results.
-    for (unsigned I = 0; I != NumProtocols; ++I)
-      if (ObjCProtocolDecl *Protocol = LookupProtocol(Protocols[I].first,
-                                                      Protocols[I].second))
+    for (const IdentifierLocPair &Pair : Protocols)
+      if (ObjCProtocolDecl *Protocol = LookupProtocol(Pair.first,
+                                                      Pair.second))
         Results.Ignore(Protocol);
 
     // Add all protocols.
