@@ -814,14 +814,14 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
                                  SourceLocation ExportLoc,
                                  SourceLocation TemplateLoc,
                                  SourceLocation LAngleLoc,
-                                 Decl **Params, unsigned NumParams,
+                                 ArrayRef<Decl *> Params,
                                  SourceLocation RAngleLoc) {
   if (ExportLoc.isValid())
     Diag(ExportLoc, diag::warn_template_export_unsupported);
 
   return TemplateParameterList::Create(Context, TemplateLoc, LAngleLoc,
-                                       (NamedDecl**)Params, NumParams,
-                                       RAngleLoc);
+                                       (NamedDecl**)Params.data(),
+                                       Params.size(), RAngleLoc);
 }
 
 static void SetNestedNameSpecifier(TagDecl *T, const CXXScopeSpec &SS) {

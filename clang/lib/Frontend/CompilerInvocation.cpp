@@ -1,4 +1,4 @@
-//===--- CompilerInvocation.cpp -------------------------------------------===//
+//===--- 
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -417,8 +417,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.EmitCodeView = Args.hasArg(OPT_gcodeview);
   Opts.SplitDwarfFile = Args.getLastArgValue(OPT_split_dwarf_file);
   Opts.DebugTypeExtRefs = Args.hasArg(OPT_dwarf_ext_refs);
-  if (Triple.isPS4CPU())
-    Opts.DebugExplicitImport = true;
+  Opts.DebugExplicitImport = Triple.isPS4CPU(); 
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ))
     Opts.DebugPrefixMap.insert(StringRef(Arg).split('='));

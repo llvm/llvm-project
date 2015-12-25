@@ -11020,6 +11020,12 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("#define a\\\n /**/}");
 }
 
+TEST_F(FormatTest, FormatsTableGenCode) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Language = FormatStyle::LK_TableGen;
+  verifyFormat("include \"a.td\"\ninclude \"b.td\"", Style);
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
