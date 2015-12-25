@@ -165,12 +165,6 @@ void WebAssemblyPassConfig::addPreRegAlloc() {
 
   // Prepare store instructions for register stackifying.
   addPass(createWebAssemblyStoreResults());
-
-  // Mark registers as representing wasm's expression stack.
-  addPass(createWebAssemblyRegStackify());
-  // The register coalescing pass has a bad interaction with COPY MIs which have
-  // EXPR_STACK as an extra operand
-  // disablePass(&RegisterCoalescerID);
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
@@ -183,6 +177,9 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&PrologEpilogCodeInserterID);
   // Fails with: should be run after register allocation.
   disablePass(&MachineCopyPropagationID);
+
+  // Mark registers as representing wasm's expression stack.
+  addPass(createWebAssemblyRegStackify());
 
   // Run the register coloring pass to reduce the total number of registers.
   addPass(createWebAssemblyRegColoring());

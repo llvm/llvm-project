@@ -10,6 +10,6 @@ LEVEL = ../..
 
 include $(LEVEL)/Makefile.config
 
-PARALLEL_DIRS := DWARF PDB Symbolize
+PARALLEL_DIRS := CodeView DWARF PDB Symbolize
 
 include $(LEVEL)/Makefile.common

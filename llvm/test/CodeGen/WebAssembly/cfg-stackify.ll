@@ -464,7 +464,7 @@ if.end:
 ; CHECK:      block       BB13_8{{$}}
 ; CHECK-NEXT: block       BB13_7{{$}}
 ; CHECK-NEXT: block       BB13_4{{$}}
-; CHECK-NEXT: br_if       $pop{{[0-9]*}}, BB13_4{{$}}
+; CHECK:      br_if       $pop{{[0-9]*}}, BB13_4{{$}}
 ; CHECK-NEXT: block       BB13_3{{$}}
 ; CHECK:      br_if       $pop{{[0-9]*}}, BB13_3{{$}}
 ; CHECK:      br_if       $pop{{[0-9]*}}, BB13_7{{$}}
@@ -483,7 +483,7 @@ if.end:
 ; OPT:      block       BB13_8{{$}}
 ; OPT-NEXT: block       BB13_7{{$}}
 ; OPT-NEXT: block       BB13_4{{$}}
-; OPT-NEXT: br_if       $pop{{[0-9]*}}, BB13_4{{$}}
+; OPT:      br_if       $pop{{[0-9]*}}, BB13_4{{$}}
 ; OPT-NEXT: block       BB13_3{{$}}
 ; OPT:      br_if       $pop{{[0-9]*}}, BB13_3{{$}}
 ; OPT:      br_if       $pop{{[0-9]*}}, BB13_7{{$}}
@@ -642,7 +642,7 @@ second:
 ; CHECK-NEXT:  loop BB16_5{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       block BB16_4{{$}}
-; CHECK-NEXT:  br_if {{[^,]*}}, BB16_4{{$}}
+; CHECK:       br_if {{[^,]*}}, BB16_4{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if {{[^,]*}}, BB16_1{{$}}
 ; CHECK-NOT:   block
@@ -907,7 +907,7 @@ bb6:
 ; CHECK-NEXT:  br_if        {{[^,]*}}, BB20_4{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       block        BB20_3{{$}}
-; CHECK-NEXT:  br_if        {{[^,]*}}, BB20_3{{$}}
+; CHECK:       br_if        {{[^,]*}}, BB20_3{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if        {{[^,]*}}, BB20_6{{$}}
 ; CHECK-NEXT:  BB20_3:
@@ -933,7 +933,7 @@ bb6:
 ; OPT-NEXT:  br_if        $0, BB20_4{{$}}
 ; OPT-NOT:   block
 ; OPT:       block        BB20_3{{$}}
-; OPT-NEXT:  br_if        $0, BB20_3{{$}}
+; OPT:       br_if        $0, BB20_3{{$}}
 ; OPT-NOT:   block
 ; OPT:       br_if        $0, BB20_8{{$}}
 ; OPT-NEXT:  BB20_3:
@@ -991,7 +991,7 @@ bb8:
 ; CHECK:       block       BB21_7{{$}}
 ; CHECK-NEXT:  block       BB21_6{{$}}
 ; CHECK-NEXT:  block       BB21_4{{$}}
-; CHECK-NEXT:  br_if       {{[^,]*}}, BB21_4{{$}}
+; CHECK:       br_if       {{[^,]*}}, BB21_4{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if       {{[^,]*}}, BB21_7{{$}}
 ; CHECK-NOT:   block
@@ -1015,7 +1015,7 @@ bb8:
 ; OPT:       block       BB21_7{{$}}
 ; OPT-NEXT:  block       BB21_6{{$}}
 ; OPT-NEXT:  block       BB21_4{{$}}
-; OPT-NEXT:  br_if       {{[^,]*}}, BB21_4{{$}}
+; OPT:       br_if       {{[^,]*}}, BB21_4{{$}}
 ; OPT-NOT:   block
 ; OPT:       br_if       {{[^,]*}}, BB21_7{{$}}
 ; OPT-NOT:   block

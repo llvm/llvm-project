@@ -24,6 +24,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -42,8 +43,12 @@ class WebAssemblyRegStackify final : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<LiveIntervals>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
+    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(MachineDominatorsID);
+    AU.addPreservedID(LiveVariablesID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -61,59 +66,68 @@ FunctionPass *llvm::createWebAssemblyRegStackify() {
 }
 
 // Decorate the given instruction with implicit operands that enforce the
-// expression stack ordering constraints needed for an instruction which is
-// consumed by an instruction using the expression stack.
-static void ImposeStackInputOrdering(MachineInstr *MI) {
+// expression stack ordering constraints for an instruction which is on
+// the expression stack.
+static void ImposeStackOrdering(MachineInstr *MI) {
   // Write the opaque EXPR_STACK register.
   if (!MI->definesRegister(WebAssembly::EXPR_STACK))
     MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
                                              /*isDef=*/true,
                                              /*isImp=*/true));
-}
-
-// Decorate the given instruction with implicit operands that enforce the
-// expression stack ordering constraints for an instruction which is on
-// the expression stack.
-static void ImposeStackOrdering(MachineInstr *MI, MachineRegisterInfo &MRI) {
-  ImposeStackInputOrdering(MI);
 
   // Also read the opaque EXPR_STACK register.
   if (!MI->readsRegister(WebAssembly::EXPR_STACK))
     MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
                                              /*isDef=*/false,
                                              /*isImp=*/true));
-
-  // Also, mark any inputs to this instruction as being consumed by an
-  // instruction on the expression stack.
-  // TODO: Find a lighter way to describe the appropriate constraints.
-  for (MachineOperand &MO : MI->uses()) {
-    if (!MO.isReg())
-      continue;
-    unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(Reg))
-      continue;
-    MachineInstr *Def = MRI.getVRegDef(Reg);
-    if (Def->getOpcode() == TargetOpcode::PHI)
-      continue;
-    ImposeStackInputOrdering(Def);
-  }
 }
 
-// Test whether it's safe to move Def to just before Insert. Note that this
-// doesn't account for physical register dependencies, because WebAssembly
-// doesn't have any (other than special ones like EXPR_STACK).
+// Test whether it's safe to move Def to just before Insert.
 // TODO: Compute memory dependencies in a way that doesn't require always
 // walking the block.
 // TODO: Compute memory dependencies in a way that uses AliasAnalysis to be
 // more precise.
 static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
-                         AliasAnalysis &AA) {
+                         AliasAnalysis &AA, LiveIntervals &LIS,
+                         MachineRegisterInfo &MRI) {
   assert(Def->getParent() == Insert->getParent());
   bool SawStore = false, SawSideEffects = false;
   MachineBasicBlock::const_iterator D(Def), I(Insert);
+
+  // Check for register dependencies.
+  for (const MachineOperand &MO : Def->operands()) {
+    if (!MO.isReg() || MO.isUndef())
+      continue;
+    unsigned Reg = MO.getReg();
+
+    // If the register is dead here and at Insert, ignore it.
+    if (MO.isDead() && Insert->definesRegister(Reg) &&
+        !Insert->readsRegister(Reg))
+      continue;
+
+    if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+      // If the physical register is never modified, ignore it.
+      if (!MRI.isPhysRegModified(Reg))
+        continue;
+      // Otherwise, it's a physical register with unknown liveness.
+      return false;
+    }
+
+    // Ask LiveIntervals whether moving this virtual register use or def to
+    // Insert will change value numbers are seen.
+    const LiveInterval &LI = LIS.getInterval(Reg);
+    VNInfo *DefVNI = MO.isDef() ?
+        LI.getVNInfoAt(LIS.getInstructionIndex(Def).getRegSlot()) :
+        LI.getVNInfoBefore(LIS.getInstructionIndex(Def));
+    assert(DefVNI && "Instruction input missing value number");
+    VNInfo *InsVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(Insert));
+    if (InsVNI && DefVNI != InsVNI)
+      return false;
+  }
+
+  // Check for memory dependencies and side effects.
   for (--I; I != D; --I)
     SawSideEffects |= I->isSafeToMove(&AA, SawStore);
-
   return !(SawStore && Def->mayLoad() && !Def->isInvariantLoad(&AA)) &&
          !(SawSideEffects && !Def->isSafeToMove(&AA, SawStore));
 }
@@ -127,8 +141,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-  assert(MRI.isSSA() && "RegStackify depends on SSA form");
+  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
 
   // Walk the instructions from the bottom up. Currently we don't look past
   // block boundaries, and the blocks aren't ordered so the block visitation
@@ -154,19 +167,10 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           continue;
 
         unsigned Reg = Op.getReg();
-        if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
-          // An instruction with a physical register. Conservatively mark it as
-          // an expression stack input so that it isn't reordered with anything
-          // in an expression stack which might use it (physical registers
-          // aren't in SSA form so it's not trivial to determine this).
-          // TODO: Be less conservative.
-          ImposeStackInputOrdering(Insert);
-          continue;
-        }
 
         // Only consider registers with a single definition.
         // TODO: Eventually we may relax this, to stackify phi transfers.
-        MachineInstr *Def = MRI.getVRegDef(Reg);
+        MachineInstr *Def = MRI.getUniqueVRegDef(Reg);
         if (!Def)
           continue;
 
@@ -198,26 +202,26 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           continue;
 
         // For now, be conservative and don't look across block boundaries.
-        // TODO: Be more aggressive.
+        // TODO: Be more aggressive?
         if (Def->getParent() != &MBB)
           continue;
 
         // Don't move instructions that have side effects or memory dependencies
         // or other complications.
-        if (!IsSafeToMove(Def, Insert, AA))
+        if (!IsSafeToMove(Def, Insert, AA, LIS, MRI))
           continue;
 
         Changed = true;
         AnyStackified = true;
         // Move the def down and nest it in the current instruction.
-        MBB.insert(MachineBasicBlock::instr_iterator(Insert),
-                   Def->removeFromParent());
+        MBB.splice(Insert, &MBB, Def);
+        LIS.handleMove(Def);
         MFI.stackifyVReg(Reg);
-        ImposeStackOrdering(Def, MRI);
+        ImposeStackOrdering(Def);
         Insert = Def;
       }
       if (AnyStackified)
-        ImposeStackOrdering(&MI, MRI);
+        ImposeStackOrdering(&MI);
     }
   }
 

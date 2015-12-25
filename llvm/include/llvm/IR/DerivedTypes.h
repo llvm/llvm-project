@@ -91,6 +91,10 @@ public:
   }
 };
 
+unsigned Type::getIntegerBitWidth() const {
+  return cast<IntegerType>(this)->getBitWidth();
+}
+
 /// FunctionType - Class to represent function types
 ///
 class FunctionType : public Type {
@@ -142,6 +146,18 @@ public:
 };
 static_assert(AlignOf<FunctionType>::Alignment >= AlignOf<Type *>::Alignment,
               "Alignment sufficient for objects appended to FunctionType");
+
+bool Type::isFunctionVarArg() const {
+  return cast<FunctionType>(this)->isVarArg();
+}
+
+Type *Type::getFunctionParamType(unsigned i) const {
+  return cast<FunctionType>(this)->getParamType(i);
+}
+
+unsigned Type::getFunctionNumParams() const {
+  return cast<FunctionType>(this)->getNumParams();
+}
 
 /// CompositeType - Common super class of ArrayType, StructType, PointerType
 /// and VectorType.
@@ -294,6 +310,18 @@ public:
   }
 };
 
+StringRef Type::getStructName() const {
+  return cast<StructType>(this)->getName();
+}
+
+unsigned Type::getStructNumElements() const {
+  return cast<StructType>(this)->getNumElements();
+}
+
+Type *Type::getStructElementType(unsigned N) const {
+  return cast<StructType>(this)->getElementType(N);
+}
+
 /// SequentialType - This is the superclass of the array, pointer and vector
 /// type classes.  All of these represent "arrays" in memory.  The array type
 /// represents a specifically sized array, pointer types are unsized/unknown
@@ -325,6 +353,10 @@ public:
   }
 };
 
+Type *Type::getSequentialElementType() const {
+  return cast<SequentialType>(this)->getElementType();
+}
+
 /// ArrayType - Class to represent array types.
 ///
 class ArrayType : public SequentialType {
@@ -351,6 +383,10 @@ public:
     return T->getTypeID() == ArrayTyID;
   }
 };
+
+uint64_t Type::getArrayNumElements() const {
+  return cast<ArrayType>(this)->getNumElements();
+}
 
 /// VectorType - Class to represent vector types.
 ///
@@ -439,6 +475,10 @@ public:
   }
 };
 
+unsigned Type::getVectorNumElements() const {
+  return cast<VectorType>(this)->getNumElements();
+}
+
 /// PointerType - Class to represent pointers.
 ///
 class PointerType : public SequentialType {
@@ -472,6 +512,10 @@ public:
     return T->getTypeID() == PointerTyID;
   }
 };
+
+unsigned Type::getPointerAddressSpace() const {
+  return cast<PointerType>(getScalarType())->getAddressSpace();
+}
 
 } // End llvm namespace
 

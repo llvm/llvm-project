@@ -163,55 +163,6 @@ bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
 }
 
 //===----------------------------------------------------------------------===//
-//                         Subclass Helper Methods
-//===----------------------------------------------------------------------===//
-
-unsigned Type::getIntegerBitWidth() const {
-  return cast<IntegerType>(this)->getBitWidth();
-}
-
-bool Type::isFunctionVarArg() const {
-  return cast<FunctionType>(this)->isVarArg();
-}
-
-Type *Type::getFunctionParamType(unsigned i) const {
-  return cast<FunctionType>(this)->getParamType(i);
-}
-
-unsigned Type::getFunctionNumParams() const {
-  return cast<FunctionType>(this)->getNumParams();
-}
-
-StringRef Type::getStructName() const {
-  return cast<StructType>(this)->getName();
-}
-
-unsigned Type::getStructNumElements() const {
-  return cast<StructType>(this)->getNumElements();
-}
-
-Type *Type::getStructElementType(unsigned N) const {
-  return cast<StructType>(this)->getElementType(N);
-}
-
-Type *Type::getSequentialElementType() const {
-  return cast<SequentialType>(this)->getElementType();
-}
-
-uint64_t Type::getArrayNumElements() const {
-  return cast<ArrayType>(this)->getNumElements();
-}
-
-unsigned Type::getVectorNumElements() const {
-  return cast<VectorType>(this)->getNumElements();
-}
-
-unsigned Type::getPointerAddressSpace() const {
-  return cast<PointerType>(getScalarType())->getAddressSpace();
-}
-
-
-//===----------------------------------------------------------------------===//
 //                          Primitive 'Type' data
 //===----------------------------------------------------------------------===//
 

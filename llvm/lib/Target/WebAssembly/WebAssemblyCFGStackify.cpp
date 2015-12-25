@@ -320,11 +320,12 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     // the BLOCK needs to be above the LOOP.
     InsertPos = Header->begin();
   } else {
-    // Otherwise, insert the BLOCK as late in Header as we can, but before any
-    // existing BLOCKs.
+    // Otherwise, insert the BLOCK as late in Header as we can, but before the
+    // beginning of the local expression tree and any nested BLOCKs.
     InsertPos = Header->getFirstTerminator();
     while (InsertPos != Header->begin() &&
-           prev(InsertPos)->getOpcode() == WebAssembly::BLOCK)
+           prev(InsertPos)->definesRegister(WebAssembly::EXPR_STACK) &&
+           prev(InsertPos)->getOpcode() != WebAssembly::LOOP)
       --InsertPos;
   }
 

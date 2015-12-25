@@ -50,9 +50,13 @@ def TABLESWITCH_I64 : I<(outs), (ins I64:$index, bb_op:$default, variable_ops),
                         "tableswitch\t$index, $default">;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
-// Placemarkers to indicate the start of a block or loop scope.
+// Placemarkers to indicate the start of a block or loop scope. These
+// use/clobber EXPR_STACK to prevent them from being moved into the middle of
+// an expression tree.
+let Uses = [EXPR_STACK], Defs = [EXPR_STACK] in {
 def BLOCK     : I<(outs), (ins bb_op:$dst), [], "block   \t$dst">;
 def LOOP      : I<(outs), (ins bb_op:$dst), [], "loop    \t$dst">;
+} // Uses = [EXPR_STACK], Defs = [EXPR_STACK]
 
 // No-op to indicate to the AsmPrinter that a loop ends here, so a
 // basic block label is needed even if it wouldn't otherwise appear so.
