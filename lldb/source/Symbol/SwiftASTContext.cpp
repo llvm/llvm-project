@@ -6717,11 +6717,9 @@ SwiftASTContext::GetMangledTypeName (swift::TypeBase * type_base)
     
     if (!has_archetypes)
     {
-        std::string s;
-        llvm::raw_string_ostream ss(s);
-        swift::Mangle::Mangler mangler(ss, true);
+        swift::Mangle::Mangler mangler(true);
         mangler.mangleTypeForDebugger(swift_type, nullptr);
-        ss.flush();
+        std::string s = mangler.finalize();
         
         if (!s.empty())
         {
@@ -10260,13 +10258,12 @@ GetInstanceVariableOffset_Symbol (ExecutionContext *exe_ctx,
             
             if (the_value_decl)
             {
-                std::string buffer;
-                llvm::raw_string_ostream stream{buffer};
-                swift::Mangle::Mangler mangler{stream};
+                swift::Mangle::Mangler mangler;
                 mangler.mangleFieldOffsetFull(the_value_decl, false);
-                
+                std::string buffer = mangler.finalize();
+
                 StreamString symbol_name;
-                symbol_name.Printf("%s",stream.str().c_str());
+                symbol_name.Printf("%s",buffer.c_str());
                 ConstString ivar_const_str (symbol_name.GetString().c_str());
                 
                 lldb::addr_t ivar_offset_ptr = target->FindLoadAddrForNameInSymbolsAndPersistentVariables(ivar_const_str, eSymbolTypeIVarOffset);
