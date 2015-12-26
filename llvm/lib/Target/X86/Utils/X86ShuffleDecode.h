@@ -96,7 +96,8 @@ void decodeVSHUF64x2FamilyMask(MVT VT, unsigned Imm,
 void DecodeVPERMMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
 
 /// \brief Decode a VPERMILP variable mask from an IR-level vector constant.
-void DecodeVPERMILPMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask);
+void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
+                        SmallVectorImpl<int> &ShuffleMask);
 
 /// \brief Decode a zero extension instruction as a shuffle mask.
 void DecodeZeroExtendMask(MVT SrcVT, MVT DstVT,

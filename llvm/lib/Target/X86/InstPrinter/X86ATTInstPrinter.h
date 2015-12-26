@@ -15,11 +15,8 @@
 #define LLVM_LIB_TARGET_X86_INSTPRINTER_X86ATTINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
-
-class MCOperand;
 
 class X86ATTInstPrinter final : public MCInstPrinter {
 public:

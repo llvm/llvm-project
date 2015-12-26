@@ -927,8 +927,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   unsigned FramePtr = TRI->getFrameRegister(MF);
   const unsigned MachineFramePtr =
       STI.isTarget64BitILP32()
-          ? getX86SubSuperRegister(FramePtr, MVT::i64, false)
-          : FramePtr;
+          ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
   unsigned BasePtr = TRI->getBaseRegister();
   
   // Debug location must be unknown since the first debug location is used
@@ -1466,8 +1465,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   const bool Is64BitILP32 = STI.isTarget64BitILP32();
   unsigned FramePtr = TRI->getFrameRegister(MF);
   unsigned MachineFramePtr =
-      Is64BitILP32 ? getX86SubSuperRegister(FramePtr, MVT::i64, false)
-                   : FramePtr;
+      Is64BitILP32 ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
 
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   bool NeedsWinCFI =

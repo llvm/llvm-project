@@ -21,6 +21,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"

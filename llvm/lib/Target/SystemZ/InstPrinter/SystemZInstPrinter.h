@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_INSTPRINTER_SYSTEMZINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCOperand;

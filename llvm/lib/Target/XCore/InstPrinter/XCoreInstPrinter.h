@@ -19,8 +19,6 @@
 
 namespace llvm {
 
-class TargetMachine;
-
 class XCoreInstPrinter : public MCInstPrinter {
 public:
   XCoreInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,

@@ -388,44 +388,66 @@ void DecodeVPERMMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask) {
   }
 }
 
-void DecodeVPERMILPMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
+void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
+                        SmallVectorImpl<int> &ShuffleMask) {
   Type *MaskTy = C->getType();
-  assert(MaskTy->isVectorTy() && "Expected a vector constant mask!");
-  assert(MaskTy->getVectorElementType()->isIntegerTy() &&
-         "Expected integer constant mask elements!");
-  int ElementBits = MaskTy->getScalarSizeInBits();
-  int NumElements = MaskTy->getVectorNumElements();
+  // It is not an error for the PSHUFB mask to not be a vector of i8 because the
+  // constant pool uniques constants by their bit representation.
+  // e.g. the following take up the same space in the constant pool:
+  //   i128 -170141183420855150465331762880109871104
+  //
+  //   <2 x i64> <i64 -9223372034707292160, i64 -9223372034707292160>
+  //
+  //   <4 x i32> <i32 -2147483648, i32 -2147483648,
+  //              i32 -2147483648, i32 -2147483648>
+
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+
+  if (MaskTySize != 128 && MaskTySize != 256) // FIXME: Add support for AVX-512.
+    return;
+
+  // Only support vector types.
+  if (!MaskTy->isVectorTy())
+    return;
+
+  // Make sure its an integer type.
+  Type *VecEltTy = MaskTy->getVectorElementType();
+  if (!VecEltTy->isIntegerTy())
+    return;
+
+  // Support any element type from byte up to element size.
+  // This is necesary primarily because 64-bit elements get split to 32-bit
+  // in the constant pool on 32-bit target.
+  unsigned EltTySize = VecEltTy->getIntegerBitWidth();
+  if (EltTySize < 8 || EltTySize > ElSize)
+    return;
+
+  unsigned NumElements = MaskTySize / ElSize;
   assert((NumElements == 2 || NumElements == 4 || NumElements == 8) &&
          "Unexpected number of vector elements.");
   ShuffleMask.reserve(NumElements);
-  if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
-    assert((unsigned)NumElements == CDS->getNumElements() &&
-           "Constant mask has a different number of elements!");
+  unsigned NumElementsPerLane = 128 / ElSize;
+  unsigned Factor = ElSize / EltTySize;
 
-    for (int i = 0; i < NumElements; ++i) {
-      int Base = (i * ElementBits / 128) * (128 / ElementBits);
-      uint64_t Element = CDS->getElementAsInteger(i);
-      // Only the least significant 2 bits of the integer are used.
-      int Index = Base + (Element & 0x3);
-      ShuffleMask.push_back(Index);
+  for (unsigned i = 0; i < NumElements; ++i) {
+    Constant *COp = C->getAggregateElement(i * Factor);
+    if (!COp) {
+      ShuffleMask.clear();
+      return;
+    } else if (isa<UndefValue>(COp)) {
+      ShuffleMask.push_back(SM_SentinelUndef);
+      continue;
     }
-  } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
-    assert((unsigned)NumElements == C->getNumOperands() &&
-           "Constant mask has a different number of elements!");
-
-    for (int i = 0; i < NumElements; ++i) {
-      int Base = (i * ElementBits / 128) * (128 / ElementBits);
-      Constant *COp = CV->getOperand(i);
-      if (isa<UndefValue>(COp)) {
-        ShuffleMask.push_back(SM_SentinelUndef);
-        continue;
-      }
-      uint64_t Element = cast<ConstantInt>(COp)->getZExtValue();
-      // Only the least significant 2 bits of the integer are used.
-      int Index = Base + (Element & 0x3);
-      ShuffleMask.push_back(Index);
-    }
+    int Index = i & ~(NumElementsPerLane - 1);
+    uint64_t Element = cast<ConstantInt>(COp)->getZExtValue();
+    if (ElSize == 64)
+      Index += (Element >> 1) & 0x1;
+    else
+      Index += Element & 0x3;
+    ShuffleMask.push_back(Index);
   }
+
+  // TODO: Handle funny-looking vectors too.
 }
 
 void DecodeZeroExtendMask(MVT SrcVT, MVT DstVT, SmallVectorImpl<int> &Mask) {

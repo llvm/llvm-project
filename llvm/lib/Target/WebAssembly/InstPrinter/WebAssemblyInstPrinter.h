@@ -20,7 +20,6 @@
 
 namespace llvm {
 
-class MCOperand;
 class MCSubtargetInfo;
 
 class WebAssemblyInstPrinter final : public MCInstPrinter {

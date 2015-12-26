@@ -16,17 +16,17 @@ define i32 @back_to_back_calls(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 a
 ; CHECK: movq	%rsi, (%rsp)
 ; There should be no more than three moves
 ; CHECK-NOT: movq
-  %safepoint_token = tail call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
-  %a1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 12)
-  %b1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 13)
-  %c1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 14)
+  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
+  %a1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 12)
+  %b1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 13)
+  %c1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 14)
 ; CHECK: callq
 ; This is the key check.  There should NOT be any memory moves here
 ; CHECK-NOT: movq
-  %safepoint_token2 = tail call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %c1, i32 addrspace(1)* %b1, i32 addrspace(1)* %a1)
-  %a2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token2, i32 12, i32 14)
-  %b2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token2, i32 12, i32 13)
-  %c2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token2, i32 12, i32 12)
+  %safepoint_token2 = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %c1, i32 addrspace(1)* %b1, i32 addrspace(1)* %a1)
+  %a2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2, i32 12, i32 14)
+  %b2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2, i32 12, i32 13)
+  %c2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2, i32 12, i32 12)
 ; CHECK: callq
   ret i32 1
 }
@@ -39,17 +39,17 @@ define i32 @reserve_first(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrsp
 ; CHECK: movq	%rdi, 16(%rsp)
 ; CHECK: movq	%rdx, 8(%rsp)
 ; CHECK: movq	%rsi, (%rsp)
-  %safepoint_token = tail call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
-  %a1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 12)
-  %b1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 13)
-  %c1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 14)
+  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
+  %a1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 12)
+  %b1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 13)
+  %c1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 14)
 ; CHECK: callq
 ; This is the key check.  There should NOT be any memory moves here
 ; CHECK-NOT: movq
-  %safepoint_token2 = tail call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 addrspace(1)* %a1, i32 0, i32 addrspace(1)* %c1, i32 0, i32 0, i32 addrspace(1)* %c1, i32 addrspace(1)* %b1, i32 addrspace(1)* %a1)
-  %a2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token2, i32 12, i32 14)
-  %b2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token2, i32 12, i32 13)
-  %c2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token2, i32 12, i32 12)
+  %safepoint_token2 = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 addrspace(1)* %a1, i32 0, i32 addrspace(1)* %c1, i32 0, i32 0, i32 addrspace(1)* %c1, i32 addrspace(1)* %b1, i32 addrspace(1)* %a1)
+  %a2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2, i32 12, i32 14)
+  %b2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2, i32 12, i32 13)
+  %c2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2, i32 12, i32 12)
 ; CHECK: callq
   ret i32 1
 }
@@ -63,25 +63,25 @@ entry:
   ; CHECK: movq	%rdx, 8(%rsp)
   ; CHECK: movq	%rsi, (%rsp)
   ; CHECK: callq
-  %safepoint_token = invoke i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
+  %safepoint_token = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
                    to label %normal_return unwind label %exceptional_return
 
 normal_return:
-  %a1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 12)
-  %b1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 13)
-  %c1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token, i32 12, i32 14)
+  %a1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 12)
+  %b1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 13)
+  %c1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 14)
   ; Should work even through bitcasts
   %c1.casted = bitcast i32 addrspace(1)* %c1 to i8 addrspace(1)*
   ; This is the key check.  There should NOT be any memory moves here
   ; CHECK-NOT: movq
   ; CHECK: callq
-  %safepoint_token2 = invoke i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i8 addrspace(1)* %c1.casted, i32 addrspace(1)* %b1, i32 addrspace(1)* %a1)
+  %safepoint_token2 = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i8 addrspace(1)* %c1.casted, i32 addrspace(1)* %b1, i32 addrspace(1)* %a1)
                     to label %normal_return2 unwind label %exceptional_return2
 
 normal_return2:
-  %a2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token2, i32 12, i32 14)
-  %b2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %safepoint_token2, i32 12, i32 13)
-  %c2 = tail call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %safepoint_token2, i32 12, i32 12)
+  %a2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2, i32 12, i32 14)
+  %b2 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2, i32 12, i32 13)
+  %c2 = tail call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token2, i32 12, i32 12)
   ret i32 1
 
 exceptional_return:
@@ -96,10 +96,10 @@ exceptional_return2:
 }
 
 ; Function Attrs: nounwind
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32) #3
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32, i32, i32) #3
+declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) #3
+declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32) #3
 
-declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 
 declare i32 @"personality_function"()
 

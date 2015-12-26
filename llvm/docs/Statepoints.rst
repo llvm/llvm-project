@@ -142,8 +142,8 @@ resulting relocation sequence is:
 
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
-    %0 = call i32 (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
-    %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %0, i32 7, i32 7)
+    %0 = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
+    %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 7, i32 7)
     ret i8 addrspace(1)* %obj.relocated
   }
 
@@ -242,9 +242,9 @@ we get:
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
     %gep = getelementptr i8, i8 addrspace(1)* %obj, i64 20000
-    %token = call i32 (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj, i8 addrspace(1)* %gep)
-    %obj.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %token, i32 7, i32 7)
-    %gep.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %token, i32 7, i32 8)
+    %token = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj, i8 addrspace(1)* %gep)
+    %obj.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 7, i32 7)
+    %gep.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 7, i32 8)
     %p = getelementptr i8, i8 addrspace(1)* %gep, i64 -20000
     ret i8 addrspace(1)* %p
   }
@@ -288,8 +288,8 @@ to unmanaged code. The resulting relocation sequence is:
   define i8 addrspace(1)* @test1(i8 addrspace(1) *%obj)
          gc "hypothetical-gc" {
 
-    %0 = call i32 (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 1, i32* @Flag, i32 0, i8 addrspace(1)* %obj)
-    %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %0, i32 7, i32 7)
+    %0 = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 1, i32* @Flag, i32 0, i8 addrspace(1)* %obj)
+    %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 7, i32 7)
     ret i8 addrspace(1)* %obj.relocated
   }
 
@@ -342,7 +342,7 @@ Syntax:
 
 ::
 
-      declare i32
+      declare token
         @llvm.experimental.gc.statepoint(i64 <id>, i32 <num patch bytes>,
                        func_type <target>, 
                        i64 <#call args>, i64 <flags>,
@@ -456,7 +456,7 @@ Syntax:
 ::
 
       declare type*
-        @llvm.experimental.gc.result(i32 %statepoint_token)
+        @llvm.experimental.gc.result(token %statepoint_token)
 
 Overview:
 """""""""
@@ -472,7 +472,7 @@ Operands:
 
 The first and only argument is the ``gc.statepoint`` which starts
 the safepoint sequence of which this ``gc.result`` is a part.
-Despite the typing of this as a generic i32, *only* the value defined
+Despite the typing of this as a generic token, *only* the value defined 
 by a ``gc.statepoint`` is legal here.
 
 Semantics:
@@ -496,7 +496,7 @@ Syntax:
 ::
 
       declare <pointer type>
-        @llvm.experimental.gc.relocate(i32 %statepoint_token, 
+        @llvm.experimental.gc.relocate(token %statepoint_token, 
                                        i32 %base_offset, 
                                        i32 %pointer_offset)
 
@@ -511,7 +511,7 @@ Operands:
 
 The first argument is the ``gc.statepoint`` which starts the
 safepoint sequence of which this ``gc.relocation`` is a part.
-Despite the typing of this as a generic i32, *only* the value defined
+Despite the typing of this as a generic token, *only* the value defined 
 by a ``gc.statepoint`` is legal here.
 
 The second argument is an index into the statepoints list of arguments
@@ -643,7 +643,7 @@ As an example, given this code:
 
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
-    call i32 (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+    call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
     ret i8 addrspace(1)* %obj
   }
 
@@ -653,8 +653,8 @@ The pass would produce this IR:
 
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
-    %0 = call i32 (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
-    %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %0, i32 12, i32 12)
+    %0 = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
+    %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 12, i32 12)
     ret i8 addrspace(1)* %obj.relocated
   }
 
@@ -717,8 +717,8 @@ This pass would produce the following IR:
 .. code-block:: llvm
 
   define void @test() gc "statepoint-example" {
-    %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
-    %safepoint_token1 = call i32 (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+    %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+    %safepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
     ret void
   }
 

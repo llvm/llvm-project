@@ -98,6 +98,17 @@ MCRelocationInfo *createX86_64MachORelocationInfo(MCContext &Ctx);
 
 /// Construct X86-64 ELF relocation info.
 MCRelocationInfo *createX86_64ELFRelocationInfo(MCContext &Ctx);
+
+/// Returns the sub or super register of a specific X86 register.
+/// e.g. getX86SubSuperRegister(X86::EAX, 16) returns X86::AX.
+/// Aborts on error.
+unsigned getX86SubSuperRegister(unsigned, unsigned, bool High=false);
+
+/// Returns the sub or super register of a specific X86 register.
+/// Like getX86SubSuperRegister() but returns 0 on error.
+unsigned getX86SubSuperRegisterOrZero(unsigned, unsigned,
+                                      bool High = false);
+
 } // End llvm namespace
 
 

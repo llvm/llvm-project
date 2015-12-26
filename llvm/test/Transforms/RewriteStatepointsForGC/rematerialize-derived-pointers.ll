@@ -10,8 +10,8 @@ define void @"test_gep_const"(i32 addrspace(1)* %base) gc "statepoint-example" {
 entry:
   %ptr = getelementptr i32, i32 addrspace(1)* %base, i32 15
   ; CHECK: getelementptr i32, i32 addrspace(1)* %base, i32 15
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
-  ; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %sp, i32 7, i32 7)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  ; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %sp, i32 7, i32 7)
   ; CHECK: bitcast i8 addrspace(1)* %base.relocated to i32 addrspace(1)*
   ; CHECK: getelementptr i32, i32 addrspace(1)* %base.relocated.casted, i32 15
   call void @use_obj32(i32 addrspace(1)* %base)
@@ -24,8 +24,8 @@ define void @"test_gep_idx"(i32 addrspace(1)* %base, i32 %idx) gc "statepoint-ex
 entry:
   %ptr = getelementptr i32, i32 addrspace(1)* %base, i32 %idx
   ; CHECK: getelementptr
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
-  ; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %sp, i32 7, i32 7)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  ; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %sp, i32 7, i32 7)
   ; CHECK: %base.relocated.casted = bitcast i8 addrspace(1)* %base.relocated to i32 addrspace(1)*
   ; CHECK: getelementptr i32, i32 addrspace(1)* %base.relocated.casted, i32 %idx
   call void @use_obj32(i32 addrspace(1)* %base)
@@ -38,8 +38,8 @@ define void @"test_bitcast"(i32 addrspace(1)* %base) gc "statepoint-example" {
 entry:
   %ptr = bitcast i32 addrspace(1)* %base to i64 addrspace(1)*
   ; CHECK: bitcast i32 addrspace(1)* %base to i64 addrspace(1)*
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
-  ; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %sp, i32 7, i32 7)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  ; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %sp, i32 7, i32 7)
   ; CHECK: %base.relocated.casted = bitcast i8 addrspace(1)* %base.relocated to i32 addrspace(1)*
   ; CHECK: bitcast i32 addrspace(1)* %base.relocated.casted to i64 addrspace(1)*
   call void @use_obj32(i32 addrspace(1)* %base)
@@ -54,7 +54,7 @@ entry:
   ; CHECK: getelementptr
   %ptr.cast = bitcast i32 addrspace(1)* %ptr.gep to i64 addrspace(1)*
   ; CHECK: bitcast
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ; CHECK: gc.relocate
   ; CHECK: bitcast
   ; CHECK: getelementptr
@@ -73,7 +73,7 @@ entry:
   ; CHECK: bitcast
   %ptr.cast2 = bitcast i32 addrspace(1)* %ptr.gep to i16 addrspace(1)*
   ; CHECK: bitcast
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ; CHECK: getelementptr
   ; CHECK: bitcast
   ; CHECK: getelementptr
@@ -96,7 +96,7 @@ entry:
   ; CHECK: getelementptr
   %ptr.cast = bitcast i32 addrspace(1)* %ptr.gep4 to i64 addrspace(1)*
   ; CHECK: bitcast
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ; CHECK: gc.relocate
   ; CHECK: bitcast
   ; CHECK: gc.relocate
@@ -112,7 +112,7 @@ entry:
   %ptr2 = getelementptr i32, i32 addrspace(1)* %base, i32 12
   ; CHECK: getelementptr
   ; CHECK: getelementptr
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ; CHECK: gc.relocate
   ; CHECK: bitcast
   ; CHECK: getelementptr
@@ -127,7 +127,7 @@ define void @"test_gep_smallint_array"([3 x i32] addrspace(1)* %base) gc "statep
 entry:
   %ptr = getelementptr [3 x i32], [3 x i32] addrspace(1)* %base, i32 0, i32 2
   ; CHECK: getelementptr
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ; CHECK: gc.relocate
   ; CHECK: bitcast
   ; CHECK: getelementptr
@@ -146,7 +146,7 @@ entry:
   ; CHECK: bitcast
   %ptr.cast2 = bitcast i32 addrspace(1)* %ptr.gep to i16 addrspace(1)*
   ; CHECK: bitcast
-  %sp = invoke i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %sp = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
                 to label %normal unwind label %exception
 
 normal:
@@ -163,7 +163,7 @@ normal:
 
 exception:
   ; CHECK-LABEL: exception:
-  %landing_pad4 = landingpad { i8*, i32 }
+  %landing_pad4 = landingpad token
           cleanup
   ; CHECK: gc.relocate
   ; CHECK: bitcast
@@ -187,7 +187,7 @@ loop:
   ; CHECK: phi i32 addrspace(1)* [ %ptr.gep, %entry ], [ %ptr.gep.remat, %loop ]
   ; CHECK: phi i32 addrspace(1)* [ %base, %entry ], [ %base.relocated.casted, %loop ]
   call void @use_obj32(i32 addrspace(1)* %ptr.gep)
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ; CHECK: gc.relocate
   ; CHECK: bitcast
   ; CHECK: getelementptr
@@ -209,7 +209,7 @@ entry:
   %ptr.gep9  = getelementptr i32, i32 addrspace(1)* %ptr.gep8, i32 15
   %ptr.gep10 = getelementptr i32, i32 addrspace(1)* %ptr.gep9, i32 15
   %ptr.gep11 = getelementptr i32, i32 addrspace(1)* %ptr.gep10, i32 15
-  %sp = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ; CHECK: gc.relocate
   ; CHECK: bitcast
   ; CHECK: gc.relocate
@@ -219,4 +219,4 @@ entry:
 }
 
 
-declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)

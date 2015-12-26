@@ -10,7 +10,7 @@ entry:
   br i1 %c, label %gc_invoke, label %normal_dest
 
 gc_invoke:
-; CHECK: [[TOKEN:%[^ ]+]] = invoke i32 {{[^@]+}}@llvm.experimental.gc.statepoint{{[^@]+}}@gc_call
+; CHECK: [[TOKEN:%[^ ]+]] = invoke token {{[^@]+}}@llvm.experimental.gc.statepoint{{[^@]+}}@gc_call
   %obj = invoke i8 addrspace(1)* @gc_call() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
           to label %normal_dest unwind label %unwind_dest
 
@@ -21,7 +21,7 @@ unwind_dest:
   resume { i8*, i32 } undef
 
 ; CHECK: [[NORMAL_DEST_SPLIT:[^:]+:]]
-; CHECK-NEXT: [[RET_VAL:%[^ ]+]] = call i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(i32 [[TOKEN]])
+; CHECK-NEXT: [[RET_VAL:%[^ ]+]] = call i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(token [[TOKEN]])
 ; CHECK-NEXT: br label %normal_dest
 
 normal_dest:

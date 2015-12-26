@@ -1,20 +1,20 @@
 ; RUN: opt -S %s -verify | FileCheck %s
 
 declare void @use(...)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32, i32, i32)
-declare i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(i32, i32, i32)
-declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 declare i32 @"personality_function"()
 
 ;; Basic usage
 define i64 addrspace(1)* @test1(i8 addrspace(1)* %arg) gc "statepoint-example" {
 entry:
   %cast = bitcast i8 addrspace(1)* %arg to i64 addrspace(1)*
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg)
-  %reloc = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(i32 %safepoint_token, i32 12, i32 13)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg)
+  %reloc = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %safepoint_token, i32 12, i32 13)
   ;; It is perfectly legal to relocate the same value multiple times...
-  %reloc2 = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(i32 %safepoint_token, i32 12, i32 13)
-  %reloc3 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %safepoint_token, i32 13, i32 12)
+  %reloc2 = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %safepoint_token, i32 12, i32 13)
+  %reloc3 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 13, i32 12)
   ret i64 addrspace(1)* %reloc
 ; CHECK-LABEL: test1
 ; CHECK: statepoint
@@ -39,8 +39,8 @@ notequal:
   ret void
 
 equal:
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg)
-  %reloc = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(i32 %safepoint_token, i32 12, i32 13)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg)
+  %reloc = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %safepoint_token, i32 12, i32 13)
   call void undef(i64 addrspace(1)* %reloc)
   ret void
 ; CHECK-LABEL: test2
@@ -57,7 +57,7 @@ define i8 addrspace(1)* @test3(i8 addrspace(1)* %obj, i8 addrspace(1)* %obj1) gc
 entry:
   ; CHECK-LABEL: entry
   ; CHECK: statepoint
-  %0 = invoke i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj, i8 addrspace(1)* %obj1)
+  %0 = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj, i8 addrspace(1)* %obj1)
           to label %normal_dest unwind label %exceptional_return
 
 normal_dest:
@@ -65,18 +65,17 @@ normal_dest:
   ; CHECK: gc.relocate
   ; CHECK: gc.relocate
   ; CHECK: ret
-  %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %0, i32 12, i32 12)
-  %obj1.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %0, i32 12, i32 12)
+  %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 12, i32 12)
+  %obj1.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 12, i32 12)
   ret i8 addrspace(1)* %obj.relocated
 
 exceptional_return:
   ; CHECK-LABEL: exceptional_return
   ; CHECK: gc.relocate
   ; CHECK: gc.relocate
-  %landing_pad = landingpad { i8*, i32 }
+  %landing_pad = landingpad token
           cleanup
-  %relocate_token = extractvalue { i8*, i32 } %landing_pad, 1
-  %obj.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %relocate_token, i32 12, i32 12)
-  %obj1.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %relocate_token, i32 12, i32 12)
+  %obj.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %landing_pad, i32 12, i32 12)
+  %obj1.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %landing_pad, i32 12, i32 12)
   ret i8 addrspace(1)* %obj1.relocated1
 }

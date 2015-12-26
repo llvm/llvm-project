@@ -13,7 +13,7 @@ declare void @use(...) "gc-leaf-function"
 
 define void @test1(<2 x i32 addrspace(1)*> addrspace(1)* %obj) gc "statepoint-example" {
 entry:
-; CHECK: %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(i32 %statepoint_token, i32 7, i32 7)
+; CHECK: %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 7, i32 7)
 ; CHECK-NEXT:  %obj.relocated.casted = bitcast i8 addrspace(1)* %obj.relocated to <2 x i32 addrspace(1)*> addrspace(1)*
 
   call void @foo() [ "deopt"() ]

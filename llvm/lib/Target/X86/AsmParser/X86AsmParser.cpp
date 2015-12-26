@@ -11,7 +11,6 @@
 #include "X86AsmInstrumentation.h"
 #include "X86AsmParserCommon.h"
 #include "X86Operand.h"
-#include "X86ISelLowering.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"

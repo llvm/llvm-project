@@ -90,7 +90,7 @@ exceptional_return:                               ; preds = %entry
 ; Can we handle an insert element with a constant offset?  This effectively
 ; tests both the equal and inequal case since we have to relocate both indices
 ; in the vector.
-  %landing_pad4 = landingpad { i8*, i32 }
+  %landing_pad4 = landingpad token
           cleanup
   ret <2 x i64 addrspace(1)*> %obj
 }

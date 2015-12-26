@@ -606,15 +606,6 @@ namespace llvm {
     bool isCalleePop(CallingConv::ID CallingConv,
                      bool is64Bit, bool IsVarArg, bool TailCallOpt);
 
-    /// AVX512 static rounding constants.  These need to match the values in
-    /// avx512fintrin.h.
-    enum STATIC_ROUNDING {
-      TO_NEAREST_INT = 0,
-      TO_NEG_INF = 1,
-      TO_POS_INF = 2,
-      TO_ZERO = 3,
-      CUR_DIRECTION = 4
-    };
   }
 
   //===--------------------------------------------------------------------===//

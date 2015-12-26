@@ -268,3 +268,184 @@ extern "C" void LLVMInitializeX86TargetMC() {
   TargetRegistry::RegisterMCAsmBackend(TheX86_64Target,
                                        createX86_64AsmBackend);
 }
+
+unsigned llvm::getX86SubSuperRegisterOrZero(unsigned Reg, unsigned Size,
+                                            bool High) {
+  switch (Size) {
+  default: return 0;
+  case 8:
+    if (High) {
+      switch (Reg) {
+      default: return getX86SubSuperRegisterOrZero(Reg, 64);
+      case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
+        return X86::SI;
+      case X86::DIL: case X86::DI: case X86::EDI: case X86::RDI:
+        return X86::DI;
+      case X86::BPL: case X86::BP: case X86::EBP: case X86::RBP:
+        return X86::BP;
+      case X86::SPL: case X86::SP: case X86::ESP: case X86::RSP:
+        return X86::SP;
+      case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
+        return X86::AH;
+      case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
+        return X86::DH;
+      case X86::CH: case X86::CL: case X86::CX: case X86::ECX: case X86::RCX:
+        return X86::CH;
+      case X86::BH: case X86::BL: case X86::BX: case X86::EBX: case X86::RBX:
+        return X86::BH;
+      }
+    } else {
+      switch (Reg) {
+      default: return 0;
+      case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
+        return X86::AL;
+      case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
+        return X86::DL;
+      case X86::CH: case X86::CL: case X86::CX: case X86::ECX: case X86::RCX:
+        return X86::CL;
+      case X86::BH: case X86::BL: case X86::BX: case X86::EBX: case X86::RBX:
+        return X86::BL;
+      case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
+        return X86::SIL;
+      case X86::DIL: case X86::DI: case X86::EDI: case X86::RDI:
+        return X86::DIL;
+      case X86::BPL: case X86::BP: case X86::EBP: case X86::RBP:
+        return X86::BPL;
+      case X86::SPL: case X86::SP: case X86::ESP: case X86::RSP:
+        return X86::SPL;
+      case X86::R8B: case X86::R8W: case X86::R8D: case X86::R8:
+        return X86::R8B;
+      case X86::R9B: case X86::R9W: case X86::R9D: case X86::R9:
+        return X86::R9B;
+      case X86::R10B: case X86::R10W: case X86::R10D: case X86::R10:
+        return X86::R10B;
+      case X86::R11B: case X86::R11W: case X86::R11D: case X86::R11:
+        return X86::R11B;
+      case X86::R12B: case X86::R12W: case X86::R12D: case X86::R12:
+        return X86::R12B;
+      case X86::R13B: case X86::R13W: case X86::R13D: case X86::R13:
+        return X86::R13B;
+      case X86::R14B: case X86::R14W: case X86::R14D: case X86::R14:
+        return X86::R14B;
+      case X86::R15B: case X86::R15W: case X86::R15D: case X86::R15:
+        return X86::R15B;
+      }
+    }
+  case 16:
+    switch (Reg) {
+    default: return 0;
+    case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
+      return X86::AX;
+    case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
+      return X86::DX;
+    case X86::CH: case X86::CL: case X86::CX: case X86::ECX: case X86::RCX:
+      return X86::CX;
+    case X86::BH: case X86::BL: case X86::BX: case X86::EBX: case X86::RBX:
+      return X86::BX;
+    case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
+      return X86::SI;
+    case X86::DIL: case X86::DI: case X86::EDI: case X86::RDI:
+      return X86::DI;
+    case X86::BPL: case X86::BP: case X86::EBP: case X86::RBP:
+      return X86::BP;
+    case X86::SPL: case X86::SP: case X86::ESP: case X86::RSP:
+      return X86::SP;
+    case X86::R8B: case X86::R8W: case X86::R8D: case X86::R8:
+      return X86::R8W;
+    case X86::R9B: case X86::R9W: case X86::R9D: case X86::R9:
+      return X86::R9W;
+    case X86::R10B: case X86::R10W: case X86::R10D: case X86::R10:
+      return X86::R10W;
+    case X86::R11B: case X86::R11W: case X86::R11D: case X86::R11:
+      return X86::R11W;
+    case X86::R12B: case X86::R12W: case X86::R12D: case X86::R12:
+      return X86::R12W;
+    case X86::R13B: case X86::R13W: case X86::R13D: case X86::R13:
+      return X86::R13W;
+    case X86::R14B: case X86::R14W: case X86::R14D: case X86::R14:
+      return X86::R14W;
+    case X86::R15B: case X86::R15W: case X86::R15D: case X86::R15:
+      return X86::R15W;
+    }
+  case 32:
+    switch (Reg) {
+    default: return 0;
+    case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
+      return X86::EAX;
+    case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
+      return X86::EDX;
+    case X86::CH: case X86::CL: case X86::CX: case X86::ECX: case X86::RCX:
+      return X86::ECX;
+    case X86::BH: case X86::BL: case X86::BX: case X86::EBX: case X86::RBX:
+      return X86::EBX;
+    case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
+      return X86::ESI;
+    case X86::DIL: case X86::DI: case X86::EDI: case X86::RDI:
+      return X86::EDI;
+    case X86::BPL: case X86::BP: case X86::EBP: case X86::RBP:
+      return X86::EBP;
+    case X86::SPL: case X86::SP: case X86::ESP: case X86::RSP:
+      return X86::ESP;
+    case X86::R8B: case X86::R8W: case X86::R8D: case X86::R8:
+      return X86::R8D;
+    case X86::R9B: case X86::R9W: case X86::R9D: case X86::R9:
+      return X86::R9D;
+    case X86::R10B: case X86::R10W: case X86::R10D: case X86::R10:
+      return X86::R10D;
+    case X86::R11B: case X86::R11W: case X86::R11D: case X86::R11:
+      return X86::R11D;
+    case X86::R12B: case X86::R12W: case X86::R12D: case X86::R12:
+      return X86::R12D;
+    case X86::R13B: case X86::R13W: case X86::R13D: case X86::R13:
+      return X86::R13D;
+    case X86::R14B: case X86::R14W: case X86::R14D: case X86::R14:
+      return X86::R14D;
+    case X86::R15B: case X86::R15W: case X86::R15D: case X86::R15:
+      return X86::R15D;
+    }
+  case 64:
+    switch (Reg) {
+    default: return 0;
+    case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
+      return X86::RAX;
+    case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
+      return X86::RDX;
+    case X86::CH: case X86::CL: case X86::CX: case X86::ECX: case X86::RCX:
+      return X86::RCX;
+    case X86::BH: case X86::BL: case X86::BX: case X86::EBX: case X86::RBX:
+      return X86::RBX;
+    case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
+      return X86::RSI;
+    case X86::DIL: case X86::DI: case X86::EDI: case X86::RDI:
+      return X86::RDI;
+    case X86::BPL: case X86::BP: case X86::EBP: case X86::RBP:
+      return X86::RBP;
+    case X86::SPL: case X86::SP: case X86::ESP: case X86::RSP:
+      return X86::RSP;
+    case X86::R8B: case X86::R8W: case X86::R8D: case X86::R8:
+      return X86::R8;
+    case X86::R9B: case X86::R9W: case X86::R9D: case X86::R9:
+      return X86::R9;
+    case X86::R10B: case X86::R10W: case X86::R10D: case X86::R10:
+      return X86::R10;
+    case X86::R11B: case X86::R11W: case X86::R11D: case X86::R11:
+      return X86::R11;
+    case X86::R12B: case X86::R12W: case X86::R12D: case X86::R12:
+      return X86::R12;
+    case X86::R13B: case X86::R13W: case X86::R13D: case X86::R13:
+      return X86::R13;
+    case X86::R14B: case X86::R14W: case X86::R14D: case X86::R14:
+      return X86::R14;
+    case X86::R15B: case X86::R15W: case X86::R15D: case X86::R15:
+      return X86::R15;
+    }
+  }
+}
+
+unsigned llvm::getX86SubSuperRegister(unsigned Reg, unsigned Size, bool High) {
+  unsigned Res = getX86SubSuperRegisterOrZero(Reg, Size, High);
+  assert(Res != 0 && "Unexpected register or VT");
+  return Res;
+}
+
+

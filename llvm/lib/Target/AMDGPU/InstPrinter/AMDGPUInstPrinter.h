@@ -13,9 +13,7 @@
 #ifndef LLVM_LIB_TARGET_R600_INSTPRINTER_AMDGPUINSTPRINTER_H
 #define LLVM_LIB_TARGET_R600_INSTPRINTER_AMDGPUINSTPRINTER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
