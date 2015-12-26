@@ -456,7 +456,7 @@ HostInfoBase::ComputeHostArchitectureSupport(ArchSpec &arch_32, ArchSpec &arch_6
 
     arch_32.Clear();
     arch_64.Clear();
-
+ 
     switch (triple.getArch())
     {
         default:

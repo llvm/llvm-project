@@ -265,7 +265,7 @@ public:
             return m_num_type_params;
         }
         
-        size_t
+        uint64_t
         GetNumWitnessesAtIndex (size_t idx) const
         {
             if (idx >= m_num_type_params)
