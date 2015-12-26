@@ -9,7 +9,7 @@
 LEVEL = ../../../..
 LIBRARYNAME = LLVMX86AsmParser
 
-# Hack: we need to include 'main' x86 target directory to grab private headers
+# Hack: we need to include 'main' X86 target directory to grab private headers
 CPP.Flags += -I$(PROJ_OBJ_DIR)/.. -I$(PROJ_SRC_DIR)/..
 
 include $(LEVEL)/Makefile.common

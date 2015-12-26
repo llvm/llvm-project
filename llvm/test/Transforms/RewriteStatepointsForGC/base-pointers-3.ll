@@ -12,9 +12,9 @@ loop:
   %current.i32 = bitcast i64 addrspace(1)* %current to i32 addrspace(1)*
   %next.i32 = getelementptr i32, i32 addrspace(1)* %current.i32, i32 1
   %next.i64 = bitcast i32 addrspace(1)* %next.i32 to i64 addrspace(1)*
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
   br label %loop
 }
 
 declare void @do_safepoint()
-declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)

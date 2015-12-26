@@ -1,7 +1,7 @@
 ; RUN: opt -S -disable-output -passes=print-cg < %s 2>&1 | FileCheck %s
 
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
-declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 
 define private void @f() {
   ret void
@@ -12,7 +12,7 @@ define void @calls_statepoint(i8 addrspace(1)* %arg) gc "statepoint-example" {
 ; CHECK-NEXT:  -> f
 entry:
   %cast = bitcast i8 addrspace(1)* %arg to i64 addrspace(1)*
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg)
   ret void
 }
 

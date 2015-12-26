@@ -2989,6 +2989,14 @@ define <4 x double> @test_x86_avx_vpermilvar_pd_256(<4 x double> %a0, <4 x i64> 
 }
 declare <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double>, <4 x i64>) nounwind readnone
 
+define <4 x double> @test_x86_avx_vpermilvar_pd_256_2(<4 x double> %a0) {
+; CHECK-LABEL: test_x86_avx_vpermilvar_pd_256_2:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpermilpd {{.*}}, %ymm0, %ymm0 ## ymm0 = ymm0[1,0,2,3]
+; CHECK-NEXT:    retl
+  %res = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 0, i64 2>) ; <<4 x double>> [#uses=1]
+  ret <4 x double> %res
+}
 
 define <4 x float> @test_x86_avx_vpermilvar_ps(<4 x float> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: test_x86_avx_vpermilvar_ps:
@@ -3313,7 +3321,7 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; CHECK-LABEL: movnt_dq:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vpaddq LCPI276_0, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq LCPI277_0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovntdq %ymm0, (%eax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl

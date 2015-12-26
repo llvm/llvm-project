@@ -24,7 +24,7 @@ check_for_null:
 loop_back:
   %next_element_ptr = getelementptr i64 addrspace(1)*, i64 addrspace(1)* addrspace(1)* %current_element_ptr, i32 1
   %next_index = add i32 %index, 1
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
   br label %loop_check
 
 not_found:
@@ -35,4 +35,4 @@ found:
 }
 
 declare void @do_safepoint()
-declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)

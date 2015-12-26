@@ -2570,7 +2570,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr *MI, const MachineOperand &Src,
     ImplicitOp = Src;
     ImplicitOp.setImplicit();
 
-    NewSrc = getX86SubSuperRegister(Src.getReg(), MVT::i64);
+    NewSrc = getX86SubSuperRegister(Src.getReg(), 64);
     MachineBasicBlock::LivenessQueryResult LQR =
       MI->getParent()->computeRegisterLiveness(&getRegisterInfo(), NewSrc, MI);
 
@@ -4304,11 +4304,11 @@ static bool GRRegClassContains(unsigned Reg) {
 static
 unsigned copyPhysRegOpcode_AVX512_DQ(unsigned& DestReg, unsigned& SrcReg) {
   if (MaskRegClassContains(SrcReg) && X86::GR8RegClass.contains(DestReg)) {
-    DestReg = getX86SubSuperRegister(DestReg, MVT::i32);
+    DestReg = getX86SubSuperRegister(DestReg, 32);
     return X86::KMOVBrk;
   }
   if (MaskRegClassContains(DestReg) && X86::GR8RegClass.contains(SrcReg)) {
-    SrcReg = getX86SubSuperRegister(SrcReg, MVT::i32);
+    SrcReg = getX86SubSuperRegister(SrcReg, 32);
     return X86::KMOVBkr;
   }
   return 0;
@@ -4349,11 +4349,11 @@ unsigned copyPhysRegOpcode_AVX512(unsigned& DestReg, unsigned& SrcReg,
   if (MaskRegClassContains(DestReg) && MaskRegClassContains(SrcReg))
     return X86::KMOVWkk;
   if (MaskRegClassContains(DestReg) && GRRegClassContains(SrcReg)) {
-    SrcReg = getX86SubSuperRegister(SrcReg, MVT::i32);
+    SrcReg = getX86SubSuperRegister(SrcReg, 32);
     return X86::KMOVWkr;
   }
   if (GRRegClassContains(DestReg) && MaskRegClassContains(SrcReg)) {
-    DestReg = getX86SubSuperRegister(DestReg, MVT::i32);
+    DestReg = getX86SubSuperRegister(DestReg, 32);
     return X86::KMOVWrk;
   }
   return 0;
@@ -5329,7 +5329,7 @@ bool X86InstrInfo::ExpandMOVImmSExti8(MachineInstrBuilder &MIB) const {
     BuildMI(MBB, I, DL, get(X86::PUSH64i8)).addImm(Imm);
     MIB->setDesc(get(X86::POP64r));
     MIB->getOperand(0)
-        .setReg(getX86SubSuperRegister(MIB->getOperand(0).getReg(), MVT::i64));
+        .setReg(getX86SubSuperRegister(MIB->getOperand(0).getReg(), 64));
   } else {
     assert(MIB->getOpcode() == X86::MOV32ImmSExti8);
     StackAdjustment = 4;

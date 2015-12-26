@@ -1,7 +1,7 @@
 ; RUN: opt -S -rewrite-statepoints-for-gc %s | FileCheck %s
 
 declare void @foo()
-declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 
 ; constants don't get relocated.
 define i8 @test() gc "statepoint-example" {
@@ -9,7 +9,7 @@ define i8 @test() gc "statepoint-example" {
 ; CHECK: gc.statepoint
 ; CHECK-NEXT: load i8, i8 addrspace(1)* inttoptr (i64 15 to i8 addrspace(1)*)
 entry:
-  call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
   %res = load i8, i8 addrspace(1)* inttoptr (i64 15 to i8 addrspace(1)*)
   ret i8 %res
 }
@@ -22,7 +22,7 @@ define i8 @test2(i8 addrspace(1)* %p) gc "statepoint-example" {
 ; CHECK-NEXT: gc.relocate
 ; CHECK-NEXT: icmp
 entry:
-  call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
   %cmp = icmp eq i8 addrspace(1)* %p, null
   br i1 %cmp, label %taken, label %not_taken
 
@@ -52,7 +52,7 @@ define i8 @test3(i1 %always_true) gc "statepoint-example" {
 ; CHECK: gc.statepoint
 ; CHECK-NEXT: load i8, i8 addrspace(1)* @G
 entry:
-  call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
   %res = load i8, i8 addrspace(1)* @G, align 1
   ret i8 %res
 }
@@ -67,7 +67,7 @@ entry:
   br i1 %is_null, label %split, label %join
 
 split:
-  call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
   %arg_value_addr.i = getelementptr inbounds i8, i8 addrspace(1)* %p, i64 8
   %arg_value_addr_casted.i = bitcast i8 addrspace(1)* %arg_value_addr.i to i8 addrspace(1)* addrspace(1)*
   br label %join
@@ -87,7 +87,7 @@ use:
 ; CHECK-LABEL: use:
 ; CHECK: gc.statepoint
 ; CHECK: gc.relocate
-  call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
   %res = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %addr2, align 1
   ret i8 addrspace(1)* %res
 }

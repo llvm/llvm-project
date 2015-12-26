@@ -14,7 +14,7 @@ entry:
 
 loop:                                             ; preds = %merge.split, %entry
 ; CHECK: loop:
-; CHECK:  [[TOKEN_0:%[^ ]+]] = call i32 (i64, i32, i64 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64f(i64 2882400000, i32 0, i64 addrspace(1)* ()* @generate_obj, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i3
+; CHECK:  [[TOKEN_0:%[^ ]+]] = call token (i64, i32, i64 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64f(i64 2882400000, i32 0, i64 addrspace(1)* ()* @generate_obj, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i3
 ; CHECK-NEXT:  [[RESULT_0:%[^ ]+]] = call i64 addrspace(1)* @llvm.experimental.gc.result
   %0 = call i64 addrspace(1)* @generate_obj() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   switch i32 %condition, label %dest_a [

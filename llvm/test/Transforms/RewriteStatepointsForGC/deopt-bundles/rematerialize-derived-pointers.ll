@@ -110,7 +110,7 @@ normal:                                           ; preds = %entry
   ret void
 
 exception:                                        ; preds = %entry
-  %landing_pad4 = landingpad { i8*, i32 }
+  %landing_pad4 = landingpad token
           cleanup
   call void @use_obj64(i64 addrspace(1)* %ptr.cast)
   call void @use_obj16(i16 addrspace(1)* %ptr.cast2)

@@ -28523,17 +28523,13 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (Class == &X86::GR8RegClass || Class == &X86::GR16RegClass ||
       Class == &X86::GR32RegClass || Class == &X86::GR64RegClass) {
     unsigned Size = VT.getSizeInBits();
-    MVT::SimpleValueType SimpleTy = Size == 1 || Size == 8 ? MVT::i8
-                                  : Size == 16 ? MVT::i16
-                                  : Size == 32 ? MVT::i32
-                                  : Size == 64 ? MVT::i64
-                                  : MVT::Other;
-    unsigned DestReg = getX86SubSuperRegisterOrZero(Res.first, SimpleTy);
+    if (Size == 1) Size = 8;
+    unsigned DestReg = getX86SubSuperRegisterOrZero(Res.first, Size);
     if (DestReg > 0) {
       Res.first = DestReg;
-      Res.second = SimpleTy == MVT::i8 ? &X86::GR8RegClass
-                 : SimpleTy == MVT::i16 ? &X86::GR16RegClass
-                 : SimpleTy == MVT::i32 ? &X86::GR32RegClass
+      Res.second = Size == 8 ? &X86::GR8RegClass
+                 : Size == 16 ? &X86::GR16RegClass
+                 : Size == 32 ? &X86::GR32RegClass
                  : &X86::GR64RegClass;
       assert(Res.second->contains(Res.first) && "Register in register class");
     } else {

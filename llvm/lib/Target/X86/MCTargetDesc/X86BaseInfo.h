@@ -41,6 +41,16 @@ namespace X86 {
     /// AddrNumOperands - Total number of operands in a memory reference.
     AddrNumOperands = 5
   };
+
+  /// AVX512 static rounding constants.  These need to match the values in
+  /// avx512fintrin.h.
+  enum STATIC_ROUNDING {
+    TO_NEAREST_INT = 0,
+    TO_NEG_INF = 1,
+    TO_POS_INF = 2,
+    TO_ZERO = 3,
+    CUR_DIRECTION = 4
+  };
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that
@@ -675,7 +685,7 @@ namespace X86II {
     case X86II::RawFrmSrc:
     case X86II::RawFrmDst:
     case X86II::RawFrmDstSrc:
-       return -1;
+      return -1;
     case X86II::MRMDestMem:
       return 0;
     case X86II::MRMSrcMem:
@@ -696,23 +706,27 @@ namespace X86II {
       // Start from 0, skip registers encoded in VEX_VVVV or a mask register.
       return 0 + HasVEX_4V + HasEVEX_K;
     case X86II::MRM_C0: case X86II::MRM_C1: case X86II::MRM_C2:
-    case X86II::MRM_C3: case X86II::MRM_C4: case X86II::MRM_C8:
+    case X86II::MRM_C3: case X86II::MRM_C4: case X86II::MRM_C5:
+    case X86II::MRM_C6: case X86II::MRM_C7: case X86II::MRM_C8:
     case X86II::MRM_C9: case X86II::MRM_CA: case X86II::MRM_CB:
+    case X86II::MRM_CC: case X86II::MRM_CD: case X86II::MRM_CE:
     case X86II::MRM_CF: case X86II::MRM_D0: case X86II::MRM_D1:
-    case X86II::MRM_D4: case X86II::MRM_D5: case X86II::MRM_D6:
-    case X86II::MRM_D7: case X86II::MRM_D8: case X86II::MRM_D9:
-    case X86II::MRM_DA: case X86II::MRM_DB: case X86II::MRM_DC:
-    case X86II::MRM_DD: case X86II::MRM_DE: case X86II::MRM_DF:
-    case X86II::MRM_E0: case X86II::MRM_E1: case X86II::MRM_E2:
-    case X86II::MRM_E3: case X86II::MRM_E4: case X86II::MRM_E5:
-    case X86II::MRM_E8: case X86II::MRM_E9: case X86II::MRM_EA:
-    case X86II::MRM_EB: case X86II::MRM_EC: case X86II::MRM_ED:
-    case X86II::MRM_EE: case X86II::MRM_EF: case X86II::MRM_F0:
-    case X86II::MRM_F1: case X86II::MRM_F2: case X86II::MRM_F3:
-    case X86II::MRM_F4: case X86II::MRM_F5: case X86II::MRM_F6:
-    case X86II::MRM_F7: case X86II::MRM_F8: case X86II::MRM_F9:
-    case X86II::MRM_FA: case X86II::MRM_FB: case X86II::MRM_FC:
-    case X86II::MRM_FD: case X86II::MRM_FE: case X86II::MRM_FF:
+    case X86II::MRM_D2: case X86II::MRM_D3: case X86II::MRM_D4:
+    case X86II::MRM_D5: case X86II::MRM_D6: case X86II::MRM_D7:
+    case X86II::MRM_D8: case X86II::MRM_D9: case X86II::MRM_DA:
+    case X86II::MRM_DB: case X86II::MRM_DC: case X86II::MRM_DD:
+    case X86II::MRM_DE: case X86II::MRM_DF: case X86II::MRM_E0:
+    case X86II::MRM_E1: case X86II::MRM_E2: case X86II::MRM_E3:
+    case X86II::MRM_E4: case X86II::MRM_E5: case X86II::MRM_E6:
+    case X86II::MRM_E7: case X86II::MRM_E8: case X86II::MRM_E9:
+    case X86II::MRM_EA: case X86II::MRM_EB: case X86II::MRM_EC:
+    case X86II::MRM_ED: case X86II::MRM_EE: case X86II::MRM_EF:
+    case X86II::MRM_F0: case X86II::MRM_F1: case X86II::MRM_F2:
+    case X86II::MRM_F3: case X86II::MRM_F4: case X86II::MRM_F5:
+    case X86II::MRM_F6: case X86II::MRM_F7: case X86II::MRM_F8:
+    case X86II::MRM_F9: case X86II::MRM_FA: case X86II::MRM_FB:
+    case X86II::MRM_FC: case X86II::MRM_FD: case X86II::MRM_FE:
+    case X86II::MRM_FF:
       return -1;
     }
   }
@@ -740,7 +754,7 @@ namespace X86II {
     case X86::R12B:  case X86::R13B:  case X86::R14B:  case X86::R15B:
     case X86::CR8:   case X86::CR9:   case X86::CR10:  case X86::CR11:
     case X86::CR12:  case X86::CR13:  case X86::CR14:  case X86::CR15:
-        return true;
+      return true;
     }
     return false;
   }

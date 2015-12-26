@@ -323,7 +323,7 @@ public:
   bool isTiedToInvoke() const {
     const Value *Token = RelocateCS.getArgument(0);
 
-    return isa<ExtractValueInst>(Token) || isa<InvokeInst>(Token);
+    return isa<LandingPadInst>(Token) || isa<InvokeInst>(Token);
   }
 
   /// Get enclosed relocate intrinsic
@@ -335,7 +335,7 @@ public:
 
     // This takes care both of relocates for call statepoints and relocates
     // on normal path of invoke statepoint.
-    if (!isa<ExtractValueInst>(Token)) {
+    if (!isa<LandingPadInst>(Token)) {
       return cast<Instruction>(Token);
     }
 
@@ -399,16 +399,10 @@ StatepointBase<FunTy, InstructionTy, ValueTy, CallSiteTy>::getRelocates()
   LandingPadInst *LandingPad =
       cast<InvokeInst>(getInstruction())->getLandingPadInst();
 
-  // Search for extract value from landingpad instruction to which
-  // gc relocates will be attached
+  // Search for gc relocates that are attached to this landingpad.
   for (const User *LandingPadUser : LandingPad->users()) {
-    if (!isa<ExtractValueInst>(LandingPadUser))
-      continue;
-
-    // gc relocates should be attached to this extract value
-    for (const User *U : LandingPadUser->users())
-      if (isGCRelocate(U))
-        Result.push_back(GCRelocateOperands(U));
+    if (isGCRelocate(LandingPadUser))
+      Result.push_back(GCRelocateOperands(LandingPadUser));
   }
   return Result;
 }

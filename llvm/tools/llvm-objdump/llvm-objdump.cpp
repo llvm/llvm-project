@@ -247,8 +247,8 @@ void llvm::error(std::error_code EC) {
   if (!EC)
     return;
 
-  outs() << ToolName << ": error reading file: " << EC.message() << ".\n";
-  outs().flush();
+  errs() << ToolName << ": error reading file: " << EC.message() << ".\n";
+  errs().flush();
   exit(1);
 }
 

@@ -1505,11 +1505,8 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
     Builder.SetInsertPoint(&*UnwindBlock->getFirstInsertionPt());
     Builder.SetCurrentDebugLocation(ToReplace->getDebugLoc());
 
-    // Extract second element from landingpad return value. We will attach
-    // exceptional gc relocates to it.
-    Instruction *ExceptionalToken =
-        cast<Instruction>(Builder.CreateExtractValue(
-            UnwindBlock->getLandingPadInst(), 1, "relocate_token"));
+    // Attach exceptional gc relocates to the landingpad.
+    Instruction *ExceptionalToken = UnwindBlock->getLandingPadInst();
     Result.UnwindToken = ExceptionalToken;
 
     const unsigned LiveStartIdx = Statepoint(Token).gcArgsStartIdx();

@@ -10,7 +10,7 @@ define i64 addrspace(1)* @test(i64 addrspace(1)* %obj) gc "statepoint-example" {
 ; CHECK-NEXT: bitcast
 ; CHECK-NEXT: ret i64 addrspace(1)* %obj.relocated.casted
 entry:
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ret i64 addrspace(1)* %obj
 }
 
@@ -28,7 +28,7 @@ define <2 x i64 addrspace(1)*> @test2(<2 x i64 addrspace(1)*> %obj) gc "statepoi
 ; CHECK-NEXT: insertelement
 ; CHECK-NEXT: ret <2 x i64 addrspace(1)*> %7
 entry:
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ret <2 x i64 addrspace(1)*> %obj
 }
 
@@ -48,7 +48,7 @@ define <2 x i64 addrspace(1)*> @test3(<2 x i64 addrspace(1)*>* %ptr) gc "statepo
 ; CHECK-NEXT: ret <2 x i64 addrspace(1)*> %7
 entry:
   %obj = load <2 x i64 addrspace(1)*>, <2 x i64 addrspace(1)*>* %ptr
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ret <2 x i64 addrspace(1)*> %obj
 }
 
@@ -63,7 +63,7 @@ define <2 x i64 addrspace(1)*> @test4(<2 x i64 addrspace(1)*>* %ptr) gc "statepo
 ; CHECK-NEXT: gc.statepoint
 entry:
   %obj = load <2 x i64 addrspace(1)*>, <2 x i64 addrspace(1)*>* %ptr
-  invoke i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
           to label %normal_return unwind label %exceptional_return
 
 ; CHECK-LABEL: normal_return:
@@ -86,7 +86,7 @@ normal_return:                                    ; preds = %entry
 ; CHECK-NEXT: insertelement
 ; CHECK-NEXT: ret <2 x i64 addrspace(1)*> %14
 exceptional_return:                               ; preds = %entry
-  %landing_pad4 = landingpad { i8*, i32 }
+  %landing_pad4 = landingpad token
           cleanup
   ret <2 x i64 addrspace(1)*> %obj
 }
@@ -110,7 +110,7 @@ define <2 x i64 addrspace(1)*> @test5(i64 addrspace(1)* %p)
 ; CHECK-NEXT: ret <2 x i64 addrspace(1)*> %7
 entry:
   %vec = insertelement <2 x i64 addrspace(1)*> undef, i64 addrspace(1)* %p, i32 0
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ret <2 x i64 addrspace(1)*> %vec
 }
 
@@ -142,11 +142,11 @@ untaken:
 
 merge:
   %obj = phi <2 x i64 addrspace(1)*> [%obja, %taken], [%objb, %untaken]
-  %safepoint_token = call i32 (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
   ret <2 x i64 addrspace(1)*> %obj
 }
 
 
 declare void @do_safepoint()
 
-declare i32 @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
