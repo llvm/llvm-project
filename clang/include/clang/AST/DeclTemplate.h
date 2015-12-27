@@ -68,15 +68,13 @@ protected:
   }
 
   TemplateParameterList(SourceLocation TemplateLoc, SourceLocation LAngleLoc,
-                        NamedDecl **Params, unsigned NumParams,
-                        SourceLocation RAngleLoc);
+                        ArrayRef<NamedDecl *> Params, SourceLocation RAngleLoc);
 
 public:
   static TemplateParameterList *Create(const ASTContext &C,
                                        SourceLocation TemplateLoc,
                                        SourceLocation LAngleLoc,
-                                       NamedDecl **Params,
-                                       unsigned NumParams,
+                                       ArrayRef<NamedDecl *> Params,
                                        SourceLocation RAngleLoc);
 
   /// \brief Iterates through the template parameters in this list.
@@ -155,9 +153,9 @@ template <size_t N> class FixedSizeTemplateParameterListStorage {
 public:
   FixedSizeTemplateParameterListStorage(SourceLocation TemplateLoc,
                                         SourceLocation LAngleLoc,
-                                        NamedDecl **Params,
+                                        ArrayRef<NamedDecl *> Params,
                                         SourceLocation RAngleLoc)
-      : List(TemplateLoc, LAngleLoc, Params, N, RAngleLoc) {
+      : List(TemplateLoc, LAngleLoc, Params, RAngleLoc) {
     // Because we're doing an evil layout hack above, have some
     // asserts, just to double-check everything is laid out like
     // expected.

@@ -4175,10 +4175,7 @@ DragonFly::DragonFly(const Driver &D, const llvm::Triple &Triple,
 
   getFilePaths().push_back(getDriver().Dir + "/../lib");
   getFilePaths().push_back("/usr/lib");
-  if (D.getVFS().exists("/usr/lib/gcc47"))
-    getFilePaths().push_back("/usr/lib/gcc47");
-  else
-    getFilePaths().push_back("/usr/lib/gcc44");
+  getFilePaths().push_back("/usr/lib/gcc50");
 }
 
 Tool *DragonFly::buildAssembler() const {

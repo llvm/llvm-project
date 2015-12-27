@@ -226,15 +226,16 @@ getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
   if (LSI->GLTemplateParameterList)
     return LSI->GLTemplateParameterList;
 
-  if (LSI->AutoTemplateParams.size()) {
+  if (!LSI->AutoTemplateParams.empty()) {
     SourceRange IntroRange = LSI->IntroducerRange;
     SourceLocation LAngleLoc = IntroRange.getBegin();
     SourceLocation RAngleLoc = IntroRange.getEnd();
     LSI->GLTemplateParameterList = TemplateParameterList::Create(
         SemaRef.Context,
         /*Template kw loc*/ SourceLocation(), LAngleLoc,
-        (NamedDecl **)LSI->AutoTemplateParams.data(),
-        LSI->AutoTemplateParams.size(), RAngleLoc);
+        llvm::makeArrayRef((NamedDecl *const *)LSI->AutoTemplateParams.data(),
+                           LSI->AutoTemplateParams.size()),
+        RAngleLoc);
   }
   return LSI->GLTemplateParameterList;
 }
