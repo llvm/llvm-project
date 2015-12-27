@@ -4299,14 +4299,6 @@ multiclass avx512_permil<string OpcodeStr, bits<8> OpcImm, bits<8> OpcVar,
   defm NAME: avx512_shift_rmi_sizes<OpcImm, MRMSrcReg, MRMSrcMem, OpcodeStr,
                                     X86VPermilpi, _>,
                     EVEX, AVX512AIi8Base, EVEX_CD8<_.info128.EltSize, CD8VF>;
-
-  let isCodeGenOnly = 1 in {
-    // lowering implementation with the alternative types
-    defm NAME#_I: avx512_permil_vec_common<OpcodeStr, OpcVar, Ctrl, Ctrl>;
-    defm NAME#_I: avx512_shift_rmi_sizes<OpcImm, MRMSrcReg, MRMSrcMem,
-                                         OpcodeStr, X86VPermilpi, Ctrl>,
-                    EVEX, AVX512AIi8Base, EVEX_CD8<_.info128.EltSize, CD8VF>;
-  }
 }
 
 defm VPERMILPS : avx512_permil<"vpermilps", 0x04, 0x0C, avx512vl_f32_info,

@@ -4421,7 +4421,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
              "Not having LAHF/SAHF only happens on 64-bit.");
       // Moving EFLAGS to / from another register requires a push and a pop.
       // Notice that we have to adjust the stack if we don't want to clobber the
-      // first frame index. See X86FrameLowering.cpp - clobbersTheStack.
+      // first frame index. See X86FrameLowering.cpp - usesTheStack.
       if (FromEFLAGS) {
         BuildMI(MBB, MI, DL, get(PushF));
         BuildMI(MBB, MI, DL, get(Pop), DestReg);
@@ -4453,7 +4453,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // such as TF/IF/DF, which LLVM doesn't model.
     //
     // Notice that we have to adjust the stack if we don't want to clobber the
-    // first frame index. See X86FrameLowering.cpp - clobbersTheStack.
+    // first frame index. See X86FrameLowering.cpp - usesTheStack.
 
 
     bool AXDead = (Reg == AX) ||

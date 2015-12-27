@@ -94,151 +94,36 @@ define x86_fp80 @test_intrinsic_fmaxl(x86_fp80 %x, x86_fp80 %y) {
   ret x86_fp80 %z
 }
 
-; FIXME: This should not be doing 4 scalar ops on a 2 element vector.
-; FIXME: This should use vector ops (maxps / cmpps).
-
 ; CHECK-LABEL: @test_intrinsic_fmax_v2f32
 ; SSE:         movaps %xmm1, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; SSE-NEXT:    movaps %xmm3, %xmm4
-; SSE-NEXT:    cmpunordss %xmm4, %xmm4
-; SSE-NEXT:    movaps %xmm4, %xmm5
-; SSE-NEXT:    andps %xmm2, %xmm5
-; SSE-NEXT:    maxss %xmm3, %xmm2
-; SSE-NEXT:    andnps %xmm2, %xmm4
-; SSE-NEXT:    orps %xmm5, %xmm4
-; SSE-NEXT:    movaps %xmm1, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
-; SSE-NEXT:    movaps %xmm0, %xmm5
-; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1,2,3]
-; SSE-NEXT:    movaps %xmm5, %xmm3
-; SSE-NEXT:    cmpunordss %xmm3, %xmm3
-; SSE-NEXT:    movaps %xmm3, %xmm6
-; SSE-NEXT:    andps %xmm2, %xmm6
-; SSE-NEXT:    maxss %xmm5, %xmm2
-; SSE-NEXT:    andnps %xmm2, %xmm3
-; SSE-NEXT:    orps %xmm6, %xmm3
-; SSE-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm2, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm4
-; SSE-NEXT:    andps %xmm1, %xmm4
-; SSE-NEXT:    movaps %xmm1, %xmm5
-; SSE-NEXT:    maxss %xmm0, %xmm5
-; SSE-NEXT:    andnps %xmm5, %xmm2
-; SSE-NEXT:    orps %xmm4, %xmm2
-; SSE-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1,0]
-; SSE-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
-; SSE-NEXT:    movapd %xmm0, %xmm4
-; SSE-NEXT:    cmpunordss %xmm4, %xmm4
-; SSE-NEXT:    movaps %xmm4, %xmm5
-; SSE-NEXT:    andps %xmm1, %xmm5
-; SSE-NEXT:    maxss %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm4
-; SSE-NEXT:    orps %xmm5, %xmm4
-; SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
-; SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    maxps %xmm0, %xmm2
+; SSE-NEXT:    cmpunordps %xmm0, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm1
+; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX:         vmaxss %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm3
-; AVX-NEXT:    vblendvps %xmm3, %xmm1, %xmm2, %xmm2
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
-; AVX-NEXT:    vmaxss %xmm3, %xmm4, %xmm5
-; AVX-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vblendvps %xmm3, %xmm4, %xmm5, %xmm3
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm1[1,0]
-; AVX-NEXT:    vmaxss %xmm3, %xmm4, %xmm5
-; AVX-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vblendvps %xmm3, %xmm4, %xmm5, %xmm3
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX-NEXT:    vmaxss %xmm0, %xmm1, %xmm3
-; AVX-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm3, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; AVX:         vmaxps %xmm0, %xmm1, %xmm2
+; AVX-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX-NEXT:    retq
 define <2 x float> @test_intrinsic_fmax_v2f32(<2 x float> %x, <2 x float> %y) {
   %z = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> %y) readnone
   ret <2 x float> %z
 }
 
-; FIXME: This should use vector ops (maxps / cmpps).
-
 ; CHECK-LABEL: @test_intrinsic_fmax_v4f32
 ; SSE:         movaps %xmm1, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; SSE-NEXT:    movaps %xmm3, %xmm4
-; SSE-NEXT:    cmpunordss %xmm4, %xmm4
-; SSE-NEXT:    movaps %xmm4, %xmm5
-; SSE-NEXT:    andps %xmm2, %xmm5
-; SSE-NEXT:    maxss %xmm3, %xmm2
-; SSE-NEXT:    andnps %xmm2, %xmm4
-; SSE-NEXT:    orps %xmm5, %xmm4
-; SSE-NEXT:    movaps %xmm1, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
-; SSE-NEXT:    movaps %xmm0, %xmm5
-; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1,2,3]
-; SSE-NEXT:    movaps %xmm5, %xmm3
-; SSE-NEXT:    cmpunordss %xmm3, %xmm3
-; SSE-NEXT:    movaps %xmm3, %xmm6
-; SSE-NEXT:    andps %xmm2, %xmm6
-; SSE-NEXT:    maxss %xmm5, %xmm2
-; SSE-NEXT:    andnps %xmm2, %xmm3
-; SSE-NEXT:    orps %xmm6, %xmm3
-; SSE-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm2, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm4
-; SSE-NEXT:    andps %xmm1, %xmm4
-; SSE-NEXT:    movaps %xmm1, %xmm5
-; SSE-NEXT:    maxss %xmm0, %xmm5
-; SSE-NEXT:    andnps %xmm5, %xmm2
-; SSE-NEXT:    orps %xmm4, %xmm2
-; SSE-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1,0]
-; SSE-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
-; SSE-NEXT:    movapd %xmm0, %xmm4
-; SSE-NEXT:    cmpunordss %xmm4, %xmm4
-; SSE-NEXT:    movaps %xmm4, %xmm5
-; SSE-NEXT:    andps %xmm1, %xmm5
-; SSE-NEXT:    maxss %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm4
-; SSE-NEXT:    orps %xmm5, %xmm4
-; SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
-; SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    maxps %xmm0, %xmm2
+; SSE-NEXT:    cmpunordps %xmm0, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm1
+; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX:         vmaxss %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm3
-; AVX-NEXT:    vblendvps %xmm3, %xmm1, %xmm2, %xmm2
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
-; AVX-NEXT:    vmaxss %xmm3, %xmm4, %xmm5
-; AVX-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vblendvps %xmm3, %xmm4, %xmm5, %xmm3
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm1[1,0]
-; AVX-NEXT:    vmaxss %xmm3, %xmm4, %xmm5
-; AVX-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vblendvps %xmm3, %xmm4, %xmm5, %xmm3
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX-NEXT:    vmaxss %xmm0, %xmm1, %xmm3
-; AVX-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm3, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; AVX:         vmaxps %xmm0, %xmm1, %xmm2
+; AVX-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX-NEXT:    retq
 define <4 x float> @test_intrinsic_fmax_v4f32(<4 x float> %x, <4 x float> %y) {
   %z = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> %y) readnone

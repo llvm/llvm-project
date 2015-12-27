@@ -27,12 +27,14 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeCrossDSOCFIPass(Registry);
   initializeDAEPass(Registry);
   initializeDAHPass(Registry);
+  initializeForceFunctionAttrsLegacyPassPass(Registry);
   initializeFunctionAttrsPass(Registry);
   initializeGlobalDCEPass(Registry);
   initializeGlobalOptPass(Registry);
   initializeIPCPPass(Registry);
   initializeAlwaysInlinerPass(Registry);
   initializeSimpleInlinerPass(Registry);
+  initializeInferFunctionAttrsLegacyPassPass(Registry);
   initializeInternalizePassPass(Registry);
   initializeLoopExtractorPass(Registry);
   initializeBlockExtractorPassPass(Registry);
