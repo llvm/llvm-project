@@ -93,6 +93,10 @@ typename ObjectFile<ELFT>::Elf_Sym_Range ObjectFile<ELFT>::getLocalSymbols() {
   return this->getSymbolsHelper(true);
 }
 
+template <class ELFT> uint32_t ObjectFile<ELFT>::getMipsGp0() const {
+  return MipsReginfo ? MipsReginfo->getGp0() : 0;
+}
+
 template <class ELFT>
 const typename ObjectFile<ELFT>::Elf_Sym *
 ObjectFile<ELFT>::getLocalSymbol(uintX_t SymIndex) {
@@ -245,8 +249,10 @@ elf2::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 
   // A MIPS object file has a special section that contains register
   // usage info, which needs to be handled by the linker specially.
-  if (Config->EMachine == EM_MIPS && Name == ".reginfo")
-    return new (this->Alloc) MipsReginfoInputSection<ELFT>(this, &Sec);
+  if (Config->EMachine == EM_MIPS && Name == ".reginfo") {
+    MipsReginfo = new (this->Alloc) MipsReginfoInputSection<ELFT>(this, &Sec);
+    return MipsReginfo;
+  }
 
   if (Name == ".eh_frame")
     return new (this->EHAlloc.Allocate()) EHInputSection<ELFT>(this, &Sec);

@@ -112,7 +112,7 @@ void SymbolTable<ELFT>::addSynthetic(StringRef Name,
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
   auto *Sym = new (Alloc)
-      DefinedRegular<ELFT>(Name, DefinedRegular<ELFT>::IgnoreUndef, nullptr);
+      DefinedRegular<ELFT>(Name, ElfSym<ELFT>::IgnoreUndef, nullptr);
   resolve(Sym);
   return Sym;
 }

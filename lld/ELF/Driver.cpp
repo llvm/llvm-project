@@ -279,7 +279,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // so that it points to an absolute address which is relative to GOT.
     // See "Global Data Symbols" in Chapter 6 in the following document:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    Symtab.addAbsolute("_gp", DefinedRegular<ELFT>::MipsGp);
+    Symtab.addAbsolute("_gp", ElfSym<ELFT>::MipsGp);
   }
 
   for (std::unique_ptr<InputFile> &F : Files)

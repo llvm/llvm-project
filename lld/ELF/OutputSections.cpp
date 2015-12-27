@@ -768,17 +768,18 @@ OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t sh_type,
     : OutputSectionBase<ELFT>(Name, sh_type, sh_flags) {}
 
 template <class ELFT>
-void OutputSection<ELFT>::addSection(InputSection<ELFT> *C) {
-  Sections.push_back(C);
-  C->OutSec = this;
-  uint32_t Align = C->getAlign();
+void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  auto *S = cast<InputSection<ELFT>>(C);
+  Sections.push_back(S);
+  S->OutSec = this;
+  uint32_t Align = S->getAlign();
   if (Align > this->Header.sh_addralign)
     this->Header.sh_addralign = Align;
 
   uintX_t Off = this->Header.sh_size;
   Off = RoundUpToAlignment(Off, Align);
-  C->OutSecOff = Off;
-  Off += C->getSize();
+  S->OutSecOff = Off;
+  Off += S->getSize();
   this->Header.sh_size = Off;
 }
 
@@ -1026,7 +1027,8 @@ EHOutputSection<ELFT>::readEntryLength(ArrayRef<uint8_t> D) {
 }
 
 template <class ELFT>
-void EHOutputSection<ELFT>::addSection(EHInputSection<ELFT> *S) {
+void EHOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  auto *S = cast<EHInputSection<ELFT>>(C);
   const Elf_Shdr *RelSec = S->RelocSection;
   if (!RelSec)
     return addSectionAux(
@@ -1109,7 +1111,8 @@ static size_t findNull(StringRef S, size_t EntSize) {
 }
 
 template <class ELFT>
-void MergeOutputSection<ELFT>::addSection(MergeInputSection<ELFT> *S) {
+void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  auto *S = cast<MergeInputSection<ELFT>>(C);
   S->OutSec = this;
   uint32_t Align = S->getAlign();
   if (Align > this->Header.sh_addralign)
@@ -1170,16 +1173,6 @@ StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
 template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
   StringRef Data = StrTabBuilder.data();
   memcpy(Buf, Data.data(), Data.size());
-}
-
-bool lld::elf2::includeInDynamicSymtab(const SymbolBody &B) {
-  uint8_t V = B.getVisibility();
-  if (V != STV_DEFAULT && V != STV_PROTECTED)
-    return false;
-
-  if (Config->ExportDynamic || Config->Shared)
-    return true;
-  return B.isUsedInDynamicReloc();
 }
 
 template <class ELFT>
@@ -1423,8 +1416,8 @@ void MipsReginfoOutputSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-void MipsReginfoOutputSection<ELFT>::addSection(
-    MipsReginfoInputSection<ELFT> *S) {
+void MipsReginfoOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  auto *S = cast<MipsReginfoInputSection<ELFT>>(C);
   GeneralMask |= S->getGeneralMask();
 }
 

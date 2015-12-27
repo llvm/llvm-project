@@ -120,9 +120,9 @@ std::unique_ptr<InputFile> Lazy::getMember() {
 }
 
 template <class ELFT> static void doInitSymbols() {
-  DefinedRegular<ELFT>::End.setBinding(STB_GLOBAL);
-  DefinedRegular<ELFT>::IgnoreUndef.setBinding(STB_WEAK);
-  DefinedRegular<ELFT>::IgnoreUndef.setVisibility(STV_HIDDEN);
+  ElfSym<ELFT>::End.setBinding(STB_GLOBAL);
+  ElfSym<ELFT>::IgnoreUndef.setBinding(STB_WEAK);
+  ElfSym<ELFT>::IgnoreUndef.setVisibility(STV_HIDDEN);
 }
 
 void lld::elf2::initSymbols() {

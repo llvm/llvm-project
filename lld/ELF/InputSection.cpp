@@ -187,6 +187,12 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uintX_t A = getAddend<ELFT>(RI);
     if (!Body) {
       uintX_t SymVA = getLocalRelTarget(*File, RI, A);
+      // We need to adjust SymVA value in case of R_MIPS_GPREL16/32 relocations
+      // because they use the following expression to calculate the relocation's
+      // result for local symbol: S + A + GP0 - G.
+      if (Config->EMachine == EM_MIPS &&
+          (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
+        SymVA += File->getMipsGp0();
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA, 0,
                           findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
       continue;
@@ -268,6 +274,11 @@ bool EHInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 template <class ELFT>
 typename EHInputSection<ELFT>::uintX_t
 EHInputSection<ELFT>::getOffset(uintX_t Offset) {
+  // The file crtbeginT.o has relocations pointing to the start of an empty
+  // .eh_frame that is known to be the first in the link. It does that to
+  // identify the start of the output .eh_frame. Handle this special case.
+  if (this->getSectionHdr()->sh_size == 0)
+    return Offset;
   std::pair<uintX_t, uintX_t> *I = this->getRangeAndSize(Offset).first;
   uintX_t Base = I->second;
   if (Base == uintX_t(-1))
@@ -344,6 +355,13 @@ uint32_t MipsReginfoInputSection<ELFT>::getGeneralMask() const {
   if (D.size() != sizeof(Elf_Mips_RegInfo))
     error("Invalid size of .reginfo section");
   return reinterpret_cast<const Elf_Mips_RegInfo *>(D.data())->ri_gprmask;
+}
+
+template <class ELFT> uint32_t MipsReginfoInputSection<ELFT>::getGp0() const {
+  ArrayRef<uint8_t> D = this->getSectionData();
+  if (D.size() != sizeof(Elf_Mips_RegInfo))
+    error("Invalid size of .reginfo section");
+  return reinterpret_cast<const Elf_Mips_RegInfo *>(D.data())->ri_gp_value;
 }
 
 template <class ELFT>

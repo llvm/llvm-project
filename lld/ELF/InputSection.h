@@ -176,6 +176,7 @@ public:
   MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
 
   uint32_t getGeneralMask() const;
+  uint32_t getGp0() const;
 
   static bool classof(const InputSectionBase<ELFT> *S);
 };

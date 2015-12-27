@@ -123,8 +123,16 @@ protected:
   const unsigned SymbolKind : 8;
   unsigned IsWeak : 1;
   unsigned Visibility : 2;
+
+  // True if the symbol was used for linking and thus need to be
+  // added to the output file's symbol table. It is usually true,
+  // but if it is a shared symbol that were not referenced by anyone,
+  // it can be false.
   unsigned IsUsedInRegularObj : 1;
+
+  // If true, the symbol is added to .dynsym symbol table.
   unsigned IsUsedInDynamicReloc : 1;
+
   unsigned IsTls : 1;
   StringRef Name;
   Symbol *Backref = nullptr;
@@ -189,39 +197,7 @@ public:
 
   // If this is null, the symbol is absolute.
   InputSectionBase<ELFT> *Section;
-
-  static Elf_Sym IgnoreUndef;
-
-  // The following symbols must be added early to reserve their places
-  // in symbol tables. The value of the symbols are set when all sections
-  // are finalized and their addresses are determined.
-
-  // The content for _end and end symbols.
-  static Elf_Sym End;
-
-  // The content for _gp symbol for MIPS target.
-  static Elf_Sym MipsGp;
-
-  // __rel_iplt_start/__rel_iplt_end for signaling
-  // where R_[*]_IRELATIVE relocations do live.
-  static Elf_Sym RelaIpltStart;
-  static Elf_Sym RelaIpltEnd;
 };
-
-template <class ELFT>
-typename DefinedRegular<ELFT>::Elf_Sym DefinedRegular<ELFT>::IgnoreUndef;
-
-template <class ELFT>
-typename DefinedRegular<ELFT>::Elf_Sym DefinedRegular<ELFT>::End;
-
-template <class ELFT>
-typename DefinedRegular<ELFT>::Elf_Sym DefinedRegular<ELFT>::MipsGp;
-
-template <class ELFT>
-typename DefinedRegular<ELFT>::Elf_Sym DefinedRegular<ELFT>::RelaIpltStart;
-
-template <class ELFT>
-typename DefinedRegular<ELFT>::Elf_Sym DefinedRegular<ELFT>::RelaIpltEnd;
 
 // DefinedSynthetic is a class to represent linker-generated ELF symbols.
 // The difference from the regular symbol is that DefinedSynthetic symbols
@@ -315,6 +291,35 @@ private:
   ArchiveFile *File;
   const llvm::object::Archive::Symbol Sym;
 };
+
+// Some linker-generated symbols need to be created as
+// DefinedRegular symbols, so they need Elf_Sym symbols.
+// Here we allocate such Elf_Sym symbols statically.
+template <class ELFT> struct ElfSym {
+  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+
+  // Used to represent an undefined symbol which we don't want
+  // to add to the output file's symbol table.
+  static Elf_Sym IgnoreUndef;
+
+  // The content for _end and end symbols.
+  static Elf_Sym End;
+
+  // The content for _gp symbol for MIPS target.
+  static Elf_Sym MipsGp;
+
+  // __rel_iplt_start/__rel_iplt_end for signaling
+  // where R_[*]_IRELATIVE relocations do live.
+  static Elf_Sym RelaIpltStart;
+  static Elf_Sym RelaIpltEnd;
+};
+
+template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::IgnoreUndef;
+template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::End;
+template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::MipsGp;
+template <class ELFT>
+typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::RelaIpltStart;
+template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::RelaIpltEnd;
 
 } // namespace elf2
 } // namespace lld

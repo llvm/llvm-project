@@ -60,9 +60,8 @@ typename llvm::object::ELFFile<ELFT>::uintX_t
 getLocalRelTarget(const ObjectFile<ELFT> &File,
                   const llvm::object::Elf_Rel_Impl<ELFT, IsRela> &Rel,
                   typename llvm::object::ELFFile<ELFT>::uintX_t Addend);
-bool canBePreempted(const SymbolBody *Body, bool NeedsGot);
 
-bool includeInDynamicSymtab(const SymbolBody &B);
+bool canBePreempted(const SymbolBody *Body, bool NeedsGot);
 
 template <class ELFT>
 bool shouldKeepInSymtab(
@@ -86,6 +85,8 @@ public:
   void writeHeaderTo(Elf_Shdr *SHdr);
   StringRef getName() { return Name; }
 
+  virtual void addSection(InputSectionBase<ELFT> *C) {}
+
   unsigned SectionIndex;
 
   // Returns the size of the section in the output file.
@@ -106,11 +107,11 @@ public:
 
   virtual void finalize() {}
   virtual void writeTo(uint8_t *Buf) = 0;
+  virtual ~OutputSectionBase() = default;
 
 protected:
   StringRef Name;
   Elf_Shdr Header;
-  ~OutputSectionBase() = default;
 };
 
 template <class ELFT> class GotSection final : public OutputSectionBase<ELFT> {
@@ -250,7 +251,7 @@ public:
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   OutputSection(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
-  void addSection(InputSection<ELFT> *C);
+  void addSection(InputSectionBase<ELFT> *C) override;
   void writeTo(uint8_t *Buf) override;
 
 private:
@@ -265,7 +266,7 @@ class MergeOutputSection final : public OutputSectionBase<ELFT> {
 
 public:
   MergeOutputSection(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
-  void addSection(MergeInputSection<ELFT> *S);
+  void addSection(InputSectionBase<ELFT> *S) override;
   void writeTo(uint8_t *Buf) override;
   unsigned getOffset(StringRef Val);
   void finalize() override;
@@ -304,7 +305,7 @@ public:
       llvm::iterator_range<const llvm::object::Elf_Rel_Impl<ELFT, IsRela> *>
           Rels);
 
-  void addSection(EHInputSection<ELFT> *S);
+  void addSection(InputSectionBase<ELFT> *S) override;
 
 private:
   uintX_t readEntryLength(ArrayRef<uint8_t> D);
@@ -425,8 +426,7 @@ class MipsReginfoOutputSection final : public OutputSectionBase<ELFT> {
 public:
   MipsReginfoOutputSection();
   void writeTo(uint8_t *Buf) override;
-
-  void addSection(MipsReginfoInputSection<ELFT> *S);
+  void addSection(InputSectionBase<ELFT> *S) override;
 
 private:
   uint32_t GeneralMask = 0;

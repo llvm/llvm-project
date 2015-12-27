@@ -1382,6 +1382,16 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     write32<E>(Loc, (read32<E>(Loc) & 0xffff0000) | (V & 0xffff));
     break;
   }
+  case R_MIPS_GPREL16: {
+    uint32_t Instr = read32<E>(Loc);
+    int64_t V = SA + SignExtend64<16>(Instr & 0xffff) - getMipsGpAddr<ELFT>();
+    checkInt<16>(V, Type);
+    write32<E>(Loc, (Instr & 0xffff0000) | (V & 0xffff));
+    break;
+  }
+  case R_MIPS_GPREL32:
+    write32<E>(Loc, SA + int32_t(read32<E>(Loc)) - getMipsGpAddr<ELFT>());
+    break;
   case R_MIPS_HI16: {
     uint32_t Instr = read32<E>(Loc);
     if (PairedLoc) {

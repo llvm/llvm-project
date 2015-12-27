@@ -1446,8 +1446,7 @@ CreateTemplateParameterList (ASTContext *ast,
     TemplateParameterList *template_param_list = TemplateParameterList::Create (*ast,
                                                                                 SourceLocation(),
                                                                                 SourceLocation(),
-                                                                                &template_param_decls.front(),
-                                                                                template_param_decls.size(),
+                                                                                template_param_decls,
                                                                                 SourceLocation());
     return template_param_list;
 }

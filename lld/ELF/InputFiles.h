@@ -121,6 +121,11 @@ public:
 
   const Elf_Shdr *getSymbolTable() const { return this->Symtab; };
 
+  // Get MIPS GP0 value defined by this file. This value represents the gp value
+  // used to create the relocatable object and required to support
+  // R_MIPS_GPREL16 / R_MIPS_GPREL32 relocations.
+  uint32_t getMipsGp0() const;
+
 private:
   void initializeSections(llvm::DenseSet<StringRef> &Comdats);
   void initializeSymbols();
@@ -133,6 +138,9 @@ private:
 
   // List of all symbols referenced or defined by this file.
   std::vector<SymbolBody *> SymbolBodies;
+
+  // MIPS .reginfo section defined by this file.
+  MipsReginfoInputSection<ELFT> *MipsReginfo = nullptr;
 
   llvm::BumpPtrAllocator Alloc;
   llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
