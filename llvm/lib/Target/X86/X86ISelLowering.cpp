@@ -4922,8 +4922,7 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT,
     if (MaskNode->getOpcode() == X86ISD::VBROADCAST) {
       unsigned NumEltsInMask = MaskNode->getNumOperands();
       MaskNode = MaskNode->getOperand(0);
-      auto *CN = dyn_cast<ConstantSDNode>(MaskNode);
-      if (CN) {
+      if (auto *CN = dyn_cast<ConstantSDNode>(MaskNode)) {
         APInt MaskEltValue = CN->getAPIntValue();
         for (unsigned i = 0; i < NumEltsInMask; ++i)
           RawMask.push_back(MaskEltValue.getLoBits(MaskLoBits).getZExtValue());
@@ -4946,8 +4945,7 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT,
     if (!MaskCP || MaskCP->isMachineConstantPoolEntry())
       return false;
 
-    auto *C = dyn_cast<Constant>(MaskCP->getConstVal());
-    if (C) {
+    if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
       DecodeVPERMVMask(C, VT, Mask);
       if (Mask.empty())
         return false;
@@ -4999,8 +4997,7 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT,
     if (!MaskCP || MaskCP->isMachineConstantPoolEntry())
       return false;
 
-    auto *C = dyn_cast<Constant>(MaskCP->getConstVal());
-    if (C) {
+    if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
       DecodeVPERMV3Mask(C, VT, Mask);
       if (Mask.empty())
         return false;
@@ -26869,12 +26866,8 @@ static SDValue PerformFMinFMaxCombine(SDNode *N, SelectionDAG &DAG) {
 
 static SDValue performFMaxNumCombine(SDNode *N, SelectionDAG &DAG,
                                      const X86Subtarget *Subtarget) {
-  // This takes at least 3 instructions, so favor a library call when
-  // minimizing code size.
-  if (DAG.getMachineFunction().getFunction()->optForMinSize())
+  if (Subtarget->useSoftFloat())
     return SDValue();
-
-  EVT VT = N->getValueType(0);
 
   // TODO: Check for global or instruction-level "nnan". In that case, we
   //       should be able to lower to FMAX/FMIN alone.
@@ -26882,7 +26875,13 @@ static SDValue performFMaxNumCombine(SDNode *N, SelectionDAG &DAG,
   //       should be an optional swap and FMAX/FMIN.
   // TODO: Allow f64, vectors, and fminnum.
 
-  if (VT != MVT::f32 || !Subtarget->hasSSE1() || Subtarget->useSoftFloat())
+  EVT VT = N->getValueType(0);
+  if (!(Subtarget->hasSSE1() && (VT == MVT::f32 || VT == MVT::v4f32)))
+    return SDValue();
+
+  // This takes at least 3 instructions, so favor a library call when operating
+  // on a scalar and minimizing code size.
+  if (!VT.isVector() && DAG.getMachineFunction().getFunction()->optForMinSize())
     return SDValue();
 
   SDValue Op0 = N->getOperand(0);
@@ -26914,7 +26913,8 @@ static SDValue performFMaxNumCombine(SDNode *N, SelectionDAG &DAG,
 
   // If Op0 is a NaN, select Op1. Otherwise, select the max. If both operands
   // are NaN, the NaN value of Op1 is the result.
-  return DAG.getNode(ISD::SELECT, DL, VT, IsOp0Nan, Op1, Max);
+  auto SelectOpcode = VT.isVector() ? ISD::VSELECT : ISD::SELECT;
+  return DAG.getNode(SelectOpcode, DL, VT, IsOp0Nan, Op1, Max);
 }
 
 /// Do target-specific dag combines on X86ISD::FAND nodes.

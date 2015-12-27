@@ -1,5 +1,6 @@
-; RUN: opt < %s -functionattrs -S | FileCheck %s
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -functionattrs -S | FileCheck -check-prefix=CHECK-POSIX %s
+; RUN: opt < %s -inferattrs -S | FileCheck %s
+; RUN: opt < %s -passes=inferattrs -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck -check-prefix=CHECK-POSIX %s
 
 declare i8* @fopen(i8*, i8*)
 ; CHECK: declare noalias i8* @fopen(i8* nocapture readonly, i8* nocapture readonly) [[G0:#[0-9]]] 

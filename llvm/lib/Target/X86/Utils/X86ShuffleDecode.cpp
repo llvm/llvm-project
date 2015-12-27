@@ -308,10 +308,10 @@ void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
   //   <4 x i32> <i32 -2147483648, i32 -2147483648,
   //              i32 -2147483648, i32 -2147483648>
 
+#ifndef NDEBUG
   unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
-
-  if (MaskTySize != 128 && MaskTySize != 256) // FIXME: Add support for AVX-512.
-    return;
+  assert(MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512);
+#endif
 
   // This is a straightforward byte vector.
   if (MaskTy->isVectorTy() && MaskTy->getVectorElementType()->isIntegerTy(8)) {
@@ -321,7 +321,7 @@ void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
     for (int i = 0; i < NumElements; ++i) {
       // For AVX vectors with 32 bytes the base of the shuffle is the 16-byte
       // lane of the vector we're inside.
-      int Base = i < 16 ? 0 : 16;
+      int Base = i & ~0xf;
       Constant *COp = C->getAggregateElement(i);
       if (!COp) {
         ShuffleMask.clear();

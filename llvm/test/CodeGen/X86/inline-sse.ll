@@ -21,9 +21,11 @@ define void @nop() nounwind {
 ;
 ; X64-LABEL: nop:
 ; X64:       # BB#0:
+; X64-NEXT:    subq    $24, %rsp
 ; X64-NEXT:    #APP
 ; X64-NEXT:    #NO_APP
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movaps %xmm0, (%rsp)
+; X64-NEXT:    addq    $24, %rsp
 ; X64-NEXT:    retq
   %1 = alloca <4 x float>, align 16
   %2 = call <4 x float> asm "", "=x,~{dirflag},~{fpsr},~{flags}"()

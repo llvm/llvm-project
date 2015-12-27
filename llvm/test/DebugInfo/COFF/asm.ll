@@ -130,12 +130,15 @@
 ; X64-NEXT: .L{{.*}}:{{$}}
 ; X64-NEXT: [[START:.*]]:{{$}}
 ; X64:      # BB
-; X64:      subq    $40, %rsp
+; X64:      pushq %rbp
+; X64-NEXT: subq    $32, %rsp
+; X64-NEXT: leaq    32(%rsp), %rbp
 ; X64-NEXT: [[ASM_LINE:.*]]:{{$}}
 ; X64:      [[CALL_LINE:.*]]:{{$}}
 ; X64:      callq   g
 ; X64-NEXT: [[EPILOG_AND_RET:.*]]:
-; X64:      addq    $40, %rsp
+; X64:      addq    $32, %rsp
+; X64-NEXT: popq %rbp
 ; X64-NEXT: ret
 ; X64-NEXT: [[END_OF_F:.*]]:
 ;
@@ -222,22 +225,22 @@
 ; OBJ64:        ProcStart {
 ; OBJ64-NEXT:     DisplayName: f
 ; OBJ64-NEXT:     Section: f
-; OBJ64-NEXT:     CodeSize: 0xE
+; OBJ64-NEXT:     CodeSize: 0x17
 ; OBJ64-NEXT:   }
 ; OBJ64-NEXT:   ProcEnd
 ; OBJ64-NEXT: ]
 ; OBJ64:      FunctionLineTable [
 ; OBJ64-NEXT:   Name: f
 ; OBJ64-NEXT:   Flags: 0x1
-; OBJ64-NEXT:   CodeSize: 0xE
+; OBJ64-NEXT:   CodeSize: 0x17
 ; OBJ64-NEXT:   FilenameSegment [
 ; OBJ64-NEXT:     Filename: D:\asm.c
 ; OBJ64-NEXT:     +0x0: 3
 ; FIXME: An empty __asm stmt creates an extra entry.
 ; See PR18679 for the details.
-; OBJ64-NEXT:     +0x4: 4
-; OBJ64-NEXT:     +0x4: 5
-; OBJ64-NEXT:     +0x9: 6
+; OBJ64-NEXT:     +0xA: 4
+; OBJ64-NEXT:     +0xC: 5
+; OBJ64-NEXT:     +0x11: 6
 ; OBJ64-NEXT:     ColStart: 0
 ; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 0

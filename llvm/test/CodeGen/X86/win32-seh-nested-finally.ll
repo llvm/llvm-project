@@ -72,9 +72,9 @@ attributes #3 = { noinline }
 ; CHECK: retl
 
 ; CHECK: L__ehtable$nested_finally:
-; CHECK:        .long   -1
-; CHECK:        .long   0
-; CHECK:        .long   LBB0_[[outer]]
-; CHECK:        .long   0
-; CHECK:        .long   0
-; CHECK:        .long   LBB0_[[inner]]
+; CHECK:        .long   -1 # ToState
+; CHECK:        .long   0  # Null
+; CHECK:        .long   "?dtor$[[outer]]@?0?nested_finally@4HA" # FinallyFunclet
+; CHECK:        .long   0  # ToState
+; CHECK:        .long   0  # Null
+; CHECK:        .long   "?dtor$[[inner]]@?0?nested_finally@4HA" # FinallyFunclet
