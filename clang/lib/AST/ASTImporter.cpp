@@ -2144,7 +2144,7 @@ TemplateParameterList *ASTNodeImporter::ImportTemplateParameterList(
   return TemplateParameterList::Create(Importer.getToContext(),
                                        Importer.Import(Params->getTemplateLoc()),
                                        Importer.Import(Params->getLAngleLoc()),
-                                       ToParams.data(), ToParams.size(),
+                                       ToParams,
                                        Importer.Import(Params->getRAngleLoc()));
 }
 

@@ -660,8 +660,7 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                        nullptr,
                          TemplateParameterList::Create(*this, SourceLocation(),
                                                        SourceLocation(),
-                                                       CanonParams.data(),
-                                                       CanonParams.size(),
+                                                       CanonParams,
                                                        SourceLocation()));
 
   // Get the new insert position for the node we care about.

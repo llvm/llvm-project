@@ -136,3 +136,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC-CPU %s
 // CHECK-SPARC-CPU: cc1{{.*}}" "-target-cpu" "ultrasparc"
 // CHECK-SPARC-CPU: as{{.*}}" "-Av9
+
+// Check that -G flags are passed to the linker for mips
+// RUN: %clang -target mips-unknown-freebsd %s -### -G0 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS-G %s
+// CHECK-MIPS-G: ld{{.*}}" "-G0"

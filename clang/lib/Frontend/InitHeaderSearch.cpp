@@ -410,10 +410,7 @@ AddDefaultCPlusPlusIncludePaths(const llvm::Triple &triple, const HeaderSearchOp
     }
     break;
   case llvm::Triple::DragonFly:
-    if (llvm::sys::fs::exists("/usr/lib/gcc47"))
-      AddPath("/usr/include/c++/4.7", CXXSystem, false);
-    else
-      AddPath("/usr/include/c++/4.4", CXXSystem, false);
+    AddPath("/usr/include/c++/5.0", CXXSystem, false);
     break;
   case llvm::Triple::OpenBSD: {
     std::string t = triple.getTriple();

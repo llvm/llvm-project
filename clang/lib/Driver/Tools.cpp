@@ -7803,6 +7803,12 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back("-EL");
 
+    if (Arg *A = Args.getLastArg(options::OPT_G)) {
+      StringRef v = A->getValue();
+      CmdArgs.push_back(Args.MakeArgString("-G" + v));
+      A->claim();
+    }
+
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -7910,6 +7916,17 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arch == llvm::Triple::ppc) {
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf32ppc_fbsd");
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_G)) {
+    if (ToolChain.getArch() == llvm::Triple::mips ||
+      ToolChain.getArch() == llvm::Triple::mipsel ||
+      ToolChain.getArch() == llvm::Triple::mips64 ||
+      ToolChain.getArch() == llvm::Triple::mips64el) {
+      StringRef v = A->getValue();
+      CmdArgs.push_back(Args.MakeArgString("-G" + v));
+      A->claim();
+    }
   }
 
   if (Output.isFilename()) {
@@ -9208,7 +9225,6 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                      const char *LinkingOutput) const {
   const Driver &D = getToolChain().getDriver();
   ArgStringList CmdArgs;
-  bool UseGCC47 = llvm::sys::fs::exists("/usr/lib/gcc47");
 
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
@@ -9225,7 +9241,8 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/usr/libexec/ld-elf.so.2");
     }
-    CmdArgs.push_back("--hash-style=both");
+    CmdArgs.push_back("--hash-style=gnu");
+    CmdArgs.push_back("--enable-new-dtags");
   }
 
   // When building 32-bit code on DragonFly/pc64, we have to explicitly
@@ -9271,21 +9288,11 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    // FIXME: GCC passes on -lgcc, -lgcc_pic and a whole lot of
-    //         rpaths
-    if (UseGCC47)
-      CmdArgs.push_back("-L/usr/lib/gcc47");
-    else
-      CmdArgs.push_back("-L/usr/lib/gcc44");
+    CmdArgs.push_back("-L/usr/lib/gcc50");
 
     if (!Args.hasArg(options::OPT_static)) {
-      if (UseGCC47) {
-        CmdArgs.push_back("-rpath");
-        CmdArgs.push_back("/usr/lib/gcc47");
-      } else {
-        CmdArgs.push_back("-rpath");
-        CmdArgs.push_back("/usr/lib/gcc44");
-      }
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back("/usr/lib/gcc50");
     }
 
     if (D.CCCIsCXX()) {
@@ -9300,28 +9307,20 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lc");
     }
 
-    if (UseGCC47) {
-      if (Args.hasArg(options::OPT_static) ||
-          Args.hasArg(options::OPT_static_libgcc)) {
+    if (Args.hasArg(options::OPT_static) ||
+        Args.hasArg(options::OPT_static_libgcc)) {
         CmdArgs.push_back("-lgcc");
         CmdArgs.push_back("-lgcc_eh");
-      } else {
-        if (Args.hasArg(options::OPT_shared_libgcc)) {
+    } else {
+      if (Args.hasArg(options::OPT_shared_libgcc)) {
           CmdArgs.push_back("-lgcc_pic");
           if (!Args.hasArg(options::OPT_shared))
             CmdArgs.push_back("-lgcc");
-        } else {
+      } else {
           CmdArgs.push_back("-lgcc");
           CmdArgs.push_back("--as-needed");
           CmdArgs.push_back("-lgcc_pic");
           CmdArgs.push_back("--no-as-needed");
-        }
-      }
-    } else {
-      if (Args.hasArg(options::OPT_shared)) {
-        CmdArgs.push_back("-lgcc_pic");
-      } else {
-        CmdArgs.push_back("-lgcc");
       }
     }
   }
