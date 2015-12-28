@@ -41,13 +41,12 @@ namespace {
 /// Checks for the init, dealloc, and any other functions that might be allowed
 /// to perform direct instance variable assignment based on their name.
 static bool DefaultMethodFilter(const ObjCMethodDecl *M) {
-  if (M->getMethodFamily() == OMF_init || M->getMethodFamily() == OMF_dealloc ||
-      M->getMethodFamily() == OMF_copy ||
-      M->getMethodFamily() == OMF_mutableCopy ||
-      M->getSelector().getNameForSlot(0).find("init") != StringRef::npos ||
-      M->getSelector().getNameForSlot(0).find("Init") != StringRef::npos)
-    return true;
-  return false;
+  return M->getMethodFamily() == OMF_init ||
+         M->getMethodFamily() == OMF_dealloc ||
+         M->getMethodFamily() == OMF_copy ||
+         M->getMethodFamily() == OMF_mutableCopy ||
+         M->getSelector().getNameForSlot(0).find("init") != StringRef::npos ||
+         M->getSelector().getNameForSlot(0).find("Init") != StringRef::npos;
 }
 
 class DirectIvarAssignment :

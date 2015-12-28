@@ -235,12 +235,9 @@ bool UnreachableCodeChecker::isInvalidPath(const CFGBlock *CB,
     return false;
 
   // Run each of the checks on the conditions
-  if (containsMacro(cond) || containsEnum(cond)
-      || containsStaticLocal(cond) || containsBuiltinOffsetOf(cond)
-      || containsStmt<UnaryExprOrTypeTraitExpr>(cond))
-    return true;
-
-  return false;
+  return containsMacro(cond) || containsEnum(cond) ||
+         containsStaticLocal(cond) || containsBuiltinOffsetOf(cond) ||
+         containsStmt<UnaryExprOrTypeTraitExpr>(cond);
 }
 
 // Returns true if the given CFGBlock is empty

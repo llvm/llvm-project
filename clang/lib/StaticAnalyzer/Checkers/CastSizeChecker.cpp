@@ -82,10 +82,7 @@ static bool evenFlexibleArraySize(ASTContext &Ctx, CharUnits RegionSize,
   if (Left.isNegative())
     return false;
 
-  if (Left % FlexSize == 0)
-    return true;
-
-  return false;
+  return Left % FlexSize == 0;
 }
 
 void CastSizeChecker::checkPreStmt(const CastExpr *CE,CheckerContext &C) const {

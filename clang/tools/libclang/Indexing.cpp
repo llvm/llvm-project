@@ -681,9 +681,7 @@ static void indexPreprocessingRecord(ASTUnit &Unit, IndexingContext &IdxCtx) {
 static bool topLevelDeclVisitor(void *context, const Decl *D) {
   IndexingContext &IdxCtx = *static_cast<IndexingContext*>(context);
   IdxCtx.indexTopLevelDecl(D);
-  if (IdxCtx.shouldAbort())
-    return false;
-  return true;
+  return !IdxCtx.shouldAbort();
 }
 
 static void indexTranslationUnit(ASTUnit &Unit, IndexingContext &IdxCtx) {
