@@ -804,10 +804,7 @@ bool IndexingContext::markEntityOccurrenceInFile(const NamedDecl *D,
   RefFileOccurrence RefOccur(FE, D);
   std::pair<llvm::DenseSet<RefFileOccurrence>::iterator, bool>
   res = RefFileOccurrences.insert(RefOccur);
-  if (!res.second)
-    return true; // already in map.
-
-  return false;
+  return !res.second; // already in map
 }
 
 const NamedDecl *IndexingContext::getEntityDecl(const NamedDecl *D) const {

@@ -716,7 +716,7 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPClauseKind Kind) {
             Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok));
         Arg[Modifier2] = KindModifier > OMPC_SCHEDULE_unknown
                              ? KindModifier
-                             : OMPC_SCHEDULE_unknown;
+                             : (unsigned)OMPC_SCHEDULE_unknown;
         KLoc[Modifier2] = Tok.getLocation();
         if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
             Tok.isNot(tok::annot_pragma_openmp_end))

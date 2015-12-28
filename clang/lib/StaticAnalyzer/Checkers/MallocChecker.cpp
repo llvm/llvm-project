@@ -1000,12 +1000,9 @@ static bool isKnownDeallocObjCMethodName(const ObjCMethodCall &Call) {
   // Ex:  [NSData dataWithBytesNoCopy:bytes length:10];
   // (...unless a 'freeWhenDone' parameter is false, but that's checked later.)
   StringRef FirstSlot = Call.getSelector().getNameForSlot(0);
-  if (FirstSlot == "dataWithBytesNoCopy" ||
-      FirstSlot == "initWithBytesNoCopy" ||
-      FirstSlot == "initWithCharactersNoCopy")
-    return true;
-
-  return false;
+  return FirstSlot == "dataWithBytesNoCopy" ||
+         FirstSlot == "initWithBytesNoCopy" ||
+         FirstSlot == "initWithCharactersNoCopy";
 }
 
 static Optional<bool> getFreeWhenDoneArg(const ObjCMethodCall &Call) {
