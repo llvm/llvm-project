@@ -1612,10 +1612,7 @@ class BitPermutationSelector {
           return false;
         }
 
-        if (VRI.RLAmt != EffRLAmt)
-          return false;
-
-        return true;
+        return VRI.RLAmt == EffRLAmt;
       };
 
       for (auto &BG : BitGroups) {

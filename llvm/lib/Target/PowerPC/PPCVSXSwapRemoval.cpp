@@ -164,9 +164,7 @@ private:
   bool isRegInClass(unsigned Reg, const TargetRegisterClass *RC) {
     if (TargetRegisterInfo::isVirtualRegister(Reg))
       return RC->hasSubClassEq(MRI->getRegClass(Reg));
-    if (RC->contains(Reg))
-      return true;
-    return false;
+    return RC->contains(Reg);
   }
 
   // Return true iff the given register is a full vector register.

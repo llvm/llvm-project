@@ -2447,28 +2447,28 @@ enum StructReturnType {
   StackStructReturn
 };
 static StructReturnType
-callIsStructReturn(const SmallVectorImpl<ISD::OutputArg> &Outs) {
+callIsStructReturn(const SmallVectorImpl<ISD::OutputArg> &Outs, bool IsMCU) {
   if (Outs.empty())
     return NotStructReturn;
 
   const ISD::ArgFlagsTy &Flags = Outs[0].Flags;
   if (!Flags.isSRet())
     return NotStructReturn;
-  if (Flags.isInReg())
+  if (Flags.isInReg() || IsMCU)
     return RegStructReturn;
   return StackStructReturn;
 }
 
 /// Determines whether a function uses struct return semantics.
 static StructReturnType
-argsAreStructReturn(const SmallVectorImpl<ISD::InputArg> &Ins) {
+argsAreStructReturn(const SmallVectorImpl<ISD::InputArg> &Ins, bool IsMCU) {
   if (Ins.empty())
     return NotStructReturn;
 
   const ISD::ArgFlagsTy &Flags = Ins[0].Flags;
   if (!Flags.isSRet())
     return NotStructReturn;
-  if (Flags.isInReg())
+  if (Flags.isInReg() || IsMCU)
     return RegStructReturn;
   return StackStructReturn;
 }
@@ -2945,7 +2945,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
     // If this is an sret function, the return should pop the hidden pointer.
     if (!Is64Bit && !canGuaranteeTCO(CallConv) &&
         !Subtarget->getTargetTriple().isOSMSVCRT() &&
-        argsAreStructReturn(Ins) == StackStructReturn)
+        argsAreStructReturn(Ins, Subtarget->isTargetMCU()) == StackStructReturn)
       FuncInfo->setBytesToPopOnReturn(4);
   }
 
@@ -3065,7 +3065,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
   bool Is64Bit        = Subtarget->is64Bit();
   bool IsWin64        = Subtarget->isCallingConvWin64(CallConv);
-  StructReturnType SR = callIsStructReturn(Outs);
+  StructReturnType SR = callIsStructReturn(Outs, Subtarget->isTargetMCU());
   bool IsSibcall      = false;
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   auto Attr = MF.getFunction()->getFnAttribute("disable-tail-calls");
@@ -28660,28 +28660,4 @@ bool X86TargetLowering::isIntDivCheap(EVT VT, AttributeSet Attr) const {
   bool OptSize = Attr.hasAttribute(AttributeSet::FunctionIndex,
                                    Attribute::MinSize);
   return OptSize && !VT.isVector();
-}
-
-void X86TargetLowering::markInRegArguments(SelectionDAG &DAG,
-       TargetLowering::ArgListTy& Args) const {
-  // The MCU psABI requires some arguments to be passed in-register.
-  // For regular calls, the inreg arguments are marked by the front-end.
-  // However, for compiler generated library calls, we have to patch this
-  // up here.
-  if (!Subtarget->isTargetMCU() || !Args.size())
-    return;
-
-  unsigned FreeRegs = 3;
-  for (auto &Arg : Args) {
-    // For library functions, we do not expect any fancy types.
-    unsigned Size = DAG.getDataLayout().getTypeSizeInBits(Arg.Ty);
-    unsigned SizeInRegs = (Size + 31) / 32;
-    if (SizeInRegs > 2 || SizeInRegs > FreeRegs)
-      continue;
-
-    Arg.isInReg = true;
-    FreeRegs -= SizeInRegs;
-    if (!FreeRegs)
-      break;
-  }
 }
