@@ -1950,37 +1950,38 @@ def CLTS : I<0x06, RawFrm, (outs), (ins), "clts", [], IIC_CLTS>, TB;
 }
 
 // Table lookup instructions
+let Uses = [AL,EBX], Defs = [AL], hasSideEffects = 0, mayLoad = 1 in
 def XLAT : I<0xD7, RawFrm, (outs), (ins), "xlatb", [], IIC_XLAT>,
            Sched<[WriteLoad]>;
 
 let SchedRW = [WriteMicrocoded] in {
 // ASCII Adjust After Addition
-// sets AL, AH and CF and AF of EFLAGS and uses AL and AF of EFLAGS
+let Uses = [AL,EFLAGS], Defs = [AX,EFLAGS], hasSideEffects = 0 in
 def AAA : I<0x37, RawFrm, (outs), (ins), "aaa", [], IIC_AAA>,
             Requires<[Not64BitMode]>;
 
 // ASCII Adjust AX Before Division
-// sets AL, AH and EFLAGS and uses AL and AH
+let Uses = [AX], Defs = [AX,EFLAGS], hasSideEffects = 0 in
 def AAD8i8 : Ii8<0xD5, RawFrm, (outs), (ins i8imm:$src),
                  "aad\t$src", [], IIC_AAD>, Requires<[Not64BitMode]>;
 
 // ASCII Adjust AX After Multiply
-// sets AL, AH and EFLAGS and uses AL
+let Uses = [AL], Defs = [AX,EFLAGS], hasSideEffects = 0 in
 def AAM8i8 : Ii8<0xD4, RawFrm, (outs), (ins i8imm:$src),
                  "aam\t$src", [], IIC_AAM>, Requires<[Not64BitMode]>;
 
 // ASCII Adjust AL After Subtraction - sets
-// sets AL, AH and CF and AF of EFLAGS and uses AL and AF of EFLAGS
+let Uses = [AL,EFLAGS], Defs = [AX,EFLAGS], hasSideEffects = 0 in
 def AAS : I<0x3F, RawFrm, (outs), (ins), "aas", [], IIC_AAS>,
             Requires<[Not64BitMode]>;
 
 // Decimal Adjust AL after Addition
-// sets AL, CF and AF of EFLAGS and uses AL, CF and AF of EFLAGS
+let Uses = [AL,EFLAGS], Defs = [AL,EFLAGS], hasSideEffects = 0 in
 def DAA : I<0x27, RawFrm, (outs), (ins), "daa", [], IIC_DAA>,
             Requires<[Not64BitMode]>;
 
 // Decimal Adjust AL after Subtraction
-// sets AL, CF and AF of EFLAGS and uses AL, CF and AF of EFLAGS
+let Uses = [AL,EFLAGS], Defs = [AL,EFLAGS], hasSideEffects = 0 in
 def DAS : I<0x2F, RawFrm, (outs), (ins), "das", [], IIC_DAS>,
             Requires<[Not64BitMode]>;
 } // SchedRW

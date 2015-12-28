@@ -581,6 +581,8 @@ def X86vfproundRnd: SDNode<"X86ISD::VFPROUND",
                                              SDTCisOpSmallerThanOp<0, 1>,
                                              SDTCisVT<2, i32>]>>;
 
+def X86cvt2mask   : SDNode<"X86ISD::CVT2MASK", SDTIntTruncOp>;
+
 //===----------------------------------------------------------------------===//
 // SSE Complex Patterns
 //===----------------------------------------------------------------------===//

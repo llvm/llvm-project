@@ -304,6 +304,9 @@ namespace llvm {
       // Vector signed/unsigned integer to double.
       CVTDQ2PD, CVTUDQ2PD,
 
+      // Convert a vector to mask, set bits base on MSB.
+      CVT2MASK,
+
       // 128-bit vector logical left / right shift
       VSHLDQ, VSRLDQ,
 

@@ -205,6 +205,10 @@ def main(builtinParameters = {}):
     group.add_option("", "--xunit-xml-output", dest="xunit_output_file",
                       help=("Write XUnit-compatible XML test reports to the"
                             " specified file"), default=None)
+    group.add_option("", "--timeout", dest="maxIndividualTestTime",
+                     help="Maximum time to spend running a single test (in seconds)."
+                     "0 means no time limit. [Default: 0]",
+                    type=int, default=None)
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Test Selection")
@@ -275,6 +279,14 @@ def main(builtinParameters = {}):
             name,val = entry.split('=', 1)
         userParams[name] = val
 
+    # Decide what the requested maximum indvidual test time should be
+    if opts.maxIndividualTestTime != None:
+        maxIndividualTestTime = opts.maxIndividualTestTime
+    else:
+        # Default is zero
+        maxIndividualTestTime = 0
+
+
     # Create the global config object.
     litConfig = lit.LitConfig.LitConfig(
         progname = os.path.basename(sys.argv[0]),
@@ -287,11 +299,25 @@ def main(builtinParameters = {}):
         debug = opts.debug,
         isWindows = isWindows,
         params = userParams,
-        config_prefix = opts.configPrefix)
+        config_prefix = opts.configPrefix,
+        maxIndividualTestTime = maxIndividualTestTime)
 
     # Perform test discovery.
     run = lit.run.Run(litConfig,
                       lit.discovery.find_tests_for_inputs(litConfig, inputs))
+
+    # After test discovery the configuration might have changed
+    # the maxIndividualTestTime. If we explicitly set this on the
+    # command line then override what was set in the test configuration
+    if opts.maxIndividualTestTime != None:
+        if opts.maxIndividualTestTime != litConfig.maxIndividualTestTime:
+            litConfig.note(('The test suite configuration requested an individual'
+                ' test timeout of {0} seconds but a timeout of {1} seconds was'
+                ' requested on the command line. Forcing timeout to be {1}'
+                ' seconds')
+                .format(litConfig.maxIndividualTestTime,
+                        opts.maxIndividualTestTime))
+            litConfig.maxIndividualTestTime = opts.maxIndividualTestTime
 
     if opts.showSuites or opts.showTests:
         # Aggregate the tests by suite.
@@ -377,7 +403,6 @@ def main(builtinParameters = {}):
         extra = ' of %d' % numTotalTests
     header = '-- Testing: %d%s tests, %d threads --'%(len(run.tests), extra,
                                                       opts.numThreads)
-
     progressBar = None
     if not opts.quiet:
         if opts.succinct and opts.useProgressBar:
@@ -422,7 +447,8 @@ def main(builtinParameters = {}):
                        ('Failing Tests', lit.Test.FAIL),
                        ('Unresolved Tests', lit.Test.UNRESOLVED),
                        ('Unsupported Tests', lit.Test.UNSUPPORTED),
-                       ('Expected Failing Tests', lit.Test.XFAIL)):
+                       ('Expected Failing Tests', lit.Test.XFAIL),
+                       ('Timed Out Tests', lit.Test.TIMEOUT)):
         if (lit.Test.XFAIL == code and not opts.show_xfail) or \
            (lit.Test.UNSUPPORTED == code and not opts.show_unsupported):
             continue
@@ -447,7 +473,8 @@ def main(builtinParameters = {}):
                       ('Unsupported Tests  ', lit.Test.UNSUPPORTED),
                       ('Unresolved Tests   ', lit.Test.UNRESOLVED),
                       ('Unexpected Passes  ', lit.Test.XPASS),
-                      ('Unexpected Failures', lit.Test.FAIL)):
+                      ('Unexpected Failures', lit.Test.FAIL),
+                      ('Individual Timeouts', lit.Test.TIMEOUT)):
         if opts.quiet and not code.isFailure:
             continue
         N = len(byCode.get(code,[]))

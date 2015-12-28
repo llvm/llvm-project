@@ -106,6 +106,7 @@ class VectorLegalizer {
   SDValue ExpandStore(SDValue Op);
   SDValue ExpandFNEG(SDValue Op);
   SDValue ExpandBITREVERSE(SDValue Op);
+  SDValue ExpandCTLZ_CTTZ_ZERO_UNDEF(SDValue Op);
 
   /// \brief Implements vector promotion.
   ///
@@ -719,6 +720,9 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
     return UnrollVSETCC(Op);
   case ISD::BITREVERSE:
     return ExpandBITREVERSE(Op);
+  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_UNDEF:
+    return ExpandCTLZ_CTTZ_ZERO_UNDEF(Op);
   default:
     return DAG.UnrollVectorOp(Op.getNode());
   }
@@ -1019,6 +1023,16 @@ SDValue VectorLegalizer::ExpandFNEG(SDValue Op) {
     return DAG.getNode(ISD::FSUB, DL, Op.getValueType(),
                        Zero, Op.getOperand(0));
   }
+  return DAG.UnrollVectorOp(Op.getNode());
+}
+
+SDValue VectorLegalizer::ExpandCTLZ_CTTZ_ZERO_UNDEF(SDValue Op) {
+  // If the non-ZERO_UNDEF version is supported we can let LegalizeDAG handle.
+  unsigned Opc = Op.getOpcode() == ISD::CTLZ_ZERO_UNDEF ? ISD::CTLZ : ISD::CTTZ;
+  if (TLI.isOperationLegalOrCustom(Opc, Op.getValueType()))
+    return Op;
+
+  // Otherwise go ahead and unroll.
   return DAG.UnrollVectorOp(Op.getNode());
 }
 
