@@ -318,7 +318,12 @@ NestedNameSpecifier::print(raw_ostream &OS,
   OS << "::";
 }
 
-void NestedNameSpecifier::dump(const LangOptions &LO) {
+void NestedNameSpecifier::dump(const LangOptions &LO) const {
+  print(llvm::errs(), PrintingPolicy(LO));
+}
+
+void NestedNameSpecifier::dump() const {
+  LangOptions LO;
   print(llvm::errs(), PrintingPolicy(LO));
 }
 

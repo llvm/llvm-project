@@ -13,13 +13,13 @@ template <class T, typename S, int N, int ST> // expected-note {{declared here}}
 T tmain(T argc, S **argv) {
   #pragma omp parallel for simd schedule // expected-error {{expected '(' after 'schedule'}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  #pragma omp parallel for simd schedule ( // expected-error {{expected 'static', 'dynamic', 'guided', 'auto' or 'runtime' in OpenMP clause 'schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel for simd schedule ( // expected-error {{expected 'static', 'dynamic', 'guided', 'auto', 'runtime', 'monotonic', 'nonmonotonic' or 'simd' in OpenMP clause 'schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  #pragma omp parallel for simd schedule () // expected-error {{expected 'static', 'dynamic', 'guided', 'auto' or 'runtime' in OpenMP clause 'schedule'}}
+  #pragma omp parallel for simd schedule () // expected-error {{expected 'static', 'dynamic', 'guided', 'auto', 'runtime', 'monotonic', 'nonmonotonic' or 'simd' in OpenMP clause 'schedule'}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp parallel for simd schedule (auto // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  #pragma omp parallel for simd schedule (auto_dynamic // expected-error {{expected 'static', 'dynamic', 'guided', 'auto' or 'runtime' in OpenMP clause 'schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel for simd schedule (auto_dynamic // expected-error {{expected 'static', 'dynamic', 'guided', 'auto', 'runtime', 'monotonic', 'nonmonotonic' or 'simd' in OpenMP clause 'schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp parallel for simd schedule (auto,  // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
@@ -54,13 +54,13 @@ T tmain(T argc, S **argv) {
 int main(int argc, char **argv) {
   #pragma omp parallel for simd schedule // expected-error {{expected '(' after 'schedule'}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
-  #pragma omp parallel for simd schedule ( // expected-error {{expected 'static', 'dynamic', 'guided', 'auto' or 'runtime' in OpenMP clause 'schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel for simd schedule ( // expected-error {{expected 'static', 'dynamic', 'guided', 'auto', 'runtime', 'monotonic', 'nonmonotonic' or 'simd' in OpenMP clause 'schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
-  #pragma omp parallel for simd schedule () // expected-error {{expected 'static', 'dynamic', 'guided', 'auto' or 'runtime' in OpenMP clause 'schedule'}}
+  #pragma omp parallel for simd schedule () // expected-error {{expected 'static', 'dynamic', 'guided', 'auto', 'runtime', 'monotonic', 'nonmonotonic' or 'simd' in OpenMP clause 'schedule'}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp parallel for simd schedule (auto // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
-  #pragma omp parallel for simd schedule (auto_dynamic // expected-error {{expected 'static', 'dynamic', 'guided', 'auto' or 'runtime' in OpenMP clause 'schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel for simd schedule (auto_dynamic // expected-error {{expected 'static', 'dynamic', 'guided', 'auto', 'runtime', 'monotonic', 'nonmonotonic' or 'simd' in OpenMP clause 'schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp parallel for simd schedule (auto,  // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];

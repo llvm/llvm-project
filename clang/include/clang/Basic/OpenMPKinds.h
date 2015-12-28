@@ -62,6 +62,15 @@ enum OpenMPScheduleClauseKind {
   OMPC_SCHEDULE_unknown
 };
 
+/// \brief OpenMP modifiers for 'schedule' clause.
+enum OpenMPScheduleClauseModifier {
+  OMPC_SCHEDULE_MODIFIER_unknown = OMPC_SCHEDULE_unknown,
+#define OPENMP_SCHEDULE_MODIFIER(Name) \
+  OMPC_SCHEDULE_MODIFIER_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_SCHEDULE_MODIFIER_last
+};
+
 /// \brief OpenMP attributes for 'depend' clause.
 enum OpenMPDependClauseKind {
 #define OPENMP_DEPEND_KIND(Name) \

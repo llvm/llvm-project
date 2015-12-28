@@ -87,8 +87,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_PROC_BIND_unknown);
   case OMPC_schedule:
-    return llvm::StringSwitch<OpenMPScheduleClauseKind>(Str)
-#define OPENMP_SCHEDULE_KIND(Name) .Case(#Name, OMPC_SCHEDULE_##Name)
+    return llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_SCHEDULE_KIND(Name)                                             \
+  .Case(#Name, static_cast<unsigned>(OMPC_SCHEDULE_##Name))
+#define OPENMP_SCHEDULE_MODIFIER(Name)                                         \
+  .Case(#Name, static_cast<unsigned>(OMPC_SCHEDULE_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_SCHEDULE_unknown);
   case OMPC_depend:
@@ -173,12 +176,17 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_schedule:
     switch (Type) {
     case OMPC_SCHEDULE_unknown:
+    case OMPC_SCHEDULE_MODIFIER_last:
       return "unknown";
 #define OPENMP_SCHEDULE_KIND(Name)                                             \
-  case OMPC_SCHEDULE_##Name:                                                   \
-    return #Name;
+    case OMPC_SCHEDULE_##Name:                                                 \
+      return #Name;
+#define OPENMP_SCHEDULE_MODIFIER(Name)                                         \
+    case OMPC_SCHEDULE_MODIFIER_##Name:                                        \
+      return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }
+    llvm_unreachable("Invalid OpenMP 'schedule' clause type");
   case OMPC_depend:
     switch (Type) {
     case OMPC_DEPEND_unknown:
@@ -188,7 +196,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
     return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }
-    llvm_unreachable("Invalid OpenMP 'schedule' clause type");
+    llvm_unreachable("Invalid OpenMP 'depend' clause type");
   case OMPC_linear:
     switch (Type) {
     case OMPC_LINEAR_unknown:

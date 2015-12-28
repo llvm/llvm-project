@@ -7986,6 +7986,14 @@ def err_omp_depend_sink_expected_plus_minus : Error<
   "expected '+' or '-' operation">;
 def err_omp_depend_sink_source_not_allowed : Error<
   "'depend(%select{source|sink:vec}0)' clause%select{|s}0 cannot be mixed with 'depend(%select{sink:vec|source}0)' clause%select{s|}0">;
+def err_omp_linear_ordered : Error<
+  "'linear' clause cannot be specified along with 'ordered' clause with a parameter">;
+def err_omp_unexpected_schedule_modifier : Error<
+  "modifier '%0' cannot be used along with modifier '%1'">;
+def err_omp_schedule_nonmonotonic_static : Error<
+  "'nonmonotonic' modifier can only be specified with 'dynamic' or 'guided' schedule kind">;
+def err_omp_schedule_nonmonotonic_ordered : Error<
+  "'schedule' clause with 'nonmonotonic' modifier cannot be specified if an 'ordered' clause is specified">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

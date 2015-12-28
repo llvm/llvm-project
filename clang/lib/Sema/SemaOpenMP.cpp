@@ -1622,6 +1622,10 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
     ActOnCapturedRegionError();
     return StmtError();
   }
+
+  OMPOrderedClause *OC = nullptr;
+  OMPScheduleClause *SC = nullptr;
+  SmallVector<OMPLinearClause *, 4> LCs;
   // This is required for proper codegen.
   for (auto *Clause : Clauses) {
     if (isOpenMPPrivate(Clause->getClauseKind()) ||
@@ -1643,10 +1647,42 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
       // Required for proper codegen of combined directives.
       // TODO: add processing for other clauses.
       if (auto *E = cast_or_null<Expr>(
-              cast<OMPScheduleClause>(Clause)->getHelperChunkSize())) {
-          MarkDeclarationsReferencedInExpr(E);
-        }
+              cast<OMPScheduleClause>(Clause)->getHelperChunkSize()))
+        MarkDeclarationsReferencedInExpr(E);
     }
+    if (Clause->getClauseKind() == OMPC_schedule)
+      SC = cast<OMPScheduleClause>(Clause);
+    else if (Clause->getClauseKind() == OMPC_ordered)
+      OC = cast<OMPOrderedClause>(Clause);
+    else if (Clause->getClauseKind() == OMPC_linear)
+      LCs.push_back(cast<OMPLinearClause>(Clause));
+  }
+  bool ErrorFound = false;
+  // OpenMP, 2.7.1 Loop Construct, Restrictions
+  // The nonmonotonic modifier cannot be specified if an ordered clause is
+  // specified.
+  if (SC &&
+      (SC->getFirstScheduleModifier() == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
+       SC->getSecondScheduleModifier() ==
+           OMPC_SCHEDULE_MODIFIER_nonmonotonic) &&
+      OC) {
+    Diag(SC->getFirstScheduleModifier() == OMPC_SCHEDULE_MODIFIER_nonmonotonic
+             ? SC->getFirstScheduleModifierLoc()
+             : SC->getSecondScheduleModifierLoc(),
+         diag::err_omp_schedule_nonmonotonic_ordered)
+        << SourceRange(OC->getLocStart(), OC->getLocEnd());
+    ErrorFound = true;
+  }
+  if (!LCs.empty() && OC && OC->getNumForLoops()) {
+    for (auto *C : LCs) {
+      Diag(C->getLocStart(), diag::err_omp_linear_ordered)
+          << SourceRange(OC->getLocStart(), OC->getLocEnd());
+    }
+    ErrorFound = true;
+  }
+  if (ErrorFound) {
+    ActOnCapturedRegionError();
+    return StmtError();
   }
   return ActOnCapturedRegionEnd(S.get());
 }
@@ -5945,33 +5981,41 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   return Res;
 }
 
+static std::string
+getListOfPossibleValues(OpenMPClauseKind K, unsigned First, unsigned Last,
+                        ArrayRef<unsigned> Exclude = llvm::None) {
+  std::string Values;
+  unsigned Bound = Last >= 2 ? Last - 2 : 0;
+  unsigned Skipped = Exclude.size();
+  auto S = Exclude.begin(), E = Exclude.end();
+  for (unsigned i = First; i < Last; ++i) {
+    if (std::find(S, E, i) != E) {
+      --Skipped;
+      continue;
+    }
+    Values += "'";
+    Values += getOpenMPSimpleClauseTypeName(K, i);
+    Values += "'";
+    if (i == Bound - Skipped)
+      Values += " or ";
+    else if (i != Bound + 1 - Skipped)
+      Values += ", ";
+  }
+  return Values;
+}
+
 OMPClause *Sema::ActOnOpenMPDefaultClause(OpenMPDefaultClauseKind Kind,
                                           SourceLocation KindKwLoc,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc) {
   if (Kind == OMPC_DEFAULT_unknown) {
-    std::string Values;
     static_assert(OMPC_DEFAULT_unknown > 0,
                   "OMPC_DEFAULT_unknown not greater than 0");
-    std::string Sep(", ");
-    for (unsigned i = 0; i < OMPC_DEFAULT_unknown; ++i) {
-      Values += "'";
-      Values += getOpenMPSimpleClauseTypeName(OMPC_default, i);
-      Values += "'";
-      switch (i) {
-      case OMPC_DEFAULT_unknown - 2:
-        Values += " or ";
-        break;
-      case OMPC_DEFAULT_unknown - 1:
-        break;
-      default:
-        Values += Sep;
-        break;
-      }
-    }
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_default);
+        << getListOfPossibleValues(OMPC_default, /*First=*/0,
+                                   /*Last=*/OMPC_DEFAULT_unknown)
+        << getOpenMPClauseName(OMPC_default);
     return nullptr;
   }
   switch (Kind) {
@@ -5995,25 +6039,10 @@ OMPClause *Sema::ActOnOpenMPProcBindClause(OpenMPProcBindClauseKind Kind,
                                            SourceLocation LParenLoc,
                                            SourceLocation EndLoc) {
   if (Kind == OMPC_PROC_BIND_unknown) {
-    std::string Values;
-    std::string Sep(", ");
-    for (unsigned i = 0; i < OMPC_PROC_BIND_unknown; ++i) {
-      Values += "'";
-      Values += getOpenMPSimpleClauseTypeName(OMPC_proc_bind, i);
-      Values += "'";
-      switch (i) {
-      case OMPC_PROC_BIND_unknown - 2:
-        Values += " or ";
-        break;
-      case OMPC_PROC_BIND_unknown - 1:
-        break;
-      default:
-        Values += Sep;
-        break;
-      }
-    }
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_proc_bind);
+        << getListOfPossibleValues(OMPC_proc_bind, /*First=*/0,
+                                   /*Last=*/OMPC_PROC_BIND_unknown)
+        << getOpenMPClauseName(OMPC_proc_bind);
     return nullptr;
   }
   return new (Context)
@@ -6021,21 +6050,28 @@ OMPClause *Sema::ActOnOpenMPProcBindClause(OpenMPProcBindClauseKind Kind,
 }
 
 OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
-    OpenMPClauseKind Kind, unsigned Argument, Expr *Expr,
+    OpenMPClauseKind Kind, ArrayRef<unsigned> Argument, Expr *Expr,
     SourceLocation StartLoc, SourceLocation LParenLoc,
-    SourceLocation ArgumentLoc, SourceLocation DelimLoc,
+    ArrayRef<SourceLocation> ArgumentLoc, SourceLocation DelimLoc,
     SourceLocation EndLoc) {
   OMPClause *Res = nullptr;
   switch (Kind) {
   case OMPC_schedule:
+    enum { Modifier1, Modifier2, ScheduleKind, NumberOfElements };
+    assert(Argument.size() == NumberOfElements &&
+           ArgumentLoc.size() == NumberOfElements);
     Res = ActOnOpenMPScheduleClause(
-        static_cast<OpenMPScheduleClauseKind>(Argument), Expr, StartLoc,
-        LParenLoc, ArgumentLoc, DelimLoc, EndLoc);
+        static_cast<OpenMPScheduleClauseModifier>(Argument[Modifier1]),
+        static_cast<OpenMPScheduleClauseModifier>(Argument[Modifier2]),
+        static_cast<OpenMPScheduleClauseKind>(Argument[ScheduleKind]), Expr,
+        StartLoc, LParenLoc, ArgumentLoc[Modifier1], ArgumentLoc[Modifier2],
+        ArgumentLoc[ScheduleKind], DelimLoc, EndLoc);
     break;
   case OMPC_if:
-    Res =
-        ActOnOpenMPIfClause(static_cast<OpenMPDirectiveKind>(Argument), Expr,
-                            StartLoc, LParenLoc, ArgumentLoc, DelimLoc, EndLoc);
+    assert(Argument.size() == 1 && ArgumentLoc.size() == 1);
+    Res = ActOnOpenMPIfClause(static_cast<OpenMPDirectiveKind>(Argument.back()),
+                              Expr, StartLoc, LParenLoc, ArgumentLoc.back(),
+                              DelimLoc, EndLoc);
     break;
   case OMPC_final:
   case OMPC_num_threads:
@@ -6082,30 +6118,72 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   return Res;
 }
 
+static bool checkScheduleModifiers(Sema &S, OpenMPScheduleClauseModifier M1,
+                                   OpenMPScheduleClauseModifier M2,
+                                   SourceLocation M1Loc, SourceLocation M2Loc) {
+  if (M1 == OMPC_SCHEDULE_MODIFIER_unknown && M1Loc.isValid()) {
+    SmallVector<unsigned, 2> Excluded;
+    if (M2 != OMPC_SCHEDULE_MODIFIER_unknown)
+      Excluded.push_back(M2);
+    if (M2 == OMPC_SCHEDULE_MODIFIER_nonmonotonic)
+      Excluded.push_back(OMPC_SCHEDULE_MODIFIER_monotonic);
+    if (M2 == OMPC_SCHEDULE_MODIFIER_monotonic)
+      Excluded.push_back(OMPC_SCHEDULE_MODIFIER_nonmonotonic);
+    S.Diag(M1Loc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_schedule,
+                                   /*First=*/OMPC_SCHEDULE_MODIFIER_unknown + 1,
+                                   /*Last=*/OMPC_SCHEDULE_MODIFIER_last,
+                                   Excluded)
+        << getOpenMPClauseName(OMPC_schedule);
+    return true;
+  }
+  return false;
+}
+
 OMPClause *Sema::ActOnOpenMPScheduleClause(
+    OpenMPScheduleClauseModifier M1, OpenMPScheduleClauseModifier M2,
     OpenMPScheduleClauseKind Kind, Expr *ChunkSize, SourceLocation StartLoc,
-    SourceLocation LParenLoc, SourceLocation KindLoc, SourceLocation CommaLoc,
-    SourceLocation EndLoc) {
+    SourceLocation LParenLoc, SourceLocation M1Loc, SourceLocation M2Loc,
+    SourceLocation KindLoc, SourceLocation CommaLoc, SourceLocation EndLoc) {
+  if (checkScheduleModifiers(*this, M1, M2, M1Loc, M2Loc) ||
+      checkScheduleModifiers(*this, M2, M1, M2Loc, M1Loc))
+    return nullptr;
+  // OpenMP, 2.7.1, Loop Construct, Restrictions
+  // Either the monotonic modifier or the nonmonotonic modifier can be specified
+  // but not both.
+  if ((M1 == M2 && M1 != OMPC_SCHEDULE_MODIFIER_unknown) ||
+      (M1 == OMPC_SCHEDULE_MODIFIER_monotonic &&
+       M2 == OMPC_SCHEDULE_MODIFIER_nonmonotonic) ||
+      (M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic &&
+       M2 == OMPC_SCHEDULE_MODIFIER_monotonic)) {
+    Diag(M2Loc, diag::err_omp_unexpected_schedule_modifier)
+        << getOpenMPSimpleClauseTypeName(OMPC_schedule, M2)
+        << getOpenMPSimpleClauseTypeName(OMPC_schedule, M1);
+    return nullptr;
+  }
   if (Kind == OMPC_SCHEDULE_unknown) {
     std::string Values;
-    std::string Sep(", ");
-    for (unsigned i = 0; i < OMPC_SCHEDULE_unknown; ++i) {
-      Values += "'";
-      Values += getOpenMPSimpleClauseTypeName(OMPC_schedule, i);
-      Values += "'";
-      switch (i) {
-      case OMPC_SCHEDULE_unknown - 2:
-        Values += " or ";
-        break;
-      case OMPC_SCHEDULE_unknown - 1:
-        break;
-      default:
-        Values += Sep;
-        break;
-      }
+    if (M1Loc.isInvalid() && M2Loc.isInvalid()) {
+      unsigned Exclude[] = {OMPC_SCHEDULE_unknown};
+      Values = getListOfPossibleValues(OMPC_schedule, /*First=*/0,
+                                       /*Last=*/OMPC_SCHEDULE_MODIFIER_last,
+                                       Exclude);
+    } else {
+      Values = getListOfPossibleValues(OMPC_schedule, /*First=*/0,
+                                       /*Last=*/OMPC_SCHEDULE_unknown);
     }
     Diag(KindLoc, diag::err_omp_unexpected_clause_value)
         << Values << getOpenMPClauseName(OMPC_schedule);
+    return nullptr;
+  }
+  // OpenMP, 2.7.1, Loop Construct, Restrictions
+  // The nonmonotonic modifier can only be specified with schedule(dynamic) or
+  // schedule(guided).
+  if ((M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
+       M2 == OMPC_SCHEDULE_MODIFIER_nonmonotonic) &&
+      Kind != OMPC_SCHEDULE_dynamic && Kind != OMPC_SCHEDULE_guided) {
+    Diag(M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ? M1Loc : M2Loc,
+         diag::err_omp_schedule_nonmonotonic_static);
     return nullptr;
   }
   Expr *ValExpr = ChunkSize;
@@ -6143,8 +6221,9 @@ OMPClause *Sema::ActOnOpenMPScheduleClause(
     }
   }
 
-  return new (Context) OMPScheduleClause(StartLoc, LParenLoc, KindLoc, CommaLoc,
-                                         EndLoc, Kind, ValExpr, HelperValExpr);
+  return new (Context)
+      OMPScheduleClause(StartLoc, LParenLoc, KindLoc, CommaLoc, EndLoc, Kind,
+                        ValExpr, HelperValExpr, M1, M1Loc, M2, M2Loc);
 }
 
 OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
@@ -8031,39 +8110,18 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
                               SourceLocation LParenLoc, SourceLocation EndLoc) {
   if (DSAStack->getCurrentDirective() == OMPD_ordered &&
       DepKind != OMPC_DEPEND_source && DepKind != OMPC_DEPEND_sink) {
-    std::string Values = "'";
-    Values += getOpenMPSimpleClauseTypeName(OMPC_depend, OMPC_DEPEND_source);
-    Values += "' or '";
-    Values += getOpenMPSimpleClauseTypeName(OMPC_depend, OMPC_DEPEND_sink);
-    Values += "'";
     Diag(DepLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_depend);
+        << "'source' or 'sink'" << getOpenMPClauseName(OMPC_depend);
     return nullptr;
   }
   if (DSAStack->getCurrentDirective() != OMPD_ordered &&
       (DepKind == OMPC_DEPEND_unknown || DepKind == OMPC_DEPEND_source ||
        DepKind == OMPC_DEPEND_sink)) {
-    std::string Values;
-    std::string Sep(", ");
-    for (unsigned i = 0; i < OMPC_DEPEND_unknown; ++i) {
-      if (i == OMPC_DEPEND_source || i == OMPC_DEPEND_sink)
-        continue;
-      Values += "'";
-      Values += getOpenMPSimpleClauseTypeName(OMPC_depend, i);
-      Values += "'";
-      switch (i) {
-      case OMPC_DEPEND_unknown - 4:
-        Values += " or ";
-        break;
-      case OMPC_DEPEND_unknown - 3:
-        break;
-      default:
-        Values += Sep;
-        break;
-      }
-    }
+    unsigned Except[] = {OMPC_DEPEND_source, OMPC_DEPEND_sink};
     Diag(DepLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_depend);
+        << getListOfPossibleValues(OMPC_depend, /*First=*/0,
+                                   /*Last=*/OMPC_DEPEND_unknown, Except)
+        << getOpenMPClauseName(OMPC_depend);
     return nullptr;
   }
   SmallVector<Expr *, 8> Vars;

@@ -1478,15 +1478,14 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPScheduleClause(OpenMPScheduleClauseKind Kind,
-                                      Expr *ChunkSize,
-                                      SourceLocation StartLoc,
-                                      SourceLocation LParenLoc,
-                                      SourceLocation KindLoc,
-                                      SourceLocation CommaLoc,
-                                      SourceLocation EndLoc) {
+  OMPClause *RebuildOMPScheduleClause(
+      OpenMPScheduleClauseModifier M1, OpenMPScheduleClauseModifier M2,
+      OpenMPScheduleClauseKind Kind, Expr *ChunkSize, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation M1Loc, SourceLocation M2Loc,
+      SourceLocation KindLoc, SourceLocation CommaLoc, SourceLocation EndLoc) {
     return getSema().ActOnOpenMPScheduleClause(
-        Kind, ChunkSize, StartLoc, LParenLoc, KindLoc, CommaLoc, EndLoc);
+        M1, M2, Kind, ChunkSize, StartLoc, LParenLoc, M1Loc, M2Loc, KindLoc,
+        CommaLoc, EndLoc);
   }
 
   /// \brief Build a new OpenMP 'ordered' clause.
@@ -7504,7 +7503,9 @@ TreeTransform<Derived>::TransformOMPScheduleClause(OMPScheduleClause *C) {
   if (E.isInvalid())
     return nullptr;
   return getDerived().RebuildOMPScheduleClause(
+      C->getFirstScheduleModifier(), C->getSecondScheduleModifier(),
       C->getScheduleKind(), E.get(), C->getLocStart(), C->getLParenLoc(),
+      C->getFirstScheduleModifierLoc(), C->getSecondScheduleModifierLoc(),
       C->getScheduleKindLoc(), C->getCommaLoc(), C->getLocEnd());
 }
 
