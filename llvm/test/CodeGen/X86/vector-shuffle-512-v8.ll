@@ -2094,7 +2094,7 @@ define <8 x double> @test_vshuff64x2_512_maskz(<8 x double> %x, <8 x double> %x1
 ; AVX512F-LABEL: test_vshuff64x2_512_maskz:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm2, %zmm2
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; AVX512F-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],zmm1[2,3,0,1]
 ; AVX512F-NEXT:    retq
@@ -2102,7 +2102,7 @@ define <8 x double> @test_vshuff64x2_512_maskz(<8 x double> %x, <8 x double> %x1
 ; AVX512F-32-LABEL: test_vshuff64x2_512_maskz:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    vpmovsxwq %xmm2, %zmm2
-; AVX512F-32-NEXT:    vpandq .LCPI122_0, %zmm2, %zmm2
+; AVX512F-32-NEXT:    vpsllvq .LCPI122_0, %zmm2, %zmm2
 ; AVX512F-32-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; AVX512F-32-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],zmm1[2,3,0,1]
 ; AVX512F-32-NEXT:    retl
@@ -2115,7 +2115,7 @@ define <8 x i64> @test_vshufi64x2_512_mask(<8 x i64> %x, <8 x i64> %x1, <8 x i1>
 ; AVX512F-LABEL: test_vshufi64x2_512_mask:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm2, %zmm2
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; AVX512F-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],zmm1[2,3,0,1]
 ; AVX512F-NEXT:    retq
@@ -2123,7 +2123,7 @@ define <8 x i64> @test_vshufi64x2_512_mask(<8 x i64> %x, <8 x i64> %x1, <8 x i1>
 ; AVX512F-32-LABEL: test_vshufi64x2_512_mask:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    vpmovsxwq %xmm2, %zmm2
-; AVX512F-32-NEXT:    vpandq .LCPI123_0, %zmm2, %zmm2
+; AVX512F-32-NEXT:    vpsllvq .LCPI123_0, %zmm2, %zmm2
 ; AVX512F-32-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; AVX512F-32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],zmm1[2,3,0,1]
 ; AVX512F-32-NEXT:    retl
@@ -2152,7 +2152,7 @@ define <8 x double> @test_vshuff64x2_512_mem_mask(<8 x double> %x, <8 x double> 
 ; AVX512F-LABEL: test_vshuff64x2_512_mem_mask:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm1, %zmm1
+; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],mem[2,3,0,1]
 ; AVX512F-NEXT:    retq
@@ -2160,7 +2160,7 @@ define <8 x double> @test_vshuff64x2_512_mem_mask(<8 x double> %x, <8 x double> 
 ; AVX512F-32-LABEL: test_vshuff64x2_512_mem_mask:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    vpmovsxwq %xmm1, %zmm1
-; AVX512F-32-NEXT:    vpandq .LCPI125_0, %zmm1, %zmm1
+; AVX512F-32-NEXT:    vpsllvq .LCPI125_0, %zmm1, %zmm1
 ; AVX512F-32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],mem[2,3,0,1]
@@ -2175,7 +2175,7 @@ define <8 x double> @test_vshuff64x2_512_mem_maskz(<8 x double> %x, <8 x double>
 ; AVX512F-LABEL: test_vshuff64x2_512_mem_maskz:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm1, %zmm1
+; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],mem[2,3,0,1]
 ; AVX512F-NEXT:    retq
@@ -2183,7 +2183,7 @@ define <8 x double> @test_vshuff64x2_512_mem_maskz(<8 x double> %x, <8 x double>
 ; AVX512F-32-LABEL: test_vshuff64x2_512_mem_maskz:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    vpmovsxwq %xmm1, %zmm1
-; AVX512F-32-NEXT:    vpandq .LCPI126_0, %zmm1, %zmm1
+; AVX512F-32-NEXT:    vpsllvq .LCPI126_0, %zmm1, %zmm1
 ; AVX512F-32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],mem[2,3,0,1]

@@ -54,7 +54,7 @@ namespace llvm {
 class PreservedAnalyses;
 class raw_ostream;
 
-/// \brief A lazily constructed view of the call graph of a module.
+/// A lazily constructed view of the call graph of a module.
 ///
 /// With the edges of this graph, the motivating constraint that we are
 /// attempting to maintain is that function-local optimization, CGSCC-local
@@ -107,7 +107,7 @@ public:
   typedef SmallVector<PointerUnion<Function *, Node *>, 4> NodeVectorT;
   typedef SmallVectorImpl<PointerUnion<Function *, Node *>> NodeVectorImplT;
 
-  /// \brief A lazy iterator used for both the entry nodes and child nodes.
+  /// A lazy iterator used for both the entry nodes and child nodes.
   ///
   /// When this iterator is dereferenced, if not yet available, a function will
   /// be scanned for "calls" or uses of functions and its child information
@@ -152,7 +152,7 @@ public:
     }
   };
 
-  /// \brief A node in the call graph.
+  /// A node in the call graph.
   ///
   /// This represents a single node. It's primary roles are to cache the list of
   /// callees, de-duplicate and provide fast testing of whether a function is
@@ -172,25 +172,23 @@ public:
     mutable NodeVectorT Callees;
     DenseMap<Function *, size_t> CalleeIndexMap;
 
-    /// \brief Basic constructor implements the scanning of F into Callees and
+    /// Basic constructor implements the scanning of F into Callees and
     /// CalleeIndexMap.
     Node(LazyCallGraph &G, Function &F);
 
-    /// \brief Internal helper to insert a callee.
+    /// Internal helper to insert a callee.
     void insertEdgeInternal(Function &Callee);
 
-    /// \brief Internal helper to insert a callee.
+    /// Internal helper to insert a callee.
     void insertEdgeInternal(Node &CalleeN);
 
-    /// \brief Internal helper to remove a callee from this node.
+    /// Internal helper to remove a callee from this node.
     void removeEdgeInternal(Function &Callee);
 
   public:
     typedef LazyCallGraph::iterator iterator;
 
-    Function &getFunction() const {
-      return F;
-    }
+    Function &getFunction() const { return F; }
 
     iterator begin() const {
       return iterator(*G, Callees.begin(), Callees.end());
@@ -202,7 +200,7 @@ public:
     bool operator!=(const Node &N) const { return !operator==(N); }
   };
 
-  /// \brief An SCC of the call graph.
+  /// An SCC of the call graph.
   ///
   /// This represents a Strongly Connected Component of the call graph as
   /// a collection of call graph nodes. While the order of nodes in the SCC is
@@ -226,7 +224,8 @@ public:
 
   public:
     typedef SmallVectorImpl<Node *>::const_iterator iterator;
-    typedef pointee_iterator<SmallPtrSet<SCC *, 1>::const_iterator> parent_iterator;
+    typedef pointee_iterator<SmallPtrSet<SCC *, 1>::const_iterator>
+        parent_iterator;
 
     iterator begin() const { return Nodes.begin(); }
     iterator end() const { return Nodes.end(); }
@@ -238,21 +237,21 @@ public:
       return make_range(parent_begin(), parent_end());
     }
 
-    /// \brief Test if this SCC is a parent of \a C.
+    /// Test if this SCC is a parent of \a C.
     bool isParentOf(const SCC &C) const { return C.isChildOf(*this); }
 
-    /// \brief Test if this SCC is an ancestor of \a C.
+    /// Test if this SCC is an ancestor of \a C.
     bool isAncestorOf(const SCC &C) const { return C.isDescendantOf(*this); }
 
-    /// \brief Test if this SCC is a child of \a C.
+    /// Test if this SCC is a child of \a C.
     bool isChildOf(const SCC &C) const {
       return ParentSCCs.count(const_cast<SCC *>(&C));
     }
 
-    /// \brief Test if this SCC is a descendant of \a C.
+    /// Test if this SCC is a descendant of \a C.
     bool isDescendantOf(const SCC &C) const;
 
-    /// \brief Short name useful for debugging or logging.
+    /// Short name useful for debugging or logging.
     ///
     /// We use the name of the first function in the SCC to name the SCC for
     /// the purposes of debugging and logging.
@@ -267,22 +266,21 @@ public:
     /// Note that these methods sometimes have complex runtimes, so be careful
     /// how you call them.
 
-    /// \brief Insert an edge from one node in this SCC to another in this SCC.
+    /// Insert an edge from one node in this SCC to another in this SCC.
     ///
     /// By the definition of an SCC, this does not change the nature or make-up
     /// of any SCCs.
     void insertIntraSCCEdge(Node &CallerN, Node &CalleeN);
 
-    /// \brief Insert an edge whose tail is in this SCC and head is in some
-    /// child SCC.
+    /// Insert an edge whose tail is in this SCC and head is in some child SCC.
     ///
     /// There must be an existing path from the caller to the callee. This
     /// operation is inexpensive and does not change the set of SCCs in the
     /// graph.
     void insertOutgoingEdge(Node &CallerN, Node &CalleeN);
 
-    /// \brief Insert an edge whose tail is in a descendant SCC and head is in
-    /// this SCC.
+    /// Insert an edge whose tail is in a descendant SCC and head is in this
+    /// SCC.
     ///
     /// There must be an existing path from the callee to the caller in this
     /// case. NB! This is has the potential to be a very expensive function. It
@@ -297,7 +295,7 @@ public:
     /// implementation for details, but that use case might impact users.
     SmallVector<SCC *, 1> insertIncomingEdge(Node &CallerN, Node &CalleeN);
 
-    /// \brief Remove an edge whose source is in this SCC and target is *not*.
+    /// Remove an edge whose source is in this SCC and target is *not*.
     ///
     /// This removes an inter-SCC edge. All inter-SCC edges originating from
     /// this SCC have been fully explored by any in-flight DFS SCC formation,
@@ -309,7 +307,7 @@ public:
     /// them.
     void removeInterSCCEdge(Node &CallerN, Node &CalleeN);
 
-    /// \brief Remove an edge which is entirely within this SCC.
+    /// Remove an edge which is entirely within this SCC.
     ///
     /// Both the \a Caller and the \a Callee must be within this SCC. Removing
     /// such an edge make break cycles that form this SCC and thus this
@@ -346,7 +344,7 @@ public:
     ///@}
   };
 
-  /// \brief A post-order depth-first SCC iterator over the call graph.
+  /// A post-order depth-first SCC iterator over the call graph.
   ///
   /// This iterator triggers the Tarjan DFS-based formation of the SCC DAG for
   /// the call graph, walking it lazily in depth-first post-order. That is, it
@@ -358,7 +356,7 @@ public:
     friend class LazyCallGraph;
     friend class LazyCallGraph::Node;
 
-    /// \brief Nonce type to select the constructor for the end iterator.
+    /// Nonce type to select the constructor for the end iterator.
     struct IsAtEndT {};
 
     LazyCallGraph *G;
@@ -387,7 +385,7 @@ public:
     }
   };
 
-  /// \brief Construct a graph for the given module.
+  /// Construct a graph for the given module.
   ///
   /// This sets up the graph and computes all of the entry points of the graph.
   /// No function definitions are scanned until their nodes in the graph are
@@ -413,18 +411,17 @@ public:
     return make_range(postorder_scc_begin(), postorder_scc_end());
   }
 
-  /// \brief Lookup a function in the graph which has already been scanned and
-  /// added.
+  /// Lookup a function in the graph which has already been scanned and added.
   Node *lookup(const Function &F) const { return NodeMap.lookup(&F); }
 
-  /// \brief Lookup a function's SCC in the graph.
+  /// Lookup a function's SCC in the graph.
   ///
   /// \returns null if the function hasn't been assigned an SCC via the SCC
   /// iterator walk.
   SCC *lookupSCC(Node &N) const { return SCCMap.lookup(&N); }
 
-  /// \brief Get a graph node for a given function, scanning it to populate the
-  /// graph data as necessary.
+  /// Get a graph node for a given function, scanning it to populate the graph
+  /// data as necessary.
   Node &get(Function &F) {
     Node *&N = NodeMap[&F];
     if (N)
@@ -443,18 +440,18 @@ public:
   /// Once you begin manipulating a call graph's SCCs, you must perform all
   /// mutation of the graph via the SCC methods.
 
-  /// \brief Update the call graph after inserting a new edge.
+  /// Update the call graph after inserting a new edge.
   void insertEdge(Node &Caller, Function &Callee);
 
-  /// \brief Update the call graph after inserting a new edge.
+  /// Update the call graph after inserting a new edge.
   void insertEdge(Function &Caller, Function &Callee) {
     return insertEdge(get(Caller), Callee);
   }
 
-  /// \brief Update the call graph after deleting an edge.
+  /// Update the call graph after deleting an edge.
   void removeEdge(Node &Caller, Function &Callee);
 
-  /// \brief Update the call graph after deleting an edge.
+  /// Update the call graph after deleting an edge.
   void removeEdge(Function &Caller, Function &Callee) {
     return removeEdge(get(Caller), Callee);
   }
@@ -462,57 +459,56 @@ public:
   ///@}
 
 private:
-  /// \brief Allocator that holds all the call graph nodes.
+  /// Allocator that holds all the call graph nodes.
   SpecificBumpPtrAllocator<Node> BPA;
 
-  /// \brief Maps function->node for fast lookup.
+  /// Maps function->node for fast lookup.
   DenseMap<const Function *, Node *> NodeMap;
 
-  /// \brief The entry nodes to the graph.
+  /// The entry nodes to the graph.
   ///
   /// These nodes are reachable through "external" means. Put another way, they
   /// escape at the module scope.
   NodeVectorT EntryNodes;
 
-  /// \brief Map of the entry nodes in the graph to their indices in
-  /// \c EntryNodes.
+  /// Map of the entry nodes in the graph to their indices in \c EntryNodes.
   DenseMap<Function *, size_t> EntryIndexMap;
 
-  /// \brief Allocator that holds all the call graph SCCs.
+  /// Allocator that holds all the call graph SCCs.
   SpecificBumpPtrAllocator<SCC> SCCBPA;
 
-  /// \brief Maps Function -> SCC for fast lookup.
+  /// Maps Function -> SCC for fast lookup.
   DenseMap<Node *, SCC *> SCCMap;
 
-  /// \brief The leaf SCCs of the graph.
+  /// The leaf SCCs of the graph.
   ///
   /// These are all of the SCCs which have no children.
   SmallVector<SCC *, 4> LeafSCCs;
 
-  /// \brief Stack of nodes in the DFS walk.
+  /// Stack of nodes in the DFS walk.
   SmallVector<std::pair<Node *, iterator>, 4> DFSStack;
 
-  /// \brief Set of entry nodes not-yet-processed into SCCs.
+  /// Set of entry nodes not-yet-processed into SCCs.
   SmallVector<Function *, 4> SCCEntryNodes;
 
-  /// \brief Stack of nodes the DFS has walked but not yet put into a SCC.
+  /// Stack of nodes the DFS has walked but not yet put into a SCC.
   SmallVector<Node *, 4> PendingSCCStack;
 
-  /// \brief Counter for the next DFS number to assign.
+  /// Counter for the next DFS number to assign.
   int NextDFSNumber;
 
-  /// \brief Helper to insert a new function, with an already looked-up entry in
+  /// Helper to insert a new function, with an already looked-up entry in
   /// the NodeMap.
   Node &insertInto(Function &F, Node *&MappedN);
 
-  /// \brief Helper to update pointers back to the graph object during moves.
+  /// Helper to update pointers back to the graph object during moves.
   void updateGraphPtrs();
 
-  /// \brief Helper to form a new SCC out of the top of a DFSStack-like
+  /// Helper to form a new SCC out of the top of a DFSStack-like
   /// structure.
   SCC *formSCC(Node *RootN, SmallVectorImpl<Node *> &NodeStack);
 
-  /// \brief Retrieve the next node in the post-order SCC walk of the call graph.
+  /// Retrieve the next node in the post-order SCC walk of the call graph.
   SCC *getNextSCCInPostOrder();
 };
 
@@ -534,17 +530,17 @@ template <> struct GraphTraits<LazyCallGraph *> {
   static ChildIteratorType child_end(NodeType *N) { return N->end(); }
 };
 
-/// \brief An analysis pass which computes the call graph for a module.
+/// An analysis pass which computes the call graph for a module.
 class LazyCallGraphAnalysis {
 public:
-  /// \brief Inform generic clients of the result type.
+  /// Inform generic clients of the result type.
   typedef LazyCallGraph Result;
 
   static void *ID() { return (void *)&PassID; }
 
   static StringRef name() { return "Lazy CallGraph Analysis"; }
 
-  /// \brief Compute the \c LazyCallGraph for the module \c M.
+  /// Compute the \c LazyCallGraph for the module \c M.
   ///
   /// This just builds the set of entry points to the call graph. The rest is
   /// built lazily as it is walked.
@@ -554,7 +550,7 @@ private:
   static char PassID;
 };
 
-/// \brief A pass which prints the call graph to a \c raw_ostream.
+/// A pass which prints the call graph to a \c raw_ostream.
 ///
 /// This is primarily useful for testing the analysis.
 class LazyCallGraphPrinterPass {

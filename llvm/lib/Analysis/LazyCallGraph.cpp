@@ -198,7 +198,8 @@ void LazyCallGraph::SCC::insertOutgoingEdge(Node &CallerN, Node &CalleeN) {
   assert(CalleeC.isDescendantOf(*this) &&
          "Callee must be a descendant of the Caller.");
 
-  // The only change required is to add this SCC to the parent set of the callee.
+  // The only change required is to add this SCC to the parent set of the
+  // callee.
   CalleeC.ParentSCCs.insert(this);
 }
 
@@ -454,8 +455,7 @@ void LazyCallGraph::SCC::internalDFS(
 }
 
 SmallVector<LazyCallGraph::SCC *, 1>
-LazyCallGraph::SCC::removeIntraSCCEdge(Node &CallerN,
-                                       Node &CalleeN) {
+LazyCallGraph::SCC::removeIntraSCCEdge(Node &CallerN, Node &CalleeN) {
   // First remove it from the node.
   CallerN.removeEdgeInternal(CalleeN.getFunction());
 
@@ -522,7 +522,7 @@ LazyCallGraph::SCC::removeIntraSCCEdge(Node &CallerN,
   // the leaf SCC list.
   if (!IsLeafSCC && !ResultSCCs.empty())
     G->LeafSCCs.erase(std::remove(G->LeafSCCs.begin(), G->LeafSCCs.end(), this),
-                     G->LeafSCCs.end());
+                      G->LeafSCCs.end());
 
   // Return the new list of SCCs.
   return ResultSCCs;

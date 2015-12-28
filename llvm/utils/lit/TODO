@@ -158,7 +158,17 @@ Miscellaneous
 
 * Support valgrind in all configs, and LLVM style valgrind.
 
-* Support a timeout / ulimit.
+* Support ulimit.
 
 * Create an explicit test suite object (instead of using the top-level
   TestingConfig object).
+
+* Introduce a wrapper class that has a ``subprocess.Popen`` like interface
+  but also supports killing the process and all its children and use this for
+  running tests.  This would allow us to implement platform specific methods
+  for killing a process's children which is needed for a per test timeout. On
+  POSIX platforms we can use process groups and on Windows we can probably use
+  job objects. This would not only allow us to remove the dependency on the
+  ``psutil`` module but would also be more reliable as the
+  ``lit.util.killProcessAndChildren()`` function which is currently used is
+  potentially racey (e.g. it might not kill a fork bomb completely).
