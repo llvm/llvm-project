@@ -4,10 +4,10 @@ Clang-Tidy Checks
 =========================
 
 .. toctree::   
-   cert-setlongjmp
-   cert-static-object-exception
-   cert-thrown-exception-type
-   cert-variadic-function-def
+   cert-dcl50-cpp
+   cert-err52-cpp
+   cert-err58-cpp
+   cert-err60-cpp
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
    cppcoreguidelines-pro-bounds-constant-array-index
    cppcoreguidelines-pro-bounds-pointer-arithmetic

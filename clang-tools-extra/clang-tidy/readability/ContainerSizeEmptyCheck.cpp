@@ -126,10 +126,15 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
         (OpCode == BinaryOperatorKind::BO_LE && Value == 0 && !ContainerIsLHS))
       return;
 
-    // Do not warn for size > 1, 1 < size.
-    if ((OpCode == BinaryOperatorKind::BO_GT && Value == 1 && ContainerIsLHS) ||
-        (OpCode == BinaryOperatorKind::BO_LT && Value == 1 && !ContainerIsLHS))
-      return;
+    // Do not warn for size > 1, 1 < size, size <= 1, 1 >= size.
+    if (Value == 1) {
+      if ((OpCode == BinaryOperatorKind::BO_GT && ContainerIsLHS) ||
+          (OpCode == BinaryOperatorKind::BO_LT && !ContainerIsLHS))
+        return;
+      if ((OpCode == BinaryOperatorKind::BO_LE && ContainerIsLHS) ||
+          (OpCode == BinaryOperatorKind::BO_GE && !ContainerIsLHS))
+        return;
+    }
 
     if (OpCode == BinaryOperatorKind::BO_NE && Value == 0)
       Negation = true;

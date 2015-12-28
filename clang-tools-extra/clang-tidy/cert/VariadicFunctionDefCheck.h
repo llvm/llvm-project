@@ -18,7 +18,7 @@ namespace tidy {
 /// Guards against any C-style variadic function definitions (not declarations).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-variadic-function-def.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert-dcl50-cpp.html
 class VariadicFunctionDefCheck : public ClangTidyCheck {
 public:
   VariadicFunctionDefCheck(StringRef Name, ClangTidyContext *Context)

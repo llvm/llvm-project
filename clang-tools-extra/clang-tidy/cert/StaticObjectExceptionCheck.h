@@ -19,7 +19,7 @@ namespace tidy {
 /// throw.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-static-object-exception.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert-err58-cpp.html
 class StaticObjectExceptionCheck : public ClangTidyCheck {
 public:
   StaticObjectExceptionCheck(StringRef Name, ClangTidyContext *Context)

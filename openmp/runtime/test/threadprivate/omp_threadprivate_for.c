@@ -16,9 +16,10 @@ int test_omp_threadprivate_for()
 
   #pragma omp parallel
   {
-    int sum0 = 0;
+    int sum0 = 0, i0;
     #pragma omp for
-    for (i = 1; i <= LOOPCOUNT; i++) {
+    for (i0 = 1; i0 <= LOOPCOUNT; i0++) {
+      i = i0;
       sum0 = sum0 + i;
     }
     #pragma omp critical

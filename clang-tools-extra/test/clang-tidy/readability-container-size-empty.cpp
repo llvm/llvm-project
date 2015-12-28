@@ -3,8 +3,8 @@
 namespace std {
 template <typename T> struct vector {
   vector() {}
-  unsigned long size() const {}
-  bool empty() const {}
+  unsigned long size() const;
+  bool empty() const;
 };
 }
 
@@ -53,6 +53,10 @@ int main() {
   if (vect.size() > 1) // no warning
     ;
   if (1 < vect.size()) // no warning
+    ;
+  if (vect.size() <= 1) // no warning
+    ;
+  if (1 >= vect.size()) // no warning
     ;
   if (!vect.size())
     ;

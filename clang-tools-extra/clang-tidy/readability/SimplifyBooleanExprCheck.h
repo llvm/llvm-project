@@ -154,6 +154,10 @@ private:
       const ast_matchers::MatchFinder::MatchResult &Result,
       const CompoundStmt *Compound, bool Negated = false);
 
+  void issueDiag(const ast_matchers::MatchFinder::MatchResult &Result,
+                 SourceLocation Loc, StringRef Description,
+                 SourceRange ReplacementRange, StringRef Replacement);
+
   const bool ChainedConditionalReturn;
   const bool ChainedConditionalAssignment;
 };

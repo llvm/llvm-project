@@ -871,3 +871,27 @@ bool negated_null_pointer_condition(int *p4) {
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
 // CHECK-FIXES: return p4 != nullptr;{{$}}
+
+bool comments_in_the_middle(bool b) {
+  if (b) {
+    return true;
+  } else {
+    // something wicked this way comes
+    return false;
+  }
+}
+// CHECK-MESSAGES: :[[@LINE-6]]:12: warning: {{.*}} in conditional return
+// CHECK-FIXES: {{^}}  if (b) {
+// CHECK-FIXES: // something wicked this way comes{{$}}
+
+bool preprocessor_in_the_middle(bool b) {
+  if (b) {
+    return true;
+  } else {
+#define SOMETHING_WICKED false
+    return false;
+  }
+}
+// CHECK-MESSAGES: :[[@LINE-6]]:12: warning: {{.*}} in conditional return
+// CHECK-FIXES: {{^}}  if (b) {
+// CHECK-FIXES: {{^}}#define SOMETHING_WICKED false
