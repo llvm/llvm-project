@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 
 define i64 @t(i64 %a, i64 %b) nounwind ssp {
 entry:
