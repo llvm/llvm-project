@@ -21,7 +21,7 @@ T tmain(T argc) {
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
-#pragma omp parallel for private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered(N) if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h) linear(a:N)
+#pragma omp parallel for private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered(N) if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h)
   for (int i = 0; i < 2; ++i)
     for (int j = 0; j < 2; ++j)
       for (int j = 0; j < 2; ++j)
@@ -33,7 +33,7 @@ T tmain(T argc) {
         for (int j = 0; j < 2; ++j)
           for (int j = 0; j < 2; ++j)
             foo();
-  // CHECK-NEXT: #pragma omp parallel for private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered(N) if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h) linear(a: N)
+  // CHECK-NEXT: #pragma omp parallel for private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered(N) if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)

@@ -664,6 +664,11 @@ class OMPScheduleClause : public OMPClause {
   SourceLocation LParenLoc;
   /// \brief A kind of the 'schedule' clause.
   OpenMPScheduleClauseKind Kind;
+  /// \brief Modifiers for 'schedule' clause.
+  enum {FIRST, SECOND, NUM_MODIFIERS};
+  OpenMPScheduleClauseModifier Modifiers[NUM_MODIFIERS];
+  /// \brief Locations of modifiers.
+  SourceLocation ModifiersLoc[NUM_MODIFIERS];
   /// \brief Start location of the schedule ind in source code.
   SourceLocation KindLoc;
   /// \brief Location of ',' (if any).
@@ -678,6 +683,42 @@ class OMPScheduleClause : public OMPClause {
   /// \param K Schedule kind.
   ///
   void setScheduleKind(OpenMPScheduleClauseKind K) { Kind = K; }
+  /// \brief Set the first schedule modifier.
+  ///
+  /// \param M Schedule modifier.
+  ///
+  void setFirstScheduleModifier(OpenMPScheduleClauseModifier M) {
+    Modifiers[FIRST] = M;
+  }
+  /// \brief Set the second schedule modifier.
+  ///
+  /// \param M Schedule modifier.
+  ///
+  void setSecondScheduleModifier(OpenMPScheduleClauseModifier M) {
+    Modifiers[SECOND] = M;
+  }
+  /// \brief Set location of the first schedule modifier.
+  ///
+  void setFirstScheduleModifierLoc(SourceLocation Loc) {
+    ModifiersLoc[FIRST] = Loc;
+  }
+  /// \brief Set location of the second schedule modifier.
+  ///
+  void setSecondScheduleModifierLoc(SourceLocation Loc) {
+    ModifiersLoc[SECOND] = Loc;
+  }
+  /// \brief Set schedule modifier location.
+  ///
+  /// \param M Schedule modifier location.
+  ///
+  void setScheduleModifer(OpenMPScheduleClauseModifier M) {
+    if (Modifiers[FIRST] == OMPC_SCHEDULE_MODIFIER_unknown)
+      Modifiers[FIRST] = M;
+    else {
+      assert(Modifiers[SECOND] == OMPC_SCHEDULE_MODIFIER_unknown);
+      Modifiers[SECOND] = M;
+    }
+  }
   /// \brief Sets the location of '('.
   ///
   /// \param Loc Location of '('.
@@ -716,15 +757,25 @@ public:
   /// \param Kind Schedule kind.
   /// \param ChunkSize Chunk size.
   /// \param HelperChunkSize Helper chunk size for combined directives.
+  /// \param M1 The first modifier applied to 'schedule' clause.
+  /// \param M1Loc Location of the first modifier
+  /// \param M2 The second modifier applied to 'schedule' clause.
+  /// \param M2Loc Location of the second modifier
   ///
   OMPScheduleClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                     SourceLocation KLoc, SourceLocation CommaLoc,
                     SourceLocation EndLoc, OpenMPScheduleClauseKind Kind,
-                    Expr *ChunkSize, Expr *HelperChunkSize)
+                    Expr *ChunkSize, Expr *HelperChunkSize,
+                    OpenMPScheduleClauseModifier M1, SourceLocation M1Loc,
+                    OpenMPScheduleClauseModifier M2, SourceLocation M2Loc)
       : OMPClause(OMPC_schedule, StartLoc, EndLoc), LParenLoc(LParenLoc),
         Kind(Kind), KindLoc(KLoc), CommaLoc(CommaLoc) {
     ChunkSizes[CHUNK_SIZE] = ChunkSize;
     ChunkSizes[HELPER_CHUNK_SIZE] = HelperChunkSize;
+    Modifiers[FIRST] = M1;
+    Modifiers[SECOND] = M2;
+    ModifiersLoc[FIRST] = M1Loc;
+    ModifiersLoc[SECOND] = M2Loc;
   }
 
   /// \brief Build an empty clause.
@@ -734,17 +785,39 @@ public:
         Kind(OMPC_SCHEDULE_unknown) {
     ChunkSizes[CHUNK_SIZE] = nullptr;
     ChunkSizes[HELPER_CHUNK_SIZE] = nullptr;
+    Modifiers[FIRST] = OMPC_SCHEDULE_MODIFIER_unknown;
+    Modifiers[SECOND] = OMPC_SCHEDULE_MODIFIER_unknown;
   }
 
   /// \brief Get kind of the clause.
   ///
   OpenMPScheduleClauseKind getScheduleKind() const { return Kind; }
+  /// \brief Get the first modifier of the clause.
+  ///
+  OpenMPScheduleClauseModifier getFirstScheduleModifier() const {
+    return Modifiers[FIRST];
+  }
+  /// \brief Get the second modifier of the clause.
+  ///
+  OpenMPScheduleClauseModifier getSecondScheduleModifier() const {
+    return Modifiers[SECOND];
+  }
   /// \brief Get location of '('.
   ///
   SourceLocation getLParenLoc() { return LParenLoc; }
   /// \brief Get kind location.
   ///
   SourceLocation getScheduleKindLoc() { return KindLoc; }
+  /// \brief Get the first modifier location.
+  ///
+  SourceLocation getFirstScheduleModifierLoc() const {
+    return ModifiersLoc[FIRST];
+  }
+  /// \brief Get the second modifier location.
+  ///
+  SourceLocation getSecondScheduleModifierLoc() const {
+    return ModifiersLoc[SECOND];
+  }
   /// \brief Get location of ','.
   ///
   SourceLocation getCommaLoc() { return CommaLoc; }

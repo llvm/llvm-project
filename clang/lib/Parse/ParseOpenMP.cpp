@@ -675,7 +675,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPClauseKind Kind) {
 /// argument like 'schedule' or 'dist_schedule'.
 ///
 ///    schedule-clause:
-///      'schedule' '(' kind [',' expression ] ')'
+///      'schedule' '(' [ modifier [ ',' modifier ] ':' ] kind [',' expression ]
+///      ')'
 ///
 ///    if-clause:
 ///      'if' '(' [ directive-name-modifier ':' ] expression ')'
@@ -690,24 +691,60 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPClauseKind Kind) {
     return nullptr;
 
   ExprResult Val;
-  unsigned Arg;
-  SourceLocation KLoc;
+  SmallVector<unsigned, 4> Arg;
+  SmallVector<SourceLocation, 4> KLoc;
   if (Kind == OMPC_schedule) {
-    Arg = getOpenMPSimpleClauseType(
+    enum { Modifier1, Modifier2, ScheduleKind, NumberOfElements };
+    Arg.resize(NumberOfElements);
+    KLoc.resize(NumberOfElements);
+    Arg[Modifier1] = OMPC_SCHEDULE_MODIFIER_unknown;
+    Arg[Modifier2] = OMPC_SCHEDULE_MODIFIER_unknown;
+    Arg[ScheduleKind] = OMPC_SCHEDULE_unknown;
+    auto KindModifier = getOpenMPSimpleClauseType(
         Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok));
-    KLoc = Tok.getLocation();
+    if (KindModifier > OMPC_SCHEDULE_unknown) {
+      // Parse 'modifier'
+      Arg[Modifier1] = KindModifier;
+      KLoc[Modifier1] = Tok.getLocation();
+      if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+          Tok.isNot(tok::annot_pragma_openmp_end))
+        ConsumeAnyToken();
+      if (Tok.is(tok::comma)) {
+        // Parse ',' 'modifier'
+        ConsumeAnyToken();
+        KindModifier = getOpenMPSimpleClauseType(
+            Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok));
+        Arg[Modifier2] = KindModifier > OMPC_SCHEDULE_unknown
+                             ? KindModifier
+                             : OMPC_SCHEDULE_unknown;
+        KLoc[Modifier2] = Tok.getLocation();
+        if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+            Tok.isNot(tok::annot_pragma_openmp_end))
+          ConsumeAnyToken();
+      }
+      // Parse ':'
+      if (Tok.is(tok::colon))
+        ConsumeAnyToken();
+      else
+        Diag(Tok, diag::warn_pragma_expected_colon) << "schedule modifier";
+      KindModifier = getOpenMPSimpleClauseType(
+          Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok));
+    }
+    Arg[ScheduleKind] = KindModifier;
+    KLoc[ScheduleKind] = Tok.getLocation();
     if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
         Tok.isNot(tok::annot_pragma_openmp_end))
       ConsumeAnyToken();
-    if ((Arg == OMPC_SCHEDULE_static || Arg == OMPC_SCHEDULE_dynamic ||
-         Arg == OMPC_SCHEDULE_guided) &&
+    if ((Arg[ScheduleKind] == OMPC_SCHEDULE_static ||
+         Arg[ScheduleKind] == OMPC_SCHEDULE_dynamic ||
+         Arg[ScheduleKind] == OMPC_SCHEDULE_guided) &&
         Tok.is(tok::comma))
       DelimLoc = ConsumeAnyToken();
   } else {
     assert(Kind == OMPC_if);
-    KLoc = Tok.getLocation();
-    Arg = ParseOpenMPDirectiveKind(*this);
-    if (Arg != OMPD_unknown) {
+    KLoc.push_back(Tok.getLocation());
+    Arg.push_back(ParseOpenMPDirectiveKind(*this));
+    if (Arg.back() != OMPD_unknown) {
       ConsumeToken();
       if (Tok.is(tok::colon))
         DelimLoc = ConsumeToken();

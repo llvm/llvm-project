@@ -651,8 +651,18 @@ void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {
-  OS << "schedule("
-     << getOpenMPSimpleClauseTypeName(OMPC_schedule, Node->getScheduleKind());
+  OS << "schedule(";
+  if (Node->getFirstScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown) {
+    OS << getOpenMPSimpleClauseTypeName(OMPC_schedule,
+                                        Node->getFirstScheduleModifier());
+    if (Node->getSecondScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown) {
+      OS << ", ";
+      OS << getOpenMPSimpleClauseTypeName(OMPC_schedule,
+                                          Node->getSecondScheduleModifier());
+    }
+    OS << ": ";
+  }
+  OS << getOpenMPSimpleClauseTypeName(OMPC_schedule, Node->getScheduleKind());
   if (Node->getChunkSize()) {
     OS << ", ";
     Node->getChunkSize()->printPretty(OS, nullptr, Policy);

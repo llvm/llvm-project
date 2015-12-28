@@ -1929,9 +1929,15 @@ void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {
 void OMPClauseReader::VisitOMPScheduleClause(OMPScheduleClause *C) {
   C->setScheduleKind(
        static_cast<OpenMPScheduleClauseKind>(Record[Idx++]));
+  C->setFirstScheduleModifier(
+      static_cast<OpenMPScheduleClauseModifier>(Record[Idx++]));
+  C->setSecondScheduleModifier(
+      static_cast<OpenMPScheduleClauseModifier>(Record[Idx++]));
   C->setChunkSize(Reader->Reader.ReadSubExpr());
   C->setHelperChunkSize(Reader->Reader.ReadSubExpr());
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
+  C->setFirstScheduleModifierLoc(Reader->ReadSourceLocation(Record, Idx));
+  C->setSecondScheduleModifierLoc(Reader->ReadSourceLocation(Record, Idx));
   C->setScheduleKindLoc(Reader->ReadSourceLocation(Record, Idx));
   C->setCommaLoc(Reader->ReadSourceLocation(Record, Idx));
 }
