@@ -7321,8 +7321,11 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
                                i, j*Parts[j].getValueType().getStoreSize());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
-        else if (j != 0)
+        else if (j != 0) {
           MyFlags.Flags.setOrigAlign(1);
+          if (j == NumParts - 1)
+            MyFlags.Flags.setSplitEnd();
+        }
 
         CLI.Outs.push_back(MyFlags);
         CLI.OutVals.push_back(Parts[j]);
@@ -7573,8 +7576,11 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1
-        else if (i > 0)
+        else if (i > 0) {
           MyFlags.Flags.setOrigAlign(1);
+          if (i == NumRegs - 1)
+            MyFlags.Flags.setSplitEnd();
+        }
         Ins.push_back(MyFlags);
       }
       if (NeedsRegBlock && Value == NumValues - 1)

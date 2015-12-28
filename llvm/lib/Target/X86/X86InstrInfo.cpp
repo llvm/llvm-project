@@ -5913,13 +5913,14 @@ breakPartialRegDependency(MachineBasicBlock::iterator MI, unsigned OpNum,
   // If MI kills this register, the false dependence is already broken.
   if (MI->killsRegister(Reg, TRI))
     return;
+
   if (X86::VR128RegClass.contains(Reg)) {
     // These instructions are all floating point domain, so xorps is the best
     // choice.
-    bool HasAVX = Subtarget.hasAVX();
-    unsigned Opc = HasAVX ? X86::VXORPSrr : X86::XORPSrr;
+    unsigned Opc = Subtarget.hasAVX() ? X86::VXORPSrr : X86::XORPSrr;
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), get(Opc), Reg)
       .addReg(Reg, RegState::Undef).addReg(Reg, RegState::Undef);
+    MI->addRegisterKilled(Reg, TRI, true);
   } else if (X86::VR256RegClass.contains(Reg)) {
     // Use vxorps to clear the full ymm register.
     // It wants to read and write the xmm sub-register.
@@ -5927,16 +5928,16 @@ breakPartialRegDependency(MachineBasicBlock::iterator MI, unsigned OpNum,
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), get(X86::VXORPSrr), XReg)
       .addReg(XReg, RegState::Undef).addReg(XReg, RegState::Undef)
       .addReg(Reg, RegState::ImplicitDefine);
-  } else
-    return;
-  MI->addRegisterKilled(Reg, TRI, true);
+    MI->addRegisterKilled(Reg, TRI, true);
+  }
 }
 
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr *MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex) const {
   // Check switch flag
-  if (NoFusing) return nullptr;
+  if (NoFusing)
+    return nullptr;
 
   // Unless optimizing for size, don't fold to avoid partial
   // register update stalls

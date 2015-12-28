@@ -345,10 +345,7 @@ static bool CommaSeparateAndAddOccurrence(Option *Handler, unsigned pos,
     Value = Val;
   }
 
-  if (Handler->addOccurrence(pos, ArgName, Value, MultiArg))
-    return true;
-
-  return false;
+  return Handler->addOccurrence(pos, ArgName, Value, MultiArg);
 }
 
 /// ProvideOption - For Value, this differentiates between an empty value ("")

@@ -4728,7 +4728,7 @@ def STLEXD : AIstlex<0b01, (outs GPR:$Rd),
 
 def CLREX : AXI<(outs), (ins), MiscFrm, NoItinerary, "clrex",
                 [(int_arm_clrex)]>,
-            Requires<[IsARM, HasV7]>  {
+            Requires<[IsARM, HasV6K]>  {
   let Inst{31-0} = 0b11110101011111111111000000011111;
 }
 
