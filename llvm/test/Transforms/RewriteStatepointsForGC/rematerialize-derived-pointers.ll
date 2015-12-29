@@ -47,6 +47,40 @@ entry:
   ret void
 }
 
+define void @"test_bitcast_bitcast"(i32 addrspace(1)* %base) gc "statepoint-example" {
+; CHECK-LABEL: test_bitcast_bitcast
+entry:
+  %ptr1 = bitcast i32 addrspace(1)* %base to i64 addrspace(1)*
+  %ptr2 = bitcast i64 addrspace(1)* %ptr1 to i16 addrspace(1)*
+  ; CHECK: bitcast i32 addrspace(1)* %base to i64 addrspace(1)*
+  ; CHECK: bitcast i64 addrspace(1)* %ptr1 to i16 addrspace(1)*
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  ; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %sp, i32 7, i32 7)
+  ; CHECK: %base.relocated.casted = bitcast i8 addrspace(1)* %base.relocated to i32 addrspace(1)*
+  ; CHECK: bitcast i32 addrspace(1)* %base.relocated.casted to i64 addrspace(1)*
+  ; CHECK: bitcast i64 addrspace(1)* %ptr1.remat to i16 addrspace(1)*
+  call void @use_obj32(i32 addrspace(1)* %base)
+  call void @use_obj16(i16 addrspace(1)* %ptr2)
+  ret void
+}
+
+define void @"test_addrspacecast_addrspacecast"(i32 addrspace(1)* %base) gc "statepoint-example" {
+; CHECK-LABEL: test_addrspacecast_addrspacecast
+entry:
+  %ptr1 = addrspacecast i32 addrspace(1)* %base to i32*
+  %ptr2 = addrspacecast i32* %ptr1 to i32 addrspace(1)*
+  ; CHECK: addrspacecast i32 addrspace(1)* %base to i32*
+  ; CHECK: addrspacecast i32* %ptr1 to i32 addrspace(1)*
+  %sp = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
+  ; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %sp, i32 7, i32 7)
+  ; CHECK: %base.relocated.casted = bitcast i8 addrspace(1)* %base.relocated to i32 addrspace(1)*
+  ; CHECK: %ptr2.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %sp, i32 7, i32 8)
+  ; CHECK: %ptr2.relocated.casted = bitcast i8 addrspace(1)* %ptr2.relocated to i32 addrspace(1)*
+  call void @use_obj32(i32 addrspace(1)* %base)
+  call void @use_obj32(i32 addrspace(1)* %ptr2)
+  ret void
+}
+
 define void @"test_bitcast_gep"(i32 addrspace(1)* %base) gc "statepoint-example" {
 ; CHECK-LABEL: test_bitcast_gep
 entry:

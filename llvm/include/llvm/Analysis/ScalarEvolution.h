@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -45,8 +46,6 @@ namespace llvm {
   class DataLayout;
   class TargetLibraryInfo;
   class LLVMContext;
-  class Loop;
-  class LoopInfo;
   class Operator;
   class SCEV;
   class SCEVAddRecExpr;

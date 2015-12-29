@@ -2101,16 +2101,12 @@ static bool findRematerializableChainToBasePointer(
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(CurrentValue)) {
-    Value *Def = CI->stripPointerCasts();
-
-    // This two checks are basically similar. First one is here for the
-    // consistency with findBasePointers logic.
-    assert(!isa<CastInst>(Def) && "not a pointer cast found");
     if (!CI->isNoopCast(CI->getModule()->getDataLayout()))
       return false;
 
     ChainToBase.push_back(CI);
-    return findRematerializableChainToBasePointer(ChainToBase, Def, BaseValue);
+    return findRematerializableChainToBasePointer(ChainToBase,
+                                                  CI->getOperand(0), BaseValue);
   }
 
   // Not supported instruction in the chain

@@ -19,6 +19,7 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWinEH.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/SMLoc.h"
@@ -33,7 +34,6 @@ class MCInst;
 class MCInstPrinter;
 class MCSection;
 class MCStreamer;
-class MCSymbol;
 class MCSymbolELF;
 class MCSymbolRefExpr;
 class MCSubtargetInfo;

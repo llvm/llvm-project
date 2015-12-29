@@ -16,7 +16,7 @@ syn case match
 " benefit as much from having dedicated highlighting rules.
 syn keyword llvmType void half float double x86_fp80 fp128 ppc_fp128
 syn keyword llvmType label metadata x86_mmx
-syn keyword llvmType type label opaque
+syn keyword llvmType type label opaque token
 syn match   llvmType /\<i\d\+\>/
 
 " Instructions.

@@ -159,6 +159,7 @@ declare i32 @doSomething(i32, i32*)
 ; DISABLE-V4T-NEXT: pop {r1}
 ; DISABLE-V4T-NEXT: bx r1
 ;
+; ENABLE-V5T-NEXT: {{LBB[0-9_]+}}: @ %if.end
 ; ENABLE-NEXT: bx lr
 define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 entry:
@@ -270,7 +271,10 @@ for.end:                                          ; preds = %for.body
 ; Next BB.
 ; SUM << 3.
 ; CHECK: lsls [[SUM]], [[SUM]], #3
-; ENABLE-NEXT: pop {r4, lr}
+; ENABLE-V5T-NEXT: pop {r4, pc}
+; ENABLE-V4T-NEXT: pop {r4}
+; ENABLE-V4T-NEXT: pop {r1}
+; ENABLE-V4T-NEXT: bx r1
 ;
 ; Duplicated epilogue.
 ; DISABLE-V5T: pop {r4, pc}
@@ -285,6 +289,7 @@ for.end:                                          ; preds = %for.body
 ; DISABLE-V4T-NEXT: pop {r1}
 ; DISABLE-V4T-NEXT: bx r1
 ;
+; ENABLE-V5T-NEXT: {{LBB[0-9_]+}}: @ %if.end
 ; ENABLE-NEXT: bx lr
 define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 entry:
@@ -350,7 +355,10 @@ declare void @somethingElse(...)
 ; Next BB.
 ; SUM << 3.
 ; CHECK: lsls [[SUM]], [[SUM]], #3
-; ENABLE: pop {r4, lr}
+; ENABLE-V5T-NEXT: pop {r4, pc}
+; ENABLE-V4T-NEXT: pop {r4}
+; ENABLE-V4T-NEXT: pop {r1}
+; ENABLE-V4T-NEXT: bx r1
 ;
 ; Duplicated epilogue.
 ; DISABLE-V5T: pop {r4, pc}
@@ -365,6 +373,7 @@ declare void @somethingElse(...)
 ; DISABLE-V4T-NEXT: pop {r1}
 ; DISABLE-V4T-NEXT: bx r1
 ;
+; ENABLE-V5T-NEXT: {{LBB[0-9_]+}}: @ %if.end
 ; ENABLE-NEXT: bx lr
 define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
 entry:
@@ -431,7 +440,10 @@ entry:
 ;
 ; Next BB.
 ; CHECK: movs r0, #0
-; ENABLE-NEXT: pop {r4, lr}
+; ENABLE-V5T-NEXT: pop {r4, pc}
+; ENABLE-V4T-NEXT: pop {r4}
+; ENABLE-V4T-NEXT: pop {r1}
+; ENABLE-V4T-NEXT: bx r1
 ;
 ; Duplicated epilogue.
 ; DISABLE-V5T-NEXT: pop {r4, pc}
@@ -446,6 +458,7 @@ entry:
 ; DISABLE-V4T-NEXT: pop {r1}
 ; DISABLE-V4T-NEXT: bx r1
 ;
+; ENABLE-V5T-NEXT: {{LBB[0-9_]+}}: @ %if.end
 ; ENABLE-NEXT: bx lr
 define i32 @inlineAsm(i32 %cond, i32 %N) {
 entry:
@@ -506,7 +519,10 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK-NEXT: lsls r0, r0, #3
 ;
 ; ENABLE-NEXT: add sp, #16
-; ENABLE-NEXT: pop {[[TMP]], lr}
+; ENABLE-V5T-NEXT: pop {[[TMP]], pc}
+; ENABLE-V4T-NEXT: pop {[[TMP]]}
+; ENABLE-V4T-NEXT: pop {r1}
+; ENABLE-V4T-NEXT: bx r1
 ;
 ; Duplicated epilogue.
 ; DISABLE-V5T-NEXT: add sp, #16
@@ -518,6 +534,7 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK: lsls r0, r1, #1
 ;
 ; Epilogue code.
+; ENABLE-V5T-NEXT: {{LBB[0-9_]+}}: @ %if.end
 ; ENABLE-NEXT: bx lr
 ;
 ; DISABLE-V4T-NEXT: [[END_LABEL]]: @ %if.end
@@ -585,5 +602,90 @@ if.end:
 }
 
 declare void @abort() #0
+
+define i32 @b_to_bx(i32 %value) {
+; CHECK-LABEL: b_to_bx:
+; DISABLE: push {r7, lr}
+; CHECK: cmp r1, #49
+; CHECK-NEXT: bgt [[ELSE_LABEL:LBB[0-9_]+]]
+; ENABLE: push {r7, lr}
+
+; CHECK: bl
+; DISABLE-V5-NEXT: pop {r7, pc}
+; DISABLE-V4T-NEXT: b [[END_LABEL:LBB[0-9_]+]]
+
+; ENABLE-V5-NEXT: pop {r7, pc}
+; ENABLE-V4-NEXT: pop {r7}
+; ENABLE-V4-NEXT: pop {r1}
+; ENABLE-V4-NEXT: bx r1
+
+; CHECK: [[ELSE_LABEL]]: @ %if.else
+; CHECK-NEXT: lsls r0, r1, #1
+; DISABLE-V5-NEXT: pop {r7, pc}
+; DISABLE-V4T-NEXT: [[END_LABEL]]: @ %if.end
+; DISABLE-V4T-NEXT: pop {r7}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
+
+; ENABLE-V5T-NEXT: {{LBB[0-9_]+}}: @ %if.end
+; ENABLE-NEXT: bx lr
+
+entry:
+  %cmp = icmp slt i32 %value, 50
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %div = sdiv i32 5000, %value
+  br label %if.end
+
+if.else:
+  %mul = shl nsw i32 %value, 1
+  br label %if.end
+
+if.end:
+  %value.addr.0 = phi i32 [ %div, %if.then ], [ %mul, %if.else ]
+  ret i32 %value.addr.0
+}
+
+define i1 @beq_to_bx(i32* %y, i32 %head) {
+; CHECK-LABEL: beq_to_bx:
+; DISABLE: push {r4, lr}
+; CHECK: cmp r2, #0
+; CHECK-NEXT: beq [[EXIT_LABEL:LBB[0-9_]+]]
+; ENABLE: push {r4, lr}
+
+; CHECK: tst r3, r4
+; ENABLE-NEXT: pop {r4}
+; ENABLE-NEXT: pop {r3}
+; ENABLE-NEXT: mov lr, r3
+; CHECK-NEXT: beq [[EXIT_LABEL]]
+
+; CHECK: str r1, [r2]
+; CHECK-NEXT: movs r0, #0
+; CHECK-NEXT: [[EXIT_LABEL]]: @ %cleanup
+; ENABLE-NEXT: bx lr
+; DISABLE-V5-NEXT: pop {r4, pc}
+; DISABLE-V4T-NEXT: pop {r4}
+; DISABLE-V4T-NEXT: pop {r1}
+; DISABLE-V4T-NEXT: bx r1
+
+entry:
+  %cmp = icmp eq i32* %y, null
+  br i1 %cmp, label %cleanup, label %if.end
+
+if.end:
+  %z = load i32, i32* %y, align 4
+  %and = and i32 %z, 2
+  %cmp2 = icmp eq i32 %and, 0
+  br i1 %cmp2, label %cleanup, label %if.end4
+
+if.end4:
+  store i32 %head, i32* %y, align 4
+  br label %cleanup
+
+cleanup:
+  %retval.0 = phi i1 [ 0, %if.end4 ], [ 1, %entry ], [ 1, %if.end ]
+  ret i1 %retval.0
+}
 
 attributes #0 = { noreturn nounwind }

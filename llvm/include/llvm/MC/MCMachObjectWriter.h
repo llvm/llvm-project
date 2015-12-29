@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/DataTypes.h"

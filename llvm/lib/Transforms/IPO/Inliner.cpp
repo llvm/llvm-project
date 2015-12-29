@@ -65,13 +65,15 @@ ColdThreshold("inlinecold-threshold", cl::Hidden, cl::init(225),
 // Threshold to use when optsize is specified (and there is no -inline-limit).
 const int OptSizeThreshold = 75;
 
-Inliner::Inliner(char &ID) 
-  : CallGraphSCCPass(ID), InlineThreshold(InlineLimit), InsertLifetime(true) {}
+Inliner::Inliner(char &ID)
+    : CallGraphSCCPass(ID), InlineThreshold(InlineLimit), InsertLifetime(true) {
+}
 
 Inliner::Inliner(char &ID, int Threshold, bool InsertLifetime)
-  : CallGraphSCCPass(ID), InlineThreshold(InlineLimit.getNumOccurrences() > 0 ?
-                                          InlineLimit : Threshold),
-    InsertLifetime(InsertLifetime) {}
+    : CallGraphSCCPass(ID),
+      InlineThreshold(InlineLimit.getNumOccurrences() > 0 ? InlineLimit
+                                                          : Threshold),
+      InsertLifetime(InsertLifetime) {}
 
 /// For this class, we declare that we require and preserve the call graph.
 /// If the derived class implements this method, it should
@@ -439,7 +441,7 @@ static bool InlineHistoryIncludes(Function *F, int InlineHistoryID,
 
 bool Inliner::runOnSCC(CallGraphSCC &SCC) {
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-  AssumptionCacheTracker *ACT = &getAnalysis<AssumptionCacheTracker>();
+  ACT = &getAnalysis<AssumptionCacheTracker>();
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
   SmallPtrSet<Function*, 8> SCCFunctions;

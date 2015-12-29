@@ -36,7 +36,6 @@ add_llvm_library(LLVMCore
   MDBuilder.cpp
   Mangler.cpp
   Metadata.cpp
-  MetadataTracking.cpp
   Module.cpp
   Operator.cpp
   Pass.cpp

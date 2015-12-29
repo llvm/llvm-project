@@ -171,10 +171,6 @@ public:
   /// \param DirectiveID - the identifier token of the directive.
   virtual bool ParseDirective(AsmToken DirectiveID) = 0;
 
-  /// mnemonicIsValid - This returns true if this is a valid mnemonic and false
-  /// otherwise.
-  virtual bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) = 0;
-
   /// MatchAndEmitInstruction - Recognize a series of operands of a parsed
   /// instruction as an actual MCInst and emit it to the specified MCStreamer.
   /// This returns false on success and returns true on failure to match.

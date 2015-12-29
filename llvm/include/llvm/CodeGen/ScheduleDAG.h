@@ -122,18 +122,7 @@ namespace llvm {
     }
 
     /// Return true if the specified SDep is equivalent except for latency.
-    bool overlaps(const SDep &Other) const {
-      if (Dep != Other.Dep) return false;
-      switch (Dep.getInt()) {
-      case Data:
-      case Anti:
-      case Output:
-        return Contents.Reg == Other.Contents.Reg;
-      case Order:
-        return Contents.OrdKind == Other.Contents.OrdKind;
-      }
-      llvm_unreachable("Invalid dependency kind!");
-    }
+    bool overlaps(const SDep &Other) const;
 
     bool operator==(const SDep &Other) const {
       return overlaps(Other) && Latency == Other.Latency;
@@ -157,19 +146,13 @@ namespace llvm {
     }
 
     //// getSUnit - Return the SUnit to which this edge points.
-    SUnit *getSUnit() const {
-      return Dep.getPointer();
-    }
+    SUnit *getSUnit() const;
 
     //// setSUnit - Assign the SUnit to which this edge points.
-    void setSUnit(SUnit *SU) {
-      Dep.setPointer(SU);
-    }
+    void setSUnit(SUnit *SU);
 
     /// getKind - Return an enum value representing the kind of the dependence.
-    Kind getKind() const {
-      return Dep.getInt();
-    }
+    Kind getKind() const;
 
     /// isCtrl - Shorthand for getKind() != SDep::Data.
     bool isCtrl() const {
@@ -489,6 +472,30 @@ namespace llvm {
     void ComputeDepth();
     void ComputeHeight();
   };
+
+  /// Return true if the specified SDep is equivalent except for latency.
+  inline bool SDep::overlaps(const SDep &Other) const {
+    if (Dep != Other.Dep)
+      return false;
+    switch (Dep.getInt()) {
+    case Data:
+    case Anti:
+    case Output:
+      return Contents.Reg == Other.Contents.Reg;
+    case Order:
+      return Contents.OrdKind == Other.Contents.OrdKind;
+    }
+    llvm_unreachable("Invalid dependency kind!");
+  }
+
+  //// getSUnit - Return the SUnit to which this edge points.
+  inline SUnit *SDep::getSUnit() const { return Dep.getPointer(); }
+
+  //// setSUnit - Assign the SUnit to which this edge points.
+  inline void SDep::setSUnit(SUnit *SU) { Dep.setPointer(SU); }
+
+  /// getKind - Return an enum value representing the kind of the dependence.
+  inline SDep::Kind SDep::getKind() const { return Dep.getInt(); }
 
   //===--------------------------------------------------------------------===//
   /// SchedulingPriorityQueue - This interface is used to plug different

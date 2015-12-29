@@ -16,15 +16,14 @@
 ///
 /// The TrailingObject template abstracts away the reinterpret_cast,
 /// pointer arithmetic, and size calculations used for the allocation
-/// and access of appended arrays of objects, as well as asserts that
-/// the alignment of the classes involved are appropriate for the
-/// usage. Additionally, it ensures that the base type is final --
-/// deriving from a class that expects data appended immediately after
-/// it is typically not safe.
+/// and access of appended arrays of objects, and takes care that they
+/// are all allocated at their required alignment. Additionally, it
+/// ensures that the base type is final -- deriving from a class that
+/// expects data appended immediately after it is typically not safe.
 ///
 /// Users are expected to derive from this template, and provide
-/// numTrailingObjects implementations for each trailing type,
-/// e.g. like this sample:
+/// numTrailingObjects implementations for each trailing type except
+/// the last, e.g. like this sample:
 ///
 /// \code
 /// class VarLengthObj : private TrailingObjects<VarLengthObj, int, double> {
@@ -32,9 +31,6 @@
 ///
 ///   unsigned NumInts, NumDoubles;
 ///   size_t numTrailingObjects(OverloadToken<int>) const { return NumInts; }
-///   size_t numTrailingObjects(OverloadToken<double>) const {
-///     return NumDoubles;
-///   }
 ///  };
 /// \endcode
 ///
@@ -51,11 +47,12 @@
 #ifndef LLVM_SUPPORT_TRAILINGOBJECTS_H
 #define LLVM_SUPPORT_TRAILINGOBJECTS_H
 
-#include <new>
-#include <type_traits>
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
+#include <new>
+#include <type_traits>
 
 namespace llvm {
 
@@ -149,13 +146,8 @@ struct TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
   using ParentType::getTrailingObjectsImpl;
   using ParentType::additionalSizeToAllocImpl;
 
-  static void verifyTrailingObjectsAssertions() {
-    static_assert(llvm::AlignOf<PrevTy>::Alignment >=
-                      llvm::AlignOf<NextTy>::Alignment,
-                  "A trailing object requires more alignment than the previous "
-                  "trailing object provides");
-
-    ParentType::verifyTrailingObjectsAssertions();
+  static LLVM_CONSTEXPR bool requiresRealignment() {
+    return llvm::AlignOf<PrevTy>::Alignment < llvm::AlignOf<NextTy>::Alignment;
   }
 
   // These two functions are helper functions for
@@ -170,30 +162,45 @@ struct TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
   static const NextTy *
   getTrailingObjectsImpl(const BaseTy *Obj,
                          TrailingObjectsBase::OverloadToken<NextTy>) {
-    return reinterpret_cast<const NextTy *>(
-        TopTrailingObj::getTrailingObjectsImpl(
-            Obj, TrailingObjectsBase::OverloadToken<PrevTy>()) +
-        TopTrailingObj::callNumTrailingObjects(
-            Obj, TrailingObjectsBase::OverloadToken<PrevTy>()));
+    auto *Ptr = TopTrailingObj::getTrailingObjectsImpl(
+                    Obj, TrailingObjectsBase::OverloadToken<PrevTy>()) +
+                TopTrailingObj::callNumTrailingObjects(
+                    Obj, TrailingObjectsBase::OverloadToken<PrevTy>());
+
+    if (requiresRealignment())
+      return reinterpret_cast<const NextTy *>(
+          llvm::alignAddr(Ptr, llvm::alignOf<NextTy>()));
+    else
+      return reinterpret_cast<const NextTy *>(Ptr);
   }
 
   static NextTy *
   getTrailingObjectsImpl(BaseTy *Obj,
                          TrailingObjectsBase::OverloadToken<NextTy>) {
-    return reinterpret_cast<NextTy *>(
-        TopTrailingObj::getTrailingObjectsImpl(
-            Obj, TrailingObjectsBase::OverloadToken<PrevTy>()) +
-        TopTrailingObj::callNumTrailingObjects(
-            Obj, TrailingObjectsBase::OverloadToken<PrevTy>()));
+    auto *Ptr = TopTrailingObj::getTrailingObjectsImpl(
+                    Obj, TrailingObjectsBase::OverloadToken<PrevTy>()) +
+                TopTrailingObj::callNumTrailingObjects(
+                    Obj, TrailingObjectsBase::OverloadToken<PrevTy>());
+
+    if (requiresRealignment())
+      return reinterpret_cast<NextTy *>(
+          llvm::alignAddr(Ptr, llvm::alignOf<NextTy>()));
+    else
+      return reinterpret_cast<NextTy *>(Ptr);
   }
 
   // Helper function for TrailingObjects::additionalSizeToAlloc: this
   // function recurses to superclasses, each of which requires one
   // fewer size_t argument, and adds its own size.
   static LLVM_CONSTEXPR size_t additionalSizeToAllocImpl(
-      size_t Count1,
+      size_t SizeSoFar, size_t Count1,
       typename ExtractSecondType<MoreTys, size_t>::type... MoreCounts) {
-    return sizeof(NextTy) * Count1 + additionalSizeToAllocImpl(MoreCounts...);
+    return additionalSizeToAllocImpl(
+        (requiresRealignment()
+             ? llvm::RoundUpToAlignment(SizeSoFar, llvm::alignOf<NextTy>())
+             : SizeSoFar) +
+            sizeof(NextTy) * Count1,
+        MoreCounts...);
   }
 };
 
@@ -207,9 +214,11 @@ struct TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy>
   // up the inheritance chain to subclasses.
   static void getTrailingObjectsImpl();
 
-  static LLVM_CONSTEXPR size_t additionalSizeToAllocImpl() { return 0; }
+  static LLVM_CONSTEXPR size_t additionalSizeToAllocImpl(size_t SizeSoFar) {
+    return SizeSoFar;
+  }
 
-  static void verifyTrailingObjectsAssertions() {}
+  template <bool CheckAlignment> static void verifyTrailingObjectsAlignment() {}
 };
 
 } // end namespace trailing_objects_internal
@@ -238,15 +247,14 @@ class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
 
   using ParentType::getTrailingObjectsImpl;
 
-  // Contains static_assert statements for the alignment of the
-  // types. Must not be at class-level, because BaseTy isn't complete
-  // at class instantiation time, but will be by the time this
-  // function is instantiated. Recurses through the superclasses.
+  // This function contains only a static_assert BaseTy is final. The
+  // static_assert must be in a function, and not at class-level
+  // because BaseTy isn't complete at class instantiation time, but
+  // will be by the time this function is instantiated.
   static void verifyTrailingObjectsAssertions() {
 #ifdef LLVM_IS_FINAL
     static_assert(LLVM_IS_FINAL(BaseTy), "BaseTy must be final.");
 #endif
-    ParentType::verifyTrailingObjectsAssertions();
   }
 
   // These two methods are the base of the recursion for this method.
@@ -320,7 +328,7 @@ public:
       additionalSizeToAlloc(
           typename trailing_objects_internal::ExtractSecondType<
               TrailingTys, size_t>::type... Counts) {
-    return ParentType::additionalSizeToAllocImpl(Counts...);
+    return ParentType::additionalSizeToAllocImpl(0, Counts...);
   }
 
   /// Returns the total size of an object if it were allocated with the
@@ -332,7 +340,7 @@ public:
       std::is_same<Foo<TrailingTys...>, Foo<Tys...>>::value, size_t>::type
       totalSizeToAlloc(typename trailing_objects_internal::ExtractSecondType<
                        TrailingTys, size_t>::type... Counts) {
-    return sizeof(BaseTy) + ParentType::additionalSizeToAllocImpl(Counts...);
+    return sizeof(BaseTy) + ParentType::additionalSizeToAllocImpl(0, Counts...);
   }
 };
 

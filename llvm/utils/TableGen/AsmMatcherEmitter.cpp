@@ -774,8 +774,7 @@ void MatchableInfo::formTwoOperandAlias(StringRef Constraint) {
 
   // Find the ResOperand that refers to the operand we're aliasing away
   // and update it to refer to the combined operand instead.
-  for (unsigned i = 0, e = ResOperands.size(); i != e; ++i) {
-    ResOperand &Op = ResOperands[i];
+  for (ResOperand &Op : ResOperands) {
     if (Op.Kind == ResOperand::RenderAsmOperand &&
         Op.AsmOperandNum == (unsigned)SrcAsmOperand) {
       Op.AsmOperandNum = DstAsmOperand;
@@ -786,8 +785,7 @@ void MatchableInfo::formTwoOperandAlias(StringRef Constraint) {
   AsmOperands.erase(AsmOperands.begin() + SrcAsmOperand);
   // Adjust the ResOperand references to any AsmOperands that followed
   // the one we just deleted.
-  for (unsigned i = 0, e = ResOperands.size(); i != e; ++i) {
-    ResOperand &Op = ResOperands[i];
+  for (ResOperand &Op : ResOperands) {
     switch(Op.Kind) {
     default:
       // Nothing to do for operands that don't reference AsmOperands.
@@ -1455,7 +1453,7 @@ void AsmMatcherInfo::buildInfo() {
       StringRef Token = Op.Token;
 
       // Check for singleton registers.
-      if (Record *RegRecord = II->AsmOperands[i].SingletonReg) {
+      if (Record *RegRecord = Op.SingletonReg) {
         Op.Class = RegisterClasses[RegRecord];
         assert(Op.Class && Op.Class->Registers.size() == 1 &&
                "Unexpected class for singleton register");
@@ -1515,8 +1513,7 @@ void AsmMatcherInfo::buildInfo() {
   // information.
   std::vector<Record*> AllTokenAliases =
     Records.getAllDerivedDefinitions("TokenAlias");
-  for (unsigned i = 0, e = AllTokenAliases.size(); i != e; ++i) {
-    Record *Rec = AllTokenAliases[i];
+  for (Record *Rec : AllTokenAliases) {
     ClassInfo *FromClass = getTokenClass(Rec->getValueAsString("FromToken"));
     ClassInfo *ToClass = getTokenClass(Rec->getValueAsString("ToToken"));
     if (FromClass == ToClass)
@@ -1624,9 +1621,7 @@ void MatchableInfo::buildInstructionResultOperands() {
 
   // Loop over all operands of the result instruction, determining how to
   // populate them.
-  for (unsigned i = 0, e = ResultInst->Operands.size(); i != e; ++i) {
-    const CGIOperandList::OperandInfo &OpInfo = ResultInst->Operands[i];
-
+  for (const CGIOperandList::OperandInfo &OpInfo : ResultInst->Operands) {
     // If this is a tied operand, just copy from the previously handled operand.
     int TiedOp = -1;
     if (OpInfo.MINumOperands == 1)
@@ -2705,7 +2700,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
      << "&Operands);\n";
   OS << "  void convertToMapAndConstraints(unsigned Kind,\n                ";
   OS << "           const OperandVector &Operands) override;\n";
-  OS << "  bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) override;\n";
+  OS << "  bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);\n";
   OS << "  unsigned MatchInstructionImpl(const OperandVector &Operands,\n"
      << "                                MCInst &Inst,\n"
      << "                                uint64_t &ErrorInfo,"
@@ -2957,7 +2952,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
   OS << "  }\n";
   OS << "  // Search the table.\n";
-  OS << "  std::pair<const MatchEntry*, const MatchEntry*>"
+  OS << "  std::pair<const MatchEntry*, const MatchEntry*> "
         "MnemonicRange(Start, End);\n";
   OS << "  unsigned SIndex = Mnemonic.empty() ? 0 : 1;\n";
   OS << "  if (!Mnemonic.empty())\n";
