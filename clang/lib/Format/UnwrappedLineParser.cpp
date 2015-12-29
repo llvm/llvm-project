@@ -818,7 +818,8 @@ void UnwrappedLineParser::parseStructuralElement() {
     case tok::kw_enum:
       // parseEnum falls through and does not yet add an unwrapped line as an
       // enum definition can start a structural element.
-      parseEnum();
+      if (!parseEnum())
+        break;
       // This only applies for C++.
       if (Style.Language != FormatStyle::LK_Cpp) {
         addUnwrappedLine();
@@ -1524,10 +1525,16 @@ void UnwrappedLineParser::parseAccessSpecifier() {
   addUnwrappedLine();
 }
 
-void UnwrappedLineParser::parseEnum() {
+bool UnwrappedLineParser::parseEnum() {
   // Won't be 'enum' for NS_ENUMs.
   if (FormatTok->Tok.is(tok::kw_enum))
     nextToken();
+
+  // In TypeScript, "enum" can also be used as property name, e.g. in interface
+  // declarations. An "enum" keyword followed by a colon would be a syntax
+  // error and thus assume it is just an identifier.
+  if (Style.Language == FormatStyle::LK_JavaScript && FormatTok->is(tok::colon))
+    return false;
 
   // Eat up enum class ...
   if (FormatTok->Tok.is(tok::kw_class) || FormatTok->Tok.is(tok::kw_struct))
@@ -1546,22 +1553,23 @@ void UnwrappedLineParser::parseEnum() {
       // return type. In Java, this can be "implements", etc.
       if (Style.Language == FormatStyle::LK_Cpp &&
           FormatTok->is(tok::identifier))
-        return;
+        return false;
     }
   }
 
   // Just a declaration or something is wrong.
   if (FormatTok->isNot(tok::l_brace))
-    return;
+    return true;
   FormatTok->BlockKind = BK_Block;
 
   if (Style.Language == FormatStyle::LK_Java) {
     // Java enums are different.
     parseJavaEnumBody();
-    return;
-  } else if (Style.Language == FormatStyle::LK_Proto) {
+    return true;
+  }
+  if (Style.Language == FormatStyle::LK_Proto) {
     parseBlock(/*MustBeDeclaration=*/true);
-    return;
+    return true;
   }
 
   // Parse enum body.
@@ -1571,6 +1579,7 @@ void UnwrappedLineParser::parseEnum() {
       nextToken();
     addUnwrappedLine();
   }
+  return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a
   // structural element afterwards. Thus, in "enum A {} n, m;",

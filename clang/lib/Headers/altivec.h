@@ -27,7 +27,7 @@
 #error "AltiVec support not enabled"
 #endif
 
-/* constants for mapping CR6 bits to predicate result. */
+/* Constants for mapping CR6 bits to predicate result. */
 
 #define __CR6_EQ 0
 #define __CR6_EQ_REV 1
