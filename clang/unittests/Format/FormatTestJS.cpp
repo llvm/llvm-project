@@ -762,6 +762,7 @@ TEST_F(FormatTestJS, ClassDeclarations) {
 TEST_F(FormatTestJS, InterfaceDeclarations) {
   verifyFormat("interface I {\n"
                "  x: string;\n"
+               "  enum: string[];\n"
                "}\n"
                "var y;");
   // Ensure that state is reset after parsing the interface.
