@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/raw_ostream.h"
@@ -31,7 +32,6 @@ namespace llvm {
 class MCAsmBackend;
 class MCContext;
 class MCObjectStreamer;
-class MCSection;
 class MCStreamer;
 class MCSymbol;
 class SourceMgr;

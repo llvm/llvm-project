@@ -17,9 +17,15 @@
 
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
+#include <type_traits>
 
 namespace llvm {
-template <typename T>
+
+namespace detail {
+
+// For everything other than an abstract class we can calulate alignment by
+// building a class with a single character and a member of the given type.
+template <typename T, bool = std::is_abstract<T>::value>
 struct AlignmentCalcImpl {
   char x;
 #if defined(_MSC_VER)
@@ -34,6 +40,25 @@ struct AlignmentCalcImpl {
 private:
   AlignmentCalcImpl() {} // Never instantiate.
 };
+
+// Abstract base class helper, this will have the minimal alignment and size
+// for any abstract class. We don't even define its destructor because this
+// type should never be used in a way that requires it.
+struct AlignmentCalcImplBase {
+  virtual ~AlignmentCalcImplBase() = 0;
+};
+
+// When we have an abstract class type, specialize the alignment computation
+// engine to create another abstract class that derives from both an empty
+// abstract base class and the provided type. This has the same effect as the
+// above except that it handles the fact that we can't actually create a member
+// of type T.
+template <typename T>
+struct AlignmentCalcImpl<T, true> : AlignmentCalcImplBase, T {
+  virtual ~AlignmentCalcImpl() = 0;
+};
+
+} // End detail namespace.
 
 /// AlignOf - A templated class that contains an enum value representing
 ///  the alignment of the template argument.  For example,
@@ -50,11 +75,13 @@ struct AlignOf {
   //   llvm::AlignOf<Y>::<anonymous>' [-Wenum-compare]
   // by using constexpr instead of enum.
   // (except on MSVC, since it doesn't support constexpr yet).
-  static constexpr unsigned Alignment =
-      static_cast<unsigned int>(sizeof(AlignmentCalcImpl<T>) - sizeof(T));
+  static constexpr unsigned Alignment = static_cast<unsigned int>(
+      sizeof(detail::AlignmentCalcImpl<T>) - sizeof(T));
 #else
-  enum { Alignment =
-         static_cast<unsigned int>(sizeof(AlignmentCalcImpl<T>) - sizeof(T)) };
+  enum {
+    Alignment = static_cast<unsigned int>(sizeof(detail::AlignmentCalcImpl<T>) -
+                                          sizeof(T))
+  };
 #endif
   enum { Alignment_GreaterEqual_2Bytes = Alignment >= 2 ? 1 : 0 };
   enum { Alignment_GreaterEqual_4Bytes = Alignment >= 4 ? 1 : 0 };

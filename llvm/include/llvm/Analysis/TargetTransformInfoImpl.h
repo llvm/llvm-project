@@ -301,6 +301,12 @@ public:
     return 1;
   }
 
+  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy, Value *Ptr,
+                                  bool VariableMask,
+                                  unsigned Alignment) {
+    return 1;
+  }
+
   unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                       unsigned Factor,
                                       ArrayRef<unsigned> Indices,
@@ -311,6 +317,10 @@ public:
 
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                                  ArrayRef<Type *> Tys) {
+    return 1;
+  }
+  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+                                 ArrayRef<Value *> Args) {
     return 1;
   }
 

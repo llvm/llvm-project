@@ -1297,6 +1297,142 @@ int X86TTIImpl::getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
   return X86TTIImpl::getIntImmCost(Imm, Ty);
 }
 
+// Return an average cost of Gather / Scatter instruction, maybe improved later
+int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, Value *Ptr,
+                                unsigned Alignment, unsigned AddressSpace) {
+
+  assert(isa<VectorType>(SrcVTy) && "Unexpected type in getGSVectorCost");
+  unsigned VF = SrcVTy->getVectorNumElements();
+
+  // Try to reduce index size from 64 bit (default for GEP)
+  // to 32. It is essential for VF 16. If the index can't be reduced to 32, the
+  // operation will use 16 x 64 indices which do not fit in a zmm and needs
+  // to split. Also check that the base pointer is the same for all lanes,
+  // and that there's at most one variable index.
+  auto getIndexSizeInBits = [](Value *Ptr, const DataLayout& DL) {
+    unsigned IndexSize = DL.getPointerSizeInBits();
+    GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+    if (IndexSize < 64 || !GEP)
+      return IndexSize;
+ 
+    unsigned NumOfVarIndices = 0;
+    Value *Ptrs = GEP->getPointerOperand();
+    if (Ptrs->getType()->isVectorTy() && !getSplatValue(Ptrs))
+      return IndexSize;
+    for (unsigned i = 1; i < GEP->getNumOperands(); ++i) {
+      if (isa<Constant>(GEP->getOperand(i)))
+        continue;
+      Type *IndxTy = GEP->getOperand(i)->getType();
+      if (IndxTy->isVectorTy())
+        IndxTy = IndxTy->getVectorElementType();
+      if ((IndxTy->getPrimitiveSizeInBits() == 64 &&
+          !isa<SExtInst>(GEP->getOperand(i))) ||
+         ++NumOfVarIndices > 1)
+        return IndexSize; // 64
+    }
+    return (unsigned)32;
+  };
+
+
+  // Trying to reduce IndexSize to 32 bits for vector 16.
+  // By default the IndexSize is equal to pointer size.
+  unsigned IndexSize = (VF >= 16) ? getIndexSizeInBits(Ptr, DL) :
+    DL.getPointerSizeInBits();
+
+  Type *IndexVTy = VectorType::get(IntegerType::get(getGlobalContext(),
+                                                    IndexSize), VF);
+  std::pair<int, MVT> IdxsLT = TLI->getTypeLegalizationCost(DL, IndexVTy);
+  std::pair<int, MVT> SrcLT = TLI->getTypeLegalizationCost(DL, SrcVTy);
+  int SplitFactor = std::max(IdxsLT.first, SrcLT.first);
+  if (SplitFactor > 1) {
+    // Handle splitting of vector of pointers
+    Type *SplitSrcTy = VectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
+    return SplitFactor * getGSVectorCost(Opcode, SplitSrcTy, Ptr, Alignment,
+                                         AddressSpace);
+  }
+
+  // The gather / scatter cost is given by Intel architects. It is a rough
+  // number since we are looking at one instruction in a time.
+  const int GSOverhead = 2;
+  return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
+                                           Alignment, AddressSpace);
+}
+
+/// Return the cost of full scalarization of gather / scatter operation.
+///
+/// Opcode - Load or Store instruction.
+/// SrcVTy - The type of the data vector that should be gathered or scattered.
+/// VariableMask - The mask is non-constant at compile time.
+/// Alignment - Alignment for one element.
+/// AddressSpace - pointer[s] address space.
+///
+int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
+                                bool VariableMask, unsigned Alignment,
+                                unsigned AddressSpace) {
+  unsigned VF = SrcVTy->getVectorNumElements();
+
+  int MaskUnpackCost = 0;
+  if (VariableMask) {
+    VectorType *MaskTy =
+      VectorType::get(Type::getInt1Ty(getGlobalContext()), VF);
+    MaskUnpackCost = getScalarizationOverhead(MaskTy, false, true);
+    int ScalarCompareCost =
+      getCmpSelInstrCost(Instruction::ICmp, Type::getInt1Ty(getGlobalContext()),
+                         nullptr);
+    int BranchCost = getCFInstrCost(Instruction::Br);
+    MaskUnpackCost += VF * (BranchCost + ScalarCompareCost);
+  }
+
+  // The cost of the scalar loads/stores.
+  int MemoryOpCost = VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
+                                          Alignment, AddressSpace);
+
+  int InsertExtractCost = 0;
+  if (Opcode == Instruction::Load)
+    for (unsigned i = 0; i < VF; ++i)
+      // Add the cost of inserting each scalar load into the vector
+      InsertExtractCost +=
+        getVectorInstrCost(Instruction::InsertElement, SrcVTy, i);
+  else
+    for (unsigned i = 0; i < VF; ++i)
+      // Add the cost of extracting each element out of the data vector
+      InsertExtractCost +=
+        getVectorInstrCost(Instruction::ExtractElement, SrcVTy, i);
+
+  return MemoryOpCost + MaskUnpackCost + InsertExtractCost;
+}
+
+/// Calculate the cost of Gather / Scatter operation
+int X86TTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *SrcVTy,
+                                       Value *Ptr, bool VariableMask,
+                                       unsigned Alignment) {
+  assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
+  unsigned VF = SrcVTy->getVectorNumElements();
+  PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
+  if (!PtrTy && Ptr->getType()->isVectorTy())
+    PtrTy = dyn_cast<PointerType>(Ptr->getType()->getVectorElementType());
+  assert(PtrTy && "Unexpected type for Ptr argument");
+  unsigned AddressSpace = PtrTy->getAddressSpace();
+
+  bool Scalarize = false;
+  if ((Opcode == Instruction::Load && !isLegalMaskedGather(SrcVTy)) ||
+      (Opcode == Instruction::Store && !isLegalMaskedScatter(SrcVTy)))
+    Scalarize = true;
+  // Gather / Scatter for vector 2 is not profitable on KNL / SKX
+  // Vector-4 of gather/scatter instruction does not exist on KNL.
+  // We can extend it to 8 elements, but zeroing upper bits of
+  // the mask vector will add more instructions. Right now we give the scalar
+  // cost of vector-4 for KNL. TODO: Check, maybe the gather/scatter instruction is
+  // better in the VariableMask case.
+  if (VF == 2 || (VF == 4 && !ST->hasVLX()))
+    Scalarize = true;
+
+  if (Scalarize)
+    return getGSScalarCost(Opcode, SrcVTy, VariableMask, Alignment, AddressSpace);
+
+  return getGSVectorCost(Opcode, SrcVTy, Ptr, Alignment, AddressSpace);
+}
+
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
   Type *ScalarTy = DataTy->getScalarType();
   int DataWidth = isa<PointerType>(ScalarTy) ?

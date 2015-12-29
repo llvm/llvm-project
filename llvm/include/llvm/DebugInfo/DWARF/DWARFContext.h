@@ -218,7 +218,7 @@ public:
   virtual StringRef getTUIndexSection() = 0;
 
   static bool isSupportedVersion(unsigned version) {
-    return version == 2 || version == 3 || version == 4;
+    return version == 2 || version == 3 || version == 4 || version == 5;
   }
 private:
   /// Return the compile unit that includes an offset (relative to .debug_info).

@@ -738,10 +738,6 @@ include "X86CallingConv.td"
 // Assembly Parser
 //===----------------------------------------------------------------------===//
 
-def ATTAsmParser : AsmParser {
-  string AsmParserClassName = "AsmParser";
-}
-
 def ATTAsmParserVariant : AsmParserVariant {
   int Variant = 0;
 
@@ -786,7 +782,6 @@ def IntelAsmWriter : AsmWriter {
 def X86 : Target {
   // Information about the instructions...
   let InstructionSet = X86InstrInfo;
-  let AssemblyParsers = [ATTAsmParser];
   let AssemblyParserVariants = [ATTAsmParserVariant, IntelAsmParserVariant];
   let AssemblyWriters = [ATTAsmWriter, IntelAsmWriter];
 }

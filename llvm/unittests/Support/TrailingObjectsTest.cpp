@@ -175,4 +175,21 @@ TEST(TrailingObjects, ThreeArg) {
           reinterpret_cast<short *>(reinterpret_cast<double *>(C + 1) + 1) +
           1));
 }
+
+class Class4 final : public TrailingObjects<Class4, char, long> {
+  friend TrailingObjects;
+  size_t numTrailingObjects(OverloadToken<char>) const { return 1; }
+};
+
+TEST(TrailingObjects, Realignment) {
+  EXPECT_EQ((Class4::additionalSizeToAlloc<char, long>(1, 1)),
+            llvm::RoundUpToAlignment(sizeof(long) + 1, llvm::alignOf<long>()));
+  EXPECT_EQ(sizeof(Class4), llvm::RoundUpToAlignment(1, llvm::alignOf<long>()));
+  std::unique_ptr<char[]> P(new char[1000]);
+  Class4 *C = reinterpret_cast<Class4 *>(P.get());
+  EXPECT_EQ(C->getTrailingObjects<char>(), reinterpret_cast<char *>(C + 1));
+  EXPECT_EQ(C->getTrailingObjects<long>(),
+            reinterpret_cast<long *>(llvm::alignAddr(
+                reinterpret_cast<char *>(C + 1) + 1, llvm::alignOf<long>())));
+}
 }

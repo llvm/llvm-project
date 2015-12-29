@@ -206,7 +206,6 @@ def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
 
 def MipsAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;
-  let MnemonicContainsDot = 1;
 }
 
 def MipsAsmParserVariant : AsmParserVariant {

@@ -20,7 +20,9 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1078,3 +1080,5 @@ void WinEHFuncInfo::addIPToStateRange(const InvokeInst *II,
          "should get invoke with precomputed state");
   LabelToStateMap[InvokeBegin] = std::make_pair(InvokeStateMap[II], InvokeEnd);
 }
+
+WinEHFuncInfo::WinEHFuncInfo() {}

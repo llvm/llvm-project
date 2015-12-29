@@ -1,14 +1,9 @@
-//===-- llvm/Target/TargetLoweringObjectFile.h - Object Info ----*- C++ -*-===//
+//===-- llvm/MC/SectionKind.h - Classification of sections ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-//
-// This file implements classes used to handle lowerings specific to common
-// object file formats.
 //
 //===----------------------------------------------------------------------===//
 

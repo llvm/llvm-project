@@ -23,7 +23,7 @@ class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class Function;
-class TargetTransformInfoWrapperPass;
+class TargetTransformInfo;
 
 namespace InlineConstants {
   // Various magic constants used to adjust heuristics.
@@ -98,46 +98,31 @@ public:
   int getCostDelta() const { return Threshold - getCost(); }
 };
 
-/// \brief Cost analyzer used by inliner.
-class InlineCostAnalysis : public CallGraphSCCPass {
-  TargetTransformInfoWrapperPass *TTIWP;
-  AssumptionCacheTracker *ACT;
+/// \brief Get an InlineCost object representing the cost of inlining this
+/// callsite.
+///
+/// Note that threshold is passed into this function. Only costs below the
+/// threshold are computed with any accuracy. The threshold can be used to
+/// bound the computation necessary to determine whether the cost is
+/// sufficiently low to warrant inlining.
+///
+/// Also note that calling this function *dynamically* computes the cost of
+/// inlining the callsite. It is an expensive, heavyweight call.
+InlineCost getInlineCost(CallSite CS, int Threshold,
+                         TargetTransformInfo &CalleeTTI,
+                         AssumptionCacheTracker *ACT);
 
-public:
-  static char ID;
+/// \brief Get an InlineCost with the callee explicitly specified.
+/// This allows you to calculate the cost of inlining a function via a
+/// pointer. This behaves exactly as the version with no explicit callee
+/// parameter in all other respects.
+//
+InlineCost getInlineCost(CallSite CS, Function *Callee, int Threshold,
+                         TargetTransformInfo &CalleeTTI,
+                         AssumptionCacheTracker *ACT);
 
-  InlineCostAnalysis();
-  ~InlineCostAnalysis() override;
-
-  // Pass interface implementation.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnSCC(CallGraphSCC &SCC) override;
-
-  /// \brief Get an InlineCost object representing the cost of inlining this
-  /// callsite.
-  ///
-  /// Note that threshold is passed into this function. Only costs below the
-  /// threshold are computed with any accuracy. The threshold can be used to
-  /// bound the computation necessary to determine whether the cost is
-  /// sufficiently low to warrant inlining.
-  ///
-  /// Also note that calling this function *dynamically* computes the cost of
-  /// inlining the callsite. It is an expensive, heavyweight call.
-  InlineCost getInlineCost(CallSite CS, int Threshold);
-
-  /// \brief Get an InlineCost with the callee explicitly specified.
-  /// This allows you to calculate the cost of inlining a function via a
-  /// pointer. This behaves exactly as the version with no explicit callee
-  /// parameter in all other respects.
-  //
-  //  Note: This is used by out-of-tree passes, please do not remove without
-  //  adding a replacement API.
-  InlineCost getInlineCost(CallSite CS, Function *Callee, int Threshold);
-
-  /// \brief Minimal filter to detect invalid constructs for inlining.
-  bool isInlineViable(Function &Callee);
-};
-
+/// \brief Minimal filter to detect invalid constructs for inlining.
+bool isInlineViable(Function &Callee);
 }
 
 #endif

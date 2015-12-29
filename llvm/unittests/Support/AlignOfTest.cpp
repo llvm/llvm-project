@@ -89,6 +89,22 @@ V6::~V6() {}
 V7::~V7() {}
 V8::~V8() {}
 
+struct Abstract1 {
+  virtual ~Abstract1() {}
+  virtual void method() = 0;
+
+  char c;
+};
+
+struct Abstract2 : Abstract1 {
+  virtual ~Abstract2() {}
+  double d;
+};
+
+struct Final final : Abstract2 {
+  void method() override {}
+};
+
 // Ensure alignment is a compile-time constant.
 char LLVM_ATTRIBUTE_UNUSED test_arr1
   [AlignOf<char>::Alignment > 0]
@@ -174,6 +190,10 @@ TEST(AlignOfTest, BasicAlignmentInvariants) {
   EXPECT_LE(alignOf<V1>(),     alignOf<V6>());
   EXPECT_LE(alignOf<V1>(),     alignOf<V7>());
   EXPECT_LE(alignOf<V1>(),     alignOf<V8>());
+
+  EXPECT_LE(alignOf<char>(), alignOf<Abstract1>());
+  EXPECT_LE(alignOf<double>(), alignOf<Abstract2>());
+  EXPECT_LE(alignOf<Abstract2>(), alignOf<Final>());
 }
 
 TEST(AlignOfTest, BasicAlignedArray) {
