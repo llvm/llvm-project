@@ -188,13 +188,6 @@ bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
 }
 
 /// \brief Tests if a value is a call or invoke to a library function that
-/// reallocates memory (such as realloc).
-bool llvm::isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
-                           bool LookThroughBitCast) {
-  return getAllocationData(V, ReallocLike, TLI, LookThroughBitCast);
-}
-
-/// \brief Tests if a value is a call or invoke to a library function that
 /// allocates memory and never returns null (such as operator new).
 bool llvm::isOperatorNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                                bool LookThroughBitCast) {

@@ -23,6 +23,9 @@ namespace llvm {
 
 template <typename T> struct DenseMapInfo;
 
+template <typename PointerT, unsigned IntBits, typename PtrTraits>
+struct PointerIntPairInfo;
+
 /// PointerIntPair - This class implements a pair of a pointer and small
 /// integer.  It is designed to represent this in the space required by one
 /// pointer by bitmangling the integer into the low part of the pointer.  This
@@ -38,29 +41,10 @@ template <typename T> struct DenseMapInfo;
 /// ... and the two bools will land in different bits.
 ///
 template <typename PointerTy, unsigned IntBits, typename IntType = unsigned,
-          typename PtrTraits = PointerLikeTypeTraits<PointerTy>>
+          typename PtrTraits = PointerLikeTypeTraits<PointerTy>,
+          typename Info = PointerIntPairInfo<PointerTy, IntBits, PtrTraits>>
 class PointerIntPair {
   intptr_t Value;
-  static_assert(PtrTraits::NumLowBitsAvailable <
-                    std::numeric_limits<uintptr_t>::digits,
-                "cannot use a pointer type that has all bits free");
-  static_assert(IntBits <= PtrTraits::NumLowBitsAvailable,
-                "PointerIntPair with integer size too large for pointer");
-  enum : uintptr_t {
-    /// PointerBitMask - The bits that come from the pointer.
-    PointerBitMask =
-        ~(uintptr_t)(((intptr_t)1 << PtrTraits::NumLowBitsAvailable) - 1),
-
-    /// IntShift - The number of low bits that we reserve for other uses, and
-    /// keep zero.
-    IntShift = (uintptr_t)PtrTraits::NumLowBitsAvailable - IntBits,
-
-    /// IntMask - This is the unshifted mask for valid bits of the int type.
-    IntMask = (uintptr_t)(((intptr_t)1 << IntBits) - 1),
-
-    // ShiftedIntMask - This is the bits for the integer shifted in place.
-    ShiftedIntMask = (uintptr_t)(IntMask << IntShift)
-  };
 
 public:
   PointerIntPair() : Value(0) {}
@@ -69,48 +53,22 @@ public:
   }
   explicit PointerIntPair(PointerTy PtrVal) { initWithPointer(PtrVal); }
 
-  PointerTy getPointer() const {
-    return PtrTraits::getFromVoidPointer(
-        reinterpret_cast<void *>(Value & PointerBitMask));
-  }
+  PointerTy getPointer() const { return Info::getPointer(Value); }
 
-  IntType getInt() const { return (IntType)((Value >> IntShift) & IntMask); }
+  IntType getInt() const { return (IntType)Info::getInt(Value); }
 
   void setPointer(PointerTy PtrVal) {
-    intptr_t PtrWord =
-        reinterpret_cast<intptr_t>(PtrTraits::getAsVoidPointer(PtrVal));
-    assert((PtrWord & ~PointerBitMask) == 0 &&
-           "Pointer is not sufficiently aligned");
-    // Preserve all low bits, just update the pointer.
-    Value = PtrWord | (Value & ~PointerBitMask);
+    Value = Info::updatePointer(Value, PtrVal);
   }
 
-  void setInt(IntType IntVal) {
-    intptr_t IntWord = static_cast<intptr_t>(IntVal);
-    assert((IntWord & ~IntMask) == 0 && "Integer too large for field");
-
-    // Preserve all bits other than the ones we are updating.
-    Value &= ~ShiftedIntMask;     // Remove integer field.
-    Value |= IntWord << IntShift; // Set new integer.
-  }
+  void setInt(IntType IntVal) { Value = Info::updateInt(Value, IntVal); }
 
   void initWithPointer(PointerTy PtrVal) {
-    intptr_t PtrWord =
-        reinterpret_cast<intptr_t>(PtrTraits::getAsVoidPointer(PtrVal));
-    assert((PtrWord & ~PointerBitMask) == 0 &&
-           "Pointer is not sufficiently aligned");
-    Value = PtrWord;
+    Value = Info::updatePointer(0, PtrVal);
   }
 
   void setPointerAndInt(PointerTy PtrVal, IntType IntVal) {
-    intptr_t PtrWord =
-        reinterpret_cast<intptr_t>(PtrTraits::getAsVoidPointer(PtrVal));
-    assert((PtrWord & ~PointerBitMask) == 0 &&
-           "Pointer is not sufficiently aligned");
-    intptr_t IntWord = static_cast<intptr_t>(IntVal);
-    assert((IntWord & ~IntMask) == 0 && "Integer too large for field");
-
-    Value = PtrWord | (IntWord << IntShift);
+    Value = Info::updateInt(Info::updatePointer(0, PtrVal), IntVal);
   }
 
   PointerTy const *getAddrOfPointer() const {
@@ -155,6 +113,56 @@ public:
   }
   bool operator>=(const PointerIntPair &RHS) const {
     return Value >= RHS.Value;
+  }
+};
+
+template <typename PointerT, unsigned IntBits, typename PtrTraits>
+struct PointerIntPairInfo {
+  static_assert(PtrTraits::NumLowBitsAvailable <
+                    std::numeric_limits<uintptr_t>::digits,
+                "cannot use a pointer type that has all bits free");
+  static_assert(IntBits <= PtrTraits::NumLowBitsAvailable,
+                "PointerIntPair with integer size too large for pointer");
+  enum : uintptr_t {
+    /// PointerBitMask - The bits that come from the pointer.
+    PointerBitMask =
+        ~(uintptr_t)(((intptr_t)1 << PtrTraits::NumLowBitsAvailable) - 1),
+
+    /// IntShift - The number of low bits that we reserve for other uses, and
+    /// keep zero.
+    IntShift = (uintptr_t)PtrTraits::NumLowBitsAvailable - IntBits,
+
+    /// IntMask - This is the unshifted mask for valid bits of the int type.
+    IntMask = (uintptr_t)(((intptr_t)1 << IntBits) - 1),
+
+    // ShiftedIntMask - This is the bits for the integer shifted in place.
+    ShiftedIntMask = (uintptr_t)(IntMask << IntShift)
+  };
+
+  static PointerT getPointer(intptr_t Value) {
+    return PtrTraits::getFromVoidPointer(
+        reinterpret_cast<void *>(Value & PointerBitMask));
+  }
+
+  static intptr_t getInt(intptr_t Value) {
+    return (Value >> IntShift) & IntMask;
+  }
+
+  static intptr_t updatePointer(intptr_t OrigValue, PointerT Ptr) {
+    intptr_t PtrWord =
+        reinterpret_cast<intptr_t>(PtrTraits::getAsVoidPointer(Ptr));
+    assert((PtrWord & ~PointerBitMask) == 0 &&
+           "Pointer is not sufficiently aligned");
+    // Preserve all low bits, just update the pointer.
+    return PtrWord | (OrigValue & ~PointerBitMask);
+  }
+
+  static intptr_t updateInt(intptr_t OrigValue, intptr_t Int) {
+    intptr_t IntWord = static_cast<intptr_t>(Int);
+    assert((IntWord & ~IntMask) == 0 && "Integer too large for field");
+
+    // Preserve all bits other than the ones we are updating.
+    return (OrigValue & ~ShiftedIntMask) | IntWord << IntShift;
   }
 };
 

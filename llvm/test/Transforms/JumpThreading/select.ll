@@ -91,6 +91,36 @@ L3:
 }
 
 
+; Jump threading of indirectbr with select as address.  Test increased
+; duplication threshold for cases where indirectbr is being threaded
+; through.
+
+; CHECK-LABEL: @test_indirectbr_thresh(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: br i1 %cond, label %L1, label %L3
+; CHECK-NOT: indirectbr
+define void @test_indirectbr_thresh(i1 %cond, i8* %address) nounwind {
+entry:
+  br i1 %cond, label %L0, label %L3
+L0:
+  %indirect.goto.dest = select i1 %cond, i8* blockaddress(@test_indirectbr_thresh, %L1), i8* %address
+  call void @quux()
+  call void @quux()
+  call void @quux()
+  indirectbr i8* %indirect.goto.dest, [label %L1, label %L2, label %L3]
+
+L1:
+  call void @foo()
+  ret void
+L2:
+  call void @bar()
+  ret void
+L3:
+  call void @baz()
+  ret void
+}
+
+
 ; A more complicated case: the condition is a select based on a comparison.
 
 ; CHECK-LABEL: @test_switch_cmp(

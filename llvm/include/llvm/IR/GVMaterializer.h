@@ -52,8 +52,8 @@ public:
   /// instantiations. If OnlyTempMD is true, only those that have remained
   /// temporary metadata are recorded in the map.
   virtual void
-  saveMDValueList(DenseMap<const Metadata *, unsigned> &MDValueToValIDMap,
-                  bool OnlyTempMD) {}
+  saveMetadataList(DenseMap<const Metadata *, unsigned> &MetadataToIDs,
+                   bool OnlyTempMD) {}
 
   virtual std::vector<StructType *> getIdentifiedStructTypes() const = 0;
 };

@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -79,7 +80,7 @@ void PrintRelocations(const object::ObjectFile *o);
 void PrintSectionHeaders(const object::ObjectFile *o);
 void PrintSectionContents(const object::ObjectFile *o);
 void PrintSymbolTable(const object::ObjectFile *o);
-void report_error(StringRef File, std::error_code EC);
+LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, std::error_code EC);
 
 } // end namespace llvm
 
