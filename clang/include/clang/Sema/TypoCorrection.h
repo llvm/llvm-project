@@ -72,15 +72,15 @@ public:
 
   /// \brief Gets the DeclarationName of the typo correction
   DeclarationName getCorrection() const { return CorrectionName; }
-  IdentifierInfo* getCorrectionAsIdentifierInfo() const {
+  IdentifierInfo *getCorrectionAsIdentifierInfo() const {
     return CorrectionName.getAsIdentifierInfo();
   }
 
   /// \brief Gets the NestedNameSpecifier needed to use the typo correction
-  NestedNameSpecifier* getCorrectionSpecifier() const {
+  NestedNameSpecifier *getCorrectionSpecifier() const {
     return CorrectionNameSpec;
   }
-  void setCorrectionSpecifier(NestedNameSpecifier* NNS) {
+  void setCorrectionSpecifier(NestedNameSpecifier *NNS) {
     CorrectionNameSpec = NNS;
     ForceSpecifierReplacement = (NNS != nullptr);
   }
@@ -129,9 +129,16 @@ public:
     return Normalized ? NormalizeEditDistance(ED) : ED;
   }
 
+  /// \brief Get the correction declaration found by name lookup (before we
+  /// looked through using shadow declarations and the like).
+  NamedDecl *getFoundDecl() const {
+    return hasCorrectionDecl() ? *(CorrectionDecls.begin()) : nullptr;
+  }
+
   /// \brief Gets the pointer to the declaration of the typo correction
   NamedDecl *getCorrectionDecl() const {
-    return hasCorrectionDecl() ? *(CorrectionDecls.begin()) : nullptr;
+    auto *D = getFoundDecl();
+    return D ? D->getUnderlyingDecl() : nullptr;
   }
   template <class DeclClass>
   DeclClass *getCorrectionDeclAs() const {
@@ -180,8 +187,7 @@ public:
   // Check if this TypoCorrection is a keyword by checking if the first
   // item in CorrectionDecls is NULL.
   bool isKeyword() const {
-    return !CorrectionDecls.empty() &&
-        CorrectionDecls.front() == nullptr;
+    return !CorrectionDecls.empty() && CorrectionDecls.front() == nullptr;
   }
 
   // Check if this TypoCorrection is the given keyword.

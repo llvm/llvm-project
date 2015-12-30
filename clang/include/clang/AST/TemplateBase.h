@@ -595,18 +595,13 @@ public:
 };
 
 /// \brief Represents an explicit template argument list in C++, e.g.,
-/// the "<int>" in "sort<int>".  This is safe to be used inside an AST
-/// node, in contrast with TemplateArgumentListInfo.
+/// the "<int>" in "sort<int>".
 ///
-/// This is currently very similar to ASTTemplateArgumentListInfo
-/// class, but a) has a extra member, TemplateKWLoc, and b) is
-/// intended to be tacked on the end of some of the Expr classes, not
-/// as a public interface.
-struct ASTTemplateKWAndArgsInfo final
-    : private llvm::TrailingObjects<ASTTemplateKWAndArgsInfo,
-                                    TemplateArgumentLoc> {
-  friend TrailingObjects;
-
+/// It is intended to be used as a trailing object on AST nodes, and
+/// as such, doesn't contain the array of TemplateArgumentLoc itself,
+/// but expects the containing object to also provide storage for
+/// that.
+struct LLVM_ALIGNAS(LLVM_PTR_SIZE) ASTTemplateKWAndArgsInfo {
   /// \brief The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
 
@@ -622,30 +617,18 @@ struct ASTTemplateKWAndArgsInfo final
   /// \brief The number of template arguments in TemplateArgs.
   unsigned NumTemplateArgs;
 
-  /// \brief Retrieve the template arguments
-  TemplateArgumentLoc *getTemplateArgs() {
-    return getTrailingObjects<TemplateArgumentLoc>();
-  }
-
-  /// \brief Retrieve the template arguments
-  const TemplateArgumentLoc *getTemplateArgs() const {
-    return getTrailingObjects<TemplateArgumentLoc>();
-  }
-
-  const TemplateArgumentLoc &operator[](unsigned I) const {
-    return getTemplateArgs()[I];
-  }
-
-  void initializeFrom(SourceLocation TemplateKWLoc,
-                      const TemplateArgumentListInfo &List);
   void initializeFrom(SourceLocation TemplateKWLoc,
                       const TemplateArgumentListInfo &List,
-                      bool &Dependent, bool &InstantiationDependent,
+                      TemplateArgumentLoc *OutArgArray);
+  void initializeFrom(SourceLocation TemplateKWLoc,
+                      const TemplateArgumentListInfo &List,
+                      TemplateArgumentLoc *OutArgArray, bool &Dependent,
+                      bool &InstantiationDependent,
                       bool &ContainsUnexpandedParameterPack);
   void initializeFrom(SourceLocation TemplateKWLoc);
 
-  void copyInto(TemplateArgumentListInfo &List) const;
-  static std::size_t sizeFor(unsigned NumTemplateArgs);
+  void copyInto(const TemplateArgumentLoc *ArgArray,
+                TemplateArgumentListInfo &List) const;
 };
 
 const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,

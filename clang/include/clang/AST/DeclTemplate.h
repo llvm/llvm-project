@@ -45,7 +45,7 @@ typedef llvm::PointerUnion3<TemplateTypeParmDecl*, NonTypeTemplateParmDecl*,
 
 /// \brief Stores a list of template parameters for a TemplateDecl and its
 /// derived classes.
-class LLVM_ALIGNAS(/*alignof(void*)*/ LLVM_PTR_SIZE) TemplateParameterList final
+class TemplateParameterList final
     : private llvm::TrailingObjects<TemplateParameterList, NamedDecl *> {
 
   /// The location of the 'template' keyword.
@@ -169,7 +169,7 @@ public:
 };
 
 /// \brief A template argument list.
-class LLVM_ALIGNAS(/*alignof(uint64_t)*/ 8) TemplateArgumentList final
+class TemplateArgumentList final
     : private llvm::TrailingObjects<TemplateArgumentList, TemplateArgument> {
   /// \brief The template argument list.
   const TemplateArgument *Arguments;
@@ -553,8 +553,7 @@ public:
 ///     friend void foo<>(T);
 ///   };
 /// \endcode
-class LLVM_ALIGNAS(/*alignof(uint64_t)*/ 8)
-    DependentFunctionTemplateSpecializationInfo final
+class DependentFunctionTemplateSpecializationInfo final
     : private llvm::TrailingObjects<DependentFunctionTemplateSpecializationInfo,
                                     TemplateArgumentLoc,
                                     FunctionTemplateDecl *> {

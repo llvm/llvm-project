@@ -307,12 +307,19 @@ struct A {
   void CreateBar(float, float);
 };
 struct B : A {
-  using A::CreateFoo;
+  using A::CreateFoo; // expected-note {{'CreateFoo' declared here}}
   void CreateFoo(int, int);  // expected-note {{'CreateFoo' declared here}}
 };
 void f(B &x) {
   x.Createfoo(0,0);  // expected-error {{no member named 'Createfoo' in 'PR13387::B'; did you mean 'CreateFoo'?}}
+  x.Createfoo(0.f,0.f);  // expected-error {{no member named 'Createfoo' in 'PR13387::B'; did you mean 'CreateFoo'?}}
 }
+}
+
+namespace using_decl {
+  namespace somewhere { int foobar; }
+  using somewhere::foobar; // expected-note {{declared here}}
+  int k = goobar; // expected-error {{did you mean 'foobar'?}}
 }
 
 struct DataStruct {void foo();};

@@ -676,13 +676,25 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     return;
   }
 
-  // Copy the cleanup emission data out.  Note that SmallVector
-  // guarantees maximal alignment for its buffer regardless of its
-  // type parameter.
+  // Copy the cleanup emission data out.  This uses either a stack
+  // array or malloc'd memory, depending on the size, which is
+  // behavior that SmallVector would provide, if we could use it
+  // here. Unfortunately, if you ask for a SmallVector<char>, the
+  // alignment isn't sufficient.
   auto *CleanupSource = reinterpret_cast<char *>(Scope.getCleanupBuffer());
-  SmallVector<char, 8 * sizeof(void *)> CleanupBuffer(
-      CleanupSource, CleanupSource + Scope.getCleanupSize());
-  auto *Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBuffer.data());
+  llvm::AlignedCharArray<EHScopeStack::ScopeStackAlignment, 8 * sizeof(void *)> CleanupBufferStack;
+  std::unique_ptr<char[]> CleanupBufferHeap;
+  size_t CleanupSize = Scope.getCleanupSize();
+  EHScopeStack::Cleanup *Fn;
+
+  if (CleanupSize <= sizeof(CleanupBufferStack)) {
+    memcpy(CleanupBufferStack.buffer, CleanupSource, CleanupSize);
+    Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBufferStack.buffer);
+  } else {
+    CleanupBufferHeap.reset(new char[CleanupSize]);
+    memcpy(CleanupBufferHeap.get(), CleanupSource, CleanupSize);
+    Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBufferHeap.get());
+  }
 
   EHScopeStack::Cleanup::Flags cleanupFlags;
   if (Scope.isNormalCleanup())

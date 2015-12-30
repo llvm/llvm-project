@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_DRIVER_COMPILATION_H
 #define LLVM_CLANG_DRIVER_COMPILATION_H
 
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/DenseMap.h"
@@ -25,7 +26,6 @@ namespace opt {
 namespace clang {
 namespace driver {
   class Driver;
-  class JobAction;
   class JobList;
   class ToolChain;
 

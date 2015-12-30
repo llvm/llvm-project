@@ -175,7 +175,7 @@ private:
   /// macro, other active macros, and anything left on the current physical
   /// source line of the expanded buffer.  Handle this by returning the
   /// first token on the next line.
-  void HandleMicrosoftCommentPaste(Token &Tok);
+  void HandleMicrosoftCommentPaste(Token &Tok, SourceLocation OpLoc);
 
   /// \brief If \p loc is a FileID and points inside the current macro
   /// definition, returns the appropriate source location pointing at the

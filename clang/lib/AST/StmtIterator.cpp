@@ -42,7 +42,7 @@ void StmtIteratorBase::NextVA() {
 
   if (inDeclGroup()) {
     if (VarDecl* VD = dyn_cast<VarDecl>(*DGI))
-      if (VD->Init)
+      if (VD->hasInit())
         return;
 
     NextDecl();

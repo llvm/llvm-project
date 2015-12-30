@@ -1521,11 +1521,15 @@ public:
 /// \code
 /// NSString *str = (__bridge_transfer NSString *)CFCreateString();
 /// \endcode
-class ObjCBridgedCastExpr : public ExplicitCastExpr {
+class ObjCBridgedCastExpr final
+    : public ExplicitCastExpr,
+      private llvm::TrailingObjects<ObjCBridgedCastExpr, CXXBaseSpecifier *> {
   SourceLocation LParenLoc;
   SourceLocation BridgeKeywordLoc;
   unsigned Kind : 2;
-  
+
+  friend TrailingObjects;
+  friend class CastExpr;
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   

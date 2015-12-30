@@ -1996,6 +1996,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.isOneOf(Keywords.kw_let, Keywords.kw_var, TT_JsFatArrow,
                      Keywords.kw_in))
       return true;
+    if (Left.is(Keywords.kw_is) && Right.is(tok::l_brace))
+      return true;
     if (Right.isOneOf(TT_JsTypeColon, TT_JsTypeOptionalQuestion))
       return false;
     if ((Left.is(tok::l_brace) || Right.is(tok::r_brace)) &&
@@ -2239,6 +2241,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     if (Left.is(TT_JsTypeColon))
       return true;
+    if (Right.NestingLevel == 0 && Right.is(Keywords.kw_is))
+      return false;
   }
 
   if (Left.is(tok::at))

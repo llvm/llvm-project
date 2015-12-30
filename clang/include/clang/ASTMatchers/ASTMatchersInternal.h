@@ -558,22 +558,32 @@ bool matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
   return false;
 }
 
-/// \brief Metafunction to determine if type T has a member called getDecl.
+// Metafunction to determine if type T has a member called
+// getDecl.
+#if defined(_MSC_VER) && (_MSC_VER < 1900) && !defined(__clang__)
+// For old versions of MSVC, we use a weird nonstandard __if_exists
+// statement, since before MSVC2015, it was not standards-conformant
+// enough to compile the usual code below.
 template <typename T> struct has_getDecl {
-  struct Default { int getDecl; };
-  struct Derived : T, Default { };
-
-  template<typename C, C> struct CheckT;
-
-  // If T::getDecl exists, an ambiguity arises and CheckT will
-  // not be instantiable. This makes f(...) the only available
-  // overload.
-  template<typename C>
-  static char (&f(CheckT<int Default::*, &C::getDecl>*))[1];
-  template<typename C> static char (&f(...))[2];
-
-  static bool const value = sizeof(f<Derived>(nullptr)) == 2;
+  __if_exists(T::getDecl) {
+    enum { value = 1 };
+  }
+  __if_not_exists(T::getDecl) {
+    enum { value = 0 };
+  }
 };
+#else
+// There is a default template inheriting from "false_type". Then, a
+// partial specialization inherits from "true_type". However, this
+// specialization will only exist when the call to getDecl() isn't an
+// error -- it vanishes by SFINAE when the member doesn't exist.
+template <typename> struct type_sink_to_void { typedef void type; };
+template <typename T, typename = void> struct has_getDecl : std::false_type {};
+template <typename T>
+struct has_getDecl<
+    T, typename type_sink_to_void<decltype(std::declval<T>().getDecl())>::type>
+    : std::true_type {};
+#endif
 
 /// \brief Matches overloaded operators with a specific name.
 ///

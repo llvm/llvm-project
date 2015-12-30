@@ -40,7 +40,8 @@ namespace clang {
     ASTStmtWriter(ASTWriter &Writer, ASTWriter::RecordData &Record)
       : Writer(Writer), Record(Record) { }
 
-    void AddTemplateKWAndArgsInfo(const ASTTemplateKWAndArgsInfo &Args);
+    void AddTemplateKWAndArgsInfo(const ASTTemplateKWAndArgsInfo &ArgInfo,
+                                  const TemplateArgumentLoc *Args);
 
     void VisitStmt(Stmt *S);
 #define STMT(Type, Base) \
@@ -49,13 +50,13 @@ namespace clang {
   };
 }
 
-void ASTStmtWriter::
-AddTemplateKWAndArgsInfo(const ASTTemplateKWAndArgsInfo &Args) {
-  Writer.AddSourceLocation(Args.TemplateKWLoc, Record);
-  Writer.AddSourceLocation(Args.LAngleLoc, Record);
-  Writer.AddSourceLocation(Args.RAngleLoc, Record);
-  for (unsigned i=0; i != Args.NumTemplateArgs; ++i)
-    Writer.AddTemplateArgumentLoc(Args.getTemplateArgs()[i], Record);
+void ASTStmtWriter::AddTemplateKWAndArgsInfo(
+    const ASTTemplateKWAndArgsInfo &ArgInfo, const TemplateArgumentLoc *Args) {
+  Writer.AddSourceLocation(ArgInfo.TemplateKWLoc, Record);
+  Writer.AddSourceLocation(ArgInfo.LAngleLoc, Record);
+  Writer.AddSourceLocation(ArgInfo.RAngleLoc, Record);
+  for (unsigned i = 0; i != ArgInfo.NumTemplateArgs; ++i)
+    Writer.AddTemplateArgumentLoc(Args[i], Record);
 }
 
 void ASTStmtWriter::VisitStmt(Stmt *S) {
@@ -386,7 +387,8 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
     Writer.AddDeclRef(E->getFoundDecl(), Record);
 
   if (E->hasTemplateKWAndArgsInfo())
-    AddTemplateKWAndArgsInfo(*E->getTemplateKWAndArgsInfo());
+    AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
+                             E->getTrailingObjects<TemplateArgumentLoc>());
 
   Writer.AddDeclRef(E->getDecl(), Record);
   Writer.AddSourceLocation(E->getLocation(), Record);
@@ -482,24 +484,24 @@ void ASTStmtWriter::VisitOffsetOfExpr(OffsetOfExpr *E) {
   Writer.AddSourceLocation(E->getRParenLoc(), Record);
   Writer.AddTypeSourceInfo(E->getTypeSourceInfo(), Record);
   for (unsigned I = 0, N = E->getNumComponents(); I != N; ++I) {
-    const OffsetOfExpr::OffsetOfNode &ON = E->getComponent(I);
+    const OffsetOfNode &ON = E->getComponent(I);
     Record.push_back(ON.getKind()); // FIXME: Stable encoding
     Writer.AddSourceLocation(ON.getSourceRange().getBegin(), Record);
     Writer.AddSourceLocation(ON.getSourceRange().getEnd(), Record);
     switch (ON.getKind()) {
-    case OffsetOfExpr::OffsetOfNode::Array:
+    case OffsetOfNode::Array:
       Record.push_back(ON.getArrayExprIndex());
       break;
-        
-    case OffsetOfExpr::OffsetOfNode::Field:
+
+    case OffsetOfNode::Field:
       Writer.AddDeclRef(ON.getField(), Record);
       break;
-        
-    case OffsetOfExpr::OffsetOfNode::Identifier:
+
+    case OffsetOfNode::Identifier:
       Writer.AddIdentifierRef(ON.getFieldName(), Record);
       break;
-        
-    case OffsetOfExpr::OffsetOfNode::Base:
+
+    case OffsetOfNode::Base:
       Writer.AddCXXBaseSpecifier(*ON.getBase(), Record);
       break;
     }
@@ -1440,9 +1442,11 @@ ASTStmtWriter::VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E){
 
   Record.push_back(E->HasTemplateKWAndArgsInfo);
   if (E->HasTemplateKWAndArgsInfo) {
-    const ASTTemplateKWAndArgsInfo &Args = *E->getTemplateKWAndArgsInfo();
-    Record.push_back(Args.NumTemplateArgs);
-    AddTemplateKWAndArgsInfo(Args);
+    const ASTTemplateKWAndArgsInfo &ArgInfo =
+        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
+    Record.push_back(ArgInfo.NumTemplateArgs);
+    AddTemplateKWAndArgsInfo(ArgInfo,
+                             E->getTrailingObjects<TemplateArgumentLoc>());
   }
 
   if (!E->isImplicitAccess())
@@ -1467,9 +1471,11 @@ ASTStmtWriter::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
 
   Record.push_back(E->HasTemplateKWAndArgsInfo);
   if (E->HasTemplateKWAndArgsInfo) {
-    const ASTTemplateKWAndArgsInfo &Args = *E->getTemplateKWAndArgsInfo();
-    Record.push_back(Args.NumTemplateArgs);
-    AddTemplateKWAndArgsInfo(Args);
+    const ASTTemplateKWAndArgsInfo &ArgInfo =
+        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
+    Record.push_back(ArgInfo.NumTemplateArgs);
+    AddTemplateKWAndArgsInfo(ArgInfo,
+                             E->getTrailingObjects<TemplateArgumentLoc>());
   }
 
   Writer.AddNestedNameSpecifierLoc(E->getQualifierLoc(), Record);
@@ -1498,9 +1504,10 @@ void ASTStmtWriter::VisitOverloadExpr(OverloadExpr *E) {
 
   Record.push_back(E->HasTemplateKWAndArgsInfo);
   if (E->HasTemplateKWAndArgsInfo) {
-    const ASTTemplateKWAndArgsInfo &Args = *E->getTemplateKWAndArgsInfo();
-    Record.push_back(Args.NumTemplateArgs);
-    AddTemplateKWAndArgsInfo(Args);
+    const ASTTemplateKWAndArgsInfo &ArgInfo =
+        *E->getTrailingASTTemplateKWAndArgsInfo();
+    Record.push_back(ArgInfo.NumTemplateArgs);
+    AddTemplateKWAndArgsInfo(ArgInfo, E->getTrailingTemplateArgumentLoc());
   }
 
   Record.push_back(E->getNumDecls());

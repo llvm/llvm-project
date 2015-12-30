@@ -2011,7 +2011,7 @@ public:
             VarDecl *Var = nullptr);
 
     /// \brief Determine the kind of capture.
-    VariableCaptureKind getCaptureKind() const { return VarAndKind.getInt(); }
+    VariableCaptureKind getCaptureKind() const;
 
     /// \brief Retrieve the source location at which the variable or 'this' was
     /// first used.
@@ -2037,11 +2037,8 @@ public:
     /// \brief Retrieve the declaration of the variable being captured.
     ///
     /// This operation is only valid if this capture captures a variable.
-    VarDecl *getCapturedVar() const {
-      assert((capturesVariable() || capturesVariableByCopy()) &&
-             "No variable available for 'this' or VAT capture");
-      return VarAndKind.getPointer();
-    }
+    VarDecl *getCapturedVar() const;
+
     friend class ASTStmtReader;
   };
 
@@ -2088,26 +2085,17 @@ public:
   const Stmt *getCapturedStmt() const { return getStoredStmts()[NumCaptures]; }
 
   /// \brief Retrieve the outlined function declaration.
-  CapturedDecl *getCapturedDecl() { return CapDeclAndKind.getPointer(); }
-  const CapturedDecl *getCapturedDecl() const {
-    return CapDeclAndKind.getPointer();
-  }
+  CapturedDecl *getCapturedDecl();
+  const CapturedDecl *getCapturedDecl() const;
 
   /// \brief Set the outlined function declaration.
-  void setCapturedDecl(CapturedDecl *D) {
-    assert(D && "null CapturedDecl");
-    CapDeclAndKind.setPointer(D);
-  }
+  void setCapturedDecl(CapturedDecl *D);
 
   /// \brief Retrieve the captured region kind.
-  CapturedRegionKind getCapturedRegionKind() const {
-    return CapDeclAndKind.getInt();
-  }
+  CapturedRegionKind getCapturedRegionKind() const;
 
   /// \brief Set the captured region kind.
-  void setCapturedRegionKind(CapturedRegionKind Kind) {
-    CapDeclAndKind.setInt(Kind);
-  }
+  void setCapturedRegionKind(CapturedRegionKind Kind);
 
   /// \brief Retrieve the record declaration for captured variables.
   const RecordDecl *getCapturedRecordDecl() const { return TheRecordDecl; }
