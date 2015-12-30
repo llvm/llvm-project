@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,nullability -verify %s
+// RUN: %clang_cc1 -fobjc-arc -analyze -analyzer-checker=core,nullability -verify %s
 
 #define nil 0
 #define BOOL int
@@ -169,9 +169,33 @@ void testObjCMessageResultNullability() {
   }
 }
 
-void testCast() {
+Dummy * _Nonnull testDirectCastNullableToNonnull() {
+  Dummy *p = returnsNullable();
+  takesNonnull((Dummy * _Nonnull)p);  // no-warning
+  return (Dummy * _Nonnull)p;         // no-warning
+}
+
+Dummy * _Nonnull testIndirectCastNullableToNonnull() {
   Dummy *p = (Dummy * _Nonnull)returnsNullable();
-  takesNonnull(p);
+  takesNonnull(p);  // no-warning
+  return p;         // no-warning
+}
+
+Dummy * _Nonnull testDirectCastNilToNonnull() {
+  takesNonnull((Dummy * _Nonnull)0);  // no-warning
+  return (Dummy * _Nonnull)0;         // no-warning
+}
+
+void testIndirectCastNilToNonnullAndPass() {
+  Dummy *p = (Dummy * _Nonnull)0;
+  // FIXME: Ideally the cast above would suppress this warning.
+  takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null argument}}
+}
+
+Dummy * _Nonnull testIndirectCastNilToNonnullAndReturn() {
+  Dummy *p = (Dummy * _Nonnull)0;
+  // FIXME: Ideally the cast above would suppress this warning.
+  return p; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 void testInvalidPropagation() {
@@ -253,4 +277,13 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   }
 
   return p;
+}
+
+void testObjCARCImplicitZeroInitialization() {
+  TestObject * _Nonnull implicitlyZeroInitialized; // no-warning
+  implicitlyZeroInitialized = getNonnullTestObject();
+}
+
+void testObjCARCExplicitZeroInitialization() {
+  TestObject * _Nonnull explicitlyZeroInitialized = nil; // expected-warning {{Null is assigned to a pointer which is expected to have non-null value}}
 }

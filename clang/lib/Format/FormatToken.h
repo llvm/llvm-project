@@ -536,6 +536,7 @@ struct AdditionalKeywords {
     kw_finally = &IdentTable.get("finally");
     kw_function = &IdentTable.get("function");
     kw_import = &IdentTable.get("import");
+    kw_is = &IdentTable.get("is");
     kw_let = &IdentTable.get("let");
     kw_var = &IdentTable.get("var");
 
@@ -580,6 +581,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_finally;
   IdentifierInfo *kw_function;
   IdentifierInfo *kw_import;
+  IdentifierInfo *kw_is;
   IdentifierInfo *kw_let;
   IdentifierInfo *kw_var;
 

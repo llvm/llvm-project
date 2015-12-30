@@ -962,6 +962,14 @@ TEST_F(FormatTestJS, TypeArguments) {
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa {}");
 }
 
+TEST_F(FormatTestJS, UserDefinedTypeGuards) {
+  verifyFormat(
+      "function foo(check: Object):\n"
+      "    check is {foo: string, bar: string, baz: string, foobar: string} {\n"
+      "  return 'bar' in check;\n"
+      "}\n");
+}
+
 TEST_F(FormatTestJS, OptionalTypes) {
   verifyFormat("function x(a?: b, c?, d?) {}");
   verifyFormat("class X {\n"

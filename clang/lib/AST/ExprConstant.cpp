@@ -7617,9 +7617,9 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
     return Error(OOE);
   QualType CurrentType = OOE->getTypeSourceInfo()->getType();
   for (unsigned i = 0; i != n; ++i) {
-    OffsetOfExpr::OffsetOfNode ON = OOE->getComponent(i);
+    OffsetOfNode ON = OOE->getComponent(i);
     switch (ON.getKind()) {
-    case OffsetOfExpr::OffsetOfNode::Array: {
+    case OffsetOfNode::Array: {
       const Expr *Idx = OOE->getIndexExpr(ON.getArrayExprIndex());
       APSInt IdxResult;
       if (!EvaluateInteger(Idx, IdxResult, Info))
@@ -7633,7 +7633,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       break;
     }
 
-    case OffsetOfExpr::OffsetOfNode::Field: {
+    case OffsetOfNode::Field: {
       FieldDecl *MemberDecl = ON.getField();
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
@@ -7648,10 +7648,10 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       break;
     }
 
-    case OffsetOfExpr::OffsetOfNode::Identifier:
+    case OffsetOfNode::Identifier:
       llvm_unreachable("dependent __builtin_offsetof");
 
-    case OffsetOfExpr::OffsetOfNode::Base: {
+    case OffsetOfNode::Base: {
       CXXBaseSpecifier *BaseSpec = ON.getBase();
       if (BaseSpec->isVirtual())
         return Error(OOE);

@@ -612,7 +612,8 @@ public:
 /// @interface NSArray<T> // stores the <T>
 /// @end
 /// \endcode
-class ObjCTypeParamList {
+class ObjCTypeParamList final
+    : private llvm::TrailingObjects<ObjCTypeParamList, ObjCTypeParamDecl *> {
   /// Stores the components of a SourceRange as a POD.
   struct PODSourceRange {
     unsigned Begin;
@@ -644,7 +645,7 @@ public:
   /// Iterate through the type parameters in the list.
   typedef ObjCTypeParamDecl **iterator;
 
-  iterator begin() { return reinterpret_cast<ObjCTypeParamDecl **>(this + 1); }
+  iterator begin() { return getTrailingObjects<ObjCTypeParamDecl *>(); }
 
   iterator end() { return begin() + size(); }
 
@@ -655,7 +656,7 @@ public:
   typedef ObjCTypeParamDecl * const *const_iterator;
 
   const_iterator begin() const {
-    return reinterpret_cast<ObjCTypeParamDecl * const *>(this + 1);
+    return getTrailingObjects<ObjCTypeParamDecl *>();
   }
 
   const_iterator end() const {
@@ -685,6 +686,7 @@ public:
   /// Gather the default set of type arguments to be substituted for
   /// these type parameters when dealing with an unspecialized type.
   void gatherDefaultTypeArgs(SmallVectorImpl<QualType> &typeArgs) const;
+  friend TrailingObjects;
 };
 
 /// ObjCContainerDecl - Represents a container for method declarations.

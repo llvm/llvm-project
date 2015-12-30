@@ -1924,10 +1924,10 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
   llvm::Value* Result = llvm::Constant::getNullValue(ResultType);
   QualType CurrentType = E->getTypeSourceInfo()->getType();
   for (unsigned i = 0; i != n; ++i) {
-    OffsetOfExpr::OffsetOfNode ON = E->getComponent(i);
+    OffsetOfNode ON = E->getComponent(i);
     llvm::Value *Offset = nullptr;
     switch (ON.getKind()) {
-    case OffsetOfExpr::OffsetOfNode::Array: {
+    case OffsetOfNode::Array: {
       // Compute the index
       Expr *IdxExpr = E->getIndexExpr(ON.getArrayExprIndex());
       llvm::Value* Idx = CGF.EmitScalarExpr(IdxExpr);
@@ -1947,7 +1947,7 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       break;
     }
 
-    case OffsetOfExpr::OffsetOfNode::Field: {
+    case OffsetOfNode::Field: {
       FieldDecl *MemberDecl = ON.getField();
       RecordDecl *RD = CurrentType->getAs<RecordType>()->getDecl();
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
@@ -1973,10 +1973,10 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       break;
     }
 
-    case OffsetOfExpr::OffsetOfNode::Identifier:
+    case OffsetOfNode::Identifier:
       llvm_unreachable("dependent __builtin_offsetof");
 
-    case OffsetOfExpr::OffsetOfNode::Base: {
+    case OffsetOfNode::Base: {
       if (ON.getBase()->isVirtual()) {
         CGF.ErrorUnsupported(E, "virtual base in offsetof");
         continue;

@@ -537,15 +537,15 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(
-    SourceLocation TemplateKWLoc, const TemplateArgumentListInfo &Info) {
+    SourceLocation TemplateKWLoc, const TemplateArgumentListInfo &Info,
+    TemplateArgumentLoc *OutArgArray) {
   this->TemplateKWLoc = TemplateKWLoc;
   LAngleLoc = Info.getLAngleLoc();
   RAngleLoc = Info.getRAngleLoc();
   NumTemplateArgs = Info.size();
 
-  TemplateArgumentLoc *ArgBuffer = getTemplateArgs();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
-    new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
+    new (&OutArgArray[i]) TemplateArgumentLoc(Info[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(SourceLocation TemplateKWLoc) {
@@ -558,14 +558,13 @@ void ASTTemplateKWAndArgsInfo::initializeFrom(SourceLocation TemplateKWLoc) {
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(
     SourceLocation TemplateKWLoc, const TemplateArgumentListInfo &Info,
-    bool &Dependent, bool &InstantiationDependent,
-    bool &ContainsUnexpandedParameterPack) {
+    TemplateArgumentLoc *OutArgArray, bool &Dependent,
+    bool &InstantiationDependent, bool &ContainsUnexpandedParameterPack) {
   this->TemplateKWLoc = TemplateKWLoc;
   LAngleLoc = Info.getLAngleLoc();
   RAngleLoc = Info.getRAngleLoc();
   NumTemplateArgs = Info.size();
 
-  TemplateArgumentLoc *ArgBuffer = getTemplateArgs();
   for (unsigned i = 0; i != NumTemplateArgs; ++i) {
     Dependent = Dependent || Info[i].getArgument().isDependent();
     InstantiationDependent = InstantiationDependent ||
@@ -574,17 +573,14 @@ void ASTTemplateKWAndArgsInfo::initializeFrom(
         ContainsUnexpandedParameterPack ||
         Info[i].getArgument().containsUnexpandedParameterPack();
 
-    new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
+    new (&OutArgArray[i]) TemplateArgumentLoc(Info[i]);
   }
 }
 
-void ASTTemplateKWAndArgsInfo::copyInto(TemplateArgumentListInfo &Info) const {
+void ASTTemplateKWAndArgsInfo::copyInto(const TemplateArgumentLoc *ArgArray,
+                                        TemplateArgumentListInfo &Info) const {
   Info.setLAngleLoc(LAngleLoc);
   Info.setRAngleLoc(RAngleLoc);
   for (unsigned I = 0; I != NumTemplateArgs; ++I)
-    Info.addArgument(getTemplateArgs()[I]);
-}
-
-std::size_t ASTTemplateKWAndArgsInfo::sizeFor(unsigned NumTemplateArgs) {
-  return totalSizeToAlloc<TemplateArgumentLoc>(NumTemplateArgs);
+    Info.addArgument(ArgArray[I]);
 }

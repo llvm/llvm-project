@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_FUNCTIONSUMMARY_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_FUNCTIONSUMMARY_H
 
+#include "clang/AST/Decl.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -22,7 +23,6 @@
 #include <deque>
 
 namespace clang {
-class Decl;
 
 namespace ento {
 typedef std::deque<Decl*> SetOfDecls;

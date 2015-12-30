@@ -291,8 +291,10 @@ bool Sema::isAcceptableNestedNameSpecifier(const NamedDecl *SD,
   if (!SD)
     return false;
 
+  SD = SD->getUnderlyingDecl();
+
   // Namespace and namespace aliases are fine.
-  if (isa<NamespaceDecl>(SD) || isa<NamespaceAliasDecl>(SD))
+  if (isa<NamespaceDecl>(SD))
     return true;
 
   if (!isa<TypeDecl>(SD))
@@ -396,10 +398,7 @@ bool Sema::isNonTypeNestedNameSpecifier(Scope *S, CXXScopeSpec &SS,
   }
   Found.suppressDiagnostics();
   
-  if (NamedDecl *ND = Found.getAsSingle<NamedDecl>())
-    return isa<NamespaceDecl>(ND) || isa<NamespaceAliasDecl>(ND);
-  
-  return false;
+  return Found.getAsSingle<NamespaceDecl>();
 }
 
 namespace {
@@ -607,7 +606,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
         diagnoseTypo(Corrected, PDiag(diag::err_undeclared_var_use_suggest)
                                   << Name);
 
-      if (NamedDecl *ND = Corrected.getCorrectionDecl())
+      if (NamedDecl *ND = Corrected.getFoundDecl())
         Found.addDecl(ND);
       Found.setLookupName(Corrected.getCorrection());
     } else {
@@ -615,7 +614,8 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
     }
   }
 
-  NamedDecl *SD = Found.getAsSingle<NamedDecl>();
+  NamedDecl *SD =
+      Found.isSingleResult() ? Found.getRepresentativeDecl() : nullptr;
   bool IsExtension = false;
   bool AcceptSpec = isAcceptableNestedNameSpecifier(SD, &IsExtension);
   if (!AcceptSpec && IsExtension) {
@@ -687,7 +687,8 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
       return false;
     }
 
-    QualType T = Context.getTypeDeclType(cast<TypeDecl>(SD));
+    QualType T =
+        Context.getTypeDeclType(cast<TypeDecl>(SD->getUnderlyingDecl()));
     TypeLocBuilder TLB;
     if (isa<InjectedClassNameType>(T)) {
       InjectedClassNameTypeLoc InjectedTL

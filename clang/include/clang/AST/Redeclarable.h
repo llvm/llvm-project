@@ -20,6 +20,7 @@
 #include <iterator>
 
 namespace clang {
+class ASTContext;
 
 /// \brief Provides common interface for the Decls that can be redeclared.
 template<typename decl_type>
@@ -32,7 +33,11 @@ protected:
                                       &ExternalASTSource::CompleteRedeclChain>
                                           KnownLatest;
 
-    typedef const ASTContext *UninitializedLatest;
+    /// We store a pointer to the ASTContext in the UninitializedLatest
+    /// pointer, but to avoid circular type dependencies when we steal the low
+    /// bits of this pointer, we use a raw void* here.
+    typedef const void *UninitializedLatest;
+
     typedef Decl *Previous;
 
     /// A pointer to either an uninitialized latest declaration (where either
@@ -47,7 +52,7 @@ protected:
     enum LatestTag { LatestLink };
 
     DeclLink(LatestTag, const ASTContext &Ctx)
-        : Next(NotKnownLatest(&Ctx)) {}
+        : Next(NotKnownLatest(reinterpret_cast<UninitializedLatest>(&Ctx))) {}
     DeclLink(PreviousTag, decl_type *D)
         : Next(NotKnownLatest(Previous(D))) {}
 
@@ -67,7 +72,8 @@ protected:
           return static_cast<decl_type*>(NKL.get<Previous>());
 
         // Allocate the generational 'most recent' cache now, if needed.
-        Next = KnownLatest(*NKL.get<UninitializedLatest>(),
+        Next = KnownLatest(*reinterpret_cast<const ASTContext *>(
+                               NKL.get<UninitializedLatest>()),
                            const_cast<decl_type *>(D));
       }
 
@@ -83,7 +89,9 @@ protected:
       assert(NextIsLatest() && "decl became canonical unexpectedly");
       if (Next.is<NotKnownLatest>()) {
         NotKnownLatest NKL = Next.get<NotKnownLatest>();
-        Next = KnownLatest(*NKL.get<UninitializedLatest>(), D);
+        Next = KnownLatest(*reinterpret_cast<const ASTContext *>(
+                               NKL.get<UninitializedLatest>()),
+                           D);
       } else {
         auto Latest = Next.get<KnownLatest>();
         Latest.set(D);

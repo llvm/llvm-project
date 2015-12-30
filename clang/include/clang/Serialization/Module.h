@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_MODULE_H
 #define LLVM_CLANG_SERIALIZATION_MODULE_H
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
@@ -32,7 +33,6 @@ template <typename Info> class OnDiskIterableChainedHashTable;
 
 namespace clang {
 
-class FileEntry;
 class DeclContext;
 class Module;
 

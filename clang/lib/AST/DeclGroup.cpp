@@ -18,10 +18,8 @@
 using namespace clang;
 
 DeclGroup* DeclGroup::Create(ASTContext &C, Decl **Decls, unsigned NumDecls) {
-  static_assert(sizeof(DeclGroup) % llvm::AlignOf<void *>::Alignment == 0,
-                "Trailing data is unaligned!");
   assert(NumDecls > 1 && "Invalid DeclGroup");
-  unsigned Size = sizeof(DeclGroup) + sizeof(Decl*) * NumDecls;
+  unsigned Size = totalSizeToAlloc<Decl *>(NumDecls);
   void* Mem = C.Allocate(Size, llvm::AlignOf<DeclGroup>::Alignment);
   new (Mem) DeclGroup(NumDecls, Decls);
   return static_cast<DeclGroup*>(Mem);
@@ -30,5 +28,6 @@ DeclGroup* DeclGroup::Create(ASTContext &C, Decl **Decls, unsigned NumDecls) {
 DeclGroup::DeclGroup(unsigned numdecls, Decl** decls) : NumDecls(numdecls) {
   assert(numdecls > 0);
   assert(decls);
-  memcpy(this+1, decls, numdecls * sizeof(*decls));
+  std::uninitialized_copy(decls, decls + numdecls,
+                          getTrailingObjects<Decl *>());
 }

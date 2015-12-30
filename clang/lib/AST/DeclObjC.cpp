@@ -772,6 +772,10 @@ void ObjCMethodDecl::setParamsAndSelLocs(ASTContext &C,
   if (Params.empty() && SelLocs.empty())
     return;
 
+  static_assert(llvm::AlignOf<ParmVarDecl *>::Alignment >=
+                    llvm::AlignOf<SourceLocation>::Alignment,
+                "Alignment not sufficient for SourceLocation");
+
   unsigned Size = sizeof(ParmVarDecl *) * NumParams +
                   sizeof(SourceLocation) * SelLocs.size();
   ParamsAndSelLocs = C.Allocate(Size);
@@ -1326,13 +1330,9 @@ ObjCTypeParamList *ObjCTypeParamList::create(
                      SourceLocation lAngleLoc,
                      ArrayRef<ObjCTypeParamDecl *> typeParams,
                      SourceLocation rAngleLoc) {
-  unsigned size = sizeof(ObjCTypeParamList)
-                + sizeof(ObjCTypeParamDecl *) * typeParams.size();
-  static_assert(llvm::AlignOf<ObjCTypeParamList>::Alignment >=
-                    llvm::AlignOf<ObjCTypeParamDecl *>::Alignment,
-                "type parameter list needs greater alignment");
-  unsigned align = llvm::alignOf<ObjCTypeParamList>();
-  void *mem = ctx.Allocate(size, align);
+  void *mem =
+      ctx.Allocate(totalSizeToAlloc<ObjCTypeParamDecl *>(typeParams.size()),
+                   llvm::alignOf<ObjCTypeParamList>());
   return new (mem) ObjCTypeParamList(lAngleLoc, typeParams, rAngleLoc);
 }
 

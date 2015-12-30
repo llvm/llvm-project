@@ -28,6 +28,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SanitizerBlacklist.h"
@@ -2256,9 +2257,7 @@ public:
          const FunctionProtoType *FromFunctionType,
          const FunctionProtoType *ToFunctionType);
 
-  void ResetObjCLayout(const ObjCContainerDecl *CD) {
-    ObjCLayouts[CD] = nullptr;
-  }
+  void ResetObjCLayout(const ObjCContainerDecl *CD);
 
   //===--------------------------------------------------------------------===//
   //                    Integer Predicates
@@ -2309,16 +2308,11 @@ public:
 
   /// \brief Get the duplicate declaration of a ObjCMethod in the same
   /// interface, or null if none exists.
-  const ObjCMethodDecl *getObjCMethodRedeclaration(
-                                               const ObjCMethodDecl *MD) const {
-    return ObjCMethodRedecls.lookup(MD);
-  }
+  const ObjCMethodDecl *
+  getObjCMethodRedeclaration(const ObjCMethodDecl *MD) const;
 
   void setObjCMethodRedeclaration(const ObjCMethodDecl *MD,
-                                  const ObjCMethodDecl *Redecl) {
-    assert(!getObjCMethodRedeclaration(MD) && "MD already has a redeclaration");
-    ObjCMethodRedecls[MD] = Redecl;
-  }
+                                  const ObjCMethodDecl *Redecl);
 
   /// \brief Returns the Objective-C interface that \p ND belongs to if it is
   /// an Objective-C method/property/ivar etc. that is part of an interface,
@@ -2514,9 +2508,15 @@ private:
 
   /// \brief A set of deallocations that should be performed when the
   /// ASTContext is destroyed.
-  typedef llvm::SmallDenseMap<void(*)(void*), llvm::SmallVector<void*, 16> >
-    DeallocationMap;
-  DeallocationMap Deallocations;
+  // FIXME: We really should have a better mechanism in the ASTContext to
+  // manage running destructors for types which do variable sized allocation
+  // within the AST. In some places we thread the AST bump pointer allocator
+  // into the datastructures which avoids this mess during deallocation but is
+  // wasteful of memory, and here we require a lot of error prone book keeping
+  // in order to track and run destructors while we're tearing things down.
+  typedef llvm::SmallVector<std::pair<void (*)(void *), void *>, 16>
+      DeallocationFunctionsAndArguments;
+  DeallocationFunctionsAndArguments Deallocations;
 
   // FIXME: This currently contains the set of StoredDeclMaps used
   // by DeclContext objects.  This probably should not be in ASTContext,

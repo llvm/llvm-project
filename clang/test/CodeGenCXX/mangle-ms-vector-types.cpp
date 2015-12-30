@@ -27,11 +27,11 @@ void foo256i(__m256i) {}
 
 // We have a custom mangling for vector types not standardized by Intel.
 void foov8hi(__v8hi) {}
-// CHECK: define void @"\01?foov8hi@@YAXT__clang_vec8_F@@@Z"
+// CHECK: define void @"\01?foov8hi@@YAXT?$__vector@F$07@__clang@@@Z"
 
 typedef __attribute__((ext_vector_type(4))) int vi4b;
 void foovi4b(vi4b) {}
-// CHECK: define void @"\01?foovi4b@@YAXT__clang_vec4_H@@@Z"
+// CHECK: define void @"\01?foovi4b@@YAXT?$__vector@H$03@__clang@@@Z"
 
 // Clang does not support vectors of complex types, so we can't test the
 // mangling of them.

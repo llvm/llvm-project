@@ -2960,8 +2960,11 @@ LexNextToken:
       
   case 26:  // DOS & CP/M EOF: "^Z".
     // If we're in Microsoft extensions mode, treat this as end of file.
-    if (LangOpts.MicrosoftExt)
+    if (LangOpts.MicrosoftExt) {
+      if (!isLexingRawMode())
+        Diag(CurPtr-1, diag::ext_ctrl_z_eof_microsoft);
       return LexEndOfFile(Result, CurPtr-1);
+    }
 
     // If Microsoft extensions are disabled, this is just random garbage.
     Kind = tok::unknown;

@@ -180,9 +180,7 @@ class TemplateName {
 
   StorageType Storage;
 
-  explicit TemplateName(void *Ptr) {
-    Storage = StorageType::getFromOpaqueValue(Ptr);
-  }
+  explicit TemplateName(void *Ptr);
 
 public:
   // \brief Kind of name that is actually stored.
@@ -207,17 +205,15 @@ public:
   };
 
   TemplateName() : Storage() { }
-  explicit TemplateName(TemplateDecl *Template) : Storage(Template) { }
-  explicit TemplateName(OverloadedTemplateStorage *Storage)
-    : Storage(Storage) { }
+  explicit TemplateName(TemplateDecl *Template);
+  explicit TemplateName(OverloadedTemplateStorage *Storage);
   explicit TemplateName(SubstTemplateTemplateParmStorage *Storage);
-  explicit TemplateName(SubstTemplateTemplateParmPackStorage *Storage)
-    : Storage(Storage) { }
-  explicit TemplateName(QualifiedTemplateName *Qual) : Storage(Qual) { }
-  explicit TemplateName(DependentTemplateName *Dep) : Storage(Dep) { }
+  explicit TemplateName(SubstTemplateTemplateParmPackStorage *Storage);
+  explicit TemplateName(QualifiedTemplateName *Qual);
+  explicit TemplateName(DependentTemplateName *Dep);
 
   /// \brief Determine whether this template name is NULL.
-  bool isNull() const { return Storage.isNull(); }
+  bool isNull() const;
   
   // \brief Get the kind of name that is actually stored.
   NameKind getKind() const;
@@ -238,26 +234,14 @@ public:
   /// name refers to, if known. If the template name does not refer to a
   /// specific set of function templates because it is a dependent name or
   /// refers to a single template, returns NULL.
-  OverloadedTemplateStorage *getAsOverloadedTemplate() const {
-    if (UncommonTemplateNameStorage *Uncommon = 
-                              Storage.dyn_cast<UncommonTemplateNameStorage *>())
-      return Uncommon->getAsOverloadedStorage();
-    
-    return nullptr;
-  }
+  OverloadedTemplateStorage *getAsOverloadedTemplate() const;
 
   /// \brief Retrieve the substituted template template parameter, if 
   /// known.
   ///
   /// \returns The storage for the substituted template template parameter,
   /// if known. Otherwise, returns NULL.
-  SubstTemplateTemplateParmStorage *getAsSubstTemplateTemplateParm() const {
-    if (UncommonTemplateNameStorage *uncommon = 
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
-      return uncommon->getAsSubstTemplateTemplateParm();
-    
-    return nullptr;
-  }
+  SubstTemplateTemplateParmStorage *getAsSubstTemplateTemplateParm() const;
 
   /// \brief Retrieve the substituted template template parameter pack, if 
   /// known.
@@ -265,25 +249,15 @@ public:
   /// \returns The storage for the substituted template template parameter pack,
   /// if known. Otherwise, returns NULL.
   SubstTemplateTemplateParmPackStorage *
-  getAsSubstTemplateTemplateParmPack() const {
-    if (UncommonTemplateNameStorage *Uncommon = 
-        Storage.dyn_cast<UncommonTemplateNameStorage *>())
-      return Uncommon->getAsSubstTemplateTemplateParmPack();
-    
-    return nullptr;
-  }
+  getAsSubstTemplateTemplateParmPack() const;
 
   /// \brief Retrieve the underlying qualified template name
   /// structure, if any.
-  QualifiedTemplateName *getAsQualifiedTemplateName() const {
-    return Storage.dyn_cast<QualifiedTemplateName *>();
-  }
+  QualifiedTemplateName *getAsQualifiedTemplateName() const;
 
   /// \brief Retrieve the underlying dependent template name
   /// structure, if any.
-  DependentTemplateName *getAsDependentTemplateName() const {
-    return Storage.dyn_cast<DependentTemplateName *>();
-  }
+  DependentTemplateName *getAsDependentTemplateName() const;
 
   TemplateName getUnderlying() const;
 
@@ -358,9 +332,6 @@ public:
                       TemplateTemplateParmDecl *parameter,
                       TemplateName replacement);
 };
-
-inline TemplateName::TemplateName(SubstTemplateTemplateParmStorage *Storage)
-  : Storage(Storage) { }
 
 inline TemplateName TemplateName::getUnderlying() const {
   if (SubstTemplateTemplateParmStorage *subst

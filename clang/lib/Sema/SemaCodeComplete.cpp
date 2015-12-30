@@ -494,6 +494,7 @@ bool ResultBuilder::isInterestingDecl(const NamedDecl *ND,
                                       bool &AsNestedNameSpecifier) const {
   AsNestedNameSpecifier = false;
 
+  auto *Named = ND;
   ND = ND->getUnderlyingDecl();
 
   // Skip unnamed entities.
@@ -526,14 +527,14 @@ bool ResultBuilder::isInterestingDecl(const NamedDecl *ND,
         return false;
 
   if (Filter == &ResultBuilder::IsNestedNameSpecifier ||
-      ((isa<NamespaceDecl>(ND) || isa<NamespaceAliasDecl>(ND)) &&
+      (isa<NamespaceDecl>(ND) &&
        Filter != &ResultBuilder::IsNamespace &&
        Filter != &ResultBuilder::IsNamespaceOrAlias &&
        Filter != nullptr))
     AsNestedNameSpecifier = true;
 
   // Filter out any unwanted results.
-  if (Filter && !(this->*Filter)(ND)) {
+  if (Filter && !(this->*Filter)(Named)) {
     // Check whether it is interesting as a nested-name-specifier.
     if (AllowNestedNameSpecifiers && SemaRef.getLangOpts().CPlusPlus && 
         IsNestedNameSpecifier(ND) &&
@@ -1142,14 +1143,12 @@ bool ResultBuilder::IsNamespace(const NamedDecl *ND) const {
 /// \brief Determines whether the given declaration is a namespace or 
 /// namespace alias.
 bool ResultBuilder::IsNamespaceOrAlias(const NamedDecl *ND) const {
-  return isa<NamespaceDecl>(ND) || isa<NamespaceAliasDecl>(ND);
+  return isa<NamespaceDecl>(ND->getUnderlyingDecl());
 }
 
 /// \brief Determines whether the given declaration is a type.
 bool ResultBuilder::IsType(const NamedDecl *ND) const {
-  if (const UsingShadowDecl *Using = dyn_cast<UsingShadowDecl>(ND))
-    ND = Using->getTargetDecl();
-  
+  ND = ND->getUnderlyingDecl();
   return isa<TypeDecl>(ND) || isa<ObjCInterfaceDecl>(ND);
 }
 
@@ -1157,11 +1156,9 @@ bool ResultBuilder::IsType(const NamedDecl *ND) const {
 /// "." or "->".  Only value declarations, nested name specifiers, and
 /// using declarations thereof should show up.
 bool ResultBuilder::IsMember(const NamedDecl *ND) const {
-  if (const UsingShadowDecl *Using = dyn_cast<UsingShadowDecl>(ND))
-    ND = Using->getTargetDecl();
-
+  ND = ND->getUnderlyingDecl();
   return isa<ValueDecl>(ND) || isa<FunctionTemplateDecl>(ND) ||
-    isa<ObjCPropertyDecl>(ND);
+         isa<ObjCPropertyDecl>(ND);
 }
 
 static bool isObjCReceiverType(ASTContext &C, QualType T) {

@@ -131,3 +131,15 @@ void test_wassert() {
   int *p = 0;
   *p = 0xDEADBEEF; // no-warning
 }
+#undef assert
+
+// Test that hard-coded Android __assert2 name is recognized as a noreturn
+#define assert(_Expression) ((_Expression) ? (void)0 : __assert2(0, 0, 0, 0));
+extern void __assert2(const char *, int, const char *, const char *);
+extern void _wassert(const char * _Message, const char *_File, unsigned _Line);
+void test___assert2() {
+  assert(0);
+  int *p = 0;
+  *p = 0xDEADBEEF; // no-warning
+}
+#undef assert

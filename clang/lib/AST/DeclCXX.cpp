@@ -1218,6 +1218,10 @@ CXXRecordDecl *CXXRecordDecl::getInstantiatedFromMemberClass() const {
   return nullptr;
 }
 
+MemberSpecializationInfo *CXXRecordDecl::getMemberSpecializationInfo() const {
+  return TemplateOrInstantiation.dyn_cast<MemberSpecializationInfo *>();
+}
+
 void 
 CXXRecordDecl::setInstantiationOfMemberClass(CXXRecordDecl *RD,
                                              TemplateSpecializationKind TSK) {
@@ -1226,6 +1230,14 @@ CXXRecordDecl::setInstantiationOfMemberClass(CXXRecordDecl *RD,
   assert(!isa<ClassTemplatePartialSpecializationDecl>(this));
   TemplateOrInstantiation 
     = new (getASTContext()) MemberSpecializationInfo(RD, TSK);
+}
+
+ClassTemplateDecl *CXXRecordDecl::getDescribedClassTemplate() const {
+  return TemplateOrInstantiation.dyn_cast<ClassTemplateDecl *>();
+}
+
+void CXXRecordDecl::setDescribedClassTemplate(ClassTemplateDecl *Template) {
+  TemplateOrInstantiation = Template;
 }
 
 TemplateSpecializationKind CXXRecordDecl::getTemplateSpecializationKind() const{
@@ -1675,8 +1687,8 @@ CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
     LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
     IsWritten(false), SourceOrderOrNumArrayIndices(NumIndices)
 {
-  VarDecl **MyIndices = reinterpret_cast<VarDecl **> (this + 1);
-  memcpy(MyIndices, Indices, NumIndices * sizeof(VarDecl *));
+  std::uninitialized_copy(Indices, Indices + NumIndices,
+                          getTrailingObjects<VarDecl *>());
 }
 
 CXXCtorInitializer *CXXCtorInitializer::Create(ASTContext &Context,
@@ -1686,8 +1698,7 @@ CXXCtorInitializer *CXXCtorInitializer::Create(ASTContext &Context,
                                                SourceLocation R,
                                                VarDecl **Indices,
                                                unsigned NumIndices) {
-  void *Mem = Context.Allocate(sizeof(CXXCtorInitializer) +
-                               sizeof(VarDecl *) * NumIndices,
+  void *Mem = Context.Allocate(totalSizeToAlloc<VarDecl *>(NumIndices),
                                llvm::alignOf<CXXCtorInitializer>());
   return new (Mem) CXXCtorInitializer(Context, Member, MemberLoc, L, Init, R,
                                       Indices, NumIndices);
@@ -2016,6 +2027,22 @@ NamespaceDecl *NamespaceDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID) NamespaceDecl(C, nullptr, false, SourceLocation(),
                                    SourceLocation(), nullptr, nullptr);
 }
+
+NamespaceDecl *NamespaceDecl::getOriginalNamespace() {
+  if (isFirstDecl())
+    return this;
+
+  return AnonOrFirstNamespaceAndInline.getPointer();
+}
+
+const NamespaceDecl *NamespaceDecl::getOriginalNamespace() const {
+  if (isFirstDecl())
+    return this;
+
+  return AnonOrFirstNamespaceAndInline.getPointer();
+}
+
+bool NamespaceDecl::isOriginalNamespace() const { return isFirstDecl(); }
 
 NamespaceDecl *NamespaceDecl::getNextRedeclarationImpl() {
   return getNextRedeclaration();

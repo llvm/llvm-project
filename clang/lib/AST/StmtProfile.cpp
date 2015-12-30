@@ -675,22 +675,22 @@ void StmtProfiler::VisitOffsetOfExpr(const OffsetOfExpr *S) {
   VisitType(S->getTypeSourceInfo()->getType());
   unsigned n = S->getNumComponents();
   for (unsigned i = 0; i < n; ++i) {
-    const OffsetOfExpr::OffsetOfNode& ON = S->getComponent(i);
+    const OffsetOfNode &ON = S->getComponent(i);
     ID.AddInteger(ON.getKind());
     switch (ON.getKind()) {
-    case OffsetOfExpr::OffsetOfNode::Array:
+    case OffsetOfNode::Array:
       // Expressions handled below.
       break;
 
-    case OffsetOfExpr::OffsetOfNode::Field:
+    case OffsetOfNode::Field:
       VisitDecl(ON.getField());
       break;
 
-    case OffsetOfExpr::OffsetOfNode::Identifier:
+    case OffsetOfNode::Identifier:
       ID.AddPointer(ON.getFieldName());
       break;
-        
-    case OffsetOfExpr::OffsetOfNode::Base:
+
+    case OffsetOfNode::Base:
       // These nodes are implicit, and therefore don't need profiling.
       break;
     }

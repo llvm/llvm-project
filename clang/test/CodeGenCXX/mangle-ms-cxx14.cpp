@@ -49,3 +49,9 @@ int WithPMD = 0;
 
 template <> int WithPMD<nullptr>;
 // CHECK-DAG: "\01??$WithPMD@$GA@A@?0@@3HA"
+
+template <const int *, const int *>
+struct Foo {};
+
+Foo<&x<int>, &x<int>> Zoo;
+// CHECK-DAG: "\01?Zoo@@3U?$Foo@$1??$x@H@@3HA$1?1@3HA@@A"

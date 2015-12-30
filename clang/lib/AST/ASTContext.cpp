@@ -19,6 +19,7 @@
 #include "clang/AST/Comment.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
@@ -760,10 +761,8 @@ ASTContext::~ASTContext() {
   ReleaseDeclContextMaps();
 
   // Call all of the deallocation functions on all of their targets.
-  for (DeallocationMap::const_iterator I = Deallocations.begin(),
-           E = Deallocations.end(); I != E; ++I)
-    for (unsigned J = 0, N = I->second.size(); J != N; ++J)
-      (I->first)((I->second)[J]);
+  for (auto &Pair : Deallocations)
+    (Pair.first)(Pair.second);
 
   // ASTRecordLayout objects in ASTRecordLayouts must always be destroyed
   // because they can contain DenseMaps.
@@ -812,7 +811,7 @@ void ASTContext::ReleaseParentMapEntries() {
 }
 
 void ASTContext::AddDeallocation(void (*Callback)(void*), void *Data) {
-  Deallocations[Callback].push_back(Data);
+  Deallocations.push_back({Callback, Data});
 }
 
 void
@@ -2062,6 +2061,17 @@ void ASTContext::setObjCImplementation(ObjCCategoryDecl *CatD,
                            ObjCCategoryImplDecl *ImplD) {
   assert(CatD && ImplD && "Passed null params");
   ObjCImpls[CatD] = ImplD;
+}
+
+const ObjCMethodDecl *
+ASTContext::getObjCMethodRedeclaration(const ObjCMethodDecl *MD) const {
+  return ObjCMethodRedecls.lookup(MD);
+}
+
+void ASTContext::setObjCMethodRedeclaration(const ObjCMethodDecl *MD,
+                                            const ObjCMethodDecl *Redecl) {
+  assert(!getObjCMethodRedeclaration(MD) && "MD already has a redeclaration");
+  ObjCMethodRedecls[MD] = Redecl;
 }
 
 const ObjCInterfaceDecl *ASTContext::getObjContainingInterface(
@@ -7805,6 +7815,10 @@ bool ASTContext::FunctionTypesMatchOnNSConsumedAttrs(
         return false;
     }
   return true;
+}
+
+void ASTContext::ResetObjCLayout(const ObjCContainerDecl *CD) {
+  ObjCLayouts[CD] = nullptr;
 }
 
 /// mergeObjCGCQualifiers - This routine merges ObjC's GC attribute of 'LHS' and

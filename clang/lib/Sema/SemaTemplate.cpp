@@ -329,8 +329,8 @@ void Sema::LookupTemplateName(LookupResult &Found,
             Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS,
             std::move(FilterCCC), CTK_ErrorRecovery, LookupCtx)) {
       Found.setLookupName(Corrected.getCorrection());
-      if (Corrected.getCorrectionDecl())
-        Found.addDecl(Corrected.getCorrectionDecl());
+      if (auto *ND = Corrected.getFoundDecl())
+        Found.addDecl(ND);
       FilterAcceptableTemplateNames(Found);
       if (!Found.empty()) {
         if (LookupCtx) {

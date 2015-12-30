@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_MODULE_H
 #define LLVM_CLANG_BASIC_MODULE_H
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -35,9 +36,6 @@ namespace llvm {
 
 namespace clang {
   
-class DirectoryEntry;
-class FileEntry;
-class FileManager;
 class LangOptions;
 class TargetInfo;
 class IdentifierInfo;

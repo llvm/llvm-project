@@ -7198,7 +7198,8 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
     // as if by qualified name lookup.
     LookupResult R(*this, II, IdentLoc, LookupOrdinaryName, ForRedeclaration);
     LookupQualifiedName(R, CurContext->getRedeclContext());
-    NamedDecl *PrevDecl = R.getAsSingle<NamedDecl>();
+    NamedDecl *PrevDecl =
+        R.isSingleResult() ? R.getRepresentativeDecl() : nullptr;
     PrevNS = dyn_cast_or_null<NamespaceDecl>(PrevDecl);
 
     if (PrevNS) {
@@ -7532,7 +7533,7 @@ static bool TryNamespaceTypoCorrection(Sema &S, LookupResult &R, Scope *Sc,
                      S.PDiag(diag::err_using_directive_suggest) << Ident,
                      S.PDiag(diag::note_namespace_defined_here));
     }
-    R.addDecl(Corrected.getCorrectionDecl());
+    R.addDecl(Corrected.getFoundDecl());
     return true;
   }
   return false;
@@ -7580,9 +7581,9 @@ Decl *Sema::ActOnUsingDirective(Scope *S,
   }
   
   if (!R.empty()) {
-    NamedDecl *Named = R.getFoundDecl();
-    assert((isa<NamespaceDecl>(Named) || isa<NamespaceAliasDecl>(Named))
-        && "expected namespace decl");
+    NamedDecl *Named = R.getRepresentativeDecl();
+    NamespaceDecl *NS = R.getAsSingle<NamespaceDecl>();
+    assert(NS && "expected namespace decl");
 
     // The use of a nested name specifier may trigger deprecation warnings.
     DiagnoseUseOfDecl(Named, IdentLoc);
@@ -7599,7 +7600,6 @@ Decl *Sema::ActOnUsingDirective(Scope *S,
 
     // Find enclosing context containing both using-directive and
     // nominated namespace.
-    NamespaceDecl *NS = getNamespaceDecl(Named);
     DeclContext *CommonAncestor = cast<DeclContext>(NS);
     while (CommonAncestor && !CommonAncestor->Encloses(CurContext))
       CommonAncestor = CommonAncestor->getParent();
@@ -8672,7 +8672,7 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
     }
   }
   assert(!R.isAmbiguous() && !R.empty());
-  NamedDecl *ND = R.getFoundDecl();
+  NamedDecl *ND = R.getRepresentativeDecl();
 
   // Check if we have a previous declaration with the same name.
   LookupResult PrevR(*this, Alias, AliasLoc, LookupOrdinaryName,
@@ -8691,7 +8691,8 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
 
   // Find the previous declaration and check that we can redeclare it.
   NamespaceAliasDecl *Prev = nullptr; 
-  if (NamedDecl *PrevDecl = PrevR.getAsSingle<NamedDecl>()) {
+  if (PrevR.isSingleResult()) {
+    NamedDecl *PrevDecl = PrevR.getRepresentativeDecl();
     if (NamespaceAliasDecl *AD = dyn_cast<NamespaceAliasDecl>(PrevDecl)) {
       // We already have an alias with the same name that points to the same
       // namespace; check that it matches.
@@ -8700,12 +8701,12 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
       } else if (isVisible(PrevDecl)) {
         Diag(AliasLoc, diag::err_redefinition_different_namespace_alias)
           << Alias;
-        Diag(PrevDecl->getLocation(), diag::note_previous_namespace_alias)
+        Diag(AD->getLocation(), diag::note_previous_namespace_alias)
           << AD->getNamespace();
         return nullptr;
       }
     } else if (isVisible(PrevDecl)) {
-      unsigned DiagID = isa<NamespaceDecl>(PrevDecl)
+      unsigned DiagID = isa<NamespaceDecl>(PrevDecl->getUnderlyingDecl())
                             ? diag::err_redefinition
                             : diag::err_redefinition_different_kind;
       Diag(AliasLoc, DiagID) << Alias;
