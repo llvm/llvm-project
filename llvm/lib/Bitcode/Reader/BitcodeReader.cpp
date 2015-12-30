@@ -94,35 +94,35 @@ public:
   void resolveConstantForwardRefs();
 };
 
-class BitcodeReaderMDValueList {
+class BitcodeReaderMetadataList {
   unsigned NumFwdRefs;
   bool AnyFwdRefs;
   unsigned MinFwdRef;
   unsigned MaxFwdRef;
-  std::vector<TrackingMDRef> MDValuePtrs;
+  std::vector<TrackingMDRef> MetadataPtrs;
 
   LLVMContext &Context;
 public:
-  BitcodeReaderMDValueList(LLVMContext &C)
+  BitcodeReaderMetadataList(LLVMContext &C)
       : NumFwdRefs(0), AnyFwdRefs(false), Context(C) {}
 
   // vector compatibility methods
-  unsigned size() const       { return MDValuePtrs.size(); }
-  void resize(unsigned N)     { MDValuePtrs.resize(N); }
-  void push_back(Metadata *MD) { MDValuePtrs.emplace_back(MD); }
-  void clear()                { MDValuePtrs.clear();  }
-  Metadata *back() const      { return MDValuePtrs.back(); }
-  void pop_back()             { MDValuePtrs.pop_back(); }
-  bool empty() const          { return MDValuePtrs.empty(); }
+  unsigned size() const { return MetadataPtrs.size(); }
+  void resize(unsigned N) { MetadataPtrs.resize(N); }
+  void push_back(Metadata *MD) { MetadataPtrs.emplace_back(MD); }
+  void clear() { MetadataPtrs.clear(); }
+  Metadata *back() const { return MetadataPtrs.back(); }
+  void pop_back() { MetadataPtrs.pop_back(); }
+  bool empty() const { return MetadataPtrs.empty(); }
 
   Metadata *operator[](unsigned i) const {
-    assert(i < MDValuePtrs.size());
-    return MDValuePtrs[i];
+    assert(i < MetadataPtrs.size());
+    return MetadataPtrs[i];
   }
 
   void shrinkTo(unsigned N) {
     assert(N <= size() && "Invalid shrinkTo request!");
-    MDValuePtrs.resize(N);
+    MetadataPtrs.resize(N);
   }
 
   Metadata *getValueFwdRef(unsigned Idx);
@@ -152,7 +152,7 @@ class BitcodeReader : public GVMaterializer {
 
   std::vector<Type*> TypeList;
   BitcodeReaderValueList ValueList;
-  BitcodeReaderMDValueList MDValueList;
+  BitcodeReaderMetadataList MetadataList;
   std::vector<Comdat *> ComdatList;
   SmallVector<Instruction *, 64> InstructionList;
 
@@ -270,12 +270,12 @@ public:
   void setStripDebugInfo() override;
 
   /// Save the mapping between the metadata values and the corresponding
-  /// value id that were recorded in the MDValueList during parsing. If
+  /// value id that were recorded in the MetadataList during parsing. If
   /// OnlyTempMD is true, then only record those entries that are still
   /// temporary metadata. This interface is used when metadata linking is
   /// performed as a postpass, such as during function importing.
-  void saveMDValueList(DenseMap<const Metadata *, unsigned> &MDValueToValIDMap,
-                       bool OnlyTempMD) override;
+  void saveMetadataList(DenseMap<const Metadata *, unsigned> &MetadataToIDs,
+                        bool OnlyTempMD) override;
 
 private:
   /// Parse the "IDENTIFICATION_BLOCK_ID" block, populate the
@@ -294,7 +294,7 @@ private:
     return ValueList.getValueFwdRef(ID, Ty);
   }
   Metadata *getFnMetadataByID(unsigned ID) {
-    return MDValueList.getValueFwdRef(ID);
+    return MetadataList.getValueFwdRef(ID);
   }
   BasicBlock *getBasicBlock(unsigned ID) const {
     if (ID >= FunctionBBs.size()) return nullptr; // Invalid ID
@@ -558,11 +558,11 @@ std::error_code BitcodeReader::error(BitcodeError E) {
 
 BitcodeReader::BitcodeReader(MemoryBuffer *Buffer, LLVMContext &Context)
     : Context(Context), Buffer(Buffer), ValueList(Context),
-      MDValueList(Context) {}
+      MetadataList(Context) {}
 
 BitcodeReader::BitcodeReader(LLVMContext &Context)
     : Context(Context), Buffer(nullptr), ValueList(Context),
-      MDValueList(Context) {}
+      MetadataList(Context) {}
 
 std::error_code BitcodeReader::materializeForwardReferencedFunctions() {
   if (WillMaterializeAllForwardRefs)
@@ -601,7 +601,7 @@ void BitcodeReader::freeState() {
   Buffer = nullptr;
   std::vector<Type*>().swap(TypeList);
   ValueList.clear();
-  MDValueList.clear();
+  MetadataList.clear();
   std::vector<Comdat *>().swap(ComdatList);
 
   std::vector<AttributeSet>().swap(MAttributes);
@@ -1035,7 +1035,7 @@ void BitcodeReaderValueList::resolveConstantForwardRefs() {
   }
 }
 
-void BitcodeReaderMDValueList::assignValue(Metadata *MD, unsigned Idx) {
+void BitcodeReaderMetadataList::assignValue(Metadata *MD, unsigned Idx) {
   if (Idx == size()) {
     push_back(MD);
     return;
@@ -1044,7 +1044,7 @@ void BitcodeReaderMDValueList::assignValue(Metadata *MD, unsigned Idx) {
   if (Idx >= size())
     resize(Idx+1);
 
-  TrackingMDRef &OldMD = MDValuePtrs[Idx];
+  TrackingMDRef &OldMD = MetadataPtrs[Idx];
   if (!OldMD) {
     OldMD.reset(MD);
     return;
@@ -1056,11 +1056,11 @@ void BitcodeReaderMDValueList::assignValue(Metadata *MD, unsigned Idx) {
   --NumFwdRefs;
 }
 
-Metadata *BitcodeReaderMDValueList::getValueFwdRef(unsigned Idx) {
+Metadata *BitcodeReaderMetadataList::getValueFwdRef(unsigned Idx) {
   if (Idx >= size())
     resize(Idx + 1);
 
-  if (Metadata *MD = MDValuePtrs[Idx])
+  if (Metadata *MD = MetadataPtrs[Idx])
     return MD;
 
   // Track forward refs to be resolved later.
@@ -1075,11 +1075,11 @@ Metadata *BitcodeReaderMDValueList::getValueFwdRef(unsigned Idx) {
 
   // Create and return a placeholder, which will later be RAUW'd.
   Metadata *MD = MDNode::getTemporary(Context, None).release();
-  MDValuePtrs[Idx].reset(MD);
+  MetadataPtrs[Idx].reset(MD);
   return MD;
 }
 
-void BitcodeReaderMDValueList::tryToResolveCycles() {
+void BitcodeReaderMetadataList::tryToResolveCycles() {
   if (!AnyFwdRefs)
     // Nothing to do.
     return;
@@ -1090,7 +1090,7 @@ void BitcodeReaderMDValueList::tryToResolveCycles() {
 
   // Resolve any cycles.
   for (unsigned I = MinFwdRef, E = MaxFwdRef + 1; I != E; ++I) {
-    auto &MD = MDValuePtrs[I];
+    auto &MD = MetadataPtrs[I];
     auto *N = dyn_cast_or_null<MDNode>(MD);
     if (!N)
       continue;
@@ -1871,20 +1871,20 @@ static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
 /// module level metadata.
 std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
   IsMetadataMaterialized = true;
-  unsigned NextMDValueNo = MDValueList.size();
+  unsigned NextMetadataNo = MetadataList.size();
   if (ModuleLevel && SeenModuleValuesRecord) {
     // Now that we are parsing the module level metadata, we want to restart
     // the numbering of the MD values, and replace temp MD created earlier
     // with their real values. If we saw a METADATA_VALUE record then we
-    // would have set the MDValueList size to the number specified in that
+    // would have set the MetadataList size to the number specified in that
     // record, to support parsing function-level metadata first, and we need
-    // to reset back to 0 to fill the MDValueList in with the parsed module
-    // The function-level metadata parsing should have reset the MDValueList
+    // to reset back to 0 to fill the MetadataList in with the parsed module
+    // The function-level metadata parsing should have reset the MetadataList
     // size back to the value reported by the METADATA_VALUE record, saved in
     // NumModuleMDs.
-    assert(NumModuleMDs == MDValueList.size() &&
-           "Expected MDValueList to only contain module level values");
-    NextMDValueNo = 0;
+    assert(NumModuleMDs == MetadataList.size() &&
+           "Expected MetadataList to only contain module level values");
+    NextMetadataNo = 0;
   }
 
   if (Stream.EnterSubBlock(bitc::METADATA_BLOCK_ID))
@@ -1892,8 +1892,9 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
   SmallVector<uint64_t, 64> Record;
 
-  auto getMD =
-      [&](unsigned ID) -> Metadata *{ return MDValueList.getValueFwdRef(ID); };
+  auto getMD = [&](unsigned ID) -> Metadata * {
+    return MetadataList.getValueFwdRef(ID);
+  };
   auto getMDOrNull = [&](unsigned ID) -> Metadata *{
     if (ID)
       return getMD(ID - 1);
@@ -1917,9 +1918,9 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      MDValueList.tryToResolveCycles();
+      MetadataList.tryToResolveCycles();
       assert((!(ModuleLevel && SeenModuleValuesRecord) ||
-              NumModuleMDs == MDValueList.size()) &&
+              NumModuleMDs == MetadataList.size()) &&
              "Inconsistent bitcode: METADATA_VALUES mismatch");
       return std::error_code();
     case BitstreamEntry::Record:
@@ -1948,7 +1949,8 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       unsigned Size = Record.size();
       NamedMDNode *NMD = TheModule->getOrInsertNamedMetadata(Name);
       for (unsigned i = 0; i != Size; ++i) {
-        MDNode *MD = dyn_cast_or_null<MDNode>(MDValueList.getValueFwdRef(Record[i]));
+        MDNode *MD =
+            dyn_cast_or_null<MDNode>(MetadataList.getValueFwdRef(Record[i]));
         if (!MD)
           return error("Invalid record");
         NMD->addOperand(MD);
@@ -1965,7 +1967,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       // If this isn't a LocalAsMetadata record, we're dropping it.  This used
       // to be legal, but there's no upgrade path.
       auto dropRecord = [&] {
-        MDValueList.assignValue(MDNode::get(Context, None), NextMDValueNo++);
+        MetadataList.assignValue(MDNode::get(Context, None), NextMetadataNo++);
       };
       if (Record.size() != 2) {
         dropRecord();
@@ -1978,9 +1980,9 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         break;
       }
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           LocalAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty)),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_OLD_NODE: {
@@ -1995,7 +1997,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         if (!Ty)
           return error("Invalid record");
         if (Ty->isMetadataTy())
-          Elts.push_back(MDValueList.getValueFwdRef(Record[i+1]));
+          Elts.push_back(MetadataList.getValueFwdRef(Record[i + 1]));
         else if (!Ty->isVoidTy()) {
           auto *MD =
               ValueAsMetadata::get(ValueList.getValueFwdRef(Record[i + 1], Ty));
@@ -2005,7 +2007,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         } else
           Elts.push_back(nullptr);
       }
-      MDValueList.assignValue(MDNode::get(Context, Elts), NextMDValueNo++);
+      MetadataList.assignValue(MDNode::get(Context, Elts), NextMetadataNo++);
       break;
     }
     case bitc::METADATA_VALUE: {
@@ -2016,9 +2018,9 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Ty->isMetadataTy() || Ty->isVoidTy())
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           ValueAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty)),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_DISTINCT_NODE:
@@ -2028,10 +2030,10 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       SmallVector<Metadata *, 8> Elts;
       Elts.reserve(Record.size());
       for (unsigned ID : Record)
-        Elts.push_back(ID ? MDValueList.getValueFwdRef(ID - 1) : nullptr);
-      MDValueList.assignValue(IsDistinct ? MDNode::getDistinct(Context, Elts)
-                                         : MDNode::get(Context, Elts),
-                              NextMDValueNo++);
+        Elts.push_back(ID ? MetadataList.getValueFwdRef(ID - 1) : nullptr);
+      MetadataList.assignValue(IsDistinct ? MDNode::getDistinct(Context, Elts)
+                                          : MDNode::get(Context, Elts),
+                               NextMetadataNo++);
       break;
     }
     case bitc::METADATA_LOCATION: {
@@ -2040,13 +2042,13 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
       unsigned Line = Record[1];
       unsigned Column = Record[2];
-      MDNode *Scope = cast<MDNode>(MDValueList.getValueFwdRef(Record[3]));
+      MDNode *Scope = cast<MDNode>(MetadataList.getValueFwdRef(Record[3]));
       Metadata *InlinedAt =
-          Record[4] ? MDValueList.getValueFwdRef(Record[4] - 1) : nullptr;
-      MDValueList.assignValue(
+          Record[4] ? MetadataList.getValueFwdRef(Record[4] - 1) : nullptr;
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DILocation, Record[0],
                           (Context, Line, Column, Scope, InlinedAt)),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_GENERIC_DEBUG: {
@@ -2079,63 +2081,65 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       auto *Header = getMDString(Record[3]);
       SmallVector<Metadata *, 8> DwarfOps;
       for (unsigned I = 4, E = Record.size(); I != E; ++I)
-        DwarfOps.push_back(Record[I] ? MDValueList.getValueFwdRef(Record[I] - 1)
-                                     : nullptr);
-      MDValueList.assignValue(GET_OR_DISTINCT(GenericDINode, Record[0],
-                                              (Context, Tag, Header, DwarfOps)),
-                              NextMDValueNo++);
+        DwarfOps.push_back(
+            Record[I] ? MetadataList.getValueFwdRef(Record[I] - 1) : nullptr);
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(GenericDINode, Record[0],
+                          (Context, Tag, Header, DwarfOps)),
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_SUBRANGE: {
       if (Record.size() != 3)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DISubrange, Record[0],
                           (Context, Record[1], unrotateSign(Record[2]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_ENUMERATOR: {
       if (Record.size() != 3)
         return error("Invalid record");
 
-      MDValueList.assignValue(GET_OR_DISTINCT(DIEnumerator, Record[0],
-                                              (Context, unrotateSign(Record[1]),
-                                               getMDString(Record[2]))),
-                              NextMDValueNo++);
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(
+              DIEnumerator, Record[0],
+              (Context, unrotateSign(Record[1]), getMDString(Record[2]))),
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_BASIC_TYPE: {
       if (Record.size() != 6)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIBasicType, Record[0],
                           (Context, Record[1], getMDString(Record[2]),
                            Record[3], Record[4], Record[5])),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_DERIVED_TYPE: {
       if (Record.size() != 12)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIDerivedType, Record[0],
                           (Context, Record[1], getMDString(Record[2]),
                            getMDOrNull(Record[3]), Record[4],
                            getMDOrNull(Record[5]), getMDOrNull(Record[6]),
                            Record[7], Record[8], Record[9], Record[10],
                            getMDOrNull(Record[11]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_COMPOSITE_TYPE: {
       if (Record.size() != 16)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DICompositeType, Record[0],
                           (Context, Record[1], getMDString(Record[2]),
                            getMDOrNull(Record[3]), Record[4],
@@ -2144,17 +2148,17 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
                            getMDOrNull(Record[11]), Record[12],
                            getMDOrNull(Record[13]), getMDOrNull(Record[14]),
                            getMDString(Record[15]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_SUBROUTINE_TYPE: {
       if (Record.size() != 3)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DISubroutineType, Record[0],
                           (Context, Record[1], getMDOrNull(Record[2]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
 
@@ -2162,12 +2166,12 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Record.size() != 6)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIModule, Record[0],
                           (Context, getMDOrNull(Record[1]),
-                          getMDString(Record[2]), getMDString(Record[3]),
-                          getMDString(Record[4]), getMDString(Record[5]))),
-          NextMDValueNo++);
+                           getMDString(Record[2]), getMDString(Record[3]),
+                           getMDString(Record[4]), getMDString(Record[5]))),
+          NextMetadataNo++);
       break;
     }
 
@@ -2175,10 +2179,10 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Record.size() != 3)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIFile, Record[0], (Context, getMDString(Record[1]),
                                               getMDString(Record[2]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_COMPILE_UNIT: {
@@ -2187,7 +2191,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
       // Ignore Record[0], which indicates whether this compile unit is
       // distinct.  It's always distinct.
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           DICompileUnit::getDistinct(
               Context, Record[1], getMDOrNull(Record[2]),
               getMDString(Record[3]), Record[4], getMDString(Record[5]),
@@ -2197,7 +2201,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
               getMDOrNull(Record[13]),
               Record.size() <= 15 ? 0 : getMDOrNull(Record[15]),
               Record.size() <= 14 ? 0 : Record[14]),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_SUBPROGRAM: {
@@ -2214,7 +2218,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
            getMDOrNull(Record[10]), Record[11], Record[12], Record[13],
            Record[14], getMDOrNull(Record[15 + HasFn]),
            getMDOrNull(Record[16 + HasFn]), getMDOrNull(Record[17 + HasFn])));
-      MDValueList.assignValue(SP, NextMDValueNo++);
+      MetadataList.assignValue(SP, NextMetadataNo++);
 
       // Upgrade sp->function mapping to function->sp mapping.
       if (HasFn && Record[15]) {
@@ -2234,92 +2238,92 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Record.size() != 5)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DILexicalBlock, Record[0],
                           (Context, getMDOrNull(Record[1]),
                            getMDOrNull(Record[2]), Record[3], Record[4])),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_LEXICAL_BLOCK_FILE: {
       if (Record.size() != 4)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DILexicalBlockFile, Record[0],
                           (Context, getMDOrNull(Record[1]),
                            getMDOrNull(Record[2]), Record[3])),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_NAMESPACE: {
       if (Record.size() != 5)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DINamespace, Record[0],
                           (Context, getMDOrNull(Record[1]),
                            getMDOrNull(Record[2]), getMDString(Record[3]),
                            Record[4])),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_MACRO: {
       if (Record.size() != 5)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIMacro, Record[0],
                           (Context, Record[1], Record[2],
                            getMDString(Record[3]), getMDString(Record[4]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_MACRO_FILE: {
       if (Record.size() != 5)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIMacroFile, Record[0],
                           (Context, Record[1], Record[2],
                            getMDOrNull(Record[3]), getMDOrNull(Record[4]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_TEMPLATE_TYPE: {
       if (Record.size() != 3)
         return error("Invalid record");
 
-      MDValueList.assignValue(GET_OR_DISTINCT(DITemplateTypeParameter,
-                                              Record[0],
-                                              (Context, getMDString(Record[1]),
-                                               getMDOrNull(Record[2]))),
-                              NextMDValueNo++);
+      MetadataList.assignValue(GET_OR_DISTINCT(DITemplateTypeParameter,
+                                               Record[0],
+                                               (Context, getMDString(Record[1]),
+                                                getMDOrNull(Record[2]))),
+                               NextMetadataNo++);
       break;
     }
     case bitc::METADATA_TEMPLATE_VALUE: {
       if (Record.size() != 5)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DITemplateValueParameter, Record[0],
                           (Context, Record[1], getMDString(Record[2]),
                            getMDOrNull(Record[3]), getMDOrNull(Record[4]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_GLOBAL_VAR: {
       if (Record.size() != 11)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIGlobalVariable, Record[0],
                           (Context, getMDOrNull(Record[1]),
                            getMDString(Record[2]), getMDString(Record[3]),
                            getMDOrNull(Record[4]), Record[5],
                            getMDOrNull(Record[6]), Record[7], Record[8],
                            getMDOrNull(Record[9]), getMDOrNull(Record[10]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_LOCAL_VAR: {
@@ -2330,56 +2334,56 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       // 2nd field used to be an artificial tag, either DW_TAG_auto_variable or
       // DW_TAG_arg_variable.
       bool HasTag = Record.size() > 8;
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DILocalVariable, Record[0],
                           (Context, getMDOrNull(Record[1 + HasTag]),
                            getMDString(Record[2 + HasTag]),
                            getMDOrNull(Record[3 + HasTag]), Record[4 + HasTag],
                            getMDOrNull(Record[5 + HasTag]), Record[6 + HasTag],
                            Record[7 + HasTag])),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_EXPRESSION: {
       if (Record.size() < 1)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIExpression, Record[0],
                           (Context, makeArrayRef(Record).slice(1))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_OBJC_PROPERTY: {
       if (Record.size() != 8)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIObjCProperty, Record[0],
                           (Context, getMDString(Record[1]),
                            getMDOrNull(Record[2]), Record[3],
                            getMDString(Record[4]), getMDString(Record[5]),
                            Record[6], getMDOrNull(Record[7]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_IMPORTED_ENTITY: {
       if (Record.size() != 6)
         return error("Invalid record");
 
-      MDValueList.assignValue(
+      MetadataList.assignValue(
           GET_OR_DISTINCT(DIImportedEntity, Record[0],
                           (Context, Record[1], getMDOrNull(Record[2]),
                            getMDOrNull(Record[3]), Record[4],
                            getMDString(Record[5]))),
-          NextMDValueNo++);
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_STRING: {
       std::string String(Record.begin(), Record.end());
       llvm::UpgradeMDStringConstant(String);
       Metadata *MD = MDString::get(Context, String);
-      MDValueList.assignValue(MD, NextMDValueNo++);
+      MetadataList.assignValue(MD, NextMetadataNo++);
       break;
     }
     case bitc::METADATA_KIND: {
@@ -3083,22 +3087,21 @@ std::error_code BitcodeReader::materializeMetadata() {
 
 void BitcodeReader::setStripDebugInfo() { StripDebugInfo = true; }
 
-void BitcodeReader::saveMDValueList(
-    DenseMap<const Metadata *, unsigned> &MDValueToValIDMap, bool OnlyTempMD) {
-  for (unsigned ValID = 0; ValID < MDValueList.size(); ++ValID) {
-    Metadata *MD = MDValueList[ValID];
+void BitcodeReader::saveMetadataList(
+    DenseMap<const Metadata *, unsigned> &MetadataToIDs, bool OnlyTempMD) {
+  for (unsigned ID = 0; ID < MetadataList.size(); ++ID) {
+    Metadata *MD = MetadataList[ID];
     auto *N = dyn_cast_or_null<MDNode>(MD);
     // Save all values if !OnlyTempMD, otherwise just the temporary metadata.
     if (!OnlyTempMD || (N && N->isTemporary())) {
       // Will call this after materializing each function, in order to
       // handle remapping of the function's instructions/metadata.
       // See if we already have an entry in that case.
-      if (OnlyTempMD && MDValueToValIDMap.count(MD)) {
-        assert(MDValueToValIDMap[MD] == ValID &&
-               "Inconsistent metadata value id");
+      if (OnlyTempMD && MetadataToIDs.count(MD)) {
+        assert(MetadataToIDs[MD] == ID && "Inconsistent metadata value id");
         continue;
       }
-      MDValueToValIDMap[MD] = ValID;
+      MetadataToIDs[MD] = ID;
     }
   }
 }
@@ -3698,15 +3701,15 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       // based on their ordering in the bitcode, with the function-level
       // metadata ids starting after the module-level metadata ids. Otherwise,
       // we would have to parse the module-level metadata block to prime the
-      // MDValueList when we are lazy loading metadata during function
-      // importing. Initialize the MDValueList size here based on the
+      // MetadataList when we are lazy loading metadata during function
+      // importing. Initialize the MetadataList size here based on the
       // record value, regardless of whether we are doing lazy metadata
       // loading, so that we have consistent handling and assertion
       // checking in parseMetadata for module-level metadata.
       NumModuleMDs = Record[0];
       SeenModuleValuesRecord = true;
-      assert(MDValueList.size() == 0);
-      MDValueList.resize(NumModuleMDs);
+      assert(MetadataList.size() == 0);
+      MetadataList.resize(NumModuleMDs);
       break;
     }
     Record.clear();
@@ -3908,7 +3911,7 @@ std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
           auto K = MDKindMap.find(Record[I]);
           if (K == MDKindMap.end())
             return error("Invalid ID");
-          Metadata *MD = MDValueList.getValueFwdRef(Record[I + 1]);
+          Metadata *MD = MetadataList.getValueFwdRef(Record[I + 1]);
           F.setMetadata(K->second, cast<MDNode>(MD));
         }
         continue;
@@ -3922,7 +3925,7 @@ std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
           MDKindMap.find(Kind);
         if (I == MDKindMap.end())
           return error("Invalid ID");
-        Metadata *Node = MDValueList.getValueFwdRef(Record[i + 1]);
+        Metadata *Node = MetadataList.getValueFwdRef(Record[i + 1]);
         if (isa<LocalAsMetadata>(Node))
           // Drop the attachment.  This used to be legal, but there's no
           // upgrade path.
@@ -3958,7 +3961,7 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
 
   InstructionList.clear();
   unsigned ModuleValueListSize = ValueList.size();
-  unsigned ModuleMDValueListSize = MDValueList.size();
+  unsigned ModuleMetadataListSize = MetadataList.size();
 
   // Add all the function arguments to the value table.
   for (Argument &I : F->args())
@@ -4088,8 +4091,10 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       unsigned ScopeID = Record[2], IAID = Record[3];
 
       MDNode *Scope = nullptr, *IA = nullptr;
-      if (ScopeID) Scope = cast<MDNode>(MDValueList.getValueFwdRef(ScopeID-1));
-      if (IAID)    IA = cast<MDNode>(MDValueList.getValueFwdRef(IAID-1));
+      if (ScopeID)
+        Scope = cast<MDNode>(MetadataList.getValueFwdRef(ScopeID - 1));
+      if (IAID)
+        IA = cast<MDNode>(MetadataList.getValueFwdRef(IAID - 1));
       LastLoc = DebugLoc::get(Line, Col, Scope, IA);
       I->setDebugLoc(LastLoc);
       I = nullptr;
@@ -5212,7 +5217,7 @@ OutOfRecordLoop:
 
   // Trim the value list down to the size it was before we parsed this function.
   ValueList.shrinkTo(ModuleValueListSize);
-  MDValueList.shrinkTo(ModuleMDValueListSize);
+  MetadataList.shrinkTo(ModuleMetadataListSize);
   std::vector<BasicBlock*>().swap(FunctionBBs);
   return std::error_code();
 }
@@ -5243,7 +5248,7 @@ void BitcodeReader::releaseBuffer() { Buffer.release(); }
 
 std::error_code BitcodeReader::materialize(GlobalValue *GV) {
   // In older bitcode we must materialize the metadata before parsing
-  // any functions, in order to set up the MDValueList properly.
+  // any functions, in order to set up the MetadataList properly.
   if (!SeenModuleValuesRecord) {
     if (std::error_code EC = materializeMetadata())
       return EC;

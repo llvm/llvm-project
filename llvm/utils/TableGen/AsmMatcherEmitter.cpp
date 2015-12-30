@@ -296,9 +296,11 @@ public:
 
 class AsmVariantInfo {
 public:
+  std::string RegisterPrefix;
   std::string TokenizingCharacters;
   std::string SeparatorCharacters;
   std::string BreakCharacters;
+  int AsmVariantNo;
 };
 
 /// MatchableInfo - Helper class for storing the necessary information for an
@@ -491,7 +493,6 @@ struct MatchableInfo {
 
   void initialize(const AsmMatcherInfo &Info,
                   SmallPtrSetImpl<Record*> &SingletonRegisters,
-                  int AsmVariantNo, StringRef RegisterPrefix,
                   AsmVariantInfo const &Variant);
 
   /// validate - Return true if this matchable is a valid thing to match against
@@ -836,11 +837,11 @@ extractSingletonRegisterForAsmOperand(MatchableInfo::AsmOperand &Op,
 
 void MatchableInfo::initialize(const AsmMatcherInfo &Info,
                                SmallPtrSetImpl<Record*> &SingletonRegisters,
-                               int AsmVariantNo, StringRef RegisterPrefix,
                                AsmVariantInfo const &Variant) {
-  AsmVariantID = AsmVariantNo;
+  AsmVariantID = Variant.AsmVariantNo;
   AsmString =
-    CodeGenInstruction::FlattenAsmStringVariants(AsmString, AsmVariantNo);
+    CodeGenInstruction::FlattenAsmStringVariants(AsmString,
+                                                 Variant.AsmVariantNo);
 
   tokenizeAsmString(Info, Variant);
 
@@ -852,7 +853,7 @@ void MatchableInfo::initialize(const AsmMatcherInfo &Info,
 
   // Collect singleton registers, if used.
   for (MatchableInfo::AsmOperand &Op : AsmOperands) {
-    extractSingletonRegisterForAsmOperand(Op, Info, RegisterPrefix);
+    extractSingletonRegisterForAsmOperand(Op, Info, Variant.RegisterPrefix);
     if (Record *Reg = Op.SingletonReg)
       SingletonRegisters.insert(Reg);
   }
@@ -882,11 +883,11 @@ void MatchableInfo::addAsmOperand(size_t Start, size_t End,
 void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
                                       AsmVariantInfo const &Variant) {
   StringRef String = AsmString;
-  unsigned Prev = 0;
+  size_t Prev = 0;
   bool InTok = false;
   std::string Separators = Variant.TokenizingCharacters +
                            Variant.SeparatorCharacters;
-  for (unsigned i = 0, e = String.size(); i != e; ++i) {
+  for (size_t i = 0, e = String.size(); i != e; ++i) {
     if(Variant.BreakCharacters.find(String[i]) != std::string::npos) {
       if(InTok) {
         addAsmOperand(Prev, i, Separators);
@@ -936,9 +937,9 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
         break;
       }
 
-      StringRef::iterator End = std::find(String.begin() + i, String.end(),'}');
-      assert(End != String.end() && "Missing brace in operand reference!");
-      size_t EndPos = End - String.begin();
+      size_t EndPos = String.find('}', i);
+      assert(EndPos != StringRef::npos &&
+             "Missing brace in operand reference!");
       addAsmOperand(i, EndPos+1, Separators);
       Prev = EndPos + 1;
       i = EndPos;
@@ -988,8 +989,8 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool Hack) const {
   // Also, check for instructions which reference the operand multiple times;
   // this implies a constraint we would not honor.
   std::set<std::string> OperandNames;
-  for (unsigned i = 0, e = AsmOperands.size(); i != e; ++i) {
-    StringRef Tok = AsmOperands[i].Token;
+  for (const AsmOperand &Op : AsmOperands) {
+    StringRef Tok = Op.Token;
     if (Tok[0] == '$' && Tok.find(':') != StringRef::npos)
       PrintFatalError(TheDef->getLoc(),
                       "matchable with operand modifier '" + Tok +
@@ -1374,15 +1375,15 @@ void AsmMatcherInfo::buildInfo() {
     Record *AsmVariant = Target.getAsmParserVariant(VC);
     std::string CommentDelimiter =
       AsmVariant->getValueAsString("CommentDelimiter");
-    std::string RegisterPrefix = AsmVariant->getValueAsString("RegisterPrefix");
     AsmVariantInfo Variant;
+    Variant.RegisterPrefix = AsmVariant->getValueAsString("RegisterPrefix");
     Variant.TokenizingCharacters =
         AsmVariant->getValueAsString("TokenizingCharacters");
     Variant.SeparatorCharacters =
         AsmVariant->getValueAsString("SeparatorCharacters");
     Variant.BreakCharacters =
         AsmVariant->getValueAsString("BreakCharacters");
-    int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
+    Variant.AsmVariantNo = AsmVariant->getValueAsInt("Variant");
 
     for (const CodeGenInstruction *CGI : Target.instructions()) {
 
@@ -1397,8 +1398,7 @@ void AsmMatcherInfo::buildInfo() {
 
       auto II = llvm::make_unique<MatchableInfo>(*CGI);
 
-      II->initialize(*this, SingletonRegisters, AsmVariantNo, RegisterPrefix,
-                     Variant);
+      II->initialize(*this, SingletonRegisters, Variant);
 
       // Ignore instructions which shouldn't be matched and diagnose invalid
       // instruction definitions with an error.
@@ -1414,7 +1414,8 @@ void AsmMatcherInfo::buildInfo() {
       Records.getAllDerivedDefinitions("InstAlias");
     for (unsigned i = 0, e = AllInstAliases.size(); i != e; ++i) {
       auto Alias = llvm::make_unique<CodeGenInstAlias>(AllInstAliases[i],
-                                                       AsmVariantNo, Target);
+                                                       Variant.AsmVariantNo,
+                                                       Target);
 
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
       // filter the set of instruction aliases we consider, based on the target
@@ -1425,8 +1426,7 @@ void AsmMatcherInfo::buildInfo() {
 
       auto II = llvm::make_unique<MatchableInfo>(std::move(Alias));
 
-      II->initialize(*this, SingletonRegisters, AsmVariantNo, RegisterPrefix,
-                     Variant);
+      II->initialize(*this, SingletonRegisters, Variant);
 
       // Validate the alias definitions.
       II->validate(CommentDelimiter, false);
@@ -2119,12 +2119,7 @@ static void emitIsSubclass(CodeGenTarget &Target,
   OS << "  if (A == B)\n";
   OS << "    return true;\n\n";
 
-  std::string OStr;
-  raw_string_ostream SS(OStr);
-  unsigned Count = 0;
-  SS << "  switch (A) {\n";
-  SS << "  default:\n";
-  SS << "    return false;\n";
+  bool EmittedSwitch = false;
   for (const auto &A : Infos) {
     std::vector<StringRef> SuperClasses;
     for (const auto &B : Infos) {
@@ -2134,33 +2129,38 @@ static void emitIsSubclass(CodeGenTarget &Target,
 
     if (SuperClasses.empty())
       continue;
-    ++Count;
 
-    SS << "\n  case " << A.Name << ":\n";
+    // If this is the first SuperClass, emit the switch header.
+    if (!EmittedSwitch) {
+      OS << "  switch (A) {\n";
+      OS << "  default:\n";
+      OS << "    return false;\n";
+      EmittedSwitch = true;
+    }
+
+    OS << "\n  case " << A.Name << ":\n";
 
     if (SuperClasses.size() == 1) {
-      SS << "    return B == " << SuperClasses.back().str() << ";\n";
+      OS << "    return B == " << SuperClasses.back() << ";\n";
       continue;
     }
 
     if (!SuperClasses.empty()) {
-      SS << "    switch (B) {\n";
-      SS << "    default: return false;\n";
-      for (unsigned i = 0, e = SuperClasses.size(); i != e; ++i)
-        SS << "    case " << SuperClasses[i].str() << ": return true;\n";
-      SS << "    }\n";
+      OS << "    switch (B) {\n";
+      OS << "    default: return false;\n";
+      for (StringRef SC : SuperClasses)
+        OS << "    case " << SC << ": return true;\n";
+      OS << "    }\n";
     } else {
       // No case statement to emit
-      SS << "    return false;\n";
+      OS << "    return false;\n";
     }
   }
-  SS << "  }\n";
+  OS << "  }\n";
 
-  // If there were case statements emitted into the string stream, write them
-  // to the output stream, otherwise write the default.
-  if (Count)
-    OS << SS.str();
-  else
+  // If there were case statements emitted into the string stream write the
+  // default.
+  if (!EmittedSwitch)
     OS << "  return false;\n";
 
   OS << "}\n\n";

@@ -5156,9 +5156,8 @@ optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2,
   // live-out. If it is live-out, do not optimize.
   if ((IsCmpZero || IsSwapped) && !IsSafe) {
     MachineBasicBlock *MBB = CmpInstr->getParent();
-    for (MachineBasicBlock::succ_iterator SI = MBB->succ_begin(),
-             SE = MBB->succ_end(); SI != SE; ++SI)
-      if ((*SI)->isLiveIn(X86::EFLAGS))
+    for (MachineBasicBlock *Successor : MBB->successors())
+      if (Successor->isLiveIn(X86::EFLAGS))
         return false;
   }
 
@@ -5199,8 +5198,8 @@ optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2,
   CmpInstr->eraseFromParent();
 
   // Modify the condition code of instructions in OpsToUpdate.
-  for (unsigned i = 0, e = OpsToUpdate.size(); i < e; i++)
-    OpsToUpdate[i].first->setDesc(get(OpsToUpdate[i].second));
+  for (auto &Op : OpsToUpdate)
+    Op.first->setDesc(get(Op.second));
   return true;
 }
 
@@ -5248,8 +5247,7 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr *MI,
     return nullptr;
 
   // Check whether we can fold the def into SrcOperandId.
-  MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandId, DefMI);
-  if (FoldMI) {
+  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandId, DefMI)) {
     FoldAsLoadDefReg = 0;
     return FoldMI;
   }
@@ -6242,20 +6240,19 @@ bool X86InstrInfo::unfoldMemoryOperand(MachineFunction &MF, MachineInstr *MI,
 
   if (FoldedStore)
     MIB.addReg(Reg, RegState::Define);
-  for (unsigned i = 0, e = BeforeOps.size(); i != e; ++i)
-    MIB.addOperand(BeforeOps[i]);
+  for (MachineOperand &BeforeOp : BeforeOps)
+    MIB.addOperand(BeforeOp);
   if (FoldedLoad)
     MIB.addReg(Reg);
-  for (unsigned i = 0, e = AfterOps.size(); i != e; ++i)
-    MIB.addOperand(AfterOps[i]);
-  for (unsigned i = 0, e = ImpOps.size(); i != e; ++i) {
-    MachineOperand &MO = ImpOps[i];
-    MIB.addReg(MO.getReg(),
-               getDefRegState(MO.isDef()) |
+  for (MachineOperand &AfterOp : AfterOps)
+    MIB.addOperand(AfterOp);
+  for (MachineOperand &ImpOp : ImpOps) {
+    MIB.addReg(ImpOp.getReg(),
+               getDefRegState(ImpOp.isDef()) |
                RegState::Implicit |
-               getKillRegState(MO.isKill()) |
-               getDeadRegState(MO.isDead()) |
-               getUndefRegState(MO.isUndef()));
+               getKillRegState(ImpOp.isKill()) |
+               getDeadRegState(ImpOp.isDead()) |
+               getUndefRegState(ImpOp.isUndef()));
   }
   // Change CMP32ri r, 0 back to TEST32rr r, r, etc.
   switch (DataMI->getOpcode()) {

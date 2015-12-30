@@ -60,11 +60,6 @@ bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                    bool LookThroughBitCast = false);
 
 /// \brief Tests if a value is a call or invoke to a library function that
-/// reallocates memory (such as realloc).
-bool isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
-                     bool LookThroughBitCast = false);
-
-/// \brief Tests if a value is a call or invoke to a library function that
 /// allocates memory and never returns null (such as operator new).
 bool isOperatorNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                          bool LookThroughBitCast = false);

@@ -405,7 +405,7 @@ unsigned ValueEnumerator::getValueID(const Value *V) const {
 void ValueEnumerator::dump() const {
   print(dbgs(), ValueMap, "Default");
   dbgs() << '\n';
-  print(dbgs(), MDValueMap, "MetaData");
+  print(dbgs(), MetadataMap, "MetaData");
   dbgs() << '\n';
 }
 
@@ -522,7 +522,7 @@ void ValueEnumerator::EnumerateMetadata(const Metadata *MD) {
   // EnumerateMDNodeOperands() from re-visiting MD in a cyclic graph.
   //
   // Return early if there's already an ID.
-  if (!MDValueMap.insert(std::make_pair(MD, 0)).second)
+  if (!MetadataMap.insert(std::make_pair(MD, 0)).second)
     return;
 
   // Visit operands first to minimize RAUW.
@@ -535,10 +535,10 @@ void ValueEnumerator::EnumerateMetadata(const Metadata *MD) {
   HasDILocation |= isa<DILocation>(MD);
   HasGenericDINode |= isa<GenericDINode>(MD);
 
-  // Replace the dummy ID inserted above with the correct one.  MDValueMap may
+  // Replace the dummy ID inserted above with the correct one.  MetadataMap may
   // have changed by inserting operands, so we need a fresh lookup here.
   MDs.push_back(MD);
-  MDValueMap[MD] = MDs.size();
+  MetadataMap[MD] = MDs.size();
 }
 
 /// EnumerateFunctionLocalMetadataa - Incorporate function-local metadata
@@ -546,12 +546,12 @@ void ValueEnumerator::EnumerateMetadata(const Metadata *MD) {
 void ValueEnumerator::EnumerateFunctionLocalMetadata(
     const LocalAsMetadata *Local) {
   // Check to see if it's already in!
-  unsigned &MDValueID = MDValueMap[Local];
-  if (MDValueID)
+  unsigned &MetadataID = MetadataMap[Local];
+  if (MetadataID)
     return;
 
   MDs.push_back(Local);
-  MDValueID = MDs.size();
+  MetadataID = MDs.size();
 
   EnumerateValue(Local->getValue());
 
@@ -758,7 +758,7 @@ void ValueEnumerator::purgeFunction() {
   for (unsigned i = NumModuleValues, e = Values.size(); i != e; ++i)
     ValueMap.erase(Values[i].first);
   for (unsigned i = NumModuleMDs, e = MDs.size(); i != e; ++i)
-    MDValueMap.erase(MDs[i]);
+    MetadataMap.erase(MDs[i]);
   for (unsigned i = 0, e = BasicBlocks.size(); i != e; ++i)
     ValueMap.erase(BasicBlocks[i]);
 

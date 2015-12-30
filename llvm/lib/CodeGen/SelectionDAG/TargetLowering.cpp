@@ -118,8 +118,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG,
   return LowerCallTo(CLI);
 }
 
-/// SoftenSetCCOperands - Soften the operands of a comparison.  This code is
-/// shared among BR_CC, SELECT_CC, and SETCC handlers.
+/// Soften the operands of a comparison. This code is shared among BR_CC,
+/// SELECT_CC, and SETCC handlers.
 void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                                          SDValue &NewLHS, SDValue &NewRHS,
                                          ISD::CondCode &CCCode,
@@ -233,9 +233,8 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   }
 }
 
-/// getJumpTableEncoding - Return the entry encoding for a jump table in the
-/// current function.  The returned value is a member of the
-/// MachineJumpTableInfo::JTEntryKind enum.
+/// Return the entry encoding for a jump table in the current function. The
+/// returned value is a member of the MachineJumpTableInfo::JTEntryKind enum.
 unsigned TargetLowering::getJumpTableEncoding() const {
   // In non-pic modes, just use the address of a block.
   if (getTargetMachine().getRelocationModel() != Reloc::PIC_)
@@ -261,9 +260,8 @@ SDValue TargetLowering::getPICJumpTableRelocBase(SDValue Table,
   return Table;
 }
 
-/// getPICJumpTableRelocBaseExpr - This returns the relocation base for the
-/// given PIC jumptable, the same as getPICJumpTableRelocBase, but as an
-/// MCExpr.
+/// This returns the relocation base for the given PIC jumptable, the same as
+/// getPICJumpTableRelocBase, but as an MCExpr.
 const MCExpr *
 TargetLowering::getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
                                              unsigned JTI,MCContext &Ctx) const{
@@ -290,10 +288,9 @@ TargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 //  Optimization Methods
 //===----------------------------------------------------------------------===//
 
-/// ShrinkDemandedConstant - Check to see if the specified operand of the
-/// specified instruction is a constant integer.  If so, check to see if there
-/// are any bits set in the constant that are not demanded.  If so, shrink the
-/// constant and return true.
+/// Check to see if the specified operand of the specified instruction is a
+/// constant integer. If so, check to see if there are any bits set in the
+/// constant that are not demanded. If so, shrink the constant and return true.
 bool TargetLowering::TargetLoweringOpt::ShrinkDemandedConstant(SDValue Op,
                                                         const APInt &Demanded) {
   SDLoc dl(Op);
@@ -328,10 +325,9 @@ bool TargetLowering::TargetLoweringOpt::ShrinkDemandedConstant(SDValue Op,
   return false;
 }
 
-/// ShrinkDemandedOp - Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the
-/// casts are free.  This uses isZExtFree and ZERO_EXTEND for the widening
-/// cast, but it could be generalized for targets with other types of
-/// implicit widening casts.
+/// Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the casts are free.
+/// This uses isZExtFree and ZERO_EXTEND for the widening cast, but it could be
+/// generalized for targets with other types of implicit widening casts.
 bool
 TargetLowering::TargetLoweringOpt::ShrinkDemandedOp(SDValue Op,
                                                     unsigned BitWidth,
@@ -377,13 +373,13 @@ TargetLowering::TargetLoweringOpt::ShrinkDemandedOp(SDValue Op,
   return false;
 }
 
-/// SimplifyDemandedBits - Look at Op.  At this point, we know that only the
-/// DemandedMask bits of the result of Op are ever used downstream.  If we can
-/// use this information to simplify Op, create a new simplified DAG node and
-/// return true, returning the original and new nodes in Old and New. Otherwise,
-/// analyze the expression and return a mask of KnownOne and KnownZero bits for
-/// the expression (used to simplify the caller).  The KnownZero/One bits may
-/// only be accurate for those bits in the DemandedMask.
+/// Look at Op. At this point, we know that only the DemandedMask bits of the
+/// result of Op are ever used downstream. If we can use this information to
+/// simplify Op, create a new simplified DAG node and return true, returning the
+/// original and new nodes in Old and New. Otherwise, analyze the expression and
+/// return a mask of KnownOne and KnownZero bits for the expression (used to
+/// simplify the caller).  The KnownZero/One bits may only be accurate for those
+/// bits in the DemandedMask.
 bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                           const APInt &DemandedMask,
                                           APInt &KnownZero,
@@ -1133,9 +1129,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
   return false;
 }
 
-/// computeKnownBitsForTargetNode - Determine which of the bits specified
-/// in Mask are known to be either zero or one and return them in the
-/// KnownZero/KnownOne bitsets.
+/// Determine which of the bits specified in Mask are known to be either zero or
+/// one and return them in the KnownZero/KnownOne bitsets.
 void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                    APInt &KnownZero,
                                                    APInt &KnownOne,
@@ -1150,9 +1145,8 @@ void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   KnownZero = KnownOne = APInt(KnownOne.getBitWidth(), 0);
 }
 
-/// ComputeNumSignBitsForTargetNode - This method can be implemented by
-/// targets that want to expose additional information about sign bits to the
-/// DAG Combiner.
+/// This method can be implemented by targets that want to expose additional
+/// information about sign bits to the DAG Combiner.
 unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
                                                          const SelectionDAG &,
                                                          unsigned Depth) const {
@@ -1165,10 +1159,8 @@ unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
   return 1;
 }
 
-/// ValueHasExactlyOneBitSet - Test if the given value is known to have exactly
-/// one bit set. This differs from computeKnownBits in that it doesn't need to
-/// determine which bit is set.
-///
+/// Test if the given value is known to have exactly one bit set. This differs
+/// from computeKnownBits in that it doesn't need to determine which bit is set.
 static bool ValueHasExactlyOneBitSet(SDValue Val, const SelectionDAG &DAG) {
   // A left-shift of a constant one will have exactly one bit set, because
   // shifting the bit off the end is undefined.
@@ -1252,8 +1244,8 @@ bool TargetLowering::isConstFalseVal(const SDNode *N) const {
   return CN->isNullValue();
 }
 
-/// SimplifySetCC - Try to simplify a setcc built with the specified operands
-/// and cc. If it is unable to simplify it, return a null SDValue.
+/// Try to simplify a setcc built with the specified operands and cc. If it is
+/// unable to simplify it, return a null SDValue.
 SDValue
 TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               ISD::CondCode Cond, bool foldBooleans,
@@ -1283,7 +1275,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
        isCondCodeLegal(SwappedCC, N0.getSimpleValueType())))
     return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
 
-  if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1.getNode())) {
+  if (auto *N1C = dyn_cast<ConstantSDNode>(N1.getNode())) {
     const APInt &C1 = N1C->getAPIntValue();
 
     // If the LHS is '(srl (ctlz x), 5)', the RHS is 0/1, and this is an
@@ -1348,7 +1340,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         PreExt = N0->getOperand(0);
       } else if (N0->getOpcode() == ISD::AND) {
         // DAGCombine turns costly ZExts into ANDs
-        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0->getOperand(1)))
+        if (auto *C = dyn_cast<ConstantSDNode>(N0->getOperand(1)))
           if ((C->getAPIntValue()+1).isPowerOf2()) {
             MinBits = C->getAPIntValue().countTrailingOnes();
             PreExt = N0->getOperand(0);
@@ -1358,7 +1350,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         MinBits = N0->getOperand(0).getValueSizeInBits();
         PreExt = N0->getOperand(0);
         Signed = true;
-      } else if (LoadSDNode *LN0 = dyn_cast<LoadSDNode>(N0)) {
+      } else if (auto *LN0 = dyn_cast<LoadSDNode>(N0)) {
         // ZEXTLOAD / SEXTLOAD
         if (LN0->getExtensionType() == ISD::ZEXTLOAD) {
           MinBits = LN0->getMemoryVT().getSizeInBits();
@@ -1710,8 +1702,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
          (isTypeLegal(VT) && VT.bitsLE(N0.getValueType()))) &&
         N0.getOpcode() == ISD::AND) {
       auto &DL = DAG.getDataLayout();
-      if (ConstantSDNode *AndRHS =
-                  dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
+      if (auto *AndRHS = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
         EVT ShiftTy = DCI.isBeforeLegalize()
                           ? getPointerTy(DL)
                           : getShiftAmountTy(N0.getValueType(), DL);
@@ -1741,8 +1732,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       // (X & -256) == 256 -> (X >> 8) == 1
       if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
           N0.getOpcode() == ISD::AND && N0.hasOneUse()) {
-        if (ConstantSDNode *AndRHS =
-            dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
+        if (auto *AndRHS = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
           const APInt &AndRHSC = AndRHS->getAPIntValue();
           if ((-AndRHSC).isPowerOf2() && (AndRHSC & C1) == C1) {
             unsigned ShiftBits = AndRHSC.countTrailingZeros();
@@ -1796,7 +1786,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     // Constant fold or commute setcc.
     SDValue O = DAG.FoldSetCC(VT, N0, N1, Cond, dl);
     if (O.getNode()) return O;
-  } else if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N1.getNode())) {
+  } else if (auto *CFP = dyn_cast<ConstantFPSDNode>(N1.getNode())) {
     // If the RHS of an FP comparison is a constant, simplify it away in
     // some cases.
     if (CFP->getValueAPF().isNaN()) {
@@ -1913,8 +1903,8 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       // to be careful about increasing register pressure needlessly.
       bool LegalRHSImm = false;
 
-      if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(N1)) {
-        if (ConstantSDNode *LHSR = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
+      if (auto *RHSC = dyn_cast<ConstantSDNode>(N1)) {
+        if (auto *LHSR = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
           // Turn (X+C1) == C2 --> X == C2-C1
           if (N0.getOpcode() == ISD::ADD && N0.getNode()->hasOneUse()) {
             return DAG.getSetCC(dl, VT, N0.getOperand(0),
@@ -1937,7 +1927,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         }
 
         // Turn (C1-X) == C2 --> X == C1-C2
-        if (ConstantSDNode *SUBC = dyn_cast<ConstantSDNode>(N0.getOperand(0))) {
+        if (auto *SUBC = dyn_cast<ConstantSDNode>(N0.getOperand(0))) {
           if (N0.getOpcode() == ISD::SUB && N0.getNode()->hasOneUse()) {
             return
               DAG.getSetCC(dl, VT, N0.getOperand(1),
@@ -2088,12 +2078,11 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-/// isGAPlusOffset - Returns true (and the GlobalValue and the offset) if the
-/// node is a GlobalAddress + offset.
+/// Returns true (and the GlobalValue and the offset) if the node is a
+/// GlobalAddress + offset.
 bool TargetLowering::isGAPlusOffset(SDNode *N, const GlobalValue *&GA,
                                     int64_t &Offset) const {
-  if (isa<GlobalAddressSDNode>(N)) {
-    GlobalAddressSDNode *GASD = cast<GlobalAddressSDNode>(N);
+  if (auto *GASD = dyn_cast<GlobalAddressSDNode>(N)) {
     GA = GASD->getGlobal();
     Offset += GASD->getOffset();
     return true;
@@ -2103,14 +2092,12 @@ bool TargetLowering::isGAPlusOffset(SDNode *N, const GlobalValue *&GA,
     SDValue N1 = N->getOperand(0);
     SDValue N2 = N->getOperand(1);
     if (isGAPlusOffset(N1.getNode(), GA, Offset)) {
-      ConstantSDNode *V = dyn_cast<ConstantSDNode>(N2);
-      if (V) {
+      if (auto *V = dyn_cast<ConstantSDNode>(N2)) {
         Offset += V->getSExtValue();
         return true;
       }
     } else if (isGAPlusOffset(N2.getNode(), GA, Offset)) {
-      ConstantSDNode *V = dyn_cast<ConstantSDNode>(N1);
-      if (V) {
+      if (auto *V = dyn_cast<ConstantSDNode>(N1)) {
         Offset += V->getSExtValue();
         return true;
       }
@@ -2171,9 +2158,9 @@ TargetLowering::getConstraintType(StringRef Constraint) const {
   return C_Unknown;
 }
 
-/// LowerXConstraint - try to replace an X constraint, which matches anything,
-/// with another that has more specific requirements based on the type of the
-/// corresponding operand.
+/// Try to replace an X constraint, which matches anything, with another that
+/// has more specific requirements based on the type of the corresponding
+/// operand.
 const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const{
   if (ConstraintVT.isInteger())
     return "r";
@@ -2182,8 +2169,8 @@ const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const{
   return nullptr;
 }
 
-/// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
-/// vector.  If it is invalid, don't add anything to Ops.
+/// Lower the specified operand into the Ops vector.
+/// If it is invalid, don't add anything to Ops.
 void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
                                                   std::string &Constraint,
                                                   std::vector<SDValue> &Ops,
@@ -2296,30 +2283,30 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
 //===----------------------------------------------------------------------===//
 // Constraint Selection.
 
-/// isMatchingInputConstraint - Return true of this is an input operand that is
-/// a matching constraint like "4".
+/// Return true of this is an input operand that is a matching constraint like
+/// "4".
 bool TargetLowering::AsmOperandInfo::isMatchingInputConstraint() const {
   assert(!ConstraintCode.empty() && "No known constraint!");
   return isdigit(static_cast<unsigned char>(ConstraintCode[0]));
 }
 
-/// getMatchedOperand - If this is an input matching constraint, this method
-/// returns the output operand it matches.
+/// If this is an input matching constraint, this method returns the output
+/// operand it matches.
 unsigned TargetLowering::AsmOperandInfo::getMatchedOperand() const {
   assert(!ConstraintCode.empty() && "No known constraint!");
   return atoi(ConstraintCode.c_str());
 }
 
-/// ParseConstraints - Split up the constraint string from the inline
-/// assembly value into the specific constraints and their prefixes,
-/// and also tie in the associated operand values.
+/// Split up the constraint string from the inline assembly value into the
+/// specific constraints and their prefixes, and also tie in the associated
+/// operand values.
 /// If this returns an empty vector, and if the constraint string itself
 /// isn't empty, there was an error parsing.
 TargetLowering::AsmOperandInfoVector
 TargetLowering::ParseConstraints(const DataLayout &DL,
                                  const TargetRegisterInfo *TRI,
                                  ImmutableCallSite CS) const {
-  /// ConstraintOperands - Information about all of the constraints.
+  /// Information about all of the constraints.
   AsmOperandInfoVector ConstraintOperands;
   const InlineAsm *IA = cast<InlineAsm>(CS.getCalledValue());
   unsigned maCount = 0; // Largest number of multiple alternative constraints.
@@ -2500,8 +2487,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
   return ConstraintOperands;
 }
 
-/// getConstraintGenerality - Return an integer indicating how general CT
-/// is.
+/// Return an integer indicating how general CT is.
 static unsigned getConstraintGenerality(TargetLowering::ConstraintType CT) {
   switch (CT) {
   case TargetLowering::C_Other:
@@ -2590,8 +2576,8 @@ TargetLowering::ConstraintWeight
   return weight;
 }
 
-/// ChooseConstraint - If there are multiple different constraints that we
-/// could pick for this operand (e.g. "imr") try to pick the 'best' one.
+/// If there are multiple different constraints that we could pick for this
+/// operand (e.g. "imr") try to pick the 'best' one.
 /// This is somewhat tricky: constraints fall into four classes:
 ///    Other         -> immediates and magic values
 ///    Register      -> one specific register
@@ -2658,9 +2644,8 @@ static void ChooseConstraint(TargetLowering::AsmOperandInfo &OpInfo,
   OpInfo.ConstraintType = BestType;
 }
 
-/// ComputeConstraintToUse - Determines the constraint code and constraint
-/// type to use for the specific AsmOperandInfo, setting
-/// OpInfo.ConstraintCode and OpInfo.ConstraintType.
+/// Determines the constraint code and constraint type to use for the specific
+/// AsmOperandInfo, setting OpInfo.ConstraintCode and OpInfo.ConstraintType.
 void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
                                             SDValue Op,
                                             SelectionDAG *DAG) const {

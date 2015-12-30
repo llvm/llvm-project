@@ -62,6 +62,11 @@ static cl::opt<unsigned> AlignAllBlock("align-all-blocks",
                                                 "blocks in the function."),
                                        cl::init(0), cl::Hidden);
 
+static cl::opt<unsigned>
+    AlignAllLoops("align-all-loops",
+                  cl::desc("Force the alignment of all loops in the function."),
+                  cl::init(0), cl::Hidden);
+
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned> ExitBlockBias(
     "block-placement-exit-block-bias",
@@ -1328,6 +1333,11 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
     MachineLoop *L = MLI->getLoopFor(ChainBB);
     if (!L)
       continue;
+
+    if (AlignAllLoops) {
+      ChainBB->setAlignment(AlignAllLoops);
+      continue;
+    }
 
     unsigned Align = TLI->getPrefLoopAlignment(L);
     if (!Align)

@@ -15,12 +15,12 @@
 #define LLVM_IR_MANGLER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
 class DataLayout;
-class GlobalValue;
 template <typename T> class SmallVectorImpl;
 class Twine;
 

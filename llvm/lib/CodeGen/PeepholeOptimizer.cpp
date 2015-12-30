@@ -400,11 +400,10 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_END(PeepholeOptimizer, "peephole-opts",
                 "Peephole Optimizations", false, false)
 
-/// optimizeExtInstr - If instruction is a copy-like instruction, i.e. it reads
-/// a single register and writes a single register and it does not modify the
-/// source, and if the source value is preserved as a sub-register of the
-/// result, then replace all reachable uses of the source with the subreg of the
-/// result.
+/// If instruction is a copy-like instruction, i.e. it reads a single register
+/// and writes a single register and it does not modify the source, and if the
+/// source value is preserved as a sub-register of the result, then replace all
+/// reachable uses of the source with the subreg of the result.
 ///
 /// Do not generate an EXTRACT that is used only in a debug use, as this changes
 /// the code. Since this code does not currently share EXTRACTs, just ignore all
@@ -555,10 +554,10 @@ optimizeExtInstr(MachineInstr *MI, MachineBasicBlock *MBB,
   return Changed;
 }
 
-/// optimizeCmpInstr - If the instruction is a compare and the previous
-/// instruction it's comparing against all ready sets (or could be modified to
-/// set) the same flag as the compare, then we can remove the comparison and use
-/// the flag from the previous instruction.
+/// If the instruction is a compare and the previous instruction it's comparing
+/// against already sets (or could be modified to set) the same flag as the
+/// compare, then we can remove the comparison and use the flag from the
+/// previous instruction.
 bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr *MI,
                                          MachineBasicBlock *MBB) {
   // If this instruction is a comparison against zero and isn't comparing a
@@ -1290,12 +1289,11 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
   return true;
 }
 
-/// isLoadFoldable - Check whether MI is a candidate for folding into a later
-/// instruction. We only fold loads to virtual registers and the virtual
-/// register defined has a single use.
+/// Check whether MI is a candidate for folding into a later instruction.
+/// We only fold loads to virtual registers and the virtual register defined
+/// has a single use.
 bool PeepholeOptimizer::isLoadFoldable(
-                              MachineInstr *MI,
-                              SmallSet<unsigned, 16> &FoldAsLoadDefCandidates) {
+    MachineInstr *MI, SmallSet<unsigned, 16> &FoldAsLoadDefCandidates) {
   if (!MI->canFoldAsLoad() || !MI->mayLoad())
     return false;
   const MCInstrDesc &MCID = MI->getDesc();
@@ -1315,9 +1313,9 @@ bool PeepholeOptimizer::isLoadFoldable(
   return false;
 }
 
-bool PeepholeOptimizer::isMoveImmediate(MachineInstr *MI,
-                                        SmallSet<unsigned, 4> &ImmDefRegs,
-                                 DenseMap<unsigned, MachineInstr*> &ImmDefMIs) {
+bool PeepholeOptimizer::isMoveImmediate(
+    MachineInstr *MI, SmallSet<unsigned, 4> &ImmDefRegs,
+    DenseMap<unsigned, MachineInstr *> &ImmDefMIs) {
   const MCInstrDesc &MCID = MI->getDesc();
   if (!MI->isMoveImmediate())
     return false;
@@ -1333,12 +1331,12 @@ bool PeepholeOptimizer::isMoveImmediate(MachineInstr *MI,
   return false;
 }
 
-/// foldImmediate - Try folding register operands that are defined by move
-/// immediate instructions, i.e. a trivial constant folding optimization, if
+/// Try folding register operands that are defined by move immediate
+/// instructions, i.e. a trivial constant folding optimization, if
 /// and only if the def and use are in the same BB.
-bool PeepholeOptimizer::foldImmediate(MachineInstr *MI, MachineBasicBlock *MBB,
-                                      SmallSet<unsigned, 4> &ImmDefRegs,
-                                 DenseMap<unsigned, MachineInstr*> &ImmDefMIs) {
+bool PeepholeOptimizer::foldImmediate(
+    MachineInstr *MI, MachineBasicBlock *MBB, SmallSet<unsigned, 4> &ImmDefRegs,
+    DenseMap<unsigned, MachineInstr *> &ImmDefMIs) {
   for (unsigned i = 0, e = MI->getDesc().getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || MO.isDef())
@@ -1376,8 +1374,7 @@ bool PeepholeOptimizer::foldImmediate(MachineInstr *MI, MachineBasicBlock *MBB,
 //
 // Should replace %vreg2 uses with %vreg1:sub1
 bool PeepholeOptimizer::foldRedundantCopy(
-    MachineInstr *MI,
-    SmallSet<unsigned, 4> &CopySrcRegs,
+    MachineInstr *MI, SmallSet<unsigned, 4> &CopySrcRegs,
     DenseMap<unsigned, MachineInstr *> &CopyMIs) {
   assert(MI->isCopy() && "expected a COPY machine instruction");
 
@@ -1490,9 +1487,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
 
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock *MBB = &*I;
-
+  for (MachineBasicBlock &MBB : MF) {
     bool SeenMoveImm = false;
 
     // During this forward scan, at some point it needs to answer the question
@@ -1517,8 +1512,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
     SmallSet<unsigned, 4> CopySrcRegs;
     DenseMap<unsigned, MachineInstr *> CopySrcMIs;
 
-    for (MachineBasicBlock::iterator
-           MII = I->begin(), MIE = I->end(); MII != MIE; ) {
+    for (MachineBasicBlock::iterator MII = MBB.begin(), MIE = MBB.end();
+         MII != MIE; ) {
       MachineInstr *MI = &*MII;
       // We may be erasing MI below, increment MII now.
       ++MII;
@@ -1581,7 +1576,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
       if ((isUncoalescableCopy(*MI) &&
            optimizeUncoalescableCopy(MI, LocalMIs)) ||
-          (MI->isCompare() && optimizeCmpInstr(MI, MBB)) ||
+          (MI->isCompare() && optimizeCmpInstr(MI, &MBB)) ||
           (MI->isSelect() && optimizeSelect(MI, LocalMIs))) {
         // MI is deleted.
         LocalMIs.erase(MI);
@@ -1612,14 +1607,14 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
       if (isMoveImmediate(MI, ImmDefRegs, ImmDefMIs)) {
         SeenMoveImm = true;
       } else {
-        Changed |= optimizeExtInstr(MI, MBB, LocalMIs);
+        Changed |= optimizeExtInstr(MI, &MBB, LocalMIs);
         // optimizeExtInstr might have created new instructions after MI
         // and before the already incremented MII. Adjust MII so that the
         // next iteration sees the new instructions.
         MII = MI;
         ++MII;
         if (SeenMoveImm)
-          Changed |= foldImmediate(MI, MBB, ImmDefRegs, ImmDefMIs);
+          Changed |= foldImmediate(MI, &MBB, ImmDefRegs, ImmDefMIs);
       }
 
       // Check whether MI is a load candidate for folding into a later
@@ -1846,7 +1841,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromExtractSubreg() {
   if (ExtractSubregInputReg.SubReg)
     return ValueTrackerResult();
   // Otherwise, the value is available in the v0.sub0.
-  return ValueTrackerResult(ExtractSubregInputReg.Reg, ExtractSubregInputReg.SubIdx);
+  return ValueTrackerResult(ExtractSubregInputReg.Reg,
+                            ExtractSubregInputReg.SubIdx);
 }
 
 ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {

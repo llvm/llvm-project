@@ -286,6 +286,21 @@ static unsigned getJumpThreadDuplicationCost(const BasicBlock *BB,
   // FIXME: THREADING will delete values that are just used to compute the
   // branch, so they shouldn't count against the duplication cost.
 
+  unsigned Bonus = 0;
+  const TerminatorInst *BBTerm = BB->getTerminator();
+  // Threading through a switch statement is particularly profitable.  If this
+  // block ends in a switch, decrease its cost to make it more likely to happen.
+  if (isa<SwitchInst>(BBTerm))
+    Bonus = 6;
+
+  // The same holds for indirect branches, but slightly more so.
+  if (isa<IndirectBrInst>(BBTerm))
+    Bonus = 8;
+
+  // Bump the threshold up so the early exit from the loop doesn't skip the
+  // terminator-based Size adjustment at the end.
+  Threshold += Bonus;
+
   // Sum up the cost of each instruction until we get to the terminator.  Don't
   // include the terminator because the copy won't include it.
   unsigned Size = 0;
@@ -326,16 +341,7 @@ static unsigned getJumpThreadDuplicationCost(const BasicBlock *BB,
     }
   }
 
-  // Threading through a switch statement is particularly profitable.  If this
-  // block ends in a switch, decrease its cost to make it more likely to happen.
-  if (isa<SwitchInst>(I))
-    Size = Size > 6 ? Size-6 : 0;
-
-  // The same holds for indirect branches, but slightly more so.
-  if (isa<IndirectBrInst>(I))
-    Size = Size > 8 ? Size-8 : 0;
-
-  return Size;
+  return Size > Bonus ? Size - Bonus : 0;
 }
 
 /// FindLoopHeaders - We do not want jump threading to turn proper loop

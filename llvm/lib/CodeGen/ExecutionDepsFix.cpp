@@ -760,22 +760,19 @@ bool ExeDepsFix::runOnMachineFunction(MachineFunction &mf) {
     enterBasicBlock(MBB);
     if (SeenUnknownBackEdge)
       Loops.push_back(MBB);
-    for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
-        ++I)
-      visitInstr(I);
+    for (MachineInstr &MI : *MBB)
+      visitInstr(&MI);
     processUndefReads(MBB);
     leaveBasicBlock(MBB);
   }
 
   // Visit all the loop blocks again in order to merge DomainValues from
   // back-edges.
-  for (unsigned i = 0, e = Loops.size(); i != e; ++i) {
-    MachineBasicBlock *MBB = Loops[i];
+  for (MachineBasicBlock *MBB : Loops) {
     enterBasicBlock(MBB);
-    for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
-        ++I)
-      if (!I->isDebugValue())
-        processDefs(I, false);
+    for (MachineInstr &MI : *MBB)
+      if (!MI.isDebugValue())
+        processDefs(&MI, false);
     processUndefReads(MBB);
     leaveBasicBlock(MBB);
   }
