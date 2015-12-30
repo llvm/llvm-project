@@ -16,6 +16,12 @@
 #include <experimental/any>
 #include "any_helpers.h"
 
+constexpr std::size_t BufferSize = (sizeof(void*) * 3);
+constexpr std::size_t BufferAlignment = alignof(void*);
+// Clang doesn't like "alignof(BufferAlignment * 2)" due to PR13986.
+// So we create "DoubleBufferAlignment" instead.
+constexpr std::size_t DoubleBufferAlignment = BufferAlignment * 2;
+
 class SmallThrowsDtor
 {
 public:
@@ -23,6 +29,30 @@ public:
     SmallThrowsDtor(SmallThrowsDtor const &) noexcept {}
     SmallThrowsDtor(SmallThrowsDtor &&) noexcept {}
     ~SmallThrowsDtor() noexcept(false) {}
+};
+
+
+struct alignas(1) MaxSizeType {
+    char buff[BufferSize];
+};
+
+struct alignas(BufferAlignment) MaxAlignType {
+};
+
+struct alignas(BufferAlignment) MaxSizeAndAlignType {
+    char buff[BufferSize];
+};
+
+
+struct alignas(1) OverSizeType {
+    char buff[BufferSize + 1];
+};
+
+struct alignas(DoubleBufferAlignment) OverAlignedType {
+};
+
+struct alignas(DoubleBufferAlignment) OverSizeAndAlignedType {
+    char buff[BufferSize + 1];
 };
 
 int main()
@@ -33,8 +63,52 @@ int main()
     static_assert(_IsSmallObject<void*>::value, "");
     static_assert(!_IsSmallObject<SmallThrowsDtor>::value, "");
     static_assert(!_IsSmallObject<large>::value, "");
-    // long double is over aligned.
-    static_assert(sizeof(long double) <= sizeof(void*) * 3, "");
-    static_assert(alignof(long double) > alignof(void*), "");
-    static_assert(!_IsSmallObject<long double>::value, "");
+    {
+        // Check a type that meets the size requirement *exactly* and has
+        // a lesser alignment requirement is considered small.
+        typedef MaxSizeType T;
+        static_assert(sizeof(T) == BufferSize, "");
+        static_assert(alignof(T) < BufferAlignment,   "");
+        static_assert(_IsSmallObject<T>::value, "");
+    }
+    {
+        // Check a type that meets the alignment requirement *exactly* and has
+        // a lesser size is considered small.
+        typedef MaxAlignType T;
+        static_assert(sizeof(T) < BufferSize, "");
+        static_assert(alignof(T) == BufferAlignment,   "");
+        static_assert(_IsSmallObject<T>::value, "");
+    }
+    {
+        // Check a type that meets the size and alignment requirements *exactly*
+        // is considered small.
+        typedef MaxSizeAndAlignType T;
+        static_assert(sizeof(T) == BufferSize, "");
+        static_assert(alignof(T) == BufferAlignment,   "");
+        static_assert(_IsSmallObject<T>::value, "");
+    }
+    {
+        // Check a type that meets the alignment requirements but is over-sized
+        // is not considered small.
+        typedef OverSizeType T;
+        static_assert(sizeof(T) > BufferSize, "");
+        static_assert(alignof(T) < BufferAlignment, "");
+        static_assert(!_IsSmallObject<T>::value, "");
+    }
+    {
+        // Check a type that meets the size requirements but is over-aligned
+        // is not considered small.
+        typedef OverAlignedType T;
+        static_assert(sizeof(T) < BufferSize, "");
+        static_assert(alignof(T) > BufferAlignment, "");
+        static_assert(!_IsSmallObject<T>::value, "");
+    }
+    {
+        // Check a type that exceeds both the size an alignment requirements
+        // is not considered small.
+        typedef OverSizeAndAlignedType T;
+        static_assert(sizeof(T) > BufferSize, "");
+        static_assert(alignof(T) > BufferAlignment, "");
+        static_assert(!_IsSmallObject<T>::value, "");
+    }
 }

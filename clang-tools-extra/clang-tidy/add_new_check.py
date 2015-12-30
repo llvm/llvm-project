@@ -92,7 +92,6 @@ public:
 } // namespace clang
 
 #endif // %(header_guard)s
-
 """ % {'header_guard': header_guard,
        'check_name': check_name_camel,
        'check_name_dashes': check_name_dashes,
@@ -146,7 +145,6 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
 } // namespace %(module)s
 } // namespace tidy
 } // namespace clang
-
 """ % {'check_name': check_name_camel,
        'module': module})
 

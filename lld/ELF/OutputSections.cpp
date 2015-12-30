@@ -283,17 +283,15 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       Reloc = Target->getDynReloc(Type);
     P->setSymbolAndType(Sym, Reloc, Config->Mips64EL);
 
-    if (NeedsGot) {
-      if (LazyReloc)
-        P->r_offset = Out<ELFT>::GotPlt->getEntryAddr(*Body);
-      else
-        P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
-    } else if (NeedsCopy) {
+    if (LazyReloc)
+      P->r_offset = Out<ELFT>::GotPlt->getEntryAddr(*Body);
+    else if (NeedsGot)
+      P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
+    else if (NeedsCopy)
       P->r_offset = Out<ELFT>::Bss->getVA() +
                     dyn_cast<SharedSymbol<ELFT>>(Body)->OffsetInBSS;
-    } else {
+    else
       P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
-    }
 
     uintX_t OrigAddend = 0;
     if (IsRela && !NeedsGot)

@@ -491,9 +491,10 @@ void SimplifyBooleanExprCheck::check(const MatchFinder::MatchResult &Result) {
 bool containsDiscardedTokens(
     const ast_matchers::MatchFinder::MatchResult &Result,
     CharSourceRange CharRange) {
-  StringRef ReplacementText =
+  std::string ReplacementText =
       Lexer::getSourceText(CharRange, *Result.SourceManager,
-                           Result.Context->getLangOpts()).str();
+                           Result.Context->getLangOpts())
+          .str();
   Lexer Lex(CharRange.getBegin(), Result.Context->getLangOpts(),
             ReplacementText.data(), ReplacementText.data(),
             ReplacementText.data() + ReplacementText.size());

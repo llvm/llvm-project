@@ -346,7 +346,7 @@ can further inspect them and report diagnostics.
     if (Ctor->getNumParams() == 0 || Ctor->getMinRequiredArguments() > 1)
       return;
     SourceLocation Loc = Ctor->getLocation();
-    diag(Loc, "Single-argument constructors must be explicit")
+    diag(Loc, "single-argument constructors must be explicit")
         << FixItHint::CreateInsertion(Loc, "explicit ");
   }
 
