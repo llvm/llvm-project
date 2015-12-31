@@ -3919,9 +3919,9 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // Support protection key
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_rdpkru : GCCBuiltin <"__builtin_ia32_rdpkru">,
-              Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+              Intrinsic<[llvm_i32_ty], [], []>;
   def int_x86_wrpkru : GCCBuiltin<"__builtin_ia32_wrpkru">,
-              Intrinsic<[], [llvm_i32_ty], [IntrNoMem]>;
+              Intrinsic<[], [llvm_i32_ty], []>;
 }
 //===----------------------------------------------------------------------===//
 // Half float conversion

@@ -251,6 +251,10 @@ def : Proc<"hexagonv60", HexagonModelV60,
 // Declare the target which we are implementing
 //===----------------------------------------------------------------------===//
 
+def HexagonAsmParser : AsmParser {
+  bit HasMnemonicFirst = 0;
+}
+
 def HexagonAsmParserVariant : AsmParserVariant {
   int Variant = 0;
   string TokenizingCharacters = "#()=:.<>!+*";
@@ -259,5 +263,6 @@ def HexagonAsmParserVariant : AsmParserVariant {
 def Hexagon : Target {
   // Pull in Instruction Info:
   let InstructionSet = HexagonInstrInfo;
+  let AssemblyParsers = [HexagonAsmParser];
   let AssemblyParserVariants = [HexagonAsmParserVariant];
 }

@@ -9,6 +9,7 @@
 
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
+#include "llvm/Support/Compression.h"
 #include "gtest/gtest.h"
 
 #include <cstdarg>
@@ -581,6 +582,66 @@ TEST_F(InstrProfTest, instr_prof_symtab_test) {
   ASSERT_EQ(StringRef("bar2"), R);
   R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar3"));
   ASSERT_EQ(StringRef("bar3"), R);
+}
+
+TEST_F(InstrProfTest, instr_prof_symtab_compression_test) {
+  std::vector<std::string> FuncNames1;
+  std::vector<std::string> FuncNames2;
+  for (int I = 0; I < 10 * 1024; I++) {
+    std::string str;
+    raw_string_ostream OS(str);
+    OS << "func_" << I;
+    FuncNames1.push_back(OS.str());
+    str.clear();
+    OS << "fooooooooooooooo_" << I;
+    FuncNames1.push_back(OS.str());
+    str.clear();
+    OS << "BAR_" << I;
+    FuncNames2.push_back(OS.str());
+    str.clear();
+    OS << "BlahblahBlahblahBar_" << I;
+    FuncNames2.push_back(OS.str());
+  }
+
+  for (int Padding = 0; Padding < 10; Padding++) {
+    for (int DoCompression = 0; DoCompression < 2; DoCompression++) {
+      // Compressing:
+      std::string FuncNameStrings1;
+      collectPGOFuncNameStrings(FuncNames1,
+                                (DoCompression != 0 && zlib::isAvailable()),
+                                FuncNameStrings1);
+
+      // Compressing:
+      std::string FuncNameStrings2;
+      collectPGOFuncNameStrings(FuncNames2,
+                                (DoCompression != 0 && zlib::isAvailable()),
+                                FuncNameStrings2);
+
+      // Join with paddings:
+      std::string FuncNameStrings = FuncNameStrings1;
+      for (int P = 0; P < Padding; P++) {
+        FuncNameStrings.push_back('\0');
+      }
+      FuncNameStrings += FuncNameStrings2;
+
+      // Now decompress
+      InstrProfSymtab Symtab;
+      Symtab.create(StringRef(FuncNameStrings));
+
+      // Now check
+      for (int I = 0; I < 10 * 1024; I++) {
+        std::string N[4];
+        N[0] = FuncNames1[2 * I];
+        N[1] = FuncNames1[2 * I + 1];
+        N[2] = FuncNames2[2 * I];
+        N[3] = FuncNames2[2 * I + 1];
+        for (int J = 0; J < 4; J++) {
+          StringRef R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(N[J]));
+          ASSERT_EQ(StringRef(N[J]), R);
+        }
+      }
+    }
+  }
 }
 
 } // end anonymous namespace
