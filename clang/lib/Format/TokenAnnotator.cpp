@@ -1715,8 +1715,10 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
                               Right.Next->is(TT_DictLiteral)))
     return 1;
   if (Right.is(tok::l_square)) {
-    if (Style.Language == FormatStyle::LK_Proto || Left.is(tok::r_square))
+    if (Style.Language == FormatStyle::LK_Proto)
       return 1;
+    if (Left.is(tok::r_square))
+      return 25;
     // Slightly prefer formatting local lambda definitions like functions.
     if (Right.is(TT_LambdaLSquare) && Left.is(tok::equal))
       return 50;

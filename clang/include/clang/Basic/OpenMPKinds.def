@@ -220,6 +220,7 @@ OPENMP_FOR_SIMD_CLAUSE(safelen)
 OPENMP_FOR_SIMD_CLAUSE(simdlen)
 OPENMP_FOR_SIMD_CLAUSE(linear)
 OPENMP_FOR_SIMD_CLAUSE(aligned)
+OPENMP_FOR_SIMD_CLAUSE(ordered)
 
 // Clauses allowed for OpenMP directive 'omp sections'.
 OPENMP_SECTIONS_CLAUSE(private)
@@ -303,6 +304,7 @@ OPENMP_PARALLEL_FOR_SIMD_CLAUSE(safelen)
 OPENMP_PARALLEL_FOR_SIMD_CLAUSE(simdlen)
 OPENMP_PARALLEL_FOR_SIMD_CLAUSE(linear)
 OPENMP_PARALLEL_FOR_SIMD_CLAUSE(aligned)
+OPENMP_PARALLEL_FOR_SIMD_CLAUSE(ordered)
 
 // Clauses allowed for OpenMP directive 'parallel sections'.
 OPENMP_PARALLEL_SECTIONS_CLAUSE(if)

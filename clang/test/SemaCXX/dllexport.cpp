@@ -730,7 +730,12 @@ __declspec(dllexport)        int  MemberRedecl::StaticField = 1;       // expect
 __declspec(dllexport) const  int  MemberRedecl::StaticConstField = 1;  // expected-error{{redeclaration of 'MemberRedecl::StaticConstField' cannot add 'dllexport' attribute}}
 __declspec(dllexport) constexpr int MemberRedecl::ConstexprField;      // expected-error{{redeclaration of 'MemberRedecl::ConstexprField' cannot add 'dllexport' attribute}}
 
-
+#ifdef MS
+struct __declspec(dllexport) ClassWithMultipleDefaultCtors {
+  ClassWithMultipleDefaultCtors(int = 40) {} // expected-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
+  ClassWithMultipleDefaultCtors(int = 30, ...) {} // expected-note{{declared here}}
+};
+#endif
 
 //===----------------------------------------------------------------------===//
 // Class member templates

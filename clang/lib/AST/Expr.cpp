@@ -3711,8 +3711,7 @@ DesignatedInitExpr::Create(const ASTContext &C, Designator *Designators,
                            ArrayRef<Expr*> IndexExprs,
                            SourceLocation ColonOrEqualLoc,
                            bool UsesColonSyntax, Expr *Init) {
-  void *Mem = C.Allocate(sizeof(DesignatedInitExpr) +
-                             sizeof(Stmt *) * (IndexExprs.size() + 1),
+  void *Mem = C.Allocate(totalSizeToAlloc<Stmt *>(IndexExprs.size() + 1),
                          llvm::alignOf<DesignatedInitExpr>());
   return new (Mem) DesignatedInitExpr(C, C.VoidTy, NumDesignators, Designators,
                                       ColonOrEqualLoc, UsesColonSyntax,
@@ -3721,8 +3720,8 @@ DesignatedInitExpr::Create(const ASTContext &C, Designator *Designators,
 
 DesignatedInitExpr *DesignatedInitExpr::CreateEmpty(const ASTContext &C,
                                                     unsigned NumIndexExprs) {
-  void *Mem = C.Allocate(sizeof(DesignatedInitExpr) +
-                         sizeof(Stmt *) * (NumIndexExprs + 1), 8);
+  void *Mem = C.Allocate(totalSizeToAlloc<Stmt *>(NumIndexExprs + 1),
+                         llvm::alignOf<DesignatedInitExpr>());
   return new (Mem) DesignatedInitExpr(NumIndexExprs + 1);
 }
 
@@ -3764,22 +3763,19 @@ SourceLocation DesignatedInitExpr::getLocEnd() const {
 
 Expr *DesignatedInitExpr::getArrayIndex(const Designator& D) const {
   assert(D.Kind == Designator::ArrayDesignator && "Requires array designator");
-  Stmt *const *SubExprs = reinterpret_cast<Stmt *const *>(this + 1);
-  return cast<Expr>(*(SubExprs + D.ArrayOrRange.Index + 1));
+  return getSubExpr(D.ArrayOrRange.Index + 1);
 }
 
 Expr *DesignatedInitExpr::getArrayRangeStart(const Designator &D) const {
   assert(D.Kind == Designator::ArrayRangeDesignator &&
          "Requires array range designator");
-  Stmt *const *SubExprs = reinterpret_cast<Stmt *const *>(this + 1);
-  return cast<Expr>(*(SubExprs + D.ArrayOrRange.Index + 1));
+  return getSubExpr(D.ArrayOrRange.Index + 1);
 }
 
 Expr *DesignatedInitExpr::getArrayRangeEnd(const Designator &D) const {
   assert(D.Kind == Designator::ArrayRangeDesignator &&
          "Requires array range designator");
-  Stmt *const *SubExprs = reinterpret_cast<Stmt *const *>(this + 1);
-  return cast<Expr>(*(SubExprs + D.ArrayOrRange.Index + 2));
+  return getSubExpr(D.ArrayOrRange.Index + 2);
 }
 
 /// \brief Replaces the designator at index @p Idx with the series
@@ -3863,9 +3859,9 @@ const OpaqueValueExpr *OpaqueValueExpr::findInCopyConstruct(const Expr *e) {
 PseudoObjectExpr *PseudoObjectExpr::Create(const ASTContext &Context,
                                            EmptyShell sh,
                                            unsigned numSemanticExprs) {
-  void *buffer = Context.Allocate(sizeof(PseudoObjectExpr) +
-                                    (1 + numSemanticExprs) * sizeof(Expr*),
-                                  llvm::alignOf<PseudoObjectExpr>());
+  void *buffer =
+      Context.Allocate(totalSizeToAlloc<Expr *>(1 + numSemanticExprs),
+                       llvm::alignOf<PseudoObjectExpr>());
   return new(buffer) PseudoObjectExpr(sh, numSemanticExprs);
 }
 
@@ -3892,8 +3888,7 @@ PseudoObjectExpr *PseudoObjectExpr::Create(const ASTContext &C, Expr *syntax,
     assert(semantics[resultIndex]->getObjectKind() == OK_Ordinary);
   }
 
-  void *buffer = C.Allocate(sizeof(PseudoObjectExpr) +
-                              (1 + semantics.size()) * sizeof(Expr*),
+  void *buffer = C.Allocate(totalSizeToAlloc<Expr *>(semantics.size() + 1),
                             llvm::alignOf<PseudoObjectExpr>());
   return new(buffer) PseudoObjectExpr(type, VK, syntax, semantics,
                                       resultIndex);

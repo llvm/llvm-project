@@ -141,15 +141,17 @@ public:
 
 /// ObjCArrayLiteral - used for objective-c array containers; as in:
 /// @[@"Hello", NSApp, [NSNumber numberWithInt:42]];
-class ObjCArrayLiteral : public Expr {
+class ObjCArrayLiteral final
+    : public Expr,
+      private llvm::TrailingObjects<ObjCArrayLiteral, Expr *> {
   unsigned NumElements;
   SourceRange Range;
   ObjCMethodDecl *ArrayWithObjectsMethod;
-  
+
   ObjCArrayLiteral(ArrayRef<Expr *> Elements,
                    QualType T, ObjCMethodDecl * Method,
                    SourceRange SR);
-  
+
   explicit ObjCArrayLiteral(EmptyShell Empty, unsigned NumElements)
     : Expr(ObjCArrayLiteralClass, Empty), NumElements(NumElements) {}
 
@@ -171,11 +173,11 @@ public:
   }
 
   /// \brief Retrieve elements of array of literals.
-  Expr **getElements() { return reinterpret_cast<Expr **>(this + 1); }
+  Expr **getElements() { return getTrailingObjects<Expr *>(); }
 
   /// \brief Retrieve elements of array of literals.
-  const Expr * const *getElements() const { 
-    return reinterpret_cast<const Expr * const*>(this + 1); 
+  const Expr * const *getElements() const {
+    return getTrailingObjects<Expr *>();
   }
 
   /// getNumElements - Return number of elements of objective-c array literal.
@@ -196,11 +198,12 @@ public:
   }
     
   // Iterators
-  child_range children() { 
-    return child_range((Stmt **)getElements(), 
-                       (Stmt **)getElements() + NumElements);
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(getElements()),
+                       reinterpret_cast<Stmt **>(getElements()) + NumElements);
   }
-    
+
+  friend TrailingObjects;
   friend class ASTStmtReader;
 };
 
@@ -230,32 +233,35 @@ template <> struct isPodLike<clang::ObjCDictionaryElement> : std::true_type {};
 }
 
 namespace clang {
-/// ObjCDictionaryLiteral - AST node to represent objective-c dictionary 
+/// \brief Internal struct for storing Key/value pair.
+struct ObjCDictionaryLiteral_KeyValuePair {
+  Expr *Key;
+  Expr *Value;
+};
+
+/// \brief Internal struct to describes an element that is a pack
+/// expansion, used if any of the elements in the dictionary literal
+/// are pack expansions.
+struct ObjCDictionaryLiteral_ExpansionData {
+  /// \brief The location of the ellipsis, if this element is a pack
+  /// expansion.
+  SourceLocation EllipsisLoc;
+
+  /// \brief If non-zero, the number of elements that this pack
+  /// expansion will expand to (+1).
+  unsigned NumExpansionsPlusOne;
+};
+
+/// ObjCDictionaryLiteral - AST node to represent objective-c dictionary
 /// literals; as in:  @{@"name" : NSUserName(), @"date" : [NSDate date] };
-class ObjCDictionaryLiteral : public Expr {
-  /// \brief Key/value pair used to store the key and value of a given element.
-  ///
-  /// Objects of this type are stored directly after the expression.
-  struct KeyValuePair {
-    Expr *Key;
-    Expr *Value;
-  };
-  
-  /// \brief Data that describes an element that is a pack expansion, used if any
-  /// of the elements in the dictionary literal are pack expansions.
-  struct ExpansionData {
-    /// \brief The location of the ellipsis, if this element is a pack
-    /// expansion.
-    SourceLocation EllipsisLoc;
-
-    /// \brief If non-zero, the number of elements that this pack
-    /// expansion will expand to (+1).
-    unsigned NumExpansionsPlusOne;
-  };
-
+class ObjCDictionaryLiteral final
+    : public Expr,
+      private llvm::TrailingObjects<ObjCDictionaryLiteral,
+                                    ObjCDictionaryLiteral_KeyValuePair,
+                                    ObjCDictionaryLiteral_ExpansionData> {
   /// \brief The number of elements in this dictionary literal.
   unsigned NumElements : 31;
-  
+
   /// \brief Determine whether this dictionary literal has any pack expansions.
   ///
   /// If the dictionary literal has pack expansions, then there will
@@ -264,10 +270,17 @@ class ObjCDictionaryLiteral : public Expr {
   /// any) and number of elements in the expansion (if known). If
   /// there are no pack expansions, we optimize away this storage.
   unsigned HasPackExpansions : 1;
-  
+
   SourceRange Range;
   ObjCMethodDecl *DictWithObjectsMethod;
-    
+
+  typedef ObjCDictionaryLiteral_KeyValuePair KeyValuePair;
+  typedef ObjCDictionaryLiteral_ExpansionData ExpansionData;
+
+  size_t numTrailingObjects(OverloadToken<KeyValuePair>) const {
+    return NumElements;
+  }
+
   ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK, 
                         bool HasPackExpansions,
                         QualType T, ObjCMethodDecl *method,
@@ -277,28 +290,6 @@ class ObjCDictionaryLiteral : public Expr {
                                  bool HasPackExpansions)
     : Expr(ObjCDictionaryLiteralClass, Empty), NumElements(NumElements),
       HasPackExpansions(HasPackExpansions) {}
-
-  KeyValuePair *getKeyValues() {
-    return reinterpret_cast<KeyValuePair *>(this + 1);
-  }
-  
-  const KeyValuePair *getKeyValues() const {
-    return reinterpret_cast<const KeyValuePair *>(this + 1);
-  }
-
-  ExpansionData *getExpansionData() {
-    if (!HasPackExpansions)
-      return nullptr;
-    
-    return reinterpret_cast<ExpansionData *>(getKeyValues() + NumElements);
-  }
-
-  const ExpansionData *getExpansionData() const {
-    if (!HasPackExpansions)
-      return nullptr;
-    
-    return reinterpret_cast<const ExpansionData *>(getKeyValues()+NumElements);
-  }
 
 public:
   static ObjCDictionaryLiteral *Create(const ASTContext &C,
@@ -317,10 +308,11 @@ public:
 
   ObjCDictionaryElement getKeyValueElement(unsigned Index) const {
     assert((Index < NumElements) && "Arg access out of range!");
-    const KeyValuePair &KV = getKeyValues()[Index];
+    const KeyValuePair &KV = getTrailingObjects<KeyValuePair>()[Index];
     ObjCDictionaryElement Result = { KV.Key, KV.Value, SourceLocation(), None };
     if (HasPackExpansions) {
-      const ExpansionData &Expansion = getExpansionData()[Index];
+      const ExpansionData &Expansion =
+          getTrailingObjects<ExpansionData>()[Index];
       Result.EllipsisLoc = Expansion.EllipsisLoc;
       if (Expansion.NumExpansionsPlusOne > 0)
         Result.NumExpansions = Expansion.NumExpansionsPlusOne - 1;
@@ -340,17 +332,20 @@ public:
   }
     
   // Iterators
-  child_range children() { 
+  child_range children() {
     // Note: we're taking advantage of the layout of the KeyValuePair struct
     // here. If that struct changes, this code will need to change as well.
     static_assert(sizeof(KeyValuePair) == sizeof(Stmt *) * 2,
                   "KeyValuePair is expected size");
-    return child_range(reinterpret_cast<Stmt **>(this + 1),
-                       reinterpret_cast<Stmt **>(this + 1) + NumElements * 2);
+    return child_range(
+        reinterpret_cast<Stmt **>(getTrailingObjects<KeyValuePair>()),
+        reinterpret_cast<Stmt **>(getTrailingObjects<KeyValuePair>()) +
+            NumElements * 2);
   }
     
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
+  friend TrailingObjects;
 };
 
 
@@ -797,13 +792,6 @@ public:
   explicit ObjCSubscriptRefExpr(EmptyShell Empty)
     : Expr(ObjCSubscriptRefExprClass, Empty) {}
   
-  static ObjCSubscriptRefExpr *Create(const ASTContext &C,
-                                      Expr *base,
-                                      Expr *key, QualType T, 
-                                      ObjCMethodDecl *getMethod,
-                                      ObjCMethodDecl *setMethod, 
-                                      SourceLocation RB);
-  
   SourceLocation getRBracket() const { return RBracket; }
   void setRBracket(SourceLocation RB) { RBracket = RB; }
 
@@ -865,7 +853,13 @@ private:
 /// All four kinds of message sends are modeled by the ObjCMessageExpr
 /// class, and can be distinguished via \c getReceiverKind(). Example:
 ///
-class ObjCMessageExpr : public Expr {
+/// The "void *" trailing objects are actually ONE void * (the
+/// receiver pointer), and NumArgs Expr *. But due to the
+/// implementation of children(), these must be together contiguously.
+
+class ObjCMessageExpr final
+    : public Expr,
+      private llvm::TrailingObjects<ObjCMessageExpr, void *, SourceLocation> {
   /// \brief Stores either the selector that this message is sending
   /// to (when \c HasMethod is zero) or an \c ObjCMethodDecl pointer
   /// referring to the method that we type-checked against.
@@ -877,11 +871,6 @@ class ObjCMessageExpr : public Expr {
   /// including the receiver.
   unsigned NumArgs : NumArgsBitWidth;
   
-  void setNumArgs(unsigned Num) {
-    assert((Num >> NumArgsBitWidth) == 0 && "Num of args is out of range!");
-    NumArgs = Num;
-  }
-
   /// \brief The kind of message send this is, which is one of the
   /// ReceiverKind values.
   ///
@@ -914,6 +903,13 @@ class ObjCMessageExpr : public Expr {
   /// \brief The source locations of the open and close square
   /// brackets ('[' and ']', respectively).
   SourceLocation LBracLoc, RBracLoc;
+
+  size_t numTrailingObjects(OverloadToken<void *>) const { return NumArgs + 1; }
+
+  void setNumArgs(unsigned Num) {
+    assert((Num >> NumArgsBitWidth) == 0 && "Num of args is out of range!");
+    NumArgs = Num;
+  }
 
   ObjCMessageExpr(EmptyShell Empty, unsigned NumArgs)
     : Expr(ObjCMessageExprClass, Empty), SelectorOrMethod(0), Kind(0), 
@@ -959,14 +955,11 @@ class ObjCMessageExpr : public Expr {
                           SelectorLocationsKind SelLocsK);
 
   /// \brief Retrieve the pointer value of the message receiver.
-  void *getReceiverPointer() const {
-    return *const_cast<void **>(
-                             reinterpret_cast<const void * const*>(this + 1));
-  }
+  void *getReceiverPointer() const { return *getTrailingObjects<void *>(); }
 
   /// \brief Set the pointer value of the message receiver.
   void setReceiverPointer(void *Value) {
-    *reinterpret_cast<void **>(this + 1) = Value;
+    *getTrailingObjects<void *>() = Value;
   }
 
   SelectorLocationsKind getSelLocsKind() const {
@@ -979,10 +972,10 @@ class ObjCMessageExpr : public Expr {
   /// \brief Get a pointer to the stored selector identifiers locations array.
   /// No locations will be stored if HasStandardSelLocs is true.
   SourceLocation *getStoredSelLocs() {
-    return reinterpret_cast<SourceLocation*>(getArgs() + getNumArgs());
+    return getTrailingObjects<SourceLocation>();
   }
   const SourceLocation *getStoredSelLocs() const {
-    return reinterpret_cast<const SourceLocation*>(getArgs() + getNumArgs());
+    return getTrailingObjects<SourceLocation>();
   }
 
   /// \brief Get the number of stored selector identifiers locations.
@@ -1286,20 +1279,21 @@ public:
   /// \brief Retrieve the arguments to this message, not including the
   /// receiver.
   Expr **getArgs() {
-    return reinterpret_cast<Expr **>(this + 1) + 1;
+    return reinterpret_cast<Expr **>(getTrailingObjects<void *>() + 1);
   }
   const Expr * const *getArgs() const {
-    return reinterpret_cast<const Expr * const *>(this + 1) + 1;
+    return reinterpret_cast<const Expr *const *>(getTrailingObjects<void *>() +
+                                                 1);
   }
 
   /// getArg - Return the specified argument.
   Expr *getArg(unsigned Arg) {
     assert(Arg < NumArgs && "Arg access out of range!");
-    return cast<Expr>(getArgs()[Arg]);
+    return getArgs()[Arg];
   }
   const Expr *getArg(unsigned Arg) const {
     assert(Arg < NumArgs && "Arg access out of range!");
-    return cast<Expr>(getArgs()[Arg]);
+    return getArgs()[Arg];
   }
   /// setArg - Set the specified argument.
   void setArg(unsigned Arg, Expr *ArgExpr) {
@@ -1379,6 +1373,7 @@ public:
     return reinterpret_cast<Stmt const * const*>(getArgs() + NumArgs); 
   }
 
+  friend TrailingObjects;
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 };

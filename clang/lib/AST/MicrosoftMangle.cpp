@@ -127,8 +127,6 @@ public:
                               CXXCtorType CT, uint32_t Size, uint32_t NVOffset,
                               int32_t VBPtrOffset, uint32_t VBIndex,
                               raw_ostream &Out) override;
-  void mangleCXXCatchHandlerType(QualType T, uint32_t Flags,
-                                 raw_ostream &Out) override;
   void mangleCXXRTTI(QualType T, raw_ostream &Out) override;
   void mangleCXXRTTIName(QualType T, raw_ostream &Out) override;
   void mangleCXXRTTIBaseClassDescriptor(const CXXRecordDecl *Derived,
@@ -221,7 +219,7 @@ class MicrosoftCXXNameMangler {
   typedef llvm::SmallVector<std::string, 10> BackRefVec;
   BackRefVec NameBackReferences;
 
-  typedef llvm::DenseMap<void *, unsigned> ArgBackRefMap;
+  typedef llvm::DenseMap<const void *, unsigned> ArgBackRefMap;
   ArgBackRefMap TypeBackReferences;
 
   typedef std::set<int> PassObjectSizeArgsSet;
@@ -1489,7 +1487,7 @@ void MicrosoftCXXNameMangler::manglePassObjectSizeArg(
   int Type = POSA->getType();
 
   auto Iter = PassObjectSizeArgs.insert(Type).first;
-  void *TypePtr = (void *)&*Iter;
+  auto *TypePtr = (const void *)&*Iter;
   ArgBackRefMap::iterator Found = TypeBackReferences.find(TypePtr);
 
   if (Found == TypeBackReferences.end()) {
@@ -2215,7 +2213,8 @@ void MicrosoftCXXNameMangler::mangleType(const ObjCObjectPointerType *T,
 void MicrosoftCXXNameMangler::mangleType(const LValueReferenceType *T,
                                          Qualifiers Quals, SourceRange Range) {
   QualType PointeeType = T->getPointeeType();
-  Out << (Quals.hasVolatile() ? 'B' : 'A');
+  assert(!Quals.hasConst() && !Quals.hasVolatile() && "unexpected qualifier!");
+  Out << 'A';
   manglePointerExtQualifiers(Quals, PointeeType);
   mangleType(PointeeType, Range);
 }
@@ -2226,7 +2225,8 @@ void MicrosoftCXXNameMangler::mangleType(const LValueReferenceType *T,
 void MicrosoftCXXNameMangler::mangleType(const RValueReferenceType *T,
                                          Qualifiers Quals, SourceRange Range) {
   QualType PointeeType = T->getPointeeType();
-  Out << (Quals.hasVolatile() ? "$$R" : "$$Q");
+  assert(!Quals.hasConst() && !Quals.hasVolatile() && "unexpected qualifier!");
+  Out << "$$Q";
   manglePointerExtQualifiers(Quals, PointeeType);
   mangleType(PointeeType, Range);
 }
@@ -2618,15 +2618,6 @@ void MicrosoftMangleContextImpl::mangleCXXRTTIName(QualType T,
   MicrosoftCXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << '.';
   Mangler.mangleType(T, SourceRange(), MicrosoftCXXNameMangler::QMM_Result);
-}
-
-void MicrosoftMangleContextImpl::mangleCXXCatchHandlerType(QualType T,
-                                                           uint32_t Flags,
-                                                           raw_ostream &Out) {
-  MicrosoftCXXNameMangler Mangler(*this, Out);
-  Mangler.getStream() << "llvm.eh.handlertype.";
-  Mangler.mangleType(T, SourceRange(), MicrosoftCXXNameMangler::QMM_Result);
-  Mangler.getStream() << '.' << Flags;
 }
 
 void MicrosoftMangleContextImpl::mangleCXXVirtualDisplacementMap(

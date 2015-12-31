@@ -224,6 +224,14 @@ void foo_simd(int low, int up) {
 #pragma omp ordered simd
     f[i] = 1.0;
   }
+  // CHECK: store float 0.000000e+00, float* %{{.+}}, align {{[0-9]+}}
+  // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}}) #{{[0-9]+}}
+#pragma omp for simd ordered
+  for (int i = low; i < up; ++i) {
+    f[i] = 0.0;
+#pragma omp ordered simd
+    f[i] = 1.0;
+  }
 }
 
 // CHECK: define internal void [[CAP_FUNC]](i32* dereferenceable({{[0-9]+}}) %{{.+}}) #

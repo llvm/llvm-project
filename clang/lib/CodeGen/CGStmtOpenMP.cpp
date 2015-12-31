@@ -1125,7 +1125,8 @@ emitPrivateLinearVars(CodeGenFunction &CGF, const OMPExecutableDirective &D,
 }
 
 static void emitSimdlenSafelenClause(CodeGenFunction &CGF,
-                                     const OMPExecutableDirective &D) {
+                                     const OMPExecutableDirective &D,
+                                     bool IsMonotonic) {
   if (!CGF.HaveInsertPoint())
     return;
   if (const auto *C = D.getSingleClause<OMPSimdlenClause>()) {
@@ -1136,7 +1137,8 @@ static void emitSimdlenSafelenClause(CodeGenFunction &CGF,
     // In presence of finite 'safelen', it may be unsafe to mark all
     // the memory instructions parallel, because loop-carried
     // dependences of 'safelen' iterations are possible.
-    CGF.LoopStack.setParallel(!D.getSingleClause<OMPSafelenClause>());
+    if (!IsMonotonic)
+      CGF.LoopStack.setParallel(!D.getSingleClause<OMPSafelenClause>());
   } else if (const auto *C = D.getSingleClause<OMPSafelenClause>()) {
     RValue Len = CGF.EmitAnyExpr(C->getSafelen(), AggValueSlot::ignored(),
                                  /*ignoreResult=*/true);
@@ -1149,11 +1151,12 @@ static void emitSimdlenSafelenClause(CodeGenFunction &CGF,
   }
 }
 
-void CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective &D) {
+void CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective &D,
+                                      bool IsMonotonic) {
   // Walk clauses and process safelen/lastprivate.
-  LoopStack.setParallel();
+  LoopStack.setParallel(!IsMonotonic);
   LoopStack.setVectorizeEnable(true);
-  emitSimdlenSafelenClause(*this, D);
+  emitSimdlenSafelenClause(*this, D, IsMonotonic);
 }
 
 void CodeGenFunction::EmitOMPSimdFinal(const OMPLoopDirective &D) {
@@ -1255,12 +1258,10 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
   CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_simd, CodeGen);
 }
 
-void CodeGenFunction::EmitOMPForOuterLoop(OpenMPScheduleClauseKind ScheduleKind,
-                                          const OMPLoopDirective &S,
-                                          OMPPrivateScope &LoopScope,
-                                          bool Ordered, Address LB,
-                                          Address UB, Address ST,
-                                          Address IL, llvm::Value *Chunk) {
+void CodeGenFunction::EmitOMPForOuterLoop(
+    OpenMPScheduleClauseKind ScheduleKind, bool IsMonotonic,
+    const OMPLoopDirective &S, OMPPrivateScope &LoopScope, bool Ordered,
+    Address LB, Address UB, Address ST, Address IL, llvm::Value *Chunk) {
   auto &RT = CGM.getOpenMPRuntime();
 
   // Dynamic scheduling of the outer loop (dynamic, guided, auto, runtime).
@@ -1378,13 +1379,10 @@ void CodeGenFunction::EmitOMPForOuterLoop(OpenMPScheduleClauseKind ScheduleKind,
 
   // Generate !llvm.loop.parallel metadata for loads and stores for loops
   // with dynamic/guided scheduling and without ordered clause.
-  if (!isOpenMPSimdDirective(S.getDirectiveKind())) {
-    LoopStack.setParallel((ScheduleKind == OMPC_SCHEDULE_dynamic ||
-                           ScheduleKind == OMPC_SCHEDULE_guided) &&
-                          !Ordered);
-  } else {
-    EmitOMPSimdInit(S);
-  }
+  if (!isOpenMPSimdDirective(S.getDirectiveKind()))
+    LoopStack.setParallel(!IsMonotonic);
+  else
+    EmitOMPSimdInit(S, IsMonotonic);
 
   SourceLocation Loc = S.getLocStart();
   EmitOMPInnerLoop(S, LoopScope.requiresCleanups(), S.getCond(), S.getInc(),
@@ -1425,14 +1423,30 @@ static LValue EmitOMPHelperVar(CodeGenFunction &CGF,
   return CGF.EmitLValue(Helper);
 }
 
-static std::pair<llvm::Value * /*Chunk*/, OpenMPScheduleClauseKind>
+namespace {
+  struct ScheduleKindModifiersTy {
+    OpenMPScheduleClauseKind Kind;
+    OpenMPScheduleClauseModifier M1;
+    OpenMPScheduleClauseModifier M2;
+    ScheduleKindModifiersTy(OpenMPScheduleClauseKind Kind,
+                            OpenMPScheduleClauseModifier M1,
+                            OpenMPScheduleClauseModifier M2)
+        : Kind(Kind), M1(M1), M2(M2) {}
+  };
+} // namespace
+
+static std::pair<llvm::Value * /*Chunk*/, ScheduleKindModifiersTy>
 emitScheduleClause(CodeGenFunction &CGF, const OMPLoopDirective &S,
                    bool OuterRegion) {
   // Detect the loop schedule kind and chunk.
   auto ScheduleKind = OMPC_SCHEDULE_unknown;
+  OpenMPScheduleClauseModifier M1 = OMPC_SCHEDULE_MODIFIER_unknown;
+  OpenMPScheduleClauseModifier M2 = OMPC_SCHEDULE_MODIFIER_unknown;
   llvm::Value *Chunk = nullptr;
   if (const auto *C = S.getSingleClause<OMPScheduleClause>()) {
     ScheduleKind = C->getScheduleKind();
+    M1 = C->getFirstScheduleModifier();
+    M2 = C->getSecondScheduleModifier();
     if (const auto *Ch = C->getChunkSize()) {
       if (auto *ImpRef = cast_or_null<DeclRefExpr>(C->getHelperChunkSize())) {
         if (OuterRegion) {
@@ -1454,7 +1468,7 @@ emitScheduleClause(CodeGenFunction &CGF, const OMPLoopDirective &S,
       }
     }
   }
-  return std::make_pair(Chunk, ScheduleKind);
+  return std::make_pair(Chunk, ScheduleKindModifiersTy(ScheduleKind, M1, M2));
 }
 
 bool CodeGenFunction::EmitOMPWorksharingLoop(const OMPLoopDirective &S) {
@@ -1530,16 +1544,21 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(const OMPLoopDirective &S) {
       auto ScheduleInfo =
           emitScheduleClause(*this, S, /*OuterRegion=*/false);
       Chunk = ScheduleInfo.first;
-      ScheduleKind = ScheduleInfo.second;
+      ScheduleKind = ScheduleInfo.second.Kind;
+      const OpenMPScheduleClauseModifier M1 = ScheduleInfo.second.M1;
+      const OpenMPScheduleClauseModifier M2 = ScheduleInfo.second.M2;
       const unsigned IVSize = getContext().getTypeSize(IVExpr->getType());
       const bool IVSigned = IVExpr->getType()->hasSignedIntegerRepresentation();
       const bool Ordered = S.getSingleClause<OMPOrderedClause>() != nullptr;
+      // OpenMP 4.5, 2.7.1 Loop Construct, Description.
+      // If the static schedule kind is specified or if the ordered clause is
+      // specified, and if no monotonic modifier is specified, the effect will
+      // be as if the monotonic modifier was specified.
       if (RT.isStaticNonchunked(ScheduleKind,
                                 /* Chunked */ Chunk != nullptr) &&
           !Ordered) {
-        if (isOpenMPSimdDirective(S.getDirectiveKind())) {
-          EmitOMPSimdInit(S);
-        }
+        if (isOpenMPSimdDirective(S.getDirectiveKind()))
+          EmitOMPSimdInit(S, /*IsMonotonic=*/true);
         // OpenMP [2.7.1, Loop Construct, Description, table 2-1]
         // When no chunk_size is specified, the iteration space is divided into
         // chunks that are approximately equal in size, and at most one chunk is
@@ -1549,7 +1568,8 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(const OMPLoopDirective &S) {
                              IVSize, IVSigned, Ordered,
                              IL.getAddress(), LB.getAddress(),
                              UB.getAddress(), ST.getAddress());
-        auto LoopExit = getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
+        auto LoopExit =
+            getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
         // UB = min(UB, GlobalUB);
         EmitIgnoredExpr(S.getEnsureUpperBound());
         // IV = LB;
@@ -1566,9 +1586,14 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(const OMPLoopDirective &S) {
         // Tell the runtime we are done.
         RT.emitForStaticFinish(*this, S.getLocStart());
       } else {
+        const bool IsMonotonic = Ordered ||
+                                 ScheduleKind == OMPC_SCHEDULE_static ||
+                                 ScheduleKind == OMPC_SCHEDULE_unknown ||
+                                 M1 == OMPC_SCHEDULE_MODIFIER_monotonic ||
+                                 M2 == OMPC_SCHEDULE_MODIFIER_monotonic;
         // Emit the outer loop, which requests its work chunk [LB..UB] from
         // runtime and runs the inner loop to process it.
-        EmitOMPForOuterLoop(ScheduleKind, S, LoopScope, Ordered,
+        EmitOMPForOuterLoop(ScheduleKind, IsMonotonic, S, LoopScope, Ordered,
                             LB.getAddress(), UB.getAddress(), ST.getAddress(),
                             IL.getAddress(), Chunk);
       }

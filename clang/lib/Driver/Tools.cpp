@@ -938,8 +938,8 @@ static void getARMTargetFeatures(const ToolChain &TC,
   if (Args.hasArg(options::OPT_ffixed_r9))
     Features.push_back("+reserve-r9");
 
-  // The kext linker doesn't know how to deal with movw/movt.
-  if (KernelOrKext)
+  // The kext and FreeBSD linkers don't know how to deal with movw/movt.
+  if (KernelOrKext || Triple.isOSFreeBSD())
     Features.push_back("+no-movt");
 }
 

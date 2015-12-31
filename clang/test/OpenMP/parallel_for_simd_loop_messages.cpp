@@ -628,8 +628,14 @@ void test_loop_firstprivate_lastprivate() {
 }
 
 void test_ordered() {
-// expected-error@+1 2 {{unexpected OpenMP clause 'ordered' in directive '#pragma omp parallel for simd'}}
 #pragma omp parallel for simd ordered ordered // expected-error {{directive '#pragma omp parallel for simd' cannot contain more than one 'ordered' clause}}
+  for (int i = 0; i < 16; ++i)
+    ;
+#pragma omp parallel for simd ordered
+  for (int i = 0; i < 16; ++i)
+    ;
+//expected-error@+1 {{'ordered' clause with a parameter can not be specified in '#pragma omp parallel for simd' directive}}
+#pragma omp parallel for simd ordered(1)
   for (int i = 0; i < 16; ++i)
     ;
 }

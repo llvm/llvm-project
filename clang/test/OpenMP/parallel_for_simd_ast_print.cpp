@@ -44,8 +44,8 @@ template<class T> struct S {
     }
     const T clen = 3;
 // CHECK: T clen = 3;
-    #pragma omp parallel for simd safelen(clen-1) simdlen(clen-1)
-// CHECK-NEXT: #pragma omp parallel for simd safelen(clen - 1) simdlen(clen - 1)
+    #pragma omp parallel for simd safelen(clen-1) simdlen(clen-1) ordered
+// CHECK-NEXT: #pragma omp parallel for simd safelen(clen - 1) simdlen(clen - 1) ordered
     for(T i = clen+2; i < 20; ++i) {
 // CHECK-NEXT: for (T i = clen + 2; i < 20; ++i) {
       v[i] = v[v-clen] + 1;
@@ -92,8 +92,8 @@ int main (int argc, char **argv) {
   int k1=0,k2=0;
   static int *a;
 // CHECK: static int *a;
-#pragma omp parallel for simd if(parallel :b)
-// CHECK-NEXT: #pragma omp parallel for simd if(parallel: b)
+#pragma omp parallel for simd if(parallel :b) ordered
+// CHECK-NEXT: #pragma omp parallel for simd if(parallel: b) ordered
   for (int i=0; i < 2; ++i)*a=2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: *a = 2;

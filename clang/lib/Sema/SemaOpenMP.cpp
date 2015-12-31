@@ -1680,6 +1680,13 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
     }
     ErrorFound = true;
   }
+  if (isOpenMPWorksharingDirective(DSAStack->getCurrentDirective()) &&
+      isOpenMPSimdDirective(DSAStack->getCurrentDirective()) && OC &&
+      OC->getNumForLoops()) {
+    Diag(OC->getLocStart(), diag::err_omp_ordered_simd)
+        << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+    ErrorFound = true;
+  }
   if (ErrorFound) {
     ActOnCapturedRegionError();
     return StmtError();
