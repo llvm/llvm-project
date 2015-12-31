@@ -148,8 +148,7 @@ namespace dr522 { // dr522: yes
   template<typename T> void b2(volatile T * const *);
   template<typename T> void b2(volatile T * const S::*);
   template<typename T> void b2(volatile T * const S::* const *);
-  // FIXME: This diagnostic isn't very good. The problem is not substitution failure.
-  template<typename T> void b2a(volatile T *S::* const *); // expected-note {{substitution failure}}
+  template<typename T> void b2a(volatile T *S::* const *); // expected-note {{candidate template ignored: deduced type 'volatile int *dr522::S::*const *' of 1st parameter does not match adjusted type 'int *dr522::S::**' of argument}}
 
   template<typename T> struct Base {};
   struct Derived : Base<int> {};

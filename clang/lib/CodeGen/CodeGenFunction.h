@@ -2365,17 +2365,17 @@ private:
 
   /// Helpers for the OpenMP loop directives.
   void EmitOMPLoopBody(const OMPLoopDirective &D, JumpDest LoopExit);
-  void EmitOMPSimdInit(const OMPLoopDirective &D);
+  void EmitOMPSimdInit(const OMPLoopDirective &D, bool IsMonotonic = false);
   void EmitOMPSimdFinal(const OMPLoopDirective &D);
   /// \brief Emit code for the worksharing loop-based directive.
   /// \return true, if this construct has any lastprivate clause, false -
   /// otherwise.
   bool EmitOMPWorksharingLoop(const OMPLoopDirective &S);
   void EmitOMPForOuterLoop(OpenMPScheduleClauseKind ScheduleKind,
-                           const OMPLoopDirective &S,
-                           OMPPrivateScope &LoopScope, bool Ordered,
-                           Address LB, Address UB, Address ST,
-                           Address IL, llvm::Value *Chunk);
+                           bool IsMonotonic, const OMPLoopDirective &S,
+                           OMPPrivateScope &LoopScope, bool Ordered, Address LB,
+                           Address UB, Address ST, Address IL,
+                           llvm::Value *Chunk);
   /// \brief Emit code for sections directive.
   OpenMPDirectiveKind EmitSections(const OMPExecutableDirective &S);
 

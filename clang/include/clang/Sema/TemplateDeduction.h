@@ -140,6 +140,9 @@ public:
   ///   TDK_SubstitutionFailure: this argument is the template
   ///   argument we were instantiating when we encountered an error.
   ///
+  ///   TDK_DeducedMismatch: this is the parameter type, after substituting
+  ///   deduced arguments.
+  ///
   ///   TDK_NonDeducedMismatch: this is the component of the 'parameter'
   ///   of the deduction, directly provided in the source code.
   TemplateArgument FirstArg;
@@ -147,18 +150,32 @@ public:
   /// \brief The second template argument to which the template
   /// argument deduction failure refers.
   ///
+  ///   TDK_Inconsistent: this argument is the second value deduced
+  ///   for the corresponding template parameter.
+  ///
+  ///   TDK_DeducedMismatch: this is the (adjusted) call argument type.
+  ///
   ///   TDK_NonDeducedMismatch: this is the mismatching component of the
   ///   'argument' of the deduction, from which we are deducing arguments.
   ///
   /// FIXME: Finish documenting this.
   TemplateArgument SecondArg;
 
-  /// \brief The expression which caused a deduction failure.
-  ///
-  ///   TDK_FailedOverloadResolution: this argument is the reference to
-  ///   an overloaded function which could not be resolved to a specific
-  ///   function.
-  Expr *Expression;
+  union {
+    /// \brief The expression which caused a deduction failure.
+    ///
+    ///   TDK_FailedOverloadResolution: this argument is the reference to
+    ///   an overloaded function which could not be resolved to a specific
+    ///   function.
+    Expr *Expression;
+
+    /// \brief The index of the function argument that caused a deduction
+    /// failure.
+    ///
+    ///   TDK_DeducedMismatch: this is the index of the argument that had a
+    ///   different argument type from its substituted parameter type.
+    unsigned CallArgIndex;
+  };
 
   /// \brief Information on packs that we're currently expanding.
   ///
@@ -210,6 +227,10 @@ struct DeductionFailureInfo {
   /// \brief Return the expression this deduction failure refers to,
   /// if any.
   Expr *getExpr();
+
+  /// \brief Return the index of the call argument that this deduction
+  /// failure refers to, if any.
+  llvm::Optional<unsigned> getCallArgIndex();
 
   /// \brief Free any memory associated with this deduction failure.
   void Destroy();

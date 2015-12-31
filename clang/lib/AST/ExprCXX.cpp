@@ -766,7 +766,7 @@ const IdentifierInfo *UserDefinedLiteral::getUDSuffix() const {
 CXXDefaultArgExpr *
 CXXDefaultArgExpr::Create(const ASTContext &C, SourceLocation Loc, 
                           ParmVarDecl *Param, Expr *SubExpr) {
-  void *Mem = C.Allocate(sizeof(CXXDefaultArgExpr) + sizeof(Stmt *));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(1));
   return new (Mem) CXXDefaultArgExpr(CXXDefaultArgExprClass, Loc, Param, 
                                      SubExpr);
 }
@@ -924,29 +924,22 @@ LambdaCaptureKind LambdaCapture::getCaptureKind() const {
   return CapByCopy ? LCK_ByCopy : LCK_ByRef;
 }
 
-LambdaExpr::LambdaExpr(QualType T,
-                       SourceRange IntroducerRange,
+LambdaExpr::LambdaExpr(QualType T, SourceRange IntroducerRange,
                        LambdaCaptureDefault CaptureDefault,
                        SourceLocation CaptureDefaultLoc,
-                       ArrayRef<Capture> Captures,
-                       bool ExplicitParams,
-                       bool ExplicitResultType,
-                       ArrayRef<Expr *> CaptureInits,
+                       ArrayRef<LambdaCapture> Captures, bool ExplicitParams,
+                       bool ExplicitResultType, ArrayRef<Expr *> CaptureInits,
                        ArrayRef<VarDecl *> ArrayIndexVars,
                        ArrayRef<unsigned> ArrayIndexStarts,
                        SourceLocation ClosingBrace,
                        bool ContainsUnexpandedParameterPack)
-  : Expr(LambdaExprClass, T, VK_RValue, OK_Ordinary,
-         T->isDependentType(), T->isDependentType(), T->isDependentType(),
-         ContainsUnexpandedParameterPack),
-    IntroducerRange(IntroducerRange),
-    CaptureDefaultLoc(CaptureDefaultLoc),
-    NumCaptures(Captures.size()),
-    CaptureDefault(CaptureDefault),
-    ExplicitParams(ExplicitParams),
-    ExplicitResultType(ExplicitResultType),
-    ClosingBrace(ClosingBrace)
-{
+    : Expr(LambdaExprClass, T, VK_RValue, OK_Ordinary, T->isDependentType(),
+           T->isDependentType(), T->isDependentType(),
+           ContainsUnexpandedParameterPack),
+      IntroducerRange(IntroducerRange), CaptureDefaultLoc(CaptureDefaultLoc),
+      NumCaptures(Captures.size()), CaptureDefault(CaptureDefault),
+      ExplicitParams(ExplicitParams), ExplicitResultType(ExplicitResultType),
+      ClosingBrace(ClosingBrace) {
   assert(CaptureInits.size() == Captures.size() && "Wrong number of arguments");
   CXXRecordDecl *Class = getLambdaClass();
   CXXRecordDecl::LambdaDefinitionData &Data = Class->getLambdaData();
@@ -957,8 +950,9 @@ LambdaExpr::LambdaExpr(QualType T,
   const ASTContext &Context = Class->getASTContext();
   Data.NumCaptures = NumCaptures;
   Data.NumExplicitCaptures = 0;
-  Data.Captures = (Capture *)Context.Allocate(sizeof(Capture) * NumCaptures);
-  Capture *ToCapture = Data.Captures;
+  Data.Captures =
+      (LambdaCapture *)Context.Allocate(sizeof(LambdaCapture) * NumCaptures);
+  LambdaCapture *ToCapture = Data.Captures;
   for (unsigned I = 0, N = Captures.size(); I != N; ++I) {
     if (Captures[I].isExplicit())
       ++Data.NumExplicitCaptures;
@@ -986,30 +980,20 @@ LambdaExpr::LambdaExpr(QualType T,
   }
 }
 
-LambdaExpr *LambdaExpr::Create(const ASTContext &Context,
-                               CXXRecordDecl *Class,
-                               SourceRange IntroducerRange,
-                               LambdaCaptureDefault CaptureDefault,
-                               SourceLocation CaptureDefaultLoc,
-                               ArrayRef<Capture> Captures,
-                               bool ExplicitParams,
-                               bool ExplicitResultType,
-                               ArrayRef<Expr *> CaptureInits,
-                               ArrayRef<VarDecl *> ArrayIndexVars,
-                               ArrayRef<unsigned> ArrayIndexStarts,
-                               SourceLocation ClosingBrace,
-                               bool ContainsUnexpandedParameterPack) {
+LambdaExpr *LambdaExpr::Create(
+    const ASTContext &Context, CXXRecordDecl *Class,
+    SourceRange IntroducerRange, LambdaCaptureDefault CaptureDefault,
+    SourceLocation CaptureDefaultLoc, ArrayRef<LambdaCapture> Captures,
+    bool ExplicitParams, bool ExplicitResultType, ArrayRef<Expr *> CaptureInits,
+    ArrayRef<VarDecl *> ArrayIndexVars, ArrayRef<unsigned> ArrayIndexStarts,
+    SourceLocation ClosingBrace, bool ContainsUnexpandedParameterPack) {
   // Determine the type of the expression (i.e., the type of the
   // function object we're creating).
   QualType T = Context.getTypeDeclType(Class);
 
-  unsigned Size = sizeof(LambdaExpr) + sizeof(Stmt *) * (Captures.size() + 1);
-  if (!ArrayIndexVars.empty()) {
-    Size += sizeof(unsigned) * (Captures.size() + 1);
-    // Realign for following VarDecl array.
-    Size = llvm::RoundUpToAlignment(Size, llvm::alignOf<VarDecl*>());
-    Size += sizeof(VarDecl *) * ArrayIndexVars.size();
-  }
+  unsigned Size = totalSizeToAlloc<Stmt *, unsigned, VarDecl *>(
+      Captures.size() + 1, ArrayIndexVars.empty() ? 0 : Captures.size() + 1,
+      ArrayIndexVars.size());
   void *Mem = Context.Allocate(Size);
   return new (Mem) LambdaExpr(T, IntroducerRange,
                               CaptureDefault, CaptureDefaultLoc, Captures,
@@ -1021,10 +1005,9 @@ LambdaExpr *LambdaExpr::Create(const ASTContext &Context,
 LambdaExpr *LambdaExpr::CreateDeserialized(const ASTContext &C,
                                            unsigned NumCaptures,
                                            unsigned NumArrayIndexVars) {
-  unsigned Size = sizeof(LambdaExpr) + sizeof(Stmt *) * (NumCaptures + 1);
-  if (NumArrayIndexVars)
-    Size += sizeof(VarDecl) * NumArrayIndexVars
-          + sizeof(unsigned) * (NumCaptures + 1);
+  unsigned Size = totalSizeToAlloc<Stmt *, unsigned, VarDecl *>(
+      NumCaptures + 1, NumArrayIndexVars ? NumCaptures + 1 : 0,
+      NumArrayIndexVars);
   void *Mem = C.Allocate(Size);
   return new (Mem) LambdaExpr(EmptyShell(), NumCaptures, NumArrayIndexVars > 0);
 }
@@ -1108,7 +1091,7 @@ CompoundStmt *LambdaExpr::getBody() const {
     *const_cast<clang::Stmt **>(&getStoredStmts()[NumCaptures]) =
         getCallOperator()->getBody();
 
-  return reinterpret_cast<CompoundStmt *>(getStoredStmts()[NumCaptures]);
+  return static_cast<CompoundStmt *>(getStoredStmts()[NumCaptures]);
 }
 
 bool LambdaExpr::isMutable() const {
@@ -1125,14 +1108,13 @@ ExprWithCleanups::ExprWithCleanups(Expr *subexpr,
     SubExpr(subexpr) {
   ExprWithCleanupsBits.NumObjects = objects.size();
   for (unsigned i = 0, e = objects.size(); i != e; ++i)
-    getObjectsBuffer()[i] = objects[i];
+    getTrailingObjects<CleanupObject>()[i] = objects[i];
 }
 
 ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C, Expr *subexpr,
                                            ArrayRef<CleanupObject> objects) {
-  size_t size = sizeof(ExprWithCleanups)
-              + objects.size() * sizeof(CleanupObject);
-  void *buffer = C.Allocate(size, llvm::alignOf<ExprWithCleanups>());
+  void *buffer = C.Allocate(totalSizeToAlloc<CleanupObject>(objects.size()),
+                            llvm::alignOf<ExprWithCleanups>());
   return new (buffer) ExprWithCleanups(subexpr, objects);
 }
 
@@ -1144,8 +1126,8 @@ ExprWithCleanups::ExprWithCleanups(EmptyShell empty, unsigned numObjects)
 ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C,
                                            EmptyShell empty,
                                            unsigned numObjects) {
-  size_t size = sizeof(ExprWithCleanups) + numObjects * sizeof(CleanupObject);
-  void *buffer = C.Allocate(size, llvm::alignOf<ExprWithCleanups>());
+  void *buffer = C.Allocate(totalSizeToAlloc<CleanupObject>(numObjects),
+                            llvm::alignOf<ExprWithCleanups>());
   return new (buffer) ExprWithCleanups(empty, numObjects);
 }
 
@@ -1165,7 +1147,7 @@ CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(TypeSourceInfo *Type,
     LParenLoc(LParenLoc),
     RParenLoc(RParenLoc),
     NumArgs(Args.size()) {
-  Stmt **StoredArgs = reinterpret_cast<Stmt **>(this + 1);
+  Expr **StoredArgs = getTrailingObjects<Expr *>();
   for (unsigned I = 0; I != Args.size(); ++I) {
     if (Args[I]->containsUnexpandedParameterPack())
       ExprBits.ContainsUnexpandedParameterPack = true;
@@ -1180,16 +1162,14 @@ CXXUnresolvedConstructExpr::Create(const ASTContext &C,
                                    SourceLocation LParenLoc,
                                    ArrayRef<Expr*> Args,
                                    SourceLocation RParenLoc) {
-  void *Mem = C.Allocate(sizeof(CXXUnresolvedConstructExpr) +
-                         sizeof(Expr *) * Args.size());
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(Args.size()));
   return new (Mem) CXXUnresolvedConstructExpr(Type, LParenLoc, Args, RParenLoc);
 }
 
 CXXUnresolvedConstructExpr *
 CXXUnresolvedConstructExpr::CreateEmpty(const ASTContext &C, unsigned NumArgs) {
   Stmt::EmptyShell Empty;
-  void *Mem = C.Allocate(sizeof(CXXUnresolvedConstructExpr) +
-                         sizeof(Expr *) * NumArgs);
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumArgs));
   return new (Mem) CXXUnresolvedConstructExpr(Empty, NumArgs);
 }
 
@@ -1404,16 +1384,16 @@ SizeOfPackExpr::Create(ASTContext &Context, SourceLocation OperatorLoc,
                        SourceLocation RParenLoc,
                        Optional<unsigned> Length,
                        ArrayRef<TemplateArgument> PartialArgs) {
-  void *Storage = Context.Allocate(
-      sizeof(SizeOfPackExpr) + sizeof(TemplateArgument) * PartialArgs.size());
+  void *Storage =
+      Context.Allocate(totalSizeToAlloc<TemplateArgument>(PartialArgs.size()));
   return new (Storage) SizeOfPackExpr(Context.getSizeType(), OperatorLoc, Pack,
                                       PackLoc, RParenLoc, Length, PartialArgs);
 }
 
 SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
                                                    unsigned NumPartialArgs) {
-  void *Storage = Context.Allocate(
-      sizeof(SizeOfPackExpr) + sizeof(TemplateArgument) * NumPartialArgs);
+  void *Storage =
+      Context.Allocate(totalSizeToAlloc<TemplateArgument>(NumPartialArgs));
   return new (Storage) SizeOfPackExpr(EmptyShell(), NumPartialArgs);
 }
 
@@ -1440,24 +1420,22 @@ FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ParmVarDecl *ParamPack,
       ParamPack(ParamPack), NameLoc(NameLoc), NumParameters(NumParams) {
   if (Params)
     std::uninitialized_copy(Params, Params + NumParams,
-                            reinterpret_cast<ParmVarDecl **>(this + 1));
+                            getTrailingObjects<ParmVarDecl *>());
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::Create(const ASTContext &Context, QualType T,
                              ParmVarDecl *ParamPack, SourceLocation NameLoc,
                              ArrayRef<ParmVarDecl *> Params) {
-  return new (Context.Allocate(sizeof(FunctionParmPackExpr) +
-                               sizeof(ParmVarDecl*) * Params.size()))
-    FunctionParmPackExpr(T, ParamPack, NameLoc, Params.size(), Params.data());
+  return new (Context.Allocate(totalSizeToAlloc<ParmVarDecl *>(Params.size())))
+      FunctionParmPackExpr(T, ParamPack, NameLoc, Params.size(), Params.data());
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::CreateEmpty(const ASTContext &Context,
                                   unsigned NumParams) {
-  return new (Context.Allocate(sizeof(FunctionParmPackExpr) +
-                               sizeof(ParmVarDecl*) * NumParams))
-    FunctionParmPackExpr(QualType(), nullptr, SourceLocation(), 0, nullptr);
+  return new (Context.Allocate(totalSizeToAlloc<ParmVarDecl *>(NumParams)))
+      FunctionParmPackExpr(QualType(), nullptr, SourceLocation(), 0, nullptr);
 }
 
 void MaterializeTemporaryExpr::setExtendingDecl(const ValueDecl *ExtendedBy,
@@ -1494,8 +1472,8 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
   TypeTraitExprBits.Value = Value;
   TypeTraitExprBits.NumArgs = Args.size();
 
-  TypeSourceInfo **ToArgs = getTypeSourceInfos();
-  
+  TypeSourceInfo **ToArgs = getTrailingObjects<TypeSourceInfo *>();
+
   for (unsigned I = 0, N = Args.size(); I != N; ++I) {
     if (Args[I]->getType()->isDependentType())
       setValueDependent(true);
@@ -1514,15 +1492,13 @@ TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
                                      ArrayRef<TypeSourceInfo *> Args,
                                      SourceLocation RParenLoc,
                                      bool Value) {
-  unsigned Size = sizeof(TypeTraitExpr) + sizeof(TypeSourceInfo*) * Args.size();
-  void *Mem = C.Allocate(Size);
+  void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(Args.size()));
   return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
 }
 
 TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
                                                  unsigned NumArgs) {
-  unsigned Size = sizeof(TypeTraitExpr) + sizeof(TypeSourceInfo*) * NumArgs;
-  void *Mem = C.Allocate(Size);
+  void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(NumArgs));
   return new (Mem) TypeTraitExpr(EmptyShell());
 }
 

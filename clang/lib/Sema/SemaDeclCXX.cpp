@@ -9473,6 +9473,10 @@ static void getDefaultArgExprsForConstructors(Sema &S, CXXRecordDecl *Class) {
   if (Class->getDescribedClassTemplate())
     return;
 
+  CallingConv ExpectedCallingConv = S.Context.getDefaultCallingConvention(
+      /*IsVariadic=*/false, /*IsCXXMethod=*/true);
+
+  CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
   for (Decl *Member : Class->decls()) {
     auto *CD = dyn_cast<CXXConstructorDecl>(Member);
     if (!CD) {
@@ -9484,7 +9488,25 @@ static void getDefaultArgExprsForConstructors(Sema &S, CXXRecordDecl *Class) {
       continue;
     }
 
-    for (unsigned I = 0, E = CD->getNumParams(); I != E; ++I) {
+    CallingConv ActualCallingConv =
+        CD->getType()->getAs<FunctionProtoType>()->getCallConv();
+
+    // Skip default constructors with typical calling conventions and no default
+    // arguments.
+    unsigned NumParams = CD->getNumParams();
+    if (ExpectedCallingConv == ActualCallingConv && NumParams == 0)
+      continue;
+
+    if (LastExportedDefaultCtor) {
+      S.Diag(LastExportedDefaultCtor->getLocation(),
+             diag::err_attribute_dll_ambiguous_default_ctor) << Class;
+      S.Diag(CD->getLocation(), diag::note_entity_declared_at)
+          << CD->getDeclName();
+      return;
+    }
+    LastExportedDefaultCtor = CD;
+
+    for (unsigned I = 0; I != NumParams; ++I) {
       // Skip any default arguments that we've already instantiated.
       if (S.Context.getDefaultArgExprForConstructor(CD, I))
         continue;

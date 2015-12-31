@@ -2060,9 +2060,19 @@ void foo() {
   }
 #pragma omp ordered
   {
-#pragma omp parallel for simd ordered //expected-error {{unexpected OpenMP clause 'ordered' in directive '#pragma omp parallel for simd'}}
+#pragma omp parallel for simd ordered
     for (int j = 0; j < 10; ++j) {
 #pragma omp ordered // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+      {
+        bar();
+      }
+    }
+  }
+#pragma omp ordered
+  {
+#pragma omp parallel for simd ordered
+    for (int j = 0; j < 10; ++j) {
+#pragma omp ordered simd
       {
         bar();
       }

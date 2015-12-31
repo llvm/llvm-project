@@ -6983,7 +6983,7 @@ void DiagnoseFloatingLiteralImpCast(Sema &S, FloatingLiteral *FL, QualType T,
 
   SmallString<16> PrettyTargetValue;
   if (T->isSpecificBuiltinType(BuiltinType::Bool))
-    PrettyTargetValue = IntegerValue == 0 ? "false" : "true";
+    PrettyTargetValue = Value.isZero() ? "false" : "true";
   else
     IntegerValue.toString(PrettyTargetValue);
 

@@ -14,8 +14,8 @@ template<class T, class N> T reduct(T* arr, N num) {
   N myind;
   T sum = (T)0;
 // CHECK: T sum = (T)0;
-#pragma omp for simd private(myind, g_ind), linear(ind), aligned(arr)
-// CHECK-NEXT: #pragma omp for simd private(myind,g_ind) linear(ind) aligned(arr)
+#pragma omp for simd private(myind, g_ind), linear(ind), aligned(arr) ordered
+// CHECK-NEXT: #pragma omp for simd private(myind,g_ind) linear(ind) aligned(arr) ordered
   for (i = 0; i < num; ++i) {
     myind = ind;
     T cur = arr[myind];
@@ -92,8 +92,8 @@ int main (int argc, char **argv) {
   int k1=0,k2=0;
   static int *a;
 // CHECK: static int *a;
-#pragma omp for simd
-// CHECK-NEXT: #pragma omp for simd
+#pragma omp for simd ordered
+// CHECK-NEXT: #pragma omp for simd ordered
   for (int i=0; i < 2; ++i)*a=2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: *a = 2;

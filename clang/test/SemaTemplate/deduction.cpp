@@ -207,3 +207,14 @@ namespace PR18645 {
   template<typename F> F Quux(F &&f);
   auto Baz = Quux(Quux<float>);
 }
+
+namespace NonDeducedNestedNameSpecifier {
+  template<typename T> struct A {
+    template<typename U> struct B {
+      B(int) {}
+    };
+  };
+
+  template<typename T> int f(A<T>, typename A<T>::template B<T>);
+  int k = f(A<int>(), 0);
+}

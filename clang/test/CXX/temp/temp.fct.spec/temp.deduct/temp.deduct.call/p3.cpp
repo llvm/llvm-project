@@ -139,7 +139,7 @@ namespace N {
 }
 
 namespace PR9233 {
-  template<typename T> void f(const T **q); // expected-note{{candidate template ignored: substitution failure [with T = int]}}
+  template<typename T> void f(const T **q); // expected-note{{candidate template ignored: deduced type 'const int **' of 1st parameter does not match adjusted type 'int **' of argument [with T = int]}}
 
   void g(int **p) {
     f(p); // expected-error{{no matching function for call to 'f'}}
