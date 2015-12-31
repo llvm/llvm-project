@@ -160,6 +160,29 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
 /// the original (static) function name.
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName);
 
+/// Given a vector of strings (function PGO names) \c NameStrs, the
+/// method generates a combined string \c Result thatis ready to be
+/// serialized.  The \c Result string is comprised of three fields:
+/// The first field is the legnth of the uncompressed strings, and the
+/// the second field is the length of the zlib-compressed string.
+/// Both fields are encoded in ULEB128.  If \c doCompress is false, the
+///  third field is the uncompressed strings; otherwise it is the 
+/// compressed string. When the string compression is off, the 
+/// second field will have value zero.
+int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
+                              bool doCompression, std::string &Result);
+/// Produce \c Result string with the same format described above. The input
+/// is vector of PGO function name variables that are referenced.
+int collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
+                              std::string &Result);
+class InstrProfSymtab;
+/// \c NameStrings is a string composed of one of more sub-strings encoded in
+/// the
+/// format described above. The substrings are seperated by 0 or more zero
+/// bytes.
+/// This method decodes the string and populates the \c Symtab.
+int readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
+
 const std::error_category &instrprof_category();
 
 enum class instrprof_error {
@@ -235,6 +258,11 @@ public:
   /// This interface is used by reader of CoverageMapping test
   /// format.
   inline std::error_code create(StringRef D, uint64_t BaseAddr);
+  /// \c NameStrings is a string composed of one of more sub-strings
+  ///  encoded in the format described above. The substrings are
+  /// seperated by 0 or more zero bytes. This method decodes the
+  /// string and populates the \c Symtab.
+  inline std::error_code create(StringRef NameStrings);
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.
   template <typename NameIterRange> void create(const NameIterRange &IterRange);
@@ -255,8 +283,8 @@ public:
     AddrToMD5Map.push_back(std::make_pair(Addr, MD5Val));
   }
   AddrHashMap &getAddrHashMap() { return AddrToMD5Map; }
-  /// Return function's PGO name from the function name's symabol
-  /// address in the object file. If an error occurs, Return
+  /// Return function's PGO name from the function name's symbol
+  /// address in the object file. If an error occurs, return
   /// an empty string.
   StringRef getFuncName(uint64_t FuncNameAddress, size_t NameSize);
   /// Return function's PGO name from the name's md5 hash value.
@@ -267,6 +295,12 @@ public:
 std::error_code InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
   Data = D;
   Address = BaseAddr;
+  return std::error_code();
+}
+
+std::error_code InstrProfSymtab::create(StringRef NameStrings) {
+  if (readPGOFuncNameStrings(NameStrings, *this))
+    return make_error_code(instrprof_error::malformed);
   return std::error_code();
 }
 

@@ -21144,6 +21144,47 @@ static MachineBasicBlock *EmitPCMPSTRI(MachineInstr *MI, MachineBasicBlock *BB,
   return BB;
 }
 
+static MachineBasicBlock *EmitWRPKRU(MachineInstr *MI, MachineBasicBlock *BB,
+                                     const X86Subtarget *Subtarget) {
+  DebugLoc dl = MI->getDebugLoc();
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+
+  // insert input VAL into EAX
+  BuildMI(*BB, MI, dl, TII->get(TargetOpcode::COPY), X86::EAX)
+                           .addReg(MI->getOperand(0).getReg());
+  // insert zero to ECX
+  BuildMI(*BB, MI, dl, TII->get(X86::XOR32rr), X86::ECX)
+                           .addReg(X86::ECX)
+                           .addReg(X86::ECX);
+  // insert zero to EDX
+  BuildMI(*BB, MI, dl, TII->get(X86::XOR32rr), X86::EDX)
+                           .addReg(X86::EDX)
+                           .addReg(X86::EDX);
+  // insert WRPKRU instruction
+  BuildMI(*BB, MI, dl, TII->get(X86::WRPKRUr));
+
+  MI->eraseFromParent(); // The pseudo is gone now.
+  return BB;
+}
+
+static MachineBasicBlock *EmitRDPKRU(MachineInstr *MI, MachineBasicBlock *BB,
+                                     const X86Subtarget *Subtarget) {
+  DebugLoc dl = MI->getDebugLoc();
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+
+  // insert zero to ECX
+  BuildMI(*BB, MI, dl, TII->get(X86::XOR32rr), X86::ECX)
+                           .addReg(X86::ECX)
+                           .addReg(X86::ECX);
+  // insert RDPKRU instruction
+  BuildMI(*BB, MI, dl, TII->get(X86::RDPKRUr));
+  BuildMI(*BB, MI, dl, TII->get(TargetOpcode::COPY), MI->getOperand(0).getReg())
+                           .addReg(X86::EAX);
+
+  MI->eraseFromParent(); // The pseudo is gone now.
+  return BB;
+}
+
 static MachineBasicBlock *EmitMonitor(MachineInstr *MI, MachineBasicBlock *BB,
                                       const X86Subtarget *Subtarget) {
   DebugLoc dl = MI->getDebugLoc();
@@ -22611,7 +22652,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   // Thread synchronization.
   case X86::MONITOR:
     return EmitMonitor(MI, BB, Subtarget);
-
+  // PKU feature
+  case X86::WRPKRU:
+    return EmitWRPKRU(MI, BB, Subtarget);
+  case X86::RDPKRU:
+    return EmitRDPKRU(MI, BB, Subtarget);
   // xbegin
   case X86::XBEGIN:
     return EmitXBegin(MI, BB, Subtarget->getInstrInfo());

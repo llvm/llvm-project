@@ -1466,6 +1466,8 @@ def SSE_CVT_SD2SI : OpndItins<
   IIC_SSE_CVT_SD2SI_RR, IIC_SSE_CVT_SD2SI_RM
 >;
 
+// FIXME: We probably want to match the rm form only when optimizing for
+// size, to avoid false depenendecies (see sse_fp_unop_s for details)
 multiclass sse12_cvt_s<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
                      SDNode OpNode, X86MemOperand x86memop, PatFrag ld_frag,
                      string asm, OpndItins itins> {
@@ -1489,6 +1491,8 @@ let hasSideEffects = 0 in {
 }
 }
 
+// FIXME: We probably want to match the rm form only when optimizing for
+// size, to avoid false depenendecies (see sse_fp_unop_s for details)
 multiclass sse12_vcvt_avx<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
                           X86MemOperand x86memop, string asm> {
 let hasSideEffects = 0, Predicates = [UseAVX] in {
@@ -1626,6 +1630,8 @@ def : InstAlias<"cvtsi2sd\t{$src, $dst|$dst, $src}",
 // Conversion Instructions Intrinsics - Match intrinsics which expect MM
 // and/or XMM operand(s).
 
+// FIXME: We probably want to match the rm form only when optimizing for
+// size, to avoid false depenendecies (see sse_fp_unop_s for details)
 multiclass sse12_cvt_sint<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
                          Intrinsic Int, Operand memop, ComplexPattern mem_cpat,
                          string asm, OpndItins itins> {
@@ -3387,9 +3393,18 @@ multiclass sse_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
   def : Pat<(Intr (load addr:$src)),
             (vt (COPY_TO_REGCLASS(!cast<Instruction>(NAME#Suffix##m)
                                       addr:$src), VR128))>;
-  def : Pat<(Intr mem_cpat:$src),
-             (!cast<Instruction>(NAME#Suffix##m_Int)
-                    (vt (IMPLICIT_DEF)), mem_cpat:$src)>;
+  }
+  // We don't want to fold scalar loads into these instructions unless
+  // optimizing for size. This is because the folded instruction will have a
+  // partial register update, while the unfolded sequence will not, e.g.
+  // movss mem, %xmm0
+  // rcpss %xmm0, %xmm0
+  // which has a clobber before the rcp, vs.
+  // rcpss mem, %xmm0
+  let Predicates = [target, OptForSize] in {
+    def : Pat<(Intr mem_cpat:$src),
+               (!cast<Instruction>(NAME#Suffix##m_Int)
+                      (vt (IMPLICIT_DEF)), mem_cpat:$src)>;
   }
 }
 
@@ -3420,28 +3435,37 @@ multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
   }
   }
 
+  // We don't want to fold scalar loads into these instructions unless
+  // optimizing for size. This is because the folded instruction will have a
+  // partial register update, while the unfolded sequence will not, e.g.
+  // vmovss mem, %xmm0
+  // vrcpss %xmm0, %xmm0, %xmm0
+  // which has a clobber before the rcp, vs.
+  // vrcpss mem, %xmm0, %xmm0
+  // TODO: In theory, we could fold the load, and avoid the stall caused by
+  // the partial register store, either in ExeDepFix or with smarter RA.
   let Predicates = [UseAVX] in {
    def : Pat<(OpNode RC:$src),  (!cast<Instruction>("V"#NAME#Suffix##r)
                                 (ScalarVT (IMPLICIT_DEF)), RC:$src)>;
-
-   def : Pat<(vt (OpNode mem_cpat:$src)),
-             (!cast<Instruction>("V"#NAME#Suffix##m_Int) (vt (IMPLICIT_DEF)),
-                                  mem_cpat:$src)>;
-
   }
   let Predicates = [HasAVX] in {
    def : Pat<(Intr VR128:$src),
              (!cast<Instruction>("V"#NAME#Suffix##r_Int) (vt (IMPLICIT_DEF)),
                                  VR128:$src)>;
-
-   def : Pat<(Intr mem_cpat:$src),
-             (!cast<Instruction>("V"#NAME#Suffix##m_Int)
+  }
+  let Predicates = [HasAVX, OptForSize] in {
+    def : Pat<(Intr mem_cpat:$src),
+              (!cast<Instruction>("V"#NAME#Suffix##m_Int)
                     (vt (IMPLICIT_DEF)), mem_cpat:$src)>;
   }
-  let Predicates = [UseAVX, OptForSize] in
-  def : Pat<(ScalarVT (OpNode (load addr:$src))),
-            (!cast<Instruction>("V"#NAME#Suffix##m) (ScalarVT (IMPLICIT_DEF)),
-             addr:$src)>;
+  let Predicates = [UseAVX, OptForSize] in {
+    def : Pat<(ScalarVT (OpNode (load addr:$src))),
+              (!cast<Instruction>("V"#NAME#Suffix##m) (ScalarVT (IMPLICIT_DEF)),
+            addr:$src)>;
+    def : Pat<(vt (OpNode mem_cpat:$src)),
+              (!cast<Instruction>("V"#NAME#Suffix##m_Int) (vt (IMPLICIT_DEF)),
+                                  mem_cpat:$src)>;
+  }
 }
 
 /// sse1_fp_unop_p - SSE1 unops in packed form.

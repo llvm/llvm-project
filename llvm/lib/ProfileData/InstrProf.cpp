@@ -12,12 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
@@ -160,6 +162,101 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
 
 GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), FuncName);
+}
+
+int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
+                              bool doCompression, std::string &Result) {
+  uint8_t Header[16], *P = Header;
+  std::string UncompressedNameStrings;
+
+  for (auto NameStr : NameStrs) {
+    UncompressedNameStrings += NameStr;
+    UncompressedNameStrings.append(" ");
+  }
+  unsigned EncLen = encodeULEB128(UncompressedNameStrings.length(), P);
+  P += EncLen;
+  if (!doCompression) {
+    EncLen = encodeULEB128(0, P);
+    P += EncLen;
+    Result.append(reinterpret_cast<char *>(&Header[0]), P - &Header[0]);
+    Result += UncompressedNameStrings;
+    return 0;
+  }
+  SmallVector<char, 128> CompressedNameStrings;
+  zlib::Status Success =
+      zlib::compress(StringRef(UncompressedNameStrings), CompressedNameStrings,
+                     zlib::BestSizeCompression);
+  assert(Success == zlib::StatusOK);
+  if (Success != zlib::StatusOK)
+    return 1;
+  EncLen = encodeULEB128(CompressedNameStrings.size(), P);
+  P += EncLen;
+  Result.append(reinterpret_cast<char *>(&Header[0]), P - &Header[0]);
+  Result +=
+      std::string(CompressedNameStrings.data(), CompressedNameStrings.size());
+  return 0;
+}
+
+int collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
+                              std::string &Result) {
+  std::vector<std::string> NameStrs;
+  for (auto *NameVar : NameVars) {
+    auto *Arr = cast<ConstantDataArray>(NameVar->getInitializer());
+    StringRef NameStr =
+        Arr->isCString() ? Arr->getAsCString() : Arr->getAsString();
+    NameStrs.push_back(NameStr.str());
+  }
+  return collectPGOFuncNameStrings(NameStrs, zlib::isAvailable(), Result);
+}
+
+int readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
+  const uint8_t *P = reinterpret_cast<const uint8_t *>(NameStrings.data());
+  const uint8_t *EndP = reinterpret_cast<const uint8_t *>(NameStrings.data() +
+                                                          NameStrings.size());
+  while (P < EndP) {
+    uint32_t N;
+    uint64_t UncompressedSize = decodeULEB128(P, &N);
+    P += N;
+    uint64_t CompressedSize = decodeULEB128(P, &N);
+    P += N;
+    bool isCompressed = (CompressedSize != 0);
+    SmallString<128> UncompressedNameStrings;
+    StringRef NameStrings;
+    if (isCompressed) {
+      StringRef CompressedNameStrings(reinterpret_cast<const char *>(P),
+                                      CompressedSize);
+      if (zlib::uncompress(CompressedNameStrings, UncompressedNameStrings,
+                           UncompressedSize) != zlib::StatusOK)
+        return 1;
+      P += CompressedSize;
+      NameStrings = StringRef(UncompressedNameStrings.data(),
+                              UncompressedNameStrings.size());
+    } else {
+      NameStrings =
+          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
+      P += UncompressedSize;
+    }
+    // Now parse the name strings.
+    size_t NameStart = 0;
+    bool isLast = false;
+    do {
+      size_t NameStop = NameStrings.find(' ', NameStart);
+      if (NameStop == StringRef::npos)
+        return 1;
+      if (NameStop == NameStrings.size() - 1)
+        isLast = true;
+      StringRef Name = NameStrings.substr(NameStart, NameStop - NameStart);
+      Symtab.addFuncName(Name);
+      if (isLast)
+        break;
+      NameStart = NameStop + 1;
+    } while (true);
+
+    while (P < EndP && *P == 0)
+      P++;
+  }
+  Symtab.finalizeSymtab();
+  return 0;
 }
 
 instrprof_error

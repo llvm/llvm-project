@@ -591,19 +591,19 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, Instruction &CI,
     // zext (x <s  0) to i32 --> x>>u31      true if signbit set.
     // zext (x >s -1) to i32 --> (x>>u31)^1  true if signbit clear.
     if ((ICI->getPredicate() == ICmpInst::ICMP_SLT && Op1CV == 0) ||
-        (ICI->getPredicate() == ICmpInst::ICMP_SGT &&Op1CV.isAllOnesValue())) {
+        (ICI->getPredicate() == ICmpInst::ICMP_SGT && Op1CV.isAllOnesValue())) {
       if (!DoXform) return ICI;
 
       Value *In = ICI->getOperand(0);
       Value *Sh = ConstantInt::get(In->getType(),
-                                   In->getType()->getScalarSizeInBits()-1);
-      In = Builder->CreateLShr(In, Sh, In->getName()+".lobit");
+                                   In->getType()->getScalarSizeInBits() - 1);
+      In = Builder->CreateLShr(In, Sh, In->getName() + ".lobit");
       if (In->getType() != CI.getType())
         In = Builder->CreateIntCast(In, CI.getType(), false/*ZExt*/);
 
       if (ICI->getPredicate() == ICmpInst::ICMP_SGT) {
         Constant *One = ConstantInt::get(In->getType(), 1);
-        In = Builder->CreateXor(In, One, In->getName()+".not");
+        In = Builder->CreateXor(In, One, In->getName() + ".not");
       }
 
       return ReplaceInstUsesWith(CI, In);
@@ -639,13 +639,13 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, Instruction &CI,
           return ReplaceInstUsesWith(CI, Res);
         }
 
-        uint32_t ShiftAmt = KnownZeroMask.logBase2();
+        uint32_t ShAmt = KnownZeroMask.logBase2();
         Value *In = ICI->getOperand(0);
-        if (ShiftAmt) {
+        if (ShAmt) {
           // Perform a logical shr by shiftamt.
           // Insert the shift to put the result in the low bit.
-          In = Builder->CreateLShr(In, ConstantInt::get(In->getType(),ShiftAmt),
-                                   In->getName()+".lobit");
+          In = Builder->CreateLShr(In, ConstantInt::get(In->getType(), ShAmt),
+                                   In->getName() + ".lobit");
         }
 
         if ((Op1CV != 0) == isNE) { // Toggle the low bit.

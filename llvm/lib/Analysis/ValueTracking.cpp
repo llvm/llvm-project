@@ -1743,9 +1743,10 @@ bool isKnownToBeAPowerOfTwo(Value *V, bool OrZero, unsigned Depth,
     return false;
 
   Value *X = nullptr, *Y = nullptr;
-  // A shift of a power of two is a power of two or zero.
+  // A shift left or a logical shift right of a power of two is a power of two
+  // or zero.
   if (OrZero && (match(V, m_Shl(m_Value(X), m_Value())) ||
-                 match(V, m_Shr(m_Value(X), m_Value()))))
+                 match(V, m_LShr(m_Value(X), m_Value()))))
     return isKnownToBeAPowerOfTwo(X, /*OrZero*/ true, Depth, Q, DL);
 
   if (ZExtInst *ZI = dyn_cast<ZExtInst>(V))
