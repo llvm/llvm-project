@@ -1485,7 +1485,7 @@ FindArgInFunction(swift::ASTContext &ast_context, swift::FuncDecl *func_decl)
     
     for (auto *paramList : func_decl->getParameterLists()) {
         for (auto &param : *paramList)
-            if (param.getName() == name)
+            if (param.decl->getName() == name)
                 return param.decl;
     }
     
