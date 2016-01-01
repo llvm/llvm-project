@@ -24,6 +24,7 @@
 
 #include "swift/AST/Decl.h"
 #include "swift/AST/Pattern.h"
+#include "swift/AST/Parameter.h"
 
 #include "llvm/ADT/StringMap.h"
 
@@ -152,8 +153,8 @@ SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(swift::Decl *lh
             auto &context = lhs_func_decl->getASTContext();
             for (int idx = 0; idx < num_patterns; idx++)
             {
-                auto *lhs_param = lhs_patterns->get(idx);
-                auto *rhs_param = rhs_patterns->get(idx);
+                auto *lhs_param = lhs_patterns[idx];
+                auto *rhs_param = lhs_patterns[idx];
                 
                 auto lhs_type = lhs_param->getType(context).getCanonicalTypeOrNull();
                 auto rhs_type = rhs_param->getType(context).getCanonicalTypeOrNull();

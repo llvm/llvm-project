@@ -22,6 +22,7 @@
 #include "swift/AST/Initializer.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/NameLookup.h"
+#include "swift/AST/Parameter.h"
 #include "swift/AST/Pattern.h"
 #include "swift/AST/Stmt.h"
 #include "swift/AST/TypeRepr.h"
@@ -1484,7 +1485,7 @@ FindArgInFunction(swift::ASTContext &ast_context, swift::FuncDecl *func_decl)
     
     for (auto *paramList : func_decl->getParameterLists()) {
         for (auto &param : *paramList)
-            if (param.getName() == m_name)
+            if (param.getName() == name)
                 return param.decl;
     }
     
