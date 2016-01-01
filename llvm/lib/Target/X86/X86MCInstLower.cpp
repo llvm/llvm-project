@@ -14,6 +14,7 @@
 
 #include "X86AsmPrinter.h"
 #include "X86RegisterInfo.h"
+#include "X86ShuffleDecodeConstantPool.h"
 #include "InstPrinter/X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "Utils/X86ShuffleDecode.h"

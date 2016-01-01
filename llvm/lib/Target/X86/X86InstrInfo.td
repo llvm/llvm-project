@@ -1093,6 +1093,32 @@ def PUSH32rmm: I<0xFF, MRM6m, (outs), (ins i32mem:$src), "push{l}\t$src",[],
 
 }
 
+let mayLoad = 1, mayStore = 1, usesCustomInserter = 1,
+    SchedRW = [WriteRMW], Defs = [ESP] in {
+  let Uses = [ESP, EFLAGS] in
+  def RDFLAGS32 : PseudoI<(outs GR32:$dst), (ins),
+                   [(set GR32:$dst, (int_x86_flags_read_u32))]>,
+                Requires<[Not64BitMode]>;
+
+  let Uses = [RSP, EFLAGS] in
+  def RDFLAGS64 : PseudoI<(outs GR64:$dst), (ins),
+                   [(set GR64:$dst, (int_x86_flags_read_u64))]>,
+                Requires<[In64BitMode]>;
+}
+
+let mayLoad = 1, mayStore = 1, usesCustomInserter = 1,
+    SchedRW = [WriteRMW] in {
+  let Defs = [ESP, EFLAGS], Uses = [ESP] in
+  def WRFLAGS32 : PseudoI<(outs), (ins GR32:$src),
+                   [(int_x86_flags_write_u32 GR32:$src)]>,
+                Requires<[Not64BitMode]>;
+
+  let Defs = [RSP, EFLAGS], Uses = [RSP] in
+  def WRFLAGS64 : PseudoI<(outs), (ins GR64:$src),
+                   [(int_x86_flags_write_u64 GR64:$src)]>,
+                Requires<[In64BitMode]>;
+}
+
 let Defs = [ESP, EFLAGS], Uses = [ESP], mayLoad = 1, hasSideEffects=0,
     SchedRW = [WriteLoad] in {
 def POPF16   : I<0x9D, RawFrm, (outs), (ins), "popf{w}", [], IIC_POP_F>,

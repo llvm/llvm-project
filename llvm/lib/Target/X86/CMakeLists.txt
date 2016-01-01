@@ -27,6 +27,7 @@ set(sources
   X86PadShortFunction.cpp
   X86RegisterInfo.cpp
   X86SelectionDAGInfo.cpp
+  X86ShuffleDecodeConstantPool.cpp
   X86Subtarget.cpp
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp

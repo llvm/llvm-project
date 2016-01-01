@@ -128,11 +128,9 @@ entry:
   ; CHECK:      .seh_setframe 5, 0
   ; CHECK:      .seh_endprologue
 
-  %call = call i64 asm sideeffect "pushf\0A\09popq $0\0A", "=r,~{dirflag},~{fpsr},~{flags}"()
-  ; CHECK-NEXT: #APP
+  %call = call i64 @llvm.x86.flags.read.u64()
   ; CHECK-NEXT: pushfq
   ; CHECK-NEXT: popq    %rax
-  ; CHECK:      #NO_APP
 
   ret i64 %call
   ; CHECK-NEXT: popq    %rbp
@@ -187,5 +185,6 @@ define i64 @f10(i64* %foo, i64 %bar, i64 %baz) {
 }
 
 declare i8* @llvm.returnaddress(i32) nounwind readnone
+declare i64 @llvm.x86.flags.read.u64()
 
 declare void @llvm.va_start(i8*) nounwind

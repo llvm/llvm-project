@@ -18,6 +18,7 @@
 #include "X86FrameLowering.h"
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
+#include "X86ShuffleDecodeConstantPool.h"
 #include "X86TargetMachine.h"
 #include "X86TargetObjectFile.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -22535,6 +22536,40 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   case X86::CMOV_V32I1:
   case X86::CMOV_V64I1:
     return EmitLoweredSelect(MI, BB);
+
+  case X86::RDFLAGS32:
+  case X86::RDFLAGS64: {
+    DebugLoc DL = MI->getDebugLoc();
+    MachineFunction *MF = BB->getParent();
+    MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    unsigned PushF =
+        MI->getOpcode() == X86::RDFLAGS32 ? X86::PUSHF32 : X86::PUSHF64;
+    unsigned Pop =
+        MI->getOpcode() == X86::RDFLAGS32 ? X86::POP32r : X86::POP64r;
+    BuildMI(*BB, MI, DL, TII->get(PushF));
+    BuildMI(*BB, MI, DL, TII->get(Pop), MI->getOperand(0).getReg());
+
+    MI->eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+
+  case X86::WRFLAGS32:
+  case X86::WRFLAGS64: {
+    DebugLoc DL = MI->getDebugLoc();
+    MachineFunction *MF = BB->getParent();
+    MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    unsigned Push =
+        MI->getOpcode() == X86::WRFLAGS32 ? X86::PUSH32r : X86::PUSH64r;
+    unsigned PopF =
+        MI->getOpcode() == X86::WRFLAGS32 ? X86::POPF32 : X86::POPF64;
+    BuildMI(*BB, MI, DL, TII->get(Push)).addReg(MI->getOperand(0).getReg());
+    BuildMI(*BB, MI, DL, TII->get(PopF));
+
+    MI->eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
 
   case X86::RELEASE_FADD32mr:
   case X86::RELEASE_FADD64mr:
