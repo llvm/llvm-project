@@ -84,21 +84,15 @@ protected:
   /// \brief Fetches list of variables associated with this clause.
   MutableArrayRef<Expr *> getVarRefs() {
     return MutableArrayRef<Expr *>(
-        reinterpret_cast<Expr **>(
-            reinterpret_cast<char *>(this) +
-            llvm::RoundUpToAlignment(sizeof(T), llvm::alignOf<Expr *>())),
-        NumVars);
+        static_cast<T *>(this)->template getTrailingObjects<Expr *>(), NumVars);
   }
 
   /// \brief Sets the list of variables for this clause.
   void setVarRefs(ArrayRef<Expr *> VL) {
     assert(VL.size() == NumVars &&
            "Number of variables is not the same as the preallocated buffer");
-    std::copy(
-        VL.begin(), VL.end(),
-        reinterpret_cast<Expr **>(
-            reinterpret_cast<char *>(this) +
-            llvm::RoundUpToAlignment(sizeof(T), llvm::alignOf<Expr *>())));
+    std::copy(VL.begin(), VL.end(),
+              static_cast<T *>(this)->template getTrailingObjects<Expr *>());
   }
 
   /// \brief Build a clause with \a N variables
@@ -142,9 +136,7 @@ public:
   /// \brief Fetches list of all variables in the clause.
   ArrayRef<const Expr *> getVarRefs() const {
     return llvm::makeArrayRef(
-        reinterpret_cast<const Expr *const *>(
-            reinterpret_cast<const char *>(this) +
-            llvm::RoundUpToAlignment(sizeof(T), llvm::alignOf<const Expr *>())),
+        static_cast<const T *>(this)->template getTrailingObjects<Expr *>(),
         NumVars);
   }
 };
@@ -1160,7 +1152,11 @@ public:
 /// In this example directive '#pragma omp parallel' has clause 'private'
 /// with the variables 'a' and 'b'.
 ///
-class OMPPrivateClause : public OMPVarListClause<OMPPrivateClause> {
+class OMPPrivateClause final
+    : public OMPVarListClause<OMPPrivateClause>,
+      private llvm::TrailingObjects<OMPPrivateClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
   /// \brief Build clause with number of variables \a N.
   ///
@@ -1252,7 +1248,11 @@ public:
 /// In this example directive '#pragma omp parallel' has clause 'firstprivate'
 /// with the variables 'a' and 'b'.
 ///
-class OMPFirstprivateClause : public OMPVarListClause<OMPFirstprivateClause> {
+class OMPFirstprivateClause final
+    : public OMPVarListClause<OMPFirstprivateClause>,
+      private llvm::TrailingObjects<OMPFirstprivateClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
 
   /// \brief Build clause with number of variables \a N.
@@ -1372,7 +1372,9 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp simd' has clause 'lastprivate'
 /// with the variables 'a' and 'b'.
-class OMPLastprivateClause : public OMPVarListClause<OMPLastprivateClause> {
+class OMPLastprivateClause final
+    : public OMPVarListClause<OMPLastprivateClause>,
+      private llvm::TrailingObjects<OMPLastprivateClause, Expr *> {
   // There are 4 additional tail-allocated arrays at the end of the class:
   // 1. Contains list of pseudo variables with the default initialization for
   // each non-firstprivate variables. Used in codegen for initialization of
@@ -1390,6 +1392,8 @@ class OMPLastprivateClause : public OMPVarListClause<OMPLastprivateClause> {
   // Required for proper codegen of final assignment performed by the
   // lastprivate clause.
   //
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
 
   /// \brief Build clause with number of variables \a N.
@@ -1557,7 +1561,11 @@ public:
 /// In this example directive '#pragma omp parallel' has clause 'shared'
 /// with the variables 'a' and 'b'.
 ///
-class OMPSharedClause : public OMPVarListClause<OMPSharedClause> {
+class OMPSharedClause final
+    : public OMPVarListClause<OMPSharedClause>,
+      private llvm::TrailingObjects<OMPSharedClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   /// \brief Build clause with number of variables \a N.
   ///
   /// \param StartLoc Starting location of the clause.
@@ -1617,7 +1625,11 @@ public:
 /// In this example directive '#pragma omp parallel' has clause 'reduction'
 /// with operator '+' and the variables 'a' and 'b'.
 ///
-class OMPReductionClause : public OMPVarListClause<OMPReductionClause> {
+class OMPReductionClause final
+    : public OMPVarListClause<OMPReductionClause>,
+      private llvm::TrailingObjects<OMPReductionClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
   /// \brief Location of ':'.
   SourceLocation ColonLoc;
@@ -1819,7 +1831,11 @@ public:
 /// In this example directive '#pragma omp simd' has clause 'linear'
 /// with variables 'a', 'b' and linear step '2'.
 ///
-class OMPLinearClause : public OMPVarListClause<OMPLinearClause> {
+class OMPLinearClause final
+    : public OMPVarListClause<OMPLinearClause>,
+      private llvm::TrailingObjects<OMPLinearClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
   /// \brief Modifier of 'linear' clause.
   OpenMPLinearClauseKind Modifier;
@@ -2039,7 +2055,11 @@ public:
 /// In this example directive '#pragma omp simd' has clause 'aligned'
 /// with variables 'a', 'b' and alignment '8'.
 ///
-class OMPAlignedClause : public OMPVarListClause<OMPAlignedClause> {
+class OMPAlignedClause final
+    : public OMPVarListClause<OMPAlignedClause>,
+      private llvm::TrailingObjects<OMPAlignedClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
   /// \brief Location of ':'.
   SourceLocation ColonLoc;
@@ -2123,7 +2143,9 @@ public:
 /// In this example directive '#pragma omp parallel' has clause 'copyin'
 /// with the variables 'a' and 'b'.
 ///
-class OMPCopyinClause : public OMPVarListClause<OMPCopyinClause> {
+class OMPCopyinClause final
+    : public OMPVarListClause<OMPCopyinClause>,
+      private llvm::TrailingObjects<OMPCopyinClause, Expr *> {
   // Class has 3 additional tail allocated arrays:
   // 1. List of helper expressions for proper generation of assignment operation
   // required for copyin clause. This list represents sources.
@@ -2137,6 +2159,8 @@ class OMPCopyinClause : public OMPVarListClause<OMPCopyinClause> {
   // threadprivate variables to local instances of that variables in other
   // implicit threads.
 
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
   /// \brief Build clause with number of variables \a N.
   ///
@@ -2282,7 +2306,11 @@ public:
 /// In this example directive '#pragma omp single' has clause 'copyprivate'
 /// with the variables 'a' and 'b'.
 ///
-class OMPCopyprivateClause : public OMPVarListClause<OMPCopyprivateClause> {
+class OMPCopyprivateClause final
+    : public OMPVarListClause<OMPCopyprivateClause>,
+      private llvm::TrailingObjects<OMPCopyprivateClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
   /// \brief Build clause with number of variables \a N.
   ///
@@ -2431,7 +2459,11 @@ public:
 /// In this example directive '#pragma omp flush' has implicit clause 'flush'
 /// with the variables 'a' and 'b'.
 ///
-class OMPFlushClause : public OMPVarListClause<OMPFlushClause> {
+class OMPFlushClause final
+    : public OMPVarListClause<OMPFlushClause>,
+      private llvm::TrailingObjects<OMPFlushClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   /// \brief Build clause with number of variables \a N.
   ///
   /// \param StartLoc Starting location of the clause.
@@ -2491,7 +2523,11 @@ public:
 /// In this example directive '#pragma omp task' with clause 'depend' with the
 /// variables 'a' and 'b' with dependency 'in'.
 ///
-class OMPDependClause : public OMPVarListClause<OMPDependClause> {
+class OMPDependClause final
+    : public OMPVarListClause<OMPDependClause>,
+      private llvm::TrailingObjects<OMPDependClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
   /// \brief Dependency type (one of in, out, inout).
   OpenMPDependClauseKind DepKind;
@@ -2695,7 +2731,10 @@ public:
 /// In this example directive '#pragma omp target' has clause 'map'
 /// with the variables 'a' and 'b'.
 ///
-class OMPMapClause : public OMPVarListClause<OMPMapClause> {
+class OMPMapClause final : public OMPVarListClause<OMPMapClause>,
+                           private llvm::TrailingObjects<OMPMapClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
   friend class OMPClauseReader;
 
   /// \brief Map type modifier for the 'map' clause.

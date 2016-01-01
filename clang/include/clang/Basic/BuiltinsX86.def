@@ -41,6 +41,13 @@ TARGET_BUILTIN(__builtin_ia32_undef128, "V2d", "nc", "")
 TARGET_BUILTIN(__builtin_ia32_undef256, "V4d", "nc", "")
 TARGET_BUILTIN(__builtin_ia32_undef512, "V8d", "nc", "")
 
+// FLAGS
+//
+TARGET_BUILTIN(__builtin_ia32_readeflags_u32, "Ui", "n", "")
+TARGET_BUILTIN(__builtin_ia32_readeflags_u64, "ULLi", "n", "")
+TARGET_BUILTIN(__builtin_ia32_writeeflags_u32, "vUi", "n", "")
+TARGET_BUILTIN(__builtin_ia32_writeeflags_u64, "vULLi", "n", "")
+
 // 3DNow!
 //
 TARGET_BUILTIN(__builtin_ia32_femms, "v", "", "3dnow")
@@ -917,6 +924,9 @@ TARGET_BUILTIN(__builtin_ia32_xtest, "i", "", "rtm")
 BUILTIN(__builtin_ia32_rdpmc, "ULLii", "")
 BUILTIN(__builtin_ia32_rdtsc, "ULLi", "")
 BUILTIN(__builtin_ia32_rdtscp, "ULLiUi*", "")
+// PKU
+TARGET_BUILTIN(__builtin_ia32_rdpkru, "Ui", "", "pku")
+TARGET_BUILTIN(__builtin_ia32_wrpkru, "vUi", "", "pku")
 
 // AVX-512
 TARGET_BUILTIN(__builtin_ia32_sqrtpd512_mask, "V8dV8dV8dUcIi", "", "avx512f")

@@ -12,6 +12,7 @@ set(files
   avx512vlintrin.h
   avx512dqintrin.h
   avx512vldqintrin.h
+  pkuintrin.h
   avxintrin.h
   bmi2intrin.h
   bmiintrin.h
