@@ -1529,8 +1529,11 @@ public:
 
   CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args = None,
                        ArrayRef<OperandBundleDef> OpBundles = None,
-                       const Twine &Name = "") {
-    return Insert(CallInst::Create(Callee, Args, OpBundles), Name);
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    CallInst *CI = CallInst::Create(Callee, Args, OpBundles);
+    if (isa<FPMathOperator>(CI))
+      CI = cast<CallInst>(AddFPMathAttributes(CI, FPMathTag, FMF));
+    return Insert(CI, Name);
   }
 
   CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args,

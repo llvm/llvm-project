@@ -57,8 +57,7 @@ static bool ignoreCallingConv(LibFunc::Func Func) {
          Func == LibFunc::llabs || Func == LibFunc::strlen;
 }
 
-/// isOnlyUsedInZeroEqualityComparison - Return true if it only matters that the
-/// value is equal or not-equal to zero.
+/// Return true if it only matters that the value is equal or not-equal to zero.
 static bool isOnlyUsedInZeroEqualityComparison(Value *V) {
   for (User *U : V->users()) {
     if (ICmpInst *IC = dyn_cast<ICmpInst>(U))
@@ -72,8 +71,7 @@ static bool isOnlyUsedInZeroEqualityComparison(Value *V) {
   return true;
 }
 
-/// isOnlyUsedInEqualityComparison - Return true if it is only used in equality
-/// comparisons with With.
+/// Return true if it is only used in equality comparisons with With.
 static bool isOnlyUsedInEqualityComparison(Value *V, Value *With) {
   for (User *U : V->users()) {
     if (ICmpInst *IC = dyn_cast<ICmpInst>(U))
@@ -249,12 +247,12 @@ Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilder<> &B) {
       !FT->getParamType(2)->isIntegerTy())
     return nullptr;
 
-  // Extract some information from the instruction
+  // Extract some information from the instruction.
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   uint64_t Len;
 
-  // We don't do anything if length is not constant
+  // We don't do anything if length is not constant.
   if (ConstantInt *LengthArg = dyn_cast<ConstantInt>(CI->getArgOperand(2)))
     Len = LengthArg->getZExtValue();
   else
@@ -272,12 +270,12 @@ Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilder<> &B) {
   if (SrcLen == 0 || Len == 0)
     return Dst;
 
-  // We don't optimize this case
+  // We don't optimize this case.
   if (Len < SrcLen)
     return nullptr;
 
   // strncat(x, s, c) -> strcat(x, s)
-  // s is constant so the strcat can be optimized further
+  // s is constant so the strcat can be optimized further.
   return emitStrLenMemCpy(Src, Dst, SrcLen, B);
 }
 
@@ -310,7 +308,8 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilder<> &B) {
   StringRef Str;
   if (!getConstantStringInfo(SrcStr, Str)) {
     if (CharC->isZero()) // strchr(p, 0) -> p + strlen(p)
-      return B.CreateGEP(B.getInt8Ty(), SrcStr, EmitStrLen(SrcStr, B, DL, TLI), "strchr");
+      return B.CreateGEP(B.getInt8Ty(), SrcStr, EmitStrLen(SrcStr, B, DL, TLI),
+                         "strchr");
     return nullptr;
   }
 
@@ -490,8 +489,8 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilder<> &B) {
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
   Value *LenV = ConstantInt::get(DL.getIntPtrType(PT), Len);
-  Value *DstEnd =
-      B.CreateGEP(B.getInt8Ty(), Dst, ConstantInt::get(DL.getIntPtrType(PT), Len - 1));
+  Value *DstEnd = B.CreateGEP(B.getInt8Ty(), Dst,
+                              ConstantInt::get(DL.getIntPtrType(PT), Len - 1));
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
@@ -599,7 +598,8 @@ Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilder<> &B) {
     if (I == StringRef::npos) // No match.
       return Constant::getNullValue(CI->getType());
 
-    return B.CreateGEP(B.getInt8Ty(), CI->getArgOperand(0), B.getInt64(I), "strpbrk");
+    return B.CreateGEP(B.getInt8Ty(), CI->getArgOperand(0), B.getInt64(I),
+                       "strpbrk");
   }
 
   // strpbrk(s, "a") -> strchr(s, 'a')
@@ -878,8 +878,10 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
       Type *RHSPtrTy =
           IntType->getPointerTo(RHS->getType()->getPointerAddressSpace());
 
-      Value *LHSV = B.CreateLoad(B.CreateBitCast(LHS, LHSPtrTy, "lhsc"), "lhsv");
-      Value *RHSV = B.CreateLoad(B.CreateBitCast(RHS, RHSPtrTy, "rhsc"), "rhsv");
+      Value *LHSV =
+          B.CreateLoad(B.CreateBitCast(LHS, LHSPtrTy, "lhsc"), "lhsv");
+      Value *RHSV =
+          B.CreateLoad(B.CreateBitCast(RHS, RHSPtrTy, "rhsc"), "rhsv");
 
       return B.CreateZExt(B.CreateICmpNE(LHSV, RHSV), CI->getType(), "memcmp");
     }
@@ -992,6 +994,10 @@ Value *LibCallSimplifier::optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
   Value *V = valueHasFloatPrecision(CI->getArgOperand(0));
   if (V == nullptr)
     return nullptr;
+  
+  // Propagate fast-math flags from the existing call to the new call.
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  B.SetFastMathFlags(CI->getFastMathFlags());
 
   // floor((double)floatval) -> (double)floorf(floatval)
   if (Callee->isIntrinsic()) {
@@ -1026,6 +1032,10 @@ Value *LibCallSimplifier::optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
   Value *V2 = valueHasFloatPrecision(CI->getArgOperand(1));
   if (V2 == nullptr)
     return nullptr;
+
+  // Propagate fast-math flags from the existing call to the new call.
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  B.SetFastMathFlags(CI->getFastMathFlags());
 
   // fmin((double)floatval1, (double)floatval2)
   //                      -> (double)fminf(floatval1, floatval2)
@@ -1117,7 +1127,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
                                   Callee->getAttributes());
   }
 
-  bool unsafeFPMath = canUseUnsafeFPMath(CI->getParent()->getParent());
+  bool UnsafeFPMath = canUseUnsafeFPMath(CI->getParent()->getParent());
 
   // pow(exp(x), y) -> exp(x*y)
   // pow(exp2(x), y) -> exp2(x * y)
@@ -1126,7 +1136,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   // underflow behavior quite dramatically.
   // Example: x = 1000, y = 0.001.
   // pow(exp(x), y) = pow(inf, 0.001) = inf, whereas exp(x*y) = exp(1).
-  if (unsafeFPMath) {
+  if (UnsafeFPMath) {
     if (auto *OpC = dyn_cast<CallInst>(Op1)) {
       IRBuilder<>::FastMathFlagGuard Guard(B);
       FastMathFlags FMF;
@@ -1157,7 +1167,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
                       LibFunc::fabsl)) {
 
     // In -ffast-math, pow(x, 0.5) -> sqrt(x).
-    if (unsafeFPMath)
+    if (UnsafeFPMath)
       return EmitUnaryFloatFnCall(Op1, TLI->getName(LibFunc::sqrt), B,
                                   Callee->getAttributes());
 
@@ -1183,7 +1193,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     return B.CreateFDiv(ConstantFP::get(CI->getType(), 1.0), Op1, "powrecip");
 
   // In -ffast-math, generate repeated fmul instead of generating pow(x, n).
-  if (unsafeFPMath) {
+  if (UnsafeFPMath) {
     APFloat V = abs(Op2C->getValueAPF());
     // We limit to a max of 7 fmul(s). Thus max exponent is 32.
     // This transformation applies to integer exponents only.
@@ -2419,7 +2429,8 @@ bool FortifiedLibCallSimplifier::isFortifiedCallFoldable(CallInst *CI,
   return false;
 }
 
-Value *FortifiedLibCallSimplifier::optimizeMemCpyChk(CallInst *CI, IRBuilder<> &B) {
+Value *FortifiedLibCallSimplifier::optimizeMemCpyChk(CallInst *CI,
+                                                     IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
 
   if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memcpy_chk))
@@ -2433,7 +2444,8 @@ Value *FortifiedLibCallSimplifier::optimizeMemCpyChk(CallInst *CI, IRBuilder<> &
   return nullptr;
 }
 
-Value *FortifiedLibCallSimplifier::optimizeMemMoveChk(CallInst *CI, IRBuilder<> &B) {
+Value *FortifiedLibCallSimplifier::optimizeMemMoveChk(CallInst *CI,
+                                                      IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
 
   if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memmove_chk))
@@ -2447,7 +2459,8 @@ Value *FortifiedLibCallSimplifier::optimizeMemMoveChk(CallInst *CI, IRBuilder<> 
   return nullptr;
 }
 
-Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI, IRBuilder<> &B) {
+Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
+                                                     IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
 
   if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memset_chk))

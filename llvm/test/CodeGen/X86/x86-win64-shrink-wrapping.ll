@@ -11,9 +11,7 @@ target triple = "x86_64--windows-gnu"
 ; etc.) prior to the return and this is forbidden for Win64.
 ; CHECK-LABEL: loopInfoSaveOutsideLoop:
 ; CHECK: push
-; CHECK: push
 ; CHECK-NOT: popq
-; CHECK: popq
 ; CHECK: popq
 ; CHECK-NOT: popq
 ; CHECK-NEXT: retq
@@ -57,7 +55,6 @@ if.end:                                           ; preds = %if.else, %for.end
 ;
 ; Prologue code.
 ; Make sure we save the CSR used in the inline asm: rbx.
-; CHECK: pushq %rbp
 ; CHECK: pushq %rbx
 ;
 ; DISABLE: testl %ecx, %ecx
@@ -79,7 +76,6 @@ if.end:                                           ; preds = %if.else, %for.end
 ; DISABLE: jmp [[EPILOG_BB:.LBB[0-9_]+]]
 ;
 ; ENABLE-NEXT: popq %rbx
-; ENABLE-NEXT: popq %rbp
 ; ENABLE-NEXT: retq
 ;
 ; CHECK: [[ELSE_LABEL]]: # %if.else

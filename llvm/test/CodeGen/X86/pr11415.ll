@@ -4,17 +4,15 @@
 ; defining %0 before it was read. This caused us to omit the
 ; movq	-8(%rsp), %rdx
 
-; CHECK: pushq	%rax
 ; CHECK: 	#APP
 ; CHECK-NEXT:	#NO_APP
 ; CHECK-NEXT:	movq	%rcx, %rax
-; CHECK-NEXT:	movq	%rax, (%rsp)
-; CHECK-NEXT:	movq	(%rsp), %rdx
+; CHECK-NEXT:	movq	%rax, -8(%rsp)
+; CHECK-NEXT:	movq	-8(%rsp), %rdx
 ; CHECK-NEXT:	#APP
 ; CHECK-NEXT:	#NO_APP
 ; CHECK-NEXT:	movq	%rdx, %rax
-; CHECK-NEXT:	movq	%rdx, (%rsp)
-; CHECK-NEXT:	popq	%rcx
+; CHECK-NEXT:	movq	%rdx, -8(%rsp)
 ; CHECK-NEXT:	ret
 
 define i64 @foo() {

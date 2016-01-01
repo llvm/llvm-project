@@ -86,10 +86,6 @@ X86FrameLowering::needsFrameIndexResolution(const MachineFunction &MF) const {
 static bool usesTheStack(const MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // Conservativley assume that inline assembly might use the stack.
-  if (MF.hasInlineAsm())
-    return true;
-
   return any_of(MRI.reg_instructions(X86::EFLAGS),
                 [](const MachineInstr &RI) { return RI.isCopy(); });
 }

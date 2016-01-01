@@ -32,7 +32,6 @@ static unsigned getVectorRegSize(unsigned RegNo) {
     return 64;
 
   llvm_unreachable("Unknown vector reg!");
-  return 0;
 }
 
 static MVT getRegOperandVectorVT(const MCInst *MI, const MVT &ScalarVT,
