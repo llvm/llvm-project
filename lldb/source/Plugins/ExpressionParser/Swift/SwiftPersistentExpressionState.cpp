@@ -140,26 +140,23 @@ SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(swift::Decl *lh
     // is, otherwise we just add it.
     case swift::DeclKind::Func:
     {
-        swift::FuncDecl *lhs_func_decl = llvm::dyn_cast<swift::FuncDecl>(lhs_decl);
-        swift::FuncDecl *rhs_func_decl = llvm::dyn_cast<swift::FuncDecl>(rhs_decl);
+        swift::FuncDecl *lhs_func_decl = llvm::cast<swift::FuncDecl>(lhs_decl);
+        swift::FuncDecl *rhs_func_decl = llvm::cast<swift::FuncDecl>(rhs_decl);
             // Okay, they have the same number of arguments, are they of the same type?
-        llvm::MutableArrayRef<swift::Pattern *> lhs_patterns = lhs_func_decl->getBodyParamPatterns();
-        llvm::MutableArrayRef<swift::Pattern *> rhs_patterns = rhs_func_decl->getBodyParamPatterns();
+        auto lhs_patterns = lhs_func_decl->getParameterLists();
+        auto rhs_patterns = rhs_func_decl->getParameterLists();
         size_t num_patterns = lhs_patterns.size();
         bool body_params_equal = true;
         if (num_patterns == rhs_patterns.size())
         {
+            auto &context = lhs_func_decl->getASTContext();
             for (int idx = 0; idx < num_patterns; idx++)
             {
-                swift::CanType lhs_type;
-                swift::CanType rhs_type;
-                swift::Pattern *lhs_pattern = lhs_patterns[idx];
-                swift::Pattern *rhs_pattern = rhs_patterns[idx];
+                auto *lhs_param = lhs_patterns->get(idx);
+                auto *rhs_param = rhs_patterns->get(idx);
                 
-                if (lhs_pattern->hasType())
-                    lhs_type = lhs_pattern->getType().getCanonicalTypeOrNull();
-                if (rhs_pattern->hasType())
-                    rhs_type = rhs_pattern->getType().getCanonicalTypeOrNull();
+                auto lhs_type = lhs_param->getType(context).getCanonicalTypeOrNull();
+                auto rhs_type = rhs_param->getType(context).getCanonicalTypeOrNull();
                 if (lhs_type != rhs_type)
                 {
                     body_params_equal = false;

@@ -1480,52 +1480,15 @@ AppendToCaptures(swift::ASTContext &ast_context, swift::FuncDecl *func_decl, swi
 static swift::VarDecl *
 FindArgInFunction(swift::ASTContext &ast_context, swift::FuncDecl *func_decl)
 {
-    class VariableFinder : public swift::ASTWalker
-    {
-    public:
-        VariableFinder (swift::Identifier name) :
-        m_name(name)
-        {
-        }
-        
-        swift::VarDecl *GetDecl()
-        {
-            return m_decl;
-        }
-        
-        std::pair<bool, swift::Pattern*> walkToPatternPre(swift::Pattern *P) {
-            swift::NamedPattern *NP = llvm::dyn_cast<swift::NamedPattern>(P);
-            if (NP)
-            {
-                swift::VarDecl *pattern_decl = NP->getDecl();
-                
-                if (pattern_decl->getName() == m_name)
-                {
-                    m_decl = pattern_decl;
-                    
-                    return { false, NULL };
-                }
-            }
-            return swift::ASTWalker::walkToPatternPre(P);
-        }
-    private:
-        swift::Identifier m_name;
-        swift::VarDecl *m_decl = nullptr;
-    };
+    auto name = ast_context.getIdentifier("$__lldb_arg");
     
-    VariableFinder finder(ast_context.getIdentifier("$__lldb_arg"));
-    
-    llvm::MutableArrayRef<swift::Pattern *> arg_param_patterns = func_decl->getBodyParamPatterns();
-    
-    for (swift::Pattern *pattern : arg_param_patterns)
-    {
-        pattern->walk(finder);
-        
-        if (finder.GetDecl())
-            break;
+    for (auto *paramList : func_decl->getParameterLists()) {
+        for (auto &param : *paramList)
+            if (param.getName() == m_name)
+                return param.decl;
     }
     
-    return finder.GetDecl();
+    return nullptr;
 }
 
 bool
