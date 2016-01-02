@@ -22,6 +22,7 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -864,7 +865,6 @@ void WinEHPrepare::cleanupPreparedFunclets(Function &F) {
 }
 
 void WinEHPrepare::verifyPreparedFunclets(Function &F) {
-  // Recolor the CFG to verify that all is well.
   for (BasicBlock &BB : F) {
     size_t NumColors = BlockColors[&BB].size();
     assert(NumColors == 1 && "Expected monochromatic BB!");
@@ -875,8 +875,6 @@ void WinEHPrepare::verifyPreparedFunclets(Function &F) {
     if (!DisableDemotion) {
       bool EHPadHasPHI = BB.isEHPad() && isa<PHINode>(BB.begin());
       assert(!EHPadHasPHI && "EH Pad still has a PHI!");
-      if (EHPadHasPHI)
-        report_fatal_error("EH Pad still has a PHI!");
     }
   }
 }
@@ -896,12 +894,17 @@ bool WinEHPrepare::prepareExplicitEH(Function &F) {
     demotePHIsOnFunclets(F);
 
   if (!DisableCleanups) {
+    DEBUG(verifyFunction(F));
     removeImplausibleInstructions(F);
 
+    DEBUG(verifyFunction(F));
     cleanupPreparedFunclets(F);
   }
 
-  verifyPreparedFunclets(F);
+  DEBUG(verifyPreparedFunclets(F));
+  // Recolor the CFG to verify that all is well.
+  DEBUG(colorFunclets(F));
+  DEBUG(verifyPreparedFunclets(F));
 
   BlockColors.clear();
   FuncletBlocks.clear();
