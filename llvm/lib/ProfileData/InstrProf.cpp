@@ -190,6 +190,13 @@ StringRef getPGOFuncNameInitializer(GlobalVariable *NameVar) {
   return NameStr;
 }
 
+StringRef getPGOFuncNameInitializer(GlobalVariable *NameVar) {
+  auto *Arr = cast<ConstantDataArray>(NameVar->getInitializer());
+  StringRef NameStr =
+      Arr->isCString() ? Arr->getAsCString() : Arr->getAsString();
+  return NameStr;
+}
+
 int collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
                               std::string &Result, bool doCompression) {
   std::vector<std::string> NameStrs;
