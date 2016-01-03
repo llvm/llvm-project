@@ -24,7 +24,7 @@
 
 #include "swift/AST/Decl.h"
 #include "swift/AST/Pattern.h"
-#include "swift/AST/Parameter.h"
+#include "swift/AST/ParameterList.h"
 
 #include "llvm/ADT/StringMap.h"
 
