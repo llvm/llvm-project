@@ -39,8 +39,8 @@ public:
   FeatureBitset(const bitset<MAX_SUBTARGET_FEATURES>& B) : bitset(B) {}
 
   FeatureBitset(std::initializer_list<unsigned> Init) : bitset() {
-    for (auto I = Init.begin() , E = Init.end(); I != E; ++I)
-      set(*I);
+    for (auto I : Init)
+      set(I);
   }
 };
 
@@ -58,6 +58,11 @@ struct SubtargetFeatureKV {
   // Compare routine for std::lower_bound
   bool operator<(StringRef S) const {
     return StringRef(Key) < S;
+  }
+
+  // Compare routine for std::is_sorted.
+  bool operator<(const SubtargetFeatureKV &Other) const {
+    return StringRef(Key) < StringRef(Other.Key);
   }
 };
 

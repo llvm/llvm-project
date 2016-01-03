@@ -185,16 +185,12 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
     const std::vector<Record*> &ImpliesList =
       Feature->getValueAsListOfDefs("Implies");
 
-    if (ImpliesList.empty()) {
-      OS << "{ }";
-    } else {
-      OS << "{ ";
-      for (unsigned j = 0, M = ImpliesList.size(); j < M;) {
-        OS << Target << "::" << ImpliesList[j]->getName();
-        if (++j < M) OS << ", ";
-      }
-      OS << " }";
+    OS << "{";
+    for (unsigned j = 0, M = ImpliesList.size(); j < M;) {
+      OS << " " << Target << "::" << ImpliesList[j]->getName();
+      if (++j < M) OS << ",";
     }
+    OS << " }";
 
     OS << " }";
     ++NumFeatures;
@@ -240,16 +236,12 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
        << "\"" << Name << "\", "
        << "\"Select the " << Name << " processor\", ";
 
-    if (FeatureList.empty()) {
-      OS << "{ }";
-    } else {
-      OS << "{ ";
-      for (unsigned j = 0, M = FeatureList.size(); j < M;) {
-        OS << Target << "::" << FeatureList[j]->getName();
-        if (++j < M) OS << ", ";
-      }
-      OS << " }";
+    OS << "{";
+    for (unsigned j = 0, M = FeatureList.size(); j < M;) {
+      OS << " " << Target << "::" << FeatureList[j]->getName();
+      if (++j < M) OS << ",";
     }
+    OS << " }";
 
     // The { } is for the "implies" section of this data structure.
     OS << ", { } }";
