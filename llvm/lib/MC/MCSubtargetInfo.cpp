@@ -77,17 +77,18 @@ FeatureBitset MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
   assert(ProcSchedModels && "Processor machine model not available!");
 
-  size_t NumProcs = ProcDesc.size();
-  assert(std::is_sorted(ProcSchedModels, ProcSchedModels+NumProcs,
+  ArrayRef<SubtargetInfoKV> SchedModels(ProcSchedModels, ProcDesc.size());
+
+  assert(std::is_sorted(SchedModels.begin(), SchedModels.end(),
                     [](const SubtargetInfoKV &LHS, const SubtargetInfoKV &RHS) {
                       return strcmp(LHS.Key, RHS.Key) < 0;
                     }) &&
          "Processor machine model table is not sorted");
 
   // Find entry
-  const SubtargetInfoKV *Found =
-    std::lower_bound(ProcSchedModels, ProcSchedModels+NumProcs, CPU);
-  if (Found == ProcSchedModels+NumProcs || StringRef(Found->Key) != CPU) {
+  auto Found =
+    std::lower_bound(SchedModels.begin(), SchedModels.end(), CPU);
+  if (Found == SchedModels.end() || StringRef(Found->Key) != CPU) {
     if (CPU != "help") // Don't error if the user asked for help.
       errs() << "'" << CPU
              << "' is not a recognized processor for this target"

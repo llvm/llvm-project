@@ -197,14 +197,18 @@ int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
   return 0;
 }
 
+StringRef getPGOFuncNameInitializer(GlobalVariable *NameVar) {
+  auto *Arr = cast<ConstantDataArray>(NameVar->getInitializer());
+  StringRef NameStr =
+      Arr->isCString() ? Arr->getAsCString() : Arr->getAsString();
+  return NameStr;
+}
+
 int collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
                               std::string &Result) {
   std::vector<std::string> NameStrs;
   for (auto *NameVar : NameVars) {
-    auto *Arr = cast<ConstantDataArray>(NameVar->getInitializer());
-    StringRef NameStr =
-        Arr->isCString() ? Arr->getAsCString() : Arr->getAsString();
-    NameStrs.push_back(NameStr.str());
+    NameStrs.push_back(getPGOFuncNameInitializer(NameVar));
   }
   return collectPGOFuncNameStrings(NameStrs, zlib::isAvailable(), Result);
 }

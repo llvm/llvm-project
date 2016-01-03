@@ -155,6 +155,8 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName);
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef FuncName);
+/// Return the initializer in string of the PGO name var \c NameVar.
+StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar);
 
 /// Given a PGO function name, remove the filename prefix and return
 /// the original (static) function name.

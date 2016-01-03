@@ -234,14 +234,10 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
     return FeatureBitset();
 
 #ifndef NDEBUG
-  for (size_t i = 1, e = CPUTable.size(); i != e; ++i) {
-    assert(strcmp(CPUTable[i - 1].Key, CPUTable[i].Key) < 0 &&
-           "CPU table is not sorted");
-  }
-  for (size_t i = 1, e = FeatureTable.size(); i != e; ++i) {
-    assert(strcmp(FeatureTable[i - 1].Key, FeatureTable[i].Key) < 0 &&
-          "CPU features table is not sorted");
-  }
+  assert(std::is_sorted(std::begin(CPUTable), std::end(CPUTable)) &&
+         "CPU table is not sorted");
+  assert(std::is_sorted(std::begin(FeatureTable), std::end(FeatureTable)) &&
+         "CPU features table is not sorted");
 #endif
   // Resulting bits
   FeatureBitset Bits;

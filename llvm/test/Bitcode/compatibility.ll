@@ -859,17 +859,23 @@ catchpad:
   ; CHECK-NEXT: br label %body
 
 body:
-  invoke void @f.ccc() to label %continue unwind label %terminate
+  invoke void @f.ccc() to label %continue unwind label %terminate.inner
   catchret from %catch to label %return
   ; CHECK: catchret from %catch to label %return
 
 return:
   ret i32 0
 
-terminate:
-  cleanuppad within %cs []
+terminate.inner:
+  cleanuppad within %catch []
   unreachable
-  ; CHECK: cleanuppad within %cs []
+  ; CHECK: cleanuppad within %catch []
+  ; CHECK-NEXT: unreachable
+
+terminate:
+  cleanuppad within none []
+  unreachable
+  ; CHECK: cleanuppad within none []
   ; CHECK-NEXT: unreachable
 
 continue:

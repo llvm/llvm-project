@@ -3046,8 +3046,7 @@ void Verifier::visitCleanupPadInst(CleanupPadInst &CPI) {
          &CPI);
 
   auto *ParentPad = CPI.getParentPad();
-  Assert(isa<CatchSwitchInst>(ParentPad) || isa<ConstantTokenNone>(ParentPad) ||
-             isa<CleanupPadInst>(ParentPad) || isa<CatchPadInst>(ParentPad),
+  Assert(isa<ConstantTokenNone>(ParentPad) || isa<FuncletPadInst>(ParentPad),
          "CleanupPadInst has an invalid parent.", &CPI);
 
   User *FirstUser = nullptr;
@@ -3104,9 +3103,16 @@ void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
   }
 
   auto *ParentPad = CatchSwitch.getParentPad();
-  Assert(isa<CatchSwitchInst>(ParentPad) || isa<ConstantTokenNone>(ParentPad) ||
-             isa<CleanupPadInst>(ParentPad) || isa<CatchPadInst>(ParentPad),
+  Assert(isa<ConstantTokenNone>(ParentPad) || isa<FuncletPadInst>(ParentPad),
          "CatchSwitchInst has an invalid parent.", ParentPad);
+
+  Assert(CatchSwitch.getNumHandlers() != 0,
+         "CatchSwitchInst cannot have empty handler list", &CatchSwitch);
+
+  for (BasicBlock *Handler : CatchSwitch.handlers()) {
+    Assert(isa<CatchPadInst>(Handler->getFirstNonPHI()),
+           "CatchSwitchInst handlers must be catchpads", &CatchSwitch, Handler);
+  }
 
   visitTerminatorInst(CatchSwitch);
 }
