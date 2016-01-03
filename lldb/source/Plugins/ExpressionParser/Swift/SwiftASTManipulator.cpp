@@ -1484,9 +1484,9 @@ FindArgInFunction(swift::ASTContext &ast_context, swift::FuncDecl *func_decl)
     auto name = ast_context.getIdentifier("$__lldb_arg");
     
     for (auto *paramList : func_decl->getParameterLists()) {
-        for (auto &param : *paramList)
-            if (param.decl->getName() == name)
-                return param.decl;
+        for (auto param : *paramList)
+            if (param->getName() == name)
+                return param;
     }
     
     return nullptr;
