@@ -2274,6 +2274,12 @@ public:
     return false;
   }
 
+  /// Return true if the MachineFunction contains a COPY which would imply
+  /// HasOpaqueSPAdjustment.
+  virtual bool hasCopyImplyingStackAdjustment(MachineFunction *MF) const {
+    return false;
+  }
+
   /// Perform necessary initialization to handle a subset of CSRs explicitly
   /// via copies. This function is called at the beginning of instruction
   /// selection.

@@ -232,7 +232,7 @@ protected:
   /// We could pack these a bit tighter by not having the IK_FirstXXXInit
   /// and IK_LastXXXInit be their own values, but that would degrade
   /// readability for really no benefit.
-  enum InitKind {
+  enum InitKind : uint8_t {
     IK_BitInit,
     IK_FirstTypedInit,
     IK_BitsInit,
@@ -256,6 +256,9 @@ protected:
 
 private:
   const InitKind Kind;
+protected:
+  uint8_t Opc; // Used by UnOpInit, BinOpInit, and TernOpInit
+private:
   Init(const Init &) = delete;
   Init &operator=(const Init &) = delete;
   virtual void anchor();
@@ -264,7 +267,7 @@ public:
   InitKind getKind() const { return Kind; }
 
 protected:
-  explicit Init(InitKind K) : Kind(K) {}
+  explicit Init(InitKind K, uint8_t Opc = 0) : Kind(K), Opc(Opc) {}
 
 public:
   virtual ~Init() {}
@@ -365,7 +368,8 @@ class TypedInit : public Init {
   TypedInit &operator=(const TypedInit &Other) = delete;
 
 protected:
-  explicit TypedInit(InitKind K, RecTy *T) : Init(K), Ty(T) {}
+  explicit TypedInit(InitKind K, RecTy *T, uint8_t Opc = 0)
+    : Init(K, Opc), Ty(T) {}
   ~TypedInit() override {
     // If this is a DefInit we need to delete the RecordRecTy.
     if (getKind() == IK_DefInit)
@@ -650,7 +654,8 @@ class OpInit : public TypedInit {
   OpInit &operator=(OpInit &Other) = delete;
 
 protected:
-  explicit OpInit(InitKind K, RecTy *Type) : TypedInit(K, Type) {}
+  explicit OpInit(InitKind K, RecTy *Type, uint8_t Opc)
+    : TypedInit(K, Type, Opc) {}
 
 public:
   static bool classof(const Init *I) {
@@ -677,14 +682,13 @@ public:
 ///
 class UnOpInit : public OpInit {
 public:
-  enum UnaryOp { CAST, HEAD, TAIL, EMPTY };
+  enum UnaryOp : uint8_t { CAST, HEAD, TAIL, EMPTY };
 
 private:
-  UnaryOp Opc;
   Init *LHS;
 
   UnOpInit(UnaryOp opc, Init *lhs, RecTy *Type)
-    : OpInit(IK_UnOpInit, Type), Opc(opc), LHS(lhs) {}
+    : OpInit(IK_UnOpInit, Type, opc), LHS(lhs) {}
 
   UnOpInit(const UnOpInit &Other) = delete;
   UnOpInit &operator=(const UnOpInit &Other) = delete;
@@ -708,7 +712,7 @@ public:
     return getOperand();
   }
 
-  UnaryOp getOpcode() const { return Opc; }
+  UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   Init *getOperand() const { return LHS; }
 
   // Fold - If possible, fold this to a simpler init.  Return this if not
@@ -724,14 +728,14 @@ public:
 ///
 class BinOpInit : public OpInit {
 public:
-  enum BinaryOp { ADD, AND, SHL, SRA, SRL, LISTCONCAT, STRCONCAT, CONCAT, EQ };
+  enum BinaryOp : uint8_t { ADD, AND, SHL, SRA, SRL, LISTCONCAT,
+                            STRCONCAT, CONCAT, EQ };
 
 private:
-  BinaryOp Opc;
   Init *LHS, *RHS;
 
   BinOpInit(BinaryOp opc, Init *lhs, Init *rhs, RecTy *Type) :
-      OpInit(IK_BinOpInit, Type), Opc(opc), LHS(lhs), RHS(rhs) {}
+      OpInit(IK_BinOpInit, Type, opc), LHS(lhs), RHS(rhs) {}
 
   BinOpInit(const BinOpInit &Other) = delete;
   BinOpInit &operator=(const BinOpInit &Other) = delete;
@@ -759,7 +763,7 @@ public:
     }
   }
 
-  BinaryOp getOpcode() const { return Opc; }
+  BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   Init *getLHS() const { return LHS; }
   Init *getRHS() const { return RHS; }
 
@@ -776,15 +780,14 @@ public:
 ///
 class TernOpInit : public OpInit {
 public:
-  enum TernaryOp { SUBST, FOREACH, IF };
+  enum TernaryOp : uint8_t { SUBST, FOREACH, IF };
 
 private:
-  TernaryOp Opc;
   Init *LHS, *MHS, *RHS;
 
   TernOpInit(TernaryOp opc, Init *lhs, Init *mhs, Init *rhs,
              RecTy *Type) :
-      OpInit(IK_TernOpInit, Type), Opc(opc), LHS(lhs), MHS(mhs), RHS(rhs) {}
+      OpInit(IK_TernOpInit, Type, opc), LHS(lhs), MHS(mhs), RHS(rhs) {}
 
   TernOpInit(const TernOpInit &Other) = delete;
   TernOpInit &operator=(const TernOpInit &Other) = delete;
@@ -815,7 +818,7 @@ public:
     }
   }
 
-  TernaryOp getOpcode() const { return Opc; }
+  TernaryOp getOpcode() const { return (TernaryOp)Opc; }
   Init *getLHS() const { return LHS; }
   Init *getMHS() const { return MHS; }
   Init *getRHS() const { return RHS; }

@@ -2843,6 +2843,43 @@ bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
   return (AZero | BZero).isAllOnesValue();
 }
 
+static SDValue FoldCONCAT_VECTORS(SDLoc DL, EVT VT, ArrayRef<SDValue> Ops,
+                                  llvm::SelectionDAG &DAG) {
+  if (Ops.size() == 1)
+    return Ops[0];
+
+  // Concat of UNDEFs is UNDEF.
+  if (std::all_of(Ops.begin(), Ops.end(),
+                  [](SDValue Op) { return Op.isUndef(); }))
+    return DAG.getUNDEF(VT);
+
+  // A CONCAT_VECTOR with all operands BUILD_VECTOR can be simplified
+  // to one big BUILD_VECTOR.
+  // FIXME: Add support for UNDEF and SCALAR_TO_VECTOR as well.
+  if (!std::all_of(Ops.begin(), Ops.end(), [](SDValue Op) {
+        return Op.getOpcode() == ISD::BUILD_VECTOR;
+      }))
+    return SDValue();
+
+  EVT SVT = VT.getScalarType();
+  SmallVector<SDValue, 16> Elts;
+  for (SDValue Op : Ops)
+    Elts.append(Op->op_begin(), Op->op_end());
+
+  // BUILD_VECTOR requires all inputs to be of the same type, find the
+  // maximum type and extend them all.
+  for (SDValue Op : Elts)
+    SVT = (SVT.bitsLT(Op.getValueType()) ? Op.getValueType() : SVT);
+
+  if (SVT.bitsGT(VT.getScalarType()))
+    for (SDValue &Op : Elts)
+      Op = DAG.getTargetLoweringInfo().isZExtFree(Op.getValueType(), SVT)
+               ? DAG.getZExtOrTrunc(Op, DL, SVT)
+               : DAG.getSExtOrTrunc(Op, DL, SVT);
+
+  return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Elts);
+}
+
 /// getNode - Gets or creates the specified node.
 ///
 SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT) {
@@ -3426,34 +3463,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT, SDValue N1,
     if (N2.getOpcode() == ISD::EntryToken) return N1;
     if (N1 == N2) return N1;
     break;
-  case ISD::CONCAT_VECTORS:
-    // Concat of UNDEFs is UNDEF.
-    if (N1.getOpcode() == ISD::UNDEF &&
-        N2.getOpcode() == ISD::UNDEF)
-      return getUNDEF(VT);
-
-    // A CONCAT_VECTOR with all operands BUILD_VECTOR can be simplified to
-    // one big BUILD_VECTOR.
-    if (N1.getOpcode() == ISD::BUILD_VECTOR &&
-        N2.getOpcode() == ISD::BUILD_VECTOR) {
-      SmallVector<SDValue, 16> Elts(N1.getNode()->op_begin(),
-                                    N1.getNode()->op_end());
-      Elts.append(N2.getNode()->op_begin(), N2.getNode()->op_end());
-
-      // BUILD_VECTOR requires all inputs to be of the same type, find the
-      // maximum type and extend them all.
-      EVT SVT = VT.getScalarType();
-      for (SDValue Op : Elts)
-        SVT = (SVT.bitsLT(Op.getValueType()) ? Op.getValueType() : SVT);
-      if (SVT.bitsGT(VT.getScalarType()))
-        for (SDValue &Op : Elts)
-          Op = TLI->isZExtFree(Op.getValueType(), SVT)
-             ? getZExtOrTrunc(Op, DL, SVT)
-             : getSExtOrTrunc(Op, DL, SVT);
-
-      return getNode(ISD::BUILD_VECTOR, DL, VT, Elts);
-    }
+  case ISD::CONCAT_VECTORS: {
+    // Attempt to fold CONCAT_VECTORS into BUILD_VECTOR or UNDEF.
+    SDValue Ops[] = {N1, N2};
+    if (SDValue V = FoldCONCAT_VECTORS(DL, VT, Ops, *this))
+      return V;
     break;
+  }
   case ISD::AND:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
@@ -3911,19 +3927,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT,
     }
     break;
   }
-  case ISD::CONCAT_VECTORS:
-    // A CONCAT_VECTOR with all operands BUILD_VECTOR can be simplified to
-    // one big BUILD_VECTOR.
-    if (N1.getOpcode() == ISD::BUILD_VECTOR &&
-        N2.getOpcode() == ISD::BUILD_VECTOR &&
-        N3.getOpcode() == ISD::BUILD_VECTOR) {
-      SmallVector<SDValue, 16> Elts(N1.getNode()->op_begin(),
-                                    N1.getNode()->op_end());
-      Elts.append(N2.getNode()->op_begin(), N2.getNode()->op_end());
-      Elts.append(N3.getNode()->op_begin(), N3.getNode()->op_end());
-      return getNode(ISD::BUILD_VECTOR, DL, VT, Elts);
-    }
+  case ISD::CONCAT_VECTORS: {
+    // Attempt to fold CONCAT_VECTORS into BUILD_VECTOR or UNDEF.
+    SDValue Ops[] = {N1, N2, N3};
+    if (SDValue V = FoldCONCAT_VECTORS(DL, VT, Ops, *this))
+      return V;
     break;
+  }
   case ISD::SETCC: {
     // Use FoldSetCC to simplify SETCC's.
     if (SDValue V = FoldSetCC(VT, N1, N2, cast<CondCodeSDNode>(N3)->get(), DL))
@@ -5462,6 +5472,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT,
 
   switch (Opcode) {
   default: break;
+  case ISD::CONCAT_VECTORS: {
+    // Attempt to fold CONCAT_VECTORS into BUILD_VECTOR or UNDEF.
+    if (SDValue V = FoldCONCAT_VECTORS(DL, VT, Ops, *this))
+      return V;
+    break;
+  }
   case ISD::SELECT_CC: {
     assert(NumOps == 5 && "SELECT_CC takes 5 operands!");
     assert(Ops[0].getValueType() == Ops[1].getValueType() &&

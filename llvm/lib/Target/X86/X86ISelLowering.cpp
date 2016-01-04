@@ -27982,6 +27982,18 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   }
 }
 
+/// This function checks if any of the users of EFLAGS copies the EFLAGS. We
+/// know that the code that lowers COPY of EFLAGS has to use the stack, and if
+/// we don't adjust the stack we clobber the first frame index.
+/// See X86InstrInfo::copyPhysReg.
+bool X86TargetLowering::hasCopyImplyingStackAdjustment(
+    MachineFunction *MF) const {
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  return any_of(MRI.reg_instructions(X86::EFLAGS),
+                [](const MachineInstr &RI) { return RI.isCopy(); });
+}
+
 /// IsDesirableToPromoteOp - This method query the target whether it is
 /// beneficial for dag combiner to promote the specified node. If true, it
 /// should return the desired promotion type by reference.

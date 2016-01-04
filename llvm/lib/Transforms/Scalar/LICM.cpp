@@ -75,10 +75,12 @@ DisablePromotion("disable-licm-promotion", cl::Hidden,
                  cl::desc("Disable memory promotion in LICM pass"));
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
-static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop);
+static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop,
+                            const LICMSafetyInfo *SafetyInfo);
 static bool hoist(Instruction &I, BasicBlock *Preheader);
 static bool sink(Instruction &I, const LoopInfo *LI, const DominatorTree *DT,
-                 const Loop *CurLoop, AliasSetTracker *CurAST );
+                 const Loop *CurLoop, AliasSetTracker *CurAST,
+                 const LICMSafetyInfo *SafetyInfo);
 static bool isGuaranteedToExecute(const Instruction &Inst,
                                   const DominatorTree *DT,
                                   const Loop *CurLoop,
@@ -92,10 +94,10 @@ static bool isSafeToExecuteUnconditionally(const Instruction &Inst,
 static bool pointerInvalidatedByLoop(Value *V, uint64_t Size,
                                      const AAMDNodes &AAInfo, 
                                      AliasSetTracker *CurAST);
-static Instruction *CloneInstructionInExitBlock(const Instruction &I,
-                                                BasicBlock &ExitBlock,
-                                                PHINode &PN,
-                                                const LoopInfo *LI);
+static Instruction *
+CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
+                            const LoopInfo *LI,
+                            const LICMSafetyInfo *SafetyInfo);
 static bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA,
                                DominatorTree *DT, TargetLibraryInfo *TLI,
                                Loop *CurLoop, AliasSetTracker *CurAST,
@@ -348,10 +350,10 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     // outside of the loop.  In this case, it doesn't even matter if the
     // operands of the instruction are loop invariant.
     //
-    if (isNotUsedInLoop(I, CurLoop) &&
+    if (isNotUsedInLoop(I, CurLoop, SafetyInfo) &&
         canSinkOrHoistInst(I, AA, DT, TLI, CurLoop, CurAST, SafetyInfo)) {
       ++II;
-      Changed |= sink(I, LI, DT, CurLoop, CurAST);
+      Changed |= sink(I, LI, DT, CurLoop, CurAST, SafetyInfo);
     }
   }
   return Changed;
@@ -432,6 +434,14 @@ void llvm::computeLICMSafetyInfo(LICMSafetyInfo * SafetyInfo, Loop * CurLoop) {
     for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end();
          (I != E) && !SafetyInfo->MayThrow; ++I)
       SafetyInfo->MayThrow |= I->mayThrow();
+
+  // Compute funclet colors if we might sink/hoist in a function with a funclet
+  // personality routine.
+  Function *Fn = CurLoop->getHeader()->getParent();
+  if (Fn->hasPersonalityFn())
+    if (Constant *PersonalityFn = Fn->getPersonalityFn())
+      if (isFuncletEHPersonality(classifyEHPersonality(PersonalityFn)))
+        SafetyInfo->BlockColors = colorEHFunclets(*Fn);
 }
 
 /// canSinkOrHoistInst - Return true if the hoister and sinker can handle this
@@ -464,6 +474,10 @@ bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     // Don't sink or hoist dbg info; it's legal, but not useful.
     if (isa<DbgInfoIntrinsic>(I))
+      return false;
+
+    // Don't sink calls which can throw.
+    if (CI->mayThrow())
       return false;
 
     // Handle simple cases by querying alias analysis.
@@ -534,10 +548,24 @@ static bool isTriviallyReplacablePHI(const PHINode &PN, const Instruction &I) {
 /// the loop. If this is true, we can sink the instruction to the exit
 /// blocks of the loop.
 ///
-static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop) {
+static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop,
+                            const LICMSafetyInfo *SafetyInfo) {
+  const auto &BlockColors = SafetyInfo->BlockColors;
   for (const User *U : I.users()) {
     const Instruction *UI = cast<Instruction>(U);
     if (const PHINode *PN = dyn_cast<PHINode>(UI)) {
+      const BasicBlock *BB = PN->getParent();
+      // We cannot sink uses in catchswitches.
+      if (isa<CatchSwitchInst>(BB->getTerminator()))
+        return false;
+
+      // We need to sink a callsite to a unique funclet.  Avoid sinking if the
+      // phi use is too muddled.
+      if (isa<CallInst>(I))
+        if (!BlockColors.empty() &&
+            BlockColors.find(const_cast<BasicBlock *>(BB))->second.size() != 1)
+          return false;
+
       // A PHI node where all of the incoming values are this instruction are
       // special -- they can just be RAUW'ed with the instruction and thus
       // don't require a use in the predecessor. This is a particular important
@@ -565,11 +593,41 @@ static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop) {
   return true;
 }
 
-static Instruction *CloneInstructionInExitBlock(const Instruction &I,
-                                                BasicBlock &ExitBlock,
-                                                PHINode &PN,
-                                                const LoopInfo *LI) {
-  Instruction *New = I.clone();
+static Instruction *
+CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
+                            const LoopInfo *LI,
+                            const LICMSafetyInfo *SafetyInfo) {
+  Instruction *New;
+  if (auto *CI = dyn_cast<CallInst>(&I)) {
+    const auto &BlockColors = SafetyInfo->BlockColors;
+
+    // Sinking call-sites need to be handled differently from other
+    // instructions.  The cloned call-site needs a funclet bundle operand
+    // appropriate for it's location in the CFG.
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    for (unsigned BundleIdx = 0, BundleEnd = CI->getNumOperandBundles();
+         BundleIdx != BundleEnd; ++BundleIdx) {
+      OperandBundleUse Bundle = CI->getOperandBundleAt(BundleIdx);
+      if (Bundle.getTagID() == LLVMContext::OB_funclet)
+        continue;
+
+      OpBundles.emplace_back(Bundle);
+    }
+
+    if (!BlockColors.empty()) {
+      const ColorVector &CV = BlockColors.find(&ExitBlock)->second;
+      assert(CV.size() == 1 && "non-unique color for exit block!");
+      BasicBlock *BBColor = CV.front();
+      Instruction *EHPad = BBColor->getFirstNonPHI();
+      if (EHPad->isEHPad())
+        OpBundles.emplace_back("funclet", EHPad);
+    }
+
+    New = CallInst::Create(CI, OpBundles);
+  } else {
+    New = I.clone();
+  }
+
   ExitBlock.getInstList().insert(ExitBlock.getFirstInsertionPt(), New);
   if (!I.getName().empty()) New->setName(I.getName() + ".le");
 
@@ -601,7 +659,8 @@ static Instruction *CloneInstructionInExitBlock(const Instruction &I,
 /// position, and may either delete it or move it to outside of the loop.
 ///
 static bool sink(Instruction &I, const LoopInfo *LI, const DominatorTree *DT,
-                 const Loop *CurLoop, AliasSetTracker *CurAST ) {
+                 const Loop *CurLoop, AliasSetTracker *CurAST,
+                 const LICMSafetyInfo *SafetyInfo) {
   DEBUG(dbgs() << "LICM sinking instruction: " << I << "\n");
   bool Changed = false;
   if (isa<LoadInst>(I)) ++NumMovedLoads;
@@ -652,7 +711,7 @@ static bool sink(Instruction &I, const LoopInfo *LI, const DominatorTree *DT,
       New = It->second;
     else
       New = SunkCopies[ExitBlock] =
-            CloneInstructionInExitBlock(I, *ExitBlock, *PN, LI);
+          CloneInstructionInExitBlock(I, *ExitBlock, *PN, LI, SafetyInfo);
 
     PN->replaceAllUsesWith(New);
     PN->eraseFromParent();

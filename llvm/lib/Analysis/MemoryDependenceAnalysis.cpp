@@ -792,10 +792,8 @@ MemDepResult MemoryDependenceAnalysis::getDependency(Instruction *QueryInst) {
 static void AssertSorted(MemoryDependenceAnalysis::NonLocalDepInfo &Cache,
                          int Count = -1) {
   if (Count == -1) Count = Cache.size();
-  if (Count == 0) return;
-
-  for (unsigned i = 1; i != unsigned(Count); ++i)
-    assert(!(Cache[i] < Cache[i-1]) && "Cache isn't sorted!");
+  assert(std::is_sorted(Cache.begin(), Cache.begin() + Count) &&
+         "Cache isn't sorted!");
 }
 #endif
 

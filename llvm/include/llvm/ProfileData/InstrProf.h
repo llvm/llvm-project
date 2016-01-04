@@ -612,8 +612,14 @@ template <class IntPtrT> struct CovMapFunctionRecord {
   #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
   #include "llvm/ProfileData/InstrProfData.inc"
 };
-LLVM_PACKED_END
+// Per module coverage mapping data header, i.e. CoverageMapFileHeader
+// documented above.
+struct CovMapHeader {
+#define COVMAP_HEADER(Type, LLVMType, Name, Init) Type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+};
 
+LLVM_PACKED_END
 }
 
 } // end namespace llvm

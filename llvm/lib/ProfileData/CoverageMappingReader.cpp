@@ -316,12 +316,17 @@ static std::error_code readCoverageMappingData(
 
   // Read the records in the coverage data section.
   for (const char *Buf = Data.data(), *End = Buf + Data.size(); Buf < End;) {
-    if (Buf + 4 * sizeof(uint32_t) > End)
+    if (Buf + sizeof(CovMapHeader) > End)
       return coveragemap_error::malformed;
-    uint32_t NRecords = endian::readNext<uint32_t, Endian, unaligned>(Buf);
-    uint32_t FilenamesSize = endian::readNext<uint32_t, Endian, unaligned>(Buf);
-    uint32_t CoverageSize = endian::readNext<uint32_t, Endian, unaligned>(Buf);
-    uint32_t Version = endian::readNext<uint32_t, Endian, unaligned>(Buf);
+    auto CovHeader = reinterpret_cast<const coverage::CovMapHeader *>(Buf);
+    uint32_t NRecords =
+        endian::byte_swap<uint32_t, Endian>(CovHeader->NRecords);
+    uint32_t FilenamesSize =
+        endian::byte_swap<uint32_t, Endian>(CovHeader->FilenamesSize);
+    uint32_t CoverageSize =
+        endian::byte_swap<uint32_t, Endian>(CovHeader->CoverageSize);
+    uint32_t Version = endian::byte_swap<uint32_t, Endian>(CovHeader->Version);
+    Buf = reinterpret_cast<const char *>(++CovHeader);
 
     switch (Version) {
     case CoverageMappingVersion1:
