@@ -46,12 +46,7 @@ template <class _Tp, class _VoidPtr>
 struct __hash_node
     : public __hash_node_base
              <
-                 typename pointer_traits<_VoidPtr>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-                     rebind<__hash_node<_Tp, _VoidPtr> >
-#else
-                     rebind<__hash_node<_Tp, _VoidPtr> >::other
-#endif
+                 typename __rebind_pointer<_VoidPtr, __hash_node<_Tp, _VoidPtr> >::type
              >
 {
     typedef _Tp value_type;
@@ -98,13 +93,7 @@ public:
     typedef typename pointer_traits<__node_pointer>::element_type::value_type value_type;
     typedef typename pointer_traits<__node_pointer>::difference_type difference_type;
     typedef value_type&                                  reference;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-                     rebind<value_type>
-#else
-                     rebind<value_type>::other
-#endif
-                                                         pointer;
+    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_iterator() _NOEXCEPT
 #if _LIBCPP_STD_VER > 11
@@ -229,20 +218,8 @@ public:
     typedef typename __node::value_type                value_type;
     typedef typename pointer_traits<__node_pointer>::difference_type difference_type;
     typedef const value_type&                          reference;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<const value_type>
-#else
-            rebind<const value_type>::other
-#endif
-                                                       pointer;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<__node>
-#else
-            rebind<__node>::other
-#endif
-                                                      __non_const_node_pointer;
+    typedef typename __rebind_pointer<__node_pointer, const value_type>::type pointer;
+    typedef typename __rebind_pointer<__node_pointer, __node>::type __non_const_node_pointer;
     typedef __hash_iterator<__non_const_node_pointer> __non_const_iterator;
 
     _LIBCPP_INLINE_VISIBILITY __hash_const_iterator() _NOEXCEPT
@@ -376,13 +353,7 @@ public:
     typedef typename __pointer_traits::element_type::value_type value_type;
     typedef typename __pointer_traits::difference_type          difference_type;
     typedef value_type&                                         reference;
-    typedef typename __pointer_traits::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<value_type>
-#else
-            rebind<value_type>::other
-#endif
-                                                                pointer;
+    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_local_iterator() _NOEXCEPT
     {
@@ -514,13 +485,9 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator
     typedef pointer_traits<__node_pointer>          __pointer_traits;
     typedef typename __pointer_traits::element_type __node;
     typedef typename remove_const<__node>::type     __non_const_node;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<__non_const_node>
-#else
-            rebind<__non_const_node>::other
-#endif
-                                                    __non_const_node_pointer;
+    typedef typename __rebind_pointer<__node_pointer, __non_const_node>::type
+        __non_const_node_pointer;
+
     typedef __hash_local_iterator<__non_const_node_pointer>
                                                     __non_const_iterator;
 public:
@@ -530,13 +497,9 @@ public:
                      >::type                           value_type;
     typedef typename __pointer_traits::difference_type difference_type;
     typedef const value_type&                          reference;
-    typedef typename __pointer_traits::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<const value_type>
-#else
-            rebind<const value_type>::other
-#endif
-                                                       pointer;
+    typedef typename __rebind_pointer<__node_pointer, const value_type>::type
+        pointer;
+
 
     _LIBCPP_INLINE_VISIBILITY __hash_const_local_iterator() _NOEXCEPT
     {
@@ -780,13 +743,8 @@ public:
     typedef typename __node_traits::pointer          __node_pointer;
     typedef typename __node_traits::pointer          __node_const_pointer;
     typedef __hash_node_base<__node_pointer>         __first_node;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<__first_node>
-#else
-            rebind<__first_node>::other
-#endif
-                                                     __node_base_pointer;
+    typedef typename __rebind_pointer<__node_pointer, __first_node>::type
+        __node_base_pointer;
 
 private:
 

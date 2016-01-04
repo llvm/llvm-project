@@ -368,7 +368,6 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_map_iterator
 {
     _HashIterator __i_;
 
-    typedef pointer_traits<typename _HashIterator::pointer>      __pointer_traits;
     typedef const typename _HashIterator::value_type::first_type key_type;
     typedef typename _HashIterator::value_type::second_type      mapped_type;
 public:
@@ -376,13 +375,8 @@ public:
     typedef pair<key_type, mapped_type>                          value_type;
     typedef typename _HashIterator::difference_type              difference_type;
     typedef value_type&                                          reference;
-    typedef typename __pointer_traits::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<value_type>
-#else
-            rebind<value_type>::other
-#endif
-                                                                 pointer;
+    typedef typename __rebind_pointer<typename _HashIterator::pointer, value_type>::type
+        pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_map_iterator() {}
 
@@ -419,7 +413,6 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_map_const_iterator
 {
     _HashIterator __i_;
 
-    typedef pointer_traits<typename _HashIterator::pointer>      __pointer_traits;
     typedef const typename _HashIterator::value_type::first_type key_type;
     typedef typename _HashIterator::value_type::second_type      mapped_type;
 public:
@@ -427,13 +420,8 @@ public:
     typedef pair<key_type, mapped_type>                          value_type;
     typedef typename _HashIterator::difference_type              difference_type;
     typedef const value_type&                                    reference;
-    typedef typename __pointer_traits::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<const value_type>
-#else
-            rebind<const value_type>::other
-#endif
-                                                                 pointer;
+    typedef typename __rebind_pointer<typename _HashIterator::pointer, const value_type>::type
+        pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_map_const_iterator() {}
 

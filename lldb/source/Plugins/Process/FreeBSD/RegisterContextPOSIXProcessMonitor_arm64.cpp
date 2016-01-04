@@ -260,9 +260,7 @@ RegisterContextPOSIXProcessMonitor_arm64::HardwareSingleStep(bool enable)
 bool
 RegisterContextPOSIXProcessMonitor_arm64::UpdateAfterBreakpoint()
 {
-    lldb::addr_t pc;
-
-    if ((pc = GetPC()) == LLDB_INVALID_ADDRESS)
+    if (GetPC() == LLDB_INVALID_ADDRESS)
         return false;
 
     return true;

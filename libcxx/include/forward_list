@@ -197,15 +197,9 @@ struct __forward_begin_node
 template <class _Tp, class _VoidPtr>
 struct _LIBCPP_HIDDEN __begin_node_of
 {
-    typedef __forward_begin_node
-        <
-             typename pointer_traits<_VoidPtr>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-                 rebind<__forward_list_node<_Tp, _VoidPtr> >
-#else
-                 rebind<__forward_list_node<_Tp, _VoidPtr> >::other
-#endif
-         > type;
+    typedef __forward_begin_node<
+        typename __rebind_pointer<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> >::type
+    > type;
 };
 
 template <class _Tp, class _VoidPtr>
@@ -240,13 +234,7 @@ public:
     typedef value_type&                                       reference;
     typedef typename pointer_traits<__node_pointer>::difference_type
                                                               difference_type;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<value_type>
-#else
-            rebind<value_type>::other
-#endif
-                                                              pointer;
+    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_iterator() _NOEXCEPT : __ptr_(nullptr) {}
@@ -295,13 +283,7 @@ class _LIBCPP_TYPE_VIS_ONLY __forward_list_const_iterator
         <
             typename pointer_traits<__node_const_pointer>::element_type
         >::type                                               __node;
-    typedef typename pointer_traits<__node_const_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<__node>
-#else
-            rebind<__node>::other
-#endif
-                                                              __node_pointer;
+    typedef typename __rebind_pointer<__node_const_pointer, __node>::type __node_pointer;
 
     template<class, class> friend class forward_list;
 
@@ -311,13 +293,7 @@ public:
     typedef const value_type&                                 reference;
     typedef typename pointer_traits<__node_const_pointer>::difference_type
                                                               difference_type;
-    typedef typename pointer_traits<__node_const_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<const value_type>
-#else
-            rebind<const value_type>::other
-#endif
-                                                              pointer;
+    typedef typename __rebind_pointer<__node_const_pointer, const value_type>::type pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_const_iterator() _NOEXCEPT : __ptr_(nullptr) {}

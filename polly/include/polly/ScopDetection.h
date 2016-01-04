@@ -52,6 +52,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
+#include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Pass.h"
 #include <map>
 #include <memory>
@@ -60,8 +61,6 @@
 using namespace llvm;
 
 namespace llvm {
-class RegionInfo;
-class Region;
 class LoopInfo;
 class Loop;
 class ScalarEvolution;

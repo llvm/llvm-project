@@ -119,7 +119,7 @@ public:
     ///
     /// @param type Either DT_REL or DT_RELA.  Any other value is invalid.
     ELFRelocation(unsigned type);
- 
+
     ~ELFRelocation();
 
     bool
@@ -156,7 +156,7 @@ private:
 };
 
 ELFRelocation::ELFRelocation(unsigned type)
-{ 
+{
     if (type == DT_REL || type == SHT_REL)
         reloc = new ELFRel();
     else if (type == DT_RELA || type == SHT_RELA)
@@ -172,7 +172,7 @@ ELFRelocation::~ELFRelocation()
     if (reloc.is<ELFRel*>())
         delete reloc.get<ELFRel*>();
     else
-        delete reloc.get<ELFRela*>();            
+        delete reloc.get<ELFRela*>();
 }
 
 bool
@@ -315,7 +315,7 @@ kalimbaVariantFromElfFlags(const elf::elf_word e_flags)
             kal_arch_variant = llvm::Triple::KalimbaSubArch_v5;
             break;
         default:
-            break;           
+            break;
     }
     return kal_arch_variant;
 }
@@ -470,9 +470,9 @@ ObjectFileELF::CreateInstance (const lldb::ModuleSP &module_sp,
 
 
 ObjectFile*
-ObjectFileELF::CreateMemoryInstance (const lldb::ModuleSP &module_sp, 
-                                     DataBufferSP& data_sp, 
-                                     const lldb::ProcessSP &process_sp, 
+ObjectFileELF::CreateMemoryInstance (const lldb::ModuleSP &module_sp,
+                                     DataBufferSP& data_sp,
+                                     const lldb::ProcessSP &process_sp,
                                      lldb::addr_t header_addr)
 {
     if (data_sp && data_sp->GetByteSize() > (llvm::ELF::EI_NIDENT))
@@ -561,7 +561,7 @@ calc_crc32(uint32_t crc, const void *buf, size_t size)
         0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693,
         0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
         0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
-    };    
+    };
     const uint8_t *p = (const uint8_t *)buf;
 
     crc = crc ^ ~0U;
@@ -826,12 +826,12 @@ ObjectFileELF::GetPluginVersion()
 // ObjectFile protocol
 //------------------------------------------------------------------
 
-ObjectFileELF::ObjectFileELF (const lldb::ModuleSP &module_sp, 
+ObjectFileELF::ObjectFileELF (const lldb::ModuleSP &module_sp,
                               DataBufferSP& data_sp,
                               lldb::offset_t data_offset,
-                              const FileSpec* file, 
+                              const FileSpec* file,
                               lldb::offset_t file_offset,
-                              lldb::offset_t length) : 
+                              lldb::offset_t length) :
     ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
     m_header(),
     m_uuid(),
@@ -901,7 +901,7 @@ ObjectFileELF::SetLoadAddress (Target &target,
 
                     if (header->p_type != PT_LOAD || header->p_offset != 0)
                         continue;
-                    
+
                     value = value - header->p_vaddr;
                     found_offset = true;
                     break;
@@ -1176,7 +1176,7 @@ ObjectFileELF::GetImageInfoAddress(Target *target)
 }
 
 lldb_private::Address
-ObjectFileELF::GetEntryPointAddress () 
+ObjectFileELF::GetEntryPointAddress ()
 {
     if (m_entry_point_address.IsValid())
         return m_entry_point_address;
@@ -1187,7 +1187,7 @@ ObjectFileELF::GetEntryPointAddress ()
     SectionList *section_list = GetSectionList();
     addr_t offset = m_header.e_entry;
 
-    if (!section_list) 
+    if (!section_list)
         m_entry_point_address.SetOffset(offset);
     else
         m_entry_point_address.ResolveAddressUsingFileSections(offset, section_list);
@@ -1545,16 +1545,16 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     {
         switch (header.e_flags & llvm::ELF::EF_MIPS_ARCH_ASE)
         {
-            case llvm::ELF::EF_MIPS_MICROMIPS:  
-                arch_spec.SetFlags (ArchSpec::eMIPSAse_micromips); 
+            case llvm::ELF::EF_MIPS_MICROMIPS:
+                arch_spec.SetFlags (ArchSpec::eMIPSAse_micromips);
                 break;
-            case llvm::ELF::EF_MIPS_ARCH_ASE_M16: 
-                arch_spec.SetFlags (ArchSpec::eMIPSAse_mips16); 
+            case llvm::ELF::EF_MIPS_ARCH_ASE_M16:
+                arch_spec.SetFlags (ArchSpec::eMIPSAse_mips16);
                 break;
-            case llvm::ELF::EF_MIPS_ARCH_ASE_MDMX: 
-                arch_spec.SetFlags (ArchSpec::eMIPSAse_mdmx); 
+            case llvm::ELF::EF_MIPS_ARCH_ASE_MDMX:
+                arch_spec.SetFlags (ArchSpec::eMIPSAse_mdmx);
                 break;
-            default: 
+            default:
                 break;
         }
     }
@@ -1612,7 +1612,7 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                     DataExtractor data;
                     if (sheader.sh_type == SHT_MIPS_ABIFLAGS)
                     {
-                        
+
                         if (section_size && (data.SetData (object_data, sheader.sh_offset, section_size) == section_size))
                         {
                             lldb::offset_t ase_offset = 12; // MIPS ABI Flags Version: 0
@@ -1621,12 +1621,12 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                     }
                     // Settings appropriate ArchSpec ABI Flags
                     if (header.e_flags & llvm::ELF::EF_MIPS_ABI2)
-                    {   
+                    {
                         arch_flags |= lldb_private::ArchSpec::eMIPSABI_N32;
                     }
                     else if (header.e_flags & llvm::ELF::EF_MIPS_ABI_O32)
                     {
-                         arch_flags |= lldb_private::ArchSpec::eMIPSABI_O32;       
+                         arch_flags |= lldb_private::ArchSpec::eMIPSABI_O32;
                     }
                     arch_spec.SetFlags (arch_flags);
                 }
@@ -1700,7 +1700,7 @@ ObjectFileELF::GetProgramHeaderByIndex(lldb::user_id_t id)
     return NULL;
 }
 
-DataExtractor 
+DataExtractor
 ObjectFileELF::GetSegmentDataByIndex(lldb::user_id_t id)
 {
     const elf::ELFProgramHeader *segment_header = GetProgramHeaderByIndex(id);
@@ -1805,12 +1805,12 @@ ObjectFileELF::CreateSections(SectionList &unified_section_list)
             else if (name == g_sect_name_tdata)
             {
                 sect_type = eSectionTypeData;
-                is_thread_specific = true;   
+                is_thread_specific = true;
             }
             else if (name == g_sect_name_tbss)
             {
-                sect_type = eSectionTypeZeroFill;   
-                is_thread_specific = true;   
+                sect_type = eSectionTypeZeroFill;
+                is_thread_specific = true;
             }
             // .debug_abbrev – Abbreviations used in the .debug_info section
             // .debug_aranges – Lookup table for mapping addresses to compilation units
@@ -1877,12 +1877,12 @@ ObjectFileELF::CreateSections(SectionList &unified_section_list)
             {
                 // the kalimba toolchain assumes that ELF section names are free-form. It does
                 // support linkscripts which (can) give rise to various arbitrarily named
-                // sections being "Code" or "Data". 
+                // sections being "Code" or "Data".
                 sect_type = kalimbaSectionType(m_header, header);
             }
 
             const uint32_t target_bytes_size =
-                (eSectionTypeData == sect_type || eSectionTypeZeroFill == sect_type) ? 
+                (eSectionTypeData == sect_type || eSectionTypeZeroFill == sect_type) ?
                 m_arch_spec.GetDataByteSize() :
                     eSectionTypeCode == sect_type ?
                     m_arch_spec.GetCodeByteSize() : 1;
@@ -2022,7 +2022,7 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
     {
         if (symbol.Parse(symtab_data, &offset) == false)
             break;
-        
+
         const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
 
         // No need to add non-section symbols that have no names
@@ -2325,7 +2325,7 @@ ObjectFileELF::ParseSymbolTable(Symtab *symbol_table, user_id_t start_id, lldb_p
 
     user_id_t symtab_id = symtab->GetID();
     const ELFSectionHeaderInfo *symtab_hdr = GetSectionHeaderByIndex(symtab_id);
-    assert(symtab_hdr->sh_type == SHT_SYMTAB || 
+    assert(symtab_hdr->sh_type == SHT_SYMTAB ||
            symtab_hdr->sh_type == SHT_DYNSYM);
 
     // sh_link: section header index of associated string table.
@@ -2601,16 +2601,16 @@ ObjectFileELF::ParseTrampolineSymbols(Symtab *symbol_table,
     if (!rel_type)
         return 0;
 
-    return ParsePLTRelocations (symbol_table, 
-                                start_id, 
+    return ParsePLTRelocations (symbol_table,
+                                start_id,
                                 rel_type,
-                                &m_header, 
-                                rel_hdr, 
-                                plt_hdr, 
+                                &m_header,
+                                rel_hdr,
+                                plt_hdr,
                                 sym_hdr,
-                                plt_section_sp, 
-                                rel_data, 
-                                symtab_data, 
+                                plt_section_sp,
+                                rel_data,
+                                symtab_data,
                                 strtab_data);
 }
 
@@ -2797,24 +2797,24 @@ ObjectFileELF::GetSymtab()
             // Synthesize trampoline symbols to help navigate the PLT.
             addr_t addr = symbol->d_ptr;
             Section *reloc_section = section_list->FindSectionContainingFileAddress(addr).get();
-            if (reloc_section) 
+            if (reloc_section)
             {
                 user_id_t reloc_id = reloc_section->GetID();
                 const ELFSectionHeaderInfo *reloc_header = GetSectionHeaderByIndex(reloc_id);
                 assert(reloc_header);
-                
+
                 if (m_symtab_ap == nullptr)
                     m_symtab_ap.reset(new Symtab(reloc_section->GetObjectFile()));
 
                 ParseTrampolineSymbols (m_symtab_ap.get(), symbol_id, reloc_header, reloc_id);
             }
         }
-        
+
         // If we still don't have any symtab then create an empty instance to avoid do the section
         // lookup next time.
         if (m_symtab_ap == nullptr)
             m_symtab_ap.reset(new Symtab(this));
-            
+
         m_symtab_ap->CalculateSymbolSizes();
     }
 
@@ -3274,7 +3274,7 @@ ObjectFileELF::CalculateStrata()
 {
     switch (m_header.e_type)
     {
-        case llvm::ELF::ET_NONE:    
+        case llvm::ELF::ET_NONE:
             // 0 - No file type
             return eStrataUnknown;
 
@@ -3285,21 +3285,21 @@ ObjectFileELF::CalculateStrata()
         case llvm::ELF::ET_EXEC:
             // 2 - Executable file
             // TODO: is there any way to detect that an executable is a kernel
-            // related executable by inspecting the program headers, section 
+            // related executable by inspecting the program headers, section
             // headers, symbols, or any other flag bits???
             return eStrataUser;
 
         case llvm::ELF::ET_DYN:
             // 3 - Shared object file
             // TODO: is there any way to detect that an shared library is a kernel
-            // related executable by inspecting the program headers, section 
+            // related executable by inspecting the program headers, section
             // headers, symbols, or any other flag bits???
             return eStrataUnknown;
 
         case ET_CORE:
             // 4 - Core file
             // TODO: is there any way to detect that an core file is a kernel
-            // related executable by inspecting the program headers, section 
+            // related executable by inspecting the program headers, section
             // headers, symbols, or any other flag bits???
             return eStrataUnknown;
 

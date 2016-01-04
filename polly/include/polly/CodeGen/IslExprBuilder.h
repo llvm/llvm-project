@@ -23,6 +23,21 @@ class DataLayout;
 class ScalarEvolution;
 }
 
+struct isl_id;
+
+namespace llvm {
+// Provide PointerLikeTypeTraits for isl_id.
+template <> class PointerLikeTypeTraits<isl_id *> {
+
+public:
+  static inline const void *getAsVoidPointer(isl_id *P) { return (void *)P; }
+  static inline const Region *getFromVoidPointer(void *P) {
+    return (Region *)P;
+  }
+  enum { NumLowBitsAvailable = 0 };
+};
+}
+
 namespace polly {
 
 /// @brief LLVM-IR generator for isl_ast_expr[essions]

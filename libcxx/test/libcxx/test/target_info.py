@@ -24,17 +24,37 @@ class DefaultTargetInfo(object):
     def use_lit_shell_default(self): return False
 
 
-def add_common_locales(features):
+def test_locale(loc):
+    assert loc is not None
+    default_locale = locale.setlocale(locale.LC_ALL)
+    try:
+        locale.setlocale(locale.LC_ALL, loc)
+        return True
+    except locale.Error:
+        return False
+    finally:
+        locale.setlocale(locale.LC_ALL, default_locale)
+
+
+def add_common_locales(features, lit_config):
+    # A list of locales needed by the test-suite.
+    # The list uses the canonical name for the locale used in the test-suite
+    # TODO: On Linux ISO8859 *may* needs to hyphenated.
     locales = [
         'en_US.UTF-8',
-        'cs_CZ.ISO8859-2',
         'fr_FR.UTF-8',
-        'fr_CA.ISO8859-1',
         'ru_RU.UTF-8',
         'zh_CN.UTF-8',
+        'fr_CA.ISO8859-1',
+        'cs_CZ.ISO8859-2'
     ]
     for loc in locales:
-        features.add('locale.{0}'.format(loc))
+        if test_locale(loc):
+            features.add('locale.{0}'.format(loc))
+        else:
+            lit_config.warning('The locale {0} is not supported by '
+                               'your platform. Some tests will be '
+                               'unsupported.'.format(loc))
 
 
 class DarwinLocalTI(DefaultTargetInfo):
@@ -42,7 +62,7 @@ class DarwinLocalTI(DefaultTargetInfo):
         super(DarwinLocalTI, self).__init__(full_config)
 
     def add_locale_features(self, features):
-        add_common_locales(features)
+        add_common_locales(feature, self.full_config.lit_config)
 
     def add_cxx_compile_flags(self, flags):
         try:
@@ -89,7 +109,7 @@ class FreeBSDLocalTI(DefaultTargetInfo):
         super(FreeBSDLocalTI, self).__init__(full_config)
 
     def add_locale_features(self, features):
-        add_common_locales(features)
+        add_common_locales(features, self.full_config.lit_config)
 
     def add_cxx_link_flags(self, flags):
         flags += ['-lc', '-lm', '-lpthread', '-lgcc_s', '-lcxxrt']
@@ -113,7 +133,7 @@ class LinuxLocalTI(DefaultTargetInfo):
         return ver # Permitted to be None.
 
     def add_locale_features(self, features):
-        add_common_locales(features)
+        add_common_locales(features, self.full_config.lit_config)
         # Some linux distributions have different locale data than others.
         # Insert the distributions name and name-version into the available
         # features to allow tests to XFAIL on them.
@@ -156,7 +176,7 @@ class WindowsLocalTI(DefaultTargetInfo):
         super(WindowsLocalTI, self).__init__(full_config)
 
     def add_locale_features(self, features):
-        add_common_locales(features)
+        add_common_locales(features, self.full_config.lit_config)
 
     def use_lit_shell_default(self):
         # Default to the internal shell on Windows, as bash on Windows is

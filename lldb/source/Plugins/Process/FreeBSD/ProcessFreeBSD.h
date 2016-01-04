@@ -88,7 +88,7 @@ public:
     DoAttachToProcessWithID (lldb::pid_t pid, const lldb_private::ProcessAttachInfo &attach_info) override;
 
     lldb_private::Error
-    DoLaunch (lldb_private::Module *exe_module, 
+    DoLaunch (lldb_private::Module *exe_module,
               lldb_private::ProcessLaunchInfo &launch_info) override;
 
     void
@@ -160,7 +160,7 @@ public:
     UpdateThreadListIfNeeded();
 
     bool
-    UpdateThreadList(lldb_private::ThreadList &old_thread_list, 
+    UpdateThreadList(lldb_private::ThreadList &old_thread_list,
                      lldb_private::ThreadList &new_thread_list) override;
 
     virtual lldb::ByteOrder

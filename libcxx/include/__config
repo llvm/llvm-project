@@ -39,6 +39,8 @@
 #define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 // Fix deque iterator type in order to support incomplete types.
 #define _LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE
+// Fix undefined behavior in how std::list stores it's linked nodes.
+#define _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
 #endif
 
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y

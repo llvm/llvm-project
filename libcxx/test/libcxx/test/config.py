@@ -558,6 +558,7 @@ class Configuration(object):
                                    '-fno-sanitize=vptr,function',
                                    '-fno-sanitize-recover']
                 self.cxx.compile_flags += ['-O3']
+                self.env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
                 self.config.available_features.add('ubsan')
             elif san == 'Thread':
                 self.cxx.flags += ['-fsanitize=thread']

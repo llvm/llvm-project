@@ -704,13 +704,8 @@ public:
     typedef pair<__key_type, __mapped_type>                      value_type;
     typedef typename _TreeIterator::difference_type              difference_type;
     typedef value_type&                                          reference;
-    typedef typename __pointer_traits::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<value_type>
-#else
-            rebind<value_type>::other
-#endif
-                                                                 pointer;
+    typedef typename __rebind_pointer<typename __pointer_traits::pointer, value_type>::type
+        pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __map_iterator() _NOEXCEPT {}
@@ -770,13 +765,8 @@ public:
     typedef pair<__key_type, __mapped_type>                      value_type;
     typedef typename _TreeIterator::difference_type              difference_type;
     typedef const value_type&                                    reference;
-    typedef typename __pointer_traits::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<const value_type>
-#else
-            rebind<const value_type>::other
-#endif
-                                                                 pointer;
+    typedef typename __rebind_pointer<typename __pointer_traits::pointer, const value_type>::type
+        pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __map_const_iterator() _NOEXCEPT {}

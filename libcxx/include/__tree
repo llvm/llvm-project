@@ -548,31 +548,15 @@ template <class _VoidPtr>
 class __tree_node_base
     : public __tree_end_node
              <
-                typename pointer_traits<_VoidPtr>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-                     rebind<__tree_node_base<_VoidPtr> >
-#else
-                     rebind<__tree_node_base<_VoidPtr> >::other
-#endif
+                typename __rebind_pointer<_VoidPtr, __tree_node_base<_VoidPtr> >::type
              >
 {
     __tree_node_base(const __tree_node_base&);
     __tree_node_base& operator=(const __tree_node_base&);
 public:
-    typedef typename pointer_traits<_VoidPtr>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<__tree_node_base>
-#else
-            rebind<__tree_node_base>::other
-#endif
-                                                pointer;
-    typedef typename pointer_traits<_VoidPtr>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<const __tree_node_base>
-#else
-            rebind<const __tree_node_base>::other
-#endif
-                                                const_pointer;
+    typedef typename __rebind_pointer<_VoidPtr, __tree_node_base>::type pointer;
+    typedef typename __rebind_pointer<_VoidPtr, const __tree_node_base>::type const_pointer;
+
     typedef __tree_end_node<pointer> base;
 
     pointer __right_;
@@ -623,13 +607,7 @@ public:
     typedef _Tp                        value_type;
     typedef _DiffType                  difference_type;
     typedef value_type&                reference;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<value_type>
-#else
-            rebind<value_type>::other
-#endif
-                                       pointer;
+    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
 
     _LIBCPP_INLINE_VISIBILITY __tree_iterator() _NOEXCEPT
 #if _LIBCPP_STD_VER > 11
@@ -694,13 +672,7 @@ public:
     typedef _Tp                              value_type;
     typedef _DiffType                        difference_type;
     typedef const value_type&                reference;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<const value_type>
-#else
-            rebind<const value_type>::other
-#endif
-                                       pointer;
+    typedef typename __rebind_pointer<__node_pointer, const value_type>::type pointer;
 
     _LIBCPP_INLINE_VISIBILITY __tree_const_iterator() _NOEXCEPT
 #if _LIBCPP_STD_VER > 11
@@ -710,13 +682,8 @@ public:
 
 private:
     typedef typename remove_const<__node>::type  __non_const_node;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<__non_const_node>
-#else
-            rebind<__non_const_node>::other
-#endif
-                                                 __non_const_node_pointer;
+    typedef typename __rebind_pointer<__node_pointer, __non_const_node>::type
+        __non_const_node_pointer;
     typedef __tree_iterator<value_type, __non_const_node_pointer, difference_type>
                                                  __non_const_iterator;
 public:
@@ -730,14 +697,8 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     __tree_const_iterator& operator++() {
-      typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-          rebind<typename __node::base>
-#else
-          rebind<typename __node::base>::other
-#endif
-              __node_base_pointer;
-
+      typedef typename __rebind_pointer<__node_pointer, typename __node::base>::type
+        __node_base_pointer;
       __ptr_ = static_cast<__node_pointer>(
           __tree_next(static_cast<__node_base_pointer>(__ptr_)));
       return *this;
@@ -749,14 +710,8 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     __tree_const_iterator& operator--() {
-      typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-          rebind<typename __node::base>
-#else
-          rebind<typename __node::base>::other
-#endif
-              __node_base_pointer;
-
+      typedef typename __rebind_pointer<__node_pointer, typename __node::base>::type
+        __node_base_pointer;
       __ptr_ = static_cast<__node_pointer>(
           __tree_prev(static_cast<__node_base_pointer>(__ptr_)));
       return *this;
@@ -810,20 +765,9 @@ public:
     typedef typename __node_base::pointer            __node_base_const_pointer;
 private:
     typedef typename __node_base::base __end_node_t;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<__end_node_t>
-#else
-            rebind<__end_node_t>::other
-#endif
-                                                     __end_node_ptr;
-    typedef typename pointer_traits<__node_pointer>::template
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-            rebind<__end_node_t>
-#else
-            rebind<__end_node_t>::other
-#endif
-                                                     __end_node_const_ptr;
+    typedef typename __rebind_pointer<__node_pointer, __end_node_t>::type
+        __end_node_ptr;
+    typedef __end_node_ptr __end_node_const_ptr;
 
     __node_pointer                                          __begin_node_;
     __compressed_pair<__end_node_t, __node_allocator>  __pair1_;
