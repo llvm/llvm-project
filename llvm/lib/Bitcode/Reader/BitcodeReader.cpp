@@ -2069,12 +2069,12 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         if (Record.size() != 6)
           return error("Invalid record");
 
-        MDValueList.assignValue(
+        MetadataList.assignValue(
             GET_OR_DISTINCT(DIModule, Record[0],
                             (Context, getMDOrNull(Record[4]),
                              getMDString(Record[5]), nullptr,
                              nullptr, nullptr)),
-            NextMDValueNo++);
+            NextMetadataNo++);
         break;
       }
 
