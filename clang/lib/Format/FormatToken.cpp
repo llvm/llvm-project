@@ -218,10 +218,12 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
     ItemBegin = ItemEnd->Next;
   }
 
-  // Don't use column layout for nested lists, lists with few elements and in
-  // presence of separating comments.
-  if ((Token->NestingLevel != 0 && Token->is(tok::l_brace)) ||
-      Commas.size() < 5 || HasSeparatingComment)
+  // Don't use column layout for lists with few elements and in presence of
+  // separating comments.
+  if (Commas.size() < 5 || HasSeparatingComment)
+    return;
+
+  if (Token->NestingLevel != 0 && Token->is(tok::l_brace) && Commas.size() < 19)
     return;
 
   // We can never place more than ColumnLimit / 3 items in a row (because of the
