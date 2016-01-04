@@ -105,10 +105,13 @@ public:
 private:  // Semantic analysis methods.
   bool AddValue(Record *TheRec, SMLoc Loc, const RecordVal &RV);
   bool SetValue(Record *TheRec, SMLoc Loc, Init *ValName,
-                const std::vector<unsigned> &BitList, Init *V);
+                ArrayRef<unsigned> BitList, Init *V,
+                bool AllowSelfAssignment = false);
   bool SetValue(Record *TheRec, SMLoc Loc, const std::string &ValName,
-                const std::vector<unsigned> &BitList, Init *V) {
-    return SetValue(TheRec, Loc, StringInit::get(ValName), BitList, V);
+                ArrayRef<unsigned> BitList, Init *V,
+                bool AllowSelfAssignment = false) {
+    return SetValue(TheRec, Loc, StringInit::get(ValName), BitList, V,
+                    AllowSelfAssignment);
   }
   bool AddSubClass(Record *Rec, SubClassReference &SubClass);
   bool AddSubMultiClass(MultiClass *CurMC,

@@ -2830,7 +2830,12 @@ Value *llvm::GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
                                               const DataLayout &DL) {
   unsigned BitWidth = DL.getPointerTypeSizeInBits(Ptr->getType());
   APInt ByteOffset(BitWidth, 0);
-  while (1) {
+
+  // We walk up the defs but use a visited set to handle unreachable code. In
+  // that case, we stop after accumulating the cycle once (not that it
+  // matters).
+  SmallPtrSet<Value *, 16> Visited;
+  while (Visited.insert(Ptr).second) {
     if (Ptr->getType()->isVectorTy())
       break;
 

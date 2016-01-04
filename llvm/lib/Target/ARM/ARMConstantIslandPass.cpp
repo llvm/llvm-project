@@ -340,12 +340,12 @@ namespace {
 /// verify - check BBOffsets, BBSizes, alignment of islands
 void ARMConstantIslands::verify() {
 #ifndef NDEBUG
-  for (MachineFunction::iterator MBBI = MF->begin(), E = MF->end();
-       MBBI != E; ++MBBI) {
-    MachineBasicBlock *MBB = &*MBBI;
-    unsigned MBBId = MBB->getNumber();
-    assert(!MBBId || BBInfo[MBBId - 1].postOffset() <= BBInfo[MBBId].Offset);
-  }
+  assert(std::is_sorted(MF->begin(), MF->end(),
+                        [this](const MachineBasicBlock &LHS,
+                               const MachineBasicBlock &RHS) {
+                          return BBInfo[LHS.getNumber()].postOffset() <
+                                 BBInfo[RHS.getNumber()].postOffset();
+                        }));
   DEBUG(dbgs() << "Verifying " << CPUsers.size() << " CP users.\n");
   for (unsigned i = 0, e = CPUsers.size(); i != e; ++i) {
     CPUser &U = CPUsers[i];

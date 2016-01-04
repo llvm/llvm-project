@@ -78,23 +78,6 @@ X86FrameLowering::needsFrameIndexResolution(const MachineFunction &MF) const {
          MF.getInfo<X86MachineFunctionInfo>()->getHasPushSequences();
 }
 
-/// usesTheStack - This function checks if any of the users of EFLAGS
-/// copies the EFLAGS. We know that the code that lowers COPY of EFLAGS has
-/// to use the stack, and if we don't adjust the stack we clobber the first
-/// frame index.
-/// See X86InstrInfo::copyPhysReg.
-static bool usesTheStack(const MachineFunction &MF) {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  return any_of(MRI.reg_instructions(X86::EFLAGS),
-                [](const MachineInstr &RI) { return RI.isCopy(); });
-}
-
-static bool doesStackUseImplyFP(const MachineFunction &MF) {
-  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-  return IsWin64Prologue && usesTheStack(MF);
-}
-
 /// hasFP - Return true if the specified function should have a dedicated frame
 /// pointer register.  This is true if the function has variable sized allocas
 /// or if frame pointer elimination is disabled.
@@ -108,8 +91,7 @@ bool X86FrameLowering::hasFP(const MachineFunction &MF) const {
           MFI->isFrameAddressTaken() || MFI->hasOpaqueSPAdjustment() ||
           MF.getInfo<X86MachineFunctionInfo>()->getForceFramePointer() ||
           MMI.callsUnwindInit() || MMI.hasEHFunclets() || MMI.callsEHReturn() ||
-          MFI->hasStackMap() || MFI->hasPatchPoint() ||
-          doesStackUseImplyFP(MF));
+          MFI->hasStackMap() || MFI->hasPatchPoint());
 }
 
 static unsigned getSUBriOpcode(unsigned IsLP64, int64_t Imm) {
@@ -961,11 +943,11 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // push and pop from the stack.
   if (Is64Bit && !Fn->hasFnAttribute(Attribute::NoRedZone) &&
       !TRI->needsStackRealignment(MF) &&
-      !MFI->hasVarSizedObjects() && // No dynamic alloca.
-      !MFI->adjustsStack() &&       // No calls.
-      !IsWin64CC &&                 // Win64 has no Red Zone
-      !usesTheStack(MF) &&          // Don't push and pop.
-      !MF.shouldSplitStack()) {     // Regular stack
+      !MFI->hasVarSizedObjects() &&    // No dynamic alloca.
+      !MFI->adjustsStack() &&          // No calls.
+      !IsWin64CC &&                    // Win64 has no Red Zone
+      !MFI->hasOpaqueSPAdjustment() && // Don't push and pop.
+      !MF.shouldSplitStack()) {        // Regular stack
     uint64_t MinSize = X86FI->getCalleeSavedFrameSize();
     if (HasFP) MinSize += SlotSize;
     StackSize = std::max(MinSize, StackSize > 128 ? StackSize - 128 : 0);

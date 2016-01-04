@@ -4453,7 +4453,8 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // such as TF/IF/DF, which LLVM doesn't model.
     //
     // Notice that we have to adjust the stack if we don't want to clobber the
-    // first frame index. See X86FrameLowering.cpp - usesTheStack.
+    // first frame index.
+    // See X86ISelLowering.cpp - X86::hasCopyImplyingStackAdjustment.
 
 
     bool AXDead = (Reg == AX) ||

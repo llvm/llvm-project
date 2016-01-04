@@ -722,7 +722,7 @@ Init *UnOpInit::resolveReferences(Record &R, const RecordVal *RV) const {
 
 std::string UnOpInit::getAsString() const {
   std::string Result;
-  switch (Opc) {
+  switch (getOpcode()) {
   case CAST: Result = "!cast<" + getType()->getAsString() + ">"; break;
   case HEAD: Result = "!head"; break;
   case TAIL: Result = "!tail"; break;
@@ -850,7 +850,7 @@ Init *BinOpInit::resolveReferences(Record &R, const RecordVal *RV) const {
 
 std::string BinOpInit::getAsString() const {
   std::string Result;
-  switch (Opc) {
+  switch (getOpcode()) {
   case CONCAT: Result = "!con"; break;
   case ADD: Result = "!add"; break;
   case AND: Result = "!and"; break;
@@ -1054,7 +1054,7 @@ Init *TernOpInit::resolveReferences(Record &R,
                                     const RecordVal *RV) const {
   Init *lhs = LHS->resolveReferences(R, RV);
 
-  if (Opc == IF && lhs != LHS) {
+  if (getOpcode() == IF && lhs != LHS) {
     IntInit *Value = dyn_cast<IntInit>(lhs);
     if (Init *I = lhs->convertInitializerTo(IntRecTy::get()))
       Value = dyn_cast<IntInit>(I);
@@ -1082,7 +1082,7 @@ Init *TernOpInit::resolveReferences(Record &R,
 
 std::string TernOpInit::getAsString() const {
   std::string Result;
-  switch (Opc) {
+  switch (getOpcode()) {
   case SUBST: Result = "!subst"; break;
   case FOREACH: Result = "!foreach"; break;
   case IF: Result = "!if"; break;

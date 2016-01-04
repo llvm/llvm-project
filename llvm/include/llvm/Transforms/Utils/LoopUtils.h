@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 
@@ -39,6 +40,8 @@ struct LICMSafetyInfo {
   bool MayThrow;           // The current loop contains an instruction which
                            // may throw.
   bool HeaderMayThrow;     // Same as previous, but specific to loop header
+  // Used to update funclet bundle operands.
+  DenseMap<BasicBlock *, ColorVector> BlockColors;
   LICMSafetyInfo() : MayThrow(false), HeaderMayThrow(false)
   {}
 };

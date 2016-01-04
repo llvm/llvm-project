@@ -647,14 +647,15 @@ AttributeSet AttributeSet::get(LLVMContext &C,
   if (Attrs.empty())
     return AttributeSet();
 
-#ifndef NDEBUG
-  for (unsigned i = 0, e = Attrs.size(); i != e; ++i) {
-    assert((!i || Attrs[i-1].first <= Attrs[i].first) &&
-           "Misordered Attributes list!");
-    assert(!Attrs[i].second.hasAttribute(Attribute::None) &&
-           "Pointless attribute!");
-  }
-#endif
+  assert(std::is_sorted(Attrs.begin(), Attrs.end(),
+                        [](const std::pair<unsigned, Attribute> &LHS,
+                           const std::pair<unsigned, Attribute> &RHS) {
+                          return LHS.first < RHS.first;
+                        }) && "Misordered Attributes list!");
+  assert(std::none_of(Attrs.begin(), Attrs.end(),
+                      [](const std::pair<unsigned, Attribute> &Pair) {
+                        return Pair.second.hasAttribute(Attribute::None);
+                      }) && "Pointless attribute!");
 
   // Create a vector if (unsigned, AttributeSetNode*) pairs from the attributes
   // list.
