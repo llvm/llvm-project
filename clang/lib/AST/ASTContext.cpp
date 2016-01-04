@@ -3658,14 +3658,13 @@ static int CmpProtocolNames(ObjCProtocolDecl *const *LHS,
   return DeclarationName::compare((*LHS)->getDeclName(), (*RHS)->getDeclName());
 }
 
-static bool areSortedAndUniqued(ObjCProtocolDecl * const *Protocols,
-                                unsigned NumProtocols) {
-  if (NumProtocols == 0) return true;
+static bool areSortedAndUniqued(ArrayRef<ObjCProtocolDecl *> Protocols) {
+  if (Protocols.empty()) return true;
 
   if (Protocols[0]->getCanonicalDecl() != Protocols[0])
     return false;
   
-  for (unsigned i = 1; i != NumProtocols; ++i)
+  for (unsigned i = 1; i != Protocols.size(); ++i)
     if (CmpProtocolNames(&Protocols[i - 1], &Protocols[i]) >= 0 ||
         Protocols[i]->getCanonicalDecl() != Protocols[i])
       return false;
@@ -3730,8 +3729,7 @@ QualType ASTContext::getObjCObjectType(
                                           [&](QualType type) {
                                             return type.isCanonical();
                                           });
-  bool protocolsSorted = areSortedAndUniqued(protocols.data(),
-                                             protocols.size());
+  bool protocolsSorted = areSortedAndUniqued(protocols);
   if (!typeArgsAreCanonical || !protocolsSorted || !baseType.isCanonical()) {
     // Determine the canonical type arguments.
     ArrayRef<QualType> canonTypeArgs;
