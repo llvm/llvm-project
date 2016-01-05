@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace cert {
 
 /// Checks whether a thrown object is nothrow copy constructible.
 ///
@@ -27,8 +28,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace cert
 } // namespace tidy
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_THROWNEXCEPTIONTYPECHECK_H
-

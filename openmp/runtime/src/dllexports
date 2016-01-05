@@ -160,7 +160,6 @@
 
     # Regular entry points
         __kmp_wait_yield_4
-        __kmp_wait_yield_8
         __kmp_fork_call
         __kmp_invoke_microtask
         __kmp_launch_monitor

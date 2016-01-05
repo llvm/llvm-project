@@ -23,7 +23,7 @@
 
 namespace clang {
 namespace tidy {
-namespace CERT {
+namespace cert {
 
 class CERTModule : public ClangTidyModule {
 public:
@@ -60,10 +60,10 @@ public:
   }
 };
 
-} // namespace misc
+} // namespace cert
 
 // Register the MiscTidyModule using this statically initialized variable.
-static ClangTidyModuleRegistry::Add<CERT::CERTModule>
+static ClangTidyModuleRegistry::Add<cert::CERTModule>
 X("cert-module",
   "Adds lint checks corresponding to CERT secure coding guidelines.");
 

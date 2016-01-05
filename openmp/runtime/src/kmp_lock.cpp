@@ -729,7 +729,7 @@ __kmp_is_ticket_lock_nestable( kmp_ticket_lock_t *lck )
 }
 
 static kmp_uint32
-__kmp_bakery_check(kmp_uint value, kmp_uint checker)
+__kmp_bakery_check(kmp_uint32 value, kmp_uint32 checker)
 {
     register kmp_uint32 pause;
 
@@ -1576,7 +1576,7 @@ __kmp_release_queuing_lock( kmp_queuing_lock_t *lck, kmp_int32 gtid )
 
                 KMP_MB();
                 /* make sure enqueuing thread has time to update next waiting thread field */
-                *head_id_p = (kmp_int32) KMP_WAIT_YIELD((volatile kmp_uint*) waiting_id_p, 0, KMP_NEQ, NULL);
+                *head_id_p = KMP_WAIT_YIELD((volatile kmp_uint32*)waiting_id_p, 0, KMP_NEQ, NULL);
 #ifdef DEBUG_QUEUING_LOCKS
                 TRACE_LOCK( gtid+1, "rel deq: (h,t)->(h',t)" );
 #endif

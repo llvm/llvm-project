@@ -173,21 +173,15 @@ typedef double  kmp_real64;
 # define KMP_UINTPTR_SPEC  "lu"
 #endif
 
-#ifdef KMP_I8
+#ifdef BUILD_I8
   typedef kmp_int64      kmp_int;
   typedef kmp_uint64     kmp_uint;
-# define  KMP_INT_SPEC	 KMP_INT64_SPEC
-# define  KMP_UINT_SPEC	 KMP_UINT64_SPEC
-# define  KMP_INT_MAX    ((kmp_int64)0x7FFFFFFFFFFFFFFFLL)
-# define  KMP_INT_MIN    ((kmp_int64)0x8000000000000000LL)
 #else
   typedef kmp_int32      kmp_int;
   typedef kmp_uint32     kmp_uint;
-# define  KMP_INT_SPEC	 KMP_INT32_SPEC
-# define  KMP_UINT_SPEC	 KMP_UINT32_SPEC
-# define  KMP_INT_MAX    ((kmp_int32)0x7FFFFFFF)
-# define  KMP_INT_MIN    ((kmp_int32)0x80000000)
-#endif /* KMP_I8 */
+#endif /* BUILD_I8 */
+#define  KMP_INT_MAX     ((kmp_int32)0x7FFFFFFF)
+#define  KMP_INT_MIN     ((kmp_int32)0x80000000)
 
 #ifdef __cplusplus
     //-------------------------------------------------------------------------
@@ -651,21 +645,12 @@ typedef void    (*microtask_t)( int *gtid, int *npr, ... );
 # define VOLATILE_CAST(x)        (x)
 #endif
 
-#ifdef KMP_I8
-# define KMP_WAIT_YIELD           __kmp_wait_yield_8
-# define KMP_EQ                   __kmp_eq_8
-# define KMP_NEQ                  __kmp_neq_8
-# define KMP_LT                   __kmp_lt_8
-# define KMP_GE                   __kmp_ge_8
-# define KMP_LE                   __kmp_le_8
-#else
-# define KMP_WAIT_YIELD           __kmp_wait_yield_4
-# define KMP_EQ                   __kmp_eq_4
-# define KMP_NEQ                  __kmp_neq_4
-# define KMP_LT                   __kmp_lt_4
-# define KMP_GE                   __kmp_ge_4
-# define KMP_LE                   __kmp_le_4
-#endif /* KMP_I8 */
+#define KMP_WAIT_YIELD           __kmp_wait_yield_4
+#define KMP_EQ                   __kmp_eq_4
+#define KMP_NEQ                  __kmp_neq_4
+#define KMP_LT                   __kmp_lt_4
+#define KMP_GE                   __kmp_ge_4
+#define KMP_LE                   __kmp_le_4
 
 /* Workaround for Intel(R) 64 code gen bug when taking address of static array (Intel(R) 64 Tracker #138) */
 #if (KMP_ARCH_X86_64 || KMP_ARCH_PPC64) && KMP_OS_LINUX

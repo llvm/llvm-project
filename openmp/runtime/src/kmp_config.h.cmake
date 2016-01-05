@@ -76,6 +76,10 @@
 # define CACHE_LINE 64
 #endif
 
+#if ! KMP_32_BIT_ARCH
+# define BUILD_I8 1
+#endif
+
 #define KMP_DYNAMIC_LIB 1
 #define KMP_NESTED_HOT_TEAMS 1
 #define KMP_ADJUST_BLOCKTIME 1

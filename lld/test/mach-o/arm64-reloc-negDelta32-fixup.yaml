@@ -6,12 +6,12 @@
 # The reference from FDE->CIE is implicitly created as a negDelta32.
 # We don't emit these in to the binary as relocations, so we need to
 # make sure that the offset in the FDE to the CIE is the correct value.
-# CHECK: 0010 10000000 00000000 017a5200 01781e01
-# CHECK: 0020 100c1f00 20000000 18000000 e4ffffff
-# Note, this one that matters   ^~~~~~~~
+# CHECK: {{[0-9abcdef]*}} 10000000 00000000 017a5200 01781e01
+# CHECK: {{[0-9abcdef]*}} 100c1f00 20000000 18000000 e4ffffff
+# Note, this one that matters               ^~~~~~~~
 # It needs to be 0x18 as that is the offset back to 0 where the CIE is.
-# CHECK: 0030 ffffffff 20000000 00000000 00480e10
-# CHECK: 0040 9e019d02 00000000
+# CHECK: {{[0-9abcdef]*}} ffffffff 20000000 00000000 00480e10
+# CHECK: {{[0-9abcdef]*}} 9e019d02 00000000
 
 ---  !mach-o
 arch:            arm64

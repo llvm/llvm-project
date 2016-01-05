@@ -507,6 +507,23 @@ void ArchHandler_arm64::generateAtomContent(
   // Copy raw bytes.
   memcpy(atomContentBuffer, atom.rawContent().data(), atom.size());
   // Apply fix-ups.
+#ifndef NDEBUG
+  if (atom.begin() != atom.end()) {
+    DEBUG_WITH_TYPE("atom-content", llvm::dbgs()
+                    << "Applying fixups to atom:\n"
+                    << "   address="
+                    << llvm::format("    0x%09lX", &atom)
+                    << ", file=#"
+                    << atom.file().ordinal()
+                    << ", atom=#"
+                    << atom.ordinal()
+                    << ", name="
+                    << atom.name()
+                    << ", type="
+                    << atom.contentType()
+                    << "\n");
+  }
+#endif
   for (const Reference *ref : atom) {
     uint32_t offset = ref->offsetInAtom();
     const Atom *target = ref->target();

@@ -1147,13 +1147,7 @@ def getExpectedTimeouts(platform_name):
     if target.startswith("linux"):
         expected_timeout |= {
             "TestEvents.py",
-            "TestExitDuringStep.py",
-
-            # Times out in ~10% of the times on the build bot
-            "TestHelloWorld.py",
             "TestMultithreaded.py",
-            "TestRegisters.py",  # ~12/600 dosep runs (build 3120-3122)
-            "TestThreadStepOut.py",
         }
     elif target.startswith("android"):
         expected_timeout |= {

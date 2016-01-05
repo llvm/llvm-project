@@ -15,6 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace cert {
 
 void VariadicFunctionDefCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
@@ -36,6 +37,6 @@ void VariadicFunctionDefCheck::check(const MatchFinder::MatchResult &Result) {
        "parameter pack or currying instead");
 }
 
+} // namespace cert
 } // namespace tidy
 } // namespace clang
-

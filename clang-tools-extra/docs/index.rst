@@ -7,7 +7,7 @@
 
 Introduction
 ============
-Welcome to the clang-tools-exta project which contains extra tools built using
+Welcome to the clang-tools-extra project which contains extra tools built using
 Clang's tooling API's.
 
 

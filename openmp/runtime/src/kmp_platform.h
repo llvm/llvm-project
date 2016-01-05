@@ -160,6 +160,9 @@
 # define KMP_MIC2 0
 #endif
 
+/* Specify 32 bit architectures here */
+#define KMP_32_BIT_ARCH (KMP_ARCH_X86 || KMP_ARCH_ARM)
+
 // TODO: Fixme - This is clever, but really fugly
 #if (1 != KMP_ARCH_X86 + KMP_ARCH_X86_64 + KMP_ARCH_ARM + KMP_ARCH_PPC64 + KMP_ARCH_AARCH64)
 # error Unknown or unsupported architecture

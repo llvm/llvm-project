@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace cert {
 
 /// Guards against use of setjmp/longjmp in C++ code
 ///
@@ -30,8 +31,8 @@ public:
   static const char DiagWording[];
 };
 
+} // namespace cert
 } // namespace tidy
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SETLONGJMPCHECK_H
-

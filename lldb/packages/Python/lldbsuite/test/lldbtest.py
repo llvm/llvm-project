@@ -752,14 +752,12 @@ def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
     """
     return expectedFailure(matchAndroid(api_levels, archs), bugnumber)
 
-# if the test passes on the first try, we're done (success)
-# if the test fails once, then passes on the second try, raise an ExpectedFailure
-# if the test fails twice in a row, re-throw the exception from the second test run
+# Flakey tests get two chances to run. If they fail the first time round, the result formatter
+# makes sure it is run one more time.
 def expectedFlakey(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from unittest2 import case
             self = args[0]
             if expected_fn(self):
                 # Send event marking test as explicitly eligible for rerunning.
@@ -767,25 +765,7 @@ def expectedFlakey(expected_fn, bugnumber=None):
                     # Mark this test as rerunnable.
                     configuration.results_formatter_object.handle_event(
                         EventBuilder.event_for_mark_test_rerun_eligible(self))
-            try:
-                func(*args, **kwargs)
-            # don't retry if the test case is already decorated with xfail or skip
-            except (case._ExpectedFailure, case.SkipTest, case._UnexpectedSuccess):
-                raise
-            except Exception:
-                if expected_fn(self):
-                    # before retry, run tearDown for previous run and setup for next
-                    try:
-                        self.tearDown()
-                        self.setUp()
-                        func(*args, **kwargs)
-                    except Exception:
-                        # oh snap! two failures in a row, record a failure/error
-                        raise
-                    # record the expected failure
-                    raise case._ExpectedFailure(sys.exc_info(), bugnumber)
-                else:
-                    raise
+            func(*args, **kwargs)
         return wrapper
     # if bugnumber is not-callable(incluing None), that means decorator function is called with optional arguments
     # return decorator in this case, so it will be used to decorating original method

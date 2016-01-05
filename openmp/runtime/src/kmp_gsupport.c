@@ -13,9 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 
-#if defined(__x86_64) || defined (__powerpc64__) || defined(__aarch64__)
-# define KMP_I8
-#endif
 #include "kmp.h"
 #include "kmp_atomic.h"
 

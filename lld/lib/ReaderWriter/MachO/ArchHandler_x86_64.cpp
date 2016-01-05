@@ -647,13 +647,33 @@ void ArchHandler_x86_64::applyFixupRelocatable(const Reference &ref,
     *loc32 = ref.addend() + inAtomAddress - fixupAddress;
     return;
   case delta32Anon:
-    *loc32 = (targetAddress - fixupAddress) + ref.addend();
+    // The value we write here should be the the delta to the target
+    // after taking in to account the difference from the fixup back to the
+    // last defined label
+    // ie, if we have:
+    // _base: ...
+    // Lfixup: .quad Ltarget - .
+    // ...
+    // Ltarget:
+    //
+    // Then we want to encode the value (Ltarget + addend) - (LFixup - _base)
+    *loc32 = (targetAddress + ref.addend()) - (fixupAddress - inAtomAddress);
     return;
   case delta64:
     *loc64 = ref.addend() + inAtomAddress - fixupAddress;
     return;
   case delta64Anon:
-    *loc64 = (targetAddress - fixupAddress) + ref.addend();
+    // The value we write here should be the the delta to the target
+    // after taking in to account the difference from the fixup back to the
+    // last defined label
+    // ie, if we have:
+    // _base: ...
+    // Lfixup: .quad Ltarget - .
+    // ...
+    // Ltarget:
+    //
+    // Then we want to encode the value (Ltarget + addend) - (LFixup - _base)
+    *loc64 = (targetAddress + ref.addend()) - (fixupAddress - inAtomAddress);
     return;
   case negDelta32:
     *loc32 = fixupAddress - targetAddress + ref.addend();
