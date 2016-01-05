@@ -477,7 +477,7 @@ MemDepResult MemoryDependenceAnalysis::getSimplePointerDependencyFrom(
   // being 42. A key property of this program however is that if either
   // 1 or 4 were missing, there would be a race between the store of 42
   // either the store of 0 or the load (making the whole progam racy).
-  // The paper mentionned above shows that the same property is respected
+  // The paper mentioned above shows that the same property is respected
   // by every program that can detect any optimisation of that kind: either
   // it is racy (undefined) or there is a release followed by an acquire
   // between the pair of accesses under consideration.
@@ -685,13 +685,13 @@ MemDepResult MemoryDependenceAnalysis::getSimplePointerDependencyFrom(
         return MemDepResult::getDef(Inst);
       if (isInvariantLoad)
         continue;
-      // Be conservative if the accessed pointer may alias the allocation.
-      if (AA->alias(Inst, AccessPtr) != NoAlias)
-        return MemDepResult::getClobber(Inst);
-      // If the allocation is not aliased and does not read memory (like
-      // strdup), it is safe to ignore.
-      if (isa<AllocaInst>(Inst) ||
-          isMallocLikeFn(Inst, TLI) || isCallocLikeFn(Inst, TLI))
+      // Be conservative if the accessed pointer may alias the allocation -
+      // fallback to the generic handling below.
+      if ((AA->alias(Inst, AccessPtr) == NoAlias) &&
+          // If the allocation is not aliased and does not read memory (like
+          // strdup), it is safe to ignore.
+          (isa<AllocaInst>(Inst) || isMallocLikeFn(Inst, TLI) ||
+           isCallocLikeFn(Inst, TLI)))
         continue;
     }
 

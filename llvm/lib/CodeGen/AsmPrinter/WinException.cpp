@@ -976,32 +976,32 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   }
 }
 
-static int getRank(const WinEHFuncInfo &FuncInfo, int State) {
+static int getTryRank(const WinEHFuncInfo &FuncInfo, int State) {
   int Rank = 0;
   while (State != -1) {
     ++Rank;
-    State = FuncInfo.ClrEHUnwindMap[State].Parent;
+    State = FuncInfo.ClrEHUnwindMap[State].TryParentState;
   }
   return Rank;
 }
 
-static int getAncestor(const WinEHFuncInfo &FuncInfo, int Left, int Right) {
-  int LeftRank = getRank(FuncInfo, Left);
-  int RightRank = getRank(FuncInfo, Right);
+static int getTryAncestor(const WinEHFuncInfo &FuncInfo, int Left, int Right) {
+  int LeftRank = getTryRank(FuncInfo, Left);
+  int RightRank = getTryRank(FuncInfo, Right);
 
   while (LeftRank < RightRank) {
-    Right = FuncInfo.ClrEHUnwindMap[Right].Parent;
+    Right = FuncInfo.ClrEHUnwindMap[Right].TryParentState;
     --RightRank;
   }
 
   while (RightRank < LeftRank) {
-    Left = FuncInfo.ClrEHUnwindMap[Left].Parent;
+    Left = FuncInfo.ClrEHUnwindMap[Left].TryParentState;
     --LeftRank;
   }
 
   while (Left != Right) {
-    Left = FuncInfo.ClrEHUnwindMap[Left].Parent;
-    Right = FuncInfo.ClrEHUnwindMap[Right].Parent;
+    Left = FuncInfo.ClrEHUnwindMap[Left].TryParentState;
+    Right = FuncInfo.ClrEHUnwindMap[Right].TryParentState;
   }
 
   return Left;
@@ -1035,9 +1035,9 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
         FuncInfo.ClrEHUnwindMap[State].Handler.get<MachineBasicBlock *>();
     HandlerStates[HandlerBlock] = State;
     // Use this loop through all handlers to verify our assumption (used in
-    // the MinEnclosingState computation) that ancestors have lower state
-    // numbers than their descendants.
-    assert(FuncInfo.ClrEHUnwindMap[State].Parent < State &&
+    // the MinEnclosingState computation) that enclosing funclets have lower
+    // state numbers than their enclosed funclets.
+    assert(FuncInfo.ClrEHUnwindMap[State].HandlerParentState < State &&
            "ill-formed state numbering");
   }
   // Map the main function to the NullState.
@@ -1070,7 +1070,6 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
   SmallVector<int, 4> MinClauseMap((size_t)NumStates, NumStates);
 
   // Visit the root function and each funclet.
-
   for (MachineFunction::const_iterator FuncletStart = MF->begin(),
                                        FuncletEnd = MF->begin(),
                                        End = MF->end();
@@ -1100,17 +1099,18 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
     for (const auto &StateChange :
          InvokeStateChangeIterator::range(FuncInfo, FuncletStart, FuncletEnd)) {
       // Close any try regions we're not still under
-      int AncestorState =
-          getAncestor(FuncInfo, CurrentState, StateChange.NewState);
-      while (CurrentState != AncestorState) {
-        assert(CurrentState != NullState && "Failed to find ancestor!");
+      int StillPendingState =
+          getTryAncestor(FuncInfo, CurrentState, StateChange.NewState);
+      while (CurrentState != StillPendingState) {
+        assert(CurrentState != NullState &&
+               "Failed to find still-pending state!");
         // Close the pending clause
         Clauses.push_back({CurrentStartLabel, StateChange.PreviousEndLabel,
                            CurrentState, FuncletState});
-        // Now the parent handler is current
-        CurrentState = FuncInfo.ClrEHUnwindMap[CurrentState].Parent;
+        // Now the next-outer try region is current
+        CurrentState = FuncInfo.ClrEHUnwindMap[CurrentState].TryParentState;
         // Pop the new start label from the handler stack if we've exited all
-        // descendants of the corresponding handler.
+        // inner try regions of the corresponding try region.
         if (HandlerStack.back().second == CurrentState)
           CurrentStartLabel = HandlerStack.pop_back_val().first;
       }
@@ -1121,7 +1121,8 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
         // it.
         for (int EnteredState = StateChange.NewState;
              EnteredState != CurrentState;
-             EnteredState = FuncInfo.ClrEHUnwindMap[EnteredState].Parent) {
+             EnteredState =
+                 FuncInfo.ClrEHUnwindMap[EnteredState].TryParentState) {
           int &MinEnclosingState = MinClauseMap[EnteredState];
           if (FuncletState < MinEnclosingState)
             MinEnclosingState = FuncletState;

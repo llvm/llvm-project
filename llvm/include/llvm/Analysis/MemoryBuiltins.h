@@ -59,11 +59,6 @@ bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
 bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                    bool LookThroughBitCast = false);
 
-/// \brief Tests if a value is a call or invoke to a library function that
-/// allocates memory and never returns null (such as operator new).
-bool isOperatorNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
-                         bool LookThroughBitCast = false);
-
 //===----------------------------------------------------------------------===//
 //  malloc Call Utility Functions.
 //

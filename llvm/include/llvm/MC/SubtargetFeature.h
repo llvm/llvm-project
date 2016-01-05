@@ -103,14 +103,13 @@ public:
   /// Adding Features.
   void AddFeature(StringRef String, bool Enable = true);
 
-  /// ToggleFeature - Toggle a feature and returns the newly updated feature
-  /// bits.
-  FeatureBitset ToggleFeature(FeatureBitset Bits, StringRef String,
-                         ArrayRef<SubtargetFeatureKV> FeatureTable);
+  /// ToggleFeature - Toggle a feature and update the feature bits.
+  static void ToggleFeature(FeatureBitset &Bits, StringRef String,
+                            ArrayRef<SubtargetFeatureKV> FeatureTable);
 
-  /// Apply the feature flag and return the newly updated feature bits.
-  FeatureBitset ApplyFeatureFlag(FeatureBitset Bits, StringRef Feature,
-                                 ArrayRef<SubtargetFeatureKV> FeatureTable);
+  /// Apply the feature flag and update the feature bits.
+  static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
+                               ArrayRef<SubtargetFeatureKV> FeatureTable);
 
   /// Get feature bits of a CPU.
   FeatureBitset getFeatureBits(StringRef CPU,

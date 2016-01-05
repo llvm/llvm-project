@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -3448,17 +3449,25 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
     if (isa<CallInst>(BBI) && !isa<DbgInfoIntrinsic>(BBI)) break;
 
     if (BBI->mayHaveSideEffects()) {
-      if (StoreInst *SI = dyn_cast<StoreInst>(BBI)) {
+      if (auto *SI = dyn_cast<StoreInst>(BBI)) {
         if (SI->isVolatile())
           break;
-      } else if (LoadInst *LI = dyn_cast<LoadInst>(BBI)) {
+      } else if (auto *LI = dyn_cast<LoadInst>(BBI)) {
         if (LI->isVolatile())
           break;
-      } else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(BBI)) {
+      } else if (auto *RMWI = dyn_cast<AtomicRMWInst>(BBI)) {
         if (RMWI->isVolatile())
           break;
-      } else if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(BBI)) {
+      } else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(BBI)) {
         if (CXI->isVolatile())
+          break;
+      } else if (isa<CatchPadInst>(BBI)) {
+        // A catchpad may invoke exception object constructors and such, which
+        // in some languages can be arbitrary code, so be conservative by
+        // default.
+        // For CoreCLR, it just involves a type test, so can be removed.
+        if (classifyEHPersonality(BB->getParent()->getPersonalityFn()) !=
+            EHPersonality::CoreCLR)
           break;
       } else if (!isa<FenceInst>(BBI) && !isa<VAArgInst>(BBI) &&
                  !isa<LandingPadInst>(BBI)) {
@@ -3485,7 +3494,7 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
   for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
     TerminatorInst *TI = Preds[i]->getTerminator();
     IRBuilder<> Builder(TI);
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
+    if (auto *BI = dyn_cast<BranchInst>(TI)) {
       if (BI->isUnconditional()) {
         if (BI->getSuccessor(0) == BB) {
           new UnreachableInst(TI->getContext(), TI);
@@ -3502,7 +3511,7 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
           Changed = true;
         }
       }
-    } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
+    } else if (auto *SI = dyn_cast<SwitchInst>(TI)) {
       for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end();
            i != e; ++i)
         if (i.getCaseSuccessor() == BB) {
@@ -3511,18 +3520,49 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
           --i; --e;
           Changed = true;
         }
-    } else if ((isa<InvokeInst>(TI) &&
-                cast<InvokeInst>(TI)->getUnwindDest() == BB) ||
-               isa<CatchSwitchInst>(TI)) {
-      removeUnwindEdge(TI->getParent());
-      Changed = true;
+    } else if (auto *II = dyn_cast<InvokeInst>(TI)) {
+      if (II->getUnwindDest() == BB) {
+        removeUnwindEdge(TI->getParent());
+        Changed = true;
+      }
+    } else if (auto *CSI = dyn_cast<CatchSwitchInst>(TI)) {
+      if (CSI->getUnwindDest() == BB) {
+        removeUnwindEdge(TI->getParent());
+        Changed = true;
+        continue;
+      }
+
+      for (CatchSwitchInst::handler_iterator I = CSI->handler_begin(),
+                                             E = CSI->handler_end();
+           I != E; ++I) {
+        if (*I == BB) {
+          CSI->removeHandler(I);
+          --I;
+          --E;
+          Changed = true;
+        }
+      }
+      if (CSI->getNumHandlers() == 0) {
+        BasicBlock *CatchSwitchBB = CSI->getParent();
+        if (CSI->hasUnwindDest()) {
+          // Redirect preds to the unwind dest
+          CatchSwitchBB->replaceAllUsesWith(CSI->getUnwindDest());
+        } else {
+          // Rewrite all preds to unwind to caller (or from invoke to call).
+          SmallVector<BasicBlock *, 8> EHPreds(predecessors(CatchSwitchBB));
+          for (BasicBlock *EHPred : EHPreds)
+            removeUnwindEdge(EHPred);
+        }
+        // The catchswitch is no longer reachable.
+        new UnreachableInst(CSI->getContext(), CSI);
+        CSI->eraseFromParent();
+        Changed = true;
+      }
     } else if (isa<CleanupReturnInst>(TI)) {
       new UnreachableInst(TI->getContext(), TI);
       TI->eraseFromParent();
       Changed = true;
     }
-    // TODO: We can remove a catchswitch if all it's catchpads end in
-    // unreachable.
   }
 
   // If this block is now dead, remove it.

@@ -97,7 +97,7 @@ private:
   // of memory operands required to be precise exceeds the maximum value of
   // NumMemRefs - currently 256 - we remove the operands entirely. Note also
   // that this is a non-owning reference to a shared copy on write buffer owned
-  // by the MachineFunction and created via MF.allocateMemRefsArray. 
+  // by the MachineFunction and created via MF.allocateMemRefsArray.
   mmo_iterator MemRefs;
 
   DebugLoc debugLoc;                    // Source line information.
@@ -354,7 +354,7 @@ public:
   mmo_iterator memoperands_end() const { return MemRefs + NumMemRefs; }
   /// Return true if we don't have any memory operands which described the the
   /// memory access done by this instruction.  If this is true, calling code
-  /// must be conservative.    
+  /// must be conservative.
   bool memoperands_empty() const { return NumMemRefs == 0; }
 
   iterator_range<mmo_iterator>  memoperands() {
@@ -774,7 +774,7 @@ public:
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
   bool isInlineAsm() const { return getOpcode() == TargetOpcode::INLINEASM; }
-  bool isMSInlineAsm() const { 
+  bool isMSInlineAsm() const {
     return getOpcode() == TargetOpcode::INLINEASM && getInlineAsmDialect();
   }
   bool isStackAligningInlineAsm() const;

@@ -256,3 +256,106 @@ if.then:
 if.end:
   ret void
 }
+
+define void @test14(i1 %cond) {
+; CHECK-LABEL: @test14
+  br i1 %cond, label %if.end, label %if.then
+
+; CHECK-NOT: and
+; CHECK: tbnz w0, #0
+
+if.then:
+  call void @t()
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @test15(i1 %cond) {
+; CHECK-LABEL: @test15
+  %cond1 = xor i1 %cond, -1
+  br i1 %cond1, label %if.then, label %if.end
+
+; CHECK-NOT: movn
+; CHECK: tbnz w0, #0
+
+if.then:
+  call void @t()
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @test16(i64 %in) {
+; CHECK-LABEL: @test16
+  %shl = shl i64 %in, 3
+  %and = and i64 %shl, 32
+  %cond = icmp eq i64 %and, 0
+  br i1 %cond, label %then, label %end
+
+; CHECK-NOT: lsl
+; CHECK: tbnz w0, #2
+
+then:
+  call void @t()
+  br label %end
+
+end:
+  ret void
+}
+
+define void @test17(i64 %in) {
+; CHECK-LABEL: @test17
+  %shr = ashr i64 %in, 3
+  %and = and i64 %shr, 1
+  %cond = icmp eq i64 %and, 0
+  br i1 %cond, label %then, label %end
+
+; CHECK-NOT: lsr
+; CHECK: tbnz w0, #3
+
+then:
+  call void @t()
+  br label %end
+
+end:
+  ret void
+}
+
+define void @test18(i32 %in) {
+; CHECK-LABEL: @test18
+  %shr = ashr i32 %in, 2
+  %cond = icmp sge i32 %shr, 0
+  br i1 %cond, label %then, label %end
+
+; CHECK-NOT: asr
+; CHECK: tbnz w0, #31
+
+then:
+  call void @t()
+  br label %end
+
+end:
+  ret void
+}
+
+define void @test19(i64 %in) {
+; CHECK-LABEL: @test19
+  %shl = lshr i64 %in, 3
+  %trunc = trunc i64 %shl to i32
+  %and = and i32 %trunc, 1
+  %cond = icmp eq i32 %and, 0
+  br i1 %cond, label %then, label %end
+
+; CHECK-NOT: ubfx
+; CHECK: tbnz w0, #3
+
+then:
+  call void @t()
+  br label %end
+
+end:
+  ret void
+}

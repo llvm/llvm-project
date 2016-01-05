@@ -63,14 +63,12 @@ FeatureBitset MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
 /// ToggleFeature - Toggle a feature and returns the re-computed feature
 /// bits. This version will also change all implied bits.
 FeatureBitset MCSubtargetInfo::ToggleFeature(StringRef FS) {
-  SubtargetFeatures Features;
-  FeatureBits = Features.ToggleFeature(FeatureBits, FS, ProcFeatures);
+  SubtargetFeatures::ToggleFeature(FeatureBits, FS, ProcFeatures);
   return FeatureBits;
 }
 
 FeatureBitset MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
-  SubtargetFeatures Features;
-  FeatureBits = Features.ApplyFeatureFlag(FeatureBits, FS, ProcFeatures);
+  SubtargetFeatures::ApplyFeatureFlag(FeatureBits, FS, ProcFeatures);
   return FeatureBits;
 }
 

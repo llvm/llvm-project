@@ -118,6 +118,11 @@ def FeatureFlatAddressSpace : SubtargetFeature<"flat-address-space",
         "true",
         "Support flat address space">;
 
+def FeatureXNACK : SubtargetFeature<"xnack",
+        "EnableXNACK",
+        "true",
+        "Enable XNACK support">;
+
 def FeatureVGPRSpilling : SubtargetFeature<"vgpr-spilling",
         "EnableVGPRSpilling",
         "true",

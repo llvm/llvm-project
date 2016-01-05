@@ -624,11 +624,24 @@ TEST_F(InstrProfTest, instr_prof_symtab_compression_test) {
       }
       FuncNameStrings += FuncNameStrings2;
 
-      // Now decompress
+      // Now decompress:
       InstrProfSymtab Symtab;
       Symtab.create(StringRef(FuncNameStrings));
 
-      // Now check
+      // Now do the checks:
+      // First sampling some data points:
+      StringRef R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames1[0]));
+      ASSERT_EQ(StringRef("func_0"), R);
+      R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames1[1]));
+      ASSERT_EQ(StringRef("fooooooooooooooo_0"), R);
+      R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames1[998]));
+      ASSERT_EQ(StringRef("func_499"), R);
+      R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames1[999]));
+      ASSERT_EQ(StringRef("fooooooooooooooo_499"), R);
+      R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames2[100]));
+      ASSERT_EQ(StringRef("BAR_50"), R);
+      R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames2[101]));
+      ASSERT_EQ(StringRef("BlahblahBlahblahBar_50"), R);
       for (int I = 0; I < 10 * 1024; I++) {
         std::string N[4];
         N[0] = FuncNames1[2 * I];

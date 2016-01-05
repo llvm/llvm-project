@@ -315,7 +315,7 @@ MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
     if (!TRI->regsOverlap(MOReg, Reg))
       continue;
 
-    bool Covered = TRI->isSuperRegisterEq(MOReg, Reg);
+    bool Covered = TRI->isSuperRegisterEq(Reg, MOReg);
     if (MO.readsReg()) {
       PRI.Read = true;
       if (Covered) {

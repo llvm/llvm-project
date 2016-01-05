@@ -417,13 +417,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     }
   }
 
-  if (VCCUsed || FlatUsed)
+  if (VCCUsed || FlatUsed || STM.isXNACKEnabled()) {
     MaxSGPR += 2;
 
-  if (FlatUsed) {
-    MaxSGPR += 2;
-    // 2 additional for VI+.
-    if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    if (FlatUsed)
+      MaxSGPR += 2;
+
+    if (STM.isXNACKEnabled())
       MaxSGPR += 2;
   }
 
@@ -619,6 +619,9 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
 
   if (MFI->hasDispatchPtr())
     header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
+
+  if (STM.isXNACKEnabled())
+    header.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;
 
   header.kernarg_segment_byte_size = MFI->ABIArgOffset;
   header.wavefront_sgpr_count = KernelInfo.NumSGPR;

@@ -1009,6 +1009,21 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
   if (!GuaranteedToExecute)
     return Changed;
 
+  // Figure out the loop exits and their insertion points, if this is the
+  // first promotion.
+  if (ExitBlocks.empty()) {
+    CurLoop->getUniqueExitBlocks(ExitBlocks);
+    InsertPts.clear();
+    InsertPts.reserve(ExitBlocks.size());
+    for (BasicBlock *ExitBlock : ExitBlocks)
+      InsertPts.push_back(&*ExitBlock->getFirstInsertionPt());
+  }
+
+  // Can't insert into a catchswitch.
+  for (BasicBlock *ExitBlock : ExitBlocks)
+    if (isa<CatchSwitchInst>(ExitBlock->getTerminator()))
+      return Changed;
+
   // Otherwise, this is safe to promote, lets do it!
   DEBUG(dbgs() << "LICM: Promoting value stored to in loop: " <<*SomePtr<<'\n');
   Changed = true;
@@ -1019,15 +1034,6 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
   // this code just arbitrarily picks a location from one, since any debug
   // location is better than none.
   DebugLoc DL = LoopUses[0]->getDebugLoc();
-
-  // Figure out the loop exits and their insertion points, if this is the
-  // first promotion.
-  if (ExitBlocks.empty()) {
-    CurLoop->getUniqueExitBlocks(ExitBlocks);
-    InsertPts.resize(ExitBlocks.size());
-    for (unsigned i = 0, e = ExitBlocks.size(); i != e; ++i)
-      InsertPts[i] = &*ExitBlocks[i]->getFirstInsertionPt();
-  }
 
   // We use the SSAUpdater interface to insert phi nodes as required.
   SmallVector<PHINode*, 16> NewPHIs;

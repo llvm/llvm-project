@@ -144,7 +144,7 @@ cast.end:                                         ; preds = %cast.notnull, %entr
 ; CHECK: br i1 false, label %cast.end, label %cast.notnull
 }
 
-declare noalias i8* @_Znwm(i64)
+declare nonnull noalias i8* @_Znwm(i64)
 
 %"struct.std::nothrow_t" = type { i8 }
 @_ZSt7nothrow = external global %"struct.std::nothrow_t"

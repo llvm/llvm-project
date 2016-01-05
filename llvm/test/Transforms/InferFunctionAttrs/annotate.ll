@@ -16,6 +16,12 @@ declare i32* @realloc(i32*, i32)
 declare i32 @strcpy(...)
 ; CHECK: declare i32 @strcpy(...)
 
+; operator new routines
+declare i8* @_Znwj(i64)
+; CHECK: declare noalias nonnull i8* @_Znwj(i64)
+declare i8* @_Znwm(i64)
+; CHECK: declare noalias nonnull i8* @_Znwm(i64)
+
 declare i32 @gettimeofday(i8*, i8*)
 ; CHECK-POSIX: declare i32 @gettimeofday(i8* nocapture, i8* nocapture) [[G0:#[0-9]+]]
 

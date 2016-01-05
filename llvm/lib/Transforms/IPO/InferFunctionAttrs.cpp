@@ -10,6 +10,7 @@
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -25,6 +26,7 @@ STATISTIC(NumNoUnwind, "Number of functions inferred as nounwind");
 STATISTIC(NumNoCapture, "Number of arguments inferred as nocapture");
 STATISTIC(NumReadOnlyArg, "Number of arguments inferred as readonly");
 STATISTIC(NumNoAlias, "Number of function returns inferred as noalias");
+STATISTIC(NumNonNull, "Number of function returns inferred as nonnull returns");
 
 static bool setDoesNotAccessMemory(Function &F) {
   if (F.doesNotAccessMemory())
@@ -74,6 +76,17 @@ static bool setDoesNotAlias(Function &F, unsigned n) {
   return true;
 }
 
+static bool setNonNull(Function &F, unsigned n) {
+  assert((n != AttributeSet::ReturnIndex ||
+          F.getReturnType()->isPointerTy()) &&
+         "nonnull applies only to pointers");
+  if (F.getAttributes().hasAttribute(n, Attribute::NonNull))
+    return false;
+  F.addAttribute(n, Attribute::NonNull);
+  ++NumNonNull;
+  return true;
+}
+
 /// Analyze the name and prototype of the given function and set any applicable
 /// attributes.
 ///
@@ -89,7 +102,6 @@ static bool inferPrototypeAttributes(Function &F,
     return false;
 
   bool Changed = false;
-
   switch (TheLibFunc) {
   case LibFunc::strlen:
     if (FTy->getNumParams() != 1 || !FTy->getParamType(0)->isPointerTy())
@@ -871,6 +883,21 @@ static bool inferPrototypeAttributes(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
+    return Changed;
+
+  case LibFunc::Znwj: // new(unsigned int)
+  case LibFunc::Znwm: // new(unsigned long)
+  case LibFunc::Znaj: // new[](unsigned int)
+  case LibFunc::Znam: // new[](unsigned long)
+  case LibFunc::msvc_new_int: // new(unsigned int)
+  case LibFunc::msvc_new_longlong: // new(unsigned long long)
+  case LibFunc::msvc_new_array_int: // new[](unsigned int)
+  case LibFunc::msvc_new_array_longlong: // new[](unsigned long long)
+    if (FTy->getNumParams() != 1)
+      return false;
+    // Operator new always returns a nonnull noalias pointer
+    Changed |= setNonNull(F, AttributeSet::ReturnIndex);
+    Changed |= setDoesNotAlias(F, AttributeSet::ReturnIndex);
     return Changed;
 
   default:

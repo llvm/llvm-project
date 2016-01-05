@@ -178,7 +178,7 @@ public:
     /// register.
     bool FullyDefined;
 
-    /// Reg or ont of its aliases is read. The register may only be read
+    /// Reg or one of its aliases is read. The register may only be read
     /// partially.
     bool Read;
     /// Reg or a super-register is read. The full register is read.

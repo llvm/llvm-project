@@ -1747,8 +1747,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Translate facts known about a pointer before relocating into
     // facts about the relocate value, while being careful to
     // preserve relocation semantics.
-    GCRelocateOperands Operands(II);
-    Value *DerivedPtr = Operands.getDerivedPtr();
+    Value *DerivedPtr = cast<GCRelocateInst>(II)->getDerivedPtr();
     auto *GCRelocateType = cast<PointerType>(II->getType());
 
     // Remove the relocation if unused, note that this check is required

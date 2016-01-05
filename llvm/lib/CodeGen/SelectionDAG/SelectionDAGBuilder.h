@@ -857,7 +857,7 @@ private:
 
   // These three are implemented in StatepointLowering.cpp
   void visitStatepoint(const CallInst &I);
-  void visitGCRelocate(const CallInst &I);
+  void visitGCRelocate(const GCRelocateInst &I);
   void visitGCResult(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {

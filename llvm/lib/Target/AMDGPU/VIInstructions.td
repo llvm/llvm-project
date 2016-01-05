@@ -101,3 +101,12 @@ def S_DCACHE_WB_VOL : SMEM_Inval <0x23,
 
 } // End SIAssemblerPredicate = DisableInst, SubtargetPredicate = isVI
 
+let Predicates = [isVI] in {
+
+// 1. Offset as 20bit DWORD immediate
+def : Pat <
+  (SIload_constant v4i32:$sbase, IMM20bit:$offset),
+  (S_BUFFER_LOAD_DWORD_IMM $sbase, (as_i32imm $offset))
+>;
+
+} // End Predicates = [isVI]
