@@ -252,6 +252,8 @@ def ProcKrait   : SubtargetFeature<"krait", "ARMProcFamily", "Krait",
 def ProcSwift   : SubtargetFeature<"swift", "ARMProcFamily", "Swift",
                                    "Swift ARM processors", []>;
 
+def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
+                                    "Samsung Exynos-M1 processors", []>;
 
 def ProcR4      : SubtargetFeature<"r4", "ARMProcFamily", "CortexR4",
                                     "Cortex-R4 ARM processors", []>;
@@ -649,6 +651,12 @@ def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
                                                          FeatureCrypto,
                                                          FeatureZCZeroing]>;
 
+def : ProcNoItin<"exynos-m1",                           [ARMv8a, ProcExynosM1,
+                                                         FeatureHWDiv,
+                                                         FeatureHWDivARM,
+                                                         FeatureT2XtPk,
+                                                         FeatureCrypto,
+                                                         FeatureCRC]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

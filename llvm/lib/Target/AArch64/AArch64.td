@@ -124,6 +124,14 @@ def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
                                    FeaturePerfMon,
                                    FeatureZCRegMove, FeatureZCZeroing]>;
 
+def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
+                                    "Samsung Exynos-M1 processors",
+                                    [FeatureFPARMv8,
+                                    FeatureNEON,
+                                    FeatureCrypto,
+                                    FeatureCRC,
+                                    FeaturePerfMon]>;
+
 def : ProcessorModel<"generic", NoSchedModel, [FeatureFPARMv8,
                                               FeatureNEON,
                                               FeatureCRC,
@@ -136,6 +144,8 @@ def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
 // FIXME: Cortex-A72 is currently modelled as an Cortex-A57.
 def : ProcessorModel<"cortex-a72", CortexA57Model, [ProcA57]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
+// FIXME: Exynos-M1 is currently modelled without a specific SchedModel.
+def : ProcessorModel<"exynos-m1", NoSchedModel, [ProcExynosM1]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

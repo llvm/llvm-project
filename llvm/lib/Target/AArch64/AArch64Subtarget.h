@@ -33,7 +33,14 @@ class Triple;
 
 class AArch64Subtarget : public AArch64GenSubtargetInfo {
 protected:
-  enum ARMProcFamilyEnum {Others, CortexA35, CortexA53, CortexA57, Cyclone};
+  enum ARMProcFamilyEnum {
+    Others,
+    CortexA35,
+    CortexA53,
+    CortexA57,
+    Cyclone,
+    ExynosM1
+  };
 
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
   ARMProcFamilyEnum ARMProcFamily;
@@ -143,6 +150,7 @@ public:
   bool isCyclone() const { return CPUString == "cyclone"; }
   bool isCortexA57() const { return CPUString == "cortex-a57"; }
   bool isCortexA53() const { return CPUString == "cortex-a53"; }
+  bool isExynosM1() const { return CPUString == "exynos-m1"; }
 
   bool useAA() const override { return isCortexA53(); }
 

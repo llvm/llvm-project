@@ -212,7 +212,7 @@ unsigned TargetSchedModel::computeOperandLatency(
       && !DefMI->getDesc().OpInfo[DefOperIdx].isOptionalDef()
       && SchedModel.isComplete()) {
     errs() << "DefIdx " << DefIdx << " exceeds machine model writes for "
-           << *DefMI;
+           << *DefMI << " (Try with MCSchedModel.CompleteModel set to false)";
     llvm_unreachable("incomplete machine model");
   }
 #endif
