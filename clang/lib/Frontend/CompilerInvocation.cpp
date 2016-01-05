@@ -1786,6 +1786,30 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.OpenMP = Args.hasArg(options::OPT_fopenmp);
   Opts.OpenMPUseTLS =
       Opts.OpenMP && !Args.hasArg(options::OPT_fnoopenmp_use_tls);
+  Opts.OpenMPIsDevice =
+      Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_device);
+
+  // Get the OpenMP target triples if any.
+  if (Arg *A = Args.getLastArg(options::OPT_omptargets_EQ)) {
+
+    for (unsigned i = 0; i < A->getNumValues(); ++i) {
+      llvm::Triple TT(A->getValue(i));
+
+      if (TT.getArch() == llvm::Triple::UnknownArch)
+        Diags.Report(clang::diag::err_drv_invalid_omp_target) << A->getValue(i);
+      else
+        Opts.OMPTargetTriples.push_back(TT);
+    }
+  }
+
+  // Get OpenMP host file path if any and report if a non existent file is
+  // found
+  if (Arg *A = Args.getLastArg(options::OPT_omp_host_ir_file_path)) {
+    Opts.OMPHostIRFile = A->getValue();
+    if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
+      Diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
+          << Opts.OMPHostIRFile;
+  }
 
   // Record whether the __DEPRECATED define was requested.
   Opts.Deprecated = Args.hasFlag(OPT_fdeprecated_macro,

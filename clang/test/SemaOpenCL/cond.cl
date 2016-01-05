@@ -128,5 +128,5 @@ int foo2(int);
 
 unsigned int ntest12(int2 C)
 {
-  return (unsigned int)(C ? foo1 : foo2); // expected-error {{taking address of function is not allowed}}
+  return (unsigned int)(C ? foo1 : foo2); // expected-error {{taking address of function is not allowed}} expected-error {{taking address of function is not allowed}}
 }
