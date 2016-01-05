@@ -2571,14 +2571,8 @@ void CodeGenFunction::EmitOMPTargetDirective(const OMPTargetDirective &S) {
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
   GenerateOpenMPCapturedVars(CS, CapturedVars);
 
-  // Emit target region as a standalone region.
-  auto &&CodeGen = [&CS](CodeGenFunction &CGF) {
-    CGF.EmitStmt(CS.getCapturedStmt());
-  };
-
-  // Obtain the target region outlined function.
-  llvm::Value *Fn =
-      CGM.getOpenMPRuntime().emitTargetOutlinedFunction(S, CodeGen);
+  llvm::Function *Fn = nullptr;
+  llvm::Constant *FnID = nullptr;
 
   // Check if we have any if clause associated with the directive.
   const Expr *IfCond = nullptr;
@@ -2593,7 +2587,34 @@ void CodeGenFunction::EmitOMPTargetDirective(const OMPTargetDirective &S) {
     Device = C->getDevice();
   }
 
-  CGM.getOpenMPRuntime().emitTargetCall(*this, S, Fn, IfCond, Device,
+  // Check if we have an if clause whose conditional always evaluates to false
+  // or if we do not have any targets specified. If so the target region is not
+  // an offload entry point.
+  bool IsOffloadEntry = true;
+  if (IfCond) {
+    bool Val;
+    if (ConstantFoldsToSimpleInteger(IfCond, Val) && !Val)
+      IsOffloadEntry = false;
+  }
+  if (CGM.getLangOpts().OMPTargetTriples.empty())
+    IsOffloadEntry = false;
+
+  assert(CurFuncDecl && "No parent declaration for target region!");
+  StringRef ParentName;
+  // In case we have Ctors/Dtors we use the complete type variant to produce
+  // the mangling of the device outlined kernel.
+  if (auto *D = dyn_cast<CXXConstructorDecl>(CurFuncDecl))
+    ParentName = CGM.getMangledName(GlobalDecl(D, Ctor_Complete));
+  else if (auto *D = dyn_cast<CXXDestructorDecl>(CurFuncDecl))
+    ParentName = CGM.getMangledName(GlobalDecl(D, Dtor_Complete));
+  else
+    ParentName =
+        CGM.getMangledName(GlobalDecl(cast<FunctionDecl>(CurFuncDecl)));
+
+  CGM.getOpenMPRuntime().emitTargetOutlinedFunction(S, ParentName, Fn, FnID,
+                                                    IsOffloadEntry);
+
+  CGM.getOpenMPRuntime().emitTargetCall(*this, S, Fn, FnID, IfCond, Device,
                                         CapturedVars);
 }
 

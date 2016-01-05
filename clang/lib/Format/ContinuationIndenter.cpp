@@ -38,6 +38,12 @@ static unsigned getLengthToMatchingParen(const FormatToken &Tok) {
   return End->TotalLength - Tok.TotalLength + 1;
 }
 
+static unsigned getLengthToNextOperator(const FormatToken &Tok) {
+  if (!Tok.NextOperator)
+    return 0;
+  return Tok.NextOperator->TotalLength - Tok.TotalLength;
+}
+
 // Returns \c true if \c Tok is the "." or "->" of a call and starts the next
 // segment of a builder type call.
 static bool startsSegmentOfBuilderTypeCall(const FormatToken &Tok) {
@@ -171,8 +177,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
 
   unsigned NewLineColumn = getNewLineColumn(State);
-  if (State.Column < NewLineColumn)
+  if (State.Column <= NewLineColumn)
     return false;
+
+  if (Current.isMemberAccess() &&
+      State.Column + getLengthToNextOperator(Current) > Style.ColumnLimit)
+    return true;
 
   if (Style.AlwaysBreakBeforeMultilineStrings &&
       (NewLineColumn == State.FirstIndent + Style.ContinuationIndentWidth ||
@@ -247,8 +257,10 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       Previous.is(tok::l_brace) && !Current.isOneOf(tok::r_brace, tok::comment))
     return true;
 
-  if (Current.is(tok::lessless) && Previous.is(tok::identifier) &&
-      Previous.TokenText == "endl")
+  if (Current.is(tok::lessless) &&
+      ((Previous.is(tok::identifier) && Previous.TokenText == "endl") ||
+       (Previous.Tok.isLiteral() && (Previous.TokenText.endswith("\\n\"") ||
+                                     Previous.TokenText == "\'\\n\'"))))
     return true;
 
   return false;
@@ -378,7 +390,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
                                TT_CtorInitializerColon)) &&
              ((Previous.getPrecedence() != prec::Assignment &&
                (Previous.isNot(tok::lessless) || Previous.OperatorIndex != 0 ||
-                !Previous.LastOperator)) ||
+                Previous.NextOperator)) ||
               Current.StartsBinaryExpression)) {
     // Always indent relative to the RHS of the expression unless this is a
     // simple assignment without binary expression on the RHS. Also indent
@@ -693,7 +705,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
         std::min(State.LowestLevelOnLine, Current.NestingLevel);
   if (Current.isMemberAccess())
     State.Stack.back().StartOfFunctionCall =
-        Current.LastOperator ? 0 : State.Column;
+        !Current.NextOperator ? 0 : State.Column;
   if (Current.is(TT_SelectorName)) {
     State.Stack.back().ObjCSelectorNameFound = true;
     if (Style.IndentWrappedFunctionNames) {

@@ -11,6 +11,9 @@ void bar()
   foo((void*)foo); // expected-error{{taking address of function is not allowed}}
   foo(&foo); // expected-error{{taking address of function is not allowed}}
 
+  // initializing an array with the address of functions is an error
+  void* vptrarr[2] = {foo, &foo}; // expected-error{{taking address of function is not allowed}} expected-error{{taking address of function is not allowed}}
+
   // just calling a function is correct
   foo(0);
 }

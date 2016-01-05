@@ -5316,7 +5316,8 @@ public:
   bool setCPU(const std::string &Name) override {
     bool CPUKnown = llvm::StringSwitch<bool>(Name)
                         .Case("generic", true)
-                        .Cases("cortex-a53", "cortex-a57", "cortex-a72", "cortex-a35", true)
+                        .Cases("cortex-a53", "cortex-a57", "cortex-a72",
+                               "cortex-a35", "exynos-m1", true)
                         .Case("cyclone", true)
                         .Default(false);
     return CPUKnown;

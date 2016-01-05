@@ -677,6 +677,15 @@ def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
 def fcuda_target_overloads : Flag<["-"], "fcuda-target-overloads">,
   HelpText<"Enable function overloads based on CUDA target attributes.">;
 
+//===----------------------------------------------------------------------===//
+// OpenMP Options
+//===----------------------------------------------------------------------===//
+
+def fopenmp_is_device : Flag<["-"], "fopenmp-is-device">,
+  HelpText<"Generate code only for an OpenMP target device.">;
+def omp_host_ir_file_path : Separate<["-"], "omp-host-ir-file-path">,
+  HelpText<"Path to the IR file produced by the frontend for the host.">;
+  
 } // let Flags = [CC1Option]
 
 
