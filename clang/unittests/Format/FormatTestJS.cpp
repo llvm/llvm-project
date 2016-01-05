@@ -310,6 +310,8 @@ TEST_F(FormatTestJS, ArrayLiterals) {
                "      ccccccccccccccccccccccccccc\n"
                "    ],\n"
                "    aaaa);");
+  verifyFormat("var aaaa = aaaaa ||  // wrap\n"
+               "    [];");
 
   verifyFormat("someFunction([], {a: a});");
 }
@@ -863,6 +865,12 @@ TEST_F(FormatTestJS, Modules) {
                "  // adsdasd\n"
                "  BAZ\n"
                "}");
+  verifyFormat("export default [\n"
+               "  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               "];");
+  verifyFormat("export default [];");
+  verifyFormat("export default () => {};");
 }
 
 TEST_F(FormatTestJS, TemplateStrings) {

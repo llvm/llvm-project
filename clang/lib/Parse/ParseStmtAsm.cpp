@@ -241,9 +241,8 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
     ConsumeToken(); // Consume the period.
     IdentifierInfo *Id = Tok.getIdentifierInfo();
     ConsumeToken(); // Consume the identifier.
-    unsigned OffsetUnused;
-    Result = Actions.LookupInlineAsmVarDeclField(
-        Result.get(), Id->getName(), OffsetUnused, Info, Tok.getLocation());
+    Result = Actions.LookupInlineAsmVarDeclField(Result.get(), Id->getName(),
+                                                 Info, Tok.getLocation());
   }
 
   // Figure out how many tokens we are into LineToks.

@@ -10917,12 +10917,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       // from the translation unit and reattach to the current context.
       if (D->getLexicalDeclContext() == Context.getTranslationUnitDecl()) {
         // Is the decl actually in the context?
-        for (const auto *DI : Context.getTranslationUnitDecl()->decls()) {
-          if (DI == D) {  
-            Context.getTranslationUnitDecl()->removeDecl(D);
-            break;
-          }
-        }
+        if (Context.getTranslationUnitDecl()->containsDecl(D))
+          Context.getTranslationUnitDecl()->removeDecl(D);
         // Either way, reassign the lexical decl context to our FunctionDecl.
         D->setLexicalDeclContext(CurContext);
       }
