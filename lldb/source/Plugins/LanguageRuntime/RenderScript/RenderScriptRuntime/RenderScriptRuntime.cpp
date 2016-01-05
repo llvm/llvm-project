@@ -2231,7 +2231,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Write allocation data to file
     num_bytes = static_cast<size_t>(*alloc->size.get());
     if (log)
-        log->Printf("RenderScriptRuntime::SaveAllocation - Writing 0x%" PRIx64 " bytes from %s", (uint64_t) num_bytes, buffer.get());
+        log->Printf("RenderScriptRuntime::SaveAllocation - Writing 0x%" PRIx64 " bytes from %p", (uint64_t) num_bytes, (void*) buffer.get());
 
     err = file.Write(buffer.get(), num_bytes);
     if (!err.Success())

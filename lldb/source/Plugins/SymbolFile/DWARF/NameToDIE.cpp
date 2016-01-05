@@ -69,7 +69,7 @@ NameToDIE::Dump (Stream *s)
     {
         const char *cstr = m_map.GetCStringAtIndex(i);
         const DIERef& die_ref = m_map.GetValueAtIndexUnchecked(i);
-        s->Printf("%s: {0x%8.8x/0x%8.8x} \"%s\"\n", cstr, die_ref.cu_offset, die_ref.die_offset, cstr);
+        s->Printf("%p: {0x%8.8x/0x%8.8x} \"%s\"\n", (const void*) cstr, die_ref.cu_offset, die_ref.die_offset, cstr);
     }
 }
 

@@ -320,7 +320,7 @@ void X86TargetInfo::writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
   // separate procedure linkage tables.
   if (Config->Shared) {
     const uint8_t V[] = {
-        0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx
+        0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
         0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp *8(%ebx)
         0x90, 0x90, 0x90, 0x90              // nop;nop;nop;nop
     };

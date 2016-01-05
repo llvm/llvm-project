@@ -973,7 +973,24 @@ NativeRegisterContextLinux_arm::DoWriteRegisterValue(uint32_t offset,
     if (error.Fail())
         return error;
 
-    m_gpr_arm[offset / sizeof(uint32_t)] = value.GetAsUInt32();
+    uint32_t reg_value = value.GetAsUInt32();
+    // As precaution for an undefined behavior encountered while setting PC we
+    // will clear thumb bit of new PC if we are already in thumb mode; that is
+    // CPSR thumb mode bit is set.
+    if (offset / sizeof(uint32_t) == gpr_pc_arm)
+    {
+        // Check if we are already in thumb mode and
+        // thumb bit of current PC is read out to be zero and
+        // thumb bit of next PC is read out to be one.
+        if ((m_gpr_arm[gpr_cpsr_arm] &  0x20) &&
+            !(m_gpr_arm[gpr_pc_arm] &  0x01) &&
+            (value.GetAsUInt32() & 0x01))
+        {
+            reg_value &= (~1ull);
+        }
+    }
+
+    m_gpr_arm[offset / sizeof(uint32_t)] = reg_value;
     return DoWriteGPR(m_gpr_arm, sizeof(m_gpr_arm));
 }
 

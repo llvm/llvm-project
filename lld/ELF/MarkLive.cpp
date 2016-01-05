@@ -16,7 +16,7 @@
 // by default. Starting with GC-root symbols or sections, markLive function
 // defined in this file visits all reachable sections to set their Live
 // bits. Writer will then ignore sections whose Live bits are off, so that
-// such sections are removed from output.
+// such sections are not included into output.
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,7 +37,7 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf2;
 
-// Calls Fn for each section that Sec refers to.
+// Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> *Sec,
                              std::function<void(InputSectionBase<ELFT> *)> Fn) {
@@ -104,7 +104,7 @@ template <class ELFT> void lld::elf2::markLive(SymbolTable<ELFT> *Symtab) {
     MarkSymbol(Symtab->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this
-  // file could override other ELF file's symbols at runtime.
+  // file can interrupt other ELF file's symbols at runtime.
   if (Config->Shared || Config->ExportDynamic) {
     for (const std::pair<StringRef, Symbol *> &P : Symtab->getSymbols()) {
       SymbolBody *B = P.second->Body;
