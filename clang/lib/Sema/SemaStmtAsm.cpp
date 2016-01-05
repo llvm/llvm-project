@@ -589,10 +589,8 @@ ExprResult Sema::LookupInlineAsmIdentifier(CXXScopeSpec &SS,
 
   QualType T = Result.get()->getType();
 
-  // For now, reject dependent types.
   if (T->isDependentType()) {
-    Diag(Id.getLocStart(), diag::err_asm_incomplete_type) << T;
-    return ExprError();
+    return Result;
   }
 
   // Any sort of function type is fine.
@@ -674,12 +672,23 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
 }
 
 ExprResult
-Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member, unsigned &Offset,
+Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member,
                                   llvm::InlineAsmIdentifierInfo &Info,
                                   SourceLocation AsmLoc) {
   Info.clear();
 
-  const RecordType *RT = E->getType()->getAs<RecordType>();
+  QualType T = E->getType();
+  if (T->isDependentType()) {
+    DeclarationNameInfo NameInfo;
+    NameInfo.setLoc(AsmLoc);
+    NameInfo.setName(&Context.Idents.get(Member));
+    return CXXDependentScopeMemberExpr::Create(
+        Context, E, T, /*IsArrow=*/false, AsmLoc, NestedNameSpecifierLoc(),
+        SourceLocation(),
+        /*FirstQualifierInScope=*/nullptr, NameInfo, /*TemplateArgs=*/nullptr);
+  }
+
+  const RecordType *RT = T->getAs<RecordType>();
   // FIXME: Diagnose this as field access into a scalar type.
   if (!RT)
     return ExprResult();
@@ -696,9 +705,6 @@ Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member, unsigned &Offset,
     FD = dyn_cast<IndirectFieldDecl>(FieldResult.getFoundDecl());
   if (!FD)
     return ExprResult();
-
-  Offset = (unsigned)Context.toCharUnitsFromBits(Context.getFieldOffset(FD))
-               .getQuantity();
 
   // Make an Expr to thread through OpDecl.
   ExprResult Result = BuildMemberReferenceExpr(

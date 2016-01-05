@@ -721,17 +721,7 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   if (!haveRegionCounts())
     return;
 
-  uint64_t MaxFunctionCount = PGOReader->getMaximumFunctionCount();
   uint64_t FunctionCount = getRegionCount(nullptr);
-  if (FunctionCount >= (uint64_t)(0.3 * (double)MaxFunctionCount))
-    // Turn on InlineHint attribute for hot functions.
-    // FIXME: 30% is from preliminary tuning on SPEC, it may not be optimal.
-    Fn->addFnAttr(llvm::Attribute::InlineHint);
-  else if (FunctionCount <= (uint64_t)(0.01 * (double)MaxFunctionCount))
-    // Turn on Cold attribute for cold functions.
-    // FIXME: 1% is from preliminary tuning on SPEC, it may not be optimal.
-    Fn->addFnAttr(llvm::Attribute::Cold);
-
   Fn->setEntryCount(FunctionCount);
 }
 

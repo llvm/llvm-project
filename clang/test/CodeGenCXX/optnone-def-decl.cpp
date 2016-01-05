@@ -90,5 +90,6 @@ int user_of_forceinline_optnone_function() {
 // CHECK: @_Z28forceinline_optnone_functionii({{.*}}) [[OPTNONE]]
 
 // CHECK: attributes [[OPTNONE]] = { noinline nounwind optnone {{.*}} }
-// CHECK: attributes [[NORMAL]] = { nounwind {{.*}} }
-
+// CHECK: attributes [[NORMAL]] =
+// CHECK-SAME-NOT: noinline
+// CHECK-SAME-NOT: optnone

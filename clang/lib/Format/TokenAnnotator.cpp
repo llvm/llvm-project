@@ -287,9 +287,11 @@ private:
         Left->Type = TT_JsComputedPropertyName;
       } else if (Style.Language == FormatStyle::LK_Proto ||
                  (Parent &&
-                  Parent->isOneOf(tok::at, tok::equal, tok::comma, tok::l_paren,
-                                  tok::l_square, tok::question, tok::colon,
-                                  tok::kw_return))) {
+                  Parent->isOneOf(TT_BinaryOperator, tok::at, tok::comma,
+                                  tok::l_paren, tok::l_square, tok::question,
+                                  tok::colon, tok::kw_return,
+                                  // Should only be relevant to JavaScript:
+                                  tok::kw_default))) {
         Left->Type = TT_ArrayInitializerLSquare;
       } else {
         BindingIncrease = 10;
@@ -1769,7 +1771,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     // which might otherwise be blown up onto many lines. Here, clang-format
     // won't produce "hanging" indents anyway as there is no other trailing
     // call.
-    return Right.LastOperator ? 150 : 40;
+    return Right.LastOperator ? 150 : 35;
   }
 
   if (Right.is(TT_TrailingAnnotation) &&
@@ -1998,6 +2000,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.isOneOf(Keywords.kw_let, Keywords.kw_var, TT_JsFatArrow,
                      Keywords.kw_in))
+      return true;
+    if (Left.is(tok::kw_default) && Left.Previous &&
+        Left.Previous->is(tok::kw_export))
       return true;
     if (Left.is(Keywords.kw_is) && Right.is(tok::l_brace))
       return true;
