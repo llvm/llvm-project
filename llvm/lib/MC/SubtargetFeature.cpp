@@ -160,10 +160,9 @@ void ClearImpliedBits(FeatureBitset &Bits,
   }
 }
 
-/// ToggleFeature - Toggle a feature and returns the newly updated feature
-/// bits.
-FeatureBitset
-SubtargetFeatures::ToggleFeature(FeatureBitset Bits, StringRef Feature,
+/// ToggleFeature - Toggle a feature and update the feature bits.
+void
+SubtargetFeatures::ToggleFeature(FeatureBitset &Bits, StringRef Feature,
                                  ArrayRef<SubtargetFeatureKV> FeatureTable) {
 
   // Find feature in table.
@@ -186,12 +185,9 @@ SubtargetFeatures::ToggleFeature(FeatureBitset Bits, StringRef Feature,
            << "' is not a recognized feature for this target"
            << " (ignoring feature)\n";
   }
-
-  return Bits;
 }
 
-FeatureBitset
-SubtargetFeatures::ApplyFeatureFlag(FeatureBitset Bits, StringRef Feature,
+void SubtargetFeatures::ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
                                     ArrayRef<SubtargetFeatureKV> FeatureTable) {
 
   assert(hasFlag(Feature));
@@ -203,7 +199,7 @@ SubtargetFeatures::ApplyFeatureFlag(FeatureBitset Bits, StringRef Feature,
   if (FeatureEntry) {
     // Enable/disable feature in bits
     if (isEnabled(Feature)) {
-      Bits |=  FeatureEntry->Value;
+      Bits |= FeatureEntry->Value;
 
       // For each feature that this implies, set it.
       SetImpliedBits(Bits, FeatureEntry, FeatureTable);
@@ -218,8 +214,6 @@ SubtargetFeatures::ApplyFeatureFlag(FeatureBitset Bits, StringRef Feature,
            << "' is not a recognized feature for this target"
            << " (ignoring feature)\n";
   }
-
-  return Bits;
 }
 
 
@@ -273,7 +267,7 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
     if (Feature == "+help")
       Help(CPUTable, FeatureTable);
 
-    Bits = ApplyFeatureFlag(Bits, Feature, FeatureTable);
+    ApplyFeatureFlag(Bits, Feature, FeatureTable);
   }
 
   return Bits;

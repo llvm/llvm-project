@@ -934,6 +934,17 @@ void CatchSwitchInst::addHandler(BasicBlock *Handler) {
   getOperandList()[OpNo] = Handler;
 }
 
+void CatchSwitchInst::removeHandler(handler_iterator HI) {
+  // Move all subsequent handlers up one.
+  Use *EndDst = op_end() - 1;
+  for (Use *CurDst = HI.getCurrent(); CurDst != EndDst; ++CurDst)
+    *CurDst = *(CurDst + 1);
+  // Null out the last handler use.
+  *EndDst = nullptr;
+
+  setNumHungOffUseOperands(getNumOperands() - 1);
+}
+
 BasicBlock *CatchSwitchInst::getSuccessorV(unsigned idx) const {
   return getSuccessor(idx);
 }

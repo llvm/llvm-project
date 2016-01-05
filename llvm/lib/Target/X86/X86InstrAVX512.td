@@ -2366,6 +2366,7 @@ def : Pat<(xor (xor VK1:$src1, VK1:$src2), (i1 1)),
 multiclass avx512_mask_unpck<string Suffix,RegisterClass KRC, ValueType VT,
                              RegisterClass KRCSrc, Predicate prd> {
   let Predicates = [prd] in {
+    let hasSideEffects = 0 in
     def rr : I<0x4b, MRMSrcReg, (outs KRC:$dst),
                (ins KRC:$src1, KRC:$src2),
                "kunpck"#Suffix#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,

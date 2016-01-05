@@ -26,7 +26,10 @@ Quick start
 We use here the command-line, non-interactive CMake interface.
 
 #. `Download <http://www.cmake.org/cmake/resources/software.html>`_ and install
-   CMake. Version 2.8.8 is the minimum required.
+   CMake. Version 2.8.8 is the minimum required, but if you're using the Ninja
+   backend, CMake v3.2 or newer is required to `get interactive output
+   <http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20141117/244797.html>`_
+   when running :doc:`Lit <CommandGuide/lit>`.
 
 #. Open a shell. Your development tools must be reachable from this shell
    through the PATH environment variable.

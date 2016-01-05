@@ -225,8 +225,14 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   if (!OptSize && TLI && TLI->isSlowDivBypassed()) {
     const DenseMap<unsigned int, unsigned int> &BypassWidths =
        TLI->getBypassSlowDivWidths();
-    for (Function::iterator I = F.begin(); I != F.end(); I++)
-      EverMadeChange |= bypassSlowDivision(F, I, BypassWidths);
+    BasicBlock* BB = &*F.begin();
+    while (BB != nullptr) {
+      // bypassSlowDivision may create new BBs, but we don't want to reapply the
+      // optimization to those blocks.
+      BasicBlock* Next = BB->getNextNode();
+      EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
+      BB = Next;
+    }
   }
 
   // Eliminate blocks that contain only PHI nodes and an
@@ -526,19 +532,17 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
 // Computes a map of base pointer relocation instructions to corresponding
 // derived pointer relocation instructions given a vector of all relocate calls
 static void computeBaseDerivedRelocateMap(
-    const SmallVectorImpl<User *> &AllRelocateCalls,
-    DenseMap<IntrinsicInst *, SmallVector<IntrinsicInst *, 2>> &
-        RelocateInstMap) {
+    const SmallVectorImpl<GCRelocateInst *> &AllRelocateCalls,
+    DenseMap<GCRelocateInst *, SmallVector<GCRelocateInst *, 2>>
+        &RelocateInstMap) {
   // Collect information in two maps: one primarily for locating the base object
   // while filling the second map; the second map is the final structure holding
   // a mapping between Base and corresponding Derived relocate calls
-  DenseMap<std::pair<unsigned, unsigned>, IntrinsicInst *> RelocateIdxMap;
-  for (auto &U : AllRelocateCalls) {
-    GCRelocateOperands ThisRelocate(U);
-    IntrinsicInst *I = cast<IntrinsicInst>(U);
-    auto K = std::make_pair(ThisRelocate.getBasePtrIndex(),
-                            ThisRelocate.getDerivedPtrIndex());
-    RelocateIdxMap.insert(std::make_pair(K, I));
+  DenseMap<std::pair<unsigned, unsigned>, GCRelocateInst *> RelocateIdxMap;
+  for (auto *ThisRelocate : AllRelocateCalls) {
+    auto K = std::make_pair(ThisRelocate->getBasePtrIndex(),
+                            ThisRelocate->getDerivedPtrIndex());
+    RelocateIdxMap.insert(std::make_pair(K, ThisRelocate));
   }
   for (auto &Item : RelocateIdxMap) {
     std::pair<unsigned, unsigned> Key = Item.first;
@@ -546,7 +550,7 @@ static void computeBaseDerivedRelocateMap(
       // Base relocation: nothing to insert
       continue;
 
-    IntrinsicInst *I = Item.second;
+    GCRelocateInst *I = Item.second;
     auto BaseKey = std::make_pair(Key.first, Key.first);
 
     // We're iterating over RelocateIdxMap so we cannot modify it.
@@ -579,16 +583,13 @@ static bool getGEPSmallConstantIntOffsetV(GetElementPtrInst *GEP,
 // Takes a RelocatedBase (base pointer relocation instruction) and Targets to
 // replace, computes a replacement, and affects it.
 static bool
-simplifyRelocatesOffABase(IntrinsicInst *RelocatedBase,
-                          const SmallVectorImpl<IntrinsicInst *> &Targets) {
+simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
+                          const SmallVectorImpl<GCRelocateInst *> &Targets) {
   bool MadeChange = false;
-  for (auto &ToReplace : Targets) {
-    GCRelocateOperands MasterRelocate(RelocatedBase);
-    GCRelocateOperands ThisRelocate(ToReplace);
-
-    assert(ThisRelocate.getBasePtrIndex() == MasterRelocate.getBasePtrIndex() &&
+  for (GCRelocateInst *ToReplace : Targets) {
+    assert(ToReplace->getBasePtrIndex() == RelocatedBase->getBasePtrIndex() &&
            "Not relocating a derived object of the original base object");
-    if (ThisRelocate.getBasePtrIndex() == ThisRelocate.getDerivedPtrIndex()) {
+    if (ToReplace->getBasePtrIndex() == ToReplace->getDerivedPtrIndex()) {
       // A duplicate relocate call. TODO: coalesce duplicates.
       continue;
     }
@@ -601,8 +602,8 @@ simplifyRelocatesOffABase(IntrinsicInst *RelocatedBase,
       continue;
     }
 
-    Value *Base = ThisRelocate.getBasePtr();
-    auto Derived = dyn_cast<GetElementPtrInst>(ThisRelocate.getDerivedPtr());
+    Value *Base = ToReplace->getBasePtr();
+    auto Derived = dyn_cast<GetElementPtrInst>(ToReplace->getDerivedPtr());
     if (!Derived || Derived->getPointerOperand() != Base)
       continue;
 
@@ -680,12 +681,12 @@ simplifyRelocatesOffABase(IntrinsicInst *RelocatedBase,
 // %val = load %ptr'
 bool CodeGenPrepare::simplifyOffsetableRelocate(Instruction &I) {
   bool MadeChange = false;
-  SmallVector<User *, 2> AllRelocateCalls;
+  SmallVector<GCRelocateInst *, 2> AllRelocateCalls;
 
   for (auto *U : I.users())
-    if (isGCRelocate(dyn_cast<Instruction>(U)))
+    if (GCRelocateInst *Relocate = dyn_cast<GCRelocateInst>(U))
       // Collect all the relocate calls associated with a statepoint
-      AllRelocateCalls.push_back(U);
+      AllRelocateCalls.push_back(Relocate);
 
   // We need atleast one base pointer relocation + one derived pointer
   // relocation to mangle
@@ -694,7 +695,7 @@ bool CodeGenPrepare::simplifyOffsetableRelocate(Instruction &I) {
 
   // RelocateInstMap is a mapping from the base relocate instruction to the
   // corresponding derived relocate instructions
-  DenseMap<IntrinsicInst *, SmallVector<IntrinsicInst *, 2>> RelocateInstMap;
+  DenseMap<GCRelocateInst *, SmallVector<GCRelocateInst *, 2>> RelocateInstMap;
   computeBaseDerivedRelocateMap(AllRelocateCalls, RelocateInstMap);
   if (RelocateInstMap.empty())
     return false;

@@ -134,6 +134,34 @@ def SIconstdata_ptr : SDNode<
                                                      SDTCisVT<0, i64>]>
 >;
 
+//===----------------------------------------------------------------------===//
+// PatFrags for FLAT instructions
+//===----------------------------------------------------------------------===//
+
+class flat_ld <SDPatternOperator ld> : PatFrag<(ops node:$ptr),
+                                               (ld node:$ptr), [{
+  return isFlatLoad(dyn_cast<LoadSDNode>(N)) ||
+         isGlobalLoad(dyn_cast<LoadSDNode>(N)) ||
+         isConstantLoad(cast<LoadSDNode>(N), -1);
+}]>;
+
+def flat_load : flat_ld <load>;
+def flat_az_extloadi8 : flat_ld <az_extloadi8>;
+def flat_sextloadi8 : flat_ld <sextloadi8>;
+def flat_az_extloadi16 : flat_ld <az_extloadi16>;
+def flat_sextloadi16 : flat_ld <sextloadi16>;
+
+class flat_st <SDPatternOperator st> : PatFrag<(ops node:$val, node:$ptr),
+                                               (st node:$val, node:$ptr), [{
+  return isFlatStore(dyn_cast<StoreSDNode>(N)) ||
+         isGlobalStore(dyn_cast<StoreSDNode>(N));
+}]>;
+
+def flat_store: flat_st <store>;
+def flat_truncstorei8 : flat_st <truncstorei8>;
+def flat_truncstorei16 : flat_st <truncstorei16>;
+
+
 def mubuf_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
 	return isGlobalLoad(cast<LoadSDNode>(N)) ||
          isConstantLoad(cast<LoadSDNode>(N), -1);

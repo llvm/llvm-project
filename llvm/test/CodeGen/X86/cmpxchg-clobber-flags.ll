@@ -1,11 +1,14 @@
-; RUN: llc -verify-machineinstrs -mtriple=i386-linux-gnu %s -o - | FileCheck %s -check-prefix=i386
-; RUN: llc -verify-machineinstrs -mtriple=i386-linux-gnu -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=i386f
+; RUN: llc -mtriple=i386-linux-gnu %s -o - | FileCheck %s -check-prefix=i386
+; RUN: llc -mtriple=i386-linux-gnu -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=i386f
 
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s -check-prefix=x8664
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=x8664
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s -check-prefix=x8664-sahf
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -mattr=+sahf -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=x8664-sahf
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -mcpu=corei7 %s -o - | FileCheck %s -check-prefix=x8664-sahf
+; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s -check-prefix=x8664
+; RUN: llc -mtriple=x86_64-linux-gnu -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=x8664
+; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s -check-prefix=x8664-sahf
+; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sahf -pre-RA-sched=fast %s -o - | FileCheck %s -check-prefix=x8664-sahf
+; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=corei7 %s -o - | FileCheck %s -check-prefix=x8664-sahf
+
+; TODO: Reenable verify-machineinstr once the if (!AXDead) // FIXME
+; in X86InstrInfo::copyPhysReg() is resolved.
 
 declare i32 @foo()
 declare i32 @bar(i64)
@@ -58,9 +61,11 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) {
 ; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: movq %rax, %rdi
 ; x8664-sahf-NEXT: callq bar
+; x8664-sahf-NEXT: pushq %rax
 ; x8664-sahf-NEXT: movq [[FLAGS]], %rax
 ; x8664-sahf-NEXT: addb $127, %al
 ; x8664-sahf-NEXT: sahf
+; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: jne
 
   %cx = cmpxchg i64* %foo, i64 %bar, i64 %baz seq_cst seq_cst
@@ -161,9 +166,11 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) {
 
 ; x8664-sahf-LABEL: test_feed_cmov:
 ; x8664-sahf: cmpxchgl
-; x8664-sahf: seto %al
+; x8664-sahf: pushq %rax
+; x8664-sahf-NEXT: seto %al
 ; x8664-sahf-NEXT: lahf
 ; x8664-sahf-NEXT: movq %rax, [[FLAGS:%.*]]
+; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: callq foo
 ; x8664-sahf-NEXT: pushq %rax
 ; x8664-sahf-NEXT: movq [[FLAGS]], %rax

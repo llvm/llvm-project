@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -167,34 +168,37 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName) {
 int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
                               bool doCompression, std::string &Result) {
   uint8_t Header[16], *P = Header;
-  std::string UncompressedNameStrings;
+  std::string UncompressedNameStrings =
+      join(NameStrs.begin(), NameStrs.end(), StringRef(" "));
 
-  for (auto NameStr : NameStrs) {
-    UncompressedNameStrings += NameStr;
-    UncompressedNameStrings.append(" ");
-  }
   unsigned EncLen = encodeULEB128(UncompressedNameStrings.length(), P);
   P += EncLen;
-  if (!doCompression) {
-    EncLen = encodeULEB128(0, P);
+
+  auto WriteStringToResult = [&](size_t CompressedLen,
+                                 const std::string &InputStr) {
+    EncLen = encodeULEB128(CompressedLen, P);
     P += EncLen;
-    Result.append(reinterpret_cast<char *>(&Header[0]), P - &Header[0]);
-    Result += UncompressedNameStrings;
+    char *HeaderStr = reinterpret_cast<char *>(&Header[0]);
+    unsigned HeaderLen = P - &Header[0];
+    Result.append(HeaderStr, HeaderLen);
+    Result += InputStr;
     return 0;
-  }
+  };
+
+  if (!doCompression)
+    return WriteStringToResult(0, UncompressedNameStrings);
+
   SmallVector<char, 128> CompressedNameStrings;
   zlib::Status Success =
       zlib::compress(StringRef(UncompressedNameStrings), CompressedNameStrings,
                      zlib::BestSizeCompression);
-  assert(Success == zlib::StatusOK);
+
   if (Success != zlib::StatusOK)
     return 1;
-  EncLen = encodeULEB128(CompressedNameStrings.size(), P);
-  P += EncLen;
-  Result.append(reinterpret_cast<char *>(&Header[0]), P - &Header[0]);
-  Result +=
-      std::string(CompressedNameStrings.data(), CompressedNameStrings.size());
-  return 0;
+
+  return WriteStringToResult(
+      CompressedNameStrings.size(),
+      std::string(CompressedNameStrings.data(), CompressedNameStrings.size()));
 }
 
 StringRef getPGOFuncNameInitializer(GlobalVariable *NameVar) {
@@ -241,20 +245,10 @@ int readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
       P += UncompressedSize;
     }
     // Now parse the name strings.
-    size_t NameStart = 0;
-    bool isLast = false;
-    do {
-      size_t NameStop = NameStrings.find(' ', NameStart);
-      if (NameStop == StringRef::npos)
-        return 1;
-      if (NameStop == NameStrings.size() - 1)
-        isLast = true;
-      StringRef Name = NameStrings.substr(NameStart, NameStop - NameStart);
+    SmallVector<StringRef, 0> Names;
+    NameStrings.split(Names, ' ');
+    for (StringRef &Name : Names)
       Symtab.addFuncName(Name);
-      if (isLast)
-        break;
-      NameStart = NameStop + 1;
-    } while (true);
 
     while (P < EndP && *P == 0)
       P++;

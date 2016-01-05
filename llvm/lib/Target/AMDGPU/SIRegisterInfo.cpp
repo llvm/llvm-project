@@ -37,13 +37,17 @@ unsigned SIRegisterInfo::reservedPrivateSegmentBufferReg(
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   if (ST.hasSGPRInitBug()) {
     unsigned BaseIdx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4 - 4;
+    if (ST.isXNACKEnabled())
+      BaseIdx -= 4;
+
     unsigned BaseReg(AMDGPU::SGPR_32RegClass.getRegister(BaseIdx));
     return getMatchingSuperReg(BaseReg, AMDGPU::sub0, &AMDGPU::SReg_128RegClass);
   }
 
   if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    // 98/99 need to be reserved for flat_scr, and 100/101 for vcc. This is the
-    // next sgpr128 down.
+    // 98/99 need to be reserved for flat_scr or 96/97 for flat_scr and
+    // 98/99 for xnack_mask, and 100/101 for vcc. This is the next sgpr128 down
+    // either way.
     return AMDGPU::SGPR92_SGPR93_SGPR94_SGPR95;
   }
 
@@ -54,13 +58,25 @@ unsigned SIRegisterInfo::reservedPrivateSegmentWaveByteOffsetReg(
   const MachineFunction &MF) const {
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   if (ST.hasSGPRInitBug()) {
-    unsigned Idx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4 - 5;
+    unsigned Idx;
+
+    if (!ST.isXNACKEnabled())
+      Idx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4 - 5;
+    else
+      Idx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 6 - 1;
+
     return AMDGPU::SGPR_32RegClass.getRegister(Idx);
   }
 
   if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    // Next register before reservations for flat_scr and vcc.
-    return AMDGPU::SGPR97;
+    if (!ST.isXNACKEnabled()) {
+      // Next register before reservations for flat_scr and vcc.
+      return AMDGPU::SGPR97;
+    } else {
+      // Next register before reservations for flat_scr, xnack_mask, vcc,
+      // and scratch resource.
+      return AMDGPU::SGPR91;
+    }
   }
 
   return AMDGPU::SGPR95;
@@ -86,6 +102,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     // for VCC/FLAT_SCR.
     reserveRegisterTuples(Reserved, AMDGPU::SGPR98_SGPR99);
     reserveRegisterTuples(Reserved, AMDGPU::SGPR100_SGPR101);
+
+    if (ST.isXNACKEnabled())
+      reserveRegisterTuples(Reserved, AMDGPU::SGPR96_SGPR97);
   }
 
   // Tonga and Iceland can only allocate a fixed number of SGPRs due
@@ -93,8 +112,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (ST.hasSGPRInitBug()) {
     unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
     // Reserve some SGPRs for FLAT_SCRATCH and VCC (4 SGPRs).
-    // Assume XNACK_MASK is unused.
     unsigned Limit = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4;
+
+    if (ST.isXNACKEnabled())
+      Limit -= 2;
 
     for (unsigned i = Limit; i < NumSGPRs; ++i) {
       unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
@@ -282,11 +303,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         struct SIMachineFunctionInfo::SpilledReg Spill =
             MFI->getSpilledReg(MF, Index, i);
 
-        if (Spill.VGPR == AMDGPU::NoRegister) {
-           LLVMContext &Ctx = MF->getFunction()->getContext();
-           Ctx.emitError("Ran out of VGPRs for spilling SGPR");
-        }
-
         BuildMI(*MBB, MI, DL,
                 TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
                 Spill.VGPR)
@@ -314,11 +330,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                            &AMDGPU::SGPR_32RegClass, i);
         struct SIMachineFunctionInfo::SpilledReg Spill =
             MFI->getSpilledReg(MF, Index, i);
-
-        if (Spill.VGPR == AMDGPU::NoRegister) {
-           LLVMContext &Ctx = MF->getFunction()->getContext();
-           Ctx.emitError("Ran out of VGPRs for spilling SGPR");
-        }
 
         BuildMI(*MBB, MI, DL,
                 TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),

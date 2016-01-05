@@ -1,4 +1,4 @@
-//===-- MObjectFileInfo.cpp - Object File Information ---------------------===//
+//===-- MCObjectFileInfo.cpp - Object File Information --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

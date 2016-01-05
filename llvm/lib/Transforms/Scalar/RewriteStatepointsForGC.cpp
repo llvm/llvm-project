@@ -428,29 +428,14 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
     // We should have never reached here if this argument isn't an gc value
     return BaseDefiningValueResult(I, true);
 
-  if (isa<GlobalVariable>(I))
-    // base case
+  if (isa<Constant>(I))
+    // We assume that objects with a constant base (e.g. a global) can't move
+    // and don't need to be reported to the collector because they are always
+    // live.  All constants have constant bases.  Besides global references, all
+    // kinds of constants (e.g. undef, constant expressions, null pointers) can
+    // be introduced by the inliner or the optimizer, especially on dynamically
+    // dead paths.  See e.g. test4 in constants.ll.
     return BaseDefiningValueResult(I, true);
-
-  // inlining could possibly introduce phi node that contains
-  // undef if callee has multiple returns
-  if (isa<UndefValue>(I))
-    // utterly meaningless, but useful for dealing with
-    // partially optimized code.
-    return BaseDefiningValueResult(I, true);
-
-  // Due to inheritance, this must be _after_ the global variable and undef
-  // checks
-  if (isa<Constant>(I)) {
-    assert(!isa<GlobalVariable>(I) && !isa<UndefValue>(I) &&
-           "order of checks wrong!");
-    // Note: Even for frontends which don't have constant references, we can
-    // see constants appearing after optimizations.  A simple example is
-    // specialization of an address computation on null feeding into a merge
-    // point where the actual use of the now-constant input is protected by
-    // another null check.  (e.g. test4 in constants.ll)
-    return BaseDefiningValueResult(I, true);
-  }
 
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Def = CI->stripPointerCasts();
@@ -1642,33 +1627,24 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
                        DenseSet<Value *> &VisitedLiveValues) {
 
   for (User *U : GCRelocs) {
-    if (!isa<IntrinsicInst>(U))
+    GCRelocateInst *Relocate = dyn_cast<GCRelocateInst>(U);
+    if (!Relocate)
       continue;
 
-    IntrinsicInst *RelocatedValue = cast<IntrinsicInst>(U);
-
-    // We only care about relocates
-    if (RelocatedValue->getIntrinsicID() !=
-        Intrinsic::experimental_gc_relocate) {
-      continue;
-    }
-
-    GCRelocateOperands RelocateOperands(RelocatedValue);
-    Value *OriginalValue =
-        const_cast<Value *>(RelocateOperands.getDerivedPtr());
+    Value *OriginalValue = const_cast<Value *>(Relocate->getDerivedPtr());
     assert(AllocaMap.count(OriginalValue));
     Value *Alloca = AllocaMap[OriginalValue];
 
     // Emit store into the related alloca
     // All gc_relocates are i8 addrspace(1)* typed, and it must be bitcasted to
     // the correct type according to alloca.
-    assert(RelocatedValue->getNextNode() &&
+    assert(Relocate->getNextNode() &&
            "Should always have one since it's not a terminator");
-    IRBuilder<> Builder(RelocatedValue->getNextNode());
+    IRBuilder<> Builder(Relocate->getNextNode());
     Value *CastedRelocatedValue =
-      Builder.CreateBitCast(RelocatedValue,
+      Builder.CreateBitCast(Relocate,
                             cast<AllocaInst>(Alloca)->getAllocatedType(),
-                            suffixed_name_or(RelocatedValue, ".casted", ""));
+                            suffixed_name_or(Relocate, ".casted", ""));
 
     StoreInst *Store = new StoreInst(CastedRelocatedValue, Alloca);
     Store->insertAfter(cast<Instruction>(CastedRelocatedValue));

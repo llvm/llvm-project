@@ -1305,8 +1305,9 @@ static bool markAliveBlocks(Function &F,
       }
     }
 
-    // Turn invokes that call 'nounwind' functions into ordinary calls.
-    if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator())) {
+    TerminatorInst *Terminator = BB->getTerminator();
+    if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
+      // Turn invokes that call 'nounwind' functions into ordinary calls.
       Value *Callee = II->getCalledValue();
       if (isa<ConstantPointerNull>(Callee) || isa<UndefValue>(Callee)) {
         changeToUnreachable(II, true);
@@ -1320,6 +1321,44 @@ static bool markAliveBlocks(Function &F,
         } else
           changeToCall(II);
         Changed = true;
+      }
+    } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
+      // Remove catchpads which cannot be reached.
+      struct CatchPadDenseMapInfo {
+        static CatchPadInst *getEmptyKey() {
+          return DenseMapInfo<CatchPadInst *>::getEmptyKey();
+        }
+        static CatchPadInst *getTombstoneKey() {
+          return DenseMapInfo<CatchPadInst *>::getTombstoneKey();
+        }
+        static unsigned getHashValue(CatchPadInst *CatchPad) {
+          return static_cast<unsigned>(hash_combine_range(
+              CatchPad->value_op_begin(), CatchPad->value_op_end()));
+        }
+        static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
+          if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
+              RHS == getEmptyKey() || RHS == getTombstoneKey())
+            return LHS == RHS;
+          return LHS->isIdenticalTo(RHS);
+        }
+      };
+
+      // Set of unique CatchPads.
+      SmallDenseMap<CatchPadInst *, detail::DenseSetEmpty, 4,
+                    CatchPadDenseMapInfo, detail::DenseSetPair<CatchPadInst *>>
+          HandlerSet;
+      detail::DenseSetEmpty Empty;
+      for (CatchSwitchInst::handler_iterator I = CatchSwitch->handler_begin(),
+                                             E = CatchSwitch->handler_end();
+           I != E; ++I) {
+        BasicBlock *HandlerBB = *I;
+        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHI());
+        if (!HandlerSet.insert({CatchPad, Empty}).second) {
+          CatchSwitch->removeHandler(I);
+          --I;
+          --E;
+          Changed = true;
+        }
       }
     }
 

@@ -6,7 +6,7 @@
 
 ; CHECK:     define
 ; CHECK-NOT: undef
-; CHECK:     %factor = mul i32 %tmp3.neg, 2
+; CHECK:     %factor = mul i32 %tmp3, -2
 ; CHECK-NOT: undef
 ; CHECK:     }
 

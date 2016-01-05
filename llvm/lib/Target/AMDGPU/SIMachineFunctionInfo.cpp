@@ -156,6 +156,17 @@ SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(
 
   if (!LaneVGPRs.count(LaneVGPRIdx)) {
     unsigned LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass);
+
+    if (LaneVGPR == AMDGPU::NoRegister) {
+      LLVMContext &Ctx = MF->getFunction()->getContext();
+      Ctx.emitError("Ran out of VGPRs for spilling SGPR");
+
+      // When compiling from inside Mesa, the compilation continues.
+      // Select an arbitrary register to avoid triggering assertions
+      // during subsequent passes.
+      LaneVGPR = AMDGPU::VGPR0;
+    }
+
     LaneVGPRs[LaneVGPRIdx] = LaneVGPR;
 
     // Add this register as live-in to all blocks to avoid machine verifer

@@ -40,20 +40,7 @@ bool llvm::isStatepoint(const Value &inst) {
 }
 
 bool llvm::isGCRelocate(const ImmutableCallSite &CS) {
-  if (!CS.getInstruction()) {
-    // This is not a call site
-    return false;
-  }
-
-  return isGCRelocate(CS.getInstruction());
-}
-bool llvm::isGCRelocate(const Value *inst) {
-  if (const CallInst *call = dyn_cast<CallInst>(inst)) {
-    if (const Function *F = call->getCalledFunction()) {
-      return F->getIntrinsicID() == Intrinsic::experimental_gc_relocate;
-    }
-  }
-  return false;
+  return CS.getInstruction() && isa<GCRelocateInst>(CS.getInstruction());
 }
 
 bool llvm::isGCResult(const ImmutableCallSite &CS) {

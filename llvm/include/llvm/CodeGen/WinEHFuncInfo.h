@@ -83,7 +83,9 @@ enum class ClrHandlerType { Catch, Finally, Fault, Filter };
 struct ClrEHUnwindMapEntry {
   MBBOrBasicBlock Handler;
   uint32_t TypeToken;
-  int Parent;
+  int HandlerParentState; ///< Outer handler enclosing this entry's handler
+  int TryParentState; ///< Outer try region enclosing this entry's try region,
+                      ///< treating later catches on same try as "outer"
   ClrHandlerType HandlerType;
 };
 

@@ -1673,14 +1673,14 @@ void Verifier::VerifyStatepoint(ImmutableCallSite CS) {
     const CallInst *Call = dyn_cast<const CallInst>(U);
     Assert(Call, "illegal use of statepoint token", &CI, U);
     if (!Call) continue;
-    Assert(isGCRelocate(Call) || isGCResult(Call),
+    Assert(isa<GCRelocateInst>(Call) || isGCResult(Call),
            "gc.result or gc.relocate are the only value uses"
            "of a gc.statepoint",
            &CI, U);
     if (isGCResult(Call)) {
       Assert(Call->getArgOperand(0) == &CI,
              "gc.result connected to wrong gc.statepoint", &CI, Call);
-    } else if (isGCRelocate(Call)) {
+    } else if (isa<GCRelocateInst>(Call)) {
       Assert(Call->getArgOperand(0) == &CI,
              "gc.relocate connected to wrong gc.statepoint", &CI, Call);
     }
@@ -3708,8 +3708,8 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
 
     // Verify rest of the relocate arguments
 
-    GCRelocateOperands Ops(CS);
-    ImmutableCallSite StatepointCS(Ops.getStatepoint());
+    ImmutableCallSite StatepointCS(
+        cast<GCRelocateInst>(*CS.getInstruction()).getStatepoint());
 
     // Both the base and derived must be piped through the safepoint
     Value* Base = CS.getArgOperand(1);
@@ -3764,14 +3764,14 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
     // Relocated value must be a pointer type, but gc_relocate does not need to return the
     // same pointer type as the relocated pointer. It can be casted to the correct type later
     // if it's desired. However, they must have the same address space.
-    GCRelocateOperands Operands(CS);
-    Assert(Operands.getDerivedPtr()->getType()->isPointerTy(),
+    GCRelocateInst &Relocate = cast<GCRelocateInst>(*CS.getInstruction());
+    Assert(Relocate.getDerivedPtr()->getType()->isPointerTy(),
            "gc.relocate: relocated value must be a gc pointer", CS);
 
     // gc_relocate return type must be a pointer type, and is verified earlier in
     // VerifyIntrinsicType().
     Assert(cast<PointerType>(CS.getType())->getAddressSpace() ==
-           cast<PointerType>(Operands.getDerivedPtr()->getType())->getAddressSpace(),
+           cast<PointerType>(Relocate.getDerivedPtr()->getType())->getAddressSpace(),
            "gc.relocate: relocating a pointer shouldn't change its address space", CS);
     break;
   }

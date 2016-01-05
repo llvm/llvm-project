@@ -1,5 +1,8 @@
-; RUN: llc -verify-machineinstrs -mtriple=i386-linux-gnu %s -o - | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s
+; RUN: llc -mtriple=i386-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s
+
+; TODO: Reenable verify-machineinstrs once the if (!AXDead) // FIXME in
+; X86InstrInfo::copyPhysReg() is resolved.
 
 ; The peephole optimizer can elide some physical register copies such as
 ; EFLAGS. Make sure the flags are used directly, instead of needlessly using
