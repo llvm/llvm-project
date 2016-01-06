@@ -72,3 +72,56 @@ define <8 x float> @widen_extract4(<8 x float> %ins, <2 x float> %ext) {
   ret <8 x float> %i1
 }
 
+; PR26015: https://llvm.org/bugs/show_bug.cgi?id=26015
+; The widening shuffle must be inserted before any uses.
+
+define <8 x i16> @pr26015(<4 x i16> %t0) {
+; CHECK-LABEL: @pr26015(
+; CHECK-NEXT:  %[[WIDEVEC:.*]] = shufflevector <4 x i16> %t0, <4 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:  %[[EXT:.*]] = extractelement <4 x i16> %t0, i32 2
+; CHECK-NEXT:  %t2 = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 undef, i16 undef>, i16 %[[EXT]], i32 3
+; CHECK-NEXT:  %t3 = insertelement <8 x i16> %t2, i16 0, i32 6
+; CHECK-NEXT:  %t5 = shufflevector <8 x i16> %t3, <8 x i16> %[[WIDEVEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 11>
+; CHECK-NEXT:  ret <8 x i16> %t5
+  %t1 = extractelement <4 x i16> %t0, i32 2
+  %t2 = insertelement <8 x i16> zeroinitializer, i16 %t1, i32 3
+  %t3 = insertelement <8 x i16> %t2, i16 0, i32 6
+  %t4 = extractelement <4 x i16> %t0, i32 3
+  %t5 = insertelement <8 x i16> %t3, i16 %t4, i32 7
+  ret <8 x i16> %t5
+}
+
+; PR25999: https://llvm.org/bugs/show_bug.cgi?id=25999
+; TODO: The widening shuffle could be inserted at the start of the function to allow the first extract to use it.
+
+define <8 x i16> @pr25999(<4 x i16> %t0, i1 %b) {
+; CHECK-LABEL: @pr25999(
+; CHECK-NEXT:  %t1 = extractelement <4 x i16> %t0, i32 2
+; CHECK-NEXT:  br i1 %b, label %if, label %end
+; CHECK:       if:
+; CHECK-NEXT:  %[[WIDEVEC:.*]] = shufflevector <4 x i16> %t0, <4 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:  %t2 = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 undef, i16 undef>, i16 %t1, i32 3
+; CHECK-NEXT:  %t3 = insertelement <8 x i16> %t2, i16 0, i32 6
+; CHECK-NEXT:  %t5 = shufflevector <8 x i16> %t3, <8 x i16> %[[WIDEVEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 11>
+; CHECK-NEXT:  ret <8 x i16> %t5
+; CHECK:       end:
+; CHECK-NEXT:  %a1 = add i16 %t1, 4
+; CHECK-NEXT:  %t6 = insertelement <8 x i16> <i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, i16 %a1, i32 0
+; CHECK-NEXT:  ret <8 x i16> %t6
+
+  %t1 = extractelement <4 x i16> %t0, i32 2
+  br i1 %b, label %if, label %end
+
+if:
+  %t2 = insertelement <8 x i16> zeroinitializer, i16 %t1, i32 3
+  %t3 = insertelement <8 x i16> %t2, i16 0, i32 6
+  %t4 = extractelement <4 x i16> %t0, i32 3
+  %t5 = insertelement <8 x i16> %t3, i16 %t4, i32 7
+  ret <8 x i16> %t5
+
+end:
+  %a1 = add i16 %t1, 4
+  %t6 = insertelement <8 x i16> zeroinitializer, i16 %a1, i32 0
+  ret <8 x i16> %t6
+}
+

@@ -383,15 +383,28 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   auto *WideVec = new ShuffleVectorInst(ExtVecOp, UndefValue::get(ExtVecType),
                                         ConstantVector::get(ExtendMask));
 
-  // Replace all extracts from the original narrow vector with extracts from
-  // the new wide vector.
-  WideVec->insertBefore(ExtElt);
+  // Insert the new shuffle after the vector operand of the extract is defined
+  // or at the start of the basic block, so any subsequent extracts can use it.
+  bool ReplaceAllExtUsers;
+  if (auto *ExtVecOpInst = dyn_cast<Instruction>(ExtVecOp)) {
+    WideVec->insertAfter(ExtVecOpInst);
+    ReplaceAllExtUsers = true;
+  } else {
+    // TODO: Insert at start of function, so it's always safe to replace all?
+    IC.InsertNewInstWith(WideVec, *ExtElt->getParent()->getFirstInsertionPt());
+    ReplaceAllExtUsers = false;
+  }
+
+  // Replace extracts from the original narrow vector with extracts from the new
+  // wide vector.
   for (User *U : ExtVecOp->users()) {
-    if (ExtractElementInst *OldExt = dyn_cast<ExtractElementInst>(U)) {
-      auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
-      NewExt->insertAfter(WideVec);
-      IC.ReplaceInstUsesWith(*OldExt, NewExt);
-    }
+    ExtractElementInst *OldExt = dyn_cast<ExtractElementInst>(U);
+    if (!OldExt ||
+        (!ReplaceAllExtUsers && OldExt->getParent() != WideVec->getParent()))
+      continue;
+    auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
+    NewExt->insertAfter(WideVec);
+    IC.ReplaceInstUsesWith(*OldExt, NewExt);
   }
 }
 

@@ -22,9 +22,14 @@ declare i8* @_Znwj(i64)
 declare i8* @_Znwm(i64)
 ; CHECK: declare noalias nonnull i8* @_Znwm(i64)
 
+declare void @memset_pattern16(i8*, i8*, i64)
+; CHECK: declare void @memset_pattern16(i8*, i8*, i64)
+; CHECK-POSIX: declare void @memset_pattern16(i8*, i8* readonly, i64) [[G2:#[0-9]+]]
+
 declare i32 @gettimeofday(i8*, i8*)
 ; CHECK-POSIX: declare i32 @gettimeofday(i8* nocapture, i8* nocapture) [[G0:#[0-9]+]]
 
 ; CHECK: attributes [[G0]] = { nounwind }
 ; CHECK: attributes [[G1]] = { nounwind readonly }
 ; CHECK-POSIX: attributes [[G0]] = { nounwind }
+; CHECK-POSIX: attributes [[G2]] = { argmemonly }

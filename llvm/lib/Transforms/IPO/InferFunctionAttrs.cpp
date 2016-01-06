@@ -22,6 +22,7 @@ using namespace llvm;
 
 STATISTIC(NumReadNone, "Number of functions inferred as readnone");
 STATISTIC(NumReadOnly, "Number of functions inferred as readonly");
+STATISTIC(NumArgMemOnly, "Number of functions inferred as argmemonly");
 STATISTIC(NumNoUnwind, "Number of functions inferred as nounwind");
 STATISTIC(NumNoCapture, "Number of arguments inferred as nocapture");
 STATISTIC(NumReadOnlyArg, "Number of arguments inferred as readonly");
@@ -43,6 +44,15 @@ static bool setOnlyReadsMemory(Function &F) {
   ++NumReadOnly;
   return true;
 }
+
+static bool setOnlyAccessesArgMemory(Function &F) {
+  if (F.onlyAccessesArgMemory())
+    return false;
+  F.setOnlyAccessesArgMemory ();
+  ++NumArgMemOnly;
+  return true;
+}
+
 
 static bool setDoesNotThrow(Function &F) {
   if (F.doesNotThrow())
@@ -898,6 +908,20 @@ static bool inferPrototypeAttributes(Function &F,
     // Operator new always returns a nonnull noalias pointer
     Changed |= setNonNull(F, AttributeSet::ReturnIndex);
     Changed |= setDoesNotAlias(F, AttributeSet::ReturnIndex);
+    return Changed;
+
+  //TODO: add LibFunc entries for:
+  //case LibFunc::memset_pattern4:
+  //case LibFunc::memset_pattern8:
+  case LibFunc::memset_pattern16:
+    if (FTy->isVarArg() || FTy->getNumParams() != 3 ||
+        !isa<PointerType>(FTy->getParamType(0)) ||
+        !isa<PointerType>(FTy->getParamType(1)) ||
+        !isa<IntegerType>(FTy->getParamType(2)))
+      return false;
+
+    Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
 
   default:

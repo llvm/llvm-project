@@ -117,11 +117,18 @@ size_t MutationDispatcher::Mutate_AddWordFromDictionary(uint8_t *Data,
   assert(!D.empty());
   if (D.empty()) return 0;
   const Unit &Word = D[Rand(D.size())];
-  if (Size + Word.size() > MaxSize) return 0;
-  size_t Idx = Rand(Size + 1);
-  memmove(Data + Idx + Word.size(), Data + Idx, Size - Idx);
-  memcpy(Data + Idx, Word.data(), Word.size());
-  return Size + Word.size();
+  if (Rand.RandBool()) {  // Insert Word.
+    if (Size + Word.size() > MaxSize) return 0;
+    size_t Idx = Rand(Size + 1);
+    memmove(Data + Idx + Word.size(), Data + Idx, Size - Idx);
+    memcpy(Data + Idx, Word.data(), Word.size());
+    return Size + Word.size();
+  } else {  // Overwrite some bytes with Word.
+    if (Word.size() > Size) return 0;
+    size_t Idx = Rand(Size - Word.size());
+    memcpy(Data + Idx, Word.data(), Word.size());
+    return Size;
+  }
 }
 
 size_t MutationDispatcher::Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size,

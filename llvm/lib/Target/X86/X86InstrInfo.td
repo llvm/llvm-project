@@ -1156,7 +1156,8 @@ def PUSH64rmm: I<0xFF, MRM6m, (outs), (ins i64mem:$src), "push{q}\t$src", [],
 let Defs = [RSP], Uses = [RSP], hasSideEffects = 0, mayStore = 1,
     SchedRW = [WriteStore] in {
 def PUSH64i8   : Ii8<0x6a, RawFrm, (outs), (ins i64i8imm:$imm),
-                    "push{q}\t$imm", [], IIC_PUSH_IMM>, Requires<[In64BitMode]>;
+                    "push{q}\t$imm", [], IIC_PUSH_IMM>, OpSize32,
+                    Requires<[In64BitMode]>;
 def PUSH64i32  : Ii32S<0x68, RawFrm, (outs), (ins i64i32imm:$imm),
                     "push{q}\t$imm", [], IIC_PUSH_IMM>, OpSize32,
                     Requires<[In64BitMode]>;

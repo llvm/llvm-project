@@ -1301,12 +1301,9 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
   // function, do that first.
   Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
-  if ((Name == "fmin" && hasFloatVersion(Name)) ||
-      (Name == "fmax" && hasFloatVersion(Name))) {
-    Value *Ret = optimizeBinaryDoubleFP(CI, B);
-    if (Ret)
+  if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(Name))
+    if (Value *Ret = optimizeBinaryDoubleFP(CI, B))
       return Ret;
-  }
 
   // Make sure this has 2 arguments of FP type which match the result type.
   FunctionType *FT = Callee->getFunctionType();
@@ -1317,14 +1314,12 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
 
   IRBuilder<>::FastMathFlagGuard Guard(B);
   FastMathFlags FMF;
-  Function *F = CI->getParent()->getParent();
-  if (canUseUnsafeFPMath(F)) {
+  if (CI->hasUnsafeAlgebra()) {
     // Unsafe algebra sets all fast-math-flags to true.
     FMF.setUnsafeAlgebra();
   } else {
     // At a minimum, no-nans-fp-math must be true.
-    Attribute Attr = F->getFnAttribute("no-nans-fp-math");
-    if (Attr.getValueAsString() != "true")
+    if (!CI->hasNoNaNs())
       return nullptr;
     // No-signed-zeros is implied by the definitions of fmax/fmin themselves:
     // "Ideally, fmax would be sensitive to the sign of zero, for example
@@ -2179,7 +2174,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   LibFunc::Func Func;
   Function *Callee = CI->getCalledFunction();
   StringRef FuncName = Callee->getName();
-  IRBuilder<> Builder(CI);
+
+  SmallVector<OperandBundleDef, 2> OpBundles;
+  CI->getOperandBundlesAsDefs(OpBundles);
+  IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
   bool isCallingConvC = CI->getCallingConv() == llvm::CallingConv::C;
 
   // Command-line parameter overrides function attribute.
@@ -2552,7 +2550,10 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
   LibFunc::Func Func;
   Function *Callee = CI->getCalledFunction();
   StringRef FuncName = Callee->getName();
-  IRBuilder<> Builder(CI);
+
+  SmallVector<OperandBundleDef, 2> OpBundles;
+  CI->getOperandBundlesAsDefs(OpBundles);
+  IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
   bool isCallingConvC = CI->getCallingConv() == llvm::CallingConv::C;
 
   // First, check that this is a known library functions.

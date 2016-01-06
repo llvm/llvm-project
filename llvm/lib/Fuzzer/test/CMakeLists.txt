@@ -26,6 +26,7 @@ set(Tests
   StrcmpTest
   StrncmpTest
   SwitchTest
+  ThreadedTest
   TimeoutTest
   )
 

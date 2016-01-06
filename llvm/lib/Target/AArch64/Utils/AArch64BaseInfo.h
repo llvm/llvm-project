@@ -285,17 +285,17 @@ struct AArch64NamedImmMapper {
     // Zero value of FeatureBitSet means the mapping is always available
     FeatureBitset FeatureBitSet;
 
-    bool isNameEqual(std::string Other, 
+    bool isNameEqual(std::string Other,
                      const FeatureBitset& FeatureBits) const {
-      if (FeatureBitSet.any() && 
+      if (FeatureBitSet.any() &&
           (FeatureBitSet & FeatureBits).none())
         return false;
       return Name == Other;
     }
 
-    bool isValueEqual(uint32_t Other, 
+    bool isValueEqual(uint32_t Other,
                       const FeatureBitset& FeatureBits) const {
-      if (FeatureBitSet.any() && 
+      if (FeatureBitSet.any() &&
           (FeatureBitSet & FeatureBits).none())
         return false;
       return Value == Other;
@@ -310,7 +310,7 @@ struct AArch64NamedImmMapper {
   StringRef toString(uint32_t Value, const FeatureBitset& FeatureBits,
                      bool &Valid) const;
   // Maps string to value, depending on availability for FeatureBits given
-  uint32_t fromString(StringRef Name, const FeatureBitset& FeatureBits, 
+  uint32_t fromString(StringRef Name, const FeatureBitset& FeatureBits,
                      bool &Valid) const;
 
   /// Many of the instructions allow an alternative assembly form consisting of
@@ -1322,7 +1322,7 @@ namespace AArch64TLBI {
       return true;
     }
   }
-} 
+}
 
 namespace AArch64II {
   /// Target Operand Flag enum.

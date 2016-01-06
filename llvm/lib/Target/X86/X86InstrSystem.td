@@ -498,10 +498,10 @@ let Predicates = [HasXSAVE] in {
 let Predicates = [HasXSAVEOPT] in {
   def XSAVEOPT : I<0xAE, MRM6m, (outs), (ins opaque512mem:$dst),
                    "xsaveopt\t$dst",
-                   [(int_x86_xsaveopt addr:$dst, EDX, EAX)]>, TB;
+                   [(int_x86_xsaveopt addr:$dst, EDX, EAX)]>, PS;
   def XSAVEOPT64 : RI<0xAE, MRM6m, (outs), (ins opaque512mem:$dst),
                       "xsaveopt64\t$dst",
-                      [(int_x86_xsaveopt64 addr:$dst, EDX, EAX)]>, TB, Requires<[In64BitMode]>;
+                      [(int_x86_xsaveopt64 addr:$dst, EDX, EAX)]>, PS, Requires<[In64BitMode]>;
 }
 let Predicates = [HasXSAVEC] in {
   def XSAVEC : I<0xC7, MRM4m, (outs), (ins opaque512mem:$dst),

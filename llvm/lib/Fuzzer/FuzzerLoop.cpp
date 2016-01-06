@@ -31,6 +31,8 @@ void __sanitizer_set_death_callback(void (*callback)(void));
 __attribute__((weak)) size_t __sanitizer_get_number_of_counters();
 __attribute__((weak))
 uintptr_t __sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
+__attribute__((weak)) uintptr_t
+__sanitizer_get_coverage_pc_buffer(uintptr_t **data);
 }
 
 namespace fuzzer {
@@ -249,7 +251,21 @@ void Fuzzer::ExecuteCallback(const Unit &U) {
 
 size_t Fuzzer::RecordBlockCoverage() {
   CHECK_WEAK_API_FUNCTION(__sanitizer_get_total_unique_coverage);
-  return LastRecordedBlockCoverage = __sanitizer_get_total_unique_coverage();
+  uintptr_t PrevCoverage = LastRecordedBlockCoverage;
+  LastRecordedBlockCoverage = __sanitizer_get_total_unique_coverage();
+
+  if (PrevCoverage == LastRecordedBlockCoverage || !Options.PrintNewCovPcs)
+    return LastRecordedBlockCoverage;
+
+  uintptr_t PrevBufferLen = LastCoveragePcBufferLen;
+  uintptr_t *CoverageBuf;
+  LastCoveragePcBufferLen = __sanitizer_get_coverage_pc_buffer(&CoverageBuf);
+  assert(CoverageBuf);
+  for (size_t i = PrevBufferLen; i < LastCoveragePcBufferLen; ++i) {
+    Printf("0x%x\n", CoverageBuf[i]);
+  }
+
+  return LastRecordedBlockCoverage;
 }
 
 size_t Fuzzer::RecordCallerCalleeCoverage() {

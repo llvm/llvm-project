@@ -613,21 +613,6 @@ static bool isLdOffsetInRangeOfSt(MachineInstr *LoadInst,
          (UnscaledLdOffset + LoadSize <= (UnscaledStOffset + StoreSize));
 }
 
-// Copy MachineMemOperands from Op0 and Op1 to a new array assigned to MI.
-static void concatenateMemOperands(MachineInstr *MI, MachineInstr *Op0,
-                                   MachineInstr *Op1) {
-  assert(MI->memoperands_empty() && "expected a new machineinstr");
-  size_t numMemRefs = (Op0->memoperands_end() - Op0->memoperands_begin()) +
-                      (Op1->memoperands_end() - Op1->memoperands_begin());
-
-  MachineFunction *MF = MI->getParent()->getParent();
-  MachineSDNode::mmo_iterator MemBegin = MF->allocateMemRefsArray(numMemRefs);
-  MachineSDNode::mmo_iterator MemEnd =
-      std::copy(Op0->memoperands_begin(), Op0->memoperands_end(), MemBegin);
-  MemEnd = std::copy(Op1->memoperands_begin(), Op1->memoperands_end(), MemEnd);
-  MI->setMemRefs(MemBegin, MemEnd);
-}
-
 MachineBasicBlock::iterator
 AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                                       MachineBasicBlock::iterator Paired,
@@ -692,10 +677,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                        TII->get(NewOpc))
                    .addOperand(getLdStRegOp(RtNewDest))
                    .addOperand(BaseRegOp)
-                   .addImm(OffsetImm);
-
-    // Copy MachineMemOperands from the original loads.
-    concatenateMemOperands(NewMemMI, I, Paired);
+                   .addImm(OffsetImm)
+                   .setMemRefs(I->mergeMemRefsWith(*Paired));
 
     DEBUG(
         dbgs()
@@ -786,9 +769,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                   TII->get(NewOpc))
               .addOperand(getLdStRegOp(I))
               .addOperand(BaseRegOp)
-              .addImm(OffsetImm);
-    // Copy MachineMemOperands from the original stores.
-    concatenateMemOperands(MIB, I, Paired);
+              .addImm(OffsetImm)
+              .setMemRefs(I->mergeMemRefsWith(*Paired));
   } else {
     // Handle Unscaled
     if (IsUnscaled)

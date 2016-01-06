@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=carrizo < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa < %s -mattr=-flat-for-global | FileCheck -check-prefix=GCNHSA -check-prefix=CIHSA -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=VIHSA -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=VIHSA -check-prefix=ALL %s
 
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 

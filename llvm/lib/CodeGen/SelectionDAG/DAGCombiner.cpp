@@ -6843,9 +6843,13 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   uint64_t PtrOff = ShAmt / 8;
   unsigned NewAlign = MinAlign(LN0->getAlignment(), PtrOff);
   SDLoc DL(LN0);
+  // The original load itself didn't wrap, so an offset within it doesn't.
+  SDNodeFlags Flags;
+  Flags.setNoUnsignedWrap(true);
   SDValue NewPtr = DAG.getNode(ISD::ADD, DL,
                                PtrType, LN0->getBasePtr(),
-                               DAG.getConstant(PtrOff, DL, PtrType));
+                               DAG.getConstant(PtrOff, DL, PtrType),
+                               &Flags);
   AddToWorklist(NewPtr.getNode());
 
   SDValue Load;

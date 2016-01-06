@@ -97,6 +97,7 @@ class Fuzzer {
     bool SaveArtifacts = true;
     bool PrintNEW = true;  // Print a status line when new units are found;
     bool OutputCSV = false;
+    bool PrintNewCovPcs = false;
   };
   Fuzzer(UserSuppliedFuzzer &USF, FuzzingOptions Options);
   void AddToCorpus(const Unit &U) { Corpus.push_back(U); }
@@ -188,6 +189,7 @@ class Fuzzer {
   long EpochOfLastReadOfOutputCorpus = 0;
   size_t LastRecordedBlockCoverage = 0;
   size_t LastRecordedCallerCalleeCoverage = 0;
+  size_t LastCoveragePcBufferLen = 0;
 };
 
 class SimpleUserSuppliedFuzzer: public UserSuppliedFuzzer {
