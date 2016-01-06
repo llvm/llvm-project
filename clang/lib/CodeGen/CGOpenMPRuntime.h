@@ -35,7 +35,6 @@ class Value;
 
 namespace clang {
 class Expr;
-class GlobalDecl;
 class OMPExecutableDirective;
 class VarDecl;
 
@@ -166,10 +165,6 @@ private:
     // arg_num, void** args_base, void **args, size_t *arg_sizes, int32_t
     // *arg_types);
     OMPRTL__tgt_target,
-    // Call to void __tgt_register_lib(__tgt_bin_desc *desc);
-    OMPRTL__tgt_register_lib,
-    // Call to void __tgt_unregister_lib(__tgt_bin_desc *desc);
-    OMPRTL__tgt_unregister_lib,
   };
 
   /// \brief Values for bit flags used in the ident_t to describe the fields.
@@ -293,181 +288,7 @@ private:
   ///    } flags;
   /// } kmp_depend_info_t;
   QualType KmpDependInfoTy;
-  /// \brief Type struct __tgt_offload_entry{
-  ///   void      *addr;       // Pointer to the offload entry info.
-  ///                          // (function or global)
-  ///   char      *name;       // Name of the function or global.
-  ///   size_t     size;       // Size of the entry info (0 if it a function).
-  /// };
-  QualType TgtOffloadEntryQTy;
-  /// struct __tgt_device_image{
-  /// void   *ImageStart;       // Pointer to the target code start.
-  /// void   *ImageEnd;         // Pointer to the target code end.
-  /// // We also add the host entries to the device image, as it may be useful
-  /// // for the target runtime to have access to that information.
-  /// __tgt_offload_entry  *EntriesBegin;   // Begin of the table with all
-  ///                                       // the entries.
-  /// __tgt_offload_entry  *EntriesEnd;     // End of the table with all the
-  ///                                       // entries (non inclusive).
-  /// };
-  QualType TgtDeviceImageQTy;
-  /// struct __tgt_bin_desc{
-  ///   int32_t              NumDevices;      // Number of devices supported.
-  ///   __tgt_device_image   *DeviceImages;   // Arrays of device images
-  ///                                         // (one per device).
-  ///   __tgt_offload_entry  *EntriesBegin;   // Begin of the table with all the
-  ///                                         // entries.
-  ///   __tgt_offload_entry  *EntriesEnd;     // End of the table with all the
-  ///                                         // entries (non inclusive).
-  /// };
-  QualType TgtBinaryDescriptorQTy;
-  /// \brief Entity that registers the offloading constants that were emitted so
-  /// far.
-  class OffloadEntriesInfoManagerTy {
-    CodeGenModule &CGM;
 
-    /// \brief Number of entries registered so far.
-    unsigned OffloadingEntriesNum;
-
-  public:
-    /// \brief Base class of the entries info.
-    class OffloadEntryInfo {
-    public:
-      /// \brief Kind of a given entry. Currently, only target regions are
-      /// supported.
-      enum OffloadingEntryInfoKinds {
-        // Entry is a target region.
-        OFFLOAD_ENTRY_INFO_TARGET_REGION = 0,
-        // Invalid entry info.
-        OFFLOAD_ENTRY_INFO_INVALID = ~0u
-      };
-
-      OffloadEntryInfo() : Order(~0u), Kind(OFFLOAD_ENTRY_INFO_INVALID) {}
-      explicit OffloadEntryInfo(OffloadingEntryInfoKinds Kind, unsigned Order)
-          : Order(Order), Kind(Kind) {}
-
-      bool isValid() const { return Order != ~0u; }
-      unsigned getOrder() const { return Order; }
-      OffloadingEntryInfoKinds getKind() const { return Kind; }
-      static bool classof(const OffloadEntryInfo *Info) { return true; }
-
-    protected:
-      // \brief Order this entry was emitted.
-      unsigned Order;
-
-      OffloadingEntryInfoKinds Kind;
-    };
-
-    /// \brief Return true if a there are no entries defined.
-    bool empty() const;
-    /// \brief Return number of entries defined so far.
-    unsigned size() const { return OffloadingEntriesNum; }
-    OffloadEntriesInfoManagerTy(CodeGenModule &CGM)
-        : CGM(CGM), OffloadingEntriesNum(0) {}
-
-    ///
-    /// Target region entries related.
-    ///
-    /// \brief Target region entries info.
-    class OffloadEntryInfoTargetRegion : public OffloadEntryInfo {
-      // \brief Address of the entity that has to be mapped for offloading.
-      llvm::Constant *Addr;
-      // \brief Address that can be used as the ID of the entry.
-      llvm::Constant *ID;
-
-    public:
-      OffloadEntryInfoTargetRegion()
-          : OffloadEntryInfo(OFFLOAD_ENTRY_INFO_TARGET_REGION, ~0u),
-            Addr(nullptr), ID(nullptr) {}
-      explicit OffloadEntryInfoTargetRegion(unsigned Order,
-                                            llvm::Constant *Addr,
-                                            llvm::Constant *ID)
-          : OffloadEntryInfo(OFFLOAD_ENTRY_INFO_TARGET_REGION, Order),
-            Addr(Addr), ID(ID) {}
-
-      llvm::Constant *getAddress() const { return Addr; }
-      llvm::Constant *getID() const { return ID; }
-      void setAddress(llvm::Constant *V) {
-        assert(!Addr && "Address as been set before!");
-        Addr = V;
-      }
-      void setID(llvm::Constant *V) {
-        assert(!ID && "ID as been set before!");
-        ID = V;
-      }
-      static bool classof(const OffloadEntryInfo *Info) {
-        return Info->getKind() == OFFLOAD_ENTRY_INFO_TARGET_REGION;
-      }
-    };
-    /// \brief Initialize target region entry.
-    void initializeTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
-                                         StringRef ParentName, unsigned LineNum,
-                                         unsigned ColNum, unsigned Order);
-    /// \brief Register target region entry.
-    void registerTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
-                                       StringRef ParentName, unsigned LineNum,
-                                       unsigned ColNum, llvm::Constant *Addr,
-                                       llvm::Constant *ID);
-    /// \brief Return true if a target region entry with the provided
-    /// information exists.
-    bool hasTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
-                                  StringRef ParentName, unsigned LineNum,
-                                  unsigned ColNum) const;
-    /// brief Applies action \a Action on all registered entries.
-    typedef llvm::function_ref<void(unsigned, unsigned, StringRef, unsigned,
-                                    unsigned, OffloadEntryInfoTargetRegion &)>
-        OffloadTargetRegionEntryInfoActTy;
-    void actOnTargetRegionEntriesInfo(
-        const OffloadTargetRegionEntryInfoActTy &Action);
-
-  private:
-    // Storage for target region entries kind. The storage is to be indexed by
-    // file ID, device ID, parent function name, lane number, and column number.
-    typedef llvm::DenseMap<unsigned, OffloadEntryInfoTargetRegion>
-        OffloadEntriesTargetRegionPerColumn;
-    typedef llvm::DenseMap<unsigned, OffloadEntriesTargetRegionPerColumn>
-        OffloadEntriesTargetRegionPerLine;
-    typedef llvm::StringMap<OffloadEntriesTargetRegionPerLine>
-        OffloadEntriesTargetRegionPerParentName;
-    typedef llvm::DenseMap<unsigned, OffloadEntriesTargetRegionPerParentName>
-        OffloadEntriesTargetRegionPerFile;
-    typedef llvm::DenseMap<unsigned, OffloadEntriesTargetRegionPerFile>
-        OffloadEntriesTargetRegionPerDevice;
-    typedef OffloadEntriesTargetRegionPerDevice OffloadEntriesTargetRegionTy;
-    OffloadEntriesTargetRegionTy OffloadEntriesTargetRegion;
-  };
-  OffloadEntriesInfoManagerTy OffloadEntriesInfoManager;
-
-  /// \brief Creates and registers offloading binary descriptor for the current
-  /// compilation unit. The function that does the registration is returned.
-  llvm::Function *createOffloadingBinaryDescriptorRegistration();
-
-  /// \brief Creates offloading entry for the provided address \a Addr,
-  /// name \a Name and size \a Size.
-  void createOffloadEntry(llvm::Constant *Addr, StringRef Name, uint64_t Size);
-
-  /// \brief Creates all the offload entries in the current compilation unit
-  /// along with the associated metadata.
-  void createOffloadEntriesAndInfoMetadata();
-
-  /// \brief Loads all the offload entries information from the host IR
-  /// metadata.
-  void loadOffloadInfoMetadata();
-
-  /// \brief Returns __tgt_offload_entry type.
-  QualType getTgtOffloadEntryQTy();
-
-  /// \brief Returns __tgt_device_image type.
-  QualType getTgtDeviceImageQTy();
-
-  /// \brief Returns __tgt_bin_desc type.
-  QualType getTgtBinaryDescriptorQTy();
-
-  /// \brief Start scanning from statement \a S and and emit all target regions
-  /// found along the way.
-  /// \param S Starting statement.
-  /// \param ParentName Name of the function declaration that is being scanned.
-  void scanForTargetRegionsFunctions(const Stmt *S, StringRef ParentName);
 
   /// \brief Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
@@ -922,24 +743,16 @@ public:
 
   /// \brief Emit outilined function for 'target' directive.
   /// \param D Directive to emit.
-  /// \param ParentName Name of the function that encloses the target region.
-  /// \param OutlinedFn Outlined function value to be defined by this call.
-  /// \param OutlinedFnID Outlined function ID value to be defined by this call.
-  /// \param IsOffloadEntry True if the outlined function is an offload entry.
-  /// An oulined function may not be an entry if, e.g. the if clause always
-  /// evaluates to false.
-  virtual void emitTargetOutlinedFunction(const OMPExecutableDirective &D,
-                                          StringRef ParentName,
-                                          llvm::Function *&OutlinedFn,
-                                          llvm::Constant *&OutlinedFnID,
-                                          bool IsOffloadEntry);
+  /// \param CodeGen Code generation sequence for the \a D directive.
+  virtual llvm::Value *
+  emitTargetOutlinedFunction(const OMPExecutableDirective &D,
+                             const RegionCodeGenTy &CodeGen);
 
   /// \brief Emit the target offloading code associated with \a D. The emitted
   /// code attempts offloading the execution to the device, an the event of
   /// a failure it executes the host version outlined in \a OutlinedFn.
   /// \param D Directive to emit.
   /// \param OutlinedFn Host version of the code to be offloaded.
-  /// \param OutlinedFnID ID of host version of the code to be offloaded.
   /// \param IfCond Expression evaluated in if clause associated with the target
   /// directive, or null if no if clause is used.
   /// \param Device Expression evaluated in device clause associated with the
@@ -947,31 +760,9 @@ public:
   /// \param CapturedVars Values captured in the current region.
   virtual void emitTargetCall(CodeGenFunction &CGF,
                               const OMPExecutableDirective &D,
-                              llvm::Value *OutlinedFn,
-                              llvm::Value *OutlinedFnID, const Expr *IfCond,
+                              llvm::Value *OutlinedFn, const Expr *IfCond,
                               const Expr *Device,
                               ArrayRef<llvm::Value *> CapturedVars);
-
-  /// \brief Emit the target regions enclosed in \a GD function definition or
-  /// the function itself in case it is a valid device function. Returns true if
-  /// \a GD was dealt with successfully.
-  /// \param FD Function to scan.
-  virtual bool emitTargetFunctions(GlobalDecl GD);
-
-  /// \brief Emit the global variable if it is a valid device global variable.
-  /// Returns true if \a GD was dealt with successfully.
-  /// \param GD Variable declaration to emit.
-  virtual bool emitTargetGlobalVariable(GlobalDecl GD);
-
-  /// \brief Emit the global \a GD if it is meaningful for the target. Returns
-  /// if it was emitted succesfully.
-  /// \param GD Global to scan.
-  virtual bool emitTargetGlobal(GlobalDecl GD);
-
-  /// \brief Creates the offloading descriptor in the event any target region
-  /// was emitted in the current module and return the function that registers
-  /// it.
-  virtual llvm::Function *emitRegistrationFunction();
 };
 
 } // namespace CodeGen

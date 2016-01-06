@@ -1323,13 +1323,6 @@ uint64_t ASTWriter::WriteControlBlock(Preprocessor &PP,
   }
   Record.push_back(LangOpts.CommentOpts.ParseAllComments);
 
-  // OpenMP offloading options.
-  Record.push_back(LangOpts.OMPTargetTriples.size());
-  for (auto &T : LangOpts.OMPTargetTriples)
-    AddString(T.getTriple(), Record);
-
-  AddString(LangOpts.OMPHostIRFile, Record);
-
   Stream.EmitRecord(LANGUAGE_OPTIONS, Record);
 
   // Target options.

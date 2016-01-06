@@ -149,6 +149,10 @@ public:
   Common(const char *Name, const char *ShortName, const ToolChain &TC)
       : GnuTool(Name, ShortName, TC) {}
 
+  // A gcc tool has an "integrated" assembler that it will call to produce an
+  // object. Let it use that assembler so that we don't have to deal with
+  // assembly syntax incompatibilities.
+  bool hasIntegratedAssembler() const override { return true; }
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,

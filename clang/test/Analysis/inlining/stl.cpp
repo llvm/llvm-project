@@ -47,3 +47,8 @@ void testBasicStringSuppression_assign(std::basic_string<char32_t> &v,
                                        const std::basic_string<char32_t> &v2) {
   v = v2;
 }
+
+class MyEngine;
+void testSupprerssion_independent_bits_engine(MyEngine& e) {
+  std::__independent_bits_engine<MyEngine, unsigned int> x(e, 64); // no-warning
+}

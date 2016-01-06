@@ -311,3 +311,21 @@ int foo10595327(int b) {
       return *p; // no-warning
   return 0;
 }
+
+#define AS_ATTRIBUTE volatile __attribute__((address_space(256)))
+#define _get_base() ((void * AS_ATTRIBUTE *)0)
+void* test_address_space_array(unsigned long slot) {
+  return _get_base()[slot]; // no-warning
+}
+void test_address_space_condition(int AS_ATTRIBUTE *cpu_data) {
+   if (cpu_data == 0) {
+    *cpu_data = 3; // no-warning
+  }
+}
+struct X { int member; };
+int test_address_space_member() {
+  struct X AS_ATTRIBUTE *data = (struct X AS_ATTRIBUTE *)0UL;
+  int ret;
+  ret = data->member; // no-warning
+  return ret;
+}

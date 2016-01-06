@@ -631,10 +631,18 @@ if (CLANG_ENABLE_BOOTSTRAP)
 
   string(REGEX MATCH "stage([0-9]*)" MATCHED_STAGE "${CLANG_STAGE}")
   if(MATCHED_STAGE)
-    math(EXPR STAGE_NUM "${MATCHED_STAGE} + 1")
-    set(NEXT_CLANG_STAGE stage${STAGE_NUM})
+    if(NOT LLVM_BUILD_INSTRUMENTED)
+      math(EXPR STAGE_NUM "${CMAKE_MATCH_1} + 1")
+      set(NEXT_CLANG_STAGE stage${STAGE_NUM})
+    else()
+      set(NEXT_CLANG_STAGE stage${CMAKE_MATCH_1})
+    endif()
   else()
     set(NEXT_CLANG_STAGE bootstrap)
+  endif()
+
+  if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
+    set(NEXT_CLANG_STAGE ${NEXT_CLANG_STAGE}-instrumented)
   endif()
   message(STATUS "Setting next clang stage to: ${NEXT_CLANG_STAGE}")
   
@@ -681,6 +689,26 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(RUNTIME_DEP compiler-rt)
   endif()
 
+  set(COMPILER_OPTIONS
+    -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++
+    -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang
+    -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
+
+  if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
+    set(PGO_DEP llvm-profdata)
+    set(PGO_OPT -DLLVM_PROFDATA=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profdata)
+  endif()
+
+  if(LLVM_BUILD_INSTRUMENTED)
+    set(PGO_DEP generate-profdata)
+    set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    set(COMPILER_OPTIONS
+      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+      -DCMAKE_ASM_COMPILER=${CMAKE_ASM_COMPILER})
+    set(RUNTIME_DEP) # Don't set runtime dependencies
+  endif()
+
   # Find all variables that start with BOOTSTRAP_ and populate a variable with
   # them.
   get_cmake_property(variableNames VARIABLES)
@@ -703,7 +731,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
   endforeach()
 
   ExternalProject_Add(${NEXT_CLANG_STAGE}
-    DEPENDS clang ${LTO_DEP} ${RUNTIME_DEP}
+    DEPENDS clang ${LTO_DEP} ${RUNTIME_DEP} ${PGO_DEP}
     PREFIX ${NEXT_CLANG_STAGE}
     SOURCE_DIR ${CMAKE_SOURCE_DIR}
     STAMP_DIR ${STAMP_DIR}
@@ -715,11 +743,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
                 -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                 ${CLANG_BOOTSTRAP_CMAKE_ARGS}
                 ${PASSTHROUGH_VARIABLES}
-                -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++
-                -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang
-                -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang
-                -DCLANG_STAGE=${NEXT_CLANG_STAGE}
-                ${LTO_LIBRARY} ${LTO_AR} ${LTO_RANLIB} ${verbose}
+                 -DCLANG_STAGE=${NEXT_CLANG_STAGE}
+                ${COMPILER_OPTIONS}
+                ${LTO_LIBRARY} ${LTO_AR} ${LTO_RANLIB} ${verbose} ${PGO_OPT}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     ${cmake_3_4_USES_TERMINAL_OPTIONS}
