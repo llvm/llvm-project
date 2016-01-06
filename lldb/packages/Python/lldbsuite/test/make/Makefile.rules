@@ -228,7 +228,7 @@ SWIFTFLAGS += -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
 ifeq "$(OS)" "Darwin"
 	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 	ifneq "$(SDKROOT)" ""
-		CFLAGS += -isysroot $(SDKROOT)
+		CFLAGS += -isysroot "$(SDKROOT)"
 	endif
 else
 	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
@@ -410,8 +410,8 @@ endif
 #----------------------------------------------------------------------
 ifneq "$(strip $(SWIFT_SOURCES))" ""
 	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.o))
-	LDFLAGS +=-L$(SWIFTLIBS)
-	SWIFTFLAGS +=-sdk $(SWIFTSDKROOT)
+	LDFLAGS +=-L"$(SWIFTLIBS)"
+	SWIFTFLAGS +=-sdk "$(SWIFTSDKROOT)"
 	USESWIFTDRIVER = 1
 endif
 
