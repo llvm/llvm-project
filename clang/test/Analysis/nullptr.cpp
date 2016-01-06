@@ -126,3 +126,22 @@ decltype(nullptr) returnsNullPtrType();
 void fromReturnType() {
   ((X *)returnsNullPtrType())->f(); // expected-warning{{Called C++ object pointer is null}}
 }
+
+#define AS_ATTRIBUTE __attribute__((address_space(256)))
+class AS1 {
+public:
+  int x;
+  ~AS1() {
+    int AS_ATTRIBUTE *x = 0;
+    *x = 3; // no-warning
+  }
+};
+void test_address_space_field_access() {
+  AS1 AS_ATTRIBUTE *pa = 0;
+  pa->x = 0; // no-warning
+}
+void test_address_space_bind() {
+  AS1 AS_ATTRIBUTE *pa = 0;
+  AS1 AS_ATTRIBUTE &r = *pa;
+  r.x = 0; // no-warning
+}

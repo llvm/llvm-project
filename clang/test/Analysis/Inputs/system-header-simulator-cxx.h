@@ -198,6 +198,25 @@ namespace std {
       storage.assignExternal(new _CharT[4]);
     }
   };
+
+template<class _Engine, class _UIntType>
+class __independent_bits_engine {
+public:
+  // constructors and seeding functions
+  __independent_bits_engine(_Engine& __e, size_t __w);
+};
+
+template<class _Engine, class _UIntType>
+__independent_bits_engine<_Engine, _UIntType>
+    ::__independent_bits_engine(_Engine& __e, size_t __w)
+{
+  // Fake error trigger.
+  // No warning is expected as we are suppressing warning coming
+  // out of std::basic_string.
+  int z = 0;
+  z = 5/z;
+}
+
 }
 
 void* operator new(std::size_t, const std::nothrow_t&) throw();

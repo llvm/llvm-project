@@ -169,3 +169,8 @@
 // NOCI-NOT: "-dwarf-column-info"
 //
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj" "-debug-info-kind={{standalone|limited}}"
+
+// RUN: not %clang -cc1 -debug-info-kind=watkind 2>&1 | FileCheck -check-prefix=BADSTRING1 %s
+// BADSTRING1: error: invalid value 'watkind' in '-debug-info-kind=watkind'
+// RUN: not %clang -cc1 -debugger-tuning=gmodal 2>&1 | FileCheck -check-prefix=BADSTRING2 %s
+// BADSTRING2: error: invalid value 'gmodal' in '-debugger-tuning=gmodal'

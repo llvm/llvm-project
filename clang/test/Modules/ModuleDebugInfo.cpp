@@ -13,7 +13,7 @@
 // PCH:
 // RUN: %clang_cc1 -triple %itanium_abi_triple -x c++ -std=c++11 -emit-pch -fmodule-format=obj -I %S/Inputs -o %t.pch %S/Inputs/DebugCXX.h -mllvm -debug-only=pchcontainer &>%t-pch.ll
 // RUN: cat %t-pch.ll | FileCheck %s
-// RUN: cat %t-mod.ll | FileCheck --check-prefix=CHECK-NEG %s
+// RUN: cat %t-pch.ll | FileCheck --check-prefix=CHECK-NEG %s
 
 #ifdef MODULES
 @import DebugCXX;

@@ -1542,6 +1542,16 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
         }
       }
 
+      // The analyzer issues a false positive when the constructor of
+      // std::__independent_bits_engine from algorithms is used.
+      if (const CXXConstructorDecl *MD = dyn_cast<CXXConstructorDecl>(D)) {
+        const CXXRecordDecl *CD = MD->getParent();
+        if (CD->getName() == "__independent_bits_engine") {
+          BR.markInvalid(getTag(), nullptr);
+          return nullptr;
+        }
+      }
+
       // The analyzer issues a false positive on
       //   std::basic_string<uint8_t> v; v.push_back(1);
       // and

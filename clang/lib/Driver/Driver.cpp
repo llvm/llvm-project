@@ -699,11 +699,11 @@ void Driver::generateCompilationDiagnostics(Compilation &C,
 }
 
 void Driver::setUpResponseFiles(Compilation &C, Command &Cmd) {
-  // Since argumentsFitWithinSystemLimits() may underestimate system's capacity
+  // Since commandLineFitsWithinSystemLimits() may underestimate system's capacity
   // if the tool does not support response files, there is a chance/ that things
   // will just work without a response file, so we silently just skip it.
   if (Cmd.getCreator().getResponseFilesSupport() == Tool::RF_None ||
-      llvm::sys::argumentsFitWithinSystemLimits(Cmd.getArguments()))
+      llvm::sys::commandLineFitsWithinSystemLimits(Cmd.getExecutable(), Cmd.getArguments()))
     return;
 
   std::string TmpName = GetTemporaryPath("response", "txt");
