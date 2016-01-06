@@ -651,7 +651,7 @@ def : Pat<(x86mmx (MMX_X86movdq2q (loadv2i64 addr:$src))),
 
 // Misc.
 let SchedRW = [WriteShuffle] in {
-let Uses = [EDI], Predicates = [HasSSE1,In32BitMode] in
+let Uses = [EDI], Predicates = [HasSSE1,Not64BitMode] in
 def MMX_MASKMOVQ : MMXI32<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
                           "maskmovq\t{$mask, $src|$src, $mask}",
                           [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, EDI)],

@@ -260,4 +260,76 @@ TEST(YAMLParser, DiagnosticFilenameFromBufferID) {
   EXPECT_EQ("buffername.yaml", GeneratedDiag.getFilename());
 }
 
+TEST(YAMLParser, SameNodeIteratorOperatorNotEquals) {
+  SourceMgr SM;
+  yaml::Stream Stream("[\"1\", \"2\"]", SM);
+
+  yaml::SequenceNode *Node = dyn_cast<yaml::SequenceNode>(
+                                              Stream.begin()->getRoot());
+
+  auto Begin = Node->begin();
+  auto End = Node->end();
+
+  EXPECT_TRUE(Begin != End);
+  EXPECT_FALSE(Begin != Begin);
+  EXPECT_FALSE(End != End);
+}
+
+TEST(YAMLParser, SameNodeIteratorOperatorEquals) {
+  SourceMgr SM;
+  yaml::Stream Stream("[\"1\", \"2\"]", SM);
+
+  yaml::SequenceNode *Node = dyn_cast<yaml::SequenceNode>(
+                                              Stream.begin()->getRoot());
+
+  auto Begin = Node->begin();
+  auto End = Node->end();
+
+  EXPECT_FALSE(Begin == End);
+  EXPECT_TRUE(Begin == Begin);
+  EXPECT_TRUE(End == End);
+}
+
+TEST(YAMLParser, DifferentNodesIteratorOperatorNotEquals) {
+  SourceMgr SM;
+  yaml::Stream Stream("[\"1\", \"2\"]", SM);
+  yaml::Stream AnotherStream("[\"1\", \"2\"]", SM);
+
+  yaml::SequenceNode *Node = dyn_cast<yaml::SequenceNode>(
+                                                  Stream.begin()->getRoot());
+  yaml::SequenceNode *AnotherNode = dyn_cast<yaml::SequenceNode>(
+                                              AnotherStream.begin()->getRoot());
+
+  auto Begin = Node->begin();
+  auto End = Node->end();
+
+  auto AnotherBegin = AnotherNode->begin();
+  auto AnotherEnd = AnotherNode->end();
+
+  EXPECT_TRUE(Begin != AnotherBegin);
+  EXPECT_TRUE(Begin != AnotherEnd);
+  EXPECT_FALSE(End != AnotherEnd);
+}
+
+TEST(YAMLParser, DifferentNodesIteratorOperatorEquals) {
+  SourceMgr SM;
+  yaml::Stream Stream("[\"1\", \"2\"]", SM);
+  yaml::Stream AnotherStream("[\"1\", \"2\"]", SM);
+
+  yaml::SequenceNode *Node = dyn_cast<yaml::SequenceNode>(
+                                                    Stream.begin()->getRoot());
+  yaml::SequenceNode *AnotherNode = dyn_cast<yaml::SequenceNode>(
+                                             AnotherStream.begin()->getRoot());
+
+  auto Begin = Node->begin();
+  auto End = Node->end();
+
+  auto AnotherBegin = AnotherNode->begin();
+  auto AnotherEnd = AnotherNode->end();
+
+  EXPECT_FALSE(Begin == AnotherBegin);
+  EXPECT_FALSE(Begin == AnotherEnd);
+  EXPECT_TRUE(End == AnotherEnd);
+}
+
 } // end namespace llvm

@@ -310,6 +310,11 @@ public:
     CALLSITE_DELEGATE_GETTER(hasFnAttr(A));
   }
 
+  /// \brief Return true if this function has the given attribute.
+  bool hasFnAttr(StringRef A) const {
+    CALLSITE_DELEGATE_GETTER(hasFnAttr(A));
+  }
+
   /// \brief Return true if the call or the callee has the given attribute.
   bool paramHasAttr(unsigned i, Attribute::AttrKind A) const {
     CALLSITE_DELEGATE_GETTER(paramHasAttr(i, A));

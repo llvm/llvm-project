@@ -1553,8 +1553,8 @@ bool llvm::callsGCLeafFunction(ImmutableCallSite CS) {
     return true;
 
   // Check if the function is specifically marked as a gc leaf function.
-  //
-  // TODO: we should be checking the attributes on the call site as well.
+  if (CS.hasFnAttr("gc-leaf-function"))
+    return true;
   if (const Function *F = CS.getCalledFunction())
     return F->hasFnAttribute("gc-leaf-function");
 

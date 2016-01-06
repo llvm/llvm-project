@@ -77,6 +77,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <thread>
 #include <unordered_map>
 
 #if !LLVM_FUZZER_SUPPORTS_DFSAN
@@ -172,8 +173,13 @@ struct TraceBasedMutation {
 
 class TraceState {
  public:
-   TraceState(const Fuzzer::FuzzingOptions &Options, const Unit &CurrentUnit)
-       : Options(Options), CurrentUnit(CurrentUnit) {}
+  TraceState(const Fuzzer::FuzzingOptions &Options, const Unit &CurrentUnit)
+       : Options(Options), CurrentUnit(CurrentUnit) {
+    // Current trace collection is not thread-friendly and it probably
+    // does not have to be such, but at least we should not crash in presence
+    // of threads. So, just ignore all traces coming from all threads but one.
+    IsMyThread = true;
+  }
 
   LabelRange GetLabelRange(dfsan_label L);
   void DFSanCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
@@ -213,7 +219,10 @@ class TraceState {
   LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)];
   const Fuzzer::FuzzingOptions &Options;
   const Unit &CurrentUnit;
+  static thread_local bool IsMyThread;
 };
+
+thread_local bool TraceState::IsMyThread;
 
 LabelRange TraceState::GetLabelRange(dfsan_label L) {
   LabelRange &LR = LabelRanges[L];
@@ -238,7 +247,7 @@ void TraceState::DFSanCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
                                   uint64_t Arg1, uint64_t Arg2, dfsan_label L1,
                                   dfsan_label L2) {
   assert(ReallyHaveDFSan());
-  if (!RecordingTraces) return;
+  if (!RecordingTraces || !IsMyThread) return;
   if (L1 == 0 && L2 == 0)
     return;  // Not actionable.
   if (L1 != 0 && L2 != 0)
@@ -267,7 +276,7 @@ void TraceState::DFSanSwitchCallback(uint64_t PC, size_t ValSizeInBits,
                                      uint64_t Val, size_t NumCases,
                                      uint64_t *Cases, dfsan_label L) {
   assert(ReallyHaveDFSan());
-  if (!RecordingTraces) return;
+  if (!RecordingTraces || !IsMyThread) return;
   if (!L) return;  // Not actionable.
   LabelRange LR = GetLabelRange(L);
   size_t ValSize = ValSizeInBits / 8;
@@ -312,7 +321,7 @@ int TraceState::TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
 
 void TraceState::TraceCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
                                   uint64_t Arg1, uint64_t Arg2) {
-  if (!RecordingTraces) return;
+  if (!RecordingTraces || !IsMyThread) return;
   int Added = 0;
   if (Options.Verbosity >= 3)
     Printf("TraceCmp %zd/%zd: %p %zd %zd\n", CmpSize, CmpType, PC, Arg1, Arg2);
@@ -327,7 +336,7 @@ void TraceState::TraceCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
 void TraceState::TraceSwitchCallback(uintptr_t PC, size_t ValSizeInBits,
                                      uint64_t Val, size_t NumCases,
                                      uint64_t *Cases) {
-  if (!RecordingTraces) return;
+  if (!RecordingTraces || !IsMyThread) return;
   size_t ValSize = ValSizeInBits / 8;
   bool TryShort = IsTwoByteData(Val);
   for (size_t i = 0; i < NumCases; i++)

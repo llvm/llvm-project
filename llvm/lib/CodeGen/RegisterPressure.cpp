@@ -97,9 +97,8 @@ void RegPressureTracker::increaseRegPressure(ArrayRef<unsigned> RegUnits) {
     unsigned Weight = PSetI.getWeight();
     for (; PSetI.isValid(); ++PSetI) {
       CurrSetPressure[*PSetI] += Weight;
-      if (CurrSetPressure[*PSetI] > P.MaxSetPressure[*PSetI]) {
-        P.MaxSetPressure[*PSetI] = CurrSetPressure[*PSetI];
-      }
+      P.MaxSetPressure[*PSetI] =
+          std::max(P.MaxSetPressure[*PSetI], CurrSetPressure[*PSetI]);
     }
   }
 }

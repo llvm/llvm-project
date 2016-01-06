@@ -3562,6 +3562,11 @@ public:
     return hasFnAttrImpl(A);
   }
 
+  /// \brief Determine whether this call has the given attribute.
+  bool hasFnAttr(StringRef A) const {
+    return hasFnAttrImpl(A);
+  }
+
   /// \brief Determine whether the call or the callee has the given attributes.
   bool paramHasAttr(unsigned i, Attribute::AttrKind A) const;
 
@@ -3746,7 +3751,19 @@ private:
   unsigned getNumSuccessorsV() const override;
   void setSuccessorV(unsigned idx, BasicBlock *B) override;
 
-  bool hasFnAttrImpl(Attribute::AttrKind A) const;
+  template <typename AttrKind> bool hasFnAttrImpl(AttrKind A) const {
+    if (AttributeList.hasAttribute(AttributeSet::FunctionIndex, A))
+      return true;
+
+    // Operand bundles override attributes on the called function, but don't
+    // override attributes directly present on the invoke instruction.
+    if (isFnAttrDisallowedByOpBundle(A))
+      return false;
+
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().hasAttribute(AttributeSet::FunctionIndex, A);
+    return false;
+  }
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.

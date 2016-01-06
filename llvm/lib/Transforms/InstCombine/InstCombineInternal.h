@@ -414,7 +414,7 @@ public:
   /// \brief A combiner-aware RAUW-like routine.
   ///
   /// This method is to be used when an instruction is found to be dead,
-  /// replacable with another preexisting expression. Here we add all uses of
+  /// replaceable with another preexisting expression. Here we add all uses of
   /// I to the worklist, replace all uses of I with the new value, then return
   /// I, so that the inst combiner will know that I was modified.
   Instruction *ReplaceInstUsesWith(Instruction &I, Value *V) {

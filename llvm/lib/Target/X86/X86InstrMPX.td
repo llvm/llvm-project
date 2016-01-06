@@ -63,8 +63,8 @@ def BNDMOVMR64mr : RI<0x1B, MRMDestMem, (outs i128mem:$dst), (ins BNDR:$src),
                     Requires<[HasMPX, In64BitMode]>;
 
 def BNDSTXmr:      I<0x1B, MRMDestMem, (outs), (ins i64mem:$dst, BNDR:$src),
-                    "bndstx \t{$src, $dst|$dst, $src}", []>, TB,
+                    "bndstx \t{$src, $dst|$dst, $src}", []>, PS,
                     Requires<[HasMPX]>;
 def BNDLDXrm:      I<0x1A, MRMSrcMem, (outs BNDR:$dst), (ins i64mem:$src),
-                    "bndldx \t{$src, $dst|$dst, $src}", []>, TB,
+                    "bndldx \t{$src, $dst|$dst, $src}", []>, PS,
                     Requires<[HasMPX]>;

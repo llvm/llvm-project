@@ -305,7 +305,7 @@ private:
 /// increment() which must set CurrentEntry to 0 to create an end iterator.
 template <class BaseT, class ValueT>
 class basic_collection_iterator
-    : public std::iterator<std::forward_iterator_tag, ValueT> {
+    : public std::iterator<std::input_iterator_tag, ValueT> {
 public:
   basic_collection_iterator() : Base(nullptr) {}
   basic_collection_iterator(BaseT *B) : Base(B) {}
@@ -326,11 +326,24 @@ public:
     return Base->CurrentEntry;
   }
 
+  /// Note on EqualityComparable:
+  ///
+  /// The iterator is not re-entrant,
+  /// it is meant to be used for parsing YAML on-demand
+  /// Once iteration started - it can point only to one entry at a time
+  /// hence Base.CurrentEntry and Other.Base.CurrentEntry are equal
+  /// iff Base and Other.Base are equal.
+  bool operator==(const basic_collection_iterator &Other) const {
+    if (Base && (Base == Other.Base)) {
+      assert((Base->CurrentEntry == Other.Base->CurrentEntry)
+             && "Equal Bases expected to point to equal Entries");
+    }
+
+    return Base == Other.Base;
+  }
+
   bool operator!=(const basic_collection_iterator &Other) const {
-    if (Base != Other.Base)
-      return true;
-    return (Base && Other.Base) &&
-           Base->CurrentEntry != Other.Base->CurrentEntry;
+    return !(Base == Other.Base);
   }
 
   basic_collection_iterator &operator++() {

@@ -543,7 +543,6 @@ static bool isMemsetPattern16(const Function *MS,
         isa<IntegerType>(MemsetType->getParamType(2)))
       return true;
   }
-
   return false;
 }
 
@@ -583,9 +582,6 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   if (F->onlyAccessesArgMemory())
     Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
 
-  if (isMemsetPattern16(F, TLI))
-    Min = FMRB_OnlyAccessesArgumentPointees;
-
   // Otherwise be conservative.
   return FunctionModRefBehavior(AAResultBase::getModRefBehavior(F) & Min);
 }
@@ -599,22 +595,21 @@ ModRefInfo BasicAAResult::getArgModRefInfo(ImmutableCallSite CS,
     case Intrinsic::memset:
     case Intrinsic::memcpy:
     case Intrinsic::memmove:
-      assert((ArgIdx == 0 || ArgIdx == 1) &&
-             "Invalid argument index for memory intrinsic");
-      return ArgIdx ? MRI_Ref : MRI_Mod;
+      // We don't currently have a writeonly attribute.  All other properties
+      // of these intrinsics are nicely described via attributes in
+      // Intrinsics.td and handled generically below.
+      if (ArgIdx == 0)
+        return MRI_Mod;
     }
 
   // We can bound the aliasing properties of memset_pattern16 just as we can
   // for memcpy/memset.  This is particularly important because the
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
-  // whenever possible.
-  if (CS.getCalledFunction() &&
-      isMemsetPattern16(CS.getCalledFunction(), TLI)) {
-    assert((ArgIdx == 0 || ArgIdx == 1) &&
-           "Invalid argument index for memset_pattern16");
-    return ArgIdx ? MRI_Ref : MRI_Mod;
-  }
-  // FIXME: Handle memset_pattern4 and memset_pattern8 also.
+  // whenever possible.  Note that all but the missing writeonly attribute are
+  // handled via InferFunctionAttr.
+  if (CS.getCalledFunction() && isMemsetPattern16(CS.getCalledFunction(), TLI))
+    if (ArgIdx == 0)
+      return MRI_Mod;
 
   if (CS.paramHasAttr(ArgIdx + 1, Attribute::ReadOnly))
     return MRI_Ref;

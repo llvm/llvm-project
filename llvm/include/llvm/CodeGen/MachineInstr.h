@@ -1180,10 +1180,25 @@ public:
   /// Assign this MachineInstr's memory reference descriptor list.
   /// This does not transfer ownership.
   void setMemRefs(mmo_iterator NewMemRefs, mmo_iterator NewMemRefsEnd) {
-    MemRefs = NewMemRefs;
-    NumMemRefs = uint8_t(NewMemRefsEnd - NewMemRefs);
-    assert(NumMemRefs == NewMemRefsEnd - NewMemRefs && "Too many memrefs");
+    setMemRefs(std::make_pair(NewMemRefs, NewMemRefsEnd-NewMemRefs));
   }
+
+  /// Assign this MachineInstr's memory reference descriptor list.  First
+  /// element in the pair is the begin iterator/pointer to the array; the
+  /// second is the number of MemoryOperands.  This does not transfer ownership
+  /// of the underlying memory.
+  void setMemRefs(std::pair<mmo_iterator, unsigned> NewMemRefs) {
+    MemRefs = NewMemRefs.first;
+    NumMemRefs = uint8_t(NewMemRefs.second);
+    assert(NumMemRefs == NewMemRefs.second &&
+           "Too many memrefs - must drop memory operands");
+  }
+
+  /// Return a set of memrefs (begin iterator, size) which conservatively
+  /// describe the memory behavior of both MachineInstrs.  This is appropriate
+  /// for use when merging two MachineInstrs into one. This routine does not
+  /// modify the memrefs of the this MachineInstr.
+  std::pair<mmo_iterator, unsigned> mergeMemRefsWith(const MachineInstr& Other);
 
   /// Clear this MachineInstr's memory reference descriptor list.  This resets
   /// the memrefs to their most conservative state.  This should be used only

@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=carrizo < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
 
 ; ALL-LABEL: {{^}}large_alloca_pixel_shader:
 ; GCN: s_mov_b32 s8, SCRATCH_RSRC_DWORD0

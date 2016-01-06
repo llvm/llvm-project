@@ -4853,8 +4853,6 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT,
 
     if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
       DecodePSHUFBMask(C, Mask);
-      if (Mask.empty())
-        return false;
       break;
     }
 
@@ -4872,7 +4870,6 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT,
   case X86ISD::VPERM2X128:
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeVPERM2X128Mask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
-    if (Mask.empty()) return false;
     // Mask only contains negative index if an element is zero.
     if (std::any_of(Mask.begin(), Mask.end(),
                     [](int M){ return M == SM_SentinelZero; }))
@@ -4950,8 +4947,6 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT,
 
     if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
       DecodeVPERMVMask(C, VT, Mask);
-      if (Mask.empty())
-        return false;
       break;
     }
     return false;
@@ -5002,14 +4997,16 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT,
 
     if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
       DecodeVPERMV3Mask(C, VT, Mask);
-      if (Mask.empty())
-        return false;
       break;
     }
     return false;
   }
   default: llvm_unreachable("unknown target shuffle node");
   }
+
+  // Empty mask indicates the decode failed.
+  if (Mask.empty())
+    return false;
 
   // If we have a fake unary shuffle, the shuffle mask is spread across two
   // inputs that are actually the same node. Re-map the mask to always point
@@ -17374,6 +17371,18 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
   if (!IntrData) {
     if (IntNo == llvm::Intrinsic::x86_seh_ehregnode)
       return MarkEHRegistrationNode(Op, DAG);
+    if (IntNo == llvm::Intrinsic::x86_flags_read_u32 ||
+        IntNo == llvm::Intrinsic::x86_flags_read_u64 ||
+        IntNo == llvm::Intrinsic::x86_flags_write_u32 ||
+        IntNo == llvm::Intrinsic::x86_flags_write_u64) {
+      // We need a frame pointer because this will get lowered to a PUSH/POP
+      // sequence.
+      MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+      MFI->setHasOpaqueSPAdjustment(true);
+      // Don't do anything here, we will expand these intrinsics out later
+      // during ExpandISelPseudos in EmitInstrWithCustomInserter.
+      return SDValue();
+    }
     return SDValue();
   }
 
@@ -22541,8 +22550,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   case X86::RDFLAGS32:
   case X86::RDFLAGS64: {
     DebugLoc DL = MI->getDebugLoc();
-    MachineFunction *MF = BB->getParent();
-    MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
     const TargetInstrInfo *TII = Subtarget->getInstrInfo();
     unsigned PushF =
         MI->getOpcode() == X86::RDFLAGS32 ? X86::PUSHF32 : X86::PUSHF64;
@@ -22558,8 +22565,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   case X86::WRFLAGS32:
   case X86::WRFLAGS64: {
     DebugLoc DL = MI->getDebugLoc();
-    MachineFunction *MF = BB->getParent();
-    MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
     const TargetInstrInfo *TII = Subtarget->getInstrInfo();
     unsigned Push =
         MI->getOpcode() == X86::WRFLAGS32 ? X86::PUSH32r : X86::PUSH64r;
@@ -23679,9 +23684,13 @@ static SDValue PerformTargetShuffleCombine(SDValue N, SelectionDAG &DAG,
 /// the operands which explicitly discard the lanes which are unused by this
 /// operation to try to flow through the rest of the combiner the fact that
 /// they're unused.
-static SDValue combineShuffleToAddSub(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineShuffleToAddSub(SDNode *N, const X86Subtarget *Subtarget,
+                                      SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+  if ((!Subtarget->hasSSE3() || (VT != MVT::v4f32 && VT != MVT::v2f64)) &&
+      (!Subtarget->hasAVX() || (VT != MVT::v8f32 && VT != MVT::v4f64)))
+    return SDValue();
 
   // We only handle target-independent shuffles.
   // FIXME: It would be easy and harmless to use the target shuffle mask
@@ -23723,12 +23732,6 @@ static SDValue combineShuffleToAddSub(SDNode *N, SelectionDAG &DAG) {
         isShuffleEquivalent(V1, V2, Mask, {0, 9, 2, 11, 4, 13, 6, 15})))
     return SDValue();
 
-  // Only specific types are legal at this point, assert so we notice if and
-  // when these change.
-  assert((VT == MVT::v4f32 || VT == MVT::v2f64 || VT == MVT::v8f32 ||
-          VT == MVT::v4f64) &&
-         "Unknown vector type encountered!");
-
   return DAG.getNode(X86ISD::ADDSUB, DL, VT, LHS, RHS);
 }
 
@@ -23748,8 +23751,8 @@ static SDValue PerformShuffleCombine(SDNode *N, SelectionDAG &DAG,
 
   // If we have legalized the vector types, look for blends of FADD and FSUB
   // nodes that we can fuse into an ADDSUB node.
-  if (TLI.isTypeLegal(VT) && Subtarget->hasSSE3())
-    if (SDValue AddSub = combineShuffleToAddSub(N, DAG))
+  if (TLI.isTypeLegal(VT))
+    if (SDValue AddSub = combineShuffleToAddSub(N, Subtarget, DAG))
       return AddSub;
 
   // Combine 256-bit vector shuffles. This is only profitable when in AVX mode
@@ -27416,7 +27419,7 @@ static SDValue PerformZExtCombine(SDNode *N, SelectionDAG &DAG,
   // from AH (which we otherwise need to do contortions to access).
   if (N0.getOpcode() == ISD::UDIVREM &&
       N0.getResNo() == 1 && N0.getValueType() == MVT::i8 &&
-      (VT == MVT::i32 || VT == MVT::i64)) {
+      VT == MVT::i32) {
     SDVTList NodeTys = DAG.getVTList(MVT::i8, VT);
     SDValue R = DAG.getNode(X86ISD::UDIVREM8_ZEXT_HREG, dl, NodeTys,
                             N0.getOperand(0), N0.getOperand(1));
@@ -27920,6 +27923,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FANDN:       return PerformFANDNCombine(N, DAG, Subtarget);
   case X86ISD::BT:          return PerformBTCombine(N, DAG, DCI);
   case X86ISD::VZEXT_MOVL:  return PerformVZEXT_MOVLCombine(N, DAG);
+// TODO: refactor the [SU]DIVREM8_[SZ]EXT_HREG code so that it's not duplicated.
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:    return PerformZExtCombine(N, DAG, DCI, Subtarget);
   case ISD::SIGN_EXTEND:    return PerformSExtCombine(N, DAG, DCI, Subtarget);

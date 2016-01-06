@@ -105,51 +105,53 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     MBB.addLiveIn(PreloadedPrivateBufferReg);
   }
 
-  // We reserved the last registers for this. Shift it down to the end of those
-  // which were actually used.
-  //
-  // FIXME: It might be safer to use a pseudoregister before replacement.
+  if (!ST.hasSGPRInitBug()) {
+    // We reserved the last registers for this. Shift it down to the end of those
+    // which were actually used.
+    //
+    // FIXME: It might be safer to use a pseudoregister before replacement.
 
-  // FIXME: We should be able to eliminate unused input registers. We only
-  // cannot do this for the resources required for scratch access. For now we
-  // skip over user SGPRs and may leave unused holes.
+    // FIXME: We should be able to eliminate unused input registers. We only
+    // cannot do this for the resources required for scratch access. For now we
+    // skip over user SGPRs and may leave unused holes.
 
-  // We find the resource first because it has an alignment requirement.
-  if (ScratchRsrcReg == TRI->reservedPrivateSegmentBufferReg(MF)) {
-    MachineRegisterInfo &MRI = MF.getRegInfo();
+    // We find the resource first because it has an alignment requirement.
+    if (ScratchRsrcReg == TRI->reservedPrivateSegmentBufferReg(MF)) {
+      MachineRegisterInfo &MRI = MF.getRegInfo();
 
-    unsigned NumPreloaded = MFI->getNumPreloadedSGPRs() / 4;
-    // Skip the last 2 elements because the last one is reserved for VCC, and
-    // this is the 2nd to last element already.
-    for (MCPhysReg Reg : getAllSGPR128().drop_back(2).slice(NumPreloaded)) {
-      // Pick the first unallocated one. Make sure we don't clobber the other
-      // reserved input we needed.
-      if (!MRI.isPhysRegUsed(Reg)) {
-        assert(MRI.isAllocatable(Reg));
-        MRI.replaceRegWith(ScratchRsrcReg, Reg);
-        ScratchRsrcReg = Reg;
-        MFI->setScratchRSrcReg(ScratchRsrcReg);
-        break;
+      unsigned NumPreloaded = MFI->getNumPreloadedSGPRs() / 4;
+      // Skip the last 2 elements because the last one is reserved for VCC, and
+      // this is the 2nd to last element already.
+      for (MCPhysReg Reg : getAllSGPR128().drop_back(2).slice(NumPreloaded)) {
+        // Pick the first unallocated one. Make sure we don't clobber the other
+        // reserved input we needed.
+        if (!MRI.isPhysRegUsed(Reg)) {
+          assert(MRI.isAllocatable(Reg));
+          MRI.replaceRegWith(ScratchRsrcReg, Reg);
+          ScratchRsrcReg = Reg;
+          MFI->setScratchRSrcReg(ScratchRsrcReg);
+          break;
+        }
       }
     }
-  }
 
-  if (ScratchWaveOffsetReg == TRI->reservedPrivateSegmentWaveByteOffsetReg(MF)) {
-    MachineRegisterInfo &MRI = MF.getRegInfo();
-    // Skip the last 2 elements because the last one is reserved for VCC, and
-    // this is the 2nd to last element already.
-    unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
-    for (MCPhysReg Reg : getAllSGPRs().drop_back(6).slice(NumPreloaded)) {
-      // Pick the first unallocated SGPR. Be careful not to pick an alias of the
-      // scratch descriptor, since we haven’t added its uses yet.
-      if (!MRI.isPhysRegUsed(Reg)) {
-        assert(MRI.isAllocatable(Reg) &&
-               !TRI->isSubRegisterEq(ScratchRsrcReg, Reg));
+    if (ScratchWaveOffsetReg == TRI->reservedPrivateSegmentWaveByteOffsetReg(MF)) {
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      // Skip the last 2 elements because the last one is reserved for VCC, and
+      // this is the 2nd to last element already.
+      unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
+      for (MCPhysReg Reg : getAllSGPRs().drop_back(6).slice(NumPreloaded)) {
+        // Pick the first unallocated SGPR. Be careful not to pick an alias of the
+        // scratch descriptor, since we haven’t added its uses yet.
+        if (!MRI.isPhysRegUsed(Reg)) {
+          assert(MRI.isAllocatable(Reg) &&
+                !TRI->isSubRegisterEq(ScratchRsrcReg, Reg));
 
-        MRI.replaceRegWith(ScratchWaveOffsetReg, Reg);
-        ScratchWaveOffsetReg = Reg;
-        MFI->setScratchWaveOffsetReg(ScratchWaveOffsetReg);
-        break;
+          MRI.replaceRegWith(ScratchWaveOffsetReg, Reg);
+          ScratchWaveOffsetReg = Reg;
+          MFI->setScratchWaveOffsetReg(ScratchWaveOffsetReg);
+          break;
+        }
       }
     }
   }

@@ -57,6 +57,10 @@
 #endif
 #endif
 
+#ifdef LLVM_ON_WIN32
+#include "Windows/WindowsSupport.h"
+#endif
+
 using namespace llvm;
 
 raw_ostream::~raw_ostream() {
@@ -567,8 +571,21 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   assert(FD >= 0 && "File already closed.");
   pos += Size;
 
+#ifndef LLVM_ON_WIN32
+  bool ShouldWriteInChunks = false;
+#else
+  // Writing a large size of output to Windows console returns ENOMEM. It seems
+  // that, prior to Windows 8, WriteFile() is redirecting to WriteConsole(), and
+  // the latter has a size limit (66000 bytes or less, depending on heap usage).
+  bool ShouldWriteInChunks = !!::_isatty(FD) && !IsWindows8OrGreater();
+#endif
+
   do {
-    ssize_t ret = ::write(FD, Ptr, Size);
+    size_t ChunkSize = Size;
+    if (ChunkSize > 32767 && ShouldWriteInChunks)
+        ChunkSize = 32767;
+
+    ssize_t ret = ::write(FD, Ptr, ChunkSize);
 
     if (ret < 0) {
       // If it's a recoverable error, swallow it and retry the write.

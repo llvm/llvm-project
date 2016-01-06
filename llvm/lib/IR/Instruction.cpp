@@ -76,22 +76,21 @@ iplist<Instruction>::iterator Instruction::eraseFromParent() {
   return getParent()->getInstList().erase(getIterator());
 }
 
-/// insertBefore - Insert an unlinked instructions into a basic block
-/// immediately before the specified instruction.
+/// Insert an unlinked instruction into a basic block immediately before the
+/// specified instruction.
 void Instruction::insertBefore(Instruction *InsertPos) {
   InsertPos->getParent()->getInstList().insert(InsertPos->getIterator(), this);
 }
 
-/// insertAfter - Insert an unlinked instructions into a basic block
-/// immediately after the specified instruction.
+/// Insert an unlinked instruction into a basic block immediately after the
+/// specified instruction.
 void Instruction::insertAfter(Instruction *InsertPos) {
   InsertPos->getParent()->getInstList().insertAfter(InsertPos->getIterator(),
                                                     this);
 }
 
-/// moveBefore - Unlink this instruction from its current basic block and
-/// insert it into the basic block that MovePos lives in, right before
-/// MovePos.
+/// Unlink this instruction from its current basic block and insert it into the
+/// basic block that MovePos lives in, right before MovePos.
 void Instruction::moveBefore(Instruction *MovePos) {
   MovePos->getParent()->getInstList().splice(
       MovePos->getIterator(), getParent()->getInstList(), getIterator());

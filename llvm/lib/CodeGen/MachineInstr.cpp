@@ -866,6 +866,27 @@ void MachineInstr::addMemOperand(MachineFunction &MF,
   setMemRefs(NewMemRefs, NewMemRefs + NewNum);
 }
 
+std::pair<MachineInstr::mmo_iterator, unsigned>
+MachineInstr::mergeMemRefsWith(const MachineInstr& Other) {
+  // TODO: If we end up with too many memory operands, return the empty
+  // conservative set rather than failing asserts.
+  // TODO: consider uniquing elements within the operand lists to reduce
+  // space usage and fall back to conservative information less often.
+  size_t CombinedNumMemRefs = (memoperands_end() - memoperands_begin())
+    + (Other.memoperands_end() - Other.memoperands_begin());
+
+  MachineFunction *MF = getParent()->getParent();
+  mmo_iterator MemBegin = MF->allocateMemRefsArray(CombinedNumMemRefs);
+  mmo_iterator MemEnd = std::copy(memoperands_begin(), memoperands_end(),
+                                  MemBegin);
+  MemEnd = std::copy(Other.memoperands_begin(), Other.memoperands_end(),
+                     MemEnd);
+  assert(MemEnd - MemBegin == (ptrdiff_t)CombinedNumMemRefs &&
+         "missing memrefs");
+  
+  return std::make_pair(MemBegin, CombinedNumMemRefs);
+}
+
 bool MachineInstr::hasPropertyInBundle(unsigned Mask, QueryType Type) const {
   assert(!isBundledWithPred() && "Must be called on bundle header");
   for (MachineBasicBlock::const_instr_iterator MII = getIterator();; ++MII) {

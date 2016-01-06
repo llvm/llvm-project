@@ -30,3 +30,9 @@ RUN:     LLVMFuzzer-SimpleDictionaryTest                    -seed=1 -runs=100000
 
 RUN: not LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
 UNINSTRUMENTED: ERROR: __sanitizer_set_death_callback is not defined. Exiting.
+
+RUN: LLVMFuzzer-SimpleTest -print_new_cov_pcs=1 2>&1 | FileCheck %s --check-prefix=PCS
+PCS:{{^0x[a-f0-9]+}}
+PCS:NEW
+PCS:BINGO
+

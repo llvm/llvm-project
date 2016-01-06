@@ -72,3 +72,5 @@ FUZZER_FLAG_STRING(exact_artifact_path,
 FUZZER_FLAG_INT(drill, 0, "Experimental: fuzz using a single unit as the seed "
                           "corpus, then merge with the initial corpus")
 FUZZER_FLAG_INT(output_csv, 0, "Enable pulse output in CSV format.")
+FUZZER_FLAG_INT(print_new_cov_pcs, 0, "If 1, print out new covered pcs.")
+

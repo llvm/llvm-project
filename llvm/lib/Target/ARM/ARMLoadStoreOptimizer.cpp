@@ -1986,23 +1986,6 @@ static bool IsSafeAndProfitableToMove(bool isLd, unsigned Base,
   return AddedRegPressure.size() <= MemRegs.size() * 2;
 }
 
-
-/// Copy \p Op0 and \p Op1 operands into a new array assigned to MI.
-static void concatenateMemOperands(MachineInstr *MI, MachineInstr *Op0,
-                                   MachineInstr *Op1) {
-  assert(MI->memoperands_empty() && "expected a new machineinstr");
-  size_t numMemRefs = (Op0->memoperands_end() - Op0->memoperands_begin())
-    + (Op1->memoperands_end() - Op1->memoperands_begin());
-
-  MachineFunction *MF = MI->getParent()->getParent();
-  MachineSDNode::mmo_iterator MemBegin = MF->allocateMemRefsArray(numMemRefs);
-  MachineSDNode::mmo_iterator MemEnd =
-    std::copy(Op0->memoperands_begin(), Op0->memoperands_end(), MemBegin);
-  MemEnd =
-    std::copy(Op1->memoperands_begin(), Op1->memoperands_end(), MemEnd);
-  MI->setMemRefs(MemBegin, MemEnd);
-}
-
 bool
 ARMPreAllocLoadStoreOpt::CanFormLdStDWord(MachineInstr *Op0, MachineInstr *Op1,
                                           DebugLoc &dl, unsigned &NewOpc,
@@ -2196,7 +2179,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
             if (!isT2)
               MIB.addReg(0);
             MIB.addImm(Offset).addImm(Pred).addReg(PredReg);
-            concatenateMemOperands(MIB, Op0, Op1);
+            MIB.setMemRefs(Op0->mergeMemRefsWith(*Op1));
             DEBUG(dbgs() << "Formed " << *MIB << "\n");
             ++NumLDRDFormed;
           } else {
@@ -2210,7 +2193,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
             if (!isT2)
               MIB.addReg(0);
             MIB.addImm(Offset).addImm(Pred).addReg(PredReg);
-            concatenateMemOperands(MIB, Op0, Op1);
+            MIB.setMemRefs(Op0->mergeMemRefsWith(*Op1));
             DEBUG(dbgs() << "Formed " << *MIB << "\n");
             ++NumSTRDFormed;
           }

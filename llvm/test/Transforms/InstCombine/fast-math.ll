@@ -733,13 +733,12 @@ declare fp128 @fminl(fp128, fp128)
 ; This should always be set when unsafe-fp-math is true, but
 ; alternate the attributes for additional test coverage.
 ; 'nsz' is implied by the definition of fmax or fmin itself.
-attributes #1 = { "no-nans-fp-math" = "true" }
 
 ; Shrink and remove the call.
-define float @max1(float %a, float %b) #0 {
+define float @max1(float %a, float %b) {
   %c = fpext float %a to double
   %d = fpext float %b to double
-  %e = call double @fmax(double %c, double %d)
+  %e = call fast double @fmax(double %c, double %d)
   %f = fptrunc double %e to float
   ret float %f
 
@@ -749,8 +748,8 @@ define float @max1(float %a, float %b) #0 {
 ; CHECK-NEXT:  ret
 }
 
-define float @max2(float %a, float %b) #1 {
-  %c = call float @fmaxf(float %a, float %b)
+define float @max2(float %a, float %b) {
+  %c = call nnan float @fmaxf(float %a, float %b)
   ret float %c
 
 ; CHECK-LABEL: max2(
@@ -760,8 +759,8 @@ define float @max2(float %a, float %b) #1 {
 }
 
 
-define double @max3(double %a, double %b) #0 {
-  %c = call double @fmax(double %a, double %b)
+define double @max3(double %a, double %b) {
+  %c = call fast double @fmax(double %a, double %b)
   ret double %c
 
 ; CHECK-LABEL: max3(
@@ -770,8 +769,8 @@ define double @max3(double %a, double %b) #0 {
 ; CHECK-NEXT:  ret
 }
 
-define fp128 @max4(fp128 %a, fp128 %b) #1 {
-  %c = call fp128 @fmaxl(fp128 %a, fp128 %b)
+define fp128 @max4(fp128 %a, fp128 %b) {
+  %c = call nnan fp128 @fmaxl(fp128 %a, fp128 %b)
   ret fp128 %c
 
 ; CHECK-LABEL: max4(
@@ -781,10 +780,10 @@ define fp128 @max4(fp128 %a, fp128 %b) #1 {
 }
 
 ; Shrink and remove the call.
-define float @min1(float %a, float %b) #1 {
+define float @min1(float %a, float %b) {
   %c = fpext float %a to double
   %d = fpext float %b to double
-  %e = call double @fmin(double %c, double %d)
+  %e = call nnan double @fmin(double %c, double %d)
   %f = fptrunc double %e to float
   ret float %f
 
@@ -794,8 +793,8 @@ define float @min1(float %a, float %b) #1 {
 ; CHECK-NEXT:  ret
 }
 
-define float @min2(float %a, float %b) #0 {
-  %c = call float @fminf(float %a, float %b)
+define float @min2(float %a, float %b) {
+  %c = call fast float @fminf(float %a, float %b)
   ret float %c
 
 ; CHECK-LABEL: min2(
@@ -804,8 +803,8 @@ define float @min2(float %a, float %b) #0 {
 ; CHECK-NEXT:  ret
 }
 
-define double @min3(double %a, double %b) #1 {
-  %c = call double @fmin(double %a, double %b)
+define double @min3(double %a, double %b) {
+  %c = call nnan double @fmin(double %a, double %b)
   ret double %c
 
 ; CHECK-LABEL: min3(
@@ -814,8 +813,8 @@ define double @min3(double %a, double %b) #1 {
 ; CHECK-NEXT:  ret
 }
 
-define fp128 @min4(fp128 %a, fp128 %b) #0 {
-  %c = call fp128 @fminl(fp128 %a, fp128 %b)
+define fp128 @min4(fp128 %a, fp128 %b) {
+  %c = call fast fp128 @fminl(fp128 %a, fp128 %b)
   ret fp128 %c
 
 ; CHECK-LABEL: min4(
