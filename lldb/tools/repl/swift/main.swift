@@ -48,7 +48,7 @@ while subsequent_short < 3 {
     var elapsedTicks = end - start
     var elapsedNano = (elapsedTicks * UInt64(timebase_info.numer)) / UInt64(timebase_info.denom)
     if elapsedNano < 100000 {
-        ++subsequent_short
+        subsequent_short += 1
     } else {
         subsequent_short = 0
     }
