@@ -909,6 +909,13 @@ public:
     iterator __insert_multi(const value_type& __v);
     iterator __insert_multi(const_iterator __p, const value_type& __v);
 
+#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    pair<iterator, bool> __insert_unique(        value_type&& __v);
+    iterator __insert_unique(const_iterator __p, value_type&& __v);
+    iterator __insert_multi(                    value_type&& __v);
+    iterator __insert_multi(const_iterator __p, value_type&& __v);
+#endif
+
     pair<iterator, bool> __node_insert_unique(__node_pointer __nd);
     iterator             __node_insert_unique(const_iterator __p,
                                               __node_pointer __nd);
@@ -1730,6 +1737,28 @@ __tree<_Tp, _Compare, _Allocator>::__emplace_hint_multi(const_iterator __p,
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp, class _Compare, class _Allocator>
+pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
+__tree<_Tp, _Compare, _Allocator>::__insert_unique(value_type&& __v)
+{
+    __node_holder __h = __construct_node(_VSTD::forward<value_type>(__v));
+    pair<iterator, bool> __r = __node_insert_unique(__h.get());
+    if (__r.second)
+        __h.release();
+    return __r;
+}
+
+template <class _Tp, class _Compare, class _Allocator>
+typename __tree<_Tp, _Compare, _Allocator>::iterator
+__tree<_Tp, _Compare, _Allocator>::__insert_unique(const_iterator __p, value_type&& __v)
+{
+    __node_holder __h = __construct_node(_VSTD::forward<value_type>(__v));
+    iterator __r = __node_insert_unique(__p, __h.get());
+    if (__r.__ptr_ == __h.get())
+        __h.release();
+    return __r;
+}
+
+template <class _Tp, class _Compare, class _Allocator>
 template <class _Vp>
 pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
 __tree<_Tp, _Compare, _Allocator>::__insert_unique(_Vp&& __v)
@@ -1751,6 +1780,28 @@ __tree<_Tp, _Compare, _Allocator>::__insert_unique(const_iterator __p, _Vp&& __v
     if (__r.__ptr_ == __h.get())
         __h.release();
     return __r;
+}
+
+template <class _Tp, class _Compare, class _Allocator>
+typename __tree<_Tp, _Compare, _Allocator>::iterator
+__tree<_Tp, _Compare, _Allocator>::__insert_multi(value_type&& __v)
+{
+    __node_base_pointer __parent;
+    __node_base_pointer& __child = __find_leaf_high(__parent, __v);
+    __node_holder __h = __construct_node(_VSTD::forward<value_type>(__v));
+    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+    return iterator(__h.release());
+}
+
+template <class _Tp, class _Compare, class _Allocator>
+typename __tree<_Tp, _Compare, _Allocator>::iterator
+__tree<_Tp, _Compare, _Allocator>::__insert_multi(const_iterator __p, value_type&& __v)
+{
+    __node_base_pointer __parent;
+    __node_base_pointer& __child = __find_leaf(__p, __parent, __v);
+    __node_holder __h = __construct_node(_VSTD::forward<value_type>(__v));
+    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+    return iterator(__h.release());
 }
 
 template <class _Tp, class _Compare, class _Allocator>

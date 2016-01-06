@@ -2577,8 +2577,9 @@ protected:
 
         if (command.GetArgumentCount() == 0)
         {
-            result.AppendErrorWithFormat ("\nSyntax: %s\n", m_cmd_syntax.c_str());
+            result.AppendError ("file option must be specified.");
             result.SetStatus (eReturnStatusFailed);
+            return result.Succeeded();
         }
         else
         {

@@ -57,6 +57,24 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
   error("Unknown emulation: " + S);
 }
 
+// Returns slices of MB by parsing MB as an archive file.
+// Each slice consists of a member file in the archive.
+static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
+  ErrorOr<std::unique_ptr<Archive>> FileOrErr = Archive::create(MB);
+  error(FileOrErr, "Failed to parse archive");
+  std::unique_ptr<Archive> File = std::move(*FileOrErr);
+
+  std::vector<MemoryBufferRef> V;
+  for (const ErrorOr<Archive::Child> &C : File->children()) {
+    error(C, "Could not get the child of the archive " + File->getFileName());
+    ErrorOr<MemoryBufferRef> MbOrErr = C->getMemoryBufferRef();
+    error(MbOrErr, "Could not get the buffer for a child of the archive " +
+                       File->getFileName());
+    V.push_back(*MbOrErr);
+  }
+  return V;
+}
+
 // Opens and parses a file. Path has to be resolved already.
 // Newly created memory buffers are owned by this driver.
 void LinkerDriver::addFile(StringRef Path) {
@@ -75,19 +93,17 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   case file_magic::archive:
     if (WholeArchive) {
-      auto File = make_unique<ArchiveFile>(MBRef);
-      for (MemoryBufferRef &MB : File->getMembers())
-        Files.push_back(createELFFile<ObjectFile>(MB));
-      OwningArchives.emplace_back(std::move(File));
+      for (MemoryBufferRef MB : getArchiveMembers(MBRef))
+        Files.push_back(createObjectFile(MB));
       return;
     }
     Files.push_back(make_unique<ArchiveFile>(MBRef));
     return;
   case file_magic::elf_shared_object:
-    Files.push_back(createELFFile<SharedFile>(MBRef));
+    Files.push_back(createSharedFile(MBRef));
     return;
   default:
-    Files.push_back(createELFFile<ObjectFile>(MBRef));
+    Files.push_back(createObjectFile(MBRef));
   }
 }
 

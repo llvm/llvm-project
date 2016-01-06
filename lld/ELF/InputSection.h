@@ -93,6 +93,10 @@ InputSectionBase<ELFT>
     InputSectionBase<ELFT>::Discarded(nullptr, nullptr,
                                       InputSectionBase<ELFT>::Regular);
 
+// Usually sections are copied to the output as atomic chunks of data,
+// but some special types of sections are split into small pieces of data
+// and each piece is copied to a different place in the output.
+// This class represents such special sections.
 template <class ELFT> class SplitInputSection : public InputSectionBase<ELFT> {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
@@ -100,7 +104,11 @@ template <class ELFT> class SplitInputSection : public InputSectionBase<ELFT> {
 public:
   SplitInputSection(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                     typename InputSectionBase<ELFT>::Kind SectionKind);
+
+  // For each piece of data, we maintain the offsets in the input section and
+  // in the output section. The latter may be -1 if it is not assigned yet.
   std::vector<std::pair<uintX_t, uintX_t>> Offsets;
+
   std::pair<std::pair<uintX_t, uintX_t> *, uintX_t>
   getRangeAndSize(uintX_t Offset);
 };

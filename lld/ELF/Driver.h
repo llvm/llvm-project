@@ -38,7 +38,6 @@ private:
   llvm::BumpPtrAllocator Alloc;
   bool WholeArchive = false;
   std::vector<std::unique_ptr<InputFile>> Files;
-  std::vector<std::unique_ptr<ArchiveFile>> OwningArchives;
   std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
 

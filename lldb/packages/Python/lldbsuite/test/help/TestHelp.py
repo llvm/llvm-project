@@ -134,7 +134,7 @@ class HelpCommandTestCase(TestBase):
 
     @no_debug_info_test
     def test_help_image_du_line_should_work(self):
-        """Command 'help image du line' is not ambiguous and should work."""
+        """Command 'help image du line-table' is not ambiguous and should work."""
         # 'image' is an alias for 'target modules'.
         self.expect("help image du line",
             substrs = ['Dump the line table for one or more compilation units'])

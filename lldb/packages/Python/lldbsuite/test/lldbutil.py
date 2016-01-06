@@ -740,7 +740,7 @@ def expect_state_changes(test, listener, states, timeout = 5):
     event = lldb.SBEvent()
     for expected_state in states:
         if not listener.WaitForEvent(timeout, event):
-            test.Fail("Timed out while waiting for a transition to state %s" %
+            test.fail("Timed out while waiting for a transition to state %s" %
                 lldb.SBDebugger.StateAsCString(expected_state))
 
         got_state = lldb.SBProcess.GetStateFromEvent(event)

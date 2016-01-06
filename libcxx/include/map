@@ -126,9 +126,11 @@ public:
     template <class... Args>
         iterator emplace_hint(const_iterator position, Args&&... args);
     pair<iterator, bool> insert(const value_type& v);
+    pair<iterator, bool> insert(      value_type&& v);                                // C++17
     template <class P>
         pair<iterator, bool> insert(P&& p);
     iterator insert(const_iterator position, const value_type& v);
+    iterator insert(const_iterator position,       value_type&& v);                   // C++17
     template <class P>
         iterator insert(const_iterator position, P&& p);
     template <class InputIterator>
@@ -336,9 +338,11 @@ public:
     template <class... Args>
         iterator emplace_hint(const_iterator position, Args&&... args);
     iterator insert(const value_type& v);
+    iterator insert(      value_type&& v);                                            // C++17
     template <class P>
         iterator insert(P&& p);
     iterator insert(const_iterator position, const value_type& v);
+    iterator insert(const_iterator position,       value_type&& v);                   // C++17
     template <class P>
         iterator insert(const_iterator position, P&& p);
     template <class InputIterator>
@@ -1088,6 +1092,17 @@ public:
     iterator
         insert(const_iterator __p, const value_type& __v)
             {return __tree_.__insert_unique(__p.__i_, __v);}
+
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool>
+        insert(     value_type&& __v) {return __tree_.__insert_unique(_VSTD::forward<value_type>(__v));}
+
+    _LIBCPP_INLINE_VISIBILITY
+    iterator
+        insert(const_iterator __p,       value_type&& __v)
+            {return __tree_.__insert_unique(__p.__i_, _VSTD::forward<value_type>(__v));}
+#endif
 
     template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
@@ -1939,6 +1954,15 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __p, const value_type& __v)
             {return __tree_.__insert_multi(__p.__i_, __v);}
+
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert( value_type&& __v) {return __tree_.__insert_multi(_VSTD::forward<value_type>(__v));}
+
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(const_iterator __p, value_type&& __v)
+            {return __tree_.__insert_multi(__p.__i_, _VSTD::forward<value_type>(__v));}
+#endif
 
     template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY

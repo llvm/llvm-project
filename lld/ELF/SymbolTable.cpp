@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Symbol table is a bag of all known symbols. We put all symbols of
-// all input files to the symbol table. The symbol Table is basically
+// all input files to the symbol table. The symbol table is basically
 // a hash table with the logic to resolve symbol name conflicts using
 // the symbol types.
 //
@@ -28,6 +28,9 @@ using namespace lld::elf2;
 
 template <class ELFT> SymbolTable<ELFT>::SymbolTable() {}
 
+// All input object files must be for the same architecture
+// (e.g. it does not make sense to link x86 object files with
+// MIPS object files.) This function checks for that error.
 template <class ELFT>
 static void checkCompatibility(InputFile *FileP) {
   auto *F = dyn_cast<ELFFileBase<ELFT>>(FileP);
@@ -42,6 +45,7 @@ static void checkCompatibility(InputFile *FileP) {
   error(A + " is incompatible with " + B);
 }
 
+// Add symbols in File to the symbol table.
 template <class ELFT>
 void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   InputFile *FileP = File.get();
@@ -64,7 +68,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
       return;
 
     SharedFiles.emplace_back(cast<SharedFile<ELFT>>(File.release()));
-    F->parse();
+    F->parseRest();
     for (SharedSymbol<ELFT> &B : F->getSharedSymbols())
       resolve(&B);
     return;
@@ -73,7 +77,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   // .o file
   auto *F = cast<ObjectFile<ELFT>>(FileP);
   ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(File.release()));
-  F->parse(Comdats);
+  F->parse(ComdatGroups);
   for (SymbolBody *B : F->getSymbols())
     resolve(B);
 }
@@ -109,6 +113,9 @@ void SymbolTable<ELFT>::addSynthetic(StringRef Name,
   resolve(Sym);
 }
 
+// Add Name as an "ignored" symbol. An ignored symbol is a regular
+// linker-synthesized defined symbol, but it is not recorded to the output
+// file's symbol table. Such symbols are useful for some linker-defined symbols.
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
   auto *Sym = new (Alloc)
@@ -117,18 +124,10 @@ SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
   return Sym;
 }
 
-template <class ELFT> bool SymbolTable<ELFT>::isUndefined(StringRef Name) {
-  if (SymbolBody *Sym = find(Name))
-    return Sym->isUndefined();
-  return false;
-}
-
 // Returns a file from which symbol B was created.
-// If B does not belong to any file in ObjectFiles, returns a nullptr.
+// If B does not belong to any file, returns a nullptr.
 template <class ELFT>
-ELFFileBase<ELFT> *
-elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELFT>>> ObjectFiles,
-               const SymbolBody *B) {
+ELFFileBase<ELFT> *SymbolTable<ELFT>::findFile(SymbolBody *B) {
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : ObjectFiles) {
     ArrayRef<SymbolBody *> Syms = F->getSymbols();
     if (std::find(Syms.begin(), Syms.end(), B) != Syms.end())
@@ -139,8 +138,8 @@ elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELFT>>> ObjectFiles,
 
 template <class ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Old, SymbolBody *New) {
-  ELFFileBase<ELFT> *OldFile = findFile<ELFT>(ObjectFiles, Old);
-  ELFFileBase<ELFT> *NewFile = findFile<ELFT>(ObjectFiles, New);
+  ELFFileBase<ELFT> *OldFile = findFile(Old);
+  ELFFileBase<ELFT> *NewFile = findFile(New);
 
   StringRef Sym = Old->getName();
   StringRef F1 = OldFile ? OldFile->getName() : "(internal)";
@@ -173,15 +172,15 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
 
   // compare() returns -1, 0, or 1 if the lhs symbol is less preferable,
   // equivalent (conflicting), or more preferable, respectively.
-  int comp = Existing->compare<ELFT>(New);
-  if (comp == 0) {
+  int Comp = Existing->compare<ELFT>(New);
+  if (Comp == 0) {
     std::string S = "duplicate symbol: " + conflictMsg(Existing, New);
     if (!Config->AllowMultipleDefinition)
       error(S);
     warning(S);
     return;
   }
-  if (comp < 0)
+  if (Comp < 0)
     Sym->Body = New;
 }
 
@@ -248,20 +247,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanShlibUndefined() {
           Sym->setUsedInDynamicReloc();
 }
 
-template class lld::elf2::SymbolTable<ELF32LE>;
-template class lld::elf2::SymbolTable<ELF32BE>;
-template class lld::elf2::SymbolTable<ELF64LE>;
-template class lld::elf2::SymbolTable<ELF64BE>;
-
-template ELFFileBase<ELF32LE> *
-lld::elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELF32LE>>>,
-                    const SymbolBody *);
-template ELFFileBase<ELF32BE> *
-lld::elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELF32BE>>>,
-                    const SymbolBody *);
-template ELFFileBase<ELF64LE> *
-lld::elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELF64LE>>>,
-                    const SymbolBody *);
-template ELFFileBase<ELF64BE> *
-lld::elf2::findFile(ArrayRef<std::unique_ptr<ObjectFile<ELF64BE>>>,
-                    const SymbolBody *);
+template class elf2::SymbolTable<ELF32LE>;
+template class elf2::SymbolTable<ELF32BE>;
+template class elf2::SymbolTable<ELF64LE>;
+template class elf2::SymbolTable<ELF64BE>;

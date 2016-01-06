@@ -2,7 +2,7 @@ namespace ns
 {
 inline int
 ifunc(int i)
-{
+{ // FUNC_ifunc
     return i;
 }
 struct S
@@ -16,7 +16,7 @@ struct S
     }
     int
     mfunc()
-    {
+    { // FUNC_mfunc
         return a + b;
     }
 };

@@ -11,6 +11,7 @@
 
 // class map
 
+// pair<iterator, bool> insert( value_type&& v);  // C++17 and later
 // template <class P>
 //   pair<iterator, bool> insert(P&& p);
 
@@ -19,6 +20,7 @@
 
 #include "MoveOnly.h"
 #include "min_allocator.h"
+#include "test_macros.h"
 
 int main()
 {
@@ -55,7 +57,7 @@ int main()
         assert(r.first->first == 3);
         assert(r.first->second == 3);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::map<int, MoveOnly, std::less<int>, min_allocator<std::pair<const int, MoveOnly>>> M;
         typedef std::pair<M::iterator, bool> R;
@@ -82,6 +84,40 @@ int main()
         assert(r.first->second == 3);
 
         r = m.insert(M::value_type(3, 3));
+        assert(!r.second);
+        assert(r.first == prev(m.end()));
+        assert(m.size() == 3);
+        assert(r.first->first == 3);
+        assert(r.first->second == 3);
+    }
+#endif
+#if TEST_STD_VER > 14
+    {
+        typedef std::map<int, MoveOnly> M;
+        typedef std::pair<M::iterator, bool> R;
+        M m;
+        R r = m.insert({2, MoveOnly(2)});
+        assert(r.second);
+        assert(r.first == m.begin());
+        assert(m.size() == 1);
+        assert(r.first->first == 2);
+        assert(r.first->second == 2);
+
+        r = m.insert({1, MoveOnly(1)});
+        assert(r.second);
+        assert(r.first == m.begin());
+        assert(m.size() == 2);
+        assert(r.first->first == 1);
+        assert(r.first->second == 1);
+
+        r = m.insert({3, MoveOnly(3)});
+        assert(r.second);
+        assert(r.first == prev(m.end()));
+        assert(m.size() == 3);
+        assert(r.first->first == 3);
+        assert(r.first->second == 3);
+
+        r = m.insert({3, MoveOnly(3)});
         assert(!r.second);
         assert(r.first == prev(m.end()));
         assert(m.size() == 3);

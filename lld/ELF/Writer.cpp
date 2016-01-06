@@ -330,18 +330,17 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &S,
 }
 
 template <class ELFT>
-static void reportUndefined(const SymbolTable<ELFT> &S, const SymbolBody &Sym) {
+static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if (Config->Shared && !Config->NoUndefined)
     return;
 
-  ELFFileBase<ELFT> *SymFile = findFile<ELFT>(S.getObjectFiles(), &Sym);
-  std::string Message = "undefined symbol: " + Sym.getName().str();
-  if (SymFile)
-    Message += " in " + SymFile->getName().str();
+  std::string Msg = "undefined symbol: " + Sym->getName().str();
+  if (ELFFileBase<ELFT> *File = Symtab.findFile(Sym))
+    Msg += " in " + File->getName().str();
   if (Config->NoInhibitExec)
-    warning(Message);
+    warning(Msg);
   else
-    error(Message);
+    error(Msg);
 }
 
 // Local symbols are not in the linker's symbol table. This function scans
@@ -801,7 +800,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     SymbolBody *Body = P.second->Body;
     if (auto *U = dyn_cast<Undefined>(Body))
       if (!U->isWeak() && !U->canKeepUndefined())
-        reportUndefined<ELFT>(Symtab, *Body);
+        reportUndefined<ELFT>(Symtab, Body);
 
     if (auto *C = dyn_cast<DefinedCommon>(Body))
       CommonSymbols.push_back(C);
@@ -956,10 +955,12 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
   StringSaver Saver(Alloc);
   StringRef Start = Saver.save("__start_" + S);
   StringRef Stop = Saver.save("__stop_" + S);
-  if (Symtab.isUndefined(Start))
-    Symtab.addSynthetic(Start, *Sec, 0);
-  if (Symtab.isUndefined(Stop))
-    Symtab.addSynthetic(Stop, *Sec, Sec->getSize());
+  if (SymbolBody *B = Symtab.find(Start))
+    if (B->isUndefined())
+      Symtab.addSynthetic(Start, *Sec, 0);
+  if (SymbolBody *B = Symtab.find(Stop))
+    if (B->isUndefined())
+      Symtab.addSynthetic(Stop, *Sec, Sec->getSize());
 }
 
 template <class ELFT> static bool needsPhdr(OutputSectionBase<ELFT> *Sec) {

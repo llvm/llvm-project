@@ -1118,9 +1118,9 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   ArrayRef<uint8_t> D = S->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   uintX_t EntSize = S->getSectionHdr()->sh_entsize;
-  uintX_t Offset = 0;
 
   if (this->Header.sh_flags & SHF_STRINGS) {
+    uintX_t Offset = 0;
     while (!Data.empty()) {
       size_t End = findNull(Data, EntSize);
       if (End == StringRef::npos)
@@ -1138,8 +1138,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
     for (unsigned I = 0, N = Data.size(); I != N; I += EntSize) {
       StringRef Entry = Data.substr(I, EntSize);
       size_t OutputOffset = Builder.add(Entry);
-      S->Offsets.push_back(std::make_pair(Offset, OutputOffset));
-      Offset += EntSize;
+      S->Offsets.push_back(std::make_pair(I, OutputOffset));
     }
   }
 }

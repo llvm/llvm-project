@@ -115,8 +115,7 @@ std::unique_ptr<InputFile> Lazy::getMember() {
   // read from the library.
   if (MBRef.getBuffer().empty())
     return std::unique_ptr<InputFile>(nullptr);
-
-  return createELFFile<ObjectFile>(MBRef);
+  return createObjectFile(MBRef);
 }
 
 template <class ELFT> static void doInitSymbols() {

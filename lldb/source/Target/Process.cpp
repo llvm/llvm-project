@@ -3980,7 +3980,7 @@ Process::ShouldBroadcastEvent (Event *event_ptr)
                 {
                     Vote stop_vote = m_thread_list.ShouldReportStop (event_ptr);
                     if (log)
-                        log->Printf ("Process::ShouldBroadcastEvent: should_stop: %i state: %s was_restarted: %i stop_vote: %d.",
+                        log->Printf ("Process::ShouldBroadcastEvent: should_resume: %i state: %s was_restarted: %i stop_vote: %d.",
                                      should_resume, StateAsCString(state),
                                      was_restarted, stop_vote);
 

@@ -19,6 +19,7 @@
 
 #include "MoveOnly.h"
 #include "min_allocator.h"
+#include "test_macros.h"
 
 int main()
 {
@@ -51,7 +52,7 @@ int main()
         assert(r->first == 3);
         assert(r->second == 3);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::multimap<int, MoveOnly, std::less<int>, min_allocator<std::pair<const int, MoveOnly>>> M;
         typedef M::iterator R;
@@ -75,6 +76,36 @@ int main()
         assert(r->second == 3);
 
         r = m.insert(M::value_type(3, 3));
+        assert(r == prev(m.end()));
+        assert(m.size() == 4);
+        assert(r->first == 3);
+        assert(r->second == 3);
+    }
+#endif
+#if TEST_STD_VER > 14
+    {
+        typedef std::multimap<int, MoveOnly> M;
+        typedef M::iterator R;
+        M m;
+        R r = m.insert({2, MoveOnly(2)});
+        assert(r == m.begin());
+        assert(m.size() == 1);
+        assert(r->first == 2);
+        assert(r->second == 2);
+
+        r = m.insert({1, MoveOnly(1)});
+        assert(r == m.begin());
+        assert(m.size() == 2);
+        assert(r->first == 1);
+        assert(r->second == 1);
+
+        r = m.insert({3, MoveOnly(3)});
+        assert(r == prev(m.end()));
+        assert(m.size() == 3);
+        assert(r->first == 3);
+        assert(r->second == 3);
+
+        r = m.insert({3, MoveOnly(3)});
         assert(r == prev(m.end()));
         assert(m.size() == 4);
         assert(r->first == 3);

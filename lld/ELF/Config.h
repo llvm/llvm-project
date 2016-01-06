@@ -30,6 +30,10 @@ enum ELFKind {
   ELF64BEKind
 };
 
+// This struct contains the global configuration for the linker.
+// Most fields are direct mapping from the command line options
+// and such fields have the same name as the corresponding options.
+// Most fields are initialized by the driver.
 struct Configuration {
   SymbolBody *EntrySym = nullptr;
   SymbolBody *MipsGpDisp = nullptr;
@@ -76,6 +80,7 @@ struct Configuration {
   unsigned Optimize = 0;
 };
 
+// The only instance of Configuration struct.
 extern Configuration *Config;
 
 } // namespace elf2

@@ -995,7 +995,14 @@ SBProcess::GetStateFromEvent (const SBEvent &event)
 bool
 SBProcess::GetRestartedFromEvent (const SBEvent &event)
 {
-    return Process::ProcessEventData::GetRestartedFromEvent (event.get());
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
+
+    bool ret_val = Process::ProcessEventData::GetRestartedFromEvent (event.get());
+
+    if (log)
+        log->Printf ("SBProcess::%s (event.sp=%p) => %d", __FUNCTION__, event.get(), ret_val);
+
+    return ret_val;
 }
 
 size_t

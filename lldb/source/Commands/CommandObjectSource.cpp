@@ -27,6 +27,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/Options.h"
@@ -34,9 +35,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
-// CommandObjectSourceInfo
-//-------------------------------------------------------------------------
+
+#pragma mark CommandObjectSourceInfo
+//----------------------------------------------------------------------
+// CommandObjectSourceInfo - debug line entries dumping command
+//----------------------------------------------------------------------
 
 class CommandObjectSourceInfo : public CommandObjectParsed
 {
@@ -44,14 +47,9 @@ class CommandObjectSourceInfo : public CommandObjectParsed
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
-        {
-        }
+        CommandOptions (CommandInterpreter &interpreter) : Options(interpreter) {}
 
-        ~CommandOptions () override
-        {
-        }
+        ~CommandOptions () override {}
 
         Error
         SetOptionValue (uint32_t option_idx, const char *option_arg) override
@@ -60,19 +58,44 @@ class CommandObjectSourceInfo : public CommandObjectParsed
             const int short_option = g_option_table[option_idx].short_option;
             switch (short_option)
             {
-            case 'l':
-                start_line = StringConvert::ToUInt32 (option_arg, 0);
-                if (start_line == 0)
-                    error.SetErrorStringWithFormat("invalid line number: '%s'", option_arg);
-                break;
+                case 'l':
+                    start_line = StringConvert::ToUInt32(option_arg, 0);
+                    if (start_line == 0)
+                        error.SetErrorStringWithFormat("invalid line number: '%s'", option_arg);
+                    break;
 
-             case 'f':
-                file_name = option_arg;
-                break;
+                case 'e':
+                    end_line = StringConvert::ToUInt32(option_arg, 0);
+                    if (end_line == 0)
+                        error.SetErrorStringWithFormat("invalid line number: '%s'", option_arg);
+                    break;
 
-           default:
-                error.SetErrorStringWithFormat("unrecognized short option '%c'", short_option);
+                case 'c':
+                    num_lines = StringConvert::ToUInt32(option_arg, 0);
+                    if (num_lines == 0)
+                        error.SetErrorStringWithFormat("invalid line count: '%s'", option_arg);
+                    break;
+
+                case 'f':
+                    file_name = option_arg;
+                    break;
+
+                case 'n':
+                    symbol_name = option_arg;
+                    break;
+
+                case 'a':
+                {
+                    ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
+                    address = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+                }
                 break;
+                case 's':
+                    modules.push_back(std::string(option_arg));
+                    break;
+                default:
+                    error.SetErrorStringWithFormat("unrecognized short option '%c'", short_option);
+                    break;
             }
 
             return error;
@@ -83,10 +106,15 @@ class CommandObjectSourceInfo : public CommandObjectParsed
         {
             file_spec.Clear();
             file_name.clear();
+            symbol_name.clear();
+            address = LLDB_INVALID_ADDRESS;
             start_line = 0;
+            end_line = 0;
+            num_lines = 0;
+            modules.clear();
         }
 
-        const OptionDefinition*
+        const OptionDefinition *
         GetDefinitions () override
         {
             return g_option_table;
@@ -96,24 +124,24 @@ class CommandObjectSourceInfo : public CommandObjectParsed
         // Instance variables to hold the values for command options.
         FileSpec file_spec;
         std::string file_name;
+        std::string symbol_name;
+        lldb::addr_t address;
         uint32_t start_line;
-        
+        uint32_t end_line;
+        uint32_t num_lines;
+        STLStringArray modules;
     };
- 
-public:   
-    CommandObjectSourceInfo(CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "source info",
-                             "Display information about the source lines from the current executable's debug info.",
-                             "source info [<cmd-options>]"),
-        m_options (interpreter)
+
+public:
+    CommandObjectSourceInfo (CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "source info", "Display source line information (as specified) based "
+                                                          "on the current executable's debug info.",
+                              NULL, eCommandRequiresTarget),
+          m_options(interpreter)
     {
     }
 
-    ~CommandObjectSourceInfo () override
-    {
-    }
-
+    ~CommandObjectSourceInfo () override {}
 
     Options *
     GetOptions () override
@@ -122,24 +150,575 @@ public:
     }
 
 protected:
-    bool
-    DoExecute (Args& command, CommandReturnObject &result) override
+
+    // Dump the line entries in each symbol context.
+    // Return the number of entries found.
+    // If module_list is set, only dump lines contained in one of the modules.
+    // If file_spec is set, only dump lines in the file.
+    // If the start_line option was specified, don't print lines less than start_line.
+    // If the end_line option was specified, don't print lines greater than end_line.
+    // If the num_lines option was specified, dont print more than num_lines entries.
+    uint32_t
+    DumpLinesInSymbolContexts (Stream &strm, const SymbolContextList &sc_list,
+                               const ModuleList &module_list, const FileSpec &file_spec)
     {
-        result.AppendError ("Not yet implemented");
-        result.SetStatus (eReturnStatusFailed);
-        return false;
+        uint32_t start_line = m_options.start_line;
+        uint32_t end_line = m_options.end_line;
+        uint32_t num_lines = m_options.num_lines;
+        Target *target = m_exe_ctx.GetTargetPtr();
+
+        uint32_t num_matches = 0;
+        bool has_path = false;
+        if (file_spec)
+        {
+            assert(file_spec.GetFilename().AsCString());
+            has_path = (file_spec.GetDirectory().AsCString() != 0);
+        }
+    
+        // Dump all the line entries for the file in the list.
+        ConstString last_module_file_name;
+        uint32_t num_scs = sc_list.GetSize();
+        for (uint32_t i = 0; i < num_scs; ++i)
+        {
+            SymbolContext sc;
+            sc_list.GetContextAtIndex(i, sc);
+            if (sc.comp_unit)
+            {
+                Module *module = sc.module_sp.get();
+                CompileUnit *cu = sc.comp_unit;
+                const LineEntry &line_entry = sc.line_entry;
+                assert(module && cu);
+    
+                // Are we looking for specific modules, files or lines?
+                if (module_list.GetSize() && module_list.GetIndexForModule(module) == LLDB_INVALID_INDEX32)
+                    continue;
+                if (file_spec && !lldb_private::FileSpec::Equal(file_spec, line_entry.file, has_path))
+                    continue;
+                if (start_line > 0 && line_entry.line < start_line)
+                    continue;
+                if (end_line > 0 && line_entry.line > end_line)
+                    continue;
+                if (num_lines > 0 && num_matches > num_lines)
+                    continue;
+    
+                // Print a new header if the module changed.
+                const ConstString &module_file_name = module->GetFileSpec().GetFilename();
+                assert(module_file_name);
+                if (module_file_name != last_module_file_name)
+                {
+                    if (num_matches > 0)
+                        strm << "\n\n";
+                    strm << "Lines found in module `" << module_file_name << "\n";
+                }
+                // Dump the line entry.
+                line_entry.GetDescription(&strm, lldb::eDescriptionLevelBrief, cu,
+                                          target, /*show_address_only=*/false);
+                strm << "\n";
+                last_module_file_name = module_file_name;
+                num_matches++;
+            }
+        }
+        return num_matches;
+    }
+    
+    // Dump the requested line entries for the file in the compilation unit.
+    // Return the number of entries found.
+    // If module_list is set, only dump lines contained in one of the modules.
+    // If the start_line option was specified, don't print lines less than start_line.
+    // If the end_line option was specified, don't print lines greater than end_line.
+    // If the num_lines option was specified, dont print more than num_lines entries.
+    uint32_t
+    DumpFileLinesInCompUnit (Stream &strm, Module *module, CompileUnit *cu, const FileSpec &file_spec)
+    {
+        uint32_t start_line = m_options.start_line;
+        uint32_t end_line = m_options.end_line;
+        uint32_t num_lines = m_options.num_lines;
+        Target *target = m_exe_ctx.GetTargetPtr();
+
+        uint32_t num_matches = 0;
+        assert(module);
+        if (cu)
+        {
+            assert(file_spec.GetFilename().AsCString());
+            bool has_path = (file_spec.GetDirectory().AsCString() != 0);
+            const FileSpecList &cu_file_list = cu->GetSupportFiles();
+            size_t file_idx = cu_file_list.FindFileIndex(0, file_spec, has_path);
+            if (file_idx != UINT32_MAX)
+            {
+                // Update the file to how it appears in the CU.
+                const FileSpec &cu_file_spec = cu_file_list.GetFileSpecAtIndex(file_idx);
+    
+                // Dump all matching lines at or above start_line for the file in the CU.
+                const ConstString &file_spec_name = file_spec.GetFilename();
+                const ConstString &module_file_name = module->GetFileSpec().GetFilename();
+                bool cu_header_printed = false;
+                uint32_t line = start_line;
+                while (true)
+                {
+                    LineEntry line_entry;
+    
+                    // Find the lowest index of a line entry with a line equal to
+                    // or higher than 'line'.
+                    uint32_t start_idx = 0;
+                    start_idx = cu->FindLineEntry(start_idx, line, &cu_file_spec,
+                                                  /*exact=*/false, &line_entry);
+                    if (start_idx == UINT32_MAX)
+                        // No more line entries for our file in this CU.
+                        break;
+    
+                    if (end_line > 0 && line_entry.line > end_line)
+                        break;
+    
+                    // Loop through to find any other entries for this line, dumping each.
+                    line = line_entry.line;
+                    do
+                    {
+                        num_matches++;
+                        if (num_lines > 0 && num_matches > num_lines)
+                            break;
+                        assert(lldb_private::FileSpec::Equal(cu_file_spec, line_entry.file, has_path));
+                        if (!cu_header_printed)
+                        {
+                            if (num_matches > 0)
+                                strm << "\n\n";
+                            strm << "Lines found for file " << file_spec_name
+                                 << " in compilation unit " << cu->GetFilename()
+                                 << " in `" << module_file_name << "\n";
+                            cu_header_printed = true;
+                        }
+                        line_entry.GetDescription(&strm, lldb::eDescriptionLevelBrief, cu,
+                                                  target, /*show_address_only=*/false);
+                        strm << "\n";
+    
+                        // Anymore after this one?
+                        start_idx++;
+                        start_idx = cu->FindLineEntry(start_idx, line, &cu_file_spec,
+                                                      /*exact=*/true, &line_entry);
+                    } while (start_idx != UINT32_MAX);
+    
+                    // Try the next higher line, starting over at start_idx 0.
+                    line++;
+                }
+            }
+        }
+        return num_matches;
+    }
+    
+    // Dump the requested line entries for the file in the module.
+    // Return the number of entries found.
+    // If module_list is set, only dump lines contained in one of the modules.
+    // If the start_line option was specified, don't print lines less than start_line.
+    // If the end_line option was specified, don't print lines greater than end_line.
+    // If the num_lines option was specified, dont print more than num_lines entries.
+    uint32_t
+    DumpFileLinesInModule (Stream &strm, Module *module, const FileSpec &file_spec)
+    {
+        uint32_t num_matches = 0;
+        if (module)
+        {
+            // Look through all the compilation units (CUs) in this module for ones that
+            // contain lines of code from this source file.
+            for (size_t i = 0; i < module->GetNumCompileUnits(); i++)
+            {
+                // Look for a matching source file in this CU.
+                CompUnitSP cu_sp(module->GetCompileUnitAtIndex(i));
+                if (cu_sp)
+                {
+                    num_matches += DumpFileLinesInCompUnit(strm, module, cu_sp.get(), file_spec);
+                }
+            }
+        }
+        return num_matches;
+    }
+    
+    // Given an address and a list of modules, append the symbol contexts of all line entries
+    // containing the address found in the modules and return the count of matches.  If none
+    // is found, return an error in 'error_strm'.
+    size_t
+    GetSymbolContextsForAddress (const ModuleList &module_list, lldb::addr_t addr,
+                                 SymbolContextList &sc_list, StreamString &error_strm)
+    {
+        Address so_addr;
+        size_t num_matches = 0;
+        assert(module_list.GetSize() > 0);
+        Target *target = m_exe_ctx.GetTargetPtr();
+        if (target->GetSectionLoadList().IsEmpty())
+        {
+            // The target isn't loaded yet, we need to lookup the file address in
+            // all modules.  Note: the module list option does not apply to addresses.
+            const size_t num_modules = module_list.GetSize();
+            for (size_t i = 0; i < num_modules; ++i)
+            {
+                ModuleSP module_sp(module_list.GetModuleAtIndex(i));
+                if (!module_sp)
+                    continue;
+                if (module_sp->ResolveFileAddress(addr, so_addr))
+                {
+                    SymbolContext sc;
+                    sc.Clear(true);
+                    if (module_sp->ResolveSymbolContextForAddress(so_addr, eSymbolContextEverything, sc) &
+                        eSymbolContextLineEntry)
+                    {
+                        sc_list.AppendIfUnique(sc, /*merge_symbol_into_function=*/false);
+                        ++num_matches;
+                    }
+                }
+            }
+            if (num_matches == 0)
+                error_strm.Printf("Source information for file address 0x%" PRIx64
+                                  " not found in any modules.\n", addr);
+        }
+        else
+        {
+            // The target has some things loaded, resolve this address to a
+            // compile unit + file + line and display
+            if (target->GetSectionLoadList().ResolveLoadAddress(addr, so_addr))
+            {
+                ModuleSP module_sp(so_addr.GetModule());
+                // Check to make sure this module is in our list.
+                if (module_sp &&
+                    module_list.GetIndexForModule(module_sp.get()) != LLDB_INVALID_INDEX32)
+                {
+                    SymbolContext sc;
+                    sc.Clear(true);
+                    if (module_sp->ResolveSymbolContextForAddress(so_addr, eSymbolContextEverything, sc) &
+                        eSymbolContextLineEntry)
+                    {
+                        sc_list.AppendIfUnique(sc, /*merge_symbol_into_function=*/false);
+                        ++num_matches;
+                    }
+                    else
+                    {
+                        StreamString addr_strm;
+                        so_addr.Dump(&addr_strm, NULL, Address::DumpStyleModuleWithFileAddress);
+                        error_strm.Printf("Address 0x%" PRIx64 " resolves to %s, but there is"
+                                          " no source information available for this address.\n",
+                                          addr, addr_strm.GetData());
+                    }
+                }
+                else
+                {
+                    StreamString addr_strm;
+                    so_addr.Dump(&addr_strm, NULL, Address::DumpStyleModuleWithFileAddress);
+                    error_strm.Printf("Address 0x%" PRIx64 " resolves to %s, but it cannot"
+                                      " be found in any modules.\n",
+                                      addr, addr_strm.GetData());
+                }
+            }
+            else
+                error_strm.Printf("Unable to resolve address 0x%" PRIx64 ".\n", addr);
+        }
+        return num_matches;
+    }
+
+    // Dump the line entries found in functions matching the name specified in the option. 
+    bool
+    DumpLinesInFunctions (CommandReturnObject &result)
+    {
+        SymbolContextList sc_list_funcs;
+        ConstString name(m_options.symbol_name.c_str());
+        SymbolContextList sc_list_lines;
+        Target *target = m_exe_ctx.GetTargetPtr();
+        uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
+
+        // Note: module_list can't be const& because FindFunctionSymbols isn't const.
+        ModuleList module_list = (m_module_list.GetSize() > 0) ?
+                                 m_module_list : target->GetImages();
+        size_t num_matches = module_list.FindFunctions(name,
+                                                       eFunctionNameTypeAuto,
+                                                       /*include_symbols=*/false,
+                                                       /*include_inlines=*/true,
+                                                       /*append=*/true,
+                                                       sc_list_funcs);
+        if (!num_matches)
+        {
+            // If we didn't find any functions with that name, try searching for
+            // symbols that line up exactly with function addresses.
+            SymbolContextList sc_list_symbols;
+            size_t num_symbol_matches = module_list.FindFunctionSymbols(name,
+                                                                        eFunctionNameTypeAuto,
+                                                                        sc_list_symbols);
+            for (size_t i = 0; i < num_symbol_matches; i++)
+            {
+                SymbolContext sc;
+                sc_list_symbols.GetContextAtIndex(i, sc);
+                if (sc.symbol && sc.symbol->ValueIsAddress())
+                {
+                    const Address &base_address = sc.symbol->GetAddressRef();
+                    Function *function = base_address.CalculateSymbolContextFunction();
+                    if (function)
+                    {
+                        sc_list_funcs.Append(SymbolContext(function));
+                        num_matches++;
+                    }
+                }
+            }
+        }
+        if (num_matches == 0)
+        {
+            result.AppendErrorWithFormat("Could not find function named \'%s\'.\n",
+                                         m_options.symbol_name.c_str());
+            return false;
+        }
+        for (size_t i = 0; i < num_matches; i++)
+        {
+            SymbolContext sc;
+            sc_list_funcs.GetContextAtIndex(i, sc);
+            bool context_found_for_symbol = false;
+            // Loop through all the ranges in the function.
+            AddressRange range;
+            for (uint32_t r = 0;
+                 sc.GetAddressRange(eSymbolContextEverything,
+                                    r,
+                                    /*use_inline_block_range=*/true,
+                                    range);
+                 ++r)
+            {
+                // Append the symbol contexts for each address in the range to sc_list_lines.
+                const Address &base_address = range.GetBaseAddress();
+                const addr_t size = range.GetByteSize();
+                lldb::addr_t start_addr = base_address.GetLoadAddress(target);
+                if (start_addr == LLDB_INVALID_ADDRESS)
+                    start_addr = base_address.GetFileAddress();
+                lldb::addr_t end_addr = start_addr + size;
+                for (lldb::addr_t addr = start_addr; addr < end_addr; addr += addr_byte_size)
+                {
+                    StreamString error_strm;
+                    if (!GetSymbolContextsForAddress(module_list, addr, sc_list_lines, error_strm))
+                        result.AppendWarningWithFormat("in symbol '%s': %s",
+                                                       sc.GetFunctionName().AsCString(),
+                                                       error_strm.GetData());
+                    else
+                        context_found_for_symbol = true;
+                }
+            }
+            if (!context_found_for_symbol)
+                result.AppendWarningWithFormat("Unable to find line information"
+                                               " for matching symbol '%s'.\n",
+                                               sc.GetFunctionName().AsCString());
+        }
+        if (sc_list_lines.GetSize() == 0)
+        {
+            result.AppendErrorWithFormat("No line information could be found"
+                                         " for any symbols matching '%s'.\n",
+                                         name.AsCString());
+            return false;
+        }
+        FileSpec file_spec;
+        if (!DumpLinesInSymbolContexts(result.GetOutputStream(),
+                                       sc_list_lines, module_list, file_spec))
+        {
+            result.AppendErrorWithFormat("Unable to dump line information for symbol '%s'.\n",
+                                         name.AsCString());
+            return false;
+        }
+        return true;
+    }
+
+    // Dump the line entries found for the address specified in the option. 
+    bool
+    DumpLinesForAddress (CommandReturnObject &result)
+    {
+        Target *target = m_exe_ctx.GetTargetPtr();
+        SymbolContextList sc_list;
+
+        StreamString error_strm;
+        if (!GetSymbolContextsForAddress(target->GetImages(), m_options.address, sc_list, error_strm))
+        {
+            result.AppendErrorWithFormat("%s.\n", error_strm.GetData());
+            return false;
+        }
+        ModuleList module_list;
+        FileSpec file_spec;
+        if (!DumpLinesInSymbolContexts(result.GetOutputStream(),
+                                       sc_list, module_list, file_spec))
+        {
+            result.AppendErrorWithFormat("No modules contain load address 0x%" PRIx64 ".\n",
+                                         m_options.address);
+            return false;
+        }
+        return true;
+    }
+
+    // Dump the line entries found in the file specified in the option. 
+    bool
+    DumpLinesForFile (CommandReturnObject &result)
+    {
+        FileSpec file_spec(m_options.file_name, false);
+        const char *filename = m_options.file_name.c_str();
+        Target *target = m_exe_ctx.GetTargetPtr();
+        const ModuleList &module_list = (m_module_list.GetSize() > 0) ?
+                                        m_module_list : target->GetImages();
+
+        bool displayed_something = false;
+        const size_t num_modules = module_list.GetSize();
+        for (uint32_t i = 0; i < num_modules; ++i)
+        {
+            // Dump lines for this module.
+            Module *module = module_list.GetModulePointerAtIndex(i);
+            assert(module);
+            if (DumpFileLinesInModule(result.GetOutputStream(), module, file_spec))
+                displayed_something = true;
+        }
+        if (!displayed_something)
+        {
+            result.AppendErrorWithFormat("No source filenames matched '%s'.\n", filename);
+            return false;
+        }
+        return true;
+    }
+
+    // Dump the line entries for the current frame.
+    bool
+    DumpLinesForFrame (CommandReturnObject &result)
+    {
+        StackFrame *cur_frame = m_exe_ctx.GetFramePtr();
+        if (cur_frame == NULL)
+        {
+            result.AppendError("No selected frame to use to find the default source.");
+            return false;
+        }
+        else if (!cur_frame->HasDebugInformation())
+        {
+            result.AppendError("No debug info for the selected frame.");
+            return false;
+        }
+        else
+        {
+            const SymbolContext &sc = cur_frame->GetSymbolContext(eSymbolContextLineEntry);
+            SymbolContextList sc_list;
+            sc_list.Append(sc);
+            ModuleList module_list;
+            FileSpec file_spec;
+            if (!DumpLinesInSymbolContexts(result.GetOutputStream(), sc_list, module_list, file_spec))
+            {
+                result.AppendError("No source line info available for the selected frame.");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool
+    DoExecute (Args &command, CommandReturnObject &result) override
+    {
+        const size_t argc = command.GetArgumentCount();
+
+        if (argc != 0)
+        {
+            result.AppendErrorWithFormat("'%s' takes no arguments, only flags.\n",
+                                         GetCommandName());
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+        }
+
+        Target *target = m_exe_ctx.GetTargetPtr();
+        if (target == NULL)
+        {
+            target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+            if (target == NULL)
+            {
+                result.AppendError("invalid target, create a debug target using the "
+                                   "'target create' command.");
+                result.SetStatus(eReturnStatusFailed);
+                return false;
+            }
+        }
+
+        uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
+        result.GetOutputStream().SetAddressByteSize(addr_byte_size);
+        result.GetErrorStream().SetAddressByteSize(addr_byte_size);
+
+        // Collect the list of modules to search.
+        m_module_list.Clear();
+        if (m_options.modules.size() > 0)
+        {
+            for (size_t i = 0, e = m_options.modules.size(); i < e; ++i)
+            {
+                FileSpec module_file_spec(m_options.modules[i].c_str(), false);
+                if (module_file_spec)
+                {
+                    ModuleSpec module_spec(module_file_spec);
+                    if (target->GetImages().FindModules(module_spec, m_module_list) == 0)
+                        result.AppendWarningWithFormat("No module found for '%s'.\n",
+                                                       m_options.modules[i].c_str());
+                }
+            }
+            if (!m_module_list.GetSize())
+            {
+                result.AppendError("No modules match the input.");
+                result.SetStatus(eReturnStatusFailed);
+                return false;
+            }
+        }
+        else if (target->GetImages().GetSize() == 0)
+        {
+            result.AppendError("The target has no associated executable images.");
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+        }
+
+        // Check the arguments to see what lines we should dump.
+        if (!m_options.symbol_name.empty())
+        {
+            // Print lines for symbol.
+            if (DumpLinesInFunctions(result))
+                result.SetStatus(eReturnStatusSuccessFinishResult);
+            else
+                result.SetStatus(eReturnStatusFailed);
+        }
+        else if (m_options.address != LLDB_INVALID_ADDRESS)
+        {
+            // Print lines for an address.
+            if (DumpLinesForAddress(result))
+                result.SetStatus(eReturnStatusSuccessFinishResult);
+            else
+                result.SetStatus(eReturnStatusFailed);
+        }
+        else if (!m_options.file_name.empty())
+        {
+            // Dump lines for a file.
+            if (DumpLinesForFile(result))
+                result.SetStatus(eReturnStatusSuccessFinishResult);
+            else
+                result.SetStatus(eReturnStatusFailed);
+        }
+        else
+        {
+            // Dump the line for the current frame.
+            if (DumpLinesForFrame(result))
+                result.SetStatus(eReturnStatusSuccessFinishResult);
+            else
+                result.SetStatus(eReturnStatusFailed);
+        }
+        return result.Succeeded();
     }
 
     CommandOptions m_options;
+    ModuleList m_module_list;
 };
 
-OptionDefinition
-CommandObjectSourceInfo::CommandOptions::g_option_table[] =
-{
-{ LLDB_OPT_SET_1, false, "line",       'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,    "The line number at which to start the display source."},
-{ LLDB_OPT_SET_1, false, "file",       'f', OptionParser::eRequiredArgument, NULL, NULL, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,    "The file from which to display source."},
-{ 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
+OptionDefinition CommandObjectSourceInfo::CommandOptions::g_option_table[] = {
+    {LLDB_OPT_SET_ALL, false, "count", 'c', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeCount,
+     "The number of line entries to display."},
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "shlib", 's', OptionParser::eRequiredArgument, NULL, NULL,
+     CommandCompletions::eModuleCompletion, eArgTypeShlibName,
+     "Look up the source in the given module or shared library (can be "
+     "specified more than once)."},
+    {LLDB_OPT_SET_1, false, "file", 'f', OptionParser::eRequiredArgument, NULL, NULL,
+     CommandCompletions::eSourceFileCompletion, eArgTypeFilename, "The file from which to display source."},
+    {LLDB_OPT_SET_1, false, "line", 'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,
+     "The line number at which to start the displaying lines."},
+    {LLDB_OPT_SET_1, false, "end-line", 'e', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,
+     "The line number at which to stop displaying lines."},
+    {LLDB_OPT_SET_2, false, "name", 'n', OptionParser::eRequiredArgument, NULL, NULL,
+     CommandCompletions::eSymbolCompletion, eArgTypeSymbol, "The name of a function whose source to display."},
+    {LLDB_OPT_SET_3, false, "address", 'a', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeAddressOrExpression,
+     "Lookup the address and display the source information for the "
+     "corresponding file and line."},
+    {0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL}
 };
+
 
 #pragma mark CommandObjectSourceList
 //-------------------------------------------------------------------------
@@ -906,7 +1485,6 @@ CommandObjectSourceList::CommandOptions::g_option_table[] =
 };
 
 #pragma mark CommandObjectMultiwordSource
-
 //-------------------------------------------------------------------------
 // CommandObjectMultiwordSource
 //-------------------------------------------------------------------------
@@ -917,8 +1495,7 @@ CommandObjectMultiwordSource::CommandObjectMultiwordSource (CommandInterpreter &
                             "A set of commands for accessing source file information",
                             "source <subcommand> [<subcommand-options>]")
 {
-    // "source info" isn't implemented yet...
-    //LoadSubCommand ("info",   CommandObjectSP (new CommandObjectSourceInfo (interpreter)));
+    LoadSubCommand ("info",   CommandObjectSP (new CommandObjectSourceInfo (interpreter)));
     LoadSubCommand ("list",   CommandObjectSP (new CommandObjectSourceList (interpreter)));
 }
 
