@@ -6234,7 +6234,7 @@ VisitNodeQualifiedArchetype (SwiftASTContext *ast,
     {
         swift::Demangle::Node::iterator end = cur_node->end();
         VisitNodeResult type_result;
-        uint64_t index = LLDB_INVALID_ADDRESS;
+        lldb::addr_t index = LLDB_INVALID_ADDRESS;
         for (swift::Demangle::Node::iterator pos = cur_node->begin(); pos != end; ++pos)
         {
             switch (pos->get()->getKind())
