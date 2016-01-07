@@ -412,6 +412,12 @@ try_again:
                                                          .getAsTemplateDecl();
     break;
 
+  case Type::Auto:
+    TP = cast<AutoType>(TP)->getDeducedType().getTypePtrOrNull();
+    if (TP)
+      goto try_again;
+    break;
+
   case Type::InjectedClassName:
     D = cast<InjectedClassNameType>(TP)->getDecl();
     break;

@@ -13,34 +13,34 @@ typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 extern "C" {
 
-// CHECK: @align_c = global i32 1
+// CHECK: @align_c = hidden global i32 1
 int align_c = __alignof(char);
 
-// CHECK: @align_s = global i32 2
+// CHECK: @align_s = hidden global i32 2
 int align_s = __alignof(short);
 
-// CHECK: @align_i = global i32 4
+// CHECK: @align_i = hidden global i32 4
 int align_i = __alignof(int);
 
-// CHECK: @align_l = global i32 4
+// CHECK: @align_l = hidden global i32 4
 int align_l = __alignof(long);
 
-// CHECK: @align_ll = global i32 8
+// CHECK: @align_ll = hidden global i32 8
 int align_ll = __alignof(long long);
 
-// CHECK: @align_p = global i32 4
+// CHECK: @align_p = hidden global i32 4
 int align_p = __alignof(void*);
 
-// CHECK: @align_f = global i32 4
+// CHECK: @align_f = hidden global i32 4
 int align_f = __alignof(float);
 
-// CHECK: @align_d = global i32 8
+// CHECK: @align_d = hidden global i32 8
 int align_d = __alignof(double);
 
-// CHECK: @align_ld = global i32 16
+// CHECK: @align_ld = hidden global i32 16
 int align_ld = __alignof(long double);
 
-// CHECK: @align_vl = global i32 4
+// CHECK: @align_vl = hidden global i32 4
 int align_vl = __alignof(va_list);
 
 // CHECK: _GNU_SOURCEdefined

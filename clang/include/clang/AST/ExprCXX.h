@@ -951,15 +951,9 @@ public:
 /// This wraps up a function call argument that was created from the
 /// corresponding parameter's default argument, when the call did not
 /// explicitly supply arguments for all of the parameters.
-class CXXDefaultArgExpr final
-    : public Expr,
-      private llvm::TrailingObjects<CXXDefaultArgExpr, Expr *> {
+class CXXDefaultArgExpr final : public Expr {
   /// \brief The parameter whose default is being used.
-  ///
-  /// When the bit is set, the subexpression is stored after the
-  /// CXXDefaultArgExpr itself. When the bit is clear, the parameter's
-  /// actual default expression is the subexpression.
-  llvm::PointerIntPair<ParmVarDecl *, 1, bool> Param;
+  ParmVarDecl *Param;
 
   /// \brief The location where the default argument expression was used.
   SourceLocation Loc;
@@ -971,16 +965,7 @@ class CXXDefaultArgExpr final
              : param->getDefaultArg()->getType(),
            param->getDefaultArg()->getValueKind(),
            param->getDefaultArg()->getObjectKind(), false, false, false, false),
-      Param(param, false), Loc(Loc) { }
-
-  CXXDefaultArgExpr(StmtClass SC, SourceLocation Loc, ParmVarDecl *param,
-                    Expr *SubExpr)
-    : Expr(SC, SubExpr->getType(),
-           SubExpr->getValueKind(), SubExpr->getObjectKind(),
-           false, false, false, false),
-      Param(param, true), Loc(Loc) {
-    *getTrailingObjects<Expr *>() = SubExpr;
-  }
+      Param(param), Loc(Loc) { }
 
 public:
   CXXDefaultArgExpr(EmptyShell Empty) : Expr(CXXDefaultArgExprClass, Empty) {}
@@ -992,24 +977,15 @@ public:
     return new (C) CXXDefaultArgExpr(CXXDefaultArgExprClass, Loc, Param);
   }
 
-  // \p Param is the parameter whose default argument is used by this
-  // expression, and \p SubExpr is the expression that will actually be used.
-  static CXXDefaultArgExpr *Create(const ASTContext &C, SourceLocation Loc,
-                                   ParmVarDecl *Param, Expr *SubExpr);
-
   // Retrieve the parameter that the argument was created from.
-  const ParmVarDecl *getParam() const { return Param.getPointer(); }
-  ParmVarDecl *getParam() { return Param.getPointer(); }
+  const ParmVarDecl *getParam() const { return Param; }
+  ParmVarDecl *getParam() { return Param; }
 
   // Retrieve the actual argument to the function call.
   const Expr *getExpr() const {
-    if (Param.getInt())
-      return *getTrailingObjects<Expr *>();
     return getParam()->getDefaultArg();
   }
   Expr *getExpr() {
-    if (Param.getInt())
-      return *getTrailingObjects<Expr *>();
     return getParam()->getDefaultArg();
   }
 
@@ -1033,7 +1009,6 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 
-  friend TrailingObjects;
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 };

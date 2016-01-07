@@ -1796,14 +1796,13 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
                          Keywords.kw_let, Keywords.kw_var))
     return; // Fall through to parsing the corresponding structure.
 
-  if (FormatTok->is(tok::l_brace)) {
-    FormatTok->BlockKind = BK_Block;
-    parseBracedList();
-  }
-
-  while (!eof() && FormatTok->isNot(tok::semi) &&
-         FormatTok->isNot(tok::l_brace)) {
-    nextToken();
+  while (!eof() && FormatTok->isNot(tok::semi)) {
+    if (FormatTok->is(tok::l_brace)) {
+      FormatTok->BlockKind = BK_Block;
+      parseBracedList();
+    } else {
+      nextToken();
+    }
   }
 }
 

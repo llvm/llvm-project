@@ -763,14 +763,6 @@ const IdentifierInfo *UserDefinedLiteral::getUDSuffix() const {
   return cast<FunctionDecl>(getCalleeDecl())->getLiteralIdentifier();
 }
 
-CXXDefaultArgExpr *
-CXXDefaultArgExpr::Create(const ASTContext &C, SourceLocation Loc, 
-                          ParmVarDecl *Param, Expr *SubExpr) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(1));
-  return new (Mem) CXXDefaultArgExpr(CXXDefaultArgExprClass, Loc, Param, 
-                                     SubExpr);
-}
-
 CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &C, SourceLocation Loc,
                                        FieldDecl *Field, QualType T)
     : Expr(CXXDefaultInitExprClass, T.getNonLValueExprType(C),

@@ -966,13 +966,14 @@ public:
   /// Get the LLVM attributes and calling convention to use for a particular
   /// function type.
   ///
+  /// \param Name - The function name.
   /// \param Info - The function type information.
   /// \param CalleeInfo - The callee information these attributes are being
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
   /// \param PAL [out] - On return, the attribute list to use.
   /// \param CallingConv [out] - On return, the LLVM calling convention to use.
-  void ConstructAttributeList(const CGFunctionInfo &Info,
+  void ConstructAttributeList(StringRef Name, const CGFunctionInfo &Info,
                               CGCalleeInfo CalleeInfo, AttributeListType &PAL,
                               unsigned &CallingConv, bool AttrOnCallSite);
 

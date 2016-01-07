@@ -123,6 +123,9 @@ def err_drv_emit_llvm_link : Error<
 def err_drv_optimization_remark_pattern : Error<
   "%0 in '%1'">;
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
+def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
+def err_drv_omp_host_ir_file_not_found : Error<
+  "The provided host compiler IR file '%0' is required to generate code for OpenMP target regions but cannot be found.">;
 
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
 def warn_drv_lto_libpath : Warning<"libLTO.dylib relative to clang installed dir not found; using 'ld' default search path instead">,

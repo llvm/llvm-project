@@ -1364,10 +1364,7 @@ void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
 
 void ASTStmtReader::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   VisitExpr(E);
-
-  assert((bool)Record[Idx] == E->Param.getInt() && "We messed up at creation ?");
-  ++Idx; // HasOtherExprStored and SubExpr was handled during creation.
-  E->Param.setPointer(ReadDeclAs<ParmVarDecl>(Record, Idx));
+  E->Param = ReadDeclAs<ParmVarDecl>(Record, Idx);
   E->Loc = ReadSourceLocation(Record, Idx);
 }
 
@@ -3205,16 +3202,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_CXX_THROW:
       S = new (Context) CXXThrowExpr(Empty);
       break;
-    case EXPR_CXX_DEFAULT_ARG: {
-      bool HasOtherExprStored = Record[ASTStmtReader::NumExprFields];
-      if (HasOtherExprStored) {
-        Expr *SubExpr = ReadSubExpr();
-        S = CXXDefaultArgExpr::Create(Context, SourceLocation(), nullptr,
-                                      SubExpr);
-      } else
-        S = new (Context) CXXDefaultArgExpr(Empty);
+    case EXPR_CXX_DEFAULT_ARG:
+      S = new (Context) CXXDefaultArgExpr(Empty);
       break;
-    }
     case EXPR_CXX_DEFAULT_INIT:
       S = new (Context) CXXDefaultInitExpr(Empty);
       break;

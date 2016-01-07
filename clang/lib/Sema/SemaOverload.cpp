@@ -9643,6 +9643,13 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
 
   case ovl_fail_enable_if:
     return DiagnoseFailedEnableIfAttr(S, Cand);
+
+  case ovl_fail_addr_not_available: {
+    bool Available = checkAddressOfCandidateIsAvailable(S, Cand->Function);
+    (void)Available;
+    assert(!Available);
+    break;
+  }
   }
 }
 
@@ -11245,6 +11252,17 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   return ExprError();
 }
 
+static void markUnaddressableCandidatesUnviable(Sema &S,
+                                                OverloadCandidateSet &CS) {
+  for (auto I = CS.begin(), E = CS.end(); I != E; ++I) {
+    if (I->Viable &&
+        !S.checkAddressOfFunctionIsAvailable(I->Function, /*Complain=*/false)) {
+      I->Viable = false;
+      I->FailureKind = ovl_fail_addr_not_available;
+    }
+  }
+}
+
 /// BuildOverloadedCallExpr - Given the call expression that calls Fn
 /// (which eventually refers to the declaration Func) and the call
 /// arguments Args/NumArgs, attempt to resolve the function call down
@@ -11257,7 +11275,8 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
                                          MultiExprArg Args,
                                          SourceLocation RParenLoc,
                                          Expr *ExecConfig,
-                                         bool AllowTypoCorrection) {
+                                         bool AllowTypoCorrection,
+                                         bool CalleesAddressIsTaken) {
   OverloadCandidateSet CandidateSet(Fn->getExprLoc(),
                                     OverloadCandidateSet::CSK_Normal);
   ExprResult result;
@@ -11265,6 +11284,11 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   if (buildOverloadedCallSet(S, Fn, ULE, Args, LParenLoc, &CandidateSet,
                              &result))
     return result;
+
+  // If the user handed us something like `(&Foo)(Bar)`, we need to ensure that
+  // functions that aren't addressible are considered unviable.
+  if (CalleesAddressIsTaken)
+    markUnaddressableCandidatesUnviable(*this, CandidateSet);
 
   OverloadCandidateSet::iterator Best;
   OverloadingResult OverloadResult =

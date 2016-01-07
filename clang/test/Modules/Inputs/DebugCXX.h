@@ -17,7 +17,7 @@ namespace DebugCXX {
     e2 = '2'
   };
 
-  // Templates (instatiations).
+  // Templates (instantiations).
   template<typename T> struct traits {};
   template<typename T,
            typename Traits = traits<T>
@@ -50,3 +50,9 @@ namespace DebugCXX {
   typedef A<void> B;
   void foo(B) {}
 }
+
+// Virtual class with a forward declaration.
+class FwdVirtual;
+class FwdVirtual {
+  virtual ~FwdVirtual() {}
+};

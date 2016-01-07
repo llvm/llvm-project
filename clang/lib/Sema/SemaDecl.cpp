@@ -3968,9 +3968,6 @@ static bool CheckAnonMemberRedeclaration(Sema &SemaRef,
                  Sema::ForRedeclaration);
   if (!SemaRef.LookupName(R, S)) return false;
 
-  if (R.getAsSingle<TagDecl>())
-    return false;
-
   // Pick a representative declaration.
   NamedDecl *PrevDecl = R.getRepresentativeDecl()->getUnderlyingDecl();
   assert(PrevDecl && "Expected a non-null Decl");
@@ -4681,11 +4678,13 @@ bool Sema::DiagnoseClassNameShadow(DeclContext *DC,
                                    DeclarationNameInfo NameInfo) {
   DeclarationName Name = NameInfo.getName();
 
-  if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(DC)) 
-    if (Record->getIdentifier() && Record->getDeclName() == Name) {
-      Diag(NameInfo.getLoc(), diag::err_member_name_of_class) << Name;
-      return true;
-    }
+  CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(DC);
+  while (Record && Record->isAnonymousStructOrUnion())
+    Record = dyn_cast<CXXRecordDecl>(Record->getParent());
+  if (Record && Record->getIdentifier() && Record->getDeclName() == Name) {
+    Diag(NameInfo.getLoc(), diag::err_member_name_of_class) << Name;
+    return true;
+  }
 
   return false;
 }

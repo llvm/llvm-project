@@ -114,6 +114,9 @@ public:
     /// Tags, declared with 'struct foo;' and referenced with
     /// 'struct foo'.  All tags are also types.  This is what
     /// elaborated-type-specifiers look for in C.
+    /// This also contains names that conflict with tags in the
+    /// same scope but that are otherwise ordinary names (non-type
+    /// template parameters and indirect field declarations).
     IDNS_Tag                 = 0x0002,
 
     /// Types, declared with 'struct foo', typedefs, etc.
@@ -132,7 +135,7 @@ public:
     IDNS_Namespace           = 0x0010,
 
     /// Ordinary names.  In C, everything that's not a label, tag,
-    /// or member ends up here.
+    /// member, or function-local extern ends up here.
     IDNS_Ordinary            = 0x0020,
 
     /// Objective C \@protocol.
@@ -161,7 +164,9 @@ public:
 
     /// This declaration is a function-local extern declaration of a
     /// variable or function. This may also be IDNS_Ordinary if it
-    /// has been declared outside any function.
+    /// has been declared outside any function. These act mostly like
+    /// invisible friend declarations, but are also visible to unqualified
+    /// lookup within the scope of the declaring function.
     IDNS_LocalExtern         = 0x0800
   };
 

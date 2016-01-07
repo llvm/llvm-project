@@ -1323,6 +1323,13 @@ uint64_t ASTWriter::WriteControlBlock(Preprocessor &PP,
   }
   Record.push_back(LangOpts.CommentOpts.ParseAllComments);
 
+  // OpenMP offloading options.
+  Record.push_back(LangOpts.OMPTargetTriples.size());
+  for (auto &T : LangOpts.OMPTargetTriples)
+    AddString(T.getTriple(), Record);
+
+  AddString(LangOpts.OMPHostIRFile, Record);
+
   Stream.EmitRecord(LANGUAGE_OPTIONS, Record);
 
   // Target options.
@@ -4604,6 +4611,11 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         AddSourceLocation(Update.getLoc(), Record);
         break;
 
+      case UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT:
+        AddStmt(const_cast<Expr*>(
+                  cast<ParmVarDecl>(Update.getDecl())->getDefaultArg()));
+        break;
+
       case UPD_CXX_INSTANTIATED_CLASS_DEFINITION: {
         auto *RD = cast<CXXRecordDecl>(D);
         UpdatedDeclContexts.insert(RD->getPrimaryContext());
@@ -5770,6 +5782,15 @@ void ASTWriter::StaticDataMemberInstantiated(const VarDecl *D) {
   DeclUpdates[D].push_back(
       DeclUpdate(UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER,
        D->getMemberSpecializationInfo()->getPointOfInstantiation()));
+}
+
+void ASTWriter::DefaultArgumentInstantiated(const ParmVarDecl *D) {
+  assert(!WritingAST && "Already writing the AST!");
+  if (!D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(
+      DeclUpdate(UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT, D));
 }
 
 void ASTWriter::AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,

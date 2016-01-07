@@ -375,6 +375,10 @@ void CodeGenModule::Release() {
     if (llvm::Function *CudaDtorFunction = CUDARuntime->makeModuleDtorFunction())
       AddGlobalDtor(CudaDtorFunction);
   }
+  if (OpenMPRuntime)
+    if (llvm::Function *OpenMPRegistrationFunction =
+            OpenMPRuntime->emitRegistrationFunction())
+      AddGlobalCtor(OpenMPRegistrationFunction, 0);
   if (PGOReader) {
     getModule().setMaximumFunctionCount(PGOReader->getMaximumFunctionCount());
     if (PGOStats.hasDiagnostics())
@@ -770,7 +774,8 @@ void CodeGenModule::SetLLVMFunctionAttributes(const Decl *D,
                                               llvm::Function *F) {
   unsigned CallingConv;
   AttributeListType AttributeList;
-  ConstructAttributeList(Info, D, AttributeList, CallingConv, false);
+  ConstructAttributeList(F->getName(), Info, D, AttributeList, CallingConv,
+                         false);
   F->setAttributes(llvm::AttributeSet::get(getLLVMContext(), AttributeList));
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 }
@@ -1489,6 +1494,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
         return;
     }
   }
+
+  // If this is OpenMP device, check if it is legal to emit this global
+  // normally.
+  if (OpenMPRuntime && OpenMPRuntime->emitTargetGlobal(GD))
+    return;
 
   // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
@@ -3597,6 +3607,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   case Decl::FileScopeAsm: {
     // File-scope asm is ignored during device-side CUDA compilation.
     if (LangOpts.CUDA && LangOpts.CUDAIsDevice)
+      break;
+    // File-scope asm is ignored during device-side OpenMP compilation.
+    if (LangOpts.OpenMPIsDevice)
       break;
     auto *AD = cast<FileScopeAsmDecl>(D);
     getModule().appendModuleInlineAsm(AD->getAsmString()->getString());
