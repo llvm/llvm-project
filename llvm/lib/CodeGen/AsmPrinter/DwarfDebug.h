@@ -400,17 +400,25 @@ class DwarfDebug : public AsmPrinterHandler {
   /// Emit visible names into a debug str section.
   void emitDebugStr();
 
-  /// Emit visible names into a debug loc section.
+  /// Emit variable locations into a debug loc section.
   void emitDebugLoc();
 
-  /// Emit visible names into a debug loc dwo section.
+  /// Emit variable locations into a debug loc dwo section.
   void emitDebugLocDWO();
 
-  /// Emit visible names into a debug aranges section.
+  /// Emit address ranges into a debug aranges section.
   void emitDebugARanges();
 
-  /// Emit visible names into a debug ranges section.
+  /// Emit address ranges into a debug ranges section.
   void emitDebugRanges();
+
+  /// Emit macros into a debug macinfo section.
+  void emitDebugMacinfo();
+  unsigned emitMacro(AsmStreamerBase *AS, DIMacro &M);
+  unsigned emitMacroFile(AsmStreamerBase *AS, DIMacroFile &F,
+                         DwarfCompileUnit &U);
+  unsigned handleMacroNodes(AsmStreamerBase *AS, DIMacroNodeArray Nodes,
+                            DwarfCompileUnit &U);
 
   /// DWARF 5 Experimental Split Dwarf Emitters
 

@@ -4549,6 +4549,7 @@ NVPTXTargetObjectFile::~NVPTXTargetObjectFile() {
   delete static_cast<NVPTXSection *>(DwarfLocSection);
   delete static_cast<NVPTXSection *>(DwarfARangesSection);
   delete static_cast<NVPTXSection *>(DwarfRangesSection);
+  delete static_cast<NVPTXSection *>(DwarfMacinfoSection);
 }
 
 MCSection *
