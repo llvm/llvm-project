@@ -3679,6 +3679,9 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   case Intrinsic::experimental_gc_relocate: {
     Assert(CS.getNumArgOperands() == 3, "wrong number of arguments", CS);
 
+    Assert(isa<PointerType>(CS.getType()->getScalarType()),
+           "gc.relocate must return a pointer or a vector of pointers", CS);
+
     // Check that this relocate is correctly tied to the statepoint
 
     // This is case for relocate on the unwinding path of an invoke statepoint
@@ -3761,17 +3764,20 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            "'gc parameters' section of the statepoint call",
            CS);
 
-    // Relocated value must be a pointer type, but gc_relocate does not need to return the
-    // same pointer type as the relocated pointer. It can be casted to the correct type later
-    // if it's desired. However, they must have the same address space.
+    // Relocated value must be either a pointer type or vector-of-pointer type,
+    // but gc_relocate does not need to return the same pointer type as the
+    // relocated pointer. It can be casted to the correct type later if it's
+    // desired. However, they must have the same address space and 'vectorness'
     GCRelocateInst &Relocate = cast<GCRelocateInst>(*CS.getInstruction());
-    Assert(Relocate.getDerivedPtr()->getType()->isPointerTy(),
+    Assert(Relocate.getDerivedPtr()->getType()->getScalarType()->isPointerTy(),
            "gc.relocate: relocated value must be a gc pointer", CS);
 
-    // gc_relocate return type must be a pointer type, and is verified earlier in
-    // VerifyIntrinsicType().
-    Assert(cast<PointerType>(CS.getType())->getAddressSpace() ==
-           cast<PointerType>(Relocate.getDerivedPtr()->getType())->getAddressSpace(),
+    auto ResultType = CS.getType();
+    auto DerivedType = Relocate.getDerivedPtr()->getType();
+    Assert(ResultType->isVectorTy() == DerivedType->isVectorTy(),
+           "gc.relocate: vector relocates to vector and pointer to pointer", CS);
+    Assert(ResultType->getPointerAddressSpace() ==
+           DerivedType->getPointerAddressSpace(),
            "gc.relocate: relocating a pointer shouldn't change its address space", CS);
     break;
   }

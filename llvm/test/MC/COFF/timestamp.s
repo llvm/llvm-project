@@ -1,5 +1,4 @@
 // RUN: llvm-mc -filetype=obj -triple i686-pc-win32 -incremental-linker-compatible %s -o - | llvm-readobj -h | FileCheck %s
-// REQUIRES: timestamps
 
 // CHECK: ImageFileHeader {
 // CHECK:   TimeDateStamp:

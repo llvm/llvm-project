@@ -109,3 +109,36 @@ define <4 x float> @shuffle_v4f32_0z6z(<4 x float> %A, <4 x float> %B) {
   %vecinit4 = insertelement <4 x float> %vecinit3, float 0.000000e+00, i32 3
   ret <4 x float> %vecinit4
 }
+
+define float @extract_zero_insertps_z0z7(<4 x float> %a0, <4 x float> %a1) {
+; SSE-LABEL: extract_zero_insertps_z0z7:
+; SSE:       # BB#0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract_zero_insertps_z0z7:
+; AVX:       # BB#0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 21)
+  %ext = extractelement <4 x float> %res, i32 0
+  ret float %ext
+}
+
+define float @extract_lane_insertps_5123(<4 x float> %a0, <4 x float> *%p1) {
+; SSE-LABEL: extract_lane_insertps_5123:
+; SSE:       # BB#0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract_lane_insertps_5123:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    retq
+  %a1 = load <4 x float>, <4 x float> *%p1
+  %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 128)
+  %ext = extractelement <4 x float> %res, i32 0
+  ret float %ext
+}
+
+declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i8) nounwind readnone

@@ -78,6 +78,13 @@ static cl::opt<bool>
     AllowStatepointWithNoDeoptInfo("rs4gc-allow-statepoint-with-no-deopt-info",
                                    cl::Hidden, cl::init(true));
 
+/// Should we split vectors of pointers into their individual elements?  This
+/// is known to be buggy, but the alternate implementation isn't yet ready.
+/// This is purely to provide a debugging and dianostic hook until the vector
+/// split is replaced with vector relocations.
+static cl::opt<bool> UseVectorSplit("rs4gc-split-vector-values", cl::Hidden,
+                                    cl::init(true));
+
 namespace {
 struct RewriteStatepointsForGC : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
@@ -2380,15 +2387,19 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 
   // Do a limited scalarization of any live at safepoint vector values which
   // contain pointers.  This enables this pass to run after vectorization at
-  // the cost of some possible performance loss.  TODO: it would be nice to
-  // natively support vectors all the way through the backend so we don't need
-  // to scalarize here.
-  for (size_t i = 0; i < Records.size(); i++) {
-    PartiallyConstructedSafepointRecord &Info = Records[i];
-    Instruction *Statepoint = ToUpdate[i].getInstruction();
-    splitVectorValues(cast<Instruction>(Statepoint), Info.LiveSet,
-                      Info.PointerToBase, DT);
-  }
+  // the cost of some possible performance loss.  Note: This is known to not
+  // handle updating of the side tables correctly which can lead to relocation
+  // bugs when the same vector is live at multiple statepoints.  We're in the
+  // process of implementing the alternate lowering - relocating the
+  // vector-of-pointers as first class item and updating the backend to
+  // understand that - but that's not yet complete.  
+  if (UseVectorSplit)
+    for (size_t i = 0; i < Records.size(); i++) {
+      PartiallyConstructedSafepointRecord &Info = Records[i];
+      Instruction *Statepoint = ToUpdate[i].getInstruction();
+      splitVectorValues(cast<Instruction>(Statepoint), Info.LiveSet,
+                        Info.PointerToBase, DT);
+    }
 
   // In order to reduce live set of statepoint we might choose to rematerialize
   // some values instead of relocating them. This is purely an optimization and

@@ -286,7 +286,7 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   Fuzzer F(USF, Options);
 
   for (auto &U: Dictionary)
-    USF.GetMD().AddWordToDictionary(U.data(), U.size());
+    USF.GetMD().AddWordToManualDictionary(U);
 
   // Timer
   if (Flags.timeout > 0)

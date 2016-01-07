@@ -878,4 +878,109 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 declare i32 @varfunc(i8* nocapture readonly)
 
+@sum1 = external hidden thread_local global i32, align 4
+
+
+; Function Attrs: nounwind
+; Make sure the TLS call used to access @sum1 happens after the prologue
+; and before the epilogue.
+; TLS calls used to be wrongly model and shrink-wrapping would have inserted
+; the prologue and epilogue just around the call to doSomething.
+; PR25820.
+;
+; CHECK-LABEL: tlsCall:
+; CHECK: pushq
+; CHECK: testb $1, %dil
+; CHECK: je [[ELSE_LABEL:LBB[0-9_]+]]
+;
+; master bb
+; CHECK: movq _sum1@TLVP(%rip), %rdi
+; CHECK-NEXT: callq *(%rdi)
+; CHECK: jmp [[EXIT_LABEL:LBB[0-9_]+]]
+;
+; [[ELSE_LABEL]]:
+; CHECK: callq _doSomething
+;
+; [[EXIT_LABEL]]:
+; CHECK: popq
+; CHECK-NEXT: retq
+define i32 @tlsCall(i1 %bool1, i32 %arg, i32* readonly dereferenceable(4) %sum1) #3 {
+entry:
+  br i1 %bool1, label %master, label %else
+
+master:
+  %tmp1 = load i32, i32* %sum1, align 4
+  store i32 %tmp1, i32* @sum1, align 4
+  br label %exit
+
+else:
+  %call = call i32 @doSomething(i32 0, i32* null)
+  br label %exit
+
+exit:
+  %res = phi i32 [ %arg, %master], [ %call, %else ]
+  ret i32 %res
+}
+
 attributes #3 = { nounwind }
+
+@irreducibleCFGa = common global i32 0, align 4
+@irreducibleCFGf = common global i8 0, align 1
+@irreducibleCFGb = common global i32 0, align 4
+
+; Check that we do not run shrink-wrapping on irreducible CFGs until
+; it is actually supported.
+; At the moment, on those CFGs the loop information may be incorrect
+; and since we use that information to do the placement, we may end up
+; inserting the prologue/epilogue at incorrect places.
+; PR25988.
+;
+; CHECK-LABEL: irreducibleCFG:
+; CHECK: %entry
+; Make sure the prologue happens in the entry block.
+; CHECK-NEXT: pushq
+; ...
+; Make sure the epilogue happens in the exit block.
+; CHECK-NOT: popq
+; CHECK: popq
+; CHECK-NEXT: popq
+; CHECK-NEXT: retq
+define i32 @irreducibleCFG() #4 {
+entry:
+  %i0 = load i32, i32* @irreducibleCFGa, align 4
+  %.pr = load i8, i8* @irreducibleCFGf, align 1
+  %bool = icmp eq i8 %.pr, 0
+  br i1 %bool, label %split, label %preheader
+
+preheader:
+  br label %preheader
+
+split:
+  %i1 = load i32, i32* @irreducibleCFGb, align 4
+  %tobool1.i = icmp ne i32 %i1, 0
+  br i1 %tobool1.i, label %for.body4.i, label %for.cond8.i.preheader
+
+for.body4.i:
+  %call.i = tail call i32 (...) @something(i32 %i0)
+  br label %for.cond8
+
+for.cond8:
+  %p1 = phi i32 [ %inc18.i, %for.inc ], [ 0, %for.body4.i ]
+  %.pr1.pr = load i32, i32* @irreducibleCFGb, align 4
+  br label %for.cond8.i.preheader
+
+for.cond8.i.preheader:
+  %.pr1 = phi i32 [ %.pr1.pr, %for.cond8 ], [ %i1, %split ]
+  %p13 = phi i32 [ %p1, %for.cond8 ], [ 0, %split ]
+  br label %for.inc
+
+fn1.exit:
+  ret i32 0
+
+for.inc:
+  %inc18.i = add nuw nsw i32 %p13, 1
+  %cmp = icmp slt i32 %inc18.i, 7
+  br i1 %cmp, label %for.cond8, label %fn1.exit
+}
+
+attributes #4 = { "no-frame-pointer-elim"="true" }

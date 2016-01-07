@@ -1366,6 +1366,14 @@ def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
                                       (ARMWrapper tglobaladdr:$src))]>,
                      Requires<[IsThumb, DontUseMovt]>;
 
+// TLS globals
+def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
+          (tLDRLIT_ga_pcrel tglobaltlsaddr:$addr)>,
+      Requires<[IsThumb, DontUseMovt]>;
+def : Pat<(ARMWrapper tglobaltlsaddr:$addr),
+          (tLDRLIT_ga_abs tglobaltlsaddr:$addr)>,
+      Requires<[IsThumb, DontUseMovt]>;
+
 
 // JumpTable
 def : T1Pat<(ARMWrapperJT tjumptable:$dst),

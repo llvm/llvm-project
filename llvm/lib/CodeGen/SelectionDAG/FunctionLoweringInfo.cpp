@@ -297,8 +297,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   else if (Personality == EHPersonality::CoreCLR)
     calculateClrEHStateNumbers(&fn, EHInfo);
 
-  calculateCatchReturnSuccessorColors(&fn, EHInfo);
-
   // Map all BB references in the WinEH data to MBBs.
   for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
     for (WinEHHandlerType &H : TBME.HandlerArray) {

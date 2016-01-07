@@ -744,18 +744,6 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
   return true;
 }
 
-static bool hasIdenticalMMOs(const MachineInstr *MI1, const MachineInstr *MI2) {
-  auto I1 = MI1->memoperands_begin(), E1 = MI1->memoperands_end();
-  auto I2 = MI2->memoperands_begin(), E2 = MI2->memoperands_end();
-  if ((E1 - I1) != (E2 - I2))
-    return false;
-  for (; I1 != E1; ++I1, ++I2) {
-    if (**I1 != **I2)
-      return false;
-  }
-  return true;
-}
-
 static void
 removeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
                                MachineBasicBlock &MBBCommon) {
@@ -792,8 +780,7 @@ removeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
     assert(MBBICommon->isIdenticalTo(&*MBBI) && "Expected matching MIIs!");
 
     if (MBBICommon->mayLoad() || MBBICommon->mayStore())
-      if (!hasIdenticalMMOs(&*MBBI, &*MBBICommon))
-        MBBICommon->dropMemRefs();
+      MBBICommon->setMemRefs(MBBI->mergeMemRefsWith(*MBBI));
 
     ++MBBI;
     ++MBBICommon;

@@ -6,6 +6,7 @@ add_public_tablegen_target(AVRCommonTableGen)
 
 add_llvm_target(AVRCodeGen
     AVRTargetMachine.cpp
+    AVRTargetObjectFile.cpp
   )
 
 add_dependencies(LLVMAVRCodeGen intrinsics_gen)

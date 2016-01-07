@@ -2,7 +2,7 @@
 
 ; Test that i1 extending loads and truncating stores are assembled properly.
 
-target datalayout = "e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: load_u_i1_i32:

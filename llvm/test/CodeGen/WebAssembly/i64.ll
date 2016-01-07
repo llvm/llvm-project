@@ -2,7 +2,7 @@
 
 ; Test that basic 64-bit integer operations assemble as expected.
 
-target datalayout = "e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare i64 @llvm.ctlz.i64(i64, i1)

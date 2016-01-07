@@ -3,7 +3,7 @@
 ; Test that the wasm-store-results pass makes users of stored values use the
 ; result of store expressions to reduce get_local/set_local traffic.
 
-target datalayout = "e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: single_block:

@@ -866,14 +866,44 @@ void MachineInstr::addMemOperand(MachineFunction &MF,
   setMemRefs(NewMemRefs, NewMemRefs + NewNum);
 }
 
+/// Check to see if the MMOs pointed to by the two MemRefs arrays are
+/// identical. 
+static bool hasIdenticalMMOs(const MachineInstr &MI1, const MachineInstr &MI2) {
+  auto I1 = MI1.memoperands_begin(), E1 = MI1.memoperands_end();
+  auto I2 = MI2.memoperands_begin(), E2 = MI2.memoperands_end();
+  if ((E1 - I1) != (E2 - I2))
+    return false;
+  for (; I1 != E1; ++I1, ++I2) {
+    if (**I1 != **I2)
+      return false;
+  }
+  return true;
+}
+
 std::pair<MachineInstr::mmo_iterator, unsigned>
 MachineInstr::mergeMemRefsWith(const MachineInstr& Other) {
-  // TODO: If we end up with too many memory operands, return the empty
-  // conservative set rather than failing asserts.
+
+  // If either of the incoming memrefs are empty, we must be conservative and
+  // treat this as if we've exhausted our space for memrefs and dropped them.
+  if (memoperands_empty() || Other.memoperands_empty())
+    return std::make_pair(nullptr, 0);
+
+  // If both instructions have identical memrefs, we don't need to merge them.
+  // Since many instructions have a single memref, and we tend to merge things
+  // like pairs of loads from the same location, this catches a large number of
+  // cases in practice.
+  if (hasIdenticalMMOs(*this, Other))
+    return std::make_pair(MemRefs, NumMemRefs);
+  
   // TODO: consider uniquing elements within the operand lists to reduce
   // space usage and fall back to conservative information less often.
-  size_t CombinedNumMemRefs = (memoperands_end() - memoperands_begin())
-    + (Other.memoperands_end() - Other.memoperands_begin());
+  size_t CombinedNumMemRefs = NumMemRefs + Other.NumMemRefs;
+
+  // If we don't have enough room to store this many memrefs, be conservative
+  // and drop them.  Otherwise, we'd fail asserts when trying to add them to
+  // the new instruction.
+  if (CombinedNumMemRefs != uint8_t(CombinedNumMemRefs))
+    return std::make_pair(nullptr, 0);
 
   MachineFunction *MF = getParent()->getParent();
   mmo_iterator MemBegin = MF->allocateMemRefsArray(CombinedNumMemRefs);

@@ -147,8 +147,10 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   // block boundaries, and the blocks aren't ordered so the block visitation
   // order isn't significant, but we may want to change this in the future.
   for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : reverse(MBB)) {
-      MachineInstr *Insert = &MI;
+    // Don't use a range-based for loop, because we modify the list as we're
+    // iterating over it and the end iterator may change.
+    for (auto MII = MBB.rbegin(); MII != MBB.rend(); ++MII) {
+      MachineInstr *Insert = &*MII;
       // Don't nest anything inside a phi.
       if (Insert->getOpcode() == TargetOpcode::PHI)
         break;
@@ -221,7 +223,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         Insert = Def;
       }
       if (AnyStackified)
-        ImposeStackOrdering(&MI);
+        ImposeStackOrdering(&*MII);
     }
   }
 

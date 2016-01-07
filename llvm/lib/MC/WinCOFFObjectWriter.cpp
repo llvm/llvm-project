@@ -969,9 +969,6 @@ void WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
 
   Header.PointerToSymbolTable = offset;
 
-  // FIXME: Remove the #else branch and make the #if branch unconditional once
-  // LLVM's self host configuration is aware of /Brepro.
-#if (ENABLE_TIMESTAMPS == 1)
   // MS LINK expects to be able to use this timestamp to implement their
   // /INCREMENTAL feature.
   if (Asm.isIncrementalLinkerCompatible()) {
@@ -980,12 +977,9 @@ void WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
       Now = UINT32_MAX;
     Header.TimeDateStamp = Now;
   } else {
+    // Have deterministic output if /INCREMENTAL isn't needed. Also matches GNU.
     Header.TimeDateStamp = 0;
   }
-#else
-  // We want a deterministic output. It looks like GNU as also writes 0 in here.
-  Header.TimeDateStamp = 0;
-#endif
 
   // Write it all to disk...
   WriteFileHeader(Header);

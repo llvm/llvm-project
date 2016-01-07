@@ -255,6 +255,10 @@ def CSR_iOS_SwiftError : CalleeSavedRegs<(sub CSR_iOS, R6)>;
 def CSR_iOS_ThisReturn : CalleeSavedRegs<(add LR, R7, R6, R5, R4,
                                          (sub CSR_AAPCS_ThisReturn, R9))>;
 
+def CSR_iOS_TLSCall : CalleeSavedRegs<(add LR, SP,
+                                           (sequence "R%u", 12, 1),
+                                           (sequence "D%u", 31, 0))>;
+
 // The "interrupt" attribute is used to generate code that is acceptable in
 // exception-handlers of various kinds. It makes us use a different return
 // instruction (handled elsewhere) and affects which registers we must return to

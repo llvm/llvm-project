@@ -586,8 +586,13 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   return FunctionModRefBehavior(AAResultBase::getModRefBehavior(F) & Min);
 }
 
-ModRefInfo BasicAAResult::getArgModRefInfo(ImmutableCallSite CS,
-                                           unsigned ArgIdx) {
+/// Returns true if this is a writeonly (i.e Mod only) parameter.  Currently,
+/// we don't have a writeonly attribute, so this only knows about builtin
+/// intrinsics and target library functions.  We could consider adding a
+/// writeonly attribute in the future and moving all of these facts to either
+/// Intrinsics.td or InferFunctionAttr.cpp
+static bool isWriteOnlyParam(ImmutableCallSite CS, unsigned ArgIdx,
+                             const TargetLibraryInfo &TLI) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(CS.getInstruction()))
     switch (II->getIntrinsicID()) {
     default:
@@ -597,9 +602,9 @@ ModRefInfo BasicAAResult::getArgModRefInfo(ImmutableCallSite CS,
     case Intrinsic::memmove:
       // We don't currently have a writeonly attribute.  All other properties
       // of these intrinsics are nicely described via attributes in
-      // Intrinsics.td and handled generically below.
+      // Intrinsics.td and handled generically.
       if (ArgIdx == 0)
-        return MRI_Mod;
+        return true;
     }
 
   // We can bound the aliasing properties of memset_pattern16 just as we can
@@ -609,7 +614,22 @@ ModRefInfo BasicAAResult::getArgModRefInfo(ImmutableCallSite CS,
   // handled via InferFunctionAttr.
   if (CS.getCalledFunction() && isMemsetPattern16(CS.getCalledFunction(), TLI))
     if (ArgIdx == 0)
-      return MRI_Mod;
+      return true;
+
+  // TODO: memset_pattern4, memset_pattern8
+  // TODO: _chk variants
+  // TODO: strcmp, strcpy
+
+  return false;
+}
+
+ModRefInfo BasicAAResult::getArgModRefInfo(ImmutableCallSite CS,
+                                           unsigned ArgIdx) {
+
+  // Emulate the missing writeonly attribute by checking for known builtin
+  // intrinsics and target library functions.
+  if (isWriteOnlyParam(CS, ArgIdx, TLI))
+    return MRI_Mod;
 
   if (CS.paramHasAttr(ArgIdx + 1, Attribute::ReadOnly))
     return MRI_Ref;
