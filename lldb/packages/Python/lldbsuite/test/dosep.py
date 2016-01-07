@@ -1149,11 +1149,6 @@ def getExpectedTimeouts(platform_name):
             "TestExitDuringStep.py",
             "TestHelloWorld.py",
         }
-        if host.startswith("win32"):
-            expected_timeout |= {
-                "TestEvents.py",
-                "TestThreadStates.py",
-            }
     elif target.startswith("freebsd"):
         expected_timeout |= {
             "TestBreakpointConditions.py",
