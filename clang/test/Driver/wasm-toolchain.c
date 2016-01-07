@@ -2,7 +2,7 @@
 // enabling -ffunction-sections, -fdata-sections, and -fvisibility=hidden by
 // default.
 
-// RUN: %clang %s -### -target wasm32-unknown-unknown 2>&1 | FileCheck -check-prefix=CC1 %s
+// RUN: %clang %s -### -no-canonical-prefixes -target wasm32-unknown-unknown 2>&1 | FileCheck -check-prefix=CC1 %s
 // CC1: clang{{.*}} "-cc1" "-triple" "wasm32-unknown-unknown" {{.*}} "-fvisibility" "hidden" {{.*}} "-ffunction-sections" "-fdata-sections"
 
 // Ditto, but ensure that a user -fno-function-sections disables the
