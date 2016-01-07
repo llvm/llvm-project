@@ -358,21 +358,6 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
         if (CS.isArgOperand(&U) && isFreeCall(I, &TLI)) {
           if (Writers)
             Writers->insert(CS->getParent()->getParent());
-        } else if (CS.doesNotCapture(CS.getDataOperandNo(&U))) {
-          Function *ParentF = CS->getParent()->getParent();
-          // A nocapture argument may be read from or written to, but does not
-          // escape unless the call can somehow recurse.
-          //
-          // nocapture "indicates that the callee does not make any copies of
-          // the pointer that outlive itself". Therefore if we directly or
-          // indirectly recurse, we must treat the pointer as escaping.
-          if (FunctionToSCCMap[ParentF] ==
-              FunctionToSCCMap[CS.getCalledFunction()])
-            return true;
-          if (Readers)
-            Readers->insert(ParentF);
-          if (Writers)
-            Writers->insert(ParentF);
         } else {
           return true; // Argument of an unknown call.
         }

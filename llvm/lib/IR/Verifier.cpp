@@ -984,6 +984,9 @@ void Verifier::visitDIMacro(const DIMacro &N) {
          N.getMacinfoType() == dwarf::DW_MACINFO_undef,
          "invalid macinfo type", &N);
   Assert(!N.getName().empty(), "anonymous macro", &N);
+  if (!N.getValue().empty()) {
+    assert(N.getValue().data()[0] != ' ' && "Macro value has a space prefix");
+  }
 }
 
 void Verifier::visitDIMacroFile(const DIMacroFile &N) {

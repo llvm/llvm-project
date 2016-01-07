@@ -32,6 +32,39 @@
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
+// EmittingAsmStreamer Implementation
+//===----------------------------------------------------------------------===//
+unsigned EmittingAsmStreamer::emitULEB128(uint64_t Value, const char *Desc,
+                                          unsigned PadTo) {
+  AP->EmitULEB128(Value, Desc, PadTo);
+  return 0;
+}
+
+unsigned EmittingAsmStreamer::emitInt8(unsigned char Value) {
+  AP->EmitInt8(Value);
+  return 0;
+}
+
+unsigned EmittingAsmStreamer::emitBytes(StringRef Data) {
+  AP->OutStreamer->EmitBytes(Data);
+  return 0;
+}
+
+//===----------------------------------------------------------------------===//
+// SizeReporterAsmStreamer Implementation
+//===----------------------------------------------------------------------===//
+unsigned SizeReporterAsmStreamer::emitULEB128(uint64_t Value, const char *Desc,
+                                              unsigned PadTo) {
+  return getULEB128Size(Value);
+}
+
+unsigned SizeReporterAsmStreamer::emitInt8(unsigned char Value) { return 1; }
+
+unsigned SizeReporterAsmStreamer::emitBytes(StringRef Data) {
+  return Data.size();
+}
+
+//===----------------------------------------------------------------------===//
 // DIEAbbrevData Implementation
 //===----------------------------------------------------------------------===//
 
