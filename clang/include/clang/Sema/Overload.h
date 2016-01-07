@@ -570,8 +570,8 @@ namespace clang {
     /// This conversion candidate is not viable because its result
     /// type is not implicitly convertible to the desired type.
     ovl_fail_bad_final_conversion,
-    
-    /// This conversion function template specialization candidate is not 
+
+    /// This conversion function template specialization candidate is not
     /// viable because the final conversion was not an exact match.
     ovl_fail_final_conversion_not_exact,
 
@@ -582,7 +582,10 @@ namespace clang {
 
     /// This candidate function was not viable because an enable_if
     /// attribute disabled it.
-    ovl_fail_enable_if
+    ovl_fail_enable_if,
+
+    /// This candidate was not viable because its address could not be taken.
+    ovl_fail_addr_not_available
   };
 
   /// OverloadCandidate - A single candidate in an overload set (C++ 13.3).

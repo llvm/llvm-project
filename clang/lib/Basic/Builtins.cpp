@@ -48,10 +48,20 @@ void Builtin::Context::InitializeTarget(const TargetInfo &Target,
     AuxTSRecords = AuxTarget->getTargetBuiltins();
 }
 
+bool Builtin::Context::isBuiltinFunc(const char *Name) {
+  StringRef FuncName(Name);
+  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin; ++i)
+    if (FuncName.equals(BuiltinInfo[i].Name))
+      return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;
+
+  return false;
+}
+
 bool Builtin::Context::builtinIsSupported(const Builtin::Info &BuiltinInfo,
                                           const LangOptions &LangOpts) {
-  bool BuiltinsUnsupported = LangOpts.NoBuiltin &&
-                             strchr(BuiltinInfo.Attributes, 'f');
+  bool BuiltinsUnsupported =
+      (LangOpts.NoBuiltin || LangOpts.isNoBuiltinFunc(BuiltinInfo.Name)) &&
+      strchr(BuiltinInfo.Attributes, 'f');
   bool MathBuiltinsUnsupported =
     LangOpts.NoMathBuiltin && BuiltinInfo.HeaderName &&
     llvm::StringRef(BuiltinInfo.HeaderName).equals("math.h");

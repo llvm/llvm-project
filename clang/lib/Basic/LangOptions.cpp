@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace clang;
 
@@ -36,3 +37,10 @@ void LangOptions::resetNonModularOptions() {
   ImplementationOfModule.clear();
 }
 
+bool LangOptions::isNoBuiltinFunc(const char *Name) const {
+  StringRef FuncName(Name);
+  for (unsigned i = 0, e = NoBuiltinFuncs.size(); i != e; ++i)
+    if (FuncName.equals(NoBuiltinFuncs[i]))
+      return true;
+  return false;
+}

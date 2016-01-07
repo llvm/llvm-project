@@ -33,7 +33,7 @@ void TakeFnOvl(void (*)(int *)) overloaded;
 
 void NotOverloaded(void *p PS(0));
 void IsOverloaded(void *p PS(0)) overloaded;
-void IsOverloaded(char *p) overloaded;
+void IsOverloaded(char *p) overloaded; // char* inestead of void* is intentional
 void FunctionPtrs() {
   void (*p)(void *) = NotOverloaded; //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
   void (*p2)(void *) = &NotOverloaded; //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
@@ -49,4 +49,8 @@ void FunctionPtrs() {
 
   TakeFnOvl(NotOverloaded); //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
   TakeFnOvl(&NotOverloaded); //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
+
+  int P;
+  (&NotOverloaded)(&P); //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
+  (&IsOverloaded)(&P); //expected-error{{no matching function}} expected-note@35{{candidate address cannot be taken because parameter 1 has pass_object_size attribute}} expected-note@36{{candidate function not viable: no known conversion from 'int *' to 'char *' for 1st argument}}
 }

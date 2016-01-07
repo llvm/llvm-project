@@ -29,7 +29,7 @@ namespace clang {
     enum {
       DIAG_START_COMMON        =                                 0,
       DIAG_START_DRIVER        = DIAG_START_COMMON          +  300,
-      DIAG_START_FRONTEND      = DIAG_START_DRIVER          +  100,
+      DIAG_START_FRONTEND      = DIAG_START_DRIVER          +  200,
       DIAG_START_SERIALIZATION = DIAG_START_FRONTEND        +  100,
       DIAG_START_LEX           = DIAG_START_SERIALIZATION   +  120,
       DIAG_START_PARSE         = DIAG_START_LEX             +  300,

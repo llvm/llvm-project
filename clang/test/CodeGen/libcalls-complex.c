@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fno-builtin -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-YES %s
+// RUN: %clang_cc1 -fno-builtin-crealf -fno-builtin-creal -fno-builtin-creall \
+// RUN:  -fno-builtin-cimagf  -fno-builtin-cimag -fno-builtin-cimagl -emit-llvm \
+// RUN:  -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-YES %s
 // RUN: %clang_cc1 -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-NO %s
 
 extern float crealf(float _Complex);

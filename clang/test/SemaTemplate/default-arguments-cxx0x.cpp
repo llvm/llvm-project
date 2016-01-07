@@ -56,3 +56,22 @@ namespace PR16975 {
 
   baz data{0};
 }
+
+// rdar://23810407
+// An IRGen failure due to a symbol collision due to a default argument
+// being instantiated twice.  Credit goes to Richard Smith for this
+// reduction to a -fsyntax-only failure.
+namespace rdar23810407 {
+  // Instantiating the default argument multiple times will produce two
+  // different lambda types and thus instantiate this function multiple
+  // times, which will produce conflicting extern variable declarations.
+  template<typename T> int f(T t) {
+    extern T rdar23810407_variable;
+    return 0;
+  }
+  template<typename T> int g(int a = f([] {}));
+  void test() {
+    g<int>();
+    g<int>();
+  }
+}

@@ -812,6 +812,7 @@ TEST_F(FormatTestJS, MetadataAnnotations) {
 TEST_F(FormatTestJS, Modules) {
   verifyFormat("import SomeThing from 'some/module.js';");
   verifyFormat("import {X, Y} from 'some/module.js';");
+  verifyFormat("import a, {X, Y} from 'some/module.js';");
   verifyFormat("import {\n"
                "  VeryLongImportsAreAnnoying,\n"
                "  VeryLongImportsAreAnnoying,\n"

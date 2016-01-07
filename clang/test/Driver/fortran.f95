@@ -13,3 +13,9 @@
 // CHECK-ASM: "-S"
 // CHECK-ASM: "-x" "f95"
 // CHECK-ASM-NOT: cc1
+
+// RUN: %clang -Wall -target x86_64-unknown-linux-gnu -integrated-as %s -o %t -### 2>&1 | FileCheck --check-prefix=CHECK-WARN %s
+// CHECK-WARN: gcc
+// CHECK-WARN-NOT: "-Wall"
+// CHECK-WARN: ld
+// CHECK-WARN-NOT: "-Wall"

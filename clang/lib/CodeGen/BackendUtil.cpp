@@ -249,6 +249,13 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
   TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
   if (!CodeGenOpts.SimplifyLibCalls)
     TLII->disableAllFunctions();
+  else {
+    // Disable individual libc/libm calls in TargetLibraryInfo.
+    LibFunc::Func F;
+    for (auto &FuncName : CodeGenOpts.getNoBuiltinFuncs())
+      if (TLII->getLibFunc(FuncName, F))
+        TLII->setUnavailable(F);
+  }
 
   switch (CodeGenOpts.getVecLib()) {
   case CodeGenOptions::Accelerate:

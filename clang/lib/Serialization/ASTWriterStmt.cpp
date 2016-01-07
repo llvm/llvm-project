@@ -1336,15 +1336,8 @@ void ASTStmtWriter::VisitCXXThrowExpr(CXXThrowExpr *E) {
 
 void ASTStmtWriter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   VisitExpr(E);
-
-  bool HasOtherExprStored = E->Param.getInt();
-  // Store these first, the reader reads them before creation.
-  Record.push_back(HasOtherExprStored);
-  if (HasOtherExprStored)
-    Writer.AddStmt(E->getExpr());
   Writer.AddDeclRef(E->getParam(), Record);
   Writer.AddSourceLocation(E->getUsedLocation(), Record);
-
   Code = serialization::EXPR_CXX_DEFAULT_ARG;
 }
 

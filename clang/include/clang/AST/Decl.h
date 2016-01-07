@@ -2440,10 +2440,9 @@ class IndirectFieldDecl : public ValueDecl,
   NamedDecl **Chaining;
   unsigned ChainingSize;
 
-  IndirectFieldDecl(DeclContext *DC, SourceLocation L,
+  IndirectFieldDecl(ASTContext &C, DeclContext *DC, SourceLocation L,
                     DeclarationName N, QualType T,
-                    NamedDecl **CH, unsigned CHS)
-    : ValueDecl(IndirectField, DC, L, N, T), Chaining(CH), ChainingSize(CHS) {}
+                    NamedDecl **CH, unsigned CHS);
 
 public:
   static IndirectFieldDecl *Create(ASTContext &C, DeclContext *DC,

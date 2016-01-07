@@ -192,6 +192,10 @@ public:
   /// for AuxTarget).
   unsigned getAuxBuiltinID(unsigned ID) const { return ID - TSRecords.size(); }
 
+  /// Returns true if this is a libc/libm function without the '__builtin_'
+  /// prefix.
+  static bool isBuiltinFunc(const char *Name);
+
 private:
   const Info &getRecord(unsigned ID) const;
 
