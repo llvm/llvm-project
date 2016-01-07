@@ -2,7 +2,7 @@
 
 ; Test that basic memory operations assemble as expected with 64-bit addresses.
 
-target datalayout = "e-p:64:64-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "wasm64-unknown-unknown"
 
 declare i64 @llvm.wasm.memory.size.i64() nounwind readonly

@@ -529,12 +529,13 @@ bool MemCpyOpt::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
 
           // We found an instruction that may write to the loaded memory.
           // We can try to promote at this position instead of the store
-          // position if nothing alias the store memory after this.
+          // position if nothing alias the store memory after this and the store
+          // destination is not in the range.
           P = &*I;
           for (; I != E; ++I) {
             MemoryLocation StoreLoc = MemoryLocation::get(SI);
-            if (AA.getModRefInfo(&*I, StoreLoc) != MRI_NoModRef) {
-              DEBUG(dbgs() << "Alias " << *I << "\n");
+            if (&*I == SI->getOperand(1) ||
+                AA.getModRefInfo(&*I, StoreLoc) != MRI_NoModRef) {
               P = nullptr;
               break;
             }
@@ -628,12 +629,38 @@ bool MemCpyOpt::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   // Ensure that the value being stored is something that can be memset'able a
   // byte at a time like "0" or "-1" or any width, as well as things like
   // 0xA0A0A0A0 and 0.0.
-  if (Value *ByteVal = isBytewiseValue(SI->getOperand(0)))
+  auto *V = SI->getOperand(0);
+  if (Value *ByteVal = isBytewiseValue(V)) {
     if (Instruction *I = tryMergingIntoMemset(SI, SI->getPointerOperand(),
                                               ByteVal)) {
       BBI = I->getIterator(); // Don't invalidate iterator.
       return true;
     }
+
+    // If we have an aggregate, we try to promote it to memset regardless
+    // of opportunity for merging as it can expose optimization opportunities
+    // in subsequent passes.
+    auto *T = V->getType();
+    if (T->isAggregateType()) {
+      uint64_t Size = DL.getTypeStoreSize(T);
+      unsigned Align = SI->getAlignment();
+      if (!Align)
+        Align = DL.getABITypeAlignment(T);
+      IRBuilder<> Builder(SI);
+      auto *M = Builder.CreateMemSet(SI->getPointerOperand(), ByteVal,
+                                     Size, Align, SI->isVolatile());
+
+      DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
+
+      MD->removeInstruction(SI);
+      SI->eraseFromParent();
+      NumMemSetInfer++;
+
+      // Make sure we do not invalidate the iterator.
+      BBI = M->getIterator();
+      return true;
+    }
+  }
 
   return false;
 }

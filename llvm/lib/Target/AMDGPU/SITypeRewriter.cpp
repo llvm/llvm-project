@@ -98,6 +98,9 @@ void SITypeRewriter::visitCallInst(CallInst &I) {
   SmallVector <Type*, 8> Types;
   bool NeedToReplace = false;
   Function *F = I.getCalledFunction();
+  if (!F)
+    return;
+
   std::string Name = F->getName();
   for (unsigned i = 0, e = I.getNumArgOperands(); i != e; ++i) {
     Value *Arg = I.getArgOperand(i);

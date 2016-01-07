@@ -664,24 +664,6 @@ void WinEHPrepare::colorFunclets(Function &F) {
   }
 }
 
-void llvm::calculateCatchReturnSuccessorColors(const Function *Fn,
-                                               WinEHFuncInfo &FuncInfo) {
-  for (const BasicBlock &BB : *Fn) {
-    const auto *CatchRet = dyn_cast<CatchReturnInst>(BB.getTerminator());
-    if (!CatchRet)
-      continue;
-    // A 'catchret' returns to the outer scope's color.
-    Value *ParentPad = CatchRet->getParentPad();
-    const BasicBlock *Color;
-    if (isa<ConstantTokenNone>(ParentPad))
-      Color = &Fn->getEntryBlock();
-    else
-      Color = cast<Instruction>(ParentPad)->getParent();
-    // Record the catchret successor's funclet membership.
-    FuncInfo.CatchRetSuccessorColorMap[CatchRet] = Color;
-  }
-}
-
 void WinEHPrepare::demotePHIsOnFunclets(Function &F) {
   // Strip PHI nodes off of EH pads.
   SmallVector<PHINode *, 16> PHINodes;

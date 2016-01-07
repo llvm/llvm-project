@@ -1,8 +1,7 @@
 ; RUN: not llvm-as -disable-output <%s 2>&1 | FileCheck %s
-; This is to verify that gc_relocate must return a pointer type, which is defined
-; in intrinsics.td.
+; This is to verify that gc_relocate must return a pointer type
 
-; CHECK: Intrinsic has incorrect return type!
+; CHECK: gc.relocate must return a pointer or a vector of pointers
 
 declare void @foo()
 

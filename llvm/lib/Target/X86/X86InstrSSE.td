@@ -7838,9 +7838,7 @@ class avx_broadcast_rm<bits<8> opc, string OpcodeStr, RegisterClass RC,
   AVX8I<opc, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
         !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
         [(set RC:$dst, (VT (X86VBroadcast (ld_frag addr:$src))))]>,
-        Sched<[Sched]>, VEX {
-    let mayLoad = 1;
-}
+        Sched<[Sched]>, VEX;
 
 // AVX2 adds register forms
 class avx2_broadcast_rr<bits<8> opc, string OpcodeStr, RegisterClass RC,
@@ -7871,7 +7869,7 @@ let ExeDomain = SSEPackedDouble in
 def VBROADCASTSDYrr  : avx2_broadcast_rr<0x19, "vbroadcastsd", VR256,
                                          v4f64, v2f64, WriteFShuffle256>, VEX_L;
 
-let mayLoad = 1, Predicates = [HasAVX2] in
+let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX2] in
 def VBROADCASTI128 : AVX8I<0x5A, MRMSrcMem, (outs VR256:$dst),
                            (ins i128mem:$src),
                            "vbroadcasti128\t{$src, $dst|$dst, $src}", []>,

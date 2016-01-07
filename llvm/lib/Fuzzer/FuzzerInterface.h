@@ -16,6 +16,7 @@
 #ifndef LLVM_FUZZER_INTERFACE_H
 #define LLVM_FUZZER_INTERFACE_H
 
+#include <limits>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -86,9 +87,13 @@ class MutationDispatcher {
   /// Mutates data by chanding one bit.
   size_t Mutate_ChangeBit(uint8_t *Data, size_t Size, size_t MaxSize);
 
-  /// Mutates data by adding a word from the dictionary.
-  size_t Mutate_AddWordFromDictionary(uint8_t *Data, size_t Size,
-                                      size_t MaxSize);
+  /// Mutates data by adding a word from the manual dictionary.
+  size_t Mutate_AddWordFromManualDictionary(uint8_t *Data, size_t Size,
+                                            size_t MaxSize);
+
+  /// Mutates data by adding a word from the automatic dictionary.
+  size_t Mutate_AddWordFromAutoDictionary(uint8_t *Data, size_t Size,
+                                          size_t MaxSize);
 
   /// Tries to find an ASCII integer in Data, changes it to another ASCII int.
   size_t Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size, size_t MaxSize);
@@ -104,7 +109,8 @@ class MutationDispatcher {
   size_t CrossOver(const uint8_t *Data1, size_t Size1, const uint8_t *Data2,
                    size_t Size2, uint8_t *Out, size_t MaxOutSize);
 
-  void AddWordToDictionary(const uint8_t *Word, size_t Size);
+  void AddWordToManualDictionary(const Unit &Word);
+  void AddWordToAutoDictionary(const Unit &Word, size_t PositionHint);
   void SetCorpus(const std::vector<Unit> *Corpus);
 
  private:

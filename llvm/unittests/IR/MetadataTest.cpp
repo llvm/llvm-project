@@ -494,6 +494,20 @@ TEST_F(MDNodeTest, isTemporary) {
   EXPECT_TRUE(T->isTemporary());
 }
 
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+
+TEST_F(MDNodeTest, deathOnNoReplaceTemporaryRAUW) {
+  auto Temp = MDNode::getTemporary(Context, None);
+  Temp->setCanReplace(false);
+  EXPECT_DEATH(Temp->replaceAllUsesWith(nullptr),
+               "Attempted to replace Metadata marked for no replacement");
+  Temp->setCanReplace(true);
+  // Remove the references to Temp; required for teardown.
+  Temp->replaceAllUsesWith(nullptr);
+}
+
+#endif
+
 TEST_F(MDNodeTest, getDistinctWithUnresolvedOperands) {
   // temporary !{}
   auto Temp = MDTuple::getTemporary(Context, None);

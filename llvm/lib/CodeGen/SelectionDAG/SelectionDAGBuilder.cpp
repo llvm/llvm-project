@@ -1241,8 +1241,13 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Figure out the funclet membership for the catchret's successor.
   // This will be used by the FuncletLayout pass to determine how to order the
   // BB's.
-  WinEHFuncInfo *EHInfo = DAG.getMachineFunction().getWinEHFuncInfo();
-  const BasicBlock *SuccessorColor = EHInfo->CatchRetSuccessorColorMap[&I];
+  // A 'catchret' returns to the outer scope's color.
+  Value *ParentPad = I.getParentPad();
+  const BasicBlock *SuccessorColor;
+  if (isa<ConstantTokenNone>(ParentPad))
+    SuccessorColor = &FuncInfo.Fn->getEntryBlock();
+  else
+    SuccessorColor = cast<Instruction>(ParentPad)->getParent();
   assert(SuccessorColor && "No parent funclet for catchret!");
   MachineBasicBlock *SuccessorColorMBB = FuncInfo.MBBMap[SuccessorColor];
   assert(SuccessorColorMBB && "No MBB for SuccessorColor!");

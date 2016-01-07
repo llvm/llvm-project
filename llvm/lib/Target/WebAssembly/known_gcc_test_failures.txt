@@ -5,6 +5,24 @@
 pr38151.c
 va-arg-22.c
 
+# WebAssemblyRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator, int, unsigned int, llvm::RegScavenger *) const: Assertion `MI.getOperand(1).getImm() == 0 && "Can't eliminate FI yet if offset is already set"'
+20030313-1.c
+20030916-1.c
+20031012-1.c
+20041126-1.c
+20050502-2.c
+20060420-1.c
+20071202-1.c
+20120808-1.c
+pr20527-1.c
+pr27073.c
+pr36339.c
+pr37573.c
+pr43236.c
+pr43835.c
+pr45070.c
+pr51933.c
+
 # TargetRegisterInfo.h:315: static unsigned int llvm::TargetRegisterInfo::virtReg2Index(unsigned int): Assertion `isVirtualRegister(Reg) && "Not a virtual register"' failed.
 struct-ret-1.c
 va-arg-11.c

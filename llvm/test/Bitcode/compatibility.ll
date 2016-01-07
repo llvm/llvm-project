@@ -47,10 +47,36 @@ $comdat.samesize = comdat samesize
 ; CHECK: @const.struct = constant %const.struct.type { i32 -1, i8 undef }
 @const.struct.packed = constant %const.struct.type.packed <{ i32 -1, i8 1 }>
 ; CHECK: @const.struct.packed = constant %const.struct.type.packed <{ i32 -1, i8 1 }>
-@const.array = constant [2 x i32] [i32 -3, i32 -4]
-; CHECK: @const.array = constant [2 x i32] [i32 -3, i32 -4]
-@const.vector = constant <2 x i32> <i32 -5, i32 -6>
-; CHECK: @const.vector = constant <2 x i32> <i32 -5, i32 -6>
+
+; CHECK: @constant.array.i8  = constant [3 x i8] c"\00\01\00"
+@constant.array.i8  = constant [3 x i8] [i8 -0, i8 1, i8 0]
+; CHECK: @constant.array.i16 = constant [3 x i16] [i16 0, i16 1, i16 0]
+@constant.array.i16 = constant [3 x i16] [i16 -0, i16 1, i16 0]
+; CHECK: @constant.array.i32 = constant [3 x i32] [i32 0, i32 1, i32 0]
+@constant.array.i32 = constant [3 x i32] [i32 -0, i32 1, i32 0]
+; CHECK: @constant.array.i64 = constant [3 x i64] [i64 0, i64 1, i64 0]
+@constant.array.i64 = constant [3 x i64] [i64 -0, i64 1, i64 0]
+; CHECK: @constant.array.f16 = constant [3 x half] [half 0xH8000, half 0xH3C00, half 0xH0000]
+@constant.array.f16 = constant [3 x half] [half -0.0, half 1.0, half 0.0]
+; CHECK: @constant.array.f32 = constant [3 x float] [float -0.000000e+00, float 1.000000e+00, float 0.000000e+00]
+@constant.array.f32 = constant [3 x float] [float -0.0, float 1.0, float 0.0]
+; CHECK: @constant.array.f64 = constant [3 x double] [double -0.000000e+00, double 1.000000e+00, double 0.000000e+00]
+@constant.array.f64 = constant [3 x double] [double -0.0, double 1.0, double 0.0]
+
+; CHECK: @constant.vector.i8  = constant <3 x i8>  <i8 0, i8 1, i8 0>
+@constant.vector.i8  = constant <3 x i8>  <i8 -0, i8 1, i8 0>
+; CHECK: @constant.vector.i16 = constant <3 x i16> <i16 0, i16 1, i16 0>
+@constant.vector.i16 = constant <3 x i16> <i16 -0, i16 1, i16 0>
+; CHECK: @constant.vector.i32 = constant <3 x i32> <i32 0, i32 1, i32 0>
+@constant.vector.i32 = constant <3 x i32> <i32 -0, i32 1, i32 0>
+; CHECK: @constant.vector.i64 = constant <3 x i64> <i64 0, i64 1, i64 0>
+@constant.vector.i64 = constant <3 x i64> <i64 -0, i64 1, i64 0>
+; CHECK: @constant.vector.f16 = constant <3 x half> <half 0xH8000, half 0xH3C00, half 0xH0000>
+@constant.vector.f16 = constant <3 x half> <half -0.0, half 1.0, half 0.0>
+; CHECK: @constant.vector.f32 = constant <3 x float> <float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>
+@constant.vector.f32 = constant <3 x float> <float -0.0, float 1.0, float 0.0>
+; CHECK: @constant.vector.f64 = constant <3 x double> <double -0.000000e+00, double 1.000000e+00, double 0.000000e+00>
+@constant.vector.f64 = constant <3 x double> <double -0.0, double 1.0, double 0.0>
 
 ;; Global Variables
 ; Format: [@<GlobalVarName> =] [Linkage] [Visibility] [DLLStorageClass]

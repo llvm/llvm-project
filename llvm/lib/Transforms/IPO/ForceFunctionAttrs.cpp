@@ -22,7 +22,7 @@ static cl::list<std::string>
     ForceAttributes("force-attribute", cl::Hidden,
                     cl::desc("Add an attribute to a function. This should be a "
                              "pair of 'function-name:attribute-name', for "
-                             "example -force-add-attribute=foo:noinline. This "
+                             "example -force-attribute=foo:noinline. This "
                              "option can be specified multiple times."));
 
 static Attribute::AttrKind parseAttrKind(StringRef Kind) {

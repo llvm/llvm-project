@@ -5398,6 +5398,27 @@ def MOV_ga_pcrel_ldr : PseudoInst<(outs GPR:$dst), (ins i32imm:$addr),
                     Requires<[IsARM, UseMovt]>;
 } // isReMaterializable
 
+// The many different faces of TLS access.
+def : ARMPat<(ARMWrapper tglobaltlsaddr :$dst),
+             (MOVi32imm tglobaltlsaddr :$dst)>,
+      Requires<[IsARM, UseMovt]>;
+
+def : Pat<(ARMWrapper tglobaltlsaddr:$src),
+          (LDRLIT_ga_abs tglobaltlsaddr:$src)>,
+      Requires<[IsARM, DontUseMovt]>;
+
+def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
+          (MOV_ga_pcrel tglobaltlsaddr:$addr)>, Requires<[IsARM, UseMovt]>;
+
+def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
+          (LDRLIT_ga_pcrel tglobaltlsaddr:$addr)>,
+      Requires<[IsARM, DontUseMovt]>;
+let AddedComplexity = 10 in
+def : Pat<(load (ARMWrapperPIC tglobaltlsaddr:$addr)),
+          (MOV_ga_pcrel_ldr tglobaltlsaddr:$addr)>,
+      Requires<[IsARM, UseMovt]>;
+
+
 // ConstantPool, GlobalAddress, and JumpTable
 def : ARMPat<(ARMWrapper  tconstpool  :$dst), (LEApcrel tconstpool  :$dst)>;
 def : ARMPat<(ARMWrapper  tglobaladdr :$dst), (MOVi32imm tglobaladdr :$dst)>,

@@ -1,5 +1,9 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -enable-shrink-wrap=true | FileCheck --check-prefix=SHRINK %s
+; TLS function were wrongly model and after fixing that, shrink-wrapping
+; cannot help here. To achieve the expected lowering, we need to playing
+; tricks similar to AArch64 fast TLS calling convention (r255821).
+; Re-enable the following run line when 
+; _RUN_: llc < %s -mtriple=x86_64-apple-darwin -enable-shrink-wrap=true | FileCheck --check-prefix=SHRINK %s
 %struct.S = type { i8 }
 
 @sg = internal thread_local global %struct.S zeroinitializer, align 1

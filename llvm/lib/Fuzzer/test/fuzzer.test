@@ -20,13 +20,11 @@ NullDerefTestExactPath: Test unit written to FOOBAR
 RUN: not LLVMFuzzer-CounterTest -use_counters=1 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
 
 RUN: not LLVMFuzzer-CallerCalleeTest                     -cross_over=0 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-CallerCalleeTest  -use_indir_calls=0 -cross_over=0 -max_len=6 -seed=1 -runs=1000000 2>&1 | FileCheck %s  --check-prefix=Done1000000
+# This one is flaky, may actually find the goal even w/o use_indir_calls.
+# LLVMFuzzer-CallerCalleeTest  -use_indir_calls=0 -cross_over=0 -max_len=6 -seed=1 -runs=1000000 2>&1 | FileCheck %s  --check-prefix=Done1000000
 
 
 RUN: not LLVMFuzzer-UserSuppliedFuzzerTest -seed=1 -timeout=15 2>&1 | FileCheck %s
-
-RUN: not LLVMFuzzer-SimpleDictionaryTest -dict=%S/dict1.txt -seed=1 -runs=1000003  2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-SimpleDictionaryTest                    -seed=1 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
 
 RUN: not LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
 UNINSTRUMENTED: ERROR: __sanitizer_set_death_callback is not defined. Exiting.

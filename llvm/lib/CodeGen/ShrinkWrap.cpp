@@ -47,6 +47,7 @@
 // MachineFrameInfo is updated with this information.
 //===----------------------------------------------------------------------===//
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 // To check for profitability.
@@ -263,6 +264,8 @@ MachineBasicBlock *FindIDom(MachineBasicBlock &Block, ListOfBBs BBs,
     if (!IDom)
       break;
   }
+  if (IDom == &Block)
+    return nullptr;
   return IDom;
 }
 
@@ -352,13 +355,9 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
       if (MLI->getLoopDepth(Save) > MLI->getLoopDepth(Restore)) {
         // Push Save outside of this loop if immediate dominator is different
         // from save block. If immediate dominator is not different, bail out.
-        MachineBasicBlock *IDom = FindIDom<>(*Save, Save->predecessors(), *MDT);
-        if (IDom != Save)
-          Save = IDom;
-        else {
-          Save = nullptr;
+        Save = FindIDom<>(*Save, Save->predecessors(), *MDT);
+        if (!Save)
           break;
-        }
       } else {
         // If the loop does not exit, there is no point in looking
         // for a post-dominator outside the loop.
@@ -386,6 +385,41 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
   }
 }
 
+/// Check whether the edge (\p SrcBB, \p DestBB) is a backedge according to MLI.
+/// I.e., check if it exists a loop that contains SrcBB and where DestBB is the
+/// loop header.
+static bool isProperBackedge(const MachineLoopInfo &MLI,
+                             const MachineBasicBlock *SrcBB,
+                             const MachineBasicBlock *DestBB) {
+  for (const MachineLoop *Loop = MLI.getLoopFor(SrcBB); Loop;
+       Loop = Loop->getParentLoop()) {
+    if (Loop->getHeader() == DestBB)
+      return true;
+  }
+  return false;
+}
+
+/// Check if the CFG of \p MF is irreducible.
+static bool isIrreducibleCFG(const MachineFunction &MF,
+                             const MachineLoopInfo &MLI) {
+  const MachineBasicBlock *Entry = &*MF.begin();
+  ReversePostOrderTraversal<const MachineBasicBlock *> RPOT(Entry);
+  BitVector VisitedBB(MF.getNumBlockIDs());
+  for (const MachineBasicBlock *MBB : RPOT) {
+    VisitedBB.set(MBB->getNumber());
+    for (const MachineBasicBlock *SuccBB : MBB->successors()) {
+      if (!VisitedBB.test(SuccBB->getNumber()))
+        continue;
+      // We already visited SuccBB, thus MBB->SuccBB must be a backedge.
+      // Check that the head matches what we have in the loop information.
+      // Otherwise, we have an irreducible graph.
+      if (!isProperBackedge(MLI, MBB, SuccBB))
+        return true;
+    }
+  }
+  return false;
+}
+
 bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
   if (MF.empty() || !isShrinkWrapEnabled(MF))
     return false;
@@ -393,6 +427,17 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "**** Analysing " << MF.getName() << '\n');
 
   init(MF);
+
+  if (isIrreducibleCFG(MF, *MLI)) {
+    // If MF is irreducible, a block may be in a loop without
+    // MachineLoopInfo reporting it. I.e., we may use the
+    // post-dominance property in loops, which lead to incorrect
+    // results. Moreover, we may miss that the prologue and
+    // epilogue are not in the same loop, leading to unbalanced
+    // construction/deconstruction of the stack frame.
+    DEBUG(dbgs() << "Irreducible CFGs are not supported yet\n");
+    return false;
+  }
 
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   std::unique_ptr<RegScavenger> RS(

@@ -3875,6 +3875,13 @@ def t2MOV_ga_pcrel : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr),
 
 }
 
+def : T2Pat<(ARMWrapperPIC tglobaltlsaddr :$dst),
+            (t2MOV_ga_pcrel tglobaltlsaddr:$dst)>,
+      Requires<[IsThumb2, UseMovt]>;
+def : T2Pat<(ARMWrapper tglobaltlsaddr:$dst),
+            (t2MOVi32imm tglobaltlsaddr:$dst)>,
+      Requires<[IsThumb2, UseMovt]>;
+
 // ConstantPool, GlobalAddress, and JumpTable
 def : T2Pat<(ARMWrapper  tconstpool  :$dst), (t2LEApcrel tconstpool  :$dst)>;
 def : T2Pat<(ARMWrapper  tglobaladdr :$dst), (t2MOVi32imm tglobaladdr :$dst)>,

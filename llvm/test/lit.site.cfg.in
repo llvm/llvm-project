@@ -36,7 +36,6 @@ config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = "@HAVE_LIBZ@"
 config.have_dia_sdk = @HAVE_DIA_SDK@
 config.enable_ffi = "@LLVM_ENABLE_FFI@"
-config.enable_timestamps = "@ENABLE_TIMESTAMPS@"
 config.test_examples = "@ENABLE_EXAMPLES@"
 
 # Support substitution of the tools_dir with user parameters. This is

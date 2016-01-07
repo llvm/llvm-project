@@ -2,7 +2,7 @@
 ; RUN:   -fast-isel -fast-isel-abort=1 -verify-machineinstrs \
 ; RUN:   | FileCheck %s
 
-target datalayout = "e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; This tests very minimal fast-isel functionality.

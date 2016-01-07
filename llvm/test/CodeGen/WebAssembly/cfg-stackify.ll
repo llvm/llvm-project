@@ -3,7 +3,7 @@
 
 ; Test the CFG stackifier pass.
 
-target datalayout = "e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare void @something()
@@ -93,6 +93,7 @@ back:
 ; Test that a simple loop is handled as expected.
 
 ; CHECK-LABEL: test2:
+; CHECK-NOT: local
 ; CHECK: block BB2_2{{$}}
 ; CHECK: br_if {{[^,]*}}, BB2_2{{$}}
 ; CHECK: BB2_1:

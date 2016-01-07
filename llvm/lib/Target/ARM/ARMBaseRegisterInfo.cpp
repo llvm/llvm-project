@@ -115,6 +115,14 @@ ARMBaseRegisterInfo::getNoPreservedMask() const {
 }
 
 const uint32_t *
+ARMBaseRegisterInfo::getTLSCallPreservedMask(const MachineFunction &MF) const {
+  assert(MF.getSubtarget<ARMSubtarget>().isTargetDarwin() &&
+         "only know about special TLS call on Darwin");
+  return CSR_iOS_TLSCall_RegMask;
+}
+
+
+const uint32_t *
 ARMBaseRegisterInfo::getThisReturnPreservedMask(const MachineFunction &MF,
                                                 CallingConv::ID CC) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();

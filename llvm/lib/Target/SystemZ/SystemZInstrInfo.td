@@ -1219,6 +1219,9 @@ def PFDRL : PrefetchRILPC<"pfdrl", 0xC62, z_prefetch>;
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
+// A serialization instruction that acts as a barrier for all memory
+// accesses, which expands to "bcr 14, 0".
+let hasSideEffects = 1 in
 def Serialize : Alias<2, (outs), (ins), [(z_serialize)]>;
 
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {

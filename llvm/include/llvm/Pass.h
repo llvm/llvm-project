@@ -369,6 +369,10 @@ protected:
 /// @brief This is the storage for the -time-passes option.
 extern bool TimePassesIsEnabled;
 
+/// isFunctionInPrintList - returns true if a function should be printed via
+//  debugging options like -print-after-all/-print-before-all.
+//  @brief Tells if the function IR should be printed by PrinterPass.
+extern bool isFunctionInPrintList(StringRef FunctionName);
 } // End llvm namespace
 
 // Include support files that contain important APIs commonly used by Passes,
