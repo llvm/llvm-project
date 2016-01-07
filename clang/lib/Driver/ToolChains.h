@@ -730,9 +730,6 @@ public:
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
   // FreeBSD defaults to standalone/full debug info.
   bool GetDefaultStandaloneDebug() const override { return true; }
-  llvm::DebuggerKind getDefaultDebuggerTuning() const override {
-    return llvm::DebuggerKind::LLDB;
-  }
 
 protected:
   Tool *buildAssembler() const override;

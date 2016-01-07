@@ -699,7 +699,7 @@ CodeGenPGO::emitEmptyCounterMapping(const Decl *D, StringRef Name,
 
   setFuncName(Name, Linkage);
   CGM.getCoverageMapping()->addFunctionMappingRecord(
-      FuncNameVar, FuncName, FunctionHash, CoverageMapping);
+      FuncNameVar, FuncName, FunctionHash, CoverageMapping, false);
 }
 
 void CodeGenPGO::computeRegionCounts(const Decl *D) {

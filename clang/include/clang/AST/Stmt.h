@@ -130,7 +130,7 @@ protected:
     friend class CharacterLiteral;
     unsigned : NumExprBits;
 
-    unsigned Kind : 2;
+    unsigned Kind : 3;
   };
 
   enum APFloatSemantics {

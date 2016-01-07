@@ -860,7 +860,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (!SkipFirstExtraIndent && *I > prec::Assignment &&
          !Current.isTrailingComment()))
       NewParenState.Indent += Style.ContinuationIndentWidth;
-    if ((Previous && !Previous->opensScope()) || *I > prec::Comma)
+    if ((Previous && !Previous->opensScope()) || *I != prec::Comma)
       NewParenState.BreakBeforeParameter = false;
     State.Stack.push_back(NewParenState);
     SkipFirstExtraIndent = false;

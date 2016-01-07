@@ -1,4 +1,4 @@
-//===-- BuiltinTypeNodes.def - Metadata about BuiltinTypes ------*- C++ -*-===//
+//===-- BuiltinTypes.def - Metadata about BuiltinTypes ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

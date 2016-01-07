@@ -910,11 +910,11 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
 }
 
 void CoverageMappingModuleGen::addFunctionMappingRecord(
-    llvm::GlobalVariable *NamePtr, StringRef NameValue,
-    uint64_t FuncHash, const std::string &CoverageMapping) {
+    llvm::GlobalVariable *NamePtr, StringRef NameValue, uint64_t FuncHash,
+    const std::string &CoverageMapping, bool isUsed) {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
   if (!FunctionRecordTy) {
-    #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) LLVMType,
+#define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) LLVMType,
     llvm::Type *FunctionRecordTypes[] = {
       #include "llvm/ProfileData/InstrProfData.inc"
     };
@@ -929,6 +929,9 @@ void CoverageMappingModuleGen::addFunctionMappingRecord(
   };
   FunctionRecords.push_back(llvm::ConstantStruct::get(
       FunctionRecordTy, makeArrayRef(FunctionRecordVals)));
+  if (!isUsed)
+    FunctionNames.push_back(
+        llvm::ConstantExpr::getBitCast(NamePtr, llvm::Type::getInt8PtrTy(Ctx)));
   CoverageMappings += CoverageMapping;
 
   if (CGM.getCodeGenOpts().DumpCoverageMapping) {
@@ -1023,6 +1026,17 @@ void CoverageMappingModuleGen::emit() {
 
   // Make sure the data doesn't get deleted.
   CGM.addUsedGlobal(CovData);
+  // Create the deferred function records array
+  if (!FunctionNames.empty()) {
+    auto NamesArrTy = llvm::ArrayType::get(llvm::Type::getInt8PtrTy(Ctx),
+                                           FunctionNames.size());
+    auto NamesArrVal = llvm::ConstantArray::get(NamesArrTy, FunctionNames);
+    // This variable will *NOT* be emitted to the object file. It is used
+    // to pass the list of names referenced to codegen.
+    new llvm::GlobalVariable(CGM.getModule(), NamesArrTy, true,
+                             llvm::GlobalValue::InternalLinkage, NamesArrVal,
+                             llvm::getCoverageNamesVarName());
+  }
 }
 
 unsigned CoverageMappingModuleGen::getFileID(const FileEntry *File) {

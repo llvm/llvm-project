@@ -32,7 +32,7 @@
 // RUN:             | FileCheck -check-prefix=G_DARWIN %s
 
 // RUN: %clang -### -c -g %s -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_LLDB %s
+// RUN:             | FileCheck -check-prefix=G_GDB %s
 
 // On the PS4, -g defaults to -gno-column-info, and we always generate the
 // arange section.
