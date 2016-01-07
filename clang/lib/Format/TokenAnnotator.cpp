@@ -199,6 +199,18 @@ private:
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
 
+        if (CurrentToken->Next && CurrentToken->Next->is(tok::l_brace) &&
+            Left->Previous && Left->Previous->is(tok::l_paren)) {
+          // Detect the case where macros are used to generate lambdas or
+          // function bodies, e.g.:
+          //   auto my_lambda = MARCO((Type *type, int i) { .. body .. });
+          for (FormatToken *Tok = Left; Tok != CurrentToken; Tok = Tok->Next) {
+            if (Tok->is(TT_BinaryOperator) &&
+                Tok->isOneOf(tok::star, tok::amp, tok::ampamp))
+              Tok->Type = TT_PointerOrReference;
+          }
+        }
+
         if (StartsObjCMethodExpr) {
           CurrentToken->Type = TT_ObjCMethodExpr;
           if (Contexts.back().FirstObjCSelectorName) {
