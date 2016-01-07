@@ -6640,7 +6640,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/sh -x";
-			shellScript = "if [ \"${CONFIGURATION}\" == CustomSwift-* ]\nthen\n    LLDB_PATH_TO_LLVM_BUILD=\"${LLDB_PATH_TO_LLVM_BUILD}\"\n    LLDB_PATH_TO_SWIFT_BUILD=\"${LLDB_PATH_TO_SWIFT_BUILD}\"\n    LLDB_PATH_TO_CMARK_BUILD=\"${LLDB_PATH_TO_CMARK_BUILD}\"\n    perl $SRCROOT/scripts/build-llvm.pl\nelse\n    perl $SRCROOT/scripts/build-llvm.pl\nfi\n\n";
+			shellScript = "if [ \"${CONFIGURATION}\" == CustomSwift-* ]\nthen\n    LLDB_PATH_TO_LLVM_BUILD=\"${LLDB_PATH_TO_LLVM_BUILD}\"\n    LLDB_PATH_TO_SWIFT_BUILD=\"${LLDB_PATH_TO_SWIFT_BUILD}\"\n    LLDB_PATH_TO_CMARK_BUILD=\"${LLDB_PATH_TO_CMARK_BUILD}\"\n    /usr/bin/env python $SRCROOT/scripts/Xcode/build-llvm.py\nelse\n    /usr/bin/env python $SRCROOT/scripts/Xcode/build-llvm.py\nfi\n\n";
 		};
 		26B60735191A961000523C8D /* Compile REPL */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -6655,7 +6655,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/sh -x";
-			shellScript = "if [ \"$CONFIGURATION\" != 'BuildAndIntegration' ]\nthen\n  # Create a swift module cache, ensure it's totally clean before building.\n  module_cache_path=\"$CONFIGURATION_BUILD_DIR/repl_swift_module_cache\"\n  rm -rf \"$module_cache_path\"\n  mkdir -p \"$module_cache_path\"\n\n  swift_path=\"${LLDB_PATH_TO_SWIFT_BUILD:-$LLVM_BUILD_DIR/swift-macosx-$CURRENT_ARCH}/bin/swiftc\"\n  rpath_flags=`echo \"${REPL_SWIFT_RPATH}\" | sed -e 's/@/-Xlinker -rpath -Xlinker @/g'`\n\n  target=''\n  if [ \"$MACOSX_DEPLOYMENT_TARGET\" != '' ]\n  then\n    target=\"-target $ARCHS-apple-macosx$MACOSX_DEPLOYMENT_TARGET\"\n  fi\n  if [ -e \"$swift_path\" ]\n  then\n    \"$swift_path\" -DXCODE_BUILD_ME $target -g -o \"$CONFIGURATION_BUILD_DIR/$EXECUTABLE_NAME\" \"$SCRIPT_INPUT_FILE_0\" -module-cache-path \"${module_cache_path}\" $rpath_flags\n    strip -S \"$CONFIGURATION_BUILD_DIR/$EXECUTABLE_NAME\"\n  fi\nfi";
+			shellScript = "/usr/bin/env python $SRCROOT/scripts/Xcode/build-swift-repl.py \"$CONFIGURATION_BUILD_DIR/$EXECUTABLE_NAME\" \"$SCRIPT_INPUT_FILE_0\"\n";
 		};
 		496C2F9B1BD8342F00C70FEA /* Delete debugserver (build) */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -6697,7 +6697,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/package-swift-resources.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_SWIFT_BUILD:-$LLVM_BUILD_DIR/swift-macosx-$CURRENT_ARCH}";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-swift-resources.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_SWIFT_BUILD:-$LLVM_BUILD_DIR/swift-macosx-$CURRENT_ARCH}";
 		};
 		49DFDE781BEBD8FE008A6797 /* Delete debugserver (install) */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -6740,7 +6740,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/package-clang-headers.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_LLVM_BUILD:-$LLVM_BUILD_DIR/llvm-macosx-$CURRENT_ARCH}";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-headers.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_LLVM_BUILD:-$LLVM_BUILD_DIR/llvm-macosx-$CURRENT_ARCH}";
 		};
 		9A19ACE2116563A700E0D453 /* Finish swig wrapper classes (lldb) */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -8620,7 +8620,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
@@ -10250,7 +10250,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
@@ -10286,7 +10286,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
@@ -10317,7 +10317,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
@@ -10349,7 +10349,7 @@
 				OTHER_CFLAGS = "-Wparentheses";
 				OTHER_SWIFT_FLAGS = "-DXCODE_BUILD_ME";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -11507,7 +11507,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
@@ -12469,7 +12469,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
@@ -13072,7 +13072,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx";
+				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;

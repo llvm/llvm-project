@@ -26,6 +26,8 @@ import re
 import shutil
 import sys
 
+import lldbbuild
+
 if len(sys.argv) != 3:
      print "usage: " + sys.argv[0] + " TARGET_DIR LLVM_BUILD_DIR"
      sys.exit(1)
@@ -39,7 +41,7 @@ if os.environ['ACTION'] == 'install':
     sys.exit(0)
 
 target_dir = sys.argv[1]
-swift_build_dir = sys.argv[2]
+swift_build_dir = lldbbuild.expected_package_build_path_for("swift")
 
 if not os.path.isdir(target_dir):
     print target_dir + " doesn't exist"

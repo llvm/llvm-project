@@ -416,7 +416,7 @@ def main(options):
     # Setup generated dependency file options.
     if options.generate_dependency_file:
         dependency_file = os.path.normcase(os.path.join(
-            options.target_dir, "LLDBWrapPython.cpp.d"))
+            options.config_build_dir, "LLDBWrapPython.cpp.d"))
     else:
         dependency_file = None
 
@@ -425,7 +425,7 @@ def main(options):
 
     # Determine the final binding file path.
     settings.output_file = os.path.normcase(
-        os.path.join(options.target_dir, "LLDBWrapPython.cpp"))
+        os.path.join(options.config_build_dir, "LLDBWrapPython.cpp"))
 
     # Touch the output file (but don't really generate it) if python
     # is disabled.
