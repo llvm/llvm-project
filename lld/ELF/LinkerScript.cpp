@@ -312,7 +312,7 @@ static bool isUnderSysroot(StringRef Path) {
 }
 
 // Entry point. The other functions or classes are private to this file.
-void lld::elf2::readLinkerScript(BumpPtrAllocator *A, MemoryBufferRef MB) {
+void elf2::readLinkerScript(BumpPtrAllocator *A, MemoryBufferRef MB) {
   StringRef Path = MB.getBufferIdentifier();
   LinkerScript(A, MB.getBuffer(), isUnderSysroot(Path)).run();
 }

@@ -124,7 +124,7 @@ template <class ELFT> static void doInitSymbols() {
   ElfSym<ELFT>::IgnoreUndef.setVisibility(STV_HIDDEN);
 }
 
-void lld::elf2::initSymbols() {
+void elf2::initSymbols() {
   doInitSymbols<ELF32LE>();
   doInitSymbols<ELF32BE>();
   doInitSymbols<ELF64LE>();
@@ -136,12 +136,12 @@ template int SymbolBody::compare<ELF32BE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF64LE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF64BE>(SymbolBody *Other);
 
-template class lld::elf2::UndefinedElf<ELF32LE>;
-template class lld::elf2::UndefinedElf<ELF32BE>;
-template class lld::elf2::UndefinedElf<ELF64LE>;
-template class lld::elf2::UndefinedElf<ELF64BE>;
+template class elf2::UndefinedElf<ELF32LE>;
+template class elf2::UndefinedElf<ELF32BE>;
+template class elf2::UndefinedElf<ELF64LE>;
+template class elf2::UndefinedElf<ELF64BE>;
 
-template class lld::elf2::DefinedSynthetic<ELF32LE>;
-template class lld::elf2::DefinedSynthetic<ELF32BE>;
-template class lld::elf2::DefinedSynthetic<ELF64LE>;
-template class lld::elf2::DefinedSynthetic<ELF64BE>;
+template class elf2::DefinedSynthetic<ELF32LE>;
+template class elf2::DefinedSynthetic<ELF32BE>;
+template class elf2::DefinedSynthetic<ELF64LE>;
+template class elf2::DefinedSynthetic<ELF64BE>;

@@ -22,7 +22,7 @@
 // SEC-NEXT:     SHF_ALLOC
 // SEC-NEXT:     SHF_WRITE
 // SEC-NEXT:   ]
-// SEC-NEXT:   Address: 0x120E0
+// SEC-NEXT:   Address: 0x120F0
 // SEC-NEXT:   Offset:
 // SEC-NEXT:   Size: 8
 // SEC-NEXT:   Link: 0
@@ -111,7 +111,7 @@ R_X86_64_64:
 R_X86_64_GOTPCREL:
  .long zed@gotpcrel
 
-// 0x120E8 - 0x101D8 = 7952
+// 0x120F8 - 0x101D8 = 7952
 // 7952 = 0x101f0000 in little endian
 // CHECK:      Contents of section .R_X86_64_GOTPCREL
-// CHECK-NEXT:   101d0 101f0000
+// CHECK-NEXT:   101d0 201f0000

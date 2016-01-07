@@ -329,21 +329,18 @@ class StringTableSection final : public OutputSectionBase<ELFT> {
 public:
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   StringTableSection(StringRef Name, bool Dynamic);
-  void add(StringRef S) { StrTabBuilder.add(S); }
-  size_t getOffset(StringRef S) const { return StrTabBuilder.getOffset(S); }
-  StringRef data() const { return StrTabBuilder.data(); }
+  void reserve(StringRef S);
+  size_t addString(StringRef S);
   void writeTo(uint8_t *Buf) override;
-
-  void finalize() override {
-    StrTabBuilder.finalize();
-    this->Header.sh_size = StrTabBuilder.data().size();
-  }
-
+  size_t getSize() const { return Used + Reserved; }
+  void finalize() override { this->Header.sh_size = getSize(); }
   bool isDynamic() const { return Dynamic; }
 
 private:
   const bool Dynamic;
-  llvm::StringTableBuilder StrTabBuilder{llvm::StringTableBuilder::ELF};
+  std::vector<StringRef> Strings;
+  size_t Used = 1; // ELF string tables start with a NUL byte, so 1.
+  size_t Reserved = 0;
 };
 
 template <class ELFT>
@@ -429,8 +426,12 @@ public:
   void addSection(InputSectionBase<ELFT> *S) override;
 
 private:
-  uint32_t GeneralMask = 0;
+  uint32_t GprMask = 0;
 };
+
+inline uint64_t align(uint64_t Value, uint64_t Align) {
+  return llvm::RoundUpToAlignment(Value, Align);
+}
 
 // All output sections that are hadnled by the linker specially are
 // globally accessible. Writer initializes them, so don't use them

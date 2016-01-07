@@ -1404,7 +1404,7 @@ EmulateInstructionMIPS::Emulate_BXX_3ops (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs, rt;
-    int32_t offset, pc, target, rs_val, rt_val;
+    int32_t offset, pc, target = 0, rs_val, rt_val;
     const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
     rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
@@ -1459,7 +1459,7 @@ EmulateInstructionMIPS::Emulate_BXX_3ops_C (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs, rt;
-    int32_t offset, pc, target, rs_val, rt_val;
+    int32_t offset, pc, target = 0, rs_val, rt_val;
     const char *op_name = m_insn_info->getName (insn.getOpcode ());
     uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
     
@@ -1555,7 +1555,7 @@ EmulateInstructionMIPS::Emulate_Bcond_Link_C (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs;
-    int32_t offset, pc, target;
+    int32_t offset, pc, target = 0;
     int32_t rs_val;
     const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
@@ -1634,7 +1634,7 @@ EmulateInstructionMIPS::Emulate_Bcond_Link (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs;
-    int32_t offset, pc, target;
+    int32_t offset, pc, target = 0;
     int32_t rs_val;
     const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
@@ -1687,7 +1687,7 @@ EmulateInstructionMIPS::Emulate_BXX_2ops (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs;
-    int32_t offset, pc, target;
+    int32_t offset, pc, target = 0;
     int32_t rs_val;
     const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
@@ -1754,7 +1754,7 @@ EmulateInstructionMIPS::Emulate_BXX_2ops_C (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs;
-    int32_t offset, pc, target;
+    int32_t offset, pc, target = 0;
     int32_t rs_val;
     const char *op_name = m_insn_info->getName (insn.getOpcode ());
     uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
@@ -2363,7 +2363,7 @@ EmulateInstructionMIPS::Emulate_FP_branch (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t cc, fcsr;
-    int32_t target, pc, offset;
+    int32_t pc, offset, target = 0;
     const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
     cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
@@ -2492,7 +2492,7 @@ EmulateInstructionMIPS::Emulate_3D_branch (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t cc, fcsr;
-    int32_t target, pc, offset;
+    int32_t pc, offset, target = 0;
     const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
     cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());

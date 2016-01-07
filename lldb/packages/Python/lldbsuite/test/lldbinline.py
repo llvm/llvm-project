@@ -3,7 +3,6 @@ from __future__ import absolute_import
 
 # System modules
 import os
-import sys
 
 # Third-party modules
 
@@ -23,6 +22,7 @@ def source_type(filename):
         '.mm' : 'OBJCXX_SOURCES'
     }.get(extension, None)
 
+
 class CommandParser:
     def __init__(self):
         self.breakpoints = []
@@ -34,7 +34,7 @@ class CommandParser:
         new_breakpoint = True
 
         if len(parts) == 2:
-            command = parts[1].strip() # take off whitespace
+            command = parts[1].strip()  # take off whitespace
             new_breakpoint = parts[0].strip() != ""
 
         return (command, new_breakpoint)
@@ -85,7 +85,7 @@ class InlineTest(TestBase):
             return "-N dwarf %s" % (self.mydir)
         else:
             return "-N dsym %s" % (self.mydir)
-        
+
     def BuildMakefile(self):
         if os.path.exists("Makefile"):
             return
@@ -116,10 +116,10 @@ class InlineTest(TestBase):
         if ('CXX_SOURCES' in list(categories.keys())):
             makefile.write("CXXFLAGS += -std=c++11\n")
 
+        makefile.write("\ncleanup:\n\trm -f Makefile *.d\n\n")
         makefile.write("include $(LEVEL)/Makefile.rules\n")
         makefile.flush()
         makefile.close()
-
 
     @skipUnlessDarwin
     def __test_with_dsym(self):

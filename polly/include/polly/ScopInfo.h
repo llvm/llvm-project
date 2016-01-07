@@ -1404,12 +1404,16 @@ private:
   /// the dimensionality of the underlying ScopArrayInfo object.
   void updateAccessDimensionality();
 
-  /// @brief Build Schedule and ScopStmts.
+  /// @brief Build Schedule for the SCoP region.
   ///
-  /// @param R              The current region traversed.
+  void buildSchedule();
+
+  /// @brief Build Schedule for the region @p RN.
+  ///
+  /// @param RN             The current region traversed.
   /// @param LoopSchedules  Map from loops to their schedule and progress.
   void buildSchedule(
-      Region *R,
+      RegionNode *RN,
       DenseMap<Loop *, std::pair<isl_schedule *, unsigned>> &LoopSchedules);
 
   /// @brief Collect all memory access relations of a given type.

@@ -1,4 +1,4 @@
-add_llvm_library(lldMipsELFTarget
+add_lld_library(lldMipsELFTarget
   MipsAbiInfoHandler.cpp
   MipsCtorsOrderPass.cpp
   MipsELFFile.cpp

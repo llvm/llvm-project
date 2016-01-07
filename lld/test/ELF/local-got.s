@@ -14,11 +14,11 @@ _start:
 foo:
         nop
 
-// 0x120A0 - 0x11000 - 5 =  4251
-// 0x120A8 - 0x11005 - 5 =  4254
+// 0x120B0 - 0x11000 - 5 =  4251
+// 0x120B8 - 0x11005 - 5 =  4254
 // DISASM:      _start:
-// DISASM-NEXT:   11000: {{.*}} callq 4251
-// DISASM-NEXT:   11005: {{.*}} callq 4254
+// DISASM-NEXT:   11000: {{.*}} callq 4267
+// DISASM-NEXT:   11005: {{.*}} callq 4270
 
 // DISASM:      foo:
 // DISASM-NEXT:   1100a: {{.*}} nop
@@ -29,7 +29,7 @@ foo:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x120A0
+// CHECK-NEXT: Address: 0x120B0
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 16
 // CHECK-NEXT: Link: 0
@@ -43,6 +43,6 @@ foo:
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x120A0 R_X86_64_GLOB_DAT bar 0x0
+// CHECK-NEXT:     0x120B0 R_X86_64_GLOB_DAT bar 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

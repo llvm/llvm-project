@@ -26,10 +26,10 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf2;
 
-Configuration *lld::elf2::Config;
-LinkerDriver *lld::elf2::Driver;
+Configuration *elf2::Config;
+LinkerDriver *elf2::Driver;
 
-void lld::elf2::link(ArrayRef<const char *> Args) {
+void elf2::link(ArrayRef<const char *> Args) {
   Configuration C;
   LinkerDriver D;
   Config = &C;
@@ -253,6 +253,9 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
 
   if (Config->GnuHash && Config->EMachine == EM_MIPS)
     error("The .gnu.hash section is not compatible with the MIPS target.");
+
+  if (!Config->Entry.empty() && Config->EMachine == EM_AMDGPU)
+    error("-e option is not valid for AMDGPU.");
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
@@ -261,7 +264,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   if (!Config->Shared) {
     // Add entry symbol.
-    if (Config->Entry.empty())
+    //
+    // There is no entry symbol for AMDGPU binaries, so skip adding one to avoid
+    // having and undefined symbol.
+    if (Config->Entry.empty() && Config->EMachine != EM_AMDGPU)
       Config->Entry = (Config->EMachine == EM_MIPS) ? "__start" : "_start";
 
     // In the assembly for 32 bit x86 the _GLOBAL_OFFSET_TABLE_ symbol

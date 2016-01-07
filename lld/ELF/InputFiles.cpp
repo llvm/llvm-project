@@ -92,7 +92,9 @@ typename ObjectFile<ELFT>::Elf_Sym_Range ObjectFile<ELFT>::getLocalSymbols() {
 }
 
 template <class ELFT> uint32_t ObjectFile<ELFT>::getMipsGp0() const {
-  return MipsReginfo ? MipsReginfo->getGp0() : 0;
+  if (MipsReginfo)
+    return MipsReginfo->Reginfo->ri_gp_value;
+  return 0;
 }
 
 template <class ELFT>
@@ -132,13 +134,13 @@ StringRef ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-ArrayRef<typename ObjectFile<ELFT>::GroupEntryType>
+ArrayRef<typename ObjectFile<ELFT>::uint32_X>
 ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->ELFObj;
-  ErrorOr<ArrayRef<GroupEntryType>> EntriesOrErr =
-      Obj.template getSectionContentsAsArray<GroupEntryType>(&Sec);
+  ErrorOr<ArrayRef<uint32_X>> EntriesOrErr =
+      Obj.template getSectionContentsAsArray<uint32_X>(&Sec);
   error(EntriesOrErr);
-  ArrayRef<GroupEntryType> Entries = *EntriesOrErr;
+  ArrayRef<uint32_X> Entries = *EntriesOrErr;
   if (Entries.empty() || Entries[0] != GRP_COMDAT)
     error("Unsupported SHT_GROUP format");
   return Entries.slice(1);
@@ -187,8 +189,7 @@ void ObjectFile<ELFT>::initializeSections(DenseSet<StringRef> &ComdatGroups) {
       Sections[I] = &InputSection<ELFT>::Discarded;
       if (ComdatGroups.insert(getShtGroupSignature(Sec)).second)
         continue;
-      for (GroupEntryType E : getShtGroupEntries(Sec)) {
-        uint32_t SecIndex = E;
+      for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
           error("Invalid section index in group");
         Sections[SecIndex] = &InputSection<ELFT>::Discarded;

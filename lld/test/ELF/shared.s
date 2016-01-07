@@ -253,6 +253,7 @@
 // CHECK-NEXT:   0x00000004 HASH                 [[HASHADDR]]
 // CHECK-NEXT:   0x0000001D RUNPATH              foo:bar
 // CHECK-NEXT:   0x00000001 NEEDED               SharedLibrary ({{.*}}2.so)
+// CHECK-NEXT:   0x00000015 DEBUG                0x0
 // CHECK-NEXT:   0x00000000 NULL                 0x0
 // CHECK-NEXT: ]
 

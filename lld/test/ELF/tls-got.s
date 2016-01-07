@@ -14,7 +14,7 @@
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
 // CHECK-NEXT: Address: [[ADDR:.*]]
-// CHECK-NEXT: Offset: 0x20A0
+// CHECK-NEXT: Offset: 0x20B0
 // CHECK-NEXT: Size: 16
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
@@ -25,20 +25,20 @@
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (4) .rela.dyn {
 // CHECK-NEXT:     [[ADDR]] R_X86_64_TPOFF64 tls1 0x0
-// CHECK-NEXT:     0x120A8 R_X86_64_TPOFF64 tls0 0x0
+// CHECK-NEXT:     0x120B8 R_X86_64_TPOFF64 tls0 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
-//0x11000 + 4249 + 7 = 0x120A0
-//0x1100A + 4247 + 7 = 0x120A8
-//0x11014 + 4237 + 7 = 0x120A8
+//0x11000 + 4249 + 7 = 0x120B0
+//0x1100A + 4247 + 7 = 0x120B8
+//0x11014 + 4237 + 7 = 0x120B8
 //DISASM:      Disassembly of section .text:
 //DISASM-NEXT: main:
-//DISASM-NEXT: 11000: 48 8b 05 99 10 00 00 movq 4249(%rip), %rax
+//DISASM-NEXT: 11000: 48 8b 05 a9 10 00 00 movq 4265(%rip), %rax
 //DISASM-NEXT: 11007: 64 8b 00 movl %fs:(%rax), %eax
-//DISASM-NEXT: 1100a: 48 8b 05 97 10 00 00 movq 4247(%rip), %rax
+//DISASM-NEXT: 1100a: 48 8b 05 a7 10 00 00 movq 4263(%rip), %rax
 //DISASM-NEXT: 11011: 64 8b 00 movl %fs:(%rax), %eax
-//DISASM-NEXT: 11014: 48 8b 05 8d 10 00 00 movq 4237(%rip), %rax
+//DISASM-NEXT: 11014: 48 8b 05 9d 10 00 00 movq 4253(%rip), %rax
 //DISASM-NEXT: 1101b: 64 8b 00 movl %fs:(%rax), %eax
 //DISASM-NEXT: 1101e: c3 retq
 

@@ -235,16 +235,28 @@ struct RenderScriptRuntime::AllocationDetails
         }
     };
 
-    // Header for reading and writing allocation contents
-    // to a binary file.
+    // The FileHeader struct specifies the header we use for writing allocations to a binary file.
+    // Our format begins with the ASCII characters "RSAD", identifying the file as an allocation dump.
+    // Member variables dims and hdr_size are then written consecutively, immediately followed by an instance of
+    // the ElementHeader struct. Because Elements can contain subelements, there may be more than one instance
+    // of the ElementHeader struct. With this first instance being the root element, and the other instances being
+    // the root's descendants. To identify which instances are an ElementHeader's children, each struct
+    // is immediately followed by a sequence of consecutive offsets to the start of its child structs.
+    // These offsets are 4 bytes in size, and the 0 offset signifies no more children.
     struct FileHeader
     {
         uint8_t ident[4];      // ASCII 'RSAD' identifying the file
-        uint16_t hdr_size;     // Header size in bytes, for backwards compatability
-        uint16_t type;         // DataType enum
-        uint32_t kind;         // DataKind enum
         uint32_t dims[3];      // Dimensions
-        uint32_t element_size; // Size of a single element, including padding
+        uint16_t hdr_size;     // Header size in bytes, including all element headers
+    };
+
+    struct ElementHeader
+    {
+        uint16_t type;          // DataType enum
+        uint32_t kind;          // DataKind enum
+        uint32_t element_size;  // Size of a single element, including padding
+        uint16_t vector_size;   // Vector width
+        uint32_t array_size;    // Number of elements in array
     };
 
     // Monotonically increasing from 1
@@ -285,7 +297,6 @@ struct RenderScriptRuntime::AllocationDetails
         return !valid_ptrs || !dimension.isValid() || !size.isValid() || element.shouldRefresh();
     }
 };
-
 
 const ConstString &
 RenderScriptRuntime::Element::GetFallbackStructName()
@@ -452,7 +463,7 @@ RenderScriptRuntime::GetPluginNameStatic()
     return g_name;
 }
 
-RenderScriptRuntime::ModuleKind 
+RenderScriptRuntime::ModuleKind
 RenderScriptRuntime::GetModuleKind(const lldb::ModuleSP &module_sp)
 {
     if (module_sp)
@@ -493,7 +504,7 @@ RenderScriptRuntime::IsRenderScriptModule(const lldb::ModuleSP &module_sp)
     return GetModuleKind(module_sp) != eModuleKindIgnored;
 }
 
-void 
+void
 RenderScriptRuntime::ModulesDidLoad(const ModuleList &module_list )
 {
     Mutex::Locker locker (module_list.GetMutex ());
@@ -640,11 +651,11 @@ RenderScriptRuntime::HookCallback(void *baton, StoppointCallbackContext *ctx, ll
     RenderScriptRuntime *lang_rt = (RenderScriptRuntime *)context.GetProcessPtr()->GetLanguageRuntime(eLanguageTypeExtRenderScript);
 
     lang_rt->HookCallback(hook_info, context);
-    
+
     return false;
 }
 
-void 
+void
 RenderScriptRuntime::HookCallback(RuntimeHook* hook_info, ExecutionContext& context)
 {
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
@@ -652,7 +663,7 @@ RenderScriptRuntime::HookCallback(RuntimeHook* hook_info, ExecutionContext& cont
     if (log)
         log->Printf ("RenderScriptRuntime::HookCallback - '%s' .", hook_info->defn->name);
 
-    if (hook_info->defn->grabber) 
+    if (hook_info->defn->grabber)
     {
         (this->*(hook_info->defn->grabber))(hook_info, context);
     }
@@ -706,7 +717,6 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                 *data = result;
                 success = true;
             }
-
             break;
         }
         case llvm::Triple::ArchType::x86_64:
@@ -741,6 +751,7 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
         case llvm::Triple::ArchType::arm:
         {
             // arm 32 bit
+            // first 4 arguments are passed via registers
             if (arg < 4)
             {
                 const RegisterInfo* rArg = reg_ctx->GetRegisterInfoAtIndex(arg);
@@ -760,18 +771,19 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
             {
                 uint64_t sp = reg_ctx->GetSP();
                 uint32_t offset = (arg-4) * sizeof(uint32_t);
-                process->ReadMemory(sp + offset, &data, sizeof(uint32_t), error);
-                if (error.Fail())
+                uint32_t value = 0;
+                size_t bytes_read = process->ReadMemory(sp + offset, &value, sizeof(value), error);
+                if (error.Fail() || bytes_read != sizeof(value))
                 {
                     if (log)
                         log->Printf("RenderScriptRuntime::GetArgSimple - error reading ARM stack: %s.", error.AsCString());
                 }
                 else
                 {
+                    *data = value;
                     success = true;
                 }
             }
-
             break;
         }
         case llvm::Triple::ArchType::aarch64:
@@ -803,8 +815,8 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
         }
         case llvm::Triple::ArchType::mipsel:
         {
-
             // read from the registers
+            // first 4 arguments are passed in registers
             if (arg < 4){
                 const RegisterInfo* rArg = reg_ctx->GetRegisterInfoAtIndex(arg + 4);
                 RegisterValue rVal;
@@ -818,26 +830,25 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                     if (log)
                         log->Printf("RenderScriptRuntime::GetArgSimple() - Mips - Error while reading the argument #%d", arg);
                 }
-
             }
-
-            // read from the stack
+            // arguments > 4 are read from the stack
             else
             {
                 uint64_t sp = reg_ctx->GetSP();
                 uint32_t offset = arg * sizeof(uint32_t);
-                process->ReadMemory(sp + offset, &data, sizeof(uint32_t), error);
-                if (error.Fail())
+                uint32_t value = 0;
+                size_t bytes_read = process->ReadMemory(sp + offset, &value, sizeof(value), error);
+                if (error.Fail() || bytes_read != sizeof(value))
                 {
                     if (log)
                         log->Printf("RenderScriptRuntime::GetArgSimple - error reading Mips stack: %s.", error.AsCString());
                 }
                 else
                 {
+                    *data = value;
                     success = true;
                 }
             }
-
             break;
         }
         case llvm::Triple::ArchType::mips64el:
@@ -858,24 +869,24 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
                         log->Printf("RenderScriptRuntime::GetArgSimple - Mips64 - Error reading the argument #%d", arg);
                 }
             }
-
-            // read from the stack
+            // arguments > 8 are read from the stack
             else
             {
                 uint64_t sp = reg_ctx->GetSP();
                 uint32_t offset = (arg - 8) * sizeof(uint64_t);
-                process->ReadMemory(sp + offset, &data, sizeof(uint64_t), error);
-                if (error.Fail())
+                uint64_t value = 0;
+                size_t bytes_read = process->ReadMemory(sp + offset, &value, sizeof(value), error);
+                if (error.Fail() || bytes_read != sizeof(value))
                 {
                     if (log)
                         log->Printf("RenderScriptRuntime::GetArgSimple - Mips64 - Error reading Mips64 stack: %s.", error.AsCString());
                 }
                 else
                 {
+                    *data = value;
                     success = true;
                 }
             }
-
             break;
         }
         default:
@@ -883,7 +894,6 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
             // invalid architecture
             if (log)
                 log->Printf("RenderScriptRuntime::GetArgSimple - Architecture not supported");
-
         }
     }
 
@@ -895,11 +905,11 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
     return success;
 }
 
-void 
+void
 RenderScriptRuntime::CaptureSetGlobalVar1(RuntimeHook* hook_info, ExecutionContext& context)
 {
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
-    
+
     //Context, Script, int, data, length
 
     uint64_t rs_context_u64 = 0U;
@@ -921,7 +931,7 @@ RenderScriptRuntime::CaptureSetGlobalVar1(RuntimeHook* hook_info, ExecutionConte
             log->Printf("RenderScriptRuntime::CaptureSetGlobalVar1 - Error while reading the function parameters");
         return;
     }
-    
+
     if (log)
     {
         log->Printf ("RenderScriptRuntime::CaptureSetGlobalVar1 - 0x%" PRIx64 ",0x%" PRIx64 " slot %" PRIu64 " = 0x%" PRIx64 ":%" PRIu64 "bytes.",
@@ -934,18 +944,18 @@ RenderScriptRuntime::CaptureSetGlobalVar1(RuntimeHook* hook_info, ExecutionConte
             if (rs_id_u64 < rsm->m_globals.size())
             {
                 auto rsg = rsm->m_globals[rs_id_u64];
-                log->Printf ("RenderScriptRuntime::CaptureSetGlobalVar1 - Setting of '%s' within '%s' inferred", rsg.m_name.AsCString(), 
+                log->Printf ("RenderScriptRuntime::CaptureSetGlobalVar1 - Setting of '%s' within '%s' inferred", rsg.m_name.AsCString(),
                                 rsm->m_module->GetFileSpec().GetFilename().AsCString());
             }
         }
     }
 }
 
-void 
+void
 RenderScriptRuntime::CaptureAllocationInit1(RuntimeHook* hook_info, ExecutionContext& context)
 {
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
-    
+
     //Context, Alloc, bool
 
     uint64_t rs_context_u64 = 0U;
@@ -1009,7 +1019,7 @@ RenderScriptRuntime::CaptureAllocationDestroy(RuntimeHook* hook_info, ExecutionC
         log->Printf("RenderScriptRuntime::CaptureAllocationDestroy - Couldn't find destroyed allocation");
 }
 
-void 
+void
 RenderScriptRuntime::CaptureScriptInit1(RuntimeHook* hook_info, ExecutionContext& context)
 {
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
@@ -1045,16 +1055,16 @@ RenderScriptRuntime::CaptureScriptInit1(RuntimeHook* hook_info, ExecutionContext
     {
         if (log)
             log->Printf ("RenderScriptRuntime::CaptureScriptInit1 - error reading resname: %s.", error.AsCString());
-                   
+
     }
 
     process->ReadCStringFromMemory((lldb::addr_t)rs_cachedirptr_u64, cachedir, error);
     if (error.Fail())
     {
         if (log)
-            log->Printf ("RenderScriptRuntime::CaptureScriptInit1 - error reading cachedir: %s.", error.AsCString());     
+            log->Printf ("RenderScriptRuntime::CaptureScriptInit1 - error reading cachedir: %s.", error.AsCString());
     }
-    
+
     if (log)
         log->Printf ("RenderScriptRuntime::CaptureScriptInit1 - 0x%" PRIx64 ",0x%" PRIx64 " => '%s' at '%s' .",
                      rs_context_u64, rs_script_u64, resname.c_str(), cachedir.c_str());
@@ -1077,7 +1087,7 @@ RenderScriptRuntime::CaptureScriptInit1(RuntimeHook* hook_info, ExecutionContext
         if (log)
             log->Printf ("RenderScriptRuntime::CaptureScriptInit1 - '%s' tagged with context 0x%" PRIx64 " and script 0x%" PRIx64 ".",
                          strm.GetData(), rs_context_u64, rs_script_u64);
-    } 
+    }
     else if (log)
     {
         log->Printf ("RenderScriptRuntime::CaptureScriptInit1 - resource name invalid, Script not tagged");
@@ -1134,7 +1144,7 @@ RenderScriptRuntime::LoadRuntimeHooks(lldb::ModuleSP module, ModuleKind kind)
         if (addr == LLDB_INVALID_ADDRESS)
         {
             if (log)
-                log->Printf ("RenderScriptRuntime::LoadRuntimeHooks - Unable to resolve the address of hook function '%s' with symbol '%s'.", 
+                log->Printf ("RenderScriptRuntime::LoadRuntimeHooks - Unable to resolve the address of hook function '%s' with symbol '%s'.",
                              hook_defn->name, symbol_name);
             continue;
         }
@@ -1152,7 +1162,7 @@ RenderScriptRuntime::LoadRuntimeHooks(lldb::ModuleSP module, ModuleKind kind)
         m_runtimeHooks[addr] = hook;
         if (log)
         {
-            log->Printf ("RenderScriptRuntime::LoadRuntimeHooks - Successfully hooked '%s' in '%s' version %" PRIu64 " at 0x%" PRIx64 ".", 
+            log->Printf ("RenderScriptRuntime::LoadRuntimeHooks - Successfully hooked '%s' in '%s' version %" PRIu64 " at 0x%" PRIx64 ".",
                 hook_defn->name, module->GetFileSpec().GetFilename().AsCString(), (uint64_t)hook_defn->version, (uint64_t)addr);
         }
     }
@@ -2085,37 +2095,62 @@ RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const
 
     // Cast start of buffer to FileHeader and use pointer to read metadata
     void* file_buffer = data_sp->GetBytes();
-    const AllocationDetails::FileHeader* head = static_cast<AllocationDetails::FileHeader*>(file_buffer);
+    if (file_buffer == NULL || data_sp->GetByteSize() <
+        (sizeof(AllocationDetails::FileHeader) + sizeof(AllocationDetails::ElementHeader)))
+    {
+        strm.Printf("Error: File %s does not contain enough data for header", filename);
+        strm.EOL();
+        return false;
+    }
+    const AllocationDetails::FileHeader* file_header = static_cast<AllocationDetails::FileHeader*>(file_buffer);
 
-    // Advance buffer past header
-    file_buffer = static_cast<uint8_t*>(file_buffer) + head->hdr_size;
+    // Check file starts with ascii characters "RSAD"
+    if (file_header->ident[0] != 'R' || file_header->ident[1] != 'S' || file_header->ident[2] != 'A'
+        || file_header->ident[3] != 'D')
+    {
+        strm.Printf("Error: File doesn't contain identifier for an RS allocation dump. Are you sure this is the correct file?");
+        strm.EOL();
+        return false;
+    }
+
+    // Look at the type of the root element in the header
+    AllocationDetails::ElementHeader root_element_header;
+    memcpy(&root_element_header, static_cast<uint8_t*>(file_buffer) + sizeof(AllocationDetails::FileHeader),
+           sizeof(AllocationDetails::ElementHeader));
 
     if (log)
         log->Printf("RenderScriptRuntime::LoadAllocation - header type %u, element size %u",
-                    head->type, head->element_size);
+                    root_element_header.type, root_element_header.element_size);
 
     // Check if the target allocation and file both have the same number of bytes for an Element
-    if (*alloc->element.datum_size.get() != head->element_size)
+    if (*alloc->element.datum_size.get() != root_element_header.element_size)
     {
         strm.Printf("Warning: Mismatched Element sizes - file %u bytes, allocation %u bytes",
-                    head->element_size, *alloc->element.datum_size.get());
+                    root_element_header.element_size, *alloc->element.datum_size.get());
         strm.EOL();
     }
 
-    // Check if the target allocation and file both have the same integral type
-    const unsigned int type = static_cast<unsigned int>(*alloc->element.type.get());
-    if (type != head->type)
+    // Check if the target allocation and file both have the same type
+    const unsigned int alloc_type = static_cast<unsigned int>(*alloc->element.type.get());
+    const unsigned int file_type = root_element_header.type;
+
+    if (file_type > Element::RS_TYPE_FONT)
+    {
+        strm.Printf("Warning: File has unknown allocation type");
+        strm.EOL();
+    }
+    else if (alloc_type != file_type)
     {
         // Enum value isn't monotonous, so doesn't always index RsDataTypeToString array
-        unsigned int printable_target_type_index = type;
-        unsigned int printable_head_type_index = head->type;
-        if (type >= Element::RS_TYPE_ELEMENT && type <= Element::RS_TYPE_FONT)
+        unsigned int printable_target_type_index = alloc_type;
+        unsigned int printable_head_type_index = file_type;
+        if (alloc_type >= Element::RS_TYPE_ELEMENT && alloc_type <= Element::RS_TYPE_FONT)
             printable_target_type_index = static_cast<Element::DataType>(
-                                         (type - Element::RS_TYPE_ELEMENT) + Element::RS_TYPE_MATRIX_2X2 + 1);
+                                         (alloc_type - Element::RS_TYPE_ELEMENT) + Element::RS_TYPE_MATRIX_2X2 + 1);
 
-        if (head->type >= Element::RS_TYPE_ELEMENT && head->type <= Element::RS_TYPE_FONT)
+        if (file_type >= Element::RS_TYPE_ELEMENT && file_type <= Element::RS_TYPE_FONT)
             printable_head_type_index = static_cast<Element::DataType>(
-                                        (head->type - Element::RS_TYPE_ELEMENT) + Element::RS_TYPE_MATRIX_2X2 + 1);
+                                        (file_type - Element::RS_TYPE_ELEMENT) + Element::RS_TYPE_MATRIX_2X2 + 1);
 
         const char* file_type_cstr = AllocationDetails::RsDataTypeToString[printable_head_type_index][0];
         const char* target_type_cstr = AllocationDetails::RsDataTypeToString[printable_target_type_index][0];
@@ -2125,8 +2160,11 @@ RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const
         strm.EOL();
     }
 
+    // Advance buffer past header
+    file_buffer = static_cast<uint8_t*>(file_buffer) + file_header->hdr_size;
+
     // Calculate size of allocation data in file
-    size_t length = data_sp->GetByteSize() - head->hdr_size;
+    size_t length = data_sp->GetByteSize() - file_header->hdr_size;
 
     // Check if the target allocation and file both have the same total data size.
     const unsigned int alloc_size = *alloc->size.get();
@@ -2153,6 +2191,62 @@ RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const
     strm.EOL();
 
     return true;
+}
+
+// Function takes as parameters a byte buffer, which will eventually be written to file as the element header,
+// an offset into that buffer, and an Element that will be saved into the buffer at the parametrised offset.
+// Return value is the new offset after writing the element into the buffer.
+// Elements are saved to the file as the ElementHeader struct followed by offsets to the structs of all the element's children.
+size_t
+RenderScriptRuntime::PopulateElementHeaders(const std::shared_ptr<uint8_t> header_buffer, size_t offset, const Element& elem)
+{
+    // File struct for an element header with all the relevant details copied from elem.
+    // We assume members are valid already.
+    AllocationDetails::ElementHeader elem_header;
+    elem_header.type = *elem.type.get();
+    elem_header.kind = *elem.type_kind.get();
+    elem_header.element_size = *elem.datum_size.get();
+    elem_header.vector_size = *elem.type_vec_size.get();
+    elem_header.array_size = elem.array_size.isValid() ? *elem.array_size.get() : 0;
+    const size_t elem_header_size = sizeof(AllocationDetails::ElementHeader);
+
+    // Copy struct into buffer and advance offset
+    // We assume that header_buffer has been checked for NULL before this method is called
+    memcpy(header_buffer.get() + offset, &elem_header, elem_header_size);
+    offset += elem_header_size;
+
+    // Starting offset of child ElementHeader struct
+    size_t child_offset = offset + ((elem.children.size() + 1) * sizeof(uint32_t));
+    for (const RenderScriptRuntime::Element& child : elem.children)
+    {
+        // Recursively populate the buffer with the element header structs of children.
+        // Then save the offsets where they were set after the parent element header.
+        memcpy(header_buffer.get() + offset, &child_offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        child_offset = PopulateElementHeaders(header_buffer, child_offset, child);
+    }
+
+    // Zero indicates no more children
+    memset(header_buffer.get() + offset, 0, sizeof(uint32_t));
+
+    return child_offset;
+}
+
+// Given an Element object this function returns the total size needed in the file header to store the element's details.
+// Taking into account the size of the element header struct, plus the offsets to all the element's children.
+// Function is recursive so that the size of all ancestors is taken into account.
+size_t
+RenderScriptRuntime::CalculateElementHeaderSize(const Element& elem)
+{
+    size_t size = (elem.children.size() + 1) * sizeof(uint32_t); // Offsets to children plus zero terminator
+    size += sizeof(AllocationDetails::ElementHeader); // Size of header struct with type details
+
+    // Calculate recursively for all descendants
+    for (const Element& child : elem.children)
+        size += CalculateElementHeaderSize(child);
+
+    return size;
 }
 
 // Function copies allocation contents into a binary file.
@@ -2210,17 +2304,44 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Create the file header
     AllocationDetails::FileHeader head;
     head.ident[0] = 'R'; head.ident[1] = 'S'; head.ident[2] = 'A'; head.ident[3] = 'D';
-    head.hdr_size = static_cast<uint16_t>(sizeof(AllocationDetails::FileHeader));
-    head.type = static_cast<uint16_t>(*alloc->element.type.get());
-    head.kind = static_cast<uint32_t>(*alloc->element.type_kind.get());
     head.dims[0] = static_cast<uint32_t>(alloc->dimension.get()->dim_1);
     head.dims[1] = static_cast<uint32_t>(alloc->dimension.get()->dim_2);
     head.dims[2] = static_cast<uint32_t>(alloc->dimension.get()->dim_3);
-    head.element_size = static_cast<uint32_t>(*alloc->element.datum_size.get());
+
+    const size_t element_header_size = CalculateElementHeaderSize(alloc->element);
+    assert((sizeof(AllocationDetails::FileHeader) + element_header_size) < UINT16_MAX && "Element header too large");
+    head.hdr_size = static_cast<uint16_t>(sizeof(AllocationDetails::FileHeader) + element_header_size);
 
     // Write the file header
     size_t num_bytes = sizeof(AllocationDetails::FileHeader);
-    Error err = file.Write(static_cast<const void*>(&head), num_bytes);
+    if (log)
+        log->Printf("RenderScriptRuntime::SaveAllocation - Writing File Header, 0x%zX bytes", num_bytes);
+
+    Error err = file.Write(&head, num_bytes);
+    if (!err.Success())
+    {
+        strm.Printf("Error: '%s' when writing to file '%s'", err.AsCString(), filename);
+        strm.EOL();
+        return false;
+    }
+
+    // Create the headers describing the element type of the allocation.
+    std::shared_ptr<uint8_t> element_header_buffer(new uint8_t[element_header_size]);
+    if (element_header_buffer == nullptr)
+    {
+        strm.Printf("Internal Error: Couldn't allocate %zu bytes on the heap", element_header_size);
+        strm.EOL();
+        return false;
+    }
+
+    PopulateElementHeaders(element_header_buffer, 0, alloc->element);
+
+    // Write headers for allocation element type to file
+    num_bytes = element_header_size;
+    if (log)
+        log->Printf("RenderScriptRuntime::SaveAllocation - Writing Element Headers, 0x%zX bytes", num_bytes);
+
+    err = file.Write(element_header_buffer.get(), num_bytes);
     if (!err.Success())
     {
         strm.Printf("Error: '%s' when writing to file '%s'", err.AsCString(), filename);
@@ -2231,7 +2352,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Write allocation data to file
     num_bytes = static_cast<size_t>(*alloc->size.get());
     if (log)
-        log->Printf("RenderScriptRuntime::SaveAllocation - Writing 0x%" PRIx64 " bytes from %p", (uint64_t) num_bytes, (void*) buffer.get());
+        log->Printf("RenderScriptRuntime::SaveAllocation - Writing 0x%zX bytes", num_bytes);
 
     err = file.Write(buffer.get(), num_bytes);
     if (!err.Success())
@@ -2299,7 +2420,7 @@ RenderScriptRuntime::LoadModule(const lldb::ModuleSP &module_sp)
             }
             case eModuleKindLibRS:
             {
-                if (!m_libRS) 
+                if (!m_libRS)
                 {
                     m_libRS = module_sp;
                     static ConstString gDbgPresentStr("gDebuggerPresent");
@@ -2334,7 +2455,7 @@ RenderScriptRuntime::LoadModule(const lldb::ModuleSP &module_sp)
                 break;
         }
         if (module_loaded)
-            Update();  
+            Update();
         return module_loaded;
     }
     return false;
@@ -2408,7 +2529,7 @@ RSModuleDescriptor::ParseRSInfo()
                         m_kernels.push_back(RSKernelDescriptor(this, name, slot));
                     }
                 }
-            } 
+            }
             else if (sscanf(line.c_str(), "pragmaCount: %u", &numDefns) == 1)
             {
                 char name[MAXLINE];
@@ -2417,7 +2538,7 @@ RSModuleDescriptor::ParseRSInfo()
                 {
                     name[0] = '\0';
                     value[0] = '\0';
-                    if (sscanf(info_lines[++offset].c_str(), "%s - %s", &name[0], &value[0]) != 0 
+                    if (sscanf(info_lines[++offset].c_str(), "%s - %s", &name[0], &value[0]) != 0
                         && (name[0] != '\0'))
                     {
                         m_pragmas[std::string(name)] = value;
@@ -2466,7 +2587,7 @@ RenderScriptRuntime::Status(Stream &strm) const
         strm.Printf("CPU Reference Implementation discovered.");
         strm.EOL();
     }
-    
+
     if (m_runtimeHooks.size())
     {
         strm.Printf("Runtime functions hooked:");
@@ -2476,7 +2597,7 @@ RenderScriptRuntime::Status(Stream &strm) const
             strm.Indent(b.second->defn->name);
             strm.EOL();
         }
-    } 
+    }
     else
     {
         strm.Printf("Runtime is not hooked.");
@@ -2484,7 +2605,7 @@ RenderScriptRuntime::Status(Stream &strm) const
     }
 }
 
-void 
+void
 RenderScriptRuntime::DumpContexts(Stream &strm) const
 {
     strm.Printf("Inferred RenderScript Contexts:");
@@ -2519,7 +2640,7 @@ RenderScriptRuntime::DumpContexts(Stream &strm) const
     strm.IndentLess();
 }
 
-void 
+void
 RenderScriptRuntime::DumpKernels(Stream &strm) const
 {
     strm.Printf("RenderScript Kernels:");

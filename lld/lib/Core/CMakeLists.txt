@@ -1,4 +1,4 @@
-add_llvm_library(lldCore
+add_lld_library(lldCore
   DefinedAtom.cpp
   Error.cpp
   File.cpp
@@ -7,6 +7,10 @@ add_llvm_library(lldCore
   Resolver.cpp
   SymbolTable.cpp
   Writer.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${LLD_INCLUDE_DIR}/lld/Core
+
   LINK_LIBS
     LLVMSupport
   )

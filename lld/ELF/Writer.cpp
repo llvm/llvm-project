@@ -103,7 +103,7 @@ template <class ELFT> static bool shouldUseRela() {
   return K == ELF64LEKind || K == ELF64BEKind;
 }
 
-template <class ELFT> void lld::elf2::writeResult(SymbolTable<ELFT> *Symtab) {
+template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   // Initialize output sections that are handled by Writer specially.
   // Don't reorder because the order of initialization matters.
   InterpSection<ELFT> Interp;
@@ -490,8 +490,7 @@ void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
 
   uintX_t Off = getBss()->getSize();
   for (DefinedCommon *C : Syms) {
-    uintX_t Align = C->MaxAlignment;
-    Off = RoundUpToAlignment(Off, Align);
+    Off = align(Off, C->MaxAlignment);
     C->OffsetInBss = Off;
     Off += C->Size;
   }
@@ -514,7 +513,7 @@ void Writer<ELFT>::addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms) {
                  countTrailingZeros((uintX_t)Sym.st_value));
     uintX_t Align = 1 << TrailingZeros;
     Out<ELFT>::Bss->updateAlign(Align);
-    Off = RoundUpToAlignment(Off, Align);
+    Off = align(Off, Align);
     C->OffsetInBss = Off;
     Off += Sym.st_size;
   }
@@ -832,7 +831,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   }
 
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    Out<ELFT>::ShStrTab->add(Sec->getName());
+    Out<ELFT>::ShStrTab->reserve(Sec->getName());
 
   // Finalizers fix each section's size.
   // .dynamic section's finalizer may add strings to .dynstr,
@@ -976,6 +975,18 @@ static uint32_t toPhdrFlags(uint64_t Flags) {
   return Ret;
 }
 
+/// For AMDGPU we need to use custom segment kinds in order to specify which
+/// address space data should be loaded into.
+template <class ELFT>
+static uint32_t getAmdgpuPhdr(OutputSectionBase<ELFT> *Sec) {
+  uint32_t Flags = Sec->getFlags();
+  if (Flags & SHF_AMDGPU_HSA_CODE)
+    return PT_AMDGPU_HSA_LOAD_CODE_AGENT;
+  if ((Flags & SHF_AMDGPU_HSA_GLOBAL) && !(Flags & SHF_AMDGPU_HSA_AGENT))
+    return PT_AMDGPU_HSA_LOAD_GLOBAL_PROGRAM;
+  return PT_LOAD;
+}
+
 template <class ELFT>
 void Writer<ELFT>::updateRelro(Elf_Phdr *Cur, Elf_Phdr *GnuRelroPhdr,
                                uintX_t VA) {
@@ -1024,8 +1035,8 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
       bool InRelRo = Config->ZRelro && (Flags & PF_W) && isRelroSection(Sec);
       bool FirstNonRelRo = GnuRelroPhdr.p_type && !InRelRo && !RelroAligned;
       if (FirstNonRelRo || PH->p_flags != Flags) {
-        VA = RoundUpToAlignment(VA, Target->getPageSize());
-        FileOff = RoundUpToAlignment(FileOff, Target->getPageSize());
+        VA = align(VA, Target->getPageSize());
+        FileOff = align(FileOff, Target->getPageSize());
         if (FirstNonRelRo)
           RelroAligned = true;
       }
@@ -1033,15 +1044,17 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
       if (PH->p_flags != Flags) {
         // Flags changed. Create a new PT_LOAD.
         PH = &Phdrs[++PhdrIdx];
-        setPhdr(PH, PT_LOAD, Flags, FileOff, VA, 0, Target->getPageSize());
+        uint32_t PTType = (Config->EMachine != EM_AMDGPU) ? (uint32_t)PT_LOAD
+                                                          : getAmdgpuPhdr(Sec);
+        setPhdr(PH, PTType, Flags, FileOff, VA, 0, Target->getPageSize());
       }
 
       if (Sec->getFlags() & SHF_TLS) {
         if (!TlsPhdr.p_vaddr)
           setPhdr(&TlsPhdr, PT_TLS, PF_R, FileOff, VA, 0, Sec->getAlign());
         if (Sec->getType() != SHT_NOBITS)
-          VA = RoundUpToAlignment(VA, Sec->getAlign());
-        uintX_t TVA = RoundUpToAlignment(VA + ThreadBssOffset, Sec->getAlign());
+          VA = align(VA, Sec->getAlign());
+        uintX_t TVA = align(VA + ThreadBssOffset, Sec->getAlign());
         Sec->setVA(TVA);
         TlsPhdr.p_memsz += Sec->getSize();
         if (Sec->getType() == SHT_NOBITS) {
@@ -1052,7 +1065,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
         }
         TlsPhdr.p_align = std::max<uintX_t>(TlsPhdr.p_align, Sec->getAlign());
       } else {
-        VA = RoundUpToAlignment(VA, Sec->getAlign());
+        VA = align(VA, Sec->getAlign());
         Sec->setVA(VA);
         VA += Sec->getSize();
         if (InRelRo)
@@ -1060,7 +1073,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
       }
     }
 
-    FileOff = RoundUpToAlignment(FileOff, Sec->getAlign());
+    FileOff = align(FileOff, Sec->getAlign());
     Sec->setFileOffset(FileOff);
     if (Sec->getType() != SHT_NOBITS)
       FileOff += Sec->getSize();
@@ -1073,7 +1086,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   if (TlsPhdr.p_vaddr) {
     // The TLS pointer goes after PT_TLS. At least glibc will align it,
     // so round up the size to make sure the offsets are correct.
-    TlsPhdr.p_memsz = RoundUpToAlignment(TlsPhdr.p_memsz, TlsPhdr.p_align);
+    TlsPhdr.p_memsz = align(TlsPhdr.p_memsz, TlsPhdr.p_align);
     Phdrs[++PhdrIdx] = TlsPhdr;
     Out<ELFT>::TlsPhdr = &Phdrs[PhdrIdx];
   }
@@ -1105,7 +1118,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   }
 
   // Add space for section headers.
-  SectionHeaderOff = RoundUpToAlignment(FileOff, ELFT::Is64Bits ? 8 : 4);
+  SectionHeaderOff = align(FileOff, ELFT::Is64Bits ? 8 : 4);
   FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);
 
   // Update "_end" and "end" symbols so that they
@@ -1238,8 +1251,17 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     Sec->writeTo(Buf + Sec->getFileOff());
   }
 
+  // Write all sections but string table sections. We know the sizes of the
+  // string tables already, but they may not have actual strings yet (only
+  // room may be reserved), because writeTo() is allowed to add actual
+  // strings to the string tables.
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd)
+    if (Sec != Out<ELFT>::Opd && Sec->getType() != SHT_STRTAB)
+      Sec->writeTo(Buf + Sec->getFileOff());
+
+  // Write string table sections.
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+    if (Sec != Out<ELFT>::Opd && Sec->getType() == SHT_STRTAB)
       Sec->writeTo(Buf + Sec->getFileOff());
 }
 
@@ -1275,7 +1297,7 @@ template <class ELFT> void Writer<ELFT>::buildSectionMap() {
       InputToOutputSection[Name] = OutSec.first;
 }
 
-template void lld::elf2::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);
-template void lld::elf2::writeResult<ELF32BE>(SymbolTable<ELF32BE> *Symtab);
-template void lld::elf2::writeResult<ELF64LE>(SymbolTable<ELF64LE> *Symtab);
-template void lld::elf2::writeResult<ELF64BE>(SymbolTable<ELF64BE> *Symtab);
+template void elf2::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);
+template void elf2::writeResult<ELF32BE>(SymbolTable<ELF32BE> *Symtab);
+template void elf2::writeResult<ELF64LE>(SymbolTable<ELF64LE> *Symtab);
+template void elf2::writeResult<ELF64BE>(SymbolTable<ELF64BE> *Symtab);

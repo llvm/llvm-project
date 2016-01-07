@@ -177,7 +177,7 @@ _start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 7
-# CHECK-NEXT:     Name: .strtab (27)
+# CHECK-NEXT:     Name: .strtab (41)
 # CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]

@@ -87,7 +87,7 @@ __start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 3
-# CHECK-NEXT:     Name: .text (1)
+# CHECK-NEXT:     Name: .text (25)
 # CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:     Flags [ (0x6)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
@@ -119,7 +119,7 @@ __start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 5
-# CHECK-NEXT:     Name: .bss (7)
+# CHECK-NEXT:     Name: .bss (37)
 # CHECK-NEXT:     Type: SHT_NOBITS (0x8)
 # CHECK-NEXT:     Flags [ (0x3)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
@@ -163,7 +163,7 @@ __start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 8
-# CHECK-NEXT:     Name: .strtab (46)
+# CHECK-NEXT:     Name: .strtab (60)
 # CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]

@@ -26,7 +26,7 @@
 int main()
 {
     // Ensure that the default locale is not C.  If it is, the second tests will fail.
-    putenv(const_cast<char*>("LC_COLLATE=" LOCALE_en_US_UTF_8));
+    putenv(const_cast<char*>("LC_ALL=" LOCALE_en_US_UTF_8));
     {
         std::locale l(LOCALE_en_US_UTF_8);
         {

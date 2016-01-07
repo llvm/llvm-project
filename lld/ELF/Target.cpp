@@ -191,6 +191,22 @@ public:
                    uint8_t *PairedLoc = nullptr) const override;
 };
 
+class AMDGPUTargetInfo final : public TargetInfo {
+public:
+  AMDGPUTargetInfo();
+  void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
+  void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
+                         uint64_t PltEntryAddr) const override;
+  void writePltEntry(uint8_t *Buf, uint64_t GotAddr, uint64_t GotEntryAddr,
+                     uint64_t PltEntryAddr, int32_t Index,
+                     unsigned RelOff) const override;
+  bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
+  bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
+  void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
+                   uint64_t SA, uint64_t ZA = 0,
+                   uint8_t *PairedLoc = nullptr) const override;
+};
+
 template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
@@ -216,6 +232,8 @@ TargetInfo *createTarget() {
     return new X86TargetInfo();
   case EM_AARCH64:
     return new AArch64TargetInfo();
+  case EM_AMDGPU:
+    return new AMDGPUTargetInfo();
   case EM_MIPS:
     switch (Config->EKind) {
     case ELF32LEKind:
@@ -1313,6 +1331,38 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   default:
     error("unrecognized reloc " + Twine(Type));
   }
+}
+
+AMDGPUTargetInfo::AMDGPUTargetInfo() {}
+
+void AMDGPUTargetInfo::writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const {
+  llvm_unreachable("not implemented");
+}
+
+void AMDGPUTargetInfo::writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
+                                         uint64_t PltEntryAddr) const {
+  llvm_unreachable("not implemented");
+}
+
+void AMDGPUTargetInfo::writePltEntry(uint8_t *Buf, uint64_t GotAddr,
+                                     uint64_t GotEntryAddr,
+                                     uint64_t PltEntryAddr, int32_t Index,
+                                     unsigned RelOff) const {
+  llvm_unreachable("not implemented");
+}
+
+bool AMDGPUTargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
+  return false;
+}
+
+bool AMDGPUTargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
+  return false;
+}
+
+void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                   uint64_t P, uint64_t SA, uint64_t ZA,
+                                   uint8_t *PairedLoc) const {
+  llvm_unreachable("not implemented");
 }
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {

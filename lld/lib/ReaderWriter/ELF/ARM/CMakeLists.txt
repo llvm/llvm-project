@@ -1,4 +1,4 @@
-add_llvm_library(lldARMELFTarget
+add_lld_library(lldARMELFTarget
   ARMLinkingContext.cpp
   ARMTargetHandler.cpp
   ARMRelocationHandler.cpp

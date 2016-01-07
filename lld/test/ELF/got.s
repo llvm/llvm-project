@@ -12,7 +12,7 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x120A0
+// CHECK-NEXT: Address: 0x120B0
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 16
 // CHECK-NEXT: Link: 0
@@ -21,22 +21,22 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x120A0 R_X86_64_GLOB_DAT bar 0x0
-// CHECK-NEXT:     0x120A8 R_X86_64_GLOB_DAT zed 0x0
+// CHECK-NEXT:     0x120B0 R_X86_64_GLOB_DAT bar 0x0
+// CHECK-NEXT:     0x120B8 R_X86_64_GLOB_DAT zed 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
 
 // Unfortunately FileCheck can't do math, so we have to check for explicit
 // values:
-//  0x120A0 - (0x11000 + 2) - 4 = 4250
-//  0x120A0 - (0x11006 + 2) - 4 = 4244
-//  0x120A8 - (0x1100c + 2) - 4 = 4246
+//  0x120B0 - (0x11000 + 2) - 4 = 4266
+//  0x120B0 - (0x11006 + 2) - 4 = 4260
+//  0x120A8 - (0x1100c + 2) - 4 = 4262
 
 // DISASM:      _start:
-// DISASM-NEXT:   11000:  {{.*}}  jmpq  *4250(%rip)
-// DISASM-NEXT:   11006:  {{.*}}  jmpq  *4244(%rip)
-// DISASM-NEXT:   1100c:  {{.*}}  jmpq  *4246(%rip)
+// DISASM-NEXT:   11000:  {{.*}}  jmpq  *4266(%rip)
+// DISASM-NEXT:   11006:  {{.*}}  jmpq  *4260(%rip)
+// DISASM-NEXT:   1100c:  {{.*}}  jmpq  *4262(%rip)
 
 .global _start
 _start:

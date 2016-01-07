@@ -1,4 +1,4 @@
-add_llvm_library(lldExampleSubTarget
+add_lld_library(lldExampleSubTarget
   ExampleLinkingContext.cpp
   ExampleTargetHandler.cpp
   LINK_LIBS

@@ -1,4 +1,4 @@
-add_llvm_library(lldX86ELFTarget
+add_lld_library(lldX86ELFTarget
   X86LinkingContext.cpp
   X86TargetHandler.cpp
   X86RelocationHandler.cpp

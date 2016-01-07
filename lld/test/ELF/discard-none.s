@@ -20,8 +20,8 @@
 // CHECK-NEXT:     AddressAlignment:
 // CHECK-NEXT:     EntrySize:
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 002E4C6D 79766172 002E4C6D 796F7468  |..Lmyvar..Lmyoth|
-// CHECK-NEXT:       0010: 65727661 7200                        |ervar.|
+// CHECK-NEXT:       0000: 002E4C6D 796F7468 65727661 72002E4C  |..Lmyothervar..L|
+// CHECK-NEXT:       0010: 6D797661 7200                        |myvar.|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 

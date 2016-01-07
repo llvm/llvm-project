@@ -52,7 +52,9 @@ InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
   case Merge:
     return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
   case MipsReginfo:
-    return cast<MipsReginfoInputSection<ELFT>>(this)->getOffset(Offset);
+    // MIPS .reginfo sections are consumed by the linker,
+    // so it should never be copied to output.
+    llvm_unreachable("MIPS .reginfo reached writeTo().");
   }
   llvm_unreachable("Invalid section kind");
 }
@@ -346,22 +348,13 @@ MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
 
 template <class ELFT>
 MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(ObjectFile<ELFT> *F,
-                                                       const Elf_Shdr *Header)
-    : InputSectionBase<ELFT>(F, Header, InputSectionBase<ELFT>::MipsReginfo) {}
-
-template <class ELFT>
-uint32_t MipsReginfoInputSection<ELFT>::getGeneralMask() const {
+                                                       const Elf_Shdr *Hdr)
+    : InputSectionBase<ELFT>(F, Hdr, InputSectionBase<ELFT>::MipsReginfo) {
+  // Initialize this->Reginfo.
   ArrayRef<uint8_t> D = this->getSectionData();
-  if (D.size() != sizeof(Elf_Mips_RegInfo))
+  if (D.size() != sizeof(Elf_Mips_RegInfo<ELFT>))
     error("Invalid size of .reginfo section");
-  return reinterpret_cast<const Elf_Mips_RegInfo *>(D.data())->ri_gprmask;
-}
-
-template <class ELFT> uint32_t MipsReginfoInputSection<ELFT>::getGp0() const {
-  ArrayRef<uint8_t> D = this->getSectionData();
-  if (D.size() != sizeof(Elf_Mips_RegInfo))
-    error("Invalid size of .reginfo section");
-  return reinterpret_cast<const Elf_Mips_RegInfo *>(D.data())->ri_gp_value;
+  Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(D.data());
 }
 
 template <class ELFT>

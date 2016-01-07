@@ -55,7 +55,7 @@ movl bar@GOT, %eax
 // ADDR-NEXT:   SHF_ALLOC
 // ADDR-NEXT:   SHF_WRITE
 // ADDR-NEXT: ]
-// ADDR-NEXT: Address: 0x12070
+// ADDR-NEXT: Address: 0x12078
 
 .section .R_386_GOTPC,"ax",@progbits
 R_386_GOTPC:
@@ -65,7 +65,7 @@ R_386_GOTPC:
 
 // CHECK:      Disassembly of section .R_386_GOTPC:
 // CHECK-NEXT: R_386_GOTPC:
-// CHECK-NEXT:   11014:  {{.*}} movl  $4188, %eax
+// CHECK-NEXT:   11014:  {{.*}} movl  $4196, %eax
 
 .section .dynamic_reloc, "ax",@progbits
  call bar

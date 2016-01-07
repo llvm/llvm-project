@@ -1144,11 +1144,7 @@ def getExpectedTimeouts(platform_name):
 
     expected_timeout = set()
 
-    if target.startswith("linux"):
-        expected_timeout |= {
-            "TestMultithreaded.py",
-        }
-    elif target.startswith("android"):
+    if target.startswith("android"):
         expected_timeout |= {
             "TestExitDuringStep.py",
             "TestHelloWorld.py",

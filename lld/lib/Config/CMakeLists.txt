@@ -1,5 +1,9 @@
-add_llvm_library(lldConfig
+add_lld_library(lldConfig
   Version.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${LLD_INCLUDE_DIR}/lld/Config
+
   LINK_LIBS
     LLVMSupport
   )

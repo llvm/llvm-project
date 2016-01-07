@@ -177,16 +177,13 @@ public:
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
 template <class ELFT>
 class MipsReginfoInputSection : public InputSectionBase<ELFT> {
-  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
 
 public:
-  MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
-
-  uint32_t getGeneralMask() const;
-  uint32_t getGp0() const;
-
+  MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
   static bool classof(const InputSectionBase<ELFT> *S);
+
+  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo;
 };
 
 } // namespace elf2

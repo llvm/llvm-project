@@ -335,6 +335,9 @@ private:
     static bool GetFrameVarAsUnsigned(const lldb::StackFrameSP, const char* var_name, uint64_t& val);
     void FindStructTypeName(Element& elem, StackFrame* frame_ptr);
 
+    size_t PopulateElementHeaders(const std::shared_ptr<uint8_t> header_buffer, size_t offset, const Element& elem);
+    size_t CalculateElementHeaderSize(const Element& elem);
+
     //
     // Helper functions for jitting the runtime
     //

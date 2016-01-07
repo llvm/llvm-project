@@ -1,4 +1,4 @@
-add_llvm_library(lldAMDGPUELFTarget
+add_lld_library(lldAMDGPUELFTarget
   AMDGPUExecutableWriter.cpp
   AMDGPULinkingContext.cpp
   AMDGPURelocationHandler.cpp

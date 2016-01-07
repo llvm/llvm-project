@@ -697,7 +697,7 @@ void ArchHandler_arm64::applyFixupRelocatable(const Reference &ref,
     *loc64 = 0;
     return;
   case delta32ToGOT:
-    *loc32 = -fixupAddress;
+    *loc32 = inAtomAddress - fixupAddress;
     return;
   case addOffset12:
     llvm_unreachable("lazy reference kind implies GOT pass was run");
