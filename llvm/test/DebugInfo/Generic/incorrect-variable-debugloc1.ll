@@ -35,7 +35,7 @@ entry:
   %call = tail call i32 @_Z4funcv(), !dbg !19
   tail call void @llvm.dbg.value(metadata i32 %call, i64 0, metadata !10, metadata !16), !dbg !17
   store volatile i32 %call, i32* %c, align 4, !dbg !19
-  tail call void @llvm.dbg.value(metadata i32* %c, i64 0, metadata !10, metadata !16), !dbg !17
+  tail call void @llvm.dbg.value(metadata i32* %c, i64 0, metadata !10, metadata !21), !dbg !17
   %c.0.c.0. = load volatile i32, i32* %c, align 4, !dbg !20
   ret i32 %c.0.c.0., !dbg !20
 }
@@ -74,4 +74,5 @@ attributes #2 = { nounwind readnone }
 !18 = !DILocation(line: 5, column: 3, scope: !4)
 !19 = !DILocation(line: 6, column: 7, scope: !4)
 !20 = !DILocation(line: 7, column: 3, scope: !4)
+!21 = !DIExpression(DW_OP_deref)
 

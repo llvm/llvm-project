@@ -221,7 +221,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   // precedence; fall back to triple-based defaults.
   if (Asm->TM.Options.DebuggerTuning != DebuggerKind::Default)
     DebuggerTuning = Asm->TM.Options.DebuggerTuning;
-  else if (IsDarwin || TT.isOSFreeBSD())
+  else if (IsDarwin)
     DebuggerTuning = DebuggerKind::LLDB;
   else if (TT.isPS4CPU())
     DebuggerTuning = DebuggerKind::SCE;

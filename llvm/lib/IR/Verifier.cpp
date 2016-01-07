@@ -432,8 +432,7 @@ private:
   // Module-level debug info verification...
   void verifyTypeRefs();
   template <class MapTy>
-  void verifyBitPieceExpression(const DbgInfoIntrinsic &I,
-                                const MapTy &TypeRefs);
+  void verifyDIExpression(const DbgInfoIntrinsic &I, const MapTy &TypeRefs);
   void visitUnresolvedTypeRef(const MDString *S, const MDNode *N);
 };
 } // End anonymous namespace
@@ -3881,25 +3880,40 @@ static uint64_t getVariableSize(const DILocalVariable &V, const MapTy &Map) {
 }
 
 template <class MapTy>
-void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I,
-                                        const MapTy &TypeRefs) {
+void Verifier::verifyDIExpression(const DbgInfoIntrinsic &I,
+                                  const MapTy &TypeRefs) {
   DILocalVariable *V;
   DIExpression *E;
+  const Value *Arg;
+  uint64_t ArgumentTypeSizeInBits = 0;
   if (auto *DVI = dyn_cast<DbgValueInst>(&I)) {
+    Arg = DVI->getValue();
+    if (Arg)
+      ArgumentTypeSizeInBits =
+          M->getDataLayout().getTypeAllocSizeInBits(Arg->getType());
     V = dyn_cast_or_null<DILocalVariable>(DVI->getRawVariable());
     E = dyn_cast_or_null<DIExpression>(DVI->getRawExpression());
   } else {
     auto *DDI = cast<DbgDeclareInst>(&I);
+    // For declare intrinsics, get the total size of the alloca, to allow
+    // case where the variable may span more than one element.
+    Arg = DDI->getAddress();
+    if (Arg)
+      Arg = Arg->stripPointerCasts();
+    const AllocaInst *AI = dyn_cast_or_null<AllocaInst>(Arg);
+    if (AI) {
+      // We can only say something about constant size allocations
+      if (const ConstantInt *CI = dyn_cast<ConstantInt>(AI->getArraySize()))
+        ArgumentTypeSizeInBits =
+            CI->getLimitedValue() *
+            M->getDataLayout().getTypeAllocSizeInBits(AI->getAllocatedType());
+    }
     V = dyn_cast_or_null<DILocalVariable>(DDI->getRawVariable());
     E = dyn_cast_or_null<DIExpression>(DDI->getRawExpression());
   }
 
   // We don't know whether this intrinsic verified correctly.
   if (!V || !E || !E->isValid())
-    return;
-
-  // Nothing to do if this isn't a bit piece expression.
-  if (!E->isBitPiece())
     return;
 
   // The frontend helps out GDB by emitting the members of local anonymous
@@ -3917,11 +3931,33 @@ void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I,
   if (!VarSize)
     return;
 
-  unsigned PieceSize = E->getBitPieceSize();
-  unsigned PieceOffset = E->getBitPieceOffset();
-  Assert(PieceSize + PieceOffset <= VarSize,
-         "piece is larger than or outside of variable", &I, V, E);
-  Assert(PieceSize != VarSize, "piece covers entire variable", &I, V, E);
+  if (E->isBitPiece()) {
+    unsigned PieceSize = E->getBitPieceSize();
+    unsigned PieceOffset = E->getBitPieceOffset();
+    Assert(PieceSize + PieceOffset <= VarSize,
+           "piece is larger than or outside of variable", &I, V, E);
+    Assert(PieceSize != VarSize, "piece covers entire variable", &I, V, E);
+    return;
+  }
+
+  if (!ArgumentTypeSizeInBits)
+    return; // We were unable to determine the size of the argument
+
+  if (E->getNumElements() == 0) {
+    // In the case where the expression is empty, verify the size of the
+    // argument. Doing this in the general case would require looking through
+    // any dereferences that may be in the expression.
+    Assert(ArgumentTypeSizeInBits == VarSize,
+           "size of passed value (" + std::to_string(ArgumentTypeSizeInBits) +
+               ") does not match size of declared variable (" +
+               std::to_string(VarSize) + ")",
+           &I, Arg, V, V->getType(), E);
+  } else if (E->getElement(0) == dwarf::DW_OP_deref) {
+    Assert(ArgumentTypeSizeInBits == M->getDataLayout().getPointerSizeInBits(),
+           "the operation of the expression is a deref, but the passed value "
+           "is not pointer sized",
+           &I, Arg, V, V->getType(), E);
+  }
 }
 
 void Verifier::visitUnresolvedTypeRef(const MDString *S, const MDNode *N) {
@@ -3954,7 +3990,7 @@ void Verifier::verifyTypeRefs() {
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
         if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I))
-          verifyBitPieceExpression(*DII, TypeRefs);
+          verifyDIExpression(*DII, TypeRefs);
 
   // Return early if all typerefs were resolved.
   if (UnresolvedTypeRefs.empty())

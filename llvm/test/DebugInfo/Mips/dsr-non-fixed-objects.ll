@@ -65,7 +65,7 @@ entry:
   %1 = load i32, i32* %b.addr, align 4, !dbg !35
   %add = add nsw i32 %0, %1, !dbg !36
   store i32 %add, i32* %c, align 16, !dbg !33
-  call void @llvm.dbg.declare(metadata i32** %w, metadata !37, metadata !16), !dbg !38
+  call void @llvm.dbg.declare(metadata i32** %w, metadata !37, metadata !DIExpression(DW_OP_deref)), !dbg !38
   %2 = load i32, i32* %c, align 16, !dbg !39
   %3 = alloca i8, i32 %2, !dbg !40
   %4 = bitcast i8* %3 to i32*, !dbg !40

@@ -32,9 +32,8 @@ declare void @llvm.AMDGPU.store.output(float, i32)
 ; R600-DAG: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, -KC0[3].Z
 ; R600-DAG: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, -KC0[3].Y
 
-; FIXME: Should be using SGPR directly for first operand
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 define void @fsub_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) {
   %sub = fsub <2 x float> %a, %b
   store <2 x float> %sub, <2 x float> addrspace(1)* %out, align 8
@@ -60,13 +59,11 @@ define void @v_fsub_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(
   ret void
 }
 
-; FIXME: Should be using SGPR directly for first operand
-
 ; FUNC-LABEL: {{^}}s_fsub_v4f32:
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; SI: s_endpgm
 define void @s_fsub_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, <4 x float> %b) {
   %result = fsub <4 x float> %a, %b

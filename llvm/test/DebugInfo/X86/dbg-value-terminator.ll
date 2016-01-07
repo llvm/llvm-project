@@ -7,6 +7,7 @@
 ;
 ; CHECK-LABEL: test:
 ; CHECK: ##DEBUG_VALUE: foo:i
+
 %a = type { i32, i32 }
 
 define hidden fastcc %a* @test() #1 !dbg !1 {
@@ -87,7 +88,7 @@ VEC_edge_base_index.exit7.i:                      ; preds = %"3.i5.i"
 "44.i":                                           ; preds = %"42.i"
   %2 = load %a*, %a** undef, align 8, !dbg !12
   %3 = bitcast %a* %2 to %a*, !dbg !12
-  call void @llvm.dbg.value(metadata %a* %3, i64 0, metadata !6, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.value(metadata %a* %3, i64 0, metadata !6, metadata !DIExpression(DW_OP_deref)), !dbg !12
   br label %may_unswitch_on.exit, !dbg !12
 
 "45.i":                                           ; preds = %"38.i"

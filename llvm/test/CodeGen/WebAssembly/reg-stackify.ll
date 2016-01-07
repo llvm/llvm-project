@@ -55,7 +55,7 @@ define i32 @yes1(i32* %q) {
 ; CHECK-NEXT: .local i32, i32{{$}}
 ; CHECK-NEXT: i32.const   $5=, 2{{$}}
 ; CHECK-NEXT: i32.const   $4=, 1{{$}}
-; CHECK-NEXT: block       BB4_2{{$}}
+; CHECK-NEXT: block       .LBB4_2{{$}}
 ; CHECK-NEXT: i32.lt_s    $push0=, $0, $4{{$}}
 ; CHECK-NEXT: i32.lt_s    $push1=, $1, $5{{$}}
 ; CHECK-NEXT: i32.xor     $push4=, $pop0, $pop1{{$}}
@@ -64,10 +64,10 @@ define i32 @yes1(i32* %q) {
 ; CHECK-NEXT: i32.xor     $push5=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.xor     $push6=, $pop4, $pop5{{$}}
 ; CHECK-NEXT: i32.ne      $push7=, $pop6, $4{{$}}
-; CHECK-NEXT: br_if       $pop7, BB4_2{{$}}
+; CHECK-NEXT: br_if       $pop7, .LBB4_2{{$}}
 ; CHECK-NEXT: i32.const   $push8=, 0{{$}}
 ; CHECK-NEXT: return      $pop8{{$}}
-; CHECK-NEXT: BB4_2:
+; CHECK-NEXT: .LBB4_2:
 ; CHECK-NEXT: return      $4{{$}}
 define i32 @stack_uses(i32 %x, i32 %y, i32 %z, i32 %w) {
 entry:
@@ -92,13 +92,13 @@ false:
 ; CHECK-NEXT: .param      i32, i32, i32{{$}}
 ; CHECK-NEXT: .local      i32{{$}}
 ; CHECK-NEXT: i32.load    $3=, 0($2){{$}}
-; CHECK-NEXT: block       BB5_3{{$}}
+; CHECK-NEXT: block       .LBB5_3{{$}}
 ; CHECK-NEXT: i32.ge_u    $push0=, $3, $1{{$}}
-; CHECK-NEXT: br_if       $pop0, BB5_3{{$}}
+; CHECK-NEXT: br_if       $pop0, .LBB5_3{{$}}
 ; CHECK-NEXT: i32.lt_u    $push1=, $3, $0{{$}}
-; CHECK-NEXT: br_if       $pop1, BB5_3{{$}}
+; CHECK-NEXT: br_if       $pop1, .LBB5_3{{$}}
 ; CHECK-NEXT: i32.store   $discard=, 0($2), $3{{$}}
-; CHECK-NEXT: BB5_3:
+; CHECK-NEXT: .LBB5_3:
 ; CHECK-NEXT: return{{$}}
 define void @multiple_uses(i32* %arg0, i32* %arg1, i32* %arg2) nounwind {
 bb:

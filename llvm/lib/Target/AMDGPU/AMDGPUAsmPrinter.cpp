@@ -417,15 +417,23 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     }
   }
 
-  if (VCCUsed || FlatUsed || STM.isXNACKEnabled()) {
-    MaxSGPR += 2;
+  unsigned ExtraSGPRs = 0;
+
+  if (VCCUsed)
+    ExtraSGPRs = 2;
+
+  if (STM.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    if (FlatUsed)
+      ExtraSGPRs = 4;
+  } else {
+    if (STM.isXNACKEnabled())
+      ExtraSGPRs = 4;
 
     if (FlatUsed)
-      MaxSGPR += 2;
-
-    if (STM.isXNACKEnabled())
-      MaxSGPR += 2;
+      ExtraSGPRs = 6;
   }
+
+  MaxSGPR += ExtraSGPRs;
 
   // We found the maximum register index. They start at 0, so add one to get the
   // number of registers.

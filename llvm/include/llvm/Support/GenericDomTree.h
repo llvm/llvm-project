@@ -724,24 +724,16 @@ public:
     if (!this->IsPostDominators) {
       // Initialize root
       NodeT *entry = TraitsTy::getEntryNode(&F);
-      this->Roots.push_back(entry);
-      this->IDoms[entry] = nullptr;
-      this->DomTreeNodes[entry] = nullptr;
+      addRoot(entry);
 
       Calculate<FT, NodeT *>(*this, F);
     } else {
       // Initialize the roots list
       for (typename TraitsTy::nodes_iterator I = TraitsTy::nodes_begin(&F),
                                              E = TraitsTy::nodes_end(&F);
-           I != E; ++I) {
+           I != E; ++I)
         if (TraitsTy::child_begin(&*I) == TraitsTy::child_end(&*I))
           addRoot(&*I);
-
-        // Prepopulate maps so that we don't get iterator invalidation issues
-        // later.
-        this->IDoms[&*I] = nullptr;
-        this->DomTreeNodes[&*I] = nullptr;
-      }
 
       Calculate<FT, Inverse<NodeT *>>(*this, F);
     }

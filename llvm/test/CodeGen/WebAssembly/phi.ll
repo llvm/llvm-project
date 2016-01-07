@@ -25,7 +25,7 @@ done:
 ; Swap phis.
 
 ; CHECK-LABEL: test1:
-; CHECK: BB1_1:
+; CHECK: .LBB1_1:
 ; CHECK: copy_local $[[NUM0:[0-9]+]]=, $[[NUM1:[0-9]+]]{{$}}
 ; CHECK: copy_local $[[NUM1]]=, $[[NUM2:[0-9]+]]{{$}}
 ; CHECK: copy_local $[[NUM2]]=, $[[NUM0]]{{$}}

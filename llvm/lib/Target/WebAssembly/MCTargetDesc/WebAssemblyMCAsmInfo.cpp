@@ -27,9 +27,6 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
 
   // TODO: What should MaxInstLength be?
 
-  PrivateGlobalPrefix = "";
-  PrivateLabelPrefix = "";
-
   UseDataRegionDirectives = true;
 
   Data8bitsDirective = "\t.int8\t";

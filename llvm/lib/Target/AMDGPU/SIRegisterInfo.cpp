@@ -36,18 +36,15 @@ unsigned SIRegisterInfo::reservedPrivateSegmentBufferReg(
   const MachineFunction &MF) const {
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   if (ST.hasSGPRInitBug()) {
-    unsigned BaseIdx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4 - 4;
-    if (ST.isXNACKEnabled())
-      BaseIdx -= 4;
-
+    // Leave space for flat_scr, xnack_mask, vcc, and alignment
+    unsigned BaseIdx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 8 - 4;
     unsigned BaseReg(AMDGPU::SGPR_32RegClass.getRegister(BaseIdx));
     return getMatchingSuperReg(BaseReg, AMDGPU::sub0, &AMDGPU::SReg_128RegClass);
   }
 
   if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    // 98/99 need to be reserved for flat_scr or 96/97 for flat_scr and
-    // 98/99 for xnack_mask, and 100/101 for vcc. This is the next sgpr128 down
-    // either way.
+    // 96/97 need to be reserved for flat_scr, 98/99 for xnack_mask, and
+    // 100/101 for vcc. This is the next sgpr128 down.
     return AMDGPU::SGPR92_SGPR93_SGPR94_SGPR95;
   }
 
@@ -58,25 +55,14 @@ unsigned SIRegisterInfo::reservedPrivateSegmentWaveByteOffsetReg(
   const MachineFunction &MF) const {
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   if (ST.hasSGPRInitBug()) {
-    unsigned Idx;
-
-    if (!ST.isXNACKEnabled())
-      Idx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4 - 5;
-    else
-      Idx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 6 - 1;
-
+    unsigned Idx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 6 - 1;
     return AMDGPU::SGPR_32RegClass.getRegister(Idx);
   }
 
   if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    if (!ST.isXNACKEnabled()) {
-      // Next register before reservations for flat_scr and vcc.
-      return AMDGPU::SGPR97;
-    } else {
-      // Next register before reservations for flat_scr, xnack_mask, vcc,
-      // and scratch resource.
-      return AMDGPU::SGPR91;
-    }
+    // Next register before reservations for flat_scr, xnack_mask, vcc,
+    // and scratch resource.
+    return AMDGPU::SGPR91;
   }
 
   return AMDGPU::SGPR95;
@@ -99,23 +85,22 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
     // SI/CI have 104 SGPRs. VI has 102. We need to shift down the reservation
-    // for VCC/FLAT_SCR.
+    // for VCC/XNACK_MASK/FLAT_SCR.
+    //
+    // TODO The SGPRs that alias to XNACK_MASK could be used as general purpose
+    // SGPRs when the XNACK feature is not used. This is currently not done
+    // because the code that counts SGPRs cannot account for such holes.
+    reserveRegisterTuples(Reserved, AMDGPU::SGPR96_SGPR97);
     reserveRegisterTuples(Reserved, AMDGPU::SGPR98_SGPR99);
     reserveRegisterTuples(Reserved, AMDGPU::SGPR100_SGPR101);
-
-    if (ST.isXNACKEnabled())
-      reserveRegisterTuples(Reserved, AMDGPU::SGPR96_SGPR97);
   }
 
   // Tonga and Iceland can only allocate a fixed number of SGPRs due
   // to a hw bug.
   if (ST.hasSGPRInitBug()) {
     unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
-    // Reserve some SGPRs for FLAT_SCRATCH and VCC (4 SGPRs).
-    unsigned Limit = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 4;
-
-    if (ST.isXNACKEnabled())
-      Limit -= 2;
+    // Reserve some SGPRs for FLAT_SCRATCH, XNACK_MASK, and VCC (6 SGPRs).
+    unsigned Limit = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 6;
 
     for (unsigned i = Limit; i < NumSGPRs; ++i) {
       unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
@@ -479,12 +464,38 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
   if (SubIdx == AMDGPU::NoSubRegister)
     return RC;
 
-  // If this register has a sub-register, we can safely assume it is a 32-bit
-  // register, because all of SI's sub-registers are 32-bit.
+  // We can assume that each lane corresponds to one 32-bit register.
+  unsigned Count = countPopulation(getSubRegIndexLaneMask(SubIdx));
   if (isSGPRClass(RC)) {
-    return &AMDGPU::SGPR_32RegClass;
+    switch (Count) {
+    case 1:
+      return &AMDGPU::SGPR_32RegClass;
+    case 2:
+      return &AMDGPU::SReg_64RegClass;
+    case 4:
+      return &AMDGPU::SReg_128RegClass;
+    case 8:
+      return &AMDGPU::SReg_256RegClass;
+    case 16: /* fall-through */
+    default:
+      llvm_unreachable("Invalid sub-register class size");
+    }
   } else {
-    return &AMDGPU::VGPR_32RegClass;
+    switch (Count) {
+    case 1:
+      return &AMDGPU::VGPR_32RegClass;
+    case 2:
+      return &AMDGPU::VReg_64RegClass;
+    case 3:
+      return &AMDGPU::VReg_96RegClass;
+    case 4:
+      return &AMDGPU::VReg_128RegClass;
+    case 8:
+      return &AMDGPU::VReg_256RegClass;
+    case 16: /* fall-through */
+    default:
+      llvm_unreachable("Invalid sub-register class size");
+    }
   }
 }
 
