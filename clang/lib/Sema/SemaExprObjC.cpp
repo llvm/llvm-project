@@ -319,6 +319,7 @@ ExprResult Sema::BuildObjCNumericLiteral(SourceLocation AtLoc, Expr *Number) {
     // to use to determine the Objective-c literal kind.
     switch (Char->getKind()) {
     case CharacterLiteral::Ascii:
+    case CharacterLiteral::UTF8:
       NumberType = Context.CharTy;
       break;
       
@@ -577,6 +578,7 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       // to use to determine the Objective-c literal kind.
       switch (Char->getKind()) {
       case CharacterLiteral::Ascii:
+      case CharacterLiteral::UTF8:
         ValueType = Context.CharTy;
         break;
         

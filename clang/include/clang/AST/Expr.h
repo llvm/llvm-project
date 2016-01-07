@@ -1292,6 +1292,7 @@ public:
   enum CharacterKind {
     Ascii,
     Wide,
+    UTF8,
     UTF16,
     UTF32
   };

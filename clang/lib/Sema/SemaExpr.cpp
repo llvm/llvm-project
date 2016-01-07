@@ -3084,6 +3084,8 @@ ExprResult Sema::ActOnCharacterConstant(const Token &Tok, Scope *UDLScope) {
     Kind = CharacterLiteral::UTF16;
   else if (Literal.isUTF32())
     Kind = CharacterLiteral::UTF32;
+  else if (Literal.isUTF8())
+    Kind = CharacterLiteral::UTF8;
 
   Expr *Lit = new (Context) CharacterLiteral(Literal.getValue(), Kind, Ty,
                                              Tok.getLocation());

@@ -3607,6 +3607,7 @@ TEST_F(FormatTest, ConstructorInitializers) {
 
   FormatStyle OnePerLine = getLLVMStyle();
   OnePerLine.ConstructorInitializerAllOnOneLineOrOnePerLine = true;
+  OnePerLine.AllowAllParametersOfDeclarationOnNextLine = false;
   verifyFormat("SomeClass::Constructor()\n"
                "    : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
                "      aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
@@ -3633,6 +3634,13 @@ TEST_F(FormatTest, ConstructorInitializers) {
                "    : aaaaa(aaaaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaa,\n"
                "            aaaaaaaaaaaaaaaaaaaaaa) {}",
                OnePerLine);
+  OnePerLine.BinPackParameters = false;
+  verifyFormat(
+      "Constructor()\n"
+      "    : aaaaaaaaaaaaaaaaaaaaaaaa(\n"
+      "          aaaaaaaaaaa().aaa(),\n"
+      "          aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}",
+      OnePerLine);
   OnePerLine.ColumnLimit = 60;
   verifyFormat("Constructor()\n"
                "    : aaaaaaaaaaaaaaaaaaaa(a),\n"
