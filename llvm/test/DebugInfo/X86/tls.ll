@@ -14,7 +14,7 @@
 ; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=DARWIN --check-prefix=STDOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-freebsd \
-; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=SINGLE --check-prefix=SINGLE-64 --check-prefix=STDOP %s
+; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=SINGLE --check-prefix=SINGLE-64 --check-prefix=GNUOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu -emulated-tls \
 ; RUN:   | FileCheck --check-prefix=SINGLE --check-prefix=EMUSINGLE-64 \

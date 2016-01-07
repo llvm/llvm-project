@@ -1777,6 +1777,10 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
     MRI.getRegClass(Reg) :
     RI.getPhysRegClass(Reg);
 
+  const SIRegisterInfo *TRI =
+      static_cast<const SIRegisterInfo*>(MRI.getTargetRegisterInfo());
+  RC = TRI->getSubRegClass(RC, MO.getSubReg());
+
   // In order to be legal, the common sub-class must be equal to the
   // class of the current operand.  For example:
   //

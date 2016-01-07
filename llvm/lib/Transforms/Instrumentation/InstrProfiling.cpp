@@ -93,8 +93,8 @@ private:
   /// Replace instrprof_increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
 
-  /// Set up the section and uses for coverage data and its references.
-  void lowerCoverageData(GlobalVariable *CoverageData);
+  /// Force emitting of name vars for unused functions.
+  void lowerCoverageData(GlobalVariable *CoverageNamesVar);
 
   /// Get the region counters for an increment, creating them if necessary.
   ///
@@ -156,9 +156,9 @@ bool InstrProfiling::runOnModule(Module &M) {
         }
       }
 
-  if (GlobalVariable *Coverage =
-          M.getNamedGlobal(getCoverageMappingVarName())) {
-    lowerCoverageData(Coverage);
+  if (GlobalVariable *CoverageNamesVar =
+          M.getNamedGlobal(getCoverageNamesVarName())) {
+    lowerCoverageData(CoverageNamesVar);
     MadeChange = true;
   }
 
@@ -233,27 +233,15 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   Inc->eraseFromParent();
 }
 
-void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageData) {
+void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
 
-  Constant *Init = CoverageData->getInitializer();
-  // We're expecting { [4 x 32], [n x { i8*, i32, i32 }], [m x i8] }
-  // for some C. If not, the frontend's given us something broken.
-  assert(Init->getNumOperands() == 3 && "bad number of fields in coverage map");
-  assert(isa<ConstantArray>(Init->getAggregateElement(1)) &&
-         "invalid function list in coverage map");
-  ConstantArray *Records = cast<ConstantArray>(Init->getAggregateElement(1));
-  for (unsigned I = 0, E = Records->getNumOperands(); I < E; ++I) {
-    Constant *Record = Records->getOperand(I);
-    Value *V = const_cast<Value *>(Record->getOperand(0))->stripPointerCasts();
-
+  ConstantArray *Names =
+      cast<ConstantArray>(CoverageNamesVar->getInitializer());
+  for (unsigned I = 0, E = Names->getNumOperands(); I < E; ++I) {
+    Constant *NC = Names->getOperand(I);
+    Value *V = NC->stripPointerCasts();
     assert(isa<GlobalVariable>(V) && "Missing reference to function name");
     GlobalVariable *Name = cast<GlobalVariable>(V);
-
-    // If we have region counters for this name, we've already handled it.
-    auto It = ProfileDataMap.find(Name);
-    if (It != ProfileDataMap.end())
-      if (It->second.RegionCounters)
-        continue;
 
     // Move the name variable to the right section.
     Name->setSection(getNameSection());

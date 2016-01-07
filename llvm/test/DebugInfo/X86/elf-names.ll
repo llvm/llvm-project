@@ -81,7 +81,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !20 = !DISubprogram(name: "D", line: 4, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 4, file: !6, scope: !10, type: !21)
 !21 = !DISubroutineType(types: !22)
 !22 = !{null, !9, !23}
-!23 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !24)
+!23 = !DIDerivedType(tag: DW_TAG_reference_type, size: 64, align: 64, baseType: !24)
 !24 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !10)
 !27 = !{!29}
 !29 = !DILocalVariable(name: "this", line: 12, arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !5, file: !6, type: !30)

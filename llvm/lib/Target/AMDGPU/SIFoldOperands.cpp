@@ -334,12 +334,9 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
           !MRI.hasOneUse(MI.getOperand(0).getReg()))
         continue;
 
-      // FIXME: Fold operands with subregs.
       if (OpToFold.isReg() &&
-          (!TargetRegisterInfo::isVirtualRegister(OpToFold.getReg()) ||
-           OpToFold.getSubReg()))
+          !TargetRegisterInfo::isVirtualRegister(OpToFold.getReg()))
         continue;
-
 
       // We need mutate the operands of new mov instructions to add implicit
       // uses of EXEC, but adding them invalidates the use_iterator, so defer

@@ -61,17 +61,23 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   MachineFunction &MF = *MBB.getParent();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   const MachineFrameInfo& MFI = *MF.getFrameInfo();
-  int FrameOffset = MFI.getStackSize() + MFI.getObjectOffset(FrameIndex);
+  int64_t FrameOffset = MFI.getStackSize() + MFI.getObjectOffset(FrameIndex);
 
   if (MI.mayLoadOrStore()) {
     // If this is a load or store, make it relative to SP and fold the frame
-    // offset directly in
-    assert(MI.getOperand(1).getImm() == 0 &&
-           "Can't eliminate FI yet if offset is already set");
-    MI.getOperand(1).setImm(FrameOffset);
+    // offset directly in.
+    assert(FrameOffset >= 0 && MI.getOperand(1).getImm() >= 0);
+    int64_t Offset = MI.getOperand(1).getImm() + FrameOffset;
+
+    if (static_cast<uint64_t>(Offset) > std::numeric_limits<uint32_t>::max()) {
+      // If this happens the program is invalid, but better to error here than
+      // generate broken code.
+      report_fatal_error("Memory offset field overflow");
+    }
+    MI.getOperand(1).setImm(Offset);
     MI.getOperand(2).ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
   } else {
-    // Otherwise create an i32.add SP, offset and make it the operand
+    // Otherwise create an i32.add SP, offset and make it the operand.
     auto &MRI = MF.getRegInfo();
     const auto *TII = MF.getSubtarget().getInstrInfo();
 

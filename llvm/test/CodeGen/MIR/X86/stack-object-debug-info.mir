@@ -35,11 +35,14 @@
   !1 = !DIFile(filename: "t.c", directory: "")
   !2 = !{}
   !3 = !{i32 1, !"Debug Info Version", i32 3}
-  !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !6)
+  !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !9)
   !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false)
   !6 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
   !7 = !DIExpression()
   !8 = !DILocation(line: 0, scope: !5)
+  !9 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 2048, align: 8, elements: !10)
+  !10 = !{!11}
+  !11 = !DISubrange(count: 256)
 ...
 ---
 name:            foo
@@ -50,7 +53,7 @@ frameInfo:
 # CHECK-LABEL: foo
 # CHECK: stack:
 # CHECK:  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
-# CHECK-NEXT: di-expression: '!7', di-location: '!8' }
+# CHECK-NEXT: di-expression: '!10', di-location: '!11' }
 stack:
   - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
       di-expression: '!7', di-location: '!8' }

@@ -215,7 +215,7 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
 
   for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {
     unsigned SrcReg = MI.getOperand(I).getReg();
-    unsigned SrcSubReg = MI.getOperand(I).getReg();
+    unsigned SrcSubReg = MI.getOperand(I).getSubReg();
 
     const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
     assert(TRI->isSGPRClass(SrcRC) &&

@@ -8,8 +8,8 @@ declare i32 @llvm.r600.read.tidig.x() #1
 
 ; FUNC-LABEL: @test_fmin_legacy_f32
 ; EG: MIN *
-; SI-SAFE: v_min_legacy_f32_e32
-; SI-NONAN: v_min_f32_e32
+; SI-SAFE: v_min_legacy_f32_e64
+; SI-NONAN: v_min_f32_e64
 define void @test_fmin_legacy_f32(<4 x float> addrspace(1)* %out, <4 x float> inreg %reg0) #0 {
    %r0 = extractelement <4 x float> %reg0, i32 0
    %r1 = extractelement <4 x float> %reg0, i32 1
