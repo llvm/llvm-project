@@ -6683,7 +6683,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $CONFIGURATION_BUILD_DIR --allow-static-binding";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $BUILT_PRODUCTS_DIR --allow-static-binding";
 		};
 		49DD45051B4EDB4A00DB3579 /* Install Swift compiler resources */ = {
 			isa = PBXShellScriptBuildPhase;
