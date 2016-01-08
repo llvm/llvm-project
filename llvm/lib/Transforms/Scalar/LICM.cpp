@@ -203,9 +203,7 @@ bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   CurAST = new AliasSetTracker(*AA);
   // Collect Alias info from subloops.
-  for (Loop::iterator LoopItr = L->begin(), LoopItrE = L->end();
-       LoopItr != LoopItrE; ++LoopItr) {
-    Loop *InnerL = *LoopItr;
+  for (Loop *InnerL : L->getSubLoops()) {
     AliasSetTracker *InnerAST = LoopToAliasSetMap[InnerL];
     assert(InnerAST && "Where is my AST?");
 
@@ -227,9 +225,7 @@ bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
   // Because subloops have already been incorporated into AST, we skip blocks in
   // subloops.
   //
-  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
-       I != E; ++I) {
-    BasicBlock *BB = *I;
+  for (BasicBlock *BB : L->blocks()) {
     if (LI->getLoopFor(BB) == L)        // Ignore blocks in subloops.
       CurAST->add(*BB);                 // Incorporate the specified basic block
   }
@@ -263,9 +259,8 @@ bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
     PredIteratorCache PIC;
 
     // Loop over all of the alias sets in the tracker object.
-    for (AliasSetTracker::iterator I = CurAST->begin(), E = CurAST->end();
-         I != E; ++I)
-      Changed |= promoteLoopAccessesToScalars(*I, ExitBlocks, InsertPts, 
+    for (AliasSet &AS : *CurAST)
+      Changed |= promoteLoopAccessesToScalars(AS, ExitBlocks, InsertPts,
                                               PIC, LI, DT, CurLoop, 
                                               CurAST, &SafetyInfo);
 
@@ -324,9 +319,9 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 
   // We are processing blocks in reverse dfo, so process children first.
   const std::vector<DomTreeNode*> &Children = N->getChildren();
-  for (unsigned i = 0, e = Children.size(); i != e; ++i)
-    Changed |=
-        sinkRegion(Children[i], AA, LI, DT, TLI, CurLoop, CurAST, SafetyInfo);
+  for (DomTreeNode *Child : Children)
+    Changed |= sinkRegion(Child, AA, LI, DT, TLI, CurLoop, CurAST, SafetyInfo);
+
   // Only need to process the contents of this block if it is not part of a
   // subloop (which would already have been processed).
   if (inSubLoop(BB,CurLoop,LI)) return Changed;
@@ -407,9 +402,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     }
 
   const std::vector<DomTreeNode*> &Children = N->getChildren();
-  for (unsigned i = 0, e = Children.size(); i != e; ++i)
-    Changed |=
-        hoistRegion(Children[i], AA, LI, DT, TLI, CurLoop, CurAST, SafetyInfo);
+  for (DomTreeNode *Child : Children)
+    Changed |= hoistRegion(Child, AA, LI, DT, TLI, CurLoop, CurAST, SafetyInfo);
   return Changed;
 }
 
@@ -499,9 +493,7 @@ bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
       // If this call only reads from memory and there are no writes to memory
       // in the loop, we can hoist or sink the call as appropriate.
       bool FoundMod = false;
-      for (AliasSetTracker::iterator I = CurAST->begin(), E = CurAST->end();
-           I != E; ++I) {
-        AliasSet &AS = *I;
+      for (AliasSet &AS : *CurAST) {
         if (!AS.isForwardingAliasSet() && AS.isMod()) {
           FoundMod = true;
           break;
@@ -783,8 +775,8 @@ static bool isGuaranteedToExecute(const Instruction &Inst,
   CurLoop->getExitBlocks(ExitBlocks);
 
   // Verify that the block dominates each of the exit blocks of the loop.
-  for (unsigned i = 0, e = ExitBlocks.size(); i != e; ++i)
-    if (!DT->dominates(Inst.getParent(), ExitBlocks[i]))
+  for (BasicBlock *ExitBlock : ExitBlocks)
+    if (!DT->dominates(Inst.getParent(), ExitBlock))
       return false;
 
   // As a degenerate case, if the loop is statically infinite then we haven't
