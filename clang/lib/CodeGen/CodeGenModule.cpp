@@ -615,7 +615,20 @@ void CodeGenModule::setTLSMode(llvm::GlobalValue *GV, const VarDecl &D) const {
 }
 
 StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
-  StringRef &FoundStr = MangledDeclNames[GD.getCanonicalDecl()];
+  GlobalDecl CanonicalGD = GD.getCanonicalDecl();
+
+  // Some ABIs don't have constructor variants.  Make sure that base and
+  // complete constructors get mangled the same.
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(CanonicalGD.getDecl())) {
+    if (!getTarget().getCXXABI().hasConstructorVariants()) {
+      CXXCtorType OrigCtorType = GD.getCtorType();
+      assert(OrigCtorType == Ctor_Base || OrigCtorType == Ctor_Complete);
+      if (OrigCtorType == Ctor_Base)
+        CanonicalGD = GlobalDecl(CD, Ctor_Complete);
+    }
+  }
+
+  StringRef &FoundStr = MangledDeclNames[CanonicalGD];
   if (!FoundStr.empty())
     return FoundStr;
 

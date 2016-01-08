@@ -26,12 +26,10 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/FunctionInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
-#include "llvm/Object/FunctionIndexObjectFile.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -781,43 +779,11 @@ void CodeGenAction::ExecuteAction() {
       TheModule->setTargetTriple(TargetOpts.Triple);
     }
 
-    auto DiagHandler = [&](const DiagnosticInfo &DI) {
-      TheModule->getContext().diagnose(DI);
-    };
-
-    // If we are performing ThinLTO importing compilation (indicated by
-    // a non-empty index file option), then we need promote to global scope
-    // and rename any local values that are potentially exported to other
-    // modules. Do this early so that the rest of the compilation sees the
-    // promoted symbols.
-    std::unique_ptr<FunctionInfoIndex> Index;
-    if (!CI.getCodeGenOpts().ThinLTOIndexFile.empty()) {
-      ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
-          llvm::getFunctionIndexForFile(CI.getCodeGenOpts().ThinLTOIndexFile,
-                                        DiagHandler);
-      if (std::error_code EC = IndexOrErr.getError()) {
-        std::string Error = EC.message();
-        errs() << "Error loading index file '"
-               << CI.getCodeGenOpts().ThinLTOIndexFile << "': " << Error
-               << "\n";
-        return;
-      }
-      Index = std::move(IndexOrErr.get());
-      assert(Index);
-      // Currently this requires creating a new Module object.
-      std::unique_ptr<llvm::Module> RenamedModule =
-          renameModuleForThinLTO(std::move(TheModule), Index.get());
-      if (!RenamedModule)
-        return;
-
-      TheModule = std::move(RenamedModule);
-    }
-
     LLVMContext &Ctx = TheModule->getContext();
     Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler);
     EmitBackendOutput(CI.getDiagnostics(), CI.getCodeGenOpts(), TargetOpts,
                       CI.getLangOpts(), CI.getTarget().getDataLayoutString(),
-                      TheModule.get(), BA, OS, std::move(Index));
+                      TheModule.get(), BA, OS);
     return;
   }
 
