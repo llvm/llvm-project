@@ -637,8 +637,10 @@ LoopInfo::LoopInfo(const DominatorTreeBase<BasicBlock> &DomTree) {
   analyze(DomTree);
 }
 
-void LoopInfo::updateUnloop(Loop *Unloop) {
-  Unloop->markUnlooped();
+void LoopInfo::markAsRemoved(Loop *Unloop) {
+  assert(!Unloop->isInvalid() && "Loop has already been removed");
+  Unloop->invalidate();
+  RemovedLoops.push_back(Unloop);
 
   // First handle the special case of no parent loop to simplify the algorithm.
   if (!Unloop->getParentLoop()) {

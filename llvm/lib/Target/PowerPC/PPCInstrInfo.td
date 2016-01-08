@@ -2299,22 +2299,35 @@ def RESTORE_VRSAVE : Pseudo<(outs VRSAVERC:$vrsave), (ins memri:$F),
                      "#RESTORE_VRSAVE", []>;
 
 let hasSideEffects = 0 in {
+// mtocrf's input needs to be prepared by shifting by an amount dependent
+// on the cr register selected. Thus, post-ra anti-dep breaking must not
+// later change that register assignment.
+let hasExtraDefRegAllocReq = 1 in {
 def MTOCRF: XFXForm_5a<31, 144, (outs crbitm:$FXM), (ins gprc:$ST),
                        "mtocrf $FXM, $ST", IIC_BrMCRX>,
             PPC970_DGroup_First, PPC970_Unit_CRU;
 
+// Similarly to mtocrf, the mask for mtcrf must be prepared in a way that
+// is dependent on the cr fields being set.
 def MTCRF : XFXForm_5<31, 144, (outs), (ins i32imm:$FXM, gprc:$rS),
                       "mtcrf $FXM, $rS", IIC_BrMCRX>,
             PPC970_MicroCode, PPC970_Unit_CRU;
+} // hasExtraDefRegAllocReq = 1
 
-let hasExtraSrcRegAllocReq = 1 in // to enable post-ra anti-dep breaking.
+// mfocrf's input needs to be prepared by shifting by an amount dependent
+// on the cr register selected. Thus, post-ra anti-dep breaking must not
+// later change that register assignment.
+let hasExtraSrcRegAllocReq = 1 in {
 def MFOCRF: XFXForm_5a<31, 19, (outs gprc:$rT), (ins crbitm:$FXM),
                        "mfocrf $rT, $FXM", IIC_SprMFCRF>,
             PPC970_DGroup_First, PPC970_Unit_CRU;
 
+// Similarly to mfocrf, the mask for mfcrf must be prepared in a way that
+// is dependent on the cr fields being copied.
 def MFCR : XFXForm_3<31, 19, (outs gprc:$rT), (ins),
                      "mfcr $rT", IIC_SprMFCR>,
                      PPC970_MicroCode, PPC970_Unit_CRU;
+} // hasExtraSrcRegAllocReq = 1
 } // hasSideEffects = 0
 
 // Pseudo instruction to perform FADD in round-to-zero mode.

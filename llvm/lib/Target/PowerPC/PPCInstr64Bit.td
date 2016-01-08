@@ -299,22 +299,35 @@ def : Pat<(PPCtc_return CTRRC8:$dst, imm:$imm),
 // 64-bit CR instructions
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let hasSideEffects = 0 in {
+// mtocrf's input needs to be prepared by shifting by an amount dependent
+// on the cr register selected. Thus, post-ra anti-dep breaking must not
+// later change that register assignment.
+let hasExtraDefRegAllocReq = 1 in {
 def MTOCRF8: XFXForm_5a<31, 144, (outs crbitm:$FXM), (ins g8rc:$ST),
                         "mtocrf $FXM, $ST", IIC_BrMCRX>,
             PPC970_DGroup_First, PPC970_Unit_CRU;
 
+// Similarly to mtocrf, the mask for mtcrf must be prepared in a way that
+// is dependent on the cr fields being set.
 def MTCRF8 : XFXForm_5<31, 144, (outs), (ins i32imm:$FXM, g8rc:$rS),
                       "mtcrf $FXM, $rS", IIC_BrMCRX>,
             PPC970_MicroCode, PPC970_Unit_CRU;
+} // hasExtraDefRegAllocReq = 1
 
-let hasExtraSrcRegAllocReq = 1 in // to enable post-ra anti-dep breaking.
+// mfocrf's input needs to be prepared by shifting by an amount dependent
+// on the cr register selected. Thus, post-ra anti-dep breaking must not
+// later change that register assignment.
+let hasExtraSrcRegAllocReq = 1 in {
 def MFOCRF8: XFXForm_5a<31, 19, (outs g8rc:$rT), (ins crbitm:$FXM),
                         "mfocrf $rT, $FXM", IIC_SprMFCRF>,
              PPC970_DGroup_First, PPC970_Unit_CRU;
 
+// Similarly to mfocrf, the mask for mfcrf must be prepared in a way that
+// is dependent on the cr fields being copied.
 def MFCR8 : XFXForm_3<31, 19, (outs g8rc:$rT), (ins),
                      "mfcr $rT", IIC_SprMFCR>,
                      PPC970_MicroCode, PPC970_Unit_CRU;
+} // hasExtraSrcRegAllocReq = 1
 } // hasSideEffects = 0
 
 let hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1 in {

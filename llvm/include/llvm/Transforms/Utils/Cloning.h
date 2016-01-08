@@ -147,42 +147,12 @@ void CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                        ValueMapTypeRemapper *TypeMapper = nullptr,
                        ValueMaterializer *Materializer = nullptr);
 
-/// A helper class used with CloneAndPruneIntoFromInst to change the default
-/// behavior while instructions are being cloned.
-class CloningDirector {
-public:
-  /// This enumeration describes the way CloneAndPruneIntoFromInst should
-  /// proceed after the CloningDirector has examined an instruction.
-  enum CloningAction {
-    ///< Continue cloning the instruction (default behavior).
-    CloneInstruction,
-    ///< Skip this instruction but continue cloning the current basic block.
-    SkipInstruction,
-    ///< Skip this instruction and stop cloning the current basic block.
-    StopCloningBB,
-    ///< Don't clone the terminator but clone the current block's successors.
-    CloneSuccessors
-  };
-
-  virtual ~CloningDirector() {}
-
-  /// Subclasses must override this function to customize cloning behavior.
-  virtual CloningAction handleInstruction(ValueToValueMapTy &VMap,
-                                          const Instruction *Inst,
-                                          BasicBlock *NewBB) = 0;
-
-  virtual ValueMapTypeRemapper *getTypeRemapper() { return nullptr; }
-  virtual ValueMaterializer *getValueMaterializer() { return nullptr; }
-};
-
 void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                const Instruction *StartingInst,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-                               SmallVectorImpl<ReturnInst*> &Returns,
-                               const char *NameSuffix = "", 
-                               ClonedCodeInfo *CodeInfo = nullptr,
-                               CloningDirector *Director = nullptr);
-
+                               SmallVectorImpl<ReturnInst *> &Returns,
+                               const char *NameSuffix = "",
+                               ClonedCodeInfo *CodeInfo = nullptr);
 
 /// CloneAndPruneFunctionInto - This works exactly like CloneFunctionInto,
 /// except that it does some simple constant prop and DCE on the fly.  The

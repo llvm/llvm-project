@@ -744,7 +744,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SUBE,    MVT::i32, Custom);
   }
 
-  if (!Subtarget->isThumb1Only())
+  if (!Subtarget->isThumb1Only() && Subtarget->hasV6T2Ops())
     setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
 
   // ARM does not have ROTL.

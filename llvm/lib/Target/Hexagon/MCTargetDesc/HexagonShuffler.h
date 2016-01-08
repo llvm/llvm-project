@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -53,9 +54,11 @@ public:
 
 // HVX insn resources.
 class HexagonCVIResource : public HexagonResource {
+public:
   typedef std::pair<unsigned, unsigned> UnitsAndLanes;
   typedef llvm::DenseMap<unsigned, UnitsAndLanes> TypeUnitsAndLanes;
 
+private:
   // Available HVX slots.
   enum {
     CVI_NONE = 0,
@@ -65,9 +68,7 @@ class HexagonCVIResource : public HexagonResource {
     CVI_MPY1 = 1 << 3
   };
 
-  static bool SetUp;
-  static bool setup();
-  static TypeUnitsAndLanes *TUL;
+  TypeUnitsAndLanes *TUL;
 
   // Count of adjacent slots that the insn requires to be executed.
   unsigned Lanes;
@@ -81,7 +82,9 @@ class HexagonCVIResource : public HexagonResource {
   void setStore(bool f = true) { Store = f; };
 
 public:
-  HexagonCVIResource(MCInstrInfo const &MCII, unsigned s, MCInst const *id);
+  HexagonCVIResource(TypeUnitsAndLanes *TUL, MCInstrInfo const &MCII,
+                     unsigned s, MCInst const *id);
+  static void SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU);
 
   bool isValid() const { return (Valid); };
   unsigned getLanes() const { return (Lanes); };
@@ -100,10 +103,11 @@ class HexagonInstr {
   bool SoloException;
 
 public:
-  HexagonInstr(MCInstrInfo const &MCII, MCInst const *id,
+  HexagonInstr(HexagonCVIResource::TypeUnitsAndLanes *T,
+               MCInstrInfo const &MCII, MCInst const *id,
                MCInst const *Extender, unsigned s, bool x = false)
-      : ID(id), Extender(Extender), Core(s), CVI(MCII, s, id),
-        SoloException(x){};
+      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id),
+        SoloException(x) {};
 
   MCInst const *getDesc() const { return (ID); };
 
@@ -135,6 +139,8 @@ class HexagonShuffler {
 
   // Shuffling error code.
   unsigned Error;
+
+  HexagonCVIResource::TypeUnitsAndLanes TUL;
 
 protected:
   int64_t BundleFlags;

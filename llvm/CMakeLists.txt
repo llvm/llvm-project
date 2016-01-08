@@ -697,6 +697,7 @@ if( LLVM_INCLUDE_TESTS )
       EXCLUDE_FROM_ALL
       NO_INSTALL)
   endif()
+  add_subdirectory(utils/lit)
   add_subdirectory(test)
   add_subdirectory(unittests)
   if (MSVC)

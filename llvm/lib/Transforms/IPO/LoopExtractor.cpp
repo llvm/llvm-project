@@ -38,7 +38,7 @@ namespace {
     static char ID; // Pass identification, replacement for typeid
     unsigned NumLoops;
 
-    explicit LoopExtractor(unsigned numLoops = ~0) 
+    explicit LoopExtractor(unsigned numLoops = ~0)
       : LoopPass(ID), NumLoops(numLoops) {
         initializeLoopExtractorPass(*PassRegistry::getPassRegistry());
       }
@@ -143,7 +143,7 @@ bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &) {
       Changed = true;
       // After extraction, the loop is replaced by a function call, so
       // we shouldn't try to run any more loop passes on it.
-      LI.updateUnloop(L);
+      LI.markAsRemoved(L);
     }
     ++NumExtracted;
   }

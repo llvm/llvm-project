@@ -848,7 +848,7 @@ namespace llvm {
   public:
     explicit ConnectedVNInfoEqClasses(LiveIntervals &lis) : LIS(lis) {}
 
-    /// Classify the values in LI into connected components.
+    /// Classify the values in \p LR into connected components.
     /// Returns the number of connected components.
     unsigned Classify(const LiveRange &LR);
 

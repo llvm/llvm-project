@@ -136,7 +136,7 @@ reviewers, the ``Differential Revision``, etc from the review and commit it to t
   arc commit --revision D<Revision>
 
 
-When committing an LLVM change that has been reviewed using
+When committing a change that has been reviewed using
 Phabricator, the convention is for the commit message to end with the
 line:
 
@@ -152,6 +152,12 @@ Note that Arcanist will add this automatically.
 This allows people reading the version history to see the review for
 context.  This also allows Phabricator to detect the commit, close the
 review, and add a link from the review to the commit.
+
+If you use ``git`` or ``svn`` to commit the change and forget to add the line
+to your commit message, you should close the review manually. In the web UI,
+under "Leap Into Action" put the SVN revision number in the Comment, set the
+Action to "Close Revision" and click Submit. Note the review must have been
+Accepted first.
 
 Abandoning a change
 -------------------

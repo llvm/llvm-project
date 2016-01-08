@@ -245,7 +245,7 @@ bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &) {
     loopInfo.removeBlock(BB);
 
   // The last step is to update LoopInfo now that we've eliminated this loop.
-  loopInfo.updateUnloop(L);
+  loopInfo.markAsRemoved(L);
   Changed = true;
 
   ++NumDeleted;

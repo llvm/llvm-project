@@ -148,11 +148,15 @@ void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     TS->EmitAMDGPUHsaProgramScopeGlobal(GV->getName());
   }
 
+  MCSymbolELF *GVSym = cast<MCSymbolELF>(getSymbol(GV));
   const DataLayout &DL = getDataLayout();
+
+  // Emit the size
+  uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
+  OutStreamer->emitELFSize(GVSym, MCConstantExpr::create(Size, OutContext));
   OutStreamer->PushSection();
   OutStreamer->SwitchSection(
       getObjFileLowering().SectionForGlobal(GV, *Mang, TM));
-  MCSymbol *GVSym = getSymbol(GV);
   const Constant *C = GV->getInitializer();
   OutStreamer->EmitLabel(GVSym);
   EmitGlobalConstant(DL, C);

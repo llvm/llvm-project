@@ -528,7 +528,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   Loop *OuterL = L->getParentLoop();
   // Update LoopInfo if the loop is completely removed.
   if (CompletelyUnroll)
-    LI->updateUnloop(L);;
+    LI->markAsRemoved(L);
 
   // If we have a pass and a DominatorTree we should re-simplify impacted loops
   // to ensure subsequent analyses can rely on this form. We want to simplify
@@ -542,7 +542,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
       // loop's last loop latch is guaranteed to be in the outermost loop after
-      // LoopInfo's been updated by updateUnloop.
+      // LoopInfo's been updated by markAsRemoved.
       Loop *LatchLoop = LI->getLoopFor(Latches.back());
       if (!OuterL->contains(LatchLoop))
         while (OuterL->getParentLoop() != LatchLoop)
