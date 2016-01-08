@@ -17,41 +17,49 @@ define void @test() {
 }
 
 ; ASM: .amdgpu_hsa_module_global internal_global
+; ASM: .size internal_global_program, 4
 ; ASM: .hsadata_global_program
 ; ASM: internal_global_program:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_module_global common_global
+; ASM: .size common_global_program, 4
 ; ASM: .hsadata_global_program
 ; ASM: common_global_program:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_program_global external_global
+; ASM: .size external_global_program, 4
 ; ASM: .hsadata_global_program
 ; ASM: external_global_program:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_module_global internal_global
+; ASM: .size internal_global_agent, 4
 ; ASM: .hsadata_global_agent
 ; ASM: internal_global_agent:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_module_global common_global
+; ASM: .size common_global_agent, 4
 ; ASM: .hsadata_global_agent
 ; ASM: common_global_agent:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_program_global external_global
+; ASM: .size external_global_agent, 4
 ; ASM: .hsadata_global_agent
 ; ASM: external_global_agent:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_module_global internal_readonly
+; ASM: .size internal_readonly, 4
 ; ASM: .hsatext
 ; ASM: internal_readonly:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_program_global external_readonly
+; ASM: .size external_readonly, 4
 ; ASM: .hsatext
 ; ASM: external_readonly:
 ; ASM: .long 0
@@ -79,18 +87,21 @@ define void @test() {
 
 ; ELF: Symbol {
 ; ELF: Name: common_global_agent
+; ELF: Size: 4
 ; ELF: Binding: Local
 ; ELF: Section: .hsadata_global_agent
 ; ELF: }
 
 ; ELF: Symbol {
 ; ELF: Name: common_global_program
+; ELF: Size: 4
 ; ELF: Binding: Local
 ; ELF: Section: .hsadata_global_program
 ; ELF: }
 
 ; ELF: Symbol {
 ; ELF: Name: internal_global_agent
+; ELF: Size: 4
 ; ELF: Binding: Local
 ; ELF: Type: Object
 ; ELF: Section: .hsadata_global_agent
@@ -98,6 +109,7 @@ define void @test() {
 
 ; ELF: Symbol {
 ; ELF: Name: internal_global_program
+; ELF: Size: 4
 ; ELF: Binding: Local
 ; ELF: Type: Object
 ; ELF: Section: .hsadata_global_program
@@ -105,6 +117,7 @@ define void @test() {
 
 ; ELF: Symbol {
 ; ELF: Name: internal_readonly
+; ELF: Size: 4
 ; ELF: Binding: Local
 ; ELF: Type: Object
 ; ELF: Section: .hsatext
@@ -112,6 +125,7 @@ define void @test() {
 
 ; ELF: Symbol {
 ; ELF: Name: external_global_agent
+; ELF: Size: 4
 ; ELF: Binding: Global
 ; ELF: Type: Object
 ; ELF: Section: .hsadata_global_agent
@@ -119,6 +133,7 @@ define void @test() {
 
 ; ELF: Symbol {
 ; ELF: Name: external_global_program
+; ELF: Size: 4
 ; ELF: Binding: Global
 ; ELF: Type: Object
 ; ELF: Section: .hsadata_global_program
@@ -126,6 +141,7 @@ define void @test() {
 
 ; ELF: Symbol {
 ; ELF: Name: external_readonly
+; ELF: Size: 4
 ; ELF: Binding: Global
 ; ELF: Type: Object
 ; ELF: Section: .hsatext

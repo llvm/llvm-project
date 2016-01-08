@@ -18,3 +18,19 @@ define x86_fp80 @foo(x86_fp80 %a) {
 }
 
 declare x86_fp80 @copysignl(x86_fp80, x86_fp80) nounwind readnone
+
+; This would crash:
+; https://llvm.org/bugs/show_bug.cgi?id=26070
+
+define float @pr26070() {
+  %c = call float @copysignf(float 1.0, float undef) readnone
+  ret float %c
+
+; CHECK-LABEL: pr26070:
+; CHECK:       andps
+; CHECK-NEXT:  orps
+; CHECK-NEXT:  retq
+}
+
+declare float @copysignf(float, float)
+

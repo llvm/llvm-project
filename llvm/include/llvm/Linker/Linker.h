@@ -67,10 +67,9 @@ public:
                       DenseMap<unsigned, MDNode *> *ValIDToTempMDMap);
 };
 
-/// Create a new module with exported local functions renamed and promoted
-/// for ThinLTO.
-std::unique_ptr<Module> renameModuleForThinLTO(std::unique_ptr<Module> M,
-                                               const FunctionInfoIndex *Index);
+/// Perform in-place global value handling on the given Module for
+/// exported local functions renamed and promoted for ThinLTO.
+bool renameModuleForThinLTO(Module &M, const FunctionInfoIndex *Index);
 
 } // End llvm namespace
 

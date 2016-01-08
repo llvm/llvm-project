@@ -951,17 +951,17 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
 
       // If there is an non-load/store instruction in the loop, we can't promote
       // it.
-      if (const LoadInst *load = dyn_cast<LoadInst>(UI)) {
-        assert(!load->isVolatile() && "AST broken");
-        if (!load->isSimple())
+      if (const LoadInst *Load = dyn_cast<LoadInst>(UI)) {
+        assert(!Load->isVolatile() && "AST broken");
+        if (!Load->isSimple())
           return Changed;
-      } else if (const StoreInst *store = dyn_cast<StoreInst>(UI)) {
+      } else if (const StoreInst *Store = dyn_cast<StoreInst>(UI)) {
         // Stores *of* the pointer are not interesting, only stores *to* the
         // pointer.
         if (UI->getOperand(1) != ASIV)
           continue;
-        assert(!store->isVolatile() && "AST broken");
-        if (!store->isSimple())
+        assert(!Store->isVolatile() && "AST broken");
+        if (!Store->isSimple())
           return Changed;
         // Don't sink stores from loops without dedicated block exits. Exits
         // containing indirect branches are not transformed by loop simplify,
@@ -979,7 +979,7 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
         // restrictive (and performant) alignment and if we are sure this
         // instruction will be executed, update the alignment.
         // Larger is better, with the exception of 0 being the best alignment.
-        unsigned InstAlignment = store->getAlignment();
+        unsigned InstAlignment = Store->getAlignment();
         if ((InstAlignment > Alignment || InstAlignment == 0) && Alignment != 0)
           if (isGuaranteedToExecute(*UI, DT, CurLoop, SafetyInfo)) {
             GuaranteedToExecute = true;

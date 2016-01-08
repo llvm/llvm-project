@@ -6,16 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements a simple interprocedural pass which walks the
-// call-graph, looking for functions which do not access or only read
-// non-local memory, and marking them readnone/readonly.  It does the
-// same with function arguments independently, marking them readonly/
-// readnone/nocapture.  Finally, well-known library call declarations
-// are marked with all attributes that are consistent with the
-// function's standard definition. This pass is implemented as a
-// bottom-up traversal of the call-graph.
-//
+///
+/// \file
+/// This file implements interprocedural passes which walk the
+/// call-graph deducing and/or propagating function attributes.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO.h"
@@ -57,19 +52,14 @@ typedef SmallSetVector<Function *, 8> SCCNodeSet;
 }
 
 namespace {
-struct FunctionAttrs : public CallGraphSCCPass {
+struct PostOrderFunctionAttrs : public CallGraphSCCPass {
   static char ID; // Pass identification, replacement for typeid
-  FunctionAttrs() : CallGraphSCCPass(ID) {
-    initializeFunctionAttrsPass(*PassRegistry::getPassRegistry());
+  PostOrderFunctionAttrs() : CallGraphSCCPass(ID) {
+    initializePostOrderFunctionAttrsPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
-  bool doInitialization(CallGraph &CG) override {
-    Revisit.clear();
-    return false;
-  }
-  bool doFinalization(CallGraph &CG) override;
-  
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<AssumptionCacheTracker>();
@@ -79,20 +69,19 @@ struct FunctionAttrs : public CallGraphSCCPass {
 
 private:
   TargetLibraryInfo *TLI;
-  SmallVector<WeakVH,16> Revisit;
 };
 }
 
-char FunctionAttrs::ID = 0;
-INITIALIZE_PASS_BEGIN(FunctionAttrs, "functionattrs",
+char PostOrderFunctionAttrs::ID = 0;
+INITIALIZE_PASS_BEGIN(PostOrderFunctionAttrs, "functionattrs",
                       "Deduce function attributes", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(FunctionAttrs, "functionattrs",
+INITIALIZE_PASS_END(PostOrderFunctionAttrs, "functionattrs",
                     "Deduce function attributes", false, false)
 
-Pass *llvm::createFunctionAttrsPass() { return new FunctionAttrs(); }
+Pass *llvm::createPostOrderFunctionAttrsPass() { return new PostOrderFunctionAttrs(); }
 
 namespace {
 /// The three kinds of memory access relevant to 'readonly' and
@@ -949,8 +938,7 @@ static bool setDoesNotRecurse(Function &F) {
   return true;
 }
 
-static bool addNoRecurseAttrs(const CallGraphSCC &SCC,
-                              SmallVectorImpl<WeakVH> &Revisit) {
+static bool addNoRecurseAttrs(const CallGraphSCC &SCC) {
   // Try and identify functions that do not recurse.
 
   // If the SCC contains multiple nodes we know for sure there is recursion.
@@ -973,32 +961,11 @@ static bool addNoRecurseAttrs(const CallGraphSCC &SCC,
     // Function calls a potentially recursive function.
     return setDoesNotRecurse(*F);
 
-  // We know that F is not obviously recursive, but we haven't been able to
-  // prove that it doesn't actually recurse. Add it to the Revisit list to try
-  // again top-down later.
-  Revisit.push_back(F);
+  // Nothing else we can deduce usefully during the postorder traversal.
   return false;
 }
 
-static bool addNoRecurseAttrsTopDownOnly(Function *F) {
-  // If F is internal and all uses are in norecurse functions, then F is also
-  // norecurse.
-  if (F->doesNotRecurse())
-    return false;
-  if (F->hasInternalLinkage()) {
-    for (auto *U : F->users())
-      if (auto *I = dyn_cast<Instruction>(U)) {
-        if (!I->getParent()->getParent()->doesNotRecurse())
-          return false;
-      } else {
-        return false;
-      }
-    return setDoesNotRecurse(*F);
-  }
-  return false;
-}
-
-bool FunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
+bool PostOrderFunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   bool Changed = false;
 
@@ -1040,19 +1007,100 @@ bool FunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
     Changed |= addNoAliasAttrs(SCCNodes);
     Changed |= addNonNullAttrs(SCCNodes, *TLI);
   }
-  
-  Changed |= addNoRecurseAttrs(SCC, Revisit);
+
+  Changed |= addNoRecurseAttrs(SCC);
   return Changed;
 }
 
-bool FunctionAttrs::doFinalization(CallGraph &CG) {
+namespace {
+/// A pass to do RPO deduction and propagation of function attributes.
+///
+/// This pass provides a general RPO or "top down" propagation of
+/// function attributes. For a few (rare) cases, we can deduce significantly
+/// more about function attributes by working in RPO, so this pass
+/// provides the compliment to the post-order pass above where the majority of
+/// deduction is performed.
+// FIXME: Currently there is no RPO CGSCC pass structure to slide into and so
+// this is a boring module pass, but eventually it should be an RPO CGSCC pass
+// when such infrastructure is available.
+struct ReversePostOrderFunctionAttrs : public ModulePass {
+  static char ID; // Pass identification, replacement for typeid
+  ReversePostOrderFunctionAttrs() : ModulePass(ID) {
+    initializeReversePostOrderFunctionAttrsPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<CallGraphWrapperPass>();
+  }
+};
+}
+
+char ReversePostOrderFunctionAttrs::ID = 0;
+INITIALIZE_PASS_BEGIN(ReversePostOrderFunctionAttrs, "rpo-functionattrs",
+                      "Deduce function attributes in RPO", false, false)
+INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
+INITIALIZE_PASS_END(ReversePostOrderFunctionAttrs, "rpo-functionattrs",
+                    "Deduce function attributes in RPO", false, false)
+
+Pass *llvm::createReversePostOrderFunctionAttrsPass() {
+  return new ReversePostOrderFunctionAttrs();
+}
+
+static bool addNoRecurseAttrsTopDown(Function &F) {
+  // We check the preconditions for the function prior to calling this to avoid
+  // the cost of building up a reversible post-order list. We assert them here
+  // to make sure none of the invariants this relies on were violated.
+  assert(!F.isDeclaration() && "Cannot deduce norecurse without a definition!");
+  assert(!F.doesNotRecurse() &&
+         "This function has already been deduced as norecurs!");
+  assert(F.hasInternalLinkage() &&
+         "Can only do top-down deduction for internal linkage functions!");
+
+  // If F is internal and all of its uses are calls from a non-recursive
+  // functions, then none of its calls could in fact recurse without going
+  // through a function marked norecurse, and so we can mark this function too
+  // as norecurse. Note that the uses must actually be calls -- otherwise
+  // a pointer to this function could be returned from a norecurse function but
+  // this function could be recursively (indirectly) called. Note that this
+  // also detects if F is directly recursive as F is not yet marked as
+  // a norecurse function.
+  for (auto *U : F.users()) {
+    auto *I = dyn_cast<Instruction>(U);
+    if (!I)
+      return false;
+    CallSite CS(I);
+    if (!CS || !CS.getParent()->getParent()->doesNotRecurse())
+      return false;
+  }
+  return setDoesNotRecurse(F);
+}
+
+bool ReversePostOrderFunctionAttrs::runOnModule(Module &M) {
+  // We only have a post-order SCC traversal (because SCCs are inherently
+  // discovered in post-order), so we accumulate them in a vector and then walk
+  // it in reverse. This is simpler than using the RPO iterator infrastructure
+  // because we need to combine SCC detection and the PO walk of the call
+  // graph. We can also cheat egregiously because we're primarily interested in
+  // synthesizing norecurse and so we can only save the singular SCCs as SCCs
+  // with multiple functions in them will clearly be recursive.
+  auto &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
+  SmallVector<Function *, 16> Worklist;
+  for (scc_iterator<CallGraph *> I = scc_begin(&CG); !I.isAtEnd(); ++I) {
+    if (I->size() != 1)
+      continue;
+
+    Function *F = I->front()->getFunction();
+    if (F && !F->isDeclaration() && !F->doesNotRecurse() &&
+        F->hasInternalLinkage())
+      Worklist.push_back(F);
+  }
+
   bool Changed = false;
-  // When iterating over SCCs we visit functions in a bottom-up fashion. Some of
-  // the rules we have for identifying norecurse functions work best with a
-  // top-down walk, so look again at all the functions we previously marked as
-  // worth revisiting, in top-down order.
-  for (auto &F : reverse(Revisit))
-    if (F)
-      Changed |= addNoRecurseAttrsTopDownOnly(cast<Function>((Value*)F));
+  for (auto *F : reverse(Worklist))
+    Changed |= addNoRecurseAttrsTopDown(*F);
+
   return Changed;
 }

@@ -53,6 +53,11 @@ public:
   /// \p MBB will be correctly handled by the target.
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
 
+  /// Disable shrink wrap as tBfar/BL will be used to adjust for long jumps.
+  bool enableShrinkWrapping(const MachineFunction &MF) const override {
+    return false;
+  }
+
 private:
   /// Check if the frame lowering of \p MF needs a special fixup
   /// code sequence for the epilogue.

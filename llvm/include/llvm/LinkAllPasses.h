@@ -157,7 +157,8 @@ namespace {
       (void) llvm::createPostDomTree();
       (void) llvm::createInstructionNamerPass();
       (void) llvm::createMetaRenamerPass();
-      (void) llvm::createFunctionAttrsPass();
+      (void) llvm::createPostOrderFunctionAttrsPass();
+      (void) llvm::createReversePostOrderFunctionAttrsPass();
       (void) llvm::createMergeFunctionsPass();
       (void) llvm::createPrintModulePass(*(llvm::raw_ostream*)nullptr);
       (void) llvm::createPrintFunctionPass(*(llvm::raw_ostream*)nullptr);

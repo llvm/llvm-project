@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -functionattrs -S | FileCheck %s
+; RUN: opt < %s -basicaa -functionattrs -rpo-functionattrs -S | FileCheck %s
 
 ; CHECK: define i32 @leaf() #0
 define i32 @leaf() {

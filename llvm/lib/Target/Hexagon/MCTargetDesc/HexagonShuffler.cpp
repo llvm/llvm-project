@@ -95,14 +95,7 @@ unsigned HexagonResource::setWeight(unsigned s) {
   return (Weight);
 }
 
-HexagonCVIResource::TypeUnitsAndLanes *HexagonCVIResource::TUL;
-
-bool HexagonCVIResource::SetUp = HexagonCVIResource::setup();
-
-bool HexagonCVIResource::setup() {
-  assert(!TUL);
-  TUL = new (TypeUnitsAndLanes);
-
+void HexagonCVIResource::SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU) {
   (*TUL)[HexagonII::TypeCVI_VA] =
       UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
   (*TUL)[HexagonII::TypeCVI_VA_DV] = UnitsAndLanes(CVI_XLANE | CVI_MPY0, 2);
@@ -123,13 +116,12 @@ bool HexagonCVIResource::setup() {
   (*TUL)[HexagonII::TypeCVI_VM_NEW_ST] = UnitsAndLanes(CVI_NONE, 0);
   (*TUL)[HexagonII::TypeCVI_VM_STU] = UnitsAndLanes(CVI_XLANE, 1);
   (*TUL)[HexagonII::TypeCVI_HIST] = UnitsAndLanes(CVI_XLANE, 4);
-
-  return true;
 }
 
-HexagonCVIResource::HexagonCVIResource(MCInstrInfo const &MCII, unsigned s,
+HexagonCVIResource::HexagonCVIResource(TypeUnitsAndLanes *TUL,
+                                       MCInstrInfo const &MCII, unsigned s,
                                        MCInst const *id)
-    : HexagonResource(s) {
+    : HexagonResource(s), TUL(TUL) {
   unsigned T = HexagonMCInstrInfo::getType(MCII, *id);
 
   if (TUL->count(T)) {
@@ -153,6 +145,7 @@ HexagonShuffler::HexagonShuffler(MCInstrInfo const &MCII,
                                  MCSubtargetInfo const &STI)
     : MCII(MCII), STI(STI) {
   reset();
+  HexagonCVIResource::SetupTUL(&TUL, STI.getCPU());
 }
 
 void HexagonShuffler::reset() {
@@ -163,7 +156,7 @@ void HexagonShuffler::reset() {
 
 void HexagonShuffler::append(MCInst const *ID, MCInst const *Extender,
                              unsigned S, bool X) {
-  HexagonInstr PI(MCII, ID, Extender, S, X);
+  HexagonInstr PI(&TUL, MCII, ID, Extender, S, X);
 
   Packet.push_back(PI);
 }

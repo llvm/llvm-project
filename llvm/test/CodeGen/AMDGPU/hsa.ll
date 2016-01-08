@@ -28,6 +28,7 @@
 
 ; ELF: Symbol {
 ; ELF: Name: simple
+; ELF: Size: 296
 ; ELF: Type: AMDGPU_HSA_KERNEL (0xA)
 ; ELF: }
 
@@ -51,6 +52,9 @@
 ; HSA-VI: s_mov_b32 s[[HI:[0-9]]], 0x1100f000
 ; Make sure we generate flat store for HSA
 ; HSA: flat_store_dword v{{[0-9]+}}
+
+; HSA: .Lfunc_end0:
+; HSA: .size   simple, .Lfunc_end0-simple
 
 define void @simple(i32 addrspace(1)* %out) {
 entry:

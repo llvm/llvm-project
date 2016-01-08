@@ -182,7 +182,7 @@ COVMAP_HEADER(uint32_t, Int32Ty, FilenamesSize, \
 COVMAP_HEADER(uint32_t, Int32Ty, CoverageSize, \
               llvm::ConstantInt::get(Int32Ty, CoverageMappingSize))
 COVMAP_HEADER(uint32_t, Int32Ty, Version, \
-              llvm::ConstantInt::get(Int32Ty, CoverageMappingVersion1))
+              llvm::ConstantInt::get(Int32Ty, CoverageMappingCurrentVersion))
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
 
@@ -699,6 +699,14 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
 #define INSTR_PROF_RAW_VERSION 2
 #define INSTR_PROF_INDEX_VERSION 3
 #define INSTR_PROF_COVMAP_VERSION 0
+
+/* Profile version is always of type uint_64_t. Reserve the upper 8 bits in the
+ * version for other variants of profile. We set the lowest bit of the upper 8
+ * bits (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentaiton
+ * generated profile, and 0 if this is a Clang FE generated profile.
+*/
+#define VARIANT_MASKS_ALL 0xff00000000000000ULL
+#define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
 
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME __llvm_prf_data

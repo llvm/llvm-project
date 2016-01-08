@@ -571,10 +571,12 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       }
     }
 
+  // Update the location of C++ catch objects for the MSVC personality routine.
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
-        if (SlotRemap.count(H.CatchObj.FrameIndex))
+        if (H.CatchObj.FrameIndex != INT_MAX &&
+            SlotRemap.count(H.CatchObj.FrameIndex))
           H.CatchObj.FrameIndex = SlotRemap[H.CatchObj.FrameIndex];
 
   DEBUG(dbgs()<<"Fixed "<<FixedMemOp<<" machine memory operands.\n");

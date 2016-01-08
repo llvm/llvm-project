@@ -7325,6 +7325,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // fold (bitcast (fneg x)) ->
   //     flipbit = signbit
   //     (xor (bitcast x) (build_pair flipbit, flipbit))
+  //
   // fold (bitcast (fabs x)) ->
   //     flipbit = (and (extract_element (bitcast x), 0), signbit)
   //     (xor (bitcast x) (build_pair flipbit, flipbit))
@@ -8794,20 +8795,21 @@ SDValue DAGCombiner::visitFSQRT(SDNode *N) {
                      ZeroCmp, Zero, RV);
 }
 
+/// copysign(x, fp_extend(y)) -> copysign(x, y)
+/// copysign(x, fp_round(y)) -> copysign(x, y)
 static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(SDNode *N) {
-  // copysign(x, fp_extend(y)) -> copysign(x, y)
-  // copysign(x, fp_round(y)) -> copysign(x, y)
-  // Do not optimize out type conversion of f128 type yet.
-  // For some target like x86_64, configuration is changed
-  // to keep one f128 value in one SSE register, but
-  // instruction selection cannot handle FCOPYSIGN on
-  // SSE registers yet.
   SDValue N1 = N->getOperand(1);
-  EVT N1VT = N1->getValueType(0);
-  EVT N1Op0VT = N1->getOperand(0)->getValueType(0);
-  return (N1.getOpcode() == ISD::FP_EXTEND ||
-          N1.getOpcode() == ISD::FP_ROUND) &&
-         (N1VT == N1Op0VT || N1Op0VT != MVT::f128);
+  if ((N1.getOpcode() == ISD::FP_EXTEND ||
+       N1.getOpcode() == ISD::FP_ROUND)) {
+    // Do not optimize out type conversion of f128 type yet.
+    // For some targets like x86_64, configuration is changed to keep one f128
+    // value in one SSE register, but instruction selection cannot handle
+    // FCOPYSIGN on SSE registers yet.
+    EVT N1VT = N1->getValueType(0);
+    EVT N1Op0VT = N1->getOperand(0)->getValueType(0);
+    return (N1VT == N1Op0VT || N1Op0VT != MVT::f128);
+  }
+  return false;
 }
 
 SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {

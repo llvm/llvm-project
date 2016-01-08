@@ -73,9 +73,8 @@ class LoopBase {
 
   SmallPtrSet<const BlockT*, 8> DenseBlockSet;
 
-  /// Indicator that this loops has been "unlooped", so there's no loop here
-  /// anymore.
-  bool IsUnloop = false;
+  /// Indicator that this loop is no longer a valid loop.
+  bool IsInvalid = false;
 
   LoopBase(const LoopBase<BlockT, LoopT> &) = delete;
   const LoopBase<BlockT, LoopT>&
@@ -154,12 +153,11 @@ public:
     return Blocks.size();
   }
 
-  /// Mark this loop as having been unlooped - the last backedge was removed and
-  /// we no longer have a loop.
-  void markUnlooped() { IsUnloop = true; }
+  /// Invalidate the loop, indicating that it is no longer a loop.
+  void invalidate() { IsInvalid = true; }
 
-  /// Return true if this no longer represents a loop.
-  bool isUnloop() const { return IsUnloop; }
+  /// Return true if this loop is no longer valid.
+  bool isInvalid() { return IsInvalid; }
 
   /// isLoopExiting - True if terminator in the block can branch to another
   /// block that is outside of the current loop.
@@ -507,6 +505,8 @@ class LoopInfoBase {
   // BBMap - Mapping of basic blocks to the inner most loop they occur in
   DenseMap<const BlockT *, LoopT *> BBMap;
   std::vector<LoopT *> TopLevelLoops;
+  std::vector<LoopT *> RemovedLoops;
+
   friend class LoopBase<BlockT, LoopT>;
   friend class LoopInfo;
 
@@ -538,6 +538,9 @@ public:
     for (auto *L : TopLevelLoops)
       delete L;
     TopLevelLoops.clear();
+    for (auto *L : RemovedLoops)
+      delete L;
+    RemovedLoops.clear();
   }
 
   /// iterator/begin/end - The interface to the top-level loops in the current
@@ -672,12 +675,11 @@ public:
 
   // Most of the public interface is provided via LoopInfoBase.
 
-  /// updateUnloop - Update LoopInfo after removing the last backedge from a
-  /// loop--now the "unloop". This updates the loop forest and parent loops for
-  /// each block so that Unloop is no longer referenced, but does not actually
-  /// delete the Unloop object. Generally, the loop pass manager should manage
-  /// deleting the Unloop.
-  void updateUnloop(Loop *Unloop);
+  /// Update LoopInfo after removing the last backedge from a loop. This updates
+  /// the loop forest and parent loops for each block so that \c L is no longer
+  /// referenced, but does not actually delete \c L immediately. The pointer
+  /// will remain valid until this LoopInfo's memory is released.
+  void markAsRemoved(Loop *L);
 
   /// replacementPreservesLCSSAForm - Returns true if replacing From with To
   /// everywhere is guaranteed to preserve LCSSA form.

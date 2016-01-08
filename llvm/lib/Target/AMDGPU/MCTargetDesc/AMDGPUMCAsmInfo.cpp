@@ -28,7 +28,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT) : MCAsmInfoELF() {
   //===--- Global Variable Emission Directives --------------------------===//
   HasAggressiveSymbolFolding = true;
   COMMDirectiveAlignmentIsInBytes = false;
-  HasDotTypeDotSizeDirective = false;
   HasNoDeadStrip = true;
   WeakRefDirective = ".weakref\t";
   //===--- Dwarf Emission Directives -----------------------------------===//
