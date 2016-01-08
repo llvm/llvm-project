@@ -104,53 +104,9 @@ class LazyCallGraph {
 public:
   class Node;
   class SCC;
+  class iterator;
   typedef SmallVector<PointerUnion<Function *, Node *>, 4> NodeVectorT;
   typedef SmallVectorImpl<PointerUnion<Function *, Node *>> NodeVectorImplT;
-
-  /// A lazy iterator used for both the entry nodes and child nodes.
-  ///
-  /// When this iterator is dereferenced, if not yet available, a function will
-  /// be scanned for "calls" or uses of functions and its child information
-  /// will be constructed. All of these results are accumulated and cached in
-  /// the graph.
-  class iterator
-      : public iterator_adaptor_base<iterator, NodeVectorImplT::iterator,
-                                     std::forward_iterator_tag, Node> {
-    friend class LazyCallGraph;
-    friend class LazyCallGraph::Node;
-
-    LazyCallGraph *G;
-    NodeVectorImplT::iterator E;
-
-    // Build the iterator for a specific position in a node list.
-    iterator(LazyCallGraph &G, NodeVectorImplT::iterator NI,
-             NodeVectorImplT::iterator E)
-        : iterator_adaptor_base(NI), G(&G), E(E) {
-      while (I != E && I->isNull())
-        ++I;
-    }
-
-  public:
-    iterator() {}
-
-    using iterator_adaptor_base::operator++;
-    iterator &operator++() {
-      do {
-        ++I;
-      } while (I != E && I->isNull());
-      return *this;
-    }
-
-    reference operator*() const {
-      if (I->is<Node *>())
-        return *I->get<Node *>();
-
-      Function *F = I->get<Function *>();
-      Node &ChildN = G->get(*F);
-      *I = &ChildN;
-      return ChildN;
-    }
-  };
 
   /// A node in the call graph.
   ///
@@ -198,6 +154,51 @@ public:
     /// Equality is defined as address equality.
     bool operator==(const Node &N) const { return this == &N; }
     bool operator!=(const Node &N) const { return !operator==(N); }
+  };
+
+  /// A lazy iterator used for both the entry nodes and child nodes.
+  ///
+  /// When this iterator is dereferenced, if not yet available, a function will
+  /// be scanned for "calls" or uses of functions and its child information
+  /// will be constructed. All of these results are accumulated and cached in
+  /// the graph.
+  class iterator
+      : public iterator_adaptor_base<iterator, NodeVectorImplT::iterator,
+                                     std::forward_iterator_tag, Node> {
+    friend class LazyCallGraph;
+    friend class LazyCallGraph::Node;
+
+    LazyCallGraph *G;
+    NodeVectorImplT::iterator E;
+
+    // Build the iterator for a specific position in a node list.
+    iterator(LazyCallGraph &G, NodeVectorImplT::iterator NI,
+             NodeVectorImplT::iterator E)
+        : iterator_adaptor_base(NI), G(&G), E(E) {
+      while (I != E && I->isNull())
+        ++I;
+    }
+
+  public:
+    iterator() {}
+
+    using iterator_adaptor_base::operator++;
+    iterator &operator++() {
+      do {
+        ++I;
+      } while (I != E && I->isNull());
+      return *this;
+    }
+
+    reference operator*() const {
+      if (I->is<Node *>())
+        return *I->get<Node *>();
+
+      Function *F = I->get<Function *>();
+      Node &ChildN = G->get(*F);
+      *I = &ChildN;
+      return ChildN;
+    }
   };
 
   /// An SCC of the call graph.

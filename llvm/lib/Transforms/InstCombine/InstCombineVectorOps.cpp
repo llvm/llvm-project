@@ -384,23 +384,20 @@ static void replaceExtractElements(InsertElementInst *InsElt,
                                         ConstantVector::get(ExtendMask));
 
   // Insert the new shuffle after the vector operand of the extract is defined
-  // or at the start of the basic block, so any subsequent extracts can use it.
-  bool ReplaceAllExtUsers;
-  if (auto *ExtVecOpInst = dyn_cast<Instruction>(ExtVecOp)) {
+  // (as long as it's not a PHI) or at the start of the basic block of the
+  // extract, so any subsequent extracts in the same basic block can use it.
+  // TODO: Insert before the earliest ExtractElementInst that is replaced.
+  auto *ExtVecOpInst = dyn_cast<Instruction>(ExtVecOp);
+  if (ExtVecOpInst && !isa<PHINode>(ExtVecOpInst))
     WideVec->insertAfter(ExtVecOpInst);
-    ReplaceAllExtUsers = true;
-  } else {
-    // TODO: Insert at start of function, so it's always safe to replace all?
+  else
     IC.InsertNewInstWith(WideVec, *ExtElt->getParent()->getFirstInsertionPt());
-    ReplaceAllExtUsers = false;
-  }
 
   // Replace extracts from the original narrow vector with extracts from the new
   // wide vector.
   for (User *U : ExtVecOp->users()) {
     ExtractElementInst *OldExt = dyn_cast<ExtractElementInst>(U);
-    if (!OldExt ||
-        (!ReplaceAllExtUsers && OldExt->getParent() != WideVec->getParent()))
+    if (!OldExt || OldExt->getParent() != WideVec->getParent())
       continue;
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
     NewExt->insertAfter(WideVec);

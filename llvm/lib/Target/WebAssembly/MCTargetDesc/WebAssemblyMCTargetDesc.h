@@ -19,32 +19,23 @@
 
 namespace llvm {
 
-class formatted_raw_ostream;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCRegisterInfo;
 class MCObjectWriter;
-class MCStreamer;
 class MCSubtargetInfo;
-class MCTargetStreamer;
-class StringRef;
 class Target;
 class Triple;
-class raw_ostream;
 class raw_pwrite_stream;
 
 extern Target TheWebAssemblyTarget32;
 extern Target TheWebAssemblyTarget64;
 
 MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII,
-                                              const MCRegisterInfo &MRI,
                                               MCContext &Ctx);
 
-MCAsmBackend *createWebAssemblyAsmBackend(const Target &T,
-                                          const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU);
+MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 
 MCObjectWriter *createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
                                                  bool Is64Bit, uint8_t OSABI);

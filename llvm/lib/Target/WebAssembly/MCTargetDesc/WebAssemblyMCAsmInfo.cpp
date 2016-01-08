@@ -29,6 +29,10 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
 
   UseDataRegionDirectives = true;
 
+  // Use .skip instead of .zero because .zero is confusing when used with two
+  // arguments (it doesn't actually zero things out).
+  ZeroDirective = "\t.skip\t";
+
   Data8bitsDirective = "\t.int8\t";
   Data16bitsDirective = "\t.int16\t";
   Data32bitsDirective = "\t.int32\t";

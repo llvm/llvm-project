@@ -28,7 +28,7 @@
  *
  * Examples of how the template is used to instantiate structure definition:
  * 1. To declare a structure:
- * 
+ *
  * struct ProfData {
  * #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) \
  *    Type Name;
@@ -155,7 +155,7 @@ VALUE_PROF_KIND(IPVK_Last, IPVK_IndirectCallTarget)
 #endif
 COVMAP_FUNC_RECORD(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
                    NamePtr, llvm::ConstantExpr::getBitCast(NamePtr, \
-                   llvm::Type::getInt8PtrTy(Ctx))) 
+                   llvm::Type::getInt8PtrTy(Ctx)))
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx),\
                    NameValue.size()))
@@ -190,7 +190,8 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 #ifdef INSTR_PROF_VALUE_PROF_DATA
 #define INSTR_PROF_DATA_DEFINED
 
-/*! 
+#define INSTR_PROF_MAX_NUM_VAL_PER_SITE 255
+/*!
  * This is the header of the data structure that defines the on-disk
  * layout of the value profile data of a particular kind for one function.
  */
@@ -202,7 +203,7 @@ typedef struct ValueProfRecord {
    * otherwise the record for this kind won't be emitted.
    */
   uint32_t NumValueSites;
-  /* 
+  /*
    * The first element of the array that stores the number of profiled
    * values for each value site. The size of the array is NumValueSites.
    * Since NumValueSites is greater than zero, there is at least one
@@ -226,7 +227,7 @@ typedef struct ValueProfRecord {
    * \brief Return the number of value sites.
    */
   uint32_t getNumValueSites() const { return NumValueSites; }
-  /*! 
+  /*!
    * \brief Read data from this record and save it to Record.
    */
   void deserializeTo(InstrProfRecord &Record,
@@ -247,10 +248,10 @@ typedef struct ValueProfRecord {
 typedef struct ValueProfData {
   /*
    * Total size in bytes including this field. It must be a multiple
-   * of sizeof(uint64_t). 
+   * of sizeof(uint64_t).
    */
   uint32_t TotalSize;
-  /* 
+  /*
    *The number of value profile kinds that has value profile data.
    * In this implementation, a value profile kind is considered to
    * have profile data if the number of value profile sites for the
@@ -260,7 +261,7 @@ typedef struct ValueProfData {
    */
   uint32_t NumValueKinds;
 
-  /* 
+  /*
    * Following are a sequence of variable length records. The prefix/header
    * of each record is defined by ValueProfRecord type. The number of
    * records is NumValueKinds.
@@ -314,7 +315,7 @@ typedef struct ValueProfData {
 #endif
 } ValueProfData;
 
-/* 
+/*
  * The closure is designed to abstact away two types of value profile data:
  * - InstrProfRecord which is the primary data structure used to
  *   represent profile data in host tools (reader, writer, and profile-use)
@@ -335,7 +336,7 @@ typedef struct ValueProfRecordClosure {
   uint32_t (*GetNumValueData)(const void *Record, uint32_t VKind);
   uint32_t (*GetNumValueDataForSite)(const void *R, uint32_t VK, uint32_t S);
 
-  /* 
+  /*
    * After extracting the value profile data from the value profile record,
    * this method is used to map the in-memory value to on-disk value. If
    * the method is null, value will be written out untranslated.
@@ -346,7 +347,7 @@ typedef struct ValueProfRecordClosure {
   ValueProfData *(*AllocValueProfData)(size_t TotalSizeInBytes);
 } ValueProfRecordClosure;
 
-/* 
+/*
  * A wrapper struct that represents value profile runtime data.
  * Like InstrProfRecord class which is used by profiling host tools,
  * ValueProfRuntimeRecord also implements the abstract intefaces defined in
@@ -384,7 +385,7 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
 uint32_t getNumValueKindsRT(const void *R);
 
 #undef INSTR_PROF_VALUE_PROF_DATA
-#endif  /* INSTR_PROF_VALUE_PROF_DATA */ 
+#endif  /* INSTR_PROF_VALUE_PROF_DATA */
 
 
 #ifdef INSTR_PROF_COMMON_API_IMPL
@@ -412,7 +413,7 @@ uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites) {
   return Size;
 }
 
-/*! 
+/*!
  * \brief Return the total size of the value profile record including the
  * header and the value data.
  */
@@ -432,7 +433,7 @@ InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *This) {
                                                    This->NumValueSites));
 }
 
-/*! 
+/*!
  * \brief Return the total number of value data for \c This record.
  */
 INSTR_PROF_INLINE
@@ -444,7 +445,7 @@ uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
   return NumValueData;
 }
 
-/*! 
+/*!
  * \brief Use this method to advance to the next \c This \c ValueProfRecord.
  */
 INSTR_PROF_INLINE
@@ -465,7 +466,7 @@ ValueProfRecord *getFirstValueProfRecord(ValueProfData *This) {
 
 /* Closure based interfaces.  */
 
-/*! 
+/*!
  * Return the total size in bytes of the on-disk value profile data
  * given the data stored in Record.
  */
@@ -535,7 +536,7 @@ ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
   return VPD;
 }
 
-/* 
+/*
  * The value profiler runtime library stores the value profile data
  * for a given function in \c NumValueSites and \c Nodes structures.
  * \c ValueProfRuntimeRecord class is used to encapsulate the runtime
@@ -639,7 +640,7 @@ static ValueProfRecordClosure RTRecordClosure = {0,
                                                  getValueForSiteRT,
                                                  allocValueProfDataRT};
 
-/* 
+/*
  * Return the size of ValueProfData structure to store data
  * recorded in the runtime record.
  */
@@ -648,7 +649,7 @@ uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record) {
   return getValueProfDataSize(&RTRecordClosure);
 }
 
-/* 
+/*
  * Return a ValueProfData instance that stores the data collected
  * from runtime. If \c DstData is provided by the caller, the value
  * profile data will be store in *DstData and DstData is returned,
@@ -696,18 +697,23 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
 
 /* Raw profile format version. */
 #define INSTR_PROF_RAW_VERSION 2
+#define INSTR_PROF_INDEX_VERSION 3
+#define INSTR_PROF_COVMAP_VERSION 0
 
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME __llvm_prf_data
 #define INSTR_PROF_NAME_SECT_NAME __llvm_prf_names
 #define INSTR_PROF_CNTS_SECT_NAME __llvm_prf_cnts
+#define INSTR_PROF_COVMAP_SECT_NAME __llvm_covmap
 
-#define INSTR_PROF_DATA_SECT_NAME_STR \
-        INSTR_PROF_QUOTE(INSTR_PROF_DATA_SECT_NAME)
-#define INSTR_PROF_NAME_SECT_NAME_STR \
-        INSTR_PROF_QUOTE(INSTR_PROF_NAME_SECT_NAME)
-#define INSTR_PROF_CNTS_SECT_NAME_STR \
-        INSTR_PROF_QUOTE(INSTR_PROF_CNTS_SECT_NAME)
+#define INSTR_PROF_DATA_SECT_NAME_STR                                          \
+  INSTR_PROF_QUOTE(INSTR_PROF_DATA_SECT_NAME)
+#define INSTR_PROF_NAME_SECT_NAME_STR                                          \
+  INSTR_PROF_QUOTE(INSTR_PROF_NAME_SECT_NAME)
+#define INSTR_PROF_CNTS_SECT_NAME_STR                                          \
+  INSTR_PROF_QUOTE(INSTR_PROF_CNTS_SECT_NAME)
+#define INSTR_PROF_COVMAP_SECT_NAME_STR                                        \
+  INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_SECT_NAME)
 
 /* Macros to define start/stop section symbol for a given
  * section on Linux. For instance
@@ -751,4 +757,3 @@ typedef struct ValueProfNode {
 #else
 #undef INSTR_PROF_DATA_DEFINED
 #endif
-

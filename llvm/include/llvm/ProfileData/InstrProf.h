@@ -30,7 +30,6 @@
 #include <system_error>
 #include <vector>
 
-#define INSTR_PROF_INDEX_VERSION 3
 namespace llvm {
 
 class Function;
@@ -66,7 +65,8 @@ inline StringRef getInstrProfValueProfFuncName() {
 /// Return the name of the section containing function coverage mapping
 /// data.
 inline StringRef getInstrProfCoverageSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA,__llvm_covmap" : "__llvm_covmap";
+  return AddSegment ? "__DATA," INSTR_PROF_COVMAP_SECT_NAME_STR
+                    : INSTR_PROF_COVMAP_SECT_NAME_STR;
 }
 
 /// Return the name prefix of variables containing instrumented function names.
@@ -355,11 +355,14 @@ struct InstrProfValueSiteRecord {
           return left.Value < right.Value;
         });
   }
+  /// Sort ValueData Descending by Count
+  inline void sortByCount();
 
   /// Merge data from another InstrProfValueSiteRecord
   /// Optionally scale merged counts by \p Weight.
-  instrprof_error mergeValueData(InstrProfValueSiteRecord &Input,
-                                 uint64_t Weight = 1);
+  instrprof_error merge(InstrProfValueSiteRecord &Input, uint64_t Weight = 1);
+  /// Scale up value profile data counts.
+  instrprof_error scale(uint64_t Weight);
 };
 
 /// Profiling information for a single function.
@@ -402,6 +405,19 @@ struct InstrProfRecord {
   /// Optionally scale merged counts by \p Weight.
   instrprof_error merge(InstrProfRecord &Other, uint64_t Weight = 1);
 
+  /// Scale up profile counts (including value profile data) by
+  /// \p Weight.
+  instrprof_error scale(uint64_t Weight);
+
+  /// Sort value profile data (per site) by count.
+  void sortValueData() {
+    for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
+      std::vector<InstrProfValueSiteRecord> &SiteRecords =
+          getValueSitesForKind(Kind);
+      for (auto &SR : SiteRecords)
+        SR.sortByCount();
+    }
+  }
   /// Clear value data entries
   void clearValueData() {
     for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
@@ -436,6 +452,8 @@ private:
   // Scale merged value counts by \p Weight.
   instrprof_error mergeValueProfData(uint32_t ValueKind, InstrProfRecord &Src,
                                      uint64_t Weight);
+  // Scale up value profile data count.
+  instrprof_error scaleValueProfData(uint32_t ValueKind, uint64_t Weight);
 };
 
 uint32_t InstrProfRecord::getNumValueKinds() const {
@@ -503,11 +521,22 @@ inline support::endianness getHostEndianness() {
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "llvm/ProfileData/InstrProfData.inc"
 
- /*
- * Initialize the record for runtime value profile data.
- * Return 0 if the initialization is successful, otherwise
- * return 1.
- */
+void InstrProfValueSiteRecord::sortByCount() {
+  ValueData.sort(
+      [](const InstrProfValueData &left, const InstrProfValueData &right) {
+        return left.Count > right.Count;
+      });
+  // Now truncate
+  size_t max_s = INSTR_PROF_MAX_NUM_VAL_PER_SITE;
+  if (ValueData.size() > max_s)
+    ValueData.resize(max_s);
+}
+
+/*
+* Initialize the record for runtime value profile data.
+* Return 0 if the initialization is successful, otherwise
+* return 1.
+*/
 int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
                                      const uint16_t *NumValueSites,
                                      ValueProfNode **Nodes);
@@ -626,6 +655,12 @@ struct CovMapHeader {
 };
 
 LLVM_PACKED_END
+
+enum CoverageMappingVersion {
+  CoverageMappingVersion1 = 0,
+  // The current versin is Version1
+  CoverageMappingCurrentVersion = INSTR_PROF_COVMAP_VERSION
+};
 }
 
 } // end namespace llvm

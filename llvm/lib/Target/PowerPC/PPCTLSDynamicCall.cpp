@@ -99,6 +99,11 @@ protected:
           break;
         }
 
+        // Don't really need to save data to the stack - the clobbered
+        // registers are already saved when the SDNode (e.g. PPCaddiTlsgdLAddr)
+        // gets translated to the pseudo instruction (e.g. ADDItlsgdLADDR).
+        BuildMI(MBB, I, DL, TII->get(PPC::ADJCALLSTACKDOWN)).addImm(0);
+
         // Expand into two ops built prior to the existing instruction.
         MachineInstr *Addi = BuildMI(MBB, I, DL, TII->get(Opc1), GPR3)
           .addReg(InReg);
@@ -112,6 +117,8 @@ protected:
         MachineInstr *Call = (BuildMI(MBB, I, DL, TII->get(Opc2), GPR3)
                               .addReg(GPR3));
         Call->addOperand(MI->getOperand(3));
+
+        BuildMI(MBB, I, DL, TII->get(PPC::ADJCALLSTACKUP)).addImm(0).addImm(0);
 
         BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), OutReg)
           .addReg(GPR3);

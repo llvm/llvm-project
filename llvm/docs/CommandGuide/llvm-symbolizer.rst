@@ -11,9 +11,9 @@ DESCRIPTION
 
 :program:`llvm-symbolizer` reads object file names and addresses from standard
 input and prints corresponding source code locations to standard output.
-If object file is specified in command line, :program:`llvm-symbolizer` reads
-only addresses from standard input. This
-program uses debug info sections and symbol table in the object files.
+If object file is specified in command line, :program:`llvm-symbolizer` 
+processes only addresses from standard input, the rest is output verbatim.
+This program uses debug info sections and symbol table in the object files.
 
 EXAMPLE
 --------

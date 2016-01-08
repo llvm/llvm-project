@@ -2155,7 +2155,8 @@ void Reassociate::OptimizeInst(Instruction *I) {
     // During the initial run we will get to the root of the tree.
     // But if we get here while we are redoing instructions, there is no
     // guarantee that the root will be visited. So Redo later
-    if (BO->user_back() != BO)
+    if (BO->user_back() != BO &&
+        BO->getParent() == BO->user_back()->getParent())
       RedoInsts.insert(BO->user_back());
     return;
   }

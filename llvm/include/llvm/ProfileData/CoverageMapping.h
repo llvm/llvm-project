@@ -35,8 +35,6 @@ class CoverageMappingReader;
 class CoverageMapping;
 struct CounterExpressions;
 
-enum CoverageMappingVersion { CoverageMappingVersion1 };
-
 /// \brief A Counter is an abstract value that describes how to compute the
 /// execution count for a region of code using the collected profile count data.
 struct Counter {

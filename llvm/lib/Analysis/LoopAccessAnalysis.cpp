@@ -845,6 +845,7 @@ int llvm::isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr,
   if (Lp != AR->getLoop()) {
     DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop " <<
           *Ptr << " SCEV: " << *PtrScev << "\n");
+    return 0;
   }
 
   // The address calculation must not wrap. Otherwise, a dependence could be

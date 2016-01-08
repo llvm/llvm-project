@@ -40,5 +40,5 @@ add_llvm_target(WebAssemblyCodeGen
 add_dependencies(LLVMWebAssemblyCodeGen intrinsics_gen)
 
 add_subdirectory(InstPrinter)
-add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
+add_subdirectory(TargetInfo)

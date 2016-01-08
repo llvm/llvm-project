@@ -328,12 +328,8 @@ static std::error_code readCoverageMappingData(
     uint32_t Version = endian::byte_swap<uint32_t, Endian>(CovHeader->Version);
     Buf = reinterpret_cast<const char *>(++CovHeader);
 
-    switch (Version) {
-    case CoverageMappingVersion1:
-      break;
-    default:
+    if (Version > coverage::CoverageMappingCurrentVersion)
       return coveragemap_error::unsupported_version;
-    }
 
     // Skip past the function records, saving the start and end for later.
     const char *FunBuf = Buf;
