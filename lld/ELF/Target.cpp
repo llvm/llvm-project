@@ -122,7 +122,6 @@ private:
 class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
-  unsigned getPltRefReloc(unsigned Type) const override;
   bool isTlsDynReloc(unsigned Type, const SymbolBody &S) const override;
   void writeGotPltHeaderEntries(uint8_t *Buf) const override;
   void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
@@ -176,7 +175,6 @@ class AArch64TargetInfo final : public TargetInfo {
 public:
   AArch64TargetInfo();
   unsigned getDynReloc(unsigned Type) const override;
-  unsigned getPltRefReloc(unsigned Type) const override;
   void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
                          uint64_t PltEntryAddr) const override;
@@ -264,8 +262,6 @@ bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
 }
 
 bool TargetInfo::isGotRelative(uint32_t Type) const { return false; }
-
-unsigned TargetInfo::getPltRefReloc(unsigned Type) const { return PCRelReloc; }
 
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
 
@@ -653,12 +649,6 @@ bool X86_64TargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
 
 bool X86_64TargetInfo::isTlsDynReloc(unsigned Type, const SymbolBody &S) const {
   return Type == R_X86_64_GOTTPOFF || Type == R_X86_64_TLSGD;
-}
-
-unsigned X86_64TargetInfo::getPltRefReloc(unsigned Type) const {
-  if (Type == R_X86_64_PLT32)
-    return R_X86_64_PC32;
-  return Type;
 }
 
 bool X86_64TargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
@@ -1150,8 +1140,6 @@ unsigned AArch64TargetInfo::getDynReloc(unsigned Type) const {
   error("Relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
 }
-
-unsigned AArch64TargetInfo::getPltRefReloc(unsigned Type) const { return Type; }
 
 void AArch64TargetInfo::writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const {
   write64le(Buf, Out<ELF64LE>::Plt->getVA());

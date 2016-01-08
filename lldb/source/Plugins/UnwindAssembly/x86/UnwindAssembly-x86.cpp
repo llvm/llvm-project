@@ -155,6 +155,7 @@ private:
     bool mov_reg_to_local_stack_frame_p (int& regno, int& fp_offset);
     bool ret_pattern_p ();
     bool pop_rbp_pattern_p ();
+    bool leave_pattern_p ();
     bool call_next_insn_pattern_p();
     uint32_t extract_4 (uint8_t *b);
     bool machine_regno_to_lldb_regno (int machine_regno, uint32_t& lldb_regno);
@@ -492,6 +493,14 @@ AssemblyParse_x86::pop_rbp_pattern_p ()
     return (*p == 0x5d);
 }
 
+// leave [0xc9]
+bool
+AssemblyParse_x86::leave_pattern_p ()
+{
+    uint8_t *p = m_cur_insn_bytes;
+    return (*p == 0xc9);
+}
+
 // call $0 [0xe8 0x0 0x0 0x0 0x0]
 bool 
 AssemblyParse_x86::call_next_insn_pattern_p ()
@@ -780,8 +789,7 @@ AssemblyParse_x86::get_non_call_site_unwind_plan (UnwindPlan &unwind_plan)
 
                 if (machine_regno == (int)m_machine_fp_regnum)
                 {
-                    row->GetCFAValue().SetIsRegisterPlusOffset (m_lldb_sp_regnum,
-                            row->GetCFAValue().GetOffset());
+                    row->GetCFAValue().SetIsRegisterPlusOffset (m_lldb_sp_regnum, row->GetCFAValue().GetOffset());
                 }
 
                 in_epilogue = true;
@@ -792,10 +800,33 @@ AssemblyParse_x86::get_non_call_site_unwind_plan (UnwindPlan &unwind_plan)
             // we need to add a new row of instructions.
             if (row->GetCFAValue().GetRegisterNumber() == m_lldb_sp_regnum)
             {
-                row->GetCFAValue().SetIsRegisterPlusOffset(m_lldb_sp_regnum,
-                        current_sp_bytes_offset_from_cfa);
+                row->GetCFAValue().SetIsRegisterPlusOffset (m_lldb_sp_regnum, current_sp_bytes_offset_from_cfa);
                 row_updated = true;
             }
+        }
+
+        // The LEAVE instruction moves the value from rbp into rsp and pops
+        // a value off the stack into rbp (restoring the caller's rbp value).  
+        // It is the opposite of ENTER, or 'push rbp, mov rsp rbp'.
+        else if (leave_pattern_p ())
+        {
+            // We're going to copy the value in rbp into rsp, so re-set the sp offset
+            // based on the CFAValue.  Also, adjust it to recognize that we're popping
+            // the saved rbp value off the stack.
+            current_sp_bytes_offset_from_cfa = row->GetCFAValue().GetOffset();
+            current_sp_bytes_offset_from_cfa -= m_wordsize;
+            row->GetCFAValue().SetOffset (current_sp_bytes_offset_from_cfa);
+
+            // rbp is restored to the caller's value
+            saved_registers[m_machine_fp_regnum] = false;
+            row->RemoveRegisterInfo (m_lldb_fp_regnum);
+
+            // cfa is now in terms of rsp again.
+            row->GetCFAValue().SetIsRegisterPlusOffset (m_lldb_sp_regnum, row->GetCFAValue().GetOffset());
+            row->GetCFAValue().SetOffset (current_sp_bytes_offset_from_cfa);
+
+            in_epilogue = true;
+            row_updated = true;
         }
 
         else if (mov_reg_to_local_stack_frame_p (machine_regno, stack_offset) 
@@ -1137,15 +1168,15 @@ AssemblyParse_x86::augment_unwind_plan_from_call_site (AddressRange& func, Unwin
             // The only case we care about is epilogue:
             //     [0x5d] pop %rbp/%ebp
             //  => [0xc3] ret
-            if (pop_rbp_pattern_p ())
+            if (pop_rbp_pattern_p () || leave_pattern_p ())
             {
                 if (target->ReadMemory (m_cur_insn, prefer_file_cache, m_cur_insn_bytes,
                                         1, error) != static_cast<size_t>(-1)
                     && ret_pattern_p ())
                 {
                     row->SetOffset (offset);
-                    row->GetCFAValue().SetIsRegisterPlusOffset (
-                        first_row->GetCFAValue().GetRegisterNumber(), m_wordsize);
+                    row->GetCFAValue().SetIsRegisterPlusOffset (first_row->GetCFAValue().GetRegisterNumber(), 
+                                                                m_wordsize);
 
                     UnwindPlan::RowSP new_row(new UnwindPlan::Row(*row));
                     unwind_plan.InsertRow (new_row);

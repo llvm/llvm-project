@@ -28,63 +28,63 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   // CHECK-FIXES: {{^}}  t1;
 
   char *pc = (char*)cpc;
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged. Use const_cast [google-readability-casting]
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use const_cast [google-readability-casting]
   // CHECK-FIXES: char *pc = const_cast<char*>(cpc);
 
   char *pc2 = (char*)(cpc + 33);
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}}. Use const_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}}; use const_cast {{.*}}
   // CHECK-FIXES: char *pc2 = const_cast<char*>(cpc + 33);
 
   const char &crc = *cpc;
   char &rc = (char&)crc;
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}}. Use const_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}}; use const_cast {{.*}}
   // CHECK-FIXES: char &rc = const_cast<char&>(crc);
 
   char &rc2 = (char&)*cpc;
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}}. Use const_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}}; use const_cast {{.*}}
   // CHECK-FIXES: char &rc2 = const_cast<char&>(*cpc);
 
   char ** const* const* ppcpcpc;
   char ****ppppc = (char****)ppcpcpc;
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: {{.*}}. Use const_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: {{.*}}; use const_cast {{.*}}
   // CHECK-FIXES: char ****ppppc = const_cast<char****>(ppcpcpc);
 
   char ***pppc = (char***)*(ppcpcpc);
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: {{.*}}. Use const_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: {{.*}}; use const_cast {{.*}}
   // CHECK-FIXES: char ***pppc = const_cast<char***>(*(ppcpcpc));
 
   char ***pppc2 = (char***)(*ppcpcpc);
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: {{.*}}. Use const_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: {{.*}}; use const_cast {{.*}}
   // CHECK-FIXES: char ***pppc2 = const_cast<char***>(*ppcpcpc);
 
   char *pc5 = (char*)(const char*)(cpv);
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}}. Use const_cast {{.*}}
-  // CHECK-MESSAGES: :[[@LINE-2]]:22: warning: {{.*}}. Use reinterpret_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}}; use const_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-2]]:22: warning: {{.*}}; use reinterpret_cast {{.*}}
   // CHECK-FIXES: char *pc5 = const_cast<char*>(reinterpret_cast<const char*>(cpv));
 
   int b1 = (int)b;
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: {{.*}}. Use static_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: {{.*}}; use static_cast {{.*}}
   // CHECK-FIXES: int b1 = static_cast<int>(b);
 
   Y *pB = (Y*)pX;
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}. Use static_cast/const_cast/reinterpret_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast {{.*}}
   Y &rB = (Y&)*pX;
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}. Use static_cast/const_cast/reinterpret_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast {{.*}}
 
   const char *pc3 = (const char*)cpv;
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}}. Use reinterpret_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}}; use reinterpret_cast {{.*}}
   // CHECK-FIXES: const char *pc3 = reinterpret_cast<const char*>(cpv);
 
   char *pc4 = (char*)cpv;
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}}. Use static_cast/const_cast/reinterpret_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast {{.*}}
   // CHECK-FIXES: char *pc4 = (char*)cpv;
 
   b1 = (int)Enum1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: {{.*}}. Use static_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: {{.*}}; use static_cast {{.*}}
   // CHECK-FIXES: b1 = static_cast<int>(Enum1);
 
   Enum e = (Enum)b1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: {{.*}}. Use static_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: {{.*}}; use static_cast {{.*}}
   // CHECK-FIXES: Enum e = static_cast<Enum>(b1);
 
   // CHECK-MESSAGES-NOT: warning:
@@ -99,7 +99,7 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
 template <typename T>
 void template_function(T t, int n) {
   int i = (int)t;
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}. Use static_cast/const_cast/reinterpret_cast {{.*}}
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast {{.*}}
   // CHECK-FIXES: int i = (int)t;
   int j = (int)n;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant cast to the same type
@@ -110,7 +110,7 @@ template <typename T>
 struct TemplateStruct {
   void f(T t, int n) {
     int k = (int)t;
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}}. Use static_cast/const_cast/reinterpret_cast
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast
     // CHECK-FIXES: int k = (int)t;
     int l = (int)n;
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant cast to the same type

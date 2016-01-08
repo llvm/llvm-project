@@ -39,6 +39,7 @@ private:
 
   std::unique_ptr<IncludeInserter> Inserter;
   const IncludeSorter::IncludeStyle IncludeStyle;
+  const bool UseCERTSemantics;
 };
 
 } // namespace tidy

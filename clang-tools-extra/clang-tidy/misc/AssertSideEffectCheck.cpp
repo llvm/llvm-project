@@ -111,7 +111,7 @@ void AssertSideEffectCheck::check(const MatchFinder::MatchResult &Result) {
   if (AssertMacroName.empty())
     return;
 
-  diag(Loc, "found " + AssertMacroName.str() + "() with side effect");
+  diag(Loc, "found %0() with side effect") << AssertMacroName;
 }
 
 } // namespace tidy

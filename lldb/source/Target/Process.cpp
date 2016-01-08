@@ -6515,3 +6515,65 @@ Process::ResetImageToken(size_t token)
     if (token < m_image_tokens.size())
         m_image_tokens[token] = LLDB_INVALID_IMAGE_TOKEN;
 }
+
+Address
+Process::AdvanceAddressToNextBranchInstruction (Address default_stop_addr, AddressRange range_bounds)
+{
+    Target &target = GetTarget();
+    DisassemblerSP disassembler_sp;
+    InstructionList *insn_list = NULL;
+
+    Address retval = default_stop_addr;
+
+    if (target.GetUseFastStepping() == false)
+        return retval;
+    if (default_stop_addr.IsValid() == false)
+        return retval;
+
+    ExecutionContext exe_ctx (this);
+    const char *plugin_name = nullptr;
+    const char *flavor = nullptr;
+    const bool prefer_file_cache = true;
+    disassembler_sp = Disassembler::DisassembleRange(target.GetArchitecture(),
+                                                     plugin_name,
+                                                     flavor,
+                                                     exe_ctx,
+                                                     range_bounds,
+                                                     prefer_file_cache);
+    if (disassembler_sp.get())
+        insn_list = &disassembler_sp->GetInstructionList();
+
+    if (insn_list == NULL)
+    {
+        return retval;
+    }
+
+    size_t insn_offset = insn_list->GetIndexOfInstructionAtAddress (default_stop_addr);
+    if (insn_offset == UINT32_MAX)
+    {
+        return retval;
+    }
+
+    uint32_t branch_index = insn_list->GetIndexOfNextBranchInstruction (insn_offset, target);
+    if (branch_index == UINT32_MAX)
+    {
+        return retval;
+    }
+
+    if (branch_index > insn_offset)
+    {
+        Address next_branch_insn_address = insn_list->GetInstructionAtIndex (branch_index)->GetAddress();
+        if (next_branch_insn_address.IsValid() && range_bounds.ContainsFileAddress (next_branch_insn_address))
+        {
+            retval = next_branch_insn_address;
+        }
+    }
+
+    if (disassembler_sp.get())
+    {
+        // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
+        disassembler_sp->GetInstructionList().Clear();
+    }
+
+    return retval;
+}

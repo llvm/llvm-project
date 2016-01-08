@@ -293,6 +293,8 @@ void MemoryAccess::updateDimensionality() {
     Map = isl_map_equate(Map, isl_dim_in, i - DimsMissing, isl_dim_out, i);
 
   AccessRelation = isl_map_apply_range(AccessRelation, Map);
+
+  assumeNoOutOfBound();
 }
 
 const std::string
@@ -492,7 +494,7 @@ MemoryAccess::createBasicAccessMap(ScopStmt *Statement) {
 void MemoryAccess::assumeNoOutOfBound() {
   isl_space *Space = isl_space_range(getOriginalAccessRelationSpace());
   isl_set *Outside = isl_set_empty(isl_space_copy(Space));
-  for (int i = 1, Size = Subscripts.size(); i < Size; ++i) {
+  for (int i = 1, Size = isl_space_dim(Space, isl_dim_set); i < Size; ++i) {
     isl_local_space *LS = isl_local_space_from_space(isl_space_copy(Space));
     isl_pw_aff *Var =
         isl_pw_aff_var_on_domain(isl_local_space_copy(LS), isl_dim_set, i);
@@ -501,10 +503,7 @@ void MemoryAccess::assumeNoOutOfBound() {
     isl_set *DimOutside;
 
     DimOutside = isl_pw_aff_lt_set(isl_pw_aff_copy(Var), Zero);
-    isl_pw_aff *SizeE = Statement->getPwAff(Sizes[i - 1]);
-
-    SizeE = isl_pw_aff_drop_dims(SizeE, isl_dim_in, 0,
-                                 Statement->getNumIterators());
+    isl_pw_aff *SizeE = getScopArrayInfo()->getDimensionSizePw(i);
     SizeE = isl_pw_aff_add_dims(SizeE, isl_dim_in,
                                 isl_space_dim(Space, isl_dim_set));
     SizeE = isl_pw_aff_set_tuple_id(SizeE, isl_dim_in,
@@ -696,7 +695,6 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
   AccessRelation =
       isl_map_set_tuple_id(AccessRelation, isl_dim_out, BaseAddrId);
 
-  assumeNoOutOfBound();
   AccessRelation = isl_map_gist_domain(AccessRelation, Statement->getDomain());
   isl_space_free(Space);
 }
@@ -1230,6 +1228,7 @@ void ScopStmt::deriveAssumptionsFromGEP(GetElementPtrInst *GEP) {
     isl_set *InBoundIfExecuted =
         isl_set_union(isl_set_complement(Executed), InBound);
 
+    InBoundIfExecuted = isl_set_coalesce(InBoundIfExecuted);
     Parent.addAssumption(INBOUNDS, InBoundIfExecuted, GEP->getDebugLoc());
   }
 

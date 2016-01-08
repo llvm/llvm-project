@@ -211,7 +211,6 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uintX_t SymVA = getSymVA<ELFT>(*Body);
     if (Target->relocNeedsPlt(Type, *Body)) {
       SymVA = Out<ELFT>::Plt->getEntryAddr(*Body);
-      Type = Target->getPltRefReloc(Type);
     } else if (Target->relocNeedsGot(Type, *Body)) {
       SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
       if (Body->isTls())

@@ -34,8 +34,8 @@ UsingNamespaceDirectiveCheck::check(const MatchFinder::MatchResult &Result) {
   if (U->isImplicit() || !Loc.isValid())
     return;
 
-  diag(Loc, "do not use namespace using-directives. Use using-declarations "
-            "instead.");
+  diag(Loc, "do not use namespace using-directives; "
+            "use using-declarations instead");
   // TODO: We could suggest a list of using directives replacing the using
   //       namespace directive.
 }

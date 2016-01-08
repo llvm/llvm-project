@@ -18,6 +18,7 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
@@ -44,7 +45,8 @@ ThreadPlanStepOut::ThreadPlanStepOut
     Vote stop_vote,
     Vote run_vote,
     uint32_t frame_idx,
-    LazyBool step_out_avoids_code_without_debug_info
+    LazyBool step_out_avoids_code_without_debug_info,
+    bool continue_to_next_branch
 ) :
     ThreadPlan (ThreadPlan::eKindStepOut, "Step out", thread, stop_vote, run_vote),
     ThreadPlanShouldStopHere (this),
@@ -86,7 +88,8 @@ ThreadPlanStepOut::ThreadPlanStepOut
                                                                      eVoteNoOpinion,
                                                                      eVoteNoOpinion,
                                                                      frame_idx - 1,
-                                                                     eLazyBoolNo));
+                                                                     eLazyBoolNo,
+                                                                     continue_to_next_branch));
             static_cast<ThreadPlanStepOut *>(m_step_out_to_inline_plan_sp.get())->SetShouldStopHereCallbacks(nullptr, nullptr);
             m_step_out_to_inline_plan_sp->SetPrivate(true);
         }
@@ -101,7 +104,27 @@ ThreadPlanStepOut::ThreadPlanStepOut
         // Find the return address and set a breakpoint there:
         // FIXME - can we do this more securely if we know first_insn?
 
-        m_return_addr = return_frame_sp->GetFrameCodeAddress().GetLoadAddress(&m_thread.GetProcess()->GetTarget());
+        Address return_address (return_frame_sp->GetFrameCodeAddress());
+        if (continue_to_next_branch)
+        {
+            SymbolContext return_address_sc;
+            AddressRange range;
+            Address return_address_decr_pc = return_address;
+            if (return_address_decr_pc.GetOffset() > 0)
+                return_address_decr_pc.Slide (-1);
+
+            return_address_decr_pc.CalculateSymbolContext (&return_address_sc, lldb::eSymbolContextLineEntry);
+            if (return_address_sc.line_entry.IsValid())
+            {
+                range = return_address_sc.line_entry.GetSameLineContiguousAddressRange();
+                if (range.GetByteSize() > 0)
+                {
+                    return_address = m_thread.GetProcess()->AdvanceAddressToNextBranchInstruction (return_address, 
+                                                                                                   range);
+                }
+            }
+        }
+        m_return_addr = return_address.GetLoadAddress(&m_thread.GetProcess()->GetTarget());
         
         if (m_return_addr == LLDB_INVALID_ADDRESS)
             return;

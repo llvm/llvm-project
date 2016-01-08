@@ -21,7 +21,6 @@ class LanguageCategoryUpdatesTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// break here')
 
-    @expectedFailureWindows("llvm.org/pr24462") # Data formatters have problems on Windows
     def test_with_run_command(self):
         """Test that LLDB correctly cleans caches when language categories change."""
         # This is the function to remove the custom formats in order to have a

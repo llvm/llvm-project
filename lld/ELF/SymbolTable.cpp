@@ -27,8 +27,6 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf2;
 
-template <class ELFT> SymbolTable<ELFT>::SymbolTable() {}
-
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
@@ -65,7 +63,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   if (auto *F = dyn_cast<SharedFile<ELFT>>(FileP)) {
     // DSOs are uniquified not by filename but by soname.
     F->parseSoName();
-    if (!IncludedSoNames.insert(F->getSoName()).second)
+    if (!SoNames.insert(F->getSoName()).second)
       return;
 
     SharedFiles.emplace_back(cast<SharedFile<ELFT>>(File.release()));
@@ -101,17 +99,20 @@ SymbolBody *SymbolTable<ELFT>::addUndefinedOpt(StringRef Name) {
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addAbsolute(StringRef Name,
-                                    typename ELFFile<ELFT>::Elf_Sym &ESym) {
-  resolve(new (Alloc) DefinedRegular<ELFT>(Name, ESym, nullptr));
+SymbolBody *SymbolTable<ELFT>::addAbsolute(StringRef Name, Elf_Sym &ESym) {
+  // Pass nullptr because absolute symbols have no corresponding input sections.
+  auto *Sym = new (Alloc) DefinedRegular<ELFT>(Name, ESym, nullptr);
+  resolve(Sym);
+  return Sym;
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addSynthetic(StringRef Name,
-                                     OutputSectionBase<ELFT> &Section,
-                                     typename ELFFile<ELFT>::uintX_t Value) {
+SymbolBody *SymbolTable<ELFT>::addSynthetic(StringRef Name,
+                                            OutputSectionBase<ELFT> &Section,
+                                            uintX_t Value) {
   auto *Sym = new (Alloc) DefinedSynthetic<ELFT>(Name, Value, Section);
   resolve(Sym);
+  return Sym;
 }
 
 // Add Name as an "ignored" symbol. An ignored symbol is a regular
@@ -119,10 +120,7 @@ void SymbolTable<ELFT>::addSynthetic(StringRef Name,
 // file's symbol table. Such symbols are useful for some linker-defined symbols.
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
-  auto *Sym = new (Alloc)
-      DefinedRegular<ELFT>(Name, ElfSym<ELFT>::IgnoreUndef, nullptr);
-  resolve(Sym);
-  return Sym;
+  return addAbsolute(Name, ElfSym<ELFT>::IgnoreUndef);
 }
 
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
@@ -150,6 +148,8 @@ ELFFileBase<ELFT> *SymbolTable<ELFT>::findFile(SymbolBody *B) {
   return nullptr;
 }
 
+// Construct a string in the form of "Sym in File1 and File2".
+// Used to construct an error message.
 template <class ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Old, SymbolBody *New) {
   ELFFileBase<ELFT> *OldFile = findFile(Old);
@@ -198,8 +198,8 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     Sym->Body = New;
 }
 
+// Find an existing symbol or create and insert a new one.
 template <class ELFT> Symbol *SymbolTable<ELFT>::insert(SymbolBody *New) {
-  // Find an existing Symbol or create and insert a new one.
   StringRef Name = New->getName();
   Symbol *&Sym = Symtab[Name];
   if (!Sym)

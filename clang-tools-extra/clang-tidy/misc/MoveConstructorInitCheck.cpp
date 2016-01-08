@@ -42,7 +42,8 @@ MoveConstructorInitCheck::MoveConstructorInitCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(IncludeSorter::parseIncludeStyle(
-          Options.get("IncludeStyle", "llvm"))) {}
+          Options.get("IncludeStyle", "llvm"))),
+      UseCERTSemantics(Context->isCheckEnabled("cert-oop11-cpp")) {}
 
 void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++11; the functionality currently does not
@@ -67,21 +68,26 @@ void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
                      hasDeclaration(cxxRecordDecl(hasMethod(cxxConstructorDecl(
                          isMoveConstructor(), unless(isDeleted()))))),
                      matchers::isExpensiveToCopy()));
-  Finder->addMatcher(
-      cxxConstructorDecl(
-          allOf(
-              unless(isMoveConstructor()),
-              hasAnyConstructorInitializer(withInitializer(cxxConstructExpr(
-                  hasDeclaration(cxxConstructorDecl(isCopyConstructor())),
-                  hasArgument(
-                      0, declRefExpr(
-                             to(parmVarDecl(
-                                    hasType(
-                                        NonConstValueMovableAndExpensiveToCopy))
-                                    .bind("movable-param")))
-                             .bind("init-arg")))))))
-          .bind("ctor-decl"),
-      this);
+
+  // This checker is also used to implement cert-oop11-cpp, but when using that
+  // form of the checker, we do not want to diagnose movable parameters.
+  if (!UseCERTSemantics)
+    Finder->addMatcher(
+        cxxConstructorDecl(
+            allOf(
+                unless(isMoveConstructor()),
+                hasAnyConstructorInitializer(withInitializer(cxxConstructExpr(
+                    hasDeclaration(cxxConstructorDecl(isCopyConstructor())),
+                    hasArgument(
+                        0,
+                        declRefExpr(
+                            to(parmVarDecl(
+                                   hasType(
+                                       NonConstValueMovableAndExpensiveToCopy))
+                                   .bind("movable-param")))
+                            .bind("init-arg")))))))
+            .bind("ctor-decl"),
+        this);
 }
 
 void MoveConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {

@@ -1591,7 +1591,7 @@ Thread::QueueThreadPlanForStepOut(bool abort_other_plans,
                                   Vote stop_vote,
                                   Vote run_vote,
                                   uint32_t frame_idx,
-                                  LazyBool step_out_avoids_code_withoug_debug_info)
+                                  LazyBool step_out_avoids_code_without_debug_info)
 {
     ThreadPlanSP thread_plan_sp (new ThreadPlanStepOut (*this, 
                                                         addr_context, 
@@ -1600,7 +1600,7 @@ Thread::QueueThreadPlanForStepOut(bool abort_other_plans,
                                                         stop_vote, 
                                                         run_vote, 
                                                         frame_idx,
-                                                        step_out_avoids_code_withoug_debug_info));
+                                                        step_out_avoids_code_without_debug_info));
     
     if (thread_plan_sp->ValidatePlan(nullptr))
     {
@@ -1620,7 +1620,8 @@ Thread::QueueThreadPlanForStepOutNoShouldStop(bool abort_other_plans,
                                               bool stop_other_threads,
                                               Vote stop_vote,
                                               Vote run_vote,
-                                              uint32_t frame_idx)
+                                              uint32_t frame_idx,
+                                              bool continue_to_next_branch)
 {
     ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut (*this,
                                                         addr_context, 
@@ -1629,7 +1630,8 @@ Thread::QueueThreadPlanForStepOutNoShouldStop(bool abort_other_plans,
                                                         stop_vote, 
                                                         run_vote, 
                                                         frame_idx,
-                                                        eLazyBoolNo));
+                                                        eLazyBoolNo,
+                                                        continue_to_next_branch));
 
     ThreadPlanStepOut *new_plan = static_cast<ThreadPlanStepOut *>(thread_plan_sp.get());
     new_plan->ClearShouldStopHereCallbacks();

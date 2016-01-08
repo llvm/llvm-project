@@ -40,9 +40,9 @@ void StringReferenceMemberCheck::registerMatchers(
 void
 StringReferenceMemberCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Member = Result.Nodes.getNodeAs<FieldDecl>("member");
-  diag(Member->getLocStart(), "const string& members are dangerous. It is much "
+  diag(Member->getLocStart(), "const string& members are dangerous; it is much "
                               "better to use alternatives, such as pointers or "
-                              "simple constants.");
+                              "simple constants");
 }
 
 } // namespace runtime

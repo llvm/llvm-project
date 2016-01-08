@@ -12,7 +12,7 @@ class string {};
 
 struct A {
   const std::string &s;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: const string& members are dangerous. It is much better to use alternatives, such as pointers or simple constants. [google-runtime-member-string-references]
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: const string& members are dangerous; it is much better to use alternatives, such as pointers or simple constants [google-runtime-member-string-references]
 };
 
 struct B {
@@ -28,14 +28,14 @@ struct D {
   D();
   const T &s;
   const std::string &s2;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: const string& members are dangerous.
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: const string& members are dangerous
 };
 
 D<std::string> d;
 
 struct AA {
   const string &s;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: const string& members are dangerous.
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: const string& members are dangerous
 };
 
 struct BB {

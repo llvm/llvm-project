@@ -31,9 +31,10 @@ class Undefined;
 // undefined, it'll read an archive member to read a real definition
 // to replace the lazy symbol. The logic is implemented in resolve().
 template <class ELFT> class SymbolTable {
-public:
-  SymbolTable();
+  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
 
+public:
   void addFile(std::unique_ptr<InputFile> File);
 
   const llvm::MapVector<StringRef, Symbol *> &getSymbols() const {
@@ -50,11 +51,11 @@ public:
 
   SymbolBody *addUndefined(StringRef Name);
   SymbolBody *addUndefinedOpt(StringRef Name);
-  void addAbsolute(StringRef Name,
-                   typename llvm::object::ELFFile<ELFT>::Elf_Sym &ESym);
-  void addSynthetic(StringRef Name, OutputSectionBase<ELFT> &Section,
-                    typename llvm::object::ELFFile<ELFT>::uintX_t Value);
+  SymbolBody *addAbsolute(StringRef Name, Elf_Sym &ESym);
+  SymbolBody *addSynthetic(StringRef Name, OutputSectionBase<ELFT> &Section,
+                           uintX_t Value);
   SymbolBody *addIgnored(StringRef Name);
+
   void scanShlibUndefined();
   SymbolBody *find(StringRef Name);
   void wrap(StringRef Name);
@@ -67,8 +68,6 @@ private:
   void resolve(SymbolBody *Body);
   std::string conflictMsg(SymbolBody *Old, SymbolBody *New);
 
-  std::vector<std::unique_ptr<ArchiveFile>> ArchiveFiles;
-
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.
   // The default hashing of StringRef produces different results on 32 and 64
@@ -79,13 +78,18 @@ private:
   llvm::MapVector<StringRef, Symbol *> Symtab;
   llvm::BumpPtrAllocator Alloc;
 
+  // Comdat groups define "link once" sections. If two comdat groups have the
+  // same name, only one of them is linked, and the other is ignored. This set
+  // is used to uniquify them.
   llvm::DenseSet<StringRef> ComdatGroups;
 
-  // The writer needs to infer the machine type from the object files.
+  // The symbol table owns all file objects.
+  std::vector<std::unique_ptr<ArchiveFile>> ArchiveFiles;
   std::vector<std::unique_ptr<ObjectFile<ELFT>>> ObjectFiles;
-
   std::vector<std::unique_ptr<SharedFile<ELFT>>> SharedFiles;
-  llvm::DenseSet<StringRef> IncludedSoNames;
+
+  // Set of .so files to not link the same shared object file more than once.
+  llvm::DenseSet<StringRef> SoNames;
 };
 
 } // namespace elf2

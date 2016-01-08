@@ -3149,6 +3149,34 @@ public:
     void
     ResetImageToken(size_t token);
 
+    //------------------------------------------------------------------
+    /// Find the next branch instruction to set a breakpoint on
+    ///
+    /// When instruction stepping through a source line, instead of 
+    /// stepping through each instruction, we can put a breakpoint on
+    /// the next branch instruction (within the range of instructions
+    /// we are stepping through) and continue the process to there,
+    /// yielding significant performance benefits over instruction
+    /// stepping.  
+    ///
+    /// @param[in] default_stop_addr
+    ///     The address of the instruction where lldb would put a 
+    ///     breakpoint normally.
+    ///
+    /// @param[in] range_bounds
+    ///     The range which the breakpoint must be contained within.
+    ///     Typically a source line.
+    ///
+    /// @return
+    ///     The address of the next branch instruction, or the end of
+    ///     the range provided in range_bounds.  If there are any
+    ///     problems with the disassembly or getting the instructions,
+    ///     the original default_stop_addr will be returned.
+    //------------------------------------------------------------------
+    Address
+    AdvanceAddressToNextBranchInstruction (Address default_stop_addr, 
+                                           AddressRange range_bounds);
+
 protected:
     void
     SetState (lldb::EventSP &event_sp);

@@ -19,7 +19,6 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureDarwin("rdar://15367566")
     @expectedFailureFreeBSD('llvm.org/pr15824')
     @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureWindows("llvm.org/pr24668") # Breakpoints not resolved correctly
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))

@@ -1,8 +1,8 @@
 ; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops < %s 2>&1| FileCheck %s
 ;
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
-; CHECK-NEXT: remark: <unknown>:0:0: Inbounds assumption: [i, N, p_2, M] -> {  : N <= i or (N >= 1 + i and p_2 <= 0) or (N >= 1 + i and p_2 >= 1 and M >= p_2) }
 ; CHECK-NEXT: remark: <unknown>:0:0: Inbounds assumption: [i, N, p_2] -> {  : N <= i or (N >= 1 + i and p_2 <= 100) }
+; CHECK-NEXT: remark: <unknown>:0:0: Inbounds assumption: [i, N, p_2, M] -> {  : N <= i or (N >= 1 + i and p_2 <= 0) or (N >= 1 + i and p_2 >= 1 and M >= p_2) }
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
 ;
 ;    void f(int *restrict A, int *restrict B, int i, int N, int M, int C[100][100]) {

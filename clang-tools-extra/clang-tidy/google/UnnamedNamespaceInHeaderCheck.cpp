@@ -41,7 +41,7 @@ UnnamedNamespaceInHeaderCheck::check(const MatchFinder::MatchResult &Result) {
   StringRef FileName = SM->getPresumedLoc(Loc).getFilename();
   if (FileName.endswith(".h") || FileName.endswith(".hh") ||
       FileName.endswith(".hpp") || FileName.endswith(".hxx"))
-    diag(Loc, "do not use unnamed namespaces in header files.");
+    diag(Loc, "do not use unnamed namespaces in header files");
 }
 
 } // namespace build

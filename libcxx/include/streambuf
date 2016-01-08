@@ -220,7 +220,7 @@ basic_streambuf<_CharT, _Traits>::~basic_streambuf()
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 locale
 basic_streambuf<_CharT, _Traits>::pubimbue(const locale& __loc)
 {
@@ -231,7 +231,7 @@ basic_streambuf<_CharT, _Traits>::pubimbue(const locale& __loc)
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 locale
 basic_streambuf<_CharT, _Traits>::getloc() const
 {
@@ -239,7 +239,7 @@ basic_streambuf<_CharT, _Traits>::getloc() const
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 basic_streambuf<_CharT, _Traits>*
 basic_streambuf<_CharT, _Traits>::pubsetbuf(char_type* __s, streamsize __n)
 {
@@ -247,7 +247,7 @@ basic_streambuf<_CharT, _Traits>::pubsetbuf(char_type* __s, streamsize __n)
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 typename basic_streambuf<_CharT, _Traits>::pos_type
 basic_streambuf<_CharT, _Traits>::pubseekoff(off_type __off,
                                              ios_base::seekdir __way,
@@ -257,7 +257,7 @@ basic_streambuf<_CharT, _Traits>::pubseekoff(off_type __off,
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 typename basic_streambuf<_CharT, _Traits>::pos_type
 basic_streambuf<_CharT, _Traits>::pubseekpos(pos_type __sp,
                                              ios_base::openmode __which)
@@ -266,7 +266,7 @@ basic_streambuf<_CharT, _Traits>::pubseekpos(pos_type __sp,
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 int
 basic_streambuf<_CharT, _Traits>::pubsync()
 {
@@ -274,7 +274,7 @@ basic_streambuf<_CharT, _Traits>::pubsync()
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 streamsize
 basic_streambuf<_CharT, _Traits>::in_avail()
 {
@@ -284,7 +284,7 @@ basic_streambuf<_CharT, _Traits>::in_avail()
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 typename basic_streambuf<_CharT, _Traits>::int_type
 basic_streambuf<_CharT, _Traits>::snextc()
 {
@@ -294,7 +294,7 @@ basic_streambuf<_CharT, _Traits>::snextc()
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 typename basic_streambuf<_CharT, _Traits>::int_type
 basic_streambuf<_CharT, _Traits>::sbumpc()
 {
@@ -304,7 +304,7 @@ basic_streambuf<_CharT, _Traits>::sbumpc()
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 typename basic_streambuf<_CharT, _Traits>::int_type
 basic_streambuf<_CharT, _Traits>::sgetc()
 {
@@ -314,7 +314,7 @@ basic_streambuf<_CharT, _Traits>::sgetc()
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 streamsize
 basic_streambuf<_CharT, _Traits>::sgetn(char_type* __s, streamsize __n)
 {
@@ -322,7 +322,7 @@ basic_streambuf<_CharT, _Traits>::sgetn(char_type* __s, streamsize __n)
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 typename basic_streambuf<_CharT, _Traits>::int_type
 basic_streambuf<_CharT, _Traits>::sputbackc(char_type __c)
 {
@@ -332,7 +332,7 @@ basic_streambuf<_CharT, _Traits>::sputbackc(char_type __c)
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 typename basic_streambuf<_CharT, _Traits>::int_type
 basic_streambuf<_CharT, _Traits>::sungetc()
 {
@@ -342,7 +342,7 @@ basic_streambuf<_CharT, _Traits>::sungetc()
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 typename basic_streambuf<_CharT, _Traits>::int_type
 basic_streambuf<_CharT, _Traits>::sputc(char_type __c)
 {
@@ -353,7 +353,7 @@ basic_streambuf<_CharT, _Traits>::sputc(char_type __c)
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 streamsize
 basic_streambuf<_CharT, _Traits>::sputn(const char_type* __s, streamsize __n)
 {
@@ -411,7 +411,7 @@ basic_streambuf<_CharT, _Traits>::swap(basic_streambuf& __sb)
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 void
 basic_streambuf<_CharT, _Traits>::gbump(int __n)
 {
@@ -419,7 +419,7 @@ basic_streambuf<_CharT, _Traits>::gbump(int __n)
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 void
 basic_streambuf<_CharT, _Traits>::setg(char_type* __gbeg, char_type* __gnext,
                                                           char_type* __gend)
@@ -430,7 +430,7 @@ basic_streambuf<_CharT, _Traits>::setg(char_type* __gbeg, char_type* __gnext,
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 void
 basic_streambuf<_CharT, _Traits>::pbump(int __n)
 {
@@ -438,7 +438,7 @@ basic_streambuf<_CharT, _Traits>::pbump(int __n)
 }
 
 template <class _CharT, class _Traits>
-inline
+inline _LIBCPP_INLINE_VISIBILITY
 void
 basic_streambuf<_CharT, _Traits>::setp(char_type* __pbeg, char_type* __pend)
 {

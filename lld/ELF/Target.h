@@ -45,7 +45,6 @@ public:
   virtual bool isTlsDynReloc(unsigned Type, const SymbolBody &S) const {
     return false;
   }
-  virtual unsigned getPltRefReloc(unsigned Type) const;
   virtual unsigned getTlsGotReloc(unsigned Type = -1) const {
     return TlsGotReloc;
   }

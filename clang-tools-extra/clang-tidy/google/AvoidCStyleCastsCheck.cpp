@@ -112,10 +112,10 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
                            SM, Result.Context->getLangOpts());
 
   auto diag_builder =
-      diag(CastExpr->getLocStart(), "C-style casts are discouraged. %0");
+      diag(CastExpr->getLocStart(), "C-style casts are discouraged; use %0");
 
   auto ReplaceWithCast = [&](StringRef CastType) {
-    diag_builder << ("Use " + CastType).str();
+    diag_builder << CastType;
 
     const Expr *SubExpr = CastExpr->getSubExprAsWritten()->IgnoreImpCasts();
     std::string CastText = (CastType + "<" + DestTypeString + ">").str();
@@ -166,7 +166,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     break;
   }
 
-  diag_builder << "Use static_cast/const_cast/reinterpret_cast";
+  diag_builder << "static_cast/const_cast/reinterpret_cast";
 }
 
 } // namespace readability
