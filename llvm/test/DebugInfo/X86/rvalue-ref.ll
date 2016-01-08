@@ -30,7 +30,7 @@ declare i32 @printf(i8*, ...)
 !6 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9}
-!9 = !DIDerivedType(tag: DW_TAG_rvalue_reference_type, size: 64, align: 64, baseType: !10)
+!9 = !DIDerivedType(tag: DW_TAG_rvalue_reference_type, baseType: !10)
 !10 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !11 = !DILocalVariable(name: "i", line: 4, arg: 1, scope: !5, file: !6, type: !9)
 !12 = !DILocation(line: 4, column: 17, scope: !5)

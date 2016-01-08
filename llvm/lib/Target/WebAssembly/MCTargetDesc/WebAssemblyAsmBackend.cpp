@@ -95,9 +95,6 @@ WebAssemblyAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
 }
 } // end anonymous namespace
 
-MCAsmBackend *llvm::createWebAssemblyAsmBackend(const Target &T,
-                                                const MCRegisterInfo &MRI,
-                                                const Triple &TT,
-                                                StringRef CPU) {
+MCAsmBackend *llvm::createWebAssemblyAsmBackend(const Triple &TT) {
   return new WebAssemblyAsmBackend(TT.isArch64Bit());
 }

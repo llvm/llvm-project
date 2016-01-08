@@ -144,10 +144,11 @@ static void addTryBlockMapEntry(WinEHFuncInfo &FuncInfo, int TryLow,
       HT.TypeDescriptor = cast<GlobalVariable>(TypeInfo->stripPointerCasts());
     HT.Adjectives = cast<ConstantInt>(CPI->getArgOperand(1))->getZExtValue();
     HT.Handler = CPI->getParent();
-    if (isa<ConstantPointerNull>(CPI->getArgOperand(2)))
-      HT.CatchObj.Alloca = nullptr;
+    if (auto *AI =
+            dyn_cast<AllocaInst>(CPI->getArgOperand(2)->stripPointerCasts()))
+      HT.CatchObj.Alloca = AI;
     else
-      HT.CatchObj.Alloca = cast<AllocaInst>(CPI->getArgOperand(2));
+      HT.CatchObj.Alloca = nullptr;
     TBME.HandlerArray.push_back(HT);
   }
   FuncInfo.TryBlockMap.push_back(TBME);

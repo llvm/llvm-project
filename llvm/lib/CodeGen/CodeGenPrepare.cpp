@@ -1108,7 +1108,7 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
 //                               <16 x i1> %mask, <16 x i32> %passthru)
 // to a chain of basic blocks, with loading element one-by-one if
 // the appropriate mask bit is set
-// 
+//
 //  %1 = bitcast i8* %addr to i32*
 //  %2 = extractelement <16 x i1> %mask, i32 0
 //  %3 = icmp eq i1 %2, true
@@ -1272,12 +1272,12 @@ static void ScalarizeMaskedLoad(CallInst *CI) {
 //   %5 = getelementptr i32* %1, i32 0
 //   store i32 %4, i32* %5
 //   br label %else
-// 
+//
 // else:                                             ; preds = %0, %cond.store
 //   %6 = extractelement <16 x i1> %mask, i32 1
 //   %7 = icmp eq i1 %6, true
 //   br i1 %7, label %cond.store1, label %else2
-// 
+//
 // cond.store1:                                      ; preds = %else
 //   %8 = extractelement <16 x i32> %val, i32 1
 //   %9 = getelementptr i32* %1, i32 1
@@ -1377,24 +1377,24 @@ static void ScalarizeMaskedStore(CallInst *CI) {
 //                               <16 x i1> %Mask, <16 x i32> %Src)
 // to a chain of basic blocks, with loading element one-by-one if
 // the appropriate mask bit is set
-// 
+//
 // % Ptrs = getelementptr i32, i32* %base, <16 x i64> %ind
 // % Mask0 = extractelement <16 x i1> %Mask, i32 0
 // % ToLoad0 = icmp eq i1 % Mask0, true
 // br i1 % ToLoad0, label %cond.load, label %else
-// 
+//
 // cond.load:
 // % Ptr0 = extractelement <16 x i32*> %Ptrs, i32 0
 // % Load0 = load i32, i32* % Ptr0, align 4
 // % Res0 = insertelement <16 x i32> undef, i32 % Load0, i32 0
 // br label %else
-// 
+//
 // else:
 // %res.phi.else = phi <16 x i32>[% Res0, %cond.load], [undef, % 0]
 // % Mask1 = extractelement <16 x i1> %Mask, i32 1
 // % ToLoad1 = icmp eq i1 % Mask1, true
 // br i1 % ToLoad1, label %cond.load1, label %else2
-// 
+//
 // cond.load1:
 // % Ptr1 = extractelement <16 x i32*> %Ptrs, i32 1
 // % Load1 = load i32, i32* % Ptr1, align 4
@@ -1526,7 +1526,7 @@ static void ScalarizeMaskedGather(CallInst *CI) {
 // % Ptr0 = extractelement <16 x i32*> %Ptrs, i32 0
 // store i32 %Elt0, i32* % Ptr0, align 4
 // br label %else
-// 
+//
 // else:
 // % Mask1 = extractelement <16 x i1> % Mask, i32 1
 // % ToStore1 = icmp eq i1 % Mask1, true

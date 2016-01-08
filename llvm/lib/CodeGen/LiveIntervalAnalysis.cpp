@@ -1446,7 +1446,7 @@ void LiveIntervals::removeVRegDefAt(LiveInterval &LI, SlotIndex Pos) {
 void LiveIntervals::splitSeparateComponents(LiveInterval &LI,
     SmallVectorImpl<LiveInterval*> &SplitLIs) {
   ConnectedVNInfoEqClasses ConEQ(*this);
-  unsigned NumComp = ConEQ.Classify(&LI);
+  unsigned NumComp = ConEQ.Classify(LI);
   if (NumComp <= 1)
     return;
   DEBUG(dbgs() << "  Split " << NumComp << " components: " << LI << '\n');

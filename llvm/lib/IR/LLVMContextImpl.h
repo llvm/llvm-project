@@ -1027,6 +1027,13 @@ public:
   void getOperandBundleTags(SmallVectorImpl<StringRef> &Tags) const;
   uint32_t getOperandBundleTagID(StringRef Tag) const;
 
+  /// Maintain the GC name for each function.
+  ///
+  /// This saves allocating an additional word in Function for programs which
+  /// do not use GC (i.e., most programs) at the cost of increased overhead for
+  /// clients which do use GC.
+  DenseMap<const Function*, std::string> GCNames;
+
   LLVMContextImpl(LLVMContext &C);
   ~LLVMContextImpl();
 

@@ -256,7 +256,8 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI) {
 /// code) for a branch instruction to both branch to a block and fallthrough
 /// to it, so we check the actual branch operands to see if there are any
 /// explicit mentions.
-static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred, MachineBasicBlock *MBB) {
+static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred,
+                                 MachineBasicBlock *MBB) {
   for (MachineInstr &MI : Pred->terminators())
     for (MachineOperand &MO : MI.explicit_operands())
       if (MO.isMBB() && MO.getMBB() == MBB)

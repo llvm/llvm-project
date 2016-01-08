@@ -90,9 +90,9 @@ private:
 
 MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
   const TargetRegisterClass *TRC =
-      TargetRegisterInfo::isVirtualRegister(RegNo) ?
-      MRI->getRegClass(RegNo) :
-      MRI->getTargetRegisterInfo()->getMinimalPhysRegClass(RegNo);
+      TargetRegisterInfo::isVirtualRegister(RegNo)
+          ? MRI->getRegClass(RegNo)
+          : MRI->getTargetRegisterInfo()->getMinimalPhysRegClass(RegNo);
   for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
     if (TRC->hasType(T))
       return T;

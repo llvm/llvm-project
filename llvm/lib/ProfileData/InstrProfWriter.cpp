@@ -104,26 +104,20 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
       ProfileDataMap.insert(std::make_pair(I.Hash, InstrProfRecord()));
   InstrProfRecord &Dest = Where->second;
 
-  instrprof_error Result;
+  instrprof_error Result = instrprof_error::success;
   if (NewFunc) {
     // We've never seen a function with this name and hash, add it.
     Dest = std::move(I);
     // Fix up the name to avoid dangling reference.
     Dest.Name = FunctionData.find(Dest.Name)->getKey();
-    Result = instrprof_error::success;
-    if (Weight > 1) {
-      for (auto &Count : Dest.Counts) {
-        bool Overflowed;
-        Count = SaturatingMultiply(Count, Weight, &Overflowed);
-        if (Overflowed && Result == instrprof_error::success) {
-          Result = instrprof_error::counter_overflow;
-        }
-      }
-    }
+    if (Weight > 1)
+      Result = Dest.scale(Weight);
   } else {
     // We're updating a function we've seen before.
     Result = Dest.merge(I, Weight);
   }
+
+  Dest.sortValueData();
 
   // We keep track of the max function count as we go for simplicity.
   // Update this statistic no matter the result of the merge.

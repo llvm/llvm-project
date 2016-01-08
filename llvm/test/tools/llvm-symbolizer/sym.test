@@ -20,11 +20,15 @@
 RUN: llvm-symbolizer -print-address -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 RUN: llvm-symbolizer -inlining -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck --check-prefix="PRETTY" %s 
 
+#CHECK: some text
 #CHECK: 0x40054d
 #CHECK: main
 #CHECK: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
+#CHECK: some text2
 #
+#PRETTY: some text
 #PRETTY: {{[0x]+}}40054d: inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3:3
 #PRETTY:  (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7:0
 #PRETTY   (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14:0
+#PRETTY: some text2
 

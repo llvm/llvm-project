@@ -130,12 +130,10 @@ def CONST_F64 : I<(outs F64:$res), (ins f64imm:$imm),
 
 } // Defs = [ARGUMENTS]
 
-def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$dst)),
-          (CONST_I32 tglobaladdr:$dst)>;
-def : Pat<(i32 (WebAssemblywrapper texternalsym:$dst)),
-          (CONST_I32 texternalsym:$dst)>;
-def : Pat<(i32 (WebAssemblywrapper tjumptable:$dst)),
-          (CONST_I32 tjumptable:$dst)>;
+def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
+          (CONST_I32 tglobaladdr:$addr)>;
+def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
+          (CONST_I32 texternalsym:$addr)>;
 
 let Defs = [ARGUMENTS] in {
 

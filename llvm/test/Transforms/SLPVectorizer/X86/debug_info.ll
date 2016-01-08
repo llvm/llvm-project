@@ -25,8 +25,8 @@ define i32 @depth(double* nocapture %A, i32 %m) #0 !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata double* %A, i64 0, metadata !12, metadata !DIExpression()), !dbg !19
   tail call void @llvm.dbg.value(metadata i32 %m, i64 0, metadata !13, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.value(metadata double 0.0, i64 0, metadata !14, metadata !DIExpression()), !dbg !21
-  tail call void @llvm.dbg.value(metadata double 0.2, i64 0, metadata !15, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 00, i64 0, metadata !14, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 02, i64 0, metadata !15, metadata !DIExpression()), !dbg !21
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !16, metadata !DIExpression()), !dbg !23
   %cmp8 = icmp sgt i32 %m, 0, !dbg !23
   br i1 %cmp8, label %for.body.lr.ph, label %for.end, !dbg !23

@@ -159,11 +159,57 @@ TEST_F(InstrProfTest, get_icall_data_read_write) {
 
   std::unique_ptr<InstrProfValueData[]> VD =
       R.get().getValueForSite(IPVK_IndirectCallTarget, 0);
-  // Now sort the target acording to frequency.
-  std::sort(&VD[0], &VD[3],
-            [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
-              return VD1.Count > VD2.Count;
-            });
+
+  ASSERT_EQ(3U, VD[0].Count);
+  ASSERT_EQ(2U, VD[1].Count);
+  ASSERT_EQ(1U, VD[2].Count);
+
+  ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
+  ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
+  ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
+}
+
+TEST_F(InstrProfTest, get_icall_data_read_write_with_weight) {
+  InstrProfRecord Record1("caller", 0x1234, {1, 2});
+  InstrProfRecord Record2("callee1", 0x1235, {3, 4});
+  InstrProfRecord Record3("callee2", 0x1235, {3, 4});
+  InstrProfRecord Record4("callee3", 0x1235, {3, 4});
+
+  // 4 value sites.
+  Record1.reserveSites(IPVK_IndirectCallTarget, 4);
+  InstrProfValueData VD0[] = {{(uint64_t) "callee1", 1},
+                              {(uint64_t) "callee2", 2},
+                              {(uint64_t) "callee3", 3}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 0, VD0, 3, nullptr);
+  // No value profile data at the second site.
+  Record1.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+  InstrProfValueData VD2[] = {{(uint64_t) "callee1", 1},
+                              {(uint64_t) "callee2", 2}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 2, VD2, 2, nullptr);
+  InstrProfValueData VD3[] = {{(uint64_t) "callee1", 1}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
+
+  Writer.addRecord(std::move(Record1), 10);
+  Writer.addRecord(std::move(Record2));
+  Writer.addRecord(std::move(Record3));
+  Writer.addRecord(std::move(Record4));
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ErrorOr<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  ASSERT_TRUE(NoError(R.getError()));
+  ASSERT_EQ(4U, R.get().getNumValueSites(IPVK_IndirectCallTarget));
+  ASSERT_EQ(3U, R.get().getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_EQ(0U, R.get().getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
+  ASSERT_EQ(2U, R.get().getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
+  ASSERT_EQ(1U, R.get().getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
+
+  std::unique_ptr<InstrProfValueData[]> VD =
+      R.get().getValueForSite(IPVK_IndirectCallTarget, 0);
+  ASSERT_EQ(30U, VD[0].Count);
+  ASSERT_EQ(20U, VD[1].Count);
+  ASSERT_EQ(10U, VD[2].Count);
+
   ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
   ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
   ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
@@ -213,11 +259,6 @@ TEST_F(InstrProfTest, get_icall_data_read_write_big_endian) {
 
   std::unique_ptr<InstrProfValueData[]> VD =
       R.get().getValueForSite(IPVK_IndirectCallTarget, 0);
-  // Now sort the target acording to frequency.
-  std::sort(&VD[0], &VD[3],
-            [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
-              return VD1.Count > VD2.Count;
-            });
   ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
   ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
   ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
@@ -249,12 +290,11 @@ TEST_F(InstrProfTest, get_icall_data_merge1) {
                               {uint64_t(callee4), 4}};
   Record11.addValueData(IPVK_IndirectCallTarget, 0, VD0, 4, nullptr);
 
-  // No valeu profile data at the second site.
+  // No value profile data at the second site.
   Record11.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
 
-  InstrProfValueData VD2[] = {{uint64_t(callee1), 1},
-                              {uint64_t(callee2), 2},
-                              {uint64_t(callee3), 3}};
+  InstrProfValueData VD2[] = {
+      {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
   Record11.addValueData(IPVK_IndirectCallTarget, 2, VD2, 3, nullptr);
 
   InstrProfValueData VD3[] = {{uint64_t(callee1), 1}};
@@ -267,16 +307,14 @@ TEST_F(InstrProfTest, get_icall_data_merge1) {
 
   // A differnt record for the same caller.
   Record12.reserveSites(IPVK_IndirectCallTarget, 5);
-  InstrProfValueData VD02[] = {{uint64_t(callee2), 5},
-                               {uint64_t(callee3), 3}};
+  InstrProfValueData VD02[] = {{uint64_t(callee2), 5}, {uint64_t(callee3), 3}};
   Record12.addValueData(IPVK_IndirectCallTarget, 0, VD02, 2, nullptr);
 
-  // No valeu profile data at the second site.
+  // No value profile data at the second site.
   Record12.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
 
-  InstrProfValueData VD22[] = {{uint64_t(callee2), 1},
-                               {uint64_t(callee3), 3},
-                               {uint64_t(callee4), 4}};
+  InstrProfValueData VD22[] = {
+      {uint64_t(callee2), 1}, {uint64_t(callee3), 3}, {uint64_t(callee4), 4}};
   Record12.addValueData(IPVK_IndirectCallTarget, 2, VD22, 3, nullptr);
 
   Record12.addValueData(IPVK_IndirectCallTarget, 3, nullptr, 0, nullptr);
@@ -309,11 +347,6 @@ TEST_F(InstrProfTest, get_icall_data_merge1) {
 
   std::unique_ptr<InstrProfValueData[]> VD =
       R.get().getValueForSite(IPVK_IndirectCallTarget, 0);
-  // Now sort the target acording to frequency.
-  std::sort(&VD[0], &VD[4],
-            [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
-              return VD1.Count > VD2.Count;
-            });
   ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee2"));
   ASSERT_EQ(7U, VD[0].Count);
   ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee3"));
@@ -325,10 +358,6 @@ TEST_F(InstrProfTest, get_icall_data_merge1) {
 
   std::unique_ptr<InstrProfValueData[]> VD_2(
       R.get().getValueForSite(IPVK_IndirectCallTarget, 2));
-  std::sort(&VD_2[0], &VD_2[4],
-            [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
-              return VD1.Count > VD2.Count;
-            });
   ASSERT_EQ(StringRef((const char *)VD_2[0].Value, 7), StringRef("callee3"));
   ASSERT_EQ(6U, VD_2[0].Count);
   ASSERT_EQ(StringRef((const char *)VD_2[1].Value, 7), StringRef("callee4"));
@@ -345,10 +374,6 @@ TEST_F(InstrProfTest, get_icall_data_merge1) {
 
   std::unique_ptr<InstrProfValueData[]> VD_4(
       R.get().getValueForSite(IPVK_IndirectCallTarget, 4));
-  std::sort(&VD_4[0], &VD_4[3],
-            [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
-              return VD1.Count > VD2.Count;
-            });
   ASSERT_EQ(StringRef((const char *)VD_4[0].Value, 7), StringRef("callee3"));
   ASSERT_EQ(6U, VD_4[0].Count);
   ASSERT_EQ(StringRef((const char *)VD_4[1].Value, 7), StringRef("callee2"));
@@ -406,6 +431,55 @@ TEST_F(InstrProfTest, get_icall_data_merge1_saturation) {
       ReadRecord2.get().getValueForSite(IPVK_IndirectCallTarget, 0);
   ASSERT_EQ(StringRef("bar"), StringRef((const char *)VD[0].Value, 3));
   ASSERT_EQ(Max, VD[0].Count);
+}
+
+// This test tests that when there are too many values
+// for a given site, the merged results are properly
+// truncated.
+TEST_F(InstrProfTest, get_icall_data_merge_site_trunc) {
+  static const char caller[] = "caller";
+
+  InstrProfRecord Record11(caller, 0x1234, {1, 2});
+  InstrProfRecord Record12(caller, 0x1234, {1, 2});
+
+  // 2 value sites.
+  Record11.reserveSites(IPVK_IndirectCallTarget, 2);
+  InstrProfValueData VD0[255];
+  for (int I = 0; I < 255; I++) {
+    VD0[I].Value = 2 * I;
+    VD0[I].Count = 2 * I + 1000;
+  }
+
+  Record11.addValueData(IPVK_IndirectCallTarget, 0, VD0, 255, nullptr);
+  Record11.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+
+  Record12.reserveSites(IPVK_IndirectCallTarget, 2);
+  InstrProfValueData VD1[255];
+  for (int I = 0; I < 255; I++) {
+    VD1[I].Value = 2 * I + 1;
+    VD1[I].Count = 2 * I + 1001;
+  }
+
+  Record12.addValueData(IPVK_IndirectCallTarget, 0, VD1, 255, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+
+  Writer.addRecord(std::move(Record11));
+  // Merge profile data.
+  Writer.addRecord(std::move(Record12));
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ErrorOr<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  ASSERT_TRUE(NoError(R.getError()));
+  std::unique_ptr<InstrProfValueData[]> VD(
+      R.get().getValueForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_EQ(2U, R.get().getNumValueSites(IPVK_IndirectCallTarget));
+  ASSERT_EQ(255U, R.get().getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+  for (unsigned I = 0; I < 255; I++) {
+    ASSERT_EQ(VD[I].Value, 509 - I);
+    ASSERT_EQ(VD[I].Count, 1509 - I);
+  }
 }
 
 // Synthesize runtime value profile data.

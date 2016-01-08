@@ -235,14 +235,7 @@ void LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
   if (OpenRanges.empty())
     return;
 
-  if (OutLocs.find(CurMBB) == OutLocs.end()) {
-    // Create space for new Outgoing locs entries.
-    VarLocList VLL;
-    OutLocs.insert(std::make_pair(CurMBB, std::move(VLL)));
-  }
-  auto OL = OutLocs.find(CurMBB);
-  assert(OL != OutLocs.end());
-  VarLocList &VLL = OL->second;
+  VarLocList &VLL = OutLocs[CurMBB];
 
   for (auto OR : OpenRanges) {
     // Copy OpenRanges to OutLocs, if not already present.
@@ -305,14 +298,7 @@ void LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
   if (InLocsT.empty())
     return;
 
-  if (InLocs.find(&MBB) == InLocs.end()) {
-    // Create space for new Incoming locs entries.
-    VarLocList VLL;
-    InLocs.insert(std::make_pair(&MBB, std::move(VLL)));
-  }
-  auto IL = InLocs.find(&MBB);
-  assert(IL != InLocs.end());
-  VarLocList &ILL = IL->second;
+  VarLocList &ILL = InLocs[&MBB];
 
   // Insert DBG_VALUE instructions, if not already inserted.
   for (auto ILT : InLocsT) {

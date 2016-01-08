@@ -1,4 +1,4 @@
-# RUN: llvm-profdata show -ic-targets  -all-functions %s | FileCheck %s --check-prefix=IC
+# RUN: llvm-profdata show -ic-targets  -all-functions %s | FileCheck %s --check-prefix=ICTXT
 # RUN: llvm-profdata show -ic-targets -counts -text -all-functions %s | FileCheck %s --check-prefix=ICTEXT
 # RUN: llvm-profdata merge -o %t.profdata  %s
 # RUN: llvm-profdata show -ic-targets  -all-functions %t.profdata | FileCheck %s --check-prefix=IC
@@ -45,10 +45,16 @@ foo2:1000
 1
 foo2:20000
 
+#ICTXT: Indirect Call Site Count: 3
+#ICTXT-NEXT:    Indirect Target Results: 
+#ICTXT-NEXT:	[ 1, foo, 100 ]
+#ICTXT-NEXT:	[ 1, foo2, 1000 ]
+#ICTXT-NEXT:	[ 2, foo2, 20000 ]
+
 #IC: Indirect Call Site Count: 3
 #IC-NEXT:    Indirect Target Results: 
-#IC-NEXT:	[ 1, foo, 100 ]
 #IC-NEXT:	[ 1, foo2, 1000 ]
+#IC-NEXT:	[ 1, foo, 100 ]
 #IC-NEXT:	[ 2, foo2, 20000 ]
 
 #ICTEXT: foo:100
