@@ -24,12 +24,12 @@ using namespace lld::elf2;
 bool elf2::HasGotOffRel = false;
 
 template <class ELFT>
-OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t sh_type,
-                                           uintX_t sh_flags)
+OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
+                                           uintX_t Flags)
     : Name(Name) {
   memset(&Header, 0, sizeof(Elf_Shdr));
-  Header.sh_type = sh_type;
-  Header.sh_flags = sh_flags;
+  Header.sh_type = Type;
+  Header.sh_flags = Flags;
 }
 
 template <class ELFT>
@@ -756,9 +756,9 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t sh_type,
-                                   uintX_t sh_flags)
-    : OutputSectionBase<ELFT>(Name, sh_type, sh_flags) {}
+OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type,
+                                   uintX_t Flags)
+    : OutputSectionBase<ELFT>(Name, Type, Flags) {}
 
 template <class ELFT>
 void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
@@ -906,9 +906,9 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-EHOutputSection<ELFT>::EHOutputSection(StringRef Name, uint32_t sh_type,
-                                       uintX_t sh_flags)
-    : OutputSectionBase<ELFT>(Name, sh_type, sh_flags) {}
+EHOutputSection<ELFT>::EHOutputSection(StringRef Name, uint32_t Type,
+                                       uintX_t Flags)
+    : OutputSectionBase<ELFT>(Name, Type, Flags) {}
 
 template <class ELFT>
 EHRegion<ELFT>::EHRegion(EHInputSection<ELFT> *S, unsigned Index)
@@ -1079,9 +1079,9 @@ template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-MergeOutputSection<ELFT>::MergeOutputSection(StringRef Name, uint32_t sh_type,
-                                             uintX_t sh_flags)
-    : OutputSectionBase<ELFT>(Name, sh_type, sh_flags) {}
+MergeOutputSection<ELFT>::MergeOutputSection(StringRef Name, uint32_t Type,
+                                             uintX_t Flags)
+    : OutputSectionBase<ELFT>(Name, Type, Flags) {}
 
 template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   if (shouldTailMerge()) {
@@ -1182,7 +1182,7 @@ template <class ELFT> void StringTableSection<ELFT>::reserve(StringRef S) {
   Reserved += S.size() + 1; // +1 for NUL
 }
 
-// Adds a string to the string table. You must call reverse() with the
+// Adds a string to the string table. You must call reserve() with the
 // same string before calling addString().
 template <class ELFT> size_t StringTableSection<ELFT>::addString(StringRef S) {
   size_t Pos = Used;
@@ -1237,11 +1237,8 @@ SymbolTableSection<ELFT>::SymbolTableSection(
                               StrTabSec.isDynamic() ? SHT_DYNSYM : SHT_SYMTAB,
                               StrTabSec.isDynamic() ? (uintX_t)SHF_ALLOC : 0),
       Table(Table), StrTabSec(StrTabSec) {
-  typedef OutputSectionBase<ELFT> Base;
-  typename Base::Elf_Shdr &Header = this->Header;
-
-  Header.sh_entsize = sizeof(Elf_Sym);
-  Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
+  this->Header.sh_entsize = sizeof(Elf_Sym);
+  this->Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
 }
 
 // Orders symbols according to their positions in the GOT,

@@ -207,10 +207,6 @@ public:
 
     void Status(Stream &strm) const;
 
-    size_t GetAlternateManglings(const ConstString &mangled, std::vector<ConstString> &alternates) override {
-        return static_cast<size_t>(0);
-    }
-
     void ModulesDidLoad(const ModuleList &module_list) override;
 
     bool LoadAllocation(Stream &strm, const uint32_t alloc_id, const char* filename, StackFrame* frame_ptr);

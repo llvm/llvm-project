@@ -208,6 +208,10 @@ public:
                    bool append,
                    lldb_private::SymbolContextList& sc_list) override;
 
+    void
+    GetMangledNamesForFunction (const std::string &scope_qualified_name,
+                                std::vector<lldb_private::ConstString> &mangled_names) override;
+
     uint32_t
     FindTypes (const lldb_private::SymbolContext& sc,
                const lldb_private::ConstString &name,
@@ -577,6 +581,9 @@ protected:
                                         m_fetched_external_modules:1;
     lldb_private::LazyBool              m_supports_DW_AT_APPLE_objc_complete_type;
 
+    typedef std::shared_ptr<std::set<DIERef> > DIERefSetSP;
+    typedef std::unordered_map<std::string, DIERefSetSP> NameToOffsetMap;
+    NameToOffsetMap m_function_scope_qualified_name_map;
     std::unique_ptr<DWARFDebugRanges>     m_ranges;
     UniqueDWARFASTTypeMap m_unique_ast_type_map;
     DIEToTypePtr m_die_to_type;

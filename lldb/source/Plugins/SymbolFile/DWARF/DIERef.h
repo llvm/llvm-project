@@ -33,6 +33,18 @@ struct DIERef
     lldb::user_id_t
     GetUID() const;
 
+    bool
+    operator< (const DIERef &ref) const
+    {
+        return die_offset < ref.die_offset;
+    }
+
+    bool
+    operator< (const DIERef &ref)
+    {
+        return die_offset < ref.die_offset;
+    }
+
     dw_offset_t cu_offset;
     dw_offset_t die_offset;
 };

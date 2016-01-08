@@ -144,6 +144,7 @@ public:
     virtual uint32_t        FindTypes (const SymbolContext& sc, const ConstString &name, const CompilerDeclContext *parent_decl_ctx, bool append, uint32_t max_matches, TypeMap& types);
     virtual size_t          FindTypes (const std::vector<CompilerContext> &context, bool append, TypeMap& types);
 
+    virtual void            GetMangledNamesForFunction(const std::string &scope_qualified_name, std::vector<ConstString> &mangled_names);
 //  virtual uint32_t        FindTypes (const SymbolContext& sc, const RegularExpression& regex, bool append, uint32_t max_matches, TypeList& types) = 0;
     virtual TypeList *      GetTypeList ();
     virtual size_t          GetTypes (lldb_private::SymbolContextScope *sc_scope,

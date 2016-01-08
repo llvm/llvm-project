@@ -1034,7 +1034,8 @@ void relocatableSectionInfoForContentType(DefinedAtom::ContentType atomType,
                                           StringRef &segmentName,
                                           StringRef &sectionName,
                                           SectionType &sectionType,
-                                          SectionAttr &sectionAttrs) {
+                                          SectionAttr &sectionAttrs,
+                                          bool &relocsToDefinedCanBeImplicit) {
 
   for (const MachORelocatableSectionToAtomType *p = sectsToAtomType ;
                                  p->atomType != DefinedAtom::typeUnknown; ++p) {
@@ -1047,8 +1048,11 @@ void relocatableSectionInfoForContentType(DefinedAtom::ContentType atomType,
     sectionName = p->sectionName;
     sectionType = p->sectionType;
     sectionAttrs = 0;
+    relocsToDefinedCanBeImplicit = false;
     if (atomType == DefinedAtom::typeCode)
       sectionAttrs = S_ATTR_PURE_INSTRUCTIONS;
+    if (atomType == DefinedAtom::typeCFI)
+      relocsToDefinedCanBeImplicit = true;
     return;
   }
   llvm_unreachable("content type not yet supported");

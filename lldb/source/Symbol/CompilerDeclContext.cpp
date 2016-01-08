@@ -38,6 +38,15 @@ CompilerDeclContext::GetName () const
         return ConstString();
 }
 
+ConstString
+CompilerDeclContext::GetScopeQualifiedName () const
+{
+    if (IsValid())
+        return m_type_system->DeclContextGetScopeQualifiedName(m_opaque_decl_ctx);
+    else
+        return ConstString();
+}
+
 bool
 CompilerDeclContext::IsStructUnionOrClass () const
 {

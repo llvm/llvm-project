@@ -2250,7 +2250,7 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
     static ConstString g_key_qaddr("qaddr");
     static ConstString g_key_queue_name("qname");
     static ConstString g_key_queue_kind("qkind");
-    static ConstString g_key_queue_serial("qserial");
+    static ConstString g_key_queue_serial_number("qserialnum");
     static ConstString g_key_registers("registers");
     static ConstString g_key_memory("memory");
     static ConstString g_key_address("address");
@@ -2272,7 +2272,7 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
     bool queue_vars_valid = false;
     std::string queue_name;
     QueueKind queue_kind = eQueueKindUnknown;
-    uint64_t queue_serial = 0;
+    uint64_t queue_serial_number = 0;
     // Iterate through all of the thread dictionary key/value pairs from the structured data dictionary
 
     thread_dict->ForEach([this,
@@ -2288,7 +2288,7 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
                           &queue_vars_valid,
                           &queue_name,
                           &queue_kind,
-                          &queue_serial]
+                          &queue_serial_number]
                           (ConstString key, StructuredData::Object* object) -> bool
     {
         if (key == g_key_tid)
@@ -2340,10 +2340,10 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
                 queue_kind = eQueueKindConcurrent;
             }
         }
-        else if (key == g_key_queue_serial)
+        else if (key == g_key_queue_serial_number)
         {
-            queue_serial = object->GetIntegerValue(0);
-            if (queue_serial != 0)
+            queue_serial_number = object->GetIntegerValue(0);
+            if (queue_serial_number != 0)
                 queue_vars_valid = true;
         }
         else if (key == g_key_reason)
@@ -2418,7 +2418,7 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
                               queue_vars_valid,
                               queue_name,
                               queue_kind,
-                              queue_serial);
+                              queue_serial_number);
 }
 
 StateType
@@ -2463,7 +2463,7 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
             bool queue_vars_valid = false; // says if locals below that start with "queue_" are valid
             std::string queue_name;
             QueueKind queue_kind = eQueueKindUnknown;
-            uint64_t queue_serial = 0;
+            uint64_t queue_serial_number = 0;
             ExpeditedRegisterMap expedited_register_map;
             while (stop_packet.GetNameColonValue(key, value))
             {
@@ -2577,10 +2577,10 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                         queue_kind = eQueueKindConcurrent;
                     }
                 }
-                else if (key.compare("qserial") == 0)
+                else if (key.compare("qserialnum") == 0)
                 {
-                    queue_serial = StringConvert::ToUInt64 (value.c_str(), 0, 0);
-                    if (queue_serial != 0)
+                    queue_serial_number = StringConvert::ToUInt64 (value.c_str(), 0, 0);
+                    if (queue_serial_number != 0)
                         queue_vars_valid = true;
                 }
                 else if (key.compare("reason") == 0)
@@ -2680,7 +2680,7 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                                                     queue_vars_valid,
                                                     queue_name,
                                                     queue_kind,
-                                                    queue_serial);
+                                                    queue_serial_number);
 
             return eStateStopped;
         }

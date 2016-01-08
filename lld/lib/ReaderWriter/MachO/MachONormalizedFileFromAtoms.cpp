@@ -50,7 +50,8 @@ struct AtomInfo {
 
 struct SectionInfo {
   SectionInfo(StringRef seg, StringRef sect, SectionType type,
-              const MachOLinkingContext &ctxt, uint32_t attr=0);
+              const MachOLinkingContext &ctxt, uint32_t attr,
+              bool relocsToDefinedCanBeImplicit);
 
   StringRef                 segmentName;
   StringRef                 sectionName;
@@ -59,15 +60,25 @@ struct SectionInfo {
   uint64_t                  address;
   uint64_t                  size;
   uint16_t                  alignment;
+
+  /// If this is set, the any relocs in this section which point to defined
+  /// addresses can be implicitly generated.  This is the case for the
+  /// __eh_frame section where references to the function can be implicit if the
+  /// function is defined.
+  bool                      relocsToDefinedCanBeImplicit;
+
+
   std::vector<AtomInfo>     atomsAndOffsets;
   uint32_t                  normalizedSectionIndex;
   uint32_t                  finalSectionIndex;
 };
 
 SectionInfo::SectionInfo(StringRef sg, StringRef sct, SectionType t,
-                         const MachOLinkingContext &ctxt, uint32_t attrs)
+                         const MachOLinkingContext &ctxt, uint32_t attrs,
+                         bool relocsToDefinedCanBeImplicit)
  : segmentName(sg), sectionName(sct), type(t), attributes(attrs),
                  address(0), size(0), alignment(1),
+                 relocsToDefinedCanBeImplicit(relocsToDefinedCanBeImplicit),
                  normalizedSectionIndex(0), finalSectionIndex(0) {
   uint16_t align = 1;
   if (ctxt.sectionAligned(segmentName, sectionName, align)) {
@@ -193,10 +204,12 @@ SectionInfo *Util::getRelocatableSection(DefinedAtom::ContentType type) {
   StringRef sectionName;
   SectionType sectionType;
   SectionAttr sectionAttrs;
+  bool relocsToDefinedCanBeImplicit;
 
   // Use same table used by when parsing .o files.
   relocatableSectionInfoForContentType(type, segmentName, sectionName,
-                                       sectionType, sectionAttrs);
+                                       sectionType, sectionAttrs,
+                                       relocsToDefinedCanBeImplicit);
   // If we already have a SectionInfo with this name, re-use it.
   // This can happen if two ContentType map to the same mach-o section.
   for (auto sect : _sectionMap) {
@@ -207,7 +220,8 @@ SectionInfo *Util::getRelocatableSection(DefinedAtom::ContentType type) {
   }
   // Otherwise allocate new SectionInfo object.
   auto *sect = new (_allocator)
-      SectionInfo(segmentName, sectionName, sectionType, _ctx, sectionAttrs);
+      SectionInfo(segmentName, sectionName, sectionType, _ctx, sectionAttrs,
+                  relocsToDefinedCanBeImplicit);
   _sectionInfos.push_back(sect);
   _sectionMap[type] = sect;
   return sect;
@@ -287,7 +301,8 @@ SectionInfo *Util::getFinalSection(DefinedAtom::ContentType atomType) {
     }
     // Otherwise allocate new SectionInfo object.
     auto *sect = new (_allocator) SectionInfo(
-        p.segmentName, p.sectionName, p.sectionType, _ctx, sectionAttrs);
+        p.segmentName, p.sectionName, p.sectionType, _ctx, sectionAttrs,
+        /* relocsToDefinedCanBeImplicit */ false);
     _sectionInfos.push_back(sect);
     _sectionMap[atomType] = sect;
     return sect;
@@ -320,7 +335,8 @@ SectionInfo *Util::sectionForAtom(const DefinedAtom *atom) {
     StringRef segName = customName.slice(0, seperatorIndex);
     StringRef sectName = customName.drop_front(seperatorIndex + 1);
     auto *sect =
-        new (_allocator) SectionInfo(segName, sectName, S_REGULAR, _ctx);
+        new (_allocator) SectionInfo(segName, sectName, S_REGULAR, _ctx,
+                                     0, /* relocsToDefinedCanBeImplicit */ false);
     _customSections.push_back(sect);
     _sectionInfos.push_back(sect);
     return sect;
@@ -1024,6 +1040,11 @@ void Util::addSectionRelocs(const lld::File &, NormalizedFile &file) {
     for (const AtomInfo &info : si->atomsAndOffsets) {
       const DefinedAtom *atom = info.atom;
       for (const Reference *ref : *atom) {
+        // Skip emitting relocs for sections which are always able to be
+        // implicitly regenerated and where the relocation targets an address
+        // which is defined.
+        if (si->relocsToDefinedCanBeImplicit && isa<DefinedAtom>(ref->target()))
+          continue;
         _archHandler.appendSectionRelocations(*atom, info.offsetInSection, *ref,
                                               symIndexForAtom,
                                               sectIndexForAtom,

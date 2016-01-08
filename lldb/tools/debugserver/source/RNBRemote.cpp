@@ -2725,7 +2725,7 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
                         ostrm << "qkind:concurrent;";
 
                     if (queue_serialnum > 0)
-                        ostrm << "qserial:" << DECIMAL << queue_serialnum << ';';
+                        ostrm << "qserialnum:" << DECIMAL << queue_serialnum << ';';
                 }
             }
         }
@@ -5198,7 +5198,7 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only)
                             else if (queue_width > 1)
                                 thread_dict_sp->AddStringItem("qkind", "concurrent");
                             if (queue_serialnum > 0)
-                                thread_dict_sp->AddIntegerItem("qserial", queue_serialnum);
+                                thread_dict_sp->AddIntegerItem("qserialnum", queue_serialnum);
                         }
                     }
                 }

@@ -1,10 +1,33 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 int 
 main (int argc, char **argv)
 {
-    if (argc >= 2 && strcmp (argv[1], "CRASH") == 0)
+    int do_crash = 0;
+    int do_wait = 0;
+
+    for (int idx = 1; idx < argc; idx++)
+    {
+        if (strcmp(argv[idx], "CRASH") == 0)
+            do_crash = 1;
+        if (strcmp(argv[idx], "WAIT") == 0)
+            do_wait = 1;
+    }
+    printf("PID: %d END\n", getpid());
+
+    if (do_wait)
+    {
+        int keep_waiting = 1;
+        while (keep_waiting)
+        {
+            printf ("Waiting\n");
+            sleep(1); // Stop here to unset keep_waiting
+        }
+    }
+
+    if (do_crash)
     {
       char *touch_me_not = (char *) 0;
       printf ("About to crash.\n");

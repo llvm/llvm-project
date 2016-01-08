@@ -9969,6 +9969,18 @@ ClangASTContext::DeclContextGetName (void *opaque_decl_ctx)
     return ConstString();
 }
 
+ConstString
+ClangASTContext::DeclContextGetScopeQualifiedName (void *opaque_decl_ctx)
+{
+    if (opaque_decl_ctx)
+    {
+        clang::NamedDecl *named_decl = llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
+        if (named_decl)
+            return ConstString(llvm::StringRef(named_decl->getQualifiedNameAsString()));
+    }
+    return ConstString();
+}
+
 bool
 ClangASTContext::DeclContextIsClassMethod (void *opaque_decl_ctx,
                                            lldb::LanguageType *language_ptr,

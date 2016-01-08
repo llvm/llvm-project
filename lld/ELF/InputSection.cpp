@@ -219,8 +219,13 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     } else if (!Target->needsCopyRel(Type, *Body) &&
                isa<SharedSymbol<ELFT>>(*Body)) {
       continue;
-    } else if (Target->isTlsDynReloc(Type, *Body) ||
-               Target->isSizeDynReloc(Type, *Body)) {
+    } else if (Target->isTlsDynReloc(Type, *Body)) {
+      continue;
+    } else if (Target->isSizeReloc(Type) && canBePreempted(Body, false)) {
+      // A SIZE relocation is supposed to set a symbol size, but if a symbol
+      // can be preempted, the size at runtime may be different than link time.
+      // If that's the case, we leave the field alone rather than filling it
+      // with a possibly incorrect value.
       continue;
     } else if (Config->EMachine == EM_MIPS) {
       if (Type == R_MIPS_HI16 && Body == Config->MipsGpDisp)

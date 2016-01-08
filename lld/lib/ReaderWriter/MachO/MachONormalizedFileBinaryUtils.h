@@ -168,7 +168,8 @@ void relocatableSectionInfoForContentType(DefinedAtom::ContentType atomType,
                                           StringRef &segmentName,
                                           StringRef &sectionName,
                                           SectionType &sectionType,
-                                          SectionAttr &sectionAttrs);
+                                          SectionAttr &sectionAttrs,
+                                          bool &relocsToDefinedCanBeImplicit);
 
 } // namespace normalized
 } // namespace mach_o

@@ -18,6 +18,7 @@
 #include "Config.h"
 #include "Error.h"
 #include "Symbols.h"
+#include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -122,6 +123,19 @@ SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
       DefinedRegular<ELFT>(Name, ElfSym<ELFT>::IgnoreUndef, nullptr);
   resolve(Sym);
   return Sym;
+}
+
+// Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
+// Used to implement --wrap.
+template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
+  if (Symtab.count(Name) == 0)
+    return;
+  StringSaver Saver(Alloc);
+  Symbol *Sym = addUndefined(Name)->getSymbol();
+  Symbol *Real = addUndefined(Saver.save("__real_" + Name))->getSymbol();
+  Symbol *Wrap = addUndefined(Saver.save("__wrap_" + Name))->getSymbol();
+  Real->Body = Sym->Body;
+  Sym->Body = Wrap->Body;
 }
 
 // Returns a file from which symbol B was created.

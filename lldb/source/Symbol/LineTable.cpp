@@ -143,6 +143,13 @@ LineTable::InsertSequence (LineSequence* sequence)
     entry_collection::iterator end_pos = m_entries.end();
     LineTable::Entry::LessThanBinaryPredicate less_than_bp(this);
     entry_collection::iterator pos = upper_bound(begin_pos, end_pos, entry, less_than_bp);
+
+    // We should never insert a sequence in the middle of another sequence
+    if (pos != begin_pos) {
+        while (pos < end_pos && !((pos - 1)->is_terminal_entry))
+            pos++;
+    }
+
 #ifdef LLDB_CONFIGURATION_DEBUG
     // If we aren't inserting at the beginning, the previous entry should
     // terminate a sequence.

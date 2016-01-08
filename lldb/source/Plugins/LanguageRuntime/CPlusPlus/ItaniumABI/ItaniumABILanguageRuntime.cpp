@@ -319,46 +319,6 @@ ItaniumABILanguageRuntime::IsVTableName (const char *name)
         return false;
 }
 
-static std::map<ConstString, std::vector<ConstString> >&
-GetAlternateManglingPrefixes()
-{
-    static std::map<ConstString, std::vector<ConstString> > g_alternate_mangling_prefixes;
-    return g_alternate_mangling_prefixes;
-}
-
-
-size_t
-ItaniumABILanguageRuntime::GetAlternateManglings(const ConstString &mangled, std::vector<ConstString> &alternates)
-{
-    if (!mangled)
-        return static_cast<size_t>(0);
-
-    alternates.clear();
-    const char *mangled_cstr = mangled.AsCString();
-    std::map<ConstString, std::vector<ConstString> >& alternate_mangling_prefixes = GetAlternateManglingPrefixes();
-    for (std::map<ConstString, std::vector<ConstString> >::iterator it = alternate_mangling_prefixes.begin();
-         it != alternate_mangling_prefixes.end();
-         ++it)
-    {
-        const char *prefix_cstr = it->first.AsCString();
-        if (strncmp(mangled_cstr, prefix_cstr, strlen(prefix_cstr)) == 0)
-        {
-            const std::vector<ConstString> &alternate_prefixes = it->second;
-            for (size_t i = 0; i < alternate_prefixes.size(); ++i)
-            {
-                std::string alternate_mangling(alternate_prefixes[i].AsCString());
-                alternate_mangling.append(mangled_cstr + strlen(prefix_cstr));
-
-                alternates.push_back(ConstString(alternate_mangling.c_str()));
-            }
-
-            return alternates.size();
-        }
-    }
-
-    return static_cast<size_t>(0);
-}
-
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
@@ -382,17 +342,6 @@ ItaniumABILanguageRuntime::Initialize()
     PluginManager::RegisterPlugin (GetPluginNameStatic(),
                                    "Itanium ABI for the C++ language",
                                    CreateInstance);    
-
-    // Alternate manglings for std::basic_string<...>
-    std::vector<ConstString> basic_string_alternates;
-    basic_string_alternates.push_back(ConstString("_ZNSs"));
-    basic_string_alternates.push_back(ConstString("_ZNKSs"));
-    std::map<ConstString, std::vector<ConstString> >& alternate_mangling_prefixes = GetAlternateManglingPrefixes();
-
-    alternate_mangling_prefixes[ConstString("_ZNSbIcSt17char_traits<char>St15allocator<char>E")] =
-        basic_string_alternates;
-    alternate_mangling_prefixes[ConstString("_ZNKSbIcSt17char_traits<char>St15allocator<char>E")] =
-        basic_string_alternates;
 }
 
 void

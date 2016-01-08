@@ -299,9 +299,15 @@ void Writer<ELFT>::scanRelocs(
       Body->setUsedInDynamicReloc();
       continue;
     }
+
+    // Here we are creating a relocation for the dynamic linker based on
+    // a relocation from an object file, but some relocations need no
+    // load-time fixup. Skip such relocation.
     bool CBP = canBePreempted(Body, NeedsGot);
-    if (!CBP && (!Config->Shared || Target->isRelRelative(Type)))
+    bool NoDynrel = Target->isRelRelative(Type) || Target->isSizeReloc(Type);
+    if (!CBP && (NoDynrel || !Config->Shared))
       continue;
+
     if (CBP)
       Body->setUsedInDynamicReloc();
     if (NeedsPlt && Target->supportsLazyRelocations())

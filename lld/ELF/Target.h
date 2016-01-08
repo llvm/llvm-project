@@ -57,8 +57,15 @@ public:
   virtual void writePltEntry(uint8_t *Buf, uint64_t GotAddr,
                              uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                              int32_t Index, unsigned RelOff) const = 0;
+
+  // Returns true if a relocation is relative to the place being relocated,
+  // such as relocations used for PC-relative instructions. Such relocations
+  // need not be fixed up if an image is loaded to a different address than
+  // the link-time address. So we don't have to emit a relocation for the
+  // dynamic linker if isRelRelative returns true.
   virtual bool isRelRelative(uint32_t Type) const;
-  virtual bool isSizeDynReloc(uint32_t Type, const SymbolBody &S) const;
+
+  virtual bool isSizeReloc(uint32_t Type) const;
   virtual bool relocNeedsDynRelative(unsigned Type) const { return false; }
   virtual bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const = 0;
   virtual bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const = 0;

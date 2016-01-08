@@ -57,6 +57,7 @@ public:
   SymbolBody *addIgnored(StringRef Name);
   void scanShlibUndefined();
   SymbolBody *find(StringRef Name);
+  void wrap(StringRef Name);
   ELFFileBase<ELFT> *findFile(SymbolBody *B);
 
 private:
