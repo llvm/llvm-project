@@ -33,12 +33,10 @@ namespace clang {
     Backend_EmitObj        ///< Emit native object files
   };
 
-  void
-  EmitBackendOutput(DiagnosticsEngine &Diags, const CodeGenOptions &CGOpts,
-                    const TargetOptions &TOpts, const LangOptions &LOpts,
-                    StringRef TDesc, llvm::Module *M, BackendAction Action,
-                    raw_pwrite_stream *OS,
-                    std::unique_ptr<llvm::FunctionInfoIndex> Index = nullptr);
+  void EmitBackendOutput(DiagnosticsEngine &Diags, const CodeGenOptions &CGOpts,
+                         const TargetOptions &TOpts, const LangOptions &LOpts,
+                         StringRef TDesc, llvm::Module *M, BackendAction Action,
+                         raw_pwrite_stream *OS);
 }
 
 #endif

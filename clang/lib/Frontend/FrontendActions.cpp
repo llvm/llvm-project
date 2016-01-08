@@ -187,15 +187,17 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
     return std::error_code();
 
   // Add includes for each of these headers.
-  for (Module::Header &H : Module->Headers[Module::HK_Normal]) {
-    Module->addTopHeader(H.Entry);
-    // Use the path as specified in the module map file. We'll look for this
-    // file relative to the module build directory (the directory containing
-    // the module map file) so this will find the same file that we found
-    // while parsing the module map.
-    if (std::error_code Err = addHeaderInclude(H.NameAsWritten, Includes,
-                                               LangOpts, Module->IsExternC))
-      return Err;
+  for (auto HK : {Module::HK_Normal, Module::HK_Private}) {
+    for (Module::Header &H : Module->Headers[HK]) {
+      Module->addTopHeader(H.Entry);
+      // Use the path as specified in the module map file. We'll look for this
+      // file relative to the module build directory (the directory containing
+      // the module map file) so this will find the same file that we found
+      // while parsing the module map.
+      if (std::error_code Err = addHeaderInclude(H.NameAsWritten, Includes,
+                                                 LangOpts, Module->IsExternC))
+        return Err;
+    }
   }
   // Note that Module->PrivateHeaders will not be a TopHeader.
 
