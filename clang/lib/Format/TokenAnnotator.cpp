@@ -1725,7 +1725,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     if (Right.is(Keywords.kw_function) && Left.isNot(tok::comma))
       return 100;
     if (Left.is(TT_JsTypeColon))
-      return 100;
+      return 35;
   }
 
   if (Left.is(tok::comma) || (Right.is(tok::identifier) && Right.Next &&

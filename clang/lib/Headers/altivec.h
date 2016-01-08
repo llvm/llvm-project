@@ -1891,6 +1891,22 @@ static vector float __ATTRS_o_ai vec_ctf(vector unsigned int __a, int __b) {
   return __builtin_altivec_vcfux((vector int)__a, __b);
 }
 
+#ifdef __VSX__
+static vector double __ATTRS_o_ai vec_ctf(vector unsigned long long __a,
+                                          int __b) {
+  vector double __ret = __builtin_convertvector(__a, vector double);
+  __ret *= (vector double)(vector unsigned long long)((0x3ffULL - __b) << 52);
+  return __ret;
+}
+
+static vector double __ATTRS_o_ai vec_ctf(vector signed long long __a,
+                                          int __b) {
+  vector double __ret = __builtin_convertvector(__a, vector double);
+  __ret *= (vector double)(vector unsigned long long)((0x3ffULL - __b) << 52);
+  return __ret;
+}
+#endif
+
 /* vec_vcfsx */
 
 static vector float __attribute__((__always_inline__))
@@ -1907,10 +1923,17 @@ vec_vcfux(vector unsigned int __a, int __b) {
 
 /* vec_cts */
 
-static vector int __attribute__((__always_inline__))
-vec_cts(vector float __a, int __b) {
+static vector int __ATTRS_o_ai vec_cts(vector float __a, int __b) {
   return __builtin_altivec_vctsxs(__a, __b);
 }
+
+#ifdef __VSX__
+static vector signed long long __ATTRS_o_ai vec_cts(vector double __a,
+                                                    int __b) {
+  __a *= (vector double)(vector unsigned long long)((0x3ffULL + __b) << 52);
+  return __builtin_convertvector(__a, vector signed long long);
+}
+#endif
 
 /* vec_vctsxs */
 
@@ -1921,10 +1944,17 @@ vec_vctsxs(vector float __a, int __b) {
 
 /* vec_ctu */
 
-static vector unsigned int __attribute__((__always_inline__))
-vec_ctu(vector float __a, int __b) {
+static vector unsigned int __ATTRS_o_ai vec_ctu(vector float __a, int __b) {
   return __builtin_altivec_vctuxs(__a, __b);
 }
+
+#ifdef __VSX__
+static vector unsigned long long __ATTRS_o_ai vec_ctu(vector double __a,
+                                                      int __b) {
+  __a *= (vector double)(vector unsigned long long)((0x3ffULL + __b) << 52);
+  return __builtin_convertvector(__a, vector unsigned long long);
+}
+#endif
 
 /* vec_vctuxs */
 

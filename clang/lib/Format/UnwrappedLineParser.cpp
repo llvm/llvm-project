@@ -841,6 +841,8 @@ void UnwrappedLineParser::parseStructuralElement() {
       // This does not apply for Java and JavaScript.
       if (Style.Language == FormatStyle::LK_Java ||
           Style.Language == FormatStyle::LK_JavaScript) {
+        if (FormatTok->is(tok::semi))
+          nextToken();
         addUnwrappedLine();
         return;
       }

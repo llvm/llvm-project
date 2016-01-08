@@ -845,4 +845,51 @@ void test1() {
 // CHECK: xor <2 x i64>
 // CHECK-LE: xor <2 x i64>
 
+  res_vsll = vec_cts(vd, 0);
+// CHECK: fmul <2 x double>
+// CHECK: fptosi <2 x double> %{{.*}} to <2 x i64>
+// CHECK-LE: fmul <2 x double>
+// CHECK-LE: fptosi <2 x double> %{{.*}} to <2 x i64>
+
+  res_vsll = vec_cts(vd, 31);
+// CHECK: fmul <2 x double>
+// CHECK: fptosi <2 x double> %{{.*}} to <2 x i64>
+// CHECK-LE: fmul <2 x double>
+// CHECK-LE: fptosi <2 x double> %{{.*}} to <2 x i64>
+
+  res_vsll = vec_ctu(vd, 0);
+// CHECK: fmul <2 x double>
+// CHECK: fptoui <2 x double> %{{.*}} to <2 x i64>
+// CHECK-LE: fmul <2 x double>
+// CHECK-LE: fptoui <2 x double> %{{.*}} to <2 x i64>
+
+  res_vsll = vec_ctu(vd, 31);
+// CHECK: fmul <2 x double>
+// CHECK: fptoui <2 x double> %{{.*}} to <2 x i64>
+// CHECK-LE: fmul <2 x double>
+// CHECK-LE: fptoui <2 x double> %{{.*}} to <2 x i64>
+
+  res_vd = vec_ctf(vsll, 0);
+// CHECK: sitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK: fmul <2 x double>
+// CHECK-LE: sitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK-LE: fmul <2 x double>
+
+  res_vd = vec_ctf(vsll, 31);
+// CHECK: sitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK: fmul <2 x double>
+// CHECK-LE: sitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK-LE: fmul <2 x double>
+
+  res_vd = vec_ctf(vull, 0);
+// CHECK: uitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK: fmul <2 x double>
+// CHECK-LE: uitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK-LE: fmul <2 x double>
+
+  res_vd = vec_ctf(vull, 31);
+// CHECK: uitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK: fmul <2 x double>
+// CHECK-LE: uitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK-LE: fmul <2 x double>
 }
