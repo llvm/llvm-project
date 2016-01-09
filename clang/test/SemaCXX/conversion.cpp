@@ -197,3 +197,34 @@ namespace test8 {
     template_and_macro2<double>();
   }
 }
+
+// Don't warn on a nullptr to bool conversion when the nullptr is the return
+// type of a function.
+namespace test9 {
+  typedef decltype(nullptr) nullptr_t;
+  nullptr_t EXIT();
+
+  bool test() {
+    return EXIT();
+  }
+}
+
+// Test NULL macro inside a macro has same warnings nullptr inside a macro.
+namespace test10 {
+#define test1(cond) \
+      ((cond) ? nullptr : NULL)
+#define test2(cond) \
+      ((cond) ? NULL : nullptr)
+
+#define assert(cond) \
+      ((cond) ? foo() : bar())
+  void foo();
+  void bar();
+
+  void run(int x) {
+    if (test1(x)) {}
+    if (test2(x)) {}
+    assert(test1(x));
+    assert(test2(x));
+  }
+}

@@ -56,3 +56,5 @@ class FwdVirtual;
 class FwdVirtual {
   virtual ~FwdVirtual() {}
 };
+
+struct PureForwardDecl;
