@@ -46,8 +46,6 @@
 //   * The __dfsw_* functions (implemented in this file) record the
 //     parameters (i.e. the application data and the corresponding taint labels)
 //     in a global state.
-//   * Fuzzer::ApplyTraceBasedMutation() tries to use the data recorded
-//     by __dfsw_* hooks to guide the fuzzing towards new application states.
 //
 // Parts of this code will not function when DFSan is not linked in.
 // Instead of using ifdefs and thus requiring a separate build of lib/Fuzzer
@@ -172,12 +170,32 @@ struct TraceBasedMutation {
   uint8_t  Data[kMaxSize];
 };
 
+static void PrintDataByte(uint8_t Byte) {
+  if (Byte == '\\')
+    Printf("\\\\");
+  else if (Byte == '"')
+    Printf("\\\"");
+  else if (Byte >= 32 && Byte < 127)
+    Printf("%c", Byte);
+  else
+    Printf("\\x02x", Byte);
+}
+
+static void PrintData(const uint8_t *Data, size_t Size) {
+  Printf("\"");
+  for (size_t i = 0; i < Size; i++) {
+    PrintDataByte(Data[i]);
+  }
+  Printf("\"");
+}
+
 const size_t TraceBasedMutation::kMaxSize;
 
 class TraceState {
  public:
-  TraceState(const Fuzzer::FuzzingOptions &Options, const Unit &CurrentUnit)
-       : Options(Options), CurrentUnit(CurrentUnit) {
+  TraceState(UserSuppliedFuzzer &USF,
+             const Fuzzer::FuzzingOptions &Options, const Unit &CurrentUnit)
+       : USF(USF), Options(Options), CurrentUnit(CurrentUnit) {
     // Current trace collection is not thread-friendly and it probably
     // does not have to be such, but at least we should not crash in presence
     // of threads. So, just ignore all traces coming from all threads but one.
@@ -209,14 +227,17 @@ class TraceState {
     if (!Options.UseTraces) return;
     RecordingTraces = true;
     NumMutations = 0;
+    USF.GetMD().ClearAutoDictionary();
   }
 
-  size_t StopTraceRecording(FuzzerRandomBase &Rand) {
+  void StopTraceRecording() {
+    if (!RecordingTraces) return;
     RecordingTraces = false;
-    return NumMutations;
+    for (size_t i = 0; i < NumMutations; i++) {
+      auto &M = Mutations[i];
+      USF.GetMD().AddWordToAutoDictionary(Unit(M.Data, M.Data + M.Size), M.Pos);
+    }
   }
-
-  void ApplyTraceBasedMutation(size_t Idx, fuzzer::Unit *U);
 
   void AddMutation(uint32_t Pos, uint32_t Size, const uint8_t *Data) {
     if (NumMutations >= kMaxMutations) return;
@@ -243,6 +264,7 @@ class TraceState {
   size_t NumMutations;
   TraceBasedMutation Mutations[kMaxMutations];
   LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)];
+  UserSuppliedFuzzer &USF;
   const Fuzzer::FuzzingOptions &Options;
   const Unit &CurrentUnit;
   static thread_local bool IsMyThread;
@@ -258,19 +280,6 @@ LabelRange TraceState::GetLabelRange(dfsan_label L) {
   if (LI->l1 || LI->l2)
     return LR = LabelRange::Join(GetLabelRange(LI->l1), GetLabelRange(LI->l2));
   return LR = LabelRange::Singleton(LI);
-}
-
-void TraceState::ApplyTraceBasedMutation(size_t Idx, fuzzer::Unit *U) {
-  assert(Idx < NumMutations);
-  auto &M = Mutations[Idx];
-  if (Options.Verbosity >= 3) {
-    Printf("TBM Pos %u Size %u ", M.Pos, M.Size);
-    for (uint32_t i = 0; i < M.Size; i++)
-      Printf("%02x", M.Data[i]);
-    Printf("\n");
-  }
-  if (M.Pos + M.Size > U->size()) return;
-  memcpy(U->data() + M.Pos, &M.Data[0], M.Size);
 }
 
 void TraceState::DFSanCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
@@ -404,8 +413,14 @@ void TraceState::TraceMemcmpCallback(size_t CmpSize, const uint8_t *Data1,
                                      const uint8_t *Data2) {
   if (!RecordingTraces || !IsMyThread) return;
   CmpSize = std::min(CmpSize, TraceBasedMutation::kMaxSize);
-  TryToAddDesiredData(Data1, Data2, CmpSize);
-  TryToAddDesiredData(Data2, Data1, CmpSize);
+  int Added2 = TryToAddDesiredData(Data1, Data2, CmpSize);
+  int Added1 = TryToAddDesiredData(Data2, Data1, CmpSize);
+  if ((Added1 || Added2) && Options.Verbosity >= 3) {
+    Printf("MemCmp Added %d%d: ", Added1, Added2);
+    if (Added1) PrintData(Data1, CmpSize);
+    if (Added2) PrintData(Data2, CmpSize);
+    Printf("\n");
+  }
 }
 
 void TraceState::TraceSwitchCallback(uintptr_t PC, size_t ValSizeInBits,
@@ -438,19 +453,14 @@ void Fuzzer::StartTraceRecording() {
   TS->StartTraceRecording();
 }
 
-size_t Fuzzer::StopTraceRecording() {
-  if (!TS) return 0;
-  return TS->StopTraceRecording(USF.GetRand());
-}
-
-void Fuzzer::ApplyTraceBasedMutation(size_t Idx, Unit *U) {
-  assert(TS);
-  TS->ApplyTraceBasedMutation(Idx, U);
+void Fuzzer::StopTraceRecording() {
+  if (!TS) return;
+  TS->StopTraceRecording();
 }
 
 void Fuzzer::InitializeTraceState() {
   if (!Options.UseTraces) return;
-  TS = new TraceState(Options, CurrentUnit);
+  TS = new TraceState(USF, Options, CurrentUnit);
   CurrentUnit.resize(Options.MaxLen);
   // The rest really requires DFSan.
   if (!ReallyHaveDFSan()) return;

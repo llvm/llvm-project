@@ -250,7 +250,13 @@ void MutationDispatcher::AddWordToManualDictionary(const Unit &Word) {
 
 void MutationDispatcher::AddWordToAutoDictionary(const Unit &Word,
                                                  size_t PositionHint) {
+  static const size_t kMaxAutoDictSize = 1 << 14;
+  if (MDImpl->AutoDictionary.size() >= kMaxAutoDictSize) return;
   MDImpl->AutoDictionary.push_back({Word, PositionHint});
+}
+
+void MutationDispatcher::ClearAutoDictionary() {
+  MDImpl->AutoDictionary.clear();
 }
 
 MutationDispatcher::MutationDispatcher(FuzzerRandomBase &Rand) : Rand(Rand) {

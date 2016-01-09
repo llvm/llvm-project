@@ -92,4 +92,13 @@ use:
   ret i8 addrspace(1)* %res
 }
 
-
+; Globals don't move and thus don't get relocated
+define i8 addrspace(1)* @test5(i1 %always_true) gc "statepoint-example" {
+; CHECK-LABEL: @test5
+; CHECK: gc.statepoint
+; CHECK-NEXT: %res = extractelement <2 x i8 addrspace(1)*> <i8 addrspace(1)* @G, i8 addrspace(1)* @G>, i32 0
+entry:
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+  %res = extractelement <2 x i8 addrspace(1)*> <i8 addrspace(1)* @G, i8 addrspace(1)* @G>, i32 0
+  ret i8 addrspace(1)* %res
+}

@@ -259,8 +259,6 @@ int FuzzerDriver(const std::vector<std::string> &Args,
       Flags.prefer_small_during_initial_shuffle;
   Options.Reload = Flags.reload;
   Options.OnlyASCII = Flags.only_ascii;
-  Options.TBMDepth = Flags.tbm_depth;
-  Options.TBMWidth = Flags.tbm_width;
   Options.OutputCSV = Flags.output_csv;
   if (Flags.runs >= 0)
     Options.MaxNumberOfRuns = Flags.runs;

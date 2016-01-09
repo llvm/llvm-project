@@ -88,8 +88,6 @@ class Fuzzer {
     int SyncTimeout = 600;
     int ReportSlowUnits = 10;
     bool OnlyASCII = false;
-    int TBMDepth = 10;
-    int TBMWidth = 10;
     std::string OutputCorpus;
     std::string SyncCommand;
     std::string ArtifactPrefix = "./";
@@ -156,10 +154,8 @@ class Fuzzer {
 
   // Start tracing; forget all previously proposed mutations.
   void StartTraceRecording();
-  // Stop tracing and return the number of proposed mutations.
-  size_t StopTraceRecording();
-  // Apply Idx-th trace-based mutation to U.
-  void ApplyTraceBasedMutation(size_t Idx, Unit *U);
+  // Stop tracing.
+  void StopTraceRecording();
 
   void SetDeathCallback();
   static void StaticDeathCallback();
