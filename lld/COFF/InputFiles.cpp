@@ -23,7 +23,6 @@
 using namespace llvm::COFF;
 using namespace llvm::object;
 using namespace llvm::support::endian;
-using llvm::RoundUpToAlignment;
 using llvm::Triple;
 using llvm::support::ulittle32_t;
 using llvm::sys::fs::file_magic;

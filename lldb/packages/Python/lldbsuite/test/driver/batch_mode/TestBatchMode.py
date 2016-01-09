@@ -19,7 +19,6 @@ class DriverBatchModeTest (TestBase):
         TestBase.setUp(self)
         # Our simple source filename.
         self.source = 'main.c'
-        self.line = line_number(self.source, 'Stop here to unset keep_waiting')
         self.victim = None
 
     def expect_string (self, string):
@@ -142,7 +141,7 @@ class DriverBatchModeTest (TestBase):
         
         self.victim.expect("Waiting")
 
-        run_commands = ' -b -o "process attach -p %d" -o "breakpoint set --file %s --line %d -N keep_waiting" -o "continue" -o "break delete keep_waiting" -o "expr keep_waiting = 0" -o "continue" ' % (victim_pid, self.source, self.line)
+        run_commands = ' -b -o "process attach -p %d" -o "breakpoint set --file %s -p \'Stop here to unset keep_waiting\' -N keep_waiting" -o "continue" -o "break delete keep_waiting" -o "expr keep_waiting = 0" -o "continue" ' % (victim_pid, self.source)
         self.child = pexpect.spawn('%s %s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, run_commands, exe))
 
         child = self.child

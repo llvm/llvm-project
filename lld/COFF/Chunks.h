@@ -326,6 +326,10 @@ public:
   uint8_t Type;
 };
 
+inline uint64_t align(uint64_t Value, uint64_t Align) {
+  return llvm::RoundUpToAlignment(Value, Align);
+}
+
 } // namespace coff
 } // namespace lld
 

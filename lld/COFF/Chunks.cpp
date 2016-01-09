@@ -310,7 +310,7 @@ void SEHTableChunk::writeTo(uint8_t *Buf) const {
 BaserelChunk::BaserelChunk(uint32_t Page, Baserel *Begin, Baserel *End) {
   // Block header consists of 4 byte page RVA and 4 byte block size.
   // Each entry is 2 byte. Last entry may be padding.
-  Data.resize(RoundUpToAlignment((End - Begin) * 2 + 8, 4));
+  Data.resize(align((End - Begin) * 2 + 8, 4));
   uint8_t *P = Data.data();
   write32le(P, Page);
   write32le(P + 4, Data.size());

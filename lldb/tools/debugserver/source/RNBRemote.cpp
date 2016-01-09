@@ -2700,36 +2700,6 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
             }
         }
 
-        thread_identifier_info_data_t thread_ident_info;
-        if (DNBThreadGetIdentifierInfo (pid, tid, &thread_ident_info))
-        {
-            if (thread_ident_info.dispatch_qaddr != 0)
-            {
-                ostrm << "qaddr:" << std::hex << thread_ident_info.dispatch_qaddr << ';';
-                const DispatchQueueOffsets *dispatch_queue_offsets = GetDispatchQueueOffsets();
-                if (dispatch_queue_offsets)
-                {
-                    std::string queue_name;
-                    uint64_t queue_width = 0;
-                    uint64_t queue_serialnum = 0;
-                    dispatch_queue_offsets->GetThreadQueueInfo(pid, thread_ident_info.dispatch_qaddr, queue_name, queue_width, queue_serialnum);
-                    if (!queue_name.empty())
-                    {
-                        ostrm << "qname:";
-                        append_hex_value(ostrm, queue_name.data(), queue_name.size(), false);
-                        ostrm << ';';
-                    }
-                    if (queue_width == 1)
-                        ostrm << "qkind:serial;";
-                    else if (queue_width > 1)
-                        ostrm << "qkind:concurrent;";
-
-                    if (queue_serialnum > 0)
-                        ostrm << "qserialnum:" << DECIMAL << queue_serialnum << ';';
-                }
-            }
-        }
-
         // If a 'QListThreadsInStopReply' was sent to enable this feature, we
         // will send all thread IDs back in the "threads" key whose value is
         // a list of hex thread IDs separated by commas:
@@ -2811,6 +2781,36 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
             }
         }
 
+
+        thread_identifier_info_data_t thread_ident_info;
+        if (DNBThreadGetIdentifierInfo (pid, tid, &thread_ident_info))
+        {
+            if (thread_ident_info.dispatch_qaddr != 0)
+            {
+                ostrm << "qaddr:" << std::hex << thread_ident_info.dispatch_qaddr << ';';
+                const DispatchQueueOffsets *dispatch_queue_offsets = GetDispatchQueueOffsets();
+                if (dispatch_queue_offsets)
+                {
+                    std::string queue_name;
+                    uint64_t queue_width = 0;
+                    uint64_t queue_serialnum = 0;
+                    dispatch_queue_offsets->GetThreadQueueInfo(pid, thread_ident_info.dispatch_qaddr, queue_name, queue_width, queue_serialnum);
+                    if (!queue_name.empty())
+                    {
+                        ostrm << "qname:";
+                        append_hex_value(ostrm, queue_name.data(), queue_name.size(), false);
+                        ostrm << ';';
+                    }
+                    if (queue_width == 1)
+                        ostrm << "qkind:serial;";
+                    else if (queue_width > 1)
+                        ostrm << "qkind:concurrent;";
+
+                    if (queue_serialnum > 0)
+                        ostrm << "qserialnum:" << DECIMAL << queue_serialnum << ';';
+                }
+            }
+        }
 
         if (g_num_reg_entries == 0)
             InitializeRegisters ();

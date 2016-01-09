@@ -405,9 +405,18 @@ AppleObjCRuntimeV2::GetDynamicTypeAndAddress (ValueObject &in_value,
                                               Address &address,
                                               Value::ValueType &value_type)
 {
-    // The Runtime is attached to a particular process, you shouldn't pass in a value from another process.
-    assert (in_value.GetProcessSP().get() == m_process);
+    // We should never get here with a null process...
     assert (m_process != NULL);
+
+    // The Runtime is attached to a particular process, you shouldn't pass in a value from another process.
+    // Note, however, the process might be NULL (e.g. if the value was made with SBTarget::EvaluateExpression...)
+    // in which case it is sufficient if the target's match:
+    
+    Process *process = in_value.GetProcessSP().get();
+    if (process)
+        assert (process == m_process);
+    else
+        assert (in_value.GetTargetSP().get() == m_process->CalculateTarget().get());
     
     class_type_or_name.Clear();
     value_type = Value::ValueType::eValueTypeScalar;

@@ -8,8 +8,8 @@
 int
 bar(int const *foo)
 {
-    int count = 0;
-    for (int i = 0; i < 10; ++i)
+    int count = 0, i = 0;
+    for (; i < 10; ++i)
     {
         count += 1;
         BREAKPOINT_INTRINSIC();

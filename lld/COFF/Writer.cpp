@@ -163,13 +163,13 @@ void OutputSection::addChunk(Chunk *C) {
   Chunks.push_back(C);
   C->setOutputSection(this);
   uint64_t Off = Header.VirtualSize;
-  Off = RoundUpToAlignment(Off, C->getAlign());
+  Off = align(Off, C->getAlign());
   C->setRVA(Off);
   C->setOutputSectionOff(Off);
   Off += C->getSize();
   Header.VirtualSize = Off;
   if (C->hasData())
-    Header.SizeOfRawData = RoundUpToAlignment(Off, SectorSize);
+    Header.SizeOfRawData = align(Off, SectorSize);
 }
 
 void OutputSection::addPermissions(uint32_t C) {
@@ -448,15 +448,14 @@ void Writer::createSymbolAndStringTable() {
   OutputSection *LastSection = OutputSections.back();
   // We position the symbol table to be adjacent to the end of the last section.
   uint64_t FileOff =
-      LastSection->getFileOff() +
-      RoundUpToAlignment(LastSection->getRawSize(), SectorSize);
+      LastSection->getFileOff() + align(LastSection->getRawSize(), SectorSize);
   if (!OutputSymtab.empty()) {
     PointerToSymbolTable = FileOff;
     FileOff += OutputSymtab.size() * sizeof(coff_symbol16);
   }
   if (!Strtab.empty())
     FileOff += Strtab.size() + 4;
-  FileSize = RoundUpToAlignment(FileOff, SectorSize);
+  FileSize = align(FileOff, SectorSize);
 }
 
 // Visits all sections to assign incremental, non-overlapping RVAs and
@@ -467,7 +466,7 @@ void Writer::assignAddresses() {
                   sizeof(coff_section) * OutputSections.size();
   SizeOfHeaders +=
       Config->is64() ? sizeof(pe32plus_header) : sizeof(pe32_header);
-  SizeOfHeaders = RoundUpToAlignment(SizeOfHeaders, SectorSize);
+  SizeOfHeaders = align(SizeOfHeaders, SectorSize);
   uint64_t RVA = 0x1000; // The first page is kept unmapped.
   FileSize = SizeOfHeaders;
   // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
@@ -481,10 +480,10 @@ void Writer::assignAddresses() {
       addBaserels(Sec);
     Sec->setRVA(RVA);
     Sec->setFileOffset(FileSize);
-    RVA += RoundUpToAlignment(Sec->getVirtualSize(), PageSize);
-    FileSize += RoundUpToAlignment(Sec->getRawSize(), SectorSize);
+    RVA += align(Sec->getVirtualSize(), PageSize);
+    FileSize += align(Sec->getRawSize(), SectorSize);
   }
-  SizeOfImage = SizeOfHeaders + RoundUpToAlignment(RVA - 0x1000, PageSize);
+  SizeOfImage = SizeOfHeaders + align(RVA - 0x1000, PageSize);
 }
 
 template <typename PEHeaderTy> void Writer::writeHeader() {
