@@ -2614,7 +2614,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case OCLQueue:
     return "queue_t";
   case OCLNDRange:
-    return "event_t";
+    return "ndrange_t";
   case OCLReserveID:
     return "reserve_id_t";
   case OMPArraySection:
