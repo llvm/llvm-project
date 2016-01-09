@@ -166,10 +166,13 @@ struct LabelRange {
 
 // For now, very simple: put Size bytes of Data at position Pos.
 struct TraceBasedMutation {
-  size_t Pos;
-  size_t Size;
-  uint64_t Data;
+  static const size_t kMaxSize = 28;
+  uint32_t Pos : 24;
+  uint32_t Size : 8;
+  uint8_t  Data[kMaxSize];
 };
+
+const size_t TraceBasedMutation::kMaxSize;
 
 class TraceState {
  public:
@@ -185,28 +188,49 @@ class TraceState {
   void DFSanCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
                         uint64_t Arg1, uint64_t Arg2, dfsan_label L1,
                         dfsan_label L2);
+  void DFSanMemcmpCallback(size_t CmpSize, const uint8_t *Data1,
+                           const uint8_t *Data2, dfsan_label L1,
+                           dfsan_label L2);
   void DFSanSwitchCallback(uint64_t PC, size_t ValSizeInBits, uint64_t Val,
                            size_t NumCases, uint64_t *Cases, dfsan_label L);
   void TraceCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
                         uint64_t Arg1, uint64_t Arg2);
+  void TraceMemcmpCallback(size_t CmpSize, const uint8_t *Data1,
+                           const uint8_t *Data2);
 
   void TraceSwitchCallback(uintptr_t PC, size_t ValSizeInBits, uint64_t Val,
                            size_t NumCases, uint64_t *Cases);
   int TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
                            size_t DataSize);
+  int TryToAddDesiredData(const uint8_t *PresentData,
+                          const uint8_t *DesiredData, size_t DataSize);
 
   void StartTraceRecording() {
     if (!Options.UseTraces) return;
     RecordingTraces = true;
-    Mutations.clear();
+    NumMutations = 0;
   }
 
   size_t StopTraceRecording(FuzzerRandomBase &Rand) {
     RecordingTraces = false;
-    return Mutations.size();
+    return NumMutations;
   }
 
   void ApplyTraceBasedMutation(size_t Idx, fuzzer::Unit *U);
+
+  void AddMutation(uint32_t Pos, uint32_t Size, const uint8_t *Data) {
+    if (NumMutations >= kMaxMutations) return;
+    assert(Size <= TraceBasedMutation::kMaxSize);
+    auto &M = Mutations[NumMutations++];
+    M.Pos = Pos;
+    M.Size = Size;
+    memcpy(M.Data, Data, Size);
+  }
+
+  void AddMutation(uint32_t Pos, uint32_t Size, uint64_t Data) {
+    assert(Size <= sizeof(Data));
+    AddMutation(Pos, Size, reinterpret_cast<uint8_t*>(&Data));
+  }
 
  private:
   bool IsTwoByteData(uint64_t Data) {
@@ -215,7 +239,9 @@ class TraceState {
     return Signed == 0 || Signed == -1L;
   }
   bool RecordingTraces = false;
-  std::vector<TraceBasedMutation> Mutations;
+  static const size_t kMaxMutations = 1 << 16;
+  size_t NumMutations;
+  TraceBasedMutation Mutations[kMaxMutations];
   LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)];
   const Fuzzer::FuzzingOptions &Options;
   const Unit &CurrentUnit;
@@ -235,12 +261,16 @@ LabelRange TraceState::GetLabelRange(dfsan_label L) {
 }
 
 void TraceState::ApplyTraceBasedMutation(size_t Idx, fuzzer::Unit *U) {
-  assert(Idx < Mutations.size());
+  assert(Idx < NumMutations);
   auto &M = Mutations[Idx];
-  if (Options.Verbosity >= 3)
-    Printf("TBM %zd %zd %zd\n", M.Pos, M.Size, M.Data);
+  if (Options.Verbosity >= 3) {
+    Printf("TBM Pos %u Size %u ", M.Pos, M.Size);
+    for (uint32_t i = 0; i < M.Size; i++)
+      Printf("%02x", M.Data[i]);
+    Printf("\n");
+  }
   if (M.Pos + M.Size > U->size()) return;
-  memcpy(U->data() + M.Pos, &M.Data, M.Size);
+  memcpy(U->data() + M.Pos, &M.Data[0], M.Size);
 }
 
 void TraceState::DFSanCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
@@ -257,19 +287,39 @@ void TraceState::DFSanCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
   LabelRange LR = L1 ? GetLabelRange(L1) : GetLabelRange(L2);
 
   for (size_t Pos = LR.Beg; Pos + CmpSize <= LR.End; Pos++) {
-    Mutations.push_back({Pos, CmpSize, Data});
-    Mutations.push_back({Pos, CmpSize, Data + 1});
-    Mutations.push_back({Pos, CmpSize, Data - 1});
+    AddMutation(Pos, CmpSize, Data);
+    AddMutation(Pos, CmpSize, Data + 1);
+    AddMutation(Pos, CmpSize, Data - 1);
   }
 
   if (CmpSize > LR.End - LR.Beg)
-    Mutations.push_back({LR.Beg, (unsigned)(LR.End - LR.Beg), Data});
+    AddMutation(LR.Beg, (unsigned)(LR.End - LR.Beg), Data);
 
 
   if (Options.Verbosity >= 3)
     Printf("DFSanCmpCallback: PC %lx S %zd T %zd A1 %llx A2 %llx R %d L1 %d L2 "
            "%d MU %zd\n",
-           PC, CmpSize, CmpType, Arg1, Arg2, Res, L1, L2, Mutations.size());
+           PC, CmpSize, CmpType, Arg1, Arg2, Res, L1, L2, NumMutations);
+}
+
+void TraceState::DFSanMemcmpCallback(size_t CmpSize, const uint8_t *Data1,
+                                     const uint8_t *Data2, dfsan_label L1,
+                                     dfsan_label L2) {
+
+  assert(ReallyHaveDFSan());
+  if (!RecordingTraces || !IsMyThread) return;
+  if (L1 == 0 && L2 == 0)
+    return;  // Not actionable.
+  if (L1 != 0 && L2 != 0)
+    return;  // Probably still actionable.
+
+  const uint8_t *Data = L1 ? Data2 : Data1;
+  LabelRange LR = L1 ? GetLabelRange(L1) : GetLabelRange(L2);
+  for (size_t Pos = LR.Beg; Pos + CmpSize <= LR.End; Pos++) {
+    AddMutation(Pos, CmpSize, Data);
+    if (Options.Verbosity >= 3)
+      Printf("DFSanMemcmpCallback: Pos %d Size %d\n", Pos, CmpSize);
+  }
 }
 
 void TraceState::DFSanSwitchCallback(uint64_t PC, size_t ValSizeInBits,
@@ -286,12 +336,12 @@ void TraceState::DFSanSwitchCallback(uint64_t PC, size_t ValSizeInBits,
 
   for (size_t Pos = LR.Beg; Pos + ValSize <= LR.End; Pos++)
     for (size_t i = 0; i < NumCases; i++)
-      Mutations.push_back({Pos, ValSize, Cases[i]});
+      AddMutation(Pos, ValSize, Cases[i]);
 
   if (TryShort)
     for (size_t Pos = LR.Beg; Pos + 2 <= LR.End; Pos++)
       for (size_t i = 0; i < NumCases; i++)
-        Mutations.push_back({Pos, 2, Cases[i]});
+        AddMutation(Pos, 2, Cases[i]);
 
   if (Options.Verbosity >= 3)
     Printf("DFSanSwitchCallback: PC %lx Val %zd SZ %zd # %zd L %d: {%d, %d} "
@@ -310,10 +360,27 @@ int TraceState::TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
       break;
     size_t Pos = Cur - Beg;
     assert(Pos < CurrentUnit.size());
-    if (Mutations.size() > 100000U) return Res;  // Just in case.
-    Mutations.push_back({Pos, DataSize, DesiredData});
-    Mutations.push_back({Pos, DataSize, DesiredData + 1});
-    Mutations.push_back({Pos, DataSize, DesiredData - 1});
+    AddMutation(Pos, DataSize, DesiredData);
+    AddMutation(Pos, DataSize, DesiredData + 1);
+    AddMutation(Pos, DataSize, DesiredData - 1);
+    Res++;
+  }
+  return Res;
+}
+
+int TraceState::TryToAddDesiredData(const uint8_t *PresentData,
+                                    const uint8_t *DesiredData,
+                                    size_t DataSize) {
+  int Res = 0;
+  const uint8_t *Beg = CurrentUnit.data();
+  const uint8_t *End = Beg + CurrentUnit.size();
+  for (const uint8_t *Cur = Beg; Cur < End; Cur++) {
+    Cur = (uint8_t *)memmem(Cur, End - Cur, PresentData, DataSize);
+    if (!Cur)
+      break;
+    size_t Pos = Cur - Beg;
+    assert(Pos < CurrentUnit.size());
+    AddMutation(Pos, DataSize, DesiredData);
     Res++;
   }
   return Res;
@@ -331,6 +398,14 @@ void TraceState::TraceCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
     Added += TryToAddDesiredData(Arg1, Arg2, 2);
     Added += TryToAddDesiredData(Arg2, Arg1, 2);
   }
+}
+
+void TraceState::TraceMemcmpCallback(size_t CmpSize, const uint8_t *Data1,
+                                     const uint8_t *Data2) {
+  if (!RecordingTraces || !IsMyThread) return;
+  CmpSize = std::min(CmpSize, TraceBasedMutation::kMaxSize);
+  TryToAddDesiredData(Data1, Data2, CmpSize);
+  TryToAddDesiredData(Data2, Data1, CmpSize);
 }
 
 void TraceState::TraceSwitchCallback(uintptr_t PC, size_t ValSizeInBits,
@@ -351,7 +426,6 @@ void TraceState::TraceSwitchCallback(uintptr_t PC, size_t ValSizeInBits,
     if (TryShort)
       TryToAddDesiredData(Val, Cases[i], 2);
   }
-
 }
 
 static TraceState *TS;
@@ -423,89 +497,66 @@ void dfsan_weak_hook_memcmp(void *caller_pc, const void *s1, const void *s2,
                             size_t n, dfsan_label s1_label,
                             dfsan_label s2_label, dfsan_label n_label) {
   if (!TS) return;
-  uintptr_t PC = reinterpret_cast<uintptr_t>(caller_pc);
-  uint64_t S1 = 0, S2 = 0;
-  // Simplification: handle only first 8 bytes.
-  memcpy(&S1, s1, std::min(n, sizeof(S1)));
-  memcpy(&S2, s2, std::min(n, sizeof(S2)));
   dfsan_label L1 = dfsan_read_label(s1, n);
   dfsan_label L2 = dfsan_read_label(s2, n);
-  TS->DFSanCmpCallback(PC, n, fuzzer::ICMP_EQ, S1, S2, L1, L2);
+  TS->DFSanMemcmpCallback(n, reinterpret_cast<const uint8_t *>(s1),
+                          reinterpret_cast<const uint8_t *>(s2), L1, L2);
 }
 
 void dfsan_weak_hook_strncmp(void *caller_pc, const char *s1, const char *s2,
                              size_t n, dfsan_label s1_label,
                              dfsan_label s2_label, dfsan_label n_label) {
   if (!TS) return;
-  uintptr_t PC = reinterpret_cast<uintptr_t>(caller_pc);
-  uint64_t S1 = 0, S2 = 0;
   n = std::min(n, fuzzer::InternalStrnlen(s1, n));
   n = std::min(n, fuzzer::InternalStrnlen(s2, n));
-  // Simplification: handle only first 8 bytes.
-  memcpy(&S1, s1, std::min(n, sizeof(S1)));
-  memcpy(&S2, s2, std::min(n, sizeof(S2)));
   dfsan_label L1 = dfsan_read_label(s1, n);
   dfsan_label L2 = dfsan_read_label(s2, n);
-  TS->DFSanCmpCallback(PC, n, fuzzer::ICMP_EQ, S1, S2, L1, L2);
+  TS->DFSanMemcmpCallback(n, reinterpret_cast<const uint8_t *>(s1),
+                          reinterpret_cast<const uint8_t *>(s2), L1, L2);
 }
 
 void dfsan_weak_hook_strcmp(void *caller_pc, const char *s1, const char *s2,
                             dfsan_label s1_label, dfsan_label s2_label) {
   if (!TS) return;
-  uintptr_t PC = reinterpret_cast<uintptr_t>(caller_pc);
-  uint64_t S1 = 0, S2 = 0;
   size_t Len1 = strlen(s1);
   size_t Len2 = strlen(s2);
   size_t N = std::min(Len1, Len2);
   if (N <= 1) return;  // Not interesting.
-  // Simplification: handle only first 8 bytes.
-  memcpy(&S1, s1, std::min(N, sizeof(S1)));
-  memcpy(&S2, s2, std::min(N, sizeof(S2)));
   dfsan_label L1 = dfsan_read_label(s1, Len1);
   dfsan_label L2 = dfsan_read_label(s2, Len2);
-  TS->DFSanCmpCallback(PC, N, fuzzer::ICMP_EQ, S1, S2, L1, L2);
+  TS->DFSanMemcmpCallback(N, reinterpret_cast<const uint8_t *>(s1),
+                          reinterpret_cast<const uint8_t *>(s2), L1, L2);
 }
 
 void __sanitizer_weak_hook_memcmp(void *caller_pc, const void *s1,
                                   const void *s2, size_t n) {
   if (!TS) return;
-  uintptr_t PC = reinterpret_cast<uintptr_t>(caller_pc);
-  uint64_t S1 = 0, S2 = 0;
-  // Simplification: handle only first 8 bytes.
-  memcpy(&S1, s1, std::min(n, sizeof(S1)));
-  memcpy(&S2, s2, std::min(n, sizeof(S2)));
-  TS->TraceCmpCallback(PC, n, fuzzer::ICMP_EQ, S1, S2);
+  if (n <= 1) return;  // Not interesting.
+  TS->TraceMemcmpCallback(n, reinterpret_cast<const uint8_t *>(s1),
+                          reinterpret_cast<const uint8_t *>(s2));
 }
 
 void __sanitizer_weak_hook_strncmp(void *caller_pc, const char *s1,
                                    const char *s2, size_t n) {
   if (!TS) return;
-  uintptr_t PC = reinterpret_cast<uintptr_t>(caller_pc);
-  uint64_t S1 = 0, S2 = 0;
   size_t Len1 = fuzzer::InternalStrnlen(s1, n);
   size_t Len2 = fuzzer::InternalStrnlen(s2, n);
   n = std::min(n, Len1);
   n = std::min(n, Len2);
   if (n <= 1) return;  // Not interesting.
-  // Simplification: handle only first 8 bytes.
-  memcpy(&S1, s1, std::min(n, sizeof(S1)));
-  memcpy(&S2, s2, std::min(n, sizeof(S2)));
-  TS->TraceCmpCallback(PC, n, fuzzer::ICMP_EQ, S1, S2);
+  TS->TraceMemcmpCallback(n, reinterpret_cast<const uint8_t *>(s1),
+                          reinterpret_cast<const uint8_t *>(s2));
 }
 
 void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
                                    const char *s2) {
   if (!TS) return;
-  uintptr_t PC = reinterpret_cast<uintptr_t>(caller_pc);
-  uint64_t S1 = 0, S2 = 0;
   size_t Len1 = strlen(s1);
   size_t Len2 = strlen(s2);
   size_t N = std::min(Len1, Len2);
   if (N <= 1) return;  // Not interesting.
-  // Simplification: handle only first 8 bytes.
-  memcpy(&S1, s1, std::min(N, sizeof(S1)));
-  memcpy(&S2, s2, std::min(N, sizeof(S2)));
-  TS->TraceCmpCallback(PC, N, fuzzer::ICMP_EQ, S1, S2);
+  TS->TraceMemcmpCallback(N, reinterpret_cast<const uint8_t *>(s1),
+                          reinterpret_cast<const uint8_t *>(s2));
 }
 
 __attribute__((visibility("default")))

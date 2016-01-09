@@ -1317,24 +1317,40 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     assert(Index < LiveVec.size() && "Bug in std::find?");
     return Index;
   };
-
-  // All gc_relocate are set to i8 addrspace(1)* type. We originally generated
-  // unique declarations for each pointer type, but this proved problematic
-  // because the intrinsic mangling code is incomplete and fragile.  Since
-  // we're moving towards a single unified pointer type anyways, we can just
-  // cast everything to an i8* of the right address space.  A bitcast is added
-  // later to convert gc_relocate to the actual value's type. 
   Module *M = StatepointToken->getModule();
-  auto AS = cast<PointerType>(LiveVariables[0]->getType())->getAddressSpace();
-  Type *Types[] = {Type::getInt8PtrTy(M->getContext(), AS)};
-  Value *GCRelocateDecl =
-    Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate, Types);
+  
+  // All gc_relocate are generated as i8 addrspace(1)* (or a vector type whose
+  // element type is i8 addrspace(1)*). We originally generated unique
+  // declarations for each pointer type, but this proved problematic because
+  // the intrinsic mangling code is incomplete and fragile.  Since we're moving
+  // towards a single unified pointer type anyways, we can just cast everything
+  // to an i8* of the right address space.  A bitcast is added later to convert
+  // gc_relocate to the actual value's type.  
+  auto getGCRelocateDecl = [&] (Type *Ty) {
+    assert(isHandledGCPointerType(Ty));
+    auto AS = Ty->getScalarType()->getPointerAddressSpace();
+    Type *NewTy = Type::getInt8PtrTy(M->getContext(), AS);
+    if (auto *VT = dyn_cast<VectorType>(Ty))
+      NewTy = VectorType::get(NewTy, VT->getNumElements());
+    return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
+                                     {NewTy});
+  };
+
+  // Lazily populated map from input types to the canonicalized form mentioned
+  // in the comment above.  This should probably be cached somewhere more
+  // broadly.
+  DenseMap<Type*, Value*> TypeToDeclMap;
 
   for (unsigned i = 0; i < LiveVariables.size(); i++) {
     // Generate the gc.relocate call and save the result
     Value *BaseIdx =
       Builder.getInt32(LiveStart + FindIndex(LiveVariables, BasePtrs[i]));
     Value *LiveIdx = Builder.getInt32(LiveStart + i);
+
+    Type *Ty = LiveVariables[i]->getType();
+    if (!TypeToDeclMap.count(Ty))
+      TypeToDeclMap[Ty] = getGCRelocateDecl(Ty);
+    Value *GCRelocateDecl = TypeToDeclMap[Ty];
 
     // only specify a debug name if we can give a useful one
     CallInst *Reloc = Builder.CreateCall(
@@ -2478,7 +2494,8 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 #ifndef NDEBUG
   // sanity check
   for (auto *Ptr : Live)
-    assert(isGCPointerType(Ptr->getType()) && "must be a gc pointer type");
+    assert(isHandledGCPointerType(Ptr->getType()) &&
+           "must be a gc pointer type");
 #endif
 
   relocationViaAlloca(F, DT, Live, Records);

@@ -82,6 +82,10 @@ static cl::opt<bool>
     ClPrettyPrint("pretty-print", cl::init(false),
                   cl::desc("Make the output more human friendly"));
 
+static cl::opt<int> ClPrintSourceContextLines(
+    "print-source-context-lines", cl::init(0),
+    cl::desc("Print N number of source file context"));
+
 static bool error(std::error_code ec) {
   if (!ec)
     return false;
@@ -155,7 +159,7 @@ int main(int argc, char **argv) {
   LLVMSymbolizer Symbolizer(Opts);
 
   DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None,
-                    ClPrettyPrint);
+                    ClPrettyPrint, ClPrintSourceContextLines);
 
   const int kMaxInputStringLength = 1024;
   char InputString[kMaxInputStringLength];
