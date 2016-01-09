@@ -390,7 +390,6 @@ void Fuzzer::MutateAndTestOne() {
   U = ChooseUnitToMutate();
 
   for (int i = 0; i < Options.MutateDepth; i++) {
-    StartTraceRecording();
     size_t Size = U.size();
     U.resize(Options.MaxLen);
     size_t NewSize = USF.Mutate(U.data(), Size, U.size());
@@ -398,21 +397,10 @@ void Fuzzer::MutateAndTestOne() {
     assert(NewSize <= (size_t)Options.MaxLen &&
            "Mutator return overisized unit");
     U.resize(NewSize);
+    if (i == 0)
+      StartTraceRecording();
     RunOneAndUpdateCorpus(U);
-    size_t NumTraceBasedMutations = StopTraceRecording();
-    size_t TBMWidth =
-        std::min((size_t)Options.TBMWidth, NumTraceBasedMutations);
-    size_t TBMDepth =
-        std::min((size_t)Options.TBMDepth, NumTraceBasedMutations);
-    Unit BackUp = U;
-    for (size_t w = 0; w < TBMWidth; w++) {
-      U = BackUp;
-      for (size_t d = 0; d < TBMDepth; d++) {
-        TotalNumberOfExecutedTraceBasedMutations++;
-        ApplyTraceBasedMutation(USF.GetRand()(NumTraceBasedMutations), &U);
-        RunOneAndUpdateCorpus(U);
-      }
-    }
+    StopTraceRecording();
   }
 }
 

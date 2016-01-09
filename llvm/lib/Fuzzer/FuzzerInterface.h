@@ -110,7 +110,10 @@ class MutationDispatcher {
                    size_t Size2, uint8_t *Out, size_t MaxOutSize);
 
   void AddWordToManualDictionary(const Unit &Word);
+
   void AddWordToAutoDictionary(const Unit &Word, size_t PositionHint);
+  void ClearAutoDictionary();
+
   void SetCorpus(const std::vector<Unit> *Corpus);
 
  private:
