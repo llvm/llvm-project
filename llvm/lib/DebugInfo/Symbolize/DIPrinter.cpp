@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
 
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Support/LineIterator.h"
 
 namespace llvm {
 namespace symbolize {
@@ -24,7 +25,37 @@ namespace symbolize {
 static const char kDILineInfoBadString[] = "<invalid>";
 static const char kBadString[] = "??";
 
-void DIPrinter::printName(const DILineInfo &Info, bool Inlined) {
+// Prints source code around in the FileName the Line.
+void DIPrinter::printContext(std::string FileName, int64_t Line) {
+  if (PrintSourceContext <= 0)
+    return;
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFile(FileName);
+  if (!BufOrErr)
+    return;
+
+  std::unique_ptr<MemoryBuffer> Buf = std::move(BufOrErr.get());
+  int64_t FirstLine =
+      std::max(static_cast<int64_t>(1), Line - PrintSourceContext / 2);
+  int64_t LastLine = FirstLine + PrintSourceContext;
+  size_t MaxLineNumberWidth = std::ceil(std::log10(LastLine));
+
+  for (line_iterator I = line_iterator(*Buf, false);
+       !I.is_at_eof() && I.line_number() <= LastLine; ++I) {
+    int64_t L = I.line_number();
+    if (L >= FirstLine && L <= LastLine) {
+      OS << format_decimal(L, MaxLineNumberWidth);
+      if (L == Line)
+        OS << " >: ";
+      else
+        OS << "  : ";
+      OS << *I << "\n";
+    }
+  }
+}
+
+void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
   if (PrintFunctionNames) {
     std::string FunctionName = Info.FunctionName;
     if (FunctionName == kDILineInfoBadString)
@@ -38,21 +69,22 @@ void DIPrinter::printName(const DILineInfo &Info, bool Inlined) {
   if (Filename == kDILineInfoBadString)
     Filename = kBadString;
   OS << Filename << ":" << Info.Line << ":" << Info.Column << "\n";
+  printContext(Filename, Info.Line);
 }
 
 DIPrinter &DIPrinter::operator<<(const DILineInfo &Info) {
-  printName(Info, false);
+  print(Info, false);
   return *this;
 }
 
 DIPrinter &DIPrinter::operator<<(const DIInliningInfo &Info) {
   uint32_t FramesNum = Info.getNumberOfFrames();
   if (FramesNum == 0) {
-    printName(DILineInfo(), false);
+    print(DILineInfo(), false);
     return *this;
   }
   for (uint32_t i = 0; i < FramesNum; i++)
-    printName(Info.getFrame(i), i > 0);
+    print(Info.getFrame(i), i > 0);
   return *this;
 }
 

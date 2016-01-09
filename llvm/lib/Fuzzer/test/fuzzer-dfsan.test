@@ -5,18 +5,19 @@ CHECK4: BINGO
 
 CHECK_DFSanCmpCallback: DFSanCmpCallback: PC
 CHECK_DFSanSwitchCallback: DFSanSwitchCallback: PC
+CHECK_DFSanMemcmpCallback: DFSanMemcmpCallback: Pos
 
 RUN: not LLVMFuzzer-SimpleCmpTest-DFSan -use_traces=1 -seed=1 -runs=1000000 -timeout=5 2>&1 | FileCheck %s --check-prefix=CHECK1
 RUN: LLVMFuzzer-SimpleCmpTest-DFSan -use_traces=1 -seed=1 -runs=100 -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanCmpCallback
 
 RUN: not LLVMFuzzer-MemcmpTest-DFSan -use_traces=1 -seed=1 -runs=10000 -timeout=5 2>&1 | FileCheck %s --check-prefix=CHECK2
-RUN: LLVMFuzzer-MemcmpTest-DFSan -use_traces=1 -seed=1 -runs=2 -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanCmpCallback
+RUN: LLVMFuzzer-MemcmpTest-DFSan -use_traces=1 -seed=1 -runs=2 -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanMemcmpCallback
 
 RUN: not LLVMFuzzer-StrncmpTest-DFSan -use_traces=1 -seed=1 -runs=10000 -timeout=5 2>&1 | FileCheck %s --check-prefix=CHECK3
-RUN: LLVMFuzzer-StrncmpTest-DFSan -use_traces=1 -seed=1 -runs=2 -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanCmpCallback
+RUN: LLVMFuzzer-StrncmpTest-DFSan -use_traces=1 -seed=1 -runs=2 -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanMemcmpCallback
 
 RUN: not LLVMFuzzer-StrcmpTest-DFSan -use_traces=1 -seed=1 -runs=10000 -timeout=5 2>&1 | FileCheck %s --check-prefix=CHECK3
-RUN:     LLVMFuzzer-StrcmpTest-DFSan -use_traces=1 -seed=1 -runs=2     -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanCmpCallback
+RUN:     LLVMFuzzer-StrcmpTest-DFSan -use_traces=1 -seed=1 -runs=2     -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanMemcmpCallback
 
 RUN: not LLVMFuzzer-SwitchTest-DFSan -use_traces=1 -seed=1 -runs=100000 -timeout=5              2>&1 | FileCheck %s --check-prefix=CHECK4
 RUN:     LLVMFuzzer-SwitchTest-DFSan -use_traces=1 -seed=1 -runs=2     -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanSwitchCallback
