@@ -36,6 +36,11 @@ namespace clang {
     TSS_unsigned
   };
   
+  enum TypeSpecifiersPipe {
+    TSP_unspecified,
+    TSP_pipe
+  };
+
   /// \brief Specifies the kind of type.
   enum TypeSpecifierType {
     TST_unspecified,

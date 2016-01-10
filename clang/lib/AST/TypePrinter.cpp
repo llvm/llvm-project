@@ -193,6 +193,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::Atomic:
+    case Type::Pipe:
       CanPrefixQualifiers = true;
       break;
       
@@ -859,6 +860,15 @@ void TypePrinter::printAtomicBefore(const AtomicType *T, raw_ostream &OS) {
 }
 void TypePrinter::printAtomicAfter(const AtomicType *T, raw_ostream &OS) { }
 
+void TypePrinter::printPipeBefore(const PipeType *T, raw_ostream &OS) {
+  IncludeStrongLifetimeRAII Strong(Policy);
+
+  OS << "pipe";
+  spaceBeforePlaceHolder(OS);
+}
+
+void TypePrinter::printPipeAfter(const PipeType *T, raw_ostream &OS) {
+}
 /// Appends the given scope to the end of a string.
 void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS) {
   if (DC->isTranslationUnit()) return;

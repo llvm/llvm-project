@@ -1652,6 +1652,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
     case Type::Auto:
     case Type::DependentTemplateSpecialization:
     case Type::PackExpansion:
+    case Type::Pipe:
       // No template argument deduction for these types
       return Sema::TDK_Success;
   }
@@ -4964,6 +4965,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::ObjCObject:
   case Type::ObjCObjectPointer:
   case Type::UnresolvedUsing:
+  case Type::Pipe:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

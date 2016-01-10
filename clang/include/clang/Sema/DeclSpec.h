@@ -337,6 +337,7 @@ private:
   unsigned TypeAltiVecPixel : 1;
   unsigned TypeAltiVecBool : 1;
   unsigned TypeSpecOwned : 1;
+  unsigned TypeSpecPipe : 1;
 
   // type-qualifiers
   unsigned TypeQualifiers : 4;  // Bitwise OR of TQ.
@@ -385,6 +386,7 @@ private:
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc, ConceptLoc;
+  SourceLocation TQ_pipeLoc;
 
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
@@ -420,6 +422,7 @@ public:
       TypeAltiVecPixel(false),
       TypeAltiVecBool(false),
       TypeSpecOwned(false),
+      TypeSpecPipe(false),
       TypeQualifiers(TQ_unspecified),
       FS_inline_specified(false),
       FS_forceinline_specified(false),
@@ -473,6 +476,7 @@ public:
   bool isTypeAltiVecBool() const { return TypeAltiVecBool; }
   bool isTypeSpecOwned() const { return TypeSpecOwned; }
   bool isTypeRep() const { return isTypeRep((TST) TypeSpecType); }
+  bool isTypeSpecPipe() const { return TypeSpecPipe; }
 
   ParsedType getRepAsType() const {
     assert(isTypeRep((TST) TypeSpecType) && "DeclSpec does not store a type");
@@ -532,6 +536,7 @@ public:
   SourceLocation getRestrictSpecLoc() const { return TQ_restrictLoc; }
   SourceLocation getVolatileSpecLoc() const { return TQ_volatileLoc; }
   SourceLocation getAtomicSpecLoc() const { return TQ_atomicLoc; }
+  SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
 
   /// \brief Clear out all of the type qualifiers.
   void ClearTypeQualifiers() {
@@ -540,6 +545,7 @@ public:
     TQ_restrictLoc = SourceLocation();
     TQ_volatileLoc = SourceLocation();
     TQ_atomicLoc = SourceLocation();
+    TQ_pipeLoc = SourceLocation();
   }
 
   // function-specifier
@@ -641,6 +647,9 @@ public:
                        const char *&PrevSpec, unsigned &DiagID,
                        const PrintingPolicy &Policy);
   bool SetTypeAltiVecBool(bool isAltiVecBool, SourceLocation Loc,
+                       const char *&PrevSpec, unsigned &DiagID,
+                       const PrintingPolicy &Policy);
+  bool SetTypePipe(bool isPipe, SourceLocation Loc,
                        const char *&PrevSpec, unsigned &DiagID,
                        const PrintingPolicy &Policy);
   bool SetTypeSpecError();
@@ -1081,7 +1090,7 @@ typedef SmallVector<Token, 4> CachedTokens;
 /// This is intended to be a small value object.
 struct DeclaratorChunk {
   enum {
-    Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren
+    Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren, Pipe
   } Kind;
 
   /// Loc - The place where this type was defined.
@@ -1409,6 +1418,13 @@ struct DeclaratorChunk {
     }
   };
 
+  struct PipeTypeInfo : TypeInfoCommon {
+  /// The access writes.
+  unsigned AccessWrites : 3;
+
+  void destroy() {}
+  };
+
   union {
     TypeInfoCommon        Common;
     PointerTypeInfo       Ptr;
@@ -1417,6 +1433,7 @@ struct DeclaratorChunk {
     FunctionTypeInfo      Fun;
     BlockPointerTypeInfo  Cls;
     MemberPointerTypeInfo Mem;
+    PipeTypeInfo          PipeInfo;
   };
 
   void destroy() {
@@ -1428,6 +1445,7 @@ struct DeclaratorChunk {
     case DeclaratorChunk::Array:         return Arr.destroy();
     case DeclaratorChunk::MemberPointer: return Mem.destroy();
     case DeclaratorChunk::Paren:         return;
+    case DeclaratorChunk::Pipe:          return PipeInfo.destroy();
     }
   }
 
@@ -1523,6 +1541,17 @@ struct DeclaratorChunk {
     I.Loc           = Loc;
     I.Cls.TypeQuals = TypeQuals;
     I.Cls.AttrList  = nullptr;
+    return I;
+  }
+
+  /// \brief Return a DeclaratorChunk for a block.
+  static DeclaratorChunk getPipe(unsigned TypeQuals,
+                                 SourceLocation Loc) {
+    DeclaratorChunk I;
+    I.Kind          = Pipe;
+    I.Loc           = Loc;
+    I.Cls.TypeQuals = TypeQuals;
+    I.Cls.AttrList  = 0;
     return I;
   }
 
@@ -2026,6 +2055,7 @@ public:
       case DeclaratorChunk::Array:
       case DeclaratorChunk::BlockPointer:
       case DeclaratorChunk::MemberPointer:
+      case DeclaratorChunk::Pipe:
         return false;
       }
       llvm_unreachable("Invalid type chunk");

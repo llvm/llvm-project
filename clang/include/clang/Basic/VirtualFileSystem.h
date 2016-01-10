@@ -299,10 +299,7 @@ public:
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
     return WorkingDirectory;
   }
-  std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
-    WorkingDirectory = Path.str();
-    return std::error_code();
-  }
+  std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 };
 
 /// \brief Get a globally unique ID for a virtual file or directory.

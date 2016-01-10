@@ -2033,7 +2033,26 @@ public:
   }
 };
 
+struct PipeTypeLocInfo {
+  SourceLocation KWLoc;
+};
 
+class PipeTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, PipeTypeLoc, PipeType,
+                                           PipeTypeLocInfo> {
+public:
+  TypeLoc getValueLoc() const { return this->getInnerTypeLoc(); }
+
+  SourceRange getLocalSourceRange() const { return SourceRange(getKWLoc()); }
+
+  SourceLocation getKWLoc() const { return this->getLocalData()->KWLoc; }
+  void setKWLoc(SourceLocation Loc) { this->getLocalData()->KWLoc = Loc; }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setKWLoc(Loc);
+  }
+
+  QualType getInnerType() const { return this->getTypePtr()->getElementType(); }
+};
 }
 
 #endif

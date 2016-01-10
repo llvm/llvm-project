@@ -1721,6 +1721,7 @@ public:
   bool isNDRangeT() const;                      // OpenCL ndrange_t
   bool isReserveIDT() const;                    // OpenCL reserve_id_t
 
+  bool isPipeType() const;                      // OpenCL pipe type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
 
   /// Determines if this type, which must satisfy
@@ -5015,6 +5016,41 @@ class AtomicType : public Type, public llvm::FoldingSetNode {
   }
 };
 
+/// PipeType - OpenCL20.
+class PipeType : public Type, public llvm::FoldingSetNode {
+  QualType ElementType;
+
+  PipeType(QualType elemType, QualType CanonicalPtr) :
+    Type(Pipe, CanonicalPtr, elemType->isDependentType(),
+         elemType->isInstantiationDependentType(),
+         elemType->isVariablyModifiedType(),
+         elemType->containsUnexpandedParameterPack()),
+    ElementType(elemType) {}
+  friend class ASTContext;  // ASTContext creates these.
+
+public:
+
+  QualType getElementType() const { return ElementType; }
+
+  bool isSugared() const { return false; }
+
+  QualType desugar() const { return QualType(this, 0); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getElementType());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType T) {
+    ID.AddPointer(T.getAsOpaquePtr());
+  }
+
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == Pipe;
+  }
+
+};
+
 /// A qualifier set is used to build a set of qualifiers.
 class QualifierCollector : public Qualifiers {
 public:
@@ -5461,9 +5497,13 @@ inline bool Type::isImageType() const {
          isImage1dBufferT();
 }
 
+inline bool Type::isPipeType() const {
+  return isa<PipeType>(CanonicalType);
+}
+
 inline bool Type::isOpenCLSpecificType() const {
   return isSamplerT() || isEventT() || isImageType() || isClkEventT() ||
-         isQueueT() || isNDRangeT() || isReserveIDT();
+         isQueueT() || isNDRangeT() || isReserveIDT() || isPipeType();
 }
 
 inline bool Type::isTemplateTypeParmType() const {

@@ -7667,6 +7667,10 @@ def err_wrong_sampler_addressspace: Error<
   "sampler type cannot be used with the __local and __global address space qualifiers">;
 def err_opencl_global_invalid_addr_space : Error<
   "program scope variable must reside in %0 address space">;
+def err_missing_actual_pipe_type : Error<
+  "missing actual type specifier for pipe">;
+def err_reference_pipe_type : Error <
+  "pipes packet types cannot be of reference type">;
 def err_opencl_no_main : Error<"%select{function|kernel}0 cannot be called 'main'">;
 def err_opencl_kernel_attr :
   Error<"attribute %0 can only be applied to a kernel function">;

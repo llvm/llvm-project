@@ -731,10 +731,14 @@ TEST_F(FormatTestJS, RegexLiteralExamples) {
 
 TEST_F(FormatTestJS, TypeAnnotations) {
   verifyFormat("var x: string;");
+  verifyFormat("var x: {a: string; b: number;} = {};");
   verifyFormat("function x(): string {\n  return 'x';\n}");
   verifyFormat("function x(): {x: string} {\n  return {x: 'x'};\n}");
   verifyFormat("function x(y: string): string {\n  return 'x';\n}");
   verifyFormat("for (var y: string in x) {\n  x();\n}");
+  verifyFormat("function x(y: {a?: number;} = {}): number {\n"
+               "  return 12;\n"
+               "}");
   verifyFormat("((a: string, b: number): string => a + b);");
   verifyFormat("var x: (y: number) => string;");
   verifyFormat("var x: P<string, (a: number) => string>;");
@@ -764,6 +768,10 @@ TEST_F(FormatTestJS, ClassDeclarations) {
   verifyFormat("foo = class {\n"
                "  constructor() {}\n"
                "};");
+  verifyFormat("class C {\n"
+               "  x: {y: Z;} = {};\n"
+               "  private y: {y: Z;} = {};\n"
+               "}");
 
   // ':' is not a type declaration here.
   verifyFormat("class X {\n"
@@ -948,6 +956,9 @@ TEST_F(FormatTestJS, TemplateStrings) {
                "var y;");
   verifyFormat("var x = `\"`;  // comment with matching quote \"\n"
                "var y;");
+  EXPECT_EQ("it(`'aaaaaaaaaaaaaaa   `, aaaaaaaaa);",
+            format("it(`'aaaaaaaaaaaaaaa   `,   aaaaaaaaa) ;",
+                   getGoogleJSStyleWithColumns(40)));
   // Backticks in a comment - not a template string.
   EXPECT_EQ("var x = 1  // `/*a`;\n"
             "    ;",

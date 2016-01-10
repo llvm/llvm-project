@@ -2616,6 +2616,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::Atomic:
       T = cast<AtomicType>(T)->getValueType().getTypePtr();
       continue;
+    case Type::Pipe:
+      T = cast<PipeType>(T)->getElementType().getTypePtr();
+      continue;
     }
 
     if (Queue.empty())
