@@ -885,7 +885,8 @@ catchpad:
   ; CHECK-NEXT: br label %body
 
 body:
-  invoke void @f.ccc() to label %continue unwind label %terminate.inner
+  invoke void @f.ccc() [ "funclet"(token %catch) ]
+    to label %continue unwind label %terminate.inner
   catchret from %catch to label %return
   ; CHECK: catchret from %catch to label %return
 

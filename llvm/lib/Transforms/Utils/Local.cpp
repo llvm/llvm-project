@@ -23,6 +23,7 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -1407,7 +1408,7 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
 /// removeUnreachableBlocksFromFn - Remove blocks that are not reachable, even
 /// if they are in a dead cycle.  Return true if a change was made, false
 /// otherwise.
-bool llvm::removeUnreachableBlocks(Function &F) {
+bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
   SmallPtrSet<BasicBlock*, 128> Reachable;
   bool Changed = markAliveBlocks(F, Reachable);
 
@@ -1428,6 +1429,8 @@ bool llvm::removeUnreachableBlocks(Function &F) {
          ++SI)
       if (Reachable.count(*SI))
         (*SI)->removePredecessor(&*BB);
+    if (LVI)
+      LVI->eraseBlock(&*BB);
     BB->dropAllReferences();
   }
 

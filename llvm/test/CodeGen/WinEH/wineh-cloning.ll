@@ -233,48 +233,6 @@ exit:
 ; CHECK-NEXT:   br label %outer.ret
 
 
-define void @test9() personality i32 (...)* @__C_specific_handler {
-entry:
-  invoke void @f()
-    to label %invoke.cont unwind label %left
-invoke.cont:
-  invoke void @f()
-    to label %unreachable unwind label %right
-left:
-  %cp.left = cleanuppad within none []
-  call void @llvm.foo(i32 1)
-  invoke void @f() [ "funclet"(token %cp.left) ]
-    to label %unreachable unwind label %right
-right:
-  %cp.right = cleanuppad within none []
-  call void @llvm.foo(i32 2)
-  invoke void @f() [ "funclet"(token %cp.right) ]
-    to label %unreachable unwind label %left
-unreachable:
-  unreachable
-}
-; This is an irreducible loop with two funclets that enter each other.
-; CHECK-LABEL: define void @test9(
-; CHECK:     entry:
-; CHECK:               to label %invoke.cont unwind label %[[LEFT:.+]]
-; CHECK:     invoke.cont:
-; CHECK:               to label %[[UNREACHABLE_ENTRY:.+]] unwind label %[[RIGHT:.+]]
-; CHECK:     [[LEFT]]:
-; CHECK:       call void @llvm.foo(i32 1)
-; CHECK:       invoke void @f()
-; CHECK:               to label %[[UNREACHABLE_LEFT:.+]] unwind label %[[RIGHT]]
-; CHECK:     [[RIGHT]]:
-; CHECK:       call void @llvm.foo(i32 2)
-; CHECK:       invoke void @f()
-; CHECK:               to label %[[UNREACHABLE_RIGHT:.+]] unwind label %[[LEFT]]
-; CHECK:     [[UNREACHABLE_RIGHT]]:
-; CHECK:       unreachable
-; CHECK:     [[UNREACHABLE_LEFT]]:
-; CHECK:       unreachable
-; CHECK:     [[UNREACHABLE_ENTRY]]:
-; CHECK:       unreachable
-
-
 define void @test10() personality i32 (...)* @__CxxFrameHandler3 {
 entry:
   invoke void @f()

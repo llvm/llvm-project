@@ -95,7 +95,9 @@ public:
 
   /// \brief Memory Management.
   class MemoryManager {
+    friend class RuntimeDyld;
   public:
+    MemoryManager() : FinalizationLocked(false) {}
     virtual ~MemoryManager() {}
 
     /// Allocate a memory block of (at least) the given size suitable for
@@ -153,6 +155,7 @@ public:
 
   private:
     virtual void anchor();
+    bool FinalizationLocked;
   };
 
   /// \brief Symbol resolution.
@@ -240,6 +243,25 @@ public:
     assert(!Dyld && "setProcessAllSections must be called before loadObject.");
     this->ProcessAllSections = ProcessAllSections;
   }
+
+  /// Perform all actions needed to make the code owned by this RuntimeDyld
+  /// instance executable:
+  ///
+  /// 1) Apply relocations.
+  /// 2) Register EH frames.
+  /// 3) Update memory permissions*.
+  ///
+  /// * Finalization is potentially recursive**, and the 3rd step will only be
+  ///   applied by the outermost call to finalize. This allows different
+  ///   RuntimeDyld instances to share a memory manager without the innermost
+  ///   finalization locking the memory and causing relocation fixup errors in
+  ///   outer instances.
+  ///
+  /// ** Recursive finalization occurs when one RuntimeDyld instances needs the
+  ///   address of a symbol owned by some other instance in order to apply
+  ///   relocations.
+  ///
+  void finalizeWithMemoryManagerLocking();
 
 private:
   // RuntimeDyldImpl is the actual class. RuntimeDyld is just the public

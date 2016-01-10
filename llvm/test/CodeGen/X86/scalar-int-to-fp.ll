@@ -74,9 +74,16 @@ define x86_fp80 @s32_to_x(i32 %a) nounwind {
 }
 
 ; CHECK-LABEL: u64_to_f
+; AVX512_32: vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512_32: vmovlpd %xmm0, {{[0-9]+}}(%esp)
 ; AVX512_32: fildll
+
 ; AVX512_64: vcvtusi2ssq
+
+; SSE2_32: movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2_32: movq %xmm0, {{[0-9]+}}(%esp)
 ; SSE2_32: fildll
+
 ; SSE2_64: cvtsi2ssq
 ; X87: fildll
 define float @u64_to_f(i64 %a) nounwind {
@@ -92,6 +99,24 @@ define float @u64_to_f(i64 %a) nounwind {
 ; X87: fildll
 define float @s64_to_f(i64 %a) nounwind {
   %r = sitofp i64 %a to float
+  ret float %r
+}
+
+; CHECK-LABEL: s64_to_f_2
+; SSE2_32:    movd %ecx, %xmm0
+; SSE2_32:    movd %eax, %xmm1
+; SSE2_32:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2_32:    movq %xmm1, {{[0-9]+}}(%esp)
+; SSE2_32:    fildll {{[0-9]+}}(%esp)
+
+; AVX512_32:    vmovd %eax, %xmm0
+; AVX512_32:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; AVX512_32:    vmovlpd %xmm0, {{[0-9]+}}(%esp)
+; AVX512_32:    fildll {{[0-9]+}}(%esp)
+
+define float @s64_to_f_2(i64 %a) nounwind {
+  %a1 = add i64 %a, 5
+  %r = sitofp i64 %a1 to float
   ret float %r
 }
 
@@ -115,6 +140,24 @@ define double @u64_to_d(i64 %a) nounwind {
 define double @s64_to_d(i64 %a) nounwind {
   %r = sitofp i64 %a to double
   ret double %r
+}
+
+; CHECK-LABEL: s64_to_d_2
+; SSE2_32: movd %ecx, %xmm0
+; SSE2_32: movd %eax, %xmm1
+; SSE2_32: punpckldq %xmm0, %xmm1
+; SSE2_32: movq %xmm1, {{[0-9]+}}(%esp)
+; SSE2_32: fildll
+
+; AVX512_32:    vmovd %eax, %xmm0
+; AVX512_32:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; AVX512_32:    vmovlpd %xmm0, {{[0-9]+}}(%esp)
+; AVX512_32: fildll
+
+define double @s64_to_d_2(i64 %a) nounwind {
+  %b = add i64 %a, 5
+  %f = sitofp i64 %b to double
+  ret double %f
 }
 
 ; CHECK-LABEL: u64_to_x

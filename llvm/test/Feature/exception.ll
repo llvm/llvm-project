@@ -43,7 +43,7 @@ entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %pad
 cleanup:
-  cleanupret from %cp unwind label %pad
+  cleanupret from %cp unwind to caller
 pad:
   %cp = cleanuppad within none []
   br label %cleanup
@@ -57,7 +57,7 @@ entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %pad
 cleanup:
-  cleanupret from %0 unwind label %pad
+  cleanupret from %0 unwind to caller
 pad:
   %0 = cleanuppad within none []
   br label %cleanup

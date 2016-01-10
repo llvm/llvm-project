@@ -33,7 +33,7 @@ right:
 
 shared:
   %x = call i32 @g()
-  invoke void @f() [ "funclet"(token %0) ]
+  invoke void @f()
           to label %shared.cont unwind label %inner
 
 shared.cont:
@@ -72,7 +72,7 @@ right:
 
 shared:
   %x = call i32 @g()
-  invoke void @f() [ "funclet"(token %0) ]
+  invoke void @f()
           to label %shared.cont unwind label %inner
 
 shared.cont:

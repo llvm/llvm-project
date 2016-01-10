@@ -780,7 +780,7 @@ removeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
     assert(MBBICommon->isIdenticalTo(&*MBBI) && "Expected matching MIIs!");
 
     if (MBBICommon->mayLoad() || MBBICommon->mayStore())
-      MBBICommon->setMemRefs(MBBICommon->mergeMemRefsWith(*MBBI));
+      MBBICommon->setMemRefs(MBBI->mergeMemRefsWith(*MBBI));
 
     ++MBBI;
     ++MBBICommon;

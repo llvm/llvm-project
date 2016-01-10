@@ -105,7 +105,9 @@ public:
     // Add the module to the JIT.
     std::vector<std::unique_ptr<Module>> S;
     S.push_back(std::move(M));
-    auto H = CODLayer.addModuleSet(std::move(S), nullptr, std::move(Resolver));
+    auto H = CODLayer.addModuleSet(std::move(S),
+				   llvm::make_unique<SectionMemoryManager>(),
+				   std::move(Resolver));
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.

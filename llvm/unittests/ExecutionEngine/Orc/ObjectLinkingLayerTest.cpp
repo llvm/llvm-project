@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
@@ -20,6 +21,10 @@ using namespace llvm;
 using namespace llvm::orc;
 
 namespace {
+
+class ObjectLinkingLayerExecutionTest : public testing::Test,
+                                        public OrcExecutionTest {
+};
 
 TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
 
@@ -89,6 +94,83 @@ TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
       << "Expected debug info section not seen";
     ObjLayer.removeObjectSet(H);
   }
+}
+
+
+TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
+
+  if (!TM)
+    return;
+
+  class SectionMemoryManagerWrapper : public SectionMemoryManager {
+  public:
+    int FinalizationCount = 0;
+    bool finalizeMemory(std::string *ErrMsg = 0) override {
+      ++FinalizationCount;
+      return SectionMemoryManager::finalizeMemory(ErrMsg);
+    }
+  };
+
+  ObjectLinkingLayer<> ObjLayer;
+  SimpleCompiler Compile(*TM);
+
+  // Create a pair of modules that will trigger recursive finalization:
+  // Module 1:
+  //   int bar() { return 42; }
+  // Module 2:
+  //   int bar();
+  //   int foo() { return bar(); }
+
+  ModuleBuilder MB1(getGlobalContext(), "", "dummy");
+  {
+    MB1.getModule()->setDataLayout(TM->createDataLayout());
+    Function *BarImpl = MB1.createFunctionDecl<int32_t(void)>("bar");
+    BasicBlock *BarEntry = BasicBlock::Create(getGlobalContext(), "entry",
+                                              BarImpl);
+    IRBuilder<> Builder(BarEntry);
+    IntegerType *Int32Ty = IntegerType::get(getGlobalContext(), 32);
+    Value *FourtyTwo = ConstantInt::getSigned(Int32Ty, 42);
+    Builder.CreateRet(FourtyTwo);
+  }
+
+  auto Obj1 = Compile(*MB1.getModule());
+  std::vector<object::ObjectFile*> Obj1Set;
+  Obj1Set.push_back(Obj1.getBinary());
+
+  ModuleBuilder MB2(getGlobalContext(), "", "dummy");
+  {
+    MB2.getModule()->setDataLayout(TM->createDataLayout());
+    Function *BarDecl = MB2.createFunctionDecl<int32_t(void)>("bar");
+    Function *FooImpl = MB2.createFunctionDecl<int32_t(void)>("foo");
+    BasicBlock *FooEntry = BasicBlock::Create(getGlobalContext(), "entry",
+                                              FooImpl);
+    IRBuilder<> Builder(FooEntry);
+    Builder.CreateRet(Builder.CreateCall(BarDecl));
+  }
+  auto Obj2 = Compile(*MB2.getModule());
+  std::vector<object::ObjectFile*> Obj2Set;
+  Obj2Set.push_back(Obj2.getBinary());
+
+  auto Resolver =
+    createLambdaResolver(
+      [&](const std::string &Name) {
+        if (auto Sym = ObjLayer.findSymbol(Name, true))
+          return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+        return RuntimeDyld::SymbolInfo(nullptr);
+      },
+      [](const std::string &Name) {
+        return RuntimeDyld::SymbolInfo(nullptr);
+      });
+
+  SectionMemoryManagerWrapper SMMW;
+  ObjLayer.addObjectSet(std::move(Obj1Set), &SMMW, &*Resolver);
+  auto H = ObjLayer.addObjectSet(std::move(Obj2Set), &SMMW, &*Resolver);
+  ObjLayer.emitAndFinalize(H);
+
+  // Finalization of module 2 should trigger finalization of module 1.
+  // Verify that finalize on SMMW is only called once.
+  EXPECT_EQ(SMMW.FinalizationCount, 1)
+      << "Extra call to finalize";
 }
 
 }

@@ -42,6 +42,7 @@ class TargetLibraryInfo;
 class TargetTransformInfo;
 class DIBuilder;
 class DominatorTree;
+class LazyValueInfo;
 
 template<typename T> class SmallVectorImpl;
 
@@ -303,7 +304,7 @@ void removeUnwindEdge(BasicBlock *BB);
 /// \brief Remove all blocks that can not be reached from the function's entry.
 ///
 /// Returns true if any basic block was removed.
-bool removeUnreachableBlocks(Function &F);
+bool removeUnreachableBlocks(Function &F, LazyValueInfo *LVI = nullptr);
 
 /// \brief Combine the metadata of two instructions so that K can replace J
 ///
