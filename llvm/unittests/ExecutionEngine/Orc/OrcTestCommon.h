@@ -20,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/TypeBuilder.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/JITSymbol.h"
 #include "llvm/Support/TargetSelect.h"
@@ -74,7 +75,6 @@ public:
 
 private:
   std::unique_ptr<Module> M;
-  IRBuilder<> Builder;
 };
 
 // Dummy struct type.

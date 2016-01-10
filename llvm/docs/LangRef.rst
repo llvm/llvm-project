@@ -1590,6 +1590,8 @@ caller's deoptimization state to the callee's deoptimization state is
 semantically equivalent to composing the caller's deoptimization
 continuation after the callee's deoptimization continuation.
 
+.. _ob_funclet:
+
 Funclet Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1598,6 +1600,18 @@ operand bundle tag.  These operand bundles indicate that a call site
 is within a particular funclet.  There can be at most one
 ``"funclet"`` operand bundle attached to a call site and it must have
 exactly one bundle operand.
+
+If any funclet EH pads have been "entered" but not "exited" (per the
+`description in the EH doc\ <ExceptionHandling.html#wineh-constraints>`_),
+it is undefined behavior to execute a ``call`` or ``invoke`` which:
+
+* does not have a ``"funclet"`` bundle and is not a ``call`` to a nounwind
+  intrinsic, or
+* has a ``"funclet"`` bundle whose operand is not the most-recently-entered
+  not-yet-exited funclet EH pad.
+
+Similarly, if no funclet EH pads have been entered-but-not-yet-exited,
+executing a ``call`` or ``invoke`` with a ``"funclet"`` bundle is undefined behavior.
 
 .. _moduleasm:
 
@@ -5415,10 +5429,12 @@ The ``parent`` argument is the token of the funclet that contains the
 ``catchswitch`` instruction. If the ``catchswitch`` is not inside a funclet,
 this operand may be the token ``none``.
 
-The ``default`` argument is the label of another basic block beginning with a
-"pad" instruction, one of ``cleanuppad`` or ``catchswitch``.
+The ``default`` argument is the label of another basic block beginning with
+either a ``cleanuppad`` or ``catchswitch`` instruction.  This unwind destination
+must be a legal target with respect to the ``parent`` links, as described in
+the `exception handling documentation\ <ExceptionHandling.html#wineh-constraints>`_.
 
-The ``handlers`` are a list of successor blocks that each begin with a
+The ``handlers`` are a nonempty list of successor blocks that each begin with a
 :ref:`catchpad <i_catchpad>` instruction.
 
 Semantics:
@@ -5441,82 +5457,6 @@ Example:
       %cs1 = catchswitch within none [label %handler0, label %handler1] unwind to caller
     dispatch2:
       %cs2 = catchswitch within %parenthandler [label %handler0] unwind label %cleanup
-
-.. _i_catchpad:
-
-'``catchpad``' Instruction
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      <resultval> = catchpad within <catchswitch> [<args>*]
-
-Overview:
-"""""""""
-
-The '``catchpad``' instruction is used by `LLVM's exception handling
-system <ExceptionHandling.html#overview>`_ to specify that a basic block
-begins a catch handler --- one where a personality routine attempts to transfer
-control to catch an exception.
-
-Arguments:
-""""""""""
-
-The ``catchswitch`` operand must always be a token produced by a
-:ref:`catchswitch <i_catchswitch>` instruction in a predecessor block. This
-ensures that each ``catchpad`` has exactly one predecessor block, and it always
-terminates in a ``catchswitch``.
-
-The ``args`` correspond to whatever information the personality routine
-requires to know if this is an appropriate handler for the exception. Control
-will transfer to the ``catchpad`` if this is the first appropriate handler for
-the exception.
-
-The ``resultval`` has the type :ref:`token <t_token>` and is used to match the
-``catchpad`` to corresponding :ref:`catchrets <i_catchret>` and other nested EH
-pads.
-
-Semantics:
-""""""""""
-
-When the call stack is being unwound due to an exception being thrown, the
-exception is compared against the ``args``. If it doesn't match, control will
-not reach the ``catchpad`` instruction.  The representation of ``args`` is
-entirely target and personality function-specific.
-
-Like the :ref:`landingpad <i_landingpad>` instruction, the ``catchpad``
-instruction must be the first non-phi of its parent basic block.
-
-The meaning of the tokens produced and consumed by ``catchpad`` and other "pad"
-instructions is described in the
-`Windows exception handling documentation <ExceptionHandling.html#wineh>`.
-
-Executing a ``catchpad`` instruction constitutes "entering" that pad.
-The pad may then be "exited" in one of three ways:
-
-1)  explicitly via a ``catchret`` that consumes it.  Executing such a ``catchret``
-    is undefined behavior if any descendant pads have been entered but not yet
-    exited.
-2)  implicitly via a call (which unwinds all the way to the current function's caller),
-    or via a ``catchswitch`` or a ``cleanupret`` that unwinds to caller.
-3)  implicitly via an unwind edge whose destination EH pad isn't a descendant of
-    the ``catchpad``.  When the ``catchpad`` is exited in this manner, it is
-    undefined behavior if the destination EH pad has a parent which is not an
-    ancestor of the ``catchpad`` being exited.
-
-Example:
-""""""""
-
-.. code-block:: llvm
-
-    dispatch:
-      %cs = catchswitch within none [label %handler0] unwind to caller
-      ;; A catch block which can catch an integer.
-    handler0:
-      %tok = catchpad within %cs [i8** @_ZTIi]
 
 .. _i_catchret:
 
@@ -5554,11 +5494,10 @@ unwinding was interrupted with a :ref:`catchpad <i_catchpad>` instruction.  The
 code to, for example, destroy the active exception.  Control then transfers to
 ``normal``.
 
-The ``token`` argument must be a token produced by a dominating ``catchpad``
-instruction. The ``catchret`` destroys the physical frame established by
-``catchpad``, so executing multiple returns on the same token without
-re-executing the ``catchpad`` will result in undefined behavior.
-See :ref:`catchpad <i_catchpad>` for more details.
+The ``token`` argument must be a token produced by a ``catchpad`` instruction.
+If the specified ``catchpad`` is not the most-recently-entered not-yet-exited
+funclet pad (as described in the `EH documentation\ <ExceptionHandling.html#wineh-constraints>`_),
+the ``catchret``'s behavior is undefined.
 
 Example:
 """"""""
@@ -5592,7 +5531,15 @@ Arguments:
 
 The '``cleanupret``' instruction requires one argument, which indicates
 which ``cleanuppad`` it exits, and must be a :ref:`cleanuppad <i_cleanuppad>`.
-It also has an optional successor, ``continue``.
+If the specified ``cleanuppad`` is not the most-recently-entered not-yet-exited
+funclet pad (as described in the `EH documentation\ <ExceptionHandling.html#wineh-constraints>`_),
+the ``cleanupret``'s behavior is undefined.
+
+The '``cleanupret``' instruction also has an optional successor, ``continue``,
+which must be the label of another basic block beginning with either a
+``cleanuppad`` or ``catchswitch`` instruction.  This unwind destination must
+be a legal target with respect to the ``parent`` links, as described in the
+`exception handling documentation\ <ExceptionHandling.html#wineh-constraints>`_.
 
 Semantics:
 """"""""""
@@ -5601,13 +5548,6 @@ The '``cleanupret``' instruction indicates to the
 :ref:`personality function <personalityfn>` that one
 :ref:`cleanuppad <i_cleanuppad>` it transferred control to has ended.
 It transfers control to ``continue`` or unwinds out of the function.
-
-The unwind destination ``continue``, if present, must be an EH pad
-whose parent is either ``none`` or an ancestor of the ``cleanuppad``
-being returned from.  This constitutes an exceptional exit from all
-ancestors of the completed ``cleanuppad``, up to but not including
-the parent of ``continue``.
-See :ref:`cleanuppad <i_cleanuppad>` for more details.
 
 Example:
 """"""""
@@ -8601,6 +8541,74 @@ Example:
                catch i8** @_ZTIi
                filter [1 x i8**] [@_ZTId]
 
+.. _i_catchpad:
+
+'``catchpad``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <resultval> = catchpad within <catchswitch> [<args>*]
+
+Overview:
+"""""""""
+
+The '``catchpad``' instruction is used by `LLVM's exception handling
+system <ExceptionHandling.html#overview>`_ to specify that a basic block
+begins a catch handler --- one where a personality routine attempts to transfer
+control to catch an exception.
+
+Arguments:
+""""""""""
+
+The ``catchswitch`` operand must always be a token produced by a
+:ref:`catchswitch <i_catchswitch>` instruction in a predecessor block. This
+ensures that each ``catchpad`` has exactly one predecessor block, and it always
+terminates in a ``catchswitch``.
+
+The ``args`` correspond to whatever information the personality routine
+requires to know if this is an appropriate handler for the exception. Control
+will transfer to the ``catchpad`` if this is the first appropriate handler for
+the exception.
+
+The ``resultval`` has the type :ref:`token <t_token>` and is used to match the
+``catchpad`` to corresponding :ref:`catchrets <i_catchret>` and other nested EH
+pads.
+
+Semantics:
+""""""""""
+
+When the call stack is being unwound due to an exception being thrown, the
+exception is compared against the ``args``. If it doesn't match, control will
+not reach the ``catchpad`` instruction.  The representation of ``args`` is
+entirely target and personality function-specific.
+
+Like the :ref:`landingpad <i_landingpad>` instruction, the ``catchpad``
+instruction must be the first non-phi of its parent basic block.
+
+The meaning of the tokens produced and consumed by ``catchpad`` and other "pad"
+instructions is described in the
+`Windows exception handling documentation\ <ExceptionHandling.html#wineh>`_.
+
+When a ``catchpad`` has been "entered" but not yet "exited" (as
+described in the `EH documentation\ <ExceptionHandling.html#wineh-constraints>`_),
+it is undefined behavior to execute a :ref:`call <i_call>` or :ref:`invoke <i_invoke>`
+that does not carry an appropriate :ref:`"funclet" bundle <ob_funclet>`.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+    dispatch:
+      %cs = catchswitch within none [label %handler0] unwind to caller
+      ;; A catch block which can catch an integer.
+    handler0:
+      %tok = catchpad within %cs [i8** @_ZTIi]
+
 .. _i_cleanuppad:
 
 '``cleanuppad``' Instruction
@@ -8655,22 +8663,10 @@ The ``cleanuppad`` instruction has several restrictions:
 -  A basic block that is not a cleanup block may not include a
    '``cleanuppad``' instruction.
 
-Executing a ``cleanuppad`` instruction constitutes "entering" that pad.
-The pad may then be "exited" in one of three ways:
-
-1)  explicitly via a ``cleanupret`` that consumes it.  Executing such a ``cleanupret``
-    is undefined behavior if any descendant pads have been entered but not yet
-    exited.
-2)  implicitly via a call (which unwinds all the way to the current function's caller),
-    or via a ``catchswitch`` or a ``cleanupret`` that unwinds to caller.
-3)  implicitly via an unwind edge whose destination EH pad isn't a descendant of
-    the ``cleanuppad``.  When the ``cleanuppad`` is exited in this manner, it is
-    undefined behavior if the destination EH pad has a parent which is not an
-    ancestor of the ``cleanuppad`` being exited.
-
-It is undefined behavior for the ``cleanuppad`` to exit via an unwind edge which
-does not transitively unwind to the same destination as a constituent
-``cleanupret``.
+When a ``cleanuppad`` has been "entered" but not yet "exited" (as
+described in the `EH documentation\ <ExceptionHandling.html#wineh-constraints>`_),
+it is undefined behavior to execute a :ref:`call <i_call>` or :ref:`invoke <i_invoke>`
+that does not carry an appropriate :ref:`"funclet" bundle <ob_funclet>`.
 
 Example:
 """"""""

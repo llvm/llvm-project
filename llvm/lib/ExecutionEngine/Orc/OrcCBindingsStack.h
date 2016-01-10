@@ -221,7 +221,8 @@ public:
   ModuleHandleT addIRModuleLazy(Module* M,
                                 LLVMOrcSymbolResolverFn ExternalResolver,
                                 void *ExternalResolverCtx) {
-    return addIRModule(CODLayer, std::move(M), nullptr,
+    return addIRModule(CODLayer, std::move(M),
+		       llvm::make_unique<SectionMemoryManager>(),
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 

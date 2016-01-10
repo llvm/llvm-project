@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -mattr=+sse2 -mtriple=i386-apple-darwin -stats 2>&1 | grep asm-printer | grep 14
+; RUN: llc < %s -march=x86 -mattr=+sse2 -mtriple=i386-apple-darwin -stats 2>&1 | grep asm-printer | grep 13
 
 define i32 @t(i8* %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) nounwind  {
 entry:

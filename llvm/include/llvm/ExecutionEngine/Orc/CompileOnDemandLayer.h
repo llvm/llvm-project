@@ -19,7 +19,6 @@
 #include "LambdaResolver.h"
 #include "LogicalDylib.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <list>
 #include <memory>
@@ -61,31 +60,36 @@ private:
 
   typedef typename BaseLayerT::ModuleSetHandleT BaseLayerModuleSetHandleT;
 
-  class ModuleOwner {
+  // Provide type-erasure for the Modules and MemoryManagers.
+  template <typename ResourceT>
+  class ResourceOwner {
   public:
-    ModuleOwner() = default;
-    ModuleOwner(const ModuleOwner&) = delete;
-    ModuleOwner& operator=(const ModuleOwner&) = delete;
-    virtual ~ModuleOwner() { }
-    virtual Module& getModule() const = 0;
+    ResourceOwner() = default;
+    ResourceOwner(const ResourceOwner&) = delete;
+    ResourceOwner& operator=(const ResourceOwner&) = delete;
+    virtual ~ResourceOwner() { }
+    virtual ResourceT& getResource() const = 0;
   };
 
-  template <typename ModulePtrT>
-  class ModuleOwnerImpl : public ModuleOwner {
+  template <typename ResourceT, typename ResourcePtrT>
+  class ResourceOwnerImpl : public ResourceOwner<ResourceT> {
   public:
-    ModuleOwnerImpl(ModulePtrT ModulePtr) : ModulePtr(std::move(ModulePtr)) {}
-    Module& getModule() const override { return *ModulePtr; }
+    ResourceOwnerImpl(ResourcePtrT ResourcePtr)
+      : ResourcePtr(std::move(ResourcePtr)) {}
+    ResourceT& getResource() const override { return *ResourcePtr; }
   private:
-    ModulePtrT ModulePtr;
+    ResourcePtrT ResourcePtr;
   };
 
-  template <typename ModulePtrT>
-  std::unique_ptr<ModuleOwner> wrapOwnership(ModulePtrT ModulePtr) {
-    return llvm::make_unique<ModuleOwnerImpl<ModulePtrT>>(std::move(ModulePtr));
+  template <typename ResourceT, typename ResourcePtrT>
+  std::unique_ptr<ResourceOwner<ResourceT>>
+  wrapOwnership(ResourcePtrT ResourcePtr) {
+    typedef ResourceOwnerImpl<ResourceT, ResourcePtrT> RO;
+    return llvm::make_unique<RO>(std::move(ResourcePtr));
   }
 
   struct LogicalModuleResources {
-    std::unique_ptr<ModuleOwner> SourceModuleOwner;
+    std::unique_ptr<ResourceOwner<Module>> SourceModule;
     std::set<const Function*> StubsToClone;
     std::unique_ptr<IndirectStubsMgrT> StubsMgr;
 
@@ -93,13 +97,13 @@ private:
 
     // Explicit move constructor to make MSVC happy.
     LogicalModuleResources(LogicalModuleResources &&Other)
-        : SourceModuleOwner(std::move(Other.SourceModuleOwner)),
+        : SourceModule(std::move(Other.SourceModule)),
           StubsToClone(std::move(Other.StubsToClone)),
           StubsMgr(std::move(Other.StubsMgr)) {}
 
     // Explicit move assignment to make MSVC happy.
     LogicalModuleResources& operator=(LogicalModuleResources &&Other) {
-      SourceModuleOwner = std::move(Other.SourceModuleOwner);
+      SourceModule = std::move(Other.SourceModule);
       StubsToClone = std::move(Other.StubsToClone);
       StubsMgr = std::move(Other.StubsMgr);
     }
@@ -114,12 +118,35 @@ private:
 
   };
 
-
-
   struct LogicalDylibResources {
     typedef std::function<RuntimeDyld::SymbolInfo(const std::string&)>
       SymbolResolverFtor;
+
+    typedef std::function<typename BaseLayerT::ModuleSetHandleT(
+                            BaseLayerT&,
+                            std::unique_ptr<Module>,
+                            std::unique_ptr<RuntimeDyld::SymbolResolver>)>
+      ModuleAdderFtor;
+
+    LogicalDylibResources() = default;
+
+    // Explicit move constructor to make MSVC happy.
+    LogicalDylibResources(LogicalDylibResources &&Other)
+      : ExternalSymbolResolver(std::move(Other.ExternalSymbolResolver)),
+        MemMgr(std::move(Other.MemMgr)),
+        ModuleAdder(std::move(Other.ModuleAdder)) {}
+
+    // Explicit move assignment operator to make MSVC happy.
+    LogicalDylibResources& operator=(LogicalDylibResources &&Other) {
+      ExternalSymbolResolver = std::move(Other.ExternalSymbolResolver);
+      MemMgr = std::move(Other.MemMgr);
+      ModuleAdder = std::move(Other.ModuleAdder);
+      return *this;
+    }
+
     SymbolResolverFtor ExternalSymbolResolver;
+    std::unique_ptr<ResourceOwner<RuntimeDyld::MemoryManager>> MemMgr;
+    ModuleAdderFtor ModuleAdder;
   };
 
   typedef LogicalDylib<BaseLayerT, LogicalModuleResources,
@@ -157,15 +184,24 @@ public:
                                 MemoryManagerPtrT MemMgr,
                                 SymbolResolverPtrT Resolver) {
 
-    assert(MemMgr == nullptr &&
-           "User supplied memory managers not supported with COD yet.");
-
     LogicalDylibs.push_back(CODLogicalDylib(BaseLayer));
     auto &LDResources = LogicalDylibs.back().getDylibResources();
 
     LDResources.ExternalSymbolResolver =
       [Resolver](const std::string &Name) {
         return Resolver->findSymbol(Name);
+      };
+
+    auto &MemMgrRef = *MemMgr;
+    LDResources.MemMgr =
+      wrapOwnership<RuntimeDyld::MemoryManager>(std::move(MemMgr));
+
+    LDResources.ModuleAdder =
+      [&MemMgrRef](BaseLayerT &B, std::unique_ptr<Module> M,
+                   std::unique_ptr<RuntimeDyld::SymbolResolver> R) {
+        std::vector<std::unique_ptr<Module>> Ms;
+        Ms.push_back(std::move(M));
+        return B.addModuleSet(std::move(Ms), &MemMgrRef, std::move(R));
       };
 
     // Process each of the modules in this module set.
@@ -215,9 +251,9 @@ private:
     auto LMH = LD.createLogicalModule();
     auto &LMResources =  LD.getLogicalModuleResources(LMH);
 
-    LMResources.SourceModuleOwner = wrapOwnership(std::move(SrcMPtr));
+    LMResources.SourceModule = wrapOwnership<Module>(std::move(SrcMPtr));
 
-    Module &SrcM = LMResources.SourceModuleOwner->getModule();
+    Module &SrcM = LMResources.SourceModule->getResource();
 
     // Create the GlobalValues module.
     const DataLayout &DL = SrcM.getDataLayout();
@@ -326,12 +362,9 @@ private:
           return RuntimeDyld::SymbolInfo(nullptr);
         });
 
-    std::vector<std::unique_ptr<Module>> GVsMSet;
-    GVsMSet.push_back(std::move(GVsM));
     auto GVsH =
-      BaseLayer.addModuleSet(std::move(GVsMSet),
-                             llvm::make_unique<SectionMemoryManager>(),
-                             std::move(GVsResolver));
+      LD.getDylibResources().ModuleAdder(BaseLayer, std::move(GVsM),
+				         std::move(GVsResolver));
     LD.addToLogicalModule(LMH, GVsH);
   }
 
@@ -348,7 +381,7 @@ private:
                                   LogicalModuleHandle LMH,
                                   Function &F) {
     auto &LMResources = LD.getLogicalModuleResources(LMH);
-    Module &SrcM = LMResources.SourceModuleOwner->getModule();
+    Module &SrcM = LMResources.SourceModule->getResource();
 
     // If F is a declaration we must already have compiled it.
     if (F.isDeclaration())
@@ -386,7 +419,7 @@ private:
                                           LogicalModuleHandle LMH,
                                           const PartitionT &Part) {
     auto &LMResources = LD.getLogicalModuleResources(LMH);
-    Module &SrcM = LMResources.SourceModuleOwner->getModule();
+    Module &SrcM = LMResources.SourceModule->getResource();
 
     // Create the module.
     std::string NewName = SrcM.getName();
@@ -445,7 +478,6 @@ private:
       moveFunctionBody(*F, VMap, &Materializer);
 
     // Create memory manager and symbol resolver.
-    auto MemMgr = llvm::make_unique<SectionMemoryManager>();
     auto Resolver = createLambdaResolver(
         [this, &LD, LMH](const std::string &Name) {
           if (auto Symbol = LD.findSymbolInternally(LMH, Name))
@@ -459,10 +491,9 @@ private:
                                            Symbol.getFlags());
           return RuntimeDyld::SymbolInfo(nullptr);
         });
-    std::vector<std::unique_ptr<Module>> PartMSet;
-    PartMSet.push_back(std::move(M));
-    return BaseLayer.addModuleSet(std::move(PartMSet), std::move(MemMgr),
-                                  std::move(Resolver));
+
+    return LD.getDylibResources().ModuleAdder(BaseLayer, std::move(M),
+					      std::move(Resolver));
   }
 
   BaseLayerT &BaseLayer;

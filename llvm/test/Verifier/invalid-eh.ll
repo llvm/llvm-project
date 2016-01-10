@@ -6,6 +6,19 @@
 ; RUN: sed -e s/.T6:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK6 %s
 ; RUN: sed -e s/.T7:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK7 %s
 ; RUN: sed -e s/.T8:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK8 %s
+; RUN: sed -e s/.T9:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK9 %s
+; RUN: sed -e s/.T10:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK10 %s
+; RUN: sed -e s/.T11:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK11 %s
+; RUN: sed -e s/.T12:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK12 %s
+; RUN: sed -e s/.T13:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK13 %s
+; RUN: sed -e s/.T14:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK14 %s
+; RUN: sed -e s/.T15:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK15 %s
+; RUN: sed -e s/.T16:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK16 %s
+; RUN: sed -e s/.T17:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK17 %s
+; RUN: sed -e s/.T18:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK18 %s
+; RUN: sed -e s/.T19:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK19 %s
+; RUN: sed -e s/.T20:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK20 %s
+; RUN: sed -e s/.T21:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK21 %s
 
 declare void @g()
 
@@ -96,3 +109,264 @@ declare void @g()
 ;T8:     %cs1 = catchswitch within none [ label %switch1 ] unwind to caller
 ;T8:     ; CHECK8: CatchSwitchInst handlers must be catchpads
 ;T8: }
+
+;T9: define void @f() personality void ()* @g {
+;T9:   entry:
+;T9:     ret void
+;T9:   cleanup:
+;T9:     %cp = cleanuppad within none []
+;T9:     invoke void @g() [ "funclet"(token %cp) ]
+;T9:       to label %exit unwind label %cleanup
+;T9:       ; CHECK9: EH pad cannot handle exceptions raised within it
+;T9:       ; CHECK9-NEXT: %cp = cleanuppad within none []
+;T9:       ; CHECK9-NEXT: invoke void @g() [ "funclet"(token %cp) ]
+;T9:   exit:
+;T9:     ret void
+;T9: }
+
+;T10: define void @f() personality void ()* @g {
+;T10:   entry:
+;T10:     ret void
+;T10:   cleanup1:
+;T10:     %cp1 = cleanuppad within none []
+;T10:     unreachable
+;T10:   switch:
+;T10:     %cs = catchswitch within %cp1 [label %catch] unwind to caller
+;T10:   catch:
+;T10:     %catchp1 = catchpad within %cs [i32 1]
+;T10:     unreachable
+;T10:   cleanup2:
+;T10:     %cp2 = cleanuppad within %catchp1 []
+;T10:     unreachable
+;T10:   cleanup3:
+;T10:     %cp3 = cleanuppad within %cp2 []
+;T10:     cleanupret from %cp3 unwind label %switch
+;T10:       ; CHECK10: EH pad cannot handle exceptions raised within it
+;T10:       ; CHECK10-NEXT: %cs = catchswitch within %cp1 [label %catch] unwind to caller
+;T10:       ; CHECK10-NEXT: cleanupret from %cp3 unwind label %switch
+;T10: }
+
+;T11: define void @f() personality void ()* @g {
+;T11:   entry:
+;T11:     ret void
+;T11:   cleanup1:
+;T11:     %cp1 = cleanuppad within none []
+;T11:     unreachable
+;T11:   cleanup2:
+;T11:     %cp2 = cleanuppad within %cp1 []
+;T11:     unreachable
+;T11:   switch:
+;T11:     %cs = catchswitch within none [label %catch] unwind label %cleanup2
+;T11:     ; CHECK11: A single unwind edge may only enter one EH pad
+;T11:     ; CHECK11-NEXT: %cs = catchswitch within none [label %catch] unwind label %cleanup2
+;T11:   catch:
+;T11:     catchpad within %cs [i32 1]
+;T11:     unreachable
+;T11: }
+
+;T12: define void @f() personality void ()* @g {
+;T12:   entry:
+;T12:     ret void
+;T12:   cleanup:
+;T12:     %cp = cleanuppad within none []
+;T12:     cleanupret from %cp unwind label %switch
+;T12:     ; CHECK12: A cleanupret must exit its cleanup
+;T12:     ; CHECK12-NEXT: cleanupret from %cp unwind label %switch
+;T12:   switch:
+;T12:     %cs = catchswitch within %cp [label %catch] unwind to caller
+;T12:   catch:
+;T12:     catchpad within %cs [i32 1]
+;T12:     unreachable
+;T12: }
+
+;T13: define void @f() personality void ()* @g {
+;T13:   entry:
+;T13:     ret void
+;T13:   switch:
+;T13:     %cs = catchswitch within none [label %catch] unwind label %switch
+;T13:     ; CHECK13: EH pad cannot handle exceptions raised within it
+;T13:     ; CHECK13-NEXT:  %cs = catchswitch within none [label %catch] unwind label %switch
+;T13:   catch:
+;T13:     catchpad within %cs [i32 0]
+;T13:     unreachable
+;T13: }
+
+;T14: define void @f() personality void ()* @g {
+;T14:   entry:
+;T14:     ret void
+;T14:   cleanup:
+;T14:     %cp = cleanuppad within none []
+;T14:     unreachable
+;T14:   left:
+;T14:     cleanupret from %cp unwind label %switch
+;T14:   right:
+;T14:     cleanupret from %cp unwind to caller
+;T14:     ; CHECK14: Unwind edges out of a funclet pad must have the same unwind dest
+;T14:     ; CHECK14-NEXT: %cp = cleanuppad within none []
+;T14:     ; CHECK14-NEXT: cleanupret from %cp unwind label %switch
+;T14:     ; CHECK14-NEXT: cleanupret from %cp unwind to caller
+;T14:   switch:
+;T14:     %cs = catchswitch within none [label %catch] unwind to caller
+;T14:   catch:
+;T14:     catchpad within %cs [i32 1]
+;T14:     unreachable
+;T14: }
+
+;T15: define void @f() personality void ()* @g {
+;T15:   entry:
+;T15:     ret void
+;T15:   switch:
+;T15:     %cs = catchswitch within none [label %catch] unwind to caller
+;T15:   catch:
+;T15:     %catch.pad = catchpad within %cs [i32 1]
+;T15:     invoke void @g() [ "funclet"(token %catch.pad) ]
+;T15:       to label %unreachable unwind label %target1
+;T15:   unreachable:
+;T15:     unreachable
+;T15:   target1:
+;T15:     cleanuppad within none []
+;T15:     unreachable
+;T15:   target2:
+;T15:     cleanuppad within none []
+;T15:     unreachable
+;T15:   nested.1:
+;T15:     %nested.pad.1 = cleanuppad within %catch.pad []
+;T15:     unreachable
+;T15:   nested.2:
+;T15:     %nested.pad.2 = cleanuppad within %nested.pad.1 []
+;T15:     cleanupret from %nested.pad.2 unwind label %target2
+;T15:     ; CHECK15: Unwind edges out of a funclet pad must have the same unwind dest
+;T15:     ; CHECK15-NEXT: %catch.pad = catchpad within %cs [i32 1]
+;T15:     ; CHECK15-NEXT: cleanupret from %nested.pad.2 unwind label %target2
+;T15:     ; CHECK15-NEXT: invoke void @g() [ "funclet"(token %catch.pad) ]
+;T15:     ; CHECK15-NEXT:   to label %unreachable unwind label %target1
+;T15: }
+
+;T16: define void @f() personality void ()* @g {
+;T16:   entry:
+;T16:     ret void
+;T16:   switch:
+;T16:     %cs = catchswitch within none [label %catch] unwind to caller
+;T16:   catch:
+;T16:     %catch.pad = catchpad within %cs [i32 1]
+;T16:     invoke void @g() [ "funclet"(token %catch.pad) ]
+;T16:       to label %unreachable unwind label %target1
+;T16:     ; CHECK16: Unwind edges out of a catch must have the same unwind dest as the parent catchswitch
+;T16:     ; CHECK16-NEXT:   %catch.pad = catchpad within %cs [i32 1]
+;T16:     ; CHECK16-NEXT:  invoke void @g() [ "funclet"(token %catch.pad) ]
+;T16:     ; CHECK16-NEXT:          to label %unreachable unwind label %target1
+;T16:     ; CHECK16-NEXT:  %cs = catchswitch within none [label %catch] unwind to caller
+;T16:   unreachable:
+;T16:     unreachable
+;T16:   target1:
+;T16:     cleanuppad within none []
+;T16:     unreachable
+;T16: }
+
+;T17: define void @f() personality void ()* @g {
+;T17:   entry:
+;T17:     ret void
+;T17:   switch:
+;T17:     %cs = catchswitch within none [label %catch] unwind label %target1
+;T17:   catch:
+;T17:     %catch.pad = catchpad within %cs [i32 1]
+;T17:     invoke void @g() [ "funclet"(token %catch.pad) ]
+;T17:       to label %unreachable unwind label %target2
+;T17:     ; CHECK17: Unwind edges out of a catch must have the same unwind dest as the parent catchswitch
+;T17:     ; CHECK17-NEXT:  %catch.pad = catchpad within %cs [i32 1]
+;T17:     ; CHECK17-NEXT:  invoke void @g() [ "funclet"(token %catch.pad) ]
+;T17:     ; CHECK17-NEXT:          to label %unreachable unwind label %target2
+;T17:     ; CHECK17-NEXT:  %cs = catchswitch within none [label %catch] unwind label %target1
+;T17:   unreachable:
+;T17:     unreachable
+;T17:   target1:
+;T17:     cleanuppad within none []
+;T17:     unreachable
+;T17:   target2:
+;T17:     cleanuppad within none []
+;T17:     unreachable
+;T17: }
+
+;T18: define void @f() personality void ()* @g {
+;T18:   entry:
+;T18:     invoke void @g()
+;T18:       to label %invoke.cont unwind label %left
+;T18:   invoke.cont:
+;T18:     invoke void @g()
+;T18:       to label %unreachable unwind label %right
+;T18:   left:
+;T18:     %cp.left = cleanuppad within none []
+;T18:     invoke void @g() [ "funclet"(token %cp.left) ]
+;T18:       to label %unreachable unwind label %right
+;T18:   right:
+;T18:     %cp.right = cleanuppad within none []
+;T18:     invoke void @g() [ "funclet"(token %cp.right) ]
+;T18:       to label %unreachable unwind label %left
+;T18:     ; CHECK18: EH pads can't handle each other's exceptions
+;T18:     ; CHECK18-NEXT: %cp.left = cleanuppad within none []
+;T18:     ; CHECK18-NEXT:  invoke void @g() [ "funclet"(token %cp.left) ]
+;T18:     ; CHECK18-NEXT:          to label %unreachable unwind label %right
+;T18:     ; CHECK18-NEXT:  %cp.right = cleanuppad within none []
+;T18:     ; CHECK18-NEXT:  invoke void @g() [ "funclet"(token %cp.right) ]
+;T18:     ; CHECK18-NEXT:          to label %unreachable unwind label %left
+;T18:   unreachable:
+;T18:     unreachable
+;T18: }
+
+;T19: define void @f() personality void ()* @g {
+;T19:   entry:
+;T19:     ret void
+;T19:   red:
+;T19:     %redpad = cleanuppad within none []
+;T19:     unreachable
+;T19:   red.inner:
+;T19:     %innerpad = cleanuppad within %redpad []
+;T19:     invoke void @g() [ "funclet"(token %innerpad) ]
+;T19:       to label %unreachable unwind label %green
+;T19:   green:
+;T19:     %greenswitch = catchswitch within none [label %catch] unwind label %blue
+;T19:   catch:
+;T19:     catchpad within %greenswitch [i32 42]
+;T19:     unreachable
+;T19:   blue:
+;T19:     %bluepad = cleanuppad within none []
+;T19:     cleanupret from %bluepad unwind label %red
+;T19:     ; CHECK19: EH pads can't handle each other's exceptions
+;T19:     ; CHECK19-NEXT: %redpad = cleanuppad within none []
+;T19:     ; CHECK19-NEXT: invoke void @g() [ "funclet"(token %innerpad) ]
+;T19:     ; CHECK19-NEXT:         to label %unreachable unwind label %green
+;T19:     ; CHECK19-NEXT: %greenswitch = catchswitch within none [label %catch] unwind label %blue
+;T19:     ; CHECK19-NEXT: %bluepad = cleanuppad within none []
+;T19:     ; CHECK19-NEXT: cleanupret from %bluepad unwind label %red
+;T19:   unreachable:
+;T19:     unreachable
+;T19: }
+
+;T20: define void @f() personality void ()* @g {
+;T20:   entry:
+;T20:     ret void
+;T20:   switch:
+;T20:     %cs = catchswitch within none [label %catch] unwind label %catch
+;T20:     ; CHECK20: Catchswitch cannot unwind to one of its catchpads
+;T20:     ; CHECK20-NEXT: %cs = catchswitch within none [label %catch] unwind label %catch
+;T20:     ; CHECK20-NEXT: %cp = catchpad within %cs [i32 4]
+;T20:   catch:
+;T20:     %cp = catchpad within %cs [i32 4]
+;T20:     unreachable
+;T20: }
+
+;T21: define void @f() personality void ()* @g {
+;T21:   entry:
+;T21:     ret void
+;T21:   switch:
+;T21:     %cs = catchswitch within none [label %catch1] unwind label %catch2
+;T21:     ; CHECK21: Catchswitch cannot unwind to one of its catchpads
+;T21:     ; CHECK21-NEXT: %cs = catchswitch within none [label %catch1] unwind label %catch2
+;T21:     ; CHECK21-NEXT: %cp2 = catchpad within %cs [i32 2]
+;T21:   catch1:
+;T21:     %cp1 = catchpad within %cs [i32 1]
+;T21:     unreachable
+;T21:   catch2:
+;T21:     %cp2 = catchpad within %cs [i32 2]
+;T21:     unreachable
+;T21: }

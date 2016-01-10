@@ -44,7 +44,7 @@ catch:                                            ; preds = %catch.dispatch
   ; CHECK: catch:
   ; CHECK:   store i32 2
   ; CHECK:   invoke void @_CxxThrowException(
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1
+  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) [ "funclet"(token %1) ]
           to label %unreachable unwind label %catch.dispatch.1
 
 catch.dispatch.1:                                 ; preds = %catch

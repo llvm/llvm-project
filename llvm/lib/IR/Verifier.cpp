@@ -45,6 +45,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Verifier.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -145,6 +146,11 @@ private:
     OS << *C;
   }
 
+  template <typename T> void Write(ArrayRef<T> Vs) {
+    for (const T &V : Vs)
+      Write(V);
+  }
+
   template <typename T1, typename... Ts>
   void WriteTs(const T1 &V1, const Ts &... Vs) {
     Write(V1);
@@ -204,6 +210,10 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// given function and the largest index passed to llvm.localrecover.
   DenseMap<Function *, std::pair<unsigned, unsigned>> FrameEscapeInfo;
 
+  // Maps catchswitches and cleanuppads that unwind to siblings to the
+  // terminators that indicate the unwind, used to detect cycles therein.
+  MapVector<Instruction *, TerminatorInst *> SiblingFuncletInfo;
+
   /// Cache of constants visited in search of ConstantExprs.
   SmallPtrSet<const Constant *, 32> ConstantExprVisited;
 
@@ -245,9 +255,11 @@ public:
     Broken = false;
     // FIXME: We strip const here because the inst visitor strips const.
     visit(const_cast<Function &>(F));
+    verifySiblingFuncletUnwinds();
     InstsInThisBlock.clear();
     LandingPadResultTy = nullptr;
     SawFrameEscape = false;
+    SiblingFuncletInfo.clear();
 
     return !Broken;
   }
@@ -403,6 +415,7 @@ private:
   void visitCatchPadInst(CatchPadInst &CPI);
   void visitCatchReturnInst(CatchReturnInst &CatchReturn);
   void visitCleanupPadInst(CleanupPadInst &CPI);
+  void visitFuncletPadInst(FuncletPadInst &FPI);
   void visitCatchSwitchInst(CatchSwitchInst &CatchSwitch);
   void visitCleanupReturnInst(CleanupReturnInst &CRI);
 
@@ -428,6 +441,7 @@ private:
   void visitConstantExpr(const ConstantExpr *CE);
   void VerifyStatepoint(ImmutableCallSite CS);
   void verifyFrameRecoverIndices();
+  void verifySiblingFuncletUnwinds();
 
   // Module-level debug info verification...
   void verifyTypeRefs();
@@ -1712,6 +1726,59 @@ void Verifier::verifyFrameRecoverIndices() {
   }
 }
 
+static Instruction *getSuccPad(TerminatorInst *Terminator) {
+  BasicBlock *UnwindDest;
+  if (auto *II = dyn_cast<InvokeInst>(Terminator))
+    UnwindDest = II->getUnwindDest();
+  else if (auto *CSI = dyn_cast<CatchSwitchInst>(Terminator))
+    UnwindDest = CSI->getUnwindDest();
+  else
+    UnwindDest = cast<CleanupReturnInst>(Terminator)->getUnwindDest();
+  return UnwindDest->getFirstNonPHI();
+}
+
+void Verifier::verifySiblingFuncletUnwinds() {
+  SmallPtrSet<Instruction *, 8> Visited;
+  SmallPtrSet<Instruction *, 8> Active;
+  for (const auto &Pair : SiblingFuncletInfo) {
+    Instruction *PredPad = Pair.first;
+    if (Visited.count(PredPad))
+      continue;
+    Active.insert(PredPad);
+    TerminatorInst *Terminator = Pair.second;
+    do {
+      Instruction *SuccPad = getSuccPad(Terminator);
+      if (Active.count(SuccPad)) {
+        // Found a cycle; report error
+        Instruction *CyclePad = SuccPad;
+        SmallVector<Instruction *, 8> CycleNodes;
+        do {
+          CycleNodes.push_back(CyclePad);
+          TerminatorInst *CycleTerminator = SiblingFuncletInfo[CyclePad];
+          if (CycleTerminator != CyclePad)
+            CycleNodes.push_back(CycleTerminator);
+          CyclePad = getSuccPad(CycleTerminator);
+        } while (CyclePad != SuccPad);
+        Assert(false, "EH pads can't handle each other's exceptions",
+               ArrayRef<Instruction *>(CycleNodes));
+      }
+      // Don't re-walk a node we've already checked
+      if (!Visited.insert(SuccPad).second)
+        break;
+      // Walk to this successor if it has a map entry.
+      PredPad = SuccPad;
+      auto TermI = SiblingFuncletInfo.find(PredPad);
+      if (TermI == SiblingFuncletInfo.end())
+        break;
+      Terminator = TermI->second;
+      Active.insert(PredPad);
+    } while (true);
+    // Each node only has one successor, so we've walked all the active
+    // nodes' successors.
+    Active.clear();
+  }
+}
+
 // visitFunction - Verify that a function is ok.
 //
 void Verifier::visitFunction(const Function &F) {
@@ -2922,6 +2989,13 @@ void Verifier::visitInsertValueInst(InsertValueInst &IVI) {
   visitInstruction(IVI);
 }
 
+static Value *getParentPad(Value *EHPad) {
+  if (auto *FPI = dyn_cast<FuncletPadInst>(EHPad))
+    return FPI->getParentPad();
+
+  return cast<CatchSwitchInst>(EHPad)->getParentPad();
+}
+
 void Verifier::visitEHPadPredecessors(Instruction &I) {
   assert(I.isEHPad());
 
@@ -2949,16 +3023,45 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
              "Block containg CatchPadInst must be jumped to "
              "only by its catchswitch.",
              CPI);
+    Assert(BB != CPI->getCatchSwitch()->getUnwindDest(),
+           "Catchswitch cannot unwind to one of its catchpads",
+           CPI->getCatchSwitch(), CPI);
     return;
   }
 
+  // Verify that each pred has a legal terminator with a legal to/from EH
+  // pad relationship.
+  Instruction *ToPad = &I;
+  Value *ToPadParent = getParentPad(ToPad);
   for (BasicBlock *PredBB : predecessors(BB)) {
     TerminatorInst *TI = PredBB->getTerminator();
+    Value *FromPad;
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       Assert(II->getUnwindDest() == BB && II->getNormalDest() != BB,
-             "EH pad must be jumped to via an unwind edge", &I, II);
-    } else if (!isa<CleanupReturnInst>(TI) && !isa<CatchSwitchInst>(TI)) {
-      Assert(false, "EH pad must be jumped to via an unwind edge", &I, TI);
+             "EH pad must be jumped to via an unwind edge", ToPad, II);
+      if (auto Bundle = II->getOperandBundle(LLVMContext::OB_funclet))
+        FromPad = Bundle->Inputs[0];
+      else
+        FromPad = ConstantTokenNone::get(II->getContext());
+    } else if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
+      FromPad = CRI->getCleanupPad();
+      Assert(FromPad != ToPadParent, "A cleanupret must exit its cleanup", CRI);
+    } else if (auto *CSI = dyn_cast<CatchSwitchInst>(TI)) {
+      FromPad = CSI;
+    } else {
+      Assert(false, "EH pad must be jumped to via an unwind edge", ToPad, TI);
+    }
+
+    // The edge may exit from zero or more nested pads.
+    for (;; FromPad = getParentPad(FromPad)) {
+      Assert(FromPad != ToPad,
+             "EH pad cannot handle exceptions raised within it", FromPad, TI);
+      if (FromPad == ToPadParent) {
+        // This is a legal unwind edge.
+        break;
+      }
+      Assert(!isa<ConstantTokenNone>(FromPad),
+             "A single unwind edge may only enter one EH pad", TI);
     }
   }
 }
@@ -3022,7 +3125,7 @@ void Verifier::visitCatchPadInst(CatchPadInst &CPI) {
   Assert(BB->getFirstNonPHI() == &CPI,
          "CatchPadInst not the first non-PHI instruction in the block.", &CPI);
 
-  visitInstruction(CPI);
+  visitFuncletPadInst(CPI);
 }
 
 void Verifier::visitCatchReturnInst(CatchReturnInst &CatchReturn) {
@@ -3052,33 +3155,160 @@ void Verifier::visitCleanupPadInst(CleanupPadInst &CPI) {
   Assert(isa<ConstantTokenNone>(ParentPad) || isa<FuncletPadInst>(ParentPad),
          "CleanupPadInst has an invalid parent.", &CPI);
 
-  User *FirstUser = nullptr;
-  BasicBlock *FirstUnwindDest = nullptr;
-  for (User *U : CPI.users()) {
-    BasicBlock *UnwindDest;
-    if (CleanupReturnInst *CRI = dyn_cast<CleanupReturnInst>(U)) {
-      UnwindDest = CRI->getUnwindDest();
-    } else if (isa<CleanupPadInst>(U) || isa<CatchSwitchInst>(U)) {
-      continue;
-    } else if (CallSite(U)) {
-      continue;
-    } else {
-      Assert(false, "bogus cleanuppad use", &CPI);
-    }
+  visitFuncletPadInst(CPI);
+}
 
-    if (!FirstUser) {
-      FirstUser = U;
-      FirstUnwindDest = UnwindDest;
-    } else {
-      Assert(
-          UnwindDest == FirstUnwindDest,
-          "cleanupret instructions from the same cleanuppad must have the same "
-          "unwind destination",
-          FirstUser, U);
+void Verifier::visitFuncletPadInst(FuncletPadInst &FPI) {
+  User *FirstUser = nullptr;
+  Value *FirstUnwindPad = nullptr;
+  SmallVector<FuncletPadInst *, 8> Worklist({&FPI});
+  while (!Worklist.empty()) {
+    FuncletPadInst *CurrentPad = Worklist.pop_back_val();
+    Value *UnresolvedAncestorPad = nullptr;
+    for (User *U : CurrentPad->users()) {
+      BasicBlock *UnwindDest;
+      if (auto *CRI = dyn_cast<CleanupReturnInst>(U)) {
+        UnwindDest = CRI->getUnwindDest();
+      } else if (auto *CSI = dyn_cast<CatchSwitchInst>(U)) {
+        // We allow catchswitch unwind to caller to nest
+        // within an outer pad that unwinds somewhere else,
+        // because catchswitch doesn't have a nounwind variant.
+        // See e.g. SimplifyCFGOpt::SimplifyUnreachable.
+        if (CSI->unwindsToCaller())
+          continue;
+        UnwindDest = CSI->getUnwindDest();
+      } else if (auto *II = dyn_cast<InvokeInst>(U)) {
+        UnwindDest = II->getUnwindDest();
+      } else if (isa<CallInst>(U)) {
+        // Calls which don't unwind may be found inside funclet
+        // pads that unwind somewhere else.  We don't *require*
+        // such calls to be annotated nounwind.
+        continue;
+      } else if (auto *CPI = dyn_cast<CleanupPadInst>(U)) {
+        // The unwind dest for a cleanup can only be found by
+        // recursive search.  Add it to the worklist, and we'll
+        // search for its first use that determines where it unwinds.
+        Worklist.push_back(CPI);
+        continue;
+      } else {
+        Assert(isa<CatchReturnInst>(U), "Bogus funclet pad use", U);
+        continue;
+      }
+
+      Value *UnwindPad;
+      bool ExitsFPI;
+      if (UnwindDest) {
+        UnwindPad = UnwindDest->getFirstNonPHI();
+        Value *UnwindParent = getParentPad(UnwindPad);
+        // Ignore unwind edges that don't exit CurrentPad.
+        if (UnwindParent == CurrentPad)
+          continue;
+        // Determine whether the original funclet pad is exited,
+        // and if we are scanning nested pads determine how many
+        // of them are exited so we can stop searching their
+        // children.
+        Value *ExitedPad = CurrentPad;
+        ExitsFPI = false;
+        do {
+          if (ExitedPad == &FPI) {
+            ExitsFPI = true;
+            // Now we can resolve any ancestors of CurrentPad up to
+            // FPI, but not including FPI since we need to make sure
+            // to check all direct users of FPI for consistency.
+            UnresolvedAncestorPad = &FPI;
+            break;
+          }
+          Value *ExitedParent = getParentPad(ExitedPad);
+          if (ExitedParent == UnwindParent) {
+            // ExitedPad is the ancestor-most pad which this unwind
+            // edge exits, so we can resolve up to it, meaning that
+            // ExitedParent is the first ancestor still unresolved.
+            UnresolvedAncestorPad = ExitedParent;
+            break;
+          }
+          ExitedPad = ExitedParent;
+        } while (!isa<ConstantTokenNone>(ExitedPad));
+      } else {
+        // Unwinding to caller exits all pads.
+        UnwindPad = ConstantTokenNone::get(FPI.getContext());
+        ExitsFPI = true;
+        UnresolvedAncestorPad = &FPI;
+      }
+
+      if (ExitsFPI) {
+        // This unwind edge exits FPI.  Make sure it agrees with other
+        // such edges.
+        if (FirstUser) {
+          Assert(UnwindPad == FirstUnwindPad, "Unwind edges out of a funclet "
+                                              "pad must have the same unwind "
+                                              "dest",
+                 &FPI, U, FirstUser);
+        } else {
+          FirstUser = U;
+          FirstUnwindPad = UnwindPad;
+          // Record cleanup sibling unwinds for verifySiblingFuncletUnwinds
+          if (isa<CleanupPadInst>(&FPI) && !isa<ConstantTokenNone>(UnwindPad) &&
+              getParentPad(UnwindPad) == getParentPad(&FPI))
+            SiblingFuncletInfo[&FPI] = cast<TerminatorInst>(U);
+        }
+      }
+      // Make sure we visit all uses of FPI, but for nested pads stop as
+      // soon as we know where they unwind to.
+      if (CurrentPad != &FPI)
+        break;
+    }
+    if (UnresolvedAncestorPad) {
+      if (CurrentPad == UnresolvedAncestorPad) {
+        // When CurrentPad is FPI itself, we don't mark it as resolved even if
+        // we've found an unwind edge that exits it, because we need to verify
+        // all direct uses of FPI.
+        assert(CurrentPad == &FPI);
+        continue;
+      }
+      // Pop off the worklist any nested pads that we've found an unwind
+      // destination for.  The pads on the worklist are the uncles,
+      // great-uncles, etc. of CurrentPad.  We've found an unwind destination
+      // for all ancestors of CurrentPad up to but not including
+      // UnresolvedAncestorPad.
+      Value *ResolvedPad = CurrentPad;
+      while (!Worklist.empty()) {
+        Value *UnclePad = Worklist.back();
+        Value *AncestorPad = getParentPad(UnclePad);
+        // Walk ResolvedPad up the ancestor list until we either find the
+        // uncle's parent or the last resolved ancestor.
+        while (ResolvedPad != AncestorPad) {
+          Value *ResolvedParent = getParentPad(ResolvedPad);
+          if (ResolvedParent == UnresolvedAncestorPad) {
+            break;
+          }
+          ResolvedPad = ResolvedParent;
+        }
+        // If the resolved ancestor search didn't find the uncle's parent,
+        // then the uncle is not yet resolved.
+        if (ResolvedPad != AncestorPad)
+          break;
+        // This uncle is resolved, so pop it from the worklist.
+        Worklist.pop_back();
+      }
     }
   }
 
-  visitInstruction(CPI);
+  if (FirstUnwindPad) {
+    if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(FPI.getParentPad())) {
+      BasicBlock *SwitchUnwindDest = CatchSwitch->getUnwindDest();
+      Value *SwitchUnwindPad;
+      if (SwitchUnwindDest)
+        SwitchUnwindPad = SwitchUnwindDest->getFirstNonPHI();
+      else
+        SwitchUnwindPad = ConstantTokenNone::get(FPI.getContext());
+      Assert(SwitchUnwindPad == FirstUnwindPad,
+             "Unwind edges out of a catch must have the same unwind dest as "
+             "the parent catchswitch",
+             &FPI, FirstUser, CatchSwitch);
+    }
+  }
+
+  visitInstruction(FPI);
 }
 
 void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
@@ -3097,17 +3327,21 @@ void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
          "CatchSwitchInst not the first non-PHI instruction in the block.",
          &CatchSwitch);
 
+  auto *ParentPad = CatchSwitch.getParentPad();
+  Assert(isa<ConstantTokenNone>(ParentPad) || isa<FuncletPadInst>(ParentPad),
+         "CatchSwitchInst has an invalid parent.", ParentPad);
+
   if (BasicBlock *UnwindDest = CatchSwitch.getUnwindDest()) {
     Instruction *I = UnwindDest->getFirstNonPHI();
     Assert(I->isEHPad() && !isa<LandingPadInst>(I),
            "CatchSwitchInst must unwind to an EH block which is not a "
            "landingpad.",
            &CatchSwitch);
-  }
 
-  auto *ParentPad = CatchSwitch.getParentPad();
-  Assert(isa<ConstantTokenNone>(ParentPad) || isa<FuncletPadInst>(ParentPad),
-         "CatchSwitchInst has an invalid parent.", ParentPad);
+    // Record catchswitch sibling unwinds for verifySiblingFuncletUnwinds
+    if (getParentPad(I) == ParentPad)
+      SiblingFuncletInfo[&CatchSwitch] = &CatchSwitch;
+  }
 
   Assert(CatchSwitch.getNumHandlers() != 0,
          "CatchSwitchInst cannot have empty handler list", &CatchSwitch);

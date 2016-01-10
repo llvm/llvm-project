@@ -775,3 +775,67 @@ C++ code:
 
 The "inner" ``catchswitch`` consumes ``%1`` which is produced by the outer
 catchswitch.
+
+.. _wineh-constraints:
+
+Funclet transitions
+-----------------------
+
+The EH tables for personalities that use funclets make implicit use of the
+funclet nesting relationship to encode unwind destinations, and so are
+constrained in the set of funclet transitions they can represent.  The related
+LLVM IR instructions accordingly have constraints that ensure encodability of
+the EH edges in the flow graph.
+
+A ``catchswitch``, ``catchpad``, or ``cleanuppad`` is said to be "entered"
+when it executes.  It may subsequently be "exited" by any of the following
+means:
+
+* A ``catchswitch`` is immediately exited when none of its constituent
+  ``catchpad``\ s are appropriate for the in-flight exception and it unwinds
+  to its unwind destination or the caller.
+* A ``catchpad`` and its parent ``catchswitch`` are both exited when a
+  ``catchret`` from the ``catchpad`` is executed.
+* A ``cleanuppad`` is exited when a ``cleanupret`` from it is executed.
+* Any of these pads is exited when control unwinds to the function's caller,
+  either by a ``call`` which unwinds all the way to the function's caller,
+  a nested ``catchswitch`` marked "``unwinds to caller``", or a nested
+  ``cleanuppad``\ 's ``cleanupret`` marked "``unwinds to caller"``.
+* Any of these pads is exited when an unwind edge (from an ``invoke``,
+  nested ``catchswitch``, or nested ``cleanuppad``\ 's ``cleanupret``)
+  unwinds to a destination pad that is not a descendant of the given pad.
+
+Note that the ``ret`` instruction is *not* a valid way to exit a funclet pad;
+it is undefined behavior to execute a ``ret`` when a pad has been entered but
+not exited.
+
+A single unwind edge may exit any number of pads (with the restrictions that
+the edge from a ``catchswitch`` must exit at least itself, and the edge from
+a ``cleanupret`` must exit at least its ``cleanuppad``), and then must enter
+exactly one pad, which must be distinct from all the exited pads.  The parent
+of the pad that an unwind edge enters must be the most-recently-entered
+not-yet-exited pad (after exiting from any pads that the unwind edge exits),
+or "none" if there is no such pad.  This ensures that the stack of executing
+funclets at run-time always corresponds to some path in the funclet pad tree
+that the parent tokens encode.
+
+All unwind edges which exit any given funclet pad (including ``cleanupret``
+edges exiting their ``cleanuppad`` and ``catchswitch`` edges exiting their
+``catchswitch``) must share the same unwind destination.  Similarly, any
+funclet pad which may be exited by unwind to caller must not be exited by
+any exception edges which unwind anywhere other than the caller.  This
+ensures that each funclet as a whole has only one unwind destination, which
+EH tables for funclet personalities may require.  Note that any unwind edge
+which exits a ``catchpad`` also exits its parent ``catchswitch``, so this
+implies that for any given ``catchswitch``, its unwind destination must also
+be the unwind destination of any unwind edge that exits any of its constituent
+``catchpad``\s.  Because ``catchswitch`` has no ``nounwind`` variant, and
+because IR producers are not *required* to annotate calls which will not
+unwind as ``nounwind``, it is legal to nest a ``call`` or an "``unwind to
+caller``\ " ``catchswitch`` within a funclet pad that has an unwind
+destination other than caller; it is undefined behavior for such a ``call``
+or ``catchswitch`` to unwind.
+
+Finally, the funclet pads' unwind destinations cannot form a cycle.  This
+ensures that EH lowering can construct "try regions" with a tree-like
+structure, which funclet-based personalities may require.

@@ -967,6 +967,17 @@ bool RuntimeDyld::hasError() { return Dyld->hasError(); }
 
 StringRef RuntimeDyld::getErrorString() { return Dyld->getErrorString(); }
 
+void RuntimeDyld::finalizeWithMemoryManagerLocking() {
+  bool MemoryFinalizationLocked = MemMgr.FinalizationLocked;
+  MemMgr.FinalizationLocked = true;
+  resolveRelocations();
+  registerEHFrames();
+  if (!MemoryFinalizationLocked) {
+    MemMgr.finalizeMemory();
+    MemMgr.FinalizationLocked = false;
+  }
+}
+
 void RuntimeDyld::registerEHFrames() {
   if (Dyld)
     Dyld->registerEHFrames();

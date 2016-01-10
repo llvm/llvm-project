@@ -3,9 +3,7 @@
 define void @endless_loop() {
 ; CHECK-LABEL: endless_loop:
 ; CHECK-NEXT:  # BB#0:
-; CHECK-NEXT:    vmovaps (%eax), %ymm0
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; CHECK-NEXT:    vbroadcastss (%eax), %ymm0
 ; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
