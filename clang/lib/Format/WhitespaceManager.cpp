@@ -55,8 +55,9 @@ void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
     return;
   Tok.Decision = (Newlines > 0) ? FD_Break : FD_Continue;
   Changes.push_back(
-      Change(true, Tok.WhitespaceRange, IndentLevel, Spaces, StartOfTokenColumn,
-             Newlines, "", "", Tok.Tok.getKind(), InPPDirective && !Tok.IsFirst,
+      Change(/*CreateReplacement=*/true, Tok.WhitespaceRange, IndentLevel,
+             Spaces, StartOfTokenColumn, Newlines, "", "", Tok.Tok.getKind(),
+             InPPDirective && !Tok.IsFirst,
              Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName)));
 }
 
@@ -64,11 +65,11 @@ void WhitespaceManager::addUntouchableToken(const FormatToken &Tok,
                                             bool InPPDirective) {
   if (Tok.Finalized)
     return;
-  Changes.push_back(
-      Change(false, Tok.WhitespaceRange, /*IndentLevel=*/0,
-             /*Spaces=*/0, Tok.OriginalColumn, Tok.NewlinesBefore, "", "",
-             Tok.Tok.getKind(), InPPDirective && !Tok.IsFirst,
-             Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName)));
+  Changes.push_back(Change(
+      /*CreateReplacement=*/false, Tok.WhitespaceRange, /*IndentLevel=*/0,
+      /*Spaces=*/0, Tok.OriginalColumn, Tok.NewlinesBefore, "", "",
+      Tok.Tok.getKind(), InPPDirective && !Tok.IsFirst,
+      Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName)));
 }
 
 void WhitespaceManager::replaceWhitespaceInToken(
@@ -342,6 +343,12 @@ void WhitespaceManager::alignTrailingComments() {
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
     unsigned ChangeMaxColumn = Style.ColumnLimit - Changes[i].TokenLength;
+
+    // If we don't create a replacement for this change, we have to consider
+    // it to be immovable.
+    if (!Changes[i].CreateReplacement)
+      ChangeMaxColumn = ChangeMinColumn;
+
     if (i + 1 != e && Changes[i + 1].ContinuesPPDirective)
       ChangeMaxColumn -= 2;
     // If this comment follows an } in column 0, it probably documents the

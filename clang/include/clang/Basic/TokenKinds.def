@@ -519,6 +519,8 @@ KEYWORD(vec_step                    , KEYOPENCL|KEYALTIVEC|KEYZVECTOR)
 // OpenMP Type Traits
 KEYWORD(__builtin_omp_required_simd_align, KEYALL)
 
+KEYWORD(pipe                        , KEYOPENCL)
+
 // Borland Extensions.
 KEYWORD(__pascal                    , KEYALL)
 

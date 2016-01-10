@@ -104,6 +104,7 @@ NON_CANONICAL_UNLESS_DEPENDENT_TYPE(PackExpansion, Type)
 TYPE(ObjCObject, Type)
 TYPE(ObjCInterface, ObjCObjectType)
 TYPE(ObjCObjectPointer, Type)
+TYPE(Pipe, Type)
 TYPE(Atomic, Type)
 
 #ifdef LAST_TYPE

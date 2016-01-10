@@ -162,6 +162,13 @@ TEST_F(FormatTestSelective, FormatsCommentsLocally) {
                    "// This is\n"
                    "// not formatted.   ",
                    0, 0));
+  EXPECT_EQ("int x;  // Format this line.\n"
+            "int xx; //\n"
+            "int xxxxx; //",
+            format("int x; // Format this line.\n"
+                   "int xx; //\n"
+                   "int xxxxx; //",
+                   0, 0));
 }
 
 TEST_F(FormatTestSelective, IndividualStatementsOfNestedBlocks) {

@@ -658,6 +658,23 @@ directory_iterator InMemoryFileSystem::dir_begin(const Twine &Dir,
   EC = make_error_code(llvm::errc::not_a_directory);
   return directory_iterator(std::make_shared<InMemoryDirIterator>());
 }
+
+std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
+  SmallString<128> Path;
+  P.toVector(Path);
+
+  // Fix up relative paths. This just prepends the current working directory.
+  std::error_code EC = makeAbsolute(Path);
+  assert(!EC);
+  (void)EC;
+
+  if (useNormalizedPaths())
+    llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
+
+  if (!Path.empty())
+    WorkingDirectory = Path.str();
+  return std::error_code();
+}
 }
 }
 

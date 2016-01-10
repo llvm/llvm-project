@@ -13140,6 +13140,7 @@ bool Sema::tryCaptureVariable(
         case Type::ObjCObject:
         case Type::ObjCInterface:
         case Type::ObjCObjectPointer:
+        case Type::Pipe:
           llvm_unreachable("type class is never variably-modified!");
         case Type::Adjusted:
           QTy = cast<AdjustedType>(Ty)->getOriginalType();

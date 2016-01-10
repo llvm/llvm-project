@@ -3361,6 +3361,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<ObjCObjectPointerType>(T)->getPointeeType());
   case Type::Atomic:
     return Cache::get(cast<AtomicType>(T)->getValueType());
+  case Type::Pipe:
+    return Cache::get(cast<PipeType>(T)->getElementType());
   }
 
   llvm_unreachable("unhandled type class");
@@ -3443,6 +3445,8 @@ static LinkageInfo computeLinkageInfo(const Type *T) {
     return computeLinkageInfo(cast<ObjCObjectPointerType>(T)->getPointeeType());
   case Type::Atomic:
     return computeLinkageInfo(cast<AtomicType>(T)->getValueType());
+  case Type::Pipe:
+    return computeLinkageInfo(cast<PipeType>(T)->getElementType());
   }
 
   llvm_unreachable("unhandled type class");
@@ -3601,6 +3605,7 @@ bool Type::canHaveNullability() const {
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::Atomic:
+  case Type::Pipe:
     return false;
   }
   llvm_unreachable("bad type kind!");

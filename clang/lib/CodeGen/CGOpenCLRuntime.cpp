@@ -99,3 +99,14 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
         llvm::StructType::create(Ctx, "opencl.reserve_id_t"), 0);
   }
 }
+
+llvm::Type *CGOpenCLRuntime::getPipeType() {
+  if (!PipeTy){
+    uint32_t PipeAddrSpc =
+      CGM.getContext().getTargetAddressSpace(LangAS::opencl_global);
+    PipeTy = llvm::PointerType::get(llvm::StructType::create(
+      CGM.getLLVMContext(), "opencl.pipe_t"), PipeAddrSpc);
+  }
+
+  return PipeTy;
+}

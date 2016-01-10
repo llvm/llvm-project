@@ -110,6 +110,7 @@ private:
   void addUnwrappedLine();
   bool eof() const;
   void nextToken();
+  const FormatToken *getPreviousToken();
   void readToken();
   void flushComments(bool NewlineBeforeNext);
   void pushToken(FormatToken *Tok);
