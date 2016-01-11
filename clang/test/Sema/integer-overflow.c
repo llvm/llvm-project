@@ -145,3 +145,11 @@ uint64_t check_integer_overflows(int i) {
 // expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
   return ((4608 * 1024 * 1024) + ((uint64_t)(4608 * 1024 * 1024)));
 }
+
+struct s {
+  unsigned x;
+  unsigned y;
+} s = {
+  .y = 5,
+  .x = 4 * 1024 * 1024 * 1024  // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+};

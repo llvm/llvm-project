@@ -18,7 +18,7 @@
 // NO_DATA_SECTIONS-NOT: data-sections
 
 // Ditto, but ensure that a user -fvisibility=default disables the default
-// -fvisibilt=hidden.
+// -fvisibility=hidden.
 
 // RUN: %clang %s -### -target wasm32-unknown-unknown -fvisibility=default 2>&1 | FileCheck -check-prefix=FVISIBILITY_DEFAULT %s
 // FVISIBILITY_DEFAULT-NOT: hidden

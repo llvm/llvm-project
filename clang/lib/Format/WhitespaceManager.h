@@ -109,7 +109,8 @@ public:
            unsigned IndentLevel, int Spaces, unsigned StartOfTokenColumn,
            unsigned NewlinesBefore, StringRef PreviousLinePostfix,
            StringRef CurrentLinePrefix, tok::TokenKind Kind,
-           bool ContinuesPPDirective, bool IsStartOfDeclName);
+           bool ContinuesPPDirective, bool IsStartOfDeclName,
+           bool IsInsideToken);
 
     bool CreateReplacement;
     // Changes might be in the middle of a token, so we cannot just keep the
@@ -138,6 +139,10 @@ public:
     // of the lines in a block comment. This is used when aligning trailing
     // comments. Uncompensated negative offset is truncated to 0.
     int Spaces;
+
+    // If this change is inside of a token but not at the start of the token or
+    // directly after a newline.
+    bool IsInsideToken;
 
     // \c IsTrailingComment, \c TokenLength, \c PreviousEndOfTokenColumn and
     // \c EscapedNewlineColumn will be calculated in

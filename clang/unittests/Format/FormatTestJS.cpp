@@ -530,6 +530,12 @@ TEST_F(FormatTestJS, MultipleFunctionLiterals) {
   verifyFormat("getSomeLongPromise()\n"
                "    .then(function(value) { body(); })\n"
                "    .thenCatch(function(error) { body(); });");
+
+  verifyFormat("return [aaaaaaaaaaaaaaaaaaaaaa]\n"
+               "    .aaaaaaa(function() {\n"
+               "      //\n"
+               "    })\n"
+               "    .bbbbbb();");
 }
 
 TEST_F(FormatTestJS, ArrowFunctions) {
