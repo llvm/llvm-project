@@ -44,7 +44,8 @@ def unique_string_match(yourentry, list):
 
 def is_supported_on_platform(category, platform):
     if category == "dwo":
-        return platform in ["linux", "freebsd", "windows"]
+        # -gsplit-dwarf is not implemented by clang on Windows.
+        return platform in ["linux", "freebsd"]
     elif category == "dsym":
         return platform in ["darwin", "macosx", "ios"]
     return True

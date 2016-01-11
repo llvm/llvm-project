@@ -203,6 +203,27 @@ TEST_F(PythonDataObjectsTest, TestPythonInteger)
     EXPECT_EQ(7, constructed_int.GetInteger());
 }
 
+TEST_F(PythonDataObjectsTest, TestPythonBytes)
+{
+    static const char *test_bytes = "PythonDataObjectsTest::TestPythonBytes";
+    PyObject *py_bytes = PyBytes_FromString(test_bytes);
+    EXPECT_TRUE(PythonBytes::Check(py_bytes));
+    PythonBytes python_bytes(PyRefType::Owned, py_bytes);
+    EXPECT_EQ(PyObjectType::Bytes, python_bytes.GetObjectType());
+
+#if PY_MAJOR_VERSION < 3
+    EXPECT_TRUE(PythonString::Check(py_bytes));
+    EXPECT_EQ(PyObjectType::String, python_bytes.GetObjectType());
+#else
+    EXPECT_FALSE(PythonString::Check(py_bytes));
+    EXPECT_NE(PyObjectType::String, python_bytes.GetObjectType());
+#endif
+
+    llvm::ArrayRef<uint8_t> bytes = python_bytes.GetBytes();
+    EXPECT_EQ(bytes.size(), strlen(test_bytes));
+    EXPECT_EQ(0, ::memcmp(bytes.data(), test_bytes, bytes.size()));
+}
+
 TEST_F(PythonDataObjectsTest, TestPythonString)
 {
     // Test that strings behave correctly when wrapped by a PythonString.

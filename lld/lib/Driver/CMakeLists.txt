@@ -25,7 +25,6 @@ add_lld_library(lldDriver
     lldELF
     lldELF2
     lldAArch64ELFTarget
-    lldAMDGPUELFTarget
     lldARMELFTarget
     lldHexagonELFTarget
     lldMipsELFTarget

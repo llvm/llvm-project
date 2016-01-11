@@ -215,15 +215,25 @@ void awesome_f2();
 
 # Recreates the list of checks in the docs/clang-tidy/checks directory.
 def update_checks_list(module_path):
-  filename = os.path.normpath(
-      os.path.join(module_path, '../../docs/clang-tidy/checks/list.rst'))
+  docs_dir = os.path.join(module_path, '../../docs/clang-tidy/checks')
+  filename = os.path.normpath(os.path.join(docs_dir, 'list.rst'))
   with open(filename, 'r') as f:
     lines = f.readlines()
+  doc_files = filter(
+      lambda s: s.endswith('.rst') and s != 'list.rst',
+      os.listdir(docs_dir))
+  doc_files.sort()
 
-  checks = map(lambda s: '   ' + s.replace('.rst', '\n'),
-               filter(lambda s: s.endswith('.rst') and s != 'list.rst',
-                      os.listdir(os.path.join(module_path, '../../docs/clang-tidy/checks'))))
-  checks.sort()
+  def format_link(doc_file):
+    check_name = doc_file.replace('.rst', '')
+    with open(os.path.join(docs_dir, doc_file), 'r') as doc:
+      match = re.search('.*:http-equiv=refresh: \d+;URL=(.*).html.*', doc.read())
+      if match:
+        return '   %(check)s (redirects to %(target)s) <%(check)s>\n' % {
+            'check' : check_name, 'target' : match.group(1) }
+      return '   %s\n' % check_name
+
+  checks = map(format_link, doc_files)
 
   print('Updating %s...' % filename)
   with open(filename, 'wb') as f:

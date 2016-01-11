@@ -6422,7 +6422,7 @@ __kmp_do_serial_initialize( void )
         #undef kmp_reduction_barrier_gather_bb
     #endif // KMP_FAST_REDUCTION_BARRIER
 #if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
-    if( __kmp_mic_type != non_mic ) {
+    if (__kmp_mic_type == mic2) { // KNC
         // AC: plane=3,2, forkjoin=2,1 are optimal for 240 threads on KNC
         __kmp_barrier_gather_branch_bits [ bs_plain_barrier ] = 3;  // plain gather
         __kmp_barrier_release_branch_bits[ bs_forkjoin_barrier ] = 1;  // forkjoin release
@@ -6430,7 +6430,7 @@ __kmp_do_serial_initialize( void )
         __kmp_barrier_release_pattern[ bs_forkjoin_barrier ] = bp_hierarchical_bar;
     }
 #if KMP_FAST_REDUCTION_BARRIER
-    if( __kmp_mic_type != non_mic ) {
+    if (__kmp_mic_type == mic2) { // KNC
         __kmp_barrier_gather_pattern [ bs_reduction_barrier ] = bp_hierarchical_bar;
         __kmp_barrier_release_pattern[ bs_reduction_barrier ] = bp_hierarchical_bar;
     }

@@ -61,8 +61,6 @@ uint16_t ELFLinkingContext::getOutputMachine() const {
     return llvm::ELF::EM_AARCH64;
   case llvm::Triple::arm:
     return llvm::ELF::EM_ARM;
-  case llvm::Triple::amdgcn:
-    return llvm::ELF::EM_AMDGPU;
   default:
     llvm_unreachable("Unhandled arch");
   }

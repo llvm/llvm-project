@@ -86,8 +86,9 @@ class kmp_flag {
 /* Spin wait loop that first does pause, then yield, then sleep. A thread that calls __kmp_wait_*
    must make certain that another thread calls __kmp_release to wake it back up to prevent deadlocks!  */
 template <class C>
-static inline void __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
-                                       USE_ITT_BUILD_ARG(void * itt_sync_obj) )
+static inline void
+__kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
+                    USE_ITT_BUILD_ARG(void * itt_sync_obj) )
 {
     // NOTE: We may not belong to a team at this point.
     volatile typename C::flag_t *spin = flag->get();
@@ -282,7 +283,8 @@ static inline void __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_
    if indicated by the sleep bit(s). A thread that calls __kmp_wait_template must call this function to wake
    up the potentially sleeping thread and prevent deadlocks!  */
 template <class C>
-static inline void __kmp_release_template(C *flag)
+static inline void
+__kmp_release_template(C *flag)
 {
 #ifdef KMP_DEBUG
     int gtid = TCR_4(__kmp_init_gtid) ? __kmp_get_gtid() : -1;

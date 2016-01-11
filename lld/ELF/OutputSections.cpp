@@ -118,7 +118,7 @@ const SymbolBody *GotSection<ELFT>::getMipsFirstGlobalEntry() const {
 
 template <class ELFT>
 unsigned GotSection<ELFT>::getMipsLocalEntriesNum() const {
-  // TODO: Update when the suppoort of GOT entries for local symbols is added.
+  // TODO: Update when the support of GOT entries for local symbols is added.
   return Target->getGotHeaderEntriesNum();
 }
 

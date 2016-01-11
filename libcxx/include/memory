@@ -3194,7 +3194,7 @@ struct __murmur2_or_cityhash<_Size, 32>
 // murmur2
 template <class _Size>
 _Size
-__murmur2_or_cityhash<_Size, 32>::operator()(const void* __key, _Size __len)
+__murmur2_or_cityhash<_Size, 32>::operator()(const void* __key, _Size __len) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK 
 {
     const _Size __m = 0x5bd1e995;
     const _Size __r = 24;
@@ -3344,7 +3344,7 @@ struct __murmur2_or_cityhash<_Size, 64>
 // cityhash64
 template <class _Size>
 _Size
-__murmur2_or_cityhash<_Size, 64>::operator()(const void* __key, _Size __len)
+__murmur2_or_cityhash<_Size, 64>::operator()(const void* __key, _Size __len) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK 
 {
   const char* __s = static_cast<const char*>(__key);
   if (__len <= 32) {

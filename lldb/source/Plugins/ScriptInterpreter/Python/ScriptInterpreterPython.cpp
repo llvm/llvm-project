@@ -1692,10 +1692,10 @@ ScriptInterpreterPython::OSPlugin_RegisterContextData(StructuredData::ObjectSP o
         PyErr_Clear();
     }
 
-    assert(PythonString::Check(py_return.get()) && "get_register_data returned unknown object type!");
+    assert(PythonBytes::Check(py_return.get()) && "get_register_data returned unknown object type!");
 
-    PythonString result_string(PyRefType::Borrowed, py_return.get());
-    return result_string.CreateStructuredString();
+    PythonBytes result(PyRefType::Borrowed, py_return.get());
+    return result.CreateStructuredString();
 }
 
 StructuredData::DictionarySP

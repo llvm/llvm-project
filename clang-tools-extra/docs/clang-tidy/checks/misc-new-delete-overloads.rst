@@ -3,6 +3,8 @@
 misc-new-delete-overloads
 =========================
 
+"cert-dcl54-cpp" redirects here as an alias for this checker.
+
 The check flags overloaded operator new() and operator delete() functions that
 do not have a corresponding free store function defined within the same scope.
 For instance, the check will flag a class implementation of a non-placement

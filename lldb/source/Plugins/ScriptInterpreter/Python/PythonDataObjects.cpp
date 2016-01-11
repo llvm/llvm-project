@@ -77,6 +77,10 @@ PythonObject::GetObjectType() const
         return PyObjectType::Dictionary;
     if (PythonString::Check(m_py_obj))
         return PyObjectType::String;
+#if PY_MAJOR_VERSION >= 3
+    if (PythonBytes::Check(m_py_obj))
+        return PyObjectType::Bytes;
+#endif
     if (PythonInteger::Check(m_py_obj))
         return PyObjectType::Integer;
     if (PythonFile::Check(m_py_obj))
@@ -210,11 +214,111 @@ PythonObject::CreateStructuredObject() const
             return PythonList(PyRefType::Borrowed, m_py_obj).CreateStructuredArray();
         case PyObjectType::String:
             return PythonString(PyRefType::Borrowed, m_py_obj).CreateStructuredString();
+        case PyObjectType::Bytes:
+            return PythonBytes(PyRefType::Borrowed, m_py_obj).CreateStructuredString();
         case PyObjectType::None:
             return StructuredData::ObjectSP();
         default:
             return StructuredData::ObjectSP(new StructuredPythonObject(m_py_obj));
     }
+}
+
+//----------------------------------------------------------------------
+// PythonString
+//----------------------------------------------------------------------
+PythonBytes::PythonBytes() : PythonObject()
+{
+}
+
+PythonBytes::PythonBytes(llvm::ArrayRef<uint8_t> bytes) : PythonObject()
+{
+    SetBytes(bytes);
+}
+
+PythonBytes::PythonBytes(const uint8_t *bytes, size_t length) : PythonObject()
+{
+    SetBytes(llvm::ArrayRef<uint8_t>(bytes, length));
+}
+
+PythonBytes::PythonBytes(PyRefType type, PyObject *py_obj) : PythonObject()
+{
+    Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a string
+}
+
+PythonBytes::PythonBytes(const PythonBytes &object) : PythonObject(object)
+{
+}
+
+PythonBytes::~PythonBytes()
+{
+}
+
+bool
+PythonBytes::Check(PyObject *py_obj)
+{
+    if (!py_obj)
+        return false;
+    if (PyBytes_Check(py_obj))
+        return true;
+    return false;
+}
+
+void
+PythonBytes::Reset(PyRefType type, PyObject *py_obj)
+{
+    // Grab the desired reference type so that if we end up rejecting
+    // `py_obj` it still gets decremented if necessary.
+    PythonObject result(type, py_obj);
+
+    if (!PythonBytes::Check(py_obj))
+    {
+        PythonObject::Reset();
+        return;
+    }
+
+    // Calling PythonObject::Reset(const PythonObject&) will lead to stack overflow since it calls
+    // back into the virtual implementation.
+    PythonObject::Reset(PyRefType::Borrowed, result.get());
+}
+
+llvm::ArrayRef<uint8_t>
+PythonBytes::GetBytes() const
+{
+    if (!IsValid())
+        return llvm::ArrayRef<uint8_t>();
+
+    Py_ssize_t size;
+    char *c;
+
+    PyBytes_AsStringAndSize(m_py_obj, &c, &size);
+    return llvm::ArrayRef<uint8_t>(reinterpret_cast<uint8_t *>(c), size);
+}
+
+size_t
+PythonBytes::GetSize() const
+{
+    if (!IsValid())
+        return 0;
+    return PyBytes_Size(m_py_obj);
+}
+
+void
+PythonBytes::SetBytes(llvm::ArrayRef<uint8_t> bytes)
+{
+    const char *data = reinterpret_cast<const char *>(bytes.data());
+    PyObject *py_bytes = PyBytes_FromStringAndSize(data, bytes.size());
+    PythonObject::Reset(PyRefType::Owned, py_bytes);
+}
+
+StructuredData::StringSP
+PythonBytes::CreateStructuredString() const
+{
+    StructuredData::StringSP result(new StructuredData::String);
+    Py_ssize_t size;
+    char *c;
+    PyBytes_AsStringAndSize(m_py_obj, &c, &size);
+    result->SetValue(std::string(c, size));
+    return result;
 }
 
 //----------------------------------------------------------------------

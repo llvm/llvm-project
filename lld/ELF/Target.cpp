@@ -154,6 +154,23 @@ private:
                          uint64_t SA) const;
 };
 
+class PPCTargetInfo final : public TargetInfo {
+public:
+  PPCTargetInfo();
+  void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
+  void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
+                         uint64_t PltEntryAddr) const override;
+  void writePltEntry(uint8_t *Buf, uint64_t GotAddr, uint64_t GotEntryAddr,
+                     uint64_t PltEntryAddr, int32_t Index,
+                     unsigned RelOff) const override;
+  bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
+  bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
+  void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
+                   uint64_t SA, uint64_t ZA = 0,
+                   uint8_t *PairedLoc = nullptr) const override;
+  bool isRelRelative(uint32_t Type) const override;
+};
+
 class PPC64TargetInfo final : public TargetInfo {
 public:
   PPC64TargetInfo();
@@ -241,6 +258,8 @@ TargetInfo *createTarget() {
     default:
       error("Unsupported MIPS target");
     }
+  case EM_PPC:
+    return new PPCTargetInfo();
   case EM_PPC64:
     return new PPC64TargetInfo();
   case EM_X86_64:
@@ -910,6 +929,37 @@ static uint16_t applyPPCHigher(uint64_t V) { return V >> 32; }
 static uint16_t applyPPCHighera(uint64_t V) { return (V + 0x8000) >> 32; }
 static uint16_t applyPPCHighest(uint64_t V) { return V >> 48; }
 static uint16_t applyPPCHighesta(uint64_t V) { return (V + 0x8000) >> 48; }
+
+PPCTargetInfo::PPCTargetInfo() {}
+void PPCTargetInfo::writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const {}
+void PPCTargetInfo::writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
+                                        uint64_t PltEntryAddr) const {}
+void PPCTargetInfo::writePltEntry(uint8_t *Buf, uint64_t GotAddr,
+                                  uint64_t GotEntryAddr,
+                                  uint64_t PltEntryAddr, int32_t Index,
+                                  unsigned RelOff) const {}
+bool PPCTargetInfo::relocNeedsGot(uint32_t Type, const SymbolBody &S) const {
+  return false;
+}
+bool PPCTargetInfo::relocNeedsPlt(uint32_t Type, const SymbolBody &S) const {
+  return false;
+}
+bool PPCTargetInfo::isRelRelative(uint32_t Type) const { return false; }
+
+void PPCTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                uint64_t P, uint64_t SA, uint64_t ZA,
+                                uint8_t *PairedLoc) const {
+  switch (Type) {
+  case R_PPC_ADDR16_HA:
+    write16be(Loc, applyPPCHa(SA));
+    break;
+  case R_PPC_ADDR16_LO:
+    write16be(Loc, applyPPCLo(SA));
+    break;
+  default:
+    error("unrecognized reloc " + Twine(Type));
+  }
+}
 
 PPC64TargetInfo::PPC64TargetInfo() {
   PCRelReloc = R_PPC64_REL24;

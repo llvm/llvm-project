@@ -26,15 +26,17 @@
 }
 
 %typemap(in) lldb::tid_t {
-    if (PyInt_Check($input))
-        $1 = PyInt_AsLong($input);
-    else if (PyLong_Check($input))
-        $1 = PyLong_AsLongLong($input);
-    else
-    {
-        PyErr_SetString(PyExc_ValueError, "Expecting an integer");
-        return NULL;
-    }
+  using namespace lldb_private;
+  if (PythonInteger::Check($input))
+  {
+    PythonInteger py_int(PyRefType::Borrowed, $input);
+    $1 = static_cast<lldb::tid_t>(py_int.GetInteger());
+  }
+  else
+  {
+    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+    return nullptr;
+  }
 }
 
 %typemap(typecheck) char ** {

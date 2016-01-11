@@ -325,7 +325,6 @@ std::unique_ptr<ELFLinkingContext>
 GnuLdDriver::createELFLinkingContext(llvm::Triple triple) {
   std::unique_ptr<ELFLinkingContext> p;
   if ((p = elf::createAArch64LinkingContext(triple))) return p;
-  if ((p = elf::createAMDGPULinkingContext(triple))) return p;
   if ((p = elf::createARMLinkingContext(triple))) return p;
   if ((p = elf::createExampleLinkingContext(triple))) return p;
   if ((p = elf::createHexagonLinkingContext(triple))) return p;
