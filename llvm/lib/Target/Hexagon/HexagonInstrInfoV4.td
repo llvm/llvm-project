@@ -3320,6 +3320,7 @@ class T_StoreAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
                                       /* u16_0Imm */ addr{15-0})));
     // Store upper-half and store doubleword cannot be NV.
     let isNVStorable = !if (!eq(mnemonic, "memd"), 0, !if(isHalf,0,1));
+    let Uses = !if (isAbs, [], [GP]);
 
     let IClass = 0b0100;
     let Inst{27} = 1;
@@ -3425,6 +3426,7 @@ class T_StoreAbsGP_NV <string mnemonic, Operand ImmOp, bits<2>MajOp, bit isAbs>
                      !if (!eq(ImmOpStr, "u16_2Imm"), addr{17-2},
                      !if (!eq(ImmOpStr, "u16_1Imm"), addr{16-1},
                                       /* u16_0Imm */ addr{15-0})));
+    let Uses = !if (isAbs, [], [GP]);
     let IClass = 0b0100;
 
     let Inst{27} = 1;
@@ -3736,7 +3738,7 @@ defm loadrd  : LD_Abs<"memd",  "LDrid", DoubleRegs, u16_3Imm, 0b110>;
 // if ([!]Pv[.new]) Rx=mem[bhwd](##global)
 //===----------------------------------------------------------------------===//
 
-let isAsmParserOnly = 1 in
+let isAsmParserOnly = 1, Uses = [GP] in
 class T_LoadGP <string mnemonic, string BaseOp, RegisterClass RC, Operand ImmOp,
                 bits<3> MajOp>
   : T_LoadAbsGP <mnemonic, RC, ImmOp, MajOp>, PredNewRel {

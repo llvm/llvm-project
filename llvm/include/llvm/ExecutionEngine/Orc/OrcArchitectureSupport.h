@@ -25,14 +25,58 @@
 namespace llvm {
 namespace orc {
 
+/// Generic ORC Architecture support.
+///
+/// This class can be substituted as the target architecure support class for
+/// ORC templates that require one (e.g. IndirectStubsManagers). It does not
+/// support lazy JITing however, and any attempt to use that functionality
+/// will result in execution of an llvm_unreachable.
+class OrcGenericArchitecture {
+public:
+  static const unsigned PointerSize = sizeof(uintptr_t);
+  static const unsigned TrampolineSize = 1;
+  static const unsigned ResolverCodeSize = 1;
+
+  typedef TargetAddress (*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+
+  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,
+                                void *CallbackMgr) {
+    llvm_unreachable("writeResolverCode is not supported by the generic host "
+                     "support class");
+  }
+
+  static void writeTrampolines(uint8_t *TrampolineMem, void *ResolverAddr,
+                               unsigned NumTrampolines) {
+    llvm_unreachable("writeTrampolines is not supported by the generic host "
+                     "support class");
+  }
+
+  class IndirectStubsInfo {
+  public:
+    const static unsigned StubSize = 1;
+    unsigned getNumStubs() const { llvm_unreachable("Not supported"); }
+    void *getStub(unsigned Idx) const { llvm_unreachable("Not supported"); }
+    void **getPtr(unsigned Idx) const { llvm_unreachable("Not supported"); }
+  };
+
+  static std::error_code emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
+                                                unsigned MinStubs,
+                                                void *InitialPtrVal) {
+    llvm_unreachable("emitIndirectStubsBlock is not supported by the generic "
+                     "host support class");
+  }
+};
+
+/// @brief X86_64 support.
+///
+/// X86_64 supports lazy JITing.
 class OrcX86_64 {
 public:
   static const unsigned PointerSize = 8;
   static const unsigned TrampolineSize = 8;
   static const unsigned ResolverCodeSize = 0x78;
 
-  typedef TargetAddress (*JITReentryFn)(void *CallbackMgr,
-                                        void *TrampolineId);
+  typedef TargetAddress (*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
 
   /// @brief Write the resolver code into the given memory. The user is be
   ///        responsible for allocating the memory and setting permissions.
@@ -49,6 +93,7 @@ public:
   ///        makeIndirectStubsBlock function.
   class IndirectStubsInfo {
     friend class OrcX86_64;
+
   public:
     const static unsigned StubSize = 8;
 
@@ -57,7 +102,7 @@ public:
         : NumStubs(Other.NumStubs), StubsMem(std::move(Other.StubsMem)) {
       Other.NumStubs = 0;
     }
-    IndirectStubsInfo& operator=(IndirectStubsInfo &&Other) {
+    IndirectStubsInfo &operator=(IndirectStubsInfo &&Other) {
       NumStubs = Other.NumStubs;
       Other.NumStubs = 0;
       StubsMem = std::move(Other.StubsMem);
@@ -69,17 +114,18 @@ public:
 
     /// @brief Get a pointer to the stub at the given index, which must be in
     ///        the range 0 .. getNumStubs() - 1.
-    void* getStub(unsigned Idx) const {
-      return static_cast<uint64_t*>(StubsMem.base()) + Idx;
+    void *getStub(unsigned Idx) const {
+      return static_cast<uint64_t *>(StubsMem.base()) + Idx;
     }
 
     /// @brief Get a pointer to the implementation-pointer at the given index,
     ///        which must be in the range 0 .. getNumStubs() - 1.
-    void** getPtr(unsigned Idx) const {
+    void **getPtr(unsigned Idx) const {
       char *PtrsBase =
-        static_cast<char*>(StubsMem.base()) + NumStubs * StubSize;
-      return reinterpret_cast<void**>(PtrsBase) + Idx;
+          static_cast<char *>(StubsMem.base()) + NumStubs * StubSize;
+      return reinterpret_cast<void **>(PtrsBase) + Idx;
     }
+
   private:
     unsigned NumStubs;
     sys::OwningMemoryBlock StubsMem;

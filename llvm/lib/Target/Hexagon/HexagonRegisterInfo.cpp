@@ -103,6 +103,8 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::R30);
   Reserved.set(Hexagon::R31);
   Reserved.set(Hexagon::PC);
+  Reserved.set(Hexagon::GP);
+  Reserved.set(Hexagon::D14);
   Reserved.set(Hexagon::D15);
   Reserved.set(Hexagon::LC0);
   Reserved.set(Hexagon::LC1);

@@ -159,6 +159,7 @@ a:
         j       a                # CHECK: j a                    # encoding: [0b000010AA,A,A,A]
                                  # CHECK:                        #   fixup A - offset: 0, value: a, kind: fixup_Mips_26
         j       1328             # CHECK: j 1328                 # encoding: [0x08,0x00,0x01,0x4c]
+        jal       21100                # CHECK: jal 21100     # encoding: [0x0c,0x00,0x14,0x9b]
         jr.hb   $4               # CHECK: jr.hb $4               # encoding: [0x00,0x80,0x04,0x09]
         jalr.hb $4               # CHECK: jalr.hb $4             # encoding: [0x00,0x80,0xfc,0x09]
         jalr.hb $4, $5           # CHECK: jalr.hb $4, $5         # encoding: [0x00,0xa0,0x24,0x09]
