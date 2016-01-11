@@ -119,7 +119,9 @@ private:
       }
     }
 
-    if (Left->Previous &&
+    if (Left->is(TT_OverloadedOperatorLParen)) {
+      Contexts.back().IsExpression = false;
+    } else if (Left->Previous &&
         (Left->Previous->isOneOf(tok::kw_static_assert, tok::kw_decltype,
                                  tok::kw_if, tok::kw_while, tok::l_paren,
                                  tok::comma) ||
@@ -132,9 +134,7 @@ private:
       // This is a parameter list of a lambda expression.
       Contexts.back().IsExpression = false;
     } else if (Line.InPPDirective &&
-               (!Left->Previous ||
-                !Left->Previous->isOneOf(tok::identifier,
-                                         TT_OverloadedOperator))) {
+               (!Left->Previous || !Left->Previous->is(tok::identifier))) {
       Contexts.back().IsExpression = true;
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.

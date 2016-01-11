@@ -7853,6 +7853,10 @@ void Sema::CheckBoolLikeConversion(Expr *E, SourceLocation CC) {
 void Sema::CheckForIntOverflow (Expr *E) {
   if (isa<BinaryOperator>(E->IgnoreParenCasts()))
     E->IgnoreParenCasts()->EvaluateForOverflow(Context);
+  else if (auto InitList = dyn_cast<InitListExpr>(E))
+    for (Expr *E : InitList->inits())
+      if (isa<BinaryOperator>(E->IgnoreParenCasts()))
+        E->IgnoreParenCasts()->EvaluateForOverflow(Context);
 }
 
 namespace {

@@ -75,7 +75,11 @@ template <template <typename> class... Templates>
 // expected-warning@-2 {{variadic templates are a C++11 extension}}
 #endif
 
-struct template_tuple {};
+struct template_tuple {
+#if __cplusplus >= 201103L
+  static constexpr int N = sizeof...(Templates);
+#endif
+};
 template <typename T>
 struct identity {};
 template <template <typename> class... Templates>
@@ -84,6 +88,12 @@ template <template <typename> class... Templates>
 #endif
 
 template_tuple<Templates...> f7() {}
+
+#if __cplusplus >= 201103L
+struct S : public template_tuple<identity, identity> {
+  static_assert(N == 2, "Number of template arguments incorrect");
+};
+#endif
 
 void foo() {
   f7<identity>();

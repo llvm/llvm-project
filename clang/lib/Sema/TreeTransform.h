@@ -3583,7 +3583,7 @@ void TreeTransform<Derived>::InventTemplateArgumentLoc(
   case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion: {
     NestedNameSpecifierLocBuilder Builder;
-    TemplateName Template = Arg.getAsTemplate();
+    TemplateName Template = Arg.getAsTemplateOrTemplatePattern();
     if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
       Builder.MakeTrivial(SemaRef.Context, DTN->getQualifier(), Loc);
     else if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
