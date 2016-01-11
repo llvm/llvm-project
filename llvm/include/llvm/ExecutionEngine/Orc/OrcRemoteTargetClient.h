@@ -18,6 +18,7 @@
 
 #include "IndirectionUtils.h"
 #include "OrcRemoteTargetRPCAPI.h"
+#include <system_error>
 
 #define DEBUG_TYPE "orc-remote"
 
@@ -41,6 +42,19 @@ public:
     RCMemoryManager(OrcRemoteTargetClient &Client, ResourceIdMgr::ResourceId Id)
         : Client(Client), Id(Id) {
       DEBUG(dbgs() << "Created remote allocator " << Id << "\n");
+    }
+
+    RCMemoryManager(RCMemoryManager &&Other)
+        : Client(std::move(Other.Client)), Id(std::move(Other.Id)),
+          Unmapped(std::move(Other.Unmapped)),
+          Unfinalized(std::move(Other.Unfinalized)) {}
+
+    RCMemoryManager operator=(RCMemoryManager &&Other) {
+      Client = std::move(Other.Client);
+      Id = std::move(Other.Id);
+      Unmapped = std::move(Other.Unmapped);
+      Unfinalized = std::move(Other.Unfinalized);
+      return *this;
     }
 
     ~RCMemoryManager() {
@@ -291,6 +305,25 @@ public:
     struct ObjectAllocs {
       ObjectAllocs()
           : RemoteCodeAddr(0), RemoteRODataAddr(0), RemoteRWDataAddr(0) {}
+
+      ObjectAllocs(ObjectAllocs &&Other)
+          : RemoteCodeAddr(std::move(Other.RemoteCodeAddr)),
+            RemoteRODataAddr(std::move(Other.RemoteRODataAddr)),
+            RemoteRWDataAddr(std::move(Other.RemoteRWDataAddr)),
+            CodeAllocs(std::move(Other.CodeAllocs)),
+            RODataAllocs(std::move(Other.RODataAllocs)),
+            RWDataAllocs(std::move(Other.RWDataAllocs)) {}
+
+      ObjectAllocs &operator=(ObjectAllocs &&Other) {
+        RemoteCodeAddr = std::move(Other.RemoteCodeAddr);
+        RemoteRODataAddr = std::move(Other.RemoteRODataAddr);
+        RemoteRWDataAddr = std::move(Other.RemoteRWDataAddr);
+        CodeAllocs = std::move(Other.CodeAllocs);
+        RODataAllocs = std::move(Other.RODataAllocs);
+        RWDataAllocs = std::move(Other.RWDataAllocs);
+        return *this;
+      }
+
       TargetAddress RemoteCodeAddr;
       TargetAddress RemoteRODataAddr;
       TargetAddress RemoteRWDataAddr;
@@ -697,10 +730,11 @@ private:
     if (auto EC = call<ReserveMem>(Channel, Id, Size, Align))
       return EC;
 
-    if (auto EC = expect<ReserveMemResponse>(Channel, [&](TargetAddress Addr) {
-          RemoteAddr = Addr;
-          return std::error_code();
-        }))
+    if (std::error_code EC =
+            expect<ReserveMemResponse>(Channel, [&](TargetAddress Addr) {
+              RemoteAddr = Addr;
+              return std::error_code();
+            }))
       return EC;
 
     return std::error_code();

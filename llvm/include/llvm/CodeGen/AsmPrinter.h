@@ -259,7 +259,7 @@ public:
   void EmitAlignment(unsigned NumBits, const GlobalObject *GO = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
-  const MCExpr *lowerConstant(const Constant *CV);
+  virtual const MCExpr *lowerConstant(const Constant *CV);
 
   /// \brief Print a general LLVM constant to the .s file.
   void EmitGlobalConstant(const DataLayout &DL, const Constant *CV);

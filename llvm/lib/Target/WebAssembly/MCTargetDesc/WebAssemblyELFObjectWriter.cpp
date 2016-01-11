@@ -41,8 +41,23 @@ WebAssemblyELFObjectWriter::WebAssemblyELFObjectWriter(bool Is64Bit,
 unsigned WebAssemblyELFObjectWriter::GetRelocType(const MCValue &Target,
                                                   const MCFixup &Fixup,
                                                   bool IsPCRel) const {
-  // FIXME: Do we need our own relocs?
-  return Fixup.getKind();
+  // WebAssembly functions are not allocated in the address space. To resolve a
+  // pointer to a function, we must use a special relocation type.
+  if (const MCSymbolRefExpr *SyExp =
+          dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
+    if (SyExp->getKind() == MCSymbolRefExpr::VK_WebAssembly_FUNCTION)
+      return ELF::R_WEBASSEMBLY_FUNCTION;
+
+  switch (Fixup.getKind()) {
+  case FK_Data_4:
+    assert(!is64Bit() && "4-byte relocations only supported on wasm32");
+    return ELF::R_WEBASSEMBLY_DATA;
+  case FK_Data_8:
+    assert(is64Bit() && "8-byte relocations only supported on wasm64");
+    return ELF::R_WEBASSEMBLY_DATA;
+  default:
+    llvm_unreachable("unimplemented fixup kind");
+  }
 }
 
 MCObjectWriter *llvm::createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,

@@ -56,6 +56,7 @@ private:
 
   SDValue LowerCTLZ(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;

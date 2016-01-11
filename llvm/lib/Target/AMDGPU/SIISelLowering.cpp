@@ -1157,6 +1157,13 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_dispatch_ptr:
+    if (!Subtarget->isAmdHsaOS()) {
+      DiagnosticInfoUnsupported BadIntrin(*MF.getFunction(),
+                                          "hsa intrinsic without hsa target");
+      DAG.getContext()->diagnose(BadIntrin);
+      return DAG.getUNDEF(VT);
+    }
+
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_64RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::DISPATCH_PTR), VT);
 

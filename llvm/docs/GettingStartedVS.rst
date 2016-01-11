@@ -12,26 +12,20 @@ Welcome to LLVM on Windows! This document only covers LLVM on Windows using
 Visual Studio, not mingw or cygwin. In order to get started, you first need to
 know some basic information.
 
-There are many different projects that compose LLVM. The first is the LLVM
-suite. This contains all of the tools, libraries, and header files needed to
-use LLVM. It contains an assembler, disassembler,
-bitcode analyzer and bitcode optimizer. It also contains a test suite that can
-be used to test the LLVM tools.
+There are many different projects that compose LLVM. The first piece is the
+LLVM suite. This contains all of the tools, libraries, and header files needed
+to use LLVM. It contains an assembler, disassembler, bitcode analyzer and
+bitcode optimizer. It also contains basic regression tests that can be used to
+test the LLVM tools and the Clang front end.
 
-Another useful project on Windows is `Clang <http://clang.llvm.org/>`_.
-Clang is a C family ([Objective]C/C++) compiler. Clang mostly works on
-Windows, but does not currently understand all of the Microsoft extensions
-to C and C++. Because of this, clang cannot parse the C++ standard library
-included with Visual Studio, nor parts of the Windows Platform SDK. However,
-most standard C programs do compile. Clang can be used to emit bitcode,
-directly emit object files or even linked executables using Visual Studio's
-``link.exe``.
+The second piece is the `Clang <http://clang.llvm.org/>`_ front end.  This
+component compiles C, C++, Objective C, and Objective C++ code into LLVM
+bitcode. Clang typically uses LLVM libraries to optimize the bitcode and emit
+machine code. LLVM fully supports the COFF object file format, which is
+compatible with all other existing Windows toolchains.
 
-The large LLVM test suite cannot be run on the Visual Studio port at this
-time.
-
-Most of the tools build and work.  ``bugpoint`` does build, but does
-not work.
+The last major part of LLVM, the execution Test Suite, does not run on Windows,
+and this document does not discuss it.
 
 Additional information about the LLVM directory structure and tool chain
 can be found on the main :doc:`GettingStarted` page.

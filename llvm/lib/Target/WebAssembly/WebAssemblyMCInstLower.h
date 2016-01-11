@@ -31,9 +31,10 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyMCInstLower {
   MCContext &Ctx;
   AsmPrinter &Printer;
 
-  MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
   MCSymbol *GetGlobalAddressSymbol(const MachineOperand &MO) const;
   MCSymbol *GetExternalSymbolSymbol(const MachineOperand &MO) const;
+  MCOperand LowerSymbolOperand(MCSymbol *Sym, int64_t Offset,
+                               bool IsFunc) const;
 
 public:
   WebAssemblyMCInstLower(MCContext &ctx, AsmPrinter &printer)

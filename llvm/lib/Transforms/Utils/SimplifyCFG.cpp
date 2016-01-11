@@ -3247,8 +3247,8 @@ bool SimplifyCFGOpt::SimplifyResume(ResumeInst *RI, IRBuilder<> &Builder) {
            RI->getValue() == RI->getParent()->getFirstNonPHI())
     // The resume must unwind the exception that caused control to branch here.
     return SimplifySingleResume(RI);
-  else
-    return false;
+
+  return false;
 }
 
 // Simplify resume that is shared by several landing pads (phi of landing pad).

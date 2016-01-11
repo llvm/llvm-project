@@ -103,7 +103,7 @@ entry:
 declare void @callee(...)
 
 ; CHECK-LABEL: caller_none:
-; CHECK-NEXT: call callee{{$}}
+; CHECK-NEXT: call callee@FUNCTION{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @caller_none() {
   call void (...) @callee()

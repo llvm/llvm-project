@@ -583,13 +583,11 @@ int main(int argc, char **argv, char * const *envp) {
 
   // Sanity check use of remote-jit: LLI currently only supports use of the
   // remote JIT on Unix platforms.
-  // FIXME: Remove this pointless fallback mode which causes tests to "pass"
-  // on platforms where they should XFAIL.
   if (RemoteMCJIT) {
 #ifndef LLVM_ON_UNIX
     errs() << "Warning: host does not support external remote targets.\n"
            << "  Defaulting to local execution execution\n";
-    RemoteMCJIT = false;
+    return -1;
 #else
     if (ChildExecPath.empty()) {
       errs() << "-remote-mcjit requires -mcjit-remote-process.\n";

@@ -222,8 +222,17 @@ static void resolveCycles(Metadata *MD, bool AllowTemps) {
   if (auto *N = dyn_cast_or_null<MDNode>(MD)) {
     if (AllowTemps && N->isTemporary())
       return;
-    if (!N->isResolved())
-      N->resolveCycles(AllowTemps);
+    if (!N->isResolved()) {
+      if (AllowTemps)
+        // Note that this will drop RAUW support on any temporaries, which
+        // blocks uniquing. If this ends up being an issue, in the future
+        // we can experiment with delaying resolving these nodes until
+        // after metadata is fully materialized (i.e. when linking metadata
+        // as a postpass after function importing).
+        N->resolveNonTemporaries();
+      else
+        N->resolveCycles();
+    }
   }
 }
 

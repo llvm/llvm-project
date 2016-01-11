@@ -209,10 +209,7 @@ namespace {
                                        ? CurrentDynamicCostSavingsDiscount
                                        : UP.DynamicCostSavingsDiscount;
 
-      if (!UserThreshold &&
-          // FIXME: Use Function::optForSize().
-          L->getHeader()->getParent()->hasFnAttribute(
-              Attribute::OptimizeForSize)) {
+      if (!UserThreshold && L->getHeader()->getParent()->optForSize()) {
         Threshold = UP.OptSizeThreshold;
         PartialThreshold = UP.PartialOptSizeThreshold;
       }

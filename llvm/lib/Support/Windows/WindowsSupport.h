@@ -47,20 +47,27 @@
 #include <string>
 #include <vector>
 
-#if !defined(__CYGWIN__) && !defined(__MINGW32__)
-#include <VersionHelpers.h>
-#else
-// Cygwin does not have the IsWindows8OrGreater() API.
-// Some version of mingw does not have the API either.
-inline bool IsWindows8OrGreater() {
-  OSVERSIONINFO osvi = {};
+/// Determines if the program is running on Windows 8 or newer. This
+/// reimplements one of the helpers in the Windows 8.1 SDK, which are intended
+/// to supercede raw calls to GetVersionEx. Old SDKs, Cygwin, and MinGW don't
+/// yet have VersionHelpers.h, so we have our own helper.
+inline bool RunningWindows8OrGreater() {
+  // Windows 8 is version 6.2, service pack 0.
+  OSVERSIONINFOEXW osvi = {};
   osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-  if (!::GetVersionEx(&osvi))
-    return false;
-  return (osvi.dwMajorVersion > 6 ||
-          (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion >= 2));
+  osvi.dwMajorVersion = 6;
+  osvi.dwMinorVersion = 2;
+  osvi.wServicePackMajor = 0;
+
+  DWORDLONG Mask = 0;
+  Mask = VerSetConditionMask(Mask, VER_MAJORVERSION, VER_GREATER_EQUAL);
+  Mask = VerSetConditionMask(Mask, VER_MINORVERSION, VER_GREATER_EQUAL);
+  Mask = VerSetConditionMask(Mask, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
+
+  return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION |
+                                       VER_SERVICEPACKMAJOR,
+                            Mask) != FALSE;
 }
-#endif // __CYGWIN__
 
 inline bool MakeErrMsg(std::string* ErrMsg, const std::string& prefix) {
   if (!ErrMsg)

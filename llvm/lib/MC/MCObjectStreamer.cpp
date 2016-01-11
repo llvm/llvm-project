@@ -64,8 +64,6 @@ void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
     return;
   }
 
-  assert(Hi->getOffset() >= Lo->getOffset() &&
-         "Expected Hi to be greater than Lo");
   EmitIntValue(Hi->getOffset() - Lo->getOffset(), Size);
 }
 

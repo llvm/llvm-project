@@ -915,11 +915,21 @@ public:
   /// \brief Resolve cycles.
   ///
   /// Once all forward declarations have been resolved, force cycles to be
-  /// resolved. If \p AllowTemps is true, then any temporary metadata
-  /// is ignored, otherwise it asserts when encountering temporary metadata.
+  /// resolved. This interface is used when there are no more temporaries,
+  /// and thus unresolved nodes are part of cycles and no longer need RAUW
+  /// support.
   ///
   /// \pre No operands (or operands' operands, etc.) have \a isTemporary().
-  void resolveCycles(bool AllowTemps = false);
+  void resolveCycles() { resolveRecursivelyImpl(/* AllowTemps */ false); }
+
+  /// \brief Resolve cycles while ignoring temporaries.
+  ///
+  /// This drops RAUW support for any temporaries, which can no longer
+  /// be uniqued.
+  ///
+  void resolveNonTemporaries() {
+    resolveRecursivelyImpl(/* AllowTemps */ true);
+  }
 
   /// \brief Replace a temporary node with a permanent one.
   ///
@@ -976,6 +986,11 @@ private:
   void resolveAfterOperandChange(Metadata *Old, Metadata *New);
   void decrementUnresolvedOperandCount();
   unsigned countUnresolvedOperands();
+
+  /// Resolve cycles recursively. If \p AllowTemps is true, then any temporary
+  /// metadata is ignored, otherwise it asserts when encountering temporary
+  /// metadata.
+  void resolveRecursivelyImpl(bool AllowTemps);
 
   /// \brief Mutate this to be "uniqued".
   ///

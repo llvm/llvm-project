@@ -557,7 +557,7 @@ void MDNode::decrementUnresolvedOperandCount() {
     resolve();
 }
 
-void MDNode::resolveCycles(bool AllowTemps) {
+void MDNode::resolveRecursivelyImpl(bool AllowTemps) {
   if (isResolved())
     return;
 

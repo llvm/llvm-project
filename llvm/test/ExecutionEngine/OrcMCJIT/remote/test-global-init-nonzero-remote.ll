@@ -1,4 +1,5 @@
 ; RUN: %lli -jit-kind=orc-mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
+; XFAIL: win32
 
 @count = global i32 1, align 4
 
