@@ -2941,6 +2941,18 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
     // This trivially expands to CTLZ.
     return DAG.getNode(ISD::CTLZ, dl, Op.getValueType(), Op);
   case ISD::CTLZ: {
+    EVT VT = Op.getValueType();
+    unsigned len = VT.getSizeInBits();
+
+    if (TLI.isOperationLegalOrCustom(ISD::CTLZ_ZERO_UNDEF, VT)) {
+      EVT SetCCVT = getSetCCResultType(VT);
+      SDValue CTLZ = DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, VT, Op);
+      SDValue Zero = DAG.getConstant(0, dl, VT);
+      SDValue SrcIsZero = DAG.getSetCC(dl, SetCCVT, Op, Zero, ISD::SETEQ);
+      return DAG.getNode(ISD::SELECT, dl, VT, SrcIsZero,
+                         DAG.getConstant(len, dl, VT), CTLZ);
+    }
+
     // for now, we do this:
     // x = x | (x >> 1);
     // x = x | (x >> 2);
@@ -2950,9 +2962,7 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
     // return popcount(~x);
     //
     // Ref: "Hacker's Delight" by Henry Warren
-    EVT VT = Op.getValueType();
     EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-    unsigned len = VT.getSizeInBits();
     for (unsigned i = 0; (1U << i) <= (len / 2); ++i) {
       SDValue Tmp3 = DAG.getConstant(1ULL << i, dl, ShVT);
       Op = DAG.getNode(ISD::OR, dl, VT, Op,

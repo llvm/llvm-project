@@ -79,12 +79,16 @@ private:
                       const MachineInstr &MI2, unsigned N2,
                       int64_t &AddrDispShift);
 
-  /// \brief Find all LEA instructions in the basic block.
+  /// \brief Find all LEA instructions in the basic block. Also, assign position
+  /// numbers to all instructions in the basic block to speed up calculation of
+  /// distance between them.
   void findLEAs(const MachineBasicBlock &MBB,
                 SmallVectorImpl<MachineInstr *> &List);
 
   /// \brief Removes redundant address calculations.
   bool removeRedundantAddrCalc(const SmallVectorImpl<MachineInstr *> &List);
+
+  DenseMap<const MachineInstr *, unsigned> InstrPos;
 
   MachineRegisterInfo *MRI;
   const X86InstrInfo *TII;
@@ -99,14 +103,15 @@ FunctionPass *llvm::createX86OptimizeLEAs() { return new OptimizeLEAPass(); }
 
 int OptimizeLEAPass::calcInstrDist(const MachineInstr &First,
                                    const MachineInstr &Last) {
-  const MachineBasicBlock *MBB = First.getParent();
-
-  // Both instructions must be in the same basic block.
-  assert(Last.getParent() == MBB &&
+  // Both instructions must be in the same basic block and they must be
+  // presented in InstrPos.
+  assert(Last.getParent() == First.getParent() &&
          "Instructions are in different basic blocks");
+  assert(InstrPos.find(&First) != InstrPos.end() &&
+         InstrPos.find(&Last) != InstrPos.end() &&
+         "Instructions' positions are undefined");
 
-  return std::distance(MBB->begin(), MachineBasicBlock::const_iterator(&Last)) -
-         std::distance(MBB->begin(), MachineBasicBlock::const_iterator(&First));
+  return InstrPos[&Last] - InstrPos[&First];
 }
 
 // Find the best LEA instruction in the List to replace address recalculation in
@@ -219,7 +224,15 @@ bool OptimizeLEAPass::isSimilarMemOp(const MachineInstr &MI1, unsigned N1,
 
 void OptimizeLEAPass::findLEAs(const MachineBasicBlock &MBB,
                                SmallVectorImpl<MachineInstr *> &List) {
+  unsigned Pos = 0;
   for (auto &MI : MBB) {
+    // Assign the position number to the instruction. Note that we are going to
+    // move some instructions during the optimization however there will never
+    // be a need to move two instructions before any selected instruction. So to
+    // avoid multiple positions' updates during moves we just increase position
+    // counter by two leaving a free space for instructions which will be moved.
+    InstrPos[&MI] = Pos += 2;
+
     if (isLEA(MI))
       List.push_back(const_cast<MachineInstr *>(&MI));
   }
@@ -270,6 +283,13 @@ bool OptimizeLEAPass::removeRedundantAddrCalc(
     if (Dist < 0) {
       DefMI->removeFromParent();
       MBB->insert(MachineBasicBlock::iterator(&MI), DefMI);
+      InstrPos[DefMI] = InstrPos[&MI] - 1;
+
+      // Make sure the instructions' position numbers are sane.
+      assert(((InstrPos[DefMI] == 1 && DefMI == MBB->begin()) ||
+              InstrPos[DefMI] >
+                  InstrPos[std::prev(MachineBasicBlock::iterator(DefMI))]) &&
+             "Instruction positioning is broken");
     }
 
     // Since we can possibly extend register lifetime, clear kill flags.
@@ -310,6 +330,7 @@ bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
   // Process all basic blocks.
   for (auto &MBB : MF) {
     SmallVector<MachineInstr *, 16> LEAs;
+    InstrPos.clear();
 
     // Find all LEA instructions in basic block.
     findLEAs(MBB, LEAs);

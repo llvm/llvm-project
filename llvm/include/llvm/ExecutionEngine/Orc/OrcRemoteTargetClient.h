@@ -91,8 +91,9 @@ public:
       DEBUG(dbgs() << "Allocator " << Id << " reserved:\n");
 
       if (CodeSize != 0) {
-        if (auto EC = Client.reserveMem(Unmapped.back().RemoteCodeAddr, Id,
-                                        CodeSize, CodeAlign)) {
+        if (std::error_code EC = Client.reserveMem(
+                Unmapped.back().RemoteCodeAddr, Id, CodeSize, CodeAlign)) {
+          (void)EC;
           // FIXME; Add error to poll.
           llvm_unreachable("Failed reserving remote memory.");
         }
@@ -250,6 +251,19 @@ public:
       Alloc(uint64_t Size, unsigned Align)
           : Size(Size), Align(Align), Contents(new char[Size + Align - 1]),
             RemoteAddr(0) {}
+
+      Alloc(Alloc &&Other)
+          : Size(std::move(Other.Size)), Align(std::move(Other.Align)),
+            Contents(std::move(Other.Contents)),
+            RemoteAddr(std::move(Other.RemoteAddr)) {}
+
+      Alloc &operator=(Alloc &&Other) {
+        Size = std::move(Other.Size);
+        Align = std::move(Other.Align);
+        Contents = std::move(Other.Contents);
+        RemoteAddr = std::move(Other.RemoteAddr);
+        return *this;
+      }
 
       uint64_t getSize() const { return Size; }
 

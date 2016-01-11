@@ -77,6 +77,11 @@ class OrcMCJITReplacement : public ExecutionEngine {
       return ClientMM->deregisterEHFrames(Addr, LoadAddr, Size);
     }
 
+    void notifyObjectLoaded(RuntimeDyld &RTDyld,
+                            const object::ObjectFile &O) override {
+      return ClientMM->notifyObjectLoaded(RTDyld, O);
+    }
+
     void notifyObjectLoaded(ExecutionEngine *EE,
                             const object::ObjectFile &O) override {
       return ClientMM->notifyObjectLoaded(EE, O);

@@ -182,3 +182,18 @@ define hidden void @thunk_undef_double(i32 %this, double %volume) unnamed_addr a
   tail call void @undef_double(i32 undef, double undef) #8
   ret void
 }
+
+; Check that immediate addresses do not use jal.
+define i32 @jal_only_allows_symbols() {
+; ALL-LABEL: jal_only_allows_symbols:
+
+; ALL-NOT:       {{jal }}
+; ALL:           addiu $[[TGT:[0-9]+]], $zero, 1234
+; ALL-NOT:       {{jal }}
+; ALL:           jalr $[[TGT]]
+; ALL-NOT:       {{jal }}
+
+  call void () inttoptr (i32 1234 to void ()*)()
+  ret i32 0
+}
+

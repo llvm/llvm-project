@@ -1003,7 +1003,7 @@ class IndirectBranch<string opstr, RegisterOperand RO> : JumpFR<opstr, RO> {
 let isCall=1, hasDelaySlot=1, Defs = [RA] in {
   class JumpLink<string opstr, DAGOperand opnd> :
     InstSE<(outs), (ins opnd:$target), !strconcat(opstr, "\t$target"),
-           [(MipsJmpLink imm:$target)], II_JAL, FrmJ, opstr> {
+           [(MipsJmpLink tglobaladdr:$target)], II_JAL, FrmJ, opstr> {
     let DecoderMethod = "DecodeJumpTarget";
   }
 
@@ -2075,8 +2075,6 @@ def : MipsPat<(MipsSync (i32 immz)),
               (SYNC 0)>, ISA_MIPS2;
 
 // Call
-def : MipsPat<(MipsJmpLink (i32 tglobaladdr:$dst)),
-              (JAL tglobaladdr:$dst)>;
 def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
               (JAL texternalsym:$dst)>;
 //def : MipsPat<(MipsJmpLink GPR32:$dst),

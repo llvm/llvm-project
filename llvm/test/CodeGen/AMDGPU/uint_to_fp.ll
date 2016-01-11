@@ -2,81 +2,136 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
-; FUNC-LABEL: {{^}}uint_to_fp_i32_to_f32:
-; R600-DAG: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[2].Z
-
+; FUNC-LABEL: {{^}}s_uint_to_fp_i32_to_f32:
 ; SI: v_cvt_f32_u32_e32
-; SI: s_endpgm
-define void @uint_to_fp_i32_to_f32(float addrspace(1)* %out, i32 %in) {
+
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[2].Z
+define void @s_uint_to_fp_i32_to_f32(float addrspace(1)* %out, i32 %in) #0 {
   %result = uitofp i32 %in to float
   store float %result, float addrspace(1)* %out
   ret void
 }
 
-; FUNC-LABEL: {{^}}uint_to_fp_v2i32_to_v2f32:
+; FUNC-LABEL: {{^}}v_uint_to_fp_i32_to_f32:
+; SI: v_cvt_f32_u32_e32 {{v[0-9]+}}, {{v[0-9]+$}}
+
+; R600: INT_TO_FLT
+define void @v_uint_to_fp_i32_to_f32(float addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %in.gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %val = load i32, i32 addrspace(1)* %in.gep
+  %result = uitofp i32 %val to float
+  store float %result, float addrspace(1)* %out.gep
+  ret void
+}
+
+; FUNC-LABEL: {{^}}s_uint_to_fp_v2i32_to_v2f32:
+; SI: v_cvt_f32_u32_e32
+; SI: v_cvt_f32_u32_e32
+
 ; R600-DAG: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[2].W
 ; R600-DAG: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[3].X
-
-; SI: v_cvt_f32_u32_e32
-; SI: v_cvt_f32_u32_e32
-; SI: s_endpgm
-define void @uint_to_fp_v2i32_to_v2f32(<2 x float> addrspace(1)* %out, <2 x i32> %in) {
+define void @s_uint_to_fp_v2i32_to_v2f32(<2 x float> addrspace(1)* %out, <2 x i32> %in) #0 {
   %result = uitofp <2 x i32> %in to <2 x float>
   store <2 x float> %result, <2 x float> addrspace(1)* %out
   ret void
 }
 
-; FUNC-LABEL: {{^}}uint_to_fp_v4i32_to_v4f32:
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-
+; FUNC-LABEL: {{^}}s_uint_to_fp_v4i32_to_v4f32:
 ; SI: v_cvt_f32_u32_e32
 ; SI: v_cvt_f32_u32_e32
 ; SI: v_cvt_f32_u32_e32
 ; SI: v_cvt_f32_u32_e32
 ; SI: s_endpgm
-define void @uint_to_fp_v4i32_to_v4f32(<4 x float> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+define void @s_uint_to_fp_v4i32_to_v4f32(<4 x float> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
   %value = load <4 x i32>, <4 x i32> addrspace(1) * %in
   %result = uitofp <4 x i32> %value to <4 x float>
   store <4 x float> %result, <4 x float> addrspace(1)* %out
   ret void
 }
 
-; FUNC-LABEL: {{^}}uint_to_fp_i64_to_f32:
-; R600: UINT_TO_FLT
-; R600: UINT_TO_FLT
-; R600: MULADD_IEEE
+; FUNC-LABEL: {{^}}v_uint_to_fp_v4i32:
 ; SI: v_cvt_f32_u32_e32
 ; SI: v_cvt_f32_u32_e32
-; SI: v_madmk_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, 0x4f800000
-; SI: s_endpgm
-define void @uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) {
-entry:
-  %0 = uitofp i64 %in to float
-  store float %0, float addrspace(1)* %out
+; SI: v_cvt_f32_u32_e32
+; SI: v_cvt_f32_u32_e32
+
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
+define void @v_uint_to_fp_v4i32(<4 x float> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %in.gep = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 %tid
+  %out.gep = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i32 %tid
+  %value = load <4 x i32>, <4 x i32> addrspace(1)* %in.gep
+  %result = uitofp <4 x i32> %value to <4 x float>
+  store <4 x float> %result, <4 x float> addrspace(1)* %out.gep
   ret void
 }
 
-; FUNC-LABEL: {{^}}uint_to_fp_i1_to_f32:
+; FUNC-LABEL: {{^}}s_uint_to_fp_i1_to_f32:
 ; SI: v_cmp_eq_i32_e64 [[CMP:s\[[0-9]+:[0-9]\]]],
 ; SI-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0, [[CMP]]
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm
-define void @uint_to_fp_i1_to_f32(float addrspace(1)* %out, i32 %in) {
+define void @s_uint_to_fp_i1_to_f32(float addrspace(1)* %out, i32 %in) #0 {
   %cmp = icmp eq i32 %in, 0
   %fp = uitofp i1 %cmp to float
-  store float %fp, float addrspace(1)* %out, align 4
+  store float %fp, float addrspace(1)* %out
   ret void
 }
 
-; FUNC-LABEL: {{^}}uint_to_fp_i1_to_f32_load:
+; FUNC-LABEL: {{^}}s_uint_to_fp_i1_to_f32_load:
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm
-define void @uint_to_fp_i1_to_f32_load(float addrspace(1)* %out, i1 %in) {
+define void @s_uint_to_fp_i1_to_f32_load(float addrspace(1)* %out, i1 %in) #0 {
   %fp = uitofp i1 %in to float
-  store float %fp, float addrspace(1)* %out, align 4
+  store float %fp, float addrspace(1)* %out
   ret void
 }
+
+; FUNC-LABEL: {{^}}v_uint_to_fp_i1_f32_load:
+; SI: {{buffer|flat}}_load_ubyte
+; SI: v_and_b32_e32 {{v[0-9]+}}, 1, {{v[0-9]+}}
+; SI: v_cmp_eq_i32
+; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0
+; SI: {{buffer|flat}}_store_dword [[RESULT]],
+; SI: s_endpgm
+define void @v_uint_to_fp_i1_f32_load(float addrspace(1)* %out, i1 addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %in.gep = getelementptr i1, i1 addrspace(1)* %in, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %val = load i1, i1 addrspace(1)* %in.gep
+  %fp = uitofp i1 %val to float
+  store float %fp, float addrspace(1)* %out.gep
+  ret void
+}
+
+; FUNC-LABEL: {{^}}s_uint_to_fp_i64_to_f32:
+; SI: v_cvt_f32_u32_e32
+; SI: v_cvt_f32_u32_e32
+; SI: v_madmk_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, 0x4f800000
+; SI: s_endpgm
+
+; R600: UINT_TO_FLT
+; R600: UINT_TO_FLT
+; R600: MULADD_IEEE
+define void @s_uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) #0 {
+entry:
+  %cvt = uitofp i64 %in to float
+  store float %cvt, float addrspace(1)* %out
+  ret void
+}
+
+declare i32 @llvm.r600.read.tidig.x() #1
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

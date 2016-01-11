@@ -111,8 +111,11 @@ public:
 private:
   struct Allocator {
     Allocator() = default;
-    Allocator(Allocator &&) = default;
-    Allocator &operator=(Allocator &&) = default;
+    Allocator(Allocator &&Other) : Allocs(std::move(Other.Allocs)) {}
+    Allocator &operator=(Allocator &&Other) {
+      Allocs = std::move(Other.Allocs);
+      return *this;
+    }
 
     ~Allocator() {
       for (auto &Alloc : Allocs)

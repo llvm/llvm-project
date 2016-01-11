@@ -334,21 +334,21 @@ static Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
   // The only relocs left should be GP relative:
   default:
     if (MCID.mayStore() || MCID.mayLoad()) {
-      for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses;
-           ++ImpUses) {
-        if (*ImpUses == Hexagon::GP) {
-          switch (HexagonMCInstrInfo::getAccessSize(MCII, MI)) {
-          case HexagonII::MemAccessSize::ByteAccess:
-            return fixup_Hexagon_GPREL16_0;
-          case HexagonII::MemAccessSize::HalfWordAccess:
-            return fixup_Hexagon_GPREL16_1;
-          case HexagonII::MemAccessSize::WordAccess:
-            return fixup_Hexagon_GPREL16_2;
-          case HexagonII::MemAccessSize::DoubleWordAccess:
-            return fixup_Hexagon_GPREL16_3;
-          default:
-            llvm_unreachable("unhandled fixup");
-          }
+      for (const MCPhysReg *ImpUses = MCID.getImplicitUses();
+           ImpUses && *ImpUses; ++ImpUses) {
+        if (*ImpUses != Hexagon::GP)
+          continue;
+        switch (HexagonMCInstrInfo::getAccessSize(MCII, MI)) {
+        case HexagonII::MemAccessSize::ByteAccess:
+          return fixup_Hexagon_GPREL16_0;
+        case HexagonII::MemAccessSize::HalfWordAccess:
+          return fixup_Hexagon_GPREL16_1;
+        case HexagonII::MemAccessSize::WordAccess:
+          return fixup_Hexagon_GPREL16_2;
+        case HexagonII::MemAccessSize::DoubleWordAccess:
+          return fixup_Hexagon_GPREL16_3;
+        default:
+          llvm_unreachable("unhandled fixup");
         }
       }
     } else
