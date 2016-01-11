@@ -96,7 +96,7 @@ ARM_ARCH("iwmmxt", AK_IWMMXT, "iwmmxt", "", ARMBuildAttrs::CPUArch::v5TE,
           FK_NONE, AEK_NONE)
 ARM_ARCH("iwmmxt2", AK_IWMMXT2, "iwmmxt2", "", ARMBuildAttrs::CPUArch::v5TE,
           FK_NONE, AEK_NONE)
-ARM_ARCH("xscale", AK_XSCALE, "xscale", "", ARMBuildAttrs::CPUArch::v5TE,
+ARM_ARCH("xscale", AK_XSCALE, "xscale", "v5e", ARMBuildAttrs::CPUArch::v5TE,
           FK_NONE, AEK_NONE)
 ARM_ARCH("armv7s", AK_ARMV7S, "7-S", "v7s", ARMBuildAttrs::CPUArch::v7,
           FK_NEON_VFPV4, AEK_DSP)

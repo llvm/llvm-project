@@ -163,13 +163,16 @@ private:
     typedef int (*IntVoidFnTy)();
 
     IntVoidFnTy Fn = nullptr;
-    if (auto EC = handle<CallIntVoid>(Channel, [&](TargetAddress Addr) {
-          Fn = reinterpret_cast<IntVoidFnTy>(static_cast<uintptr_t>(Addr));
-          return std::error_code();
-        }))
+    if (std::error_code EC =
+            handle<CallIntVoid>(Channel, [&](TargetAddress Addr) {
+              Fn = reinterpret_cast<IntVoidFnTy>(static_cast<uintptr_t>(Addr));
+              return std::error_code();
+            }))
       return EC;
 
-    DEBUG(dbgs() << "  Calling " << reinterpret_cast<void *>(Fn) << "\n");
+    DEBUG(dbgs() << "  Calling "
+                 << reinterpret_cast<void *>(reinterpret_cast<intptr_t>(Fn))
+                 << "\n");
     int Result = Fn();
     DEBUG(dbgs() << "  Result = " << Result << "\n");
 
@@ -181,7 +184,7 @@ private:
 
     MainFnTy Fn = nullptr;
     std::vector<std::string> Args;
-    if (auto EC = handle<CallMain>(
+    if (std::error_code EC = handle<CallMain>(
             Channel, [&](TargetAddress Addr, std::vector<std::string> &A) {
               Fn = reinterpret_cast<MainFnTy>(static_cast<uintptr_t>(Addr));
               Args = std::move(A);
@@ -207,10 +210,11 @@ private:
     typedef void (*VoidVoidFnTy)();
 
     VoidVoidFnTy Fn = nullptr;
-    if (auto EC = handle<CallIntVoid>(Channel, [&](TargetAddress Addr) {
-          Fn = reinterpret_cast<VoidVoidFnTy>(static_cast<uintptr_t>(Addr));
-          return std::error_code();
-        }))
+    if (std::error_code EC =
+            handle<CallIntVoid>(Channel, [&](TargetAddress Addr) {
+              Fn = reinterpret_cast<VoidVoidFnTy>(static_cast<uintptr_t>(Addr));
+              return std::error_code();
+            }))
       return EC;
 
     DEBUG(dbgs() << "  Calling " << reinterpret_cast<void *>(Fn) << "\n");
@@ -387,7 +391,7 @@ private:
   std::error_code handleReadMem() {
     char *Src = nullptr;
     uint64_t Size = 0;
-    if (auto EC =
+    if (std::error_code EC =
             handle<ReadMem>(Channel, [&](TargetAddress RSrc, uint64_t RSize) {
               Src = reinterpret_cast<char *>(static_cast<uintptr_t>(RSrc));
               Size = RSize;
@@ -410,7 +414,7 @@ private:
   std::error_code handleReserveMem() {
     void *LocalAllocAddr = nullptr;
 
-    if (auto EC =
+    if (std::error_code EC =
             handle<ReserveMem>(Channel, [&](ResourceIdMgr::ResourceId Id,
                                             uint64_t Size, uint32_t Align) {
               auto I = Allocators.find(Id);

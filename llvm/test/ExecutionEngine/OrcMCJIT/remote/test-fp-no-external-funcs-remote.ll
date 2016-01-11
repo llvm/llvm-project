@@ -1,4 +1,5 @@
 ; RUN: %lli -jit-kind=orc-mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
+; XFAIL: win32
 
 define double @test(double* %DP, double %Arg) nounwind {
 	%D = load double, double* %DP		; <double> [#uses=1]

@@ -692,7 +692,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const DataLayout &DL = F.getParent()->getDataLayout();
     unsigned OriginAlignment = std::max(kMinOriginAlignment, Alignment);
     unsigned StoreSize = DL.getTypeStoreSize(Shadow->getType());
-    if (isa<StructType>(Shadow->getType())) {
+    if (Shadow->getType()->isAggregateType()) {
       paintOrigin(IRB, updateOrigin(Origin, IRB),
                   getOriginPtr(Addr, IRB, Alignment), StoreSize,
                   OriginAlignment);

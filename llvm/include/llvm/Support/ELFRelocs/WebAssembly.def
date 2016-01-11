@@ -1,0 +1,8 @@
+
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+ELF_RELOC(R_WEBASSEMBLY_NONE,          0)
+ELF_RELOC(R_WEBASSEMBLY_DATA,          1)
+ELF_RELOC(R_WEBASSEMBLY_FUNCTION,      2)

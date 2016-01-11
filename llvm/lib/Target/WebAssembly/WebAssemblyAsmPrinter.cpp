@@ -70,6 +70,7 @@ private:
   void EmitConstantPool() override;
   void EmitFunctionBodyStart() override;
   void EmitInstruction(const MachineInstr *MI) override;
+  const MCExpr *lowerConstant(const Constant *CV) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        unsigned AsmVariant, const char *ExtraCode,
                        raw_ostream &OS) override;
@@ -219,6 +220,14 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     break;
   }
   }
+}
+
+const MCExpr *WebAssemblyAsmPrinter::lowerConstant(const Constant *CV) {
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV))
+    if (GV->getValueType()->isFunctionTy())
+      return MCSymbolRefExpr::create(
+          getSymbol(GV), MCSymbolRefExpr::VK_WebAssembly_FUNCTION, OutContext);
+  return AsmPrinter::lowerConstant(CV);
 }
 
 bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,

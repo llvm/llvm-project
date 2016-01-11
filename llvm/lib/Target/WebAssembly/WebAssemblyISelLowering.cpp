@@ -573,7 +573,8 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   SDLoc DL(Op);
   const auto *GA = cast<GlobalAddressSDNode>(Op);
   EVT VT = Op.getValueType();
-  assert(GA->getTargetFlags() == 0 && "WebAssembly doesn't set target flags");
+  assert(GA->getTargetFlags() == 0 &&
+         "Unexpected target flags on generic GlobalAddressSDNode");
   if (GA->getAddressSpace() != 0)
     fail(DL, DAG, "WebAssembly only expects the 0 address space");
   return DAG.getNode(
@@ -587,9 +588,16 @@ WebAssemblyTargetLowering::LowerExternalSymbol(SDValue Op,
   SDLoc DL(Op);
   const auto *ES = cast<ExternalSymbolSDNode>(Op);
   EVT VT = Op.getValueType();
-  assert(ES->getTargetFlags() == 0 && "WebAssembly doesn't set target flags");
+  assert(ES->getTargetFlags() == 0 &&
+         "Unexpected target flags on generic ExternalSymbolSDNode");
+  // Set the TargetFlags to 0x1 which indicates that this is a "function"
+  // symbol rather than a data symbol. We do this unconditionally even though
+  // we don't know anything about the symbol other than its name, because all
+  // external symbols used in target-independent SelectionDAG code are for
+  // functions.
   return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
-                     DAG.getTargetExternalSymbol(ES->getSymbol(), VT));
+                     DAG.getTargetExternalSymbol(ES->getSymbol(), VT,
+                                                 /*TargetFlags=*/0x1));
 }
 
 SDValue WebAssemblyTargetLowering::LowerJumpTable(SDValue Op,

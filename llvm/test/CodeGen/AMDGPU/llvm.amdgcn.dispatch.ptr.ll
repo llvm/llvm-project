@@ -1,4 +1,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgcn-unknown-unknown -mcpu=kaveri -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+
+; ERROR: error: unsupported hsa intrinsic without hsa target in test
 
 ; GCN-LABEL: {{^}}test:
 ; GCN: enable_sgpr_dispatch_ptr = 1

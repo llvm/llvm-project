@@ -1,4 +1,5 @@
 ; RUN: %lli -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
+; XFAIL: win32
 
 define i32 @bar() nounwind {
 	ret i32 0

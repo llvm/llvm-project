@@ -594,6 +594,11 @@ enum {
 #include "ELFRelocs/Sparc.def"
 };
 
+// ELF Relocation types for WebAssembly
+enum {
+#include "ELFRelocs/WebAssembly.def"
+};
+
 #undef ELF_RELOC
 
 // Section header.

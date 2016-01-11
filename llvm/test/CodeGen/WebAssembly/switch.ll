@@ -23,17 +23,17 @@ declare void @foo5()
 ; CHECK: block .LBB0_2{{$}}
 ; CHECK: tableswitch {{[^,]*}}, .LBB0_2, .LBB0_2, .LBB0_2, .LBB0_2, .LBB0_2, .LBB0_2, .LBB0_2, .LBB0_2, .LBB0_3, .LBB0_3, .LBB0_3, .LBB0_3, .LBB0_3, .LBB0_3, .LBB0_3, .LBB0_3, .LBB0_4, .LBB0_4, .LBB0_4, .LBB0_4, .LBB0_4, .LBB0_4, .LBB0_5, .LBB0_6, .LBB0_7{{$}}
 ; CHECK: .LBB0_2:
-; CHECK:   call foo0
+; CHECK:   call foo0@FUNCTION{{$}}
 ; CHECK: .LBB0_3:
-; CHECK:   call foo1
+; CHECK:   call foo1@FUNCTION{{$}}
 ; CHECK: .LBB0_4:
-; CHECK:   call foo2
+; CHECK:   call foo2@FUNCTION{{$}}
 ; CHECK: .LBB0_5:
-; CHECK:   call foo3
+; CHECK:   call foo3@FUNCTION{{$}}
 ; CHECK: .LBB0_6:
-; CHECK:   call foo4
+; CHECK:   call foo4@FUNCTION{{$}}
 ; CHECK: .LBB0_7:
-; CHECK:   call foo5
+; CHECK:   call foo5@FUNCTION{{$}}
 ; CHECK: .LBB0_8:
 ; CHECK:   return{{$}}
 define void @bar32(i32 %n) {
@@ -103,17 +103,17 @@ sw.epilog:                                        ; preds = %entry, %sw.bb.5, %s
 ; CHECK: block .LBB1_2{{$}}
 ; CHECK: tableswitch {{[^,]*}}, .LBB1_2, .LBB1_2, .LBB1_2, .LBB1_2, .LBB1_2, .LBB1_2, .LBB1_2, .LBB1_2, .LBB1_3, .LBB1_3, .LBB1_3, .LBB1_3, .LBB1_3, .LBB1_3, .LBB1_3, .LBB1_3, .LBB1_4, .LBB1_4, .LBB1_4, .LBB1_4, .LBB1_4, .LBB1_4, .LBB1_5, .LBB1_6, .LBB1_7{{$}}
 ; CHECK: .LBB1_2:
-; CHECK:   call foo0
+; CHECK:   call foo0@FUNCTION{{$}}
 ; CHECK: .LBB1_3:
-; CHECK:   call foo1
+; CHECK:   call foo1@FUNCTION{{$}}
 ; CHECK: .LBB1_4:
-; CHECK:   call foo2
+; CHECK:   call foo2@FUNCTION{{$}}
 ; CHECK: .LBB1_5:
-; CHECK:   call foo3
+; CHECK:   call foo3@FUNCTION{{$}}
 ; CHECK: .LBB1_6:
-; CHECK:   call foo4
+; CHECK:   call foo4@FUNCTION{{$}}
 ; CHECK: .LBB1_7:
-; CHECK:   call foo5
+; CHECK:   call foo5@FUNCTION{{$}}
 ; CHECK: .LBB1_8:
 ; CHECK:   return{{$}}
 define void @bar64(i64 %n) {

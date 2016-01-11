@@ -555,18 +555,12 @@ define float @fact_div6(float %x) {
 
 ; A squared factor fed into a square root intrinsic should be hoisted out
 ; as a fabs() value.
-; We have to rely on a function-level attribute to enable this optimization
-; because intrinsics don't currently have access to IR-level fast-math
-; flags. If that changes, we can relax the requirement on all of these
-; tests to just specify 'fast' on the sqrt.
-
-attributes #0 = { "unsafe-fp-math" = "true" }
 
 declare double @llvm.sqrt.f64(double)
 
-define double @sqrt_intrinsic_arg_squared(double %x) #0 {
+define double @sqrt_intrinsic_arg_squared(double %x) {
   %mul = fmul fast double %x, %x
-  %sqrt = call double @llvm.sqrt.f64(double %mul)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_squared(
@@ -577,10 +571,10 @@ define double @sqrt_intrinsic_arg_squared(double %x) #0 {
 ; Check all 6 combinations of a 3-way multiplication tree where
 ; one factor is repeated.
 
-define double @sqrt_intrinsic_three_args1(double %x, double %y) #0 {
+define double @sqrt_intrinsic_three_args1(double %x, double %y) {
   %mul = fmul fast double %y, %x
   %mul2 = fmul fast double %mul, %x
-  %sqrt = call double @llvm.sqrt.f64(double %mul2)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args1(
@@ -590,10 +584,10 @@ define double @sqrt_intrinsic_three_args1(double %x, double %y) #0 {
 ; CHECK-NEXT: ret double %1
 }
 
-define double @sqrt_intrinsic_three_args2(double %x, double %y) #0 {
+define double @sqrt_intrinsic_three_args2(double %x, double %y) {
   %mul = fmul fast double %x, %y
   %mul2 = fmul fast double %mul, %x
-  %sqrt = call double @llvm.sqrt.f64(double %mul2)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args2(
@@ -603,10 +597,10 @@ define double @sqrt_intrinsic_three_args2(double %x, double %y) #0 {
 ; CHECK-NEXT: ret double %1
 }
 
-define double @sqrt_intrinsic_three_args3(double %x, double %y) #0 {
+define double @sqrt_intrinsic_three_args3(double %x, double %y) {
   %mul = fmul fast double %x, %x
   %mul2 = fmul fast double %mul, %y
-  %sqrt = call double @llvm.sqrt.f64(double %mul2)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args3(
@@ -616,10 +610,10 @@ define double @sqrt_intrinsic_three_args3(double %x, double %y) #0 {
 ; CHECK-NEXT: ret double %1
 }
 
-define double @sqrt_intrinsic_three_args4(double %x, double %y) #0 {
+define double @sqrt_intrinsic_three_args4(double %x, double %y) {
   %mul = fmul fast double %y, %x
   %mul2 = fmul fast double %x, %mul
-  %sqrt = call double @llvm.sqrt.f64(double %mul2)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args4(
@@ -629,10 +623,10 @@ define double @sqrt_intrinsic_three_args4(double %x, double %y) #0 {
 ; CHECK-NEXT: ret double %1
 }
 
-define double @sqrt_intrinsic_three_args5(double %x, double %y) #0 {
+define double @sqrt_intrinsic_three_args5(double %x, double %y) {
   %mul = fmul fast double %x, %y
   %mul2 = fmul fast double %x, %mul
-  %sqrt = call double @llvm.sqrt.f64(double %mul2)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args5(
@@ -642,10 +636,10 @@ define double @sqrt_intrinsic_three_args5(double %x, double %y) #0 {
 ; CHECK-NEXT: ret double %1
 }
 
-define double @sqrt_intrinsic_three_args6(double %x, double %y) #0 {
+define double @sqrt_intrinsic_three_args6(double %x, double %y) {
   %mul = fmul fast double %x, %x
   %mul2 = fmul fast double %y, %mul
-  %sqrt = call double @llvm.sqrt.f64(double %mul2)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_three_args6(
@@ -655,10 +649,25 @@ define double @sqrt_intrinsic_three_args6(double %x, double %y) #0 {
 ; CHECK-NEXT: ret double %1
 }
 
-define double @sqrt_intrinsic_arg_4th(double %x) #0 {
+; If any operation is not 'fast', we can't simplify.
+
+define double @sqrt_intrinsic_not_so_fast(double %x, double %y) {
+  %mul = fmul double %x, %x
+  %mul2 = fmul fast double %mul, %y
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
+  ret double %sqrt
+
+; CHECK-LABEL: sqrt_intrinsic_not_so_fast(
+; CHECK-NEXT:  %mul = fmul double %x, %x
+; CHECK-NEXT:  %mul2 = fmul fast double %mul, %y
+; CHECK-NEXT:  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
+; CHECK-NEXT:  ret double %sqrt
+}
+
+define double @sqrt_intrinsic_arg_4th(double %x) {
   %mul = fmul fast double %x, %x
   %mul2 = fmul fast double %mul, %mul
-  %sqrt = call double @llvm.sqrt.f64(double %mul2)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_4th(
@@ -666,11 +675,11 @@ define double @sqrt_intrinsic_arg_4th(double %x) #0 {
 ; CHECK-NEXT: ret double %mul
 }
 
-define double @sqrt_intrinsic_arg_5th(double %x) #0 {
+define double @sqrt_intrinsic_arg_5th(double %x) {
   %mul = fmul fast double %x, %x
   %mul2 = fmul fast double %mul, %x
   %mul3 = fmul fast double %mul2, %mul
-  %sqrt = call double @llvm.sqrt.f64(double %mul3)
+  %sqrt = call fast double @llvm.sqrt.f64(double %mul3)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_5th(
@@ -686,9 +695,9 @@ declare float @sqrtf(float)
 declare double @sqrt(double)
 declare fp128 @sqrtl(fp128)
 
-define float @sqrt_call_squared_f32(float %x) #0 {
+define float @sqrt_call_squared_f32(float %x) {
   %mul = fmul fast float %x, %x
-  %sqrt = call float @sqrtf(float %mul)
+  %sqrt = call fast float @sqrtf(float %mul)
   ret float %sqrt
 
 ; CHECK-LABEL: sqrt_call_squared_f32(
@@ -696,9 +705,9 @@ define float @sqrt_call_squared_f32(float %x) #0 {
 ; CHECK-NEXT: ret float %fabs
 }
 
-define double @sqrt_call_squared_f64(double %x) #0 {
+define double @sqrt_call_squared_f64(double %x) {
   %mul = fmul fast double %x, %x
-  %sqrt = call double @sqrt(double %mul)
+  %sqrt = call fast double @sqrt(double %mul)
   ret double %sqrt
 
 ; CHECK-LABEL: sqrt_call_squared_f64(
@@ -706,9 +715,9 @@ define double @sqrt_call_squared_f64(double %x) #0 {
 ; CHECK-NEXT: ret double %fabs
 }
 
-define fp128 @sqrt_call_squared_f128(fp128 %x) #0 {
+define fp128 @sqrt_call_squared_f128(fp128 %x) {
   %mul = fmul fast fp128 %x, %x
-  %sqrt = call fp128 @sqrtl(fp128 %mul)
+  %sqrt = call fast fp128 @sqrtl(fp128 %mul)
   ret fp128 %sqrt
 
 ; CHECK-LABEL: sqrt_call_squared_f128(

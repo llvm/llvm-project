@@ -1,4 +1,5 @@
 ; RUN: %lli -jit-kind=orc-mcjit -remote-mcjit -O0 -disable-lazy-compilation=false -mcjit-remote-process=lli-child-target%exeext %s
+; XFAIL: win32
 
 ; The intention of this test is to verify that symbols mapped to COMMON in ELF
 ; work as expected.

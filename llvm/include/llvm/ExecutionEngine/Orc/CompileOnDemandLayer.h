@@ -106,6 +106,7 @@ private:
       SourceModule = std::move(Other.SourceModule);
       StubsToClone = std::move(Other.StubsToClone);
       StubsMgr = std::move(Other.StubsMgr);
+      return *this;
     }
 
     JITSymbol findSymbol(StringRef Name, bool ExportedSymbolsOnly) {

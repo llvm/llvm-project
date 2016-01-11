@@ -1,4 +1,5 @@
 ; RUN: %lli -extra-module=%p/Inputs/cross-module-b.ll -disable-lazy-compilation=true -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
+; XFAIL: win32
 
 declare i32 @FB()
 

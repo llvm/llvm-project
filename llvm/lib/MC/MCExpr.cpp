@@ -300,6 +300,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_Hexagon_LD_PLT: return "LDPLT";
   case VK_Hexagon_IE: return "IE";
   case VK_Hexagon_IE_GOT: return "IEGOT";
+  case VK_WebAssembly_FUNCTION: return "FUNCTION";
   case VK_TPREL: return "tprel";
   case VK_DTPREL: return "dtprel";
   }

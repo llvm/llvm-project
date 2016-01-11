@@ -115,15 +115,17 @@ define void @v_uint_to_fp_i1_f32_load(float addrspace(1)* %out, i1 addrspace(1)*
   ret void
 }
 
+; FIXME: Repeated here to test r600
 ; FUNC-LABEL: {{^}}s_uint_to_fp_i64_to_f32:
-; SI: v_cvt_f32_u32_e32
-; SI: v_cvt_f32_u32_e32
-; SI: v_madmk_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, 0x4f800000
-; SI: s_endpgm
+; R600: FFBH_UINT
+; R600: FFBH_UINT
+; R600: CNDE_INT
+; R600: CNDE_INT
 
-; R600: UINT_TO_FLT
-; R600: UINT_TO_FLT
-; R600: MULADD_IEEE
+; R600-DAG: SETGT_UINT
+; R600-DAG: SETGT_UINT
+; R600-DAG: SETE_INT
+
 define void @s_uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) #0 {
 entry:
   %cvt = uitofp i64 %in to float

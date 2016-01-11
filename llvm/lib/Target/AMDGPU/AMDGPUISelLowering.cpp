@@ -2223,6 +2223,91 @@ SDValue AMDGPUTargetLowering::LowerCTLZ(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i64, NewCtlz);
 }
 
+SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
+                                               bool Signed) const {
+  // Unsigned
+  // cul2f(ulong u)
+  //{
+  //  uint lz = clz(u);
+  //  uint e = (u != 0) ? 127U + 63U - lz : 0;
+  //  u = (u << lz) & 0x7fffffffffffffffUL;
+  //  ulong t = u & 0xffffffffffUL;
+  //  uint v = (e << 23) | (uint)(u >> 40);
+  //  uint r = t > 0x8000000000UL ? 1U : (t == 0x8000000000UL ? v & 1U : 0U);
+  //  return as_float(v + r);
+  //}
+  // Signed
+  // cl2f(long l)
+  //{
+  //  long s = l >> 63;
+  //  float r = cul2f((l + s) ^ s);
+  //  return s ? -r : r;
+  //}
+
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  SDValue L = Src;
+
+  SDValue S;
+  if (Signed) {
+    const SDValue SignBit = DAG.getConstant(63, SL, MVT::i64);
+    S = DAG.getNode(ISD::SRA, SL, MVT::i64, L, SignBit);
+
+    SDValue LPlusS = DAG.getNode(ISD::ADD, SL, MVT::i64, L, S);
+    L = DAG.getNode(ISD::XOR, SL, MVT::i64, LPlusS, S);
+  }
+
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(),
+                                   *DAG.getContext(), MVT::f32);
+
+
+  SDValue ZeroI32 = DAG.getConstant(0, SL, MVT::i32);
+  SDValue ZeroI64 = DAG.getConstant(0, SL, MVT::i64);
+  SDValue LZ = DAG.getNode(ISD::CTLZ_ZERO_UNDEF, SL, MVT::i64, L);
+  LZ = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LZ);
+
+  SDValue K = DAG.getConstant(127U + 63U, SL, MVT::i32);
+  SDValue E = DAG.getSelect(SL, MVT::i32,
+    DAG.getSetCC(SL, SetCCVT, L, ZeroI64, ISD::SETNE),
+    DAG.getNode(ISD::SUB, SL, MVT::i32, K, LZ),
+    ZeroI32);
+
+  SDValue U = DAG.getNode(ISD::AND, SL, MVT::i64,
+    DAG.getNode(ISD::SHL, SL, MVT::i64, L, LZ),
+    DAG.getConstant((-1ULL) >> 1, SL, MVT::i64));
+
+  SDValue T = DAG.getNode(ISD::AND, SL, MVT::i64, U,
+                          DAG.getConstant(0xffffffffffULL, SL, MVT::i64));
+
+  SDValue UShl = DAG.getNode(ISD::SRL, SL, MVT::i64,
+                             U, DAG.getConstant(40, SL, MVT::i64));
+
+  SDValue V = DAG.getNode(ISD::OR, SL, MVT::i32,
+    DAG.getNode(ISD::SHL, SL, MVT::i32, E, DAG.getConstant(23, SL, MVT::i32)),
+    DAG.getNode(ISD::TRUNCATE, SL, MVT::i32,  UShl));
+
+  SDValue C = DAG.getConstant(0x8000000000ULL, SL, MVT::i64);
+  SDValue RCmp = DAG.getSetCC(SL, SetCCVT, T, C, ISD::SETUGT);
+  SDValue TCmp = DAG.getSetCC(SL, SetCCVT, T, C, ISD::SETEQ);
+
+  SDValue One = DAG.getConstant(1, SL, MVT::i32);
+
+  SDValue VTrunc1 = DAG.getNode(ISD::AND, SL, MVT::i32, V, One);
+
+  SDValue R = DAG.getSelect(SL, MVT::i32,
+    RCmp,
+    One,
+    DAG.getSelect(SL, MVT::i32, TCmp, VTrunc1, ZeroI32));
+  R = DAG.getNode(ISD::ADD, SL, MVT::i32, V, R);
+  R = DAG.getNode(ISD::BITCAST, SL, MVT::f32, R);
+
+  if (!Signed)
+    return R;
+
+  SDValue RNeg = DAG.getNode(ISD::FNEG, SL, MVT::f32, R);
+  return DAG.getSelect(SL, MVT::f32, DAG.getSExtOrTrunc(S, SL, SetCCVT), RNeg, R);
+}
+
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
   SDLoc SL(Op);
@@ -2248,35 +2333,29 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
 
 SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
                                                SelectionDAG &DAG) const {
-  SDValue S0 = Op.getOperand(0);
-  if (S0.getValueType() != MVT::i64)
-    return SDValue();
+  assert(Op.getOperand(0).getValueType() == MVT::i64 &&
+         "operation should be legal");
 
   EVT DestVT = Op.getValueType();
   if (DestVT == MVT::f64)
     return LowerINT_TO_FP64(Op, DAG, false);
 
-  assert(DestVT == MVT::f32);
+  if (DestVT == MVT::f32)
+    return LowerINT_TO_FP32(Op, DAG, false);
 
-  SDLoc DL(Op);
-
-  // f32 uint_to_fp i64
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, S0,
-                           DAG.getConstant(0, DL, MVT::i32));
-  SDValue FloatLo = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f32, Lo);
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, S0,
-                           DAG.getConstant(1, DL, MVT::i32));
-  SDValue FloatHi = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f32, Hi);
-  // TODO: Should this propagate fast-math-flags?
-  FloatHi = DAG.getNode(ISD::FMUL, DL, MVT::f32, FloatHi,
-                        DAG.getConstantFP(4294967296.0f, DL, MVT::f32)); // 2^32
-  return DAG.getNode(ISD::FADD, DL, MVT::f32, FloatLo, FloatHi);
+  return SDValue();
 }
 
 SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
                                               SelectionDAG &DAG) const {
-  SDValue Src = Op.getOperand(0);
-  if (Src.getValueType() == MVT::i64 && Op.getValueType() == MVT::f64)
+  assert(Op.getOperand(0).getValueType() == MVT::i64 &&
+         "operation should be legal");
+
+  EVT DestVT = Op.getValueType();
+  if (DestVT == MVT::f32)
+    return LowerINT_TO_FP32(Op, DAG, true);
+
+  if (DestVT == MVT::f64)
     return LowerINT_TO_FP64(Op, DAG, true);
 
   return SDValue();

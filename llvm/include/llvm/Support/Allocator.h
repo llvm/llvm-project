@@ -187,6 +187,7 @@ public:
   /// \brief Deallocate all but the current slab and reset the current pointer
   /// to the beginning of it, freeing all memory allocated so far.
   void Reset() {
+    // Deallocate all but the first slab, and deallocate all custom-sized slabs.
     DeallocateCustomSizedSlabs();
     CustomSizedSlabs.clear();
 
@@ -198,7 +199,7 @@ public:
     CurPtr = (char *)Slabs.front();
     End = CurPtr + SlabSize;
 
-    // Deallocate all but the first slab, and deallocate all custom-sized slabs.
+    __asan_poison_memory_region(*Slabs.begin(), computeSlabSize(0));
     DeallocateSlabs(std::next(Slabs.begin()), Slabs.end());
     Slabs.erase(std::next(Slabs.begin()), Slabs.end());
   }

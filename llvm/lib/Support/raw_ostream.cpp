@@ -577,7 +577,7 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   // Writing a large size of output to Windows console returns ENOMEM. It seems
   // that, prior to Windows 8, WriteFile() is redirecting to WriteConsole(), and
   // the latter has a size limit (66000 bytes or less, depending on heap usage).
-  bool ShouldWriteInChunks = !!::_isatty(FD) && !IsWindows8OrGreater();
+  bool ShouldWriteInChunks = !!::_isatty(FD) && !RunningWindows8OrGreater();
 #endif
 
   do {

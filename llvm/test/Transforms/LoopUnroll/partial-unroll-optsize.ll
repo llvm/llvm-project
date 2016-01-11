@@ -1,4 +1,6 @@
 ; RUN: opt < %s -S -loop-unroll -unroll-allow-partial | FileCheck %s
+; RUN: sed -e 's/optsize/minsize/' %s | opt -S -loop-unroll -unroll-allow-partial | FileCheck %s
+
 ; Loop size = 3, when the function has the optsize attribute, the
 ; OptSizeUnrollThreshold, i.e. 50, is used, hence the loop should be unrolled
 ; by 32 times because (1 * 32) + 2 < 50 (whereas (1 * 64 + 2) is not).
@@ -49,4 +51,3 @@ exit:
 ; CHECK-NEXT: add
 ; CHECK-NEXT: add
 ; CHECK-NEXT: icmp
-

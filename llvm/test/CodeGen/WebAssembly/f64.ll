@@ -146,7 +146,7 @@ define double @fmax64(double %x) {
 }
 
 ; CHECK-LABEL: fma64:
-; CHECK: {{^}} f64.call $push0=, fma, $0, $1, $2{{$}}
+; CHECK: {{^}} f64.call $push0=, fma@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define double @fma64(double %a, double %b, double %c) {
   %d = call double @llvm.fma.f64(double %a, double %b, double %c)
