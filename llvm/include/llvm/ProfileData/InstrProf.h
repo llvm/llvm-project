@@ -632,37 +632,6 @@ struct Header {
 
 }  // end namespace RawInstrProf
 
-namespace coverage {
-
-// Profile coverage map has the following layout:
-// [CoverageMapFileHeader]
-// [ArrayStart]
-//  [CovMapFunctionRecord]
-//  [CovMapFunctionRecord]
-//  ...
-// [ArrayEnd]
-// [Encoded Region Mapping Data]
-LLVM_PACKED_START
-template <class IntPtrT> struct CovMapFunctionRecord {
-  #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
-  #include "llvm/ProfileData/InstrProfData.inc"
-};
-// Per module coverage mapping data header, i.e. CoverageMapFileHeader
-// documented above.
-struct CovMapHeader {
-#define COVMAP_HEADER(Type, LLVMType, Name, Init) Type Name;
-#include "llvm/ProfileData/InstrProfData.inc"
-};
-
-LLVM_PACKED_END
-
-enum CoverageMappingVersion {
-  CoverageMappingVersion1 = 0,
-  // The current versin is Version1
-  CoverageMappingCurrentVersion = INSTR_PROF_COVMAP_VERSION
-};
-}
-
 } // end namespace llvm
 
 namespace std {

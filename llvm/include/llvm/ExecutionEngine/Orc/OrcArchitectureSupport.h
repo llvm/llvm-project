@@ -1,4 +1,4 @@
-//===-- OrcTargetSupport.h - Code to support specific targets  --*- C++ -*-===//
+//===-- OrcArchitectureSupport.h - Architecture support code  ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,26 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Target specific code for Orc, e.g. callback assembly.
+// Architecture specific code for Orc, e.g. callback assembly.
 //
-// Target classes should be part of the JIT *target* process, not the host
+// Architecture classes should be part of the JIT *target* process, not the host
 // process (except where you're doing hosted JITing and the two are one and the
 // same).
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_ORCTARGETSUPPORT_H
-#define LLVM_EXECUTIONENGINE_ORC_ORCTARGETSUPPORT_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_ORCARCHITECTURESUPPORT_H
+#define LLVM_EXECUTIONENGINE_ORC_ORCARCHITECTURESUPPORT_H
 
 #include "IndirectionUtils.h"
 #include "llvm/Support/Memory.h"
+#include "llvm/Support/Process.h"
 
 namespace llvm {
 namespace orc {
 
 class OrcX86_64 {
 public:
-  static const unsigned PageSize = 4096;
   static const unsigned PointerSize = 8;
   static const unsigned TrampolineSize = 8;
   static const unsigned ResolverCodeSize = 0x78;
@@ -51,7 +51,6 @@ public:
     friend class OrcX86_64;
   public:
     const static unsigned StubSize = 8;
-    const static unsigned PtrSize = 8;
 
     IndirectStubsInfo() : NumStubs(0) {}
     IndirectStubsInfo(IndirectStubsInfo &&Other)
@@ -100,4 +99,4 @@ public:
 } // End namespace orc.
 } // End namespace llvm.
 
-#endif // LLVM_EXECUTIONENGINE_ORC_ORCTARGETSUPPORT_H
+#endif // LLVM_EXECUTIONENGINE_ORC_ORCARCHITECTURESUPPORT_H

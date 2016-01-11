@@ -30,6 +30,10 @@ class ExecutionEngine;
 
 class MCJITMemoryManager : public RuntimeDyld::MemoryManager {
 public:
+
+  // Don't hide the notifyObjectLoaded method from RuntimeDyld::MemoryManager.
+  using RuntimeDyld::MemoryManager::notifyObjectLoaded;
+
   /// This method is called after an object has been loaded into memory but
   /// before relocations are applied to the loaded sections.  The object load
   /// may have been initiated by MCJIT to resolve an external symbol for another

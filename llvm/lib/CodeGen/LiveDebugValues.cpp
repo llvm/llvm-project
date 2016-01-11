@@ -19,6 +19,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -30,7 +32,7 @@
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <deque>
+#include <queue>
 #include <list>
 
 using namespace llvm;
@@ -338,43 +340,65 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   VarLocInMBB OutLocs;   // Ranges that exist beyond bb.
   VarLocInMBB InLocs;    // Ranges that are incoming after joining.
 
-  std::deque<MachineBasicBlock *> BBWorklist;
-
+  DenseMap<unsigned int, MachineBasicBlock *> OrderToBB;
+  DenseMap<MachineBasicBlock *, unsigned int> BBToOrder;
+  std::priority_queue<unsigned int, std::vector<unsigned int>,
+                      std::greater<unsigned int>> Worklist;
+  std::priority_queue<unsigned int, std::vector<unsigned int>,
+                      std::greater<unsigned int>> Pending;
   // Initialize every mbb with OutLocs.
   for (auto &MBB : MF)
     for (auto &MI : MBB)
       transfer(MI, OpenRanges, OutLocs);
   DEBUG(printVarLocInMBB(OutLocs, "OutLocs after initialization", dbgs()));
 
-  // Construct a worklist of MBBs.
-  for (auto &MBB : MF)
-    BBWorklist.push_back(&MBB);
+  ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
+  unsigned int RPONumber = 0;
+  for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
+    OrderToBB[RPONumber] = *RI;
+    BBToOrder[*RI] = RPONumber;
+    Worklist.push(RPONumber);
+    ++RPONumber;
+  }
 
-  // Perform join() and transfer() using the worklist until the ranges converge
-  // Ranges have converged when the worklist is empty.
-  while (!BBWorklist.empty()) {
-    MachineBasicBlock *MBB = BBWorklist.front();
-    BBWorklist.pop_front();
+  // This is a standard "union of predecessor outs" dataflow problem.
+  // To solve it, we perform join() and transfer() using the two worklist method
+  // until the ranges converge.
+  // Ranges have converged when both worklists are empty.
+  while (!Worklist.empty() || !Pending.empty()) {
+    // We track what is on the pending worklist to avoid inserting the same
+    // thing twice.  We could avoid this with a custom priority queue, but this
+    // is probably not worth it.
+    SmallPtrSet<MachineBasicBlock *, 16> OnPending;
+    while (!Worklist.empty()) {
+      MachineBasicBlock *MBB = OrderToBB[Worklist.top()];
+      Worklist.pop();
+      MBBJoined = join(*MBB, OutLocs, InLocs);
 
-    MBBJoined = join(*MBB, OutLocs, InLocs);
+      if (MBBJoined) {
+        MBBJoined = false;
+        Changed = true;
+        for (auto &MI : *MBB)
+          OLChanged |= transfer(MI, OpenRanges, OutLocs);
+        DEBUG(printVarLocInMBB(OutLocs, "OutLocs after propagating", dbgs()));
+        DEBUG(printVarLocInMBB(InLocs, "InLocs after propagating", dbgs()));
 
-    if (MBBJoined) {
-      MBBJoined = false;
-      Changed = true;
-      for (auto &MI : *MBB)
-        OLChanged |= transfer(MI, OpenRanges, OutLocs);
-      DEBUG(printVarLocInMBB(OutLocs, "OutLocs after propagating", dbgs()));
-      DEBUG(printVarLocInMBB(InLocs, "InLocs after propagating", dbgs()));
-
-      if (OLChanged) {
-        OLChanged = false;
-        for (auto s : MBB->successors())
-          if (std::find(BBWorklist.begin(), BBWorklist.end(), s) ==
-              BBWorklist.end()) // add if not already present.
-            BBWorklist.push_back(s);
+        if (OLChanged) {
+          OLChanged = false;
+          for (auto s : MBB->successors())
+            if (!OnPending.count(s)) {
+              OnPending.insert(s);
+              Pending.push(BBToOrder[s]);
+            }
+        }
       }
     }
+    Worklist.swap(Pending);
+    // At this point, pending must be empty, since it was just the empty
+    // worklist
+    assert(Pending.empty() && "Pending should be empty");
   }
+
   DEBUG(printVarLocInMBB(OutLocs, "Final OutLocs", dbgs()));
   DEBUG(printVarLocInMBB(InLocs, "Final InLocs", dbgs()));
   return Changed;

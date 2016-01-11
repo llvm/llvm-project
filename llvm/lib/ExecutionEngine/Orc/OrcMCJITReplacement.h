@@ -54,10 +54,13 @@ class OrcMCJITReplacement : public ExecutionEngine {
       return Addr;
     }
 
-    void reserveAllocationSpace(uintptr_t CodeSize, uintptr_t DataSizeRO,
-                                uintptr_t DataSizeRW) override {
-      return ClientMM->reserveAllocationSpace(CodeSize, DataSizeRO,
-                                                DataSizeRW);
+    void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
+                                uintptr_t RODataSize, uint32_t RODataAlign,
+                                uintptr_t RWDataSize,
+                                uint32_t RWDataAlign) override {
+      return ClientMM->reserveAllocationSpace(CodeSize, CodeAlign,
+                                              RODataSize, RODataAlign,
+                                              RWDataSize, RWDataAlign);
     }
 
     bool needsToReserveAllocationSpace() override {

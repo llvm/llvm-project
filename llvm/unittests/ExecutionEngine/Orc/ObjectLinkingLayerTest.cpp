@@ -26,6 +26,15 @@ class ObjectLinkingLayerExecutionTest : public testing::Test,
                                         public OrcExecutionTest {
 };
 
+class SectionMemoryManagerWrapper : public SectionMemoryManager {
+public:
+  int FinalizationCount = 0;
+  bool finalizeMemory(std::string *ErrMsg = 0) override {
+    ++FinalizationCount;
+    return SectionMemoryManager::finalizeMemory(ErrMsg);
+  }
+};
+
 TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
 
   class SectionMemoryManagerWrapper : public SectionMemoryManager {
@@ -101,15 +110,6 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
 
   if (!TM)
     return;
-
-  class SectionMemoryManagerWrapper : public SectionMemoryManager {
-  public:
-    int FinalizationCount = 0;
-    bool finalizeMemory(std::string *ErrMsg = 0) override {
-      ++FinalizationCount;
-      return SectionMemoryManager::finalizeMemory(ErrMsg);
-    }
-  };
 
   ObjectLinkingLayer<> ObjLayer;
   SimpleCompiler Compile(*TM);

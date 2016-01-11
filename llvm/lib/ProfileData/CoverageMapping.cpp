@@ -517,6 +517,6 @@ class CoverageMappingErrorCategoryType : public std::error_category {
 
 static ManagedStatic<CoverageMappingErrorCategoryType> ErrorCategory;
 
-const std::error_category &llvm::coveragemap_category() {
+const std::error_category &llvm::coverage::coveragemap_category() {
   return *ErrorCategory;
 }

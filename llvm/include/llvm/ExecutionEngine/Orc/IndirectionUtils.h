@@ -22,6 +22,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include "llvm/Support/Process.h"
 #include <sstream>
 
 namespace llvm {
@@ -179,14 +180,15 @@ private:
     std::error_code EC;
     auto TrampolineBlock =
       sys::OwningMemoryBlock(
-        sys::Memory::allocateMappedMemory(TargetT::PageSize, nullptr,
+        sys::Memory::allocateMappedMemory(sys::Process::getPageSize(), nullptr,
                                           sys::Memory::MF_READ |
                                           sys::Memory::MF_WRITE, EC));
     assert(!EC && "Failed to allocate trampoline block");
 
 
     unsigned NumTrampolines =
-      (TargetT::PageSize - TargetT::PointerSize) / TargetT::TrampolineSize;
+      (sys::Process::getPageSize() - TargetT::PointerSize) /
+        TargetT::TrampolineSize;
 
     uint8_t *TrampolineMem = static_cast<uint8_t*>(TrampolineBlock.base());
     TargetT::writeTrampolines(TrampolineMem, ResolverBlock.base(),
@@ -240,8 +242,8 @@ private:
   virtual void anchor();
 };
 
-/// @brief IndirectStubsManager implementation for a concrete target, e.g.
-///        OrcX86_64. (See OrcTargetSupport.h).
+/// @brief IndirectStubsManager implementation for the host architecture, e.g.
+///        OrcX86_64. (See OrcArchitectureSupport.h).
 template <typename TargetT>
 class LocalIndirectStubsManager : public IndirectStubsManager {
 public:

@@ -18,4 +18,5 @@ add_llvm_unittest(OrcJITTests
   ObjectTransformLayerTest.cpp
   OrcCAPITest.cpp
   OrcTestCommon.cpp
+  RPCUtilsTest.cpp
   )

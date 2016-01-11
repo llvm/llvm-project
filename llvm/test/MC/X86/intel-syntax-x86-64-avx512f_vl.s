@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vl -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
-// CHECK:  vcmppd k3 , xmm27, xmm23, 171
+// CHECK:  vcmppd k3, xmm27, xmm23, 171
 // CHECK:  encoding: [0x62,0xb1,0xa5,0x00,0xc2,0xdf,0xab]
           vcmppd k3,xmm27,xmm23,0xab
 
@@ -8,55 +8,55 @@
 // CHECK:  encoding: [0x62,0xb1,0xa5,0x05,0xc2,0xdf,0xab]
           vcmppd k3{k5},xmm27,xmm23,0xab
 
-// CHECK:  vcmppd k3 , xmm27, xmm23, 123
+// CHECK:  vcmppd k3, xmm27, xmm23, 123
 // CHECK:  encoding: [0x62,0xb1,0xa5,0x00,0xc2,0xdf,0x7b]
           vcmppd k3,xmm27,xmm23,0x7b
 
-// CHECK:  vcmppd k3 , xmm27, xmmword ptr [rcx], 123
+// CHECK:  vcmppd k3, xmm27, xmmword ptr [rcx], 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x00,0xc2,0x19,0x7b]
           vcmppd k3,xmm27,XMMWORD PTR [rcx],0x7b
 
-// CHECK:  vcmppd k3 , xmm27, xmmword ptr [rax + 8*r14 + 291], 123
+// CHECK:  vcmppd k3, xmm27, xmmword ptr [rax + 8*r14 + 291], 123
 // CHECK:  encoding: [0x62,0xb1,0xa5,0x00,0xc2,0x9c,0xf0,0x23,0x01,0x00,0x00,0x7b]
           vcmppd k3,xmm27,XMMWORD PTR [rax+r14*8+0x123],0x7b
 
-// CHECK:  vcmppd k3 , xmm27, qword ptr [rcx]{1to2}, 123
+// CHECK:  vcmppd k3, xmm27, qword ptr [rcx]{1to2}, 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x10,0xc2,0x19,0x7b]
           vcmppd k3,xmm27,QWORD PTR [rcx]{1to2},0x7b
 
-// CHECK:  vcmppd k3 , xmm27, xmmword ptr [rdx + 2032], 123
+// CHECK:  vcmppd k3, xmm27, xmmword ptr [rdx + 2032], 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x00,0xc2,0x5a,0x7f,0x7b]
           vcmppd k3,xmm27,XMMWORD PTR [rdx+0x7f0],0x7b
 
-// CHECK:  vcmppd k3 , xmm27, xmmword ptr [rdx + 2048], 123
+// CHECK:  vcmppd k3, xmm27, xmmword ptr [rdx + 2048], 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x00,0xc2,0x9a,0x00,0x08,0x00,0x00,0x7b]
           vcmppd k3,xmm27,XMMWORD PTR [rdx+0x800],0x7b
 
-// CHECK:  vcmppd k3 , xmm27, xmmword ptr [rdx - 2048], 123
+// CHECK:  vcmppd k3, xmm27, xmmword ptr [rdx - 2048], 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x00,0xc2,0x5a,0x80,0x7b]
           vcmppd k3,xmm27,XMMWORD PTR [rdx-0x800],0x7b
 
-// CHECK:  vcmppd k3 , xmm27, xmmword ptr [rdx - 2064], 123
+// CHECK:  vcmppd k3, xmm27, xmmword ptr [rdx - 2064], 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x00,0xc2,0x9a,0xf0,0xf7,0xff,0xff,0x7b]
           vcmppd k3,xmm27,XMMWORD PTR [rdx-0x810],0x7b
 
-// CHECK:  vcmppd k3 , xmm27, qword ptr [rdx + 1016]{1to2}, 123
+// CHECK:  vcmppd k3, xmm27, qword ptr [rdx + 1016]{1to2}, 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x10,0xc2,0x5a,0x7f,0x7b]
           vcmppd k3,xmm27,QWORD PTR [rdx+0x3f8]{1to2},0x7b
 
-// CHECK:  vcmppd k3 , xmm27, qword ptr [rdx + 1024]{1to2}, 123
+// CHECK:  vcmppd k3, xmm27, qword ptr [rdx + 1024]{1to2}, 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x10,0xc2,0x9a,0x00,0x04,0x00,0x00,0x7b]
           vcmppd k3,xmm27,QWORD PTR [rdx+0x400]{1to2},0x7b
 
-// CHECK:  vcmppd k3 , xmm27, qword ptr [rdx - 1024]{1to2}, 123
+// CHECK:  vcmppd k3, xmm27, qword ptr [rdx - 1024]{1to2}, 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x10,0xc2,0x5a,0x80,0x7b]
           vcmppd k3,xmm27,QWORD PTR [rdx-0x400]{1to2},0x7b
 
-// CHECK:  vcmppd k3 , xmm27, qword ptr [rdx - 1032]{1to2}, 123
+// CHECK:  vcmppd k3, xmm27, qword ptr [rdx - 1032]{1to2}, 123
 // CHECK:  encoding: [0x62,0xf1,0xa5,0x10,0xc2,0x9a,0xf8,0xfb,0xff,0xff,0x7b]
           vcmppd k3,xmm27,QWORD PTR [rdx-0x408]{1to2},0x7b
 
-// CHECK:  vcmppd k4 , ymm17, ymm27, 171
+// CHECK:  vcmppd k4, ymm17, ymm27, 171
 // CHECK:  encoding: [0x62,0x91,0xf5,0x20,0xc2,0xe3,0xab]
           vcmppd k4,ymm17,ymm27,0xab
 
@@ -64,55 +64,55 @@
 // CHECK:  encoding: [0x62,0x91,0xf5,0x27,0xc2,0xe3,0xab]
           vcmppd k4{k7},ymm17,ymm27,0xab
 
-// CHECK:  vcmppd k4 , ymm17, ymm27, 123
+// CHECK:  vcmppd k4, ymm17, ymm27, 123
 // CHECK:  encoding: [0x62,0x91,0xf5,0x20,0xc2,0xe3,0x7b]
           vcmppd k4,ymm17,ymm27,0x7b
 
-// CHECK:  vcmppd k4 , ymm17, ymmword ptr [rcx], 123
+// CHECK:  vcmppd k4, ymm17, ymmword ptr [rcx], 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x20,0xc2,0x21,0x7b]
           vcmppd k4,ymm17,YMMWORD PTR [rcx],0x7b
 
-// CHECK:  vcmppd k4 , ymm17, ymmword ptr [rax + 8*r14 + 291], 123
+// CHECK:  vcmppd k4, ymm17, ymmword ptr [rax + 8*r14 + 291], 123
 // CHECK:  encoding: [0x62,0xb1,0xf5,0x20,0xc2,0xa4,0xf0,0x23,0x01,0x00,0x00,0x7b]
           vcmppd k4,ymm17,YMMWORD PTR [rax+r14*8+0x123],0x7b
 
-// CHECK:  vcmppd k4 , ymm17, qword ptr [rcx]{1to4}, 123
+// CHECK:  vcmppd k4, ymm17, qword ptr [rcx]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x30,0xc2,0x21,0x7b]
           vcmppd k4,ymm17,QWORD PTR [rcx]{1to4},0x7b
 
-// CHECK:  vcmppd k4 , ymm17, ymmword ptr [rdx + 4064], 123
+// CHECK:  vcmppd k4, ymm17, ymmword ptr [rdx + 4064], 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x20,0xc2,0x62,0x7f,0x7b]
           vcmppd k4,ymm17,YMMWORD PTR [rdx+0xfe0],0x7b
 
-// CHECK:  vcmppd k4 , ymm17, ymmword ptr [rdx + 4096], 123
+// CHECK:  vcmppd k4, ymm17, ymmword ptr [rdx + 4096], 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x20,0xc2,0xa2,0x00,0x10,0x00,0x00,0x7b]
           vcmppd k4,ymm17,YMMWORD PTR [rdx+0x1000],0x7b
 
-// CHECK:  vcmppd k4 , ymm17, ymmword ptr [rdx - 4096], 123
+// CHECK:  vcmppd k4, ymm17, ymmword ptr [rdx - 4096], 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x20,0xc2,0x62,0x80,0x7b]
           vcmppd k4,ymm17,YMMWORD PTR [rdx-0x1000],0x7b
 
-// CHECK:  vcmppd k4 , ymm17, ymmword ptr [rdx - 4128], 123
+// CHECK:  vcmppd k4, ymm17, ymmword ptr [rdx - 4128], 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x20,0xc2,0xa2,0xe0,0xef,0xff,0xff,0x7b]
           vcmppd k4,ymm17,YMMWORD PTR [rdx-0x1020],0x7b
 
-// CHECK:  vcmppd k4 , ymm17, qword ptr [rdx + 1016]{1to4}, 123
+// CHECK:  vcmppd k4, ymm17, qword ptr [rdx + 1016]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x30,0xc2,0x62,0x7f,0x7b]
           vcmppd k4,ymm17,QWORD PTR [rdx+0x3f8]{1to4},0x7b
 
-// CHECK:  vcmppd k4 , ymm17, qword ptr [rdx + 1024]{1to4}, 123
+// CHECK:  vcmppd k4, ymm17, qword ptr [rdx + 1024]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x30,0xc2,0xa2,0x00,0x04,0x00,0x00,0x7b]
           vcmppd k4,ymm17,QWORD PTR [rdx+0x400]{1to4},0x7b
 
-// CHECK:  vcmppd k4 , ymm17, qword ptr [rdx - 1024]{1to4}, 123
+// CHECK:  vcmppd k4, ymm17, qword ptr [rdx - 1024]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x30,0xc2,0x62,0x80,0x7b]
           vcmppd k4,ymm17,QWORD PTR [rdx-0x400]{1to4},0x7b
 
-// CHECK:  vcmppd k4 , ymm17, qword ptr [rdx - 1032]{1to4}, 123
+// CHECK:  vcmppd k4, ymm17, qword ptr [rdx - 1032]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x30,0xc2,0xa2,0xf8,0xfb,0xff,0xff,0x7b]
           vcmppd k4,ymm17,QWORD PTR [rdx-0x408]{1to4},0x7b
 
-// CHECK:  vcmpps k4 , xmm29, xmm28, 171
+// CHECK:  vcmpps k4, xmm29, xmm28, 171
 // CHECK:  encoding: [0x62,0x91,0x14,0x00,0xc2,0xe4,0xab]
           vcmpps k4,xmm29,xmm28,0xab
 
@@ -120,55 +120,55 @@
 // CHECK:  encoding: [0x62,0x91,0x14,0x02,0xc2,0xe4,0xab]
           vcmpps k4{k2},xmm29,xmm28,0xab
 
-// CHECK:  vcmpps k4 , xmm29, xmm28, 123
+// CHECK:  vcmpps k4, xmm29, xmm28, 123
 // CHECK:  encoding: [0x62,0x91,0x14,0x00,0xc2,0xe4,0x7b]
           vcmpps k4,xmm29,xmm28,0x7b
 
-// CHECK:  vcmpps k4 , xmm29, xmmword ptr [rcx], 123
+// CHECK:  vcmpps k4, xmm29, xmmword ptr [rcx], 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x00,0xc2,0x21,0x7b]
           vcmpps k4,xmm29,XMMWORD PTR [rcx],0x7b
 
-// CHECK:  vcmpps k4 , xmm29, xmmword ptr [rax + 8*r14 + 291], 123
+// CHECK:  vcmpps k4, xmm29, xmmword ptr [rax + 8*r14 + 291], 123
 // CHECK:  encoding: [0x62,0xb1,0x14,0x00,0xc2,0xa4,0xf0,0x23,0x01,0x00,0x00,0x7b]
           vcmpps k4,xmm29,XMMWORD PTR [rax+r14*8+0x123],0x7b
 
-// CHECK:  vcmpps k4 , xmm29, dword ptr [rcx]{1to4}, 123
+// CHECK:  vcmpps k4, xmm29, dword ptr [rcx]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x10,0xc2,0x21,0x7b]
           vcmpps k4,xmm29,DWORD PTR [rcx]{1to4},0x7b
 
-// CHECK:  vcmpps k4 , xmm29, xmmword ptr [rdx + 2032], 123
+// CHECK:  vcmpps k4, xmm29, xmmword ptr [rdx + 2032], 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x00,0xc2,0x62,0x7f,0x7b]
           vcmpps k4,xmm29,XMMWORD PTR [rdx+0x7f0],0x7b
 
-// CHECK:  vcmpps k4 , xmm29, xmmword ptr [rdx + 2048], 123
+// CHECK:  vcmpps k4, xmm29, xmmword ptr [rdx + 2048], 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x00,0xc2,0xa2,0x00,0x08,0x00,0x00,0x7b]
           vcmpps k4,xmm29,XMMWORD PTR [rdx+0x800],0x7b
 
-// CHECK:  vcmpps k4 , xmm29, xmmword ptr [rdx - 2048], 123
+// CHECK:  vcmpps k4, xmm29, xmmword ptr [rdx - 2048], 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x00,0xc2,0x62,0x80,0x7b]
           vcmpps k4,xmm29,XMMWORD PTR [rdx-0x800],0x7b
 
-// CHECK:  vcmpps k4 , xmm29, xmmword ptr [rdx - 2064], 123
+// CHECK:  vcmpps k4, xmm29, xmmword ptr [rdx - 2064], 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x00,0xc2,0xa2,0xf0,0xf7,0xff,0xff,0x7b]
           vcmpps k4,xmm29,XMMWORD PTR [rdx-0x810],0x7b
 
-// CHECK:  vcmpps k4 , xmm29, dword ptr [rdx + 508]{1to4}, 123
+// CHECK:  vcmpps k4, xmm29, dword ptr [rdx + 508]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x10,0xc2,0x62,0x7f,0x7b]
           vcmpps k4,xmm29,DWORD PTR [rdx+0x1fc]{1to4},0x7b
 
-// CHECK:  vcmpps k4 , xmm29, dword ptr [rdx + 512]{1to4}, 123
+// CHECK:  vcmpps k4, xmm29, dword ptr [rdx + 512]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x10,0xc2,0xa2,0x00,0x02,0x00,0x00,0x7b]
           vcmpps k4,xmm29,DWORD PTR [rdx+0x200]{1to4},0x7b
 
-// CHECK:  vcmpps k4 , xmm29, dword ptr [rdx - 512]{1to4}, 123
+// CHECK:  vcmpps k4, xmm29, dword ptr [rdx - 512]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x10,0xc2,0x62,0x80,0x7b]
           vcmpps k4,xmm29,DWORD PTR [rdx-0x200]{1to4},0x7b
 
-// CHECK:  vcmpps k4 , xmm29, dword ptr [rdx - 516]{1to4}, 123
+// CHECK:  vcmpps k4, xmm29, dword ptr [rdx - 516]{1to4}, 123
 // CHECK:  encoding: [0x62,0xf1,0x14,0x10,0xc2,0xa2,0xfc,0xfd,0xff,0xff,0x7b]
           vcmpps k4,xmm29,DWORD PTR [rdx-0x204]{1to4},0x7b
 
-// CHECK:  vcmpps k4 , ymm19, ymm18, 171
+// CHECK:  vcmpps k4, ymm19, ymm18, 171
 // CHECK:  encoding: [0x62,0xb1,0x64,0x20,0xc2,0xe2,0xab]
           vcmpps k4,ymm19,ymm18,0xab
 
@@ -176,50 +176,50 @@
 // CHECK:  encoding: [0x62,0xb1,0x64,0x21,0xc2,0xe2,0xab]
           vcmpps k4{k1},ymm19,ymm18,0xab
 
-// CHECK:  vcmpps k4 , ymm19, ymm18, 123
+// CHECK:  vcmpps k4, ymm19, ymm18, 123
 // CHECK:  encoding: [0x62,0xb1,0x64,0x20,0xc2,0xe2,0x7b]
           vcmpps k4,ymm19,ymm18,0x7b
 
-// CHECK:  vcmpps k4 , ymm19, ymmword ptr [rcx], 123
+// CHECK:  vcmpps k4, ymm19, ymmword ptr [rcx], 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x20,0xc2,0x21,0x7b]
           vcmpps k4,ymm19,YMMWORD PTR [rcx],0x7b
 
-// CHECK:  vcmpps k4 , ymm19, ymmword ptr [rax + 8*r14 + 291], 123
+// CHECK:  vcmpps k4, ymm19, ymmword ptr [rax + 8*r14 + 291], 123
 // CHECK:  encoding: [0x62,0xb1,0x64,0x20,0xc2,0xa4,0xf0,0x23,0x01,0x00,0x00,0x7b]
           vcmpps k4,ymm19,YMMWORD PTR [rax+r14*8+0x123],0x7b
 
-// CHECK: vcmpps k4 , ymm19, dword ptr [rcx]{1to8}, 123
+// CHECK: vcmpps k4, ymm19, dword ptr [rcx]{1to8}, 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x30,0xc2,0x21,0x7b]
           vcmpps k4,ymm19,DWORD PTR [rcx]{1to8},0x7b
 
-// CHECK:  vcmpps k4 , ymm19, ymmword ptr [rdx + 4064], 123
+// CHECK:  vcmpps k4, ymm19, ymmword ptr [rdx + 4064], 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x20,0xc2,0x62,0x7f,0x7b]
           vcmpps k4,ymm19,YMMWORD PTR [rdx+0xfe0],0x7b
 
-// CHECK:  vcmpps k4 , ymm19, ymmword ptr [rdx + 4096], 123
+// CHECK:  vcmpps k4, ymm19, ymmword ptr [rdx + 4096], 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x20,0xc2,0xa2,0x00,0x10,0x00,0x00,0x7b]
           vcmpps k4,ymm19,YMMWORD PTR [rdx+0x1000],0x7b
 
-// CHECK:  vcmpps k4 , ymm19, ymmword ptr [rdx - 4096], 123
+// CHECK:  vcmpps k4, ymm19, ymmword ptr [rdx - 4096], 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x20,0xc2,0x62,0x80,0x7b]
           vcmpps k4,ymm19,YMMWORD PTR [rdx-0x1000],0x7b
 
-// CHECK:  vcmpps k4 , ymm19, ymmword ptr [rdx - 4128], 123
+// CHECK:  vcmpps k4, ymm19, ymmword ptr [rdx - 4128], 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x20,0xc2,0xa2,0xe0,0xef,0xff,0xff,0x7b]
           vcmpps k4,ymm19,YMMWORD PTR [rdx-0x1020],0x7b
 
-// CHECK:  vcmpps k4 , ymm19, dword ptr [rdx + 508]{1to8}, 123
+// CHECK:  vcmpps k4, ymm19, dword ptr [rdx + 508]{1to8}, 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x30,0xc2,0x62,0x7f,0x7b]
           vcmpps k4,ymm19,DWORD PTR [rdx+0x1fc]{1to8},0x7b
 
-// CHECK:  vcmpps k4 , ymm19, dword ptr [rdx + 512]{1to8}, 123
+// CHECK:  vcmpps k4, ymm19, dword ptr [rdx + 512]{1to8}, 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x30,0xc2,0xa2,0x00,0x02,0x00,0x00,0x7b]
           vcmpps k4,ymm19,DWORD PTR [rdx+0x200]{1to8},0x7b
 
-// CHECK:  vcmpps k4 , ymm19, dword ptr [rdx - 512]{1to8}, 123
+// CHECK:  vcmpps k4, ymm19, dword ptr [rdx - 512]{1to8}, 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x30,0xc2,0x62,0x80,0x7b]
           vcmpps k4,ymm19,DWORD PTR [rdx-0x200]{1to8},0x7b
 
-// CHECK:  vcmpps k4 , ymm19, dword ptr [rdx - 516]{1to8}, 123
+// CHECK:  vcmpps k4, ymm19, dword ptr [rdx - 516]{1to8}, 123
 // CHECK:  encoding: [0x62,0xf1,0x64,0x30,0xc2,0xa2,0xfc,0xfd,0xff,0xff,0x7b]
           vcmpps k4,ymm19,DWORD PTR [rdx-0x204]{1to8},0x7b

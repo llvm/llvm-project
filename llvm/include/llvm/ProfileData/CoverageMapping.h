@@ -20,6 +20,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -452,6 +453,50 @@ public:
   CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion);
 };
 
+const std::error_category &coveragemap_category();
+
+enum class coveragemap_error {
+  success = 0,
+  eof,
+  no_data_found,
+  unsupported_version,
+  truncated,
+  malformed
+};
+
+inline std::error_code make_error_code(coveragemap_error E) {
+  return std::error_code(static_cast<int>(E), coveragemap_category());
+}
+
+
+// Profile coverage map has the following layout:
+// [CoverageMapFileHeader]
+// [ArrayStart]
+//  [CovMapFunctionRecord]
+//  [CovMapFunctionRecord]
+//  ...
+// [ArrayEnd]
+// [Encoded Region Mapping Data]
+LLVM_PACKED_START
+template <class IntPtrT> struct CovMapFunctionRecord {
+  #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
+  #include "llvm/ProfileData/InstrProfData.inc"
+};
+// Per module coverage mapping data header, i.e. CoverageMapFileHeader
+// documented above.
+struct CovMapHeader {
+#define COVMAP_HEADER(Type, LLVMType, Name, Init) Type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
+LLVM_PACKED_END
+
+enum CoverageMappingVersion {
+  CoverageMappingVersion1 = 0,
+  // The current versin is Version1
+  CoverageMappingCurrentVersion = INSTR_PROF_COVMAP_VERSION
+};
+
 } // end namespace coverage
 
 /// \brief Provide DenseMapInfo for CounterExpression
@@ -482,26 +527,12 @@ template<> struct DenseMapInfo<coverage::CounterExpression> {
   }
 };
 
-const std::error_category &coveragemap_category();
-
-enum class coveragemap_error {
-  success = 0,
-  eof,
-  no_data_found,
-  unsupported_version,
-  truncated,
-  malformed
-};
-
-inline std::error_code make_error_code(coveragemap_error E) {
-  return std::error_code(static_cast<int>(E), coveragemap_category());
-}
-
 } // end namespace llvm
 
 namespace std {
 template <>
-struct is_error_code_enum<llvm::coveragemap_error> : std::true_type {};
+struct is_error_code_enum<llvm::coverage::coveragemap_error> : std::true_type {};
 }
+
 
 #endif // LLVM_PROFILEDATA_COVERAGEMAPPING_H_
