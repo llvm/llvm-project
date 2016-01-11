@@ -375,20 +375,16 @@ public:
   /// ConstructAction - Construct the appropriate action to do for
   /// \p Phase on the \p Input, taking in to account arguments
   /// like -fsyntax-only or --analyze.
-  std::unique_ptr<Action>
-  ConstructPhaseAction(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                       phases::ID Phase, std::unique_ptr<Action> Input) const;
+  Action *ConstructPhaseAction(Compilation &C, const ToolChain &TC,
+                               const llvm::opt::ArgList &Args, phases::ID Phase,
+                               Action *Input) const;
 
   /// BuildJobsForAction - Construct the jobs to perform for the
-  /// action \p A.
-  void BuildJobsForAction(Compilation &C,
-                          const Action *A,
-                          const ToolChain *TC,
-                          const char *BoundArch,
-                          bool AtTopLevel,
-                          bool MultipleArchs,
-                          const char *LinkingOutput,
-                          InputInfo &Result) const;
+  /// action \p A and return an InputInfo for the result of running \p A.
+  InputInfo BuildJobsForAction(Compilation &C, const Action *A,
+                               const ToolChain *TC, const char *BoundArch,
+                               bool AtTopLevel, bool MultipleArchs,
+                               const char *LinkingOutput) const;
 
   /// Returns the default name for linked images (e.g., "a.out").
   const char *getDefaultImageName() const;

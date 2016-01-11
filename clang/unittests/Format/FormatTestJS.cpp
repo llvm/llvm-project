@@ -900,6 +900,10 @@ TEST_F(FormatTestJS, Modules) {
                "];");
   verifyFormat("export default [];");
   verifyFormat("export default () => {};");
+  verifyFormat("export interface Foo { foo: number; }\n"
+               "export class Bar {\n"
+               "  blah(): string { return this.blah; };\n"
+               "}");
 }
 
 TEST_F(FormatTestJS, TemplateStrings) {
