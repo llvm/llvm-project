@@ -30,13 +30,13 @@ template <typename IntT, int Bits = sizeof(IntT) * CHAR_BIT>
 class PointerEmbeddedInt {
   uintptr_t Value;
 
-  static_assert(Bits < sizeof(Value) * CHAR_BIT,
+  static_assert(Bits < sizeof(uintptr_t) * CHAR_BIT,
                 "Cannot embed more bits than we have in a pointer!");
 
   enum : uintptr_t {
     // We shift as many zeros into the value as we can while preserving the
     // number of bits desired for the integer.
-    Shift = sizeof(Value) * CHAR_BIT - Bits,
+    Shift = sizeof(uintptr_t) * CHAR_BIT - Bits,
 
     // We also want to be able to mask out the preserved bits for asserts.
     Mask = static_cast<uintptr_t>(-1) << Bits

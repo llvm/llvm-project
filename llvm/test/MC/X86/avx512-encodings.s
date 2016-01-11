@@ -6184,7 +6184,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x91,0x9d,0x4b,0xc2,0xd2,0xab]
           vcmppd $0xab, %zmm26, %zmm12, %k2 {%k3}
 
-// CHECK: vcmppd $171,{sae}, %zmm26, %zmm12, %k2
+// CHECK: vcmppd $171, {sae}, %zmm26, %zmm12, %k2
 // CHECK:  encoding: [0x62,0x91,0x9d,0x18,0xc2,0xd2,0xab]
           vcmppd $0xab,{sae}, %zmm26, %zmm12, %k2
 
@@ -6192,7 +6192,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x91,0x9d,0x48,0xc2,0xd2,0x7b]
           vcmppd $0x7b, %zmm26, %zmm12, %k2
 
-// CHECK: vcmppd $123,{sae}, %zmm26, %zmm12, %k2
+// CHECK: vcmppd $123, {sae}, %zmm26, %zmm12, %k2
 // CHECK:  encoding: [0x62,0x91,0x9d,0x18,0xc2,0xd2,0x7b]
           vcmppd $0x7b,{sae}, %zmm26, %zmm12, %k2
 
@@ -6248,7 +6248,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xb1,0x74,0x43,0xc2,0xd6,0xab]
           vcmpps $0xab, %zmm22, %zmm17, %k2 {%k3}
 
-// CHECK: vcmpps $171,{sae}, %zmm22, %zmm17, %k2
+// CHECK: vcmpps $171, {sae}, %zmm22, %zmm17, %k2
 // CHECK:  encoding: [0x62,0xb1,0x74,0x10,0xc2,0xd6,0xab]
           vcmpps $0xab,{sae}, %zmm22, %zmm17, %k2
 
@@ -6256,7 +6256,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xb1,0x74,0x40,0xc2,0xd6,0x7b]
           vcmpps $0x7b, %zmm22, %zmm17, %k2
 
-// CHECK: vcmpps $123,{sae}, %zmm22, %zmm17, %k2
+// CHECK: vcmpps $123, {sae}, %zmm22, %zmm17, %k2
 // CHECK:  encoding: [0x62,0xb1,0x74,0x10,0xc2,0xd6,0x7b]
           vcmpps $0x7b,{sae}, %zmm22, %zmm17, %k2
 
@@ -7812,7 +7812,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x73,0x2d,0xc4,0x54,0xfa,0xab]
           vfixupimmps $0xab, %zmm2, %zmm26, %zmm15 {%k4} {z}
 
-// CHECK: vfixupimmps $171,{sae}, %zmm2, %zmm26, %zmm15
+// CHECK: vfixupimmps $171, {sae}, %zmm2, %zmm26, %zmm15
 // CHECK:  encoding: [0x62,0x73,0x2d,0x10,0x54,0xfa,0xab]
           vfixupimmps $0xab,{sae}, %zmm2, %zmm26, %zmm15
 
@@ -7820,7 +7820,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x73,0x2d,0x40,0x54,0xfa,0x7b]
           vfixupimmps $0x7b, %zmm2, %zmm26, %zmm15
 
-// CHECK: vfixupimmps $123,{sae}, %zmm2, %zmm26, %zmm15
+// CHECK: vfixupimmps $123, {sae}, %zmm2, %zmm26, %zmm15
 // CHECK:  encoding: [0x62,0x73,0x2d,0x10,0x54,0xfa,0x7b]
           vfixupimmps $0x7b,{sae}, %zmm2, %zmm26, %zmm15
 
@@ -7880,7 +7880,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x33,0xd5,0xc2,0x54,0xcb,0xab]
           vfixupimmpd $0xab, %zmm19, %zmm21, %zmm9 {%k2} {z}
 
-// CHECK: vfixupimmpd $171,{sae}, %zmm19, %zmm21, %zmm9
+// CHECK: vfixupimmpd $171, {sae}, %zmm19, %zmm21, %zmm9
 // CHECK:  encoding: [0x62,0x33,0xd5,0x10,0x54,0xcb,0xab]
           vfixupimmpd $0xab,{sae}, %zmm19, %zmm21, %zmm9
 
@@ -7888,7 +7888,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x33,0xd5,0x40,0x54,0xcb,0x7b]
           vfixupimmpd $0x7b, %zmm19, %zmm21, %zmm9
 
-// CHECK: vfixupimmpd $123,{sae}, %zmm19, %zmm21, %zmm9
+// CHECK: vfixupimmpd $123, {sae}, %zmm19, %zmm21, %zmm9
 // CHECK:  encoding: [0x62,0x33,0xd5,0x10,0x54,0xcb,0x7b]
           vfixupimmpd $0x7b,{sae}, %zmm19, %zmm21, %zmm9
 
@@ -7948,7 +7948,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x13,0x6d,0x85,0x55,0xfc,0xab]
           vfixupimmss $0xab, %xmm28, %xmm18, %xmm15 {%k5} {z}
 
-// CHECK: vfixupimmss $171,{sae}, %xmm28, %xmm18, %xmm15
+// CHECK: vfixupimmss $171, {sae}, %xmm28, %xmm18, %xmm15
 // CHECK:  encoding: [0x62,0x13,0x6d,0x10,0x55,0xfc,0xab]
           vfixupimmss $0xab,{sae}, %xmm28, %xmm18, %xmm15
 
@@ -7956,7 +7956,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x13,0x6d,0x00,0x55,0xfc,0x7b]
           vfixupimmss $0x7b, %xmm28, %xmm18, %xmm15
 
-// CHECK: vfixupimmss $123,{sae}, %xmm28, %xmm18, %xmm15
+// CHECK: vfixupimmss $123, {sae}, %xmm28, %xmm18, %xmm15
 // CHECK:  encoding: [0x62,0x13,0x6d,0x10,0x55,0xfc,0x7b]
           vfixupimmss $0x7b,{sae}, %xmm28, %xmm18, %xmm15
 
@@ -7996,7 +7996,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x73,0xad,0x86,0x55,0xed,0xab]
           vfixupimmsd $0xab, %xmm5, %xmm26, %xmm13 {%k6} {z}
 
-// CHECK: vfixupimmsd $171,{sae}, %xmm5, %xmm26, %xmm13
+// CHECK: vfixupimmsd $171, {sae}, %xmm5, %xmm26, %xmm13
 // CHECK:  encoding: [0x62,0x73,0xad,0x10,0x55,0xed,0xab]
           vfixupimmsd $0xab,{sae}, %xmm5, %xmm26, %xmm13
 
@@ -8004,7 +8004,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x73,0xad,0x00,0x55,0xed,0x7b]
           vfixupimmsd $0x7b, %xmm5, %xmm26, %xmm13
 
-// CHECK: vfixupimmsd $123,{sae}, %xmm5, %xmm26, %xmm13
+// CHECK: vfixupimmsd $123, {sae}, %xmm5, %xmm26, %xmm13
 // CHECK:  encoding: [0x62,0x73,0xad,0x10,0x55,0xed,0x7b]
           vfixupimmsd $0x7b,{sae}, %xmm5, %xmm26, %xmm13
 
@@ -12962,7 +12962,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xe3,0xfd,0xc9,0x09,0xf7,0xab]
           vrndscalepd $0xab, %zmm7, %zmm22 {%k1} {z}
 
-// CHECK: vrndscalepd $171,{sae}, %zmm7, %zmm22
+// CHECK: vrndscalepd $171, {sae}, %zmm7, %zmm22
 // CHECK:  encoding: [0x62,0xe3,0xfd,0x18,0x09,0xf7,0xab]
           vrndscalepd $0xab,{sae}, %zmm7, %zmm22
 
@@ -12970,7 +12970,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xe3,0xfd,0x48,0x09,0xf7,0x7b]
           vrndscalepd $0x7b, %zmm7, %zmm22
 
-// CHECK: vrndscalepd $123,{sae}, %zmm7, %zmm22
+// CHECK: vrndscalepd $123, {sae}, %zmm7, %zmm22
 // CHECK:  encoding: [0x62,0xe3,0xfd,0x18,0x09,0xf7,0x7b]
           vrndscalepd $0x7b,{sae}, %zmm7, %zmm22
 
@@ -13030,7 +13030,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x73,0x7d,0xc9,0x08,0xef,0xab]
           vrndscaleps $0xab, %zmm7, %zmm13 {%k1} {z}
 
-// CHECK: vrndscaleps $171,{sae}, %zmm7, %zmm13
+// CHECK: vrndscaleps $171, {sae}, %zmm7, %zmm13
 // CHECK:  encoding: [0x62,0x73,0x7d,0x18,0x08,0xef,0xab]
           vrndscaleps $0xab,{sae}, %zmm7, %zmm13
 
@@ -13038,7 +13038,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x73,0x7d,0x48,0x08,0xef,0x7b]
           vrndscaleps $0x7b, %zmm7, %zmm13
 
-// CHECK: vrndscaleps $123,{sae}, %zmm7, %zmm13
+// CHECK: vrndscaleps $123, {sae}, %zmm7, %zmm13
 // CHECK:  encoding: [0x62,0x73,0x7d,0x18,0x08,0xef,0x7b]
           vrndscaleps $0x7b,{sae}, %zmm7, %zmm13
 
@@ -14966,7 +14966,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xd1,0x06,0x0d,0xc2,0xe4,0xab]
           vcmpss $0xab, %xmm12, %xmm15, %k4 {%k5}
 
-// CHECK: vcmpss $171,{sae}, %xmm12, %xmm15, %k4
+// CHECK: vcmpss $171, {sae}, %xmm12, %xmm15, %k4
 // CHECK:  encoding: [0x62,0xd1,0x06,0x18,0xc2,0xe4,0xab]
           vcmpss $0xab,{sae}, %xmm12, %xmm15, %k4
 
@@ -14974,7 +14974,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xd1,0x06,0x08,0xc2,0xe4,0x7b]
           vcmpss $0x7b, %xmm12, %xmm15, %k4
 
-// CHECK: vcmpss $123,{sae}, %xmm12, %xmm15, %k4
+// CHECK: vcmpss $123, {sae}, %xmm12, %xmm15, %k4
 // CHECK:  encoding: [0x62,0xd1,0x06,0x18,0xc2,0xe4,0x7b]
           vcmpss $0x7b,{sae}, %xmm12, %xmm15, %k4
 
@@ -15010,7 +15010,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xf1,0xe7,0x01,0xc2,0xec,0xab]
           vcmpsd $0xab, %xmm4, %xmm19, %k5 {%k1}
 
-// CHECK: vcmpsd $171,{sae}, %xmm4, %xmm19, %k5
+// CHECK: vcmpsd $171, {sae}, %xmm4, %xmm19, %k5
 // CHECK:  encoding: [0x62,0xf1,0xe7,0x10,0xc2,0xec,0xab]
           vcmpsd $0xab,{sae}, %xmm4, %xmm19, %k5
 
@@ -15018,7 +15018,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xf1,0xe7,0x00,0xc2,0xec,0x7b]
           vcmpsd $0x7b, %xmm4, %xmm19, %k5
 
-// CHECK: vcmpsd $123,{sae}, %xmm4, %xmm19, %k5
+// CHECK: vcmpsd $123, {sae}, %xmm4, %xmm19, %k5
 // CHECK:  encoding: [0x62,0xf1,0xe7,0x10,0xc2,0xec,0x7b]
           vcmpsd $0x7b,{sae}, %xmm4, %xmm19, %k5
 
@@ -15518,7 +15518,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xd3,0x6d,0x8f,0x27,0xdc,0xab]
           vgetmantss $0xab, %xmm12, %xmm2, %xmm3 {%k7} {z}
 
-// CHECK: vgetmantss $171,{sae}, %xmm12, %xmm2, %xmm3
+// CHECK: vgetmantss $171, {sae}, %xmm12, %xmm2, %xmm3
 // CHECK:  encoding: [0x62,0xd3,0x6d,0x18,0x27,0xdc,0xab]
           vgetmantss $0xab,{sae}, %xmm12, %xmm2, %xmm3
 
@@ -15526,7 +15526,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xd3,0x6d,0x08,0x27,0xdc,0x7b]
           vgetmantss $0x7b, %xmm12, %xmm2, %xmm3
 
-// CHECK: vgetmantss $123,{sae}, %xmm12, %xmm2, %xmm3
+// CHECK: vgetmantss $123, {sae}, %xmm12, %xmm2, %xmm3
 // CHECK:  encoding: [0x62,0xd3,0x6d,0x18,0x27,0xdc,0x7b]
           vgetmantss $0x7b,{sae}, %xmm12, %xmm2, %xmm3
 
@@ -15566,7 +15566,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xd3,0xa5,0x86,0x27,0xd8,0xab]
           vgetmantsd $0xab, %xmm8, %xmm27, %xmm3 {%k6} {z}
 
-// CHECK: vgetmantsd $171,{sae}, %xmm8, %xmm27, %xmm3
+// CHECK: vgetmantsd $171, {sae}, %xmm8, %xmm27, %xmm3
 // CHECK:  encoding: [0x62,0xd3,0xa5,0x10,0x27,0xd8,0xab]
           vgetmantsd $0xab,{sae}, %xmm8, %xmm27, %xmm3
 
@@ -15574,7 +15574,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0xd3,0xa5,0x00,0x27,0xd8,0x7b]
           vgetmantsd $0x7b, %xmm8, %xmm27, %xmm3
 
-// CHECK: vgetmantsd $123,{sae}, %xmm8, %xmm27, %xmm3
+// CHECK: vgetmantsd $123, {sae}, %xmm8, %xmm27, %xmm3
 // CHECK:  encoding: [0x62,0xd3,0xa5,0x10,0x27,0xd8,0x7b]
           vgetmantsd $0x7b,{sae}, %xmm8, %xmm27, %xmm3
 
@@ -15614,7 +15614,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x83,0x7d,0xcb,0x26,0xf4,0xab]
           vgetmantps $0xab, %zmm28, %zmm22 {%k3} {z}
 
-// CHECK: vgetmantps $171,{sae}, %zmm28, %zmm22
+// CHECK: vgetmantps $171, {sae}, %zmm28, %zmm22
 // CHECK:  encoding: [0x62,0x83,0x7d,0x18,0x26,0xf4,0xab]
           vgetmantps $0xab,{sae}, %zmm28, %zmm22
 
@@ -15622,7 +15622,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x83,0x7d,0x48,0x26,0xf4,0x7b]
           vgetmantps $0x7b, %zmm28, %zmm22
 
-// CHECK: vgetmantps $123,{sae}, %zmm28, %zmm22
+// CHECK: vgetmantps $123, {sae}, %zmm28, %zmm22
 // CHECK:  encoding: [0x62,0x83,0x7d,0x18,0x26,0xf4,0x7b]
           vgetmantps $0x7b,{sae}, %zmm28, %zmm22
 
@@ -15682,7 +15682,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x93,0xfd,0xcf,0x26,0xd2,0xab]
           vgetmantpd $0xab, %zmm26, %zmm2 {%k7} {z}
 
-// CHECK: vgetmantpd $171,{sae}, %zmm26, %zmm2
+// CHECK: vgetmantpd $171, {sae}, %zmm26, %zmm2
 // CHECK:  encoding: [0x62,0x93,0xfd,0x18,0x26,0xd2,0xab]
           vgetmantpd $0xab,{sae}, %zmm26, %zmm2
 
@@ -15690,7 +15690,7 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK:  encoding: [0x62,0x93,0xfd,0x48,0x26,0xd2,0x7b]
           vgetmantpd $0x7b, %zmm26, %zmm2
 
-// CHECK: vgetmantpd $123,{sae}, %zmm26, %zmm2
+// CHECK: vgetmantpd $123, {sae}, %zmm26, %zmm2
 // CHECK:  encoding: [0x62,0x93,0xfd,0x18,0x26,0xd2,0x7b]
           vgetmantpd $0x7b,{sae}, %zmm26, %zmm2
 

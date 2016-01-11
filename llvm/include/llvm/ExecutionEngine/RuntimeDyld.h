@@ -124,9 +124,11 @@ public:
     ///
     /// Note that by default the callback is disabled. To enable it
     /// redefine the method needsToReserveAllocationSpace to return true.
-    virtual void reserveAllocationSpace(uintptr_t CodeSize,
-                                        uintptr_t DataSizeRO,
-                                        uintptr_t DataSizeRW) {}
+    virtual void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
+                                        uintptr_t RODataSize,
+                                        uint32_t RODataAlign,
+                                        uintptr_t RWDataSize,
+                                        uint32_t RWDataAlign) {}
 
     /// Override to return true to enable the reserveAllocationSpace callback.
     virtual bool needsToReserveAllocationSpace() { return false; }
@@ -152,6 +154,20 @@ public:
     ///
     /// Returns true if an error occurred, false otherwise.
     virtual bool finalizeMemory(std::string *ErrMsg = nullptr) = 0;
+
+    /// This method is called after an object has been loaded into memory but
+    /// before relocations are applied to the loaded sections.
+    ///
+    /// Memory managers which are preparing code for execution in an external
+    /// address space can use this call to remap the section addresses for the
+    /// newly loaded object.
+    ///
+    /// For clients that do not need access to an ExecutionEngine instance this
+    /// method should be preferred to its cousin
+    /// MCJITMemoryManager::notifyObjectLoaded as this method is compatible with
+    /// ORC JIT stacks.
+    virtual void notifyObjectLoaded(RuntimeDyld &RTDyld,
+                                    const object::ObjectFile &Obj) {}
 
   private:
     virtual void anchor();

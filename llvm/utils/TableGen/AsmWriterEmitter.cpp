@@ -390,51 +390,49 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
     TableDrivenOperandPrinters.push_back(std::move(UniqueOperandCommands));
   }
 
-
-  // We always emit at least one 32-bit table. A second table is emitted if
-  // more bits are needed.
-  O<<"  static const uint32_t OpInfo[] = {\n";
-  for (unsigned i = 0, e = NumberedInstructions->size(); i != e; ++i) {
-    O << "    " << (OpcodeInfo[i] & 0xffffffff) << "U,\t// "
-      << NumberedInstructions->at(i)->TheDef->getName() << "\n";
-  }
-  // Add a dummy entry so the array init doesn't end with a comma.
-  O << "    0U\n";
-  O << "  };\n\n";
-
-  if (BitsLeft < 32) {
-    // Add a second OpInfo table only when it is necessary.
-    // Adjust the type of the second table based on the number of bits needed.
-    O << "  static const uint"
-      << ((BitsLeft < 16) ? "32" : (BitsLeft < 24) ? "16" : "8")
-      << "_t OpInfo2[] = {\n";
-    for (unsigned i = 0, e = NumberedInstructions->size(); i != e; ++i) {
-      O << "    " << (OpcodeInfo[i] >> 32) << "U,\t// "
-        << NumberedInstructions->at(i)->TheDef->getName() << "\n";
-    }
-    // Add a dummy entry so the array init doesn't end with a comma.
-    O << "    0U\n";
-    O << "  };\n\n";
-  }
-
-  // Emit the string itself.
+  // Emit the string table itself.
   O << "  static const char AsmStrs[] = {\n";
   StringTable.emit(O, printChar);
   O << "  };\n\n";
 
+  // Emit the lookup tables in pieces to minimize wasted bytes.
+  unsigned BytesNeeded = ((64 - BitsLeft) + 7) / 8;
+  unsigned Table = 0, Shift = 0;
+  SmallString<128> BitsString;
+  raw_svector_ostream BitsOS(BitsString);
+  // If the total bits is more than 32-bits we need to use a 64-bit type.
+  BitsOS << "  uint" << ((BitsLeft < 32) ? 64 : 32) << "_t Bits = 0;\n";
+  while (BytesNeeded != 0) {
+    // Figure out how big this table section needs to be, but no bigger than 4.
+    unsigned TableSize = std::min(1 << Log2_32(BytesNeeded), 4);
+    BytesNeeded -= TableSize;
+    TableSize *= 8; // Convert to bits;
+    uint64_t Mask = (1ULL << TableSize) - 1;
+    O << "  static const uint" << TableSize << "_t OpInfo" << Table
+      << "[] = {\n";
+    for (unsigned i = 0, e = NumberedInstructions->size(); i != e; ++i) {
+      O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << "U,\t// "
+        << NumberedInstructions->at(i)->TheDef->getName() << "\n";
+    }
+    O << "  };\n\n";
+    // Emit string to combine the individual table lookups.
+    BitsOS << "  Bits |= ";
+    // If the total bits is more than 32-bits we need to use a 64-bit type.
+    if (BitsLeft < 32)
+      BitsOS << "(uint64_t)";
+    BitsOS << "OpInfo" << Table << "[MI->getOpcode()] << " << Shift << ";\n";
+    // Prepare the shift for the next iteration and increment the table count.
+    Shift += TableSize;
+    ++Table;
+  }
+
+  // Emit the initial tab character.
   O << "  O << \"\\t\";\n\n";
 
   O << "  // Emit the opcode for the instruction.\n";
-  if (BitsLeft < 32) {
-    // If we have two tables then we need to perform two lookups and combine
-    // the results into a single 64-bit value.
-    O << "  uint64_t Bits1 = OpInfo[MI->getOpcode()];\n"
-      << "  uint64_t Bits2 = OpInfo2[MI->getOpcode()];\n"
-      << "  uint64_t Bits = (Bits2 << 32) | Bits1;\n";
-  } else {
-    // If only one table is used we just need to perform a single lookup.
-    O << "  uint32_t Bits = OpInfo[MI->getOpcode()];\n";
-  }
+  O << BitsString;
+
+  // Emit the starting string.
   O << "  assert(Bits != 0 && \"Cannot print this instruction.\");\n"
     << "  O << AsmStrs+(Bits & " << (1 << AsmStrBits)-1 << ")-1;\n\n";
 

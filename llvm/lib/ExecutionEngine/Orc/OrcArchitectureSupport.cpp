@@ -1,4 +1,4 @@
-//===------- OrcTargetSupport.cpp - Target support utilities for Orc ------===//
+//===------ OrcArchSupport.cpp - Architecture specific support code -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Triple.h"
-#include "llvm/ExecutionEngine/Orc/OrcTargetSupport.h"
+#include "llvm/ExecutionEngine/Orc/OrcArchitectureSupport.h"
 #include "llvm/Support/Process.h"
 #include <array>
 

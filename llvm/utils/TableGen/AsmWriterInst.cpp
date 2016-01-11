@@ -29,8 +29,8 @@ static bool isIdentChar(char C) {
 std::string AsmWriterOperand::getCode() const {
   if (OperandType == isLiteralTextOperand) {
     if (Str.size() == 1)
-      return "O << '" + Str + "'; ";
-    return "O << \"" + Str + "\"; ";
+      return "O << '" + Str + "';";
+    return "O << \"" + Str + "\";";
   }
 
   if (OperandType == isLiteralStatementOperand)
@@ -44,7 +44,7 @@ std::string AsmWriterOperand::getCode() const {
   Result += ", O";
   if (!MiModifier.empty())
     Result += ", \"" + MiModifier + '"';
-  return Result + "); ";
+  return Result + ");";
 }
 
 /// ParseAsmString - Parse the specified Instruction's AsmString into this

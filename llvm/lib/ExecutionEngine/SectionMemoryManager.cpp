@@ -137,9 +137,6 @@ bool SectionMemoryManager::finalizeMemory(std::string *ErrMsg)
     return true;
   }
 
-  // Don't allow free memory blocks to be used after setting protection flags.
-  RODataMem.FreeMem.clear();
-
   // Make read-only data memory read-only.
   ec = applyMemoryGroupPermissions(RODataMem,
                                    sys::Memory::MF_READ | sys::Memory::MF_EXEC);
