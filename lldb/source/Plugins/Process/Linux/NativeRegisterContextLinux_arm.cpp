@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__arm__)
+#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
 
 #include "NativeRegisterContextLinux_arm.h"
 
@@ -16,7 +16,11 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 
+#include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_arm.h"
+
+#include <elf.h>
+#include <sys/socket.h>
 
 #define REG_CONTEXT_SIZE (GetGPRSize() + sizeof (m_fpr))
 
@@ -169,6 +173,8 @@ g_reg_sets_arm[k_num_register_sets] =
     { "Floating Point Registers",   "fpu", k_num_fpr_registers_arm, g_fpu_regnums_arm }
 };
 
+#if defined(__arm__)
+
 NativeRegisterContextLinux*
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(const ArchSpec& target_arch,
                                                                  NativeThreadProtocol &native_thread,
@@ -176,6 +182,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(const ArchSpec&
 {
     return new NativeRegisterContextLinux_arm(target_arch, native_thread, concrete_frame_idx);
 }
+
+#endif // defined(__arm__)
 
 NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm (const ArchSpec& target_arch,
                                                                 NativeThreadProtocol &native_thread,
@@ -919,14 +927,14 @@ NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(int hwbType, int hwb_inde
         ctrl_buf = &m_hwp_regs[hwb_index].control;
 
         error = NativeProcessLinux::PtraceWrapper(PTRACE_SETHBPREGS,
-                m_thread.GetID(), (PTRACE_TYPE_ARG3) -((hwb_index << 1) + 1),
+                m_thread.GetID(), (PTRACE_TYPE_ARG3)(intptr_t) -((hwb_index << 1) + 1),
                 addr_buf, sizeof(unsigned int));
 
         if (error.Fail())
             return error;
 
         error = NativeProcessLinux::PtraceWrapper(PTRACE_SETHBPREGS,
-                m_thread.GetID(), (PTRACE_TYPE_ARG3) -((hwb_index << 1) + 2),
+                m_thread.GetID(), (PTRACE_TYPE_ARG3)(intptr_t) -((hwb_index << 1) + 2),
                 ctrl_buf, sizeof(unsigned int));
     }
     else
@@ -935,14 +943,14 @@ NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(int hwbType, int hwb_inde
         ctrl_buf = &m_hwp_regs[hwb_index].control;
 
         error = NativeProcessLinux::PtraceWrapper(PTRACE_SETHBPREGS,
-                m_thread.GetID(), (PTRACE_TYPE_ARG3) ((hwb_index << 1) + 1),
+                m_thread.GetID(), (PTRACE_TYPE_ARG3)(intptr_t) ((hwb_index << 1) + 1),
                 addr_buf, sizeof(unsigned int));
 
         if (error.Fail())
             return error;
 
         error = NativeProcessLinux::PtraceWrapper(PTRACE_SETHBPREGS,
-                m_thread.GetID(), (PTRACE_TYPE_ARG3) ((hwb_index << 1) + 2),
+                m_thread.GetID(), (PTRACE_TYPE_ARG3)(intptr_t) ((hwb_index << 1) + 2),
                 ctrl_buf, sizeof(unsigned int));
 
     }
@@ -957,11 +965,33 @@ NativeRegisterContextLinux_arm::CalculateFprOffset(const RegisterInfo* reg_info)
 }
 
 Error
+NativeRegisterContextLinux_arm::DoReadRegisterValue(uint32_t offset,
+                                                    const char* reg_name,
+                                                    uint32_t size,
+                                                    RegisterValue &value)
+{
+    // PTRACE_PEEKUSER don't work in the aarch64 linux kernel used on android devices (always return
+    // "Bad address"). To avoid using PTRACE_PEEKUSER we read out the full GPR register set instead.
+    // This approach is about 4 times slower but the performance overhead is negligible in
+    // comparision to processing time in lldb-server.
+    assert(offset % 4 == 0 && "Try to write a register with unaligned offset");
+    if (offset + sizeof(uint32_t) > sizeof(m_gpr_arm))
+        return Error("Register isn't fit into the size of the GPR area");
+
+    Error error = DoReadGPR(m_gpr_arm, sizeof(m_gpr_arm));
+    if (error.Fail())
+        return error;
+
+    value.SetUInt32(m_gpr_arm[offset / sizeof(uint32_t)]);
+    return Error();
+}
+
+Error
 NativeRegisterContextLinux_arm::DoWriteRegisterValue(uint32_t offset,
                                                      const char* reg_name,
                                                      const RegisterValue &value)
 {
-    // PTRACE_POKEUSER don't work in the aarch64 liux kernel used on android devices (always return
+    // PTRACE_POKEUSER don't work in the aarch64 linux kernel used on android devices (always return
     // "Bad address"). To avoid using PTRACE_POKEUSER we read out the full GPR register set, modify
     // the requested register and write it back. This approach is about 4 times slower but the
     // performance overhead is negligible in comparision to processing time in lldb-server.
@@ -995,23 +1025,67 @@ NativeRegisterContextLinux_arm::DoWriteRegisterValue(uint32_t offset,
 }
 
 Error
+NativeRegisterContextLinux_arm::DoReadGPR(void *buf, size_t buf_size)
+{
+#ifdef __arm__
+    return NativeRegisterContextLinux::DoReadGPR(buf, buf_size);
+#else // __aarch64__
+    struct iovec ioVec;
+    ioVec.iov_base = buf;
+    ioVec.iov_len = buf_size;
+
+    return ReadRegisterSet(&ioVec, buf_size, NT_PRSTATUS);
+#endif // __arm__
+}
+
+Error
+NativeRegisterContextLinux_arm::DoWriteGPR(void *buf, size_t buf_size)
+{
+#ifdef __arm__
+    return NativeRegisterContextLinux::DoWriteGPR(buf, buf_size);
+#else // __aarch64__
+    struct iovec ioVec;
+    ioVec.iov_base = buf;
+    ioVec.iov_len = buf_size;
+
+    return WriteRegisterSet(&ioVec, buf_size, NT_PRSTATUS);
+#endif // __arm__
+}
+
+Error
 NativeRegisterContextLinux_arm::DoReadFPR(void *buf, size_t buf_size)
 {
+#ifdef __arm__
     return NativeProcessLinux::PtraceWrapper(PTRACE_GETVFPREGS,
                                              m_thread.GetID(),
                                              nullptr,
                                              buf,
                                              buf_size);
+#else // __aarch64__
+    struct iovec ioVec;
+    ioVec.iov_base = buf;
+    ioVec.iov_len = buf_size;
+
+    return ReadRegisterSet(&ioVec, buf_size, NT_ARM_VFP);
+#endif // __arm__
 }
 
 Error
 NativeRegisterContextLinux_arm::DoWriteFPR(void *buf, size_t buf_size)
 {
+#ifdef __arm__
     return NativeProcessLinux::PtraceWrapper(PTRACE_SETVFPREGS,
                                              m_thread.GetID(),
                                              nullptr,
                                              buf,
                                              buf_size);
+#else // __aarch64__
+    struct iovec ioVec;
+    ioVec.iov_base = buf;
+    ioVec.iov_len = buf_size;
+
+    return WriteRegisterSet(&ioVec, buf_size, NT_ARM_VFP);
+#endif // __arm__
 }
 
-#endif // defined(__arm__)
+#endif // defined(__arm__) || defined(__arm64__) || defined(__aarch64__)

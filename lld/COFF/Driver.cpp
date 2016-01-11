@@ -586,6 +586,8 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
 
     // Windows specific -- Make sure we resolve all dllexported symbols.
     for (Export &E : Config->Exports) {
+      if (!E.ForwardTo.empty())
+        continue;
       E.Sym = addUndefined(E.Name);
       if (!E.Directives)
         Symtab.mangleMaybe(E.Sym);

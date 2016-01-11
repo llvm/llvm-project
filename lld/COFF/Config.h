@@ -25,6 +25,7 @@ using llvm::COFF::WindowsSubsystem;
 using llvm::StringRef;
 class DefinedAbsolute;
 class DefinedRelative;
+class StringChunk;
 class Undefined;
 
 // Short aliases.
@@ -41,6 +42,12 @@ struct Export {
   bool Noname = false;
   bool Data = false;
   bool Private = false;
+
+  // If an export is a form of /export:foo=dllname.bar, that means
+  // that foo should be exported as an alias to bar in the DLL.
+  // ForwardTo is set to "dllname.bar" part. Usually empty.
+  StringRef ForwardTo;
+  StringChunk *ForwardChunk = nullptr;
 
   // True if this /export option was in .drectves section.
   bool Directives = false;

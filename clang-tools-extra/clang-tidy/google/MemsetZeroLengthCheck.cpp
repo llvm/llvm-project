@@ -51,25 +51,29 @@ static StringRef getAsString(const MatchFinder::MatchResult &Result,
 void MemsetZeroLengthCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("decl");
 
+  // Note, this is:
+  // void *memset(void *buffer, int fill_char, size_t byte_count);
+  // Arg1 is fill_char, Arg2 is byte_count.
   const Expr *Arg1 = Call->getArg(1);
   const Expr *Arg2 = Call->getArg(2);
 
-  // Try to evaluate the second argument so we can also find values that are not
-  // just literals.
+  // Return if `byte_count` is not zero at compile time.
   llvm::APSInt Value1, Value2;
   if (Arg2->isValueDependent() ||
       !Arg2->EvaluateAsInt(Value2, *Result.Context) || Value2 != 0)
     return;
 
-  // If both arguments evaluate to zero emit a warning without fix suggestions.
+  // Return if `fill_char` is known to be zero or negative at compile
+  // time. In these cases, swapping the args would be a nop, or
+  // introduce a definite bug. The code is likely correct.
   if (!Arg1->isValueDependent() &&
       Arg1->EvaluateAsInt(Value1, *Result.Context) &&
-      (Value1 == 0 || Value1.isNegative())) {
-    diag(Call->getLocStart(), "memset of size zero");
+      (Value1 == 0 || Value1.isNegative()))
     return;
-  }
 
-  // Emit a warning and fix-its to swap the arguments.
+  // `byte_count` is known to be zero at compile time, and `fill_char` is
+  // either not known or known to be a positive integer. Emit a warning
+  // and fix-its to swap the arguments.
   auto D = diag(Call->getLocStart(),
                 "memset of size zero, potentially swapped arguments");
   SourceRange LHSRange = Arg1->getSourceRange();

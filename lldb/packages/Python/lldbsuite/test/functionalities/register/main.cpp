@@ -8,10 +8,6 @@
 //===----------------------------------------------------------------------===//
 #include <stdio.h>
 
-#if defined(__linux__)
-#include <sys/prctl.h>
-#endif
-
 #include <chrono>
 #include <thread>
 
@@ -19,18 +15,7 @@ long double outermost_return_long_double (long double my_long_double);
 
 int main (int argc, char const *argv[])
 {
-#if defined(__linux__)
-    // Immediately enable any ptracer so that we can allow the stub attach
-    // operation to succeed.  Some Linux kernels are locked down so that
-    // only an ancestor process can be a ptracer of a process.  This disables that
-    // restriction.  Without it, attach-related stub tests will fail.
-#if defined(PR_SET_PTRACER) && defined(PR_SET_PTRACER_ANY)
-    // For now we execute on best effort basis.  If this fails for
-    // some reason, so be it.
-    const int prctl_result = prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
-    static_cast<void> (prctl_result);
-#endif
-#endif
+    lldb_enable_attach();
 
     char my_string[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 0};
     double my_double = 1234.5678;

@@ -80,3 +80,14 @@ SYMTAB: __imp_exportfn2 in export.test.tmp.DLL
 SYMTAB: exportfn2 in export.test.tmp.DLL
 SYMTAB: __imp_exportfn3 in export.test.tmp.DLL
 SYMTAB: exportfn3 in export.test.tmp.DLL
+
+# RUN: lld-link /out:%t.dll /dll %t.obj /export:foo=kernel32.foobar
+# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=FORWARDER %s
+
+FORWARDER: Export Table:
+FORWARDER:  DLL name: export.test.tmp.dll
+FORWARDER:  Ordinal base: 0
+FORWARDER:  Ordinal      RVA  Name
+FORWARDER:        0        0
+FORWARDER:        1   0x1010  exportfn
+FORWARDER:        2   0x2062  foo

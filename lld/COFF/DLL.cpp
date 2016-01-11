@@ -320,8 +320,12 @@ public:
 
   void writeTo(uint8_t *Buf) const override {
     for (Export &E : Config->Exports) {
-      auto *D = cast<Defined>(E.Sym->repl());
-      write32le(Buf + OutputSectionOff + E.Ordinal * 4, D->getRVA());
+      uint8_t *P = Buf + OutputSectionOff + E.Ordinal * 4;
+      if (E.ForwardChunk) {
+        write32le(P, E.ForwardChunk->getRVA());
+      } else {
+        write32le(P, cast<Defined>(E.Sym->repl())->getRVA());
+      }
     }
   }
 
@@ -539,6 +543,15 @@ EdataContents::EdataContents() {
   for (Export &E : Config->Exports)
     if (!E.Noname)
       Names.push_back(new StringChunk(E.ExportName));
+
+  std::vector<Chunk *> Forwards;
+  for (Export &E : Config->Exports) {
+    if (E.ForwardTo.empty())
+      continue;
+    E.ForwardChunk = new StringChunk(E.ForwardTo);
+    Forwards.push_back(E.ForwardChunk);
+  }
+
   auto *NameTab = new NamePointersChunk(Names);
   auto *OrdinalTab = new ExportOrdinalChunk(Names.size());
   auto *Dir = new ExportDirectoryChunk(MaxOrdinal, Names.size(), DLLName,
@@ -549,6 +562,8 @@ EdataContents::EdataContents() {
   Chunks.push_back(std::unique_ptr<Chunk>(NameTab));
   Chunks.push_back(std::unique_ptr<Chunk>(OrdinalTab));
   for (Chunk *C : Names)
+    Chunks.push_back(std::unique_ptr<Chunk>(C));
+  for (Chunk *C : Forwards)
     Chunks.push_back(std::unique_ptr<Chunk>(C));
 }
 

@@ -48,13 +48,15 @@ void foo(void *a, int xsize, int ysize) {
 
   memset(a, -1, sizeof(int));
   memset(a, 0xcd, 1);
-  memset(a, v, 0);
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: memset of size zero
-// CHECK-FIXES: memset(a, v, 0);
 
+  // Don't warn when the fill char and the length are both known to be
+  // zero.  No bug is possible.
+  memset(a, 0, v);
+  memset(a, v, 0);
+
+  // -1 is clearly not a length by virtue of being negative, so no warning
+  // despite v == 0.
   memset(a, -1, v);
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: memset of size zero
-// CHECK-FIXES: memset(a, -1, v);
 
   memtmpl<0, int>();
 }

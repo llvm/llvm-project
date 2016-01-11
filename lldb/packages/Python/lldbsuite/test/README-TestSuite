@@ -157,3 +157,10 @@ o Writing test cases:
  then use SBInterpreter::HandleCommand to run the command.  You get the full result text 
  from the command in the command return object, and all the part where you are driving the 
  debugger to the point you want to test will be more robust.
+
+o Attaching in test cases:
+
+ If you need to attach to inferiors in your tests, you must make sure the inferior calls
+ lldb_enable_attach(), before the debugger attempts to attach. This function performs any
+ platform-specific processing needed to enable attaching to this process (e.g., on Linux, we
+ execute prctl(PR_SET_TRACER) syscall to disable protections present in some Linux systems).
