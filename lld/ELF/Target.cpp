@@ -1126,6 +1126,7 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 
 AArch64TargetInfo::AArch64TargetInfo() {
   CopyReloc = R_AARCH64_COPY;
+  IRelativeReloc = R_AARCH64_IRELATIVE;
   GotReloc = R_AARCH64_GLOB_DAT;
   PltReloc = R_AARCH64_JUMP_SLOT;
   LazyRelocations = true;
@@ -1216,11 +1217,15 @@ bool AArch64TargetInfo::relocNeedsGot(uint32_t Type,
 
 bool AArch64TargetInfo::relocNeedsPlt(uint32_t Type,
                                       const SymbolBody &S) const {
+  if (isGnuIFunc<ELF64LE>(S))
+    return true;
   switch (Type) {
   default:
     return false;
   case R_AARCH64_CALL26:
+  case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
+  case R_AARCH64_TSTBR14:
     return canBePreempted(&S, true);
   }
 }
@@ -1286,6 +1291,12 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     or32le(Loc, (X & 0x0FFFFFFC) >> 2);
     break;
   }
+  case R_AARCH64_CONDBR19: {
+    uint64_t X = SA - P;
+    checkInt<21>(X, Type);
+    or32le(Loc, (X & 0x1FFFFC) << 3);
+    break;
+  }
   case R_AARCH64_LD64_GOT_LO12_NC:
     checkAlignment<8>(SA, Type);
     or32le(Loc, (SA & 0xFF8) << 7);
@@ -1310,6 +1321,12 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   case R_AARCH64_PREL64:
     write64le(Loc, SA - P);
     break;
+  case R_AARCH64_TSTBR14: {
+    uint64_t X = SA - P;
+    checkInt<16>(X, Type);
+    or32le(Loc, (X & 0xFFFC) << 3);
+    break;
+  }
   default:
     error("unrecognized reloc " + Twine(Type));
   }

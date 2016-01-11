@@ -28,6 +28,7 @@ class ChangeValueAPITestCase(TestBase):
 
     @expectedFailureWindows("llvm.org/pr24772")
     @add_test_categories(['pyapi'])
+    @expectedFlakeyLinux("llvm.org/pr25652")
     def test_change_value(self):
         """Exercise the SBValue::SetValueFromCString API."""
         d = {'EXE': self.exe_name}

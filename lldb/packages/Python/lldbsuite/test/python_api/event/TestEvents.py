@@ -13,6 +13,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 @skipIfDarwin  # llvm.org/pr25924, sometimes generating SIGSEGV
+@skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
 class EventAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -25,7 +26,6 @@ class EventAPITestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @expectedFailureLinux("llvm.org/pr23730") # Flaky, fails ~1/10 cases
-    @skipIfLinux # skip to avoid crashes
     def test_listen_for_and_print_event(self):
         """Exercise SBEvent API."""
         self.build()
