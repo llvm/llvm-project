@@ -560,10 +560,10 @@ bool matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
 
 // Metafunction to determine if type T has a member called
 // getDecl.
-#if defined(_MSC_VER) && (_MSC_VER < 1900) && !defined(__clang__)
-// For old versions of MSVC, we use a weird nonstandard __if_exists
-// statement, since before MSVC2015, it was not standards-conformant
-// enough to compile the usual code below.
+#if defined(_MSC_VER) && !defined(__clang__)
+// For MSVC, we use a weird nonstandard __if_exists statement, as it
+// is not standards-conformant enough to properly compile the standard
+// code below. (At least up through MSVC 2015 require this workaround)
 template <typename T> struct has_getDecl {
   __if_exists(T::getDecl) {
     enum { value = 1 };

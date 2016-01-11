@@ -2980,7 +2980,7 @@ static void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
   ExtractArgs.push_back(OutFile);
 
   const char *Exec = Args.MakeArgString(TC.GetProgramPath("objcopy"));
-  InputInfo II(Output.getFilename(), types::TY_Object, Output.getFilename());
+  InputInfo II(types::TY_Object, Output.getFilename(), Output.getFilename());
 
   // First extract the dwo sections.
   C.addCommand(llvm::make_unique<Command>(JA, T, Exec, ExtractArgs, II));
@@ -9014,7 +9014,7 @@ void nacltools::AssemblerARM::ConstructJob(Compilation &C, const JobAction &JA,
                                            const char *LinkingOutput) const {
   const toolchains::NaClToolChain &ToolChain =
       static_cast<const toolchains::NaClToolChain &>(getToolChain());
-  InputInfo NaClMacros(ToolChain.GetNaClArmMacrosPath(), types::TY_PP_Asm,
+  InputInfo NaClMacros(types::TY_PP_Asm, ToolChain.GetNaClArmMacrosPath(),
                        "nacl-arm-macros.s");
   InputInfoList NewInputs;
   NewInputs.push_back(NaClMacros);

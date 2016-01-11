@@ -40,11 +40,6 @@ Compilation::~Compilation() {
     if (it->second != TranslatedArgs)
       delete it->second;
 
-  // Free the actions, if built.
-  for (ActionList::iterator it = Actions.begin(), ie = Actions.end();
-       it != ie; ++it)
-    delete *it;
-
   // Free redirections of stdout/stderr.
   if (Redirects) {
     delete Redirects[1];
@@ -208,7 +203,8 @@ void Compilation::initCompilationForDiagnostics() {
   ForDiagnostics = true;
 
   // Free actions and jobs.
-  DeleteContainerPointers(Actions);
+  Actions.clear();
+  AllActions.clear();
   Jobs.clear();
 
   // Clear temporary/results file lists.

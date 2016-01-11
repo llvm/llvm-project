@@ -48,7 +48,12 @@ class Compilation {
   /// own argument translation.
   llvm::opt::DerivedArgList *TranslatedArgs;
 
-  /// The list of actions.
+  /// The list of actions we've created via MakeAction.  This is not accessible
+  /// to consumers; it's here just to manage ownership.
+  std::vector<std::unique_ptr<Action>> AllActions;
+
+  /// The list of actions.  This is maintained and modified by consumers, via
+  /// getActions().
   ActionList Actions;
 
   /// The root list of jobs.
@@ -104,6 +109,15 @@ public:
 
   ActionList &getActions() { return Actions; }
   const ActionList &getActions() const { return Actions; }
+
+  /// Creates a new Action owned by this Compilation.
+  ///
+  /// The new Action is *not* added to the list returned by getActions().
+  template <typename T, typename... Args> T *MakeAction(Args &&... Arg) {
+    T *RawPtr = new T(std::forward<Args>(Arg)...);
+    AllActions.push_back(std::unique_ptr<Action>(RawPtr));
+    return RawPtr;
+  }
 
   JobList &getJobs() { return Jobs; }
   const JobList &getJobs() const { return Jobs; }

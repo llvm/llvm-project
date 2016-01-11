@@ -1049,19 +1049,15 @@ void Driver::BuildUniversalActions(Compilation &C, const ToolChain &TC,
           << types::getTypeName(Act->getType());
 
     ActionList Inputs;
-    for (unsigned i = 0, e = Archs.size(); i != e; ++i) {
-      Inputs.push_back(
-          new BindArchAction(std::unique_ptr<Action>(Act), Archs[i]));
-      if (i != 0)
-        Inputs.back()->setOwnsInputs(false);
-    }
+    for (unsigned i = 0, e = Archs.size(); i != e; ++i)
+      Inputs.push_back(C.MakeAction<BindArchAction>(Act, Archs[i]));
 
     // Lipo if necessary, we do it this way because we need to set the arch flag
     // so that -Xarch_ gets overwritten.
     if (Inputs.size() == 1 || Act->getType() == types::TY_Nothing)
       Actions.append(Inputs.begin(), Inputs.end());
     else
-      Actions.push_back(new LipoJobAction(Inputs, Act->getType()));
+      Actions.push_back(C.MakeAction<LipoJobAction>(Inputs, Act->getType()));
 
     // Handle debug info queries.
     Arg *A = Args.getLastArg(options::OPT_g_Group);
@@ -1077,15 +1073,16 @@ void Driver::BuildUniversalActions(Compilation &C, const ToolChain &TC,
         ActionList Inputs;
         Inputs.push_back(Actions.back());
         Actions.pop_back();
-        Actions.push_back(new DsymutilJobAction(Inputs, types::TY_dSYM));
+        Actions.push_back(
+            C.MakeAction<DsymutilJobAction>(Inputs, types::TY_dSYM));
       }
 
       // Verify the debug info output.
       if (Args.hasArg(options::OPT_verify_debug_info)) {
-        std::unique_ptr<Action> VerifyInput(Actions.back());
+        Action* LastAction = Actions.back();
         Actions.pop_back();
-        Actions.push_back(new VerifyDebugInfoJobAction(std::move(VerifyInput),
-                                                       types::TY_Nothing));
+        Actions.push_back(C.MakeAction<VerifyDebugInfoJobAction>(
+            LastAction, types::TY_Nothing));
       }
     }
   }
@@ -1283,16 +1280,15 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
 // Actions and /p Current is released. Otherwise the function creates
 // and returns a new CudaHostAction which wraps /p Current and device
 // side actions.
-static std::unique_ptr<Action>
-buildCudaActions(Compilation &C, DerivedArgList &Args, const Arg *InputArg,
-                 std::unique_ptr<Action> HostAction, ActionList &Actions) {
+static Action *buildCudaActions(Compilation &C, DerivedArgList &Args,
+                                const Arg *InputArg, Action *HostAction,
+                                ActionList &Actions) {
   Arg *PartialCompilationArg = Args.getLastArg(options::OPT_cuda_host_only,
                                                options::OPT_cuda_device_only);
   // Host-only compilation case.
   if (PartialCompilationArg &&
       PartialCompilationArg->getOption().matches(options::OPT_cuda_host_only))
-    return std::unique_ptr<Action>(
-        new CudaHostAction(std::move(HostAction), {}));
+    return C.MakeAction<CudaHostAction>(HostAction, ActionList());
 
   // Collect all cuda_gpu_arch parameters, removing duplicates.
   SmallVector<const char *, 4> GpuArchList;
@@ -1301,8 +1297,12 @@ buildCudaActions(Compilation &C, DerivedArgList &Args, const Arg *InputArg,
     if (!A->getOption().matches(options::OPT_cuda_gpu_arch_EQ))
       continue;
     A->claim();
-    if (GpuArchNames.insert(A->getValue()).second)
-      GpuArchList.push_back(A->getValue());
+
+    const auto& Arch = A->getValue();
+    if (!CudaDeviceAction::IsValidGpuArchName(Arch))
+      C.getDriver().Diag(clang::diag::err_drv_cuda_bad_gpu_arch) << Arch;
+    else if (GpuArchNames.insert(Arch).second)
+      GpuArchList.push_back(Arch);
   }
 
   // Default to sm_20 which is the lowest common denominator for supported GPUs.
@@ -1347,12 +1347,12 @@ buildCudaActions(Compilation &C, DerivedArgList &Args, const Arg *InputArg,
     }
 
     for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I)
-      Actions.push_back(new CudaDeviceAction(
-          std::unique_ptr<Action>(CudaDeviceActions[I]), GpuArchList[I],
-          /* AtTopLevel */ true));
+      Actions.push_back(C.MakeAction<CudaDeviceAction>(CudaDeviceActions[I],
+                                                       GpuArchList[I],
+                                                       /* AtTopLevel */ true));
     // Kill host action in case of device-only compilation.
     if (DeviceOnlyCompilation)
-      HostAction.reset(nullptr);
+      return nullptr;
     return HostAction;
   }
 
@@ -1360,13 +1360,12 @@ buildCudaActions(Compilation &C, DerivedArgList &Args, const Arg *InputArg,
   // with AtTopLevel=false and become inputs for the host action.
   ActionList DeviceActions;
   for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I)
-    DeviceActions.push_back(new CudaDeviceAction(
-        std::unique_ptr<Action>(CudaDeviceActions[I]), GpuArchList[I],
-        /* AtTopLevel */ false));
+    DeviceActions.push_back(
+        C.MakeAction<CudaDeviceAction>(CudaDeviceActions[I], GpuArchList[I],
+                                       /* AtTopLevel */ false));
   // Return a new host action that incorporates original host action and all
   // device actions.
-  return std::unique_ptr<Action>(
-      new CudaHostAction(std::move(HostAction), DeviceActions));
+  return C.MakeAction<CudaHostAction>(HostAction, DeviceActions);
 }
 
 void Driver::BuildActions(Compilation &C, const ToolChain &TC,
@@ -1474,7 +1473,7 @@ void Driver::BuildActions(Compilation &C, const ToolChain &TC,
             : FinalPhase;
 
     // Build the pipeline for this file.
-    std::unique_ptr<Action> Current(new InputAction(*InputArg, InputType));
+    Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
     for (SmallVectorImpl<phases::ID>::iterator i = PL.begin(), e = PL.end();
          i != e; ++i) {
       phases::ID Phase = *i;
@@ -1486,7 +1485,8 @@ void Driver::BuildActions(Compilation &C, const ToolChain &TC,
       // Queue linker inputs.
       if (Phase == phases::Link) {
         assert((i + 1) == e && "linking must be final compilation step.");
-        LinkerInputs.push_back(Current.release());
+        LinkerInputs.push_back(Current);
+        Current = nullptr;
         break;
       }
 
@@ -1497,11 +1497,10 @@ void Driver::BuildActions(Compilation &C, const ToolChain &TC,
         continue;
 
       // Otherwise construct the appropriate action.
-      Current = ConstructPhaseAction(TC, Args, Phase, std::move(Current));
+      Current = ConstructPhaseAction(C, TC, Args, Phase, Current);
 
       if (InputType == types::TY_CUDA && Phase == CudaInjectionPhase) {
-        Current =
-            buildCudaActions(C, Args, InputArg, std::move(Current), Actions);
+        Current = buildCudaActions(C, Args, InputArg, Current, Actions);
         if (!Current)
           break;
       }
@@ -1512,12 +1511,13 @@ void Driver::BuildActions(Compilation &C, const ToolChain &TC,
 
     // If we ended with something, add to the output list.
     if (Current)
-      Actions.push_back(Current.release());
+      Actions.push_back(Current);
   }
 
   // Add a link action if necessary.
   if (!LinkerInputs.empty())
-    Actions.push_back(new LinkJobAction(LinkerInputs, types::TY_Image));
+    Actions.push_back(
+        C.MakeAction<LinkJobAction>(LinkerInputs, types::TY_Image));
 
   // If we are linking, claim any options which are obviously only used for
   // compilation.
@@ -1534,10 +1534,9 @@ void Driver::BuildActions(Compilation &C, const ToolChain &TC,
   Args.ClaimAllArgs(options::OPT_cuda_host_only);
 }
 
-std::unique_ptr<Action>
-Driver::ConstructPhaseAction(const ToolChain &TC, const ArgList &Args,
-                             phases::ID Phase,
-                             std::unique_ptr<Action> Input) const {
+Action *Driver::ConstructPhaseAction(Compilation &C, const ToolChain &TC,
+                                     const ArgList &Args, phases::ID Phase,
+                                     Action *Input) const {
   llvm::PrettyStackTraceString CrashInfo("Constructing phase actions");
   // Build the appropriate action.
   switch (Phase) {
@@ -1557,7 +1556,7 @@ Driver::ConstructPhaseAction(const ToolChain &TC, const ArgList &Args,
       assert(OutputTy != types::TY_INVALID &&
              "Cannot preprocess this input type!");
     }
-    return llvm::make_unique<PreprocessJobAction>(std::move(Input), OutputTy);
+    return C.MakeAction<PreprocessJobAction>(Input, OutputTy);
   }
   case phases::Precompile: {
     types::ID OutputTy = types::TY_PCH;
@@ -1565,53 +1564,43 @@ Driver::ConstructPhaseAction(const ToolChain &TC, const ArgList &Args,
       // Syntax checks should not emit a PCH file
       OutputTy = types::TY_Nothing;
     }
-    return llvm::make_unique<PrecompileJobAction>(std::move(Input), OutputTy);
+    return C.MakeAction<PrecompileJobAction>(Input, OutputTy);
   }
   case phases::Compile: {
     if (Args.hasArg(options::OPT_fsyntax_only))
-      return llvm::make_unique<CompileJobAction>(std::move(Input),
-                                                 types::TY_Nothing);
+      return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);
     if (Args.hasArg(options::OPT_rewrite_objc))
-      return llvm::make_unique<CompileJobAction>(std::move(Input),
-                                                 types::TY_RewrittenObjC);
+      return C.MakeAction<CompileJobAction>(Input, types::TY_RewrittenObjC);
     if (Args.hasArg(options::OPT_rewrite_legacy_objc))
-      return llvm::make_unique<CompileJobAction>(std::move(Input),
-                                                 types::TY_RewrittenLegacyObjC);
+      return C.MakeAction<CompileJobAction>(Input,
+                                            types::TY_RewrittenLegacyObjC);
     if (Args.hasArg(options::OPT__analyze, options::OPT__analyze_auto))
-      return llvm::make_unique<AnalyzeJobAction>(std::move(Input),
-                                                 types::TY_Plist);
+      return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT__migrate))
-      return llvm::make_unique<MigrateJobAction>(std::move(Input),
-                                                 types::TY_Remap);
+      return C.MakeAction<MigrateJobAction>(Input, types::TY_Remap);
     if (Args.hasArg(options::OPT_emit_ast))
-      return llvm::make_unique<CompileJobAction>(std::move(Input),
-                                                 types::TY_AST);
+      return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
     if (Args.hasArg(options::OPT_module_file_info))
-      return llvm::make_unique<CompileJobAction>(std::move(Input),
-                                                 types::TY_ModuleFile);
+      return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
-      return llvm::make_unique<VerifyPCHJobAction>(std::move(Input),
-                                                   types::TY_Nothing);
-    return llvm::make_unique<CompileJobAction>(std::move(Input),
-                                               types::TY_LLVM_BC);
+      return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
+    return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
     if (isUsingLTO()) {
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
-      return llvm::make_unique<BackendJobAction>(std::move(Input), Output);
+      return C.MakeAction<BackendJobAction>(Input, Output);
     }
     if (Args.hasArg(options::OPT_emit_llvm)) {
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
-      return llvm::make_unique<BackendJobAction>(std::move(Input), Output);
+      return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    return llvm::make_unique<BackendJobAction>(std::move(Input),
-                                               types::TY_PP_Asm);
+    return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }
   case phases::Assemble:
-    return llvm::make_unique<AssembleJobAction>(std::move(Input),
-                                                types::TY_Object);
+    return C.MakeAction<AssembleJobAction>(Input, types::TY_Object);
   }
 
   llvm_unreachable("invalid phase in ConstructPhaseAction");
@@ -1658,12 +1647,11 @@ void Driver::BuildJobs(Compilation &C) const {
         LinkingOutput = getDefaultImageName();
     }
 
-    InputInfo II;
     BuildJobsForAction(C, A, &C.getDefaultToolChain(),
                        /*BoundArch*/ nullptr,
                        /*AtTopLevel*/ true,
                        /*MultipleArchs*/ ArchNames.size() > 1,
-                       /*LinkingOutput*/ LinkingOutput, II);
+                       /*LinkingOutput*/ LinkingOutput);
   }
 
   // If the user passed -Qunused-arguments or there were errors, don't warn
@@ -1791,21 +1779,19 @@ static const Tool *selectToolForJob(Compilation &C, bool SaveTemps,
   return ToolForJob;
 }
 
-void Driver::BuildJobsForAction(Compilation &C, const Action *A,
-                                const ToolChain *TC, const char *BoundArch,
-                                bool AtTopLevel, bool MultipleArchs,
-                                const char *LinkingOutput,
-                                InputInfo &Result) const {
+InputInfo Driver::BuildJobsForAction(Compilation &C, const Action *A,
+                                     const ToolChain *TC, const char *BoundArch,
+                                     bool AtTopLevel, bool MultipleArchs,
+                                     const char *LinkingOutput) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation jobs");
 
   InputInfoList CudaDeviceInputInfos;
   if (const CudaHostAction *CHA = dyn_cast<CudaHostAction>(A)) {
-    InputInfo II;
     // Append outputs of device jobs to the input list.
     for (const Action *DA : CHA->getDeviceActions()) {
-      BuildJobsForAction(C, DA, TC, nullptr, AtTopLevel,
-                         /*MultipleArchs*/ false, LinkingOutput, II);
-      CudaDeviceInputInfos.push_back(II);
+      CudaDeviceInputInfos.push_back(
+          BuildJobsForAction(C, DA, TC, nullptr, AtTopLevel,
+                             /*MultipleArchs*/ false, LinkingOutput));
     }
     // Override current action with a real host compile action and continue
     // processing it.
@@ -1819,11 +1805,9 @@ void Driver::BuildJobsForAction(Compilation &C, const Action *A,
     Input.claim();
     if (Input.getOption().matches(options::OPT_INPUT)) {
       const char *Name = Input.getValue();
-      Result = InputInfo(Name, A->getType(), Name);
-    } else {
-      Result = InputInfo(&Input, A->getType(), "");
+      return InputInfo(A, Name, /* BaseInput = */ Name);
     }
-    return;
+    return InputInfo(A, &Input, /* BaseInput = */ "");
   }
 
   if (const BindArchAction *BAA = dyn_cast<BindArchAction>(A)) {
@@ -1837,19 +1821,17 @@ void Driver::BuildJobsForAction(Compilation &C, const Action *A,
     else
       TC = &C.getDefaultToolChain();
 
-    BuildJobsForAction(C, *BAA->begin(), TC, ArchName, AtTopLevel,
-                       MultipleArchs, LinkingOutput, Result);
-    return;
+    return BuildJobsForAction(C, *BAA->begin(), TC, ArchName, AtTopLevel,
+                              MultipleArchs, LinkingOutput);
   }
 
   if (const CudaDeviceAction *CDA = dyn_cast<CudaDeviceAction>(A)) {
     // Initial processing of CudaDeviceAction carries host params.
     // Call BuildJobsForAction() again, now with correct device parameters.
     assert(CDA->getGpuArchName() && "No GPU name in device action.");
-    BuildJobsForAction(C, *CDA->begin(), C.getCudaDeviceToolChain(),
-                       CDA->getGpuArchName(), CDA->isAtTopLevel(),
-                       /*MultipleArchs*/ true, LinkingOutput, Result);
-    return;
+    return BuildJobsForAction(C, *CDA->begin(), C.getCudaDeviceToolChain(),
+                              CDA->getGpuArchName(), CDA->isAtTopLevel(),
+                              /*MultipleArchs*/ true, LinkingOutput);
   }
 
   const ActionList *Inputs = &A->getInputs();
@@ -1859,16 +1841,15 @@ void Driver::BuildJobsForAction(Compilation &C, const Action *A,
   const Tool *T =
       selectToolForJob(C, isSaveTempsEnabled(), TC, JA, Inputs, CollapsedCHA);
   if (!T)
-    return;
+    return InputInfo();
 
   // If we've collapsed action list that contained CudaHostAction we
   // need to build jobs for device-side inputs it may have held.
   if (CollapsedCHA) {
-    InputInfo II;
     for (const Action *DA : CollapsedCHA->getDeviceActions()) {
-      BuildJobsForAction(C, DA, TC, "", AtTopLevel,
-                         /*MultipleArchs*/ false, LinkingOutput, II);
-      CudaDeviceInputInfos.push_back(II);
+      CudaDeviceInputInfos.push_back(
+          BuildJobsForAction(C, DA, TC, "", AtTopLevel,
+                             /*MultipleArchs*/ false, LinkingOutput));
     }
   }
 
@@ -1878,14 +1859,11 @@ void Driver::BuildJobsForAction(Compilation &C, const Action *A,
     // Treat dsymutil and verify sub-jobs as being at the top-level too, they
     // shouldn't get temporary output names.
     // FIXME: Clean this up.
-    bool SubJobAtTopLevel = false;
-    if (AtTopLevel && (isa<DsymutilJobAction>(A) || isa<VerifyJobAction>(A)))
-      SubJobAtTopLevel = true;
-
-    InputInfo II;
-    BuildJobsForAction(C, Input, TC, BoundArch, SubJobAtTopLevel, MultipleArchs,
-                       LinkingOutput, II);
-    InputInfos.push_back(II);
+    bool SubJobAtTopLevel =
+        AtTopLevel && (isa<DsymutilJobAction>(A) || isa<VerifyJobAction>(A));
+    InputInfos.push_back(BuildJobsForAction(C, Input, TC, BoundArch,
+                                            SubJobAtTopLevel, MultipleArchs,
+                                            LinkingOutput));
   }
 
   // Always use the first input as the base input.
@@ -1901,12 +1879,13 @@ void Driver::BuildJobsForAction(Compilation &C, const Action *A,
     InputInfos.append(CudaDeviceInputInfos.begin(), CudaDeviceInputInfos.end());
 
   // Determine the place to write output to, if any.
+  InputInfo Result;
   if (JA->getType() == types::TY_Nothing)
-    Result = InputInfo(A->getType(), BaseInput);
+    Result = InputInfo(A, BaseInput);
   else
-    Result = InputInfo(GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
-                                          AtTopLevel, MultipleArchs),
-                       A->getType(), BaseInput);
+    Result = InputInfo(A, GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
+                                             AtTopLevel, MultipleArchs),
+                       BaseInput);
 
   if (CCCPrintBindings && !CCGenDiagnostics) {
     llvm::errs() << "# \"" << T->getToolChain().getTripleString() << '"'
@@ -1921,6 +1900,7 @@ void Driver::BuildJobsForAction(Compilation &C, const Action *A,
     T->ConstructJob(C, *JA, Result, InputInfos,
                     C.getArgsForToolChain(TC, BoundArch), LinkingOutput);
   }
+  return Result;
 }
 
 const char *Driver::getDefaultImageName() const {

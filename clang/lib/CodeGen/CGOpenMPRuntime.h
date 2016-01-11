@@ -335,7 +335,7 @@ private:
     public:
       /// \brief Kind of a given entry. Currently, only target regions are
       /// supported.
-      enum OffloadingEntryInfoKinds {
+      enum OffloadingEntryInfoKinds : unsigned {
         // Entry is a target region.
         OFFLOAD_ENTRY_INFO_TARGET_REGION = 0,
         // Invalid entry info.
