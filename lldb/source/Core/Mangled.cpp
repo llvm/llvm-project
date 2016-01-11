@@ -44,6 +44,7 @@
 #include "lldb/Core/Timer.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include <ctype.h>
 #include <functional>
 #include <mutex>
@@ -66,17 +67,9 @@ cstring_mangling_scheme(const char *s)
 }
 
 static inline bool
-cstring_is_swift_mangled (const char *s)
-{
-    if (s)
-        return s[0] == '_'&& s[1] == 'T';
-    return false;
-}
-
-static inline bool
 cstring_is_mangled (const char* s)
 {
-    return cstring_mangling_scheme(s) != Mangled::eManglingSchemeNone || cstring_is_swift_mangled(s);
+    return cstring_mangling_scheme(s) != Mangled::eManglingSchemeNone || SwiftLanguageRuntime::IsSwiftMangledName(s);
 }
 
 static const ConstString &
@@ -374,7 +367,7 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
         }
         else if (mangling_scheme == eManglingSchemeNone &&
                  !m_mangled.GetMangledCounterpart(m_demangled) &&
-                 cstring_is_swift_mangled(mangled_name))
+                 SwiftLanguageRuntime::IsSwiftMangledName(mangled_name))
         {
             std::string demangled(swift::Demangle::demangleSymbolAsString(mangled_name, strlen(mangled_name)));
             if (!demangled.empty())
@@ -403,7 +396,7 @@ Mangled::GetDisplayDemangledName (lldb::LanguageType language) const
             
             if (mangled)
             {
-                if (cstring_is_swift_mangled(mangled))
+                if (SwiftLanguageRuntime::IsSwiftMangledName(mangled))
                 {
                     auto display_cache = ::GetDisplayDemangledNamesCache();
                     if (display_cache &&
@@ -452,6 +445,9 @@ Mangled::NameMatches (const RegularExpression& regex, lldb::LanguageType languag
 ConstString
 Mangled::GetName (lldb::LanguageType language, Mangled::NamePreference preference) const
 {
+    if (preference == ePreferMangled && m_mangled)
+        return m_mangled;
+
     ConstString demangled = GetDemangledName(language);
 
     if (preference == ePreferDemangledWithoutArguments)
@@ -466,12 +462,7 @@ Mangled::GetName (lldb::LanguageType language, Mangled::NamePreference preferenc
             return demangled;
         return m_mangled;
     }
-    else
-    {
-        if (m_mangled)
-            return m_mangled;
-        return demangled;
-    }
+    return demangled;
 }
 
 //----------------------------------------------------------------------
@@ -517,6 +508,14 @@ Mangled::MemorySize () const
     return m_mangled.MemorySize() + m_demangled.MemorySize();
 }
 
+//----------------------------------------------------------------------
+// We "guess" the language because we can't determine a symbol's language
+// from it's name.  For example, a Pascal symbol can be mangled using the
+// C++ Itanium scheme, and defined in a compilation unit within the same
+// module as other C++ units.  In addition, different targets could have
+// different ways of mangling names from a given language, likewise the
+// compilation units within those targets.
+//----------------------------------------------------------------------
 lldb::LanguageType
 Mangled::GuessLanguage () const
 {
@@ -525,14 +524,16 @@ Mangled::GuessLanguage () const
     {
         if (GetDemangledName(lldb::eLanguageTypeUnknown))
         {
-            const char *mangled_cstr = mangled.GetCString();
-            if (cstring_mangling_scheme (mangled_cstr) == Mangled::eManglingSchemeItanium)
+            const char *mangled_name = mangled.GetCString();
+            if (CPlusPlusLanguage::IsCPPMangledName(mangled_name))
                 return lldb::eLanguageTypeC_plus_plus;
-            else if (cstring_is_swift_mangled(mangled_cstr))
+            else if (ObjCLanguage::IsPossibleObjCMethodName(mangled_name))
+                return lldb::eLanguageTypeObjC;
+            else if (SwiftLanguageRuntime::IsSwiftMangledName(mangled_name))
                 return lldb::eLanguageTypeSwift;
         }
     }
-    return  lldb::eLanguageTypeUnknown;
+    return lldb::eLanguageTypeUnknown;
 }
 
 //----------------------------------------------------------------------

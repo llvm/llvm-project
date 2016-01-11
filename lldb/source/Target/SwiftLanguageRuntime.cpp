@@ -3006,8 +3006,6 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct (ValueObject &in_value,
     
     for (size_t i = 0; i < num_type_args; i++)
     {
-        bool failed = false;
-        
         lldb::TemplateArgumentKind kind;
         CompilerType type_arg;
         type_arg = struct_type.GetTemplateArgument(i, kind);

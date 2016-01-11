@@ -253,6 +253,9 @@ public:
     uint32_t
     GetResolvedMask () const;
 
+    lldb::LanguageType
+    GetLanguage () const;
+
     //------------------------------------------------------------------
     /// Find a block that defines the function represented by this
     /// symbol context.

@@ -19,7 +19,6 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureDarwin("rdar://15367566")
     @expectedFailureFreeBSD('llvm.org/pr15824')
     @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureWindows("llvm.org/pr24668") # Breakpoints not resolved correctly
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
@@ -27,6 +26,7 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin('llvm.org/pr23669')
+    @expectedFailureFreeBSD('llvm.org/pr15824')
     @expectedFailureWindows("llvm.org/pr24660")
     def test_state_after_continue(self):
         """Test thread state after continue."""

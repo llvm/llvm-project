@@ -7892,6 +7892,12 @@ SwiftASTContext::DeclContextGetName (void *opaque_decl_ctx)
     return ConstString();
 }
 
+ConstString
+SwiftASTContext::DeclContextGetScopeQualifiedName (void *opaque_decl_ctx)
+{
+    return ConstString();
+}
+
 bool
 SwiftASTContext::DeclContextIsClassMethod (void *opaque_decl_ctx,
                                            lldb::LanguageType *language_ptr,

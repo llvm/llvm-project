@@ -20,7 +20,6 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
     @skipIfFreeBSD # test frequently times out or hangs
     @expectedFailureFreeBSD('llvm.org/pr18522') # hits break in another thread in testrun
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows # Thread specific breakpoints cause the inferior to crash.
     @expectedFlakeyLinux # this test fails 6/100 dosep runs
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""

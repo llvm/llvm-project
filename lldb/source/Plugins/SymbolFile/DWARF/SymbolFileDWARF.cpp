@@ -1093,12 +1093,17 @@ SymbolFileDWARF::ParseCompileUnitSupportFiles (const SymbolContext& sc, FileSpec
             const char * cu_comp_dir = resolveCompDir(cu_die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr));
 
             const dw_offset_t stmt_list = cu_die.GetAttributeValueAsUnsigned(DW_AT_stmt_list, DW_INVALID_OFFSET);
-
-            // All file indexes in DWARF are one based and a file of index zero is
-            // supposed to be the compile unit itself.
-            support_files.Append (*sc.comp_unit);
-
-            return DWARFDebugLine::ParseSupportFiles(sc.comp_unit->GetModule(), get_debug_line_data(), cu_comp_dir, stmt_list, support_files);
+            if (stmt_list != DW_INVALID_OFFSET)
+            {
+                // All file indexes in DWARF are one based and a file of index zero is
+                // supposed to be the compile unit itself.
+                support_files.Append (*sc.comp_unit);
+                return DWARFDebugLine::ParseSupportFiles(sc.comp_unit->GetModule(),
+                                                         get_debug_line_data(),
+                                                         cu_comp_dir,
+                                                         stmt_list,
+                                                         support_files);
+            }
         }
     }
     return false;
@@ -3085,6 +3090,40 @@ SymbolFileDWARF::FindFunctions(const RegularExpression& regex, bool include_inli
     return sc_list.GetSize() - original_size;
 }
 
+void
+SymbolFileDWARF::GetMangledNamesForFunction (const std::string &scope_qualified_name,
+                                             std::vector<ConstString> &mangled_names)
+{
+    DWARFDebugInfo* info = DebugInfo();
+    uint32_t num_comp_units = 0;
+    if (info)
+        num_comp_units = info->GetNumCompileUnits();
+
+    for (uint32_t i = 0; i < num_comp_units; i++)
+    {
+        DWARFCompileUnit *cu = info->GetCompileUnitAtIndex(i);
+        if (cu == nullptr)
+            continue;
+
+        SymbolFileDWARFDwo *dwo = cu->GetDwoSymbolFile();
+        if (dwo)
+            dwo->GetMangledNamesForFunction(scope_qualified_name, mangled_names);
+    }
+
+    NameToOffsetMap::iterator iter = m_function_scope_qualified_name_map.find(scope_qualified_name);
+    if (iter == m_function_scope_qualified_name_map.end())
+        return;
+
+    DIERefSetSP set_sp = (*iter).second;
+    std::set<DIERef>::iterator set_iter;
+    for (set_iter = set_sp->begin(); set_iter != set_sp->end(); set_iter++)
+    {
+        DWARFDIE die = DebugInfo()->GetDIE (*set_iter);
+        mangled_names.push_back(ConstString(die.GetMangledName()));
+    }
+}
+
+
 uint32_t
 SymbolFileDWARF::FindTypes (const SymbolContext& sc, 
                             const ConstString &name, 
@@ -3909,6 +3948,24 @@ SymbolFileDWARF::ParseType (const SymbolContext& sc, const DWARFDIE &die, bool *
                     TypeList* type_list = GetTypeList();
                     if (type_list)
                         type_list->Insert(type_sp);
+
+                    if (die.Tag() == DW_TAG_subprogram)
+                    {
+                        DIERef die_ref = die.GetDIERef();
+                        std::string scope_qualified_name(GetDeclContextForUID(die.GetID()).GetScopeQualifiedName().AsCString(""));
+                        if (scope_qualified_name.size())
+                        {
+                            NameToOffsetMap::iterator iter = m_function_scope_qualified_name_map.find(scope_qualified_name);
+                            if (iter != m_function_scope_qualified_name_map.end())
+                                (*iter).second->insert(die_ref);
+                            else
+                            {
+                                DIERefSetSP new_set(new std::set<DIERef>);
+                                new_set->insert(die_ref);
+                                m_function_scope_qualified_name_map.emplace(std::make_pair(scope_qualified_name, new_set));
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -4582,7 +4639,10 @@ SymbolFileDWARF::ParseVariableDIE
                 }
                 else
                 {
-                    scope = eValueTypeVariableLocal;
+                    if (location_is_const_value_data)
+                        scope = eValueTypeVariableStatic;
+                    else
+                        scope = eValueTypeVariableLocal;
                 }
             }
 

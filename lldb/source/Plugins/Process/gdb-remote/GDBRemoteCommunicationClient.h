@@ -619,6 +619,7 @@ protected:
         m_supports_QEnvironment:1,
         m_supports_QEnvironmentHexEncoded:1,
         m_supports_qSymbol:1,
+        m_supports_qModuleInfo:1,
         m_supports_jThreadsInfo:1;
     
     lldb::pid_t m_curr_pid;

@@ -1144,29 +1144,11 @@ def getExpectedTimeouts(platform_name):
 
     expected_timeout = set()
 
-    if target.startswith("linux"):
-        expected_timeout |= {
-            "TestConnectRemote.py",
-            "TestCreateAfterAttach.py",
-            "TestEvents.py",
-            "TestExitDuringStep.py",
-
-            # Times out in ~10% of the times on the build bot
-            "TestHelloWorld.py",
-            "TestMultithreaded.py",
-            "TestRegisters.py",  # ~12/600 dosep runs (build 3120-3122)
-            "TestThreadStepOut.py",
-        }
-    elif target.startswith("android"):
+    if target.startswith("android"):
         expected_timeout |= {
             "TestExitDuringStep.py",
             "TestHelloWorld.py",
         }
-        if host.startswith("win32"):
-            expected_timeout |= {
-                "TestEvents.py",
-                "TestThreadStates.py",
-            }
     elif target.startswith("freebsd"):
         expected_timeout |= {
             "TestBreakpointConditions.py",

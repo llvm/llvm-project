@@ -89,6 +89,9 @@ public:
         {
             return m_full;
         }
+
+        std::string
+        GetScopeQualifiedName ();
         
         llvm::StringRef
         GetBasename ();

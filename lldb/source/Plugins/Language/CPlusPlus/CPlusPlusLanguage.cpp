@@ -296,6 +296,22 @@ CPlusPlusLanguage::MethodName::GetQualifiers ()
     return m_qualifiers;
 }
 
+std::string
+CPlusPlusLanguage::MethodName::GetScopeQualifiedName ()
+{
+    if (!m_parsed)
+        Parse();
+    if (m_basename.empty() || m_context.empty())
+        return std::string();
+
+    std::string res;
+    res += m_context;
+    res += "::";
+    res += m_basename;
+
+    return res;
+}
+
 bool
 CPlusPlusLanguage::IsCPPMangledName (const char *name)
 {

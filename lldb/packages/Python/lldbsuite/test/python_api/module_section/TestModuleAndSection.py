@@ -16,6 +16,8 @@ class ModuleAndSectionAPIsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    # Py3 asserts due to a bug in SWIG.  A fix for this was upstreamed into SWIG 3.0.8.
+    @skipIf(py_version=['>=', (3,0)], swig_version=['<', (3,0,8)])
     @add_test_categories(['pyapi'])
     def test_module_and_section(self):
         """Test module and section APIs."""

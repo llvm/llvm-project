@@ -550,56 +550,74 @@ ProcessWindowsLive::RefreshStateAfterStop()
     if (!stop_thread)
         return;
 
-    RegisterContextSP register_context = stop_thread->GetRegisterContext();
-
-    // The current EIP is AFTER the BP opcode, which is one byte.
-    uint64_t pc = register_context->GetPC() - 1;
-    if (active_exception->GetExceptionCode() == EXCEPTION_BREAKPOINT)
+    switch (active_exception->GetExceptionCode())
     {
-        BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-
-        if (site)
+        case EXCEPTION_SINGLE_STEP:
         {
-            WINLOG_IFANY(WINDOWS_LOG_BREAKPOINTS | WINDOWS_LOG_EXCEPTION,
-                         "RefreshStateAfterStop detected breakpoint in process %I64u at "
-                         "address 0x%I64x with breakpoint site %d",
-                         m_session_data->m_debugger->GetProcess().GetProcessId(), pc, site->GetID());
+            stop_info = StopInfo::CreateStopReasonToTrace(*stop_thread);
+            stop_thread->SetStopInfo(stop_info);
+            WINLOG_IFANY(WINDOWS_LOG_EXCEPTION | WINDOWS_LOG_STEP, "RefreshStateAfterStop single stepping thread %u",
+                         stop_thread->GetID());
+            stop_thread->SetStopInfo(stop_info);
+            return;
+        }
 
-            if (site->ValidForThisThread(stop_thread.get()))
+        case EXCEPTION_BREAKPOINT:
+        {
+            RegisterContextSP register_context = stop_thread->GetRegisterContext();
+
+            // The current EIP is AFTER the BP opcode, which is one byte.
+            uint64_t pc = register_context->GetPC() - 1;
+
+            BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
+            if (site)
             {
-                WINLOG_IFALL(WINDOWS_LOG_BREAKPOINTS | WINDOWS_LOG_EXCEPTION,
-                             "Breakpoint site %d is valid for this thread (0x%I64x), creating stop info.",
-                             site->GetID(), stop_thread->GetID());
+                WINLOG_IFANY(WINDOWS_LOG_BREAKPOINTS | WINDOWS_LOG_EXCEPTION,
+                             "RefreshStateAfterStop detected breakpoint in process %I64u at "
+                             "address 0x%I64x with breakpoint site %d",
+                             m_session_data->m_debugger->GetProcess().GetProcessId(), pc, site->GetID());
 
-                stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(
-                    *stop_thread, site->GetID());
-                register_context->SetPC(pc);
+                if (site->ValidForThisThread(stop_thread.get()))
+                {
+                    WINLOG_IFALL(WINDOWS_LOG_BREAKPOINTS | WINDOWS_LOG_EXCEPTION,
+                                 "Breakpoint site %d is valid for this thread (0x%I64x), creating stop info.",
+                                 site->GetID(), stop_thread->GetID());
+
+                    stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(
+                        *stop_thread, site->GetID());
+                    register_context->SetPC(pc);
+                }
+                else
+                {
+                    WINLOG_IFALL(WINDOWS_LOG_BREAKPOINTS | WINDOWS_LOG_EXCEPTION,
+                                 "Breakpoint site %d is not valid for this thread, creating empty stop info.",
+                                 site->GetID());
+                }
+                stop_thread->SetStopInfo(stop_info);
+                return;
             }
             else
             {
+                // The thread hit a hard-coded breakpoint like an `int 3` or `__debugbreak()`.
                 WINLOG_IFALL(WINDOWS_LOG_BREAKPOINTS | WINDOWS_LOG_EXCEPTION,
-                             "Breakpoint site %d is not valid for this thread, creating empty stop info.",
-                             site->GetID());
+                                "No breakpoint site matches for this thread. __debugbreak()?  "
+                                "Creating stop info with the exception.");
+                // FALLTHROUGH:  We'll treat this as a generic exception record in the default case.
             }
         }
-        stop_thread->SetStopInfo(stop_info);
-    }
-    else if (active_exception->GetExceptionCode() == EXCEPTION_SINGLE_STEP)
-    {
-        stop_info = StopInfo::CreateStopReasonToTrace(*stop_thread);
-        stop_thread->SetStopInfo(stop_info);
-        WINLOG_IFANY(WINDOWS_LOG_EXCEPTION | WINDOWS_LOG_STEP, "RefreshStateAfterStop single stepping thread %u",
-                     stop_thread->GetID());
-    }
-    else
-    {
-        std::string desc;
-        llvm::raw_string_ostream desc_stream(desc);
-        desc_stream << "Exception " << llvm::format_hex(active_exception->GetExceptionCode(), 8)
-                    << " encountered at address " << llvm::format_hex(pc, 8);
-        stop_info = StopInfo::CreateStopReasonWithException(*stop_thread, desc_stream.str().c_str());
-        stop_thread->SetStopInfo(stop_info);
-        WINLOG_IFALL(WINDOWS_LOG_EXCEPTION, desc_stream.str().c_str());
+
+        default:
+        {
+            std::string desc;
+            llvm::raw_string_ostream desc_stream(desc);
+            desc_stream << "Exception " << llvm::format_hex(active_exception->GetExceptionCode(), 8)
+                        << " encountered at address "
+                        << llvm::format_hex(active_exception->GetExceptionAddress(), 8);
+            stop_info = StopInfo::CreateStopReasonWithException(*stop_thread, desc_stream.str().c_str());
+            stop_thread->SetStopInfo(stop_info);
+            WINLOG_IFALL(WINDOWS_LOG_EXCEPTION, desc_stream.str().c_str());
+            return;
+        }
     }
 }
 

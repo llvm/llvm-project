@@ -108,7 +108,7 @@ PyInit__lldb(void);
 #define LLDBSwigPyInit PyInit__lldb
 
 #else
-extern "C" void 
+extern "C" void
 init_lldb(void);
 
 #define LLDBSwigPyInit init_lldb
@@ -333,7 +333,7 @@ SystemInitializerFull::Initialize()
     SystemRuntimeMacOSX::Initialize();
     RenderScriptRuntime::Initialize();
     GoLanguageRuntime::Initialize();
-    
+
     CPlusPlusLanguage::Initialize();
     GoLanguage::Initialize();
     ObjCLanguage::Initialize();
@@ -460,7 +460,7 @@ SystemInitializerFull::Terminate()
     GoLanguage::Terminate();
     ObjCLanguage::Terminate();
     ObjCPlusPlusLanguage::Terminate();
-    
+
 #if defined(__APPLE__)
     ProcessMachCore::Terminate();
     ProcessKDP::Terminate();

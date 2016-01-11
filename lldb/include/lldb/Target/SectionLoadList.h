@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 // Project includes
 #include "lldb/lldb-public.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Host/Mutex.h"
 
 namespace lldb_private {

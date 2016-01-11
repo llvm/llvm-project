@@ -128,6 +128,9 @@ public:
     ConstString
     GetName () const;
 
+    ConstString
+    GetScopeQualifiedName() const;
+
     bool
     IsStructUnionOrClass () const;
 

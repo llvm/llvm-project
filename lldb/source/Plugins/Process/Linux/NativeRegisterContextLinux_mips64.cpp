@@ -1388,7 +1388,7 @@ NativeRegisterContextLinux_mips64::DoReadRegisterValue(uint32_t offset,
     {
         lldb_private::ArchSpec arch;
         if (m_thread.GetProcess()->GetArchitecture(arch))
-            value.SetBytes((void *)(((unsigned char *)&regs) + offset + 4 * (arch.GetMachine() == llvm::Triple::mips)), arch.GetAddressByteSize(), arch.GetByteOrder());
+            value.SetBytes((void *)(((unsigned char *)&regs) + offset + 4 * (arch.GetMachine() == llvm::Triple::mips)), arch.GetFlags() & lldb_private::ArchSpec::eMIPSABI_O32 ? 4 : 8, arch.GetByteOrder());
         else
             error.SetErrorString("failed to get architecture");
     }
@@ -1404,8 +1404,14 @@ NativeRegisterContextLinux_mips64::DoWriteRegisterValue(uint32_t offset,
     Error error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
     if (error.Success())
     {
-        ::memcpy((void *)(((unsigned char *)(&regs)) + offset), value.GetBytes(), 8);
-        error = NativeProcessLinux::PtraceWrapper(PTRACE_SETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
+        lldb_private::ArchSpec arch;
+        if (m_thread.GetProcess()->GetArchitecture(arch))
+        {
+            ::memcpy((void *)(((unsigned char *)(&regs)) + offset), value.GetBytes(), arch.GetFlags() & lldb_private::ArchSpec::eMIPSABI_O32 ? 4 : 8);
+            error = NativeProcessLinux::PtraceWrapper(PTRACE_SETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
+        }
+        else
+            error.SetErrorString("failed to get architecture");
     }
     return error;
 }

@@ -29,7 +29,7 @@
 
 #include "llvm/ADT/Triple.h"
 
-#include "llvm/IR/Type.h"
+#include "llvm/IR/DerivedTypes.h"
 
 using namespace lldb;
 using namespace lldb_private;

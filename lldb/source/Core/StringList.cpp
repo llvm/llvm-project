@@ -11,6 +11,7 @@
 
 #include "lldb/Core/StreamString.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Core/Log.h"
 
 #include <string>
 
@@ -305,9 +306,26 @@ StringList::operator << (const char* str)
 }
 
 StringList&
+StringList::operator << (const std::string& str)
+{
+    AppendString(str);
+    return *this;
+}
+
+StringList&
 StringList::operator << (StringList strings)
 {
     AppendList(strings);
+    return *this;
+}
+
+StringList&
+StringList::operator = (const std::vector<std::string> &rhs)
+{
+    Clear();
+    for (const auto &s : rhs)
+        m_strings.push_back(s);
+
     return *this;
 }
 
@@ -339,3 +357,21 @@ StringList::AutoComplete (const char *s, StringList &matches, size_t &exact_idx)
     return matches.GetSize();
 }
 
+void
+StringList::LogDump(Log *log, const char *name)
+{
+    if (!log)
+        return;
+
+    StreamString strm;
+    if (name)
+        strm.Printf("Begin %s:\n", name);
+    for (const auto &s : m_strings) {
+        strm.Indent();
+        strm.Printf("%s\n", s.c_str());
+    }
+    if (name)
+        strm.Printf("End %s.\n", name);
+
+    log->Debug("%s", strm.GetData());
+}

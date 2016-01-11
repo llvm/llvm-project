@@ -4,10 +4,6 @@
 
 using std::chrono::microseconds;
 
-#if defined(__linux__)
-#include <sys/prctl.h>
-#endif
-
 volatile int g_thread_2_continuing = 0;
 
 void *
@@ -42,20 +38,7 @@ thread_2_func (void *input)
 
 int main(int argc, char const *argv[])
 {
-#if defined(__linux__)
-    // Immediately enable any ptracer so that we can allow the stub attach
-    // operation to succeed.  Some Linux kernels are locked down so that
-    // only an ancestor process can be a ptracer of a process.  This disables that
-    // restriction.  Without it, attach-related stub tests will fail.
-#if defined(PR_SET_PTRACER) && defined(PR_SET_PTRACER_ANY)
-    int prctl_result;
-
-    // For now we execute on best effort basis.  If this fails for
-    // some reason, so be it.
-    prctl_result = prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
-    (void) prctl_result;
-#endif
-#endif
+    lldb_enable_attach();
 
     // Create a new thread
     std::thread thread_1(thread_1_func, nullptr);

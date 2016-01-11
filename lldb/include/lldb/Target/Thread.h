@@ -888,6 +888,16 @@ public:
     /// @param[in] run_vote
     ///    See standard meanings for the stop & run votes in ThreadPlan.h.
     ///
+    /// @param[in] continue_to_next_branch
+    ///    Normally this will enqueue a plan that will put a breakpoint on the return address and continue
+    ///    to there.  If continue_to_next_branch is true, this is an operation not involving the user -- 
+    ///    e.g. stepping "next" in a source line and we instruction stepped into another function -- 
+    ///    so instead of putting a breakpoint on the return address, advance the breakpoint to the 
+    ///    end of the source line that is doing the call, or until the next flow control instruction.
+    ///    If the return value from the function call is to be retrieved / displayed to the user, you must stop
+    ///    on the return address.  The return value may be stored in volatile registers which are overwritten
+    ///    before the next branch instruction.
+    ///
     /// @return
     ///     A shared pointer to the newly queued thread plan, or nullptr if the plan could not be queued.
     //------------------------------------------------------------------
@@ -898,7 +908,8 @@ public:
                                            bool stop_other_threads,
                                            Vote stop_vote, // = eVoteYes,
                                            Vote run_vote, // = eVoteNoOpinion);
-                                           uint32_t frame_idx);
+                                           uint32_t frame_idx,
+                                           bool continue_to_next_branch = false);
 
     //------------------------------------------------------------------
     /// Gets the plan used to step through the code that steps from a function

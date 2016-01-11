@@ -207,10 +207,6 @@ public:
 
     void Status(Stream &strm) const;
 
-    size_t GetAlternateManglings(const ConstString &mangled, std::vector<ConstString> &alternates) override {
-        return static_cast<size_t>(0);
-    }
-
     void ModulesDidLoad(const ModuleList &module_list) override;
 
     bool LoadAllocation(Stream &strm, const uint32_t alloc_id, const char* filename, StackFrame* frame_ptr);
@@ -334,6 +330,9 @@ private:
     void SetElementSize(Element& elem);
     static bool GetFrameVarAsUnsigned(const lldb::StackFrameSP, const char* var_name, uint64_t& val);
     void FindStructTypeName(Element& elem, StackFrame* frame_ptr);
+
+    size_t PopulateElementHeaders(const std::shared_ptr<uint8_t> header_buffer, size_t offset, const Element& elem);
+    size_t CalculateElementHeaderSize(const Element& elem);
 
     //
     // Helper functions for jitting the runtime

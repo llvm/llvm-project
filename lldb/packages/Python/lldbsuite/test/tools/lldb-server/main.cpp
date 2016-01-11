@@ -20,10 +20,6 @@ int pthread_threadid_np(pthread_t,__uint64_t*);
 #include <sys/syscall.h>
 #endif
 
-#if defined(__linux__)
-#include <sys/prctl.h>
-#endif
-
 static const char *const RETVAL_PREFIX               = "retval:";
 static const char *const SLEEP_PREFIX                = "sleep:";
 static const char *const STDERR_PREFIX               = "stderr:";
@@ -210,16 +206,7 @@ thread_func (void *arg)
 
 int main (int argc, char **argv)
 {
-#if defined(__linux__)
-    // Immediately enable any ptracer so that we can allow the stub attach
-    // operation to succeed.  Some Linux kernels are locked down so that
-    // only an ancestor can be a ptracer of a process.  This disables that
-    // restriction.  Without it, attach-related stub tests will fail.
-#if defined(PR_SET_PTRACER) && defined(PR_SET_PTRACER_ANY)
-    const int prctl_result = prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
-    static_cast<void> (prctl_result);
-#endif
-#endif
+	lldb_enable_attach();
 
 	std::vector<pthread_t> threads;
 	std::unique_ptr<uint8_t[]> heap_array_up;

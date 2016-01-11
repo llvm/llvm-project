@@ -82,11 +82,7 @@ CMICmdCmdSymbolListLines::Execute()
     CMICMDBASE_GETOPTION(pArgFile, File, m_constStrArgNameFile);
 
     const CMIUtilString &strFilePath(pArgFile->GetValue());
-    // FIXME: this won't work for header files!  To try and use existing
-    // commands to get this to work for header files would be too slow.
-    // Instead, this code should be rewritten to use APIs and/or support
-    // should be added to lldb which would work for header files.
-    const CMIUtilString strCmd(CMIUtilString::Format("target modules dump line-table \"%s\"", strFilePath.AddSlashes().c_str()));
+    const CMIUtilString strCmd(CMIUtilString::Format("source info --file \"%s\"", strFilePath.AddSlashes().c_str()));
 
     CMICmnLLDBDebugSessionInfo &rSessionInfo(CMICmnLLDBDebugSessionInfo::Instance());
     const lldb::ReturnStatus rtn = rSessionInfo.GetDebugger().GetCommandInterpreter().HandleCommand(strCmd.c_str(), m_lldbResult);
@@ -110,10 +106,10 @@ ParseLLDBLineAddressHeader(const char *input, CMIUtilString &file)
 {
     // Match LineEntry using regex.
     static MIUtilParse::CRegexParser g_lineentry_header_regex( 
-        "^ *Line table for (.+) in `(.+)$");
-        //                 ^1=file  ^2=module
+        "^ *Lines found for file (.+) in compilation unit (.+) in `(.+)$");
+        //                       ^1=file                  ^2=cu    ^3=module
 
-    MIUtilParse::CRegexParser::Match match(3);
+    MIUtilParse::CRegexParser::Match match(4);
 
     const bool ok = g_lineentry_header_regex.Execute(input, match);
     if (ok)
@@ -146,12 +142,12 @@ ParseLLDBLineAddressEntry(const char *input, CMIUtilString &addr,
 
     // Match LineEntry using regex.
     static MIUtilParse::CRegexParser g_lineentry_nocol_regex( 
-        "^ *(0x[0-9a-fA-F]+): (.+):([0-9]+)$");
+        "^ *\\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+)$");
     static MIUtilParse::CRegexParser g_lineentry_col_regex( 
-        "^ *(0x[0-9a-fA-F]+): (.+):([0-9]+):[0-9]+$");
-        //  ^1=addr           ^2=f ^3=line ^4=:col(opt)
+        "^ *\\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+):[0-9]+$");
+        //     ^1=start         ^2=end               ^3=f ^4=line ^5=:col(opt)
 
-    MIUtilParse::CRegexParser::Match match(5);
+    MIUtilParse::CRegexParser::Match match(6);
 
     // First try matching the LineEntry with the column,
     // then try without the column.
@@ -160,8 +156,8 @@ ParseLLDBLineAddressEntry(const char *input, CMIUtilString &addr,
     if (ok)
     {
         addr = match.GetMatchAtIndex(1);
-        file = match.GetMatchAtIndex(2);
-        line = match.GetMatchAtIndex(3);
+        file = match.GetMatchAtIndex(3);
+        line = match.GetMatchAtIndex(4);
     }
     return ok;
 }
@@ -220,10 +216,6 @@ CMICmdCmdSymbolListLines::Acknowledge()
             CMIUtilString strLine;
 
             if (!ParseLLDBLineAddressEntry(rLine.c_str(), strAddr, strFile, strLine))
-                continue;
-
-            // Skip entries which don't match the desired source.
-            if (strWantFile != strFile)
                 continue;
 
             const CMICmnMIValueConst miValueConst(strAddr);

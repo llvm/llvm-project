@@ -534,7 +534,10 @@ public:
     
     ConstString
     DeclContextGetName (void *opaque_decl_ctx) override;
-    
+
+    ConstString
+    DeclContextGetScopeQualifiedName (void *opaque_decl_ctx) override;
+
     bool
     DeclContextIsClassMethod (void *opaque_decl_ctx,
                               lldb::LanguageType *language_ptr,

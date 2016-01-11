@@ -101,6 +101,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient() :
     m_supports_QEnvironment (true),
     m_supports_QEnvironmentHexEncoded (true),
     m_supports_qSymbol (true),
+    m_supports_qModuleInfo (true),
     m_supports_jThreadsInfo (true),
     m_curr_pid (LLDB_INVALID_PROCESS_ID),
     m_curr_tid (LLDB_INVALID_THREAD_ID),
@@ -376,6 +377,7 @@ GDBRemoteCommunicationClient::ResetDiscoverableSettings (bool did_exec)
         m_supports_QEnvironment = true;
         m_supports_QEnvironmentHexEncoded = true;
         m_supports_qSymbol = true;
+        m_supports_qModuleInfo = true;
         m_host_arch.Clear();
         m_os_version_major = UINT32_MAX;
         m_os_version_minor = UINT32_MAX;
@@ -4284,6 +4286,9 @@ GDBRemoteCommunicationClient::GetModuleInfo (const FileSpec& module_file_spec,
                                              const lldb_private::ArchSpec& arch_spec,
                                              ModuleSpec &module_spec)
 {
+    if (!m_supports_qModuleInfo)
+        return false;
+
     std::string module_path = module_file_spec.GetPath (false);
     if (module_path.empty ())
         return false;
@@ -4299,8 +4304,14 @@ GDBRemoteCommunicationClient::GetModuleInfo (const FileSpec& module_file_spec,
     if (SendPacketAndWaitForResponse (packet.GetData(), packet.GetSize(), response, false) != PacketResult::Success)
         return false;
 
-    if (response.IsErrorResponse () || response.IsUnsupportedResponse ())
+    if (response.IsErrorResponse ())
         return false;
+
+    if (response.IsUnsupportedResponse ())
+    {
+        m_supports_qModuleInfo = false;
+        return false;
+    }
 
     std::string name;
     std::string value;

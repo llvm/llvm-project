@@ -29,6 +29,7 @@ class CommonShortSpellingsTestCase(TestBase):
             ('dis', 'disassemble'),
             ('ta st a', 'target stop-hook add'),
             ('fr v', 'frame variable'),
+            ('f 1', 'frame select 1'),
             ('ta st li', 'target stop-hook list'),
         ]
 

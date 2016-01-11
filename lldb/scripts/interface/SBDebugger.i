@@ -343,6 +343,9 @@ public:
     lldb::SBTypeCategory
     GetCategory (const char* category_name);
     
+    SBTypeCategory
+    GetCategory (lldb::LanguageType lang_type);
+    
     lldb::SBTypeCategory
     CreateCategory (const char* category_name);
     
