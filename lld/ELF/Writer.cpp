@@ -635,8 +635,6 @@ public:
 private:
   SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
                                        StringRef OutsecName);
-  OutputSectionBase<ELFT> *createAux(InputSectionBase<ELFT> *C,
-                                     const SectionKey<ELFT::Is64Bits> &Key);
 
   SmallDenseMap<SectionKey<ELFT::Is64Bits>, OutputSectionBase<ELFT> *> Map;
 };
@@ -650,25 +648,22 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   OutputSectionBase<ELFT> *&Sec = Map[Key];
   if (Sec)
     return {Sec, false};
-  Sec = createAux(C, Key);
-  return {Sec, true};
-}
 
-template <class ELFT>
-OutputSectionBase<ELFT> *
-OutputSectionFactory<ELFT>::createAux(InputSectionBase<ELFT> *C,
-                                      const SectionKey<ELFT::Is64Bits> &Key) {
   switch (C->SectionKind) {
   case InputSectionBase<ELFT>::Regular:
-    return new OutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    Sec = new OutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    break;
   case InputSectionBase<ELFT>::EHFrame:
-    return new EHOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    Sec = new EHOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    break;
   case InputSectionBase<ELFT>::Merge:
-    return new MergeOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    Sec = new MergeOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    break;
   case InputSectionBase<ELFT>::MipsReginfo:
-    return new MipsReginfoOutputSection<ELFT>();
+    Sec = new MipsReginfoOutputSection<ELFT>();
+    break;
   }
-  llvm_unreachable("Unknown output section type");
+  return {Sec, true};
 }
 
 template <class ELFT>

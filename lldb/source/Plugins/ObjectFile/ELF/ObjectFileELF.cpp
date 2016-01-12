@@ -954,9 +954,6 @@ ObjectFileELF::GetAddressByteSize() const
     return m_data.GetAddressByteSize();
 }
 
-// Top 16 bits of the `Symbol` flags are available.
-#define ARM_ELF_SYM_IS_THUMB    (1 << 16)
-
 AddressClass
 ObjectFileELF::GetAddressClass (addr_t file_addr)
 {
@@ -2190,7 +2187,6 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
                         // symbol.st_value to produce the final symbol_value
                         // that we store in the symtab.
                         symbol_value_offset = -1;
-                        additional_flags = ARM_ELF_SYM_IS_THUMB;
                         m_address_class_map[symbol.st_value^1] = eAddressClassCodeAlternateISA;
                     }
                     else
