@@ -206,6 +206,7 @@ ABISysV_mips64::PrepareTrivialCall (Thread &thread,
     const RegisterInfo *pc_reg_info = reg_ctx->GetRegisterInfo (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
     const RegisterInfo *sp_reg_info = reg_ctx->GetRegisterInfo (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
     const RegisterInfo *ra_reg_info = reg_ctx->GetRegisterInfo (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
+    const RegisterInfo *r25_info = reg_ctx->GetRegisterInfoByName("r25", 0);
 
     if (log)
     log->Printf("Writing SP: 0x%" PRIx64, (uint64_t)sp);
@@ -226,6 +227,13 @@ ABISysV_mips64::PrepareTrivialCall (Thread &thread,
 
     // Set pc to the address of the called function.
     if (!reg_ctx->WriteRegisterFromUnsigned (pc_reg_info, func_addr))
+        return false;
+
+    if (log)
+        log->Printf("Writing r25: 0x%" PRIx64, (uint64_t)func_addr);
+
+    // All callers of position independent functions must place the address of the called function in t9 (r25)
+    if (!reg_ctx->WriteRegisterFromUnsigned (r25_info, func_addr))
         return false;
 
     return true;

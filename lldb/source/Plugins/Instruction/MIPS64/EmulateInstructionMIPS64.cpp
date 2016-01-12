@@ -549,45 +549,45 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction (const char *op_name)
         //----------------------------------------------------------------------
         // Branch instructions
         //----------------------------------------------------------------------
-        { "BEQ",        &EmulateInstructionMIPS64::Emulate_BEQ,         "BEQ rs,rt,offset"          },
-        { "BNE",        &EmulateInstructionMIPS64::Emulate_BNE,         "BNE rs,rt,offset"          },
-        { "BEQL",       &EmulateInstructionMIPS64::Emulate_BEQL,        "BEQL rs,rt,offset"         },
-        { "BNEL",       &EmulateInstructionMIPS64::Emulate_BNEL,        "BNEL rs,rt,offset"         },
-        { "BGEZALL",    &EmulateInstructionMIPS64::Emulate_BGEZALL,     "BGEZALL rt,offset"         },
+        { "BEQ",        &EmulateInstructionMIPS64::Emulate_BXX_3ops,    "BEQ rs,rt,offset"          },
+        { "BNE",        &EmulateInstructionMIPS64::Emulate_BXX_3ops,    "BNE rs,rt,offset"          },
+        { "BEQL",       &EmulateInstructionMIPS64::Emulate_BXX_3ops,    "BEQL rs,rt,offset"         },
+        { "BNEL",       &EmulateInstructionMIPS64::Emulate_BXX_3ops,    "BNEL rs,rt,offset"         },
+        { "BGEZALL",    &EmulateInstructionMIPS64::Emulate_Bcond_Link,  "BGEZALL rt,offset"         },
         { "BAL",        &EmulateInstructionMIPS64::Emulate_BAL,         "BAL offset"                },
-        { "BGEZAL",     &EmulateInstructionMIPS64::Emulate_BGEZAL,      "BGEZAL rs,offset"          },
+        { "BGEZAL",     &EmulateInstructionMIPS64::Emulate_Bcond_Link,  "BGEZAL rs,offset"          },
         { "BALC",       &EmulateInstructionMIPS64::Emulate_BALC,        "BALC offset"               },
         { "BC",         &EmulateInstructionMIPS64::Emulate_BC,          "BC offset"                 },
-        { "BGEZ",       &EmulateInstructionMIPS64::Emulate_BGEZ,        "BGEZ rs,offset"            },
-        { "BLEZALC",    &EmulateInstructionMIPS64::Emulate_BLEZALC,     "BLEZALC rs,offset"         },
-        { "BGEZALC",    &EmulateInstructionMIPS64::Emulate_BGEZALC,     "BGEZALC rs,offset"         },
-        { "BLTZALC",    &EmulateInstructionMIPS64::Emulate_BLTZALC,     "BLTZALC rs,offset"         },
-        { "BGTZALC",    &EmulateInstructionMIPS64::Emulate_BGTZALC,     "BGTZALC rs,offset"         },
-        { "BEQZALC",    &EmulateInstructionMIPS64::Emulate_BEQZALC,     "BEQZALC rs,offset"         },
-        { "BNEZALC",    &EmulateInstructionMIPS64::Emulate_BNEZALC,     "BNEZALC rs,offset"         },
-        { "BEQC",       &EmulateInstructionMIPS64::Emulate_BEQC,        "BEQC rs,rt,offset"         },
-        { "BNEC",       &EmulateInstructionMIPS64::Emulate_BNEC,        "BNEC rs,rt,offset"         },
-        { "BLTC",       &EmulateInstructionMIPS64::Emulate_BLTC,        "BLTC rs,rt,offset"         },
-        { "BGEC",       &EmulateInstructionMIPS64::Emulate_BGEC,        "BGEC rs,rt,offset"         },
-        { "BLTUC",      &EmulateInstructionMIPS64::Emulate_BLTUC,       "BLTUC rs,rt,offset"        },
-        { "BGEUC",      &EmulateInstructionMIPS64::Emulate_BGEUC,       "BGEUC rs,rt,offset"        },
-        { "BLTZC",      &EmulateInstructionMIPS64::Emulate_BLTZC,       "BLTZC rt,offset"           },
-        { "BLEZC",      &EmulateInstructionMIPS64::Emulate_BLEZC,       "BLEZC rt,offset"           },
-        { "BGEZC",      &EmulateInstructionMIPS64::Emulate_BGEZC,       "BGEZC rt,offset"           },
-        { "BGTZC",      &EmulateInstructionMIPS64::Emulate_BGTZC,       "BGTZC rt,offset"           },
-        { "BEQZC",      &EmulateInstructionMIPS64::Emulate_BEQZC,       "BEQZC rt,offset"           },
-        { "BNEZC",      &EmulateInstructionMIPS64::Emulate_BNEZC,       "BNEZC rt,offset"           },
-        { "BGEZL",      &EmulateInstructionMIPS64::Emulate_BGEZL,       "BGEZL rt,offset"           },
-        { "BGTZ",       &EmulateInstructionMIPS64::Emulate_BGTZ,        "BGTZ rt,offset"            },
-        { "BGTZL",      &EmulateInstructionMIPS64::Emulate_BGTZL,       "BGTZL rt,offset"           },
-        { "BLEZ",       &EmulateInstructionMIPS64::Emulate_BLEZ,        "BLEZ rt,offset"            },
-        { "BLEZL",      &EmulateInstructionMIPS64::Emulate_BLEZL,       "BLEZL rt,offset"           },
-        { "BLTZ",       &EmulateInstructionMIPS64::Emulate_BLTZ,        "BLTZ rt,offset"            },
-        { "BLTZAL",     &EmulateInstructionMIPS64::Emulate_BLTZAL,      "BLTZAL rt,offset"          },
-        { "BLTZALL",    &EmulateInstructionMIPS64::Emulate_BLTZALL,     "BLTZALL rt,offset"         },
-        { "BLTZL",      &EmulateInstructionMIPS64::Emulate_BLTZL,       "BLTZL rt,offset"           },
-        { "BOVC",       &EmulateInstructionMIPS64::Emulate_BOVC,        "BOVC rs,rt,offset"         },
-        { "BNVC",       &EmulateInstructionMIPS64::Emulate_BNVC,        "BNVC rs,rt,offset"         },
+        { "BGEZ",       &EmulateInstructionMIPS64::Emulate_BXX_2ops,    "BGEZ rs,offset"            },
+        { "BLEZALC",    &EmulateInstructionMIPS64::Emulate_Bcond_Link_C,"BLEZALC rs,offset"         },
+        { "BGEZALC",    &EmulateInstructionMIPS64::Emulate_Bcond_Link_C,"BGEZALC rs,offset"         },
+        { "BLTZALC",    &EmulateInstructionMIPS64::Emulate_Bcond_Link_C,"BLTZALC rs,offset"         },
+        { "BGTZALC",    &EmulateInstructionMIPS64::Emulate_Bcond_Link_C,"BGTZALC rs,offset"         },
+        { "BEQZALC",    &EmulateInstructionMIPS64::Emulate_Bcond_Link_C,"BEQZALC rs,offset"         },
+        { "BNEZALC",    &EmulateInstructionMIPS64::Emulate_Bcond_Link_C,"BNEZALC rs,offset"         },
+        { "BEQC",       &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,  "BEQC rs,rt,offset"         },
+        { "BNEC",       &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,  "BNEC rs,rt,offset"         },
+        { "BLTC",       &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,  "BLTC rs,rt,offset"         },
+        { "BGEC",       &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,  "BGEC rs,rt,offset"         },
+        { "BLTUC",      &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,  "BLTUC rs,rt,offset"        },
+        { "BGEUC",      &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,  "BGEUC rs,rt,offset"        },
+        { "BLTZC",      &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,  "BLTZC rt,offset"           },
+        { "BLEZC",      &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,  "BLEZC rt,offset"           },
+        { "BGEZC",      &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,  "BGEZC rt,offset"           },
+        { "BGTZC",      &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,  "BGTZC rt,offset"           },
+        { "BEQZC",      &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,  "BEQZC rt,offset"           },
+        { "BNEZC",      &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,  "BNEZC rt,offset"           },
+        { "BGEZL",      &EmulateInstructionMIPS64::Emulate_BXX_2ops,    "BGEZL rt,offset"           },
+        { "BGTZ",       &EmulateInstructionMIPS64::Emulate_BXX_2ops,    "BGTZ rt,offset"            },
+        { "BGTZL",      &EmulateInstructionMIPS64::Emulate_BXX_2ops,    "BGTZL rt,offset"           },
+        { "BLEZ",       &EmulateInstructionMIPS64::Emulate_BXX_2ops,    "BLEZ rt,offset"            },
+        { "BLEZL",      &EmulateInstructionMIPS64::Emulate_BXX_2ops,    "BLEZL rt,offset"           },
+        { "BLTZ",       &EmulateInstructionMIPS64::Emulate_BXX_2ops,    "BLTZ rt,offset"            },
+        { "BLTZAL",     &EmulateInstructionMIPS64::Emulate_Bcond_Link,  "BLTZAL rt,offset"          },
+        { "BLTZALL",    &EmulateInstructionMIPS64::Emulate_Bcond_Link,  "BLTZALL rt,offset"         },
+        { "BLTZL",      &EmulateInstructionMIPS64::Emulate_BXX_2ops,    "BLTZL rt,offset"           },
+        { "BOVC",       &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,  "BOVC rs,rt,offset"         },
+        { "BNVC",       &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,  "BNVC rs,rt,offset"         },
         { "J",          &EmulateInstructionMIPS64::Emulate_J,           "J target"                  },
         { "JAL",        &EmulateInstructionMIPS64::Emulate_JAL,         "JAL target"                },
         { "JALX",       &EmulateInstructionMIPS64::Emulate_JAL,         "JALX target"               },
@@ -597,16 +597,16 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction (const char *op_name)
         { "JIC",        &EmulateInstructionMIPS64::Emulate_JIC,         "JIC rt,offset"             },
         { "JR",         &EmulateInstructionMIPS64::Emulate_JR,          "JR target"                 },
         { "JR_HB",      &EmulateInstructionMIPS64::Emulate_JR,          "JR.HB target"              },
-        { "BC1F",       &EmulateInstructionMIPS64::Emulate_BC1F,        "BC1F cc, offset"           },
-        { "BC1T",       &EmulateInstructionMIPS64::Emulate_BC1T,        "BC1T cc, offset"           },
-        { "BC1FL",      &EmulateInstructionMIPS64::Emulate_BC1FL,       "BC1FL cc, offset"          },
-        { "BC1TL",      &EmulateInstructionMIPS64::Emulate_BC1TL,       "BC1TL cc, offset"          },
+        { "BC1F",       &EmulateInstructionMIPS64::Emulate_FP_branch,   "BC1F cc, offset"           },
+        { "BC1T",       &EmulateInstructionMIPS64::Emulate_FP_branch,   "BC1T cc, offset"           },
+        { "BC1FL",      &EmulateInstructionMIPS64::Emulate_FP_branch,   "BC1FL cc, offset"          },
+        { "BC1TL",      &EmulateInstructionMIPS64::Emulate_FP_branch,   "BC1TL cc, offset"          },
         { "BC1EQZ",     &EmulateInstructionMIPS64::Emulate_BC1EQZ,      "BC1EQZ ft, offset"         },
         { "BC1NEZ",     &EmulateInstructionMIPS64::Emulate_BC1NEZ,      "BC1NEZ ft, offset"         },
-        { "BC1ANY2F",   &EmulateInstructionMIPS64::Emulate_BC1ANY2F,    "BC1ANY2F cc, offset"       },
-        { "BC1ANY2T",   &EmulateInstructionMIPS64::Emulate_BC1ANY2T,    "BC1ANY2T cc, offset"       },
-        { "BC1ANY4F",   &EmulateInstructionMIPS64::Emulate_BC1ANY4F,    "BC1ANY4F cc, offset"       },
-        { "BC1ANY4T",   &EmulateInstructionMIPS64::Emulate_BC1ANY4T,    "BC1ANY4T cc, offset"       },
+        { "BC1ANY2F",   &EmulateInstructionMIPS64::Emulate_3D_branch,   "BC1ANY2F cc, offset"       },
+        { "BC1ANY2T",   &EmulateInstructionMIPS64::Emulate_3D_branch,   "BC1ANY2T cc, offset"       },
+        { "BC1ANY4F",   &EmulateInstructionMIPS64::Emulate_3D_branch,   "BC1ANY4F cc, offset"       },
+        { "BC1ANY4T",   &EmulateInstructionMIPS64::Emulate_3D_branch,   "BC1ANY4T cc, offset"       },
         { "BNZ_B",      &EmulateInstructionMIPS64::Emulate_BNZB,        "BNZ.b wt,s16"              },
         { "BNZ_H",      &EmulateInstructionMIPS64::Emulate_BNZH,        "BNZ.h wt,s16"              },
         { "BNZ_W",      &EmulateInstructionMIPS64::Emulate_BNZW,        "BNZ.w wt,s16"              },
@@ -907,21 +907,20 @@ EmulateInstructionMIPS64::Emulate_LD (llvm::MCInst& insn)
     return false;
 }
 
+
+/*
+    Emulate below MIPS branch instructions.
+    BEQ, BNE : Branch on condition
+    BEQL, BNEL : Branch likely
+*/
 bool
-EmulateInstructionMIPS64::Emulate_BEQ (llvm::MCInst& insn)
+EmulateInstructionMIPS64::Emulate_BXX_3ops (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs, rt;
-    int64_t offset, pc, target, rs_val, rt_val;
+    int64_t offset, pc, rs_val, rt_val, target = 0;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
-    /*
-     * BEQ rs, rt, offset
-     *      condition <- (GPR[rs] = GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-     *      else
-     *          PC = PC + 4
-    */
     rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
     offset = insn.getOperand(2).getImm();
@@ -938,13 +937,26 @@ EmulateInstructionMIPS64::Emulate_BEQ (llvm::MCInst& insn)
     if (!success)
         return false;
 
-    if (rs_val == rt_val)
-        target = pc + offset;
-    else
-        target = pc + 8;
+    if (!strcasecmp (op_name, "BEQ") ||
+        !strcasecmp (op_name, "BEQL"))
+    {
+        if (rs_val == rt_val)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BNE") ||
+             !strcasecmp (op_name, "BNEL"))
+    {
+        if (rs_val != rt_val)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
 
     Context context;
     context.type = eContextRelativeBranchImmediate;
+    context.SetImmediate (offset);
 
     if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
         return false;
@@ -952,149 +964,20 @@ EmulateInstructionMIPS64::Emulate_BEQ (llvm::MCInst& insn)
     return true;
 }
 
+/* 
+    Emulate below MIPS Non-Compact conditional branch and link instructions.
+    BLTZAL, BGEZAL      :
+    BLTZALL, BGEZALL    : Branch likely
+*/
 bool
-EmulateInstructionMIPS64::Emulate_BNE (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target, rs_val, rt_val;
-
-    /*
-     * BNE rs, rt, offset
-     *      condition <- (GPR[rs] != GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val != rt_val)
-        target = pc + offset;
-    else
-        target = pc + 8;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BEQL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target, rs_val, rt_val;
-
-    /*
-     * BEQL rs, rt, offset
-     *      condition <- (GPR[rs] = GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val == rt_val)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BNEL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target, rs_val, rt_val;
-
-    /*
-     * BNEL rs, rt, offset
-     *      condition <- (GPR[rs] != GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val != rt_val)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGEZL (llvm::MCInst& insn)
+EmulateInstructionMIPS64::Emulate_Bcond_Link (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs;
-    int64_t offset, pc, target; 
+    int64_t offset, pc, target = 0;
     int64_t rs_val;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
-    /*
-     * BGEZL rs, offset
-     *      condition <- (GPR[rs] >= 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
     rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     offset = insn.getOperand(1).getImm();
 
@@ -1106,286 +989,24 @@ EmulateInstructionMIPS64::Emulate_BGEZL (llvm::MCInst& insn)
     if (!success)
         return false;
 
-    if (rs_val >= 0)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
+    if (!strcasecmp (op_name, "BLTZAL") ||
+        !strcasecmp (op_name, "BLTZALL"))
+    {
+        if (rs_val < 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BGEZAL") ||
+             !strcasecmp (op_name, "BGEZALL"))
+    {
+        if (rs_val >= 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
 
     Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLTZL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLTZL rs, offset
-     *      condition <- (GPR[rs] < 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val < 0)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGTZL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BGTZL rs, offset
-     *      condition <- (GPR[rs] > 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val > 0)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLEZL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLEZL rs, offset
-     *      condition <- (GPR[rs] <= 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val <= 0)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGTZ (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BGTZ rs, offset
-     *      condition <- (GPR[rs] > 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val > 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLEZ (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target; 
-    int64_t rs_val;
-
-    /*
-     * BLEZ rs, offset
-     *      condition <- (GPR[rs] <= 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val <= 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLTZ (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLTZ rs, offset
-     *      condition <- (GPR[rs] < 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val < 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGEZALL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BGEZALL rt, offset
-     *      condition <- (GPR[rs] >= 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val >= 0)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
 
     if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
         return false;
@@ -1458,22 +1079,18 @@ EmulateInstructionMIPS64::Emulate_BALC (llvm::MCInst& insn)
     return true;
 }
 
+/* 
+    Emulate below MIPS conditional branch and link instructions.
+    BLEZALC, BGEZALC, BLTZALC, BGTZALC, BEQZALC, BNEZALC : Compact branches
+*/
 bool
-EmulateInstructionMIPS64::Emulate_BGEZAL (llvm::MCInst& insn)
+EmulateInstructionMIPS64::Emulate_Bcond_Link_C (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
+    int64_t offset, pc, rs_val, target = 0;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
-    /*
-     * BGEZAL rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] >= 0)
-     *      if condition then     
-     *          RA = PC + 8
-     *          PC = PC + offset
-    */
     rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     offset = insn.getOperand(1).getImm();
 
@@ -1485,142 +1102,50 @@ EmulateInstructionMIPS64::Emulate_BGEZAL (llvm::MCInst& insn)
     if (!success)
         return false;
 
-    Context context;
-
-    if ((int64_t) rs_val >= 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_ra_mips64, pc + 8))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLTZAL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLTZAL rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] < 0)
-     *      if condition then     
-     *          RA = PC + 8
-     *          PC = PC + offset
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    Context context;
-
-    if ((int64_t) rs_val < 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_ra_mips64, pc + 8))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLTZALL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLTZALL rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] < 0)
-     *      if condition then     
-     *          RA = PC + 8
-     *          PC = PC + offset
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
+    if (!strcasecmp (op_name, "BLEZALC"))
+    {
+        if (rs_val <= 0)
+            target = pc + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BGEZALC"))
+    {
+        if (rs_val >= 0)
+            target = pc + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BLTZALC"))
+    {
+        if (rs_val < 0)
+            target = pc + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BGTZALC"))
+    {
+        if (rs_val > 0)
+            target = pc + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BEQZALC"))
+    {
+        if (rs_val == 0)
+            target = pc + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BNEZALC"))
+    {
+        if (rs_val != 0)
+            target = pc + offset;
+        else
+            target = pc + 4;
+    }
 
     Context context;
-
-    if (rs_val < 0)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_ra_mips64, pc + 8))
-        return false;
-
-    return true;
-}
-
-
-bool
-EmulateInstructionMIPS64::Emulate_BLEZALC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLEZALC rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] <= 0)
-     *      if condition then     
-     *          RA = PC + 4
-     *          PC = PC + offset
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    Context context;
-
-    if (rs_val <= 0)
-        target = pc + offset;
-    else
-        target = pc + 4;
 
     if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
         return false;
@@ -1631,22 +1156,19 @@ EmulateInstructionMIPS64::Emulate_BLEZALC (llvm::MCInst& insn)
     return true;
 }
 
+/* 
+    Emulate below MIPS branch instructions.
+    BLTZL, BGEZL, BGTZL, BLEZL : Branch likely
+    BLTZ, BGEZ, BGTZ, BLEZ     : Non-compact branches
+*/
 bool
-EmulateInstructionMIPS64::Emulate_BGEZALC (llvm::MCInst& insn)
+EmulateInstructionMIPS64::Emulate_BXX_2ops (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
+    int64_t offset, pc, rs_val, target = 0;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
 
-    /*
-     * BGEZALC rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] >= 0)
-     *      if condition then     
-     *          RA = PC + 4
-     *          PC = PC + offset
-    */
     rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     offset = insn.getOperand(1).getImm();
 
@@ -1658,223 +1180,42 @@ EmulateInstructionMIPS64::Emulate_BGEZALC (llvm::MCInst& insn)
     if (!success)
         return false;
 
-    Context context;
-
-    if (rs_val >= 0)
-        target = pc + offset;
-    else
-        target = pc + 4;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_ra_mips64, pc + 4))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLTZALC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLTZALC rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] < 0)
-     *      if condition then     
-     *          RA = PC + 4
-     *          PC = PC + offset
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
+    if (!strcasecmp (op_name, "BLTZL") ||
+        !strcasecmp (op_name, "BLTZ"))
+    {
+        if (rs_val < 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BGEZL") ||
+             !strcasecmp (op_name, "BGEZ"))
+    {
+        if (rs_val >= 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BGTZL") ||
+             !strcasecmp (op_name, "BGTZ"))
+    {
+        if (rs_val > 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BLEZL") ||
+             !strcasecmp (op_name, "BLEZ"))
+    {
+        if (rs_val <= 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
 
     Context context;
-
-    if (rs_val < 0)
-        target = pc + offset;
-    else
-        target = pc + 4;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_ra_mips64, pc + 4))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGTZALC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BGTZALC rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] > 0)
-     *      if condition then     
-     *          RA = PC + 4
-     *          PC = PC + offset
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    Context context;
-
-    if (rs_val > 0)
-        target = pc + offset;
-    else
-        target = pc + 4;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_ra_mips64, pc + 4))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BEQZALC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target, rs_val;
-
-    /*
-     * BEQZALC rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] == 0)
-     *      if condition then     
-     *          RA = PC + 4
-     *          PC = PC + offset
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    Context context;
-
-    if (rs_val == 0)
-        target = pc + offset;
-    else
-        target = pc + 4;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_ra_mips64, pc + 4))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BNEZALC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target, rs_val;
-
-    /*
-     * BNEZALC rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] != 0)
-     *      if condition then     
-     *          RA = PC + 4
-     *          PC = PC + offset
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    Context context;
-
-    if (rs_val != 0)
-        target = pc + offset;
-    else
-        target = pc + 4;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_ra_mips64, pc + 4))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGEZ (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target, rs_val;
-
-    /*
-     * BGEZ rs,offset
-     *      offset = sign_ext (offset << 2)
-     *      condition <- (GPR[rs] >= 0)
-     *      if condition then     
-     *          PC = PC + offset
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    Context context;
-
-    if (rs_val >= 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
+    context.type = eContextRelativeBranchImmediate;
+    context.SetImmediate (offset);
 
     if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
         return false;
@@ -1909,502 +1250,6 @@ EmulateInstructionMIPS64::Emulate_BC (llvm::MCInst& insn)
     return true;
 }
 
-bool
-EmulateInstructionMIPS64::Emulate_BEQC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target, rs_val, rt_val;
-
-    /*
-     * BEQC rs, rt, offset
-     *      condition <- (GPR[rs] = GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val == rt_val)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BNEC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target, rs_val, rt_val;
-
-    /*
-     * BNEC rs, rt, offset
-     *      condition <- (GPR[rs] != GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val != rt_val)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLTC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target;
-    int64_t rs_val, rt_val;
-
-    /*
-     * BLTC rs, rt, offset
-     *      condition <- (GPR[rs] < GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val < rt_val)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGEC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target;
-    int64_t rs_val, rt_val;
-
-    /*
-     * BGEC rs, rt, offset
-     *      condition <- (GPR[rs] > GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val > rt_val)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLTUC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target;
-    uint64_t rs_val, rt_val;
-
-    /*
-     * BLTUC rs, rt, offset
-     *      condition <- (GPR[rs] < GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val < rt_val)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGEUC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target;
-    uint64_t rs_val, rt_val;
-
-    /*
-     * BGEUC rs, rt, offset
-     *      condition <- (GPR[rs] > GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    rt_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val > rt_val)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLTZC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLTZC rs, offset
-     *      condition <- (GPR[rs] < 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val < 0)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BLEZC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BLEZC rs, offset
-     *      condition <- (GPR[rs] <= 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val <= 0)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGEZC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BGEZC rs, offset
-     *      condition <- (GPR[rs] >= 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val >= 0)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BGTZC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    int64_t rs_val;
-
-    /*
-     * BGTZC rs, offset
-     *      condition <- (GPR[rs] > 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val > 0)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BEQZC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    uint64_t rs_val;
-
-    /*
-     * BEQZC rs, offset
-     *      condition <- (GPR[rs] = 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val == 0)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BNEZC (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t rs;
-    int64_t offset, pc, target;
-    uint64_t rs_val;
-
-    /*
-     * BNEZC rs, offset
-     *      condition <- (GPR[rs] != 0)
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
-    rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    rs_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rs, 0, &success);
-    if (!success)
-        return false;
-
-    if (rs_val != 0)
-        target = pc + 4 + offset;
-    else
-        target = pc + 4;
-
-    Context context;
-    context.type = eContextRelativeBranchImmediate;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
 static int
 IsAdd64bitOverflow (int64_t a, int64_t b)
 {
@@ -2412,20 +1257,19 @@ IsAdd64bitOverflow (int64_t a, int64_t b)
   return (a < 0 && b < 0 && r >= 0) || (a >= 0 && b >= 0 && r < 0);
 }
 
+/*
+    Emulate below MIPS branch instructions.
+    BEQC, BNEC, BLTC, BGEC, BLTUC, BGEUC, BOVC, BNVC: Compact branch instructions with no delay slot
+*/
 bool
-EmulateInstructionMIPS64::Emulate_BOVC (llvm::MCInst& insn)
+EmulateInstructionMIPS64::Emulate_BXX_3ops_C (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t rs, rt;
-    int64_t offset, pc, target;
-    int64_t rs_val, rt_val;
+    int64_t offset, pc, rs_val, rt_val, target = 0;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
+    uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
 
-    /*
-     * BOVC rs, rt, offset
-     *      condition <- overflow(GPR[rs] + GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
     rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
     offset = insn.getOperand(2).getImm();
@@ -2442,13 +1286,66 @@ EmulateInstructionMIPS64::Emulate_BOVC (llvm::MCInst& insn)
     if (!success)
         return false;
 
-    if (IsAdd64bitOverflow (rs_val, rt_val))
-        target = pc + offset;
-    else
-        target = pc + 4;
+    if (!strcasecmp (op_name, "BEQC"))
+    {
+        if (rs_val == rt_val)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BNEC"))
+    {
+        if (rs_val != rt_val)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BLTC"))
+    {
+        if (rs_val < rt_val)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BGEC"))
+    {
+        if (rs_val >= rt_val)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BLTUC"))
+    {
+        if (rs_val < rt_val)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BGEUC"))
+    {
+        if ((uint32_t)rs_val >= (uint32_t)rt_val)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BOVC"))
+    {
+        if (IsAdd64bitOverflow (rs_val, rt_val))
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BNVC"))
+    {
+        if (!IsAdd64bitOverflow (rs_val, rt_val))
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
 
     Context context;
     context.type = eContextRelativeBranchImmediate;
+    context.SetImmediate (current_inst_size + offset);
 
     if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
         return false;
@@ -2456,23 +1353,22 @@ EmulateInstructionMIPS64::Emulate_BOVC (llvm::MCInst& insn)
     return true;
 }
 
+/* 
+    Emulate below MIPS branch instructions.
+    BLTZC, BLEZC, BGEZC, BGTZC, BEQZC, BNEZC : Compact Branches
+*/
 bool
-EmulateInstructionMIPS64::Emulate_BNVC (llvm::MCInst& insn)
+EmulateInstructionMIPS64::Emulate_BXX_2ops_C (llvm::MCInst& insn)
 {
     bool success = false;
-    uint32_t rs, rt;
-    int64_t offset, pc, target;
-    int64_t rs_val, rt_val;
+    uint32_t rs;
+    int64_t offset, pc, target = 0;
+    int64_t rs_val;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
+    uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
 
-    /*
-     * BNVC rs, rt, offset
-     *      condition <- overflow(GPR[rs] + GPR[rt])
-     *      if condition then
-     *          PC = PC + sign_ext (offset << 2)
-    */
     rs = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    rt = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
-    offset = insn.getOperand(2).getImm();
+    offset = insn.getOperand(1).getImm();
 
     pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
     if (!success)
@@ -2482,17 +1378,52 @@ EmulateInstructionMIPS64::Emulate_BNVC (llvm::MCInst& insn)
     if (!success)
         return false;
 
-    rt_val = (int64_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
-    if (!success)
-        return false;
-
-    if (! IsAdd64bitOverflow (rs_val, rt_val))
-        target = pc + offset;
-    else
-        target = pc + 4;
+    if (!strcasecmp (op_name, "BLTZC"))
+    {
+        if (rs_val < 0)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BLEZC"))
+    {
+        if (rs_val <= 0)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BGEZC"))
+    {
+        if (rs_val >= 0)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BGTZC"))
+    {
+        if (rs_val > 0)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BEQZC"))
+    {
+        if (rs_val == 0)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
+    else if (!strcasecmp (op_name, "BNEZC"))
+    {
+        if (rs_val != 0)
+            target = pc + 4 + offset;
+        else
+            target = pc + 4;
+    }
 
     Context context;
     context.type = eContextRelativeBranchImmediate;
+    context.SetImmediate (current_inst_size + offset);
 
     if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
         return false;
@@ -2684,13 +1615,19 @@ EmulateInstructionMIPS64::Emulate_JR (llvm::MCInst& insn)
     return true;
 }
 
+/*
+    Emulate Branch on FP True/False
+    BC1F, BC1FL :   Branch on FP False (L stands for branch likely)
+    BC1T, BC1TL :   Branch on FP True  (L stands for branch likely)
+*/
 bool
-EmulateInstructionMIPS64::Emulate_BC1F (llvm::MCInst& insn)
+EmulateInstructionMIPS64::Emulate_FP_branch (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t cc, fcsr;
-    int64_t target, pc, offset;
-    
+    int64_t pc, offset, target = 0;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
+
     /*
      * BC1F cc, offset
      *  condition <- (FPConditionCode(cc) == 0)
@@ -2700,7 +1637,7 @@ EmulateInstructionMIPS64::Emulate_BC1F (llvm::MCInst& insn)
     */
     cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     offset = insn.getOperand(1).getImm();
-    
+
     pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
     if (!success)
         return false;
@@ -2712,134 +1649,23 @@ EmulateInstructionMIPS64::Emulate_BC1F (llvm::MCInst& insn)
     /* fcsr[23], fcsr[25-31] are vaild condition bits */
     fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
     
-    if ((fcsr & (1 << cc)) == 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-    
-    Context context;
+    if (!strcasecmp (op_name, "BC1F") ||
+        !strcasecmp (op_name, "BC1FL"))
+    {    
+        if ((fcsr & (1 << cc)) == 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BC1T") ||
+             !strcasecmp (op_name, "BC1TL"))
+    {
+        if ((fcsr & (1 << cc)) != 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
 
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BC1T (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t cc, fcsr;
-    int64_t target, pc, offset;
-    
-    /*
-     * BC1T cc, offset
-     *  condition <- (FPConditionCode(cc) != 0)
-     *      if condition then
-     *          offset = sign_ext (offset)
-     *          PC = PC + offset
-    */
-    cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-    
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    fcsr = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_fcsr_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    /* fcsr[23], fcsr[25-31] are vaild condition bits */
-    fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
-    
-    if ((fcsr & (1 << cc)) != 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-    
-    Context context;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BC1FL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t cc, fcsr;
-    int64_t target, pc, offset;
-    
-    /*
-     * BC1F cc, offset
-     *  condition <- (FPConditionCode(cc) == 0)
-     *      if condition then
-     *          offset = sign_ext (offset)
-     *          PC = PC + offset
-    */
-    cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-    
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    fcsr = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_fcsr_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    /* fcsr[23], fcsr[25-31] are vaild condition bits */
-    fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
-    
-    if ((fcsr & (1 << cc)) == 0)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-    
-    Context context;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BC1TL (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t cc, fcsr;
-    int64_t target, pc, offset;
-    
-    /*
-     * BC1T cc, offset
-     *  condition <- (FPConditionCode(cc) != 0)
-     *      if condition then
-     *          offset = sign_ext (offset)
-     *          PC = PC + offset
-    */
-    cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-    
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    fcsr = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_fcsr_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    /* fcsr[23], fcsr[25-31] are vaild condition bits */
-    fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
-    
-    if ((fcsr & (1 << cc)) != 0)
-        target = pc + offset;
-    else
-        target = pc + 8;    /* skip delay slot */
-    
     Context context;
 
     if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
@@ -2926,21 +1752,19 @@ EmulateInstructionMIPS64::Emulate_BC1NEZ (llvm::MCInst& insn)
     return true;
 }
 
+/*
+    Emulate MIPS-3D Branch instructions
+    BC1ANY2F, BC1ANY2T  : Branch on Any of Two Floating Point Condition Codes False/True
+    BC1ANY4F, BC1ANY4T  : Branch on Any of Four Floating Point Condition Codes False/True
+*/
 bool
-EmulateInstructionMIPS64::Emulate_BC1ANY2F (llvm::MCInst& insn)
+EmulateInstructionMIPS64::Emulate_3D_branch (llvm::MCInst& insn)
 {
     bool success = false;
     uint32_t cc, fcsr;
-    int64_t target, pc, offset;
-    
-    /*
-     * BC1ANY2F cc, offset
-     *  condition <- (FPConditionCode(cc) == 0 
-     *                  || FPConditionCode(cc+1) == 0)
-     *      if condition then
-     *          offset = sign_ext (offset)
-     *          PC = PC + offset
-    */
+    int64_t pc, offset, target = 0;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
+
     cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     offset = insn.getOperand(1).getImm();
     
@@ -2955,145 +1779,39 @@ EmulateInstructionMIPS64::Emulate_BC1ANY2F (llvm::MCInst& insn)
     /* fcsr[23], fcsr[25-31] are vaild condition bits */
     fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
 
-    /* if any one bit is 0 */
-    if (((fcsr >> cc) & 3) != 3)
-        target = pc + offset;
-    else
-        target = pc + 8;
-    
-    Context context;
+    if (!strcasecmp (op_name, "BC1ANY2F"))
+    {
+        /* if any one bit is 0 */
+        if (((fcsr >> cc) & 3) != 3)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BC1ANY2T"))
+    {
+        /* if any one bit is 1 */
+        if (((fcsr >> cc) & 3) != 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BC1ANY4F"))
+    {
+        /* if any one bit is 0 */
+        if (((fcsr >> cc) & 0xf) != 0xf)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
+    else if (!strcasecmp (op_name, "BC1ANY4T"))
+    {
+        /* if any one bit is 1 */
+        if (((fcsr >> cc) & 0xf) != 0)
+            target = pc + offset;
+        else
+            target = pc + 8;
+    }
 
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BC1ANY2T (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t cc, fcsr;
-    int64_t target, pc, offset;
-    
-    /*
-     * BC1ANY2T cc, offset
-     *  condition <- (FPConditionCode(cc) == 1 
-     *                  || FPConditionCode(cc+1) == 1)
-     *      if condition then
-     *          offset = sign_ext (offset)
-     *          PC = PC + offset
-    */
-    cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-    
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    fcsr = (uint32_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_fcsr_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    /* fcsr[23], fcsr[25-31] are vaild condition bits */
-    fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
-
-    /* if any one bit is 1 */
-    if (((fcsr >> cc) & 3) != 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-    
-    Context context;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BC1ANY4F (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t cc, fcsr;
-    int64_t target, pc, offset;
-    
-    /*
-     * BC1ANY4F cc, offset
-     *  condition <- (FPConditionCode(cc) == 0 
-     *                  || FPConditionCode(cc+1) == 0)
-     *                  || FPConditionCode(cc+2) == 0)
-     *                  || FPConditionCode(cc+3) == 0)
-     *      if condition then
-     *          offset = sign_ext (offset)
-     *          PC = PC + offset
-    */
-    cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-    
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    fcsr = (uint32_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_fcsr_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    /* fcsr[23], fcsr[25-31] are vaild condition bits */
-    fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
-
-    /* if any one bit is 0 */
-    if (((fcsr >> cc) & 0xf) != 0xf)
-        target = pc + offset;
-    else
-        target = pc + 8;
-    
-    Context context;
-
-    if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))
-        return false;
-
-    return true;
-}
-
-bool
-EmulateInstructionMIPS64::Emulate_BC1ANY4T (llvm::MCInst& insn)
-{
-    bool success = false;
-    uint32_t cc, fcsr;
-    int64_t target, pc, offset;
-    
-    /*
-     * BC1ANY4T cc, offset
-     *  condition <- (FPConditionCode(cc) == 1 
-     *                  || FPConditionCode(cc+1) == 1)
-     *                  || FPConditionCode(cc+2) == 1)
-     *                  || FPConditionCode(cc+3) == 1)
-     *      if condition then
-     *          offset = sign_ext (offset)
-     *          PC = PC + offset
-    */
-    cc = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
-    offset = insn.getOperand(1).getImm();
-    
-    pc = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    fcsr = (uint32_t) ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_fcsr_mips64, 0, &success);
-    if (!success)
-        return false;
-
-    /* fcsr[23], fcsr[25-31] are vaild condition bits */
-    fcsr = ((fcsr >> 24) & 0xfe) | ((fcsr >> 23) & 0x01);
-
-    /* if any one bit is 1 */
-    if (((fcsr >> cc) & 0xf) != 0)
-        target = pc + offset;
-    else
-        target = pc + 8;
-    
     Context context;
 
     if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc_mips64, target))

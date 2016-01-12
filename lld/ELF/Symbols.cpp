@@ -122,6 +122,8 @@ template <class ELFT> static void doInitSymbols() {
   ElfSym<ELFT>::End.setBinding(STB_GLOBAL);
   ElfSym<ELFT>::IgnoreUndef.setBinding(STB_WEAK);
   ElfSym<ELFT>::IgnoreUndef.setVisibility(STV_HIDDEN);
+  ElfSym<ELFT>::IgnoreUndefStrong.setBinding(STB_GLOBAL);
+  ElfSym<ELFT>::IgnoreUndefStrong.setVisibility(STV_HIDDEN);
 }
 
 void elf2::initSymbols() {

@@ -98,10 +98,7 @@ private:
 };
 } // anonymous namespace
 
-template <class ELFT> static bool shouldUseRela() {
-  ELFKind K = cast<ELFFileBase<ELFT>>(Config->FirstElf)->getELFKind();
-  return K == ELF64LEKind || K == ELF64BEKind;
-}
+template <class ELFT> static bool shouldUseRela() { return ELFT::Is64Bits; }
 
 template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   // Initialize output sections that are handled by Writer specially.
@@ -602,7 +599,8 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
 
   // Don't include synthetic symbols like __init_array_start in every output.
   if (auto *U = dyn_cast<DefinedRegular<ELFT>>(&B))
-    if (&U->Sym == &ElfSym<ELFT>::IgnoreUndef)
+    if (&U->Sym == &ElfSym<ELFT>::IgnoreUndef ||
+        &U->Sym == &ElfSym<ELFT>::IgnoreUndefStrong)
       return false;
 
   return true;
@@ -1160,7 +1158,7 @@ static uint32_t getELFFlags() {
   if (Config->EMachine != EM_MIPS)
     return 0;
   // FIXME: In fact ELF flags depends on ELF flags of input object files
-  // and selected emulation. For now just use hadr coded values.
+  // and selected emulation. For now just use hard coded values.
   uint32_t V = EF_MIPS_ABI_O32 | EF_MIPS_CPIC | EF_MIPS_ARCH_32R2;
   if (Config->Shared)
     V |= EF_MIPS_PIC;
