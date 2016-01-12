@@ -542,5 +542,43 @@ TEST(ObjCMessageExpr, CXXConstructExprRange) {
       cxxConstructExpr(), Lang_OBJCXX));
 }
 
+TEST(FunctionDecl, FunctionDeclWithThrowSpecification) {
+  RangeVerifier<FunctionDecl> Verifier;
+  Verifier.expectRange(1, 1, 1, 16);
+  EXPECT_TRUE(Verifier.match(
+      "void f() throw();\n",
+      functionDecl()));
+}
+
+TEST(FunctionDecl, FunctionDeclWithNoExceptSpecification) {
+  RangeVerifier<FunctionDecl> Verifier;
+  Verifier.expectRange(1, 1, 1, 24);
+  EXPECT_TRUE(Verifier.match(
+      "void f() noexcept(false);\n",
+      functionDecl(),
+      Language::Lang_CXX11));
+}
+
+TEST(CXXMethodDecl, CXXMethodDeclWithThrowSpecification) {
+  RangeVerifier<FunctionDecl> Verifier;
+  Verifier.expectRange(2, 1, 2, 16);
+  EXPECT_TRUE(Verifier.match(
+      "class A {\n"
+      "void f() throw();\n"
+      "};\n",
+      functionDecl()));
+}
+
+TEST(CXXMethodDecl, CXXMethodDeclWithNoExceptSpecification) {
+  RangeVerifier<FunctionDecl> Verifier;
+  Verifier.expectRange(2, 1, 2, 24);
+  EXPECT_TRUE(Verifier.match(
+      "class A {\n"
+      "void f() noexcept(false);\n"
+      "};\n",
+      functionDecl(),
+      Language::Lang_CXX11));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang

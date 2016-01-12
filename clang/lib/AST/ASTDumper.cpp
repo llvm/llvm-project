@@ -1055,6 +1055,7 @@ void ASTDumper::VisitTypedefDecl(const TypedefDecl *D) {
   dumpType(D->getUnderlyingType());
   if (D->isModulePrivate())
     OS << " __module_private__";
+  dumpTypeAsChild(D->getUnderlyingType());
 }
 
 void ASTDumper::VisitEnumDecl(const EnumDecl *D) {
@@ -1226,6 +1227,7 @@ void ASTDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
 void ASTDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
   dumpName(D);
   dumpType(D->getUnderlyingType());
+  dumpTypeAsChild(D->getUnderlyingType());
 }
 
 void ASTDumper::VisitTypeAliasTemplateDecl(const TypeAliasTemplateDecl *D) {
@@ -1419,6 +1421,8 @@ void ASTDumper::VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D)
 void ASTDumper::VisitUsingShadowDecl(const UsingShadowDecl *D) {
   OS << ' ';
   dumpBareDeclRef(D->getTargetDecl());
+  if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
+    dumpTypeAsChild(TD->getTypeForDecl());
 }
 
 void ASTDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {

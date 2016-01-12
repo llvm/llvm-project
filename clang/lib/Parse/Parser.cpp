@@ -668,6 +668,9 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::annot_pragma_ms_pragma:
     HandlePragmaMSPragma();
     return DeclGroupPtrTy();
+  case tok::annot_pragma_dump:
+    HandlePragmaDump();
+    return DeclGroupPtrTy();
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl = Actions.ActOnEmptyDeclaration(getCurScope(),

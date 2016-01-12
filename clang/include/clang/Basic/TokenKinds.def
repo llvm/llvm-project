@@ -699,6 +699,11 @@ ANNOTATION(pragma_parser_crash)
 // handles them.
 ANNOTATION(pragma_captured)
 
+// Annotation for #pragma clang __debug dump...
+// The lexer produces these so that the parser and semantic analysis can
+// look up and dump the operand.
+ANNOTATION(pragma_dump)
+
 // Annotation for #pragma ms_struct...
 // The lexer produces these so that they only take effect when the parser
 // handles them.

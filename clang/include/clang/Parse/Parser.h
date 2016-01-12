@@ -502,6 +502,10 @@ private:
   void HandlePragmaAlign();
 
   /// \brief Handle the annotation token produced for
+  /// #pragma clang __debug dump...
+  void HandlePragmaDump();
+
+  /// \brief Handle the annotation token produced for
   /// #pragma weak id...
   void HandlePragmaWeak();
 

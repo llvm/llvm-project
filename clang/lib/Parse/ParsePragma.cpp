@@ -377,6 +377,14 @@ void Parser::HandlePragmaAlign() {
   Actions.ActOnPragmaOptionsAlign(Kind, PragmaLoc);
 }
 
+void Parser::HandlePragmaDump() {
+  assert(Tok.is(tok::annot_pragma_dump));
+  IdentifierInfo *II =
+      reinterpret_cast<IdentifierInfo *>(Tok.getAnnotationValue());
+  Actions.ActOnPragmaDump(getCurScope(), Tok.getLocation(), II);
+  ConsumeToken();
+}
+
 void Parser::HandlePragmaWeak() {
   assert(Tok.is(tok::annot_pragma_weak));
   SourceLocation PragmaLoc = ConsumeToken();
