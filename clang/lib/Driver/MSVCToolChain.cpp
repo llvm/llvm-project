@@ -634,6 +634,96 @@ SanitizerMask MSVCToolChain::getSupportedSanitizers() const {
   return Res;
 }
 
+static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
+                            bool SupportsForcingFramePointer,
+                            const char *ExpandChar, const OptTable &Opts) {
+  assert(A->getOption().matches(options::OPT__SLASH_O));
+
+  StringRef OptStr = A->getValue();
+  for (size_t I = 0, E = OptStr.size(); I != E; ++I) {
+    const char &OptChar = *(OptStr.data() + I);
+    switch (OptChar) {
+    default:
+      break;
+    case '1':
+    case '2':
+    case 'x':
+    case 'd':
+      if (&OptChar == ExpandChar) {
+        if (OptChar == 'd') {
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_O0));
+        } else {
+          if (OptChar == '1') {
+            DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
+          } else if (OptChar == '2' || OptChar == 'x') {
+            DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
+            DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
+          }
+          if (SupportsForcingFramePointer)
+            DAL.AddFlagArg(A,
+                           Opts.getOption(options::OPT_fomit_frame_pointer));
+          if (OptChar == '1' || OptChar == '2')
+            DAL.AddFlagArg(A,
+                           Opts.getOption(options::OPT_ffunction_sections));
+        }
+      }
+      break;
+    case 'b':
+      if (I + 1 != E && isdigit(OptStr[I + 1]))
+        ++I;
+      break;
+    case 'g':
+      break;
+    case 'i':
+      if (I + 1 != E && OptStr[I + 1] == '-') {
+        ++I;
+        DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_builtin));
+      } else {
+        DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
+      }
+      break;
+    case 's':
+      DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
+      break;
+    case 't':
+      DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
+      break;
+    case 'y': {
+      bool OmitFramePointer = true;
+      if (I + 1 != E && OptStr[I + 1] == '-') {
+        OmitFramePointer = false;
+        ++I;
+      }
+      if (SupportsForcingFramePointer) {
+        if (OmitFramePointer)
+          DAL.AddFlagArg(A,
+                         Opts.getOption(options::OPT_fomit_frame_pointer));
+        else
+          DAL.AddFlagArg(
+              A, Opts.getOption(options::OPT_fno_omit_frame_pointer));
+      }
+      break;
+    }
+    }
+  }
+}
+
+static void TranslateDArg(Arg *A, llvm::opt::DerivedArgList &DAL,
+                          const OptTable &Opts) {
+  assert(A->getOption().matches(options::OPT_D));
+
+  StringRef Val = A->getValue();
+  size_t Hash = Val.find('#');
+  if (Hash == StringRef::npos || Hash > Val.find('=')) {
+    DAL.append(A);
+    return;
+  }
+
+  std::string NewVal = Val;
+  NewVal[Hash] = '=';
+  DAL.AddJoinedArg(A, Opts.getOption(options::OPT_D), NewVal);
+}
+
 llvm::opt::DerivedArgList *
 MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                              const char *BoundArch) const {
@@ -664,81 +754,18 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     }
   }
 
-  // The -O flag actually takes an amalgam of other options.  For example,
-  // '/Ogyb2' is equivalent to '/Og' '/Oy' '/Ob2'.
   for (Arg *A : Args) {
-    if (!A->getOption().matches(options::OPT__SLASH_O)) {
+    if (A->getOption().matches(options::OPT__SLASH_O)) {
+      // The -O flag actually takes an amalgam of other options.  For example,
+      // '/Ogyb2' is equivalent to '/Og' '/Oy' '/Ob2'.
+      TranslateOptArg(A, *DAL, SupportsForcingFramePointer, ExpandChar, Opts);
+    } else if (A->getOption().matches(options::OPT_D)) {
+      // Translate -Dfoo#bar into -Dfoo=bar.
+      TranslateDArg(A, *DAL, Opts);
+    } else {
       DAL->append(A);
-      continue;
-    }
-
-    StringRef OptStr = A->getValue();
-    for (size_t I = 0, E = OptStr.size(); I != E; ++I) {
-      const char &OptChar = *(OptStr.data() + I);
-      switch (OptChar) {
-      default:
-        break;
-      case '1':
-      case '2':
-      case 'x':
-      case 'd':
-        if (&OptChar == ExpandChar) {
-          if (OptChar == 'd') {
-            DAL->AddFlagArg(A, Opts.getOption(options::OPT_O0));
-          } else {
-            if (OptChar == '1') {
-              DAL->AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
-            } else if (OptChar == '2' || OptChar == 'x') {
-              DAL->AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
-              DAL->AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
-            }
-            if (SupportsForcingFramePointer)
-              DAL->AddFlagArg(A,
-                              Opts.getOption(options::OPT_fomit_frame_pointer));
-            if (OptChar == '1' || OptChar == '2')
-              DAL->AddFlagArg(A,
-                              Opts.getOption(options::OPT_ffunction_sections));
-          }
-        }
-        break;
-      case 'b':
-        if (I + 1 != E && isdigit(OptStr[I + 1]))
-          ++I;
-        break;
-      case 'g':
-        break;
-      case 'i':
-        if (I + 1 != E && OptStr[I + 1] == '-') {
-          ++I;
-          DAL->AddFlagArg(A, Opts.getOption(options::OPT_fno_builtin));
-        } else {
-          DAL->AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
-        }
-        break;
-      case 's':
-        DAL->AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
-        break;
-      case 't':
-        DAL->AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
-        break;
-      case 'y': {
-        bool OmitFramePointer = true;
-        if (I + 1 != E && OptStr[I + 1] == '-') {
-          OmitFramePointer = false;
-          ++I;
-        }
-        if (SupportsForcingFramePointer) {
-          if (OmitFramePointer)
-            DAL->AddFlagArg(A,
-                            Opts.getOption(options::OPT_fomit_frame_pointer));
-          else
-            DAL->AddFlagArg(
-                A, Opts.getOption(options::OPT_fno_omit_frame_pointer));
-        }
-        break;
-      }
-      }
     }
   }
+
   return DAL;
 }

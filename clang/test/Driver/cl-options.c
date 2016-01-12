@@ -14,9 +14,14 @@
 // C_P: "-E"
 // C_P: "-C"
 
-// RUN: %clang_cl /Dfoo=bar -### -- %s 2>&1 | FileCheck -check-prefix=D %s
-// RUN: %clang_cl /D foo=bar -### -- %s 2>&1 | FileCheck -check-prefix=D %s
+// RUN: %clang_cl /Dfoo=bar /D bar=baz /DMYDEF#value /DMYDEF2=foo#bar /DMYDEF3#a=b /DMYDEF4# \
+// RUN:    -### -- %s 2>&1 | FileCheck -check-prefix=D %s
 // D: "-D" "foo=bar"
+// D: "-D" "bar=baz"
+// D: "-D" "MYDEF=value"
+// D: "-D" "MYDEF2=foo#bar"
+// D: "-D" "MYDEF3=a=b"
+// D: "-D" "MYDEF4="
 
 // RUN: %clang_cl /E -### -- %s 2>&1 | FileCheck -check-prefix=E %s
 // E: "-E"
