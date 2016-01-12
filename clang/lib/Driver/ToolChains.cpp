@@ -526,7 +526,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     // no environment variable defined, see if we can set the default based
     // on -isysroot.
     if (OSXTarget.empty() && iOSTarget.empty() && WatchOSTarget.empty() &&
-        Args.hasArg(options::OPT_isysroot)) {
+        TvOSTarget.empty() && Args.hasArg(options::OPT_isysroot)) {
       if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
         StringRef isysroot = A->getValue();
         // Assume SDK has path: SOME_PATH/SDKs/PlatformXX.YY.sdk
