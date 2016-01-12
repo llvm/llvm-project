@@ -210,11 +210,6 @@ namespace {
       AU.addPreserved<DominatorTreeWrapperPass>();
       AU.addPreserved<GlobalsAAWrapperPass>();
     }
-
-    bool canUnrollCompletely(Loop *L, unsigned Threshold,
-                             unsigned PercentDynamicCostSavedThreshold,
-                             unsigned DynamicCostSavingsDiscount,
-                             uint64_t UnrolledCost, uint64_t RolledDynamicCost);
   };
 }
 
@@ -783,12 +778,11 @@ static void SetLoopAlreadyUnrolled(Loop *L) {
   L->setLoopID(NewLoopID);
 }
 
-bool LoopUnroll::canUnrollCompletely(Loop *L, unsigned Threshold,
-                                     unsigned PercentDynamicCostSavedThreshold,
-                                     unsigned DynamicCostSavingsDiscount,
-                                     uint64_t UnrolledCost,
-                                     uint64_t RolledDynamicCost) {
-
+static bool canUnrollCompletely(Loop *L, unsigned Threshold,
+                                unsigned PercentDynamicCostSavedThreshold,
+                                unsigned DynamicCostSavingsDiscount,
+                                uint64_t UnrolledCost,
+                                uint64_t RolledDynamicCost) {
   if (Threshold == NoThreshold) {
     DEBUG(dbgs() << "  Can fully unroll, because no threshold is set.\n");
     return true;
