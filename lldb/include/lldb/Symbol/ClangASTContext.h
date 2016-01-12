@@ -759,15 +759,6 @@ public:
     ConstString
     GetTypeName (lldb::opaque_compiler_type_t type) override;
     
-    ConstString
-    GetDisplayTypeName (void * type) override;
-    
-    ConstString
-    GetTypeSymbolName (void * type) override;
-
-    ConstString
-    GetMangledTypeName (void * type) override;
-    
     uint32_t
     GetTypeInfo (lldb::opaque_compiler_type_t type, CompilerType *pointee_or_element_compiler_type) override;
     

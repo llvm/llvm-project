@@ -3885,24 +3885,6 @@ ClangASTContext::GetTypeName (lldb::opaque_compiler_type_t type)
     return ConstString(type_name);
 }
 
-ConstString
-ClangASTContext::GetDisplayTypeName (void * type)
-{
-    return GetTypeName(type);
-}
-
-ConstString
-ClangASTContext::GetTypeSymbolName (void * type)
-{
-    return GetTypeName(type);
-}
-
-ConstString
-ClangASTContext::GetMangledTypeName (void * type)
-{
-    return GetTypeName(type);
-}
-
 uint32_t
 ClangASTContext::GetTypeInfo (lldb::opaque_compiler_type_t type, CompilerType *pointee_or_element_clang_type)
 {

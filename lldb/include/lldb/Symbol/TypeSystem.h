@@ -256,14 +256,20 @@ public:
     virtual ConstString
     GetTypeName (lldb::opaque_compiler_type_t type) = 0;
 
+    // Defaults to GetTypeName(type).  Override if your language desires
+    // specialized behavior.
     virtual ConstString
-    GetDisplayTypeName (lldb::opaque_compiler_type_t type) = 0;
-    
-    virtual ConstString
-    GetTypeSymbolName (lldb::opaque_compiler_type_t type) = 0;
+    GetDisplayTypeName (lldb::opaque_compiler_type_t type);
 
+    // Defaults to GetTypeName(type).  Override if your language desires
+    // specialized behavior.
     virtual ConstString
-    GetMangledTypeName (lldb::opaque_compiler_type_t type) = 0;
+    GetTypeSymbolName (lldb::opaque_compiler_type_t type);
+
+    // Defaults to GetTypeName(type).  Override if your language desires
+    // specialized behavior.
+    virtual ConstString
+    GetMangledTypeName (lldb::opaque_compiler_type_t type);
     
     virtual uint32_t
     GetTypeInfo (lldb::opaque_compiler_type_t type, CompilerType *pointee_or_element_compiler_type) = 0;

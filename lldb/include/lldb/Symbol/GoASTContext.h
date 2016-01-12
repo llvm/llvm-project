@@ -218,12 +218,6 @@ class GoASTContext : public TypeSystem
 
     lldb::TypeClass GetTypeClass(lldb::opaque_compiler_type_t type) override;
     
-    ConstString GetDisplayTypeName (lldb::opaque_compiler_type_t type) override { return ConstString("<unimplemented>"); }
-    
-    ConstString GetTypeSymbolName (lldb::opaque_compiler_type_t type) override { return ConstString("<unimplemented>"); }
-    
-    ConstString GetMangledTypeName (lldb::opaque_compiler_type_t type) override { return ConstString("<unimplemented>"); }
-    
     //----------------------------------------------------------------------
     // Creating related types
     //----------------------------------------------------------------------
