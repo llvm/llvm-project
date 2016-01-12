@@ -66,6 +66,9 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
     default:
       MI->dump();
       llvm_unreachable("unknown operand type");
+    case MachineOperand::MO_MachineBasicBlock:
+      MI->dump();
+      llvm_unreachable("MachineBasicBlock operand should have been rewritten");
     case MachineOperand::MO_Register: {
       // Ignore all implicit register operands.
       if (MO.isImplicit())
@@ -91,10 +94,6 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
         llvm_unreachable("unknown floating point immediate type");
       break;
     }
-    case MachineOperand::MO_MachineBasicBlock:
-      MCOp = MCOperand::createExpr(
-          MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
-      break;
     case MachineOperand::MO_GlobalAddress:
       assert(MO.getTargetFlags() == 0 &&
              "WebAssembly does not use target flags on GlobalAddresses");

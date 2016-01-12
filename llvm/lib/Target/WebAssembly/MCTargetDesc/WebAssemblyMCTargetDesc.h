@@ -48,16 +48,26 @@ enum OperandType {
   /// Floating-point immediate.
   OPERAND_FPIMM
 };
+
+/// WebAssembly-specific directive identifiers.
+enum Directive {
+  // FIXME: This is not the real binary encoding.
+  DotParam = UINT64_MAX - 0,   ///< .param
+  DotResult = UINT64_MAX - 1,  ///< .result
+  DotLocal = UINT64_MAX - 2,   ///< .local
+  DotEndFunc = UINT64_MAX - 3, ///< .endfunc
+};
+
 } // end namespace WebAssembly
 
 namespace WebAssemblyII {
 enum {
   // For variadic instructions, this flag indicates whether an operand
   // in the variable_ops range is an immediate value.
-  VariableOpIsImmediate       = (1 << 0),
+  VariableOpIsImmediate = (1 << 0),
   // For immediate values in the variable_ops range, this flag indicates
-  // whether the value represents a type.
-  VariableOpImmediateIsType   = (1 << 1),
+  // whether the value represents a control-flow label.
+  VariableOpImmediateIsLabel = (1 << 1),
 };
 } // end namespace WebAssemblyII
 

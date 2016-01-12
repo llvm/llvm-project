@@ -30,13 +30,10 @@ protected:
 };
 } // end anonymous namespace
 
-// FIXME: Use EM_NONE as a temporary hack. Should we decide to pursue ELF
-// writing seriously, we should email generic-abi@googlegroups.com and ask
-// for our own ELF code.
 WebAssemblyELFObjectWriter::WebAssemblyELFObjectWriter(bool Is64Bit,
                                                        uint8_t OSABI)
-    : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_NONE,
-                              /*HasRelocationAddend=*/true) {}
+    : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_WEBASSEMBLY,
+                              /*HasRelocationAddend=*/false) {}
 
 unsigned WebAssemblyELFObjectWriter::GetRelocType(const MCValue &Target,
                                                   const MCFixup &Fixup,

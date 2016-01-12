@@ -309,7 +309,12 @@ enum {
   EM_COOL          = 217, // iCelero CoolEngine
   EM_NORC          = 218, // Nanoradio Optimized RISC
   EM_CSR_KALIMBA   = 219, // CSR Kalimba architecture family
-  EM_AMDGPU        = 224  // AMD GPU architecture
+  EM_AMDGPU        = 224, // AMD GPU architecture
+
+  // A request has been made to the maintainer of the official registry for
+  // such numbers for an official value for WebAssembly. As soon as one is
+  // allocated, this enum will be updated to use it.
+  EM_WEBASSEMBLY   = 0x4157, // WebAssembly architecture
 };
 
 // Object file classes.

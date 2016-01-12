@@ -90,9 +90,9 @@
 ; X86-NEXT: .long [[X_RETURN]]-_x
 ; X86-NEXT: .long   5
 ; X86-NEXT: .short 42
-; X86-NEXT: .short 42
+; X86-NEXT: .short 0
 ; X86-NEXT: .short 43
-; X86-NEXT: .short 43
+; X86-NEXT: .short 0
 ; X86-NEXT: [[FILE_SEGMENT_END]]:
 ; X86-NEXT: [[F2_END]]:
 ; Symbol subsection for y
@@ -133,9 +133,9 @@
 ; X86-NEXT: .long [[Y_RETURN]]-_y
 ; X86-NEXT: .long   9
 ; X86-NEXT: .short 52
-; X86-NEXT: .short 52
+; X86-NEXT: .short 0
 ; X86-NEXT: .short 53
-; X86-NEXT: .short 53
+; X86-NEXT: .short 0
 ; X86-NEXT: [[FILE_SEGMENT_END]]:
 ; X86-NEXT: [[F2_END]]:
 ; Symbol subsection for f
@@ -180,13 +180,13 @@
 ; X86-NEXT: .long [[F_RETURN]]-_f
 ; X86-NEXT: .long   15
 ; X86-NEXT: .short 62
-; X86-NEXT: .short 62
+; X86-NEXT: .short 0
 ; X86-NEXT: .short 63
-; X86-NEXT: .short 63
+; X86-NEXT: .short 0
 ; X86-NEXT: .short 72
-; X86-NEXT: .short 72
+; X86-NEXT: .short 0
 ; X86-NEXT: .short 73
-; X86-NEXT: .short 73
+; X86-NEXT: .short 0
 ; X86-NEXT: [[FILE_SEGMENT_END]]:
 ; X86-NEXT: [[F2_END]]:
 ; File index to string table offset subsection
@@ -268,9 +268,9 @@
 ; OBJ32-NEXT:     +0x0: 4
 ; OBJ32-NEXT:     +0x5: 5
 ; OBJ32-NEXT:     ColStart: 42
-; OBJ32-NEXT:     ColEnd: 42
+; OBJ32-NEXT:     ColEnd: 0
 ; OBJ32-NEXT:     ColStart: 43
-; OBJ32-NEXT:     ColEnd: 43
+; OBJ32-NEXT:     ColEnd: 0
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT: ]
 ; OBJ32-NEXT: FunctionLineTable [
@@ -282,9 +282,9 @@
 ; OBJ32-NEXT:     +0x0: 8
 ; OBJ32-NEXT:     +0x5: 9
 ; OBJ32-NEXT:     ColStart: 52
-; OBJ32-NEXT:     ColEnd: 52
+; OBJ32-NEXT:     ColEnd: 0
 ; OBJ32-NEXT:     ColStart: 53
-; OBJ32-NEXT:     ColEnd: 53
+; OBJ32-NEXT:     ColEnd: 0
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT: ]
 ; OBJ32-NEXT: FunctionLineTable [
@@ -298,13 +298,13 @@
 ; OBJ32-NEXT:     +0xA: 14
 ; OBJ32-NEXT:     +0xF: 15
 ; OBJ32-NEXT:     ColStart: 62
-; OBJ32-NEXT:     ColEnd: 62
+; OBJ32-NEXT:     ColEnd: 0
 ; OBJ32-NEXT:     ColStart: 63
-; OBJ32-NEXT:     ColEnd: 63
+; OBJ32-NEXT:     ColEnd: 0
 ; OBJ32-NEXT:     ColStart: 72
-; OBJ32-NEXT:     ColEnd: 72
+; OBJ32-NEXT:     ColEnd: 0
 ; OBJ32-NEXT:     ColStart: 73
-; OBJ32-NEXT:     ColEnd: 73
+; OBJ32-NEXT:     ColEnd: 0
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT: ]
 
@@ -392,9 +392,9 @@
 ; X64-NEXT: .short 0
 ; X64-NEXT: .short 0
 ; X64-NEXT: .short 42
-; X64-NEXT: .short 42
+; X64-NEXT: .short 0
 ; X64-NEXT: .short 43
-; X64-NEXT: .short 43
+; X64-NEXT: .short 0
 ; X64-NEXT: [[FILE_SEGMENT_END]]:
 ; X64-NEXT: [[F2_END]]:
 ; Symbol subsection for y
@@ -439,9 +439,9 @@
 ; X64-NEXT: .short 0
 ; X64-NEXT: .short 0
 ; X64-NEXT: .short 52
-; X64-NEXT: .short 52
+; X64-NEXT: .short 0
 ; X64-NEXT: .short 53
-; X64-NEXT: .short 53
+; X64-NEXT: .short 0
 ; X64-NEXT: [[FILE_SEGMENT_END]]:
 ; X64-NEXT: [[F2_END]]:
 ; Symbol subsection for f
@@ -490,13 +490,13 @@
 ; X64-NEXT: .short 0
 ; X64-NEXT: .short 0
 ; X64-NEXT: .short 62
-; X64-NEXT: .short 62
+; X64-NEXT: .short 0
 ; X64-NEXT: .short 63
-; X64-NEXT: .short 63
+; X64-NEXT: .short 0
 ; X64-NEXT: .short 72
-; X64-NEXT: .short 72
+; X64-NEXT: .short 0
 ; X64-NEXT: .short 73
-; X64-NEXT: .short 73
+; X64-NEXT: .short 0
 ; X64-NEXT: [[FILE_SEGMENT_END]]:
 ; X64-NEXT: [[F2_END]]:
 ; File index to string table offset subsection
@@ -581,9 +581,9 @@
 ; OBJ64-NEXT:     ColStart: 0
 ; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 42
-; OBJ64-NEXT:     ColEnd: 42
+; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 43
-; OBJ64-NEXT:     ColEnd: 43
+; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT: ]
 ; OBJ64-NEXT: FunctionLineTable [
@@ -598,9 +598,9 @@
 ; OBJ64-NEXT:     ColStart: 0
 ; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 52
-; OBJ64-NEXT:     ColEnd: 52
+; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 53
-; OBJ64-NEXT:     ColEnd: 53
+; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT: ]
 ; OBJ64-NEXT: FunctionLineTable [
@@ -617,13 +617,13 @@
 ; OBJ64-NEXT:     ColStart: 0
 ; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 62
-; OBJ64-NEXT:     ColEnd: 62
+; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 63
-; OBJ64-NEXT:     ColEnd: 63
+; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 72
-; OBJ64-NEXT:     ColEnd: 72
+; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:     ColStart: 73
-; OBJ64-NEXT:     ColEnd: 73
+; OBJ64-NEXT:     ColEnd: 0
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT: ]
 

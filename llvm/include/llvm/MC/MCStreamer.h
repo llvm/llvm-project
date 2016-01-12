@@ -131,6 +131,10 @@ public:
 
   void finish() override;
 
+  /// Reset any state between object emissions, i.e. the equivalent of
+  /// MCStreamer's reset method.
+  virtual void reset();
+
   /// Callback used to implement the ldr= pseudo.
   /// Add a new entry to the constant pool for the current section and return an
   /// MCExpr that can be used to refer to the constant pool location.

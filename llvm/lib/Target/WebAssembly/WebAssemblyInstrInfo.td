@@ -145,26 +145,6 @@ def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
 def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
           (CONST_I32 texternalsym:$addr)>;
 
-let Defs = [ARGUMENTS] in {
-
-// Function signature and local variable declaration "instructions".
-// Set TSFlags{0} to 1 to indicate that the variable_ops are immediates.
-// Set TSFlags{1} to 1 to indicate that the immediates represent types.
-def PARAM  : I<(outs), (ins variable_ops), [], ".param  \t"> {
-  let TSFlags{0} = 1;
-  let TSFlags{1} = 1;
-}
-def RESULT : I<(outs), (ins variable_ops), [], ".result \t"> {
-  let TSFlags{0} = 1;
-  let TSFlags{1} = 1;
-}
-def LOCAL  : I<(outs), (ins variable_ops), [], ".local  \t"> {
-  let TSFlags{0} = 1;
-  let TSFlags{1} = 1;
-}
-
-} // Defs = [ARGUMENTS]
-
 //===----------------------------------------------------------------------===//
 // Additional sets of instructions.
 //===----------------------------------------------------------------------===//

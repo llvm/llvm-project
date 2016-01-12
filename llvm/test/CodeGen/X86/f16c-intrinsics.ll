@@ -61,6 +61,18 @@ define <4 x float> @test_x86_vcvtps2ph_128_scalar(i64* %ptr) {
   ret <4 x float> %res
 }
 
+define <4 x float> @test_x86_vcvtps2ph_128_scalar2(i64* %ptr) {
+; CHECK-LABEL: test_x86_vcvtps2ph_128_scalar2:
+; CHECK-NOT: vmov
+; CHECK: vcvtph2ps (%
+
+  %load = load i64, i64* %ptr
+  %ins = insertelement <2 x i64> undef, i64 %load, i32 0
+  %bc = bitcast <2 x i64> %ins to <8 x i16>
+  %res = tail call <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16> %bc)
+  ret <4 x float> %res
+}
+
 define void @test_x86_vcvtps2ph_256_m(<8 x i16>* nocapture %d, <8 x float> %a) nounwind {
 entry:
   ; CHECK-LABEL: test_x86_vcvtps2ph_256_m:

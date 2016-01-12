@@ -74,6 +74,9 @@ bool WebAssemblyInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
     case WebAssembly::BR_IF:
       if (HaveCond)
         return true;
+      // If we're running after CFGStackify, we can't optimize further.
+      if (!MI.getOperand(1).isMBB())
+        return true;
       Cond.push_back(MachineOperand::CreateImm(true));
       Cond.push_back(MI.getOperand(0));
       TBB = MI.getOperand(1).getMBB();
@@ -82,12 +85,18 @@ bool WebAssemblyInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
     case WebAssembly::BR_UNLESS:
       if (HaveCond)
         return true;
+      // If we're running after CFGStackify, we can't optimize further.
+      if (!MI.getOperand(1).isMBB())
+        return true;
       Cond.push_back(MachineOperand::CreateImm(false));
       Cond.push_back(MI.getOperand(0));
       TBB = MI.getOperand(1).getMBB();
       HaveCond = true;
       break;
     case WebAssembly::BR:
+      // If we're running after CFGStackify, we can't optimize further.
+      if (!MI.getOperand(0).isMBB())
+        return true;
       if (!HaveCond)
         TBB = MI.getOperand(0).getMBB();
       else

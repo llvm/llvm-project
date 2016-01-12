@@ -190,9 +190,9 @@ bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
-		    MCStreamer &OutStreamer,
-                    const MCOperand &Imm, int AlignSize) {
+static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
+                           MCStreamer &OutStreamer, const MCOperand &Imm,
+                           int AlignSize) {
   MCSymbol *Sym;
   int64_t Value;
   if (Imm.getExpr()->evaluateAsAbsolute(Value)) {

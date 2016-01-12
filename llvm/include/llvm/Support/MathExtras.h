@@ -717,6 +717,25 @@ SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
   return Z;
 }
 
+/// \brief Multiply two unsigned integers, X and Y, and add the unsigned
+/// integer, A to the product. Clamp the result to the maximum representable
+/// value of T on overflow. ResultOverflowed indicates if the result is larger
+/// than the maximum representable value of type T.
+/// Note that this is purely a convenience function as there is no distinction
+/// where overflow occurred in a 'fused' multiply-add for unsigned numbers.
+template <typename T>
+typename std::enable_if<std::is_unsigned<T>::value, T>::type
+SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
+  bool Dummy;
+  bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
+
+  T Product = SaturatingMultiply(X, Y, &Overflowed);
+  if (Overflowed)
+    return Product;
+
+  return SaturatingAdd(A, Product, &Overflowed);
+}
+
 extern const float huge_valf;
 } // End llvm namespace
 

@@ -29,7 +29,7 @@ FunctionPass *createX86ISelDag(X86TargetMachine &TM,
                                CodeGenOpt::Level OptLevel);
 
 /// This pass initializes a global base register for PIC on x86-32.
-FunctionPass* createX86GlobalBaseRegPass();
+FunctionPass *createX86GlobalBaseRegPass();
 
 /// This pass combines multiple accesses to local-dynamic TLS variables so that
 /// the TLS base address for the module is only fetched once per execution path
@@ -49,7 +49,7 @@ FunctionPass *createX86IssueVZeroUpperPass();
 /// This will prevent a stall when returning on the Atom.
 FunctionPass *createX86PadShortFunctions();
 
-/// Return a a pass that selectively replaces certain instructions (like add,
+/// Return a pass that selectively replaces certain instructions (like add,
 /// sub, inc, dec, some shifts, and some multiplies) by equivalent LEA
 /// instructions, in order to eliminate execution delays in some processors.
 FunctionPass *createX86FixupLEAs();

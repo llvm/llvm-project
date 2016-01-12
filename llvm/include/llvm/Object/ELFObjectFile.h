@@ -842,6 +842,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_SPARC:
     case ELF::EM_SPARC32PLUS:
       return "ELF32-sparc";
+    case ELF::EM_WEBASSEMBLY:
+      return "ELF32-wasm";
     default:
       return "ELF32-unknown";
     }
@@ -861,6 +863,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "ELF64-sparc";
     case ELF::EM_MIPS:
       return "ELF64-mips";
+    case ELF::EM_WEBASSEMBLY:
+      return "ELF64-wasm";
     default:
       return "ELF64-unknown";
     }
@@ -908,6 +912,12 @@ unsigned ELFObjectFile<ELFT>::getArch() const {
     return IsLittleEndian ? Triple::sparcel : Triple::sparc;
   case ELF::EM_SPARCV9:
     return Triple::sparcv9;
+  case ELF::EM_WEBASSEMBLY:
+    switch (EF.getHeader()->e_ident[ELF::EI_CLASS]) {
+    case ELF::ELFCLASS32: return Triple::wasm32;
+    case ELF::ELFCLASS64: return Triple::wasm64;
+    default: return Triple::UnknownArch;
+    }
 
   default:
     return Triple::UnknownArch;

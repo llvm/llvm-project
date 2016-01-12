@@ -140,16 +140,9 @@ public:
   /// around unsigned integers.
   sampleprof_error addSamples(uint64_t S, uint64_t Weight = 1) {
     bool Overflowed;
-    if (Weight > 1) {
-      S = SaturatingMultiply(S, Weight, &Overflowed);
-      if (Overflowed)
-        return sampleprof_error::counter_overflow;
-    }
-    NumSamples = SaturatingAdd(NumSamples, S, &Overflowed);
-    if (Overflowed)
-      return sampleprof_error::counter_overflow;
-
-    return sampleprof_error::success;
+    NumSamples = SaturatingMultiplyAdd(S, Weight, NumSamples, &Overflowed);
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
   }
 
   /// Add called function \p F with samples \p S.
@@ -161,16 +154,10 @@ public:
                                    uint64_t Weight = 1) {
     uint64_t &TargetSamples = CallTargets[F];
     bool Overflowed;
-    if (Weight > 1) {
-      S = SaturatingMultiply(S, Weight, &Overflowed);
-      if (Overflowed)
-        return sampleprof_error::counter_overflow;
-    }
-    TargetSamples = SaturatingAdd(TargetSamples, S, &Overflowed);
-    if (Overflowed)
-      return sampleprof_error::counter_overflow;
-
-    return sampleprof_error::success;
+    TargetSamples =
+        SaturatingMultiplyAdd(S, Weight, TargetSamples, &Overflowed);
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
   }
 
   /// Return true if this sample record contains function calls.
@@ -215,29 +202,17 @@ public:
   void dump() const;
   sampleprof_error addTotalSamples(uint64_t Num, uint64_t Weight = 1) {
     bool Overflowed;
-    if (Weight > 1) {
-      Num = SaturatingMultiply(Num, Weight, &Overflowed);
-      if (Overflowed)
-        return sampleprof_error::counter_overflow;
-    }
-    TotalSamples = SaturatingAdd(TotalSamples, Num, &Overflowed);
-    if (Overflowed)
-      return sampleprof_error::counter_overflow;
-
-    return sampleprof_error::success;
+    TotalSamples =
+        SaturatingMultiplyAdd(Num, Weight, TotalSamples, &Overflowed);
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
   }
   sampleprof_error addHeadSamples(uint64_t Num, uint64_t Weight = 1) {
     bool Overflowed;
-    if (Weight > 1) {
-      Num = SaturatingMultiply(Num, Weight, &Overflowed);
-      if (Overflowed)
-        return sampleprof_error::counter_overflow;
-    }
-    TotalHeadSamples = SaturatingAdd(TotalHeadSamples, Num, &Overflowed);
-    if (Overflowed)
-      return sampleprof_error::counter_overflow;
-
-    return sampleprof_error::success;
+    TotalHeadSamples =
+        SaturatingMultiplyAdd(Num, Weight, TotalHeadSamples, &Overflowed);
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
   }
   sampleprof_error addBodySamples(uint32_t LineOffset, uint32_t Discriminator,
                                   uint64_t Num, uint64_t Weight = 1) {
