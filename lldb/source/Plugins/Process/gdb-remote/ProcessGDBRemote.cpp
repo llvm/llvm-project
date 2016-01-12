@@ -2034,6 +2034,8 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                                      const std::vector<addr_t> &exc_data,
                                      addr_t thread_dispatch_qaddr,
                                      bool queue_vars_valid, // Set to true if queue_name, queue_kind and queue_serial are valid
+                                     LazyBool associated_with_dispatch_queue,
+                                     addr_t dispatch_queue_t,
                                      std::string &queue_name,
                                      QueueKind queue_kind,
                                      uint64_t queue_serial)
@@ -2074,9 +2076,14 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
             gdb_thread->SetThreadDispatchQAddr (thread_dispatch_qaddr);
             // Check if the GDB server was able to provide the queue name, kind and serial number
             if (queue_vars_valid)
-                gdb_thread->SetQueueInfo(std::move(queue_name), queue_kind, queue_serial);
+                gdb_thread->SetQueueInfo(std::move(queue_name), queue_kind, queue_serial, dispatch_queue_t, associated_with_dispatch_queue);
             else
                 gdb_thread->ClearQueueInfo();
+
+            gdb_thread->SetAssociatedWithLibdispatchQueue (associated_with_dispatch_queue);
+
+            if (dispatch_queue_t != LLDB_INVALID_ADDRESS)
+                gdb_thread->SetQueueLibdispatchQueueAddress (dispatch_queue_t);
 
             // Make sure we update our thread stop reason just once
             if (!thread_sp->StopInfoIsUpToDate())
@@ -2248,6 +2255,8 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
     static ConstString g_key_metype("metype");
     static ConstString g_key_medata("medata");
     static ConstString g_key_qaddr("qaddr");
+    static ConstString g_key_dispatch_queue_t("dispatch_queue_t");
+    static ConstString g_key_associated_with_dispatch_queue("associated_with_dispatch_queue");
     static ConstString g_key_queue_name("qname");
     static ConstString g_key_queue_kind("qkind");
     static ConstString g_key_queue_serial_number("qserialnum");
@@ -2270,6 +2279,8 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
     addr_t thread_dispatch_qaddr = LLDB_INVALID_ADDRESS;
     ExpeditedRegisterMap expedited_register_map;
     bool queue_vars_valid = false;
+    addr_t dispatch_queue_t = LLDB_INVALID_ADDRESS;
+    LazyBool associated_with_dispatch_queue = eLazyBoolCalculate;
     std::string queue_name;
     QueueKind queue_kind = eQueueKindUnknown;
     uint64_t queue_serial_number = 0;
@@ -2286,6 +2297,8 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
                           &exc_data,
                           &thread_dispatch_qaddr,
                           &queue_vars_valid,
+                          &associated_with_dispatch_queue,
+                          &dispatch_queue_t,
                           &queue_name,
                           &queue_kind,
                           &queue_serial_number]
@@ -2345,6 +2358,21 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
             queue_serial_number = object->GetIntegerValue(0);
             if (queue_serial_number != 0)
                 queue_vars_valid = true;
+        }
+        else if (key == g_key_dispatch_queue_t)
+        {
+            dispatch_queue_t = object->GetIntegerValue(0);
+            if (dispatch_queue_t != 0 && dispatch_queue_t != LLDB_INVALID_ADDRESS)
+                queue_vars_valid = true;
+        }
+        else if (key == g_key_associated_with_dispatch_queue)
+        {
+            queue_vars_valid = true;
+            bool associated = object->GetBooleanValue ();
+            if (associated)
+                associated_with_dispatch_queue = eLazyBoolYes;
+            else
+                associated_with_dispatch_queue = eLazyBoolNo;
         }
         else if (key == g_key_reason)
         {
@@ -2416,6 +2444,8 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
                               exc_data,
                               thread_dispatch_qaddr,
                               queue_vars_valid,
+                              associated_with_dispatch_queue,
+                              dispatch_queue_t,
                               queue_name,
                               queue_kind,
                               queue_serial_number);
@@ -2461,6 +2491,8 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
             std::vector<addr_t> exc_data;
             addr_t thread_dispatch_qaddr = LLDB_INVALID_ADDRESS;
             bool queue_vars_valid = false; // says if locals below that start with "queue_" are valid
+            addr_t dispatch_queue_t = LLDB_INVALID_ADDRESS;
+            LazyBool associated_with_dispatch_queue = eLazyBoolCalculate;
             std::string queue_name;
             QueueKind queue_kind = eQueueKindUnknown;
             uint64_t queue_serial_number = 0;
@@ -2553,6 +2585,11 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                 else if (key.compare("qaddr") == 0)
                 {
                     thread_dispatch_qaddr = StringConvert::ToUInt64 (value.c_str(), 0, 16);
+                }
+                else if (key.compare("dispatch_queue_t") == 0)
+                {
+                    queue_vars_valid = true;
+                    dispatch_queue_t = StringConvert::ToUInt64 (value.c_str(), 0, 16);
                 }
                 else if (key.compare("qname") == 0)
                 {
@@ -2678,6 +2715,8 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                                                     exc_data,
                                                     thread_dispatch_qaddr,
                                                     queue_vars_valid,
+                                                    associated_with_dispatch_queue,
+                                                    dispatch_queue_t,
                                                     queue_name,
                                                     queue_kind,
                                                     queue_serial_number);
