@@ -82,6 +82,9 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                           raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
+    assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
+            MII.get(MI->getOpcode()).TSFlags == 0) &&
+           "WebAssembly variable_ops register ops don't use TSFlags");
     unsigned WAReg = Op.getReg();
     if (int(WAReg) >= 0)
       printRegName(O, WAReg);
@@ -95,19 +98,28 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (OpNo < MII.get(MI->getOpcode()).getNumDefs())
       O << '=';
   } else if (Op.isImm()) {
-    switch (MI->getOpcode()) {
-    case WebAssembly::PARAM:
-    case WebAssembly::RESULT:
-    case WebAssembly::LOCAL:
+    assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
+            (MII.get(MI->getOpcode()).TSFlags &
+                     WebAssemblyII::VariableOpIsImmediate)) &&
+           "WebAssemblyII::VariableOpIsImmediate should be set for "
+           "variable_ops immediate ops");
+    if (MII.get(MI->getOpcode()).TSFlags &
+        WebAssemblyII::VariableOpImmediateIsType)
+      // The immediates represent types.
       O << WebAssembly::TypeToString(MVT::SimpleValueType(Op.getImm()));
-      break;
-    default:
+    else
       O << Op.getImm();
-      break;
-    }
-  } else if (Op.isFPImm())
+  } else if (Op.isFPImm()) {
+    assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
+            MII.get(MI->getOpcode()).TSFlags == 0) &&
+           "WebAssembly variable_ops floating point ops don't use TSFlags");
     O << toString(APFloat(Op.getFPImm()));
-  else {
+  } else {
+    assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
+            (MII.get(MI->getOpcode()).TSFlags &
+                     WebAssemblyII::VariableOpIsImmediate)) &&
+           "WebAssemblyII::VariableOpIsImmediate should be set for "
+           "variable_ops expr ops");
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     Op.getExpr()->print(O, &MAI);
   }

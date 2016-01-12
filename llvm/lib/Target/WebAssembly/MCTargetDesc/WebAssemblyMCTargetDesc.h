@@ -56,4 +56,15 @@ MCObjectWriter *createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
 #define GET_SUBTARGETINFO_ENUM
 #include "WebAssemblyGenSubtargetInfo.inc"
 
+namespace WebAssemblyII {
+enum {
+  // For variadic instructions, this flag indicates whether an operand
+  // in the variable_ops range is an immediate value.
+  VariableOpIsImmediate       = (1 << 0),
+  // For immediate values in the variable_ops range, this flag indicates
+  // whether the value represents a type.
+  VariableOpImmediateIsType   = (1 << 1),
+};
+} // end namespace WebAssemblyII
+
 #endif

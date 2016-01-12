@@ -859,6 +859,12 @@ def CSR_Win64 : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R15,
 def CSR_64_TLS_Darwin : CalleeSavedRegs<(add CSR_64, RCX, RDX, RSI,
                                              R8, R9, R10, R11)>;
 
+// CSRs that are handled by prologue, epilogue.
+def CSR_64_CXX_TLS_Darwin_PE : CalleeSavedRegs<(add)>;
+
+// CSRs that are handled explicitly via copies.
+def CSR_64_CXX_TLS_Darwin_ViaCopy : CalleeSavedRegs<(add CSR_64_TLS_Darwin)>;
+
 // All GPRs - except r11
 def CSR_64_RT_MostRegs : CalleeSavedRegs<(add CSR_64, RAX, RCX, RDX, RSI, RDI,
                                               R8, R9, R10, RSP)>;

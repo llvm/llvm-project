@@ -2,8 +2,8 @@
 ; TLS function were wrongly model and after fixing that, shrink-wrapping
 ; cannot help here. To achieve the expected lowering, we need to playing
 ; tricks similar to AArch64 fast TLS calling convention (r255821).
-; Re-enable the following run line when 
-; _RUN_: llc < %s -mtriple=x86_64-apple-darwin -enable-shrink-wrap=true | FileCheck --check-prefix=SHRINK %s
+; Applying tricks on x86-64 similar to r255821.
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -enable-shrink-wrap=true | FileCheck %s
 %struct.S = type { i8 }
 
 @sg = internal thread_local global %struct.S zeroinitializer, align 1
@@ -16,51 +16,28 @@ declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
 
 ; Every GPR should be saved - except rdi, rax, and rsp
 ; CHECK-LABEL: _ZTW2sg
-; CHECK: pushq %r11
-; CHECK: pushq %r10
-; CHECK: pushq %r9
-; CHECK: pushq %r8
-; CHECK: pushq %rsi
-; CHECK: pushq %rdx
-; CHECK: pushq %rcx
-; CHECK: pushq %rbx
+; CHECK-NOT: pushq %r11
+; CHECK-NOT: pushq %r10
+; CHECK-NOT: pushq %r9
+; CHECK-NOT: pushq %r8
+; CHECK-NOT: pushq %rsi
+; CHECK-NOT: pushq %rdx
+; CHECK-NOT: pushq %rcx
+; CHECK-NOT: pushq %rbx
 ; CHECK: callq
 ; CHECK: jne
 ; CHECK: callq
 ; CHECK: tlv_atexit
 ; CHECK: callq
-; CHECK: popq %rbx
-; CHECK: popq %rcx
-; CHECK: popq %rdx
-; CHECK: popq %rsi
-; CHECK: popq %r8
-; CHECK: popq %r9
-; CHECK: popq %r10
-; CHECK: popq %r11
-; SHRINK-LABEL: _ZTW2sg
-; SHRINK: callq
-; SHRINK: jne
-; SHRINK: pushq %r11
-; SHRINK: pushq %r10
-; SHRINK: pushq %r9
-; SHRINK: pushq %r8
-; SHRINK: pushq %rsi
-; SHRINK: pushq %rdx
-; SHRINK: pushq %rcx
-; SHRINK: pushq %rbx
-; SHRINK: callq
-; SHRINK: tlv_atexit
-; SHRINK: popq %rbx
-; SHRINK: popq %rcx
-; SHRINK: popq %rdx
-; SHRINK: popq %rsi
-; SHRINK: popq %r8
-; SHRINK: popq %r9
-; SHRINK: popq %r10
-; SHRINK: popq %r11
-; SHRINK: LBB{{.*}}:
-; SHRINK: callq
-define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() {
+; CHECK-NOT: popq %rbx
+; CHECK-NOT: popq %rcx
+; CHECK-NOT: popq %rdx
+; CHECK-NOT: popq %rsi
+; CHECK-NOT: popq %r8
+; CHECK-NOT: popq %r9
+; CHECK-NOT: popq %r10
+; CHECK-NOT: popq %r11
+define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind {
   %.b.i = load i1, i1* @__tls_guard, align 1
   br i1 %.b.i, label %__tls_init.exit, label %init.i
 
