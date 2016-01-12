@@ -3400,7 +3400,10 @@ class SBDebugger(_object):
         return _lldb.SBDebugger_SetCloseInputOnEOF(self, *args)
 
     def GetCategory(self, *args):
-        """GetCategory(self, str category_name) -> SBTypeCategory"""
+        """
+        GetCategory(self, str category_name) -> SBTypeCategory
+        GetCategory(self, LanguageType lang_type) -> SBTypeCategory
+        """
         return _lldb.SBDebugger_GetCategory(self, *args)
 
     def CreateCategory(self, *args):
@@ -12566,7 +12569,7 @@ class value(object):
                 return self_val == other_val
         raise TypeError("Unknown type %s, No equality operation defined." % str(type(other)))
 
-    def __neq__(self, other):
+    def __ne__(self, other):
         return not self.__eq__(other)
 
 class SBSyntheticValueProvider(object):

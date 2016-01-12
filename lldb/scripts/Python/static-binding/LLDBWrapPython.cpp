@@ -19219,7 +19219,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_SBDebugger_GetCategory(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_SBDebugger_GetCategory__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBDebugger *arg1 = (lldb::SBDebugger *) 0 ;
   char *arg2 = (char *) 0 ;
@@ -19253,6 +19253,89 @@ SWIGINTERN PyObject *_wrap_SBDebugger_GetCategory(PyObject *SWIGUNUSEDPARM(self)
   return resultobj;
 fail:
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBDebugger_GetCategory__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBDebugger *arg1 = (lldb::SBDebugger *) 0 ;
+  lldb::LanguageType arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  lldb::SBTypeCategory result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBDebugger_GetCategory",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBDebugger, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBDebugger_GetCategory" "', argument " "1"" of type '" "lldb::SBDebugger *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBDebugger * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBDebugger_GetCategory" "', argument " "2"" of type '" "lldb::LanguageType""'");
+  } 
+  arg2 = static_cast< lldb::LanguageType >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetCategory(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBTypeCategory(static_cast< const lldb::SBTypeCategory& >(result))), SWIGTYPE_p_lldb__SBTypeCategory, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBDebugger_GetCategory(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[3];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = (int)PyObject_Length(args);
+  for (ii = 0; (ii < argc) && (ii < 2); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBDebugger, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_SBDebugger_GetCategory__SWIG_1(self, args);
+      }
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBDebugger, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_AsCharPtrAndSize(argv[1], 0, NULL, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_SBDebugger_GetCategory__SWIG_0(self, args);
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'SBDebugger_GetCategory'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    GetCategory(lldb::SBDebugger *,char const *)\n"
+    "    GetCategory(lldb::SBDebugger *,lldb::LanguageType)\n");
   return NULL;
 }
 
@@ -66991,7 +67074,10 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBDebugger_SetScriptLanguage", _wrap_SBDebugger_SetScriptLanguage, METH_VARARGS, (char *)"SBDebugger_SetScriptLanguage(SBDebugger self, ScriptLanguage script_lang)"},
 	 { (char *)"SBDebugger_GetCloseInputOnEOF", _wrap_SBDebugger_GetCloseInputOnEOF, METH_VARARGS, (char *)"SBDebugger_GetCloseInputOnEOF(SBDebugger self) -> bool"},
 	 { (char *)"SBDebugger_SetCloseInputOnEOF", _wrap_SBDebugger_SetCloseInputOnEOF, METH_VARARGS, (char *)"SBDebugger_SetCloseInputOnEOF(SBDebugger self, bool b)"},
-	 { (char *)"SBDebugger_GetCategory", _wrap_SBDebugger_GetCategory, METH_VARARGS, (char *)"SBDebugger_GetCategory(SBDebugger self, char category_name) -> SBTypeCategory"},
+	 { (char *)"SBDebugger_GetCategory", _wrap_SBDebugger_GetCategory, METH_VARARGS, (char *)"\n"
+		"GetCategory(char category_name) -> SBTypeCategory\n"
+		"SBDebugger_GetCategory(SBDebugger self, LanguageType lang_type) -> SBTypeCategory\n"
+		""},
 	 { (char *)"SBDebugger_CreateCategory", _wrap_SBDebugger_CreateCategory, METH_VARARGS, (char *)"SBDebugger_CreateCategory(SBDebugger self, char category_name) -> SBTypeCategory"},
 	 { (char *)"SBDebugger_DeleteCategory", _wrap_SBDebugger_DeleteCategory, METH_VARARGS, (char *)"SBDebugger_DeleteCategory(SBDebugger self, char category_name) -> bool"},
 	 { (char *)"SBDebugger_GetNumCategories", _wrap_SBDebugger_GetNumCategories, METH_VARARGS, (char *)"SBDebugger_GetNumCategories(SBDebugger self) -> uint32_t"},
