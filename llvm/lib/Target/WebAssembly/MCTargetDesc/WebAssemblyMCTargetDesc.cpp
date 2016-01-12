@@ -73,6 +73,11 @@ static MCAsmBackend *createAsmBackend(const Target & /*T*/,
   return createWebAssemblyAsmBackend(TT);
 }
 
+static MCSubtargetInfo *createMCSubtargetInfo(const Triple &TT, StringRef CPU,
+                                              StringRef FS) {
+  return createWebAssemblyMCSubtargetInfoImpl(TT, CPU, FS);
+}
+
 // Force static initialization.
 extern "C" void LLVMInitializeWebAssemblyTargetMC() {
   for (Target *T : {&TheWebAssemblyTarget32, &TheWebAssemblyTarget64}) {
@@ -93,5 +98,8 @@ extern "C" void LLVMInitializeWebAssemblyTargetMC() {
 
     // Register the ASM Backend.
     TargetRegistry::RegisterMCAsmBackend(*T, createAsmBackend);
+
+    // Register the MC subtarget info.
+    TargetRegistry::RegisterMCSubtargetInfo(*T, createMCSubtargetInfo);
   }
 }

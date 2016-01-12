@@ -308,6 +308,8 @@ endfunction(set_windows_version_resource_properties)
 #   SHARED;STATIC
 #     STATIC by default w/o BUILD_SHARED_LIBS.
 #     SHARED by default w/  BUILD_SHARED_LIBS.
+#   OBJECT
+#     Also create an OBJECT library target. Default if STATIC && SHARED.
 #   MODULE
 #     Target ${name} might not be created on unsupported platforms.
 #     Check with "if(TARGET ${name})".
@@ -329,7 +331,7 @@ endfunction(set_windows_version_resource_properties)
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
-    "MODULE;SHARED;STATIC;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME"
+    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME"
     "OUTPUT_NAME"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
@@ -362,7 +364,7 @@ function(llvm_add_library name)
   endif()
 
   # Generate objlib
-  if(ARG_SHARED AND ARG_STATIC)
+  if((ARG_SHARED AND ARG_STATIC) OR ARG_OBJECT)
     # Generate an obj library for both targets.
     set(obj_name "obj.${name}")
     add_library(${obj_name} OBJECT EXCLUDE_FROM_ALL
@@ -911,8 +913,13 @@ function(llvm_add_go_executable binary pkgpath)
       set(cppflags "${cppflags} -I${d}")
     endforeach(d)
     set(ldflags "${CMAKE_EXE_LINKER_FLAGS}")
+    if (LLVM_LINK_LLVM_DYLIB)
+      set(linkmode "dylib")
+    else()
+      set(linkmode "component-libs")
+    endif()
     add_custom_command(OUTPUT ${binpath}
-      COMMAND ${CMAKE_BINARY_DIR}/bin/llvm-go "go=${GO_EXECUTABLE}" "cc=${cc}" "cxx=${cxx}" "cppflags=${cppflags}" "ldflags=${ldflags}"
+      COMMAND ${CMAKE_BINARY_DIR}/bin/llvm-go "go=${GO_EXECUTABLE}" "cc=${cc}" "cxx=${cxx}" "cppflags=${cppflags}" "ldflags=${ldflags}" "linkmode=${linkmode}"
               ${ARG_GOFLAGS} build -o ${binpath} ${pkgpath}
       DEPENDS llvm-config ${CMAKE_BINARY_DIR}/bin/llvm-go${CMAKE_EXECUTABLE_SUFFIX}
               ${llvmlibs} ${ARG_DEPENDS}

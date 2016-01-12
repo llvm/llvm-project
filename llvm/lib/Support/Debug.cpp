@@ -95,7 +95,10 @@ struct DebugOnlyOpt {
     if (Val.empty())
       return;
     DebugFlag = true;
-    CurrentDebugType->push_back(Val);
+    SmallVector<StringRef,8> dbgTypes;
+    StringRef(Val).split(dbgTypes, ',', -1, false);
+    for (auto dbgType : dbgTypes)
+      CurrentDebugType->push_back(dbgType);
   }
 };
 
@@ -104,10 +107,9 @@ struct DebugOnlyOpt {
 static DebugOnlyOpt DebugOnlyOptLoc;
 
 static cl::opt<DebugOnlyOpt, true, cl::parser<std::string> >
-DebugOnly("debug-only", cl::desc("Enable a specific type of debug output"),
+DebugOnly("debug-only", cl::desc("Enable a specific type of debug output (comma separated list of types)"),
           cl::Hidden, cl::ZeroOrMore, cl::value_desc("debug string"),
           cl::location(DebugOnlyOptLoc), cl::ValueRequired);
-
 // Signal handlers - dump debug output on termination.
 static void debug_user_sig_handler(void *Cookie) {
   // This is a bit sneaky.  Since this is under #ifndef NDEBUG, we

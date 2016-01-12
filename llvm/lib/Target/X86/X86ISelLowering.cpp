@@ -4171,6 +4171,35 @@ static bool hasFPCMov(unsigned X86CC) {
   }
 }
 
+
+bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
+                                           const CallInst &I,
+                                           unsigned Intrinsic) const {
+
+  const IntrinsicData* IntrData = getIntrinsicWithChain(Intrinsic);
+  if (!IntrData)
+    return false;
+
+  switch (IntrData->Type) {
+  case LOADA:
+  case LOADU: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(I.getType());
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = (IntrData->Type == LOADA ? Info.memVT.getSizeInBits()/8 : 1);
+    Info.vol = false;
+    Info.readMem = true;
+    Info.writeMem = false;
+    return true;
+  }
+  default:
+    break;
+  }
+
+  return false;
+}
+
 /// Returns true if the target can instruction select the
 /// specified FP immediate natively. If false, the legalizer will
 /// materialize the FP immediate as a load from a constant pool.
@@ -17538,7 +17567,6 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
     return DAG.getMergeValues(Results, dl);
   }
   case COMPRESS_TO_MEM: {
-    SDLoc dl(Op);
     SDValue Mask = Op.getOperand(4);
     SDValue DataToCompress = Op.getOperand(3);
     SDValue Addr = Op.getOperand(2);
@@ -17564,7 +17592,6 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
   case TRUNCATE_TO_MEM_VI32:
     return LowerINTRINSIC_TRUNCATE_TO_MEM(Op, DAG, MVT::i32);
   case EXPAND_FROM_MEM: {
-    SDLoc dl(Op);
     SDValue Mask = Op.getOperand(4);
     SDValue PassThru = Op.getOperand(3);
     SDValue Addr = Op.getOperand(2);
@@ -17583,6 +17610,25 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
       getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, DataToExpand),
                            Mask, PassThru, Subtarget, DAG), Chain};
     return DAG.getMergeValues(Results, dl);
+  }
+  case LOADU:
+  case LOADA: {
+    SDValue Mask = Op.getOperand(4);
+    SDValue PassThru = Op.getOperand(3);
+    SDValue Addr = Op.getOperand(2);
+    SDValue Chain = Op.getOperand(0);
+    MVT VT = Op.getSimpleValueType();
+
+    MemIntrinsicSDNode *MemIntr = dyn_cast<MemIntrinsicSDNode>(Op);
+    assert(MemIntr && "Expected MemIntrinsicSDNode!");
+
+    if (isAllOnesConstant(Mask)) // return just a load
+      return DAG.getLoad(VT, dl, Chain, Addr, MemIntr->getMemOperand());
+
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+    SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+    return DAG.getMaskedLoad(VT, dl, Chain, Addr, VMask, PassThru, VT,
+                             MemIntr->getMemOperand(), ISD::NON_EXTLOAD);
   }
   }
 }

@@ -837,6 +837,13 @@ namespace llvm {
     /// from i32 to i8 but not from i32 to i16.
     bool isNarrowingProfitable(EVT VT1, EVT VT2) const override;
 
+    /// Given an intrinsic, checks if on the target the intrinsic will need to map
+    /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
+    /// true and stores the intrinsic information into the IntrinsicInfo that was
+    /// passed to the function.
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+                            unsigned Intrinsic) const override;
+
     /// Returns true if the target can instruction select the
     /// specified FP immediate natively. If false, the legalizer will
     /// materialize the FP immediate as a load from a constant pool.

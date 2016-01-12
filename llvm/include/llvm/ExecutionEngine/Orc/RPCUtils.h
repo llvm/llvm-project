@@ -69,6 +69,20 @@ protected:
     }
   };
 
+  template <typename ClassT, typename... ArgTs> class MemberFnWrapper {
+  public:
+    typedef std::error_code (ClassT::*MethodT)(ArgTs...);
+    MemberFnWrapper(ClassT &Instance, MethodT Method)
+        : Instance(Instance), Method(Method) {}
+    std::error_code operator()(ArgTs &... Args) {
+      return (Instance.*Method)(Args...);
+    }
+
+  private:
+    ClassT &Instance;
+    MethodT Method;
+  };
+
   template <typename... ArgTs> class ReadArgs {
   public:
     std::error_code operator()() { return std::error_code(); }
@@ -193,6 +207,15 @@ public:
     return HandlerHelper<ChannelT, Proc>::handle(C, Handler);
   }
 
+  /// Helper version of 'handle' for calling member functions.
+  template <typename Proc, typename ClassT, typename... ArgTs>
+  static std::error_code
+  handle(ChannelT &C, ClassT &Instance,
+         std::error_code (ClassT::*HandlerMethod)(ArgTs...)) {
+    return handle<Proc>(
+        C, MemberFnWrapper<ClassT, ArgTs...>(Instance, HandlerMethod));
+  }
+
   /// Deserialize a ProcedureIdT from C and verify it matches the id for Proc.
   /// If the id does match, deserialize the arguments and call the handler
   /// (similarly to handle).
@@ -206,6 +229,15 @@ public:
     if (ProcId != Proc::Id)
       return orcError(OrcErrorCode::UnexpectedRPCCall);
     return handle<Proc>(C, Handler);
+  }
+
+  /// Helper version of expect for calling member functions.
+  template <typename Proc, typename ClassT, typename... ArgTs>
+  static std::error_code
+  expect(ChannelT &C, ClassT &Instance,
+         std::error_code (ClassT::*HandlerMethod)(ArgTs...)) {
+    return expect<Proc>(
+        C, MemberFnWrapper<ClassT, ArgTs...>(Instance, HandlerMethod));
   }
 
   /// Helper for handling setter procedures - this method returns a functor that
