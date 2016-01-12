@@ -66,17 +66,23 @@ MinGW::MinGW(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
-  // On Windows if there is no sysroot we search for gcc on the PATH.
-  if (getDriver().SysRoot.size())
-  Base = getDriver().SysRoot;
+// In Windows there aren't any standard install locations, we search
+// for gcc on the PATH. In Linux the base is always /usr.
 #ifdef LLVM_ON_WIN32
+  if (getDriver().SysRoot.size())
+    Base = getDriver().SysRoot;
   else if (llvm::ErrorOr<std::string> GPPName =
                llvm::sys::findProgramByName("gcc"))
     Base = llvm::sys::path::parent_path(
         llvm::sys::path::parent_path(GPPName.get()));
-#endif
-  if (!Base.size())
+  else
     Base = llvm::sys::path::parent_path(getDriver().getInstalledDir());
+#else
+  if (getDriver().SysRoot.size())
+    Base = getDriver().SysRoot;
+  else
+    Base = "/usr";
+#endif
 
   Base += llvm::sys::path::get_separator();
   findGccLibDir();
