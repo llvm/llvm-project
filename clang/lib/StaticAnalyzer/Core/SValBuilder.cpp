@@ -423,6 +423,45 @@ static bool shouldBeModeledWithNoOp(ASTContext &Context, QualType ToTy,
   return true;
 }
 
+// Handles casts of type CK_IntegralCast.
+// At the moment, this function will redirect to evalCast, except when the range
+// of the original value is known to be greater than the max of the target type.
+SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
+                                   QualType castTy, QualType originalTy) {
+
+  // No truncations if target type is big enough.
+  if (getContext().getTypeSize(castTy) >= getContext().getTypeSize(originalTy))
+    return evalCast(val, castTy, originalTy);
+
+  const SymExpr *se = val.getAsSymbolicExpression();
+  if (!se) // Let evalCast handle non symbolic expressions.
+    return evalCast(val, castTy, originalTy);
+
+  // Find the maximum value of the target type.
+  APSIntType ToType(getContext().getTypeSize(castTy),
+                    castTy->isUnsignedIntegerType());
+  llvm::APSInt ToTypeMax = ToType.getMaxValue();
+  NonLoc ToTypeMaxVal =
+      makeIntVal(ToTypeMax.isUnsigned() ? ToTypeMax.getZExtValue()
+                                        : ToTypeMax.getSExtValue(),
+                 castTy)
+          .castAs<NonLoc>();
+  // Check the range of the symbol being casted against the maximum value of the
+  // target type.
+  NonLoc FromVal = val.castAs<NonLoc>();
+  QualType CmpTy = getConditionType();
+  NonLoc CompVal =
+      evalBinOpNN(state, BO_LT, FromVal, ToTypeMaxVal, CmpTy).castAs<NonLoc>();
+  ProgramStateRef IsNotTruncated, IsTruncated;
+  std::tie(IsNotTruncated, IsTruncated) = state->assume(CompVal);
+  if (!IsNotTruncated && IsTruncated) {
+    // Symbol is truncated so we evaluate it as a cast.
+    NonLoc CastVal = makeNonLoc(se, originalTy, castTy);
+    return CastVal;
+  }
+  return evalCast(val, castTy, originalTy);
+}
+
 // FIXME: should rewrite according to the cast kind.
 SVal SValBuilder::evalCast(SVal val, QualType castTy, QualType originalTy) {
   castTy = Context.getCanonicalType(castTy);

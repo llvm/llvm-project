@@ -171,7 +171,7 @@ private:
       case APSIntType::RTR_Below:
         // The entire range is outside the symbol's set of possible values.
         // If this is a conventionally-ordered range, the state is infeasible.
-        if (Lower < Upper)
+        if (Lower <= Upper)
           return false;
 
         // However, if the range wraps around, it spans all possible values.
@@ -222,7 +222,7 @@ private:
       case APSIntType::RTR_Above:
         // The entire range is outside the symbol's set of possible values.
         // If this is a conventionally-ordered range, the state is infeasible.
-        if (Lower < Upper)
+        if (Lower <= Upper)
           return false;
 
         // However, if the range wraps around, it spans all possible values.

@@ -878,6 +878,7 @@ TEST_F(FormatTestJS, Modules) {
                "  y: string;\n"
                "}");
   verifyFormat("export class X { y: number; }");
+  verifyFormat("export abstract class X { y: number; }");
   verifyFormat("export default class X { y: number }");
   verifyFormat("export default function() {\n  return 1;\n}");
   verifyFormat("export var x = 12;");

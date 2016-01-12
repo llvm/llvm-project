@@ -1184,7 +1184,7 @@ static LinkageInfo getLVForLocalDecl(const NamedDecl *D,
     return LinkageInfo::none();
 
   const Decl *OuterD = getOutermostFuncOrBlockContext(D);
-  if (!OuterD)
+  if (!OuterD || OuterD->isInvalidDecl())
     return LinkageInfo::none();
 
   LinkageInfo LV;
