@@ -1,6 +1,6 @@
 ; RUN: %lli -remote-mcjit -mcjit-remote-process=lli-child-target%exeext \
 ; RUN:   -relocation-model=pic -code-model=small %s > /dev/null
-; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386
+; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386, win32
 
 @count = global i32 1, align 4
 

@@ -91,7 +91,20 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       F->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_iOS_SwiftError_SaveList;
 
+  if (STI.isTargetDarwin() && F->getCallingConv() == CallingConv::CXX_FAST_TLS)
+    return MF->getInfo<ARMFunctionInfo>()->isSplitCSR()
+               ? CSR_iOS_CXX_TLS_PE_SaveList
+               : CSR_iOS_CXX_TLS_SaveList;
   return RegList;
+}
+
+const MCPhysReg *ARMBaseRegisterInfo::getCalleeSavedRegsViaCopy(
+    const MachineFunction *MF) const {
+  assert(MF && "Invalid MachineFunction pointer.");
+  if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
+      MF->getInfo<ARMFunctionInfo>()->isSplitCSR())
+    return CSR_iOS_CXX_TLS_ViaCopy_SaveList;
+  return nullptr;
 }
 
 const uint32_t *
@@ -106,6 +119,8 @@ ARMBaseRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_iOS_SwiftError_RegMask;
 
+  if (STI.isTargetDarwin() && CC == CallingConv::CXX_FAST_TLS)
+    return CSR_iOS_CXX_TLS_RegMask;
   return STI.isTargetDarwin() ? CSR_iOS_RegMask : CSR_AAPCS_RegMask;
 }
 

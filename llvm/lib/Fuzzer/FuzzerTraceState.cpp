@@ -539,16 +539,18 @@ void dfsan_weak_hook_strcmp(void *caller_pc, const char *s1, const char *s2,
 }
 
 void __sanitizer_weak_hook_memcmp(void *caller_pc, const void *s1,
-                                  const void *s2, size_t n) {
+                                  const void *s2, size_t n, int result) {
   if (!TS) return;
+  if (result == 0) return;  // No reason to mutate.
   if (n <= 1) return;  // Not interesting.
   TS->TraceMemcmpCallback(n, reinterpret_cast<const uint8_t *>(s1),
                           reinterpret_cast<const uint8_t *>(s2));
 }
 
 void __sanitizer_weak_hook_strncmp(void *caller_pc, const char *s1,
-                                   const char *s2, size_t n) {
+                                   const char *s2, size_t n, int result) {
   if (!TS) return;
+  if (result == 0) return;  // No reason to mutate.
   size_t Len1 = fuzzer::InternalStrnlen(s1, n);
   size_t Len2 = fuzzer::InternalStrnlen(s2, n);
   n = std::min(n, Len1);
@@ -559,8 +561,9 @@ void __sanitizer_weak_hook_strncmp(void *caller_pc, const char *s1,
 }
 
 void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
-                                   const char *s2) {
+                                   const char *s2, int result) {
   if (!TS) return;
+  if (result == 0) return;  // No reason to mutate.
   size_t Len1 = strlen(s1);
   size_t Len2 = strlen(s2);
   size_t N = std::min(Len1, Len2);

@@ -10,6 +10,7 @@
 
 define void @globalfunc1() #0 {
 entry:
+  call void @funcwithpersonality()
   ret void
 }
 
@@ -77,6 +78,20 @@ entry:
 define internal i32 @staticfunc() #0 {
 entry:
   ret i32 1
+}
+
+declare i32 @__gxx_personality_v0(...)
+
+; Add enough instructions to prevent import with inst limit of 5
+define internal void @funcwithpersonality() #2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+entry:
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  ret void
 }
 
 define internal void @staticfunc2() #0 {

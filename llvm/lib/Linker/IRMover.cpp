@@ -773,6 +773,16 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
     NewGV->setLinkage(GlobalValue::ExternalWeakLinkage);
 
   NewGV->copyAttributesFrom(SGV);
+
+  // Remove these copied constants in case this stays a declaration, since
+  // they point to the source module. If the def is linked the values will
+  // be mapped in during linkFunctionBody.
+  if (auto *NewF = dyn_cast<Function>(NewGV)) {
+    NewF->setPersonalityFn(nullptr);
+    NewF->setPrefixData(nullptr);
+    NewF->setPrologueData(nullptr);
+  }
+
   return NewGV;
 }
 
