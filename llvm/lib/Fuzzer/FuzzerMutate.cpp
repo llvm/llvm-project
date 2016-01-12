@@ -32,6 +32,7 @@ struct MutationDispatcher::Impl {
   std::vector<DictionaryEntry> AutoDictionary;
   std::vector<Mutator> Mutators;
   std::vector<Mutator> CurrentMutatorSequence;
+  std::vector<DictionaryEntry> CurrentDictionaryEntrySequence;
   const std::vector<Unit> *Corpus = nullptr;
   FuzzerRandomBase &Rand;
 
@@ -146,13 +147,14 @@ size_t MutationDispatcher::Impl::AddWordFromDictionary(
     size_t Idx = UsePositionHint ? PositionHint : Rand(Size + 1);
     memmove(Data + Idx + Word.size(), Data + Idx, Size - Idx);
     memcpy(Data + Idx, Word.data(), Word.size());
-    return Size + Word.size();
+    Size += Word.size();
   } else {  // Overwrite some bytes with Word.
     if (Word.size() > Size) return 0;
     size_t Idx = UsePositionHint ? PositionHint : Rand(Size - Word.size());
     memcpy(Data + Idx, Word.data(), Word.size());
-    return Size;
   }
+  CurrentDictionaryEntrySequence.push_back(DE);
+  return Size;
 }
 
 size_t MutationDispatcher::Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size,
@@ -206,12 +208,20 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
 
 void MutationDispatcher::StartMutationSequence() {
   MDImpl->CurrentMutatorSequence.clear();
+  MDImpl->CurrentDictionaryEntrySequence.clear();
 }
 
 void MutationDispatcher::PrintMutationSequence() {
   Printf("MS: %zd ", MDImpl->CurrentMutatorSequence.size());
   for (auto M : MDImpl->CurrentMutatorSequence)
     Printf("%s-", M.Name);
+  if (!MDImpl->CurrentDictionaryEntrySequence.empty()) {
+    Printf(" DE: ");
+    for (auto DE : MDImpl->CurrentDictionaryEntrySequence) {
+      Printf("\"");
+      PrintASCII(DE.Word, "\"-");
+    }
+  }
 }
 
 // Mutates Data in place, returns new size.

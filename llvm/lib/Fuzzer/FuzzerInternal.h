@@ -38,6 +38,7 @@ std::string DirPlusFile(const std::string &DirPath,
 
 void Printf(const char *Fmt, ...);
 void Print(const Unit &U, const char *PrintAfter = "");
+void PrintASCII(const uint8_t *Data, size_t Size, const char *PrintAfter = "");
 void PrintASCII(const Unit &U, const char *PrintAfter = "");
 std::string Hash(const Unit &U);
 void SetTimer(int Seconds);

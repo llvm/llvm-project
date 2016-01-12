@@ -41,13 +41,18 @@ let Defs = [ARGUMENTS] in {
 // TODO: SelectionDAG's lowering insists on using a pointer as the index for
 // jump tables, so in practice we don't ever use TABLESWITCH_I64 in wasm32 mode
 // currently.
+// Set TSFlags{0} to 1 to indicate that the variable_ops are immediates.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 def TABLESWITCH_I32 : I<(outs), (ins I32:$index, bb_op:$default, variable_ops),
                         [(WebAssemblytableswitch I32:$index, bb:$default)],
-                        "tableswitch\t$index, $default">;
+                        "tableswitch\t$index, $default"> {
+  let TSFlags{0} = 1;
+}
 def TABLESWITCH_I64 : I<(outs), (ins I64:$index, bb_op:$default, variable_ops),
                         [(WebAssemblytableswitch I64:$index, bb:$default)],
-                        "tableswitch\t$index, $default">;
+                        "tableswitch\t$index, $default"> {
+  let TSFlags{0} = 1;
+}
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // Placemarkers to indicate the start of a block or loop scope. These
