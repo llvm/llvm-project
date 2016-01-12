@@ -876,6 +876,22 @@ struct PragmaDebugHandler : public PragmaHandler {
       Crasher.setKind(tok::annot_pragma_parser_crash);
       Crasher.setAnnotationRange(SourceRange(Tok.getLocation()));
       PP.EnterToken(Crasher);
+    } else if (II->isStr("dump")) {
+      Token Identifier;
+      PP.LexUnexpandedToken(Identifier);
+      if (auto *DumpII = Identifier.getIdentifierInfo()) {
+        Token DumpAnnot;
+        DumpAnnot.startToken();
+        DumpAnnot.setKind(tok::annot_pragma_dump);
+        DumpAnnot.setAnnotationRange(
+            SourceRange(Tok.getLocation(), Identifier.getLocation()));
+        DumpAnnot.setAnnotationValue(DumpII);
+        PP.DiscardUntilEndOfDirective();
+        PP.EnterToken(DumpAnnot);
+      } else {
+        PP.Diag(Identifier, diag::warn_pragma_debug_missing_argument)
+            << II->getName();
+      }
     } else if (II->isStr("llvm_fatal_error")) {
       llvm::report_fatal_error("#pragma clang __debug llvm_fatal_error");
     } else if (II->isStr("llvm_unreachable")) {
@@ -887,7 +903,8 @@ struct PragmaDebugHandler : public PragmaHandler {
       if (MacroII)
         PP.dumpMacroInfo(MacroII);
       else
-        PP.Diag(MacroName, diag::warn_pragma_diagnostic_invalid);
+        PP.Diag(MacroName, diag::warn_pragma_debug_missing_argument)
+            << II->getName();
     } else if (II->isStr("overflow_stack")) {
       DebugOverflowStack();
     } else if (II->isStr("handle_crash")) {

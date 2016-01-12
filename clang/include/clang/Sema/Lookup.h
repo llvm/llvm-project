@@ -515,6 +515,7 @@ public:
     configure();
   }
 
+  void dump();
   void print(raw_ostream &);
 
   /// Suppress the diagnostics that would normally fire because of this

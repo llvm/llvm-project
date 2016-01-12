@@ -2211,8 +2211,11 @@ std::string CompilerInvocation::getModuleHash() const {
     code = hash_combine(code, I->first, I->second);
   }
 
-  // Extend the signature with the sysroot.
-  code = hash_combine(code, hsOpts.Sysroot, hsOpts.UseBuiltinIncludes,
+  // Extend the signature with the sysroot and other header search options.
+  code = hash_combine(code, hsOpts.Sysroot,
+                      hsOpts.ModuleFormat,
+                      hsOpts.UseDebugInfo,
+                      hsOpts.UseBuiltinIncludes,
                       hsOpts.UseStandardSystemIncludes,
                       hsOpts.UseStandardCXXIncludes,
                       hsOpts.UseLibcxx);

@@ -1,2 +1,3 @@
 struct string {};
-namespace N { typedef ::string clstring; }
+const int n = 0;
+namespace N { typedef ::string clstring; using ::n; }

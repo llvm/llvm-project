@@ -366,6 +366,10 @@ Retry:
   case tok::annot_pragma_loop_hint:
     ProhibitAttributes(Attrs);
     return ParsePragmaLoopHint(Stmts, OnlyStatement, TrailingElseLoc, Attrs);
+
+  case tok::annot_pragma_dump:
+    HandlePragmaDump();
+    return StmtEmpty();
   }
 
   // If we reached this code, the statement must end in a semicolon.
@@ -892,6 +896,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_ms_vtordisp:
       HandlePragmaMSVtorDisp();
+      break;
+    case tok::annot_pragma_dump:
+      HandlePragmaDump();
       break;
     default:
       checkForPragmas = false;

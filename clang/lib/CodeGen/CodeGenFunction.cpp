@@ -79,7 +79,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
   if (CGM.getCodeGenOpts().ReciprocalMath) {
     FMF.setAllowReciprocal();
   }
-  Builder.SetFastMathFlags(FMF);
+  Builder.setFastMathFlags(FMF);
 }
 
 CodeGenFunction::~CodeGenFunction() {

@@ -84,7 +84,7 @@ public:
 
 protected:
   CGOpenMPRegionKind RegionKind;
-  const RegionCodeGenTy &CodeGen;
+  RegionCodeGenTy CodeGen;
   OpenMPDirectiveKind Kind;
   bool HasCancel;
 };

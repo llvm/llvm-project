@@ -146,6 +146,10 @@ public:
   CudaDeviceAction(Action *Input, const char *ArchName, bool AtTopLevel);
 
   const char *getGpuArchName() const { return GpuArchName; }
+
+  /// Gets the compute_XX that corresponds to getGpuArchName().
+  const char *getComputeArchName() const;
+
   bool isAtTopLevel() const { return AtTopLevel; }
 
   static bool IsValidGpuArchName(llvm::StringRef ArchName);

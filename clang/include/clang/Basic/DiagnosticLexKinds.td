@@ -490,6 +490,8 @@ def warn_pragma_diagnostic_unknown_warning :
 // - #pragma __debug
 def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_missing_argument : Warning<
+  "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
 def err_paste_at_start : Error<

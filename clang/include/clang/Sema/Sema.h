@@ -7647,6 +7647,9 @@ public:
   void ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
                             StringLiteral *SegmentName);
 
+  /// \brief Called on #pragma clang __debug dump II
+  void ActOnPragmaDump(Scope *S, SourceLocation Loc, IdentifierInfo *II);
+
   /// ActOnPragmaDetectMismatch - Call on well-formed \#pragma detect_mismatch
   void ActOnPragmaDetectMismatch(StringRef Name, StringRef Value);
 
