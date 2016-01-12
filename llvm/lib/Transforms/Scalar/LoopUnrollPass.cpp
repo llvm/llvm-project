@@ -169,78 +169,6 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
 }
 
 namespace {
-  class LoopUnroll : public LoopPass {
-  public:
-    static char ID; // Pass ID, replacement for typeid
-    LoopUnroll(Optional<unsigned> Threshold = None,
-               Optional<unsigned> Count = None,
-               Optional<bool> AllowPartial = None,
-               Optional<bool> Runtime = None)
-        : LoopPass(ID), ProvidedCount(Count), ProvidedThreshold(Threshold),
-          ProvidedAllowPartial(AllowPartial), ProvidedRuntime(Runtime) {
-      initializeLoopUnrollPass(*PassRegistry::getPassRegistry());
-    }
-
-    Optional<unsigned> ProvidedCount;
-    Optional<unsigned> ProvidedThreshold;
-    Optional<bool> ProvidedAllowPartial;
-    Optional<bool> ProvidedRuntime;
-
-    bool runOnLoop(Loop *L, LPPassManager &) override;
-
-    /// This transformation requires natural loop information & requires that
-    /// loop preheaders be inserted into the CFG...
-    ///
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<AssumptionCacheTracker>();
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<LoopInfoWrapperPass>();
-      AU.addPreserved<LoopInfoWrapperPass>();
-      AU.addRequiredID(LoopSimplifyID);
-      AU.addPreservedID(LoopSimplifyID);
-      AU.addRequiredID(LCSSAID);
-      AU.addPreservedID(LCSSAID);
-      AU.addRequired<ScalarEvolutionWrapperPass>();
-      AU.addPreserved<ScalarEvolutionWrapperPass>();
-      AU.addRequired<TargetTransformInfoWrapperPass>();
-      // FIXME: Loop unroll requires LCSSA. And LCSSA requires dom info.
-      // If loop unroll does not preserve dom info then LCSSA pass on next
-      // loop will receive invalid dom info.
-      // For now, recreate dom info, if loop is unrolled.
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-    }
-  };
-}
-
-char LoopUnroll::ID = 0;
-INITIALIZE_PASS_BEGIN(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(LCSSA)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
-
-Pass *llvm::createLoopUnrollPass(int Threshold, int Count, int AllowPartial,
-                                 int Runtime) {
-  // TODO: It would make more sense for this function to take the optionals
-  // directly, but that's dangerous since it would silently break out of tree
-  // callers.
-  return new LoopUnroll(Threshold == -1 ? None : Optional<unsigned>(Threshold),
-                        Count == -1 ? None : Optional<unsigned>(Count),
-                        AllowPartial == -1 ? None
-                                           : Optional<bool>(AllowPartial),
-                        Runtime == -1 ? None : Optional<bool>(Runtime));
-}
-
-Pass *llvm::createSimpleLoopUnrollPass() {
-  return llvm::createLoopUnrollPass(-1, -1, 0, 0);
-}
-
-namespace {
 // This class is used to get an estimate of the optimization effects that we
 // could get from complete loop unrolling. It comes from the fact that some
 // loads might be replaced with concrete constant values and that could trigger
@@ -830,20 +758,13 @@ static bool canUnrollCompletely(Loop *L, unsigned Threshold,
   return false;
 }
 
-bool LoopUnroll::runOnLoop(Loop *L, LPPassManager &) {
-  if (skipOptnoneFunction(L))
-    return false;
-
-  Function &F = *L->getHeader()->getParent();
-
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  const TargetTransformInfo &TTI =
-      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
-
+static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
+                            ScalarEvolution *SE, const TargetTransformInfo &TTI,
+                            AssumptionCache &AC, bool PreserveLCSSA,
+                            Optional<unsigned> ProvidedCount,
+                            Optional<unsigned> ProvidedThreshold,
+                            Optional<bool> ProvidedAllowPartial,
+                            Optional<bool> ProvidedRuntime) {
   BasicBlock *Header = L->getHeader();
   DEBUG(dbgs() << "Loop Unroll: F[" << Header->getParent()->getName()
         << "] Loop %" << Header->getName() << "\n");
@@ -1018,4 +939,92 @@ bool LoopUnroll::runOnLoop(Loop *L, LPPassManager &) {
     return false;
 
   return true;
+}
+
+namespace {
+class LoopUnroll : public LoopPass {
+public:
+  static char ID; // Pass ID, replacement for typeid
+  LoopUnroll(Optional<unsigned> Threshold = None,
+             Optional<unsigned> Count = None,
+             Optional<bool> AllowPartial = None, Optional<bool> Runtime = None)
+      : LoopPass(ID), ProvidedCount(Count), ProvidedThreshold(Threshold),
+        ProvidedAllowPartial(AllowPartial), ProvidedRuntime(Runtime) {
+    initializeLoopUnrollPass(*PassRegistry::getPassRegistry());
+  }
+
+  Optional<unsigned> ProvidedCount;
+  Optional<unsigned> ProvidedThreshold;
+  Optional<bool> ProvidedAllowPartial;
+  Optional<bool> ProvidedRuntime;
+
+  bool runOnLoop(Loop *L, LPPassManager &) override {
+    if (skipOptnoneFunction(L))
+      return false;
+
+    Function &F = *L->getHeader()->getParent();
+
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    const TargetTransformInfo &TTI =
+        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
+
+    return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, PreserveLCSSA, ProvidedCount,
+                           ProvidedThreshold, ProvidedAllowPartial,
+                           ProvidedRuntime);
+  }
+
+  /// This transformation requires natural loop information & requires that
+  /// loop preheaders be inserted into the CFG...
+  ///
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequiredID(LoopSimplifyID);
+    AU.addPreservedID(LoopSimplifyID);
+    AU.addRequiredID(LCSSAID);
+    AU.addPreservedID(LCSSAID);
+    AU.addRequired<ScalarEvolutionWrapperPass>();
+    AU.addPreserved<ScalarEvolutionWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
+    // FIXME: Loop unroll requires LCSSA. And LCSSA requires dom info.
+    // If loop unroll does not preserve dom info then LCSSA pass on next
+    // loop will receive invalid dom info.
+    // For now, recreate dom info, if loop is unrolled.
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+  }
+};
+}
+
+char LoopUnroll::ID = 0;
+INITIALIZE_PASS_BEGIN(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
+INITIALIZE_PASS_DEPENDENCY(LCSSA)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
+
+Pass *llvm::createLoopUnrollPass(int Threshold, int Count, int AllowPartial,
+                                 int Runtime) {
+  // TODO: It would make more sense for this function to take the optionals
+  // directly, but that's dangerous since it would silently break out of tree
+  // callers.
+  return new LoopUnroll(Threshold == -1 ? None : Optional<unsigned>(Threshold),
+                        Count == -1 ? None : Optional<unsigned>(Count),
+                        AllowPartial == -1 ? None
+                                           : Optional<bool>(AllowPartial),
+                        Runtime == -1 ? None : Optional<bool>(Runtime));
+}
+
+Pass *llvm::createSimpleLoopUnrollPass() {
+  return llvm::createLoopUnrollPass(-1, -1, 0, 0);
 }

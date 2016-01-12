@@ -66,7 +66,17 @@ def WebAssemblywrapper  : SDNode<"WebAssemblyISD::Wrapper",
 // WebAssembly-specific Operands.
 //===----------------------------------------------------------------------===//
 
+let OperandNamespace = "WebAssembly" in {
+
+let OperandType = "OPERAND_BASIC_BLOCK" in
 def bb_op : Operand<OtherVT>;
+
+let OperandType = "OPERAND_FPIMM" in {
+def f32imm_op : Operand<f32>;
+def f64imm_op : Operand<f64>;
+} // OperandType = "OPERAND_FPIMM"
+
+} // OperandNamespace = "WebAssembly"
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Instruction Format Definitions.
@@ -120,10 +130,10 @@ def CONST_I32 : I<(outs I32:$res), (ins i32imm:$imm),
 def CONST_I64 : I<(outs I64:$res), (ins i64imm:$imm),
                   [(set I64:$res, imm:$imm)],
                   "i64.const\t$res, $imm">;
-def CONST_F32 : I<(outs F32:$res), (ins f32imm:$imm),
+def CONST_F32 : I<(outs F32:$res), (ins f32imm_op:$imm),
                   [(set F32:$res, fpimm:$imm)],
                   "f32.const\t$res, $imm">;
-def CONST_F64 : I<(outs F64:$res), (ins f64imm:$imm),
+def CONST_F64 : I<(outs F64:$res), (ins f64imm_op:$imm),
                   [(set F64:$res, fpimm:$imm)],
                   "f64.const\t$res, $imm">;
 } // isMoveImm = 1

@@ -21,6 +21,6 @@ BUILT_SOURCES = \
 	WebAssemblyGenRegisterInfo.inc \
 	WebAssemblyGenSubtargetInfo.inc
 
-DIRS = InstPrinter TargetInfo MCTargetDesc
+DIRS = InstPrinter TargetInfo MCTargetDesc Disassembler
 
 include $(LEVEL)/Makefile.common
