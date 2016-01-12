@@ -259,6 +259,17 @@ def CSR_iOS_TLSCall : CalleeSavedRegs<(add LR, SP,
                                            (sequence "R%u", 12, 1),
                                            (sequence "D%u", 31, 0))>;
 
+// C++ TLS access function saves all registers except SP. Try to match
+// the order of CSRs in CSR_iOS.
+def CSR_iOS_CXX_TLS : CalleeSavedRegs<(add CSR_iOS, (sequence "R%u", 12, 1),
+                                           (sequence "D%u", 31, 0))>;
+
+// CSRs that are handled by prologue, epilogue.
+def CSR_iOS_CXX_TLS_PE : CalleeSavedRegs<(add LR)>;
+
+// CSRs that are handled explicitly via copies.
+def CSR_iOS_CXX_TLS_ViaCopy : CalleeSavedRegs<(sub CSR_iOS_CXX_TLS, LR)>;
+
 // The "interrupt" attribute is used to generate code that is acceptable in
 // exception-handlers of various kinds. It makes us use a different return
 // instruction (handled elsewhere) and affects which registers we must return to
