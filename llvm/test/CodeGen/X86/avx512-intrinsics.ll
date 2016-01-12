@@ -6632,3 +6632,46 @@ define <8 x i64>@test_int_x86_avx512_mask_prorv_q_512(<8 x i64> %x0, <8 x i64> %
   %res4 = add <8 x i64> %res3, %res2
   ret <8 x i64> %res4
 }
+
+declare <16 x i32> @llvm.x86.avx512.mask.prol.d.512(<16 x i32>, i8, <16 x i32>, i16)
+
+define <16 x i32>@test_int_x86_avx512_mask_prol_d_512(<16 x i32> %x0, i8 %x1, <16 x i32> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_prol_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1 
+; CHECK-NEXT:    vprold $3, %zmm0, %zmm1 {%k1} 
+; CHECK-NEXT:    vprold $3, %zmm0, %zmm2 {%k1} {z} 
+; CHECK-NEXT:    vprold $3, %zmm0, %zmm0 
+; CHECK-NEXT:    vpaddd %zmm2, %zmm1, %zmm1 
+; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x i32> @llvm.x86.avx512.mask.prol.d.512(<16 x i32> %x0, i8 3, <16 x i32> %x2, i16 %x3)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.prol.d.512(<16 x i32> %x0, i8 3, <16 x i32> zeroinitializer, i16 %x3)
+  %res2 = call <16 x i32> @llvm.x86.avx512.mask.prol.d.512(<16 x i32> %x0, i8 3, <16 x i32> %x2, i16 -1)
+  %res3 = add <16 x i32> %res, %res1
+  %res4 = add <16 x i32> %res3, %res2
+  ret <16 x i32> %res4
+}
+
+declare <8 x i64> @llvm.x86.avx512.mask.prol.q.512(<8 x i64>, i8, <8 x i64>, i8)
+
+define <8 x i64>@test_int_x86_avx512_mask_prol_q_512(<8 x i64> %x0, i8 %x1, <8 x i64> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_prol_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %sil, %eax 
+; CHECK-NEXT:    kmovw %eax, %k1 
+; CHECK-NEXT:    vprolq $3, %zmm0, %zmm1 {%k1} 
+; CHECK-NEXT:    vprolq $3, %zmm0, %zmm2 {%k1} {z} 
+; CHECK-NEXT:    vprolq $3, %zmm0, %zmm0 
+; CHECK-NEXT:    vpaddq %zmm2, %zmm1, %zmm1 
+; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0 
+; CHECK-NEXT:    retq 
+  %res = call <8 x i64> @llvm.x86.avx512.mask.prol.q.512(<8 x i64> %x0, i8 3, <8 x i64> %x2, i8 %x3)
+  %res1 = call <8 x i64> @llvm.x86.avx512.mask.prol.q.512(<8 x i64> %x0, i8 3, <8 x i64> zeroinitializer, i8 %x3)
+  %res2 = call <8 x i64> @llvm.x86.avx512.mask.prol.q.512(<8 x i64> %x0, i8 3, <8 x i64> %x2, i8 -1)
+  %res3 = add <8 x i64> %res, %res1
+  %res4 = add <8 x i64> %res3, %res2
+  ret <8 x i64> %res4
+}
+
+

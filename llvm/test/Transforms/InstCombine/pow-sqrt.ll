@@ -1,15 +1,13 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
-define double @mypow(double %x) #0 {
-entry:
-  %pow = call double @llvm.pow.f64(double %x, double 5.000000e-01)
+define double @pow_half(double %x) {
+  %pow = call fast double @llvm.pow.f64(double %x, double 5.000000e-01)
   ret double %pow
 }
 
-; CHECK-LABEL: define double @mypow(
-; CHECK:   %sqrt = call double @sqrt(double %x) #1
-; CHECK:   ret double %sqrt
-; CHECK: }
+; CHECK-LABEL: define double @pow_half(
+; CHECK-NEXT:  %sqrt = call fast double @sqrt(double %x)
+; CHECK-NEXT:  ret double %sqrt
 
 declare double @llvm.pow.f64(double, double)
-attributes #0 = { "unsafe-fp-math"="true" }
+

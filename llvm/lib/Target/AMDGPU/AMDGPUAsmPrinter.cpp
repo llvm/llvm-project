@@ -91,6 +91,25 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {}
 
+void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+    return;
+
+  // Need to construct an MCSubtargetInfo here in case we have no functions
+  // in the module.
+  std::unique_ptr<MCSubtargetInfo> STI(TM.getTarget().createMCSubtargetInfo(
+        TM.getTargetTriple().str(), TM.getTargetCPU(),
+        TM.getTargetFeatureString()));
+
+  AMDGPUTargetStreamer *TS =
+      static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
+
+  TS->EmitDirectiveHSACodeObjectVersion(1, 0);
+  AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(STI->getFeatureBits());
+  TS->EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor, ISA.Stepping,
+                                    "AMD", "AMDGPU");
+}
+
 void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
   SIProgramInfo KernelInfo;
@@ -182,13 +201,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     if (!STM.isAmdHsaOS()) {
       EmitProgramInfoSI(MF, KernelInfo);
     }
-    // Emit directives
-    AMDGPUTargetStreamer *TS =
-        static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
-    TS->EmitDirectiveHSACodeObjectVersion(1, 0);
-    AMDGPU::IsaVersion ISA = STM.getIsaVersion();
-    TS->EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor, ISA.Stepping,
-                                      "AMD", "AMDGPU");
   } else {
     EmitProgramInfoR600(MF);
   }

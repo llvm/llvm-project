@@ -225,6 +225,8 @@ def X86vshli   : SDNode<"X86ISD::VSHLI", SDTIntShiftOp>;
 def X86vsrli   : SDNode<"X86ISD::VSRLI", SDTIntShiftOp>;
 def X86vsrai   : SDNode<"X86ISD::VSRAI", SDTIntShiftOp>;
 
+def X86vrotli  : SDNode<"X86ISD::VROTLI", SDTIntShiftOp>;
+
 def X86vprot   : SDNode<"X86ISD::VPROT",
                         SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                              SDTCisSameAs<0,2>]>>;

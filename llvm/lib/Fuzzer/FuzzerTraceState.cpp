@@ -542,6 +542,12 @@ void dfsan_weak_hook_strcmp(void *caller_pc, const char *s1, const char *s2,
                           reinterpret_cast<const uint8_t *>(s2), L1, L2);
 }
 
+// We may need to avoid defining weak hooks to stay compatible with older clang.
+#ifndef LLVM_FUZZER_DEFINES_SANITIZER_WEAK_HOOOKS
+# define LLVM_FUZZER_DEFINES_SANITIZER_WEAK_HOOOKS 1
+#endif
+
+#if LLVM_FUZZER_DEFINES_SANITIZER_WEAK_HOOOKS
 void __sanitizer_weak_hook_memcmp(void *caller_pc, const void *s1,
                                   const void *s2, size_t n, int result) {
   if (!TS) return;
@@ -575,6 +581,8 @@ void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
   TS->TraceMemcmpCallback(N, reinterpret_cast<const uint8_t *>(s1),
                           reinterpret_cast<const uint8_t *>(s2));
 }
+
+#endif  // LLVM_FUZZER_DEFINES_SANITIZER_WEAK_HOOOKS
 
 __attribute__((visibility("default")))
 void __sanitizer_cov_trace_cmp(uint64_t SizeAndType, uint64_t Arg1,

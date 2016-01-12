@@ -133,6 +133,8 @@ static void findExternalCalls(const Module &DestModule, Function &F,
         // Ignore functions already present in the destination module
         auto *SrcGV = DestModule.getNamedValue(ImportedName);
         if (SrcGV) {
+          if (GlobalAlias *SGA = dyn_cast<GlobalAlias>(SrcGV))
+            SrcGV = SGA->getBaseObject();
           assert(isa<Function>(SrcGV) && "Name collision during import");
           if (!cast<Function>(SrcGV)->isDeclaration()) {
             DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": Ignoring "

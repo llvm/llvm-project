@@ -38,6 +38,7 @@ typedef int errno_t;
 
 #ifdef _MSC_VER
 # pragma comment(lib, "advapi32.lib")  // This provides CryptAcquireContextW.
+# pragma comment(lib, "ole32.lib")     // This provides CoTaskMemFree
 #endif
 
 using namespace llvm;

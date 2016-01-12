@@ -23,6 +23,9 @@ namespace llvm {
 class MCSubtargetInfo;
 
 class WebAssemblyInstPrinter final : public MCInstPrinter {
+  uint64_t ControlFlowCounter;
+  SmallVector<std::pair<uint64_t, bool>, 0> ControlFlowStack;
+
 public:
   WebAssemblyInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                          const MCRegisterInfo &MRI);

@@ -102,47 +102,42 @@ public:
                                 uint32_t RWDataAlign) override {
       Unmapped.push_back(ObjectAllocs());
 
-//      DEBUG(dbgs() << "Allocator " << Id << " reserved:\n");
+      DEBUG(dbgs() << "Allocator " << Id << " reserved:\n");
 
       if (CodeSize != 0) {
-        if (std::error_code EC = Client.reserveMem(
-                Unmapped.back().RemoteCodeAddr, Id, CodeSize, CodeAlign)) {
-          (void)EC;
-          // FIXME; Add error to poll.
-          llvm_unreachable("Failed reserving remote memory.");
-        }
-//         DEBUG(dbgs() << "  code: "
-//                      << format("0x%016x", Unmapped.back().RemoteCodeAddr)
-//                      << " (" << CodeSize << " bytes, alignment " << CodeAlign
-//                      << ")\n");
+        std::error_code EC = Client.reserveMem(Unmapped.back().RemoteCodeAddr,
+                                               Id, CodeSize, CodeAlign);
+        // FIXME; Add error to poll.
+        assert(!EC && "Failed reserving remote memory.");
+        (void)EC;
+        DEBUG(dbgs() << "  code: "
+                     << format("0x%016x", Unmapped.back().RemoteCodeAddr)
+                     << " (" << CodeSize << " bytes, alignment " << CodeAlign
+                     << ")\n");
       }
 
       if (RODataSize != 0) {
-        if (std::error_code EC =
-                Client.reserveMem(Unmapped.back().RemoteRODataAddr, Id,
-                                  RODataSize, RODataAlign)) {
-          (void)EC;
-          // FIXME; Add error to poll.
-          llvm_unreachable("Failed reserving remote memory.");
-        }
-//         DEBUG(dbgs() << "  ro-data: "
-//                      << format("0x%016x", Unmapped.back().RemoteRODataAddr)
-//                      << " (" << RODataSize << " bytes, alignment "
-//                      << RODataAlign << ")\n");
+        std::error_code EC = Client.reserveMem(Unmapped.back().RemoteRODataAddr,
+                                               Id, RODataSize, RODataAlign);
+        // FIXME; Add error to poll.
+        assert(!EC && "Failed reserving remote memory.");
+        (void)EC;
+        DEBUG(dbgs() << "  ro-data: "
+                     << format("0x%016x", Unmapped.back().RemoteRODataAddr)
+                     << " (" << RODataSize << " bytes, alignment "
+                     << RODataAlign << ")\n");
       }
 
       if (RWDataSize != 0) {
-        if (std::error_code EC =
-                Client.reserveMem(Unmapped.back().RemoteRWDataAddr, Id,
-                                  RWDataSize, RWDataAlign)) {
-          (void)EC;
-          // FIXME; Add error to poll.
-          llvm_unreachable("Failed reserving remote memory.");
-        }
-//         DEBUG(dbgs() << "  rw-data: "
-//                      << format("0x%016x", Unmapped.back().RemoteRWDataAddr)
-//                      << " (" << RWDataSize << " bytes, alignment "
-//                      << RWDataAlign << ")\n");
+        std::error_code EC = Client.reserveMem(Unmapped.back().RemoteRWDataAddr,
+                                               Id, RWDataSize, RWDataAlign);
+        // FIXME; Add error to poll.
+        assert(!EC && "Failed reserving remote memory.");
+        (void)EC;
+        DEBUG(dbgs() << "  rw-data: "
+                     << format("0x%016x", Unmapped.back().RemoteRWDataAddr)
+                     << " (" << RWDataSize << " bytes, alignment "
+                     << RWDataAlign << ")\n");
       }
     }
 
@@ -731,17 +726,10 @@ private:
     if (ExistingError)
       return ExistingError;
 
-    if (auto EC = call<ReserveMem>(Channel, Id, Size, Align))
+    if (std::error_code EC = call<ReserveMem>(Channel, Id, Size, Align))
       return EC;
 
-    if (std::error_code EC =
-            expect<ReserveMemResponse>(Channel, [&](TargetAddress Addr) {
-              RemoteAddr = Addr;
-              return std::error_code();
-            }))
-      return EC;
-
-    return std::error_code();
+    return expect<ReserveMemResponse>(Channel, readArgs(RemoteAddr));
   }
 
   std::error_code setProtections(ResourceIdMgr::ResourceId Id,

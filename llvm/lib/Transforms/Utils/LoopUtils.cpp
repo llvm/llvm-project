@@ -599,7 +599,7 @@ Value *RecurrenceDescriptor::createMinMaxOp(IRBuilder<> &Builder,
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
   FastMathFlags FMF;
   FMF.setUnsafeAlgebra();
-  Builder.SetFastMathFlags(FMF);
+  Builder.setFastMathFlags(FMF);
 
   Value *Cmp;
   if (RK == MRK_FloatMin || RK == MRK_FloatMax)

@@ -15,10 +15,10 @@
 #include "WebAssemblyMCTargetDesc.h"
 #include "InstPrinter/WebAssemblyInstPrinter.h"
 #include "WebAssemblyMCAsmInfo.h"
+#include "WebAssemblyTargetStreamer.h"
 #include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -46,10 +46,10 @@ static MCInstrInfo *createMCInstrInfo() {
   return X;
 }
 
-static MCStreamer *createMCStreamer(const Triple & /*T*/, MCContext &Ctx,
-                                    MCAsmBackend &MAB, raw_pwrite_stream &OS,
-                                    MCCodeEmitter *Emitter, bool RelaxAll) {
-  return createELFStreamer(Ctx, MAB, OS, Emitter, RelaxAll);
+static MCRegisterInfo *createMCRegisterInfo(const Triple & /*T*/) {
+  MCRegisterInfo *X = new MCRegisterInfo();
+  InitWebAssemblyMCRegisterInfo(X, 0);
+  return X;
 }
 
 static MCInstPrinter *createMCInstPrinter(const Triple & /*T*/,
@@ -78,6 +78,18 @@ static MCSubtargetInfo *createMCSubtargetInfo(const Triple &TT, StringRef CPU,
   return createWebAssemblyMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
+static MCTargetStreamer *
+createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo & /*STI*/) {
+  return new WebAssemblyTargetELFStreamer(S);
+}
+
+static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
+                                                 formatted_raw_ostream &OS,
+                                                 MCInstPrinter * /*InstPrint*/,
+                                                 bool /*isVerboseAsm*/) {
+  return new WebAssemblyTargetAsmStreamer(S, OS);
+}
+
 // Force static initialization.
 extern "C" void LLVMInitializeWebAssemblyTargetMC() {
   for (Target *T : {&TheWebAssemblyTarget32, &TheWebAssemblyTarget64}) {
@@ -87,8 +99,8 @@ extern "C" void LLVMInitializeWebAssemblyTargetMC() {
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createMCInstrInfo);
 
-    // Register the object streamer.
-    TargetRegistry::RegisterELFStreamer(*T, createMCStreamer);
+    // Register the MC register info.
+    TargetRegistry::RegisterMCRegInfo(*T, createMCRegisterInfo);
 
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createMCInstPrinter);
@@ -101,5 +113,11 @@ extern "C" void LLVMInitializeWebAssemblyTargetMC() {
 
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T, createMCSubtargetInfo);
+
+    // Register the object target streamer.
+    TargetRegistry::RegisterObjectTargetStreamer(*T,
+                                                 createObjectTargetStreamer);
+    // Register the asm target streamer.
+    TargetRegistry::RegisterAsmTargetStreamer(*T, createAsmTargetStreamer);
   }
 }

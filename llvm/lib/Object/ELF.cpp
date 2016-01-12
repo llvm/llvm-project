@@ -91,6 +91,13 @@ StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type) {
       break;
     }
     break;
+  case ELF::EM_WEBASSEMBLY:
+    switch (Type) {
+#include "llvm/Support/ELFRelocs/WebAssembly.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }

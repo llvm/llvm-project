@@ -8257,6 +8257,9 @@ let Predicates = [HasF16C] in {
             (VCVTPH2PSrm addr:$src)>;
   def : Pat<(int_x86_vcvtph2ps_128 (vzload_v2i64 addr:$src)),
             (VCVTPH2PSrm addr:$src)>;
+  def : Pat<(int_x86_vcvtph2ps_128 (bitconvert
+              (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
+            (VCVTPH2PSrm addr:$src)>;
 
   def : Pat<(store (f64 (extractelt (bc_v2f64 (v8i16
                   (int_x86_vcvtps2ph_128 VR128:$src1, i32:$src2))), (iPTR 0))),

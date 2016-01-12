@@ -326,13 +326,21 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     InsertPos = Header->getFirstTerminator();
     while (InsertPos != Header->begin() &&
            prev(InsertPos)->definesRegister(WebAssembly::EXPR_STACK) &&
-           prev(InsertPos)->getOpcode() != WebAssembly::LOOP)
+           prev(InsertPos)->getOpcode() != WebAssembly::LOOP &&
+           prev(InsertPos)->getOpcode() != WebAssembly::END_BLOCK &&
+           prev(InsertPos)->getOpcode() != WebAssembly::END_LOOP)
       --InsertPos;
   }
 
   // Add the BLOCK.
-  BuildMI(*Header, InsertPos, DebugLoc(), TII.get(WebAssembly::BLOCK))
-      .addMBB(&MBB);
+  BuildMI(*Header, InsertPos, DebugLoc(), TII.get(WebAssembly::BLOCK));
+
+  // Mark the end of the block.
+  InsertPos = MBB.begin();
+  while (InsertPos != MBB.end() &&
+         InsertPos->getOpcode() == WebAssembly::END_LOOP)
+    ++InsertPos;
+  BuildMI(MBB, InsertPos, DebugLoc(), TII.get(WebAssembly::END_BLOCK));
 
   // Track the farthest-spanning scope that ends at this point.
   int Number = MBB.getNumber();
@@ -342,10 +350,11 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
 }
 
 /// Insert a LOOP marker for a loop starting at MBB (if it's a loop header).
-static void PlaceLoopMarker(MachineBasicBlock &MBB, MachineFunction &MF,
-                            SmallVectorImpl<MachineBasicBlock *> &ScopeTops,
-                            const WebAssemblyInstrInfo &TII,
-                            const MachineLoopInfo &MLI) {
+static void PlaceLoopMarker(
+    MachineBasicBlock &MBB, MachineFunction &MF,
+    SmallVectorImpl<MachineBasicBlock *> &ScopeTops,
+    DenseMap<const MachineInstr *, const MachineBasicBlock *> &LoopTops,
+    const WebAssemblyInstrInfo &TII, const MachineLoopInfo &MLI) {
   MachineLoop *Loop = MLI.getLoopFor(&MBB);
   if (!Loop || Loop->getHeader() != &MBB)
     return;
@@ -362,20 +371,38 @@ static void PlaceLoopMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     Iter = next(MachineFunction::iterator(Bottom));
   }
   MachineBasicBlock *AfterLoop = &*Iter;
-  BuildMI(MBB, MBB.begin(), DebugLoc(), TII.get(WebAssembly::LOOP))
-      .addMBB(AfterLoop);
 
-  // Emit a special no-op telling the asm printer that we need a label to close
-  // the loop scope, even though the destination is only reachable by
-  // fallthrough.
-  if (!Bottom->back().isBarrier())
-    BuildMI(*Bottom, Bottom->end(), DebugLoc(), TII.get(WebAssembly::LOOP_END));
+  // Mark the beginning of the loop (after the end of any existing loop that
+  // ends here).
+  auto InsertPos = MBB.begin();
+  while (InsertPos != MBB.end() &&
+         InsertPos->getOpcode() == WebAssembly::END_LOOP)
+    ++InsertPos;
+  BuildMI(MBB, InsertPos, DebugLoc(), TII.get(WebAssembly::LOOP));
+
+  // Mark the end of the loop.
+  MachineInstr *End = BuildMI(*AfterLoop, AfterLoop->begin(), DebugLoc(),
+                              TII.get(WebAssembly::END_LOOP));
+  LoopTops[End] = &MBB;
 
   assert((!ScopeTops[AfterLoop->getNumber()] ||
           ScopeTops[AfterLoop->getNumber()]->getNumber() < MBB.getNumber()) &&
          "With RPO we should visit the outer-most loop for a block first.");
   if (!ScopeTops[AfterLoop->getNumber()])
     ScopeTops[AfterLoop->getNumber()] = &MBB;
+}
+
+static unsigned
+GetDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
+         const MachineBasicBlock *MBB) {
+  unsigned Depth = 0;
+  for (auto X : reverse(Stack)) {
+    if (X == MBB)
+      break;
+    ++Depth;
+  }
+  assert(Depth < Stack.size() && "Branch destination should be in scope");
+  return Depth;
 }
 
 /// Insert LOOP and BLOCK markers at appropriate places.
@@ -389,25 +416,57 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
   // we may insert at the end.
   SmallVector<MachineBasicBlock *, 8> ScopeTops(MF.getNumBlockIDs() + 1);
 
+  // For eacn LOOP_END, the corresponding LOOP.
+  DenseMap<const MachineInstr *, const MachineBasicBlock *> LoopTops;
+
   for (auto &MBB : MF) {
     // Place the LOOP for MBB if MBB is the header of a loop.
-    PlaceLoopMarker(MBB, MF, ScopeTops, TII, MLI);
+    PlaceLoopMarker(MBB, MF, ScopeTops, LoopTops, TII, MLI);
 
     // Place the BLOCK for MBB if MBB is branched to from above.
     PlaceBlockMarker(MBB, MF, ScopeTops, TII, MLI, MDT);
   }
-}
 
-#ifndef NDEBUG
-static bool
-IsOnStack(const SmallVectorImpl<std::pair<MachineBasicBlock *, bool>> &Stack,
-          const MachineBasicBlock *MBB) {
-  for (const auto &Pair : Stack)
-    if (Pair.first == MBB)
-      return true;
-  return false;
+  // Now rewrite references to basic blocks to be depth immediates.
+  SmallVector<const MachineBasicBlock *, 8> Stack;
+  for (auto &MBB : reverse(MF)) {
+    for (auto &MI : reverse(MBB)) {
+      switch (MI.getOpcode()) {
+      case WebAssembly::BLOCK:
+        assert(ScopeTops[Stack.back()->getNumber()] == &MBB &&
+               "Block should be balanced");
+        Stack.pop_back();
+        break;
+      case WebAssembly::LOOP:
+        assert(Stack.back() == &MBB && "Loop top should be balanced");
+        Stack.pop_back();
+        Stack.pop_back();
+        break;
+      case WebAssembly::END_BLOCK:
+        Stack.push_back(&MBB);
+        break;
+      case WebAssembly::END_LOOP:
+        Stack.push_back(&MBB);
+        Stack.push_back(LoopTops[&MI]);
+        break;
+      default:
+        if (MI.isTerminator()) {
+          // Rewrite MBB operands to be depth immediates.
+          SmallVector<MachineOperand, 4> Ops(MI.operands());
+          while (MI.getNumOperands() > 0)
+            MI.RemoveOperand(MI.getNumOperands() - 1);
+          for (auto MO : Ops) {
+            if (MO.isMBB())
+              MO = MachineOperand::CreateImm(GetDepth(Stack, MO.getMBB()));
+            MI.addOperand(MF, MO);
+          }
+        }
+        break;
+      }
+    }
+  }
+  assert(Stack.empty() && "Control flow should be balanced");
 }
-#endif
 
 bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** CFG Stackifying **********\n"
@@ -426,44 +485,6 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
 
   // Place the BLOCK and LOOP markers to indicate the beginnings of scopes.
   PlaceMarkers(MF, MLI, TII, MDT);
-
-#ifndef NDEBUG
-  // Verify that block and loop beginnings and endings are in LIFO order, and
-  // that all references to blocks are to blocks on the stack at the point of
-  // the reference.
-  SmallVector<std::pair<MachineBasicBlock *, bool>, 0> Stack;
-  for (auto &MBB : MF) {
-    while (!Stack.empty() && Stack.back().first == &MBB)
-      if (Stack.back().second) {
-        assert(Stack.size() >= 2);
-        Stack.pop_back();
-        Stack.pop_back();
-      } else {
-        assert(Stack.size() >= 1);
-        Stack.pop_back();
-      }
-    for (auto &MI : MBB)
-      switch (MI.getOpcode()) {
-      case WebAssembly::LOOP:
-        Stack.push_back(std::make_pair(&MBB, false));
-        Stack.push_back(std::make_pair(MI.getOperand(0).getMBB(), true));
-        break;
-      case WebAssembly::BLOCK:
-        Stack.push_back(std::make_pair(MI.getOperand(0).getMBB(), false));
-        break;
-      default:
-        // Verify that all referenced blocks are in scope. A reference to a
-        // block with a negative number is invalid, but can happen with inline
-        // asm, so we shouldn't assert on it, but instead let CodeGen properly
-        // fail on it.
-        for (const MachineOperand &MO : MI.explicit_operands())
-          if (MO.isMBB() && MO.getMBB()->getNumber() >= 0)
-            assert(IsOnStack(Stack, MO.getMBB()));
-        break;
-      }
-  }
-  assert(Stack.empty());
-#endif
 
   return true;
 }

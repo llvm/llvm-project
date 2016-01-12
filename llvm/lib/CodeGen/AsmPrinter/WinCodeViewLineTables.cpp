@@ -283,7 +283,7 @@ void WinCodeViewLineTables::emitDebugInfoForFunction(const Function *GV) {
          ColSegI != ColSegEnd; ++ColSegI) {
       unsigned ColumnNumber = InstrInfo[FI.Instrs[ColSegI]].ColumnNumber;
       Asm->EmitInt16(ColumnNumber); // Start column
-      Asm->EmitInt16(ColumnNumber); // End column
+      Asm->EmitInt16(0);            // End column
     }
     Asm->OutStreamer->EmitLabel(FileSegmentEnd);
   };

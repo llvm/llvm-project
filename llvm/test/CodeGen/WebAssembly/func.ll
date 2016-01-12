@@ -7,6 +7,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: f0:
 ; CHECK: return{{$}}
+; CHECK: .endfunc{{$}}
 ; CHECK: .size f0,
 define void @f0() {
   ret void

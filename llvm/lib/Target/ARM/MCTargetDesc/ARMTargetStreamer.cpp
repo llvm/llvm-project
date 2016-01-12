@@ -38,6 +38,9 @@ void ARMTargetStreamer::emitCurrentConstantPool() {
 // finish() - write out any non-empty assembler constant pools.
 void ARMTargetStreamer::finish() { ConstantPools->emitAll(Streamer); }
 
+// reset() - Reset any state
+void ARMTargetStreamer::reset() {}
+
 // The remaining callbacks should be handled separately by each
 // streamer.
 void ARMTargetStreamer::emitFnStart() {}

@@ -304,4 +304,58 @@ TEST(MathExtras, SaturatingMultiply) {
   SaturatingMultiplyTestHelper<uint64_t>();
 }
 
+template<typename T>
+void SaturatingMultiplyAddTestHelper()
+{
+  const T Max = std::numeric_limits<T>::max();
+  bool ResultOverflowed;
+
+  // Test basic multiply-add.
+  EXPECT_EQ(T(16), SaturatingMultiplyAdd(T(2), T(3), T(10)));
+  EXPECT_EQ(T(16), SaturatingMultiplyAdd(T(2), T(3), T(10), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  // Test multiply overflows, add doesn't overflow
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(Max, Max, T(0), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  // Test multiply doesn't overflow, add overflows
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(T(1), T(1), Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  // Test multiply-add with Max as operand
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(T(1), T(1), Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(T(1), Max, T(1), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(Max, Max, T(1), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(Max, Max, Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  // Test multiply-add with 0 as operand
+  EXPECT_EQ(T(1), SaturatingMultiplyAdd(T(1), T(1), T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(1), SaturatingMultiplyAdd(T(1), T(0), T(1), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(1), SaturatingMultiplyAdd(T(0), T(0), T(1), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(0), SaturatingMultiplyAdd(T(0), T(0), T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+}
+
+TEST(MathExtras, SaturatingMultiplyAdd) {
+  SaturatingMultiplyAddTestHelper<uint8_t>();
+  SaturatingMultiplyAddTestHelper<uint16_t>();
+  SaturatingMultiplyAddTestHelper<uint32_t>();
+  SaturatingMultiplyAddTestHelper<uint64_t>();
+}
+
 }

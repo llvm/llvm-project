@@ -708,7 +708,8 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EM_VIDEOCORE5   ),
   LLVM_READOBJ_ENUM_ENT(ELF, EM_78KOR        ),
   LLVM_READOBJ_ENUM_ENT(ELF, EM_56800EX      ),
-  LLVM_READOBJ_ENUM_ENT(ELF, EM_AMDGPU       )
+  LLVM_READOBJ_ENUM_ENT(ELF, EM_AMDGPU       ),
+  LLVM_READOBJ_ENUM_ENT(ELF, EM_WEBASSEMBLY  ),
 };
 
 static const EnumEntry<unsigned> ElfSymbolBindings[] = {

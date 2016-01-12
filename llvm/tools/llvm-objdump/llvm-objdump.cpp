@@ -482,6 +482,23 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   case ELF::EM_MIPS:
     res = Target;
     break;
+  case ELF::EM_WEBASSEMBLY:
+    switch (type) {
+    case ELF::R_WEBASSEMBLY_DATA: {
+      std::string fmtbuf;
+      raw_string_ostream fmt(fmtbuf);
+      fmt << Target << (addend < 0 ? "" : "+") << addend;
+      fmt.flush();
+      Result.append(fmtbuf.begin(), fmtbuf.end());
+      break;
+    }
+    case ELF::R_WEBASSEMBLY_FUNCTION:
+      res = Target;
+      break;
+    default:
+      res = "Unknown";
+    }
+    break;
   default:
     res = "Unknown";
   }

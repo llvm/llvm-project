@@ -1,4 +1,5 @@
-; RUN: llc -enable-aa-sched-mi -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -enable-aa-sched-mi -march=hexagon -mcpu=hexagonv5 -rdf-opt=0 \
+; RUN:      < %s | FileCheck %s
 
 ; CHECK: {
 ; CHECK: ={{ *}}memd([[REG0:(r[0-9]+)]]{{ *}}++{{ *}}#8)
