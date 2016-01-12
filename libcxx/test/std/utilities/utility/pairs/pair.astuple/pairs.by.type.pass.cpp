@@ -13,6 +13,7 @@
 #include <string>
 #include <type_traits>
 #include <complex>
+#include <memory>
 
 #include <cassert>
 

@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
 
 #include "min_allocator.h"
 
@@ -38,7 +39,7 @@ int main()
             P(80)
         };
         const C c(std::begin(a), std::end(a));
-        assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
+        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
     }
     {
         typedef std::unordered_set<int> C;
@@ -63,7 +64,7 @@ int main()
             P(80)
         };
         const C c(std::begin(a), std::end(a));
-        assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
+        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
     }
     {
         typedef std::unordered_set<int, std::hash<int>,

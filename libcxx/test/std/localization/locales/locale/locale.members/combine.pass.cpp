@@ -13,6 +13,7 @@
 // template <class Facet> locale combine(const locale& other) const;
 
 #include <locale>
+#include <stdexcept>
 #include <cassert>
 
 #include "count_new.hpp"

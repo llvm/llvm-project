@@ -21,6 +21,7 @@
 #include <functional>
 #include <cassert>
 #include <type_traits>
+#include <cstddef>
 #include <limits>
 
 template <class T>
@@ -59,7 +60,7 @@ int main()
     test<unsigned long long>();
 
 //	LWG #2119
-    test<ptrdiff_t>();
+    test<std::ptrdiff_t>();
     test<size_t>();
 
 	test<int8_t>();

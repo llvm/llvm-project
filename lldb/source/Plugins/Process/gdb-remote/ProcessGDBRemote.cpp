@@ -173,118 +173,6 @@ namespace {
 
 } // anonymous namespace end
 
-class ProcessGDBRemote::GDBLoadedModuleInfoList
-{
-public:
-
-    class LoadedModuleInfo
-    {
-    public:
-
-        enum e_data_point
-        {
-            e_has_name      = 0,
-            e_has_base      ,
-            e_has_dynamic   ,
-            e_has_link_map  ,
-            e_num
-        };
-
-        LoadedModuleInfo ()
-        {
-            for (uint32_t i = 0; i < e_num; ++i)
-                m_has[i] = false;
-        }
-
-        void set_name (const std::string & name)
-        {
-            m_name = name;
-            m_has[e_has_name] = true;
-        }
-        bool get_name (std::string & out) const
-        {
-            out = m_name;
-            return m_has[e_has_name];
-        }
-
-        void set_base (const lldb::addr_t base)
-        {
-            m_base = base;
-            m_has[e_has_base] = true;
-        }
-        bool get_base (lldb::addr_t & out) const
-        {
-            out = m_base;
-            return m_has[e_has_base];
-        }
-
-        void set_base_is_offset (bool is_offset)
-        {
-            m_base_is_offset = is_offset;
-        }
-        bool get_base_is_offset(bool & out) const
-        {
-            out = m_base_is_offset;
-            return m_has[e_has_base];
-        }
-
-        void set_link_map (const lldb::addr_t addr)
-        {
-            m_link_map = addr;
-            m_has[e_has_link_map] = true;
-        }
-        bool get_link_map (lldb::addr_t & out) const
-        {
-            out = m_link_map;
-            return m_has[e_has_link_map];
-        }
-
-        void set_dynamic (const lldb::addr_t addr)
-        {
-            m_dynamic = addr;
-            m_has[e_has_dynamic] = true;
-        }
-        bool get_dynamic (lldb::addr_t & out) const
-        {
-            out = m_dynamic;
-            return m_has[e_has_dynamic];
-        }
-
-        bool has_info (e_data_point datum)
-        {
-            assert (datum < e_num);
-            return m_has[datum];
-        }
-
-    protected:
-
-        bool m_has[e_num];
-        std::string m_name;
-        lldb::addr_t m_link_map;
-        lldb::addr_t m_base;
-        bool m_base_is_offset;
-        lldb::addr_t m_dynamic;
-    };
-
-    GDBLoadedModuleInfoList ()
-        : m_list ()
-        , m_link_map (LLDB_INVALID_ADDRESS)
-    {}
-
-    void add (const LoadedModuleInfo & mod)
-    {
-        m_list.push_back (mod);
-    }
-
-    void clear ()
-    {
-        m_list.clear ();
-    }
-
-    std::vector<LoadedModuleInfo> m_list;
-    lldb::addr_t m_link_map;
-};
-
 // TODO Randomly assigning a port is unsafe.  We should get an unused
 // ephemeral port from the kernel and make sure we reserve it before passing
 // it to debugserver.
@@ -3090,7 +2978,7 @@ ProcessGDBRemote::GetImageInfoAddress()
     // the loaded module list can also provides a link map address
     if (addr == LLDB_INVALID_ADDRESS)
     {
-        GDBLoadedModuleInfoList list;
+        LoadedModuleInfoList list;
         if (GetLoadedModuleList (list).Success())
             addr = list.m_link_map;
     }
@@ -4742,7 +4630,7 @@ ProcessGDBRemote::GetGDBServerRegisterInfo ()
 }
 
 Error
-ProcessGDBRemote::GetLoadedModuleList (GDBLoadedModuleInfoList & list)
+ProcessGDBRemote::GetLoadedModuleList (LoadedModuleInfoList & list)
 {
     // Make sure LLDB has an XML parser it can use first
     if (!XMLDocument::XMLEnabled())
@@ -4786,7 +4674,7 @@ ProcessGDBRemote::GetLoadedModuleList (GDBLoadedModuleInfoList & list)
 
         root_element.ForEachChildElementWithName("library", [log, &list](const XMLNode &library) -> bool {
 
-            GDBLoadedModuleInfoList::LoadedModuleInfo module;
+            LoadedModuleInfoList::LoadedModuleInfo module;
 
             library.ForEachAttribute([log, &module](const llvm::StringRef &name, const llvm::StringRef &value) -> bool {
 
@@ -4856,7 +4744,7 @@ ProcessGDBRemote::GetLoadedModuleList (GDBLoadedModuleInfoList & list)
             return Error();
 
         root_element.ForEachChildElementWithName("library", [log, &list](const XMLNode &library) -> bool {
-            GDBLoadedModuleInfoList::LoadedModuleInfo module;
+            LoadedModuleInfoList::LoadedModuleInfo module;
 
             llvm::StringRef name = library.GetAttributeValue("name");
             module.set_name(name.str());
@@ -4918,19 +4806,18 @@ ProcessGDBRemote::LoadModuleAtAddress (const FileSpec &file, lldb::addr_t base_a
 }
 
 size_t
-ProcessGDBRemote::LoadModules ()
+ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
 {
     using lldb_private::process_gdb_remote::ProcessGDBRemote;
 
     // request a list of loaded libraries from GDBServer
-    GDBLoadedModuleInfoList module_list;
     if (GetLoadedModuleList (module_list).Fail())
         return 0;
 
     // get a list of all the modules
     ModuleList new_modules;
 
-    for (GDBLoadedModuleInfoList::LoadedModuleInfo & modInfo : module_list.m_list)
+    for (LoadedModuleInfoList::LoadedModuleInfo & modInfo : module_list.m_list)
     {
         std::string  mod_name;
         lldb::addr_t mod_base;
@@ -4981,6 +4868,14 @@ ProcessGDBRemote::LoadModules ()
     }
 
     return new_modules.GetSize();
+
+}
+
+size_t
+ProcessGDBRemote::LoadModules ()
+{
+    LoadedModuleInfoList module_list;
+    return LoadModules (module_list);
 }
 
 Error

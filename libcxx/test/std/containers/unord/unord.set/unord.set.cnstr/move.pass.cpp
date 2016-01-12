@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
 
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
@@ -97,7 +98,7 @@ int main()
         assert(!c.empty());
         assert(std::distance(c.begin(), c.end()) == c.size());
         assert(std::distance(c.cbegin(), c.cend()) == c.size());
-        assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
+        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
 
         assert(c0.empty());
@@ -173,7 +174,7 @@ int main()
         assert(!c.empty());
         assert(std::distance(c.begin(), c.end()) == c.size());
         assert(std::distance(c.cbegin(), c.cend()) == c.size());
-        assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
+        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
 
         assert(c0.empty());

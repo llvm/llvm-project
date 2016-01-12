@@ -30,6 +30,7 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Event.h"
+#include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/StructuredData.h"
@@ -1150,6 +1151,12 @@ public:
     LoadModules ()
     {
         return 0;
+    }
+
+    virtual size_t
+    LoadModules (LoadedModuleInfoList &)
+    {
+       return 0;
     }
 
 protected:

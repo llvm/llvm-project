@@ -17,6 +17,7 @@
 // constexpr const _CharT& at(size_type _pos) const;
 
 #include <experimental/string_view>
+#include <stdexcept>
 #include <cassert>
 
 template <typename CharT>

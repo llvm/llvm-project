@@ -4732,4 +4732,42 @@ void __kmp_balanced_affinity( int tid, int nthreads )
     }
 }
 
+#if KMP_OS_LINUX
+// We don't need this entry for Windows because
+// there is GetProcessAffinityMask() api
+//
+// The intended usage is indicated by these steps:
+// 1) The user gets the current affinity mask
+// 2) Then sets the affinity by calling this function
+// 3) Error check the return value
+// 4) Use non-OpenMP parallelization
+// 5) Reset the affinity to what was stored in step 1)
+#ifdef __cplusplus
+extern "C"
+#endif
+int
+kmp_set_thread_affinity_mask_initial()
+// the function returns 0 on success,
+//   -1 if we cannot bind thread
+//   >0 (errno) if an error happened during binding
+{
+    int gtid = __kmp_get_gtid();
+    if (gtid < 0) {
+        // Do not touch non-omp threads
+        KA_TRACE(30, ( "kmp_set_thread_affinity_mask_initial: "
+            "non-omp thread, returning\n"));
+        return -1;
+    }
+    if (!KMP_AFFINITY_CAPABLE() || !__kmp_init_middle) {
+        KA_TRACE(30, ( "kmp_set_thread_affinity_mask_initial: "
+            "affinity not initialized, returning\n"));
+        return -1;
+    }
+    KA_TRACE(30, ( "kmp_set_thread_affinity_mask_initial: "
+        "set full mask for thread %d\n", gtid));
+    KMP_DEBUG_ASSERT(fullMask != NULL);
+    return __kmp_set_system_affinity(fullMask, FALSE);
+}
+#endif
+
 #endif // KMP_AFFINITY_SUPPORTED

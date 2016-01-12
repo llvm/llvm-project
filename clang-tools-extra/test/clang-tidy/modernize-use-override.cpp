@@ -37,6 +37,9 @@ struct Base {
 
   virtual void cv() const volatile;
   virtual void cv2() const volatile;
+
+  virtual void ne() noexcept(false);
+  virtual void t() throw();
 };
 
 struct SimpleCases : public Base {
@@ -104,6 +107,14 @@ public:
   virtual void o() __attribute__((unused));
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
   // CHECK-FIXES: {{^}}  void o() override __attribute__((unused));
+
+  virtual void ne() noexcept(false);
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
+  // CHECK-FIXES: {{^}}  void ne() noexcept(false) override;
+
+  virtual void t() throw();
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
+  // CHECK-FIXES: {{^}}  void t() throw() override;
 };
 
 // CHECK-MESSAGES-NOT: warning:

@@ -287,14 +287,21 @@ void Writer<ELFT>::scanRelocs(
       continue;
     }
 
-    if (Config->EMachine == EM_MIPS && NeedsGot) {
-      // MIPS ABI has special rules to process GOT entries
-      // and doesn't require relocation entries for them.
-      // See "Global Offset Table" in Chapter 5 in the following document
-      // for detailed description:
-      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-      Body->setUsedInDynamicReloc();
-      continue;
+    if (Config->EMachine == EM_MIPS) {
+      if (NeedsGot) {
+        // MIPS ABI has special rules to process GOT entries
+        // and doesn't require relocation entries for them.
+        // See "Global Offset Table" in Chapter 5 in the following document
+        // for detailed description:
+        // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+        Body->setUsedInDynamicReloc();
+        continue;
+      }
+      if (Body == Config->MipsGpDisp)
+        // MIPS _gp_disp designates offset between start of function and gp
+        // pointer into GOT therefore any relocations against it do not require
+        // dynamic relocation.
+        continue;
     }
 
     // Here we are creating a relocation for the dynamic linker based on
@@ -599,8 +606,8 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
 
   // Don't include synthetic symbols like __init_array_start in every output.
   if (auto *U = dyn_cast<DefinedRegular<ELFT>>(&B))
-    if (&U->Sym == &ElfSym<ELFT>::IgnoreUndef ||
-        &U->Sym == &ElfSym<ELFT>::IgnoreUndefStrong)
+    if (&U->Sym == &ElfSym<ELFT>::IgnoredWeak ||
+        &U->Sym == &ElfSym<ELFT>::Ignored)
       return false;
 
   return true;

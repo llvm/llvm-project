@@ -15,6 +15,7 @@
 // http://llvm.org/bugs/show_bug.cgi?id=16816
 
 #include <vector>
+#include <algorithm>
 #include <cassert>
 
 int main()

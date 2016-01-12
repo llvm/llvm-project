@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <string>
 #include <cassert>
+#include <cmath>
 #include <cfloat>
 
 #include "test_macros.h"
@@ -40,7 +41,7 @@ int main()
             P(80, "eighty"),
         };
         const C c(std::begin(a), std::end(a));
-        assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
+        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
     }
     {
         typedef std::unordered_map<int, std::string> C;
@@ -64,7 +65,7 @@ int main()
             P(80, "eighty"),
         };
         const C c(std::begin(a), std::end(a));
-        assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
+        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
     }
     {
         typedef std::unordered_map<int, std::string, std::hash<int>, std::equal_to<int>,

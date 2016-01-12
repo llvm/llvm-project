@@ -19,6 +19,7 @@
 #include <string>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
 
 #include "min_allocator.h"
 
@@ -39,7 +40,7 @@ int main()
             P(80, "eighty"),
         };
         const C c(std::begin(a), std::end(a));
-        assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
+        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
     }
     {
         typedef std::unordered_multimap<int, std::string> C;
@@ -64,7 +65,7 @@ int main()
             P(80, "eighty"),
         };
         const C c(std::begin(a), std::end(a));
-        assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
+        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
     }
     {
         typedef std::unordered_multimap<int, std::string, std::hash<int>, std::equal_to<int>,

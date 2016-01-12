@@ -20,6 +20,7 @@
 // throw.
 
 #include <random>
+#include <system_error>
 #include <cassert>
 #include <unistd.h>
 

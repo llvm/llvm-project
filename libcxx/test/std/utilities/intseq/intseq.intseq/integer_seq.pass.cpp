@@ -19,6 +19,7 @@
 
 #include <utility>
 #include <type_traits>
+#include <cstddef>
 #include <cassert>
 
 int main()
@@ -27,7 +28,7 @@ int main()
 
 //  Make a few of sequences
     using int3    = std::integer_sequence<int, 3, 2, 1>;
-    using size1   = std::integer_sequence<size_t, 7>;
+    using size1   = std::integer_sequence<std::size_t, 7>;
     using ushort2 = std::integer_sequence<unsigned short, 4, 6>;
     using bool0   = std::integer_sequence<bool>;
     
@@ -35,7 +36,7 @@ int main()
     static_assert ( std::is_same<int3::value_type, int>::value, "int3 type wrong" );
     static_assert ( int3::size() == 3, "int3 size wrong" );
     
-    static_assert ( std::is_same<size1::value_type, size_t>::value, "size1 type wrong" );
+    static_assert ( std::is_same<size1::value_type, std::size_t>::value, "size1 type wrong" );
     static_assert ( size1::size() == 1, "size1 size wrong" );
     
     static_assert ( std::is_same<ushort2::value_type, unsigned short>::value, "ushort2 type wrong" );
