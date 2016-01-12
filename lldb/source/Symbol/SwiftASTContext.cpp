@@ -9626,10 +9626,6 @@ SwiftASTContext::GetEncoding (void* type, uint64_t &count)
         case swift::TypeKind::DependentMember:
             break;
             
-        case swift::TypeKind::Enum:
-        case swift::TypeKind::BoundGenericEnum:
-            return lldb::eEncodingUint;
-            
         case swift::TypeKind::ExistentialMetatype:
         case swift::TypeKind::Metatype:
             return lldb::eEncodingUint;
@@ -9638,6 +9634,10 @@ SwiftASTContext::GetEncoding (void* type, uint64_t &count)
         case swift::TypeKind::GenericFunction:
         case swift::TypeKind::Function:
             return lldb::eEncodingUint;
+            
+        case swift::TypeKind::Enum:
+        case swift::TypeKind::BoundGenericEnum:
+            break;
             
         case swift::TypeKind::Struct:
         case swift::TypeKind::Dictionary:
