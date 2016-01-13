@@ -2556,6 +2556,9 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V, unsigned Depth) {
 
   switch (I->getOpcode()) {
   default: break;
+  // Unsigned integers are always nonnegative.
+  case Instruction::UIToFP:
+    return true;
   case Instruction::FMul:
     // x*x is always non-negative or a NaN.
     if (I->getOperand(0) == I->getOperand(1)) 
@@ -2566,6 +2569,9 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V, unsigned Depth) {
   case Instruction::FRem:
     return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) &&
            CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
+  case Instruction::Select:
+    return CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1) &&
+           CannotBeOrderedLessThanZero(I->getOperand(2), Depth+1);
   case Instruction::FPExt:
   case Instruction::FPTrunc:
     // Widening/narrowing never change sign.
@@ -2574,6 +2580,12 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V, unsigned Depth) {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) 
       switch (II->getIntrinsicID()) {
       default: break;
+      case Intrinsic::maxnum:
+        return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) ||
+               CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
+      case Intrinsic::minnum:
+        return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) &&
+               CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
       case Intrinsic::exp:
       case Intrinsic::exp2:
       case Intrinsic::fabs:
