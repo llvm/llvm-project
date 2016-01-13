@@ -1049,6 +1049,21 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
         case DW_TAG_unspecified_type:
             if (name && is_declaration == false)
             {
+                if (cu_language == eLanguageTypeGo)
+                {
+                    // For Go, check if the type name appears to have the full
+                    // package scope in it.  If so, reduce to the basename and
+                    // add a type lookup for the basename.
+                    llvm::StringRef name_string_ref (name);
+                    const size_t dot_pos = name_string_ref.find_last_of('.');
+                    if ((dot_pos != llvm::StringRef::npos) && (name_string_ref.size() > dot_pos + 1))
+                    {
+                        llvm::StringRef base_name = name_string_ref.substr (dot_pos + 1);
+                        types.Insert (ConstString(base_name), DIERef(cu_offset, die.GetOffset()));
+                    }
+                }
+
+                // Add a type mapping for the name just as it appeared.
                 types.Insert (ConstString(name), DIERef(cu_offset, die.GetOffset()));
             }
             break;
