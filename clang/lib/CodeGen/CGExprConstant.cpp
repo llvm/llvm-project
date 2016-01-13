@@ -735,6 +735,7 @@ public:
     case CK_PointerToBoolean:
     case CK_NullToPointer:
     case CK_IntegralCast:
+    case CK_BooleanToSignedIntegral:
     case CK_IntegralToPointer:
     case CK_IntegralToBoolean:
     case CK_IntegralToFloating:

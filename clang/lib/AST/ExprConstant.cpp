@@ -7781,12 +7781,16 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_PointerToBoolean:
   case CK_IntegralToBoolean:
   case CK_FloatingToBoolean:
+  case CK_BooleanToSignedIntegral:
   case CK_FloatingComplexToBoolean:
   case CK_IntegralComplexToBoolean: {
     bool BoolResult;
     if (!EvaluateAsBooleanCondition(SubExpr, BoolResult, Info))
       return false;
-    return Success(BoolResult, E);
+    uint64_t IntResult = BoolResult;
+    if (BoolResult && E->getCastKind() == CK_BooleanToSignedIntegral)
+      IntResult = (uint64_t)-1;
+    return Success(IntResult, E);
   }
 
   case CK_IntegralCast: {
@@ -8223,6 +8227,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_ToVoid:
   case CK_VectorSplat:
   case CK_IntegralCast:
+  case CK_BooleanToSignedIntegral:
   case CK_IntegralToBoolean:
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:

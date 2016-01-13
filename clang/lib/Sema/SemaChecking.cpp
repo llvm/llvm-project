@@ -6243,7 +6243,8 @@ static IntRange GetExprRange(ASTContext &C, Expr *E, unsigned MaxWidth) {
 
     IntRange OutputTypeRange = IntRange::forValueOfType(C, GetExprType(CE));
 
-    bool isIntegerCast = (CE->getCastKind() == CK_IntegralCast);
+    bool isIntegerCast = CE->getCastKind() == CK_IntegralCast ||
+                         CE->getCastKind() == CK_BooleanToSignedIntegral;
 
     // Assume that non-integer casts can span the full range of the type.
     if (!isIntegerCast)

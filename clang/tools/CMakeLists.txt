@@ -5,8 +5,6 @@ add_clang_subdirectory(driver)
 add_clang_subdirectory(clang-format)
 add_clang_subdirectory(clang-format-vs)
 add_clang_subdirectory(clang-fuzzer)
-add_clang_subdirectory(scan-build)
-add_clang_subdirectory(scan-view)
 
 add_clang_subdirectory(c-index-test)
 add_clang_subdirectory(libclang)
@@ -18,6 +16,8 @@ endif()
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
   add_clang_subdirectory(clang-check)
+  add_clang_subdirectory(scan-build)
+  add_clang_subdirectory(scan-view)
 endif()
 
 # We support checking out the clang-tools-extra repository into the 'extra'

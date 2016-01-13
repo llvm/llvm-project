@@ -3365,6 +3365,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_PointerToBoolean:
   case CK_VectorSplat:
   case CK_IntegralCast:
+  case CK_BooleanToSignedIntegral:
   case CK_IntegralToBoolean:
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:

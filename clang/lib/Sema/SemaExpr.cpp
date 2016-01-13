@@ -5602,6 +5602,39 @@ bool Sema::CheckVectorCast(SourceRange R, QualType VectorTy, QualType Ty,
   return false;
 }
 
+ExprResult Sema::prepareVectorSplat(QualType VectorTy, Expr *SplattedExpr) {
+  QualType DestElemTy = VectorTy->castAs<VectorType>()->getElementType();
+
+  if (DestElemTy == SplattedExpr->getType())
+    return SplattedExpr;
+
+  assert(DestElemTy->isFloatingType() ||
+         DestElemTy->isIntegralOrEnumerationType());
+
+  CastKind CK;
+  if (VectorTy->isExtVectorType() && SplattedExpr->getType()->isBooleanType()) {
+    // OpenCL requires that we convert `true` boolean expressions to -1, but
+    // only when splatting vectors.
+    if (DestElemTy->isFloatingType()) {
+      // To avoid having to have a CK_BooleanToSignedFloating cast kind, we cast
+      // in two steps: boolean to signed integral, then to floating.
+      ExprResult CastExprRes = ImpCastExprToType(SplattedExpr, Context.IntTy,
+                                                 CK_BooleanToSignedIntegral);
+      SplattedExpr = CastExprRes.get();
+      CK = CK_IntegralToFloating;
+    } else {
+      CK = CK_BooleanToSignedIntegral;
+    }
+  } else {
+    ExprResult CastExprRes = SplattedExpr;
+    CK = PrepareScalarCast(CastExprRes, DestElemTy);
+    if (CastExprRes.isInvalid())
+      return ExprError();
+    SplattedExpr = CastExprRes.get();
+  }
+  return ImpCastExprToType(SplattedExpr, DestElemTy, CK);
+}
+
 ExprResult Sema::CheckExtVectorCast(SourceRange R, QualType DestTy,
                                     Expr *CastExpr, CastKind &Kind) {
   assert(DestTy->isExtVectorType() && "Not an extended vector type!");
@@ -5632,15 +5665,8 @@ ExprResult Sema::CheckExtVectorCast(SourceRange R, QualType DestTy,
                 diag::err_invalid_conversion_between_vector_and_scalar)
       << DestTy << SrcTy << R;
 
-  QualType DestElemTy = DestTy->getAs<ExtVectorType>()->getElementType();
-  ExprResult CastExprRes = CastExpr;
-  CastKind CK = PrepareScalarCast(CastExprRes, DestElemTy);
-  if (CastExprRes.isInvalid())
-    return ExprError();
-  CastExpr = ImpCastExprToType(CastExprRes.get(), DestElemTy, CK).get();
-
   Kind = CK_VectorSplat;
-  return CastExpr;
+  return prepareVectorSplat(DestTy, CastExpr);
 }
 
 ExprResult
@@ -6979,13 +7005,9 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
     if (RHSType->isExtVectorType())
       return Incompatible;
     if (RHSType->isArithmeticType()) {
-      // CK_VectorSplat does T -> vector T, so first cast to the
-      // element type.
-      QualType elType = cast<ExtVectorType>(LHSType)->getElementType();
-      if (elType != RHSType && ConvertRHS) {
-        Kind = PrepareScalarCast(RHS, elType);
-        RHS = ImpCastExprToType(RHS.get(), elType, Kind);
-      }
+      // CK_VectorSplat does T -> vector T, so first cast to the element type.
+      if (ConvertRHS)
+        RHS = prepareVectorSplat(LHSType, RHS.get());
       Kind = CK_VectorSplat;
       return Compatible;
     }
@@ -8203,7 +8225,7 @@ static QualType checkOpenCLVectorShift(Sema &S,
   if (RHS.isInvalid()) return QualType();
 
   QualType LHSType = LHS.get()->getType();
-  const VectorType *LHSVecTy = LHSType->getAs<VectorType>();
+  const VectorType *LHSVecTy = LHSType->castAs<VectorType>();
   QualType LHSEleType = LHSVecTy->getElementType();
 
   // Note that RHS might not be a vector.

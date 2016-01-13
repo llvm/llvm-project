@@ -348,6 +348,25 @@ static void handleSimpleAttribute(Sema &S, Decl *D,
                                         Attr.getAttributeSpellingListIndex()));
 }
 
+template <typename AttrType>
+static void handleSimpleAttributeWithExclusions(Sema &S, Decl *D,
+                                                const AttributeList &Attr) {
+  handleSimpleAttribute<AttrType>(S, D, Attr);
+}
+
+/// \brief Applies the given attribute to the Decl so long as the Decl doesn't
+/// already have one of the given incompatible attributes.
+template <typename AttrType, typename IncompatibleAttrType,
+          typename... IncompatibleAttrTypes>
+static void handleSimpleAttributeWithExclusions(Sema &S, Decl *D,
+                                                const AttributeList &Attr) {
+  if (checkAttrMutualExclusion<IncompatibleAttrType>(S, D, Attr.getRange(),
+                                                     Attr.getName()))
+    return;
+  handleSimpleAttributeWithExclusions<AttrType, IncompatibleAttrTypes...>(S, D,
+                                                                          Attr);
+}
+
 /// \brief Check if the passed-in expression is of type int or bool.
 static bool isIntOrBool(Expr *Exp) {
   QualType QT = Exp->getType();
@@ -3633,6 +3652,12 @@ static void handleOptimizeNoneAttr(Sema &S, Decl *D,
 }
 
 static void handleGlobalAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  if (checkAttrMutualExclusion<CUDADeviceAttr>(S, D, Attr.getRange(),
+                                               Attr.getName()) ||
+      checkAttrMutualExclusion<CUDAHostAttr>(S, D, Attr.getRange(),
+                                             Attr.getName())) {
+    return;
+  }
   FunctionDecl *FD = cast<FunctionDecl>(D);
   if (!FD->getReturnType()->isVoidType()) {
     SourceRange RTRange = FD->getReturnTypeSourceRange();
@@ -4816,14 +4841,6 @@ static void handleInterruptAttr(Sema &S, Decl *D, const AttributeList &Attr) {
     handleARMInterruptAttr(S, D, Attr);
 }
 
-static void handleMips16Attribute(Sema &S, Decl *D, const AttributeList &Attr) {
-  if (checkAttrMutualExclusion<MipsInterruptAttr>(S, D, Attr.getRange(),
-                                                  Attr.getName()))
-    return;
-
-  handleSimpleAttribute<Mips16Attr>(S, D, Attr);
-}
-
 static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D,
                                     const AttributeList &Attr) {
   uint32_t NumRegs;
@@ -5213,7 +5230,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleDLLAttr(S, D, Attr);
     break;
   case AttributeList::AT_Mips16:
-    handleMips16Attribute(S, D, Attr);
+    handleSimpleAttributeWithExclusions<Mips16Attr, MipsInterruptAttr>(S, D,
+                                                                       Attr);
     break;
   case AttributeList::AT_NoMips16:
     handleSimpleAttribute<NoMips16Attr>(S, D, Attr);
@@ -5264,7 +5282,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleCommonAttr(S, D, Attr);
     break;
   case AttributeList::AT_CUDAConstant:
-    handleSimpleAttribute<CUDAConstantAttr>(S, D, Attr);
+    handleSimpleAttributeWithExclusions<CUDAConstantAttr, CUDASharedAttr>(S, D,
+                                                                          Attr);
     break;
   case AttributeList::AT_PassObjectSize:
     handlePassObjectSizeAttr(S, D, Attr);
@@ -5309,10 +5328,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleGlobalAttr(S, D, Attr);
     break;
   case AttributeList::AT_CUDADevice:
-    handleSimpleAttribute<CUDADeviceAttr>(S, D, Attr);
+    handleSimpleAttributeWithExclusions<CUDADeviceAttr, CUDAGlobalAttr>(S, D,
+                                                                        Attr);
     break;
   case AttributeList::AT_CUDAHost:
-    handleSimpleAttribute<CUDAHostAttr>(S, D, Attr);
+    handleSimpleAttributeWithExclusions<CUDAHostAttr, CUDAGlobalAttr>(S, D,
+                                                                      Attr);
     break;
   case AttributeList::AT_GNUInline:
     handleGNUInlineAttr(S, D, Attr);
@@ -5375,7 +5396,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttribute<NoThrowAttr>(S, D, Attr);
     break;
   case AttributeList::AT_CUDAShared:
-    handleSimpleAttribute<CUDASharedAttr>(S, D, Attr);
+    handleSimpleAttributeWithExclusions<CUDASharedAttr, CUDAConstantAttr>(S, D,
+                                                                          Attr);
     break;
   case AttributeList::AT_VecReturn:
     handleVecReturnAttr(S, D, Attr);

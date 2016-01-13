@@ -3353,20 +3353,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              VK_RValue, /*BasePath=*/nullptr, CCK).get();
     break;
 
-  case ICK_Vector_Splat:
+  case ICK_Vector_Splat: {
     // Vector splat from any arithmetic type to a vector.
-    // Cast to the element type.
-    {
-      QualType elType = ToType->getAs<ExtVectorType>()->getElementType();
-      if (elType != From->getType()) {
-        ExprResult E = From;
-        From = ImpCastExprToType(From, elType,
-                                 PrepareScalarCast(E, elType)).get();
-      }
-      From = ImpCastExprToType(From, ToType, CK_VectorSplat,
-                               VK_RValue, /*BasePath=*/nullptr, CCK).get();
-    }
+    Expr *Elem = prepareVectorSplat(ToType, From).get();
+    From = ImpCastExprToType(Elem, ToType, CK_VectorSplat, VK_RValue,
+                             /*BasePath=*/nullptr, CCK).get();
     break;
+  }
 
   case ICK_Complex_Real:
     // Case 1.  x -> _Complex y
