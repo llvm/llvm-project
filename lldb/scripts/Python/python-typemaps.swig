@@ -543,7 +543,9 @@
          return nullptr;
 
       $1 = file.GetStream();
-   }
+      if ($1)
+         file.Clear();
+    }
 }
 
 %typemap(out) FILE * {
