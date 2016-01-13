@@ -923,23 +923,46 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
             {
                 if (name)
                 {
-                    ObjCLanguage::MethodName objc_method(name, true);
-                    if (objc_method.IsValid(true))
+                    bool has_valid_objc_method = false;
+
+                    if (Language::LanguageIsObjC(cu_language))
                     {
-                        ConstString objc_class_name_with_category (objc_method.GetClassNameWithCategory());
-                        ConstString objc_selector_name (objc_method.GetSelector());
-                        ConstString objc_fullname_no_category_name (objc_method.GetFullNameWithoutCategory(true));
-                        ConstString objc_class_name_no_category (objc_method.GetClassName());
-                        func_fullnames.Insert (ConstString(name), DIERef(cu_offset, die.GetOffset()));
-                        if (objc_class_name_with_category)
-                            objc_class_selectors.Insert(objc_class_name_with_category, DIERef(cu_offset, die.GetOffset()));
-                        if (objc_class_name_no_category && objc_class_name_no_category != objc_class_name_with_category)
-                            objc_class_selectors.Insert(objc_class_name_no_category, DIERef(cu_offset, die.GetOffset()));
-                        if (objc_selector_name)
-                            func_selectors.Insert (objc_selector_name, DIERef(cu_offset, die.GetOffset()));
-                        if (objc_fullname_no_category_name)
-                            func_fullnames.Insert (objc_fullname_no_category_name, DIERef(cu_offset, die.GetOffset()));
+                        ObjCLanguage::MethodName objc_method(name, true);
+                        if (objc_method.IsValid(true))
+                        {
+                            ConstString objc_class_name_with_category (objc_method.GetClassNameWithCategory());
+                            ConstString objc_selector_name (objc_method.GetSelector());
+                            ConstString objc_fullname_no_category_name (objc_method.GetFullNameWithoutCategory(true));
+                            ConstString objc_class_name_no_category (objc_method.GetClassName());
+                            func_fullnames.Insert (ConstString(name), DIERef(cu_offset, die.GetOffset()));
+                            if (objc_class_name_with_category)
+                                objc_class_selectors.Insert(objc_class_name_with_category, DIERef(cu_offset, die.GetOffset()));
+                            if (objc_class_name_no_category && objc_class_name_no_category != objc_class_name_with_category)
+                                objc_class_selectors.Insert(objc_class_name_no_category, DIERef(cu_offset, die.GetOffset()));
+                            if (objc_selector_name)
+                                func_selectors.Insert (objc_selector_name, DIERef(cu_offset, die.GetOffset()));
+                            if (objc_fullname_no_category_name)
+                                func_fullnames.Insert (objc_fullname_no_category_name, DIERef(cu_offset, die.GetOffset()));
+                            has_valid_objc_method = true;
+                        }
                     }
+                    else if (cu_language == eLanguageTypeGo)
+                    {
+                        // If the name is of the form {something}.{basename}, we're going
+                        // to inject an accelerator for basename into the mapping table.
+                        // This will allow us to handle user-specified symbol names
+                        // in Go versions where the DW_AT_name of the subprogram is
+                        // set to {package}.{funcname}, without colliding with how
+                        // Swift handles this.
+                        llvm::StringRef name_string_ref (name);
+                        const size_t dot_pos = name_string_ref.find_last_of('.');
+                        if ((dot_pos != llvm::StringRef::npos) && (name_string_ref.size() > dot_pos + 1))
+                        {
+                            llvm::StringRef base_name = name_string_ref.substr (dot_pos + 1);
+                            func_basenames.Insert (ConstString(base_name.str()), DIERef(cu_offset, die.GetOffset()));
+                        }
+                    }
+
                     // If we have a mangled name, then the DW_AT_name attribute
                     // is usually the method name without the class or any parameters
                     const DWARFDebugInfoEntry *parent = die.GetParent();
@@ -968,7 +991,7 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
                     else
                         func_basenames.Insert (ConstString(name), DIERef(cu_offset, die.GetOffset()));
 
-                    if (!is_method && !mangled_cstr && !objc_method.IsValid(true))
+                    if (!is_method && !mangled_cstr && !has_valid_objc_method)
                         func_fullnames.Insert (ConstString(name), DIERef(cu_offset, die.GetOffset()));
                 }
                 if (mangled_cstr)
