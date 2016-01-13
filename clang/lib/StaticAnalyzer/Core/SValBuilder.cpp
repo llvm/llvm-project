@@ -214,15 +214,15 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
 }
 
 DefinedSVal SValBuilder::getFunctionPointer(const FunctionDecl *func) {
-  return loc::MemRegionVal(MemMgr.getFunctionTextRegion(func));
+  return loc::MemRegionVal(MemMgr.getFunctionCodeRegion(func));
 }
 
 DefinedSVal SValBuilder::getBlockPointer(const BlockDecl *block,
                                          CanQualType locTy,
                                          const LocationContext *locContext,
                                          unsigned blockCount) {
-  const BlockTextRegion *BC =
-    MemMgr.getBlockTextRegion(block, locTy, locContext->getAnalysisDeclContext());
+  const BlockCodeRegion *BC =
+    MemMgr.getBlockCodeRegion(block, locTy, locContext->getAnalysisDeclContext());
   const BlockDataRegion *BD = MemMgr.getBlockDataRegion(BC, locContext,
                                                         blockCount);
   return loc::MemRegionVal(BD);

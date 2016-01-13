@@ -7763,7 +7763,12 @@ TEST_F(FormatTest, ObjCArrayLiterals) {
       "  aaaa == bbbbbbbbbbb ? @\"aaaaaaaaaaaa\" : @\"aaaaaaaaaaaaaa\",\n"
       "  @\"aaaaaaaaaaaaaaaaa\",\n"
       "  @\"aaaaaaaaaaaaaaaaa\",\n"
-      "  @\"aaaaaaaaaaaaaaaaa\"\n"
+      "  @\"aaaaaaaaaaaaaaaaa\",\n"
+      "];");
+  verifyFormat(
+      "NSArray *some_variable = @[\n"
+      "  aaaa == bbbbbbbbbbb ? @\"aaaaaaaaaaaa\" : @\"aaaaaaaaaaaaaa\",\n"
+      "  @\"aaaaaaaaaaaaaaaa\", @\"aaaaaaaaaaaaaaaa\", @\"aaaaaaaaaaaaaaaa\"\n"
       "];");
   verifyFormat("NSArray *some_variable = @[\n"
                "  @\"aaaaaaaaaaaaaaaaa\",\n"
@@ -7771,12 +7776,6 @@ TEST_F(FormatTest, ObjCArrayLiterals) {
                "  @\"aaaaaaaaaaaaaaaaa\",\n"
                "  @\"aaaaaaaaaaaaaaaaa\",\n"
                "];");
-  verifyGoogleFormat("NSArray *some_variable = @[\n"
-                     "  @\"aaaaaaaaaaaaaaaaa\",\n"
-                     "  @\"aaaaaaaaaaaaaaaaa\",\n"
-                     "  @\"aaaaaaaaaaaaaaaaa\",\n"
-                     "  @\"aaaaaaaaaaaaaaaaa\"\n"
-                     "];");
   verifyFormat("NSArray *array = @[\n"
                "  @\"a\",\n"
                "  @\"a\",\n" // Trailing comma -> one per line.

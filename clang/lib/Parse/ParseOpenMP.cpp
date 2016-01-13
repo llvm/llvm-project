@@ -165,8 +165,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
 ///         'distribute'
 ///         annot_pragma_openmp_end
 ///
-StmtResult
-Parser::ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed) {
+StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
+    AllowedContsructsKind Allowed) {
   assert(Tok.is(tok::annot_pragma_openmp) && "Not an OpenMP directive!");
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   SmallVector<Expr *, 5> Identifiers;
@@ -186,6 +186,10 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed) {
 
   switch (DKind) {
   case OMPD_threadprivate:
+    if (Allowed != ACK_Any) {
+      Diag(Tok, diag::err_omp_immediate_directive)
+          << getOpenMPDirectiveName(DKind) << 0;
+    }
     ConsumeToken();
     if (!ParseOpenMPSimpleVarList(OMPD_threadprivate, Identifiers, false)) {
       // The last seen token is annot_pragma_openmp_end - need to check for
@@ -213,7 +217,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed) {
   case OMPD_taskwait:
   case OMPD_cancellation_point:
   case OMPD_cancel:
-    if (!StandAloneAllowed) {
+    if (Allowed == ACK_StatementsOpenMPNonStandalone) {
       Diag(Tok, diag::err_omp_immediate_directive)
           << getOpenMPDirectiveName(DKind) << 0;
     }
@@ -299,7 +303,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed) {
     // If the depend clause is specified, the ordered construct is a stand-alone
     // directive.
     if (DKind == OMPD_ordered && FirstClauses[OMPC_depend].getInt()) {
-      if (!StandAloneAllowed) {
+      if (Allowed == ACK_StatementsOpenMPNonStandalone) {
         Diag(Loc, diag::err_omp_immediate_directive)
             << getOpenMPDirectiveName(DKind) << 1
             << getOpenMPClauseName(OMPC_depend);

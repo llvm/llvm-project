@@ -1,5 +1,5 @@
 =====================================
-Clang 3.8 (In-Progress) Release Notes
+Clang 3.9 (In-Progress) Release Notes
 =====================================
 
 .. contents::
@@ -10,7 +10,7 @@ Written by the `LLVM Team <http://llvm.org/>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming Clang 3.8 release. You may
+   These are in-progress notes for the upcoming Clang 3.9 release. You may
    prefer the `Clang 3.7 Release Notes
    <http://llvm.org/releases/3.7.0/tools/clang/docs/ReleaseNotes.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the Clang C/C++/Objective-C
-frontend, part of the LLVM Compiler Infrastructure, release 3.8. Here we
+frontend, part of the LLVM Compiler Infrastructure, release 3.9. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see `the LLVM
@@ -36,7 +36,7 @@ main Clang web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <http://llvm.org/releases/>`_.
 
-What's New in Clang 3.8?
+What's New in Clang 3.9?
 ========================
 
 Some of the major new features and improvements to Clang are listed
@@ -108,7 +108,7 @@ OpenCL C Language Changes in Clang
 Internal API Changes
 --------------------
 
-These are major API changes that have happened since the 3.7 release of
+These are major API changes that have happened since the 3.8 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
@@ -116,46 +116,6 @@ this section should help get you past the largest hurdles of upgrading.
 
 AST Matchers
 ------------
-The AST matcher functions were renamed to reflect the exact AST node names,
-which is a breaking change to AST matching code. The following matchers were
-affected:
-
-=======================	============================
-Previous Matcher Name	New Matcher Name
-=======================	============================
-recordDecl		recordDecl and cxxRecordDecl
-ctorInitializer		cxxCtorInitializer
-constructorDecl		cxxConstructorDecl
-destructorDecl		cxxDestructorDecl
-methodDecl		cxxMethodDecl
-conversionDecl		cxxConversionDecl
-memberCallExpr		cxxMemberCallExpr
-constructExpr		cxxConstructExpr
-unresolvedConstructExpr	cxxUnresolvedConstructExpr
-thisExpr		cxxThisExpr
-bindTemporaryExpr	cxxBindTemporaryExpr
-newExpr			cxxNewExpr
-deleteExpr		cxxDeleteExpr
-defaultArgExpr		cxxDefaultArgExpr
-operatorCallExpr	cxxOperatorCallExpr
-forRangeStmt		cxxForRangeStmt
-catchStmt		cxxCatchStmt
-tryStmt			cxxTryStmt
-throwExpr		cxxThrowExpr
-boolLiteral		cxxBoolLiteral
-nullPtrLiteralExpr	cxxNullPtrLiteralExpr
-reinterpretCastExpr	cxxReinterpretCastExpr
-staticCastExpr		cxxStaticCastExpr
-dynamicCastExpr		cxxDynamicCastExpr
-constCastExpr		cxxConstCastExpr
-functionalCastExpr	cxxFunctionalCastExpr
-temporaryObjectExpr	cxxTemporaryObjectExpr
-CUDAKernalCallExpr	cudaKernelCallExpr
-=======================	============================
-
-recordDecl() previously matched AST nodes of type CXXRecordDecl, but now
-matches AST nodes of type RecordDecl. If a CXXRecordDecl is required, use the
-cxxRecordDecl() matcher instead.
 
 ...
 

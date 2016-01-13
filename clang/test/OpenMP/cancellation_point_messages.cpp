@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 #pragma omp cancellation point parallel // expected-error {{'#pragma omp cancellation point' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp cancellation point sections // expected-error {{'#pragma omp cancellation point' cannot be an immediate substatement}}
+#pragma omp cancellation point sections
   switch (argc)
   case 1: {
 #pragma omp cancellation point for
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   switch (argc) {
 #pragma omp cancellation point taskgroup
   case 1:
-#pragma omp cancellation point parallel // expected-error {{'#pragma omp cancellation point' cannot be an immediate substatement}}
+#pragma omp cancellation point parallel
     break;
   default: {
 #pragma omp cancellation point sections
