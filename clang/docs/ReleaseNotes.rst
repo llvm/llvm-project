@@ -61,7 +61,22 @@ about them. The improvements since the 3.7 release include:
 New Compiler Flags
 ------------------
 
-The option ....
+Clang can "tune" DWARF debugging information to suit one of several different
+debuggers. This fine-tuning can mean omitting DWARF features that the
+debugger does not need or use, or including DWARF extensions specific to the
+debugger. Clang supports tuning for three debuggers, as follows.
+
+- ``-ggdb`` is equivalent to ``-g`` plus tuning for the GDB debugger. For
+  compatibility with GCC, Clang allows this option to be followed by a
+  single digit from 0 to 3 indicating the debugging information "level."
+  For example, ``-ggdb1`` is equivalent to ``-ggdb -g1``.
+
+- ``-glldb`` is equivalent to ``-g`` plus tuning for the LLDB debugger.
+
+- ``-gsce`` is equivalent to ``-g`` plus tuning for the Sony Computer
+  Entertainment debugger.
+
+Specifying ``-g`` without a tuning option will use a target-dependent default.
 
 
 New Pragmas in Clang
