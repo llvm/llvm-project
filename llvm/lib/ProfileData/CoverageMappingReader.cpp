@@ -319,13 +319,10 @@ static std::error_code readCoverageMappingData(
     if (Buf + sizeof(CovMapHeader) > End)
       return coveragemap_error::malformed;
     auto CovHeader = reinterpret_cast<const coverage::CovMapHeader *>(Buf);
-    uint32_t NRecords =
-        endian::byte_swap<uint32_t, Endian>(CovHeader->NRecords);
-    uint32_t FilenamesSize =
-        endian::byte_swap<uint32_t, Endian>(CovHeader->FilenamesSize);
-    uint32_t CoverageSize =
-        endian::byte_swap<uint32_t, Endian>(CovHeader->CoverageSize);
-    uint32_t Version = endian::byte_swap<uint32_t, Endian>(CovHeader->Version);
+    uint32_t NRecords = CovHeader->getNRecords<Endian>();
+    uint32_t FilenamesSize = CovHeader->getFilenamesSize<Endian>();
+    uint32_t CoverageSize = CovHeader->getCoverageSize<Endian>();
+    uint32_t Version = CovHeader->getVersion<Endian>();
     Buf = reinterpret_cast<const char *>(++CovHeader);
 
     if (Version > coverage::CoverageMappingCurrentVersion)
@@ -360,11 +357,8 @@ static std::error_code readCoverageMappingData(
         reinterpret_cast<const coverage::CovMapFunctionRecord<T> *>(FunBuf);
     while ((const char *)CFR < FunEnd) {
       // Read the function information
-      T NamePtr = endian::byte_swap<T, Endian>(CFR->NamePtr);
-      uint32_t NameSize = endian::byte_swap<uint32_t, Endian>(CFR->NameSize);
-      uint32_t DataSize = endian::byte_swap<uint32_t, Endian>(CFR->DataSize);
-      uint64_t FuncHash = endian::byte_swap<uint64_t, Endian>(CFR->FuncHash);
-      CFR++;
+      uint32_t DataSize = CFR->template getDataSize<Endian>();
+      uint64_t FuncHash = CFR->template getFuncHash<Endian>();
 
       // Now use that to read the coverage data.
       if (CovBuf + DataSize > CovEnd)
@@ -375,16 +369,18 @@ static std::error_code readCoverageMappingData(
       // Ignore this record if we already have a record that points to the same
       // function name. This is useful to ignore the redundant records for the
       // functions with ODR linkage.
-      if (!UniqueFunctionMappingData.insert(NamePtr).second)
+      T NameRef = CFR->template getFuncNameRef<Endian>();
+      if (!UniqueFunctionMappingData.insert(NameRef).second)
         continue;
 
-      // Finally, grab the name and create a record.
-      StringRef FuncName = ProfileNames.getFuncName(NamePtr, NameSize);
-      if (NameSize && FuncName.empty())
-        return coveragemap_error::malformed;
+      StringRef FuncName;
+      if (std::error_code EC =
+              CFR->template getFuncName<Endian>(ProfileNames, FuncName))
+        return EC;
       Records.push_back(BinaryCoverageReader::ProfileMappingRecord(
           CoverageMappingVersion(Version), FuncName, FuncHash, Mapping,
           FilenamesBegin, Filenames.size() - FilenamesBegin));
+      CFR++;
     }
   }
 

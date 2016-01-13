@@ -455,12 +455,15 @@ void Fuzzer::Drill() {
 
   PrintStats("REINIT");
   SavedOutputCorpusPath.swap(Options.OutputCorpus);
-  for (auto &U : SavedCorpus)
+  for (auto &U : SavedCorpus) {
+    CurrentUnit = U;
     RunOne(U);
+  }
   PrintStats("MERGE ");
   Options.PrintNEW = true;
   size_t NumMerged = 0;
   for (auto &U : Corpus) {
+    CurrentUnit = U;
     if (RunOne(U)) {
       PrintStatusForNewUnit(U);
       NumMerged++;

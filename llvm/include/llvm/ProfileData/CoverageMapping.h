@@ -20,12 +20,32 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/ProfileData/InstrProfData.inc"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 #include <tuple>
+
+namespace llvm {
+namespace coverage {
+enum class coveragemap_error {
+  success = 0,
+  eof,
+  no_data_found,
+  unsupported_version,
+  truncated,
+  malformed
+};
+} // end of coverage namespace.
+}
+
+namespace std {
+template <>
+struct is_error_code_enum<llvm::coverage::coveragemap_error> : std::true_type {
+};
+}
 
 namespace llvm {
 class IndexedInstrProfReader;
@@ -455,19 +475,9 @@ public:
 
 const std::error_category &coveragemap_category();
 
-enum class coveragemap_error {
-  success = 0,
-  eof,
-  no_data_found,
-  unsupported_version,
-  truncated,
-  malformed
-};
-
 inline std::error_code make_error_code(coveragemap_error E) {
   return std::error_code(static_cast<int>(E), coveragemap_category());
 }
-
 
 // Profile coverage map has the following layout:
 // [CoverageMapFileHeader]
@@ -479,14 +489,50 @@ inline std::error_code make_error_code(coveragemap_error E) {
 // [Encoded Region Mapping Data]
 LLVM_PACKED_START
 template <class IntPtrT> struct CovMapFunctionRecord {
-  #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
-  #include "llvm/ProfileData/InstrProfData.inc"
+#define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+
+  // Return the structural hash associated with the function.
+  template <support::endianness Endian> uint64_t getFuncHash() const {
+    return support::endian::byte_swap<uint64_t, Endian>(FuncHash);
+  }
+  // Return the coverage map data size for the funciton.
+  template <support::endianness Endian> uint32_t getDataSize() const {
+    return support::endian::byte_swap<uint32_t, Endian>(DataSize);
+  }
+  // Return function lookup key. The value is consider opaque.
+  template <support::endianness Endian> IntPtrT getFuncNameRef() const {
+    return support::endian::byte_swap<IntPtrT, Endian>(NamePtr);
+  }
+  // Return the PGO name of the function */
+  template <support::endianness Endian>
+  std::error_code getFuncName(InstrProfSymtab &ProfileNames,
+                              StringRef &FuncName) const {
+    IntPtrT NameRef = getFuncNameRef<Endian>();
+    uint32_t NameS = support::endian::byte_swap<uint32_t, Endian>(NameSize);
+    FuncName = ProfileNames.getFuncName(NameRef, NameS);
+    if (NameS && FuncName.empty())
+      return coveragemap_error::malformed;
+    return std::error_code();
+  }
 };
 // Per module coverage mapping data header, i.e. CoverageMapFileHeader
 // documented above.
 struct CovMapHeader {
 #define COVMAP_HEADER(Type, LLVMType, Name, Init) Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
+  template <support::endianness Endian> uint32_t getNRecords() const {
+    return support::endian::byte_swap<uint32_t, Endian>(NRecords);
+  }
+  template <support::endianness Endian> uint32_t getFilenamesSize() const {
+    return support::endian::byte_swap<uint32_t, Endian>(FilenamesSize);
+  }
+  template <support::endianness Endian> uint32_t getCoverageSize() const {
+    return support::endian::byte_swap<uint32_t, Endian>(CoverageSize);
+  }
+  template <support::endianness Endian> uint32_t getVersion() const {
+    return support::endian::byte_swap<uint32_t, Endian>(Version);
+  }
 };
 
 LLVM_PACKED_END
@@ -528,11 +574,5 @@ template<> struct DenseMapInfo<coverage::CounterExpression> {
 };
 
 } // end namespace llvm
-
-namespace std {
-template <>
-struct is_error_code_enum<llvm::coverage::coveragemap_error> : std::true_type {};
-}
-
 
 #endif // LLVM_PROFILEDATA_COVERAGEMAPPING_H_

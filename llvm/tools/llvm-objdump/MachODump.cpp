@@ -1196,7 +1196,11 @@ static void ProcessMachO(StringRef Filename, MachOObjectFile *MachOOF,
     PrintSymbolTable(MachOOF);
   if (UnwindInfo)
     printMachOUnwindInfo(MachOOF);
-  if (PrivateHeaders)
+  if (PrivateHeaders) {
+    printMachOFileHeader(MachOOF);
+    printMachOLoadCommands(MachOOF);
+  }
+  if (FirstPrivateHeader)
     printMachOFileHeader(MachOOF);
   if (ObjcMetaData)
     printObjcMetaData(MachOOF, !NonVerbose);
@@ -1477,10 +1481,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
 
   // Attempt to open the binary.
   ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
-  if (std::error_code EC = BinaryOrErr.getError()) {
-    errs() << "llvm-objdump: '" << Filename << "': " << EC.message() << ".\n";
-    return;
-  }
+  if (std::error_code EC = BinaryOrErr.getError())
+    report_error(Filename, EC);
   Binary &Bin = *BinaryOrErr.get().getBinary();
 
   if (Archive *A = dyn_cast<Archive>(&Bin)) {
@@ -1649,8 +1651,9 @@ void llvm::ParseInputMachO(StringRef Filename) {
     } else
       errs() << "llvm-objdump: '" << Filename << "': "
              << "Object is not a Mach-O file type.\n";
-  } else
-    report_error(Filename, object_error::invalid_file_type);
+    return;
+  }
+  llvm_unreachable("Input object can't be invalid at this point");
 }
 
 typedef std::pair<uint64_t, const char *> BindInfoEntry;
@@ -8646,31 +8649,40 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
   }
 }
 
-static void getAndPrintMachHeader(const MachOObjectFile *Obj,
-                                  uint32_t &filetype, uint32_t &cputype,
-                                  bool verbose) {
+static void PrintMachHeader(const MachOObjectFile *Obj, bool verbose) {
   if (Obj->is64Bit()) {
     MachO::mach_header_64 H_64;
     H_64 = Obj->getHeader64();
     PrintMachHeader(H_64.magic, H_64.cputype, H_64.cpusubtype, H_64.filetype,
                     H_64.ncmds, H_64.sizeofcmds, H_64.flags, verbose);
-    filetype = H_64.filetype;
-    cputype = H_64.cputype;
   } else {
     MachO::mach_header H;
     H = Obj->getHeader();
     PrintMachHeader(H.magic, H.cputype, H.cpusubtype, H.filetype, H.ncmds,
                     H.sizeofcmds, H.flags, verbose);
-    filetype = H.filetype;
-    cputype = H.cputype;
   }
 }
 
 void llvm::printMachOFileHeader(const object::ObjectFile *Obj) {
   const MachOObjectFile *file = dyn_cast<const MachOObjectFile>(Obj);
+  PrintMachHeader(file, !NonVerbose);
+}
+
+void llvm::printMachOLoadCommands(const object::ObjectFile *Obj) {
+  const MachOObjectFile *file = dyn_cast<const MachOObjectFile>(Obj);
   uint32_t filetype = 0;
   uint32_t cputype = 0;
-  getAndPrintMachHeader(file, filetype, cputype, !NonVerbose);
+  if (file->is64Bit()) {
+    MachO::mach_header_64 H_64;
+    H_64 = file->getHeader64();
+    filetype = H_64.filetype;
+    cputype = H_64.cputype;
+  } else {
+    MachO::mach_header H;
+    H = file->getHeader();
+    filetype = H.filetype;
+    cputype = H.cputype;
+  }
   PrintLoadCommands(file, filetype, cputype, !NonVerbose);
 }
 

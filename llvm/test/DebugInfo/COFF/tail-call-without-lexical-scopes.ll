@@ -30,7 +30,7 @@
 ; X86-NEXT:  .long   1
 ; X86-NEXT:  .long {{.*}}
 ; X86-NEXT:  .long [[JMP_LINE]]-"?bar@@YAXHZZ"
-; X86-NEXT:  .long   4
+; X86-NEXT:  .long   -2147483644
 
 ; X86-LABEL: .long   244
 

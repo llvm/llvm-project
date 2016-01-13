@@ -6947,7 +6947,7 @@ name ``<index>`` corresponding to a metadata node with one ``i32`` entry of
 value 1. The existence of the ``!nontemporal`` metadata on the instruction
 tells the optimizer and code generator that this load is not expected to
 be reused in the cache. The code generator may select special
-instructions to save cache bandwidth, such as the MOVNT instruction on
+instructions to save cache bandwidth, such as the ``MOVNT`` instruction on
 x86.
 
 The optional ``!invariant.group`` metadata must reference a 

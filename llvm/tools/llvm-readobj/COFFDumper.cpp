@@ -603,12 +603,14 @@ void COFFDumper::printCodeViewSection(const SectionRef &Section) {
       // in the line table.  The filename string is accessed using double
       // indirection to the string table subsection using the index subsection.
       uint32_t OffsetInIndex = DE.getU32(&Offset),
-               SegmentLength = DE.getU32(&Offset),
+               NumLines = DE.getU32(&Offset),
                FullSegmentSize = DE.getU32(&Offset);
 
+      uint32_t ColumnOffset = Offset + 8 * NumLines;
+      DataExtractor ColumnDE(DE.getData(), true, 4);
+
       if (FullSegmentSize !=
-          12 + 8 * SegmentLength +
-              (HasColumnInformation ? 4 * SegmentLength : 0)) {
+          12 + 8 * NumLines + (HasColumnInformation ? 4 * NumLines : 0)) {
         error(object_error::parse_failed);
         return;
       }
@@ -635,27 +637,39 @@ void COFFDumper::printCodeViewSection(const SectionRef &Section) {
       StringRef Filename(CVStringTable.data() + FilenameOffset);
       ListScope S(W, "FilenameSegment");
       W.printString("Filename", Filename);
-      for (unsigned J = 0; J != SegmentLength && DE.isValidOffset(Offset);
-           ++J) {
+      for (unsigned LineIdx = 0;
+           LineIdx != NumLines && DE.isValidOffset(Offset); ++LineIdx) {
         // Then go the (PC, LineNumber) pairs.  The line number is stored in the
         // least significant 31 bits of the respective word in the table.
-        uint32_t PC = DE.getU32(&Offset),
-                 LineNumber = DE.getU32(&Offset) & 0x7fffffff;
+        uint32_t PC = DE.getU32(&Offset), LineData = DE.getU32(&Offset);
         if (PC >= FunctionSize) {
           error(object_error::parse_failed);
           return;
         }
         char Buffer[32];
         format("+0x%X", PC).snprint(Buffer, 32);
-        W.printNumber(Buffer, LineNumber);
-      }
-      if (HasColumnInformation) {
-        for (unsigned J = 0; J != SegmentLength && DE.isValidOffset(Offset);
-             ++J) {
-          uint16_t ColStart = DE.getU16(&Offset);
+        ListScope PCScope(W, Buffer);
+        uint32_t LineNumberStart = LineData & COFF::CVL_MaxLineNumber;
+        uint32_t LineNumberEndDelta =
+            (LineData >> COFF::CVL_LineNumberStartBits) &
+            COFF::CVL_LineNumberEndDeltaMask;
+        bool IsStatement = LineData & COFF::CVL_IsStatement;
+        W.printNumber("LineNumberStart", LineNumberStart);
+        W.printNumber("LineNumberEndDelta", LineNumberEndDelta);
+        W.printBoolean("IsStatement", IsStatement);
+        if (HasColumnInformation &&
+            ColumnDE.isValidOffsetForDataOfSize(ColumnOffset, 4)) {
+          uint16_t ColStart = ColumnDE.getU16(&ColumnOffset);
           W.printNumber("ColStart", ColStart);
-          uint16_t ColEnd = DE.getU16(&Offset);
+          uint16_t ColEnd = ColumnDE.getU16(&ColumnOffset);
           W.printNumber("ColEnd", ColEnd);
+        }
+      }
+      // Skip over the column data.
+      if (HasColumnInformation) {
+        for (unsigned LineIdx = 0;
+             LineIdx != NumLines && DE.isValidOffset(Offset); ++LineIdx) {
+          DE.getU32(&Offset);
         }
       }
     }
