@@ -8,6 +8,8 @@ declare float @llvm.fabs.f32(float)
 declare float @llvm.sqrt.f32(float)
 declare double @llvm.powi.f64(double,i32)
 declare float @llvm.exp.f32(float)
+declare float @llvm.minnum.f32(float, float)
+declare float @llvm.maxnum.f32(float, float)
 declare double @llvm.exp2.f64(double)
 declare float @llvm.fma.f32(float,float,float)
 
@@ -56,6 +58,45 @@ define i1 @orderedLessZeroPowi(double,double) {
   %olt = fcmp olt double %b, 0.000000e+00
 ; CHECK: ret i1 false
   ret i1 %olt
+}
+
+; CHECK-LABEL: @orderedLessZeroUIToFP(
+define i1 @orderedLessZeroUIToFP(i32) {
+  %a = uitofp i32 %0 to float
+  %uge = fcmp uge float %a, 0.000000e+00
+; CHECK: ret i1 true
+  ret i1 %uge
+}
+
+; CHECK-LABEL: @orderedLessZeroSelect(
+define i1 @orderedLessZeroSelect(float, float) {
+  %a = call float @llvm.exp.f32(float %0)
+  %b = call float @llvm.fabs.f32(float %1)
+  %c = fcmp olt float %0, %1
+  %d = select i1 %c, float %a, float %b
+  %e = fadd float %d, 1.0
+  %uge = fcmp uge float %e, 0.000000e+00
+; CHECK: ret i1 true
+  ret i1 %uge
+}
+
+; CHECK-LABEL: @orderedLessZeroMinNum(
+define i1 @orderedLessZeroMinNum(float, float) {
+  %a = call float @llvm.exp.f32(float %0)
+  %b = call float @llvm.fabs.f32(float %1)
+  %c = call float @llvm.minnum.f32(float %a, float %b)
+  %uge = fcmp uge float %c, 0.000000e+00
+; CHECK: ret i1 true
+  ret i1 %uge
+}
+
+; CHECK-LABEL: @orderedLessZeroMaxNum(
+define i1 @orderedLessZeroMaxNum(float, float) {
+  %a = call float @llvm.exp.f32(float %0)
+  %b = call float @llvm.maxnum.f32(float %a, float %1)
+  %uge = fcmp uge float %b, 0.000000e+00
+; CHECK: ret i1 true
+  ret i1 %uge
 }
 
 define i1 @nonans1(double %in1, double %in2) {

@@ -858,6 +858,9 @@ public:
   std::error_code getExportRVA(uint32_t &Result) const;
   std::error_code getSymbolName(StringRef &Result) const;
 
+  std::error_code isForwarder(bool &Result) const;
+  std::error_code getForwardTo(StringRef &Result) const;
+
 private:
   const export_directory_table_entry *ExportTable;
   uint32_t Index;

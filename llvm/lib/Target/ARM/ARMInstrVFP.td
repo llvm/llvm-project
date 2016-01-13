@@ -930,10 +930,10 @@ def VMOVDRR : AVConv5I<0b11000100, 0b1011,
 // and could enable the conversion to float to be removed completely.
 def : Pat<(fabs (arm_fmdrr GPR:$Rl, GPR:$Rh)),
           (VMOVDRR GPR:$Rl, (BFC GPR:$Rh, (i32 0x7FFFFFFF)))>,
-      Requires<[IsARM]>;
+      Requires<[IsARM, HasV6T2]>;
 def : Pat<(fabs (arm_fmdrr GPR:$Rl, GPR:$Rh)),
           (VMOVDRR GPR:$Rl, (t2BFC GPR:$Rh, (i32 0x7FFFFFFF)))>,
-      Requires<[IsThumb2]>;
+      Requires<[IsThumb2, HasV6T2]>;
 def : Pat<(fneg (arm_fmdrr GPR:$Rl, GPR:$Rh)),
           (VMOVDRR GPR:$Rl, (EORri GPR:$Rh, (i32 0x80000000)))>,
       Requires<[IsARM]>;

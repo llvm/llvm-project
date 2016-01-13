@@ -358,13 +358,30 @@ static void printExportTable(const COFFObjectFile *Obj) {
     uint32_t RVA;
     if (I->getExportRVA(RVA))
       return;
-    outs() << format("    % 4d %# 8x", Ordinal, RVA);
+    bool IsForwarder;
+    if (I->isForwarder(IsForwarder))
+      return;
+
+    if (IsForwarder) {
+      // Export table entries can be used to re-export symbols that
+      // this COFF file is imported from some DLLs. This is rare.
+      // In most cases IsForwarder is false.
+      outs() << format("    % 4d         ", Ordinal);
+    } else {
+      outs() << format("    % 4d %# 8x", Ordinal, RVA);
+    }
 
     StringRef Name;
     if (I->getSymbolName(Name))
       continue;
     if (!Name.empty())
       outs() << "  " << Name;
+    if (IsForwarder) {
+      StringRef S;
+      if (I->getForwardTo(S))
+        return;
+      outs() << " (forwarded to " << S << ")";
+    }
     outs() << "\n";
   }
 }

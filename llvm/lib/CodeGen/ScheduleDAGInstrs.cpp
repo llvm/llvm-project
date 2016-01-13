@@ -896,11 +896,16 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     assert(SU && "No SUnit mapped to this MI");
 
     if (RPTracker) {
-      PressureDiff *PDiff = PDiffs ? &(*PDiffs)[SU->NodeNum] : nullptr;
-      RPTracker->recede(/*LiveUses=*/nullptr, PDiff);
-      assert(RPTracker->getPos() == std::prev(MII) &&
-             "RPTracker can't find MI");
       collectVRegUses(SU);
+
+      RegisterOperands RegOpers;
+      RegOpers.collect(*MI, *TRI, MRI);
+      if (PDiffs != nullptr)
+        PDiffs->addInstruction(SU->NodeNum, RegOpers, MRI);
+
+      RPTracker->recedeSkipDebugValues();
+      assert(&*RPTracker->getPos() == MI && "RPTracker in sync");
+      RPTracker->recede(RegOpers);
     }
 
     assert(
