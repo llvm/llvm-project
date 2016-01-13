@@ -141,9 +141,9 @@ SVal SimpleSValBuilder::evalCastFromLoc(Loc val, QualType castTy) {
   // unless this is a weak function or a symbolic region.
   if (castTy->isBooleanType()) {
     switch (val.getSubKind()) {
-      case loc::MemRegionKind: {
+      case loc::MemRegionValKind: {
         const MemRegion *R = val.castAs<loc::MemRegionVal>().getRegion();
-        if (const FunctionTextRegion *FTR = dyn_cast<FunctionTextRegion>(R))
+        if (const FunctionCodeRegion *FTR = dyn_cast<FunctionCodeRegion>(R))
           if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(FTR->getDecl()))
             if (FD->isWeak())
               // FIXME: Currently we are using an extent symbol here,
@@ -689,7 +689,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     // completely unknowable.
     return UnknownVal();
   }
-  case loc::MemRegionKind: {
+  case loc::MemRegionValKind: {
     if (Optional<loc::ConcreteInt> rInt = rhs.getAs<loc::ConcreteInt>()) {
       // If one of the operands is a symbol and the other is a constant,
       // build an expression for use by the constraint manager.
@@ -718,7 +718,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 
     // Get both values as regions, if possible.
     const MemRegion *LeftMR = lhs.getAsRegion();
-    assert(LeftMR && "MemRegionKind SVal doesn't have a region!");
+    assert(LeftMR && "MemRegionValKind SVal doesn't have a region!");
 
     const MemRegion *RightMR = rhs.getAsRegion();
     if (!RightMR)

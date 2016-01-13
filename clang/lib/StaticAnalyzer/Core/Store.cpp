@@ -100,7 +100,7 @@ const MemRegion *StoreManager::castRegion(const MemRegion *R, QualType CastToTy)
   // Process region cast according to the kind of the region being cast.
   switch (R->getKind()) {
     case MemRegion::CXXThisRegionKind:
-    case MemRegion::GenericMemSpaceRegionKind:
+    case MemRegion::CodeSpaceRegionKind:
     case MemRegion::StackLocalsSpaceRegionKind:
     case MemRegion::StackArgumentsSpaceRegionKind:
     case MemRegion::HeapSpaceRegionKind:
@@ -112,8 +112,8 @@ const MemRegion *StoreManager::castRegion(const MemRegion *R, QualType CastToTy)
       llvm_unreachable("Invalid region cast");
     }
 
-    case MemRegion::FunctionTextRegionKind:
-    case MemRegion::BlockTextRegionKind:
+    case MemRegion::FunctionCodeRegionKind:
+    case MemRegion::BlockCodeRegionKind:
     case MemRegion::BlockDataRegionKind:
     case MemRegion::StringRegionKind:
       // FIXME: Need to handle arbitrary downcasts.
@@ -393,7 +393,7 @@ SVal StoreManager::getLValueFieldOrIvar(const Decl *D, SVal Base) {
   const MemRegion* BaseR = nullptr;
 
   switch (BaseL.getSubKind()) {
-  case loc::MemRegionKind:
+  case loc::MemRegionValKind:
     BaseR = BaseL.castAs<loc::MemRegionVal>().getRegion();
     break;
 

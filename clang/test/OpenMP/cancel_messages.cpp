@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 #pragma omp cancel parallel // expected-error {{'#pragma omp cancel' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp cancel sections // expected-error {{'#pragma omp cancel' cannot be an immediate substatement}}
+#pragma omp cancel sections
   switch (argc)
   case 1: {
 #pragma omp cancel for
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   switch (argc) {
 #pragma omp cancel taskgroup
   case 1:
-#pragma omp cancel parallel // expected-error {{'#pragma omp cancel' cannot be an immediate substatement}}
+#pragma omp cancel parallel
     break;
   default: {
 #pragma omp cancel sections

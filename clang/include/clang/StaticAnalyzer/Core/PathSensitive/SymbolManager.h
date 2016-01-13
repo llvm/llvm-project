@@ -42,14 +42,22 @@ namespace ento {
 class SymExpr : public llvm::FoldingSetNode {
   virtual void anchor();
 public:
-  enum Kind { RegionValueKind, ConjuredKind, DerivedKind, ExtentKind,
-              MetadataKind,
-              BEGIN_SYMBOLS = RegionValueKind,
-              END_SYMBOLS = MetadataKind,
-              SymIntKind, IntSymKind, SymSymKind,
-              BEGIN_BINARYSYMEXPRS = SymIntKind,
-              END_BINARYSYMEXPRS = SymSymKind,
-              CastSymbolKind };
+  enum Kind {
+    SymbolRegionValueKind,
+    SymbolConjuredKind,
+    SymbolDerivedKind,
+    SymbolExtentKind,
+    SymbolMetadataKind,
+    BEGIN_SYMBOLS = SymbolRegionValueKind,
+    END_SYMBOLS = SymbolMetadataKind,
+    SymIntExprKind,
+    IntSymExprKind,
+    SymSymExprKind,
+    BEGIN_BINARYSYMEXPRS = SymIntExprKind,
+    END_BINARYSYMEXPRS = SymSymExprKind,
+    SymbolCastKind
+  };
+
 private:
   Kind K;
 
@@ -126,12 +134,12 @@ class SymbolRegionValue : public SymbolData {
 
 public:
   SymbolRegionValue(SymbolID sym, const TypedValueRegion *r)
-    : SymbolData(RegionValueKind, sym), R(r) {}
+    : SymbolData(SymbolRegionValueKind, sym), R(r) {}
 
   const TypedValueRegion* getRegion() const { return R; }
 
   static void Profile(llvm::FoldingSetNodeID& profile, const TypedValueRegion* R) {
-    profile.AddInteger((unsigned) RegionValueKind);
+    profile.AddInteger((unsigned) SymbolRegionValueKind);
     profile.AddPointer(R);
   }
 
@@ -145,7 +153,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == RegionValueKind;
+    return SE->getKind() == SymbolRegionValueKind;
   }
 };
 
@@ -160,11 +168,9 @@ class SymbolConjured : public SymbolData {
 
 public:
   SymbolConjured(SymbolID sym, const Stmt *s, const LocationContext *lctx,
-		 QualType t, unsigned count,
-                 const void *symbolTag)
-    : SymbolData(ConjuredKind, sym), S(s), T(t), Count(count),
-      LCtx(lctx),
-      SymbolTag(symbolTag) {}
+                 QualType t, unsigned count, const void *symbolTag)
+      : SymbolData(SymbolConjuredKind, sym), S(s), T(t), Count(count),
+        LCtx(lctx), SymbolTag(symbolTag) {}
 
   const Stmt *getStmt() const { return S; }
   unsigned getCount() const { return Count; }
@@ -177,7 +183,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID& profile, const Stmt *S,
                       QualType T, unsigned Count, const LocationContext *LCtx,
                       const void *SymbolTag) {
-    profile.AddInteger((unsigned) ConjuredKind);
+    profile.AddInteger((unsigned) SymbolConjuredKind);
     profile.AddPointer(S);
     profile.AddPointer(LCtx);
     profile.Add(T);
@@ -191,7 +197,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == ConjuredKind;
+    return SE->getKind() == SymbolConjuredKind;
   }
 };
 
@@ -203,7 +209,7 @@ class SymbolDerived : public SymbolData {
 
 public:
   SymbolDerived(SymbolID sym, SymbolRef parent, const TypedValueRegion *r)
-    : SymbolData(DerivedKind, sym), parentSymbol(parent), R(r) {}
+    : SymbolData(SymbolDerivedKind, sym), parentSymbol(parent), R(r) {}
 
   SymbolRef getParentSymbol() const { return parentSymbol; }
   const TypedValueRegion *getRegion() const { return R; }
@@ -214,7 +220,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID& profile, SymbolRef parent,
                       const TypedValueRegion *r) {
-    profile.AddInteger((unsigned) DerivedKind);
+    profile.AddInteger((unsigned) SymbolDerivedKind);
     profile.AddPointer(r);
     profile.AddPointer(parent);
   }
@@ -225,7 +231,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == DerivedKind;
+    return SE->getKind() == SymbolDerivedKind;
   }
 };
 
@@ -237,7 +243,7 @@ class SymbolExtent : public SymbolData {
   
 public:
   SymbolExtent(SymbolID sym, const SubRegion *r)
-  : SymbolData(ExtentKind, sym), R(r) {}
+  : SymbolData(SymbolExtentKind, sym), R(r) {}
 
   const SubRegion *getRegion() const { return R; }
 
@@ -246,7 +252,7 @@ public:
   void dumpToStream(raw_ostream &os) const override;
 
   static void Profile(llvm::FoldingSetNodeID& profile, const SubRegion *R) {
-    profile.AddInteger((unsigned) ExtentKind);
+    profile.AddInteger((unsigned) SymbolExtentKind);
     profile.AddPointer(R);
   }
 
@@ -256,7 +262,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == ExtentKind;
+    return SE->getKind() == SymbolExtentKind;
   }
 };
 
@@ -273,7 +279,7 @@ class SymbolMetadata : public SymbolData {
 public:
   SymbolMetadata(SymbolID sym, const MemRegion* r, const Stmt *s, QualType t,
                  unsigned count, const void *tag)
-  : SymbolData(MetadataKind, sym), R(r), S(s), T(t), Count(count), Tag(tag) {}
+  : SymbolData(SymbolMetadataKind, sym), R(r), S(s), T(t), Count(count), Tag(tag) {}
 
   const MemRegion *getRegion() const { return R; }
   const Stmt *getStmt() const { return S; }
@@ -287,7 +293,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID& profile, const MemRegion *R,
                       const Stmt *S, QualType T, unsigned Count,
                       const void *Tag) {
-    profile.AddInteger((unsigned) MetadataKind);
+    profile.AddInteger((unsigned) SymbolMetadataKind);
     profile.AddPointer(R);
     profile.AddPointer(S);
     profile.Add(T);
@@ -301,7 +307,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == MetadataKind;
+    return SE->getKind() == SymbolMetadataKind;
   }
 };
 
@@ -315,7 +321,7 @@ class SymbolCast : public SymExpr {
 
 public:
   SymbolCast(const SymExpr *In, QualType From, QualType To) :
-    SymExpr(CastSymbolKind), Operand(In), FromTy(From), ToTy(To) { }
+    SymExpr(SymbolCastKind), Operand(In), FromTy(From), ToTy(To) { }
 
   QualType getType() const override { return ToTy; }
 
@@ -325,7 +331,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID& ID,
                       const SymExpr *In, QualType From, QualType To) {
-    ID.AddInteger((unsigned) CastSymbolKind);
+    ID.AddInteger((unsigned) SymbolCastKind);
     ID.AddPointer(In);
     ID.Add(From);
     ID.Add(To);
@@ -337,7 +343,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == CastSymbolKind;
+    return SE->getKind() == SymbolCastKind;
   }
 };
 
@@ -372,7 +378,7 @@ class SymIntExpr : public BinarySymExpr {
 public:
   SymIntExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
              const llvm::APSInt& rhs, QualType t)
-    : BinarySymExpr(SymIntKind, op, t), LHS(lhs), RHS(rhs) {}
+    : BinarySymExpr(SymIntExprKind, op, t), LHS(lhs), RHS(rhs) {}
 
   void dumpToStream(raw_ostream &os) const override;
 
@@ -382,7 +388,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID& ID, const SymExpr *lhs,
                       BinaryOperator::Opcode op, const llvm::APSInt& rhs,
                       QualType t) {
-    ID.AddInteger((unsigned) SymIntKind);
+    ID.AddInteger((unsigned) SymIntExprKind);
     ID.AddPointer(lhs);
     ID.AddInteger(op);
     ID.AddPointer(&rhs);
@@ -395,7 +401,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymIntKind;
+    return SE->getKind() == SymIntExprKind;
   }
 };
 
@@ -407,7 +413,7 @@ class IntSymExpr : public BinarySymExpr {
 public:
   IntSymExpr(const llvm::APSInt& lhs, BinaryOperator::Opcode op,
              const SymExpr *rhs, QualType t)
-    : BinarySymExpr(IntSymKind, op, t), LHS(lhs), RHS(rhs) {}
+    : BinarySymExpr(IntSymExprKind, op, t), LHS(lhs), RHS(rhs) {}
 
   void dumpToStream(raw_ostream &os) const override;
 
@@ -417,7 +423,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID& ID, const llvm::APSInt& lhs,
                       BinaryOperator::Opcode op, const SymExpr *rhs,
                       QualType t) {
-    ID.AddInteger((unsigned) IntSymKind);
+    ID.AddInteger((unsigned) IntSymExprKind);
     ID.AddPointer(&lhs);
     ID.AddInteger(op);
     ID.AddPointer(rhs);
@@ -430,7 +436,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == IntSymKind;
+    return SE->getKind() == IntSymExprKind;
   }
 };
 
@@ -442,7 +448,7 @@ class SymSymExpr : public BinarySymExpr {
 public:
   SymSymExpr(const SymExpr *lhs, BinaryOperator::Opcode op, const SymExpr *rhs,
              QualType t)
-    : BinarySymExpr(SymSymKind, op, t), LHS(lhs), RHS(rhs) {}
+    : BinarySymExpr(SymSymExprKind, op, t), LHS(lhs), RHS(rhs) {}
 
   const SymExpr *getLHS() const { return LHS; }
   const SymExpr *getRHS() const { return RHS; }
@@ -451,7 +457,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID& ID, const SymExpr *lhs,
                     BinaryOperator::Opcode op, const SymExpr *rhs, QualType t) {
-    ID.AddInteger((unsigned) SymSymKind);
+    ID.AddInteger((unsigned) SymSymExprKind);
     ID.AddPointer(lhs);
     ID.AddInteger(op);
     ID.AddPointer(rhs);
@@ -464,7 +470,7 @@ public:
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymSymKind;
+    return SE->getKind() == SymSymExprKind;
   }
 };
 

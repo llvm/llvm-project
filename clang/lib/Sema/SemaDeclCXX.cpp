@@ -1742,13 +1742,18 @@ void Sema::BuildBasePathArray(const CXXBasePaths &Paths,
 /// otherwise. Loc is the location where this routine should point to
 /// if there is an error, and Range is the source range to highlight
 /// if there is an error.
+///
+/// If either InaccessibleBaseID or AmbigiousBaseConvID are 0, then the
+/// diagnostic for the respective type of error will be suppressed, but the
+/// check for ill-formed code will still be performed.
 bool
 Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
                                    unsigned InaccessibleBaseID,
                                    unsigned AmbigiousBaseConvID,
                                    SourceLocation Loc, SourceRange Range,
                                    DeclarationName Name,
-                                   CXXCastPath *BasePath) {
+                                   CXXCastPath *BasePath,
+                                   bool IgnoreAccess) {
   // First, determine whether the path from Derived to Base is
   // ambiguous. This is slightly more expensive than checking whether
   // the Derived to Base conversion exists, because here we need to
@@ -1761,7 +1766,7 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
   (void)DerivationOkay;
   
   if (!Paths.isAmbiguous(Context.getCanonicalType(Base).getUnqualifiedType())) {
-    if (InaccessibleBaseID) {
+    if (!IgnoreAccess) {
       // Check that the base class can be accessed.
       switch (CheckBaseClassAccess(Loc, Base, Derived, Paths.front(),
                                    InaccessibleBaseID)) {
@@ -1810,12 +1815,10 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
                                    SourceLocation Loc, SourceRange Range,
                                    CXXCastPath *BasePath,
                                    bool IgnoreAccess) {
-  return CheckDerivedToBaseConversion(Derived, Base,
-                                      IgnoreAccess ? 0
-                                       : diag::err_upcast_to_inaccessible_base,
-                                      diag::err_ambiguous_derived_to_base_conv,
-                                      Loc, Range, DeclarationName(), 
-                                      BasePath);
+  return CheckDerivedToBaseConversion(
+      Derived, Base, diag::err_upcast_to_inaccessible_base,
+      diag::err_ambiguous_derived_to_base_conv, Loc, Range, DeclarationName(),
+      BasePath, IgnoreAccess);
 }
 
 

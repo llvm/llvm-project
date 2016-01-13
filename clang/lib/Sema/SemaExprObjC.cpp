@@ -3816,7 +3816,7 @@ bool Sema::checkObjCBridgeRelatedComponents(SourceLocation Loc,
                                             ObjCMethodDecl *&ClassMethod,
                                             ObjCMethodDecl *&InstanceMethod,
                                             TypedefNameDecl *&TDNDecl,
-                                            bool CfToNs) {
+                                            bool CfToNs, bool Diagnose) {
   QualType T = CfToNs ? SrcType : DestType;
   ObjCBridgeRelatedAttr *ObjCBAttr = ObjCBridgeRelatedAttrFromType(T, TDNDecl);
   if (!ObjCBAttr)
@@ -3832,20 +3832,24 @@ bool Sema::checkObjCBridgeRelatedComponents(SourceLocation Loc,
   LookupResult R(*this, DeclarationName(RCId), SourceLocation(),
                  Sema::LookupOrdinaryName);
   if (!LookupName(R, TUScope)) {
-    Diag(Loc, diag::err_objc_bridged_related_invalid_class) << RCId
-          << SrcType << DestType;
-    Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+    if (Diagnose) {
+      Diag(Loc, diag::err_objc_bridged_related_invalid_class) << RCId
+            << SrcType << DestType;
+      Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+    }
     return false;
   }
   Target = R.getFoundDecl();
   if (Target && isa<ObjCInterfaceDecl>(Target))
     RelatedClass = cast<ObjCInterfaceDecl>(Target);
   else {
-    Diag(Loc, diag::err_objc_bridged_related_invalid_class_name) << RCId
-          << SrcType << DestType;
-    Diag(TDNDecl->getLocStart(), diag::note_declared_at);
-    if (Target)
-      Diag(Target->getLocStart(), diag::note_declared_at);
+    if (Diagnose) {
+      Diag(Loc, diag::err_objc_bridged_related_invalid_class_name) << RCId
+            << SrcType << DestType;
+      Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+      if (Target)
+        Diag(Target->getLocStart(), diag::note_declared_at);
+    }
     return false;
   }
       
@@ -3854,9 +3858,11 @@ bool Sema::checkObjCBridgeRelatedComponents(SourceLocation Loc,
     Selector Sel = Context.Selectors.getUnarySelector(CMId);
     ClassMethod = RelatedClass->lookupMethod(Sel, false);
     if (!ClassMethod) {
-      Diag(Loc, diag::err_objc_bridged_related_known_method)
-            << SrcType << DestType << Sel << false;
-      Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+      if (Diagnose) {
+        Diag(Loc, diag::err_objc_bridged_related_known_method)
+              << SrcType << DestType << Sel << false;
+        Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+      }
       return false;
     }
   }
@@ -3866,9 +3872,11 @@ bool Sema::checkObjCBridgeRelatedComponents(SourceLocation Loc,
     Selector Sel = Context.Selectors.getNullarySelector(IMId);
     InstanceMethod = RelatedClass->lookupMethod(Sel, true);
     if (!InstanceMethod) {
-      Diag(Loc, diag::err_objc_bridged_related_known_method)
-            << SrcType << DestType << Sel << true;
-      Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+      if (Diagnose) {
+        Diag(Loc, diag::err_objc_bridged_related_known_method)
+              << SrcType << DestType << Sel << true;
+        Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+      }
       return false;
     }
   }
@@ -3878,7 +3886,7 @@ bool Sema::checkObjCBridgeRelatedComponents(SourceLocation Loc,
 bool
 Sema::CheckObjCBridgeRelatedConversions(SourceLocation Loc,
                                         QualType DestType, QualType SrcType,
-                                        Expr *&SrcExpr) {
+                                        Expr *&SrcExpr, bool Diagnose) {
   ARCConversionTypeClass rhsExprACTC = classifyTypeForARCConversion(SrcType);
   ARCConversionTypeClass lhsExprACTC = classifyTypeForARCConversion(DestType);
   bool CfToNs = (rhsExprACTC == ACTC_coreFoundation && lhsExprACTC == ACTC_retainable);
@@ -3891,27 +3899,29 @@ Sema::CheckObjCBridgeRelatedConversions(SourceLocation Loc,
   ObjCMethodDecl *InstanceMethod = nullptr;
   TypedefNameDecl *TDNDecl = nullptr;
   if (!checkObjCBridgeRelatedComponents(Loc, DestType, SrcType, RelatedClass,
-                                        ClassMethod, InstanceMethod, TDNDecl, CfToNs))
+                                        ClassMethod, InstanceMethod, TDNDecl,
+                                        CfToNs, Diagnose))
     return false;
   
   if (CfToNs) {
     // Implicit conversion from CF to ObjC object is needed.
     if (ClassMethod) {
-      std::string ExpressionString = "[";
-      ExpressionString += RelatedClass->getNameAsString();
-      ExpressionString += " ";
-      ExpressionString += ClassMethod->getSelector().getAsString();
-      SourceLocation SrcExprEndLoc = getLocForEndOfToken(SrcExpr->getLocEnd());
-      // Provide a fixit: [RelatedClass ClassMethod SrcExpr]
-      Diag(Loc, diag::err_objc_bridged_related_known_method)
-        << SrcType << DestType << ClassMethod->getSelector() << false
-        << FixItHint::CreateInsertion(SrcExpr->getLocStart(), ExpressionString)
-        << FixItHint::CreateInsertion(SrcExprEndLoc, "]");
-      Diag(RelatedClass->getLocStart(), diag::note_declared_at);
-      Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+      if (Diagnose) {
+        std::string ExpressionString = "[";
+        ExpressionString += RelatedClass->getNameAsString();
+        ExpressionString += " ";
+        ExpressionString += ClassMethod->getSelector().getAsString();
+        SourceLocation SrcExprEndLoc = getLocForEndOfToken(SrcExpr->getLocEnd());
+        // Provide a fixit: [RelatedClass ClassMethod SrcExpr]
+        Diag(Loc, diag::err_objc_bridged_related_known_method)
+          << SrcType << DestType << ClassMethod->getSelector() << false
+          << FixItHint::CreateInsertion(SrcExpr->getLocStart(), ExpressionString)
+          << FixItHint::CreateInsertion(SrcExprEndLoc, "]");
+        Diag(RelatedClass->getLocStart(), diag::note_declared_at);
+        Diag(TDNDecl->getLocStart(), diag::note_declared_at);
+      }
       
-      QualType receiverType =
-        Context.getObjCInterfaceType(RelatedClass);
+      QualType receiverType = Context.getObjCInterfaceType(RelatedClass);
       // Argument.
       Expr *args[] = { SrcExpr };
       ExprResult msg = BuildClassMessageImplicit(receiverType, false,
@@ -3925,30 +3935,34 @@ Sema::CheckObjCBridgeRelatedConversions(SourceLocation Loc,
   else {
     // Implicit conversion from ObjC type to CF object is needed.
     if (InstanceMethod) {
-      std::string ExpressionString;
-      SourceLocation SrcExprEndLoc = getLocForEndOfToken(SrcExpr->getLocEnd());
-      if (InstanceMethod->isPropertyAccessor())
-        if (const ObjCPropertyDecl *PDecl = InstanceMethod->findPropertyDecl()) {
-          // fixit: ObjectExpr.propertyname when it is  aproperty accessor.
-          ExpressionString = ".";
-          ExpressionString += PDecl->getNameAsString();
+      if (Diagnose) {
+        std::string ExpressionString;
+        SourceLocation SrcExprEndLoc =
+            getLocForEndOfToken(SrcExpr->getLocEnd());
+        if (InstanceMethod->isPropertyAccessor())
+          if (const ObjCPropertyDecl *PDecl =
+                  InstanceMethod->findPropertyDecl()) {
+            // fixit: ObjectExpr.propertyname when it is  aproperty accessor.
+            ExpressionString = ".";
+            ExpressionString += PDecl->getNameAsString();
+            Diag(Loc, diag::err_objc_bridged_related_known_method)
+                << SrcType << DestType << InstanceMethod->getSelector() << true
+                << FixItHint::CreateInsertion(SrcExprEndLoc, ExpressionString);
+          }
+        if (ExpressionString.empty()) {
+          // Provide a fixit: [ObjectExpr InstanceMethod]
+          ExpressionString = " ";
+          ExpressionString += InstanceMethod->getSelector().getAsString();
+          ExpressionString += "]";
+
           Diag(Loc, diag::err_objc_bridged_related_known_method)
-          << SrcType << DestType << InstanceMethod->getSelector() << true
-          << FixItHint::CreateInsertion(SrcExprEndLoc, ExpressionString);
+              << SrcType << DestType << InstanceMethod->getSelector() << true
+              << FixItHint::CreateInsertion(SrcExpr->getLocStart(), "[")
+              << FixItHint::CreateInsertion(SrcExprEndLoc, ExpressionString);
         }
-      if (ExpressionString.empty()) {
-        // Provide a fixit: [ObjectExpr InstanceMethod]
-        ExpressionString = " ";
-        ExpressionString += InstanceMethod->getSelector().getAsString();
-        ExpressionString += "]";
-      
-        Diag(Loc, diag::err_objc_bridged_related_known_method)
-        << SrcType << DestType << InstanceMethod->getSelector() << true
-        << FixItHint::CreateInsertion(SrcExpr->getLocStart(), "[")
-        << FixItHint::CreateInsertion(SrcExprEndLoc, ExpressionString);
+        Diag(RelatedClass->getLocStart(), diag::note_declared_at);
+        Diag(TDNDecl->getLocStart(), diag::note_declared_at);
       }
-      Diag(RelatedClass->getLocStart(), diag::note_declared_at);
-      Diag(TDNDecl->getLocStart(), diag::note_declared_at);
       
       ExprResult msg =
         BuildInstanceMessageImplicit(SrcExpr, SrcType,
@@ -3965,6 +3979,7 @@ Sema::CheckObjCBridgeRelatedConversions(SourceLocation Loc,
 Sema::ARCConversionResult
 Sema::CheckObjCARCConversion(SourceRange castRange, QualType castType,
                              Expr *&castExpr, CheckedConversionKind CCK,
+                             bool Diagnose,
                              bool DiagnoseCFAudited,
                              BinaryOperatorKind Opc) {
   QualType castExprType = castExpr->getType();
@@ -3980,9 +3995,9 @@ Sema::CheckObjCARCConversion(SourceRange castRange, QualType castType,
   if (exprACTC == castACTC) {
     // check for viablity and report error if casting an rvalue to a
     // life-time qualifier.
-    if ((castACTC == ACTC_retainable) &&
+    if (Diagnose && castACTC == ACTC_retainable &&
         (CCK == CCK_CStyleCast || CCK == CCK_OtherCast) &&
-        (castType != castExprType)) {
+        castType != castExprType) {
       const Type *DT = castType.getTypePtr();
       QualType QDT = castType;
       // We desugar some types but not others. We ignore those
@@ -4051,19 +4066,20 @@ Sema::CheckObjCARCConversion(SourceRange castRange, QualType castType,
   // to 'NSString *'. Let caller issue a normal mismatched diagnostic with
   // suitable fix-it.
   if (castACTC == ACTC_retainable && exprACTC == ACTC_none &&
-      ConversionToObjCStringLiteralCheck(castType, castExpr))
+      ConversionToObjCStringLiteralCheck(castType, castExpr, Diagnose))
     return ACR_okay;
   
   // Do not issue "bridge cast" diagnostic when implicit casting
   // a retainable object to a CF type parameter belonging to an audited
   // CF API function. Let caller issue a normal type mismatched diagnostic
   // instead.
-  if (!DiagnoseCFAudited || exprACTC != ACTC_retainable ||
-      castACTC != ACTC_coreFoundation)
+  if (Diagnose &&
+      (!DiagnoseCFAudited || exprACTC != ACTC_retainable ||
+        castACTC != ACTC_coreFoundation))
     if (!(exprACTC == ACTC_voidPtr && castACTC == ACTC_retainable &&
           (Opc == BO_NE || Opc == BO_EQ)))
-      diagnoseObjCARCConversion(*this, castRange, castType, castACTC,
-                                castExpr, castExpr, exprACTC, CCK);
+      diagnoseObjCARCConversion(*this, castRange, castType, castACTC, castExpr,
+                                castExpr, exprACTC, CCK);
   return ACR_okay;
 }
 

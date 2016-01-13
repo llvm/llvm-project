@@ -118,6 +118,7 @@ int main(int argc, char **argv) { // expected-note {{'argc' defined here}}
   static double d1;
   static double d2;
   static double d3; // expected-note {{'d3' defined here}}
+  static double d4;
   static TestClass LocalClass(y); // expected-error {{variable with local storage in initial value of threadprivate variable}}
 #pragma omp threadprivate(LocalClass)
 
@@ -133,6 +134,8 @@ int main(int argc, char **argv) { // expected-note {{'argc' defined here}}
 #pragma omp threadprivate(d3) // expected-error {{'#pragma omp threadprivate' must appear in the scope of the 'd3' variable declaration}}
   }
 #pragma omp threadprivate(d3)
+label:
+#pragma omp threadprivate(d4) // expected-error {{'#pragma omp threadprivate' cannot be an immediate substatement}}
 
 #pragma omp threadprivate(a) // expected-error {{'#pragma omp threadprivate' must appear in the scope of the 'a' variable declaration}}
   return (y);

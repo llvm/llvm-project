@@ -2234,7 +2234,8 @@ public:
   bool CheckPointerConversion(Expr *From, QualType ToType,
                               CastKind &Kind,
                               CXXCastPath& BasePath,
-                              bool IgnoreBaseAccess);
+                              bool IgnoreBaseAccess,
+                              bool Diagnose = true);
   bool IsMemberPointerConversion(Expr *From, QualType FromType, QualType ToType,
                                  bool InOverloadResolution,
                                  QualType &ConvertedType);
@@ -5400,7 +5401,8 @@ public:
                                     unsigned AmbigiousBaseConvID,
                                     SourceLocation Loc, SourceRange Range,
                                     DeclarationName Name,
-                                    CXXCastPath *BasePath);
+                                    CXXCastPath *BasePath,
+                                    bool IgnoreAccess = false);
 
   std::string getAmbiguousPathsDisplayString(CXXBasePaths &Paths);
 
@@ -7526,14 +7528,15 @@ public:
                                         ObjCMethodDecl *&ClassMethod,
                                         ObjCMethodDecl *&InstanceMethod,
                                         TypedefNameDecl *&TDNDecl,
-                                        bool CfToNs);
-  
+                                        bool CfToNs, bool Diagnose = true);
+
   bool CheckObjCBridgeRelatedConversions(SourceLocation Loc,
                                          QualType DestType, QualType SrcType,
-                                         Expr *&SrcExpr);
-  
-  bool ConversionToObjCStringLiteralCheck(QualType DstType, Expr *&SrcExpr);
-  
+                                         Expr *&SrcExpr, bool Diagnose = true);
+
+  bool ConversionToObjCStringLiteralCheck(QualType DstType, Expr *&SrcExpr,
+                                          bool Diagnose = true);
+
   bool checkInitMethod(ObjCMethodDecl *method, QualType receiverTypeIfCall);
 
   /// \brief Check whether the given new method is a valid override of the
@@ -8631,6 +8634,7 @@ public:
   ARCConversionResult CheckObjCARCConversion(SourceRange castRange,
                                              QualType castType, Expr *&op,
                                              CheckedConversionKind CCK,
+                                             bool Diagnose = true,
                                              bool DiagnoseCFAudited = false,
                                              BinaryOperatorKind Opc = BO_PtrMemD
                                              );
