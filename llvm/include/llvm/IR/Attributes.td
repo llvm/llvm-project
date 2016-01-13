@@ -195,4 +195,9 @@ class MergeRule<string F> {
   string MergeFunc = F;
 }
 
+def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
+def : MergeRule<"setAND<NoInfsFPMathAttr>">;
+def : MergeRule<"setAND<NoNansFPMathAttr>">;
+def : MergeRule<"setAND<UnsafeFPMathAttr>">;
+def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"adjustCallerSSPLevel">;

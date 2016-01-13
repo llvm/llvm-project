@@ -160,3 +160,87 @@ define i32 @test_target_features1(i32 %i) "target-features"="+sse4.2" {
 ; CHECK-NEXT: @test_target_features_callee1
 ; CHECK-NEXT: ret i32
 }
+
+define i32 @less-precise-fpmad_callee0(i32 %i) "less-precise-fpmad"="false" {
+  ret i32 %i
+; CHECK: @less-precise-fpmad_callee0(i32 %i) [[FPMAD_FALSE:#[0-9]+]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @less-precise-fpmad_callee1(i32 %i) "less-precise-fpmad"="true" {
+  ret i32 %i
+; CHECK: @less-precise-fpmad_callee1(i32 %i) [[FPMAD_TRUE:#[0-9]+]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_less-precise-fpmad0(i32 %i) "less-precise-fpmad"="false" {
+  %1 = call i32 @less-precise-fpmad_callee0(i32 %i)
+  ret i32 %1
+; CHECK: @test_less-precise-fpmad0(i32 %i) [[FPMAD_FALSE]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_less-precise-fpmad1(i32 %i) "less-precise-fpmad"="false" {
+  %1 = call i32 @less-precise-fpmad_callee1(i32 %i)
+  ret i32 %1
+; CHECK: @test_less-precise-fpmad1(i32 %i) [[FPMAD_FALSE]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_less-precise-fpmad2(i32 %i) "less-precise-fpmad"="true" {
+  %1 = call i32 @less-precise-fpmad_callee0(i32 %i)
+  ret i32 %1
+; CHECK: @test_less-precise-fpmad2(i32 %i) [[FPMAD_FALSE]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_less-precise-fpmad3(i32 %i) "less-precise-fpmad"="true" {
+  %1 = call i32 @less-precise-fpmad_callee1(i32 %i)
+  ret i32 %1
+; CHECK: @test_less-precise-fpmad3(i32 %i) [[FPMAD_TRUE]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @no-implicit-float_callee0(i32 %i) {
+  ret i32 %i
+; CHECK: @no-implicit-float_callee0(i32 %i) {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @no-implicit-float_callee1(i32 %i) noimplicitfloat {
+  ret i32 %i
+; CHECK: @no-implicit-float_callee1(i32 %i) [[NOIMPLICITFLOAT:#[0-9]+]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_no-implicit-float0(i32 %i) {
+  %1 = call i32 @no-implicit-float_callee0(i32 %i)
+  ret i32 %1
+; CHECK: @test_no-implicit-float0(i32 %i) {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_no-implicit-float1(i32 %i) {
+  %1 = call i32 @no-implicit-float_callee1(i32 %i)
+  ret i32 %1
+; CHECK: @test_no-implicit-float1(i32 %i) [[NOIMPLICITFLOAT]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_no-implicit-float2(i32 %i) noimplicitfloat {
+  %1 = call i32 @no-implicit-float_callee0(i32 %i)
+  ret i32 %1
+; CHECK: @test_no-implicit-float2(i32 %i) [[NOIMPLICITFLOAT]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_no-implicit-float3(i32 %i) noimplicitfloat {
+  %1 = call i32 @no-implicit-float_callee1(i32 %i)
+  ret i32 %1
+; CHECK: @test_no-implicit-float3(i32 %i) [[NOIMPLICITFLOAT]] {
+; CHECK-NEXT: ret i32
+}
+
+; CHECK: attributes [[FPMAD_FALSE]] = { "less-precise-fpmad"="false" }
+; CHECK: attributes [[FPMAD_TRUE]] = { "less-precise-fpmad"="true" }
+; CHECK: attributes [[NOIMPLICITFLOAT]] = { noimplicitfloat }

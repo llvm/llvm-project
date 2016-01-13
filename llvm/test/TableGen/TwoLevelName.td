@@ -21,6 +21,21 @@ multiclass OT2<string ss, int w> {
 
 defm i8 : OT2<"i8", 8>;
 
+multiclass OT3<string ss, int w> {
+  defm v32#NAME : OT1<!strconcat("v32", ss), 32, w>;
+}
+
+multiclass OT4<string ss, int w> {
+  defm v64#NAME : OT1<!strconcat("v64", ss), 64, w>;
+}
+
+multiclass OT5<string ss, int w> {
+  defm NAME : OT3<ss, w>;
+  defm NAME : OT4<ss, w>;
+}
+
+defm i16 : OT5<"i16", 16>;
+
 // CHECK: _v16i8
 // CHECK: Length = 16
 // CHECK: Width = 8
@@ -33,6 +48,10 @@ defm i8 : OT2<"i8", 8>;
 // CHECK: Length = 2
 // CHECK: Width = 8
 
+// CHECK: def _v32i16
+// CHECK: Length = 32
+// CHECK: Width = 16
+
 // CHECK: _v3i8
 // CHECK: Length = 3
 // CHECK: Width = 8
@@ -41,6 +60,11 @@ defm i8 : OT2<"i8", 8>;
 // CHECK: Length = 4
 // CHECK: Width = 8
 
+// CHECK: _v64i16
+// CHECK: Length = 64
+// CHECK: Width = 16
+
 // CHECK: _v8i8
 // CHECK: Length = 8
 // CHECK: Width = 8
+

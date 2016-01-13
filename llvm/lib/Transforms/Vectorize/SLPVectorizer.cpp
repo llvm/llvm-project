@@ -222,7 +222,7 @@ static void propagateIRFlags(Value *I, ArrayRef<Value *> VL) {
     }
   }
 }
-  
+
 /// \returns \p I after propagating metadata from \p VL.
 static Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL) {
   Instruction *I0 = cast<Instruction>(VL[0]);
@@ -506,7 +506,7 @@ private:
     }
     return Last;
   }
-  
+
   /// -- Vectorization State --
   /// Holds all of the tree entries.
   std::vector<TreeEntry> VectorizableTree;
@@ -884,7 +884,7 @@ private:
 
     /// The current size of the scheduling region.
     int ScheduleRegionSize;
-    
+
     /// The maximum size allowed for the scheduling region.
     int ScheduleRegionSizeLimit;
 
@@ -1089,7 +1089,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
     newTreeEntry(VL, false);
     return;
   }
-  
+
   // Check that every instructions appears once in this bundle.
   for (unsigned i = 0, e = VL.size(); i < e; ++i)
     for (unsigned j = i+1; j < e; ++j)
@@ -1713,7 +1713,7 @@ int BoUpSLP::getSpillCost() {
   int Cost = 0;
 
   SmallPtrSet<Instruction*, 4> LiveValues;
-  Instruction *PrevInst = nullptr; 
+  Instruction *PrevInst = nullptr;
 
   for (unsigned N = 0; N < VectorizableTree.size(); ++N) {
     Instruction *Inst = dyn_cast<Instruction>(VectorizableTree[N].Scalars[0]);
@@ -1738,7 +1738,7 @@ int BoUpSLP::getSpillCost() {
     for (auto &J : PrevInst->operands()) {
       if (isa<Instruction>(&*J) && ScalarToTreeEntry.count(&*J))
         LiveValues.insert(cast<Instruction>(&*J));
-    }    
+    }
 
     // Now find the sequence of instructions between PrevInst and Inst.
     BasicBlock::reverse_iterator InstIt(Inst->getIterator()),
@@ -2552,7 +2552,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 }
 
 Value *BoUpSLP::vectorizeTree() {
-  
+
   // All blocks must be scheduled before any instructions are inserted.
   for (auto &BSIter : BlocksSchedules) {
     scheduleBlock(BSIter.second.get());
@@ -3073,10 +3073,10 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
 }
 
 void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
-  
+
   if (!BS->ScheduleStart)
     return;
-  
+
   DEBUG(dbgs() << "SLP: schedule block " << BS->BB->getName() << "\n");
 
   BS->resetSchedule();
@@ -3591,7 +3591,7 @@ bool SLPVectorizer::tryToVectorize(BinaryOperator *V, BoUpSLP &R) {
 /// \param NumEltsToRdx The number of elements that should be reduced in the
 ///        vector.
 /// \param IsPairwise Whether the reduction is a pairwise or splitting
-///        reduction. A pairwise reduction will generate a mask of 
+///        reduction. A pairwise reduction will generate a mask of
 ///        <0,2,...> or <1,3,..> while a splitting reduction will generate
 ///        <2,3, undef,undef> for a vector of 4 and NumElts = 2.
 /// \param IsLeft True will generate a mask of even elements, odd otherwise.
