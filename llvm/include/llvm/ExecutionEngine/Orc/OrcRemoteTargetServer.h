@@ -400,10 +400,14 @@ private:
 
   std::error_code handleWriteMem(TargetAddress RDst, uint64_t Size) {
     char *Dst = reinterpret_cast<char *>(static_cast<uintptr_t>(RDst));
+    DEBUG(dbgs() << "  Writing " << Size << " bytes to "
+                 << format("0x%016x", RDst) << "\n");
     return Channel.readBytes(Dst, Size);
   }
 
   std::error_code handleWritePtr(TargetAddress Addr, TargetAddress PtrVal) {
+    DEBUG(dbgs() << "  Writing pointer *" << format("0x%016x", Addr) << " = "
+                 << format("0x%016x", PtrVal) << "\n");
     uintptr_t *Ptr =
         reinterpret_cast<uintptr_t *>(static_cast<uintptr_t>(Addr));
     *Ptr = static_cast<uintptr_t>(PtrVal);

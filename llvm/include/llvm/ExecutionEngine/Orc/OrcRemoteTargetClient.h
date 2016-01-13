@@ -92,7 +92,7 @@ public:
           Unmapped.back().RWDataAllocs.back().getLocalAddress());
       DEBUG(dbgs() << "Allocator " << Id << " allocated rw-data for "
                    << SectionName << ": " << Alloc << " (" << Size
-                   << " bytes, alignment " << Alignment << "\n");
+                   << " bytes, alignment " << Alignment << ")\n");
       return Alloc;
     }
 
