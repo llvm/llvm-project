@@ -12275,6 +12275,8 @@ SWIGINTERN PyObject *_wrap_SBCommandReturnObject_PutOutput(PyObject *SWIGUNUSEDP
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   {
@@ -12333,6 +12335,8 @@ SWIGINTERN PyObject *_wrap_SBCommandReturnObject_PutError(PyObject *SWIGUNUSEDPA
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   {
@@ -12828,6 +12832,8 @@ SWIGINTERN PyObject *_wrap_SBCommandReturnObject_SetImmediateOutputFile(PyObject
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   {
@@ -12885,6 +12891,8 @@ SWIGINTERN PyObject *_wrap_SBCommandReturnObject_SetImmediateErrorFile(PyObject 
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   {
@@ -16991,6 +16999,8 @@ SWIGINTERN PyObject *_wrap_SBDebugger_SetInputFileHandle(PyObject *SWIGUNUSEDPAR
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   ecode3 = SWIG_AsVal_bool(obj2, &val3);
@@ -17057,6 +17067,8 @@ SWIGINTERN PyObject *_wrap_SBDebugger_SetOutputFileHandle(PyObject *SWIGUNUSEDPA
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   ecode3 = SWIG_AsVal_bool(obj2, &val3);
@@ -17123,6 +17135,8 @@ SWIGINTERN PyObject *_wrap_SBDebugger_SetErrorFileHandle(PyObject *SWIGUNUSEDPAR
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   ecode3 = SWIG_AsVal_bool(obj2, &val3);
@@ -17450,6 +17464,8 @@ SWIGINTERN PyObject *_wrap_SBDebugger_HandleProcessEvent(PyObject *SWIGUNUSEDPAR
       return nullptr;
       
       arg4 = file.GetStream();
+      if (arg4)
+      file.Clear();
     }
   }
   {
@@ -17480,6 +17496,8 @@ SWIGINTERN PyObject *_wrap_SBDebugger_HandleProcessEvent(PyObject *SWIGUNUSEDPAR
       return nullptr;
       
       arg5 = file.GetStream();
+      if (arg5)
+      file.Clear();
     }
   }
   {
@@ -28211,6 +28229,8 @@ SWIGINTERN PyObject *_wrap_SBInstruction_Print(PyObject *SWIGUNUSEDPARM(self), P
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   {
@@ -28730,6 +28750,8 @@ SWIGINTERN PyObject *_wrap_SBInstructionList_Print(PyObject *SWIGUNUSEDPARM(self
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   {
@@ -37125,6 +37147,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_ReportEventState(PyObject *SWIGUNUSEDPARM(s
       return nullptr;
       
       arg3 = file.GetStream();
+      if (arg3)
+      file.Clear();
     }
   }
   {
@@ -41169,6 +41193,8 @@ SWIGINTERN PyObject *_wrap_SBStream_RedirectToFileHandle(PyObject *SWIGUNUSEDPAR
       return nullptr;
       
       arg2 = file.GetStream();
+      if (arg2)
+      file.Clear();
     }
   }
   ecode3 = SWIG_AsVal_bool(obj2, &val3);
