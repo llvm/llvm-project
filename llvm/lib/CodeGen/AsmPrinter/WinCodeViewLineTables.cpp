@@ -82,13 +82,24 @@ void WinCodeViewLineTables::maybeRecordLocation(DebugLoc DL,
   const MDNode *Scope = DL.getScope();
   if (!Scope)
     return;
+  unsigned LineNumber = DL.getLine();
+  // Skip this line if it is longer than the maximum we can record.
+  if (LineNumber > COFF::CVL_MaxLineNumber)
+    return;
+
+  unsigned ColumnNumber = DL.getCol();
+  // Truncate the column number if it is longer than the maximum we can record.
+  if (ColumnNumber > COFF::CVL_MaxColumnNumber)
+    ColumnNumber = 0;
+
   StringRef Filename = getFullFilepath(Scope);
 
   // Skip this instruction if it has the same file:line as the previous one.
   assert(CurFn);
   if (!CurFn->Instrs.empty()) {
     const InstrInfoTy &LastInstr = InstrInfo[CurFn->Instrs.back()];
-    if (LastInstr.Filename == Filename && LastInstr.LineNumber == DL.getLine())
+    if (LastInstr.Filename == Filename && LastInstr.LineNumber == LineNumber &&
+        LastInstr.ColumnNumber == ColumnNumber)
       return;
   }
   FileNameRegistry.add(Filename);
@@ -96,7 +107,7 @@ void WinCodeViewLineTables::maybeRecordLocation(DebugLoc DL,
   MCSymbol *MCL = Asm->MMI->getContext().createTempSymbol();
   Asm->OutStreamer->EmitLabel(MCL);
   CurFn->Instrs.push_back(MCL);
-  InstrInfo[MCL] = InstrInfoTy(Filename, DL.getLine(), DL.getCol());
+  InstrInfo[MCL] = InstrInfoTy(Filename, LineNumber, ColumnNumber);
 }
 
 WinCodeViewLineTables::WinCodeViewLineTables(AsmPrinter *AP)
@@ -282,6 +293,7 @@ void WinCodeViewLineTables::emitDebugInfoForFunction(const Function *GV) {
                 ColSegEnd = ColSegI + FilenameSegmentLengths[LastSegmentStart];
          ColSegI != ColSegEnd; ++ColSegI) {
       unsigned ColumnNumber = InstrInfo[FI.Instrs[ColSegI]].ColumnNumber;
+      assert(ColumnNumber <= COFF::CVL_MaxColumnNumber);
       Asm->EmitInt16(ColumnNumber); // Start column
       Asm->EmitInt16(0);            // End column
     }
@@ -320,7 +332,10 @@ void WinCodeViewLineTables::emitDebugInfoForFunction(const Function *GV) {
 
     // The first PC with the given linenumber and the linenumber itself.
     EmitLabelDiff(*Asm->OutStreamer, Fn, Instr);
-    Asm->EmitInt32(InstrInfo[Instr].LineNumber);
+    uint32_t LineNumber = InstrInfo[Instr].LineNumber;
+    assert(LineNumber <= COFF::CVL_MaxLineNumber);
+    uint32_t LineData = LineNumber | COFF::CVL_IsStatement;
+    Asm->EmitInt32(LineData);
   }
 
   FinishPreviousChunk();

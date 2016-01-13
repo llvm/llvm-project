@@ -103,41 +103,85 @@ MFUN32-NEXT:     Type: 0xF1
 MFUN32-NEXT:     PayloadSize: 0x8
 MFUN32:        ]
 MFUN32-NEXT:   FunctionLineTable [
-MFUN32-NEXT:     LinkageName: _x
-MFUN32-NEXT:     Flags: 0x0
-MFUN32-NEXT:     CodeSize: 0xA
-MFUN32-NEXT:     FilenameSegment [
-MFUN32-NEXT:       Filename: d:\source.c
-MFUN32-NEXT:       +0x0: 3
-MFUN32-NEXT:       +0x3: 4
-MFUN32-NEXT:       +0x8: 5
-MFUN32-NEXT:     ]
-MFUN32-NEXT:   ]
-MFUN32-NEXT:   FunctionLineTable [
-MFUN32-NEXT:     LinkageName: _y
-MFUN32-NEXT:     Flags: 0x0
-MFUN32-NEXT:     CodeSize: 0xA
-MFUN32-NEXT:     FilenameSegment [
-MFUN32-NEXT:       Filename: d:\source.c
-MFUN32-NEXT:       +0x0: 7
-MFUN32-NEXT:       +0x3: 8
-MFUN32-NEXT:       +0x8: 9
-MFUN32-NEXT:     ]
-MFUN32-NEXT:   ]
-MFUN32-NEXT:   FunctionLineTable [
-MFUN32-NEXT:     LinkageName: _f
-MFUN32-NEXT:     Flags: 0x0
-MFUN32-NEXT:     CodeSize: 0x14
-MFUN32-NEXT:     FilenameSegment [
-MFUN32-NEXT:       Filename: d:\source.c
-MFUN32-NEXT:       +0x0: 11
-MFUN32-NEXT:       +0x3: 12
-MFUN32-NEXT:       +0x8: 13
-MFUN32-NEXT:       +0xD: 14
-MFUN32-NEXT:       +0x12: 15
-MFUN32-NEXT:     ]
-MFUN32-NEXT:   ]
-MFUN32-NEXT: ]
+MFUN32-NEXT      LinkageName: _x
+MFUN32-NEXT      Flags: 0x0
+MFUN32-NEXT      CodeSize: 0xA
+MFUN32-NEXT      FilenameSegment [
+MFUN32-NEXT        Filename: d:\source.c
+MFUN32-NEXT        +0x0 [
+MFUN32-NEXT          LineNumberStart: 3
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT        +0x3 [
+MFUN32-NEXT          LineNumberStart: 4
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT        +0x8 [
+MFUN32-NEXT          LineNumberStart: 5
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT      ]
+MFUN32-NEXT    ]
+MFUN32-NEXT    FunctionLineTable [
+MFUN32-NEXT      LinkageName: _y
+MFUN32-NEXT      Flags: 0x0
+MFUN32-NEXT      CodeSize: 0xA
+MFUN32-NEXT      FilenameSegment [
+MFUN32-NEXT        Filename: d:\source.c
+MFUN32-NEXT        +0x0 [
+MFUN32-NEXT          LineNumberStart: 7
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT        +0x3 [
+MFUN32-NEXT          LineNumberStart: 8
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT        +0x8 [
+MFUN32-NEXT          LineNumberStart: 9
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT      ]
+MFUN32-NEXT    ]
+MFUN32-NEXT    FunctionLineTable [
+MFUN32-NEXT      LinkageName: _f
+MFUN32-NEXT      Flags: 0x0
+MFUN32-NEXT      CodeSize: 0x14
+MFUN32-NEXT      FilenameSegment [
+MFUN32-NEXT        Filename: d:\source.c
+MFUN32-NEXT        +0x0 [
+MFUN32-NEXT          LineNumberStart: 11
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT        +0x3 [
+MFUN32-NEXT          LineNumberStart: 12
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT        +0x8 [
+MFUN32-NEXT          LineNumberStart: 13
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT        +0xD [
+MFUN32-NEXT          LineNumberStart: 14
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT        +0x12 [
+MFUN32-NEXT          LineNumberStart: 15
+MFUN32-NEXT          LineNumberEndDelta: 0
+MFUN32-NEXT          IsStatement: Yes
+MFUN32-NEXT        ]
+MFUN32-NEXT      ]
+MFUN32-NEXT    ]
+MFUN32-NEXT  ]
 
 MFUN64:      CodeViewDebugInfo [
 MFUN64-NEXT:   Magic: 0x4
@@ -208,9 +252,21 @@ MFUN64-NEXT:     Flags: 0x0
 MFUN64-NEXT:     CodeSize: 0xE
 MFUN64-NEXT:     FilenameSegment [
 MFUN64-NEXT:       Filename: d:\source.c
-MFUN64-NEXT:       +0x0: 3
-MFUN64-NEXT:       +0x4: 4
-MFUN64-NEXT:       +0x9: 5
+MFUN64-NEXT:       +0x0 [
+MFUN64-NEXT:         LineNumberStart: 3
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
+MFUN64-NEXT:       +0x4 [
+MFUN64-NEXT:         LineNumberStart: 4
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
+MFUN64-NEXT:       +0x9 [
+MFUN64-NEXT:         LineNumberStart: 5
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
 MFUN64-NEXT:     ]
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   FunctionLineTable [
@@ -219,9 +275,21 @@ MFUN64-NEXT:     Flags: 0x0
 MFUN64-NEXT:     CodeSize: 0xE
 MFUN64-NEXT:     FilenameSegment [
 MFUN64-NEXT:       Filename: d:\source.c
-MFUN64-NEXT:       +0x0: 7
-MFUN64-NEXT:       +0x4: 8
-MFUN64-NEXT:       +0x9: 9
+MFUN64-NEXT:       +0x0 [
+MFUN64-NEXT:         LineNumberStart: 7
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
+MFUN64-NEXT:       +0x4 [
+MFUN64-NEXT:         LineNumberStart: 8
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
+MFUN64-NEXT:       +0x9 [
+MFUN64-NEXT:         LineNumberStart: 9
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
 MFUN64-NEXT:     ]
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   FunctionLineTable [
@@ -230,11 +298,31 @@ MFUN64-NEXT:     Flags: 0x0
 MFUN64-NEXT:     CodeSize: 0x18
 MFUN64-NEXT:     FilenameSegment [
 MFUN64-NEXT:       Filename: d:\source.c
-MFUN64-NEXT:       +0x0: 11
-MFUN64-NEXT:       +0x4: 12
-MFUN64-NEXT:       +0x9: 13
-MFUN64-NEXT:       +0xE: 14
-MFUN64-NEXT:       +0x13: 15
+MFUN64-NEXT:       +0x0 [
+MFUN64-NEXT:         LineNumberStart: 11
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
+MFUN64-NEXT:       +0x4 [
+MFUN64-NEXT:         LineNumberStart: 12
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
+MFUN64-NEXT:       +0x9 [
+MFUN64-NEXT:         LineNumberStart: 13
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
+MFUN64-NEXT:       +0xE [
+MFUN64-NEXT:         LineNumberStart: 14
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
+MFUN64-NEXT:       +0x13 [
+MFUN64-NEXT:         LineNumberStart: 15
+MFUN64-NEXT:         LineNumberEndDelta: 0
+MFUN64-NEXT:         IsStatement: Yes
+MFUN64-NEXT:       ]
 MFUN64-NEXT:     ]
 MFUN64-NEXT:   ]
 MFUN64-NEXT: ]
@@ -306,20 +394,40 @@ MFILE32-NEXT:     Flags: 0x0
 MFILE32-NEXT:     CodeSize: 0x14
 MFILE32-NEXT:     FilenameSegment [
 MFILE32-NEXT:       Filename: d:\input.c
-MFILE32-NEXT:       +0x0: 3
+MFILE32-NEXT:       +0x0 [
+MFILE32-NEXT:         LineNumberStart: 3
+MFILE32-NEXT:         LineNumberEndDelta: 0
+MFILE32-NEXT:         IsStatement: Yes
+MFILE32-NEXT:       ]
 MFILE32-NEXT:     ]
 MFILE32-NEXT:     FilenameSegment [
 MFILE32-NEXT:       Filename: d:\one.c
-MFILE32-NEXT:       +0x3: 1
+MFILE32-NEXT:       +0x3 [
+MFILE32-NEXT:         LineNumberStart: 1
+MFILE32-NEXT:         LineNumberEndDelta: 0
+MFILE32-NEXT:         IsStatement: Yes
+MFILE32-NEXT:       ]
 MFILE32-NEXT:     ]
 MFILE32-NEXT:     FilenameSegment [
 MFILE32-NEXT:       Filename: d:\two.c
-MFILE32-NEXT:       +0x8: 2
+MFILE32-NEXT:       +0x8 [
+MFILE32-NEXT:         LineNumberStart: 2
+MFILE32-NEXT:         LineNumberEndDelta: 0
+MFILE32-NEXT:         IsStatement: Yes
+MFILE32-NEXT:       ]
 MFILE32-NEXT:     ]
 MFILE32-NEXT:     FilenameSegment [
 MFILE32-NEXT:       Filename: d:\one.c
-MFILE32-NEXT:       +0xD: 7
-MFILE32-NEXT:       +0x12: 8
+MFILE32-NEXT:       +0xD [
+MFILE32-NEXT:         LineNumberStart: 7
+MFILE32-NEXT:         LineNumberEndDelta: 0
+MFILE32-NEXT:         IsStatement: Yes
+MFILE32-NEXT:       ]
+MFILE32-NEXT:       +0x12 [
+MFILE32-NEXT:         LineNumberStart: 8
+MFILE32-NEXT:         LineNumberEndDelta: 0
+MFILE32-NEXT:         IsStatement: Yes
+MFILE32-NEXT:       ]
 MFILE32-NEXT:     ]
 MFILE32-NEXT:   ]
 MFILE32-NEXT: ]
@@ -357,28 +465,47 @@ MFILE64-NEXT:   Subsection [
 MFILE64-NEXT:     Type: 0xF1
 MFILE64-NEXT:     PayloadSize: 0x8
 MFILE64:        ]
-MFILE64-NEXT:   FunctionLineTable [
-MFILE64-NEXT:     LinkageName: f
-MFILE64-NEXT:     Flags: 0x0
-MFILE64-NEXT:     CodeSize: 0x18
-MFILE64-NEXT:     FilenameSegment [
-MFILE64-NEXT:       Filename: d:\input.c
-MFILE64-NEXT:       +0x0: 3
-MFILE64-NEXT:     ]
-MFILE64-NEXT:     FilenameSegment [
-MFILE64-NEXT:       Filename: d:\one.c
-MFILE64-NEXT:       +0x4: 1
-MFILE64-NEXT:     ]
-MFILE64-NEXT:     FilenameSegment [
-MFILE64-NEXT:       Filename: d:\two.c
-MFILE64-NEXT:       +0x9: 2
-MFILE64-NEXT:     ]
-MFILE64-NEXT:     FilenameSegment [
-MFILE64-NEXT:       Filename: d:\one.c
-MFILE64-NEXT:       +0xE: 7
-MFILE64-NEXT:       +0x13: 8
-MFILE64-NEXT:     ]
-MFILE64-NEXT:   ]
+MFILE64-NEXT:  FunctionLineTable [
+MFILE64-NEXT:    LinkageName: f
+MFILE64-NEXT:    Flags: 0x0
+MFILE64-NEXT:    CodeSize: 0x18
+MFILE64-NEXT:    FilenameSegment [
+MFILE64-NEXT:      Filename: d:\input.c
+MFILE64-NEXT:      +0x0 [
+MFILE64-NEXT:        LineNumberStart: 3
+MFILE64-NEXT:        LineNumberEndDelta: 0
+MFILE64-NEXT:        IsStatement: Yes
+MFILE64-NEXT:      ]
+MFILE64-NEXT:    ]
+MFILE64-NEXT:    FilenameSegment [
+MFILE64-NEXT:      Filename: d:\one.c
+MFILE64-NEXT:      +0x4 [
+MFILE64-NEXT:        LineNumberStart: 1
+MFILE64-NEXT:        LineNumberEndDelta: 0
+MFILE64-NEXT:        IsStatement: Yes
+MFILE64-NEXT:      ]
+MFILE64-NEXT:    ]
+MFILE64-NEXT:    FilenameSegment [
+MFILE64-NEXT:      Filename: d:\two.c
+MFILE64-NEXT:      +0x9 [
+MFILE64-NEXT:        LineNumberStart: 2
+MFILE64-NEXT:        LineNumberEndDelta: 0
+MFILE64-NEXT:        IsStatement: Yes
+MFILE64-NEXT:      ]
+MFILE64-NEXT:    ]
+MFILE64-NEXT:    FilenameSegment [
+MFILE64-NEXT:      Filename: d:\one.c
+MFILE64-NEXT:      +0xE [
+MFILE64-NEXT:        LineNumberStart: 7
+MFILE64-NEXT:        LineNumberEndDelta: 0
+MFILE64-NEXT:        IsStatement: Yes
+MFILE64-NEXT:      ]
+MFILE64-NEXT:      +0x13 [
+MFILE64-NEXT:        LineNumberStart: 8
+MFILE64-NEXT:        LineNumberEndDelta: 0
+MFILE64-NEXT:        IsStatement: Yes
+MFILE64-NEXT:      ]
+MFILE64-NEXT:    ]
 MFILE64-NEXT: ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -411,9 +538,21 @@ MCOMDAT-NEXT:   Flags: 0x0
 MCOMDAT-NEXT:   CodeSize: 0x7
 MCOMDAT-NEXT:   FilenameSegment [
 MCOMDAT-NEXT:     Filename: c:\src\test.cc
-MCOMDAT-NEXT:     +0x0: 2
-MCOMDAT-NEXT:     +0x3: 3
-MCOMDAT-NEXT:     +0x5: 4
+MCOMDAT-NEXT:     +0x0 [
+MCOMDAT-NEXT:       LineNumberStart: 2
+MCOMDAT-NEXT:       LineNumberEndDelta: 0
+MCOMDAT-NEXT:       IsStatement: Yes
+MCOMDAT-NEXT:     ]
+MCOMDAT-NEXT:     +0x3 [
+MCOMDAT-NEXT:       LineNumberStart: 3
+MCOMDAT-NEXT:       LineNumberEndDelta: 0
+MCOMDAT-NEXT:       IsStatement: Yes
+MCOMDAT-NEXT:     ]
+MCOMDAT-NEXT:     +0x5 [
+MCOMDAT-NEXT:       LineNumberStart: 4
+MCOMDAT-NEXT:       LineNumberEndDelta: 0
+MCOMDAT-NEXT:       IsStatement: Yes
+MCOMDAT-NEXT:     ]
 MCOMDAT-NEXT:   ]
 MCOMDAT-NEXT: ]
 MCOMDAT:      ProcStart {
@@ -427,8 +566,20 @@ MCOMDAT-NEXT:   Flags: 0x0
 MCOMDAT-NEXT:   CodeSize: 0x7
 MCOMDAT-NEXT:   FilenameSegment [
 MCOMDAT-NEXT:     Filename: c:\src\test.cc
-MCOMDAT-NEXT:     +0x0: 7
-MCOMDAT-NEXT:     +0x3: 8
-MCOMDAT-NEXT:     +0x5: 9
+MCOMDAT-NEXT:     +0x0 [
+MCOMDAT-NEXT:       LineNumberStart: 7
+MCOMDAT-NEXT:       LineNumberEndDelta: 0
+MCOMDAT-NEXT:       IsStatement: Yes
+MCOMDAT-NEXT:     ]
+MCOMDAT-NEXT:     +0x3 [
+MCOMDAT-NEXT:       LineNumberStart: 8
+MCOMDAT-NEXT:       LineNumberEndDelta: 0
+MCOMDAT-NEXT:       IsStatement: Yes
+MCOMDAT-NEXT:     ]
+MCOMDAT-NEXT:     +0x5 [
+MCOMDAT-NEXT:       LineNumberStart: 9
+MCOMDAT-NEXT:       LineNumberEndDelta: 0
+MCOMDAT-NEXT:       IsStatement: Yes
+MCOMDAT-NEXT:     ]
 MCOMDAT-NEXT:   ]
 MCOMDAT-NEXT: ]

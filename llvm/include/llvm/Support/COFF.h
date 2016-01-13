@@ -656,6 +656,15 @@ namespace COFF {
     }
   };
 
+  enum CodeViewLine : unsigned {
+    CVL_LineNumberStartBits = 24,
+    CVL_LineNumberEndDeltaBits = 7,
+    CVL_LineNumberEndDeltaMask = (1U << CVL_LineNumberEndDeltaBits) - 1,
+    CVL_MaxLineNumber = (1U << CVL_LineNumberStartBits) - 1,
+    CVL_IsStatement = 1U << 31,
+    CVL_MaxColumnNumber = UINT16_MAX,
+  };
+
   enum CodeViewIdentifiers {
     DEBUG_LINE_TABLES_HAVE_COLUMN_RECORDS = 0x1,
     DEBUG_SECTION_MAGIC = 0x4,

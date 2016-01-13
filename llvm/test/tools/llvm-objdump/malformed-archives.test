@@ -1,7 +1,7 @@
 // These test checks that llvm-objdump will not crash with malformed Archive
 // files.  So the check line is not all that important but the bug fixes to
 // make sure llvm-objdump is robust is what matters.
-# RUN: llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump -macho -archive-headers \
 # RUN:   %p/Inputs/libbogus1.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus1 %s 
 

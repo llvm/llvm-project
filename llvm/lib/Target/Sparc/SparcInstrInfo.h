@@ -76,6 +76,9 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         DebugLoc DL) const override;
 
+  bool
+  ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+
   void copyPhysReg(MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator I, DebugLoc DL,
                    unsigned DestReg, unsigned SrcReg,

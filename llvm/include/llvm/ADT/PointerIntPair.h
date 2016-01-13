@@ -55,20 +55,25 @@ public:
 
   PointerTy getPointer() const { return Info::getPointer(Value); }
 
-  IntType getInt() const { return (IntType)Info::getInt(Value); }
+  IntType getInt() const {
+    return (IntType)Info::getInt(Value);
+  }
 
   void setPointer(PointerTy PtrVal) {
     Value = Info::updatePointer(Value, PtrVal);
   }
 
-  void setInt(IntType IntVal) { Value = Info::updateInt(Value, IntVal); }
+  void setInt(IntType IntVal) {
+    Value = Info::updateInt(Value, static_cast<intptr_t>(IntVal));
+  }
 
   void initWithPointer(PointerTy PtrVal) {
     Value = Info::updatePointer(0, PtrVal);
   }
 
   void setPointerAndInt(PointerTy PtrVal, IntType IntVal) {
-    Value = Info::updateInt(Info::updatePointer(0, PtrVal), IntVal);
+    Value = Info::updateInt(Info::updatePointer(0, PtrVal),
+                            static_cast<intptr_t>(IntVal));
   }
 
   PointerTy const *getAddrOfPointer() const {
