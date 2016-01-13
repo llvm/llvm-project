@@ -1553,6 +1553,7 @@ bool CastExpr::CastConsistency() const {
   case CK_ToVoid:
   case CK_VectorSplat:
   case CK_IntegralCast:
+  case CK_BooleanToSignedIntegral:
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
   case CK_FloatingCast:
@@ -1646,6 +1647,8 @@ const char *CastExpr::getCastKindName() const {
     return "VectorSplat";
   case CK_IntegralCast:
     return "IntegralCast";
+  case CK_BooleanToSignedIntegral:
+    return "BooleanToSignedIntegral";
   case CK_IntegralToBoolean:
     return "IntegralToBoolean";
   case CK_IntegralToFloating:

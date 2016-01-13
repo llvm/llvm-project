@@ -218,6 +218,8 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 // RUN: %clang -c %s -target armv7-apple-ios -fapple-kext -miphoneos-version-min=6.0.0 -static -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
+// RUN: %clang -c %s -target armv7-apple-unknown-macho -static -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 //
 // On OpenBSD, PIE is enabled by default, but can be disabled.
 // RUN: %clang -c %s -target amd64-pc-openbsd -### 2>&1 \

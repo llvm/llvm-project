@@ -258,6 +258,7 @@ static const Expr *IgnoreNarrowingConversion(const Expr *Converted) {
     case CK_IntegralCast:
     case CK_IntegralToBoolean:
     case CK_IntegralToFloating:
+    case CK_BooleanToSignedIntegral:
     case CK_FloatingToIntegral:
     case CK_FloatingToBoolean:
     case CK_FloatingCast:

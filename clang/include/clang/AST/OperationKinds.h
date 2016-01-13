@@ -185,7 +185,11 @@ enum CastKind {
   /// CK_FloatingToBoolean - Floating point to boolean.
   ///    (bool) f
   CK_FloatingToBoolean,
-    
+
+  // CK_BooleanToSignedIntegral - Convert a boolean to -1 or 0 for true and
+  // false, respectively.
+  CK_BooleanToSignedIntegral,
+
   /// CK_FloatingCast - Casting between floating types of different size.
   ///    (double) f
   ///    (float) ld

@@ -8607,6 +8607,10 @@ public:
   bool CheckVectorCast(SourceRange R, QualType VectorTy, QualType Ty,
                        CastKind &Kind);
 
+  /// \brief Prepare `SplattedExpr` for a vector splat operation, adding
+  /// implicit casts if necessary.
+  ExprResult prepareVectorSplat(QualType VectorTy, Expr *SplattedExpr);
+
   // CheckExtVectorCast - check type constraints for extended vectors.
   // Since vectors are an extension, there are no C standard reference for this.
   // We allow casting between vectors and integer datatypes of the same size,

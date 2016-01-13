@@ -2283,9 +2283,13 @@ public:
   /// \brief Make an APSInt of the appropriate width and signedness for the
   /// given \p Value and integer \p Type.
   llvm::APSInt MakeIntValue(uint64_t Value, QualType Type) const {
-    llvm::APSInt Res(getIntWidth(Type), 
-                     !Type->isSignedIntegerOrEnumerationType());
+    // If Type is a signed integer type larger than 64 bits, we need to be sure
+    // to sign extend Res appropriately.
+    llvm::APSInt Res(64, !Type->isSignedIntegerOrEnumerationType());
     Res = Value;
+    unsigned Width = getIntWidth(Type);
+    if (Width != Res.getBitWidth())
+      return Res.extOrTrunc(Width);
     return Res;
   }
 

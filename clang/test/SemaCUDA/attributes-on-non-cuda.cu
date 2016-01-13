@@ -1,4 +1,5 @@
-// Tests handling of CUDA attributes.
+// Tests that CUDA attributes are warnings when compiling C files, but not when
+// compiling CUDA files.
 //
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s

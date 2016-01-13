@@ -2,7 +2,9 @@
 
 typedef unsigned char uchar4 __attribute((ext_vector_type(4)));
 typedef unsigned int int4 __attribute((ext_vector_type(4)));
+typedef float float4 __attribute((ext_vector_type(4)));
 
+// CHECK-LABEL: define void @ker()
 void kernel ker() {
   bool t = true;
   int4 vec4 = (int4)t;
@@ -24,4 +26,8 @@ void kernel ker() {
   unsigned char c;
   c = (unsigned char)true;
 // CHECK: store i8 1, i8* %c, align 1
+
+  float4 vf;
+  vf = (float4)true;
+// CHECK: store <4 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>
 }
