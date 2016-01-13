@@ -20,7 +20,7 @@ class AMDGPUInstrPrinter;
 class AMDGPUSubtarget;
 class AMDGPUTargetMachine;
 class FunctionPass;
-class MachineSchedContext;
+struct MachineSchedContext;
 class MCAsmInfo;
 class raw_ostream;
 class ScheduleDAGInstrs;
