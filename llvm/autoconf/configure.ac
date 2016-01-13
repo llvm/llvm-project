@@ -32,12 +32,12 @@ dnl===-----------------------------------------------------------------------===
 dnl Initialize autoconf and define the package name, version number and
 dnl address for reporting bugs.
 
-AC_INIT([LLVM],[3.8.0svn],[http://llvm.org/bugs/])
+AC_INIT([LLVM],[3.8.0],[http://llvm.org/bugs/])
 
 LLVM_VERSION_MAJOR=3
 LLVM_VERSION_MINOR=8
 LLVM_VERSION_PATCH=0
-LLVM_VERSION_SUFFIX=svn
+LLVM_VERSION_SUFFIX=
 
 AC_DEFINE_UNQUOTED([LLVM_VERSION_MAJOR], $LLVM_VERSION_MAJOR, [Major version of the LLVM API])
 AC_DEFINE_UNQUOTED([LLVM_VERSION_MINOR], $LLVM_VERSION_MINOR, [Minor version of the LLVM API])
