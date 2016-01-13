@@ -1687,25 +1687,6 @@ search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const
 }
 
 // copy
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator
-{
-    static const bool value = is_pointer<_Iter>::value;
-};
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator<move_iterator<_Iter> >
-{
-    static const bool value = is_pointer<_Iter>::value;
-};
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator<__wrap_iter<_Iter> >
-{
-    static const bool value = is_pointer<_Iter>::value;
-};
-
 template <class _Iter>
 inline _LIBCPP_INLINE_VISIBILITY
 _Iter

@@ -18,6 +18,7 @@
 #include <cassert>
 
 #include "min_allocator.h"
+#include "test_iterators.h"
 
 template <class S, class It>
 void
@@ -32,6 +33,22 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l, S ex
     assert(s == expected);
     typename S::size_type rlen = std::distance(f, l);
     assert(s.size() == old_size - xlen + rlen);
+}
+
+template <class S, class It>
+void
+test_exceptions(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l)
+{
+    typename S::const_iterator first = s.begin() + pos1;
+    typename S::const_iterator last = s.begin() + pos1 + n1;
+	S aCopy = s;
+	try {
+	    s.replace(first, last, f, l);
+	    assert(false);
+	    }
+	catch (...) {}
+    assert(s.__invariants());
+    assert(s == aCopy);
 }
 
 const char* str = "12345678901234567890";
@@ -959,7 +976,7 @@ int main()
     test7<S>();
     test8<S>();
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test0<S>();
@@ -973,4 +990,17 @@ int main()
     test8<S>();
     }
 #endif
+	{ // test iterator operations that throw
+    typedef std::string S;
+    typedef ThrowingIterator<char> TIter;
+    typedef input_iterator<TIter> IIter;
+    const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter());
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter());
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter());
+
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, TIter(s, s+10, 5, TIter::TADereference), TIter());
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, TIter(s, s+10, 6, TIter::TAComparison), TIter());
+	}
 }

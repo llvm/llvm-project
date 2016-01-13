@@ -101,7 +101,7 @@ int main()
     test(S("abcdefghijklmnopqrst"), 20, 10, '1', S("abcdefghijklmnopqrst1111111111"));
     test(S("abcdefghijklmnopqrst"), 20, 20, '1', S("abcdefghijklmnopqrst11111111111111111111"));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(""), 0, 0, '1', S(""));

@@ -437,6 +437,12 @@ struct __is_bidirectional_iterator : public __has_iterator_category_convertible_
 template <class _Tp>
 struct __is_random_access_iterator : public __has_iterator_category_convertible_to<_Tp, random_access_iterator_tag> {};
 
+template <class _Tp>
+struct __is_exactly_input_iterator
+    : public integral_constant<bool, 
+    	 __has_iterator_category_convertible_to<_Tp, input_iterator_tag>::value && 
+    	!__has_iterator_category_convertible_to<_Tp, forward_iterator_tag>::value> {};
+
 template<class _Category, class _Tp, class _Distance = ptrdiff_t,
          class _Pointer = _Tp*, class _Reference = _Tp&>
 struct _LIBCPP_TYPE_VIS_ONLY iterator
@@ -1403,6 +1409,23 @@ operator+(typename __wrap_iter<_Iter>::difference_type __n,
     __x += __n;
     return __x;
 }
+
+template <class _Iter>
+struct __libcpp_is_trivial_iterator
+	: public _LIBCPP_BOOL_CONSTANT(is_pointer<_Iter>::value) {};
+	
+template <class _Iter>
+struct __libcpp_is_trivial_iterator<move_iterator<_Iter> >
+	: public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
+
+template <class _Iter>
+struct __libcpp_is_trivial_iterator<reverse_iterator<_Iter> >
+	: public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
+
+template <class _Iter>
+struct __libcpp_is_trivial_iterator<__wrap_iter<_Iter> >
+	: public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
+
 
 template <class _Tp, size_t _Np>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
