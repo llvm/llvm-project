@@ -90,4 +90,4 @@ FORWARDER:  Ordinal base: 0
 FORWARDER:  Ordinal      RVA  Name
 FORWARDER:        0        0
 FORWARDER:        1   0x1010  exportfn
-FORWARDER:        2   0x2062  foo
+FORWARDER:        2           foo (forwarded to kernel32.foobar)

@@ -101,6 +101,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient() :
     m_supports_QEnvironment (true),
     m_supports_QEnvironmentHexEncoded (true),
     m_supports_qSymbol (true),
+    m_qSymbol_requests_done (false),
     m_supports_qModuleInfo (true),
     m_supports_jThreadsInfo (true),
     m_curr_pid (LLDB_INVALID_PROCESS_ID),
@@ -377,6 +378,7 @@ GDBRemoteCommunicationClient::ResetDiscoverableSettings (bool did_exec)
         m_supports_QEnvironment = true;
         m_supports_QEnvironmentHexEncoded = true;
         m_supports_qSymbol = true;
+        m_qSymbol_requests_done = false;
         m_supports_qModuleInfo = true;
         m_host_arch.Clear();
         m_os_version_major = UINT32_MAX;
@@ -4443,11 +4445,42 @@ GDBRemoteCommunicationClient::ReadExtFeature (const lldb_private::ConstString ob
 //  qSymbol:<sym_name>  The target requests the value of symbol sym_name (hex encoded).
 //                      LLDB may provide the value by sending another qSymbol packet
 //                      in the form of"qSymbol:<sym_value>:<sym_name>".
+//
+//  Three examples:
+//
+//  lldb sends:    qSymbol::
+//  lldb receives: OK
+//     Remote gdb stub does not need to know the addresses of any symbols, lldb does not
+//     need to ask again in this session.
+//
+//  lldb sends:    qSymbol::
+//  lldb receives: qSymbol:64697370617463685f71756575655f6f666673657473
+//  lldb sends:    qSymbol::64697370617463685f71756575655f6f666673657473
+//  lldb receives: OK
+//     Remote gdb stub asks for address of 'dispatch_queue_offsets'.  lldb does not know
+//     the address at this time.  lldb needs to send qSymbol:: again when it has more
+//     solibs loaded.
+//
+//  lldb sends:    qSymbol::
+//  lldb receives: qSymbol:64697370617463685f71756575655f6f666673657473
+//  lldb sends:    qSymbol:2bc97554:64697370617463685f71756575655f6f666673657473
+//  lldb receives: OK
+//     Remote gdb stub asks for address of 'dispatch_queue_offsets'.  lldb says that it
+//     is at address 0x2bc97554.  Remote gdb stub sends 'OK' indicating that it does not
+//     need any more symbols.  lldb does not need to ask again in this session.
 
 void
 GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
 {
-    if (m_supports_qSymbol)
+    // Set to true once we've resolved a symbol to an address for the remote stub.
+    // If we get an 'OK' response after this, the remote stub doesn't need any more
+    // symbols and we can stop asking.
+    bool symbol_response_provided = false;
+
+    // Is this the inital qSymbol:: packet?
+    bool first_qsymbol_query = true;
+
+    if (m_supports_qSymbol && m_qSymbol_requests_done == false)
     {
         Mutex::Locker locker;
         if (GetSequenceMutex(locker, "GDBRemoteCommunicationClient::ServeSymbolLookups() failed due to not getting the sequence mutex"))
@@ -4459,9 +4492,15 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
             {
                 if (response.IsOKResponse())
                 {
+                    if (symbol_response_provided || first_qsymbol_query)
+                    {
+                        m_qSymbol_requests_done = true;
+                    }
+
                     // We are done serving symbols requests
                     return;
                 }
+                first_qsymbol_query = false;
 
                 if (response.IsUnsupportedResponse())
                 {
@@ -4541,7 +4580,14 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
                             packet.Clear();
                             packet.PutCString("qSymbol:");
                             if (symbol_load_addr != LLDB_INVALID_ADDRESS)
+                            {
                                 packet.Printf("%" PRIx64, symbol_load_addr);
+                                symbol_response_provided = true;
+                            }
+                            else
+                            {
+                                symbol_response_provided = false;
+                            }
                             packet.PutCString(":");
                             packet.PutBytesAsRawHex8(symbol_name.data(), symbol_name.size());
                             continue; // go back to the while loop and send "packet" and wait for another response
