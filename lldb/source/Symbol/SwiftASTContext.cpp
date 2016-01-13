@@ -2720,7 +2720,19 @@ SwiftASTContext::GetSearchPathOptions ()
         bool set_sdk = false;
         bool set_resource_dir = false;
         
-        if (!m_platform_sdk_path.empty())
+        if (!search_path_opts.SDKPath.empty())
+        {
+            FileSpec provided_sdk_path(search_path_opts.SDKPath, false);
+            if (provided_sdk_path.Exists())
+            {
+                // We don't check whether the SDK supports swift because we figure if
+                // someone is passing this to us on the command line (e.g., for the REPL),
+                // they probably know what they're doing.
+                
+                set_sdk = true;
+            }
+        }
+        else if (!m_platform_sdk_path.empty())
         {
             FileSpec platform_sdk(m_platform_sdk_path.c_str(), false);
             
