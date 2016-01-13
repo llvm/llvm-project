@@ -118,6 +118,8 @@ public:
                     return false;
                 else
                     return true;
+            default:
+                return false;
         }
     }
 

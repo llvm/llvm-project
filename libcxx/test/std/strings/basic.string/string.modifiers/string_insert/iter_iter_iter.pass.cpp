@@ -19,7 +19,7 @@
 #include <string>
 #include <cassert>
 
-#include "../../input_iterator.h"
+#include "test_iterators.h"
 #include "min_allocator.h"
 
 template <class S, class It>
@@ -31,6 +31,21 @@ test(S s, typename S::difference_type pos, It first, It last, S expected)
     assert(s.__invariants());
     assert(i - s.begin() == pos);
     assert(s == expected);
+}
+
+template <class S, class It>
+void
+test_exceptions(S s, typename S::difference_type pos, It first, It last)
+{
+    typename S::const_iterator p = s.cbegin() + pos;
+	S aCopy = s;
+    try {
+        s.insert(p, first, last);
+        assert(false);
+        }
+    catch (...) {}
+    assert(s.__invariants());
+    assert(s == aCopy);
 }
 
 int main()
@@ -80,7 +95,7 @@ int main()
     test(S("12345678901234567890"), 20, input_iterator<const char*>(s), input_iterator<const char*>(s+52),
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -127,6 +142,19 @@ int main()
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
     }
 #endif
+	{ // test iterator operations that throw
+    typedef std::string S;
+    typedef ThrowingIterator<char> TIter;
+    typedef input_iterator<TIter> IIter;
+    const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter());
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter());
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter());
+
+    test_exceptions(S(), 0, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
+    test_exceptions(S(), 0, TIter(s, s+10, 5, TIter::TADereference), TIter());
+    test_exceptions(S(), 0, TIter(s, s+10, 6, TIter::TAComparison), TIter());
+	}
 #if _LIBCPP_DEBUG >= 1
     {
         std::string v;

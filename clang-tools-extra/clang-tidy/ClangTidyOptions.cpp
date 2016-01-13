@@ -85,6 +85,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(
         IO, Options.CheckOptions);
     IO.mapOptional("Checks", Options.Checks);
+    IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
     IO.mapOptional("AnalyzeTemporaryDtors", Options.AnalyzeTemporaryDtors);
     IO.mapOptional("User", Options.User);
@@ -103,6 +104,7 @@ namespace tidy {
 ClangTidyOptions ClangTidyOptions::getDefaults() {
   ClangTidyOptions Options;
   Options.Checks = "";
+  Options.WarningsAsErrors = "";
   Options.HeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.AnalyzeTemporaryDtors = false;
@@ -123,6 +125,12 @@ ClangTidyOptions::mergeWith(const ClangTidyOptions &Other) const {
     Result.Checks =
         (Result.Checks && !Result.Checks->empty() ? *Result.Checks + "," : "") +
         *Other.Checks;
+  if (Other.WarningsAsErrors)
+    Result.WarningsAsErrors =
+        (Result.WarningsAsErrors && !Result.WarningsAsErrors->empty()
+             ? *Result.WarningsAsErrors + ","
+             : "") +
+        *Other.WarningsAsErrors;
 
   if (Other.HeaderFilterRegex)
     Result.HeaderFilterRegex = Other.HeaderFilterRegex;

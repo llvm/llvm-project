@@ -44,6 +44,11 @@ template <class ELFT> class SharedFile;
 // Called at the beginning of main().
 void initSymbols();
 
+// Returns a demangled C++ symbol name. If Name is not a mangled
+// name or the system does not provide __cxa_demangle function,
+// it returns the unmodified string.
+std::string demangle(StringRef Name);
+
 // A real symbol object, SymbolBody, is usually accessed indirectly
 // through a Symbol. There's always one Symbol for each symbol name.
 // The resolver updates SymbolBody pointers as it resolves symbols.

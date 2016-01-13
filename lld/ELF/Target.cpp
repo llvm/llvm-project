@@ -198,6 +198,8 @@ public:
   void writePltEntry(uint8_t *Buf, uint64_t GotAddr, uint64_t GotEntryAddr,
                      uint64_t PltEntryAddr, int32_t Index,
                      unsigned RelOff) const override;
+  unsigned getTlsGotReloc(unsigned Type = -1) const override;
+  bool isTlsDynReloc(unsigned Type, const SymbolBody &S) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const override;
   bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const override;
@@ -1179,6 +1181,7 @@ AArch64TargetInfo::AArch64TargetInfo() {
   IRelativeReloc = R_AARCH64_IRELATIVE;
   GotReloc = R_AARCH64_GLOB_DAT;
   PltReloc = R_AARCH64_JUMP_SLOT;
+  TlsGotReloc = R_AARCH64_TLS_TPREL64;
   LazyRelocations = true;
   PltEntrySize = 16;
   PltZeroEntrySize = 32;
@@ -1238,6 +1241,19 @@ void AArch64TargetInfo::writePltEntry(uint8_t *Buf, uint64_t GotAddr,
               GotEntryAddr);
 }
 
+unsigned AArch64TargetInfo::getTlsGotReloc(unsigned Type) const {
+  if (Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
+      Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC)
+    return Type;
+  return TlsGotReloc;
+}
+
+bool AArch64TargetInfo::isTlsDynReloc(unsigned Type,
+                                      const SymbolBody &S) const {
+  return Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
+         Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
+}
+
 bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   if (Config->Shared)
     return false;
@@ -1261,8 +1277,15 @@ bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
 
 bool AArch64TargetInfo::relocNeedsGot(uint32_t Type,
                                       const SymbolBody &S) const {
-  return Type == R_AARCH64_ADR_GOT_PAGE || Type == R_AARCH64_LD64_GOT_LO12_NC ||
-         relocNeedsPlt(Type, S);
+  switch (Type) {
+  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+  case R_AARCH64_ADR_GOT_PAGE:
+  case R_AARCH64_LD64_GOT_LO12_NC:
+    return true;
+  default:
+    return relocNeedsPlt(Type, S);
+  }
 }
 
 bool AArch64TargetInfo::relocNeedsPlt(uint32_t Type,
@@ -1328,7 +1351,8 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     updateAArch64Adr(Loc, X & 0x1FFFFF);
     break;
   }
-  case R_AARCH64_ADR_PREL_PG_HI21: {
+  case R_AARCH64_ADR_PREL_PG_HI21:
+  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21: {
     uint64_t X = getAArch64Page(SA) - getAArch64Page(P);
     checkInt<33>(X, Type);
     updateAArch64Adr(Loc, (X >> 12) & 0x1FFFFF); // X[32:12]
@@ -1348,6 +1372,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     break;
   }
   case R_AARCH64_LD64_GOT_LO12_NC:
+  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     checkAlignment<8>(SA, Type);
     or32le(Loc, (SA & 0xFF8) << 7);
     break;

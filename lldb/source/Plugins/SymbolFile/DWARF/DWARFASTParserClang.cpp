@@ -2928,7 +2928,7 @@ DWARFASTParserClang::ParseChildMembers (const SymbolContext& sc,
 
                                         if (member_byte_offset >= parent_byte_size)
                                         {
-                                            if (member_array_size != 1)
+                                            if (member_array_size != 1 && (member_array_size != 0 || member_byte_offset > parent_byte_size))
                                             {
                                                 module_sp->ReportError ("0x%8.8" PRIx64 ": DW_TAG_member '%s' refers to type 0x%8.8" PRIx64 " which extends beyond the bounds of 0x%8.8" PRIx64,
                                                                         die.GetID(),

@@ -214,7 +214,8 @@ runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
 //
 /// \brief Displays the found \p Errors to the users. If \p Fix is true, \p
 /// Errors containing fixes are automatically applied.
-void handleErrors(const std::vector<ClangTidyError> &Errors, bool Fix);
+void handleErrors(const std::vector<ClangTidyError> &Errors, bool Fix,
+                  unsigned &WarningsAsErrorsCount);
 
 /// \brief Serializes replacements into YAML and writes them to the specified
 /// output stream.

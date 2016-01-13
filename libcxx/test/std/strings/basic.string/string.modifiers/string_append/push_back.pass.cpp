@@ -33,7 +33,7 @@ int main()
     test(S("12345"), 'a', S("12345a"));
     test(S("12345678901234567890"), 'a', S("12345678901234567890a"));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(), 'a', S(1, 'a'));

@@ -62,6 +62,9 @@ struct ClangTidyOptions {
   /// \brief Checks filter.
   llvm::Optional<std::string> Checks;
 
+  /// \brief WarningsAsErrors filter.
+  llvm::Optional<std::string> WarningsAsErrors;
+
   /// \brief Output warnings from headers matching this filter. Warnings from
   /// main files will always be displayed.
   llvm::Optional<std::string> HeaderFilterRegex;

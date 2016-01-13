@@ -64,15 +64,21 @@ Checks("checks", cl::desc("Comma-separated list of globs with optional '-'\n"
        cl::init(""), cl::cat(ClangTidyCategory));
 
 static cl::opt<std::string>
-HeaderFilter("header-filter",
-             cl::desc("Regular expression matching the names of the\n"
-                      "headers to output diagnostics from. Diagnostics\n"
-                      "from the main file of each translation unit are\n"
-                      "always displayed.\n"
-                      "Can be used together with -line-filter.\n"
-                      "This option overrides the value read from a\n"
-                      ".clang-tidy file."),
-             cl::init(""), cl::cat(ClangTidyCategory));
+    WarningsAsErrors("warnings-as-errors",
+                     cl::desc("Upgrades warnings to errors. "
+                              "Same format as '-checks'."),
+                     cl::init(""), cl::cat(ClangTidyCategory));
+
+static cl::opt<std::string>
+    HeaderFilter("header-filter",
+                 cl::desc("Regular expression matching the names of the\n"
+                          "headers to output diagnostics from. Diagnostics\n"
+                          "from the main file of each translation unit are\n"
+                          "always displayed.\n"
+                          "Can be used together with -line-filter.\n"
+                          "This option overrides the value read from a\n"
+                          ".clang-tidy file."),
+                 cl::init(""), cl::cat(ClangTidyCategory));
 
 static cl::opt<bool>
     SystemHeaders("system-headers",
@@ -227,6 +233,7 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider() {
 
   ClangTidyOptions DefaultOptions;
   DefaultOptions.Checks = DefaultChecks;
+  DefaultOptions.WarningsAsErrors = "";
   DefaultOptions.HeaderFilterRegex = HeaderFilter;
   DefaultOptions.SystemHeaders = SystemHeaders;
   DefaultOptions.AnalyzeTemporaryDtors = AnalyzeTemporaryDtors;
@@ -238,6 +245,8 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider() {
   ClangTidyOptions OverrideOptions;
   if (Checks.getNumOccurrences() > 0)
     OverrideOptions.Checks = Checks;
+  if (WarningsAsErrors.getNumOccurrences() > 0)
+    OverrideOptions.WarningsAsErrors = WarningsAsErrors;
   if (HeaderFilter.getNumOccurrences() > 0)
     OverrideOptions.HeaderFilterRegex = HeaderFilter;
   if (SystemHeaders.getNumOccurrences() > 0)
@@ -322,8 +331,10 @@ static int clangTidyMain(int argc, const char **argv) {
 
   const bool DisableFixes = Fix && FoundErrors && !FixErrors;
 
+  unsigned WErrorCount = 0;
+
   // -fix-errors implies -fix.
-  handleErrors(Errors, (FixErrors || Fix) && !DisableFixes);
+  handleErrors(Errors, (FixErrors || Fix) && !DisableFixes, WErrorCount);
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;
@@ -343,6 +354,13 @@ static int clangTidyMain(int argc, const char **argv) {
 
   if (EnableCheckProfile)
     printProfileData(Profile, llvm::errs());
+
+  if (WErrorCount) {
+    StringRef Plural = WErrorCount == 1 ? "" : "s";
+    llvm::errs() << WErrorCount << " warning" << Plural << " treated as error"
+                 << Plural << "\n";
+    return WErrorCount;
+  }
 
   return 0;
 }

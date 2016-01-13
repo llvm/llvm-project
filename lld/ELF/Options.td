@@ -67,6 +67,9 @@ def no_allow_shlib_undefined : Flag<["--"], "no-allow-shlib-undefined">;
 
 def no_as_needed : Flag<["--"], "no-as-needed">;
 
+def no_demangle: Flag<["--"], "no-demangle">,
+  HelpText<"Demangle symbol names">;
+
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
   HelpText<"Restores the default behavior of loading archive members">;
 

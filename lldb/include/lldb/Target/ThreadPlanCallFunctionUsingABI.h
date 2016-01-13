@@ -20,7 +20,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/DerivedTypes.h"
 
 namespace lldb_private {
 

@@ -34,6 +34,7 @@
 #include "UnusedAliasDeclsCheck.h"
 #include "UnusedParametersCheck.h"
 #include "UnusedRAIICheck.h"
+#include "VirtualNearMissCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -87,6 +88,8 @@ public:
     CheckFactories.registerCheck<UnusedParametersCheck>(
         "misc-unused-parameters");
     CheckFactories.registerCheck<UnusedRAIICheck>("misc-unused-raii");
+    CheckFactories.registerCheck<VirtualNearMissCheck>(
+        "misc-virtual-near-miss");
   }
 };
 

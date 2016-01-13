@@ -165,7 +165,7 @@ std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Old, SymbolBody *New) {
   StringRef Sym = Old->getName();
   StringRef F1 = OldFile ? OldFile->getName() : "(internal)";
   StringRef F2 = NewFile ? NewFile->getName() : "(internal)";
-  return (Sym + " in " + F1 + " and " + F2).str();
+  return (demangle(Sym) + " in " + F1 + " and " + F2).str();
 }
 
 // This function resolves conflicts if there's an existing symbol with

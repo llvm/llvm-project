@@ -1201,6 +1201,30 @@ _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_TYPE_VIS __basic_string_common<true>)
 #pragma warning( pop )
 #endif // _LIBCPP_MSVC
 
+#ifdef _LIBCPP_NO_EXCEPTIONS
+template <class _Iter>
+struct __libcpp_string_gets_noexcept_iterator_impl : public true_type {};
+#elif defined(_LIBCPP_HAS_NO_NOEXCEPT)
+template <class _Iter>
+struct __libcpp_string_gets_noexcept_iterator_impl : public false_type {};
+#else
+template <class _Iter, bool = __is_forward_iterator<_Iter>::value>
+struct __libcpp_string_gets_noexcept_iterator_impl : public _LIBCPP_BOOL_CONSTANT((
+    noexcept(++(declval<_Iter&>())) && 
+    is_nothrow_assignable<_Iter&, _Iter>::value && 
+    noexcept(declval<_Iter>() == declval<_Iter>()) && 
+    noexcept(*declval<_Iter>())
+)) {};
+
+template <class _Iter> 
+struct __libcpp_string_gets_noexcept_iterator_impl<_Iter, false> : public false_type {};
+#endif
+
+
+template <class _Iter>
+struct __libcpp_string_gets_noexcept_iterator
+    : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value || __libcpp_string_gets_noexcept_iterator_impl<_Iter>::value) {};
+
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
 template <class _CharT, size_t = sizeof(_CharT)>
@@ -1495,15 +1519,16 @@ public:
     template<class _InputIterator>
         typename enable_if
         <
-             __is_input_iterator  <_InputIterator>::value &&
-            !__is_forward_iterator<_InputIterator>::value,
+            __is_exactly_input_iterator<_InputIterator>::value
+                || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
             basic_string&
         >::type
         append(_InputIterator __first, _InputIterator __last);
     template<class _ForwardIterator>
         typename enable_if
         <
-            __is_forward_iterator<_ForwardIterator>::value,
+            __is_forward_iterator<_ForwardIterator>::value
+                && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
             basic_string&
         >::type
         append(_ForwardIterator __first, _ForwardIterator __last);
@@ -1535,15 +1560,16 @@ public:
     template<class _InputIterator>
         typename enable_if
         <
-             __is_input_iterator  <_InputIterator>::value &&
-            !__is_forward_iterator<_InputIterator>::value,
+           __is_exactly_input_iterator<_InputIterator>::value
+                || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
             basic_string&
         >::type
         assign(_InputIterator __first, _InputIterator __last);
     template<class _ForwardIterator>
         typename enable_if
         <
-            __is_forward_iterator<_ForwardIterator>::value,
+            __is_forward_iterator<_ForwardIterator>::value
+                 && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
             basic_string&
         >::type
         assign(_ForwardIterator __first, _ForwardIterator __last);
@@ -1564,15 +1590,16 @@ public:
     template<class _InputIterator>
         typename enable_if
         <
-             __is_input_iterator  <_InputIterator>::value &&
-            !__is_forward_iterator<_InputIterator>::value,
+           __is_exactly_input_iterator<_InputIterator>::value
+                || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
             iterator
         >::type
         insert(const_iterator __pos, _InputIterator __first, _InputIterator __last);
     template<class _ForwardIterator>
         typename enable_if
         <
-            __is_forward_iterator<_ForwardIterator>::value,
+            __is_forward_iterator<_ForwardIterator>::value
+                 && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
             iterator
         >::type
         insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last);
@@ -1817,8 +1844,7 @@ private:
     template <class _InputIterator>
     typename enable_if
     <
-         __is_input_iterator  <_InputIterator>::value &&
-        !__is_forward_iterator<_InputIterator>::value,
+        __is_exactly_input_iterator<_InputIterator>::value,
         void
     >::type
     __init(_InputIterator __first, _InputIterator __last);
@@ -2195,8 +2221,7 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class _InputIterator>
 typename enable_if
 <
-     __is_input_iterator  <_InputIterator>::value &&
-    !__is_forward_iterator<_InputIterator>::value,
+    __is_exactly_input_iterator<_InputIterator>::value,
     void
 >::type
 basic_string<_CharT, _Traits, _Allocator>::__init(_InputIterator __first, _InputIterator __last)
@@ -2494,15 +2519,14 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _InputIterator>
 typename enable_if
 <
-     __is_input_iterator  <_InputIterator>::value &&
-    !__is_forward_iterator<_InputIterator>::value,
+     __is_exactly_input_iterator <_InputIterator>::value
+          || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
     basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
 {
-    clear();
-    for (; __first != __last; ++__first)
-        push_back(*__first);
+    basic_string __temp(__first, __last, __alloc());
+    assign(__temp.data(), __temp.size());
     return *this;
 }
 
@@ -2510,7 +2534,8 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _ForwardIterator>
 typename enable_if
 <
-    __is_forward_iterator<_ForwardIterator>::value,
+    __is_forward_iterator<_ForwardIterator>::value
+         && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
     basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::assign(_ForwardIterator __first, _ForwardIterator __last)
@@ -2643,14 +2668,14 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _InputIterator>
 typename enable_if
 <
-     __is_input_iterator  <_InputIterator>::value &&
-    !__is_forward_iterator<_InputIterator>::value,
+    __is_exactly_input_iterator<_InputIterator>::value
+             || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
     basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::append(_InputIterator __first, _InputIterator __last)
 {
-    for (; __first != __last; ++__first)
-        push_back(*__first);
+	basic_string __temp (__first, __last, __alloc());
+	append(__temp.data(), __temp.size());
     return *this;
 }
 
@@ -2658,7 +2683,8 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _ForwardIterator>
 typename enable_if
 <
-    __is_forward_iterator<_ForwardIterator>::value,
+    __is_forward_iterator<_ForwardIterator>::value
+          && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
     basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::append(_ForwardIterator __first, _ForwardIterator __last)
@@ -2774,9 +2800,9 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _InputIterator>
 typename enable_if
 <
-     __is_input_iterator  <_InputIterator>::value &&
-    !__is_forward_iterator<_InputIterator>::value,
-    typename basic_string<_CharT, _Traits, _Allocator>::iterator
+   __is_exactly_input_iterator<_InputIterator>::value
+        || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
+   typename basic_string<_CharT, _Traits, _Allocator>::iterator
 >::type
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _InputIterator __first, _InputIterator __last)
 {
@@ -2785,24 +2811,16 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _InputIt
         "string::insert(iterator, range) called with an iterator not"
         " referring to this string");
 #endif
-    size_type __old_sz = size();
-    difference_type __ip = __pos - begin();
-    for (; __first != __last; ++__first)
-        push_back(*__first);
-    pointer __p = __get_pointer();
-    _VSTD::rotate(__p + __ip, __p + __old_sz, __p + size());
-#if _LIBCPP_DEBUG_LEVEL >= 2
-    return iterator(this, __p + __ip);
-#else
-    return iterator(__p + __ip);
-#endif
+    basic_string __temp(__first, __last, __alloc());
+    return insert(__pos, __temp.data(), __temp.data() + __temp.size());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
 template<class _ForwardIterator>
 typename enable_if
 <
-    __is_forward_iterator<_ForwardIterator>::value,
+    __is_forward_iterator<_ForwardIterator>::value
+        && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
     typename basic_string<_CharT, _Traits, _Allocator>::iterator
 >::type
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last)
@@ -3005,22 +3023,8 @@ typename enable_if
 basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2,
                                                    _InputIterator __j1, _InputIterator __j2)
 {
-    for (; true; ++__i1, ++__j1)
-    {
-        if (__i1 == __i2)
-        {
-            if (__j1 != __j2)
-                insert(__i1, __j1, __j2);
-            break;
-        }
-        if (__j1 == __j2)
-        {
-            erase(__i1, __i2);
-            break;
-        }
-        traits_type::assign(const_cast<value_type&>(*__i1), *__j1);
-    }
-    return *this;
+    basic_string __temp(__j1, __j2, __alloc());
+    return this->replace(__i1, __i2, __temp);
 }
 
 template <class _CharT, class _Traits, class _Allocator>

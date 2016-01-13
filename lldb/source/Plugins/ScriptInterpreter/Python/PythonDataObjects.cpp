@@ -23,6 +23,8 @@
 
 #include <stdio.h>
 
+#include "llvm/ADT/StringSwitch.h"
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -1156,6 +1158,22 @@ PythonFile::Reset(File &file, const char *mode)
 #endif
 }
 
+uint32_t
+PythonFile::GetOptionsFromMode(llvm::StringRef mode)
+{
+    if (mode.empty())
+        return 0;
+
+    return llvm::StringSwitch<uint32_t>(mode.str().c_str())
+    .Case("r",   File::eOpenOptionRead)
+    .Case("w",   File::eOpenOptionWrite)
+    .Case("a",   File::eOpenOptionAppend|File::eOpenOptionCanCreate)
+    .Case("r+",  File::eOpenOptionRead|File::eOpenOptionWrite)
+    .Case("w+",  File::eOpenOptionRead|File::eOpenOptionWrite|File::eOpenOptionCanCreate|File::eOpenOptionTruncate)
+    .Case("a+",  File::eOpenOptionRead|File::eOpenOptionWrite|File::eOpenOptionCanCreate)
+    .Default(0);
+}
+
 bool
 PythonFile::GetUnderlyingFile(File &file) const
 {
@@ -1166,6 +1184,8 @@ PythonFile::GetUnderlyingFile(File &file) const
     // We don't own the file descriptor returned by this function, make sure the
     // File object knows about that.
     file.SetDescriptor(PyObject_AsFileDescriptor(m_py_obj), false);
+    PythonString py_mode = GetAttributeValue("mode").AsType<PythonString>();
+    file.SetOptions(PythonFile::GetOptionsFromMode(py_mode.GetString()));
     return file.IsValid();
 }
 

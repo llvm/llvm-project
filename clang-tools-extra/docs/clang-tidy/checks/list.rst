@@ -65,6 +65,7 @@ Clang-Tidy Checks
    misc-unused-alias-decls
    misc-unused-parameters
    misc-unused-raii
+   misc-virtual-near-miss
    modernize-loop-convert
    modernize-make-unique
    modernize-pass-by-value

@@ -5928,7 +5928,7 @@
 /* Begin PBXLegacyTarget section */
 		2387551E1C24974600CCE8C3 /* lldb-python-test-suite */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100";
+			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
 			buildConfigurationList = 238755241C24974600CCE8C3 /* Build configuration list for PBXLegacyTarget "lldb-python-test-suite" */;
 			buildPhases = (
 			);
@@ -5937,7 +5937,7 @@
 			dependencies = (
 			);
 			name = "lldb-python-test-suite";
-			passBuildSettingsInEnvironment = 0;
+			passBuildSettingsInEnvironment = 1;
 			productName = "LLDB Python Test Suite";
 		};
 		2687EAC51508110B00DD8C2E /* install-headers */ = {
@@ -6300,7 +6300,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "sh $SRCROOT/scripts/finish-swig-wrapper-classes.sh $SRCROOT $TARGET_BUILD_DIR $CONFIGURATION_BUILD_DIR \"\"";
+			shellScript = "sh $SRCROOT/scripts/finish-swig-wrapper-classes.sh $SRCROOT $TARGET_BUILD_DIR $BUILT_PRODUCTS_DIR \"\"";
 		};
 		AF3059151B4B390800E25622 /* Run Script - remove unneeded Resources and Swift dirs from iOS LLDB.framework bundle */ = {
 			isa = PBXShellScriptBuildPhase;

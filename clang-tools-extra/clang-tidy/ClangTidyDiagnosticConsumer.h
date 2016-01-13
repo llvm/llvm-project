@@ -57,7 +57,7 @@ struct ClangTidyError {
     Error = DiagnosticsEngine::Error
   };
 
-  ClangTidyError(StringRef CheckName, Level DiagLevel);
+  ClangTidyError(StringRef CheckName, Level DiagLevel, bool IsWarningAsError);
 
   std::string CheckName;
   ClangTidyMessage Message;
@@ -65,6 +65,7 @@ struct ClangTidyError {
   SmallVector<ClangTidyMessage, 1> Notes;
 
   Level DiagLevel;
+  bool IsWarningAsError;
 };
 
 /// \brief Read-only set of strings represented as a list of positive and
@@ -164,6 +165,10 @@ public:
   /// \brief Returns true if the check name is enabled for the \c CurrentFile.
   bool isCheckEnabled(StringRef CheckName) const;
 
+  /// \brief Returns check filter for the \c CurrentFile which
+  /// selects checks for upgrade to error.
+  GlobList &getWarningAsErrorFilter();
+
   /// \brief Returns global options.
   const ClangTidyGlobalOptions &getGlobalOptions() const;
 
@@ -211,6 +216,7 @@ private:
   std::string CurrentFile;
   ClangTidyOptions CurrentOptions;
   std::unique_ptr<GlobList> CheckFilter;
+  std::unique_ptr<GlobList> WarningAsErrorFilter;
 
   LangOptions LangOpts;
 

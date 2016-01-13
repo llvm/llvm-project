@@ -506,7 +506,7 @@ OperatingSystemGo::Goroutine
 OperatingSystemGo::CreateGoroutineAtIndex(uint64_t idx, Error &err)
 {
     err.Clear();
-    Goroutine result;
+    Goroutine result = {};
     ValueObjectSP g = m_allg_sp->GetSyntheticArrayMember(idx, true)->Dereference(err);
     if (err.Fail())
     {

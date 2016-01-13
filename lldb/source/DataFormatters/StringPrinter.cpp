@@ -207,7 +207,7 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8> (uint8_t* buffer, uint8
                 else
                 {
                     uint8_t* data = new uint8_t[11];
-                    sprintf((char*)data,"\\U%08x",codepoint);
+                    sprintf((char *)data, "\\U%08x", (unsigned)codepoint);
                     retval = { data,10,[] (const uint8_t* c) {delete[] c;} };
                     break;
                 }

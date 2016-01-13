@@ -13,7 +13,8 @@
 
 #include <limits>
 
-#if defined(__i386__) || defined(__x86_64__) || defined(__pnacl__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__pnacl__) || \
+    defined(__wasm__)
 static const bool integral_types_trap = true;
 #else
 static const bool integral_types_trap = false;

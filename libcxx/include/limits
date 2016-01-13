@@ -237,7 +237,8 @@ protected:
     static _LIBCPP_CONSTEXPR const bool is_bounded = true;
     static _LIBCPP_CONSTEXPR const bool is_modulo = !_VSTD::is_signed<_Tp>::value;
 
-#if defined(__i386__) || defined(__x86_64__) || defined(__pnacl__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__pnacl__) || \
+    defined(__wasm__)
     static _LIBCPP_CONSTEXPR const bool traps = true;
 #else
     static _LIBCPP_CONSTEXPR const bool traps = false;

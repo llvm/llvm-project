@@ -56,7 +56,7 @@ int main()
     test(s, s.begin()+5, 'B', S("a567AB1432dcb"));
     test(s, s.begin()+6, 'C', S("a567ABC1432dcb"));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     S s;

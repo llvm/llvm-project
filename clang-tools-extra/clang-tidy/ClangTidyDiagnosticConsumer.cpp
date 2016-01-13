@@ -115,8 +115,10 @@ ClangTidyMessage::ClangTidyMessage(StringRef Message,
 }
 
 ClangTidyError::ClangTidyError(StringRef CheckName,
-                               ClangTidyError::Level DiagLevel)
-    : CheckName(CheckName), DiagLevel(DiagLevel) {}
+                               ClangTidyError::Level DiagLevel,
+                               bool IsWarningAsError)
+    : CheckName(CheckName), DiagLevel(DiagLevel),
+      IsWarningAsError(IsWarningAsError) {}
 
 // Returns true if GlobList starts with the negative indicator ('-'), removes it
 // from the GlobList.
@@ -204,6 +206,7 @@ void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = File;
   CurrentOptions = getOptionsForFile(CurrentFile);
   CheckFilter.reset(new GlobList(*getOptions().Checks));
+  WarningAsErrorFilter.reset(new GlobList(*getOptions().WarningsAsErrors));
 }
 
 void ClangTidyContext::setASTContext(ASTContext *Context) {
@@ -235,6 +238,11 @@ GlobList &ClangTidyContext::getChecksFilter() {
 
 bool ClangTidyContext::isCheckEnabled(StringRef CheckName) const {
   return CheckFilter->contains(CheckName);
+}
+
+GlobList &ClangTidyContext::getWarningAsErrorFilter() {
+  assert(WarningAsErrorFilter != nullptr);
+  return *WarningAsErrorFilter;
 }
 
 /// \brief Store a \c ClangTidyError.
@@ -324,7 +332,10 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
       LastErrorRelatesToUserCode = true;
       LastErrorPassesLineFilter = true;
     }
-    Errors.push_back(ClangTidyError(CheckName, Level));
+    bool IsWarningAsError =
+        DiagLevel == DiagnosticsEngine::Warning &&
+        Context.getWarningAsErrorFilter().contains(CheckName);
+    Errors.push_back(ClangTidyError(CheckName, Level, IsWarningAsError));
   }
 
   // FIXME: Provide correct LangOptions for each file.

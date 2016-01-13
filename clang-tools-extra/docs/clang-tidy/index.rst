@@ -68,7 +68,9 @@ Clang diagnostics are treated in a similar way as check diagnostics. Clang
 diagnostics are displayed by clang-tidy and can be filtered out using
 ``-checks=`` option. However, the ``-checks=`` option does not affect
 compilation arguments, so it can not turn on Clang warnings which are not
-already turned on in build configuration.
+already turned on in build configuration. The ``-warnings-as-errors=`` option
+upgrades any warnings emitted under the ``-checks=`` flag to errors (but it
+does not enable any checks itself).
 
 Clang diagnostics have check names starting with ``clang-diagnostic-``.
 Diagnostics which have a corresponding warning option, are named
@@ -150,6 +152,7 @@ An overview of all the command-line options:
                                  -checks=* to list all available checks.
     -p=<string>                - Build path
     -system-headers            - Display the errors from system headers.
+    -warnings-as-errors=<string> - Upgrades warnings to errors. Same format as '-checks'.
 
   -p <build-path> is used to read a compile command database.
 
