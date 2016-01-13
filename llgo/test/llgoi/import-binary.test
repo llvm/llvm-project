@@ -1,5 +1,0 @@
-// RUN: llgoi < %s | FileCheck %s
-
-import "fmt"
-fmt.Println(1, "two", 3)
-// CHECK: 1 two 3
