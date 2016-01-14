@@ -15,7 +15,7 @@
 #include "DwarfDebug.h"
 #include "DwarfException.h"
 #include "WinException.h"
-#include "WinCodeViewLineTables.h"
+#include "CodeViewDebug.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -248,7 +248,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = MMI->getModule()->getCodeViewFlag();
     if (EmitCodeView && TM.getTargetTriple().isKnownWindowsMSVCEnvironment()) {
-      Handlers.push_back(HandlerInfo(new WinCodeViewLineTables(this),
+      Handlers.push_back(HandlerInfo(new CodeViewDebug(this),
                                      DbgTimerName,
                                      CodeViewLineTablesGroupName));
     }

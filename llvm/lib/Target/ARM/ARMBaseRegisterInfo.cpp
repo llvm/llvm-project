@@ -176,9 +176,8 @@ getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(ARM::R9);
   // Reserve D16-D31 if the subtarget doesn't support them.
   if (!STI.hasVFP3() || STI.hasD16()) {
-    assert(ARM::D31 == ARM::D16 + 15);
-    for (unsigned i = 0; i != 16; ++i)
-      Reserved.set(ARM::D16 + i);
+    static_assert(ARM::D31 == ARM::D16 + 15, "Register list not consecutive!");
+    Reserved.set(ARM::D16, ARM::D31 + 1);
   }
   const TargetRegisterClass *RC  = &ARM::GPRPairRegClass;
   for(TargetRegisterClass::iterator I = RC->begin(), E = RC->end(); I!=E; ++I)

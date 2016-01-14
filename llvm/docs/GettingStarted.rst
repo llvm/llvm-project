@@ -628,6 +628,8 @@ Then, your .git/config should have [imap] sections.
   ; example for Traditional Chinese
         folder = "[Gmail]/&g0l6Pw-"
 
+.. _developers-work-with-git-svn:
+
 For developers to work with git-svn
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

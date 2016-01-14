@@ -3416,7 +3416,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         SDValue FloatVal = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, Op,
                                        DAG.getIntPtrConstant(0, dl));
         Results.push_back(
-            DAG.getNode(ISD::FP_TO_FP16, dl, MVT::i16, FloatVal));
+            DAG.getNode(ISD::FP_TO_FP16, dl, Node->getValueType(0), FloatVal));
       }
     }
     break;

@@ -33,6 +33,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ELF.h"
@@ -119,6 +120,10 @@ getELFKindForNamedSection(StringRef Name, SectionKind K) {
   // section(".eh_frame") gcc will produce:
   //
   //   .section   .eh_frame,"a",@progbits
+  
+  if (Name == getInstrProfCoverageSectionName(false))
+    return SectionKind::getMetadata();
+
   if (Name.empty() || Name[0] != '.') return K;
 
   // Some lame default implementation based on some magic section names.
@@ -149,6 +154,9 @@ getELFKindForNamedSection(StringRef Name, SectionKind K) {
 
 
 static unsigned getELFSectionType(StringRef Name, SectionKind K) {
+
+  if (Name == getInstrProfCoverageSectionName(false))
+    return ELF::SHT_NOTE;
 
   if (Name == ".init_array")
     return ELF::SHT_INIT_ARRAY;

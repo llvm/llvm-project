@@ -224,6 +224,11 @@ public:
     startLine() << Label << ": " << Str << " (" << hex(Value) << ")\n";
   }
 
+  template <typename T>
+  void printSymbolOffset(StringRef Label, StringRef Symbol, T Value) {
+    startLine() << Label << ": " << Symbol << '+' << hex(Value) << '\n';
+  }
+
   void printString(StringRef Label, StringRef Value) {
     startLine() << Label << ": " << Value << "\n";
   }

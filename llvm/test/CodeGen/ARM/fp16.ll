@@ -1,9 +1,15 @@
 ; RUN: llc -mtriple=armv7a--none-eabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-HARDFLOAT-EABI %s
 ; RUN: llc -mtriple=armv7a--none-gnueabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-HARDFLOAT-GNU %s
-; RUN: llc -mattr=+vfp3,+fp16 < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-FP16 %s
 ; RUN: llc -mtriple=armv8-eabihf < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-ARMV8 %s
 ; RUN: llc -mtriple=thumbv7m-eabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-SOFTFLOAT-EABI %s
 ; RUN: llc -mtriple=thumbv7m-gnueabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-SOFTFLOAT-GNU %s
+
+;; +fp16 is special: it has f32->f16 (unlike v7), but not f64->f16 (unlike v8).
+;; This exposes unsafe-fp-math optimization opportunities; test that.
+; RUN: llc -mattr=+vfp3,+fp16 < %s |\
+; RUN:   FileCheck --check-prefix=CHECK --check-prefix=CHECK-FP16 --check-prefix=CHECK-FP16-SAFE %s
+; RUN: llc -mattr=+vfp3,+fp16 < %s -enable-unsafe-fp-math |\
+; RUN:   FileCheck --check-prefix=CHECK --check-prefix=CHECK-FP16 --check-prefix=CHECK-FP16-UNSAFE %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n32"
 target triple = "armv7---eabihf"
@@ -76,7 +82,10 @@ define i16 @test_to_fp16(double %in) {
 
 ; CHECK-HARDFLOAT-GNU: bl __aeabi_d2h
 
-; CHECK-FP16: bl __aeabi_d2h
+; CHECK-FP16-SAFE: bl __aeabi_d2h
+
+; CHECK-FP16-UNSAFE:      vcvt.f32.f64 s0, d0
+; CHECK-FP16-UNSAFE-NEXT: vcvtb.f16.f32 s0, s0
 
 ; CHECK-ARMV8: vcvtb.f16.f64 [[TMP:s[0-9]+]], d0
 ; CHECK-ARMV8: vmov r0, [[TMP]]

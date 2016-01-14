@@ -485,6 +485,8 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
         if (predLive)
           break;
 
+        if (!MI->getOperand(1).isMBB())
+          continue;
         jmpTarget = MI->getOperand(1).getMBB();
         foundJump = true;
         if (MI->getOpcode() == Hexagon::J2_jumpf ||

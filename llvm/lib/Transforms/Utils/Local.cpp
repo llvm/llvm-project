@@ -944,31 +944,37 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 static unsigned enforceKnownAlignment(Value *V, unsigned Align,
                                       unsigned PrefAlign,
                                       const DataLayout &DL) {
-  assert(PrefAlign > Align);
-
   V = V->stripPointerCasts();
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
-    assert(AI->getAlignment() <= Align);
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
     if (DL.exceedsNaturalStackAlignment(PrefAlign))
       return Align;
+    // If there is a requested alignment and if this is an alloca, round up.
+    if (AI->getAlignment() >= PrefAlign)
+      return AI->getAlignment();
     AI->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   if (auto *GO = dyn_cast<GlobalObject>(V)) {
-    assert(GO->getAlignment() <= Align);
     // If there is a large requested alignment and we can, bump up the alignment
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
-    if (!GO->canIncreaseAlignment())
+    if (!GO->isStrongDefinitionForLinker())
       return Align;
 
-    GO->setAlignment(PrefAlign);
-    return PrefAlign;
+    if (GO->getAlignment() >= PrefAlign)
+      return GO->getAlignment();
+    // We can only increase the alignment of the global if it has no alignment
+    // specified or if it is not assigned a section.  If it is assigned a
+    // section, the global could be densely packed with other objects in the
+    // section, increasing the alignment could cause padding issues.
+    if (!GO->hasSection() || GO->getAlignment() == 0)
+      GO->setAlignment(PrefAlign);
+    return GO->getAlignment();
   }
 
   return Align;
@@ -1127,12 +1133,14 @@ bool llvm::LowerDbgDeclare(Function &F) {
     // the stack slot (and at a lexical-scope granularity). Later
     // passes will attempt to elide the stack slot.
     if (AI && !isArray(AI)) {
-      for (User *U : AI->users())
-        if (StoreInst *SI = dyn_cast<StoreInst>(U))
-          ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
-        else if (LoadInst *LI = dyn_cast<LoadInst>(U))
+      for (auto &AIUse : AI->uses()) {
+        User *U = AIUse.getUser();
+        if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
+          if (AIUse.getOperandNo() == 1)
+            ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
+        } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
           ConvertDebugDeclareToDebugValue(DDI, LI, DIB);
-        else if (CallInst *CI = dyn_cast<CallInst>(U)) {
+        } else if (CallInst *CI = dyn_cast<CallInst>(U)) {
           // This is a call by-value or some other instruction that
           // takes a pointer to the variable. Insert a *value*
           // intrinsic that describes the alloca.
@@ -1144,6 +1152,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
                                       DIB.createExpression(NewDIExpr),
                                       DDI->getDebugLoc(), CI);
         }
+      }
       DDI->eraseFromParent();
     }
   }

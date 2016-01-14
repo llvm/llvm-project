@@ -377,6 +377,9 @@ bool HexagonInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   bool LastOpcodeHasJMP_c = PredOpcodeHasJMP_c(LastOpcode);
   bool LastOpcodeHasNVJump = isNewValueJump(LastInst);
 
+  if (LastOpcodeHasJMP_c && !LastInst->getOperand(1).isMBB())
+    return true;
+
   // If there is only one terminator instruction, process it.
   if (LastInst && !SecondLastInst) {
     if (LastOpcode == Hexagon::J2_jump) {
@@ -412,6 +415,8 @@ bool HexagonInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   bool SecLastOpcodeHasJMP_c = PredOpcodeHasJMP_c(SecLastOpcode);
   bool SecLastOpcodeHasNVJump = isNewValueJump(SecondLastInst);
   if (SecLastOpcodeHasJMP_c && (LastOpcode == Hexagon::J2_jump)) {
+    if (!SecondLastInst->getOperand(1).isMBB())
+      return true;
     TBB =  SecondLastInst->getOperand(1).getMBB();
     Cond.push_back(MachineOperand::CreateImm(SecondLastInst->getOpcode()));
     Cond.push_back(SecondLastInst->getOperand(0));
@@ -950,6 +955,36 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI)
       MRI.clearKillFlags(Src2SubLo);
       MRI.clearKillFlags(Src3SubHi);
       MRI.clearKillFlags(Src3SubLo);
+      return true;
+    }
+    case Hexagon::Insert4: {
+      unsigned DstReg = MI->getOperand(0).getReg();
+      unsigned Src1Reg = MI->getOperand(1).getReg();
+      unsigned Src2Reg = MI->getOperand(2).getReg();
+      unsigned Src3Reg = MI->getOperand(3).getReg();
+      unsigned Src4Reg = MI->getOperand(4).getReg();
+      unsigned Src1RegIsKill = getKillRegState(MI->getOperand(1).isKill());
+      unsigned Src2RegIsKill = getKillRegState(MI->getOperand(2).isKill());
+      unsigned Src3RegIsKill = getKillRegState(MI->getOperand(3).isKill());
+      unsigned Src4RegIsKill = getKillRegState(MI->getOperand(4).isKill());
+      unsigned DstSubHi = HRI.getSubReg(DstReg, Hexagon::subreg_hireg);
+      unsigned DstSubLo = HRI.getSubReg(DstReg, Hexagon::subreg_loreg);
+      BuildMI(MBB, MI, MI->getDebugLoc(), get(Hexagon::S2_insert),
+              HRI.getSubReg(DstReg, Hexagon::subreg_loreg)).addReg(DstSubLo)
+          .addReg(Src1Reg, Src1RegIsKill).addImm(16).addImm(0);
+      BuildMI(MBB, MI, MI->getDebugLoc(), get(Hexagon::S2_insert),
+              HRI.getSubReg(DstReg, Hexagon::subreg_loreg)).addReg(DstSubLo)
+          .addReg(Src2Reg, Src2RegIsKill).addImm(16).addImm(16);
+      BuildMI(MBB, MI, MI->getDebugLoc(), get(Hexagon::S2_insert),
+              HRI.getSubReg(DstReg, Hexagon::subreg_hireg)).addReg(DstSubHi)
+          .addReg(Src3Reg, Src3RegIsKill).addImm(16).addImm(0);
+      BuildMI(MBB, MI, MI->getDebugLoc(), get(Hexagon::S2_insert),
+              HRI.getSubReg(DstReg, Hexagon::subreg_hireg)).addReg(DstSubHi)
+          .addReg(Src4Reg, Src4RegIsKill).addImm(16).addImm(16);
+      MBB.erase(MI);
+      MRI.clearKillFlags(DstReg);
+      MRI.clearKillFlags(DstSubHi);
+      MRI.clearKillFlags(DstSubLo);
       return true;
     }
     case Hexagon::MUX64_rr: {
