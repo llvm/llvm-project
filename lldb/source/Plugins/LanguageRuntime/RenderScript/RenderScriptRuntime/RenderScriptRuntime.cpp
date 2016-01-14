@@ -581,28 +581,12 @@ const RenderScriptRuntime::HookDefn RenderScriptRuntime::s_runtimeHookDefns[] =
         &lldb_private::RenderScriptRuntime::CaptureScriptInit1 // handler
     },
     {
-        "rsdScriptInvokeForEach", // name
-        "_Z22rsdScriptInvokeForEachPKN7android12renderscript7ContextEPNS0_6ScriptEjPKNS0_10AllocationEPS6_PKvjPK12RsScriptCall", // symbol name 32bit
-        "_Z22rsdScriptInvokeForEachPKN7android12renderscript7ContextEPNS0_6ScriptEjPKNS0_10AllocationEPS6_PKvmPK12RsScriptCall", // symbol name 64bit
-        0, // version
-        RenderScriptRuntime::eModuleKindDriver, // type
-        nullptr // handler
-    },
-    {
         "rsdScriptInvokeForEachMulti", // name
         "_Z27rsdScriptInvokeForEachMultiPKN7android12renderscript7ContextEPNS0_6ScriptEjPPKNS0_10AllocationEjPS6_PKvjPK12RsScriptCall", // symbol name 32bit
         "_Z27rsdScriptInvokeForEachMultiPKN7android12renderscript7ContextEPNS0_6ScriptEjPPKNS0_10AllocationEmPS6_PKvmPK12RsScriptCall", // symbol name 64bit
         0, // version
         RenderScriptRuntime::eModuleKindDriver, // type
-        nullptr // handler
-    },
-    {
-        "rsdScriptInvokeFunction", // name
-        "_Z23rsdScriptInvokeFunctionPKN7android12renderscript7ContextEPNS0_6ScriptEjPKvj", // symbol name 32bit
-        "_Z23rsdScriptInvokeFunctionPKN7android12renderscript7ContextEPNS0_6ScriptEjPKvm", // symbol name 64bit
-        0, // version
-        RenderScriptRuntime::eModuleKindDriver, // type
-        nullptr // handler
+        &lldb_private::RenderScriptRuntime::CaptureScriptInvokeForEachMulti // handler
     },
     {
         "rsdScriptSetGlobalVar", // name
@@ -903,6 +887,119 @@ RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint6
             log->Printf("RenderScriptRuntime::GetArgSimple - failed to get argument at index %" PRIu32, arg);
     }
     return success;
+}
+
+void
+RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
+                                                     ExecutionContext& context)
+{
+    Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+
+    struct args_t
+    {
+        uint64_t context;   // const Context       *rsc
+        uint64_t script;    // Script              *s
+        uint64_t slot;      // uint32_t             slot
+        uint64_t aIns;      // const Allocation   **aIns
+        uint64_t inLen;     // size_t               inLen
+        uint64_t aOut;      // Allocation          *aout
+        uint64_t usr;       // const void          *usr
+        uint64_t usrLen;    // size_t               usrLen
+        uint64_t sc;        // const RsScriptCall  *sc
+    }
+    args;
+
+    bool success =
+        GetArgSimple(context, 0, &args.context) &&
+        GetArgSimple(context, 1, &args.script) &&
+        GetArgSimple(context, 2, &args.slot) &&
+        GetArgSimple(context, 3, &args.aIns) &&
+        GetArgSimple(context, 4, &args.inLen) &&
+        GetArgSimple(context, 5, &args.aOut) &&
+        GetArgSimple(context, 6, &args.usr) &&
+        GetArgSimple(context, 7, &args.usrLen) &&
+        GetArgSimple(context, 8, &args.sc);
+
+    if (!success)
+    {
+        if (log)
+            log->Printf("RenderScriptRuntime::CaptureScriptInvokeForEachMulti()"
+                        " - Error while reading the function parameters");
+        return;
+    }
+
+    const uint32_t target_ptr_size = m_process->GetAddressByteSize();
+    Error error;
+    std::vector<uint64_t> allocs;
+
+    // traverse allocation list
+    for (uint64_t i = 0; i < args.inLen; ++i)
+    {
+        // calculate offest to allocation pointer
+        const lldb::addr_t addr = args.aIns + i * target_ptr_size;
+
+        // Note: due to little endian layout, reading 32bits or 64bits into res64 will
+        //       give the correct results.
+
+        uint64_t res64 = 0;
+        size_t read = m_process->ReadMemory(addr, &res64, target_ptr_size, error);
+        if (read != target_ptr_size || !error.Success())
+        {
+            if (log)
+                log->Printf("RenderScriptRuntime::CaptureScriptInvokeForEachMulti()"
+                            " - Error while reading allocation list argument %" PRId64, i);
+        }
+        else
+        {
+            allocs.push_back(res64);
+        }
+    }
+
+    // if there is an output allocation track it
+    if (args.aOut)
+    {
+        allocs.push_back(args.aOut);
+    }
+
+    // for all allocations we have found
+    for (const uint64_t alloc_addr : allocs)
+    {
+        AllocationDetails* alloc = LookUpAllocation(alloc_addr, true);
+        if (alloc)
+        {
+            // save the allocation address
+            if (alloc->address.isValid())
+            {
+                // check the allocation address we already have matches
+                assert(*alloc->address.get() == alloc_addr);
+            }
+            else
+            {
+                alloc->address = alloc_addr;
+            }
+
+            // save the context
+            if (log)
+            {
+                if (alloc->context.isValid() && *alloc->context.get() != args.context)
+                    log->Printf("RenderScriptRuntime::CaptureScriptInvokeForEachMulti"
+                                " - Allocation used by multiple contexts");
+            }
+            alloc->context = args.context;
+        }
+    }
+
+    // make sure we track this script object
+    if (lldb_private::RenderScriptRuntime::ScriptDetails * script = LookUpScript(args.script, true))
+    {
+        if (log)
+        {
+            if (script->context.isValid() && *script->context.get() != args.context)
+                log->Printf("RenderScriptRuntime::CaptureScriptInvokeForEachMulti"
+                            " - Script used by multiple contexts");
+        }
+        script->context = args.context;
+    }
 }
 
 void

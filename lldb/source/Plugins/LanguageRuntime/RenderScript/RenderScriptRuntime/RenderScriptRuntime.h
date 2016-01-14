@@ -324,6 +324,7 @@ private:
     void CaptureAllocationInit1(RuntimeHook* hook_info, ExecutionContext& context);
     void CaptureAllocationDestroy(RuntimeHook* hook_info, ExecutionContext& context);
     void CaptureSetGlobalVar1(RuntimeHook* hook_info, ExecutionContext& context);
+    void CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info, ExecutionContext& context);
 
     AllocationDetails* FindAllocByID(Stream &strm, const uint32_t alloc_id);
     std::shared_ptr<uint8_t> GetAllocationData(AllocationDetails* allocation, StackFrame* frame_ptr);

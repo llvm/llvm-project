@@ -2105,14 +2105,14 @@ ClangASTContext::CreateArrayType (const CompilerType &element_type,
             if (element_count == 0)
             {
                 return CompilerType (ast, ast->getIncompleteArrayType (GetQualType(element_type),
-                                                                       ArrayType::Normal,
+                                                                       clang::ArrayType::Normal,
                                                                        0));
             }
             else
             {
                 return CompilerType (ast, ast->getConstantArrayType (GetQualType(element_type),
                                                                      ap_element_count,
-                                                                     ArrayType::Normal,
+                                                                     clang::ArrayType::Normal,
                                                                      0));
             }
         }

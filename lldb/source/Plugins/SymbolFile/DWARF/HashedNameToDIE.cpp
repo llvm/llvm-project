@@ -671,6 +671,9 @@ DWARFMappedHash::MemoryTable::AppendAllDIEsInRange (const uint32_t die_offset_st
 size_t
 DWARFMappedHash::MemoryTable::FindByName (const char *name, DIEArray &die_offsets)
 {
+    if (!name || !name[0])
+        return 0;
+    
     DIEInfoArray die_info_array;
     if (FindByName(name, die_info_array))
         DWARFMappedHash::ExtractDIEArray (die_info_array, die_offsets);
@@ -736,6 +739,9 @@ DWARFMappedHash::MemoryTable::FindCompleteObjCClassByName (const char *name,
 size_t 
 DWARFMappedHash::MemoryTable::FindByName (const char *name, DIEInfoArray &die_info_array)
 {
+    if (!name || !name[0])
+        return 0;
+
     Pair kv_pair;
     size_t old_size = die_info_array.size();
     if (Find (name, kv_pair))

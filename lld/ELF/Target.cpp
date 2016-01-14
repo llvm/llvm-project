@@ -1269,6 +1269,7 @@ bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   case R_AARCH64_LDST8_ABS_LO12_NC:
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_LDST64_ABS_LO12_NC:
+  case R_AARCH64_LDST128_ABS_LO12_NC:
     if (auto *SS = dyn_cast<SharedSymbol<ELF64LE>>(&S))
       return SS->Sym.getType() == STT_OBJECT;
     return false;
@@ -1375,6 +1376,9 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     checkAlignment<8>(SA, Type);
     or32le(Loc, (SA & 0xFF8) << 7);
+    break;
+  case R_AARCH64_LDST128_ABS_LO12_NC:
+    or32le(Loc, (SA & 0x0FF8) << 6);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
     or32le(Loc, (SA & 0xFFF) << 10);

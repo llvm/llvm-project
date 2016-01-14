@@ -287,6 +287,7 @@ template <class ELFT> struct EHRegion {
 template <class ELFT> struct Cie : public EHRegion<ELFT> {
   Cie(EHInputSection<ELFT> *S, unsigned Index);
   std::vector<EHRegion<ELFT>> Fdes;
+  uint8_t FdeEncoding;
 };
 
 template <class ELFT>
@@ -308,6 +309,7 @@ public:
   void addSection(InputSectionBase<ELFT> *S) override;
 
 private:
+  uint8_t getFdeEncoding(ArrayRef<uint8_t> D);
   uintX_t readEntryLength(ArrayRef<uint8_t> D);
 
   std::vector<EHInputSection<ELFT> *> Sections;
@@ -429,6 +431,42 @@ private:
   uint32_t GprMask = 0;
 };
 
+// --eh-frame-hdr option tells linker to construct a header for all the
+// .eh_frame sections. This header is placed to a section named .eh_frame_hdr
+// and also to a PT_GNU_EH_FRAME segment.
+// At runtime the unwinder then can find all the PT_GNU_EH_FRAME segments by
+// calling dl_iterate_phdr.
+// This section contains a lookup table for quick binary search of FDEs.
+// Detailed info about internals can be found in Ian Lance Taylor's blog:
+// http://www.airs.com/blog/archives/460 (".eh_frame")
+// http://www.airs.com/blog/archives/462 (".eh_frame_hdr")
+template <class ELFT>
+class EhFrameHeader final : public OutputSectionBase<ELFT> {
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+
+public:
+  EhFrameHeader();
+  void writeTo(uint8_t *Buf) override;
+
+  void addFde(uint8_t Enc, size_t Off, uint8_t *PCRel);
+  void assignEhFrame(EHOutputSection<ELFT> *Sec);
+  void reserveFde();
+
+  bool Live = false;
+
+private:
+  struct FdeData {
+    uint8_t Enc;
+    size_t Off;
+    uint8_t *PCRel;
+  };
+
+  uintX_t getFdePc(uintX_t EhVA, const FdeData &F);
+
+  EHOutputSection<ELFT> *Sec = nullptr;
+  std::vector<FdeData> FdeList;
+};
+
 inline uint64_t align(uint64_t Value, uint64_t Align) {
   return llvm::RoundUpToAlignment(Value, Align);
 }
@@ -440,6 +478,7 @@ template <class ELFT> struct Out {
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Phdr Elf_Phdr;
   static DynamicSection<ELFT> *Dynamic;
+  static EhFrameHeader<ELFT> *EhFrameHdr;
   static GnuHashTableSection<ELFT> *GnuHashTab;
   static GotPltSection<ELFT> *GotPlt;
   static GotSection<ELFT> *Got;
@@ -461,6 +500,7 @@ template <class ELFT> struct Out {
 };
 
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
+template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
 template <class ELFT> GnuHashTableSection<ELFT> *Out<ELFT>::GnuHashTab;
 template <class ELFT> GotPltSection<ELFT> *Out<ELFT>::GotPlt;
 template <class ELFT> GotSection<ELFT> *Out<ELFT>::Got;
