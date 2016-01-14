@@ -251,6 +251,10 @@ class MachineFrameInfo {
   /// opaque mechanism like inline assembly or Win32 EH.
   bool HasOpaqueSPAdjustment;
 
+  /// True if the function contains operations which will lower down to
+  /// instructions which manipulate the stack pointer.
+  bool HasCopyImplyingStackAdjustment;
+
   /// True if the function contains a call to the llvm.vastart intrinsic.
   bool HasVAStart;
 
@@ -288,6 +292,7 @@ public:
     LocalFrameMaxAlign = 0;
     UseLocalStackAllocationBlock = false;
     HasOpaqueSPAdjustment = false;
+    HasCopyImplyingStackAdjustment = false;
     HasVAStart = false;
     HasMustTailInVarArgFunc = false;
     Save = nullptr;
@@ -492,6 +497,15 @@ public:
   /// Returns true if the function contains opaque dynamic stack adjustments.
   bool hasOpaqueSPAdjustment() const { return HasOpaqueSPAdjustment; }
   void setHasOpaqueSPAdjustment(bool B) { HasOpaqueSPAdjustment = B; }
+
+  /// Returns true if the function contains operations which will lower down to
+  /// instructions which manipulate the stack pointer.
+  bool hasCopyImplyingStackAdjustment() const {
+    return HasCopyImplyingStackAdjustment;
+  }
+  void setHasCopyImplyingStackAdjustment(bool B) {
+    HasCopyImplyingStackAdjustment = B;
+  }
 
   /// Returns true if the function calls the llvm.va_start intrinsic.
   bool hasVAStart() const { return HasVAStart; }

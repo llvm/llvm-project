@@ -634,7 +634,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   }
 
   if (TLI->hasCopyImplyingStackAdjustment(MF))
-    MFI->setHasOpaqueSPAdjustment(true);
+    MFI->setHasCopyImplyingStackAdjustment(true);
 
   // Freeze the set of reserved registers now that MachineFrameInfo has been
   // set up. All the information required by getReservedRegs() should be
