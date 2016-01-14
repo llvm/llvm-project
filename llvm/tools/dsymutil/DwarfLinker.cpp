@@ -1458,6 +1458,9 @@ private:
 
   /// Mapping the PCM filename to the DwoId.
   StringMap<uint64_t> ClangModules;
+
+  bool ModuleCacheHintDisplayed = false;
+  bool ArchiveHintDisplayed = false;
 };
 
 /// Similar to DWARFUnitSection::getUnitForOffset(), but returning our
@@ -3237,8 +3240,38 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
   auto &Obj =
       ModuleMap.addDebugMapObject(Path, sys::TimeValue::PosixZeroTime());
   auto ErrOrObj = loadObject(ObjHolder, Obj, ModuleMap);
-  if (!ErrOrObj)
+  if (!ErrOrObj) {
+    // Try and emit more helpful warnings by applying some heuristics.
+    StringRef ObjFile = CurrentDebugObject->getObjectFilename();
+    bool isClangModule = sys::path::extension(Filename).equals(".pcm");
+    bool isArchive = ObjFile.endswith(")");
+    if (isClangModule) {
+      sys::path::remove_filename(Path);
+      StringRef ModuleCacheDir = sys::path::parent_path(Path);
+      if (sys::fs::exists(ModuleCacheDir)) {
+        // If the module's parent directory exists, we assume that the module
+        // cache has expired and was pruned by clang.  A more adventurous
+        // dsymutil would invoke clang to rebuild the module now.
+        if (!ModuleCacheHintDisplayed) {
+          errs() << "note: The clang module cache may have expired since this "
+                    "object file was built. Rebuilding the object file will "
+                    "rebuild the module cache.\n";
+          ModuleCacheHintDisplayed = true;
+        }
+      } else if (isArchive) {
+        // If the module cache directory doesn't exist at all and the object
+        // file is inside a static library, we assume that the static library
+        // was built on a different machine. We don't want to discourage module
+        // debugging for convenience libraries within a project though.
+        if (!ArchiveHintDisplayed) {
+          errs() << "note: Module debugging should be disabled when shipping "
+                    "static libraries.\n";
+          ArchiveHintDisplayed = true;
+        }
+      }
+    }
     return;
+  }
 
   std::unique_ptr<CompileUnit> Unit;
 

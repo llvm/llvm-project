@@ -346,10 +346,6 @@ public:
     return !(isDeclarationForLinker() || isWeakForLinker());
   }
 
-  // Returns true if the alignment of the value can be unilaterally
-  // increased.
-  bool canIncreaseAlignment() const;
-
   /// This method unlinks 'this' from the containing module, but does not delete
   /// it.
   virtual void removeFromParent() = 0;

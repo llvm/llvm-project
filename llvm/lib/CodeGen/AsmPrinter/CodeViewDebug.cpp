@@ -1,4 +1,4 @@
-//===-- llvm/lib/CodeGen/AsmPrinter/WinCodeViewLineTables.cpp --*- C++ -*--===//
+//===-- llvm/lib/CodeGen/AsmPrinter/CodeViewDebug.cpp --*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains support for writing line tables info into COFF files.
+// This file contains support for writing Microsoft CodeView debug info.
 //
 //===----------------------------------------------------------------------===//
 
-#include "WinCodeViewLineTables.h"
+#include "CodeViewDebug.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCExpr.h"
@@ -22,7 +22,7 @@ using namespace llvm::codeview;
 
 namespace llvm {
 
-StringRef WinCodeViewLineTables::getFullFilepath(const MDNode *S) {
+StringRef CodeViewDebug::getFullFilepath(const MDNode *S) {
   assert(S);
   assert((isa<DICompileUnit>(S) || isa<DIFile>(S) || isa<DISubprogram>(S) ||
           isa<DILexicalBlockBase>(S)) &&
@@ -81,7 +81,7 @@ StringRef WinCodeViewLineTables::getFullFilepath(const MDNode *S) {
   return Filepath;
 }
 
-void WinCodeViewLineTables::maybeRecordLocation(DebugLoc DL,
+void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
                                                 const MachineFunction *MF) {
   const MDNode *Scope = DL.getScope();
   if (!Scope)
@@ -114,7 +114,7 @@ void WinCodeViewLineTables::maybeRecordLocation(DebugLoc DL,
   InstrInfo[MCL] = InstrInfoTy(Filename, LineNumber, ColumnNumber);
 }
 
-WinCodeViewLineTables::WinCodeViewLineTables(AsmPrinter *AP)
+CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
     : Asm(nullptr), CurFn(nullptr) {
   MachineModuleInfo *MMI = AP->MMI;
 
@@ -129,7 +129,7 @@ WinCodeViewLineTables::WinCodeViewLineTables(AsmPrinter *AP)
   Asm = AP;
 }
 
-void WinCodeViewLineTables::endModule() {
+void CodeViewDebug::endModule() {
   if (FnDebugInfo.empty())
     return;
 
@@ -195,7 +195,7 @@ static void EmitLabelDiff(MCStreamer &Streamer,
   Streamer.EmitValue(AddrDelta, Size);
 }
 
-void WinCodeViewLineTables::emitDebugInfoForFunction(const Function *GV) {
+void CodeViewDebug::emitDebugInfoForFunction(const Function *GV) {
   // For each function there is a separate subsection
   // which holds the PC to file:line table.
   const MCSymbol *Fn = Asm->getSymbol(GV);
@@ -347,7 +347,7 @@ void WinCodeViewLineTables::emitDebugInfoForFunction(const Function *GV) {
   Asm->OutStreamer->EmitLabel(LineTableEnd);
 }
 
-void WinCodeViewLineTables::beginFunction(const MachineFunction *MF) {
+void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   assert(!CurFn && "Can't process two functions at once!");
 
   if (!Asm || !Asm->MMI->hasDebugInfo())
@@ -387,7 +387,7 @@ void WinCodeViewLineTables::beginFunction(const MachineFunction *MF) {
   }
 }
 
-void WinCodeViewLineTables::endFunction(const MachineFunction *MF) {
+void CodeViewDebug::endFunction(const MachineFunction *MF) {
   if (!Asm || !CurFn)  // We haven't created any debug info for this function.
     return;
 
@@ -404,7 +404,7 @@ void WinCodeViewLineTables::endFunction(const MachineFunction *MF) {
   CurFn = nullptr;
 }
 
-void WinCodeViewLineTables::beginInstruction(const MachineInstr *MI) {
+void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   // Ignore DBG_VALUE locations and function prologue.
   if (!Asm || MI->isDebugValue() || MI->getFlag(MachineInstr::FrameSetup))
     return;

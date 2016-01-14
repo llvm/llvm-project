@@ -1,0 +1,65 @@
+; The following two object files were generated using the following command:
+;   $ cl /d2Zi+ /Zc:inline /O2 /Z7 /c t.cpp
+; The contents of t.cpp follow:
+;   static void bar() {
+;     __asm nop
+;   }
+;   static void baz() {
+;     __asm nop
+;   }
+;   static __forceinline void foo() {
+;     __asm nop
+;   #include "a.h"
+;   #include "b.h"
+;     __asm nop
+;     goto forwards;
+;
+;   backwards:
+;     __asm nop
+;     return;
+;
+;   forwards:
+;     __asm rep nop
+;     goto backwards;
+;   }
+;   int main() {
+;     bar();
+;     baz();
+;     foo();
+;   }
+;
+; Both a.h and b.h contain "__asm nop".
+
+RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/codeview-inlining.obj.coff | FileCheck %s
+
+; FIXME: If we were more clever, we could turn FileIDs into paths.
+
+; CHECK:       SubSectionType: InlineeLines (0xF6)
+; CHECK-NEXT:  SubSectionSize: 0x3C
+; CHECK-NEXT:  InlineeSourceLine {
+; CHECK-NEXT:    Inlinee: bar (0x1002)
+; CHECK-NEXT:    FileID: 0x30
+; CHECK-NEXT:    SourceLineNum: 2
+; CHECK-NEXT:    ExtraFileCount: 0
+; CHECK-NEXT:    ExtraFiles [
+; CHECK-NEXT:    ]
+; CHECK-NEXT:  }
+; CHECK-NEXT:  InlineeSourceLine {
+; CHECK-NEXT:    Inlinee: baz (0x1003)
+; CHECK-NEXT:    FileID: 0x30
+; CHECK-NEXT:    SourceLineNum: 5
+; CHECK-NEXT:    ExtraFileCount: 0
+; CHECK-NEXT:    ExtraFiles [
+; CHECK-NEXT:    ]
+; CHECK-NEXT:  }
+;   The 'foo' inline site has extra files due to includes.
+; CHECK-NEXT:  InlineeSourceLine {
+; CHECK-NEXT:    Inlinee: foo (0x1004)
+; CHECK-NEXT:    FileID: 0x0
+; CHECK-NEXT:    SourceLineNum: 1
+; CHECK-NEXT:    ExtraFileCount: 2
+; CHECK-NEXT:    ExtraFiles [
+; CHECK-NEXT:      FileID: 0x18
+; CHECK-NEXT:      FileID: 0x30
+; CHECK-NEXT:    ]
+; CHECK-NEXT:  }

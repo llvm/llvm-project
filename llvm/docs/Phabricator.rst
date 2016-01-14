@@ -127,18 +127,9 @@ a change from Phabricator.
 Committing a change
 -------------------
 
-Arcanist can manage the commit transparently. It will retrieve the description,
-reviewers, the ``Differential Revision``, etc from the review and commit it to the repository.
-
-::
-
-  arc patch D<Revision>
-  arc commit --revision D<Revision>
-
-
-When committing a change that has been reviewed using
-Phabricator, the convention is for the commit message to end with the
-line:
+Once a patch has been reviewed and approved on Phabricator it can then be
+committed to trunk.  There are multiple workflows to achieve this. Whichever
+method you follow it is recommend that your commit message ends with the line:
 
 ::
 
@@ -147,17 +138,69 @@ line:
 where ``<URL>`` is the URL for the code review, starting with
 ``http://reviews.llvm.org/``.
 
-Note that Arcanist will add this automatically.
-
 This allows people reading the version history to see the review for
-context.  This also allows Phabricator to detect the commit, close the
+context. This also allows Phabricator to detect the commit, close the
 review, and add a link from the review to the commit.
 
-If you use ``git`` or ``svn`` to commit the change and forget to add the line
-to your commit message, you should close the review manually. In the web UI,
-under "Leap Into Action" put the SVN revision number in the Comment, set the
-Action to "Close Revision" and click Submit. Note the review must have been
-Accepted first.
+Note that if you use the Arcanist tool the ``Differential Revision`` line will
+be added automatically. If you don't want to use Arcanist, you can add the
+``Differential Revision`` line (as the last line) to the commit message
+yourself.
+
+Using the Arcanist tool can simplify the process of committing reviewed code
+as it will retrieve reviewers, the ``Differential Revision``, etc from the review
+and place it in the commit message. Several methods of using Arcanist to commit
+code are given below. If you do not wish to use Arcanist then simply commit
+the reviewed patch as you would normally.
+
+Note that if you commit the change without using Arcanist and forget to add the
+``Differential Revision`` line to your commit message then it is recommended
+that you close the review manually. In the web UI, under "Leap Into Action" put
+the SVN revision number in the Comment, set the Action to "Close Revision" and
+click Submit.  Note the review must have been Accepted first.
+
+Subversion and Arcanist
+^^^^^^^^^^^^^^^^^^^^^^^
+
+On a clean Subversion working copy run the following (where ``<Revision>`` is
+the Phabricator review number):
+
+::
+
+  arc patch D<Revision>
+  arc commit --revision D<Revision>
+
+The first command will take the latest version of the reviewed patch and apply it to the working
+copy. The second command will commit this revision to trunk.
+
+git-svn and Arcanist
+^^^^^^^^^^^^^^^^^^^^
+
+This presumes that the git repository has been configured as described in :ref:`developers-work-with-git-svn`.
+
+On a clean Git repository on an up to date ``master`` branch run the
+following (where ``<Revision>`` is the Phabricator review number):
+
+::
+
+  arc patch D<Revision>
+
+
+This will create a new branch called ``arcpatch-D<Revision>`` based on the
+current ``master`` and will create a commit corresponding to ``D<Revision>`` with a
+commit message derived from information in the Phabricator review.
+
+Check you are happy with the commit message and amend it if necessary. Now switch to
+the ``master`` branch and add the new commit to it and commit it to trunk. This
+can be done by running the following:
+
+::
+
+  git checkout master
+  git merge --ff-only arcpatch-D<Revision>
+  git svn dcommit
+
+
 
 Abandoning a change
 -------------------

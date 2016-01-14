@@ -2,7 +2,7 @@
 
 ; ARM & AArch64 run an extra SimplifyCFG which disrupts this test.
 ; Hexagon crashes (PR23377)
-; XFAIL: arm,aarch64,hexagon
+; XFAIL: arm,aarch64
 
 ; Make sure we have the correct weight attached to each successor.
 define i32 @test2(i32 %x) nounwind uwtable readnone ssp {

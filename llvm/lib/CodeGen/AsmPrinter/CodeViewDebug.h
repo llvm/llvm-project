@@ -1,4 +1,4 @@
-//===-- llvm/lib/CodeGen/AsmPrinter/WinCodeViewLineTables.h ----*- C++ -*--===//
+//===-- llvm/lib/CodeGen/AsmPrinter/CodeViewDebug.h ----*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains support for writing line tables info into COFF files.
+// This file contains support for writing Microsoft CodeView debug info.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_WINCODEVIEWLINETABLES_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_WINCODEVIEWLINETABLES_H
+#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
+#define LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 
 #include "AsmPrinterHandler.h"
 #include "llvm/ADT/DenseMap.h"
@@ -29,7 +29,7 @@
 
 namespace llvm {
 /// \brief Collects and handles line tables information in a CodeView format.
-class LLVM_LIBRARY_VISIBILITY WinCodeViewLineTables : public AsmPrinterHandler {
+class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public AsmPrinterHandler {
   AsmPrinter *Asm;
   DebugLoc PrevInstLoc;
 
@@ -114,7 +114,7 @@ class LLVM_LIBRARY_VISIBILITY WinCodeViewLineTables : public AsmPrinterHandler {
   void emitDebugInfoForFunction(const Function *GV);
 
 public:
-  WinCodeViewLineTables(AsmPrinter *Asm);
+  CodeViewDebug(AsmPrinter *Asm);
 
   void setSymbolSize(const llvm::MCSymbol *, uint64_t) override {}
 

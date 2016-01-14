@@ -1,13 +1,26 @@
-Test for module-related warnings.
-This reuses the files from the modules.m testcase.
+# Test for module-related warnings.
+# This reuses the inputs from the modules.m testcase.
+#
+# RUN: rm -rf %t.dir && mkdir %t.dir
+# RUN: cp %p/../Inputs/modules/1.o %p/../Inputs/modules/Foo.pcm %t.dir
+#
+# RUN: llvm-dsymutil -f -oso-prepend-path=%t.dir -y \
+# RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck %s
+#
+# Module-not-found should be reported only once.
+# The exact error message depends on the OS so we don't check for it.
+# CHECK:     warning: {{.*}}Bar.pcm:
+# CHECK-NOT: warning: {{.*}}Bar.pcm:
+#
+# RUN: cp %p/../Inputs/modules/libstatic.a %t.dir
+# RUN: llvm-dsymutil -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
+# CHECK: rebuild the module cache
+# CHECK-NOT: static libraries
 
-RUN: rm -rf %t.dir && mkdir %t.dir
-RUN: cp %p/../Inputs/modules/1.o %p/../Inputs/modules/Foo.pcm %t.dir
-
-RUN: llvm-dsymutil -f -oso-prepend-path=%t.dir -y \
-RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck %s
-
-Module-not-found should be reported only once.
-The exact error message deoends on the OS so we don't check for it.
-CHECK:     warning: {{.*}}Bar.pcm:
-CHECK-NOT: warning: {{.*}}Bar.pcm:
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: libstatic.a(1.o)
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...

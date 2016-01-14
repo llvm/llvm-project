@@ -1742,8 +1742,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
       // over-aligning global variables that have an explicit section is
       // forbidden.
       GlobalVariable *GV;
-      if ((GV = dyn_cast<GlobalVariable>(Val)) && GV->canIncreaseAlignment() &&
-          GV->getAlignment() < PrefAlign &&
+      if ((GV = dyn_cast<GlobalVariable>(Val)) && GV->hasUniqueInitializer() &&
+          !GV->hasSection() && GV->getAlignment() < PrefAlign &&
           DL->getTypeAllocSize(GV->getType()->getElementType()) >=
               MinSize + Offset2)
         GV->setAlignment(PrefAlign);
