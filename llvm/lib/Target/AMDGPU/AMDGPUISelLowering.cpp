@@ -572,6 +572,12 @@ void AMDGPUTargetLowering::AnalyzeFormalArguments(CCState &State,
   State.AnalyzeFormalArguments(Ins, CC_AMDGPU);
 }
 
+void AMDGPUTargetLowering::AnalyzeReturn(CCState &State,
+                           const SmallVectorImpl<ISD::OutputArg> &Outs) const {
+
+  State.AnalyzeReturn(Outs, RetCC_SI);
+}
+
 SDValue AMDGPUTargetLowering::LowerReturn(
                                      SDValue Chain,
                                      CallingConv::ID CallConv,

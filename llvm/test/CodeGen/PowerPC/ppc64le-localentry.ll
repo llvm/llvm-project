@@ -17,11 +17,11 @@ define i64 @use_toc(i64 %a) nounwind {
 entry:
 ; CHECK-LABEL: @use_toc
 ; CHECK-NEXT: .L{{.*}}:
-; CHECK-NEXT: .Ltmp[[TMP1:[0-9]+]]:
-; CHECK-NEXT: addis 2, 12, .TOC.-.Ltmp[[TMP1]]@ha
-; CHECK-NEXT: addi 2, 2, .TOC.-.Ltmp[[TMP1]]@l
-; CHECK-NEXT: .Ltmp[[TMP2:[0-9]+]]:
-; CHECK-NEXT: .localentry use_toc, .Ltmp[[TMP2]]-.Ltmp[[TMP1]]
+; CHECK-NEXT: .Lfunc_gep[[FN:[0-9]+]]:
+; CHECK-NEXT: addis 2, 12, .TOC.-.Lfunc_gep[[FN]]@ha
+; CHECK-NEXT: addi 2, 2, .TOC.-.Lfunc_gep[[FN]]@l
+; CHECK-NEXT: .Lfunc_lep[[FN]]:
+; CHECK-NEXT: .localentry use_toc, .Lfunc_lep[[FN]]-.Lfunc_gep[[FN]]
 ; CHECK-NEXT: %entry
   %0 = load i64, i64* @number64, align 8
   %cmp = icmp eq i64 %0, %a
@@ -34,11 +34,11 @@ define void @use_toc_implicit() nounwind {
 entry:
 ; CHECK-LABEL: @use_toc_implicit
 ; CHECK-NEXT: .L{{.*}}:
-; CHECK-NEXT: .Ltmp[[TMP1:[0-9]+]]:
-; CHECK-NEXT: addis 2, 12, .TOC.-.Ltmp[[TMP1]]@ha
-; CHECK-NEXT: addi 2, 2, .TOC.-.Ltmp[[TMP1]]@l
-; CHECK-NEXT: .Ltmp[[TMP2:[0-9]+]]:
-; CHECK-NEXT: .localentry use_toc_implicit, .Ltmp[[TMP2]]-.Ltmp[[TMP1]]
+; CHECK-NEXT: .Lfunc_gep[[FN:[0-9]+]]:
+; CHECK-NEXT: addis 2, 12, .TOC.-.Lfunc_gep[[FN]]@ha
+; CHECK-NEXT: addi 2, 2, .TOC.-.Lfunc_gep[[FN]]@l
+; CHECK-NEXT: .Lfunc_lep[[FN]]:
+; CHECK-NEXT: .localentry use_toc_implicit, .Lfunc_lep[[FN]]-.Lfunc_gep[[FN]]
 ; CHECK-NEXT: %entry
   call void @callee()
   ret void

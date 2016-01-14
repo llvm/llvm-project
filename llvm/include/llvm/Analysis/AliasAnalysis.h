@@ -951,16 +951,14 @@ ModRefInfo AAResultBase<DerivedT>::getModRefInfo(ImmutableCallSite CS1,
   return Mask;
 }
 
-/// isNoAliasCall - Return true if this pointer is returned by a noalias
-/// function.
+/// Return true if this pointer is returned by a noalias function.
 bool isNoAliasCall(const Value *V);
 
-/// isNoAliasArgument - Return true if this is an argument with the noalias
-/// attribute.
+/// Return true if this is an argument with the noalias attribute.
 bool isNoAliasArgument(const Value *V);
 
-/// isIdentifiedObject - Return true if this pointer refers to a distinct and
-/// identifiable object.  This returns true for:
+/// Return true if this pointer refers to a distinct and identifiable object.
+/// This returns true for:
 ///    Global Variables and Functions (but not Global Aliases)
 ///    Allocas
 ///    ByVal and NoAlias Arguments
@@ -968,8 +966,8 @@ bool isNoAliasArgument(const Value *V);
 ///
 bool isIdentifiedObject(const Value *V);
 
-/// isIdentifiedFunctionLocal - Return true if V is umabigously identified
-/// at the function-level. Different IdentifiedFunctionLocals can't alias.
+/// Return true if V is umabigously identified at the function-level.
+/// Different IdentifiedFunctionLocals can't alias.
 /// Further, an IdentifiedFunctionLocal can not alias with any function
 /// arguments other than itself, which is not necessarily true for
 /// IdentifiedObjects.

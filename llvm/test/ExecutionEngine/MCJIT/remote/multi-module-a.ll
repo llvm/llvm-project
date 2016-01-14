@@ -1,5 +1,5 @@
 ; RUN: %lli -extra-module=%p/Inputs/multi-module-b.ll -extra-module=%p/Inputs/multi-module-c.ll -disable-lazy-compilation=true -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
-; XFAIL: win32
+; XFAIL: mingw32,win32
 
 declare i32 @FB()
 

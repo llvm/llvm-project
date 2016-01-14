@@ -28,79 +28,80 @@ RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifunction-linetabl
 RUN:   | FileCheck %s -check-prefix MFUN64
 
 MFUN32:      CodeViewDebugInfo [
+MFUN32-NEXT:   Section: .debug$S (2)
 MFUN32-NEXT:   Magic: 0x4
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF1
-MFUN32-NEXT:     PayloadSize: 0x52
+MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN32-NEXT:     SubSectionSize: 0x52
+MFUN32:        ]
+MFUN32:       Subsection [
+MFUN32-NEXT:     SubSectionType: FrameData (0xF5)
+MFUN32-NEXT:     SubSectionSize: 0x24
 MFUN32:        ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF5
-MFUN32-NEXT:     PayloadSize: 0x24
-MFUN32:        ]
-MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF1
-MFUN32-NEXT:     PayloadSize: 0x4B
+MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN32-NEXT:     SubSectionSize: 0x4B
 MFUN32:          ProcStart {
-MFUN32-NEXT:       DisplayName: x
-MFUN32-NEXT:       Section: _x
-MFUN32-NEXT:       CodeSize: 0xA
-MFUN32-NEXT:     }
-MFUN32-NEXT:     ProcEnd
+MFUN32:            CodeSize: 0xA
+MFUN32:            DisplayName: x
+MFUN32:            LinkageName: _x
+MFUN32:          }
+MFUN32:          ProcEnd
 MFUN32:        ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF2
-MFUN32-NEXT:     PayloadSize: 0x30
+MFUN32-NEXT:     SubSectionType: Lines (0xF2)
+MFUN32-NEXT:     SubSectionSize: 0x30
 MFUN32:          LinkageName: _x
 MFUN32-NEXT:   ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF5
-MFUN32-NEXT:     PayloadSize: 0x24
+MFUN32-NEXT:     SubSectionType: FrameData (0xF5)
+MFUN32-NEXT:     SubSectionSize: 0x24
 MFUN32:        ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF1
-MFUN32-NEXT:     PayloadSize: 0x4B
+MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN32-NEXT:     SubSectionSize: 0x4B
 MFUN32:          ProcStart {
-MFUN32-NEXT:       DisplayName: y
-MFUN32-NEXT:       Section: _y
-MFUN32-NEXT:       CodeSize: 0xA
-MFUN32-NEXT:     }
-MFUN32-NEXT:     ProcEnd
+MFUN32:            CodeSize: 0xA
+MFUN32:            DisplayName: y
+MFUN32:            LinkageName: _y
+MFUN32:          }
+MFUN32:          ProcEnd
 MFUN32:        ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF2
-MFUN32-NEXT:     PayloadSize: 0x30
+MFUN32-NEXT:     SubSectionType: Lines (0xF2)
+MFUN32-NEXT:     SubSectionSize: 0x30
 MFUN32:          LinkageName: _y
 MFUN32-NEXT:   ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF5
-MFUN32-NEXT:     PayloadSize: 0x24
+MFUN32-NEXT:     SubSectionType: FrameData (0xF5)
+MFUN32-NEXT:     SubSectionSize: 0x24
 MFUN32:        ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF1
-MFUN32-NEXT:     PayloadSize: 0x4B
+MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN32-NEXT:     SubSectionSize: 0x4B
 MFUN32:          ProcStart {
-MFUN32-NEXT:       DisplayName: f
-MFUN32-NEXT:       Section: _f
-MFUN32-NEXT:       CodeSize: 0x14
-MFUN32-NEXT:     }
-MFUN32-NEXT:     ProcEnd
+MFUN32:            CodeSize: 0x14
+MFUN32:            DisplayName: f
+MFUN32:            LinkageName: _f
+MFUN32:          }
+MFUN32:          ProcEnd
 MFUN32:        ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF2
-MFUN32-NEXT:     PayloadSize: 0x40
+MFUN32-NEXT:     SubSectionType: Lines (0xF2)
+MFUN32-NEXT:     SubSectionSize: 0x40
 MFUN32:          LinkageName: _f
 MFUN32-NEXT:   ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF4
-MFUN32-NEXT:     PayloadSize: 0x18
+MFUN32-NEXT:     SubSectionType: FileChecksums (0xF4)
+MFUN32-NEXT:     SubSectionSize: 0x18
 MFUN32:        ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF3
-MFUN32-NEXT:     PayloadSize: 0x46
+MFUN32-NEXT:     SubSectionType: StringTable (0xF3)
+MFUN32-NEXT:     SubSectionSize: 0x46
 MFUN32:        ]
 MFUN32-NEXT:   Subsection [
-MFUN32-NEXT:     Type: 0xF1
-MFUN32-NEXT:     PayloadSize: 0x8
+MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN32-NEXT:     SubSectionSize: 0x8
 MFUN32:        ]
 MFUN32-NEXT:   FunctionLineTable [
 MFUN32-NEXT      LinkageName: _x
@@ -181,70 +182,70 @@ MFUN32-NEXT          IsStatement: Yes
 MFUN32-NEXT        ]
 MFUN32-NEXT      ]
 MFUN32-NEXT    ]
-MFUN32-NEXT  ]
+MFUN32:      ]
 
 MFUN64:      CodeViewDebugInfo [
-MFUN64-NEXT:   Magic: 0x4
+MFUN64:        Magic: 0x4
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF1
-MFUN64-NEXT:     PayloadSize: 0x52
+MFUN64-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN64-NEXT:     SubSectionSize: 0x52
 MFUN64:        ]
-MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF1
-MFUN64-NEXT:     PayloadSize: 0x4B
+MFUN64:        Subsection [
+MFUN64-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN64-NEXT:     SubSectionSize: 0x4B
 MFUN64:          ProcStart {
-MFUN64-NEXT:       DisplayName: x
-MFUN64-NEXT:       Section: x
-MFUN64-NEXT:       CodeSize: 0xE
-MFUN64-NEXT:     }
-MFUN64-NEXT:     ProcEnd
+MFUN64:            CodeSize: 0xE
+MFUN64:            DisplayName: x
+MFUN64:            LinkageName: x
+MFUN64:          }
+MFUN64:          ProcEnd
 MFUN64:        ]
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF2
-MFUN64-NEXT:     PayloadSize: 0x30
+MFUN64-NEXT:     SubSectionType: Lines (0xF2)
+MFUN64-NEXT:     SubSectionSize: 0x30
 MFUN64:          LinkageName: x
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF1
-MFUN64-NEXT:     PayloadSize: 0x4B
+MFUN64-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN64-NEXT:     SubSectionSize: 0x4B
 MFUN64:          ProcStart {
-MFUN64-NEXT:       DisplayName: y
-MFUN64-NEXT:       Section: y
-MFUN64-NEXT:       CodeSize: 0xE
-MFUN64-NEXT:     }
-MFUN64-NEXT:     ProcEnd
+MFUN64:            CodeSize: 0xE
+MFUN64:            DisplayName: y
+MFUN64:            LinkageName: y
+MFUN64:          }
+MFUN64:          ProcEnd
 MFUN64:        ]
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF2
-MFUN64-NEXT:     PayloadSize: 0x30
+MFUN64-NEXT:     SubSectionType: Lines (0xF2)
+MFUN64-NEXT:     SubSectionSize: 0x30
 MFUN64:          LinkageName: y
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF1
-MFUN64-NEXT:     PayloadSize: 0x4B
+MFUN64-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN64-NEXT:     SubSectionSize: 0x4B
 MFUN64:          ProcStart {
-MFUN64-NEXT:       DisplayName: f
-MFUN64-NEXT:       Section: f
-MFUN64-NEXT:       CodeSize: 0x18
-MFUN64-NEXT:     }
-MFUN64-NEXT:     ProcEnd
+MFUN64:            CodeSize: 0x18
+MFUN64:            DisplayName: f
+MFUN64:            LinkageName: f
+MFUN64:          }
+MFUN64:          ProcEnd
 MFUN64:        ]
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF2
-MFUN64-NEXT:     PayloadSize: 0x40
+MFUN64-NEXT:     SubSectionType: Lines (0xF2)
+MFUN64-NEXT:     SubSectionSize: 0x40
 MFUN64:          LinkageName: f
 MFUN64-NEXT:   ]
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF4
-MFUN64-NEXT:     PayloadSize: 0x18
+MFUN64-NEXT:     SubSectionType: FileChecksums (0xF4)
+MFUN64-NEXT:     SubSectionSize: 0x18
 MFUN64:        ]
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF3
-MFUN64-NEXT:     PayloadSize: 0xD
+MFUN64-NEXT:     SubSectionType: StringTable (0xF3)
+MFUN64-NEXT:     SubSectionSize: 0xD
 MFUN64:        ]
 MFUN64-NEXT:   Subsection [
-MFUN64-NEXT:     Type: 0xF1
-MFUN64-NEXT:     PayloadSize: 0x8
+MFUN64-NEXT:     SubSectionType: Symbols (0xF1)
+MFUN64-NEXT:     SubSectionSize: 0x8
 MFUN64:        ]
 MFUN64-NEXT:   FunctionLineTable [
 MFUN64-NEXT:     LinkageName: x
@@ -325,7 +326,7 @@ MFUN64-NEXT:         IsStatement: Yes
 MFUN64-NEXT:       ]
 MFUN64-NEXT:     ]
 MFUN64-NEXT:   ]
-MFUN64-NEXT: ]
+MFUN64:      ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; The following two object files were generated using the following command:
@@ -352,41 +353,41 @@ RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/multifile-linetables.o
 RUN:   | FileCheck %s -check-prefix MFILE64
 
 MFILE32:      CodeViewDebugInfo [
-MFILE32-NEXT:   Magic: 0x4
+MFILE32:        Magic: 0x4
 MFILE32-NEXT:   Subsection [
-MFILE32-NEXT:     Type: 0xF1
-MFILE32-NEXT:     PayloadSize: 0x51
+MFILE32-NEXT:     SubSectionType: Symbols (0xF1)
+MFILE32-NEXT:     SubSectionSize: 0x51
+MFILE32:        ]
+MFILE32:        Subsection [
+MFILE32-NEXT:     SubSectionType: FrameData (0xF5)
+MFILE32-NEXT:     SubSectionSize: 0x24
 MFILE32:        ]
 MFILE32-NEXT:   Subsection [
-MFILE32-NEXT:     Type: 0xF5
-MFILE32-NEXT:     PayloadSize: 0x24
-MFILE32:        ]
-MFILE32-NEXT:   Subsection [
-MFILE32-NEXT:     Type: 0xF1
-MFILE32-NEXT:     PayloadSize: 0x4B
+MFILE32-NEXT:     SubSectionType: Symbols (0xF1)
+MFILE32-NEXT:     SubSectionSize: 0x4B
 MFILE32:          ProcStart {
-MFILE32-NEXT:       DisplayName: f
-MFILE32-NEXT:       Section: _f
-MFILE32-NEXT:       CodeSize: 0x14
-MFILE32-NEXT:     }
-MFILE32-NEXT:     ProcEnd
+MFILE32:            CodeSize: 0x14
+MFILE32:            DisplayName: f
+MFILE32:            LinkageName: _f
+MFILE32:          }
+MFILE32:          ProcEnd
 MFILE32:        ]
 MFILE32-NEXT:   Subsection [
-MFILE32-NEXT:     Type: 0xF2
-MFILE32-NEXT:     PayloadSize: 0x64
+MFILE32-NEXT:     SubSectionType: Lines (0xF2)
+MFILE32-NEXT:     SubSectionSize: 0x64
 MFILE32:          LinkageName: _f
 MFILE32-NEXT:   ]
 MFILE32-NEXT:   Subsection [
-MFILE32-NEXT:     Type: 0xF4
-MFILE32-NEXT:     PayloadSize: 0x28
+MFILE32-NEXT:     SubSectionType: FileChecksums (0xF4)
+MFILE32-NEXT:     SubSectionSize: 0x28
 MFILE32:        ]
 MFILE32-NEXT:   Subsection [
-MFILE32-NEXT:     Type: 0xF3
-MFILE32-NEXT:     PayloadSize: 0x57
+MFILE32-NEXT:     SubSectionType: StringTable (0xF3)
+MFILE32-NEXT:     SubSectionSize: 0x57
 MFILE32:        ]
 MFILE32-NEXT:   Subsection [
-MFILE32-NEXT:     Type: 0xF1
-MFILE32-NEXT:     PayloadSize: 0x8
+MFILE32-NEXT:     SubSectionType: Symbols (0xF1)
+MFILE32-NEXT:     SubSectionSize: 0x8
 MFILE32:        ]
 MFILE32-NEXT:   FunctionLineTable [
 MFILE32-NEXT:     LinkageName: _f
@@ -430,40 +431,40 @@ MFILE32-NEXT:         IsStatement: Yes
 MFILE32-NEXT:       ]
 MFILE32-NEXT:     ]
 MFILE32-NEXT:   ]
-MFILE32-NEXT: ]
+MFILE32:      ]
 
 MFILE64:      CodeViewDebugInfo [
-MFILE64-NEXT:   Magic: 0x4
+MFILE64:        Magic: 0x4
 MFILE64-NEXT:   Subsection [
-MFILE64-NEXT:     Type: 0xF1
-MFILE64-NEXT:     PayloadSize: 0x51
+MFILE64-NEXT:     SubSectionType: Symbols (0xF1)
+MFILE64-NEXT:     SubSectionSize: 0x51
 MFILE64:        ]
-MFILE64-NEXT:   Subsection [
-MFILE64-NEXT:     Type: 0xF1
-MFILE64-NEXT:     PayloadSize: 0x4B
+MFILE64:        Subsection [
+MFILE64-NEXT:     SubSectionType: Symbols (0xF1)
+MFILE64-NEXT:     SubSectionSize: 0x4B
 MFILE64:          ProcStart {
-MFILE64-NEXT:       DisplayName: f
-MFILE64-NEXT:       Section: f
-MFILE64-NEXT:       CodeSize: 0x18
-MFILE64-NEXT:     }
-MFILE64-NEXT:     ProcEnd
+MFILE64:            CodeSize: 0x18
+MFILE64:            DisplayName: f
+MFILE64:            LinkageName: f
+MFILE64:          }
+MFILE64:          ProcEnd
 MFILE64:        ]
 MFILE64-NEXT:   Subsection [
-MFILE64-NEXT:     Type: 0xF2
-MFILE64-NEXT:     PayloadSize: 0x64
+MFILE64-NEXT:     SubSectionType: Lines (0xF2)
+MFILE64-NEXT:     SubSectionSize: 0x64
 MFILE64:          LinkageName: f
 MFILE64-NEXT:   ]
 MFILE64-NEXT:   Subsection [
-MFILE64-NEXT:     Type: 0xF4
-MFILE64-NEXT:     PayloadSize: 0x28
+MFILE64-NEXT:     SubSectionType: FileChecksums (0xF4)
+MFILE64-NEXT:     SubSectionSize: 0x28
 MFILE64:        ]
 MFILE64-NEXT:   Subsection [
-MFILE64-NEXT:     Type: 0xF3
-MFILE64-NEXT:     PayloadSize: 0x1E
+MFILE64-NEXT:     SubSectionType: StringTable (0xF3)
+MFILE64-NEXT:     SubSectionSize: 0x1E
 MFILE64:        ]
 MFILE64-NEXT:   Subsection [
-MFILE64-NEXT:     Type: 0xF1
-MFILE64-NEXT:     PayloadSize: 0x8
+MFILE64-NEXT:     SubSectionType: Symbols (0xF1)
+MFILE64-NEXT:     SubSectionSize: 0x8
 MFILE64:        ]
 MFILE64-NEXT:  FunctionLineTable [
 MFILE64-NEXT:    LinkageName: f
@@ -506,7 +507,7 @@ MFILE64-NEXT:        LineNumberEndDelta: 0
 MFILE64-NEXT:        IsStatement: Yes
 MFILE64-NEXT:      ]
 MFILE64-NEXT:    ]
-MFILE64-NEXT: ]
+MFILE64:      ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; The following object files were generated using the following command:
@@ -528,10 +529,10 @@ RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/comdat-function-lineta
 RUN:   | FileCheck %s -check-prefix MCOMDAT
 
 MCOMDAT:      ProcStart {
-MCOMDAT-NEXT:   DisplayName: f
-MCOMDAT-NEXT:   Section: ?f@@YAHXZ
-MCOMDAT-NEXT:   CodeSize: 0x7
-MCOMDAT-NEXT: }
+MCOMDAT:        CodeSize: 0x7
+MCOMDAT:        DisplayName: f
+MCOMDAT:        LinkageName: ?f@@YAHXZ
+MCOMDAT:      }
 MCOMDAT:      FunctionLineTable [
 MCOMDAT-NEXT:   LinkageName: ?f@@YAHXZ
 MCOMDAT-NEXT:   Flags: 0x0
@@ -556,10 +557,10 @@ MCOMDAT-NEXT:     ]
 MCOMDAT-NEXT:   ]
 MCOMDAT-NEXT: ]
 MCOMDAT:      ProcStart {
-MCOMDAT-NEXT:   DisplayName: g
-MCOMDAT-NEXT:   Section: ?g@@YAHXZ
-MCOMDAT-NEXT:   CodeSize: 0x7
-MCOMDAT-NEXT: }
+MCOMDAT:        CodeSize: 0x7
+MCOMDAT:        DisplayName: g
+MCOMDAT:        LinkageName: ?g@@YAHXZ
+MCOMDAT:      }
 MCOMDAT:      FunctionLineTable [
 MCOMDAT-NEXT:   LinkageName: ?g@@YAHXZ
 MCOMDAT-NEXT:   Flags: 0x0

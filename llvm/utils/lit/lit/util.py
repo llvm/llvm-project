@@ -267,7 +267,14 @@ def killProcessAndChildren(pid):
     import psutil
     try:
         psutilProc = psutil.Process(pid)
-        for child in psutilProc.children(recursive=True):
+        # Handle the different psutil API versions
+        try:
+            # psutil >= 2.x
+            children_iterator = psutilProc.children(recursive=True)
+        except AttributeError:
+            # psutil 1.x
+            children_iterator = psutilProc.get_children(recursive=True)
+        for child in children_iterator:
             try:
                 child.kill()
             except psutil.NoSuchProcess:

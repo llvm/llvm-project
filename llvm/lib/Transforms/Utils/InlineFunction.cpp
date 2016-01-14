@@ -506,10 +506,9 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
   const Function *CalledFunc = CS.getCalledFunction();
   SmallVector<const Argument *, 4> NoAliasArgs;
 
-  for (const Argument &I : CalledFunc->args()) {
-    if (I.hasNoAliasAttr() && !I.hasNUses(0))
-      NoAliasArgs.push_back(&I);
-  }
+  for (const Argument &Arg : CalledFunc->args())
+    if (Arg.hasNoAliasAttr() && !Arg.use_empty())
+      NoAliasArgs.push_back(&Arg);
 
   if (NoAliasArgs.empty())
     return;
@@ -590,17 +589,16 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
             IsArgMemOnlyCall = true;
         }
 
-        for (ImmutableCallSite::arg_iterator AI = ICS.arg_begin(),
-             AE = ICS.arg_end(); AI != AE; ++AI) {
+        for (Value *Arg : ICS.args()) {
           // We need to check the underlying objects of all arguments, not just
           // the pointer arguments, because we might be passing pointers as
           // integers, etc.
           // However, if we know that the call only accesses pointer arguments,
           // then we only need to check the pointer arguments.
-          if (IsArgMemOnlyCall && !(*AI)->getType()->isPointerTy())
+          if (IsArgMemOnlyCall && !Arg->getType()->isPointerTy())
             continue;
 
-          PtrArgs.push_back(*AI);
+          PtrArgs.push_back(Arg);
         }
       }
 
@@ -618,9 +616,9 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
       SmallVector<Metadata *, 4> Scopes, NoAliases;
 
       SmallSetVector<const Argument *, 4> NAPtrArgs;
-      for (unsigned i = 0, ie = PtrArgs.size(); i != ie; ++i) {
+      for (const Value *V : PtrArgs) {
         SmallVector<Value *, 4> Objects;
-        GetUnderlyingObjects(const_cast<Value*>(PtrArgs[i]),
+        GetUnderlyingObjects(const_cast<Value*>(V),
                              Objects, DL, /* LI = */ nullptr);
 
         for (Value *O : Objects)

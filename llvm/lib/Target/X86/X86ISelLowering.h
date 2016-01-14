@@ -317,9 +317,8 @@ namespace llvm {
       VSHLI, VSRLI, VSRAI,
 
       // Bit rotate by immediate
+      VROTLI, VROTRI,
 
-      VROTLI,
-      
       // Vector packed double/float comparison.
       CMPP,
 

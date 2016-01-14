@@ -17,6 +17,7 @@
 
 namespace llvm {
 class MCAssembler;
+class MCContext;
 class MCFixup;
 class MCFragment;
 class MCObjectWriter;
@@ -64,8 +65,8 @@ public:
 
   virtual ~MCELFObjectTargetWriter() {}
 
-  virtual unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                                bool IsPCRel) const = 0;
+  virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                                const MCFixup &Fixup, bool IsPCRel) const = 0;
 
   virtual bool needsRelocateWithSymbol(const MCSymbol &Sym,
                                        unsigned Type) const;

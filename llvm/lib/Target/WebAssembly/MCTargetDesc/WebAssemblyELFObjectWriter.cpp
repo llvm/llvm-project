@@ -25,8 +25,8 @@ public:
   WebAssemblyELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
 protected:
-  unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                        bool IsPCRel) const override;
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override;
 };
 } // end anonymous namespace
 
@@ -35,7 +35,8 @@ WebAssemblyELFObjectWriter::WebAssemblyELFObjectWriter(bool Is64Bit,
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_WEBASSEMBLY,
                               /*HasRelocationAddend=*/false) {}
 
-unsigned WebAssemblyELFObjectWriter::GetRelocType(const MCValue &Target,
+unsigned WebAssemblyELFObjectWriter::getRelocType(MCContext &Ctx,
+                                                  const MCValue &Target,
                                                   const MCFixup &Fixup,
                                                   bool IsPCRel) const {
   // WebAssembly functions are not allocated in the address space. To resolve a

@@ -94,6 +94,10 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
                         AnalysisID StartAfter, AnalysisID StopAfter,
                         MachineFunctionInitializer *MFInitializer = nullptr) {
 
+  // When in emulated TLS mode, add the LowerEmuTLS pass.
+  if (TM->Options.EmulatedTLS)
+    PM.add(createLowerEmuTLSPass(TM));
+
   // Add internal analysis passes from the target machine.
   PM.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
 

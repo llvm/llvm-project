@@ -597,18 +597,20 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     // First check if it's a PS input addr
     if (Info->getShaderType() == ShaderType::PIXEL && !Arg.Flags.isInReg() &&
-        !Arg.Flags.isByVal()) {
+        !Arg.Flags.isByVal() && PSInputNum <= 15) {
 
-      assert((PSInputNum <= 15) && "Too many PS inputs!");
-
-      if (!Arg.Used) {
+      if (!Arg.Used && !Info->isPSInputAllocated(PSInputNum)) {
         // We can safely skip PS inputs
         Skipped.set(i);
         ++PSInputNum;
         continue;
       }
 
-      Info->PSInputAddr |= 1 << PSInputNum++;
+      Info->markPSInputAllocated(PSInputNum);
+      if (Arg.Used)
+        Info->PSInputEna |= 1 << PSInputNum;
+
+      ++PSInputNum;
     }
 
     // Second split vertices into their elements
@@ -638,11 +640,25 @@ SDValue SITargetLowering::LowerFormalArguments(
                  *DAG.getContext());
 
   // At least one interpolation mode must be enabled or else the GPU will hang.
+  //
+  // Check PSInputAddr instead of PSInputEna. The idea is that if the user set
+  // PSInputAddr, the user wants to enable some bits after the compilation
+  // based on run-time states. Since we can't know what the final PSInputEna
+  // will look like, so we shouldn't do anything here and the user should take
+  // responsibility for the correct programming.
+  //
+  // Otherwise, the following restrictions apply:
+  // - At least one of PERSP_* (0xF) or LINEAR_* (0x70) must be enabled.
+  // - If POS_W_FLOAT (11) is enabled, at least one of PERSP_* must be
+  //   enabled too.
   if (Info->getShaderType() == ShaderType::PIXEL &&
-      (Info->PSInputAddr & 0x7F) == 0) {
-    Info->PSInputAddr |= 1;
+      ((Info->getPSInputAddr() & 0x7F) == 0 ||
+       ((Info->getPSInputAddr() & 0xF) == 0 &&
+	Info->isPSInputAllocated(11)))) {
     CCInfo.AllocateReg(AMDGPU::VGPR0);
     CCInfo.AllocateReg(AMDGPU::VGPR1);
+    Info->markPSInputAllocated(0);
+    Info->PSInputEna |= 1;
   }
 
   if (Info->getShaderType() == ShaderType::COMPUTE) {
@@ -869,6 +885,97 @@ SDValue SITargetLowering::LowerFormalArguments(
     return Chain;
 
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
+}
+
+SDValue SITargetLowering::LowerReturn(SDValue Chain,
+                                      CallingConv::ID CallConv,
+                                      bool isVarArg,
+                                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                      const SmallVectorImpl<SDValue> &OutVals,
+                                      SDLoc DL, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+
+  if (Info->getShaderType() == ShaderType::COMPUTE)
+    return AMDGPUTargetLowering::LowerReturn(Chain, CallConv, isVarArg, Outs,
+                                             OutVals, DL, DAG);
+
+  Info->setIfReturnsVoid(Outs.size() == 0);
+
+  SmallVector<ISD::OutputArg, 48> Splits;
+  SmallVector<SDValue, 48> SplitVals;
+
+  // Split vectors into their elements.
+  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
+    const ISD::OutputArg &Out = Outs[i];
+
+    if (Out.VT.isVector()) {
+      MVT VT = Out.VT.getVectorElementType();
+      ISD::OutputArg NewOut = Out;
+      NewOut.Flags.setSplit();
+      NewOut.VT = VT;
+
+      // We want the original number of vector elements here, e.g.
+      // three or five, not four or eight.
+      unsigned NumElements = Out.ArgVT.getVectorNumElements();
+
+      for (unsigned j = 0; j != NumElements; ++j) {
+        SDValue Elem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, OutVals[i],
+                                   DAG.getConstant(j, DL, MVT::i32));
+        SplitVals.push_back(Elem);
+        Splits.push_back(NewOut);
+        NewOut.PartOffset += NewOut.VT.getStoreSize();
+      }
+    } else {
+      SplitVals.push_back(OutVals[i]);
+      Splits.push_back(Out);
+    }
+  }
+
+  // CCValAssign - represent the assignment of the return value to a location.
+  SmallVector<CCValAssign, 48> RVLocs;
+
+  // CCState - Info about the registers and stack slots.
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
+                 *DAG.getContext());
+
+  // Analyze outgoing return values.
+  AnalyzeReturn(CCInfo, Splits);
+
+  SDValue Flag;
+  SmallVector<SDValue, 48> RetOps;
+  RetOps.push_back(Chain); // Operand #0 = Chain (updated below)
+
+  // Copy the result values into the output registers.
+  for (unsigned i = 0, realRVLocIdx = 0;
+       i != RVLocs.size();
+       ++i, ++realRVLocIdx) {
+    CCValAssign &VA = RVLocs[i];
+    assert(VA.isRegLoc() && "Can only return in registers!");
+
+    SDValue Arg = SplitVals[realRVLocIdx];
+
+    // Copied from other backends.
+    switch (VA.getLocInfo()) {
+    default: llvm_unreachable("Unknown loc info!");
+    case CCValAssign::Full:
+      break;
+    case CCValAssign::BCvt:
+      Arg = DAG.getNode(ISD::BITCAST, DL, VA.getLocVT(), Arg);
+      break;
+    }
+
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Arg, Flag);
+    Flag = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
+  }
+
+  // Update chain and glue.
+  RetOps[0] = Chain;
+  if (Flag.getNode())
+    RetOps.push_back(Flag);
+
+  return DAG.getNode(AMDGPUISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
 MachineBasicBlock * SITargetLowering::EmitInstrWithCustomInserter(

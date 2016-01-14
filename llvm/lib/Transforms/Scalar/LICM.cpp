@@ -310,14 +310,12 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
          DT != nullptr && CurLoop != nullptr && CurAST != nullptr && 
          SafetyInfo != nullptr && "Unexpected input to sinkRegion");
 
-  // Set changed as false.
-  bool Changed = false;
-  // Get basic block
   BasicBlock *BB = N->getBlock();
   // If this subregion is not in the top level loop at all, exit.
-  if (!CurLoop->contains(BB)) return Changed;
+  if (!CurLoop->contains(BB)) return false;
 
   // We are processing blocks in reverse dfo, so process children first.
+  bool Changed = false;
   const std::vector<DomTreeNode*> &Children = N->getChildren();
   for (DomTreeNode *Child : Children)
     Changed |= sinkRegion(Child, AA, LI, DT, TLI, CurLoop, CurAST, SafetyInfo);
@@ -366,14 +364,15 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
   assert(N != nullptr && AA != nullptr && LI != nullptr && 
          DT != nullptr && CurLoop != nullptr && CurAST != nullptr && 
          SafetyInfo != nullptr && "Unexpected input to hoistRegion");
-  // Set changed as false.
-  bool Changed = false;
-  // Get basic block
+
   BasicBlock *BB = N->getBlock();
+
   // If this subregion is not in the top level loop at all, exit.
-  if (!CurLoop->contains(BB)) return Changed;
+  if (!CurLoop->contains(BB)) return false;
+
   // Only need to process the contents of this block if it is not part of a
   // subloop (which would already have been processed).
+  bool Changed = false;
   if (!inSubLoop(BB, CurLoop, LI))
     for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E; ) {
       Instruction &I = *II++;
@@ -883,14 +882,13 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
          CurLoop != nullptr && CurAST != nullptr && 
          SafetyInfo != nullptr && 
          "Unexpected Input to promoteLoopAccessesToScalars");
-  // Initially set Changed status to false.
-  bool Changed = false;
+
   // We can promote this alias set if it has a store, if it is a "Must" alias
   // set, if the pointer is loop invariant, and if we are not eliminating any
   // volatile loads or stores.
   if (AS.isForwardingAliasSet() || !AS.isMod() || !AS.isMustAlias() ||
       AS.isVolatile() || !CurLoop->isLoopInvariant(AS.begin()->getValue()))
-    return Changed;
+    return false;
 
   assert(!AS.empty() &&
          "Must alias set should have at least one pointer element in it!");
@@ -925,6 +923,7 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
   // Check that all of the pointers in the alias set have the same type.  We
   // cannot (yet) promote a memory location that is loaded and stored in
   // different sizes.  While we are at it, collect alignment and AA info.
+  bool Changed = false;
   for (AliasSet::iterator ASI = AS.begin(), E = AS.end(); ASI != E; ++ASI) {
     Value *ASIV = ASI->getValue();
     PointerMustAliases.insert(ASIV);

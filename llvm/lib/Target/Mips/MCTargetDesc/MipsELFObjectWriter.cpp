@@ -44,8 +44,8 @@ struct MipsRelocationEntry {
 
     ~MipsELFObjectWriter() override;
 
-    unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                          bool IsPCRel) const override;
+    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                          const MCFixup &Fixup, bool IsPCRel) const override;
     bool needsRelocateWithSymbol(const MCSymbol &Sym,
                                  unsigned Type) const override;
     virtual void sortRelocs(const MCAssembler &Asm,
@@ -61,7 +61,8 @@ MipsELFObjectWriter::MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
 
 MipsELFObjectWriter::~MipsELFObjectWriter() {}
 
-unsigned MipsELFObjectWriter::GetRelocType(const MCValue &Target,
+unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
+                                           const MCValue &Target,
                                            const MCFixup &Fixup,
                                            bool IsPCRel) const {
   // Determine the type of the relocation.

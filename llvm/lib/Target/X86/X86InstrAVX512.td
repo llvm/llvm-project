@@ -4056,7 +4056,7 @@ defm VPSLL : avx512_shift_rmi_dq<0x72, 0x73, MRM6r, MRM6m, "vpsll", X86vshli>,
 defm VPSRA : avx512_shift_rmi_dq<0x72, 0x72, MRM4r, MRM4m, "vpsra", X86vsrai>,
              avx512_shift_rmi_w<0x71, MRM4r, MRM4m, "vpsraw", X86vsrai>, AVX512BIi8Base, EVEX_4V;
 
-defm VPROR : avx512_shift_rmi_dq<0x72, 0x72, MRM0r, MRM0m, "vpror", rotr>, AVX512BIi8Base, EVEX_4V;
+defm VPROR : avx512_shift_rmi_dq<0x72, 0x72, MRM0r, MRM0m, "vpror", X86vrotri>, AVX512BIi8Base, EVEX_4V;
 defm VPROL : avx512_shift_rmi_dq<0x72, 0x72, MRM1r, MRM1m, "vprol", X86vrotli>, AVX512BIi8Base, EVEX_4V;
 
 defm VPSLL : avx512_shift_types<0xF2, 0xF3, 0xF1, "vpsll", X86vshl>;

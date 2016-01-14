@@ -62,3 +62,23 @@ hex_hash
 # SUMMARY: Total functions: 4
 # SUMMARY: Maximum function count: 2305843009213693952
 # SUMMARY: Maximum internal block count: 1152921504606846976
+
+# RUN: llvm-profdata show --detailed-summary %t.profdata | FileCheck %s -check-prefix=DETAILED-SUMMARY
+# DETAILED-SUMMARY: Detailed summary:
+# DETAILED-SUMMARY: Total number of blocks: 6
+# DETAILED-SUMMARY: Total count: 2233785415175766016
+# DETAILED-SUMMARY: 3 blocks with count >= 288230376151711744 account for 80 percentage of the total counts
+# DETAILED-SUMMARY: 3 blocks with count >= 288230376151711744 account for 90 percentage of the total counts
+# DETAILED-SUMMARY: 4 blocks with count >= 144115188075855872 account for 95 percentage of the total counts.
+# DETAILED-SUMMARY: 5 blocks with count >= 72057594037927936 account for 99 percentage of the total counts.
+# DETAILED-SUMMARY: 5 blocks with count >= 72057594037927936 account for 99.9 percentage of the total counts.
+# DETAILED-SUMMARY: 5 blocks with count >= 72057594037927936 account for 99.99 percentage of the total counts.
+# DETAILED-SUMMARY: 5 blocks with count >= 72057594037927936 account for 99.999 percentage of the total counts.
+
+# RUN: llvm-profdata show --detailed-summary --detailed-summary-cutoffs=600000 %t.profdata | FileCheck %s -check-prefix=DETAILED-SUMMARY-2
+# DETAILED-SUMMARY-2: 2 blocks with count >= 576460752303423488 account for 60 percentage of the total counts.
+#
+# RUN: llvm-profdata show --detailed-summary --detailed-summary-cutoffs=600000,900000,999999 %t.profdata | FileCheck %s -check-prefix=DETAILED-SUMMARY-3
+# DETAILED-SUMMARY-3: 2 blocks with count >= 576460752303423488 account for 60 percentage of the total counts.
+# DETAILED-SUMMARY-3: 3 blocks with count >= 288230376151711744 account for 90 percentage of the total counts
+# DETAILED-SUMMARY-3: 5 blocks with count >= 72057594037927936 account for 99.9999 percentage of the total counts.

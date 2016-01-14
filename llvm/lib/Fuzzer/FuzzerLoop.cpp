@@ -11,6 +11,8 @@
 
 #include "FuzzerInternal.h"
 #include <algorithm>
+#include <cstring>
+#include <memory>
 
 #if defined(__has_include)
 # if __has_include(<sanitizer/coverage_interface.h>)
@@ -66,10 +68,6 @@ void Fuzzer::SetDeathCallback() {
   __sanitizer_set_death_callback(StaticDeathCallback);
 }
 
-void Fuzzer::PrintUnitInASCII(const Unit &U, const char *PrintAfter) {
-  PrintASCII(U, PrintAfter);
-}
-
 void Fuzzer::StaticDeathCallback() {
   assert(F);
   F->DeathCallback();
@@ -77,11 +75,12 @@ void Fuzzer::StaticDeathCallback() {
 
 void Fuzzer::DeathCallback() {
   Printf("DEATH:\n");
-  if (CurrentUnit.size() <= kMaxUnitSizeToPrint) {
-    Print(CurrentUnit, "\n");
-    PrintUnitInASCII(CurrentUnit, "\n");
+  if (CurrentUnitSize <= kMaxUnitSizeToPrint) {
+    PrintHexArray(CurrentUnitData, CurrentUnitSize, "\n");
+    PrintASCII(CurrentUnitData, CurrentUnitSize, "\n");
   }
-  WriteUnitToFileWithPrefix(CurrentUnit, "crash-");
+  WriteUnitToFileWithPrefix(
+      {CurrentUnitData, CurrentUnitData + CurrentUnitSize}, "crash-");
 }
 
 void Fuzzer::StaticAlarmCallback() {
@@ -100,11 +99,12 @@ void Fuzzer::AlarmCallback() {
     Printf("ALARM: working on the last Unit for %zd seconds\n", Seconds);
     Printf("       and the timeout value is %d (use -timeout=N to change)\n",
            Options.UnitTimeoutSec);
-    if (CurrentUnit.size() <= kMaxUnitSizeToPrint) {
-      Print(CurrentUnit, "\n");
-      PrintUnitInASCII(CurrentUnit, "\n");
+    if (CurrentUnitSize <= kMaxUnitSizeToPrint) {
+      PrintHexArray(CurrentUnitData, CurrentUnitSize, "\n");
+      PrintASCII(CurrentUnitData, CurrentUnitSize, "\n");
     }
-    WriteUnitToFileWithPrefix(CurrentUnit, "timeout-");
+    WriteUnitToFileWithPrefix(
+        {CurrentUnitData, CurrentUnitData + CurrentUnitSize}, "timeout-");
     Printf("==%d== ERROR: libFuzzer: timeout after %d seconds\n", GetPid(),
            Seconds);
     if (__sanitizer_print_stack_trace)
@@ -161,9 +161,7 @@ void Fuzzer::RereadOutputCorpus() {
     if (X.size() > (size_t)Options.MaxLen)
       X.resize(Options.MaxLen);
     if (UnitHashesAddedToCorpus.insert(Hash(X)).second) {
-      CurrentUnit.clear();
-      CurrentUnit.insert(CurrentUnit.begin(), X.begin(), X.end());
-      if (RunOne(CurrentUnit)) {
+      if (RunOne(X)) {
         Corpus.push_back(X);
         PrintStats("RELOAD");
       }
@@ -186,7 +184,7 @@ void Fuzzer::ShuffleAndMinimize() {
           Corpus.begin(), Corpus.end(),
           [](const Unit &A, const Unit &B) { return A.size() < B.size(); });
   }
-  Unit &U = CurrentUnit;
+  Unit U;
   for (const auto &C : Corpus) {
     for (size_t First = 0; First < 1; First++) {
       U.clear();
@@ -240,13 +238,18 @@ void Fuzzer::RunOneAndUpdateCorpus(Unit &U) {
 }
 
 void Fuzzer::ExecuteCallback(const Unit &U) {
-  const uint8_t *Data = U.data();
-  uint8_t EmptyData;
-  if (!Data) 
-    Data = &EmptyData;
-  int Res = USF.TargetFunction(Data, U.size());
+  // We copy the contents of Unit into a separate heap buffer
+  // so that we reliably find buffer overflows in it.
+  std::unique_ptr<uint8_t[]> Data(new uint8_t[U.size()]);
+  memcpy(Data.get(), U.data(), U.size());
+  AssignTaintLabels(Data.get(), U.size());
+  CurrentUnitData = Data.get();
+  CurrentUnitSize = U.size();
+  int Res = USF.TargetFunction(Data.get(), U.size());
   (void)Res;
   assert(Res == 0);
+  CurrentUnitData = nullptr;
+  CurrentUnitSize = 0;
 }
 
 size_t Fuzzer::RecordBlockCoverage() {
@@ -384,10 +387,9 @@ void Fuzzer::Merge(const std::vector<std::string> &Corpora) {
 }
 
 void Fuzzer::MutateAndTestOne() {
-  auto &U = CurrentUnit;
   USF.StartMutationSequence();
 
-  U = ChooseUnitToMutate();
+  auto U = ChooseUnitToMutate();
 
   for (int i = 0; i < Options.MutateDepth; i++) {
     size_t Size = U.size();
@@ -455,15 +457,12 @@ void Fuzzer::Drill() {
 
   PrintStats("REINIT");
   SavedOutputCorpusPath.swap(Options.OutputCorpus);
-  for (auto &U : SavedCorpus) {
-    CurrentUnit = U;
+  for (auto &U : SavedCorpus)
     RunOne(U);
-  }
   PrintStats("MERGE ");
   Options.PrintNEW = true;
   size_t NumMerged = 0;
   for (auto &U : Corpus) {
-    CurrentUnit = U;
     if (RunOne(U)) {
       PrintStatusForNewUnit(U);
       NumMerged++;

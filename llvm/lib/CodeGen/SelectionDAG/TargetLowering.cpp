@@ -3059,9 +3059,7 @@ SDValue TargetLowering::LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
   Module *VariableModule = const_cast<Module*>(GA->getGlobal()->getParent());
   StringRef EmuTlsVarName(NameString);
   GlobalVariable *EmuTlsVar = VariableModule->getNamedGlobal(EmuTlsVarName);
-  if (!EmuTlsVar)
-    EmuTlsVar = dyn_cast_or_null<GlobalVariable>(
-        VariableModule->getOrInsertGlobal(EmuTlsVarName, VoidPtrType));
+  assert(EmuTlsVar && "Cannot find EmuTlsVar ");
   Entry.Node = DAG.getGlobalAddress(EmuTlsVar, dl, PtrVT);
   Entry.Ty = VoidPtrType;
   Args.push_back(Entry);

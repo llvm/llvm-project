@@ -53,6 +53,7 @@ add_llvm_library(LLVMCodeGen
   LiveStackAnalysis.cpp
   LiveVariables.cpp
   LocalStackSlotAllocation.cpp
+  LowerEmuTLS.cpp
   MachineBasicBlock.cpp
   MachineBlockFrequencyInfo.cpp
   MachineBlockPlacement.cpp

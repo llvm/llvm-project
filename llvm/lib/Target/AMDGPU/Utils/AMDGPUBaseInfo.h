@@ -45,6 +45,8 @@ bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
 unsigned getShaderType(const Function &F);
+unsigned getInitialPSInputAddr(const Function &F);
+
 
 bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);

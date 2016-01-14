@@ -13,6 +13,7 @@ set(DFSanTests
   )
 
 set(Tests
+  BufferOverflowOnInput
   CallerCalleeTest
   CounterTest
   FourIndependentBranchesTest

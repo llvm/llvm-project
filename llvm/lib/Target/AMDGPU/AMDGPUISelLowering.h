@@ -115,6 +115,8 @@ protected:
                                SmallVectorImpl<ISD::InputArg> &OrigIns) const;
   void AnalyzeFormalArguments(CCState &State,
                               const SmallVectorImpl<ISD::InputArg> &Ins) const;
+  void AnalyzeReturn(CCState &State,
+                     const SmallVectorImpl<ISD::OutputArg> &Outs) const;
 
 public:
   AMDGPUTargetLowering(TargetMachine &TM, const AMDGPUSubtarget &STI);

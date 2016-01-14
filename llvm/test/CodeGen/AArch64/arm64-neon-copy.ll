@@ -902,6 +902,43 @@ define <8 x i8> @getl(<16 x i8> %x) #0 {
   ret <8 x i8> %vecinit14
 }
 
+; CHECK-LABEL: test_extracts_inserts_varidx_extract:
+; CHECK: str q0
+; CHECK: add x[[PTR:[0-9]+]], {{.*}}, w0, sxtw #1
+; CHECK-DAG: ld1 { v[[R:[0-9]+]].h }[0], [x[[PTR]]]
+; CHECK-DAG: ins v[[R]].h[1], v0.h[1]
+; CHECK-DAG: ins v[[R]].h[2], v0.h[2]
+; CHECK-DAG: ins v[[R]].h[3], v0.h[3]
+define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
+  %tmp = extractelement <8 x i16> %x, i32 %idx
+  %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 0
+  %tmp3 = extractelement <8 x i16> %x, i32 1
+  %tmp4 = insertelement <4 x i16> %tmp2, i16 %tmp3, i32 1
+  %tmp5 = extractelement <8 x i16> %x, i32 2
+  %tmp6 = insertelement <4 x i16> %tmp4, i16 %tmp5, i32 2
+  %tmp7 = extractelement <8 x i16> %x, i32 3
+  %tmp8 = insertelement <4 x i16> %tmp6, i16 %tmp7, i32 3
+  ret <4 x i16> %tmp8
+}
+
+; CHECK-LABEL: test_extracts_inserts_varidx_insert:
+; CHECK: str h0, [{{.*}}, w0, sxtw #1]
+; CHECK-DAG: ldr d[[R:[0-9]+]]
+; CHECK-DAG: ins v[[R]].h[1], v0.h[1]
+; CHECK-DAG: ins v[[R]].h[2], v0.h[2]
+; CHECK-DAG: ins v[[R]].h[3], v0.h[3]
+define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
+  %tmp = extractelement <8 x i16> %x, i32 0
+  %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 %idx
+  %tmp3 = extractelement <8 x i16> %x, i32 1
+  %tmp4 = insertelement <4 x i16> %tmp2, i16 %tmp3, i32 1
+  %tmp5 = extractelement <8 x i16> %x, i32 2
+  %tmp6 = insertelement <4 x i16> %tmp4, i16 %tmp5, i32 2
+  %tmp7 = extractelement <8 x i16> %x, i32 3
+  %tmp8 = insertelement <4 x i16> %tmp6, i16 %tmp7, i32 3
+  ret <4 x i16> %tmp8
+}
+
 define <4 x i16> @test_dup_v2i32_v4i16(<2 x i32> %a) {
 ; CHECK-LABEL: test_dup_v2i32_v4i16:
 ; CHECK: dup v0.4h, v0.h[2]

@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -475,7 +476,9 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
 
   const auto &MLI = getAnalysis<MachineLoopInfo>();
   auto &MDT = getAnalysis<MachineDominatorTree>();
+  // Liveness is not tracked for EXPR_STACK physreg.
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  MF.getRegInfo().invalidateLiveness();
 
   // RPO sorting needs all loops to be single-entry.
   EliminateMultipleEntryLoops(MF, MLI);

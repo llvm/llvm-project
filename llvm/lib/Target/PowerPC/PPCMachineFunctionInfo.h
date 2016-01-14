@@ -197,6 +197,10 @@ public:
   bool usesPICBase() const { return UsesPICBase; }
 
   MCSymbol *getPICOffsetSymbol() const;
+
+  MCSymbol *getGlobalEPSymbol() const;
+  MCSymbol *getLocalEPSymbol() const;
+  MCSymbol *getTOCOffsetSymbol() const;
 };
 
 } // end of namespace llvm

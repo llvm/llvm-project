@@ -36,6 +36,105 @@ using namespace llvm;
 
 enum ProfileFormat { PF_None = 0, PF_Text, PF_Binary, PF_GCC };
 
+///// Profile summary computation ////
+// The 'show' command displays richer summary of the profile data. The profile
+// summary is one or more (Cutoff, MinBlockCount, NumBlocks) triplets. Given a
+// target execution count percentile, we compute the minimum number of blocks
+// needed to reach this target and the minimum execution count of these blocks.
+struct ProfileSummaryEntry {
+  uint32_t Cutoff;        ///< The required percentile of total execution count.
+  uint64_t MinBlockCount; ///< The minimum execution count for this percentile.
+  uint64_t NumBlocks;     ///< Number of blocks >= the minumum execution count.
+};
+
+class ProfileSummary {
+  // We keep track of the number of times a count appears in the profile and
+  // keep the map sorted in the descending order of counts.
+  std::map<uint64_t, uint32_t, std::greater<uint64_t>> CountFrequencies;
+  std::vector<ProfileSummaryEntry> DetailedSummary;
+  std::vector<uint32_t> DetailedSummaryCutoffs;
+  // Sum of all counts.
+  uint64_t TotalCount;
+  uint64_t MaxBlockCount, MaxFunctionCount;
+  uint32_t NumBlocks, NumFunctions;
+  void addCount(uint64_t Count);
+  void computeDetailedSummary();
+
+public:
+  static const int Scale = 1000000;
+  ProfileSummary(std::vector<uint32_t> Cutoffs)
+      : DetailedSummaryCutoffs(Cutoffs), TotalCount(0), MaxBlockCount(0),
+        MaxFunctionCount(0), NumBlocks(0), NumFunctions(0) {}
+  void addRecord(const InstrProfRecord &);
+  std::vector<ProfileSummaryEntry> &getDetailedSummary();
+  uint32_t getNumBlocks() { return NumBlocks; }
+  uint64_t getTotalCount() { return TotalCount; }
+  uint32_t getNumFunctions() { return NumFunctions; }
+  uint64_t getMaxFunctionCount() { return MaxFunctionCount; }
+  uint64_t getMaxBlockCount() { return MaxBlockCount; }
+};
+
+// This is called when a count is seen in the profile.
+void ProfileSummary::addCount(uint64_t Count) {
+  TotalCount += Count;
+  if (Count > MaxBlockCount)
+    MaxBlockCount = Count;
+  NumBlocks++;
+  CountFrequencies[Count]++;
+}
+
+void ProfileSummary::addRecord(const InstrProfRecord &R) {
+  NumFunctions++;
+  if (R.Counts[0] > MaxFunctionCount)
+    MaxFunctionCount = R.Counts[0];
+
+  for (size_t I = 1, E = R.Counts.size(); I < E; ++I)
+    addCount(R.Counts[I]);
+}
+
+// The argument to this method is a vector of cutoff percentages and the return
+// value is a vector of (Cutoff, MinBlockCount, NumBlocks) triplets.
+void ProfileSummary::computeDetailedSummary() {
+  if (DetailedSummaryCutoffs.empty())
+    return;
+  auto Iter = CountFrequencies.begin();
+  auto End = CountFrequencies.end();
+  std::sort(DetailedSummaryCutoffs.begin(), DetailedSummaryCutoffs.end());
+
+  uint32_t BlocksSeen = 0;
+  uint64_t CurrSum = 0, Count;
+
+  for (uint32_t Cutoff : DetailedSummaryCutoffs) {
+    assert(Cutoff <= 999999);
+    APInt Temp(128, TotalCount);
+    APInt N(128, Cutoff);
+    APInt D(128, ProfileSummary::Scale);
+    Temp *= N;
+    Temp = Temp.sdiv(D);
+    uint64_t DesiredCount = Temp.getZExtValue();
+    dbgs() << "Cutoff = " << Cutoff << "\n";
+    dbgs() << "DesiredCount = " << DesiredCount << "\n";
+    assert(DesiredCount <= TotalCount);
+    while (CurrSum < DesiredCount && Iter != End) {
+      Count = Iter->first;
+      uint32_t Freq = Iter->second;
+      CurrSum += (Count * Freq);
+      BlocksSeen += Freq;
+      Iter++;
+    }
+    assert(CurrSum >= DesiredCount);
+    ProfileSummaryEntry PSE = {Cutoff, Count, BlocksSeen};
+    DetailedSummary.push_back(PSE);
+  }
+  return;
+}
+
+std::vector<ProfileSummaryEntry> &ProfileSummary::getDetailedSummary() {
+  if (!DetailedSummaryCutoffs.empty() && DetailedSummary.empty())
+    computeDetailedSummary();
+  return DetailedSummary;
+}
+
 static void exitWithError(const Twine &Message, StringRef Whence = "",
                           StringRef Hint = "") {
   errs() << "error: ";
@@ -249,16 +348,22 @@ static int merge_main(int argc, const char *argv[]) {
 }
 
 static int showInstrProfile(std::string Filename, bool ShowCounts,
-                            bool ShowIndirectCallTargets, bool ShowAllFunctions,
-                            std::string ShowFunction, bool TextFormat,
-                            raw_fd_ostream &OS) {
+                            bool ShowIndirectCallTargets,
+                            bool ShowDetailedSummary,
+                            std::vector<uint32_t> DetailedSummaryCutoffs,
+                            bool ShowAllFunctions, std::string ShowFunction,
+                            bool TextFormat, raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
+  std::vector<uint32_t> Cutoffs(DetailedSummaryCutoffs);
+  if (ShowDetailedSummary && DetailedSummaryCutoffs.empty()) {
+    Cutoffs = {800000, 900000, 950000, 990000, 999000, 999900, 999990};
+  }
+  ProfileSummary PS(Cutoffs);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
-  uint64_t MaxFunctionCount = 0, MaxBlockCount = 0;
-  size_t ShownFunctions = 0, TotalFunctions = 0;
+  size_t ShownFunctions = 0;
   for (const auto &Func : *Reader) {
     bool Show =
         ShowAllFunctions || (!ShowFunction.empty() &&
@@ -272,15 +377,8 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
       continue;
     }
 
-    ++TotalFunctions;
     assert(Func.Counts.size() > 0 && "function missing entry counter");
-    if (Func.Counts[0] > MaxFunctionCount)
-      MaxFunctionCount = Func.Counts[0];
-
-    for (size_t I = 1, E = Func.Counts.size(); I < E; ++I) {
-      if (Func.Counts[I] > MaxBlockCount)
-        MaxBlockCount = Func.Counts[I];
-    }
+    PS.addRecord(Func);
 
     if (Show) {
 
@@ -332,9 +430,21 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
 
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
-  OS << "Total functions: " << TotalFunctions << "\n";
-  OS << "Maximum function count: " << MaxFunctionCount << "\n";
-  OS << "Maximum internal block count: " << MaxBlockCount << "\n";
+  OS << "Total functions: " << PS.getNumFunctions() << "\n";
+  OS << "Maximum function count: " << PS.getMaxFunctionCount() << "\n";
+  OS << "Maximum internal block count: " << PS.getMaxBlockCount() << "\n";
+
+  if (ShowDetailedSummary) {
+    OS << "Detailed summary:\n";
+    OS << "Total number of blocks: " << PS.getNumBlocks() << "\n";
+    OS << "Total count: " << PS.getTotalCount() << "\n";
+    for (auto Entry : PS.getDetailedSummary()) {
+      OS << Entry.NumBlocks << " blocks with count >= " << Entry.MinBlockCount
+         << " account for "
+         << format("%0.6g", (float)Entry.Cutoff / ProfileSummary::Scale * 100)
+         << " percentage of the total counts.\n";
+    }
+  }
   return 0;
 }
 
@@ -370,6 +480,13 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<bool> ShowIndirectCallTargets(
       "ic-targets", cl::init(false),
       cl::desc("Show indirect call site target values for shown functions"));
+  cl::opt<bool> ShowDetailedSummary("detailed-summary", cl::init(false),
+                                    cl::desc("Show detailed profile summary"));
+  cl::list<uint32_t> DetailedSummaryCutoffs(
+      cl::CommaSeparated, "detailed-summary-cutoffs",
+      cl::desc(
+          "Cutoff percentages (times 10000) for generating detailed summary"),
+      cl::value_desc("800000,901000,999999"));
   cl::opt<bool> ShowAllFunctions("all-functions", cl::init(false),
                                  cl::desc("Details for every function"));
   cl::opt<std::string> ShowFunction("function",
@@ -397,8 +514,11 @@ static int show_main(int argc, const char *argv[]) {
   if (ShowAllFunctions && !ShowFunction.empty())
     errs() << "warning: -function argument ignored: showing all functions\n";
 
+  std::vector<uint32_t> Cutoffs(DetailedSummaryCutoffs.begin(),
+                                DetailedSummaryCutoffs.end());
   if (ProfileKind == instr)
     return showInstrProfile(Filename, ShowCounts, ShowIndirectCallTargets,
+                            ShowDetailedSummary, DetailedSummaryCutoffs,
                             ShowAllFunctions, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,

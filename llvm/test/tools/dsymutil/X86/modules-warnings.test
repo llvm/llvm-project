@@ -1,0 +1,13 @@
+Test for module-related warnings.
+This reuses the files from the modules.m testcase.
+
+RUN: rm -rf %t.dir && mkdir %t.dir
+RUN: cp %p/../Inputs/modules/1.o %p/../Inputs/modules/Foo.pcm %t.dir
+
+RUN: llvm-dsymutil -f -oso-prepend-path=%t.dir -y \
+RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck %s
+
+Module-not-found should be reported only once.
+The exact error message deoends on the OS so we don't check for it.
+CHECK:     warning: {{.*}}Bar.pcm:
+CHECK-NOT: warning: {{.*}}Bar.pcm:
