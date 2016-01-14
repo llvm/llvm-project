@@ -182,7 +182,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
 
   unsigned NewLineColumn = getNewLineColumn(State);
-  if (Current.isMemberAccess() &&
+  if (Current.isMemberAccess() && Style.ColumnLimit != 0 &&
       State.Column + getLengthToNextOperator(Current) > Style.ColumnLimit &&
       (State.Column > NewLineColumn ||
        Current.NestingLevel < State.StartOfLineLevel))

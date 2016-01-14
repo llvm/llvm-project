@@ -4449,6 +4449,29 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-fuse-init-array");
 }
 
+ToolChain::RuntimeLibType WebAssembly::GetDefaultRuntimeLibType() const {
+  return ToolChain::RLT_CompilerRT;
+}
+
+ToolChain::CXXStdlibType WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
+  return ToolChain::CST_Libcxx;
+}
+
+void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args) const {
+  if (!DriverArgs.hasArg(options::OPT_nostdinc))
+    addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
+}
+
+void WebAssembly::AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const {
+  if (!DriverArgs.hasArg(options::OPT_nostdlibinc) &&
+      !DriverArgs.hasArg(options::OPT_nostdincxx))
+    addSystemInclude(DriverArgs, CC1Args,
+                     getDriver().SysRoot + "/include/c++/v1");
+}
+
 Tool *WebAssembly::buildLinker() const {
   return new tools::wasm::Linker(*this);
 }
