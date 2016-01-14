@@ -14,7 +14,9 @@
 
 // __libcpp_string_gets_noexcept_iterator determines if an iterator can be used
 // w/o worrying about whether or not certain operations can throw.
-// This gives us a "fast path for string operations"
+// This gives us a "fast path for string operations".
+//
+// When exceptions are disabled, all iterators should get this "fast path"
 //
 
 #define	_LIBCPP_NO_EXCEPTIONS
@@ -44,7 +46,6 @@ int main()
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::reverse_iterator<std::__wrap_iter<char *> > > ::value), "");
     
 //  iterators in the libc++ test suite
-//	Since we have turned off exceptions, they're all noexcept
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<output_iterator       <char *> >::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<input_iterator        <char *> >::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<forward_iterator      <char *> >::value), "");
