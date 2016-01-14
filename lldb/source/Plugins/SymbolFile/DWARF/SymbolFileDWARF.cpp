@@ -1203,8 +1203,6 @@ SymbolFileDWARF::ParseImportedModules (const lldb_private::SymbolContext &sc, st
             
             if (sc.comp_unit)
             {
-                DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit (sc.comp_unit);
-                
                 const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
                 
                 if (die)
