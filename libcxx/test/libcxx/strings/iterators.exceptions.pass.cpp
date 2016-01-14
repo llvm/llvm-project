@@ -49,7 +49,11 @@ int main()
     static_assert((!std::__libcpp_string_gets_noexcept_iterator<random_access_iterator<char *> >::value), "");
     static_assert((!std::__libcpp_string_gets_noexcept_iterator<ThrowingIterator      <char *> >::value), "");
     
+#if __has_feature(cxx_noexcept)
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<NonThrowingIterator   <char *> >::value), "");
+#else
+    static_assert((!std::__libcpp_string_gets_noexcept_iterator<NonThrowingIterator   <char *> >::value), "");
+#endif
 	
 //
 //  iterators from libc++'s containers
