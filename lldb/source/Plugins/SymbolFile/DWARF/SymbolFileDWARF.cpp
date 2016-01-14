@@ -3315,6 +3315,9 @@ SymbolFileDWARF::FindTypes (const std::vector<CompilerContext> &context,
 
     ConstString name = context.back().name;
 
+    if (!name)
+        return 0;
+
     if (m_using_apple_tables)
     {
         if (m_apple_types_ap.get())
