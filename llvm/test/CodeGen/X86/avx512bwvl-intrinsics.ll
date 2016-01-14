@@ -5009,3 +5009,129 @@ define <8 x i16>@test_int_x86_avx512_mask_psllv8_hi(<8 x i16> %x0, <8 x i16> %x1
   %res4 = add <8 x i16> %res3, %res2
   ret <8 x i16> %res4
 }
+
+declare <8 x i16> @llvm.x86.avx512.mask.pmovzxb.w.128(<16 x i8>, <8 x i16>, i8)
+
+define <8 x i16>@test_int_x86_avx512_mask_pmovzxb_w_128(<16 x i8> %x0, <8 x i16> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_pmovzxb_w_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax 
+; CHECK-NEXT:    kmovw %eax, %k1 
+; CHECK-NEXT:    vpmovzxbw %xmm0, %xmm1 {%k1} 
+; CHECK-NEXT:    vpmovzxbw %xmm0, %xmm2 {%k1} {z} 
+; CHECK-NEXT:    vpmovzxbw %xmm0, %xmm0 
+; CHECK-NEXT:    vpaddw %xmm2, %xmm1, %xmm1 
+; CHECK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0 
+; CHECK-NEXT:    retq 
+  %res = call <8 x i16> @llvm.x86.avx512.mask.pmovzxb.w.128(<16 x i8> %x0, <8 x i16> %x1, i8 %x2)
+  %res1 = call <8 x i16> @llvm.x86.avx512.mask.pmovzxb.w.128(<16 x i8> %x0, <8 x i16> zeroinitializer, i8 %x2)
+  %res2 = call <8 x i16> @llvm.x86.avx512.mask.pmovzxb.w.128(<16 x i8> %x0, <8 x i16> %x1, i8 -1)
+  %res3 = add <8 x i16> %res, %res1
+  %res4 = add <8 x i16> %res3, %res2
+  ret <8 x i16> %res4
+}
+
+declare <16 x i16> @llvm.x86.avx512.mask.pmovzxb.w.256(<16 x i8>, <16 x i16>, i16)
+
+define <16 x i16>@test_int_x86_avx512_mask_pmovzxb_w_256(<16 x i8> %x0, <16 x i16> %x1, i16 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_pmovzxb_w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 
+; CHECK-NEXT:    vpmovzxbw %xmm0, %ymm1 {%k1} 
+; CHECK-NEXT:    vpmovzxbw %xmm0, %ymm2 {%k1} {z} 
+; CHECK-NEXT:    vpmovzxbw %xmm0, %ymm0 
+; CHECK-NEXT:    vpaddw %ymm2, %ymm1, %ymm1 
+; CHECK-NEXT:    vpaddw %ymm0, %ymm1, %ymm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x i16> @llvm.x86.avx512.mask.pmovzxb.w.256(<16 x i8> %x0, <16 x i16> %x1, i16 %x2)
+  %res1 = call <16 x i16> @llvm.x86.avx512.mask.pmovzxb.w.256(<16 x i8> %x0, <16 x i16> zeroinitializer, i16 %x2)
+  %res2 = call <16 x i16> @llvm.x86.avx512.mask.pmovzxb.w.256(<16 x i8> %x0, <16 x i16> %x1, i16 -1)
+  %res3 = add <16 x i16> %res, %res1
+  %res4 = add <16 x i16> %res3, %res2
+  ret <16 x i16> %res4
+}
+
+
+declare <8 x i16> @llvm.x86.avx512.mask.pmovsxb.w.128(<16 x i8>, <8 x i16>, i8)
+
+define <8 x i16>@test_int_x86_avx512_mask_pmovsxb_w_128(<16 x i8> %x0, <8 x i16> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_pmovsxb_w_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax 
+; CHECK-NEXT:    kmovw %eax, %k1 
+; CHECK-NEXT:    vpmovsxbw %xmm0, %xmm1 {%k1} 
+; CHECK-NEXT:    vpmovsxbw %xmm0, %xmm2 {%k1} {z} 
+; CHECK-NEXT:    vpmovsxbw %xmm0, %xmm0 
+; CHECK-NEXT:    vpaddw %xmm2, %xmm1, %xmm1 
+; CHECK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0 
+; CHECK-NEXT:    retq 
+  %res = call <8 x i16> @llvm.x86.avx512.mask.pmovsxb.w.128(<16 x i8> %x0, <8 x i16> %x1, i8 %x2)
+  %res1 = call <8 x i16> @llvm.x86.avx512.mask.pmovsxb.w.128(<16 x i8> %x0, <8 x i16> zeroinitializer, i8 %x2)
+  %res2 = call <8 x i16> @llvm.x86.avx512.mask.pmovsxb.w.128(<16 x i8> %x0, <8 x i16> %x1, i8 -1)
+  %res3 = add <8 x i16> %res, %res1
+  %res4 = add <8 x i16> %res3, %res2
+  ret <8 x i16> %res4
+}
+
+declare <16 x i16> @llvm.x86.avx512.mask.pmovsxb.w.256(<16 x i8>, <16 x i16>, i16)
+
+define <16 x i16>@test_int_x86_avx512_mask_pmovsxb_w_256(<16 x i8> %x0, <16 x i16> %x1, i16 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_pmovsxb_w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 
+; CHECK-NEXT:    vpmovsxbw %xmm0, %ymm1 {%k1} 
+; CHECK-NEXT:    vpmovsxbw %xmm0, %ymm2 {%k1} {z} 
+; CHECK-NEXT:    vpmovsxbw %xmm0, %ymm0 
+; CHECK-NEXT:    vpaddw %ymm2, %ymm1, %ymm1 
+; CHECK-NEXT:    vpaddw %ymm0, %ymm1, %ymm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x i16> @llvm.x86.avx512.mask.pmovsxb.w.256(<16 x i8> %x0, <16 x i16> %x1, i16 %x2)
+  %res1 = call <16 x i16> @llvm.x86.avx512.mask.pmovsxb.w.256(<16 x i8> %x0, <16 x i16> zeroinitializer, i16 %x2)
+  %res2 = call <16 x i16> @llvm.x86.avx512.mask.pmovsxb.w.256(<16 x i8> %x0, <16 x i16> %x1, i16 -1)
+  %res3 = add <16 x i16> %res, %res1
+  %res4 = add <16 x i16> %res3, %res2
+  ret <16 x i16> %res4
+}
+
+declare <2 x i64> @llvm.x86.avx512.mask.pmovsxd.q.128(<4 x i32>, <2 x i64>, i8)
+
+define <2 x i64>@test_int_x86_avx512_mask_pmovsxd_q_128(<4 x i32> %x0, <2 x i64> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_pmovsxd_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax 
+; CHECK-NEXT:    kmovw %eax, %k1 
+; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm1 {%k1} 
+; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm2 {%k1} {z} 
+; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm0 
+; CHECK-NEXT:    vpaddq %xmm2, %xmm1, %xmm1 
+; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0 
+; CHECK-NEXT:    retq 
+  %res = call <2 x i64> @llvm.x86.avx512.mask.pmovsxd.q.128(<4 x i32> %x0, <2 x i64> %x1, i8 %x2)
+  %res1 = call <2 x i64> @llvm.x86.avx512.mask.pmovsxd.q.128(<4 x i32> %x0, <2 x i64> zeroinitializer, i8 %x2)
+  %res2 = call <2 x i64> @llvm.x86.avx512.mask.pmovsxd.q.128(<4 x i32> %x0, <2 x i64> %x1, i8 -1)
+  %res3 = add <2 x i64> %res, %res1
+  %res4 = add <2 x i64> %res3, %res2
+  ret <2 x i64> %res4
+}
+
+declare <4 x i64> @llvm.x86.avx512.mask.pmovsxd.q.256(<4 x i32>, <4 x i64>, i8)
+
+define <4 x i64>@test_int_x86_avx512_mask_pmovsxd_q_256(<4 x i32> %x0, <4 x i64> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_pmovsxd_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax 
+; CHECK-NEXT:    kmovw %eax, %k1 
+; CHECK-NEXT:    vpmovsxdq %xmm0, %ymm1 {%k1} 
+; CHECK-NEXT:    vpmovsxdq %xmm0, %ymm2 {%k1} {z} 
+; CHECK-NEXT:    vpmovsxdq %xmm0, %ymm0 
+; CHECK-NEXT:    vpaddq %ymm2, %ymm1, %ymm1 
+; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 
+; CHECK-NEXT:    retq 
+  %res = call <4 x i64> @llvm.x86.avx512.mask.pmovsxd.q.256(<4 x i32> %x0, <4 x i64> %x1, i8 %x2)
+  %res1 = call <4 x i64> @llvm.x86.avx512.mask.pmovsxd.q.256(<4 x i32> %x0, <4 x i64> zeroinitializer, i8 %x2)
+  %res2 = call <4 x i64> @llvm.x86.avx512.mask.pmovsxd.q.256(<4 x i32> %x0, <4 x i64> %x1, i8 -1)
+  %res3 = add <4 x i64> %res, %res1
+  %res4 = add <4 x i64> %res3, %res2
+  ret <4 x i64> %res4
+}
+

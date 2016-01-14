@@ -129,3 +129,41 @@ sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, 
 ; CHECK:	movl ${{[1-4]+}}, ([[REG2]])
 ; CHECK:	movl ${{[1-4]+}}, ([[REG3]])
 }
+
+define void @test4(i64 %x) nounwind minsize {
+entry:
+  %a = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 0
+  %tmp = load i32, i32* %a, align 4
+  %b = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 1
+  %tmp1 = load i32, i32* %b, align 4
+  %sub = sub i32 %tmp, %tmp1
+  %c = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 2
+  %tmp2 = load i32, i32* %c, align 4
+  %add = add nsw i32 %sub, %tmp2
+  switch i32 %add, label %sw.epilog [
+    i32 1, label %sw.bb.1
+    i32 2, label %sw.bb.2
+  ]
+
+sw.bb.1:                                          ; preds = %entry
+  store i32 111, i32* %b, align 4
+  store i32 222, i32* %c, align 4
+  br label %sw.epilog
+
+sw.bb.2:                                          ; preds = %entry
+  store i32 333, i32* %b, align 4
+  store i32 444, i32* %c, align 4
+  br label %sw.epilog
+
+sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, %entry
+  ret void
+; CHECK-LABEL: test4:
+; CHECK:	leaq arr1+4({{.*}}), [[REG2:%[a-z]+]]
+; CHECK:	movl -4([[REG2]]), {{.*}}
+; CHECK:	subl ([[REG2]]), {{.*}}
+; CHECK:	addl 4([[REG2]]), {{.*}}
+; CHECK:	movl ${{[1-4]+}}, ([[REG2]])
+; CHECK:	movl ${{[1-4]+}}, 4([[REG2]])
+; CHECK:	movl ${{[1-4]+}}, ([[REG2]])
+; CHECK:	movl ${{[1-4]+}}, 4([[REG2]])
+}

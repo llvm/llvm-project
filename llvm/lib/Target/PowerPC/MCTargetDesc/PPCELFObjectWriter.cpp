@@ -25,8 +25,8 @@ namespace {
     PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
   protected:
-    unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                          bool IsPCRel) const override;
+    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                          const MCFixup &Fixup, bool IsPCRel) const override;
 
     bool needsRelocateWithSymbol(const MCSymbol &Sym,
                                  unsigned Type) const override;
@@ -66,7 +66,7 @@ static MCSymbolRefExpr::VariantKind getAccessVariant(const MCValue &Target,
   llvm_unreachable("unknown PPCMCExpr kind");
 }
 
-unsigned PPCELFObjectWriter::GetRelocType(const MCValue &Target,
+unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   MCSymbolRefExpr::VariantKind Modifier = getAccessVariant(Target, Fixup);

@@ -45,17 +45,18 @@ entry:
 ; CHECK:       __emutls_t.internal_y
 
 ; X86_32-LABEL:  get_external_x:
-; X86_32:        movl __emutls_v.external_x
+; X86_32:        movl __emutls_v.external_x@GOT(%ebx)
 ; X86_32:        calll __emutls_get_address
 ; X86_32-LABEL:  get_external_y:
-; X86_32:        movl __emutls_v.external_y
+; X86_32:        movl __emutls_v.external_y@GOT(%ebx)
 ; X86_32:        calll __emutls_get_address
 ; X86_32-LABEL:  get_internal_y:
-; X86_32:      movl __emutls_v.internal_y
-; X86_32:      calll __emutls_get_address
-; X86_32-NOT:   __emutls_t.external_x
-; X86_32-NOT:   __emutls_v.external_x:
-; X86_32:        .data
+; X86_32:        leal __emutls_v.internal_y@GOTOFF(%ebx)
+; X86_32:        calll __emutls_get_address
+; X86_32-NOT:    __emutls_t.external_x
+; X86_32-NOT:    __emutls_v.external_x:
+; X86_32:        .data{{$}}
+; X86_32:        .globl __emutls_v.external_y
 ; X86_32:        .align 4
 ; X86_32-LABEL:  __emutls_v.external_y:
 ; X86_32-NEXT:   .long 1
@@ -65,7 +66,8 @@ entry:
 ; X86_32:        .section .rodata,
 ; X86_32-LABEL:  __emutls_t.external_y:
 ; X86_32-NEXT:   .byte 7
-; X86_32:        .data
+; X86_32:        .data{{$}}
+; X86_32-NOT:    .globl
 ; X86_32:        .align 4
 ; X86_32-LABEL:  __emutls_v.internal_y:
 ; X86_32-NEXT:   .long 8
@@ -75,16 +77,17 @@ entry:
 ; X86_32-LABEL:  __emutls_t.internal_y:
 ; X86_32-NEXT:   .quad 9
 ; X86_64-LABEL:  get_external_x:
-; X86_64:      __emutls_v.external_x
-; X86_64:      __emutls_get_address
+; X86_64:        __emutls_v.external_x@GOTPCREL(%rip)
+; X86_64:        __emutls_get_address
 ; X86_64-LABEL:  get_external_y:
-; X86_64:      __emutls_v.external_y
-; X86_64:      __emutls_get_address
+; X86_64:        __emutls_v.external_y@GOTPCREL(%rip)
+; X86_64:        __emutls_get_address
 ; X86_64-LABEL:  get_internal_y:
-; X86_64:      __emutls_v.internal_y
-; X86_64:      __emutls_get_address
-; X86_64-NOT:   __emutls_t.external_x
-; X86_64-NOT:   __emutls_v.external_x:
+; X86_64:        __emutls_v.internal_y(%rip)
+; X86_64:        __emutls_get_address
+; X86_64-NOT:    __emutls_t.external_x
+; X86_64-NOT:    __emutls_v.external_x:
+; X86_64:        .globl __emutls_v.external_y
 ; X86_64:        .align 8
 ; X86_64-LABEL:  __emutls_v.external_y:
 ; X86_64-NEXT:   .quad 1
@@ -95,7 +98,8 @@ entry:
 ; X86_64:        .section .rodata,
 ; X86_64-LABEL:  __emutls_t.external_y:
 ; X86_64-NEXT:   .byte 7
-; X86_64:        .data
+; X86_64:        .data{{$}}
+; X86_64-NOT:    .globl
 ; X86_64:        .align 8
 ; X86_64-LABEL:  __emutls_v.internal_y:
 ; X86_64-NEXT:   .quad 8

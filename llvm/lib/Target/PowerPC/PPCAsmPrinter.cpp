@@ -1092,8 +1092,28 @@ void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
   }
 
   // ELFv2 ABI - Normal entry label.
-  if (Subtarget->isELFv2ABI())
+  if (Subtarget->isELFv2ABI()) {
+    // In the Large code model, we allow arbitrary displacements between
+    // the text section and its associated TOC section.  We place the
+    // full 8-byte offset to the TOC in memory immediatedly preceding
+    // the function global entry point.
+    if (TM.getCodeModel() == CodeModel::Large
+        && !MF->getRegInfo().use_empty(PPC::X2)) {
+      const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
+
+      MCSymbol *TOCSymbol = OutContext.getOrCreateSymbol(StringRef(".TOC."));
+      MCSymbol *GlobalEPSymbol = PPCFI->getGlobalEPSymbol();
+      const MCExpr *TOCDeltaExpr =
+        MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCSymbol, OutContext),
+                                MCSymbolRefExpr::create(GlobalEPSymbol,
+                                                        OutContext),
+                                OutContext);
+
+      OutStreamer->EmitLabel(PPCFI->getTOCOffsetSymbol());
+      OutStreamer->EmitValue(TOCDeltaExpr, 8);
+    }
     return AsmPrinter::EmitFunctionEntryLabel();
+  }
 
   // Emit an official procedure descriptor.
   MCSectionSubPair Current = OutStreamer->getCurrentSection();
@@ -1160,10 +1180,25 @@ void PPCLinuxAsmPrinter::EmitFunctionBodyStart() {
   // thus emit a prefix sequence along the following lines:
   //
   // func:
+  // .Lfunc_gepNN:
   //         # global entry point
-  //         addis r2,r12,(.TOC.-func)@ha
-  //         addi  r2,r2,(.TOC.-func)@l
-  //         .localentry func, .-func
+  //         addis r2,r12,(.TOC.-.Lfunc_gepNN)@ha
+  //         addi  r2,r2,(.TOC.-.Lfunc_gepNN)@l
+  // .Lfunc_lepNN:
+  //         .localentry func, .Lfunc_lepNN-.Lfunc_gepNN
+  //         # local entry point, followed by function body
+  //
+  // For the Large code model, we create
+  //
+  // .Lfunc_tocNN:
+  //         .quad .TOC.-.Lfunc_gepNN      # done by EmitFunctionEntryLabel
+  // func:
+  // .Lfunc_gepNN:
+  //         # global entry point
+  //         ld    r2,.Lfunc_tocNN-.Lfunc_gepNN(r12)
+  //         add   r2,r2,r12
+  // .Lfunc_lepNN:
+  //         .localentry func, .Lfunc_lepNN-.Lfunc_gepNN
   //         # local entry point, followed by function body
   //
   // This ensures we have r2 set up correctly while executing the function
@@ -1171,32 +1206,49 @@ void PPCLinuxAsmPrinter::EmitFunctionBodyStart() {
   if (Subtarget->isELFv2ABI()
       // Only do all that if the function uses r2 in the first place.
       && !MF->getRegInfo().use_empty(PPC::X2)) {
+    const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
 
-    MCSymbol *GlobalEntryLabel = OutContext.createTempSymbol();
+    MCSymbol *GlobalEntryLabel = PPCFI->getGlobalEPSymbol();
     OutStreamer->EmitLabel(GlobalEntryLabel);
     const MCSymbolRefExpr *GlobalEntryLabelExp =
       MCSymbolRefExpr::create(GlobalEntryLabel, OutContext);
 
-    MCSymbol *TOCSymbol = OutContext.getOrCreateSymbol(StringRef(".TOC."));
-    const MCExpr *TOCDeltaExpr =
-      MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCSymbol, OutContext),
-                              GlobalEntryLabelExp, OutContext);
+    if (TM.getCodeModel() != CodeModel::Large) {
+      MCSymbol *TOCSymbol = OutContext.getOrCreateSymbol(StringRef(".TOC."));
+      const MCExpr *TOCDeltaExpr =
+        MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCSymbol, OutContext),
+                                GlobalEntryLabelExp, OutContext);
 
-    const MCExpr *TOCDeltaHi =
-      PPCMCExpr::createHa(TOCDeltaExpr, false, OutContext);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS)
-                                 .addReg(PPC::X2)
-                                 .addReg(PPC::X12)
-                                 .addExpr(TOCDeltaHi));
+      const MCExpr *TOCDeltaHi =
+        PPCMCExpr::createHa(TOCDeltaExpr, false, OutContext);
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS)
+                                   .addReg(PPC::X2)
+                                   .addReg(PPC::X12)
+                                   .addExpr(TOCDeltaHi));
 
-    const MCExpr *TOCDeltaLo =
-      PPCMCExpr::createLo(TOCDeltaExpr, false, OutContext);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDI)
-                                 .addReg(PPC::X2)
-                                 .addReg(PPC::X2)
-                                 .addExpr(TOCDeltaLo));
+      const MCExpr *TOCDeltaLo =
+        PPCMCExpr::createLo(TOCDeltaExpr, false, OutContext);
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDI)
+                                   .addReg(PPC::X2)
+                                   .addReg(PPC::X2)
+                                   .addExpr(TOCDeltaLo));
+    } else {
+      MCSymbol *TOCOffset = PPCFI->getTOCOffsetSymbol();
+      const MCExpr *TOCOffsetDeltaExpr =
+        MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCOffset, OutContext),
+                                GlobalEntryLabelExp, OutContext);
 
-    MCSymbol *LocalEntryLabel = OutContext.createTempSymbol();
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LD)
+                                   .addReg(PPC::X2)
+                                   .addExpr(TOCOffsetDeltaExpr)
+                                   .addReg(PPC::X12));
+      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADD8)
+                                   .addReg(PPC::X2)
+                                   .addReg(PPC::X2)
+                                   .addReg(PPC::X12));
+    }
+
+    MCSymbol *LocalEntryLabel = PPCFI->getLocalEPSymbol();
     OutStreamer->EmitLabel(LocalEntryLabel);
     const MCSymbolRefExpr *LocalEntryLabelExp =
        MCSymbolRefExpr::create(LocalEntryLabel, OutContext);

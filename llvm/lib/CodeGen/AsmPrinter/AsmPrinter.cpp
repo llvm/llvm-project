@@ -347,50 +347,16 @@ MCSymbol *AsmPrinter::getSymbol(const GlobalValue *GV) const {
   return TM.getSymbol(GV, *Mang);
 }
 
-static MCSymbol *getOrCreateEmuTLSControlSym(MCSymbol *GVSym, MCContext &C) {
-  return C.getOrCreateSymbol(Twine("__emutls_v.") + GVSym->getName());
-}
-
-static MCSymbol *getOrCreateEmuTLSInitSym(MCSymbol *GVSym, MCContext &C) {
-  return C.getOrCreateSymbol(Twine("__emutls_t.") + GVSym->getName());
-}
-
-/// EmitEmulatedTLSControlVariable - Emit the control variable for an emulated TLS variable.
-void AsmPrinter::EmitEmulatedTLSControlVariable(const GlobalVariable *GV,
-                                                MCSymbol *EmittedSym,
-                                                bool AllZeroInitValue) {
-  MCSection *TLSVarSection = getObjFileLowering().getDataSection();
-  OutStreamer->SwitchSection(TLSVarSection);
-  MCSymbol *GVSym = getSymbol(GV);
-  EmitLinkage(GV, EmittedSym);  // same linkage as GV
-  const DataLayout &DL = GV->getParent()->getDataLayout();
-  uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
-  unsigned AlignLog = getGVAlignmentLog2(GV, DL);
-  unsigned WordSize = DL.getPointerSize();
-  unsigned Alignment = DL.getPointerABIAlignment();
-  EmitAlignment(Log2_32(Alignment));
-  OutStreamer->EmitLabel(EmittedSym);
-  OutStreamer->EmitIntValue(Size, WordSize);
-  OutStreamer->EmitIntValue((1 << AlignLog), WordSize);
-  OutStreamer->EmitIntValue(0, WordSize);
-  if (GV->hasInitializer() && !AllZeroInitValue) {
-    OutStreamer->EmitSymbolValue(
-        getOrCreateEmuTLSInitSym(GVSym, OutContext), WordSize);
-  } else
-    OutStreamer->EmitIntValue(0, WordSize);
-  if (MAI->hasDotTypeDotSizeDirective())
-    OutStreamer->emitELFSize(cast<MCSymbolELF>(EmittedSym),
-                             MCConstantExpr::create(4 * WordSize, OutContext));
-  OutStreamer->AddBlankLine();  // End of the __emutls_v.* variable.
-}
-
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
 void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
-  bool IsEmuTLSVar =
-      GV->getThreadLocalMode() != llvm::GlobalVariable::NotThreadLocal &&
-      TM.Options.EmulatedTLS;
+  bool IsEmuTLSVar = TM.Options.EmulatedTLS && GV->isThreadLocal();
   assert(!(IsEmuTLSVar && GV->hasCommonLinkage()) &&
          "No emulated TLS variables in the common section");
+
+  // Never emit TLS variable xyz in emulated TLS model.
+  // The initialization value is in __emutls_t.xyz instead of xyz.
+  if (IsEmuTLSVar)
+    return;
 
   if (GV->hasInitializer()) {
     // Check to see if this is a special global used by LLVM, if so, emit it.
@@ -402,7 +368,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     if (GlobalGOTEquivs.count(getSymbol(GV)))
       return;
 
-    if (isVerbose() && !IsEmuTLSVar) {
+    if (isVerbose()) {
       // When printing the control variable __emutls_v.*,
       // we don't need to print the original TLS variable name.
       GV->printAsOperand(OutStreamer->GetCommentOS(),
@@ -412,8 +378,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   }
 
   MCSymbol *GVSym = getSymbol(GV);
-  MCSymbol *EmittedSym = IsEmuTLSVar ?
-      getOrCreateEmuTLSControlSym(GVSym, OutContext) : GVSym;
+  MCSymbol *EmittedSym = GVSym;
   // getOrCreateEmuTLSControlSym only creates the symbol with name and default attributes.
   // GV's or GVSym's attributes will be used for the EmittedSym.
 
@@ -440,18 +405,6 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   // sections and expected to be contiguous (e.g. ObjC metadata).
   unsigned AlignLog = getGVAlignmentLog2(GV, DL);
 
-  bool AllZeroInitValue = false;
-  const Constant *InitValue = GV->getInitializer();
-  if (isa<ConstantAggregateZero>(InitValue))
-    AllZeroInitValue = true;
-  else {
-    const ConstantInt *InitIntValue = dyn_cast<ConstantInt>(InitValue);
-    if (InitIntValue && InitIntValue->isZero())
-      AllZeroInitValue = true;
-  }
-  if (IsEmuTLSVar)
-    EmitEmulatedTLSControlVariable(GV, EmittedSym, AllZeroInitValue);
-
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerGroupName, TimePassesIsEnabled);
     HI.Handler->setSymbolSize(GVSym, Size);
@@ -459,8 +412,6 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
   // Handle common and BSS local symbols (.lcomm).
   if (GVKind.isCommon() || GVKind.isBSSLocal()) {
-    assert(!(IsEmuTLSVar && GVKind.isCommon()) &&
-           "No emulated TLS variables in the common section");
     if (Size == 0) Size = 1;   // .comm Foo, 0 is undefined, avoid it.
     unsigned Align = 1 << AlignLog;
 
@@ -505,21 +456,14 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     return;
   }
 
-  if (IsEmuTLSVar && AllZeroInitValue)
-    return;  // No need of initialization values.
+  MCSymbol *EmittedInitSym = GVSym;
 
-  MCSymbol *EmittedInitSym = IsEmuTLSVar ?
-      getOrCreateEmuTLSInitSym(GVSym, OutContext) : GVSym;
-  // getOrCreateEmuTLSInitSym only creates the symbol with name and default attributes.
-  // GV's or GVSym's attributes will be used for the EmittedInitSym.
-
-  MCSection *TheSection = IsEmuTLSVar ?
-      getObjFileLowering().getReadOnlySection() :
+  MCSection *TheSection =
       getObjFileLowering().SectionForGlobal(GV, GVKind, *Mang, TM);
 
   // Handle the zerofill directive on darwin, which is a special form of BSS
   // emission.
-  if (GVKind.isBSSExtern() && MAI->hasMachoZeroFillDirective() && !IsEmuTLSVar) {
+  if (GVKind.isBSSExtern() && MAI->hasMachoZeroFillDirective()) {
     if (Size == 0) Size = 1;  // zerofill of 0 bytes is undefined.
 
     // .globl _foo
@@ -539,7 +483,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   // TLOF class.  This will also make it more obvious that stuff like
   // MCStreamer::EmitTBSSSymbol is macho specific and only called from macho
   // specific code.
-  if (GVKind.isThreadLocal() && MAI->hasMachoTBSSDirective() && !IsEmuTLSVar) {
+  if (GVKind.isThreadLocal() && MAI->hasMachoTBSSDirective()) {
     // Emit the .tbss symbol
     MCSymbol *MangSym =
       OutContext.getOrCreateSymbol(GVSym->getName() + Twine("$tlv$init"));
@@ -583,9 +527,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
   OutStreamer->SwitchSection(TheSection);
 
-  // emutls_t.* symbols are only used in the current compilation unit.
-  if (!IsEmuTLSVar)
-    EmitLinkage(GV, EmittedInitSym);
+  EmitLinkage(GV, EmittedInitSym);
   EmitAlignment(AlignLog, GV);
 
   OutStreamer->EmitLabel(EmittedInitSym);

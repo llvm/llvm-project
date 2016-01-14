@@ -46,8 +46,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     WorkGroupIDZSystemSGPR(AMDGPU::NoRegister),
     WorkGroupInfoSystemSGPR(AMDGPU::NoRegister),
     PrivateSegmentWaveByteOffsetSystemSGPR(AMDGPU::NoRegister),
-    LDSWaveSpillSize(0),
     PSInputAddr(0),
+    ReturnsVoid(true),
+    LDSWaveSpillSize(0),
+    PSInputEna(0),
     NumUserSGPRs(0),
     NumSystemSGPRs(0),
     HasSpilledSGPRs(false),
@@ -71,6 +73,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     WorkItemIDZ(false) {
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   const Function *F = MF.getFunction();
+
+  PSInputAddr = AMDGPU::getInitialPSInputAddr(*F);
 
   const MachineFrameInfo *FrameInfo = MF.getFrameInfo();
 

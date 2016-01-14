@@ -26,7 +26,7 @@
 // ... = load %ptr2, !alias.scope !{ !scope1, !scope2 }, !noalias !{ !scope1 }
 //
 // When evaluating an aliasing query, if one of the instructions is associated
-// has a set of noalias scopes in some domain that is superset of the alias
+// has a set of noalias scopes in some domain that is a superset of the alias
 // scopes in that domain of some other instruction, then the two memory
 // accesses are assumed not to alias.
 //
@@ -51,9 +51,9 @@ static cl::opt<bool> EnableScopedNoAlias("enable-scoped-noalias",
                                          cl::init(true));
 
 namespace {
-/// AliasScopeNode - This is a simple wrapper around an MDNode which provides
-/// a higher-level interface by hiding the details of how alias analysis
-/// information is encoded in its operands.
+/// This is a simple wrapper around an MDNode which provides a higher-level
+/// interface by hiding the details of how alias analysis information is encoded
+/// in its operands.
 class AliasScopeNode {
   const MDNode *Node;
 
@@ -61,10 +61,10 @@ public:
   AliasScopeNode() : Node(nullptr) {}
   explicit AliasScopeNode(const MDNode *N) : Node(N) {}
 
-  /// getNode - Get the MDNode for this AliasScopeNode.
+  /// Get the MDNode for this AliasScopeNode.
   const MDNode *getNode() const { return Node; }
 
-  /// getDomain - Get the MDNode for this AliasScopeNode's domain.
+  /// Get the MDNode for this AliasScopeNode's domain.
   const MDNode *getDomain() const {
     if (Node->getNumOperands() < 2)
       return nullptr;
@@ -131,8 +131,8 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(ImmutableCallSite CS1,
 void ScopedNoAliasAAResult::collectMDInDomain(
     const MDNode *List, const MDNode *Domain,
     SmallPtrSetImpl<const MDNode *> &Nodes) const {
-  for (unsigned i = 0, ie = List->getNumOperands(); i != ie; ++i)
-    if (const MDNode *MD = dyn_cast<MDNode>(List->getOperand(i)))
+  for (const MDOperand &MDOp : List->operands())
+    if (const MDNode *MD = dyn_cast<MDNode>(MDOp))
       if (AliasScopeNode(MD).getDomain() == Domain)
         Nodes.insert(MD);
 }
@@ -144,8 +144,8 @@ bool ScopedNoAliasAAResult::mayAliasInScopes(const MDNode *Scopes,
 
   // Collect the set of scope domains relevant to the noalias scopes.
   SmallPtrSet<const MDNode *, 16> Domains;
-  for (unsigned i = 0, ie = NoAlias->getNumOperands(); i != ie; ++i)
-    if (const MDNode *NAMD = dyn_cast<MDNode>(NoAlias->getOperand(i)))
+  for (const MDOperand &MDOp : NoAlias->operands())
+    if (const MDNode *NAMD = dyn_cast<MDNode>(MDOp))
       if (const MDNode *Domain = AliasScopeNode(NAMD).getDomain())
         Domains.insert(Domain);
 

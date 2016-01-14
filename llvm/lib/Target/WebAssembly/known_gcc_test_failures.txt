@@ -1,5 +1,13 @@
 # Tests which are known to fail from the GCC torture test suite.
 
+# WebAssemblyCFGStackify.cpp:438: void PlaceMarkers(llvm::MachineFunction&, const llvm::MachineLoopInfo&, const llvm::WebAssemblyInstrInfo&, llvm::MachineDominatorTree&): Assertion `ScopeTops[Stack.back()->getNumber()] == &MBB && "Block should be balanced"' failed.
+ashldi-1.c
+ashrdi-1.c
+builtin-bitops-1.c
+loop-11.c
+lshrdi-1.c
+mode-dependent-address.c
+
 # Core dump.
 920908-1.c
 pr38151.c

@@ -66,8 +66,12 @@ static ScheduleDAGInstrs *createR600MachineScheduler(MachineSchedContext *C) {
 }
 
 static MachineSchedRegistry
-SchedCustomRegistry("r600", "Run R600's custom scheduler",
-                    createR600MachineScheduler);
+R600SchedRegistry("r600", "Run R600's custom scheduler",
+                   createR600MachineScheduler);
+
+static MachineSchedRegistry
+SISchedRegistry("si", "Run SI's custom scheduler",
+                createSIMachineScheduler);
 
 static std::string computeDataLayout(const Triple &TT) {
   std::string Ret = "e-p:32:32";

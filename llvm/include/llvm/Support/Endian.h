@@ -173,6 +173,10 @@ template<typename value_type,
          endianness endian,
          std::size_t alignment>
 struct packed_endian_specific_integral {
+  packed_endian_specific_integral() = default;
+
+  explicit packed_endian_specific_integral(value_type val) { *this = val; }
+
   operator value_type() const {
     return endian::read<value_type, endian, alignment>(
       (const void*)Value.buffer);

@@ -79,7 +79,7 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
 }
 
 /// Translates generic PPC fixup kind to Mach-O/PPC relocation type enum.
-/// Outline based on PPCELFObjectWriter::GetRelocType().
+/// Outline based on PPCELFObjectWriter::getRelocType().
 static unsigned getRelocType(const MCValue &Target,
                              const MCFixupKind FixupKind, // from
                                                           // Fixup.getKind()

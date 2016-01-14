@@ -190,7 +190,7 @@ this property are side-effect free, only depending on their input arguments and
 the state of memory when they are called.  This property allows calls to these
 functions to be eliminated and moved around, as long as there is no store
 instruction that changes the contents of memory.  Note that all functions that
-satisfy the ``doesNotAccessMemory`` method also satisfies ``onlyReadsMemory``.
+satisfy the ``doesNotAccessMemory`` method also satisfy ``onlyReadsMemory``.
 
 Writing a new ``AliasAnalysis`` Implementation
 ==============================================
@@ -634,7 +634,7 @@ transformations:
 * It uses mod/ref information to hoist function calls out of loops that do not
   write to memory and are loop-invariant.
 
-* If uses alias information to promote memory objects that are loaded and stored
+* It uses alias information to promote memory objects that are loaded and stored
   to in loops to live in a register instead.  It can do this if there are no may
   aliases to the loaded/stored memory location.
 

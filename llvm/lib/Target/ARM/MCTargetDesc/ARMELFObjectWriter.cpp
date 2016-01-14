@@ -34,8 +34,8 @@ namespace {
 
     ~ARMELFObjectWriter() override;
 
-    unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                          bool IsPCRel) const override;
+    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                          const MCFixup &Fixup, bool IsPCRel) const override;
 
     bool needsRelocateWithSymbol(const MCSymbol &Sym,
                                  unsigned Type) const override;
@@ -67,7 +67,7 @@ bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
 // Need to examine the Fixup when determining whether to 
 // emit the relocation as an explicit symbol or as a section relative
 // offset
-unsigned ARMELFObjectWriter::GetRelocType(const MCValue &Target,
+unsigned ARMELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   return GetRelocTypeInner(Target, Fixup, IsPCRel);

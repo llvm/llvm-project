@@ -4864,9 +4864,10 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     SDValue V = Op.getOperand(i);
     if (V.getOpcode() == ISD::UNDEF)
       continue;
-    else if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT) {
+    else if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+             !isa<ConstantSDNode>(V.getOperand(1))) {
       // A shuffle can only come from building a vector from various
-      // elements of other vectors.
+      // elements of other vectors, provided their indices are constant.
       return SDValue();
     }
 

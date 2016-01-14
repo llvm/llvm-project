@@ -17458,7 +17458,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
       // We need a frame pointer because this will get lowered to a PUSH/POP
       // sequence.
       MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-      MFI->setHasOpaqueSPAdjustment(true);
+      MFI->setHasCopyImplyingStackAdjustment(true);
       // Don't do anything here, we will expand these intrinsics out later
       // during ExpandISelPseudos in EmitInstrWithCustomInserter.
       return SDValue();
@@ -20796,6 +20796,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VSRLI:              return "X86ISD::VSRLI";
   case X86ISD::VSRAI:              return "X86ISD::VSRAI";
   case X86ISD::VROTLI:             return "X86ISD::VROTLI";
+  case X86ISD::VROTRI:             return "X86ISD::VROTRI";
   case X86ISD::CMPP:               return "X86ISD::CMPP";
   case X86ISD::PCMPEQ:             return "X86ISD::PCMPEQ";
   case X86ISD::PCMPGT:             return "X86ISD::PCMPGT";

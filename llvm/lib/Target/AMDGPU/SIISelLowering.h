@@ -95,6 +95,13 @@ public:
                                SDLoc DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
+  SDValue LowerReturn(SDValue Chain,
+                      CallingConv::ID CallConv,
+                      bool isVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      const SmallVectorImpl<SDValue> &OutVals,
+                      SDLoc DL, SelectionDAG &DAG) const override;
+
   MachineBasicBlock * EmitInstrWithCustomInserter(MachineInstr * MI,
                                       MachineBasicBlock * BB) const override;
   bool enableAggressiveFMAFusion(EVT VT) const override;

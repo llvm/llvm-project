@@ -18,7 +18,7 @@ rev=""
 proj=""
 revert="no"
 
-function usage() {
+usage() {
     echo "usage: `basename $0` [OPTIONS]"
     echo "  -proj PROJECT  The project to merge the result into"
     echo "  -rev NUM       The revision to merge into the project"

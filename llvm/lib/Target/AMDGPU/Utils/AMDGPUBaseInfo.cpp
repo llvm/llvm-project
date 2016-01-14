@@ -41,6 +41,9 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
   if (Features.test(FeatureISAVersion8_0_1))
     return {8, 0, 1};
 
+  if (Features.test(FeatureISAVersion8_0_3))
+    return {8, 0, 3};
+
   return {0, 0, 0};
 }
 
@@ -106,20 +109,27 @@ bool isReadOnlySegment(const GlobalValue *GV) {
   return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }
 
-static const char ShaderTypeAttribute[] = "ShaderType";
-
-unsigned getShaderType(const Function &F) {
-  Attribute A = F.getFnAttribute(ShaderTypeAttribute);
-  unsigned ShaderType = ShaderType::COMPUTE;
+static unsigned getIntegerAttribute(const Function &F, const char *Name,
+                                    unsigned Default) {
+  Attribute A = F.getFnAttribute(Name);
+  unsigned Result = Default;
 
   if (A.isStringAttribute()) {
     StringRef Str = A.getValueAsString();
-    if (Str.getAsInteger(0, ShaderType)) {
+    if (Str.getAsInteger(0, Result)) {
       LLVMContext &Ctx = F.getContext();
       Ctx.emitError("can't parse shader type");
     }
   }
-  return ShaderType;
+  return Result;
+}
+
+unsigned getShaderType(const Function &F) {
+  return getIntegerAttribute(F, "ShaderType", ShaderType::COMPUTE);
+}
+
+unsigned getInitialPSInputAddr(const Function &F) {
+  return getIntegerAttribute(F, "InitialPSInputAddr", 0);
 }
 
 bool isSI(const MCSubtargetInfo &STI) {

@@ -24,8 +24,8 @@ public:
 
 protected:
   // Override MCELFObjectTargetWriter.
-  unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                        bool IsPCRel) const override;
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override;
 };
 } // end anonymous namespace
 
@@ -106,7 +106,8 @@ static unsigned getPLTReloc(unsigned Kind) {
   llvm_unreachable("Unsupported absolute address");
 }
 
-unsigned SystemZObjectWriter::GetRelocType(const MCValue &Target,
+unsigned SystemZObjectWriter::getRelocType(MCContext &Ctx,
+                                           const MCValue &Target,
                                            const MCFixup &Fixup,
                                            bool IsPCRel) const {
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();

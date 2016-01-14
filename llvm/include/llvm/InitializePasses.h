@@ -182,6 +182,7 @@ void initializeLowerExpectIntrinsicPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
 void initializeLowerInvokePass(PassRegistry&);
 void initializeLowerSwitchPass(PassRegistry&);
+void initializeLowerEmuTLSPass(PassRegistry&);
 void initializeMachineBlockFrequencyInfoPass(PassRegistry&);
 void initializeMachineBlockPlacementPass(PassRegistry&);
 void initializeMachineBlockPlacementStatsPass(PassRegistry&);

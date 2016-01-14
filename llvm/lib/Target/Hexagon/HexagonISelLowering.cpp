@@ -1629,9 +1629,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
 
   if (EmitJumpTables)
-    setMinimumJumpTableEntries(2);
-  else
     setMinimumJumpTableEntries(MinimumJumpTables);
+  else
+    setMinimumJumpTableEntries(INT_MAX);
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
 
   // Hexagon has instructions for add/sub with carry. The problem with

@@ -15,6 +15,97 @@
 namespace llvm {
 namespace codeview {
 
+/// These values correspond to the CV_CPU_TYPE_e enumeration, and are documented
+/// here: https://msdn.microsoft.com/en-us/library/b2fc64ek.aspx
+enum class CPUType : uint16_t {
+  Intel8080 = 0x0,
+  Intel8086 = 0x1,
+  Intel80286 = 0x2,
+  Intel80386 = 0x3,
+  Intel80486 = 0x4,
+  Pentium = 0x5,
+  PentiumPro = 0x6,
+  Pentium3 = 0x7,
+  MIPS = 0x10,
+  MIPS16 = 0x11,
+  MIPS32 = 0x12,
+  MIPS64 = 0x13,
+  MIPSI = 0x14,
+  MIPSII = 0x15,
+  MIPSIII = 0x16,
+  MIPSIV = 0x17,
+  MIPSV = 0x18,
+  M68000 = 0x20,
+  M68010 = 0x21,
+  M68020 = 0x22,
+  M68030 = 0x23,
+  M68040 = 0x24,
+  Alpha = 0x30,
+  Alpha21164 = 0x31,
+  Alpha21164A = 0x32,
+  Alpha21264 = 0x33,
+  Alpha21364 = 0x34,
+  PPC601 = 0x40,
+  PPC603 = 0x41,
+  PPC604 = 0x42,
+  PPC620 = 0x43,
+  PPCFP = 0x44,
+  PPCBE = 0x45,
+  SH3 = 0x50,
+  SH3E = 0x51,
+  SH3DSP = 0x52,
+  SH4 = 0x53,
+  SHMedia = 0x54,
+  ARM3 = 0x60,
+  ARM4 = 0x61,
+  ARM4T = 0x62,
+  ARM5 = 0x63,
+  ARM5T = 0x64,
+  ARM6 = 0x65,
+  ARM_XMAC = 0x66,
+  ARM_WMMX = 0x67,
+  ARM7 = 0x68,
+  Omni = 0x70,
+  Ia64 = 0x80,
+  Ia64_2 = 0x81,
+  CEE = 0x90,
+  AM33 = 0xa0,
+  M32R = 0xb0,
+  TriCore = 0xc0,
+  X64 = 0xd0,
+  EBC = 0xe0,
+  Thumb = 0xf0,
+  ARMNT = 0xf4,
+  D3D11_Shader = 0x100,
+};
+
+/// These values correspond to the CV_CFL_LANG enumeration, and are documented
+/// here: https://msdn.microsoft.com/en-us/library/bw3aekw6.aspx
+enum SourceLanguage : uint8_t {
+  C = 0x00,
+  Cpp = 0x01,
+  Fortran = 0x02,
+  Masm = 0x03,
+  Pascal = 0x04,
+  Basic = 0x05,
+  Cobol = 0x06,
+  Link = 0x07,
+  Cvtres = 0x08,
+  Cvtpgd = 0x09,
+  CSharp = 0x0a,
+  VB = 0x0b,
+  ILAsm = 0x0c,
+  Java = 0x0d,
+  JScript = 0x0e,
+  MSIL = 0x0f,
+  HLSL = 0x10
+};
+
+/// These values correspond to the CV_call_e enumeration, and are documented
+/// at the following locations:
+///   https://msdn.microsoft.com/en-us/library/b2fc64ek.aspx
+///   https://msdn.microsoft.com/en-us/library/windows/desktop/ms680207(v=vs.85).aspx
+///
 enum class CallingConvention : uint8_t {
   NearC = 0x00,       // near right to left push, caller pops stack
   FarC = 0x01,        // far right to left push, caller pops stack
@@ -140,6 +231,7 @@ enum class HfaKind : uint8_t {
   Other = 0x03
 };
 
+/// Source-level access specifier. (CV_access_e)
 enum class MemberAccess : uint8_t {
   None = 0,
   Private = 1,
@@ -147,6 +239,7 @@ enum class MemberAccess : uint8_t {
   Public = 3
 };
 
+/// Part of member attribute flags. (CV_methodprop_e)
 enum class MethodKind : uint8_t {
   Vanilla = 0x00,
   Virtual = 0x01,
@@ -157,9 +250,14 @@ enum class MethodKind : uint8_t {
   PureIntroducingVirtual = 0x06
 };
 
+/// Equivalent to CV_fldattr_t bitfield.
 enum class MethodOptions : uint16_t {
   None = 0x0000,
+  AccessMask = 0x0003,
+  MethodKindMask = 0x001c,
   Pseudo = 0x0020,
+  NoInherit = 0x0040,
+  NoConstruct = 0x0080,
   CompilerGenerated = 0x0100,
   Sealed = 0x0200
 };
@@ -178,6 +276,7 @@ inline MethodOptions operator~(MethodOptions a) {
   return static_cast<MethodOptions>(~static_cast<uint16_t>(a));
 }
 
+/// Equivalent to CV_modifier_t.
 enum class ModifierOptions : uint16_t {
   None = 0x0000,
   Const = 0x0001,
@@ -207,9 +306,18 @@ enum class ModuleSubstreamKind : uint32_t {
   FrameData = 0xf5,
   InlineeLines = 0xf6,
   CrossScopeImports = 0xf7,
-  CrossScopeExports = 0xf8
+  CrossScopeExports = 0xf8,
+
+  // These appear to relate to .Net assembly info.
+  ILLines = 0xf9,
+  FuncMDTokenMap = 0xfa,
+  TypeMDTokenMap = 0xfb,
+  MergedAssemblyInput = 0xfc,
+
+  CoffSymbolRVA = 0xfd,
 };
 
+/// Equivalent to CV_ptrtype_e.
 enum class PointerKind : uint8_t {
   Near16 = 0x00,                // 16 bit pointer
   Far16 = 0x01,                 // 16:16 far pointer
@@ -226,6 +334,7 @@ enum class PointerKind : uint8_t {
   Near64 = 0x0c                 // 64 bit pointer
 };
 
+/// Equivalent to CV_ptrmode_e.
 enum class PointerMode : uint8_t {
   Pointer = 0x00,                 // "normal" pointer
   LValueReference = 0x01,         // "old" reference
@@ -234,6 +343,7 @@ enum class PointerMode : uint8_t {
   RValueReference = 0x04          // r-value reference
 };
 
+/// Equivalent to misc lfPointerAttr bitfields.
 enum class PointerOptions : uint32_t {
   None = 0x00000000,
   Flat32 = 0x00000100,
@@ -258,6 +368,7 @@ inline PointerOptions operator~(PointerOptions a) {
   return static_cast<PointerOptions>(~static_cast<uint16_t>(a));
 }
 
+/// Equivalent to CV_pmtype_e.
 enum class PointerToMemberRepresentation : uint16_t {
   Unknown = 0x00,                     // not specified (pre VC8)
   SingleInheritanceData = 0x01,       // member data, single inheritance
@@ -268,6 +379,13 @@ enum class PointerToMemberRepresentation : uint16_t {
   MultipleInheritanceFunction = 0x06, // member function, multiple inheritance
   VirtualInheritanceFunction = 0x07,  // member function, virtual inheritance
   GeneralFunction = 0x08              // member function, most general
+};
+
+/// Distinguishes individual records in .debug$T section or PDB type stream. The
+/// documentation and headers talk about this as the "leaf" type.
+enum TypeLeafKind : uint16_t {
+#define LEAF_TYPE(name, val) name = val,
+#include "CVLeafTypes.def"
 };
 
 enum class TypeRecordKind : uint16_t {

@@ -96,14 +96,14 @@
 ; OBJ32-NEXT: ]
 ; OBJ32:    CodeViewDebugInfo [
 ; OBJ32:      Subsection [
-; OBJ32-NEXT:   Type: 0xF1
+; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ32-NOT:    ]
 ; OBJ32:        ProcStart {
-; OBJ32-NEXT:     DisplayName: f
-; OBJ32-NEXT:     Section: _f
-; OBJ32-NEXT:     CodeSize: 0x6
-; OBJ32-NEXT:   }
-; OBJ32-NEXT:   ProcEnd
+; OBJ32:          CodeSize: 0x6
+; OBJ32:          DisplayName: f
+; OBJ32:          LinkageName: _f
+; OBJ32:        }
+; OBJ32:        ProcEnd
 ; OBJ32-NEXT: ]
 ; OBJ32:      FunctionLineTable [
 ; OBJ32-NEXT:   Name: _f
@@ -228,13 +228,13 @@
 ; OBJ64-NEXT:   0x48 IMAGE_REL_AMD64_SECTION f
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
-; OBJ64-NEXT:   Type: 0xF1
+; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ64-NOT:    ]
 ; OBJ64:        ProcStart {
-; OBJ64-NEXT:     DisplayName: f
-; OBJ64-NEXT:     Section: f
-; OBJ64-NEXT:     CodeSize: 0xE
-; OBJ64-NEXT:   }
+; OBJ64:          CodeSize: 0xE
+; OBJ64:          DisplayName: f
+; OBJ64:          LinkageName: f
+; OBJ64:        }
 ; OBJ64-NEXT:   ProcEnd
 ; OBJ64-NEXT: ]
 ; OBJ64:      FunctionLineTable [

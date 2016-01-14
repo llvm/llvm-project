@@ -1,6 +1,6 @@
 ; RUN: %lli -jit-kind=orc-mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext \
 ; RUN:   -O0 -relocation-model=pic -code-model=small %s
-; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386, win32
+; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386, mingw32, win32
 
 @.str = private unnamed_addr constant [6 x i8] c"data1\00", align 1
 @ptr = global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), align 4

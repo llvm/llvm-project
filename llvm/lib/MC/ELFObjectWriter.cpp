@@ -129,9 +129,9 @@ class ELFObjectWriter : public MCObjectWriter {
     bool hasRelocationAddend() const {
       return TargetObjectWriter->hasRelocationAddend();
     }
-    unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                          bool IsPCRel) const {
-      return TargetObjectWriter->GetRelocType(Target, Fixup, IsPCRel);
+    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                          const MCFixup &Fixup, bool IsPCRel) const {
+      return TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
     }
 
     void align(unsigned Alignment);
@@ -618,6 +618,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   const MCSectionELF &FixupSection = cast<MCSectionELF>(*Fragment->getParent());
   uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
+  MCContext &Ctx = Asm.getContext();
 
   if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
     assert(RefB->getKind() == MCSymbolRefExpr::VK_None &&
@@ -631,7 +632,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     // or (A + C - R). If B = R + K and the relocation is not pcrel, we can
     // replace B to implement it: (A - R - K + C)
     if (IsPCRel) {
-      Asm.getContext().reportError(
+      Ctx.reportError(
           Fixup.getLoc(),
           "No relocation available to represent this relative expression");
       return;
@@ -640,24 +641,23 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
 
     if (SymB.isUndefined()) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(),
-          Twine("symbol '") + SymB.getName() +
-              "' can not be undefined in a subtraction expression");
+      Ctx.reportError(Fixup.getLoc(),
+                      Twine("symbol '") + SymB.getName() +
+                          "' can not be undefined in a subtraction expression");
       return;
     }
 
     assert(!SymB.isAbsolute() && "Should have been folded");
     const MCSection &SecB = SymB.getSection();
     if (&SecB != &FixupSection) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "Cannot represent a difference across sections");
+      Ctx.reportError(Fixup.getLoc(),
+                      "Cannot represent a difference across sections");
       return;
     }
 
     if (::isWeak(SymB)) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "Cannot represent a subtraction with a weak symbol");
+      Ctx.reportError(Fixup.getLoc(),
+                      "Cannot represent a subtraction with a weak symbol");
       return;
     }
 
@@ -682,7 +682,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     }
   }
 
-  unsigned Type = GetRelocType(Target, Fixup, IsPCRel);
+  unsigned Type = getRelocType(Ctx, Target, Fixup, IsPCRel);
   bool RelocateWithSymbol = shouldRelocateWithSymbol(Asm, RefA, SymA, C, Type);
   if (!RelocateWithSymbol && SymA && !SymA->isUndefined())
     C += Layout.getSymbolOffset(*SymA);

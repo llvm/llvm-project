@@ -54,7 +54,8 @@ FunctionPass *createX86PadShortFunctions();
 /// instructions, in order to eliminate execution delays in some processors.
 FunctionPass *createX86FixupLEAs();
 
-/// Return a pass that removes redundant address recalculations.
+/// Return a pass that removes redundant LEA instructions and redundant address
+/// recalculations.
 FunctionPass *createX86OptimizeLEAs();
 
 /// Return a pass that optimizes the code-size of x86 call sequences. This is

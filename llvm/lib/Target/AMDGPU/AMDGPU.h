@@ -20,8 +20,10 @@ class AMDGPUInstrPrinter;
 class AMDGPUSubtarget;
 class AMDGPUTargetMachine;
 class FunctionPass;
+struct MachineSchedContext;
 class MCAsmInfo;
 class raw_ostream;
+class ScheduleDAGInstrs;
 class Target;
 class TargetMachine;
 
@@ -48,6 +50,8 @@ FunctionPass *createSIFixSGPRCopiesPass();
 FunctionPass *createSIFixSGPRLiveRangesPass();
 FunctionPass *createSICodeEmitterPass(formatted_raw_ostream &OS);
 FunctionPass *createSIInsertWaits(TargetMachine &tm);
+
+ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C);
 
 ModulePass *createAMDGPUAnnotateKernelFeaturesPass();
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);

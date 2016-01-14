@@ -20,8 +20,8 @@ class AMDGPUELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   AMDGPUELFObjectWriter(bool Is64Bit);
 protected:
-  unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                        bool IsPCRel) const override {
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override {
     return Fixup.getKind();
   }
 

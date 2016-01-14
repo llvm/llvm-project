@@ -91,7 +91,8 @@ bool X86FrameLowering::hasFP(const MachineFunction &MF) const {
           MFI->isFrameAddressTaken() || MFI->hasOpaqueSPAdjustment() ||
           MF.getInfo<X86MachineFunctionInfo>()->getForceFramePointer() ||
           MMI.callsUnwindInit() || MMI.hasEHFunclets() || MMI.callsEHReturn() ||
-          MFI->hasStackMap() || MFI->hasPatchPoint());
+          MFI->hasStackMap() || MFI->hasPatchPoint() ||
+          MFI->hasCopyImplyingStackAdjustment());
 }
 
 static unsigned getSUBriOpcode(unsigned IsLP64, int64_t Imm) {
@@ -943,11 +944,11 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // push and pop from the stack.
   if (Is64Bit && !Fn->hasFnAttribute(Attribute::NoRedZone) &&
       !TRI->needsStackRealignment(MF) &&
-      !MFI->hasVarSizedObjects() &&    // No dynamic alloca.
-      !MFI->adjustsStack() &&          // No calls.
-      !IsWin64CC &&                    // Win64 has no Red Zone
-      !MFI->hasOpaqueSPAdjustment() && // Don't push and pop.
-      !MF.shouldSplitStack()) {        // Regular stack
+      !MFI->hasVarSizedObjects() &&             // No dynamic alloca.
+      !MFI->adjustsStack() &&                   // No calls.
+      !IsWin64CC &&                             // Win64 has no Red Zone
+      !MFI->hasCopyImplyingStackAdjustment() && // Don't push and pop.
+      !MF.shouldSplitStack()) {                 // Regular stack
     uint64_t MinSize = X86FI->getCalleeSavedFrameSize();
     if (HasFP) MinSize += SlotSize;
     StackSize = std::max(MinSize, StackSize > 128 ? StackSize - 128 : 0);

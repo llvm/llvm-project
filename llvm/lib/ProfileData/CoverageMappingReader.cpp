@@ -306,31 +306,59 @@ StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) {
   return Data.substr(Pointer - Address, Size);
 }
 
-template <typename T, support::endianness Endian>
-static std::error_code readCoverageMappingData(
-    InstrProfSymtab &ProfileNames, StringRef Data,
-    std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records,
-    std::vector<StringRef> &Filenames) {
-  using namespace support;
-  llvm::DenseSet<T> UniqueFunctionMappingData;
+struct CovMapFuncRecordReader {
+  // The interface to read coverage mapping function records for
+  // a module. \p Buf is a reference to the buffer pointer pointing
+  // to the \c CovHeader of coverage mapping data associated with
+  // the module.
+  virtual std::error_code readFunctionRecords(const char *&Buf,
+                                              const char *End) = 0;
+  virtual ~CovMapFuncRecordReader() {}
+  template <class IntPtrT, support::endianness Endian>
+  static std::unique_ptr<CovMapFuncRecordReader>
+  get(coverage::CoverageMappingVersion Version, InstrProfSymtab &P,
+      std::vector<BinaryCoverageReader::ProfileMappingRecord> &R,
+      std::vector<StringRef> &F);
+};
 
-  // Read the records in the coverage data section.
-  for (const char *Buf = Data.data(), *End = Buf + Data.size(); Buf < End;) {
+// A class for reading coverage mapping function records for a module.
+template <coverage::CoverageMappingVersion CovMapVersion, class IntPtrT,
+          support::endianness Endian>
+class VersionedCovMapFuncRecordReader : public CovMapFuncRecordReader {
+  typedef typename coverage::CovMapTraits<
+      CovMapVersion, IntPtrT>::CovMapFuncRecordType FuncRecordType;
+  typedef typename coverage::CovMapTraits<CovMapVersion, IntPtrT>::NameRefType
+      NameRefType;
+
+  llvm::DenseSet<NameRefType> UniqueFunctionMappingData;
+  InstrProfSymtab &ProfileNames;
+  std::vector<StringRef> &Filenames;
+  std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records;
+
+public:
+  VersionedCovMapFuncRecordReader(
+      InstrProfSymtab &P,
+      std::vector<BinaryCoverageReader::ProfileMappingRecord> &R,
+      std::vector<StringRef> &F)
+      : ProfileNames(P), Filenames(F), Records(R) {}
+  ~VersionedCovMapFuncRecordReader() override {}
+
+  std::error_code readFunctionRecords(const char *&Buf,
+                                      const char *End) override {
+    using namespace support;
     if (Buf + sizeof(CovMapHeader) > End)
       return coveragemap_error::malformed;
     auto CovHeader = reinterpret_cast<const coverage::CovMapHeader *>(Buf);
     uint32_t NRecords = CovHeader->getNRecords<Endian>();
     uint32_t FilenamesSize = CovHeader->getFilenamesSize<Endian>();
     uint32_t CoverageSize = CovHeader->getCoverageSize<Endian>();
-    uint32_t Version = CovHeader->getVersion<Endian>();
-    Buf = reinterpret_cast<const char *>(++CovHeader);
-
-    if (Version > coverage::CoverageMappingCurrentVersion)
-      return coveragemap_error::unsupported_version;
+    assert((CoverageMappingVersion)CovHeader->getVersion<Endian>() ==
+           CovMapVersion);
+    Buf = reinterpret_cast<const char *>(CovHeader + 1);
 
     // Skip past the function records, saving the start and end for later.
     const char *FunBuf = Buf;
-    Buf += NRecords * sizeof(coverage::CovMapFunctionRecord<T>);
+    Buf += NRecords * sizeof(FuncRecordType);
     const char *FunEnd = Buf;
 
     // Get the filenames.
@@ -353,8 +381,7 @@ static std::error_code readCoverageMappingData(
     // before reading the next map.
     Buf += alignmentAdjustment(Buf, 8);
 
-    auto CFR =
-        reinterpret_cast<const coverage::CovMapFunctionRecord<T> *>(FunBuf);
+    auto CFR = reinterpret_cast<const FuncRecordType *>(FunBuf);
     while ((const char *)CFR < FunEnd) {
       // Read the function information
       uint32_t DataSize = CFR->template getDataSize<Endian>();
@@ -369,7 +396,7 @@ static std::error_code readCoverageMappingData(
       // Ignore this record if we already have a record that points to the same
       // function name. This is useful to ignore the redundant records for the
       // functions with ODR linkage.
-      T NameRef = CFR->template getFuncNameRef<Endian>();
+      NameRefType NameRef = CFR->template getFuncNameRef<Endian>();
       if (!UniqueFunctionMappingData.insert(NameRef).second)
         continue;
 
@@ -378,15 +405,50 @@ static std::error_code readCoverageMappingData(
               CFR->template getFuncName<Endian>(ProfileNames, FuncName))
         return EC;
       Records.push_back(BinaryCoverageReader::ProfileMappingRecord(
-          CoverageMappingVersion(Version), FuncName, FuncHash, Mapping,
-          FilenamesBegin, Filenames.size() - FilenamesBegin));
+          CovMapVersion, FuncName, FuncHash, Mapping, FilenamesBegin,
+          Filenames.size() - FilenamesBegin));
       CFR++;
     }
+    return std::error_code();
   }
+};
 
-  return std::error_code();
+template <class IntPtrT, support::endianness Endian>
+std::unique_ptr<CovMapFuncRecordReader> CovMapFuncRecordReader::get(
+    coverage::CoverageMappingVersion Version, InstrProfSymtab &P,
+    std::vector<BinaryCoverageReader::ProfileMappingRecord> &R,
+    std::vector<StringRef> &F) {
+  using namespace coverage;
+  switch (Version) {
+  case CoverageMappingVersion1:
+    return llvm::make_unique<VersionedCovMapFuncRecordReader<
+        CoverageMappingVersion1, IntPtrT, Endian>>(P, R, F);
+  }
+  llvm_unreachable("Unsupported version");
 }
 
+template <typename T, support::endianness Endian>
+static std::error_code readCoverageMappingData(
+    InstrProfSymtab &ProfileNames, StringRef Data,
+    std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records,
+    std::vector<StringRef> &Filenames) {
+  using namespace coverage;
+  // Read the records in the coverage data section.
+  auto CovHeader =
+      reinterpret_cast<const coverage::CovMapHeader *>(Data.data());
+  CoverageMappingVersion Version =
+      (CoverageMappingVersion)CovHeader->getVersion<Endian>();
+  if (Version > coverage::CoverageMappingCurrentVersion)
+    return coveragemap_error::unsupported_version;
+  std::unique_ptr<CovMapFuncRecordReader> Reader =
+      CovMapFuncRecordReader::get<T, Endian>(Version, ProfileNames, Records,
+                                             Filenames);
+  for (const char *Buf = Data.data(), *End = Buf + Data.size(); Buf < End;) {
+    if (std::error_code EC = Reader->readFunctionRecords(Buf, End))
+      return EC;
+  }
+  return std::error_code();
+}
 static const char *TestingFormatMagic = "llvmcovmtestdata";
 
 static std::error_code loadTestingFormat(StringRef Data,
