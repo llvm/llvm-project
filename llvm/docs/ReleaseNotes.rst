@@ -68,6 +68,17 @@ Non-comprehensive list of changes in this release
   Core.h so nothing should change for projects directly including the headers,
   but transitive dependencies may be affected.
 
+* llvm-ar now suports thin archives.
+
+* llvm doesn't produce .data.rel.ro.local or .data.rel sections anymore.
+
+* aliases to available_externally globals are now rejected by the verifier.
+
+* the IR Linker has been split into IRMover that moves bits from one module to
+  another and Linker proper that decides what to link.
+
+* Support for dematerializing has been dropped.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
