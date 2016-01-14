@@ -302,7 +302,7 @@ void TestAddWordFromDictionaryWithHint(Mutator M, int NumIter) {
 
 TEST(FuzzerMutate, AddWordFromDictionaryWithHint1) {
   TestAddWordFromDictionaryWithHint(
-      &MutationDispatcher::Mutate_AddWordFromAutoDictionary, 1 << 5);
+      &MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary, 1 << 5);
 }
 
 TEST(FuzzerMutate, AddWordFromDictionaryWithHint2) {

@@ -66,6 +66,23 @@ struct ProcSym {
   // Name: The null-terminated name follows.
 };
 
+enum BinaryAnnotationsOpCode : uint32_t {
+  Invalid,
+  CodeOffset,
+  ChangeCodeOffsetBase,
+  ChangeCodeOffset,
+  ChangeCodeLength,
+  ChangeFile,
+  ChangeLineOffset,
+  ChangeLineEndDelta,
+  ChangeRangeKind,
+  ChangeColumnStart,
+  ChangeColumnEndDelta,
+  ChangeCodeOffsetAndLineOffset,
+  ChangeCodeLengthAndCodeOffset,
+  ChangeColumnEnd,
+};
+
 // S_INLINESITE
 struct InlineSiteSym {
   ulittle32_t PtrParent;

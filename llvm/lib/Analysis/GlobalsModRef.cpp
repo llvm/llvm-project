@@ -863,7 +863,11 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(ImmutableCallSite CS,
     GetUnderlyingObjects(A, Objects, DL);
     
     // All objects must be identified.
-    if (!std::all_of(Objects.begin(), Objects.end(), isIdentifiedObject))
+    if (!std::all_of(Objects.begin(), Objects.end(), isIdentifiedObject) &&
+        // Try ::alias to see if all objects are known not to alias GV.
+        !std::all_of(Objects.begin(), Objects.end(), [&](Value *V) {
+          return this->alias(MemoryLocation(V), MemoryLocation(GV)) == NoAlias;
+          }))
       return ConservativeResult;
 
     if (std::find(Objects.begin(), Objects.end(), GV) != Objects.end())

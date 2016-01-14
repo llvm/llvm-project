@@ -314,16 +314,6 @@ void Value::takeName(Value *V) {
 }
 
 #ifndef NDEBUG
-void Value::assertModuleIsMaterialized() const {
-  const GlobalValue *GV = dyn_cast<GlobalValue>(this);
-  if (!GV)
-    return;
-  const Module *M = GV->getParent();
-  if (!M)
-    return;
-  assert(M->isMaterialized());
-}
-
 static bool contains(SmallPtrSetImpl<ConstantExpr *> &Cache, ConstantExpr *Expr,
                      Constant *C) {
   if (!Cache.insert(Expr).second)

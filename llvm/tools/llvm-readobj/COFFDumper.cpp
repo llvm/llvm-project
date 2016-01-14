@@ -1321,7 +1321,106 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
       W.printHex("PtrParent", InlineSite->PtrParent);
       W.printHex("PtrEnd", InlineSite->PtrEnd);
       printTypeIndex("Inlinee", InlineSite->Inlinee);
-      W.printBinaryBlock("BinaryAnnotations", SymData);
+
+      auto GetCompressedAnnotation = [&]() -> uint32_t {
+        if (SymData.empty())
+          return -1;
+
+        uint8_t FirstByte = SymData.front();
+        SymData = SymData.drop_front();
+
+        if ((FirstByte & 0x80) == 0x00)
+          return FirstByte;
+
+        if (SymData.empty())
+          return -1;
+
+        uint8_t SecondByte = SymData.front();
+        SymData = SymData.drop_front();
+
+        if ((FirstByte & 0xC0) == 0x80)
+          return ((FirstByte & 0x3F) << 8) | SecondByte;
+
+        if (SymData.empty())
+          return -1;
+
+        uint8_t ThirdByte = SymData.front();
+        SymData = SymData.drop_front();
+
+        if (SymData.empty())
+          return -1;
+
+        uint8_t FourthByte = SymData.front();
+        SymData = SymData.drop_front();
+
+        if ((FirstByte & 0xE0) == 0xC0)
+          return ((FirstByte & 0x1F) << 24) | (SecondByte << 16) |
+                 (ThirdByte << 8) | FourthByte;
+
+        return -1;
+      };
+      auto DecodeSignedOperand = [](uint32_t Operand) -> int32_t {
+        if (Operand & 1)
+          return -(Operand >> 1);
+        return Operand >> 1;
+      };
+
+      ListScope BinaryAnnotations(W, "BinaryAnnotations");
+      while (!SymData.empty()) {
+        uint32_t OpCode = GetCompressedAnnotation();
+        switch (OpCode) {
+        default:
+        case Invalid:
+          return error(object_error::parse_failed);
+        case CodeOffset:
+          W.printNumber("CodeOffset", GetCompressedAnnotation());
+          break;
+        case ChangeCodeOffsetBase:
+          W.printNumber("ChangeCodeOffsetBase", GetCompressedAnnotation());
+          break;
+        case ChangeCodeOffset:
+          W.printNumber("ChangeCodeOffset", GetCompressedAnnotation());
+          break;
+        case ChangeCodeLength:
+          W.printNumber("ChangeCodeLength", GetCompressedAnnotation());
+          break;
+        case ChangeFile:
+          W.printNumber("ChangeFile", GetCompressedAnnotation());
+          break;
+        case ChangeLineOffset:
+          W.printNumber("ChangeLineOffset",
+                        DecodeSignedOperand(GetCompressedAnnotation()));
+          break;
+        case ChangeLineEndDelta:
+          W.printNumber("ChangeLineEndDelta", GetCompressedAnnotation());
+          break;
+        case ChangeRangeKind:
+          W.printNumber("ChangeRangeKind", GetCompressedAnnotation());
+          break;
+        case ChangeColumnStart:
+          W.printNumber("ChangeColumnStart", GetCompressedAnnotation());
+          break;
+        case ChangeColumnEndDelta:
+          W.printNumber("ChangeColumnEndDelta",
+                        DecodeSignedOperand(GetCompressedAnnotation()));
+          break;
+        case ChangeCodeOffsetAndLineOffset: {
+          uint32_t Annotation = GetCompressedAnnotation();
+          uint32_t Operands[] = {Annotation >> 4, Annotation & 0xf};
+          W.printList("ChangeCodeOffsetAndLineOffset", Operands);
+          break;
+        }
+        case ChangeCodeLengthAndCodeOffset: {
+          uint32_t Operands[] = {GetCompressedAnnotation(),
+                                 GetCompressedAnnotation()};
+          W.printList("ChangeCodeLengthAndCodeOffset", Operands);
+          break;
+        }
+        case ChangeColumnEnd:
+          W.printNumber("ChangeColumnEnd", GetCompressedAnnotation());
+          break;
+        }
+      }
       break;
     }
 

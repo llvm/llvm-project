@@ -27,12 +27,28 @@ struct DictionaryEntry {
   size_t PositionHint;
 };
 
+struct Dictionary : public std::vector<DictionaryEntry>{
+  bool ContainsWord(const Unit &W) const {
+    return end() !=
+           std::find_if(begin(), end(), [&](const DictionaryEntry &DE) {
+             return DE.Word == W;
+           });
+  }
+};
+
 struct MutationDispatcher::Impl {
-  std::vector<DictionaryEntry> ManualDictionary;
-  std::vector<DictionaryEntry> AutoDictionary;
+  // Dictionary provided by the user via -dict=DICT_FILE.
+  Dictionary ManualDictionary;
+  // Temporary dictionary modified by the fuzzer itself,
+  // recreated periodically.
+  Dictionary TempAutoDictionary;
+  // Persistent dictionary modified by the fuzzer, consists of
+  // entries that led to successfull discoveries in the past mutations.
+  Dictionary PersistentAutoDictionary;
+
   std::vector<Mutator> Mutators;
   std::vector<Mutator> CurrentMutatorSequence;
-  std::vector<DictionaryEntry> CurrentDictionaryEntrySequence;
+  Dictionary CurrentDictionaryEntrySequence;
   const std::vector<Unit> *Corpus = nullptr;
   FuzzerRandomBase &Rand;
 
@@ -47,8 +63,10 @@ struct MutationDispatcher::Impl {
     Add({&MutationDispatcher::Mutate_CrossOver, "CrossOver"});
     Add({&MutationDispatcher::Mutate_AddWordFromManualDictionary,
          "AddFromManualDict"});
-    Add({&MutationDispatcher::Mutate_AddWordFromAutoDictionary,
-         "AddFromAutoDict"});
+    Add({&MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary,
+         "AddFromTempAutoDict"});
+    Add({&MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary,
+         "AddFromPersAutoDict"});
   }
   void SetCorpus(const std::vector<Unit> *Corpus) { this->Corpus = Corpus; }
   size_t AddWordFromDictionary(const std::vector<DictionaryEntry> &D,
@@ -126,10 +144,15 @@ size_t MutationDispatcher::Mutate_AddWordFromManualDictionary(uint8_t *Data,
                                        MaxSize);
 }
 
-size_t MutationDispatcher::Mutate_AddWordFromAutoDictionary(uint8_t *Data,
-                                                            size_t Size,
-                                                            size_t MaxSize) {
-  return MDImpl->AddWordFromDictionary(MDImpl->AutoDictionary, Data, Size,
+size_t MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary(
+    uint8_t *Data, size_t Size, size_t MaxSize) {
+  return MDImpl->AddWordFromDictionary(MDImpl->TempAutoDictionary, Data, Size,
+                                       MaxSize);
+}
+
+size_t MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary(
+    uint8_t *Data, size_t Size, size_t MaxSize) {
+  return MDImpl->AddWordFromDictionary(MDImpl->PersistentAutoDictionary, Data, Size,
                                        MaxSize);
 }
 
@@ -211,13 +234,36 @@ void MutationDispatcher::StartMutationSequence() {
   MDImpl->CurrentDictionaryEntrySequence.clear();
 }
 
+// Copy successful dictionary entries to PersistentAutoDictionary.
+void MutationDispatcher::RecordSuccessfulMutationSequence() {
+  for (auto &DE : MDImpl->CurrentDictionaryEntrySequence)
+    // Linear search is fine here as this happens seldom.
+    if (!MDImpl->PersistentAutoDictionary.ContainsWord(DE.Word))
+      MDImpl->PersistentAutoDictionary.push_back(
+          {DE.Word, std::numeric_limits<size_t>::max()});
+}
+
+void MutationDispatcher::PrintRecommendedDictionary() {
+  std::vector<Unit> V;
+  for (auto &DE : MDImpl->PersistentAutoDictionary)
+    if (!MDImpl->ManualDictionary.ContainsWord(DE.Word))
+      V.push_back(DE.Word);
+  if (V.empty()) return;
+  Printf("###### Recommended dictionary. ######\n");
+  for (auto &U: V) {
+    Printf("\"");
+    PrintASCII(U, "\"\n");
+  }
+  Printf("###### End of recommended dictionary. ######\n");
+}
+
 void MutationDispatcher::PrintMutationSequence() {
   Printf("MS: %zd ", MDImpl->CurrentMutatorSequence.size());
   for (auto M : MDImpl->CurrentMutatorSequence)
     Printf("%s-", M.Name);
   if (!MDImpl->CurrentDictionaryEntrySequence.empty()) {
     Printf(" DE: ");
-    for (auto DE : MDImpl->CurrentDictionaryEntrySequence) {
+    for (auto &DE : MDImpl->CurrentDictionaryEntrySequence) {
       Printf("\"");
       PrintASCII(DE.Word, "\"-");
     }
@@ -261,12 +307,12 @@ void MutationDispatcher::AddWordToManualDictionary(const Unit &Word) {
 void MutationDispatcher::AddWordToAutoDictionary(const Unit &Word,
                                                  size_t PositionHint) {
   static const size_t kMaxAutoDictSize = 1 << 14;
-  if (MDImpl->AutoDictionary.size() >= kMaxAutoDictSize) return;
-  MDImpl->AutoDictionary.push_back({Word, PositionHint});
+  if (MDImpl->TempAutoDictionary.size() >= kMaxAutoDictSize) return;
+  MDImpl->TempAutoDictionary.push_back({Word, PositionHint});
 }
 
 void MutationDispatcher::ClearAutoDictionary() {
-  MDImpl->AutoDictionary.clear();
+  MDImpl->TempAutoDictionary.clear();
 }
 
 MutationDispatcher::MutationDispatcher(FuzzerRandomBase &Rand) : Rand(Rand) {

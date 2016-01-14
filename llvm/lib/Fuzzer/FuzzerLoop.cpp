@@ -340,7 +340,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
   PrintStats("NEW   ", "");
   if (Options.Verbosity) {
     Printf(" L: %zd ", U.size());
-    USF.PrintMutationSequence();
+    USF.GetMD().PrintMutationSequence();
     Printf("\n");
   }
 }
@@ -348,6 +348,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
 void Fuzzer::ReportNewCoverage(const Unit &U) {
   Corpus.push_back(U);
   UnitHashesAddedToCorpus.insert(Hash(U));
+  USF.GetMD().RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
   if (Options.ExitOnFirst)
@@ -387,7 +388,7 @@ void Fuzzer::Merge(const std::vector<std::string> &Corpora) {
 }
 
 void Fuzzer::MutateAndTestOne() {
-  USF.StartMutationSequence();
+  USF.GetMD().StartMutationSequence();
 
   auto U = ChooseUnitToMutate();
 
@@ -496,6 +497,7 @@ void Fuzzer::Loop() {
   }
 
   PrintStats("DONE  ", "\n");
+  USF.GetMD().PrintRecommendedDictionary();
 }
 
 void Fuzzer::SyncCorpus() {

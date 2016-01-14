@@ -76,6 +76,8 @@ class MutationDispatcher {
   void StartMutationSequence();
   /// Print the current sequence of mutations.
   void PrintMutationSequence();
+  /// Indicate that the current sequence of mutations was successfull.
+  void RecordSuccessfulMutationSequence();
   /// Mutates data by shuffling bytes.
   size_t Mutate_ShuffleBytes(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by erasing a byte.
@@ -91,9 +93,13 @@ class MutationDispatcher {
   size_t Mutate_AddWordFromManualDictionary(uint8_t *Data, size_t Size,
                                             size_t MaxSize);
 
-  /// Mutates data by adding a word from the automatic dictionary.
-  size_t Mutate_AddWordFromAutoDictionary(uint8_t *Data, size_t Size,
-                                          size_t MaxSize);
+  /// Mutates data by adding a word from the temporary automatic dictionary.
+  size_t Mutate_AddWordFromTemporaryAutoDictionary(uint8_t *Data, size_t Size,
+                                                   size_t MaxSize);
+
+  /// Mutates data by adding a word from the persistent automatic dictionary.
+  size_t Mutate_AddWordFromPersistentAutoDictionary(uint8_t *Data, size_t Size,
+                                                    size_t MaxSize);
 
   /// Tries to find an ASCII integer in Data, changes it to another ASCII int.
   size_t Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size, size_t MaxSize);
@@ -113,6 +119,7 @@ class MutationDispatcher {
 
   void AddWordToAutoDictionary(const Unit &Word, size_t PositionHint);
   void ClearAutoDictionary();
+  void PrintRecommendedDictionary();
 
   void SetCorpus(const std::vector<Unit> *Corpus);
 
@@ -157,8 +164,6 @@ class UserSuppliedFuzzer {
   UserSuppliedFuzzer(FuzzerRandomBase *Rand);
   /// Executes the target function on 'Size' bytes of 'Data'.
   virtual int TargetFunction(const uint8_t *Data, size_t Size) = 0;
-  virtual void StartMutationSequence() { MD.StartMutationSequence(); }
-  virtual void PrintMutationSequence() { MD.PrintMutationSequence(); }
   virtual void SetCorpus(const std::vector<Unit> *Corpus) {
     MD.SetCorpus(Corpus);
   }

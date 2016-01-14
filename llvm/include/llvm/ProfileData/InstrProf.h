@@ -581,7 +581,26 @@ inline uint64_t ComputeHash(HashT Type, StringRef K) {
 }
 
 const uint64_t Magic = 0x8169666f72706cff; // "\xfflprofi\x81"
-const uint64_t Version = INSTR_PROF_INDEX_VERSION;
+
+enum ProfVersion {
+  // Version 1 is the first version. In this version, the value of
+  // a key/value pair can only include profile data of a single function.
+  // Due to this restriction, the number of block counters for a given
+  // function is not recorded but derived from the length of the value.
+  Version1 = 1,
+  // The version 2 format supports recording profile data of multiple
+  // functions which share the same key in one value field. To support this,
+  // the number block counters is recorded as an uint64_t field right after the
+  // function structural hash.
+  Version2 = 2,
+  // Version 3 supports value profile data. The value profile data is expected
+  // to follow the block counter profile data.
+  Version3 = 3,
+  // The current version is 3.
+  CurrentVersion = INSTR_PROF_INDEX_VERSION
+};
+const uint64_t Version = ProfVersion::CurrentVersion;
+
 const HashT HashType = HashT::MD5;
 
 inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }

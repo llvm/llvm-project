@@ -182,7 +182,7 @@ COVMAP_HEADER(uint32_t, Int32Ty, FilenamesSize, \
 COVMAP_HEADER(uint32_t, Int32Ty, CoverageSize, \
               llvm::ConstantInt::get(Int32Ty, CoverageMappingSize))
 COVMAP_HEADER(uint32_t, Int32Ty, Version, \
-              llvm::ConstantInt::get(Int32Ty, CoverageMappingCurrentVersion))
+              llvm::ConstantInt::get(Int32Ty, CovMapVersion::CurrentVersion))
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
 

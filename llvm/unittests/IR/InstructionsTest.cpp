@@ -518,7 +518,66 @@ TEST(InstructionsTest, CloneCall) {
   }
 }
 
-}  // end anonymous namespace
-}  // end namespace llvm
+TEST(InstructionsTest, AlterCallBundles) {
+  LLVMContext &C(getGlobalContext());
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
+  OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
+  std::unique_ptr<CallInst> Call(
+      CallInst::Create(Callee, Args, OldBundle, "result"));
+  Call->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
+  AttrBuilder AB;
+  AB.addAttribute(Attribute::Cold);
+  Call->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
+  Call->setDebugLoc(DebugLoc(MDNode::get(C, None)));
 
+  OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
+  std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
+  EXPECT_EQ(Call->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Call->getArgOperand(0), Clone->getArgOperand(0));
+  EXPECT_EQ(Call->getCallingConv(), Clone->getCallingConv());
+  EXPECT_EQ(Call->getTailCallKind(), Clone->getTailCallKind());
+  EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
+  EXPECT_EQ(Call->getDebugLoc(), Clone->getDebugLoc());
+  EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
+  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+}
 
+TEST(InstructionsTest, AlterInvokeBundles) {
+  LLVMContext &C(getGlobalContext());
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
+  BasicBlock *NormalDest = BasicBlock::Create(C);
+  BasicBlock *UnwindDest = BasicBlock::Create(C);
+  OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
+  InvokeInst *Invoke(InvokeInst::Create(Callee, NormalDest, UnwindDest, Args,
+                                        OldBundle, "result"));
+  AttrBuilder AB;
+  AB.addAttribute(Attribute::Cold);
+  Invoke->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
+  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, None)));
+
+  OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
+  InvokeInst *Clone(InvokeInst::Create(Invoke, NewBundle));
+  EXPECT_EQ(Invoke->getNormalDest(), Clone->getNormalDest());
+  EXPECT_EQ(Invoke->getUnwindDest(), Clone->getUnwindDest());
+  EXPECT_EQ(Invoke->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Invoke->getArgOperand(0), Clone->getArgOperand(0));
+  EXPECT_EQ(Invoke->getCallingConv(), Clone->getCallingConv());
+  EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
+  EXPECT_EQ(Invoke->getDebugLoc(), Clone->getDebugLoc());
+  EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
+  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+
+  delete Invoke;
+  delete Clone;
+  delete NormalDest;
+  delete UnwindDest;
+}
+
+} // end anonymous namespace
+} // end namespace llvm

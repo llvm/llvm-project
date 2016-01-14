@@ -273,91 +273,38 @@ public:
   //----------------------------------------------------------------------
   // Methods for handling the chain of uses of this Value.
   //
-  // Materializing a function can introduce new uses, so these methods come in
-  // two variants:
-  // The methods that start with materialized_ check the uses that are
-  // currently known given which functions are materialized. Be very careful
-  // when using them since you might not get all uses.
-  // The methods that don't start with materialized_ assert that modules is
-  // fully materialized.
-#ifdef NDEBUG
-  void assertModuleIsMaterialized() const {}
-#else
-  void assertModuleIsMaterialized() const;
-#endif
-
-  bool use_empty() const {
-    assertModuleIsMaterialized();
-    return UseList == nullptr;
-  }
+  bool use_empty() const { return UseList == nullptr; }
 
   typedef use_iterator_impl<Use> use_iterator;
   typedef use_iterator_impl<const Use> const_use_iterator;
-  use_iterator materialized_use_begin() { return use_iterator(UseList); }
-  const_use_iterator materialized_use_begin() const {
-    return const_use_iterator(UseList);
-  }
-  use_iterator use_begin() {
-    assertModuleIsMaterialized();
-    return materialized_use_begin();
-  }
-  const_use_iterator use_begin() const {
-    assertModuleIsMaterialized();
-    return materialized_use_begin();
-  }
+  use_iterator use_begin() { return use_iterator(UseList); }
+  const_use_iterator use_begin() const { return const_use_iterator(UseList); }
   use_iterator use_end() { return use_iterator(); }
   const_use_iterator use_end() const { return const_use_iterator(); }
-  iterator_range<use_iterator> materialized_uses() {
-    return make_range(materialized_use_begin(), use_end());
-  }
-  iterator_range<const_use_iterator> materialized_uses() const {
-    return make_range(materialized_use_begin(), use_end());
-  }
   iterator_range<use_iterator> uses() {
-    assertModuleIsMaterialized();
-    return materialized_uses();
+    return make_range(use_begin(), use_end());
   }
   iterator_range<const_use_iterator> uses() const {
-    assertModuleIsMaterialized();
-    return materialized_uses();
+    return make_range(use_begin(), use_end());
   }
 
-  bool user_empty() const {
-    assertModuleIsMaterialized();
-    return UseList == nullptr;
-  }
+  bool user_empty() const { return UseList == nullptr; }
 
   typedef user_iterator_impl<User> user_iterator;
   typedef user_iterator_impl<const User> const_user_iterator;
-  user_iterator materialized_user_begin() { return user_iterator(UseList); }
-  const_user_iterator materialized_user_begin() const {
-    return const_user_iterator(UseList);
-  }
-  user_iterator user_begin() {
-    assertModuleIsMaterialized();
-    return materialized_user_begin();
-  }
+  user_iterator user_begin() { return user_iterator(UseList); }
   const_user_iterator user_begin() const {
-    assertModuleIsMaterialized();
-    return materialized_user_begin();
+    return const_user_iterator(UseList);
   }
   user_iterator user_end() { return user_iterator(); }
   const_user_iterator user_end() const { return const_user_iterator(); }
-  User *user_back() {
-    assertModuleIsMaterialized();
-    return *materialized_user_begin();
-  }
-  const User *user_back() const {
-    assertModuleIsMaterialized();
-    return *materialized_user_begin();
-  }
+  User *user_back() { return *user_begin(); }
+  const User *user_back() const { return *user_begin(); }
   iterator_range<user_iterator> users() {
-    assertModuleIsMaterialized();
-    return make_range(materialized_user_begin(), user_end());
+    return make_range(user_begin(), user_end());
   }
   iterator_range<const_user_iterator> users() const {
-    assertModuleIsMaterialized();
-    return make_range(materialized_user_begin(), user_end());
+    return make_range(user_begin(), user_end());
   }
 
   /// \brief Return true if there is exactly one user of this value.
