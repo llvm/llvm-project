@@ -696,11 +696,14 @@ public:
   unsigned GetGlobalVarAddressSpace(const VarDecl *D, unsigned AddrSpace);
 
   /// Return the llvm::Constant for the address of the given global variable.
-  /// If Ty is non-null and if the global doesn't exist, then it will be greated
+  /// If Ty is non-null and if the global doesn't exist, then it will be created
   /// with the specified type instead of whatever the normal requested type
-  /// would be.
+  /// would be. If IsForDefinition is true, it is guranteed that an actual
+  /// global with type Ty will be returned, not conversion of a variable with
+  /// the same mangled name but some other type.
   llvm::Constant *GetAddrOfGlobalVar(const VarDecl *D,
-                                     llvm::Type *Ty = nullptr);
+                                     llvm::Type *Ty = nullptr,
+                                     bool IsForDefinition = false);
 
   /// Return the address of the given function. If Ty is non-null, then this
   /// function will use the specified type if it has to create it.
@@ -1136,7 +1139,8 @@ private:
 
   llvm::Constant *GetOrCreateLLVMGlobal(StringRef MangledName,
                                         llvm::PointerType *PTy,
-                                        const VarDecl *D);
+                                        const VarDecl *D,
+                                        bool IsForDefinition = false);
 
   void setNonAliasAttributes(const Decl *D, llvm::GlobalObject *GO);
 
@@ -1147,7 +1151,7 @@ private:
   void EmitGlobalDefinition(GlobalDecl D, llvm::GlobalValue *GV = nullptr);
 
   void EmitGlobalFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
-  void EmitGlobalVarDefinition(const VarDecl *D);
+  void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitAliasDefinition(GlobalDecl GD);
   void EmitObjCPropertyImplementations(const ObjCImplementationDecl *D);
   void EmitObjCIvarInitializations(ObjCImplementationDecl *D);

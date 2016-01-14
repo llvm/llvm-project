@@ -8,6 +8,7 @@
 
 struct A {
   virtual void f();
+  int i() const;
 };
 
 struct B : A {
@@ -103,23 +104,31 @@ void vbrr(char &&r) {
 // CHECK-UCAST-LABEL: define void @_Z3vcpPv
 // CHECK-UCAST-STRICT-LABEL: define void @_Z3vcpPv
 void vcp(void *p) {
-  // CHECK-UCAST: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1A")
-  // CHECK-UCAST-STRICT: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1C")
+  // CHECK-UCAST: call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1A")
+  // CHECK-UCAST-STRICT: call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1C")
   static_cast<C*>(p);
 }
 
 // CHECK-UCAST-LABEL: define void @_Z3bcpP1B
 // CHECK-UCAST-STRICT-LABEL: define void @_Z3bcpP1B
 void bcp(B *p) {
-  // CHECK-UCAST: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1A")
-  // CHECK-UCAST-STRICT: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1C")
+  // CHECK-UCAST: call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1A")
+  // CHECK-UCAST-STRICT: call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1C")
   (C *)p;
 }
 
 // CHECK-UCAST-LABEL: define void @_Z8bcp_callP1B
 // CHECK-UCAST-STRICT-LABEL: define void @_Z8bcp_callP1B
 void bcp_call(B *p) {
-  // CHECK-UCAST: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1A")
-  // CHECK-UCAST-STRICT: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1C")
+  // CHECK-UCAST: call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1A")
+  // CHECK-UCAST-STRICT: call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTS1C")
   ((C *)p)->f();
+}
+
+// CHECK-UCAST-LABEL: define i32 @_Z6a_callP1A
+// CHECK-UCAST-STRICT-LABEL: define i32 @_Z6a_callP1A
+int a_call(A *a) {
+  // CHECK-UCAST-NOT: @llvm.bitset.test
+  // CHECK-UCAST-STRICT-NOT: @llvm.bitset.test
+  return a->i();
 }

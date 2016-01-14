@@ -591,6 +591,10 @@ TEST_F(FormatTestJS, AutomaticSemicolonInsertion) {
   verifyFormat("throw aaaaa;", getGoogleJSStyleWithColumns(10));
   verifyFormat("aaaaaaaaa++;", getGoogleJSStyleWithColumns(10));
   verifyFormat("aaaaaaaaa--;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("return [\n"
+               "  aaa\n"
+               "];",
+               getGoogleJSStyleWithColumns(12));
 }
 
 TEST_F(FormatTestJS, ClosureStyleCasts) {
