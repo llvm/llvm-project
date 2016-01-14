@@ -1447,7 +1447,6 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           NewInst = CallInst::Create(cast<CallInst>(I), OpBundles, I);
         else
           NewInst = InvokeInst::Create(cast<InvokeInst>(I), OpBundles, I);
-        NewInst->setDebugLoc(I->getDebugLoc());
         NewInst->takeName(I);
         I->replaceAllUsesWith(NewInst);
         I->eraseFromParent();

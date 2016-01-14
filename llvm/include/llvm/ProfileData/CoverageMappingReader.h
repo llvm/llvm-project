@@ -140,14 +140,14 @@ private:
 class BinaryCoverageReader : public CoverageMappingReader {
 public:
   struct ProfileMappingRecord {
-    CoverageMappingVersion Version;
+    CovMapVersion Version;
     StringRef FunctionName;
     uint64_t FunctionHash;
     StringRef CoverageMapping;
     size_t FilenamesBegin;
     size_t FilenamesSize;
 
-    ProfileMappingRecord(CoverageMappingVersion Version, StringRef FunctionName,
+    ProfileMappingRecord(CovMapVersion Version, StringRef FunctionName,
                          uint64_t FunctionHash, StringRef CoverageMapping,
                          size_t FilenamesBegin, size_t FilenamesSize)
         : Version(Version), FunctionName(FunctionName),

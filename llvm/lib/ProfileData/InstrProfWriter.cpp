@@ -140,7 +140,7 @@ std::pair<uint64_t, uint64_t> InstrProfWriter::writeImpl(raw_ostream &OS) {
   // Write the header.
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
-  Header.Version = IndexedInstrProf::Version;
+  Header.Version = IndexedInstrProf::ProfVersion::CurrentVersion;
   Header.MaxFunctionCount = MaxFunctionCount;
   Header.HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);
   Header.HashOffset = 0;

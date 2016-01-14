@@ -316,18 +316,18 @@ struct CovMapFuncRecordReader {
   virtual ~CovMapFuncRecordReader() {}
   template <class IntPtrT, support::endianness Endian>
   static std::unique_ptr<CovMapFuncRecordReader>
-  get(coverage::CoverageMappingVersion Version, InstrProfSymtab &P,
+  get(coverage::CovMapVersion Version, InstrProfSymtab &P,
       std::vector<BinaryCoverageReader::ProfileMappingRecord> &R,
       std::vector<StringRef> &F);
 };
 
 // A class for reading coverage mapping function records for a module.
-template <coverage::CoverageMappingVersion CovMapVersion, class IntPtrT,
+template <coverage::CovMapVersion Version, class IntPtrT,
           support::endianness Endian>
 class VersionedCovMapFuncRecordReader : public CovMapFuncRecordReader {
   typedef typename coverage::CovMapTraits<
-      CovMapVersion, IntPtrT>::CovMapFuncRecordType FuncRecordType;
-  typedef typename coverage::CovMapTraits<CovMapVersion, IntPtrT>::NameRefType
+      Version, IntPtrT>::CovMapFuncRecordType FuncRecordType;
+  typedef typename coverage::CovMapTraits<Version, IntPtrT>::NameRefType
       NameRefType;
 
   llvm::DenseSet<NameRefType> UniqueFunctionMappingData;
@@ -352,8 +352,7 @@ public:
     uint32_t NRecords = CovHeader->getNRecords<Endian>();
     uint32_t FilenamesSize = CovHeader->getFilenamesSize<Endian>();
     uint32_t CoverageSize = CovHeader->getCoverageSize<Endian>();
-    assert((CoverageMappingVersion)CovHeader->getVersion<Endian>() ==
-           CovMapVersion);
+    assert((CovMapVersion)CovHeader->getVersion<Endian>() == Version);
     Buf = reinterpret_cast<const char *>(CovHeader + 1);
 
     // Skip past the function records, saving the start and end for later.
@@ -405,7 +404,7 @@ public:
               CFR->template getFuncName<Endian>(ProfileNames, FuncName))
         return EC;
       Records.push_back(BinaryCoverageReader::ProfileMappingRecord(
-          CovMapVersion, FuncName, FuncHash, Mapping, FilenamesBegin,
+          Version, FuncName, FuncHash, Mapping, FilenamesBegin,
           Filenames.size() - FilenamesBegin));
       CFR++;
     }
@@ -415,14 +414,14 @@ public:
 
 template <class IntPtrT, support::endianness Endian>
 std::unique_ptr<CovMapFuncRecordReader> CovMapFuncRecordReader::get(
-    coverage::CoverageMappingVersion Version, InstrProfSymtab &P,
+    coverage::CovMapVersion Version, InstrProfSymtab &P,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &R,
     std::vector<StringRef> &F) {
   using namespace coverage;
   switch (Version) {
-  case CoverageMappingVersion1:
+  case CovMapVersion::Version1:
     return llvm::make_unique<VersionedCovMapFuncRecordReader<
-        CoverageMappingVersion1, IntPtrT, Endian>>(P, R, F);
+        CovMapVersion::Version1, IntPtrT, Endian>>(P, R, F);
   }
   llvm_unreachable("Unsupported version");
 }
@@ -436,9 +435,8 @@ static std::error_code readCoverageMappingData(
   // Read the records in the coverage data section.
   auto CovHeader =
       reinterpret_cast<const coverage::CovMapHeader *>(Data.data());
-  CoverageMappingVersion Version =
-      (CoverageMappingVersion)CovHeader->getVersion<Endian>();
-  if (Version > coverage::CoverageMappingCurrentVersion)
+  CovMapVersion Version = (CovMapVersion)CovHeader->getVersion<Endian>();
+  if (Version > coverage::CovMapVersion::CurrentVersion)
     return coveragemap_error::unsupported_version;
   std::unique_ptr<CovMapFuncRecordReader> Reader =
       CovMapFuncRecordReader::get<T, Endian>(Version, ProfileNames, Records,

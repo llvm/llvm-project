@@ -537,10 +537,10 @@ struct CovMapHeader {
 
 LLVM_PACKED_END
 
-enum CoverageMappingVersion {
-  CoverageMappingVersion1 = 0,
-  // The current versin is Version1
-  CoverageMappingCurrentVersion = INSTR_PROF_COVMAP_VERSION
+enum CovMapVersion {
+  Version1 = 0,
+  // The current version is Version1
+  CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
 
 template <int CovMapVersion, class IntPtrT> struct CovMapTraits {

@@ -10,7 +10,7 @@ CHECK_DFSanMemcmpCallback: DFSanMemcmpCallback: Pos
 RUN: not LLVMFuzzer-SimpleCmpTest-DFSan -use_traces=1 -seed=1 -runs=1000000 -timeout=5 2>&1 | FileCheck %s --check-prefix=CHECK1
 RUN: LLVMFuzzer-SimpleCmpTest-DFSan -use_traces=1 -seed=1 -runs=100 -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanCmpCallback
 
-RUN: not LLVMFuzzer-MemcmpTest-DFSan -use_traces=1 -seed=1 -runs=10000 -timeout=5 2>&1 | FileCheck %s --check-prefix=CHECK2
+RUN: not LLVMFuzzer-MemcmpTest-DFSan -use_traces=1 -seed=1 -runs=100000 -timeout=5 2>&1 | FileCheck %s --check-prefix=CHECK2
 RUN: LLVMFuzzer-MemcmpTest-DFSan -use_traces=1 -seed=1 -runs=2 -timeout=5 -verbosity=3 2>&1 | FileCheck %s  -check-prefix=CHECK_DFSanMemcmpCallback
 
 RUN: not LLVMFuzzer-StrncmpTest-DFSan -use_traces=1 -seed=1 -runs=10000 -timeout=5 2>&1 | FileCheck %s --check-prefix=CHECK3

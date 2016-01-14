@@ -20,6 +20,7 @@ set(Tests
   FullCoverageSetTest
   MemcmpTest
   NullDerefTest
+  RepeatedMemcmp
   SimpleCmpTest
   SimpleDictionaryTest
   SimpleHashTest

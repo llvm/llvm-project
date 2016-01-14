@@ -309,6 +309,7 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   NewCI->setCallingConv(CI->getCallingConv());
   NewCI->SubclassOptionalData = CI->SubclassOptionalData;
   NewCI->setAttributes(CI->getAttributes());
+  NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;
 }
 
@@ -596,6 +597,7 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
   NewII->setCallingConv(II->getCallingConv());
   NewII->SubclassOptionalData = II->SubclassOptionalData;
   NewII->setAttributes(II->getAttributes());
+  NewII->setDebugLoc(II->getDebugLoc());
   return NewII;
 }
 

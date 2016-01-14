@@ -242,22 +242,13 @@ int main(int argc, char **argv) {
     }
   }
 
-  {
-    std::vector<GlobalValue *> Gvs(GVs.begin(), GVs.end());
-    legacy::PassManager Extract;
-    Extract.add(createGVExtractionPass(Gvs, DeleteFn));
-    Extract.run(*M);
-
-    // Now that we have all the GVs we want, mark the module as fully
-    // materialized.
-    // FIXME: should the GVExtractionPass handle this?
-    M->materializeAll();
-  }
-
   // In addition to deleting all other functions, we also want to spiff it
   // up a little bit.  Do this now.
   legacy::PassManager Passes;
 
+  std::vector<GlobalValue*> Gvs(GVs.begin(), GVs.end());
+
+  Passes.add(createGVExtractionPass(Gvs, DeleteFn));
   if (!DeleteFn)
     Passes.add(createGlobalDCEPass());           // Delete unreachable globals
   Passes.add(createStripDeadDebugInfoPass());    // Remove dead debug info

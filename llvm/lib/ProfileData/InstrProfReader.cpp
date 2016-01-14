@@ -478,7 +478,7 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     // Initialize number of counters for FormatVersion == 1.
     uint64_t CountsSize = N / sizeof(uint64_t) - 1;
     // If format version is different then read the number of counters.
-    if (FormatVersion != 1) {
+    if (FormatVersion != IndexedInstrProf::ProfVersion::Version1) {
       if (D + sizeof(uint64_t) > End)
         return data_type();
       CountsSize = endian::readNext<uint64_t, little, unaligned>(D);
@@ -495,7 +495,8 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer));
 
     // Read value profiling data.
-    if (FormatVersion > 2 && !readValueProfilingData(D, End)) {
+    if (FormatVersion > IndexedInstrProf::ProfVersion::Version2 &&
+        !readValueProfilingData(D, End)) {
       DataBuffer.clear();
       return data_type();
     }
@@ -572,7 +573,7 @@ std::error_code IndexedInstrProfReader::readHeader() {
 
   // Read the version.
   uint64_t FormatVersion = endian::byte_swap<uint64_t, little>(Header->Version);
-  if (FormatVersion > IndexedInstrProf::Version)
+  if (FormatVersion > IndexedInstrProf::ProfVersion::CurrentVersion)
     return error(instrprof_error::unsupported_version);
 
   // Read the maximal function count.

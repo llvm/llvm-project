@@ -18,3 +18,10 @@ RUN:     LLVMFuzzer-SwitchTest               -seed=1 -runs=1000000  2>&1 | FileC
 
 RUN: not LLVMFuzzer-SimpleHashTest -use_traces=1 -seed=1 -runs=10000000  2>&1 | FileCheck %s
 RUN:     LLVMFuzzer-SimpleHashTest               -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=Done10000000
+
+RUN: LLVMFuzzer-RepeatedMemcmp -use_traces=1 -seed=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=RECOMMENDED_DICT
+RECOMMENDED_DICT:###### Recommended dictionary. ######
+RECOMMENDED_DICT-DAG: "foo"
+RECOMMENDED_DICT-DAG: "bar"
+RECOMMENDED_DICT:###### End of recommended dictionary. ######
+
