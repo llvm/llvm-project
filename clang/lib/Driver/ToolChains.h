@@ -1107,6 +1107,14 @@ private:
   bool HasNativeLLVMSupport() const override;
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args) const override;
+  RuntimeLibType GetDefaultRuntimeLibType() const override;
+  CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
+  void AddClangSystemIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
 
   Tool *buildLinker() const override;
 };

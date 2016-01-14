@@ -3899,6 +3899,7 @@ public:
   MCUX86_32TargetInfo(const llvm::Triple &Triple) : X86_32TargetInfo(Triple) {
     LongDoubleWidth = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    UserLabelPrefix = "";
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {

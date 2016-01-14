@@ -2580,6 +2580,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   // When using an integrated assembler, translate -Wa, and -Xassembler
   // options.
   bool CompressDebugSections = false;
+  const char *MipsTargetFeature = nullptr;
   for (const Arg *A :
        Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
     A->claim();
@@ -2618,7 +2619,26 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           CmdArgs.push_back("-soft-float");
           continue;
         }
-        break;
+
+        MipsTargetFeature = llvm::StringSwitch<const char *>(Value)
+                                .Case("-mips1", "+mips1")
+                                .Case("-mips2", "+mips2")
+                                .Case("-mips3", "+mips3")
+                                .Case("-mips4", "+mips4")
+                                .Case("-mips5", "+mips5")
+                                .Case("-mips32", "+mips32")
+                                .Case("-mips32r2", "+mips32r2")
+                                .Case("-mips32r3", "+mips32r3")
+                                .Case("-mips32r5", "+mips32r5")
+                                .Case("-mips32r6", "+mips32r6")
+                                .Case("-mips64", "+mips64")
+                                .Case("-mips64r2", "+mips64r2")
+                                .Case("-mips64r3", "+mips64r3")
+                                .Case("-mips64r5", "+mips64r5")
+                                .Case("-mips64r6", "+mips64r6")
+                                .Default(nullptr);
+        if (MipsTargetFeature)
+          continue;
       }
 
       if (Value == "-force_cpusubtype_ALL") {
@@ -2665,6 +2685,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       CmdArgs.push_back("-compress-debug-sections");
     else
       D.Diag(diag::warn_debug_compression_unavailable);
+  }
+  if (MipsTargetFeature != nullptr) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back(MipsTargetFeature);
   }
 }
 
