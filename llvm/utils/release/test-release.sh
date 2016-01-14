@@ -159,6 +159,12 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+if [ "$use_autoconf" = "no" ]; then
+  # See llvm.org/PR26146.
+  echo Skipping test-suite when using CMake.
+  do_test_suite="no"
+fi
+
 # Check required arguments.
 if [ -z "$Release" ]; then
     echo "error: no release number specified"
