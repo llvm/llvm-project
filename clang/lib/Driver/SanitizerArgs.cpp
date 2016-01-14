@@ -180,25 +180,8 @@ bool SanitizerArgs::needsUnwindTables() const {
   return Sanitizers.Mask & NeedsUnwindTables;
 }
 
-void SanitizerArgs::clear() {
-  Sanitizers.clear();
-  RecoverableSanitizers.clear();
-  TrapSanitizers.clear();
-  BlacklistFiles.clear();
-  ExtraDeps.clear();
-  CoverageFeatures = 0;
-  MsanTrackOrigins = 0;
-  MsanUseAfterDtor = false;
-  NeedPIE = false;
-  AsanFieldPadding = 0;
-  AsanSharedRuntime = false;
-  LinkCXXRuntimes = false;
-  CfiCrossDso = false;
-}
-
 SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                              const llvm::opt::ArgList &Args) {
-  clear();
   SanitizerMask AllRemove = 0;  // During the loop below, the accumulated set of
                                 // sanitizers disabled by the current sanitizer
                                 // argument or any argument after it.
