@@ -99,7 +99,7 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
       Ty = cast<PointerType>(Ty)->getElementType();
     // Size should be aligned to pointer size.
     unsigned PtrSize = DL.getPointerSize();
-    ArgWords += RoundUpToAlignment(DL.getTypeAllocSize(Ty), PtrSize);
+    ArgWords += alignTo(DL.getTypeAllocSize(Ty), PtrSize);
   }
 
   OS << '@' << ArgWords;

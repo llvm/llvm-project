@@ -439,6 +439,14 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
     let Inst{2-0} = 0b000;
     let Unpredictable{2-0} = 0b111;
   }
+  def tBXNS : TI<(outs), (ins GPR:$Rm, pred:$p), IIC_Br, "bxns${p}\t$Rm", []>,
+              Requires<[IsThumb, Has8MSecExt]>,
+              T1Special<{1,1,0,?}>, Sched<[WriteBr]> {
+    bits<4> Rm;
+    let Inst{6-3} = Rm;
+    let Inst{2-0} = 0b100;
+    let Unpredictable{1-0} = 0b11;
+  }
 }
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
@@ -494,6 +502,17 @@ let isCall = 1,
     bits<4> func;
     let Inst{6-3} = func;
     let Inst{2-0} = 0b000;
+  }
+
+  // ARMv8-M Security Extensions
+  def tBLXNSr : TI<(outs), (ins pred:$p, GPRnopc:$func), IIC_Br,
+                   "blxns${p}\t$func", []>,
+                Requires<[IsThumb, Has8MSecExt]>,
+                T1Special<{1,1,1,?}>, Sched<[WriteBrL]> {
+    bits<4> func;
+    let Inst{6-3} = func;
+    let Inst{2-0} = 0b100;
+    let Unpredictable{1-0} = 0b11;
   }
 
   // ARMv4T

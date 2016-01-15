@@ -80,7 +80,7 @@ private:
   // CachedTable is a map from <FromState, Input> to ToState.
   DenseMap<UnsignPair, unsigned> CachedTable;
 
-  // ReadTable - Read the DFA transition table and update CachedTable.
+  // Read the DFA transition table and update CachedTable.
   void ReadTable(unsigned state);
 
 public:
@@ -92,38 +92,39 @@ public:
     CurrentState = 0;
   }
 
-  // getInsnInput - Return the DFAInput for an instruction class.
+  // Return the DFAInput for an instruction class.
   DFAInput getInsnInput(unsigned InsnClass);
 
-  // getInsnInput - Return the DFAInput for an instruction class input vector.
+  // Return the DFAInput for an instruction class input vector.
   static DFAInput getInsnInput(const std::vector<unsigned> &InsnClass);
 
-  // canReserveResources - Check if the resources occupied by a MCInstrDesc
-  // are available in the current state.
+  // Check if the resources occupied by a MCInstrDesc are available in
+  // the current state.
   bool canReserveResources(const llvm::MCInstrDesc *MID);
 
-  // reserveResources - Reserve the resources occupied by a MCInstrDesc and
-  // change the current state to reflect that change.
+  // Reserve the resources occupied by a MCInstrDesc and change the current
+  // state to reflect that change.
   void reserveResources(const llvm::MCInstrDesc *MID);
 
-  // canReserveResources - Check if the resources occupied by a machine
-  // instruction are available in the current state.
+  // Check if the resources occupied by a machine instruction are available
+  // in the current state.
   bool canReserveResources(llvm::MachineInstr *MI);
 
-  // reserveResources - Reserve the resources occupied by a machine
-  // instruction and change the current state to reflect that change.
+  // Reserve the resources occupied by a machine instruction and change the
+  // current state to reflect that change.
   void reserveResources(llvm::MachineInstr *MI);
 
   const InstrItineraryData *getInstrItins() const { return InstrItins; }
 };
 
-// VLIWPacketizerList - Implements a simple VLIW packetizer using DFA. The
-// packetizer works on machine basic blocks. For each instruction I in BB, the
-// packetizer consults the DFA to see if machine resources are available to
-// execute I. If so, the packetizer checks if I depends on any instruction J in
-// the current packet. If no dependency is found, I is added to current packet
-// and machine resource is marked as taken. If any dependency is found, a target
-// API call is made to prune the dependence.
+
+// VLIWPacketizerList implements a simple VLIW packetizer using DFA. The
+// packetizer works on machine basic blocks. For each instruction I in BB,
+// the packetizer consults the DFA to see if machine resources are available
+// to execute I. If so, the packetizer checks if I depends on any instruction
+// in the current packet. If no dependency is found, I is added to current
+// packet and the machine resource is marked as taken. If any dependency is
+// found, a target API call is made to prune the dependence.
 class VLIWPacketizerList {
 protected:
   MachineFunction &MF;
@@ -132,13 +133,11 @@ protected:
 
   // The VLIW Scheduler.
   DefaultVLIWScheduler *VLIWScheduler;
-
   // Vector of instructions assigned to the current packet.
   std::vector<MachineInstr*> CurrentPacketMIs;
   // DFA resource tracker.
   DFAPacketizer *ResourceTracker;
-
-  // Generate MI -> SU map.
+  // Map: MI -> SU.
   std::map<MachineInstr*, SUnit*> MIToSUnit;
 
 public:
@@ -148,12 +147,12 @@ public:
 
   virtual ~VLIWPacketizerList();
 
-  // PacketizeMIs - Implement this API in the backend to bundle instructions.
+  // Implement this API in the backend to bundle instructions.
   void PacketizeMIs(MachineBasicBlock *MBB,
                     MachineBasicBlock::iterator BeginItr,
                     MachineBasicBlock::iterator EndItr);
 
-  // getResourceTracker - return ResourceTracker
+  // Return the ResourceTracker.
   DFAPacketizer *getResourceTracker() {return ResourceTracker;}
 
   // addToPacket - Add MI to the current packet.
@@ -169,19 +168,18 @@ public:
   // to perform custom finalization.
   virtual void endPacket(MachineBasicBlock *MBB, MachineInstr *MI);
 
-  // initPacketizerState - perform initialization before packetizing
-  // an instruction. This function is supposed to be overrided by
-  // the target dependent packetizer.
-  virtual void initPacketizerState() { return; }
+  // Perform initialization before packetizing an instruction. This
+  // function is supposed to be overrided by the target dependent packetizer.
+  virtual void initPacketizerState() {}
 
-  // ignorePseudoInstruction - Ignore bundling of pseudo instructions.
+  // Check if the given instruction I should be ignored by the packetizer.
   virtual bool ignorePseudoInstruction(const MachineInstr *I,
                                        const MachineBasicBlock *MBB) {
     return false;
   }
 
-  // isSoloInstruction - return true if instruction MI can not be packetized
-  // with any other instruction, which means that MI itself is a packet.
+  // Return true if instruction MI can not be packetized with any other
+  // instruction, which means that MI itself is a packet.
   virtual bool isSoloInstruction(const MachineInstr *MI) {
     return true;
   }
@@ -196,19 +194,17 @@ public:
     return true;
   }
 
-  // isLegalToPacketizeTogether - Is it legal to packetize SUI and SUJ
-  // together.
+  // Check if it is legal to packetize SUI and SUJ together.
   virtual bool isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     return false;
   }
 
-  // isLegalToPruneDependencies - Is it legal to prune dependece between SUI
-  // and SUJ.
+  // Check if it is legal to prune dependece between SUI and SUJ.
   virtual bool isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) {
     return false;
   }
-
 };
-}
+
+} // namespace llvm
 
 #endif

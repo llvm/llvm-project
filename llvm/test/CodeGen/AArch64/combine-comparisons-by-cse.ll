@@ -429,6 +429,42 @@ falser:
   ret void
 }
 
+define i32 @combine_gt_ge_sel(i64 %v, i64* %p) #0 {
+; CHECK-LABEL: combine_gt_ge_sel
+; CHECK: ldr [[reg1:w[0-9]*]],
+; CHECK: cmp [[reg1]], #0
+; CHECK: csel {{.*}}, gt
+entry:
+  %0 = load i32, i32* @a, align 4
+  %cmp = icmp sgt i32 %0, 0
+  %m = select i1 %cmp, i64 %v, i64 0
+  store i64 %m, i64* %p
+  br i1 %cmp, label %lor.lhs.false, label %land.lhs.true
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, i32* @b, align 4
+  %2 = load i32, i32* @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %land.lhs.true3
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp sgt i32 %0, 1
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false, %land.lhs.true
+  %3 = load i32, i32* @b, align 4
+  %4 = load i32, i32* @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
 declare i32 @zoo(i32)
 
 declare double @yoo(i32)

@@ -16,6 +16,9 @@ function(add_version_info_from_vcs VERS)
         set(SVN_REVISION ${Project_WC_REVISION} PARENT_SCOPE)
         set(result "${result}-r${Project_WC_REVISION}")
       endif()
+      if( Project_WC_URL )
+        set(LLVM_REPOSITORY ${Project_WC_URL} PARENT_SCOPE)
+      endif()
     endif()
   elseif( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git )
     set(result "${result}git")
@@ -64,6 +67,19 @@ function(add_version_info_from_vcs VERS)
           set(result "${result}${git_svn_rev}-${git_ref_id}")
         else()
           set(result "${result}${git_svn_rev}")
+        endif()
+
+        execute_process(COMMAND
+          ${git_executable} svn info
+          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+          TIMEOUT 5
+          RESULT_VARIABLE git_result
+          OUTPUT_VARIABLE git_output)
+        if( git_result EQUAL 0)
+          string(REGEX MATCH "URL: ([^ \n]*)" svn_url ${git_output})
+          if(svn_url)
+            set(LLVM_REPOSITORY ${CMAKE_MATCH_1} PARENT_SCOPE)
+          endif()
         endif()
       endif()
     endif()

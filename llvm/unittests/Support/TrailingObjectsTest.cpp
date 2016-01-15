@@ -118,8 +118,8 @@ TEST(TrailingObjects, TwoArg) {
   Class2 *C1 = Class2::create(4);
   Class2 *C2 = Class2::create(0, 4.2);
 
-  EXPECT_EQ(sizeof(Class2), llvm::RoundUpToAlignment(sizeof(bool) * 2,
-                                                     llvm::alignOf<double>()));
+  EXPECT_EQ(sizeof(Class2),
+            llvm::alignTo(sizeof(bool) * 2, llvm::alignOf<double>()));
   EXPECT_EQ(llvm::alignOf<Class2>(), llvm::alignOf<double>());
 
   EXPECT_EQ((Class2::additionalSizeToAlloc<double, short>(1, 0)),
@@ -162,8 +162,7 @@ class Class3 final : public TrailingObjects<Class3, double, short, bool> {
 TEST(TrailingObjects, ThreeArg) {
   EXPECT_EQ((Class3::additionalSizeToAlloc<double, short, bool>(1, 1, 3)),
             sizeof(double) + sizeof(short) + 3 * sizeof(bool));
-  EXPECT_EQ(sizeof(Class3),
-            llvm::RoundUpToAlignment(1, llvm::alignOf<double>()));
+  EXPECT_EQ(sizeof(Class3), llvm::alignTo(1, llvm::alignOf<double>()));
   std::unique_ptr<char[]> P(new char[1000]);
   Class3 *C = reinterpret_cast<Class3 *>(P.get());
   EXPECT_EQ(C->getTrailingObjects<double>(), reinterpret_cast<double *>(C + 1));
@@ -183,8 +182,8 @@ class Class4 final : public TrailingObjects<Class4, char, long> {
 
 TEST(TrailingObjects, Realignment) {
   EXPECT_EQ((Class4::additionalSizeToAlloc<char, long>(1, 1)),
-            llvm::RoundUpToAlignment(sizeof(long) + 1, llvm::alignOf<long>()));
-  EXPECT_EQ(sizeof(Class4), llvm::RoundUpToAlignment(1, llvm::alignOf<long>()));
+            llvm::alignTo(sizeof(long) + 1, llvm::alignOf<long>()));
+  EXPECT_EQ(sizeof(Class4), llvm::alignTo(1, llvm::alignOf<long>()));
   std::unique_ptr<char[]> P(new char[1000]);
   Class4 *C = reinterpret_cast<Class4 *>(P.get());
   EXPECT_EQ(C->getTrailingObjects<char>(), reinterpret_cast<char *>(C + 1));

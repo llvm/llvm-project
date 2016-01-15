@@ -1142,7 +1142,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             setOrigin(A, getCleanOrigin());
           }
         }
-        ArgOffset += RoundUpToAlignment(Size, kShadowTLSAlignment);
+        ArgOffset += alignTo(Size, kShadowTLSAlignment);
       }
       assert(*ShadowPtr && "Could not find shadow for an argument");
       return *ShadowPtr;
@@ -2498,7 +2498,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       (void)Store;
       assert(Size != 0 && Store != nullptr);
       DEBUG(dbgs() << "  Param:" << *Store << "\n");
-      ArgOffset += RoundUpToAlignment(Size, 8);
+      ArgOffset += alignTo(Size, 8);
     }
     DEBUG(dbgs() << "  done with call args\n");
 
@@ -2818,7 +2818,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
         Type *RealTy = A->getType()->getPointerElementType();
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
         Value *Base = getShadowPtrForVAArgument(RealTy, IRB, OverflowOffset);
-        OverflowOffset += RoundUpToAlignment(ArgSize, 8);
+        OverflowOffset += alignTo(ArgSize, 8);
         IRB.CreateMemCpy(Base, MSV.getShadowPtr(A, IRB.getInt8Ty(), IRB),
                          ArgSize, kShadowTLSAlignment);
       } else {
@@ -2840,7 +2840,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
           case AK_Memory:
             uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
             Base = getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset);
-            OverflowOffset += RoundUpToAlignment(ArgSize, 8);
+            OverflowOffset += alignTo(ArgSize, 8);
         }
         IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
       }
@@ -2965,7 +2965,7 @@ struct VarArgMIPS64Helper : public VarArgHelper {
 #endif
       Base = getShadowPtrForVAArgument(A->getType(), IRB, VAArgOffset);
       VAArgOffset += ArgSize;
-      VAArgOffset = RoundUpToAlignment(VAArgOffset, 8);
+      VAArgOffset = alignTo(VAArgOffset, 8);
       IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
     }
 
@@ -3110,7 +3110,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
         case AK_Memory:
           uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
           Base = getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset);
-          OverflowOffset += RoundUpToAlignment(ArgSize, 8);
+          OverflowOffset += alignTo(ArgSize, 8);
           break;
       }
       IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);

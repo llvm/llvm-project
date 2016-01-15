@@ -47,33 +47,10 @@ STATISTIC(NumMergedAllocas, "Number of allocas merged together");
 // if those would be more profitable and blocked inline steps.
 STATISTIC(NumCallerCallersAnalyzed, "Number of caller-callers analyzed");
 
-static cl::opt<int>
-InlineLimit("inline-threshold", cl::Hidden, cl::init(225), cl::ZeroOrMore,
-        cl::desc("Control the amount of inlining to perform (default = 225)"));
+Inliner::Inliner(char &ID) : CallGraphSCCPass(ID), InsertLifetime(true) {}
 
-static cl::opt<int>
-HintThreshold("inlinehint-threshold", cl::Hidden, cl::init(325),
-              cl::desc("Threshold for inlining functions with inline hint"));
-
-// We instroduce this threshold to help performance of instrumentation based
-// PGO before we actually hook up inliner with analysis passes such as BPI and
-// BFI.
-static cl::opt<int>
-ColdThreshold("inlinecold-threshold", cl::Hidden, cl::init(225),
-              cl::desc("Threshold for inlining functions with cold attribute"));
-
-// Threshold to use when optsize is specified (and there is no -inline-limit).
-const int OptSizeThreshold = 75;
-
-Inliner::Inliner(char &ID)
-    : CallGraphSCCPass(ID), InlineThreshold(InlineLimit), InsertLifetime(true) {
-}
-
-Inliner::Inliner(char &ID, int Threshold, bool InsertLifetime)
-    : CallGraphSCCPass(ID),
-      InlineThreshold(InlineLimit.getNumOccurrences() > 0 ? InlineLimit
-                                                          : Threshold),
-      InsertLifetime(InsertLifetime) {}
+Inliner::Inliner(char &ID, bool InsertLifetime)
+    : CallGraphSCCPass(ID), InsertLifetime(InsertLifetime) {}
 
 /// For this class, we declare that we require and preserve the call graph.
 /// If the derived class implements this method, it should
@@ -241,67 +218,6 @@ static bool InlineCallIfPossible(Pass &P, CallSite CS, InlineFunctionInfo &IFI,
   }
   
   return true;
-}
-
-unsigned Inliner::getInlineThreshold(CallSite CS) const {
-  int Threshold = InlineThreshold; // -inline-threshold or else selected by
-                                   // overall opt level
-
-  // If -inline-threshold is not given, listen to the optsize attribute when it
-  // would decrease the threshold.
-  Function *Caller = CS.getCaller();
-  bool OptSize = Caller && !Caller->isDeclaration() &&
-                 // FIXME: Use Function::optForSize().
-                 Caller->hasFnAttribute(Attribute::OptimizeForSize);
-  if (!(InlineLimit.getNumOccurrences() > 0) && OptSize &&
-      OptSizeThreshold < Threshold)
-    Threshold = OptSizeThreshold;
-
-  Function *Callee = CS.getCalledFunction();
-  if (!Callee || Callee->isDeclaration())
-    return Threshold;
-
-  // If profile information is available, use that to adjust threshold of hot
-  // and cold functions.
-  // FIXME: The heuristic used below for determining hotness and coldness are
-  // based on preliminary SPEC tuning and may not be optimal. Replace this with
-  // a well-tuned heuristic based on *callsite* hotness and not callee hotness.
-  uint64_t FunctionCount = 0, MaxFunctionCount = 0;
-  bool HasPGOCounts = false;
-  if (Callee->getEntryCount() &&
-      Callee->getParent()->getMaximumFunctionCount()) {
-    HasPGOCounts = true;
-    FunctionCount = Callee->getEntryCount().getValue();
-    MaxFunctionCount =
-        Callee->getParent()->getMaximumFunctionCount().getValue();
-  }
-
-  // Listen to the inlinehint attribute or profile based hotness information
-  // when it would increase the threshold and the caller does not need to
-  // minimize its size.
-  bool InlineHint =
-      Callee->hasFnAttribute(Attribute::InlineHint) ||
-      (HasPGOCounts &&
-       FunctionCount >= (uint64_t)(0.3 * (double)MaxFunctionCount));
-  if (InlineHint && HintThreshold > Threshold &&
-      !Caller->hasFnAttribute(Attribute::MinSize))
-    Threshold = HintThreshold;
-
-  // Listen to the cold attribute or profile based coldness information
-  // when it would decrease the threshold.
-  bool ColdCallee =
-      Callee->hasFnAttribute(Attribute::Cold) ||
-      (HasPGOCounts &&
-       FunctionCount <= (uint64_t)(0.01 * (double)MaxFunctionCount));
-  // Command line argument for InlineLimit will override the default
-  // ColdThreshold. If we have -inline-threshold but no -inlinecold-threshold,
-  // do not use the default cold threshold even if it is smaller.
-  if ((InlineLimit.getNumOccurrences() == 0 ||
-       ColdThreshold.getNumOccurrences() > 0) && ColdCallee &&
-      ColdThreshold < Threshold)
-    Threshold = ColdThreshold;
-
-  return Threshold;
 }
 
 static void emitAnalysis(CallSite CS, const Twine &Msg) {

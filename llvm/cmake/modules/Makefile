@@ -128,8 +128,7 @@ SKIPSRCMODS := \
   LLVMBuildExports.cmake \
   LLVMConfig.cmake \
   LLVMConfigVersion.cmake \
-  LLVMExports.cmake \
-  VersionFromVCS.cmake
+  LLVMExports.cmake
 
 SRCMODS := $(notdir $(wildcard $(PROJ_SRC_DIR)/*.cmake))
 SRCMODS := $(filter-out $(SKIPSRCMODS),$(SRCMODS))

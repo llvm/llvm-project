@@ -52,7 +52,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
     // Add padding if necessary to align the data element properly.
     if ((StructSize & (TyAlign-1)) != 0) {
       IsPadded = true;
-      StructSize = RoundUpToAlignment(StructSize, TyAlign);
+      StructSize = alignTo(StructSize, TyAlign);
     }
 
     // Keep track of maximum alignment constraint.
@@ -69,7 +69,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
   // and all array elements would be aligned correctly.
   if ((StructSize & (StructAlignment-1)) != 0) {
     IsPadded = true;
-    StructSize = RoundUpToAlignment(StructSize, StructAlignment);
+    StructSize = alignTo(StructSize, StructAlignment);
   }
 }
 

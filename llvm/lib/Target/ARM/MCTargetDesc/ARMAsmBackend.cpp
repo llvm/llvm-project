@@ -159,6 +159,7 @@ void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
 
 unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op) const {
   bool HasThumb2 = STI->getFeatureBits()[ARM::FeatureThumb2];
+  bool HasV8MBaselineOps = STI->getFeatureBits()[ARM::HasV8MBaselineOps];
 
   switch (Op) {
   default:
@@ -170,7 +171,7 @@ unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op) const {
   case ARM::tADR:
     return HasThumb2 ? (unsigned)ARM::t2ADR : Op;
   case ARM::tB:
-    return HasThumb2 ? (unsigned)ARM::t2B : Op;
+    return HasV8MBaselineOps ? (unsigned)ARM::t2B : Op;
   case ARM::tCBZ:
     return ARM::tHINT;
   case ARM::tCBNZ:
@@ -563,7 +564,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
   case ARM::fixup_arm_thumb_br:
     // Offset by 4 and don't encode the lower bit, which is always 0.
-    if (Ctx && !STI->getFeatureBits()[ARM::FeatureThumb2]) {
+    if (Ctx && !STI->getFeatureBits()[ARM::FeatureThumb2] &&
+               !STI->getFeatureBits()[ARM::HasV8MBaselineOps]) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx->reportError(Fixup.getLoc(), FixupDiagnostic);

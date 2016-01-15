@@ -566,15 +566,36 @@ Each statepoint generates the following Locations:
 * Constant which describes number of following deopt *Locations* (not
   operands)
 * Variable number of Locations, one for each deopt parameter listed in
-  the IR statepoint (same number as described by previous Constant)
-* Variable number of Locations pairs, one pair for each unique pointer
-  which needs relocated.  The first Location in each pair describes
-  the base pointer for the object.  The second is the derived pointer
-  actually being relocated.  It is guaranteed that the base pointer
-  must also appear explicitly as a relocation pair if used after the
-  statepoint. There may be fewer pairs then gc parameters in the IR
+  the IR statepoint (same number as described by previous Constant).  At 
+  the moment, only deopt parameters with a bitwidth of 64 bits or less 
+  are supported.  Values of a type larger than 64 bits can be specified 
+  and reported only if a) the value is constant at the call site, and b) 
+  the constant can be represented with less than 64 bits (assuming zero 
+  extension to the original bitwidth).
+* Variable number of relocation records, each of which consists of 
+  exactly two Locations.  Relocation records are described in detail
+  below.
+
+Each relocation record provides sufficient information for a collector to 
+relocate one or more derived pointers.  Each record consists of a pair of 
+Locations.  The second element in the record represents the pointer (or 
+pointers) which need updated.  The first element in the record provides a 
+pointer to the base of the object with which the pointer(s) being relocated is
+associated.  This information is required for handling generalized derived 
+pointers since a pointer may be outside the bounds of the original allocation,
+but still needs to be relocated with the allocation.  Additionally:
+
+* It is guaranteed that the base pointer must also appear explicitly as a 
+  relocation pair if used after the statepoint. 
+* There may be fewer relocation records then gc parameters in the IR
   statepoint. Each *unique* pair will occur at least once; duplicates
-  are possible.
+  are possible.  
+* The Locations within each record may either be of pointer size or a 
+  multiple of pointer size.  In the later case, the record must be 
+  interpreted as describing a sequence of pointers and their corresponding 
+  base pointers. If the Location is of size N x sizeof(pointer), then
+  there will be N records of one pointer each contained within the Location.
+  Both Locations in a pair can be assumed to be of the same size.
 
 Note that the Locations used in each section may describe the same
 physical location.  e.g. A stack slot may appear as a deopt location,

@@ -57,7 +57,7 @@ define void @_Z1biz(i32 %c, ...) #0 !dbg !14 {
   store i32 %c, i32* %1, align 4
   call void @llvm.dbg.declare(metadata i32* %1, metadata !21, metadata !DIExpression()), !dbg !22
   call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !23, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.declare(metadata void (i32, ...)** %fptr, metadata !25, metadata !DIExpression()), !dbg !27
+  call void @llvm.dbg.declare(metadata void (i32, ...)** %fptr, metadata !25, metadata !DIExpression(DW_OP_deref)), !dbg !27
   store void (i32, ...)* @_Z1biz, void (i32, ...)** %fptr, align 8, !dbg !27
   ret void, !dbg !28
 }
@@ -95,7 +95,8 @@ attributes #1 = { nounwind readnone }
 !22 = !DILocation(line: 13, scope: !14)
 !23 = !DILocalVariable(name: "a", line: 16, scope: !14, file: !15, type: !4)
 !24 = !DILocation(line: 16, scope: !14)
-!25 = !DILocalVariable(name: "fptr", line: 18, scope: !14, file: !15, type: !26)
+; Manually modifed to avoid dependence on pointer size
+!25 = !DILocalVariable(name: "fptr", line: 18, scope: !14, file: !15, type: !16)
 !26 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !16)
 !27 = !DILocation(line: 18, scope: !14)
 !28 = !DILocation(line: 22, scope: !14)

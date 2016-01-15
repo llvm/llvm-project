@@ -38,14 +38,19 @@ namespace {
 /// inliner pass and the always inliner pass. The two passes use different cost
 /// analyses to determine when to inline.
 class SimpleInliner : public Inliner {
+  // This field is populated based on one of the following:
+  //  optimization or size optimization levels,
+  //  --inline-threshold flag,
+  //  user specified value.
+  int DefaultThreshold;
 
 public:
-  SimpleInliner() : Inliner(ID) {
+  SimpleInliner()
+      : Inliner(ID), DefaultThreshold(llvm::getDefaultInlineThreshold()) {
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 
-  SimpleInliner(int Threshold)
-      : Inliner(ID, Threshold, /*InsertLifetime*/ true) {
+  SimpleInliner(int Threshold) : Inliner(ID), DefaultThreshold(Threshold) {
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 
@@ -54,7 +59,7 @@ public:
   InlineCost getInlineCost(CallSite CS) override {
     Function *Callee = CS.getCalledFunction();
     TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
-    return llvm::getInlineCost(CS, getInlineThreshold(CS), TTI, ACT);
+    return llvm::getInlineCost(CS, DefaultThreshold, TTI, ACT);
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
@@ -63,17 +68,6 @@ public:
 private:
   TargetTransformInfoWrapperPass *TTIWP;
 };
-
-static int computeThresholdFromOptLevels(unsigned OptLevel,
-                                         unsigned SizeOptLevel) {
-  if (OptLevel > 2)
-    return 275;
-  if (SizeOptLevel == 1) // -Os
-    return 75;
-  if (SizeOptLevel == 2) // -Oz
-    return 25;
-  return 225;
-}
 
 } // end anonymous namespace
 
@@ -96,7 +90,7 @@ Pass *llvm::createFunctionInliningPass(int Threshold) {
 Pass *llvm::createFunctionInliningPass(unsigned OptLevel,
                                        unsigned SizeOptLevel) {
   return new SimpleInliner(
-      computeThresholdFromOptLevels(OptLevel, SizeOptLevel));
+      llvm::computeThresholdFromOptLevels(OptLevel, SizeOptLevel));
 }
 
 bool SimpleInliner::runOnSCC(CallGraphSCC &SCC) {

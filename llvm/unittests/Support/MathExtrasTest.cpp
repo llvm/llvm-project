@@ -179,15 +179,15 @@ TEST(MathExtras, NextPowerOf2) {
   EXPECT_EQ(256u, NextPowerOf2(128));
 }
 
-TEST(MathExtras, RoundUpToAlignment) {
-  EXPECT_EQ(8u, RoundUpToAlignment(5, 8));
-  EXPECT_EQ(24u, RoundUpToAlignment(17, 8));
-  EXPECT_EQ(0u, RoundUpToAlignment(~0LL, 8));
+TEST(MathExtras, alignTo) {
+  EXPECT_EQ(8u, alignTo(5, 8));
+  EXPECT_EQ(24u, alignTo(17, 8));
+  EXPECT_EQ(0u, alignTo(~0LL, 8));
 
-  EXPECT_EQ(7u, RoundUpToAlignment(5, 8, 7));
-  EXPECT_EQ(17u, RoundUpToAlignment(17, 8, 1));
-  EXPECT_EQ(3u, RoundUpToAlignment(~0LL, 8, 3));
-  EXPECT_EQ(552u, RoundUpToAlignment(321, 255, 42));
+  EXPECT_EQ(7u, alignTo(5, 8, 7));
+  EXPECT_EQ(17u, alignTo(17, 8, 1));
+  EXPECT_EQ(3u, alignTo(~0LL, 8, 3));
+  EXPECT_EQ(552u, alignTo(321, 255, 42));
 }
 
 template<typename T>

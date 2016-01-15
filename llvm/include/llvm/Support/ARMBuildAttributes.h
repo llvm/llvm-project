@@ -67,6 +67,7 @@ enum AttrType {
   ABI_FP_16bit_format       = 38,
   MPextension_use           = 42, // recoded from 70 (ABI r2.08)
   DIV_use                   = 44,
+  DSP_extension             = 46,
   also_compatible_with      = 65,
   conformance               = 67,
   Virtualization_use        = 68,
@@ -106,7 +107,9 @@ enum CPUArch {
   v6_M     = 11,  // e.g. Cortex M1
   v6S_M    = 12,  // v6_M with the System extensions
   v7E_M    = 13,  // v7_M with DSP extensions
-  v8       = 14,  // v8,v8.1a AArch32
+  v8_A     = 14,  // v8_A AArch32
+  v8_M_Base= 16,  // v8_M_Base AArch32
+  v8_M_Main= 17,  // v8_M_Main AArch32
 };
 
 enum CPUArchProfile {               // (=7), uleb128
@@ -126,6 +129,7 @@ enum {
 
   // Tag_THUMB_ISA_use, (=9), uleb128
   AllowThumb32 = 2, // 32-bit Thumb (implies 16-bit instructions)
+  AllowThumbDerived = 3, // Thumb allowed, derived from arch/profile
 
   // Tag_FP_arch (=10), uleb128 (formerly Tag_VFP_arch = 10)
   AllowFPv2  = 2,     // v2 FP ISA permitted (implies use of the v1 FP ISA)

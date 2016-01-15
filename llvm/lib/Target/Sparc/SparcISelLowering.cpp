@@ -1131,7 +1131,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   unsigned ArgsSize = std::max(6*8u, CCInfo.getNextStackOffset());
 
   // Keep stack frames 16-byte aligned.
-  ArgsSize = RoundUpToAlignment(ArgsSize, 16);
+  ArgsSize = alignTo(ArgsSize, 16);
 
   // Varargs calls require special treatment.
   if (CLI.IsVarArg)

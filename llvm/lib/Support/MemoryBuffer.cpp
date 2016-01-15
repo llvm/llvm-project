@@ -135,7 +135,7 @@ MemoryBuffer::getNewUninitMemBuffer(size_t Size, const Twine &BufferName) {
   SmallString<256> NameBuf;
   StringRef NameRef = BufferName.toStringRef(NameBuf);
   size_t AlignedStringLen =
-      RoundUpToAlignment(sizeof(MemoryBufferMem) + NameRef.size() + 1, 16);
+      alignTo(sizeof(MemoryBufferMem) + NameRef.size() + 1, 16);
   size_t RealLen = AlignedStringLen + Size + 1;
   char *Mem = static_cast<char*>(operator new(RealLen, std::nothrow));
   if (!Mem)

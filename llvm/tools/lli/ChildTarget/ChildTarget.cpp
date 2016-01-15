@@ -41,9 +41,17 @@ int main(int argc, char *argv[]) {
     return RTDyldMemoryManager::getSymbolAddressInProcess(Name);
   };
 
+  auto RegisterEHFrames = [](uint8_t *Addr, uint32_t Size) {
+    RTDyldMemoryManager::registerEHFramesInProcess(Addr, Size);
+  };
+
+  auto DeregisterEHFrames = [](uint8_t *Addr, uint32_t Size) {
+    RTDyldMemoryManager::deregisterEHFramesInProcess(Addr, Size);
+  };
+
   FDRPCChannel Channel(InFD, OutFD);
   typedef remote::OrcRemoteTargetServer<FDRPCChannel, HostOrcArch> JITServer;
-  JITServer Server(Channel, SymbolLookup);
+  JITServer Server(Channel, SymbolLookup, RegisterEHFrames, DeregisterEHFrames);
 
   while (1) {
     JITServer::JITProcId Id = JITServer::InvalidId;

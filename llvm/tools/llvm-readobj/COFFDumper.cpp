@@ -86,6 +86,8 @@ private:
   void printCodeViewTypeSection(StringRef SectionName, const SectionRef &Section);
   void printCodeViewFieldList(StringRef FieldData);
   StringRef getTypeName(TypeIndex Ty);
+  StringRef getFileNameForFileOffset(uint32_t FileOffset);
+  void printFileNameForOffset(StringRef Label, uint32_t FileOffset);
   void printTypeIndex(StringRef FieldName, TypeIndex TI);
 
   void printCodeViewSymbolsSubsection(StringRef Subsection,
@@ -102,6 +104,9 @@ private:
 
   void printBinaryBlockWithRelocs(StringRef Label, const SectionRef &Sec,
                                   StringRef SectionContents, StringRef Block);
+
+  /// Given a .debug$S section, find the string table and file checksum table.
+  void initializeFileAndStringTables(StringRef Data);
 
   void cacheRelocations();
 
@@ -122,7 +127,7 @@ private:
   const llvm::object::COFFObjectFile *Obj;
   bool RelocCached = false;
   RelocMapTy RelocMap;
-  StringRef CVFileIndexToStringOffsetTable;
+  StringRef CVFileChecksumTable;
   StringRef CVStringTable;
 
   /// All user defined type records in .debug$T live in here. Type indices
@@ -942,6 +947,30 @@ static std::error_code consumeUInt32(StringRef &Data, uint32_t &Res) {
   return std::error_code();
 }
 
+void COFFDumper::initializeFileAndStringTables(StringRef Data) {
+  while (!Data.empty() && (CVFileChecksumTable.data() == nullptr ||
+                           CVStringTable.data() == nullptr)) {
+    // The section consists of a number of subsection in the following format:
+    // |SubSectionType|SubSectionSize|Contents...|
+    uint32_t SubType, SubSectionSize;
+    error(consumeUInt32(Data, SubType));
+    error(consumeUInt32(Data, SubSectionSize));
+    if (SubSectionSize > Data.size())
+      return error(object_error::parse_failed);
+    switch (ModuleSubstreamKind(SubType)) {
+    case ModuleSubstreamKind::FileChecksums:
+      CVFileChecksumTable = Data.substr(0, SubSectionSize);
+      break;
+    case ModuleSubstreamKind::StringTable:
+      CVStringTable = Data.substr(0, SubSectionSize);
+      break;
+    default:
+      break;
+    }
+    Data = Data.drop_front(alignTo(SubSectionSize, 4));
+  }
+}
+
 void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
                                             const SectionRef &Section) {
   StringRef SectionContents;
@@ -961,6 +990,8 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
   W.printHex("Magic", Magic);
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return error(object_error::parse_failed);
+
+  initializeFileAndStringTables(Data);
 
   while (!Data.empty()) {
     // The section consists of a number of subsection in the following format:
@@ -982,7 +1013,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     // the next subsection.
     size_t SectionOffset = Data.data() - SectionContents.data();
     size_t NextOffset = SectionOffset + SubSectionSize;
-    NextOffset = RoundUpToAlignment(NextOffset, 4);
+    NextOffset = alignTo(NextOffset, 4);
     Data = SectionContents.drop_front(NextOffset);
 
     // Optionally print the subsection bytes in case our parsing gets confused
@@ -1025,27 +1056,6 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
       FunctionNames.push_back(LinkageName);
       break;
     }
-    case ModuleSubstreamKind::StringTable:
-      if (SubSectionSize == 0 || CVStringTable.data() != nullptr ||
-          Contents.back() != '\0') {
-        // Empty or duplicate or non-null-terminated subsection.
-        error(object_error::parse_failed);
-        return;
-      }
-      CVStringTable = Contents;
-      break;
-    case ModuleSubstreamKind::FileChecksums:
-      // Holds the translation table from file indices
-      // to offsets in the string table.
-
-      if (SubSectionSize == 0 ||
-          CVFileIndexToStringOffsetTable.data() != nullptr) {
-        // Empty or duplicate subsection.
-        error(object_error::parse_failed);
-        return;
-      }
-      CVFileIndexToStringOffsetTable = Contents;
-      break;
     case ModuleSubstreamKind::FrameData: {
       const size_t RelocationSize = 4;
       if (SubSectionSize != sizeof(FrameData) + RelocationSize) {
@@ -1106,28 +1116,8 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         return;
       }
 
-      uint32_t FilenameOffset;
-      {
-        DataExtractor SDE(CVFileIndexToStringOffsetTable, true, 4);
-        uint32_t OffsetInSDE = OffsetInIndex;
-        if (!SDE.isValidOffset(OffsetInSDE)) {
-          error(object_error::parse_failed);
-          return;
-        }
-        FilenameOffset = SDE.getU32(&OffsetInSDE);
-      }
-
-      if (FilenameOffset == 0 || FilenameOffset + 1 >= CVStringTable.size() ||
-          CVStringTable.data()[FilenameOffset - 1] != '\0') {
-        // Each string in an F3 subsection should be preceded by a null
-        // character.
-        error(object_error::parse_failed);
-        return;
-      }
-
-      StringRef Filename(CVStringTable.data() + FilenameOffset);
       ListScope S(W, "FilenameSegment");
-      W.printString("Filename", Filename);
+      printFileNameForOffset("Filename", OffsetInIndex);
       for (unsigned LineIdx = 0;
            LineIdx != NumLines && DE.isValidOffset(Offset); ++LineIdx) {
         // Then go the (PC, LineNumber) pairs.  The line number is stored in the
@@ -1420,19 +1410,19 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
         case Invalid:
           return error(object_error::parse_failed);
         case CodeOffset:
-          W.printNumber("CodeOffset", GetCompressedAnnotation());
+          W.printHex("CodeOffset", GetCompressedAnnotation());
           break;
         case ChangeCodeOffsetBase:
           W.printNumber("ChangeCodeOffsetBase", GetCompressedAnnotation());
           break;
         case ChangeCodeOffset:
-          W.printNumber("ChangeCodeOffset", GetCompressedAnnotation());
+          W.printHex("ChangeCodeOffset", GetCompressedAnnotation());
           break;
         case ChangeCodeLength:
           W.printNumber("ChangeCodeLength", GetCompressedAnnotation());
           break;
         case ChangeFile:
-          W.printNumber("ChangeFile", GetCompressedAnnotation());
+          W.printHex("ChangeFile", GetCompressedAnnotation());
           break;
         case ChangeLineOffset:
           W.printNumber("ChangeLineOffset",
@@ -1453,14 +1443,19 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
           break;
         case ChangeCodeOffsetAndLineOffset: {
           uint32_t Annotation = GetCompressedAnnotation();
-          uint32_t Operands[] = {Annotation >> 4, Annotation & 0xf};
-          W.printList("ChangeCodeOffsetAndLineOffset", Operands);
+          int32_t LineOffset = DecodeSignedOperand(Annotation >> 4);
+          uint32_t CodeOffset = Annotation & 0xf;
+          W.startLine() << "ChangeCodeOffsetAndLineOffset: {LineOffset: "
+                        << LineOffset << ", CodeOffset: " << W.hex(CodeOffset)
+                        << "}\n";
           break;
         }
         case ChangeCodeLengthAndCodeOffset: {
-          uint32_t Operands[] = {GetCompressedAnnotation(),
-                                 GetCompressedAnnotation()};
-          W.printList("ChangeCodeLengthAndCodeOffset", Operands);
+          uint32_t Length = GetCompressedAnnotation();
+          uint32_t CodeOffset = GetCompressedAnnotation();
+          W.startLine() << "ChangeCodeLengthAndCodeOffset: {Length: "
+                        << W.hex(Length)
+                        << ", CodeOffset: " << W.hex(CodeOffset) << "}\n";
           break;
         }
         case ChangeColumnEnd:
@@ -1473,6 +1468,19 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 
     case S_INLINESITE_END: {
       DictScope S(W, "InlineSiteEnd");
+      break;
+    }
+
+    case S_CALLERS:
+    case S_CALLEES: {
+      ListScope S(W, Kind == S_CALLEES ? "Callees" : "Callers");
+      uint32_t Count;
+      error(consumeUInt32(SymData, Count));
+      for (uint32_t I = 0; I < Count; ++I) {
+        const TypeIndex *FuncID;
+        error(consumeObject(SymData, FuncID));
+        printTypeIndex("FuncID", *FuncID);
+      }
       break;
     }
 
@@ -1704,7 +1712,7 @@ void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
     error(consumeObject(Data, ISL));
     DictScope S(W, "InlineeSourceLine");
     printTypeIndex("Inlinee", ISL->Inlinee);
-    W.printHex("FileID", ISL->FileID);
+    printFileNameForOffset("FileID", ISL->FileID);
     W.printNumber("SourceLineNum", ISL->SourceLineNum);
 
     if (HasExtraFiles) {
@@ -1715,7 +1723,7 @@ void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
       for (unsigned I = 0; I < ExtraFileCount; ++I) {
         uint32_t FileID;
         error(consumeUInt32(Data, FileID));
-        W.printHex("FileID", FileID);
+        printFileNameForOffset("FileID", FileID);
       }
     }
   }
@@ -1772,6 +1780,31 @@ void COFFDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
     W.printHex(FieldName, TypeName, TI.getIndex());
   else
     W.printHex(FieldName, TI.getIndex());
+}
+
+StringRef COFFDumper::getFileNameForFileOffset(uint32_t FileOffset) {
+  // The file checksum subsection should precede all references to it.
+  if (!CVFileChecksumTable.data() || !CVStringTable.data())
+    error(object_error::parse_failed);
+  // Check if the file checksum table offset is valid.
+  if (FileOffset >= CVFileChecksumTable.size())
+    error(object_error::parse_failed);
+
+  // The string table offset comes first before the file checksum.
+  StringRef Data = CVFileChecksumTable.drop_front(FileOffset);
+  uint32_t StringOffset;
+  error(consumeUInt32(Data, StringOffset));
+
+  // Check if the string table offset is valid.
+  if (StringOffset >= CVStringTable.size())
+    error(object_error::parse_failed);
+
+  // Return the null-terminated string.
+  return CVStringTable.drop_front(StringOffset).split('\0').first;
+}
+
+void COFFDumper::printFileNameForOffset(StringRef Label, uint32_t FileOffset) {
+  W.printHex(Label, getFileNameForFileOffset(FileOffset), FileOffset);
 }
 
 static StringRef getLeafTypeName(TypeLeafKind LT) {

@@ -1873,10 +1873,10 @@ SDValue MipsTargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   auto &TD = DAG.getDataLayout();
   unsigned ArgSizeInBytes =
       TD.getTypeAllocSize(VT.getTypeForEVT(*DAG.getContext()));
-  SDValue Tmp3 = DAG.getNode(ISD::ADD, DL, VAList.getValueType(), VAList,
-                             DAG.getConstant(RoundUpToAlignment(ArgSizeInBytes,
-                                                            ArgSlotSizeInBytes),
-                                             DL, VAList.getValueType()));
+  SDValue Tmp3 =
+      DAG.getNode(ISD::ADD, DL, VAList.getValueType(), VAList,
+                  DAG.getConstant(alignTo(ArgSizeInBytes, ArgSlotSizeInBytes),
+                                  DL, VAList.getValueType()));
   // Store the incremented VAList to the legalized pointer
   Chain = DAG.getStore(VAListLoad.getValue(1), DL, Tmp3, VAListPtr,
                       MachinePointerInfo(SV), false, false, 0);
@@ -2604,7 +2604,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // ByValChain is the output chain of the last Memcpy node created for copying
   // byval arguments to the stack.
   unsigned StackAlignment = TFL->getStackAlignment();
-  NextStackOffset = RoundUpToAlignment(NextStackOffset, StackAlignment);
+  NextStackOffset = alignTo(NextStackOffset, StackAlignment);
   SDValue NextStackOffsetVal = DAG.getIntPtrConstant(NextStackOffset, DL, true);
 
   if (!IsTailCall)
@@ -3787,8 +3787,7 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
   int VaArgOffset;
 
   if (ArgRegs.size() == Idx)
-    VaArgOffset =
-        RoundUpToAlignment(State.getNextStackOffset(), RegSizeInBytes);
+    VaArgOffset = alignTo(State.getNextStackOffset(), RegSizeInBytes);
   else {
     VaArgOffset =
         (int)ABI.GetCalleeAllocdArgSizeInBytes(State.getCallingConv()) -
@@ -3854,7 +3853,7 @@ void MipsTargetLowering::HandleByVal(CCState *State, unsigned &Size,
     }
 
     // Mark the registers allocated.
-    Size = RoundUpToAlignment(Size, RegSizeInBytes);
+    Size = alignTo(Size, RegSizeInBytes);
     for (unsigned I = FirstReg; Size > 0 && (I < IntArgRegs.size());
          Size -= RegSizeInBytes, ++I, ++NumRegs)
       State->AllocateReg(IntArgRegs[I], ShadowRegs[I]);

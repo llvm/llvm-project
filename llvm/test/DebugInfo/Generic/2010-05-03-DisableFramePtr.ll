@@ -6,7 +6,7 @@ define void @DisposeDMNotificationUPP(void (%struct.AppleEvent*)* %userUPP) "no-
 entry:
   %userUPP_addr = alloca void (%struct.AppleEvent*)* ; <void (%struct.AppleEvent*)**> [#uses=1]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  call void @llvm.dbg.declare(metadata void (%struct.AppleEvent*)** %userUPP_addr, metadata !0, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.declare(metadata void (%struct.AppleEvent*)** %userUPP_addr, metadata !0, metadata !DIExpression(DW_OP_deref)), !dbg !13
   store void (%struct.AppleEvent*)* %userUPP, void (%struct.AppleEvent*)** %userUPP_addr
   br label %return, !dbg !14
 
@@ -24,7 +24,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 9999)", isOptimized: true, emissionKind: 0, file: !16, enums: !17, retainedTypes: !17, subprograms: !18)
 !4 = !DISubroutineType(types: !5)
 !5 = !{null, !6}
-!6 = !DIDerivedType(tag: DW_TAG_typedef, name: "DMNotificationUPP", line: 6, file: !16, scope: !2, baseType: !7)
+; Manually modified to avoid dependence on pointer size in generic test
+!6 = !DIDerivedType(tag: DW_TAG_typedef, name: "DMNotificationUPP", line: 6, file: !16, scope: !2, baseType: !8)
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !16, scope: !2, baseType: !8)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10}

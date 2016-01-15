@@ -281,7 +281,7 @@ void llvm::emitThumbRegPlusImmediate(MachineBasicBlock &MBB,
 
   unsigned RequiredExtraInstrs;
   if (ExtraRange)
-    RequiredExtraInstrs = RoundUpToAlignment(RangeAfterCopy, ExtraRange) / ExtraRange;
+    RequiredExtraInstrs = alignTo(RangeAfterCopy, ExtraRange) / ExtraRange;
   else if (RangeAfterCopy > 0)
     // We need an extra instruction but none is available
     RequiredExtraInstrs = 1000000;

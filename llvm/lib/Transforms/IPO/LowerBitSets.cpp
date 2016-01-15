@@ -544,7 +544,7 @@ void LowerBitSets::buildBitSetsFromGlobalVariables(
     // Cap at 128 was found experimentally to have a good data/instruction
     // overhead tradeoff.
     if (Padding > 128)
-      Padding = RoundUpToAlignment(InitSize, 128) - InitSize;
+      Padding = alignTo(InitSize, 128) - InitSize;
 
     GlobalInits.push_back(
         ConstantAggregateZero::get(ArrayType::get(Int8Ty, Padding)));

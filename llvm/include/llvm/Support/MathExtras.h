@@ -606,27 +606,31 @@ inline uint64_t PowerOf2Floor(uint64_t A) {
 ///
 /// Examples:
 /// \code
-///   RoundUpToAlignment(5, 8) = 8
-///   RoundUpToAlignment(17, 8) = 24
-///   RoundUpToAlignment(~0LL, 8) = 0
-///   RoundUpToAlignment(321, 255) = 510
+///   alignTo(5, 8) = 8
+///   alignTo(17, 8) = 24
+///   alignTo(~0LL, 8) = 0
+///   alignTo(321, 255) = 510
 ///
-///   RoundUpToAlignment(5, 8, 7) = 7
-///   RoundUpToAlignment(17, 8, 1) = 17
-///   RoundUpToAlignment(~0LL, 8, 3) = 3
-///   RoundUpToAlignment(321, 255, 42) = 552
+///   alignTo(5, 8, 7) = 7
+///   alignTo(17, 8, 1) = 17
+///   alignTo(~0LL, 8, 3) = 3
+///   alignTo(321, 255, 42) = 552
 /// \endcode
-inline uint64_t RoundUpToAlignment(uint64_t Value, uint64_t Align,
-                                   uint64_t Skew = 0) {
+inline uint64_t alignTo(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {
   Skew %= Align;
   return (Value + Align - 1 - Skew) / Align * Align + Skew;
+}
+
+inline uint64_t RoundUpToAlignment(uint64_t Value, uint64_t Align,
+                                   uint64_t Skew = 0) {
+  return alignTo(Value, Align, Skew);
 }
 
 /// Returns the offset to the next integer (mod 2**64) that is greater than
 /// or equal to \p Value and is a multiple of \p Align. \p Align must be
 /// non-zero.
 inline uint64_t OffsetToAlignment(uint64_t Value, uint64_t Align) {
-  return RoundUpToAlignment(Value, Align) - Value;
+  return alignTo(Value, Align) - Value;
 }
 
 /// SignExtend32 - Sign extend B-bit number x to 32-bit int.

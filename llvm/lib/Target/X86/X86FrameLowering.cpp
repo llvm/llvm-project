@@ -1010,7 +1010,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     // Callee-saved registers are pushed on stack before the stack is realigned.
     if (TRI->needsStackRealignment(MF) && !IsWin64Prologue)
-      NumBytes = RoundUpToAlignment(NumBytes, MaxAlign);
+      NumBytes = alignTo(NumBytes, MaxAlign);
 
     // Get the offset of the stack slot for the EBP register, which is
     // guaranteed to be the last slot by processFunctionBeforeFrameFinalized.
@@ -1131,7 +1131,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // virtual memory manager are allocated in correct sequence.
   uint64_t AlignedNumBytes = NumBytes;
   if (IsWin64Prologue && !IsFunclet && TRI->needsStackRealignment(MF))
-    AlignedNumBytes = RoundUpToAlignment(AlignedNumBytes, MaxAlign);
+    AlignedNumBytes = alignTo(AlignedNumBytes, MaxAlign);
   if (AlignedNumBytes >= StackProbeSize && UseStackProbe) {
     // Check whether EAX is livein for this function.
     bool isEAXAlive = isEAXLiveIn(MF);
@@ -1430,8 +1430,7 @@ X86FrameLowering::getWinEHFuncletFrameSize(const MachineFunction &MF) const {
   // RBP is not included in the callee saved register block. After pushing RBP,
   // everything is 16 byte aligned. Everything we allocate before an outgoing
   // call must also be 16 byte aligned.
-  unsigned FrameSizeMinusRBP =
-      RoundUpToAlignment(CSSize + UsedSize, getStackAlignment());
+  unsigned FrameSizeMinusRBP = alignTo(CSSize + UsedSize, getStackAlignment());
   // Subtract out the size of the callee saved registers. This is how much stack
   // each funclet will allocate.
   return FrameSizeMinusRBP - CSSize;
@@ -1491,7 +1490,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     // Callee-saved registers were pushed on stack before the stack was
     // realigned.
     if (TRI->needsStackRealignment(MF) && !IsWin64Prologue)
-      NumBytes = RoundUpToAlignment(FrameSize, MaxAlign);
+      NumBytes = alignTo(FrameSize, MaxAlign);
 
     // Pop EBP.
     BuildMI(MBB, MBBI, DL,
@@ -2481,7 +2480,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     // amount of space needed for the outgoing arguments up to the next
     // alignment boundary.
     unsigned StackAlign = getStackAlignment();
-    Amount = RoundUpToAlignment(Amount, StackAlign);
+    Amount = alignTo(Amount, StackAlign);
 
     MachineModuleInfo &MMI = MF.getMMI();
     const Function *Fn = MF.getFunction();

@@ -599,4 +599,39 @@ void ValueProfData::swapBytesFromHost(support::endianness Endianness) {
   sys::swapByteOrder<uint32_t>(NumValueKinds);
 }
 
+// The argument to this method is a vector of cutoff percentages and the return
+// value is a vector of (Cutoff, MinBlockCount, NumBlocks) triplets.
+void ProfileSummary::computeDetailedSummary() {
+  if (DetailedSummaryCutoffs.empty())
+    return;
+  auto Iter = CountFrequencies.begin();
+  auto End = CountFrequencies.end();
+  std::sort(DetailedSummaryCutoffs.begin(), DetailedSummaryCutoffs.end());
+
+  uint32_t BlocksSeen = 0;
+  uint64_t CurrSum = 0, Count;
+
+  for (uint32_t Cutoff : DetailedSummaryCutoffs) {
+    assert(Cutoff <= 999999);
+    APInt Temp(128, TotalCount);
+    APInt N(128, Cutoff);
+    APInt D(128, ProfileSummary::Scale);
+    Temp *= N;
+    Temp = Temp.sdiv(D);
+    uint64_t DesiredCount = Temp.getZExtValue();
+    assert(DesiredCount <= TotalCount);
+    while (CurrSum < DesiredCount && Iter != End) {
+      Count = Iter->first;
+      uint32_t Freq = Iter->second;
+      CurrSum += (Count * Freq);
+      BlocksSeen += Freq;
+      Iter++;
+    }
+    assert(CurrSum >= DesiredCount);
+    ProfileSummaryEntry PSE = {Cutoff, Count, BlocksSeen};
+    DetailedSummary.push_back(PSE);
+  }
+  return;
+}
+
 }

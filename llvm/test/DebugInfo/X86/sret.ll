@@ -284,7 +284,7 @@ attributes #7 = { builtin nounwind }
 !19 = !DISubprogram(name: "A", line: 5, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 5, file: !1, scope: !"_ZTS1A", type: !20)
 !20 = !DISubroutineType(types: !21)
 !21 = !{null, !17, !22}
-!22 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !23)
+!22 = !DIDerivedType(tag: DW_TAG_reference_type, size: 64, align: 64, baseType: !23)
 !23 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !"_ZTS1A")
 !25 = !DISubprogram(name: "operator=", linkageName: "_ZN1AaSERKS_", line: 7, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 7, file: !1, scope: !"_ZTS1A", type: !26)
 !26 = !DISubroutineType(types: !27)

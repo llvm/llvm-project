@@ -763,6 +763,12 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
     setAttributeItem(Virtualization_use, AllowTZVirtualization, false);
     break;
 
+  case ARM::AK_ARMV8MBaseline:
+  case ARM::AK_ARMV8MMainline:
+    setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false);
+    setAttributeItem(CPU_arch_profile, MicroControllerProfile, false);
+    break;
+
   case ARM::AK_IWMMXT:
     setAttributeItem(ARM_ISA_use, Allowed, false);
     setAttributeItem(THUMB_ISA_use, Allowed, false);

@@ -27,6 +27,7 @@
 #include "llvm/Support/MD5.h"
 #include <cstdint>
 #include <list>
+#include <map>
 #include <system_error>
 #include <vector>
 
@@ -552,6 +553,68 @@ uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record);
 ValueProfData *
 serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
                              ValueProfData *Dst);
+
+///// Profile summary computation ////
+// The 'show' command displays richer summary of the profile data. The profile
+// summary is one or more (Cutoff, MinBlockCount, NumBlocks) triplets. Given a
+// target execution count percentile, we compute the minimum number of blocks
+// needed to reach this target and the minimum execution count of these blocks.
+struct ProfileSummaryEntry {
+  uint32_t Cutoff;        ///< The required percentile of total execution count.
+  uint64_t MinBlockCount; ///< The minimum execution count for this percentile.
+  uint64_t NumBlocks;     ///< Number of blocks >= the minumum execution count.
+};
+
+class ProfileSummary {
+  // We keep track of the number of times a count appears in the profile and
+  // keep the map sorted in the descending order of counts.
+  std::map<uint64_t, uint32_t, std::greater<uint64_t>> CountFrequencies;
+  std::vector<ProfileSummaryEntry> DetailedSummary;
+  std::vector<uint32_t> DetailedSummaryCutoffs;
+  // Sum of all counts.
+  uint64_t TotalCount;
+  uint64_t MaxBlockCount, MaxFunctionCount;
+  uint32_t NumBlocks, NumFunctions;
+  inline void addCount(uint64_t Count);
+  void computeDetailedSummary();
+
+public:
+  static const int Scale = 1000000;
+  ProfileSummary(std::vector<uint32_t> Cutoffs)
+      : DetailedSummaryCutoffs(Cutoffs), TotalCount(0), MaxBlockCount(0),
+        MaxFunctionCount(0), NumBlocks(0), NumFunctions(0) {}
+  inline void addRecord(const InstrProfRecord &);
+  inline std::vector<ProfileSummaryEntry> &getDetailedSummary();
+  uint32_t getNumBlocks() { return NumBlocks; }
+  uint64_t getTotalCount() { return TotalCount; }
+  uint32_t getNumFunctions() { return NumFunctions; }
+  uint64_t getMaxFunctionCount() { return MaxFunctionCount; }
+  uint64_t getMaxBlockCount() { return MaxBlockCount; }
+};
+
+// This is called when a count is seen in the profile.
+void ProfileSummary::addCount(uint64_t Count) {
+  TotalCount += Count;
+  if (Count > MaxBlockCount)
+    MaxBlockCount = Count;
+  NumBlocks++;
+  CountFrequencies[Count]++;
+}
+
+void ProfileSummary::addRecord(const InstrProfRecord &R) {
+  NumFunctions++;
+  if (R.Counts[0] > MaxFunctionCount)
+    MaxFunctionCount = R.Counts[0];
+
+  for (size_t I = 1, E = R.Counts.size(); I < E; ++I)
+    addCount(R.Counts[I]);
+}
+
+std::vector<ProfileSummaryEntry> &ProfileSummary::getDetailedSummary() {
+  if (!DetailedSummaryCutoffs.empty() && DetailedSummary.empty())
+    computeDetailedSummary();
+  return DetailedSummary;
+}
 
 namespace IndexedInstrProf {
 

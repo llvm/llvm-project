@@ -110,7 +110,7 @@ entry:
 
 ; <label>:30                                      ; preds = %24, %5
   store i32 0, i32* %i.i, align 4, !dbg !39, !tbaa !41
-  tail call void @llvm.dbg.value(metadata %struct.C* %8, i64 0, metadata !27, metadata !DIExpression()), !dbg !46
+  tail call void @llvm.dbg.value(metadata %struct.C* %8, i64 0, metadata !27, metadata !DIExpression(DW_OP_deref)), !dbg !46
   call void @_ZN1C5m_fn3Ev(%struct.C* %8), !dbg !47
   unreachable, !dbg !47
 }

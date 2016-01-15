@@ -55,7 +55,8 @@ namespace {
 enum ActionType {
   PrintAction,
   CoveredFunctionsAction,
-  NotCoveredFunctionsAction
+  NotCoveredFunctionsAction,
+  HtmlReportAction
 };
 
 cl::opt<ActionType> Action(
@@ -65,6 +66,8 @@ cl::opt<ActionType> Action(
                           "Print all covered funcions."),
                clEnumValN(NotCoveredFunctionsAction, "not-covered-functions",
                           "Print all not covered funcions."),
+               clEnumValN(HtmlReportAction, "html-report",
+                          "Print HTML coverage report."),
                clEnumValEnd));
 
 static cl::list<std::string> ClInputFiles(cl::Positional, cl::OneOrMore,
@@ -167,19 +170,24 @@ std::string stripPathPrefix(std::string Path) {
   return Path.substr(Pos + ClStripPathPrefix.size());
 }
 
+static std::unique_ptr<symbolize::LLVMSymbolizer> createSymbolizer() {
+  symbolize::LLVMSymbolizer::Options SymbolizerOptions;
+  SymbolizerOptions.Demangle = ClDemangle;
+  SymbolizerOptions.UseSymbolTable = true;
+  return std::unique_ptr<symbolize::LLVMSymbolizer>(
+      new symbolize::LLVMSymbolizer(SymbolizerOptions));
+}
+
 // Compute [FileLoc -> FunctionName] map for given addresses.
 static std::map<FileLoc, std::string>
 computeFunctionsMap(const std::set<uint64_t> &Addrs) {
   std::map<FileLoc, std::string> Fns;
 
-  symbolize::LLVMSymbolizer::Options SymbolizerOptions;
-  SymbolizerOptions.Demangle = ClDemangle;
-  SymbolizerOptions.UseSymbolTable = true;
-  symbolize::LLVMSymbolizer Symbolizer(SymbolizerOptions);
+  auto Symbolizer(createSymbolizer());
 
   // Fill in Fns map.
   for (auto Addr : Addrs) {
-    auto InliningInfo = Symbolizer.symbolizeInlinedCode(ClBinaryName, Addr);
+    auto InliningInfo = Symbolizer->symbolizeInlinedCode(ClBinaryName, Addr);
     FailIfError(InliningInfo);
     for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
       auto FrameInfo = InliningInfo->getFrame(I);
@@ -398,6 +406,56 @@ static void printFunctionLocs(const std::set<FunctionLoc> &FnLocs,
   }
 }
 
+static std::string escapeHtml(const std::string &S) {
+  std::string Result;
+  Result.reserve(S.size());
+  for (char Ch : S) {
+    switch (Ch) {
+    case '&':
+      Result.append("&amp;");
+      break;
+    case '\'':
+      Result.append("&apos;");
+      break;
+    case '"':
+      Result.append("&quot;");
+      break;
+    case '<':
+      Result.append("&lt;");
+      break;
+    case '>':
+      Result.append("&gt;");
+      break;
+    default:
+      Result.push_back(Ch);
+      break;
+    }
+  }
+  return Result;
+}
+
+// Computes a map file_name->{line_number}
+static std::map<std::string, std::set<int>>
+getFileLines(const std::set<uint64_t> &Addrs) {
+  std::map<std::string, std::set<int>> FileLines;
+
+  auto Symbolizer(createSymbolizer());
+
+  // Fill in FileLines map.
+  for (auto Addr : Addrs) {
+    auto InliningInfo = Symbolizer->symbolizeInlinedCode(ClBinaryName, Addr);
+    FailIfError(InliningInfo);
+    for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
+      auto FrameInfo = InliningInfo->getFrame(I);
+      SmallString<256> FileName(FrameInfo.FileName);
+      sys::path::remove_dots(FileName, /* remove_dot_dot */ true);
+      FileLines[FileName.str()].insert(FrameInfo.Line);
+    }
+  }
+
+  return FileLines;
+}
+
 class CoverageData {
  public:
   // Read single file coverage data.
@@ -471,6 +529,82 @@ class CoverageData {
     }
   }
 
+  void printReport(raw_ostream &OS) {
+    // file_name -> set of covered lines;
+    std::map<std::string, std::set<int>> CoveredFileLines =
+        getFileLines(*Addrs);
+    std::map<std::string, std::set<int>> CoveragePoints =
+        getFileLines(getCoveragePoints(ClBinaryName));
+
+    std::string Title = stripPathPrefix(ClBinaryName) + " Coverage Report";
+
+    OS << "<html>\n";
+    OS << "<head>\n";
+
+    // Stylesheet
+    OS << "<style>\n";
+    OS << ".covered { background: #7F7; }\n";
+    OS << ".notcovered { background: #F77; }\n";
+    OS << "</style>\n";
+    OS << "<title>" << Title << "</title>\n";
+    OS << "</head>\n";
+    OS << "<body>\n";
+
+    // Title
+    OS << "<h1>" << Title << "</h1>\n";
+    OS << "<p>Coverage files: ";
+    for (auto InputFile : ClInputFiles) {
+      llvm::sys::fs::file_status Status;
+      llvm::sys::fs::status(InputFile, Status);
+      OS << stripPathPrefix(InputFile) << " ("
+         << Status.getLastModificationTime().str() << ")";
+    }
+    OS << "</p>\n";
+
+    // TOC
+    OS << "<ul>\n";
+    for (auto It : CoveredFileLines) {
+      auto FileName = It.first;
+      OS << "<li><a href=\"#" << escapeHtml(FileName) << "\">"
+         << stripPathPrefix(FileName) << "</a></li>\n";
+    }
+    OS << "</ul>\n";
+
+    // Source
+    for (auto It : CoveredFileLines) {
+      auto FileName = It.first;
+      auto Lines = It.second;
+      auto CovLines = CoveragePoints[FileName];
+
+      OS << "<a name=\"" << escapeHtml(FileName) << "\"> </a>\n";
+      OS << "<h2>" << stripPathPrefix(FileName) << "</h2>\n";
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+          MemoryBuffer::getFile(FileName);
+      if (!BufOrErr) {
+        OS << "Error reading file: " << FileName << " : "
+           << BufOrErr.getError().message() << "("
+           << BufOrErr.getError().value() << ")\n";
+        continue;
+      }
+
+      OS << "<pre>\n";
+      for (line_iterator I = line_iterator(*BufOrErr.get(), false);
+           !I.is_at_eof(); ++I) {
+        OS << "<span ";
+        if (Lines.find(I.line_number()) != Lines.end())
+          OS << "class=covered";
+        else if (CovLines.find(I.line_number()) != CovLines.end())
+          OS << "class=notcovered";
+        OS << ">";
+        OS << escapeHtml(*I) << "</span>\n";
+      }
+      OS << "</pre>\n";
+    }
+
+    OS << "</body>\n";
+    OS << "</html>\n";
+  }
+
   // Print list of covered functions.
   // Line format: <file_name>:<line> <function_name>
   void printCoveredFunctions(raw_ostream &OS) {
@@ -525,6 +659,10 @@ int main(int argc, char **argv) {
   }
   case NotCoveredFunctionsAction: {
     CovData.get()->printNotCoveredFunctions(outs());
+    return 0;
+  }
+  case HtmlReportAction: {
+    CovData.get()->printReport(outs());
     return 0;
   }
   }

@@ -38,7 +38,7 @@ class ContiguousBlobAccumulator {
     if (Align == 0)
       Align = 1;
     uint64_t CurrentOffset = InitialOffset + OS.tell();
-    uint64_t AlignedOffset = RoundUpToAlignment(CurrentOffset, Align);
+    uint64_t AlignedOffset = alignTo(CurrentOffset, Align);
     for (; CurrentOffset != AlignedOffset; ++CurrentOffset)
       OS.write('\0');
     return AlignedOffset; // == CurrentOffset;

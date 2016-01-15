@@ -534,7 +534,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     // Add alignment.
     // NOTE: we ensure that BasePointer itself is aligned to >= Align.
     StaticOffset += Size;
-    StaticOffset = RoundUpToAlignment(StaticOffset, Align);
+    StaticOffset = alignTo(StaticOffset, Align);
 
     Value *Off = IRB.CreateGEP(BasePointer, // BasePointer is i8*
                                ConstantInt::get(Int32Ty, -StaticOffset));
@@ -565,7 +565,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     // Add alignment.
     // NOTE: we ensure that BasePointer itself is aligned to >= Align.
     StaticOffset += Size;
-    StaticOffset = RoundUpToAlignment(StaticOffset, Align);
+    StaticOffset = alignTo(StaticOffset, Align);
 
     Value *Off = IRB.CreateGEP(BasePointer, // BasePointer is i8*
                                ConstantInt::get(Int32Ty, -StaticOffset));
@@ -582,7 +582,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   // Re-align BasePointer so that our callees would see it aligned as
   // expected.
   // FIXME: no need to update BasePointer in leaf functions.
-  StaticOffset = RoundUpToAlignment(StaticOffset, StackAlignment);
+  StaticOffset = alignTo(StaticOffset, StackAlignment);
 
   // Update shadow stack pointer in the function epilogue.
   IRB.SetInsertPoint(BasePointer->getNextNode());

@@ -65,7 +65,7 @@
 @ CHECK-THUMB: wfe                             @ encoding: [0x20,0xbf]
 @ CHECK-THUMB: wfi                             @ encoding: [0x30,0xbf]
 @ CHECK-THUMB: sev                             @ encoding: [0x40,0xbf]
-@ CHECK-ERROR-THUMB: error: instruction requires: armv7
+@ CHECK-ERROR-THUMB: error: instruction requires: v7 clrex
 @ CHECK-ERROR-THUMB: clrex
 @ CHECK-ERROR-THUMB: ^
 
@@ -77,6 +77,6 @@
 @ CHECK-V6M: wfe                             @ encoding: [0x20,0xbf]
 @ CHECK-V6M: wfi                             @ encoding: [0x30,0xbf]
 @ CHECK-V6M: sev                             @ encoding: [0x40,0xbf]
-@ CHECK-ERROR-V6M: error: instruction requires: armv7
+@ CHECK-ERROR-V6M: error: instruction requires: v7 clrex
 @ CHECK-ERROR-V6M: clrex
 @ CHECK-ERROR-V6M: ^
