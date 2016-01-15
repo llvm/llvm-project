@@ -205,3 +205,9 @@ def single_module : Flag<["-"], "single_module">,
      HelpText<"Default for dylibs">, Group<grp_obsolete>;
 def multi_module : Flag<["-"], "multi_module">,
      HelpText<"Unsupported way to build dylibs">, Group<grp_obsolete>;
+def objc_gc_compaction : Flag<["-"], "objc_gc_compaction">,
+     HelpText<"Unsupported ObjC GC option">, Group<grp_obsolete>;
+def objc_gc : Flag<["-"], "objc_gc">,
+     HelpText<"Unsupported ObjC GC option">, Group<grp_obsolete>;
+def objc_gc_only : Flag<["-"], "objc_gc_only">,
+     HelpText<"Unsupported ObjC GC option">, Group<grp_obsolete>;

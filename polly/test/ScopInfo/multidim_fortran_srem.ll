@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb188
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb188[i0] : i0 >= 0 and i0 <= -3 + tmp183 };
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb188[i0] : 0 <= i0 <= -3 + tmp183 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb188[i0] -> [i0, 0, 0, 0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
@@ -13,7 +13,7 @@ target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:
 ; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb188[i0] -> MemRef_tmp194[] };
 ; CHECK-NEXT:     Stmt_bb203
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] : i0 >= 0 and i0 <= -3 + tmp183 and i1 >= 0 and i1 <= -3 + tmp180 and i2 >= 0 and i2 <= -3 + tmp177 };
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] : 0 <= i0 <= -3 + tmp183 and 0 <= i1 <= -3 + tmp180 and 0 <= i2 <= -3 + tmp177 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> [i0, 1, i1, i2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
@@ -21,9 +21,9 @@ target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp194[] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : exists (e0 = floor((-i0 + o0)/3): 3e0 = -i0 + o0 and o0 <= 2 and o0 >= 0) };
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : 3*floor((-i0 + o0)/3) = -i0 + o0 and 0 <= o0 <= 2 };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : exists (e0 = floor((-2 - i0 + o0)/3): 3e0 = -2 - i0 + o0 and o0 <= 2 and o0 >= 0) };
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : 3*floor((-2 - i0 + o0)/3) = -2 - i0 + o0 and 0 <= o0 <= 2 };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_arg56[1 + i0, 1 + i1, 1 + i2] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

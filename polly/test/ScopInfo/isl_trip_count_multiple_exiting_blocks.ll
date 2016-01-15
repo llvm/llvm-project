@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
 ; CHECK: Domain :=
-; CHECK:   { Stmt_if_end[i0] : i0 <= 1024 and i0 >= 0 };
+; CHECK:   { Stmt_if_end[i0] : 0 <= i0 <= 1024 };
 ;
 ;    void f(int *A) {
 ;      int i = 0;

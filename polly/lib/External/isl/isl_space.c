@@ -2281,6 +2281,45 @@ error:
 	return NULL;
 }
 
+/* Can isl_space_range_curry be applied to "space"?
+ * That is, does it have a nested relation in its range,
+ * the domain of which is itself a nested relation?
+ */
+isl_bool isl_space_can_range_curry(__isl_keep isl_space *space)
+{
+	isl_bool can;
+
+	if (!space)
+		return isl_bool_error;
+	can = isl_space_range_is_wrapping(space);
+	if (can < 0 || !can)
+		return can;
+	return isl_space_can_curry(space->nested[1]);
+}
+
+/* Given a space A -> ((B -> C) -> D), return the corresponding space
+ * A -> (B -> (C -> D)).
+ */
+__isl_give isl_space *isl_space_range_curry(__isl_take isl_space *space)
+{
+	if (!space)
+		return NULL;
+
+	if (!isl_space_can_range_curry(space))
+		isl_die(isl_space_get_ctx(space), isl_error_invalid,
+			"space range cannot be curried",
+			return isl_space_free(space));
+
+	space = isl_space_cow(space);
+	if (!space)
+		return NULL;
+	space->nested[1] = isl_space_curry(space->nested[1]);
+	if (!space->nested[1])
+		return isl_space_free(space);
+
+	return space;
+}
+
 /* Can we apply isl_space_uncurry to "space"?
  * That is, does it have a nested relation in its range?
  */

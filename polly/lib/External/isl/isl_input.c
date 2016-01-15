@@ -658,10 +658,28 @@ error:
 	return NULL;
 }
 
+/* Is "type" the type of a comparison operator between lists
+ * of affine expressions?
+ */
+static int is_list_comparator_type(int type)
+{
+	switch (type) {
+	case ISL_TOKEN_LEX_LT:
+	case ISL_TOKEN_LEX_GT:
+	case ISL_TOKEN_LEX_LE:
+	case ISL_TOKEN_LEX_GE:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 static int is_comparator(struct isl_token *tok)
 {
 	if (!tok)
 		return 0;
+	if (is_list_comparator_type(tok->type))
+		return 1;
 
 	switch (tok->type) {
 	case ISL_TOKEN_LT:
@@ -1426,6 +1444,81 @@ static __isl_give isl_map *read_map_tuple(__isl_keep isl_stream *s,
 	return map_from_tuple(tuple, map, type, v, rational);
 }
 
+/* Given two equal-length lists of piecewise affine expression with the space
+ * of "set" as domain, construct a set in the same space that expresses
+ * that "left" and "right" satisfy the comparison "type".
+ *
+ * A space is constructed of the same dimension as the number of elements
+ * in the two lists.  The comparison is then expressed in a map from
+ * this space to itself and wrapped into a set.  Finally the two lists
+ * of piecewise affine expressions are plugged into this set.
+ *
+ * Let S be the space of "set" and T the constructed space.
+ * The lists are first changed into two isl_multi_pw_affs in S -> T and
+ * then combined into an isl_multi_pw_aff in S -> [T -> T],
+ * while the comparison is first expressed in T -> T, then [T -> T]
+ * and finally in S.
+ */
+static __isl_give isl_set *list_cmp(__isl_keep isl_set *set, int type,
+	__isl_take isl_pw_aff_list *left, __isl_take isl_pw_aff_list *right)
+{
+	isl_space *space;
+	int n;
+	isl_multi_pw_aff *mpa1, *mpa2;
+
+	if (!set || !left || !right)
+		goto error;
+
+	space = isl_set_get_space(set);
+	n = isl_pw_aff_list_n_pw_aff(left);
+	space = isl_space_from_domain(space);
+	space = isl_space_add_dims(space, isl_dim_out, n);
+	mpa1 = isl_multi_pw_aff_from_pw_aff_list(isl_space_copy(space), left);
+	mpa2 = isl_multi_pw_aff_from_pw_aff_list(isl_space_copy(space), right);
+	mpa1 = isl_multi_pw_aff_range_product(mpa1, mpa2);
+
+	space = isl_space_range(space);
+	switch (type) {
+	case ISL_TOKEN_LEX_LT:
+		set = isl_map_wrap(isl_map_lex_lt(space));
+		break;
+	case ISL_TOKEN_LEX_GT:
+		set = isl_map_wrap(isl_map_lex_gt(space));
+		break;
+	case ISL_TOKEN_LEX_LE:
+		set = isl_map_wrap(isl_map_lex_le(space));
+		break;
+	case ISL_TOKEN_LEX_GE:
+		set = isl_map_wrap(isl_map_lex_ge(space));
+		break;
+	default:
+		isl_multi_pw_aff_free(mpa1);
+		isl_space_free(space);
+		isl_die(isl_set_get_ctx(set), isl_error_internal,
+			"unhandled list comparison type", return NULL);
+	}
+	set = isl_set_preimage_multi_pw_aff(set, mpa1);
+	return set;
+error:
+	isl_pw_aff_list_free(left);
+	isl_pw_aff_list_free(right);
+	return NULL;
+}
+
+/* Construct constraints of the form
+ *
+ *	a op b
+ *
+ * where a is an element in "left", op is an operator of type "type" and
+ * b is an element in "right", add the constraints to "set" and return
+ * the result.
+ * "rational" is set if the constraints should be treated as
+ * a rational constraints.
+ *
+ * If "type" is the type of a comparison operator between lists
+ * of affine expressions, then a single (compound) constraint
+ * is constructed by list_cmp instead.
+ */
 static __isl_give isl_set *construct_constraints(
 	__isl_take isl_set *set, int type,
 	__isl_keep isl_pw_aff_list *left, __isl_keep isl_pw_aff_list *right,
@@ -1439,7 +1532,9 @@ static __isl_give isl_set *construct_constraints(
 		left = isl_pw_aff_list_set_rational(left);
 		right = isl_pw_aff_list_set_rational(right);
 	}
-	if (type == ISL_TOKEN_LE)
+	if (is_list_comparator_type(type))
+		cond = list_cmp(set, type, left, right);
+	else if (type == ISL_TOKEN_LE)
 		cond = isl_pw_aff_list_le_set(left, right);
 	else if (type == ISL_TOKEN_GE)
 		cond = isl_pw_aff_list_ge_set(left, right);
@@ -1455,11 +1550,32 @@ static __isl_give isl_set *construct_constraints(
 	return isl_set_intersect(set, cond);
 }
 
+/* Read a constraint from "s", add it to "map" and return the result.
+ * "v" contains a description of the identifiers parsed so far.
+ * "rational" is set if the constraint should be treated as
+ * a rational constraint.
+ * The constraint read from "s" may be applied to multiple pairs
+ * of affine expressions and may be chained.
+ * In particular, a list of affine expressions is read, followed
+ * by a comparison operator and another list of affine expressions.
+ * The comparison operator is then applied to each pair of elements
+ * in the two lists and the results are added to "map".
+ * However, if the operator expects two lists of affine expressions,
+ * then it is applied directly to those lists and the two lists
+ * are required to have the same length.
+ * If the next token is another comparison operator, then another
+ * list of affine expressions is read and the process repeats.
+ *
+ * The processing is performed on a wrapped copy of "map" because
+ * an affine expression cannot have a binary relation as domain.
+ */
 static __isl_give isl_map *add_constraint(__isl_keep isl_stream *s,
 	struct vars *v, __isl_take isl_map *map, int rational)
 {
-	struct isl_token *tok = NULL;
+	struct isl_token *tok;
+	int type;
 	isl_pw_aff_list *list1 = NULL, *list2 = NULL;
+	int n1, n2;
 	isl_set *set;
 
 	set = isl_map_wrap(map);
@@ -1471,17 +1587,23 @@ static __isl_give isl_map *add_constraint(__isl_keep isl_stream *s,
 		isl_stream_error(s, tok, "missing operator");
 		if (tok)
 			isl_stream_push_token(s, tok);
-		tok = NULL;
 		goto error;
 	}
+	type = tok->type;
+	isl_token_free(tok);
 	for (;;) {
 		list2 = accept_affine_list(s, isl_set_get_space(set), v);
 		if (!list2)
 			goto error;
+		n1 = isl_pw_aff_list_n_pw_aff(list1);
+		n2 = isl_pw_aff_list_n_pw_aff(list2);
+		if (is_list_comparator_type(type) && n1 != n2) {
+			isl_stream_error(s, NULL,
+					"list arguments not of same size");
+			goto error;
+		}
 
-		set = construct_constraints(set, tok->type, list1, list2,
-						rational);
-		isl_token_free(tok);
+		set = construct_constraints(set, type, list1, list2, rational);
 		isl_pw_aff_list_free(list1);
 		list1 = list2;
 
@@ -1491,13 +1613,13 @@ static __isl_give isl_map *add_constraint(__isl_keep isl_stream *s,
 				isl_stream_push_token(s, tok);
 			break;
 		}
+		type = tok->type;
+		isl_token_free(tok);
 	}
 	isl_pw_aff_list_free(list1);
 
 	return isl_set_unwrap(set);
 error:
-	if (tok)
-		isl_token_free(tok);
 	isl_pw_aff_list_free(list1);
 	isl_pw_aff_list_free(list2);
 	isl_set_free(set);
@@ -3585,6 +3707,61 @@ static __isl_give isl_union_pw_aff *read_union_pw_aff_with_dom(
 	}
 
 	isl_set_free(dom);
+	return upa;
+}
+
+/* Read an isl_union_pw_aff from "s".
+ *
+ * First check if there are any paramters, then read in the opening brace
+ * and use read_union_pw_aff_with_dom to read in the body of
+ * the isl_union_pw_aff.  Finally, read the closing brace.
+ */
+__isl_give isl_union_pw_aff *isl_stream_read_union_pw_aff(
+	__isl_keep isl_stream *s)
+{
+	struct vars *v;
+	isl_set *dom;
+	isl_union_pw_aff *upa = NULL;
+
+	v = vars_new(s->ctx);
+	if (!v)
+		return NULL;
+
+	dom = isl_set_universe(isl_space_params_alloc(s->ctx, 0));
+	if (next_is_tuple(s)) {
+		dom = read_map_tuple(s, dom, isl_dim_param, v, 1, 0);
+		if (isl_stream_eat(s, ISL_TOKEN_TO))
+			goto error;
+	}
+	if (isl_stream_eat(s, '{'))
+		goto error;
+
+	upa = read_union_pw_aff_with_dom(s, isl_set_copy(dom), v);
+
+	if (isl_stream_eat(s, '}'))
+		goto error;
+
+	vars_free(v);
+	isl_set_free(dom);
+	return upa;
+error:
+	vars_free(v);
+	isl_set_free(dom);
+	isl_union_pw_aff_free(upa);
+	return NULL;
+}
+
+/* Read an isl_union_pw_aff from "str".
+ */
+__isl_give isl_union_pw_aff *isl_union_pw_aff_read_from_str(isl_ctx *ctx,
+	const char *str)
+{
+	isl_union_pw_aff *upa;
+	isl_stream *s = isl_stream_new_str(ctx, str);
+	if (!s)
+		return NULL;
+	upa = isl_stream_read_union_pw_aff(s);
+	isl_stream_free(s);
 	return upa;
 }
 

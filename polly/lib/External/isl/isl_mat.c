@@ -1123,7 +1123,7 @@ static int preimage(struct isl_ctx *ctx, isl_int **q, unsigned n,
  * M the matrix mat.
  *
  * If there are fewer variables x' then there are x, then we perform
- * the transformation in place, which that, in principle,
+ * the transformation in place, which means that, in principle,
  * this frees up some extra variables as the number
  * of columns remains constant, but we would have to extend
  * the div array too as the number of rows in this array is assumed

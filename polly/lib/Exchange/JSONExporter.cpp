@@ -304,33 +304,35 @@ bool JSONImporter::runOnScop(Scop &S) {
       isl_id *OutId = isl_map_get_tuple_id(currentAccessMap, isl_dim_out);
       newAccessMap = isl_map_set_tuple_id(newAccessMap, isl_dim_out, OutId);
 
-      // We keep the old alignment, thus we cannot allow accesses to memory
-      // locations that were not accessed before if the alignment of the access
-      // is not the default alignment.
-      bool SpecialAlignment = true;
-      if (LoadInst *LoadI = dyn_cast<LoadInst>(MA->getAccessInstruction())) {
-        SpecialAlignment =
-            DL.getABITypeAlignment(LoadI->getType()) != LoadI->getAlignment();
-      } else if (StoreInst *StoreI =
-                     dyn_cast<StoreInst>(MA->getAccessInstruction())) {
-        SpecialAlignment =
-            DL.getABITypeAlignment(StoreI->getValueOperand()->getType()) !=
-            StoreI->getAlignment();
-      }
+      if (MA->isArrayKind()) {
+        // We keep the old alignment, thus we cannot allow accesses to memory
+        // locations that were not accessed before if the alignment of the
+        // access is not the default alignment.
+        bool SpecialAlignment = true;
+        if (LoadInst *LoadI = dyn_cast<LoadInst>(MA->getAccessInstruction())) {
+          SpecialAlignment =
+              DL.getABITypeAlignment(LoadI->getType()) != LoadI->getAlignment();
+        } else if (StoreInst *StoreI =
+                       dyn_cast<StoreInst>(MA->getAccessInstruction())) {
+          SpecialAlignment =
+              DL.getABITypeAlignment(StoreI->getValueOperand()->getType()) !=
+              StoreI->getAlignment();
+        }
 
-      if (SpecialAlignment) {
-        isl_set *newAccessSet = isl_map_range(isl_map_copy(newAccessMap));
-        isl_set *currentAccessSet =
-            isl_map_range(isl_map_copy(currentAccessMap));
-        bool isSubset = isl_set_is_subset(newAccessSet, currentAccessSet);
-        isl_set_free(newAccessSet);
-        isl_set_free(currentAccessSet);
+        if (SpecialAlignment) {
+          isl_set *newAccessSet = isl_map_range(isl_map_copy(newAccessMap));
+          isl_set *currentAccessSet =
+              isl_map_range(isl_map_copy(currentAccessMap));
+          bool isSubset = isl_set_is_subset(newAccessSet, currentAccessSet);
+          isl_set_free(newAccessSet);
+          isl_set_free(currentAccessSet);
 
-        if (!isSubset) {
-          errs() << "JScop file changes the accessed memory\n";
-          isl_map_free(currentAccessMap);
-          isl_map_free(newAccessMap);
-          return false;
+          if (!isSubset) {
+            errs() << "JScop file changes the accessed memory\n";
+            isl_map_free(currentAccessMap);
+            isl_map_free(newAccessMap);
+            return false;
+          }
         }
       }
 

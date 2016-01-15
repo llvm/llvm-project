@@ -42,15 +42,15 @@
 ; ALL-NEXT: Statements {
 ; ALL-NEXT:     Stmt_bb4__TO__bb17
 ; ALL-NEXT:         Domain :=
-; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] : i0 <= 1023 and i0 >= 0 };
+; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] : 0 <= i0 <= 1023 };
 ; ALL-NEXT:         Schedule :=
 ; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> [i0] };
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> MemRef_A[i0] };
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= 0 };
+; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> MemRef_A[o0] : 0 <= o0 <= 2147483645 };
 ; ALL-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= 0 };
+; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> MemRef_A[o0] : 0 <= o0 <= 2147483645 };
 ; ALL-NEXT: }
 ;
 ;    void f(int *A, int N) {

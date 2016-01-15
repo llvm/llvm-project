@@ -20,7 +20,7 @@
 ; INNERMOST-NEXT: Invariant Accesses: {
 ; INNERMOST-NEXT: }
 ; INNERMOST-NEXT: Context:
-; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : p_0 >= 0 and p_0 <= 2147483647 and p_1 >= 0 and p_1 <= 4096 and p_2 >= 0 and p_2 <= 4096 }
+; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 0 <= p_0 <= 2147483647 and 0 <= p_1 <= 4096 and 0 <= p_2 <= 4096 }
 ; INNERMOST-NEXT: Assumed Context:
 ; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  :  }
 ; INNERMOST-NEXT: Boundary Context:
@@ -43,7 +43,7 @@
 ; INNERMOST-NEXT: Statements {
 ; INNERMOST-NEXT:     Stmt_bb16
 ; INNERMOST-NEXT:         Domain :=
-; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] : i0 >= 0 and i0 <= -1 + p_0 };
+; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] : 0 <= i0 < p_0 };
 ; INNERMOST-NEXT:         Schedule :=
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> [0, i0] };
 ; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -87,7 +87,7 @@
 ; ALL-NEXT: Statements {
 ; ALL-NEXT:     Stmt_bb15__TO__bb25
 ; ALL-NEXT:         Domain :=
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] : i0 <= 1023 and i0 >= 0 and i1 <= 1023 and i1 >= 0 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] : 0 <= i0 <= 1023 and 0 <= i1 <= 1023 };
 ; ALL-NEXT:         Schedule :=
 ; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> [i0, i1] };
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -95,9 +95,9 @@
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i1] };
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : o0 <= 4294967293 and o0 >= 0 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 4294967293 };
 ; ALL-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : o0 <= 4294967293 and o0 >= 0 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 4294967293 };
 ; ALL-NEXT: }
 ;
 ;    void f(int *A) {

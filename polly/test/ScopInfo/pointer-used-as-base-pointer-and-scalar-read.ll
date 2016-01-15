@@ -23,7 +23,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_then
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [p] -> { Stmt_then[i0] : p = 32 and i0 <= 999 and i0 >= 0 };
+; CHECK-NEXT:             [p] -> { Stmt_then[i0] : p = 32 and 0 <= i0 <= 999 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [p] -> { Stmt_then[i0] -> [i0, 1] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -34,7 +34,7 @@
 ; CHECK-NEXT:             [p] -> { Stmt_then[i0] -> MemRef_x__phi[] };
 ; CHECK-NEXT:     Stmt_else
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [p] -> { Stmt_else[i0] : (p >= 33 and i0 <= 999 and i0 >= 0) or (p <= 31 and i0 <= 999 and i0 >= 0) };
+; CHECK-NEXT:             [p] -> { Stmt_else[i0] : 0 <= i0 <= 999 and (p >= 33 or p <= 31) };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [p] -> { Stmt_else[i0] -> [i0, 0] : p >= 33 or p <= 31 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -45,7 +45,7 @@
 ; CHECK-NEXT:             [p] -> { Stmt_else[i0] -> MemRef_x__phi[] };
 ; CHECK-NEXT:     Stmt_bb8
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [p] -> { Stmt_bb8[i0] : (p >= 33 and i0 <= 999 and i0 >= 0) or (p <= 32 and i0 <= 999 and i0 >= 0) };
+; CHECK-NEXT:             [p] -> { Stmt_bb8[i0] : 0 <= i0 <= 999 and (p >= 33 or p <= 32) };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [p] -> { Stmt_bb8[i0] -> [i0, 2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]

@@ -1610,12 +1610,25 @@ static struct isl_basic_map *remove_redundant_divs(struct isl_basic_map *bmap)
 	return bmap;
 }
 
-struct isl_basic_map *isl_basic_map_finalize(struct isl_basic_map *bmap)
+/* Mark "bmap" as final, without checking for obviously redundant
+ * integer divisions.  This function should be used when "bmap"
+ * is known not to involve any such integer divisions.
+ */
+__isl_give isl_basic_map *isl_basic_map_mark_final(
+	__isl_take isl_basic_map *bmap)
 {
-	bmap = remove_redundant_divs(bmap);
 	if (!bmap)
 		return NULL;
 	ISL_F_SET(bmap, ISL_BASIC_SET_FINAL);
+	return bmap;
+}
+
+/* Mark "bmap" as final, after removing obviously redundant integer divisions.
+ */
+struct isl_basic_map *isl_basic_map_finalize(struct isl_basic_map *bmap)
+{
+	bmap = remove_redundant_divs(bmap);
+	bmap = isl_basic_map_mark_final(bmap);
 	return bmap;
 }
 
@@ -1828,6 +1841,86 @@ __isl_give isl_basic_set *isl_basic_set_eliminate(
 	enum isl_dim_type type, unsigned first, unsigned n)
 {
 	return isl_basic_map_eliminate(bset, type, first, n);
+}
+
+/* Remove all constraints from "bmap" that reference any unknown local
+ * variables (directly or indirectly).
+ *
+ * Dropping all constraints on a local variable will make it redundant,
+ * so it will get removed implicitly by
+ * isl_basic_map_drop_constraints_involving_dims.  Some other local
+ * variables may also end up becoming redundant if they only appear
+ * in constraints together with the unknown local variable.
+ * Therefore, start over after calling
+ * isl_basic_map_drop_constraints_involving_dims.
+ */
+__isl_give isl_basic_map *isl_basic_map_drop_constraint_involving_unknown_divs(
+	__isl_take isl_basic_map *bmap)
+{
+	isl_bool known;
+	int i, n_div, o_div;
+
+	known = isl_basic_map_divs_known(bmap);
+	if (known < 0)
+		return isl_basic_map_free(bmap);
+	if (known)
+		return bmap;
+
+	n_div = isl_basic_map_dim(bmap, isl_dim_div);
+	o_div = isl_basic_map_offset(bmap, isl_dim_div) - 1;
+
+	for (i = 0; i < n_div; ++i) {
+		known = isl_basic_map_div_is_known(bmap, i);
+		if (known < 0)
+			return isl_basic_map_free(bmap);
+		if (known)
+			continue;
+		bmap = remove_dependent_vars(bmap, o_div + i);
+		bmap = isl_basic_map_drop_constraints_involving_dims(bmap,
+							    isl_dim_div, i, 1);
+		if (!bmap)
+			return NULL;
+		n_div = isl_basic_map_dim(bmap, isl_dim_div);
+		i = -1;
+	}
+
+	return bmap;
+}
+
+/* Remove all constraints from "map" that reference any unknown local
+ * variables (directly or indirectly).
+ *
+ * Since constraints may get dropped from the basic maps,
+ * they may no longer be disjoint from each other.
+ */
+__isl_give isl_map *isl_map_drop_constraint_involving_unknown_divs(
+	__isl_take isl_map *map)
+{
+	int i;
+	isl_bool known;
+
+	known = isl_map_divs_known(map);
+	if (known < 0)
+		return isl_map_free(map);
+	if (known)
+		return map;
+
+	map = isl_map_cow(map);
+	if (!map)
+		return NULL;
+
+	for (i = 0; i < map->n; ++i) {
+		map->p[i] =
+		    isl_basic_map_drop_constraint_involving_unknown_divs(
+								    map->p[i]);
+		if (!map->p[i])
+			return isl_map_free(map);
+	}
+
+	if (map->n > 1)
+		ISL_F_CLR(map, ISL_MAP_DISJOINT);
+
+	return map;
 }
 
 /* Don't assume equalities are in order, because align_divs
@@ -2842,6 +2935,230 @@ error:
 	return NULL;
 }
 
+/* Drop all inequalities from "bmap" that also appear in "context".
+ * "context" is assumed to have only known local variables and
+ * the initial local variables of "bmap" are assumed to be the same
+ * as those of "context".
+ * The constraints of both "bmap" and "context" are assumed
+ * to have been sorted using isl_basic_map_sort_constraints.
+ *
+ * Run through the inequality constraints of "bmap" and "context"
+ * in sorted order.
+ * If a constraint of "bmap" involves variables not in "context",
+ * then it cannot appear in "context".
+ * If a matching constraint is found, it is removed from "bmap".
+ */
+static __isl_give isl_basic_map *drop_inequalities(
+	__isl_take isl_basic_map *bmap, __isl_keep isl_basic_map *context)
+{
+	int i1, i2;
+	unsigned total, extra;
+
+	if (!bmap || !context)
+		return isl_basic_map_free(bmap);
+
+	total = isl_basic_map_total_dim(context);
+	extra = isl_basic_map_total_dim(bmap) - total;
+
+	i1 = bmap->n_ineq - 1;
+	i2 = context->n_ineq - 1;
+	while (bmap && i1 >= 0 && i2 >= 0) {
+		int cmp;
+
+		if (isl_seq_first_non_zero(bmap->ineq[i1] + 1 + total,
+					    extra) != -1) {
+			--i1;
+			continue;
+		}
+		cmp = isl_basic_map_constraint_cmp(context, bmap->ineq[i1],
+							context->ineq[i2]);
+		if (cmp < 0) {
+			--i2;
+			continue;
+		}
+		if (cmp > 0) {
+			--i1;
+			continue;
+		}
+		if (isl_int_eq(bmap->ineq[i1][0], context->ineq[i2][0])) {
+			bmap = isl_basic_map_cow(bmap);
+			if (isl_basic_map_drop_inequality(bmap, i1) < 0)
+				bmap = isl_basic_map_free(bmap);
+		}
+		--i1;
+		--i2;
+	}
+
+	return bmap;
+}
+
+/* Drop all equalities from "bmap" that also appear in "context".
+ * "context" is assumed to have only known local variables and
+ * the initial local variables of "bmap" are assumed to be the same
+ * as those of "context".
+ *
+ * Run through the equality constraints of "bmap" and "context"
+ * in sorted order.
+ * If a constraint of "bmap" involves variables not in "context",
+ * then it cannot appear in "context".
+ * If a matching constraint is found, it is removed from "bmap".
+ */
+static __isl_give isl_basic_map *drop_equalities(
+	__isl_take isl_basic_map *bmap, __isl_keep isl_basic_map *context)
+{
+	int i1, i2;
+	unsigned total, extra;
+
+	if (!bmap || !context)
+		return isl_basic_map_free(bmap);
+
+	total = isl_basic_map_total_dim(context);
+	extra = isl_basic_map_total_dim(bmap) - total;
+
+	i1 = bmap->n_eq - 1;
+	i2 = context->n_eq - 1;
+
+	while (bmap && i1 >= 0 && i2 >= 0) {
+		int last1, last2;
+
+		if (isl_seq_first_non_zero(bmap->eq[i1] + 1 + total,
+					    extra) != -1)
+			break;
+		last1 = isl_seq_last_non_zero(bmap->eq[i1] + 1, total);
+		last2 = isl_seq_last_non_zero(context->eq[i2] + 1, total);
+		if (last1 > last2) {
+			--i2;
+			continue;
+		}
+		if (last1 < last2) {
+			--i1;
+			continue;
+		}
+		if (isl_seq_eq(bmap->eq[i1], context->eq[i2], 1 + total)) {
+			bmap = isl_basic_map_cow(bmap);
+			if (isl_basic_map_drop_equality(bmap, i1) < 0)
+				bmap = isl_basic_map_free(bmap);
+		}
+		--i1;
+		--i2;
+	}
+
+	return bmap;
+}
+
+/* Remove the constraints in "context" from "bmap".
+ * "context" is assumed to have explicit representations
+ * for all local variables.
+ *
+ * First align the divs of "bmap" to those of "context" and
+ * sort the constraints.  Then drop all constraints from "bmap"
+ * that appear in "context".
+ */
+__isl_give isl_basic_map *isl_basic_map_plain_gist(
+	__isl_take isl_basic_map *bmap, __isl_take isl_basic_map *context)
+{
+	isl_bool done, known;
+
+	done = isl_basic_map_is_universe(context);
+	if (done == isl_bool_false)
+		done = isl_basic_map_is_universe(bmap);
+	if (done == isl_bool_false)
+		done = isl_basic_map_plain_is_empty(context);
+	if (done == isl_bool_false)
+		done = isl_basic_map_plain_is_empty(bmap);
+	if (done < 0)
+		goto error;
+	if (done) {
+		isl_basic_map_free(context);
+		return bmap;
+	}
+	known = isl_basic_map_divs_known(context);
+	if (known < 0)
+		goto error;
+	if (!known)
+		isl_die(isl_basic_map_get_ctx(bmap), isl_error_invalid,
+			"context has unknown divs", goto error);
+
+	bmap = isl_basic_map_align_divs(bmap, context);
+	bmap = isl_basic_map_gauss(bmap, NULL);
+	bmap = isl_basic_map_sort_constraints(bmap);
+	context = isl_basic_map_sort_constraints(context);
+
+	bmap = drop_inequalities(bmap, context);
+	bmap = drop_equalities(bmap, context);
+
+	isl_basic_map_free(context);
+	bmap = isl_basic_map_finalize(bmap);
+	return bmap;
+error:
+	isl_basic_map_free(bmap);
+	isl_basic_map_free(context);
+	return NULL;
+}
+
+/* Replace "map" by the disjunct at position "pos" and free "context".
+ */
+static __isl_give isl_map *replace_by_disjunct(__isl_take isl_map *map,
+	int pos, __isl_take isl_basic_map *context)
+{
+	isl_basic_map *bmap;
+
+	bmap = isl_basic_map_copy(map->p[pos]);
+	isl_map_free(map);
+	isl_basic_map_free(context);
+	return isl_map_from_basic_map(bmap);
+}
+
+/* Remove the constraints in "context" from "map".
+ * If any of the disjuncts in the result turns out to be the universe,
+ * the return this universe.
+ * "context" is assumed to have explicit representations
+ * for all local variables.
+ */
+__isl_give isl_map *isl_map_plain_gist_basic_map(__isl_take isl_map *map,
+	__isl_take isl_basic_map *context)
+{
+	int i;
+	isl_bool univ, known;
+
+	univ = isl_basic_map_is_universe(context);
+	if (univ < 0)
+		goto error;
+	if (univ) {
+		isl_basic_map_free(context);
+		return map;
+	}
+	known = isl_basic_map_divs_known(context);
+	if (known < 0)
+		goto error;
+	if (!known)
+		isl_die(isl_map_get_ctx(map), isl_error_invalid,
+			"context has unknown divs", goto error);
+
+	map = isl_map_cow(map);
+	if (!map)
+		goto error;
+	for (i = 0; i < map->n; ++i) {
+		map->p[i] = isl_basic_map_plain_gist(map->p[i],
+						isl_basic_map_copy(context));
+		univ = isl_basic_map_is_universe(map->p[i]);
+		if (univ < 0)
+			goto error;
+		if (univ && map->n > 1)
+			return replace_by_disjunct(map, i, context);
+	}
+
+	isl_basic_map_free(context);
+	ISL_F_CLR(map, ISL_MAP_NORMALIZED);
+	if (map->n > 1)
+		ISL_F_CLR(map, ISL_MAP_DISJOINT);
+	return map;
+error:
+	isl_map_free(map);
+	isl_basic_map_free(context);
+	return NULL;
+}
+
 /* Return a map that has the same intersection with "context" as "map"
  * and that is as "simple" as possible.
  *
@@ -3233,6 +3550,13 @@ isl_bool isl_set_is_disjoint(__isl_keep isl_set *set1, __isl_keep isl_set *set2)
 	return isl_map_is_disjoint(set1, set2);
 }
 
+/* Is "v" equal to 0, 1 or -1?
+ */
+static int is_zero_or_one(isl_int v)
+{
+	return isl_int_is_zero(v) || isl_int_is_one(v) || isl_int_is_negone(v);
+}
+
 /* Check if we can combine a given div with lower bound l and upper
  * bound u with some other div and if so return that other div.
  * Otherwise return -1.
@@ -3258,6 +3582,8 @@ isl_bool isl_set_is_disjoint(__isl_keep isl_set *set1, __isl_keep isl_set *set2)
  *
  *	e + f (a + m b) >= 0
  *
+ * Furthermore, in the constraints that only contain b, the coefficient
+ * of b should be equal to 1 or -1.
  * If so, we return b so that "a + m b" can be replaced by
  * a single div "c = a + m b".
  */
@@ -3314,8 +3640,11 @@ static int div_find_coalesce(struct isl_basic_map *bmap, int *pairs,
 			int valid;
 			if (j == l || j == u)
 				continue;
-			if (isl_int_is_zero(bmap->ineq[j][1 + dim + div]))
-				continue;
+			if (isl_int_is_zero(bmap->ineq[j][1 + dim + div])) {
+				if (is_zero_or_one(bmap->ineq[j][1 + dim + i]))
+					continue;
+				break;
+			}
 			if (isl_int_is_zero(bmap->ineq[j][1 + dim + i]))
 				break;
 			isl_int_mul(bmap->ineq[j][1 + dim + div],
@@ -3487,8 +3816,8 @@ error:
 	return NULL;
 }
 
-/* Given a pair of divs div1 and div2 such that, expect for the lower bound l
- * and the upper bound u, div1 always occurs together with div2 in the form 
+/* Given a pair of divs div1 and div2 such that, except for the lower bound l
+ * and the upper bound u, div1 always occurs together with div2 in the form
  * (div1 + m div2), where m is the constant range on the variable div1
  * allowed by l and u, replace the pair div1 and div2 by a single
  * div that is equal to div1 + m div2.
@@ -3496,6 +3825,7 @@ error:
  * The new div will appear in the location that contains div2.
  * We need to modify all constraints that contain
  * div2 = (div - div1) / m
+ * The coefficient of div2 is known to be equal to 1 or -1.
  * (If a constraint does not contain div2, it will also not contain div1.)
  * If the constraint also contains div1, then we know they appear
  * as f (div1 + m div2) and we can simply replace (div1 + m div2) by div,
@@ -3512,20 +3842,19 @@ error:
  *
  * A lower bound on div2
  *
- *	n div2 + t >= 0
+ *	div2 + t >= 0
  *
  * can be replaced by
  *
- *	(n * (m div 2 + div1) + m t + n f)/g >= 0
+ *	m div2 + div1 + m t + f >= 0
  *
- * with g = gcd(m,n).
  * An upper bound
  *
- *	-n div2 + t >= 0
+ *	-div2 + t >= 0
  *
  * can be replaced by
  *
- *	(-n * (m div2 + div1) + m t + n f')/g >= 0
+ *	-(m div2 + div1) + m t + f' >= 0
  *
  * These constraint are those that we would obtain from eliminating
  * div1 using Fourier-Motzkin.
@@ -3536,17 +3865,16 @@ error:
 static struct isl_basic_map *coalesce_divs(struct isl_basic_map *bmap,
 	unsigned div1, unsigned div2, unsigned l, unsigned u)
 {
-	isl_int a;
-	isl_int b;
+	isl_ctx *ctx;
 	isl_int m;
 	unsigned dim, total;
 	int i;
 
+	ctx = isl_basic_map_get_ctx(bmap);
+
 	dim = isl_space_dim(bmap->dim, isl_dim_all);
 	total = 1 + dim + bmap->n_div;
 
-	isl_int_init(a);
-	isl_int_init(b);
 	isl_int_init(m);
 	isl_int_add(m, bmap->ineq[l][0], bmap->ineq[u][0]);
 	isl_int_add_ui(m, m, 1);
@@ -3556,26 +3884,18 @@ static struct isl_basic_map *coalesce_divs(struct isl_basic_map *bmap,
 			continue;
 		if (isl_int_is_zero(bmap->ineq[i][1 + dim + div2]))
 			continue;
-		if (isl_int_is_zero(bmap->ineq[i][1 + dim + div1])) {
-			isl_int_gcd(b, m, bmap->ineq[i][1 + dim + div2]);
-			isl_int_divexact(a, m, b);
-			isl_int_divexact(b, bmap->ineq[i][1 + dim + div2], b);
-			if (isl_int_is_pos(b)) {
-				isl_seq_combine(bmap->ineq[i], a, bmap->ineq[i],
-						b, bmap->ineq[l], total);
-			} else {
-				isl_int_neg(b, b);
-				isl_seq_combine(bmap->ineq[i], a, bmap->ineq[i],
-						b, bmap->ineq[u], total);
-			}
-		}
+		if (isl_int_is_zero(bmap->ineq[i][1 + dim + div1]))
+			if (isl_int_is_pos(bmap->ineq[i][1 + dim + div2]))
+				isl_seq_combine(bmap->ineq[i], m, bmap->ineq[i],
+						ctx->one, bmap->ineq[l], total);
+			else
+				isl_seq_combine(bmap->ineq[i], m, bmap->ineq[i],
+						ctx->one, bmap->ineq[u], total);
 		isl_int_set(bmap->ineq[i][1 + dim + div2],
 			    bmap->ineq[i][1 + dim + div1]);
 		isl_int_set_si(bmap->ineq[i][1 + dim + div1], 0);
 	}
 
-	isl_int_clear(a);
-	isl_int_clear(b);
 	isl_int_clear(m);
 	if (l > u) {
 		isl_basic_map_drop_inequality(bmap, l);

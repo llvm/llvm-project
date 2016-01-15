@@ -15,13 +15,13 @@
 ; CHECK:      Invariant Accesses: {
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [N] -> { Stmt_for_j[i0, i1] -> MemRef_init_ptr[0] };
-; CHECK-NEXT:         Execution Context: [N] -> {  : N <= -1 or N >= 1 }
+; CHECK-NEXT:         Execution Context: [N] -> {  : N < 0 or N > 0 }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_j
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_for_j[i0, i1] : i0 >= 0 and i0 <= -1 + N and i1 >= 0 and i1 <= -1 + N };
+; CHECK-NEXT:             [N] -> { Stmt_for_j[i0, i1] : 0 <= i0 < N and 0 <= i1 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_for_j[i0, i1] -> [i0, i1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]

@@ -11,7 +11,9 @@
 #include "Config.h"
 #include "SymbolTable.h"
 #include "Target.h"
+#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MathExtras.h"
+#include <map>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -756,6 +758,99 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
+EhFrameHeader<ELFT>::EhFrameHeader()
+    : OutputSectionBase<ELFT>(".eh_frame_hdr", llvm::ELF::SHT_PROGBITS,
+                              SHF_ALLOC) {
+  // It's a 4 bytes of header + pointer to the contents of the .eh_frame section
+  // + the number of FDE pointers in the table.
+  this->Header.sh_size = 12;
+}
+
+// We have to get PC values of FDEs. They depend on relocations
+// which are target specific, so we run this code after performing
+// all relocations. We read the values from ouput buffer according to the
+// encoding given for FDEs. Return value is an offset to the initial PC value
+// for the FDE.
+template <class ELFT>
+typename EhFrameHeader<ELFT>::uintX_t
+EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
+  const endianness E = ELFT::TargetEndianness;
+  assert((F.Enc & 0xF0) != dwarf::DW_EH_PE_datarel);
+
+  uintX_t FdeOff = EhVA + F.Off + 8;
+  switch (F.Enc & 0xF) {
+  case dwarf::DW_EH_PE_udata2:
+  case dwarf::DW_EH_PE_sdata2:
+    return FdeOff + read16<E>(F.PCRel);
+  case dwarf::DW_EH_PE_udata4:
+  case dwarf::DW_EH_PE_sdata4:
+    return FdeOff + read32<E>(F.PCRel);
+  case dwarf::DW_EH_PE_udata8:
+  case dwarf::DW_EH_PE_sdata8:
+    return FdeOff + read64<E>(F.PCRel);
+  case dwarf::DW_EH_PE_absptr:
+    if (sizeof(uintX_t) == 8)
+      return FdeOff + read64<E>(F.PCRel);
+    return FdeOff + read32<E>(F.PCRel);
+  }
+  error("unknown FDE size encoding");
+}
+
+template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
+  const endianness E = ELFT::TargetEndianness;
+
+  const uint8_t Header[] = {1, dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4,
+                            dwarf::DW_EH_PE_udata4,
+                            dwarf::DW_EH_PE_datarel | dwarf::DW_EH_PE_sdata4};
+  memcpy(Buf, Header, sizeof(Header));
+
+  uintX_t EhVA = Sec->getVA();
+  uintX_t VA = this->getVA();
+  uintX_t EhOff = EhVA - VA - 4;
+  write32<E>(Buf + 4, EhOff);
+  write32<E>(Buf + 8, this->FdeList.size());
+  Buf += 12;
+
+  // InitialPC -> Offset in .eh_frame, sorted by InitialPC.
+  std::map<uintX_t, size_t> PcToOffset;
+  for (const FdeData &F : FdeList)
+    PcToOffset[getFdePc(EhVA, F)] = F.Off;
+
+  for (auto &I : PcToOffset) {
+    // The first four bytes are an offset to the initial PC value for the FDE.
+    write32<E>(Buf, I.first - VA);
+    // The last four bytes are an offset to the FDE data itself.
+    write32<E>(Buf + 4, EhVA + I.second - VA);
+    Buf += 8;
+  }
+}
+
+template <class ELFT>
+void EhFrameHeader<ELFT>::assignEhFrame(EHOutputSection<ELFT> *Sec) {
+  if (this->Sec && this->Sec != Sec) {
+    warning("multiple .eh_frame sections not supported for .eh_frame_hdr");
+    Live = false;
+    return;
+  }
+  Live = Config->EhFrameHdr;
+  this->Sec = Sec;
+}
+
+template <class ELFT>
+void EhFrameHeader<ELFT>::addFde(uint8_t Enc, size_t Off, uint8_t *PCRel) {
+  if (Live && (Enc & 0xF0) == dwarf::DW_EH_PE_datarel)
+    error("DW_EH_PE_datarel encoding unsupported for FDEs by .eh_frame_hdr");
+  FdeList.push_back(FdeData{Enc, Off, PCRel});
+}
+
+template <class ELFT> void EhFrameHeader<ELFT>::reserveFde() {
+  // Each FDE entry is 8 bytes long:
+  // The first four bytes are an offset to the initial PC value for the FDE. The
+  // last four byte are an offset to the FDE data itself.
+  this->Header.sh_size += 8;
+}
+
+template <class ELFT>
 OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type,
                                    uintX_t Flags)
     : OutputSectionBase<ELFT>(Name, Type, Flags) {}
@@ -908,7 +1003,9 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
 template <class ELFT>
 EHOutputSection<ELFT>::EHOutputSection(StringRef Name, uint32_t Type,
                                        uintX_t Flags)
-    : OutputSectionBase<ELFT>(Name, Type, Flags) {}
+    : OutputSectionBase<ELFT>(Name, Type, Flags) {
+  Out<ELFT>::EhFrameHdr->assignEhFrame(this);
+}
 
 template <class ELFT>
 EHRegion<ELFT>::EHRegion(EHInputSection<ELFT> *S, unsigned Index)
@@ -926,6 +1023,107 @@ template <class ELFT> StringRef EHRegion<ELFT>::data() const {
 template <class ELFT>
 Cie<ELFT>::Cie(EHInputSection<ELFT> *S, unsigned Index)
     : EHRegion<ELFT>(S, Index) {}
+
+// Read a byte and advance D by one byte.
+static uint8_t readByte(ArrayRef<uint8_t> &D) {
+  if (D.empty())
+    error("corrupted or unsupported CIE information");
+  uint8_t B = D.front();
+  D = D.slice(1);
+  return B;
+}
+
+static void skipLeb128(ArrayRef<uint8_t> &D) {
+  while (!D.empty()) {
+    uint8_t Val = D.front();
+    D = D.slice(1);
+    if ((Val & 0x80) == 0)
+      return;
+  }
+  error("corrupted or unsupported CIE information");
+}
+
+template <class ELFT> static unsigned getSizeForEncoding(unsigned Enc) {
+  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  switch (Enc & 0x0f) {
+  default:
+    error("unknown FDE encoding");
+  case dwarf::DW_EH_PE_absptr:
+  case dwarf::DW_EH_PE_signed:
+    return sizeof(uintX_t);
+  case dwarf::DW_EH_PE_udata2:
+  case dwarf::DW_EH_PE_sdata2:
+    return 2;
+  case dwarf::DW_EH_PE_udata4:
+  case dwarf::DW_EH_PE_sdata4:
+    return 4;
+  case dwarf::DW_EH_PE_udata8:
+  case dwarf::DW_EH_PE_sdata8:
+    return 8;
+  }
+}
+
+template <class ELFT>
+uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
+  auto Check = [](bool C) {
+    if (!C)
+      error("corrupted or unsupported CIE information");
+  };
+
+  Check(D.size() >= 8);
+  D = D.slice(8);
+
+  uint8_t Version = readByte(D);
+  if (Version != 1 && Version != 3)
+    error("FDE version 1 or 3 expected, but got " + Twine((unsigned)Version));
+
+  auto AugEnd = std::find(D.begin() + 1, D.end(), '\0');
+  Check(AugEnd != D.end());
+  ArrayRef<uint8_t> AugString(D.begin(), AugEnd - D.begin());
+  D = D.slice(AugString.size() + 1);
+
+  // Code alignment factor should always be 1 for .eh_frame.
+  if (readByte(D) != 1)
+    error("CIE code alignment must be 1");
+  // Skip data alignment factor
+  skipLeb128(D);
+
+  // Skip the return address register. In CIE version 1 this is a single
+  // byte. In CIE version 3 this is an unsigned LEB128.
+  if (Version == 1)
+    readByte(D);
+  else
+    skipLeb128(D);
+
+  while (!AugString.empty()) {
+    switch (readByte(AugString)) {
+    case 'z':
+      skipLeb128(D);
+      break;
+    case 'R':
+      return readByte(D);
+    case 'P': {
+      uint8_t Enc = readByte(D);
+      if ((Enc & 0xf0) == dwarf::DW_EH_PE_aligned)
+        error("DW_EH_PE_aligned encoding for address of a personality routine "
+              "handler not supported");
+      unsigned EncSize = getSizeForEncoding<ELFT>(Enc);
+      Check(D.size() >= EncSize);
+      D = D.slice(EncSize);
+      break;
+    }
+    case 'S':
+    case 'L':
+      // L: Language Specific Data Area (LSDA) encoding
+      // S: This CIE represents a stack frame for the invocation of a signal
+      //    handler
+      break;
+    default:
+      error("unknown .eh_frame augmentation string value");
+    }
+  }
+  return dwarf::DW_EH_PE_absptr;
+}
 
 template <class ELFT>
 template <bool IsRela>
@@ -953,6 +1151,10 @@ void EHOutputSection<ELFT>::addSectionAux(
     S->Offsets.push_back(std::make_pair(Offset, -1));
 
     uintX_t Length = readEntryLength(D);
+    // If CIE/FDE data length is zero then Length is 4, this
+    // shall be considered a terminator and processing shall end.
+    if (Length == 4)
+      break;
     StringRef Entry((const char *)D.data(), Length);
 
     while (RelI != RelE && RelI->r_offset < Offset)
@@ -964,6 +1166,8 @@ void EHOutputSection<ELFT>::addSectionAux(
     if (ID == 0) {
       // CIE
       Cie<ELFT> C(S, Index);
+      if (Config->EhFrameHdr)
+        C.FdeEncoding = getFdeEncoding(D);
 
       StringRef Personality;
       if (HasReloc) {
@@ -989,6 +1193,7 @@ void EHOutputSection<ELFT>::addSectionAux(
         if (I == OffsetToIndex.end())
           error("Invalid CIE reference");
         Cies[I->second].Fdes.push_back(EHRegion<ELFT>(S, Index));
+        Out<ELFT>::EhFrameHdr->reserveFde();
         this->Header.sh_size += alignTo(Length, sizeof(uintX_t));
       }
     }
@@ -1062,6 +1267,7 @@ template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
       uintX_t Len = writeAlignedCieOrFde<ELFT>(F.data(), Buf + Offset);
       write32<E>(Buf + Offset + 4, Offset + 4 - CieOffset); // Pointer
       F.S->Offsets[F.Index].second = Offset;
+      Out<ELFT>::EhFrameHdr->addFde(C.FdeEncoding, Offset, Buf + Offset + 8);
       Offset += Len;
     }
   }
@@ -1454,6 +1660,11 @@ template class OutputSectionBase<ELF32LE>;
 template class OutputSectionBase<ELF32BE>;
 template class OutputSectionBase<ELF64LE>;
 template class OutputSectionBase<ELF64BE>;
+
+template class EhFrameHeader<ELF32LE>;
+template class EhFrameHeader<ELF32BE>;
+template class EhFrameHeader<ELF64LE>;
+template class EhFrameHeader<ELF64BE>;
 
 template class GotPltSection<ELF32LE>;
 template class GotPltSection<ELF32BE>;

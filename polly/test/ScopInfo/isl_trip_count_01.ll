@@ -1,6 +1,6 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
-; CHECK: [M, N] -> { Stmt_while_body[i0] : i0 >= 0 and 4i0 <= -M + N; Stmt_while_body[0] : N <= -1 + M }
+; CHECK: [M, N] -> { Stmt_while_body[i0] : i0 > 0 and 4i0 <= -M + N; Stmt_while_body[0] };
 ;
 ;   void f(int *A, int N, int M) {
 ;     int i = 0;

@@ -1,10 +1,10 @@
-AC_INIT([isl], [0.15], [isl-development@googlegroups.com])
+AC_INIT([isl], [0.16.1], [isl-development@googlegroups.com])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 AC_SUBST(versioninfo)
-versioninfo=15:0:0
+versioninfo=16:1:1
 
 if test "x$prefix" != "xNONE"; then
 	prefix_wd=`cd $prefix && pwd`
@@ -227,6 +227,10 @@ system)
 	AC_CHECK_HEADER([llvm/ADT/OwningPtr.h],
 		[AC_DEFINE([HAVE_ADT_OWNINGPTR_H], [],
 			   [Define if llvm/ADT/OwningPtr.h exists])])
+	AC_EGREP_HEADER([initializeBuiltins],
+		[clang/Basic/Builtins.h], [],
+		[AC_DEFINE([initializeBuiltins], [InitializeBuiltins],
+		[Define to InitializeBuiltins for older versions of clang])])
 	AC_LANG_POP
 	CPPFLAGS="$SAVE_CPPFLAGS"
 

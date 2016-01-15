@@ -652,6 +652,9 @@ __isl_give isl_map *isl_map_drop_constraints_involving_dims(
 			return isl_map_free(map);
 	}
 
+	if (map->n > 1)
+		ISL_F_CLR(map, ISL_MAP_DISJOINT);
+
 	return map;
 }
 

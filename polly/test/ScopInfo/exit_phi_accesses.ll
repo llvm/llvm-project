@@ -16,7 +16,7 @@
 ; CHECK-NEXT:              { Stmt_header[] -> MemRef_phi[] };
 ; CHECK-NEXT:      Stmt_body
 ; CHECK-NEXT:          Domain :=
-; CHECK-NEXT:              { Stmt_body[i0] : i0 <= 100 and i0 >= 0 };
+; CHECK-NEXT:              { Stmt_body[i0] : 0 <= i0 <= 100 };
 ; CHECK-NEXT:          Schedule :=
 ; CHECK-NEXT:              { Stmt_body[i0] -> [1, i0] };
 ; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]

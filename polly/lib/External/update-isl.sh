@@ -7,12 +7,15 @@ set -e
 SCRIPTPATH=`realpath --no-symlinks $(dirname $0)`
 ISL_SOURCE_DIR="${SCRIPTPATH}/isl"
 
-
 TMPDIR=`mktemp -d --tmpdir isl-XXX`
 GITDIR=$TMPDIR/src
 BUILDDIR=$TMPDIR/build
 
 git clone --recursive http://repo.or.cz/isl.git $GITDIR
+if [ -n "$1" ]; then
+  (cd $GITDIR && git checkout $1)
+  (cd $GITDIR && git submodule update --recursive)
+fi
 (cd $GITDIR && ./autogen.sh)
 mkdir -p $BUILDDIR
 (cd $BUILDDIR && $GITDIR/configure --with-int=imath-32)

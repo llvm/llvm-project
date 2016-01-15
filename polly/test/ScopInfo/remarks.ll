@@ -2,9 +2,9 @@
 ;
 ; CHECK: remark: test/ScopInfo/remarks.c:4:7: SCoP begins here.
 ; CHECK: remark: test/ScopInfo/remarks.c:8:5: Finite loop assumption:    [M, N, Debug] -> {  : M >= 0 or (M <= -2 and N <= 0) or (M = -1 and N <= 0) }
-; CHECK: remark: test/ScopInfo/remarks.c:13:7: No-error assumption:    [M, N, Debug] -> {  : M <= -1 or (M >= 0 and N <= 0) or (Debug = 0 and M >= 0 and N >= 1) }
-; CHECK: remark: test/ScopInfo/remarks.c:9:7: Inbounds assumption:    [M, N, Debug] -> {  : M <= 100 or (M >= 1 and N <= 0) }
-; CHECK: remark: <unknown>:0:0: No-overflows assumption:    [N, M, Debug] -> {  : M <= 2147483647 - N and M >= -2147483648 - N }
+; CHECK: remark: test/ScopInfo/remarks.c:13:7: No-error assumption:    [M, N, Debug] -> {  : M < 0 or (M >= 0 and N <= 0) or (Debug = 0 and M >= 0 and N > 0) }
+; CHECK: remark: test/ScopInfo/remarks.c:9:7: Inbounds assumption:    [M, N, Debug] -> {  : M <= 100 or (M > 0 and N <= 0) }
+; CHECK: remark: <unknown>:0:0: No-overflows assumption:    [N, M, Debug] -> {  : -2147483648 - N <= M <= 2147483647 - N }
 ; CHECK: remark: test/ScopInfo/remarks.c:9:18: Possibly aliasing pointer, use restrict keyword.
 ; CHECK: remark: test/ScopInfo/remarks.c:9:33: Possibly aliasing pointer, use restrict keyword.
 ; CHECK: remark: test/ScopInfo/remarks.c:9:15: Possibly aliasing pointer, use restrict keyword.

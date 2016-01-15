@@ -17,7 +17,7 @@
 ;    }
 ;
 ; CHECK: Domain :=
-; CHECK:  [n] -> { Stmt_if_end_7[i0, i1] : i0 >= 0 and i1 <= 99 - i0 and i1 >= 0 and i1 <= -1 + n - i0 };
+; CHECK:  [n] -> { Stmt_if_end_7[i0, i1] : i0 >= 0 and 0 <= i1 <= 99 - i0 and i1 < n - i0 };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

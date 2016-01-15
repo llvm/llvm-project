@@ -1132,3 +1132,23 @@ void isl_schedule_dump(__isl_keep isl_schedule *schedule)
 
 	isl_printer_free(printer);
 }
+
+/* Return a string representation of "schedule".
+ * Print the schedule in flow format.
+ */
+__isl_give char *isl_schedule_to_str(__isl_keep isl_schedule *schedule)
+{
+	isl_printer *printer;
+	char *s;
+
+	if (!schedule)
+		return NULL;
+
+	printer = isl_printer_to_str(isl_schedule_get_ctx(schedule));
+	printer = isl_printer_set_yaml_style(printer, ISL_YAML_STYLE_FLOW);
+	printer = isl_printer_print_schedule(printer, schedule);
+	s = isl_printer_get_str(printer);
+	isl_printer_free(printer);
+
+	return s;
+}

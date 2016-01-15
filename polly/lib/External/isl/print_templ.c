@@ -1,3 +1,5 @@
+#include <isl_printer_private.h>
+
 #define xCAT(A,B) A ## B
 #define CAT(A,B) xCAT(A,B)
 #undef TYPE
@@ -12,6 +14,7 @@ void FN(TYPE,dump)(__isl_keep TYPE *obj)
 	if (!obj)
 		return;
 	p = isl_printer_to_file(FN(TYPE,get_ctx)(obj), stderr);
+	p = isl_printer_set_dump(p, 1);
 	p = FN(isl_printer_print,BASE)(p, obj);
 	p = isl_printer_end_line(p);
 	isl_printer_free(p);

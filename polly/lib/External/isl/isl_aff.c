@@ -1242,7 +1242,7 @@ __isl_give isl_aff *isl_aff_neg(__isl_take isl_aff *aff)
  * expression, but we would also need to check that no other divs are
  * defined in terms of them.
  */
-__isl_give isl_aff *isl_aff_remove_unused_divs( __isl_take isl_aff *aff)
+__isl_give isl_aff *isl_aff_remove_unused_divs(__isl_take isl_aff *aff)
 {
 	int pos;
 	int off;
@@ -4380,58 +4380,198 @@ error:
 	return NULL;
 }
 
-/* Given a basic map with a single output dimension that is defined
- * in terms of the parameters and input dimensions using an equality,
- * extract an isl_aff that expresses the output dimension in terms
+/* Subtract the initial "n" elements in "ma" with coefficients in "c" and
+ * denominator "denom".
+ * "denom" is allowed to be negative, in which case the actual denominator
+ * is -denom and the expressions are added instead.
+ */
+static __isl_give isl_aff *subtract_initial(__isl_take isl_aff *aff,
+	__isl_keep isl_multi_aff *ma, int n, isl_int *c, isl_int denom)
+{
+	int i, first;
+	int sign;
+	isl_int d;
+
+	first = isl_seq_first_non_zero(c, n);
+	if (first == -1)
+		return aff;
+
+	sign = isl_int_sgn(denom);
+	isl_int_init(d);
+	isl_int_abs(d, denom);
+	for (i = first; i < n; ++i) {
+		isl_aff *aff_i;
+
+		if (isl_int_is_zero(c[i]))
+			continue;
+		aff_i = isl_multi_aff_get_aff(ma, i);
+		aff_i = isl_aff_scale(aff_i, c[i]);
+		aff_i = isl_aff_scale_down(aff_i, d);
+		if (sign >= 0)
+			aff = isl_aff_sub(aff, aff_i);
+		else
+			aff = isl_aff_add(aff, aff_i);
+	}
+	isl_int_clear(d);
+
+	return aff;
+}
+
+/* Extract an affine expression that expresses the output dimension "pos"
+ * of "bmap" in terms of the parameters and input dimensions from
+ * equality "eq".
+ * Note that this expression may involve integer divisions defined
+ * in terms of parameters and input dimensions.
+ * The equality may also involve references to earlier (but not later)
+ * output dimensions.  These are replaced by the corresponding elements
+ * in "ma".
+ *
+ * If the equality is of the form
+ *
+ *	f(i) + h(j) + a x + g(i) = 0,
+ *
+ * with f(i) a linear combinations of the parameters and input dimensions,
+ * g(i) a linear combination of integer divisions defined in terms of the same
+ * and h(j) a linear combinations of earlier output dimensions,
+ * then the affine expression is
+ *
+ *	(-f(i) - g(i))/a - h(j)/a
+ *
+ * If the equality is of the form
+ *
+ *	f(i) + h(j) - a x + g(i) = 0,
+ *
+ * then the affine expression is
+ *
+ *	(f(i) + g(i))/a - h(j)/(-a)
+ *
+ *
+ * If "div" refers to an integer division (i.e., it is smaller than
+ * the number of integer divisions), then the equality constraint
+ * does involve an integer division (the one at position "div") that
+ * is defined in terms of output dimensions.  However, this integer
+ * division can be eliminated by exploiting a pair of constraints
+ * x >= l and x <= l + n, with n smaller than the coefficient of "div"
+ * in the equality constraint.  "ineq" refers to inequality x >= l, i.e.,
+ * -l + x >= 0.
+ * In particular, let
+ *
+ *	x = e(i) + m floor(...)
+ *
+ * with e(i) the expression derived above and floor(...) the integer
+ * division involving output dimensions.
+ * From
+ *
+ *	l <= x <= l + n,
+ *
+ * we have
+ *
+ *	0 <= x - l <= n
+ *
+ * This means
+ *
+ *	e(i) + m floor(...) - l = (e(i) + m floor(...) - l) mod m
+ *	                        = (e(i) - l) mod m
+ *
+ * Therefore,
+ *
+ *	x - l = (e(i) - l) mod m
+ *
+ * or
+ *
+ *	x = ((e(i) - l) mod m) + l
+ *
+ * The variable "shift" below contains the expression -l, which may
+ * also involve a linear combination of earlier output dimensions.
+ */
+static __isl_give isl_aff *extract_aff_from_equality(
+	__isl_keep isl_basic_map *bmap, int pos, int eq, int div, int ineq,
+	__isl_keep isl_multi_aff *ma)
+{
+	unsigned o_out;
+	unsigned n_div, n_out;
+	isl_ctx *ctx;
+	isl_local_space *ls;
+	isl_aff *aff, *shift;
+	isl_val *mod;
+
+	ctx = isl_basic_map_get_ctx(bmap);
+	ls = isl_basic_map_get_local_space(bmap);
+	ls = isl_local_space_domain(ls);
+	aff = isl_aff_alloc(isl_local_space_copy(ls));
+	if (!aff)
+		goto error;
+	o_out = isl_basic_map_offset(bmap, isl_dim_out);
+	n_out = isl_basic_map_dim(bmap, isl_dim_out);
+	n_div = isl_basic_map_dim(bmap, isl_dim_div);
+	if (isl_int_is_neg(bmap->eq[eq][o_out + pos])) {
+		isl_seq_cpy(aff->v->el + 1, bmap->eq[eq], o_out);
+		isl_seq_cpy(aff->v->el + 1 + o_out,
+			    bmap->eq[eq] + o_out + n_out, n_div);
+	} else {
+		isl_seq_neg(aff->v->el + 1, bmap->eq[eq], o_out);
+		isl_seq_neg(aff->v->el + 1 + o_out,
+			    bmap->eq[eq] + o_out + n_out, n_div);
+	}
+	if (div < n_div)
+		isl_int_set_si(aff->v->el[1 + o_out + div], 0);
+	isl_int_abs(aff->v->el[0], bmap->eq[eq][o_out + pos]);
+	aff = subtract_initial(aff, ma, pos, bmap->eq[eq] + o_out,
+			    bmap->eq[eq][o_out + pos]);
+	if (div < n_div) {
+		shift = isl_aff_alloc(isl_local_space_copy(ls));
+		if (!shift)
+			goto error;
+		isl_seq_cpy(shift->v->el + 1, bmap->ineq[ineq], o_out);
+		isl_seq_cpy(shift->v->el + 1 + o_out,
+			    bmap->ineq[ineq] + o_out + n_out, n_div);
+		isl_int_set_si(shift->v->el[0], 1);
+		shift = subtract_initial(shift, ma, pos,
+					bmap->ineq[ineq] + o_out, ctx->negone);
+		aff = isl_aff_add(aff, isl_aff_copy(shift));
+		mod = isl_val_int_from_isl_int(ctx,
+					    bmap->eq[eq][o_out + n_out + div]);
+		mod = isl_val_abs(mod);
+		aff = isl_aff_mod_val(aff, mod);
+		aff = isl_aff_sub(aff, shift);
+	}
+
+	isl_local_space_free(ls);
+	return aff;
+error:
+	isl_local_space_free(ls);
+	isl_aff_free(aff);
+	return NULL;
+}
+
+/* Given a basic map with output dimensions defined
+ * in terms of the parameters input dimensions and earlier
+ * output dimensions using an equality (and possibly a pair on inequalities),
+ * extract an isl_aff that expresses output dimension "pos" in terms
  * of the parameters and input dimensions.
  * Note that this expression may involve integer divisions defined
  * in terms of parameters and input dimensions.
+ * "ma" contains the expressions corresponding to earlier output dimensions.
  *
  * This function shares some similarities with
  * isl_basic_map_has_defining_equality and isl_constraint_get_bound.
  */
 static __isl_give isl_aff *extract_isl_aff_from_basic_map(
-	__isl_take isl_basic_map *bmap)
+	__isl_keep isl_basic_map *bmap, int pos, __isl_keep isl_multi_aff *ma)
 {
-	int eq;
-	unsigned offset;
-	unsigned n_div;
-	isl_local_space *ls;
+	int eq, div, ineq;
 	isl_aff *aff;
 
 	if (!bmap)
 		return NULL;
-	if (isl_basic_map_dim(bmap, isl_dim_out) != 1)
-		isl_die(isl_basic_map_get_ctx(bmap), isl_error_invalid,
-			"basic map should have a single output dimension",
-			goto error);
-	eq = isl_basic_map_output_defining_equality(bmap, 0);
+	eq = isl_basic_map_output_defining_equality(bmap, pos, &div, &ineq);
 	if (eq >= bmap->n_eq)
 		isl_die(isl_basic_map_get_ctx(bmap), isl_error_invalid,
-			"unable to find suitable equality", goto error);
-	ls = isl_basic_map_get_local_space(bmap);
-	aff = isl_aff_alloc(isl_local_space_domain(ls));
-	if (!aff)
-		goto error;
-	offset = isl_basic_map_offset(bmap, isl_dim_out);
-	n_div = isl_basic_map_dim(bmap, isl_dim_div);
-	if (isl_int_is_neg(bmap->eq[eq][offset])) {
-		isl_seq_cpy(aff->v->el + 1, bmap->eq[eq], offset);
-		isl_seq_cpy(aff->v->el + 1 + offset, bmap->eq[eq] + offset + 1,
-			    n_div);
-	} else {
-		isl_seq_neg(aff->v->el + 1, bmap->eq[eq], offset);
-		isl_seq_neg(aff->v->el + 1 + offset, bmap->eq[eq] + offset + 1,
-			    n_div);
-	}
-	isl_int_abs(aff->v->el[0], bmap->eq[eq][offset]);
-	isl_basic_map_free(bmap);
+			"unable to find suitable equality", return NULL);
+	aff = extract_aff_from_equality(bmap, pos, eq, div, ineq, ma);
 
 	aff = isl_aff_remove_unused_divs(aff);
 	return aff;
-error:
-	isl_basic_map_free(bmap);
-	return NULL;
 }
 
 /* Given a basic map where each output dimension is defined
@@ -4453,14 +4593,9 @@ static __isl_give isl_multi_aff *extract_isl_multi_aff_from_basic_map(
 	n_out = isl_basic_map_dim(bmap, isl_dim_out);
 
 	for (i = 0; i < n_out; ++i) {
-		isl_basic_map *bmap_i;
 		isl_aff *aff;
 
-		bmap_i = isl_basic_map_copy(bmap);
-		bmap_i = isl_basic_map_project_out(bmap_i, isl_dim_out,
-							i + 1, n_out - (1 + i));
-		bmap_i = isl_basic_map_project_out(bmap_i, isl_dim_out, 0, i);
-		aff = extract_isl_aff_from_basic_map(bmap_i);
+		aff = extract_isl_aff_from_basic_map(bmap, i, ma);
 		ma = isl_multi_aff_set_aff(ma, i, aff);
 	}
 
@@ -4488,12 +4623,22 @@ __isl_give isl_multi_aff *isl_multi_aff_from_basic_set_equalities(
  * Since some applications expect the result of isl_pw_multi_aff_from_map
  * to only contain integer affine expressions, we compute the floor
  * of the expression before returning.
+ *
+ * Remove all constraints involving local variables without
+ * an explicit representation (resulting in the removal of those
+ * local variables) prior to the actual extraction to ensure
+ * that the local spaces in which the resulting affine expressions
+ * are created do not contain any unknown local variables.
+ * Removing such constraints is safe because constraints involving
+ * unknown local variables are not used to determine whether
+ * a basic map is obviously single-valued.
  */
 static __isl_give isl_pw_multi_aff *plain_pw_multi_aff_from_map(
 	__isl_take isl_set *domain, __isl_take isl_basic_map *bmap)
 {
 	isl_multi_aff *ma;
 
+	bmap = isl_basic_map_drop_constraint_involving_unknown_divs(bmap);
 	ma = extract_isl_multi_aff_from_basic_map(bmap);
 	ma = isl_multi_aff_floor(ma);
 	return isl_pw_multi_aff_alloc(domain, ma);
@@ -4800,7 +4945,7 @@ static __isl_give isl_multi_aff *range_map(__isl_take isl_aff *aff, int d,
  *
  * We basically plug (1) into "map", resulting in a map with "a"
  * in the range instead of "x".  The corresponding isl_pw_multi_aff
- * defining "a" is then plugged back into (1) to obtain a definition fro "x".
+ * defining "a" is then plugged back into (1) to obtain a definition for "x".
  *
  * Specifically, given the input map
  *
@@ -4914,8 +5059,8 @@ static __isl_give isl_pw_multi_aff *pw_multi_aff_from_map_stride(
  *
  *	x = m a + f(..)
  *
- * with m greater than 1, a some combination of existentiall quantified
- * variables and f and expression in the parameters and input dimensions.
+ * with m greater than 1, a some combination of existentially quantified
+ * variables and f an expression in the parameters and input dimensions.
  * If so, we remove the stride in pw_multi_aff_from_map_stride.
  *
  * Otherwise, we continue with pw_multi_aff_from_map_check_div for a further
@@ -4924,7 +5069,7 @@ static __isl_give isl_pw_multi_aff *pw_multi_aff_from_map_stride(
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_from_map(__isl_take isl_map *map)
 {
 	int i, j;
-	int sv;
+	isl_bool sv;
 	isl_basic_map *hull;
 	unsigned n_out;
 	unsigned o_out;
@@ -4935,7 +5080,8 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_from_map(__isl_take isl_map *map)
 	if (!map)
 		return NULL;
 
-	hull = isl_map_affine_hull(isl_map_copy(map));
+	map = isl_map_detect_equalities(map);
+	hull = isl_map_unshifted_simple_hull(isl_map_copy(map));
 	sv = isl_basic_map_plain_is_single_valued(hull);
 	if (sv >= 0 && sv)
 		return plain_pw_multi_aff_from_map(isl_map_domain(map), hull);

@@ -3,13 +3,13 @@
 ;
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : N >= -2147483648 - M and N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and M <= 100 and M >= 1 and N <= 2147483647 - M and N >= -2147483648 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and N >= -2147483648 - M and N <= 2147483647 - M and M <= 100 and M >= 1 and N >= 1 }
+; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : -2147483648 - M <= N <= 2147483647 - M }
+; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and 0 < M <= 100 and -2147483648 - M <= N <= 2147483647 - M }
+; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and 0 < M <= 100 and N > 0 and -2147483648 - M <= N <= 2147483647 - M }
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
 
 ; SCOP:      Context:
-; SCOP-NEXT: [N, M, Debug] -> {  : Debug = 0 and N >= 1 and M <= 2147483647 - N and M <= 100 and M >= 1 }
+; SCOP-NEXT: [N, M, Debug] -> {  : Debug = 0 and N > 0 and 0 < M <= 2147483647 - N and M <= 100 }
 ; SCOP:      Assumed Context:
 ; SCOP-NEXT: [N, M, Debug] -> {  :  }
 ; SCOP:      Boundary Context:

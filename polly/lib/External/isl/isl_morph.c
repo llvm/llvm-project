@@ -398,7 +398,7 @@ static __isl_give isl_basic_set *copy_equalities(__isl_keep isl_basic_set *bset,
 		k = isl_basic_set_alloc_equality(eq);
 		if (k < 0)
 			goto error;
-		isl_seq_cpy(eq->eq[k], bset->eq[first + k], 1 + total);
+		isl_seq_cpy(eq->eq[k], bset->eq[first + i], 1 + total);
 	}
 
 	return eq;

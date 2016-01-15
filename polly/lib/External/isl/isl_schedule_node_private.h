@@ -3,6 +3,7 @@
 
 #include <isl/schedule_node.h>
 #include <isl_schedule_band.h>
+#include <isl_schedule_tree.h>
 
 /* An isl_schedule_node points to a particular location in a schedule tree.
  *
@@ -41,6 +42,9 @@ __isl_give isl_schedule_tree *isl_schedule_node_get_tree(
 __isl_give isl_schedule_node *isl_schedule_node_pullback_union_pw_multi_aff(
 	__isl_take isl_schedule_node *node,
 	__isl_take isl_union_pw_multi_aff *upma);
+
+__isl_give isl_schedule_node *isl_schedule_node_gist(
+	__isl_take isl_schedule_node *node, __isl_take isl_union_set *context);
 
 __isl_give isl_schedule_node *isl_schedule_node_domain_intersect_domain(
 	__isl_take isl_schedule_node *node, __isl_take isl_union_set *domain);

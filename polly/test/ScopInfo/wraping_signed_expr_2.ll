@@ -13,7 +13,7 @@
 ; CHECK:      Function: wrap
 ;
 ; CHECK:      Context:
-; CHECK-NEXT: [N] -> {  : N <= 2147483647 and N >= -2147483648 }
+; CHECK-NEXT: [N] -> {  : -2147483648 <= N <= 2147483647 }
 ;
 ; CHECK:      Boundary Context:
 ; CHECK-NEXT: [N] -> {  : N <= 2147483618 }

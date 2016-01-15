@@ -29,6 +29,7 @@ enum isl_schedule_node_type isl_schedule_node_get_type(
 	__isl_keep isl_schedule_node *node);
 enum isl_schedule_node_type isl_schedule_node_get_parent_type(
 	__isl_keep isl_schedule_node *node);
+__isl_export
 __isl_give isl_schedule *isl_schedule_node_get_schedule(
 	__isl_keep isl_schedule_node *node);
 
@@ -64,10 +65,12 @@ __isl_give isl_schedule_node *isl_schedule_node_get_shared_ancestor(
 
 __isl_give isl_schedule_node *isl_schedule_node_root(
 	__isl_take isl_schedule_node *node);
+__isl_export
 __isl_give isl_schedule_node *isl_schedule_node_parent(
 	__isl_take isl_schedule_node *node);
 __isl_give isl_schedule_node *isl_schedule_node_ancestor(
 	__isl_take isl_schedule_node *node, int generation);
+__isl_export
 __isl_give isl_schedule_node *isl_schedule_node_child(
 	__isl_take isl_schedule_node *node, int pos);
 __isl_give isl_schedule_node *isl_schedule_node_first_child(
@@ -82,6 +85,9 @@ isl_bool isl_schedule_node_is_subtree_anchored(
 
 __isl_give isl_schedule_node *isl_schedule_node_group(
 	__isl_take isl_schedule_node *node, __isl_take isl_id *group_id);
+
+__isl_give isl_schedule_node *isl_schedule_node_sequence_splice_child(
+	__isl_take isl_schedule_node *node, int pos);
 
 __isl_give isl_space *isl_schedule_node_band_get_space(
 	__isl_keep isl_schedule_node *node);
@@ -105,8 +111,10 @@ __isl_give isl_union_set *isl_schedule_node_band_get_ast_build_options(
 __isl_give isl_schedule_node *isl_schedule_node_band_set_ast_build_options(
 	__isl_take isl_schedule_node *node, __isl_take isl_union_set *options);
 unsigned isl_schedule_node_band_n_member(__isl_keep isl_schedule_node *node);
+__isl_export
 isl_bool isl_schedule_node_band_member_get_coincident(
 	__isl_keep isl_schedule_node *node, int pos);
+__isl_export
 __isl_give isl_schedule_node *isl_schedule_node_band_member_set_coincident(
 	__isl_take isl_schedule_node *node, int pos, int coincident);
 isl_bool isl_schedule_node_band_get_permutable(
@@ -157,12 +165,15 @@ __isl_give isl_union_set *isl_schedule_node_get_domain(
 	__isl_keep isl_schedule_node *node);
 __isl_give isl_union_set *isl_schedule_node_get_universe_domain(
 	__isl_keep isl_schedule_node *node);
+__isl_export
 __isl_give isl_multi_union_pw_aff *
 isl_schedule_node_get_prefix_schedule_multi_union_pw_aff(
 	__isl_keep isl_schedule_node *node);
+__isl_export
 __isl_give isl_union_pw_multi_aff *
 isl_schedule_node_get_prefix_schedule_union_pw_multi_aff(
 	__isl_keep isl_schedule_node *node);
+__isl_export
 __isl_give isl_union_map *isl_schedule_node_get_prefix_schedule_union_map(
 	__isl_keep isl_schedule_node *node);
 __isl_give isl_union_map *isl_schedule_node_get_prefix_schedule_relation(
@@ -197,6 +208,8 @@ __isl_give isl_schedule_node *isl_schedule_node_cut(
 __isl_give isl_schedule_node *isl_schedule_node_delete(
 	__isl_take isl_schedule_node *node);
 
+__isl_give isl_schedule_node *isl_schedule_node_order_before(
+	__isl_take isl_schedule_node *node, __isl_take isl_union_set *filter);
 __isl_give isl_schedule_node *isl_schedule_node_order_after(
 	__isl_take isl_schedule_node *node, __isl_take isl_union_set *filter);
 
@@ -215,6 +228,7 @@ __isl_give isl_schedule_node *isl_schedule_node_align_params(
 __isl_give isl_printer *isl_printer_print_schedule_node(
 	__isl_take isl_printer *p, __isl_keep isl_schedule_node *node);
 void isl_schedule_node_dump(__isl_keep isl_schedule_node *node);
+__isl_give char *isl_schedule_node_to_str(__isl_keep isl_schedule_node *node);
 
 #if defined(__cplusplus)
 }

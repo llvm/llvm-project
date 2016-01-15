@@ -15,25 +15,25 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb2
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] : i0 <= 99 and i0 >= 0 };
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] : 0 <= i0 <= 99 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> [i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : exists (e0 = floor((-n + o0)/42): 42e0 = -n + o0 and o0 <= 41 and o0 >= 0) };
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : 42*floor((-n + o0)/42) = -n + o0 and 0 <= o0 <= 41 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : exists (e0 = floor((-n + o0)/42): 42e0 = -n + o0 and o0 <= 41 and o0 >= 0) };
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : 42*floor((-n + o0)/42) = -n + o0 and 0 <= o0 <= 41 };
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb2
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] : i0 <= 99 and i0 >= 0 };
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] : 0 <= i0 <= 99 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> [i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : exists (e0 = floor((-n + o0)/42): 42e0 = -n + o0 and o0 <= 41 and o0 >= 0) };
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : 42*floor((-n + o0)/42) = -n + o0 and 0 <= o0 <= 41 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : exists (e0 = floor((-n + o0)/42): 42e0 = -n + o0 and o0 <= 41 and o0 >= 0) };
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : 42*floor((-n + o0)/42) = -n + o0 and 0 <= o0 <= 41 };
 ; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

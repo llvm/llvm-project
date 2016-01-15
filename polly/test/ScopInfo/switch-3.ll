@@ -20,7 +20,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_sw_bb
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] : exists (e0 = floor((i0)/4): 4e0 = i0 and i0 >= 0 and i0 <= -1 + N) };
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] : 4*floor((i0)/4) = i0 and 0 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> [i0, 2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
@@ -29,7 +29,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_sw_bb_1
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] : exists (e0 = floor((2 + i0)/4): i0 >= 0 and i0 <= -1 + N and 4e0 >= -1 + i0 and 4e0 <= i0) };
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] : 0 <= i0 < N and 4*floor((2 + i0)/4) <= i0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] -> [i0, 3] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
@@ -38,7 +38,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_sw_bb_5
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] : exists (e0 = floor((-2 + i0)/4): 4e0 = -2 + i0 and i0 >= 2 and i0 <= -1 + N) };
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] : 4*floor((-2 + i0)/4) = -2 + i0 and 2 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] -> [i0, 0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
@@ -47,7 +47,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_sw_bb_9
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] : exists (e0 = floor((i0)/4): i0 >= 0 and i0 <= -1 + N and 4e0 >= -3 + i0 and 4e0 <= -2 + i0) };
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] : 0 <= i0 < N and 4*floor((i0)/4) <= -2 + i0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] -> [i0, 1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]

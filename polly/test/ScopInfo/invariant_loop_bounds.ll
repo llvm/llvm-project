@@ -6,10 +6,10 @@
 ; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  :  }
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [bounds2, bounds1, bounds0] -> { Stmt_for_cond_1[i0, i1] -> MemRef_bounds[1] };
-; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  : bounds2 >= 1 }
+; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  : bounds2 > 0 }
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [bounds2, bounds1, bounds0] -> { Stmt_for_cond_4[i0, i1, i2] -> MemRef_bounds[0] };
-; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  : bounds1 >= 1 and bounds2 >= 1 }
+; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  : bounds2 > 0 and bounds1 > 0 }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      p0: %bounds2
@@ -19,7 +19,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_body_6
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [bounds2, bounds1, bounds0] -> { Stmt_for_body_6[i0, i1, i2] : i0 >= 0 and i0 <= -1 + bounds2 and i1 >= 0 and i1 <= -1 + bounds1 and i2 >= 0 and i2 <= -1 + bounds0 };
+; CHECK-NEXT:             [bounds2, bounds1, bounds0] -> { Stmt_for_body_6[i0, i1, i2] : 0 <= i0 < bounds2 and 0 <= i1 < bounds1 and 0 <= i2 < bounds0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [bounds2, bounds1, bounds0] -> { Stmt_for_body_6[i0, i1, i2] -> [i0, i1, i2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]

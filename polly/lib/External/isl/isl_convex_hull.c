@@ -2414,6 +2414,176 @@ __isl_give isl_basic_set *isl_set_unshifted_simple_hull(
 	return isl_map_unshifted_simple_hull(set);
 }
 
+/* Drop all inequalities from "bmap1" that do not also appear in "bmap2".
+ * A constraint that appears with different constant terms
+ * in "bmap1" and "bmap2" is also kept, with the least restrictive
+ * (i.e., greatest) constant term.
+ * "bmap1" and "bmap2" are assumed to have the same (known)
+ * integer divisions.
+ * The constraints of both "bmap1" and "bmap2" are assumed
+ * to have been sorted using isl_basic_map_sort_constraints.
+ *
+ * Run through the inequality constraints of "bmap1" and "bmap2"
+ * in sorted order.
+ * Each constraint of "bmap1" without a matching constraint in "bmap2"
+ * is removed.
+ * If a match is found, the constraint is kept.  If needed, the constant
+ * term of the constraint is adjusted.
+ */
+static __isl_give isl_basic_map *select_shared_inequalities(
+	__isl_take isl_basic_map *bmap1, __isl_keep isl_basic_map *bmap2)
+{
+	int i1, i2;
+
+	bmap1 = isl_basic_map_cow(bmap1);
+	if (!bmap1 || !bmap2)
+		return isl_basic_map_free(bmap1);
+
+	i1 = bmap1->n_ineq - 1;
+	i2 = bmap2->n_ineq - 1;
+	while (bmap1 && i1 >= 0 && i2 >= 0) {
+		int cmp;
+
+		cmp = isl_basic_map_constraint_cmp(bmap1, bmap1->ineq[i1],
+							bmap2->ineq[i2]);
+		if (cmp < 0) {
+			--i2;
+			continue;
+		}
+		if (cmp > 0) {
+			if (isl_basic_map_drop_inequality(bmap1, i1) < 0)
+				bmap1 = isl_basic_map_free(bmap1);
+			--i1;
+			continue;
+		}
+		if (isl_int_lt(bmap1->ineq[i1][0], bmap2->ineq[i2][0]))
+			isl_int_set(bmap1->ineq[i1][0], bmap2->ineq[i2][0]);
+		--i1;
+		--i2;
+	}
+	for (; i1 >= 0; --i1)
+		if (isl_basic_map_drop_inequality(bmap1, i1) < 0)
+			bmap1 = isl_basic_map_free(bmap1);
+
+	return bmap1;
+}
+
+/* Drop all equalities from "bmap1" that do not also appear in "bmap2".
+ * "bmap1" and "bmap2" are assumed to have the same (known)
+ * integer divisions.
+ *
+ * Run through the equality constraints of "bmap1" and "bmap2".
+ * Each constraint of "bmap1" without a matching constraint in "bmap2"
+ * is removed.
+ */
+static __isl_give isl_basic_map *select_shared_equalities(
+	__isl_take isl_basic_map *bmap1, __isl_keep isl_basic_map *bmap2)
+{
+	int i1, i2;
+	unsigned total;
+
+	bmap1 = isl_basic_map_cow(bmap1);
+	if (!bmap1 || !bmap2)
+		return isl_basic_map_free(bmap1);
+
+	total = isl_basic_map_total_dim(bmap1);
+
+	i1 = bmap1->n_eq - 1;
+	i2 = bmap2->n_eq - 1;
+	while (bmap1 && i1 >= 0 && i2 >= 0) {
+		int last1, last2;
+
+		last1 = isl_seq_last_non_zero(bmap1->eq[i1] + 1, total);
+		last2 = isl_seq_last_non_zero(bmap2->eq[i2] + 1, total);
+		if (last1 > last2) {
+			--i2;
+			continue;
+		}
+		if (last1 < last2) {
+			if (isl_basic_map_drop_equality(bmap1, i1) < 0)
+				bmap1 = isl_basic_map_free(bmap1);
+			--i1;
+			continue;
+		}
+		if (!isl_seq_eq(bmap1->eq[i1], bmap2->eq[i2], 1 + total)) {
+			if (isl_basic_map_drop_equality(bmap1, i1) < 0)
+				bmap1 = isl_basic_map_free(bmap1);
+		}
+		--i1;
+		--i2;
+	}
+	for (; i1 >= 0; --i1)
+		if (isl_basic_map_drop_equality(bmap1, i1) < 0)
+			bmap1 = isl_basic_map_free(bmap1);
+
+	return bmap1;
+}
+
+/* Compute a superset of "bmap1" and "bmap2" that is described
+ * by only the constraints that appear in both "bmap1" and "bmap2".
+ *
+ * First drop constraints that involve unknown integer divisions
+ * since it is not trivial to check whether two such integer divisions
+ * in different basic maps are the same.
+ * Then align the remaining (known) divs and sort the constraints.
+ * Finally drop all inequalities and equalities from "bmap1" that
+ * do not also appear in "bmap2".
+ */
+__isl_give isl_basic_map *isl_basic_map_plain_unshifted_simple_hull(
+	__isl_take isl_basic_map *bmap1, __isl_take isl_basic_map *bmap2)
+{
+	bmap1 = isl_basic_map_drop_constraint_involving_unknown_divs(bmap1);
+	bmap2 = isl_basic_map_drop_constraint_involving_unknown_divs(bmap2);
+	bmap2 = isl_basic_map_align_divs(bmap2, bmap1);
+	bmap1 = isl_basic_map_align_divs(bmap1, bmap2);
+	bmap1 = isl_basic_map_gauss(bmap1, NULL);
+	bmap2 = isl_basic_map_gauss(bmap2, NULL);
+	bmap1 = isl_basic_map_sort_constraints(bmap1);
+	bmap2 = isl_basic_map_sort_constraints(bmap2);
+
+	bmap1 = select_shared_inequalities(bmap1, bmap2);
+	bmap1 = select_shared_equalities(bmap1, bmap2);
+
+	isl_basic_map_free(bmap2);
+	bmap1 = isl_basic_map_finalize(bmap1);
+	return bmap1;
+}
+
+/* Compute a superset of the convex hull of "map" that is described
+ * by only the constraints in the constituents of "map".
+ * In particular, the result is composed of constraints that appear
+ * in each of the basic maps of "map"
+ *
+ * Constraints that involve unknown integer divisions are dropped
+ * since it is not trivial to check whether two such integer divisions
+ * in different basic maps are the same.
+ *
+ * The hull is initialized from the first basic map and then
+ * updated with respect to the other basic maps in turn.
+ */
+__isl_give isl_basic_map *isl_map_plain_unshifted_simple_hull(
+	__isl_take isl_map *map)
+{
+	int i;
+	isl_basic_map *hull;
+
+	if (!map)
+		return NULL;
+	if (map->n <= 1)
+		return map_simple_hull_trivial(map);
+	map = isl_map_drop_constraint_involving_unknown_divs(map);
+	hull = isl_basic_map_copy(map->p[0]);
+	for (i = 1; i < map->n; ++i) {
+		isl_basic_map *bmap_i;
+
+		bmap_i = isl_basic_map_copy(map->p[i]);
+		hull = isl_basic_map_plain_unshifted_simple_hull(hull, bmap_i);
+	}
+
+	isl_map_free(map);
+	return hull;
+}
+
 /* Check if "ineq" is a bound on "set" and, if so, add it to "hull".
  *
  * For each basic set in "set", we first check if the basic set

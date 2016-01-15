@@ -119,8 +119,82 @@ static int test_parse_multi_val(isl_ctx *ctx, const char *str)
 	return mv ? 0 : -1;
 }
 
+/* Pairs of binary relation representations that should represent
+ * the same binary relations.
+ */
+struct {
+	const char *map1;
+	const char *map2;
+} parse_map_equal_tests[] = {
+	{ "{ [x,y]  : [([x/2]+y)/3] >= 1 }",
+	  "{ [x, y] : 2y >= 6 - x }" },
+	{ "{ [x,y] : x <= min(y, 2*y+3) }",
+	  "{ [x,y] : x <= y, 2*y + 3 }" },
+	{ "{ [x,y] : x >= min(y, 2*y+3) }",
+	  "{ [x, y] : (y <= x and y >= -3) or (2y <= -3 + x and y <= -4) }" },
+	{ "[n] -> { [c1] : c1>=0 and c1<=floord(n-4,3) }",
+	  "[n] -> { [c1] : c1 >= 0 and 3c1 <= -4 + n }" },
+	{ "{ [i,j] -> [i] : i < j; [i,j] -> [j] : j <= i }",
+	  "{ [i,j] -> [min(i,j)] }" },
+	{ "{ [i,j] : i != j }",
+	  "{ [i,j] : i < j or i > j }" },
+	{ "{ [i,j] : (i+1)*2 >= j }",
+	  "{ [i, j] : j <= 2 + 2i }" },
+	{ "{ [i] -> [i > 0 ? 4 : 5] }",
+	  "{ [i] -> [5] : i <= 0; [i] -> [4] : i >= 1 }" },
+	{ "[N=2,M] -> { [i=[(M+N)/4]] }",
+	  "[N, M] -> { [i] : N = 2 and 4i <= 2 + M and 4i >= -1 + M }" },
+	{ "{ [x] : x >= 0 }",
+	  "{ [x] : x-0 >= 0 }" },
+	{ "{ [i] : ((i > 10)) }",
+	  "{ [i] : i >= 11 }" },
+	{ "{ [i] -> [0] }",
+	  "{ [i] -> [0 * i] }" },
+	{ "{ [a] -> [b] : (not false) }",
+	  "{ [a] -> [b] : true }" },
+	{ "{ [i] : i/2 <= 5 }",
+	  "{ [i] : i <= 10 }" },
+	{ "{Sym=[n] [i] : i <= n }",
+	  "[n] -> { [i] : i <= n }" },
+	{ "{ [*] }",
+	  "{ [a] }" },
+	{ "{ [i] : 2*floor(i/2) = i }",
+	  "{ [i] : exists a : i = 2 a }" },
+	{ "{ [a] -> [b] : a = 5 implies b = 5 }",
+	  "{ [a] -> [b] : a != 5 or b = 5 }" },
+	{ "{ [a] -> [a - 1 : a > 0] }",
+	  "{ [a] -> [a - 1] : a > 0 }" },
+	{ "{ [a] -> [a - 1 : a > 0; a : a <= 0] }",
+	  "{ [a] -> [a - 1] : a > 0; [a] -> [a] : a <= 0 }" },
+	{ "{ [a] -> [(a) * 2 : a >= 0; 0 : a < 0] }",
+	  "{ [a] -> [2a] : a >= 0; [a] -> [0] : a < 0 }" },
+	{ "{ [a] -> [(a * 2) : a >= 0; 0 : a < 0] }",
+	  "{ [a] -> [2a] : a >= 0; [a] -> [0] : a < 0 }" },
+	{ "{ [a] -> [(a * 2 : a >= 0); 0 : a < 0] }",
+	  "{ [a] -> [2a] : a >= 0; [a] -> [0] : a < 0 }" },
+	{ "{ [a] -> [(a * 2 : a >= 0; 0 : a < 0)] }",
+	  "{ [a] -> [2a] : a >= 0; [a] -> [0] : a < 0 }" },
+	{ "{ [a,b] -> [i,j] : a,b << i,j }",
+	  "{ [a,b] -> [i,j] : a < i or (a = i and b < j) }" },
+	{ "{ [a,b] -> [i,j] : a,b <<= i,j }",
+	  "{ [a,b] -> [i,j] : a < i or (a = i and b <= j) }" },
+	{ "{ [a,b] -> [i,j] : a,b >> i,j }",
+	  "{ [a,b] -> [i,j] : a > i or (a = i and b > j) }" },
+	{ "{ [a,b] -> [i,j] : a,b >>= i,j }",
+	  "{ [a,b] -> [i,j] : a > i or (a = i and b >= j) }" },
+	{ "{ [n] -> [i] : exists (a, b, c: 8b <= i - 32a and "
+			    "8b >= -7 + i - 32 a and b >= 0 and b <= 3 and "
+			    "8c < n - 32a and i < n and c >= 0 and "
+			    "c <= 3 and c >= -4a) }",
+	  "{ [n] -> [i] : 0 <= i < n }" },
+	{ "{ [x] -> [] : exists (a, b: 0 <= a <= 1 and 0 <= b <= 3 and "
+			    "2b <= x - 8a and 2b >= -1 + x - 8a) }",
+	  "{ [x] -> [] : 0 <= x <= 15 }" },
+};
+
 int test_parse(struct isl_ctx *ctx)
 {
+	int i;
 	isl_map *map, *map2;
 	const char *str, *str2;
 
@@ -145,18 +219,12 @@ int test_parse(struct isl_ctx *ctx)
 	test_parse_map(ctx, "{ [p1, y1, y2] -> [2, y1, y2] : "
 				"p1 = 1 && (y1 <= y2 || y2 = 0) }");
 
-	str = "{ [x,y]  : [([x/2]+y)/3] >= 1 }";
-	str2 = "{ [x, y] : 2y >= 6 - x }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	if (test_parse_map_equal(ctx, "{ [x,y] : x <= min(y, 2*y+3) }",
-				      "{ [x,y] : x <= y, 2*y + 3 }") < 0)
-		return -1;
-	str = "{ [x, y] : (y <= x and y >= -3) or (2y <= -3 + x and y <= -4) }";
-	if (test_parse_map_equal(ctx, "{ [x,y] : x >= min(y, 2*y+3) }",
-					str) < 0)
-		return -1;
+	for (i = 0; i < ARRAY_SIZE(parse_map_equal_tests); ++i) {
+		str = parse_map_equal_tests[i].map1;
+		str2 = parse_map_equal_tests[i].map2;
+		if (test_parse_map_equal(ctx, str, str2) < 0)
+			return -1;
+	}
 
 	str = "{[new,old] -> [new+1-2*[(new+1)/2],old+1-2*[(old+1)/2]]}";
 	map = isl_map_read_from_str(ctx, str);
@@ -177,102 +245,10 @@ int test_parse(struct isl_ctx *ctx)
 	isl_map_free(map);
 	isl_map_free(map2);
 
-	str = "[n] -> { [c1] : c1>=0 and c1<=floord(n-4,3) }";
-	str2 = "[n] -> { [c1] : c1 >= 0 and 3c1 <= -4 + n }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	str = "{ [i,j] -> [i] : i < j; [i,j] -> [j] : j <= i }";
-	str2 = "{ [i,j] -> [min(i,j)] }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	str = "{ [i,j] : i != j }";
-	str2 = "{ [i,j] : i < j or i > j }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	str = "{ [i,j] : (i+1)*2 >= j }";
-	str2 = "{ [i, j] : j <= 2 + 2i }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	str = "{ [i] -> [i > 0 ? 4 : 5] }";
-	str2 = "{ [i] -> [5] : i <= 0; [i] -> [4] : i >= 1 }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	str = "[N=2,M] -> { [i=[(M+N)/4]] }";
-	str2 = "[N, M] -> { [i] : N = 2 and 4i <= 2 + M and 4i >= -1 + M }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	str = "{ [x] : x >= 0 }";
-	str2 = "{ [x] : x-0 >= 0 }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	str = "{ [i] : ((i > 10)) }";
-	str2 = "{ [i] : i >= 11 }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
-	str = "{ [i] -> [0] }";
-	str2 = "{ [i] -> [0 * i] }";
-	if (test_parse_map_equal(ctx, str, str2) < 0)
-		return -1;
-
 	test_parse_pwqp(ctx, "{ [i] -> i + [ (i + [i/3])/2 ] }");
 	test_parse_map(ctx, "{ S1[i] -> [([i/10]),i%10] : 0 <= i <= 45 }");
 	test_parse_pwaff(ctx, "{ [i] -> [i + 1] : i > 0; [a] -> [a] : a < 0 }");
 	test_parse_pwqp(ctx, "{ [x] -> ([(x)/2] * [(x)/3]) }");
-
-	if (test_parse_map_equal(ctx, "{ [a] -> [b] : (not false) }",
-				      "{ [a] -> [b] : true }") < 0)
-		return -1;
-
-	if (test_parse_map_equal(ctx, "{ [i] : i/2 <= 5 }",
-				      "{ [i] : i <= 10 }") < 0)
-		return -1;
-
-	if (test_parse_map_equal(ctx, "{Sym=[n] [i] : i <= n }",
-				      "[n] -> { [i] : i <= n }") < 0)
-		return -1;
-
-	if (test_parse_map_equal(ctx, "{ [*] }", "{ [a] }") < 0)
-		return -1;
-
-	if (test_parse_map_equal(ctx, "{ [i] : 2*floor(i/2) = i }",
-				      "{ [i] : exists a : i = 2 a }") < 0)
-		return -1;
-
-	if (test_parse_map_equal(ctx, "{ [a] -> [b] : a = 5 implies b = 5 }",
-				      "{ [a] -> [b] : a != 5 or b = 5 }") < 0)
-		return -1;
-
-	if (test_parse_map_equal(ctx, "{ [a] -> [a - 1 : a > 0] }",
-				      "{ [a] -> [a - 1] : a > 0 }") < 0)
-		return -1;
-	if (test_parse_map_equal(ctx,
-	    "{ [a] -> [a - 1 : a > 0; a : a <= 0] }",
-	    "{ [a] -> [a - 1] : a > 0; [a] -> [a] : a <= 0 }") < 0)
-		return -1;
-	if (test_parse_map_equal(ctx,
-	    "{ [a] -> [(a) * 2 : a >= 0; 0 : a < 0] }",
-	    "{ [a] -> [2a] : a >= 0; [a] -> [0] : a < 0 }") < 0)
-		return -1;
-	if (test_parse_map_equal(ctx,
-	    "{ [a] -> [(a * 2) : a >= 0; 0 : a < 0] }",
-	    "{ [a] -> [2a] : a >= 0; [a] -> [0] : a < 0 }") < 0)
-		return -1;
-	if (test_parse_map_equal(ctx,
-	    "{ [a] -> [(a * 2 : a >= 0); 0 : a < 0] }",
-	    "{ [a] -> [2a] : a >= 0; [a] -> [0] : a < 0 }") < 0)
-		return -1;
-	if (test_parse_map_equal(ctx,
-	    "{ [a] -> [(a * 2 : a >= 0; 0 : a < 0)] }",
-	    "{ [a] -> [2a] : a >= 0; [a] -> [0] : a < 0 }") < 0)
-		return -1;
 
 	return 0;
 }
@@ -1105,6 +1081,49 @@ int test_affine_hull(struct isl_ctx *ctx)
 	return 0;
 }
 
+/* Pairs of maps and the corresponding expected results of
+ * isl_map_plain_unshifted_simple_hull.
+ */
+struct {
+	const char *map;
+	const char *hull;
+} plain_unshifted_simple_hull_tests[] = {
+	{ "{ [i] -> [j] : i >= 1 and j >= 1 or i >= 2 and j <= 10 }",
+	  "{ [i] -> [j] : i >= 1 }" },
+	{ "{ [n] -> [i,j,k] : (i mod 3 = 2 and j mod 4 = 2) or "
+		"(j mod 4 = 2 and k mod 6 = n) }",
+	  "{ [n] -> [i,j,k] : j mod 4 = 2 }" },
+};
+
+/* Basic tests for isl_map_plain_unshifted_simple_hull.
+ */
+static int test_plain_unshifted_simple_hull(isl_ctx *ctx)
+{
+	int i;
+	isl_map *map;
+	isl_basic_map *hull, *expected;
+	isl_bool equal;
+
+	for (i = 0; i < ARRAY_SIZE(plain_unshifted_simple_hull_tests); ++i) {
+		const char *str;
+		str = plain_unshifted_simple_hull_tests[i].map;
+		map = isl_map_read_from_str(ctx, str);
+		str = plain_unshifted_simple_hull_tests[i].hull;
+		expected = isl_basic_map_read_from_str(ctx, str);
+		hull = isl_map_plain_unshifted_simple_hull(map);
+		equal = isl_basic_map_is_equal(hull, expected);
+		isl_basic_map_free(hull);
+		isl_basic_map_free(expected);
+		if (equal < 0)
+			return -1;
+		if (!equal)
+			isl_die(ctx, isl_error_unknown, "unexpected hull",
+				return -1);
+	}
+
+	return 0;
+}
+
 static int test_simple_hull(struct isl_ctx *ctx)
 {
 	const char *str;
@@ -1125,6 +1144,9 @@ static int test_simple_hull(struct isl_ctx *ctx)
 	if (is_empty == isl_bool_false)
 		isl_die(ctx, isl_error_unknown, "Empty set should be detected",
 			return -1);
+
+	if (test_plain_unshifted_simple_hull(ctx) < 0)
+		return -1;
 
 	return 0;
 }
@@ -1256,6 +1278,55 @@ void test_gist_case(struct isl_ctx *ctx, const char *name)
 	free(filename);
 
 	fclose(input);
+}
+
+/* Inputs to isl_map_plain_gist_basic_map, along with the expected output.
+ */
+struct {
+	const char *map;
+	const char *context;
+	const char *gist;
+} plain_gist_tests[] = {
+	{ "{ [i] -> [j] : i >= 1 and j >= 1 or i >= 2 and j <= 10 }",
+	  "{ [i] -> [j] : i >= 1 }",
+	  "{ [i] -> [j] : j >= 1 or i >= 2 and j <= 10 }" },
+	{ "{ [n] -> [i,j,k] : (i mod 3 = 2 and j mod 4 = 2) or "
+		"(j mod 4 = 2 and k mod 6 = n) }",
+	  "{ [n] -> [i,j,k] : j mod 4 = 2 }",
+	  "{ [n] -> [i,j,k] : (i mod 3 = 2) or (k mod 6 = n) }" },
+	{ "{ [i] -> [j] : i > j and (exists a,b : i <= 2a + 5b <= 2) }",
+	  "{ [i] -> [j] : i > j }",
+	  "{ [i] -> [j] : exists a,b : i <= 2a + 5b <= 2 }" },
+};
+
+/* Basic tests for isl_map_plain_gist_basic_map.
+ */
+static int test_plain_gist(isl_ctx *ctx)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(plain_gist_tests); ++i) {
+		const char *str;
+		int equal;
+		isl_map *map, *gist;
+		isl_basic_map *context;
+
+		map = isl_map_read_from_str(ctx, plain_gist_tests[i].map);
+		str = plain_gist_tests[i].context;
+		context = isl_basic_map_read_from_str(ctx, str);
+		map = isl_map_plain_gist_basic_map(map, context);
+		gist = isl_map_read_from_str(ctx, plain_gist_tests[i].gist);
+		equal = isl_map_is_equal(map, gist);
+		isl_map_free(map);
+		isl_map_free(gist);
+		if (equal < 0)
+			return -1;
+		if (!equal)
+			isl_die(ctx, isl_error_unknown,
+				"incorrect gist result", return -1);
+	}
+
+	return 0;
 }
 
 struct {
@@ -1396,6 +1467,9 @@ static int test_gist(struct isl_ctx *ctx)
 		isl_die(ctx, isl_error_unknown, "expecting single div",
 			isl_map_free(map1); return -1);
 	isl_map_free(map1);
+
+	if (test_plain_gist(ctx) < 0)
+		return -1;
 
 	return 0;
 }
@@ -1658,6 +1732,10 @@ struct {
 		"32e0 <= 31 + i0)) or "
 		"i0 >= 0 }" },
 	{ 1, "{ [a, b, c] : 2b = 1 + a and 2c = 2 + a; [0, 0, 0] }" },
+	{ 1, "{ [a, a, b, c] : 32*floor((a)/32) = a and 2*floor((b)/2) = b and "
+				"2*floor((c)/2) = c and 0 <= a <= 192;"
+		"[224, 224, b, c] : 2*floor((b)/2) = b and 2*floor((c)/2) = c }"
+	},
 };
 
 /* A specialized coalescing test case that would result
@@ -1722,13 +1800,55 @@ static int test_coalesce(struct isl_ctx *ctx)
 	return 0;
 }
 
+/* Construct a representation of the graph on the right of Figure 1
+ * in "Computing the Transitive Closure of a Union of
+ * Affine Integer Tuple Relations".
+ */
+static __isl_give isl_map *cocoa_fig_1_right_graph(isl_ctx *ctx)
+{
+	isl_set *dom;
+	isl_map *up, *right;
+
+	dom = isl_set_read_from_str(ctx,
+		"{ [x,y] : x >= 0 and -2 x + 3 y >= 0 and x <= 3 and "
+			"2 x - 3 y + 3 >= 0 }");
+	right = isl_map_read_from_str(ctx,
+		"{ [x,y] -> [x2,y2] : x2 = x + 1 and y2 = y }");
+	up = isl_map_read_from_str(ctx,
+		"{ [x,y] -> [x2,y2] : x2 = x and y2 = y + 1 }");
+	right = isl_map_intersect_domain(right, isl_set_copy(dom));
+	right = isl_map_intersect_range(right, isl_set_copy(dom));
+	up = isl_map_intersect_domain(up, isl_set_copy(dom));
+	up = isl_map_intersect_range(up, dom);
+	return isl_map_union(up, right);
+}
+
+/* Construct a representation of the power of the graph
+ * on the right of Figure 1 in "Computing the Transitive Closure of
+ * a Union of Affine Integer Tuple Relations".
+ */
+static __isl_give isl_map *cocoa_fig_1_right_power(isl_ctx *ctx)
+{
+	return isl_map_read_from_str(ctx,
+		"{ [1] -> [[0,0] -> [0,1]]; [2] -> [[0,0] -> [1,1]]; "
+		"  [1] -> [[0,1] -> [1,1]]; [1] -> [[2,2] -> [3,2]]; "
+		"  [2] -> [[2,2] -> [3,3]]; [1] -> [[3,2] -> [3,3]] }");
+}
+
+/* Construct a representation of the transitive closure of the graph
+ * on the right of Figure 1 in "Computing the Transitive Closure of
+ * a Union of Affine Integer Tuple Relations".
+ */
+static __isl_give isl_map *cocoa_fig_1_right_tc(isl_ctx *ctx)
+{
+	return isl_set_unwrap(isl_map_range(cocoa_fig_1_right_power(ctx)));
+}
+
 static int test_closure(isl_ctx *ctx)
 {
 	const char *str;
-	isl_set *dom;
-	isl_map *up, *right;
 	isl_map *map, *map2;
-	int exact;
+	int exact, equal;
 
 	/* COCOA example 1 */
 	map = isl_map_read_from_str(ctx,
@@ -1837,27 +1957,26 @@ static int test_closure(isl_ctx *ctx)
 	isl_map_free(map2);
 	isl_map_free(map);
 
-	/* COCOA Fig.1 right */
-	dom = isl_set_read_from_str(ctx,
-		"{ [x,y] : x >= 0 and -2 x + 3 y >= 0 and x <= 3 and "
-			"2 x - 3 y + 3 >= 0 }");
-	right = isl_map_read_from_str(ctx,
-		"{ [x,y] -> [x2,y2] : x2 = x + 1 and y2 = y }");
-	up = isl_map_read_from_str(ctx,
-		"{ [x,y] -> [x2,y2] : x2 = x and y2 = y + 1 }");
-	right = isl_map_intersect_domain(right, isl_set_copy(dom));
-	right = isl_map_intersect_range(right, isl_set_copy(dom));
-	up = isl_map_intersect_domain(up, isl_set_copy(dom));
-	up = isl_map_intersect_range(up, dom);
-	map = isl_map_union(up, right);
+	map = cocoa_fig_1_right_graph(ctx);
 	map = isl_map_transitive_closure(map, &exact);
 	assert(exact);
-	map2 = isl_map_read_from_str(ctx,
-		"{ [0,0] -> [0,1]; [0,0] -> [1,1]; [0,1] -> [1,1]; "
-		"  [2,2] -> [3,2]; [2,2] -> [3,3]; [3,2] -> [3,3] }");
+	map2 = cocoa_fig_1_right_tc(ctx);
 	assert(isl_map_is_equal(map, map2));
 	isl_map_free(map2);
 	isl_map_free(map);
+
+	map = cocoa_fig_1_right_graph(ctx);
+	map = isl_map_power(map, &exact);
+	map2 = cocoa_fig_1_right_power(ctx);
+	equal = isl_map_is_equal(map, map2);
+	isl_map_free(map2);
+	isl_map_free(map);
+	if (equal < 0)
+		return -1;
+	if (!exact)
+		isl_die(ctx, isl_error_unknown, "power not exact", return -1);
+	if (!equal)
+		isl_die(ctx, isl_error_unknown, "unexpected power", return -1);
 
 	/* COCOA Theorem 1 counter example */
 	map = isl_map_read_from_str(ctx,
@@ -4834,6 +4953,9 @@ const char *set_conversion_tests[] = {
 	"[N] -> { [i,j] : exists a : i = 4 a and N - 1 <= i, 2j <= N }",
 	"[N] -> { [[i]->[j]] : exists a : i = 4 a and N - 1 <= i, 2j <= N }",
 	"[N] -> { [3*floor(N/2) + 5*floor(N/3)] }",
+	"[a, b] -> { [c, d] : (4*floor((-a + c)/4) = -a + c and "
+			"32*floor((-b + d)/32) = -b + d and 5 <= c <= 8 and "
+			"-3 + c <= d <= 28 + c) }",
 };
 
 /* Check that converting from isl_set to isl_pw_multi_aff and back
@@ -4866,32 +4988,41 @@ static int test_set_conversion(isl_ctx *ctx)
 	return 0;
 }
 
+const char *conversion_tests[] = {
+	"{ [a, b, c, d] -> s0[a, b, e, f] : "
+	    "exists (e0 = [(a - 2c)/3], e1 = [(-4 + b - 5d)/9], "
+	    "e2 = [(-d + f)/9]: 3e0 = a - 2c and 9e1 = -4 + b - 5d and "
+	    "9e2 = -d + f and f >= 0 and f <= 8 and 9e >= -5 - 2a and "
+	    "9e <= -2 - 2a) }",
+	"{ [a, b] -> [c] : exists (e0 = floor((-a - b + c)/5): "
+	    "5e0 = -a - b + c and c >= -a and c <= 4 - a) }",
+	"{ [a, b] -> [c] : exists d : 18 * d = -3 - a + 2c and 1 <= c <= 3 }",
+};
+
 /* Check that converting from isl_map to isl_pw_multi_aff and back
  * to isl_map produces the original isl_map.
  */
 static int test_map_conversion(isl_ctx *ctx)
 {
-	const char *str;
+	int i;
 	isl_map *map1, *map2;
 	isl_pw_multi_aff *pma;
 	int equal;
 
-	str = "{ [a, b, c, d] -> s0[a, b, e, f] : "
-		"exists (e0 = [(a - 2c)/3], e1 = [(-4 + b - 5d)/9], "
-		"e2 = [(-d + f)/9]: 3e0 = a - 2c and 9e1 = -4 + b - 5d and "
-		"9e2 = -d + f and f >= 0 and f <= 8 and 9e >= -5 - 2a and "
-		"9e <= -2 - 2a) }";
-	map1 = isl_map_read_from_str(ctx, str);
-	pma = isl_pw_multi_aff_from_map(isl_map_copy(map1));
-	map2 = isl_map_from_pw_multi_aff(pma);
-	equal = isl_map_is_equal(map1, map2);
-	isl_map_free(map1);
-	isl_map_free(map2);
+	for (i = 0; i < ARRAY_SIZE(conversion_tests); ++i) {
+		map1 = isl_map_read_from_str(ctx, conversion_tests[i]);
+		pma = isl_pw_multi_aff_from_map(isl_map_copy(map1));
+		map2 = isl_map_from_pw_multi_aff(pma);
+		equal = isl_map_is_equal(map1, map2);
+		isl_map_free(map1);
+		isl_map_free(map2);
 
-	if (equal < 0)
-		return -1;
-	if (!equal)
-		isl_die(ctx, isl_error_unknown, "bad conversion", return -1);
+		if (equal < 0)
+			return -1;
+		if (!equal)
+			isl_die(ctx, isl_error_unknown, "bad conversion",
+				return -1);
+	}
 
 	return 0;
 }

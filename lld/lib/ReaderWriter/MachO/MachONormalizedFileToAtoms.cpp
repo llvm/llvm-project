@@ -903,6 +903,14 @@ std::error_code parseObjCImageInfo(const NormalizedFile &normalizedFile,
                                    " in file " + file.path() +
                                    " should be 8 bytes in size");
 
+  const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
+  uint32_t version = read32(content.data(), isBig);
+  if (version)
+    return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
+                                   imageInfoSection->sectionName +
+                                   " in file " + file.path() +
+                                   " should have version=0");
+
   return std::error_code();
 }
 

@@ -16,7 +16,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_body
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_for_body[i0] : i0 <= 999 and i0 >= 0 };
+; CHECK-NEXT:             { Stmt_for_body[i0] : 0 <= i0 <= 999 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_for_body[i0] -> [i0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

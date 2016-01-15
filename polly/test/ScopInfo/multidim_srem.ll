@@ -10,13 +10,13 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_body_8
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] : i0 <= 199 and i0 >= 0 and i1 >= 0 and i1 <= -1 + n and i2 >= 0 and i2 <= -1 + n };
+; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] : 0 <= i0 <= 199 and 0 <= i1 < n and 0 <= i2 < n };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> [i0, i1, i2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[o0, i1, i2] : exists (e0 = floor((-i0 + o0)/2): 2e0 = -i0 + o0 and o0 <= 1 and o0 >= 0) };
+; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[o0, i1, i2] : 2*floor((-i0 + o0)/2) = -i0 + o0 and 0 <= o0 <= 1 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[o0, i1, i2] : exists (e0 = floor((-i0 + o0)/2): 2e0 = -i0 + o0 and o0 <= 1 and o0 >= 0) };
+; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[o0, i1, i2] : 2*floor((-i0 + o0)/2) = -i0 + o0 and 0 <= o0 <= 1 };
 ; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

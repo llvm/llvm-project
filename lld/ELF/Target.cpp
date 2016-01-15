@@ -1271,6 +1271,7 @@ bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_LDST8_ABS_LO12_NC:
+  case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
@@ -1383,6 +1384,9 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
     or32le(Loc, (SA & 0x0FF8) << 6);
+    break;
+  case R_AARCH64_LDST16_ABS_LO12_NC:
+    or32le(Loc, (SA & 0x0FFC) << 9);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
     or32le(Loc, (SA & 0xFFF) << 10);

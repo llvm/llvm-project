@@ -55,7 +55,7 @@ for.end7:                                         ; preds = %for.cond
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_if_then
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [p_0] -> { Stmt_if_then[i0] : i0 <= 1022 and i0 >= 0 and i0 >= 999 - p_0 };
+; CHECK-NEXT:             [p_0] -> { Stmt_if_then[i0] : i0 >= 0 and 999 - p_0 <= i0 <= 1022 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [p_0] -> { Stmt_if_then[i0] -> [0, i0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

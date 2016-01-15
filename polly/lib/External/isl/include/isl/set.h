@@ -440,7 +440,9 @@ isl_stat isl_set_foreach_point(__isl_keep isl_set *set,
 	isl_stat (*fn)(__isl_take isl_point *pnt, void *user), void *user);
 __isl_give isl_val *isl_set_count_val(__isl_keep isl_set *set);
 
+__isl_constructor
 __isl_give isl_basic_set *isl_basic_set_from_point(__isl_take isl_point *pnt);
+__isl_constructor
 __isl_give isl_set *isl_set_from_point(__isl_take isl_point *pnt);
 __isl_give isl_basic_set *isl_basic_set_box_from_points(
 	__isl_take isl_point *pnt1, __isl_take isl_point *pnt2);

@@ -4,7 +4,7 @@
 ; __wrapping__ range metadata (see bottom of the file) are present:
 ;
 ; CHECK: Context:
-; CHECK:   [tmp] -> {  : tmp >= 256 or tmp <= -1 }
+; CHECK:   [tmp] -> {  : tmp >= 256 or tmp < 0 }
 ;
 ;    void jd(int *A, int *p /* in [256, 0) */) {
 ;      for (int i = 0; i < 1024; i++)

@@ -63,6 +63,8 @@ __isl_null isl_schedule_constraints *isl_schedule_constraints_free(
 
 isl_ctx *isl_schedule_constraints_get_ctx(
 	__isl_keep isl_schedule_constraints *sc);
+__isl_give isl_union_set *isl_schedule_constraints_get_domain(
+	__isl_keep isl_schedule_constraints *sc);
 __isl_give isl_union_map *isl_schedule_constraints_get_validity(
 	__isl_keep isl_schedule_constraints *sc);
 __isl_give isl_union_map *isl_schedule_constraints_get_coincidence(
@@ -88,12 +90,14 @@ __isl_give isl_schedule *isl_schedule_from_domain(
 	__isl_take isl_union_set *domain);
 __isl_give isl_schedule *isl_schedule_copy(__isl_keep isl_schedule *sched);
 __isl_null isl_schedule *isl_schedule_free(__isl_take isl_schedule *sched);
+__isl_export
 __isl_give isl_union_map *isl_schedule_get_map(__isl_keep isl_schedule *sched);
 
 isl_ctx *isl_schedule_get_ctx(__isl_keep isl_schedule *sched);
 isl_bool isl_schedule_plain_is_equal(__isl_keep isl_schedule *schedule1,
 	__isl_keep isl_schedule *schedule2);
 
+__isl_export
 __isl_give isl_schedule_node *isl_schedule_get_root(
 	__isl_keep isl_schedule *schedule);
 __isl_give isl_union_set *isl_schedule_get_domain(
@@ -128,6 +132,7 @@ __isl_give isl_schedule *isl_schedule_reset_user(
 	__isl_take isl_schedule *schedule);
 __isl_give isl_schedule *isl_schedule_align_params(
 	__isl_take isl_schedule *schedule, __isl_take isl_space *space);
+__isl_overload
 __isl_give isl_schedule *isl_schedule_pullback_union_pw_multi_aff(
 	__isl_take isl_schedule *schedule,
 	__isl_take isl_union_pw_multi_aff *upma);
@@ -136,11 +141,13 @@ __isl_give isl_band_list *isl_schedule_get_band_forest(
 	__isl_keep isl_schedule *schedule);
 
 __isl_give isl_schedule *isl_schedule_read_from_file(isl_ctx *ctx, FILE *input);
+__isl_constructor
 __isl_give isl_schedule *isl_schedule_read_from_str(isl_ctx *ctx,
 	const char *str);
 __isl_give isl_printer *isl_printer_print_schedule(__isl_take isl_printer *p,
 	__isl_keep isl_schedule *schedule);
 void isl_schedule_dump(__isl_keep isl_schedule *schedule);
+__isl_give char *isl_schedule_to_str(__isl_keep isl_schedule *schedule);
 
 int isl_schedule_foreach_band(__isl_keep isl_schedule *sched,
 	int (*fn)(__isl_keep isl_band *band, void *user), void *user);

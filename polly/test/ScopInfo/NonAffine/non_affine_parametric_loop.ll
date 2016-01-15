@@ -29,11 +29,11 @@ for.end:
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_body
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] : i0 >= 0 and i0 <= -1 + n };
+; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] : 0 <= i0 < n };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] -> [i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] -> MemRef_INDEX[i0] };
 ; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] -> MemRef_A[o0] : o0 >= -1152921504606846976 and o0 <= 1152921504606846973 };
+; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] -> MemRef_A[o0] : -1152921504606846976 <= o0 <= 1152921504606846973 };
 ; CHECK-NEXT: }

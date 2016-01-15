@@ -25,14 +25,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; NONAFFINE:      Statements {
 ; NONAFFINE-NEXT:     Stmt_for_i_1
 ; NONAFFINE-NEXT:         Domain :=
-; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_1[i0] : i0 >= 0 and i0 <= -1 + n };
+; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_1[i0] : 0 <= i0 < n };
 ; NONAFFINE-NEXT:         Schedule :=
 ; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_1[i0] -> [0, i0] };
 ; NONAFFINE-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_1[i0] -> MemRef_X[o0] : o0 >= -2305843009213693952 and o0 <= 2305843009213693949 };
+; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_1[i0] -> MemRef_X[o0] : -2305843009213693952 <= o0 <= 2305843009213693949 };
 ; NONAFFINE-NEXT:     Stmt_for_i_2
 ; NONAFFINE-NEXT:         Domain :=
-; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_2[i0] : i0 >= 0 and i0 <= -1 + n };
+; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_2[i0] : 0 <= i0 < n };
 ; NONAFFINE-NEXT:         Schedule :=
 ; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_2[i0] -> [1, i0] };
 ; NONAFFINE-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -42,14 +42,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; DELIN:      Statements {
 ; DELIN-NEXT:     Stmt_for_i_1
 ; DELIN-NEXT:         Domain :=
-; DELIN-NEXT:             [n] -> { Stmt_for_i_1[i0] : i0 >= 0 and i0 <= -1 + n };
+; DELIN-NEXT:             [n] -> { Stmt_for_i_1[i0] : 0 <= i0 < n };
 ; DELIN-NEXT:         Schedule :=
 ; DELIN-NEXT:             [n] -> { Stmt_for_i_1[i0] -> [0, i0] };
 ; DELIN-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; DELIN-NEXT:             [n] -> { Stmt_for_i_1[i0] -> MemRef_X[i0, 0] };
 ; DELIN-NEXT:     Stmt_for_i_2
 ; DELIN-NEXT:         Domain :=
-; DELIN-NEXT:             [n] -> { Stmt_for_i_2[i0] : i0 >= 0 and i0 <= -1 + n };
+; DELIN-NEXT:             [n] -> { Stmt_for_i_2[i0] : 0 <= i0 < n };
 ; DELIN-NEXT:         Schedule :=
 ; DELIN-NEXT:             [n] -> { Stmt_for_i_2[i0] -> [1, i0] };
 ; DELIN-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

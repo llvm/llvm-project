@@ -4,7 +4,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_loop_1
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_loop_1[i0] : N <= 100 and i0 <= 101 and i0 >= 0 };
+; CHECK-NEXT:             [N] -> { Stmt_loop_1[i0] : N <= 100 and 0 <= i0 <= 101 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_loop_1[i0] -> [0, i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -13,7 +13,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_loop_1[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_loop_2
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_loop_2[i0] : N <= 100 and i0 <= 301 and i0 >= 0 };
+; CHECK-NEXT:             [N] -> { Stmt_loop_2[i0] : N <= 100 and 0 <= i0 <= 301 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_loop_2[i0] -> [1, i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]

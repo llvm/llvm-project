@@ -3,7 +3,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_body_outer
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_for_body_outer[i0] : i0 <= 257 and i0 >= 0 };
+; CHECK-NEXT:             { Stmt_for_body_outer[i0] : 0 <= i0 <= 257 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_for_body_outer[i0] -> [i0, 0, 0, 0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -12,7 +12,7 @@
 ; CHECK-NEXT:             { Stmt_for_body_outer[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_for_body
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_for_body[257, i1] : i1 <= 1025 and i1 >= 0; Stmt_for_body[i0, 0] : i0 <= 256 and i0 >= 0 };
+; CHECK-NEXT:             { Stmt_for_body[257, i1] : 0 <= i1 <= 1025; Stmt_for_body[i0, 0] : 0 <= i0 <= 256 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_for_body[257, i1] -> [257, 1, i1, 0]; Stmt_for_body[i0, 0] -> [i0, 1, 0, 0] : i0 <= 256 };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -21,7 +21,7 @@
 ; CHECK-NEXT:             { Stmt_for_body[i0, i1] -> MemRef_A[i1] };
 ; CHECK-NEXT:     Stmt_for_inc
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_for_inc[257, i1] : i1 <= 1025 and i1 >= 0 };
+; CHECK-NEXT:             { Stmt_for_inc[257, i1] : 0 <= i1 <= 1025 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_for_inc[i0, i1] -> [257, 1, i1, 1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]

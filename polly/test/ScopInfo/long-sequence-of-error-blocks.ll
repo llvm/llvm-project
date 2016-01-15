@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; iteration spaces are not overly complicated.
 
 ; CHECK:      Assumed Context:
-; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> {  : (tmp17 = 0 and tmp27 >= 4) or (tmp17 = 0 and tmp27 <= 2) or (tmp21 = 0 and tmp17 <= -1 and tmp27 >= 4) or (tmp21 = 0 and tmp17 <= -1 and tmp27 <= 2) or (tmp21 = 0 and tmp17 >= 1 and tmp27 >= 4) or (tmp21 = 0 and tmp17 >= 1 and tmp27 <= 2) or (tmp17 = 0 and tmp27 = 3 and tmp31 >= 144) or (tmp21 = 0 and tmp27 = 3 and tmp17 <= -1 and tmp31 >= 144) or (tmp21 = 0 and tmp27 = 3 and tmp17 >= 1 and tmp31 >= 144) }
+; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> {  : (tmp17 = 0 and tmp27 >= 4) or (tmp17 = 0 and tmp27 <= 2) or (tmp21 = 0 and tmp17 < 0 and tmp27 >= 4) or (tmp21 = 0 and tmp17 < 0 and tmp27 <= 2) or (tmp21 = 0 and tmp17 > 0 and tmp27 >= 4) or (tmp21 = 0 and tmp17 > 0 and tmp27 <= 2) or (tmp17 = 0 and tmp27 = 3 and tmp31 >= 144) or (tmp21 = 0 and tmp27 = 3 and tmp17 < 0 and tmp31 >= 144) or (tmp21 = 0 and tmp27 = 3 and tmp17 > 0 and tmp31 >= 144) }
 ;
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb15
@@ -25,9 +25,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb15[] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_bb19
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] : tmp17 <= -1 or tmp17 >= 1 };
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] : tmp17 < 0 or tmp17 > 0 };
 ; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] -> [1] : tmp17 <= -1 or tmp17 >= 1 };
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] -> [1] : tmp17 < 0 or tmp17 > 0 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_bb24

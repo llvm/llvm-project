@@ -988,6 +988,9 @@ of the original object.
 		__isl_keep isl_qpolynomial *qp);
 	__isl_give isl_space *isl_qpolynomial_get_space(
 		__isl_keep isl_qpolynomial *qp);
+	__isl_give isl_space *
+	isl_qpolynomial_fold_get_domain_space(
+		__isl_keep isl_qpolynomial_fold *fold);
 	__isl_give isl_space *isl_qpolynomial_fold_get_space(
 		__isl_keep isl_qpolynomial_fold *fold);
 	__isl_give isl_space *isl_pw_qpolynomial_get_domain_space(
@@ -2128,6 +2131,11 @@ To iterate over all the sets or maps in a union set or map, use
 		isl_stat (*fn)(__isl_take isl_map *map, void *user),
 		void *user);
 
+These functions call the callback function once for each
+(pair of) space(s) for which there are elements in the input.
+The argument to the callback contains all elements in the input
+with that (pair of) space(s).
+
 The number of sets or maps in a union set or map can be obtained
 from
 
@@ -2329,6 +2337,8 @@ A singleton set can be created from a point using
 		__isl_take isl_point *pnt);
 	__isl_give isl_set *isl_set_from_point(
 		__isl_take isl_point *pnt);
+	__isl_give isl_union_set *isl_union_set_from_point(
+		__isl_take isl_point *pnt);
 
 and a box can be created from two opposite extremal points using
 
@@ -2361,12 +2371,14 @@ enumerating and return C<-1> as well.
 If the enumeration is performed successfully and to completion,
 then C<isl_set_foreach_point> returns C<0>.
 
-To obtain a single point of a (basic) set, use
+To obtain a single point of a (basic or union) set, use
 
 	__isl_give isl_point *isl_basic_set_sample_point(
 		__isl_take isl_basic_set *bset);
 	__isl_give isl_point *isl_set_sample_point(
 		__isl_take isl_set *set);
+	__isl_give isl_point *isl_union_set_sample_point(
+		__isl_take isl_union_set *uset);
 
 If C<set> does not contain any (integer) points, then the
 resulting point will be ``void'', a property that can be
@@ -2728,6 +2740,10 @@ then this space also needs to be a set space.
 	__isl_give isl_multi_aff *isl_multi_aff_from_aff_list(
 		__isl_take isl_space *space,
 		__isl_take isl_aff_list *list);
+	__isl_give isl_multi_pw_aff *
+	isl_multi_pw_aff_from_pw_aff_list(
+		__isl_take isl_space *space,
+		__isl_take isl_pw_aff_list *list);
 	__isl_give isl_multi_union_pw_aff *
 	isl_multi_union_pw_aff_from_union_pw_aff_list(
 		__isl_take isl_space *space,
@@ -3406,6 +3422,9 @@ Objects can be read from input using the following functions.
 		isl_ctx *ctx, const char *str);
 	__isl_give isl_multi_pw_aff *isl_multi_pw_aff_read_from_str(
 		isl_ctx *ctx, const char *str);
+	__isl_give isl_union_pw_aff *
+	isl_union_pw_aff_read_from_str(
+		isl_ctx *ctx, const char *str);
 	__isl_give isl_union_pw_multi_aff *
 	isl_union_pw_multi_aff_read_from_str(
 		isl_ctx *ctx, const char *str);
@@ -3889,17 +3908,38 @@ i.e., whether both domain and range are nested relations.
 
 =item * Currying
 
+	#include <isl/space.h>
+	isl_bool isl_space_can_curry(
+		__isl_keep isl_space *space);
+
+	#include <isl/map.h>
 	isl_bool isl_basic_map_can_curry(
 		__isl_keep isl_basic_map *bmap);
 	isl_bool isl_map_can_curry(__isl_keep isl_map *map);
 
 Check whether the domain of the (basic) relation is a wrapped relation.
 
+	#include <isl/space.h>
+	__isl_give isl_space *isl_space_uncurry(
+		__isl_take isl_space *space);
+
+	#include <isl/map.h>
 	isl_bool isl_basic_map_can_uncurry(
 		__isl_keep isl_basic_map *bmap);
 	isl_bool isl_map_can_uncurry(__isl_keep isl_map *map);
 
 Check whether the range of the (basic) relation is a wrapped relation.
+
+	#include <isl/space.h>
+	isl_bool isl_space_can_range_curry(
+		__isl_keep isl_space *space);
+
+	#include <isl/map.h>
+	isl_bool isl_map_can_range_curry(
+		__isl_keep isl_map *map);
+
+Check whether the domain of the relation wrapped in the range of
+the input is itself a wrapped relation.
 
 =item * Special Values
 
@@ -4332,10 +4372,11 @@ on a given parameter domain using the following functions.
 	__isl_give isl_set *isl_set_from_params(
 		__isl_take isl_set *set);
 
-=item * Constructing a relation from a set
+=item * Constructing a relation from one or two sets
 
-Create a relation with the given set as domain or range.
-The range or domain of the created relation is a zero-dimensional
+Create a relation with the given set(s) as domain and/or range.
+If only the domain or the range is specified, then
+the range or domain of the created relation is a zero-dimensional
 flat anonymous space.
 
 	#include <isl/space.h>
@@ -4358,6 +4399,12 @@ flat anonymous space.
 		__isl_take isl_set *set);
 	__isl_give isl_map *isl_map_from_range(
 		__isl_take isl_set *set);
+
+	#include <isl/union_map.h>
+	__isl_give isl_union_map *
+	isl_union_map_from_domain_and_range(
+		__isl_take isl_union_set *domain,
+		__isl_take isl_union_set *range);
 
 	#include <isl/val.h>
 	__isl_give isl_multi_val *isl_multi_val_from_range(
@@ -4818,6 +4865,11 @@ per space.
 		__isl_take isl_basic_map *bmap,
 		enum isl_dim_type type,
 		unsigned first, unsigned n);
+	__isl_give isl_basic_map *
+	isl_basic_map_drop_constraints_not_involving_dims(
+		__isl_take isl_basic_map *bmap,
+		enum isl_dim_type type,
+		unsigned first, unsigned n);
 	__isl_give isl_map *
 	isl_map_drop_constraints_involving_dims(
 		__isl_take isl_map *map,
@@ -5145,6 +5197,21 @@ move the range of the nested relation out of the domain
 and use it as the domain of a nested relation in the range,
 with the original range as range of this nested relation.
 The C<uncurry> functions perform the inverse operation.
+
+	#include <isl/space.h>
+	__isl_give isl_space *isl_space_range_curry(
+		__isl_take isl_space *space);
+
+	#include <isl/map.h>
+	__isl_give isl_map *isl_map_range_curry(
+		__isl_take isl_map *map);
+
+	#include <isl/union_map.h>
+	__isl_give isl_union_map *isl_union_map_range_curry(
+		__isl_take isl_union_map *umap);
+
+These functions apply the currying to the relation that
+is nested inside the range of the input.
 
 =item * Aligning parameters
 
@@ -6320,6 +6387,9 @@ from the result using the following functions.
 		__isl_take isl_union_map *umap);
 	__isl_give isl_union_map *
 	isl_union_map_domain_factor_range(
+		__isl_take isl_union_map *umap);
+	__isl_give isl_union_map *
+	isl_union_map_range_factor_domain(
 		__isl_take isl_union_map *umap);
 	__isl_give isl_union_map *
 	isl_union_map_range_factor_range(
@@ -7677,6 +7747,10 @@ A representation of the schedule can be printed using
 	__isl_give isl_printer *isl_printer_print_schedule(
 		__isl_take isl_printer *p,
 		__isl_keep isl_schedule *schedule);
+	__isl_give char *isl_schedule_to_str(
+		__isl_keep isl_schedule *schedule);
+
+C<isl_schedule_to_str> prints the schedule in flow format.
 
 The schedule tree can be traversed through the use of
 C<isl_schedule_node> objects that point to a particular
@@ -8183,6 +8257,20 @@ introduced expansion node.  Grouping instances of different statements
 ensures that they will be treated as a single statement by the
 AST generator up to the point of the expansion node.
 
+The following function can be used to flatten a nested
+sequence.
+
+	#include <isl/schedule_node.h>
+	__isl_give isl_schedule_node *
+	isl_schedule_node_sequence_splice_child(
+		__isl_take isl_schedule_node *node, int pos);
+
+That is, given a sequence node C<node> that has another sequence node
+in its child at position C<pos> (in particular, the child of that filter
+node is a sequence node), attach the children of that other sequence
+node as children of C<node>, replacing the original child at position
+C<pos>.
+
 The partial schedule of a band node can be scaled (down) or reduced using
 the following functions.
 
@@ -8265,14 +8353,20 @@ position as the node pointed to by C<node> in the original tree.
 
 	#include <isl/schedule_node.h>
 	__isl_give isl_schedule_node *
+	isl_schedule_node_order_before(
+		__isl_take isl_schedule_node *node,
+		__isl_take isl_union_set *filter);
+	__isl_give isl_schedule_node *
 	isl_schedule_node_order_after(
 		__isl_take isl_schedule_node *node,
 		__isl_take isl_union_set *filter);
 
-This function splits the domain elements that reach C<node>
+These functions split the domain elements that reach C<node>
 into those that satisfy C<filter> and those that do not and
 arranges for the elements that do satisfy the filter to be
-executed after those that do not.  The order is imposed by
+executed before (in case of C<isl_schedule_node_order_before>)
+or after (in case of C<isl_schedule_node_order_after>)
+those that do not.  The order is imposed by
 a sequence node, possibly reusing the grandparent of C<node>
 on two copies of the subtree attached to the original C<node>.
 Both copies are simplified with respect to their filter.
@@ -8325,6 +8419,10 @@ A representation of the schedule node can be printed using
 	__isl_give isl_printer *isl_printer_print_schedule_node(
 		__isl_take isl_printer *p,
 		__isl_keep isl_schedule_node *node);
+	__isl_give char *isl_schedule_node_to_str(
+		__isl_keep isl_schedule_node *node);
+
+C<isl_schedule_node_to_str> prints the schedule node in block format.
 
 =head2 Dependence Analysis
 
@@ -8337,7 +8435,8 @@ of which of the source access relations was the last
 to access the same data element before the given iteration
 of the sink access.
 The resulting dependence relations map source iterations
-to the corresponding sink iterations.
+to either the corresponding sink iterations or
+pairs of corresponding sink iterations and accessed data elements.
 To compute standard flow dependences, the sink should be
 a read, while the sources should be writes.
 If any of the source accesses are marked as being I<may>
@@ -8410,6 +8509,19 @@ the access relations.  In particular, the domains of the access
 relations are effectively intersected with the domain of the schedule
 and only the resulting accesses are considered by the dependence analysis.
 
+A representation of the information contained in an object
+of type C<isl_union_access_info> can be obtained using
+
+	#include <isl/flow.h>
+	__isl_give isl_printer *
+	isl_printer_print_union_access_info(
+		__isl_take isl_printer *p,
+		__isl_keep isl_union_access_info *access);
+	__isl_give char *isl_union_access_info_to_str(
+		__isl_keep isl_union_access_info *access);
+
+C<isl_union_access_info_to_str> prints the information in flow format.
+
 The output of C<isl_union_access_info_compute_flow> can be examined
 and freed using the following functions.
 
@@ -8417,6 +8529,12 @@ and freed using the following functions.
 	__isl_give isl_union_map *isl_union_flow_get_must_dependence(
 		__isl_keep isl_union_flow *flow);
 	__isl_give isl_union_map *isl_union_flow_get_may_dependence(
+		__isl_keep isl_union_flow *flow);
+	__isl_give isl_union_map *
+	isl_union_flow_get_full_must_dependence(
+		__isl_keep isl_union_flow *flow);
+	__isl_give isl_union_map *
+	isl_union_flow_get_full_may_dependence(
 		__isl_keep isl_union_flow *flow);
 	__isl_give isl_union_map *isl_union_flow_get_must_no_source(
 		__isl_keep isl_union_flow *flow);
@@ -8430,6 +8548,13 @@ relates domain elements of must sources to domain elements of the sink.
 The relation returned by C<isl_union_flow_get_may_dependence>
 relates domain elements of must or may sources to domain elements of the sink
 and includes the previous relation as a subset.
+The relation returned by C<isl_union_flow_get_full_must_dependence>
+relates domain elements of must sources to pairs of domain elements of the sink
+and accessed data elements.
+The relation returned by C<isl_union_flow_get_full_may_dependence>
+relates domain elements of must or may sources to pairs of
+domain elements of the sink and accessed data elements.
+This relation includes the previous relation as a subset.
 The relation returned by C<isl_union_flow_get_must_no_source> is the subset
 of the sink relation for which no dependences have been found.
 The relation returned by C<isl_union_flow_get_may_no_source> is the subset
@@ -8437,6 +8562,18 @@ of the sink relation for which no definite dependences have been found.
 That is, it contains those sink access that do not contribute to any
 of the elements in the relation returned
 by C<isl_union_flow_get_must_dependence>.
+
+A representation of the information contained in an object
+of type C<isl_union_flow> can be obtained using
+
+	#include <isl/flow.h>
+	__isl_give isl_printer *isl_printer_print_union_flow(
+		__isl_take isl_printer *p,
+		__isl_keep isl_union_flow *flow);
+	__isl_give char *isl_union_flow_to_str(
+		__isl_keep isl_union_flow *flow);
+
+C<isl_union_flow_to_str> prints the information in flow format.
 
 =head3 Low-level Interface
 
@@ -8729,6 +8866,9 @@ An C<isl_schedule_constraints> object can be inspected
 using the following functions.
 
 	#include <isl/schedule.h>
+	__isl_give isl_union_set *
+	isl_schedule_constraints_get_domain(
+		__isl_keep isl_schedule_constraints *sc);
 	__isl_give isl_union_map *
 	isl_schedule_constraints_get_validity(
 		__isl_keep isl_schedule_constraints *sc);

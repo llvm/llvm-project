@@ -136,3 +136,17 @@ foo128:
 # CHECK:   1104c:       74 16 c0 3d     ldr     q20, [x19, #80]
 #foo128:
 #   11050:       66 6f 6f 00     .word
+
+.section .R_AARCH64_LDST16_ABS_LO12_NC,"ax",@progbits
+ldst16:
+  ldr h17, [x19, :lo12:foo16]
+foo16:
+  .asciz "foo"
+  .size mystr, 3
+
+# S = 0x11054, A = 0x4
+# R = ((S + A) & 0x0FFC) << 9 = 0xb000
+# 0xb000 | 0x7d400271 = 0x7d40b271
+# CHECK: Disassembly of section .R_AARCH64_LDST16_ABS_LO12_NC:
+# CHECK-NEXT: ldst16:
+# CHECK-NEXT:   11054:       71 b2 40 7d     ldr     h17, [x19, #88]

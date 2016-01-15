@@ -6,7 +6,7 @@
 ;       whole loop body.
 ;
 ; CHECK:   Domain :=
-; CHECK:       { Stmt_for_body[i0] : i0 <= 15 and i0 >= 0 };
+; CHECK:       { Stmt_for_body[i0] : 0 <= i0 <= 15 };
 ;
 ;    void foo(float *A) {
 ;      for (long i = 0; i < 16; i++) {

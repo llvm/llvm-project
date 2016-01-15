@@ -1,9 +1,14 @@
+#ifndef ISL_PRINTER_PRIVATE_H
+#define ISL_PRINTER_PRIVATE_H
+
 #include <isl/printer.h>
 #include <isl_yaml.h>
 
 struct isl_printer_ops;
 
 /* A printer to a file or a string.
+ *
+ * "dump" is set if the printing is performed from an isl_*_dump function.
  *
  * yaml_style is the YAML style in which the next elements should
  * be printed and may be either ISL_YAML_STYLE_BLOCK or ISL_YAML_STYLE_FLOW,
@@ -22,6 +27,7 @@ struct isl_printer {
 	char		*buf;
 	int		indent;
 	int		output_format;
+	int		dump;
 	char		*indent_prefix;
 	char		*prefix;
 	char		*suffix;
@@ -32,3 +38,8 @@ struct isl_printer {
 	int			yaml_size;
 	enum isl_yaml_state	*yaml_state;
 };
+
+__isl_give isl_printer *isl_printer_set_dump(__isl_take isl_printer *p,
+	int dump);
+
+#endif

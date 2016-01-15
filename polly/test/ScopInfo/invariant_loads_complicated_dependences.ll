@@ -9,7 +9,7 @@
 ; CHECK-NEXT:         Execution Context: [LB, UB] -> {  :  }
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [LB, UB] -> { Stmt_if_then[i0, i1] -> MemRef_V[0] };
-; CHECK-NEXT:         Execution Context: [LB, UB] -> {  : (UB >= 1 + LB and UB >= 6) or LB >= 6 }
+; CHECK-NEXT:         Execution Context: [LB, UB] -> {  : (UB > LB and UB >= 6) or LB >= 6 }
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [LB, UB] -> { Stmt_if_else[i0, i1] -> MemRef_U[0] };
 ; CHECK-NEXT:         Execution Context: [LB, UB] -> {  : LB <= 5 }

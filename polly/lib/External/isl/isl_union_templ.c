@@ -220,8 +220,11 @@ static __isl_give UNION *FN(UNION,alloc_same_size_on_space)(__isl_keep UNION *u,
 	__isl_take isl_space *space)
 {
 	if (!u)
-		space = isl_space_free(space);
+		goto error;
 	return FN(UNION,alloc)(space, u->type, u->table.n);
+error:
+	isl_space_free(space);
+	return NULL;
 }
 #else
 /* Allocate a UNION with the same size as "u" and with space "space".
@@ -230,8 +233,11 @@ static __isl_give UNION *FN(UNION,alloc_same_size_on_space)(__isl_keep UNION *u,
 	__isl_take isl_space *space)
 {
 	if (!u)
-		space = isl_space_free(space);
+		goto error;
 	return FN(UNION,alloc)(space, u->table.n);
+error:
+	isl_space_free(space);
+	return NULL;
 }
 #endif
 

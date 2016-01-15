@@ -15,7 +15,7 @@
 ; CHECK-NEXT:               for (int c5 = 0; c5 <= min(31, nk - 32 * c2 - 1); c5 += 1)
 ; CHECK-NEXT:                 #pragma simd
 ; CHECK-NEXT:                 for (int c6 = 0; c6 < nj % 4; c6 += 1)
-; CHECK-NEXT:                   Stmt_for_body_6(32 * c0 + c3, -((nj - 1) % 4) + nj + c6 - 1, 32 * c2 + c5);
+; CHECK-NEXT:                   Stmt_for_body_6(32 * c0 + c3, -(nj % 4) + nj + c6, 32 * c2 + c5);
 ; CHECK-NEXT:           }
 ; CHECK-NEXT:         }
 

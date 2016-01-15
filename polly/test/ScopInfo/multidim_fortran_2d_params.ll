@@ -15,7 +15,7 @@
 ;   end do
 ;   end subroutine
 
-; CHECK: [tmp9, nj_loaded2, tmp20, tmp19] -> { Stmt_bb17[i0, i1] -> MemRef_a[-1 + tmp20 + i0, nj_loaded2 + tmp19 + i1] : i1 <= -1 - tmp19; Stmt_bb17[i0, i1] -> MemRef_a[tmp20 + i0, tmp19 + i1] : i1 >= -tmp19 };
+; CHECK: [tmp9, nj_loaded2, tmp20, tmp19] -> { Stmt_bb17[i0, i1] -> MemRef_a[-1 + tmp20 + i0, nj_loaded2 + tmp19 + i1] : i1 < -tmp19; Stmt_bb17[i0, i1] -> MemRef_a[tmp20 + i0, tmp19 + i1] : i1 >= -tmp19 };
 
 
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"

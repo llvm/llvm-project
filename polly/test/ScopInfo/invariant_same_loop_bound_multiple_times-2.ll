@@ -18,7 +18,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_body_6
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] : p = 0 and i0 >= 0 and i0 <= -1 + bounds0l0 and i1 >= 0 and i1 <= -1 + bounds0l0 and i2 >= 0 and i2 <= -1 + bounds0l0 };
+; CHECK-NEXT:             [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] : p = 0 and 0 <= i0 < bounds0l0 and 0 <= i1 < bounds0l0 and 0 <= i2 < bounds0l0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] -> [i0, i1, i2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]

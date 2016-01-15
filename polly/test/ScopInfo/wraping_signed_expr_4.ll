@@ -8,7 +8,7 @@
 ; CHECK:      Function: wrap
 ;
 ; CHECK:      Context:
-; CHECK-NEXT: [N, p] -> {  : N <= 127 and N >= -128 and p <= 127 and p >= -128 }
+; CHECK-NEXT: [N, p] -> {  : -128 <= N <= 127 and -128 <= p <= 127 }
 ;
 ; CHECK:      Boundary Context:
 ; CHECK-NEXT: [N, p] -> {  : p >= -127 }

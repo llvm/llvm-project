@@ -30,6 +30,9 @@
 #ifndef __isl_export
 #define __isl_export
 #endif
+#ifndef __isl_overload
+#define __isl_overload
+#endif
 #ifndef __isl_constructor
 #define __isl_constructor
 #endif
@@ -80,7 +83,7 @@ enum isl_error {
 };
 typedef enum {
 	isl_stat_error = -1,
-	isl_stat_ok = 0,
+	isl_stat_ok = 0
 } isl_stat;
 typedef enum {
 	isl_bool_error = -1,

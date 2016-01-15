@@ -20,9 +20,9 @@
 ; CHECK:       Statements {
 ; CHECK-NEXT:      Stmt_if_then
 ; CHECK-NEXT:          Domain :=
-; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] : (i0 <= 99 and i0 >= 0 and i0 <= -1 + m) or (i0 <= 99 and i0 >= 0 and i0 <= -1 + n) };
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] : 0 <= i0 <= 99 and (i0 < m or i0 < n) };
 ; CHECK-NEXT:          Schedule :=
-; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> [i0] : i0 <= -1 + m or i0 <= -1 + n };
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> [i0] : i0 < m or i0 < n };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -34,7 +34,7 @@
 ; CHECK:       Statements {
 ; CHECK-NEXT:      Stmt_if_then
 ; CHECK-NEXT:          Domain :=
-; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] : i0 <= 99 and i0 >= 0 and i0 <= -1 + m and i0 <= -1 + n };
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] : 0 <= i0 <= 99 and i0 < m and i0 < n };
 ; CHECK-NEXT:          Schedule :=
 ; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> [i0] };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]

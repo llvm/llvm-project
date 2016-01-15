@@ -16,7 +16,7 @@
 ; accessed. In this case the value of m does not matter.
 
 ; CHECK:      Assumed Context:
-; CHECK-NEXT: [n, m, p] -> {  : (n <= 0 and p <= 20) or (n >= 1 and m <= 20 and p <= 20) }
+; CHECK-NEXT: [n, m, p] -> {  : p <= 20 and (n <= 0 or (n > 0 and m <= 20)) }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

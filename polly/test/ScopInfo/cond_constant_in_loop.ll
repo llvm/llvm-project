@@ -45,5 +45,5 @@ return:                                           ; preds = %bb3, %entry
 
 ; CHECK:     Stmt_bb1
 ; CHECK:       Domain :=
-; CHECK:         [M] -> { Stmt_bb1[i0] : i0 >= 0 and i0 <= -1 + M };
+; CHECK:         [M] -> { Stmt_bb1[i0] : 0 <= i0 < M };
 ; CHECK-NOT: Stmt_bb2

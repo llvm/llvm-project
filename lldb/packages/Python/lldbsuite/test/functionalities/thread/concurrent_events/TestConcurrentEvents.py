@@ -21,7 +21,6 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 @skipIfWindows
-@expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB. 
 class ConcurrentEventsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -30,24 +29,28 @@ class ConcurrentEventsTestCase(TestBase):
     ## Tests for multiple threads that generate a single event.
     #
     @unittest2.skipIf(TestBase.skipLongRunningTest(), "Skip this long running test")
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_many_breakpoints(self):
         """Test 100 breakpoints from 100 threads."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_breakpoint_threads=100)
 
     @unittest2.skipIf(TestBase.skipLongRunningTest(), "Skip this long running test")
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_many_watchpoints(self):
         """Test 100 watchpoints from 100 threads."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_watchpoint_threads=100)
 
     @unittest2.skipIf(TestBase.skipLongRunningTest(), "Skip this long running test")
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_many_signals(self):
         """Test 100 signals from 100 threads."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_signal_threads=100)
 
     @unittest2.skipIf(TestBase.skipLongRunningTest(), "Skip this long running test")
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_many_crash(self):
         """Test 100 threads that cause a segfault."""
         self.build(dictionary=self.getBuildFlags())
@@ -58,18 +61,21 @@ class ConcurrentEventsTestCase(TestBase):
     ## Tests for concurrent signal and breakpoint
     #
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_signal_break(self):
         """Test signal and a breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_breakpoint_threads=1, num_signal_threads=1)
 
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_delay_signal_break(self):
         """Test (1-second delay) signal and a breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_breakpoint_threads=1, num_delay_signal_threads=1)
 
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_signal_delay_break(self):
         """Test signal and a (1 second delay) breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -81,6 +87,7 @@ class ConcurrentEventsTestCase(TestBase):
     #
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_watch_break(self):
         """Test watchpoint and a breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -88,6 +95,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_delay_watch_break(self):
         """Test (1-second delay) watchpoint and a breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -95,6 +103,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_watch_break_delay(self):
         """Test watchpoint and a (1 second delay) breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -105,6 +114,7 @@ class ConcurrentEventsTestCase(TestBase):
     #
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_signal_watch(self):
         """Test a watchpoint and a signal in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -112,6 +122,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_delay_signal_watch(self):
         """Test a watchpoint and a (1 second delay) signal in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -120,6 +131,7 @@ class ConcurrentEventsTestCase(TestBase):
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
     @expectedFailureAll("llvm.org/pr16714", oslist=["linux"], archs=["i386"])
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_signal_delay_watch(self):
         """Test a (1 second delay) watchpoint and a signal in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -130,12 +142,14 @@ class ConcurrentEventsTestCase(TestBase):
     ## Tests for multiple breakpoint threads
     #
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_two_breakpoint_threads(self):
         """Test two threads that trigger a breakpoint. """
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_breakpoint_threads=2)
 
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_breakpoint_one_delay_breakpoint_threads(self):
         """Test threads that trigger a breakpoint where one thread has a 1 second delay. """
         self.build(dictionary=self.getBuildFlags())
@@ -143,12 +157,14 @@ class ConcurrentEventsTestCase(TestBase):
                                num_delay_breakpoint_threads=1)
 
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_two_breakpoints_one_signal(self):
         """Test two threads that trigger a breakpoint and one signal thread. """
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_breakpoint_threads=2, num_signal_threads=1)
 
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_breakpoint_delay_breakpoint_one_signal(self):
         """Test two threads that trigger a breakpoint (one with a 1 second delay) and one signal thread. """
         self.build(dictionary=self.getBuildFlags())
@@ -157,6 +173,7 @@ class ConcurrentEventsTestCase(TestBase):
                                num_signal_threads=1)
 
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_two_breakpoints_one_delay_signal(self):
         """Test two threads that trigger a breakpoint and one (1 second delay) signal thread. """
         self.build(dictionary=self.getBuildFlags())
@@ -164,6 +181,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_two_breakpoints_one_watchpoint(self):
         """Test two threads that trigger a breakpoint and one watchpoint thread. """
         self.build(dictionary=self.getBuildFlags())
@@ -171,6 +189,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_breakpoints_delayed_breakpoint_one_watchpoint(self):
         """Test a breakpoint, a delayed breakpoint, and one watchpoint thread. """
         self.build(dictionary=self.getBuildFlags())
@@ -183,6 +202,7 @@ class ConcurrentEventsTestCase(TestBase):
     #
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_two_watchpoint_threads(self):
         """Test two threads that trigger a watchpoint. """
         self.build(dictionary=self.getBuildFlags())
@@ -190,6 +210,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_watchpoint_with_delay_watchpoint_threads(self):
         """Test two threads that trigger a watchpoint where one thread has a 1 second delay. """
         self.build(dictionary=self.getBuildFlags())
@@ -198,6 +219,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_two_watchpoints_one_breakpoint(self):
         """Test two threads that trigger a watchpoint and one breakpoint thread. """
         self.build(dictionary=self.getBuildFlags())
@@ -205,6 +227,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_two_watchpoints_one_delay_breakpoint(self):
         """Test two threads that trigger a watchpoint and one (1 second delay) breakpoint thread. """
         self.build(dictionary=self.getBuildFlags())
@@ -212,6 +235,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_watchpoint_delay_watchpoint_one_breakpoint(self):
         """Test two threads that trigger a watchpoint (one with a 1 second delay) and one breakpoint thread. """
         self.build(dictionary=self.getBuildFlags())
@@ -221,6 +245,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_two_watchpoints_one_signal(self):
         """Test two threads that trigger a watchpoint and one signal thread. """
         self.build(dictionary=self.getBuildFlags())
@@ -231,6 +256,7 @@ class ConcurrentEventsTestCase(TestBase):
     #
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_signal_watch_break(self):
         """Test a signal/watchpoint/breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -240,6 +266,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_signal_watch_break(self):
         """Test one signal thread with 5 watchpoint and breakpoint threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -249,6 +276,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_signal_watch_break(self):
         """Test with 5 watchpoint and breakpoint threads."""
         self.build(dictionary=self.getBuildFlags())
@@ -260,6 +288,7 @@ class ConcurrentEventsTestCase(TestBase):
     ## Test for crashing threads happening concurrently with other events
     #
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_crash_with_break(self):
         """ Test a thread that crashes while another thread hits a breakpoint."""
         self.build(dictionary=self.getBuildFlags())
@@ -267,12 +296,14 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_crash_with_watchpoint(self):
         """ Test a thread that crashes while another thread hits a watchpoint."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_crash_threads=1, num_watchpoint_threads=1)
 
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_crash_with_signal(self):
         """ Test a thread that crashes while another thread generates a signal."""
         self.build(dictionary=self.getBuildFlags())
@@ -280,6 +311,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_crash_with_watchpoint_breakpoint_signal(self):
         """ Test a thread that crashes while other threads generate a signal and hit a watchpoint and breakpoint. """
         self.build(dictionary=self.getBuildFlags())
@@ -290,6 +322,7 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_delayed_crash_with_breakpoint_watchpoint(self):
         """ Test a thread with a delayed crash while other threads hit a watchpoint and a breakpoint. """
         self.build(dictionary=self.getBuildFlags())
@@ -298,6 +331,7 @@ class ConcurrentEventsTestCase(TestBase):
                                num_watchpoint_threads=1)
 
     @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_delayed_crash_with_breakpoint_signal(self):
         """ Test a thread with a delayed crash while other threads generate a signal and hit a breakpoint. """
         self.build(dictionary=self.getBuildFlags())

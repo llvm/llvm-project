@@ -11,7 +11,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_body
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_for_body[i0] : i0 <= 15 and i0 >= 0 };
+; CHECK-NEXT:             { Stmt_for_body[i0] : 0 <= i0 <= 15 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_for_body[i0] -> [i0, 0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -20,7 +20,7 @@
 ; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_if_then
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_if_then[i0] : i0 <= 7 and i0 >= 6 };
+; CHECK-NEXT:             { Stmt_if_then[i0] : 6 <= i0 <= 7 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_if_then[i0] -> [i0, 1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]

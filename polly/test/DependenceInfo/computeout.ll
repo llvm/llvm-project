@@ -55,7 +55,7 @@ exit.3:
 ; VALUE-NEXT: WAR dependences:
 ; VALUE-NEXT:     {  }
 ; VALUE-NEXT: WAW dependences:
-; VALUE-NEXT:     { Stmt_S1[i0] -> Stmt_S2[i0] : i0 <= 9 and i0 >= 0; Stmt_S2[i0] -> Stmt_S3[i0] : i0 <= 9 and i0 >= 0; Stmt_S1[i0] -> Stmt_S3[i0] : i0 <= 99 and i0 >= 10 }
+; VALUE-NEXT:     { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99 }
 
 ; TIMEOUT:      RAW dependences:
 ; TIMEOUT-NEXT:     n/a

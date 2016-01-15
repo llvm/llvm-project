@@ -673,6 +673,22 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
     }
   }
 
+  // Handle obsolete ObjC options: -objc_gc_compaction, -objc_gc, -objc_gc_only
+  if (parsedArgs.getLastArg(OPT_objc_gc_compaction)) {
+    diagnostics << "error: -objc_gc_compaction is not supported\n";
+    return false;
+  }
+
+  if (parsedArgs.getLastArg(OPT_objc_gc)) {
+    diagnostics << "error: -objc_gc is not supported\n";
+    return false;
+  }
+
+  if (parsedArgs.getLastArg(OPT_objc_gc_only)) {
+    diagnostics << "error: -objc_gc_only is not supported\n";
+    return false;
+  }
+
   // Handle -pie or -no_pie
   if (llvm::opt::Arg *pie = parsedArgs.getLastArg(OPT_pie, OPT_no_pie)) {
     switch (ctx.outputMachOType()) {

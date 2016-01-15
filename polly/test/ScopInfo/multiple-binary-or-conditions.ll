@@ -11,7 +11,7 @@
 ; CHECK: Function: or
 ; CHECK:   Stmt_if_then
 ; CHECK:     Domain :=
-; CHECK:       [n, m, p] -> { Stmt_if_then[i0] : (i0 >= 1 + p and i0 <= 99 and i0 >= 0) or (i0 <= 99 and i0 >= 0 and i0 <= -1 + m) or (i0 <= 99 and i0 >= 0 and i0 <= -1 + n) };
+; CHECK:       [n, m, p] -> { Stmt_if_then[i0] : 0 <= i0 <= 99 and (i0 > p or i0 < m or i0 < n) };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

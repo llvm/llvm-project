@@ -1608,7 +1608,7 @@ static __isl_give isl_map *floyd_warshall_with_groups(__isl_take isl_space *dim,
 
 	floyd_warshall_iterate(grid, n, exact);
 
-	app = isl_map_empty(isl_map_get_space(map));
+	app = isl_map_empty(isl_map_get_space(grid[0][0]));
 
 	for (i = 0; i < n; ++i) {
 		for (j = 0; j < n; ++j)

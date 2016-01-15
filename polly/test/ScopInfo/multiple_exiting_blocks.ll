@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
 ; CHECK: Domain :=
-; CHECK:   [N, P, Q] -> { Stmt_if_end[i0] : (i0 >= 0 and i0 <= 1 + Q and i0 <= -1 + P and i0 <= -1 + N) or (P <= -1 and i0 >= 2 + P and i0 >= 0 and i0 <= 1 + Q and i0 <= -1 + N); Stmt_if_end[0] : (N >= 1 and P <= -2 and Q <= -2) or (N >= 1 and P >= 1 and Q <= -2) or (P = -1 and N >= 1) }
+; CHECK:   [N, P, Q] -> { Stmt_if_end[i0] : 0 <= i0 <= 1 + Q and i0 < N and (i0 < P or (P < 0 and i0 >= 2 + P)); Stmt_if_end[0] : N > 0 and ((P <= -2 and Q <= -2) or (P > 0 and Q <= -2) or P = -1) };
 ;
 ;    void f(int *A, int N, int P, int Q) {
 ;      for (int i = 0; i < N; i++) {

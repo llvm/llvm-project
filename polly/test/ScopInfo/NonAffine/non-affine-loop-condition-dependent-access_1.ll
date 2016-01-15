@@ -31,15 +31,15 @@
 ; SCALAR-NEXT: Statements {
 ; SCALAR-NEXT:     Stmt_bb3__TO__bb11
 ; SCALAR-NEXT:         Domain :=
-; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] : i0 <= 1023 and i0 >= 0 };
+; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] : 0 <= i0 <= 1023 };
 ; SCALAR-NEXT:         Schedule :=
 ; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> [i0] };
 ; SCALAR-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> MemRef_C[i0] };
 ; SCALAR-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
-; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= -2147483648 };
+; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> MemRef_A[o0] : -2147483648 <= o0 <= 2147483645 };
 ; SCALAR-NEXT:         MayWriteAccess :=    [Reduction Type: +] [Scalar: 0]
-; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= -2147483648 };
+; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> MemRef_A[o0] : -2147483648 <= o0 <= 2147483645 };
 ; SCALAR-NEXT: }
 
 ; PROFIT-NOT: Statements

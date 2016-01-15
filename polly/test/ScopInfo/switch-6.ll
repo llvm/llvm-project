@@ -24,7 +24,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_sw_bb
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb[0] : N >= 1 };
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[0] : N > 0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> [0, 3] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]

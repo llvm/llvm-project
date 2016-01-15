@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-struct isl_point;
+struct __isl_subclass(isl_basic_set) isl_point;
 typedef struct isl_point isl_point;
 
 isl_ctx *isl_point_get_ctx(__isl_keep isl_point *pnt);

@@ -9,16 +9,16 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb1
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] : i0 >= 0 and i0 <= N; Stmt_bb1[0] : N <= -1 };
+; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] : 0 <= i0 <= N; Stmt_bb1[0] : N < 0 };
 ; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] -> [i0, 0] : i0 <= N; Stmt_bb1[0] -> [0, 0] : N <= -1 };
+; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] -> [i0, 0] : i0 <= N; Stmt_bb1[0] -> [0, 0] : N < 0 };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] -> MemRef_tmp_0__phi[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] -> MemRef_tmp_0[] };
 ; CHECK-NEXT:     Stmt_bb4
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] : i0 <= -1 + N and i0 >= 0 };
+; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] : 0 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> [i0, 1] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]

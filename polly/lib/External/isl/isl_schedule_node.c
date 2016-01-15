@@ -772,7 +772,7 @@ __isl_give isl_union_map *isl_schedule_node_get_prefix_schedule_union_map(
  * there is also a filter ancestor that filters out all the extended
  * domain elements.
  *
- * Essentially, this functions intersected the domain of the output
+ * Essentially, this function intersects the domain of the output
  * of isl_schedule_node_get_prefix_schedule_union_map with the output
  * of isl_schedule_node_get_domain, except that it only traverses
  * the ancestors of "node" once.
@@ -2088,6 +2088,39 @@ error:
 	return NULL;
 }
 
+/* Intersect the filter of filter node "node" with "filter".
+ *
+ * If the filter of the node is already a subset of "filter",
+ * then leave the node unchanged.
+ */
+__isl_give isl_schedule_node *isl_schedule_node_filter_intersect_filter(
+	__isl_take isl_schedule_node *node, __isl_take isl_union_set *filter)
+{
+	isl_union_set *node_filter = NULL;
+	isl_bool subset;
+
+	if (!node || !filter)
+		goto error;
+
+	node_filter = isl_schedule_node_filter_get_filter(node);
+	subset = isl_union_set_is_subset(node_filter, filter);
+	if (subset < 0)
+		goto error;
+	if (subset) {
+		isl_union_set_free(node_filter);
+		isl_union_set_free(filter);
+		return node;
+	}
+	node_filter = isl_union_set_intersect(node_filter, filter);
+	node = isl_schedule_node_filter_set_filter(node, node_filter);
+	return node;
+error:
+	isl_schedule_node_free(node);
+	isl_union_set_free(node_filter);
+	isl_union_set_free(filter);
+	return NULL;
+}
+
 /* Return the guard of the guard node "node".
  */
 __isl_give isl_set *isl_schedule_node_guard_get_guard(
@@ -2136,6 +2169,50 @@ error:
 	isl_schedule_node_free(node);
 	isl_schedule_tree_free(tree);
 	return NULL;
+}
+
+/* Given a sequence node "node", with a child at position "pos" that
+ * is also a sequence node, attach the children of that node directly
+ * as children of "node" at that position, replacing the original child.
+ *
+ * The filters of these children are intersected with the filter
+ * of the child at position "pos".
+ */
+__isl_give isl_schedule_node *isl_schedule_node_sequence_splice_child(
+	__isl_take isl_schedule_node *node, int pos)
+{
+	int i, n;
+	isl_union_set *filter;
+	isl_schedule_node *child;
+	isl_schedule_tree *tree;
+
+	if (!node)
+		return NULL;
+	if (isl_schedule_node_get_type(node) != isl_schedule_node_sequence)
+		isl_die(isl_schedule_node_get_ctx(node), isl_error_invalid,
+			"not a sequence node", isl_schedule_node_free(node));
+	node = isl_schedule_node_child(node, pos);
+	node = isl_schedule_node_child(node, 0);
+	if (isl_schedule_node_get_type(node) != isl_schedule_node_sequence)
+		isl_die(isl_schedule_node_get_ctx(node), isl_error_invalid,
+			"not a sequence node", isl_schedule_node_free(node));
+	child = isl_schedule_node_copy(node);
+	node = isl_schedule_node_parent(node);
+	filter = isl_schedule_node_filter_get_filter(node);
+	n = isl_schedule_node_n_children(child);
+	for (i = 0; i < n; ++i) {
+		child = isl_schedule_node_child(child, i);
+		child = isl_schedule_node_filter_intersect_filter(child,
+						isl_union_set_copy(filter));
+		child = isl_schedule_node_parent(child);
+	}
+	isl_union_set_free(filter);
+	tree = isl_schedule_node_get_tree(child);
+	isl_schedule_node_free(child);
+	node = isl_schedule_node_parent(node);
+	node = isl_schedule_node_sequence_splice(node, pos, tree);
+
+	return node;
 }
 
 /* Update the ancestors of "node" to point to the tree that "node"
@@ -2418,6 +2495,8 @@ __isl_give isl_schedule_node *isl_schedule_node_insert_mark(
  * with filters described by "filters", attach this sequence
  * of filter tree nodes as children to a new tree of type "type" and
  * replace the original subtree of "node" by this new tree.
+ * Each copy of the original subtree is simplified with respect
+ * to the corresponding filter.
  */
 static __isl_give isl_schedule_node *isl_schedule_node_insert_children(
 	__isl_take isl_schedule_node *node,
@@ -2439,11 +2518,16 @@ static __isl_give isl_schedule_node *isl_schedule_node_insert_children(
 	n = isl_union_set_list_n_union_set(filters);
 	list = isl_schedule_tree_list_alloc(ctx, n);
 	for (i = 0; i < n; ++i) {
+		isl_schedule_node *node_i;
 		isl_schedule_tree *tree;
 		isl_union_set *filter;
 
-		tree = isl_schedule_node_get_tree(node);
 		filter = isl_union_set_list_get_union_set(filters, i);
+		node_i = isl_schedule_node_copy(node);
+		node_i = isl_schedule_node_gist(node_i,
+						isl_union_set_copy(filter));
+		tree = isl_schedule_node_get_tree(node_i);
+		isl_schedule_node_free(node_i);
 		tree = isl_schedule_tree_insert_filter(tree, filter);
 		list = isl_schedule_tree_list_add(list, tree);
 	}
@@ -4206,7 +4290,8 @@ __isl_give isl_schedule_node *isl_schedule_node_graft_after(
 
 /* Split the domain elements that reach "node" into those that satisfy
  * "filter" and those that do not.  Arrange for the first subset to be
- * executed after the second subset.
+ * executed before or after the second subset, depending on the value
+ * of "before".
  * Return a pointer to the tree corresponding to the second subset,
  * except when this subset is empty in which case the original pointer
  * is returned.
@@ -4217,8 +4302,9 @@ __isl_give isl_schedule_node *isl_schedule_node_graft_after(
  * The children in the sequence are copies of the original subtree,
  * simplified with respect to their filters.
  */
-__isl_give isl_schedule_node *isl_schedule_node_order_after(
-	__isl_take isl_schedule_node *node, __isl_take isl_union_set *filter)
+static __isl_give isl_schedule_node *isl_schedule_node_order_before_or_after(
+	__isl_take isl_schedule_node *node, __isl_take isl_union_set *filter,
+	int before)
 {
 	enum isl_schedule_node_type ancestors[] =
 		{ isl_schedule_node_filter, isl_schedule_node_sequence };
@@ -4262,9 +4348,14 @@ __isl_give isl_schedule_node *isl_schedule_node_order_after(
 	isl_schedule_node_free(node2);
 	tree1 = isl_schedule_tree_insert_filter(tree1, node_filter);
 	tree2 = isl_schedule_tree_insert_filter(tree2, filter);
-	tree1 = isl_schedule_tree_sequence_pair(tree1, tree2);
 
-	node = graft_or_splice(node, tree1, 0);
+	if (before) {
+		tree1 = isl_schedule_tree_sequence_pair(tree2, tree1);
+		node = graft_or_splice(node, tree1, 1);
+	} else {
+		tree1 = isl_schedule_tree_sequence_pair(tree1, tree2);
+		node = graft_or_splice(node, tree1, 0);
+	}
 
 	return node;
 error:
@@ -4272,6 +4363,32 @@ error:
 	isl_union_set_free(filter);
 	isl_union_set_free(node_filter);
 	return NULL;
+}
+
+/* Split the domain elements that reach "node" into those that satisfy
+ * "filter" and those that do not.  Arrange for the first subset to be
+ * executed before the second subset.
+ * Return a pointer to the tree corresponding to the second subset,
+ * except when this subset is empty in which case the original pointer
+ * is returned.
+ */
+__isl_give isl_schedule_node *isl_schedule_node_order_before(
+	__isl_take isl_schedule_node *node, __isl_take isl_union_set *filter)
+{
+	return isl_schedule_node_order_before_or_after(node, filter, 1);
+}
+
+/* Split the domain elements that reach "node" into those that satisfy
+ * "filter" and those that do not.  Arrange for the first subset to be
+ * executed after the second subset.
+ * Return a pointer to the tree corresponding to the second subset,
+ * except when this subset is empty in which case the original pointer
+ * is returned.
+ */
+__isl_give isl_schedule_node *isl_schedule_node_order_after(
+	__isl_take isl_schedule_node *node, __isl_take isl_union_set *filter)
+{
+	return isl_schedule_node_order_before_or_after(node, filter, 0);
 }
 
 /* Reset the user pointer on all identifiers of parameters and tuples
@@ -4427,4 +4544,25 @@ void isl_schedule_node_dump(__isl_keep isl_schedule_node *node)
 	printer = isl_printer_print_schedule_node(printer, node);
 
 	isl_printer_free(printer);
+}
+
+/* Return a string representation of "node".
+ * Print the schedule node in block format as it would otherwise
+ * look identical to the entire schedule.
+ */
+__isl_give char *isl_schedule_node_to_str(__isl_keep isl_schedule_node *node)
+{
+	isl_printer *printer;
+	char *s;
+
+	if (!node)
+		return NULL;
+
+	printer = isl_printer_to_str(isl_schedule_node_get_ctx(node));
+	printer = isl_printer_set_yaml_style(printer, ISL_YAML_STYLE_BLOCK);
+	printer = isl_printer_print_schedule_node(printer, node);
+	s = isl_printer_get_str(printer);
+	isl_printer_free(printer);
+
+	return s;
 }

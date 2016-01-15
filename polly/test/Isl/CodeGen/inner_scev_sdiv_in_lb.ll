@@ -3,7 +3,7 @@
 ; RUN: opt %loadPolly \
 ; RUN:      -S -polly-codegen < %s | FileCheck %s --check-prefix=CODEGEN
 ;
-; CHECK: [N] -> { Stmt_bb11[i0, i1] : i0 <= -1 + N and i1 >= 0 and 3i1 <= -3 + i0 };
+; CHECK: [N] -> { Stmt_bb11[i0, i1] : i0 < N and i1 >= 0 and 3i1 <= -3 + i0 };
 ; CODEGEN: polly
 ;
 ;    void f(int *A, int N) {

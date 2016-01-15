@@ -46,6 +46,7 @@ __isl_give isl_union_set *isl_union_set_simple_hull(
 __isl_export
 __isl_give isl_union_set *isl_union_set_coalesce(
 	__isl_take isl_union_set *uset);
+__isl_export
 __isl_give isl_union_set *isl_union_set_compute_divs(
 	__isl_take isl_union_set *uset);
 __isl_export
@@ -55,6 +56,7 @@ __isl_give isl_union_set *isl_union_set_lexmax(__isl_take isl_union_set *uset);
 
 __isl_give isl_union_set *isl_union_set_add_set(__isl_take isl_union_set *uset,
 	__isl_take isl_set *set);
+__isl_export
 __isl_give isl_union_set *isl_union_set_union(__isl_take isl_union_set *uset1,
 	__isl_take isl_union_set *uset2);
 __isl_export
@@ -115,10 +117,17 @@ __isl_give int isl_union_set_contains(__isl_keep isl_union_set *uset,
 __isl_give isl_set *isl_union_set_extract_set(__isl_keep isl_union_set *uset,
 	__isl_take isl_space *dim);
 __isl_give isl_set *isl_set_from_union_set(__isl_take isl_union_set *uset);
+__isl_export
 isl_stat isl_union_set_foreach_point(__isl_keep isl_union_set *uset,
 	isl_stat (*fn)(__isl_take isl_point *pnt, void *user), void *user);
 
 __isl_give isl_basic_set *isl_union_set_sample(__isl_take isl_union_set *uset);
+__isl_export
+__isl_give isl_point *isl_union_set_sample_point(
+	__isl_take isl_union_set *uset);
+
+__isl_constructor
+__isl_give isl_union_set *isl_union_set_from_point(__isl_take isl_point *pnt);
 
 __isl_give isl_union_set *isl_union_set_lift(__isl_take isl_union_set *uset);
 

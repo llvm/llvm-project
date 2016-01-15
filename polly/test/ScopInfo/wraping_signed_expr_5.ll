@@ -4,7 +4,7 @@
 ; to overflow. However (p + q) can, thus checks are needed.
 ;
 ; CHECK:      Boundary Context:
-; CHECK-NEXT: [r1, r2, q, p] -> {  : r2 <= 127 + r1 and p <= 2147483647 - q and p >= -2147483648 - q }
+; CHECK-NEXT: [r1, r2, q, p] -> {  : r2 <= 127 + r1 and -2147483648 - q <= p <= 2147483647 - q }
 ;
 ;    void wraps(int *A, int p, short q, char r1, char r2) {
 ;      for (char i = r1; i < r2; i++)

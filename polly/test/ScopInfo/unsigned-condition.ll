@@ -39,7 +39,7 @@ return:
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_store
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] : P >= 42 and i0 >= 0 and i0 <= -1 + N };
+; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] : P >= 42 and 0 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] -> [i0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

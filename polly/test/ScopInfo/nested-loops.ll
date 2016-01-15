@@ -31,7 +31,7 @@ return:
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_body
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_body[i0, i1] : i0 <= 2046 and i0 >= 0 and i1 <= 1022 and i1 >= 0 };
+; CHECK-NEXT:             { Stmt_body[i0, i1] : 0 <= i0 <= 2046 and 0 <= i1 <= 1022 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_body[i0, i1] -> [i0, i1] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

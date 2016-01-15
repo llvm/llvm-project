@@ -4,13 +4,13 @@
 ; accesses to the array A. We need to ensure we keep the dependences of A.
 ;
 ; CHECK:      RAW dependences:
-; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 >= 0 and i0 <= 1022 }
+; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : 0 <= i0 <= 1022 }
 ; CHECK-NEXT: WAR dependences:
 ; CHECK-NEXT:     {  }
 ; CHECK-NEXT: WAW dependences:
-; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 <= 1022 and i0 >= 0 }
+; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : 0 <= i0 <= 1022 }
 ; CHECK-NEXT: Reduction dependences:
-; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 <= 1022 and i0 >= 0 }
+; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : 0 <= i0 <= 1022 }
 ;
 ;
 ;    void AandSum(int *restrict sum, int *restrict A) {

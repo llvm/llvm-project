@@ -193,8 +193,8 @@ am__libisl_la_SOURCES_DIST = mp_get_memory_functions.c isl_int_gmp.h \
 	isl_map_subtract.c isl_map_private.h isl_map_to_basic_set.c \
 	isl_mat.c isl_mat_private.h isl_morph.c isl_morph.h isl_id.c \
 	isl_id_private.h isl_obj.c isl_options.c isl_options_private.h \
-	isl_output.c isl_point_private.h isl_point.c \
-	isl_polynomial_private.h isl_polynomial.c \
+	isl_output.c isl_output_private.h isl_point_private.h \
+	isl_point.c isl_polynomial_private.h isl_polynomial.c \
 	isl_printer_private.h isl_printer.c print.c isl_range.c \
 	isl_range.h isl_reordering.c isl_reordering.h isl_sample.h \
 	isl_sample.c isl_scan.c isl_scan.h isl_schedule.c \
@@ -888,6 +888,7 @@ libisl_la_SOURCES = \
 	isl_options.c \
 	isl_options_private.h \
 	isl_output.c \
+	isl_output_private.h \
 	isl_point_private.h \
 	isl_point.c \
 	isl_polynomial_private.h \

@@ -5,7 +5,7 @@
 ; loop bounds. However, the new domain generation will detect the SCoP.
 
 ; CHECK:      Context:
-; CHECK-NEXT: [n] -> {  : n <= 2147483647 and n >= -2147483648 }
+; CHECK-NEXT: [n] -> {  : -2147483648 <= n <= 2147483647 }
 ;
 ; CHECK:      p0: %n
 ;

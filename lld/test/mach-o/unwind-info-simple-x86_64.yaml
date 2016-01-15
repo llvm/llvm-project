@@ -117,10 +117,6 @@ defined-atoms:
   - name:            _main
     scope:           global
     content:         [ C3 ]
-    references:
-      - kind:            branch32
-        offset:          9
-        target:          __Z3barv
   - name:            _needsDwarfButNoCompactUnwind
     scope:           global
     content:         [ C3 ]

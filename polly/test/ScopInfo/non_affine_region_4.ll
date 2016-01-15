@@ -29,7 +29,7 @@
 ; CHECK:       Statements {
 ; CHECK-NEXT:      Stmt_bb2__TO__bb7
 ; CHECK-NEXT:          Domain :=
-; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] : i0 <= 1023 and i0 >= 0 };
+; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] : 0 <= i0 <= 1023 };
 ; CHECK-NEXT:          Schedule :=
 ; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> [i0, 0] };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -42,7 +42,7 @@
 ; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_y__phi[] };
 ; CHECK-NEXT:      Stmt_bb7
 ; CHECK-NEXT:          Domain :=
-; CHECK-NEXT:              { Stmt_bb7[i0] : i0 <= 1023 and i0 >= 0 };
+; CHECK-NEXT:              { Stmt_bb7[i0] : 0 <= i0 <= 1023 };
 ; CHECK-NEXT:          Schedule :=
 ; CHECK-NEXT:              { Stmt_bb7[i0] -> [i0, 1] };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]

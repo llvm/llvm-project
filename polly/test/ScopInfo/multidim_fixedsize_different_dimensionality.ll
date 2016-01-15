@@ -29,7 +29,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb7
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_bb7[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] : 0 <= i0 <= 399 and 0 <= i1 <= 399 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> [0, i0, i1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -49,7 +49,7 @@
 ; CHECK-NEXT:             { Stmt_bb17[] -> MemRef_A[0, 0] };
 ; CHECK-NEXT:     Stmt_bb26
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_bb26[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] : 0 <= i0 <= 399 and 0 <= i1 <= 399 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> [2, i0, i1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -61,7 +61,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb7
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_bb7[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] : 0 <= i0 <= 399 and 0 <= i1 <= 399 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> [0, i0, i1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -81,7 +81,7 @@
 ; CHECK-NEXT:             { Stmt_bb17[] -> MemRef_A[0, 0] };
 ; CHECK-NEXT:     Stmt_bb26
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_bb26[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] : 0 <= i0 <= 399 and 0 <= i1 <= 399 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> [2, i0, i1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]

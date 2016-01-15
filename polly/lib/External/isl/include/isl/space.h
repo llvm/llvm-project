@@ -141,6 +141,9 @@ __isl_give isl_space *isl_space_zip(__isl_take isl_space *dim);
 isl_bool isl_space_can_curry(__isl_keep isl_space *space);
 __isl_give isl_space *isl_space_curry(__isl_take isl_space *space);
 
+isl_bool isl_space_can_range_curry(__isl_keep isl_space *space);
+__isl_give isl_space *isl_space_range_curry(__isl_take isl_space *space);
+
 isl_bool isl_space_can_uncurry(__isl_keep isl_space *space);
 __isl_give isl_space *isl_space_uncurry(__isl_take isl_space *space);
 

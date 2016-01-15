@@ -53,9 +53,9 @@
 ; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_BC[] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_S_BC
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_BC[] : bool_cond <= -1 or bool_cond >= 1 };
+; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_BC[] : bool_cond < 0 or bool_cond > 0 };
 ; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_BC[] -> [1] : bool_cond <= -1 or bool_cond >= 1 };
+; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_BC[] -> [1] : bool_cond < 0 or bool_cond > 0 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_BC[] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_M_BC
@@ -95,7 +95,7 @@
 ; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_SLT[] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_S_SLT
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_SLT[] : rhs >= 1 + lhs };
+; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_SLT[] : rhs > lhs };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_SLT[] -> [7] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -137,7 +137,7 @@
 ; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_SGT[] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_S_SGT
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_SGT[] : rhs <= -1 + lhs };
+; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_SGT[] : rhs < lhs };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_SGT[] -> [13] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
@@ -200,9 +200,9 @@
 ; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_NEQ[] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_S_NEQ
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_NEQ[] : rhs >= 1 + lhs or rhs <= -1 + lhs };
+; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_NEQ[] : rhs > lhs or rhs < lhs };
 ; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_NEQ[] -> [22] : rhs >= 1 + lhs or rhs <= -1 + lhs };
+; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_NEQ[] -> [22] : rhs > lhs or rhs < lhs };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [bool_cond, lhs, rhs] -> { Stmt_S_NEQ[] -> MemRef_A[0] };
 ; CHECK-NEXT:     Stmt_M_NEQ

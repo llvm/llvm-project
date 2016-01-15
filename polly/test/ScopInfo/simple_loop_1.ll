@@ -35,7 +35,7 @@ return:                                           ; preds = %bb, %entry
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_bb[i0] : i0 >= 0 and i0 <= -1 + N };
+; CHECK-NEXT:             [N] -> { Stmt_bb[i0] : 0 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_bb[i0] -> [i0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

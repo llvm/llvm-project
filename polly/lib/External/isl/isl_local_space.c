@@ -740,18 +740,20 @@ int isl_local_space_div_is_known(__isl_keep isl_local_space *ls, int div)
 	return !isl_int_is_zero(ls->div->row[div][0]);
 }
 
-int isl_local_space_divs_known(__isl_keep isl_local_space *ls)
+/* Does "ls" have an explicit representation for all local variables?
+ */
+isl_bool isl_local_space_divs_known(__isl_keep isl_local_space *ls)
 {
 	int i;
 
 	if (!ls)
-		return -1;
+		return isl_bool_error;
 
 	for (i = 0; i < ls->div->n_row; ++i)
 		if (isl_int_is_zero(ls->div->row[i][0]))
-			return 0;
+			return isl_bool_false;
 
-	return 1;
+	return isl_bool_true;
 }
 
 __isl_give isl_local_space *isl_local_space_domain(

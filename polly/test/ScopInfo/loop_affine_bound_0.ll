@@ -57,7 +57,7 @@ return:                                           ; preds = %bb.nph8, %bb3, %ent
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb1
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] : i0 >= 0 and i0 <= 2 + 4N + 7M and i1 >= 0 and i1 <= 1 + 5N };
+; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] : 0 <= i0 <= 2 + 4N + 7M and 0 <= i1 <= 1 + 5N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] -> [i0, i1] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

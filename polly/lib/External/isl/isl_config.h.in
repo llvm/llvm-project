@@ -197,4 +197,7 @@
 /* Define to getResultType for older versions of clang */
 #undef getReturnType
 
+/* Define to InitializeBuiltins for older versions of clang */
+#undef initializeBuiltins
+
 #include <isl_config_post.h>

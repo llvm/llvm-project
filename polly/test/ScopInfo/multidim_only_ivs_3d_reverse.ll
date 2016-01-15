@@ -25,7 +25,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_j
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [m, o, n] -> { Stmt_for_j[i0, i1, i2] : i0 >= 0 and i0 <= -1 + n and i1 >= 0 and i1 <= -1 + o and i2 >= 0 and i2 <= -1 + m };
+; CHECK-NEXT:             [m, o, n] -> { Stmt_for_j[i0, i1, i2] : 0 <= i0 < n and 0 <= i1 < o and 0 <= i2 < m };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [m, o, n] -> { Stmt_for_j[i0, i1, i2] -> [i0, i1, i2] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

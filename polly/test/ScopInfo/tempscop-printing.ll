@@ -16,7 +16,7 @@
 ; CHECK:       Statements {
 ; CHECK-NEXT:      Stmt_for_j
 ; CHECK-NEXT:          Domain :=
-; CHECK-NEXT:              [N] -> { Stmt_for_j[i0, i1] : i0 >= 0 and i0 <= -1 + N and i1 >= 0 and i1 <= -1 + N };
+; CHECK-NEXT:              [N] -> { Stmt_for_j[i0, i1] : 0 <= i0 < N and 0 <= i1 < N };
 ; CHECK-NEXT:          Schedule :=
 ; CHECK-NEXT:              [N] -> { Stmt_for_j[i0, i1] -> [i0, i1] };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
@@ -30,7 +30,7 @@
 ; CHECK:       Statements {
 ; CHECK-NEXT:      Stmt_for_j
 ; CHECK-NEXT:          Domain :=
-; CHECK-NEXT:              [N] -> { Stmt_for_j[i0, i1] : i0 >= 0 and i0 <= -1 + N and i1 >= 0 and i1 <= -1 + N };
+; CHECK-NEXT:              [N] -> { Stmt_for_j[i0, i1] : 0 <= i0 < N and 0 <= i1 < N };
 ; CHECK-NEXT:          Schedule :=
 ; CHECK-NEXT:              [N] -> { Stmt_for_j[i0, i1] -> [i0, i1] };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]

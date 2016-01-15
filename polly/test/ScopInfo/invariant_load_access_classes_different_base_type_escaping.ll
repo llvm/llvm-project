@@ -30,7 +30,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_do_body
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             { Stmt_do_body[i0] : i0 <= 1000 and i0 >= 0 };
+; CHECK-NEXT:             { Stmt_do_body[i0] : 0 <= i0 <= 1000 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_do_body[i0] -> [i0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

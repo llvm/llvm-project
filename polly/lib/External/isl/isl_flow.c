@@ -167,6 +167,8 @@ struct isl_labeled_map {
  *
  * domain_map is an auxiliary map that maps the sink access relation
  * to the domain of this access relation.
+ * This field is only needed when restrict_fn is set and
+ * the field itself is set by isl_access_info_compute_flow.
  *
  * restrict_fn is a callback that (if not NULL) will be called
  * right before any lexicographical maximization.
@@ -1062,18 +1064,17 @@ error:
  *
  * To deal with multi-valued sink access relations, the sink iteration
  * domain is first extended with dimensions that correspond to the data
- * space.  After the computation is finished, these extra dimensions are
- * projected out again.
+ * space.  However, these extra dimensions are not projected out again.
+ * It is up to the caller to decide whether these dimensions should be kept.
  */
-__isl_give isl_flow *isl_access_info_compute_flow(__isl_take isl_access_info *acc)
+static __isl_give isl_flow *access_info_compute_flow_core(
+	__isl_take isl_access_info *acc)
 {
-	int j;
 	struct isl_flow *res = NULL;
 
 	if (!acc)
 		return NULL;
 
-	acc->domain_map = isl_map_domain_map(isl_map_copy(acc->sink.map));
 	acc->sink.map = isl_map_range_map(acc->sink.map);
 	if (!acc->sink.map)
 		goto error;
@@ -1084,22 +1085,56 @@ __isl_give isl_flow *isl_access_info_compute_flow(__isl_take isl_access_info *ac
 		acc = isl_access_info_sort_sources(acc);
 		res = compute_val_based_dependences(acc);
 	}
+	acc = isl_access_info_free(acc);
 	if (!res)
-		goto error;
-
-	for (j = 0; j < res->n_source; ++j) {
-		res->dep[j].map = isl_map_apply_range(res->dep[j].map,
-					isl_map_copy(acc->domain_map));
-		if (!res->dep[j].map)
-			goto error;
-	}
+		return NULL;
 	if (!res->must_no_source || !res->may_no_source)
 		goto error;
-
-	isl_access_info_free(acc);
 	return res;
 error:
 	isl_access_info_free(acc);
+	isl_flow_free(res);
+	return NULL;
+}
+
+/* Given a "sink" access, a list of n "source" accesses,
+ * compute for each iteration of the sink access
+ * and for each element accessed by that iteration,
+ * the source access in the list that last accessed the
+ * element accessed by the sink access before this sink access.
+ * Each access is given as a map from the loop iterators
+ * to the array indices.
+ * The result is a list of n relations between source and sink
+ * iterations and a subset of the domain of the sink access,
+ * corresponding to those iterations that access an element
+ * not previously accessed.
+ *
+ * To deal with multi-valued sink access relations,
+ * access_info_compute_flow_core extends the sink iteration domain
+ * with dimensions that correspond to the data space.  These extra dimensions
+ * are projected out from the result of access_info_compute_flow_core.
+ */
+__isl_give isl_flow *isl_access_info_compute_flow(__isl_take isl_access_info *acc)
+{
+	int j;
+	struct isl_flow *res;
+
+	if (!acc)
+		return NULL;
+
+	acc->domain_map = isl_map_domain_map(isl_map_copy(acc->sink.map));
+	res = access_info_compute_flow_core(acc);
+	if (!res)
+		return NULL;
+
+	for (j = 0; j < res->n_source; ++j) {
+		res->dep[j].map = isl_map_range_factor_domain(res->dep[j].map);
+		if (!res->dep[j].map)
+			goto error;
+	}
+
+	return res;
+error:
 	isl_flow_free(res);
 	return NULL;
 }
@@ -1368,6 +1403,70 @@ __isl_give isl_union_access_info *isl_union_access_info_copy(
 	return copy;
 }
 
+/* Print a key-value pair of a YAML mapping to "p",
+ * with key "name" and value "umap".
+ */
+static __isl_give isl_printer *print_union_map_field(__isl_take isl_printer *p,
+	const char *name, __isl_keep isl_union_map *umap)
+{
+	p = isl_printer_print_str(p, name);
+	p = isl_printer_yaml_next(p);
+	p = isl_printer_print_str(p, "\"");
+	p = isl_printer_print_union_map(p, umap);
+	p = isl_printer_print_str(p, "\"");
+	p = isl_printer_yaml_next(p);
+
+	return p;
+}
+
+/* Print the information contained in "access" to "p".
+ * The information is printed as a YAML document.
+ */
+__isl_give isl_printer *isl_printer_print_union_access_info(
+	__isl_take isl_printer *p, __isl_keep isl_union_access_info *access)
+{
+	if (!access)
+		return isl_printer_free(p);
+
+	p = isl_printer_yaml_start_mapping(p);
+	p = print_union_map_field(p, "sink", access->sink);
+	p = print_union_map_field(p, "must_source", access->must_source);
+	p = print_union_map_field(p, "may_source", access->may_source);
+	if (access->schedule) {
+		p = isl_printer_print_str(p, "schedule");
+		p = isl_printer_yaml_next(p);
+		p = isl_printer_print_schedule(p, access->schedule);
+		p = isl_printer_yaml_next(p);
+	} else {
+		p = print_union_map_field(p, "schedule_map",
+						access->schedule_map);
+	}
+	p = isl_printer_yaml_end_mapping(p);
+
+	return p;
+}
+
+/* Return a string representation of the information in "access".
+ * The information is printed in flow format.
+ */
+__isl_give char *isl_union_access_info_to_str(
+	__isl_keep isl_union_access_info *access)
+{
+	isl_printer *p;
+	char *s;
+
+	if (!access)
+		return NULL;
+
+	p = isl_printer_to_str(isl_union_access_info_get_ctx(access));
+	p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_FLOW);
+	p = isl_printer_print_union_access_info(p, access);
+	s = isl_printer_get_str(p);
+	isl_printer_free(p);
+
+	return s;
+}
+
 /* Update the fields of "access" such that they all have the same parameters,
  * keeping in mind that the schedule_map field may be NULL and ignoring
  * the schedule field.
@@ -1457,10 +1556,15 @@ isl_union_access_info_introduce_schedule(
 	return access;
 }
 
-/* This structure epresents the result of a dependence analysis computation.
+/* This structure represents the result of a dependence analysis computation.
  *
- * "must_dep" represents the definite dependences.
- * "may_dep" represents the non-definite dependences.
+ * "must_dep" represents the full definite dependences
+ * "may_dep" represents the full non-definite dependences.
+ * Both are of the form
+ *
+ *	[Source] -> [[Sink -> Data]]
+ *
+ * (after the schedule dimensions have been projected out).
  * "must_no_source" represents the subset of the sink accesses for which
  * definitely no source was found.
  * "may_no_source" represents the subset of the sink accesses for which
@@ -1509,9 +1613,9 @@ void isl_union_flow_dump(__isl_keep isl_union_flow *flow)
 	isl_union_map_dump(flow->may_no_source);
 }
 
-/* Return the definite dependences in "flow".
+/* Return the full definite dependences in "flow", with accessed elements.
  */
-__isl_give isl_union_map *isl_union_flow_get_must_dependence(
+__isl_give isl_union_map *isl_union_flow_get_full_must_dependence(
 	__isl_keep isl_union_flow *flow)
 {
 	if (!flow)
@@ -1519,16 +1623,44 @@ __isl_give isl_union_map *isl_union_flow_get_must_dependence(
 	return isl_union_map_copy(flow->must_dep);
 }
 
-/* Return the possible dependences in "flow", including the definite
- * dependences.
+/* Return the full possible dependences in "flow", including the definite
+ * dependences, with accessed elements.
  */
-__isl_give isl_union_map *isl_union_flow_get_may_dependence(
+__isl_give isl_union_map *isl_union_flow_get_full_may_dependence(
 	__isl_keep isl_union_flow *flow)
 {
 	if (!flow)
 		return NULL;
 	return isl_union_map_union(isl_union_map_copy(flow->must_dep),
 				    isl_union_map_copy(flow->may_dep));
+}
+
+/* Return the definite dependences in "flow", without the accessed elements.
+ */
+__isl_give isl_union_map *isl_union_flow_get_must_dependence(
+	__isl_keep isl_union_flow *flow)
+{
+	isl_union_map *dep;
+
+	if (!flow)
+		return NULL;
+	dep = isl_union_map_copy(flow->must_dep);
+	return isl_union_map_range_factor_domain(dep);
+}
+
+/* Return the possible dependences in "flow", including the definite
+ * dependences, without the accessed elements.
+ */
+__isl_give isl_union_map *isl_union_flow_get_may_dependence(
+	__isl_keep isl_union_flow *flow)
+{
+	isl_union_map *dep;
+
+	if (!flow)
+		return NULL;
+	dep = isl_union_map_union(isl_union_map_copy(flow->must_dep),
+				    isl_union_map_copy(flow->may_dep));
+	return isl_union_map_range_factor_domain(dep);
 }
 
 /* Return the non-definite dependences in "flow".
@@ -1614,6 +1746,20 @@ error:
  * to the iteration domains prior to the dependence analysis by
  * replacing the iteration domain D, by the wrapped map [S -> D].
  * Replace these wrapped maps by the original D.
+ *
+ * In particular, the dependences computed by access_info_compute_flow_core
+ * are of the form
+ *
+ *	[S -> D] -> [[S' -> D'] -> A]
+ *
+ * The schedule dimensions are projected out by first currying the range,
+ * resulting in
+ *
+ *	[S -> D] -> [S' -> [D' -> A]]
+ *
+ * and then computing the factor range
+ *
+ *	D -> [D' -> A]
  */
 static __isl_give isl_union_flow *isl_union_flow_drop_schedule(
 	__isl_take isl_union_flow *flow)
@@ -1621,7 +1767,9 @@ static __isl_give isl_union_flow *isl_union_flow_drop_schedule(
 	if (!flow)
 		return NULL;
 
+	flow->must_dep = isl_union_map_range_curry(flow->must_dep);
 	flow->must_dep = isl_union_map_factor_range(flow->must_dep);
+	flow->may_dep = isl_union_map_range_curry(flow->may_dep);
 	flow->may_dep = isl_union_map_factor_range(flow->may_dep);
 	flow->must_no_source =
 		isl_union_map_domain_factor_range(flow->must_no_source);
@@ -1754,7 +1902,7 @@ static int before(void *first, void *second)
 
 /* Given a sink access, look for all the source accesses that access
  * the same array and perform dataflow analysis on them using
- * isl_access_info_compute_flow.
+ * isl_access_info_compute_flow_core.
  */
 static isl_stat compute_flow(__isl_take isl_map *map, void *user)
 {
@@ -1801,7 +1949,7 @@ static isl_stat compute_flow(__isl_take isl_map *map, void *user)
 					&collect_matching_array, data) < 0)
 		goto error;
 
-	flow = isl_access_info_compute_flow(data->accesses);
+	flow = access_info_compute_flow_core(data->accesses);
 	data->accesses = NULL;
 
 	if (!flow)
@@ -2233,6 +2381,19 @@ error:
 /* Given a scheduled sink access relation "sink", compute the corresponding
  * dependences on the sources in "data" and add the computed dependences
  * to "uf".
+ *
+ * The dependences computed by access_info_compute_flow_core are of the form
+ *
+ *	[S -> I] -> [[S' -> I'] -> A]
+ *
+ * The schedule dimensions are projected out by first currying the range,
+ * resulting in
+ *
+ *	[S -> I] -> [S' -> [I' -> A]]
+ *
+ * and then computing the factor range
+ *
+ *	I -> [I' -> A]
  */
 static __isl_give isl_union_flow *compute_single_flow(
 	__isl_take isl_union_flow *uf, struct isl_scheduled_access *sink,
@@ -2250,7 +2411,7 @@ static __isl_give isl_union_flow *compute_single_flow(
 					&before_node, data->n_source);
 	access = add_matching_sources(access, sink, data);
 
-	flow = isl_access_info_compute_flow(access);
+	flow = access_info_compute_flow_core(access);
 	if (!flow)
 		return isl_union_flow_free(uf);
 
@@ -2264,7 +2425,8 @@ static __isl_give isl_union_flow *compute_single_flow(
 	for (i = 0; i < flow->n_source; ++i) {
 		isl_union_map *dep;
 
-		map = isl_map_factor_range(isl_map_copy(flow->dep[i].map));
+		map = isl_map_range_curry(isl_map_copy(flow->dep[i].map));
+		map = isl_map_factor_range(map);
 		dep = isl_union_map_from_map(map);
 		if (flow->dep[i].must)
 			uf->must_dep = isl_union_map_union(uf->must_dep, dep);
@@ -2369,6 +2531,51 @@ __isl_give isl_union_flow *isl_union_access_info_compute_flow(
 		return compute_flow_schedule(access);
 	else
 		return compute_flow_union_map(access);
+}
+
+/* Print the information contained in "flow" to "p".
+ * The information is printed as a YAML document.
+ */
+__isl_give isl_printer *isl_printer_print_union_flow(
+	__isl_take isl_printer *p, __isl_keep isl_union_flow *flow)
+{
+	isl_union_map *umap;
+
+	if (!flow)
+		return isl_printer_free(p);
+
+	p = isl_printer_yaml_start_mapping(p);
+	p = print_union_map_field(p, "must_dependence", flow->must_dep);
+	umap = isl_union_flow_get_may_dependence(flow);
+	p = print_union_map_field(p, "may_dependence", umap);
+	isl_union_map_free(umap);
+	p = print_union_map_field(p, "must_no_source", flow->must_no_source);
+	umap = isl_union_flow_get_may_no_source(flow);
+	p = print_union_map_field(p, "may_no_source", umap);
+	isl_union_map_free(umap);
+	p = isl_printer_yaml_end_mapping(p);
+
+	return p;
+}
+
+/* Return a string representation of the information in "flow".
+ * The information is printed in flow format.
+ */
+__isl_give char *isl_union_flow_to_str(__isl_keep isl_union_flow *flow)
+{
+	isl_printer *p;
+	char *s;
+
+	if (!flow)
+		return NULL;
+
+	p = isl_printer_to_str(isl_union_flow_get_ctx(flow));
+	p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_FLOW);
+	p = isl_printer_print_union_flow(p, flow);
+	s = isl_printer_get_str(p);
+	isl_printer_free(p);
+
+	return s;
 }
 
 /* Given a collection of "sink" and "source" accesses,

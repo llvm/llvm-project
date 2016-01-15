@@ -13,7 +13,7 @@
 ; CHECK-NEXT:             [p_0, p_1, p_2] -> { Stmt_top_split[] -> MemRef_26[] };
 ; CHECK-NEXT:     Stmt_L_4
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [p_0, p_1, p_2] -> { Stmt_L_4[i0, i1, i2] : i0 >= 0 and i0 <= -1 + p_0 and i1 >= 0 and i1 <= -1 + p_0 and i2 >= 0 and i2 <= -1 + p_0 };
+; CHECK-NEXT:             [p_0, p_1, p_2] -> { Stmt_L_4[i0, i1, i2] : 0 <= i0 < p_0 and 0 <= i1 < p_0 and 0 <= i2 < p_0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [p_0, p_1, p_2] -> { Stmt_L_4[i0, i1, i2] -> [1, i0, i1, i2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]

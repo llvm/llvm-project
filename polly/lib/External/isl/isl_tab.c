@@ -1883,6 +1883,7 @@ int isl_tab_add_ineq(struct isl_tab *tab, isl_int *ineq)
 	}
 	if (tab->cone) {
 		isl_int_init(cst);
+		isl_int_set_si(cst, 0);
 		isl_int_swap(ineq[0], cst);
 	}
 	r = isl_tab_add_row(tab, ineq);
@@ -2064,6 +2065,7 @@ int isl_tab_add_eq(struct isl_tab *tab, isl_int *eq)
 
 	if (tab->cone) {
 		isl_int_init(cst);
+		isl_int_set_si(cst, 0);
 		isl_int_swap(eq[0], cst);
 	}
 	r = isl_tab_add_row(tab, eq);
@@ -2363,6 +2365,7 @@ struct isl_tab *isl_tab_from_recession_cone(__isl_keep isl_basic_set *bset,
 	tab->cone = 1;
 
 	isl_int_init(cst);
+	isl_int_set_si(cst, 0);
 	for (i = 0; i < bset->n_eq; ++i) {
 		isl_int_swap(bset->eq[i][offset], cst);
 		if (offset > 0) {

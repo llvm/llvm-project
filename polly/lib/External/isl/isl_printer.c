@@ -384,6 +384,20 @@ int isl_printer_get_output_format(__isl_keep isl_printer *p)
 	return p->output_format;
 }
 
+/* Keep track of whether the printing to "p" is being performed from
+ * an isl_*_dump function as specified by "dump".
+ */
+__isl_give isl_printer *isl_printer_set_dump(__isl_take isl_printer *p,
+	int dump)
+{
+	if (!p)
+		return NULL;
+
+	p->dump = dump;
+
+	return p;
+}
+
 /* Set the YAML style of "p" to "yaml_style" and return the updated printer.
  */
 __isl_give isl_printer *isl_printer_set_yaml_style(__isl_take isl_printer *p,
