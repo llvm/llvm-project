@@ -64,17 +64,16 @@ do.end45:                                         ; preds = %do.cond42
   ret void
 }
 
-; VALUE: RAW dependences:
-; VALUE: { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 <= 34 and i2 >= 0 }
-; VALUE: WAR dependences:
-; VALUE: {  }
-; VALUE: WAW dependences:
-; VALUE: { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 <= 34 and i2 >= 0 }
+; VALUE:      RAW dependences:
+; VALUE-NEXT:     { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 <= 34 and i2 >= 0 }
+; VALUE-NEXT: WAR dependences:
+; VALUE-NEXT:     {  }
+; VALUE-NEXT: WAW dependences:
+; VALUE-NEXT:     { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 <= 34 and i2 >= 0 }
 
-
-; MEMORY: RAW dependences:
-; MEMORY:  { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 >= 0 and o2 >= 1 + i2 and o2 <= 35 and o2 >= 0 }
-; MEMORY: WAR dependences:
-; MEMORY:  { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 >= 0 and o2 >= 1 + i2 and o2 <= 35 and o2 >= 0 }
-; MEMORY: WAW dependences:
-; MEMORY:  { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 >= 0 and o2 >= 1 + i2 and o2 <= 35 and o2 >= 0 }
+; MEMORY:      RAW dependences:
+; MEMORY-NEXT:     { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 >= 0 and o2 >= 1 + i2 and o2 <= 35 and o2 >= 0 }
+; MEMORY-NEXT: WAR dependences:
+; MEMORY-NEXT:     { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 >= 0 and o2 >= 1 + i2 and o2 <= 35 and o2 >= 0 }
+; MEMORY-NEXT: WAW dependences:
+; MEMORY-NEXT:     { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : i0 <= 35 and i0 >= 0 and i1 <= 35 and i1 >= 0 and i2 >= 0 and o2 >= 1 + i2 and o2 <= 35 and o2 >= 0 }

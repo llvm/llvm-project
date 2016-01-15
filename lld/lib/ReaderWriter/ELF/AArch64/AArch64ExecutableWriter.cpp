@@ -22,7 +22,7 @@ AArch64ExecutableWriter::AArch64ExecutableWriter(AArch64LinkingContext &ctx,
 void AArch64ExecutableWriter::createImplicitFiles(
     std::vector<std::unique_ptr<File>> &result) {
   ExecutableWriter::createImplicitFiles(result);
-  auto gotFile = llvm::make_unique<SimpleFile>("GOTFile");
+  auto gotFile = llvm::make_unique<SimpleFile>("GOTFile", File::kindELFObject);
   gotFile->addAtom(*new (gotFile->allocator()) GlobalOffsetTableAtom(*gotFile));
   if (this->_ctx.isDynamic())
     gotFile->addAtom(*new (gotFile->allocator()) DynamicAtom(*gotFile));

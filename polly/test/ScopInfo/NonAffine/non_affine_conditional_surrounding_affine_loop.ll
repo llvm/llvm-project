@@ -20,32 +20,38 @@
 ;
 ; INNERMOST-NOT:    Function: f
 ;
-; ALL:    Function: f
-; ALL:    Region: %bb3---%bb19
-; ALL:    Max Loop Depth:  1
-; ALL:    Context:
-; ALL:    {  :  }
-; ALL:    Assumed Context:
-; ALL:    {  :  }
-; ALL:    Alias Groups (0):
-; ALL:        n/a
-; ALL:    Statements {
-; ALL:      Stmt_bb4__TO__bb17
-; ALL:            Domain :=
-; ALL:                { Stmt_bb4__TO__bb17[i0] :
-; ALL-DAG:               i0 >= 0
-; ALL-DAG:             and
-; ALL-DAG:               i0 <= 1023
-; ALL:                }
-; ALL:            Schedule :=
-; ALL:                { Stmt_bb4__TO__bb17[i0] -> [i0] };
-; ALL:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; ALL:                { Stmt_bb4__TO__bb17[i0] -> MemRef_A[i0] };
-; ALL:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; ALL:                { Stmt_bb4__TO__bb17[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= 0 };
-; ALL:            MayWriteAccess := [Reduction Type: NONE] [Scalar: 0]
-; ALL:                { Stmt_bb4__TO__bb17[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= 0 };
-; ALL:    }
+; ALL:      Function: f
+; ALL-NEXT: Region: %bb3---%bb19
+; ALL-NEXT: Max Loop Depth:  1
+; ALL-NEXT: Invariant Accesses: {
+; ALL-NEXT: }
+; ALL-NEXT: Context:
+; ALL-NEXT: {  :  }
+; ALL-NEXT: Assumed Context:
+; ALL-NEXT: {  :  }
+; ALL-NEXT: Boundary Context:
+; ALL-NEXT: {  :  }
+; ALL-NEXT: Arrays {
+; ALL-NEXT:     i32 MemRef_A[*]; // Element size 4
+; ALL-NEXT: }
+; ALL-NEXT: Arrays (Bounds as pw_affs) {
+; ALL-NEXT:     i32 MemRef_A[*]; // Element size 4
+; ALL-NEXT: }
+; ALL-NEXT: Alias Groups (0):
+; ALL-NEXT:     n/a
+; ALL-NEXT: Statements {
+; ALL-NEXT:     Stmt_bb4__TO__bb17
+; ALL-NEXT:         Domain :=
+; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] : i0 <= 1023 and i0 >= 0 };
+; ALL-NEXT:         Schedule :=
+; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> [i0] };
+; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> MemRef_A[i0] };
+; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= 0 };
+; ALL-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; ALL-NEXT:             { Stmt_bb4__TO__bb17[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= 0 };
+; ALL-NEXT: }
 ;
 ;    void f(int *A, int N) {
 ;      for (int i = 0; i < 1024; i++)

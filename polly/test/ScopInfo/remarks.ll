@@ -1,16 +1,16 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops < %s 2>&1| FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: remark: test/ScopInfo/remarks.c:4:7: SCoP begins here.
-; CHECK: remark: test/ScopInfo/remarks.c:8:5: Finite loop assumption: [M, N, Debug] -> {  : M >= 0 or (M <= -2 and N <= 0) or (M = -1 and N <= 0) }
-; CHECK: remark: test/ScopInfo/remarks.c:13:7: No-error assumption: [M, N, Debug] -> {  : M <= -1 or (M >= 0 and N <= 0) or (Debug = 0 and M >= 0 and N >= 1) }
-; CHECK: remark: test/ScopInfo/remarks.c:9:7: Inbounds assumption: [M, N, Debug] -> {  : M <= 100 or (M >= 1 and N <= 0) }
-; CHECK: remark: <unknown>:0:0: No-overflows assumption: [N, M, Debug] -> {  : M <= 2147483647 - N and M >= -2147483648 - N }
+; CHECK: remark: test/ScopInfo/remarks.c:8:5: Finite loop assumption:    [M, N, Debug] -> {  : M >= 0 or (M <= -2 and N <= 0) or (M = -1 and N <= 0) }
+; CHECK: remark: test/ScopInfo/remarks.c:13:7: No-error assumption:    [M, N, Debug] -> {  : M <= -1 or (M >= 0 and N <= 0) or (Debug = 0 and M >= 0 and N >= 1) }
+; CHECK: remark: test/ScopInfo/remarks.c:9:7: Inbounds assumption:    [M, N, Debug] -> {  : M <= 100 or (M >= 1 and N <= 0) }
+; CHECK: remark: <unknown>:0:0: No-overflows assumption:    [N, M, Debug] -> {  : M <= 2147483647 - N and M >= -2147483648 - N }
 ; CHECK: remark: test/ScopInfo/remarks.c:9:18: Possibly aliasing pointer, use restrict keyword.
 ; CHECK: remark: test/ScopInfo/remarks.c:9:33: Possibly aliasing pointer, use restrict keyword.
 ; CHECK: remark: test/ScopInfo/remarks.c:9:15: Possibly aliasing pointer, use restrict keyword.
 ; CHECK: remark: test/ScopInfo/remarks.c:14:3: SCoP ends here.
 ; CHECK: remark: test/ScopInfo/remarks.c:19:3: SCoP begins here.
-; CHECK: remark: test/ScopInfo/remarks.c:21:11: Invariant load assumption: [tmp] -> {  : 1 = 0 }
+; CHECK: remark: test/ScopInfo/remarks.c:21:11: Invariant load assumption:    [tmp] -> {  : 1 = 0 }
 ; CHECK: remark: test/ScopInfo/remarks.c:22:16: SCoP ends here but was dismissed.
 ;
 ;    #include <stdio.h>

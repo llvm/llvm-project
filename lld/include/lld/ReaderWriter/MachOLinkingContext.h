@@ -342,6 +342,8 @@ public:
 
   void finalizeInputFiles() override;
 
+  std::error_code handleLoadedFile(File &file) override;
+
   bool customAtomOrderer(const DefinedAtom *left, const DefinedAtom *right,
                          bool &leftBeforeRight) const;
 

@@ -40,7 +40,7 @@ public:
     std::call_once(_tpOffOnce, [this]() {
       for (const auto &phdr : *_programHeader) {
         if (phdr->p_type == llvm::ELF::PT_TLS) {
-          _tpOff = llvm::RoundUpToAlignment(TCB_SIZE, phdr->p_align);
+          _tpOff = llvm::alignTo(TCB_SIZE, phdr->p_align);
           break;
         }
       }

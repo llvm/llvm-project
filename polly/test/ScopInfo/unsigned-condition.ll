@@ -32,19 +32,16 @@ return:
   ret void
 }
 
-; CHECK: Assumed Context:
-; CHECK:   {  :  }
 
-; CHECK:  Stmt_store
-; CHECK:        Domain :=
-; CHECK:            [P, N] -> { Stmt_store[i0] :
-; CHECK-DAG:          i0 >= 0
-; CHECK-DAG:        and
-; CHECK-DAG:          i0 <= -1 + N
-; CHECK-DAG:        and
-; CHECK-DAG:          P >= 42
-; CHECK:                   };
-; CHECK:        Schedule :=
-; CHECK:            [P, N] -> { Stmt_store[i0] -> [i0] };
-; CHECK:        MustWriteAccess := [Reduction Type: NONE]
-; CHECK:            [P, N] -> { Stmt_store[i0] -> MemRef_a[i0] };
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [P, N] -> {  :  }
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_store
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] : P >= 42 and i0 >= 0 and i0 <= -1 + N };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] -> [i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] -> MemRef_a[i0] };
+; CHECK-NEXT: }

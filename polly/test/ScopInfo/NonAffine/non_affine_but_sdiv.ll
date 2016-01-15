@@ -1,9 +1,18 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
-; CHECK: ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:   [N] -> { Stmt_for_body[i0] -> MemRef_A[o0] : 5o0 >= -4 + N + 5i0 and 5o0 <= N + 5i0 };
-; CHECK: ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:   [N] -> { Stmt_for_body[i0] -> MemRef_A[o0] : 5o0 <= 4 - N + 5i0 and 5o0 >= -N + 5i0 };
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_body
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] : i0 >= 0 and i0 <= -1 + N };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] -> [i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] -> MemRef_A[o0] : 5o0 >= -4 + N + 5i0 and 5o0 <= N + 5i0 };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] -> MemRef_A[o0] : 5o0 <= 4 - N + 5i0 and 5o0 >= -N + 5i0 };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] -> MemRef_A[i0] };
+; CHECK-NEXT: }
 ;
 ;    void f(int *A, int N) {
 ;      for (int i = 0; i < N; i++)

@@ -13,36 +13,26 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;    {{{((8 * ((((%m * %p) + %q) * %o) + %r)) + %A),+,(8 * %m * %o)}<%for.i>,+,
 ;        (8 * %o)}<%for.j>,+,8}<%for.k>
 
-; CHECK: Assumed Context:
-; CHECK: [o, m, n, p, q, r] -> { : (q <= 0 and q >= 1 - m and r <= -1 and r >= 1 - o) or (r = 0 and q <= 0 and q >= -m) or (r = -o and q <= 1 and q >= 1 - m) }
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [o, m, n, p, q, r] -> {  : (q <= 0 and q >= 1 - m and r <= -1 and r >= 1 - o) or (r = 0 and q <= 0 and q >= -m) or (r = -o and q <= 1 and q >= 1 - m) }
 ;
-; CHECK: p0: %o
-; CHECK: p1: %m
-; CHECK: p2: %n
-; CHECK: p3: %p
-; CHECK: p4: %q
-; CHECK: p5: %r
-; CHECK-NOT: p6
+; CHECK:      p0: %o
+; CHECK-NEXT: p1: %m
+; CHECK-NEXT: p2: %n
+; CHECK-NEXT: p3: %p
+; CHECK-NEXT: p4: %q
+; CHECK-NEXT: p5: %r
+; CHECK-NOT:  p6
 ;
-; CHECK: Domain
-; CHECK:   [o, m, n, p, q, r] -> { Stmt_for_k[i0, i1, i2] :
-; CHECK-DAG:             i0 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i0 <= -1 + n
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 <= -1 + m
-; CHECK-DAG:          and
-; CHECK-DAG:             i2 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i2 <= -1 + o
-; CHECK:              }
-; CHECK: Schedule
-; CHECK:   [o, m, n, p, q, r] -> { Stmt_for_k[i0, i1, i2] -> [i0, i1, i2] };
-; CHECK: MustWriteAccess
-; CHECK: [o, m, n, p, q, r] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[-1 + p + i0, -1 + m + q + i1, o + r + i2] : i1 <= -q and i2 <= -1 - r; Stmt_for_k[i0, i1, i2] -> MemRef_A[p + i0, -1 + q + i1, o + r + i2] : i1 >= 1 - q and i2 <= -1 - r; Stmt_for_k[i0, i1, i2] -> MemRef_A[-1 + p + i0, m + q + i1, r + i2] : i1 <= -1 - q and i2 >= -r; Stmt_for_k[i0, i1, i2] -> MemRef_A[p + i0, q + i1, r + i2] : i1 >= -q and i2 >= -r };
-
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_k
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [o, m, n, p, q, r] -> { Stmt_for_k[i0, i1, i2] : i0 >= 0 and i0 <= -1 + n and i1 >= 0 and i1 <= -1 + m and i2 >= 0 and i2 <= -1 + o };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [o, m, n, p, q, r] -> { Stmt_for_k[i0, i1, i2] -> [i0, i1, i2] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [o, m, n, p, q, r] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[-1 + p + i0, -1 + m + q + i1, o + r + i2] : i1 <= -q and i2 <= -1 - r; Stmt_for_k[i0, i1, i2] -> MemRef_A[p + i0, -1 + q + i1, o + r + i2] : i1 >= 1 - q and i2 <= -1 - r; Stmt_for_k[i0, i1, i2] -> MemRef_A[-1 + p + i0, m + q + i1, r + i2] : i1 <= -1 - q and i2 >= -r; Stmt_for_k[i0, i1, i2] -> MemRef_A[p + i0, q + i1, r + i2] : i1 >= -q and i2 >= -r };
+; CHECK-NEXT: }
 
 define void @foo(i64 %n, i64 %m, i64 %o, double* %A, i64 %p, i64 %q, i64 %r) {
 entry:

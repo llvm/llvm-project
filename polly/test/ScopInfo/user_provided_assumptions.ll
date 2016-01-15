@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -analyze < %s 2>&1| FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s --check-prefix=SCOP
 ;
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : N <= 2147483647 - M }
@@ -6,13 +7,13 @@
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and M <= 100 and M >= 1 and N <= 2147483647 - M and N >= -2147483648 - M }
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and N >= -2147483648 - M and N <= 2147483647 - M and M <= 100 and M >= 1 and N >= 1 }
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
-;
-; CHECK:      Context:
-; CHECK-NEXT:   [N, M, Debug] -> {  : Debug = 0 and N >= 1 and M <= 2147483647 - N and M <= 100 and M >= 1 }
-; CHECK-NEXT: Assumed Context:
-; CHECK-NEXT:   [N, M, Debug] -> {  :  }
-; CHECK-NEXT: Boundary Context:
-; CHECK-NEXT:   [N, M, Debug] -> {  :  }
+
+; SCOP:      Context:
+; SCOP-NEXT: [N, M, Debug] -> {  : Debug = 0 and N >= 1 and M <= 2147483647 - N and M <= 100 and M >= 1 }
+; SCOP:      Assumed Context:
+; SCOP-NEXT: [N, M, Debug] -> {  :  }
+; SCOP:      Boundary Context:
+; SCOP-NEXT: [N, M, Debug] -> {  :  }
 ;
 ;    #include <stdio.h>
 ;

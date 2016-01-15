@@ -8,25 +8,20 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;     for (long j = 0; j < 150; j++)
 ;       A[i][j] = 1.0;
 ; }
-; CHECK: Assumed Context:
-; CHECK: [m] -> {  : m >= 150 }
-; CHECK: p0: %m
-; CHECK: Statements {
-; CHECK:   Stmt_for_j
-; CHECK:         Domain :=
-; CHECK:             [m] -> { Stmt_for_j[i0, i1]
-; CHECK-DAG:             i0 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i0 <= 99
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 <= 149
-; CHECK:              }
-; CHECK:         Schedule :=
-; CHECK:             [m] -> { Stmt_for_j[i0, i1] -> [i0, i1] };
-; CHECK:         MustWriteAccess := [Reduction Type: NONE]
-; CHECK:             [m] -> { Stmt_for_j[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [m] -> {  : m >= 150 }
+;
+; CHECK:      p0: %m
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_j
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [m] -> { Stmt_for_j[i0, i1] : i0 <= 99 and i0 >= 0 and i1 <= 149 and i1 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [m] -> { Stmt_for_j[i0, i1] -> [i0, i1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [m] -> { Stmt_for_j[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT: }
 
 define void @foo(i64 %n, i64 %m, double* %A) {
 entry:

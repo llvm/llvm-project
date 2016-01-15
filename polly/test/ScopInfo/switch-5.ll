@@ -13,19 +13,27 @@
 ;        }
 ;      }
 ;    }
+
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_body
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_for_body[0] : N >= 1 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] -> [0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] -> MemRef_A[0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] -> MemRef_A[0] };
+; CHECK-NEXT: }
+
+; AST:      if (1)
 ;
-; CHECK:    Statements {
-; CHECK:      Stmt_for_body
-; CHECK:            Domain :=
-; CHECK:                [N] -> { Stmt_for_body[0] : N >= 1 };
-; CHECK:            Schedule :=
-; CHECK:                [N] -> { Stmt_for_body[i0] -> [0] };
-; CHECK-NOT:  Stmt_sw_bb
-; CHECK:    }
+; AST:          if (N >= 1)
+; AST-NEXT:       Stmt_for_body(0);
 ;
-; AST:    if (N >= 1)
-; AST:      Stmt_for_body(0);
-;
+; AST:      else
+; AST-NEXT:     {  /* original code */ }
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(i32* %A, i32* %B, i32 %N) {

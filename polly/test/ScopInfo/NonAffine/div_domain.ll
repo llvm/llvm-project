@@ -8,12 +8,26 @@
 ;      }
 ;    }
 ;
-; CHECK:      Stmt_for_body
-; CHECK:            Domain :=
-; CHECK:                { Stmt_for_body[i0] : i0 <= 15 and i0 >= 0 };
-; CHECK:      Stmt_if_then
-; CHECK:            Domain :=
-; CHECK:                { Stmt_if_then[i0] : i0 <= 7 and i0 >= 6 };
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_body
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_for_body[i0] : i0 <= 15 and i0 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_for_body[i0] -> [i0, 0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:     Stmt_if_then
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_if_then[i0] : i0 <= 7 and i0 >= 6 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_if_then[i0] -> [i0, 1] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_if_then[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_if_then[i0] -> MemRef_A[i0] };
+; CHECK-NEXT: }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

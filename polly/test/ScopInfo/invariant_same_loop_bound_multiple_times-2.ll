@@ -6,25 +6,26 @@
 ; one, e.g., here the universal set.
 ;
 ; CHECK:      Invariant Accesses: {
-; CHECK-NEXT:         ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             MemRef_bounds[0]
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [bounds0l0, p] -> { Stmt_for_cond_4[i0, i1, i2] -> MemRef_bounds[0] };
 ; CHECK-NEXT:         Execution Context: [bounds0l0, p] -> {  :  }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      p0: %bounds0l0
-; CHECK:      p1: %p
-; CHECK-NOT:  p2:
+; CHECK-NEXT: p1: %p
+; CHECK-NOT:  p2
+;
 ; CHECK:      Statements {
-; CHECK:        Stmt_for_body_6
-; CHECK:              Domain :=
-; CHECK:                  [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] : p = 0 and i0 >= 0 and i0 <= -1 + bounds0l0 and i1 >= 0 and i1 <= -1 + bounds0l0 and i2 >= 0 and i2 <= -1 + bounds0l0 };
-; CHECK:              Schedule :=
-; CHECK:                  [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] -> [i0, i1, i2] };
-; CHECK:              ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                  [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] -> MemRef_data[i0, i1, i2] };
-; CHECK:              MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                  [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] -> MemRef_data[i0, i1, i2] };
-; CHECK:      }
+; CHECK-NEXT:     Stmt_for_body_6
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] : p = 0 and i0 >= 0 and i0 <= -1 + bounds0l0 and i1 >= 0 and i1 <= -1 + bounds0l0 and i2 >= 0 and i2 <= -1 + bounds0l0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] -> [i0, i1, i2] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] -> MemRef_data[i0, i1, i2] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [bounds0l0, p] -> { Stmt_for_body_6[i0, i1, i2] -> MemRef_data[i0, i1, i2] };
+; CHECK-NEXT: }
 ;
 ;    int bounds[1];
 ;    double data[1024][1024][1024];

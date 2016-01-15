@@ -16,33 +16,44 @@
 ;      }
 ;      }
 ;    }
+
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_body
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body[i0] : c = -1 and i0 >= 0 and i0 <= -1 + N };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body[i0] -> [1, i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body[i0] -> MemRef_A[-1 + N - i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body[i0] -> MemRef_A[N - i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body[i0] -> MemRef_A[N - i0] };
+; CHECK-NEXT:     Stmt_for_body_7
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body_7[i0] : c = 1 and i0 >= 0 and i0 <= -1 + N };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body_7[i0] -> [0, i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body_7[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body_7[i0] -> MemRef_A[1 + i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [c, N] -> { Stmt_for_body_7[i0] -> MemRef_A[1 + i0] };
+; CHECK-NEXT: }
+
+; AST:      if (1)
 ;
-; CHECK:    Statements {
-; CHECK:      Stmt_for_body
-; CHECK:            Domain :=
-; CHECK:                [c, N] -> { Stmt_for_body[i0] : c = -1 and i0 >= 0 and i0 <= -1 + N };
-; CHECK:            Schedule :=
-; CHECK:                [c, N] -> { Stmt_for_body[i0] -> [1, i0] };
-; CHECK:      Stmt_for_body_7
-; CHECK:            Domain :=
-; CHECK:                [c, N] -> { Stmt_for_body_7[i0] : c = 1 and i0 >= 0 and i0 <= -1 + N };
-; CHECK:            Schedule :=
-; CHECK:                [c, N] -> { Stmt_for_body_7[i0] -> [0, i0] };
-; CHECK:    }
+; AST:          if (c == 1) {
+; AST-NEXT:       for (int c0 = 0; c0 < N; c0 += 1)
+; AST-NEXT:         Stmt_for_body_7(c0);
+; AST-NEXT:     } else if (c == -1)
+; AST-NEXT:       for (int c0 = 0; c0 < N; c0 += 1)
+; AST-NEXT:         Stmt_for_body(c0);
 ;
-; AST:  if (1)
-;
-; AST:      if (c == 1) {
-; AST:        for (int c0 = 0; c0 < N; c0 += 1)
-; AST:          Stmt_for_body_7(c0);
-; AST:      } else if (c == -1)
-; AST:        for (int c0 = 0; c0 < N; c0 += 1)
-; AST:          Stmt_for_body(c0);
-;
-; AST:  else
-; AST:      {  /* original code */ }
-;
-;
+; AST:      else
+; AST-NEXT:     {  /* original code */ }
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(i32* %A, i32 %c, i32 %N) {

@@ -307,6 +307,15 @@ public:
   // Derived classes may use it to change the list of input files.
   virtual void finalizeInputFiles() {}
 
+  /// Callback invoked for each file the Resolver decides we are going to load.
+  /// This can be used to update context state based on the file, and emit
+  /// errors for any differences between the context state and a loaded file.
+  /// For example, we can error if we try to load a file which is a different
+  /// arch from that being linked.
+  virtual std::error_code handleLoadedFile(File &file) {
+    return std::error_code();
+  }
+
   TaskGroup &getTaskGroup() { return _taskGroup; }
 
   /// @}

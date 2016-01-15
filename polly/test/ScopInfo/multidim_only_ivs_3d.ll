@@ -9,31 +9,23 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;         A[i][j][k] = 1.0;
 ; }
 
-; CHECK: Assumed Context:
-; CHECK:   [o, m, n] -> {  :  }
-; CHECK: p0: %o
-; CHECK: p1: %m
-; CHECK: p2: %n
-; CHECK-NOT: p3
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [o, m, n] -> {  :  }
 ;
-; CHECK: Domain
-; CHECK:   [o, m, n] -> { Stmt_for_k[i0, i1, i2] :
-; CHECK-DAG:             i0 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i0 <= -1 + n
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 <= -1 + m
-; CHECK-DAG:          and
-; CHECK-DAG:             i2 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i2 <= -1 + o
-; CHECK:              }
-; CHECK: Schedule
-; CHECK:   [o, m, n] -> { Stmt_for_k[i0, i1, i2] -> [i0, i1, i2] };
-; CHECK: WriteAccess
-; CHECK:   [o, m, n] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[i0, i1, i2] };
+; CHECK:      p0: %o
+; CHECK-NEXT: p1: %m
+; CHECK-NEXT: p2: %n
+; CHECK-NOT:  p3
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_k
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [o, m, n] -> { Stmt_for_k[i0, i1, i2] : i0 >= 0 and i0 <= -1 + n and i1 >= 0 and i1 <= -1 + m and i2 >= 0 and i2 <= -1 + o };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [o, m, n] -> { Stmt_for_k[i0, i1, i2] -> [i0, i1, i2] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [o, m, n] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[i0, i1, i2] };
+; CHECK-NEXT: }
 
 define void @foo(i64 %n, i64 %m, i64 %o, double* %A) {
 entry:

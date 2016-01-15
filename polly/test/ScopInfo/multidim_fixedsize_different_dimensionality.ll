@@ -14,36 +14,6 @@
 ;          A[i][j] += i + j;
 ;    }
 
-; CHECK: Stmt_bb7
-; CHECK:       Domain :=
-; CHECK:           { Stmt_bb7[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
-; CHECK:       Schedule :=
-; CHECK:           { Stmt_bb7[i0, i1] -> [0, i0, i1] };
-; CHECK:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb7[i0, i1] -> MemRef_A[i0, i1] };
-; CHECK:       MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb7[i0, i1] -> MemRef_A[i0, i1] };
-; CHECK: Stmt_bb17
-; CHECK:       Domain :=
-; CHECK:           { Stmt_bb17[] };
-; CHECK:       Schedule :=
-; CHECK:           { Stmt_bb17[] -> [1, 0, 0] };
-; CHECK:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb17[] -> MemRef_A[100, 100] };
-; CHECK:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb17[] -> MemRef_A[0, 0] };
-; CHECK:       MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb17[] -> MemRef_A[0, 0] };
-; CHECK: Stmt_bb26
-; CHECK:       Domain :=
-; CHECK:           { Stmt_bb26[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
-; CHECK:       Schedule :=
-; CHECK:           { Stmt_bb26[i0, i1] -> [2, i0, i1] };
-; CHECK:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
-; CHECK:       MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
-
 ;    void first_lower_dimensional(float A[][N], float B[][N]) {
 ;      for (long i = 0; i < N; i++)
 ;        for (long j = 0; j < N; j++)
@@ -56,37 +26,69 @@
 ;          A[i][j] += i + j;
 ;    }
 
-; CHECK: Statements {
-; CHECK:   Stmt_bb7
-; CHECK:         Domain :=
-; CHECK:             { Stmt_bb7[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
-; CHECK:         Schedule :=
-; CHECK:             { Stmt_bb7[i0, i1] -> [0, i0, i1] };
-; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb7[i0, i1]  -> MemRef_B[i0, i1] };
-; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb7[i0, i1] -> MemRef_B[i0, i1] };
-; CHECK:   Stmt_bb17
-; CHECK:         Domain :=
-; CHECK:             { Stmt_bb17[] };
-; CHECK:         Schedule :=
-; CHECK:             { Stmt_bb17[] -> [1, 0, 0] };
-; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb17[] -> MemRef_B[100, 100] };
-; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb17[] -> MemRef_A[0, 0] };
-; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb17[] -> MemRef_A[0, 0] };
-; CHECK:   Stmt_bb26
-; CHECK:         Domain :=
-; CHECK:             { Stmt_bb26[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
-; CHECK:         Schedule :=
-; CHECK:             { Stmt_bb26[i0, i1] -> [2, i0, i1] };
-; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
-; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
-
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_bb7
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> [0, i0, i1] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT:     Stmt_bb17
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_bb17[] };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_bb17[] -> [1, 0, 0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb17[] -> MemRef_A[100, 100] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb17[] -> MemRef_A[0, 0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb17[] -> MemRef_A[0, 0] };
+; CHECK-NEXT:     Stmt_bb26
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> [2, i0, i1] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT: }
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_bb7
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> [0, i0, i1] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> MemRef_B[i0, i1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> MemRef_B[i0, i1] };
+; CHECK-NEXT:     Stmt_bb17
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_bb17[] };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_bb17[] -> [1, 0, 0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb17[] -> MemRef_B[100, 100] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb17[] -> MemRef_A[0, 0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb17[] -> MemRef_A[0, 0] };
+; CHECK-NEXT:     Stmt_bb26
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] : i0 <= 399 and i0 >= 0 and i1 <= 399 and i1 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> [2, i0, i1] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

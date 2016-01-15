@@ -20,40 +20,63 @@
 ;        }
 ;      }
 ;    }
+
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_sw_bb
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[0] : N >= 1 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> [0, 3] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> MemRef_A[0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> MemRef_A[0] };
+; CHECK-NEXT:     Stmt_sw_bb_1
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[1] : N >= 2 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] -> [1, 2] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] -> MemRef_A[1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] -> MemRef_A[1] };
+; CHECK-NEXT:     Stmt_sw_bb_5
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[2] : N >= 3 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] -> [2, 1] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] -> MemRef_A[2] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] -> MemRef_A[2] };
+; CHECK-NEXT:     Stmt_sw_bb_9
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[3] : N >= 4 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] -> [3, 0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] -> MemRef_A[3] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] -> MemRef_A[3] };
+; CHECK-NEXT: }
+
+; AST:      if (1)
 ;
-; CHECK:    Statements {
-; CHECK:      Stmt_sw_bb
-; CHECK:            Domain :=
-; CHECK:                [N] -> { Stmt_sw_bb[0] : N >= 1 };
-; CHECK:      Stmt_sw_bb_1
-; CHECK:            Domain :=
-; CHECK:                [N] -> { Stmt_sw_bb_1[1] : N >= 2 };
-; CHECK:      Stmt_sw_bb_5
-; CHECK:            Domain :=
-; CHECK:                [N] -> { Stmt_sw_bb_5[2] : N >= 3 };
-; CHECK:      Stmt_sw_bb_9
-; CHECK:            Domain :=
-; CHECK:                [N] -> { Stmt_sw_bb_9[3] : N >= 4 };
-; CHECK:    }
+; AST:          if (N >= 1) {
+; AST-NEXT:       Stmt_sw_bb(0);
+; AST-NEXT:       if (N >= 2) {
+; AST-NEXT:         Stmt_sw_bb_1(1);
+; AST-NEXT:         if (N >= 3) {
+; AST-NEXT:           Stmt_sw_bb_5(2);
+; AST-NEXT:           if (N >= 4)
+; AST-NEXT:             Stmt_sw_bb_9(3);
+; AST-NEXT:         }
+; AST-NEXT:       }
+; AST-NEXT:     }
 ;
-; AST:  if (1)
-;
-; AST:      if (N >= 1) {
-; AST:        Stmt_sw_bb(0);
-; AST:        if (N >= 2) {
-; AST:          Stmt_sw_bb_1(1);
-; AST:          if (N >= 3) {
-; AST:            Stmt_sw_bb_5(2);
-; AST:            if (N >= 4)
-; AST:              Stmt_sw_bb_9(3);
-; AST:          }
-; AST:        }
-; AST:      }
-;
-; AST:  else
-; AST:      {  /* original code */ }
-;
-;
+; AST:      else
+; AST-NEXT:     {  /* original code */ }
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(i32* %A, i32 %N) {

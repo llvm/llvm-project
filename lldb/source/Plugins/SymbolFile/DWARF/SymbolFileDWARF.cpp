@@ -1091,9 +1091,40 @@ SymbolFileDWARF::ParseImportedModules (const lldb_private::SymbolContext &sc, st
         if (ClangModulesDeclVendor::LanguageSupportsClangModules(sc.comp_unit->GetLanguage()))
         {
             UpdateExternalModuleListIfNeeded();
-            for (const auto &pair : m_external_type_modules)
+            
+            if (sc.comp_unit)
             {
-                imported_modules.push_back(pair.first);
+                const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
+                
+                if (die)
+                {
+                    for (DWARFDIE child_die = die.GetFirstChild();
+                         child_die;
+                         child_die = child_die.GetSibling())
+                    {
+                        if (child_die.Tag() == DW_TAG_imported_declaration)
+                        {
+                            if (DWARFDIE module_die = child_die.GetReferencedDIE(DW_AT_import))
+                            {
+                                if (module_die.Tag() == DW_TAG_module)
+                                {
+                                    if (const char *name = module_die.GetAttributeValueAsString(DW_AT_name, nullptr))
+                                    {
+                                        ConstString const_name(name);
+                                        imported_modules.push_back(const_name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (const auto &pair : m_external_type_modules)
+                {
+                    imported_modules.push_back(pair.first);
+                }
             }
         }
     }

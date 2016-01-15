@@ -7,28 +7,40 @@
 ;          A[i]++;
 ;    }
 ;
-; CHECK:    Function: f
-; CHECK:    Region: %bb1---%bb14
-; CHECK:    Max Loop Depth:  1
-; CHECK:    Statements {
-; CHECK:      Stmt_bb2__TO__bb12
-; CHECK:            Domain :=
-; CHECK:                { Stmt_bb2__TO__bb12[i0] :
-; CHECK-DAG:               i0 >= 0
-; CHECK-DAG:             and
-; CHECK-DAG:               i0 <= 1023
-; CHECK:                }
-; CHECK:            Schedule :=
-; CHECK:                { Stmt_bb2__TO__bb12[i0] -> [i0] };
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_bb2__TO__bb12[i0] -> MemRef_A[i0] };
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_bb2__TO__bb12[i0] -> MemRef_A[-1 + i0] };
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_bb2__TO__bb12[i0] -> MemRef_A[i0] };
-; CHECK:            MayWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_bb2__TO__bb12[i0] -> MemRef_A[i0] };
-; CHECK:    }
+; CHECK:      Function: f
+; CHECK-NEXT: Region: %bb1---%bb14
+; CHECK-NEXT: Max Loop Depth:  1
+; CHECK-NEXT: Invariant Accesses: {
+; CHECK-NEXT: }
+; CHECK-NEXT: Context:
+; CHECK-NEXT: {  :  }
+; CHECK-NEXT: Assumed Context:
+; CHECK-NEXT: {  :  }
+; CHECK-NEXT: Boundary Context:
+; CHECK-NEXT: {  :  }
+; CHECK-NEXT: Arrays {
+; CHECK-NEXT:     float MemRef_A[*]; // Element size 4
+; CHECK-NEXT: }
+; CHECK-NEXT: Arrays (Bounds as pw_affs) {
+; CHECK-NEXT:     float MemRef_A[*]; // Element size 4
+; CHECK-NEXT: }
+; CHECK-NEXT: Alias Groups (0):
+; CHECK-NEXT:     n/a
+; CHECK-NEXT: Statements {
+; CHECK-NEXT:     Stmt_bb2__TO__bb12
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_bb2__TO__bb12[i0] : i0 <= 1023 and i0 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_bb2__TO__bb12[i0] -> [i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb2__TO__bb12[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb2__TO__bb12[i0] -> MemRef_A[-1 + i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb2__TO__bb12[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb2__TO__bb12[i0] -> MemRef_A[i0] };
+; CHECK-NEXT: }
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(float* %A) {

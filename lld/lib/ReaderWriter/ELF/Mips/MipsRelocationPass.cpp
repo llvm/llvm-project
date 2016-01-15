@@ -492,7 +492,7 @@ public:
 class RelocationPassFile : public SimpleFile {
 public:
   RelocationPassFile(const ELFLinkingContext &ctx)
-      : SimpleFile("RelocationPassFile") {
+      : SimpleFile("RelocationPassFile", kindELFObject) {
     setOrdinal(ctx.getNextOrdinalAndIncrement());
   }
 

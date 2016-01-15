@@ -16,14 +16,15 @@ namespace elf {
 
 template <typename ELFT>
 ELFFile<ELFT>::ELFFile(StringRef name, ELFLinkingContext &ctx)
-    : SimpleFile(name), _ordinal(0), _doStringsMerge(ctx.mergeCommonStrings()),
-      _useWrap(false), _ctx(ctx) {
+    : SimpleFile(name, kindELFObject), _ordinal(0),
+      _doStringsMerge(ctx.mergeCommonStrings()), _useWrap(false), _ctx(ctx) {
   setLastError(std::error_code());
 }
 
 template <typename ELFT>
 ELFFile<ELFT>::ELFFile(std::unique_ptr<MemoryBuffer> mb, ELFLinkingContext &ctx)
-    : SimpleFile(mb->getBufferIdentifier()), _mb(std::move(mb)), _ordinal(0),
+    : SimpleFile(mb->getBufferIdentifier(), kindELFObject),
+      _mb(std::move(mb)), _ordinal(0),
       _doStringsMerge(ctx.mergeCommonStrings()),
       _useWrap(ctx.wrapCalls().size()), _ctx(ctx) {}
 

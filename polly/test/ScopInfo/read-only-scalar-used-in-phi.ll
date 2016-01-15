@@ -9,26 +9,32 @@
 ;      return sum;
 ;    }
 
-; CHECK: Stmt_next
-; CHECK:       Domain :=
-; CHECK:           { Stmt_next[] };
-; CHECK:       Schedule :=
-; CHECK:           { Stmt_next[] -> [0, 0] };
-; CHECK:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
-; CHECK:           { Stmt_next[] -> MemRef_sum[] };
-; CHECK:       MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK:           { Stmt_next[] -> MemRef_phisum__phi[] };
-; CHECK: Stmt_bb1
-; CHECK:       Domain :=
-; CHECK:           { Stmt_bb1[i0] : i0 <= 100 and i0 >= 0 };
-; CHECK:       Schedule :=
-; CHECK:           { Stmt_bb1[i0] -> [1, i0] };
-; CHECK:       MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK:           { Stmt_bb1[i0] -> MemRef_phisum__phi[] };
-; CHECK:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
-; CHECK:           { Stmt_bb1[i0] -> MemRef_phisum__phi[] };
-; CHECK:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb1[i0] -> MemRef_A[i0] };
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_next
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_next[] };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_next[] -> [0, 0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             { Stmt_next[] -> MemRef_sum[] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             { Stmt_next[] -> MemRef_phisum__phi[] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             { Stmt_next[] -> MemRef_phisummerge[] };
+; CHECK-NEXT:     Stmt_bb1
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_bb1[i0] : i0 <= 100 and i0 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_bb1[i0] -> [1, i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             { Stmt_bb1[i0] -> MemRef_phisum__phi[] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             { Stmt_bb1[i0] -> MemRef_phisum__phi[] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_bb1[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             { Stmt_bb1[i0] -> MemRef_phisummerge[] };
+; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

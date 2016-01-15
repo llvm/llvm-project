@@ -24,16 +24,20 @@ return:                                           ; preds = %bb, %entry
   ret void
 }
 
-; CHECK: Assumed Context:
-; CHECK:   {  :  }
-; CHECK: Arrays {
-; CHECK:     i64 MemRef_a[*]; // Element size 8
-; CHECK: }
 
-; CHECK:  Stmt_bb
-; CHECK:        Domain :=
-; CHECK:            [N] -> { Stmt_bb[i0] : i0 >= 0 and i0 <= -1 + N };
-; CHECK:        Schedule :=
-; CHECK:            [N] -> { Stmt_bb[i0] -> [i0] };
-; CHECK:        MustWriteAccess := [Reduction Type: NONE]
-; CHECK:            [N] -> { Stmt_bb[i0] -> MemRef_a[i0] };
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [N] -> {  :  }
+;
+; CHECK:      Arrays {
+; CHECK-NEXT:     i64 MemRef_a[*]; // Element size 8
+; CHECK-NEXT: }
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_bb
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_bb[i0] : i0 >= 0 and i0 <= -1 + N };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_bb[i0] -> [i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_bb[i0] -> MemRef_a[i0] };
+; CHECK-NEXT: }

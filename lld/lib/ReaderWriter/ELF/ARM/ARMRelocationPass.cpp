@@ -314,7 +314,8 @@ public:
 
 class ELFPassFile : public SimpleFile {
 public:
-  ELFPassFile(const ELFLinkingContext &eti) : SimpleFile("ELFPassFile") {
+  ELFPassFile(const ELFLinkingContext &eti)
+    : SimpleFile("ELFPassFile", kindELFObject) {
     setOrdinal(eti.getNextOrdinalAndIncrement());
   }
 

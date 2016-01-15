@@ -4,13 +4,15 @@
 ;      for (char i = 0; i < N; i++)
 ;        A[p-1] = 0;
 ;    }
+
+; CHECK:      Function: wrap
 ;
-; CHECK:    Function: wrap
-; CHECK:    Context:
-; CHECK:        [N, p] -> {  : N <= 127 and N >= -128 and p <= 127 and p >= -128 }
-; CHECK:    Boundary Context:
-; CHECK:        [N, p] -> {  : p >= -127 }
+; CHECK:      Context:
+; CHECK-NEXT: [N, p] -> {  : N <= 127 and N >= -128 and p <= 127 and p >= -128 }
 ;
+; CHECK:      Boundary Context:
+; CHECK-NEXT: [N, p] -> {  : p >= -127 }
+
 target datalayout = "e-m:e-i8:64-f80:128-n8:16:32:64-S128"
 
 define void @wrap(i8* %A, i8 %N, i8 %p) {

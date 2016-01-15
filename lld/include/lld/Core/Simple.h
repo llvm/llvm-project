@@ -29,7 +29,8 @@ namespace lld {
 
 class SimpleFile : public File {
 public:
-  SimpleFile(StringRef path) : File(path, kindObject) {}
+  SimpleFile(StringRef path, File::Kind kind)
+    : File(path, kind) {}
 
   void addAtom(const DefinedAtom &a) { _defined.push_back(&a); }
   void addAtom(const UndefinedAtom &a) { _undefined.push_back(&a); }

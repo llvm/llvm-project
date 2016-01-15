@@ -50,7 +50,8 @@ std::unique_ptr<File>
 LinkingContext::createEntrySymbolFile(StringRef filename) const {
   if (entrySymbolName().empty())
     return nullptr;
-  std::unique_ptr<SimpleFile> entryFile(new SimpleFile(filename));
+  std::unique_ptr<SimpleFile> entryFile(new SimpleFile(filename,
+                                                       File::kindEntryObject));
   entryFile->addAtom(
       *(new (_allocator) SimpleUndefinedAtom(*entryFile, entrySymbolName())));
   return std::move(entryFile);
@@ -64,7 +65,8 @@ std::unique_ptr<File>
 LinkingContext::createUndefinedSymbolFile(StringRef filename) const {
   if (_initialUndefinedSymbols.empty())
     return nullptr;
-  std::unique_ptr<SimpleFile> undefinedSymFile(new SimpleFile(filename));
+  std::unique_ptr<SimpleFile> undefinedSymFile(
+    new SimpleFile(filename, File::kindUndefinedSymsObject));
   for (StringRef undefSym : _initialUndefinedSymbols)
     undefinedSymFile->addAtom(*(new (_allocator) SimpleUndefinedAtom(
                                    *undefinedSymFile, undefSym)));
@@ -74,7 +76,8 @@ LinkingContext::createUndefinedSymbolFile(StringRef filename) const {
 std::unique_ptr<File> LinkingContext::createAliasSymbolFile() const {
   if (getAliases().empty())
     return nullptr;
-  std::unique_ptr<SimpleFile> file(new SimpleFile("<alias>"));
+  std::unique_ptr<SimpleFile> file(
+    new SimpleFile("<alias>", File::kindUndefinedSymsObject));
   for (const auto &i : getAliases()) {
     StringRef from = i.first;
     StringRef to = i.second;

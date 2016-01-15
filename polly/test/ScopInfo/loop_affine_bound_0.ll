@@ -50,24 +50,16 @@ return:                                           ; preds = %bb.nph8, %bb3, %ent
   ret void
 }
 
-; CHECK:  p0: %N
-; CHECK:  p1: %M
-; CHECK:  Statements {
-; CHECK:    Stmt_bb1
-; CHECK:          Domain :=
-; CHECK:              [N, M] -> { Stmt_bb1[i0, i1] :
-; CHECK-DAG:             i0 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i0 <= 2 + 4N + 7M
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 <= 1 + 5N
-; CHECK:               }
-; CHECK:          Schedule :=
-; CHECK:              [N, M] -> { Stmt_bb1[i0, i1] -> [i0, i1] };
-; CHECK-NOT: 128i1
-; CHECK:          MustWriteAccess := [Reduction Type: NONE]
-; CHECK:              [N, M] -> { Stmt_bb1[i0, i1] -> MemRef_a[i1, i0] };
-; CHECK-NOT: 128i1
-; CHECK:  }
+
+; CHECK:      p0: %N
+; CHECK-NEXT: p1: %M
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_bb1
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] : i0 >= 0 and i0 <= 2 + 4N + 7M and i1 >= 0 and i1 <= 1 + 5N };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] -> [i0, i1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] -> MemRef_a[i1, i0] };
+; CHECK-NEXT: }

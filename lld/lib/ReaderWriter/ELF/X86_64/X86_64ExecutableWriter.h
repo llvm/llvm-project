@@ -25,7 +25,8 @@ protected:
   void
   createImplicitFiles(std::vector<std::unique_ptr<File>> &result) override {
     ExecutableWriter::createImplicitFiles(result);
-    auto gotFile = llvm::make_unique<SimpleFile>("GOTFile");
+    auto gotFile = llvm::make_unique<SimpleFile>("GOTFile",
+                                                 File::kindELFObject);
     gotFile->addAtom(*new (gotFile->allocator())
                          GlobalOffsetTableAtom(*gotFile));
     if (this->_ctx.isDynamic())

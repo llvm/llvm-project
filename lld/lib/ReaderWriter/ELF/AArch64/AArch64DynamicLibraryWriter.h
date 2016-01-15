@@ -33,7 +33,7 @@ AArch64DynamicLibraryWriter::AArch64DynamicLibraryWriter(
 void AArch64DynamicLibraryWriter::createImplicitFiles(
     std::vector<std::unique_ptr<File>> &result) {
   DynamicLibraryWriter::createImplicitFiles(result);
-  auto gotFile = llvm::make_unique<SimpleFile>("GOTFile");
+  auto gotFile = llvm::make_unique<SimpleFile>("GOTFile", File::kindELFObject);
   gotFile->addAtom(*new (gotFile->allocator()) GlobalOffsetTableAtom(*gotFile));
   gotFile->addAtom(*new (gotFile->allocator()) DynamicAtom(*gotFile));
   result.push_back(std::move(gotFile));

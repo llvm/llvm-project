@@ -1,24 +1,22 @@
 ; RUN: opt %loadPolly -basicaa -polly-dependences -analyze < %s | FileCheck %s
 ;
-; CHECK: RAW dependences:
-; CHECK-DAG: Stmt_S2[i0, i1] -> Stmt_S3[i0] : i0 <= 1023 and i0 >= 0 and i1 <= 1023 and i1 >= 0
-; CHECK-DAG: Stmt_S3[i0] -> Stmt_S0[1 + i0] : i0 <= 1022 and i0 >= 0
-; CHECK-DAG: Stmt_S0[i0] -> Stmt_S1[i0, o1] : i0 <= 1023 and i0 >= 0 and o1 <= 1023 and o1 >= 0
+;
 ; These are the important RAW dependences, as they need to originate/end in only one iteration:
-; CHECK-DAG: Stmt_S1[i0, 1023] -> Stmt_S2[i0, o1] : i0 <= 1023 and i0 >= 0 and o1 <= 1023 and o1 >= 0
-; CHECK-DAG: Stmt_S1[i0, i1] -> Stmt_S2[i0, 0] : i0 <= 1023 and i0 >= 0 and i1 <= 1022 and i1 >= 0
-; CHECK: WAR dependences:
-; CHECK:   {  }
-; CHECK: WAW dependences:
-; CHECK-DAG: Stmt_S2[i0, i1] -> Stmt_S3[i0] : i0 <= 1023 and i0 >= 0 and i1 <= 1023 and i1 >= 0
-; CHECK-DAG: Stmt_S3[i0] -> Stmt_S0[1 + i0] : i0 <= 1022 and i0 >= 0
-; CHECK-DAG: Stmt_S0[i0] -> Stmt_S1[i0, o1] : i0 <= 1023 and i0 >= 0 and o1 <= 1023 and o1 >= 0
+;   Stmt_S1[i0, 1023] -> Stmt_S2[i0, o1]
+;   Stmt_S1[i0, i1] -> Stmt_S2[i0, 0]
+;
 ; These are the important WAW dependences, as they need to originate/end in only one iteration:
-; CHECK-DAG: Stmt_S1[i0, 1023] -> Stmt_S2[i0, o1] : i0 <= 1023 and i0 >= 0 and o1 <= 1023 and o1 >= 0
-; CHECK-DAG: Stmt_S1[i0, i1] -> Stmt_S2[i0, 0] : i0 <= 1023 and i0 >= 0 and i1 <= 1022 and i1 >= 0
-; CHECK: Reduction dependences:
-; CHECK-DAG:  Stmt_S1[i0, i1] -> Stmt_S1[i0, 1 + i1] : i0 <= 1023 and i0 >= 0 and i1 <= 1022 and i1 >= 0
-; CHECK-DAG:  Stmt_S2[i0, i1] -> Stmt_S2[i0, 1 + i1] : i0 <= 1023 and i0 >= 0 and i1 <= 1022 and i1 >= 0
+;   Stmt_S1[i0, 1023] -> Stmt_S2[i0, o1]
+;   Stmt_S1[i0, i1] -> Stmt_S2[i0, 0]
+;
+; CHECK:      RAW dependences:
+; CHECK-NEXT:     { Stmt_S0[i0] -> Stmt_S1[i0, o1] : i0 <= 1023 and i0 >= 0 and o1 <= 1023 and o1 >= 0; Stmt_S2[i0, i1] -> Stmt_S3[i0] : i0 <= 1023 and i0 >= 0 and i1 <= 1023 and i1 >= 0; Stmt_S3[i0] -> Stmt_S0[1 + i0] : i0 <= 1022 and i0 >= 0; Stmt_S1[i0, 1023] -> Stmt_S2[i0, o1] : i0 <= 1023 and i0 >= 0 and o1 <= 1023 and o1 >= 0; Stmt_S1[i0, i1] -> Stmt_S2[i0, 0] : i0 <= 1023 and i0 >= 0 and i1 <= 1022 and i1 >= 0 }
+; CHECK-NEXT: WAR dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAW dependences:
+; CHECK-NEXT:     { Stmt_S0[i0] -> Stmt_S1[i0, o1] : i0 <= 1023 and i0 >= 0 and o1 <= 1023 and o1 >= 0; Stmt_S2[i0, i1] -> Stmt_S3[i0] : i0 <= 1023 and i0 >= 0 and i1 <= 1023 and i1 >= 0; Stmt_S3[i0] -> Stmt_S0[1 + i0] : i0 <= 1022 and i0 >= 0; Stmt_S1[i0, 1023] -> Stmt_S2[i0, o1] : i0 <= 1023 and i0 >= 0 and o1 <= 1023 and o1 >= 0; Stmt_S1[i0, i1] -> Stmt_S2[i0, 0] : i0 <= 1023 and i0 >= 0 and i1 <= 1022 and i1 >= 0 }
+; CHECK-NEXT: Reduction dependences:
+; CHECK-NEXT:     { Stmt_S1[i0, i1] -> Stmt_S1[i0, 1 + i1] : i0 <= 1023 and i0 >= 0 and i1 <= 1022 and i1 >= 0; Stmt_S2[i0, i1] -> Stmt_S2[i0, 1 + i1] : i0 <= 1023 and i0 >= 0 and i1 <= 1022 and i1 >= 0 }
 ;
 ;    void f(int *restrict red) {
 ;      for (int j = 0; j < 1024; j++) {

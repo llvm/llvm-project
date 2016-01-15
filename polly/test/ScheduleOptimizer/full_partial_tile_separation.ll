@@ -1,23 +1,23 @@
 ; RUN: opt -S %loadPolly -polly-vectorizer=stripmine -polly-opt-isl -polly-ast -analyze < %s | FileCheck %s
-; CHECK:       // 1st level tiling - Tiles
-; CHECK:       #pragma known-parallel
-; CHECK:       for (int c0 = 0; c0 <= floord(ni - 1, 32); c0 += 1)
-; CHECK:         for (int c1 = 0; c1 <= floord(nj - 1, 32); c1 += 1)
-; CHECK:           for (int c2 = 0; c2 <= floord(nk - 1, 32); c2 += 1) {
-; CHECK:             // 1st level tiling - Points
-; CHECK:             for (int c3 = 0; c3 <= min(31, ni - 32 * c0 - 1); c3 += 1) {
-; CHECK:               for (int c4 = 0; c4 <= min(7, -8 * c1 + nj / 4 - 1); c4 += 1)
-; CHECK:                 for (int c5 = 0; c5 <= min(31, nk - 32 * c2 - 1); c5 += 1)
-; CHECK:                   #pragma simd
-; CHECK:                   for (int c6 = 0; c6 <= 3; c6 += 1)
-; CHECK:                     Stmt_for_body_6(32 * c0 + c3, 32 * c1 + 4 * c4 + c6, 32 * c2 + c5);
-; CHECK:               if (32 * c1 + 31 >= nj)
-; CHECK:                 for (int c5 = 0; c5 <= min(31, nk - 32 * c2 - 1); c5 += 1)
-; CHECK:                   #pragma simd
-; CHECK:                   for (int c6 = 0; c6 < nj % 4; c6 += 1)
-; CHECK:                     Stmt_for_body_6(32 * c0 + c3, -((nj - 1) % 4) + nj + c6 - 1, 32 * c2 + c5);
-; CHECK:             }
-; CHECK:           }
+; CHECK:          // 1st level tiling - Tiles
+; CHECK-NEXT:     #pragma known-parallel
+; CHECK-NEXT:     for (int c0 = 0; c0 <= floord(ni - 1, 32); c0 += 1)
+; CHECK-NEXT:       for (int c1 = 0; c1 <= floord(nj - 1, 32); c1 += 1)
+; CHECK-NEXT:         for (int c2 = 0; c2 <= floord(nk - 1, 32); c2 += 1) {
+; CHECK-NEXT:           // 1st level tiling - Points
+; CHECK-NEXT:           for (int c3 = 0; c3 <= min(31, ni - 32 * c0 - 1); c3 += 1) {
+; CHECK-NEXT:             for (int c4 = 0; c4 <= min(7, -8 * c1 + nj / 4 - 1); c4 += 1)
+; CHECK-NEXT:               for (int c5 = 0; c5 <= min(31, nk - 32 * c2 - 1); c5 += 1)
+; CHECK-NEXT:                 #pragma simd
+; CHECK-NEXT:                 for (int c6 = 0; c6 <= 3; c6 += 1)
+; CHECK-NEXT:                   Stmt_for_body_6(32 * c0 + c3, 32 * c1 + 4 * c4 + c6, 32 * c2 + c5);
+; CHECK-NEXT:             if (32 * c1 + 31 >= nj)
+; CHECK-NEXT:               for (int c5 = 0; c5 <= min(31, nk - 32 * c2 - 1); c5 += 1)
+; CHECK-NEXT:                 #pragma simd
+; CHECK-NEXT:                 for (int c6 = 0; c6 < nj % 4; c6 += 1)
+; CHECK-NEXT:                   Stmt_for_body_6(32 * c0 + c3, -((nj - 1) % 4) + nj + c6 - 1, 32 * c2 + c5);
+; CHECK-NEXT:           }
+; CHECK-NEXT:         }
 
 ; Function Attrs: nounwind uwtable
 define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, [1024 x double]* %C, [1024 x double]* %A, [1024 x double]* %B) #0 {

@@ -9,13 +9,15 @@
 ; we will add the assumption that i+1 won't overflow only to the former.
 ;
 ; Note: 2147483618 + 30 == 2 ^ 31
-;
+
 ; CHECK:      Function: wrap
-; CHECK:      Context:
-; CHECK:        [N] -> {  : N <= 2147483647 and N >= -2147483648 }
-; CHECK:      Boundary Context:
-; CHECK:        [N] -> {  : N <= 2147483618 }
 ;
+; CHECK:      Context:
+; CHECK-NEXT: [N] -> {  : N <= 2147483647 and N >= -2147483648 }
+;
+; CHECK:      Boundary Context:
+; CHECK-NEXT: [N] -> {  : N <= 2147483618 }
+
 target datalayout = "e-m:e-i32:64-f80:128-n8:16:32:64-S128"
 
 define void @wrap(i32* %A, i32 %N, i32 %p) {

@@ -36,9 +36,6 @@ def discard_none : Flag<["-"], "discard-none">,
 def dynamic_linker : Separate<["--", "-"], "dynamic-linker">,
   HelpText<"Which dynamic linker to use">;
 
-def eh_frame_hdr : Flag<["--"], "eh-frame-hdr">,
-  HelpText<"Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header">;
-
 def enable_new_dtags : Flag<["--"], "enable-new-dtags">,
   HelpText<"Enable new dynamic tags">;
 
@@ -157,6 +154,7 @@ def start_group_paren: Flag<["-"], "(">;
 
 // Options listed below are silently ignored for now for compatibility.
 def build_id : Flag<["--"], "build-id">;
+def eh_frame_hdr : Flag<["--"], "eh-frame-hdr">;
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;

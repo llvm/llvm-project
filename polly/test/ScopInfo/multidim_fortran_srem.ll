@@ -1,11 +1,34 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-; CHECK: ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:   [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : exists (e0 = floor((-i0 + o0)/3): 3e0 = -i0 + o0 and o0 <= 2 and o0 >= 0) };
-; CHECK: ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:   [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : exists (e0 = floor((-2 - i0 + o0)/3): 3e0 = -2 - i0 + o0 and o0 <= 2 and o0 >= 0) };
-
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_bb188
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb188[i0] : i0 >= 0 and i0 <= -3 + tmp183 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb188[i0] -> [i0, 0, 0, 0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb188[i0] -> MemRef_tmp192[] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb188[i0] -> MemRef_tmp194[] };
+; CHECK-NEXT:     Stmt_bb203
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] : i0 >= 0 and i0 <= -3 + tmp183 and i1 >= 0 and i1 <= -3 + tmp180 and i2 >= 0 and i2 <= -3 + tmp177 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> [i0, 1, i1, i2] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp192[] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp194[] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : exists (e0 = floor((-i0 + o0)/3): 3e0 = -i0 + o0 and o0 <= 2 and o0 >= 0) };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : exists (e0 = floor((-2 - i0 + o0)/3): 3e0 = -2 - i0 + o0 and o0 <= 2 and o0 >= 0) };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_arg56[1 + i0, 1 + i1, 1 + i2] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_arg55[1 + i0, 1 + i1, 1 + i2] };
+; CHECK-NEXT: }
 
 define void @pluto(i32* noalias %arg, [0 x i32]* noalias %arg2, [0 x i32]* noalias %arg3, [0 x i32]* noalias %arg4, [0 x i32]* noalias %arg5, [0 x i32]* noalias %arg6, [0 x i32]* noalias %arg7, [0 x i32]* noalias %arg8, [0 x i32]* noalias %arg9, double* noalias %arg10, double* noalias %arg11, [0 x double]* noalias %arg12, [0 x double]* noalias %arg13, [0 x i32]* noalias %arg14, i32* noalias %arg15, [0 x i32]* noalias %arg16, i32* noalias %arg17, i32* noalias %arg18, i32* noalias %arg19, i32* noalias %arg20, i32* noalias %arg21, i32* noalias %arg22, i32* noalias %arg23, i32* noalias %arg24, i32* noalias %arg25, i32* noalias %arg26, i32* noalias %arg27, [0 x double]* noalias %arg28, [0 x double]* noalias %arg29, [0 x double]* noalias %arg30, [0 x double]* noalias %arg31, [0 x double]* noalias %arg32, [0 x double]* noalias %arg33, [0 x double]* noalias %arg34, [0 x double]* noalias %arg35, [0 x double]* noalias %arg36, [0 x double]* noalias %arg37, [0 x double]* noalias %arg38, [0 x double]* noalias %arg39, [0 x double]* noalias %arg40, [0 x double]* noalias %arg41, [0 x double]* noalias %arg42, [0 x double]* noalias %arg43, [0 x double]* noalias %arg44, [0 x double]* noalias %arg45, [0 x double]* noalias %arg46, [0 x double]* noalias %arg47, [0 x double]* noalias %arg48, [0 x double]* noalias %arg49, [0 x double]* noalias %arg50, [0 x double]* noalias %arg51, [0 x double]* noalias %arg52, [0 x double]* noalias %arg53, [0 x double]* noalias %arg54, [0 x double]* noalias %arg55, [0 x double]* noalias %arg56, [0 x double]* noalias %arg57, [0 x double]* noalias %arg58, [0 x double]* noalias %arg59, [0 x double]* noalias %arg60, [0 x double]* noalias %arg61, [0 x double]* noalias %arg62, [0 x double]* noalias %arg63, [0 x double]* noalias %arg64, [0 x double]* noalias %arg65, [0 x double]* noalias %arg66, [0 x double]* noalias %arg67, [0 x double]* noalias %arg68, [0 x double]* noalias %arg69, i32* noalias %arg70, i32* noalias %arg71, i32* noalias %arg72, i32* noalias %arg73, i32* noalias %arg74, i32* noalias %arg75, i32* noalias %arg76, i32* noalias %arg77, i32* noalias %arg78, i32* noalias %arg79, i32* noalias %arg80, i32* noalias %arg81, i32* noalias %arg82, i32* noalias %arg83, i32* noalias %arg84, i32* noalias %arg85, i32* noalias %arg86, i32* noalias %arg87, i32* noalias %arg88, i32* noalias %arg89, i32* noalias %arg90, i32* noalias %arg91, i32* noalias %arg92, i32* noalias %arg93, i32* noalias %arg94, i32* noalias %arg95, i32* noalias %arg96, i32* noalias %arg97, [0 x double]* noalias %arg98, [0 x double]* noalias %arg99, [0 x double]* noalias %arg100, [0 x double]* noalias %arg101, double* noalias %arg102, double* noalias %arg103, double* noalias %arg104, i32* noalias %arg105, double* noalias %arg106, double* noalias %arg107, [0 x double]* noalias %arg108, [0 x double]* noalias %arg109, [0 x double]* noalias %arg110, [0 x double]* noalias %arg111, [0 x double]* noalias %arg112, [0 x double]* noalias %arg113, [0 x double]* noalias %arg114, [0 x double]* noalias %arg115, [0 x double]* noalias %arg116, [0 x double]* noalias %arg117, [0 x double]* noalias %arg118, [0 x double]* noalias %arg119, [0 x double]* noalias %arg120, [0 x double]* noalias %arg121, [0 x double]* noalias %arg122, [0 x double]* noalias %arg123, [0 x double]* noalias %arg124, [0 x double]* noalias %arg125, [0 x double]* noalias %arg126, [0 x double]* noalias %arg127, [0 x double]* noalias %arg128, [0 x double]* noalias %arg129, [0 x double]* noalias %arg130, [0 x double]* noalias %arg131, i32* noalias %arg132, [0 x double]* noalias %arg133, [0 x double]* noalias %arg134, [0 x double]* noalias %arg135) {
 bb:

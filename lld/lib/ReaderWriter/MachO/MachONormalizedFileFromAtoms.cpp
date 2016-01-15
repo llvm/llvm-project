@@ -465,10 +465,10 @@ void Util::organizeSections() {
 void Util::layoutSectionsInSegment(SegmentInfo *seg, uint64_t &addr) {
   seg->address = addr;
   for (SectionInfo *sect : seg->sections) {
-    sect->address = llvm::RoundUpToAlignment(addr, sect->alignment);
+    sect->address = llvm::alignTo(addr, sect->alignment);
     addr = sect->address + sect->size;
   }
-  seg->size = llvm::RoundUpToAlignment(addr - seg->address, _ctx.pageSize());
+  seg->size = llvm::alignTo(addr - seg->address, _ctx.pageSize());
 }
 
 // __TEXT segment lays out backwards so padding is at front after load commands.
@@ -488,10 +488,10 @@ void Util::layoutSectionsInTextSegment(size_t hlcSize, SegmentInfo *seg,
   // Start assigning section address starting at padded offset.
   addr += (padding + hlcSize);
   for (SectionInfo *sect : seg->sections) {
-    sect->address = llvm::RoundUpToAlignment(addr, sect->alignment);
+    sect->address = llvm::alignTo(addr, sect->alignment);
     addr = sect->address + sect->size;
   }
-  seg->size = llvm::RoundUpToAlignment(addr - seg->address, _ctx.pageSize());
+  seg->size = llvm::alignTo(addr - seg->address, _ctx.pageSize());
 }
 
 void Util::assignAddressesToSections(const NormalizedFile &file) {
@@ -511,7 +511,7 @@ void Util::assignAddressesToSections(const NormalizedFile &file) {
     } else
       layoutSectionsInSegment(seg, address);
 
-    address = llvm::RoundUpToAlignment(address, _ctx.pageSize());
+    address = llvm::alignTo(address, _ctx.pageSize());
   }
   DEBUG_WITH_TYPE("WriterMachO-norm",
     llvm::dbgs() << "assignAddressesToSections()\n";

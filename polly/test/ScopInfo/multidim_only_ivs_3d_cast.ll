@@ -12,44 +12,33 @@
 ; m and o, such that we generate unnecessary run-time checks. This is not a
 ; correctness issue, but could be improved.
 
-; CHECK: Assumed Context:
-; CHECK:  [o, m, n, p_3, p_4] -> { :
-; CHECK-DAG: p_3 >= m
-; CHECK-DAG: p_4 >= o
-; CHECK:  }
-; CHECK: p0: %o
-; CHECK: p1: %m
-; CHECK: p2: %n
-; CHECK: p3: (zext i32 %m to i64)
-; CHECK: p4: (zext i32 %o to i64)
-; CHECK-NOT: p5
-
-; CHECK: Arrays {
-; CHECK: double MemRef_A[*][(zext i32 %m to i64)][(zext i32 %o to i64)]; // Element size 8
-; CHECK: }
-; CHECK: Arrays (Bounds as pw_affs) {
-; CHECK: double MemRef_A[*][ [p_3] -> { [] -> [(p_3)] } ][ [p_4] -> { [] -> [(p_4)] } ]; // Element size 8
-; CHECK: }
-
-
-; CHECK: Domain
-; CHECK:   [o, m, n, p_3, p_4] -> { Stmt_for_k[i0, i1, i2] :
-; CHECK-DAG:             i0 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i0 <= -1 + n
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i1 <= -1 + m
-; CHECK-DAG:          and
-; CHECK-DAG:             i2 >= 0
-; CHECK-DAG:          and
-; CHECK-DAG:             i2 <= -1 + o
-; CHECK:              }
-; CHECK: Schedule
-; CHECK:   [o, m, n, p_3, p_4] -> { Stmt_for_k[i0, i1, i2] -> [i0, i1, i2] };
-; CHECK: WriteAccess
-; CHECK:   [o, m, n, p_3, p_4] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[i0, i1, i2] };
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [o, m, n, p_3, p_4] -> {  : p_3 >= m and p_4 >= o }
+;
+; CHECK:      p0: %o
+; CHECK-NEXT: p1: %m
+; CHECK-NEXT: p2: %n
+; CHECK-NEXT: p3: (zext i32 %m to i64)
+; CHECK-NEXT: p4: (zext i32 %o to i64)
+; CHECK-NOT:  p5
+;
+; CHECK:      Arrays {
+; CHECK-NEXT:     double MemRef_A[*][(zext i32 %m to i64)][(zext i32 %o to i64)]; // Element size 8
+; CHECK-NEXT: }
+;
+; CHECK:      Arrays (Bounds as pw_affs) {
+; CHECK-NEXT:     double MemRef_A[*][ [p_3] -> { [] -> [(p_3)] } ][ [p_4] -> { [] -> [(p_4)] } ]; // Element size 8
+; CHECK-NEXT: }
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_k
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [o, m, n, p_3, p_4] -> { Stmt_for_k[i0, i1, i2] : i0 >= 0 and i0 <= -1 + n and i1 >= 0 and i1 <= -1 + m and i2 >= 0 and i2 <= -1 + o };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [o, m, n, p_3, p_4] -> { Stmt_for_k[i0, i1, i2] -> [i0, i1, i2] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [o, m, n, p_3, p_4] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[i0, i1, i2] };
+; CHECK-NEXT: }
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 

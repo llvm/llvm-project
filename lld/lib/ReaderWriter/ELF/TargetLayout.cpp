@@ -616,7 +616,7 @@ void TargetLayout<ELFT>::assignFileOffsetsForMiscSections() {
     section = dyn_cast<Section<ELFT>>(si);
     if (section && TargetLayout<ELFT>::hasOutputSegment(section))
       continue;
-    fileoffset = llvm::RoundUpToAlignment(fileoffset, si->alignment());
+    fileoffset = llvm::alignTo(fileoffset, si->alignment());
     si->setFileOffset(fileoffset);
     si->setVirtualAddr(0);
     fileoffset += si->fileSize();

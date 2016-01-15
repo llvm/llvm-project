@@ -16,34 +16,39 @@
 ;          break;
 ;        }
 ;    }
+
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_sw_bb
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] : exists (e0 = floor((i0)/4): 4e0 = i0 and i0 >= 0 and i0 <= -1 + N) };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> [i0, 1] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:     Stmt_sw_bb_2
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_2[i0] : exists (e0 = floor((-2 + i0)/4): 4e0 = -2 + i0 and i0 >= 2 and i0 <= -1 + N) };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_2[i0] -> [i0, 0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_2[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_2[i0] -> MemRef_A[i0] };
+; CHECK-NEXT: }
+
+; AST:      if (1)
 ;
-; CHECK:    Statements {
-; CHECK-NOT:  Stmt_sw_bb1
-; CHECK:      Stmt_sw_bb
-; CHECK:            Domain :=
-; CHECK:                [N] -> { Stmt_sw_bb[i0] : exists (e0 = floor((i0)/4): 4e0 = i0 and i0 >= 0 and i0 <= -1 + N) };
-; CHECK:            Schedule :=
-; CHECK:                [N] -> { Stmt_sw_bb[i0] -> [i0, 1] };
-; CHECK-NOT:  Stmt_sw_bb1
-; CHECK:      Stmt_sw_bb_2
-; CHECK:            Domain :=
-; CHECK:                [N] -> { Stmt_sw_bb_2[i0] : exists (e0 = floor((-2 + i0)/4): 4e0 = -2 + i0 and i0 >= 2 and i0 <= -1 + N) };
-; CHECK:            Schedule :=
-; CHECK:                [N] -> { Stmt_sw_bb_2[i0] -> [i0, 0] };
-; CHECK-NOT:  Stmt_sw_bb1
-; CHECK:    }
+; AST:          for (int c0 = 0; c0 < N; c0 += 4) {
+; AST-NEXT:       Stmt_sw_bb(c0);
+; AST-NEXT:       if (N >= c0 + 3)
+; AST-NEXT:         Stmt_sw_bb_2(c0 + 2);
+; AST-NEXT:     }
 ;
-; AST:  if (1)
-;
-; AST:      for (int c0 = 0; c0 < N; c0 += 4) {
-; AST:        Stmt_sw_bb(c0);
-; AST:        if (N >= c0 + 3)
-; AST:          Stmt_sw_bb_2(c0 + 2);
-; AST:      }
-;
-; AST:  else
-; AST:      {  /* original code */ }
-;
+; AST:      else
+; AST-NEXT:     {  /* original code */ }
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(i32* %A, i32 %N) {

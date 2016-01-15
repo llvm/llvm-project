@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-dependences -analyze -basicaa < %s | FileCheck %s
 ;
-; CHECK: Reduction dependences:
-; CHECK:   { Stmt_for_inc[i0, i1] -> Stmt_for_inc[i0, 1 + i1] : i0 <= 99 and i0 >= 0 and i1 <= 98 and i1 >= 0 }
+; CHECK:      Reduction dependences:
+; CHECK-NEXT:     { Stmt_for_inc[i0, i1] -> Stmt_for_inc[i0, 1 + i1] : i0 <= 99 and i0 >= 0 and i1 <= 98 and i1 >= 0 }
 ;
 ; int f(int * __restrict__ A) {
 ;   int i, j, sum = 0;

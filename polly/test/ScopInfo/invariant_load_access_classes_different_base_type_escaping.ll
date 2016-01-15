@@ -18,26 +18,24 @@
 ;      return x + y;
 ;    }
 ;
-; CHECK:   Invariant Accesses: {
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_do_body[i0] -> MemRef_S[0] };
-; CHECK:            Execution Context: {  :  }
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_do_body[i0] -> MemRef_S[1] };
-; CHECK:            Execution Context: {  :  }
-; CHECK:    }
+; CHECK:      Invariant Accesses: {
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_do_body[i0] -> MemRef_S[0] };
+; CHECK-NEXT:         Execution Context: {  :  }
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_do_body[i0] -> MemRef_S[1] };
+; CHECK-NEXT:         Execution Context: {  :  }
+; CHECK-NEXT: }
 ;
-; CHECK:    Statements {
-; CHECK-NOT: Access
-; CHECK:      Stmt_do_body
-; CHECK:            Domain :=
-; CHECK:                { Stmt_do_body[i0] : i0 <= 1000 and i0 >= 0 };
-; CHECK:            Schedule :=
-; CHECK:                { Stmt_do_body[i0] -> [i0] };
-; CHECK:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_do_body[i0] -> MemRef_A[i0] };
-; CHECK-NOT: Access
-; CHECK:    }
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_do_body
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_do_body[i0] : i0 <= 1000 and i0 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_do_body[i0] -> [i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_do_body[i0] -> MemRef_A[i0] };
+; CHECK-NEXT: }
 ;
 ; CODEGEN: entry:
 ; CODEGEN:   %S.b.preload.s2a = alloca float

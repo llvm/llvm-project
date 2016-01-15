@@ -1,13 +1,13 @@
 ; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
 ;
-; CHECK:  RAW dependences:
-; CHECK:    {  }
-; CHECK:  WAR dependences:
-; CHECK:    {  }
-; CHECK:  WAW dependences:
-; CHECK:    {  }
-; CHECK:  Reduction dependences:
-; CHECK:    { Stmt_for_cond[i0] -> Stmt_for_cond[1 + i0] : i0 <= 99 and i0 >= 0 }
+; CHECK:      RAW dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAR dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAW dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: Reduction dependences:
+; CHECK-NEXT:     { Stmt_for_cond[i0] -> Stmt_for_cond[1 + i0] : i0 <= 99 and i0 >= 0 }
 ;
 ; void f(int* sum) {
 ;   for (int i = 0; i <= 100; i++)

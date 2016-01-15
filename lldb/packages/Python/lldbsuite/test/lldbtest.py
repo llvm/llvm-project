@@ -1647,7 +1647,7 @@ class Base(unittest2.TestCase):
                 print("Executing tearDown hook:", getsource_if_available(hook), file=sbuf)
             import inspect
             hook_argc = len(inspect.getargspec(hook).args)
-            if hook_argc == 0 or getattr(hook,'im_self',None):
+            if hook_argc == 0 or (getattr(hook,'im_self',None) is not None) or (hasattr(hook, '__self__')):
                 hook()
             elif hook_argc == 1:
                 hook(self)

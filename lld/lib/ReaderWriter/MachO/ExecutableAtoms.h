@@ -34,7 +34,7 @@ namespace mach_o {
 class CEntryFile : public SimpleFile {
 public:
   CEntryFile(const MachOLinkingContext &context)
-      : SimpleFile("C entry"),
+      : SimpleFile("C entry", kindCEntryObject),
        _undefMain(*this, context.entrySymbolName()) {
     this->addAtom(_undefMain);
   }
@@ -51,7 +51,7 @@ private:
 class StubHelperFile : public SimpleFile {
 public:
   StubHelperFile(const MachOLinkingContext &context)
-      : SimpleFile("stub runtime"),
+      : SimpleFile("stub runtime", kindStubHelperObject),
         _undefBinder(*this, context.binderSymbolName()) {
     this->addAtom(_undefBinder);
   }

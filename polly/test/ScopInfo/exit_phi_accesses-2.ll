@@ -1,19 +1,20 @@
 ; RUN: opt %loadPolly -analyze -polly-scops %s | FileCheck %s
 
 ; CHECK-LABEL: Function: foo
+;
 ; CHECK:       Statements {
 ; CHECK-NEXT:      Stmt_body
 ; CHECK-NEXT:          Domain :=
 ; CHECK-NEXT:              { Stmt_body[i0] : i0 <= 100 and i0 >= 0 };
 ; CHECK-NEXT:          Schedule :=
 ; CHECK-NEXT:              { Stmt_body[i0] -> [i0] };
-; CHECK-NEXT:          MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_body[i0] -> MemRef_sum__phi[] };
-; CHECK-NEXT:          ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_body[i0] -> MemRef_sum__phi[] };
-; CHECK-NEXT:          ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:              { Stmt_body[i0] -> MemRef_A[i0] };
-; CHECK-NEXT:          MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_body[i0] -> MemRef_sum_next[] };
 ; CHECK-NEXT:  }
 

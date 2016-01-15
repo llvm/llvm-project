@@ -17,6 +17,7 @@
 #include "lld/Core/SymbolTable.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/ErrorOr.h"
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -43,13 +44,13 @@ public:
 
   // Handle files, this adds atoms from the current file thats
   // being processed by the resolver
-  bool handleFile(File &);
+  ErrorOr<bool> handleFile(File &);
 
   // Handle an archive library file.
-  bool handleArchiveFile(File &);
+  ErrorOr<bool> handleArchiveFile(File &);
 
   // Handle a shared library file.
-  void handleSharedLibrary(File &);
+  std::error_code handleSharedLibrary(File &);
 
   /// @brief do work of merging and resolving and return list
   bool resolve();
@@ -57,7 +58,7 @@ public:
   std::unique_ptr<SimpleFile> resultFile() { return std::move(_result); }
 
 private:
-  typedef std::function<void(StringRef, bool)> UndefCallback;
+  typedef std::function<ErrorOr<bool>(StringRef, bool)> UndefCallback;
 
   bool undefinesAdded(int begin, int end);
   File *getFile(int &index);
@@ -73,7 +74,8 @@ private:
   bool checkUndefines();
   void removeCoalescedAwayAtoms();
   void checkDylibSymbolCollisions();
-  void forEachUndefines(File &file, bool searchForOverrides, UndefCallback callback);
+  ErrorOr<bool> forEachUndefines(File &file, bool searchForOverrides,
+                                 UndefCallback callback);
 
   void markLive(const Atom *atom);
   void addAtoms(const std::vector<const DefinedAtom *>&);
@@ -81,7 +83,7 @@ private:
 
   class MergedFile : public SimpleFile {
   public:
-    MergedFile() : SimpleFile("<linker-internal>") {}
+    MergedFile() : SimpleFile("<linker-internal>", kindResolverMergedObject) {}
     void addAtoms(std::vector<const Atom*>& atoms);
   };
 

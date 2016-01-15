@@ -11,54 +11,48 @@
 ;        A[i] = x + y;
 ;      }
 ;    }
+
+; CHECK-LABEL: Region: %bb1---%bb11
 ;
-; CHECK:    Region: %bb1---%bb11
+; CHECK:       Arrays {
+; CHECK-NEXT:      i32 MemRef_A[*]; // Element size 4
+; CHECK-NEXT:      i32 MemRef_x; [BasePtrOrigin: MemRef_A] // Element size 4
+; CHECK-NEXT:      i32 MemRef_y__phi; // Element size 4
+; CHECK-NEXT:  }
 ;
-; CHECK: Arrays {
-; CHECK:   i32 MemRef_A[*];
-; CHECK:   i32 MemRef_x; [BasePtrOrigin: MemRef_A]
-; CHECK:   i32 MemRef_y__phi;
-; CHECK: }
+; CHECK:       Arrays (Bounds as pw_affs) {
+; CHECK-NEXT:      i32 MemRef_A[*]; // Element size 4
+; CHECK-NEXT:      i32 MemRef_x; [BasePtrOrigin: MemRef_A] // Element size 4
+; CHECK-NEXT:      i32 MemRef_y__phi; // Element size 4
+; CHECK-NEXT:  }
 ;
-; CHECK: Arrays (Bounds as pw_affs) {
-; CHECK:   i32 MemRef_A[*];
-; CHECK:   i32 MemRef_x; [BasePtrOrigin: MemRef_A]
-; CHECK:   i32 MemRef_y__phi;
-; CHECK: }
-;
-; CHECK:      Stmt_bb2__TO__bb7
-; CHECK:            Domain :=
-; CHECK:                { Stmt_bb2__TO__bb7[i0] :
-; CHECK-DAG:               i0 >= 0
-; CHECK-DAG:             and
-; CHECK-DAG:               i0 <= 1023
-; CHECK:                };
-; CHECK:            Schedule :=
-; CHECK:                { Stmt_bb2__TO__bb7[i0] -> [i0, 0] };
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_bb2__TO__bb7[i0] -> MemRef_A[i0] };
-; CHECK:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK:                { Stmt_bb2__TO__bb7[i0] -> MemRef_x[] };
-; CHECK:            MayWriteAccess := [Reduction Type: NONE] [Scalar: 1]
-; CHECK:                { Stmt_bb2__TO__bb7[i0] -> MemRef_y__phi[] };
-; CHECK:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK:                { Stmt_bb2__TO__bb7[i0] -> MemRef_y__phi[] };
-; CHECK:      Stmt_bb7
-; CHECK:            Domain :=
-; CHECK:                { Stmt_bb7[i0] :
-; CHECK-DAG:               i0 >= 0
-; CHECK-DAG:             and
-; CHECK-DAG:               i0 <= 1023
-; CHECK:                };
-; CHECK:            Schedule :=
-; CHECK:                { Stmt_bb7[i0] -> [i0, 1] };
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 1]
-; CHECK:                { Stmt_bb7[i0] -> MemRef_x[] };
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 1]
-; CHECK:                { Stmt_bb7[i0] -> MemRef_y__phi[] };
-; CHECK:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_bb7[i0] -> MemRef_A[i0] };
-;
+; CHECK:       Statements {
+; CHECK-NEXT:      Stmt_bb2__TO__bb7
+; CHECK-NEXT:          Domain :=
+; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] : i0 <= 1023 and i0 >= 0 };
+; CHECK-NEXT:          Schedule :=
+; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> [i0, 0] };
+; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_x[] };
+; CHECK-NEXT:          MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_y__phi[] };
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_y__phi[] };
+; CHECK-NEXT:      Stmt_bb7
+; CHECK-NEXT:          Domain :=
+; CHECK-NEXT:              { Stmt_bb7[i0] : i0 <= 1023 and i0 >= 0 };
+; CHECK-NEXT:          Schedule :=
+; CHECK-NEXT:              { Stmt_bb7[i0] -> [i0, 1] };
+; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:              { Stmt_bb7[i0] -> MemRef_x[] };
+; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:              { Stmt_bb7[i0] -> MemRef_y__phi[] };
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:              { Stmt_bb7[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:  }
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(i32* %A, i32 %b) {

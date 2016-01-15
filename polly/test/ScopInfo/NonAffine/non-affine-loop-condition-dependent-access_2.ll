@@ -15,72 +15,92 @@
 ; innermost loop in the whole loop nest and model A[k] as a non-affine
 ; access.
 ;
-; INNERMOST:    Function: f
-; INNERMOST:    Region: %bb15---%bb13
-; INNERMOST:    Max Loop Depth:  1
-; INNERMOST:    p0: {0,+,{0,+,1}<nuw><nsw><%bb11>}<nuw><nsw><%bb13>
-; INNERMOST:    p1: {0,+,4}<nuw><nsw><%bb11>
-; INNERMOST:    p2: {0,+,4}<nuw><nsw><%bb13>
-; INNERMOST:    p3: {0,+,{0,+,4}<nuw><nsw><%bb11>}<%bb13>
-; INNERMOST:    Alias Groups (0):
-; INNERMOST:        n/a
-; INNERMOST:    Statements {
-; INNERMOST:      Stmt_bb16
-; INNERMOST:            Domain :=
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] : i0 <= 1023 - p_0 and i0 >= 0 }
-; INNERMOST:            Schedule :=
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> [0, i0] }
-; INNERMOST:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_1 };
-; INNERMOST:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_2 };
-; INNERMOST:            ReadAccess := [Reduction Type: +] [Scalar: 0]
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_3 + 4i0 };
-; INNERMOST:            MustWriteAccess :=  [Reduction Type: +] [Scalar: 0]
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_3 + 4i0 };
-; INNERMOST:      Stmt_bb26
-; INNERMOST:            Domain :=
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb26[] : p_0 <= 1024 };
-; INNERMOST:            Schedule :=
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb26[] -> [1, 0] };
-; INNERMOST:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb26[] -> MemRef_indvars_iv_next6[] };
-; INNERMOST:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; INNERMOST:                [p_0, p_1, p_2, p_3] -> { Stmt_bb26[] -> MemRef_indvars_iv_next4[] };
-; INNERMOST:    }
-;
-; ALL:    Function: f
-; ALL:    Region: %bb11---%bb29
-; ALL:    Max Loop Depth:  2
-; ALL:    Context:
-; ALL:    {  :  }
-; ALL:    Assumed Context:
-; ALL:    {  :  }
-; ALL:    Alias Groups (0):
-; ALL:        n/a
-; ALL:    Statements {
-; ALL:      Stmt_bb15__TO__bb25
-; ALL:            Domain :=
-; ALL:                { Stmt_bb15__TO__bb25[i0, i1] :
-; ALL-DAG:               i0 >= 0
-; ALL-DAG:             and
-; ALL-DAG:               i0 <= 1023
-; ALL-DAG:             and
-; ALL-DAG:               i1 >= 0
-; ALL-DAG:             and
-; ALL-DAG:               i1 <= 1023
-; ALL:                }
-; ALL:            Schedule :=
-; ALL:                { Stmt_bb15__TO__bb25[i0, i1] -> [i0, i1] };
-; ALL:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; ALL:                { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i0] };
-; ALL:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; ALL:                { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i1] };
-; ALL:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; ALL:                { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : o0 <= 2305843009213693949 and o0 >= 0 };
-; ALL:            MayWriteAccess := [Reduction Type: NONE] [Scalar: 0]
-; ALL:                { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : o0 <= 2305843009213693949 and o0 >= 0 };
-; ALL:    }
+; INNERMOST:      Function: f
+; INNERMOST-NEXT: Region: %bb15---%bb13
+; INNERMOST-NEXT: Max Loop Depth:  1
+; INNERMOST-NEXT: Invariant Accesses: {
+; INNERMOST-NEXT: }
+; INNERMOST-NEXT: Context:
+; INNERMOST-NEXT: [p_0, p_1, p_2, p_3] -> {  : p_0 >= 0 and p_0 <= 1048576 and p_1 >= 0 and p_1 <= 4096 and p_2 >= 0 and p_2 <= 4096 and p_3 >= 0 and p_3 <= 4194304 }
+; INNERMOST-NEXT: Assumed Context:
+; INNERMOST-NEXT: [p_0, p_1, p_2, p_3] -> {  :  }
+; INNERMOST-NEXT: Boundary Context:
+; INNERMOST-NEXT: [p_0, p_1, p_2, p_3] -> {  :  }
+; INNERMOST-NEXT: p0: {0,+,{0,+,1}<nuw><nsw><%bb11>}<nuw><nsw><%bb13>
+; INNERMOST-NEXT: p1: {0,+,4}<nuw><nsw><%bb11>
+; INNERMOST-NEXT: p2: {0,+,4}<nuw><nsw><%bb13>
+; INNERMOST-NEXT: p3: {0,+,{0,+,4}<nuw><nsw><%bb11>}<%bb13>
+; INNERMOST-NEXT: Arrays {
+; INNERMOST-NEXT:     i32 MemRef_A[*]; // Element size 4
+; INNERMOST-NEXT:     i64 MemRef_indvars_iv_next6; // Element size 8
+; INNERMOST-NEXT:     i64 MemRef_indvars_iv_next4; // Element size 8
+; INNERMOST-NEXT: }
+; INNERMOST-NEXT: Arrays (Bounds as pw_affs) {
+; INNERMOST-NEXT:     i32 MemRef_A[*]; // Element size 4
+; INNERMOST-NEXT:     i64 MemRef_indvars_iv_next6; // Element size 8
+; INNERMOST-NEXT:     i64 MemRef_indvars_iv_next4; // Element size 8
+; INNERMOST-NEXT: }
+; INNERMOST-NEXT: Alias Groups (0):
+; INNERMOST-NEXT:     n/a
+; INNERMOST-NEXT: Statements {
+; INNERMOST-NEXT:     Stmt_bb16
+; INNERMOST-NEXT:         Domain :=
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] : i0 <= 1023 - p_0 and i0 >= 0 };
+; INNERMOST-NEXT:         Schedule :=
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> [0, i0] };
+; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_1 };
+; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_2 };
+; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_3 + 4i0 };
+; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_3 + 4i0 };
+; INNERMOST-NEXT:     Stmt_bb26
+; INNERMOST-NEXT:         Domain :=
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb26[] : p_0 <= 1024 };
+; INNERMOST-NEXT:         Schedule :=
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb26[] -> [1, 0] };
+; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb26[] -> MemRef_indvars_iv_next6[] };
+; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; INNERMOST-NEXT:             [p_0, p_1, p_2, p_3] -> { Stmt_bb26[] -> MemRef_indvars_iv_next4[] };
+; INNERMOST-NEXT: }
+
+; ALL:      Function: f
+; ALL-NEXT: Region: %bb11---%bb29
+; ALL-NEXT: Max Loop Depth:  2
+; ALL-NEXT: Invariant Accesses: {
+; ALL-NEXT: }
+; ALL-NEXT: Context:
+; ALL-NEXT: {  :  }
+; ALL-NEXT: Assumed Context:
+; ALL-NEXT: {  :  }
+; ALL-NEXT: Boundary Context:
+; ALL-NEXT: {  :  }
+; ALL-NEXT: Arrays {
+; ALL-NEXT:     i32 MemRef_A[*]; // Element size 4
+; ALL-NEXT: }
+; ALL-NEXT: Arrays (Bounds as pw_affs) {
+; ALL-NEXT:     i32 MemRef_A[*]; // Element size 4
+; ALL-NEXT: }
+; ALL-NEXT: Alias Groups (0):
+; ALL-NEXT:     n/a
+; ALL-NEXT: Statements {
+; ALL-NEXT:     Stmt_bb15__TO__bb25
+; ALL-NEXT:         Domain :=
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] : i0 <= 1023 and i0 >= 0 and i1 <= 1023 and i1 >= 0 };
+; ALL-NEXT:         Schedule :=
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> [i0, i1] };
+; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i0] };
+; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i1] };
+; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : o0 <= 2305843009213693949 and o0 >= 0 };
+; ALL-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : o0 <= 2305843009213693949 and o0 >= 0 };
+; ALL-NEXT: }
 ;
 ;    void f(int *A) {
 ;      for (int i = 0; i < 1024; i++)

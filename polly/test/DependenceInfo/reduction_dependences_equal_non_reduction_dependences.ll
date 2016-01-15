@@ -3,14 +3,14 @@
 ; This loopnest contains a reduction which imposes the same dependences as the
 ; accesses to the array A. We need to ensure we keep the dependences of A.
 ;
-; CHECK: RAW dependences:
-; CHECK:   { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 >= 0 and i0 <= 1022 }
-; CHECK: WAR dependences:
-; CHECK:   {  }
-; CHECK: WAW dependences:
-; CHECK:   { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 <= 1022 and i0 >= 0 }
-; CHECK: Reduction dependences:
-; CHECK:   { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 <= 1022 and i0 >= 0 }
+; CHECK:      RAW dependences:
+; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 >= 0 and i0 <= 1022 }
+; CHECK-NEXT: WAR dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAW dependences:
+; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 <= 1022 and i0 >= 0 }
+; CHECK-NEXT: Reduction dependences:
+; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : i0 <= 1022 and i0 >= 0 }
 ;
 ;
 ;    void AandSum(int *restrict sum, int *restrict A) {

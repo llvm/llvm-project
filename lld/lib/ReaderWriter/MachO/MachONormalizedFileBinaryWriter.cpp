@@ -255,7 +255,7 @@ StringRef MachOFileLayout::dyldPath() {
 }
 
 uint32_t MachOFileLayout::pointerAlign(uint32_t value) {
-  return llvm::RoundUpToAlignment(value, _is64 ? 8 : 4);
+  return llvm::alignTo(value, _is64 ? 8 : 4);
 }
 
 
@@ -292,7 +292,7 @@ MachOFileLayout::MachOFileLayout(const NormalizedFile &file)
       if (isZeroFillSection(sect.type))
         _sectInfo[&sect].fileOffset = 0;
       else {
-        offset = llvm::RoundUpToAlignment(offset, sect.alignment);
+        offset = llvm::alignTo(offset, sect.alignment);
         _sectInfo[&sect].fileOffset = offset;
         offset += sect.content.size();
       }
@@ -539,10 +539,8 @@ void MachOFileLayout::buildFileOffsets() {
                   << ", fileOffset=" << fileOffset << "\n");
     }
 
-    _segInfo[&sg].fileSize = llvm::RoundUpToAlignment(segFileSize,
-                                                      _file.pageSize);
-    fileOffset = llvm::RoundUpToAlignment(fileOffset + segFileSize,
-                                          _file.pageSize);
+    _segInfo[&sg].fileSize = llvm::alignTo(segFileSize, _file.pageSize);
+    fileOffset = llvm::alignTo(fileOffset + segFileSize, _file.pageSize);
     _addressOfLinkEdit = sg.address + sg.size;
   }
   _startOfLinkEdit = fileOffset;
@@ -679,7 +677,7 @@ std::error_code MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
   uint8_t *next = lc + cmd->cmdsize;
   setString16("__LINKEDIT", cmd->segname);
   cmd->vmaddr   = _addressOfLinkEdit;
-  cmd->vmsize   = llvm::RoundUpToAlignment(linkeditSize, _file.pageSize);
+  cmd->vmsize   = llvm::alignTo(linkeditSize, _file.pageSize);
   cmd->fileoff  = _startOfLinkEdit;
   cmd->filesize = linkeditSize;
   cmd->maxprot  = VM_PROT_READ;

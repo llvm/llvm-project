@@ -57,6 +57,11 @@ public:
                              uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                              int32_t Index, unsigned RelOff) const = 0;
 
+  // Returns true if a relocation is just a hint for linker to make for example
+  // some code optimization. Such relocations should not be handled as a regular
+  // ones and lead to dynamic relocation creation etc.
+  virtual bool isHintReloc(uint32_t Type) const;
+
   // Returns true if a relocation is relative to the place being relocated,
   // such as relocations used for PC-relative instructions. Such relocations
   // need not be fixed up if an image is loaded to a different address than

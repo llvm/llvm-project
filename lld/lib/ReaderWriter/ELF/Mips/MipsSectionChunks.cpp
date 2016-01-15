@@ -58,7 +58,7 @@ MipsOptionsSection<ELFT>::MipsOptionsSection(
   this->setOrder(MipsTargetLayout<ELFT>::ORDER_MIPS_OPTIONS);
   this->_entSize = 1;
   this->_alignment = 8;
-  this->_fsize = llvm::RoundUpToAlignment(
+  this->_fsize = llvm::alignTo(
       sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo), this->_alignment);
   this->_msize = this->_fsize;
   this->_type = SHT_MIPS_OPTIONS;
@@ -100,7 +100,7 @@ MipsAbiFlagsSection<ELFT>::MipsAbiFlagsSection(
       _targetLayout(targetLayout) {
   this->setOrder(MipsTargetLayout<ELFT>::ORDER_MIPS_ABI_FLAGS);
   this->_alignment = 8;
-  this->_fsize = llvm::RoundUpToAlignment(sizeof(_abiFlags), this->_alignment);
+  this->_fsize = llvm::alignTo(sizeof(_abiFlags), this->_alignment);
   this->_msize = this->_fsize;
   this->_entSize = this->_fsize;
   this->_type = SHT_MIPS_ABIFLAGS;

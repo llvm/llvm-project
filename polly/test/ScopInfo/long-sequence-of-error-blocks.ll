@@ -8,43 +8,43 @@ target triple = "x86_64-unknown-linux-gnu"
 ; The assumed context of this test case is still very large and should be
 ; reduced.
 
-; CHECK: Assumed Context:
-; CHECK: {{.*}} or {{.*}} or {{.*}} or {{.*}} or {{.*}}
-
 ; This test case contains a long sequence of branch instructions together with
 ; function calls that are considered 'error blocks'. We verify that the
 ; iteration spaces are not overly complicated.
 
-; CHECK: Statements {
-; CHECK:   Stmt_bb15
-; CHECK:         Domain :=
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb15[] };
-; CHECK:         Schedule :=
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb15[] -> [0] };
-; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb15[] -> MemRef_A[0] };
-; CHECK:   Stmt_bb19
-; CHECK:         Domain :=
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] : tmp17 <= -1 or tmp17 >= 1 };
-; CHECK:         Schedule :=
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] -> [1] : tmp17 <= -1 or tmp17 >= 1 };
-; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] -> MemRef_A[0] };
-; CHECK:   Stmt_bb24
-; CHECK:         Domain :=
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb24[] };
-; CHECK:         Schedule :=
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb24[] -> [2] };
-; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb24[] -> MemRef_A[0] };
-; CHECK:   Stmt_bb29
-; CHECK:         Domain :=
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb29[] : tmp27 = 3 };
-; CHECK:         Schedule :=
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb29[] -> [3] };
-; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb29[] -> MemRef_A[0] };
-
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> {  : (tmp17 = 0 and tmp27 >= 4) or (tmp17 = 0 and tmp27 <= 2) or (tmp21 = 0 and tmp17 <= -1 and tmp27 >= 4) or (tmp21 = 0 and tmp17 <= -1 and tmp27 <= 2) or (tmp21 = 0 and tmp17 >= 1 and tmp27 >= 4) or (tmp21 = 0 and tmp17 >= 1 and tmp27 <= 2) or (tmp17 = 0 and tmp27 = 3 and tmp31 >= 144) or (tmp21 = 0 and tmp27 = 3 and tmp17 <= -1 and tmp31 >= 144) or (tmp21 = 0 and tmp27 = 3 and tmp17 >= 1 and tmp31 >= 144) }
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_bb15
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb15[] };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb15[] -> [0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb15[] -> MemRef_A[0] };
+; CHECK-NEXT:     Stmt_bb19
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] : tmp17 <= -1 or tmp17 >= 1 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] -> [1] : tmp17 <= -1 or tmp17 >= 1 };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb19[] -> MemRef_A[0] };
+; CHECK-NEXT:     Stmt_bb24
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb24[] };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb24[] -> [2] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb24[] -> MemRef_A[0] };
+; CHECK-NEXT:     Stmt_bb29
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb29[] : tmp27 = 3 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb29[] -> [3] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp17, tmp21, tmp27, tmp31] -> { Stmt_bb29[] -> MemRef_A[0] };
+; CHECK-NEXT: }
 
 @global = external global [300 x i8], align 16
 @global1 = external global %struct.hoge*, align 8

@@ -35,6 +35,7 @@
 #endif
 
 using lld::mach_o::ArchHandler;
+using lld::mach_o::MachOFile;
 using lld::mach_o::MachODylibFile;
 using namespace llvm::MachO;
 
@@ -988,6 +989,33 @@ void MachOLinkingContext::finalizeInputFiles() {
                    });
   size_t numLibs = std::count_if(elements.begin(), elements.end(), isLibrary);
   elements.push_back(llvm::make_unique<GroupEnd>(numLibs));
+}
+
+std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
+  auto *machoFile = dyn_cast<MachOFile>(&file);
+  if (!machoFile)
+    return std::error_code();
+
+  // Check that the arch of the context matches that of the file.
+  // Also set the arch of the context if it didn't have one.
+  if (_arch == arch_unknown) {
+    _arch = machoFile->arch();
+  } else if (machoFile->arch() != arch_unknown && machoFile->arch() != _arch) {
+    // Archs are different.
+    return make_dynamic_error_code(file.path() +
+                  Twine(" cannot be linked due to incompatible architecture"));
+  }
+
+  // Check that the OS of the context matches that of the file.
+  // Also set the OS of the context if it didn't have one.
+  if (_os == OS::unknown) {
+    _os = machoFile->OS();
+  } else if (machoFile->OS() != OS::unknown && machoFile->OS() != _os) {
+    // OSes are different.
+    return make_dynamic_error_code(file.path() +
+              Twine(" cannot be linked due to incompatible operating systems"));
+  }
+  return std::error_code();
 }
 
 } // end namespace lld

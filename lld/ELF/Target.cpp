@@ -227,6 +227,7 @@ public:
 template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
+  unsigned getDynReloc(unsigned Type) const override;
   void writeGotHeaderEntries(uint8_t *Buf) const override;
   void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
@@ -239,6 +240,7 @@ public:
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
+  bool isHintReloc(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
 };
 } // anonymous namespace
@@ -283,6 +285,8 @@ bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
 }
 
 bool TargetInfo::isGotRelative(uint32_t Type) const { return false; }
+
+bool TargetInfo::isHintReloc(uint32_t Type) const { return false; }
 
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
 
@@ -1450,6 +1454,16 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   PageSize = 65536;
   GotHeaderEntriesNum = 2;
+  RelativeReloc = R_MIPS_REL32;
+}
+
+template <class ELFT>
+unsigned MipsTargetInfo<ELFT>::getDynReloc(unsigned Type) const {
+  if (Type == R_MIPS_32 || Type == R_MIPS_64)
+    return R_MIPS_REL32;
+  StringRef S = getELFRelocationTypeName(EM_MIPS, Type);
+  error("Relocation " + S + " cannot be used when making a shared object; "
+                            "recompile with -fPIC.");
 }
 
 template <class ELFT>
@@ -1578,6 +1592,11 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   default:
     error("unrecognized reloc " + Twine(Type));
   }
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::isHintReloc(uint32_t Type) const {
+  return Type == R_MIPS_JALR;
 }
 
 template <class ELFT>

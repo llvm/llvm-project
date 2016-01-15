@@ -1,29 +1,28 @@
 ; RUN: opt %loadPolly -polly-scops -analyze \
 ; RUN:     -S < %s | FileCheck %s
 
-
-; CHECK: Statements {
-; CHECK-NEXT:   Stmt_loop__TO__backedge
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_loop__TO__backedge
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] : i0 <= 100 and i0 >= 0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] -> [i0, 0] };
-; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] -> MemRef_merge__phi[] };
-; CHECK-NEXT:         MayWriteAccess :=   [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] -> MemRef_merge__phi[] };
-; CHECK-NEXT:         MayWriteAccess :=   [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] -> MemRef_merge__phi[] };
-; CHECK-NEXT:   Stmt_backedge
+; CHECK-NEXT:     Stmt_backedge
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             { Stmt_backedge[i0] : i0 <= 100 and i0 >= 0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_backedge[i0] -> [i0, 1] };
-; CHECK-NEXT:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             { Stmt_backedge[i0] -> MemRef_merge__phi[] };
-; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             { Stmt_backedge[i0] -> MemRef_A[0] };
-; CHECK-NEXT:       }
+; CHECK-NEXT: }
 
 define void @foo(float* %A, i1 %cond0, i1 %cond1) {
 entry:

@@ -50,22 +50,16 @@ exit.3:
   ret void
 }
 
-; VALUE: region: 'S1 => exit.3' in function 'sequential_writes':
-; VALUE:   RAW dependences:
-; VALUE:     {  }
-; VALUE:   WAR dependences:
-; VALUE:     {  }
-; VALUE:   WAW dependences:
-; VALUE:     {
-; VALUE:       Stmt_S1[i0] -> Stmt_S2[i0] : i0 <= 9 and i0 >= 0;
-; VALUE:       Stmt_S2[i0] -> Stmt_S3[i0] : i0 <= 9 and i0 >= 0;
-; VALUE:       Stmt_S1[i0] -> Stmt_S3[i0] : i0 <= 99 and i0 >= 10
-; VALUE:     }
+; VALUE:      RAW dependences:
+; VALUE-NEXT:     {  }
+; VALUE-NEXT: WAR dependences:
+; VALUE-NEXT:     {  }
+; VALUE-NEXT: WAW dependences:
+; VALUE-NEXT:     { Stmt_S1[i0] -> Stmt_S2[i0] : i0 <= 9 and i0 >= 0; Stmt_S2[i0] -> Stmt_S3[i0] : i0 <= 9 and i0 >= 0; Stmt_S1[i0] -> Stmt_S3[i0] : i0 <= 99 and i0 >= 10 }
 
-; TIMEOUT: region: 'S1 => exit.3' in function 'sequential_writes':
-; TIMEOUT:   RAW dependences:
-; TIMEOUT:     n/a
-; TIMEOUT:   WAR dependences:
-; TIMEOUT:     n/a
-; TIMEOUT:   WAW dependences:
-; TIMEOUT:     n/a
+; TIMEOUT:      RAW dependences:
+; TIMEOUT-NEXT:     n/a
+; TIMEOUT-NEXT: WAR dependences:
+; TIMEOUT-NEXT:     n/a
+; TIMEOUT-NEXT: WAW dependences:
+; TIMEOUT-NEXT:     n/a

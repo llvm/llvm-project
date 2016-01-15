@@ -50,15 +50,22 @@ for.end7:                                         ; preds = %for.cond
   ret i32 0
 }
 
-; CHECK: Context:
-; CHECK: p0: {0,+,1}<%for.cond>
-
-; CHECK: Domain :=
-; CHECK: [p_0] -> { Stmt_if_then[i0] :
-; CHECK-DAG:         i0 >= 0
-; CHECK-DAG:       and
-; CHECK-DAG:         i0 <= 1022
-; CHECK-DAG:       and
-; CHECK-DAG:         i0 >= 999 - p_0
-; CHECK:          }
+; CHECK:      p0: {0,+,1}<%for.cond>
+;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_if_then
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [p_0] -> { Stmt_if_then[i0] : i0 <= 1022 and i0 >= 0 and i0 >= 999 - p_0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [p_0] -> { Stmt_if_then[i0] -> [0, i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [p_0] -> { Stmt_if_then[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:     Stmt_for_inc5
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [p_0] -> { Stmt_for_inc5[] };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [p_0] -> { Stmt_for_inc5[] -> [1, 0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [p_0] -> { Stmt_for_inc5[] -> MemRef_indvar_out_next[] };
+; CHECK-NEXT: }
 

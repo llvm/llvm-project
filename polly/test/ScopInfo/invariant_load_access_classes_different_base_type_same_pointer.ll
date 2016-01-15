@@ -7,23 +7,21 @@
 ;        A[i] = (*(int *)&U) + (int)(*(float *)&U);
 ;    }
 ;
-; CHECK:    Invariant Accesses: {
-; CHECK-NOT:        ReadAccess
-; CHECK:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_for_body[i0] -> MemRef_U[0] };
-; CHECK:            Execution Context: {  :  }
-; CHECK-NOT:        ReadAccess
-; CHECK:    }
+; CHECK:      Invariant Accesses: {
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_U[0] };
+; CHECK-NEXT:         Execution Context: {  :  }
+; CHECK-NEXT: }
 ;
-; CHECK:    Statements {
-; CHECK:      Stmt_for_body
-; CHECK:            Domain :=
-; CHECK:                { Stmt_for_body[i0] : i0 <= 999 and i0 >= 0 };
-; CHECK:            Schedule :=
-; CHECK:                { Stmt_for_body[i0] -> [i0] };
-; CHECK:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:                { Stmt_for_body[i0] -> MemRef_A[i0] };
-; CHECK:    }
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_body
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_for_body[i0] : i0 <= 999 and i0 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_for_body[i0] -> [i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[i0] };
+; CHECK-NEXT: }
 ;
 ; CODEGEN: entry:
 ; CODEGEN:   %U.f.preload.s2a = alloca float

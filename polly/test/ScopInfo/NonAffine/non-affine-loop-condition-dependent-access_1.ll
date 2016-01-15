@@ -7,32 +7,40 @@
 ; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
 ; RUN:     -analyze < %s | FileCheck %s -check-prefix=PROFIT
 ;
-; SCALAR:    Function: f
-; SCALAR:    Region: %bb1---%bb13
-; SCALAR:    Max Loop Depth:  1
-; SCALAR:    Context:
-; SCALAR:    {  :  }
-; SCALAR:    Assumed Context:
-; SCALAR:    {  :  }
-; SCALAR:    Alias Groups (0):
-; SCALAR:        n/a
-; SCALAR:    Statements {
-; SCALAR:      Stmt_bb3__TO__bb11
-; SCALAR:            Domain :=
-; SCALAR:                { Stmt_bb3__TO__bb11[i0] :
-; SCALAR-DAG:               i0 >= 0
-; SCALAR-DAG:             and
-; SCALAR-DAG:               i0 <= 1023
-; SCALAR:                }
-; SCALAR:            Schedule :=
-; SCALAR:                { Stmt_bb3__TO__bb11[i0] -> [i0] };
-; SCALAR:            ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; SCALAR:                { Stmt_bb3__TO__bb11[i0] -> MemRef_C[i0] };
-; SCALAR:            ReadAccess := [Reduction Type: +] [Scalar: 0]
-; SCALAR:                { Stmt_bb3__TO__bb11[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= -2147483648 };
-; SCALAR:            MayWriteAccess := [Reduction Type: +] [Scalar: 0]
-; SCALAR:                { Stmt_bb3__TO__bb11[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= -2147483648 };
-; SCALAR:    }
+; SCALAR:      Function: f
+; SCALAR-NEXT: Region: %bb1---%bb13
+; SCALAR-NEXT: Max Loop Depth:  1
+; SCALAR-NEXT: Invariant Accesses: {
+; SCALAR-NEXT: }
+; SCALAR-NEXT: Context:
+; SCALAR-NEXT: {  :  }
+; SCALAR-NEXT: Assumed Context:
+; SCALAR-NEXT: {  :  }
+; SCALAR-NEXT: Boundary Context:
+; SCALAR-NEXT: {  :  }
+; SCALAR-NEXT: Arrays {
+; SCALAR-NEXT:     i32 MemRef_C[*]; // Element size 4
+; SCALAR-NEXT:     i32 MemRef_A[*]; // Element size 4
+; SCALAR-NEXT: }
+; SCALAR-NEXT: Arrays (Bounds as pw_affs) {
+; SCALAR-NEXT:     i32 MemRef_C[*]; // Element size 4
+; SCALAR-NEXT:     i32 MemRef_A[*]; // Element size 4
+; SCALAR-NEXT: }
+; SCALAR-NEXT: Alias Groups (0):
+; SCALAR-NEXT:     n/a
+; SCALAR-NEXT: Statements {
+; SCALAR-NEXT:     Stmt_bb3__TO__bb11
+; SCALAR-NEXT:         Domain :=
+; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] : i0 <= 1023 and i0 >= 0 };
+; SCALAR-NEXT:         Schedule :=
+; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> [i0] };
+; SCALAR-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> MemRef_C[i0] };
+; SCALAR-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= -2147483648 };
+; SCALAR-NEXT:         MayWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; SCALAR-NEXT:             { Stmt_bb3__TO__bb11[i0] -> MemRef_A[o0] : o0 <= 2147483645 and o0 >= -2147483648 };
+; SCALAR-NEXT: }
 
 ; PROFIT-NOT: Statements
 ;

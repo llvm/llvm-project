@@ -5,28 +5,30 @@
 ;      for (int i = 0; i < N; i++)
 ;        tmp += A[i];
 ;    }
-;
+
 ; CHECK:      Statements {
-; CHECK-LABEL:   Stmt_bb1
-; CHECK-NOT: Access
-; CHECK:              ReadAccess := [Reduction Type: NONE]
-; CHECK:                  [N] -> { Stmt_bb1[i0] -> MemRef_tmp_0__phi[] };
-; CHECK-NOT: Access
-; CHECK:              MustWriteAccess :=  [Reduction Type: NONE]
-; CHECK:                  [N] -> { Stmt_bb1[i0] -> MemRef_tmp_0[] };
-; CHECK-NOT: Access
-; CHECK-LABEL:   Stmt_bb4
-; CHECK-NOT: Access
-; CHECK:              MustWriteAccess :=  [Reduction Type: NONE]
-; CHECK:                  [N] -> { Stmt_bb4[i0] -> MemRef_tmp_0__phi[] };
-; CHECK-NOT: Access
-; CHECK:              ReadAccess := [Reduction Type: NONE]
-; CHECK:                  [N] -> { Stmt_bb4[i0] -> MemRef_tmp_0[] };
-; CHECK-NOT: Access
-; CHECK:              ReadAccess := [Reduction Type: NONE]
-; CHECK:                  [N] -> { Stmt_bb4[i0] -> MemRef_A[i0] };
-; CHECK-NOT: Access
-; CHECK:      }
+; CHECK-NEXT:     Stmt_bb1
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] : i0 >= 0 and i0 <= N; Stmt_bb1[0] : N <= -1 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] -> [i0, 0] : i0 <= N; Stmt_bb1[0] -> [0, 0] : N <= -1 };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] -> MemRef_tmp_0__phi[] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [N] -> { Stmt_bb1[i0] -> MemRef_tmp_0[] };
+; CHECK-NEXT:     Stmt_bb4
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] : i0 <= -1 + N and i0 >= 0 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> [i0, 1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> MemRef_tmp_0__phi[] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> MemRef_tmp_0[] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> MemRef_A[i0] };
+; CHECK-NEXT: }
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(float* %A, i32 %N) {

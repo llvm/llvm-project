@@ -14,18 +14,35 @@
 ;       A[i] += i;
 ;   }
 ; }
+
+; CHECK-LABEL: Function: or
 ;
-; CHECK: Function: or
-; CHECK:   Stmt_if_then
-; CHECK:     Domain :=
-; CHECK:       [n, m] -> { Stmt_if_then[i0] : (i0 <= 99 and i0 >= 0 and i0 <= -1 + m) or (i0 <= 99 and i0 >= 0 and i0 <= -1 + n) };
+; CHECK:       Statements {
+; CHECK-NEXT:      Stmt_if_then
+; CHECK-NEXT:          Domain :=
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] : (i0 <= 99 and i0 >= 0 and i0 <= -1 + m) or (i0 <= 99 and i0 >= 0 and i0 <= -1 + n) };
+; CHECK-NEXT:          Schedule :=
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> [i0] : i0 <= -1 + m or i0 <= -1 + n };
+; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:  }
 ;
-; CHECK: Function: and
-; CHECK:   Stmt_if_then
-; CHECK:     Domain :=
-; CHECK:       [n, m] -> { Stmt_if_then[i0] : i0 <= 99 and i0 >= 0 and i0 <= -1 + m and i0 <= -1 + n }
+; CHECK-LABEL: Function: and
 ;
-;
+; CHECK:       Statements {
+; CHECK-NEXT:      Stmt_if_then
+; CHECK-NEXT:          Domain :=
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] : i0 <= 99 and i0 >= 0 and i0 <= -1 + m and i0 <= -1 + n };
+; CHECK-NEXT:          Schedule :=
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> [i0] };
+; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:              [n, m] -> { Stmt_if_then[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:  }
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable

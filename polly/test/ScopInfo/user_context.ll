@@ -9,15 +9,11 @@
 ;     a[i] = i;
 ; }
 
-; CHECK: Context:
-; CHECK:    [N] -> {  :
-; CHECK-DAG:     N >= -9223372036854775808
-; CHECK-DAG:   and
-; CHECK-DAG:     N <= 9223372036854775807
-; CHECK:           }
+; CHECK:      Context:
+; CHECK-NEXT: [N] -> {  : N <= 9223372036854775807 and N >= -9223372036854775808 }
 
-; CTX: Context:
-; CTX:    [N] -> {  : N = 1024 }
+; CTX:      Context:
+; CTX-NEXT: [N] -> {  : N = 1024 }
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 

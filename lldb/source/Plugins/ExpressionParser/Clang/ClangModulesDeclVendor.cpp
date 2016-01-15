@@ -627,7 +627,9 @@ ClangModulesDeclVendor::Create(Target &target)
     
     std::vector<std::string> compiler_invocation_arguments =
     {
+        "clang",
         "-fmodules",
+        "-fimplicit-module-maps",
         "-fcxx-modules",
         "-fsyntax-only",
         "-femit-all-decls",

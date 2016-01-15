@@ -189,7 +189,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->DiscardAll = Args.hasArg(OPT_discard_all);
   Config->DiscardLocals = Args.hasArg(OPT_discard_locals);
   Config->DiscardNone = Args.hasArg(OPT_discard_none);
-  Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
   Config->GcSections = Args.hasArg(OPT_gc_sections);

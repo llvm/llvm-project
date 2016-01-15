@@ -156,7 +156,7 @@ void Segment<ELFT>::assignFileOffsets(uint64_t startOffset) {
         fileOffset = newOffset;
       }
       // Align fileoffset to the alignment of the section.
-      fileOffset = llvm::RoundUpToAlignment(fileOffset, section->alignment());
+      fileOffset = llvm::alignTo(fileOffset, section->alignment());
       // If the linker outputmagic is set to OutputMagic::NMAGIC, align the Data
       // to a page boundary
       if (isFirstSection &&
@@ -165,18 +165,17 @@ void Segment<ELFT>::assignFileOffsets(uint64_t startOffset) {
         // Align to a page only if the output is not
         // OutputMagic::NMAGIC/OutputMagic::OMAGIC
         if (alignSegments)
-          fileOffset = llvm::RoundUpToAlignment(fileOffset, p_align);
+          fileOffset = llvm::alignTo(fileOffset, p_align);
         // Align according to ELF spec.
         // in p75, http://www.sco.com/developers/devspecs/gabi41.pdf
         uint64_t virtualAddress = slice->virtualAddr();
         Section<ELFT> *sect = dyn_cast<Section<ELFT>>(section);
         if (sect && sect->isLoadableSection() &&
             ((virtualAddress & (p_align - 1)) != (fileOffset & (p_align - 1))))
-          fileOffset = llvm::RoundUpToAlignment(fileOffset, p_align) +
-                       (virtualAddress % p_align);
+          fileOffset =
+              llvm::alignTo(fileOffset, p_align) + (virtualAddress % p_align);
       } else if (!isDataPageAlignedForNMagic && needAlign(section)) {
-        fileOffset =
-            llvm::RoundUpToAlignment(fileOffset, this->_ctx.getPageSize());
+        fileOffset = llvm::alignTo(fileOffset, this->_ctx.getPageSize());
         isDataPageAlignedForNMagic = true;
       }
       if (isFirstSection) {
@@ -228,15 +227,15 @@ template <class ELFT> void Segment<ELFT>::assignVirtualAddress(uint64_t addr) {
         _outputMagic != ELFLinkingContext::OutputMagic::OMAGIC) {
       // Align to a page only if the output is not
       // OutputMagic::NMAGIC/OutputMagic::OMAGIC
-      startAddr = llvm::RoundUpToAlignment(startAddr, this->_ctx.getPageSize());
+      startAddr = llvm::alignTo(startAddr, this->_ctx.getPageSize());
     } else if (needAlign(*si)) {
       // If the linker outputmagic is set to OutputMagic::NMAGIC, align the
       // Data to a page boundary.
-      startAddr = llvm::RoundUpToAlignment(startAddr, this->_ctx.getPageSize());
+      startAddr = llvm::alignTo(startAddr, this->_ctx.getPageSize());
       isDataPageAlignedForNMagic = true;
     }
     // align the startOffset to the section alignment
-    uint64_t newAddr = llvm::RoundUpToAlignment(startAddr, (*si)->alignment());
+    uint64_t newAddr = llvm::alignTo(startAddr, (*si)->alignment());
     // Handle linker script expressions, which *may update newAddr* if the
     // expression assigns to "."
     if (auto expr = dyn_cast<ExpressionChunk<ELFT>>(*si))
@@ -248,8 +247,7 @@ template <class ELFT> void Segment<ELFT>::assignVirtualAddress(uint64_t addr) {
     // Handle TLS.
     if (auto section = dyn_cast<Section<ELFT>>(*si)) {
       if (section->getSegmentType() == llvm::ELF::PT_TLS) {
-        tlsStartAddr =
-            llvm::RoundUpToAlignment(tlsStartAddr, (*si)->alignment());
+        tlsStartAddr = llvm::alignTo(tlsStartAddr, (*si)->alignment());
         section->assignVirtualAddress(tlsStartAddr);
         tlsStartAddr += (*si)->memSize();
       } else {
@@ -278,11 +276,11 @@ template <class ELFT> void Segment<ELFT>::assignVirtualAddress(uint64_t addr) {
       // If the linker outputmagic is set to OutputMagic::NMAGIC, align the
       // Data
       // to a page boundary
-      curAddr = llvm::RoundUpToAlignment(curAddr, this->_ctx.getPageSize());
+      curAddr = llvm::alignTo(curAddr, this->_ctx.getPageSize());
       isDataPageAlignedForNMagic = true;
     }
-    uint64_t newAddr = llvm::RoundUpToAlignment(
-        forceScriptAddr ? scriptAddr : curAddr, (*si)->alignment());
+    uint64_t newAddr = llvm::alignTo(forceScriptAddr ? scriptAddr : curAddr,
+                                     (*si)->alignment());
     forceScriptAddr = false;
 
     // Handle linker script expressions, which may force an address change if
@@ -347,8 +345,7 @@ template <class ELFT> void Segment<ELFT>::assignVirtualAddress(uint64_t addr) {
       // Handle TLS.
       if (auto section = dyn_cast<Section<ELFT>>(*si)) {
         if (section->getSegmentType() == llvm::ELF::PT_TLS) {
-          tlsStartAddr =
-              llvm::RoundUpToAlignment(tlsStartAddr, (*si)->alignment());
+          tlsStartAddr = llvm::alignTo(tlsStartAddr, (*si)->alignment());
           section->assignVirtualAddress(tlsStartAddr);
           tlsStartAddr += (*si)->memSize();
         } else {

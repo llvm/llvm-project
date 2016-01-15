@@ -45,7 +45,7 @@ public:
   size_t getSize() const override {
     // Starts with 2 byte Hint field, followed by a null-terminated string,
     // ends with 0 or 1 byte padding.
-    return align(Name.size() + 3, 2);
+    return alignTo(Name.size() + 3, 2);
   }
 
   void writeTo(uint8_t *Buf) const override {

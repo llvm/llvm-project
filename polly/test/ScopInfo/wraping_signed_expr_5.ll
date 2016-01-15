@@ -3,14 +3,8 @@
 ; We should not generate runtime check for ((int)r1 + (int)r2) as it is known not
 ; to overflow. However (p + q) can, thus checks are needed.
 ;
-; CHECK:     Boundary Context:
-; CHECK:     [r1, r2, q, p] -> {
-; CHECK-DAG:      p <= 2147483647 - q
-; CHECK-DAG:        and
-; CHECK-DAG:      p >= -2147483648 - q
-; CHECK-DAG:        and
-; CHECK-DAG:      r2 <= 127 + r1
-; CHECK:     }
+; CHECK:      Boundary Context:
+; CHECK-NEXT: [r1, r2, q, p] -> {  : r2 <= 127 + r1 and p <= 2147483647 - q and p >= -2147483648 - q }
 ;
 ;    void wraps(int *A, int p, short q, char r1, char r2) {
 ;      for (char i = r1; i < r2; i++)

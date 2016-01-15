@@ -3,16 +3,14 @@
 ; We have privatization dependences from a textually later statement to a
 ; textually earlier one, but the dependences still go forward in time.
 ;
-;  CHECK: RAW dependences:
-;  CHECK-DAG:  Stmt_S3[i0] -> Stmt_S2[1 + i0, o1] : i0 <= 97 and i0 >= 0 and o1 <= 99 and o1 >= 0
-;  CHECK-DAG:  Stmt_S1[i0] -> Stmt_S3[i0] : i0 <= 98 and i0 >= 0
-;  CHECK: WAR dependences:
-;  CHECK:   {  }
-;  CHECK: WAW dependences:
-;  CHECK-DAG:  Stmt_S3[i0] -> Stmt_S2[1 + i0, o1] : i0 <= 97 and i0 >= 0 and o1 <= 99 and o1 >= 0
-;  CHECK-DAG:  Stmt_S1[i0] -> Stmt_S3[i0] : i0 <= 98 and i0 >= 0
-;  CHECK: Reduction dependences:
-;  CHECK:   { Stmt_S2[i0, i1] -> Stmt_S2[i0, 1 + i1] : i0 <= 98 and i0 >= 0 and i1 <= 98 and i1 >= 0 }
+; CHECK:      RAW dependences:
+; CHECK-NEXT:     { Stmt_S3[i0] -> Stmt_S2[1 + i0, o1] : i0 <= 97 and i0 >= 0 and o1 <= 99 and o1 >= 0; Stmt_S1[i0] -> Stmt_S3[i0] : i0 <= 98 and i0 >= 0 }
+; CHECK-NEXT: WAR dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAW dependences:
+; CHECK-NEXT:     { Stmt_S3[i0] -> Stmt_S2[1 + i0, o1] : i0 <= 97 and i0 >= 0 and o1 <= 99 and o1 >= 0; Stmt_S1[i0] -> Stmt_S3[i0] : i0 <= 98 and i0 >= 0 }
+; CHECK-NEXT: Reduction dependences:
+; CHECK-NEXT:     { Stmt_S2[i0, i1] -> Stmt_S2[i0, 1 + i1] : i0 <= 98 and i0 >= 0 and i1 <= 98 and i1 >= 0 }
 ;
 ;    void f(int *sum) {
 ;      int i, j;

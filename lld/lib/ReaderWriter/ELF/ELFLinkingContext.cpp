@@ -170,7 +170,7 @@ ErrorOr<StringRef> ELFLinkingContext::searchFile(StringRef fileName,
 void ELFLinkingContext::createInternalFiles(
     std::vector<std::unique_ptr<File>> &files) const {
   std::unique_ptr<SimpleFile> file(
-      new SimpleFile("<internal file for --defsym>"));
+    new SimpleFile("<internal file for --defsym>", File::kindELFObject));
   for (auto &i : getAbsoluteSymbols()) {
     StringRef sym = i.first;
     uint64_t val = i.second;
@@ -191,7 +191,7 @@ std::unique_ptr<File> ELFLinkingContext::createUndefinedSymbolFile() const {
   if (_initialUndefinedSymbols.empty())
     return nullptr;
   std::unique_ptr<SimpleFile> undefinedSymFile(
-      new SimpleFile("command line option -u"));
+      new SimpleFile("command line option -u", File::kindELFObject));
   for (auto undefSymStr : _initialUndefinedSymbols)
     undefinedSymFile->addAtom(*(new (_allocator) CommandLineUndefinedAtom(
         *undefinedSymFile, undefSymStr)));

@@ -3,22 +3,24 @@
 ; Test comes from a bug (15771) or better a feature request. It was not allowed
 ; in Polly in the old domain generation as ScalarEvolution cannot figure out the
 ; loop bounds. However, the new domain generation will detect the SCoP.
+
+; CHECK:      Context:
+; CHECK-NEXT: [n] -> {  : n <= 2147483647 and n >= -2147483648 }
 ;
-; CHECK:    Context:
-; CHECK:    [n] -> {  : n <= 2147483647 and n >= -2147483648 }
-; CHECK:    p0: %n
-; CHECK:    Statements {
-; CHECK:      Stmt_for_next
-; CHECK:            Domain :=
-; CHECK:                [n] -> { Stmt_for_next[i0] : i0 >= 0 and 2i0 <= -3 + n };
-; CHECK:            Schedule :=
-; CHECK:                [n] -> { Stmt_for_next[i0] -> [i0] };
-; CHECK:            ReadAccess := 
-; CHECK:                [n] -> { Stmt_for_next[i0] -> MemRef_A[i0] };
-; CHECK:            WriteAccess := 
-; CHECK:                [n] -> { Stmt_for_next[i0] -> MemRef_A[i0] };
-; CHECK:    }
+; CHECK:      p0: %n
 ;
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_next
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [n] -> { Stmt_for_next[i0] : i0 >= 0 and 2i0 <= -3 + n };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [n] -> { Stmt_for_next[i0] -> [i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [n] -> { Stmt_for_next[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             [n] -> { Stmt_for_next[i0] -> MemRef_A[i0] };
+; CHECK-NEXT: }
+
 @A = common global [100 x i32] zeroinitializer, align 16
 
 define void @foo(i32 %n) #0 {

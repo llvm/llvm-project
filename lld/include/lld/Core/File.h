@@ -45,9 +45,19 @@ public:
 
   /// \brief Kinds of files that are supported.
   enum Kind {
-    kindObject,        ///< object file (.o)
-    kindSharedLibrary, ///< shared library (.so)
-    kindArchiveLibrary ///< archive (.a)
+    kindErrorObject,          ///< a error object file (.o)
+    kindNormalizedObject,     ///< a normalized file (.o)
+    kindMachObject,           ///< a MachO object file (.o)
+    kindELFObject,            ///< a ELF object file (.o)
+    kindCEntryObject,         ///< a file for CEntries
+    kindEntryObject,          ///< a file for the entry
+    kindUndefinedSymsObject,  ///< a file for undefined symbols
+    kindAliasSymsObject,      ///< a file for alias symbols
+    kindStubHelperObject,     ///< a file for stub helpers
+    kindResolverMergedObject, ///< the resolver merged file.
+    kindSectCreateObject,     ///< a sect create object file (.o)
+    kindSharedLibrary,        ///< shared library (.so)
+    kindArchiveLibrary        ///< archive (.a)
   };
 
   /// \brief Returns file kind.  Need for dyn_cast<> on File objects.
@@ -190,7 +200,7 @@ private:
 class ErrorFile : public File {
 public:
   ErrorFile(StringRef path, std::error_code ec)
-      : File(path, kindObject), _ec(ec) {}
+      : File(path, kindErrorObject), _ec(ec) {}
 
   std::error_code doParse() override { return _ec; }
 

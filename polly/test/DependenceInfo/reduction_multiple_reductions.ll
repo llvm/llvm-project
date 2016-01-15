@@ -2,15 +2,14 @@
 ;
 ; Verify we do not have dependences between the if and the else clause
 ;
-; CHECK: RAW dependences:
-; CHECK:   {  }
-; CHECK: WAR dependences:
-; CHECK:   {  }
-; CHECK: WAW dependences:
-; CHECK:   {  }
-; CHECK: Reduction dependences:
-; CHECK-DAG: Stmt_if_then[i0] -> Stmt_if_then[1 + i0] : i0 <= 510 and i0 >= 0
-; CHECK-DAG: Stmt_if_else[i0] -> Stmt_if_else[1 + i0] : i0 <= 1022 and i0 >= 512
+; CHECK:      RAW dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAR dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAW dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: Reduction dependences:
+; CHECK-NEXT:     { Stmt_if_else[i0] -> Stmt_if_else[1 + i0] : i0 <= 1022 and i0 >= 512; Stmt_if_then[i0] -> Stmt_if_then[1 + i0] : i0 <= 510 and i0 >= 0 }
 ;
 ; void f(int *restrict sum, int *restrict prod) {
 ;   for (int i = 0; i < 1024; i++)

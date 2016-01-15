@@ -1,13 +1,13 @@
 ; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
 ;
-; CHECK: RAW dependences:
-; CHECK:   {  }
-; CHECK: WAR dependences:
-; CHECK:   {  }
-; CHECK: WAW dependences:
-; CHECK:   {  }
-; CHECK: Reduction dependences:
-; CHECK:   { Stmt_for_body3[i0, i1] -> Stmt_for_body3[2 + i0, -1 + i1] : i0 <= 97 and i0 >= 0 and i1 <= 99 and i1 >= 1 }
+; CHECK:      RAW dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAR dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAW dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: Reduction dependences:
+; CHECK-NEXT:     { Stmt_for_body3[i0, i1] -> Stmt_for_body3[2 + i0, -1 + i1] : i0 <= 97 and i0 >= 0 and i1 <= 99 and i1 >= 1 }
 ;
 ; void f(int *sum) {
 ;   for (int i = 0; i < 100; i++)

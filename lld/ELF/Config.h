@@ -57,7 +57,6 @@ struct Configuration {
   bool DiscardAll;
   bool DiscardLocals;
   bool DiscardNone;
-  bool EhFrameHdr;
   bool EnableNewDtags;
   bool ExportDynamic;
   bool GcSections;

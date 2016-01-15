@@ -1,13 +1,13 @@
 ; RUN: opt %loadPolly -basicaa -polly-dependences -analyze < %s | FileCheck %s
 ;
-; CHECK: RAW dependences:
-; CHECK:   {  }
-; CHECK: WAR dependences:
-; CHECK:   {  }
-; CHECK: WAW dependences:
-; CHECK:   {  }
-; CHECK: Reduction dependences:
-; CHECK-DAG: Stmt_for_body3[i0, i1] -> Stmt_for_body3[o0, 1 + i0 + i1 - o0] : o0 <= 1 + i0 and o0 >= i0 and o0 <= 1023 and i0 >= 0 and i1 >= 0 and o0 >= -1022 + i0 + i1
+; CHECK:      RAW dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAR dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: WAW dependences:
+; CHECK-NEXT:     {  }
+; CHECK-NEXT: Reduction dependences:
+; CHECK-NEXT:     { Stmt_for_body3[i0, i1] -> Stmt_for_body3[o0, 1 + i0 + i1 - o0] : o0 <= 1 + i0 and o0 >= i0 and o0 <= 1023 and i0 >= 0 and i1 >= 0 and o0 >= -1022 + i0 + i1 }
 ;
 ; void f(int *restrict A, int *restrict B, int *restrict Values) {
 ;   for (int i = 0; i < 1024; i++) {

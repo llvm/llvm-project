@@ -3,10 +3,14 @@
 # RUN: yaml2obj -format elf %s -o %t.o
 # RUN: ld.lld %t.o -o %t.so -shared
 # RUN: llvm-objdump -d %t.so | FileCheck %s
+# RUN: llvm-readobj -relocations %t.so | FileCheck -check-prefix=REL %s
 
 # REQUIRES: mips
 
 # CHECK: 10000:   09 f8 20 03   jalr    $25
+
+# REL:      Relocations [
+# REL-NEXT: ]
 
 FileHeader:
   Class:    ELFCLASS32

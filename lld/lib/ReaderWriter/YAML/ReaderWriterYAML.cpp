@@ -294,7 +294,8 @@ template <> struct ScalarTraits<RefKind> {
 
 template <> struct ScalarEnumerationTraits<lld::File::Kind> {
   static void enumeration(IO &io, lld::File::Kind &value) {
-    io.enumCase(value, "object",         lld::File::kindObject);
+    io.enumCase(value, "error-object",   lld::File::kindErrorObject);
+    io.enumCase(value, "object",         lld::File::kindMachObject);
     io.enumCase(value, "shared-library", lld::File::kindSharedLibrary);
     io.enumCase(value, "static-library", lld::File::kindArchiveLibrary);
   }
@@ -630,9 +631,10 @@ template <> struct MappingTraits<const lld::File *> {
 
   class NormalizedFile : public lld::File {
   public:
-    NormalizedFile(IO &io) : File("", kindObject), _io(io), _rnb(nullptr) {}
+    NormalizedFile(IO &io)
+      : File("", kindNormalizedObject), _io(io), _rnb(nullptr) {}
     NormalizedFile(IO &io, const lld::File *file)
-        : File(file->path(), kindObject), _io(io),
+        : File(file->path(), kindNormalizedObject), _io(io),
           _rnb(new RefNameBuilder(*file)), _path(file->path()) {
       for (const lld::DefinedAtom *a : file->defined())
         _definedAtoms._atoms.push_back(a);

@@ -1,15 +1,13 @@
 ; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
-; CHECK-DAG:    Stmt_S0[] -> Stmt_S1[o0] : N >= 11 and o0 <= 1023 and o0 >= 0
-; CHECK-DAG:    Stmt_S1[i0] -> Stmt_S2[] : N >= 11 and i0 <= 1023 and i0 >= 0
-; CHECK:      WAR dependences:
-; CHECK:       [N] -> {  }
-; CHECK:      WAW dependences:
-; CHECK-DAG:    Stmt_S0[] -> Stmt_S1[o0] : N >= 11 and o0 <= 1023 and o0 >= 0
-; CHECK-DAG:    Stmt_S1[i0] -> Stmt_S2[] : N >= 11 and i0 <= 1023 and i0 >= 0
-; CHECK:   Reduction dependences:
-; CHECK:        Stmt_S1[i0] -> Stmt_S1[1 + i0] : N >= 11 and i0 <= 1022 and i0 >= 0
+; CHECK-NEXT:     [N] -> { Stmt_S0[] -> Stmt_S1[o0] : N >= 11 and o0 <= 1023 and o0 >= 0; Stmt_S1[i0] -> Stmt_S2[] : N >= 11 and i0 <= 1023 and i0 >= 0 }
+; CHECK-NEXT: WAR dependences:
+; CHECK-NEXT:     [N] -> {  }
+; CHECK-NEXT: WAW dependences:
+; CHECK-NEXT:     [N] -> { Stmt_S0[] -> Stmt_S1[o0] : N >= 11 and o0 <= 1023 and o0 >= 0; Stmt_S1[i0] -> Stmt_S2[] : N >= 11 and i0 <= 1023 and i0 >= 0 }
+; CHECK-NEXT: Reduction dependences:
+; CHECK-NEXT:     [N] -> { Stmt_S1[i0] -> Stmt_S1[1 + i0] : N >= 11 and i0 <= 1022 and i0 >= 0 }
 ;
 ;    void f(int *sum, int N) {
 ;      if (N >= 10) {

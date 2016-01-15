@@ -59,7 +59,7 @@ public:
     std::unique_ptr<MemoryBuffer> _content;
   };
 
-  SectCreateFile() : File("sectcreate", kindObject) {}
+  SectCreateFile() : File("sectcreate", kindSectCreateObject) {}
 
   void addSection(StringRef seg, StringRef sect,
                   std::unique_ptr<MemoryBuffer> content) {
