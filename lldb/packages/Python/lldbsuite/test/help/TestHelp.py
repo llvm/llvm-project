@@ -77,22 +77,32 @@ class HelpCommandTestCase(TestBase):
             substrs = ['arm', 'x86_64', 'i386'])
 
     @no_debug_info_test
-    @expectedFailureDarwin("rdar://problem/23629980")
-    @expectedFailureLinux("rdar://problem/23629980")
     def test_help_version(self):
         """Test 'help version' and 'version' commands."""
         self.expect("help version",
             substrs = ['Show version of LLDB debugger.'])
+
+        valid_version_patterns = []
+
+        # Add the Swift OSS version pattern
+        valid_version_patterns.append(
+            r"^lldb-(local|buildbot)-\d{4}-\d{2}-\d{2} \((LLDB [^,)]+(, (LLVM|Clang|Swift-\d+\.\d+) [^,)]+){0,3})?\)$"
+            )
+
+        # Add valid llvm.org and official Apple Xcode LLDB version patterns
         version_str = self.version_number_string()
         import re
         match = re.match('[0-9]+', version_str)
         if sys.platform.startswith("darwin"):
-            search_regexp = ['lldb-' + (version_str if match else '[0-9]+')]
+            valid_version_patterns.append(
+                '^lldb-' + (version_str if match else '[0-9]+'))
         else:
-            search_regexp = ['lldb version (\d|\.)+.*$']
+            valid_version_patterns.append('^lldb version (\d|\.)+.*$')
 
-        self.expect("version",
-            patterns = search_regexp)
+        match = self.match("version", valid_version_patterns)
+        self.assertIsNotNone(
+            match, "version result did not match any valid version string")
+        # print("matched: {}".format(match.re.pattern))
 
     @no_debug_info_test
     def test_help_should_not_crash_lldb(self):
