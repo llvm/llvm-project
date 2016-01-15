@@ -41,6 +41,10 @@ GetLLDBRevision()
     static const char *s_revision = nullptr;
 #endif
 
+    // If LLDB_REVISION is defined but isn't set to a string, it
+    // can still be the equivalent of NULL.  Hence we always do
+    // this check below and return an empty string when we don't
+    // otherwise have a valid const string for it.
     if (s_revision != nullptr)
         return s_revision;
     else
