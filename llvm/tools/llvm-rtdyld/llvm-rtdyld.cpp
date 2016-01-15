@@ -191,7 +191,7 @@ public:
   }
 
   uint8_t *allocateFromSlab(uintptr_t Size, unsigned Alignment, bool isCode) {
-    Size = RoundUpToAlignment(Size, Alignment);
+    Size = alignTo(Size, Alignment);
     if (CurrentSlabOffset + Size > SlabSize)
       report_fatal_error("Can't allocate enough memory. Tune --preallocate");
 

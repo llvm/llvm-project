@@ -976,7 +976,7 @@ static bool inBoundsForPair(bool IsUnscaled, int Offset, int OffsetStride) {
 
 // Do alignment, specialized to power of 2 and for signed ints,
 // avoiding having to do a C-style cast from uint_64t to int when
-// using RoundUpToAlignment from include/llvm/Support/MathExtras.h.
+// using alignTo from include/llvm/Support/MathExtras.h.
 // FIXME: Move this function to include/MathExtras.h?
 static int alignTo(int Num, int PowOf2) {
   return (Num + PowOf2 - 1) & ~(PowOf2 - 1);

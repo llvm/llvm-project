@@ -215,10 +215,6 @@ static MCInstPrinter *createX86MCInstPrinter(const Triple &T,
 
 static MCRelocationInfo *createX86MCRelocationInfo(const Triple &TheTriple,
                                                    MCContext &Ctx) {
-  if (TheTriple.isOSBinFormatMachO() && TheTriple.getArch() == Triple::x86_64)
-    return createX86_64MachORelocationInfo(Ctx);
-  else if (TheTriple.isOSBinFormatELF())
-    return createX86_64ELFRelocationInfo(Ctx);
   // Default to the stock relocation info.
   return llvm::createMCRelocationInfo(TheTriple, Ctx);
 }

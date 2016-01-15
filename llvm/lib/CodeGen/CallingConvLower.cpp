@@ -53,7 +53,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT,
     Align = MinAlign;
   MF.getFrameInfo()->ensureMaxAlignment(Align);
   MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size, Align);
-  Size = unsigned(RoundUpToAlignment(Size, MinAlign));
+  Size = unsigned(alignTo(Size, MinAlign));
   unsigned Offset = AllocateStack(Size, Align);
   addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
 }

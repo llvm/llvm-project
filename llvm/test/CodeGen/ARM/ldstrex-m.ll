@@ -1,4 +1,6 @@
 ; RUN: llc < %s -mtriple=thumbv7m-none-eabi -mcpu=cortex-m4 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv8m.main-none-eabi | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv8m.base-none-eabi | FileCheck %s
 
 ; CHECK-LABEL: f0:
 ; CHECK-NOT: ldrexd

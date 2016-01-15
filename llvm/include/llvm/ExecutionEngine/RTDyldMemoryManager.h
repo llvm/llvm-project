@@ -62,8 +62,19 @@ public:
   RTDyldMemoryManager() {}
   ~RTDyldMemoryManager() override;
 
-  void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override;
-  void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override;
+  /// Register EH frames in the current process.
+  static void registerEHFramesInProcess(uint8_t *Addr, size_t Size);
+
+  /// Deregister EH frames in the current proces.
+  static void deregisterEHFramesInProcess(uint8_t *Addr, size_t Size);
+
+  void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
+    registerEHFramesInProcess(Addr, Size);
+  }
+
+  void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
+    registerEHFramesInProcess(Addr, Size);
+  }
 
   /// This method returns the address of the specified function or variable in
   /// the current process.

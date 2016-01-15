@@ -197,7 +197,7 @@ struct TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
       typename ExtractSecondType<MoreTys, size_t>::type... MoreCounts) {
     return additionalSizeToAllocImpl(
         (requiresRealignment()
-             ? llvm::RoundUpToAlignment(SizeSoFar, llvm::alignOf<NextTy>())
+             ? llvm::alignTo(SizeSoFar, llvm::alignOf<NextTy>())
              : SizeSoFar) +
             sizeof(NextTy) * Count1,
         MoreCounts...);

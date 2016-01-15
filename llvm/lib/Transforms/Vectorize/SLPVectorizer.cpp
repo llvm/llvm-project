@@ -412,6 +412,13 @@ public:
     return NumLoadsWantToChangeOrder > NumLoadsWantToKeepOrder;
   }
 
+  /// \return The vector element size in bits to use when vectorizing the
+  /// expression tree ending at \p V. If V is a store, the size is the width of
+  /// the stored value. Otherwise, the size is the width of the largest loaded
+  /// value reaching V. This method is used by the vectorizer to calculate
+  /// vectorization factors.
+  unsigned getVectorElementSize(Value *V);
+
 private:
   struct TreeEntry;
 
@@ -3139,10 +3146,73 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   BS->ScheduleStart = nullptr;
 }
 
+unsigned BoUpSLP::getVectorElementSize(Value *V) {
+  auto &DL = F->getParent()->getDataLayout();
+
+  // If V is a store, just return the width of the stored value without
+  // traversing the expression tree. This is the common case.
+  if (auto *Store = dyn_cast<StoreInst>(V))
+    return DL.getTypeSizeInBits(Store->getValueOperand()->getType());
+
+  // If V is not a store, we can traverse the expression tree to find loads
+  // that feed it. The type of the loaded value may indicate a more suitable
+  // width than V's type. We want to base the vector element size on the width
+  // of memory operations where possible.
+  SmallVector<Instruction *, 16> Worklist;
+  SmallPtrSet<Instruction *, 16> Visited;
+  if (auto *I = dyn_cast<Instruction>(V))
+    Worklist.push_back(I);
+
+  // Traverse the expression tree in bottom-up order looking for loads. If we
+  // encounter an instruciton we don't yet handle, we give up.
+  auto MaxWidth = 0u;
+  auto FoundUnknownInst = false;
+  while (!Worklist.empty() && !FoundUnknownInst) {
+    auto *I = Worklist.pop_back_val();
+    Visited.insert(I);
+
+    // We should only be looking at scalar instructions here. If the current
+    // instruction has a vector type, give up.
+    auto *Ty = I->getType();
+    if (isa<VectorType>(Ty))
+      FoundUnknownInst = true;
+
+    // If the current instruction is a load, update MaxWidth to reflect the
+    // width of the loaded value.
+    else if (isa<LoadInst>(I))
+      MaxWidth = std::max(MaxWidth, (unsigned)DL.getTypeSizeInBits(Ty));
+
+    // Otherwise, we need to visit the operands of the instruction. We only
+    // handle the interesting cases from buildTree here. If an operand is an
+    // instruction we haven't yet visited, we add it to the worklist.
+    else if (isa<PHINode>(I) || isa<CastInst>(I) || isa<GetElementPtrInst>(I) ||
+             isa<CmpInst>(I) || isa<SelectInst>(I) || isa<BinaryOperator>(I)) {
+      for (Use &U : I->operands())
+        if (auto *J = dyn_cast<Instruction>(U.get()))
+          if (!Visited.count(J))
+            Worklist.push_back(J);
+    }
+
+    // If we don't yet handle the instruction, give up.
+    else
+      FoundUnknownInst = true;
+  }
+
+  // If we didn't encounter a memory access in the expression tree, or if we
+  // gave up for some reason, just return the width of V.
+  if (!MaxWidth || FoundUnknownInst)
+    return DL.getTypeSizeInBits(V->getType());
+
+  // Otherwise, return the maximum width we found.
+  return MaxWidth;
+}
+
 /// The SLPVectorizer Pass.
 struct SLPVectorizer : public FunctionPass {
   typedef SmallVector<StoreInst *, 8> StoreList;
   typedef MapVector<Value *, StoreList> StoreListMap;
+  typedef SmallVector<WeakVH, 8> WeakVHList;
+  typedef MapVector<Value *, WeakVHList> WeakVHListMap;
 
   /// Pass identification, replacement for typeid
   static char ID;
@@ -3172,7 +3242,8 @@ struct SLPVectorizer : public FunctionPass {
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
 
-    StoreRefs.clear();
+    Stores.clear();
+    GEPs.clear();
     bool Changed = false;
 
     // If the target claims to have no vector registers don't attempt
@@ -3206,15 +3277,24 @@ struct SLPVectorizer : public FunctionPass {
 
     // Scan the blocks in the function in post order.
     for (auto BB : post_order(&F.getEntryBlock())) {
+      collectSeedInstructions(BB);
+
       // Vectorize trees that end at stores.
-      if (unsigned count = collectStores(BB, R)) {
-        (void)count;
-        DEBUG(dbgs() << "SLP: Found " << count << " stores to vectorize.\n");
+      if (NumStores > 0) {
+        DEBUG(dbgs() << "SLP: Found " << NumStores << " stores.\n");
         Changed |= vectorizeStoreChains(R);
       }
 
       // Vectorize trees that end at reductions.
       Changed |= vectorizeChainsInBlock(BB, R);
+
+      // Vectorize the index computations of getelementptr instructions. This
+      // is primarily intended to catch gather-like idioms ending at
+      // non-consecutive loads.
+      if (NumGEPs > 0) {
+        DEBUG(dbgs() << "SLP: Found " << NumGEPs << " GEPs.\n");
+        Changed |= vectorizeGEPIndices(BB, R);
+      }
     }
 
     if (Changed) {
@@ -3241,12 +3321,14 @@ struct SLPVectorizer : public FunctionPass {
   }
 
 private:
-
-  /// \brief Collect memory references and sort them according to their base
-  /// object. We sort the stores to their base objects to reduce the cost of the
-  /// quadratic search on the stores. TODO: We can further reduce this cost
-  /// if we flush the chain creation every time we run into a memory barrier.
-  unsigned collectStores(BasicBlock *BB, BoUpSLP &R);
+  /// \brief Collect store and getelementptr instructions and organize them
+  /// according to the underlying object of their pointer operands. We sort the
+  /// instructions by their underlying objects to reduce the cost of
+  /// consecutive access queries.
+  ///
+  /// TODO: We can further reduce this cost if we flush the chain creation
+  ///       every time we run into a memory barrier.
+  void collectSeedInstructions(BasicBlock *BB);
 
   /// \brief Try to vectorize a chain that starts at two arithmetic instrs.
   bool tryToVectorizePair(Value *A, Value *B, BoUpSLP &R);
@@ -3262,8 +3344,12 @@ private:
   /// \brief Try to vectorize a chain that may start at the operands of \V;
   bool tryToVectorize(BinaryOperator *V, BoUpSLP &R);
 
-  /// \brief Vectorize the stores that were collected in StoreRefs.
+  /// \brief Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(BoUpSLP &R);
+
+  /// \brief Vectorize the index computations of the getelementptr instructions
+  /// collected in GEPs.
+  bool vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R);
 
   /// \brief Scan the basic block and look for patterns that are likely to start
   /// a vectorization chain.
@@ -3274,8 +3360,19 @@ private:
 
   bool vectorizeStores(ArrayRef<StoreInst *> Stores, int costThreshold,
                        BoUpSLP &R);
-private:
-  StoreListMap StoreRefs;
+
+  /// The store instructions in a basic block organized by base pointer.
+  StoreListMap Stores;
+
+  /// The getelementptr instructions in a basic block organized by base pointer.
+  WeakVHListMap GEPs;
+
+  /// The number of store instructions in a basic block.
+  unsigned NumStores;
+
+  /// The number of getelementptr instructions in a basic block.
+  unsigned NumGEPs;
+
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
 };
 
@@ -3296,9 +3393,7 @@ bool SLPVectorizer::vectorizeStoreChain(ArrayRef<Value *> Chain,
   unsigned ChainLen = Chain.size();
   DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << ChainLen
         << "\n");
-  Type *StoreTy = cast<StoreInst>(Chain[0])->getValueOperand()->getType();
-  auto &DL = cast<StoreInst>(Chain[0])->getModule()->getDataLayout();
-  unsigned Sz = DL.getTypeSizeInBits(StoreTy);
+  unsigned Sz = R.getVectorElementSize(Chain[0]);
   unsigned VF = VecRegSize / Sz;
 
   if (!isPowerOf2_32(Sz) || VF < 2)
@@ -3409,33 +3504,43 @@ bool SLPVectorizer::vectorizeStores(ArrayRef<StoreInst *> Stores,
   return Changed;
 }
 
+void SLPVectorizer::collectSeedInstructions(BasicBlock *BB) {
 
-unsigned SLPVectorizer::collectStores(BasicBlock *BB, BoUpSLP &R) {
-  unsigned count = 0;
-  StoreRefs.clear();
+  // Initialize the collections. We will make a single pass over the block.
+  Stores.clear();
+  GEPs.clear();
+  NumStores = NumGEPs = 0;
   const DataLayout &DL = BB->getModule()->getDataLayout();
+
+  // Visit the store and getelementptr instructions in BB and organize them in
+  // Stores and GEPs according to the underlying objects of their pointer
+  // operands.
   for (Instruction &I : *BB) {
-    StoreInst *SI = dyn_cast<StoreInst>(&I);
-    if (!SI)
-      continue;
 
-    // Don't touch volatile stores.
-    if (!SI->isSimple())
-      continue;
+    // Ignore store instructions that are volatile or have a pointer operand
+    // that doesn't point to a scalar type.
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (!SI->isSimple())
+        continue;
+      if (!isValidElementType(SI->getValueOperand()->getType()))
+        continue;
+      Stores[GetUnderlyingObject(SI->getPointerOperand(), DL)].push_back(SI);
+      ++NumStores;
+    }
 
-    // Check that the pointer points to scalars.
-    Type *Ty = SI->getValueOperand()->getType();
-    if (!isValidElementType(Ty))
-      continue;
-
-    // Find the base pointer.
-    Value *Ptr = GetUnderlyingObject(SI->getPointerOperand(), DL);
-
-    // Save the store locations.
-    StoreRefs[Ptr].push_back(SI);
-    count++;
+    // Ignore getelementptr instructions that have more than one index, a
+    // constant index, or a pointer operand that doesn't point to a scalar
+    // type.
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      auto Idx = GEP->idx_begin()->get();
+      if (GEP->getNumIndices() > 1 || isa<Constant>(Idx))
+        continue;
+      if (!isValidElementType(Idx->getType()))
+        continue;
+      GEPs[GetUnderlyingObject(GEP->getPointerOperand(), DL)].push_back(GEP);
+      ++NumGEPs;
+    }
   }
-  return count;
 }
 
 bool SLPVectorizer::tryToVectorizePair(Value *A, Value *B, BoUpSLP &R) {
@@ -3459,12 +3564,10 @@ bool SLPVectorizer::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     return false;
 
   unsigned Opcode0 = I0->getOpcode();
-  const DataLayout &DL = I0->getModule()->getDataLayout();
 
-  Type *Ty0 = I0->getType();
-  unsigned Sz = DL.getTypeSizeInBits(Ty0);
   // FIXME: Register size should be a parameter to this function, so we can
   // try different vectorization factors.
+  unsigned Sz = R.getVectorElementSize(I0);
   unsigned VF = MinVecRegSize / Sz;
 
   for (Value *V : VL) {
@@ -4183,10 +4286,83 @@ bool SLPVectorizer::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   return Changed;
 }
 
+bool SLPVectorizer::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
+  auto Changed = false;
+  for (auto &Entry : GEPs) {
+    auto &GEPList = Entry.second;
+
+    // If the getelementptr list has fewer than two elements, there's nothing
+    // to do.
+    if (GEPList.size() < 2)
+      continue;
+
+    DEBUG(dbgs() << "SLP: Analyzing a getelementptr list of length "
+                 << GEPList.size() << ".\n");
+
+    // Initialize a set a candidate getelementptrs. Note that we use a
+    // SetVector here to preserve program order. If the index computations are
+    // vectorizable and begin with loads, we want to minimize the chance of
+    // having to reorder them later.
+    SetVector<Value *> Candidates(GEPList.begin(), GEPList.end());
+
+    // Some of the candidates may have already been vectorized after we
+    // initially collected them. If so, the WeakVHs will have nullified the
+    // values, so remove them from the set of candidates.
+    Candidates.remove(nullptr);
+
+    // Remove from the set of candidates all pairs of getelementptrs with
+    // constant differences. Such getelementptrs are likely not good candidates
+    // for vectorization in a bottom-up phase since one can be computed from
+    // the other.
+    for (int I = 0, E = GEPList.size(); I < E && Candidates.size() > 1; ++I) {
+      auto *GEP = SE->getSCEV(GEPList[I]);
+      for (int J = I + 1; J < E && Candidates.size() > 1; ++J)
+        if (isa<SCEVConstant>(SE->getMinusSCEV(GEP, SE->getSCEV(GEPList[J])))) {
+          Candidates.remove(GEPList[I]);
+          Candidates.remove(GEPList[J]);
+        }
+    }
+
+    // We break out of the above computation as soon as we know there are fewer
+    // than two candidates remaining.
+    if (Candidates.size() < 2)
+      continue;
+
+    // Add the single, non-constant index of each candidate to the bundle. We
+    // ensured the indices met these constraints when we originally collected
+    // the getelementptrs.
+    SmallVector<Value *, 16> Bundle(Candidates.size());
+    auto BundleIndex = 0u;
+    for (auto *V : Candidates) {
+      auto *GEP = cast<GetElementPtrInst>(V);
+      auto *GEPIdx = GEP->idx_begin()->get();
+      assert(GEP->getNumIndices() == 1 || !isa<Constant>(GEPIdx));
+      Bundle[BundleIndex++] = GEPIdx;
+    }
+
+    // Try and vectorize the indices. We are currently only interested in
+    // gather-like cases of the form:
+    //
+    // ... = g[a[0] - b[0]] + g[a[1] - b[1]] + ...
+    //
+    // where the loads of "a", the loads of "b", and the subtractions can be
+    // performed in parallel. It's likely that detecting this pattern in a
+    // bottom-up phase will be simpler and less costly than building a
+    // full-blown top-down phase beginning at the consecutive loads. We process
+    // the bundle in chunks of 16 (like we do for stores) to minimize
+    // compile-time.
+    for (unsigned BI = 0, BE = Bundle.size(); BI < BE; BI += 16) {
+      auto Len = std::min<unsigned>(BE - BI, 16);
+      Changed |= tryToVectorizeList(makeArrayRef(&Bundle[BI], Len), R);
+    }
+  }
+  return Changed;
+}
+
 bool SLPVectorizer::vectorizeStoreChains(BoUpSLP &R) {
   bool Changed = false;
   // Attempt to sort and vectorize each of the store-groups.
-  for (StoreListMap::iterator it = StoreRefs.begin(), e = StoreRefs.end();
+  for (StoreListMap::iterator it = Stores.begin(), e = Stores.end();
        it != e; ++it) {
     if (it->second.size() < 2)
       continue;

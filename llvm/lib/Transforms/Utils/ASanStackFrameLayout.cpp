@@ -44,7 +44,7 @@ static size_t VarAndRedzoneSize(size_t Size, size_t Alignment) {
   else if (Size <= 512) Res = Size + 64;
   else if (Size <= 4096) Res = Size + 128;
   else                   Res = Size + 256;
-  return RoundUpToAlignment(Res, Alignment);
+  return alignTo(Res, Alignment);
 }
 
 void

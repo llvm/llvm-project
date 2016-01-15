@@ -215,10 +215,12 @@ void LLVMDisposeExecutionEngine(LLVMExecutionEngineRef EE) {
 }
 
 void LLVMRunStaticConstructors(LLVMExecutionEngineRef EE) {
+  unwrap(EE)->finalizeObject();
   unwrap(EE)->runStaticConstructorsDestructors(false);
 }
 
 void LLVMRunStaticDestructors(LLVMExecutionEngineRef EE) {
+  unwrap(EE)->finalizeObject();
   unwrap(EE)->runStaticConstructorsDestructors(true);
 }
 

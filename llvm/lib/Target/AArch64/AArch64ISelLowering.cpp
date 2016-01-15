@@ -2545,7 +2545,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     // This is a non-standard ABI so by fiat I say we're allowed to make full
     // use of the stack area to be popped, which must be aligned to 16 bytes in
     // any case:
-    StackArgSize = RoundUpToAlignment(StackArgSize, 16);
+    StackArgSize = alignTo(StackArgSize, 16);
 
     // If we're expected to restore the stack (e.g. fastcc) then we'll be adding
     // a multiple of 16.
@@ -2959,7 +2959,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     // Since callee will pop argument stack as a tail call, we must keep the
     // popped size 16-byte aligned.
-    NumBytes = RoundUpToAlignment(NumBytes, 16);
+    NumBytes = alignTo(NumBytes, 16);
 
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
@@ -3199,9 +3199,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   Chain = DAG.getNode(AArch64ISD::CALL, DL, NodeTys, Ops);
   InFlag = Chain.getValue(1);
 
-  uint64_t CalleePopBytes = DoesCalleeRestoreStack(CallConv, TailCallOpt)
-                                ? RoundUpToAlignment(NumBytes, 16)
-                                : 0;
+  uint64_t CalleePopBytes =
+      DoesCalleeRestoreStack(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : 0;
 
   Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, DL, true),
                              DAG.getIntPtrConstant(CalleePopBytes, DL, true),

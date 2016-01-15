@@ -211,7 +211,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned &ValNo, MVT &ValVT,
 
     // First consume all registers that would give an unaligned object. Whether
     // we go on stack or in regs, no-one will be using them in future.
-    unsigned RegAlign = RoundUpToAlignment(Align, 4) / 4;
+    unsigned RegAlign = alignTo(Align, 4) / 4;
     while (RegIdx % RegAlign != 0 && RegIdx < RegList.size())
       State.AllocateReg(RegList[RegIdx++]);
 

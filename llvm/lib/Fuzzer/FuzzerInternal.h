@@ -83,6 +83,7 @@ class Fuzzer {
     bool UseCounters = false;
     bool UseIndirCalls = true;
     bool UseTraces = false;
+    bool UseMemcmp = true;
     bool UseFullCoverageSet  = false;
     bool Reload = true;
     bool ShuffleAtStartUp = true;

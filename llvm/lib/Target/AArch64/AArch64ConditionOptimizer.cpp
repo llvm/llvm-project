@@ -144,10 +144,18 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
   if (I->getOpcode() != AArch64::Bcc)
     return nullptr;
 
+  // Since we may modify cmp of this MBB, make sure NZCV does not live out.
+  for (auto SuccBB : MBB->successors())
+    if (SuccBB->isLiveIn(AArch64::NZCV))
+      return nullptr;
+
   // Now find the instruction controlling the terminator.
   for (MachineBasicBlock::iterator B = MBB->begin(); I != B;) {
     --I;
     assert(!I->isTerminator() && "Spurious terminator");
+    // Check if there is any use of NZCV between CMP and Bcc.
+    if (I->readsRegister(AArch64::NZCV))
+      return nullptr;
     switch (I->getOpcode()) {
     // cmp is an alias for subs with a dead destination register.
     case AArch64::SUBSWri:

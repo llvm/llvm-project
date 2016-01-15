@@ -1180,7 +1180,7 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
       // for now (will return false). We need to determine the right alignment
       // based on the normal alignment for the underlying machine type.
       //
-      unsigned ArgSize = RoundUpToAlignment(ArgVT.getSizeInBits(), 4);
+      unsigned ArgSize = alignTo(ArgVT.getSizeInBits(), 4);
 
       unsigned BEAlign = 0;
       if (ArgSize < 8 && !Subtarget->isLittle())

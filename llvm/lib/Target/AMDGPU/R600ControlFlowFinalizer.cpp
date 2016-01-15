@@ -142,8 +142,8 @@ unsigned CFStack::getSubEntrySize(CFStack::StackItem Item) {
 }
 
 void CFStack::updateMaxStackSize() {
-  unsigned CurrentStackSize = CurrentEntries +
-                              (RoundUpToAlignment(CurrentSubEntries, 4) / 4);
+  unsigned CurrentStackSize =
+      CurrentEntries + (alignTo(CurrentSubEntries, 4) / 4);
   MaxStackSize = std::max(CurrentStackSize, MaxStackSize);
 }
 

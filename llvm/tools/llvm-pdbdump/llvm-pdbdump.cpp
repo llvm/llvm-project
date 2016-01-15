@@ -184,7 +184,7 @@ static std::error_code getObject(const T *&Obj, MemoryBufferRef M,
 }
 
 static uint64_t bytesToBlocks(uint64_t NumBytes, uint64_t BlockSize) {
-  return RoundUpToAlignment(NumBytes, BlockSize) / BlockSize;
+  return alignTo(NumBytes, BlockSize) / BlockSize;
 }
 
 static uint64_t blockToOffset(uint64_t BlockNumber, uint64_t BlockSize) {

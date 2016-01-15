@@ -327,7 +327,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
 
   if (MFI->getShaderType() == ShaderType::COMPUTE) {
     OutStreamer->EmitIntValue(R_0288E8_SQ_LDS_ALLOC, 4);
-    OutStreamer->EmitIntValue(RoundUpToAlignment(MFI->LDSSize, 4) >> 2, 4);
+    OutStreamer->EmitIntValue(alignTo(MFI->LDSSize, 4) >> 2, 4);
   }
 }
 
@@ -503,7 +503,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.LDSSize = MFI->LDSSize + LDSSpillSize;
   ProgInfo.LDSBlocks =
-     RoundUpToAlignment(ProgInfo.LDSSize, 1 << LDSAlignShift) >> LDSAlignShift;
+      alignTo(ProgInfo.LDSSize, 1 << LDSAlignShift) >> LDSAlignShift;
 
   // Scratch is allocated in 256 dword blocks.
   unsigned ScratchAlignShift = 10;
@@ -511,8 +511,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // is used by the entire wave.  ProgInfo.ScratchSize is the amount of
   // scratch memory used per thread.
   ProgInfo.ScratchBlocks =
-    RoundUpToAlignment(ProgInfo.ScratchSize * STM.getWavefrontSize(),
-                       1 << ScratchAlignShift) >> ScratchAlignShift;
+      alignTo(ProgInfo.ScratchSize * STM.getWavefrontSize(),
+              1 << ScratchAlignShift) >>
+      ScratchAlignShift;
 
   ProgInfo.ComputePGMRSrc1 =
       S_00B848_VGPRS(ProgInfo.VGPRBlocks) |

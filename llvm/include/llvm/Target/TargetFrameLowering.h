@@ -75,9 +75,9 @@ public:
   ///
   int alignSPAdjust(int SPAdj) const {
     if (SPAdj < 0) {
-      SPAdj = -RoundUpToAlignment(-SPAdj, StackAlignment);
+      SPAdj = -alignTo(-SPAdj, StackAlignment);
     } else {
-      SPAdj = RoundUpToAlignment(SPAdj, StackAlignment);
+      SPAdj = alignTo(SPAdj, StackAlignment);
     }
     return SPAdj;
   }

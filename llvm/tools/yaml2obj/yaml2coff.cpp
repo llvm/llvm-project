@@ -173,12 +173,12 @@ static bool layoutCOFF(COFFParser &CP) {
   // Assign each section data address consecutively.
   for (COFFYAML::Section &S : CP.Obj.Sections) {
     if (S.SectionData.binary_size() > 0) {
-      CurrentSectionDataOffset = RoundUpToAlignment(
-          CurrentSectionDataOffset, CP.isPE() ? CP.getFileAlignment() : 4);
+      CurrentSectionDataOffset = alignTo(CurrentSectionDataOffset,
+                                         CP.isPE() ? CP.getFileAlignment() : 4);
       S.Header.SizeOfRawData = S.SectionData.binary_size();
       if (CP.isPE())
         S.Header.SizeOfRawData =
-            RoundUpToAlignment(S.Header.SizeOfRawData, CP.getFileAlignment());
+            alignTo(S.Header.SizeOfRawData, CP.getFileAlignment());
       S.Header.PointerToRawData = CurrentSectionDataOffset;
       CurrentSectionDataOffset += S.Header.SizeOfRawData;
       if (!S.Relocations.empty()) {
@@ -292,10 +292,9 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic, T Heade
   Header->FileAlignment = CP.Obj.OptionalHeader->Header.FileAlignment;
   uint32_t SizeOfCode = 0, SizeOfInitializedData = 0,
            SizeOfUninitializedData = 0;
-  uint32_t SizeOfHeaders = RoundUpToAlignment(
-      CP.SectionTableStart + CP.SectionTableSize, Header->FileAlignment);
-  uint32_t SizeOfImage =
-      RoundUpToAlignment(SizeOfHeaders, Header->SectionAlignment);
+  uint32_t SizeOfHeaders = alignTo(CP.SectionTableStart + CP.SectionTableSize,
+                                   Header->FileAlignment);
+  uint32_t SizeOfImage = alignTo(SizeOfHeaders, Header->SectionAlignment);
   uint32_t BaseOfData = 0;
   for (const COFFYAML::Section &S : CP.Obj.Sections) {
     if (S.Header.Characteristics & COFF::IMAGE_SCN_CNT_CODE)
@@ -309,8 +308,7 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic, T Heade
     else if (S.Name.equals(".data"))
       BaseOfData = S.Header.VirtualAddress; // RVA
     if (S.Header.VirtualAddress)
-      SizeOfImage +=
-          RoundUpToAlignment(S.Header.VirtualSize, Header->SectionAlignment);
+      SizeOfImage += alignTo(S.Header.VirtualSize, Header->SectionAlignment);
   }
   Header->SizeOfCode = SizeOfCode;
   Header->SizeOfInitializedData = SizeOfInitializedData;

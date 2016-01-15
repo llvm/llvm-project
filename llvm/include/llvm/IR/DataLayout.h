@@ -387,7 +387,7 @@ public:
   /// returns 12 or 16 for x86_fp80, depending on alignment.
   uint64_t getTypeAllocSize(Type *Ty) const {
     // Round up to the next alignment boundary.
-    return RoundUpToAlignment(getTypeStoreSize(Ty), getABITypeAlignment(Ty));
+    return alignTo(getTypeStoreSize(Ty), getABITypeAlignment(Ty));
   }
 
   /// \brief Returns the offset in bits between successive objects of the

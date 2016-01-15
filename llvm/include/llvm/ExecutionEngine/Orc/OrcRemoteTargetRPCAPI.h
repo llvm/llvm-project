@@ -29,7 +29,6 @@ protected:
   class ResourceIdMgr {
   public:
     typedef uint64_t ResourceId;
-    ResourceIdMgr() : NextId(0) {}
     ResourceId getNext() {
       if (!FreeIds.empty()) {
         ResourceId I = FreeIds.back();
@@ -41,7 +40,7 @@ protected:
     void release(ResourceId I) { FreeIds.push_back(I); }
 
   private:
-    ResourceId NextId;
+    ResourceId NextId = 0;
     std::vector<ResourceId> FreeIds;
   };
 
@@ -56,6 +55,7 @@ public:
     CallVoidVoidResponseId,
     CreateRemoteAllocatorId,
     CreateIndirectStubsOwnerId,
+    DeregisterEHFramesId,
     DestroyRemoteAllocatorId,
     DestroyIndirectStubsOwnerId,
     EmitIndirectStubsId,
@@ -69,6 +69,7 @@ public:
     GetRemoteInfoResponseId,
     ReadMemId,
     ReadMemResponseId,
+    RegisterEHFramesId,
     ReserveMemId,
     ReserveMemResponseId,
     RequestCompileId,
@@ -103,6 +104,10 @@ public:
   typedef Procedure<CreateIndirectStubsOwnerId,
                     ResourceIdMgr::ResourceId /* StubsOwner ID */>
       CreateIndirectStubsOwner;
+
+  typedef Procedure<DeregisterEHFramesId, TargetAddress /* Addr */,
+                    uint32_t /* Size */>
+      DeregisterEHFrames;
 
   typedef Procedure<DestroyRemoteAllocatorId,
                     ResourceIdMgr::ResourceId /* Allocator ID */>
@@ -149,6 +154,10 @@ public:
       ReadMem;
 
   typedef Procedure<ReadMemResponseId> ReadMemResponse;
+
+  typedef Procedure<RegisterEHFramesId, TargetAddress /* Addr */,
+                    uint32_t /* Size */>
+      RegisterEHFrames;
 
   typedef Procedure<ReserveMemId, ResourceIdMgr::ResourceId /* Id */,
                     uint64_t /* Size */, uint32_t /* Align */>

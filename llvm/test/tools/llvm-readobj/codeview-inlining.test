@@ -38,7 +38,7 @@ RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/codeview-inlining.obj.
 ; CHECK-NEXT:  SubSectionSize: 0x3C
 ; CHECK-NEXT:  InlineeSourceLine {
 ; CHECK-NEXT:    Inlinee: bar (0x1002)
-; CHECK-NEXT:    FileID: 0x30
+; CHECK-NEXT:    FileID: d:\src\llvm\build\t.cpp (0x30)
 ; CHECK-NEXT:    SourceLineNum: 2
 ; CHECK-NEXT:    ExtraFileCount: 0
 ; CHECK-NEXT:    ExtraFiles [
@@ -46,7 +46,7 @@ RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/codeview-inlining.obj.
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  InlineeSourceLine {
 ; CHECK-NEXT:    Inlinee: baz (0x1003)
-; CHECK-NEXT:    FileID: 0x30
+; CHECK-NEXT:    FileID: d:\src\llvm\build\t.cpp (0x30)
 ; CHECK-NEXT:    SourceLineNum: 5
 ; CHECK-NEXT:    ExtraFileCount: 0
 ; CHECK-NEXT:    ExtraFiles [
@@ -55,11 +55,11 @@ RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/codeview-inlining.obj.
 ;   The 'foo' inline site has extra files due to includes.
 ; CHECK-NEXT:  InlineeSourceLine {
 ; CHECK-NEXT:    Inlinee: foo (0x1004)
-; CHECK-NEXT:    FileID: 0x0
+; CHECK-NEXT:    FileID: d:\src\llvm\build\a.h (0x0)
 ; CHECK-NEXT:    SourceLineNum: 1
 ; CHECK-NEXT:    ExtraFileCount: 2
 ; CHECK-NEXT:    ExtraFiles [
-; CHECK-NEXT:      FileID: 0x18
-; CHECK-NEXT:      FileID: 0x30
+; CHECK-NEXT:      FileID: d:\src\llvm\build\b.h (0x18)
+; CHECK-NEXT:      FileID: d:\src\llvm\build\t.cpp (0x30)
 ; CHECK-NEXT:    ]
 ; CHECK-NEXT:  }

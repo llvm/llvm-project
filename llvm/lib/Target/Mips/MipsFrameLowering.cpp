@@ -122,7 +122,7 @@ uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
   // Conservatively assume all callee-saved registers will be saved.
   for (const MCPhysReg *R = TRI.getCalleeSavedRegs(&MF); *R; ++R) {
     unsigned Size = TRI.getMinimalPhysRegClass(*R)->getSize();
-    Offset = RoundUpToAlignment(Offset + Size, Size);
+    Offset = alignTo(Offset + Size, Size);
   }
 
   unsigned MaxAlign = MFI->getMaxAlignment();
@@ -133,14 +133,14 @@ uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
 
   // Iterate over other objects.
   for (unsigned I = 0, E = MFI->getObjectIndexEnd(); I != E; ++I)
-    Offset = RoundUpToAlignment(Offset + MFI->getObjectSize(I), MaxAlign);
+    Offset = alignTo(Offset + MFI->getObjectSize(I), MaxAlign);
 
   // Call frame.
   if (MFI->adjustsStack() && hasReservedCallFrame(MF))
-    Offset = RoundUpToAlignment(Offset + MFI->getMaxCallFrameSize(),
-                                std::max(MaxAlign, getStackAlignment()));
+    Offset = alignTo(Offset + MFI->getMaxCallFrameSize(),
+                     std::max(MaxAlign, getStackAlignment()));
 
-  return RoundUpToAlignment(Offset, getStackAlignment());
+  return alignTo(Offset, getStackAlignment());
 }
 
 // Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions

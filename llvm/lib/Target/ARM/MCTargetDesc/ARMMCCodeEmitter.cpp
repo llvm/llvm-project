@@ -1049,12 +1049,12 @@ ARMMCCodeEmitter::getHiLo16ImmOpValue(const MCInst &MI, unsigned OpIdx,
     switch (ARM16Expr->getKind()) {
     default: llvm_unreachable("Unsupported ARMFixup");
     case ARMMCExpr::VK_ARM_HI16:
-      Kind = MCFixupKind(isThumb2(STI) ? ARM::fixup_t2_movt_hi16
-                                       : ARM::fixup_arm_movt_hi16);
+      Kind = MCFixupKind(isThumb(STI) ? ARM::fixup_t2_movt_hi16
+                                      : ARM::fixup_arm_movt_hi16);
       break;
     case ARMMCExpr::VK_ARM_LO16:
-      Kind = MCFixupKind(isThumb2(STI) ? ARM::fixup_t2_movw_lo16
-                                       : ARM::fixup_arm_movw_lo16);
+      Kind = MCFixupKind(isThumb(STI) ? ARM::fixup_t2_movw_lo16
+                                      : ARM::fixup_arm_movw_lo16);
       break;
     }
 

@@ -269,6 +269,15 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool hasV8Ops() const {
     return getSTI().getFeatureBits()[ARM::HasV8Ops];
   }
+  bool hasV8MBaseline() const {
+    return getSTI().getFeatureBits()[ARM::HasV8MBaselineOps];
+  }
+  bool hasV8MMainline() const {
+    return getSTI().getFeatureBits()[ARM::HasV8MMainlineOps];
+  }
+  bool has8MSecExt() const {
+    return getSTI().getFeatureBits()[ARM::Feature8MSecExt];
+  }
   bool hasARM() const {
     return !getSTI().getFeatureBits()[ARM::FeatureNoARM];
   }
@@ -3969,6 +3978,18 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
       .Case("basepri_max", 0x812)
       .Case("faultmask", 0x813)
       .Case("control", 0x814)
+      .Case("msplim", 0x80a)
+      .Case("psplim", 0x80b)
+      .Case("msp_ns", 0x888)
+      .Case("psp_ns", 0x889)
+      .Case("msplim_ns", 0x88a)
+      .Case("psplim_ns", 0x88b)
+      .Case("primask_ns", 0x890)
+      .Case("basepri_ns", 0x891)
+      .Case("basepri_max_ns", 0x892)
+      .Case("faultmask_ns", 0x893)
+      .Case("control_ns", 0x894)
+      .Case("sp_ns", 0x898)
       .Default(~0U);
 
     if (FlagsVal == ~0U)
@@ -3981,6 +4002,14 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
 
     if (!hasV7Ops() && FlagsVal >= 0x811 && FlagsVal <= 0x813)
       // basepri, basepri_max and faultmask only valid for V7m.
+      return MatchOperand_NoMatch;
+
+    if (!has8MSecExt() && (FlagsVal == 0x80a || FlagsVal == 0x80b ||
+                             (FlagsVal > 0x814 && FlagsVal < 0xc00)))
+      return MatchOperand_NoMatch;
+
+    if (!hasV8MMainline() && (FlagsVal == 0x88a || FlagsVal == 0x88b ||
+                              (FlagsVal > 0x890 && FlagsVal <= 0x893)))
       return MatchOperand_NoMatch;
 
     Parser.Lex(); // Eat identifier token.
@@ -4673,14 +4702,14 @@ void ARMAsmParser::cvtThumbBranches(MCInst &Inst,
     // classify tB as either t2B or t1B based on range of immediate operand
     case ARM::tB: {
       ARMOperand &op = static_cast<ARMOperand &>(*Operands[ImmOp]);
-      if (!op.isSignedOffset<11, 1>() && isThumbTwo())
+      if (!op.isSignedOffset<11, 1>() && isThumb() && hasV8MBaseline())
         Inst.setOpcode(ARM::t2B);
       break;
     }
     // classify tBcc as either t2Bcc or t1Bcc based on range of immediate operand
     case ARM::tBcc: {
       ARMOperand &op = static_cast<ARMOperand &>(*Operands[ImmOp]);
-      if (!op.isSignedOffset<8, 1>() && isThumbTwo())
+      if (!op.isSignedOffset<8, 1>() && isThumb() && hasV8MBaseline())
         Inst.setOpcode(ARM::t2Bcc);
       break;
     }
@@ -5265,7 +5294,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic == "vcvta" || Mnemonic == "vcvtn"  || Mnemonic == "vcvtp" ||
       Mnemonic == "vcvtm" || Mnemonic == "vrinta" || Mnemonic == "vrintn" ||
       Mnemonic == "vrintp" || Mnemonic == "vrintm" || Mnemonic == "hvc" ||
-      Mnemonic.startswith("vsel"))
+      Mnemonic == "bxns"  || Mnemonic == "blxns" || Mnemonic.startswith("vsel"))
     return Mnemonic;
 
   // First, split out any predication code. Ignore mnemonics we know aren't

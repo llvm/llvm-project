@@ -33,6 +33,8 @@ const char *OrcRemoteTargetRPCAPI::getJITProcIdName(JITProcId Id) {
     return "CreateRemoteAllocator";
   case CreateIndirectStubsOwnerId:
     return "CreateIndirectStubsOwner";
+  case DeregisterEHFramesId:
+    return "DeregisterEHFrames";
   case DestroyRemoteAllocatorId:
     return "DestroyRemoteAllocator";
   case DestroyIndirectStubsOwnerId:
@@ -59,6 +61,8 @@ const char *OrcRemoteTargetRPCAPI::getJITProcIdName(JITProcId Id) {
     return "ReadMem";
   case ReadMemResponseId:
     return "ReadMemResponse";
+  case RegisterEHFramesId:
+    return "RegisterEHFrames";
   case ReserveMemId:
     return "ReserveMem";
   case ReserveMemResponseId:

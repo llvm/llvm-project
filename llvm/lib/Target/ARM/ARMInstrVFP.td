@@ -200,6 +200,37 @@ defm VSTM : vfp_ldst_mult<"vstm", 0, IIC_fpStore_m, IIC_fpStore_mu>;
 def : MnemonicAlias<"vldm", "vldmia">;
 def : MnemonicAlias<"vstm", "vstmia">;
 
+
+//===----------------------------------------------------------------------===//
+//  Lazy load / store multiple Instructions
+//
+let mayLoad = 1 in
+def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
+                  IIC_fpLoad_m, "vlldm${p}\t$Rn", "", []>,
+            Requires<[HasV8MMainline, Has8MSecExt]> {
+    let Inst{24-23} = 0b00;
+    let Inst{22}    = 0;
+    let Inst{21}    = 1;
+    let Inst{20}    = 1;
+    let Inst{15-12} = 0;
+    let Inst{7-0}   = 0;
+    let mayLoad     = 1;
+}
+
+let mayStore = 1 in
+def VLSTM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
+                  IIC_fpStore_m, "vlstm${p}\t$Rn", "", []>,
+            Requires<[HasV8MMainline, Has8MSecExt]> {
+    let Inst{24-23} = 0b00;
+    let Inst{22}    = 0;
+    let Inst{21}    = 1;
+    let Inst{20}    = 0;
+    let Inst{15-12} = 0;
+    let Inst{7-0}   = 0;
+    let mayStore    = 1;
+}
+
+
 // FLDM/FSTM - Load / Store multiple single / double precision registers for
 // pre-ARMv6 cores.
 // These instructions are deprecated!

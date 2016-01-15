@@ -106,9 +106,7 @@ public:
     Type *ElTy = GV->getType()->getElementType();
     size_t GVSize = (size_t)TD.getTypeAllocSize(ElTy);
     void *RawMemory = ::operator new(
-      RoundUpToAlignment(sizeof(GVMemoryBlock),
-                         TD.getPreferredAlignment(GV))
-      + GVSize);
+        alignTo(sizeof(GVMemoryBlock), TD.getPreferredAlignment(GV)) + GVSize);
     new(RawMemory) GVMemoryBlock(GV);
     return static_cast<char*>(RawMemory) + sizeof(GVMemoryBlock);
   }

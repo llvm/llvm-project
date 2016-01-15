@@ -170,7 +170,7 @@ void AArch64FrameLowering::eliminateCallFramePseudoInstr(
     unsigned Align = getStackAlignment();
 
     int64_t Amount = I->getOperand(0).getImm();
-    Amount = RoundUpToAlignment(Amount, Align);
+    Amount = alignTo(Amount, Align);
     if (!IsDestroy)
       Amount = -Amount;
 

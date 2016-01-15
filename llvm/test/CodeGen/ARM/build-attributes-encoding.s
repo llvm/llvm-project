@@ -54,6 +54,9 @@
 // Tag_DIV_use (=44)
 .eabi_attribute 44, 2
 
+// Tag_DSP_extension (=46)
+.eabi_attribute 46, 1
+
 // Tag_Virtualization_use (=68)
 .eabi_attribute 68, 3
 
@@ -71,15 +74,15 @@
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
 // CHECK-NEXT:     Offset: 0x34
-// CHECK-NEXT:     Size: 71
+// CHECK-NEXT:     Size: 73
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
 // CHECK-NEXT:     AddressAlignment: 1
 // CHECK-NEXT:     EntrySize: 0
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 41460000 00616561 62690001 3C000000
+// CHECK-NEXT:       0000: 41480000 00616561 62690001 3E000000
 // CHECK-NEXT:       0010: 05636F72 7465782D 61380006 0A074108
 // CHECK-NEXT:       0020: 0109020A 030C0214 01150117 01180119
-// CHECK-NEXT:       0030: 011B001C 0124012A 012C0244 036EA001
-// CHECK-NEXT:       0040: 81013100 FA0101
+// CHECK-NEXT:       0030: 011B001C 0124012A 012C022E 0144036E
+// CHECK-NEXT:       0040: A0018101 3100FA01 01
 // CHECK-NEXT:     )
