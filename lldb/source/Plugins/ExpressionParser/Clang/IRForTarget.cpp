@@ -36,7 +36,6 @@
 #include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Target/CPPLanguageRuntime.h"
 
 #include <map>
 
@@ -230,36 +229,6 @@ IRForTarget::GetFunctionAddress (llvm::Function *fun,
         {
             std::vector<lldb_private::ConstString> alternates;
             bool found_it = m_decl_map->GetFunctionAddress (name, fun_addr);
-            if (!found_it)
-            {
-                if (log)
-                    log->Printf("Address of function \"%s\" not found.\n", name.GetCString());
-                // Check for an alternate mangling for names from the standard library.
-                // For example, "std::basic_string<...>" has an alternate mangling scheme per
-                // the Itanium C++ ABI.
-                lldb::ProcessSP process_sp = m_data_allocator.GetTarget()->GetProcessSP();
-                if (process_sp)
-                {
-                    lldb_private::CPPLanguageRuntime *cpp_runtime = process_sp->GetCPPLanguageRuntime();
-                    if (cpp_runtime && cpp_runtime->GetAlternateManglings(name, alternates))
-                    {
-                        for (size_t i = 0; i < alternates.size(); ++i)
-                        {
-                            const lldb_private::ConstString &alternate_name = alternates[i];
-                            if (log)
-                                log->Printf("Looking up address of function \"%s\" with alternate name \"%s\"",
-                                            name.GetCString(), alternate_name.GetCString());
-                            if ((found_it = m_decl_map->GetFunctionAddress (alternate_name, fun_addr)))
-                            {
-                                if (log)
-                                    log->Printf("Found address of function \"%s\" with alternate name \"%s\"",
-                                                name.GetCString(), alternate_name.GetCString());
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
 
             if (!found_it)
             {

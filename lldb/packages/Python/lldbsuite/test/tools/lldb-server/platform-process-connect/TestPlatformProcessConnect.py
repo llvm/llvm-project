@@ -10,6 +10,7 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     @no_debug_info_test
     @skipIf(remote=False)
+    @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
     def test_platform_process_connect(self):
         self.build()
         self.init_llgs_test(False)

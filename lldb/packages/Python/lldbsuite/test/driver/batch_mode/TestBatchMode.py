@@ -14,21 +14,12 @@ class DriverBatchModeTest (TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfRemote # test not remote-ready llvm.org/pr24813
-    @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
-    @expectedFlakeyLinux("llvm.org/pr25172")
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
-    def test_driver_batch_mode(self):
-        """Test that the lldb driver's batch mode works correctly."""
-        self.build()
-        self.setTearDownCleanup()
-        self.batch_mode()
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Our simple source filename.
         self.source = 'main.c'
+        self.victim = None
 
     def expect_string (self, string):
         import pexpect
@@ -40,12 +31,20 @@ class DriverBatchModeTest (TestBase):
         except pexpect.TIMEOUT:
             self.fail ("Timed out waiting for '%s'"%(string))
 
-    def batch_mode (self):
+    @skipIfRemote # test not remote-ready llvm.org/pr24813
+    @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
+    @expectedFlakeyLinux("llvm.org/pr25172")
+    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    def test_batch_mode_run_crash (self):
+        """Test that the lldb driver's batch mode works correctly."""
+        self.build()
+        self.setTearDownCleanup()
+
         import pexpect
         exe = os.path.join(os.getcwd(), "a.out")
         prompt = "(lldb) "
 
-        # First time through, pass CRASH so the process will crash and stop in batch mode.
+        # Pass CRASH so the process will crash and stop in batch mode.
         run_commands = ' -b -o "break set -n main" -o "run" -o "continue" -k "frame var touch_me_not"'
         self.child = pexpect.spawn('%s %s %s %s -- CRASH' % (lldbtest_config.lldbExec, self.lldbOption, run_commands, exe))
         child = self.child
@@ -68,7 +67,21 @@ class DriverBatchModeTest (TestBase):
         
         self.deletePexpectChild()
 
-        # Now do it again, and see make sure if we don't crash, we quit:
+
+    @skipIfRemote # test not remote-ready llvm.org/pr24813
+    @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
+    @expectedFlakeyLinux("llvm.org/pr25172")
+    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    def test_batch_mode_run_exit (self):
+        """Test that the lldb driver's batch mode works correctly."""
+        self.build()
+        self.setTearDownCleanup()
+
+        import pexpect
+        exe = os.path.join(os.getcwd(), "a.out")
+        prompt = "(lldb) "
+
+        # Now do it again, and make sure if we don't crash, we quit:
         run_commands = ' -b -o "break set -n main" -o "run" -o "continue" '
         self.child = pexpect.spawn('%s %s %s %s -- NOCRASH' % (lldbtest_config.lldbExec, self.lldbOption, run_commands, exe))
         child = self.child
@@ -87,3 +100,69 @@ class DriverBatchModeTest (TestBase):
         index = self.child.expect([pexpect.EOF, pexpect.TIMEOUT])
         self.assertTrue(index == 0, "lldb didn't close on successful batch completion.")
 
+    def closeVictim(self):
+        if self.victim != None:
+            self.victim.close()
+            self.victim = None
+
+    @skipIfRemote # test not remote-ready llvm.org/pr24813
+    @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
+    @expectedFlakeyLinux("llvm.org/pr25172")
+    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    def test_batch_mode_attach_exit (self):
+        """Test that the lldb driver's batch mode works correctly."""
+        self.build()
+        self.setTearDownCleanup()
+ 
+        import pexpect
+        exe = os.path.join(os.getcwd(), "a.out")
+        prompt = "(lldb) "
+
+        # Finally, start up the process by hand, attach to it, and wait for its completion.
+        # Attach is funny, since it looks like it stops with a signal on most Unixen so 
+        # care must be taken not to treat that as a reason to exit batch mode.
+        
+        # Start up the process by hand and wait for it to get to the wait loop.
+
+        self.victim = pexpect.spawn('%s WAIT' %(exe))
+        if self.victim == None:
+            self.fail("Could not spawn ", exe, ".")
+
+        self.addTearDownHook (self.closeVictim)
+
+        if self.TraceOn():
+            self.victim.logfile_read = sys.stdout
+
+        self.victim.expect("PID: ([0-9]+) END")
+        if self.victim.match == None:
+            self.fail("Couldn't get the target PID.")
+
+        victim_pid = int(self.victim.match.group(1))
+        
+        self.victim.expect("Waiting")
+
+        run_commands = ' -b -o "process attach -p %d" -o "breakpoint set --file %s -p \'Stop here to unset keep_waiting\' -N keep_waiting" -o "continue" -o "break delete keep_waiting" -o "expr keep_waiting = 0" -o "continue" ' % (victim_pid, self.source)
+        self.child = pexpect.spawn('%s %s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, run_commands, exe))
+
+        child = self.child
+        # Turn on logging for what the child sends back.
+        if self.TraceOn():
+            child.logfile_read = sys.stdout
+
+        # We should see the "run":
+        self.expect_string ("attach")
+
+        self.expect_string(prompt + "continue")
+
+        self.expect_string(prompt + "continue")
+
+        # Then we should see the process exit:
+        self.expect_string ("Process %d exited with status"%(victim_pid))
+        
+        victim_index = self.victim.expect([pexpect.EOF, pexpect.TIMEOUT])
+        self.assertTrue(victim_index == 0, "Victim didn't really exit.")
+
+        index = self.child.expect([pexpect.EOF, pexpect.TIMEOUT])
+        self.assertTrue(index == 0, "lldb didn't close on successful batch completion.")
+
+        

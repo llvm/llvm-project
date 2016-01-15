@@ -683,8 +683,8 @@
 		3F8169321ABB7A6D001DA9DF /* SystemInitializerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692F1ABB7A6D001DA9DF /* SystemInitializerCommon.cpp */; };
 		3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8169301ABB7A6D001DA9DF /* SystemLifetimeManager.cpp */; };
 		3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FA093141BF65D3A0037DD08 /* PythonExceptionStateTests.cpp */; };
-		3FBA69DF1B6067020008F44A /* ScriptInterpreterNone.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
-		3FBA69E01B6067020008F44A /* ScriptInterpreterNone.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69DE1B6067020008F44A /* ScriptInterpreterNone.h */; };
+		3FBA69DF1B6067020008F44A /* ScriptInterpreterNone.cpp in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
+		3FBA69E01B6067020008F44A /* ScriptInterpreterNone.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69DE1B6067020008F44A /* ScriptInterpreterNone.h */; };
 		3FBA69E11B6067120008F44A /* ScriptInterpreterNone.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
 		3FBA69E71B60672A0008F44A /* lldb-python.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69E21B60672A0008F44A /* lldb-python.h */; };
 		3FBA69E91B60672A0008F44A /* PythonDataObjects.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69E41B60672A0008F44A /* PythonDataObjects.h */; };
@@ -921,9 +921,6 @@
 		AEC6FFA01BE970A2007882C1 /* GoParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */; };
 		AEEA34051AC88A7400AB639D /* TypeSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEEA34041AC88A7400AB639D /* TypeSystem.cpp */; };
 		AF061F87182C97ED00B6A19C /* RegisterContextHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF061F85182C97ED00B6A19C /* RegisterContextHistory.cpp */; };
-		AF0639A41BEC2D2500EA1B29 /* PlatformAppleSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF06398D1BEC2D2500EA1B29 /* PlatformAppleSimulator.h */; };
-		AF0639A61BEC2D2500EA1B29 /* PlatformAppleTVSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF06398F1BEC2D2500EA1B29 /* PlatformAppleTVSimulator.h */; };
-		AF0639A81BEC2D2500EA1B29 /* PlatformAppleWatchSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0639911BEC2D2500EA1B29 /* PlatformAppleWatchSimulator.h */; };
 		AF0639A91BEC2D2500EA1B29 /* PlatformDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0639921BEC2D2500EA1B29 /* PlatformDarwin.cpp */; };
 		AF0639AA1BEC2D2500EA1B29 /* PlatformDarwin.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0639931BEC2D2500EA1B29 /* PlatformDarwin.h */; };
 		AF0639AB1BEC2D2500EA1B29 /* PlatformDarwinKernel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0639941BEC2D2500EA1B29 /* PlatformDarwinKernel.cpp */; };
@@ -981,14 +978,13 @@
 		AF9107EF168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */; };
 		AFA87A331BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFA87A311BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp */; };
-		AFA87A341BEC2D6700A7424F /* PlatformRemoteAppleTV.h in Headers */ = {isa = PBXBuildFile; fileRef = AFA87A321BEC2D6700A7424F /* PlatformRemoteAppleTV.h */; };
 		AFB3D2801AC262AB003B4B30 /* MICmdCmdGdbShow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */; };
 		AFBB11B219A70AC1002213FF /* FileSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFBB11B119A70AC1002213FF /* FileSpec.cpp */; };
 		AFC1A8991BEAF27000681CFD /* ValueObjectConstResultImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */; };
 		AFC234091AF85CE100CDE8B6 /* CommandObjectLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */; };
-		AFCFF8231BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCFF8221BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp */; };
 		AFCB2BBD1BF577F40018B553 /* PythonExceptionState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB2BBB1BF577F40018B553 /* PythonExceptionState.cpp */; };
 		AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */ = {isa = PBXBuildFile; fileRef = AFCB2BBC1BF577F40018B553 /* PythonExceptionState.h */; };
+		AFCFF8231BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCFF8221BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp */; };
 		AFDCDBCB19DD0F42005EA55E /* SBExecutionContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 940B02F419DC96CB00AD0F52 /* SBExecutionContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AFDD168919A6FDE40075888E /* AppleObjCTypeEncodingParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFDD168719A6FDE40075888E /* AppleObjCTypeEncodingParser.cpp */; };
 		AFEC3362194A8ABA00FF05C6 /* StructuredData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */; };
@@ -1013,14 +1009,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		235AFBC1199BC70700897A4B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 26F5C26910F3D9A4009D5894;
-			remoteInfo = "lldb-tool";
-		};
-		239504C41BDD3FD700963CEA /* PBXContainerItemProxy */ = {
+		2341D3B31C4433D200E481AD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
 			proxyType = 1;
@@ -3070,12 +3059,11 @@
 		AFBB11B119A70AC1002213FF /* FileSpec.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileSpec.cpp; sourceTree = "<group>"; };
 		AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectLanguage.cpp; path = source/Commands/CommandObjectLanguage.cpp; sourceTree = "<group>"; };
 		AFC234071AF85CE000CDE8B6 /* CommandObjectLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectLanguage.h; path = source/Commands/CommandObjectLanguage.h; sourceTree = "<group>"; };
+		AFCB2BBB1BF577F40018B553 /* PythonExceptionState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PythonExceptionState.cpp; path = ScriptInterpreter/Python/PythonExceptionState.cpp; sourceTree = "<group>"; };
+		AFCB2BBC1BF577F40018B553 /* PythonExceptionState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PythonExceptionState.h; path = ScriptInterpreter/Python/PythonExceptionState.h; sourceTree = "<group>"; };
 		AFCFF8221BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleWatchSimulator.cpp; sourceTree = "<group>"; };
 		AFDD168719A6FDE40075888E /* AppleObjCTypeEncodingParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCTypeEncodingParser.cpp; sourceTree = "<group>"; };
 		AFDD168819A6FDE40075888E /* AppleObjCTypeEncodingParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleObjCTypeEncodingParser.h; sourceTree = "<group>"; };
-		AFCB2BBB1BF577F40018B553 /* PythonExceptionState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PythonExceptionState.cpp; path = ScriptInterpreter/Python/PythonExceptionState.cpp; sourceTree = "<group>"; };
-		AFCB2BBC1BF577F40018B553 /* PythonExceptionState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PythonExceptionState.h; path = ScriptInterpreter/Python/PythonExceptionState.h; sourceTree = "<group>"; };
-		AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ConnectionFileDescriptorPosix.cpp; sourceTree = "<group>"; };
 		AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StructuredData.cpp; path = source/Core/StructuredData.cpp; sourceTree = "<group>"; };
 		AFF87C86150FF669000E1742 /* com.apple.debugserver.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.plist; path = tools/debugserver/source/com.apple.debugserver.plist; sourceTree = "<group>"; };
 		AFF87C8A150FF677000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
@@ -6271,12 +6259,10 @@
 			files = (
 				AF0639AA1BEC2D2500EA1B29 /* PlatformDarwin.h in Headers */,
 				AF0639B21BEC2D2500EA1B29 /* PlatformMacOSX.h in Headers */,
-				AF8AD6381BEC28C400150209 /* PlatformRemoteAppleTV.h in Headers */,
 				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
 				AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
-				AF8AD62F1BEC28A400150209 /* PlatformAppleTVSimulator.h in Headers */,
 				257906651BD5AFD000178368 /* Acceptor.h in Headers */,
 				AF0639B61BEC2D2500EA1B29 /* PlatformRemoteAppleWatch.h in Headers */,
 				260A63171861008E00FECF8E /* IOHandler.h in Headers */,
@@ -6285,13 +6271,26 @@
 				AF0639AF1BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.h in Headers */,
 				AF0639AC1BEC2D2500EA1B29 /* PlatformDarwinKernel.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
-				AF8AD6311BEC28A400150209 /* PlatformAppleWatchSimulator.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXLegacyTarget section */
+		2387551E1C24974600CCE8C3 /* lldb-python-test-suite */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100";
+			buildConfigurationList = 238755241C24974600CCE8C3 /* Build configuration list for PBXLegacyTarget "lldb-python-test-suite" */;
+			buildPhases = (
+			);
+			buildToolPath = python;
+			buildWorkingDirectory = "$(BUILD_DIR)";
+			dependencies = (
+			);
+			name = "lldb-python-test-suite";
+			passBuildSettingsInEnvironment = 0;
+			productName = "LLDB Python Test Suite";
+		};
 		2687EAC51508110B00DD8C2E /* install-headers */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "$(ACTION)";
@@ -6516,6 +6515,9 @@
 				LastSwiftUpdateCheck = 0700;
 				LastUpgradeCheck = 0720;
 				TargetAttributes = {
+					2387551E1C24974600CCE8C3 = {
+						CreatedOnToolsVersion = 7.2;
+					};
 					239504D31BDD451400963CEA = {
 						CreatedOnToolsVersion = 7.1;
 					};
@@ -6551,6 +6553,8 @@
 				49753FA91BEAB2BB00019E45 /* toolchain */,
 				26F5C26910F3D9A4009D5894 /* lldb-tool */,
 				26680206115FD0ED008E1FE4 /* LLDB */,
+				239504D31BDD451400963CEA /* lldb-gtest */,
+				2387551E1C24974600CCE8C3 /* lldb-python-test-suite */,
 				26579F67126A25920007C5CB /* darwin-debug */,
 				2689FFC913353D7A00698AC0 /* lldb-core */,
 				26DC6A0F1337FE6900FF7998 /* lldb-server */,
@@ -6561,7 +6565,6 @@
 				2690CD161A6DC0D000E717C8 /* lldb-mi */,
 				941E2F521AE81CA100AAA711 /* PrebuiltSwiftDebugBuild */,
 				942829BF1A89835300521B30 /* lldb-argdumper */,
-				239504D31BDD451400963CEA /* lldb-gtest */,
 			);
 		};
 /* End PBXProject section */
@@ -6657,20 +6660,6 @@
 			shellPath = "/bin/sh -x";
 			shellScript = "/usr/bin/env python $SRCROOT/scripts/Xcode/build-swift-repl.py \"$CONFIGURATION_BUILD_DIR/$EXECUTABLE_NAME\" \"$SCRIPT_INPUT_FILE_0\"\n";
 		};
-		496C2F9B1BD8342F00C70FEA /* Delete debugserver (build) */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "Delete debugserver (build)";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n    if [ -n \"${DEBUGSERVER_DELETE_AFTER_BUILD}\" ]\n    then\n        rm -f \"${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/debugserver\"\n    fi\nfi\n";
-		};
 		26DC6A5813380D4300FF7998 /* Prepare Swig Bindings */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -6684,6 +6673,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $BUILT_PRODUCTS_DIR --allow-static-binding";
+		};
+		496C2F9B1BD8342F00C70FEA /* Delete debugserver (build) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Delete debugserver (build)";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n    if [ -n \"${DEBUGSERVER_DELETE_AFTER_BUILD}\" ]\n    then\n        rm -f \"${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/debugserver\"\n    fi\nfi\n";
 		};
 		49DD45051B4EDB4A00DB3579 /* Install Swift compiler resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -6760,7 +6763,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "sh $SRCROOT/scripts/finish-swig-wrapper-classes.sh $SRCROOT $TARGET_BUILD_DIR $CONFIGURATION_BUILD_DIR \"\"";
+			shellScript = "sh $SRCROOT/scripts/finish-swig-wrapper-classes.sh $SRCROOT $TARGET_BUILD_DIR $BUILT_PRODUCTS_DIR \"\"";
 		};
 		A54A7D131A0D99FC001912FE /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -7165,7 +7168,6 @@
 				268900AF13353E5000698AC0 /* UnwindLLDB.cpp in Sources */,
 				268900B013353E5000698AC0 /* RegisterContextLLDB.cpp in Sources */,
 				AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */,
-				949EEDA31BA76577008C63CF /* Cocoa.cpp in Sources */,
 				3FDFE56C19AF9C44009756A7 /* HostProcessPosix.cpp in Sources */,
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
 				AE44FB321BB07EBC0033EB62 /* GoParser.cpp in Sources */,
@@ -7735,7 +7737,7 @@
 		94A928741A92B95000771D51 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 942829BF1A89835300521B30 /* lldb-argdumper */;
-			targetProxy = 239C59C31BE3D73800E9B832 /* PBXContainerItemProxy */;
+			targetProxy = 2341D3B31C4433D200E481AD /* PBXContainerItemProxy */;
 		};
 		94E829C9152D33B4006F96A3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -7826,6 +7828,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
 				LLDB_FRAMEWORK_INSTALL_DIR = /Applications/Xcode.app/Contents/SharedFrameworks;
@@ -7846,6 +7850,8 @@
 				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
+				LLDB_USE_OSS_VERSION_SCHEME = 1;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
@@ -7863,6 +7869,7 @@
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -7941,6 +7948,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
 				LLDB_FRAMEWORK_INSTALL_DIR = /Applications/Xcode.app/Contents/SharedFrameworks;
@@ -7961,6 +7970,8 @@
 				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
+				LLDB_USE_OSS_VERSION_SCHEME = 1;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
@@ -7978,6 +7989,7 @@
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -7997,159 +8009,64 @@
 			};
 			name = Release;
 		};
-		235AFBB6199BC6AD00897A4B /* Debug */ = {
+		2341D3B51C4433D200E481AD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				DEBUGGING_SYMBOLS = YES;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
+				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				PRODUCT_NAME = "LLDB Python Test Suite";
 			};
 			name = Debug;
 		};
-		235AFBB7199BC6AD00897A4B /* DebugClang */ = {
+		2341D3B61C4433D200E481AD /* DebugClang */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				DEBUGGING_SYMBOLS = YES;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				PRODUCT_NAME = "LLDB Python Test Suite";
 			};
 			name = DebugClang;
 		};
-		235AFBB8199BC6AD00897A4B /* Release */ = {
+		2341D3B71C4433D200E481AD /* DebugPresubmission */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
+				PRODUCT_NAME = "LLDB Python Test Suite";
+			};
+			name = DebugPresubmission;
+		};
+		2341D3B81C4433D200E481AD /* CustomSwift-Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "LLDB Python Test Suite";
+			};
+			name = "CustomSwift-Debug";
+		};
+		2341D3B91C4433D200E481AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				PRODUCT_NAME = "LLDB Python Test Suite";
 			};
 			name = Release;
 		};
-		235AFBB9199BC6AD00897A4B /* BuildAndIntegration */ = {
+		2341D3BA1C4433D200E481AD /* CustomSwift-Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				PRODUCT_NAME = "LLDB Python Test Suite";
 			};
-			name = BuildAndIntegration;
+			name = "CustomSwift-Release";
 		};
-		235AFBBD199BC6FD00897A4B /* Debug */ = {
+		2341D3BB1C4433D200E481AD /* CustomSwift-RelWithDebInfo */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "LLDB Python Test Suite";
 			};
-			name = Debug;
+			name = "CustomSwift-RelWithDebInfo";
 		};
-		235AFBBE199BC6FD00897A4B /* DebugClang */ = {
+		2341D3BC1C4433D200E481AD /* BuildAndIntegration */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = DebugClang;
-		};
-		235AFBBF199BC6FD00897A4B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
-		235AFBC0199BC6FD00897A4B /* BuildAndIntegration */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "LLDB Python Test Suite";
 			};
 			name = BuildAndIntegration;
 		};
@@ -8211,6 +8128,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
 				LLDB_FRAMEWORK_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/System/Library/PrivateFrameworks";
@@ -8231,6 +8150,8 @@
 				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
+				LLDB_USE_OSS_VERSION_SCHEME = 1;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
@@ -8249,6 +8170,7 @@
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = "";
 				SDKROOT = macosx.internal;
@@ -8630,47 +8552,6 @@
 			name = "CustomSwift-RelWithDebInfo";
 		};
 		237965F51C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = "CustomSwift-RelWithDebInfo";
-		};
-		237965F61C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				EXPORTED_SYMBOLS_FILE = tools/argdumper/argdumper.exports;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-				);
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = "CustomSwift-RelWithDebInfo";
-		};
-		237965F71C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -9481,6 +9362,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
 				LLDB_FRAMEWORK_INSTALL_DIR = "/$(DT_VARIANT)/Applications/Xcode.app/Contents/SharedFrameworks";
@@ -9503,6 +9386,8 @@
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "/$(DT_VARIANT)/Applications/Xcode.app/Contents/Developer/usr/bin";
 				"LLDB_TOOLS_INSTALL_DIR[sdk=iphoneos*]" = "/$(DT_VARIANT)/usr/local/bin";
+				LLDB_USE_OSS_VERSION_SCHEME = 0;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
@@ -9519,6 +9404,7 @@
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -10486,6 +10372,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
 				LLDB_FRAMEWORK_INSTALL_DIR = /Applications/Xcode.app/Contents/SharedFrameworks;
@@ -10506,6 +10394,8 @@
 				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
+				LLDB_USE_OSS_VERSION_SCHEME = 1;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
@@ -10523,6 +10413,7 @@
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -11112,6 +11003,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
 				LLDB_FRAMEWORK_INSTALL_DIR = /Applications/Xcode.app/Contents/SharedFrameworks;
@@ -11132,6 +11025,8 @@
 				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
+				LLDB_USE_OSS_VERSION_SCHEME = 1;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
@@ -11149,6 +11044,7 @@
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = "";
 				SDKROOT = macosx.internal;
@@ -11516,48 +11412,6 @@
 			name = DebugPresubmission;
 		};
 		9448C46E1B1FC0AD00414490 /* DebugPresubmission */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = DebugPresubmission;
-		};
-		9448C46F1B1FC0AD00414490 /* DebugPresubmission */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				DEBUGGING_SYMBOLS = YES;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = DebugPresubmission;
-		};
-		9448C4701B1FC0AD00414490 /* DebugPresubmission */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -12078,6 +11932,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
 				LLDB_FRAMEWORK_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/System/Library/PrivateFrameworks";
@@ -12098,6 +11954,8 @@
 				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
+				LLDB_USE_OSS_VERSION_SCHEME = 1;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
@@ -12116,6 +11974,7 @@
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = "";
 				SDKROOT = macosx.internal;
@@ -12484,48 +12343,6 @@
 			};
 			name = "CustomSwift-Debug";
 		};
-		94DF55DA1ADDBF240030B937 /* CustomSwift-Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				DEBUGGING_SYMBOLS = YES;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = "CustomSwift-Debug";
-		};
-		94DF55DB1ADDBF240030B937 /* CustomSwift-Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = "CustomSwift-Debug";
-		};
 		94DF55DC1ADDBF240030B937 /* CustomSwift-Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -12696,6 +12513,8 @@
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
 				LLDB_FRAMEWORK_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/System/Library/PrivateFrameworks";
@@ -12716,6 +12535,8 @@
 				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
+				LLDB_USE_OSS_VERSION_SCHEME = 1;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
@@ -12734,6 +12555,7 @@
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = "";
 				SDKROOT = macosx.internal;
@@ -13088,47 +12910,6 @@
 			};
 			name = "CustomSwift-Release";
 		};
-		94DF55EC1ADDBF2C0030B937 /* CustomSwift-Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				EXPORTED_SYMBOLS_FILE = tools/argdumper/argdumper.exports;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-				);
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = "CustomSwift-Release";
-		};
-		94DF55ED1ADDBF2C0030B937 /* CustomSwift-Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = "CustomSwift-Release";
-		};
 		94DF55EE1ADDBF2C0030B937 /* CustomSwift-Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -13476,6 +13257,21 @@
 				94DF55DE1ADDBF2C0030B937 /* CustomSwift-Release */,
 				237965E71C12369B008D490F /* CustomSwift-RelWithDebInfo */,
 				268A89B211963ECA00D953EB /* BuildAndIntegration */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = BuildAndIntegration;
+		};
+		238755241C24974600CCE8C3 /* Build configuration list for PBXLegacyTarget "lldb-python-test-suite" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2341D3B51C4433D200E481AD /* Debug */,
+				2341D3B61C4433D200E481AD /* DebugClang */,
+				2341D3B71C4433D200E481AD /* DebugPresubmission */,
+				2341D3B81C4433D200E481AD /* CustomSwift-Debug */,
+				2341D3B91C4433D200E481AD /* Release */,
+				2341D3BA1C4433D200E481AD /* CustomSwift-Release */,
+				2341D3BB1C4433D200E481AD /* CustomSwift-RelWithDebInfo */,
+				2341D3BC1C4433D200E481AD /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;

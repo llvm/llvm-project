@@ -632,7 +632,12 @@ def not_in(iterable):
 def check_list_or_lambda(list_or_lambda, value):
     if six.callable(list_or_lambda):
         return list_or_lambda(value)
-    elif isinstance(list_or_lambda, list) or isinstance(list_or_lambda, str):
+    elif isinstance(list_or_lambda, list):
+        for item in list_or_lambda:
+            if value in item:
+                return True
+        return False
+    elif isinstance(list_or_lambda, str):
         return value is None or value in list_or_lambda
     else:
         return list_or_lambda is None or value is None or list_or_lambda == value
@@ -648,7 +653,7 @@ def expectedFailureAll(bugnumber=None, oslist=None, hostoslist=None, compiler=No
         oslist_passes = check_list_or_lambda(oslist, self.getPlatform())
         hostoslist_passes = check_list_or_lambda(hostoslist, getHostPlatform())
         compiler_passes = check_list_or_lambda(self.getCompiler(), compiler) and self.expectedCompilerVersion(compiler_version)
-        arch_passes = self.expectedArch(archs)
+        arch_passes = check_list_or_lambda(archs, self.getArchitecture())
         triple_passes = triple is None or re.match(triple, lldb.DBG.GetSelectedPlatform().GetTriple())
         debug_info_passes = check_list_or_lambda(debug_info, self.debug_info)
         swig_version_passes = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
@@ -756,14 +761,12 @@ def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
     """
     return expectedFailure(matchAndroid(api_levels, archs), bugnumber)
 
-# if the test passes on the first try, we're done (success)
-# if the test fails once, then passes on the second try, raise an ExpectedFailure
-# if the test fails twice in a row, re-throw the exception from the second test run
+# Flakey tests get two chances to run. If they fail the first time round, the result formatter
+# makes sure it is run one more time.
 def expectedFlakey(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from unittest2 import case
             self = args[0]
             if expected_fn(self):
                 # Send event marking test as explicitly eligible for rerunning.
@@ -771,25 +774,7 @@ def expectedFlakey(expected_fn, bugnumber=None):
                     # Mark this test as rerunnable.
                     configuration.results_formatter_object.handle_event(
                         EventBuilder.event_for_mark_test_rerun_eligible(self))
-            try:
-                func(*args, **kwargs)
-            # don't retry if the test case is already decorated with xfail or skip
-            except (case._ExpectedFailure, case.SkipTest, case._UnexpectedSuccess):
-                raise
-            except Exception:
-                if expected_fn(self):
-                    # before retry, run tearDown for previous run and setup for next
-                    try:
-                        self.tearDown()
-                        self.setUp()
-                        func(*args, **kwargs)
-                    except Exception:
-                        # oh snap! two failures in a row, record a failure/error
-                        raise
-                    # record the expected failure
-                    raise case._ExpectedFailure(sys.exc_info(), bugnumber)
-                else:
-                    raise
+            func(*args, **kwargs)
         return wrapper
     # if bugnumber is not-callable(incluing None), that means decorator function is called with optional arguments
     # return decorator in this case, so it will be used to decorating original method
@@ -1114,7 +1099,7 @@ def skipIf(bugnumber=None, oslist=None, compiler=None, compiler_version=None, ar
     def fn(self):
         oslist_passes = check_list_or_lambda(oslist, self.getPlatform())
         compiler_passes = check_list_or_lambda(self.getCompiler(), compiler) and self.expectedCompilerVersion(compiler_version)
-        arch_passes = self.expectedArch(archs)
+        arch_passes = check_list_or_lambda(archs, self.getArchitecture())
         debug_info_passes = check_list_or_lambda(debug_info, self.debug_info)
         swig_version_passes = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
         py_version_passes = (py_version is None) or check_expected_version(py_version[0], py_version[1], sys.version_info)

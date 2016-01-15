@@ -1500,8 +1500,8 @@ CreateTemplateParameterList (ASTContext *ast,
     TemplateParameterList *template_param_list = TemplateParameterList::Create (*ast,
                                                                                 SourceLocation(),
                                                                                 SourceLocation(),
-                                                                                &template_param_decls.front(),
-                                                                                template_param_decls.size(),
+                                                                                &template_param_decls[0],
+                                                                                num_template_params,
                                                                                 SourceLocation());
     return template_param_list;
 }
@@ -2638,6 +2638,7 @@ ClangASTContext::GetDeclContextForType (clang::QualType type)
         case clang::Type::Record:                   return llvm::cast<clang::RecordType>(qual_type)->getDecl();
         case clang::Type::Enum:                     return llvm::cast<clang::EnumType>(qual_type)->getDecl();
         case clang::Type::Typedef:                  return GetDeclContextForType (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType());
+        case clang::Type::Auto:                     return GetDeclContextForType (llvm::cast<clang::AutoType>(qual_type)->getDeducedType());
         case clang::Type::Elaborated:               return GetDeclContextForType (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType());
         case clang::Type::Paren:                    return GetDeclContextForType (llvm::cast<clang::ParenType>(qual_type)->desugar());
         default:
@@ -2767,6 +2768,9 @@ GetCompleteQualType (clang::ASTContext *ast, clang::QualType qual_type, bool all
         case clang::Type::Typedef:
             return GetCompleteQualType (ast, llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType(), allow_completion);
             
+        case clang::Type::Auto:
+            return GetCompleteQualType (ast, llvm::cast<clang::AutoType>(qual_type)->getDeducedType(), allow_completion);
+            
         case clang::Type::Elaborated:
             return GetCompleteQualType (ast, llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType(), allow_completion);
             
@@ -2819,6 +2823,8 @@ ClangASTContext::IsAggregateType (lldb::opaque_compiler_type_t type)
         case clang::Type::ObjCObject:
         case clang::Type::ObjCInterface:
             return true;
+        case clang::Type::Auto:
+            return IsAggregateType(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr());
         case clang::Type::Elaborated:
             return IsAggregateType(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr());
         case clang::Type::Typedef:
@@ -2851,6 +2857,8 @@ ClangASTContext::IsAnonymousType (lldb::opaque_compiler_type_t type)
             }
             break;
         }
+        case clang::Type::Auto:
+            return IsAnonymousType(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr());
         case clang::Type::Elaborated:
             return IsAnonymousType(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr());
         case clang::Type::Typedef:
@@ -2916,6 +2924,11 @@ ClangASTContext::IsArrayType (lldb::opaque_compiler_type_t type,
 
         case clang::Type::Typedef:
             return IsArrayType(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(),
+                               element_type_ptr,
+                               size,
+                               is_incomplete);
+        case clang::Type::Auto:
+            return IsArrayType(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(),
                                element_type_ptr,
                                size,
                                is_incomplete);
@@ -3072,6 +3085,8 @@ ClangASTContext::IsFunctionType (lldb::opaque_compiler_type_t type, bool *is_var
                 break;
             case clang::Type::Typedef:
                 return IsFunctionType(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), nullptr);
+            case clang::Type::Auto:
+                return IsFunctionType(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), nullptr);
             case clang::Type::Elaborated:
                 return IsFunctionType(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), nullptr);
             case clang::Type::Paren:
@@ -3176,6 +3191,9 @@ ClangASTContext::IsHomogeneousAggregate (lldb::opaque_compiler_type_t type, Comp
             
         case clang::Type::Typedef:
             return IsHomogeneousAggregate(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), base_type_ptr);
+
+        case clang::Type::Auto:
+            return IsHomogeneousAggregate(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), base_type_ptr);
             
         case clang::Type::Elaborated:
             return IsHomogeneousAggregate(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), base_type_ptr);
@@ -3231,6 +3249,8 @@ ClangASTContext::IsFunctionPointerType (lldb::opaque_compiler_type_t type)
                 break;
             case clang::Type::Typedef:
                 return IsFunctionPointerType (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr());
+            case clang::Type::Auto:
+                return IsFunctionPointerType (llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr());
             case clang::Type::Elaborated:
                 return IsFunctionPointerType (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr());
             case clang::Type::Paren:
@@ -3308,6 +3328,8 @@ ClangASTContext::IsPointerType (lldb::opaque_compiler_type_t type, CompilerType 
                 return true;
             case clang::Type::Typedef:
                 return IsPointerType (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), pointee_type);
+            case clang::Type::Auto:
+                return IsPointerType (llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), pointee_type);
             case clang::Type::Elaborated:
                 return IsPointerType (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), pointee_type);
             case clang::Type::Paren:
@@ -3367,6 +3389,8 @@ ClangASTContext::IsPointerOrReferenceType (lldb::opaque_compiler_type_t type, Co
                 return true;
             case clang::Type::Typedef:
                 return IsPointerOrReferenceType(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), pointee_type);
+            case clang::Type::Auto:
+                return IsPointerOrReferenceType(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), pointee_type);
             case clang::Type::Elaborated:
                 return IsPointerOrReferenceType(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), pointee_type);
             case clang::Type::Paren:
@@ -3405,6 +3429,8 @@ ClangASTContext::IsReferenceType (lldb::opaque_compiler_type_t type, CompilerTyp
                 return true;
             case clang::Type::Typedef:
                 return IsReferenceType (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), pointee_type, is_rvalue);
+            case clang::Type::Auto:
+                return IsReferenceType (llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), pointee_type, is_rvalue);
             case clang::Type::Elaborated:
                 return IsReferenceType (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), pointee_type, is_rvalue);
             case clang::Type::Paren:
@@ -3589,6 +3615,13 @@ ClangASTContext::IsPossibleDynamicType (lldb::opaque_compiler_type_t type,
                 
             case clang::Type::Typedef:
                 return IsPossibleDynamicType (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(),
+                                              dynamic_pointee_type,
+                                              check_cplusplus,
+                                              check_objc,
+                                              check_swift);
+
+            case clang::Type::Auto:
+                return IsPossibleDynamicType (llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(),
                                               dynamic_pointee_type,
                                               check_cplusplus,
                                               check_objc,
@@ -3852,24 +3885,6 @@ ClangASTContext::GetTypeName (lldb::opaque_compiler_type_t type)
     return ConstString(type_name);
 }
 
-ConstString
-ClangASTContext::GetDisplayTypeName (void * type)
-{
-    return GetTypeName(type);
-}
-
-ConstString
-ClangASTContext::GetTypeSymbolName (void * type)
-{
-    return GetTypeName(type);
-}
-
-ConstString
-ClangASTContext::GetMangledTypeName (void * type)
-{
-    return GetTypeName(type);
-}
-
 uint32_t
 ClangASTContext::GetTypeInfo (lldb::opaque_compiler_type_t type, CompilerType *pointee_or_element_clang_type)
 {
@@ -3980,7 +3995,9 @@ ClangASTContext::GetTypeInfo (lldb::opaque_compiler_type_t type, CompilerType *p
             if (pointee_or_element_clang_type)
                 pointee_or_element_clang_type->SetCompilerType(getASTContext(), llvm::cast<clang::EnumType>(qual_type)->getDecl()->getIntegerType());
             return eTypeIsEnumeration | eTypeHasValue;
-            
+
+        case clang::Type::Auto:
+            return CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetTypeInfo (pointee_or_element_clang_type);
         case clang::Type::Elaborated:
             return CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).GetTypeInfo (pointee_or_element_clang_type);
         case clang::Type::Paren:
@@ -4183,6 +4200,8 @@ ClangASTContext::GetTypeClass (lldb::opaque_compiler_type_t type)
         case clang::Type::UnresolvedUsing:          break;
         case clang::Type::Paren:
             return CompilerType(getASTContext(), llvm::cast<clang::ParenType>(qual_type)->desugar()).GetTypeClass();
+        case clang::Type::Auto:
+            return CompilerType(getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetTypeClass();
         case clang::Type::Elaborated:
             return CompilerType(getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).GetTypeClass();
             
@@ -4190,7 +4209,6 @@ ClangASTContext::GetTypeClass (lldb::opaque_compiler_type_t type)
         case clang::Type::TemplateTypeParm:         break;
         case clang::Type::SubstTemplateTypeParm:    break;
         case clang::Type::SubstTemplateTypeParmPack:break;
-        case clang::Type::Auto:                     break;
         case clang::Type::InjectedClassName:        break;
         case clang::Type::DependentName:            break;
         case clang::Type::DependentTemplateSpecialization: break;
@@ -4302,7 +4320,7 @@ ClangASTContext::GetFunctionArgumentTypeAtIndex (lldb::opaque_compiler_type_t ty
 {
     if (type)
     {
-        const clang::FunctionProtoType* func = llvm::dyn_cast<clang::FunctionProtoType>(GetCanonicalQualType(type));
+        const clang::FunctionProtoType* func = llvm::dyn_cast<clang::FunctionProtoType>(GetQualType(type));
         if (func)
         {
             const uint32_t num_args = func->getNumParams();
@@ -4318,7 +4336,7 @@ ClangASTContext::GetFunctionReturnType (lldb::opaque_compiler_type_t type)
 {
     if (type)
     {
-        clang::QualType qual_type(GetCanonicalQualType(type));
+        clang::QualType qual_type(GetQualType(type));
         const clang::FunctionProtoType* func = llvm::dyn_cast<clang::FunctionProtoType>(qual_type.getTypePtr());
         if (func)
             return CompilerType(getASTContext(), func->getReturnType());
@@ -4376,6 +4394,9 @@ ClangASTContext::GetNumMemberFunctions (lldb::opaque_compiler_type_t type)
                 
             case clang::Type::Typedef:
                 return CompilerType (getASTContext(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType()).GetNumMemberFunctions();
+
+            case clang::Type::Auto:
+                return CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetNumMemberFunctions();
                 
             case clang::Type::Elaborated:
                 return CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).GetNumMemberFunctions();
@@ -4498,6 +4519,9 @@ ClangASTContext::GetMemberFunctionAtIndex (lldb::opaque_compiler_type_t type, si
                 
             case clang::Type::Typedef:
                 return GetMemberFunctionAtIndex(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), idx);
+
+            case clang::Type::Auto:
+                return GetMemberFunctionAtIndex(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), idx);
                 
             case clang::Type::Elaborated:
                 return GetMemberFunctionAtIndex(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), idx);
@@ -4932,6 +4956,9 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
         case clang::Type::Enum:                     return lldb::eEncodingSint;
         case clang::Type::Typedef:
             return CompilerType(getASTContext(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType()).GetEncoding(count);
+
+        case clang::Type::Auto:
+            return CompilerType(getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetEncoding(count);
             
         case clang::Type::Elaborated:
             return CompilerType(getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).GetEncoding(count);
@@ -4946,7 +4973,6 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
         case clang::Type::TemplateTypeParm:
         case clang::Type::SubstTemplateTypeParm:
         case clang::Type::SubstTemplateTypeParmPack:
-        case clang::Type::Auto:
         case clang::Type::InjectedClassName:
         case clang::Type::DependentName:
         case clang::Type::DependentTemplateSpecialization:
@@ -5257,6 +5283,10 @@ ClangASTContext::GetNumChildren (lldb::opaque_compiler_type_t type, bool omit_em
         case clang::Type::Typedef:
             num_children = CompilerType (getASTContext(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType()).GetNumChildren (omit_empty_base_classes);
             break;
+
+        case clang::Type::Auto:
+            num_children = CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetNumChildren (omit_empty_base_classes);
+            break;
             
         case clang::Type::Elaborated:
             num_children = CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).GetNumChildren (omit_empty_base_classes);
@@ -5383,6 +5413,10 @@ ClangASTContext::GetNumFields (lldb::opaque_compiler_type_t type)
             
         case clang::Type::Typedef:
             count = CompilerType (getASTContext(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType()).GetNumFields();
+            break;
+
+        case clang::Type::Auto:
+            count = CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetNumFields();
             break;
             
         case clang::Type::Elaborated:
@@ -5584,6 +5618,14 @@ ClangASTContext::GetFieldAtIndex (lldb::opaque_compiler_type_t type, size_t idx,
                              bitfield_bit_size_ptr,
                              is_bitfield_ptr);
             
+        case clang::Type::Auto:
+            return CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).
+            GetFieldAtIndex (idx,
+                             name,
+                             bit_offset_ptr,
+                             bitfield_bit_size_ptr,
+                             is_bitfield_ptr);
+            
         case clang::Type::Elaborated:
             return CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).
             GetFieldAtIndex (idx,
@@ -5659,6 +5701,10 @@ ClangASTContext::GetNumDirectBaseClasses (lldb::opaque_compiler_type_t type)
             count = GetNumDirectBaseClasses(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr());
             break;
 
+        case clang::Type::Auto:
+            count = GetNumDirectBaseClasses(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr());
+            break;
+            
         case clang::Type::Elaborated:
             count = GetNumDirectBaseClasses(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr());
             break;
@@ -5694,6 +5740,10 @@ ClangASTContext::GetNumVirtualBaseClasses (lldb::opaque_compiler_type_t type)
             count = GetNumVirtualBaseClasses(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr());
             break;
 
+        case clang::Type::Auto:
+            count = GetNumVirtualBaseClasses(llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr());
+            break;
+            
         case clang::Type::Elaborated:
             count = GetNumVirtualBaseClasses(llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr());
             break;
@@ -5796,6 +5846,9 @@ ClangASTContext::GetDirectBaseClassAtIndex (lldb::opaque_compiler_type_t type, s
         case clang::Type::Typedef:
             return GetDirectBaseClassAtIndex (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), idx, bit_offset_ptr);
 
+        case clang::Type::Auto:
+            return GetDirectBaseClassAtIndex (llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), idx, bit_offset_ptr);
+            
         case clang::Type::Elaborated:
             return GetDirectBaseClassAtIndex (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), idx, bit_offset_ptr);
 
@@ -5847,7 +5900,10 @@ ClangASTContext::GetVirtualBaseClassAtIndex (lldb::opaque_compiler_type_t type,
 
         case clang::Type::Typedef:
             return GetVirtualBaseClassAtIndex (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), idx, bit_offset_ptr);
-
+            
+        case clang::Type::Auto:
+            return GetVirtualBaseClassAtIndex (llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), idx, bit_offset_ptr);
+            
         case clang::Type::Elaborated:
             return GetVirtualBaseClassAtIndex (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), idx, bit_offset_ptr);
 
@@ -5948,6 +6004,7 @@ ClangASTContext::GetNumPointeeChildren (clang::QualType type)
         case clang::Type::UnresolvedUsing:          return 0;
         case clang::Type::Paren:                    return GetNumPointeeChildren (llvm::cast<clang::ParenType>(qual_type)->desugar());
         case clang::Type::Typedef:                  return GetNumPointeeChildren (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType());
+        case clang::Type::Auto:                     return GetNumPointeeChildren (llvm::cast<clang::AutoType>(qual_type)->getDeducedType());
         case clang::Type::Elaborated:               return GetNumPointeeChildren (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType());
         case clang::Type::TypeOfExpr:               return 0;
         case clang::Type::TypeOf:                   return 0;
@@ -6488,6 +6545,25 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
         }
             break;
             
+        case clang::Type::Auto:
+        {
+            CompilerType elaborated_clang_type (getASTContext(), llvm::cast<clang::AutoType>(parent_qual_type)->getDeducedType());
+            return elaborated_clang_type.GetChildCompilerTypeAtIndex (exe_ctx,
+                                                                      idx,
+                                                                      transparent_pointers,
+                                                                      omit_empty_base_classes,
+                                                                      ignore_array_bounds,
+                                                                      child_name,
+                                                                      child_byte_size,
+                                                                      child_byte_offset,
+                                                                      child_bitfield_bit_size,
+                                                                      child_bitfield_bit_offset,
+                                                                      child_is_base_class,
+                                                                      child_is_deref_of_parent,
+                                                                      valobj,
+                                                                      language_flags);
+        }
+            
         case clang::Type::Elaborated:
         {
             CompilerType elaborated_clang_type (getASTContext(), llvm::cast<clang::ElaboratedType>(parent_qual_type)->getNamedType());
@@ -6871,18 +6947,23 @@ ClangASTContext::GetIndexOfChildMemberWithName (lldb::opaque_compiler_type_t typ
                 
             case clang::Type::Typedef:
                 return CompilerType (getASTContext(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType()).GetIndexOfChildMemberWithName (name,
-                                                                                                                                                      omit_empty_base_classes,
-                                                                                                                                                      child_indexes);
+                                                                                                                                                                omit_empty_base_classes,
+                                                                                                                                                                child_indexes);
+
+            case clang::Type::Auto:
+                return CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetIndexOfChildMemberWithName (name,
+                                                                                                                                               omit_empty_base_classes,
+                                                                                                                                               child_indexes);
                 
             case clang::Type::Elaborated:
                 return CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).GetIndexOfChildMemberWithName (name,
-                                                                                                                                         omit_empty_base_classes,
-                                                                                                                                         child_indexes);
+                                                                                                                                                   omit_empty_base_classes,
+                                                                                                                                                   child_indexes);
                 
             case clang::Type::Paren:
                 return CompilerType (getASTContext(), llvm::cast<clang::ParenType>(qual_type)->desugar()).GetIndexOfChildMemberWithName (name,
-                                                                                                                               omit_empty_base_classes,
-                                                                                                                               child_indexes);
+                                                                                                                                         omit_empty_base_classes,
+                                                                                                                                         child_indexes);
                 
             default:
                 break;
@@ -7077,6 +7158,9 @@ ClangASTContext::GetIndexOfChildWithName (lldb::opaque_compiler_type_t type, con
                 }
             }
                 break;
+
+            case clang::Type::Auto:
+                return CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetIndexOfChildWithName (name, omit_empty_base_classes);
                 
             case clang::Type::Elaborated:
                 return CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).GetIndexOfChildWithName (name, omit_empty_base_classes);
@@ -7120,6 +7204,9 @@ ClangASTContext::GetNumTemplateArguments (lldb::opaque_compiler_type_t type)
             
         case clang::Type::Typedef:
             return (CompilerType (getASTContext(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType())).GetNumTemplateArguments();
+
+        case clang::Type::Auto:
+            return (CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType())).GetNumTemplateArguments();
             
         case clang::Type::Elaborated:
             return (CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType())).GetNumTemplateArguments();
@@ -7199,6 +7286,9 @@ ClangASTContext::GetTemplateArgument (lldb::opaque_compiler_type_t type, size_t 
             
         case clang::Type::Typedef:
             return (CompilerType (getASTContext(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType())).GetTemplateArgument(arg_idx, kind);
+
+        case clang::Type::Auto:
+            return (CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType())).GetTemplateArgument(arg_idx, kind);
             
         case clang::Type::Elaborated:
             return (CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType())).GetTemplateArgument(arg_idx, kind);
@@ -8386,6 +8476,9 @@ ClangASTContext::GetHasExternalStorage (const CompilerType &type)
         case clang::Type::Typedef:
             return GetHasExternalStorage (CompilerType(type.GetTypeSystem(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr()));
 
+        case clang::Type::Auto:
+            return GetHasExternalStorage (CompilerType(type.GetTypeSystem(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr()));
+            
         case clang::Type::Elaborated:
             return GetHasExternalStorage (CompilerType(type.GetTypeSystem(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr()));
 
@@ -8455,6 +8548,9 @@ ClangASTContext::SetHasExternalStorage (lldb::opaque_compiler_type_t type, bool 
             
         case clang::Type::Typedef:
             return SetHasExternalStorage(llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), has_extern);
+
+        case clang::Type::Auto:
+            return SetHasExternalStorage (llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), has_extern);
             
         case clang::Type::Elaborated:
             return SetHasExternalStorage (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), has_extern);
@@ -8526,6 +8622,9 @@ ClangASTContext::CanImport (const CompilerType &type, lldb_private::ClangASTImpo
             case clang::Type::Typedef:
                 return CanImport(CompilerType (type.GetTypeSystem(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr()), importer);
 
+            case clang::Type::Auto:
+                return CanImport(CompilerType (type.GetTypeSystem(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr()), importer);
+                
             case clang::Type::Elaborated:
                 return CanImport(CompilerType (type.GetTypeSystem(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr()), importer);
 
@@ -8595,6 +8694,9 @@ ClangASTContext::Import (const CompilerType &type, lldb_private::ClangASTImporte
             case clang::Type::Typedef:
                 return Import (CompilerType(type.GetTypeSystem(), llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr()), importer);
 
+            case clang::Type::Auto:
+                return Import (CompilerType(type.GetTypeSystem(),llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr()), importer);
+                
             case clang::Type::Elaborated:
                 return Import (CompilerType(type.GetTypeSystem(),llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr()), importer);
 
@@ -9092,6 +9194,29 @@ ClangASTContext::DumpValue (lldb::opaque_compiler_type_t type, ExecutionContext 
         }
             break;
             
+        case clang::Type::Auto:
+        {
+            clang::QualType elaborated_qual_type = llvm::cast<clang::AutoType>(qual_type)->getDeducedType();
+            CompilerType elaborated_clang_type (getASTContext(), elaborated_qual_type);
+            lldb::Format elaborated_format = elaborated_clang_type.GetFormat();
+            clang::TypeInfo elaborated_type_info = getASTContext()->getTypeInfo(elaborated_qual_type);
+            uint64_t elaborated_byte_size = elaborated_type_info.Width / 8;
+            
+            return elaborated_clang_type.DumpValue (exe_ctx,
+                                                    s,                  // Stream to dump to
+                                                    elaborated_format,  // The format with which to display the element
+                                                    data,               // Data buffer containing all bytes for this type
+                                                    data_byte_offset,   // Offset into "data" where to grab value from
+                                                    elaborated_byte_size,  // Size of this type in bytes
+                                                    bitfield_bit_size,  // Bitfield bit size
+                                                    bitfield_bit_offset,// Bitfield bit offset
+                                                    show_types,         // Boolean indicating if we should show the variable types
+                                                    show_summary,       // Boolean indicating if we should show a summary for the current type
+                                                    verbose,            // Verbose output?
+                                                    depth);             // Scope depth for any types that have children
+        }
+            break;
+            
         case clang::Type::Elaborated:
         {
             clang::QualType elaborated_qual_type = llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType();
@@ -9432,6 +9557,10 @@ ClangASTContext::DumpTypeDescription (lldb::opaque_compiler_type_t type, Stream 
                 }
             }
                 break;
+
+            case clang::Type::Auto:
+                CompilerType (getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).DumpTypeDescription(s);
+                return;
                 
             case clang::Type::Elaborated:
                 CompilerType (getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).DumpTypeDescription(s);
@@ -9529,6 +9658,10 @@ ClangASTContext::DumpTypeName (const CompilerType &type)
                 printf("typedef %s", llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getName().str().c_str());
                 break;
 
+            case clang::Type::Auto:
+                printf("auto ");
+                return DumpTypeName (CompilerType (type.GetTypeSystem(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr()));
+                
             case clang::Type::Elaborated:
                 printf("elaborated ");
                 return DumpTypeName (CompilerType (type.GetTypeSystem(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr()));
@@ -9929,6 +10062,18 @@ ClangASTContext::DeclContextGetName (void *opaque_decl_ctx)
         clang::NamedDecl *named_decl = llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
         if (named_decl)
             return ConstString(named_decl->getName());
+    }
+    return ConstString();
+}
+
+ConstString
+ClangASTContext::DeclContextGetScopeQualifiedName (void *opaque_decl_ctx)
+{
+    if (opaque_decl_ctx)
+    {
+        clang::NamedDecl *named_decl = llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
+        if (named_decl)
+            return ConstString(llvm::StringRef(named_decl->getQualifiedNameAsString()));
     }
     return ConstString();
 }

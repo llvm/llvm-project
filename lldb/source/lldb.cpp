@@ -20,11 +20,7 @@ using namespace lldb_private;
 extern "C" const unsigned char liblldb_coreVersionString[];
 #endif
 
-// The following flag should be 1 ONLY for the Open Source Swift
-// version of LLDB.  Everything else should set this to 0.
-#define LLDB_IS_OSS_VERSION 1
-
-#if LLDB_IS_OSS_VERSION
+#if defined(LLDB_USE_OSS_VERSION_SCHEME)
 
 #include "llvm/Support/raw_ostream.h"
 #include "swift/Basic/Version.h"
@@ -32,7 +28,7 @@ extern "C" const unsigned char liblldb_coreVersionString[];
 #endif
 
 
-#if !defined (__APPLE__) || LLDB_IS_OSS_VERSION
+#if !defined (__APPLE__) || defined(LLDB_USE_OSS_VERSION_SCHEME)
 
 #include "clang/Basic/Version.h"
 
@@ -40,10 +36,19 @@ static const char *
 GetLLDBRevision()
 {
 #ifdef LLDB_REVISION
-    return LLDB_REVISION;
+    static const char *s_revision = LLDB_REVISION;
 #else
-    return NULL;
+    static const char *s_revision = nullptr;
 #endif
+
+    // If LLDB_REVISION is defined but isn't set to a string, it
+    // can still be the equivalent of NULL.  Hence we always do
+    // this check below and return an empty string when we don't
+    // otherwise have a valid const string for it.
+    if (s_revision != nullptr)
+        return s_revision;
+    else
+        return "";
 }
 
 #endif
@@ -63,7 +68,7 @@ GetLLDBRepository()
 
 #endif
 
-#if LLDB_IS_OSS_VERSION
+#if defined(LLDB_USE_OSS_VERSION_SCHEME)
 
 // TODO remove this function once swift revision is directly exposed.
 std::string ExtractSwiftRevision(const std::string &fullVersion)
@@ -157,7 +162,7 @@ _GetVersionOSS ()
 
 #endif
 
-#if defined(__APPLE__) && !LLDB_IS_OSS_VERSION
+#if defined(__APPLE__) && !defined(LLDB_USE_OSS_VERSION_SCHEME)
 
 static const char*
 _GetVersionAppleStandard ()
@@ -193,13 +198,13 @@ const char *
 lldb_private::GetVersion ()
 {
 #if defined (__APPLE__)
-# if LLDB_IS_OSS_VERSION
+# if defined(LLDB_USE_OSS_VERSION_SCHEME)
     return _GetVersionOSS ();
 # else
     return _GetVersionAppleStandard ();
 # endif
 #else
-# if LLDB_IS_OSS_VERSION
+# if defined(LLDB_USE_OSS_VERSION_SCHEME)
     return _GetVersionOSS ();
 # else
     // On platforms other than Darwin, report a version number in the same style as the clang tool.

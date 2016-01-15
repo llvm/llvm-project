@@ -586,6 +586,9 @@ public:
     ConstString
     DeclContextGetName (void *opaque_decl_ctx) override;
 
+    ConstString
+    DeclContextGetScopeQualifiedName (void *opaque_decl_ctx) override;
+
     bool
     DeclContextIsClassMethod (void *opaque_decl_ctx,
                               lldb::LanguageType *language_ptr,
@@ -755,15 +758,6 @@ public:
     
     ConstString
     GetTypeName (lldb::opaque_compiler_type_t type) override;
-    
-    ConstString
-    GetDisplayTypeName (void * type) override;
-    
-    ConstString
-    GetTypeSymbolName (void * type) override;
-
-    ConstString
-    GetMangledTypeName (void * type) override;
     
     uint32_t
     GetTypeInfo (lldb::opaque_compiler_type_t type, CompilerType *pointee_or_element_compiler_type) override;

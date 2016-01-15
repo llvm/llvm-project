@@ -90,7 +90,6 @@ typedef enum
     JIT_UNREGISTER_FN
 } jit_actions_t;
 
-#pragma pack(push, 4)
 template <typename ptr_t>
 struct jit_code_entry
 {
@@ -107,7 +106,6 @@ struct jit_descriptor
     ptr_t    relevant_entry; // pointer
     ptr_t    first_entry; // pointer
 };
-#pragma pack(pop)
 
 JITLoaderGDB::JITLoaderGDB (lldb_private::Process *process) :
     JITLoader(process),

@@ -525,6 +525,38 @@ SymbolContext::GetAddressRange (uint32_t scope,
     return false;
 }
 
+LanguageType
+SymbolContext::GetLanguage () const
+{
+    LanguageType lang;
+    if (function &&
+        (lang = function->GetLanguage()) != eLanguageTypeUnknown)
+    {
+        return lang;
+    }
+    else if (variable &&
+             (lang = variable->GetLanguage()) != eLanguageTypeUnknown)
+    {
+        return lang;
+    }
+    else if (symbol &&
+             (lang = symbol->GetLanguage()) != eLanguageTypeUnknown)
+    {
+        return lang;
+    }
+    else if (comp_unit &&
+             (lang = comp_unit->GetLanguage()) != eLanguageTypeUnknown)
+    {
+        return lang;
+    }
+    else if (symbol)
+    {
+        // If all else fails, try to guess the language from the name.
+        return symbol->GetMangled().GuessLanguage();
+    }
+    return eLanguageTypeUnknown;
+}
+
 bool
 SymbolContext::GetParentOfInlinedScope (const Address &curr_frame_pc, 
                                         SymbolContext &next_frame_sc, 

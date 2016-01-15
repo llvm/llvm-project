@@ -550,6 +550,7 @@ protected:
                     result.AppendMessage(stream.GetData());
                 result.SetStatus (eReturnStatusSuccessFinishNoResult);
                 result.SetDidChangeProcessState (true);
+                result.SetAbnormalStopWasExpected(true);
             }
             else
             {

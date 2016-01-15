@@ -262,8 +262,10 @@ protected:
             }
             else
             {
-                result.AppendError ("invalid arguments.\n");
+                result.AppendErrorWithFormat ("too many arguments; expected frame-index, saw '%s'.\n",
+                                              command.GetArgumentAtIndex(0));
                 m_options.GenerateOptionUsage (result.GetErrorStream(), this);
+                return false;
             }
         }
 

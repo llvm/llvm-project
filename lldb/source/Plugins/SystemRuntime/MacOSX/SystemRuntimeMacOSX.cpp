@@ -725,14 +725,26 @@ SystemRuntimeMacOSX::PopulateQueueList (lldb_private::QueueList &queue_list)
 
     for (ThreadSP thread_sp : m_process->Threads())
     {
-        if (thread_sp->GetQueueID() != LLDB_INVALID_QUEUE_ID)
+        if (thread_sp->GetAssociatedWithLibdispatchQueue () != eLazyBoolNo)
         {
-            if (queue_list.FindQueueByID (thread_sp->GetQueueID()).get() == NULL)
+            if (thread_sp->GetQueueID() != LLDB_INVALID_QUEUE_ID)
             {
-                QueueSP queue_sp (new Queue(m_process->shared_from_this(), thread_sp->GetQueueID(), thread_sp->GetQueueName()));
-                queue_sp->SetKind (GetQueueKind (thread_sp->GetQueueLibdispatchQueueAddress()));
-                queue_sp->SetLibdispatchQueueAddress (thread_sp->GetQueueLibdispatchQueueAddress());
-                queue_list.AddQueue (queue_sp);
+                if (queue_list.FindQueueByID (thread_sp->GetQueueID()).get() == NULL)
+                {
+                    QueueSP queue_sp (new Queue(m_process->shared_from_this(), thread_sp->GetQueueID(), thread_sp->GetQueueName()));
+                    if (thread_sp->ThreadHasQueueInformation ())
+                    {
+                        queue_sp->SetKind (thread_sp->GetQueueKind ());
+                        queue_sp->SetLibdispatchQueueAddress (thread_sp->GetQueueLibdispatchQueueAddress());
+                        queue_list.AddQueue (queue_sp);
+                    }
+                    else
+                    {
+                        queue_sp->SetKind (GetQueueKind (thread_sp->GetQueueLibdispatchQueueAddress()));
+                        queue_sp->SetLibdispatchQueueAddress (thread_sp->GetQueueLibdispatchQueueAddress());
+                        queue_list.AddQueue (queue_sp);
+                    }
+                }
             }
         }
     }

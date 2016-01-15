@@ -1396,11 +1396,6 @@ protected:
         
         auto category_closure = [&result, &formatter_regex] (const lldb::TypeCategoryImplSP& category) -> void {
             result.GetOutputStream().Printf("-----------------------\nCategory: %s\n-----------------------\n", category->GetName());
-            
-            typedef const std::shared_ptr<FormatterType> Bar;
-            typedef std::function<bool(ConstString,Bar)> Func1Type;
-            typedef std::function<bool(RegularExpressionSP,Bar)> Func2Type;
-            
             TypeCategoryImpl::ForEachCallbacks<FormatterType> foreach;
             foreach.SetExact([&result, &formatter_regex] (ConstString name, const FormatterSharedPointer& format_sp) -> bool {
                 if (formatter_regex)

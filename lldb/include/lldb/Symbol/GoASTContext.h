@@ -112,6 +112,12 @@ class GoASTContext : public TypeSystem
         return ConstString();
     }
 
+    ConstString
+    DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) override
+    {
+        return ConstString();
+    }
+
     bool
     DeclContextIsClassMethod(void *opaque_decl_ctx, lldb::LanguageType *language_ptr, bool *is_instance_method_ptr,
                              ConstString *language_object_name_ptr) override
@@ -211,12 +217,6 @@ class GoASTContext : public TypeSystem
     lldb::LanguageType GetMinimumLanguage(lldb::opaque_compiler_type_t type) override;
 
     lldb::TypeClass GetTypeClass(lldb::opaque_compiler_type_t type) override;
-    
-    ConstString GetDisplayTypeName (lldb::opaque_compiler_type_t type) override { return ConstString("<unimplemented>"); }
-    
-    ConstString GetTypeSymbolName (lldb::opaque_compiler_type_t type) override { return ConstString("<unimplemented>"); }
-    
-    ConstString GetMangledTypeName (lldb::opaque_compiler_type_t type) override { return ConstString("<unimplemented>"); }
     
     //----------------------------------------------------------------------
     // Creating related types

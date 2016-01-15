@@ -131,6 +131,24 @@ TypeSystem::IsCompatible ()
 }
 
 ConstString
+TypeSystem::GetDisplayTypeName (void *type)
+{
+    return GetTypeName(type);
+}
+
+ConstString
+TypeSystem::GetTypeSymbolName (void *type)
+{
+    return GetTypeName(type);
+}
+
+ConstString
+TypeSystem::GetMangledTypeName (void *type)
+{
+    return GetTypeName(type);
+}
+
+ConstString
 TypeSystem::DeclGetMangledName (void *opaque_decl)
 {
     return ConstString();

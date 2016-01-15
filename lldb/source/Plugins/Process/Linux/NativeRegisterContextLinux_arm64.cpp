@@ -9,6 +9,7 @@
 
 #if defined (__arm64__) || defined (__aarch64__)
 
+#include "NativeRegisterContextLinux_arm.h"
 #include "NativeRegisterContextLinux_arm64.h"
 
 // C Includes
@@ -23,6 +24,7 @@
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_arm64.h"
 
 // System includes - They have to be included after framework includes because they define some
@@ -142,7 +144,19 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(const ArchSpec&
                                                                  NativeThreadProtocol &native_thread,
                                                                  uint32_t concrete_frame_idx)
 {
-    return new NativeRegisterContextLinux_arm64(target_arch, native_thread, concrete_frame_idx);
+    Log *log  = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_REGISTERS);
+    switch (target_arch.GetMachine())
+    {
+        case llvm::Triple::arm:
+            return new NativeRegisterContextLinux_arm(target_arch, native_thread, concrete_frame_idx);
+        case llvm::Triple::aarch64:
+            return new NativeRegisterContextLinux_arm64(target_arch, native_thread, concrete_frame_idx);
+        default:
+            if (log)
+                log->Printf("NativeRegisterContextLinux::%s() have no register context for architecture: %s\n", __FUNCTION__,
+                            target_arch.GetTriple().getArchName().str().c_str());
+            return nullptr;
+    }
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64 (const ArchSpec& target_arch,

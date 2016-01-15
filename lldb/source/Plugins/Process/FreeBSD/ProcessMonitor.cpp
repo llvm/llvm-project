@@ -317,7 +317,7 @@ ReadRegOperation::Execute(ProcessMonitor *monitor)
         else if (m_size == sizeof(uint64_t))
             m_value = *(uint64_t *)(((caddr_t)&regs) + m_offset);
         else
-            memcpy(&m_value, (((caddr_t)&regs) + m_offset), m_size);
+            memcpy((void *)&m_value, (((caddr_t)&regs) + m_offset), m_size);
         m_result = true;
     }
 }
@@ -393,7 +393,7 @@ ReadDebugRegOperation::Execute(ProcessMonitor *monitor)
         if (m_size == sizeof(uintptr_t))
             m_value = *(uintptr_t *)(((caddr_t)&regs) + m_offset);
         else
-            memcpy(&m_value, (((caddr_t)&regs) + m_offset), m_size);
+            memcpy((void *)&m_value, (((caddr_t)&regs) + m_offset), m_size);
         m_result = true;
     }
 }

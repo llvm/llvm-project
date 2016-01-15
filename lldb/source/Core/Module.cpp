@@ -1780,9 +1780,15 @@ Module::PrepareForFunctionNameLookup (const ConstString &name,
             CPlusPlusLanguage::MethodName cpp_method (name);
             SwiftLanguageRuntime::MethodName swift_method (name, true);
             
-            if (swift_method.IsValid())
+            if ((language == eLanguageTypeUnknown ||
+                 language == eLanguageTypeSwift) &&
+                swift_method.IsValid())
                 basename = swift_method.GetBasename();
-            else if (cpp_method.IsValid())
+            else if ((language == eLanguageTypeUnknown ||
+                      Language::LanguageIsCPlusPlus(language) ||
+                      Language::LanguageIsC(language) ||
+                      language == eLanguageTypeObjC_plus_plus) &&
+                     cpp_method.IsValid())
                 basename = cpp_method.GetBasename();
 
             if (basename.empty())

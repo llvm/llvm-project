@@ -147,6 +147,52 @@ GDBRemoteRegisterContext::PrivateSetRegisterValue (uint32_t reg, StringExtractor
     return success;
 }
 
+bool
+GDBRemoteRegisterContext::PrivateSetRegisterValue (uint32_t reg, uint64_t new_reg_val)
+{
+    const RegisterInfo *reg_info = GetRegisterInfoAtIndex (reg);
+    if (reg_info == NULL)
+        return false;
+
+    // Early in process startup, we can get a thread that has an invalid byte order
+    // because the process hasn't been completely set up yet (see the ctor where the
+    // byte order is setfrom the process).  If that's the case, we can't set the
+    // value here.
+    if (m_reg_data.GetByteOrder() == eByteOrderInvalid)
+    {
+        return false;
+    }
+
+    // Invalidate if needed
+    InvalidateIfNeeded (false);
+
+    DataBufferSP buffer_sp (new DataBufferHeap (&new_reg_val, sizeof (new_reg_val)));
+    DataExtractor data (buffer_sp, endian::InlHostByteOrder(), sizeof (void*));
+
+    // If our register context and our register info disagree, which should never happen, don't
+    // overwrite past the end of the buffer.
+    if (m_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
+        return false;
+
+    // Grab a pointer to where we are going to put this register
+    uint8_t *dst = const_cast<uint8_t*>(m_reg_data.PeekData(reg_info->byte_offset, reg_info->byte_size));
+
+    if (dst == NULL)
+        return false;
+
+
+    if (data.CopyByteOrderedData (0,                            // src offset
+                                  reg_info->byte_size,          // src length
+                                  dst,                          // dst
+                                  reg_info->byte_size,          // dst length
+                                  m_reg_data.GetByteOrder()))   // dst byte order
+    {
+        SetRegisterIsValid (reg, true);
+        return true;
+    }
+    return false;
+}
+
 // Helper function for GDBRemoteRegisterContext::ReadRegisterBytes().
 bool
 GDBRemoteRegisterContext::GetPrimordialRegister(const RegisterInfo *reg_info,

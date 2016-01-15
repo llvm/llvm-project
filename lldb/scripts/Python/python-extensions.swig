@@ -1058,7 +1058,7 @@ class value(object):
                 return self_val == other_val
         raise TypeError("Unknown type %s, No equality operation defined." % str(type(other)))
 
-    def __neq__(self, other):
+    def __ne__(self, other):
         return not self.__eq__(other)
 %}
 

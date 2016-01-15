@@ -130,9 +130,9 @@ CommandHistory::Dump (Stream& stream,
                       size_t stop_idx) const
 {
     Mutex::Locker locker(m_mutex);
-    stop_idx = std::min(stop_idx, m_history.size() - 1);
+    stop_idx = std::min(stop_idx + 1, m_history.size());
     for (size_t counter = start_idx;
-         counter <= stop_idx;
+         counter < stop_idx;
          counter++)
     {
         const std::string hist_item = m_history[counter];

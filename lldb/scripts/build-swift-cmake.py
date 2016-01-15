@@ -20,6 +20,8 @@ import sys
 parser = argparse.ArgumentParser()
 parser.add_argument('--lldb-extra-cmake-args', action='store',
                     help='extra arguments to be passed to lldb cmake')
+parser.add_argument('--lldb-extra-xcodebuild-args', action='store',
+                    help='extra arguments to be passed to lldb xcodebuild')
 parser.add_argument('--update', action='store_true')
 parser.add_argument('--test', action='store_true')
 parser.add_argument('--curses', action='store_true',
@@ -87,6 +89,11 @@ package_darwin = args.package and (uname == "Darwin")
 
 build_script_arguments = []
 build_script_impl_arguments = []
+
+if args.lldb_extra_xcodebuild_args:
+    build_script_impl_arguments.append(
+        "--lldb-extra-xcodebuild-args={}".format(
+            args.lldb_extra_xcodebuild_args))
 
 if package_darwin:
     # packaging preset

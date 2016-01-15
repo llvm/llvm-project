@@ -415,7 +415,7 @@ LoadObjCFormatters(TypeCategoryImplSP objc_category_sp)
                      ConstString("Rect"),
                      objc_flags);
     AddStringSummary(objc_category_sp,
-                     "(v=${var.v}, h=${var.h})",
+                     "{(v=${var.v}, h=${var.h})}",
                      ConstString("Point"),
                      objc_flags);
     AddStringSummary(objc_category_sp,

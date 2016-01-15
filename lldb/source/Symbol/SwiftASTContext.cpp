@@ -2720,7 +2720,19 @@ SwiftASTContext::GetSearchPathOptions ()
         bool set_sdk = false;
         bool set_resource_dir = false;
         
-        if (!m_platform_sdk_path.empty())
+        if (!search_path_opts.SDKPath.empty())
+        {
+            FileSpec provided_sdk_path(search_path_opts.SDKPath, false);
+            if (provided_sdk_path.Exists())
+            {
+                // We don't check whether the SDK supports swift because we figure if
+                // someone is passing this to us on the command line (e.g., for the REPL),
+                // they probably know what they're doing.
+                
+                set_sdk = true;
+            }
+        }
+        else if (!m_platform_sdk_path.empty())
         {
             FileSpec platform_sdk(m_platform_sdk_path.c_str(), false);
             
@@ -7892,6 +7904,12 @@ SwiftASTContext::DeclContextGetName (void *opaque_decl_ctx)
     return ConstString();
 }
 
+ConstString
+SwiftASTContext::DeclContextGetScopeQualifiedName (void *opaque_decl_ctx)
+{
+    return ConstString();
+}
+
 bool
 SwiftASTContext::DeclContextIsClassMethod (void *opaque_decl_ctx,
                                            lldb::LanguageType *language_ptr,
@@ -9620,10 +9638,6 @@ SwiftASTContext::GetEncoding (void* type, uint64_t &count)
         case swift::TypeKind::DependentMember:
             break;
             
-        case swift::TypeKind::Enum:
-        case swift::TypeKind::BoundGenericEnum:
-            return lldb::eEncodingUint;
-            
         case swift::TypeKind::ExistentialMetatype:
         case swift::TypeKind::Metatype:
             return lldb::eEncodingUint;
@@ -9632,6 +9646,10 @@ SwiftASTContext::GetEncoding (void* type, uint64_t &count)
         case swift::TypeKind::GenericFunction:
         case swift::TypeKind::Function:
             return lldb::eEncodingUint;
+            
+        case swift::TypeKind::Enum:
+        case swift::TypeKind::BoundGenericEnum:
+            break;
             
         case swift::TypeKind::Struct:
         case swift::TypeKind::Dictionary:
