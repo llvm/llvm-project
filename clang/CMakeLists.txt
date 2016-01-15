@@ -101,6 +101,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
+  include(VersionFromVCS)
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 
@@ -211,6 +212,18 @@ set(CLANG_REPOSITORY_STRING "" CACHE STRING
 
 if(CLANG_REPOSITORY_STRING)
   add_definitions(-DCLANG_REPOSITORY_STRING="${CLANG_REPOSITORY_STRING}")
+endif()
+
+option(CLANG_APPEND_VC_REV
+  "Append the version control system revision id to clang version spew" OFF)
+
+if(NOT SVN_REVISION)
+  # This macro will set SVN_REVISION in the parent scope
+  add_version_info_from_vcs(VERSION_VAR)
+endif()
+
+if(SVN_REVISION)
+  add_definitions(-DSVN_REVISION="${SVN_REVISION}")
 endif()
 
 set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
@@ -460,28 +473,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.inc"
     PATTERN "*.h"
     )
-endif()
-
-if(INTERNAL_INSTALL_PREFIX)
-  set(LIBCLANG_HEADERS_INSTALL_DESTINATION "${INTERNAL_INSTALL_PREFIX}/include")
-else()
-  set(LIBCLANG_HEADERS_INSTALL_DESTINATION include)
-endif()
-
-install(DIRECTORY include/clang-c
-  COMPONENT libclang-headers
-  DESTINATION "${LIBCLANG_HEADERS_INSTALL_DESTINATION}"
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-  )
-
-if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
-  add_custom_target(install-libclang-headers
-    DEPENDS
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=libclang-headers
-            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 endif()
 
 add_definitions( -D_GNU_SOURCE )

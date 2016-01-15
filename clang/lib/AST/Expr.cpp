@@ -1138,28 +1138,23 @@ OverloadedOperatorKind UnaryOperator::getOverloadedOperator(Opcode Opc) {
 // Postfix Operators.
 //===----------------------------------------------------------------------===//
 
-CallExpr::CallExpr(const ASTContext& C, StmtClass SC, Expr *fn,
-                   unsigned NumPreArgs, ArrayRef<Expr*> args, QualType t,
+CallExpr::CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
+                   ArrayRef<Expr *> preargs, ArrayRef<Expr *> args, QualType t,
                    ExprValueKind VK, SourceLocation rparenloc)
-  : Expr(SC, t, VK, OK_Ordinary,
-         fn->isTypeDependent(),
-         fn->isValueDependent(),
-         fn->isInstantiationDependent(),
-         fn->containsUnexpandedParameterPack()),
-    NumArgs(args.size()) {
+    : Expr(SC, t, VK, OK_Ordinary, fn->isTypeDependent(),
+           fn->isValueDependent(), fn->isInstantiationDependent(),
+           fn->containsUnexpandedParameterPack()),
+      NumArgs(args.size()) {
 
-  SubExprs = new (C) Stmt*[args.size()+PREARGS_START+NumPreArgs];
+  unsigned NumPreArgs = preargs.size();
+  SubExprs = new (C) Stmt *[args.size()+PREARGS_START+NumPreArgs];
   SubExprs[FN] = fn;
+  for (unsigned i = 0; i != NumPreArgs; ++i) {
+    updateDependenciesFromArg(preargs[i]);
+    SubExprs[i+PREARGS_START] = preargs[i];
+  }
   for (unsigned i = 0; i != args.size(); ++i) {
-    if (args[i]->isTypeDependent())
-      ExprBits.TypeDependent = true;
-    if (args[i]->isValueDependent())
-      ExprBits.ValueDependent = true;
-    if (args[i]->isInstantiationDependent())
-      ExprBits.InstantiationDependent = true;
-    if (args[i]->containsUnexpandedParameterPack())
-      ExprBits.ContainsUnexpandedParameterPack = true;
-
+    updateDependenciesFromArg(args[i]);
     SubExprs[i+PREARGS_START+NumPreArgs] = args[i];
   }
 
@@ -1167,9 +1162,14 @@ CallExpr::CallExpr(const ASTContext& C, StmtClass SC, Expr *fn,
   RParenLoc = rparenloc;
 }
 
+CallExpr::CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
+                   ArrayRef<Expr *> args, QualType t, ExprValueKind VK,
+                   SourceLocation rparenloc)
+    : CallExpr(C, SC, fn, ArrayRef<Expr *>(), args, t, VK, rparenloc) {}
+
 CallExpr::CallExpr(const ASTContext &C, Expr *fn, ArrayRef<Expr *> args,
                    QualType t, ExprValueKind VK, SourceLocation rparenloc)
-    : CallExpr(C, CallExprClass, fn, /*NumPreArgs=*/0, args, t, VK, rparenloc) {
+    : CallExpr(C, CallExprClass, fn, ArrayRef<Expr *>(), args, t, VK, rparenloc) {
 }
 
 CallExpr::CallExpr(const ASTContext &C, StmtClass SC, EmptyShell Empty)
@@ -1179,8 +1179,19 @@ CallExpr::CallExpr(const ASTContext &C, StmtClass SC, unsigned NumPreArgs,
                    EmptyShell Empty)
   : Expr(SC, Empty), SubExprs(nullptr), NumArgs(0) {
   // FIXME: Why do we allocate this?
-  SubExprs = new (C) Stmt*[PREARGS_START+NumPreArgs];
+  SubExprs = new (C) Stmt*[PREARGS_START+NumPreArgs]();
   CallExprBits.NumPreArgs = NumPreArgs;
+}
+
+void CallExpr::updateDependenciesFromArg(Expr *Arg) {
+  if (Arg->isTypeDependent())
+    ExprBits.TypeDependent = true;
+  if (Arg->isValueDependent())
+    ExprBits.ValueDependent = true;
+  if (Arg->isInstantiationDependent())
+    ExprBits.InstantiationDependent = true;
+  if (Arg->containsUnexpandedParameterPack())
+    ExprBits.ContainsUnexpandedParameterPack = true;
 }
 
 Decl *CallExpr::getCalleeDecl() {

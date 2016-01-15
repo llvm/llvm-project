@@ -2896,8 +2896,7 @@ llvm::DIType *CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
                   CGM.getTarget().getPointerAlign(0))) {
     CharUnits FieldOffsetInBytes =
         CGM.getContext().toCharUnitsFromBits(FieldOffset);
-    CharUnits AlignedOffsetInBytes =
-        FieldOffsetInBytes.RoundUpToAlignment(Align);
+    CharUnits AlignedOffsetInBytes = FieldOffsetInBytes.alignTo(Align);
     CharUnits NumPaddingBytes = AlignedOffsetInBytes - FieldOffsetInBytes;
 
     if (NumPaddingBytes.isPositive()) {

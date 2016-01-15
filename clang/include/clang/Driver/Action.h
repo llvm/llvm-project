@@ -136,7 +136,8 @@ public:
 
 class CudaDeviceAction : public Action {
   virtual void anchor();
-  /// GPU architecture to bind.  Always of the form /sm_\d+/.
+  /// GPU architecture to bind.  Always of the form /sm_\d+/ or null (when the
+  /// action applies to multiple architectures).
   const char *GpuArchName;
   /// True when action results are not consumed by the host action (e.g when
   /// -fsyntax-only or --cuda-device-only options are used).
@@ -147,7 +148,8 @@ public:
 
   const char *getGpuArchName() const { return GpuArchName; }
 
-  /// Gets the compute_XX that corresponds to getGpuArchName().
+  /// Gets the compute_XX that corresponds to getGpuArchName().  Returns null
+  /// when getGpuArchName() is null.
   const char *getComputeArchName() const;
 
   bool isAtTopLevel() const { return AtTopLevel; }

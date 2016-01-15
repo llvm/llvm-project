@@ -4956,7 +4956,7 @@ CGObjCCommonMac::BuildIvarLayout(const ObjCImplementationDecl *OMD,
       baseOffset = CharUnits::Zero();
     }
 
-    baseOffset = baseOffset.RoundUpToAlignment(CGM.getPointerAlign());
+    baseOffset = baseOffset.alignTo(CGM.getPointerAlign());
   }
   else {
     CGM.getContext().DeepCollectObjCIvars(OI, true, ivars);

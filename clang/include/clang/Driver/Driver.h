@@ -21,6 +21,7 @@
 #include "llvm/Support/Path.h" // FIXME: Kill when CompilationInfo lands.
 
 #include <list>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -381,10 +382,13 @@ public:
 
   /// BuildJobsForAction - Construct the jobs to perform for the
   /// action \p A and return an InputInfo for the result of running \p A.
+  /// Will only construct jobs for a given (Action, ToolChain) pair once.
   InputInfo BuildJobsForAction(Compilation &C, const Action *A,
                                const ToolChain *TC, const char *BoundArch,
                                bool AtTopLevel, bool MultipleArchs,
-                               const char *LinkingOutput) const;
+                               const char *LinkingOutput,
+                               std::map<std::pair<const Action *, std::string>,
+                                        InputInfo> &CachedResults) const;
 
   /// Returns the default name for linked images (e.g., "a.out").
   const char *getDefaultImageName() const;
@@ -440,6 +444,16 @@ private:
   /// \brief Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
   std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks() const;
+
+  /// Helper used in BuildJobsForAction.  Doesn't use the cache when building
+  /// jobs specifically for the given action, but will use the cache when
+  /// building jobs for the Action's inputs.
+  InputInfo BuildJobsForActionNoCache(
+      Compilation &C, const Action *A, const ToolChain *TC,
+      const char *BoundArch, bool AtTopLevel, bool MultipleArchs,
+      const char *LinkingOutput,
+      std::map<std::pair<const Action *, std::string>, InputInfo>
+          &CachedResults) const;
 
 public:
   /// GetReleaseVersion - Parse (([0-9]+)(.([0-9]+)(.([0-9]+)?))?)? and

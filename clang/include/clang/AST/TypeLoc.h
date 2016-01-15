@@ -254,7 +254,7 @@ public:
     unsigned align =
         TypeLoc::getLocalAlignmentForType(QualType(getTypePtr(), 0));
     uintptr_t dataInt = reinterpret_cast<uintptr_t>(Data);
-    dataInt = llvm::RoundUpToAlignment(dataInt, align);
+    dataInt = llvm::alignTo(dataInt, align);
     return UnqualTypeLoc(getTypePtr(), reinterpret_cast<void*>(dataInt));
   }
 
@@ -353,7 +353,7 @@ public:
   unsigned getLocalDataSize() const {
     unsigned size = sizeof(LocalData);
     unsigned extraAlign = asDerived()->getExtraLocalDataAlignment();
-    size = llvm::RoundUpToAlignment(size, extraAlign);
+    size = llvm::alignTo(size, extraAlign);
     size += asDerived()->getExtraLocalDataSize();
     return size;
   }
@@ -399,14 +399,14 @@ protected:
   void *getExtraLocalData() const {
     unsigned size = sizeof(LocalData);
     unsigned extraAlign = asDerived()->getExtraLocalDataAlignment();
-    size = llvm::RoundUpToAlignment(size, extraAlign);
+    size = llvm::alignTo(size, extraAlign);
     return reinterpret_cast<char*>(Base::Data) + size;
   }
 
   void *getNonLocalData() const {
     uintptr_t data = reinterpret_cast<uintptr_t>(Base::Data);
     data += asDerived()->getLocalDataSize();
-    data = llvm::RoundUpToAlignment(data, getNextTypeAlign());
+    data = llvm::alignTo(data, getNextTypeAlign());
     return reinterpret_cast<void*>(data);
   }
 

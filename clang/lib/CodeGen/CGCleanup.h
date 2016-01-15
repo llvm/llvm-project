@@ -540,7 +540,7 @@ public:
       Size = EHPadEndScope::getSize();
       break;
     }
-    Ptr += llvm::RoundUpToAlignment(Size, ScopeStackAlignment);
+    Ptr += llvm::alignTo(Size, ScopeStackAlignment);
     return *this;
   }
 

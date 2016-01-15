@@ -70,8 +70,7 @@ protected:
       : Stmt(SC), Kind(K), StartLoc(std::move(StartLoc)),
         EndLoc(std::move(EndLoc)), NumClauses(NumClauses),
         NumChildren(NumChildren),
-        ClausesOffset(llvm::RoundUpToAlignment(sizeof(T),
-                                               llvm::alignOf<OMPClause *>())) {}
+        ClausesOffset(llvm::alignTo(sizeof(T), llvm::alignOf<OMPClause *>())) {}
 
   /// \brief Sets the list of variables for this clause.
   ///

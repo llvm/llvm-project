@@ -79,7 +79,7 @@ namespace {
         auto Offset = OrigBFI.Offset % C.toBits(lvalue.getAlignment());
         AtomicSizeInBits = C.toBits(
             C.toCharUnitsFromBits(Offset + OrigBFI.Size + C.getCharWidth() - 1)
-                .RoundUpToAlignment(lvalue.getAlignment()));
+                .alignTo(lvalue.getAlignment()));
         auto VoidPtrAddr = CGF.EmitCastToVoidPtr(lvalue.getBitFieldPointer());
         auto OffsetInChars =
             (C.toCharUnitsFromBits(OrigBFI.Offset) / lvalue.getAlignment()) *

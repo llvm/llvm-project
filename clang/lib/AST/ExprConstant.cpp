@@ -5135,7 +5135,7 @@ bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     // The offset must also have the correct alignment.
-    if (OffsetResult.Offset.RoundUpToAlignment(Align) != OffsetResult.Offset) {
+    if (OffsetResult.Offset.alignTo(Align) != OffsetResult.Offset) {
       Result.Designator.setInvalid();
       APSInt Offset(64, false);
       Offset = OffsetResult.Offset.getQuantity();

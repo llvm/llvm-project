@@ -66,8 +66,7 @@ public:
   CXXOperatorCallExpr(ASTContext& C, OverloadedOperatorKind Op, Expr *fn,
                       ArrayRef<Expr*> args, QualType t, ExprValueKind VK,
                       SourceLocation operatorloc, bool fpContractable)
-    : CallExpr(C, CXXOperatorCallExprClass, fn, 0, args, t, VK,
-               operatorloc),
+    : CallExpr(C, CXXOperatorCallExprClass, fn, args, t, VK, operatorloc),
       Operator(Op), FPContractable(fpContractable) {
     Range = getSourceRangeImpl();
   }
@@ -125,7 +124,7 @@ class CXXMemberCallExpr : public CallExpr {
 public:
   CXXMemberCallExpr(ASTContext &C, Expr *fn, ArrayRef<Expr*> args,
                     QualType t, ExprValueKind VK, SourceLocation RP)
-    : CallExpr(C, CXXMemberCallExprClass, fn, 0, args, t, VK, RP) {}
+    : CallExpr(C, CXXMemberCallExprClass, fn, args, t, VK, RP) {}
 
   CXXMemberCallExpr(ASTContext &C, EmptyShell Empty)
     : CallExpr(C, CXXMemberCallExprClass, Empty) { }
@@ -160,9 +159,7 @@ public:
   CUDAKernelCallExpr(ASTContext &C, Expr *fn, CallExpr *Config,
                      ArrayRef<Expr*> args, QualType t, ExprValueKind VK,
                      SourceLocation RP)
-    : CallExpr(C, CUDAKernelCallExprClass, fn, END_PREARG, args, t, VK, RP) {
-    setConfig(Config);
-  }
+      : CallExpr(C, CUDAKernelCallExprClass, fn, Config, args, t, VK, RP) {}
 
   CUDAKernelCallExpr(ASTContext &C, EmptyShell Empty)
     : CallExpr(C, CUDAKernelCallExprClass, END_PREARG, Empty) { }
@@ -171,7 +168,20 @@ public:
     return cast_or_null<CallExpr>(getPreArg(CONFIG));
   }
   CallExpr *getConfig() { return cast_or_null<CallExpr>(getPreArg(CONFIG)); }
-  void setConfig(CallExpr *E) { setPreArg(CONFIG, E); }
+
+  /// \brief Sets the kernel configuration expression.
+  ///
+  /// Note that this method cannot be called if config has already been set to a
+  /// non-null value.
+  void setConfig(CallExpr *E) {
+    assert(!getConfig() &&
+           "Cannot call setConfig if config is not null");
+    setPreArg(CONFIG, E);
+    setInstantiationDependent(isInstantiationDependent() ||
+                              E->isInstantiationDependent());
+    setContainsUnexpandedParameterPack(containsUnexpandedParameterPack() ||
+                                       E->containsUnexpandedParameterPack());
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CUDAKernelCallExprClass;
@@ -398,7 +408,7 @@ public:
   UserDefinedLiteral(const ASTContext &C, Expr *Fn, ArrayRef<Expr*> Args,
                      QualType T, ExprValueKind VK, SourceLocation LitEndLoc,
                      SourceLocation SuffixLoc)
-    : CallExpr(C, UserDefinedLiteralClass, Fn, 0, Args, T, VK, LitEndLoc),
+    : CallExpr(C, UserDefinedLiteralClass, Fn, Args, T, VK, LitEndLoc),
       UDSuffixLoc(SuffixLoc) {}
   explicit UserDefinedLiteral(const ASTContext &C, EmptyShell Empty)
     : CallExpr(C, UserDefinedLiteralClass, Empty) {}
