@@ -260,13 +260,13 @@ public:
         // We are poorly aligned, and we need to pad in order to layout another
         // field. Round up to at least the smallest field alignment that we
         // currently have.
-        CharUnits NextOffset = NewOffset.RoundUpToAlignment(Fields[0].Align);
+        CharUnits NextOffset = NewOffset.alignTo(Fields[0].Align);
         NewPad += NextOffset - NewOffset;
         NewOffset = NextOffset;
       }
     }
     // Calculate tail padding.
-    CharUnits NewSize = NewOffset.RoundUpToAlignment(RL.getAlignment());
+    CharUnits NewSize = NewOffset.alignTo(RL.getAlignment());
     NewPad += NewSize - NewOffset;
     return NewPad;
   }

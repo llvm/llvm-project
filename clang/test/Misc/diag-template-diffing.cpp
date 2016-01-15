@@ -925,7 +925,7 @@ namespace DependentDefault {
     // CHECK-ELIDE-NOTREE: no known conversion from 'A<char, [...]>' to 'A<int, [...]>'
     a3 = a1;
     // CHECK-ELIDE-NOTREE: no viable overloaded '='
-    // CHECK-ELIDE-NOTREE: no known conversion from 'A<[...], (default) 40>' to 'A<[...], 10>'
+    // CHECK-ELIDE-NOTREE: no known conversion from 'A<[...], (default) Trait<T>::V aka 40>' to 'A<[...], 10>'
     a2 = a3;
     // CHECK-ELIDE-NOTREE: no viable overloaded '='
     // CHECK-ELIDE-NOTREE: no known conversion from 'A<int, 10>' to 'A<char, 40>'
@@ -1118,7 +1118,7 @@ int global, global2;
 constexpr int * ptr = nullptr;
 Wrapper<S<ptr>> W = MakeWrapper<S<&global>>();
 // Don't print an extra '&' for 'ptr'
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<ptr>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<ptr aka nullptr>>'
 
 // Handle parens correctly
 Wrapper<S<(&global2)>> W2 = MakeWrapper<S<&global>>();
@@ -1148,7 +1148,7 @@ S<&global, nullptr> s2 = S<&global, ptr>();
 S<&global, nullptr> s3 = S<&global, &global>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'S<[...], &global>' to 'S<[...], nullptr>'
 S<&global, ptr> s4 = S<&global, &global>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'S<[...], &global>' to 'S<[...], ptr>
+// CHECK-ELIDE-NOTREE: no viable conversion from 'S<[...], &global>' to 'S<[...], ptr aka nullptr>
 
 Wrapper<S<&global, nullptr>> W1 = MakeWrapper<S<&global, ptr>>();
 Wrapper<S<&global, static_cast<int*>(0)>> W2 = MakeWrapper<S<&global, ptr>>();
@@ -1156,7 +1156,7 @@ Wrapper<S<&global, static_cast<int*>(0)>> W2 = MakeWrapper<S<&global, ptr>>();
 Wrapper<S<&global, nullptr>> W3 = MakeWrapper<S<&global, &global>>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], nullptr>>'
 Wrapper<S<&global, ptr>> W4 = MakeWrapper<S<&global, &global>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr aka nullptr>>'
 
 Wrapper<S<&global2, ptr>> W5 = MakeWrapper<S<&global, nullptr>>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
@@ -1180,7 +1180,7 @@ Wrapper<S<&global2, nullptr>> W12 =
 Wrapper<S<&global, &global>> W13 = MakeWrapper<S<&global, ptr>>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], nullptr>>' to 'Wrapper<S<[...], &global>>'
 Wrapper<S<&global, ptr>> W14 = MakeWrapper<S<&global, &global>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr aka nullptr>>'
 }
 
 namespace TemplateTemplateDefault {
@@ -1271,7 +1271,160 @@ void test() {
   foo<BoolT<true>>(X);
 }
 // CHECK-ELIDE-NOTREE: no matching function for call to 'foo'
-// CHECK-ELIDE-NOTREE: candidate function [with T = BoolArgumentBitExtended::BoolT<true>] not viable: no known conversion from 'BoolT<0>' to 'BoolT<1>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function [with T = BoolArgumentBitExtended::BoolT<true>] not viable: no known conversion from 'BoolT<false>' to 'BoolT<true>' for 1st argument
+}
+
+namespace DifferentIntegralTypes {
+template<typename T, T n>
+class A{};
+void foo() {
+  A<int, 1> a1 = A<long long, 1>();
+  A<unsigned int, 1> a2 = A<int, 5>();
+  A<bool, true> a3 = A<signed char, true>();
+}
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<long long, (long long) 1>' to 'A<int, (int) 1>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int, (int) 5>' to 'A<unsigned int, (unsigned int) 1>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<signed char, (signed char) 1>' to 'A<bool, (bool) true>'
+}
+
+namespace MixedDeclarationIntegerArgument {
+template<typename T, T n> class A{};
+int x;
+int y[5];
+
+A<int, 5> a1 = A<int&, x>();
+A<int, 5 - 1> a2 = A<int*, &x>();
+A<int, 5 + 1> a3 = A<int*, y>();
+A<int, 0> a4 = A<int**, nullptr>();
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int &, x>' to 'A<int, 5>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int *, &x>' to 'A<int, 5 - 1 aka 4>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int *, y>' to 'A<int, 5 + 1 aka 6>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int **, nullptr>' to 'A<int, 0>'
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   A<
+// CHECK-ELIDE-TREE:     [int & != int],
+// CHECK-ELIDE-TREE:     [x != 5]>
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   A<
+// CHECK-ELIDE-TREE:     [int * != int],
+// CHECK-ELIDE-TREE:     [&x != 5 - 1 aka 4]>
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   A<
+// CHECK-ELIDE-TREE:     [int * != int],
+// CHECK-ELIDE-TREE:     [y != 5 + 1 aka 6]>
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   A<
+// CHECK-ELIDE-TREE:     [int ** != int],
+// CHECK-ELIDE-TREE:     [nullptr != 0]>
+
+A<int&, x> a5 = A<int, 3>();
+A<int*, &x> a6 = A<int, 3 - 1>();
+A<int*, y> a7 = A<int, 3 + 1>();
+A<int**, nullptr> a8 = A<int, 3>();
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int, 3>' to 'A<int &, x>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int, 3 - 1 aka 2>' to 'A<int *, &x>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int, 3 + 1 aka 4>' to 'A<int *, y>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<int, 3>' to 'A<int **, nullptr>'
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   A<
+// CHECK-ELIDE-TREE:     [int != int &],
+// CHECK-ELIDE-TREE:     [3 != x]>
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   A<
+// CHECK-ELIDE-TREE:     [int != int *],
+// CHECK-ELIDE-TREE:     [3 - 1 aka 2 != &x]>
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   A<
+// CHECK-ELIDE-TREE:     [int != int *],
+// CHECK-ELIDE-TREE:     [3 + 1 aka 4 != y]>
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   A<
+// CHECK-ELIDE-TREE:     [int != int **],
+// CHECK-ELIDE-TREE:     [3 != nullptr]>
+
+template<class T, T n = x> class B{} ;
+B<int, 5> b1 = B<int&>();
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<int &, (default) x>' to 'B<int, 5>'
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   B<
+// CHECK-ELIDE-TREE:     [int & != int],
+// CHECK-ELIDE-TREE:     [(default) x != 5]>
+
+B<int &> b2 = B<int, 2>();
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<int, 2>' to 'B<int &, (default) x>'
+// CHECK-ELIDE-TREE:   B<
+// CHECK-ELIDE-TREE:     [int != int &],
+// CHECK-ELIDE-TREE:     [2 != (default) x]>
+
+template<class T, T n = 11> class C {};
+C<int> c1 = C<int&, x>();
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'C<int &, x>' to 'C<int, (default) 11>'
+// CHECK-ELIDE-TREE: error: no viable conversion
+// CHECK-ELIDE-TREE:   C<
+// CHECK-ELIDE-TREE:     [int & != int],
+// CHECK-ELIDE-TREE:     [x != (default) 11]>
+
+C<int &, x> c2 = C<int>();
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'C<int, (default) 11>' to 'C<int &, x>'
+// CHECK-ELIDE-TREE:   C<
+// CHECK-ELIDE-TREE:     [int != int &],
+// CHECK-ELIDE-TREE:     [(default) 11 != x]>
+}
+
+namespace default_args {
+  template <int x, int y = 1+1, int z = 2>
+  class A {};
+
+  void foo(A<0> &M) {
+    // CHECK-ELIDE-NOTREE: no viable conversion from 'A<[...], (default) 1 + 1 aka 2, (default) 2>' to 'A<[...], 0, 0>'
+    A<0, 0, 0> N = M;
+
+    // CHECK-ELIDE-NOTREE: no viable conversion from 'A<[2 * ...], (default) 2>' to 'A<[2 * ...], 0>'
+    A<0, 2, 0> N2 = M;
+  }
+}
+
+namespace DefaultNonTypeArgWithDependentType {
+// We used to crash diffing integer template arguments when the argument type
+// is dependent and default arguments were used.
+template <typename SizeType = int, SizeType = 0> struct A {};
+template <typename R = A<>> R bar();
+A<> &foo() { return bar(); }
+// CHECK-ELIDE-NOTREE: error: non-const lvalue reference to type 'A<[2 * ...]>' cannot bind to a temporary of type 'A<[2 * ...]>'
+// CHECK-NOELIDE-NOTREE: error: non-const lvalue reference to type 'A<int, 0>' cannot bind to a temporary of type 'A<int, 0>'
+}
+
+namespace PR24587 {
+template <typename T, T v>
+struct integral_constant {};
+
+auto false_ = integral_constant<bool, false> {};
+
+template <typename T>
+void f(T, decltype(false_));
+
+void run() {
+  f(1, integral_constant<bool, true>{});
+}
+// CHECK-ELIDE-NOTREE: error: no matching function for call to 'f'
+// CHECK-ELIDE-NOTREE: note: candidate function [with T = int] not viable: no known conversion from 'integral_constant<[...], true>' to 'integral_constant<[...], false>' for 2nd argument
+}
+
+namespace ZeroArgs {
+template <int N = 0> class A {};
+template <class T = A<>> class B {};
+A<1> a1 = A<>();
+A<> a2 = A<1>();
+B<> b1 = B<int>();
+B<int> b2 = B<>();
+B<> b3 = B<const A<>>();
+B<const A<>> b4 = B<>();
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<(default) 0>' to 'A<1>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<1>' to 'A<(default) 0>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<int>' to 'B<(default) ZeroArgs::A<0>>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<(default) ZeroArgs::A<0>>' to 'B<int>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<const A<[...]>>' to 'B<A<[...]>>'
+// CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<A<[...]>>' to 'B<const A<[...]>>'
 }
 
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.

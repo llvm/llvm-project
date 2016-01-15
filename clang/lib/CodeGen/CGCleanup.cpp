@@ -112,7 +112,7 @@ RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
 
 /// Push an entry of the given size onto this protected-scope stack.
 char *EHScopeStack::allocate(size_t Size) {
-  Size = llvm::RoundUpToAlignment(Size, ScopeStackAlignment);
+  Size = llvm::alignTo(Size, ScopeStackAlignment);
   if (!StartOfBuffer) {
     unsigned Capacity = 1024;
     while (Capacity < Size) Capacity *= 2;
@@ -143,7 +143,7 @@ char *EHScopeStack::allocate(size_t Size) {
 }
 
 void EHScopeStack::deallocate(size_t Size) {
-  StartOfData += llvm::RoundUpToAlignment(Size, ScopeStackAlignment);
+  StartOfData += llvm::alignTo(Size, ScopeStackAlignment);
 }
 
 bool EHScopeStack::containsOnlyLifetimeMarkers(

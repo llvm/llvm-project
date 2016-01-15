@@ -3419,13 +3419,8 @@ static void handleModeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   QualType OldTy;
   if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
     OldTy = TD->getUnderlyingType();
-  else if (ValueDecl *VD = dyn_cast<ValueDecl>(D))
-    OldTy = VD->getType();
-  else {
-    S.Diag(D->getLocation(), diag::err_attr_wrong_decl)
-      << Attr.getName() << Attr.getRange();
-    return;
-  }
+  else
+    OldTy = cast<VarDecl>(D)->getType();
 
   // Base type can also be a vector type (see PR17453).
   // Distinguish between base type and base element type.
@@ -3498,7 +3493,7 @@ static void handleModeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
     TD->setModedTypeSourceInfo(TD->getTypeSourceInfo(), NewTy);
   else
-    cast<ValueDecl>(D)->setType(NewTy);
+    cast<VarDecl>(D)->setType(NewTy);
 
   D->addAttr(::new (S.Context)
              ModeAttr(Attr.getRange(), S.Context, Name,
@@ -4828,17 +4823,90 @@ static void handleMipsInterruptAttr(Sema &S, Decl *D,
       Attr.getLoc(), S.Context, Kind, Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleAnyX86InterruptAttr(Sema &S, Decl *D,
+                                      const AttributeList &Attr) {
+  // Semantic checks for a function with the 'interrupt' attribute.
+  // a) Must be a function.
+  // b) Must have the 'void' return type.
+  // c) Must take 1 or 2 arguments.
+  // d) The 1st argument must be a pointer.
+  // e) The 2nd argument (if any) must be an unsigned integer.
+  if (!isFunctionOrMethod(D) || !hasFunctionProto(D) || isInstanceMethod(D) ||
+      CXXMethodDecl::isStaticOverloadedOperator(
+          cast<NamedDecl>(D)->getDeclName().getCXXOverloadedOperator())) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << Attr.getName() << ExpectedFunctionWithProtoType;
+    return;
+  }
+  // Interrupt handler must have void return type.
+  if (!getFunctionOrMethodResultType(D)->isVoidType()) {
+    S.Diag(getFunctionOrMethodResultSourceRange(D).getBegin(),
+           diag::err_anyx86_interrupt_attribute)
+        << (S.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
+                ? 0
+                : 1)
+        << 0;
+    return;
+  }
+  // Interrupt handler must have 1 or 2 parameters.
+  unsigned NumParams = getFunctionOrMethodNumParams(D);
+  if (NumParams < 1 || NumParams > 2) {
+    S.Diag(D->getLocStart(), diag::err_anyx86_interrupt_attribute)
+        << (S.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
+                ? 0
+                : 1)
+        << 1;
+    return;
+  }
+  // The first argument must be a pointer.
+  if (!getFunctionOrMethodParamType(D, 0)->isPointerType()) {
+    S.Diag(getFunctionOrMethodParamRange(D, 0).getBegin(),
+           diag::err_anyx86_interrupt_attribute)
+        << (S.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
+                ? 0
+                : 1)
+        << 2;
+    return;
+  }
+  // The second argument, if present, must be an unsigned integer.
+  unsigned TypeSize =
+      S.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86_64
+          ? 64
+          : 32;
+  if (NumParams == 2 &&
+      (!getFunctionOrMethodParamType(D, 1)->isUnsignedIntegerType() ||
+       S.Context.getTypeSize(getFunctionOrMethodParamType(D, 1)) != TypeSize)) {
+    S.Diag(getFunctionOrMethodParamRange(D, 1).getBegin(),
+           diag::err_anyx86_interrupt_attribute)
+        << (S.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
+                ? 0
+                : 1)
+        << 3 << S.Context.getIntTypeForBitwidth(TypeSize, /*Signed=*/false);
+    return;
+  }
+  D->addAttr(::new (S.Context) AnyX86InterruptAttr(
+      Attr.getLoc(), S.Context, Attr.getAttributeSpellingListIndex()));
+  D->addAttr(UsedAttr::CreateImplicit(S.Context));
+}
+
 static void handleInterruptAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   // Dispatch the interrupt attribute based on the current target.
-  if (S.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::msp430)
+  switch (S.Context.getTargetInfo().getTriple().getArch()) {
+  case llvm::Triple::msp430:
     handleMSP430InterruptAttr(S, D, Attr);
-  else if (S.Context.getTargetInfo().getTriple().getArch() ==
-               llvm::Triple::mipsel ||
-           S.Context.getTargetInfo().getTriple().getArch() ==
-               llvm::Triple::mips)
+    break;
+  case llvm::Triple::mipsel:
+  case llvm::Triple::mips:
     handleMipsInterruptAttr(S, D, Attr);
-  else
+    break;
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    handleAnyX86InterruptAttr(S, D, Attr);
+    break;
+  default:
     handleARMInterruptAttr(S, D, Attr);
+    break;
+  }
 }
 
 static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D,

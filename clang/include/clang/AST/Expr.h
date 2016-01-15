@@ -2137,11 +2137,15 @@ class CallExpr : public Expr {
   unsigned NumArgs;
   SourceLocation RParenLoc;
 
+  void updateDependenciesFromArg(Expr *Arg);
+
 protected:
   // These versions of the constructor are for derived classes.
-  CallExpr(const ASTContext& C, StmtClass SC, Expr *fn, unsigned NumPreArgs,
-           ArrayRef<Expr*> args, QualType t, ExprValueKind VK,
-           SourceLocation rparenloc);
+  CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
+           ArrayRef<Expr *> preargs, ArrayRef<Expr *> args, QualType t,
+           ExprValueKind VK, SourceLocation rparenloc);
+  CallExpr(const ASTContext &C, StmtClass SC, Expr *fn, ArrayRef<Expr *> args,
+           QualType t, ExprValueKind VK, SourceLocation rparenloc);
   CallExpr(const ASTContext &C, StmtClass SC, unsigned NumPreArgs,
            EmptyShell Empty);
 

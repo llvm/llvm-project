@@ -163,6 +163,7 @@ protected:
     bool IsValid;
     const Driver &D;
     std::string CudaInstallPath;
+    std::string CudaBinPath;
     std::string CudaLibPath;
     std::string CudaLibDevicePath;
     std::string CudaIncludePath;
@@ -179,6 +180,8 @@ protected:
 
     /// \brief Get the detected Cuda installation path.
     StringRef getInstallPath() const { return CudaInstallPath; }
+    /// \brief Get the detected path to Cuda's bin directory.
+    StringRef getBinPath() const { return CudaBinPath; }
     /// \brief Get the detected Cuda Include path.
     StringRef getIncludePath() const { return CudaIncludePath; }
     /// \brief Get the detected Cuda library path.
@@ -816,6 +819,14 @@ public:
                 const char *BoundArch) const override;
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args) const override;
+
+  // Never try to use the integrated assembler with CUDA; always fork out to
+  // ptxas.
+  bool useIntegratedAs() const override { return false; }
+
+protected:
+  Tool *buildAssembler() const override;  // ptxas
+  Tool *buildLinker() const override;     // fatbinary (ok, not really a linker)
 };
 
 class LLVM_LIBRARY_VISIBILITY MipsLLVMToolChain : public Linux {

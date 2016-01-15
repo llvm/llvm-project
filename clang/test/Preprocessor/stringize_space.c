@@ -12,3 +12,9 @@ c)
 
 // CHECK: {{^}}"a c"{{$}}
 
+#define str(x) #x
+#define f(x) str(-x)
+f(
+    1)
+
+// CHECK: {{^}}"-1"

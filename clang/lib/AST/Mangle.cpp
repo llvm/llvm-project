@@ -177,9 +177,9 @@ void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
       ++ArgWords;
   for (const auto &AT : Proto->param_types())
     // Size should be aligned to pointer size.
-    ArgWords += llvm::RoundUpToAlignment(ASTContext.getTypeSize(AT),
-                                         TI.getPointerWidth(0)) /
-                TI.getPointerWidth(0);
+    ArgWords +=
+        llvm::alignTo(ASTContext.getTypeSize(AT), TI.getPointerWidth(0)) /
+        TI.getPointerWidth(0);
   Out << ((TI.getPointerWidth(0) / 8) * ArgWords);
 }
 

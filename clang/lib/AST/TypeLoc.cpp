@@ -80,11 +80,11 @@ unsigned TypeLoc::getFullDataSizeForType(QualType Ty) {
   while (!TyLoc.isNull()) {
     unsigned Align = getLocalAlignmentForType(TyLoc.getType());
     MaxAlign = std::max(Align, MaxAlign);
-    Total = llvm::RoundUpToAlignment(Total, Align);
+    Total = llvm::alignTo(Total, Align);
     Total += TypeSizer().Visit(TyLoc);
     TyLoc = TyLoc.getNextTypeLoc();
   }
-  Total = llvm::RoundUpToAlignment(Total, MaxAlign);
+  Total = llvm::alignTo(Total, MaxAlign);
   return Total;
 }
 
@@ -149,12 +149,12 @@ void TypeLoc::copy(TypeLoc other) {
   // If both data pointers are aligned to the maximum alignment, we
   // can memcpy because getFullDataSize() accurately reflects the
   // layout of the data.
-  if (reinterpret_cast<uintptr_t>(Data)
-        == llvm::RoundUpToAlignment(reinterpret_cast<uintptr_t>(Data),
-                                    TypeLocMaxDataAlign) &&
-      reinterpret_cast<uintptr_t>(other.Data)
-        == llvm::RoundUpToAlignment(reinterpret_cast<uintptr_t>(other.Data),
-                                    TypeLocMaxDataAlign)) {
+  if (reinterpret_cast<uintptr_t>(Data) ==
+          llvm::alignTo(reinterpret_cast<uintptr_t>(Data),
+                        TypeLocMaxDataAlign) &&
+      reinterpret_cast<uintptr_t>(other.Data) ==
+          llvm::alignTo(reinterpret_cast<uintptr_t>(other.Data),
+                        TypeLocMaxDataAlign)) {
     memcpy(Data, other.Data, getFullDataSize());
     return;
   }

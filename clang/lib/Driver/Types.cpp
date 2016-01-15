@@ -232,8 +232,7 @@ void types::getCompilationPhases(ID Id, llvm::SmallVectorImpl<phases::ID> &P) {
         P.push_back(phases::Compile);
         P.push_back(phases::Backend);
       }
-      if (Id != TY_CUDA_DEVICE)
-        P.push_back(phases::Assemble);
+      P.push_back(phases::Assemble);
     }
   }
 

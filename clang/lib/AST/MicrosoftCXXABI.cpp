@@ -262,7 +262,7 @@ std::pair<uint64_t, unsigned> MicrosoftCXXABI::getMemberPointerWidthAndAlign(
     Align = Target.getIntAlign();
 
   if (Target.getTriple().isArch64Bit())
-    Width = llvm::RoundUpToAlignment(Width, Align);
+    Width = llvm::alignTo(Width, Align);
   return std::make_pair(Width, Align);
 }
 

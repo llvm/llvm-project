@@ -75,7 +75,7 @@ CudaDeviceAction::CudaDeviceAction(Action *Input, const char *ArchName,
                                    bool AtTopLevel)
     : Action(CudaDeviceClass, Input), GpuArchName(ArchName),
       AtTopLevel(AtTopLevel) {
-  assert(IsValidGpuArchName(GpuArchName));
+  assert(!GpuArchName || IsValidGpuArchName(GpuArchName));
 }
 
 const char *CudaDeviceAction::getComputeArchName() const {

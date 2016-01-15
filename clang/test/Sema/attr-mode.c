@@ -24,6 +24,9 @@ typedef unsigned unwind_word __attribute((mode(unwind_word)));
 
 int **__attribute((mode(QI)))* i32;  // expected-error{{mode attribute}}
 
+__attribute__((mode(QI))) int invalid_func() { return 1; } // expected-error{{'mode' attribute only applies to variables and typedefs}}
+enum invalid_enum { A1 __attribute__((mode(QI))) }; // expected-error{{'mode' attribute only applies to variables and typedefs}}
+
 typedef _Complex double c32 __attribute((mode(SC)));
 int c32_test[sizeof(c32) == 8 ? 1 : -1];
 typedef _Complex float c64 __attribute((mode(DC)));

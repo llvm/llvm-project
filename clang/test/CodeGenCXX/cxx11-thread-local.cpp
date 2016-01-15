@@ -217,7 +217,7 @@ void set_anon_i() {
 // CHECK: }
 
 
-// LINUX: declare extern_weak void @_ZTH1b()
+// LINUX: declare extern_weak void @_ZTH1b() [[ATTR:#[0-9]+]]
 
 
 // LINUX-LABEL: define internal i32* @_ZTWL1d()
@@ -229,3 +229,5 @@ void set_anon_i() {
 // DARWIN-LABEL: define cxx_fast_tlscc i32* @_ZTWN1U1mE()
 // CHECK: call void @_ZTHN1U1mE()
 // CHECK: ret i32* @_ZN1U1mE
+
+// LINUX: attributes [[ATTR]] = { {{.+}} }

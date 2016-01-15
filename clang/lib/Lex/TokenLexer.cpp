@@ -305,6 +305,7 @@ void TokenLexer::ExpandFunctionArguments() {
         // identifier.
         ResultToks[FirstResult].setFlagValue(Token::LeadingSpace,
                                              NextTokGetsSpace);
+        ResultToks[FirstResult].setFlagValue(Token::StartOfLine, false);
         NextTokGetsSpace = false;
       }
       continue;
