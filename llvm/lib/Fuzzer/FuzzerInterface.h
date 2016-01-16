@@ -23,7 +23,6 @@
 #include <string>
 
 namespace fuzzer {
-typedef std::vector<uint8_t> Unit;
 
 /// Returns an int 0. Values other than zero are reserved for future.
 typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
@@ -36,6 +35,15 @@ Usage:
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   DoStuffWithData(Data, Size);
+  return 0;
+}
+
+// Optional.
+// Define this only if you need to read/modify argc/argv at startup
+// and you are using libFuzzer's main().
+// Must return 0.
+int LLVMFuzzerInitialize(int *argc, char ***argv) {
+  ReadAndMaybeModify(argc, argv);
   return 0;
 }
 
@@ -68,73 +76,11 @@ class FuzzerRandomLibc : public FuzzerRandomBase {
   size_t Rand() override;
 };
 
-class MutationDispatcher {
- public:
-  MutationDispatcher(FuzzerRandomBase &Rand);
-  ~MutationDispatcher();
-  /// Indicate that we are about to start a new sequence of mutations.
-  void StartMutationSequence();
-  /// Print the current sequence of mutations.
-  void PrintMutationSequence();
-  /// Indicate that the current sequence of mutations was successfull.
-  void RecordSuccessfulMutationSequence();
-  /// Mutates data by shuffling bytes.
-  size_t Mutate_ShuffleBytes(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Mutates data by erasing a byte.
-  size_t Mutate_EraseByte(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Mutates data by inserting a byte.
-  size_t Mutate_InsertByte(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Mutates data by chanding one byte.
-  size_t Mutate_ChangeByte(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Mutates data by chanding one bit.
-  size_t Mutate_ChangeBit(uint8_t *Data, size_t Size, size_t MaxSize);
-
-  /// Mutates data by adding a word from the manual dictionary.
-  size_t Mutate_AddWordFromManualDictionary(uint8_t *Data, size_t Size,
-                                            size_t MaxSize);
-
-  /// Mutates data by adding a word from the temporary automatic dictionary.
-  size_t Mutate_AddWordFromTemporaryAutoDictionary(uint8_t *Data, size_t Size,
-                                                   size_t MaxSize);
-
-  /// Mutates data by adding a word from the persistent automatic dictionary.
-  size_t Mutate_AddWordFromPersistentAutoDictionary(uint8_t *Data, size_t Size,
-                                                    size_t MaxSize);
-
-  /// Tries to find an ASCII integer in Data, changes it to another ASCII int.
-  size_t Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size, size_t MaxSize);
-
-  /// CrossOver Data with some other element of the corpus.
-  size_t Mutate_CrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
-
-  /// Applies one of the above mutations.
-  /// Returns the new size of data which could be up to MaxSize.
-  size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize);
-
-  /// Creates a cross-over of two pieces of Data, returns its size.
-  size_t CrossOver(const uint8_t *Data1, size_t Size1, const uint8_t *Data2,
-                   size_t Size2, uint8_t *Out, size_t MaxOutSize);
-
-  void AddWordToManualDictionary(const Unit &Word);
-
-  void AddWordToAutoDictionary(const Unit &Word, size_t PositionHint);
-  void ClearAutoDictionary();
-  void PrintRecommendedDictionary();
-
-  void SetCorpus(const std::vector<Unit> *Corpus);
-
- private:
-  FuzzerRandomBase &Rand;
-  struct Impl;
-  Impl *MDImpl;
-};
-
 // For backward compatibility only, deprecated.
-static inline size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize,
-                            FuzzerRandomBase &Rand) {
-  MutationDispatcher MD(Rand);
-  return MD.Mutate(Data, Size, MaxSize);
-}
+size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize,
+              FuzzerRandomBase &Rand);
+
+class MutationDispatcher;
 
 /** An abstract class that allows to use user-supplied mutators with libFuzzer.
 
@@ -164,31 +110,24 @@ class UserSuppliedFuzzer {
   UserSuppliedFuzzer(FuzzerRandomBase *Rand);
   /// Executes the target function on 'Size' bytes of 'Data'.
   virtual int TargetFunction(const uint8_t *Data, size_t Size) = 0;
-  virtual void SetCorpus(const std::vector<Unit> *Corpus) {
-    MD.SetCorpus(Corpus);
-  }
   /// Mutates 'Size' bytes of data in 'Data' inplace into up to 'MaxSize' bytes,
   /// returns the new size of the data, which should be positive.
-  virtual size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize) {
-    return MD.Mutate(Data, Size, MaxSize);
-  }
+  virtual size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Crosses 'Data1' and 'Data2', writes up to 'MaxOutSize' bytes into Out,
   /// returns the number of bytes written, which should be positive.
   virtual size_t CrossOver(const uint8_t *Data1, size_t Size1,
                            const uint8_t *Data2, size_t Size2,
-                           uint8_t *Out, size_t MaxOutSize) {
-    return MD.CrossOver(Data1, Size1, Data2, Size2, Out, MaxOutSize);
-  }
+                           uint8_t *Out, size_t MaxOutSize);
   virtual ~UserSuppliedFuzzer();
 
   FuzzerRandomBase &GetRand() { return *Rand; }
 
-  MutationDispatcher &GetMD() { return MD; }
+  MutationDispatcher &GetMD() { return *MD; }
 
  private:
   bool OwnRand = false;
   FuzzerRandomBase *Rand;
-  MutationDispatcher MD;
+  MutationDispatcher *MD;
 };
 
 /// Runs the fuzzing with the UserSuppliedFuzzer.

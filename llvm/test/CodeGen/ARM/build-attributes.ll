@@ -29,7 +29,6 @@
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi | FileCheck %s --check-prefix=V8-FPARMv8-NEON-CRYPTO
 ; RUN: llc < %s -mtriple=thumbv8m.base-linux-gnueabi | FileCheck %s --check-prefix=V8MBASELINE
 ; RUN: llc < %s -mtriple=thumbv8m.main-linux-gnueabi | FileCheck %s --check-prefix=V8MMAINLINE
-; RUN: llc < %s -mtriple=thumbv8m.main-linux-gnueabi -mattr=+dsp | FileCheck %s --check-prefix=V8MMAINLINE_DSP
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5 | FileCheck %s --check-prefix=CORTEX-A5-DEFAULT
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A5-DEFAULT-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
@@ -392,14 +391,6 @@
 ; V8MMAINLINE: .eabi_attribute 7, 77
 ; V8MMAINLINE: .eabi_attribute 8, 0
 ; V8MMAINLINE: .eabi_attribute 9, 3
-; V8MMAINLINE_DSP-NOT: .eabi_attribute 46
-
-; V8MMAINLINE_DSP: .syntax unified
-; V8MBASELINE_DSP: .eabi_attribute 6, 17
-; V8MBASELINE_DSP: .eabi_attribute 7, 77
-; V8MMAINLINE_DSP: .eabi_attribute 8, 0
-; V8MMAINLINE_DSP: .eabi_attribute 9, 3
-; V8MMAINLINE_DSP: .eabi_attribute 46, 1
 
 ; Tag_CPU_unaligned_access
 ; NO-STRICT-ALIGN: .eabi_attribute 34, 1
@@ -489,9 +480,6 @@
 ; CORTEX-A7-CHECK: .eabi_attribute      44, 2
 ; CORTEX-A7-NOFPU: .eabi_attribute      44, 2
 ; CORTEX-A7-FPUV4: .eabi_attribute      44, 2
-
-; Tag_DSP_extension
-; CORTEX-A7-CHECK-NOT: .eabi_attribute      46
 
 ; Tag_Virtualization_use
 ; CORTEX-A7-CHECK: .eabi_attribute      68, 3

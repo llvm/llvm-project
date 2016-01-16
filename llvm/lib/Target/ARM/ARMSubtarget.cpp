@@ -148,7 +148,6 @@ void ARMSubtarget::initializeEnvironment() {
   FPOnlySP = false;
   HasPerfMon = false;
   HasTrustZone = false;
-  Has8MSecExt = false;
   HasCrypto = false;
   HasCRC = false;
   HasZeroCycleZeroing = false;

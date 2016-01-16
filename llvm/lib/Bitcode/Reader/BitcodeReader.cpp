@@ -3043,7 +3043,7 @@ std::error_code BitcodeReader::parseUseLists() {
         V = ValueList[ID];
       unsigned NumUses = 0;
       SmallDenseMap<const Use *, unsigned, 16> Order;
-      for (const Use &U : V->uses()) {
+      for (const Use &U : V->materialized_uses()) {
         if (++NumUses > Record.size())
           break;
         Order[&U] = Record[NumUses - 1];
@@ -5290,7 +5290,8 @@ std::error_code BitcodeReader::materialize(GlobalValue *GV) {
 
   // Upgrade any old intrinsic calls in the function.
   for (auto &I : UpgradedIntrinsics) {
-    for (auto UI = I.first->user_begin(), UE = I.first->user_end(); UI != UE;) {
+    for (auto UI = I.first->materialized_user_begin(), UE = I.first->user_end();
+         UI != UE;) {
       User *U = *UI;
       ++UI;
       if (CallInst *CI = dyn_cast<CallInst>(U))

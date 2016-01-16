@@ -377,22 +377,6 @@ static void AddNodeIDOperands(FoldingSetNodeID &ID,
   }
 }
 
-/// Add logical or fast math flag values to FoldingSetNodeID value.
-static void AddNodeIDFlags(FoldingSetNodeID &ID, unsigned Opcode,
-                           const SDNodeFlags *Flags) {
-  if (!isBinOpWithFlags(Opcode))
-    return;
-
-  unsigned RawFlags = 0;
-  if (Flags)
-    RawFlags = Flags->getRawFlags();
-  ID.AddInteger(RawFlags);
-}
-
-static void AddNodeIDFlags(FoldingSetNodeID &ID, const SDNode *N) {
-  AddNodeIDFlags(ID, N->getOpcode(), N->getFlags());
-}
-
 static void AddNodeIDNode(FoldingSetNodeID &ID, unsigned short OpC,
                           SDVTList VTList, ArrayRef<SDValue> OpList) {
   AddNodeIDOpcode(ID, OpC);
@@ -527,8 +511,6 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     break;
   }
   } // end switch (N->getOpcode())
-
-  AddNodeIDFlags(ID, N);
 
   // Target specific memory nodes could also have address spaces to check.
   if (N->isTargetMemoryOpcode())
@@ -851,6 +833,9 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, SDValue Op,
   AddNodeIDNode(ID, N->getOpcode(), N->getVTList(), Ops);
   AddNodeIDCustom(ID, N);
   SDNode *Node = FindNodeOrInsertPos(ID, N->getDebugLoc(), InsertPos);
+  if (Node)
+    if (const SDNodeFlags *Flags = N->getFlags())
+      Node->intersectFlagsWith(Flags);
   return Node;
 }
 
@@ -869,6 +854,9 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N,
   AddNodeIDNode(ID, N->getOpcode(), N->getVTList(), Ops);
   AddNodeIDCustom(ID, N);
   SDNode *Node = FindNodeOrInsertPos(ID, N->getDebugLoc(), InsertPos);
+  if (Node)
+    if (const SDNodeFlags *Flags = N->getFlags())
+      Node->intersectFlagsWith(Flags);
   return Node;
 }
 
@@ -886,6 +874,9 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
   AddNodeIDNode(ID, N->getOpcode(), N->getVTList(), Ops);
   AddNodeIDCustom(ID, N);
   SDNode *Node = FindNodeOrInsertPos(ID, N->getDebugLoc(), InsertPos);
+  if (Node)
+    if (const SDNodeFlags *Flags = N->getFlags())
+      Node->intersectFlagsWith(Flags);
   return Node;
 }
 
@@ -3892,10 +3883,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT, SDValue N1,
     SDValue Ops[] = {N1, N2};
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTs, Ops);
-    AddNodeIDFlags(ID, Opcode, Flags);
     void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL.getDebugLoc(), IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL.getDebugLoc(), IP)) {
+      if (Flags)
+        E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
+    }
 
     N = GetBinarySDNode(Opcode, DL, VTs, N1, N2, Flags);
 
@@ -6249,10 +6242,12 @@ SDNode *SelectionDAG::getNodeIfExists(unsigned Opcode, SDVTList VTList,
   if (VTList.VTs[VTList.NumVTs - 1] != MVT::Glue) {
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTList, Ops);
-    AddNodeIDFlags(ID, Opcode, Flags);
     void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DebugLoc(), IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DebugLoc(), IP)) {
+      if (Flags)
+        E->intersectFlagsWith(Flags);
       return E;
+    }
   }
   return nullptr;
 }
@@ -6946,6 +6941,11 @@ const SDNodeFlags *SDNode::getFlags() const {
   if (auto *FlagsNode = dyn_cast<BinaryWithFlagsSDNode>(this))
     return &FlagsNode->Flags;
   return nullptr;
+}
+
+void SDNode::intersectFlagsWith(const SDNodeFlags *Flags) {
+  if (auto *FlagsNode = dyn_cast<BinaryWithFlagsSDNode>(this))
+    FlagsNode->Flags.intersectWith(Flags);
 }
 
 SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {

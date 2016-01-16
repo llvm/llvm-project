@@ -18,6 +18,7 @@ set(Tests
   CounterTest
   FourIndependentBranchesTest
   FullCoverageSetTest
+  InitializeTest
   MemcmpTest
   NullDerefTest
   RepeatedMemcmp

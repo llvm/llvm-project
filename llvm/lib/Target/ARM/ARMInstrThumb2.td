@@ -4336,37 +4336,6 @@ def t2SETPAN : T1I<(outs), (ins imm0_1:$imm), NoItinerary, "setpan\t$imm", []>,
 }
 
 //===----------------------------------------------------------------------===//
-// ARMv8-M Security Extensions instructions
-//
-
-let hasSideEffects = 1 in
-def t2SG : T2I<(outs), (ins), NoItinerary, "sg", "", []>,
-           Requires<[Has8MSecExt]> {
-  let Inst = 0xe97fe97f;
-}
-
-class T2TT<bits<2> at, string asm, list<dag> pattern>
-  : T2I<(outs rGPR:$Rt), (ins GPRnopc:$Rn), NoItinerary, asm, "\t$Rt, $Rn",
-        pattern> {
-  bits<4> Rn;
-  bits<4> Rt;
-
-  let Inst{31-20} = 0b111010000100;
-  let Inst{19-16} = Rn;
-  let Inst{15-12} = 0b1111;
-  let Inst{11-8} = Rt;
-  let Inst{7-6} = at;
-  let Inst{5-0} = 0b000000;
-
-  let Unpredictable{5-0} = 0b111111;
-}
-
-def t2TT   : T2TT<0b00, "tt",   []>, Requires<[IsThumb,Has8MSecExt]>;
-def t2TTT  : T2TT<0b01, "ttt",  []>, Requires<[IsThumb,Has8MSecExt]>;
-def t2TTA  : T2TT<0b10, "tta",  []>, Requires<[IsThumb,Has8MSecExt]>;
-def t2TTAT : T2TT<0b11, "ttat", []>, Requires<[IsThumb,Has8MSecExt]>;
-
-//===----------------------------------------------------------------------===//
 // Non-Instruction Patterns
 //
 

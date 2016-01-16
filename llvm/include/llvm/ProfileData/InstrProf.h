@@ -573,16 +573,16 @@ class ProfileSummary {
   std::vector<uint32_t> DetailedSummaryCutoffs;
   // Sum of all counts.
   uint64_t TotalCount;
-  uint64_t MaxBlockCount, MaxFunctionCount;
+  uint64_t MaxBlockCount, MaxInternalBlockCount, MaxFunctionCount;
   uint32_t NumBlocks, NumFunctions;
-  inline void addCount(uint64_t Count);
+  inline void addCount(uint64_t Count, bool IsEntry);
   void computeDetailedSummary();
 
 public:
   static const int Scale = 1000000;
   ProfileSummary(std::vector<uint32_t> Cutoffs)
       : DetailedSummaryCutoffs(Cutoffs), TotalCount(0), MaxBlockCount(0),
-        MaxFunctionCount(0), NumBlocks(0), NumFunctions(0) {}
+        MaxInternalBlockCount(0), MaxFunctionCount(0), NumBlocks(0), NumFunctions(0) {}
   inline void addRecord(const InstrProfRecord &);
   inline std::vector<ProfileSummaryEntry> &getDetailedSummary();
   uint32_t getNumBlocks() { return NumBlocks; }
@@ -590,13 +590,16 @@ public:
   uint32_t getNumFunctions() { return NumFunctions; }
   uint64_t getMaxFunctionCount() { return MaxFunctionCount; }
   uint64_t getMaxBlockCount() { return MaxBlockCount; }
+  uint64_t getMaxInternalBlockCount() { return MaxInternalBlockCount; }
 };
 
 // This is called when a count is seen in the profile.
-void ProfileSummary::addCount(uint64_t Count) {
+void ProfileSummary::addCount(uint64_t Count, bool IsEntry) {
   TotalCount += Count;
   if (Count > MaxBlockCount)
     MaxBlockCount = Count;
+  if (!IsEntry && Count > MaxInternalBlockCount)
+    MaxInternalBlockCount = Count;
   NumBlocks++;
   CountFrequencies[Count]++;
 }
@@ -606,8 +609,8 @@ void ProfileSummary::addRecord(const InstrProfRecord &R) {
   if (R.Counts[0] > MaxFunctionCount)
     MaxFunctionCount = R.Counts[0];
 
-  for (size_t I = 1, E = R.Counts.size(); I < E; ++I)
-    addCount(R.Counts[I]);
+  for (size_t I = 0, E = R.Counts.size(); I < E; ++I)
+    addCount(R.Counts[I], (I == 0));
 }
 
 std::vector<ProfileSummaryEntry> &ProfileSummary::getDetailedSummary() {

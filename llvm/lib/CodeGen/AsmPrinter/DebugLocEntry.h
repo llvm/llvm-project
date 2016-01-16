@@ -93,18 +93,7 @@ public:
   /// variable, merge them by appending Next's values to the current
   /// list of values.
   /// Return true if the merge was successful.
-  bool MergeValues(const DebugLocEntry &Next) {
-    if (Begin == Next.Begin) {
-      auto *Expr = cast_or_null<DIExpression>(Values[0].Expression);
-      auto *NextExpr = cast_or_null<DIExpression>(Next.Values[0].Expression);
-      if (Expr->isBitPiece() && NextExpr->isBitPiece()) {
-        addValues(Next.Values);
-        End = Next.End;
-        return true;
-      }
-    }
-    return false;
-  }
+  bool MergeValues(const DebugLocEntry &Next);
 
   /// \brief Attempt to merge this DebugLocEntry with Next and return
   /// true if the merge was successful. Entries can be merged if they

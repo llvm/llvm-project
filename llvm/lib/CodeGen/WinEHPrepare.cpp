@@ -787,7 +787,7 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
       FixupCatchrets.clear();
       for (BasicBlock *Pred : predecessors(OldBlock))
         if (auto *CatchRet = dyn_cast<CatchReturnInst>(Pred->getTerminator()))
-          if (CatchRet->getParentPad() == FuncletToken)
+          if (CatchRet->getCatchSwitchParentPad() == FuncletToken)
             FixupCatchrets.push_back(CatchRet);
 
       for (CatchReturnInst *CatchRet : FixupCatchrets)
@@ -802,7 +802,7 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
         bool EdgeTargetsFunclet;
         if (auto *CRI =
                 dyn_cast<CatchReturnInst>(IncomingBlock->getTerminator())) {
-          EdgeTargetsFunclet = (CRI->getParentPad() == FuncletToken);
+          EdgeTargetsFunclet = (CRI->getCatchSwitchParentPad() == FuncletToken);
         } else {
           ColorVector &IncomingColors = BlockColors[IncomingBlock];
           assert(!IncomingColors.empty() && "Block not colored!");

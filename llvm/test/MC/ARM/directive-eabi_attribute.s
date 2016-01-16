@@ -209,12 +209,6 @@
 @ CHECK-OBJ-NEXT:   Value: 0
 @ CHECK-OBJ-NEXT:   TagName: DIV_use
 @ CHECK-OBJ-NEXT:   Description: If Available
-	.eabi_attribute Tag_DSP_extension, 0
-@ CHECK: .eabi_attribute 46, 0
-@ CHECK-OBJ:        Tag: 46
-@ CHECK-OBJ-NEXT:   Value: 0
-@ CHECK-OBJ-NEXT:   TagName: DSP_extension
-@ CHECK-OBJ-NEXT:   Description: Not Permitted
 	.eabi_attribute Tag_nodefaults, 0
 @ CHECK: .eabi_attribute 64, 0
 @ CHECK-OBJ:        Tag: 64

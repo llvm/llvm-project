@@ -49,10 +49,12 @@ void PrintASCII(const uint8_t *Data, size_t Size, const char *PrintAfter) {
   Printf("%s", PrintAfter);
 }
 
+void PrintASCII(const Word &W, const char *PrintAfter) {
+  PrintASCII(W.data(), W.size(), PrintAfter);
+}
+
 void PrintASCII(const Unit &U, const char *PrintAfter) {
-  for (auto X : U)
-    PrintASCIIByte(X);
-  Printf("%s", PrintAfter);
+  PrintASCII(U.data(), U.size(), PrintAfter);
 }
 
 std::string Hash(const Unit &U) {

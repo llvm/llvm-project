@@ -272,9 +272,6 @@ def HasVirtualization: Predicate<"false">,
 def HasTrustZone     : Predicate<"Subtarget->hasTrustZone()">,
                                  AssemblerPredicate<"FeatureTrustZone",
                                                     "TrustZone">;
-def Has8MSecExt      : Predicate<"Subtarget->has8MSecExt()">,
-                                 AssemblerPredicate<"Feature8MSecExt",
-                                                    "ARMv8-M Security Extensions">;
 def HasZCZ           : Predicate<"Subtarget->hasZeroCycleZeroing()">;
 def UseNEONForFP     : Predicate<"Subtarget->useNEONForSinglePrecisionFP()">;
 def DontUseNEONForFP : Predicate<"!Subtarget->useNEONForSinglePrecisionFP()">;

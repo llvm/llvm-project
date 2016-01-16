@@ -23,16 +23,15 @@ struct Mutator {
 };
 
 struct DictionaryEntry {
-  Unit Word;
+  Word W;
   size_t PositionHint;
 };
 
 struct Dictionary : public std::vector<DictionaryEntry>{
-  bool ContainsWord(const Unit &W) const {
+  bool ContainsWord(const Word &W) const {
     return end() !=
-           std::find_if(begin(), end(), [&](const DictionaryEntry &DE) {
-             return DE.Word == W;
-           });
+           std::find_if(begin(), end(),
+                        [&](const DictionaryEntry &DE) { return DE.W == W; });
   }
 };
 
@@ -161,20 +160,20 @@ size_t MutationDispatcher::Impl::AddWordFromDictionary(
     size_t MaxSize) {
   if (D.empty()) return 0;
   const DictionaryEntry &DE = D[Rand(D.size())];
-  const Unit &Word = DE.Word;
+  const Word &W = DE.W;
   size_t PositionHint = DE.PositionHint;
   bool UsePositionHint = PositionHint != std::numeric_limits<size_t>::max() &&
-                         PositionHint + Word.size() < Size && Rand.RandBool();
-  if (Rand.RandBool()) {  // Insert Word.
-    if (Size + Word.size() > MaxSize) return 0;
+                         PositionHint + W.size() < Size && Rand.RandBool();
+  if (Rand.RandBool()) {  // Insert W.
+    if (Size + W.size() > MaxSize) return 0;
     size_t Idx = UsePositionHint ? PositionHint : Rand(Size + 1);
-    memmove(Data + Idx + Word.size(), Data + Idx, Size - Idx);
-    memcpy(Data + Idx, Word.data(), Word.size());
-    Size += Word.size();
-  } else {  // Overwrite some bytes with Word.
-    if (Word.size() > Size) return 0;
-    size_t Idx = UsePositionHint ? PositionHint : Rand(Size - Word.size());
-    memcpy(Data + Idx, Word.data(), Word.size());
+    memmove(Data + Idx + W.size(), Data + Idx, Size - Idx);
+    memcpy(Data + Idx, W.data(), W.size());
+    Size += W.size();
+  } else {  // Overwrite some bytes with W.
+    if (W.size() > Size) return 0;
+    size_t Idx = UsePositionHint ? PositionHint : Rand(Size - W.size());
+    memcpy(Data + Idx, W.data(), W.size());
   }
   CurrentDictionaryEntrySequence.push_back(DE);
   return Size;
@@ -238,16 +237,16 @@ void MutationDispatcher::StartMutationSequence() {
 void MutationDispatcher::RecordSuccessfulMutationSequence() {
   for (auto &DE : MDImpl->CurrentDictionaryEntrySequence)
     // Linear search is fine here as this happens seldom.
-    if (!MDImpl->PersistentAutoDictionary.ContainsWord(DE.Word))
+    if (!MDImpl->PersistentAutoDictionary.ContainsWord(DE.W))
       MDImpl->PersistentAutoDictionary.push_back(
-          {DE.Word, std::numeric_limits<size_t>::max()});
+          {DE.W, std::numeric_limits<size_t>::max()});
 }
 
 void MutationDispatcher::PrintRecommendedDictionary() {
-  std::vector<Unit> V;
+  std::vector<Word> V;
   for (auto &DE : MDImpl->PersistentAutoDictionary)
-    if (!MDImpl->ManualDictionary.ContainsWord(DE.Word))
-      V.push_back(DE.Word);
+    if (!MDImpl->ManualDictionary.ContainsWord(DE.W))
+      V.push_back(DE.W);
   if (V.empty()) return;
   Printf("###### Recommended dictionary. ######\n");
   for (auto &U: V) {
@@ -265,7 +264,7 @@ void MutationDispatcher::PrintMutationSequence() {
     Printf(" DE: ");
     for (auto &DE : MDImpl->CurrentDictionaryEntrySequence) {
       Printf("\"");
-      PrintASCII(DE.Word, "\"-");
+      PrintASCII(DE.W, "\"-");
     }
   }
 }
@@ -299,16 +298,16 @@ void MutationDispatcher::SetCorpus(const std::vector<Unit> *Corpus) {
   MDImpl->SetCorpus(Corpus);
 }
 
-void MutationDispatcher::AddWordToManualDictionary(const Unit &Word) {
+void MutationDispatcher::AddWordToManualDictionary(const Word &W) {
   MDImpl->ManualDictionary.push_back(
-      {Word, std::numeric_limits<size_t>::max()});
+      {W, std::numeric_limits<size_t>::max()});
 }
 
-void MutationDispatcher::AddWordToAutoDictionary(const Unit &Word,
+void MutationDispatcher::AddWordToAutoDictionary(const Word &W,
                                                  size_t PositionHint) {
   static const size_t kMaxAutoDictSize = 1 << 14;
   if (MDImpl->TempAutoDictionary.size() >= kMaxAutoDictSize) return;
-  MDImpl->TempAutoDictionary.push_back({Word, PositionHint});
+  MDImpl->TempAutoDictionary.push_back({W, PositionHint});
 }
 
 void MutationDispatcher::ClearAutoDictionary() {

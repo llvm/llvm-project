@@ -394,10 +394,8 @@ std::error_code Module::materialize(GlobalValue *GV) {
 std::error_code Module::materializeAll() {
   if (!Materializer)
     return std::error_code();
-  if (std::error_code EC = Materializer->materializeModule())
-    return EC;
-  Materializer.reset();
-  return std::error_code();
+  std::unique_ptr<GVMaterializer> M = std::move(Materializer);
+  return M->materializeModule();
 }
 
 std::error_code Module::materializeMetadata() {

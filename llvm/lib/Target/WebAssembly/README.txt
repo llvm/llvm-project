@@ -86,3 +86,13 @@ Memset/memcpy/memmove should be marked with the "returned" attribute somehow,
 even when they are translated through intrinsics.
 
 //===---------------------------------------------------------------------===//
+
+Consider implementing optimizeSelect, optimizeCompareInstr, optimizeCondBranch,
+optimizeLoadInstr, and/or getMachineCombinerPatterns.
+
+//===---------------------------------------------------------------------===//
+
+Find a clean way to fix the problem which leads to the Shrink Wrapping pass
+being run after the WebAssembly PEI pass.
+
+//===---------------------------------------------------------------------===//

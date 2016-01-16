@@ -24,6 +24,7 @@
 namespace llvm {
 
 /// Writer for instrumentation based profile data.
+class ProfOStream;
 class InstrProfWriter {
 public:
   typedef SmallDenseMap<uint64_t, InstrProfRecord, 1> ProfilingData;
@@ -53,7 +54,7 @@ public:
   void setValueProfDataEndianness(support::endianness Endianness);
 
 private:
-  std::pair<uint64_t, uint64_t> writeImpl(raw_ostream &OS);
+  void writeImpl(ProfOStream &OS);
 };
 
 } // end namespace llvm

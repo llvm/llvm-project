@@ -164,13 +164,9 @@ struct LabelRange {
 
 // For now, very simple: put Size bytes of Data at position Pos.
 struct TraceBasedMutation {
-  static const size_t kMaxSize = 28;
-  uint32_t Pos : 24;
-  uint32_t Size : 8;
-  uint8_t  Data[kMaxSize];
+  uint32_t Pos;
+  Word W;
 };
-
-const size_t TraceBasedMutation::kMaxSize;
 
 // Declared as static globals for faster checks inside the hooks.
 static bool RecordingTraces = false;
@@ -223,12 +219,11 @@ class TraceState {
     RecordingMemcmp = false;
     for (size_t i = 0; i < NumMutations; i++) {
       auto &M = Mutations[i];
-      Unit U(M.Data, M.Data + M.Size);
       if (Options.Verbosity >= 2) {
-        AutoDictUnitCounts[U]++;
+        AutoDictUnitCounts[M.W]++;
         AutoDictAdds++;
         if ((AutoDictAdds & (AutoDictAdds - 1)) == 0) {
-          typedef std::pair<size_t, Unit> CU;
+          typedef std::pair<size_t, Word> CU;
           std::vector<CU> CountedUnits;
           for (auto &I : AutoDictUnitCounts)
             CountedUnits.push_back(std::make_pair(I.second, I.first));
@@ -242,17 +237,15 @@ class TraceState {
           }
         }
       }
-      USF.GetMD().AddWordToAutoDictionary(U, M.Pos);
+      USF.GetMD().AddWordToAutoDictionary(M.W, M.Pos);
     }
   }
 
   void AddMutation(uint32_t Pos, uint32_t Size, const uint8_t *Data) {
     if (NumMutations >= kMaxMutations) return;
-    assert(Size <= TraceBasedMutation::kMaxSize);
     auto &M = Mutations[NumMutations++];
     M.Pos = Pos;
-    M.Size = Size;
-    memcpy(M.Data, Data, Size);
+    M.W.Set(Data, Size);
   }
 
   void AddMutation(uint32_t Pos, uint32_t Size, uint64_t Data) {
@@ -274,7 +267,7 @@ class TraceState {
   const Fuzzer::FuzzingOptions &Options;
   uint8_t **CurrentUnitData;
   size_t *CurrentUnitSize;
-  std::map<Unit, size_t> AutoDictUnitCounts;
+  std::map<Word, size_t> AutoDictUnitCounts;
   size_t AutoDictAdds = 0;
   static thread_local bool IsMyThread;
 };
@@ -423,7 +416,7 @@ void TraceState::TraceCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
 void TraceState::TraceMemcmpCallback(size_t CmpSize, const uint8_t *Data1,
                                      const uint8_t *Data2) {
   if (!RecordingMemcmp || !IsMyThread) return;
-  CmpSize = std::min(CmpSize, TraceBasedMutation::kMaxSize);
+  CmpSize = std::min(CmpSize, Word::GetMaxSize());
   int Added2 = TryToAddDesiredData(Data1, Data2, CmpSize);
   int Added1 = TryToAddDesiredData(Data2, Data1, CmpSize);
   if ((Added1 || Added2) && Options.Verbosity >= 3) {

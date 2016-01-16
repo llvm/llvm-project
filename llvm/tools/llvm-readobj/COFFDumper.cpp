@@ -94,6 +94,8 @@ private:
                                       const SectionRef &Section,
                                       StringRef SectionContents);
 
+  void printCodeViewFileChecksums(StringRef Subsection);
+
   void printCodeViewInlineeLines(StringRef Subsection);
 
   void printMemberAttributes(MemberAttributes Attrs);
@@ -767,6 +769,13 @@ static const EnumEntry<uint8_t> FunctionOptionEnum[] = {
     LLVM_READOBJ_ENUM_CLASS_ENT(FunctionOptions, ConstructorWithVirtualBases),
 };
 
+static const EnumEntry<uint8_t> FileChecksumKindNames[] = {
+  LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, None),
+  LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, MD5),
+  LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA1),
+  LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA256),
+};
+
 template <typename T>
 static std::error_code getSymbolAuxData(const COFFObjectFile *Obj,
                                         COFFSymbolRef Symbol,
@@ -979,7 +988,6 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
 
   SmallVector<StringRef, 10> FunctionNames;
   StringMap<StringRef> FunctionLineTables;
-  std::map<StringRef, const FrameData *> FunctionFrameData;
 
   ListScope D(W, "CodeViewDebugInfo");
   // Print the section to allow correlation with printSections.
@@ -1019,7 +1027,8 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     // Optionally print the subsection bytes in case our parsing gets confused
     // later.
     if (opts::CodeViewSubsectionBytes)
-      W.printBinaryBlock("SubSectionContents", Contents);
+      printBinaryBlockWithRelocs("SubSectionContents", Section, SectionContents,
+                                 Contents);
 
     switch (ModuleSubstreamKind(SubType)) {
     case ModuleSubstreamKind::Symbols:
@@ -1028,6 +1037,10 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
 
     case ModuleSubstreamKind::InlineeLines:
       printCodeViewInlineeLines(Contents);
+      break;
+
+    case ModuleSubstreamKind::FileChecksums:
+      printCodeViewFileChecksums(Contents);
       break;
 
     case ModuleSubstreamKind::Lines: {
@@ -1057,23 +1070,30 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
       break;
     }
     case ModuleSubstreamKind::FrameData: {
-      const size_t RelocationSize = 4;
-      if (SubSectionSize != sizeof(FrameData) + RelocationSize) {
-        // There should be exactly one relocation followed by the FrameData
-        // contents.
-        error(object_error::parse_failed);
-        return;
-      }
-
-      const auto *FD = reinterpret_cast<const FrameData *>(
-          Contents.drop_front(RelocationSize).data());
-
+      // First four bytes is a relocation against the function.
+      const uint32_t *CodePtr;
+      error(consumeObject(Contents, CodePtr));
       StringRef LinkageName;
-      error(resolveSymbolName(Obj->getCOFFSection(Section), SectionOffset,
-                              LinkageName));
-      if (!FunctionFrameData.insert(std::make_pair(LinkageName, FD)).second) {
-        error(object_error::parse_failed);
-        return;
+      error(resolveSymbolName(Obj->getCOFFSection(Section), SectionContents,
+                              CodePtr, LinkageName));
+      W.printString("LinkageName", LinkageName);
+
+      // To find the active frame description, search this array for the
+      // smallest PC range that includes the current PC.
+      while (!Contents.empty()) {
+        const FrameData *FD;
+        error(consumeObject(Contents, FD));
+        DictScope S(W, "FrameData");
+        W.printHex("RvaStart", FD->RvaStart);
+        W.printHex("CodeSize", FD->CodeSize);
+        W.printHex("LocalSize", FD->LocalSize);
+        W.printHex("ParamsSize", FD->ParamsSize);
+        W.printHex("MaxStackSize", FD->MaxStackSize);
+        W.printString("FrameFunc",
+                      CVStringTable.drop_front(FD->FrameFunc).split('\0').first);
+        W.printHex("PrologSize", FD->PrologSize);
+        W.printHex("SavedRegsSize", FD->SavedRegsSize);
+        W.printFlags("Flags", FD->Flags, makeArrayRef(FrameDataFlags));
       }
       break;
     }
@@ -1082,6 +1102,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     default:
       break;
     }
+    W.flush();
   }
 
   // Dump the line tables now that we've read all the subsections and know all
@@ -1154,22 +1175,6 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         }
       }
     }
-  }
-
-  for (auto FrameDataPair : FunctionFrameData) {
-    StringRef LinkageName = FrameDataPair.first;
-    const FrameData *FD = FrameDataPair.second;
-    ListScope S(W, "FunctionFrameData");
-    W.printString("LinkageName", LinkageName);
-    W.printHex("RvaStart", FD->RvaStart);
-    W.printHex("CodeSize", FD->CodeSize);
-    W.printHex("LocalSize", FD->LocalSize);
-    W.printHex("ParamsSize", FD->ParamsSize);
-    W.printHex("MaxStackSize", FD->MaxStackSize);
-    W.printString("FrameFunc", StringRef(CVStringTable.data() + FD->FrameFunc));
-    W.printHex("PrologSize", FD->PrologSize);
-    W.printHex("SavedRegsSize", FD->SavedRegsSize);
-    W.printFlags("Flags", FD->Flags, makeArrayRef(FrameDataFlags));
   }
 }
 
@@ -1422,7 +1427,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
           W.printNumber("ChangeCodeLength", GetCompressedAnnotation());
           break;
         case ChangeFile:
-          W.printHex("ChangeFile", GetCompressedAnnotation());
+          printFileNameForOffset("ChangeFile", GetCompressedAnnotation());
           break;
         case ChangeLineOffset:
           W.printNumber("ChangeLineOffset",
@@ -1698,6 +1703,33 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
     if (opts::CodeViewSubsectionBytes)
       printBinaryBlockWithRelocs("SymData", Section, SectionContents,
                                  OrigSymData);
+    W.flush();
+  }
+  W.flush();
+}
+
+void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
+  StringRef Data = Subsection;
+  while (!Data.empty()) {
+    DictScope S(W, "FileChecksum");
+    const FileChecksum *FC;
+    error(consumeObject(Data, FC));
+    if (FC->FileNameOffset >= CVStringTable.size())
+      error(object_error::parse_failed);
+    StringRef Filename =
+        CVStringTable.drop_front(FC->FileNameOffset).split('\0').first;
+    W.printHex("Filename", Filename, FC->FileNameOffset);
+    W.printHex("ChecksumSize", FC->ChecksumSize);
+    W.printEnum("ChecksumKind", uint8_t(FC->ChecksumKind),
+                makeArrayRef(FileChecksumKindNames));
+    if (FC->ChecksumSize >= Data.size())
+      error(object_error::parse_failed);
+    StringRef ChecksumBytes = Data.substr(0, FC->ChecksumSize);
+    W.printBinary("ChecksumBytes", ChecksumBytes);
+    unsigned PaddedSize =
+        RoundUpToAlignment(FC->ChecksumSize + sizeof(FileChecksum), 4) -
+        sizeof(FileChecksum);
+    Data = Data.drop_front(PaddedSize);
   }
 }
 

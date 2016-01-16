@@ -805,6 +805,24 @@ static bool piecesOverlap(const DIExpression *P1, const DIExpression *P2) {
   return (l1 < r2) && (l2 < r1);
 }
 
+/// \brief If this and Next are describing different pieces of the same
+/// variable, merge them by appending Next's values to the current
+/// list of values.
+/// Return true if the merge was successful.
+bool DebugLocEntry::MergeValues(const DebugLocEntry &Next) {
+  if (Begin == Next.Begin) {
+    auto *Expr = cast_or_null<DIExpression>(Values[0].Expression);
+    auto *NextExpr = cast_or_null<DIExpression>(Next.Values[0].Expression);
+    if (Expr->isBitPiece() && NextExpr->isBitPiece() &&
+        !piecesOverlap(Expr, NextExpr)) {
+      addValues(Next.Values);
+      End = Next.End;
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Build the location list for all DBG_VALUEs in the function that
 /// describe the same variable.  If the ranges of several independent
 /// pieces of the same variable overlap partially, split them up and

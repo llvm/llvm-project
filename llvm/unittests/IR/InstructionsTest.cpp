@@ -551,18 +551,19 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
   Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
-  BasicBlock *NormalDest = BasicBlock::Create(C);
-  BasicBlock *UnwindDest = BasicBlock::Create(C);
+  std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
+  std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
   OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
-  InvokeInst *Invoke(InvokeInst::Create(Callee, NormalDest, UnwindDest, Args,
-                                        OldBundle, "result"));
+  std::unique_ptr<InvokeInst> Invoke(InvokeInst::Create(
+      Callee, NormalDest.get(), UnwindDest.get(), Args, OldBundle, "result"));
   AttrBuilder AB;
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
   Invoke->setDebugLoc(DebugLoc(MDNode::get(C, None)));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
-  InvokeInst *Clone(InvokeInst::Create(Invoke, NewBundle));
+  std::unique_ptr<InvokeInst> Clone(
+      InvokeInst::Create(Invoke.get(), NewBundle));
   EXPECT_EQ(Invoke->getNormalDest(), Clone->getNormalDest());
   EXPECT_EQ(Invoke->getUnwindDest(), Clone->getUnwindDest());
   EXPECT_EQ(Invoke->getNumArgOperands(), Clone->getNumArgOperands());
@@ -572,11 +573,6 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   EXPECT_EQ(Invoke->getDebugLoc(), Clone->getDebugLoc());
   EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
   EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
-
-  delete Invoke;
-  delete Clone;
-  delete NormalDest;
-  delete UnwindDest;
 }
 
 } // end anonymous namespace

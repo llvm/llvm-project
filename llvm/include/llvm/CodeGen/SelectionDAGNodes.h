@@ -369,6 +369,18 @@ public:
     (UnsafeAlgebra << 3) | (NoNaNs << 4) | (NoInfs << 5) |
     (NoSignedZeros << 6) | (AllowReciprocal << 7);
   }
+
+  /// Clear any flags in this flag set that aren't also set in Flags.
+  void intersectWith(const SDNodeFlags *Flags) {
+    NoUnsignedWrap &= Flags->NoUnsignedWrap;
+    NoSignedWrap &= Flags->NoSignedWrap;
+    Exact &= Flags->Exact;
+    UnsafeAlgebra &= Flags->UnsafeAlgebra;
+    NoNaNs &= Flags->NoNaNs;
+    NoInfs &= Flags->NoInfs;
+    NoSignedZeros &= Flags->NoSignedZeros;
+    AllowReciprocal &= Flags->AllowReciprocal;
+  }
 };
 
 /// Represents one node in the SelectionDAG.
@@ -681,6 +693,9 @@ public:
   /// This could be defined as a virtual function and implemented more simply
   /// and directly, but it is not to avoid creating a vtable for this class.
   const SDNodeFlags *getFlags() const;
+
+  /// Clear any flags in this node that aren't also set in Flags.
+  void intersectFlagsWith(const SDNodeFlags *Flags);
 
   /// Return the number of values defined/returned by this operator.
   unsigned getNumValues() const { return NumValues; }

@@ -191,9 +191,7 @@ private:
     IntVoidFnTy Fn =
         reinterpret_cast<IntVoidFnTy>(static_cast<uintptr_t>(Addr));
 
-    DEBUG(dbgs() << "  Calling "
-                 << reinterpret_cast<void *>(reinterpret_cast<intptr_t>(Fn))
-                 << "\n");
+    DEBUG(dbgs() << "  Calling " << format("0x%016x", Addr) << "\n");
     int Result = Fn();
     DEBUG(dbgs() << "  Result = " << Result << "\n");
 
@@ -212,7 +210,7 @@ private:
     for (auto &Arg : Args)
       ArgV[Idx++] = Arg.c_str();
 
-    DEBUG(dbgs() << "  Calling " << reinterpret_cast<void *>(Fn) << "\n");
+    DEBUG(dbgs() << "  Calling " << format("0x%016x", Addr) << "\n");
     int Result = Fn(ArgC, ArgV.get());
     DEBUG(dbgs() << "  Result = " << Result << "\n");
 
@@ -224,7 +222,7 @@ private:
     VoidVoidFnTy Fn =
         reinterpret_cast<VoidVoidFnTy>(static_cast<uintptr_t>(Addr));
 
-    DEBUG(dbgs() << "  Calling " << reinterpret_cast<void *>(Fn) << "\n");
+    DEBUG(dbgs() << "  Calling " << format("0x%016x", Addr) << "\n");
     Fn();
     DEBUG(dbgs() << "  Complete.\n");
 
@@ -375,7 +373,7 @@ private:
     char *Src = reinterpret_cast<char *>(static_cast<uintptr_t>(RSrc));
 
     DEBUG(dbgs() << "  Reading " << Size << " bytes from "
-                 << static_cast<void *>(Src) << "\n");
+                 << format("0x%016x", RSrc) << "\n");
 
     if (auto EC = call<ReadMemResponse>(Channel))
       return EC;
