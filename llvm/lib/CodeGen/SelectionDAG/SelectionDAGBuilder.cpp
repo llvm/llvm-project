@@ -1242,7 +1242,7 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // This will be used by the FuncletLayout pass to determine how to order the
   // BB's.
   // A 'catchret' returns to the outer scope's color.
-  Value *ParentPad = I.getParentPad();
+  Value *ParentPad = I.getCatchSwitchParentPad();
   const BasicBlock *SuccessorColor;
   if (isa<ConstantTokenNone>(ParentPad))
     SuccessorColor = &FuncInfo.Fn->getEntryBlock();

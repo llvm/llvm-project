@@ -288,10 +288,20 @@ function export_sources() {
     if [ ! -h clang ]; then
         ln -s ../../cfe.src clang
     fi
-    cd $BuildDir/llvm.src/tools/clang/tools
-    if [ ! -h extra ]; then
-        ln -s ../../../../clang-tools-extra.src extra
+
+    # The autoconf and CMake builds want different symlinks here:
+    if [ "$use_autoconf" = "yes" ]; then
+      cd $BuildDir/llvm.src/tools/clang/tools
+      if [ ! -h extra ]; then
+          ln -s ../../../../clang-tools-extra.src extra
+      fi
+    else
+      cd $BuildDir/cfe.src/tools
+      if [ ! -h extra ]; then
+          ln -s ../../clang-tools-extra.src extra
+      fi
     fi
+
     cd $BuildDir/llvm.src/projects
     if [ -d $BuildDir/test-suite.src ] && [ ! -h test-suite ]; then
         ln -s ../../test-suite.src test-suite

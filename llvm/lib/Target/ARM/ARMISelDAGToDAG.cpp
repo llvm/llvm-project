@@ -3444,9 +3444,6 @@ static inline int getMClassRegisterSYSmValueMask(StringRef RegString) {
           .Case("basepri_max", 0x12)
           .Case("faultmask", 0x13)
           .Case("control", 0x14)
-          .Case("msplim", 0x0a)
-          .Case("psplim", 0x0b)
-          .Case("sp", 0x18)
           .Default(-1);
 }
 
@@ -3476,27 +3473,11 @@ static int getMClassRegisterMask(StringRef Reg, StringRef Flags, bool IsRead,
   if (!Subtarget->hasV7Ops() && SYSmvalue >= 0x11 && SYSmvalue <= 0x13)
     return -1;
 
-  if (Subtarget->has8MSecExt() && Flags.lower() == "ns") {
-    Flags = "";
-    SYSmvalue |= 0x80;
-  }
-
-  if (!Subtarget->has8MSecExt() &&
-      (SYSmvalue == 0xa || SYSmvalue == 0xb || SYSmvalue > 0x14))
-    return -1;
-
-  if (!Subtarget->hasV8MMainlineOps() &&
-      (SYSmvalue == 0x8a || SYSmvalue == 0x8b || SYSmvalue == 0x91 ||
-       SYSmvalue == 0x93))
-    return -1;
-
   // If it was a read then we won't be expecting flags and so at this point
   // we can return the mask.
   if (IsRead) {
-    if (Flags.empty())
-      return SYSmvalue;
-    else
-      return -1;
+    assert (Flags.empty() && "Unexpected flags for reading M class register.");
+    return SYSmvalue;
   }
 
   // We know we are now handling a write so need to get the mask for the flags.
@@ -3655,13 +3636,7 @@ SDNode *ARMDAGToDAGISel::SelectReadRegister(SDNode *N){
   // is an acceptable value, so check that a mask can be constructed from the
   // string.
   if (Subtarget->isMClass()) {
-    StringRef Flags = "", Reg = SpecialReg;
-    if (Reg.endswith("_ns")) {
-      Flags = "ns";
-      Reg = Reg.drop_back(3);
-    }
-
-    int SYSmValue = getMClassRegisterMask(Reg, Flags, true, Subtarget);
+    int SYSmValue = getMClassRegisterMask(SpecialReg, "", true, Subtarget);
     if (SYSmValue == -1)
       return nullptr;
 
@@ -3755,10 +3730,10 @@ SDNode *ARMDAGToDAGISel::SelectWriteRegister(SDNode *N){
     return CurDAG->getMachineNode(Opcode, DL, MVT::Other, Ops);
   }
 
-  std::pair<StringRef, StringRef> Fields;
-  Fields = StringRef(SpecialReg).rsplit('_');
-  std::string Reg = Fields.first.str();
-  StringRef Flags = Fields.second;
+  SmallVector<StringRef, 5> Fields;
+  StringRef(SpecialReg).split(Fields, '_', 1, false);
+  std::string Reg = Fields[0].str();
+  StringRef Flags = Fields.size() == 2 ? Fields[1] : "";
 
   // If the target was M Class then need to validate the special register value
   // and retrieve the mask for use in the instruction node.

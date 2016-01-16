@@ -54,7 +54,6 @@ const struct {
   { ARMBuildAttrs::ABI_FP_16bit_format, "Tag_ABI_FP_16bit_format" },
   { ARMBuildAttrs::MPextension_use, "Tag_MPextension_use" },
   { ARMBuildAttrs::DIV_use, "Tag_DIV_use" },
-  { ARMBuildAttrs::DSP_extension, "Tag_DSP_extension" },
   { ARMBuildAttrs::nodefaults, "Tag_nodefaults" },
   { ARMBuildAttrs::also_compatible_with, "Tag_also_compatible_with" },
   { ARMBuildAttrs::T2EE_use, "Tag_T2EE_use" },

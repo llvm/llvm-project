@@ -234,7 +234,9 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
-FunctionType *Function::getFunctionType() const { return Ty; }
+FunctionType *Function::getFunctionType() const {
+  return cast<FunctionType>(getValueType());
+}
 
 bool Function::isVarArg() const {
   return getFunctionType()->isVarArg();
@@ -259,8 +261,7 @@ void Function::eraseFromParent() {
 Function::Function(FunctionType *Ty, LinkageTypes Linkage, const Twine &name,
                    Module *ParentModule)
     : GlobalObject(Ty, Value::FunctionVal,
-                   OperandTraits<Function>::op_begin(this), 0, Linkage, name),
-      Ty(Ty) {
+                   OperandTraits<Function>::op_begin(this), 0, Linkage, name) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);

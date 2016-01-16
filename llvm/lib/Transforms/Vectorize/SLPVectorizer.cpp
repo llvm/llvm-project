@@ -4289,71 +4289,81 @@ bool SLPVectorizer::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 bool SLPVectorizer::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
   auto Changed = false;
   for (auto &Entry : GEPs) {
-    auto &GEPList = Entry.second;
 
     // If the getelementptr list has fewer than two elements, there's nothing
     // to do.
-    if (GEPList.size() < 2)
+    if (Entry.second.size() < 2)
       continue;
 
     DEBUG(dbgs() << "SLP: Analyzing a getelementptr list of length "
-                 << GEPList.size() << ".\n");
+                 << Entry.second.size() << ".\n");
 
-    // Initialize a set a candidate getelementptrs. Note that we use a
-    // SetVector here to preserve program order. If the index computations are
-    // vectorizable and begin with loads, we want to minimize the chance of
-    // having to reorder them later.
-    SetVector<Value *> Candidates(GEPList.begin(), GEPList.end());
-
-    // Some of the candidates may have already been vectorized after we
-    // initially collected them. If so, the WeakVHs will have nullified the
-    // values, so remove them from the set of candidates.
-    Candidates.remove(nullptr);
-
-    // Remove from the set of candidates all pairs of getelementptrs with
-    // constant differences. Such getelementptrs are likely not good candidates
-    // for vectorization in a bottom-up phase since one can be computed from
-    // the other.
-    for (int I = 0, E = GEPList.size(); I < E && Candidates.size() > 1; ++I) {
-      auto *GEP = SE->getSCEV(GEPList[I]);
-      for (int J = I + 1; J < E && Candidates.size() > 1; ++J)
-        if (isa<SCEVConstant>(SE->getMinusSCEV(GEP, SE->getSCEV(GEPList[J])))) {
-          Candidates.remove(GEPList[I]);
-          Candidates.remove(GEPList[J]);
-        }
-    }
-
-    // We break out of the above computation as soon as we know there are fewer
-    // than two candidates remaining.
-    if (Candidates.size() < 2)
-      continue;
-
-    // Add the single, non-constant index of each candidate to the bundle. We
-    // ensured the indices met these constraints when we originally collected
-    // the getelementptrs.
-    SmallVector<Value *, 16> Bundle(Candidates.size());
-    auto BundleIndex = 0u;
-    for (auto *V : Candidates) {
-      auto *GEP = cast<GetElementPtrInst>(V);
-      auto *GEPIdx = GEP->idx_begin()->get();
-      assert(GEP->getNumIndices() == 1 || !isa<Constant>(GEPIdx));
-      Bundle[BundleIndex++] = GEPIdx;
-    }
-
-    // Try and vectorize the indices. We are currently only interested in
-    // gather-like cases of the form:
-    //
-    // ... = g[a[0] - b[0]] + g[a[1] - b[1]] + ...
-    //
-    // where the loads of "a", the loads of "b", and the subtractions can be
-    // performed in parallel. It's likely that detecting this pattern in a
-    // bottom-up phase will be simpler and less costly than building a
-    // full-blown top-down phase beginning at the consecutive loads. We process
-    // the bundle in chunks of 16 (like we do for stores) to minimize
-    // compile-time.
-    for (unsigned BI = 0, BE = Bundle.size(); BI < BE; BI += 16) {
+    // We process the getelementptr list in chunks of 16 (like we do for
+    // stores) to minimize compile-time.
+    for (unsigned BI = 0, BE = Entry.second.size(); BI < BE; BI += 16) {
       auto Len = std::min<unsigned>(BE - BI, 16);
-      Changed |= tryToVectorizeList(makeArrayRef(&Bundle[BI], Len), R);
+      auto GEPList = makeArrayRef(&Entry.second[BI], Len);
+
+      // Initialize a set a candidate getelementptrs. Note that we use a
+      // SetVector here to preserve program order. If the index computations
+      // are vectorizable and begin with loads, we want to minimize the chance
+      // of having to reorder them later.
+      SetVector<Value *> Candidates(GEPList.begin(), GEPList.end());
+
+      // Some of the candidates may have already been vectorized after we
+      // initially collected them. If so, the WeakVHs will have nullified the
+      // values, so remove them from the set of candidates.
+      Candidates.remove(nullptr);
+
+      // Remove from the set of candidates all pairs of getelementptrs with
+      // constant differences. Such getelementptrs are likely not good
+      // candidates for vectorization in a bottom-up phase since one can be
+      // computed from the other. We also ensure all candidate getelementptr
+      // indices are unique.
+      for (int I = 0, E = GEPList.size(); I < E && Candidates.size() > 1; ++I) {
+        auto *GEPI = cast<GetElementPtrInst>(GEPList[I]);
+        if (!Candidates.count(GEPI))
+          continue;
+        auto *SCEVI = SE->getSCEV(GEPList[I]);
+        for (int J = I + 1; J < E && Candidates.size() > 1; ++J) {
+          auto *GEPJ = cast<GetElementPtrInst>(GEPList[J]);
+          auto *SCEVJ = SE->getSCEV(GEPList[J]);
+          if (isa<SCEVConstant>(SE->getMinusSCEV(SCEVI, SCEVJ))) {
+            Candidates.remove(GEPList[I]);
+            Candidates.remove(GEPList[J]);
+          } else if (GEPI->idx_begin()->get() == GEPJ->idx_begin()->get()) {
+            Candidates.remove(GEPList[J]);
+          }
+        }
+      }
+
+      // We break out of the above computation as soon as we know there are
+      // fewer than two candidates remaining.
+      if (Candidates.size() < 2)
+        continue;
+
+      // Add the single, non-constant index of each candidate to the bundle. We
+      // ensured the indices met these constraints when we originally collected
+      // the getelementptrs.
+      SmallVector<Value *, 16> Bundle(Candidates.size());
+      auto BundleIndex = 0u;
+      for (auto *V : Candidates) {
+        auto *GEP = cast<GetElementPtrInst>(V);
+        auto *GEPIdx = GEP->idx_begin()->get();
+        assert(GEP->getNumIndices() == 1 || !isa<Constant>(GEPIdx));
+        Bundle[BundleIndex++] = GEPIdx;
+      }
+
+      // Try and vectorize the indices. We are currently only interested in
+      // gather-like cases of the form:
+      //
+      // ... = g[a[0] - b[0]] + g[a[1] - b[1]] + ...
+      //
+      // where the loads of "a", the loads of "b", and the subtractions can be
+      // performed in parallel. It's likely that detecting this pattern in a
+      // bottom-up phase will be simpler and less costly than building a
+      // full-blown top-down phase beginning at the consecutive loads.
+      Changed |= tryToVectorizeList(Bundle, R);
     }
   }
   return Changed;
@@ -4362,8 +4372,8 @@ bool SLPVectorizer::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
 bool SLPVectorizer::vectorizeStoreChains(BoUpSLP &R) {
   bool Changed = false;
   // Attempt to sort and vectorize each of the store-groups.
-  for (StoreListMap::iterator it = Stores.begin(), e = Stores.end();
-       it != e; ++it) {
+  for (StoreListMap::iterator it = Stores.begin(), e = Stores.end(); it != e;
+       ++it) {
     if (it->second.size() < 2)
       continue;
 

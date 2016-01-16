@@ -1193,7 +1193,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // is already a load in the block, then we can move the load to the pred
     // block.
     if (isDereferenceablePointer(InVal, DL) ||
-        isSafeToLoadUnconditionally(InVal, TI, MaxAlign))
+        isSafeToLoadUnconditionally(InVal, MaxAlign, TI))
       continue;
 
     return false;
@@ -1274,10 +1274,10 @@ static bool isSafeSelectToSpeculate(SelectInst &SI) {
     // absolutely (e.g. allocas) or at this point because we can see other
     // accesses to it.
     if (!TDerefable &&
-        !isSafeToLoadUnconditionally(TValue, LI, LI->getAlignment()))
+        !isSafeToLoadUnconditionally(TValue, LI->getAlignment(), LI))
       return false;
     if (!FDerefable &&
-        !isSafeToLoadUnconditionally(FValue, LI, LI->getAlignment()))
+        !isSafeToLoadUnconditionally(FValue, LI->getAlignment(), LI))
       return false;
   }
 

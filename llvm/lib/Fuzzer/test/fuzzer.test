@@ -37,3 +37,5 @@ PCS:BINGO
 RUN: not LLVMFuzzer-BufferOverflowOnInput 2>&1 | FileCheck %s --check-prefix=OOB
 OOB: AddressSanitizer: heap-buffer-overflow
 OOB: is located 0 bytes to the right of 3-byte region
+
+RUN: not LLVMFuzzer-InitializeTest 2>&1 | FileCheck %s

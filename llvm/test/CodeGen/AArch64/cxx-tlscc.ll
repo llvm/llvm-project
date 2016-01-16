@@ -8,6 +8,7 @@
 @sg = internal thread_local global %struct.S zeroinitializer, align 1
 @__dso_handle = external global i8
 @__tls_guard = internal thread_local unnamed_addr global i1 false
+@sum1 = internal thread_local global i32 0, align 4
 
 declare %struct.S* @_ZN1SC1Ev(%struct.S* returned)
 declare %struct.S* @_ZN1SD1Ev(%struct.S* returned)
@@ -74,3 +75,29 @@ __tls_init.exit:
 ; CHECK-NOT: ldp d27, d26
 ; CHECK-NOT: ldp d29, d28
 ; CHECK-NOT: ldp d31, d30
+
+; CHECK-LABEL: _ZTW4sum1
+; CHECK-NOT: stp d31, d30
+; CHECK-NOT: stp d29, d28
+; CHECK-NOT: stp d27, d26
+; CHECK-NOT: stp d25, d24
+; CHECK-NOT: stp d23, d22
+; CHECK-NOT: stp d21, d20
+; CHECK-NOT: stp d19, d18
+; CHECK-NOT: stp d17, d16
+; CHECK-NOT: stp d7, d6
+; CHECK-NOT: stp d5, d4
+; CHECK-NOT: stp d3, d2
+; CHECK-NOT: stp d1, d0
+; CHECK-NOT: stp x20, x19
+; CHECK-NOT: stp x14, x13
+; CHECK-NOT: stp x12, x11
+; CHECK-NOT: stp x10, x9
+; CHECK-NOT: stp x8, x7
+; CHECK-NOT: stp x6, x5
+; CHECK-NOT: stp x4, x3
+; CHECK-NOT: stp x2, x1
+; CHECK: blr
+define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
+  ret i32* @sum1
+}

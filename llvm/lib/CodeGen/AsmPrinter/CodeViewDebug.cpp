@@ -22,19 +22,12 @@ using namespace llvm::codeview;
 
 namespace llvm {
 
-StringRef CodeViewDebug::getFullFilepath(const MDNode *S) {
-  assert(S);
-  assert((isa<DICompileUnit>(S) || isa<DIFile>(S) || isa<DISubprogram>(S) ||
-          isa<DILexicalBlockBase>(S)) &&
-         "Unexpected scope info");
-
-  auto *Scope = cast<DIScope>(S);
-  StringRef Dir = Scope->getDirectory(),
-            Filename = Scope->getFilename();
-  std::string &Filepath =
-      DirAndFilenameToFilepathMap[std::make_pair(Dir, Filename)];
+StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
+  std::string &Filepath = FileToFilepathMap[File];
   if (!Filepath.empty())
     return Filepath;
+
+  StringRef Dir = File->getDirectory(), Filename = File->getFilename();
 
   // Clang emits directory and relative filename info into the IR, but CodeView
   // operates on full paths.  We could change Clang to emit full paths too, but
@@ -82,36 +75,25 @@ StringRef CodeViewDebug::getFullFilepath(const MDNode *S) {
 }
 
 void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
-                                                const MachineFunction *MF) {
-  const MDNode *Scope = DL.getScope();
+                                        const MachineFunction *MF) {
+  // Skip this instruction if it has the same location as the previous one.
+  if (DL == CurFn->LastLoc)
+    return;
+
+  const DIScope *Scope = DL.get()->getScope();
   if (!Scope)
     return;
-  unsigned LineNumber = DL.getLine();
+
   // Skip this line if it is longer than the maximum we can record.
-  if (LineNumber > COFF::CVL_MaxLineNumber)
+  if (DL.getLine() > COFF::CVL_MaxLineNumber)
     return;
 
-  unsigned ColumnNumber = DL.getCol();
-  // Truncate the column number if it is longer than the maximum we can record.
-  if (ColumnNumber > COFF::CVL_MaxColumnNumber)
-    ColumnNumber = 0;
-
-  StringRef Filename = getFullFilepath(Scope);
-
-  // Skip this instruction if it has the same file:line as the previous one.
-  assert(CurFn);
-  if (!CurFn->Instrs.empty()) {
-    const InstrInfoTy &LastInstr = InstrInfo[CurFn->Instrs.back()];
-    if (LastInstr.Filename == Filename && LastInstr.LineNumber == LineNumber &&
-        LastInstr.ColumnNumber == ColumnNumber)
-      return;
-  }
-  FileNameRegistry.add(Filename);
+  CurFn->LastLoc = DL;
 
   MCSymbol *MCL = Asm->MMI->getContext().createTempSymbol();
   Asm->OutStreamer->EmitLabel(MCL);
   CurFn->Instrs.push_back(MCL);
-  InstrInfo[MCL] = InstrInfoTy(Filename, LineNumber, ColumnNumber);
+  LabelsAndLocs[MCL] = DL;
 }
 
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
@@ -195,6 +177,10 @@ static void EmitLabelDiff(MCStreamer &Streamer,
   Streamer.EmitValue(AddrDelta, Size);
 }
 
+static const DIFile *getFileFromLoc(DebugLoc DL) {
+  return DL.get()->getScope()->getFile();
+}
+
 void CodeViewDebug::emitDebugInfoForFunction(const Function *GV) {
   // For each function there is a separate subsection
   // which holds the PC to file:line table.
@@ -258,13 +244,14 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV) {
   // number of the respective instruction that starts a new segment.
   DenseMap<size_t, size_t> FilenameSegmentLengths;
   size_t LastSegmentEnd = 0;
-  StringRef PrevFilename = InstrInfo[FI.Instrs[0]].Filename;
+  const DIFile *PrevFile = getFileFromLoc(LabelsAndLocs[FI.Instrs[0]]);
   for (size_t J = 1, F = FI.Instrs.size(); J != F; ++J) {
-    if (PrevFilename == InstrInfo[FI.Instrs[J]].Filename)
+    const DIFile *CurFile = getFileFromLoc(LabelsAndLocs[FI.Instrs[J]]);
+    if (PrevFile == CurFile)
       continue;
     FilenameSegmentLengths[LastSegmentEnd] = J - LastSegmentEnd;
     LastSegmentEnd = J;
-    PrevFilename = InstrInfo[FI.Instrs[J]].Filename;
+    PrevFile = CurFile;
   }
   FilenameSegmentLengths[LastSegmentEnd] = FI.Instrs.size() - LastSegmentEnd;
 
@@ -297,8 +284,11 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV) {
     for (size_t ColSegI = LastSegmentStart,
                 ColSegEnd = ColSegI + FilenameSegmentLengths[LastSegmentStart];
          ColSegI != ColSegEnd; ++ColSegI) {
-      unsigned ColumnNumber = InstrInfo[FI.Instrs[ColSegI]].ColumnNumber;
-      assert(ColumnNumber <= COFF::CVL_MaxColumnNumber);
+      unsigned ColumnNumber = LabelsAndLocs[FI.Instrs[ColSegI]].getCol();
+      // Truncate the column number if it is longer than the maximum we can
+      // record.
+      if (ColumnNumber > COFF::CVL_MaxColumnNumber)
+        ColumnNumber = 0;
       Asm->EmitInt16(ColumnNumber); // Start column
       Asm->EmitInt16(0);            // End column
     }
@@ -307,22 +297,21 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV) {
 
   for (size_t J = 0, F = FI.Instrs.size(); J != F; ++J) {
     MCSymbol *Instr = FI.Instrs[J];
-    assert(InstrInfo.count(Instr));
+    assert(LabelsAndLocs.count(Instr));
 
     if (FilenameSegmentLengths.count(J)) {
       // We came to a beginning of a new filename segment.
       FinishPreviousChunk();
-      StringRef CurFilename = InstrInfo[FI.Instrs[J]].Filename;
-      assert(FileNameRegistry.Infos.count(CurFilename));
-      size_t IndexInStringTable =
-          FileNameRegistry.Infos[CurFilename].FilenameID;
+      const DIFile *File = getFileFromLoc(LabelsAndLocs[FI.Instrs[J]]);
+      StringRef CurFilename = getFullFilepath(File);
+      size_t IndexInFileTable = FileNameRegistry.add(CurFilename);
       // Each segment starts with the offset of the filename
       // in the string table.
       Asm->OutStreamer->AddComment(
           "Segment for file '" + Twine(CurFilename) + "' begins");
       MCSymbol *FileSegmentBegin = Asm->MMI->getContext().createTempSymbol();
       Asm->OutStreamer->EmitLabel(FileSegmentBegin);
-      Asm->EmitInt32(8 * IndexInStringTable);
+      Asm->EmitInt32(8 * IndexInFileTable);
 
       // Number of PC records in the lookup table.
       size_t SegmentLength = FilenameSegmentLengths[J];
@@ -337,7 +326,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV) {
 
     // The first PC with the given linenumber and the linenumber itself.
     EmitLabelDiff(*Asm->OutStreamer, Fn, Instr);
-    uint32_t LineNumber = InstrInfo[Instr].LineNumber;
+    uint32_t LineNumber = LabelsAndLocs[Instr].getLine();
     assert(LineNumber <= COFF::CVL_MaxLineNumber);
     uint32_t LineData = LineNumber | COFF::CVL_IsStatement;
     Asm->EmitInt32(LineData);

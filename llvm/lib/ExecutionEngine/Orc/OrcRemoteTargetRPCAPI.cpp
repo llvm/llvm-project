@@ -9,6 +9,10 @@
 
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
 
+#define PROCNAME(X) \
+  case X ## Id: \
+  return #X
+
 namespace llvm {
 namespace orc {
 namespace remote {
@@ -17,68 +21,37 @@ const char *OrcRemoteTargetRPCAPI::getJITProcIdName(JITProcId Id) {
   switch (Id) {
   case InvalidId:
     return "*** Invalid JITProcId ***";
-  case CallIntVoidId:
-    return "CallIntVoid";
-  case CallIntVoidResponseId:
-    return "CallIntVoidResponse";
-  case CallMainId:
-    return "CallMain";
-  case CallMainResponseId:
-    return "CallMainResponse";
-  case CallVoidVoidId:
-    return "CallVoidVoid";
-  case CallVoidVoidResponseId:
-    return "CallVoidVoidResponse";
-  case CreateRemoteAllocatorId:
-    return "CreateRemoteAllocator";
-  case CreateIndirectStubsOwnerId:
-    return "CreateIndirectStubsOwner";
-  case DeregisterEHFramesId:
-    return "DeregisterEHFrames";
-  case DestroyRemoteAllocatorId:
-    return "DestroyRemoteAllocator";
-  case DestroyIndirectStubsOwnerId:
-    return "DestroyIndirectStubsOwner";
-  case EmitIndirectStubsId:
-    return "EmitIndirectStubs";
-  case EmitIndirectStubsResponseId:
-    return "EmitIndirectStubsResponse";
-  case EmitResolverBlockId:
-    return "EmitResolverBlock";
-  case EmitTrampolineBlockId:
-    return "EmitTrampolineBlock";
-  case EmitTrampolineBlockResponseId:
-    return "EmitTrampolineBlockResponse";
-  case GetSymbolAddressId:
-    return "GetSymbolAddress";
-  case GetSymbolAddressResponseId:
-    return "GetSymbolAddressResponse";
-  case GetRemoteInfoId:
-    return "GetRemoteInfo";
-  case GetRemoteInfoResponseId:
-    return "GetRemoteInfoResponse";
-  case ReadMemId:
-    return "ReadMem";
-  case ReadMemResponseId:
-    return "ReadMemResponse";
-  case RegisterEHFramesId:
-    return "RegisterEHFrames";
-  case ReserveMemId:
-    return "ReserveMem";
-  case ReserveMemResponseId:
-    return "ReserveMemResponse";
-  case RequestCompileId:
-    return "RequestCompile";
-  case RequestCompileResponseId:
-    return "RequestCompileResponse";
-  case SetProtectionsId:
-    return "SetProtections";
-  case TerminateSessionId:
-    return "TerminateSession";
-  case WriteMemId:
-    return "WriteMem";
-  case WritePtrId:
-    return "WritePtr";
+  PROCNAME(CallIntVoid);
+  PROCNAME(CallIntVoidResponse);
+  PROCNAME(CallMain);
+  PROCNAME(CallMainResponse);
+  PROCNAME(CallVoidVoid);
+  PROCNAME(CallVoidVoidResponse);
+  PROCNAME(CreateRemoteAllocator);
+  PROCNAME(CreateIndirectStubsOwner);
+  PROCNAME(DeregisterEHFrames);
+  PROCNAME(DestroyRemoteAllocator);
+  PROCNAME(DestroyIndirectStubsOwner);
+  PROCNAME(EmitIndirectStubs);
+  PROCNAME(EmitIndirectStubsResponse);
+  PROCNAME(EmitResolverBlock);
+  PROCNAME(EmitTrampolineBlock);
+  PROCNAME(EmitTrampolineBlockResponse);
+  PROCNAME(GetSymbolAddress);
+  PROCNAME(GetSymbolAddressResponse);
+  PROCNAME(GetRemoteInfo);
+  PROCNAME(GetRemoteInfoResponse);
+  PROCNAME(ReadMem);
+  PROCNAME(ReadMemResponse);
+  PROCNAME(RegisterEHFrames);
+  PROCNAME(ReserveMem);
+  PROCNAME(ReserveMemResponse);
+  PROCNAME(RequestCompile);
+  PROCNAME(RequestCompileResponse);
+  PROCNAME(SetProtections);
+  PROCNAME(TerminateSession);
+  PROCNAME(WriteMem);
+  PROCNAME(WritePtr);
   };
   return nullptr;
 }

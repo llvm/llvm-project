@@ -20,6 +20,59 @@
 
 using namespace llvm;
 
+// A struct to define how the data stream should be patched. For Indexed
+// profiling, only uint64_t data type is needed.
+struct PatchItem {
+  uint64_t Pos; // Where to patch.
+  uint64_t *D;  // Pointer to an array of source data.
+  int N;        // Number of elements in \c D array.
+};
+
+namespace llvm {
+// A wrapper class to abstract writer stream with support of bytes
+// back patching.
+class ProfOStream {
+
+public:
+  ProfOStream(llvm::raw_fd_ostream &FD) : IsFDOStream(true), OS(FD), LE(FD) {}
+  ProfOStream(llvm::raw_string_ostream &STR)
+      : IsFDOStream(false), OS(STR), LE(STR) {}
+
+  uint64_t tell() { return OS.tell(); }
+  void write(uint64_t V) { LE.write<uint64_t>(V); }
+  // \c patch can only be called when all data is written and flushed.
+  // For raw_string_ostream, the patch is done on the target string
+  // directly and it won't be reflected in the stream's internal buffer.
+  void patch(PatchItem *P, int NItems) {
+    using namespace support;
+    if (IsFDOStream) {
+      llvm::raw_fd_ostream &FDOStream = static_cast<llvm::raw_fd_ostream &>(OS);
+      for (int K = 0; K < NItems; K++) {
+        FDOStream.seek(P[K].Pos);
+        for (int I = 0; I < P[K].N; I++)
+          write(P[K].D[I]);
+      }
+    } else {
+      llvm::raw_string_ostream &SOStream =
+          static_cast<llvm::raw_string_ostream &>(OS);
+      std::string &Data = SOStream.str(); // with flush
+      for (int K = 0; K < NItems; K++) {
+        for (int I = 0; I < P[K].N; I++) {
+          uint64_t Bytes = endian::byte_swap<uint64_t, little>(P[K].D[I]);
+          Data.replace(P[K].Pos + I * sizeof(uint64_t), sizeof(uint64_t),
+                       (const char *)&Bytes, sizeof(uint64_t));
+        }
+      }
+    }
+  }
+  // If \c OS is an instance of \c raw_fd_ostream, this field will be
+  // true. Otherwise, \c OS will be an raw_string_ostream.
+  bool IsFDOStream;
+  raw_ostream &OS;
+  support::endian::Writer<support::little> LE;
+};
+}
+
 namespace {
 static support::endianness ValueProfDataEndianness = support::little;
 
@@ -127,16 +180,11 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
   return Result;
 }
 
-std::pair<uint64_t, uint64_t> InstrProfWriter::writeImpl(raw_ostream &OS) {
+void InstrProfWriter::writeImpl(ProfOStream &OS) {
   OnDiskChainedHashTableGenerator<InstrProfRecordTrait> Generator;
-
   // Populate the hash table generator.
   for (const auto &I : FunctionData)
     Generator.insert(I.getKey(), &I.getValue());
-
-  using namespace llvm::support;
-  endian::Writer<little> LE(OS);
-
   // Write the header.
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
@@ -150,27 +198,34 @@ std::pair<uint64_t, uint64_t> InstrProfWriter::writeImpl(raw_ostream &OS) {
   // to remember the offset of that field to allow back patching
   // later.
   for (int I = 0; I < N - 1; I++)
-    LE.write<uint64_t>(reinterpret_cast<uint64_t *>(&Header)[I]);
+    OS.write(reinterpret_cast<uint64_t *>(&Header)[I]);
 
   // Save a space to write the hash table start location.
   uint64_t HashTableStartLoc = OS.tell();
   // Reserve the space for HashOffset field.
-  LE.write<uint64_t>(0);
+  OS.write(0);
   // Write the hash table.
-  uint64_t HashTableStart = Generator.Emit(OS);
+  uint64_t HashTableStart = Generator.Emit(OS.OS);
 
-  return std::make_pair(HashTableStartLoc, HashTableStart);
+  // Now do the final patch:
+  PatchItem PatchItems[1] = {{HashTableStartLoc, &HashTableStart, 1}};
+  OS.patch(PatchItems, sizeof(PatchItems) / sizeof(*PatchItems));
 }
 
 void InstrProfWriter::write(raw_fd_ostream &OS) {
   // Write the hash table.
-  auto TableStart = writeImpl(OS);
+  ProfOStream POS(OS);
+  writeImpl(POS);
+}
 
-  // Go back and fill in the hash table start.
-  using namespace support;
-  OS.seek(TableStart.first);
-  // Now patch the HashOffset field previously reserved.
-  endian::Writer<little>(OS).write<uint64_t>(TableStart.second);
+std::unique_ptr<MemoryBuffer> InstrProfWriter::writeBuffer() {
+  std::string Data;
+  llvm::raw_string_ostream OS(Data);
+  ProfOStream POS(OS);
+  // Write the hash table.
+  writeImpl(POS);
+  // Return this in an aligned memory buffer.
+  return MemoryBuffer::getMemBufferCopy(Data);
 }
 
 static const char *ValueProfKindStr[] = {
@@ -226,21 +281,4 @@ void InstrProfWriter::writeText(raw_fd_ostream &OS) {
   for (const auto &I : FunctionData)
     for (const auto &Func : I.getValue())
       writeRecordInText(Func.second, Symtab, OS);
-}
-
-std::unique_ptr<MemoryBuffer> InstrProfWriter::writeBuffer() {
-  std::string Data;
-  llvm::raw_string_ostream OS(Data);
-  // Write the hash table.
-  auto TableStart = writeImpl(OS);
-  OS.flush();
-
-  // Go back and fill in the hash table start.
-  using namespace support;
-  uint64_t Bytes = endian::byte_swap<uint64_t, little>(TableStart.second);
-  Data.replace(TableStart.first, sizeof(uint64_t), (const char *)&Bytes,
-               sizeof(uint64_t));
-
-  // Return this in an aligned memory buffer.
-  return MemoryBuffer::getMemBufferCopy(Data);
 }

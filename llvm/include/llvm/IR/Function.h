@@ -56,7 +56,6 @@ private:
   mutable ArgumentListType ArgumentList;  ///< The formal arguments
   ValueSymbolTable *SymTab;               ///< Symbol table of args/instructions
   AttributeSet AttributeSets;             ///< Parameter attributes
-  FunctionType *Ty;
 
   /*
    * Value::SubclassData

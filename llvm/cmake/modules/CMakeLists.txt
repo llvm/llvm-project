@@ -90,6 +90,5 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN LLVMConfigVersion.cmake EXCLUDE
     PATTERN LLVM-Config.cmake EXCLUDE
     PATTERN GetHostTriple.cmake EXCLUDE
-    PATTERN VersionFromVCS.cmake EXCLUDE
     PATTERN CheckAtomic.cmake EXCLUDE)
 endif()

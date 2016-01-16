@@ -333,7 +333,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
     OS << "Functions shown: " << ShownFunctions << "\n";
   OS << "Total functions: " << PS.getNumFunctions() << "\n";
   OS << "Maximum function count: " << PS.getMaxFunctionCount() << "\n";
-  OS << "Maximum internal block count: " << PS.getMaxBlockCount() << "\n";
+  OS << "Maximum internal block count: " << PS.getMaxInternalBlockCount() << "\n";
 
   if (ShowDetailedSummary) {
     OS << "Detailed summary:\n";

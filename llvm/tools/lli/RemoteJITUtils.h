@@ -24,7 +24,7 @@
 #endif
 
 /// RPC channel that reads from and writes from file descriptors.
-class FDRPCChannel : public llvm::orc::remote::RPCChannel {
+class FDRPCChannel final : public llvm::orc::remote::RPCChannel {
 public:
   FDRPCChannel(int InFD, int OutFD) : InFD(InFD), OutFD(OutFD) {}
 

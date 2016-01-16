@@ -746,8 +746,8 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
   unsigned OpCode = Is64Bit ? PPC::ISEL8 : PPC::ISEL;
   auto SelectPred = static_cast<PPC::Predicate>(Cond[0].getImm());
 
-  unsigned SubIdx;
-  bool SwapOps;
+  unsigned SubIdx = 0;
+  bool SwapOps = false;
   switch (SelectPred) {
   case PPC::PRED_EQ:
   case PPC::PRED_EQ_MINUS:

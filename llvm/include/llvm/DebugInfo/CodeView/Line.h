@@ -137,6 +137,20 @@ struct InlineeSourceLine {
   //   ulittle32_t Files[];
 };
 
+enum class FileChecksumKind : uint8_t {
+  None,
+  MD5,
+  SHA1,
+  SHA256
+};
+
+struct FileChecksum {
+  ulittle32_t FileNameOffset; // Offset of filename in string table substream.
+  uint8_t ChecksumSize;
+  uint8_t ChecksumKind; // FileChecksumKind
+  // Checksum bytes follow.
+};
+
 } // namespace codeview
 } // namespace llvm
 

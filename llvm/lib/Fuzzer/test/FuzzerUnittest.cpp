@@ -247,8 +247,8 @@ void TestAddWordFromDictionary(Mutator M, int NumIter) {
   MutationDispatcher MD(Rand);
   uint8_t Word1[4] = {0xAA, 0xBB, 0xCC, 0xDD};
   uint8_t Word2[3] = {0xFF, 0xEE, 0xEF};
-  MD.AddWordToManualDictionary(Unit(Word1, Word1 + sizeof(Word1)));
-  MD.AddWordToManualDictionary(Unit(Word2, Word2 + sizeof(Word2)));
+  MD.AddWordToManualDictionary(Word(Word1, sizeof(Word1)));
+  MD.AddWordToManualDictionary(Word(Word2, sizeof(Word2)));
   int FoundMask = 0;
   uint8_t CH0[7] = {0x00, 0x11, 0x22, 0xAA, 0xBB, 0xCC, 0xDD};
   uint8_t CH1[7] = {0x00, 0x11, 0xAA, 0xBB, 0xCC, 0xDD, 0x22};
@@ -285,16 +285,16 @@ TEST(FuzzerMutate, AddWordFromDictionary2) {
 void TestAddWordFromDictionaryWithHint(Mutator M, int NumIter) {
   FuzzerRandomLibc Rand(0);
   MutationDispatcher MD(Rand);
-  uint8_t Word[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xFF, 0xEE, 0xEF};
+  uint8_t W[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xFF, 0xEE, 0xEF};
   size_t PosHint = 7777;
-  MD.AddWordToAutoDictionary(Unit(Word, Word + sizeof(Word)), PosHint);
+  MD.AddWordToAutoDictionary(Word(W, sizeof(W)), PosHint);
   int FoundMask = 0;
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[10000];
     memset(T, 0, sizeof(T));
     size_t NewSize = (MD.*M)(T, 9000, 10000);
-    if (NewSize >= PosHint + sizeof(Word) &&
-        !memcmp(Word, T + PosHint, sizeof(Word)))
+    if (NewSize >= PosHint + sizeof(W) &&
+        !memcmp(W, T + PosHint, sizeof(W)))
       FoundMask = 1;
   }
   EXPECT_EQ(FoundMask, 1);

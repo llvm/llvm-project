@@ -27,8 +27,8 @@ class MDNode;
 /// from this value cannot trap.  If it is not obviously safe to load from the
 /// specified pointer, we do a quick local scan of the basic block containing
 /// ScanFrom, to determine if the address is already accessed.
-bool isSafeToLoadUnconditionally(Value *V, Instruction *ScanFrom,
-                                 unsigned Align);
+bool isSafeToLoadUnconditionally(Value *V, unsigned Align,
+                                 Instruction *ScanFrom);
 
 /// DefMaxInstsToScan - the default number of maximum instructions
 /// to scan in the block, used by FindAvailableLoadedValue().

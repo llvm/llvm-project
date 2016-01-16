@@ -336,6 +336,35 @@ User-supplied mutators
 LibFuzzer allows to use custom (user-supplied) mutators,
 see FuzzerInterface.h_
 
+Startup initialization
+----------------------
+If the library being tested needs to be initialized, there are several options.
+
+The simplest way is to have a statically initialized global object::
+
+   static bool Initialized = DoInitialization();
+
+Alternatively, you may define an optional init function and it will receive
+the program arguments that you can read and modify::
+
+   extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
+    ReadAndMaybeModify(argc, argv);
+    return 0;
+   }
+
+Finally, you may use your own ``main()`` and call ``FuzzerDriver``
+from there, see FuzzerInterface.h_.
+
+Try to avoid initialization inside the target function itself as
+it will skew the coverage data. Don't do this::
+
+    extern "C" int LLVMFuzzerTestOneInput(...) {
+      static bool initialized = false;
+      if (!initialized) { 
+         ...
+      }
+    }
+
 Fuzzing components of LLVM
 ==========================
 

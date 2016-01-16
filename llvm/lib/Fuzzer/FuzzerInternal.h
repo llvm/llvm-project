@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <string>
+#include <string.h>
 #include <vector>
 #include <unordered_set>
 
@@ -25,6 +26,41 @@
 
 namespace fuzzer {
 using namespace std::chrono;
+typedef std::vector<uint8_t> Unit;
+
+// A simple POD sized array of bytes.
+template<size_t kMaxSize>
+class FixedWord {
+ public:
+
+  FixedWord() : Size(0) {}
+  FixedWord(const uint8_t *B, uint8_t S) { Set(B, S); }
+
+  void Set(const uint8_t *B, uint8_t S) {
+    assert(S <= kMaxSize);
+    memcpy(Data, B, S);
+    Size = S;
+  }
+
+  bool operator == (const FixedWord<kMaxSize> &w) const {
+    return Size == w.Size && 0 == memcmp(Data, w.Data, Size);
+  }
+
+  bool operator < (const FixedWord<kMaxSize> &w) const {
+    if (Size != w.Size) return Size < w.Size;
+    return memcmp(Data, w.Data, Size) < 0;
+  }
+
+  static size_t GetMaxSize() { return kMaxSize; }
+  const uint8_t *data() const { return Data; }
+  uint8_t size() const { return Size; }
+
+ private:
+  uint8_t Size;
+  uint8_t Data[kMaxSize];
+};
+
+typedef FixedWord<27> Word;  // 28 bytes.
 
 std::string FileToString(const std::string &Path);
 Unit FileToVector(const std::string &Path);
@@ -42,6 +78,7 @@ void PrintHexArray(const uint8_t *Data, size_t Size,
                    const char *PrintAfter = "");
 void PrintASCII(const uint8_t *Data, size_t Size, const char *PrintAfter = "");
 void PrintASCII(const Unit &U, const char *PrintAfter = "");
+void PrintASCII(const Word &W, const char *PrintAfter = "");
 std::string Hash(const Unit &U);
 void SetTimer(int Seconds);
 std::string Base64(const Unit &U);
@@ -69,6 +106,67 @@ bool ParseOneDictionaryEntry(const std::string &Str, Unit *U);
 // Parses the dictionary file, fills Units, returns true iff all lines
 // were parsed succesfully.
 bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units);
+
+class MutationDispatcher {
+ public:
+  MutationDispatcher(FuzzerRandomBase &Rand);
+  ~MutationDispatcher();
+  /// Indicate that we are about to start a new sequence of mutations.
+  void StartMutationSequence();
+  /// Print the current sequence of mutations.
+  void PrintMutationSequence();
+  /// Indicate that the current sequence of mutations was successfull.
+  void RecordSuccessfulMutationSequence();
+  /// Mutates data by shuffling bytes.
+  size_t Mutate_ShuffleBytes(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by erasing a byte.
+  size_t Mutate_EraseByte(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by inserting a byte.
+  size_t Mutate_InsertByte(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by chanding one byte.
+  size_t Mutate_ChangeByte(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by chanding one bit.
+  size_t Mutate_ChangeBit(uint8_t *Data, size_t Size, size_t MaxSize);
+
+  /// Mutates data by adding a word from the manual dictionary.
+  size_t Mutate_AddWordFromManualDictionary(uint8_t *Data, size_t Size,
+                                            size_t MaxSize);
+
+  /// Mutates data by adding a word from the temporary automatic dictionary.
+  size_t Mutate_AddWordFromTemporaryAutoDictionary(uint8_t *Data, size_t Size,
+                                                   size_t MaxSize);
+
+  /// Mutates data by adding a word from the persistent automatic dictionary.
+  size_t Mutate_AddWordFromPersistentAutoDictionary(uint8_t *Data, size_t Size,
+                                                    size_t MaxSize);
+
+  /// Tries to find an ASCII integer in Data, changes it to another ASCII int.
+  size_t Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size, size_t MaxSize);
+
+  /// CrossOver Data with some other element of the corpus.
+  size_t Mutate_CrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
+
+  /// Applies one of the above mutations.
+  /// Returns the new size of data which could be up to MaxSize.
+  size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize);
+
+  /// Creates a cross-over of two pieces of Data, returns its size.
+  size_t CrossOver(const uint8_t *Data1, size_t Size1, const uint8_t *Data2,
+                   size_t Size2, uint8_t *Out, size_t MaxOutSize);
+
+  void AddWordToManualDictionary(const Word &W);
+
+  void AddWordToAutoDictionary(const Word &W, size_t PositionHint);
+  void ClearAutoDictionary();
+  void PrintRecommendedDictionary();
+
+  void SetCorpus(const std::vector<Unit> *Corpus);
+
+ private:
+  FuzzerRandomBase &Rand;
+  struct Impl;
+  Impl *MDImpl;
+};
 
 class Fuzzer {
  public:

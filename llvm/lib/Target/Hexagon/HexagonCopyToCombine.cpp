@@ -42,6 +42,11 @@ cl::opt<bool> IsCombinesDisabled("disable-merge-into-combines",
                                  cl::init(false),
                                  cl::desc("Disable merging into combines"));
 static
+cl::opt<bool> IsConst64Disabled("disable-const64",
+                                 cl::Hidden, cl::ZeroOrMore,
+                                 cl::init(false),
+                                 cl::desc("Disable generation of const64"));
+static
 cl::opt<unsigned>
 MaxNumOfInstsBetweenNewValueStoreAndTFR("max-num-inst-between-tfr-and-nv-store",
                    cl::Hidden, cl::init(4),
@@ -62,6 +67,8 @@ class HexagonCopyToCombine : public MachineFunctionPass  {
   bool ShouldCombineAggressively;
 
   DenseSet<MachineInstr *> PotentiallyNewifiableTFR;
+  SmallVector<MachineInstr *, 8> DbgMItoMove;
+
 public:
   static char ID;
 
@@ -80,12 +87,14 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
 private:
-  MachineInstr *findPairable(MachineInstr *I1, bool &DoInsertAtI1);
+  MachineInstr *findPairable(MachineInstr *I1, bool &DoInsertAtI1,
+                             bool AllowC64);
 
   void findPotentialNewifiableTFRs(MachineBasicBlock &);
 
   void combine(MachineInstr *I1, MachineInstr *I2,
-               MachineBasicBlock::iterator &MI, bool DoInsertAtI1);
+               MachineBasicBlock::iterator &MI, bool DoInsertAtI1,
+               bool OptForSize);
 
   bool isSafeToMoveTogether(MachineInstr *I1, MachineInstr *I2,
                             unsigned I1DestReg, unsigned I2DestReg,
@@ -102,6 +111,9 @@ private:
 
   void emitCombineII(MachineBasicBlock::iterator &Before, unsigned DestReg,
                      MachineOperand &HiOperand, MachineOperand &LoOperand);
+
+  void emitConst64(MachineBasicBlock::iterator &Before, unsigned DestReg,
+                   MachineOperand &HiOperand, MachineOperand &LoOperand);
 };
 
 } // End anonymous namespace.
@@ -168,7 +180,7 @@ static bool isGreaterThanNBitTFRI(const MachineInstr *I) {
 /// into a combine (ignoring register constraints).
 static bool areCombinableOperations(const TargetRegisterInfo *TRI,
                                     MachineInstr *HighRegInst,
-                                    MachineInstr *LowRegInst) {
+                                    MachineInstr *LowRegInst, bool AllowC64) {
   unsigned HiOpc = HighRegInst->getOpcode();
   unsigned LoOpc = LowRegInst->getOpcode();
   (void)HiOpc; // Fix compiler warning
@@ -177,9 +189,24 @@ static bool areCombinableOperations(const TargetRegisterInfo *TRI,
          (LoOpc == Hexagon::A2_tfr || LoOpc == Hexagon::A2_tfrsi) &&
          "Assume individual instructions are of a combinable type");
 
-  // There is no combine of two constant extended values.
+  if (!AllowC64) {
+    // There is no combine of two constant extended values.
+    if (isGreaterThanNBitTFRI<8>(HighRegInst) &&
+        isGreaterThanNBitTFRI<6>(LowRegInst))
+      return false;
+  }
+
+  // There is a combine of two constant extended values into CONST64,
+  // provided both constants are true immediates.
+  if (isGreaterThanNBitTFRI<16>(HighRegInst) &&
+      isGreaterThanNBitTFRI<16>(LowRegInst))
+    return (HighRegInst->getOperand(1).isImm() &&
+            LowRegInst->getOperand(1).isImm());
+
+  // There is no combine of two constant extended values, unless handled above
+  // Make both 8-bit size checks to allow both combine (#,##) and combine(##,#)
   if (isGreaterThanNBitTFRI<8>(HighRegInst) &&
-      isGreaterThanNBitTFRI<6>(LowRegInst))
+      isGreaterThanNBitTFRI<8>(LowRegInst))
     return false;
 
   return true;
@@ -257,6 +284,9 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr *I1,
       //   * reads I2's def reg
       //   * or has unmodelled side effects
       // we can't move I2 across it.
+      if (I->isDebugValue())
+        continue;
+
       if (isUnsafeToMoveAcross(&*I, I2UseReg, I2DestReg, TRI)) {
         isSafe = false;
         break;
@@ -304,13 +334,19 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr *I1,
       //   kill flag for a register (a removeRegisterKilled() analogous to
       //   addRegisterKilled) that handles aliased register correctly.
       //   * or has a killed aliased register use of I1's use reg
-      //           %D4<def> = TFRI64 16
-      //           %R6<def> = TFR %R9
+      //           %D4<def> = A2_tfrpi 16
+      //           %R6<def> = A2_tfr %R9
       //           %R8<def> = KILL %R8, %D4<imp-use,kill>
       //      If we want to move R6 = across the KILL instruction we would have
       //      to remove the %D4<imp-use,kill> operand. For now, we are
       //      conservative and disallow the move.
       // we can't move I1 across it.
+      if (I->isDebugValue()) {
+        if (I->readsRegister(I1DestReg, TRI)) // Move this instruction after I2.
+          DbgMItoMove.push_back(I);
+        continue;
+      }
+
       if (isUnsafeToMoveAcross(I, I1UseReg, I1DestReg, TRI) ||
           // Check for an aliased register kill. Bail out if we see one.
           (!I->killsRegister(I1UseReg) && I->killsRegister(I1UseReg, TRI)))
@@ -344,6 +380,9 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
   DenseMap<unsigned, MachineInstr *> LastDef;
   for (MachineBasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ++I) {
     MachineInstr *MI = I;
+    if (MI->isDebugValue())
+      continue;
+
     // Mark TFRs that feed a potential new value store as such.
     if(TII->mayBeNewStore(MI)) {
       // Look for uses of TFR instructions.
@@ -364,10 +403,14 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
           continue;
 
         // Only close newifiable stores should influence the decision.
+        // Ignore the debug instructions in between.
         MachineBasicBlock::iterator It(DefInst);
         unsigned NumInstsToDef = 0;
-        while (&*It++ != MI)
-          ++NumInstsToDef;
+        while (&*It != MI) {
+          if (!It->isDebugValue())
+            ++NumInstsToDef;
+          *It++;
+        }
 
         if (NumInstsToDef > MaxNumOfInstsBetweenNewValueStoreAndTFR)
           continue;
@@ -405,6 +448,9 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
 
+  const Function *F = MF.getFunction();
+  bool OptForSize = F->hasFnAttribute(Attribute::OptimizeForSize);
+
   // Combine aggressively (for code size)
   ShouldCombineAggressively =
     MF.getTarget().getOptLevel() <= CodeGenOpt::Default;
@@ -419,6 +465,10 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
     for(MachineBasicBlock::iterator MI = BI->begin(), End = BI->end();
         MI != End;) {
       MachineInstr *I1 = MI++;
+
+      if (I1->isDebugValue())
+        continue;
+
       // Don't combine a TFR whose user could be newified (instructions that
       // define double registers can not be newified - Programmer's Ref Manual
       // 5.4.2 New-value stores).
@@ -430,12 +480,14 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       // Find a second instruction that can be merged into a combine
-      // instruction.
+      // instruction. In addition, also find all the debug instructions that
+      // need to be moved along with it.
       bool DoInsertAtI1 = false;
-      MachineInstr *I2 = findPairable(I1, DoInsertAtI1);
+      DbgMItoMove.clear();
+      MachineInstr *I2 = findPairable(I1, DoInsertAtI1, OptForSize);
       if (I2) {
         HasChanged = true;
-        combine(I1, I2, MI, DoInsertAtI1);
+        combine(I1, I2, MI, DoInsertAtI1, OptForSize);
       }
     }
   }
@@ -448,8 +500,13 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
 /// in \p DoInsertAtI1 if the combine must be inserted at instruction \p I1
 /// false if the combine must be inserted at the returned instruction.
 MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr *I1,
-                                                 bool &DoInsertAtI1) {
+                                                 bool &DoInsertAtI1,
+                                                 bool AllowC64) {
   MachineBasicBlock::iterator I2 = std::next(MachineBasicBlock::iterator(I1));
+
+  while (I2->isDebugValue())
+    ++I2;
+
   unsigned I1DestReg = I1->getOperand(0).getReg();
 
   for (MachineBasicBlock::iterator End = I1->getParent()->end(); I2 != End;
@@ -478,10 +535,10 @@ MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr *I1,
 
     // Check that the two instructions are combinable. V4 allows more
     // instructions to be merged into a combine.
-    // The order matters because in a TFRI we might can encode a int8 as the
-    // hi reg operand but only a uint6 as the low reg operand.
-    if ((IsI2LowReg && !areCombinableOperations(TRI, I1, I2)) ||
-        (IsI1LowReg && !areCombinableOperations(TRI, I2, I1)))
+    // The order matters because in a A2_tfrsi we might can encode a int8 as
+    // the hi reg operand but only a uint6 as the low reg operand.
+    if ((IsI2LowReg && !areCombinableOperations(TRI, I1, I2, AllowC64)) ||
+        (IsI1LowReg && !areCombinableOperations(TRI, I2, I1, AllowC64)))
       break;
 
     if (isSafeToMoveTogether(I1, I2, I1DestReg, I2DestReg,
@@ -496,7 +553,7 @@ MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr *I1,
 
 void HexagonCopyToCombine::combine(MachineInstr *I1, MachineInstr *I2,
                                    MachineBasicBlock::iterator &MI,
-                                   bool DoInsertAtI1) {
+                                   bool DoInsertAtI1, bool OptForSize) {
   // We are going to delete I2. If MI points to I2 advance it to the next
   // instruction.
   if ((MachineInstr *)MI == I2) ++MI;
@@ -524,6 +581,10 @@ void HexagonCopyToCombine::combine(MachineInstr *I1, MachineInstr *I2,
   bool IsHiReg = HiOperand.isReg();
   bool IsLoReg = LoOperand.isReg();
 
+  // There is a combine of two constant extended values into CONST64.
+  bool IsC64 = OptForSize && LoOperand.isImm() && HiOperand.isImm() &&
+               isGreaterThanNBitTFRI<16>(I1) && isGreaterThanNBitTFRI<16>(I2);
+
   MachineBasicBlock::iterator InsertPt(DoInsertAtI1 ? I1 : I2);
   // Emit combine.
   if (IsHiReg && IsLoReg)
@@ -532,11 +593,45 @@ void HexagonCopyToCombine::combine(MachineInstr *I1, MachineInstr *I2,
     emitCombineRI(InsertPt, DoubleRegDest, HiOperand, LoOperand);
   else if (IsLoReg)
     emitCombineIR(InsertPt, DoubleRegDest, HiOperand, LoOperand);
+  else if (IsC64 && !IsConst64Disabled)
+    emitConst64(InsertPt, DoubleRegDest, HiOperand, LoOperand);
   else
     emitCombineII(InsertPt, DoubleRegDest, HiOperand, LoOperand);
 
+  // Move debug instructions along with I1 if it's being
+  // moved towards I2.
+  if (!DoInsertAtI1 && DbgMItoMove.size() != 0) {
+    // Insert debug instructions at the new location before I2.
+    MachineBasicBlock *BB = InsertPt->getParent();
+    for (auto NewMI : DbgMItoMove) {
+      // If iterator MI is pointing to DEBUG_VAL, make sure
+      // MI now points to next relevant instruction.
+      if (NewMI == (MachineInstr*)MI)
+        ++MI;
+      BB->splice(InsertPt, BB, NewMI);
+    }
+  }
+
   I1->eraseFromParent();
   I2->eraseFromParent();
+}
+
+void HexagonCopyToCombine::emitConst64(MachineBasicBlock::iterator &InsertPt,
+                                       unsigned DoubleDestReg,
+                                       MachineOperand &HiOperand,
+                                       MachineOperand &LoOperand) {
+  DEBUG(dbgs() << "Found a CONST64\n");
+
+  DebugLoc DL = InsertPt->getDebugLoc();
+  MachineBasicBlock *BB = InsertPt->getParent();
+  assert(LoOperand.isImm() && HiOperand.isImm() &&
+         "Both operands must be immediate");
+
+  int64_t V = HiOperand.getImm();
+  V = (V << 32) | (0x0ffffffffLL & LoOperand.getImm());
+  BuildMI(*BB, InsertPt, DL, TII->get(Hexagon::CONST64_Int_Real),
+    DoubleDestReg)
+    .addImm(V);
 }
 
 void HexagonCopyToCombine::emitCombineII(MachineBasicBlock::iterator &InsertPt,

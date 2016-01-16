@@ -5,10 +5,7 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-; FIXME: make this 'external' and make sure it still works. WebAssembly
-;        currently only supports linking single files, so 'external' makes
-;        little sense.
-@x = global [0 x i32] zeroinitializer
+@x = external global [0 x i32]
 @y = global [50 x i32] zeroinitializer
 
 ; Test basic constant offsets of both defined and external symbols.

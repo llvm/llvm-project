@@ -478,7 +478,7 @@ void Fuzzer::Drill() {
 void Fuzzer::Loop() {
   system_clock::time_point LastCorpusReload = system_clock::now();
   if (Options.DoCrossOver)
-    USF.SetCorpus(&Corpus);
+    USF.GetMD().SetCorpus(&Corpus);
   while (true) {
     SyncCorpus();
     auto Now = system_clock::now();

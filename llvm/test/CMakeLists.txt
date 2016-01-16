@@ -61,6 +61,7 @@ set(LLVM_TEST_DEPENDS
           obj2yaml
           opt
           sancov
+          sanstats
           verify-uselistorder
           yaml-bench
           yaml2obj

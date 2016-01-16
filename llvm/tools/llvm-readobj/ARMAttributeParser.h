@@ -100,8 +100,6 @@ class ARMAttributeParser {
                        uint32_t &Offset);
   void DIV_use(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
                uint32_t &Offset);
-  void DSP_extension(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
-                     uint32_t &Offset);
   void T2EE_use(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
                 uint32_t &Offset);
   void Virtualization_use(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,

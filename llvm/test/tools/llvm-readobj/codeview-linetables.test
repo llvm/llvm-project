@@ -34,11 +34,11 @@ MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
 MFUN32-NEXT:     SubSectionSize: 0x52
 MFUN32:        ]
-MFUN32:       Subsection [
+MFUN32:        Subsection [
 MFUN32-NEXT:     SubSectionType: FrameData (0xF5)
 MFUN32-NEXT:     SubSectionSize: 0x24
 MFUN32:        ]
-MFUN32-NEXT:   Subsection [
+MFUN32:        Subsection [
 MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
 MFUN32-NEXT:     SubSectionSize: 0x4B
 MFUN32:          ProcStart {
@@ -48,7 +48,7 @@ MFUN32:            LinkageName: _x
 MFUN32:          }
 MFUN32:          ProcEnd
 MFUN32:        ]
-MFUN32-NEXT:   Subsection [
+MFUN32:        Subsection [
 MFUN32-NEXT:     SubSectionType: Lines (0xF2)
 MFUN32-NEXT:     SubSectionSize: 0x30
 MFUN32:          LinkageName: _x
@@ -57,7 +57,7 @@ MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     SubSectionType: FrameData (0xF5)
 MFUN32-NEXT:     SubSectionSize: 0x24
 MFUN32:        ]
-MFUN32-NEXT:   Subsection [
+MFUN32:        Subsection [
 MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
 MFUN32-NEXT:     SubSectionSize: 0x4B
 MFUN32:          ProcStart {
@@ -76,7 +76,7 @@ MFUN32-NEXT:   Subsection [
 MFUN32-NEXT:     SubSectionType: FrameData (0xF5)
 MFUN32-NEXT:     SubSectionSize: 0x24
 MFUN32:        ]
-MFUN32-NEXT:   Subsection [
+MFUN32:        Subsection [
 MFUN32-NEXT:     SubSectionType: Symbols (0xF1)
 MFUN32-NEXT:     SubSectionSize: 0x4B
 MFUN32:          ProcStart {
@@ -86,7 +86,7 @@ MFUN32:            LinkageName: _f
 MFUN32:          }
 MFUN32:          ProcEnd
 MFUN32:        ]
-MFUN32-NEXT:   Subsection [
+MFUN32:        Subsection [
 MFUN32-NEXT:     SubSectionType: Lines (0xF2)
 MFUN32-NEXT:     SubSectionSize: 0x40
 MFUN32:          LinkageName: _f
@@ -362,7 +362,7 @@ MFILE32:        Subsection [
 MFILE32-NEXT:     SubSectionType: FrameData (0xF5)
 MFILE32-NEXT:     SubSectionSize: 0x24
 MFILE32:        ]
-MFILE32-NEXT:   Subsection [
+MFILE32:        Subsection [
 MFILE32-NEXT:     SubSectionType: Symbols (0xF1)
 MFILE32-NEXT:     SubSectionSize: 0x4B
 MFILE32:          ProcStart {

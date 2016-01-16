@@ -852,8 +852,8 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
     if (SelectInst *SI = dyn_cast<SelectInst>(Op)) {
       // load (select (Cond, &V1, &V2))  --> select(Cond, load &V1, load &V2).
       unsigned Align = LI.getAlignment();
-      if (isSafeToLoadUnconditionally(SI->getOperand(1), SI, Align) &&
-          isSafeToLoadUnconditionally(SI->getOperand(2), SI, Align)) {
+      if (isSafeToLoadUnconditionally(SI->getOperand(1), Align, SI) &&
+          isSafeToLoadUnconditionally(SI->getOperand(2), Align, SI)) {
         LoadInst *V1 = Builder->CreateLoad(SI->getOperand(1),
                                            SI->getOperand(1)->getName()+".val");
         LoadInst *V2 = Builder->CreateLoad(SI->getOperand(2),
