@@ -257,6 +257,7 @@ void nowarnnonpoly() {
   }
 }
 
+// FIXME: Why are these supposed to not warn?
 void nowarnarray() {
   {
     B* b = new B[4];
@@ -311,6 +312,14 @@ void nowarn0() {
   }
 }
 
+void nowarn0_explicit_dtor(F* f, VB* vb, VD* vd, VF* vf) {
+  f->~F();
+  f->~F();
+  vb->~VB();
+  vd->~VD();
+  vf->~VF();
+}
+
 void warn0() {
   {
     B* b = new B();
@@ -324,6 +333,17 @@ void warn0() {
     D* d = new D();
     delete d; // expected-warning {{delete called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}}
   }
+}
+
+void warn0_explicit_dtor(B* b, B& br, D* d) {
+  b->~B(); // expected-warning {{destructor called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} expected-note{{qualify call to silence this warning}}
+  b->B::~B(); // No warning when the call isn't virtual.
+
+  br.~B(); // expected-warning {{destructor called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} expected-note{{qualify call to silence this warning}}
+  br.B::~B();
+
+  d->~D(); // expected-warning {{destructor called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}} expected-note{{qualify call to silence this warning}}
+  d->D::~D();
 }
 
 void nowarn1() {

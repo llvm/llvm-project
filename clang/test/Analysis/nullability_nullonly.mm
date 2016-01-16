@@ -1,5 +1,21 @@
 // RUN: %clang_cc1 -analyze -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -verify %s
 
+#define nil 0
+#define BOOL int
+
+@protocol NSObject
++ (id)alloc;
+- (id)init;
+@end
+
+@protocol NSCopying
+@end
+
+__attribute__((objc_root_class))
+@interface
+NSObject<NSObject>
+@end
+
 int getRandom();
 
 typedef struct Dummy { int val; } Dummy;
@@ -85,3 +101,27 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
     takesNonnull(p);
   return p;
 }
+
+
+@interface SomeClass : NSObject
+@end
+
+@implementation SomeClass (MethodReturn)
+- (SomeClass * _Nonnull)testReturnsNilInNonnull {
+  SomeClass *local = nil;
+  return local; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
+}
+
+- (SomeClass * _Nonnull)testReturnsCastSuppressedNilInNonnull {
+  SomeClass *local = nil;
+  return (SomeClass * _Nonnull)local; // no-warning
+}
+
+- (SomeClass * _Nonnull)testReturnsNilInNonnullWhenPreconditionViolated:(SomeClass * _Nonnull) p {
+  SomeClass *local = nil;
+  if (!p) // Pre-condition violated here.
+    return local; // no-warning
+  else
+    return p; // no-warning
+}
+@end

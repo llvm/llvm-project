@@ -1632,7 +1632,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       ConsumeToken(); // consume 'in'
 
       if (Tok.is(tok::code_completion)) {
-        Actions.CodeCompleteObjCForCollection(getCurScope(), DeclGroupPtrTy());
+        Actions.CodeCompleteObjCForCollection(getCurScope(), nullptr);
         cutOffParsing();
         return StmtError();
       }

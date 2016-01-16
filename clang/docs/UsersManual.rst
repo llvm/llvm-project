@@ -1038,6 +1038,11 @@ are listed below.
    Enable simple code coverage in addition to certain sanitizers.
    See :doc:`SanitizerCoverage` for more details.
 
+**-f[no-]sanitize-stats**
+
+   Enable simple statistics gathering for the enabled sanitizers.
+   See :doc:`SanitizerStats` for more details.
+
 .. option:: -fsanitize-undefined-trap-on-error
 
    Deprecated alias for ``-fsanitize-trap=undefined``.

@@ -2040,7 +2040,7 @@ Sema::ObjCMessageKind Sema::getObjCMessageKind(Scope *S,
                                                bool IsSuper,
                                                bool HasTrailingDot,
                                                ParsedType &ReceiverType) {
-  ReceiverType = ParsedType();
+  ReceiverType = nullptr;
 
   // If the identifier is "super" and there is no trailing dot, we're
   // messaging super. If the identifier is "super" and there is a

@@ -43,19 +43,9 @@ class SymExpr : public llvm::FoldingSetNode {
   virtual void anchor();
 public:
   enum Kind {
-    SymbolRegionValueKind,
-    SymbolConjuredKind,
-    SymbolDerivedKind,
-    SymbolExtentKind,
-    SymbolMetadataKind,
-    BEGIN_SYMBOLS = SymbolRegionValueKind,
-    END_SYMBOLS = SymbolMetadataKind,
-    SymIntExprKind,
-    IntSymExprKind,
-    SymSymExprKind,
-    BEGIN_BINARYSYMEXPRS = SymIntExprKind,
-    END_BINARYSYMEXPRS = SymSymExprKind,
-    SymbolCastKind
+#define SYMBOL(Id, Parent) Id ## Kind,
+#define SYMBOL_RANGE(Id, First, Last) BEGIN_##Id = First, END_##Id = Last,
+#include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
   };
 
 private:

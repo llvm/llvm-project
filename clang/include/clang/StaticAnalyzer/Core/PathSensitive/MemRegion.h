@@ -76,51 +76,13 @@ public:
 
 /// MemRegion - The root abstract class for all memory regions.
 class MemRegion : public llvm::FoldingSetNode {
-  friend class MemRegionManager;
 public:
   enum Kind {
-    // Memory spaces.
-    CodeSpaceRegionKind,
-    StackLocalsSpaceRegionKind,
-    StackArgumentsSpaceRegionKind,
-    HeapSpaceRegionKind,
-    UnknownSpaceRegionKind,
-    StaticGlobalSpaceRegionKind,
-    GlobalInternalSpaceRegionKind,
-    GlobalSystemSpaceRegionKind,
-    GlobalImmutableSpaceRegionKind,
-    BEGIN_NON_STATIC_GLOBAL_MEMSPACES = GlobalInternalSpaceRegionKind,
-    END_NON_STATIC_GLOBAL_MEMSPACES = GlobalImmutableSpaceRegionKind,
-    BEGIN_GLOBAL_MEMSPACES = StaticGlobalSpaceRegionKind,
-    END_GLOBAL_MEMSPACES = GlobalImmutableSpaceRegionKind,
-    BEGIN_MEMSPACES = CodeSpaceRegionKind,
-    END_MEMSPACES = GlobalImmutableSpaceRegionKind,
-    // Untyped regions.
-    SymbolicRegionKind,
-    AllocaRegionKind,
-    // Typed regions.
-    BEGIN_TYPED_REGIONS,
-    FunctionCodeRegionKind = BEGIN_TYPED_REGIONS,
-    BlockCodeRegionKind,
-    BlockDataRegionKind,
-    BEGIN_TYPED_VALUE_REGIONS,
-    CompoundLiteralRegionKind = BEGIN_TYPED_VALUE_REGIONS,
-    CXXThisRegionKind,
-    StringRegionKind,
-    ObjCStringRegionKind,
-    ElementRegionKind,
-    // Decl Regions.
-    BEGIN_DECL_REGIONS,
-    VarRegionKind = BEGIN_DECL_REGIONS,
-    FieldRegionKind,
-    ObjCIvarRegionKind,
-    END_DECL_REGIONS = ObjCIvarRegionKind,
-    CXXTempObjectRegionKind,
-    CXXBaseObjectRegionKind,
-    END_TYPED_VALUE_REGIONS = CXXBaseObjectRegionKind,
-    END_TYPED_REGIONS = CXXBaseObjectRegionKind
+#define REGION(Id, Parent) Id ## Kind,
+#define REGION_RANGE(Id, First, Last) BEGIN_##Id = First, END_##Id = Last,
+#include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
   };
-    
+
 private:
   const Kind kind;
 
@@ -386,8 +348,7 @@ public:
 
   static bool classof(const MemRegion *R) {
     Kind k = R->getKind();
-    return k >= StackLocalsSpaceRegionKind &&
-           k <= StackArgumentsSpaceRegionKind;
+    return k >= BEGIN_STACK_MEMSPACES && k <= END_STACK_MEMSPACES;
   }
 };
 
@@ -549,7 +510,7 @@ public:
 
   static bool classof(const MemRegion* R) {
     Kind k = R->getKind();
-    return k >= FunctionCodeRegionKind && k <= BlockCodeRegionKind;
+    return k >= BEGIN_CODE_TEXT_REGIONS && k <= END_CODE_TEXT_REGIONS;
   }
 };
 

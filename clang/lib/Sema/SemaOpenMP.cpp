@@ -1141,7 +1141,7 @@ Sema::ActOnOpenMPThreadprivateDirective(SourceLocation Loc,
     CurContext->addDecl(D);
     return DeclGroupPtrTy::make(DeclGroupRef(D));
   }
-  return DeclGroupPtrTy();
+  return nullptr;
 }
 
 namespace {
@@ -5699,6 +5699,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_simd:
   case OMPC_map:
   case OMPC_nogroup:
+  case OMPC_dist_schedule:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -5982,6 +5983,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_nogroup:
   case OMPC_num_tasks:
   case OMPC_hint:
+  case OMPC_dist_schedule:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -6079,6 +6081,11 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
     Res = ActOnOpenMPIfClause(static_cast<OpenMPDirectiveKind>(Argument.back()),
                               Expr, StartLoc, LParenLoc, ArgumentLoc.back(),
                               DelimLoc, EndLoc);
+    break;
+  case OMPC_dist_schedule:
+    Res = ActOnOpenMPDistScheduleClause(
+        static_cast<OpenMPDistScheduleClauseKind>(Argument.back()), Expr,
+        StartLoc, LParenLoc, ArgumentLoc.back(), DelimLoc, EndLoc);
     break;
   case OMPC_final:
   case OMPC_num_threads:
@@ -6303,6 +6310,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_grainsize:
   case OMPC_num_tasks:
   case OMPC_hint:
+  case OMPC_dist_schedule:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -6444,6 +6452,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_nogroup:
   case OMPC_num_tasks:
   case OMPC_hint:
+  case OMPC_dist_schedule:
   case OMPC_unknown:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -8542,3 +8551,55 @@ OMPClause *Sema::ActOnOpenMPHintClause(Expr *Hint, SourceLocation StartLoc,
       OMPHintClause(HintExpr.get(), StartLoc, LParenLoc, EndLoc);
 }
 
+OMPClause *Sema::ActOnOpenMPDistScheduleClause(
+    OpenMPDistScheduleClauseKind Kind, Expr *ChunkSize, SourceLocation StartLoc,
+    SourceLocation LParenLoc, SourceLocation KindLoc, SourceLocation CommaLoc,
+    SourceLocation EndLoc) {
+  if (Kind == OMPC_DIST_SCHEDULE_unknown) {
+    std::string Values;
+    Values += "'";
+    Values += getOpenMPSimpleClauseTypeName(OMPC_dist_schedule, 0);
+    Values += "'";
+    Diag(KindLoc, diag::err_omp_unexpected_clause_value)
+        << Values << getOpenMPClauseName(OMPC_dist_schedule);
+    return nullptr;
+  }
+  Expr *ValExpr = ChunkSize;
+  Expr *HelperValExpr = nullptr;
+  if (ChunkSize) {
+    if (!ChunkSize->isValueDependent() && !ChunkSize->isTypeDependent() &&
+        !ChunkSize->isInstantiationDependent() &&
+        !ChunkSize->containsUnexpandedParameterPack()) {
+      SourceLocation ChunkSizeLoc = ChunkSize->getLocStart();
+      ExprResult Val =
+          PerformOpenMPImplicitIntegerConversion(ChunkSizeLoc, ChunkSize);
+      if (Val.isInvalid())
+        return nullptr;
+
+      ValExpr = Val.get();
+
+      // OpenMP [2.7.1, Restrictions]
+      //  chunk_size must be a loop invariant integer expression with a positive
+      //  value.
+      llvm::APSInt Result;
+      if (ValExpr->isIntegerConstantExpr(Result, Context)) {
+        if (Result.isSigned() && !Result.isStrictlyPositive()) {
+          Diag(ChunkSizeLoc, diag::err_omp_negative_expression_in_clause)
+              << "dist_schedule" << ChunkSize->getSourceRange();
+          return nullptr;
+        }
+      } else if (isParallelOrTaskRegion(DSAStack->getCurrentDirective())) {
+        auto *ImpVar = buildVarDecl(*this, ChunkSize->getExprLoc(),
+                                    ChunkSize->getType(), ".chunk.");
+        auto *ImpVarRef = buildDeclRefExpr(*this, ImpVar, ChunkSize->getType(),
+                                           ChunkSize->getExprLoc(),
+                                           /*RefersToCapture=*/true);
+        HelperValExpr = ImpVarRef;
+      }
+    }
+  }
+
+  return new (Context)
+      OMPDistScheduleClause(StartLoc, LParenLoc, KindLoc, CommaLoc, EndLoc,
+                            Kind, ValExpr, HelperValExpr);
+}

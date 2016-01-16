@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 32
+#define CINDEX_VERSION_MINOR 33
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -2431,6 +2431,11 @@ CINDEX_LINKAGE unsigned clang_isStatement(enum CXCursorKind);
 CINDEX_LINKAGE unsigned clang_isAttribute(enum CXCursorKind);
 
 /**
+ * \brief Determine whether the given cursor has any attributes.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_hasAttrs(CXCursor C);
+
+/**
  * \brief Determine whether the given cursor kind represents an invalid
  * cursor.
  */
@@ -3170,6 +3175,24 @@ CINDEX_LINKAGE CXType clang_getCanonicalType(CXType T);
 CINDEX_LINKAGE unsigned clang_isConstQualifiedType(CXType T);
 
 /**
+ * \brief Determine whether a  CXCursor that is a macro, is
+ * function like.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isMacroFunctionLike(CXCursor C);
+
+/**
+ * \brief Determine whether a  CXCursor that is a macro, is a
+ * builtin one.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isMacroBuiltin(CXCursor C);
+
+/**
+ * \brief Determine whether a  CXCursor that is a function declaration, is an
+ * inline declaration.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isFunctionInlined(CXCursor C);
+
+/**
  * \brief Determine whether a CXType has the "volatile" qualifier set,
  * without looking through typedefs that may have added "volatile" at
  * a different level.
@@ -3197,6 +3220,11 @@ CINDEX_LINKAGE CXCursor clang_getTypeDeclaration(CXType T);
  * Returns the Objective-C type encoding for the specified declaration.
  */
 CINDEX_LINKAGE CXString clang_getDeclObjCTypeEncoding(CXCursor C);
+
+/**
+ * Returns the Objective-C type encoding for the specified CXType.
+ */
+CINDEX_LINKAGE CXString clang_Type_getObjCEncoding(CXType type); 
 
 /**
  * \brief Retrieve the spelling of a given CXTypeKind.
@@ -5077,6 +5105,59 @@ CINDEX_LINKAGE void clang_getInclusions(CXTranslationUnit tu,
                                         CXInclusionVisitor visitor,
                                         CXClientData client_data);
 
+typedef enum {
+  CXEval_Int = 1 ,
+  CXEval_Float = 2,
+  CXEval_ObjCStrLiteral = 3,
+  CXEval_StrLiteral = 4,
+  CXEval_CFStr = 5,
+  CXEval_Other = 6,
+
+  CXEval_UnExposed = 0
+
+} CXEvalResultKind ;
+
+/**
+ * \brief Evaluation result of a cursor
+ */
+typedef void * CXEvalResult;
+
+/**
+ * \brief If cursor is a statement declaration tries to evaluate the 
+ * statement and if its variable, tries to evaluate its initializer,
+ * into its corresponding type.
+ */
+CINDEX_LINKAGE CXEvalResult clang_Cursor_Evaluate(CXCursor C);
+
+/**
+ * \brief Returns the kind of the evaluated result.
+ */
+CINDEX_LINKAGE CXEvalResultKind clang_EvalResult_getKind(CXEvalResult E);
+
+/**
+ * \brief Returns the evaluation result as integer if the
+ * kind is Int.
+ */
+CINDEX_LINKAGE int clang_EvalResult_getAsInt(CXEvalResult E);
+
+/**
+ * \brief Returns the evaluation result as double if the
+ * kind is double.
+ */
+CINDEX_LINKAGE double clang_EvalResult_getAsDouble(CXEvalResult E);
+
+/**
+ * \brief Returns the evaluation result as a constant string if the
+ * kind is other than Int or float. User must not free this pointer,
+ * instead call clang_EvalResult_dispose on the CXEvalResult returned
+ * by clang_Cursor_Evaluate.
+ */
+CINDEX_LINKAGE const char* clang_EvalResult_getAsStr(CXEvalResult E);
+
+/**
+ * \brief Disposes the created Eval memory.
+ */
+CINDEX_LINKAGE void clang_EvalResult_dispose(CXEvalResult E);
 /**
  * @}
  */

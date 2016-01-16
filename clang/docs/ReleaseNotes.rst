@@ -74,6 +74,8 @@ Windows Support
 
 Clang's support for building native Windows programs ...
 
+TLS is enabled for Cygwin defaults to -femulated-tls.
+
 
 C Language Changes in Clang
 ---------------------------

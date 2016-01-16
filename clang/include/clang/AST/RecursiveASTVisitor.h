@@ -2781,6 +2781,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPHintClause(OMPHintClause *C) {
   return true;
 }
 
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDistScheduleClause(
+    OMPDistScheduleClause *C) {
+  TRY_TO(TraverseStmt(C->getChunkSize()));
+  TRY_TO(TraverseStmt(C->getHelperChunkSize()));
+  return true;
+}
+
 // FIXME: look at the following tricky-seeming exprs to see if we
 // need to recurse on anything.  These are ones that have methods
 // returning decls or qualtypes or nestednamespecifier -- though I'm

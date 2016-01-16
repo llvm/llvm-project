@@ -2773,12 +2773,12 @@ static void addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
 
 static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
                                 ArgStringList &CmdArgs, StringRef Sanitizer,
-                                bool IsShared) {
-  // Static runtimes must be forced into executable, so we wrap them in
+                                bool IsShared, bool IsWhole) {
+  // Wrap any static runtimes that must be forced into executable in
   // whole-archive.
-  if (!IsShared) CmdArgs.push_back("-whole-archive");
+  if (IsWhole) CmdArgs.push_back("-whole-archive");
   CmdArgs.push_back(TC.getCompilerRTArgString(Args, Sanitizer, IsShared));
-  if (!IsShared) CmdArgs.push_back("-no-whole-archive");
+  if (IsWhole) CmdArgs.push_back("-no-whole-archive");
 }
 
 // Tries to use a file with the list of dynamic symbols that need to be exported
@@ -2811,12 +2811,17 @@ static void
 collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                          SmallVectorImpl<StringRef> &SharedRuntimes,
                          SmallVectorImpl<StringRef> &StaticRuntimes,
-                         SmallVectorImpl<StringRef> &HelperStaticRuntimes) {
+                         SmallVectorImpl<StringRef> &NonWholeStaticRuntimes,
+                         SmallVectorImpl<StringRef> &HelperStaticRuntimes,
+                         SmallVectorImpl<StringRef> &RequiredSymbols) {
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
   // Collect shared runtimes.
   if (SanArgs.needsAsanRt() && SanArgs.needsSharedAsanRt()) {
     SharedRuntimes.push_back("asan");
   }
+  // The stats_client library is also statically linked into DSOs.
+  if (SanArgs.needsStatsRt())
+    StaticRuntimes.push_back("stats_client");
 
   // Collect static runtimes.
   if (Args.hasArg(options::OPT_shared) || TC.getTriple().isAndroid()) {
@@ -2857,6 +2862,10 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     StaticRuntimes.push_back("cfi");
   if (SanArgs.needsCfiDiagRt())
     StaticRuntimes.push_back("cfi_diag");
+  if (SanArgs.needsStatsRt()) {
+    NonWholeStaticRuntimes.push_back("stats");
+    RequiredSymbols.push_back("__sanitizer_stats_register");
+  }
 }
 
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
@@ -2864,17 +2873,26 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 static bool addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
   SmallVector<StringRef, 4> SharedRuntimes, StaticRuntimes,
-      HelperStaticRuntimes;
+      NonWholeStaticRuntimes, HelperStaticRuntimes, RequiredSymbols;
   collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
-                           HelperStaticRuntimes);
+                           NonWholeStaticRuntimes, HelperStaticRuntimes,
+                           RequiredSymbols);
   for (auto RT : SharedRuntimes)
-    addSanitizerRuntime(TC, Args, CmdArgs, RT, true);
+    addSanitizerRuntime(TC, Args, CmdArgs, RT, true, false);
   for (auto RT : HelperStaticRuntimes)
-    addSanitizerRuntime(TC, Args, CmdArgs, RT, false);
+    addSanitizerRuntime(TC, Args, CmdArgs, RT, false, true);
   bool AddExportDynamic = false;
   for (auto RT : StaticRuntimes) {
-    addSanitizerRuntime(TC, Args, CmdArgs, RT, false);
+    addSanitizerRuntime(TC, Args, CmdArgs, RT, false, true);
     AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
+  }
+  for (auto RT : NonWholeStaticRuntimes) {
+    addSanitizerRuntime(TC, Args, CmdArgs, RT, false, false);
+    AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
+  }
+  for (auto S : RequiredSymbols) {
+    CmdArgs.push_back("-u");
+    CmdArgs.push_back(Args.MakeArgString(S));
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.
@@ -4579,7 +4597,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fno_operator_names);
   // Emulated TLS is enabled by default on Android, and can be enabled manually
   // with -femulated-tls.
-  bool EmulatedTLSDefault = Triple.isAndroid();
+  bool EmulatedTLSDefault = Triple.isAndroid() || Triple.isWindowsCygwinEnvironment();
   if (Args.hasFlag(options::OPT_femulated_tls, options::OPT_fno_emulated_tls,
                    EmulatedTLSDefault))
     CmdArgs.push_back("-femulated-tls");

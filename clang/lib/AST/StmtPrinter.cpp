@@ -909,6 +909,16 @@ void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
     OS << ")";
   }
 }
+
+void OMPClausePrinter::VisitOMPDistScheduleClause(OMPDistScheduleClause *Node) {
+  OS << "dist_schedule(" << getOpenMPSimpleClauseTypeName(
+                           OMPC_dist_schedule, Node->getDistScheduleKind());
+  if (Node->getChunkSize()) {
+    OS << ", ";
+    Node->getChunkSize()->printPretty(OS, nullptr, Policy);
+  }
+  OS << ")";
+}
 }
 
 //===----------------------------------------------------------------------===//

@@ -3193,6 +3193,135 @@ public:
   child_range children() { return child_range(&Hint, &Hint + 1); }
 };
 
+/// \brief This represents 'dist_schedule' clause in the '#pragma omp ...'
+/// directive.
+///
+/// \code
+/// #pragma omp distribute dist_schedule(static, 3)
+/// \endcode
+/// In this example directive '#pragma omp distribute' has 'dist_schedule'
+/// clause with arguments 'static' and '3'.
+///
+class OMPDistScheduleClause : public OMPClause {
+  friend class OMPClauseReader;
+  /// \brief Location of '('.
+  SourceLocation LParenLoc;
+  /// \brief A kind of the 'schedule' clause.
+  OpenMPDistScheduleClauseKind Kind;
+  /// \brief Start location of the schedule kind in source code.
+  SourceLocation KindLoc;
+  /// \brief Location of ',' (if any).
+  SourceLocation CommaLoc;
+  /// \brief Chunk size and a reference to pseudo variable for combined
+  /// directives.
+  enum { CHUNK_SIZE, HELPER_CHUNK_SIZE, NUM_EXPRS };
+  Stmt *ChunkSizes[NUM_EXPRS];
+
+  /// \brief Set schedule kind.
+  ///
+  /// \param K Schedule kind.
+  ///
+  void setDistScheduleKind(OpenMPDistScheduleClauseKind K) { Kind = K; }
+  /// \brief Sets the location of '('.
+  ///
+  /// \param Loc Location of '('.
+  ///
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  /// \brief Set schedule kind start location.
+  ///
+  /// \param KLoc Schedule kind location.
+  ///
+  void setDistScheduleKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
+  /// \brief Set location of ','.
+  ///
+  /// \param Loc Location of ','.
+  ///
+  void setCommaLoc(SourceLocation Loc) { CommaLoc = Loc; }
+  /// \brief Set chunk size.
+  ///
+  /// \param E Chunk size.
+  ///
+  void setChunkSize(Expr *E) { ChunkSizes[CHUNK_SIZE] = E; }
+  /// \brief Set helper chunk size.
+  ///
+  /// \param E Helper chunk size.
+  ///
+  void setHelperChunkSize(Expr *E) { ChunkSizes[HELPER_CHUNK_SIZE] = E; }
+
+public:
+  /// \brief Build 'dist_schedule' clause with schedule kind \a Kind and chunk
+  /// size expression \a ChunkSize.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param KLoc Starting location of the argument.
+  /// \param CommaLoc Location of ','.
+  /// \param EndLoc Ending location of the clause.
+  /// \param Kind DistSchedule kind.
+  /// \param ChunkSize Chunk size.
+  /// \param HelperChunkSize Helper chunk size for combined directives.
+  ///
+  OMPDistScheduleClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                        SourceLocation KLoc, SourceLocation CommaLoc,
+                        SourceLocation EndLoc,
+                        OpenMPDistScheduleClauseKind Kind, Expr *ChunkSize,
+                        Expr *HelperChunkSize)
+      : OMPClause(OMPC_dist_schedule, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Kind(Kind), KindLoc(KLoc), CommaLoc(CommaLoc) {
+    ChunkSizes[CHUNK_SIZE] = ChunkSize;
+    ChunkSizes[HELPER_CHUNK_SIZE] = HelperChunkSize;
+  }
+
+  /// \brief Build an empty clause.
+  ///
+  explicit OMPDistScheduleClause()
+      : OMPClause(OMPC_dist_schedule, SourceLocation(), SourceLocation()),
+        Kind(OMPC_DIST_SCHEDULE_unknown) {
+    ChunkSizes[CHUNK_SIZE] = nullptr;
+    ChunkSizes[HELPER_CHUNK_SIZE] = nullptr;
+  }
+
+  /// \brief Get kind of the clause.
+  ///
+  OpenMPDistScheduleClauseKind getDistScheduleKind() const { return Kind; }
+  /// \brief Get location of '('.
+  ///
+  SourceLocation getLParenLoc() { return LParenLoc; }
+  /// \brief Get kind location.
+  ///
+  SourceLocation getDistScheduleKindLoc() { return KindLoc; }
+  /// \brief Get location of ','.
+  ///
+  SourceLocation getCommaLoc() { return CommaLoc; }
+  /// \brief Get chunk size.
+  ///
+  Expr *getChunkSize() {
+    return dyn_cast_or_null<Expr>(ChunkSizes[CHUNK_SIZE]);
+  }
+  /// \brief Get chunk size.
+  ///
+  Expr *getChunkSize() const {
+    return dyn_cast_or_null<Expr>(ChunkSizes[CHUNK_SIZE]);
+  }
+  /// \brief Get helper chunk size.
+  ///
+  Expr *getHelperChunkSize() {
+    return dyn_cast_or_null<Expr>(ChunkSizes[HELPER_CHUNK_SIZE]);
+  }
+  /// \brief Get helper chunk size.
+  ///
+  Expr *getHelperChunkSize() const {
+    return dyn_cast_or_null<Expr>(ChunkSizes[HELPER_CHUNK_SIZE]);
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_dist_schedule;
+  }
+
+  child_range children() {
+    return child_range(&ChunkSizes[CHUNK_SIZE], &ChunkSizes[CHUNK_SIZE] + 1);
+  }
+};
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

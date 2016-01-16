@@ -162,6 +162,41 @@ ExprInspection checks
     } while(0);  // expected-warning{{SYMBOL DEAD}}
 
 
+- void clang_analyzer_explain(a single argument of any type);
+
+  This function explains the value of its argument in a human-readable manner
+  in the warning message. You can make as many overrides of its prototype
+  in the test code as necessary to explain various integral, pointer,
+  or even record-type values.
+
+  Example usage::
+
+    void clang_analyzer_explain(int);
+    void clang_analyzer_explain(void *);
+
+    void foo(int param, void *ptr) {
+      clang_analyzer_explain(param); // expected-warning{{argument 'param'}}
+      if (!ptr)
+        clang_analyzer_explain(ptr); // expected-warning{{memory address '0'}}
+    }
+
+- size_t clang_analyzer_getExtent(void *);
+
+  This function returns the value that represents the extent of a memory region
+  pointed to by the argument. This value is often difficult to obtain otherwise,
+  because no valid code that produces this value. However, it may be useful
+  for testing purposes, to see how well does the analyzer model region extents.
+
+  Example usage::
+
+    void foo() {
+      int x, *y;
+      size_t xs = clang_analyzer_getExtent(&x);
+      clang_analyzer_explain(xs); // expected-warning{{'4'}}
+      size_t ys = clang_analyzer_getExtent(&y);
+      clang_analyzer_explain(ys); // expected-warning{{'8'}}
+    }
+
 Statistics
 ==========
 

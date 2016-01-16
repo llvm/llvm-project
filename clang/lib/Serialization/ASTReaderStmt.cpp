@@ -1878,6 +1878,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_hint:
     C = new (Context) OMPHintClause();
     break;
+  case OMPC_dist_schedule:
+    C = new (Context) OMPDistScheduleClause();
+    break;
   }
   Visit(C);
   C->setLocStart(Reader->ReadSourceLocation(Record, Idx));
@@ -2238,6 +2241,16 @@ void OMPClauseReader::VisitOMPNumTasksClause(OMPNumTasksClause *C) {
 void OMPClauseReader::VisitOMPHintClause(OMPHintClause *C) {
   C->setHint(Reader->Reader.ReadSubExpr());
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
+}
+
+void OMPClauseReader::VisitOMPDistScheduleClause(OMPDistScheduleClause *C) {
+  C->setDistScheduleKind(
+      static_cast<OpenMPDistScheduleClauseKind>(Record[Idx++]));
+  C->setChunkSize(Reader->Reader.ReadSubExpr());
+  C->setHelperChunkSize(Reader->Reader.ReadSubExpr());
+  C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
+  C->setDistScheduleKindLoc(Reader->ReadSourceLocation(Record, Idx));
+  C->setCommaLoc(Reader->ReadSourceLocation(Record, Idx));
 }
 
 //===----------------------------------------------------------------------===//

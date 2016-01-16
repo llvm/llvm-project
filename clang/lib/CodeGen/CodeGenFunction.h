@@ -36,6 +36,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Utils/SanitizerStats.h"
 
 namespace llvm {
 class BasicBlock;
@@ -3186,6 +3187,8 @@ public:
   ///   explicit source.
   Address EmitPointerWithAlignment(const Expr *Addr,
                                    AlignmentSource *Source = nullptr);
+
+  void EmitSanitizerStatReport(llvm::SanitizerStatKind SSK);
 
 private:
   QualType getVarArgType(const Expr *Arg);

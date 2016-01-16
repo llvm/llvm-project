@@ -26,6 +26,7 @@
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Transforms/Utils/SanitizerStats.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -2551,6 +2552,22 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
     return;
 
   SanitizerScope SanScope(this);
+  llvm::SanitizerStatKind SSK;
+  switch (TCK) {
+  case CFITCK_VCall:
+    SSK = llvm::SanStat_CFI_VCall;
+    break;
+  case CFITCK_NVCall:
+    SSK = llvm::SanStat_CFI_NVCall;
+    break;
+  case CFITCK_DerivedCast:
+    SSK = llvm::SanStat_CFI_DerivedCast;
+    break;
+  case CFITCK_UnrelatedCast:
+    SSK = llvm::SanStat_CFI_UnrelatedCast;
+    break;
+  }
+  EmitSanitizerStatReport(SSK);
 
   llvm::Metadata *MD =
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));

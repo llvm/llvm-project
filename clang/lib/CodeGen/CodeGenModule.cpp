@@ -392,6 +392,8 @@ void CodeGenModule::Release() {
   if (CoverageMapping)
     CoverageMapping->emit();
   emitLLVMUsed();
+  if (SanStats)
+    SanStats->finish();
 
   if (CodeGenOpts.Autolink &&
       (Context.getLangOpts().Modules || !LinkerOptionsMetadata.empty())) {
@@ -4067,4 +4069,11 @@ void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
     Target.initFeatureMap(FeatureMap, getDiags(), TargetCPU,
                           Target.getTargetOpts().Features);
   }
+}
+
+llvm::SanitizerStatReport &CodeGenModule::getSanStats() {
+  if (!SanStats)
+    SanStats = llvm::make_unique<llvm::SanitizerStatReport>(&getModule());
+
+  return *SanStats;
 }

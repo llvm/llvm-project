@@ -164,6 +164,9 @@ public:
   /// A list of dependent libraries.
   std::vector<std::string> DependentLibraries;
 
+  /// A list of linker options to embed in the object file.
+  std::vector<std::string> LinkerOptions;
+
   /// Name of the profile file to use as output for -fprofile-instr-generate
   /// and -fprofile-generate.
   std::string InstrProfileOutput;

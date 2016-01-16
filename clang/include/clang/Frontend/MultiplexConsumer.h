@@ -44,7 +44,7 @@ public:
   void HandleCXXImplicitFunctionInstantiation(FunctionDecl *D) override;
   void HandleTopLevelDeclInObjCContainer(DeclGroupRef D) override;
   void HandleImplicitImportDecl(ImportDecl *D) override;
-  void HandleLinkerOptionPragma(llvm::StringRef Opts) override;
+  void HandleLinkerOption(llvm::StringRef Opts) override;
   void HandleDetectMismatch(llvm::StringRef Name,
                             llvm::StringRef Value) override;
   void HandleDependentLibrary(llvm::StringRef Lib) override;

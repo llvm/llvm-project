@@ -652,6 +652,12 @@ def fsanitize_cfi_cross_dso : Flag<["-"], "fsanitize-cfi-cross-dso">,
 def fno_sanitize_cfi_cross_dso : Flag<["-"], "fno-sanitize-cfi-cross-dso">,
                                  Group<f_clang_Group>, Flags<[CC1Option]>,
                                  HelpText<"Disable control flow integrity (CFI) checks for cross-DSO calls.">;
+def fsanitize_stats : Flag<["-"], "fsanitize-stats">,
+                              Group<f_clang_Group>, Flags<[CC1Option]>,
+                              HelpText<"Enable sanitizer statistics gathering.">;
+def fno_sanitize_stats : Flag<["-"], "fno-sanitize-stats">,
+                                 Group<f_clang_Group>, Flags<[CC1Option]>,
+                                 HelpText<"Disable sanitizer statistics gathering.">;
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
   Group<f_Group>;
 def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">,
