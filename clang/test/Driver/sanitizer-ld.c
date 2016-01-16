@@ -345,6 +345,39 @@
 // CHECK-SAFESTACK-LINUX: "-lpthread"
 // CHECK-SAFESTACK-LINUX: "-ldl"
 
+// RUN: %clang -fsanitize=cfi -fsanitize-stats %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-LINUX %s
+// CHECK-CFI-STATS-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-STATS-LINUX: "-whole-archive" "{{[^"]*}}libclang_rt.stats_client-x86_64.a" "-no-whole-archive"
+// CHECK-CFI-STATS-LINUX-NOT: "-whole-archive"
+// CHECK-CFI-STATS-LINUX: "{{[^"]*}}libclang_rt.stats-x86_64.a"
+
+// RUN: %clang -fsanitize=cfi -fsanitize-stats %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-DARWIN %s
+// CHECK-CFI-STATS-DARWIN: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-STATS-DARWIN: "{{[^"]*}}libclang_rt.stats_client_osx.a"
+// CHECK-CFI-STATS-DARWIN: "{{[^"]*}}libclang_rt.stats_osx_dynamic.dylib"
+
+// RUN: %clang -fsanitize=cfi -fsanitize-stats %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-pc-windows \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-WIN64 %s
+// CHECK-CFI-STATS-WIN64: "--dependent-lib={{[^"]*}}clang_rt.stats_client-x86_64.lib"
+// CHECK-CFI-STATS-WIN64: "--dependent-lib={{[^"]*}}clang_rt.stats-x86_64.lib"
+// CHECK-CFI-STATS-WIN64: "--linker-option=/include:__sanitizer_stats_register"
+
+// RUN: %clang -fsanitize=cfi -fsanitize-stats %s -### -o %t.o 2>&1 \
+// RUN:     -target i686-pc-windows \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-WIN32 %s
+// CHECK-CFI-STATS-WIN32: "--dependent-lib={{[^"]*}}clang_rt.stats_client-i386.lib"
+// CHECK-CFI-STATS-WIN32: "--dependent-lib={{[^"]*}}clang_rt.stats-i386.lib"
+// CHECK-CFI-STATS-WIN32: "--linker-option=/include:___sanitizer_stats_register"
+
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi -fsanitize=safe-stack \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \

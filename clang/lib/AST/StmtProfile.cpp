@@ -611,6 +611,16 @@ void StmtProfiler::VisitOMPDistributeDirective(
   VisitOMPLoopDirective(S);
 }
 
+void OMPClauseProfiler::VisitOMPDistScheduleClause(
+    const OMPDistScheduleClause *C) {
+  if (C->getChunkSize()) {
+    Profiler->VisitStmt(C->getChunkSize());
+    if (C->getHelperChunkSize()) {
+      Profiler->VisitStmt(C->getChunkSize());
+    }
+  }
+}
+
 void StmtProfiler::VisitExpr(const Expr *S) {
   VisitStmt(S);
 }

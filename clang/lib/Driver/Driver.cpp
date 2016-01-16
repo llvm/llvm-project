@@ -1803,8 +1803,15 @@ InputInfo Driver::BuildJobsForAction(
     bool AtTopLevel, bool MultipleArchs, const char *LinkingOutput,
     std::map<std::pair<const Action *, std::string>, InputInfo> &CachedResults)
     const {
-  std::pair<const Action *, std::string> ActionTC = {
-      A, TC->getTriple().normalize()};
+  // The bound arch is not necessarily represented in the toolchain's triple --
+  // for example, armv7 and armv7s both map to the same triple -- so we need
+  // both in our map.
+  std::string TriplePlusArch = TC->getTriple().normalize();
+  if (BoundArch) {
+    TriplePlusArch += "-";
+    TriplePlusArch += BoundArch;
+  }
+  std::pair<const Action *, std::string> ActionTC = {A, TriplePlusArch};
   auto CachedResult = CachedResults.find(ActionTC);
   if (CachedResult != CachedResults.end()) {
     return CachedResult->second;

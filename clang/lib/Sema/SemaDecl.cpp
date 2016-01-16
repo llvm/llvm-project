@@ -207,7 +207,7 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
       FoundTypeDecl = lookupUnqualifiedTypeNameInBase(S, II, NameLoc, RD);
   }
   if (FoundTypeDecl != UnqualifiedTypeNameLookupResult::FoundType)
-    return ParsedType();
+    return nullptr;
 
   // We found some types in dependent base classes.  Recover as if the user
   // wrote 'typename MyClass::II' instead of 'II'.  We'll fully resolve the
@@ -266,8 +266,8 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
         // We therefore do not perform any name lookup if the result would
         // refer to a member of an unknown specialization.
         if (!isClassName && !IsCtorOrDtorName)
-          return ParsedType();
-        
+          return nullptr;
+
         // We know from the grammar that this name refers to a type,
         // so build a dependent node to describe the type.
         if (WantNontrivialTypeSourceInfo)
@@ -278,13 +278,13 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                                        II, NameLoc);
         return ParsedType::make(T);
       }
-      
-      return ParsedType();
+
+      return nullptr;
     }
     
     if (!LookupCtx->isDependentContext() &&
         RequireCompleteDeclContext(*SS, LookupCtx))
-      return ParsedType();
+      return nullptr;
   }
 
   // FIXME: LookupNestedNameSpecifierName isn't the right kind of
@@ -346,8 +346,8 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
           // identifier is not a template (typo correction for template names
           // is handled elsewhere).
           !(getLangOpts().CPlusPlus && NewSSPtr &&
-            isTemplateName(S, *NewSSPtr, false, TemplateName, ParsedType(),
-                           false, Template, MemberOfUnknownSpecialization))) {
+            isTemplateName(S, *NewSSPtr, false, TemplateName, nullptr, false,
+                           Template, MemberOfUnknownSpecialization))) {
         ParsedType Ty = getTypeName(*NewII, NameLoc, S, NewSSPtr,
                                     isClassName, HasTrailingDot, ObjectTypePtr,
                                     IsCtorOrDtorName,
@@ -367,7 +367,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   case LookupResult::FoundOverloaded:
   case LookupResult::FoundUnresolvedValue:
     Result.suppressDiagnostics();
-    return ParsedType();
+    return nullptr;
 
   case LookupResult::Ambiguous:
     // Recover from type-hiding ambiguities by hiding the type.  We'll
@@ -377,7 +377,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // that only makes sense if the identifier was treated like a type.
     if (Result.getAmbiguityKind() == LookupResult::AmbiguousTagHiding) {
       Result.suppressDiagnostics();
-      return ParsedType();
+      return nullptr;
     }
 
     // Look to see if we have a type anywhere in the list of results.
@@ -399,7 +399,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       // will produce the ambiguity, or will complain that it expected
       // a type name.
       Result.suppressDiagnostics();
-      return ParsedType();
+      return nullptr;
     }
 
     // We found a type within the ambiguous lookup; diagnose the
@@ -449,7 +449,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   if (T.isNull()) {
     // If it's not plausibly a type, suppress diagnostics.
     Result.suppressDiagnostics();
-    return ParsedType();
+    return nullptr;
   }
   return ParsedType::make(T);
 }
@@ -559,8 +559,8 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
                                    ParsedType &SuggestedType,
                                    bool AllowClassTemplates) {
   // We don't have anything to suggest (yet).
-  SuggestedType = ParsedType();
-  
+  SuggestedType = nullptr;
+
   // There may have been a typo in the name of the type. Look up typo
   // results, in case we have something that we can suggest.
   if (TypoCorrection Corrected =
@@ -592,11 +592,11 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
       if (Corrected.getCorrectionSpecifier())
         tmpSS.MakeTrivial(Context, Corrected.getCorrectionSpecifier(),
                           SourceRange(IILoc));
-      SuggestedType = getTypeName(*Corrected.getCorrectionAsIdentifierInfo(),
-                                  IILoc, S, tmpSS.isSet() ? &tmpSS : SS, false,
-                                  false, ParsedType(),
-                                  /*IsCtorOrDtorName=*/false,
-                                  /*NonTrivialTypeSourceInfo=*/true);
+      SuggestedType =
+          getTypeName(*Corrected.getCorrectionAsIdentifierInfo(), IILoc, S,
+                      tmpSS.isSet() ? &tmpSS : SS, false, false, nullptr,
+                      /*IsCtorOrDtorName=*/false,
+                      /*NonTrivialTypeSourceInfo=*/true);
     }
     return;
   }
@@ -609,7 +609,7 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
     TemplateTy TemplateResult;
     bool MemberOfUnknownSpecialization;
     if (isTemplateName(S, SS ? *SS : EmptySS, /*hasTemplateKeyword=*/false,
-                       Name, ParsedType(), true, TemplateResult,
+                       Name, nullptr, true, TemplateResult,
                        MemberOfUnknownSpecialization) == TNK_Type_template) {
       TemplateName TplName = TemplateResult.get();
       Diag(IILoc, diag::err_template_missing_args) << TplName;

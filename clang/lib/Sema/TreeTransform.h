@@ -1734,6 +1734,19 @@ public:
     return getSema().ActOnOpenMPHintClause(Hint, StartLoc, LParenLoc, EndLoc);
   }
 
+  /// \brief Build a new OpenMP 'dist_schedule' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *
+  RebuildOMPDistScheduleClause(OpenMPDistScheduleClauseKind Kind,
+                               Expr *ChunkSize, SourceLocation StartLoc,
+                               SourceLocation LParenLoc, SourceLocation KindLoc,
+                               SourceLocation CommaLoc, SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPDistScheduleClause(
+        Kind, ChunkSize, StartLoc, LParenLoc, KindLoc, CommaLoc, EndLoc);
+  }
+
   /// \brief Rebuild the operand to an Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -7887,6 +7900,17 @@ OMPClause *TreeTransform<Derived>::TransformOMPHintClause(OMPHintClause *C) {
     return nullptr;
   return getDerived().RebuildOMPHintClause(E.get(), C->getLocStart(),
                                            C->getLParenLoc(), C->getLocEnd());
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPDistScheduleClause(
+    OMPDistScheduleClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getChunkSize());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPDistScheduleClause(
+      C->getDistScheduleKind(), E.get(), C->getLocStart(), C->getLParenLoc(),
+      C->getDistScheduleKindLoc(), C->getCommaLoc(), C->getLocEnd());
 }
 
 //===----------------------------------------------------------------------===//

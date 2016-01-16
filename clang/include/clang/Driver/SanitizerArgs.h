@@ -36,6 +36,7 @@ class SanitizerArgs {
   bool AsanSharedRuntime = false;
   bool LinkCXXRuntimes = false;
   bool NeedPIE = false;
+  bool Stats = false;
 
  public:
   /// Parses the sanitizer arguments from an argument list.
@@ -56,6 +57,7 @@ class SanitizerArgs {
   }
   bool needsCfiRt() const;
   bool needsCfiDiagRt() const;
+  bool needsStatsRt() const { return Stats; }
 
   bool requiresPIE() const;
   bool needsUnwindTables() const;

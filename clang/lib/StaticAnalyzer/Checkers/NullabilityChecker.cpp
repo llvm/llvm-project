@@ -366,24 +366,20 @@ static bool checkPreconditionViolation(ProgramStateRef State, ExplodedNode *N,
   if (!D)
     return false;
 
-  if (const auto *BlockD = dyn_cast<BlockDecl>(D)) {
-    if (checkParamsForPreconditionViolation(BlockD->parameters(), State,
-                                            LocCtxt)) {
-      if (!N->isSink())
-        C.addTransition(State->set<PreconditionViolated>(true), N);
-      return true;
-    }
+  ArrayRef<ParmVarDecl*> Params;
+  if (const auto *BD = dyn_cast<BlockDecl>(D))
+    Params = BD->parameters();
+  else if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    Params = FD->parameters();
+  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+    Params = MD->parameters();
+  else
     return false;
-  }
 
-  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
-    if (checkParamsForPreconditionViolation(FuncDecl->parameters(), State,
-                                            LocCtxt)) {
-      if (!N->isSink())
-        C.addTransition(State->set<PreconditionViolated>(true), N);
-      return true;
-    }
-    return false;
+  if (checkParamsForPreconditionViolation(Params, State, LocCtxt)) {
+    if (!N->isSink())
+      C.addTransition(State->set<PreconditionViolated>(true), N);
+    return true;
   }
   return false;
 }
@@ -484,16 +480,20 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (!RetSVal)
     return;
 
+  QualType RequiredRetType;
   AnalysisDeclContext *DeclCtxt =
       C.getLocationContext()->getAnalysisDeclContext();
-  const FunctionType *FuncType = DeclCtxt->getDecl()->getFunctionType();
-  if (!FuncType)
+  const Decl *D = DeclCtxt->getDecl();
+  if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
+    RequiredRetType = MD->getReturnType();
+  else if (auto *FD = dyn_cast<FunctionDecl>(D))
+    RequiredRetType = FD->getReturnType();
+  else
     return;
 
   NullConstraint Nullness = getNullConstraint(*RetSVal, State);
 
-  Nullability RequiredNullability =
-      getNullabilityAnnotation(FuncType->getReturnType());
+  Nullability RequiredNullability = getNullabilityAnnotation(RequiredRetType);
 
   // If the returned value is null but the type of the expression
   // generating it is nonnull then we will suppress the diagnostic.

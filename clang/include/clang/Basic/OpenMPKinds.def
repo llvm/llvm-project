@@ -102,6 +102,9 @@
 #ifndef OPENMP_MAP_KIND
 #define OPENMP_MAP_KIND(Name)
 #endif
+#ifndef OPENMP_DIST_SCHEDULE_KIND
+#define OPENMP_DIST_SCHEDULE_KIND(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -175,6 +178,7 @@ OPENMP_CLAUSE(grainsize, OMPGrainsizeClause)
 OPENMP_CLAUSE(nogroup, OMPNogroupClause)
 OPENMP_CLAUSE(num_tasks, OMPNumTasksClause)
 OPENMP_CLAUSE(hint, OMPHintClause)
+OPENMP_CLAUSE(dist_schedule, OMPDistScheduleClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -418,6 +422,10 @@ OPENMP_DISTRIBUTE_CLAUSE(private)
 OPENMP_DISTRIBUTE_CLAUSE(firstprivate)
 OPENMP_DISTRIBUTE_CLAUSE(lastprivate)
 OPENMP_DISTRIBUTE_CLAUSE(collapse)
+OPENMP_DISTRIBUTE_CLAUSE(dist_schedule)
+
+// Static attributes for 'dist_schedule' clause.
+OPENMP_DIST_SCHEDULE_KIND(static)
 
 #undef OPENMP_TASKLOOP_SIMD_CLAUSE
 #undef OPENMP_TASKLOOP_CLAUSE
@@ -449,3 +457,4 @@ OPENMP_DISTRIBUTE_CLAUSE(collapse)
 #undef OPENMP_FOR_SIMD_CLAUSE
 #undef OPENMP_MAP_KIND
 #undef OPENMP_DISTRIBUTE_CLAUSE
+#undef OPENMP_DIST_SCHEDULE_KIND

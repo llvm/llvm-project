@@ -103,8 +103,10 @@ namespace {
                                                PreprocessorOpts, CodeGenOpts,
                                                *M, Diags, CoverageInfo));
 
-      for (size_t i = 0, e = CodeGenOpts.DependentLibraries.size(); i < e; ++i)
-        HandleDependentLibrary(CodeGenOpts.DependentLibraries[i]);
+      for (auto &&Lib : CodeGenOpts.DependentLibraries)
+        HandleDependentLibrary(Lib);
+      for (auto &&Opt : CodeGenOpts.LinkerOptions)
+        HandleLinkerOption(Opt);
     }
 
     void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override {
@@ -222,7 +224,7 @@ namespace {
       Builder->EmitVTable(RD);
     }
 
-    void HandleLinkerOptionPragma(llvm::StringRef Opts) override {
+    void HandleLinkerOption(llvm::StringRef Opts) override {
       Builder->AppendLinkerOptions(Opts);
     }
 

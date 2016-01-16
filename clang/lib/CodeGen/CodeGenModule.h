@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Transforms/Utils/SanitizerStats.h"
 
 namespace llvm {
 class Module;
@@ -289,6 +290,7 @@ private:
   llvm::MDNode *NoObjCARCExceptionsMetadata;
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
+  std::unique_ptr<llvm::SanitizerStatReport> SanStats;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -1128,6 +1130,8 @@ public:
 
   /// \breif Get the declaration of std::terminate for the platform.
   llvm::Constant *getTerminateFn();
+
+  llvm::SanitizerStatReport &getSanStats();
 
 private:
   llvm::Constant *

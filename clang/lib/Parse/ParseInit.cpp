@@ -216,10 +216,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
           NextToken().isNot(tok::period) && 
           getCurScope()->isInObjcMethodScope()) {
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
-        return ParseAssignmentExprWithObjCMessageExprStart(StartLoc,
-                                                           ConsumeToken(),
-                                                           ParsedType(), 
-                                                           nullptr);
+        return ParseAssignmentExprWithObjCMessageExprStart(
+            StartLoc, ConsumeToken(), nullptr, nullptr);
       }
 
       // Parse the receiver, which is either a type or an expression.
@@ -257,10 +255,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
           NextToken().is(tok::period), ReceiverType)) {
       case Sema::ObjCSuperMessage:
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
-        return ParseAssignmentExprWithObjCMessageExprStart(StartLoc,
-                                                           ConsumeToken(),
-                                                           ParsedType(),
-                                                           nullptr);
+        return ParseAssignmentExprWithObjCMessageExprStart(
+            StartLoc, ConsumeToken(), nullptr, nullptr);
 
       case Sema::ObjCClassMessage:
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
@@ -320,10 +316,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
     if (getLangOpts().ObjC1 && Tok.isNot(tok::ellipsis) &&
         Tok.isNot(tok::r_square)) {
       CheckArrayDesignatorSyntax(*this, Tok.getLocation(), Desig);
-      return ParseAssignmentExprWithObjCMessageExprStart(StartLoc,
-                                                         SourceLocation(),
-                                                         ParsedType(),
-                                                         Idx.get());
+      return ParseAssignmentExprWithObjCMessageExprStart(
+          StartLoc, SourceLocation(), nullptr, Idx.get());
     }
 
     // If this is a normal array designator, remember it.

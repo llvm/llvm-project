@@ -583,7 +583,7 @@ Decl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
   //   template-parameter that is not a template parameter pack.
   if (DefaultArg && IsParameterPack) {
     Diag(EqualLoc, diag::err_template_param_pack_default_arg);
-    DefaultArg = ParsedType();
+    DefaultArg = nullptr;
   }
 
   // Handle the default argument, if provided.

@@ -275,7 +275,7 @@ void Sema::ActOnPragmaMSComment(PragmaMSCommentKind Kind, StringRef Arg) {
   case PCK_Unknown:
     llvm_unreachable("unexpected pragma comment kind");
   case PCK_Linker:
-    Consumer.HandleLinkerOptionPragma(Arg);
+    Consumer.HandleLinkerOption(Arg);
     return;
   case PCK_Lib:
     Consumer.HandleDependentLibrary(Arg);

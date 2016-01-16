@@ -380,9 +380,9 @@ public:
                                const llvm::opt::ArgList &Args, phases::ID Phase,
                                Action *Input) const;
 
-  /// BuildJobsForAction - Construct the jobs to perform for the
-  /// action \p A and return an InputInfo for the result of running \p A.
-  /// Will only construct jobs for a given (Action, ToolChain) pair once.
+  /// BuildJobsForAction - Construct the jobs to perform for the action \p A and
+  /// return an InputInfo for the result of running \p A.  Will only construct
+  /// jobs for a given (Action, ToolChain, BoundArch) tuple once.
   InputInfo BuildJobsForAction(Compilation &C, const Action *A,
                                const ToolChain *TC, const char *BoundArch,
                                bool AtTopLevel, bool MultipleArchs,

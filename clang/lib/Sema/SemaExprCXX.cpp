@@ -113,7 +113,7 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
   bool LookInScope = false;
 
   if (SS.isInvalid())
-    return ParsedType();
+    return nullptr;
 
   // If we have an object type, it's because we are in a
   // pseudo-destructor-expression or a member access expression, and
@@ -198,7 +198,7 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
 
     // FIXME: Should we be suppressing ambiguities here?
     if (Found.isAmbiguous())
-      return ParsedType();
+      return nullptr;
 
     if (TypeDecl *Type = Found.getAsSingle<TypeDecl>()) {
       QualType T = Context.getTypeDeclType(Type);
@@ -320,12 +320,12 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
     }
   }
 
-  return ParsedType();
+  return nullptr;
 }
 
 ParsedType Sema::getDestructorType(const DeclSpec& DS, ParsedType ObjectType) {
     if (DS.getTypeSpecType() == DeclSpec::TST_error || !ObjectType)
-      return ParsedType();
+      return nullptr;
     assert(DS.getTypeSpecType() == DeclSpec::TST_decltype 
            && "only get destructor types from declspecs");
     QualType T = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc());
@@ -336,7 +336,7 @@ ParsedType Sema::getDestructorType(const DeclSpec& DS, ParsedType ObjectType) {
       
     Diag(DS.getTypeSpecTypeLoc(), diag::err_destructor_expr_type_mismatch)
       << T << SearchType;
-    return ParsedType();
+    return nullptr;
 }
 
 bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
@@ -2765,30 +2765,10 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
             return ExprError();
         }
 
-      // C++ [expr.delete]p3:
-      //   In the first alternative (delete object), if the static type of the
-      //   object to be deleted is different from its dynamic type, the static
-      //   type shall be a base class of the dynamic type of the object to be
-      //   deleted and the static type shall have a virtual destructor or the
-      //   behavior is undefined.
-      //
-      // Note: a final class cannot be derived from, no issue there
-      if (PointeeRD->isPolymorphic() && !PointeeRD->hasAttr<FinalAttr>()) {
-        CXXDestructorDecl *dtor = PointeeRD->getDestructor();
-        if (dtor && !dtor->isVirtual()) {
-          if (PointeeRD->isAbstract()) {
-            // If the class is abstract, we warn by default, because we're
-            // sure the code has undefined behavior.
-            Diag(StartLoc, diag::warn_delete_abstract_non_virtual_dtor)
-                << PointeeElem;
-          } else if (!ArrayForm) {
-            // Otherwise, if this is not an array delete, it's a bit suspect,
-            // but not necessarily wrong.
-            Diag(StartLoc, diag::warn_delete_non_virtual_dtor) << PointeeElem;
-          }
-        }
-      }
-
+      CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
+                           /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
+                           /*WarnOnNonAbstractTypes=*/!ArrayForm,
+                           SourceLocation());
     }
 
     if (!OperatorDelete)
@@ -2815,6 +2795,45 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       UsualArrayDeleteWantsSize, OperatorDelete, Ex.get(), StartLoc);
   AnalyzeDeleteExprMismatch(Result);
   return Result;
+}
+
+void Sema::CheckVirtualDtorCall(CXXDestructorDecl *dtor, SourceLocation Loc,
+                                bool IsDelete, bool CallCanBeVirtual,
+                                bool WarnOnNonAbstractTypes,
+                                SourceLocation DtorLoc) {
+  if (!dtor || dtor->isVirtual() || !CallCanBeVirtual)
+    return;
+
+  // C++ [expr.delete]p3:
+  //   In the first alternative (delete object), if the static type of the
+  //   object to be deleted is different from its dynamic type, the static
+  //   type shall be a base class of the dynamic type of the object to be
+  //   deleted and the static type shall have a virtual destructor or the
+  //   behavior is undefined.
+  //
+  const CXXRecordDecl *PointeeRD = dtor->getParent();
+  // Note: a final class cannot be derived from, no issue there
+  if (!PointeeRD->isPolymorphic() || PointeeRD->hasAttr<FinalAttr>())
+    return;
+
+  QualType ClassType = dtor->getThisType(Context)->getPointeeType();
+  if (PointeeRD->isAbstract()) {
+    // If the class is abstract, we warn by default, because we're
+    // sure the code has undefined behavior.
+    Diag(Loc, diag::warn_delete_abstract_non_virtual_dtor) << (IsDelete ? 0 : 1)
+                                                           << ClassType;
+  } else if (WarnOnNonAbstractTypes) {
+    // Otherwise, if this is not an array delete, it's a bit suspect,
+    // but not necessarily wrong.
+    Diag(Loc, diag::warn_delete_non_virtual_dtor) << (IsDelete ? 0 : 1)
+                                                  << ClassType;
+  }
+  if (!IsDelete) {
+    std::string TypeStr;
+    ClassType.getAsStringInternal(TypeStr, getPrintingPolicy());
+    Diag(DtorLoc, diag::note_delete_non_virtual)
+        << FixItHint::CreateInsertion(DtorLoc, TypeStr + "::");
+  }
 }
 
 /// \brief Check the use of the given variable as a C++ condition in an if,
@@ -5746,7 +5765,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
     MayBePseudoDestructor = true;
     return Base;
   } else if (!BaseType->isRecordType()) {
-    ObjectType = ParsedType();
+    ObjectType = nullptr;
     MayBePseudoDestructor = true;
     return Base;
   }

@@ -1487,9 +1487,8 @@ public:
 
   ParsedType getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                          Scope *S, CXXScopeSpec *SS = nullptr,
-                         bool isClassName = false,
-                         bool HasTrailingDot = false,
-                         ParsedType ObjectType = ParsedType(),
+                         bool isClassName = false, bool HasTrailingDot = false,
+                         ParsedType ObjectType = nullptr,
                          bool IsCtorOrDtorName = false,
                          bool WantNontrivialTypeSourceInfo = false,
                          IdentifierInfo **CorrectedII = nullptr);
@@ -4710,6 +4709,10 @@ public:
   ExprResult ActOnCXXDelete(SourceLocation StartLoc,
                             bool UseGlobal, bool ArrayForm,
                             Expr *Operand);
+  void CheckVirtualDtorCall(CXXDestructorDecl *dtor, SourceLocation Loc,
+                            bool IsDelete, bool CallCanBeVirtual,
+                            bool WarnOnNonAbstractTypes,
+                            SourceLocation DtorLoc);
 
   DeclResult ActOnCXXConditionDeclaration(Scope *S, Declarator &D);
   ExprResult CheckConditionVariable(VarDecl *ConditionVar,
@@ -8210,6 +8213,11 @@ public:
   OMPClause *ActOnOpenMPPriorityClause(Expr *Priority, SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
+  /// \brief Called on well-formed 'dist_schedule' clause.
+  OMPClause *ActOnOpenMPDistScheduleClause(
+      OpenMPDistScheduleClauseKind Kind, Expr *ChunkSize,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation KindLoc,
+      SourceLocation CommaLoc, SourceLocation EndLoc);
 
   /// \brief The kind of conversion being performed.
   enum CheckedConversionKind {

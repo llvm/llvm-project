@@ -413,6 +413,13 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     AddLinkSanitizerLibArgs(Args, CmdArgs, "ubsan");
   if (Sanitize.needsTsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
+  if (Sanitize.needsStatsRt()) {
+    StringRef OS = isTargetMacOS() ? "osx" : "iossim";
+    AddLinkRuntimeLib(Args, CmdArgs,
+                      (Twine("libclang_rt.stats_client_") + OS + ".a").str(),
+                      /*AlwaysLink=*/true);
+    AddLinkSanitizerLibArgs(Args, CmdArgs, "stats");
+  }
 
   // Otherwise link libSystem, then the dynamic runtime library, and finally any
   // target specific static runtime library.
