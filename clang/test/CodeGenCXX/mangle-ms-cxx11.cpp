@@ -166,14 +166,14 @@ inline int define_lambda() {
   static auto lambda = [] { static int local; ++local; return local; };
 // First, we have the static local variable of type "<lambda_1>" inside of
 // "define_lambda".
-// CHECK-DAG: @"\01?lambda@?1??define_lambda@@YAHXZ@4V<lambda_1>@?1@YAHXZ@A"
+// CHECK-DAG: @"\01?lambda@?1??define_lambda@@YAHXZ@4V<lambda_1>@?0??1@YAHXZ@A"
 // Next, we have the "operator()" for "<lambda_1>" which is inside of
 // "define_lambda".
-// CHECK-DAG: @"\01??R<lambda_1>@?define_lambda@@YAHXZ@QBEHXZ"
+// CHECK-DAG: @"\01??R<lambda_1>@?0??define_lambda@@YAHXZ@QBE@XZ"
 // Finally, we have the local which is inside of "<lambda_1>" which is inside of
 // "define_lambda". Hooray.
-// MSVC2013-DAG: @"\01?local@?2???R<lambda_1>@?define_lambda@@YAHXZ@QBEHXZ@4HA"
-// MSVC2015-DAG: @"\01?local@?1???R<lambda_1>@?define_lambda@@YAHXZ@QBEHXZ@4HA"
+// MSVC2013-DAG: @"\01?local@?2???R<lambda_1>@?0??define_lambda@@YAHXZ@QBE@XZ@4HA"
+// MSVC2015-DAG: @"\01?local@?1???R<lambda_1>@?0??define_lambda@@YAHXZ@QBE@XZ@4HA"
   return lambda();
 }
 
@@ -182,12 +182,12 @@ void use_lambda_arg(T) {}
 
 inline void call_with_lambda_arg1() {
   use_lambda_arg([]{});
-  // CHECK-DAG: @"\01??$use_lambda_arg@V<lambda_1>@?call_with_lambda_arg1@@YAXXZ@@@YAXV<lambda_1>@?call_with_lambda_arg1@@YAXXZ@@Z"
+  // CHECK-DAG: @"\01??$use_lambda_arg@V<lambda_1>@?0??call_with_lambda_arg1@@YAXXZ@@@YAXV<lambda_1>@?0??call_with_lambda_arg1@@YAXXZ@@Z"
 }
 
 inline void call_with_lambda_arg2() {
   use_lambda_arg([]{});
-  // CHECK-DAG: @"\01??$use_lambda_arg@V<lambda_1>@?call_with_lambda_arg2@@YAXXZ@@@YAXV<lambda_1>@?call_with_lambda_arg2@@YAXXZ@@Z"
+  // CHECK-DAG: @"\01??$use_lambda_arg@V<lambda_1>@?0??call_with_lambda_arg2@@YAXXZ@@@YAXV<lambda_1>@?0??call_with_lambda_arg2@@YAXXZ@@Z"
 }
 
 int call_lambda() {
@@ -286,3 +286,10 @@ static union {
 };
 // CHECK-DAG: @"\01??$f@T<unnamed-type-$S1>@PR18204@@@PR18204@@YAHPAT<unnamed-type-$S1>@0@@Z"
 }
+
+int PR26105() {
+  auto add = [](int x) { return ([x](int y) { return x + y; }); };
+  return add(3)(4);
+}
+// CHECK-DAG: @"\01??R<lambda_0>@?0??PR26105@@YAHXZ@QBE@H@Z"
+// CHECK-DAG: @"\01??R<lambda_1>@?0???R<lambda_0>@?0??PR26105@@YAHXZ@QBE@H@Z@QBE@H@Z"
