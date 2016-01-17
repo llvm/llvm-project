@@ -587,7 +587,7 @@ int main(int argc, char **argv, char * const *envp) {
   if (RemoteMCJIT) {
 #ifndef LLVM_ON_UNIX
     errs() << "Warning: host does not support external remote targets.\n"
-           << "  Defaulting to local execution execution\n";
+           << "  Defaulting to local execution\n";
     return -1;
 #else
     if (ChildExecPath.empty()) {

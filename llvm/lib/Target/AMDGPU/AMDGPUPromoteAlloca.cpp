@@ -78,8 +78,7 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
     for (Module::global_iterator I = Mod->global_begin(),
                                  E = Mod->global_end(); I != E; ++I) {
       GlobalVariable *GV = &*I;
-      PointerType *GVTy = GV->getType();
-      if (GVTy->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+      if (GV->getType()->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
         continue;
       for (Value::use_iterator U = GV->use_begin(),
                                UE = GV->use_end(); U != UE; ++U) {
@@ -88,7 +87,7 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
           continue;
         if (Use->getParent()->getParent() == &F)
           LocalMemAvailable -=
-              Mod->getDataLayout().getTypeAllocSize(GVTy->getElementType());
+              Mod->getDataLayout().getTypeAllocSize(GV->getValueType());
       }
     }
   }

@@ -83,8 +83,8 @@ static const ConstantExpr *getMergedGlobalExpr(const Value *V) {
 
   // First operand points to a global struct.
   Value *Ptr = CE->getOperand(0);
-  if (!isa<GlobalValue>(Ptr) ||
-      !isa<StructType>(cast<PointerType>(Ptr->getType())->getElementType()))
+  GlobalValue *GV = dyn_cast<GlobalValue>(Ptr);
+  if (!GV || !isa<StructType>(GV->getValueType()))
     return nullptr;
 
   // Second operand is zero.

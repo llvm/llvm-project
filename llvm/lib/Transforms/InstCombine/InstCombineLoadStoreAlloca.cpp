@@ -637,7 +637,7 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
       if (!GV->hasDefinitiveInitializer() || !GV->isConstant())
         return false;
 
-      uint64_t InitSize = DL.getTypeAllocSize(GV->getType()->getElementType());
+      uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
       if (InitSize > MaxSize)
         return false;
       continue;

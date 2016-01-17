@@ -792,7 +792,7 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
 }
 
 static char getSymbolNMTypeChar(const GlobalValue &GV) {
-  if (GV.getType()->getElementType()->isFunctionTy())
+  if (GV.getValueType()->isFunctionTy())
     return 't';
   // FIXME: should we print 'b'? At the IR level we cannot be sure if this
   // will be in bss or not, but we could approximate.

@@ -1560,7 +1560,7 @@ static unsigned getAlignment(const Value *V, const DataLayout &DL) {
     Align = GO->getAlignment();
     if (Align == 0) {
       if (auto *GVar = dyn_cast<GlobalVariable>(GO)) {
-        Type *ObjectType = GVar->getType()->getElementType();
+        Type *ObjectType = GVar->getValueType();
         if (ObjectType->isSized()) {
           // If the object is defined in the current Module, we'll be giving
           // it the preferred alignment. Otherwise, we have to assume that it

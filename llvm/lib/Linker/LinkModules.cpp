@@ -471,10 +471,8 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
 
     const DataLayout &DstDL = DstM.getDataLayout();
     const DataLayout &SrcDL = SrcM.getDataLayout();
-    uint64_t DstSize =
-        DstDL.getTypeAllocSize(DstGV->getType()->getPointerElementType());
-    uint64_t SrcSize =
-        SrcDL.getTypeAllocSize(SrcGV->getType()->getPointerElementType());
+    uint64_t DstSize = DstDL.getTypeAllocSize(DstGV->getValueType());
+    uint64_t SrcSize = SrcDL.getTypeAllocSize(SrcGV->getValueType());
     if (Result == Comdat::SelectionKind::ExactMatch) {
       if (SrcGV->getInitializer() != DstGV->getInitializer())
         return emitError("Linking COMDATs named '" + ComdatName +
@@ -598,8 +596,8 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
     }
 
     const DataLayout &DL = Dest.getParent()->getDataLayout();
-    uint64_t DestSize = DL.getTypeAllocSize(Dest.getType()->getElementType());
-    uint64_t SrcSize = DL.getTypeAllocSize(Src.getType()->getElementType());
+    uint64_t DestSize = DL.getTypeAllocSize(Dest.getValueType());
+    uint64_t SrcSize = DL.getTypeAllocSize(Src.getValueType());
     LinkFromSrc = SrcSize > DestSize;
     return false;
   }

@@ -36,7 +36,6 @@ namespace {
 class AsmWriterEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
-  std::map<const CodeGenInstruction*, AsmWriterInst*> CGIAWIMap;
   const std::vector<const CodeGenInstruction*> *NumberedInstructions;
   std::vector<AsmWriterInst> Instructions;
   std::vector<std::string> PrintMethods;
@@ -50,13 +49,6 @@ private:
   void EmitGetRegisterName(raw_ostream &o);
   void EmitPrintAliasInstruction(raw_ostream &O);
 
-  AsmWriterInst *getAsmWriterInstByID(unsigned ID) const {
-    assert(ID < NumberedInstructions->size());
-    std::map<const CodeGenInstruction*, AsmWriterInst*>::const_iterator I =
-      CGIAWIMap.find(NumberedInstructions->at(ID));
-    assert(I != CGIAWIMap.end() && "Didn't find inst!");
-    return I->second;
-  }
   void FindUniqueOperandCommands(std::vector<std::string> &UOC,
                                  std::vector<unsigned> &InstIdxs,
                                  std::vector<unsigned> &InstOpsUsed,
@@ -148,7 +140,7 @@ FindUniqueOperandCommands(std::vector<std::string> &UniqueOperandCommands,
                           std::vector<unsigned> &InstIdxs,
                           std::vector<unsigned> &InstOpsUsed,
                           bool PassSubtarget) const {
-  InstIdxs.assign(NumberedInstructions->size(), ~0U);
+  InstIdxs.assign(Instructions.size(), ~0U);
 
   // This vector parallels UniqueOperandCommands, keeping track of which
   // instructions each case are used for.  It is a comma separated string of
@@ -157,31 +149,26 @@ FindUniqueOperandCommands(std::vector<std::string> &UniqueOperandCommands,
   InstrsForCase.resize(UniqueOperandCommands.size());
   InstOpsUsed.assign(UniqueOperandCommands.size(), 0);
 
-  for (unsigned i = 0, e = NumberedInstructions->size(); i != e; ++i) {
-    const AsmWriterInst *Inst = getAsmWriterInstByID(i);
-    if (!Inst)
-      continue; // PHI, INLINEASM, CFI_INSTRUCTION, etc.
-
-    if (Inst->Operands.empty())
+  for (size_t i = 0, e = Instructions.size(); i != e; ++i) {
+    const AsmWriterInst &Inst = Instructions[i];
+    if (Inst.Operands.empty())
       continue;   // Instruction already done.
 
-    std::string Command = "    "+Inst->Operands[0].getCode(PassSubtarget)+"\n";
+    std::string Command = "    "+Inst.Operands[0].getCode(PassSubtarget)+"\n";
 
     // Check to see if we already have 'Command' in UniqueOperandCommands.
     // If not, add it.
-    bool FoundIt = false;
-    for (unsigned idx = 0, e = UniqueOperandCommands.size(); idx != e; ++idx)
-      if (UniqueOperandCommands[idx] == Command) {
-        InstIdxs[i] = idx;
-        InstrsForCase[idx] += ", ";
-        InstrsForCase[idx] += Inst->CGI->TheDef->getName();
-        FoundIt = true;
-        break;
-      }
-    if (!FoundIt) {
+    auto I = std::find(UniqueOperandCommands.begin(),
+                       UniqueOperandCommands.end(), Command);
+    if (I != UniqueOperandCommands.end()) {
+      size_t idx = I - UniqueOperandCommands.begin();
+      InstIdxs[i] = idx;
+      InstrsForCase[idx] += ", ";
+      InstrsForCase[idx] += Inst.CGI->TheDef->getName();
+    } else {
       InstIdxs[i] = UniqueOperandCommands.size();
       UniqueOperandCommands.push_back(std::move(Command));
-      InstrsForCase.push_back(Inst->CGI->TheDef->getName());
+      InstrsForCase.push_back(Inst.CGI->TheDef->getName());
 
       // This command matches one operand so far.
       InstOpsUsed.push_back(1);
@@ -196,15 +183,13 @@ FindUniqueOperandCommands(std::vector<std::string> &UniqueOperandCommands,
 
     for (unsigned Op = 1; ; ++Op) {
       // Scan for the first instruction in the set.
-      std::vector<unsigned>::iterator NIT =
-        std::find(InstIdxs.begin(), InstIdxs.end(), CommandIdx);
+      auto NIT = std::find(InstIdxs.begin(), InstIdxs.end(), CommandIdx);
       if (NIT == InstIdxs.end()) break;  // No commonality.
 
       // If this instruction has no more operands, we isn't anything to merge
       // into this command.
-      const AsmWriterInst *FirstInst =
-        getAsmWriterInstByID(NIT-InstIdxs.begin());
-      if (!FirstInst || FirstInst->Operands.size() == Op)
+      const AsmWriterInst &FirstInst = Instructions[NIT-InstIdxs.begin()];
+      if (FirstInst.Operands.size() == Op)
         break;
 
       // Otherwise, scan to see if all of the other instructions in this command
@@ -216,11 +201,10 @@ FindUniqueOperandCommands(std::vector<std::string> &UniqueOperandCommands,
            NIT = std::find(NIT+1, InstIdxs.end(), CommandIdx)) {
         // Okay, found another instruction in this command set.  If the operand
         // matches, we're ok, otherwise bail out.
-        const AsmWriterInst *OtherInst =
-          getAsmWriterInstByID(NIT-InstIdxs.begin());
+        const AsmWriterInst &OtherInst = Instructions[NIT-InstIdxs.begin()];
 
-        if (!OtherInst || OtherInst->Operands.size() == Op ||
-            OtherInst->Operands[Op] != FirstInst->Operands[Op]) {
+        if (OtherInst.Operands.size() == Op ||
+            OtherInst.Operands[Op] != FirstInst.Operands[Op]) {
           AllSame = false;
           break;
         }
@@ -230,7 +214,7 @@ FindUniqueOperandCommands(std::vector<std::string> &UniqueOperandCommands,
       // Okay, everything in this command set has the same next operand.  Add it
       // to UniqueOperandCommands and remember that it was consumed.
       std::string Command = "    " +
-        FirstInst->Operands[Op].getCode(PassSubtarget) + "\n";
+        FirstInst.Operands[Op].getCode(PassSubtarget) + "\n";
 
       UniqueOperandCommands[CommandIdx] += Command;
       InstOpsUsed[CommandIdx]++;
@@ -296,18 +280,16 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
 
   /// OpcodeInfo - This encodes the index of the string to use for the first
   /// chunk of the output as well as indices used for operand printing.
-  std::vector<uint64_t> OpcodeInfo;
+  std::vector<uint64_t> OpcodeInfo(NumberedInstructions->size());
   const unsigned OpcodeInfoBits = 64;
 
   // Add all strings to the string table upfront so it can generate an optimized
   // representation.
-  for (const CodeGenInstruction *Inst : *NumberedInstructions) {
-    AsmWriterInst *AWI = CGIAWIMap[Inst];
-    if (AWI &&
-        AWI->Operands[0].OperandType ==
+  for (AsmWriterInst &AWI : Instructions) {
+    if (AWI.Operands[0].OperandType ==
                  AsmWriterOperand::isLiteralTextOperand &&
-        !AWI->Operands[0].Str.empty()) {
-      std::string Str = AWI->Operands[0].Str;
+        !AWI.Operands[0].Str.empty()) {
+      std::string Str = AWI.Operands[0].Str;
       UnescapeString(Str);
       StringTable.add(Str);
     }
@@ -316,29 +298,24 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
   StringTable.layout();
 
   unsigned MaxStringIdx = 0;
-  for (const CodeGenInstruction *Inst : *NumberedInstructions) {
-    AsmWriterInst *AWI = CGIAWIMap[Inst];
+  for (AsmWriterInst &AWI : Instructions) {
     unsigned Idx;
-    if (!AWI) {
-      // Something not handled by the asmwriter printer.
-      Idx = ~0U;
-    } else if (AWI->Operands[0].OperandType !=
-                        AsmWriterOperand::isLiteralTextOperand ||
-               AWI->Operands[0].Str.empty()) {
+    if (AWI.Operands[0].OperandType != AsmWriterOperand::isLiteralTextOperand ||
+        AWI.Operands[0].Str.empty()) {
       // Something handled by the asmwriter printer, but with no leading string.
       Idx = StringTable.get("");
     } else {
-      std::string Str = AWI->Operands[0].Str;
+      std::string Str = AWI.Operands[0].Str;
       UnescapeString(Str);
       Idx = StringTable.get(Str);
       MaxStringIdx = std::max(MaxStringIdx, Idx);
 
       // Nuke the string from the operand list.  It is now handled!
-      AWI->Operands.erase(AWI->Operands.begin());
+      AWI.Operands.erase(AWI.Operands.begin());
     }
 
     // Bias offset by one since we want 0 as a sentinel.
-    OpcodeInfo.push_back(Idx+1);
+    OpcodeInfo[AWI.CGIIndex] = Idx+1;
   }
 
   // Figure out how many bits we used for the string index.
@@ -372,22 +349,22 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
     }
 
     // Otherwise, we can include this in the initial lookup table.  Add it in.
-    for (unsigned i = 0, e = InstIdxs.size(); i != e; ++i)
-      if (InstIdxs[i] != ~0U) {
-        OpcodeInfo[i] |= (uint64_t)InstIdxs[i] << (OpcodeInfoBits-BitsLeft);
-      }
+    for (size_t i = 0, e = Instructions.size(); i != e; ++i)
+      if (InstIdxs[i] != ~0U)
+        OpcodeInfo[Instructions[i].CGIIndex] |=
+          (uint64_t)InstIdxs[i] << (OpcodeInfoBits-BitsLeft);
     BitsLeft -= NumBits;
 
     // Remove the info about this operand.
-    for (unsigned i = 0, e = NumberedInstructions->size(); i != e; ++i) {
-      if (AsmWriterInst *Inst = getAsmWriterInstByID(i))
-        if (!Inst->Operands.empty()) {
-          unsigned NumOps = NumInstOpsHandled[InstIdxs[i]];
-          assert(NumOps <= Inst->Operands.size() &&
-                 "Can't remove this many ops!");
-          Inst->Operands.erase(Inst->Operands.begin(),
-                               Inst->Operands.begin()+NumOps);
-        }
+    for (size_t i = 0, e = Instructions.size(); i != e; ++i) {
+      AsmWriterInst &Inst = Instructions[i];
+      if (!Inst.Operands.empty()) {
+        unsigned NumOps = NumInstOpsHandled[InstIdxs[i]];
+        assert(NumOps <= Inst.Operands.size() &&
+               "Can't remove this many ops!");
+        Inst.Operands.erase(Inst.Operands.begin(),
+                            Inst.Operands.begin()+NumOps);
+      }
     }
 
     // Remember the handlers for this set of operands.
@@ -1093,18 +1070,15 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 AsmWriterEmitter::AsmWriterEmitter(RecordKeeper &R) : Records(R), Target(R) {
   Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
-  for (const CodeGenInstruction *I : Target.instructions())
-    if (!I->AsmString.empty() && I->TheDef->getName() != "PHI")
-      Instructions.emplace_back(*I, Variant);
 
   // Get the instruction numbering.
   NumberedInstructions = &Target.getInstructionsByEnumValue();
 
-  // Compute the CodeGenInstruction -> AsmWriterInst mapping.  Note that not
-  // all machine instructions are necessarily being printed, so there may be
-  // target instructions not in this map.
-  for (AsmWriterInst &AWI : Instructions)
-    CGIAWIMap.insert(std::make_pair(AWI.CGI, &AWI));
+  for (unsigned i = 0, e = NumberedInstructions->size(); i != e; ++i) {
+    const CodeGenInstruction *I = NumberedInstructions->at(i);
+    if (!I->AsmString.empty() && I->TheDef->getName() != "PHI")
+      Instructions.emplace_back(*I, i, Variant);
+  }
 }
 
 void AsmWriterEmitter::run(raw_ostream &O) {

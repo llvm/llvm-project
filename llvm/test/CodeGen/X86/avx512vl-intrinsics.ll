@@ -7496,3 +7496,47 @@ define <4 x i64>@test_int_x86_avx512_mask_pmovsxw_q_256(<8 x i16> %x0, <4 x i64>
   %res4 = add <4 x i64> %res3, %res2
   ret <4 x i64> %res4
 }
+
+declare <4 x double> @llvm.x86.avx512.mask.perm.df.256(<4 x double>, i8, <4 x double>, i8)
+
+define <4 x double>@test_int_x86_avx512_mask_perm_df_256(<4 x double> %x0, i8 %x1, <4 x double> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_perm_df_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %sil, %eax 
+; CHECK-NEXT:    kmovw %eax, %k1 
+; CHECK-NEXT:    vpermpd $3, %ymm0, %ymm1 {%k1} 
+; CHECK-NEXT:    vpermpd $3, %ymm0, %ymm2 {%k1} {z} 
+; CHECK-NEXT:    vpermpd $3, %ymm0, %ymm0 
+; CHECK-NEXT:    ## ymm0 = ymm0[3,0,0,0]
+; CHECK-NEXT:    vaddpd %ymm2, %ymm1, %ymm1 
+; CHECK-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 
+; CHECK-NEXT:    retq 
+  %res = call <4 x double> @llvm.x86.avx512.mask.perm.df.256(<4 x double> %x0, i8 3, <4 x double> %x2, i8 %x3)
+  %res1 = call <4 x double> @llvm.x86.avx512.mask.perm.df.256(<4 x double> %x0, i8 3, <4 x double> zeroinitializer, i8 %x3)
+  %res2 = call <4 x double> @llvm.x86.avx512.mask.perm.df.256(<4 x double> %x0, i8 3, <4 x double> %x2, i8 -1)
+  %res3 = fadd <4 x double> %res, %res1
+  %res4 = fadd <4 x double> %res3, %res2
+  ret <4 x double> %res4
+}
+
+declare <4 x i64> @llvm.x86.avx512.mask.perm.di.256(<4 x i64>, i8, <4 x i64>, i8)
+
+define <4 x i64>@test_int_x86_avx512_mask_perm_di_256(<4 x i64> %x0, i8 %x1, <4 x i64> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_perm_di_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %sil, %eax 
+; CHECK-NEXT:    kmovw %eax, %k1 
+; CHECK-NEXT:    vpermq $3, %ymm0, %ymm1 {%k1} 
+; CHECK-NEXT:    vpermq $3, %ymm0, %ymm2 {%k1} {z} 
+; CHECK-NEXT:    vpermq $3, %ymm0, %ymm0 
+; CHECK-NEXT:    ## ymm0 = ymm0[3,0,0,0]
+; CHECK-NEXT:    vpaddq %ymm2, %ymm1, %ymm1 
+; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 
+; CHECK-NEXT:    retq 
+  %res = call <4 x i64> @llvm.x86.avx512.mask.perm.di.256(<4 x i64> %x0, i8 3, <4 x i64> %x2, i8 %x3)
+  %res1 = call <4 x i64> @llvm.x86.avx512.mask.perm.di.256(<4 x i64> %x0, i8 3, <4 x i64> zeroinitializer, i8 %x3)
+  %res2 = call <4 x i64> @llvm.x86.avx512.mask.perm.di.256(<4 x i64> %x0, i8 3, <4 x i64> %x2, i8 -1)
+  %res3 = add <4 x i64> %res, %res1
+  %res4 = add <4 x i64> %res3, %res2
+  ret <4 x i64> %res4
+}

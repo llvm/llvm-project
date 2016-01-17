@@ -116,7 +116,7 @@ Function* cloneFunctionDecl(Module &Dst, const Function &F,
                             ValueToValueMapTy *VMap) {
   assert(F.getParent() != &Dst && "Can't copy decl over existing function.");
   Function *NewF =
-    Function::Create(cast<FunctionType>(F.getType()->getElementType()),
+    Function::Create(cast<FunctionType>(F.getValueType()),
                      F.getLinkage(), F.getName(), &Dst);
   NewF->copyAttributesFrom(&F);
 
@@ -154,7 +154,7 @@ GlobalVariable* cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
                                         ValueToValueMapTy *VMap) {
   assert(GV.getParent() != &Dst && "Can't copy decl over existing global var.");
   GlobalVariable *NewGV = new GlobalVariable(
-      Dst, GV.getType()->getElementType(), GV.isConstant(),
+      Dst, GV.getValueType(), GV.isConstant(),
       GV.getLinkage(), nullptr, GV.getName(), nullptr,
       GV.getThreadLocalMode(), GV.getType()->getAddressSpace());
   NewGV->copyAttributesFrom(&GV);

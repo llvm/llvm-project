@@ -86,7 +86,7 @@ bool GenericToNVVM::runOnModule(Module &M) {
         !llvm::isTexture(*GV) && !llvm::isSurface(*GV) &&
         !llvm::isSampler(*GV) && !GV->getName().startswith("llvm.")) {
       GlobalVariable *NewGV = new GlobalVariable(
-          M, GV->getType()->getElementType(), GV->isConstant(),
+          M, GV->getValueType(), GV->isConstant(),
           GV->getLinkage(),
           GV->hasInitializer() ? GV->getInitializer() : nullptr,
           "", GV, GV->getThreadLocalMode(), llvm::ADDRESS_SPACE_GLOBAL);
@@ -172,7 +172,7 @@ Value *GenericToNVVM::getOrInsertCVTA(Module *M, Function *F,
 
   // See if the address space conversion requires the operand to be bitcast
   // to i8 addrspace(n)* first.
-  EVT ExtendedGVType = EVT::getEVT(GVType->getElementType(), true);
+  EVT ExtendedGVType = EVT::getEVT(GV->getValueType(), true);
   if (!ExtendedGVType.isInteger() && !ExtendedGVType.isFloatingPoint()) {
     // A bitcast to i8 addrspace(n)* on the operand is needed.
     LLVMContext &Context = M->getContext();
@@ -191,12 +191,12 @@ Value *GenericToNVVM::getOrInsertCVTA(Module *M, Function *F,
     // Another bitcast from i8 * to <the element type of GVType> * is
     // required.
     DestTy =
-        PointerType::get(GVType->getElementType(), llvm::ADDRESS_SPACE_GENERIC);
+        PointerType::get(GV->getValueType(), llvm::ADDRESS_SPACE_GENERIC);
     CVTA = Builder.CreateBitCast(CVTA, DestTy, "cvta");
   } else {
     // A simple CVTA is enough.
     SmallVector<Type *, 2> ParamTypes;
-    ParamTypes.push_back(PointerType::get(GVType->getElementType(),
+    ParamTypes.push_back(PointerType::get(GV->getValueType(),
                                           llvm::ADDRESS_SPACE_GENERIC));
     ParamTypes.push_back(GVType);
     Function *CVTAFunction = Intrinsic::getDeclaration(
