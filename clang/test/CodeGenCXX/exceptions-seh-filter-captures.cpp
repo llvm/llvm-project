@@ -70,14 +70,14 @@ void test_lambda() {
   lambda();
 }
 
-// CHECK-LABEL: define internal void @"\01??R<lambda_0>@?test_lambda@@YAXXZ@QEBAXXZ"(%class.anon* %this)
+// CHECK-LABEL: define internal void @"\01??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ"(%class.anon* %this)
 // CHECK: @llvm.localescape(i32* %[[l2_addr:[^, ]*]])
 // CHECK: store i32 42, i32* %[[l2_addr]], align 4
 // CHECK: invoke void @might_crash()
 
-// CHECK-LABEL: define internal i32 @"\01?filt$0@0@?R<lambda_0>@?test_lambda@@YAXXZ@"(i8* %exception_pointers, i8* %frame_pointer)
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void (%class.anon*)* @"\01??R<lambda_0>@?test_lambda@@YAXXZ@QEBAXXZ" to i8*), i8* %frame_pointer)
-// CHECK: %[[l2_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%class.anon*)* @"\01??R<lambda_0>@?test_lambda@@YAXXZ@QEBAXXZ" to i8*), i8* %[[fp]], i32 0)
+// CHECK-LABEL: define internal i32 @"\01?filt$0@0@?R<lambda_0>@?0??test_lambda@@YAXXZ@"(i8* %exception_pointers, i8* %frame_pointer)
+// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void (%class.anon*)* @"\01??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ" to i8*), i8* %frame_pointer)
+// CHECK: %[[l2_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%class.anon*)* @"\01??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ" to i8*), i8* %[[fp]], i32 0)
 // CHECK: %[[l2_ptr:[^ ]*]] = bitcast i8* %[[l2_i8]] to i32*
 // CHECK: %[[l2:[^ ]*]] = load i32, i32* %[[l2_ptr]]
 // CHECK: call i32 (i32, ...) @basic_filter(i32 %[[l2]])
