@@ -10425,7 +10425,7 @@ static SDValue lowerVectorShuffleWithUndefHalf(SDLoc DL, MVT VT, SDValue V1,
                                                SDValue V2, ArrayRef<int> Mask,
                                                const X86Subtarget *Subtarget,
                                                SelectionDAG &DAG) {
-  assert(VT.getSizeInBits() == 256 && "Expected 256-bit vector");
+  assert(VT.is256BitVector() && "Expected 256-bit vector");
 
   unsigned NumElts = VT.getVectorNumElements();
   unsigned HalfNumElts = NumElts / 2;
@@ -10456,11 +10456,6 @@ static SDValue lowerVectorShuffleWithUndefHalf(SDLoc DL, MVT VT, SDValue V1,
                        DAG.getIntPtrConstant(HalfNumElts, DL));
   }
 
-  // AVX2 supports efficient immediate 64-bit element cross-lane shuffles.
-  if (UndefLower && Subtarget->hasAVX2() &&
-      (VT == MVT::v4f64 || VT == MVT::v4i64))
-    return SDValue();
-
   // If the shuffle only uses the lower halves of the input operands,
   // then extract them and perform the 'half' shuffle at half width.
   // e.g. vector_shuffle <X, X, X, X, u, u, u, u> or <X, X, u, u>
@@ -10477,11 +10472,6 @@ static SDValue lowerVectorShuffleWithUndefHalf(SDLoc DL, MVT VT, SDValue V1,
     // Determine which of the 4 half vectors this element is from.
     // i.e. 0 = Lower V1, 1 = Upper V1, 2 = Lower V2, 3 = Upper V2.
     int HalfIdx = M / HalfNumElts;
-
-    // Only shuffle using the lower halves of the inputs.
-    // TODO: Investigate usefulness of shuffling with upper halves.
-    if (HalfIdx != 0 && HalfIdx != 2)
-      return SDValue();
 
     // Determine the element index into its half vector source.
     int HalfElt = M % HalfNumElts;
@@ -10503,6 +10493,33 @@ static SDValue lowerVectorShuffleWithUndefHalf(SDLoc DL, MVT VT, SDValue V1,
     return SDValue();
   }
   assert(HalfMask.size() == HalfNumElts && "Unexpected shuffle mask length");
+
+  // Only shuffle the halves of the inputs when useful.
+  int NumLowerHalves =
+      (HalfIdx1 == 0 || HalfIdx1 == 2) + (HalfIdx2 == 0 || HalfIdx2 == 2);
+  int NumUpperHalves =
+      (HalfIdx1 == 1 || HalfIdx1 == 3) + (HalfIdx2 == 1 || HalfIdx2 == 3);
+
+  // uuuuXXXX - don't extract uppers just to insert again.
+  if (UndefLower && NumUpperHalves != 0)
+    return SDValue();
+
+  // XXXXuuuu - don't extract both uppers, instead shuffle and then extract.
+  if (UndefUpper && NumUpperHalves == 2)
+    return SDValue();
+
+  // AVX2 - XXXXuuuu - always extract lowers.
+  if (Subtarget->hasAVX2() && !(UndefUpper && NumUpperHalves == 0)) {
+    // AVX2 supports efficient immediate 64-bit element cross-lane shuffles.
+    if (VT == MVT::v4f64 || VT == MVT::v4i64)
+      return SDValue();
+    // AVX2 supports variable 32-bit element cross-lane shuffles.
+    if (VT == MVT::v8f32 || VT == MVT::v8i32) {
+      // XXXXuuuu - don't extract lowers and uppers.
+      if (UndefUpper && NumLowerHalves != 0 && NumUpperHalves != 0)
+        return SDValue();
+    }
+  }
 
   auto GetHalfVector = [&](int HalfIdx) {
     if (HalfIdx < 0)

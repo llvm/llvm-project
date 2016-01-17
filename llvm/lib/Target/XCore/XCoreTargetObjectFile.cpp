@@ -122,7 +122,7 @@ XCoreTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
     if (Kind.isMergeableConst8())       return MergeableConst8Section;
     if (Kind.isMergeableConst16())      return MergeableConst16Section;
   }
-  Type *ObjType = GV->getType()->getPointerElementType();
+  Type *ObjType = GV->getValueType();
   auto &DL = GV->getParent()->getDataLayout();
   if (TM.getCodeModel() == CodeModel::Small || !ObjType->isSized() ||
       DL.getTypeAllocSize(ObjType) < CodeModelLargeSize) {

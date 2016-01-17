@@ -808,7 +808,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
 
     unsigned Offset;
     if (MFI->LocalMemoryObjects.count(GV) == 0) {
-      uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
+      uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
       Offset = MFI->LDSSize;
       MFI->LocalMemoryObjects[GV] = Offset;
       // XXX: Account for alignment?
@@ -822,7 +822,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   }
   case AMDGPUAS::CONSTANT_ADDRESS: {
     MachineFrameInfo *FrameInfo = DAG.getMachineFunction().getFrameInfo();
-    Type *EltType = GV->getType()->getElementType();
+    Type *EltType = GV->getValueType();
     unsigned Size = DL.getTypeAllocSize(EltType);
     unsigned Alignment = DL.getPrefTypeAlignment(EltType);
 

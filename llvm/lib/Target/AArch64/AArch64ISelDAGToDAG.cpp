@@ -687,7 +687,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexed(SDValue N, unsigned Size,
 
     const GlobalValue *GV = GAN->getGlobal();
     unsigned Alignment = GV->getAlignment();
-    Type *Ty = GV->getType()->getElementType();
+    Type *Ty = GV->getValueType();
     if (Alignment == 0 && Ty->isSized())
       Alignment = DL.getABITypeAlignment(Ty);
 

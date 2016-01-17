@@ -1030,7 +1030,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
 
   // GlobalVariables are always constant pointers themselves.
   PointerType *PTy = GVar->getType();
-  Type *ETy = PTy->getElementType();
+  Type *ETy = GVar->getValueType();
 
   if (GVar->hasExternalLinkage()) {
     if (GVar->hasInitializer())
@@ -1341,11 +1341,10 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   const DataLayout &DL = getDataLayout();
 
   // GlobalVariables are always constant pointers themselves.
-  PointerType *PTy = GVar->getType();
-  Type *ETy = PTy->getElementType();
+  Type *ETy = GVar->getValueType();
 
   O << ".";
-  emitPTXAddressSpace(PTy->getAddressSpace(), O);
+  emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
   if (GVar->getAlignment() == 0)
     O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
   else
@@ -1715,9 +1714,8 @@ void NVPTXAsmPrinter::printScalarConstant(const Constant *CPV, raw_ostream &O) {
     return;
   }
   if (const GlobalValue *GVar = dyn_cast<GlobalValue>(CPV)) {
-    PointerType *PTy = dyn_cast<PointerType>(GVar->getType());
     bool IsNonGenericPointer = false;
-    if (PTy && PTy->getAddressSpace() != 0) {
+    if (GVar->getType()->getAddressSpace() != 0) {
       IsNonGenericPointer = true;
     }
     if (EmitGeneric && !isa<Function>(CPV) && !IsNonGenericPointer) {

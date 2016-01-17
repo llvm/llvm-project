@@ -874,7 +874,7 @@ Function *GCOVProfiler::insertCounterWriteout(
 
         GlobalVariable *GV = CountersBySP[j].first;
         unsigned Arcs =
-          cast<ArrayType>(GV->getType()->getElementType())->getNumElements();
+          cast<ArrayType>(GV->getValueType())->getNumElements();
         Builder.CreateCall(EmitArcs, {Builder.getInt32(Arcs),
                                       Builder.CreateConstGEP2_64(GV, 0, 0)});
       }
@@ -966,7 +966,7 @@ insertFlush(ArrayRef<std::pair<GlobalVariable*, MDNode*> > CountersBySP) {
          I = CountersBySP.begin(), E = CountersBySP.end();
        I != E; ++I) {
     GlobalVariable *GV = I->first;
-    Constant *Null = Constant::getNullValue(GV->getType()->getElementType());
+    Constant *Null = Constant::getNullValue(GV->getValueType());
     Builder.CreateStore(Null, GV);
   }
 

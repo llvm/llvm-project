@@ -310,7 +310,7 @@ void GlobalsAAResult::AnalyzeGlobals(Module &M) {
         ++NumNonAddrTakenGlobalVars;
 
         // If this global holds a pointer type, see if it is an indirect global.
-        if (GV.getType()->getElementType()->isPointerTy() &&
+        if (GV.getValueType()->isPointerTy() &&
             AnalyzeIndirectGlobalMemory(&GV))
           ++NumIndirectGlobalVars;
       }

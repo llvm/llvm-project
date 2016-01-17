@@ -763,7 +763,7 @@ InsertSafepointPoll(Instruction *InsertBefore,
 
   auto *F = M->getFunction(GCSafepointPollName);
   assert(F && "gc.safepoint_poll function is missing");
-  assert(F->getType()->getElementType() ==
+  assert(F->getValueType() ==
          FunctionType::get(Type::getVoidTy(M->getContext()), false) &&
          "gc.safepoint_poll declared with wrong type");
   assert(!F->empty() && "gc.safepoint_poll must be a non-empty function");

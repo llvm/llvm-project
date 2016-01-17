@@ -521,7 +521,7 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   if (GV.hasInitializer()) {
-    Assert(GV.getInitializer()->getType() == GV.getType()->getElementType(),
+    Assert(GV.getInitializer()->getType() == GV.getValueType(),
            "Global variable initializer type does not match global "
            "variable type!",
            &GV);

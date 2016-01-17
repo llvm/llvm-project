@@ -2417,7 +2417,7 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
     Out << "addrspace(" << AddressSpace << ") ";
   if (GV->isExternallyInitialized()) Out << "externally_initialized ";
   Out << (GV->isConstant() ? "constant " : "global ");
-  TypePrinter.print(GV->getType()->getElementType(), Out);
+  TypePrinter.print(GV->getValueType(), Out);
 
   if (GV->hasInitializer()) {
     Out << ' ';

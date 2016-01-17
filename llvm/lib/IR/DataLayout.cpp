@@ -764,7 +764,7 @@ uint64_t DataLayout::getIndexedOffset(Type *ptrTy,
 /// global.  This includes an explicitly requested alignment (if the global
 /// has one).
 unsigned DataLayout::getPreferredAlignment(const GlobalVariable *GV) const {
-  Type *ElemType = GV->getType()->getElementType();
+  Type *ElemType = GV->getValueType();
   unsigned Alignment = getPrefTypeAlignment(ElemType);
   unsigned GVAlignment = GV->getAlignment();
   if (GVAlignment >= Alignment) {

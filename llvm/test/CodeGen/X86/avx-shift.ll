@@ -10,8 +10,7 @@ define <8 x i32> @vshift00(<8 x i32> %a) {
 ; CHECK-NEXT:    vpslld $2, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %s = shl <8 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32
-2>
+  %s = shl <8 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   ret <8 x i32> %s
 }
 
@@ -48,8 +47,7 @@ define <8 x i32> @vshift03(<8 x i32> %a) {
 ; CHECK-NEXT:    vpsrld $2, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %s = lshr <8 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32
-2>
+  %s = lshr <8 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   ret <8 x i32> %s
 }
 
@@ -86,8 +84,7 @@ define <8 x i32> @vshift06(<8 x i32> %a) {
 ; CHECK-NEXT:    vpsrad $2, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %s = ashr <8 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32
-2>
+  %s = ashr <8 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   ret <8 x i32> %s
 }
 

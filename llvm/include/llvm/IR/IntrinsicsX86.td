@@ -2463,7 +2463,21 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
         Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, 
                    llvm_i8_ty, llvm_v8i64_ty,  llvm_i8_ty], [IntrNoMem]>;
 }
-
+// Permute
+let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
+  def int_x86_avx512_mask_perm_df_256 : GCCBuiltin<"__builtin_ia32_permdf256_mask">,
+              Intrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty,
+                        llvm_i8_ty, llvm_v4f64_ty, llvm_i8_ty], [IntrNoMem]>;
+  def int_x86_avx512_mask_perm_df_512 : GCCBuiltin<"__builtin_ia32_permdf512_mask">,
+              Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty,
+                         llvm_i8_ty, llvm_v8f64_ty, llvm_i8_ty], [IntrNoMem]>;
+  def int_x86_avx512_mask_perm_di_256 : GCCBuiltin<"__builtin_ia32_permdi256_mask">,
+              Intrinsic<[llvm_v4i64_ty], [llvm_v4i64_ty,
+                        llvm_i8_ty, llvm_v4i64_ty, llvm_i8_ty], [IntrNoMem]>;
+  def int_x86_avx512_mask_perm_di_512 : GCCBuiltin<"__builtin_ia32_permdi512_mask">,
+              Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty,
+                        llvm_i8_ty, llvm_v8i64_ty, llvm_i8_ty], [IntrNoMem]>;
+}
 // Pack ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx2_packsswb : GCCBuiltin<"__builtin_ia32_packsswb256">,

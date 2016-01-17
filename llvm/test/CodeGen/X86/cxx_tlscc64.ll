@@ -4,6 +4,7 @@
 ; tricks similar to AArch64 fast TLS calling convention (r255821).
 ; Applying tricks on x86-64 similar to r255821.
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -enable-shrink-wrap=true | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -O0 | FileCheck %s --check-prefix=CHECK-O0
 %struct.S = type { i8 }
 
 @sg = internal thread_local global %struct.S zeroinitializer, align 1
@@ -65,3 +66,14 @@ __tls_init.exit:
 define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
   ret i32* @sum1
 }
+
+; Make sure at O0 we don't overwrite RBP.
+; CHECK-O0-LABEL: _ZTW4sum2
+; CHECK-O0: pushq %rbp
+; CHECK-O0: movq %rsp, %rbp
+; CHECK-O0-NOT: movq %r{{.*}}, (%rbp) 
+define cxx_fast_tlscc i32* @_ZTW4sum2() #0 {
+  ret i32* @sum1
+}
+
+attributes #0 = { nounwind "no-frame-pointer-elim"="true" }

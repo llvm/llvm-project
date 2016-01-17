@@ -120,7 +120,7 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
     return false;
 
   SmallVector<Type *, 4> Types;
-  Types.push_back(cast<PointerType>(GV->getType())->getElementType());
+  Types.push_back(GV->getValueType());
 
   unsigned Limit = 20;
   do {
@@ -867,9 +867,8 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
   }
 
   Constant *RepValue = NewGV;
-  if (NewGV->getType() != GV->getType()->getElementType())
-    RepValue = ConstantExpr::getBitCast(RepValue,
-                                        GV->getType()->getElementType());
+  if (NewGV->getType() != GV->getValueType())
+    RepValue = ConstantExpr::getBitCast(RepValue, GV->getValueType());
 
   // If there is a comparison against null, we will insert a global bool to
   // keep track of whether the global was initialized yet or not.
@@ -1397,8 +1396,8 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
 
     // Insert a store of null into each global.
     for (unsigned i = 0, e = FieldGlobals.size(); i != e; ++i) {
-      PointerType *PT = cast<PointerType>(FieldGlobals[i]->getType());
-      Constant *Null = Constant::getNullValue(PT->getElementType());
+      Type *ValTy = cast<GlobalValue>(FieldGlobals[i])->getValueType();
+      Constant *Null = Constant::getNullValue(ValTy);
       new StoreInst(Null, FieldGlobals[i], SI);
     }
     // Erase the original store.
@@ -1583,7 +1582,7 @@ static bool optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
 /// boolean and select between the two values whenever it is used.  This exposes
 /// the values to other scalar optimizations.
 static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
-  Type *GVElType = GV->getType()->getElementType();
+  Type *GVElType = GV->getValueType();
 
   // If GVElType is already i1, it is already shrunk.  If the type of the GV is
   // an FP value, pointer or vector, don't do this optimization because a select
@@ -1879,7 +1878,7 @@ bool GlobalOpt::processInternalGlobal(GlobalVariable *GV,
   // If the global is in different address space, don't bring it to stack.
   if (!GS.HasMultipleAccessingFunctions &&
       GS.AccessingFunction &&
-      GV->getType()->getElementType()->isSingleValueType() &&
+      GV->getValueType()->isSingleValueType() &&
       GV->getType()->getAddressSpace() == 0 &&
       !GV->isExternallyInitialized() &&
       allNonInstructionUsersCanBeMadeInstructions(GV) &&
@@ -1888,7 +1887,7 @@ bool GlobalOpt::processInternalGlobal(GlobalVariable *GV,
     DEBUG(dbgs() << "LOCALIZING GLOBAL: " << *GV << "\n");
     Instruction &FirstI = const_cast<Instruction&>(*GS.AccessingFunction
                                                    ->getEntryBlock().begin());
-    Type *ElemTy = GV->getType()->getElementType();
+    Type *ElemTy = GV->getValueType();
     // FIXME: Pass Global's alignment when globals have alignment
     AllocaInst *Alloca = new AllocaInst(ElemTy, nullptr,
                                         GV->getName(), &FirstI);
@@ -2627,7 +2626,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           Value *PtrArg = getVal(II->getArgOperand(1));
           Value *Ptr = PtrArg->stripPointerCasts();
           if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr)) {
-            Type *ElemTy = cast<PointerType>(GV->getType())->getElementType();
+            Type *ElemTy = GV->getValueType();
             if (!Size->isAllOnesValue() &&
                 Size->getValue().getLimitedValue() >=
                     DL.getTypeStoreSize(ElemTy)) {

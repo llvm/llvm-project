@@ -435,7 +435,7 @@ void Lint::visitMemoryReference(Instruction &I,
       // If the global may be defined differently in another compilation unit
       // then don't warn about funky memory accesses.
       if (GV->hasDefinitiveInitializer()) {
-        Type *GTy = GV->getType()->getElementType();
+        Type *GTy = GV->getValueType();
         if (GTy->isSized())
           BaseSize = DL->getTypeAllocSize(GTy);
         BaseAlign = GV->getAlignment();

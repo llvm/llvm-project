@@ -86,8 +86,10 @@ namespace llvm {
   public:
     std::vector<AsmWriterOperand> Operands;
     const CodeGenInstruction *CGI;
+    unsigned CGIIndex;
 
-    AsmWriterInst(const CodeGenInstruction &CGI, unsigned Variant);
+    AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
+                  unsigned Variant);
 
     /// MatchesAllButOneOp - If this instruction is exactly identical to the
     /// specified instruction except for one differing operand, return the

@@ -4091,7 +4091,7 @@ static bool isFunctionGlobalAddress(SDValue Callee) {
         Callee.getOpcode() == ISD::TargetGlobalTLSAddress)
       return false;
 
-    return G->getGlobal()->getType()->getElementType()->isFunctionTy();
+    return G->getGlobal()->getValueType()->isFunctionTy();
   }
 
   return false;
