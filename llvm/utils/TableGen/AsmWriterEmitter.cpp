@@ -36,7 +36,7 @@ namespace {
 class AsmWriterEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
-  const std::vector<const CodeGenInstruction*> *NumberedInstructions;
+  ArrayRef<const CodeGenInstruction *> NumberedInstructions;
   std::vector<AsmWriterInst> Instructions;
   std::vector<std::string> PrintMethods;
 public:
@@ -280,7 +280,7 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
 
   /// OpcodeInfo - This encodes the index of the string to use for the first
   /// chunk of the output as well as indices used for operand printing.
-  std::vector<uint64_t> OpcodeInfo(NumberedInstructions->size());
+  std::vector<uint64_t> OpcodeInfo(NumberedInstructions.size());
   const unsigned OpcodeInfoBits = 64;
 
   // Add all strings to the string table upfront so it can generate an optimized
@@ -392,9 +392,9 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
     uint64_t Mask = (1ULL << TableSize) - 1;
     O << "  static const uint" << TableSize << "_t OpInfo" << Table
       << "[] = {\n";
-    for (unsigned i = 0, e = NumberedInstructions->size(); i != e; ++i) {
+    for (unsigned i = 0, e = NumberedInstructions.size(); i != e; ++i) {
       O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << "U,\t// "
-        << NumberedInstructions->at(i)->TheDef->getName() << "\n";
+        << NumberedInstructions[i]->TheDef->getName() << "\n";
     }
     O << "  };\n\n";
     // Emit string to combine the individual table lookups.
@@ -559,7 +559,7 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   Record *AsmWriter = Target.getAsmWriter();
   std::string ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   const auto &Registers = Target.getRegBank().getRegisters();
-  std::vector<Record*> AltNameIndices = Target.getRegAltNameIndices();
+  const std::vector<Record*> &AltNameIndices = Target.getRegAltNameIndices();
   bool hasAltNames = AltNameIndices.size() > 1;
   std::string Namespace =
       Registers.front().TheDef->getValueAsString("Namespace");
@@ -1072,10 +1072,10 @@ AsmWriterEmitter::AsmWriterEmitter(RecordKeeper &R) : Records(R), Target(R) {
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
 
   // Get the instruction numbering.
-  NumberedInstructions = &Target.getInstructionsByEnumValue();
+  NumberedInstructions = Target.getInstructionsByEnumValue();
 
-  for (unsigned i = 0, e = NumberedInstructions->size(); i != e; ++i) {
-    const CodeGenInstruction *I = NumberedInstructions->at(i);
+  for (unsigned i = 0, e = NumberedInstructions.size(); i != e; ++i) {
+    const CodeGenInstruction *I = NumberedInstructions[i];
     if (!I->AsmString.empty() && I->TheDef->getName() != "PHI")
       Instructions.emplace_back(*I, i, Variant);
   }

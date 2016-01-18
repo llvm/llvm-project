@@ -1169,8 +1169,6 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
   if (!HaveLoad)
     return false;
 
-  const DataLayout &DL = PN.getModule()->getDataLayout();
-
   // We can only transform this if it is safe to push the loads into the
   // predecessor blocks. The only thing to watch out for is that we can't put
   // a possibly trapping load in the predecessor if it is a critical edge.
@@ -1192,8 +1190,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // If this pointer is always safe to load, or if we can prove that there
     // is already a load in the block, then we can move the load to the pred
     // block.
-    if (isDereferenceablePointer(InVal, DL) ||
-        isSafeToLoadUnconditionally(InVal, MaxAlign, TI))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, TI))
       continue;
 
     return false;
@@ -1261,9 +1258,6 @@ static void speculatePHINodeLoads(PHINode &PN) {
 static bool isSafeSelectToSpeculate(SelectInst &SI) {
   Value *TValue = SI.getTrueValue();
   Value *FValue = SI.getFalseValue();
-  const DataLayout &DL = SI.getModule()->getDataLayout();
-  bool TDerefable = isDereferenceablePointer(TValue, DL);
-  bool FDerefable = isDereferenceablePointer(FValue, DL);
 
   for (User *U : SI.users()) {
     LoadInst *LI = dyn_cast<LoadInst>(U);
@@ -1273,11 +1267,9 @@ static bool isSafeSelectToSpeculate(SelectInst &SI) {
     // Both operands to the select need to be dereferencable, either
     // absolutely (e.g. allocas) or at this point because we can see other
     // accesses to it.
-    if (!TDerefable &&
-        !isSafeToLoadUnconditionally(TValue, LI->getAlignment(), LI))
+    if (!isSafeToLoadUnconditionally(TValue, LI->getAlignment(), LI))
       return false;
-    if (!FDerefable &&
-        !isSafeToLoadUnconditionally(FValue, LI->getAlignment(), LI))
+    if (!isSafeToLoadUnconditionally(FValue, LI->getAlignment(), LI))
       return false;
   }
 

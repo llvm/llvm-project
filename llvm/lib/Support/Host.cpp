@@ -823,6 +823,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avx512cd"] = HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save;
   Features["avx512bw"] = HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save;
   Features["avx512vl"] = HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save;
+  Features["avx515vbmi"] = HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save;
 
   bool HasLeafD = MaxLevel >= 0xd &&
     !GetX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);

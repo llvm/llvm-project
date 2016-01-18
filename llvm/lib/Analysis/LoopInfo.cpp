@@ -274,9 +274,9 @@ void Loop::setLoopID(MDNode *LoopID) const {
 }
 
 bool Loop::isAnnotatedParallel() const {
-  MDNode *desiredLoopIdMetadata = getLoopID();
+  MDNode *DesiredLoopIdMetadata = getLoopID();
 
-  if (!desiredLoopIdMetadata)
+  if (!DesiredLoopIdMetadata)
       return false;
 
   // The loop branch contains the parallel loop metadata. In order to ensure
@@ -293,21 +293,21 @@ bool Loop::isAnnotatedParallel() const {
       // directly or indirectly through another list metadata (in case of
       // nested parallel loops). The loop identifier metadata refers to
       // itself so we can check both cases with the same routine.
-      MDNode *loopIdMD =
+      MDNode *LoopIdMD =
           I.getMetadata(LLVMContext::MD_mem_parallel_loop_access);
 
-      if (!loopIdMD)
+      if (!LoopIdMD)
         return false;
 
-      bool loopIdMDFound = false;
-      for (const MDOperand &MDOp : loopIdMD->operands()) {
-        if (MDOp == desiredLoopIdMetadata) {
-          loopIdMDFound = true;
+      bool LoopIdMDFound = false;
+      for (const MDOperand &MDOp : LoopIdMD->operands()) {
+        if (MDOp == DesiredLoopIdMetadata) {
+          LoopIdMDFound = true;
           break;
         }
       }
 
-      if (!loopIdMDFound)
+      if (!LoopIdMDFound)
         return false;
     }
   }
@@ -332,22 +332,22 @@ Loop::getUniqueExitBlocks(SmallVectorImpl<BasicBlock *> &ExitBlocks) const {
   assert(hasDedicatedExits() &&
          "getUniqueExitBlocks assumes the loop has canonical form exits!");
 
-  SmallVector<BasicBlock *, 32> switchExitBlocks;
+  SmallVector<BasicBlock *, 32> SwitchExitBlocks;
   for (BasicBlock *BB : this->blocks()) {
-    switchExitBlocks.clear();
+    SwitchExitBlocks.clear();
     for (BasicBlock *Successor : successors(BB)) {
       // If block is inside the loop then it is not an exit block.
       if (contains(Successor))
         continue;
 
       pred_iterator PI = pred_begin(Successor);
-      BasicBlock *firstPred = *PI;
+      BasicBlock *FirstPred = *PI;
 
       // If current basic block is this exit block's first predecessor
       // then only insert exit block in to the output ExitBlocks vector.
       // This ensures that same exit block is not inserted twice into
       // ExitBlocks vector.
-      if (BB != firstPred)
+      if (BB != FirstPred)
         continue;
 
       // If a terminator has more then two successors, for example SwitchInst,
@@ -361,9 +361,9 @@ Loop::getUniqueExitBlocks(SmallVectorImpl<BasicBlock *> &ExitBlocks) const {
       // In case of multiple edges from current block to exit block, collect
       // only one edge in ExitBlocks. Use switchExitBlocks to keep track of
       // duplicate edges.
-      if (std::find(switchExitBlocks.begin(), switchExitBlocks.end(), Successor)
-          == switchExitBlocks.end()) {
-        switchExitBlocks.push_back(Successor);
+      if (std::find(SwitchExitBlocks.begin(), SwitchExitBlocks.end(), Successor)
+          == SwitchExitBlocks.end()) {
+        SwitchExitBlocks.push_back(Successor);
         ExitBlocks.push_back(Successor);
       }
     }

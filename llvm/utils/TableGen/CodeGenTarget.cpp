@@ -162,7 +162,7 @@ const std::string &CodeGenTarget::getName() const {
 }
 
 std::string CodeGenTarget::getInstNamespace() const {
-  for (const CodeGenInstruction *Inst : instructions()) {
+  for (const CodeGenInstruction *Inst : getInstructionsByEnumValue()) {
     // Make sure not to pick up "TargetOpcode" by accidentally getting
     // the namespace off the PHI instruction or something.
     if (Inst->Namespace != "TargetOpcode")

@@ -5135,3 +5135,43 @@ define <4 x i64>@test_int_x86_avx512_mask_pmovsxd_q_256(<4 x i32> %x0, <4 x i64>
   ret <4 x i64> %res4
 }
 
+declare <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16>, <8 x i16>, <8 x i16>, i8)
+
+define <8 x i16>@test_int_x86_avx512_mask_permvar_hi_128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_permvar_hi_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax 
+; CHECK-NEXT:    kmovw %eax, %k1 
+; CHECK-NEXT:    vpermw %xmm1, %xmm0, %xmm2 {%k1} 
+; CHECK-NEXT:    vpermw %xmm1, %xmm0, %xmm3 {%k1} {z} 
+; CHECK-NEXT:    vpermw %xmm1, %xmm0, %xmm0 
+; CHECK-NEXT:    vpaddw %xmm3, %xmm2, %xmm1 
+; CHECK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0 
+; CHECK-NEXT:    retq 
+  %res = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 %x3)
+  %res1 = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> zeroinitializer, i8 %x3)
+  %res2 = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 -1)
+  %res3 = add <8 x i16> %res, %res1
+  %res4 = add <8 x i16> %res3, %res2
+  ret <8 x i16> %res4
+}
+
+declare <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16>, <16 x i16>, <16 x i16>, i16)
+
+define <16 x i16>@test_int_x86_avx512_mask_permvar_hi_256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_permvar_hi_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 
+; CHECK-NEXT:    vpermw %ymm1, %ymm0, %ymm2 {%k1} 
+; CHECK-NEXT:    vpermw %ymm1, %ymm0, %ymm3 {%k1} {z} 
+; CHECK-NEXT:    vpermw %ymm1, %ymm0, %ymm0 
+; CHECK-NEXT:    vpaddw %ymm3, %ymm2, %ymm1 
+; CHECK-NEXT:    vpaddw %ymm0, %ymm1, %ymm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 %x3)
+  %res1 = call <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> zeroinitializer, i16 %x3)
+  %res2 = call <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 -1)
+  %res3 = add <16 x i16> %res, %res1
+  %res4 = add <16 x i16> %res3, %res2
+  ret <16 x i16> %res4
+}

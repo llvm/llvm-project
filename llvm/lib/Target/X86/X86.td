@@ -134,6 +134,9 @@ def FeatureBWI     : SubtargetFeature<"avx512bw", "HasBWI", "true",
 def FeatureVLX     : SubtargetFeature<"avx512vl", "HasVLX", "true",
                       "Enable AVX-512 Vector Length eXtensions",
                                       [FeatureAVX512]>;
+def FeatureVBMI     : SubtargetFeature<"avx512vbmi", "HasVBMI", "true",
+                      "Enable AVX-512 Vector Bit Manipulation Instructions",
+                                      [FeatureAVX512]>;
 def FeaturePKU   : SubtargetFeature<"pku", "HasPKU", "true",
                       "Enable protection keys">;
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
@@ -508,6 +511,7 @@ class SkylakeProc<string Name> : ProcessorModel<Name, HaswellModel, [
   FeatureLZCNT,
   FeatureBMI,
   FeatureBMI2,
+  FeatureVBMI,
   FeatureFMA,
   FeatureRTM,
   FeatureHLE,
