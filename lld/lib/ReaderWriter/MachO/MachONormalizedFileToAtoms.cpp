@@ -892,10 +892,12 @@ std::error_code parseObjCImageInfo(const NormalizedFile &normalizedFile,
   //		uint32_t	version;	// initially 0
   //		uint32_t	flags;
   //	};
-  // #define OBJC_IMAGE_SUPPORTS_GC   2
-  // #define OBJC_IMAGE_GC_ONLY       4
-  // #define OBJC_IMAGE_IS_SIMULATED  32
-  //
+  enum {
+    OBJC_IMAGE_SUPPORTS_GC=2,
+    OBJC_IMAGE_GC_ONLY=4,
+    OBJC_IMAGE_IS_SIMULATED=32,
+  };
+
   ArrayRef<uint8_t> content = imageInfoSection->content;
   if (content.size() != 8)
     return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
@@ -910,6 +912,15 @@ std::error_code parseObjCImageInfo(const NormalizedFile &normalizedFile,
                                    imageInfoSection->sectionName +
                                    " in file " + file.path() +
                                    " should have version=0");
+
+  uint32_t flags = read32(content.data() + 4, isBig);
+  if (flags & (OBJC_IMAGE_SUPPORTS_GC|OBJC_IMAGE_GC_ONLY))
+    return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
+                                   imageInfoSection->sectionName +
+                                   " in file " + file.path() +
+                                   " uses GC.  This is not supported");
+
+  file.setSwiftVersion((flags >> 8) & 0xFF);
 
   return std::error_code();
 }
@@ -1045,6 +1056,7 @@ normalizedObjectToAtoms(MachOFile *file,
   }
 
   // Cache some attributes on the file for use later.
+  file->setFlags(normalizedFile.flags);
   file->setArch(normalizedFile.arch);
   file->setOS(normalizedFile.os);
 

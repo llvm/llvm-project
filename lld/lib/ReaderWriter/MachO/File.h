@@ -194,6 +194,14 @@ public:
   MachOLinkingContext::OS OS() const { return _os; }
   void setOS(MachOLinkingContext::OS os) { _os = os; }
 
+  uint32_t swiftVersion() const { return _swiftVersion; }
+  void setSwiftVersion(uint32_t v) { _swiftVersion = v; }
+
+  bool subsectionsViaSymbols() const {
+    return _flags & llvm::MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
+  }
+  void setFlags(normalized::FileFlags v) { _flags = v; }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const File *F) {
     return F->kind() == File::kindMachObject;
@@ -234,6 +242,8 @@ private:
   NameToAtom                     _undefAtoms;
   MachOLinkingContext::Arch      _arch = MachOLinkingContext::arch_unknown;
   MachOLinkingContext::OS        _os = MachOLinkingContext::OS::unknown;
+  uint32_t                       _swiftVersion = 0;
+  normalized::FileFlags          _flags;
 };
 
 class MachODylibFile : public SharedLibraryFile {

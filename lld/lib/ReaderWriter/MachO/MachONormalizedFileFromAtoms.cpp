@@ -105,10 +105,12 @@ class Util {
 public:
   Util(const MachOLinkingContext &ctxt)
       : _ctx(ctxt), _archHandler(ctxt.archHandler()), _entryAtom(nullptr),
-        _hasTLVDescriptors(false) {}
+        _hasTLVDescriptors(false), _subsectionsViaSymbols(true) {}
   ~Util();
 
-  void      assignAtomsToSections(const lld::File &atomFile);
+  void      processDefinedAtoms(const lld::File &atomFile);
+  void      processAtomAttributes(const DefinedAtom *atom);
+  void      assignAtomToSection(const DefinedAtom *atom);
   void      organizeSections();
   void      assignAddressesToSections(const NormalizedFile &file);
   uint32_t  fileFlags();
@@ -180,6 +182,7 @@ private:
   AtomToIndex                   _atomToSymbolIndex;
   std::vector<const Atom *>     _machHeaderAliasAtoms;
   bool                          _hasTLVDescriptors;
+  bool                          _subsectionsViaSymbols;
 };
 
 Util::~Util() {
@@ -366,13 +369,26 @@ void Util::appendAtom(SectionInfo *sect, const DefinedAtom *atom) {
   sect->size = offset + atom->size();
 }
 
-void Util::assignAtomsToSections(const lld::File &atomFile) {
+void Util::processDefinedAtoms(const lld::File &atomFile) {
   for (const DefinedAtom *atom : atomFile.defined()) {
-    if (atom->contentType() == DefinedAtom::typeMachHeader)
-      _machHeaderAliasAtoms.push_back(atom);
-    else
-      appendAtom(sectionForAtom(atom), atom);
+    processAtomAttributes(atom);
+    assignAtomToSection(atom);
   }
+}
+
+void Util::processAtomAttributes(const DefinedAtom *atom) {
+  auto *machoFile = static_cast<const mach_o::MachOFile *>(&atom->file());
+  // If the file doesn't use subsections via symbols, then make sure we don't
+  // add that flag to the final output file if we have a relocatable file.
+  if (!machoFile->subsectionsViaSymbols())
+    _subsectionsViaSymbols = false;
+}
+
+void Util::assignAtomToSection(const DefinedAtom *atom) {
+  if (atom->contentType() == DefinedAtom::typeMachHeader)
+    _machHeaderAliasAtoms.push_back(atom);
+  else
+    appendAtom(sectionForAtom(atom), atom);
 }
 
 SegmentInfo *Util::segmentForName(StringRef segName) {
@@ -1183,7 +1199,7 @@ void Util::addExportInfo(const lld::File &atomFile, NormalizedFile &nFile) {
 uint32_t Util::fileFlags() {
   // FIXME: these need to determined at runtime.
   if (_ctx.outputMachOType() == MH_OBJECT) {
-    return MH_SUBSECTIONS_VIA_SYMBOLS;
+    return _subsectionsViaSymbols ? MH_SUBSECTIONS_VIA_SYMBOLS : 0;
   } else {
     uint32_t flags = MH_DYLDLINK;
     if (!_ctx.useFlatNamespace())
@@ -1208,7 +1224,7 @@ normalizedFromAtoms(const lld::File &atomFile,
                                            const MachOLinkingContext &context) {
   // The util object buffers info until the normalized file can be made.
   Util util(context);
-  util.assignAtomsToSections(atomFile);
+  util.processDefinedAtoms(atomFile);
   util.organizeSections();
 
   std::unique_ptr<NormalizedFile> f(new NormalizedFile());

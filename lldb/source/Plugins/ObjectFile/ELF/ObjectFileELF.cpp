@@ -2295,7 +2295,7 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
                 symbol_section_sp,  // Section in which this symbol is defined or null.
                 symbol_value,       // Offset in section or symbol value.
                 symbol.st_size),    // Size in bytes of this symbol.
-            symbol.st_size != 0,    // Size is valid if it is not 0
+            true,                   // Symbol size is valid
             has_suffix,             // Contains linker annotations?
             flags);                 // Symbol flags.
         symtab->AddSymbol(dc_symbol);
@@ -2304,7 +2304,9 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
 }
 
 unsigned
-ObjectFileELF::ParseSymbolTable(Symtab *symbol_table, user_id_t start_id, lldb_private::Section *symtab)
+ObjectFileELF::ParseSymbolTable(Symtab *symbol_table,
+                                user_id_t start_id,
+                                lldb_private::Section *symtab)
 {
     if (symtab->GetObjectFile() != this)
     {

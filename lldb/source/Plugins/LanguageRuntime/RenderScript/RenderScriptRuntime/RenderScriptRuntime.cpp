@@ -1374,136 +1374,61 @@ RenderScriptRuntime::EvalRSExpression(const char* expression, StackFrame* frame_
     return true;
 }
 
-namespace // anonymous
+// Used to index expression format strings
+enum ExpressionStrings
 {
-    // max length of an expanded expression
-    const int jit_max_expr_size = 768;
+   eExprGetOffsetPtr = 0,
+   eExprAllocGetType,
+   eExprTypeDimX,
+   eExprTypeDimY,
+   eExprTypeDimZ,
+   eExprTypeElemPtr,
+   eExprElementType,
+   eExprElementKind,
+   eExprElementVec,
+   eExprElementFieldCount,
+   eExprSubelementsId,
+   eExprSubelementsName,
+   eExprSubelementsArrSize
+};
 
-    // Format strings containing the expressions we may need to evaluate.
-    const char runtimeExpressions[][256] =
-    {
-     // Mangled GetOffsetPointer(Allocation*, xoff, yoff, zoff, lod, cubemap)
-     "(int*)_Z12GetOffsetPtrPKN7android12renderscript10AllocationEjjjj23RsAllocationCubemapFace(0x%lx, %u, %u, %u, 0, 0)",
-
-     // Type* rsaAllocationGetType(Context*, Allocation*)
-     "(void*)rsaAllocationGetType(0x%lx, 0x%lx)",
-
-     // rsaTypeGetNativeData(Context*, Type*, void* typeData, size)
-     // Pack the data in the following way mHal.state.dimX; mHal.state.dimY; mHal.state.dimZ;
-     // mHal.state.lodCount; mHal.state.faces; mElement; into typeData
-     // Need to specify 32 or 64 bit for uint_t since this differs between devices
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[0]", // X dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[1]", // Y dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[2]", // Z dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[5]", // Element ptr
-
-     // rsaElementGetNativeData(Context*, Element*, uint32_t* elemData,size)
-     // Pack mType; mKind; mNormalized; mVectorSize; NumSubElements into elemData
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[0]", // Type
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[1]", // Kind
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[3]", // Vector Size
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[4]", // Field Count
-
-      // rsaElementGetSubElements(RsContext con, RsElement elem, uintptr_t *ids, const char **names,
-      // size_t *arraySizes, uint32_t dataSize)
-      // Needed for Allocations of structs to gather details about fields/Subelements
-     "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); ids[%u]",     // Element* of field
-
-     "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); names[%u]",   // Name of field
-
-     "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); arr_size[%u]" // Array size of field
-    };
-
-
-    // Temporary workaround for MIPS, until the compiler emits the JAL instruction when invoking directly the function.
-    // At the moment, when evaluating an expression involving a function call, the LLVM codegen for Mips  emits a JAL
-    // instruction, which is able to jump in the range +/- 128MB with respect to the current program counter ($pc). If
-    // the requested function happens to reside outside the above region, the function address will be truncated and the
-    // function invocation will fail. This is a problem in the RS plugin as we rely on the RS API to probe the number and
-    // the nature of allocations. A proper solution in the MIPS compiler is currently being investigated. As temporary
-    // work around for this context, we'll invoke the RS API through function pointers, which cause the compiler to emit a
-    // register based JALR instruction.
-    const char runtimeExpressions_mips[][512] =
-    {
-    // Mangled GetOffsetPointer(Allocation*, xoff, yoff, zoff, lod, cubemap)
-    "int* (*f) (void*, int, int, int, int, int) = (int* (*) (void*, int, int, int, int, int)) "
-        "_Z12GetOffsetPtrPKN7android12renderscript10AllocationEjjjj23RsAllocationCubemapFace; "
-        "(int*) f((void*) 0x%lx, %u, %u, %u, 0, 0)",
-
-    // Type* rsaAllocationGetType(Context*, Allocation*)
-    "void* (*f) (void*, void*) = (void* (*) (void*, void*)) rsaAllocationGetType; (void*) f((void*) 0x%lx, (void*) 0x%lx)",
-
-    // rsaTypeGetNativeData(Context*, Type*, void* typeData, size)
-    // Pack the data in the following way mHal.state.dimX; mHal.state.dimY; mHal.state.dimZ;
-    // mHal.state.lodCount; mHal.state.faces; mElement; into typeData
-    // Need to specify 32 or 64 bit for uint_t since this differs between devices
-    "uint%u_t data[6]; void* (*f)(void*, void*, uintptr_t*, uint32_t) = (void* (*)(void*, void*, uintptr_t*, uint32_t)) "
-        "rsaTypeGetNativeData; (void*) f((void*) 0x%lx, (void*) 0x%lx, data, 6); data[0]",
-    "uint%u_t data[6]; void* (*f)(void*, void*, uintptr_t*, uint32_t) = (void* (*)(void*, void*, uintptr_t*, uint32_t)) "
-        "rsaTypeGetNativeData; (void*) f((void*) 0x%lx, (void*) 0x%lx, data, 6); data[1]",
-    "uint%u_t data[6]; void* (*f)(void*, void*, uintptr_t*, uint32_t) = (void* (*)(void*, void*, uintptr_t*, uint32_t)) "
-        "rsaTypeGetNativeData; (void*) f((void*) 0x%lx, (void*) 0x%lx, data, 6); data[2]",
-    "uint%u_t data[6]; void* (*f)(void*, void*, uintptr_t*, uint32_t) = (void* (*)(void*, void*, uintptr_t*, uint32_t)) "
-        "rsaTypeGetNativeData; (void*) f((void*) 0x%lx, (void*) 0x%lx, data, 6); data[5]",
-
-    // rsaElementGetNativeData(Context*, Element*, uint32_t* elemData,size)
-    // Pack mType; mKind; mNormalized; mVectorSize; NumSubElements into elemData
-    "uint32_t data[5]; void* (*f)(void*, void*, uint32_t*, uint32_t) = (void* (*)(void*, void*, uint32_t*, uint32_t)) "
-        "rsaElementGetNativeData; (void*) f((void*) 0x%lx, (void*) 0x%lx, data, 5); data[0]", // Type
-    "uint32_t data[5]; void* (*f)(void*, void*, uint32_t*, uint32_t) = (void* (*)(void*, void*, uint32_t*, uint32_t)) "
-        "rsaElementGetNativeData; (void*) f((void*) 0x%lx, (void*) 0x%lx, data, 5); data[1]", // Kind
-    "uint32_t data[5]; void* (*f)(void*, void*, uint32_t*, uint32_t) = (void* (*)(void*, void*, uint32_t*, uint32_t)) "
-        "rsaElementGetNativeData; (void*) f((void*) 0x%lx, (void*) 0x%lx, data, 5); data[3]", // Vector size
-    "uint32_t data[5]; void* (*f)(void*, void*, uint32_t*, uint32_t) = (void* (*)(void*, void*, uint32_t*, uint32_t)) "
-        "rsaElementGetNativeData; (void*) f((void*) 0x%lx, (void*) 0x%lx, data, 5); data[4]", // Field count
-
-    // rsaElementGetSubElements(RsContext con, RsElement elem, uintptr_t *ids, const char **names,
-    // size_t *arraySizes, uint32_t dataSize)
-    // Needed for Allocations of structs to gather details about fields/Subelements
-   "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
-        "void* (*f) (void*, void*, uintptr_t*, const char**, size_t*, uint32_t) = "
-        "(void* (*) (void*, void*, uintptr_t*, const char**, size_t*, uint32_t)) rsaElementGetSubElements;"
-        "(void*) f((void*) 0x%lx, (void*) 0x%lx, (uintptr_t*) ids, names, arr_size, (uint32_t) %u);"
-        "ids[%u]", // Element* of field
-   "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
-        "void* (*f) (void*, void*, uintptr_t*, const char**, size_t*, uint32_t) = "
-        "(void* (*) (void*, void*, uintptr_t*, const char**, size_t*, uint32_t)) rsaElementGetSubElements;"
-        "(void*) f((void*) 0x%lx, (void*) 0x%lx, (uintptr_t*) ids, names, arr_size, (uint32_t) %u);"
-        "names[%u]", // Name of field
-   "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
-        "void* (*f) (void*, void*, uintptr_t*, const char**, size_t*, uint32_t) = "
-        "(void* (*) (void*, void*, uintptr_t*, const char**, size_t*, uint32_t)) rsaElementGetSubElements;"
-        "(void*) f((void*) 0x%lx, (void*) 0x%lx, (uintptr_t*) ids, names, arr_size, (uint32_t) %u);"
-        "arr_size[%u]" // Array size of field
-    };
-
-} // end of the anonymous namespace
-
-
-// Retrieve the string to JIT for the given expression
-const char*
-RenderScriptRuntime::JITTemplate(ExpressionStrings e)
+// Format strings containing the expressions we may need to evaluate.
+const char runtimeExpressions[][256] =
 {
-    // be nice to your Mips friend when adding new expression strings
-    static_assert(sizeof(runtimeExpressions)/sizeof(runtimeExpressions[0]) ==
-            sizeof(runtimeExpressions_mips)/sizeof(runtimeExpressions_mips[0]),
-            "#runtimeExpressions != #runtimeExpressions_mips");
+ // Mangled GetOffsetPointer(Allocation*, xoff, yoff, zoff, lod, cubemap)
+ "(int*)_Z12GetOffsetPtrPKN7android12renderscript10AllocationEjjjj23RsAllocationCubemapFace(0x%lx, %u, %u, %u, 0, 0)",
 
-    assert((e >= eExprGetOffsetPtr && e <= eExprSubelementsArrSize) &&
-           "Expression string out of bounds");
+ // Type* rsaAllocationGetType(Context*, Allocation*)
+ "(void*)rsaAllocationGetType(0x%lx, 0x%lx)",
 
-    llvm::Triple::ArchType arch = GetTargetRef().GetArchitecture().GetMachine();
+ // rsaTypeGetNativeData(Context*, Type*, void* typeData, size)
+ // Pack the data in the following way mHal.state.dimX; mHal.state.dimY; mHal.state.dimZ;
+ // mHal.state.lodCount; mHal.state.faces; mElement; into typeData
+ // Need to specify 32 or 64 bit for uint_t since this differs between devices
+ "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[0]", // X dim
+ "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[1]", // Y dim
+ "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[2]", // Z dim
+ "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[5]", // Element ptr
 
-    // mips JAL workaround
-    if(arch == llvm::Triple::ArchType::mips64el || arch == llvm::Triple::ArchType::mipsel)
-        return runtimeExpressions_mips[e];
-    else
-        return runtimeExpressions[e];
-}
+ // rsaElementGetNativeData(Context*, Element*, uint32_t* elemData,size)
+ // Pack mType; mKind; mNormalized; mVectorSize; NumSubElements into elemData
+ "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[0]", // Type
+ "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[1]", // Kind
+ "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[3]", // Vector Size
+ "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[4]", // Field Count
 
+  // rsaElementGetSubElements(RsContext con, RsElement elem, uintptr_t *ids, const char **names,
+  // size_t *arraySizes, uint32_t dataSize)
+  // Needed for Allocations of structs to gather details about fields/Subelements
+ "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
+ "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); ids[%u]",     // Element* of field
+
+ "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
+ "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); names[%u]",   // Name of field
+
+ "void* ids[%u]; const char* names[%u]; size_t arr_size[%u];"
+ "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); arr_size[%u]" // Array size of field
+};
 
 // JITs the RS runtime for the internal data pointer of an allocation.
 // Is passed x,y,z coordinates for the pointer to a specific element.
@@ -1522,17 +1447,18 @@ RenderScriptRuntime::JITDataPointer(AllocationDetails* allocation, StackFrame* f
         return false;
     }
 
-    const char* expr_cstr = JITTemplate(eExprGetOffsetPtr);
-    char buffer[jit_max_expr_size];
+    const char* expr_cstr = runtimeExpressions[eExprGetOffsetPtr];
+    const int max_expr_size = 512; // Max expression size
+    char buffer[max_expr_size];
 
-    int chars_written = snprintf(buffer, jit_max_expr_size, expr_cstr, *allocation->address.get(), x, y, z);
+    int chars_written = snprintf(buffer, max_expr_size, expr_cstr, *allocation->address.get(), x, y, z);
     if (chars_written < 0)
     {
         if (log)
             log->Printf("RenderScriptRuntime::JITDataPointer - Encoding error in snprintf()");
         return false;
     }
-    else if (chars_written >= jit_max_expr_size)
+    else if (chars_written >= max_expr_size)
     {
         if (log)
             log->Printf("RenderScriptRuntime::JITDataPointer - Expression too long");
@@ -1564,17 +1490,18 @@ RenderScriptRuntime::JITTypePointer(AllocationDetails* allocation, StackFrame* f
         return false;
     }
 
-    const char* expr_cstr = JITTemplate(eExprAllocGetType);
-    char buffer[jit_max_expr_size];
+    const char* expr_cstr = runtimeExpressions[eExprAllocGetType];
+    const int max_expr_size = 512; // Max expression size
+    char buffer[max_expr_size];
 
-    int chars_written = snprintf(buffer, jit_max_expr_size, expr_cstr, *allocation->context.get(), *allocation->address.get());
+    int chars_written = snprintf(buffer, max_expr_size, expr_cstr, *allocation->context.get(), *allocation->address.get());
     if (chars_written < 0)
     {
         if (log)
             log->Printf("RenderScriptRuntime::JITDataPointer - Encoding error in snprintf()");
         return false;
     }
-    else if (chars_written >= jit_max_expr_size)
+    else if (chars_written >= max_expr_size)
     {
         if (log)
             log->Printf("RenderScriptRuntime::JITTypePointer - Expression too long");
@@ -1614,13 +1541,13 @@ RenderScriptRuntime::JITTypePacked(AllocationDetails* allocation, StackFrame* fr
     const unsigned int num_exprs = 4;
     assert(num_exprs == (eExprTypeElemPtr - eExprTypeDimX + 1) && "Invalid number of expressions");
 
-    char buffer[num_exprs][jit_max_expr_size];
+    const int max_expr_size = 512; // Max expression size
+    char buffer[num_exprs][max_expr_size];
     uint64_t results[num_exprs];
 
     for (unsigned int i = 0; i < num_exprs; ++i)
     {
-        const char* expr_cstr = JITTemplate((ExpressionStrings) (eExprTypeDimX + i));
-        int chars_written = snprintf(buffer[i], jit_max_expr_size, expr_cstr, bits,
+        int chars_written = snprintf(buffer[i], max_expr_size, runtimeExpressions[eExprTypeDimX + i], bits,
                                      *allocation->context.get(), *allocation->type_ptr.get());
         if (chars_written < 0)
         {
@@ -1628,7 +1555,7 @@ RenderScriptRuntime::JITTypePacked(AllocationDetails* allocation, StackFrame* fr
                 log->Printf("RenderScriptRuntime::JITDataPointer - Encoding error in snprintf()");
             return false;
         }
-        else if (chars_written >= jit_max_expr_size)
+        else if (chars_written >= max_expr_size)
         {
             if (log)
                 log->Printf("RenderScriptRuntime::JITTypePacked - Expression too long");
@@ -1676,20 +1603,20 @@ RenderScriptRuntime::JITElementPacked(Element& elem, const lldb::addr_t context,
     const unsigned int num_exprs = 4;
     assert(num_exprs == (eExprElementFieldCount - eExprElementType + 1) && "Invalid number of expressions");
 
-    char buffer[num_exprs][jit_max_expr_size];
+    const int max_expr_size = 512; // Max expression size
+    char buffer[num_exprs][max_expr_size];
     uint64_t results[num_exprs];
 
     for (unsigned int i = 0; i < num_exprs; i++)
     {
-        const char* expr_cstr = JITTemplate((ExpressionStrings) (eExprElementType + i));
-        int chars_written = snprintf(buffer[i], jit_max_expr_size, expr_cstr, context, *elem.element_ptr.get());
+        int chars_written = snprintf(buffer[i], max_expr_size, runtimeExpressions[eExprElementType + i], context, *elem.element_ptr.get());
         if (chars_written < 0)
         {
             if (log)
                 log->Printf("RenderScriptRuntime::JITElementPacked - Encoding error in snprintf()");
             return false;
         }
-        else if (chars_written >= jit_max_expr_size)
+        else if (chars_written >= max_expr_size)
         {
             if (log)
                 log->Printf("RenderScriptRuntime::JITElementPacked - Expression too long");
@@ -1736,7 +1663,8 @@ RenderScriptRuntime::JITSubelements(Element& elem, const lldb::addr_t context, S
     const short num_exprs = 3;
     assert(num_exprs == (eExprSubelementsArrSize - eExprSubelementsId + 1) && "Invalid number of expressions");
 
-    char expr_buffer[jit_max_expr_size];
+    const int max_expr_size = 512; // Max expression size
+    char expr_buffer[max_expr_size];
     uint64_t results;
 
     // Iterate over struct fields.
@@ -1746,8 +1674,7 @@ RenderScriptRuntime::JITSubelements(Element& elem, const lldb::addr_t context, S
         Element child;
         for (unsigned int expr_index = 0; expr_index < num_exprs; ++expr_index)
         {
-            const char* expr_cstr = JITTemplate((ExpressionStrings) (eExprSubelementsId + expr_index));
-            int chars_written = snprintf(expr_buffer, jit_max_expr_size, expr_cstr,
+            int chars_written = snprintf(expr_buffer, max_expr_size, runtimeExpressions[eExprSubelementsId + expr_index],
                                          field_count, field_count, field_count,
                                          context, *elem.element_ptr.get(), field_count, field_index);
             if (chars_written < 0)
@@ -1756,7 +1683,7 @@ RenderScriptRuntime::JITSubelements(Element& elem, const lldb::addr_t context, S
                     log->Printf("RenderScriptRuntime::JITSubelements - Encoding error in snprintf()");
                 return false;
             }
-            else if (chars_written >= jit_max_expr_size)
+            else if (chars_written >= max_expr_size)
             {
                 if (log)
                     log->Printf("RenderScriptRuntime::JITSubelements - Expression too long");
@@ -1848,15 +1775,16 @@ RenderScriptRuntime::JITAllocationSize(AllocationDetails* allocation, StackFrame
         return true;
     }
 
-    const char* expr_cstr = JITTemplate(eExprGetOffsetPtr);
-    char buffer[jit_max_expr_size];
+    const char* expr_cstr = runtimeExpressions[eExprGetOffsetPtr];
+    const int max_expr_size = 512;
+    char buffer[max_expr_size];
 
     // Calculate last element
     dim_x = dim_x == 0 ? 0 : dim_x - 1;
     dim_y = dim_y == 0 ? 0 : dim_y - 1;
     dim_z = dim_z == 0 ? 0 : dim_z - 1;
 
-    int chars_written = snprintf(buffer, jit_max_expr_size, expr_cstr, *allocation->address.get(),
+    int chars_written = snprintf(buffer, max_expr_size, expr_cstr, *allocation->address.get(),
                                  dim_x, dim_y, dim_z);
     if (chars_written < 0)
     {
@@ -1864,7 +1792,7 @@ RenderScriptRuntime::JITAllocationSize(AllocationDetails* allocation, StackFrame
             log->Printf("RenderScriptRuntime::JITAllocationSize - Encoding error in snprintf()");
         return false;
     }
-    else if (chars_written >= jit_max_expr_size)
+    else if (chars_written >= max_expr_size)
     {
         if (log)
             log->Printf("RenderScriptRuntime::JITAllocationSize - Expression too long");
@@ -1897,10 +1825,11 @@ RenderScriptRuntime::JITAllocationStride(AllocationDetails* allocation, StackFra
         return false;
     }
 
-    const char* expr_cstr = JITTemplate(eExprGetOffsetPtr);
-    char buffer[jit_max_expr_size];
+    const char* expr_cstr = runtimeExpressions[eExprGetOffsetPtr];
+    const int max_expr_size = 512; // Max expression size
+    char buffer[max_expr_size];
 
-    int chars_written = snprintf(buffer, jit_max_expr_size, expr_cstr, *allocation->address.get(),
+    int chars_written = snprintf(buffer, max_expr_size, expr_cstr, *allocation->address.get(),
                                  0, 1, 0);
     if (chars_written < 0)
     {
@@ -1908,7 +1837,7 @@ RenderScriptRuntime::JITAllocationStride(AllocationDetails* allocation, StackFra
             log->Printf("RenderScriptRuntime::JITAllocationStride - Encoding error in snprintf()");
         return false;
     }
-    else if (chars_written >= jit_max_expr_size)
+    else if (chars_written >= max_expr_size)
     {
         if (log)
             log->Printf("RenderScriptRuntime::JITAllocationStride - Expression too long");
@@ -2907,11 +2836,12 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
                     expr_options.SetHideName(true);
 
                     // Setup expression as derefrencing a pointer cast to element address.
-                    char expr_char_buffer[jit_max_expr_size];
-                    int chars_written = snprintf(expr_char_buffer, jit_max_expr_size, "*(%s*) 0x%" PRIx64,
+                    const int max_expr_size = 512;
+                    char expr_char_buffer[max_expr_size];
+                    int chars_written = snprintf(expr_char_buffer, max_expr_size, "*(%s*) 0x%" PRIx64,
                                         alloc->element.type_name.AsCString(), *alloc->data_ptr.get() + offset);
 
-                    if (chars_written < 0 || chars_written >= jit_max_expr_size)
+                    if (chars_written < 0 || chars_written >= max_expr_size)
                     {
                         if (log)
                             log->Printf("RenderScriptRuntime::DumpAllocation- Error in snprintf()");
