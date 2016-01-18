@@ -42,6 +42,15 @@ void test_BOOL_initialization(int y) {
     BOOL x = y; // expected-warning {{Assignment of a non-Boolean value}}
     return;
   }
+  if (y > 200 && y < 250) {
+    // FIXME: Currently we are loosing this warning due to a SymbolCast in RHS.
+    BOOL x = y; // no-warning
+    return;
+  }
+  if (y >= 127 && y < 150) {
+    BOOL x = y; // expected-warning{{Assignment of a non-Boolean value}}
+    return;
+  }
   if (y > 1) {
     BOOL x = y; // expected-warning {{Assignment of a non-Boolean value}}
     return;
