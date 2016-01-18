@@ -1342,7 +1342,7 @@ static void computeKnownBitsFromOperator(Operator *I, APInt &KnownZero,
     AllocaInst *AI = cast<AllocaInst>(I);
     unsigned Align = AI->getAlignment();
     if (Align == 0)
-      Align = Q.DL.getABITypeAlignment(AI->getType()->getElementType());
+      Align = Q.DL.getABITypeAlignment(AI->getAllocatedType());
 
     if (Align > 0)
       KnownZero = APInt::getLowBitsSet(BitWidth, countTrailingZeros(Align));

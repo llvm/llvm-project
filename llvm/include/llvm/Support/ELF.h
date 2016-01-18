@@ -1201,8 +1201,12 @@ enum {
   DT_MIPS_PLTGOT            = 0x70000032, // Address of the base of the PLTGOT.
   DT_MIPS_RWPLT             = 0x70000034, // Points to the base
                                           // of a writable PLT.
-  DT_MIPS_RLD_MAP_REL       = 0x70000035  // Relative offset of run time loader
-                                          // map, used for debugging.
+  DT_MIPS_RLD_MAP_REL       = 0x70000035, // Relative offset of run time loader
+
+  // Sun machine-independent extensions.
+  DT_AUXILIARY              = 0x7FFFFFFD, // Shared object to load before self
+  DT_FILTER                 = 0x7FFFFFFF, // Shared object to get values from
+  DT_EXTRANUM               = 3
 };
 
 // DT_FLAGS values.

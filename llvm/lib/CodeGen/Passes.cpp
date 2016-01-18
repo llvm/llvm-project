@@ -241,7 +241,7 @@ TargetPassConfig::TargetPassConfig(TargetMachine *tm, PassManagerBase &pm)
     : ImmutablePass(ID), PM(&pm), StartBefore(nullptr), StartAfter(nullptr),
       StopAfter(nullptr), Started(true), Stopped(false),
       AddingMachinePasses(false), TM(tm), Impl(nullptr), Initialized(false),
-      DisableVerify(false), EnableTailMerge(true) { 
+      DisableVerify(false), EnableTailMerge(true) {
 
   Impl = new PassConfigImpl();
 
@@ -556,7 +556,7 @@ void TargetPassConfig::addMachinePasses() {
   addPostRegAlloc();
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
-  if (getOptLevel() != CodeGenOpt::None) 
+  if (getOptLevel() != CodeGenOpt::None)
     addPass(&ShrinkWrapID);
 
   addPass(&PrologEpilogCodeInserterID);

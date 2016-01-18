@@ -1400,7 +1400,7 @@ void AsmMatcherInfo::buildInfo() {
         AsmVariant->getValueAsString("BreakCharacters");
     Variant.AsmVariantNo = AsmVariant->getValueAsInt("Variant");
 
-    for (const CodeGenInstruction *CGI : Target.instructions()) {
+    for (const CodeGenInstruction *CGI : Target.getInstructionsByEnumValue()) {
 
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
       // filter the set of instructions we consider.

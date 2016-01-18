@@ -4180,24 +4180,58 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   if (!IntrData)
     return false;
 
+  Info.opc = ISD::INTRINSIC_W_CHAIN;
+  Info.readMem = false;
+  Info.writeMem = false;
+  Info.vol = false;
+  Info.offset = 0;
+
   switch (IntrData->Type) {
   case LOADA:
   case LOADU: {
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(I.getType());
     Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
+    Info.memVT = MVT::getVT(I.getType());
     Info.align = (IntrData->Type == LOADA ? Info.memVT.getSizeInBits()/8 : 1);
-    Info.vol = false;
     Info.readMem = true;
-    Info.writeMem = false;
-    return true;
-  }
-  default:
     break;
   }
+  case EXPAND_FROM_MEM: {
+    Info.ptrVal = I.getArgOperand(0);
+    Info.memVT = MVT::getVT(I.getType());
+    Info.align = 1;
+    Info.readMem = true;
+    break;
+  }
+  case COMPRESS_TO_MEM: {
+    Info.ptrVal = I.getArgOperand(0);
+    Info.memVT = MVT::getVT(I.getArgOperand(1)->getType());
+    Info.align = 1;
+    Info.writeMem = true;
+    break;
+  }
+  case TRUNCATE_TO_MEM_VI8:
+  case TRUNCATE_TO_MEM_VI16:
+  case TRUNCATE_TO_MEM_VI32: {
+    Info.ptrVal = I.getArgOperand(0);
+    MVT VT  = MVT::getVT(I.getArgOperand(1)->getType());
+    MVT ScalarVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+    if (IntrData->Type == TRUNCATE_TO_MEM_VI8)
+      ScalarVT = MVT::i8;
+    else if (IntrData->Type == TRUNCATE_TO_MEM_VI16)
+      ScalarVT = MVT::i16;
+    else if (IntrData->Type == TRUNCATE_TO_MEM_VI32)
+      ScalarVT = MVT::i32;
 
-  return false;
+    Info.memVT = MVT::getVectorVT(ScalarVT, VT.getVectorNumElements());
+    Info.align = 1;
+    Info.writeMem = true;
+    break;
+  }
+  default:
+    return false;
+  }
+
+  return true;
 }
 
 /// Returns true if the target can instruction select the
@@ -17419,43 +17453,6 @@ static SDValue MarkEHRegistrationNode(SDValue Op, SelectionDAG &DAG) {
   return Chain;
 }
 
-/// \brief Lower intrinsics for TRUNCATE_TO_MEM case
-/// return truncate Store/MaskedStore Node
-static SDValue LowerINTRINSIC_TRUNCATE_TO_MEM(const SDValue & Op,
-                                               SelectionDAG &DAG,
-                                               MVT ElementType) {
-  SDLoc dl(Op);
-  SDValue Mask = Op.getOperand(4);
-  SDValue DataToTruncate = Op.getOperand(3);
-  SDValue Addr = Op.getOperand(2);
-  SDValue Chain = Op.getOperand(0);
-
-  MVT VT  = DataToTruncate.getSimpleValueType();
-  MVT SVT = MVT::getVectorVT(ElementType, VT.getVectorNumElements());
-
-  if (isAllOnesConstant(Mask)) // return just a truncate store
-    return DAG.getTruncStore(Chain, dl, DataToTruncate, Addr,
-                             MachinePointerInfo(), SVT, false, false,
-                             SVT.getScalarSizeInBits()/8);
-
-  MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
-  MVT BitcastVT = MVT::getVectorVT(MVT::i1,
-                                   Mask.getSimpleValueType().getSizeInBits());
-  // In case when MaskVT equals v2i1 or v4i1, low 2 or 4 elements
-  // are extracted by EXTRACT_SUBVECTOR.
-  SDValue VMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MaskVT,
-                              DAG.getBitcast(BitcastVT, Mask),
-                              DAG.getIntPtrConstant(0, dl));
-
-  MachineMemOperand *MMO = DAG.getMachineFunction().
-    getMachineMemOperand(MachinePointerInfo(),
-                         MachineMemOperand::MOStore, SVT.getStoreSize(),
-                         SVT.getScalarSizeInBits()/8);
-
-  return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr,
-                            VMask, SVT, MMO, true);
-}
-
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
                                       SelectionDAG &DAG) {
   unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
@@ -17584,26 +17581,44 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
     SDValue DataToCompress = Op.getOperand(3);
     SDValue Addr = Op.getOperand(2);
     SDValue Chain = Op.getOperand(0);
-
     MVT VT = DataToCompress.getSimpleValueType();
+
+    MemIntrinsicSDNode *MemIntr = dyn_cast<MemIntrinsicSDNode>(Op);
+    assert(MemIntr && "Expected MemIntrinsicSDNode!");
+
     if (isAllOnesConstant(Mask)) // return just a store
       return DAG.getStore(Chain, dl, DataToCompress, Addr,
-                          MachinePointerInfo(), false, false,
-                          VT.getScalarSizeInBits()/8);
+                          MemIntr->getMemOperand());
 
     SDValue Compressed =
       getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, DataToCompress),
                            Mask, DAG.getUNDEF(VT), Subtarget, DAG);
     return DAG.getStore(Chain, dl, Compressed, Addr,
-                        MachinePointerInfo(), false, false,
-                        VT.getScalarSizeInBits()/8);
+                        MemIntr->getMemOperand());
   }
   case TRUNCATE_TO_MEM_VI8:
-    return LowerINTRINSIC_TRUNCATE_TO_MEM(Op, DAG, MVT::i8);
   case TRUNCATE_TO_MEM_VI16:
-    return LowerINTRINSIC_TRUNCATE_TO_MEM(Op, DAG, MVT::i16);
-  case TRUNCATE_TO_MEM_VI32:
-    return LowerINTRINSIC_TRUNCATE_TO_MEM(Op, DAG, MVT::i32);
+  case TRUNCATE_TO_MEM_VI32: {
+    SDValue Mask = Op.getOperand(4);
+    SDValue DataToTruncate = Op.getOperand(3);
+    SDValue Addr = Op.getOperand(2);
+    SDValue Chain = Op.getOperand(0);
+
+    MemIntrinsicSDNode *MemIntr = dyn_cast<MemIntrinsicSDNode>(Op);
+    assert(MemIntr && "Expected MemIntrinsicSDNode!");
+
+    EVT VT  = MemIntr->getMemoryVT();
+
+    if (isAllOnesConstant(Mask)) // return just a truncate store
+      return DAG.getTruncStore(Chain, dl, DataToTruncate, Addr, VT,
+                               MemIntr->getMemOperand());
+
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+    SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+
+    return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr, VMask, VT,
+                              MemIntr->getMemOperand(), true);
+  }
   case EXPAND_FROM_MEM: {
     SDValue Mask = Op.getOperand(4);
     SDValue PassThru = Op.getOperand(3);
@@ -17611,13 +17626,14 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
     SDValue Chain = Op.getOperand(0);
     MVT VT = Op.getSimpleValueType();
 
-    if (isAllOnesConstant(Mask)) // return just a load
-      return DAG.getLoad(VT, dl, Chain, Addr, MachinePointerInfo(), false, false,
-                         false, VT.getScalarSizeInBits()/8);
+    MemIntrinsicSDNode *MemIntr = dyn_cast<MemIntrinsicSDNode>(Op);
+    assert(MemIntr && "Expected MemIntrinsicSDNode!");
 
-    SDValue DataToExpand = DAG.getLoad(VT, dl, Chain, Addr, MachinePointerInfo(),
-                                       false, false, false,
-                                       VT.getScalarSizeInBits()/8);
+    SDValue DataToExpand = DAG.getLoad(VT, dl, Chain, Addr,
+                                       MemIntr->getMemOperand());
+
+    if (isAllOnesConstant(Mask)) // return just a load
+      return DataToExpand;
 
     SDValue Results[] = {
       getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, DataToExpand),

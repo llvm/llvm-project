@@ -226,7 +226,7 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; AVX512F-NEXT:    movzbl %dil, %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vshufi64x2 $8, %zmm0, %zmm0, %zmm0 # zmm0 = zmm0[0,1,4,5,0,1,0,1]
+; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5,0,1,0,1]
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
@@ -236,7 +236,7 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; VL_BW_DQ:       # BB#0:
 ; VL_BW_DQ-NEXT:    kmovb %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %zmm0
-; VL_BW_DQ-NEXT:    vshufi64x2 $8, %zmm0, %zmm0, %zmm0 # zmm0 = zmm0[0,1,4,5,0,1,0,1]
+; VL_BW_DQ-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5,0,1,0,1]
 ; VL_BW_DQ-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovb %k0, %eax

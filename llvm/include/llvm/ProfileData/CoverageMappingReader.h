@@ -158,6 +158,7 @@ public:
 private:
   std::vector<StringRef> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
+  InstrProfSymtab ProfileNames;
   size_t CurrentRecord;
   std::vector<StringRef> FunctionsFilenames;
   std::vector<CounterExpression> Expressions;

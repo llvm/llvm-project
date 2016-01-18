@@ -68,7 +68,7 @@ struct InstRegexOp : public SetTheory::Operator {
       }
       RegexList.push_back(Regex(pat));
     }
-    for (const CodeGenInstruction *Inst : Target.instructions()) {
+    for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
       for (auto &R : RegexList) {
         if (R.match(Inst->TheDef->getName()))
           Elts.insert(Inst->TheDef);
@@ -204,7 +204,7 @@ void CodeGenSchedModels::collectSchedRW() {
 
   // Find all SchedReadWrites referenced by instruction defs.
   RecVec SWDefs, SRDefs;
-  for (const CodeGenInstruction *Inst : Target.instructions()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     Record *SchedDef = Inst->TheDef;
     if (SchedDef->isValueUnset("SchedRW"))
       continue;
@@ -498,7 +498,7 @@ void CodeGenSchedModels::collectSchedClasses() {
 
   // Create a SchedClass for each unique combination of itinerary class and
   // SchedRW list.
-  for (const CodeGenInstruction *Inst : Target.instructions()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     Record *ItinDef = Inst->TheDef->getValueAsDef("Itinerary");
     IdxVec Writes, Reads;
     if (!Inst->TheDef->isValueUnset("SchedRW"))
@@ -523,7 +523,7 @@ void CodeGenSchedModels::collectSchedClasses() {
   if (!EnableDump)
     return;
 
-  for (const CodeGenInstruction *Inst : Target.instructions()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     std::string InstName = Inst->TheDef->getName();
     unsigned SCIdx = InstrClassMap.lookup(Inst->TheDef);
     if (!SCIdx) {

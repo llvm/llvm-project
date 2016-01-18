@@ -1296,6 +1296,20 @@ entry:
   ret i32 %v
 }
 
+define i32 @test78_deref(i1 %flag, i32* dereferenceable(4) %x, i32* dereferenceable(4) %y, i32* %z) {
+; Test that we can speculate the loads around the select even when we can't
+; fold the load completely away.
+; CHECK-LABEL: @test78_deref(
+; CHECK:         %[[V1:.*]] = load i32, i32* %x
+; CHECK-NEXT:    %[[V2:.*]] = load i32, i32* %y
+; CHECK-NEXT:    %[[S:.*]] = select i1 %flag, i32 %[[V1]], i32 %[[V2]]
+; CHECK-NEXT:    ret i32 %[[S]]
+entry:
+  %p = select i1 %flag, i32* %x, i32* %y
+  %v = load i32, i32* %p
+  ret i32 %v
+}
+
 define i32 @test78_neg(i1 %flag, i32* %x, i32* %y, i32* %z) {
 ; The same as @test78 but we can't speculate the load because it can trap
 ; if under-aligned.
@@ -1310,6 +1324,19 @@ entry:
   store i32 42, i32* %z
   %p = select i1 %flag, i32* %x, i32* %y
   %v = load i32, i32* %p, align 16
+  ret i32 %v
+}
+
+define i32 @test78_deref_neg(i1 %flag, i32* dereferenceable(2) %x, i32* dereferenceable(4) %y, i32* %z) {
+; The same as @test78_deref but we can't speculate the load because
+; one of the arguments is not sufficiently dereferenceable.
+; CHECK-LABEL: @test78_deref_neg(
+; CHECK: %p = select i1 %flag, i32* %x, i32* %y
+; CHECK-NEXT: %v = load i32, i32* %p
+; CHECK-NEXT: ret i32 %v
+entry:
+  %p = select i1 %flag, i32* %x, i32* %y
+  %v = load i32, i32* %p
   ret i32 %v
 }
 

@@ -71,6 +71,9 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align,
     Align = DL.getABITypeAlignment(V->getType()->getPointerElementType());
   assert(isPowerOf2_32(Align));
 
+  if (isDereferenceableAndAlignedPointer(V, Align, DL))
+    return true;
+
   int64_t ByteOffset = 0;
   Value *Base = V;
   Base = GetPointerBaseWithConstantOffset(V, ByteOffset, DL);

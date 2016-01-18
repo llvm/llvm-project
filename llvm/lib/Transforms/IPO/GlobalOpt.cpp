@@ -2568,7 +2568,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         DEBUG(dbgs() << "Found an array alloca. Can not evaluate.\n");
         return false;  // Cannot handle array allocs.
       }
-      Type *Ty = AI->getType()->getElementType();
+      Type *Ty = AI->getAllocatedType();
       AllocaTmps.push_back(
           make_unique<GlobalVariable>(Ty, false, GlobalValue::InternalLinkage,
                                       UndefValue::get(Ty), AI->getName()));

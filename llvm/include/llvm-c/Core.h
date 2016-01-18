@@ -1202,7 +1202,7 @@ char *LLVMPrintValueToString(LLVMValueRef Val);
 void LLVMReplaceAllUsesWith(LLVMValueRef OldVal, LLVMValueRef NewVal);
 
 /**
- * Determine whether the specified constant instance is constant.
+ * Determine whether the specified value instance is constant.
  */
 LLVMBool LLVMIsConstant(LLVMValueRef Val);
 

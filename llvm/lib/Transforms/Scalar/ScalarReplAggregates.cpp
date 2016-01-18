@@ -710,7 +710,7 @@ void ConvertToScalarInfo::ConvertUsesToScalar(Value *Ptr, AllocaInst *NewAI,
         PointerType* SPTy = cast<PointerType>(SrcPtr->getType());
         PointerType* AIPTy = cast<PointerType>(NewAI->getType());
         if (SPTy->getAddressSpace() != AIPTy->getAddressSpace()) {
-          AIPTy = PointerType::get(AIPTy->getElementType(),
+          AIPTy = PointerType::get(NewAI->getAllocatedType(),
                                    SPTy->getAddressSpace());
         }
         SrcPtr = Builder.CreateBitCast(SrcPtr, AIPTy);
@@ -727,7 +727,7 @@ void ConvertToScalarInfo::ConvertUsesToScalar(Value *Ptr, AllocaInst *NewAI,
         PointerType* DPTy = cast<PointerType>(MTI->getDest()->getType());
         PointerType* AIPTy = cast<PointerType>(NewAI->getType());
         if (DPTy->getAddressSpace() != AIPTy->getAddressSpace()) {
-          AIPTy = PointerType::get(AIPTy->getElementType(),
+          AIPTy = PointerType::get(NewAI->getAllocatedType(),
                                    DPTy->getAddressSpace());
         }
         Value *DstPtr = Builder.CreateBitCast(MTI->getDest(), AIPTy);
@@ -1140,22 +1140,16 @@ public:
 /// We can do this to a select if its only uses are loads and if the operand to
 /// the select can be loaded unconditionally.
 static bool isSafeSelectToSpeculate(SelectInst *SI) {
-  const DataLayout &DL = SI->getModule()->getDataLayout();
-  bool TDerefable = isDereferenceablePointer(SI->getTrueValue(), DL);
-  bool FDerefable = isDereferenceablePointer(SI->getFalseValue(), DL);
-
   for (User *U : SI->users()) {
     LoadInst *LI = dyn_cast<LoadInst>(U);
     if (!LI || !LI->isSimple()) return false;
 
     // Both operands to the select need to be dereferencable, either absolutely
     // (e.g. allocas) or at this point because we can see other accesses to it.
-    if (!TDerefable &&
-        !isSafeToLoadUnconditionally(SI->getTrueValue(), LI->getAlignment(),
+    if (!isSafeToLoadUnconditionally(SI->getTrueValue(), LI->getAlignment(),
                                      LI))
       return false;
-    if (!FDerefable &&
-        !isSafeToLoadUnconditionally(SI->getFalseValue(), LI->getAlignment(),
+    if (!isSafeToLoadUnconditionally(SI->getFalseValue(), LI->getAlignment(),
                                      LI))
       return false;
   }
@@ -1203,8 +1197,6 @@ static bool isSafePHIToSpeculate(PHINode *PN) {
     MaxAlign = std::max(MaxAlign, LI->getAlignment());
   }
 
-  const DataLayout &DL = PN->getModule()->getDataLayout();
-
   // Okay, we know that we have one or more loads in the same block as the PHI.
   // We can transform this if it is safe to push the loads into the predecessor
   // blocks.  The only thing to watch out for is that we can't put a possibly
@@ -1229,8 +1221,7 @@ static bool isSafePHIToSpeculate(PHINode *PN) {
 
     // If this pointer is always safe to load, or if we can prove that there is
     // already a load in the block, then we can move the load to the pred block.
-    if (isDereferenceablePointer(InVal, DL) ||
-        isSafeToLoadUnconditionally(InVal, MaxAlign, Pred->getTerminator()))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, Pred->getTerminator()))
       continue;
 
     return false;
@@ -1366,7 +1357,7 @@ static bool tryToMakeAllocaBePromotable(AllocaInst *AI, const DataLayout &DL) {
       continue;
     }
 
-    Type *LoadTy = cast<PointerType>(PN->getType())->getElementType();
+    Type *LoadTy = AI->getAllocatedType();
     PHINode *NewPN = PHINode::Create(LoadTy, PN->getNumIncomingValues(),
                                      PN->getName()+".ld", PN);
 
@@ -2219,8 +2210,7 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
 
     // If the pointer is not the right type, insert a bitcast to the right
     // type.
-    Type *NewTy =
-      PointerType::get(AI->getType()->getElementType(), AddrSpace);
+    Type *NewTy = PointerType::get(AI->getAllocatedType(), AddrSpace);
 
     if (OtherPtr->getType() != NewTy)
       OtherPtr = new BitCastInst(OtherPtr, NewTy, OtherPtr->getName(), MI);
@@ -2244,8 +2234,7 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
                                               OtherPtr->getName()+"."+Twine(i),
                                                    MI);
       uint64_t EltOffset;
-      PointerType *OtherPtrTy = cast<PointerType>(OtherPtr->getType());
-      Type *OtherTy = OtherPtrTy->getElementType();
+      Type *OtherTy = AI->getAllocatedType();
       if (StructType *ST = dyn_cast<StructType>(OtherTy)) {
         EltOffset = DL.getStructLayout(ST)->getElementOffset(i);
       } else {
@@ -2261,8 +2250,8 @@ SROA::RewriteMemIntrinUserOfAlloca(MemIntrinsic *MI, Instruction *Inst,
       OtherEltAlign = (unsigned)MinAlign(OtherEltAlign, EltOffset);
     }
 
-    Value *EltPtr = NewElts[i];
-    Type *EltTy = cast<PointerType>(EltPtr->getType())->getElementType();
+    AllocaInst *EltPtr = NewElts[i];
+    Type *EltTy = EltPtr->getAllocatedType();
 
     // If we got down to a scalar, insert a load or store as appropriate.
     if (EltTy->isSingleValueType()) {
@@ -2494,8 +2483,7 @@ SROA::RewriteLoadUserOfWholeAlloca(LoadInst *LI, AllocaInst *AI,
     // Load the value from the alloca.  If the NewElt is an aggregate, cast
     // the pointer to an integer of the same size before doing the load.
     Value *SrcField = NewElts[i];
-    Type *FieldTy =
-      cast<PointerType>(SrcField->getType())->getElementType();
+    Type *FieldTy = NewElts[i]->getAllocatedType();
     uint64_t FieldSizeBits = DL.getTypeSizeInBits(FieldTy);
 
     // Ignore zero sized fields like {}, they obviously contain no data.

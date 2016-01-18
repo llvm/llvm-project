@@ -120,6 +120,11 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   // Module 2:
   //   int bar();
   //   int foo() { return bar(); }
+  //
+  // Verify that the memory manager is only finalized once (for Module 2).
+  // Failure suggests that finalize is being called on the inner RTDyld
+  // instance (for Module 1) which is unsafe, as it will prevent relocation of
+  // Module 2.
 
   ModuleBuilder MB1(getGlobalContext(), "", "dummy");
   {
