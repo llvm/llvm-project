@@ -2547,7 +2547,6 @@ debugserver_regnum_with_fixed_width_hex_register_value (std::ostream& ostrm,
 void
 RNBRemote::DispatchQueueOffsets::GetThreadQueueInfo (nub_process_t pid,
                                                      nub_addr_t dispatch_qaddr,
-                                                     nub_addr_t &dispatch_queue_t,
                                                      std::string &queue_name,
                                                      uint64_t &queue_width,
                                                      uint64_t &queue_serialnum) const
@@ -2558,17 +2557,17 @@ RNBRemote::DispatchQueueOffsets::GetThreadQueueInfo (nub_process_t pid,
 
     if (IsValid() && dispatch_qaddr != INVALID_NUB_ADDRESS && dispatch_qaddr != 0)
     {
-        dispatch_queue_t = DNBProcessMemoryReadPointer (pid, dispatch_qaddr);
-        if (dispatch_queue_t)
+        nub_addr_t dispatch_queue_addr = DNBProcessMemoryReadPointer (pid, dispatch_qaddr);
+        if (dispatch_queue_addr)
         {
-            queue_width = DNBProcessMemoryReadInteger (pid, dispatch_queue_t + dqo_width, dqo_width_size, 0);
-            queue_serialnum = DNBProcessMemoryReadInteger (pid, dispatch_queue_t + dqo_serialnum, dqo_serialnum_size, 0);
+            queue_width = DNBProcessMemoryReadInteger (pid, dispatch_queue_addr + dqo_width, dqo_width_size, 0);
+            queue_serialnum = DNBProcessMemoryReadInteger (pid, dispatch_queue_addr + dqo_serialnum, dqo_serialnum_size, 0);
 
             if (dqo_version >= 4)
             {
                 // libdispatch versions 4+, pointer to dispatch name is in the
                 // queue structure.
-                nub_addr_t pointer_to_label_address = dispatch_queue_t + dqo_label;
+                nub_addr_t pointer_to_label_address = dispatch_queue_addr + dqo_label;
                 nub_addr_t label_addr = DNBProcessMemoryReadPointer (pid, pointer_to_label_address);
                 if (label_addr)
                     queue_name = std::move(DNBProcessMemoryReadCString (pid, label_addr));
@@ -2577,7 +2576,7 @@ RNBRemote::DispatchQueueOffsets::GetThreadQueueInfo (nub_process_t pid,
             {
                 // libdispatch versions 1-3, dispatch name is a fixed width char array
                 // in the queue structure.
-                queue_name = std::move(DNBProcessMemoryReadCStringFixed(pid, dispatch_queue_t + dqo_label, dqo_label_size));
+                queue_name = std::move(DNBProcessMemoryReadCStringFixed(pid, dispatch_queue_addr + dqo_label, dqo_label_size));
             }
         }
     }
@@ -2701,6 +2700,36 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
             }
         }
 
+        thread_identifier_info_data_t thread_ident_info;
+        if (DNBThreadGetIdentifierInfo (pid, tid, &thread_ident_info))
+        {
+            if (thread_ident_info.dispatch_qaddr != 0)
+            {
+                ostrm << "qaddr:" << std::hex << thread_ident_info.dispatch_qaddr << ';';
+                const DispatchQueueOffsets *dispatch_queue_offsets = GetDispatchQueueOffsets();
+                if (dispatch_queue_offsets)
+                {
+                    std::string queue_name;
+                    uint64_t queue_width = 0;
+                    uint64_t queue_serialnum = 0;
+                    dispatch_queue_offsets->GetThreadQueueInfo(pid, thread_ident_info.dispatch_qaddr, queue_name, queue_width, queue_serialnum);
+                    if (!queue_name.empty())
+                    {
+                        ostrm << "qname:";
+                        append_hex_value(ostrm, queue_name.data(), queue_name.size(), false);
+                        ostrm << ';';
+                    }
+                    if (queue_width == 1)
+                        ostrm << "qkind:serial;";
+                    else if (queue_width > 1)
+                        ostrm << "qkind:concurrent;";
+
+                    if (queue_serialnum > 0)
+                        ostrm << "qserial:" << DECIMAL << queue_serialnum << ';';
+                }
+            }
+        }
+
         // If a 'QListThreadsInStopReply' was sent to enable this feature, we
         // will send all thread IDs back in the "threads" key whose value is
         // a list of hex thread IDs separated by commas:
@@ -2714,7 +2743,6 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
             const nub_size_t numthreads = DNBProcessGetNumThreads (pid);
             if (numthreads > 0)
             {
-                std::vector<uint64_t> pc_values;
                 ostrm << std::hex << "threads:";
                 for (nub_size_t i = 0; i < numthreads; ++i)
                 {
@@ -2722,43 +2750,8 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
                     if (i > 0)
                         ostrm << ',';
                     ostrm << std::hex << th;
-                    DNBRegisterValue pc_regval;
-                    if (DNBThreadGetRegisterValueByID (pid, th, REGISTER_SET_GENERIC, GENERIC_REGNUM_PC, &pc_regval))
-                    {
-                        uint64_t pc = INVALID_NUB_ADDRESS;
-                        if (pc_regval.value.uint64 != INVALID_NUB_ADDRESS)
-                        {
-                            if (pc_regval.info.size == 4)
-                            {
-                                pc = pc_regval.value.uint32;
-                            }
-                            else if (pc_regval.info.size == 8)
-                            {
-                                pc = pc_regval.value.uint64;
-                            }
-                            if (pc != INVALID_NUB_ADDRESS)
-                            {
-                                pc_values.push_back (pc);
-                            }
-                        }
-                    }
                 }
                 ostrm << ';';
-
-                // If we failed to get any of the thread pc values, the size of our vector will not
-                // be the same as the # of threads.  Don't provide any expedited thread pc values in
-                // that case.  This should not happen.
-                if (pc_values.size() == numthreads)
-                {
-                    ostrm << std::hex << "thread-pcs:";
-                    for (nub_size_t i = 0; i < numthreads; ++i)
-                    {
-                        if (i > 0)
-                            ostrm << ',';
-                        ostrm << std::hex << pc_values[i];
-                    }
-                    ostrm << ';';
-                }
             }
 
             // Include JSON info that describes the stop reason for any threads
@@ -2781,6 +2774,7 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
                 }
             }
         }
+
 
         if (g_num_reg_entries == 0)
             InitializeRegisters ();
@@ -2818,7 +2812,7 @@ RNBRemote::SendStopReplyPacketForThread (nub_thread_t tid)
         // Add expedited stack memory so stack backtracing doesn't need to read anything from the
         // frame pointer chain.
         StackMemoryMap stack_mmap;
-        ReadStackMemory (pid, tid, stack_mmap, 2);
+        ReadStackMemory (pid, tid, stack_mmap, 1);
         if (!stack_mmap.empty())
         {
             for (const auto &stack_memory : stack_mmap)
@@ -5160,18 +5154,7 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only)
                             std::string queue_name;
                             uint64_t queue_width = 0;
                             uint64_t queue_serialnum = 0;
-                            nub_addr_t dispatch_queue_t = INVALID_NUB_ADDRESS;
-                            dispatch_queue_offsets->GetThreadQueueInfo(pid, thread_ident_info.dispatch_qaddr, dispatch_queue_t, queue_name, queue_width, queue_serialnum);
-                            if (dispatch_queue_t == 0 && queue_name.empty() && queue_serialnum == 0)
-                            {
-                                thread_dict_sp->AddBooleanItem ("associated_with_dispatch_queue", false);
-                            }
-                            else
-                            {
-                                thread_dict_sp->AddBooleanItem ("associated_with_dispatch_queue", true);
-                            }
-                            if (dispatch_queue_t != INVALID_NUB_ADDRESS && dispatch_queue_t != 0)
-                                thread_dict_sp->AddIntegerItem("dispatch_queue_t", dispatch_queue_t);
+                            dispatch_queue_offsets->GetThreadQueueInfo(pid, thread_ident_info.dispatch_qaddr, queue_name, queue_width, queue_serialnum);
                             if (!queue_name.empty())
                                 thread_dict_sp->AddStringItem("qname", queue_name);
                             if (queue_width == 1)
@@ -5179,7 +5162,7 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only)
                             else if (queue_width > 1)
                                 thread_dict_sp->AddStringItem("qkind", "concurrent");
                             if (queue_serialnum > 0)
-                                thread_dict_sp->AddIntegerItem("qserialnum", queue_serialnum);
+                                thread_dict_sp->AddIntegerItem("qserial", queue_serialnum);
                         }
                     }
                 }

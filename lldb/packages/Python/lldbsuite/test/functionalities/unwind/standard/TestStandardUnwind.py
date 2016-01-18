@@ -117,7 +117,7 @@ for d in test_source_dirs:
 # Generate test cases based on the collected source files
 for f in test_source_files:
     if f.endswith(".cpp") or f.endswith(".c"):
-        @add_test_categories(["dwarf"])
+        @dwarf_test
         @unittest2.skipIf(TestBase.skipLongRunningTest(), "Skip this long running test")
         def test_function_dwarf(self, f=f):
             if f.endswith(".cpp"):

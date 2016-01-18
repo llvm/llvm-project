@@ -11,7 +11,6 @@ set(LLVM_LINK_COMPONENTS
   SelectionDAG
   Support
   Target
-  TransformUtils
   )
 
 # Support plugins.

@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 class A {}; // expected-note 4 {{previous use is here}}
 enum E {};
@@ -16,10 +14,7 @@ class A1 {
   friend union A; // expected-error {{use of 'A' with tag type that does not match previous declaration}}
 
   friend enum A; // expected-error {{use of 'A' with tag type that does not match previous declaration}}
-  friend enum E; 
-#if __cplusplus <= 199711L // C++03 or earlier modes
-  // expected-warning@-2 {{befriending enumeration type 'enum E' is a C++11 extension}}
-#endif
+  friend enum E; // expected-warning {{befriending enumeration type 'enum E' is a C++11 extension}}
 };
 
 template <class T> struct B { // expected-note {{previous use is here}}

@@ -45,7 +45,7 @@ typedef llvm::PointerUnion3<TemplateTypeParmDecl*, NonTypeTemplateParmDecl*,
 
 /// \brief Stores a list of template parameters for a TemplateDecl and its
 /// derived classes.
-class TemplateParameterList final
+class LLVM_ALIGNAS(/*alignof(void*)*/ LLVM_PTR_SIZE) TemplateParameterList final
     : private llvm::TrailingObjects<TemplateParameterList, NamedDecl *> {
 
   /// The location of the 'template' keyword.
@@ -68,13 +68,15 @@ protected:
   }
 
   TemplateParameterList(SourceLocation TemplateLoc, SourceLocation LAngleLoc,
-                        ArrayRef<NamedDecl *> Params, SourceLocation RAngleLoc);
+                        NamedDecl **Params, unsigned NumParams,
+                        SourceLocation RAngleLoc);
 
 public:
   static TemplateParameterList *Create(const ASTContext &C,
                                        SourceLocation TemplateLoc,
                                        SourceLocation LAngleLoc,
-                                       ArrayRef<NamedDecl *> Params,
+                                       NamedDecl **Params,
+                                       unsigned NumParams,
                                        SourceLocation RAngleLoc);
 
   /// \brief Iterates through the template parameters in this list.
@@ -153,9 +155,9 @@ template <size_t N> class FixedSizeTemplateParameterListStorage {
 public:
   FixedSizeTemplateParameterListStorage(SourceLocation TemplateLoc,
                                         SourceLocation LAngleLoc,
-                                        ArrayRef<NamedDecl *> Params,
+                                        NamedDecl **Params,
                                         SourceLocation RAngleLoc)
-      : List(TemplateLoc, LAngleLoc, Params, RAngleLoc) {
+      : List(TemplateLoc, LAngleLoc, Params, N, RAngleLoc) {
     // Because we're doing an evil layout hack above, have some
     // asserts, just to double-check everything is laid out like
     // expected.
@@ -169,7 +171,7 @@ public:
 };
 
 /// \brief A template argument list.
-class TemplateArgumentList final
+class LLVM_ALIGNAS(/*alignof(uint64_t)*/ 8) TemplateArgumentList final
     : private llvm::TrailingObjects<TemplateArgumentList, TemplateArgument> {
   /// \brief The template argument list.
   const TemplateArgument *Arguments;
@@ -446,8 +448,17 @@ public:
   /// explicit instantiation declaration, or explicit instantiation
   /// definition.
   bool isExplicitInstantiationOrSpecialization() const {
-    return isTemplateExplicitInstantiationOrSpecialization(
-        getTemplateSpecializationKind());
+    switch (getTemplateSpecializationKind()) {
+    case TSK_ExplicitSpecialization:
+    case TSK_ExplicitInstantiationDeclaration:
+    case TSK_ExplicitInstantiationDefinition:
+      return true;
+
+    case TSK_Undeclared:
+    case TSK_ImplicitInstantiation:
+      return false;
+    }
+    llvm_unreachable("bad template specialization kind");
   }
 
   /// \brief Set the template specialization kind.
@@ -553,7 +564,8 @@ public:
 ///     friend void foo<>(T);
 ///   };
 /// \endcode
-class DependentFunctionTemplateSpecializationInfo final
+class LLVM_ALIGNAS(/*alignof(uint64_t)*/ 8)
+    DependentFunctionTemplateSpecializationInfo final
     : private llvm::TrailingObjects<DependentFunctionTemplateSpecializationInfo,
                                     TemplateArgumentLoc,
                                     FunctionTemplateDecl *> {
@@ -1632,8 +1644,17 @@ public:
   /// explicit instantiation declaration, or explicit instantiation
   /// definition.
   bool isExplicitInstantiationOrSpecialization() const {
-    return isTemplateExplicitInstantiationOrSpecialization(
-        getTemplateSpecializationKind());
+    switch (getTemplateSpecializationKind()) {
+    case TSK_ExplicitSpecialization:
+    case TSK_ExplicitInstantiationDeclaration:
+    case TSK_ExplicitInstantiationDefinition:
+      return true;
+
+    case TSK_Undeclared:
+    case TSK_ImplicitInstantiation:
+      return false;
+    }
+    llvm_unreachable("bad template specialization kind");
   }
 
   void setSpecializationKind(TemplateSpecializationKind TSK) {
@@ -2478,8 +2499,17 @@ public:
   /// explicit instantiation declaration, or explicit instantiation
   /// definition.
   bool isExplicitInstantiationOrSpecialization() const {
-    return isTemplateExplicitInstantiationOrSpecialization(
-        getTemplateSpecializationKind());
+    switch (getTemplateSpecializationKind()) {
+    case TSK_ExplicitSpecialization:
+    case TSK_ExplicitInstantiationDeclaration:
+    case TSK_ExplicitInstantiationDefinition:
+      return true;
+
+    case TSK_Undeclared:
+    case TSK_ImplicitInstantiation:
+      return false;
+    }
+    llvm_unreachable("bad template specialization kind");
   }
 
   void setSpecializationKind(TemplateSpecializationKind TSK) {

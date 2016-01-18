@@ -12,20 +12,15 @@
 
 // C Includes
 // C++ Includes
-#include <string>
-
 // Other libraries and framework includes
-// Project includes
 #include "lldb/Host/FileSpec.h"
 
+// Project includes
 #include "PlatformDarwin.h"
 
 class PlatformRemoteAppleTV : public PlatformDarwin
 {
 public:
-    PlatformRemoteAppleTV();
-
-    ~PlatformRemoteAppleTV() override = default;
 
     //------------------------------------------------------------
     // Class Functions
@@ -48,6 +43,11 @@ public:
     //------------------------------------------------------------
     // Class Methods
     //------------------------------------------------------------
+    PlatformRemoteAppleTV ();
+
+    virtual
+    ~PlatformRemoteAppleTV();
+
     //------------------------------------------------------------
     // lldb_private::PluginInterface functions
     //------------------------------------------------------------
@@ -166,6 +166,7 @@ protected:
 
 private:
     DISALLOW_COPY_AND_ASSIGN (PlatformRemoteAppleTV);
+
 };
 
-#endif // liblldb_PlatformRemoteAppleTV_h_
+#endif  // liblldb_PlatformRemoteAppleTV_h_

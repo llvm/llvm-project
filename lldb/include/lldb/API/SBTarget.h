@@ -180,9 +180,6 @@ public:
             bool stop_at_entry,
             lldb::SBError& error);
 
-    SBProcess
-    LoadCore (const char *core_file);
-
     //------------------------------------------------------------------
     /// Launch a new process with sensible defaults.
     ///
@@ -217,6 +214,9 @@ public:
     SBProcess
     Launch (SBLaunchInfo &launch_info, SBError& error);
     
+    SBProcess
+    LoadCore (const char *core_file);
+
     SBProcess
     Attach (SBAttachInfo &attach_info, SBError& error);
 
@@ -636,13 +636,6 @@ public:
                             const SBFileSpecList &comp_unit_list);
 
     lldb::SBBreakpoint
-    BreakpointCreateByName (const char *symbol_name,
-                            uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
-                            lldb::LanguageType symbol_language,
-                            const SBFileSpecList &module_list, 
-                            const SBFileSpecList &comp_unit_list);
-
-    lldb::SBBreakpoint
     BreakpointCreateByNames (const char *symbol_name[],
                              uint32_t num_names,
                              uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
@@ -650,24 +643,10 @@ public:
                              const SBFileSpecList &comp_unit_list);
 
     lldb::SBBreakpoint
-    BreakpointCreateByNames (const char *symbol_name[],
-                             uint32_t num_names,
-                             uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
-                             lldb::LanguageType symbol_language,
-                             const SBFileSpecList &module_list,
-                             const SBFileSpecList &comp_unit_list);
-
-    lldb::SBBreakpoint
-    BreakpointCreateByRegex (const char *symbol_name_regex, const char *module_name = nullptr);
+    BreakpointCreateByRegex(const char *symbol_name_regex, const char *module_name = nullptr);
     
     lldb::SBBreakpoint
     BreakpointCreateByRegex (const char *symbol_name_regex, 
-                             const SBFileSpecList &module_list, 
-                             const SBFileSpecList &comp_unit_list);
-    
-    lldb::SBBreakpoint
-    BreakpointCreateByRegex (const char *symbol_name_regex,
-                             lldb::LanguageType symbol_language,
                              const SBFileSpecList &module_list, 
                              const SBFileSpecList &comp_unit_list);
     
@@ -688,9 +667,6 @@ public:
 
     lldb::SBBreakpoint
     BreakpointCreateByAddress (addr_t address);
-
-    lldb::SBBreakpoint
-    BreakpointCreateBySBAddress (SBAddress &address);
 
     uint32_t
     GetNumBreakpoints () const;

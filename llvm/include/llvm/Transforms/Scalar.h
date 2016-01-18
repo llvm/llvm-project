@@ -382,13 +382,6 @@ Pass *createLowerAtomicPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LowerEmuTLS - This pass generates __emutls_[vt].xyz variables for all
-// TLS variables for the emulated TLS model.
-//
-ModulePass *createLowerEmuTLSPass(const TargetMachine *TM);
-
-//===----------------------------------------------------------------------===//
-//
 // ValuePropagation - Propagate CFG-derived value information
 //
 Pass *createCorrelatedValuePropagationPass();

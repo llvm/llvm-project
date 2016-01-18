@@ -60,7 +60,6 @@ public:
 
   /// state management
   void reset() override {
-    CreatedADWARFSection = false;
     HasSectionLabel.clear();
     MCObjectStreamer::reset();
   }

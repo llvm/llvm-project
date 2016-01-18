@@ -300,7 +300,6 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_Hexagon_LD_PLT: return "LDPLT";
   case VK_Hexagon_IE: return "IE";
   case VK_Hexagon_IE_GOT: return "IEGOT";
-  case VK_WebAssembly_FUNCTION: return "FUNCTION";
   case VK_TPREL: return "tprel";
   case VK_DTPREL: return "dtprel";
   }
@@ -383,13 +382,6 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("got@tlsld@l", VK_PPC_GOT_TLSLD_LO)
     .Case("got@tlsld@h", VK_PPC_GOT_TLSLD_HI)
     .Case("got@tlsld@ha", VK_PPC_GOT_TLSLD_HA)
-    .Case("gdgot", VK_Hexagon_GD_GOT)
-    .Case("gdplt", VK_Hexagon_GD_PLT)
-    .Case("iegot", VK_Hexagon_IE_GOT)
-    .Case("ie", VK_Hexagon_IE)
-    .Case("ldgot", VK_Hexagon_LD_GOT)
-    .Case("ldplt", VK_Hexagon_LD_PLT)
-    .Case("pcrel", VK_Hexagon_PCREL)
     .Case("none", VK_ARM_NONE)
     .Case("got_prel", VK_ARM_GOT_PREL)
     .Case("target1", VK_ARM_TARGET1)

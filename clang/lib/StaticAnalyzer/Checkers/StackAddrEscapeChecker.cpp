@@ -156,15 +156,6 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   if (isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType())
     return;
 
-  // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
-  // so the stack address is not escaping here.
-  if (auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
-    if (isa<BlockDataRegion>(R) &&
-        ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject) {
-      return;
-    }
-  }
-
   EmitStackError(C, R, RetE);
 }
 

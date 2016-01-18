@@ -41,10 +41,6 @@
 #include "lldb/Target/Target.h"
 #include "llvm/ADT/STLExtras.h"
 
-#if defined (__APPLE__)
-#include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
-#endif
-
 using namespace lldb;
 using namespace lldb_private;
     
@@ -765,44 +761,35 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
 {
     ArchSpec system_arch (GetSystemArchitecture());
 
-    // When lldb is running on a watch or tv, set the arch OS name appropriately.
-#if defined (TARGET_OS_TV) && TARGET_OS_TV == 1
-#define OSNAME "tvos"
-#elif defined (TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
-#define OSNAME "watchos"
-#else
-#define OSNAME "ios"
-#endif
-
     const ArchSpec::Core system_core = system_arch.GetCore();
     switch (system_core)
     {
     default:
         switch (idx)
         {
-            case  0: arch.SetTriple ("arm64-apple-" OSNAME);    return true;
-            case  1: arch.SetTriple ("armv7-apple-" OSNAME);    return true;
-            case  2: arch.SetTriple ("armv7f-apple-" OSNAME);   return true;
-            case  3: arch.SetTriple ("armv7k-apple-" OSNAME);   return true;
-            case  4: arch.SetTriple ("armv7s-apple-" OSNAME);   return true;
-            case  5: arch.SetTriple ("armv7m-apple-" OSNAME);   return true;
-            case  6: arch.SetTriple ("armv7em-apple-" OSNAME);  return true;
-            case  7: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case  8: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case  9: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case 10: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case 11: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case 12: arch.SetTriple ("thumbv7-apple-" OSNAME);  return true;
-            case 13: arch.SetTriple ("thumbv7f-apple-" OSNAME); return true;
-            case 14: arch.SetTriple ("thumbv7k-apple-" OSNAME); return true;
-            case 15: arch.SetTriple ("thumbv7s-apple-" OSNAME); return true;
-            case 16: arch.SetTriple ("thumbv7m-apple-" OSNAME); return true;
-            case 17: arch.SetTriple ("thumbv7em-apple-" OSNAME); return true;
-            case 18: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case 19: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 20: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 21: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 22: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case  0: arch.SetTriple ("arm64-apple-ios");    return true;
+            case  1: arch.SetTriple ("armv7-apple-ios");    return true;
+            case  2: arch.SetTriple ("armv7f-apple-ios");   return true;
+            case  3: arch.SetTriple ("armv7k-apple-ios");   return true;
+            case  4: arch.SetTriple ("armv7s-apple-ios");   return true;
+            case  5: arch.SetTriple ("armv7m-apple-ios");   return true;
+            case  6: arch.SetTriple ("armv7em-apple-ios");  return true;
+            case  7: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case  8: arch.SetTriple ("armv6-apple-ios");    return true;
+            case  9: arch.SetTriple ("armv5-apple-ios");    return true;
+            case 10: arch.SetTriple ("armv4-apple-ios");    return true;
+            case 11: arch.SetTriple ("arm-apple-ios");      return true;
+            case 12: arch.SetTriple ("thumbv7-apple-ios");  return true;
+            case 13: arch.SetTriple ("thumbv7f-apple-ios"); return true;
+            case 14: arch.SetTriple ("thumbv7k-apple-ios"); return true;
+            case 15: arch.SetTriple ("thumbv7s-apple-ios"); return true;
+            case 16: arch.SetTriple ("thumbv7m-apple-ios"); return true;
+            case 17: arch.SetTriple ("thumbv7em-apple-ios"); return true;
+            case 18: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case 19: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 20: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 21: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 22: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -810,28 +797,28 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_arm64:
         switch (idx)
         {
-            case  0: arch.SetTriple ("arm64-apple-" OSNAME);   return true;
-            case  1: arch.SetTriple ("armv7s-apple-" OSNAME);   return true;
-            case  2: arch.SetTriple ("armv7f-apple-" OSNAME);   return true;
-            case  3: arch.SetTriple ("armv7m-apple-" OSNAME);   return true;
-            case  4: arch.SetTriple ("armv7em-apple-" OSNAME);  return true;
-            case  5: arch.SetTriple ("armv7-apple-" OSNAME);    return true;
-            case  6: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case  7: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case  8: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case  9: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case 10: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case 11: arch.SetTriple ("thumbv7-apple-" OSNAME);  return true;
-            case 12: arch.SetTriple ("thumbv7f-apple-" OSNAME); return true;
-            case 13: arch.SetTriple ("thumbv7k-apple-" OSNAME); return true;
-            case 14: arch.SetTriple ("thumbv7s-apple-" OSNAME); return true;
-            case 15: arch.SetTriple ("thumbv7m-apple-" OSNAME); return true;
-            case 16: arch.SetTriple ("thumbv7em-apple-" OSNAME); return true;
-            case 17: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case 18: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 19: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 20: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 21: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case  0: arch.SetTriple ("arm64-apple-ios");   return true;
+            case  1: arch.SetTriple ("armv7s-apple-ios");   return true;
+            case  2: arch.SetTriple ("armv7f-apple-ios");   return true;
+            case  3: arch.SetTriple ("armv7m-apple-ios");   return true;
+            case  4: arch.SetTriple ("armv7em-apple-ios");  return true;
+            case  5: arch.SetTriple ("armv7-apple-ios");    return true;
+            case  6: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case  7: arch.SetTriple ("armv6-apple-ios");    return true;
+            case  8: arch.SetTriple ("armv5-apple-ios");    return true;
+            case  9: arch.SetTriple ("armv4-apple-ios");    return true;
+            case 10: arch.SetTriple ("arm-apple-ios");      return true;
+            case 11: arch.SetTriple ("thumbv7-apple-ios");  return true;
+            case 12: arch.SetTriple ("thumbv7f-apple-ios"); return true;
+            case 13: arch.SetTriple ("thumbv7k-apple-ios"); return true;
+            case 14: arch.SetTriple ("thumbv7s-apple-ios"); return true;
+            case 15: arch.SetTriple ("thumbv7m-apple-ios"); return true;
+            case 16: arch.SetTriple ("thumbv7em-apple-ios"); return true;
+            case 17: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case 18: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 19: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 20: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 21: arch.SetTriple ("thumb-apple-ios");    return true;
         default: break;
         }
         break;
@@ -839,20 +826,20 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv7f:
         switch (idx)
         {
-            case  0: arch.SetTriple ("armv7f-apple-" OSNAME);   return true;
-            case  1: arch.SetTriple ("armv7-apple-" OSNAME);    return true;
-            case  2: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case  3: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case  4: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case  5: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case  6: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case  7: arch.SetTriple ("thumbv7f-apple-" OSNAME); return true;
-            case  8: arch.SetTriple ("thumbv7-apple-" OSNAME);  return true;
-            case  9: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case 10: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 11: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 12: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 13: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case  0: arch.SetTriple ("armv7f-apple-ios");   return true;
+            case  1: arch.SetTriple ("armv7-apple-ios");    return true;
+            case  2: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case  3: arch.SetTriple ("armv6-apple-ios");    return true;
+            case  4: arch.SetTriple ("armv5-apple-ios");    return true;
+            case  5: arch.SetTriple ("armv4-apple-ios");    return true;
+            case  6: arch.SetTriple ("arm-apple-ios");      return true;
+            case  7: arch.SetTriple ("thumbv7f-apple-ios"); return true;
+            case  8: arch.SetTriple ("thumbv7-apple-ios");  return true;
+            case  9: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case 10: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 11: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 12: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 13: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -860,20 +847,20 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv7k:
         switch (idx)
         {
-            case  0: arch.SetTriple ("armv7k-apple-" OSNAME);   return true;
-            case  1: arch.SetTriple ("armv7-apple-" OSNAME);    return true;
-            case  2: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case  3: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case  4: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case  5: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case  6: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case  7: arch.SetTriple ("thumbv7k-apple-" OSNAME); return true;
-            case  8: arch.SetTriple ("thumbv7-apple-" OSNAME);  return true;
-            case  9: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case 10: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 11: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 12: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 13: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case  0: arch.SetTriple ("armv7k-apple-ios");   return true;
+            case  1: arch.SetTriple ("armv7-apple-ios");    return true;
+            case  2: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case  3: arch.SetTriple ("armv6-apple-ios");    return true;
+            case  4: arch.SetTriple ("armv5-apple-ios");    return true;
+            case  5: arch.SetTriple ("armv4-apple-ios");    return true;
+            case  6: arch.SetTriple ("arm-apple-ios");      return true;
+            case  7: arch.SetTriple ("thumbv7k-apple-ios"); return true;
+            case  8: arch.SetTriple ("thumbv7-apple-ios");  return true;
+            case  9: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case 10: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 11: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 12: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 13: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -881,20 +868,20 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv7s:
         switch (idx)
         {
-            case  0: arch.SetTriple ("armv7s-apple-" OSNAME);   return true;
-            case  1: arch.SetTriple ("armv7-apple-" OSNAME);    return true;
-            case  2: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case  3: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case  4: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case  5: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case  6: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case  7: arch.SetTriple ("thumbv7s-apple-" OSNAME); return true;
-            case  8: arch.SetTriple ("thumbv7-apple-" OSNAME);  return true;
-            case  9: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case 10: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 11: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 12: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 13: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case  0: arch.SetTriple ("armv7s-apple-ios");   return true;
+            case  1: arch.SetTriple ("armv7-apple-ios");    return true;
+            case  2: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case  3: arch.SetTriple ("armv6-apple-ios");    return true;
+            case  4: arch.SetTriple ("armv5-apple-ios");    return true;
+            case  5: arch.SetTriple ("armv4-apple-ios");    return true;
+            case  6: arch.SetTriple ("arm-apple-ios");      return true;
+            case  7: arch.SetTriple ("thumbv7s-apple-ios"); return true;
+            case  8: arch.SetTriple ("thumbv7-apple-ios");  return true;
+            case  9: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case 10: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 11: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 12: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 13: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -902,20 +889,20 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv7m:
         switch (idx)
         {
-            case  0: arch.SetTriple ("armv7m-apple-" OSNAME);   return true;
-            case  1: arch.SetTriple ("armv7-apple-" OSNAME);    return true;
-            case  2: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case  3: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case  4: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case  5: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case  6: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case  7: arch.SetTriple ("thumbv7m-apple-" OSNAME); return true;
-            case  8: arch.SetTriple ("thumbv7-apple-" OSNAME);  return true;
-            case  9: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case 10: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 11: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 12: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 13: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case  0: arch.SetTriple ("armv7m-apple-ios");   return true;
+            case  1: arch.SetTriple ("armv7-apple-ios");    return true;
+            case  2: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case  3: arch.SetTriple ("armv6-apple-ios");    return true;
+            case  4: arch.SetTriple ("armv5-apple-ios");    return true;
+            case  5: arch.SetTriple ("armv4-apple-ios");    return true;
+            case  6: arch.SetTriple ("arm-apple-ios");      return true;
+            case  7: arch.SetTriple ("thumbv7m-apple-ios"); return true;
+            case  8: arch.SetTriple ("thumbv7-apple-ios");  return true;
+            case  9: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case 10: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 11: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 12: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 13: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -923,20 +910,20 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv7em:
         switch (idx)
         {
-            case  0: arch.SetTriple ("armv7em-apple-" OSNAME);  return true;
-            case  1: arch.SetTriple ("armv7-apple-" OSNAME);    return true;
-            case  2: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case  3: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case  4: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case  5: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case  6: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case  7: arch.SetTriple ("thumbv7em-apple-" OSNAME); return true;
-            case  8: arch.SetTriple ("thumbv7-apple-" OSNAME);  return true;
-            case  9: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case 10: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 11: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 12: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 13: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case  0: arch.SetTriple ("armv7em-apple-ios");  return true;
+            case  1: arch.SetTriple ("armv7-apple-ios");    return true;
+            case  2: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case  3: arch.SetTriple ("armv6-apple-ios");    return true;
+            case  4: arch.SetTriple ("armv5-apple-ios");    return true;
+            case  5: arch.SetTriple ("armv4-apple-ios");    return true;
+            case  6: arch.SetTriple ("arm-apple-ios");      return true;
+            case  7: arch.SetTriple ("thumbv7em-apple-ios"); return true;
+            case  8: arch.SetTriple ("thumbv7-apple-ios");  return true;
+            case  9: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case 10: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 11: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 12: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 13: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -944,18 +931,18 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv7:
         switch (idx)
         {
-            case  0: arch.SetTriple ("armv7-apple-" OSNAME);    return true;
-            case  1: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case  2: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case  3: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case  4: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case  5: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case  6: arch.SetTriple ("thumbv7-apple-" OSNAME);  return true;
-            case  7: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case  8: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case  9: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 10: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 11: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case  0: arch.SetTriple ("armv7-apple-ios");    return true;
+            case  1: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case  2: arch.SetTriple ("armv6-apple-ios");    return true;
+            case  3: arch.SetTriple ("armv5-apple-ios");    return true;
+            case  4: arch.SetTriple ("armv4-apple-ios");    return true;
+            case  5: arch.SetTriple ("arm-apple-ios");      return true;
+            case  6: arch.SetTriple ("thumbv7-apple-ios");  return true;
+            case  7: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case  8: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case  9: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 10: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 11: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -963,16 +950,16 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv6m:
         switch (idx)
         {
-            case 0: arch.SetTriple ("armv6m-apple-" OSNAME);   return true;
-            case 1: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case 2: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case 3: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case 4: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case 5: arch.SetTriple ("thumbv6m-apple-" OSNAME); return true;
-            case 6: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 7: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 8: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 9: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case 0: arch.SetTriple ("armv6m-apple-ios");   return true;
+            case 1: arch.SetTriple ("armv6-apple-ios");    return true;
+            case 2: arch.SetTriple ("armv5-apple-ios");    return true;
+            case 3: arch.SetTriple ("armv4-apple-ios");    return true;
+            case 4: arch.SetTriple ("arm-apple-ios");      return true;
+            case 5: arch.SetTriple ("thumbv6m-apple-ios"); return true;
+            case 6: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 7: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 8: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 9: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -980,14 +967,14 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv6:
         switch (idx)
         {
-            case 0: arch.SetTriple ("armv6-apple-" OSNAME);    return true;
-            case 1: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case 2: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case 3: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case 4: arch.SetTriple ("thumbv6-apple-" OSNAME);  return true;
-            case 5: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 6: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 7: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case 0: arch.SetTriple ("armv6-apple-ios");    return true;
+            case 1: arch.SetTriple ("armv5-apple-ios");    return true;
+            case 2: arch.SetTriple ("armv4-apple-ios");    return true;
+            case 3: arch.SetTriple ("arm-apple-ios");      return true;
+            case 4: arch.SetTriple ("thumbv6-apple-ios");  return true;
+            case 5: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 6: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 7: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -995,12 +982,12 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv5:
         switch (idx)
         {
-            case 0: arch.SetTriple ("armv5-apple-" OSNAME);    return true;
-            case 1: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case 2: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case 3: arch.SetTriple ("thumbv5-apple-" OSNAME);  return true;
-            case 4: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 5: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case 0: arch.SetTriple ("armv5-apple-ios");    return true;
+            case 1: arch.SetTriple ("armv4-apple-ios");    return true;
+            case 2: arch.SetTriple ("arm-apple-ios");      return true;
+            case 3: arch.SetTriple ("thumbv5-apple-ios");  return true;
+            case 4: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 5: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -1008,10 +995,10 @@ PlatformDarwin::ARMGetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch
     case ArchSpec::eCore_arm_armv4:
         switch (idx)
         {
-            case 0: arch.SetTriple ("armv4-apple-" OSNAME);    return true;
-            case 1: arch.SetTriple ("arm-apple-" OSNAME);      return true;
-            case 2: arch.SetTriple ("thumbv4t-apple-" OSNAME); return true;
-            case 3: arch.SetTriple ("thumb-apple-" OSNAME);    return true;
+            case 0: arch.SetTriple ("armv4-apple-ios");    return true;
+            case 1: arch.SetTriple ("arm-apple-ios");      return true;
+            case 2: arch.SetTriple ("thumbv4t-apple-ios"); return true;
+            case 3: arch.SetTriple ("thumb-apple-ios");    return true;
             default: break;
         }
         break;
@@ -1634,7 +1621,7 @@ PlatformDarwin::GetOSVersion (uint32_t &major,
                     }
                     else if (env_str.startswith(k_dyld_root_path))
                     {
-                        dyld_root_path = env_str.substr(k_dyld_root_path.size()).str();
+                        dyld_root_path = std::move(env_str.substr(k_dyld_root_path.size()).str());
                     }
                 }
             }

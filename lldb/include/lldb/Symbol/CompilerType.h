@@ -107,9 +107,6 @@ public:
     IsAggregateType () const;
     
     bool
-    IsAnonymousType () const;
-    
-    bool
     IsBeingDefined () const;
 
     bool
@@ -179,9 +176,6 @@ public:
     
     bool
     IsReferenceType(CompilerType *pointee_type = nullptr, bool* is_rvalue = nullptr) const;
-
-    bool
-    ShouldTreatScalarValueAsAddress () const;
     
     bool
     IsScalarType () const;
@@ -443,8 +437,7 @@ public:
                                  uint32_t &child_bitfield_bit_offset,
                                  bool &child_is_base_class,
                                  bool &child_is_deref_of_parent,
-                                 ValueObject *valobj,
-                                 uint64_t &language_flags) const;
+                                 ValueObject *valobj) const;
     
     // Lookup a child given a name. This function will match base class names
     // and member member names in "clang_type" only, not descendants.
@@ -473,7 +466,7 @@ public:
     GetTypeForFormatters () const;
     
     LazyBool
-    ShouldPrintAsOneLiner (ValueObject* valobj) const;
+    ShouldPrintAsOneLiner () const;
     
     bool
     IsMeaninglessWithoutDynamicResolution () const;

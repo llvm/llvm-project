@@ -128,7 +128,7 @@ namespace {
         makeVisible(*CurI, Delete);
 
         if (Delete) {
-          Type *Ty =  CurI->getValueType();
+          Type *Ty =  CurI->getType()->getElementType();
 
           CurI->removeFromParent();
           llvm::Value *Declaration;

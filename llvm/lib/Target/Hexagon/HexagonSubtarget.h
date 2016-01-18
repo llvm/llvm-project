@@ -43,10 +43,6 @@ public:
   };
 
   HexagonArchEnum HexagonArchVersion;
-  /// True if the target should use Back-Skip-Back scheduling. This is the
-  /// default for V60.
-  bool UseBSBScheduling;
-
 private:
   std::string CPUString;
   HexagonInstrInfo InstrInfo;
@@ -54,7 +50,6 @@ private:
   HexagonSelectionDAGInfo TSInfo;
   HexagonFrameLowering FrameLowering;
   InstrItineraryData InstrItins;
-  void initializeEnvironment();
 
 public:
   HexagonSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
@@ -89,16 +84,11 @@ public:
   bool useMemOps() const { return UseMemOps; }
   bool hasV5TOps() const { return getHexagonArchVersion() >= V5; }
   bool hasV5TOpsOnly() const { return getHexagonArchVersion() == V5; }
-  bool hasV55TOps() const { return getHexagonArchVersion() >= V55; }
-  bool hasV55TOpsOnly() const { return getHexagonArchVersion() == V55; }
   bool hasV60TOps() const { return getHexagonArchVersion() >= V60; }
   bool hasV60TOpsOnly() const { return getHexagonArchVersion() == V60; }
   bool modeIEEERndNear() const { return ModeIEEERndNear; }
-  bool useHVXOps() const { return UseHVXOps; }
-  bool useHVXDblOps() const { return UseHVXOps && UseHVXDblOps; }
+  bool useHVXDblOps() const { return UseHVXDblOps; }
   bool useHVXSglOps() const { return UseHVXOps && !UseHVXDblOps; }
-
-  bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;
   // Always use the TargetLowering default scheduler.
   // FIXME: This will use the vliw scheduler which is probably just hurting
@@ -112,7 +102,7 @@ public:
     return Hexagon_SMALL_DATA_THRESHOLD;
   }
   const HexagonArchEnum &getHexagonArchVersion() const {
-    return HexagonArchVersion;
+    return  HexagonArchVersion;
   }
 };
 

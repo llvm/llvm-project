@@ -608,20 +608,6 @@
                     return lldb_private::PythonString("").release();
         }
 }
-%extend lldb::SBTypeMemberFunction {
-        PyObject *lldb::SBTypeMemberFunction::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description, lldb::eDescriptionLevelBrief);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                if (desc_len > 0)
-                    return lldb_private::PythonString(llvm::StringRef(desc, desc_len)).release();
-                else
-                    return lldb_private::PythonString("").release();
-        }
-}
 %extend lldb::SBTypeEnumMember {
         PyObject *lldb::SBTypeEnumMember::__str__ (){
                 lldb::SBStream description;
@@ -1058,7 +1044,7 @@ class value(object):
                 return self_val == other_val
         raise TypeError("Unknown type %s, No equality operation defined." % str(type(other)))
 
-    def __ne__(self, other):
+    def __neq__(self, other):
         return not self.__eq__(other)
 %}
 

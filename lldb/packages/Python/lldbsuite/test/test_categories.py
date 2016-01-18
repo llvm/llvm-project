@@ -3,7 +3,6 @@ Provides definitions for various lldb test categories
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 
 # System modules
 import sys
@@ -12,15 +11,8 @@ import sys
 
 # LLDB modules
 
-debug_info_categories = [
-    'dwarf', 'dwo', 'dsym'
-]
-
 all_categories = {
     'dataformatters': 'Tests related to the type command and the data formatters subsystem',
-    'dwarf'         : 'Tests that can be run with DWARF debug information',
-    'dwo'           : 'Tests that can be run with DWO debug information',
-    'dsym'          : 'Tests that can be run with DSYM debug information',
     'expression'    : 'Tests related to the expression parser',
     'objc'          : 'Tests related to the Objective-C programming language support',
     'pyapi'         : 'Tests related to the Python API',
@@ -41,14 +33,6 @@ def unique_string_match(yourentry, list):
             return None
         candidate = item
     return candidate
-
-def is_supported_on_platform(category, platform):
-    if category == "dwo":
-        # -gsplit-dwarf is not implemented by clang on Windows.
-        return platform in ["linux", "freebsd"]
-    elif category == "dsym":
-        return platform in ["darwin", "macosx", "ios"]
-    return True
 
 def validate(categories, exact_match):
     """

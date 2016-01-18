@@ -43,6 +43,7 @@ class AArch64Operand;
 class AArch64AsmParser : public MCTargetAsmParser {
 private:
   StringRef Mnemonic; ///< Instruction mnemonic.
+  MCSubtargetInfo &STI;
 
   // Map of register aliases registers via the .req directive.
   StringMap<std::pair<bool, unsigned> > RegisterReqs;
@@ -100,7 +101,6 @@ private:
   OperandMatchResultTy tryParseSysReg(OperandVector &Operands);
   OperandMatchResultTy tryParseSysCROperand(OperandVector &Operands);
   OperandMatchResultTy tryParsePrefetch(OperandVector &Operands);
-  OperandMatchResultTy tryParsePSBHint(OperandVector &Operands);
   OperandMatchResultTy tryParseAdrpLabel(OperandVector &Operands);
   OperandMatchResultTy tryParseAdrLabel(OperandVector &Operands);
   OperandMatchResultTy tryParseFPImm(OperandVector &Operands);
@@ -115,16 +115,16 @@ public:
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "AArch64GenAsmMatcher.inc"
   };
-  AArch64AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
+  AArch64AsmParser(MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI) {
+      : MCTargetAsmParser(Options), STI(STI) {
     MCAsmParserExtension::Initialize(Parser);
     MCStreamer &S = getParser().getStreamer();
     if (S.getTargetStreamer() == nullptr)
       new AArch64TargetStreamer(S);
 
     // Initialize the set of available features.
-    setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
+    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -160,8 +160,7 @@ private:
     k_Prefetch,
     k_ShiftExtend,
     k_FPImm,
-    k_Barrier,
-    k_PSBHint,
+    k_Barrier
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -229,12 +228,6 @@ private:
     unsigned Length;
   };
 
-  struct PSBHintOp {
-    unsigned Val;
-    const char *Data;
-    unsigned Length;
-  };
-
   struct ShiftExtendOp {
     AArch64_AM::ShiftExtendType Type;
     unsigned Amount;
@@ -258,7 +251,6 @@ private:
     struct SysRegOp SysReg;
     struct SysCRImmOp SysCRImm;
     struct PrefetchOp Prefetch;
-    struct PSBHintOp PSBHint;
     struct ShiftExtendOp ShiftExtend;
   };
 
@@ -309,9 +301,6 @@ public:
       break;
     case k_Prefetch:
       Prefetch = o.Prefetch;
-      break;
-    case k_PSBHint:
-      PSBHint = o.PSBHint;
       break;
     case k_ShiftExtend:
       ShiftExtend = o.ShiftExtend;
@@ -402,16 +391,6 @@ public:
   unsigned getPrefetch() const {
     assert(Kind == k_Prefetch && "Invalid access!");
     return Prefetch.Val;
-  }
-
-  unsigned getPSBHint() const {
-    assert(Kind == k_PSBHint && "Invalid access!");
-    return PSBHint.Val;
-  }
-
-  StringRef getPSBHintName() const {
-    assert(Kind == k_PSBHint && "Invalid access!");
-    return StringRef(PSBHint.Data, PSBHint.Length);
   }
 
   StringRef getPrefetchName() const {
@@ -910,8 +889,7 @@ public:
   }
   bool isSystemPStateFieldWithImm0_1() const {
     if (!isSysReg()) return false;
-    return (SysReg.PStateField == AArch64PState::PAN ||
-            SysReg.PStateField == AArch64PState::UAO);
+    return SysReg.PStateField == AArch64PState::PAN;
   }
   bool isSystemPStateFieldWithImm0_15() const {
     if (!isSysReg() || isSystemPStateFieldWithImm0_1()) return false;
@@ -983,7 +961,6 @@ public:
   }
   bool isSysCR() const { return Kind == k_SysCR; }
   bool isPrefetch() const { return Kind == k_Prefetch; }
-  bool isPSBHint() const { return Kind == k_PSBHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
     if (!isShiftExtend())
@@ -1557,11 +1534,6 @@ public:
     Inst.addOperand(MCOperand::createImm(getPrefetch()));
   }
 
-  void addPSBHintOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getPSBHint()));
-  }
-
   void addShifterOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     unsigned Imm =
@@ -1758,19 +1730,6 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<AArch64Operand> CreatePSBHint(unsigned Val,
-                                                       StringRef Str,
-                                                       SMLoc S,
-                                                       MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_PSBHint, Ctx);
-    Op->PSBHint.Val = Val;
-    Op->PSBHint.Data = Str.data();
-    Op->PSBHint.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
-  }
-
   static std::unique_ptr<AArch64Operand>
   CreateShiftExtend(AArch64_AM::ShiftExtendType ShOp, unsigned Val,
                     bool HasExplicitAmount, SMLoc S, SMLoc E, MCContext &Ctx) {
@@ -1842,10 +1801,6 @@ void AArch64Operand::print(raw_ostream &OS) const {
       OS << "<prfop " << Name << ">";
     else
       OS << "<prfop invalid #" << getPrefetch() << ">";
-    break;
-  }
-  case k_PSBHint: {
-    OS << getPSBHintName();
     break;
   }
   case k_ShiftExtend: {
@@ -1921,8 +1876,6 @@ static bool isValidVectorKind(StringRef Name) {
       .Case(".h", true)
       .Case(".s", true)
       .Case(".d", true)
-      // Needed for fp16 scalar pairwise reductions
-      .Case(".2h", true)
       .Default(false);
 }
 
@@ -2090,7 +2043,7 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
     bool Valid;
     auto Mapper = AArch64PRFM::PRFMMapper();
     StringRef Name = 
-        Mapper.toString(MCE->getValue(), getSTI().getFeatureBits(), Valid);
+        Mapper.toString(MCE->getValue(), STI.getFeatureBits(), Valid);
     Operands.push_back(AArch64Operand::CreatePrefetch(prfop, Name,
                                                       S, getContext()));
     return MatchOperand_Success;
@@ -2104,7 +2057,7 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   bool Valid;
   auto Mapper = AArch64PRFM::PRFMMapper();
   unsigned prfop = 
-      Mapper.fromString(Tok.getString(), getSTI().getFeatureBits(), Valid);
+      Mapper.fromString(Tok.getString(), STI.getFeatureBits(), Valid);
   if (!Valid) {
     TokError("pre-fetch hint expected");
     return MatchOperand_ParseFail;
@@ -2113,32 +2066,6 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(AArch64Operand::CreatePrefetch(prfop, Tok.getString(),
                                                     S, getContext()));
-  return MatchOperand_Success;
-}
-
-/// tryParsePSBHint - Try to parse a PSB operand, mapped to Hint command
-AArch64AsmParser::OperandMatchResultTy
-AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-  SMLoc S = getLoc();
-  const AsmToken &Tok = Parser.getTok();
-  if (Tok.isNot(AsmToken::Identifier)) {
-    TokError("invalid operand for instruction");
-    return MatchOperand_ParseFail;
-  }
-
-  bool Valid;
-  auto Mapper = AArch64PSBHint::PSBHintMapper();
-  unsigned psbhint =
-      Mapper.fromString(Tok.getString(), getSTI().getFeatureBits(), Valid);
-  if (!Valid) {
-    TokError("invalid operand for instruction");
-    return MatchOperand_ParseFail;
-  }
-
-  Parser.Lex(); // Eat identifier token.
-  Operands.push_back(AArch64Operand::CreatePSBHint(psbhint, Tok.getString(),
-                                                   S, getContext()));
   return MatchOperand_Success;
 }
 
@@ -2539,13 +2466,6 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     } else if (!Op.compare_lower("cisw")) {
       // SYS #0, C7, C14, #2
       SYS_ALIAS(0, 7, 14, 2);
-    } else if (!Op.compare_lower("cvap")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #3, C7, C12, #1
-        SYS_ALIAS(3, 7, 12, 1);
-      } else {
-        return TokError("DC CVAP requires ARMv8.2a");
-      }
     } else {
       return TokError("invalid operand for DC instruction");
     }
@@ -2586,20 +2506,6 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     } else if (!Op.compare_lower("s12e0w")) {
       // SYS #4, C7, C8, #7
       SYS_ALIAS(4, 7, 8, 7);
-    } else if (!Op.compare_lower("s1e1rp")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #0, C7, C9, #0
-        SYS_ALIAS(0, 7, 9, 0);
-      } else {
-        return TokError("AT S1E1RP requires ARMv8.2a");
-      }
-    } else if (!Op.compare_lower("s1e1wp")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #0, C7, C9, #1
-        SYS_ALIAS(0, 7, 9, 1);
-      } else {
-        return TokError("AT S1E1WP requires ARMv8.2a");
-      }
     } else {
       return TokError("invalid operand for AT instruction");
     }
@@ -2765,7 +2671,7 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     bool Valid;
     auto Mapper = AArch64DB::DBarrierMapper();
     StringRef Name = 
-        Mapper.toString(MCE->getValue(), getSTI().getFeatureBits(), Valid);
+        Mapper.toString(MCE->getValue(), STI.getFeatureBits(), Valid);
     Operands.push_back( AArch64Operand::CreateBarrier(MCE->getValue(), Name,
                                                       ExprLoc, getContext()));
     return MatchOperand_Success;
@@ -2779,7 +2685,7 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   bool Valid;
   auto Mapper = AArch64DB::DBarrierMapper();
   unsigned Opt = 
-      Mapper.fromString(Tok.getString(), getSTI().getFeatureBits(), Valid);
+      Mapper.fromString(Tok.getString(), STI.getFeatureBits(), Valid);
   if (!Valid) {
     TokError("invalid barrier option name");
     return MatchOperand_ParseFail;
@@ -2808,21 +2714,20 @@ AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
 
   bool IsKnown;
   auto MRSMapper = AArch64SysReg::MRSMapper();
-  uint32_t MRSReg = MRSMapper.fromString(Tok.getString(),
-                                         getSTI().getFeatureBits(), IsKnown);
+  uint32_t MRSReg = MRSMapper.fromString(Tok.getString(), STI.getFeatureBits(),
+                                         IsKnown);
   assert(IsKnown == (MRSReg != -1U) &&
          "register should be -1 if and only if it's unknown");
 
   auto MSRMapper = AArch64SysReg::MSRMapper();
-  uint32_t MSRReg = MSRMapper.fromString(Tok.getString(),
-                                         getSTI().getFeatureBits(), IsKnown);
+  uint32_t MSRReg = MSRMapper.fromString(Tok.getString(), STI.getFeatureBits(),
+                                         IsKnown);
   assert(IsKnown == (MSRReg != -1U) &&
          "register should be -1 if and only if it's unknown");
 
   auto PStateMapper = AArch64PState::PStateMapper();
   uint32_t PStateField = 
-      PStateMapper.fromString(Tok.getString(),
-                              getSTI().getFeatureBits(), IsKnown);
+      PStateMapper.fromString(Tok.getString(), STI.getFeatureBits(), IsKnown);
   assert(IsKnown == (PStateField != -1U) &&
          "register should be -1 if and only if it's unknown");
 
@@ -3273,7 +3178,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
 
     if (Operands.size() < 2 ||
         !static_cast<AArch64Operand &>(*Operands[1]).isReg())
-      return Error(Loc, "Only valid when first operand is register");
+      return true;
 
     bool IsXReg =
         AArch64MCRegisterClasses[AArch64::GPR64allRegClassID].contains(
@@ -3305,7 +3210,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     }
     // If it is a label or an imm that cannot fit in a movz, put it into CP.
     const MCExpr *CPLoc =
-        getTargetStreamer().addConstantPoolEntry(SubExprVal, IsXReg ? 8 : 4, Loc);
+        getTargetStreamer().addConstantPoolEntry(SubExprVal, IsXReg ? 8 : 4);
     Operands.push_back(AArch64Operand::CreateImm(CPLoc, S, E, Ctx));
     return false;
   }
@@ -4036,7 +3941,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     AArch64Operand &ImmOp = static_cast<AArch64Operand &>(*Operands[2]);
     if (RegOp.isReg() && ImmOp.isFPImm() && ImmOp.getFPImm() == (unsigned)-1) {
       unsigned zreg =
-          !AArch64MCRegisterClasses[AArch64::FPR64RegClassID].contains(
+          AArch64MCRegisterClasses[AArch64::FPR32RegClassID].contains(
               RegOp.getReg())
               ? AArch64::WZR
               : AArch64::XZR;
@@ -4085,7 +3990,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       return true;
 
     Inst.setLoc(IDLoc);
-    Out.EmitInstruction(Inst, getSTI());
+    Out.EmitInstruction(Inst, STI);
     return false;
   }
   case Match_MissingFeature: {
@@ -4226,7 +4131,7 @@ bool AArch64AsmParser::parseDirectiveWord(unsigned Size, SMLoc L) {
       if (getParser().parseExpression(Value))
         return true;
 
-      getParser().getStreamer().EmitValue(Value, Size, L);
+      getParser().getStreamer().EmitValue(Value, Size);
 
       if (getLexer().is(AsmToken::EndOfStatement))
         break;
@@ -4298,7 +4203,7 @@ bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L) {
   Inst.setOpcode(AArch64::TLSDESCCALL);
   Inst.addOperand(MCOperand::createExpr(Expr));
 
-  getParser().getStreamer().EmitInstruction(Inst, getSTI());
+  getParser().getStreamer().EmitInstruction(Inst, STI);
   return false;
 }
 

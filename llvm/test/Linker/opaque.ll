@@ -19,7 +19,3 @@
 %C = type { %A }
 
 @g1 = external global %B
-
-define %B* @use_g1() {
-  ret %B* @g1
-}

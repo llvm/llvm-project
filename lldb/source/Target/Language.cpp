@@ -287,57 +287,6 @@ Language::LanguageIsPascal (LanguageType language)
     }
 }
 
-LanguageType
-Language::GetPrimaryLanguage (LanguageType language)
-{
-    switch (language)
-    {
-        case eLanguageTypeC_plus_plus:
-        case eLanguageTypeC_plus_plus_03:
-        case eLanguageTypeC_plus_plus_11:
-        case eLanguageTypeC_plus_plus_14:
-            return eLanguageTypeC_plus_plus;
-        case eLanguageTypeC:
-        case eLanguageTypeC89:
-        case eLanguageTypeC99:
-        case eLanguageTypeC11:
-            return eLanguageTypeC;
-        case eLanguageTypeObjC:
-        case eLanguageTypeObjC_plus_plus:
-            return eLanguageTypeObjC;
-        case eLanguageTypePascal83:
-        case eLanguageTypeCobol74:
-        case eLanguageTypeCobol85:
-        case eLanguageTypeFortran77:
-        case eLanguageTypeFortran90:
-        case eLanguageTypeFortran95:
-        case eLanguageTypeFortran03:
-        case eLanguageTypeFortran08:
-        case eLanguageTypeAda83:
-        case eLanguageTypeAda95:
-        case eLanguageTypeModula2:
-        case eLanguageTypeJava:
-        case eLanguageTypePLI:
-        case eLanguageTypeUPC:
-        case eLanguageTypeD:
-        case eLanguageTypePython:
-        case eLanguageTypeOpenCL:
-        case eLanguageTypeGo:
-        case eLanguageTypeModula3:
-        case eLanguageTypeHaskell:
-        case eLanguageTypeOCaml:
-        case eLanguageTypeRust:
-        case eLanguageTypeSwift:
-        case eLanguageTypeJulia:
-        case eLanguageTypeDylan:
-        case eLanguageTypeMipsAssembler:
-        case eLanguageTypeExtRenderScript:
-        case eLanguageTypeUnknown:
-        default:
-            return language;
-    }
-}
-
 void
 Language::GetLanguagesSupportingTypeSystems (std::set<lldb::LanguageType> &languages,
                                              std::set<lldb::LanguageType> &languages_for_expressions)
@@ -409,40 +358,6 @@ Language::IsLogicalTrue (ValueObject& valobj,
     return eLazyBoolCalculate;
 }
 
-bool
-Language::IsNilReference (ValueObject& valobj)
-{
-    return false;
-}
-
-bool
-Language::IsUninitializedReference (ValueObject& valobj)
-{
-    return false;
-}
-
-bool
-Language::GetFunctionDisplayName (const SymbolContext *sc,
-                                  const ExecutionContext *exe_ctx,
-                                  FunctionNameRepresentation representation,
-                                  Stream& s)
-{
-    return false;
-}
-
-void
-Language::GetExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s)
-{
-    GetDefaultExceptionResolverDescription(catch_on, throw_on, s);
-}
-
-void
-Language::GetDefaultExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s)
-{
-     s.Printf ("Exception breakpoint (catch: %s throw: %s)",
-               catch_on ? "on" : "off",
-               throw_on ? "on" : "off");
-}
 //----------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------

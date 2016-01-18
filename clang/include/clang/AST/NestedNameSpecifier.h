@@ -217,8 +217,7 @@ public:
 
   /// \brief Dump the nested name specifier to standard output to aid
   /// in debugging.
-  void dump(const LangOptions &LO) const;
-  void dump() const;
+  void dump(const LangOptions &LO);
 };
 
 /// \brief A C++ nested-name-specifier augmented with source location

@@ -35,6 +35,9 @@ public:
     void
     Dump(Stream *s, bool show_context);
 
+//    lldb::TypeSP
+//    FindType(lldb::user_id_t uid);
+
     TypeMap
     FindTypes(const ConstString &name);
 
@@ -69,7 +72,7 @@ public:
     ForEach (std::function <bool(lldb::TypeSP &type_sp)> const &callback);
 
     bool
-    Remove (const lldb::TypeSP &type_sp);
+    RemoveTypeWithUID (lldb::user_id_t uid);
 
     void
     RemoveMismatchedTypes (const char *qualified_typename,

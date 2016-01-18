@@ -512,7 +512,7 @@ AdjustStackOffset(MachineFrameInfo *MFI, int FrameIdx,
   MaxAlign = std::max(MaxAlign, Align);
 
   // Adjust to alignment boundary.
-  Offset = alignTo(Offset, Align, Skew);
+  Offset = RoundUpToAlignment(Offset, Align, Skew);
 
   if (StackGrowsDown) {
     DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << -Offset << "]\n");
@@ -596,7 +596,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
 
       unsigned Align = MFI->getObjectAlignment(i);
       // Adjust to alignment boundary
-      Offset = alignTo(Offset, Align, Skew);
+      Offset = RoundUpToAlignment(Offset, Align, Skew);
 
       MFI->setObjectOffset(i, -Offset);        // Set the computed offset
     }
@@ -605,7 +605,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
     for (int i = MaxCSFI; i >= MinCSFI ; --i) {
       unsigned Align = MFI->getObjectAlignment(i);
       // Adjust to alignment boundary
-      Offset = alignTo(Offset, Align, Skew);
+      Offset = RoundUpToAlignment(Offset, Align, Skew);
 
       MFI->setObjectOffset(i, Offset);
       Offset += MFI->getObjectSize(i);
@@ -638,7 +638,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
     unsigned Align = MFI->getLocalFrameMaxAlign();
 
     // Adjust to alignment boundary.
-    Offset = alignTo(Offset, Align, Skew);
+    Offset = RoundUpToAlignment(Offset, Align, Skew);
 
     DEBUG(dbgs() << "Local frame base offset: " << Offset << "\n");
 
@@ -757,7 +757,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
     // If the frame pointer is eliminated, all frame offsets will be relative to
     // SP not FP. Align to MaxAlign so this works.
     StackAlign = std::max(StackAlign, MaxAlign);
-    Offset = alignTo(Offset, StackAlign, Skew);
+    Offset = RoundUpToAlignment(Offset, StackAlign, Skew);
   }
 
   // Update frame info to pretend that this is part of the stack...
@@ -780,9 +780,6 @@ void PEI::insertPrologEpilogCode(MachineFunction &Fn) {
   // Add epilogue to restore the callee-save registers in each exiting block.
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
     TFI.emitEpilogue(Fn, *RestoreBlock);
-
-  for (MachineBasicBlock *SaveBlock : SaveBlocks)
-    TFI.inlineStackProbe(Fn, *SaveBlock);
 
   // Emit additional code that is required to support segmented stacks, if
   // we've been asked for it.  This, when linked with a runtime with support

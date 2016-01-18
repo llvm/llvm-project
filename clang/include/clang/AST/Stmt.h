@@ -130,7 +130,7 @@ protected:
     friend class CharacterLiteral;
     unsigned : NumExprBits;
 
-    unsigned Kind : 3;
+    unsigned Kind : 2;
   };
 
   enum APFloatSemantics {
@@ -558,7 +558,7 @@ public:
     CompoundStmtBits.NumStmts = 0;
   }
 
-  void setStmts(const ASTContext &C, ArrayRef<Stmt *> Stmts);
+  void setStmts(const ASTContext &C, Stmt **Stmts, unsigned NumStmts);
 
   bool body_empty() const { return CompoundStmtBits.NumStmts == 0; }
   unsigned size() const { return CompoundStmtBits.NumStmts; }
@@ -825,20 +825,18 @@ class AttributedStmt : public Stmt {
   AttributedStmt(SourceLocation Loc, ArrayRef<const Attr*> Attrs, Stmt *SubStmt)
     : Stmt(AttributedStmtClass), SubStmt(SubStmt), AttrLoc(Loc),
       NumAttrs(Attrs.size()) {
-    std::copy(Attrs.begin(), Attrs.end(), getAttrArrayPtr());
+    memcpy(getAttrArrayPtr(), Attrs.data(), Attrs.size() * sizeof(Attr *));
   }
 
   explicit AttributedStmt(EmptyShell Empty, unsigned NumAttrs)
     : Stmt(AttributedStmtClass, Empty), NumAttrs(NumAttrs) {
-    std::fill_n(getAttrArrayPtr(), NumAttrs, nullptr);
+    memset(getAttrArrayPtr(), 0, NumAttrs * sizeof(Attr *));
   }
 
-  const Attr *const *getAttrArrayPtr() const {
-    return reinterpret_cast<const Attr *const *>(this + 1);
+  Attr *const *getAttrArrayPtr() const {
+    return reinterpret_cast<Attr *const *>(this + 1);
   }
-  const Attr **getAttrArrayPtr() {
-    return reinterpret_cast<const Attr **>(this + 1);
-  }
+  Attr **getAttrArrayPtr() { return reinterpret_cast<Attr **>(this + 1); }
 
 public:
   static AttributedStmt *Create(const ASTContext &C, SourceLocation Loc,
@@ -1988,7 +1986,6 @@ public:
   enum VariableCaptureKind {
     VCK_This,
     VCK_ByRef,
-    VCK_ByCopy,
     VCK_VLAType,
   };
 
@@ -2008,10 +2005,24 @@ public:
     /// \param Var The variable being captured, or null if capturing this.
     ///
     Capture(SourceLocation Loc, VariableCaptureKind Kind,
-            VarDecl *Var = nullptr);
+            VarDecl *Var = nullptr)
+      : VarAndKind(Var, Kind), Loc(Loc) {
+      switch (Kind) {
+      case VCK_This:
+        assert(!Var && "'this' capture cannot have a variable!");
+        break;
+      case VCK_ByRef:
+        assert(Var && "capturing by reference must have a variable!");
+        break;
+      case VCK_VLAType:
+        assert(!Var &&
+               "Variable-length array type capture cannot have a variable!");
+        break;
+      }
+    }
 
     /// \brief Determine the kind of capture.
-    VariableCaptureKind getCaptureKind() const;
+    VariableCaptureKind getCaptureKind() const { return VarAndKind.getInt(); }
 
     /// \brief Retrieve the source location at which the variable or 'this' was
     /// first used.
@@ -2020,13 +2031,8 @@ public:
     /// \brief Determine whether this capture handles the C++ 'this' pointer.
     bool capturesThis() const { return getCaptureKind() == VCK_This; }
 
-    /// \brief Determine whether this capture handles a variable (by reference).
+    /// \brief Determine whether this capture handles a variable.
     bool capturesVariable() const { return getCaptureKind() == VCK_ByRef; }
-
-    /// \brief Determine whether this capture handles a variable by copy.
-    bool capturesVariableByCopy() const {
-      return getCaptureKind() == VCK_ByCopy;
-    }
 
     /// \brief Determine whether this capture handles a variable-length array
     /// type.
@@ -2037,8 +2043,11 @@ public:
     /// \brief Retrieve the declaration of the variable being captured.
     ///
     /// This operation is only valid if this capture captures a variable.
-    VarDecl *getCapturedVar() const;
-
+    VarDecl *getCapturedVar() const {
+      assert(capturesVariable() &&
+             "No variable available for 'this' or VAT capture");
+      return VarAndKind.getPointer();
+    }
     friend class ASTStmtReader;
   };
 
@@ -2085,17 +2094,26 @@ public:
   const Stmt *getCapturedStmt() const { return getStoredStmts()[NumCaptures]; }
 
   /// \brief Retrieve the outlined function declaration.
-  CapturedDecl *getCapturedDecl();
-  const CapturedDecl *getCapturedDecl() const;
+  CapturedDecl *getCapturedDecl() { return CapDeclAndKind.getPointer(); }
+  const CapturedDecl *getCapturedDecl() const {
+    return CapDeclAndKind.getPointer();
+  }
 
   /// \brief Set the outlined function declaration.
-  void setCapturedDecl(CapturedDecl *D);
+  void setCapturedDecl(CapturedDecl *D) {
+    assert(D && "null CapturedDecl");
+    CapDeclAndKind.setPointer(D);
+  }
 
   /// \brief Retrieve the captured region kind.
-  CapturedRegionKind getCapturedRegionKind() const;
+  CapturedRegionKind getCapturedRegionKind() const {
+    return CapDeclAndKind.getInt();
+  }
 
   /// \brief Set the captured region kind.
-  void setCapturedRegionKind(CapturedRegionKind Kind);
+  void setCapturedRegionKind(CapturedRegionKind Kind) {
+    CapDeclAndKind.setInt(Kind);
+  }
 
   /// \brief Retrieve the record declaration for captured variables.
   const RecordDecl *getCapturedRecordDecl() const { return TheRecordDecl; }

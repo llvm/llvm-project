@@ -31,8 +31,7 @@ public:
                        Vote stop_vote,
                        Vote run_vote,
                        uint32_t frame_idx,
-                       LazyBool step_out_avoids_code_without_debug_info,
-                       bool continue_to_next_branch = false);
+                       LazyBool step_out_avoids_code_without_debug_info);
 
     ~ThreadPlanStepOut() override;
 

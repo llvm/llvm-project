@@ -127,10 +127,9 @@ AddressSanitizerRuntime::IsActive()
 }
 
 #define RETRIEVE_REPORT_DATA_FUNCTION_TIMEOUT_USEC 2*1000*1000
+
 const char *
-address_sanitizer_retrieve_report_data_prefix = R"(
-extern "C"
-{
+address_sanitizer_retrieve_report_data_command = R"(
 int __asan_report_present();
 void *__asan_get_report_pc();
 void *__asan_get_report_bp();
@@ -139,11 +138,6 @@ void *__asan_get_report_address();
 const char *__asan_get_report_description();
 int __asan_get_report_access_type();
 size_t __asan_get_report_access_size();
-}
-)";
-
-const char *
-address_sanitizer_retrieve_report_data_command = R"(
 struct {
     int present;
     int access_type;
@@ -185,7 +179,6 @@ AddressSanitizerRuntime::RetrieveReportData()
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
     options.SetTimeoutUsec(RETRIEVE_REPORT_DATA_FUNCTION_TIMEOUT_USEC);
-    options.SetPrefix(address_sanitizer_retrieve_report_data_prefix);
     
     ValueObjectSP return_value_sp;
     if (process_sp->GetTarget().EvaluateExpression(address_sanitizer_retrieve_report_data_command, frame_sp.get(), return_value_sp, options) != eExpressionCompleted)

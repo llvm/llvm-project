@@ -63,8 +63,8 @@ define i32 @test7(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT: %A1 = and i32 %A, 7
 ; CHECK-NEXT: %B1 = and i32 %B, 128
-; CHECK-NEXT: %C11 = or i32 %A1, %B1
-; CHECK-NEXT: ret i32 %C11
+; CHECK-NEXT: %C1.1 = or i32 %A1, %B1
+; CHECK-NEXT: ret i32 %C1.1
 	%A1 = and i32 %A, 7		; <i32> [#uses=1]
 	%B1 = and i32 %B, 128		; <i32> [#uses=1]
 	%C1 = xor i32 %A1, %B1		; <i32> [#uses=1]
@@ -96,8 +96,8 @@ define i1 @test9(i8 %A) {
 define i8 @test10(i8 %A) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT: %B = and i8 %A, 3
-; CHECK-NEXT: %C1 = or i8 %B, 4
-; CHECK-NEXT: ret i8 %C1
+; CHECK-NEXT: %C.1 = or i8 %B, 4
+; CHECK-NEXT: ret i8 %C.1
 	%B = and i8 %A, 3		; <i8> [#uses=1]
 	%C = xor i8 %B, 4		; <i8> [#uses=1]
 	ret i8 %C

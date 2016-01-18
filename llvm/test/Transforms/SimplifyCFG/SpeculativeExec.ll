@@ -69,29 +69,3 @@ end:
 
   ret i8* %x10
 }
-
-define i32* @test5(i32 %a, i32 %b, i32 %c, i32* dereferenceable(10) %ptr1,
-                  i32* dereferenceable(10) %ptr2, i32** dereferenceable(10) %ptr3) nounwind {
-; CHECK-LABEL: @test5(
-entry:
-        %tmp1 = icmp eq i32 %b, 0
-        br i1 %tmp1, label %bb1, label %bb3
-
-bb1:            ; preds = %entry
-	%tmp2 = icmp sgt i32 %c, 1
-	br i1 %tmp2, label %bb2, label %bb3
-; CHECK: bb1:
-; CHECK-NEXT: icmp sgt i32 %c, 1
-; CHECK-NEXT: load i32*, i32** %ptr3
-; CHECK-NOT: dereferenceable
-; CHECK-NEXT: select i1 %tmp2, i32* %tmp3, i32* %ptr2
-; CHECK-NEXT: ret i32* %tmp3.ptr2
-
-bb2:		; preds = bb1
-        %tmp3 = load i32*, i32** %ptr3, !dereferenceable !{i64 10}
-	br label %bb3
-
-bb3:		; preds = %bb2, %entry
-	%tmp4 = phi i32* [ %ptr1, %entry ], [ %ptr2, %bb1 ], [ %tmp3, %bb2 ]
-	ret i32* %tmp4
-}

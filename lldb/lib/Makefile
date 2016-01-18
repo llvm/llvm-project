@@ -18,8 +18,7 @@ LINK_LIBS_IN_SHARED = 1
 SHARED_LIBRARY = 1
 
 ifeq (,$(findstring -DLLDB_DISABLE_PYTHON,$(CXXFLAGS)))
-PYTHON_CONFIG?=	python-config
-PYTHON_BUILD_FLAGS = $(shell $(PYTHON_CONFIG) --ldflags)
+PYTHON_BUILD_FLAGS = $(shell python-config --ldflags)
 endif
 
 # Include all archives in liblldb.so file
@@ -52,7 +51,6 @@ USEDLIBS = lldbAPI.a \
 	lldbPluginDynamicLoaderMacOSXDYLD.a \
 	lldbPluginDynamicLoaderWindowsDYLD.a \
 	lldbPluginExpressionParserClang.a \
-	lldbPluginExpressionParserGo.a \
 	lldbPluginInstructionARM.a \
 	lldbPluginInstructionARM64.a \
 	lldbPluginInstructionMIPS.a \
@@ -66,7 +64,6 @@ USEDLIBS = lldbAPI.a \
 	lldbPluginLanguageRuntimeGo.a \
 	lldbPluginObjCLanguage.a \
 	lldbPluginObjCPlusPlusLanguage.a \
-	lldbPluginGoLanguage.a \
 	lldbPluginObjectContainerBSDArchive.a \
 	lldbPluginObjectContainerMachOArchive.a \
 	lldbPluginObjectFileELF.a \
@@ -203,15 +200,4 @@ ifeq ($(HOST_OS),FreeBSD)
     # Link in python
     LLVMLibsOptions += $(PYTHON_BUILD_FLAGS) -lrt -L/usr/local/lib -lexecinfo \
                        -ledit -lncurses -lpanel -lpthread
-endif
-
-ifeq ($(HOST_OS),NetBSD)
-    # Include everything from the .a's into the shared library.
-    ProjLibsOptions := -Wl,--whole-archive $(ProjLibsOptions) \
-                       -Wl,--no-whole-archive
-    # Allow unresolved symbols.
-    LLVMLibsOptions += -Wl,--allow-shlib-undefined
-    # Link in python
-    LLVMLibsOptions += $(PYTHON_BUILD_FLAGS) -lrt -L/usr/pkg/lib -lexecinfo \
-                       -ledit -lcurses -lpthread -lkvm -Wl,-rpath,/usr/pkg/lib
 endif

@@ -14,7 +14,6 @@
 #include "SymbolizableObjectFile.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 
 namespace llvm {
 namespace symbolize {
@@ -187,16 +186,6 @@ bool SymbolizableObjectFile::getNameFromSymbolTable(SymbolRef::Type Type,
   return true;
 }
 
-bool SymbolizableObjectFile::shouldOverrideWithSymbolTable(
-    FunctionNameKind FNKind, bool UseSymbolTable) const {
-  // When DWARF is used with -gline-tables-only / -gmlt, the symbol table gives
-  // better answers for linkage names than the DIContext. Otherwise, we are
-  // probably using PEs and PDBs, and we shouldn't do the override. PE files
-  // generally only contain the names of exported symbols.
-  return FNKind == FunctionNameKind::LinkageName && UseSymbolTable &&
-         isa<DWARFContext>(DebugInfoContext.get());
-}
-
 DILineInfo SymbolizableObjectFile::symbolizeCode(uint64_t ModuleOffset,
                                                  FunctionNameKind FNKind,
                                                  bool UseSymbolTable) const {
@@ -206,7 +195,7 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(uint64_t ModuleOffset,
         ModuleOffset, getDILineInfoSpecifier(FNKind));
   }
   // Override function name from symbol table if necessary.
-  if (shouldOverrideWithSymbolTable(FNKind, UseSymbolTable)) {
+  if (FNKind == FunctionNameKind::LinkageName && UseSymbolTable) {
     std::string FunctionName;
     uint64_t Start, Size;
     if (getNameFromSymbolTable(SymbolRef::ST_Function, ModuleOffset,
@@ -229,7 +218,7 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
     InlinedContext.addFrame(DILineInfo());
 
   // Override the function name in lower frame with name from symbol table.
-  if (shouldOverrideWithSymbolTable(FNKind, UseSymbolTable)) {
+  if (FNKind == FunctionNameKind::LinkageName && UseSymbolTable) {
     std::string FunctionName;
     uint64_t Start, Size;
     if (getNameFromSymbolTable(SymbolRef::ST_Function, ModuleOffset,

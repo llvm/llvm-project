@@ -6,7 +6,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(IRSources
-  AsmWriterTest.cpp
   AttributesTest.cpp
   ConstantRangeTest.cpp
   ConstantsTest.cpp

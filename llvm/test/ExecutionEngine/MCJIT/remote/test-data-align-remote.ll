@@ -1,5 +1,4 @@
 ; RUN:  %lli -remote-mcjit -O0 -mcjit-remote-process=lli-child-target%exeext %s
-; XFAIL: mingw32,win32
 
 ; Check that a variable is always aligned as specified.
 

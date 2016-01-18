@@ -30,7 +30,7 @@ namespace llvm {
 // A container class for subtarget features.
 // This is convenient because std::bitset does not have a constructor
 // with an initializer list of set bits.
-const unsigned MAX_SUBTARGET_FEATURES = 128;
+const unsigned MAX_SUBTARGET_FEATURES = 96;
 class FeatureBitset : public std::bitset<MAX_SUBTARGET_FEATURES> {
 public:
   // Cannot inherit constructors because it's not supported by VC++..
@@ -39,8 +39,8 @@ public:
   FeatureBitset(const bitset<MAX_SUBTARGET_FEATURES>& B) : bitset(B) {}
 
   FeatureBitset(std::initializer_list<unsigned> Init) : bitset() {
-    for (auto I : Init)
-      set(I);
+    for (auto I = Init.begin() , E = Init.end(); I != E; ++I)
+      set(*I);
   }
 };
 
@@ -58,11 +58,6 @@ struct SubtargetFeatureKV {
   // Compare routine for std::lower_bound
   bool operator<(StringRef S) const {
     return StringRef(Key) < S;
-  }
-
-  // Compare routine for std::is_sorted.
-  bool operator<(const SubtargetFeatureKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
   }
 };
 
@@ -103,13 +98,14 @@ public:
   /// Adding Features.
   void AddFeature(StringRef String, bool Enable = true);
 
-  /// ToggleFeature - Toggle a feature and update the feature bits.
-  static void ToggleFeature(FeatureBitset &Bits, StringRef String,
-                            ArrayRef<SubtargetFeatureKV> FeatureTable);
+  /// ToggleFeature - Toggle a feature and returns the newly updated feature
+  /// bits.
+  FeatureBitset ToggleFeature(FeatureBitset Bits, StringRef String,
+                         ArrayRef<SubtargetFeatureKV> FeatureTable);
 
-  /// Apply the feature flag and update the feature bits.
-  static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
-                               ArrayRef<SubtargetFeatureKV> FeatureTable);
+  /// Apply the feature flag and return the newly updated feature bits.
+  FeatureBitset ApplyFeatureFlag(FeatureBitset Bits, StringRef Feature,
+                                 ArrayRef<SubtargetFeatureKV> FeatureTable);
 
   /// Get feature bits of a CPU.
   FeatureBitset getFeatureBits(StringRef CPU,

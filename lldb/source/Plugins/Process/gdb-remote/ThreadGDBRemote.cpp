@@ -41,10 +41,8 @@ ThreadGDBRemote::ThreadGDBRemote (Process &process, lldb::tid_t tid) :
     m_thread_name (),
     m_dispatch_queue_name (),
     m_thread_dispatch_qaddr (LLDB_INVALID_ADDRESS),
-    m_dispatch_queue_t (LLDB_INVALID_ADDRESS),
-    m_queue_kind (eQueueKindUnknown),
-    m_queue_serial_number (LLDB_INVALID_QUEUE_ID),
-    m_associated_with_libdispatch_queue (eLazyBoolCalculate)
+    m_queue_kind(eQueueKindUnknown),
+    m_queue_serial(0)
 {
     ProcessGDBRemoteLog::LogIf(GDBR_LOG_THREAD, "%p: ThreadGDBRemote::ThreadGDBRemote (pid = %i, tid = 0x%4.4x)",
                                this, 
@@ -75,19 +73,15 @@ ThreadGDBRemote::ClearQueueInfo ()
 {
     m_dispatch_queue_name.clear();
     m_queue_kind = eQueueKindUnknown;
-    m_queue_serial_number = 0;
-    m_dispatch_queue_t = LLDB_INVALID_ADDRESS;
-    m_associated_with_libdispatch_queue = eLazyBoolCalculate;
+    m_queue_serial = 0;
 }
 
 void
-ThreadGDBRemote::SetQueueInfo (std::string &&queue_name, QueueKind queue_kind, uint64_t queue_serial, addr_t dispatch_queue_t, LazyBool associated_with_libdispatch_queue)
+ThreadGDBRemote::SetQueueInfo (std::string &&queue_name, QueueKind queue_kind, uint64_t queue_serial)
 {
     m_dispatch_queue_name = queue_name;
     m_queue_kind = queue_kind;
-    m_queue_serial_number = queue_serial;
-    m_dispatch_queue_t = dispatch_queue_t;
-    m_associated_with_libdispatch_queue = associated_with_libdispatch_queue;
+    m_queue_serial = queue_serial;
 }
 
 
@@ -106,10 +100,7 @@ ThreadGDBRemote::GetQueueName ()
     }
     // Always re-fetch the dispatch queue name since it can change
 
-    if (m_associated_with_libdispatch_queue == eLazyBoolNo)
-        return nullptr;
-
-    if (m_thread_dispatch_qaddr != 0 && m_thread_dispatch_qaddr != LLDB_INVALID_ADDRESS)
+    if (m_thread_dispatch_qaddr != 0 || m_thread_dispatch_qaddr != LLDB_INVALID_ADDRESS)
     {
         ProcessSP process_sp (GetProcess());
         if (process_sp)
@@ -127,35 +118,6 @@ ThreadGDBRemote::GetQueueName ()
     return NULL;
 }
 
-QueueKind
-ThreadGDBRemote::GetQueueKind ()
-{
-    // If our cached queue info is valid, then someone called ThreadGDBRemote::SetQueueInfo(...)
-    // with valid information that was gleaned from the stop reply packet. In this case we trust
-    // that the info is valid in m_dispatch_queue_name without refetching it
-    if (CachedQueueInfoIsValid())
-    {
-        return m_queue_kind;
-    }
-
-    if (m_associated_with_libdispatch_queue == eLazyBoolNo)
-        return eQueueKindUnknown;
-
-    if (m_thread_dispatch_qaddr != 0 && m_thread_dispatch_qaddr != LLDB_INVALID_ADDRESS)
-    {
-        ProcessSP process_sp (GetProcess());
-        if (process_sp)
-        {
-            SystemRuntime *runtime = process_sp->GetSystemRuntime ();
-            if (runtime)
-                m_queue_kind = runtime->GetQueueKind (m_thread_dispatch_qaddr);
-            return m_queue_kind;
-        }
-    }
-    return eQueueKindUnknown;
-}
-
-
 queue_id_t
 ThreadGDBRemote::GetQueueID ()
 {
@@ -163,12 +125,9 @@ ThreadGDBRemote::GetQueueID ()
     // with valid information that was gleaned from the stop reply packet. In this case we trust
     // that the info is valid in m_dispatch_queue_name without refetching it
     if (CachedQueueInfoIsValid())
-        return m_queue_serial_number;
+        return m_queue_serial;
 
-    if (m_associated_with_libdispatch_queue == eLazyBoolNo)
-        return LLDB_INVALID_QUEUE_ID;
-
-    if (m_thread_dispatch_qaddr != 0 && m_thread_dispatch_qaddr != LLDB_INVALID_ADDRESS)
+    if (m_thread_dispatch_qaddr != 0 || m_thread_dispatch_qaddr != LLDB_INVALID_ADDRESS)
     {
         ProcessSP process_sp (GetProcess());
         if (process_sp)
@@ -202,54 +161,20 @@ ThreadGDBRemote::GetQueue ()
 addr_t
 ThreadGDBRemote::GetQueueLibdispatchQueueAddress ()
 {
-    if (m_dispatch_queue_t == LLDB_INVALID_ADDRESS)
+    addr_t dispatch_queue_t_addr = LLDB_INVALID_ADDRESS;
+    if (m_thread_dispatch_qaddr != 0 || m_thread_dispatch_qaddr != LLDB_INVALID_ADDRESS)
     {
-        if (m_thread_dispatch_qaddr != 0 && m_thread_dispatch_qaddr != LLDB_INVALID_ADDRESS)
+        ProcessSP process_sp (GetProcess());
+        if (process_sp)
         {
-            ProcessSP process_sp (GetProcess());
-            if (process_sp)
+            SystemRuntime *runtime = process_sp->GetSystemRuntime ();
+            if (runtime)
             {
-                SystemRuntime *runtime = process_sp->GetSystemRuntime ();
-                if (runtime)
-                {
-                    m_dispatch_queue_t = runtime->GetLibdispatchQueueAddressFromThreadQAddress (m_thread_dispatch_qaddr);
-                }
+                dispatch_queue_t_addr = runtime->GetLibdispatchQueueAddressFromThreadQAddress (m_thread_dispatch_qaddr);
             }
         }
     }
-    return m_dispatch_queue_t;
-}
-
-void
-ThreadGDBRemote::SetQueueLibdispatchQueueAddress (lldb::addr_t dispatch_queue_t)
-{
-    m_dispatch_queue_t = dispatch_queue_t;
-}
-
-bool
-ThreadGDBRemote::ThreadHasQueueInformation () const
-{
-    if (m_thread_dispatch_qaddr != 0 
-        && m_thread_dispatch_qaddr != LLDB_INVALID_ADDRESS
-        && m_dispatch_queue_t != LLDB_INVALID_ADDRESS
-        && m_queue_kind != eQueueKindUnknown
-        && m_queue_serial_number != 0)
-    {
-        return true;
-    }
-    return false;
-}
-
-LazyBool
-ThreadGDBRemote::GetAssociatedWithLibdispatchQueue ()
-{
-    return m_associated_with_libdispatch_queue;
-}
-
-void
-ThreadGDBRemote::SetAssociatedWithLibdispatchQueue (LazyBool associated_with_libdispatch_queue)
-{
-    m_associated_with_libdispatch_queue = associated_with_libdispatch_queue;
+    return dispatch_queue_t_addr;
 }
 
 StructuredData::ObjectSP
@@ -385,14 +310,6 @@ ThreadGDBRemote::PrivateSetRegisterValue (uint32_t reg, StringExtractor &respons
     GDBRemoteRegisterContext *gdb_reg_ctx = static_cast<GDBRemoteRegisterContext *>(GetRegisterContext ().get());
     assert (gdb_reg_ctx);
     return gdb_reg_ctx->PrivateSetRegisterValue (reg, response);
-}
-
-bool
-ThreadGDBRemote::PrivateSetRegisterValue (uint32_t reg, uint64_t regval)
-{
-    GDBRemoteRegisterContext *gdb_reg_ctx = static_cast<GDBRemoteRegisterContext *>(GetRegisterContext ().get());
-    assert (gdb_reg_ctx);
-    return gdb_reg_ctx->PrivateSetRegisterValue (reg, regval);
 }
 
 bool

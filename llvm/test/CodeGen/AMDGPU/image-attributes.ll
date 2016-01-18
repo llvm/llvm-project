@@ -6,7 +6,7 @@
 
 ; FUNC-LABEL: {{^}}width_2d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[2].Z
+; EG: MOV [[VAL]], KC0[2].Z
 define void @width_2d (%opencl.image2d_t addrspace(1)* %in,
                        i32 addrspace(1)* %out) {
 entry:
@@ -19,7 +19,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}width_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[2].Z
+; EG: MOV [[VAL]], KC0[2].Z
 define void @width_3d (%opencl.image3d_t addrspace(1)* %in,
                        i32 addrspace(1)* %out) {
 entry:
@@ -36,7 +36,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}height_2d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[2].W
+; EG: MOV [[VAL]], KC0[2].W
 define void @height_2d (%opencl.image2d_t addrspace(1)* %in,
                         i32 addrspace(1)* %out) {
 entry:
@@ -49,7 +49,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}height_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[2].W
+; EG: MOV [[VAL]], KC0[2].W
 define void @height_3d (%opencl.image3d_t addrspace(1)* %in,
                         i32 addrspace(1)* %out) {
 entry:
@@ -66,7 +66,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}depth_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[3].X
+; EG: MOV [[VAL]], KC0[3].X
 define void @depth_3d (%opencl.image3d_t addrspace(1)* %in,
                        i32 addrspace(1)* %out) {
 entry:
@@ -83,7 +83,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}data_type_2d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[3].Y
+; EG: MOV [[VAL]], KC0[3].Y
 define void @data_type_2d (%opencl.image2d_t addrspace(1)* %in,
                            i32 addrspace(1)* %out) {
 entry:
@@ -96,7 +96,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}data_type_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[3].Y
+; EG: MOV [[VAL]], KC0[3].Y
 define void @data_type_3d (%opencl.image3d_t addrspace(1)* %in,
                                      i32 addrspace(1)* %out) {
 entry:
@@ -113,7 +113,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}channel_order_2d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[3].Z
+; EG: MOV [[VAL]], KC0[3].Z
 define void @channel_order_2d (%opencl.image2d_t addrspace(1)* %in,
                                i32 addrspace(1)* %out) {
 entry:
@@ -126,7 +126,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}channel_order_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[3].Z
+; EG: MOV [[VAL]], KC0[3].Z
 define void @channel_order_3d (%opencl.image3d_t addrspace(1)* %in,
                                          i32 addrspace(1)* %out) {
 entry:
@@ -145,7 +145,7 @@ entry:
 ;
 ; FUNC-LABEL: {{^}}image_arg_2nd:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV * [[VAL]], KC0[4].Z
+; EG: MOV [[VAL]], KC0[4].Z
 define void @image_arg_2nd (%opencl.image3d_t addrspace(1)* %in1,
                             i32 %x,
                             %opencl.image2d_t addrspace(1)* %in2,

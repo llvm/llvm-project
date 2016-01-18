@@ -75,9 +75,6 @@ CODEGENOPT(PrepareForLTO     , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
 CODEGENOPT(EmitFunctionSummary, 1, 0) ///< Set when -flto=thin is enabled on the
                                       ///< compile step.
-CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
-                                              ///< be used with an incremental
-                                              ///< linker.
 CODEGENOPT(MergeAllConstants , 1, 1) ///< Merge identical constants.
 CODEGENOPT(MergeFunctions    , 1, 0) ///< Set when -fmerge-functions is enabled.
 CODEGENOPT(MSVolatile        , 1, 0) ///< Set when /volatile:ms is enabled.
@@ -123,7 +120,6 @@ CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
                                              ///< MemorySanitizer
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
                                              ///< in MemorySanitizer
-CODEGENOPT(SanitizeCfiCrossDso, 1, 0) ///< Enable cross-dso support in CFI.
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
                                        ///< instrumentation.
 CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage
@@ -134,7 +130,6 @@ CODEGENOPT(SanitizeCoverageTraceCmp, 1, 0) ///< Enable cmp instruction tracing
                                            ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverage8bitCounters, 1, 0) ///< Use 8-bit frequency counters
                                                ///< in sanitizer coverage.
-CODEGENOPT(SanitizeStats     , 1, 0) ///< Collect statistics for sanitizers.
 CODEGENOPT(SimplifyLibCalls  , 1, 1) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0) ///< -soft-float.
 CODEGENOPT(StrictEnums       , 1, 0) ///< Optimize based on strict enum definition.
@@ -171,10 +166,6 @@ CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
 CODEGENOPT(DebugTypeExtRefs, 1, 0) ///< Whether or not debug info should contain
                                    ///< external references to a PCH or module.
 
-CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should 
-                                       ///< contain explicit imports for 
-                                       ///< anonymous namespaces
-
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 
 /// The user specified number of registers to be used for integral arguments,
@@ -186,9 +177,6 @@ VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
 
 /// The kind of generated debug info.
 ENUM_CODEGENOPT(DebugInfo, DebugInfoKind, 3, NoDebugInfo)
-
-/// Tune the debug info for this debugger.
-ENUM_CODEGENOPT(DebuggerTuning, DebuggerKind, 2, DebuggerKindDefault)
 
 /// Dwarf version. Version zero indicates to LLVM that no DWARF should be
 /// emitted.

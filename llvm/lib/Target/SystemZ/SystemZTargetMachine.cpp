@@ -16,7 +16,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> MISchedPostRA;
 extern "C" void LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(TheSystemZTarget);
@@ -164,16 +163,6 @@ void SystemZPassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createSystemZElimComparePass(getSystemZTargetMachine()), false);
   addPass(createSystemZLongBranchPass(getSystemZTargetMachine()));
-
-  // Do final scheduling after all other optimizations, to get an
-  // optimal input for the decoder (branch relaxation must happen
-  // after block placement).
-  if (getOptLevel() != CodeGenOpt::None) {
-    if (MISchedPostRA)
-      addPass(&PostMachineSchedulerID);
-    else
-      addPass(&PostRASchedulerID);
-  }
 }
 
 TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {

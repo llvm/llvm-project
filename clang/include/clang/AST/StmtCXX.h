@@ -292,56 +292,20 @@ public:
 /// body and holds the additional semantic context required to set up and tear
 /// down the coroutine frame.
 class CoroutineBodyStmt : public Stmt {
-  enum SubStmt {
-    Body,          ///< The body of the coroutine.
-    Promise,       ///< The promise statement.
-    InitSuspend,   ///< The initial suspend statement, run before the body.
-    FinalSuspend,  ///< The final suspend statement, run after the body.
-    OnException,   ///< Handler for exceptions thrown in the body.
-    OnFallthrough, ///< Handler for control flow falling off the body.
-    ReturnValue,   ///< Return value for thunk function.
-    FirstParamMove ///< First offset for move construction of parameter copies.
-  };
-  Stmt *SubStmts[SubStmt::FirstParamMove];
+  enum SubStmt { Body, Count };
+  Stmt *SubStmts[SubStmt::Count];
 
   friend class ASTStmtReader;
 public:
-  CoroutineBodyStmt(Stmt *Body, Stmt *Promise, Stmt *InitSuspend,
-                    Stmt *FinalSuspend, Stmt *OnException, Stmt *OnFallthrough,
-                    Expr *ReturnValue, ArrayRef<Expr *> ParamMoves)
+  CoroutineBodyStmt(Stmt *Body)
       : Stmt(CoroutineBodyStmtClass) {
     SubStmts[CoroutineBodyStmt::Body] = Body;
-    SubStmts[CoroutineBodyStmt::Promise] = Promise;
-    SubStmts[CoroutineBodyStmt::InitSuspend] = InitSuspend;
-    SubStmts[CoroutineBodyStmt::FinalSuspend] = FinalSuspend;
-    SubStmts[CoroutineBodyStmt::OnException] = OnException;
-    SubStmts[CoroutineBodyStmt::OnFallthrough] = OnFallthrough;
-    SubStmts[CoroutineBodyStmt::ReturnValue] = ReturnValue;
-    // FIXME: Tail-allocate space for parameter move expressions and store them.
-    assert(ParamMoves.empty() && "not implemented yet");
   }
 
   /// \brief Retrieve the body of the coroutine as written. This will be either
   /// a CompoundStmt or a TryStmt.
   Stmt *getBody() const {
     return SubStmts[SubStmt::Body];
-  }
-
-  Stmt *getPromiseDeclStmt() const { return SubStmts[SubStmt::Promise]; }
-  VarDecl *getPromiseDecl() const {
-    return cast<VarDecl>(cast<DeclStmt>(getPromiseDeclStmt())->getSingleDecl());
-  }
-
-  Stmt *getInitSuspendStmt() const { return SubStmts[SubStmt::InitSuspend]; }
-  Stmt *getFinalSuspendStmt() const { return SubStmts[SubStmt::FinalSuspend]; }
-
-  Stmt *getExceptionHandler() const { return SubStmts[SubStmt::OnException]; }
-  Stmt *getFallthroughHandler() const {
-    return SubStmts[SubStmt::OnFallthrough];
-  }
-
-  Expr *getReturnValueInit() const {
-    return cast<Expr>(SubStmts[SubStmt::ReturnValue]);
   }
 
   SourceLocation getLocStart() const LLVM_READONLY {
@@ -352,7 +316,7 @@ public:
   }
 
   child_range children() {
-    return child_range(SubStmts, SubStmts + SubStmt::FirstParamMove);
+    return child_range(SubStmts, SubStmts + SubStmt::Count);
   }
 
   static bool classof(const Stmt *T) {
@@ -364,47 +328,50 @@ public:
 ///
 /// This statament models the initialization of the coroutine promise
 /// (encapsulating the eventual notional return value) from an expression
-/// (or braced-init-list), followed by termination of the coroutine.
+/// (or braced-init-list).
 ///
-/// This initialization is modeled by the evaluation of the operand
-/// followed by a call to one of:
+/// This initialization is modeled by a call to one of:
 ///   <promise>.return_value(<operand>)
 ///   <promise>.return_void()
 /// which we name the "promise call".
 class CoreturnStmt : public Stmt {
   SourceLocation CoreturnLoc;
 
-  enum SubStmt { Operand, PromiseCall, Count };
-  Stmt *SubStmts[SubStmt::Count];
+  /// The operand of the 'co_return' statement.
+  Stmt *Operand;
+  /// The implied call to the promise object. May be null if the
+  /// coroutine has not yet been finalized.
+  Stmt *PromiseCall;
 
   friend class ASTStmtReader;
 public:
-  CoreturnStmt(SourceLocation CoreturnLoc, Stmt *Operand, Stmt *PromiseCall)
-      : Stmt(CoreturnStmtClass), CoreturnLoc(CoreturnLoc) {
-    SubStmts[SubStmt::Operand] = Operand;
-    SubStmts[SubStmt::PromiseCall] = PromiseCall;
-  }
+  CoreturnStmt(SourceLocation CoreturnLoc, Stmt *Operand)
+      : Stmt(CoreturnStmtClass), CoreturnLoc(CoreturnLoc),
+        Operand(Operand), PromiseCall(nullptr) {}
 
   SourceLocation getKeywordLoc() const { return CoreturnLoc; }
 
   /// \brief Retrieve the operand of the 'co_return' statement. Will be nullptr
   /// if none was specified.
-  Expr *getOperand() const { return static_cast<Expr*>(SubStmts[Operand]); }
+  Expr *getOperand() const { return static_cast<Expr*>(Operand); }
 
   /// \brief Retrieve the promise call that results from this 'co_return'
   /// statement. Will be nullptr if either the coroutine has not yet been
   /// finalized or the coroutine has no eventual return type.
-  Expr *getPromiseCall() const {
-    return static_cast<Expr*>(SubStmts[PromiseCall]);
-  }
+  Expr *getPromiseCall() const { return static_cast<Expr*>(PromiseCall); }
+
+  /// \brief Set the resolved promise call. This is delayed until the
+  /// complete coroutine body has been parsed and the promise type is known.
+  void finalize(Stmt *PC) { PromiseCall = PC; }
 
   SourceLocation getLocStart() const LLVM_READONLY { return CoreturnLoc; }
   SourceLocation getLocEnd() const LLVM_READONLY {
-    return getOperand()->getLocEnd();
+    return Operand->getLocEnd();
   }
 
   child_range children() {
-    return child_range(SubStmts, SubStmts + SubStmt::Count);
+    Stmt **Which = PromiseCall ? &PromiseCall : &Operand;
+    return child_range(Which, Which + 1);
   }
 
   static bool classof(const Stmt *T) {

@@ -417,23 +417,16 @@ const char *Process::ResetColor() {
   return 0;
 }
 
-// Include GetLastError() in a fatal error message.
-static void ReportLastErrorFatal(const char *Msg) {
-  std::string ErrMsg;
-  MakeErrMsg(&ErrMsg, Msg);
-  report_fatal_error(ErrMsg);
-}
-
 unsigned Process::GetRandomNumber() {
   HCRYPTPROV HCPC;
   if (!::CryptAcquireContextW(&HCPC, NULL, NULL, PROV_RSA_FULL,
                               CRYPT_VERIFYCONTEXT))
-    ReportLastErrorFatal("Could not acquire a cryptographic context");
+    report_fatal_error("Could not acquire a cryptographic context");
 
   ScopedCryptContext CryptoProvider(HCPC);
   unsigned Ret;
   if (!::CryptGenRandom(CryptoProvider, sizeof(Ret),
                         reinterpret_cast<BYTE *>(&Ret)))
-    ReportLastErrorFatal("Could not generate a random number");
+    report_fatal_error("Could not generate a random number");
   return Ret;
 }

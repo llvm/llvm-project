@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Target/ThreadPlanStepRange.h"
+
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/ThreadPlanStepRange.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Disassembler.h"
@@ -29,6 +30,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
 
 //----------------------------------------------------------------------
 // ThreadPlanStepRange: Step through a stack range, either stepping over or into
@@ -160,7 +162,7 @@ ThreadPlanStepRange::InRange ()
                 if (m_addr_context.line_entry.line == new_context.line_entry.line)
                 {
                     m_addr_context = new_context;
-                    AddRange(m_addr_context.line_entry.GetSameLineContiguousAddressRange());
+                    AddRange(m_addr_context.line_entry.range);
                     ret_value = true;
                     if (log)
                     {
@@ -179,7 +181,7 @@ ThreadPlanStepRange::InRange ()
                 {
                     new_context.line_entry.line = m_addr_context.line_entry.line;
                     m_addr_context = new_context;
-                    AddRange(m_addr_context.line_entry.GetSameLineContiguousAddressRange());
+                    AddRange(m_addr_context.line_entry.range);
                     ret_value = true;
                     if (log)
                     {
@@ -219,9 +221,12 @@ ThreadPlanStepRange::InRange ()
                                      new_context.line_entry.line, 
                                      s.GetData());
                     }
+                
                 }
             }
+            
         }
+        
     }
 
     if (!ret_value && log)
@@ -234,7 +239,7 @@ bool
 ThreadPlanStepRange::InSymbol()
 {
     lldb::addr_t cur_pc = m_thread.GetRegisterContext()->GetPC();
-    if (m_addr_context.function != nullptr)
+    if (m_addr_context.function != NULL)
     {
         return m_addr_context.function->GetAddressRange().ContainsLoadAddress (cur_pc, m_thread.CalculateTarget().get());
     }
@@ -286,7 +291,11 @@ ThreadPlanStepRange::CompareCurrentFrameToStartFrame()
 bool
 ThreadPlanStepRange::StopOthers ()
 {
-    return (m_stop_others == lldb::eOnlyThisThread || m_stop_others == lldb::eOnlyDuringStepping);
+    if (m_stop_others == lldb::eOnlyThisThread
+        || m_stop_others == lldb::eOnlyDuringStepping)
+        return true;
+    else
+        return false;
 }
 
 InstructionList *
@@ -299,14 +308,14 @@ ThreadPlanStepRange::GetInstructionsForAddress(lldb::addr_t addr, size_t &range_
         {
             // Some joker added a zero size range to the stepping range...
             if (m_address_ranges[i].GetByteSize() == 0)
-                return nullptr;
+                return NULL;
 
             if (!m_instruction_ranges[i])
             {
                 //Disassemble the address range given:
                 ExecutionContext exe_ctx (m_thread.GetProcess());
-                const char *plugin_name = nullptr;
-                const char *flavor = nullptr;
+                const char *plugin_name = NULL;
+                const char *flavor = NULL;
                 const bool prefer_file_cache = true;
                 m_instruction_ranges[i] = Disassembler::DisassembleRange(GetTarget().GetArchitecture(),
                                                                          plugin_name,
@@ -314,17 +323,18 @@ ThreadPlanStepRange::GetInstructionsForAddress(lldb::addr_t addr, size_t &range_
                                                                          exe_ctx,
                                                                          m_address_ranges[i],
                                                                          prefer_file_cache);
+                
             }
             if (!m_instruction_ranges[i])
-                return nullptr;
+                return NULL;
             else
             {
                 // Find where we are in the instruction list as well.  If we aren't at an instruction,
-                // return nullptr. In this case, we're probably lost, and shouldn't try to do anything fancy.
+                // return NULL.  In this case, we're probably lost, and shouldn't try to do anything fancy.
                 
                 insn_offset = m_instruction_ranges[i]->GetInstructionList().GetIndexOfInstructionAtLoadAddress(addr, GetTarget());
                 if (insn_offset == UINT32_MAX)
-                    return nullptr;
+                    return NULL;
                 else
                 {
                     range_index = i;
@@ -333,7 +343,7 @@ ThreadPlanStepRange::GetInstructionsForAddress(lldb::addr_t addr, size_t &range_
             }
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 void
@@ -366,7 +376,7 @@ ThreadPlanStepRange::SetNextBranchBreakpoint ()
     size_t pc_index;
     size_t range_index;
     InstructionList *instructions = GetInstructionsForAddress (cur_addr, range_index, pc_index);
-    if (instructions == nullptr)
+    if (instructions == NULL)
         return false;
     else
     {
@@ -379,23 +389,13 @@ ThreadPlanStepRange::SetNextBranchBreakpoint ()
         // If we didn't find a branch, run to the end of the range.
         if (branch_index == UINT32_MAX)
         {
-            uint32_t last_index = instructions->GetSize() - 1;
-            if (last_index - pc_index > 1)
-            {
-                InstructionSP last_inst = instructions->GetInstructionAtIndex(last_index);
-                size_t last_inst_size = last_inst->GetOpcode().GetByteSize();
-                run_to_address = last_inst->GetAddress();
-                run_to_address.Slide(last_inst_size);
-            }
-        }
-        else if (branch_index - pc_index > 1)
-        {
-            run_to_address = instructions->GetInstructionAtIndex(branch_index)->GetAddress();
+            branch_index = instructions->GetSize() - 1;
         }
         
-        if (run_to_address.IsValid())
+        if (branch_index - pc_index > 1)
         {
             const bool is_internal = true;
+            run_to_address = instructions->GetInstructionAtIndex(branch_index)->GetAddress();
             m_next_branch_bp_sp = GetTarget().CreateBreakpoint(run_to_address, is_internal, false);
             if (m_next_branch_bp_sp)
             {
@@ -501,7 +501,15 @@ ThreadPlanStepRange::MischiefManaged ()
         else 
         {
             FrameComparison frame_order = CompareCurrentFrameToStartFrame();
-            done = (frame_order != eFrameCompareOlder) ? m_no_more_plans : true;
+            if (frame_order != eFrameCompareOlder)
+            {
+                if (m_no_more_plans)
+                    done = true;
+                else
+                    done = false;
+            }
+            else
+                done = true;
         }
     }
 
@@ -518,6 +526,7 @@ ThreadPlanStepRange::MischiefManaged ()
     {
         return false;
     }
+
 }
 
 bool

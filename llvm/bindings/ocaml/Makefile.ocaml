@@ -277,8 +277,6 @@ uninstall-local:: uninstall-deplibs
 
 build-deplibs: $(OutputLibs)
 
-$(OcamlDir)/%.so: $(LibDir)/%.so
-	$(Verb) ln -sf $< $@
 $(OcamlDir)/%.a: $(LibDir)/%.a
 	$(Verb) ln -sf $< $@
 

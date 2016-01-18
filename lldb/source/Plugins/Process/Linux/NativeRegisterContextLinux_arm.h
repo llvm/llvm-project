@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
+#if defined(__arm__) // arm register context only needed on arm devices
 
 #ifndef lldb_NativeRegisterContextLinux_arm_h
 #define lldb_NativeRegisterContextLinux_arm_h
@@ -91,21 +91,9 @@ namespace process_linux {
 
     protected:
         Error
-        DoReadRegisterValue(uint32_t offset,
-                            const char* reg_name,
-                            uint32_t size,
-                            RegisterValue &value) override;
-
-        Error
         DoWriteRegisterValue(uint32_t offset,
                              const char* reg_name,
                              const RegisterValue &value) override;
-
-        Error
-        DoReadGPR(void *buf, size_t buf_size) override;
-
-        Error
-        DoWriteGPR(void *buf, size_t buf_size) override;
 
         Error
         DoReadFPR(void *buf, size_t buf_size) override;
@@ -194,4 +182,4 @@ namespace process_linux {
 
 #endif // #ifndef lldb_NativeRegisterContextLinux_arm_h
 
-#endif // defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
+#endif // defined(__arm__)

@@ -73,6 +73,8 @@ enum CondCode {
 const char *MipsFCCToString(Mips::CondCode CC);
 } // end namespace Mips
 
+class TargetMachine;
+
 class MipsInstPrinter : public MCInstPrinter {
 public:
   MipsInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,

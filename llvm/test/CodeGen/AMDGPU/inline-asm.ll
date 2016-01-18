@@ -10,14 +10,3 @@ entry:
   call void asm sideeffect "s_endpgm", ""()
   ret void
 }
-
-; CHECK: {{^}}inline_asm_shader:
-; CHECK: s_endpgm
-; CHECK: s_endpgm
-define void @inline_asm_shader() #0 {
-entry:
-  call void asm sideeffect "s_endpgm", ""()
-  ret void
-}
-
-attributes #0 = { "ShaderType"="0" }

@@ -713,7 +713,7 @@ bool Sema::CheckExceptionSpecSubset(
         continue;
 
       Paths.clear();
-      if (!IsDerivedFrom(SubLoc, CanonicalSubT, CanonicalSuperT, Paths))
+      if (!IsDerivedFrom(CanonicalSubT, CanonicalSuperT, Paths))
         continue;
 
       if (Paths.isAmbiguous(Context.getCanonicalType(CanonicalSuperT)))
@@ -1179,7 +1179,6 @@ CanThrowResult Sema::canThrow(const Expr *E) {
     return CT_Cannot;
 
   case Expr::MSPropertyRefExprClass:
-  case Expr::MSPropertySubscriptExprClass:
     llvm_unreachable("Invalid class for expression");
 
 #define STMT(CLASS, PARENT) case Expr::CLASS##Class:

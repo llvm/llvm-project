@@ -69,20 +69,7 @@ AppleObjCRuntime::GetObjectDescription (Stream &str, ValueObject &valobj)
     if (!valobj.ResolveValue(val.GetScalar()))
         return false;
     
-    // Value Objects may not have a process in their ExecutionContextRef.  But we need to have one
-    // in the ref we pass down to eventually call description.  Get it from the target if it isn't
-    // present.
-    ExecutionContext exe_ctx;
-    if (valobj.GetProcessSP())
-    {
-        exe_ctx = ExecutionContext(valobj.GetExecutionContextRef());
-    }
-    else
-    {
-        exe_ctx.SetContext(valobj.GetTargetSP(), true);
-        if (!exe_ctx.HasProcessScope())
-            return false;
-    }
+    ExecutionContext exe_ctx (valobj.GetExecutionContextRef());
     return GetObjectDescription(str, val, exe_ctx.GetBestExecutionContextScope());
                    
 }

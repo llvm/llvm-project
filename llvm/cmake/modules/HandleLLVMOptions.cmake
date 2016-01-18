@@ -132,8 +132,7 @@ endif()
 # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO
 # build might work on ELF but fail on MachO/COFF.
 if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR WIN32 OR CYGWIN OR
-        ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR
-        ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD") AND
+        ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD") AND
    NOT LLVM_USE_SANITIZER)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
 endif()
@@ -182,13 +181,14 @@ if( LLVM_ENABLE_PIC )
     # On Windows all code is PIC. MinGW warns if -fPIC is used.
   else()
     add_flag_or_print_warning("-fPIC" FPIC)
-  endif()
-endif()
 
-if(NOT WIN32 AND NOT CYGWIN)
-  # MinGW warns if -fvisibility-inlines-hidden is used.
-  check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
-  append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
+    if( WIN32 OR CYGWIN)
+      # MinGW warns if -fvisibility-inlines-hidden is used.
+    else()
+      check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
+      append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
+    endif()
+  endif()
 endif()
 
 if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
@@ -317,9 +317,6 @@ if( MSVC )
     -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
     -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
     -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
-        # C4592 is disabled because of false positives in Visual Studio 2015
-        # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-    -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
 
 	# Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
 	# support the 'aligned' attribute in the way that clang sources requires (for
@@ -338,10 +335,7 @@ if( MSVC )
 
   # Enable warnings
   if (LLVM_ENABLE_WARNINGS)
-    # Put /W4 in front of all the -we flags. cl.exe doesn't care, but for
-    # clang-cl having /W4 after the -we flags will re-enable the warnings
-    # disabled by -we.
-    set(msvc_warning_flags "/W4 ${msvc_warning_flags}")
+    append("/W4" msvc_warning_flags)
     # CMake appends /W3 by default, and having /W3 followed by /W4 will result in 
     # cl : Command line warning D9025 : overriding '/W3' with '/W4'.  Since this is
     # a command line warning and not a compiler warning, it cannot be suppressed except
@@ -362,36 +356,6 @@ if( MSVC )
   endforeach(flag)
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-
-  if (NOT LLVM_ENABLE_TIMESTAMPS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # clang-cl and cl by default produce non-deterministic binaries because
-    # link.exe /incremental requires a timestamp in the .obj file.  clang-cl
-    # has the flag /Brepro to force deterministic binaries, so pass that when
-    # LLVM_ENABLE_TIMESTAMPS is turned off.
-    # This checks CMAKE_CXX_COMPILER_ID in addition to check_cxx_compiler_flag()
-    # because cl.exe does not emit an error on flags it doesn't understand,
-    # letting check_cxx_compiler_flag() claim it understands all flags.
-    check_cxx_compiler_flag("/Brepro" SUPPORTS_BREPRO)
-    append_if(SUPPORTS_BREPRO "/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-
-    if (SUPPORTS_BREPRO)
-      # Check if /INCREMENTAL is passed to the linker and complain that it
-      # won't work with /Brepro.
-      string(TOUPPER "${CMAKE_EXE_LINKER_FLAGS}" upper_exe_flags)
-      string(TOUPPER "${CMAKE_MODULE_LINKER_FLAGS}" upper_module_flags)
-      string(TOUPPER "${CMAKE_SHARED_LINKER_FLAGS}" upper_shared_flags)
-
-      string(FIND "${upper_exe_flags}" "/INCREMENTAL" exe_index)
-      string(FIND "${upper_module_flags}" "/INCREMENTAL" module_index)
-      string(FIND "${upper_shared_flags}" "/INCREMENTAL" shared_index)
-      
-      if (${exe_index} GREATER -1 OR
-          ${module_index} GREATER -1 OR
-          ${shared_index} GREATER -1)
-        message(FATAL_ERROR "LLVM_ENABLE_TIMESTAMPS not compatible with /INCREMENTAL linking")
-      endif()
-    endif()
-  endif()
 
   # Disable sized deallocation if the flag is supported. MSVC fails to compile
   # the operator new overload in User otherwise.
@@ -424,23 +388,16 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
     # Check if -Wnon-virtual-dtor warns even though the class is marked final.
     # If it does, don't add it. So it won't be added on clang 3.4 and older.
     # This also catches cases when -Wnon-virtual-dtor isn't supported by
-    # the compiler at all.  This flag is not activated for gcc since it will
-    # incorrectly identify a protected non-virtual base when there is a friend
-    # declaration.
-    if (NOT CMAKE_COMPILER_IS_GNUCXX)
-      set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-      set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++11 -Werror=non-virtual-dtor")
-      CHECK_CXX_SOURCE_COMPILES("class base {public: virtual void anchor();protected: ~base();};
-                                 class derived final : public base { public: ~derived();};
-                                 int main() { return 0; }"
-                                CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR)
-      set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-      append_if(CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR
-                "-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
-    endif()
-
-    # Enable -Wdelete-non-virtual-dtor if available.
-    add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
+    # the compiler at all.
+    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++11 -Werror=non-virtual-dtor")
+    CHECK_CXX_SOURCE_COMPILES("class base {public: virtual void anchor();protected: ~base();};
+                               class derived final : public base { public: ~derived();};
+                               int main() { return 0; }"
+                              CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR)
+    set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+    append_if(CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR
+              "-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
 
     # Check if -Wcomment is OK with an // comment ending with '\' if the next
     # line is also a // comment.
@@ -476,7 +433,7 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   endif()
   if (LLVM_ENABLE_MODULES)
     set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fmodules")
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fmodules -fcxx-modules")
     # Check that we can build code with modules enabled, and that repeatedly
     # including <cassert> still manages to respect NDEBUG properly.
     CHECK_CXX_SOURCE_COMPILES("#undef NDEBUG
@@ -626,14 +583,6 @@ option(LLVM_ENABLE_RTTI "Enable run time type information" OFF)
 if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
 endif()
-
-option(LLVM_BUILD_INSTRUMENTED "Build LLVM and tools with PGO instrumentation (experimental)" Off)
-mark_as_advanced(LLVM_BUILD_INSTRUMENTED)
-append_if(LLVM_BUILD_INSTRUMENTED "-fprofile-instr-generate"
-  CMAKE_CXX_FLAGS
-  CMAKE_C_FLAGS
-  CMAKE_EXE_LINKER_FLAGS
-  CMAKE_SHARED_LINKER_FLAGS)
 
 # Plugin support
 # FIXME: Make this configurable.

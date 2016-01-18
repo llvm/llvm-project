@@ -20,10 +20,9 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LibCallSemantics.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -944,44 +943,37 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 static unsigned enforceKnownAlignment(Value *V, unsigned Align,
                                       unsigned PrefAlign,
                                       const DataLayout &DL) {
-  assert(PrefAlign > Align);
-
   V = V->stripPointerCasts();
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
-    // TODO: ideally, computeKnownBits ought to have used
-    // AllocaInst::getAlignment() in its computation already, making
-    // the below max redundant. But, as it turns out,
-    // stripPointerCasts recurses through infinite layers of bitcasts,
-    // while computeKnownBits is not allowed to traverse more than 6
-    // levels.
-    Align = std::max(AI->getAlignment(), Align);
-    if (PrefAlign <= Align)
-      return Align;
-
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
     if (DL.exceedsNaturalStackAlignment(PrefAlign))
       return Align;
+    // If there is a requested alignment and if this is an alloca, round up.
+    if (AI->getAlignment() >= PrefAlign)
+      return AI->getAlignment();
     AI->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   if (auto *GO = dyn_cast<GlobalObject>(V)) {
-    // TODO: as above, this shouldn't be necessary.
-    Align = std::max(GO->getAlignment(), Align);
-    if (PrefAlign <= Align)
-      return Align;
-
     // If there is a large requested alignment and we can, bump up the alignment
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
-    if (!GO->canIncreaseAlignment())
+    if (!GO->isStrongDefinitionForLinker())
       return Align;
 
-    GO->setAlignment(PrefAlign);
-    return PrefAlign;
+    if (GO->getAlignment() >= PrefAlign)
+      return GO->getAlignment();
+    // We can only increase the alignment of the global if it has no alignment
+    // specified or if it is not assigned a section.  If it is assigned a
+    // section, the global could be densely packed with other objects in the
+    // section, increasing the alignment could cause padding issues.
+    if (!GO->hasSection() || GO->getAlignment() == 0)
+      GO->setAlignment(PrefAlign);
+    return GO->getAlignment();
   }
 
   return Align;
@@ -1059,31 +1051,9 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
     ExtendedArg = dyn_cast<Argument>(ZExt->getOperand(0));
   if (SExtInst *SExt = dyn_cast<SExtInst>(SI->getOperand(0)))
     ExtendedArg = dyn_cast<Argument>(SExt->getOperand(0));
-  if (ExtendedArg) {
-    // We're now only describing a subset of the variable. The piece we're
-    // describing will always be smaller than the variable size, because
-    // VariableSize == Size of Alloca described by DDI. Since SI stores
-    // to the alloca described by DDI, if it's first operand is an extend,
-    // we're guaranteed that before extension, the value was narrower than
-    // the size of the alloca, hence the size of the described variable.
-    SmallVector<uint64_t, 3> NewDIExpr;
-    unsigned PieceOffset = 0;
-    // If this already is a bit piece, we drop the bit piece from the expression
-    // and record the offset.
-    if (DIExpr->isBitPiece()) {
-      NewDIExpr.append(DIExpr->elements_begin(), DIExpr->elements_end()-3);
-      PieceOffset = DIExpr->getBitPieceOffset();
-    } else {
-      NewDIExpr.append(DIExpr->elements_begin(), DIExpr->elements_end());
-    }
-    NewDIExpr.push_back(dwarf::DW_OP_bit_piece);
-    NewDIExpr.push_back(PieceOffset); //Offset
-    const DataLayout &DL = DDI->getModule()->getDataLayout();
-    NewDIExpr.push_back(DL.getTypeSizeInBits(ExtendedArg->getType())); // Size
-    Builder.insertDbgValueIntrinsic(ExtendedArg, 0, DIVar,
-                                    Builder.createExpression(NewDIExpr),
+  if (ExtendedArg)
+    Builder.insertDbgValueIntrinsic(ExtendedArg, 0, DIVar, DIExpr,
                                     DDI->getDebugLoc(), SI);
-  }
   else
     Builder.insertDbgValueIntrinsic(SI->getOperand(0), 0, DIVar, DIExpr,
                                     DDI->getDebugLoc(), SI);
@@ -1101,13 +1071,8 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   if (LdStHasDebugValue(DIVar, LI))
     return true;
 
-  // We are now tracking the loaded value instead of the address. In the
-  // future if multi-location support is added to the IR, it might be
-  // preferable to keep tracking both the loaded value and the original
-  // address in case the alloca can not be elided.
-  Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
-      LI, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
-  DbgValue->insertAfter(LI);
+  Builder.insertDbgValueIntrinsic(LI->getOperand(0), 0, DIVar, DIExpr,
+                                  DDI->getDebugLoc(), LI);
   return true;
 }
 
@@ -1140,26 +1105,19 @@ bool llvm::LowerDbgDeclare(Function &F) {
     // the stack slot (and at a lexical-scope granularity). Later
     // passes will attempt to elide the stack slot.
     if (AI && !isArray(AI)) {
-      for (auto &AIUse : AI->uses()) {
-        User *U = AIUse.getUser();
-        if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-          if (AIUse.getOperandNo() == 1)
-            ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
-        } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
+      for (User *U : AI->users())
+        if (StoreInst *SI = dyn_cast<StoreInst>(U))
+          ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
+        else if (LoadInst *LI = dyn_cast<LoadInst>(U))
           ConvertDebugDeclareToDebugValue(DDI, LI, DIB);
-        } else if (CallInst *CI = dyn_cast<CallInst>(U)) {
+        else if (CallInst *CI = dyn_cast<CallInst>(U)) {
           // This is a call by-value or some other instruction that
           // takes a pointer to the variable. Insert a *value*
           // intrinsic that describes the alloca.
-          SmallVector<uint64_t, 1> NewDIExpr;
-          auto *DIExpr = DDI->getExpression();
-          NewDIExpr.push_back(dwarf::DW_OP_deref);
-          NewDIExpr.append(DIExpr->elements_begin(), DIExpr->elements_end());
           DIB.insertDbgValueIntrinsic(AI, 0, DDI->getVariable(),
-                                      DIB.createExpression(NewDIExpr),
-                                      DDI->getDebugLoc(), CI);
+                                      DDI->getExpression(), DDI->getDebugLoc(),
+                                      CI);
         }
-      }
       DDI->eraseFromParent();
     }
   }
@@ -1178,10 +1136,9 @@ DbgDeclareInst *llvm::FindAllocaDbgDeclare(Value *V) {
   return nullptr;
 }
 
-bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
-                             Instruction *InsertBefore, DIBuilder &Builder,
-                             bool Deref, int Offset) {
-  DbgDeclareInst *DDI = FindAllocaDbgDeclare(Address);
+bool llvm::replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
+                                      DIBuilder &Builder, bool Deref, int Offset) {
+  DbgDeclareInst *DDI = FindAllocaDbgDeclare(AI);
   if (!DDI)
     return false;
   DebugLoc Loc = DDI->getDebugLoc();
@@ -1211,18 +1168,15 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
 
   // Insert llvm.dbg.declare immediately after the original alloca, and remove
   // old llvm.dbg.declare.
-  Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, InsertBefore);
+  Builder.insertDeclare(NewAllocaAddress, DIVar, DIExpr, Loc,
+                        AI->getNextNode());
   DDI->eraseFromParent();
   return true;
 }
 
-bool llvm::replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
-                                      DIBuilder &Builder, bool Deref, int Offset) {
-  return replaceDbgDeclare(AI, NewAllocaAddress, AI->getNextNode(), Builder,
-                           Deref, Offset);
-}
-
-void llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap) {
+/// changeToUnreachable - Insert an unreachable instruction before the specified
+/// instruction, making it and the rest of the code in the block dead.
+static void changeToUnreachable(Instruction *I, bool UseLLVMTrap) {
   BasicBlock *BB = I->getParent();
   // Loop over all of the successors, removing BB's entry from any PHI
   // nodes.
@@ -1250,11 +1204,8 @@ void llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap) {
 
 /// changeToCall - Convert the specified invoke into a normal call.
 static void changeToCall(InvokeInst *II) {
-  SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  II->getOperandBundlesAsDefs(OpBundles);
-  CallInst *NewCall = CallInst::Create(II->getCalledValue(), Args, OpBundles,
-                                       "", II);
+  SmallVector<Value*, 8> Args(II->op_begin(), II->op_end() - 3);
+  CallInst *NewCall = CallInst::Create(II->getCalledValue(), Args, "", II);
   NewCall->takeName(II);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
@@ -1338,9 +1289,8 @@ static bool markAliveBlocks(Function &F,
       }
     }
 
-    TerminatorInst *Terminator = BB->getTerminator();
-    if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
-      // Turn invokes that call 'nounwind' functions into ordinary calls.
+    // Turn invokes that call 'nounwind' functions into ordinary calls.
+    if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator())) {
       Value *Callee = II->getCalledValue();
       if (isa<ConstantPointerNull>(Callee) || isa<UndefValue>(Callee)) {
         changeToUnreachable(II, true);
@@ -1354,44 +1304,6 @@ static bool markAliveBlocks(Function &F,
         } else
           changeToCall(II);
         Changed = true;
-      }
-    } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
-      // Remove catchpads which cannot be reached.
-      struct CatchPadDenseMapInfo {
-        static CatchPadInst *getEmptyKey() {
-          return DenseMapInfo<CatchPadInst *>::getEmptyKey();
-        }
-        static CatchPadInst *getTombstoneKey() {
-          return DenseMapInfo<CatchPadInst *>::getTombstoneKey();
-        }
-        static unsigned getHashValue(CatchPadInst *CatchPad) {
-          return static_cast<unsigned>(hash_combine_range(
-              CatchPad->value_op_begin(), CatchPad->value_op_end()));
-        }
-        static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
-          if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
-              RHS == getEmptyKey() || RHS == getTombstoneKey())
-            return LHS == RHS;
-          return LHS->isIdenticalTo(RHS);
-        }
-      };
-
-      // Set of unique CatchPads.
-      SmallDenseMap<CatchPadInst *, detail::DenseSetEmpty, 4,
-                    CatchPadDenseMapInfo, detail::DenseSetPair<CatchPadInst *>>
-          HandlerSet;
-      detail::DenseSetEmpty Empty;
-      for (CatchSwitchInst::handler_iterator I = CatchSwitch->handler_begin(),
-                                             E = CatchSwitch->handler_end();
-           I != E; ++I) {
-        BasicBlock *HandlerBB = *I;
-        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHI());
-        if (!HandlerSet.insert({CatchPad, Empty}).second) {
-          CatchSwitch->removeHandler(I);
-          --I;
-          --E;
-          Changed = true;
-        }
       }
     }
 
@@ -1417,15 +1329,19 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
   if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
     NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI);
     UnwindDest = CRI->getUnwindDest();
-  } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(TI)) {
-    auto *NewCatchSwitch = CatchSwitchInst::Create(
-        CatchSwitch->getParentPad(), nullptr, CatchSwitch->getNumHandlers(),
-        CatchSwitch->getName(), CatchSwitch);
-    for (BasicBlock *PadBB : CatchSwitch->handlers())
-      NewCatchSwitch->addHandler(PadBB);
-
-    NewTI = NewCatchSwitch;
-    UnwindDest = CatchSwitch->getUnwindDest();
+  } else if (auto *CEP = dyn_cast<CleanupEndPadInst>(TI)) {
+    NewTI = CleanupEndPadInst::Create(CEP->getCleanupPad(), nullptr, CEP);
+    UnwindDest = CEP->getUnwindDest();
+  } else if (auto *CEP = dyn_cast<CatchEndPadInst>(TI)) {
+    NewTI = CatchEndPadInst::Create(CEP->getContext(), nullptr, CEP);
+    UnwindDest = CEP->getUnwindDest();
+  } else if (auto *TPI = dyn_cast<TerminatePadInst>(TI)) {
+    SmallVector<Value *, 3> TerminatePadArgs;
+    for (Value *Operand : TPI->arg_operands())
+      TerminatePadArgs.push_back(Operand);
+    NewTI = TerminatePadInst::Create(TPI->getContext(), nullptr,
+                                     TerminatePadArgs, TPI);
+    UnwindDest = TPI->getUnwindDest();
   } else {
     llvm_unreachable("Could not find unwind successor");
   }
@@ -1433,14 +1349,13 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
   NewTI->takeName(TI);
   NewTI->setDebugLoc(TI->getDebugLoc());
   UnwindDest->removePredecessor(BB);
-  TI->replaceAllUsesWith(NewTI);
   TI->eraseFromParent();
 }
 
 /// removeUnreachableBlocksFromFn - Remove blocks that are not reachable, even
 /// if they are in a dead cycle.  Return true if a change was made, false
 /// otherwise.
-bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
+bool llvm::removeUnreachableBlocks(Function &F) {
   SmallPtrSet<BasicBlock*, 128> Reachable;
   bool Changed = markAliveBlocks(F, Reachable);
 
@@ -1461,8 +1376,6 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
          ++SI)
       if (Reachable.count(*SI))
         (*SI)->removePredecessor(&*BB);
-    if (LVI)
-      LVI->eraseBlock(&*BB);
     BB->dropAllReferences();
   }
 
@@ -1588,212 +1501,10 @@ bool llvm::callsGCLeafFunction(ImmutableCallSite CS) {
     return true;
 
   // Check if the function is specifically marked as a gc leaf function.
-  if (CS.hasFnAttr("gc-leaf-function"))
-    return true;
+  //
+  // TODO: we should be checking the attributes on the call site as well.
   if (const Function *F = CS.getCalledFunction())
     return F->hasFnAttribute("gc-leaf-function");
 
   return false;
-}
-
-/// A potential constituent of a bitreverse or bswap expression. See
-/// collectBitParts for a fuller explanation.
-struct BitPart {
-  BitPart(Value *P, unsigned BW) : Provider(P) {
-    Provenance.resize(BW);
-  }
-
-  /// The Value that this is a bitreverse/bswap of.
-  Value *Provider;
-  /// The "provenance" of each bit. Provenance[A] = B means that bit A
-  /// in Provider becomes bit B in the result of this expression.
-  SmallVector<int8_t, 32> Provenance; // int8_t means max size is i128.
-
-  enum { Unset = -1 };
-};
-
-/// Analyze the specified subexpression and see if it is capable of providing
-/// pieces of a bswap or bitreverse. The subexpression provides a potential
-/// piece of a bswap or bitreverse if it can be proven that each non-zero bit in
-/// the output of the expression came from a corresponding bit in some other
-/// value. This function is recursive, and the end result is a mapping of
-/// bitnumber to bitnumber. It is the caller's responsibility to validate that
-/// the bitnumber to bitnumber mapping is correct for a bswap or bitreverse.
-///
-/// For example, if the current subexpression if "(shl i32 %X, 24)" then we know
-/// that the expression deposits the low byte of %X into the high byte of the
-/// result and that all other bits are zero. This expression is accepted and a
-/// BitPart is returned with Provider set to %X and Provenance[24-31] set to
-/// [0-7].
-///
-/// To avoid revisiting values, the BitPart results are memoized into the
-/// provided map. To avoid unnecessary copying of BitParts, BitParts are
-/// constructed in-place in the \c BPS map. Because of this \c BPS needs to
-/// store BitParts objects, not pointers. As we need the concept of a nullptr
-/// BitParts (Value has been analyzed and the analysis failed), we an Optional
-/// type instead to provide the same functionality.
-///
-/// Because we pass around references into \c BPS, we must use a container that
-/// does not invalidate internal references (std::map instead of DenseMap).
-///
-static const Optional<BitPart> &
-collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
-                std::map<Value *, Optional<BitPart>> &BPS) {
-  auto I = BPS.find(V);
-  if (I != BPS.end())
-    return I->second;
-
-  auto &Result = BPS[V] = None;
-  auto BitWidth = cast<IntegerType>(V->getType())->getBitWidth();
-
-  if (Instruction *I = dyn_cast<Instruction>(V)) {
-    // If this is an or instruction, it may be an inner node of the bswap.
-    if (I->getOpcode() == Instruction::Or) {
-      auto &A = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                MatchBitReversals, BPS);
-      auto &B = collectBitParts(I->getOperand(1), MatchBSwaps,
-                                MatchBitReversals, BPS);
-      if (!A || !B)
-        return Result;
-
-      // Try and merge the two together.
-      if (!A->Provider || A->Provider != B->Provider)
-        return Result;
-
-      Result = BitPart(A->Provider, BitWidth);
-      for (unsigned i = 0; i < A->Provenance.size(); ++i) {
-        if (A->Provenance[i] != BitPart::Unset &&
-            B->Provenance[i] != BitPart::Unset &&
-            A->Provenance[i] != B->Provenance[i])
-          return Result = None;
-
-        if (A->Provenance[i] == BitPart::Unset)
-          Result->Provenance[i] = B->Provenance[i];
-        else
-          Result->Provenance[i] = A->Provenance[i];
-      }
-
-      return Result;
-    }
-
-    // If this is a logical shift by a constant, recurse then shift the result.
-    if (I->isLogicalShift() && isa<ConstantInt>(I->getOperand(1))) {
-      unsigned BitShift =
-          cast<ConstantInt>(I->getOperand(1))->getLimitedValue(~0U);
-      // Ensure the shift amount is defined.
-      if (BitShift > BitWidth)
-        return Result;
-
-      auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                  MatchBitReversals, BPS);
-      if (!Res)
-        return Result;
-      Result = Res;
-
-      // Perform the "shift" on BitProvenance.
-      auto &P = Result->Provenance;
-      if (I->getOpcode() == Instruction::Shl) {
-        P.erase(std::prev(P.end(), BitShift), P.end());
-        P.insert(P.begin(), BitShift, BitPart::Unset);
-      } else {
-        P.erase(P.begin(), std::next(P.begin(), BitShift));
-        P.insert(P.end(), BitShift, BitPart::Unset);
-      }
-
-      return Result;
-    }
-
-    // If this is a logical 'and' with a mask that clears bits, recurse then
-    // unset the appropriate bits.
-    if (I->getOpcode() == Instruction::And &&
-        isa<ConstantInt>(I->getOperand(1))) {
-      APInt Bit(I->getType()->getPrimitiveSizeInBits(), 1);
-      const APInt &AndMask = cast<ConstantInt>(I->getOperand(1))->getValue();
-
-      // Check that the mask allows a multiple of 8 bits for a bswap, for an
-      // early exit.
-      unsigned NumMaskedBits = AndMask.countPopulation();
-      if (!MatchBitReversals && NumMaskedBits % 8 != 0)
-        return Result;
-      
-      auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                  MatchBitReversals, BPS);
-      if (!Res)
-        return Result;
-      Result = Res;
-
-      for (unsigned i = 0; i < BitWidth; ++i, Bit <<= 1)
-        // If the AndMask is zero for this bit, clear the bit.
-        if ((AndMask & Bit) == 0)
-          Result->Provenance[i] = BitPart::Unset;
-
-      return Result;
-    }
-  }
-
-  // Okay, we got to something that isn't a shift, 'or' or 'and'.  This must be
-  // the input value to the bswap/bitreverse.
-  Result = BitPart(V, BitWidth);
-  for (unsigned i = 0; i < BitWidth; ++i)
-    Result->Provenance[i] = i;
-  return Result;
-}
-
-static bool bitTransformIsCorrectForBSwap(unsigned From, unsigned To,
-                                          unsigned BitWidth) {
-  if (From % 8 != To % 8)
-    return false;
-  // Convert from bit indices to byte indices and check for a byte reversal.
-  From >>= 3;
-  To >>= 3;
-  BitWidth >>= 3;
-  return From == BitWidth - To - 1;
-}
-
-static bool bitTransformIsCorrectForBitReverse(unsigned From, unsigned To,
-                                               unsigned BitWidth) {
-  return From == BitWidth - To - 1;
-}
-
-/// Given an OR instruction, check to see if this is a bitreverse
-/// idiom. If so, insert the new intrinsic and return true.
-bool llvm::recognizeBitReverseOrBSwapIdiom(
-    Instruction *I, bool MatchBSwaps, bool MatchBitReversals,
-    SmallVectorImpl<Instruction *> &InsertedInsts) {
-  if (Operator::getOpcode(I) != Instruction::Or)
-    return false;
-  if (!MatchBSwaps && !MatchBitReversals)
-    return false;
-  IntegerType *ITy = dyn_cast<IntegerType>(I->getType());
-  if (!ITy || ITy->getBitWidth() > 128)
-    return false;   // Can't do vectors or integers > 128 bits.
-  unsigned BW = ITy->getBitWidth();
-
-  // Try to find all the pieces corresponding to the bswap.
-  std::map<Value *, Optional<BitPart>> BPS;
-  auto Res = collectBitParts(I, MatchBSwaps, MatchBitReversals, BPS);
-  if (!Res)
-    return false;
-  auto &BitProvenance = Res->Provenance;
-
-  // Now, is the bit permutation correct for a bswap or a bitreverse? We can
-  // only byteswap values with an even number of bytes.
-  bool OKForBSwap = BW % 16 == 0, OKForBitReverse = true;
-  for (unsigned i = 0; i < BW; ++i) {
-    OKForBSwap &= bitTransformIsCorrectForBSwap(BitProvenance[i], i, BW);
-    OKForBitReverse &=
-        bitTransformIsCorrectForBitReverse(BitProvenance[i], i, BW);
-  }
-
-  Intrinsic::ID Intrin;
-  if (OKForBSwap && MatchBSwaps)
-    Intrin = Intrinsic::bswap;
-  else if (OKForBitReverse && MatchBitReversals)
-    Intrin = Intrinsic::bitreverse;
-  else
-    return false;
-
-  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, ITy);
-  InsertedInsts.push_back(CallInst::Create(F, Res->Provider, "rev", I));
-  return true;
 }

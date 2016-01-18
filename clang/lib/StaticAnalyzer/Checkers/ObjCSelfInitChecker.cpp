@@ -404,7 +404,10 @@ static bool shouldRunOnFunctionOrMethod(const NamedDecl *ND) {
     if (II == NSObjectII)
       break;
   }
-  return ID != nullptr;
+  if (!ID)
+    return false;
+
+  return true;
 }
 
 /// \brief Returns true if the location is 'self'.

@@ -1,9 +1,14 @@
-//===-- llvm/MC/SectionKind.h - Classification of sections ------*- C++ -*-===//
+//===-- llvm/Target/TargetLoweringObjectFile.h - Object Info ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements classes used to handle lowerings specific to common
+// object file formats.
 //
 //===----------------------------------------------------------------------===//
 
@@ -94,8 +99,21 @@ class SectionKind {
            /// marked 'constant'.
            Common,
 
-           /// This is writeable data that has a non-zero initializer.
-           Data,
+           /// DataRel - This is the most general form of data that is written
+           /// to by the program, it can have random relocations to arbitrary
+           /// globals.
+           DataRel,
+
+               /// DataRelLocal - This is writeable data that has a non-zero
+               /// initializer and has relocations in it, but all of the
+               /// relocations are known to be within the final linked image
+               /// the global is linked into.
+               DataRelLocal,
+
+                   /// DataNoRel - This is writeable data that has a non-zero
+                   /// initializer, but whose initializer is known to have no
+                   /// relocations.
+                   DataNoRel,
 
            /// ReadOnlyWithRel - These are global variables that are never
            /// written to by the program, but that have relocations, so they
@@ -103,7 +121,15 @@ class SectionKind {
            /// can write to them.  If it chooses to, the dynamic linker can
            /// mark the pages these globals end up on as read-only after it is
            /// done with its relocation phase.
-           ReadOnlyWithRel
+           ReadOnlyWithRel,
+
+               /// ReadOnlyWithRelLocal - This is data that is readonly by the
+               /// program, but must be writeable so that the dynamic linker
+               /// can perform relocations in it.  This is used when we know
+               /// that all the relocations are to globals in this final
+               /// linked image.
+               ReadOnlyWithRelLocal
+
   } K : 8;
 public:
 
@@ -143,7 +169,7 @@ public:
   bool isThreadData() const { return K == ThreadData; }
 
   bool isGlobalWriteableData() const {
-    return isBSS() || isCommon() || isData() || isReadOnlyWithRel();
+    return isBSS() || isCommon() || isDataRel() || isReadOnlyWithRel();
   }
 
   bool isBSS() const { return K == BSS || K == BSSLocal || K == BSSExtern; }
@@ -152,10 +178,22 @@ public:
 
   bool isCommon() const { return K == Common; }
 
-  bool isData() const { return K == Data; }
+  bool isDataRel() const {
+    return K == DataRel || K == DataRelLocal || K == DataNoRel;
+  }
+
+  bool isDataRelLocal() const {
+    return K == DataRelLocal || K == DataNoRel;
+  }
+
+  bool isDataNoRel() const { return K == DataNoRel; }
 
   bool isReadOnlyWithRel() const {
-    return K == ReadOnlyWithRel;
+    return K == ReadOnlyWithRel || K == ReadOnlyWithRelLocal;
+  }
+
+  bool isReadOnlyWithRelLocal() const {
+    return K == ReadOnlyWithRelLocal;
   }
 private:
   static SectionKind get(Kind K) {
@@ -186,8 +224,13 @@ public:
   static SectionKind getBSSLocal() { return get(BSSLocal); }
   static SectionKind getBSSExtern() { return get(BSSExtern); }
   static SectionKind getCommon() { return get(Common); }
-  static SectionKind getData() { return get(Data); }
+  static SectionKind getDataRel() { return get(DataRel); }
+  static SectionKind getDataRelLocal() { return get(DataRelLocal); }
+  static SectionKind getDataNoRel() { return get(DataNoRel); }
   static SectionKind getReadOnlyWithRel() { return get(ReadOnlyWithRel); }
+  static SectionKind getReadOnlyWithRelLocal(){
+    return get(ReadOnlyWithRelLocal);
+  }
 };
 
 } // end namespace llvm

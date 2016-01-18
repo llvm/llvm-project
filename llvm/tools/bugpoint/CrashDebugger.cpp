@@ -143,7 +143,7 @@ ReduceCrashingGlobalVariables::TestGlobalVariables(
                               std::vector<GlobalVariable*> &GVs) {
   // Clone the program to try hacking it apart...
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  Module *M = CloneModule(BD.getProgram(), VMap);
 
   // Convert list to set for fast lookup...
   std::set<GlobalVariable*> GVSet;
@@ -162,7 +162,7 @@ ReduceCrashingGlobalVariables::TestGlobalVariables(
   // playing with...
   for (GlobalVariable &I : M->globals())
     if (I.hasInitializer() && !GVSet.count(&I)) {
-      DeleteGlobalInitializer(&I);
+      I.setInitializer(nullptr);
       I.setLinkage(GlobalValue::ExternalLinkage);
     }
 
@@ -239,7 +239,7 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function*> &Funcs) {
 
   // Clone the program to try hacking it apart...
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  Module *M = CloneModule(BD.getProgram(), VMap);
 
   // Convert list to set for fast lookup...
   std::set<Function*> Functions;
@@ -346,7 +346,7 @@ namespace {
 bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock*> &BBs) {
   // Clone the program to try hacking it apart...
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  Module *M = CloneModule(BD.getProgram(), VMap);
 
   // Convert list to set for fast lookup...
   SmallPtrSet<BasicBlock*, 8> Blocks;
@@ -373,9 +373,8 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock*> &BBs) {
           (*SI)->removePredecessor(&*BB);
 
         TerminatorInst *BBTerm = BB->getTerminator();
-        if (BBTerm->isEHPad())
-          continue;
-        if (!BBTerm->getType()->isVoidTy() && !BBTerm->getType()->isTokenTy())
+
+        if (!BB->getTerminator()->getType()->isVoidTy())
           BBTerm->replaceAllUsesWith(Constant::getNullValue(BBTerm->getType()));
 
         // Replace the old terminator instruction.
@@ -456,7 +455,7 @@ bool ReduceCrashingInstructions::TestInsts(std::vector<const Instruction*>
                                            &Insts) {
   // Clone the program to try hacking it apart...
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  Module *M = CloneModule(BD.getProgram(), VMap);
 
   // Convert list to set for fast lookup...
   SmallPtrSet<Instruction*, 64> Instructions;
@@ -477,7 +476,7 @@ bool ReduceCrashingInstructions::TestInsts(std::vector<const Instruction*>
         Instruction *Inst = &*I++;
         if (!Instructions.count(Inst) && !isa<TerminatorInst>(Inst) &&
             !Inst->isEHPad()) {
-          if (!Inst->getType()->isVoidTy() && !Inst->getType()->isTokenTy())
+          if (!Inst->getType()->isVoidTy())
             Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
           Inst->eraseFromParent();
         }
@@ -532,7 +531,7 @@ public:
 bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
 
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  Module *M = CloneModule(BD.getProgram(), VMap);
 
   outs() << "Checking for crash with only these named metadata nodes:";
   unsigned NumPrint = std::min<size_t>(NamedMDs.size(), 10);
@@ -612,7 +611,7 @@ bool ReduceCrashingNamedMDOps::TestNamedMDOps(
     outs() << " named metadata operands: ";
 
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  Module *M = CloneModule(BD.getProgram(), VMap);
 
   // This is a little wasteful. In the future it might be good if we could have
   // these dropped during cloning.
@@ -658,13 +657,13 @@ static bool DebugACrash(BugDriver &BD,
       BD.getProgram()->global_begin() != BD.getProgram()->global_end()) {
     // Now try to reduce the number of global variable initializers in the
     // module to something small.
-    Module *M = CloneModule(BD.getProgram()).release();
+    Module *M = CloneModule(BD.getProgram());
     bool DeletedInit = false;
 
     for (Module::global_iterator I = M->global_begin(), E = M->global_end();
          I != E; ++I)
       if (I->hasInitializer()) {
-        DeleteGlobalInitializer(&*I);
+        I->setInitializer(nullptr);
         I->setLinkage(GlobalValue::ExternalLinkage);
         DeletedInit = true;
       }
@@ -786,7 +785,7 @@ static bool DebugACrash(BugDriver &BD,
             } else {
               if (BugpointIsInterrupted) goto ExitLoops;
 
-              if (I->isEHPad() || I->getType()->isTokenTy())
+              if (isa<LandingPadInst>(I))
                 continue;
 
               outs() << "Checking instruction: " << *I;
@@ -840,7 +839,7 @@ ExitLoops:
   // Try to clean up the testcase by running funcresolve and globaldce...
   if (!BugpointIsInterrupted) {
     outs() << "\n*** Attempting to perform final cleanups: ";
-    Module *M = CloneModule(BD.getProgram()).release();
+    Module *M = CloneModule(BD.getProgram());
     M = BD.performFinalCleanups(M, true).release();
 
     // Find out if the pass still crashes on the cleaned up program...

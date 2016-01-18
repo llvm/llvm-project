@@ -1289,5 +1289,3 @@ def: T_stc_pat<S2_storerf_pci_pseudo, int_hexagon_circ_sthhi, s4_1ImmPred, I32>;
 include "HexagonIntrinsicsV3.td"
 include "HexagonIntrinsicsV4.td"
 include "HexagonIntrinsicsV5.td"
-include "HexagonIntrinsicsV60.td"
-

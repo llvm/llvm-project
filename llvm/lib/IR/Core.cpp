@@ -1722,7 +1722,7 @@ void LLVMSetFunctionCallConv(LLVMValueRef Fn, unsigned CC) {
 
 const char *LLVMGetGC(LLVMValueRef Fn) {
   Function *F = unwrap<Function>(Fn);
-  return F->hasGC()? F->getGC().c_str() : nullptr;
+  return F->hasGC()? F->getGC() : nullptr;
 }
 
 void LLVMSetGC(LLVMValueRef Fn, const char *GC) {

@@ -62,9 +62,6 @@ public:
   /// registers.
   bool CanLowerReturn;
 
-  /// True if part of the CSRs will be handled via explicit copies.
-  bool SplitCSR;
-
   /// DemoteRegister - if CanLowerReturn is false, DemoteRegister is a vreg
   /// allocated to hold a pointer to the hidden sret parameter.
   unsigned DemoteRegister;

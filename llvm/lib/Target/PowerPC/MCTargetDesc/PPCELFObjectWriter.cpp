@@ -25,8 +25,8 @@ namespace {
     PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
   protected:
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
+    unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
+                          bool IsPCRel) const override;
 
     bool needsRelocateWithSymbol(const MCSymbol &Sym,
                                  unsigned Type) const override;
@@ -66,7 +66,7 @@ static MCSymbolRefExpr::VariantKind getAccessVariant(const MCValue &Target,
   llvm_unreachable("unknown PPCMCExpr kind");
 }
 
-unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
+unsigned PPCELFObjectWriter::GetRelocType(const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   MCSymbolRefExpr::VariantKind Modifier = getAccessVariant(Target, Fixup);
@@ -113,10 +113,13 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
         break;
       }
       break;
-    case PPC::fixup_ppc_half16ds:
-      Target.print(errs());
-      errs() << '\n';
+    case PPC::fixup_ppc_half16ds: {
+      raw_ostream &OS = *(new raw_fd_ostream(2, false));
+      Target.print(OS);
+      OS << "\n";
       report_fatal_error("Invalid PC-relative half16ds relocation");
+      break;
+    }
     case FK_Data_4:
     case FK_PCRel_4:
       Type = ELF::R_PPC_REL32;

@@ -126,9 +126,9 @@ class FileManager : public RefCountedBase<FileManager> {
   ///
   /// For each virtual file (e.g. foo/bar/baz.cpp), we add all of its parent
   /// directories (foo/ and foo/bar/) here.
-  SmallVector<std::unique_ptr<DirectoryEntry>, 4> VirtualDirectoryEntries;
+  SmallVector<DirectoryEntry*, 4> VirtualDirectoryEntries;
   /// \brief The virtual files that we have allocated.
-  SmallVector<std::unique_ptr<FileEntry>, 4> VirtualFileEntries;
+  SmallVector<FileEntry*, 4> VirtualFileEntries;
 
   /// \brief A cache that maps paths to directory entries (either real or
   /// virtual) we have looked up
@@ -272,6 +272,9 @@ public:
   /// FileEntry. Use with caution.
   static void modifyFileEntry(FileEntry *File, off_t Size,
                               time_t ModificationTime);
+
+  /// \brief Remove any './' components from a path.
+  static bool removeDotPaths(SmallVectorImpl<char> &Path, bool RemoveDotDot = false);
 
   /// \brief Retrieve the canonical name for a given directory.
   ///

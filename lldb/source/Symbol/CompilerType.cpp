@@ -64,14 +64,6 @@ CompilerType::IsAggregateType () const
 }
 
 bool
-CompilerType::IsAnonymousType () const
-{
-    if (IsValid())
-        return m_type_system->IsAnonymousType(m_type);
-    return false;
-}
-
-bool
 CompilerType::IsArrayType (CompilerType *element_type_ptr,
                            uint64_t *size,
                            bool *is_incomplete) const
@@ -223,14 +215,6 @@ CompilerType::IsReferenceType (CompilerType *pointee_type, bool* is_rvalue) cons
     }
     if (pointee_type)
         pointee_type->Clear();
-    return false;
-}
-
-bool
-CompilerType::ShouldTreatScalarValueAsAddress () const
-{
-    if (IsValid())
-        return m_type_system->ShouldTreatScalarValueAsAddress(m_type);
     return false;
 }
 
@@ -780,8 +764,7 @@ CompilerType::GetChildCompilerTypeAtIndex (ExecutionContext *exe_ctx,
                                            uint32_t &child_bitfield_bit_offset,
                                            bool &child_is_base_class,
                                            bool &child_is_deref_of_parent,
-                                           ValueObject *valobj,
-                                           uint64_t &language_flags) const
+                                           ValueObject *valobj) const
 {
     if (!IsValid())
         return CompilerType();
@@ -798,8 +781,7 @@ CompilerType::GetChildCompilerTypeAtIndex (ExecutionContext *exe_ctx,
                                                       child_bitfield_bit_offset,
                                                       child_is_base_class,
                                                       child_is_deref_of_parent,
-                                                      valobj,
-                                                      language_flags);
+                                                      valobj);
 }
 
 // Look for a child member (doesn't include base classes, but it does include
@@ -878,10 +860,10 @@ CompilerType::GetTypeForFormatters () const
 }
 
 LazyBool
-CompilerType::ShouldPrintAsOneLiner (ValueObject* valobj) const
+CompilerType::ShouldPrintAsOneLiner () const
 {
     if (IsValid())
-        return m_type_system->ShouldPrintAsOneLiner(m_type, valobj);
+        return m_type_system->ShouldPrintAsOneLiner(m_type);
     return eLazyBoolCalculate;
 }
 

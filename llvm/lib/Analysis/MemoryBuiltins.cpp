@@ -31,7 +31,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "memory-builtins"
 
-enum AllocType : uint8_t {
+enum AllocType {
   OpNewLike          = 1<<0, // allocates; never returns null
   MallocLike         = 1<<1 | OpNewLike, // allocates; may return null
   CallocLike         = 1<<2, // allocates + bzero
@@ -62,14 +62,6 @@ static const AllocFnsTy AllocationFnData[] = {
   {LibFunc::ZnajRKSt9nothrow_t,  MallocLike,  2, 0,  -1}, // new[](unsigned int, nothrow)
   {LibFunc::Znam,                OpNewLike,   1, 0,  -1}, // new[](unsigned long)
   {LibFunc::ZnamRKSt9nothrow_t,  MallocLike,  2, 0,  -1}, // new[](unsigned long, nothrow)
-  {LibFunc::msvc_new_int,         OpNewLike,   1, 0,  -1}, // new(unsigned int)
-  {LibFunc::msvc_new_int_nothrow, MallocLike,  2, 0,  -1}, // new(unsigned int, nothrow)
-  {LibFunc::msvc_new_longlong,         OpNewLike,   1, 0,  -1}, // new(unsigned long long)
-  {LibFunc::msvc_new_longlong_nothrow, MallocLike,  2, 0,  -1}, // new(unsigned long long, nothrow)
-  {LibFunc::msvc_new_array_int,         OpNewLike,   1, 0,  -1}, // new[](unsigned int)
-  {LibFunc::msvc_new_array_int_nothrow, MallocLike,  2, 0,  -1}, // new[](unsigned int, nothrow)
-  {LibFunc::msvc_new_array_longlong,         OpNewLike,   1, 0,  -1}, // new[](unsigned long long)
-  {LibFunc::msvc_new_array_longlong_nothrow, MallocLike,  2, 0,  -1}, // new[](unsigned long long, nothrow)
   {LibFunc::calloc,              CallocLike,  2, 0,   1},
   {LibFunc::realloc,             ReallocLike, 2, 1,  -1},
   {LibFunc::reallocf,            ReallocLike, 2, 1,  -1},
@@ -187,6 +179,20 @@ bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
   return getAllocationData(V, AllocLike, TLI, LookThroughBitCast);
 }
 
+/// \brief Tests if a value is a call or invoke to a library function that
+/// reallocates memory (such as realloc).
+bool llvm::isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                           bool LookThroughBitCast) {
+  return getAllocationData(V, ReallocLike, TLI, LookThroughBitCast);
+}
+
+/// \brief Tests if a value is a call or invoke to a library function that
+/// allocates memory and never returns null (such as operator new).
+bool llvm::isOperatorNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                               bool LookThroughBitCast) {
+  return getAllocationData(V, OpNewLike, TLI, LookThroughBitCast);
+}
+
 /// extractMallocCall - Returns the corresponding CallInst if the instruction
 /// is a malloc call.  Since CallInst::CreateMalloc() only creates calls, we
 /// ignore InvokeInst here.
@@ -302,26 +308,14 @@ const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
   unsigned ExpectedNumParams;
   if (TLIFn == LibFunc::free ||
       TLIFn == LibFunc::ZdlPv || // operator delete(void*)
-      TLIFn == LibFunc::ZdaPv || // operator delete[](void*)
-      TLIFn == LibFunc::msvc_delete_ptr32 || // operator delete(void*)
-      TLIFn == LibFunc::msvc_delete_ptr64 || // operator delete(void*)
-      TLIFn == LibFunc::msvc_delete_array_ptr32 || // operator delete[](void*)
-      TLIFn == LibFunc::msvc_delete_array_ptr64)   // operator delete[](void*)
+      TLIFn == LibFunc::ZdaPv)   // operator delete[](void*)
     ExpectedNumParams = 1;
   else if (TLIFn == LibFunc::ZdlPvj ||              // delete(void*, uint)
            TLIFn == LibFunc::ZdlPvm ||              // delete(void*, ulong)
            TLIFn == LibFunc::ZdlPvRKSt9nothrow_t || // delete(void*, nothrow)
            TLIFn == LibFunc::ZdaPvj ||              // delete[](void*, uint)
            TLIFn == LibFunc::ZdaPvm ||              // delete[](void*, ulong)
-           TLIFn == LibFunc::ZdaPvRKSt9nothrow_t || // delete[](void*, nothrow)
-           TLIFn == LibFunc::msvc_delete_ptr32_int ||      // delete(void*, uint)
-           TLIFn == LibFunc::msvc_delete_ptr64_longlong || // delete(void*, ulonglong)
-           TLIFn == LibFunc::msvc_delete_ptr32_nothrow || // delete(void*, nothrow)
-           TLIFn == LibFunc::msvc_delete_ptr64_nothrow || // delete(void*, nothrow)
-           TLIFn == LibFunc::msvc_delete_array_ptr32_int ||      // delete[](void*, uint)
-           TLIFn == LibFunc::msvc_delete_array_ptr64_longlong || // delete[](void*, ulonglong)
-           TLIFn == LibFunc::msvc_delete_array_ptr32_nothrow || // delete[](void*, nothrow)
-           TLIFn == LibFunc::msvc_delete_array_ptr64_nothrow)   // delete[](void*, nothrow)
+           TLIFn == LibFunc::ZdaPvRKSt9nothrow_t)   // delete[](void*, nothrow)
     ExpectedNumParams = 2;
   else
     return nullptr;
@@ -376,7 +370,7 @@ STATISTIC(ObjectVisitorLoad,
 
 APInt ObjectSizeOffsetVisitor::align(APInt Size, uint64_t Align) {
   if (RoundToAlign && Align)
-    return APInt(IntTyBits, alignTo(Size.getZExtValue(), Align));
+    return APInt(IntTyBits, RoundUpToAlignment(Size.getZExtValue(), Align));
   return Size;
 }
 

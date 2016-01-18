@@ -102,7 +102,6 @@ protected: // Can only create subclasses.
   const MCSubtargetInfo *STI;
 
   unsigned RequireStructuredCFG : 1;
-  unsigned O0WantsFastISel : 1;
 
   /// This API is here to support the C API, deprecated in 3.7 release.
   /// This should never be used outside of legacy existing client.
@@ -191,8 +190,6 @@ public:
   void setOptLevel(CodeGenOpt::Level Level) const;
 
   void setFastISel(bool Enable) { Options.EnableFastISel = Enable; }
-  bool getO0WantsFastISel() { return O0WantsFastISel; }
-  void setO0WantsFastISel(bool Enable) { O0WantsFastISel = Enable; }
 
   bool shouldPrintMachineCode() const { return Options.PrintMachineCode; }
 
@@ -254,13 +251,6 @@ public:
                                  bool /*DisableVerify*/ = true) {
     return true;
   }
-
-  /// True if subtarget inserts the final scheduling pass on its own.
-  ///
-  /// Branch relaxation, which must happen after block placement, can
-  /// on some targets (e.g. SystemZ) expose additional post-RA
-  /// scheduling opportunities.
-  virtual bool targetSchedulesPostRAScheduling() const { return false; };
 
   void getNameWithPrefix(SmallVectorImpl<char> &Name, const GlobalValue *GV,
                          Mangler &Mang, bool MayAlwaysUsePrivate = false) const;

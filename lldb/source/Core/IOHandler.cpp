@@ -2214,7 +2214,7 @@ type summary add -s "${var.origin%S} ${var.size%S}" curses::Rect
             {
                 // Run the action on this menu in case we need to populate the
                 // menu with dynamic content and also in case check marks, and
-                // any other menu decorations need to be calculated
+                // any other menu decorations need to be caclulated
                 if (run_menu_sp->Action() == MenuActionResult::Quit)
                     return eQuitApplication;
 

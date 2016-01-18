@@ -1259,8 +1259,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
       = SourceMgr.getOrCreateContentCache(File,
                               /*isSystemFile=*/FileCharacter != SrcMgr::C_User);
     if (OverriddenBuffer && !ContentCache->BufferOverridden &&
-        ContentCache->ContentsEntry == ContentCache->OrigEntry &&
-        !ContentCache->getRawBuffer()) {
+        ContentCache->ContentsEntry == ContentCache->OrigEntry) {
       unsigned Code = SLocEntryCursor.ReadCode();
       Record.clear();
       unsigned RecCode = SLocEntryCursor.readRecord(Code, Record, &Blob);
@@ -1891,14 +1890,19 @@ ASTReader::readInputFileInfo(ModuleFile &F, unsigned ID) {
          "invalid record type for input file");
   (void)Result;
 
+  std::string Filename;
+  off_t StoredSize;
+  time_t StoredTime;
+  bool Overridden;
+
   assert(Record[0] == ID && "Bogus stored ID or offset");
-  InputFileInfo R;
-  R.StoredSize = static_cast<off_t>(Record[1]);
-  R.StoredTime = static_cast<time_t>(Record[2]);
-  R.Overridden = static_cast<bool>(Record[3]);
-  R.Transient = static_cast<bool>(Record[4]);
-  R.Filename = Blob;
-  ResolveImportedPath(F, R.Filename);
+  StoredSize = static_cast<off_t>(Record[1]);
+  StoredTime = static_cast<time_t>(Record[2]);
+  Overridden = static_cast<bool>(Record[3]);
+  Filename = Blob;
+  ResolveImportedPath(F, Filename);
+
+  InputFileInfo R = { std::move(Filename), StoredSize, StoredTime, Overridden };
   return R;
 }
 
@@ -1923,10 +1927,11 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   off_t StoredSize = FI.StoredSize;
   time_t StoredTime = FI.StoredTime;
   bool Overridden = FI.Overridden;
-  bool Transient = FI.Transient;
   StringRef Filename = FI.Filename;
 
-  const FileEntry *File = FileMgr.getFile(Filename, /*OpenFile=*/false);
+  const FileEntry *File
+    = Overridden? FileMgr.getVirtualFile(Filename, StoredSize, StoredTime)
+                : FileMgr.getFile(Filename, /*OpenFile=*/false);
 
   // If we didn't find the file, resolve it relative to the
   // original directory from which this AST file was created.
@@ -1941,8 +1946,9 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
   // For an overridden file, create a virtual file with the stored
   // size/timestamp.
-  if ((Overridden || Transient) && File == nullptr)
+  if (Overridden && File == nullptr) {
     File = FileMgr.getVirtualFile(Filename, StoredSize, StoredTime);
+  }
 
   if (File == nullptr) {
     if (Complain) {
@@ -1963,17 +1969,11 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // can lead to problems when lexing using the source locations from the
   // PCH.
   SourceManager &SM = getSourceManager();
-  // FIXME: Reject if the overrides are different.
-  if ((!Overridden && !Transient) && SM.isFileOverridden(File)) {
+  if (!Overridden && SM.isFileOverridden(File)) {
     if (Complain)
       Error(diag::err_fe_pch_file_overridden, Filename);
     // After emitting the diagnostic, recover by disabling the override so
     // that the original file will be used.
-    //
-    // FIXME: This recovery is just as broken as the original state; there may
-    // be another precompiled module that's using the overridden contents, or
-    // we might be half way through parsing it. Instead, we should treat the
-    // overridden contents as belonging to a separate FileEntry.
     SM.disableFileContentsOverride(File);
     // The FileEntry is a virtual file entry with the size of the contents
     // that would override the original contents. Set it to the original's
@@ -2024,10 +2024,8 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
     IsOutOfDate = true;
   }
-  // FIXME: If the file is overridden and we've already opened it,
-  // issue an error (or split it into a separate FileEntry).
 
-  InputFile IF = InputFile(File, Overridden || Transient, IsOutOfDate);
+  InputFile IF = InputFile(File, Overridden, IsOutOfDate);
 
   // Note that we've loaded this input file.
   F.InputFilesLoaded[ID-1] = IF;
@@ -4699,13 +4697,6 @@ bool ASTReader::ParseLanguageOptions(const RecordData &Record,
   }
   LangOpts.CommentOpts.ParseAllComments = Record[Idx++];
 
-  // OpenMP offloading options.
-  for (unsigned N = Record[Idx++]; N; --N) {
-    LangOpts.OMPTargetTriples.push_back(llvm::Triple(ReadString(Record, Idx)));
-  }
-
-  LangOpts.OMPHostIRFile = ReadString(Record, Idx);
-
   return Listener.ReadLanguageOptions(LangOpts, Complain,
                                       AllowCompatibleDifferences);
 }
@@ -5422,9 +5413,9 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
 
   case TYPE_AUTO: {
     QualType Deduced = readType(*Loc.F, Record, Idx);
-    AutoTypeKeyword Keyword = (AutoTypeKeyword)Record[Idx++];
+    bool IsDecltypeAuto = Record[Idx++];
     bool IsDependent = Deduced.isNull() ? Record[Idx++] : false;
-    return Context.getAutoType(Deduced, Keyword, IsDependent);
+    return Context.getAutoType(Deduced, IsDecltypeAuto, IsDependent);
   }
 
   case TYPE_RECORD: {
@@ -5639,17 +5630,6 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     }
     QualType ValueType = readType(*Loc.F, Record, Idx);
     return Context.getAtomicType(ValueType);
-  }
-
-  case TYPE_PIPE: {
-    if (Record.size() != 1) {
-      Error("Incorrect encoding of pipe type");
-      return QualType();
-    }
-
-    // Reading the pipe element type.
-    QualType ElementType = readType(*Loc.F, Record, Idx);
-    return Context.getPipeType(ElementType);
   }
   }
   llvm_unreachable("Invalid TypeCode!");
@@ -5921,9 +5901,6 @@ void TypeLocReader::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
   TL.setKWLoc(ReadSourceLocation(Record, Idx));
   TL.setLParenLoc(ReadSourceLocation(Record, Idx));
   TL.setRParenLoc(ReadSourceLocation(Record, Idx));
-}
-void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
-  TL.setKWLoc(ReadSourceLocation(Record, Idx));
 }
 
 TypeSourceInfo *ASTReader::GetTypeSourceInfo(ModuleFile &F,
@@ -7859,7 +7836,7 @@ ASTReader::ReadTemplateParameterList(ModuleFile &F,
 
   TemplateParameterList* TemplateParams =
     TemplateParameterList::Create(Context, TemplateLoc, LAngleLoc,
-                                  Params, RAngleLoc);
+                                  Params.data(), Params.size(), RAngleLoc);
   return TemplateParams;
 }
 

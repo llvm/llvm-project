@@ -409,19 +409,12 @@ protected:
             if (error.Success())
             {
                 platform_sp->GetStatus (ostrm);
-                result.SetStatus (eReturnStatusSuccessFinishResult);
-
-                platform_sp->ConnectToWaitingProcesses(m_interpreter.GetDebugger(), error);
-                if (error.Fail())
-                {
-                    result.AppendError (error.AsCString());
-                    result.SetStatus (eReturnStatusFailed);
-                }
+                result.SetStatus (eReturnStatusSuccessFinishResult);            
             }
             else
             {
                 result.AppendErrorWithFormat ("%s\n", error.AsCString());
-                result.SetStatus (eReturnStatusFailed);
+                result.SetStatus (eReturnStatusFailed);            
             }
         }
         else

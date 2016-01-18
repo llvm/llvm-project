@@ -209,27 +209,23 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
   // Parse an optional scope-specifier if we're in C++.
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus) {
-    ParseOptionalCXXScopeSpecifier(SS, nullptr, /*EnteringContext=*/false);
+    ParseOptionalCXXScopeSpecifier(SS, ParsedType(), /*EnteringContext=*/false);
   }
 
   // Require an identifier here.
   SourceLocation TemplateKWLoc;
   UnqualifiedId Id;
-  bool Invalid = true;
-  ExprResult Result;
-  if (Tok.is(tok::kw_this)) {
-    Result = ParseCXXThis();
-    Invalid = false;
-  } else {
-    Invalid = ParseUnqualifiedId(SS,
-                                 /*EnteringContext=*/false,
-                                 /*AllowDestructorName=*/false,
-                                 /*AllowConstructorName=*/false,
-                                 /*ObjectType=*/nullptr, TemplateKWLoc, Id);
-    // Perform the lookup.
-    Result = Actions.LookupInlineAsmIdentifier(SS, TemplateKWLoc, Id, Info,
-                                               IsUnevaluatedContext);
-  }
+  bool Invalid =
+      ParseUnqualifiedId(SS,
+                         /*EnteringContext=*/false,
+                         /*AllowDestructorName=*/false,
+                         /*AllowConstructorName=*/false,
+                         /*ObjectType=*/ParsedType(), TemplateKWLoc, Id);
+
+  // Perform the lookup.
+  ExprResult Result = Actions.LookupInlineAsmIdentifier(
+      SS, TemplateKWLoc, Id, Info, IsUnevaluatedContext);
+
   // While the next two tokens are 'period' 'identifier', repeatedly parse it as
   // a field access. We have to avoid consuming assembler directives that look
   // like '.' 'else'.
@@ -240,8 +236,9 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
     ConsumeToken(); // Consume the period.
     IdentifierInfo *Id = Tok.getIdentifierInfo();
     ConsumeToken(); // Consume the identifier.
-    Result = Actions.LookupInlineAsmVarDeclField(Result.get(), Id->getName(),
-                                                 Info, Tok.getLocation());
+    unsigned OffsetUnused;
+    Result = Actions.LookupInlineAsmVarDeclField(
+        Result.get(), Id->getName(), OffsetUnused, Info, Tok.getLocation());
   }
 
   // Figure out how many tokens we are into LineToks.

@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 namespace Ints {
   int zero = 0; // expected-note {{candidate found by name lookup is 'Ints::zero'}}
@@ -33,11 +31,7 @@ void test() {
 }
 
 namespace Numbers {
-  struct Number { // expected-note 2 {{candidate constructor (the implicit copy constructor) not viable}}
-#if __cplusplus >= 201103L // C++11 or later
-  // expected-note@-2 2 {{candidate constructor (the implicit move constructor) not viable}}
-#endif
-
+  struct Number {	// expected-note 2 {{candidate}}
     explicit Number(double d) : d(d) {}
     double d;
   };
@@ -72,11 +66,7 @@ void test3() {
 
 namespace inline_ns {
   int x; // expected-note 2{{found}}
-  inline namespace A {
-#if __cplusplus <= 199711L // C++03 or earlier
-  // expected-warning@-2 {{inline namespaces are a C++11 feature}}
-#endif
-
+  inline namespace A { // expected-warning {{C++11}}
     int x; // expected-note 2{{found}}
     int y; // expected-note 2{{found}}
   }

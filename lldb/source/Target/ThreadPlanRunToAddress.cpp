@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Target/ThreadPlanRunToAddress.h"
+
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Target/Target.h"
@@ -87,7 +88,7 @@ ThreadPlanRunToAddress::SetInitialBreakpoints ()
     {
         Breakpoint *breakpoint;
         breakpoint = m_thread.CalculateTarget()->CreateBreakpoint (m_addresses[i], true, false).get();
-        if (breakpoint != nullptr)
+        if (breakpoint != NULL)
         {
             m_break_ids[i] = breakpoint->GetID();
             breakpoint->SetThreadID(m_thread.GetID());

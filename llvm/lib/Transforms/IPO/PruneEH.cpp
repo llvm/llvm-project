@@ -21,7 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
-#include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/LibCallSemantics.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -153,16 +153,21 @@ bool PruneEH::runOnSCC(CallGraphSCC &SCC) {
   // If the SCC doesn't unwind or doesn't throw, note this fact.
   if (!SCCMightUnwind || !SCCMightReturn)
     for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); I != E; ++I) {
+      AttrBuilder NewAttributes;
+
+      if (!SCCMightUnwind)
+        NewAttributes.addAttribute(Attribute::NoUnwind);
+      if (!SCCMightReturn)
+        NewAttributes.addAttribute(Attribute::NoReturn);
+
       Function *F = (*I)->getFunction();
+      const AttributeSet &PAL = F->getAttributes().getFnAttributes();
+      const AttributeSet &NPAL = AttributeSet::get(
+          F->getContext(), AttributeSet::FunctionIndex, NewAttributes);
 
-      if (!SCCMightUnwind && !F->hasFnAttribute(Attribute::NoUnwind)) {
-        F->addFnAttr(Attribute::NoUnwind);
+      if (PAL != NPAL) {
         MadeChange = true;
-      }
-
-      if (!SCCMightReturn && !F->hasFnAttribute(Attribute::NoReturn)) {
-        F->addFnAttr(Attribute::NoReturn);
-        MadeChange = true;
+        F->addAttributes(AttributeSet::FunctionIndex, NPAL);
       }
     }
 
@@ -186,13 +191,9 @@ bool PruneEH::SimplifyFunction(Function *F) {
   for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator()))
       if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(F)) {
-        SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
-        SmallVector<OperandBundleDef, 1> OpBundles;
-        II->getOperandBundlesAsDefs(OpBundles);
-
+        SmallVector<Value*, 8> Args(II->op_begin(), II->op_end() - 3);
         // Insert a call instruction before the invoke.
-        CallInst *Call = CallInst::Create(II->getCalledValue(), Args, OpBundles,
-                                          "", II);
+        CallInst *Call = CallInst::Create(II->getCalledValue(), Args, "", II);
         Call->takeName(II);
         Call->setCallingConv(II->getCallingConv());
         Call->setAttributes(II->getAttributes());

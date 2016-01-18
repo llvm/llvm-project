@@ -54,9 +54,6 @@ private:
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerCTLZ(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
@@ -70,9 +67,6 @@ private:
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performShlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performCtlzCombine(SDLoc SL, SDValue Cond, SDValue LHS, SDValue RHS,
-                             DAGCombinerInfo &DCI) const;
-  SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
 protected:
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
@@ -115,8 +109,6 @@ protected:
                                SmallVectorImpl<ISD::InputArg> &OrigIns) const;
   void AnalyzeFormalArguments(CCState &State,
                               const SmallVectorImpl<ISD::InputArg> &Ins) const;
-  void AnalyzeReturn(CCState &State,
-                     const SmallVectorImpl<ISD::OutputArg> &Outs) const;
 
 public:
   AMDGPUTargetLowering(TargetMachine &TM, const AMDGPUSubtarget &STI);
@@ -271,7 +263,7 @@ enum NodeType : unsigned {
   BFE_I32, // Extract range of bits with sign extension to 32-bits.
   BFI, // (src0 & src1) | (~src0 & src2)
   BFM, // Insert a range of bits into a 32-bit word.
-  FFBH_U32, // ctlz with -1 if input is zero.
+  BREV, // Reverse bits.
   MUL_U24,
   MUL_I24,
   MAD_U24,

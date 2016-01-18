@@ -19,7 +19,6 @@
 #include "Plugins/Process/Utility/FreeBSDSignals.h"
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/Utility/MipsLinuxSignals.h"
-#include "Plugins/Process/Utility/NetBSDSignals.h"
 
 using namespace lldb_private;
 
@@ -64,9 +63,8 @@ UnixSignals::Create(const ArchSpec &arch)
         }
         case llvm::Triple::FreeBSD:
         case llvm::Triple::OpenBSD:
-            return std::make_shared<FreeBSDSignals>();
         case llvm::Triple::NetBSD:
-            return std::make_shared<NetBSDSignals>();
+            return std::make_shared<FreeBSDSignals>();
         default:
             return std::make_shared<UnixSignals>();
     }

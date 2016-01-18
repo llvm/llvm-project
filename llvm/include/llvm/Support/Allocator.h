@@ -187,7 +187,6 @@ public:
   /// \brief Deallocate all but the current slab and reset the current pointer
   /// to the beginning of it, freeing all memory allocated so far.
   void Reset() {
-    // Deallocate all but the first slab, and deallocate all custom-sized slabs.
     DeallocateCustomSizedSlabs();
     CustomSizedSlabs.clear();
 
@@ -199,7 +198,7 @@ public:
     CurPtr = (char *)Slabs.front();
     End = CurPtr + SlabSize;
 
-    __asan_poison_memory_region(*Slabs.begin(), computeSlabSize(0));
+    // Deallocate all but the first slab, and deallocate all custom-sized slabs.
     DeallocateSlabs(std::next(Slabs.begin()), Slabs.end());
     Slabs.erase(std::next(Slabs.begin()), Slabs.end());
   }
@@ -223,8 +222,6 @@ public:
       // Without this, MemorySanitizer messages for values originated from here
       // will point to the allocation of the entire slab.
       __msan_allocated_memory(AlignedPtr, Size);
-      // Similarly, tell ASan about this space.
-      __asan_unpoison_memory_region(AlignedPtr, Size);
       return AlignedPtr;
     }
 
@@ -232,16 +229,12 @@ public:
     size_t PaddedSize = Size + Alignment - 1;
     if (PaddedSize > SizeThreshold) {
       void *NewSlab = Allocator.Allocate(PaddedSize, 0);
-      // We own the new slab and don't want anyone reading anyting other than
-      // pieces returned from this method.  So poison the whole slab.
-      __asan_poison_memory_region(NewSlab, PaddedSize);
       CustomSizedSlabs.push_back(std::make_pair(NewSlab, PaddedSize));
 
       uintptr_t AlignedAddr = alignAddr(NewSlab, Alignment);
       assert(AlignedAddr + Size <= (uintptr_t)NewSlab + PaddedSize);
       char *AlignedPtr = (char*)AlignedAddr;
       __msan_allocated_memory(AlignedPtr, Size);
-      __asan_unpoison_memory_region(AlignedPtr, Size);
       return AlignedPtr;
     }
 
@@ -253,16 +246,13 @@ public:
     char *AlignedPtr = (char*)AlignedAddr;
     CurPtr = AlignedPtr + Size;
     __msan_allocated_memory(AlignedPtr, Size);
-    __asan_unpoison_memory_region(AlignedPtr, Size);
     return AlignedPtr;
   }
 
   // Pull in base class overloads.
   using AllocatorBase<BumpPtrAllocatorImpl>::Allocate;
 
-  void Deallocate(const void *Ptr, size_t Size) {
-    __asan_poison_memory_region(Ptr, Size);
-  }
+  void Deallocate(const void * /*Ptr*/, size_t /*Size*/) {}
 
   // Pull in base class overloads.
   using AllocatorBase<BumpPtrAllocatorImpl>::Deallocate;
@@ -320,10 +310,6 @@ private:
     size_t AllocatedSlabSize = computeSlabSize(Slabs.size());
 
     void *NewSlab = Allocator.Allocate(AllocatedSlabSize, 0);
-    // We own the new slab and don't want anyone reading anything other than
-    // pieces returned from this method.  So poison the whole slab.
-    __asan_poison_memory_region(NewSlab, AllocatedSlabSize);
-
     Slabs.push_back(NewSlab);
     CurPtr = (char *)(NewSlab);
     End = ((char *)NewSlab) + AllocatedSlabSize;

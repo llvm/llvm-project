@@ -15,7 +15,6 @@ namespace clang {
 class Decl;
 class SourceManager;
 class FullSourceLoc;
-class LangOptions;
 
 /// \brief Get an MD5 hash to help identify bugs.
 ///
@@ -38,14 +37,13 @@ class LangOptions;
 llvm::SmallString<32> GetIssueHash(const SourceManager &SM,
                                    FullSourceLoc &IssueLoc,
                                    llvm::StringRef CheckerName,
-                                   llvm::StringRef BugType, const Decl *D,
-                                   const LangOptions &LangOpts);
+                                   llvm::StringRef BugType, const Decl *D);
 
 /// \brief Get the string representation of issue hash. See GetIssueHash() for
 /// more information.
 std::string GetIssueString(const SourceManager &SM, FullSourceLoc &IssueLoc,
                            llvm::StringRef CheckerName, llvm::StringRef BugType,
-                           const Decl *D, const LangOptions &LangOpts);
+                           const Decl *D);
 } // namespace clang
 
 #endif

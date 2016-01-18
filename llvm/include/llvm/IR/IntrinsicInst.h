@@ -372,39 +372,6 @@ namespace llvm {
       return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
     }
   };
-
-  /// This represents the llvm.instrprof_value_profile intrinsic.
-  class InstrProfValueProfileInst : public IntrinsicInst {
-  public:
-    static inline bool classof(const IntrinsicInst *I) {
-      return I->getIntrinsicID() == Intrinsic::instrprof_value_profile;
-    }
-    static inline bool classof(const Value *V) {
-      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-    }
-
-    GlobalVariable *getName() const {
-      return cast<GlobalVariable>(
-          const_cast<Value *>(getArgOperand(0))->stripPointerCasts());
-    }
-
-    ConstantInt *getHash() const {
-      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
-    }
-
-    Value *getTargetValue() const {
-      return cast<Value>(const_cast<Value *>(getArgOperand(2)));
-    }
-
-    ConstantInt *getValueKind() const {
-      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
-    }
-
-    // Returns the value site index.
-    ConstantInt *getIndex() const {
-      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(4)));
-    }
-  };
-} // namespace llvm
+}
 
 #endif

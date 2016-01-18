@@ -92,13 +92,3 @@ typedef struct __SomeStruct {
   char * p;
 } SomeStruct;
 void fakeSystemHeaderCall(SomeStruct *);
-
-typedef int pid_t;
-pid_t fork(void);
-pid_t vfork(void);
-int execl(const char *path, const char *arg, ...);
-
-void exit(int status) __attribute__ ((__noreturn__));
-void _exit(int status) __attribute__ ((__noreturn__));
-void _Exit(int status) __attribute__ ((__noreturn__));
-

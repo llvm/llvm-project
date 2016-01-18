@@ -55,6 +55,7 @@ public:
   // TODO: Implement more Scalar TTI for WebAssembly
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
+  bool haveFastSqrt(Type *Ty) const;
 
   /// @}
 

@@ -46,9 +46,6 @@ public:
     const char *
     GetQueueName () override;
 
-    lldb::QueueKind
-    GetQueueKind () override;
-
     lldb::queue_id_t
     GetQueueID () override;
 
@@ -57,12 +54,6 @@ public:
 
     lldb::addr_t
     GetQueueLibdispatchQueueAddress () override;
-
-    void
-    SetQueueLibdispatchQueueAddress (lldb::addr_t dispatch_queue_t) override;
-
-    bool
-    ThreadHasQueueInformation () const override;
 
     lldb::RegisterContextSP
     GetRegisterContext () override;
@@ -107,13 +98,7 @@ public:
     ClearQueueInfo ();
     
     void
-    SetQueueInfo (std::string &&queue_name, lldb::QueueKind queue_kind, uint64_t queue_serial, lldb::addr_t dispatch_queue_t, lldb_private::LazyBool associated_with_libdispatch_queue);
-
-    lldb_private::LazyBool
-    GetAssociatedWithLibdispatchQueue () override;
-
-    void
-    SetAssociatedWithLibdispatchQueue (lldb_private::LazyBool associated_with_libdispatch_queue) override;
+    SetQueueInfo (std::string &&queue_name, lldb::QueueKind queue_kind, uint64_t queue_serial);
 
     StructuredData::ObjectSP
     FetchThreadExtendedInfo () override;
@@ -124,18 +109,12 @@ protected:
     std::string m_thread_name;
     std::string m_dispatch_queue_name;
     lldb::addr_t m_thread_dispatch_qaddr;
-    lldb::addr_t m_dispatch_queue_t;
     lldb::QueueKind m_queue_kind;     // Queue info from stop reply/stop info for thread
-    uint64_t m_queue_serial_number;   // Queue info from stop reply/stop info for thread
-    lldb_private::LazyBool m_associated_with_libdispatch_queue;
+    uint64_t m_queue_serial;    // Queue info from stop reply/stop info for thread
 
     bool
     PrivateSetRegisterValue (uint32_t reg, 
                              StringExtractor &response);
-
-    bool
-    PrivateSetRegisterValue (uint32_t reg, 
-                             uint64_t regval);
 
     bool
     CachedQueueInfoIsValid() const

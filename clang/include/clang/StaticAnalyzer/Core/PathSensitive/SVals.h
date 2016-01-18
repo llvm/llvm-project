@@ -45,9 +45,11 @@ class SVal {
 public:
   enum BaseKind {
     // The enumerators must be representable using 2 bits.
-#define BASIC_SVAL(Id, Parent) Id ## Kind,
-#define ABSTRACT_SVAL_WITH_KIND(Id, Parent) Id ## Kind,
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
+    UndefinedKind = 0,  // for subclass UndefinedVal (an uninitialized value)
+    UnknownKind = 1,    // for subclass UnknownVal (a void value)
+    LocKind = 2,        // for subclass Loc (an L-value)
+    NonLocKind = 3      // for subclass NonLoc (an R-value that's not
+                        //   an L-value)
   };
   enum { BaseBits = 2, BaseMask = 0x3 };
 
@@ -113,19 +115,19 @@ public:
   }
 
   inline bool isUnknown() const {
-    return getRawKind() == UnknownValKind;
+    return getRawKind() == UnknownKind;
   }
 
   inline bool isUndef() const {
-    return getRawKind() == UndefinedValKind;
+    return getRawKind() == UndefinedKind;
   }
 
   inline bool isUnknownOrUndef() const {
-    return getRawKind() <= UnknownValKind;
+    return getRawKind() <= UnknownKind;
   }
 
   inline bool isValid() const {
-    return getRawKind() > UnknownValKind;
+    return getRawKind() > UnknownKind;
   }
 
   bool isConstant() const;
@@ -188,12 +190,12 @@ public:
 
 class UndefinedVal : public SVal {
 public:
-  UndefinedVal() : SVal(UndefinedValKind) {}
+  UndefinedVal() : SVal(UndefinedKind) {}
 
 private:
   friend class SVal;
   static bool isKind(const SVal& V) {
-    return V.getBaseKind() == UndefinedValKind;
+    return V.getBaseKind() == UndefinedKind;
   }
 };
 
@@ -221,12 +223,12 @@ private:
   
 class UnknownVal : public DefinedOrUnknownSVal {
 public:
-  explicit UnknownVal() : DefinedOrUnknownSVal(UnknownValKind) {}
+  explicit UnknownVal() : DefinedOrUnknownSVal(UnknownKind) {}
   
 private:
   friend class SVal;
   static bool isKind(const SVal &V) {
-    return V.getBaseKind() == UnknownValKind;
+    return V.getBaseKind() == UnknownKind;
   }
 };
 
@@ -304,10 +306,8 @@ private:
 
 namespace nonloc {
 
-enum Kind {
-#define NONLOC_SVAL(Id, Parent) Id ## Kind,
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
-};
+enum Kind { ConcreteIntKind, SymbolValKind,
+            LocAsIntegerKind, CompoundValKind, LazyCompoundValKind };
 
 /// \brief Represents symbolic expression.
 class SymbolVal : public NonLoc {
@@ -465,10 +465,7 @@ private:
 
 namespace loc {
 
-enum Kind {
-#define LOC_SVAL(Id, Parent) Id ## Kind,
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
-};
+enum Kind { GotoLabelKind, MemRegionKind, ConcreteIntKind };
 
 class GotoLabel : public Loc {
 public:
@@ -493,7 +490,7 @@ private:
 
 class MemRegionVal : public Loc {
 public:
-  explicit MemRegionVal(const MemRegion* r) : Loc(MemRegionValKind, r) {}
+  explicit MemRegionVal(const MemRegion* r) : Loc(MemRegionKind, r) {}
 
   /// \brief Get the underlining region.
   const MemRegion* getRegion() const {
@@ -521,11 +518,11 @@ private:
   MemRegionVal() {}
   static bool isKind(const SVal& V) {
     return V.getBaseKind() == LocKind &&
-           V.getSubKind() == MemRegionValKind;
+           V.getSubKind() == MemRegionKind;
   }
 
   static bool isKind(const Loc& V) {
-    return V.getSubKind() == MemRegionValKind;
+    return V.getSubKind() == MemRegionKind;
   }
 };
 

@@ -21,11 +21,11 @@ class ConstVariableTestCase(TestBase):
         compiler="clang", compiler_version=["=", "3.7"])
     @expectedFailureAll(
         oslist=["freebsd", "linux"],
-        compiler="clang", compiler_version=[">=", "3.8"])
+        compiler="clang", compiler_version=["=", "3.8"])
     @expectedFailureAll(oslist=["freebsd", "linux"], compiler="icc")
-    @expectedFailureAll(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
     @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
     @expectedFailureWindows("llvm.org/pr24490: We shouldn't be using platform-specific names like `getpid` in tests")
+    @expectedFailureDarwin
     def test_and_run_command(self):
         """Test interpreted and JITted expressions on constant values."""
         self.build()

@@ -459,9 +459,8 @@ bool MIParser::parseBasicBlockSuccessors(MachineBasicBlock &MBB) {
       if (expectAndConsume(MIToken::rparen))
         return true;
     }
-    MBB.addSuccessor(SuccMBB, BranchProbability::getRaw(Weight));
+    MBB.addSuccessor(SuccMBB, Weight);
   } while (consumeIfPresent(MIToken::comma));
-  MBB.normalizeSuccProbs();
   return false;
 }
 
@@ -745,11 +744,11 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
   // Gather all the expected implicit operands.
   SmallVector<MachineOperand, 4> ImplicitOperands;
   if (MCID.ImplicitDefs)
-    for (const MCPhysReg *ImpDefs = MCID.getImplicitDefs(); *ImpDefs; ++ImpDefs)
+    for (const uint16_t *ImpDefs = MCID.getImplicitDefs(); *ImpDefs; ++ImpDefs)
       ImplicitOperands.push_back(
           MachineOperand::CreateReg(*ImpDefs, true, true));
   if (MCID.ImplicitUses)
-    for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses; ++ImpUses)
+    for (const uint16_t *ImpUses = MCID.getImplicitUses(); *ImpUses; ++ImpUses)
       ImplicitOperands.push_back(
           MachineOperand::CreateReg(*ImpUses, false, true));
 

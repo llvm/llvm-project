@@ -129,6 +129,7 @@ public:
 };
 
 class ARMAsmParser : public MCTargetAsmParser {
+  MCSubtargetInfo &STI;
   const MCInstrInfo &MII;
   const MCRegisterInfo *MRI;
   UnwindContext UC;
@@ -246,52 +247,48 @@ class ARMAsmParser : public MCTargetAsmParser {
                                      OperandVector &Operands);
   bool isThumb() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[ARM::ModeThumb];
+    return STI.getFeatureBits()[ARM::ModeThumb];
   }
   bool isThumbOne() const {
-    return isThumb() && !getSTI().getFeatureBits()[ARM::FeatureThumb2];
+    return isThumb() && !STI.getFeatureBits()[ARM::FeatureThumb2];
   }
   bool isThumbTwo() const {
-    return isThumb() && getSTI().getFeatureBits()[ARM::FeatureThumb2];
+    return isThumb() && STI.getFeatureBits()[ARM::FeatureThumb2];
   }
   bool hasThumb() const {
-    return getSTI().getFeatureBits()[ARM::HasV4TOps];
+    return STI.getFeatureBits()[ARM::HasV4TOps];
   }
   bool hasV6Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV6Ops];
+    return STI.getFeatureBits()[ARM::HasV6Ops];
   }
   bool hasV6MOps() const {
-    return getSTI().getFeatureBits()[ARM::HasV6MOps];
+    return STI.getFeatureBits()[ARM::HasV6MOps];
   }
   bool hasV7Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV7Ops];
+    return STI.getFeatureBits()[ARM::HasV7Ops];
   }
   bool hasV8Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV8Ops];
-  }
-  bool hasV8MBaseline() const {
-    return getSTI().getFeatureBits()[ARM::HasV8MBaselineOps];
+    return STI.getFeatureBits()[ARM::HasV8Ops];
   }
   bool hasARM() const {
-    return !getSTI().getFeatureBits()[ARM::FeatureNoARM];
+    return !STI.getFeatureBits()[ARM::FeatureNoARM];
   }
   bool hasDSP() const {
-    return getSTI().getFeatureBits()[ARM::FeatureDSP];
+    return STI.getFeatureBits()[ARM::FeatureDSP];
   }
   bool hasD16() const {
-    return getSTI().getFeatureBits()[ARM::FeatureD16];
+    return STI.getFeatureBits()[ARM::FeatureD16];
   }
   bool hasV8_1aOps() const {
-    return getSTI().getFeatureBits()[ARM::HasV8_1aOps];
+    return STI.getFeatureBits()[ARM::HasV8_1aOps];
   }
 
   void SwitchMode() {
-    MCSubtargetInfo &STI = copySTI();
     uint64_t FB = ComputeAvailableFeatures(STI.ToggleFeature(ARM::ModeThumb));
     setAvailableFeatures(FB);
   }
   bool isMClass() const {
-    return getSTI().getFeatureBits()[ARM::FeatureMClass];
+    return STI.getFeatureBits()[ARM::FeatureMClass];
   }
 
   /// @name Auto-generated Match Functions
@@ -352,9 +349,9 @@ public:
 
   };
 
-  ARMAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
+  ARMAsmParser(MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI), MII(MII), UC(Parser) {
+      : MCTargetAsmParser(Options), STI(STI), MII(MII), UC(Parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Cache the MCRegisterInfo.
@@ -4676,14 +4673,14 @@ void ARMAsmParser::cvtThumbBranches(MCInst &Inst,
     // classify tB as either t2B or t1B based on range of immediate operand
     case ARM::tB: {
       ARMOperand &op = static_cast<ARMOperand &>(*Operands[ImmOp]);
-      if (!op.isSignedOffset<11, 1>() && isThumb() && hasV8MBaseline())
+      if (!op.isSignedOffset<11, 1>() && isThumbTwo())
         Inst.setOpcode(ARM::t2B);
       break;
     }
     // classify tBcc as either t2Bcc or t1Bcc based on range of immediate operand
     case ARM::tBcc: {
       ARMOperand &op = static_cast<ARMOperand &>(*Operands[ImmOp]);
-      if (!op.isSignedOffset<8, 1>() && isThumb() && hasV8MBaseline())
+      if (!op.isSignedOffset<8, 1>() && isThumbTwo())
         Inst.setOpcode(ARM::t2Bcc);
       break;
     }
@@ -5125,7 +5122,6 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     // FALLTHROUGH
   }
   case AsmToken::Colon: {
-    S = Parser.getTok().getLoc();
     // ":lower16:" and ":upper16:" expression prefixes
     // FIXME: Check it's an expression prefix,
     // e.g. (FOO - :lower16:BAR) isn't legal.
@@ -5144,9 +5140,8 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     return false;
   }
   case AsmToken::Equal: {
-    S = Parser.getTok().getLoc();
     if (Mnemonic != "ldr") // only parse for ldr pseudo (e.g. ldr r0, =val)
-      return Error(S, "unexpected token in operand");
+      return Error(Parser.getTok().getLoc(), "unexpected token in operand");
 
     Parser.Lex(); // Eat '='
     const MCExpr *SubExprVal;
@@ -5154,8 +5149,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return true;
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
-    const MCExpr *CPLoc =
-        getTargetStreamer().addConstantPoolEntry(SubExprVal, S);
+    const MCExpr *CPLoc = getTargetStreamer().addConstantPoolEntry(SubExprVal);
     Operands.push_back(ARMOperand::CreateImm(CPLoc, S, E));
     return false;
   }
@@ -5608,11 +5602,9 @@ bool ARMAsmParser::shouldOmitPredicateOperand(StringRef Mnemonic,
   // VRINT{Z, R, X} have a predicate operand in VFP, but not in NEON
   unsigned RegIdx = 3;
   if ((Mnemonic == "vrintz" || Mnemonic == "vrintx" || Mnemonic == "vrintr") &&
-      (static_cast<ARMOperand &>(*Operands[2]).getToken() == ".f32" ||
-       static_cast<ARMOperand &>(*Operands[2]).getToken() == ".f16")) {
+      static_cast<ARMOperand &>(*Operands[2]).getToken() == ".f32") {
     if (static_cast<ARMOperand &>(*Operands[3]).isToken() &&
-        (static_cast<ARMOperand &>(*Operands[3]).getToken() == ".f32" ||
-         static_cast<ARMOperand &>(*Operands[3]).getToken() == ".f16"))
+        static_cast<ARMOperand &>(*Operands[3]).getToken() == ".f32")
       RegIdx = 4;
 
     if (static_cast<ARMOperand &>(*Operands[RegIdx]).isReg() &&
@@ -8619,7 +8611,7 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       return false;
 
     Inst.setLoc(IDLoc);
-    Out.EmitInstruction(Inst, getSTI());
+    Out.EmitInstruction(Inst, STI);
     return false;
   case Match_MissingFeature: {
     assert(ErrorInfo && "Unknown missing feature!");
@@ -8809,7 +8801,7 @@ bool ARMAsmParser::parseLiteralValues(unsigned Size, SMLoc L) {
         return false;
       }
 
-      getParser().getStreamer().EmitValue(Value, Size, L);
+      getParser().getStreamer().EmitValue(Value, Size);
 
       if (getLexer().is(AsmToken::EndOfStatement))
         break;
@@ -9047,8 +9039,7 @@ bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
   }
 
   Triple T;
-  MCSubtargetInfo &STI = copySTI();
-  STI.setDefaultFeatures("", ("+" + ARM::getArchName(ID)).str());
+  STI.setDefaultFeatures(T.getARMCPUForArch(Arch));
   setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
   getTargetStreamer().emitArch(ID);
@@ -9175,13 +9166,12 @@ bool ARMAsmParser::parseDirectiveCPU(SMLoc L) {
 
   // FIXME: This is using table-gen data, but should be moved to
   // ARMTargetParser once that is table-gen'd.
-  if (!getSTI().isCPUStringValid(CPU)) {
+  if (!STI.isCPUStringValid(CPU)) {
     Error(L, "Unknown CPU name");
     return false;
   }
 
-  MCSubtargetInfo &STI = copySTI();
-  STI.setDefaultFeatures(CPU, "");
+  STI.setDefaultFeatures(CPU);
   setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
   return false;
@@ -9199,7 +9189,6 @@ bool ARMAsmParser::parseDirectiveFPU(SMLoc L) {
     return false;
   }
 
-  MCSubtargetInfo &STI = copySTI();
   for (auto Feature : Features)
     STI.ApplyFeatureFlag(Feature);
   setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
@@ -9921,7 +9910,7 @@ extern "C" void LLVMInitializeARMAsmParser() {
 // flags below, that were generated by table-gen.
 static const struct {
   const unsigned Kind;
-  const uint64_t ArchCheck;
+  const unsigned ArchCheck;
   const FeatureBitset Features;
 } Extensions[] = {
   { ARM::AEK_CRC, Feature_HasV8, {ARM::FeatureCRC} },
@@ -9935,7 +9924,6 @@ static const struct {
   { ARM::AEK_SEC, Feature_HasV6K, {ARM::FeatureTrustZone} },
   // FIXME: Only available in A-class, isel not predicated
   { ARM::AEK_VIRT, Feature_HasV7, {ARM::FeatureVirtualization} },
-  { ARM::AEK_FP16, Feature_HasV8_2a, {ARM::FeatureFPARMv8, ARM::FeatureFullFP16} },
   // FIXME: Unsupported extensions.
   { ARM::AEK_OS, Feature_None, {} },
   { ARM::AEK_IWMMXT, Feature_None, {} },
@@ -9981,7 +9969,6 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
       return false;
     }
 
-    MCSubtargetInfo &STI = copySTI();
     FeatureBitset ToggleFeatures = EnableFeature
       ? (~STI.getFeatureBits() & Extension.Features)
       : ( STI.getFeatureBits() & Extension.Features);

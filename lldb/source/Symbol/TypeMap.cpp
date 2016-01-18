@@ -72,8 +72,8 @@ TypeMap::InsertUnique (const TypeSP& type_sp)
             if (pos->second.get() == type_sp.get())
                 return false;
         }
-        Insert (type_sp);
     }
+    Insert (type_sp);
     return true;
 }
 
@@ -161,23 +161,20 @@ TypeMap::ForEach (std::function <bool(lldb::TypeSP &type_sp)> const &callback)
     }
 }
 
+
 bool
-TypeMap::Remove (const lldb::TypeSP &type_sp)
+TypeMap::RemoveTypeWithUID (user_id_t uid)
 {
-    if (type_sp)
+    iterator pos = m_types.find(uid);
+    
+    if (pos != m_types.end())
     {
-        lldb::user_id_t uid = type_sp->GetID();
-        for (iterator pos = m_types.find(uid), end = m_types.end(); pos != end && pos->first == uid; ++pos)
-        {
-            if (pos->second == type_sp)
-            {
-                m_types.erase(pos);
-                return true;
-            }
-        }
+        m_types.erase(pos);
+        return true;
     }
     return false;
 }
+
 
 void
 TypeMap::Dump(Stream *s, bool show_context)

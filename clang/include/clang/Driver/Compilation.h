@@ -10,7 +10,6 @@
 #ifndef LLVM_CLANG_DRIVER_COMPILATION_H
 #define LLVM_CLANG_DRIVER_COMPILATION_H
 
-#include "clang/Driver/Action.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/DenseMap.h"
@@ -26,6 +25,7 @@ namespace opt {
 namespace clang {
 namespace driver {
   class Driver;
+  class JobAction;
   class JobList;
   class ToolChain;
 
@@ -38,9 +38,6 @@ class Compilation {
   /// The default tool chain.
   const ToolChain &DefaultToolChain;
 
-  const ToolChain *CudaHostToolChain;
-  const ToolChain *CudaDeviceToolChain;
-
   /// The original (untranslated) input argument list.
   llvm::opt::InputArgList *Args;
 
@@ -48,12 +45,7 @@ class Compilation {
   /// own argument translation.
   llvm::opt::DerivedArgList *TranslatedArgs;
 
-  /// The list of actions we've created via MakeAction.  This is not accessible
-  /// to consumers; it's here just to manage ownership.
-  std::vector<std::unique_ptr<Action>> AllActions;
-
-  /// The list of actions.  This is maintained and modified by consumers, via
-  /// getActions().
+  /// The list of actions.
   ActionList Actions;
 
   /// The root list of jobs.
@@ -89,17 +81,6 @@ public:
   const Driver &getDriver() const { return TheDriver; }
 
   const ToolChain &getDefaultToolChain() const { return DefaultToolChain; }
-  const ToolChain *getCudaHostToolChain() const { return CudaHostToolChain; }
-  const ToolChain *getCudaDeviceToolChain() const {
-    return CudaDeviceToolChain;
-  }
-
-  void setCudaHostToolChain(const ToolChain *HostToolChain) {
-    CudaHostToolChain = HostToolChain;
-  }
-  void setCudaDeviceToolChain(const ToolChain *DeviceToolChain) {
-    CudaDeviceToolChain = DeviceToolChain;
-  }
 
   const llvm::opt::InputArgList &getInputArgs() const { return *Args; }
 
@@ -109,15 +90,6 @@ public:
 
   ActionList &getActions() { return Actions; }
   const ActionList &getActions() const { return Actions; }
-
-  /// Creates a new Action owned by this Compilation.
-  ///
-  /// The new Action is *not* added to the list returned by getActions().
-  template <typename T, typename... Args> T *MakeAction(Args &&... Arg) {
-    T *RawPtr = new T(std::forward<Args>(Arg)...);
-    AllActions.push_back(std::unique_ptr<Action>(RawPtr));
-    return RawPtr;
-  }
 
   JobList &getJobs() { return Jobs; }
   const JobList &getJobs() const { return Jobs; }
@@ -207,7 +179,7 @@ public:
   void initCompilationForDiagnostics();
 
   /// Return true if we're compiling for diagnostics.
-  bool isForDiagnostics() const { return ForDiagnostics; }
+  bool isForDiagnostics() { return ForDiagnostics; }
 };
 
 } // end namespace driver

@@ -812,7 +812,7 @@ defm : ZXB<subc, GR64, SLGFR>;
 let Defs = [CC], Uses = [CC] in {
   // Subtraction of a register.
   def SLBR  : BinaryRRE<"slb",  0xB999, sube, GR32, GR32>;
-  def SLBGR : BinaryRRE<"slbg", 0xB989, sube, GR64, GR64>;
+  def SLGBR : BinaryRRE<"slbg", 0xB989, sube, GR64, GR64>;
 
   // Subtraction of memory.
   def SLB  : BinaryRXY<"slb",  0xE399, sube, GR32, load, 4>;
@@ -1219,9 +1219,6 @@ def PFDRL : PrefetchRILPC<"pfdrl", 0xC62, z_prefetch>;
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
-// A serialization instruction that acts as a barrier for all memory
-// accesses, which expands to "bcr 14, 0".
-let hasSideEffects = 1 in
 def Serialize : Alias<2, (outs), (ins), [(z_serialize)]>;
 
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {

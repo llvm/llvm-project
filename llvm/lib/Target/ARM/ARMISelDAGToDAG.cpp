@@ -548,11 +548,8 @@ bool ARMDAGToDAGISel::SelectImmShifterOperand(SDValue N,
     unsigned PowerOfTwo = 0;
     SDValue NewMulConst;
     if (canExtractShiftFromMul(N, 31, PowerOfTwo, NewMulConst)) {
-      BaseReg = SDValue(Select(CurDAG->getNode(ISD::MUL, SDLoc(N), MVT::i32,
-                                               N.getOperand(0), NewMulConst)
-                                   .getNode()),
-                        0);
       replaceDAGValue(N.getOperand(1), NewMulConst);
+      BaseReg = N;
       Opc = CurDAG->getTargetConstant(ARM_AM::getSORegOpc(ARM_AM::lsl,
                                                           PowerOfTwo),
                                       SDLoc(N), MVT::i32);
@@ -622,8 +619,7 @@ bool ARMDAGToDAGISel::SelectAddrModeImm12(SDValue N,
     }
 
     if (N.getOpcode() == ARMISD::Wrapper &&
-        N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
-        N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
+        N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress) {
       Base = N.getOperand(0);
     } else
       Base = N;
@@ -802,8 +798,7 @@ AddrMode2Type ARMDAGToDAGISel::SelectAddrMode2Worker(SDValue N,
       Base = CurDAG->getTargetFrameIndex(
           FI, TLI->getPointerTy(CurDAG->getDataLayout()));
     } else if (N.getOpcode() == ARMISD::Wrapper &&
-               N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
-               N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
+               N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress) {
       Base = N.getOperand(0);
     }
     Offset = CurDAG->getRegister(0, MVT::i32);
@@ -1069,8 +1064,7 @@ bool ARMDAGToDAGISel::SelectAddrMode5(SDValue N,
       Base = CurDAG->getTargetFrameIndex(
           FI, TLI->getPointerTy(CurDAG->getDataLayout()));
     } else if (N.getOpcode() == ARMISD::Wrapper &&
-               N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
-               N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
+               N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress) {
       Base = N.getOperand(0);
     }
     Offset = CurDAG->getTargetConstant(ARM_AM::getAM5Opc(ARM_AM::add, 0),
@@ -1189,8 +1183,7 @@ ARMDAGToDAGISel::SelectThumbAddrModeImm5S(SDValue N, unsigned Scale,
     if (N.getOpcode() == ISD::ADD) {
       return false; // We want to select register offset instead
     } else if (N.getOpcode() == ARMISD::Wrapper &&
-        N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
-        N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
+               N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress) {
       Base = N.getOperand(0);
     } else {
       Base = N;
@@ -1296,8 +1289,7 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm12(SDValue N,
     }
 
     if (N.getOpcode() == ARMISD::Wrapper &&
-        N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
-        N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
+        N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress) {
       Base = N.getOperand(0);
       if (Base.getOpcode() == ISD::TargetConstantPool)
         return false;  // We want to select t2LDRpci instead.
@@ -3056,7 +3048,7 @@ SDNode *ARMDAGToDAGISel::Select(SDNode *N) {
       SDLoc dl(N);
       SDValue Chain = N->getOperand(0);
       SDValue MemAddr = N->getOperand(2);
-      bool isThumb = Subtarget->isThumb() && Subtarget->hasV8MBaselineOps();
+      bool isThumb = Subtarget->isThumb() && Subtarget->hasThumb2();
 
       bool IsAcquire = IntNo == Intrinsic::arm_ldaexd;
       unsigned NewOpc = isThumb ? (IsAcquire ? ARM::t2LDAEXD : ARM::t2LDREXD)

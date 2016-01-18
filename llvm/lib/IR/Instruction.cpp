@@ -62,11 +62,6 @@ Module *Instruction::getModule() {
   return getParent()->getModule();
 }
 
-Function *Instruction::getFunction() { return getParent()->getParent(); }
-
-const Function *Instruction::getFunction() const {
-  return getParent()->getParent();
-}
 
 void Instruction::removeFromParent() {
   getParent()->getInstList().remove(getIterator());
@@ -76,21 +71,22 @@ iplist<Instruction>::iterator Instruction::eraseFromParent() {
   return getParent()->getInstList().erase(getIterator());
 }
 
-/// Insert an unlinked instruction into a basic block immediately before the
-/// specified instruction.
+/// insertBefore - Insert an unlinked instructions into a basic block
+/// immediately before the specified instruction.
 void Instruction::insertBefore(Instruction *InsertPos) {
   InsertPos->getParent()->getInstList().insert(InsertPos->getIterator(), this);
 }
 
-/// Insert an unlinked instruction into a basic block immediately after the
-/// specified instruction.
+/// insertAfter - Insert an unlinked instructions into a basic block
+/// immediately after the specified instruction.
 void Instruction::insertAfter(Instruction *InsertPos) {
   InsertPos->getParent()->getInstList().insertAfter(InsertPos->getIterator(),
                                                     this);
 }
 
-/// Unlink this instruction from its current basic block and insert it into the
-/// basic block that MovePos lives in, right before MovePos.
+/// moveBefore - Unlink this instruction from its current basic block and
+/// insert it into the basic block that MovePos lives in, right before
+/// MovePos.
 void Instruction::moveBefore(Instruction *MovePos) {
   MovePos->getParent()->getInstList().splice(
       MovePos->getIterator(), getParent()->getInstList(), getIterator());
@@ -201,10 +197,12 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case Invoke: return "invoke";
   case Resume: return "resume";
   case Unreachable: return "unreachable";
+  case CleanupEndPad: return "cleanupendpad";
   case CleanupRet: return "cleanupret";
+  case CatchEndPad: return "catchendpad";
   case CatchRet: return "catchret";
   case CatchPad: return "catchpad";
-  case CatchSwitch: return "catchswitch";
+  case TerminatePad: return "terminatepad";
 
   // Standard binary operators...
   case Add: return "add";
@@ -295,12 +293,11 @@ static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
   if (const CallInst *CI = dyn_cast<CallInst>(I1))
     return CI->isTailCall() == cast<CallInst>(I2)->isTailCall() &&
            CI->getCallingConv() == cast<CallInst>(I2)->getCallingConv() &&
-           CI->getAttributes() == cast<CallInst>(I2)->getAttributes() &&
-           CI->hasIdenticalOperandBundleSchema(*cast<CallInst>(I2));
+           CI->getAttributes() == cast<CallInst>(I2)->getAttributes();
   if (const InvokeInst *CI = dyn_cast<InvokeInst>(I1))
     return CI->getCallingConv() == cast<InvokeInst>(I2)->getCallingConv() &&
-           CI->getAttributes() == cast<InvokeInst>(I2)->getAttributes() &&
-           CI->hasIdenticalOperandBundleSchema(*cast<InvokeInst>(I2));
+           CI->getAttributes() ==
+             cast<InvokeInst>(I2)->getAttributes();
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(I1))
     return IVI->getIndices() == cast<InsertValueInst>(I2)->getIndices();
   if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(I1))
@@ -420,6 +417,7 @@ bool Instruction::mayReadFromMemory() const {
   case Instruction::AtomicRMW:
   case Instruction::CatchPad:
   case Instruction::CatchRet:
+  case Instruction::TerminatePad:
     return true;
   case Instruction::Call:
     return !cast<CallInst>(this)->doesNotAccessMemory();
@@ -442,6 +440,7 @@ bool Instruction::mayWriteToMemory() const {
   case Instruction::AtomicRMW:
   case Instruction::CatchPad:
   case Instruction::CatchRet:
+  case Instruction::TerminatePad:
     return true;
   case Instruction::Call:
     return !cast<CallInst>(this)->onlyReadsMemory();
@@ -472,8 +471,12 @@ bool Instruction::mayThrow() const {
     return !CI->doesNotThrow();
   if (const auto *CRI = dyn_cast<CleanupReturnInst>(this))
     return CRI->unwindsToCaller();
-  if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(this))
-    return CatchSwitch->unwindsToCaller();
+  if (const auto *CEPI = dyn_cast<CleanupEndPadInst>(this))
+    return CEPI->unwindsToCaller();
+  if (const auto *CEPI = dyn_cast<CatchEndPadInst>(this))
+    return CEPI->unwindsToCaller();
+  if (const auto *TPI = dyn_cast<TerminatePadInst>(this))
+    return TPI->unwindsToCaller();
   return isa<ResumeInst>(this);
 }
 

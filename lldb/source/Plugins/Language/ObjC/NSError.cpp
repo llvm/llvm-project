@@ -1,4 +1,4 @@
-//===-- NSError.cpp ---------------------------------------------*- C++ -*-===//
+//===-- NSError.cpp ----------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-#include "clang/AST/DeclCXX.h"
-
-// Project includes
 #include "Cocoa.h"
 
 #include "lldb/Core/DataBufferHeap.h"
@@ -27,6 +21,8 @@
 #include "lldb/Target/Target.h"
 
 #include "lldb/Utility/ProcessStructReader.h"
+
+#include "clang/AST/DeclCXX.h"
 
 #include "Plugins/Language/ObjC/NSString.h"
 
@@ -100,12 +96,9 @@ public:
     NSErrorSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
     SyntheticChildrenFrontEnd(*valobj_sp)
     {}
-
-    ~NSErrorSyntheticFrontEnd() override = default;
-    // no need to delete m_child_ptr - it's kept alive by the cluster manager on our behalf
-
-    size_t
-    CalculateNumChildren() override
+    
+    virtual size_t
+    CalculateNumChildren ()
     {
         if (m_child_ptr)
             return 1;
@@ -114,8 +107,8 @@ public:
         return 0;
     }
     
-    lldb::ValueObjectSP
-    GetChildAtIndex(size_t idx) override
+    virtual lldb::ValueObjectSP
+    GetChildAtIndex (size_t idx)
     {
         if (idx != 0)
             return lldb::ValueObjectSP();
@@ -125,8 +118,8 @@ public:
         return m_child_sp;
     }
     
-    bool
-    Update() override
+    virtual bool
+    Update()
     {
         m_child_ptr = nullptr;
         m_child_sp.reset();
@@ -165,21 +158,27 @@ public:
         return false;
     }
     
-    bool
-    MightHaveChildren() override
+    virtual bool
+    MightHaveChildren ()
     {
         return true;
     }
     
-    size_t
-    GetIndexOfChildWithName(const ConstString &name) override
+    virtual size_t
+    GetIndexOfChildWithName (const ConstString &name)
     {
         static ConstString g___userInfo("_userInfo");
         if (name == g___userInfo)
             return 0;
         return UINT32_MAX;
     }
-
+    
+    virtual
+    ~NSErrorSyntheticFrontEnd ()
+    {
+        // no need to delete m_child_ptr - it's kept alive by the cluster manager on our behalf
+    }
+    
 private:
     // the child here can be "real" (i.e. an actual child of the root) or synthetized from raw memory
     // if the former, I need to store a plain pointer to it - or else a loop of references will cause this entire hierarchy of values to leak
@@ -216,3 +215,4 @@ lldb_private::formatters::NSErrorSyntheticFrontEndCreator (CXXSyntheticChildren*
     
     return nullptr;
 }
+

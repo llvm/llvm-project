@@ -15,8 +15,11 @@
 #define LLVM_LIB_TARGET_SPARC_INSTPRINTER_SPARCINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
+
+class MCOperand;
 
 class SparcInstPrinter : public MCInstPrinter {
 public:

@@ -47,9 +47,6 @@ public:
     static uint32_t
     HashString (uint32_t hash_function, const char *s)
     {
-        if (!s)
-            return 0;
-        
         switch (hash_function)
         {
             case MappedHash::eHashFunctionDJB:
@@ -437,9 +434,6 @@ public:
         bool
         Find (const char *name, Pair &pair) const
         {
-            if (!name || !name[0])
-                return false;
-
             if (IsValid ())
             {
                 const uint32_t bucket_count = m_header.bucket_count;

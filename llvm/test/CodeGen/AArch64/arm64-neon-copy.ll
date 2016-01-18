@@ -320,20 +320,21 @@ define i32 @smovw8h(<8 x i16> %tmp1) {
   ret i32 %tmp5
 }
 
-define i64 @smovx16b(<16 x i8> %tmp1) {
+define i32 @smovx16b(<16 x i8> %tmp1) {
 ; CHECK-LABEL: smovx16b:
-; CHECK: smov {{x[0-9]+}}, {{v[0-9]+}}.b[8]
+; CHECK: smov {{[xw][0-9]+}}, {{v[0-9]+}}.b[8]
   %tmp3 = extractelement <16 x i8> %tmp1, i32 8
-  %tmp4 = sext i8 %tmp3 to i64
-  ret i64 %tmp4
+  %tmp4 = sext i8 %tmp3 to i32
+  %tmp5 = add i32 %tmp4, %tmp4
+  ret i32 %tmp5
 }
 
-define i64 @smovx8h(<8 x i16> %tmp1) {
+define i32 @smovx8h(<8 x i16> %tmp1) {
 ; CHECK-LABEL: smovx8h:
-; CHECK: smov {{x[0-9]+}}, {{v[0-9]+}}.h[2]
+; CHECK: smov {{[xw][0-9]+}}, {{v[0-9]+}}.h[2]
   %tmp3 = extractelement <8 x i16> %tmp1, i32 2
-  %tmp4 = sext i16 %tmp3 to i64
-  ret i64 %tmp4
+  %tmp4 = sext i16 %tmp3 to i32
+  ret i32 %tmp4
 }
 
 define i64 @smovx4s(<4 x i32> %tmp1) {
@@ -900,43 +901,6 @@ define <8 x i8> @getl(<16 x i8> %x) #0 {
   %vecext13 = extractelement <16 x i8> %x, i32 7
   %vecinit14 = insertelement <8 x i8> %vecinit12, i8 %vecext13, i32 7
   ret <8 x i8> %vecinit14
-}
-
-; CHECK-LABEL: test_extracts_inserts_varidx_extract:
-; CHECK: str q0
-; CHECK: add x[[PTR:[0-9]+]], {{.*}}, w0, sxtw #1
-; CHECK-DAG: ld1 { v[[R:[0-9]+]].h }[0], [x[[PTR]]]
-; CHECK-DAG: ins v[[R]].h[1], v0.h[1]
-; CHECK-DAG: ins v[[R]].h[2], v0.h[2]
-; CHECK-DAG: ins v[[R]].h[3], v0.h[3]
-define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
-  %tmp = extractelement <8 x i16> %x, i32 %idx
-  %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 0
-  %tmp3 = extractelement <8 x i16> %x, i32 1
-  %tmp4 = insertelement <4 x i16> %tmp2, i16 %tmp3, i32 1
-  %tmp5 = extractelement <8 x i16> %x, i32 2
-  %tmp6 = insertelement <4 x i16> %tmp4, i16 %tmp5, i32 2
-  %tmp7 = extractelement <8 x i16> %x, i32 3
-  %tmp8 = insertelement <4 x i16> %tmp6, i16 %tmp7, i32 3
-  ret <4 x i16> %tmp8
-}
-
-; CHECK-LABEL: test_extracts_inserts_varidx_insert:
-; CHECK: str h0, [{{.*}}, w0, sxtw #1]
-; CHECK-DAG: ldr d[[R:[0-9]+]]
-; CHECK-DAG: ins v[[R]].h[1], v0.h[1]
-; CHECK-DAG: ins v[[R]].h[2], v0.h[2]
-; CHECK-DAG: ins v[[R]].h[3], v0.h[3]
-define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
-  %tmp = extractelement <8 x i16> %x, i32 0
-  %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 %idx
-  %tmp3 = extractelement <8 x i16> %x, i32 1
-  %tmp4 = insertelement <4 x i16> %tmp2, i16 %tmp3, i32 1
-  %tmp5 = extractelement <8 x i16> %x, i32 2
-  %tmp6 = insertelement <4 x i16> %tmp4, i16 %tmp5, i32 2
-  %tmp7 = extractelement <8 x i16> %x, i32 3
-  %tmp8 = insertelement <4 x i16> %tmp6, i16 %tmp7, i32 3
-  ret <4 x i16> %tmp8
 }
 
 define <4 x i16> @test_dup_v2i32_v4i16(<2 x i32> %a) {

@@ -44,26 +44,16 @@ def EXEC : RegisterWithSubRegs<"EXEC", [EXEC_LO, EXEC_HI]>,
 def SCC : SIReg<"scc", 253>;
 def M0 : SIReg <"m0", 124>;
 
-multiclass FLAT_SCR_LOHI_m <string n, bits<16> ci_e, bits<16> vi_e> {
-  def _ci : SIReg<n, ci_e>;
-  def _vi : SIReg<n, vi_e>;
-  def "" : SIReg<"", 0>;
-}
+def FLAT_SCR_LO : SIReg<"flat_scr_lo", 104>; // Offset in units of 256-bytes.
+def FLAT_SCR_HI : SIReg<"flat_scr_hi", 105>; // Size is the per-thread scratch size, in bytes.
 
-class FlatReg <Register lo, Register hi, bits<16> encoding> :
-    RegisterWithSubRegs<"flat_scratch", [lo, hi]>,
-    DwarfRegAlias<lo> {
+// Pair to indicate location of scratch space for flat accesses.
+def FLAT_SCR : RegisterWithSubRegs <"flat_scr", [FLAT_SCR_LO, FLAT_SCR_HI]>,
+               DwarfRegAlias<FLAT_SCR_LO> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = encoding;
+  let HWEncoding = 104;
 }
-
-defm FLAT_SCR_LO : FLAT_SCR_LOHI_m<"flat_scratch_lo", 104, 102>; // Offset in units of 256-bytes.
-defm FLAT_SCR_HI : FLAT_SCR_LOHI_m<"flat_scratch_hi", 105, 103>; // Size is the per-thread scratch size, in bytes.
-
-def FLAT_SCR_ci : FlatReg<FLAT_SCR_LO_ci, FLAT_SCR_HI_ci, 104>;
-def FLAT_SCR_vi : FlatReg<FLAT_SCR_LO_vi, FLAT_SCR_HI_vi, 102>;
-def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 
 // SGPR registers
 foreach Index = 0-103 in {
@@ -197,50 +187,50 @@ def SReg_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
   (add SGPR_32, M0, VCC_LO, VCC_HI, EXEC_LO, EXEC_HI, FLAT_SCR_LO, FLAT_SCR_HI)
 >;
 
-def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add SGPR_64Regs)>;
+def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 64, (add SGPR_64Regs)>;
 
-def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
+def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 64,
   (add SGPR_64, VCC, EXEC, FLAT_SCR)
 >;
 
-def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128)> {
+def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8], 128, (add SGPR_128)> {
   // Requires 2 s_mov_b64 to copy
   let CopyCost = 2;
 }
 
-def SReg_256 : RegisterClass<"AMDGPU", [v32i8, v8i32, v8f32], 32, (add SGPR_256)> {
+def SReg_256 : RegisterClass<"AMDGPU", [v32i8, v8i32, v8f32], 256, (add SGPR_256)> {
   // Requires 4 s_mov_b64 to copy
   let CopyCost = 4;
 }
 
-def SReg_512 : RegisterClass<"AMDGPU", [v64i8, v16i32], 32, (add SGPR_512)> {
+def SReg_512 : RegisterClass<"AMDGPU", [v64i8, v16i32], 512, (add SGPR_512)> {
   // Requires 8 s_mov_b64 to copy
   let CopyCost = 8;
 }
 
 // Register class for all vector registers (VGPRs + Interploation Registers)
-def VReg_64 : RegisterClass<"AMDGPU", [i64, f64, v2i32, v2f32], 32, (add VGPR_64)> {
+def VReg_64 : RegisterClass<"AMDGPU", [i64, f64, v2i32, v2f32], 64, (add VGPR_64)> {
   // Requires 2 v_mov_b32 to copy
   let CopyCost = 2;
 }
 
-def VReg_96 : RegisterClass<"AMDGPU", [untyped], 32, (add VGPR_96)> {
+def VReg_96 : RegisterClass<"AMDGPU", [untyped], 96, (add VGPR_96)> {
   let Size = 96;
 
   // Requires 3 v_mov_b32 to copy
   let CopyCost = 3;
 }
 
-def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32, (add VGPR_128)> {
+def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32], 128, (add VGPR_128)> {
   // Requires 4 v_mov_b32 to copy
   let CopyCost = 4;
 }
 
-def VReg_256 : RegisterClass<"AMDGPU", [v32i8, v8i32, v8f32], 32, (add VGPR_256)> {
+def VReg_256 : RegisterClass<"AMDGPU", [v32i8, v8i32, v8f32], 256, (add VGPR_256)> {
   let CopyCost = 8;
 }
 
-def VReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32, (add VGPR_512)> {
+def VReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 512, (add VGPR_512)> {
   let CopyCost = 16;
 }
 
@@ -284,7 +274,7 @@ def SCSrc_32 : RegInlineOperand<SReg_32> {
 
 def VS_32 : RegisterClass<"AMDGPU", [i32, f32], 32, (add VGPR_32, SReg_32)>;
 
-def VS_64 : RegisterClass<"AMDGPU", [i64, f64], 32, (add VReg_64, SReg_64)> {
+def VS_64 : RegisterClass<"AMDGPU", [i64, f64], 64, (add VReg_64, SReg_64)> {
   let CopyCost = 2;
 }
 

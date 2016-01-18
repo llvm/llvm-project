@@ -816,7 +816,7 @@ GetMacOSXProcessArgs (const ProcessInstanceInfoMatch *match_info_ptr,
         arg_data_size = arg_data.GetByteSize();
         if (::sysctl (proc_args_mib, 3, arg_data.GetBytes(), &arg_data_size , NULL, 0) == 0)
         {
-            DataExtractor data (arg_data.GetBytes(), arg_data_size, endian::InlHostByteOrder(), sizeof(void *));
+            DataExtractor data (arg_data.GetBytes(), arg_data_size, lldb::endian::InlHostByteOrder(), sizeof(void *));
             lldb::offset_t offset = 0;
             uint32_t argc = data.GetU32 (&offset);
             llvm::Triple &triple = process_info.GetArchitecture().GetTriple();
@@ -1366,11 +1366,8 @@ Host::ShellExpandArguments (ProcessLaunchInfo &launch_info)
             error.SetErrorStringWithFormat("could not find the lldb-argdumper tool: %s", expand_tool_spec.GetPath().c_str());
             return error;
         }
-        
-        StreamString expand_tool_spec_stream;
-        expand_tool_spec_stream.Printf("\"%s\"",expand_tool_spec.GetPath().c_str());
 
-        Args expand_command(expand_tool_spec_stream.GetData());
+        Args expand_command(expand_tool_spec.GetPath().c_str());
         expand_command.AppendArguments (launch_info.GetArguments());
         
         int status;

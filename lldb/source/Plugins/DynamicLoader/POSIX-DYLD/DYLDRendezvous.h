@@ -20,10 +20,6 @@
 #include "lldb/lldb-types.h"
 #include "lldb/Host/FileSpec.h"
 
-#include "lldb/Core/LoadedModuleInfoList.h"
-
-using lldb_private::LoadedModuleInfoList;
-
 namespace lldb_private {
 class Process;
 }
@@ -205,9 +201,6 @@ protected:
     Rendezvous m_current;
     Rendezvous m_previous;
 
-    /// List of currently loaded SO modules
-    LoadedModuleInfoList m_loaded_modules;
-
     /// List of SOEntry objects corresponding to the current link map state.
     SOEntryList m_soentries;
 
@@ -247,29 +240,13 @@ protected:
     /// Updates the current set of SOEntries, the set of added entries, and the
     /// set of removed entries.
     bool
-    UpdateSOEntries(bool fromRemote = false);
+    UpdateSOEntries();
 
     bool
-    FillSOEntryFromModuleInfo (LoadedModuleInfoList::LoadedModuleInfo const & modInfo,
-                               SOEntry &entry);
+    UpdateSOEntriesForAddition();
 
     bool
-    SaveSOEntriesFromRemote(LoadedModuleInfoList &module_list);
-
-    bool
-    AddSOEntriesFromRemote(LoadedModuleInfoList &module_list);
-
-    bool
-    RemoveSOEntriesFromRemote(LoadedModuleInfoList &module_list);
-
-    bool
-    AddSOEntries();
-
-    bool
-    RemoveSOEntries();
-
-    void
-    UpdateBaseAddrIfNecessary(SOEntry &entry, std::string const &file_path);
+    UpdateSOEntriesForDeletion();
 
     bool
     SOEntryIsMainExecutable(const SOEntry &entry);

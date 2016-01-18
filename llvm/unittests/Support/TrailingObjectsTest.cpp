@@ -45,10 +45,9 @@ public:
   using TrailingObjects::getTrailingObjects;
 };
 
-// Here, there are two singular optional object types appended.  Note
-// that the alignment of Class2 is automatically increased to account
-// for the alignment requirements of the trailing objects.
-class Class2 final : protected TrailingObjects<Class2, double, short> {
+// Here, there are two singular optional object types appended.
+// Note that it fails to compile without the alignment spec.
+class LLVM_ALIGNAS(8) Class2 final : protected TrailingObjects<Class2, double, short> {
   friend TrailingObjects;
 
   bool HasShort, HasDouble;
@@ -118,9 +117,7 @@ TEST(TrailingObjects, TwoArg) {
   Class2 *C1 = Class2::create(4);
   Class2 *C2 = Class2::create(0, 4.2);
 
-  EXPECT_EQ(sizeof(Class2),
-            llvm::alignTo(sizeof(bool) * 2, llvm::alignOf<double>()));
-  EXPECT_EQ(llvm::alignOf<Class2>(), llvm::alignOf<double>());
+  EXPECT_EQ(sizeof(Class2), 8u); // due to alignment
 
   EXPECT_EQ((Class2::additionalSizeToAlloc<double, short>(1, 0)),
             sizeof(double));
@@ -146,49 +143,5 @@ TEST(TrailingObjects, TwoArg) {
             reinterpret_cast<short *>(reinterpret_cast<double *>(C2 + 1) + 1));
   delete C1;
   delete C2;
-}
-
-// This test class is not trying to be a usage demo, just asserting
-// that three args does actually work too (it's the same code as
-// handles the second arg, so it's basically covered by the above, but
-// just in case..)
-class Class3 final : public TrailingObjects<Class3, double, short, bool> {
-  friend TrailingObjects;
-
-  size_t numTrailingObjects(OverloadToken<double>) const { return 1; }
-  size_t numTrailingObjects(OverloadToken<short>) const { return 1; }
-};
-
-TEST(TrailingObjects, ThreeArg) {
-  EXPECT_EQ((Class3::additionalSizeToAlloc<double, short, bool>(1, 1, 3)),
-            sizeof(double) + sizeof(short) + 3 * sizeof(bool));
-  EXPECT_EQ(sizeof(Class3), llvm::alignTo(1, llvm::alignOf<double>()));
-  std::unique_ptr<char[]> P(new char[1000]);
-  Class3 *C = reinterpret_cast<Class3 *>(P.get());
-  EXPECT_EQ(C->getTrailingObjects<double>(), reinterpret_cast<double *>(C + 1));
-  EXPECT_EQ(C->getTrailingObjects<short>(),
-            reinterpret_cast<short *>(reinterpret_cast<double *>(C + 1) + 1));
-  EXPECT_EQ(
-      C->getTrailingObjects<bool>(),
-      reinterpret_cast<bool *>(
-          reinterpret_cast<short *>(reinterpret_cast<double *>(C + 1) + 1) +
-          1));
-}
-
-class Class4 final : public TrailingObjects<Class4, char, long> {
-  friend TrailingObjects;
-  size_t numTrailingObjects(OverloadToken<char>) const { return 1; }
-};
-
-TEST(TrailingObjects, Realignment) {
-  EXPECT_EQ((Class4::additionalSizeToAlloc<char, long>(1, 1)),
-            llvm::alignTo(sizeof(long) + 1, llvm::alignOf<long>()));
-  EXPECT_EQ(sizeof(Class4), llvm::alignTo(1, llvm::alignOf<long>()));
-  std::unique_ptr<char[]> P(new char[1000]);
-  Class4 *C = reinterpret_cast<Class4 *>(P.get());
-  EXPECT_EQ(C->getTrailingObjects<char>(), reinterpret_cast<char *>(C + 1));
-  EXPECT_EQ(C->getTrailingObjects<long>(),
-            reinterpret_cast<long *>(llvm::alignAddr(
-                reinterpret_cast<char *>(C + 1) + 1, llvm::alignOf<long>())));
 }
 }

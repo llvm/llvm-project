@@ -415,10 +415,8 @@ llvm::writeArchive(StringRef ArcName,
       ErrorOr<uint32_t> Size = OldMember.getSize();
       if (std::error_code EC = Size.getError())
         return std::make_pair("", EC);
-      StringRef FileName = I.getName();
-      printMemberHeader(Out, Kind, Thin, sys::path::filename(FileName),
-                        StringMapIndexIter, ModTime, UID, GID, Perms,
-                        Size.get());
+      printMemberHeader(Out, Kind, Thin, I.getName(), StringMapIndexIter,
+                        ModTime, UID, GID, Perms, Size.get());
     }
 
     if (!Thin)

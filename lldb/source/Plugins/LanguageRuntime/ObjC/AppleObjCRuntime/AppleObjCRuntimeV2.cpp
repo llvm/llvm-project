@@ -207,14 +207,6 @@ struct objc_opt_t {
     int32_t clsopt_offset;
 };
 
-struct objc_opt_v14_t {
-    uint32_t version;
-    uint32_t flags;
-    int32_t selopt_offset;
-    int32_t headeropt_offset;
-    int32_t clsopt_offset;
-};
-
 struct ClassInfo
 {
     Class isa;
@@ -233,34 +225,16 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
     if (objc_opt_ro_ptr)
     {
         const objc_opt_t *objc_opt = (objc_opt_t *)objc_opt_ro_ptr;
-        const objc_opt_v14_t* objc_opt_v14 = (objc_opt_v14_t*)objc_opt_ro_ptr;
-        const bool is_v14_format = objc_opt->version >= 14;
-        if (is_v14_format)
+        DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt->version);
+        DEBUG_PRINTF ("objc_opt->selopt_offset = %d\n", objc_opt->selopt_offset);
+        DEBUG_PRINTF ("objc_opt->headeropt_offset = %d\n", objc_opt->headeropt_offset);
+        DEBUG_PRINTF ("objc_opt->clsopt_offset = %d\n", objc_opt->clsopt_offset);
+        if (objc_opt->version == 12 || objc_opt->version == 13)
         {
-            DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt_v14->version);
-            DEBUG_PRINTF ("objc_opt->flags = %u\n", objc_opt_v14->flags);
-            DEBUG_PRINTF ("objc_opt->selopt_offset = %d\n", objc_opt_v14->selopt_offset);
-            DEBUG_PRINTF ("objc_opt->headeropt_offset = %d\n", objc_opt_v14->headeropt_offset);
-            DEBUG_PRINTF ("objc_opt->clsopt_offset = %d\n", objc_opt_v14->clsopt_offset);
-        }
-        else
-        {
-            DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt->version);
-            DEBUG_PRINTF ("objc_opt->selopt_offset = %d\n", objc_opt->selopt_offset);
-            DEBUG_PRINTF ("objc_opt->headeropt_offset = %d\n", objc_opt->headeropt_offset);
-            DEBUG_PRINTF ("objc_opt->clsopt_offset = %d\n", objc_opt->clsopt_offset);
-        }
-        if (objc_opt->version == 12 || objc_opt->version == 13 || objc_opt->version == 14)
-        {
-            const objc_clsopt_t* clsopt = NULL;
-            if (is_v14_format)
-                clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt_v14 + objc_opt_v14->clsopt_offset);
-            else
-                clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt + objc_opt->clsopt_offset);
+            const objc_clsopt_t* clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt + objc_opt->clsopt_offset);
             const size_t max_class_infos = class_infos_byte_size/sizeof(ClassInfo);
             ClassInfo *class_infos = (ClassInfo *)class_infos_ptr;
             int32_t invalidEntryOffset = 0;
-            // this is safe to do because the version field order is invariant
             if (objc_opt->version == 12)
                 invalidEntryOffset = 16;
             const uint8_t *checkbytes = &clsopt->tab[clsopt->mask+1];
@@ -405,18 +379,9 @@ AppleObjCRuntimeV2::GetDynamicTypeAndAddress (ValueObject &in_value,
                                               Address &address,
                                               Value::ValueType &value_type)
 {
-    // We should never get here with a null process...
-    assert (m_process != NULL);
-
     // The Runtime is attached to a particular process, you shouldn't pass in a value from another process.
-    // Note, however, the process might be NULL (e.g. if the value was made with SBTarget::EvaluateExpression...)
-    // in which case it is sufficient if the target's match:
-    
-    Process *process = in_value.GetProcessSP().get();
-    if (process)
-        assert (process == m_process);
-    else
-        assert (in_value.GetTargetSP().get() == m_process->CalculateTarget().get());
+    assert (in_value.GetProcessSP().get() == m_process);
+    assert (m_process != NULL);
     
     class_type_or_name.Clear();
     value_type = Value::ValueType::eValueTypeScalar;

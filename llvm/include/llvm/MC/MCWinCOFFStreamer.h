@@ -73,7 +73,7 @@ protected:
   void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
 private:
-  void Error(const Twine &Msg) const;
+  LLVM_ATTRIBUTE_NORETURN void FatalError(const Twine &Msg) const;
 };
 }
 

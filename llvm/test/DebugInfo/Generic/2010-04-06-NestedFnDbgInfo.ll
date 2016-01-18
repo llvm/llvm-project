@@ -42,7 +42,7 @@ entry:
   %a = alloca %class.A, align 1                   ; <%class.A*> [#uses=1]
   %i = alloca i32, align 4                        ; <i32*> [#uses=2]
   store %class.A* %this, %class.A** %this.addr
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
+  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !17, metadata !DIExpression()), !dbg !18
   %this1 = load %class.A*, %class.A** %this.addr             ; <%class.A*> [#uses=0]
   call void @llvm.dbg.declare(metadata %class.A* %a, metadata !19, metadata !DIExpression()), !dbg !27
   call void @llvm.dbg.declare(metadata i32* %i, metadata !28, metadata !DIExpression()), !dbg !29
@@ -59,7 +59,7 @@ entry:
   %retval = alloca i32, align 4                   ; <i32*> [#uses=2]
   %this.addr = alloca %class.A*, align 8          ; <%class.A**> [#uses=2]
   store %class.A* %this, %class.A** %this.addr
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !33, metadata !DIExpression(DW_OP_deref)), !dbg !34
+  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !33, metadata !DIExpression()), !dbg !34
   %this1 = load %class.A*, %class.A** %this.addr             ; <%class.A*> [#uses=0]
   store i32 42, i32* %retval, !dbg !35
   %0 = load i32, i32* %retval, !dbg !35                ; <i32> [#uses=1]
@@ -87,8 +87,7 @@ entry:
 !14 = !DILocation(line: 16, column: 5, scope: !1)
 !15 = !DILocation(line: 17, column: 3, scope: !1)
 !16 = !DILocation(line: 18, column: 1, scope: !2)
-; Manually modified to avoid pointers (thus dependence on pointer size) in Generic test
-!17 = !DILocalVariable(name: "this", line: 4, arg: 1, scope: !10, file: !3, type: !8)
+!17 = !DILocalVariable(name: "this", line: 4, arg: 1, scope: !10, file: !3, type: !13)
 !18 = !DILocation(line: 4, column: 7, scope: !10)
 !19 = !DILocalVariable(name: "a", line: 9, scope: !20, file: !3, type: !21)
 !20 = distinct !DILexicalBlock(line: 4, column: 12, file: !38, scope: !10)
@@ -104,8 +103,7 @@ entry:
 !30 = !DILocation(line: 10, column: 5, scope: !20)
 !31 = !DILocation(line: 11, column: 5, scope: !20)
 !32 = !DILocation(line: 12, column: 3, scope: !10)
-; Manually modified like !17 above
-!33 = !DILocalVariable(name: "this", line: 7, arg: 1, scope: !23, file: !3, type: !21)
+!33 = !DILocalVariable(name: "this", line: 7, arg: 1, scope: !23, file: !3, type: !26)
 !34 = !DILocation(line: 7, column: 11, scope: !23)
 !35 = !DILocation(line: 7, column: 19, scope: !36)
 !36 = distinct !DILexicalBlock(line: 7, column: 17, file: !38, scope: !23)

@@ -127,6 +127,9 @@ public:
   }
 
 public:
+  // Delete loop from the loop queue and loop nest (LoopInfo).
+  void deleteLoopFromQueue(Loop *L);
+
   // Add a new loop into the loop queue as a child of the given parent, or at
   // the top level if \c ParentLoop is null.
   Loop &addLoop(Loop *ParentLoop);
@@ -152,6 +155,7 @@ public:
 
 private:
   std::deque<Loop *> LQ;
+  bool skipThisLoop;
   LoopInfo *LI;
   Loop *CurrentLoop;
 };

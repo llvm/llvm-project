@@ -1,4 +1,0 @@
-
-extern "C" void LLVMInitializeAVRTarget() {
-
-}

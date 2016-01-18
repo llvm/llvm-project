@@ -77,9 +77,6 @@ public:
     lldb::SBAddress
     GetEndAddress ();
 
-    const char *
-    GetArgumentName (uint32_t arg_idx);
-
     uint32_t
     GetPrologueByteSize ();
 

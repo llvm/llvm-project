@@ -194,7 +194,7 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo (StringExtractorGDBRemote &
         response.Printf("watchpoint_exceptions_received:after;");
 #endif
 
-    switch (endian::InlHostByteOrder())
+    switch (lldb::endian::InlHostByteOrder())
     {
     case eByteOrderBig:     response.PutCString ("endian:big;"); break;
     case eByteOrderLittle:  response.PutCString ("endian:little;"); break;

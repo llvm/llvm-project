@@ -2764,7 +2764,6 @@ R GoASTExpr::Visit(V* v) const
         return v->VisitUnaryExpr(llvm::cast<const GoASTUnaryExpr>(this));
     default:
         assert(false && "Invalid kind");
-        return R();
     }
 }
 

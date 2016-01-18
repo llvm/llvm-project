@@ -42,6 +42,10 @@
 
 using namespace llvm;
 
+// FIXME: Remove this once soft-float is supported.
+static cl::opt<bool> DisablePPCFloatInVariadic("disable-ppc-float-in-variadic",
+cl::desc("disable saving float registers for va_start on PPC"), cl::Hidden);
+
 static cl::opt<bool> DisablePPCPreinc("disable-ppc-preinc",
 cl::desc("disable preincrement load/store generation on PPC"), cl::Hidden);
 
@@ -68,10 +72,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // Set up the register classes.
   addRegisterClass(MVT::i32, &PPC::GPRCRegClass);
-  if (!Subtarget.useSoftFloat()) {
-    addRegisterClass(MVT::f32, &PPC::F4RCRegClass);
-    addRegisterClass(MVT::f64, &PPC::F8RCRegClass);
-  }
+  addRegisterClass(MVT::f32, &PPC::F4RCRegClass);
+  addRegisterClass(MVT::f64, &PPC::F8RCRegClass);
 
   // PowerPC has an i16 but no i8 (or i1) SEXTLOAD
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -255,17 +257,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::SINT_TO_FP, MVT::i32, Expand);
   setOperationAction(ISD::UINT_TO_FP, MVT::i32, Expand);
 
-  if (Subtarget.hasDirectMove()) {
-    setOperationAction(ISD::BITCAST, MVT::f32, Legal);
-    setOperationAction(ISD::BITCAST, MVT::i32, Legal);
-    setOperationAction(ISD::BITCAST, MVT::i64, Legal);
-    setOperationAction(ISD::BITCAST, MVT::f64, Legal);
-  } else {
-    setOperationAction(ISD::BITCAST, MVT::f32, Expand);
-    setOperationAction(ISD::BITCAST, MVT::i32, Expand);
-    setOperationAction(ISD::BITCAST, MVT::i64, Expand);
-    setOperationAction(ISD::BITCAST, MVT::f64, Expand);
-  }
+  setOperationAction(ISD::BITCAST, MVT::f32, Expand);
+  setOperationAction(ISD::BITCAST, MVT::i32, Expand);
+  setOperationAction(ISD::BITCAST, MVT::i64, Expand);
+  setOperationAction(ISD::BITCAST, MVT::f64, Expand);
 
   // We cannot sextinreg(i1).  Expand to shifts.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
@@ -334,8 +329,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::STACKRESTORE      , MVT::Other, Custom);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32  , Custom);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64  , Custom);
-  setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, MVT::i32, Custom);
-  setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, MVT::i64, Custom);
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -484,8 +477,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
       setOperationAction(ISD::VSELECT, VT, Expand);
       setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
-      setOperationAction(ISD::ROTL, VT, Expand);
-      setOperationAction(ISD::ROTR, VT, Expand);
 
       for (MVT InnerVT : MVT::vector_valuetypes()) {
         setTruncStoreAction(VT, InnerVT, Expand);
@@ -836,7 +827,15 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLibcallName(RTLIB::SRA_I128, nullptr);
   }
 
-  setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
+  if (isPPC64) {
+    setStackPointerRegisterToSaveRestore(PPC::X1);
+    setExceptionPointerRegister(PPC::X3);
+    setExceptionSelectorRegister(PPC::X4);
+  } else {
+    setStackPointerRegisterToSaveRestore(PPC::R1);
+    setExceptionPointerRegister(PPC::R3);
+    setExceptionSelectorRegister(PPC::R4);
+  }
 
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine(ISD::SINT_TO_FP);
@@ -984,10 +983,6 @@ unsigned PPCTargetLowering::getByValTypeAlignment(Type *Ty,
   return Align;
 }
 
-bool PPCTargetLowering::useSoftFloat() const {
-  return Subtarget.useSoftFloat();
-}
-
 const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((PPCISD::NodeType)Opcode) {
   case PPCISD::FIRST_NUMBER:    break;
@@ -1011,7 +1006,6 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::Lo:              return "PPCISD::Lo";
   case PPCISD::TOC_ENTRY:       return "PPCISD::TOC_ENTRY";
   case PPCISD::DYNALLOC:        return "PPCISD::DYNALLOC";
-  case PPCISD::DYNAREAOFFSET:   return "PPCISD::DYNAREAOFFSET";
   case PPCISD::GlobalBaseReg:   return "PPCISD::GlobalBaseReg";
   case PPCISD::SRL:             return "PPCISD::SRL";
   case PPCISD::SRA:             return "PPCISD::SRA";
@@ -1533,8 +1527,8 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
     for (unsigned i = 0; i != Multiple-1; ++i) {
       if (!UniquedVals[i].getNode()) continue;  // Must have been undefs.
 
-      LeadingZero &= isNullConstant(UniquedVals[i]);
-      LeadingOnes &= isAllOnesConstant(UniquedVals[i]);
+      LeadingZero &= cast<ConstantSDNode>(UniquedVals[i])->isNullValue();
+      LeadingOnes &= cast<ConstantSDNode>(UniquedVals[i])->isAllOnesValue();
     }
     // Finally, check the least significant entry.
     if (LeadingZero) {
@@ -2954,9 +2948,8 @@ PPCTargetLowering::LowerFormalArguments_32SVR4(
       PPC::F8
     };
     unsigned NumFPArgRegs = array_lengthof(FPArgRegs);
-
-    if (Subtarget.useSoftFloat())
-       NumFPArgRegs = 0;
+    if (DisablePPCFloatInVariadic)
+      NumFPArgRegs = 0;
 
     FuncInfo->setVarArgsNumGPR(CCInfo.getFirstUnallocated(GPArgRegs));
     FuncInfo->setVarArgsNumFPR(CCInfo.getFirstUnallocated(FPArgRegs));
@@ -4091,7 +4084,7 @@ static bool isFunctionGlobalAddress(SDValue Callee) {
         Callee.getOpcode() == ISD::TargetGlobalTLSAddress)
       return false;
 
-    return G->getGlobal()->getValueType()->isFunctionTy();
+    return G->getGlobal()->getType()->getElementType()->isFunctionTy();
   }
 
   return false;
@@ -5823,22 +5816,6 @@ PPCTargetLowering::LowerReturn(SDValue Chain,
   return DAG.getNode(PPCISD::RET_FLAG, dl, MVT::Other, RetOps);
 }
 
-SDValue PPCTargetLowering::LowerGET_DYNAMIC_AREA_OFFSET(
-    SDValue Op, SelectionDAG &DAG, const PPCSubtarget &Subtarget) const {
-  SDLoc dl(Op);
-
-  // Get the corect type for integers.
-  EVT IntVT = Op.getValueType();
-
-  // Get the inputs.
-  SDValue Chain = Op.getOperand(0);
-  SDValue FPSIdx = getFramePointerFrameIndex(DAG);
-  // Build a DYNAREAOFFSET node.
-  SDValue Ops[2] = {Chain, FPSIdx};
-  SDVTList VTs = DAG.getVTList(IntVT);
-  return DAG.getNode(PPCISD::DYNAREAOFFSET, dl, VTs, Ops);
-}
-
 SDValue PPCTargetLowering::LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG,
                                    const PPCSubtarget &Subtarget) const {
   // When we pop the dynamic allocation we need to restore the SP link.
@@ -6842,7 +6819,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       for (unsigned i = 0; i < 4; ++i) {
         if (BVN->getOperand(i).getOpcode() == ISD::UNDEF)
           CV[i] = UndefValue::get(Type::getFloatTy(*DAG.getContext()));
-        else if (isNullConstant(BVN->getOperand(i)))
+        else if (cast<ConstantSDNode>(BVN->getOperand(i))->
+                   getConstantIntValue()->isZero())
           continue;
         else
           CV[i] = One;
@@ -7969,7 +7947,6 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STACKRESTORE:       return LowerSTACKRESTORE(Op, DAG, Subtarget);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG, Subtarget);
-  case ISD::GET_DYNAMIC_AREA_OFFSET: return LowerGET_DYNAMIC_AREA_OFFSET(Op, DAG, Subtarget);
 
   case ISD::EH_SJLJ_SETJMP:     return lowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP:    return lowerEH_SJLJ_LONGJMP(Op, DAG);
@@ -8444,8 +8421,8 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr *MI,
           .addMBB(mainMBB);
   MIB = BuildMI(*thisMBB, MI, DL, TII->get(PPC::B)).addMBB(sinkMBB);
 
-  thisMBB->addSuccessor(mainMBB, BranchProbability::getZero());
-  thisMBB->addSuccessor(sinkMBB, BranchProbability::getOne());
+  thisMBB->addSuccessor(mainMBB, /* weight */ 0);
+  thisMBB->addSuccessor(sinkMBB, /* weight */ 1);
 
   // mainMBB:
   //  mainDstReg = 0
@@ -10178,12 +10155,16 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default: break;
   case PPCISD::SHL:
-    if (isNullConstant(N->getOperand(0))) // 0 << V -> 0.
+    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
+      if (C->isNullValue())   // 0 << V -> 0.
         return N->getOperand(0);
+    }
     break;
   case PPCISD::SRL:
-    if (isNullConstant(N->getOperand(0))) // 0 >>u V -> 0.
+    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
+      if (C->isNullValue())   // 0 >>u V -> 0.
         return N->getOperand(0);
+    }
     break;
   case PPCISD::SRA:
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
@@ -10631,7 +10612,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1))->getZExtValue() ==
           Intrinsic::ppc_is_decremented_ctr_nonzero &&
         isa<ConstantSDNode>(LHS.getOperand(1)) &&
-        !isNullConstant(LHS.getOperand(1)))
+        !cast<ConstantSDNode>(LHS.getOperand(1))->getConstantIntValue()->
+          isZero())
       LHS = LHS.getOperand(0);
 
     if (LHS.getOpcode() == ISD::INTRINSIC_W_CHAIN &&
@@ -10811,11 +10793,8 @@ unsigned PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     // boundary so that the entire loop fits in one instruction-cache line.
     uint64_t LoopSize = 0;
     for (auto I = ML->block_begin(), IE = ML->block_end(); I != IE; ++I)
-      for (auto J = (*I)->begin(), JE = (*I)->end(); J != JE; ++J) {
+      for (auto J = (*I)->begin(), JE = (*I)->end(); J != JE; ++J)
         LoopSize += TII->GetInstSizeInBytes(J);
-        if (LoopSize > 32)
-          break;
-      }
 
     if (LoopSize > 16 && LoopSize <= 32)
       return 5;
@@ -11434,7 +11413,9 @@ bool PPCTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
-  return !(BitSize == 0 || BitSize > 64);
+  if (BitSize == 0 || BitSize > 64)
+    return false;
+  return true;
 }
 
 bool PPCTargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
@@ -11549,16 +11530,6 @@ PPCTargetLowering::getScratchRegisters(CallingConv::ID) const {
   };
 
   return ScratchRegs;
-}
-
-unsigned PPCTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
-  return Subtarget.isPPC64() ? PPC::X3 : PPC::R3;
-}
-
-unsigned PPCTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
-  return Subtarget.isPPC64() ? PPC::X4 : PPC::R4;
 }
 
 bool

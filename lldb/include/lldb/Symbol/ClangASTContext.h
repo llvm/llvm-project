@@ -117,9 +117,6 @@ public:
     clang::DiagnosticConsumer *
     getDiagnosticConsumer();
 
-    clang::MangleContext *
-    getMangleContext();
-
     std::shared_ptr<clang::TargetOptions> &getTargetOptions();
 
     clang::TargetInfo *
@@ -151,16 +148,7 @@ public:
     {
         return ClangASTContext::GetCompleteDecl(getASTContext(), decl);
     }
-
-    static void
-    DumpDeclHiearchy (clang::Decl *decl);
-
-    static void
-    DumpDeclContextHiearchy (clang::DeclContext *decl_ctx);
-
-    static bool
-    DeclsAreEquivalent (clang::Decl *lhs_decl, clang::Decl *rhs_decl);
-
+    
     static bool
     GetCompleteDecl (clang::ASTContext *ast,
                      clang::Decl *decl);
@@ -545,26 +533,11 @@ public:
     ConstString
     DeclGetName (void *opaque_decl) override;
 
-    ConstString
-    DeclGetMangledName (void *opaque_decl) override;
-
-    CompilerDeclContext
-    DeclGetDeclContext (void *opaque_decl) override;
-
-    CompilerType
-    DeclGetFunctionReturnType(void *opaque_decl) override;
-
-    size_t
-    DeclGetFunctionNumArguments(void *opaque_decl) override;
-
-    CompilerType
-    DeclGetFunctionArgumentType (void *opaque_decl, size_t arg_idx) override;
-
     //----------------------------------------------------------------------
     // CompilerDeclContext override functions
     //----------------------------------------------------------------------
     
-    std::vector<CompilerDecl>
+    std::vector<void *>
     DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name) override;
 
     bool
@@ -572,9 +545,6 @@ public:
 
     ConstString
     DeclContextGetName (void *opaque_decl_ctx) override;
-
-    ConstString
-    DeclContextGetScopeQualifiedName (void *opaque_decl_ctx) override;
 
     bool
     DeclContextIsClassMethod (void *opaque_decl_ctx,
@@ -634,9 +604,6 @@ public:
     
     bool
     IsAggregateType (lldb::opaque_compiler_type_t type) override;
-    
-    bool
-    IsAnonymousType (lldb::opaque_compiler_type_t type) override;
     
     bool
     IsBeingDefined (lldb::opaque_compiler_type_t type) override;
@@ -915,8 +882,7 @@ public:
                                  uint32_t &child_bitfield_bit_offset,
                                  bool &child_is_base_class,
                                  bool &child_is_deref_of_parent,
-                                 ValueObject *valobj,
-                                 uint64_t &language_flags) override;
+                                 ValueObject *valobj) override;
     
     // Lookup a child given a name. This function will match base class names
     // and member member names in "clang_type" only, not descendants.
@@ -947,15 +913,6 @@ public:
     CompilerType
     GetTypeForFormatters (void* type) override;
     
-#define LLDB_INVALID_DECL_LEVEL            UINT32_MAX
-    // LLDB_INVALID_DECL_LEVEL is returned by CountDeclLevels if
-    // child_decl_ctx could not be found in decl_ctx.
-    uint32_t
-    CountDeclLevels (clang::DeclContext *frame_decl_ctx,
-                     clang::DeclContext *child_decl_ctx,
-                     ConstString *child_name = nullptr,
-                     CompilerType *child_type = nullptr);
-
     //----------------------------------------------------------------------
     // Modifying RecordType
     //----------------------------------------------------------------------
@@ -1027,18 +984,10 @@ public:
                                lldb::AccessType access,
                                bool is_artificial);
     
-    static bool
+    bool
     SetHasExternalStorage (lldb::opaque_compiler_type_t type, bool has_extern);
     
-
-    static bool
-    CanImport (const CompilerType &type, lldb_private::ClangASTImporter &importer);
-
-    static bool
-    Import (const CompilerType &type, lldb_private::ClangASTImporter &importer);
-
-    static bool
-    GetHasExternalStorage (const CompilerType &type);
+    
     //------------------------------------------------------------------
     // Tag Declarations
     //------------------------------------------------------------------
@@ -1121,19 +1070,13 @@ public:
     
     void
     DumpTypeDescription (lldb::opaque_compiler_type_t type, Stream *s) override;
-
-    static void
-    DumpTypeName (const CompilerType &type);
-
+    
     static clang::EnumDecl *
     GetAsEnumDecl (const CompilerType& type);
     
     static clang::RecordDecl *
     GetAsRecordDecl (const CompilerType& type);
-
-    static clang::TagDecl *
-    GetAsTagDecl (const CompilerType& type);
-
+    
     clang::CXXRecordDecl *
     GetAsCXXRecordDecl (lldb::opaque_compiler_type_t type);
     
@@ -1144,12 +1087,9 @@ public:
     GetQualType (const CompilerType& type)
     {
         // Make sure we have a clang type before making a clang::QualType
-        if (type.GetOpaqueQualType())
-        {
-            ClangASTContext *ast = llvm::dyn_cast_or_null<ClangASTContext>(type.GetTypeSystem());
-            if (ast)
-                return clang::QualType::getFromOpaquePtr(type.GetOpaqueQualType());
-        }
+        ClangASTContext *ast = llvm::dyn_cast_or_null<ClangASTContext>(type.GetTypeSystem());
+        if (ast)
+            return clang::QualType::getFromOpaquePtr(type.GetOpaqueQualType());
         return clang::QualType();
     }
 
@@ -1217,7 +1157,6 @@ protected:
     std::unique_ptr<clang::Builtin::Context>        m_builtins_ap;
     std::unique_ptr<DWARFASTParser>                 m_dwarf_ast_parser_ap;
     std::unique_ptr<ClangASTSource>                 m_scratch_ast_source_ap;
-    std::unique_ptr<clang::MangleContext>           m_mangle_ctx_ap;
     CompleteTagDeclCallback                         m_callback_tag_decl;
     CompleteObjCInterfaceDeclCallback               m_callback_objc_decl;
     void *                                          m_callback_baton;

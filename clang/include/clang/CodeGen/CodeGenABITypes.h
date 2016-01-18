@@ -36,7 +36,6 @@ namespace llvm {
 namespace clang {
 class ASTContext;
 class CXXRecordDecl;
-class CXXMethodDecl;
 class CodeGenOptions;
 class CoverageSourceInfo;
 class DiagnosticsEngine;
@@ -61,13 +60,12 @@ public:
   const CGFunctionInfo &arrangeObjCMessageSendSignature(
                                                      const ObjCMethodDecl *MD,
                                                      QualType receiverType);
-  const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty,
-                                                const FunctionDecl *FD);
+  const CGFunctionInfo &arrangeFreeFunctionType(
+                                               CanQual<FunctionProtoType> Ty);
   const CGFunctionInfo &arrangeFreeFunctionType(
                                              CanQual<FunctionNoProtoType> Ty);
   const CGFunctionInfo &arrangeCXXMethodType(const CXXRecordDecl *RD,
-                                             const FunctionProtoType *FTP,
-                                             const CXXMethodDecl *MD);
+                                             const FunctionProtoType *FTP);
   const CGFunctionInfo &arrangeFreeFunctionCall(CanQualType returnType,
                                                 ArrayRef<CanQualType> argTypes,
                                                 FunctionType::ExtInfo info,

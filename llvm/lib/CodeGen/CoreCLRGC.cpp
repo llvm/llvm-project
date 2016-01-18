@@ -38,9 +38,9 @@ public:
     UsesMetadata = false;
     CustomRoots = false;
   }
-  Optional<bool> isGCManagedPointer(const Type *Ty) const override {
+  Optional<bool> isGCManagedPointer(const Value *V) const override {
     // Method is only valid on pointer typed values.
-    const PointerType *PT = cast<PointerType>(Ty);
+    PointerType *PT = cast<PointerType>(V->getType());
     // We pick addrspace(1) as our GC managed heap.
     return (1 == PT->getAddressSpace());
   }

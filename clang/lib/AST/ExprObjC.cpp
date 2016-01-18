@@ -39,14 +39,16 @@ ObjCArrayLiteral *ObjCArrayLiteral::Create(const ASTContext &C,
                                            ArrayRef<Expr *> Elements,
                                            QualType T, ObjCMethodDecl *Method,
                                            SourceRange SR) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(Elements.size()));
+  void *Mem =
+      C.Allocate(sizeof(ObjCArrayLiteral) + Elements.size() * sizeof(Expr *));
   return new (Mem) ObjCArrayLiteral(Elements, T, Method, SR);
 }
 
 ObjCArrayLiteral *ObjCArrayLiteral::CreateEmpty(const ASTContext &C,
                                                 unsigned NumElements) {
 
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumElements));
+  void *Mem =
+      C.Allocate(sizeof(ObjCArrayLiteral) + NumElements * sizeof(Expr *));
   return new (Mem) ObjCArrayLiteral(EmptyShell(), NumElements);
 }
 
@@ -58,9 +60,8 @@ ObjCDictionaryLiteral::ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
            false, false),
       NumElements(VK.size()), HasPackExpansions(HasPackExpansions), Range(SR),
       DictWithObjectsMethod(method) {
-  KeyValuePair *KeyValues = getTrailingObjects<KeyValuePair>();
-  ExpansionData *Expansions =
-      HasPackExpansions ? getTrailingObjects<ExpansionData>() : nullptr;
+  KeyValuePair *KeyValues = getKeyValues();
+  ExpansionData *Expansions = getExpansionData();
   for (unsigned I = 0; I < NumElements; I++) {
     if (VK[I].Key->isTypeDependent() || VK[I].Key->isValueDependent() ||
         VK[I].Value->isTypeDependent() || VK[I].Value->isValueDependent())
@@ -90,16 +91,23 @@ ObjCDictionaryLiteral::Create(const ASTContext &C,
                               ArrayRef<ObjCDictionaryElement> VK,
                               bool HasPackExpansions, QualType T,
                               ObjCMethodDecl *method, SourceRange SR) {
-  void *Mem = C.Allocate(totalSizeToAlloc<KeyValuePair, ExpansionData>(
-      VK.size(), HasPackExpansions ? VK.size() : 0));
+  unsigned ExpansionsSize = 0;
+  if (HasPackExpansions)
+    ExpansionsSize = sizeof(ExpansionData) * VK.size();
+
+  void *Mem = C.Allocate(sizeof(ObjCDictionaryLiteral) +
+                         sizeof(KeyValuePair) * VK.size() + ExpansionsSize);
   return new (Mem) ObjCDictionaryLiteral(VK, HasPackExpansions, T, method, SR);
 }
 
 ObjCDictionaryLiteral *
 ObjCDictionaryLiteral::CreateEmpty(const ASTContext &C, unsigned NumElements,
                                    bool HasPackExpansions) {
-  void *Mem = C.Allocate(totalSizeToAlloc<KeyValuePair, ExpansionData>(
-      NumElements, HasPackExpansions ? NumElements : 0));
+  unsigned ExpansionsSize = 0;
+  if (HasPackExpansions)
+    ExpansionsSize = sizeof(ExpansionData) * NumElements;
+  void *Mem = C.Allocate(sizeof(ObjCDictionaryLiteral) +
+                         sizeof(KeyValuePair) * NumElements + ExpansionsSize);
   return new (Mem)
       ObjCDictionaryLiteral(EmptyShell(), NumElements, HasPackExpansions);
 }
@@ -112,6 +120,15 @@ QualType ObjCPropertyRefExpr::getReceiverType(const ASTContext &ctx) const {
     return getSuperReceiverType();
 
   return getBase()->getType();
+}
+
+ObjCSubscriptRefExpr *
+ObjCSubscriptRefExpr::Create(const ASTContext &C, Expr *base, Expr *key,
+                             QualType T, ObjCMethodDecl *getMethod,
+                             ObjCMethodDecl *setMethod, SourceLocation RB) {
+  void *Mem = C.Allocate(sizeof(ObjCSubscriptRefExpr));
+  return new (Mem) ObjCSubscriptRefExpr(
+      base, key, T, VK_LValue, OK_ObjCSubscript, getMethod, setMethod, RB);
 }
 
 ObjCMessageExpr::ObjCMessageExpr(QualType T, ExprValueKind VK,
@@ -276,9 +293,11 @@ ObjCMessageExpr *ObjCMessageExpr::alloc(const ASTContext &C,
 
 ObjCMessageExpr *ObjCMessageExpr::alloc(const ASTContext &C, unsigned NumArgs,
                                         unsigned NumStoredSelLocs) {
+  unsigned Size = sizeof(ObjCMessageExpr) + sizeof(void *) +
+                  NumArgs * sizeof(Expr *) +
+                  NumStoredSelLocs * sizeof(SourceLocation);
   return (ObjCMessageExpr *)C.Allocate(
-      totalSizeToAlloc<void *, SourceLocation>(NumArgs + 1, NumStoredSelLocs),
-      llvm::AlignOf<ObjCMessageExpr>::Alignment);
+      Size, llvm::AlignOf<ObjCMessageExpr>::Alignment);
 }
 
 void ObjCMessageExpr::getSelectorLocs(
@@ -339,7 +358,7 @@ ObjCInterfaceDecl *ObjCMessageExpr::getReceiverInterface() const {
 Stmt::child_range ObjCMessageExpr::children() {
   Stmt **begin;
   if (getReceiverKind() == Instance)
-    begin = reinterpret_cast<Stmt **>(getTrailingObjects<void *>());
+    begin = reinterpret_cast<Stmt **>(this + 1);
   else
     begin = reinterpret_cast<Stmt **>(getArgs());
   return child_range(begin,

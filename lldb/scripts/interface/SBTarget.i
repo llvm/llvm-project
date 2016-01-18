@@ -595,35 +595,14 @@ public:
                             const SBFileSpecList &comp_unit_list);
 
     lldb::SBBreakpoint
-    BreakpointCreateByName (const char *symbol_name,
-                            uint32_t func_name_type,           // Logical OR one or more FunctionNameType enum bits
-                            lldb::LanguageType symbol_language,
-                            const SBFileSpecList &module_list, 
-                            const SBFileSpecList &comp_unit_list);
-
-    lldb::SBBreakpoint
     BreakpointCreateByNames (const char *symbol_name[],
                              uint32_t num_names,
                              uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
-                             const SBFileSpecList &module_list,
-                             const SBFileSpecList &comp_unit_list);
-
-    lldb::SBBreakpoint
-    BreakpointCreateByNames (const char *symbol_name[],
-                             uint32_t num_names,
-                             uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
-                             lldb::LanguageType symbol_language,
                              const SBFileSpecList &module_list,
                              const SBFileSpecList &comp_unit_list);
 
     lldb::SBBreakpoint
     BreakpointCreateByRegex (const char *symbol_name_regex, const char *module_name = NULL);
-
-    lldb::SBBreakpoint
-    BreakpointCreateByRegex (const char *symbol_name_regex,
-                             lldb::LanguageType symbol_language,
-                             const SBFileSpecList &module_list, 
-                             const SBFileSpecList &comp_unit_list);
 
     lldb::SBBreakpoint
     BreakpointCreateBySourceRegex (const char *source_regex, const lldb::SBFileSpec &source_file, const char *module_name = NULL);
@@ -638,9 +617,6 @@ public:
 
     lldb::SBBreakpoint
     BreakpointCreateByAddress (addr_t address);
-
-    lldb::SBBreakpoint
-    BreakpointCreateBySBAddress (SBAddress &sb_address);
 
     uint32_t
     GetNumBreakpoints () const;
@@ -695,24 +671,6 @@ public:
     lldb::SBBroadcaster
     GetBroadcaster () const;
               
-     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// Create an SBValue with the given name by treating the memory starting at addr as an entity of type.
-    ///
-    /// @param[in] name
-    ///     The name of the resultant SBValue
-    ///
-    /// @param[in] addr
-    ///     The address of the start of the memory region to be used.
-    ///
-    /// @param[in] type
-    ///     The type to use to interpret the memory starting at addr.
-    ///
-    /// @return
-    ///     An SBValue of the given type, may be invalid if there was an error reading
-    ///     the underlying memory.
-    //------------------------------------------------------------------
-    ") CreateValueFromAddress;
     lldb::SBValue
     CreateValueFromAddress (const char *name, lldb::SBAddress addr, lldb::SBType type);
 

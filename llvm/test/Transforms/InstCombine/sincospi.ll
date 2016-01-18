@@ -90,12 +90,3 @@ define double @test_constant_f64() {
 ; CHECK-NO-SINCOS: call double @__sinpi
 ; CHECK-NO-SINCOS: call double @__cospi
 }
-
-define double @test_fptr(double (double)* %fptr, double %p1) {
-       %sin = call double @__sinpi(double %p1) #0
-       %cos = call double %fptr(double %p1)
-       %res = fadd double %sin, %cos
-       ret double %res
-; CHECK-LABEL: @test_fptr
-; CHECK: __sinpi
-}

@@ -1169,6 +1169,8 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
   if (!HaveLoad)
     return false;
 
+  const DataLayout &DL = PN.getModule()->getDataLayout();
+
   // We can only transform this if it is safe to push the loads into the
   // predecessor blocks. The only thing to watch out for is that we can't put
   // a possibly trapping load in the predecessor if it is a critical edge.
@@ -1190,7 +1192,8 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // If this pointer is always safe to load, or if we can prove that there
     // is already a load in the block, then we can move the load to the pred
     // block.
-    if (isSafeToLoadUnconditionally(InVal, MaxAlign, TI))
+    if (isDereferenceablePointer(InVal, DL) ||
+        isSafeToLoadUnconditionally(InVal, TI, MaxAlign))
       continue;
 
     return false;
@@ -1258,6 +1261,9 @@ static void speculatePHINodeLoads(PHINode &PN) {
 static bool isSafeSelectToSpeculate(SelectInst &SI) {
   Value *TValue = SI.getTrueValue();
   Value *FValue = SI.getFalseValue();
+  const DataLayout &DL = SI.getModule()->getDataLayout();
+  bool TDerefable = isDereferenceablePointer(TValue, DL);
+  bool FDerefable = isDereferenceablePointer(FValue, DL);
 
   for (User *U : SI.users()) {
     LoadInst *LI = dyn_cast<LoadInst>(U);
@@ -1267,9 +1273,11 @@ static bool isSafeSelectToSpeculate(SelectInst &SI) {
     // Both operands to the select need to be dereferencable, either
     // absolutely (e.g. allocas) or at this point because we can see other
     // accesses to it.
-    if (!isSafeToLoadUnconditionally(TValue, LI->getAlignment(), LI))
+    if (!TDerefable &&
+        !isSafeToLoadUnconditionally(TValue, LI, LI->getAlignment()))
       return false;
-    if (!isSafeToLoadUnconditionally(FValue, LI->getAlignment(), LI))
+    if (!FDerefable &&
+        !isSafeToLoadUnconditionally(FValue, LI, LI->getAlignment()))
       return false;
   }
 
@@ -4015,13 +4023,14 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   if (DbgDeclareInst *DbgDecl = FindAllocaDbgDeclare(&AI)) {
     auto *Var = DbgDecl->getVariable();
     auto *Expr = DbgDecl->getExpression();
-    DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
-    uint64_t AllocaSize = DL.getTypeSizeInBits(AI.getAllocatedType());
+    DIBuilder DIB(*AI.getParent()->getParent()->getParent(),
+                  /*AllowUnresolved*/ false);
+    bool IsSplit = Pieces.size() > 1;
     for (auto Piece : Pieces) {
       // Create a piece expression describing the new partition or reuse AI's
       // expression if there is only one partition.
       auto *PieceExpr = Expr;
-      if (Piece.Size < AllocaSize || Expr->isBitPiece()) {
+      if (IsSplit || Expr->isBitPiece()) {
         // If this alloca is already a scalar replacement of a larger aggregate,
         // Piece.Offset describes the offset inside the scalar.
         uint64_t Offset = Expr->isBitPiece() ? Expr->getBitPieceOffset() : 0;
@@ -4035,9 +4044,6 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
           Size = std::min(Size, AbsEnd - Start);
         }
         PieceExpr = DIB.createBitPieceExpression(Start, Size);
-      } else {
-        assert(Pieces.size() == 1 &&
-               "partition is as large as original alloca");
       }
 
       // Remove any existing dbg.declare intrinsic describing the same alloca.

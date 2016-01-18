@@ -4781,11 +4781,7 @@ EmulateInstructionARM::EmulateSTRThumb (const uint32_t opcode, const ARMEncoding
             address = base_address;
                   
         EmulateInstruction::Context context;
-        if (n == 13)
-            context.type = eContextPushRegisterOnStack;
-        else
-            context.type = eContextRegisterStore;
-
+        context.type = eContextRegisterStore;
         RegisterInfo base_reg;
         GetRegisterInfo (eRegisterKindDWARF, dwarf_r0 + n, base_reg);
                   
@@ -4813,12 +4809,8 @@ EmulateInstructionARM::EmulateSTRThumb (const uint32_t opcode, const ARMEncoding
         // if wback then R[n] = offset_addr;
         if (wback)
         {
-            if (n == 13)
-                context.type = eContextAdjustStackPointer;
-            else
-                context.type = eContextAdjustBaseRegister;
+            context.type = eContextRegisterLoad;
             context.SetAddress (offset_addr);
-
             if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_r0 + n, offset_addr))
                 return false;
         }
@@ -10623,12 +10615,9 @@ EmulateInstructionARM::EmulateSTRDImm (const uint32_t opcode, const ARMEncoding 
         //if wback then R[n] = offset_addr;
         if (wback)
         {
-            if (n == 13)
-                context.type = eContextAdjustStackPointer;
-            else
-                context.type = eContextAdjustBaseRegister;
+            context.type = eContextAdjustBaseRegister;
             context.SetAddress (offset_addr);
-
+                  
             if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_r0 + n, offset_addr))
                 return false;
         }

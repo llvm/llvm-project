@@ -1,1 +1,0 @@
-module M { module E { header "empty.h" } module D { header "decls.h" } }

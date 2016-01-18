@@ -188,28 +188,27 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
 
   static const TypeConversionCostTblEntry
   ConversionTbl[] = {
-    { ISD::TRUNCATE, MVT::v4i16, MVT::v4i32,  1 },
-    { ISD::TRUNCATE, MVT::v4i32, MVT::v4i64,  0 },
-    { ISD::TRUNCATE, MVT::v8i8,  MVT::v8i32,  3 },
-    { ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 6 },
+    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 0 },
+    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 0 },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i32, 1 },
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i32, 1 },
+    { ISD::TRUNCATE,    MVT::v4i32, MVT::v4i64, 0 },
+    { ISD::TRUNCATE,    MVT::v4i16, MVT::v4i32, 1 },
 
     // The number of shll instructions for the extension.
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32, 2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32, 2 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,  3 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,  3 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16, 2 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16, 2 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i8,  7 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i8,  7 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i16, 6 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i16, 6 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 2 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 2 },
+    { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i16, 3 },
+    { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i16, 3 },
+    { ISD::SIGN_EXTEND, MVT::v8i32, MVT::v8i8, 3 },
+    { ISD::ZERO_EXTEND, MVT::v8i32, MVT::v8i8, 3 },
+    { ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i8, 7 },
+    { ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i8, 7 },
+    { ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i16, 6 },
+    { ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i16, 6 },
     { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6 },
     { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6 },
+
+    { ISD::TRUNCATE,    MVT::v16i8, MVT::v16i32, 6 },
+    { ISD::TRUNCATE,    MVT::v8i8, MVT::v8i32, 3 },
 
     // LowerVectorINT_TO_FP:
     { ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1 },
@@ -448,7 +447,7 @@ int AArch64TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   if (Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     unsigned NumElts = VecTy->getVectorNumElements();
     Type *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
-    unsigned SubVecSize = DL.getTypeSizeInBits(SubVecTy);
+    unsigned SubVecSize = DL.getTypeAllocSizeInBits(SubVecTy);
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize == 128))
@@ -538,7 +537,7 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_ld4:
     Info.ReadMem = true;
     Info.WriteMem = false;
-    Info.IsSimple = true;
+    Info.Vol = false;
     Info.NumMemRefs = 1;
     Info.PtrVal = Inst->getArgOperand(0);
     break;
@@ -547,7 +546,7 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_st4:
     Info.ReadMem = false;
     Info.WriteMem = true;
-    Info.IsSimple = true;
+    Info.Vol = false;
     Info.NumMemRefs = 1;
     Info.PtrVal = Inst->getArgOperand(Inst->getNumArgOperands() - 1);
     break;

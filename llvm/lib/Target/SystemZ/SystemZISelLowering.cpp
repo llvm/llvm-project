@@ -114,6 +114,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
   // Set up special registers.
+  setExceptionPointerRegister(SystemZ::R6D);
+  setExceptionSelectorRegister(SystemZ::R7D);
   setStackPointerRegisterToSaveRestore(SystemZ::R15D);
 
   // TODO: It may be better to default to latency-oriented scheduling, however
@@ -775,7 +777,9 @@ bool SystemZTargetLowering::allowTruncateForTailCall(Type *FromType,
 }
 
 bool SystemZTargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
-  return CI->isTailCall();
+  if (!CI->isTailCall())
+    return false;
+  return true;
 }
 
 // We do not yet support 128-bit single-element vector types.  If the user
@@ -1603,8 +1607,8 @@ static void adjustSubwordCmp(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
   } else if (Load->getExtensionType() == ISD::ZEXTLOAD) {
     if (Value > Mask)
       return;
-    // If the constant is in range, we can use any comparison.
-    C.ICmpType = SystemZICMP::Any;
+    assert(C.ICmpType == SystemZICMP::Any &&
+           "Signedness shouldn't matter here.");
   } else
     return;
 
@@ -2739,37 +2743,17 @@ SDValue SystemZTargetLowering::lowerVACOPY(SDValue Op,
 
 SDValue SystemZTargetLowering::
 lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
-  const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-  bool RealignOpt = !DAG.getMachineFunction().getFunction()->
-    hasFnAttribute("no-realign-stack");
-
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
-  SDValue Align = Op.getOperand(2);
   SDLoc DL(Op);
 
-  // If user has set the no alignment function attribute, ignore
-  // alloca alignments.
-  uint64_t AlignVal = (RealignOpt ?
-                       dyn_cast<ConstantSDNode>(Align)->getZExtValue() : 0);
-
-  uint64_t StackAlign = TFI->getStackAlignment();
-  uint64_t RequiredAlign = std::max(AlignVal, StackAlign);
-  uint64_t ExtraAlignSpace = RequiredAlign - StackAlign;
-
   unsigned SPReg = getStackPointerRegisterToSaveRestore();
-  SDValue NeededSpace = Size;
 
   // Get a reference to the stack pointer.
   SDValue OldSP = DAG.getCopyFromReg(Chain, DL, SPReg, MVT::i64);
 
-  // Add extra space for alignment if needed.
-  if (ExtraAlignSpace)
-    NeededSpace = DAG.getNode(ISD::ADD, DL, MVT::i64, NeededSpace,
-                              DAG.getConstant(ExtraAlignSpace, DL, MVT::i64)); 
-
   // Get the new stack pointer value.
-  SDValue NewSP = DAG.getNode(ISD::SUB, DL, MVT::i64, OldSP, NeededSpace);
+  SDValue NewSP = DAG.getNode(ISD::SUB, DL, MVT::i64, OldSP, Size);
 
   // Copy the new stack pointer back.
   Chain = DAG.getCopyToReg(Chain, DL, SPReg, NewSP);
@@ -2779,16 +2763,6 @@ lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
   // amounts to yet, so emit a special ADJDYNALLOC placeholder.
   SDValue ArgAdjust = DAG.getNode(SystemZISD::ADJDYNALLOC, DL, MVT::i64);
   SDValue Result = DAG.getNode(ISD::ADD, DL, MVT::i64, NewSP, ArgAdjust);
-
-  // Dynamically realign if needed.
-  if (RequiredAlign > StackAlign) {
-    Result =
-      DAG.getNode(ISD::ADD, DL, MVT::i64, Result,
-                  DAG.getConstant(ExtraAlignSpace, DL, MVT::i64));
-    Result =
-      DAG.getNode(ISD::AND, DL, MVT::i64, Result,
-                  DAG.getConstant(~(RequiredAlign - 1), DL, MVT::i64));
-  }
 
   SDValue Ops[2] = { Result, Chain };
   return DAG.getMergeValues(Ops, DL);

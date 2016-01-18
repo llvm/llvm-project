@@ -72,7 +72,6 @@ lldb_private::InferiorCallMmap (Process *process,
             options.SetTryAllThreads(true);
             options.SetDebug (false);
             options.SetTimeoutUsec(500000);
-            options.SetTrapExceptions(false);
 
             addr_t prot_arg, flags_arg = 0;
             if (prot == eMmapProtNone)
@@ -173,7 +172,6 @@ lldb_private::InferiorCallMunmap (Process *process,
             options.SetTryAllThreads(true);
             options.SetDebug (false);
             options.SetTimeoutUsec(500000);
-            options.SetTrapExceptions(false);
            
             AddressRange munmap_range;
             if (sc.GetAddressRange(range_scope, 0, use_inline_block_range, munmap_range))
@@ -216,8 +214,7 @@ lldb_private::InferiorCallMunmap (Process *process,
 bool
 lldb_private::InferiorCall (Process *process,
                             const Address *address,
-                            addr_t &returned_func,
-                            bool trap_exceptions)
+                            addr_t &returned_func)
 {
     Thread *thread = process->GetThreadList().GetSelectedThread().get();
     if (thread == NULL || address == NULL)
@@ -230,7 +227,6 @@ lldb_private::InferiorCall (Process *process,
     options.SetTryAllThreads(true);
     options.SetDebug (false);
     options.SetTimeoutUsec(500000);
-    options.SetTrapExceptions(trap_exceptions);
 
     ClangASTContext *clang_ast_context = process->GetTarget().GetScratchClangASTContext();
     CompilerType clang_void_ptr_type = clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();

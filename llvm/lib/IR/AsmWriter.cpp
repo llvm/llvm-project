@@ -39,7 +39,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -103,9 +102,17 @@ static OrderMap orderModule(const Module *M) {
     orderValue(&A, OM);
   }
   for (const Function &F : *M) {
-    for (const Use &U : F.operands())
-      if (!isa<GlobalValue>(U.get()))
-        orderValue(U.get(), OM);
+    if (F.hasPrefixData())
+      if (!isa<GlobalValue>(F.getPrefixData()))
+        orderValue(F.getPrefixData(), OM);
+
+    if (F.hasPrologueData())
+      if (!isa<GlobalValue>(F.getPrologueData()))
+        orderValue(F.getPrologueData(), OM);
+
+    if (F.hasPersonalityFn())
+      if (!isa<GlobalValue>(F.getPersonalityFn()))
+        orderValue(F.getPersonalityFn(), OM);
 
     orderValue(&F, OM);
 
@@ -255,8 +262,8 @@ static UseListOrderStack predictUseListOrder(const Module *M) {
   for (const GlobalAlias &A : M->aliases())
     predictValueUseListOrder(A.getAliasee(), nullptr, OM, Stack);
   for (const Function &F : *M)
-    for (const Use &U : F.operands())
-      predictValueUseListOrder(U.get(), nullptr, OM, Stack);
+    if (F.hasPrefixData())
+      predictValueUseListOrder(F.getPrefixData(), nullptr, OM, Stack);
 
   return Stack;
 }
@@ -296,7 +303,6 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AnyReg:        Out << "anyregcc"; break;
   case CallingConv::PreserveMost:  Out << "preserve_mostcc"; break;
   case CallingConv::PreserveAll:   Out << "preserve_allcc"; break;
-  case CallingConv::CXX_FAST_TLS:  Out << "cxx_fast_tlscc"; break;
   case CallingConv::GHC:           Out << "ghccc"; break;
   case CallingConv::X86_StdCall:   Out << "x86_stdcallcc"; break;
   case CallingConv::X86_FastCall:  Out << "x86_fastcallcc"; break;
@@ -313,7 +319,6 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::X86_64_Win64:  Out << "x86_64_win64cc"; break;
   case CallingConv::SPIR_FUNC:     Out << "spir_func"; break;
   case CallingConv::SPIR_KERNEL:   Out << "spir_kernel"; break;
-  case CallingConv::X86_INTR:      Out << "x86_intrcc"; break;
   case CallingConv::HHVM:          Out << "hhvmcc"; break;
   case CallingConv::HHVM_C:        Out << "hhvm_ccc"; break;
   }
@@ -1103,10 +1108,11 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
       // the value back and get the same value.
       //
       bool ignored;
+      bool isHalf = &CFP->getValueAPF().getSemantics()==&APFloat::IEEEhalf;
       bool isDouble = &CFP->getValueAPF().getSemantics()==&APFloat::IEEEdouble;
       bool isInf = CFP->getValueAPF().isInfinity();
       bool isNaN = CFP->getValueAPF().isNaN();
-      if (!isInf && !isNaN) {
+      if (!isHalf && !isInf && !isNaN) {
         double Val = isDouble ? CFP->getValueAPF().convertToDouble() :
                                 CFP->getValueAPF().convertToFloat();
         SmallString<128> StrVal;
@@ -1132,12 +1138,15 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
       // x86, so we must not use these types.
       static_assert(sizeof(double) == sizeof(uint64_t),
                     "assuming that double is 64 bits!");
+      char Buffer[40];
       APFloat apf = CFP->getValueAPF();
-      // Floats are represented in ASCII IR as double, convert.
+      // Halves and floats are represented in ASCII IR as double, convert.
       if (!isDouble)
         apf.convert(APFloat::IEEEdouble, APFloat::rmNearestTiesToEven,
                           &ignored);
-      Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
+      Out << "0x" <<
+              utohex_buffer(uint64_t(apf.bitcastToAPInt().getZExtValue()),
+                            Buffer+40);
       return;
     }
 
@@ -1145,32 +1154,60 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     // These appear as a magic letter identifying the type, then a
     // fixed number of hex digits.
     Out << "0x";
-    APInt API = CFP->getValueAPF().bitcastToAPInt();
+    // Bit position, in the current word, of the next nibble to print.
+    int shiftcount;
+
     if (&CFP->getValueAPF().getSemantics() == &APFloat::x87DoubleExtended) {
       Out << 'K';
-      Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
+      // api needed to prevent premature destruction
+      APInt api = CFP->getValueAPF().bitcastToAPInt();
+      const uint64_t* p = api.getRawData();
+      uint64_t word = p[1];
+      shiftcount = 12;
+      int width = api.getBitWidth();
+      for (int j=0; j<width; j+=4, shiftcount-=4) {
+        unsigned int nibble = (word>>shiftcount) & 15;
+        if (nibble < 10)
+          Out << (unsigned char)(nibble + '0');
+        else
+          Out << (unsigned char)(nibble - 10 + 'A');
+        if (shiftcount == 0 && j+4 < width) {
+          word = *p;
+          shiftcount = 64;
+          if (width-j-4 < 64)
+            shiftcount = width-j-4;
+        }
+      }
       return;
     } else if (&CFP->getValueAPF().getSemantics() == &APFloat::IEEEquad) {
+      shiftcount = 60;
       Out << 'L';
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
     } else if (&CFP->getValueAPF().getSemantics() == &APFloat::PPCDoubleDouble) {
+      shiftcount = 60;
       Out << 'M';
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
     } else if (&CFP->getValueAPF().getSemantics() == &APFloat::IEEEhalf) {
+      shiftcount = 12;
       Out << 'H';
-      Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                  /*Upper=*/true);
     } else
       llvm_unreachable("Unsupported floating point type");
+    // api needed to prevent premature destruction
+    APInt api = CFP->getValueAPF().bitcastToAPInt();
+    const uint64_t* p = api.getRawData();
+    uint64_t word = *p;
+    int width = api.getBitWidth();
+    for (int j=0; j<width; j+=4, shiftcount-=4) {
+      unsigned int nibble = (word>>shiftcount) & 15;
+      if (nibble < 10)
+        Out << (unsigned char)(nibble + '0');
+      else
+        Out << (unsigned char)(nibble - 10 + 'A');
+      if (shiftcount == 0 && j+4 < width) {
+        word = *(++p);
+        shiftcount = 64;
+        if (width-j-4 < 64)
+          shiftcount = width-j-4;
+      }
+    }
     return;
   }
 
@@ -1291,11 +1328,6 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
-  if (isa<ConstantTokenNone>(CV)) {
-    Out << "none";
-    return;
-  }
-
   if (isa<UndefValue>(CV)) {
     Out << "undef";
     return;
@@ -1389,7 +1421,6 @@ struct MDFieldPrinter {
       : Out(Out), TypePrinter(TypePrinter), Machine(Machine), Context(Context) {
   }
   void printTag(const DINode *N);
-  void printMacinfoType(const DIMacroNode *N);
   void printString(StringRef Name, StringRef Value,
                    bool ShouldSkipEmpty = true);
   void printMetadata(StringRef Name, const Metadata *MD,
@@ -1410,14 +1441,6 @@ void MDFieldPrinter::printTag(const DINode *N) {
     Out << Tag;
   else
     Out << N->getTag();
-}
-
-void MDFieldPrinter::printMacinfoType(const DIMacroNode *N) {
-  Out << FS << "type: ";
-  if (const char *Type = dwarf::MacinfoString(N->getMacinfoType()))
-    Out << Type;
-  else
-    Out << N->getMacinfoType();
 }
 
 void MDFieldPrinter::printString(StringRef Name, StringRef Value,
@@ -1645,7 +1668,6 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printMetadata("subprograms", N->getRawSubprograms());
   Printer.printMetadata("globals", N->getRawGlobalVariables());
   Printer.printMetadata("imports", N->getRawImportedEntities());
-  Printer.printMetadata("macros", N->getRawMacros());
   Printer.printInt("dwoId", N->getDWOId());
   Out << ")";
 }
@@ -1711,29 +1733,6 @@ static void writeDINamespace(raw_ostream &Out, const DINamespace *N,
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
-  Out << ")";
-}
-
-static void writeDIMacro(raw_ostream &Out, const DIMacro *N,
-                         TypePrinting *TypePrinter, SlotTracker *Machine,
-                         const Module *Context) {
-  Out << "!DIMacro(";
-  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
-  Printer.printMacinfoType(N);
-  Printer.printInt("line", N->getLine());
-  Printer.printString("name", N->getName());
-  Printer.printString("value", N->getValue());
-  Out << ")";
-}
-
-static void writeDIMacroFile(raw_ostream &Out, const DIMacroFile *N,
-                             TypePrinting *TypePrinter, SlotTracker *Machine,
-                             const Module *Context) {
-  Out << "!DIMacroFile(";
-  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
-  Printer.printInt("line", N->getLine());
-  Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
-  Printer.printMetadata("nodes", N->getRawElements());
   Out << ")";
 }
 
@@ -2060,7 +2059,7 @@ private:
 
   // printGCRelocateComment - print comment after call to the gc.relocate
   // intrinsic indicating base and derived pointer names.
-  void printGCRelocateComment(const GCRelocateInst &Relocate);
+  void printGCRelocateComment(const Value &V);
 };
 } // namespace
 
@@ -2170,14 +2169,14 @@ void AssemblyWriter::writeOperandBundles(ImmutableCallSite CS) {
 
   bool FirstBundle = true;
   for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i) {
-    OperandBundleUse BU = CS.getOperandBundleAt(i);
+    OperandBundleUse BU = CS.getOperandBundle(i);
 
     if (!FirstBundle)
       Out << ", ";
     FirstBundle = false;
 
     Out << '"';
-    PrintEscapedString(BU.getTagName(), Out);
+    PrintEscapedString(BU.Tag, Out);
     Out << '"';
 
     Out << '(';
@@ -2416,7 +2415,7 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
     Out << "addrspace(" << AddressSpace << ") ";
   if (GV->isExternallyInitialized()) Out << "externally_initialized ";
   Out << (GV->isConstant() ? "constant " : "global ");
-  TypePrinter.print(GV->getValueType(), Out);
+  TypePrinter.print(GV->getType()->getElementType(), Out);
 
   if (GV->hasInitializer()) {
     Out << ' ';
@@ -2722,11 +2721,14 @@ void AssemblyWriter::printInstructionLine(const Instruction &I) {
 
 /// printGCRelocateComment - print comment after call to the gc.relocate
 /// intrinsic indicating base and derived pointer names.
-void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
+void AssemblyWriter::printGCRelocateComment(const Value &V) {
+  assert(isGCRelocate(&V));
+  GCRelocateOperands GCOps(cast<Instruction>(&V));
+
   Out << " ; (";
-  writeOperand(Relocate.getBasePtr(), false);
+  writeOperand(GCOps.getBasePtr(), false);
   Out << ", ";
-  writeOperand(Relocate.getDerivedPtr(), false);
+  writeOperand(GCOps.getDerivedPtr(), false);
   Out << ")";
 }
 
@@ -2734,8 +2736,8 @@ void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
 /// which slot it occupies.
 ///
 void AssemblyWriter::printInfoComment(const Value &V) {
-  if (const auto *Relocate = dyn_cast<GCRelocateInst>(&V))
-    printGCRelocateComment(*Relocate);
+  if (isGCRelocate(&V))
+    printGCRelocateComment(V);
 
   if (AnnotationWriter)
     AnnotationWriter->printInfoComment(V, Out);
@@ -2766,8 +2768,6 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << "musttail ";
     else if (CI->isTailCall())
       Out << "tail ";
-    else if (CI->isNoTailCall())
-      Out << "notail ";
   }
 
   // Print out the opcode...
@@ -2880,48 +2880,69 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
       writeOperand(LPI->getClause(i), true);
     }
-  } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(&I)) {
-    Out << " within ";
-    writeOperand(CatchSwitch->getParentPad(), /*PrintType=*/false);
+  } else if (const auto *CPI = dyn_cast<CatchPadInst>(&I)) {
     Out << " [";
-    unsigned Op = 0;
-    for (const BasicBlock *PadBB : CatchSwitch->handlers()) {
-      if (Op > 0)
-        Out << ", ";
-      writeOperand(PadBB, /*PrintType=*/true);
-      ++Op;
-    }
-    Out << "] unwind ";
-    if (const BasicBlock *UnwindDest = CatchSwitch->getUnwindDest())
-      writeOperand(UnwindDest, /*PrintType=*/true);
-    else
-      Out << "to caller";
-  } else if (const auto *FPI = dyn_cast<FuncletPadInst>(&I)) {
-    Out << " within ";
-    writeOperand(FPI->getParentPad(), /*PrintType=*/false);
-    Out << " [";
-    for (unsigned Op = 0, NumOps = FPI->getNumArgOperands(); Op < NumOps;
+    for (unsigned Op = 0, NumOps = CPI->getNumArgOperands(); Op < NumOps;
          ++Op) {
       if (Op > 0)
         Out << ", ";
-      writeOperand(FPI->getArgOperand(Op), /*PrintType=*/true);
+      writeOperand(CPI->getArgOperand(Op), /*PrintType=*/true);
     }
-    Out << ']';
+    Out << "]\n          to ";
+    writeOperand(CPI->getNormalDest(), /*PrintType=*/true);
+    Out << " unwind ";
+    writeOperand(CPI->getUnwindDest(), /*PrintType=*/true);
+  } else if (const auto *TPI = dyn_cast<TerminatePadInst>(&I)) {
+    Out << " [";
+    for (unsigned Op = 0, NumOps = TPI->getNumArgOperands(); Op < NumOps;
+         ++Op) {
+      if (Op > 0)
+        Out << ", ";
+      writeOperand(TPI->getArgOperand(Op), /*PrintType=*/true);
+    }
+    Out << "] unwind ";
+    if (TPI->hasUnwindDest())
+      writeOperand(TPI->getUnwindDest(), /*PrintType=*/true);
+    else
+      Out << "to caller";
+  } else if (const auto *CPI = dyn_cast<CleanupPadInst>(&I)) {
+    Out << " [";
+    for (unsigned Op = 0, NumOps = CPI->getNumOperands(); Op < NumOps; ++Op) {
+      if (Op > 0)
+        Out << ", ";
+      writeOperand(CPI->getOperand(Op), /*PrintType=*/true);
+    }
+    Out << "]";
   } else if (isa<ReturnInst>(I) && !Operand) {
     Out << " void";
   } else if (const auto *CRI = dyn_cast<CatchReturnInst>(&I)) {
-    Out << " from ";
-    writeOperand(CRI->getOperand(0), /*PrintType=*/false);
+    Out << ' ';
+    writeOperand(CRI->getCatchPad(), /*PrintType=*/false);
 
     Out << " to ";
-    writeOperand(CRI->getOperand(1), /*PrintType=*/true);
+    writeOperand(CRI->getSuccessor(), /*PrintType=*/true);
   } else if (const auto *CRI = dyn_cast<CleanupReturnInst>(&I)) {
-    Out << " from ";
-    writeOperand(CRI->getOperand(0), /*PrintType=*/false);
+    Out << ' ';
+    writeOperand(CRI->getCleanupPad(), /*PrintType=*/false);
 
     Out << " unwind ";
     if (CRI->hasUnwindDest())
-      writeOperand(CRI->getOperand(1), /*PrintType=*/true);
+      writeOperand(CRI->getUnwindDest(), /*PrintType=*/true);
+    else
+      Out << "to caller";
+  } else if (const auto *CEPI = dyn_cast<CatchEndPadInst>(&I)) {
+    Out << " unwind ";
+    if (CEPI->hasUnwindDest())
+      writeOperand(CEPI->getUnwindDest(), /*PrintType=*/true);
+    else
+      Out << "to caller";
+  } else if (const auto *CEPI = dyn_cast<CleanupEndPadInst>(&I)) {
+    Out << ' ';
+    writeOperand(CEPI->getCleanupPad(), /*PrintType=*/false);
+
+    Out << " unwind ";
+    if (CEPI->hasUnwindDest())
+      writeOperand(CEPI->getUnwindDest(), /*PrintType=*/true);
     else
       Out << "to caller";
   } else if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
@@ -3121,7 +3142,7 @@ void AssemblyWriter::printMetadataAttachments(
     return;
 
   if (MDNames.empty())
-    MDs[0].second->getContext().getMDKindNames(MDNames);
+    TheModule->getMDKindNames(MDNames);
 
   for (const auto &I : MDs) {
     unsigned Kind = I.first;

@@ -651,18 +651,8 @@ void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {
-  OS << "schedule(";
-  if (Node->getFirstScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown) {
-    OS << getOpenMPSimpleClauseTypeName(OMPC_schedule,
-                                        Node->getFirstScheduleModifier());
-    if (Node->getSecondScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown) {
-      OS << ", ";
-      OS << getOpenMPSimpleClauseTypeName(OMPC_schedule,
-                                          Node->getSecondScheduleModifier());
-    }
-    OS << ": ";
-  }
-  OS << getOpenMPSimpleClauseTypeName(OMPC_schedule, Node->getScheduleKind());
+  OS << "schedule("
+     << getOpenMPSimpleClauseTypeName(OMPC_schedule, Node->getScheduleKind());
   if (Node->getChunkSize()) {
     OS << ", ";
     Node->getChunkSize()->printPretty(OS, nullptr, Policy);
@@ -685,10 +675,6 @@ void OMPClausePrinter::VisitOMPNowaitClause(OMPNowaitClause *) {
 
 void OMPClausePrinter::VisitOMPUntiedClause(OMPUntiedClause *) {
   OS << "untied";
-}
-
-void OMPClausePrinter::VisitOMPNogroupClause(OMPNogroupClause *) {
-  OS << "nogroup";
 }
 
 void OMPClausePrinter::VisitOMPMergeableClause(OMPMergeableClause *) {
@@ -720,42 +706,6 @@ void OMPClausePrinter::VisitOMPSIMDClause(OMPSIMDClause *) { OS << "simd"; }
 void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
   OS << "device(";
   Node->getDevice()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
-}
-
-void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
-  OS << "num_teams(";
-  Node->getNumTeams()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
-}
-
-void OMPClausePrinter::VisitOMPThreadLimitClause(OMPThreadLimitClause *Node) {
-  OS << "thread_limit(";
-  Node->getThreadLimit()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
-}
-
-void OMPClausePrinter::VisitOMPPriorityClause(OMPPriorityClause *Node) {
-  OS << "priority(";
-  Node->getPriority()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
-}
-
-void OMPClausePrinter::VisitOMPGrainsizeClause(OMPGrainsizeClause *Node) {
-  OS << "grainsize(";
-  Node->getGrainsize()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
-}
-
-void OMPClausePrinter::VisitOMPNumTasksClause(OMPNumTasksClause *Node) {
-  OS << "num_tasks(";
-  Node->getNumTasks()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
-}
-
-void OMPClausePrinter::VisitOMPHintClause(OMPHintClause *Node) {
-  OS << "hint(";
-  Node->getHint()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }
 
@@ -883,41 +833,14 @@ void OMPClausePrinter::VisitOMPFlushClause(OMPFlushClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPDependClause(OMPDependClause *Node) {
-  OS << "depend(";
-  OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
-                                      Node->getDependencyKind());
   if (!Node->varlist_empty()) {
-    OS << " :";
-    VisitOMPClauseList(Node, ' ');
-  }
-  OS << ")";
-}
-
-void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
-  if (!Node->varlist_empty()) {
-    OS << "map(";
-    if (Node->getMapType() != OMPC_MAP_unknown) {
-      if (Node->getMapTypeModifier() != OMPC_MAP_unknown) {
-        OS << getOpenMPSimpleClauseTypeName(OMPC_map, 
-                                            Node->getMapTypeModifier());
-        OS << ',';
-      }
-      OS << getOpenMPSimpleClauseTypeName(OMPC_map, Node->getMapType());
-      OS << ':';
-    }
+    OS << "depend(";
+    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                        Node->getDependencyKind())
+       << " :";
     VisitOMPClauseList(Node, ' ');
     OS << ")";
   }
-}
-
-void OMPClausePrinter::VisitOMPDistScheduleClause(OMPDistScheduleClause *Node) {
-  OS << "dist_schedule(" << getOpenMPSimpleClauseTypeName(
-                           OMPC_dist_schedule, Node->getDistScheduleKind());
-  if (Node->getChunkSize()) {
-    OS << ", ";
-    Node->getChunkSize()->printPretty(OS, nullptr, Policy);
-  }
-  OS << ")";
 }
 }
 
@@ -990,7 +913,6 @@ void StmtPrinter::VisitOMPCriticalDirective(OMPCriticalDirective *Node) {
     Node->getDirectiveName().printName(OS);
     OS << ")";
   }
-  OS << " ";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1078,23 +1000,6 @@ void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
            << getOpenMPDirectiveName(Node->getCancelRegion()) << " ";
   PrintOMPExecutableDirective(Node);
 }
-
-void StmtPrinter::VisitOMPTaskLoopDirective(OMPTaskLoopDirective *Node) {
-  Indent() << "#pragma omp taskloop ";
-  PrintOMPExecutableDirective(Node);
-}
-
-void StmtPrinter::VisitOMPTaskLoopSimdDirective(
-    OMPTaskLoopSimdDirective *Node) {
-  Indent() << "#pragma omp taskloop simd ";
-  PrintOMPExecutableDirective(Node);
-}
-
-void StmtPrinter::VisitOMPDistributeDirective(OMPDistributeDirective *Node) {
-  Indent() << "#pragma omp distribute ";
-  PrintOMPExecutableDirective(Node);
-}
-
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
@@ -1175,7 +1080,6 @@ void StmtPrinter::VisitCharacterLiteral(CharacterLiteral *Node) {
   switch (Node->getKind()) {
   case CharacterLiteral::Ascii: break; // no prefix.
   case CharacterLiteral::Wide:  OS << 'L'; break;
-  case CharacterLiteral::UTF8:  OS << "u8"; break;
   case CharacterLiteral::UTF16: OS << 'u'; break;
   case CharacterLiteral::UTF32: OS << 'U'; break;
   }
@@ -1316,8 +1220,8 @@ void StmtPrinter::VisitOffsetOfExpr(OffsetOfExpr *Node) {
   OS << ", ";
   bool PrintedSomething = false;
   for (unsigned i = 0, n = Node->getNumComponents(); i < n; ++i) {
-    OffsetOfNode ON = Node->getComponent(i);
-    if (ON.getKind() == OffsetOfNode::Array) {
+    OffsetOfExpr::OffsetOfNode ON = Node->getComponent(i);
+    if (ON.getKind() == OffsetOfExpr::OffsetOfNode::Array) {
       // Array node
       OS << "[";
       PrintExpr(Node->getIndexExpr(ON.getArrayExprIndex()));
@@ -1327,7 +1231,7 @@ void StmtPrinter::VisitOffsetOfExpr(OffsetOfExpr *Node) {
     }
 
     // Skip implicit base indirections.
-    if (ON.getKind() == OffsetOfNode::Base)
+    if (ON.getKind() == OffsetOfExpr::OffsetOfNode::Base)
       continue;
 
     // Field or identifier node.
@@ -1809,13 +1713,6 @@ void StmtPrinter::VisitMSPropertyRefExpr(MSPropertyRefExpr *Node) {
       Node->getQualifierLoc().getNestedNameSpecifier())
     Qualifier->print(OS, Policy);
   OS << Node->getPropertyDecl()->getDeclName();
-}
-
-void StmtPrinter::VisitMSPropertySubscriptExpr(MSPropertySubscriptExpr *Node) {
-  PrintExpr(Node->getBase());
-  OS << "[";
-  PrintExpr(Node->getIdx());
-  OS << "]";
 }
 
 void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {

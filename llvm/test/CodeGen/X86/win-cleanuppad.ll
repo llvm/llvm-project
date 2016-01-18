@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
+; RUN: llc -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
 
 %struct.Dtor = type { i8 }
 
@@ -14,40 +14,10 @@ invoke.cont:                                      ; preds = %entry
   ret void
 
 ehcleanup:                                        ; preds = %entry
-  %0 = cleanuppad within none []
-  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o) #2 [ "funclet"(token %0) ]
-  cleanupret from %0 unwind to caller
+  %0 = cleanuppad []
+  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o) #2
+  cleanupret %0 unwind to caller
 }
-
-; CHECK: simple_cleanup:                         # @simple_cleanup
-; CHECK:         pushq   %rbp
-; CHECK:         subq    $48, %rsp
-; CHECK:         leaq    48(%rsp), %rbp
-; CHECK:         movq    $-2, -8(%rbp)
-; CHECK:         movl    $1, %ecx
-; CHECK:         callq   f
-; CHECK:         callq   "??1Dtor@@QAE@XZ"
-; CHECK:         nop
-; CHECK:         addq    $48, %rsp
-; CHECK:         popq    %rbp
-; CHECK:         retq
-
-; CHECK: "?dtor$2@?0?simple_cleanup@4HA":
-; CHECK:         callq   "??1Dtor@@QAE@XZ"
-; CHECK:         retq
-
-; CHECK: $cppxdata$simple_cleanup:
-; CHECK-NEXT:         .long   429065506
-; CHECK-NEXT:         .long   1
-; CHECK-NEXT:         .long   ($stateUnwindMap$simple_cleanup)@IMGREL
-; CHECK-NEXT:         .long   0
-; CHECK-NEXT:         .long   0
-; CHECK-NEXT:         .long   3
-; CHECK-NEXT:         .long   ($ip2state$simple_cleanup)@IMGREL
-; UnwindHelp offset should match the -2 store above
-; CHECK-NEXT:         .long   40
-; CHECK-NEXT:         .long   0
-; CHECK-NEXT:         .long   1
 
 declare void @f(i32) #0
 
@@ -77,14 +47,14 @@ invoke.cont.2:                                    ; preds = %invoke.cont.1
   ret void
 
 cleanup.inner:                                        ; preds = %invoke.cont
-  %0 = cleanuppad within none []
-  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o2) #2 [ "funclet"(token %0) ]
-  cleanupret from %0 unwind label %cleanup.outer
+  %0 = cleanuppad []
+  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o2) #2
+  cleanupret %0 unwind label %cleanup.outer
 
 cleanup.outer:                                      ; preds = %invoke.cont.1, %cleanup.inner, %entry
-  %1 = cleanuppad within none []
-  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o1) #2 [ "funclet"(token %1) ]
-  cleanupret from %1 unwind to caller
+  %1 = cleanuppad []
+  call x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor* %o1) #2
+  cleanupret %1 unwind to caller
 }
 
 ; X86-LABEL: _nested_cleanup:
@@ -172,7 +142,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   5
 ; X64-NEXT: .long   ($ip2state$nested_cleanup)@IMGREL
-; X64-NEXT: .long   56
+; X64-NEXT: .long   40
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1
 

@@ -205,9 +205,9 @@ following CMakeLists.txt to link it:
 
 ::
 
-    add_clang_executable(find-class-decls FindClassDecls.cpp)
+    set(LLVM_USED_LIBS clangTooling)
 
-    target_link_libraries(find-class-decls clangTooling)
+    add_clang_executable(find-class-decls FindClassDecls.cpp)
 
 When running this tool over a small code snippet it will output all
 declarations of a class n::m::C it found:

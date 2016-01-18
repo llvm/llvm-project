@@ -91,20 +91,6 @@ PlatformRemoteiOS::Terminate ()
 PlatformSP
 PlatformRemoteiOS::CreateInstance (bool force, const ArchSpec *arch)
 {
-    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
-    if (log)
-    {
-        const char *arch_name;
-        if (arch && arch->GetArchitectureName ())
-            arch_name = arch->GetArchitectureName ();
-        else
-            arch_name = "<null>";
-
-        const char *triple_cstr = arch ? arch->GetTriple ().getTriple ().c_str() : "<null>";
-
-        log->Printf ("PlatformRemoteiOS::%s(force=%s, arch={%s,%s})", __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
-    }
-
     bool create = force;
     if (create == false && arch && arch->IsValid())
     {
@@ -163,16 +149,7 @@ PlatformRemoteiOS::CreateInstance (bool force, const ArchSpec *arch)
     }
 
     if (create)
-    {
-        if (log)
-            log->Printf ("PlatformRemoteiOS::%s() creating platform", __FUNCTION__);
-
         return lldb::PlatformSP(new PlatformRemoteiOS ());
-    }
-
-    if (log)
-        log->Printf ("PlatformRemoteiOS::%s() aborting creation of platform", __FUNCTION__);
-
     return lldb::PlatformSP();
 }
 

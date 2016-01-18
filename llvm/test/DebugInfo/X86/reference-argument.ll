@@ -1,18 +1,10 @@
-; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 -filetype=obj -O0 < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=asm %s -o - | FileCheck %s
 ; ModuleID = 'aggregate-indirect-arg.cpp'
 ; extracted from debuginfo-tests/aggregate-indirect-arg.cpp
 
-; v should be a pointer.
-; CHECK:   DW_TAG_subprogram
-; CHECK:     DW_AT_specification {{.*}} "_ZN1A3fooE4SVal"
-; CHECK-NOT: DW_TAG_subprogram
-; CHECK:     DW_TAG_formal_parameter
-; CHECK:       DW_AT_name {{.*}} "this"
-; CHECK-NOT:   DW_TAG_subprogram
-; CHECK:     DW_TAG_formal_parameter
-;                                                    rsi+0
-; CHECK-NEXT:  DW_AT_location [DW_FORM_block1]      (<0x02> 74 00{{ *}})
-; CHECK-NEXT:  DW_AT_name {{.*}} "v"
+; v should not be a pointer.
+; CHECK: ##DEBUG_VALUE: foo:v <- RSI
+; rdar://problem/13658587
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -22,7 +14,6 @@ target triple = "x86_64-apple-macosx10.9.0"
 
 declare void @_Z3barR4SVal(%class.SVal* %v)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 declare i32 @main()
 ; Function Attrs: nounwind ssp uwtable
 define linkonce_odr void @_ZN1A3fooE4SVal(%class.A* %this, %class.SVal* %v) nounwind ssp uwtable align 2 !dbg !35 {
@@ -30,7 +21,7 @@ entry:
   %this.addr = alloca %class.A*, align 8
   store %class.A* %this, %class.A** %this.addr, align 8
   call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !59, metadata !DIExpression()), !dbg !61
-  call void @llvm.dbg.value(metadata %class.SVal* %v, i64 0, metadata !62, metadata !DIExpression(DW_OP_deref)), !dbg !61
+  call void @llvm.dbg.declare(metadata %class.SVal* %v, metadata !62, metadata !DIExpression(DW_OP_deref)), !dbg !61
   %this1 = load %class.A*, %class.A** %this.addr
   call void @_Z3barR4SVal(%class.SVal* %v), !dbg !61
   ret void, !dbg !61

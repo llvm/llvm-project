@@ -76,7 +76,7 @@ bool MipsTargetObjectFile::
 IsGlobalInSmallSection(const GlobalValue *GV, const TargetMachine &TM,
                        SectionKind Kind) const {
   return (IsGlobalInSmallSectionImpl(GV, TM) &&
-          (Kind.isData() || Kind.isBSS() || Kind.isCommon()));
+          (Kind.isDataRel() || Kind.isBSS() || Kind.isCommon()));
 }
 
 /// Return true if this global address should be placed into small data/bss
@@ -106,7 +106,7 @@ IsGlobalInSmallSectionImpl(const GlobalValue *GV,
                        GV->hasCommonLinkage()))
     return false;
 
-  Type *Ty = GV->getValueType();
+  Type *Ty = GV->getType()->getElementType();
   return IsInSmallSection(
       GV->getParent()->getDataLayout().getTypeAllocSize(Ty));
 }
@@ -121,7 +121,7 @@ MipsTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
   // Handle Small Section classification here.
   if (Kind.isBSS() && IsGlobalInSmallSection(GV, TM, Kind))
     return SmallBSSSection;
-  if (Kind.isData() && IsGlobalInSmallSection(GV, TM, Kind))
+  if (Kind.isDataRel() && IsGlobalInSmallSection(GV, TM, Kind))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.

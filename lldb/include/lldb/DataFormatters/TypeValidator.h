@@ -150,6 +150,7 @@ public:
     TypeValidatorImpl (const Flags& flags = Flags());
     
     typedef std::shared_ptr<TypeValidatorImpl> SharedPointer;
+    typedef std::function<bool(void*, ConstString, TypeValidatorImpl::SharedPointer)> ValueCallback;
     
     virtual ~TypeValidatorImpl ();
     
@@ -264,6 +265,7 @@ public:
     TypeValidatorImpl_CXX (ValidatorFunction f, std::string d, const TypeValidatorImpl::Flags& flags = Flags());
     
     typedef std::shared_ptr<TypeValidatorImpl_CXX> SharedPointer;
+    typedef std::function<bool(void*, ConstString, TypeValidatorImpl_CXX::SharedPointer)> ValueCallback;
     
     ~TypeValidatorImpl_CXX() override;
     

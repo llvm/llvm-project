@@ -148,7 +148,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
   CUNode = DICompileUnit::getDistinct(
       VMContext, Lang, DIFile::get(VMContext, Filename, Directory), Producer,
       isOptimized, Flags, RunTimeVer, SplitName, Kind, nullptr,
-      nullptr, nullptr, nullptr, nullptr, nullptr, DWOId);
+      nullptr, nullptr, nullptr, nullptr, DWOId);
 
   // Create a named metadata so that it is easier to find cu in a module.
   // Note that we only generate this when the caller wants to actually
@@ -255,12 +255,10 @@ DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
                             DITypeRef::get(Base));
 }
 
-DIDerivedType *DIBuilder::createReferenceType(unsigned Tag, DIType *RTy,
-                                              uint64_t SizeInBits,
-                                              uint64_t AlignInBits) {
+DIDerivedType *DIBuilder::createReferenceType(unsigned Tag, DIType *RTy) {
   assert(RTy && "Unable to create reference type");
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr,
-                            DITypeRef::get(RTy), SizeInBits, AlignInBits, 0, 0);
+                            DITypeRef::get(RTy), 0, 0, 0, 0);
 }
 
 DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,

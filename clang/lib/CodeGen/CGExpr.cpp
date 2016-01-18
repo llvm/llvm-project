@@ -32,7 +32,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Transforms/Utils/SanitizerStats.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -87,7 +86,7 @@ void CodeGenFunction::InitTempAlloca(Address Var, llvm::Value *Init) {
   auto *Store = new llvm::StoreInst(Init, Var.getPointer());
   Store->setAlignment(Var.getAlignment().getQuantity());
   llvm::BasicBlock *Block = AllocaInsertPt->getParent();
-  Block->getInstList().insertAfter(AllocaInsertPt->getIterator(), Store);
+  Block->getInstList().insertAfter(&*AllocaInsertPt, Store);
 }
 
 Address CodeGenFunction::CreateIRTemp(QualType Ty, const Twine &Name) {
@@ -825,8 +824,7 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
                          getNaturalPointeeTypeAlignment(E->getType(), Source));
         }
 
-        if (SanOpts.has(SanitizerKind::CFIUnrelatedCast) &&
-            CE->getCastKind() == CK_BitCast) {
+        if (SanOpts.has(SanitizerKind::CFIUnrelatedCast)) {
           if (auto PT = E->getType()->getAs<PointerType>())
             EmitVTablePtrCheckForCast(PT->getPointeeType(), Addr.getPointer(),
                                       /*MayBeNull=*/true,
@@ -2534,34 +2532,6 @@ void CodeGenFunction::EmitCheck(
   EmitBlock(Cont);
 }
 
-void CodeGenFunction::EmitCfiSlowPathCheck(llvm::Value *Cond,
-                                           llvm::ConstantInt *TypeId,
-                                           llvm::Value *Ptr) {
-  auto &Ctx = getLLVMContext();
-  llvm::BasicBlock *Cont = createBasicBlock("cfi.cont");
-
-  llvm::BasicBlock *CheckBB = createBasicBlock("cfi.slowpath");
-  llvm::BranchInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
-
-  llvm::MDBuilder MDHelper(getLLVMContext());
-  llvm::MDNode *Node = MDHelper.createBranchWeights((1U << 20) - 1, 1);
-  BI->setMetadata(llvm::LLVMContext::MD_prof, Node);
-
-  EmitBlock(CheckBB);
-
-  llvm::Constant *SlowPathFn = CGM.getModule().getOrInsertFunction(
-      "__cfi_slowpath",
-      llvm::FunctionType::get(
-          llvm::Type::getVoidTy(Ctx),
-          {llvm::Type::getInt64Ty(Ctx),
-           llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(Ctx))},
-          false));
-  llvm::CallInst *CheckCall = Builder.CreateCall(SlowPathFn, {TypeId, Ptr});
-  CheckCall->setDoesNotThrow();
-
-  EmitBlock(Cont);
-}
-
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
@@ -3367,7 +3337,6 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_PointerToBoolean:
   case CK_VectorSplat:
   case CK_IntegralCast:
-  case CK_BooleanToSignedIntegral:
   case CK_IntegralToBoolean:
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
@@ -3772,31 +3741,11 @@ LValue CodeGenFunction::EmitStmtExprLValue(const StmtExpr *E) {
 
 RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
                                  const CallExpr *E, ReturnValueSlot ReturnValue,
-                                 CGCalleeInfo CalleeInfo, llvm::Value *Chain) {
+                                 const Decl *TargetDecl, llvm::Value *Chain) {
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
   assert(CalleeType->isFunctionPointerType() &&
          "Call must have function pointer type!");
-
-  // Preserve the non-canonical function type because things like exception
-  // specifications disappear in the canonical type. That information is useful
-  // to drive the generation of more accurate code for this call later on.
-  const FunctionProtoType *NonCanonicalFTP = CalleeType->getAs<PointerType>()
-                                                 ->getPointeeType()
-                                                 ->getAs<FunctionProtoType>();
-
-  const Decl *TargetDecl = CalleeInfo.getCalleeDecl();
-
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
-    // We can only guarantee that a function is called from the correct
-    // context/function based on the appropriate target attributes,
-    // so only check in the case where we have both always_inline and target
-    // since otherwise we could be making a conditional call after a check for
-    // the proper cpu features (and it won't cause code generation issues due to
-    // function based code generation).
-    if (TargetDecl->hasAttr<AlwaysInlineAttr>() &&
-        TargetDecl->hasAttr<TargetAttr>())
-      checkTargetFeatures(E, FD);
 
   CalleeType = getContext().getCanonicalType(CalleeType);
 
@@ -3853,27 +3802,22 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
   if (SanOpts.has(SanitizerKind::CFIICall) &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
     SanitizerScope SanScope(this);
-    EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
 
-    llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(QualType(FnType, 0));
-    llvm::Value *BitSetName = llvm::MetadataAsValue::get(getLLVMContext(), MD);
+    llvm::Value *BitSetName = llvm::MetadataAsValue::get(
+        getLLVMContext(),
+        CGM.CreateMetadataIdentifierForType(QualType(FnType, 0)));
 
     llvm::Value *CastedCallee = Builder.CreateBitCast(Callee, Int8PtrTy);
     llvm::Value *BitSetTest =
         Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::bitset_test),
                            {CastedCallee, BitSetName});
 
-    auto TypeId = CGM.CreateCfiIdForTypeMetadata(MD);
-    if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && TypeId) {
-      EmitCfiSlowPathCheck(BitSetTest, TypeId, CastedCallee);
-    } else {
-      llvm::Constant *StaticData[] = {
-          EmitCheckSourceLocation(E->getLocStart()),
-          EmitCheckTypeDescriptor(QualType(FnType, 0)),
-      };
-      EmitCheck(std::make_pair(BitSetTest, SanitizerKind::CFIICall),
-                "cfi_bad_icall", StaticData, CastedCallee);
-    }
+    llvm::Constant *StaticData[] = {
+      EmitCheckSourceLocation(E->getLocStart()),
+      EmitCheckTypeDescriptor(QualType(FnType, 0)),
+    };
+    EmitCheck(std::make_pair(BitSetTest, SanitizerKind::CFIICall),
+              "cfi_bad_icall", StaticData, CastedCallee);
   }
 
   CallArgList Args;
@@ -3912,8 +3856,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
     Callee = Builder.CreateBitCast(Callee, CalleeTy, "callee.knr.cast");
   }
 
-  return EmitCall(FnInfo, Callee, ReturnValue, Args,
-                  CGCalleeInfo(NonCanonicalFTP, TargetDecl));
+  return EmitCall(FnInfo, Callee, ReturnValue, Args, TargetDecl);
 }
 
 LValue CodeGenFunction::

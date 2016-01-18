@@ -193,7 +193,7 @@ endfunction(add_link_opts)
 # Note: Don't set variables CMAKE_*_OUTPUT_DIRECTORY any more,
 # or a certain builder, for eaxample, msbuild.exe, would be confused.
 function(set_output_directory target)
-  cmake_parse_arguments(ARG "" "BINARY_DIR;LIBRARY_DIR" "" ${ARGN})
+  cmake_parse_arguments(ARG "" "BINARY_DIR;LIBRARY_DIR;" "" ${ARGN})
 
   # module_dir -- corresponding to LIBRARY_OUTPUT_DIRECTORY.
   # It affects output of add_library(MODULE).
@@ -308,8 +308,6 @@ endfunction(set_windows_version_resource_properties)
 #   SHARED;STATIC
 #     STATIC by default w/o BUILD_SHARED_LIBS.
 #     SHARED by default w/  BUILD_SHARED_LIBS.
-#   OBJECT
-#     Also create an OBJECT library target. Default if STATIC && SHARED.
 #   MODULE
 #     Target ${name} might not be created on unsupported platforms.
 #     Check with "if(TARGET ${name})".
@@ -331,7 +329,7 @@ endfunction(set_windows_version_resource_properties)
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
-    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME"
+    "MODULE;SHARED;STATIC;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME"
     "OUTPUT_NAME"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
@@ -364,7 +362,7 @@ function(llvm_add_library name)
   endif()
 
   # Generate objlib
-  if((ARG_SHARED AND ARG_STATIC) OR ARG_OBJECT)
+  if(ARG_SHARED AND ARG_STATIC)
     # Generate an obj library for both targets.
     set(obj_name "obj.${name}")
     add_library(${obj_name} OBJECT EXCLUDE_FROM_ALL
@@ -450,24 +448,6 @@ function(llvm_add_library name)
     endif()
   endif()
 
-  if(ARG_SHARED AND UNIX)
-    if(NOT APPLE AND ARG_SONAME)
-      get_target_property(output_name ${name} OUTPUT_NAME)
-      if(${output_name} STREQUAL "output_name-NOTFOUND")
-        set(output_name ${name})
-      endif()
-      set(library_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
-      set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
-      set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
-      llvm_install_library_symlink(${api_name} ${library_name} SHARED
-        COMPONENT ${name}
-        ALWAYS_GENERATE)
-      llvm_install_library_symlink(${output_name} ${library_name} SHARED
-        COMPONENT ${name}
-        ALWAYS_GENERATE)
-    endif()
-  endif()
-
   # Add the explicit dependency information for this library.
   #
   # It would be nice to verify that we have the dependencies for this library
@@ -514,15 +494,11 @@ function(llvm_add_library name)
       add_dependencies(${objlib} ${LLVM_COMMON_DEPENDS})
     endforeach()
   endif()
-
-  if(ARG_SHARED OR ARG_MODULE)
-    llvm_externalize_debuginfo(${name})
-  endif()
 endfunction()
 
 macro(add_llvm_library name)
   cmake_parse_arguments(ARG
-    "SHARED"
+    "SHARED;SONAME"
     ""
     ""
     ${ARGN})
@@ -543,11 +519,9 @@ macro(add_llvm_library name)
     set_target_properties( ${name} PROPERTIES EXCLUDE_FROM_ALL ON)
   elseif(NOT _is_gtest)
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LTO")
-      set(install_dir lib${LLVM_LIBDIR_SUFFIX})
       if(ARG_SHARED OR BUILD_SHARED_LIBS)
-        if(WIN32 OR CYGWIN OR MINGW)
+        if(WIN32 OR CYGWIN)
           set(install_type RUNTIME)
-          set(install_dir bin)
         else()
           set(install_type LIBRARY)
         endif()
@@ -557,7 +531,7 @@ macro(add_llvm_library name)
 
       install(TARGETS ${name}
             EXPORT LLVMExports
-            ${install_type} DESTINATION ${install_dir}
+            ${install_type} DESTINATION lib${LLVM_LIBDIR_SUFFIX}
             COMPONENT ${name})
 
       if (NOT CMAKE_CONFIGURATION_TYPES)
@@ -566,6 +540,19 @@ macro(add_llvm_library name)
                           COMMAND "${CMAKE_COMMAND}"
                                   -DCMAKE_INSTALL_COMPONENT=${name}
                                   -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      endif()
+      if(ARG_SHARED AND UNIX)
+        if(NOT APPLE AND ARG_SONAME)
+          set(library_name ${name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
+          set(api_name ${name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
+          set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
+          llvm_install_library_symlink(${api_name} ${library_name} SHARED
+            COMPONENT ${name}
+            ALWAYS_GENERATE)
+          llvm_install_library_symlink(${name} ${library_name} SHARED
+            COMPONENT ${name}
+            ALWAYS_GENERATE)
+        endif()
       endif()
     endif()
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
@@ -603,7 +590,7 @@ endmacro(add_llvm_loadable_module name)
 
 
 macro(add_llvm_executable name)
-  cmake_parse_arguments(ARG "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO" "" "" ${ARGN})
+  cmake_parse_arguments(ARG "DISABLE_LLVM_LINK_LLVM_DYLIB" "" "" ${ARGN})
   llvm_process_sources( ALL_FILES ${ARG_UNPARSED_ARGUMENTS} )
 
   # Generate objlib
@@ -663,19 +650,11 @@ macro(add_llvm_executable name)
   if( LLVM_COMMON_DEPENDS )
     add_dependencies( ${name} ${LLVM_COMMON_DEPENDS} )
   endif( LLVM_COMMON_DEPENDS )
-
-  if(NOT ARG_IGNORE_EXTERNALIZE_DEBUGINFO)
-    llvm_externalize_debuginfo(${name})
-  endif()
 endmacro(add_llvm_executable name)
 
 function(export_executable_symbols target)
   if (NOT MSVC) # MSVC's linker doesn't support exporting all symbols.
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS 1)
-    if (APPLE)
-      set_property(TARGET ${target} APPEND_STRING PROPERTY
-        LINK_FLAGS " -rdynamic")
-    endif()
   endif()
 endfunction()
 
@@ -882,7 +861,7 @@ function(add_unittest test_suite test_name)
 
   set(LLVM_REQUIRES_RTTI OFF)
 
-  add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO ${ARGN})
+  add_llvm_executable(${test_name} ${ARGN})
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   target_link_libraries(${test_name}
@@ -1090,7 +1069,7 @@ function(llvm_install_library_symlink name dest type)
   set(full_name ${CMAKE_${type}_LIBRARY_PREFIX}${name}${CMAKE_${type}_LIBRARY_SUFFIX})
   set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
 
-  set(output_dir lib${LLVM_LIBDIR_SUFFIX})
+  set(output_dir lib)
   if(WIN32 AND "${type}" STREQUAL "SHARED")
     set(output_dir bin)
   endif()
@@ -1116,7 +1095,7 @@ function(llvm_install_symlink name dest)
       break()
     endif()
   endforeach()
-
+  
   if(ARG_ALWAYS_GENERATE)
     set(component ${dest})
   else()
@@ -1181,23 +1160,3 @@ function(add_llvm_tool_symlink name dest)
   endif()
 endfunction()
 
-function(llvm_externalize_debuginfo name)
-  if(NOT LLVM_EXTERNALIZE_DEBUGINFO)
-    return()
-  endif()
-
-  if(APPLE)
-    if(CMAKE_CXX_FLAGS MATCHES "-flto"
-      OR CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} MATCHES "-flto")
-
-      set(lto_object ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}-lto.o)
-      set_property(TARGET ${name} APPEND_STRING PROPERTY
-        LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
-    endif()
-    add_custom_command(TARGET ${name} POST_BUILD
-      COMMAND xcrun dsymutil $<TARGET_FILE:${name}>
-      COMMAND xcrun strip -Sl $<TARGET_FILE:${name}>)
-  else()
-    message(FATAL_ERROR "LLVM_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
-  endif()
-endfunction()

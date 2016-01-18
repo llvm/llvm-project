@@ -94,8 +94,9 @@ static const char *processFDE(const char *Entry, bool isDeregister) {
 // This implementation handles frame registration for local targets.
 // Memory managers for remote targets should re-implement this function
 // and use the LoadAddr parameter.
-void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
-                                                    size_t Size) {
+void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr,
+                                           uint64_t LoadAddr,
+                                           size_t Size) {
   // On OS X OS X __register_frame takes a single FDE as an argument.
   // See http://lists.llvm.org/pipermail/llvm-dev/2013-April/061768.html
   const char *P = (const char *)Addr;
@@ -105,8 +106,9 @@ void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
   } while(P != End);
 }
 
-void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
-                                                      size_t Size) {
+void RTDyldMemoryManager::deregisterEHFrames(uint8_t *Addr,
+                                           uint64_t LoadAddr,
+                                           size_t Size) {
   const char *P = (const char *)Addr;
   const char *End = P + Size;
   do  {
@@ -116,8 +118,9 @@ void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
 
 #else
 
-void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
-                                                    size_t Size) {
+void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr,
+                                           uint64_t LoadAddr,
+                                           size_t Size) {
   // On Linux __register_frame takes a single argument: 
   // a pointer to the start of the .eh_frame section.
 
@@ -126,8 +129,9 @@ void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
   __register_frame(Addr);
 }
 
-void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
-                                                      size_t Size) {
+void RTDyldMemoryManager::deregisterEHFrames(uint8_t *Addr,
+                                           uint64_t LoadAddr,
+                                           size_t Size) {
   __deregister_frame(Addr);
 }
 

@@ -28,13 +28,7 @@ PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
 
 PreservedAnalyses PrintModulePass::run(Module &M) {
   OS << Banner;
-  if (llvm::isFunctionInPrintList("*"))
-    M.print(OS, nullptr, ShouldPreserveUseListOrder);
-  else {
-    for(const auto &F : M.functions())
-      if (llvm::isFunctionInPrintList(F.getName()))
-        F.print(OS);
-  }
+  M.print(OS, nullptr, ShouldPreserveUseListOrder);
   return PreservedAnalyses::all();
 }
 
@@ -43,8 +37,7 @@ PrintFunctionPass::PrintFunctionPass(raw_ostream &OS, const std::string &Banner)
     : OS(OS), Banner(Banner) {}
 
 PreservedAnalyses PrintFunctionPass::run(Function &F) {
-  if (isFunctionInPrintList(F.getName()))
-    OS << Banner << static_cast<Value &>(F);
+  OS << Banner << static_cast<Value &>(F);
   return PreservedAnalyses::all();
 }
 

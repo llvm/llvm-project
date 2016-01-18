@@ -131,8 +131,6 @@ static Instruction::BinaryOps mapBinOpcode(unsigned Opcode) {
 // integer domain.
 void Float2Int::findRoots(Function &F, SmallPtrSet<Instruction*,8> &Roots) {
   for (auto &I : instructions(F)) {
-    if (isa<VectorType>(I.getType()))
-      continue;
     switch (I.getOpcode()) {
     default: break;
     case Instruction::FPToUI:

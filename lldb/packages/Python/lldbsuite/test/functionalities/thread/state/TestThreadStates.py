@@ -19,6 +19,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureDarwin("rdar://15367566")
     @expectedFailureFreeBSD('llvm.org/pr15824')
     @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
+    @expectedFailureWindows("llvm.org/pr24668") # Breakpoints not resolved correctly
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
@@ -26,7 +27,6 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin('llvm.org/pr23669')
-    @expectedFailureFreeBSD('llvm.org/pr15824')
     @expectedFailureWindows("llvm.org/pr24660")
     def test_state_after_continue(self):
         """Test thread state after continue."""
@@ -36,11 +36,10 @@ class ThreadStateTestCase(TestBase):
     @skipIfDarwin # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin('llvm.org/pr23669')
     @expectedFailureWindows("llvm.org/pr24660")
-    @unittest2.expectedFailure("llvm.org/pr16712") # thread states not properly maintained
     def test_state_after_expression(self):
         """Test thread state after expression."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
-        self.thread_state_after_expression_test()
+        self.thread_state_after_continue_test()
 
     @unittest2.expectedFailure("llvm.org/pr16712") # thread states not properly maintained
     @expectedFailureWindows("llvm.org/pr24668") # Breakpoints not resolved correctly
@@ -71,6 +70,10 @@ class ThreadStateTestCase(TestBase):
         # This should create a breakpoint in the main thread.
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
 
+        # The breakpoint list should show 1 breakpoint with 1 location.
+        self.expect("breakpoint list -f", "Breakpoint location shown correctly",
+            substrs = ["1: file = 'main.cpp', line = %d, locations = 1" % self.break_1])
+
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -99,12 +102,6 @@ class ThreadStateTestCase(TestBase):
         # Kill the process
         self.runCmd("process kill")
 
-    def wait_for_running_event(self):
-        listener = self.dbg.GetListener()
-        if lldb.remote_platform:
-            lldbutil.expect_state_changes(self, listener, [lldb.eStateConnected])
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning])
-
     def thread_state_after_continue_test(self):
         """Test thread state after continue."""
         exe = os.path.join(os.getcwd(), "a.out")
@@ -113,6 +110,10 @@ class ThreadStateTestCase(TestBase):
         # This should create a breakpoint in the main thread.
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
+
+        # The breakpoint list should show 1 breakpoints with 1 location.
+        self.expect("breakpoint list -f", "Breakpoint location shown correctly",
+            substrs = ["1: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" % self.break_1])
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -138,7 +139,7 @@ class ThreadStateTestCase(TestBase):
         # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
-        self.wait_for_running_event()
+        time.sleep(1)
 
         # Check the thread state. It should be running.
         self.assertFalse(thread.IsStopped(), "Thread state is \'stopped\' when it should be running.")
@@ -158,6 +159,10 @@ class ThreadStateTestCase(TestBase):
         # This should create a breakpoint in the main thread.
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
+
+        # The breakpoint list should show 1 breakpoints with 1 location.
+        self.expect("breakpoint list -f", "Breakpoint location shown correctly",
+            substrs = ["1: file = 'main.cpp', line = %d, locations = 1" % self.break_1])
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -199,6 +204,10 @@ class ThreadStateTestCase(TestBase):
         # This should create a breakpoint in the main thread.
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
 
+        # The breakpoint list should show 1 breakpoints with 1 location.
+        self.expect("breakpoint list -f", "Breakpoint location shown correctly",
+            substrs = ["1: file = 'main.cpp', line = %d, locations = 1" % self.break_1])
+
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -220,7 +229,7 @@ class ThreadStateTestCase(TestBase):
         # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
-        self.wait_for_running_event()
+        time.sleep(1)
 
         # Go back to synchronous interactions
         self.dbg.SetAsync(False)
@@ -248,6 +257,11 @@ class ThreadStateTestCase(TestBase):
         # This should create a breakpoint in the main thread.
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
         lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
+
+        # The breakpoint list should show 2 breakpoints with 1 location each.
+        self.expect("breakpoint list -f", "Breakpoint location shown correctly",
+            substrs = ["1: file = 'main.cpp', line = %d, locations = 1" % self.break_1,
+                       "2: file = 'main.cpp', line = %d, locations = 1" % self.break_2])
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -277,7 +291,7 @@ class ThreadStateTestCase(TestBase):
         # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
-        self.wait_for_running_event()
+        time.sleep(1)
 
         # Check the thread state. It should be running.
         self.assertFalse(thread.IsStopped(), "Thread state is \'stopped\' when it should be running.")

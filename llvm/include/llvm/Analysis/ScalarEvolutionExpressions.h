@@ -43,7 +43,6 @@ namespace llvm {
       SCEV(ID, scConstant), V(v) {}
   public:
     ConstantInt *getValue() const { return V; }
-    const APInt &getAPInt() const { return getValue()->getValue(); }
 
     Type *getType() const { return V->getType(); }
 
@@ -524,10 +523,14 @@ namespace llvm {
         case scMulExpr:
         case scSMaxExpr:
         case scUMaxExpr:
-        case scAddRecExpr:
-	  for (const auto *Op : cast<SCEVNAryExpr>(S)->operands())
-	    push(Op);
+        case scAddRecExpr: {
+          const SCEVNAryExpr *NAry = cast<SCEVNAryExpr>(S);
+          for (SCEVNAryExpr::op_iterator I = NAry->op_begin(),
+                 E = NAry->op_end(); I != E; ++I) {
+            push(*I);
+          }
           break;
+        }
         case scUDivExpr: {
           const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
           push(UDiv->getLHS());

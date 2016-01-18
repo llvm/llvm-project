@@ -41,175 +41,175 @@ let validSubTargets = HasV60SubT in
 {
 class CVI_VA_Resource<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
-                       InstrItinClass itin = CVI_VA>
+                       InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VA>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VA_DV_Resource<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VA_DV>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VA_DV>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VX_Resource_long<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
-                       InstrItinClass itin = CVI_VX_LONG>
+                       InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VX>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VX_Resource_late<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
-                       InstrItinClass itin = CVI_VX_LATE>
+                       InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VX>,
      Requires<[HasV60T, UseHVX]>;
 
 class CVI_VX_Resource<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
-                       InstrItinClass itin = CVI_VX>
+                       InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VX>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VX_DV_Resource<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
-                       InstrItinClass itin = CVI_VX_DV>
+                       InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VX_DV>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VX_DV_Slot2_Resource<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
-                       InstrItinClass itin = CVI_VX_DV_SLOT2>
+                       InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VX_DV>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VX_DV_Resource_long<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VX_DV_LONG>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VX_DV>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VP_Resource_long<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VP_LONG>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VP>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VP_VS_Resource_early<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VP_VS_EARLY>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VP_VS>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VP_VS_Resource_long<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VP_VS_LONG>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VP_VS>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VP_VS_Resource_long_early<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VP_VS_LONG_EARLY>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VP_VS>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VS_Resource<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VS>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VS>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VINLANESAT_Resource<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VINLANESAT>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VINLANESAT>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VS_Resource_long<dag outs, dag ins, string asmstr,
                            list<dag> pattern = [], string cstr = "",
-                           InstrItinClass itin = CVI_VS>
+                           InstrItinClass itin = PSEUDO>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VS>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_LD_Resource<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VM_LD>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_LD>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_LD_Resource_long<dag outs, dag ins, string asmstr,
                               list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VM_LD>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_LD>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_TMP_LD_Resource<dag outs, dag ins, string asmstr,
                              list<dag> pattern = [], string cstr = "",
-                             InstrItinClass itin = CVI_VM_TMP_LD>
+                             InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_TMP_LD>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_TMP_LD_Resource_long<dag outs, dag ins, string asmstr,
                                   list<dag> pattern = [], string cstr = "",
-                                  InstrItinClass itin = CVI_VM_TMP_LD>
+                                  InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_TMP_LD>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_CUR_LD_Resource<dag outs, dag ins, string asmstr,
                              list<dag> pattern = [], string cstr = "",
-                             InstrItinClass itin = CVI_VM_CUR_LD>
+                             InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_CUR_LD>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_VP_LDU_Resource<dag outs, dag ins, string asmstr,
                              list<dag> pattern = [], string cstr = "",
-                             InstrItinClass itin = CVI_VM_VP_LDU>
+                             InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_VP_LDU>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_VP_LDU_Resource_long<dag outs, dag ins, string asmstr,
                                   list<dag> pattern = [], string cstr = "",
-                                  InstrItinClass itin = CVI_VM_VP_LDU>
+                                  InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_VP_LDU>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_ST_Resource<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VM_ST>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_ST>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_ST_Resource_long<dag outs, dag ins, string asmstr,
                               list<dag> pattern = [], string cstr = "",
-                              InstrItinClass itin = CVI_VM_ST>
+                              InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_ST>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_NEW_ST_Resource<dag outs, dag ins, string asmstr,
                              list<dag> pattern = [], string cstr = "",
-                             InstrItinClass itin = CVI_VM_NEW_ST>
+                             InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_NEW_ST>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_NEW_ST_Resource_long<dag outs, dag ins, string asmstr,
                                   list<dag> pattern = [], string cstr = "",
-                                  InstrItinClass itin = CVI_VM_NEW_ST>
+                                  InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_NEW_ST>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_STU_Resource<dag outs, dag ins, string asmstr,
                           list<dag> pattern = [], string cstr = "",
-                          InstrItinClass itin = CVI_VM_STU>
+                          InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_STU>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_VM_STU_Resource_long<dag outs, dag ins, string asmstr,
                                list<dag> pattern = [], string cstr = "",
-                               InstrItinClass itin = CVI_VM_STU>
+                               InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VM_STU>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 
 class CVI_HIST_Resource<dag outs, dag ins, string asmstr,
                         list<dag> pattern = [], string cstr = "",
-                        InstrItinClass itin = CVI_HIST>
+                        InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_HIST>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
 }
@@ -218,19 +218,19 @@ let validSubTargets = HasV60SubT in
 {
 class CVI_VA_Resource1<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
-                       InstrItinClass itin = CVI_VA>
+                       InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VA>,
      Requires<[HasV60T, UseHVX]>;
 
 class CVI_VX_DV_Resource1<dag outs, dag ins, string asmstr,
                          list<dag> pattern = [], string cstr = "",
-                         InstrItinClass itin = CVI_VX_DV>
+                         InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VX_DV>,
      Requires<[HasV60T, UseHVX]>;
 
 class CVI_HIST_Resource1<dag outs, dag ins, string asmstr,
                         list<dag> pattern = [], string cstr = "",
-                        InstrItinClass itin = CVI_HIST>
+                        InstrItinClass itin = PSEUDO>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_HIST>,
      Requires<[HasV60T, UseHVX]>;
 }

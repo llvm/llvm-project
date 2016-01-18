@@ -29,7 +29,7 @@ namespace llvm {
 class OrcLazyJIT {
 public:
 
-  typedef orc::JITCompileCallbackManager CompileCallbackMgr;
+  typedef orc::JITCompileCallbackManagerBase CompileCallbackMgr;
   typedef orc::ObjectLinkingLayer<> ObjLayerT;
   typedef orc::IRCompileLayer<ObjLayerT> CompileLayerT;
   typedef std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>
@@ -105,9 +105,7 @@ public:
     // Add the module to the JIT.
     std::vector<std::unique_ptr<Module>> S;
     S.push_back(std::move(M));
-    auto H = CODLayer.addModuleSet(std::move(S),
-				   llvm::make_unique<SectionMemoryManager>(),
-				   std::move(Resolver));
+    auto H = CODLayer.addModuleSet(std::move(S), nullptr, std::move(Resolver));
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.

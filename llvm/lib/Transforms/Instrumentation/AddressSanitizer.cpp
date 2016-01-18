@@ -63,6 +63,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asan"
 
+// VMA size definition for architecture that support multiple sizes.
+// AArch64 has 3 VMA sizes: 39, 42 and 48.
+#ifndef SANITIZER_AARCH64_VMA
+# define SANITIZER_AARCH64_VMA 39
+#else
+# if SANITIZER_AARCH64_VMA != 39 && SANITIZER_AARCH64_VMA != 42
+#  error "invalid SANITIZER_AARCH64_VMA size"
+# endif
+#endif
+
 static const uint64_t kDefaultShadowScale = 3;
 static const uint64_t kDefaultShadowOffset32 = 1ULL << 29;
 static const uint64_t kIOSShadowOffset32 = 1ULL << 30;
@@ -72,7 +82,11 @@ static const uint64_t kLinuxKasan_ShadowOffset64 = 0xdffffc0000000000;
 static const uint64_t kPPC64_ShadowOffset64 = 1ULL << 41;
 static const uint64_t kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const uint64_t kMIPS64_ShadowOffset64 = 1ULL << 37;
+#if SANITIZER_AARCH64_VMA == 39
 static const uint64_t kAArch64_ShadowOffset64 = 1ULL << 36;
+#elif SANITIZER_AARCH64_VMA == 42
+static const uint64_t kAArch64_ShadowOffset64 = 1ULL << 39;
+#endif
 static const uint64_t kFreeBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kFreeBSD_ShadowOffset64 = 1ULL << 46;
 static const uint64_t kWindowsShadowOffset32 = 3ULL << 28;
@@ -121,10 +135,6 @@ static const unsigned kAllocaRzSize = 32;
 // Command-line flags.
 static cl::opt<bool> ClEnableKasan(
     "asan-kernel", cl::desc("Enable KernelAddressSanitizer instrumentation"),
-    cl::Hidden, cl::init(false));
-static cl::opt<bool> ClRecover(
-    "asan-recover",
-    cl::desc("Enable recovery mode (continue-after-error)."),
     cl::Hidden, cl::init(false));
 
 // This flag may need to be replaced with -f[no-]asan-reads.
@@ -280,11 +290,6 @@ class GlobalsMetadata {
 
   GlobalsMetadata() : inited_(false) {}
 
-  void reset() {
-    inited_ = false;
-    Entries.clear();
-  }
-
   void init(Module &M) {
     assert(!inited_);
     inited_ = true;
@@ -390,8 +395,7 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
   // OR-ing shadow offset if more efficient (at least on x86) if the offset
   // is a power of two, but on ppc64 we have to use add since the shadow
   // offset is not necessary 1/8-th of the address space.
-  Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64
-                           && !(Mapping.Offset & (Mapping.Offset - 1));
+  Mapping.OrShadowOffset = !IsPPC64 && !(Mapping.Offset & (Mapping.Offset - 1));
 
   return Mapping;
 }
@@ -404,9 +408,8 @@ static size_t RedzoneSizeForScale(int MappingScale) {
 
 /// AddressSanitizer: instrument the code in module to find memory bugs.
 struct AddressSanitizer : public FunctionPass {
-  explicit AddressSanitizer(bool CompileKernel = false, bool Recover = false)
-      : FunctionPass(ID), CompileKernel(CompileKernel || ClEnableKasan),
-        Recover(Recover || ClRecover) {
+  explicit AddressSanitizer(bool CompileKernel = false)
+      : FunctionPass(ID), CompileKernel(CompileKernel || ClEnableKasan) {
     initializeAddressSanitizerPass(*PassRegistry::getPassRegistry());
   }
   const char *getPassName() const override {
@@ -455,7 +458,6 @@ struct AddressSanitizer : public FunctionPass {
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
   bool doInitialization(Module &M) override;
-  bool doFinalization(Module &M) override;
   static char ID;  // Pass identification, replacement for typeid
 
   DominatorTree &getDominatorTree() const { return *DT; }
@@ -482,7 +484,6 @@ struct AddressSanitizer : public FunctionPass {
   Triple TargetTriple;
   int LongSize;
   bool CompileKernel;
-  bool Recover;
   Type *IntptrTy;
   ShadowMapping Mapping;
   DominatorTree *DT;
@@ -506,10 +507,8 @@ struct AddressSanitizer : public FunctionPass {
 
 class AddressSanitizerModule : public ModulePass {
  public:
-  explicit AddressSanitizerModule(bool CompileKernel = false,
-                                  bool Recover = false)
-      : ModulePass(ID), CompileKernel(CompileKernel || ClEnableKasan),
-        Recover(Recover || ClRecover) {}
+  explicit AddressSanitizerModule(bool CompileKernel = false)
+      : ModulePass(ID), CompileKernel(CompileKernel || ClEnableKasan) {}
   bool runOnModule(Module &M) override;
   static char ID;  // Pass identification, replacement for typeid
   const char *getPassName() const override { return "AddressSanitizerModule"; }
@@ -527,7 +526,6 @@ class AddressSanitizerModule : public ModulePass {
 
   GlobalsMetadata GlobalsMD;
   bool CompileKernel;
-  bool Recover;
   Type *IntptrTy;
   LLVMContext *C;
   Triple TargetTriple;
@@ -630,24 +628,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   void unpoisonDynamicAllocasBeforeInst(Instruction *InstBefore,
                                         Value *SavedStack) {
     IRBuilder<> IRB(InstBefore);
-    Value *DynamicAreaPtr = IRB.CreatePtrToInt(SavedStack, IntptrTy);
-    // When we insert _asan_allocas_unpoison before @llvm.stackrestore, we
-    // need to adjust extracted SP to compute the address of the most recent
-    // alloca. We have a special @llvm.get.dynamic.area.offset intrinsic for
-    // this purpose.
-    if (!isa<ReturnInst>(InstBefore)) {
-      Function *DynamicAreaOffsetFunc = Intrinsic::getDeclaration(
-          InstBefore->getModule(), Intrinsic::get_dynamic_area_offset,
-          {IntptrTy});
-
-      Value *DynamicAreaOffset = IRB.CreateCall(DynamicAreaOffsetFunc, {});
-
-      DynamicAreaPtr = IRB.CreateAdd(IRB.CreatePtrToInt(SavedStack, IntptrTy),
-                                     DynamicAreaOffset);
-    }
-
     IRB.CreateCall(AsanAllocasUnpoisonFunc,
-                   {IRB.CreateLoad(DynamicAllocaLayout), DynamicAreaPtr});
+                   {IRB.CreateLoad(DynamicAllocaLayout),
+                    IRB.CreatePtrToInt(SavedStack, IntptrTy)});
   }
 
   // Unpoison dynamic allocas redzones.
@@ -759,10 +742,8 @@ INITIALIZE_PASS_END(
     AddressSanitizer, "asan",
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs.", false,
     false)
-FunctionPass *llvm::createAddressSanitizerFunctionPass(bool CompileKernel,
-                                                       bool Recover) {
-  assert(!CompileKernel || Recover);
-  return new AddressSanitizer(CompileKernel, Recover);
+FunctionPass *llvm::createAddressSanitizerFunctionPass(bool CompileKernel) {
+  return new AddressSanitizer(CompileKernel);
 }
 
 char AddressSanitizerModule::ID = 0;
@@ -771,10 +752,8 @@ INITIALIZE_PASS(
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs."
     "ModulePass",
     false, false)
-ModulePass *llvm::createAddressSanitizerModulePass(bool CompileKernel,
-                                                   bool Recover) {
-  assert(!CompileKernel || Recover);
-  return new AddressSanitizerModule(CompileKernel, Recover);
+ModulePass *llvm::createAddressSanitizerModulePass(bool CompileKernel) {
+  return new AddressSanitizerModule(CompileKernel);
 }
 
 static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
@@ -1103,17 +1082,13 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     BasicBlock *NextBB = CheckTerm->getSuccessor(0);
     IRB.SetInsertPoint(CheckTerm);
     Value *Cmp2 = createSlowPathCmp(IRB, AddrLong, ShadowValue, TypeSize);
-    if (Recover) {
-      CrashTerm = SplitBlockAndInsertIfThen(Cmp2, CheckTerm, false);
-    } else {
-      BasicBlock *CrashBlock =
+    BasicBlock *CrashBlock =
         BasicBlock::Create(*C, "", NextBB->getParent(), NextBB);
-      CrashTerm = new UnreachableInst(*C, CrashBlock);
-      BranchInst *NewTerm = BranchInst::Create(CrashBlock, NextBB, Cmp2);
-      ReplaceInstWithInst(CheckTerm, NewTerm);
-    }
+    CrashTerm = new UnreachableInst(*C, CrashBlock);
+    BranchInst *NewTerm = BranchInst::Create(CrashBlock, NextBB, Cmp2);
+    ReplaceInstWithInst(CheckTerm, NewTerm);
   } else {
-    CrashTerm = SplitBlockAndInsertIfThen(Cmp, InsertBefore, !Recover);
+    CrashTerm = SplitBlockAndInsertIfThen(Cmp, InsertBefore, true);
   }
 
   Instruction *Crash = generateCrashCode(CrashTerm, AddrLong, IsWrite,
@@ -1184,7 +1159,7 @@ void AddressSanitizerModule::createInitializerPoisonCalls(
 }
 
 bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
-  Type *Ty = G->getValueType();
+  Type *Ty = cast<PointerType>(G->getType())->getElementType();
   DEBUG(dbgs() << "GLOBAL: " << *G << "\n");
 
   if (GlobalsMD.get(G).IsBlacklisted) return false;
@@ -1237,7 +1212,10 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
       bool TAAParsed;
       std::string ErrorCode = MCSectionMachO::ParseSectionSpecifier(
           Section, ParsedSegment, ParsedSection, TAA, TAAParsed, StubSize);
-      assert(ErrorCode.empty() && "Invalid section specifier.");
+      if (!ErrorCode.empty()) {
+        assert(false && "Invalid section specifier.");
+        return false;
+      }
 
       // Ignore the globals from the __OBJC section. The ObjC runtime assumes
       // those conform to /usr/lib/objc/runtime.h, so we can't add redzones to
@@ -1338,7 +1316,8 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
         M, MD.Name.empty() ? G->getName() : MD.Name,
         /*AllowMerging*/ true);
 
-    Type *Ty = G->getValueType();
+    PointerType *PtrTy = cast<PointerType>(G->getType());
+    Type *Ty = PtrTy->getElementType();
     uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
     uint64_t MinRZ = MinRedzoneSizeForGlobal();
     // MinRZ <= RZ <= kMaxGlobalRedzone
@@ -1454,11 +1433,13 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
       const std::string TypeStr = AccessIsWrite ? "store" : "load";
       const std::string ExpStr = Exp ? "exp_" : "";
       const std::string SuffixStr = CompileKernel ? "N" : "_n";
-      const std::string EndingStr = Recover ? "_noabort" : "";
+      const std::string EndingStr = CompileKernel ? "_noabort" : "";
       Type *ExpType = Exp ? Type::getInt32Ty(*C) : nullptr;
+      // TODO(glider): for KASan builds add _noabort to error reporting
+      // functions and make them actually noabort (remove the UnreachableInst).
       AsanErrorCallbackSized[AccessIsWrite][Exp] =
           checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-              kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr + EndingStr,
+              kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr,
               IRB.getVoidTy(), IntptrTy, IntptrTy, ExpType, nullptr));
       AsanMemoryAccessCallbackSized[AccessIsWrite][Exp] =
           checkSanitizerInterfaceFunction(M.getOrInsertFunction(
@@ -1469,7 +1450,7 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
         const std::string Suffix = TypeStr + itostr(1 << AccessSizeIndex);
         AsanErrorCallback[AccessIsWrite][Exp][AccessSizeIndex] =
             checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-                kAsanReportErrorTemplate + ExpStr + Suffix + EndingStr,
+                kAsanReportErrorTemplate + ExpStr + Suffix,
                 IRB.getVoidTy(), IntptrTy, ExpType, nullptr));
         AsanMemoryAccessCallback[AccessIsWrite][Exp][AccessSizeIndex] =
             checkSanitizerInterfaceFunction(M.getOrInsertFunction(
@@ -1524,11 +1505,6 @@ bool AddressSanitizer::doInitialization(Module &M) {
   }
   Mapping = getShadowMapping(TargetTriple, LongSize, CompileKernel);
   return true;
-}
-
-bool AddressSanitizer::doFinalization(Module &M) {
-  GlobalsMD.reset();
-  return false;
 }
 
 bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {

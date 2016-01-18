@@ -1495,7 +1495,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   // version of DCE that preserves lifetime markers. Without it, merging
   // of stack objects can fail to recognize and merge disjoint objects
   // leading to unnecessary stack growth.
-  Changed = removeDeadCode(MDT->getRootNode());
+  Changed |= removeDeadCode(MDT->getRootNode());
 
   const HexagonEvaluator HE(*HRI, *MRI, *HII, MF);
   BitTracker BTLoc(HE, MF);
@@ -1533,7 +1533,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (IFMap.empty())
-    return Changed;
+    return false;
 
   {
     NamedRegionTimer _T("pruning", "hexinsert", TimingDetail);
@@ -1546,7 +1546,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (IFMap.empty())
-    return Changed;
+    return false;
 
   {
     NamedRegionTimer _T("selection", "hexinsert", TimingDetail);
@@ -1571,15 +1571,13 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
     for (unsigned i = 0, n = Out.size(); i < n; ++i)
       IFMap.erase(Out[i]);
   }
-  if (IFMap.empty())
-    return Changed;
 
   {
     NamedRegionTimer _T("generation", "hexinsert", TimingDetail);
-    generateInserts();
+    Changed = generateInserts();
   }
 
-  return true;
+  return Changed;
 }
 
 

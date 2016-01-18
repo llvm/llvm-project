@@ -46,8 +46,6 @@ namespace ISD {
     static const uint64_t SplitOffs      = 11;
     static const uint64_t InAlloca       = 1ULL<<12; ///< Passed with inalloca
     static const uint64_t InAllocaOffs   = 12;
-    static const uint64_t SplitEnd       = 1ULL<<13; ///< Last part of a split
-    static const uint64_t SplitEndOffs   = 13;
     static const uint64_t OrigAlign      = 0x1FULL<<27;
     static const uint64_t OrigAlignOffs  = 27;
     static const uint64_t ByValSize      = 0x3fffffffULL<<32; ///< Struct size
@@ -104,9 +102,6 @@ namespace ISD {
 
     bool isSplit()   const { return Flags & Split; }
     void setSplit()  { Flags |= One << SplitOffs; }
-
-    bool isSplitEnd()   const { return Flags & SplitEnd; }
-    void setSplitEnd()  { Flags |= One << SplitEndOffs; }
 
     unsigned getOrigAlign() const {
       return (unsigned)

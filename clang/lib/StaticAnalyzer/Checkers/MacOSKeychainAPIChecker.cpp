@@ -201,8 +201,12 @@ unsigned MacOSKeychainAPIChecker::getTrackedFunctionIndex(StringRef Name,
 static bool isBadDeallocationArgument(const MemRegion *Arg) {
   if (!Arg)
     return false;
-  return isa<AllocaRegion>(Arg) || isa<BlockDataRegion>(Arg) ||
-         isa<TypedRegion>(Arg);
+  if (isa<AllocaRegion>(Arg) ||
+      isa<BlockDataRegion>(Arg) ||
+      isa<TypedRegion>(Arg)) {
+    return true;
+  }
+  return false;
 }
 
 /// Given the address expression, retrieve the value it's pointing to. Assume
@@ -236,7 +240,11 @@ bool MacOSKeychainAPIChecker::definitelyReturnedError(SymbolRef RetSym,
   DefinedOrUnknownSVal NoErr = Builder.evalEQ(State, NoErrVal,
                                                      nonloc::SymbolVal(RetSym));
   ProgramStateRef ErrState = State->assume(NoErr, noError);
-  return ErrState == State;
+  if (ErrState == State) {
+    return true;
+  }
+
+  return false;
 }
 
 // Report deallocator mismatch. Remove the region from tracking - reporting a

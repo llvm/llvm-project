@@ -18,13 +18,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
-#include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class MCAsmInfo;
 class MCAssembler;
+class MCAsmInfo;
 class MCContext;
 class MCExpr;
 class MCFragment;
@@ -152,11 +152,6 @@ public:
   MCSection::FragmentListType &getFragmentList() { return Fragments; }
   const MCSection::FragmentListType &getFragmentList() const {
     return const_cast<MCSection *>(this)->getFragmentList();
-  }
-
-  /// Support for MCFragment::getNextNode().
-  static FragmentListType MCSection::*getSublistAccess(MCFragment *) {
-    return &MCSection::Fragments;
   }
 
   const MCDummyFragment &getDummyFragment() const { return DummyFragment; }

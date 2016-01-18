@@ -2544,54 +2544,6 @@ AST_MATCHER(VarDecl, hasGlobalStorage) {
   return Node.hasGlobalStorage();
 }
 
-/// \brief Matches a variable declaration that has automatic storage duration.
-///
-/// Example matches x, but not y, z, or a.
-/// (matcher = varDecl(hasAutomaticStorageDuration())
-/// \code
-/// void f() {
-///   int x;
-///   static int y;
-///   thread_local int z;
-/// }
-/// int a;
-/// \endcode
-AST_MATCHER(VarDecl, hasAutomaticStorageDuration) {
-  return Node.getStorageDuration() == SD_Automatic;
-}
-
-/// \brief Matches a variable declaration that has static storage duration.
-///
-/// Example matches y and a, but not x or z.
-/// (matcher = varDecl(hasStaticStorageDuration())
-/// \code
-/// void f() {
-///   int x;
-///   static int y;
-///   thread_local int z;
-/// }
-/// int a;
-/// \endcode
-AST_MATCHER(VarDecl, hasStaticStorageDuration) {
-  return Node.getStorageDuration() == SD_Static;
-}
-
-/// \brief Matches a variable declaration that has thread storage duration.
-///
-/// Example matches z, but not x, z, or a.
-/// (matcher = varDecl(hasThreadStorageDuration())
-/// \code
-/// void f() {
-///   int x;
-///   static int y;
-///   thread_local int z;
-/// }
-/// int a;
-/// \endcode
-AST_MATCHER(VarDecl, hasThreadStorageDuration) {
-  return Node.getStorageDuration() == SD_Thread;
-}
-
 /// \brief Matches a variable declaration that is an exception variable from
 /// a C++ catch block, or an Objective-C \@catch statement.
 ///
@@ -2940,34 +2892,6 @@ AST_MATCHER(FunctionDecl, isExternC) {
 ///   matches the declaration of DeletedFunc, but not Func.
 AST_MATCHER(FunctionDecl, isDeleted) {
   return Node.isDeleted();
-}
-
-/// \brief Matches functions that have a non-throwing exception specification.
-///
-/// Given:
-/// \code
-///   void f();
-///   void g() noexcept;
-///   void h() throw();
-///   void i() throw(int);
-///   void j() noexcept(false);
-/// \endcode
-/// functionDecl(isNoThrow())
-///   matches the declarations of g, and h, but not f, i or j.
-AST_MATCHER(FunctionDecl, isNoThrow) {
-  const auto *FnTy = Node.getType()->getAs<FunctionProtoType>();
-
-  // If the function does not have a prototype, then it is assumed to be a
-  // throwing function (as it would if the function did not have any exception
-  // specification).
-  if (!FnTy)
-    return false;
-
-  // Assume the best for any unresolved exception specification.
-  if (isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
-    return true;
-
-  return FnTy->isNothrow(Node.getASTContext());
 }
 
 /// \brief Matches constexpr variable and function declarations.
@@ -3533,20 +3457,6 @@ AST_MATCHER(QualType, isInteger) {
     return Node->isIntegerType();
 }
 
-/// \brief Matches QualType nodes that are of character type.
-///
-/// Given
-/// \code
-///   void a(char);
-///   void b(wchar_t);
-///   void c(double);
-/// \endcode
-/// functionDecl(hasAnyParameter(hasType(isAnyCharacter())))
-/// matches "a(char)", "b(wchar_t)", but not "c(double)".
-AST_MATCHER(QualType, isAnyCharacter) {
-    return Node->isAnyCharacterType();
-}
-
 /// \brief Matches QualType nodes that are const-qualified, i.e., that
 /// include "top-level" const.
 ///
@@ -3564,25 +3474,6 @@ AST_MATCHER(QualType, isAnyCharacter) {
 ///   is no top-level const on the parameter type "const int *".
 AST_MATCHER(QualType, isConstQualified) {
   return Node.isConstQualified();
-}
-
-/// \brief Matches QualType nodes that are volatile-qualified, i.e., that
-/// include "top-level" volatile.
-///
-/// Given
-/// \code
-///   void a(int);
-///   void b(int volatile);
-///   void c(volatile int);
-///   void d(volatile int*);
-///   void e(int volatile) {};
-/// \endcode
-/// functionDecl(hasAnyParameter(hasType(isVolatileQualified())))
-///   matches "void b(int volatile)", "void c(volatile int)" and
-///   "void e(int volatile) {}". It does not match d as there
-///   is no top-level volatile on the parameter type "volatile int *".
-AST_MATCHER(QualType, isVolatileQualified) {
-  return Node.isVolatileQualified();
 }
 
 /// \brief Matches QualType nodes that have local CV-qualifiers attached to
@@ -3760,18 +3651,6 @@ AST_MATCHER_FUNCTION_P_OVERLOAD(internal::BindableMatcher<TypeLoc>, loc,
                                 internal::Matcher<QualType>, InnerMatcher, 0) {
   return internal::BindableMatcher<TypeLoc>(
       new internal::TypeLocTypeMatcher(InnerMatcher));
-}
-
-/// \brief Matches type \c bool.
-///
-/// Given
-/// \code
-///  struct S { bool func(); };
-/// \endcode
-/// functionDecl(returns(booleanType()))
-///   matches "bool func();"
-AST_MATCHER(Type, booleanType) {
-  return Node.isBooleanType();
 }
 
 /// \brief Matches type \c void.

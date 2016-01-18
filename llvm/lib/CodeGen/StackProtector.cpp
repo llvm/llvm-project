@@ -453,13 +453,12 @@ bool StackProtector::InsertStackProtectors() {
       LoadInst *LI1 = B.CreateLoad(StackGuardVar);
       LoadInst *LI2 = B.CreateLoad(AI);
       Value *Cmp = B.CreateICmpEQ(LI1, LI2);
-      auto SuccessProb =
-          BranchProbabilityInfo::getBranchProbStackProtector(true);
-      auto FailureProb =
-          BranchProbabilityInfo::getBranchProbStackProtector(false);
+      unsigned SuccessWeight =
+          BranchProbabilityInfo::getBranchWeightStackProtector(true);
+      unsigned FailureWeight =
+          BranchProbabilityInfo::getBranchWeightStackProtector(false);
       MDNode *Weights = MDBuilder(F->getContext())
-                            .createBranchWeights(SuccessProb.getNumerator(),
-                                                 FailureProb.getNumerator());
+                            .createBranchWeights(SuccessWeight, FailureWeight);
       B.CreateCondBr(Cmp, NewBB, FailBB, Weights);
     }
   }

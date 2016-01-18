@@ -7,7 +7,9 @@ define i64 @test1(i64 %A) {
 ; ALL-LABEL: @test1(
 ; ALL: [[COND:%[A-Za-z0-9]+]] = icmp eq i64 %A, 0
 ; ALL: [[CTLZ:%[A-Za-z0-9]+]] = tail call i64 @llvm.ctlz.i64(i64 %A, i1 true)
-; ALL-NEXT: select i1 [[COND]], i64 64, i64 [[CTLZ]]
+; LZCNT-NEXT: select i1 [[COND]], i64 64, i64 [[CTLZ]]
+; BMI-NOT: select
+; GENERIC-NOT: select
 ; ALL: ret
 entry:
   %tobool = icmp eq i64 %A, 0
@@ -26,7 +28,9 @@ define i32 @test2(i32 %A) {
 ; ALL-LABEL: @test2(
 ; ALL: [[COND:%[A-Za-z0-9]+]] = icmp eq i32 %A, 0
 ; ALL: [[CTLZ:%[A-Za-z0-9]+]] = tail call i32 @llvm.ctlz.i32(i32 %A, i1 true)
-; ALL-NEXT: select i1 [[COND]], i32 32, i32 [[CTLZ]]
+; LZCNT-NEXT: select i1 [[COND]], i32 32, i32 [[CTLZ]]
+; BMI-NOT: select
+; GENERIC-NOT: select
 ; ALL: ret
 entry:
   %tobool = icmp eq i32 %A, 0
@@ -46,7 +50,9 @@ define signext i16 @test3(i16 signext %A) {
 ; ALL-LABEL: @test3(
 ; ALL: [[COND:%[A-Za-z0-9]+]] = icmp eq i16 %A, 0
 ; ALL: [[CTLZ:%[A-Za-z0-9]+]] = tail call i16 @llvm.ctlz.i16(i16 %A, i1 true)
-; ALL-NEXT: select i1 [[COND]], i16 16, i16 [[CTLZ]]
+; LZCNT-NEXT: select i1 [[COND]], i16 16, i16 [[CTLZ]]
+; BMI-NOT: select
+; GENERIC-NOT: select
 ; ALL: ret
 entry:
   %tobool = icmp eq i16 %A, 0
@@ -66,7 +72,9 @@ define i64 @test1b(i64 %A) {
 ; ALL-LABEL: @test1b(
 ; ALL: [[COND:%[A-Za-z0-9]+]] = icmp eq i64 %A, 0
 ; ALL: [[CTTZ:%[A-Za-z0-9]+]] = tail call i64 @llvm.cttz.i64(i64 %A, i1 true)
-; ALL-NEXT: select i1 [[COND]], i64 64, i64 [[CTTZ]]
+; BMI-NEXT: select i1 [[COND]], i64 64, i64 [[CTTZ]]
+; LZCNT-NOT: select
+; GENERIC-NOT: select
 ; ALL: ret
 entry:
   %tobool = icmp eq i64 %A, 0
@@ -86,7 +94,9 @@ define i32 @test2b(i32 %A) {
 ; ALL-LABEL: @test2b(
 ; ALL: [[COND:%[A-Za-z0-9]+]] = icmp eq i32 %A, 0
 ; ALL: [[CTTZ:%[A-Za-z0-9]+]] = tail call i32 @llvm.cttz.i32(i32 %A, i1 true)
-; ALL-NEXT: select i1 [[COND]], i32 32, i32 [[CTTZ]]
+; BMI-NEXT: select i1 [[COND]], i32 32, i32 [[CTTZ]]
+; LZCNT-NOT: select
+; GENERIC-NOT: select
 ; ALL: ret
 entry:
   %tobool = icmp eq i32 %A, 0
@@ -106,7 +116,9 @@ define signext i16 @test3b(i16 signext %A) {
 ; ALL-LABEL: @test3b(
 ; ALL: [[COND:%[A-Za-z0-9]+]] = icmp eq i16 %A, 0
 ; ALL: [[CTTZ:%[A-Za-z0-9]+]] = tail call i16 @llvm.cttz.i16(i16 %A, i1 true)
-; ALL-NEXT: select i1 [[COND]], i16 16, i16 [[CTTZ]]
+; BMI-NEXT: select i1 [[COND]], i16 16, i16 [[CTTZ]]
+; LZCNT-NOT: select
+; GENERIC-NOT: select
 ; ALL: ret
 entry:
   %tobool = icmp eq i16 %A, 0

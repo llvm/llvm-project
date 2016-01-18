@@ -262,10 +262,8 @@ protected:
             }
             else
             {
-                result.AppendErrorWithFormat ("too many arguments; expected frame-index, saw '%s'.\n",
-                                              command.GetArgumentAtIndex(0));
+                result.AppendError ("invalid arguments.\n");
                 m_options.GenerateOptionUsage (result.GetErrorStream(), this);
-                return false;
             }
         }
 
@@ -480,8 +478,7 @@ protected:
                     {
                         Error error;
                         uint32_t expr_path_options = StackFrame::eExpressionPathOptionCheckPtrVsMember |
-                                                     StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
-                                                     StackFrame::eExpressionPathOptionsInspectAnonymousUnions;
+                                                     StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
                         lldb::VariableSP var_sp;
                         valobj_sp = frame->GetValueForVariableExpressionPath (name_cstr, 
                                                                               m_varobj_options.use_dynamic, 

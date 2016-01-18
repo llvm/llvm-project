@@ -226,9 +226,9 @@ DataVisualization::Categories::DisableStar ()
 }
 
 void
-DataVisualization::Categories::ForEach (TypeCategoryMap::ForEachCallback callback)
+DataVisualization::Categories::LoopThrough (FormatManager::CategoryCallback callback, void* callback_baton)
 {
-    GetFormatManager().ForEachCategory(callback);
+    GetFormatManager().LoopThroughCategories(callback, callback_baton);
 }
 
 uint32_t
@@ -268,9 +268,9 @@ DataVisualization::NamedSummaryFormats::Clear ()
 }
 
 void
-DataVisualization::NamedSummaryFormats::ForEach (std::function<bool(ConstString, const lldb::TypeSummaryImplSP&)> callback)
+DataVisualization::NamedSummaryFormats::LoopThrough (TypeSummaryImpl::SummaryCallback callback, void* callback_baton)
 {
-    GetFormatManager().GetNamedSummaryContainer().ForEach(callback);
+    GetFormatManager().GetNamedSummaryContainer().LoopThrough(callback, callback_baton);
 }
 
 uint32_t

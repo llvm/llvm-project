@@ -2,10 +2,10 @@
 
 from __future__ import print_function
 
+
+
 import os, sys
 import lldb
-from lldbsuite.test import configuration
-from lldbsuite.test import lldbtest_config
 from lldbsuite.test.lldbbench import *
 
 class SteppingSpeedBench(BenchBase):
@@ -14,9 +14,18 @@ class SteppingSpeedBench(BenchBase):
 
     def setUp(self):
         BenchBase.setUp(self)
-        self.exe = lldbtest_config.lldbExec
-        self.break_spec = '-n main'
-        self.count = 50
+        if lldb.bmExecutable:
+            self.exe = lldb.bmExecutable
+        else:
+            self.exe = lldbtest_config.lldbExec
+        if lldb.bmBreakpointSpec:
+            self.break_spec = lldb.bmBreakpointSpec
+        else:
+            self.break_spec = '-n main'
+
+        self.count = lldb.bmIterationCount
+        if self.count <= 0:
+            self.count = 50
 
         #print("self.exe=%s" % self.exe)
         #print("self.break_spec=%s" % self.break_spec)

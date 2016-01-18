@@ -40,7 +40,20 @@ bool llvm::isStatepoint(const Value &inst) {
 }
 
 bool llvm::isGCRelocate(const ImmutableCallSite &CS) {
-  return CS.getInstruction() && isa<GCRelocateInst>(CS.getInstruction());
+  if (!CS.getInstruction()) {
+    // This is not a call site
+    return false;
+  }
+
+  return isGCRelocate(CS.getInstruction());
+}
+bool llvm::isGCRelocate(const Value *inst) {
+  if (const CallInst *call = dyn_cast<CallInst>(inst)) {
+    if (const Function *F = call->getCalledFunction()) {
+      return F->getIntrinsicID() == Intrinsic::experimental_gc_relocate;
+    }
+  }
+  return false;
 }
 
 bool llvm::isGCResult(const ImmutableCallSite &CS) {
@@ -54,7 +67,10 @@ bool llvm::isGCResult(const ImmutableCallSite &CS) {
 bool llvm::isGCResult(const Value *inst) {
   if (const CallInst *call = dyn_cast<CallInst>(inst)) {
     if (Function *F = call->getCalledFunction()) {
-      return F->getIntrinsicID() == Intrinsic::experimental_gc_result;
+      return (F->getIntrinsicID() == Intrinsic::experimental_gc_result_int ||
+              F->getIntrinsicID() == Intrinsic::experimental_gc_result_float ||
+              F->getIntrinsicID() == Intrinsic::experimental_gc_result_ptr ||
+              F->getIntrinsicID() == Intrinsic::experimental_gc_result);
     }
   }
   return false;

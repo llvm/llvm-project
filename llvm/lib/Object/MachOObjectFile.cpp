@@ -401,9 +401,6 @@ SymbolRef::Type MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
     case MachO::N_UNDF :
       return SymbolRef::ST_Unknown;
     case MachO::N_SECT :
-      section_iterator Sec = *getSymbolSection(Symb);
-      if (Sec->isData() || Sec->isBSS())
-        return SymbolRef::ST_Data;
       return SymbolRef::ST_Function;
   }
   return SymbolRef::ST_Other;
@@ -1403,7 +1400,8 @@ MachOObjectFile::exports(ArrayRef<uint8_t> Trie) {
   ExportEntry Finish(Trie);
   Finish.moveToEnd();
 
-  return make_range(export_iterator(Start), export_iterator(Finish));
+  return iterator_range<export_iterator>(export_iterator(Start),
+                                         export_iterator(Finish));
 }
 
 iterator_range<export_iterator> MachOObjectFile::exports() const {
@@ -1573,7 +1571,8 @@ MachOObjectFile::rebaseTable(ArrayRef<uint8_t> Opcodes, bool is64) {
   MachORebaseEntry Finish(Opcodes, is64);
   Finish.moveToEnd();
 
-  return make_range(rebase_iterator(Start), rebase_iterator(Finish));
+  return iterator_range<rebase_iterator>(rebase_iterator(Start),
+                                         rebase_iterator(Finish));
 }
 
 iterator_range<rebase_iterator> MachOObjectFile::rebaseTable() const {
@@ -1824,7 +1823,8 @@ MachOObjectFile::bindTable(ArrayRef<uint8_t> Opcodes, bool is64,
   MachOBindEntry Finish(Opcodes, is64, BKind);
   Finish.moveToEnd();
 
-  return make_range(bind_iterator(Start), bind_iterator(Finish));
+  return iterator_range<bind_iterator>(bind_iterator(Start),
+                                       bind_iterator(Finish));
 }
 
 iterator_range<bind_iterator> MachOObjectFile::bindTable() const {
@@ -1854,7 +1854,8 @@ MachOObjectFile::end_load_commands() const {
 
 iterator_range<MachOObjectFile::load_command_iterator>
 MachOObjectFile::load_commands() const {
-  return make_range(begin_load_commands(), end_load_commands());
+  return iterator_range<load_command_iterator>(begin_load_commands(),
+                                               end_load_commands());
 }
 
 StringRef

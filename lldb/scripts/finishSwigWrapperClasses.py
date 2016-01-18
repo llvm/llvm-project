@@ -253,12 +253,29 @@ def run_post_process_for_each_script_supported(vDictArgs):
         return (-8, strScriptDirNotFound)
 
     # Look for any script language directories to build for
-    listDirs = ["Python"]
+    listDirs = []
+    nDepth = 1
+    for strPath, listDirs, listFiles in os.walk(strScriptDir):
+        nDepth = nDepth - 1
+        if nDepth == 0:
+            break
+
+    # Skip the directory that contains the interface files.
+    listDirs.remove('interface')
+    # and the svn directory.
+    if '.svn' in listDirs:
+        listDirs.remove('.svn')
+
+    if gbDbgFlag:
+        sys.stdout.write(strScriptLangsFound)
+        for dir in listDirs:
+            sys.stdout.write(dir)
+        print("\n")
 
     # Iterate script directory find any script language directories
     for scriptLang in listDirs:
         # __pycache__ is a magic directory in Python 3 that holds .pyc files
-        if scriptLang != "__pycache__" and scriptLang != "swig_bot_lib":
+        if scriptLang != "__pycache__":
             dbg.dump_text("Executing language script for \'%s\'" % scriptLang)
             nResult, strStatusMsg = run_post_process(scriptLang, strFinishFileName,
                                                      vDictArgs)

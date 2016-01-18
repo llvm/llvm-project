@@ -20,5 +20,4 @@ ARMFunctionInfo::ARMFunctionInfo(MachineFunction &MF)
       RestoreSPFromFP(false), LRSpilledForFarJump(false),
       FramePtrSpillOffset(0), GPRCS1Offset(0), GPRCS2Offset(0), DPRCSOffset(0),
       GPRCS1Size(0), GPRCS2Size(0), DPRCSSize(0),
-      PICLabelUId(0), VarArgsFrameIndex(0), HasITBlocks(false),
-      IsSplitCSR(false) {}
+      PICLabelUId(0), VarArgsFrameIndex(0), HasITBlocks(false) {}

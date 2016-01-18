@@ -32,6 +32,7 @@ class Language :
 public PluginInterface
 {
 public:
+    
     class TypeScavenger
     {
     public:
@@ -65,13 +66,6 @@ public:
         Find_Impl (ExecutionContextScope *exe_scope,
                    const char *key,
                    ResultSet &results) = 0;
-    };
-    
-    enum class FunctionNameRepresentation
-    {
-        eName,
-        eNameWithArgs,
-        eNameWithNoArgs
     };
 
     ~Language() override;
@@ -129,29 +123,6 @@ public:
     IsLogicalTrue (ValueObject& valobj,
                    Error& error);
     
-    // for a ValueObject of some "reference type", if the value points to the
-    // nil/null object, this method returns true
-    virtual bool
-    IsNilReference (ValueObject& valobj);
-    
-    // for a ValueObject of some "reference type", if the language provides a technique
-    // to decide whether the reference has ever been assigned to some object, this method
-    // will return true if such detection is possible, and if the reference has never been assigned
-    virtual bool
-    IsUninitializedReference (ValueObject& valobj);
-    
-    virtual bool
-    GetFunctionDisplayName (const SymbolContext *sc,
-                            const ExecutionContext *exe_ctx,
-                            FunctionNameRepresentation representation,
-                            Stream& s);
-    
-    virtual void
-    GetExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s);
-    
-    static void
-    GetDefaultExceptionResolverDescription(bool catch_on, bool throw_on, Stream &s);
-    
     // These are accessors for general information about the Languages lldb knows about:
     
     static lldb::LanguageType
@@ -179,10 +150,6 @@ public:
     static bool
     LanguageIsPascal (lldb::LanguageType language);
     
-    // return the primary language, so if LanguageIsC(l), return eLanguageTypeC, etc.
-    static lldb::LanguageType
-    GetPrimaryLanguage (lldb::LanguageType language);
-
     static void
     GetLanguagesSupportingTypeSystems (std::set<lldb::LanguageType> &languages,
                                        std::set<lldb::LanguageType> &languages_for_expressions);

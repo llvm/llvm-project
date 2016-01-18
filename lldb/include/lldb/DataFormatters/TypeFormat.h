@@ -151,6 +151,7 @@ namespace lldb_private {
         TypeFormatImpl (const Flags& flags = Flags());
         
         typedef std::shared_ptr<TypeFormatImpl> SharedPointer;
+        typedef std::function<bool(void*, ConstString, lldb::TypeFormatImplSP)> ValueCallback;
         
         virtual ~TypeFormatImpl ();
         
@@ -258,6 +259,7 @@ namespace lldb_private {
                                const TypeFormatImpl::Flags& flags = Flags());
         
         typedef std::shared_ptr<TypeFormatImpl_Format> SharedPointer;
+        typedef std::function<bool(void*, ConstString, TypeFormatImpl_Format::SharedPointer)> ValueCallback;
         
         ~TypeFormatImpl_Format() override;
         
@@ -300,6 +302,7 @@ namespace lldb_private {
                                  const TypeFormatImpl::Flags& flags = Flags());
         
         typedef std::shared_ptr<TypeFormatImpl_EnumType> SharedPointer;
+        typedef std::function<bool(void*, ConstString, TypeFormatImpl_EnumType::SharedPointer)> ValueCallback;
         
         ~TypeFormatImpl_EnumType() override;
         

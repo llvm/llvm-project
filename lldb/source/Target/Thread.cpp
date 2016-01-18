@@ -67,13 +67,13 @@ Thread::GetGlobalProperties()
 static PropertyDefinition
 g_properties[] =
 {
-    { "step-in-avoid-nodebug", OptionValue::eTypeBoolean, true, true, nullptr, nullptr, "If true, step-in will not stop in functions with no debug information." },
-    { "step-out-avoid-nodebug", OptionValue::eTypeBoolean, true, false, nullptr, nullptr, "If true, when step-in/step-out/step-over leave the current frame, they will continue to step out till they come to a function with "
+    { "step-in-avoid-nodebug", OptionValue::eTypeBoolean, true, true, NULL, NULL, "If true, step-in will not stop in functions with no debug information." },
+    { "step-out-avoid-nodebug", OptionValue::eTypeBoolean, true, false, NULL, NULL, "If true, when step-in/step-out/step-over leave the current frame, they will continue to step out till they come to a function with "
                                                                                     "debug information.  Passing a frame argument to step-out will override this option." },
-    { "step-avoid-regexp",  OptionValue::eTypeRegex  , true , 0, "^std::", nullptr, "A regular expression defining functions step-in won't stop in." },
-    { "step-avoid-libraries",  OptionValue::eTypeFileSpecList  , true , 0, nullptr, nullptr, "A list of libraries that source stepping won't stop in." },
-    { "trace-thread",       OptionValue::eTypeBoolean, false, false, nullptr, nullptr, "If true, this thread will single-step and log execution." },
-    {  nullptr               , OptionValue::eTypeInvalid, false, 0    , nullptr, nullptr, nullptr  }
+    { "step-avoid-regexp",  OptionValue::eTypeRegex  , true , 0, "^std::", NULL, "A regular expression defining functions step-in won't stop in." },
+    { "step-avoid-libraries",  OptionValue::eTypeFileSpecList  , true , 0, NULL, NULL, "A list of libraries that source stepping won't stop in." },
+    { "trace-thread",       OptionValue::eTypeBoolean, false, false, NULL, NULL, "If true, this thread will single-step and log execution." },
+    {  NULL               , OptionValue::eTypeInvalid, false, 0    , NULL, NULL, NULL  }
 };
 
 enum {
@@ -138,14 +138,14 @@ const RegularExpression *
 ThreadProperties::GetSymbolsToAvoidRegexp()
 {
     const uint32_t idx = ePropertyStepAvoidRegex;
-    return m_collection_sp->GetPropertyAtIndexAsOptionValueRegex(nullptr, idx);
+    return m_collection_sp->GetPropertyAtIndexAsOptionValueRegex (NULL, idx);
 }
 
 FileSpecList &
 ThreadProperties::GetLibrariesToAvoid() const
 {
     const uint32_t idx = ePropertyStepAvoidLibraries;
-    OptionValueFileSpecList *option_value = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr, false, idx);
+    OptionValueFileSpecList *option_value = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList (NULL, false, idx);
     assert(option_value);
     return option_value->GetCurrentValue();
 }
@@ -154,21 +154,21 @@ bool
 ThreadProperties::GetTraceEnabledState() const
 {
     const uint32_t idx = ePropertyEnableThreadTrace;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, g_properties[idx].default_uint_value != 0);
+    return m_collection_sp->GetPropertyAtIndexAsBoolean (NULL, idx, g_properties[idx].default_uint_value != 0);
 }
 
 bool
 ThreadProperties::GetStepInAvoidsNoDebug() const
 {
     const uint32_t idx = ePropertyStepInAvoidsNoDebug;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, g_properties[idx].default_uint_value != 0);
+    return m_collection_sp->GetPropertyAtIndexAsBoolean (NULL, idx, g_properties[idx].default_uint_value != 0);
 }
 
 bool
 ThreadProperties::GetStepOutAvoidsNoDebug() const
 {
     const uint32_t idx = ePropertyStepOutAvoidsNoDebug;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, g_properties[idx].default_uint_value != 0);
+    return m_collection_sp->GetPropertyAtIndexAsBoolean (NULL, idx, g_properties[idx].default_uint_value != 0);
 }
 
 //------------------------------------------------------------------
@@ -216,7 +216,7 @@ Thread::ThreadEventData::GetEventDataFromEvent (const Event *event_ptr)
         if (event_data && event_data->GetFlavor() == ThreadEventData::GetFlavorString())
             return static_cast <const ThreadEventData *> (event_ptr->GetData());
     }
-    return nullptr;
+    return NULL;
 }
 
 ThreadSP
@@ -418,7 +418,7 @@ Thread::SetSelectedFrameByIndexNoisily (uint32_t frame_idx, Stream &output_strea
 void
 Thread::FunctionOptimizationWarning (StackFrame *frame)
 {
-    if (frame && frame->HasDebugInformation() && GetProcess()->GetWarningsOptimization())
+    if (frame && frame->HasDebugInformation() && GetProcess()->GetWarningsOptimization() == true)
     {
         SymbolContext sc = frame->GetSymbolContext (eSymbolContextFunction | eSymbolContextModule);
         GetProcess()->PrintWarningOptimization (sc);
@@ -477,7 +477,7 @@ Thread::GetPrivateStopInfo ()
 
             if (!m_stop_info_sp)
             {
-                if (!CalculateStopInfo())
+                if (CalculateStopInfo() == false)
                     SetStopInfo (StopInfoSP());
             }
         }
@@ -726,17 +726,14 @@ Thread::ShouldResume (StateType resume_state)
     m_discarded_plan_stack.clear();
     m_override_should_notify = eLazyBoolCalculate;
 
-    StateType prev_resume_state = GetTemporaryResumeState();
-
-    SetTemporaryResumeState(resume_state);
+    m_temporary_resume_state = resume_state;
     
     lldb::ThreadSP backing_thread_sp (GetBackingThread ());
     if (backing_thread_sp)
-        backing_thread_sp->SetTemporaryResumeState(resume_state);
+        backing_thread_sp->m_temporary_resume_state = resume_state;
 
-    // Make sure m_stop_info_sp is valid.  Don't do this for threads we suspended in the previous run.
-    if (prev_resume_state != eStateSuspended)
-        GetPrivateStopInfo();
+    // Make sure m_stop_info_sp is valid
+    GetPrivateStopInfo();
     
     // This is a little dubious, but we are trying to limit how often we actually fetch stop info from
     // the target, 'cause that slows down single stepping.  So assume that if we got to the point where
@@ -761,7 +758,7 @@ Thread::ShouldResume (StateType resume_state)
     {
         need_to_resume = plan_ptr->WillResume(resume_state, true);
 
-        while ((plan_ptr = GetPreviousPlan(plan_ptr)) != nullptr)
+        while ((plan_ptr = GetPreviousPlan(plan_ptr)) != NULL)
         {
             plan_ptr->WillResume (resume_state, false);
         }
@@ -826,7 +823,7 @@ Thread::ShouldStop (Event* event_ptr)
     // thread caused the process to stop. NOTE: this must take place before
     // the plan is moved from the current plan stack to the completed plan
     // stack.
-    if (!ThreadStoppedForAReason())
+    if (ThreadStoppedForAReason() == false)
     {
         if (log)
             log->Printf ("Thread::%s for tid = 0x%4.4" PRIx64 " 0x%4.4" PRIx64 ", pc = 0x%16.16" PRIx64 ", should_stop = 0 (ignore since no stop reason)",
@@ -857,7 +854,7 @@ Thread::ShouldStop (Event* event_ptr)
     // command on internal breakpoints.  If a synchronous stop reason says we should not stop, then we don't have to
     // do any more work on this stop.
     StopInfoSP private_stop_info (GetPrivateStopInfo());
-    if (private_stop_info && !private_stop_info->ShouldStopSynchronous(event_ptr))
+    if (private_stop_info && private_stop_info->ShouldStopSynchronous(event_ptr) == false)
     {
         if (log)
             log->Printf ("StopInfo::ShouldStop async callback says we should not stop, returning ShouldStop of false.");
@@ -890,7 +887,7 @@ Thread::ShouldStop (Event* event_ptr)
             // If the current plan doesn't explain the stop, then find one that
             // does and let it handle the situation.
             ThreadPlan *plan_ptr = current_plan;
-            while ((plan_ptr = GetPreviousPlan(plan_ptr)) != nullptr)
+            while ((plan_ptr = GetPreviousPlan(plan_ptr)) != NULL)
             {
                 if (plan_ptr->PlanExplainsStop(event_ptr))
                 {
@@ -913,7 +910,10 @@ Thread::ShouldStop (Event* event_ptr)
                         while ((current_plan = GetCurrentPlan()) != prev_plan_ptr);
                         // Now, if the responsible plan was not "Okay to discard" then we're done,
                         // otherwise we forward this to the next plan in the stack below.
-                        done_processing_current_plan = (plan_ptr->IsMasterPlan() && !plan_ptr->OkayToDiscard());
+                        if (plan_ptr->IsMasterPlan() && !plan_ptr->OkayToDiscard())
+                            done_processing_current_plan = true;
+                        else
+                            done_processing_current_plan = false;
                     }
                     else
                         done_processing_current_plan = true;
@@ -970,7 +970,7 @@ Thread::ShouldStop (Event* event_ptr)
                         PopPlan();
 
                         current_plan = GetCurrentPlan();
-                        if (current_plan == nullptr)
+                        if (current_plan == NULL)
                         {
                             break;
                         }
@@ -1119,7 +1119,10 @@ Thread::ShouldReportRun (Event* event_ptr)
 bool
 Thread::MatchesSpec (const ThreadSpec *spec)
 {
-    return (spec == nullptr) ? true : spec->ThreadPassesBasicTests(*this);
+    if (spec == NULL)
+        return true;
+        
+    return spec->ThreadPassesBasicTests(*this);
 }
 
 void
@@ -1187,7 +1190,9 @@ Thread::GetCurrentPlan ()
 {
     // There will always be at least the base plan.  If somebody is mucking with a
     // thread with an empty plan stack, we should assert right away.
-    return m_plan_stack.empty() ? nullptr : m_plan_stack.back().get();
+    if (m_plan_stack.empty())
+        return NULL;
+    return m_plan_stack.back().get();
 }
 
 ThreadPlanSP
@@ -1270,8 +1275,8 @@ Thread::WasThreadPlanDiscarded (ThreadPlan *plan)
 ThreadPlan *
 Thread::GetPreviousPlan (ThreadPlan *current_plan)
 {
-    if (current_plan == nullptr)
-        return nullptr;
+    if (current_plan == NULL)
+        return NULL;
 
     int stack_size = m_completed_plan_stack.size();
     for (int i = stack_size - 1; i > 0; i--)
@@ -1282,7 +1287,10 @@ Thread::GetPreviousPlan (ThreadPlan *current_plan)
 
     if (stack_size > 0 && m_completed_plan_stack[0].get() == current_plan)
     {
-        return GetCurrentPlan();
+        if (m_plan_stack.size() > 0)
+            return m_plan_stack.back().get();
+        else
+            return NULL;
     }
 
     stack_size = m_plan_stack.size();
@@ -1291,7 +1299,7 @@ Thread::GetPreviousPlan (ThreadPlan *current_plan)
         if (current_plan == m_plan_stack[i].get())
             return m_plan_stack[i-1].get();
     }
-    return nullptr;
+    return NULL;
 }
 
 void
@@ -1370,10 +1378,10 @@ Thread::DiscardThreadPlansUpToPlan (ThreadPlan *up_to_plan_ptr)
 
     int stack_size = m_plan_stack.size();
 
-    // If the input plan is nullptr, discard all plans.  Otherwise make sure this plan is in the
+    // If the input plan is NULL, discard all plans.  Otherwise make sure this plan is in the
     // stack, and if so discard up to and including it.
 
-    if (up_to_plan_ptr == nullptr)
+    if (up_to_plan_ptr == NULL)
     {
         for (int i = stack_size - 1; i > 0; i--)
             DiscardPlan();
@@ -1477,7 +1485,7 @@ Thread::UnwindInnermostExpression()
     Error error;
     int stack_size = m_plan_stack.size();
     
-    // If the input plan is nullptr, discard all plans.  Otherwise make sure this plan is in the
+    // If the input plan is NULL, discard all plans.  Otherwise make sure this plan is in the
     // stack, and if so discard up to and including it.
     
     for (int i = stack_size - 1; i > 0; i--)
@@ -1524,21 +1532,6 @@ Thread::QueueThreadPlanForStepOverRange(bool abort_other_plans,
     return thread_plan_sp;
 }
 
-// Call the QueueThreadPlanForStepOverRange method which takes an address range.
-ThreadPlanSP
-Thread::QueueThreadPlanForStepOverRange(bool abort_other_plans,
-                                        const LineEntry &line_entry,
-                                        const SymbolContext &addr_context,
-                                        lldb::RunMode stop_other_threads,
-                                        LazyBool step_out_avoids_code_withoug_debug_info)
-{
-    return QueueThreadPlanForStepOverRange (abort_other_plans, 
-                                            line_entry.GetSameLineContiguousAddressRange(), 
-                                            addr_context, 
-                                            stop_other_threads, 
-                                            step_out_avoids_code_withoug_debug_info);
-}
-
 ThreadPlanSP
 Thread::QueueThreadPlanForStepInRange(bool abort_other_plans,
                                       const AddressRange &range,
@@ -1563,26 +1556,6 @@ Thread::QueueThreadPlanForStepInRange(bool abort_other_plans,
     return thread_plan_sp;
 }
 
-// Call the QueueThreadPlanForStepInRange method which takes an address range.
-ThreadPlanSP
-Thread::QueueThreadPlanForStepInRange(bool abort_other_plans,
-                                      const LineEntry &line_entry,
-                                      const SymbolContext &addr_context,
-                                      const char *step_in_target,
-                                      lldb::RunMode stop_other_threads,
-                                      LazyBool step_in_avoids_code_without_debug_info,
-                                      LazyBool step_out_avoids_code_without_debug_info)
-{
-    return QueueThreadPlanForStepInRange (abort_other_plans, 
-                                          line_entry.GetSameLineContiguousAddressRange(), 
-                                          addr_context, 
-                                          step_in_target, 
-                                          stop_other_threads, 
-                                          step_in_avoids_code_without_debug_info, 
-                                          step_out_avoids_code_without_debug_info);
-}
-
-
 ThreadPlanSP
 Thread::QueueThreadPlanForStepOut(bool abort_other_plans,
                                   SymbolContext *addr_context,
@@ -1591,7 +1564,7 @@ Thread::QueueThreadPlanForStepOut(bool abort_other_plans,
                                   Vote stop_vote,
                                   Vote run_vote,
                                   uint32_t frame_idx,
-                                  LazyBool step_out_avoids_code_without_debug_info)
+                                  LazyBool step_out_avoids_code_withoug_debug_info)
 {
     ThreadPlanSP thread_plan_sp (new ThreadPlanStepOut (*this, 
                                                         addr_context, 
@@ -1600,9 +1573,9 @@ Thread::QueueThreadPlanForStepOut(bool abort_other_plans,
                                                         stop_vote, 
                                                         run_vote, 
                                                         frame_idx,
-                                                        step_out_avoids_code_without_debug_info));
+                                                        step_out_avoids_code_withoug_debug_info));
     
-    if (thread_plan_sp->ValidatePlan(nullptr))
+    if (thread_plan_sp->ValidatePlan(NULL))
     {
         QueueThreadPlan (thread_plan_sp, abort_other_plans);
         return thread_plan_sp;
@@ -1620,8 +1593,7 @@ Thread::QueueThreadPlanForStepOutNoShouldStop(bool abort_other_plans,
                                               bool stop_other_threads,
                                               Vote stop_vote,
                                               Vote run_vote,
-                                              uint32_t frame_idx,
-                                              bool continue_to_next_branch)
+                                              uint32_t frame_idx)
 {
     ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut (*this,
                                                         addr_context, 
@@ -1630,13 +1602,12 @@ Thread::QueueThreadPlanForStepOutNoShouldStop(bool abort_other_plans,
                                                         stop_vote, 
                                                         run_vote, 
                                                         frame_idx,
-                                                        eLazyBoolNo,
-                                                        continue_to_next_branch));
+                                                        eLazyBoolNo));
 
     ThreadPlanStepOut *new_plan = static_cast<ThreadPlanStepOut *>(thread_plan_sp.get());
     new_plan->ClearShouldStopHereCallbacks();
 
-    if (thread_plan_sp->ValidatePlan(nullptr))
+    if (thread_plan_sp->ValidatePlan(NULL))
     {
         QueueThreadPlan (thread_plan_sp, abort_other_plans);
         return thread_plan_sp;
@@ -1651,7 +1622,7 @@ ThreadPlanSP
 Thread::QueueThreadPlanForStepThrough (StackID &return_stack_id, bool abort_other_plans, bool stop_other_threads)
 {
     ThreadPlanSP thread_plan_sp(new ThreadPlanStepThrough (*this, return_stack_id, stop_other_threads));
-    if (!thread_plan_sp || !thread_plan_sp->ValidatePlan(nullptr))
+    if (!thread_plan_sp || !thread_plan_sp->ValidatePlan (NULL))
         return ThreadPlanSP();
 
     QueueThreadPlan (thread_plan_sp, abort_other_plans);
@@ -1789,6 +1760,7 @@ Thread::CalculateTarget ()
     if (process_sp)
         target_sp = process_sp->CalculateTarget();
     return target_sp;
+    
 }
 
 ProcessSP
@@ -1904,7 +1876,7 @@ Thread::ReturnFromFrame (lldb::StackFrameSP frame_sp, lldb::ValueObjectSP return
         
         // FIXME: ValueObject::Cast doesn't currently work correctly, at least not for scalars.
         // Turn that back on when that works.
-        if (/* DISABLES CODE */ (0) && sc.function != nullptr)
+        if (/* DISABLES CODE */ (0) && sc.function != NULL)
         {
             Type *function_type = sc.function->GetType();
             if (function_type)
@@ -2042,7 +2014,7 @@ Thread::DumpUsingSettingsFormat (Stream &strm, uint32_t frame_idx)
 {
     ExecutionContext exe_ctx (shared_from_this());
     Process *process = exe_ctx.GetProcessPtr();
-    if (process == nullptr)
+    if (process == NULL)
         return;
 
     StackFrameSP frame_sp;
@@ -2062,10 +2034,10 @@ Thread::DumpUsingSettingsFormat (Stream &strm, uint32_t frame_idx)
     
     FormatEntity::Format(*thread_format,
                          strm,
-                         frame_sp ? &frame_sc : nullptr,
+                         frame_sp ? &frame_sc : NULL,
                          &exe_ctx,
-                         nullptr,
-                         nullptr,
+                         NULL,
+                         NULL,
                          false,
                          false);
 }
@@ -2193,7 +2165,7 @@ Thread::GetStatus (Stream &strm, uint32_t start_frame, uint32_t num_frames, uint
         
         const bool show_frame_info = true;
         
-        const char *selected_frame_marker = nullptr;
+        const char *selected_frame_marker = NULL;
         if (num_frames == 1 || (GetID() != GetProcess()->GetThreadList().GetSelectedThread()->GetID()))
             strm.IndentMore ();
         else
@@ -2319,7 +2291,7 @@ Thread::GetStackFrameStatus (Stream& strm,
 Unwind *
 Thread::GetUnwinder ()
 {
-    if (!m_unwinder_ap)
+    if (m_unwinder_ap.get() == NULL)
     {
         const ArchSpec target_arch (CalculateTarget()->GetArchitecture ());
         const llvm::Triple::ArchType machine = target_arch.GetMachine();
@@ -2398,13 +2370,13 @@ Thread::StepIn (bool source_step,
         if (source_step && frame_sp && frame_sp->HasDebugInformation ())
         {
             SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
-            new_plan_sp = QueueThreadPlanForStepInRange(abort_other_plans,
-                                                        sc.line_entry,
-                                                        sc,
-                                                        nullptr,
-                                                        run_mode,
-                                                        step_in_avoids_code_without_debug_info,
-                                                        step_out_avoids_code_without_debug_info);
+            new_plan_sp = QueueThreadPlanForStepInRange (abort_other_plans,
+                                                         sc.line_entry.range,
+                                                         sc,
+                                                         NULL,
+                                                         run_mode,
+                                                         step_in_avoids_code_without_debug_info,
+                                                         step_out_avoids_code_without_debug_info);
         }
         else
         {
@@ -2445,7 +2417,7 @@ Thread::StepOver (bool source_step,
         {
             SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
             new_plan_sp = QueueThreadPlanForStepOverRange (abort_other_plans,
-                                                           sc.line_entry,
+                                                           sc.line_entry.range,
                                                            sc,
                                                            run_mode,
                                                            step_out_avoids_code_without_debug_info);
@@ -2482,13 +2454,13 @@ Thread::StepOut ()
         const bool stop_other_threads = false;
         const bool abort_other_plans = false;
 
-        ThreadPlanSP new_plan_sp(QueueThreadPlanForStepOut(abort_other_plans,
-                                                           nullptr,
-                                                           first_instruction,
-                                                           stop_other_threads,
-                                                           eVoteYes,
-                                                           eVoteNoOpinion,
-                                                           0));
+        ThreadPlanSP new_plan_sp(QueueThreadPlanForStepOut (abort_other_plans,
+                                                            NULL,
+                                                            first_instruction,
+                                                            stop_other_threads,
+                                                            eVoteYes,
+                                                            eVoteNoOpinion,
+                                                            0));
         
         new_plan_sp->SetIsMasterPlan(true);
         new_plan_sp->SetOkayToDiscard(false);

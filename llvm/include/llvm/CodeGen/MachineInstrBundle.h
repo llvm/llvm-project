@@ -164,32 +164,27 @@ public:
     bool Tied;
   };
 
-  /// Information about how a physical register Reg is used by a set of
+  /// PhysRegInfo - Information about a physical register used by a set of
   /// operands.
   struct PhysRegInfo {
-    /// There is a regmask operand indicating Reg is clobbered.
-    /// \see MachineOperand::CreateRegMask().
-    bool Clobbered;
+    /// Clobbers - Reg or an overlapping register is defined, or a regmask
+    /// clobbers Reg.
+    bool Clobbers;
 
-    /// Reg or one of its aliases is defined. The definition may only cover
-    /// parts of the register.
-    bool Defined;
-    /// Reg or a super-register is defined. The definition covers the full
-    /// register.
-    bool FullyDefined;
+    /// Defines - Reg or a super-register is defined.
+    bool Defines;
 
-    /// Reg or one of its aliases is read. The register may only be read
-    /// partially.
-    bool Read;
-    /// Reg or a super-register is read. The full register is read.
-    bool FullyRead;
+    /// Reads - Read or a super-register is read.
+    bool Reads;
 
-    /// Reg is FullyDefined and all defs of reg or an overlapping register are
-    /// dead.
-    bool DeadDef;
+    /// ReadsOverlap - Reg or an overlapping register is read.
+    bool ReadsOverlap;
 
-    /// There is a use operand of reg or a super-register with kill flag set.
-    bool Killed;
+    /// DefinesDead - All defs of a Reg or a super-register are dead.
+    bool DefinesDead;
+
+    /// There is a kill of Reg or a super-register.
+    bool Kills;
   };
 
   /// analyzeVirtReg - Analyze how the current instruction or bundle uses a

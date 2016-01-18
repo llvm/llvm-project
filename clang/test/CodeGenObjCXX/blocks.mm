@@ -68,18 +68,3 @@ class CaptureThisAndAnotherPointer {
     takeBlock(^{ useValues(ptr, this); });
   }
 };
-
-// rdar://problem/23713871
-// Check that we don't crash when using BLOCK_LAYOUT_STRONG.
-#pragma clang assume_nonnull begin
-@interface NSUUID @end
-#pragma clang assume_nonnull end
-
-struct Wrapper1 { NSUUID *Ref; };
-struct Wrapper2 { Wrapper1 W1; };
-
-@implementation B
-- (void) captureStrongRef {
-  __block Wrapper2 W2;
-}
-@end

@@ -207,6 +207,10 @@ public:
 
     void Status(Stream &strm) const;
 
+    size_t GetAlternateManglings(const ConstString &mangled, std::vector<ConstString> &alternates) override {
+        return static_cast<size_t>(0);
+    }
+
     void ModulesDidLoad(const ModuleList &module_list) override;
 
     bool LoadAllocation(Stream &strm, const uint32_t alloc_id, const char* filename, StackFrame* frame_ptr);
@@ -227,7 +231,6 @@ public:
 protected:
     struct ScriptDetails;
     struct AllocationDetails;
-    struct Element;
 
     void InitSearchFilter(lldb::TargetSP target)
     {
@@ -290,24 +293,6 @@ protected:
     static const size_t s_runtimeHookCount;
 
 private:
-    // Used to index expression format strings
-    enum ExpressionStrings
-    {
-       eExprGetOffsetPtr = 0,
-       eExprAllocGetType,
-       eExprTypeDimX,
-       eExprTypeDimY,
-       eExprTypeDimZ,
-       eExprTypeElemPtr,
-       eExprElementType,
-       eExprElementKind,
-       eExprElementVec,
-       eExprElementFieldCount,
-       eExprSubelementsId,
-       eExprSubelementsName,
-       eExprSubelementsArrSize
-    };
-
     RenderScriptRuntime(Process *process); // Call CreateInstance instead.
     
     static bool HookCallback(void *baton, StoppointCallbackContext *ctx, lldb::user_id_t break_id,
@@ -322,24 +307,16 @@ private:
 
     void CaptureScriptInit1(RuntimeHook* hook_info, ExecutionContext& context);
     void CaptureAllocationInit1(RuntimeHook* hook_info, ExecutionContext& context);
-    void CaptureAllocationDestroy(RuntimeHook* hook_info, ExecutionContext& context);
     void CaptureSetGlobalVar1(RuntimeHook* hook_info, ExecutionContext& context);
-    void CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info, ExecutionContext& context);
 
     AllocationDetails* FindAllocByID(Stream &strm, const uint32_t alloc_id);
     std::shared_ptr<uint8_t> GetAllocationData(AllocationDetails* allocation, StackFrame* frame_ptr);
-    void SetElementSize(Element& elem);
+    unsigned int GetElementSize(const AllocationDetails* allocation);
     static bool GetFrameVarAsUnsigned(const lldb::StackFrameSP, const char* var_name, uint64_t& val);
-    void FindStructTypeName(Element& elem, StackFrame* frame_ptr);
-
-    size_t PopulateElementHeaders(const std::shared_ptr<uint8_t> header_buffer, size_t offset, const Element& elem);
-    size_t CalculateElementHeaderSize(const Element& elem);
 
     //
     // Helper functions for jitting the runtime
     //
-    const char* JITTemplate(ExpressionStrings e);
-
     bool JITDataPointer(AllocationDetails* allocation, StackFrame* frame_ptr,
                         unsigned int x = 0, unsigned int y = 0, unsigned int z = 0);
 
@@ -347,11 +324,9 @@ private:
 
     bool JITTypePacked(AllocationDetails* allocation, StackFrame* frame_ptr);
 
-    bool JITElementPacked(Element& elem, const lldb::addr_t context, StackFrame* frame_ptr);
+    bool JITElementPacked(AllocationDetails* allocation, StackFrame* frame_ptr);
 
-    bool JITAllocationSize(AllocationDetails* allocation, StackFrame* frame_ptr);
-
-    bool JITSubelements(Element& elem, const lldb::addr_t context, StackFrame* frame_ptr);
+    bool JITAllocationSize(AllocationDetails* allocation, StackFrame* frame_ptr, const uint32_t elem_size);
 
     bool JITAllocationStride(AllocationDetails* allocation, StackFrame* frame_ptr);
 

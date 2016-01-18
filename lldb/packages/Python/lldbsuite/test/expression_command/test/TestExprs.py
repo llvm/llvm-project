@@ -56,6 +56,7 @@ class BasicExprCommandsTestCase(TestBase):
             patterns = ["\(float\) \$.* = 2\.234"])
         # (float) $2 = 2.234
 
+    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     @expectedFailureWindows("llvm.org/pr21765")
     def test_many_expr_commands(self):
         self.build_and_run()
@@ -98,6 +99,7 @@ class BasicExprCommandsTestCase(TestBase):
         # (const char *) $8 = 0x... "/Volumes/data/lldb/svn/trunk/test/expression_command/test/a.out"
 
     @add_test_categories(['pyapi'])
+    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     @expectedFailureWindows # Test crashes
     def test_evaluate_expression_python(self):
         """Test SBFrame.EvaluateExpression() API for evaluating an expression."""

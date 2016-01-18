@@ -90,13 +90,12 @@ BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
 
 BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
                                                 RegularExpression &func_regex,
-                                                lldb::LanguageType language,
                                                 bool skip_prologue) :
     BreakpointResolver (bkpt, BreakpointResolver::NameResolver),
     m_class_name (nullptr),
     m_regex (func_regex),
     m_match_type (Breakpoint::Regexp),
-    m_language (language),
+    m_language (eLanguageTypeUnknown),
     m_skip_prologue (skip_prologue)
 {
 }
@@ -212,7 +211,6 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
         return Searcher::eCallbackReturnStop;
     }
     bool filter_by_cu = (filter.GetFilterRequiredItems() & eSymbolContextCompUnit) != 0;
-    bool filter_by_language = (m_language != eLanguageTypeUnknown);
     const bool include_symbols = !filter_by_cu;
     const bool include_inlines = true;
     const bool append = true;
@@ -256,33 +254,15 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
     }
 
     // If the filter specifies a Compilation Unit, remove the ones that don't pass at this point.
-    if (filter_by_cu || filter_by_language)
+    if (filter_by_cu)
     {
         uint32_t num_functions = func_list.GetSize();
         
         for (size_t idx = 0; idx < num_functions; idx++)
         {
-            bool remove_it = false;
             SymbolContext sc;
             func_list.GetContextAtIndex(idx, sc);
-            if (filter_by_cu)
-            {
-                if (!sc.comp_unit || !filter.CompUnitPasses(*sc.comp_unit))
-                    remove_it = true;
-            }
-            
-            if (filter_by_language)
-            {
-                LanguageType sym_language = sc.GetLanguage();
-                if ((Language::GetPrimaryLanguage(sym_language) !=
-                     Language::GetPrimaryLanguage(m_language)) &&
-                    (sym_language != eLanguageTypeUnknown))
-                {
-                    remove_it = true;
-                }
-            }
-            
-            if  (remove_it)
+            if (!sc.comp_unit || !filter.CompUnitPasses(*sc.comp_unit))
             {
                 func_list.RemoveContextAtIndex(idx);
                 num_functions--;
@@ -389,10 +369,6 @@ BreakpointResolverName::GetDescription (Stream *s)
             }
             s->Printf ("'%s'}", m_lookups[num_names - 1].name.GetCString());
         }
-    }
-    if (m_language != eLanguageTypeUnknown)
-    {
-        s->Printf (", language = %s", Language::GetNameForLanguageType(m_language));
     }
 }
 

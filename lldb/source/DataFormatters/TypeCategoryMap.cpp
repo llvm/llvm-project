@@ -373,7 +373,7 @@ TypeCategoryMap::GetValidator (FormattersMatchData& match_data)
 }
 
 void
-TypeCategoryMap::ForEach(ForEachCallback callback)
+TypeCategoryMap::LoopThrough(CallbackType callback, void* param)
 {
     if (callback)
     {
@@ -385,7 +385,7 @@ TypeCategoryMap::ForEach(ForEachCallback callback)
             for (begin = m_active_categories.begin(); begin != end; begin++)
             {
                 lldb::TypeCategoryImplSP category = *begin;
-                if (!callback(category))
+                if (!callback(param, category))
                     break;
             }
         }
@@ -398,7 +398,7 @@ TypeCategoryMap::ForEach(ForEachCallback callback)
                 if (pos->second->IsEnabled())
                     continue;
                 KeyType type = pos->first;
-                if (!callback(pos->second))
+                if (!callback(param, pos->second))
                     break;
             }
         }

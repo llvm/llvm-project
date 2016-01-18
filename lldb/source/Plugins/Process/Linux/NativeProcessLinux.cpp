@@ -2547,7 +2547,8 @@ NativeProcessLinux::ReadMemory (lldb::addr_t addr, void *buf, size_t size, size_
         remainder = remainder > k_ptrace_word_size ? k_ptrace_word_size : remainder;
 
         // Copy the data into our buffer
-        memcpy(dst, &data, remainder);
+        for (unsigned i = 0; i < remainder; ++i)
+            dst[i] = ((data >> i*8) & 0xFF);
 
         if (log && ProcessPOSIXLog::AtTopNestLevel() &&
                 (log->GetMask().Test(POSIX_LOG_MEMORY_DATA_LONG) ||
@@ -2599,7 +2600,8 @@ NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
         if (remainder == k_ptrace_word_size)
         {
             unsigned long data = 0;
-            memcpy(&data, src, k_ptrace_word_size);
+            for (unsigned i = 0; i < k_ptrace_word_size; ++i)
+                data |= (unsigned long)src[i] << i*8;
 
             if (log && ProcessPOSIXLog::AtTopNestLevel() &&
                     (log->GetMask().Test(POSIX_LOG_MEMORY_DATA_LONG) ||

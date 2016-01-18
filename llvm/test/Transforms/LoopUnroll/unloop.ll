@@ -1,6 +1,6 @@
 ; RUN: opt < %s -S -loop-unroll -verify-loop-info | FileCheck %s
 ;
-; Unit tests for LoopInfo::markAsRemoved.
+; Unit tests for LoopInfo::updateUnloop.
 
 declare i1 @check() nounwind
 

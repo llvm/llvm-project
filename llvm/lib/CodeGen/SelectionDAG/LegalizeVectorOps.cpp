@@ -105,8 +105,7 @@ class VectorLegalizer {
   SDValue ExpandLoad(SDValue Op);
   SDValue ExpandStore(SDValue Op);
   SDValue ExpandFNEG(SDValue Op);
-  SDValue ExpandBITREVERSE(SDValue Op);
-  SDValue ExpandCTLZ_CTTZ_ZERO_UNDEF(SDValue Op);
+  SDValue ExpandABSDIFF(SDValue Op);
 
   /// \brief Implements vector promotion.
   ///
@@ -232,7 +231,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     EVT StVT = ST->getMemoryVT();
     MVT ValVT = ST->getValue().getSimpleValueType();
     if (StVT.isVector() && ST->isTruncatingStore())
-      switch (TLI.getTruncStoreAction(ValVT, StVT)) {
+      switch (TLI.getTruncStoreAction(ValVT, StVT.getSimpleVT())) {
       default: llvm_unreachable("This action is not supported yet!");
       case TargetLowering::Legal:
         return TranslateLegalizeResults(Op, Result);
@@ -245,7 +244,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         Changed = true;
         return LegalizeOp(ExpandStore(Op));
       }
-  } else if (Op.getOpcode() == ISD::MSCATTER || Op.getOpcode() == ISD::MSTORE)
+  } else if (Op.getOpcode() == ISD::MSCATTER)
     HasVectorValue = true;
 
   for (SDNode::value_iterator J = Node->value_begin(), E = Node->value_end();
@@ -282,7 +281,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::BSWAP:
-  case ISD::BITREVERSE:
   case ISD::CTLZ:
   case ISD::CTTZ:
   case ISD::CTLZ_ZERO_UNDEF:
@@ -332,6 +330,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::UABSDIFF:
+  case ISD::SABSDIFF:
     QueryType = Node->getValueType(0);
     break;
   case ISD::FP_ROUND_INREG:
@@ -343,9 +343,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::MSCATTER:
     QueryType = cast<MaskedScatterSDNode>(Node)->getValue().getValueType();
-    break;
-  case ISD::MSTORE:
-    QueryType = cast<MaskedStoreSDNode>(Node)->getValue().getValueType();
     break;
   }
 
@@ -420,7 +417,7 @@ SDValue VectorLegalizer::Promote(SDValue Op) {
     else
       Operands[j] = Op.getOperand(j);
   }
-
+  
   Op = DAG.getNode(Op.getOpcode(), dl, NVT, Operands, Op.getNode()->getFlags());
   if ((VT.isFloatingPoint() && NVT.isFloatingPoint()) ||
       (VT.isVector() && VT.getVectorElementType().isFloatingPoint() &&
@@ -718,14 +715,40 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
     return ExpandFNEG(Op);
   case ISD::SETCC:
     return UnrollVSETCC(Op);
-  case ISD::BITREVERSE:
-    return ExpandBITREVERSE(Op);
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTTZ_ZERO_UNDEF:
-    return ExpandCTLZ_CTTZ_ZERO_UNDEF(Op);
+  case ISD::UABSDIFF:
+  case ISD::SABSDIFF:
+    return ExpandABSDIFF(Op);
   default:
     return DAG.UnrollVectorOp(Op.getNode());
   }
+}
+
+SDValue VectorLegalizer::ExpandABSDIFF(SDValue Op) {
+  SDLoc dl(Op);
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  EVT VT = Op.getValueType();
+
+  // For unsigned intrinsic, promote the type to handle unsigned overflow.
+  bool isUabsdiff = (Op->getOpcode() == ISD::UABSDIFF);
+  if (isUabsdiff) {
+    VT = VT.widenIntegerVectorElementType(*DAG.getContext());
+    Op0 = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Op0);
+    Op1 = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Op1);
+  }
+
+  SDNodeFlags Flags;
+  Flags.setNoSignedWrap(!isUabsdiff);
+  SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, Op0, Op1, &Flags);
+  if (isUabsdiff)
+    return DAG.getNode(ISD::TRUNCATE, dl, Op.getValueType(), Sub);
+
+  SDValue Cmp =
+      DAG.getNode(ISD::SETCC, dl, TLI.getSetCCResultType(DAG.getDataLayout(),
+                                                         *DAG.getContext(), VT),
+                  Sub, DAG.getConstant(0, dl, VT), DAG.getCondCode(ISD::SETGE));
+  SDValue Neg = DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT), Sub, &Flags);
+  return DAG.getNode(ISD::VSELECT, dl, VT, Cmp, Sub, Neg);
 }
 
 SDValue VectorLegalizer::ExpandSELECT(SDValue Op) {
@@ -908,25 +931,6 @@ SDValue VectorLegalizer::ExpandBSWAP(SDValue Op) {
   return DAG.getNode(ISD::BITCAST, DL, VT, Op);
 }
 
-SDValue VectorLegalizer::ExpandBITREVERSE(SDValue Op) {
-  EVT VT = Op.getValueType();
-
-  // If we have the scalar operation, it's probably cheaper to unroll it.
-  if (TLI.isOperationLegalOrCustom(ISD::BITREVERSE, VT.getScalarType()))
-    return DAG.UnrollVectorOp(Op.getNode());
-
-  // If we have the appropriate vector bit operations, it is better to use them
-  // than unrolling and expanding each component.
-  if (!TLI.isOperationLegalOrCustom(ISD::SHL, VT) ||
-      !TLI.isOperationLegalOrCustom(ISD::SRL, VT) ||
-      !TLI.isOperationLegalOrCustom(ISD::AND, VT) ||
-      !TLI.isOperationLegalOrCustom(ISD::OR, VT))
-    return DAG.UnrollVectorOp(Op.getNode());
-
-  // Let LegalizeDAG handle this later.
-  return Op;
-}
-
 SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
   // Implement VSELECT in terms of XOR, AND, OR
   // on platforms which do not support blend natively.
@@ -1023,16 +1027,6 @@ SDValue VectorLegalizer::ExpandFNEG(SDValue Op) {
     return DAG.getNode(ISD::FSUB, DL, Op.getValueType(),
                        Zero, Op.getOperand(0));
   }
-  return DAG.UnrollVectorOp(Op.getNode());
-}
-
-SDValue VectorLegalizer::ExpandCTLZ_CTTZ_ZERO_UNDEF(SDValue Op) {
-  // If the non-ZERO_UNDEF version is supported we can let LegalizeDAG handle.
-  unsigned Opc = Op.getOpcode() == ISD::CTLZ_ZERO_UNDEF ? ISD::CTLZ : ISD::CTTZ;
-  if (TLI.isOperationLegalOrCustom(Opc, Op.getValueType()))
-    return Op;
-
-  // Otherwise go ahead and unroll.
   return DAG.UnrollVectorOp(Op.getNode());
 }
 

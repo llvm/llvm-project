@@ -33,7 +33,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetAsmParser.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -343,7 +342,6 @@ private:
   enum DirectiveKind {
     DK_NO_DIRECTIVE, // Placeholder
     DK_SET, DK_EQU, DK_EQUIV, DK_ASCII, DK_ASCIZ, DK_STRING, DK_BYTE, DK_SHORT,
-    DK_RELOC,
     DK_VALUE, DK_2BYTE, DK_LONG, DK_INT, DK_4BYTE, DK_QUAD, DK_8BYTE, DK_OCTA,
     DK_SINGLE, DK_FLOAT, DK_DOUBLE, DK_ALIGN, DK_ALIGN32, DK_BALIGN, DK_BALIGNW,
     DK_BALIGNL, DK_P2ALIGN, DK_P2ALIGNW, DK_P2ALIGNL, DK_ORG, DK_FILL, DK_ENDR,
@@ -376,7 +374,6 @@ private:
 
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
-  bool parseDirectiveReloc(SMLoc DirectiveLoc); // ".reloc"
   bool parseDirectiveValue(unsigned Size); // ".byte", ".long", ...
   bool parseDirectiveOctaValue(); // ".octa"
   bool parseDirectiveRealValue(const fltSemantics &); // ".single", ...
@@ -703,7 +700,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   if (!HadError && !NoFinalize)
     Out.Finish();
 
-  return HadError || getContext().hadError();
+  return HadError;
 }
 
 void AsmParser::checkForValidSection() {
@@ -1337,15 +1334,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // Treat '.' as a valid identifier in this context.
     Lex();
     IDVal = ".";
-  } else if (Lexer.is(AsmToken::LCurly)) {
-    // Treat '{' as a valid identifier in this context.
-    Lex();
-    IDVal = "{";
-
-  } else if (Lexer.is(AsmToken::RCurly)) {
-    // Treat '}' as a valid identifier in this context.
-    Lex();
-    IDVal = "}";
   } else if (parseIdentifier(IDVal)) {
     if (!TheCondState.Ignore)
       return TokError("unexpected token at start of statement");
@@ -1408,8 +1396,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   // See what kind of statement we have.
   switch (Lexer.getKind()) {
   case AsmToken::Colon: {
-    if (!getTargetParser().isLabel(ID))
-      break;
     checkForValidSection();
 
     // identifier ':'   -> Label.
@@ -1468,8 +1454,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   }
 
   case AsmToken::Equal:
-    if (!getTargetParser().equalIsAsmAssignment())
-      break;
     // identifier '=' ... -> assignment statement
     Lex();
 
@@ -1698,8 +1682,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveError(IDLoc, true);
     case DK_WARNING:
       return parseDirectiveWarning(IDLoc);
-    case DK_RELOC:
-      return parseDirectiveReloc(IDLoc);
     }
 
     return Error(IDLoc, "unknown directive");
@@ -1714,14 +1696,12 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   if (ParsingInlineAsm && (IDVal == "align" || IDVal == "ALIGN"))
     return parseDirectiveMSAlign(IDLoc, Info);
 
-  if (ParsingInlineAsm && (IDVal == "even"))
-    Info.AsmRewrites->emplace_back(AOK_EVEN, IDLoc, 4);
   checkForValidSection();
 
   // Canonicalize the opcode to lower case.
   std::string OpcodeStr = IDVal.lower();
   ParseInstructionInfo IInfo(Info.AsmRewrites);
-  bool HadError = getTargetParser().ParseInstruction(IInfo, OpcodeStr, ID,
+  bool HadError = getTargetParser().ParseInstruction(IInfo, OpcodeStr, IDLoc,
                                                      Info.ParsedOperands);
   Info.ParseError = HadError;
 
@@ -2467,51 +2447,6 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   }
 
   Lex();
-  return false;
-}
-
-/// parseDirectiveReloc
-///  ::= .reloc expression , identifier [ , expression ]
-bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
-  const MCExpr *Offset;
-  const MCExpr *Expr = nullptr;
-
-  SMLoc OffsetLoc = Lexer.getTok().getLoc();
-  if (parseExpression(Offset))
-    return true;
-
-  // We can only deal with constant expressions at the moment.
-  int64_t OffsetValue;
-  if (!Offset->evaluateAsAbsolute(OffsetValue))
-    return Error(OffsetLoc, "expression is not a constant value");
-
-  if (Lexer.isNot(AsmToken::Comma))
-    return TokError("expected comma");
-  Lexer.Lex();
-
-  if (Lexer.isNot(AsmToken::Identifier))
-    return TokError("expected relocation name");
-  SMLoc NameLoc = Lexer.getTok().getLoc();
-  StringRef Name = Lexer.getTok().getIdentifier();
-  Lexer.Lex();
-
-  if (Lexer.is(AsmToken::Comma)) {
-    Lexer.Lex();
-    SMLoc ExprLoc = Lexer.getLoc();
-    if (parseExpression(Expr))
-      return true;
-
-    MCValue Value;
-    if (!Expr->evaluateAsRelocatable(Value, nullptr, nullptr))
-      return Error(ExprLoc, "expression must be relocatable");
-  }
-
-  if (Lexer.isNot(AsmToken::EndOfStatement))
-    return TokError("unexpected token in .reloc directive");
-
-  if (getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc))
-    return Error(NameLoc, "unknown relocation name");
-
   return false;
 }
 
@@ -4410,7 +4345,6 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".err"] = DK_ERR;
   DirectiveKindMap[".error"] = DK_ERROR;
   DirectiveKindMap[".warning"] = DK_WARNING;
-  DirectiveKindMap[".reloc"] = DK_RELOC;
 }
 
 MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
@@ -4755,8 +4689,8 @@ bool AsmParser::parseMSInlineAsm(
     }
 
     // Consider implicit defs to be clobbers.  Think of cpuid and push.
-    ArrayRef<MCPhysReg> ImpDefs(Desc.getImplicitDefs(),
-                                Desc.getNumImplicitDefs());
+    ArrayRef<uint16_t> ImpDefs(Desc.getImplicitDefs(),
+                               Desc.getNumImplicitDefs());
     ClobberRegs.insert(ClobberRegs.end(), ImpDefs.begin(), ImpDefs.end());
   }
 
@@ -4865,9 +4799,6 @@ bool AsmParser::parseMSInlineAsm(
       AdditionalSkip = (Val < 4) ? 2 : Val < 7 ? 3 : 4;
       break;
     }
-    case AOK_EVEN:
-      OS << ".even";
-      break;
     case AOK_DotOperator:
       // Insert the dot if the user omitted it.
       OS.flush();

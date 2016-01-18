@@ -123,19 +123,6 @@ GetFormatFromFormatName (const char *format_name, bool partial_match_ok, Format 
     return false;
 }
 
-void
-FormatManager::Changed ()
-{
-    ++m_last_revision;
-    m_format_cache.Clear ();
-    Mutex::Locker lang_locker(m_language_categories_mutex);
-    for (auto& iter : m_language_categories_map)
-    {
-        if (iter.second)
-            iter.second->GetFormatCache().Clear();
-    }
-}
-
 bool
 FormatManager::GetFormatFromCString (const char *format_cstr,
                                      bool partial_match_ok,
@@ -499,15 +486,15 @@ FormatManager::GetValidatorForType (lldb::TypeNameSpecifierImplSP type_sp)
 }
 
 void
-FormatManager::ForEachCategory(TypeCategoryMap::ForEachCallback callback)
+FormatManager::LoopThroughCategories (CategoryCallback callback, void* param)
 {
-    m_categories_map.ForEach(callback);
+    m_categories_map.LoopThrough(callback, param);
     Mutex::Locker locker(m_language_categories_mutex);
     for (const auto& entry : m_language_categories_map)
     {
         if (auto category_sp = entry.second->GetCategory())
         {
-            if (!callback(category_sp))
+            if (!callback(param, category_sp))
                 break;
         }
     }
@@ -581,7 +568,7 @@ FormatManager::ShouldPrintAsOneLiner (ValueObject& valobj)
     CompilerType compiler_type(valobj.GetCompilerType());
     if (compiler_type.IsValid())
     {
-        switch (compiler_type.ShouldPrintAsOneLiner(&valobj))
+        switch (compiler_type.ShouldPrintAsOneLiner())
         {
             case eLazyBoolNo:
                 return false;
@@ -603,23 +590,6 @@ FormatManager::ShouldPrintAsOneLiner (ValueObject& valobj)
         // something is wrong here - bail out
         if (!child_sp)
             return false;
-        
-        // also ask the child's type if it has any opinion
-        CompilerType child_compiler_type(child_sp->GetCompilerType());
-        if (child_compiler_type.IsValid())
-        {
-            switch (child_compiler_type.ShouldPrintAsOneLiner(child_sp.get()))
-            {
-                case eLazyBoolYes:
-                    // an opinion of yes is only binding for the child, so keep going
-                case eLazyBoolCalculate:
-                    break;
-                case eLazyBoolNo:
-                    // but if the child says no, then it's a veto on the whole thing
-                    return false;
-            }
-        }
-        
         // if we decided to define synthetic children for a type, we probably care enough
         // to show them, but avoid nesting children in children
         if (child_sp->GetSyntheticChildren().get() != nullptr)
@@ -1056,12 +1026,12 @@ FormatManager::GetHardcodedValidator (FormattersMatchData& match_data)
 }
 
 FormatManager::FormatManager() :
-    m_last_revision(0),
     m_format_cache(),
-    m_language_categories_mutex(Mutex::eMutexTypeRecursive),
-    m_language_categories_map(),
     m_named_summaries_map(this),
+    m_last_revision(0),
     m_categories_map(this),
+    m_language_categories_map(),
+    m_language_categories_mutex(Mutex::eMutexTypeRecursive),
     m_default_category_name(ConstString("default")),
     m_system_category_name(ConstString("system")), 
     m_vectortypes_category_name(ConstString("VectorTypes"))
@@ -1076,6 +1046,7 @@ FormatManager::FormatManager() :
 void
 FormatManager::LoadSystemFormatters()
 {
+    
     TypeSummaryImpl::Flags string_flags;
     string_flags.SetCascades(true)
     .SetSkipPointers(true)

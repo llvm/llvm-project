@@ -365,7 +365,7 @@ namespace lldb_private {
         {
             if (m_type == eTypeBytes)
                 return buffer.byte_order;
-            return endian::InlHostByteOrder();
+            return lldb::endian::InlHostByteOrder();
         }
         
         uint32_t

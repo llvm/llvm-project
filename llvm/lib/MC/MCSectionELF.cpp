@@ -133,8 +133,6 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI,
     OS << "note";
   else if (Type == ELF::SHT_PROGBITS)
     OS << "progbits";
-  else if (Type == ELF::SHT_X86_64_UNWIND)
-    OS << "unwind";
 
   if (EntrySize) {
     assert(Flags & ELF::SHF_MERGE);

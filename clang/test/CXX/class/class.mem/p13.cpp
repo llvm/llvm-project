@@ -58,12 +58,12 @@ struct X3a {
 };
 
 // - every member of every anonymous union that is a member of class T.
-struct X4 { // expected-note{{previous}}
+struct X4 {
   union {
     int X;
     union {
       float Y;
-      unsigned X4; // expected-error{{redeclares 'X4'}}
+      unsigned X4; // expected-error{{member 'X4' has the same name as its class}}
     };
   };
 };

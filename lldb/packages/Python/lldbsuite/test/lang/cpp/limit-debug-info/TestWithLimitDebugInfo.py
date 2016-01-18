@@ -6,9 +6,9 @@ class TestWithLimitDebugInfo(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(debug_info=not_in(["dwarf"]))
-    def test_limit_debug_info(self):
-        self.build()
+    @dwarf_test
+    def test_with_dwarf(self):
+        self.buildDwarf()
 
         cwd = os.getcwd()
 

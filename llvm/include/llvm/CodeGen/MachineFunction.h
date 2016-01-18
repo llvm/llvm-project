@@ -43,7 +43,6 @@ class TargetMachine;
 class TargetSubtargetInfo;
 class TargetRegisterClass;
 struct MachinePointerInfo;
-struct WinEHFuncInfo;
 
 template <>
 struct ilist_traits<MachineBasicBlock>
@@ -107,10 +106,6 @@ class MachineFunction {
 
   // Keep track of jump tables for switch instructions
   MachineJumpTableInfo *JumpTableInfo;
-
-  // Keeps track of Windows exception handling related data. This will be null
-  // for functions that aren't using a funclet-based EH personality.
-  WinEHFuncInfo *WinEHInfo = nullptr;
 
   // Function-level unique numbering for MachineBasicBlocks.  When a
   // MachineBasicBlock is inserted into a MachineFunction is it automatically
@@ -226,12 +221,6 @@ public:
   MachineConstantPool *getConstantPool() { return ConstantPool; }
   const MachineConstantPool *getConstantPool() const { return ConstantPool; }
 
-  /// getWinEHFuncInfo - Return information about how the current function uses
-  /// Windows exception handling. Returns null for functions that don't use
-  /// funclets for exception handling.
-  const WinEHFuncInfo *getWinEHFuncInfo() const { return WinEHInfo; }
-  WinEHFuncInfo *getWinEHFuncInfo() { return WinEHInfo; }
-
   /// getAlignment - Return the alignment (log2, not bytes) of the function.
   ///
   unsigned getAlignment() const { return Alignment; }
@@ -341,12 +330,6 @@ public:
   typedef BasicBlockListType::const_iterator const_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
   typedef std::reverse_iterator<iterator>             reverse_iterator;
-
-  /// Support for MachineBasicBlock::getNextNode().
-  static BasicBlockListType MachineFunction::*
-  getSublistAccess(MachineBasicBlock *) {
-    return &MachineFunction::BasicBlocks;
-  }
 
   /// addLiveIn - Add the specified physical register as a live-in value and
   /// create a corresponding virtual register for it.

@@ -22,8 +22,8 @@ public:
   ~BPFELFObjectWriter() override;
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
+                        bool IsPCRel) const override;
 };
 }
 
@@ -33,7 +33,7 @@ BPFELFObjectWriter::BPFELFObjectWriter(uint8_t OSABI)
 
 BPFELFObjectWriter::~BPFELFObjectWriter() {}
 
-unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
+unsigned BPFELFObjectWriter::GetRelocType(const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   // determine the type of the relocation

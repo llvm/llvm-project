@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 100 -o - %s
 
 void foo() {
 }
@@ -18,7 +16,7 @@ class S2 {
 public:
   S2() : a(0) {}
   S2(S2 &s2) : a(s2.a) {}
-  static float S2s; // expected-note 2 {{static data member is predetermined as shared}}
+  static float S2s;
   static const float S2sc;
 };
 const float S2::S2sc = 0; // expected-note 2 {{'S2sc' defined here}}
@@ -57,9 +55,6 @@ public:
   S5(int v) : a(v) {}
 };
 class S6 { // expected-note 2 {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'int' to 'const S6' for 1st argument}}
-#if __cplusplus >= 201103L // C++11 or later
-// expected-note@-2 2 {{candidate function (the implicit move assignment operator) not viable}}
-#endif
   int a;
 
 public:
@@ -121,7 +116,7 @@ T tmain(T argc) {
   foo();
 #pragma omp parallel reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
-#pragma omp parallel reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
+#pragma omp parallel reduction(&& : S2::S2s)
   foo();
 #pragma omp parallel reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
   foo();
@@ -216,7 +211,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp parallel reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
-#pragma omp parallel reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
+#pragma omp parallel reduction(&& : S2::S2s)
   foo();
 #pragma omp parallel reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
   foo();

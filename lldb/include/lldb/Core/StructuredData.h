@@ -250,14 +250,11 @@ public:
         bool
         GetItemAtIndexAsInteger(size_t idx, IntType &result) const
         {
-            ObjectSP value_sp = GetItemAtIndex(idx);
-            if (value_sp.get())
+            ObjectSP value = GetItemAtIndex(idx);
+            if (auto int_value = value->GetAsInteger())
             {
-                if (auto int_value = value_sp->GetAsInteger())
-                {
-                    result = static_cast<IntType>(int_value->GetValue());
-                    return true;
-                }
+                result = static_cast<IntType>(int_value->GetValue());
+                return true;
             }
             return false;
         }
@@ -275,14 +272,11 @@ public:
         bool
         GetItemAtIndexAsString(size_t idx, std::string &result) const
         {
-            ObjectSP value_sp = GetItemAtIndex(idx);
-            if (value_sp.get())
+            ObjectSP value = GetItemAtIndex(idx);
+            if (auto string_value = value->GetAsString())
             {
-                if (auto string_value = value_sp->GetAsString())
-                {
-                    result = string_value->GetValue();
-                    return true;
-                }
+                result = string_value->GetValue();
+                return true;
             }
             return false;
         }
@@ -299,13 +293,13 @@ public:
         bool
         GetItemAtIndexAsString(size_t idx, ConstString &result) const
         {
-            ObjectSP value_sp = GetItemAtIndex(idx);
-            if (value_sp.get()) {
-                if (auto string_value = value_sp->GetAsString())
-                {
-                    result = ConstString(string_value->GetValue());
-                    return true;
-                }
+            ObjectSP value = GetItemAtIndex(idx);
+            if (!value)
+                return false;
+            if (auto string_value = value->GetAsString())
+            {
+                result = ConstString(string_value->GetValue());
+                return true;
             }
             return false;
         }
@@ -322,27 +316,17 @@ public:
         bool
         GetItemAtIndexAsDictionary(size_t idx, Dictionary *&result) const
         {
-            result = nullptr;
-            ObjectSP value_sp = GetItemAtIndex(idx);
-            if (value_sp.get()) 
-            {
-                result = value_sp->GetAsDictionary();
-                return (result != nullptr);
-            }
-            return false;
+            ObjectSP value = GetItemAtIndex(idx);
+            result = value->GetAsDictionary();
+            return (result != nullptr);
         }
 
         bool
         GetItemAtIndexAsArray(size_t idx, Array *&result) const
         {
-            result = nullptr;
-            ObjectSP value_sp = GetItemAtIndex(idx);
-            if (value_sp.get())
-            {
-                result = value_sp->GetAsArray();
-                return (result != nullptr);
-            }
-            return false;
+            ObjectSP value = GetItemAtIndex(idx);
+            result = value->GetAsArray();
+            return (result != nullptr);
         }
 
         void
@@ -558,13 +542,13 @@ public:
         bool
         GetValueForKeyAsInteger(llvm::StringRef key, IntType &result) const
         {
-            ObjectSP value_sp = GetValueForKey(key);
-            if (value_sp) {
-                if (auto int_value = value_sp->GetAsInteger())
-                {
-                    result = static_cast<IntType>(int_value->GetValue());
-                    return true;
-                }
+            ObjectSP value = GetValueForKey(key);
+            if (!value)
+                return false;
+            if (auto int_value = value->GetAsInteger())
+            {
+                result = static_cast<IntType>(int_value->GetValue());
+                return true;
             }
             return false;
         }
@@ -582,14 +566,13 @@ public:
         bool
         GetValueForKeyAsString(llvm::StringRef key, std::string &result) const
         {
-            ObjectSP value_sp = GetValueForKey(key);
-            if (value_sp.get())
+            ObjectSP value = GetValueForKey(key);
+            if (!value)
+                return false;
+            if (auto string_value = value->GetAsString())
             {
-                if (auto string_value = value_sp->GetAsString())
-                {
-                    result = string_value->GetValue();
-                    return true;
-                }
+                result = string_value->GetValue();
+                return true;
             }
             return false;
         }
@@ -611,14 +594,13 @@ public:
         bool
         GetValueForKeyAsString(llvm::StringRef key, ConstString &result) const
         {
-            ObjectSP value_sp = GetValueForKey(key);
-            if (value_sp.get())
+            ObjectSP value = GetValueForKey(key);
+            if (!value)
+                return false;
+            if (auto string_value = value->GetAsString())
             {
-                if (auto string_value = value_sp->GetAsString())
-                {
-                    result = ConstString(string_value->GetValue());
-                    return true;
-                }
+                result = ConstString(string_value->GetValue());
+                return true;
             }
             return false;
         }
@@ -636,26 +618,22 @@ public:
         GetValueForKeyAsDictionary(llvm::StringRef key, Dictionary *&result) const
         {
             result = nullptr;
-            ObjectSP value_sp = GetValueForKey(key);
-            if (value_sp.get())
-            {
-                result = value_sp->GetAsDictionary();
-                return (result != nullptr);
-            }
-            return false;
+            ObjectSP value = GetValueForKey(key);
+            if (!value)
+                return false;
+            result = value->GetAsDictionary();
+            return true;
         }
 
         bool
         GetValueForKeyAsArray(llvm::StringRef key, Array *&result) const
         {
             result = nullptr;
-            ObjectSP value_sp = GetValueForKey(key);
-            if (value_sp.get())
-            {
-                result = value_sp->GetAsArray();
-                return (result != nullptr);
-            }
-            return false;
+            ObjectSP value = GetValueForKey(key);
+            if (!value)
+                return false;
+            result = value->GetAsArray();
+            return true;
         }
 
         bool
@@ -667,10 +645,10 @@ public:
         }
 
         void
-        AddItem (llvm::StringRef key, ObjectSP value_sp)
+        AddItem (llvm::StringRef key, ObjectSP value)
         {
             ConstString key_cs(key);
-            m_dict[key_cs] = value_sp;
+            m_dict[key_cs] = value;
         }
 
         void

@@ -64,6 +64,8 @@ void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
     return;
   }
 
+  assert(Hi->getOffset() >= Lo->getOffset() &&
+         "Expected Hi to be greater than Lo");
   EmitIntValue(Hi->getOffset() - Lo->getOffset(), Size);
 }
 
@@ -412,26 +414,6 @@ void MCObjectStreamer::EmitGPRel64Value(const MCExpr *Value) {
   DF->getFixups().push_back(MCFixup::create(DF->getContents().size(), 
                                             Value, FK_GPRel_4));
   DF->getContents().resize(DF->getContents().size() + 8, 0);
-}
-
-bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                          const MCExpr *Expr, SMLoc Loc) {
-  int64_t OffsetValue;
-  if (!Offset.evaluateAsAbsolute(OffsetValue))
-    llvm_unreachable("Offset is not absolute");
-
-  MCDataFragment *DF = getOrCreateDataFragment();
-  flushPendingLabels(DF, DF->getContents().size());
-
-  MCFixupKind Kind;
-  if (!Assembler->getBackend().getFixupKind(Name, Kind))
-    return true;
-
-  if (Expr == nullptr)
-    Expr =
-        MCSymbolRefExpr::create(getContext().createTempSymbol(), getContext());
-  DF->getFixups().push_back(MCFixup::create(OffsetValue, Expr, Kind, Loc));
-  return false;
 }
 
 void MCObjectStreamer::EmitFill(uint64_t NumBytes, uint8_t FillValue) {

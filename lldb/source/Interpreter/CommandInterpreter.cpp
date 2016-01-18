@@ -3038,10 +3038,7 @@ CommandInterpreter::IOHandlerInputComplete (IOHandler &io_handler, std::string &
                 for (ThreadSP thread_sp : process_sp->GetThreadList().Threads())
                 {
                     StopReason reason = thread_sp->GetStopReason();
-                    if ((reason == eStopReasonSignal
-                        || reason == eStopReasonException
-                        || reason == eStopReasonInstrumentation)
-                        && !result.GetAbnormalStopWasExpected())
+                    if (reason == eStopReasonSignal || reason == eStopReasonException || reason == eStopReasonInstrumentation)
                     {
                         should_stop = true;
                         break;

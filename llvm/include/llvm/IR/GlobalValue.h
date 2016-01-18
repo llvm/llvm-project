@@ -322,10 +322,20 @@ public:
   /// function has been read in yet or not.
   bool isMaterializable() const;
 
+  /// Returns true if this function was loaded from a GVMaterializer that's
+  /// still attached to its Module and that knows how to dematerialize the
+  /// function.
+  bool isDematerializable() const;
+
   /// Make sure this GlobalValue is fully read. If the module is corrupt, this
   /// returns true and fills in the optional string with information about the
   /// problem.  If successful, this returns false.
   std::error_code materialize();
+
+  /// If this GlobalValue is read in, and if the GVMaterializer supports it,
+  /// release the memory for the function, and set it up to be materialized
+  /// lazily. If !isDematerializable(), this method is a noop.
+  void dematerialize();
 
 /// @}
 
@@ -345,10 +355,6 @@ public:
   bool isStrongDefinitionForLinker() const {
     return !(isDeclarationForLinker() || isWeakForLinker());
   }
-
-  // Returns true if the alignment of the value can be unilaterally
-  // increased.
-  bool canIncreaseAlignment() const;
 
   /// This method unlinks 'this' from the containing module, but does not delete
   /// it.

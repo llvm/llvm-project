@@ -117,10 +117,8 @@ void argument_deduction() {
 
 void auto_deduction() {
   auto l = {1, 2, 3, 4};
-  auto l2 {1, 2, 3, 4}; // expected-error {{initializer for variable 'l2' with type 'auto' contains multiple expressions}}
-  auto l3 {1};
+  auto l2 {1, 2, 3, 4}; // expected-warning {{will change meaning in a future version of Clang}}
   static_assert(same_type<decltype(l), std::initializer_list<int>>::value, "");
-  static_assert(same_type<decltype(l3), int>::value, "");
   auto bl = {1, 2.0}; // expected-error {{cannot deduce}}
 
   for (int i : {1, 2, 3, 4}) {}
@@ -192,7 +190,7 @@ namespace rdar11948732 {
 }
 
 namespace PR14272 {
-  auto x { { 0, 0 } }; // expected-error {{cannot deduce type for variable 'x' with type 'auto' from nested initializer list}}
+  auto x { { 0, 0 } }; // expected-error {{cannot deduce actual type for variable 'x' with type 'auto' from initializer list}}
 }
 
 namespace initlist_of_array {
@@ -283,29 +281,4 @@ namespace ParameterPackNestedInitializerLists_PR23904c3 {
   void f(std::initializer_list<std::initializer_list<T>> ...tt);
 
   void foo() { f({{0}}, {{'\0'}}); }
-}
-
-namespace update_rbrace_loc_crash {
-  // We used to crash-on-invalid on this example when updating the right brace
-  // location.
-  template <typename T, T>
-  struct A {};
-  template <typename T, typename F, int... I>
-  std::initializer_list<T> ExplodeImpl(F p1, A<int, I...>) {
-    // expected-error@+1 {{reference to type 'const update_rbrace_loc_crash::Incomplete' could not bind to an rvalue of type 'void'}}
-    return {p1(I)...};
-  }
-  template <typename T, int N, typename F>
-  void Explode(F p1) {
-    // expected-note@+1 {{in instantiation of function template specialization}}
-    ExplodeImpl<T>(p1, A<int, N>());
-  }
-  class Incomplete;
-  struct ContainsIncomplete {
-    const Incomplete &obstacle;
-  };
-  void f() {
-    // expected-note@+1 {{in instantiation of function template specialization}}
-    Explode<ContainsIncomplete, 4>([](int) {});
-  }
 }

@@ -15,8 +15,11 @@
 #define LLVM_LIB_TARGET_ARM_INSTPRINTER_ARMINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
+
+class MCOperand;
 
 class ARMInstPrinter : public MCInstPrinter {
 public:

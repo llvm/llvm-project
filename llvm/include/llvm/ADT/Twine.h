@@ -101,13 +101,15 @@ namespace llvm {
       /// A pointer to a SmallString instance.
       SmallStringKind,
 
-      /// A char value, to render as a character.
+      /// A char value reinterpreted as a pointer, to render as a character.
       CharKind,
 
-      /// An unsigned int value, to render as an unsigned decimal integer.
+      /// An unsigned int value reinterpreted as a pointer, to render as an
+      /// unsigned decimal integer.
       DecUIKind,
 
-      /// An int value, to render as a signed decimal integer.
+      /// An int value reinterpreted as a pointer, to render as a signed
+      /// decimal integer.
       DecIKind,
 
       /// A pointer to an unsigned long value, to render as an unsigned decimal

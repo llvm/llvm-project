@@ -30,12 +30,8 @@
 #define _WIN32_WINNT 0x0601
 #define _WIN32_IE    0x0800 // MinGW at it again. FIXME: verify if still needed.
 #define WIN32_LEAN_AND_MEAN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h" // Get build system configuration settings
@@ -47,42 +43,17 @@
 #include <string>
 #include <vector>
 
-/// Determines if the program is running on Windows 8 or newer. This
-/// reimplements one of the helpers in the Windows 8.1 SDK, which are intended
-/// to supercede raw calls to GetVersionEx. Old SDKs, Cygwin, and MinGW don't
-/// yet have VersionHelpers.h, so we have our own helper.
-inline bool RunningWindows8OrGreater() {
-  // Windows 8 is version 6.2, service pack 0.
-  OSVERSIONINFOEXW osvi = {};
-  osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-  osvi.dwMajorVersion = 6;
-  osvi.dwMinorVersion = 2;
-  osvi.wServicePackMajor = 0;
-
-  DWORDLONG Mask = 0;
-  Mask = VerSetConditionMask(Mask, VER_MAJORVERSION, VER_GREATER_EQUAL);
-  Mask = VerSetConditionMask(Mask, VER_MINORVERSION, VER_GREATER_EQUAL);
-  Mask = VerSetConditionMask(Mask, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
-
-  return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION |
-                                       VER_SERVICEPACKMAJOR,
-                            Mask) != FALSE;
-}
-
 inline bool MakeErrMsg(std::string* ErrMsg, const std::string& prefix) {
   if (!ErrMsg)
     return true;
   char *buffer = NULL;
-  DWORD LastError = GetLastError();
   DWORD R = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                          FORMAT_MESSAGE_FROM_SYSTEM |
-                          FORMAT_MESSAGE_MAX_WIDTH_MASK,
-                          NULL, LastError, 0, (LPSTR)&buffer, 1, NULL);
+                          FORMAT_MESSAGE_FROM_SYSTEM,
+                          NULL, GetLastError(), 0, (LPSTR)&buffer, 1, NULL);
   if (R)
-    *ErrMsg = prefix + ": " + buffer;
+    *ErrMsg = prefix + buffer;
   else
-    *ErrMsg = prefix + ": Unknown error";
-  *ErrMsg += " (0x" + llvm::utohexstr(LastError) + ")";
+    *ErrMsg = prefix + "Unknown error";
 
   LocalFree(buffer);
   return R != 0;

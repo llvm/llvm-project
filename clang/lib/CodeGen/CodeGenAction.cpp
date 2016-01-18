@@ -57,10 +57,6 @@ namespace clang {
     SmallVector<std::pair<unsigned, std::unique_ptr<llvm::Module>>, 4>
         LinkModules;
 
-    // This is here so that the diagnostic printer knows the module a diagnostic
-    // refers to.
-    llvm::Module *CurLinkModule = nullptr;
-
   public:
     BackendConsumer(
         BackendAction Action, DiagnosticsEngine &Diags,
@@ -165,6 +161,18 @@ namespace clang {
       assert(TheModule.get() == M &&
              "Unexpected module change during IR generation");
 
+      // Link LinkModule into this module if present, preserving its validity.
+      for (auto &I : LinkModules) {
+        unsigned LinkFlags = I.first;
+        llvm::Module *LinkModule = I.second.get();
+        if (Linker::LinkModules(M, LinkModule,
+                                [=](const DiagnosticInfo &DI) {
+                                  linkerDiagnosticHandler(DI, LinkModule);
+                                },
+                                LinkFlags))
+          return;
+      }
+
       // Install an inline asm handler so that diagnostics get printed through
       // our diagnostics hooks.
       LLVMContext &Ctx = TheModule->getContext();
@@ -177,14 +185,6 @@ namespace clang {
           Ctx.getDiagnosticHandler();
       void *OldDiagnosticContext = Ctx.getDiagnosticContext();
       Ctx.setDiagnosticHandler(DiagnosticHandler, this);
-
-      // Link LinkModule into this module if present, preserving its validity.
-      for (auto &I : LinkModules) {
-        unsigned LinkFlags = I.first;
-        CurLinkModule = I.second.get();
-        if (Linker::linkModules(*M, std::move(I.second), LinkFlags))
-          return;
-      }
 
       EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
                         C.getTargetInfo().getDataLayoutString(),
@@ -214,8 +214,8 @@ namespace clang {
       Gen->HandleVTable(RD);
     }
 
-    void HandleLinkerOption(llvm::StringRef Opts) override {
-      Gen->HandleLinkerOption(Opts);
+    void HandleLinkerOptionPragma(llvm::StringRef Opts) override {
+      Gen->HandleLinkerOptionPragma(Opts);
     }
 
     void HandleDetectMismatch(llvm::StringRef Name,
@@ -232,6 +232,9 @@ namespace clang {
       SourceLocation Loc = SourceLocation::getFromRawEncoding(LocCookie);
       ((BackendConsumer*)Context)->InlineAsmDiagHandler2(SM, Loc);
     }
+
+    void linkerDiagnosticHandler(const llvm::DiagnosticInfo &DI,
+                                 const llvm::Module *LinkModule);
 
     static void DiagnosticHandler(const llvm::DiagnosticInfo &DI,
                                   void *Context) {
@@ -542,6 +545,22 @@ void BackendConsumer::OptimizationFailureHandler(
   EmitOptimizationMessage(D, diag::warn_fe_backend_optimization_failure);
 }
 
+void BackendConsumer::linkerDiagnosticHandler(const DiagnosticInfo &DI,
+                                              const llvm::Module *LinkModule) {
+  if (DI.getSeverity() != DS_Error)
+    return;
+
+  std::string MsgStorage;
+  {
+    raw_string_ostream Stream(MsgStorage);
+    DiagnosticPrinterRawOStream DP(Stream);
+    DI.print(DP);
+  }
+
+  Diags.Report(diag::err_fe_cannot_link_module)
+      << LinkModule->getModuleIdentifier() << MsgStorage;
+}
+
 /// \brief This function is invoked when the backend needs
 /// to report something to the user.
 void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
@@ -558,13 +577,6 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
     if (StackSizeDiagHandler(cast<DiagnosticInfoStackSize>(DI)))
       return;
     ComputeDiagID(Severity, backend_frame_larger_than, DiagID);
-    break;
-  case DK_Linker:
-    assert(CurLinkModule);
-    // FIXME: stop eating the warnings and notes.
-    if (Severity != DS_Error)
-      return;
-    DiagID = diag::err_fe_cannot_link_module;
     break;
   case llvm::DK_OptimizationRemark:
     // Optimization remarks are always handled completely by this
@@ -609,12 +621,6 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
     raw_string_ostream Stream(MsgStorage);
     DiagnosticPrinterRawOStream DP(Stream);
     DI.print(DP);
-  }
-
-  if (DiagID == diag::err_fe_cannot_link_module) {
-    Diags.Report(diag::err_fe_cannot_link_module)
-        << CurLinkModule->getModuleIdentifier() << MsgStorage;
-    return;
   }
 
   // Report the backend message using the usual diagnostic mechanism.

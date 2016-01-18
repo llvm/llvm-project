@@ -597,7 +597,9 @@ static bool CheckMatchedBrackets(const SmallVectorImpl<Token> &Tokens) {
       Brackets.pop_back();
     }
   }
-  return Brackets.empty();
+  if (!Brackets.empty())
+    return false;
+  return true;
 }
 
 /// GenerateNewArgTokens - Returns true if OldTokens can be converted to a new

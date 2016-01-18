@@ -132,12 +132,6 @@ void DiagnosticInfoSampleProfile::print(DiagnosticPrinter &DP) const {
   DP << getMsg();
 }
 
-void DiagnosticInfoPGOProfile::print(DiagnosticPrinter &DP) const {
-  if (getFileName())
-    DP << getFileName() << ": ";
-  DP << getMsg();
-}
-
 bool DiagnosticInfoOptimizationBase::isLocationAvailable() const {
   return getDebugLoc();
 }

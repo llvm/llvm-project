@@ -34,6 +34,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     def test_lldbmi_exec_abort(self):
         """Test that 'lldb-mi --interpreter' works for -exec-abort."""
 
@@ -83,6 +84,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     def test_lldbmi_exec_arguments_set(self):
         """Test that 'lldb-mi --interpreter' can pass args using -exec-arguments."""
 
@@ -125,6 +127,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     def test_lldbmi_exec_arguments_reset(self):
         """Test that 'lldb-mi --interpreter' can reset previously set args using -exec-arguments."""
 
@@ -205,6 +208,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     @expectedFailurei386 #xfail to get buildbot green, failing config: i386 binary running on ubuntu 14.04 x86_64
+    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     def test_lldbmi_exec_next_instruction(self):
         """Test that 'lldb-mi --interpreter' works for instruction stepping."""
 
@@ -387,6 +391,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll("llvm.org/pr23139", oslist=["linux"], compiler="gcc", compiler_version=[">=","4.9"], archs=["i386"])
     def test_lldbmi_exec_finish(self):
         """Test that 'lldb-mi --interpreter' works for -exec-finish."""
 

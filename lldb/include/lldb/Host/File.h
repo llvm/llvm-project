@@ -223,9 +223,6 @@ public:
     Error
     Close() override;
     
-    void
-    Clear ();
-    
     Error
     Duplicate (const File &rhs);
 

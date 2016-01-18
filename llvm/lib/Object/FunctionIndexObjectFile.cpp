@@ -72,21 +72,20 @@ FunctionIndexObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
 // Looks for function index in the given memory buffer.
 // returns true if found, else false.
 bool FunctionIndexObjectFile::hasFunctionSummaryInMemBuffer(
-    MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler) {
+    MemoryBufferRef Object, LLVMContext &Context) {
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
   if (!BCOrErr)
     return false;
 
-  return hasFunctionSummary(BCOrErr.get(), DiagnosticHandler);
+  return hasFunctionSummary(BCOrErr.get(), Context, nullptr);
 }
 
 // Parse function index in the given memory buffer.
 // Return new FunctionIndexObjectFile instance containing parsed
 // function summary/index.
 ErrorOr<std::unique_ptr<FunctionIndexObjectFile>>
-FunctionIndexObjectFile::create(MemoryBufferRef Object,
-                                DiagnosticHandlerFunction DiagnosticHandler,
-                                bool IsLazy) {
+FunctionIndexObjectFile::create(MemoryBufferRef Object, LLVMContext &Context,
+                                const Module *ExportingModule, bool IsLazy) {
   std::unique_ptr<FunctionInfoIndex> Index;
 
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
@@ -94,7 +93,7 @@ FunctionIndexObjectFile::create(MemoryBufferRef Object,
     return BCOrErr.getError();
 
   ErrorOr<std::unique_ptr<FunctionInfoIndex>> IOrErr = getFunctionInfoIndex(
-      BCOrErr.get(), DiagnosticHandler, IsLazy);
+      BCOrErr.get(), Context, nullptr, ExportingModule, IsLazy);
 
   if (std::error_code EC = IOrErr.getError())
     return EC;
@@ -108,36 +107,14 @@ FunctionIndexObjectFile::create(MemoryBufferRef Object,
 // given name out of the given buffer. Parsed information is
 // stored on the index object saved in this object.
 std::error_code FunctionIndexObjectFile::findFunctionSummaryInMemBuffer(
-    MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler,
-    StringRef FunctionName) {
+    MemoryBufferRef Object, LLVMContext &Context, StringRef FunctionName) {
   sys::fs::file_magic Type = sys::fs::identify_magic(Object.getBuffer());
   switch (Type) {
   case sys::fs::file_magic::bitcode: {
-    return readFunctionSummary(Object, DiagnosticHandler, FunctionName,
+    return readFunctionSummary(Object, Context, nullptr, FunctionName,
                                std::move(Index));
   }
   default:
     return object_error::invalid_file_type;
   }
-}
-
-// Parse the function index out of an IR file and return the function
-// index object if found, or nullptr if not.
-ErrorOr<std::unique_ptr<FunctionInfoIndex>>
-llvm::getFunctionIndexForFile(StringRef Path,
-                              DiagnosticHandlerFunction DiagnosticHandler) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Path);
-  std::error_code EC = FileOrErr.getError();
-  if (EC)
-    return EC;
-  MemoryBufferRef BufferRef = (FileOrErr.get())->getMemBufferRef();
-  ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
-      object::FunctionIndexObjectFile::create(BufferRef, DiagnosticHandler);
-  EC = ObjOrErr.getError();
-  if (EC)
-    return EC;
-
-  object::FunctionIndexObjectFile &Obj = **ObjOrErr;
-  return Obj.takeIndex();
 }

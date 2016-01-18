@@ -180,7 +180,7 @@ SBTypeCategory::GetFilterForType (SBTypeNameSpecifier spec)
     if (!spec.IsValid())
         return SBTypeFilter();
     
-    lldb::TypeFilterImplSP children_sp;
+    lldb::SyntheticChildrenSP children_sp;
     
     if (spec.IsRegex())
         m_opaque_sp->GetRegexTypeFiltersContainer()->GetExact(ConstString(spec.GetName()), children_sp);

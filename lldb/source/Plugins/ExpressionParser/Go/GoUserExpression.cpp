@@ -1,4 +1,4 @@
-//===-- GoUserExpression.cpp ------------------------------------*- C++ -*-===//
+//===-- GoUserExpression.cpp ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,23 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <stdio.h>
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
 
-// C++ Includes
 #include <cstdlib>
-#include <memory>
 #include <string>
+#include <map>
 #include <vector>
 
-// Other libraries and framework includes
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringMap.h"
-
-// Project includes
 #include "GoUserExpression.h"
 
 #include "lldb/lldb-private.h"
@@ -48,6 +41,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringMap.h"
 
 #include "Plugins/ExpressionParser/Go/GoAST.h"
 #include "Plugins/ExpressionParser/Go/GoParser.h"
@@ -91,7 +86,6 @@ class GoUserExpression::GoInterpreter
         m_parser.GetError(m_error);
         return nullptr;
     }
-
     ValueObjectSP VisitParenExpr(const GoASTParenExpr *e);
     ValueObjectSP VisitIdent(const GoASTIdent *e);
     ValueObjectSP VisitStarExpr(const GoASTStarExpr *e);
@@ -100,79 +94,66 @@ class GoUserExpression::GoInterpreter
     ValueObjectSP VisitIndexExpr(const GoASTIndexExpr *e);
     ValueObjectSP VisitUnaryExpr(const GoASTUnaryExpr *e);
     ValueObjectSP VisitCallExpr(const GoASTCallExpr *e);
-
     ValueObjectSP
     VisitTypeAssertExpr(const GoASTTypeAssertExpr *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitBinaryExpr(const GoASTBinaryExpr *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitArrayType(const GoASTArrayType *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitChanType(const GoASTChanType *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitCompositeLit(const GoASTCompositeLit *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitEllipsis(const GoASTEllipsis *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitFuncType(const GoASTFuncType *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitFuncLit(const GoASTFuncLit *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitInterfaceType(const GoASTInterfaceType *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitKeyValueExpr(const GoASTKeyValueExpr *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitMapType(const GoASTMapType *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitSliceExpr(const GoASTSliceExpr *e)
     {
         return NotImplemented(e);
     }
-
     ValueObjectSP
     VisitStructType(const GoASTStructType *e)
     {
@@ -236,7 +217,6 @@ LookupType(TargetSP target, ConstString name)
     }
     return CompilerType();
 }
-
 GoUserExpression::GoUserExpression(ExecutionContextScope &exe_scope, const char *expr, const char *expr_prefix,
                                    lldb::LanguageType language, ResultType desired_type,
                                    const EvaluateExpressionOptions &options)
@@ -551,7 +531,7 @@ GoUserExpression::GoInterpreter::VisitBasicLit(const lldb_private::GoASTBasicLit
         return nullptr;
     }
     errno = 0;
-    int64_t intvalue = strtol(value.c_str(), nullptr, 0);
+    int64_t intvalue = strtol(value.c_str(), NULL, 0);
     if (errno != 0)
     {
         m_error.SetErrorToErrno();
@@ -751,6 +731,6 @@ GoPersistentExpressionState::RemovePersistentVariable(lldb::ExpressionVariableSP
     if (*(name++) != 'o')
         return;
 
-    if (strtoul(name, nullptr, 0) == m_next_persistent_variable_id - 1)
+    if (strtoul(name, NULL, 0) == m_next_persistent_variable_id - 1)
         m_next_persistent_variable_id--;
 }

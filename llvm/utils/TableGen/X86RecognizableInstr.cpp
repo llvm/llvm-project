@@ -796,12 +796,12 @@ void RecognizableInstr::emitInstructionSpecifier() {
   case X86Local::MRM_E3: case X86Local::MRM_E4: case X86Local::MRM_E5:
   case X86Local::MRM_E8: case X86Local::MRM_E9: case X86Local::MRM_EA:
   case X86Local::MRM_EB: case X86Local::MRM_EC: case X86Local::MRM_ED:
-  case X86Local::MRM_EE: case X86Local::MRM_EF: case X86Local::MRM_F0:
-  case X86Local::MRM_F1: case X86Local::MRM_F2: case X86Local::MRM_F3:
-  case X86Local::MRM_F4: case X86Local::MRM_F5: case X86Local::MRM_F6:
-  case X86Local::MRM_F7: case X86Local::MRM_F9: case X86Local::MRM_FA:
-  case X86Local::MRM_FB:  case X86Local::MRM_FC: case X86Local::MRM_FD:
-  case X86Local::MRM_FE:  case X86Local::MRM_FF:
+  case X86Local::MRM_EE: case X86Local::MRM_F0: case X86Local::MRM_F1:
+  case X86Local::MRM_F2: case X86Local::MRM_F3: case X86Local::MRM_F4:
+  case X86Local::MRM_F5: case X86Local::MRM_F6: case X86Local::MRM_F7:
+  case X86Local::MRM_F9: case X86Local::MRM_FA: case X86Local::MRM_FB:
+  case X86Local::MRM_FC: case X86Local::MRM_FD: case X86Local::MRM_FE:
+  case X86Local::MRM_FF:
     // Ignored.
     break;
   }
@@ -951,7 +951,6 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("f128mem",             TYPE_M128)
   TYPE("f256mem",             TYPE_M256)
   TYPE("f512mem",             TYPE_M512)
-  TYPE("FR128",               TYPE_XMM128)
   TYPE("FR64",                TYPE_XMM64)
   TYPE("FR64X",               TYPE_XMM64)
   TYPE("f64mem",              TYPE_M64FP)
@@ -1070,7 +1069,6 @@ RecognizableInstr::immediateEncodingFromString(const std::string &s,
   // register IDs in 8-bit immediates nowadays.
   ENCODING("FR32",            ENCODING_IB)
   ENCODING("FR64",            ENCODING_IB)
-  ENCODING("FR128",           ENCODING_IB)
   ENCODING("VR128",           ENCODING_IB)
   ENCODING("VR256",           ENCODING_IB)
   ENCODING("FR32X",           ENCODING_IB)
@@ -1093,7 +1091,6 @@ RecognizableInstr::rmRegisterEncodingFromString(const std::string &s,
   ENCODING("GR8",             ENCODING_RM)
   ENCODING("VR128",           ENCODING_RM)
   ENCODING("VR128X",          ENCODING_RM)
-  ENCODING("FR128",           ENCODING_RM)
   ENCODING("FR64",            ENCODING_RM)
   ENCODING("FR32",            ENCODING_RM)
   ENCODING("FR64X",           ENCODING_RM)
@@ -1123,7 +1120,6 @@ RecognizableInstr::roRegisterEncodingFromString(const std::string &s,
   ENCODING("GR64",            ENCODING_REG)
   ENCODING("GR8",             ENCODING_REG)
   ENCODING("VR128",           ENCODING_REG)
-  ENCODING("FR128",           ENCODING_REG)
   ENCODING("FR64",            ENCODING_REG)
   ENCODING("FR32",            ENCODING_REG)
   ENCODING("VR64",            ENCODING_REG)
@@ -1161,7 +1157,6 @@ RecognizableInstr::vvvvRegisterEncodingFromString(const std::string &s,
   ENCODING("GR32",            ENCODING_VVVV)
   ENCODING("GR64",            ENCODING_VVVV)
   ENCODING("FR32",            ENCODING_VVVV)
-  ENCODING("FR128",           ENCODING_VVVV)
   ENCODING("FR64",            ENCODING_VVVV)
   ENCODING("VR128",           ENCODING_VVVV)
   ENCODING("VR256",           ENCODING_VVVV)

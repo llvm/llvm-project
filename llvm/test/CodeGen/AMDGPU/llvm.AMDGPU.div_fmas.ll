@@ -4,6 +4,7 @@
 ; FIXME: Enable for VI.
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare void @llvm.AMDGPU.barrier.global() nounwind noduplicate
 declare float @llvm.AMDGPU.div.fmas.f32(float, float, float, i1) nounwind readnone
 declare double @llvm.AMDGPU.div.fmas.f64(double, double, double, i1) nounwind readnone
 

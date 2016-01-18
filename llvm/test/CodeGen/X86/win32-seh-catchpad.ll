@@ -11,11 +11,10 @@ entry:
           to label %invoke.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %cs1 = catchswitch within none [label %__except.ret] unwind to caller
+  %0 = catchpad [i8* bitcast (i32 ()* @try_except_filter_catchall to i8*)] to label %__except.ret unwind label %catchendblock
 
 __except.ret:                                     ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* bitcast (i32 ()* @try_except_filter_catchall to i8*)]
-  catchret from %0 to label %__except
+  catchret %0 to label %__except
 
 __except:                                         ; preds = %__except.ret
   call void @f(i32 2)
@@ -24,6 +23,9 @@ __except:                                         ; preds = %__except.ret
 __try.cont:                                       ; preds = %__except, %invoke.cont
   call void @f(i32 3)
   ret void
+
+catchendblock:                                    ; preds = %catch.dispatch
+  catchendpad unwind to caller
 
 invoke.cont:                                      ; preds = %entry
   br label %__try.cont
@@ -46,8 +48,8 @@ invoke.cont:                                      ; preds = %entry
 
 ; CHECK: .section        .xdata,"dr"
 ; CHECK: L__ehtable$try_except:
-; CHECK:         .long   -1                          # ToState
-; CHECK:         .long   _try_except_filter_catchall # Filter
+; CHECK:         .long   -1
+; CHECK:         .long   _try_except_filter_catchall
 ; CHECK:         .long   LBB0_1
 
 define internal i32 @try_except_filter_catchall() #0 {
@@ -75,69 +77,81 @@ entry:
           to label %__try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %cs1 = catchswitch within none [label %__except.ret] unwind label %catch.dispatch.11
+  %0 = catchpad [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)] to label %__except.ret unwind label %catchendblock
 
 __except.ret:                                     ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
-  catchret from %0 to label %__try.cont
+  catchret %0 to label %__try.cont
 
 __try.cont:                                       ; preds = %entry, %__except.ret
   invoke void @crash() #3
           to label %__try.cont.9 unwind label %catch.dispatch.5
 
 catch.dispatch.5:                                 ; preds = %__try.cont
-  %cs2 = catchswitch within none [label %__except.ret.7] unwind label %catch.dispatch.11
+  %1 = catchpad [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)] to label %__except.ret.7 unwind label %catchendblock.6
 
 __except.ret.7:                                   ; preds = %catch.dispatch.5
-  %1 = catchpad within %cs2 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
-  catchret from %1 to label %__try.cont.9
+  catchret %1 to label %__try.cont.9
 
 __try.cont.9:                                     ; preds = %__try.cont, %__except.ret.7
   invoke void @crash() #3
           to label %__try.cont.15 unwind label %catch.dispatch.11
 
 catch.dispatch.11:                                ; preds = %catchendblock, %catchendblock.6, %__try.cont.9
-  %cs3 = catchswitch within none [label %__except.ret.13] unwind label %catch.dispatch.17
+  %2 = catchpad [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)] to label %__except.ret.13 unwind label %catchendblock.12
 
 __except.ret.13:                                  ; preds = %catch.dispatch.11
-  %2 = catchpad within %cs3 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
-  catchret from %2 to label %__try.cont.15
+  catchret %2 to label %__try.cont.15
 
 __try.cont.15:                                    ; preds = %__try.cont.9, %__except.ret.13
   invoke void @crash() #3
           to label %__try.cont.35 unwind label %catch.dispatch.17
 
 catch.dispatch.17:                                ; preds = %catchendblock.12, %__try.cont.15
-  %cs4 = catchswitch within none [label %__except.ret.19] unwind to caller
+  %3 = catchpad [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)] to label %__except.ret.19 unwind label %catchendblock.18
 
 __except.ret.19:                                  ; preds = %catch.dispatch.17
-  %3 = catchpad within %cs4 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
-  catchret from %3 to label %__except.20
+  catchret %3 to label %__except.20
 
 __except.20:                                      ; preds = %__except.ret.19
   invoke void @crash() #3
           to label %__try.cont.27 unwind label %catch.dispatch.23
 
 catch.dispatch.23:                                ; preds = %__except.20
-  %cs5 = catchswitch within none [label %__except.ret.25] unwind to caller
+  %4 = catchpad [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)] to label %__except.ret.25 unwind label %catchendblock.24
 
 __except.ret.25:                                  ; preds = %catch.dispatch.23
-  %4 = catchpad within %cs5 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
-  catchret from %4 to label %__try.cont.27
+  catchret %4 to label %__try.cont.27
 
 __try.cont.27:                                    ; preds = %__except.20, %__except.ret.25
   invoke void @crash() #3
           to label %__try.cont.35 unwind label %catch.dispatch.30
 
 catch.dispatch.30:                                ; preds = %__try.cont.27
-  %cs6 = catchswitch within none [label %__except.ret.32] unwind to caller
+  %5 = catchpad [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)] to label %__except.ret.32 unwind label %catchendblock.31
 
 __except.ret.32:                                  ; preds = %catch.dispatch.30
-  %5 = catchpad within %cs6 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
-  catchret from %5 to label %__try.cont.35
+  catchret %5 to label %__try.cont.35
 
 __try.cont.35:                                    ; preds = %__try.cont.15, %__try.cont.27, %__except.ret.32
   ret void
+
+catchendblock.31:                                 ; preds = %catch.dispatch.30
+  catchendpad unwind to caller
+
+catchendblock.24:                                 ; preds = %catch.dispatch.23
+  catchendpad unwind to caller
+
+catchendblock.18:                                 ; preds = %catch.dispatch.17
+  catchendpad unwind to caller
+
+catchendblock.12:                                 ; preds = %catch.dispatch.11
+  catchendpad unwind label %catch.dispatch.17
+
+catchendblock.6:                                  ; preds = %catch.dispatch.5
+  catchendpad unwind label %catch.dispatch.11
+
+catchendblock:                                    ; preds = %catch.dispatch
+  catchendpad unwind label %catch.dispatch.11
 }
 
 ; This table is equivalent to the one produced by MSVC, even if it isn't in
@@ -148,19 +162,19 @@ __try.cont.35:                                    ; preds = %__try.cont.15, %__t
 ; CHECK:         .long   -1
 ; CHECK:         .long   _nested_exceptions_filter_catchall
 ; CHECK:         .long   LBB
-; CHECK:         .long   0
-; CHECK:         .long   _nested_exceptions_filter_catchall
-; CHECK:         .long   LBB
-; CHECK:         .long   1
-; CHECK:         .long   _nested_exceptions_filter_catchall
-; CHECK:         .long   LBB
-; CHECK:         .long   1
-; CHECK:         .long   _nested_exceptions_filter_catchall
-; CHECK:         .long   LBB
 ; CHECK:         .long   -1
 ; CHECK:         .long   _nested_exceptions_filter_catchall
 ; CHECK:         .long   LBB
 ; CHECK:         .long   -1
+; CHECK:         .long   _nested_exceptions_filter_catchall
+; CHECK:         .long   LBB
+; CHECK:         .long   2
+; CHECK:         .long   _nested_exceptions_filter_catchall
+; CHECK:         .long   LBB
+; CHECK:         .long   3
+; CHECK:         .long   _nested_exceptions_filter_catchall
+; CHECK:         .long   LBB
+; CHECK:         .long   3
 ; CHECK:         .long   _nested_exceptions_filter_catchall
 ; CHECK:         .long   LBB
 
@@ -189,21 +203,24 @@ entry:
           to label %__except unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %cs1 = catchswitch within none [label %__except.ret] unwind to caller
+  %0 = catchpad [i8* bitcast (i32 ()* @try_except_filter_catchall to i8*)] to label %__except.ret unwind label %catchendblock
 
 __except.ret:                                     ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* bitcast (i32 ()* @try_except_filter_catchall to i8*)]
-  call void @f(i32 2) [ "funclet"(token %0) ]
-  catchret from %0 to label %__except
+  call void @f(i32 2)
+  catchret %0 to label %__except
 
 __except:
   ret void
+
+catchendblock:                                    ; preds = %catch.dispatch
+  catchendpad unwind to caller
 }
 
 ; CHECK-LABEL: _code_in_catchpad:
-; CHECK: # %__except.ret
+; CHECK: # %catch.dispatch
 ; CHECK-NEXT:         movl    -24(%ebp), %esp
 ; CHECK-NEXT:         addl    $12, %ebp
+; CHECK: # %__except.ret
 ; CHECK-NEXT:         movl    $-1, -16(%ebp)
 ; CHECK-NEXT:         movl    $2, (%esp)
 ; CHECK-NEXT:         calll   _f

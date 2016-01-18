@@ -23,7 +23,7 @@ struct ThreadData;
 
 class ProcessWinMiniDump : public lldb_private::ProcessWindows
 {
-  public:
+public:
     static lldb::ProcessSP
     CreateInstance (lldb::TargetSP target_sp,
                     lldb_private::Listener &listener,
@@ -84,10 +84,7 @@ class ProcessWinMiniDump : public lldb_private::ProcessWindows
     lldb_private::ArchSpec
     GetArchitecture();
 
-    lldb_private::Error
-    GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &range_info) override;
-
-  protected:
+protected:
     void
     Clear();
 
@@ -95,7 +92,7 @@ class ProcessWinMiniDump : public lldb_private::ProcessWindows
     UpdateThreadList(lldb_private::ThreadList &old_thread_list,
                      lldb_private::ThreadList &new_thread_list) override;
 
-  private:
+private:
     // Describes a range of memory captured in the mini dump.
     struct Range {
       lldb::addr_t start;  // virtual address of the beginning of the range

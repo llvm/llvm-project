@@ -279,23 +279,6 @@ def CSR_AArch64_TLS_Darwin
                            FP,
                            (sequence "Q%u", 0, 31))>;
 
-// We can only handle a register pair with adjacent registers, the register pair
-// should belong to the same class as well. Since the access function on the
-// fast path calls a function that follows CSR_AArch64_TLS_Darwin,
-// CSR_AArch64_CXX_TLS_Darwin should be a subset of CSR_AArch64_TLS_Darwin.
-def CSR_AArch64_CXX_TLS_Darwin
-    : CalleeSavedRegs<(add CSR_AArch64_AAPCS,
-                           (sub (sequence "X%u", 1, 28), X15, X16, X17, X18),
-                           (sequence "D%u", 0, 31))>;
-
-// CSRs that are handled by prologue, epilogue.
-def CSR_AArch64_CXX_TLS_Darwin_PE
-    : CalleeSavedRegs<(add LR, FP)>;
-
-// CSRs that are handled explicitly via copies.
-def CSR_AArch64_CXX_TLS_Darwin_ViaCopy
-    : CalleeSavedRegs<(sub CSR_AArch64_CXX_TLS_Darwin, LR, FP)>;
-
 // The ELF stub used for TLS-descriptor access saves every feasible
 // register. Only X0 and LR are clobbered.
 def CSR_AArch64_TLS_ELF

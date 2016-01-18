@@ -203,7 +203,7 @@ namespace lldb_private
                     {
                         snprintf (history_path, sizeof (history_path), "~/%s-widehistory", m_prefix.c_str());
                     }
-                    m_path = FileSpec (history_path, true).GetPath();
+                    m_path = std::move (FileSpec (history_path, true).GetPath());
                 }
                 if (m_path.empty())
                     return NULL;
@@ -863,50 +863,37 @@ Editline::NextLineCommand (int ch)
 unsigned char
 Editline::FixIndentationCommand (int ch)
 {
-    if (!m_fix_indentation_callback)
+    if (!m_fix_indentation_callback) 
         return CC_NORM;
-
-    // Insert the character typed before proceeding
+    
+    // Insert the character by hand prior to correction
     EditLineCharType inserted[] = { (EditLineCharType)ch, 0 };
     el_winsertstr (m_editline, inserted);
-    LineInfoW * info = const_cast<LineInfoW *>(el_wline (m_editline));
-    int cursor_position = info->cursor - info->buffer;
-
-    // Save the edits and determine the correct indentation level
     SaveEditedLine();
     StringList lines = GetInputAsStringList (m_current_line_index + 1);
+
+    // Determine the cursor position
+    LineInfoW * info = const_cast<LineInfoW *>(el_wline (m_editline));
+    int cursor_position = info->cursor - info->buffer;
+    
     int indent_correction = m_fix_indentation_callback (this, lines, cursor_position, m_fix_indentation_callback_baton);
-
-    // If it is already correct no special work is needed
-    if (indent_correction == 0)
-        return CC_REFRESH;
-
-    // Change the indentation level of the line
-    std::string currentLine = lines.GetStringAtIndex (m_current_line_index);
+    
+    // Adjust the input buffer to correct indentation
     if (indent_correction > 0)
     {
-        currentLine = currentLine.insert (0, indent_correction, ' ');
+        info->cursor = info->buffer;
+        el_winsertstr (m_editline, EditLineStringType (indent_correction, EditLineCharType(' ')).c_str());
     }
-    else
+    else if (indent_correction < 0)
     {
-        currentLine = currentLine.erase (0, -indent_correction);
-    }
-#if LLDB_EDITLINE_USE_WCHAR
-    m_input_lines[m_current_line_index] = m_utf8conv.from_bytes (currentLine);
-#else
-    m_input_lines[m_current_line_index] = currentLine;
-#endif
+        // Delete characters for the unindentation AND including the character we just added.
+        el_wdeletestr (m_editline, -indent_correction + 1);
 
-    // Update the display to reflect the change
-    MoveCursor (CursorLocation::EditingCursor, CursorLocation::EditingPrompt);
-    DisplayInput (m_current_line_index);
-    
-    // Reposition the cursor back on the original line and prepare to restart editing
-    // with a new cursor position
-    SetCurrentLine (m_current_line_index);
-    MoveCursor (CursorLocation::BlockEnd, CursorLocation::EditingPrompt);
-    m_revert_cursor_index = cursor_position + indent_correction;
-    return CC_NEWLINE;
+        // Rewrite the character that caused the unindentation.
+        el_winsertstr (m_editline, inserted);
+    }
+    info->cursor = info->buffer + cursor_position + indent_correction;
+    return CC_REFRESH;
 }
 
 unsigned char

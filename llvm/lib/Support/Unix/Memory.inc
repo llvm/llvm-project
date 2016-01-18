@@ -152,7 +152,6 @@ Memory::releaseMappedMemory(MemoryBlock &M) {
 
 std::error_code
 Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
-  static const size_t PageSize = Process::getPageSize();
   if (M.Address == nullptr || M.Size == 0)
     return std::error_code();
 
@@ -161,7 +160,7 @@ Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
 
   int Protect = getPosixProtectionFlags(Flags);
 
-  int Result = ::mprotect((void*)((uintptr_t)M.Address & ~(PageSize-1)), PageSize*((M.Size+PageSize-1)/PageSize), Protect);
+  int Result = ::mprotect(M.Address, M.Size, Protect);
   if (Result != 0)
     return std::error_code(errno, std::generic_category());
 
@@ -181,7 +180,7 @@ Memory::AllocateRWX(size_t NumBytes, const MemoryBlock* NearBlock,
                     std::string *ErrMsg) {
   if (NumBytes == 0) return MemoryBlock();
 
-  static const size_t PageSize = Process::getPageSize();
+  size_t PageSize = Process::getPageSize();
   size_t NumPages = (NumBytes+PageSize-1)/PageSize;
 
   int fd = -1;
@@ -265,12 +264,15 @@ bool Memory::setWritable (MemoryBlock &M, std::string *ErrMsg) {
 }
 
 bool Memory::setExecutable (MemoryBlock &M, std::string *ErrMsg) {
+#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
   if (M.Address == 0 || M.Size == 0) return false;
   Memory::InvalidateInstructionCache(M.Address, M.Size);
-#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
   kern_return_t kr = vm_protect(mach_task_self(), (vm_address_t)M.Address,
     (vm_size_t)M.Size, 0, VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_COPY);
   return KERN_SUCCESS == kr;
+#elif defined(__arm__) || defined(__aarch64__)
+  Memory::InvalidateInstructionCache(M.Address, M.Size);
+  return true;
 #else
   return true;
 #endif

@@ -133,7 +133,7 @@ namespace clang {
       /// Test whether this is a multiple of the other value.
       ///
       /// Among other things, this promises that
-      /// self.alignTo(N) will just return self.
+      /// self.RoundUpToAlignment(N) will just return self.
       bool isMultipleOf(CharUnits N) const {
         return (*this % N) == 0;
       }
@@ -170,11 +170,12 @@ namespace clang {
       /// getQuantity - Get the raw integer representation of this quantity.
       QuantityType getQuantity() const { return Quantity; }
 
-      /// alignTo - Returns the next integer (mod 2**64) that is
+      /// RoundUpToAlignment - Returns the next integer (mod 2**64) that is
       /// greater than or equal to this quantity and is a multiple of \p Align.
       /// Align must be non-zero.
-      CharUnits alignTo(const CharUnits &Align) const {
-        return CharUnits(llvm::alignTo(Quantity, Align.Quantity));
+      CharUnits RoundUpToAlignment(const CharUnits &Align) const {
+        return CharUnits(llvm::RoundUpToAlignment(Quantity, 
+                                                  Align.Quantity));
       }
 
       /// Given that this is a non-zero alignment value, what is the

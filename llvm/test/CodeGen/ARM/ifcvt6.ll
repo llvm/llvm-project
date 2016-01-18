@@ -3,7 +3,7 @@
 define void @foo(i32 %X, i32 %Y) {
 entry:
 ; CHECK: cmpne
-; CHECK: bxhi lr
+; CHECK: pophi
 	%tmp1 = icmp ult i32 %X, 4		; <i1> [#uses=1]
 	%tmp4 = icmp eq i32 %Y, 0		; <i1> [#uses=1]
 	%tmp7 = or i1 %tmp4, %tmp1		; <i1> [#uses=1]

@@ -16,7 +16,7 @@
 #ifndef LLVM_C_INITIALIZATION_H
 #define LLVM_C_INITIALIZATION_H
 
-#include "llvm-c/Types.h"
+#include "llvm-c/Core.h"
 
 #ifdef __cplusplus
 extern "C" {

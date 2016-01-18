@@ -15,7 +15,6 @@ clang_Cursor_getTemplateArgumentValue
 clang_Cursor_getTemplateArgumentUnsignedValue
 clang_Cursor_getBriefCommentText
 clang_Cursor_getCommentRange
-clang_Cursor_getCXXManglings
 clang_Cursor_getMangling
 clang_Cursor_getParsedComment
 clang_Cursor_getRawCommentText
@@ -121,7 +120,6 @@ clang_disposeOverriddenCursors
 clang_disposeCXPlatformAvailability
 clang_disposeSourceRangeList
 clang_disposeString
-clang_disposeStringSet
 clang_disposeTokens
 clang_disposeTranslationUnit
 clang_enableStackTraces
@@ -176,7 +174,6 @@ clang_getCursorSemanticParent
 clang_getCursorSpelling
 clang_getCursorType
 clang_getCursorUSR
-clang_getCursorVisibility
 clang_getDeclObjCTypeEncoding
 clang_getDefinitionSpellingAndExtent
 clang_getDiagnostic
@@ -250,7 +247,6 @@ clang_hashCursor
 clang_indexLoc_getCXSourceLocation
 clang_indexLoc_getFileLocation
 clang_indexSourceFile
-clang_indexSourceFileFullArgv
 clang_indexTranslationUnit
 clang_index_getCXXClassDeclInfo
 clang_index_getClientContainer
@@ -286,7 +282,6 @@ clang_Location_isInSystemHeader
 clang_Location_isFromMainFile
 clang_parseTranslationUnit
 clang_parseTranslationUnit2
-clang_parseTranslationUnit2FullArgv
 clang_remap_dispose
 clang_remap_getFilenames
 clang_remap_getNumFiles
@@ -320,14 +315,3 @@ clang_VirtualFileOverlay_create
 clang_VirtualFileOverlay_dispose
 clang_VirtualFileOverlay_setCaseSensitivity
 clang_VirtualFileOverlay_writeToBuffer
-clang_Type_getObjCEncoding
-clang_Cursor_isMacroFunctionLike
-clang_Cursor_isMacroBuiltin
-clang_Cursor_isFunctionInlined
-clang_Cursor_hasAttrs
-clang_Cursor_Evaluate
-clang_EvalResult_getKind
-clang_EvalResult_getAsInt
-clang_EvalResult_getAsDouble
-clang_EvalResult_getAsStr
-clang_EvalResult_dispose

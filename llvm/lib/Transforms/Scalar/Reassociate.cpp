@@ -64,7 +64,7 @@ namespace {
 /// Print out the expression identified in the Ops list.
 ///
 static void PrintOps(Instruction *I, const SmallVectorImpl<ValueEntry> &Ops) {
-  Module *M = I->getModule();
+  Module *M = I->getParent()->getParent()->getParent();
   dbgs() << Instruction::getOpcodeName(I->getOpcode()) << " "
        << *Ops[0].Op->getType() << '\t';
   for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
@@ -183,8 +183,6 @@ namespace {
     Value *OptimizeMul(BinaryOperator *I, SmallVectorImpl<ValueEntry> &Ops);
     Value *RemoveFactorFromExpression(Value *V, Value *Factor);
     void EraseInst(Instruction *I);
-    void RecursivelyEraseDeadInsts(Instruction *I,
-                                   SetVector<AssertingVH<Instruction>> &Insts);
     void OptimizeInst(Instruction *I);
     Instruction *canonicalizeNegConstExpr(Instruction *I);
   };
@@ -883,11 +881,7 @@ void Reassociate::RewriteExprTree(BinaryOperator *I,
 /// that computes the negative version of the value specified.  The negative
 /// version of the value is returned, and BI is left pointing at the instruction
 /// that should be processed next by the reassociation pass.
-/// Also add intermediate instructions to the redo list that are modified while
-/// pushing the negates through adds.  These will be revisited to see if
-/// additional opportunities have been exposed.
-static Value *NegateValue(Value *V, Instruction *BI,
-                          SetVector<AssertingVH<Instruction>> &ToRedo) {
+static Value *NegateValue(Value *V, Instruction *BI) {
   if (Constant *C = dyn_cast<Constant>(V)) {
     if (C->getType()->isFPOrFPVectorTy()) {
       return ConstantExpr::getFNeg(C);
@@ -908,8 +902,8 @@ static Value *NegateValue(Value *V, Instruction *BI,
   if (BinaryOperator *I =
           isReassociableOp(V, Instruction::Add, Instruction::FAdd)) {
     // Push the negates through the add.
-    I->setOperand(0, NegateValue(I->getOperand(0), BI, ToRedo));
-    I->setOperand(1, NegateValue(I->getOperand(1), BI, ToRedo));
+    I->setOperand(0, NegateValue(I->getOperand(0), BI));
+    I->setOperand(1, NegateValue(I->getOperand(1), BI));
     if (I->getOpcode() == Instruction::Add) {
       I->setHasNoUnsignedWrap(false);
       I->setHasNoSignedWrap(false);
@@ -922,10 +916,6 @@ static Value *NegateValue(Value *V, Instruction *BI,
     //
     I->moveBefore(BI);
     I->setName(I->getName()+".neg");
-
-    // Add the intermediate negates to the redo list as processing them later
-    // could expose more reassociating opportunities.
-    ToRedo.insert(I);
     return I;
   }
 
@@ -949,6 +939,8 @@ static Value *NegateValue(Value *V, Instruction *BI,
     if (Instruction *InstInput = dyn_cast<Instruction>(V)) {
       if (InvokeInst *II = dyn_cast<InvokeInst>(InstInput)) {
         InsertPt = II->getNormalDest()->begin();
+      } else if (auto *CPI = dyn_cast<CatchPadInst>(InstInput)) {
+        InsertPt = CPI->getNormalDest()->begin();
       } else {
         InsertPt = ++InstInput->getIterator();
       }
@@ -963,15 +955,12 @@ static Value *NegateValue(Value *V, Instruction *BI,
     } else {
       TheNeg->andIRFlags(BI);
     }
-    ToRedo.insert(TheNeg);
     return TheNeg;
   }
 
   // Insert a 'neg' instruction that subtracts the value from zero to get the
   // negation.
-  BinaryOperator *NewNeg = CreateNeg(V, V->getName() + ".neg", BI, BI);
-  ToRedo.insert(NewNeg);
-  return NewNeg;
+  return CreateNeg(V, V->getName() + ".neg", BI, BI);
 }
 
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
@@ -1005,15 +994,14 @@ static bool ShouldBreakUpSubtract(Instruction *Sub) {
 
 /// If we have (X-Y), and if either X is an add, or if this is only used by an
 /// add, transform this into (X+(0-Y)) to promote better reassociation.
-static BinaryOperator *
-BreakUpSubtract(Instruction *Sub, SetVector<AssertingVH<Instruction>> &ToRedo) {
+static BinaryOperator *BreakUpSubtract(Instruction *Sub) {
   // Convert a subtract into an add and a neg instruction. This allows sub
   // instructions to be commuted with other add instructions.
   //
   // Calculate the negative value of Operand 1 of the sub instruction,
   // and set it as the RHS of the add instruction we just made.
   //
-  Value *NegVal = NegateValue(Sub->getOperand(1), Sub, ToRedo);
+  Value *NegVal = NegateValue(Sub->getOperand(1), Sub);
   BinaryOperator *New = CreateAdd(Sub->getOperand(0), NegVal, "", Sub, Sub);
   Sub->setOperand(0, Constant::getNullValue(Sub->getType())); // Drop use of op.
   Sub->setOperand(1, Constant::getNullValue(Sub->getType())); // Drop use of op.
@@ -1231,7 +1219,7 @@ static Value *OptimizeAndOrXor(unsigned Opcode,
   return nullptr;
 }
 
-/// Helper function of CombineXorOpnd(). It creates a bitwise-and
+/// Helper funciton of CombineXorOpnd(). It creates a bitwise-and
 /// instruction with the given two operands, and return the resulting
 /// instruction. There are two special cases: 1) if the constant operand is 0,
 /// it will return NULL. 2) if the constant is ~0, the symbolic operand will
@@ -1928,22 +1916,6 @@ Value *Reassociate::OptimizeExpression(BinaryOperator *I,
   return nullptr;
 }
 
-// Remove dead instructions and if any operands are trivially dead add them to
-// Insts so they will be removed as well.
-void Reassociate::RecursivelyEraseDeadInsts(
-    Instruction *I, SetVector<AssertingVH<Instruction>> &Insts) {
-  assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
-  SmallVector<Value *, 4> Ops(I->op_begin(), I->op_end());
-  ValueRankMap.erase(I);
-  Insts.remove(I);
-  RedoInsts.remove(I);
-  I->eraseFromParent();
-  for (auto Op : Ops)
-    if (Instruction *OpInst = dyn_cast<Instruction>(Op))
-      if (OpInst->use_empty())
-        Insts.insert(OpInst);
-}
-
 /// Zap the given instruction, adding interesting operands to the work list.
 void Reassociate::EraseInst(Instruction *I) {
   assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
@@ -2080,7 +2052,7 @@ void Reassociate::OptimizeInst(Instruction *I) {
     return;
 
   // Don't optimize floating point instructions that don't have unsafe algebra.
-  if (I->getType()->isFPOrFPVectorTy() && !I->hasUnsafeAlgebra())
+  if (I->getType()->isFloatingPointTy() && !I->hasUnsafeAlgebra())
     return;
 
   // Do not reassociate boolean (i1) expressions.  We want to preserve the
@@ -2096,7 +2068,7 @@ void Reassociate::OptimizeInst(Instruction *I) {
   // see if we can convert it to X+-Y.
   if (I->getOpcode() == Instruction::Sub) {
     if (ShouldBreakUpSubtract(I)) {
-      Instruction *NI = BreakUpSubtract(I, RedoInsts);
+      Instruction *NI = BreakUpSubtract(I);
       RedoInsts.insert(I);
       MadeChange = true;
       I = NI;
@@ -2107,12 +2079,6 @@ void Reassociate::OptimizeInst(Instruction *I) {
           (!I->hasOneUse() ||
            !isReassociableOp(I->user_back(), Instruction::Mul))) {
         Instruction *NI = LowerNegateToMultiply(I);
-        // If the negate was simplified, revisit the users to see if we can
-        // reassociate further.
-        for (User *U : NI->users()) {
-          if (BinaryOperator *Tmp = dyn_cast<BinaryOperator>(U))
-            RedoInsts.insert(Tmp);
-        }
         RedoInsts.insert(I);
         MadeChange = true;
         I = NI;
@@ -2120,7 +2086,7 @@ void Reassociate::OptimizeInst(Instruction *I) {
     }
   } else if (I->getOpcode() == Instruction::FSub) {
     if (ShouldBreakUpSubtract(I)) {
-      Instruction *NI = BreakUpSubtract(I, RedoInsts);
+      Instruction *NI = BreakUpSubtract(I);
       RedoInsts.insert(I);
       MadeChange = true;
       I = NI;
@@ -2130,13 +2096,7 @@ void Reassociate::OptimizeInst(Instruction *I) {
       if (isReassociableOp(I->getOperand(1), Instruction::FMul) &&
           (!I->hasOneUse() ||
            !isReassociableOp(I->user_back(), Instruction::FMul))) {
-        // If the negate was simplified, revisit the users to see if we can
-        // reassociate further.
         Instruction *NI = LowerNegateToMultiply(I);
-        for (User *U : NI->users()) {
-          if (BinaryOperator *Tmp = dyn_cast<BinaryOperator>(U))
-            RedoInsts.insert(Tmp);
-        }
         RedoInsts.insert(I);
         MadeChange = true;
         I = NI;
@@ -2151,15 +2111,8 @@ void Reassociate::OptimizeInst(Instruction *I) {
   // If this is an interior node of a reassociable tree, ignore it until we
   // get to the root of the tree, to avoid N^2 analysis.
   unsigned Opcode = BO->getOpcode();
-  if (BO->hasOneUse() && BO->user_back()->getOpcode() == Opcode) {
-    // During the initial run we will get to the root of the tree.
-    // But if we get here while we are redoing instructions, there is no
-    // guarantee that the root will be visited. So Redo later
-    if (BO->user_back() != BO &&
-        BO->getParent() == BO->user_back()->getParent())
-      RedoInsts.insert(BO->user_back());
+  if (BO->hasOneUse() && BO->user_back()->getOpcode() == Opcode)
     return;
-  }
 
   // If this is an add tree that is used by a sub instruction, ignore it
   // until we process the subtract.
@@ -2274,21 +2227,7 @@ bool Reassociate::runOnFunction(Function &F) {
         ++II;
       }
 
-    // Make a copy of all the instructions to be redone so we can remove dead
-    // instructions.
-    SetVector<AssertingVH<Instruction>> ToRedo(RedoInsts);
-    // Iterate over all instructions to be reevaluated and remove trivially dead
-    // instructions. If any operand of the trivially dead instruction becomes
-    // dead mark it for deletion as well. Continue this process until all
-    // trivially dead instructions have been removed.
-    while (!ToRedo.empty()) {
-      Instruction *I = ToRedo.pop_back_val();
-      if (isInstructionTriviallyDead(I))
-        RecursivelyEraseDeadInsts(I, ToRedo);
-    }
-
-    // Now that we have removed dead instructions, we can reoptimize the
-    // remaining instructions.
+    // If this produced extra instructions to optimize, handle them now.
     while (!RedoInsts.empty()) {
       Instruction *I = RedoInsts.pop_back_val();
       if (isInstructionTriviallyDead(I))

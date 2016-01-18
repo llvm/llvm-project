@@ -16,8 +16,6 @@
 //
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
                                  AssemblerPredicate<"HasV8_1aOps", "armv8.1a">;
-def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
-                                 AssemblerPredicate<"HasV8_2aOps", "armv8.2a">;
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicate<"FeatureFPARMv8", "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
@@ -27,11 +25,6 @@ def HasCrypto        : Predicate<"Subtarget->hasCrypto()">,
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
                                  AssemblerPredicate<"FeatureCRC", "crc">;
 def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;
-def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
-                                 AssemblerPredicate<"FeatureFullFP16", "fullfp16">;
-def HasSPE           : Predicate<"Subtarget->hasSPE()">,
-                                 AssemblerPredicate<"FeatureSPE", "spe">;
-
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsCyclone        : Predicate<"Subtarget->isCyclone()">;
@@ -383,9 +376,6 @@ def : InstAlias<"wfe",  (HINT 0b010)>;
 def : InstAlias<"wfi",  (HINT 0b011)>;
 def : InstAlias<"sev",  (HINT 0b100)>;
 def : InstAlias<"sevl", (HINT 0b101)>;
-
-// v8.2a Statistical Profiling extension
-def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in
@@ -2632,40 +2622,6 @@ defm FMOV : FPMoveImmediate<"fmov">;
 // Advanced SIMD two vector instructions.
 //===----------------------------------------------------------------------===//
 
-defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl",
-                                          int_aarch64_neon_uabd>;
-// Match UABDL in log2-shuffle patterns.
-def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (v8i8 V64:$opA)),
-                                (zext (v8i8 V64:$opB))),
-                           (AArch64vashr v8i16:$src, (i32 15))))),
-          (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
-def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (extract_high_v16i8 V128:$opA)),
-                                (zext (extract_high_v16i8 V128:$opB))),
-                           (AArch64vashr v8i16:$src, (i32 15))))),
-          (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
-def : Pat<(xor (v4i32 (AArch64vashr v4i32:$src, (i32 31))),
-               (v4i32 (add (sub (zext (v4i16 V64:$opA)),
-                                (zext (v4i16 V64:$opB))),
-                           (AArch64vashr v4i32:$src, (i32 31))))),
-          (UABDLv4i16_v4i32 V64:$opA, V64:$opB)>;
-def : Pat<(xor (v4i32 (AArch64vashr v4i32:$src, (i32 31))),
-               (v4i32 (add (sub (zext (extract_high_v8i16 V128:$opA)),
-                                (zext (extract_high_v8i16 V128:$opB))),
-                          (AArch64vashr v4i32:$src, (i32 31))))),
-          (UABDLv8i16_v4i32 V128:$opA, V128:$opB)>;
-def : Pat<(xor (v2i64 (AArch64vashr v2i64:$src, (i32 63))),
-               (v2i64 (add (sub (zext (v2i32 V64:$opA)),
-                                (zext (v2i32 V64:$opB))),
-                           (AArch64vashr v2i64:$src, (i32 63))))),
-          (UABDLv2i32_v2i64 V64:$opA, V64:$opB)>;
-def : Pat<(xor (v2i64 (AArch64vashr v2i64:$src, (i32 63))),
-               (v2i64 (add (sub (zext (extract_high_v4i32 V128:$opA)),
-                                (zext (extract_high_v4i32 V128:$opB))),
-                          (AArch64vashr v2i64:$src, (i32 63))))),
-          (UABDLv4i32_v2i64 V128:$opA, V128:$opB)>;
-
 defm ABS    : SIMDTwoVectorBHSD<0, 0b01011, "abs", int_aarch64_neon_abs>;
 def : Pat<(xor (v8i8 (AArch64vashr V64:$src, (i32 7))),
                (v8i8 (add V64:$src, (AArch64vashr V64:$src, (i32 7))))),
@@ -2857,29 +2813,29 @@ defm CMGT    : SIMDThreeSameVector<0, 0b00110, "cmgt", AArch64cmgt>;
 defm CMHI    : SIMDThreeSameVector<1, 0b00110, "cmhi", AArch64cmhi>;
 defm CMHS    : SIMDThreeSameVector<1, 0b00111, "cmhs", AArch64cmhs>;
 defm CMTST   : SIMDThreeSameVector<0, 0b10001, "cmtst", AArch64cmtst>;
-defm FABD    : SIMDThreeSameVectorFP<1,1,0b010,"fabd", int_aarch64_neon_fabd>;
-defm FACGE   : SIMDThreeSameVectorFPCmp<1,0,0b101,"facge",int_aarch64_neon_facge>;
-defm FACGT   : SIMDThreeSameVectorFPCmp<1,1,0b101,"facgt",int_aarch64_neon_facgt>;
-defm FADDP   : SIMDThreeSameVectorFP<1,0,0b010,"faddp",int_aarch64_neon_addp>;
-defm FADD    : SIMDThreeSameVectorFP<0,0,0b010,"fadd", fadd>;
-defm FCMEQ   : SIMDThreeSameVectorFPCmp<0, 0, 0b100, "fcmeq", AArch64fcmeq>;
-defm FCMGE   : SIMDThreeSameVectorFPCmp<1, 0, 0b100, "fcmge", AArch64fcmge>;
-defm FCMGT   : SIMDThreeSameVectorFPCmp<1, 1, 0b100, "fcmgt", AArch64fcmgt>;
-defm FDIV    : SIMDThreeSameVectorFP<1,0,0b111,"fdiv", fdiv>;
-defm FMAXNMP : SIMDThreeSameVectorFP<1,0,0b000,"fmaxnmp", int_aarch64_neon_fmaxnmp>;
-defm FMAXNM  : SIMDThreeSameVectorFP<0,0,0b000,"fmaxnm", fmaxnum>;
-defm FMAXP   : SIMDThreeSameVectorFP<1,0,0b110,"fmaxp", int_aarch64_neon_fmaxp>;
-defm FMAX    : SIMDThreeSameVectorFP<0,0,0b110,"fmax", fmaxnan>;
-defm FMINNMP : SIMDThreeSameVectorFP<1,1,0b000,"fminnmp", int_aarch64_neon_fminnmp>;
-defm FMINNM  : SIMDThreeSameVectorFP<0,1,0b000,"fminnm", fminnum>;
-defm FMINP   : SIMDThreeSameVectorFP<1,1,0b110,"fminp", int_aarch64_neon_fminp>;
-defm FMIN    : SIMDThreeSameVectorFP<0,1,0b110,"fmin", fminnan>;
+defm FABD    : SIMDThreeSameVectorFP<1,1,0b11010,"fabd", int_aarch64_neon_fabd>;
+defm FACGE   : SIMDThreeSameVectorFPCmp<1,0,0b11101,"facge",int_aarch64_neon_facge>;
+defm FACGT   : SIMDThreeSameVectorFPCmp<1,1,0b11101,"facgt",int_aarch64_neon_facgt>;
+defm FADDP   : SIMDThreeSameVectorFP<1,0,0b11010,"faddp",int_aarch64_neon_addp>;
+defm FADD    : SIMDThreeSameVectorFP<0,0,0b11010,"fadd", fadd>;
+defm FCMEQ   : SIMDThreeSameVectorFPCmp<0, 0, 0b11100, "fcmeq", AArch64fcmeq>;
+defm FCMGE   : SIMDThreeSameVectorFPCmp<1, 0, 0b11100, "fcmge", AArch64fcmge>;
+defm FCMGT   : SIMDThreeSameVectorFPCmp<1, 1, 0b11100, "fcmgt", AArch64fcmgt>;
+defm FDIV    : SIMDThreeSameVectorFP<1,0,0b11111,"fdiv", fdiv>;
+defm FMAXNMP : SIMDThreeSameVectorFP<1,0,0b11000,"fmaxnmp", int_aarch64_neon_fmaxnmp>;
+defm FMAXNM  : SIMDThreeSameVectorFP<0,0,0b11000,"fmaxnm", fmaxnum>;
+defm FMAXP   : SIMDThreeSameVectorFP<1,0,0b11110,"fmaxp", int_aarch64_neon_fmaxp>;
+defm FMAX    : SIMDThreeSameVectorFP<0,0,0b11110,"fmax", fmaxnan>;
+defm FMINNMP : SIMDThreeSameVectorFP<1,1,0b11000,"fminnmp", int_aarch64_neon_fminnmp>;
+defm FMINNM  : SIMDThreeSameVectorFP<0,1,0b11000,"fminnm", fminnum>;
+defm FMINP   : SIMDThreeSameVectorFP<1,1,0b11110,"fminp", int_aarch64_neon_fminp>;
+defm FMIN    : SIMDThreeSameVectorFP<0,1,0b11110,"fmin", fminnan>;
 
 // NOTE: The operands of the PatFrag are reordered on FMLA/FMLS because the
 // instruction expects the addend first, while the fma intrinsic puts it last.
-defm FMLA     : SIMDThreeSameVectorFPTied<0, 0, 0b001, "fmla",
+defm FMLA     : SIMDThreeSameVectorFPTied<0, 0, 0b11001, "fmla",
             TriOpFrag<(fma node:$RHS, node:$MHS, node:$LHS)> >;
-defm FMLS     : SIMDThreeSameVectorFPTied<0, 1, 0b001, "fmls",
+defm FMLS     : SIMDThreeSameVectorFPTied<0, 1, 0b11001, "fmls",
             TriOpFrag<(fma node:$MHS, (fneg node:$RHS), node:$LHS)> >;
 
 // The following def pats catch the case where the LHS of an FMA is negated.
@@ -2893,11 +2849,11 @@ def : Pat<(v4f32 (fma (fneg V128:$Rn), V128:$Rm, V128:$Rd)),
 def : Pat<(v2f64 (fma (fneg V128:$Rn), V128:$Rm, V128:$Rd)),
           (FMLSv2f64 V128:$Rd, V128:$Rn, V128:$Rm)>;
 
-defm FMULX    : SIMDThreeSameVectorFP<0,0,0b011,"fmulx", int_aarch64_neon_fmulx>;
-defm FMUL     : SIMDThreeSameVectorFP<1,0,0b011,"fmul", fmul>;
-defm FRECPS   : SIMDThreeSameVectorFP<0,0,0b111,"frecps", int_aarch64_neon_frecps>;
-defm FRSQRTS  : SIMDThreeSameVectorFP<0,1,0b111,"frsqrts", int_aarch64_neon_frsqrts>;
-defm FSUB     : SIMDThreeSameVectorFP<0,1,0b010,"fsub", fsub>;
+defm FMULX    : SIMDThreeSameVectorFP<0,0,0b11011,"fmulx", int_aarch64_neon_fmulx>;
+defm FMUL     : SIMDThreeSameVectorFP<1,0,0b11011,"fmul", fmul>;
+defm FRECPS   : SIMDThreeSameVectorFP<0,0,0b11111,"frecps", int_aarch64_neon_frecps>;
+defm FRSQRTS  : SIMDThreeSameVectorFP<0,1,0b11111,"frsqrts", int_aarch64_neon_frsqrts>;
+defm FSUB     : SIMDThreeSameVectorFP<0,1,0b11010,"fsub", fsub>;
 defm MLA      : SIMDThreeSameVectorBHSTied<0, 0b10010, "mla",
                       TriOpFrag<(add node:$LHS, (mul node:$MHS, node:$RHS))> >;
 defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls",
@@ -2905,8 +2861,8 @@ defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls",
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
-      TriOpFrag<(add node:$LHS, (int_aarch64_neon_sabd node:$MHS, node:$RHS))> >;
-defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", int_aarch64_neon_sabd>;
+      TriOpFrag<(add node:$LHS, (sabsdiff node:$MHS, node:$RHS))> >;
+defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", sabsdiff>;
 defm SHADD    : SIMDThreeSameVectorBHS<0,0b00000,"shadd", int_aarch64_neon_shadd>;
 defm SHSUB    : SIMDThreeSameVectorBHS<0,0b00100,"shsub", int_aarch64_neon_shsub>;
 defm SMAXP    : SIMDThreeSameVectorBHS<0,0b10100,"smaxp", int_aarch64_neon_smaxp>;
@@ -2924,8 +2880,8 @@ defm SRSHL    : SIMDThreeSameVector<0,0b01010,"srshl", int_aarch64_neon_srshl>;
 defm SSHL     : SIMDThreeSameVector<0,0b01000,"sshl", int_aarch64_neon_sshl>;
 defm SUB      : SIMDThreeSameVector<1,0b10000,"sub", sub>;
 defm UABA     : SIMDThreeSameVectorBHSTied<1, 0b01111, "uaba",
-      TriOpFrag<(add node:$LHS, (int_aarch64_neon_uabd node:$MHS, node:$RHS))> >;
-defm UABD     : SIMDThreeSameVectorBHS<1,0b01110,"uabd", int_aarch64_neon_uabd>;
+      TriOpFrag<(add node:$LHS, (uabsdiff node:$MHS, node:$RHS))> >;
+defm UABD     : SIMDThreeSameVectorBHS<1,0b01110,"uabd", uabsdiff>;
 defm UHADD    : SIMDThreeSameVectorBHS<1,0b00000,"uhadd", int_aarch64_neon_uhadd>;
 defm UHSUB    : SIMDThreeSameVectorBHS<1,0b00100,"uhsub", int_aarch64_neon_uhsub>;
 defm UMAXP    : SIMDThreeSameVectorBHS<1,0b10100,"umaxp", int_aarch64_neon_umaxp>;
@@ -3081,14 +3037,6 @@ def : InstAlias<"{cmlt\t$dst.2d, $src1.2d, $src2.2d" #
                 "|cmlt.2d\t$dst, $src1, $src2}",
                 (CMGTv2i64 V128:$dst, V128:$src2, V128:$src1), 0>;
 
-let Predicates = [HasNEON, HasFullFP16] in {
-def : InstAlias<"{fcmle\t$dst.4h, $src1.4h, $src2.4h" #
-                "|fcmle.4h\t$dst, $src1, $src2}",
-                (FCMGEv4f16 V64:$dst, V64:$src2, V64:$src1), 0>;
-def : InstAlias<"{fcmle\t$dst.8h, $src1.8h, $src2.8h" #
-                "|fcmle.8h\t$dst, $src1, $src2}",
-                (FCMGEv8f16 V128:$dst, V128:$src2, V128:$src1), 0>;
-}
 def : InstAlias<"{fcmle\t$dst.2s, $src1.2s, $src2.2s" #
                 "|fcmle.2s\t$dst, $src1, $src2}",
                 (FCMGEv2f32 V64:$dst, V64:$src2, V64:$src1), 0>;
@@ -3099,14 +3047,6 @@ def : InstAlias<"{fcmle\t$dst.2d, $src1.2d, $src2.2d" #
                 "|fcmle.2d\t$dst, $src1, $src2}",
                 (FCMGEv2f64 V128:$dst, V128:$src2, V128:$src1), 0>;
 
-let Predicates = [HasNEON, HasFullFP16] in {
-def : InstAlias<"{fcmlt\t$dst.4h, $src1.4h, $src2.4h" #
-                "|fcmlt.4h\t$dst, $src1, $src2}",
-                (FCMGTv4f16 V64:$dst, V64:$src2, V64:$src1), 0>;
-def : InstAlias<"{fcmlt\t$dst.8h, $src1.8h, $src2.8h" #
-                "|fcmlt.8h\t$dst, $src1, $src2}",
-                (FCMGTv8f16 V128:$dst, V128:$src2, V128:$src1), 0>;
-}
 def : InstAlias<"{fcmlt\t$dst.2s, $src1.2s, $src2.2s" #
                 "|fcmlt.2s\t$dst, $src1, $src2}",
                 (FCMGTv2f32 V64:$dst, V64:$src2, V64:$src1), 0>;
@@ -3117,14 +3057,6 @@ def : InstAlias<"{fcmlt\t$dst.2d, $src1.2d, $src2.2d" #
                 "|fcmlt.2d\t$dst, $src1, $src2}",
                 (FCMGTv2f64 V128:$dst, V128:$src2, V128:$src1), 0>;
 
-let Predicates = [HasNEON, HasFullFP16] in {
-def : InstAlias<"{facle\t$dst.4h, $src1.4h, $src2.4h" #
-                "|facle.4h\t$dst, $src1, $src2}",
-                (FACGEv4f16 V64:$dst, V64:$src2, V64:$src1), 0>;
-def : InstAlias<"{facle\t$dst.8h, $src1.8h, $src2.8h" #
-                "|facle.8h\t$dst, $src1, $src2}",
-                (FACGEv8f16 V128:$dst, V128:$src2, V128:$src1), 0>;
-}
 def : InstAlias<"{facle\t$dst.2s, $src1.2s, $src2.2s" #
                 "|facle.2s\t$dst, $src1, $src2}",
                 (FACGEv2f32 V64:$dst, V64:$src2, V64:$src1), 0>;
@@ -3135,14 +3067,6 @@ def : InstAlias<"{facle\t$dst.2d, $src1.2d, $src2.2d" #
                 "|facle.2d\t$dst, $src1, $src2}",
                 (FACGEv2f64 V128:$dst, V128:$src2, V128:$src1), 0>;
 
-let Predicates = [HasNEON, HasFullFP16] in {
-def : InstAlias<"{faclt\t$dst.4h, $src1.4h, $src2.4h" #
-                "|faclt.4h\t$dst, $src1, $src2}",
-                (FACGTv4f16 V64:$dst, V64:$src2, V64:$src1), 0>;
-def : InstAlias<"{faclt\t$dst.8h, $src1.8h, $src2.8h" #
-                "|faclt.8h\t$dst, $src1, $src2}",
-                (FACGTv8f16 V128:$dst, V128:$src2, V128:$src1), 0>;
-}
 def : InstAlias<"{faclt\t$dst.2s, $src1.2s, $src2.2s" #
                 "|faclt.2s\t$dst, $src1, $src2}",
                 (FACGTv2f32 V64:$dst, V64:$src2, V64:$src1), 0>;
@@ -3164,19 +3088,19 @@ defm CMGT     : SIMDThreeScalarD<0, 0b00110, "cmgt", AArch64cmgt>;
 defm CMHI     : SIMDThreeScalarD<1, 0b00110, "cmhi", AArch64cmhi>;
 defm CMHS     : SIMDThreeScalarD<1, 0b00111, "cmhs", AArch64cmhs>;
 defm CMTST    : SIMDThreeScalarD<0, 0b10001, "cmtst", AArch64cmtst>;
-defm FABD     : SIMDFPThreeScalar<1, 1, 0b010, "fabd", int_aarch64_sisd_fabd>;
+defm FABD     : SIMDThreeScalarSD<1, 1, 0b11010, "fabd", int_aarch64_sisd_fabd>;
 def : Pat<(v1f64 (int_aarch64_neon_fabd (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FABD64 FPR64:$Rn, FPR64:$Rm)>;
-defm FACGE    : SIMDThreeScalarFPCmp<1, 0, 0b101, "facge",
+defm FACGE    : SIMDThreeScalarFPCmp<1, 0, 0b11101, "facge",
                                      int_aarch64_neon_facge>;
-defm FACGT    : SIMDThreeScalarFPCmp<1, 1, 0b101, "facgt",
+defm FACGT    : SIMDThreeScalarFPCmp<1, 1, 0b11101, "facgt",
                                      int_aarch64_neon_facgt>;
-defm FCMEQ    : SIMDThreeScalarFPCmp<0, 0, 0b100, "fcmeq", AArch64fcmeq>;
-defm FCMGE    : SIMDThreeScalarFPCmp<1, 0, 0b100, "fcmge", AArch64fcmge>;
-defm FCMGT    : SIMDThreeScalarFPCmp<1, 1, 0b100, "fcmgt", AArch64fcmgt>;
-defm FMULX    : SIMDFPThreeScalar<0, 0, 0b011, "fmulx", int_aarch64_neon_fmulx>;
-defm FRECPS   : SIMDFPThreeScalar<0, 0, 0b111, "frecps", int_aarch64_neon_frecps>;
-defm FRSQRTS  : SIMDFPThreeScalar<0, 1, 0b111, "frsqrts", int_aarch64_neon_frsqrts>;
+defm FCMEQ    : SIMDThreeScalarFPCmp<0, 0, 0b11100, "fcmeq", AArch64fcmeq>;
+defm FCMGE    : SIMDThreeScalarFPCmp<1, 0, 0b11100, "fcmge", AArch64fcmge>;
+defm FCMGT    : SIMDThreeScalarFPCmp<1, 1, 0b11100, "fcmgt", AArch64fcmgt>;
+defm FMULX    : SIMDThreeScalarSD<0, 0, 0b11011, "fmulx", int_aarch64_neon_fmulx>;
+defm FRECPS   : SIMDThreeScalarSD<0, 0, 0b11111, "frecps", int_aarch64_neon_frecps>;
+defm FRSQRTS  : SIMDThreeScalarSD<0, 1, 0b11111, "frsqrts", int_aarch64_neon_frsqrts>;
 defm SQADD    : SIMDThreeScalarBHSD<0, 0b00001, "sqadd", int_aarch64_neon_sqadd>;
 defm SQDMULH  : SIMDThreeScalarHS<  0, 0b10110, "sqdmulh", int_aarch64_neon_sqdmulh>;
 defm SQRDMULH : SIMDThreeScalarHS<  1, 0b10110, "sqrdmulh", int_aarch64_neon_sqrdmulh>;
@@ -3280,14 +3204,14 @@ defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx">;
 defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte">;
 defm NEG    : SIMDTwoScalarD<    1, 0b01011, "neg",
                                  UnOpFrag<(sub immAllZerosV, node:$LHS)> >;
-defm SCVTF  : SIMDFPTwoScalarCVT<   0, 0, 0b11101, "scvtf", AArch64sitof>;
+defm SCVTF  : SIMDTwoScalarCVTSD<   0, 0, 0b11101, "scvtf", AArch64sitof>;
 defm SQABS  : SIMDTwoScalarBHSD< 0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
 defm SQNEG  : SIMDTwoScalarBHSD< 1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
 defm SQXTN  : SIMDTwoScalarMixedBHS< 0, 0b10100, "sqxtn", int_aarch64_neon_scalar_sqxtn>;
 defm SQXTUN : SIMDTwoScalarMixedBHS< 1, 0b10010, "sqxtun", int_aarch64_neon_scalar_sqxtun>;
 defm SUQADD : SIMDTwoScalarBHSDTied< 0, 0b00011, "suqadd",
                                      int_aarch64_neon_suqadd>;
-defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
+defm UCVTF  : SIMDTwoScalarCVTSD<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
                                     int_aarch64_neon_usqadd>;
@@ -3427,9 +3351,9 @@ defm RADDHN : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn
 defm RSUBHN : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
 defm PMULL  : SIMDDifferentThreeVectorBD<0,0b1110,"pmull",int_aarch64_neon_pmull>;
 defm SABAL  : SIMDLongThreeVectorTiedBHSabal<0,0b0101,"sabal",
-                                             int_aarch64_neon_sabd>;
+                                             sabsdiff>;
 defm SABDL   : SIMDLongThreeVectorBHSabdl<0, 0b0111, "sabdl",
-                                          int_aarch64_neon_sabd>;
+                                          sabsdiff>;
 defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
             BinOpFrag<(add (sext node:$LHS), (sext node:$RHS))>>;
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
@@ -3450,7 +3374,9 @@ defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
                  BinOpFrag<(sub node:$LHS, (sext node:$RHS))>>;
 defm UABAL   : SIMDLongThreeVectorTiedBHSabal<1, 0b0101, "uabal",
-                                              int_aarch64_neon_uabd>;
+                                              uabsdiff>;
+defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl",
+                                          uabsdiff>;
 defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
                  BinOpFrag<(add (zext node:$LHS), (zext node:$RHS))>>;
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
@@ -3508,8 +3434,8 @@ defm : Neon_mulacc_widen_patterns<
 // Patterns for 64-bit pmull
 def : Pat<(int_aarch64_neon_pmull64 V64:$Rn, V64:$Rm),
           (PMULLv1i64 V64:$Rn, V64:$Rm)>;
-def : Pat<(int_aarch64_neon_pmull64 (extractelt (v2i64 V128:$Rn), (i64 1)),
-                                    (extractelt (v2i64 V128:$Rm), (i64 1))),
+def : Pat<(int_aarch64_neon_pmull64 (vector_extract (v2i64 V128:$Rn), (i64 1)),
+                                  (vector_extract (v2i64 V128:$Rm), (i64 1))),
           (PMULLv2i64 V128:$Rn, V128:$Rm)>;
 
 // CodeGen patterns for addhn and subhn instructions, which can actually be
@@ -3652,11 +3578,11 @@ defm CPY : SIMDScalarCPY<"cpy">;
 //----------------------------------------------------------------------------
 
 defm ADDP    : SIMDPairwiseScalarD<0, 0b11011, "addp">;
-defm FADDP   : SIMDFPPairwiseScalar<0, 0b01101, "faddp">;
-defm FMAXNMP : SIMDFPPairwiseScalar<0, 0b01100, "fmaxnmp">;
-defm FMAXP   : SIMDFPPairwiseScalar<0, 0b01111, "fmaxp">;
-defm FMINNMP : SIMDFPPairwiseScalar<1, 0b01100, "fminnmp">;
-defm FMINP   : SIMDFPPairwiseScalar<1, 0b01111, "fminp">;
+defm FADDP   : SIMDFPPairwiseScalar<1, 0, 0b01101, "faddp">;
+defm FMAXNMP : SIMDFPPairwiseScalar<1, 0, 0b01100, "fmaxnmp">;
+defm FMAXP   : SIMDFPPairwiseScalar<1, 0, 0b01111, "fmaxp">;
+defm FMINNMP : SIMDFPPairwiseScalar<1, 1, 0b01100, "fminnmp">;
+defm FMINP   : SIMDFPPairwiseScalar<1, 1, 0b01111, "fminp">;
 def : Pat<(v2i64 (AArch64saddv V128:$Rn)),
           (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (ADDPv2i64p V128:$Rn), dsub)>;
 def : Pat<(v2i64 (AArch64uaddv V128:$Rn)),
@@ -3772,12 +3698,12 @@ defm : DUPWithTruncPats<v8i16,  v2i32, v4i32, i32, DUPv8i16lane, VecIndex_x2>;
 
 multiclass DUPWithTrunci64Pats<ValueType ResVT, Instruction DUP,
                                SDNodeXForm IdxXFORM> {
-  def : Pat<(ResVT (AArch64dup (i32 (trunc (extractelt (v2i64 V128:$Rn),
+  def : Pat<(ResVT (AArch64dup (i32 (trunc (vector_extract (v2i64 V128:$Rn),
                                                          imm:$idx))))),
             (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
 
-  def : Pat<(ResVT (AArch64dup (i32 (trunc (extractelt (v1i64 V64:$Rn),
-                                                       imm:$idx))))),
+  def : Pat<(ResVT (AArch64dup (i32 (trunc (vector_extract (v1i64 V64:$Rn),
+                                                         imm:$idx))))),
             (DUP (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), (IdxXFORM imm:$idx))>;
 }
 
@@ -3805,13 +3731,6 @@ def : Pat<(sext_inreg (vector_extract (v8i16 V128:$Rn), VectorIndexH:$idx),i16),
           (i32 (SMOVvi16to32 V128:$Rn, VectorIndexH:$idx))>;
 def : Pat<(sext (i32 (vector_extract (v4i32 V128:$Rn), VectorIndexS:$idx))),
           (i64 (SMOVvi32to64 V128:$Rn, VectorIndexS:$idx))>;
-
-def : Pat<(sext_inreg (i64 (anyext (i32 (vector_extract (v16i8 V128:$Rn),
-            VectorIndexB:$idx)))), i8),
-          (i64 (SMOVvi8to64 V128:$Rn, VectorIndexB:$idx))>;
-def : Pat<(sext_inreg (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
-            VectorIndexH:$idx)))), i16),
-          (i64 (SMOVvi16to64 V128:$Rn, VectorIndexH:$idx))>;
 
 // Extracting i8 or i16 elements will have the zero-extend transformed to
 // an 'and' mask by type legalization since neither i8 nor i16 are legal types
@@ -3849,11 +3768,6 @@ def : Pat<(v4i32 (scalar_to_vector (i32 FPR32:$Rn))),
 def : Pat<(v2i64 (scalar_to_vector (i64 FPR64:$Rn))),
             (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
                                   (i64 FPR64:$Rn), dsub))>;
-
-def : Pat<(v4f16 (scalar_to_vector (f16 FPR16:$Rn))),
-          (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
-def : Pat<(v8f16 (scalar_to_vector (f16 FPR16:$Rn))),
-          (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 
 def : Pat<(v4f32 (scalar_to_vector (f32 FPR32:$Rn))),
           (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), FPR32:$Rn, ssub)>;
@@ -4020,10 +3934,10 @@ defm UMAXV   : SIMDAcrossLanesBHS<1, 0b01010, "umaxv">;
 defm UMINV   : SIMDAcrossLanesBHS<1, 0b11010, "uminv">;
 defm SADDLV  : SIMDAcrossLanesHSD<0, 0b00011, "saddlv">;
 defm UADDLV  : SIMDAcrossLanesHSD<1, 0b00011, "uaddlv">;
-defm FMAXNMV : SIMDFPAcrossLanes<0b01100, 0, "fmaxnmv", int_aarch64_neon_fmaxnmv>;
-defm FMAXV   : SIMDFPAcrossLanes<0b01111, 0, "fmaxv", int_aarch64_neon_fmaxv>;
-defm FMINNMV : SIMDFPAcrossLanes<0b01100, 1, "fminnmv", int_aarch64_neon_fminnmv>;
-defm FMINV   : SIMDFPAcrossLanes<0b01111, 1, "fminv", int_aarch64_neon_fminv>;
+defm FMAXNMV : SIMDAcrossLanesS<0b01100, 0, "fmaxnmv", int_aarch64_neon_fmaxnmv>;
+defm FMAXV   : SIMDAcrossLanesS<0b01111, 0, "fmaxv", int_aarch64_neon_fmaxv>;
+defm FMINNMV : SIMDAcrossLanesS<0b01100, 1, "fminnmv", int_aarch64_neon_fminnmv>;
+defm FMINV   : SIMDAcrossLanesS<0b01111, 1, "fminv", int_aarch64_neon_fminv>;
 
 // Patterns for across-vector intrinsics, that have a node equivalent, that
 // returns a vector (with only the low lane defined) instead of a scalar.
@@ -4270,23 +4184,15 @@ def : InstAlias<"orr.2s $Vd, $imm", (ORRv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"orr.4s $Vd, $imm", (ORRv4i32 V128:$Vd, imm0_255:$imm, 0), 0>;
 
 // AdvSIMD FMOV
-def FMOVv2f64_ns : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1111, V128, fpimm8,
+def FMOVv2f64_ns : SIMDModifiedImmVectorNoShift<1, 1, 0b1111, V128, fpimm8,
                                               "fmov", ".2d",
                        [(set (v2f64 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
-def FMOVv2f32_ns : SIMDModifiedImmVectorNoShift<0, 0, 0, 0b1111, V64,  fpimm8,
+def FMOVv2f32_ns : SIMDModifiedImmVectorNoShift<0, 0, 0b1111, V64,  fpimm8,
                                               "fmov", ".2s",
                        [(set (v2f32 V64:$Rd), (AArch64fmov imm0_255:$imm8))]>;
-def FMOVv4f32_ns : SIMDModifiedImmVectorNoShift<1, 0, 0, 0b1111, V128, fpimm8,
+def FMOVv4f32_ns : SIMDModifiedImmVectorNoShift<1, 0, 0b1111, V128, fpimm8,
                                               "fmov", ".4s",
                        [(set (v4f32 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
-let Predicates = [HasNEON, HasFullFP16] in {
-def FMOVv4f16_ns : SIMDModifiedImmVectorNoShift<0, 0, 1, 0b1111, V64,  fpimm8,
-                                              "fmov", ".4h",
-                       [(set (v4f16 V64:$Rd), (AArch64fmov imm0_255:$imm8))]>;
-def FMOVv8f16_ns : SIMDModifiedImmVectorNoShift<1, 0, 1, 0b1111, V128, fpimm8,
-                                              "fmov", ".8h",
-                       [(set (v8f16 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
-} // Predicates = [HasNEON, HasFullFP16]
 
 // AdvSIMD MOVI
 
@@ -4314,7 +4220,7 @@ def : Pat<(v8i8  immAllOnesV), (MOVID (i32 255))>;
 // The movi_edit node has the immediate value already encoded, so we use
 // a plain imm0_255 in the pattern
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
+def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0b1110, V128,
                                                 simdimmtype10,
                                                 "movi", ".2d",
                    [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
@@ -4375,10 +4281,10 @@ def MOVIv4s_msl  : SIMDModifiedImmMoveMSL<1, 0, {1,1,0,?}, V128, "movi", ".4s",
                             (AArch64movi_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
 
 // Per byte: 8b & 16b
-def MOVIv8b_ns   : SIMDModifiedImmVectorNoShift<0, 0, 0, 0b1110, V64,  imm0_255,
+def MOVIv8b_ns   : SIMDModifiedImmVectorNoShift<0, 0, 0b1110, V64,  imm0_255,
                                                  "movi", ".8b",
                        [(set (v8i8 V64:$Rd), (AArch64movi imm0_255:$imm8))]>;
-def MOVIv16b_ns  : SIMDModifiedImmVectorNoShift<1, 0, 0, 0b1110, V128, imm0_255,
+def MOVIv16b_ns  : SIMDModifiedImmVectorNoShift<1, 0, 0b1110, V128, imm0_255,
                                                  "movi", ".16b",
                        [(set (v16i8 V128:$Rd), (AArch64movi imm0_255:$imm8))]>;
 
@@ -4578,10 +4484,10 @@ def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
 //----------------------------------------------------------------------------
 // AdvSIMD scalar shift instructions
 //----------------------------------------------------------------------------
-defm FCVTZS : SIMDFPScalarRShift<0, 0b11111, "fcvtzs">;
-defm FCVTZU : SIMDFPScalarRShift<1, 0b11111, "fcvtzu">;
-defm SCVTF  : SIMDFPScalarRShift<0, 0b11100, "scvtf">;
-defm UCVTF  : SIMDFPScalarRShift<1, 0b11100, "ucvtf">;
+defm FCVTZS : SIMDScalarRShiftSD<0, 0b11111, "fcvtzs">;
+defm FCVTZU : SIMDScalarRShiftSD<1, 0b11111, "fcvtzu">;
+defm SCVTF  : SIMDScalarRShiftSD<0, 0b11100, "scvtf">;
+defm UCVTF  : SIMDScalarRShiftSD<1, 0b11100, "ucvtf">;
 // Codegen patterns for the above. We don't put these directly on the
 // instructions because TableGen's type inference can't handle the truth.
 // Having the same base pattern for fp <--> int totally freaks it out.
@@ -4654,7 +4560,7 @@ defm USRA     : SIMDScalarRShiftDTied<   1, 0b00010, "usra",
 //----------------------------------------------------------------------------
 defm FCVTZS:SIMDVectorRShiftSD<0, 0b11111, "fcvtzs", int_aarch64_neon_vcvtfp2fxs>;
 defm FCVTZU:SIMDVectorRShiftSD<1, 0b11111, "fcvtzu", int_aarch64_neon_vcvtfp2fxu>;
-defm SCVTF: SIMDVectorRShiftToFP<0, 0b11100, "scvtf",
+defm SCVTF: SIMDVectorRShiftSDToFP<0, 0b11100, "scvtf",
                                    int_aarch64_neon_vcvtfxs2fp>;
 defm RSHRN   : SIMDVectorRShiftNarrowBHS<0, 0b10001, "rshrn",
                                          int_aarch64_neon_rshrn>;
@@ -4689,7 +4595,7 @@ defm SSHLL   : SIMDVectorLShiftLongBHSD<0, 0b10100, "sshll",
 defm SSHR    : SIMDVectorRShiftBHSD<0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
                 TriOpFrag<(add node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
-defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
+defm UCVTF   : SIMDVectorRShiftSDToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
                                          int_aarch64_neon_uqrshrn>;
@@ -5881,21 +5787,6 @@ def : Pat<(v16i8 (bitconvert (v4f32 FPR128:$src))),
 def : Pat<(v16i8 (bitconvert (v8f16 FPR128:$src))),
                              (v16i8 (REV16v16i8 FPR128:$src))>;
 }
-
-def : Pat<(v4i16 (extract_subvector V128:$Rn, (i64 0))),
-           (EXTRACT_SUBREG V128:$Rn, dsub)>;
-def : Pat<(v8i8 (extract_subvector V128:$Rn, (i64 0))),
-           (EXTRACT_SUBREG V128:$Rn, dsub)>;
-def : Pat<(v2f32 (extract_subvector V128:$Rn, (i64 0))),
-           (EXTRACT_SUBREG V128:$Rn, dsub)>;
-def : Pat<(v4f16 (extract_subvector V128:$Rn, (i64 0))),
-           (EXTRACT_SUBREG V128:$Rn, dsub)>;
-def : Pat<(v2i32 (extract_subvector V128:$Rn, (i64 0))),
-           (EXTRACT_SUBREG V128:$Rn, dsub)>;
-def : Pat<(v1i64 (extract_subvector V128:$Rn, (i64 0))),
-           (EXTRACT_SUBREG V128:$Rn, dsub)>;
-def : Pat<(v1f64 (extract_subvector V128:$Rn, (i64 0))),
-           (EXTRACT_SUBREG V128:$Rn, dsub)>;
 
 def : Pat<(v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 1))),
           (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;

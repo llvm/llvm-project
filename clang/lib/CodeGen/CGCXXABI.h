@@ -538,9 +538,11 @@ public:
   ///        thread_local variables, a list of functions to perform the
   ///        initialization.
   virtual void EmitThreadLocalInitFuncs(
-      CodeGenModule &CGM, ArrayRef<const VarDecl *> CXXThreadLocals,
+      CodeGenModule &CGM,
+      ArrayRef<std::pair<const VarDecl *, llvm::GlobalVariable *>>
+          CXXThreadLocals,
       ArrayRef<llvm::Function *> CXXThreadLocalInits,
-      ArrayRef<const VarDecl *> CXXThreadLocalInitVars) = 0;
+      ArrayRef<llvm::GlobalVariable *> CXXThreadLocalInitVars) = 0;
 
   // Determine if references to thread_local global variables can be made
   // directly or require access through a thread wrapper function.

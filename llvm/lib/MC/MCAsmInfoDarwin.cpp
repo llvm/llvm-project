@@ -93,4 +93,9 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
 
   UseIntegratedAssembler = true;
   SetDirectiveSuppressesReloc = true;
+
+  // FIXME: For now keep the previous behavior, AShr, matching the previous
+  // behavior of as(1) (both -q and -Q: resp. LLVM and gas v1.38).
+  // If/when this changes, the AArch64 Darwin special case can go away.
+  UseLogicalShr = false;
 }

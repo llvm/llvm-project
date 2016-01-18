@@ -612,10 +612,9 @@ namespace {
     bool runOnSCC(CallGraphSCC &SCC) override {
       Out << Banner;
       for (CallGraphNode *CGN : SCC) {
-        if (CGN->getFunction()) {
-          if (isFunctionInPrintList(CGN->getFunction()->getName()))
-            CGN->getFunction()->print(Out);
-        } else
+        if (CGN->getFunction())
+          CGN->getFunction()->print(Out);
+        else
           Out << "\nPrinting <null> Function\n";
       }
       return false;

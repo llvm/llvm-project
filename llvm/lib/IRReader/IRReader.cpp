@@ -31,11 +31,11 @@ static const char *const TimeIRParsingName = "Parse IR";
 
 static std::unique_ptr<Module>
 getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer, SMDiagnostic &Err,
-                LLVMContext &Context, bool ShouldLazyLoadMetadata) {
+                LLVMContext &Context) {
   if (isBitcode((const unsigned char *)Buffer->getBufferStart(),
                 (const unsigned char *)Buffer->getBufferEnd())) {
-    ErrorOr<std::unique_ptr<Module>> ModuleOrErr = getLazyBitcodeModule(
-        std::move(Buffer), Context, ShouldLazyLoadMetadata);
+    ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
+        getLazyBitcodeModule(std::move(Buffer), Context);
     if (std::error_code EC = ModuleOrErr.getError()) {
       Err = SMDiagnostic(Buffer->getBufferIdentifier(), SourceMgr::DK_Error,
                          EC.message());
@@ -49,8 +49,7 @@ getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer, SMDiagnostic &Err,
 
 std::unique_ptr<Module> llvm::getLazyIRFileModule(StringRef Filename,
                                                   SMDiagnostic &Err,
-                                                  LLVMContext &Context,
-                                                  bool ShouldLazyLoadMetadata) {
+                                                  LLVMContext &Context) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = FileOrErr.getError()) {
@@ -59,8 +58,7 @@ std::unique_ptr<Module> llvm::getLazyIRFileModule(StringRef Filename,
     return nullptr;
   }
 
-  return getLazyIRModule(std::move(FileOrErr.get()), Err, Context,
-                         ShouldLazyLoadMetadata);
+  return getLazyIRModule(std::move(FileOrErr.get()), Err, Context);
 }
 
 std::unique_ptr<Module> llvm::parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,

@@ -101,8 +101,6 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient() :
     m_supports_QEnvironment (true),
     m_supports_QEnvironmentHexEncoded (true),
     m_supports_qSymbol (true),
-    m_qSymbol_requests_done (false),
-    m_supports_qModuleInfo (true),
     m_supports_jThreadsInfo (true),
     m_curr_pid (LLDB_INVALID_PROCESS_ID),
     m_curr_tid (LLDB_INVALID_THREAD_ID),
@@ -378,8 +376,6 @@ GDBRemoteCommunicationClient::ResetDiscoverableSettings (bool did_exec)
         m_supports_QEnvironment = true;
         m_supports_QEnvironmentHexEncoded = true;
         m_supports_qSymbol = true;
-        m_qSymbol_requests_done = false;
-        m_supports_qModuleInfo = true;
         m_host_arch.Clear();
         m_os_version_major = UINT32_MAX;
         m_os_version_minor = UINT32_MAX;
@@ -1588,7 +1584,6 @@ GDBRemoteCommunicationClient::SendEnvironmentPacket (char const *name_equal_valu
                     case '$':
                     case '#':
                     case '*':
-                    case '}':
                         send_hex_encoding = true;
                         break;
                     default:
@@ -3387,43 +3382,6 @@ GDBRemoteCommunicationClient::LaunchGDBServer (const char *remote_accept_hostnam
     return false;
 }
 
-size_t
-GDBRemoteCommunicationClient::QueryGDBServer (std::vector<std::pair<uint16_t, std::string>>& connection_urls)
-{
-    connection_urls.clear();
-
-    StringExtractorGDBRemote response;
-    if (SendPacketAndWaitForResponse("qQueryGDBServer", response, false) != PacketResult::Success)
-        return 0;
-
-    StructuredData::ObjectSP data = StructuredData::ParseJSON(response.GetStringRef());
-    if (!data)
-        return 0;
-
-    StructuredData::Array* array = data->GetAsArray();
-    if (!array)
-        return 0;
-
-    for (size_t i = 0, count = array->GetSize(); i < count; ++i)
-    {
-        StructuredData::Dictionary* element = nullptr;
-        if (!array->GetItemAtIndexAsDictionary(i, element))
-            continue;
-
-        uint16_t port = 0;
-        if (StructuredData::ObjectSP port_osp = element->GetValueForKey(llvm::StringRef("port")))
-            port = port_osp->GetIntegerValue(0);
-
-        std::string socket_name;
-        if (StructuredData::ObjectSP socket_name_osp = element->GetValueForKey(llvm::StringRef("socket_name")))
-            socket_name = socket_name_osp->GetStringValue();
-
-        if (port != 0 || !socket_name.empty())
-            connection_urls.emplace_back(port, socket_name);
-    }
-    return connection_urls.size();
-}
-
 bool
 GDBRemoteCommunicationClient::KillSpawnedProcess (lldb::pid_t pid)
 {
@@ -4288,9 +4246,6 @@ GDBRemoteCommunicationClient::GetModuleInfo (const FileSpec& module_file_spec,
                                              const lldb_private::ArchSpec& arch_spec,
                                              ModuleSpec &module_spec)
 {
-    if (!m_supports_qModuleInfo)
-        return false;
-
     std::string module_path = module_file_spec.GetPath (false);
     if (module_path.empty ())
         return false;
@@ -4306,14 +4261,8 @@ GDBRemoteCommunicationClient::GetModuleInfo (const FileSpec& module_file_spec,
     if (SendPacketAndWaitForResponse (packet.GetData(), packet.GetSize(), response, false) != PacketResult::Success)
         return false;
 
-    if (response.IsErrorResponse ())
+    if (response.IsErrorResponse () || response.IsUnsupportedResponse ())
         return false;
-
-    if (response.IsUnsupportedResponse ())
-    {
-        m_supports_qModuleInfo = false;
-        return false;
-    }
 
     std::string name;
     std::string value;
@@ -4445,42 +4394,11 @@ GDBRemoteCommunicationClient::ReadExtFeature (const lldb_private::ConstString ob
 //  qSymbol:<sym_name>  The target requests the value of symbol sym_name (hex encoded).
 //                      LLDB may provide the value by sending another qSymbol packet
 //                      in the form of"qSymbol:<sym_value>:<sym_name>".
-//
-//  Three examples:
-//
-//  lldb sends:    qSymbol::
-//  lldb receives: OK
-//     Remote gdb stub does not need to know the addresses of any symbols, lldb does not
-//     need to ask again in this session.
-//
-//  lldb sends:    qSymbol::
-//  lldb receives: qSymbol:64697370617463685f71756575655f6f666673657473
-//  lldb sends:    qSymbol::64697370617463685f71756575655f6f666673657473
-//  lldb receives: OK
-//     Remote gdb stub asks for address of 'dispatch_queue_offsets'.  lldb does not know
-//     the address at this time.  lldb needs to send qSymbol:: again when it has more
-//     solibs loaded.
-//
-//  lldb sends:    qSymbol::
-//  lldb receives: qSymbol:64697370617463685f71756575655f6f666673657473
-//  lldb sends:    qSymbol:2bc97554:64697370617463685f71756575655f6f666673657473
-//  lldb receives: OK
-//     Remote gdb stub asks for address of 'dispatch_queue_offsets'.  lldb says that it
-//     is at address 0x2bc97554.  Remote gdb stub sends 'OK' indicating that it does not
-//     need any more symbols.  lldb does not need to ask again in this session.
 
 void
 GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
 {
-    // Set to true once we've resolved a symbol to an address for the remote stub.
-    // If we get an 'OK' response after this, the remote stub doesn't need any more
-    // symbols and we can stop asking.
-    bool symbol_response_provided = false;
-
-    // Is this the inital qSymbol:: packet?
-    bool first_qsymbol_query = true;
-
-    if (m_supports_qSymbol && m_qSymbol_requests_done == false)
+    if (m_supports_qSymbol)
     {
         Mutex::Locker locker;
         if (GetSequenceMutex(locker, "GDBRemoteCommunicationClient::ServeSymbolLookups() failed due to not getting the sequence mutex"))
@@ -4492,15 +4410,9 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
             {
                 if (response.IsOKResponse())
                 {
-                    if (symbol_response_provided || first_qsymbol_query)
-                    {
-                        m_qSymbol_requests_done = true;
-                    }
-
                     // We are done serving symbols requests
                     return;
                 }
-                first_qsymbol_query = false;
 
                 if (response.IsUnsupportedResponse())
                 {
@@ -4580,14 +4492,7 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
                             packet.Clear();
                             packet.PutCString("qSymbol:");
                             if (symbol_load_addr != LLDB_INVALID_ADDRESS)
-                            {
                                 packet.Printf("%" PRIx64, symbol_load_addr);
-                                symbol_response_provided = true;
-                            }
-                            else
-                            {
-                                symbol_response_provided = false;
-                            }
                             packet.PutCString(":");
                             packet.PutBytesAsRawHex8(symbol_name.data(), symbol_name.size());
                             continue; // go back to the while loop and send "packet" and wait for another response

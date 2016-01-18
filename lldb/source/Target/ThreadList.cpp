@@ -6,15 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
-// C Includes
 #include <stdlib.h>
 
-// C++ Includes
 #include <algorithm>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
 #include "lldb/Target/RegisterContext.h"
@@ -23,7 +18,6 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConvertEnum.h"
-#include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -263,24 +257,7 @@ ThreadList::ShouldStop (Event *event_ptr)
         Mutex::Locker locker(GetMutex());
 
         m_process->UpdateThreadListIfNeeded();
-        for (lldb::ThreadSP thread_sp : m_threads)
-        {
-            // This is an optimization...  If we didn't let a thread run in between the previous stop and this
-            // one, we shouldn't have to consult it for ShouldStop.  So just leave it off the list we are going to
-            // inspect.
-            // On Linux, if a thread-specific conditional breakpoint was hit, it won't necessarily be the thread
-            // that hit the breakpoint itself that evaluates the conditional expression, so the thread that hit
-            // the breakpoint could still be asked to stop, even though it hasn't been allowed to run since the
-            // previous stop.
-            if (thread_sp->GetTemporaryResumeState () != eStateSuspended || thread_sp->IsStillAtLastBreakpointHit())
-                threads_copy.push_back(thread_sp);
-        }
-
-        // It is possible the threads we were allowing to run all exited and then maybe the user interrupted
-        // or something, then fall back on looking at all threads:
-
-        if (threads_copy.size() == 0)
-            threads_copy = m_threads;
+        threads_copy = m_threads;
     }
 
     collection::iterator pos, end = threads_copy.end();
@@ -288,10 +265,7 @@ ThreadList::ShouldStop (Event *event_ptr)
     if (log)
     {
         log->PutCString("");
-        log->Printf ("ThreadList::%s: %" PRIu64 " threads, %" PRIu64 " unsuspended threads",
-                     __FUNCTION__,
-                     (uint64_t)m_threads.size(),
-                     (uint64_t)threads_copy.size());
+        log->Printf ("ThreadList::%s: %" PRIu64 " threads", __FUNCTION__, (uint64_t)m_threads.size());
     }
 
     bool did_anybody_stop_for_a_reason = false;
@@ -544,7 +518,6 @@ ThreadList::WillResume ()
     
     for (pos = m_threads.begin(); pos != end; ++pos)
     {
-        lldbassert((*pos)->GetCurrentPlan() && "thread should not have null thread plan");
         if ((*pos)->GetResumeState() != eStateSuspended &&
                  (*pos)->GetCurrentPlan()->StopOthers())
         {

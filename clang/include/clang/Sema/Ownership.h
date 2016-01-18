@@ -43,13 +43,13 @@ namespace clang {
   /// compatible with "Type" pointers for example.
   template <class PtrTy>
   class OpaquePtr {
-    void *Ptr = nullptr;
+    void *Ptr;
     explicit OpaquePtr(void *Ptr) : Ptr(Ptr) {}
 
     typedef llvm::PointerLikeTypeTraits<PtrTy> Traits;
 
   public:
-    OpaquePtr(std::nullptr_t = nullptr) {}
+    OpaquePtr() : Ptr(nullptr) {}
 
     static OpaquePtr make(PtrTy P) { OpaquePtr OP; OP.set(P); return OP; }
 

@@ -14,7 +14,6 @@
 #ifndef LLVM_OBJECT_FUNCTIONINDEXOBJECTFILE_H
 #define LLVM_OBJECT_FUNCTIONINDEXOBJECTFILE_H
 
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Object/SymbolicFile.h"
 
 namespace llvm {
@@ -79,32 +78,24 @@ public:
 
   /// \brief Looks for function summary in the given memory buffer,
   /// returns true if found, else false.
-  static bool
-  hasFunctionSummaryInMemBuffer(MemoryBufferRef Object,
-                                DiagnosticHandlerFunction DiagnosticHandler);
+  static bool hasFunctionSummaryInMemBuffer(MemoryBufferRef Object,
+                                            LLVMContext &Context);
 
   /// \brief Parse function index in the given memory buffer.
   /// Return new FunctionIndexObjectFile instance containing parsed function
   /// summary/index.
   static ErrorOr<std::unique_ptr<FunctionIndexObjectFile>>
-  create(MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler,
-         bool IsLazy = false);
+  create(MemoryBufferRef Object, LLVMContext &Context,
+         const Module *ExportingModule = nullptr, bool IsLazy = false);
 
   /// \brief Parse the function summary information for function with the
   /// given name out of the given buffer. Parsed information is
   /// stored on the index object saved in this object.
-  std::error_code
-  findFunctionSummaryInMemBuffer(MemoryBufferRef Object,
-                                 DiagnosticHandlerFunction DiagnosticHandler,
-                                 StringRef FunctionName);
+  std::error_code findFunctionSummaryInMemBuffer(MemoryBufferRef Object,
+                                                 LLVMContext &Context,
+                                                 StringRef FunctionName);
 };
 }
-
-/// Parse the function index out of an IR file and return the function
-/// index object if found, or nullptr if not.
-ErrorOr<std::unique_ptr<FunctionInfoIndex>>
-getFunctionIndexForFile(StringRef Path,
-                        DiagnosticHandlerFunction DiagnosticHandler);
 }
 
 #endif

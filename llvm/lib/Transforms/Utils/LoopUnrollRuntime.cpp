@@ -63,7 +63,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                           BasicBlock *LastPrologBB, BasicBlock *PrologEnd,
                           BasicBlock *OrigPH, BasicBlock *NewPH,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
-                          LoopInfo *LI, bool PreserveLCSSA) {
+                          LoopInfo *LI, Pass *P) {
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
 
@@ -128,7 +128,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // Split the exit to maintain loop canonicalization guarantees
   SmallVector<BasicBlock*, 4> Preds(pred_begin(Exit), pred_end(Exit));
   SplitBlockPredecessors(Exit, Preds, ".unr-lcssa", DT, LI,
-                         PreserveLCSSA);
+                         P->mustPreserveAnalysisID(LCSSAID));
   // Add the branch to the exit block (around the unrolled loop)
   B.CreateCondBr(BrLoopExit, Exit, NewPH);
   InsertPt->eraseFromParent();
@@ -279,8 +279,7 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter, const bool UnrollProlog,
 ///
 bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
                                    bool AllowExpensiveTripCount, LoopInfo *LI,
-                                   ScalarEvolution *SE, DominatorTree *DT,
-                                   bool PreserveLCSSA) {
+                                   LPPassManager *LPM) {
   // for now, only unroll loops that contain a single exit
   if (!L->getExitingBlock())
     return false;
@@ -292,12 +291,16 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
 
   // Use Scalar Evolution to compute the trip count.  This allows more
   // loops to be unrolled than relying on induction var simplification
-  if (!SE)
+  if (!LPM)
     return false;
+  auto *SEWP = LPM->getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
+  if (!SEWP)
+    return false;
+  ScalarEvolution &SE = SEWP->getSE();
 
   // Only unroll loops with a computable trip count and the trip count needs
   // to be an int value (allowing a pointer type is a TODO item)
-  const SCEV *BECountSC = SE->getBackedgeTakenCount(L);
+  const SCEV *BECountSC = SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BECountSC) ||
       !BECountSC->getType()->isIntegerTy())
     return false;
@@ -306,13 +309,13 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
 
   // Add 1 since the backedge count doesn't include the first loop iteration
   const SCEV *TripCountSC =
-      SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
+      SE.getAddExpr(BECountSC, SE.getConstant(BECountSC->getType(), 1));
   if (isa<SCEVCouldNotCompute>(TripCountSC))
     return false;
 
   BasicBlock *Header = L->getHeader();
   const DataLayout &DL = Header->getModule()->getDataLayout();
-  SCEVExpander Expander(*SE, DL, "loop-unroll");
+  SCEVExpander Expander(SE, DL, "loop-unroll");
   if (!AllowExpensiveTripCount && Expander.isHighCostExpansion(TripCountSC, L))
     return false;
 
@@ -329,7 +332,11 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   // If this loop is nested, then the loop unroller changes the code in
   // parent loop, so the Scalar Evolution pass needs to be run again
   if (Loop *ParentLoop = L->getParentLoop())
-    SE->forgetLoop(ParentLoop);
+    SE.forgetLoop(ParentLoop);
+
+  // Grab analyses that we preserve.
+  auto *DTWP = LPM->getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
 
   BasicBlock *PH = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
@@ -409,7 +416,7 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   // PHI functions.
   BasicBlock *LastLoopBB = cast<BasicBlock>(VMap[Latch]);
   ConnectProlog(L, BECount, Count, LastLoopBB, PEnd, PH, NewPH, VMap, DT, LI,
-                PreserveLCSSA);
+                LPM->getAsPass());
   NumRuntimeUnrolled++;
   return true;
 }

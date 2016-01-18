@@ -30,7 +30,6 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Event.h"
-#include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/StructuredData.h"
@@ -1153,12 +1152,6 @@ public:
         return 0;
     }
 
-    virtual size_t
-    LoadModules (LoadedModuleInfoList &)
-    {
-       return 0;
-    }
-
 protected:
     virtual JITLoaderList &
     GetJITLoaders ();
@@ -1240,6 +1233,33 @@ public:
     //------------------------------------------------------------------
     virtual lldb::addr_t
     GetImageInfoAddress ();
+
+    //------------------------------------------------------------------
+    /// Load a shared library into this process.
+    ///
+    /// Try and load a shared library into the current process. This
+    /// call might fail in the dynamic loader plug-in says it isn't safe
+    /// to try and load shared libraries at the moment.
+    ///
+    /// @param[in] image_spec
+    ///     The image file spec that points to the shared library that
+    ///     you want to load.
+    ///
+    /// @param[out] error
+    ///     An error object that gets filled in with any errors that
+    ///     might occur when trying to load the shared library.
+    ///
+    /// @return
+    ///     A token that represents the shared library that can be
+    ///     later used to unload the shared library. A value of
+    ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+    ///     library can't be opened.
+    //------------------------------------------------------------------
+    virtual uint32_t
+    LoadImage (const FileSpec &image_spec, Error &error);
+
+    virtual Error
+    UnloadImage (uint32_t image_token);
 
     //------------------------------------------------------------------
     /// Called when the process is about to broadcast a public stop.
@@ -1335,7 +1355,6 @@ public:
 
     Error
     ResumeSynchronous (Stream *stream);
-
     //------------------------------------------------------------------
     /// Halts a running process.
     ///
@@ -1348,15 +1367,12 @@ public:
     /// @param[in] clear_thread_plans
     ///     If true, when the process stops, clear all thread plans.
     ///
-    /// @param[in] use_run_lock
-    ///     Whether to release the run lock after the stop.
-    ///
     /// @return
     ///     Returns an error object.  If the error is empty, the process is halted.
     ///     otherwise the halt has failed.
     //------------------------------------------------------------------
     Error
-    Halt (bool clear_thread_plans = false, bool use_run_lock = true);
+    Halt (bool clear_thread_plans = false);
 
     //------------------------------------------------------------------
     /// Detaches from a running or stopped process.
@@ -1667,8 +1683,9 @@ public:
     /// DoHalt must produce one and only one stop StateChanged event if it actually
     /// stops the process.  If the stop happens through some natural event (for
     /// instance a SIGSTOP), then forwarding that event will do.  Otherwise, you must 
-    /// generate the event manually. This function is called from the context of the
-    /// private state thread.
+    /// generate the event manually.  Note also, the private event thread is stopped when 
+    /// DoHalt is run to prevent the events generated while halting to trigger
+    /// other state changes before the halt is complete.
     ///
     /// @param[out] caused_stop
     ///     If true, then this Halt caused the stop, otherwise, the 
@@ -2844,16 +2861,12 @@ public:
     // Returns the process state when it is stopped. If specified, event_sp_ptr
     // is set to the event which triggered the stop. If wait_always = false,
     // and the process is already stopped, this function returns immediately.
-    // If the process is hijacked and use_run_lock is true (the default), then this
-    // function releases the run lock after the stop. Setting use_run_lock to false
-    // will avoid this behavior.
     lldb::StateType
     WaitForProcessToStop(const TimeValue *timeout,
                          lldb::EventSP *event_sp_ptr = nullptr,
                          bool wait_always = true,
                          Listener *hijack_listener = nullptr,
-                         Stream *stream = nullptr,
-                         bool use_run_lock = true);
+                         Stream *stream = nullptr);
 
     uint32_t
     GetIOHandlerID () const
@@ -3147,43 +3160,6 @@ public:
         return Error("Not supported");
     }
 
-    size_t
-    AddImageToken(lldb::addr_t image_ptr);
-
-    lldb::addr_t
-    GetImagePtrFromToken(size_t token) const;
-
-    void
-    ResetImageToken(size_t token);
-
-    //------------------------------------------------------------------
-    /// Find the next branch instruction to set a breakpoint on
-    ///
-    /// When instruction stepping through a source line, instead of 
-    /// stepping through each instruction, we can put a breakpoint on
-    /// the next branch instruction (within the range of instructions
-    /// we are stepping through) and continue the process to there,
-    /// yielding significant performance benefits over instruction
-    /// stepping.  
-    ///
-    /// @param[in] default_stop_addr
-    ///     The address of the instruction where lldb would put a 
-    ///     breakpoint normally.
-    ///
-    /// @param[in] range_bounds
-    ///     The range which the breakpoint must be contained within.
-    ///     Typically a source line.
-    ///
-    /// @return
-    ///     The address of the next branch instruction, or the end of
-    ///     the range provided in range_bounds.  If there are any
-    ///     problems with the disassembly or getting the instructions,
-    ///     the original default_stop_addr will be returned.
-    //------------------------------------------------------------------
-    Address
-    AdvanceAddressToNextBranchInstruction (Address default_stop_addr, 
-                                           AddressRange range_bounds);
-
 protected:
     void
     SetState (lldb::EventSP &event_sp);
@@ -3236,7 +3212,7 @@ protected:
     ///     printf style format string
     //------------------------------------------------------------------
     void
-    PrintWarning (uint64_t warning_type, const void *repeat_key, const char *fmt, ...) __attribute__((format(printf, 4, 5)));
+    PrintWarning (uint64_t warning_type, void *repeat_key, const char *fmt, ...) __attribute__((format(printf, 4, 5)));
     
     //------------------------------------------------------------------
     // NextEventAction provides a way to register an action on the next
@@ -3305,6 +3281,12 @@ protected:
         std::string m_exit_string;
     };
 
+    bool 
+    HijackPrivateProcessEvents (Listener *listener);
+    
+    void 
+    RestorePrivateProcessEvents ();
+    
     bool
     PrivateStateThreadIsValid () const
     {
@@ -3321,7 +3303,7 @@ protected:
     // Type definitions
     //------------------------------------------------------------------
     typedef std::map<lldb::LanguageType, lldb::LanguageRuntimeSP> LanguageRuntimeCollection;
-    typedef std::unordered_set<const void *> WarningsPointerSet;
+    typedef std::unordered_set<void *> WarningsPointerSet;
     typedef std::map<uint64_t, WarningsPointerSet> WarningsCollection;
 
     struct PreResumeCallbackAndBaton
@@ -3390,6 +3372,7 @@ protected:
     std::vector<PreResumeCallbackAndBaton> m_pre_resume_actions;
     ProcessRunLock              m_public_run_lock;
     ProcessRunLock              m_private_run_lock;
+    Predicate<bool>             m_currently_handling_event; // This predicate is set in HandlePrivateEvent while all its business is being done.
     ArchSpec::StopInfoOverrideCallbackType m_stop_info_override_callback;
     bool                        m_currently_handling_do_on_removals;
     bool                        m_resume_requested;         // If m_currently_handling_event or m_currently_handling_do_on_removals are true, Resume will only request a resume, using this flag to check.
@@ -3452,9 +3435,6 @@ protected:
 
     void
     HandlePrivateEvent (lldb::EventSP &event_sp);
-
-    Error
-    HaltPrivate();
 
     lldb::StateType
     WaitForProcessStopPrivate (const TimeValue *timeout, lldb::EventSP &event_sp);

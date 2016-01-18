@@ -1,13 +1,11 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 -femulated-tls -emit-llvm %s -o - \
-// RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+// RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefix=CHECK %s
 
 int f();
 int g();
 
-// LINUX: @a = thread_local global i32 0
-// DARWIN: @a = internal thread_local global i32 0
+// CHECK: @a = thread_local global i32 0
 thread_local int a = f();
 extern thread_local int b;
 // CHECK: @c = global i32 0
@@ -16,21 +14,8 @@ int c = b;
 static thread_local int d = g();
 
 struct U { static thread_local int m; };
-// LINUX: @_ZN1U1mE = thread_local global i32 0
-// DARWIN: @_ZN1U1mE = internal thread_local global i32 0
+// CHECK: @_ZN1U1mE = thread_local global i32 0
 thread_local int U::m = f();
-
-namespace MismatchedInitType {
-  // Check that we don't crash here when we're forced to create a new global
-  // variable (with a different type) when we add the initializer.
-  union U {
-    int a;
-    float f;
-    constexpr U() : f(0.0) {}
-  };
-  static thread_local U u;
-  void *p = &u;
-}
 
 template<typename T> struct V { static thread_local int m; };
 template<typename T> thread_local int V<T>::m = g();
@@ -60,11 +45,9 @@ int e = V<int>::m;
 
 // CHECK: @llvm.global_ctors = appending global {{.*}} @[[GLOBAL_INIT:[^ ]*]]
 
-// LINUX: @_ZTH1a = alias void (), void ()* @__tls_init
-// DARWIN: @_ZTH1a = internal alias void (), void ()* @__tls_init
+// CHECK: @_ZTH1a = alias void (), void ()* @__tls_init
 // CHECK: @_ZTHL1d = internal alias void (), void ()* @__tls_init
-// LINUX: @_ZTHN1U1mE = alias void (), void ()* @__tls_init
-// DARWIN: @_ZTHN1U1mE = internal alias void (), void ()* @__tls_init
+// CHECK: @_ZTHN1U1mE = alias void (), void ()* @__tls_init
 // CHECK: @_ZTHN1VIiE1mE = linkonce_odr alias void (), void ()* @__tls_init
 
 
@@ -91,20 +74,17 @@ int f() {
 }
 
 // CHECK: define {{.*}} @[[C_INIT:.*]]()
-// LINUX: call i32* @_ZTW1b()
-// DARWIN: call cxx_fast_tlscc i32* @_ZTW1b()
+// CHECK: call i32* @_ZTW1b()
 // CHECK-NEXT: load i32, i32* %{{.*}}, align 4
 // CHECK-NEXT: store i32 %{{.*}}, i32* @c, align 4
 
-// LINUX-LABEL: define weak_odr hidden i32* @_ZTW1b()
-// LINUX: br i1 icmp ne (void ()* @_ZTH1b, void ()* null),
+// CHECK-LABEL: define weak_odr hidden i32* @_ZTW1b()
+// CHECK: br i1 icmp ne (void ()* @_ZTH1b, void ()* null),
 // not null:
-// LINUX: call void @_ZTH1b()
-// LINUX: br label
+// CHECK: call void @_ZTH1b()
+// CHECK: br label
 // finally:
-// LINUX: ret i32* @b
-// DARWIN-LABEL: declare cxx_fast_tlscc i32* @_ZTW1b()
-// There is no definition of the thread wrapper on Darwin for external TLV.
+// CHECK: ret i32* @b
 
 // CHECK: define {{.*}} @[[D_INIT:.*]]()
 // CHECK: call i32 @_Z1gv()
@@ -115,13 +95,11 @@ int f() {
 // CHECK-NEXT: store i32 %{{.*}}, i32* @_ZN1U1mE, align 4
 
 // CHECK: define {{.*}} @[[E_INIT:.*]]()
-// LINUX: call i32* @_ZTWN1VIiE1mE()
-// DARWIN: call cxx_fast_tlscc i32* @_ZTWN1VIiE1mE()
+// CHECK: call i32* @_ZTWN1VIiE1mE()
 // CHECK-NEXT: load i32, i32* %{{.*}}, align 4
 // CHECK-NEXT: store i32 %{{.*}}, i32* @e, align 4
 
-// LINUX-LABEL: define weak_odr hidden i32* @_ZTWN1VIiE1mE()
-// DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc i32* @_ZTWN1VIiE1mE()
+// CHECK-LABEL: define weak_odr hidden i32* @_ZTWN1VIiE1mE()
 // CHECK: call void @_ZTHN1VIiE1mE()
 // CHECK: ret i32* @_ZN1VIiE1mE
 
@@ -133,28 +111,24 @@ struct T { ~T(); };
 void tls_dtor() {
   // CHECK: load i8, i8* @_ZGVZ8tls_dtorvE1s
   // CHECK: call void @_ZN1SC1Ev(%struct.S* @_ZZ8tls_dtorvE1s)
-  // LINUX: call i32 @__cxa_thread_atexit({{.*}}@_ZN1SD1Ev {{.*}} @_ZZ8tls_dtorvE1s{{.*}} @__dso_handle
-  // DARWIN: call i32 @_tlv_atexit({{.*}}@_ZN1SD1Ev {{.*}} @_ZZ8tls_dtorvE1s{{.*}} @__dso_handle
+  // CHECK: call i32 @__cxa_thread_atexit({{.*}}@_ZN1SD1Ev {{.*}} @_ZZ8tls_dtorvE1s{{.*}} @__dso_handle
   // CHECK: store i8 1, i8* @_ZGVZ8tls_dtorvE1s
   static thread_local S s;
 
   // CHECK: load i8, i8* @_ZGVZ8tls_dtorvE1t
   // CHECK-NOT: _ZN1T
-  // LINUX: call i32 @__cxa_thread_atexit({{.*}}@_ZN1TD1Ev {{.*}}@_ZZ8tls_dtorvE1t{{.*}} @__dso_handle
-  // DARWIN: call i32 @_tlv_atexit({{.*}}@_ZN1TD1Ev {{.*}}@_ZZ8tls_dtorvE1t{{.*}} @__dso_handle
+  // CHECK: call i32 @__cxa_thread_atexit({{.*}}@_ZN1TD1Ev {{.*}}@_ZZ8tls_dtorvE1t{{.*}} @__dso_handle
   // CHECK: store i8 1, i8* @_ZGVZ8tls_dtorvE1t
   static thread_local T t;
 
   // CHECK: load i8, i8* @_ZGVZ8tls_dtorvE1u
   // CHECK: call void @_ZN1SC1Ev(%struct.S* @_ZGRZ8tls_dtorvE1u_)
-  // LINUX: call i32 @__cxa_thread_atexit({{.*}}@_ZN1SD1Ev {{.*}} @_ZGRZ8tls_dtorvE1u_{{.*}} @__dso_handle
-  // DARWIN: call i32 @_tlv_atexit({{.*}}@_ZN1SD1Ev {{.*}} @_ZGRZ8tls_dtorvE1u_{{.*}} @__dso_handle
+  // CHECK: call i32 @__cxa_thread_atexit({{.*}}@_ZN1SD1Ev {{.*}} @_ZGRZ8tls_dtorvE1u_{{.*}} @__dso_handle
   // CHECK: store i8 1, i8* @_ZGVZ8tls_dtorvE1u
   static thread_local const S &u = S();
 }
 
-// LINUX: declare i32 @__cxa_thread_atexit(void (i8*)*, i8*, i8*)
-// DARWIN: declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
+// CHECK: declare i32 @__cxa_thread_atexit(void (i8*)*, i8*, i8*)
 
 // CHECK: define {{.*}} @_Z7PR15991v(
 int PR15991() {
@@ -169,8 +143,7 @@ struct PR19254 {
 };
 // CHECK: define {{.*}} @_ZN7PR192541fEv(
 int PR19254::f() {
-  // LINUX: call void @_ZTHN7PR192541nE(
-  // DARWIN: call cxx_fast_tlscc i32* @_ZTWN7PR192541nE(
+  // CHECK: call void @_ZTHN7PR192541nE(
   return this->n;
 }
 
@@ -180,8 +153,7 @@ thread_local int anon_i{1};
 void set_anon_i() {
   anon_i = 2;
 }
-// LINUX-LABEL: define internal i32* @_ZTWN12_GLOBAL__N_16anon_iE()
-// DARWIN-LABEL: define internal cxx_fast_tlscc i32* @_ZTWN12_GLOBAL__N_16anon_iE()
+// CHECK-LABEL: define internal i32* @_ZTWN12_GLOBAL__N_16anon_iE()
 
 // CHECK: define {{.*}} @[[V_M_INIT:.*]]()
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
@@ -201,33 +173,28 @@ void set_anon_i() {
 // CHECK: define {{.*}}@__tls_init()
 // CHECK: load i8, i8* @__tls_guard
 // CHECK: %[[NEED_TLS_INIT:.*]] = icmp eq i8 %{{.*}}, 0
+// CHECK: store i8 1, i8* @__tls_guard
 // CHECK: br i1 %[[NEED_TLS_INIT]],
 // init:
-// CHECK: store i8 1, i8* @__tls_guard
 // CHECK: call void @[[A_INIT]]()
 // CHECK: call void @[[D_INIT]]()
 // CHECK: call void @[[U_M_INIT]]()
 // CHECK: call void @[[V_M_INIT]]()
 
 
-// LIUNX: define weak_odr hidden i32* @_ZTW1a() {
-// DARWIN: define cxx_fast_tlscc i32* @_ZTW1a()
+// CHECK: define weak_odr hidden i32* @_ZTW1a() {
 // CHECK:   call void @_ZTH1a()
 // CHECK:   ret i32* @a
 // CHECK: }
 
 
-// LINUX: declare extern_weak void @_ZTH1b() [[ATTR:#[0-9]+]]
+// CHECK: declare extern_weak void @_ZTH1b()
 
 
-// LINUX-LABEL: define internal i32* @_ZTWL1d()
-// DARWIN-LABEL: define internal cxx_fast_tlscc i32* @_ZTWL1d()
+// CHECK-LABEL: define internal i32* @_ZTWL1d()
 // CHECK: call void @_ZTHL1d()
 // CHECK: ret i32* @_ZL1d
 
-// LINUX-LABEL: define weak_odr hidden i32* @_ZTWN1U1mE()
-// DARWIN-LABEL: define cxx_fast_tlscc i32* @_ZTWN1U1mE()
+// CHECK-LABEL: define weak_odr hidden i32* @_ZTWN1U1mE()
 // CHECK: call void @_ZTHN1U1mE()
 // CHECK: ret i32* @_ZN1U1mE
-
-// LINUX: attributes [[ATTR]] = { {{.+}} }

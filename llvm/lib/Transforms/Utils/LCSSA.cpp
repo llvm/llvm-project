@@ -66,13 +66,6 @@ static bool processInstruction(Loop &L, Instruction &Inst, DominatorTree &DT,
                                PredIteratorCache &PredCache, LoopInfo *LI) {
   SmallVector<Use *, 16> UsesToRewrite;
 
-  // Tokens cannot be used in PHI nodes, so we skip over them.
-  // We can run into tokens which are live out of a loop with catchswitch
-  // instructions in Windows EH if the catchswitch has one catchpad which
-  // is inside the loop and another which is not.
-  if (Inst.getType()->isTokenTy())
-    return false;
-
   BasicBlock *InstBB = Inst.getParent();
 
   for (Use &U : Inst.uses()) {
@@ -91,13 +84,15 @@ static bool processInstruction(Loop &L, Instruction &Inst, DominatorTree &DT,
 
   ++NumLCSSA; // We are applying the transformation
 
-  // Invoke instructions are special in that their result value is not available
-  // along their unwind edge. The code below tests to see whether DomBB
-  // dominates the value, so adjust DomBB to the normal destination block,
+  // Invoke/CatchPad instructions are special in that their result value is not
+  // available along their unwind edge. The code below tests to see whether
+  // DomBB dominates the value, so adjust DomBB to the normal destination block,
   // which is effectively where the value is first usable.
   BasicBlock *DomBB = Inst.getParent();
   if (InvokeInst *Inv = dyn_cast<InvokeInst>(&Inst))
     DomBB = Inv->getNormalDest();
+  if (auto *CPI = dyn_cast<CatchPadInst>(&Inst))
+    DomBB = CPI->getNormalDest();
 
   DomTreeNode *DomNode = DT.getNode(DomBB);
 

@@ -36,6 +36,7 @@
 #include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Target/CPPLanguageRuntime.h"
 
 #include <map>
 
@@ -229,6 +230,36 @@ IRForTarget::GetFunctionAddress (llvm::Function *fun,
         {
             std::vector<lldb_private::ConstString> alternates;
             bool found_it = m_decl_map->GetFunctionAddress (name, fun_addr);
+            if (!found_it)
+            {
+                if (log)
+                    log->Printf("Address of function \"%s\" not found.\n", name.GetCString());
+                // Check for an alternate mangling for names from the standard library.
+                // For example, "std::basic_string<...>" has an alternate mangling scheme per
+                // the Itanium C++ ABI.
+                lldb::ProcessSP process_sp = m_data_allocator.GetTarget()->GetProcessSP();
+                if (process_sp)
+                {
+                    lldb_private::CPPLanguageRuntime *cpp_runtime = process_sp->GetCPPLanguageRuntime();
+                    if (cpp_runtime && cpp_runtime->GetAlternateManglings(name, alternates))
+                    {
+                        for (size_t i = 0; i < alternates.size(); ++i)
+                        {
+                            const lldb_private::ConstString &alternate_name = alternates[i];
+                            if (log)
+                                log->Printf("Looking up address of function \"%s\" with alternate name \"%s\"",
+                                            name.GetCString(), alternate_name.GetCString());
+                            if ((found_it = m_decl_map->GetFunctionAddress (alternate_name, fun_addr)))
+                            {
+                                if (log)
+                                    log->Printf("Found address of function \"%s\" with alternate name \"%s\"",
+                                                name.GetCString(), alternate_name.GetCString());
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
 
             if (!found_it)
             {
@@ -307,7 +338,7 @@ IRForTarget::ResolveFunctionPointers(llvm::Module &llvm_module)
          fi != llvm_module.end();
          ++fi)
     {
-        Function *fun = &*fi;
+        Function *fun = fi;
 
         bool is_decl = fun->isDeclaration();
 
@@ -1924,7 +1955,7 @@ IRForTarget::ReplaceStaticLiterals (llvm::BasicBlock &basic_block)
             if (operand_constant_fp/* && operand_constant_fp->getType()->isX86_FP80Ty()*/)
             {
                 static_constants.push_back(operand_val);
-                static_users.push_back(&*ii);
+                static_users.push_back(ii);
             }
         }
     }
@@ -1969,7 +2000,7 @@ IRForTarget::ReplaceStaticLiterals (llvm::BasicBlock &basic_block)
 
             lldb_private::DataBufferHeap data(operand_data_size, 0);
 
-            if (lldb_private::endian::InlHostByteOrder() != m_data_allocator.GetStream().GetByteOrder())
+            if (lldb::endian::InlHostByteOrder() != m_data_allocator.GetStream().GetByteOrder())
             {
                 uint8_t *data_bytes = data.GetBytes();
 
@@ -2249,7 +2280,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
         return false;
     }
 
-    Argument *argument = &*iter;
+    Argument *argument = iter;
 
     if (argument->getName().equals("this"))
     {
@@ -2263,7 +2294,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
             return false;
         }
 
-        argument = &*iter;
+        argument = iter;
     }
     else if (argument->getName().equals("self"))
     {
@@ -2295,7 +2326,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
             return false;
         }
 
-        argument = &*iter;
+        argument = iter;
     }
 
     if (!argument->getName().equals("$__lldb_arg"))
@@ -2593,7 +2624,7 @@ IRForTarget::runOnModule (Module &llvm_module)
          fi != fe;
          ++fi)
     {
-        llvm::Function *function = &*fi;
+        llvm::Function *function = fi;
 
         if (function->begin() == function->end())
             continue;
@@ -2668,7 +2699,7 @@ IRForTarget::runOnModule (Module &llvm_module)
          fi != fe;
          ++fi)
     {
-        llvm::Function *function = &*fi;
+        llvm::Function *function = fi;
 
         for (llvm::Function::iterator bbi = function->begin(), bbe = function->end();
              bbi != bbe;
@@ -2690,7 +2721,7 @@ IRForTarget::runOnModule (Module &llvm_module)
          fi != fe;
          ++fi)
     {
-        llvm::Function *function = &*fi;
+        llvm::Function *function = fi;
 
         for (llvm::Function::iterator bbi = function->begin(), bbe = function->end();
              bbi != bbe;

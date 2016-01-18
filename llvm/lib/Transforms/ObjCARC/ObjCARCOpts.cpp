@@ -2010,7 +2010,10 @@ HasSafePathToPredecessorCall(const Value *Arg, Instruction *Retain,
 
   // Check that the call is a regular call.
   ARCInstKind Class = GetBasicARCInstKind(Call);
-  return Class == ARCInstKind::CallOrUser || Class == ARCInstKind::Call;
+  if (Class != ARCInstKind::CallOrUser && Class != ARCInstKind::Call)
+    return false;
+
+  return true;
 }
 
 /// Find a dependent retain that precedes the given autorelease for which there

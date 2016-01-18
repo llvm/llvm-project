@@ -778,16 +778,9 @@ public:
                       bool internal,
                       bool request_hardware);
 
-    // Use this to create a breakpoint from a load address and a module file spec
-    lldb::BreakpointSP
-    CreateAddressInModuleBreakpoint (lldb::addr_t file_addr,
-                                     bool internal,
-                                     const FileSpec *file_spec,
-                                     bool request_hardware);
-
     // Use this to create Address breakpoints:
     lldb::BreakpointSP
-    CreateBreakpoint (const Address &addr,
+    CreateBreakpoint (Address &addr,
                       bool internal,
                       bool request_hardware);
 
@@ -798,7 +791,6 @@ public:
     CreateFuncRegexBreakpoint (const FileSpecList *containingModules,
                                const FileSpecList *containingSourceFiles,
                                RegularExpression &func_regexp,
-                               lldb::LanguageType requested_language,
                                LazyBool skip_prologue,
                                bool internal,
                                bool request_hardware);
@@ -1294,7 +1286,7 @@ public:
     ClangASTContext *
     GetScratchClangASTContext(bool create_on_demand=true);
     
-    lldb::ClangASTImporterSP
+    ClangASTImporter *
     GetClangASTImporter();
     
     //----------------------------------------------------------------------
@@ -1575,7 +1567,7 @@ protected:
     typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
     REPLMap m_repl_map;
     
-    lldb::ClangASTImporterSP m_ast_importer_sp;
+    lldb::ClangASTImporterUP m_ast_importer_ap;
     lldb::ClangModulesDeclVendorUP m_clang_modules_decl_vendor_ap;
 
     lldb::SourceManagerUP m_source_manager_ap;

@@ -5,7 +5,7 @@
 ; to that containing %G should likewise drop to null.
 @G = internal global i8** null
 
-define i32 @main(i32 %argc, i8** %argv) norecurse {
+define i32 @main(i32 %argc, i8** %argv) {
 ; CHECK-LABEL: @main(
 ; CHECK: %G = alloca
   store i8** %argv, i8*** @G

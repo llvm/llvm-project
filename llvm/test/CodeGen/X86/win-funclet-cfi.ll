@@ -9,20 +9,23 @@ entry:
           to label %unreachable unwind label %cleanupblock
 
 cleanupblock:
-  %cleanp = cleanuppad within none []
-  call void @g() [ "funclet"(token %cleanp) ]
-  cleanupret from %cleanp unwind label %catch.dispatch
+  %cleanp = cleanuppad []
+  call void @g()
+  cleanupret %cleanp unwind label %catch.dispatch
 
 catch.dispatch:
-  %cs1 = catchswitch within none [label %catch] unwind to caller
+  %cp = catchpad [i8* null, i32 64, i8* null]
+          to label %catch unwind label %catchendblock
 
 catch:
-  %cp = catchpad within %cs1 [i8* null, i32 64, i8* null]
-  call void @g() [ "funclet"(token %cp) ]
-  catchret from %cp to label %try.cont
+  call void @g()
+  catchret %cp to label %try.cont
 
 try.cont:
   ret void
+
+catchendblock:
+  catchendpad unwind to caller
 
 unreachable:
   unreachable
@@ -67,7 +70,7 @@ declare i32 @__CxxFrameHandler3(...)
 ; CHECK: "?catch$[[catch:[0-9]+]]@?0??f@@YAXXZ@4HA":
 ; CHECK: .seh_proc "?catch$[[catch]]@?0??f@@YAXXZ@4HA"
 ; CHECK-NEXT: .seh_handler __CxxFrameHandler3, @unwind, @except
-; CHECK: LBB0_[[catch]]: # %catch{{$}}
+; CHECK: LBB0_[[catch]]: # %catch.dispatch{{$}}
 
 ; Emit CFI for pushing RBP.
 ; CHECK: movq    %rdx, 16(%rsp)

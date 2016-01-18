@@ -6,11 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// \brief This is a target description file for the WebAssembly architecture,
-/// which is also known as "wasm".
-///
+//
+// This is a target description file for the WebAssembly architecture, which is
+// also known as "wasm".
+//
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//

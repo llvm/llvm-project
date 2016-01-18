@@ -62,52 +62,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
 
-// Some structure definitions needed for parsing the dyld shared cache files
-// found on iOS devices.
-
-struct lldb_copy_dyld_cache_header_v1
-{
-    char        magic[16];            // e.g. "dyld_v0    i386", "dyld_v1   armv7", etc.
-    uint32_t    mappingOffset;        // file offset to first dyld_cache_mapping_info
-    uint32_t    mappingCount;         // number of dyld_cache_mapping_info entries
-    uint32_t    imagesOffset;
-    uint32_t    imagesCount;
-    uint64_t    dyldBaseAddress;
-    uint64_t    codeSignatureOffset;
-    uint64_t    codeSignatureSize;
-    uint64_t    slideInfoOffset;
-    uint64_t    slideInfoSize;
-    uint64_t    localSymbolsOffset;
-    uint64_t    localSymbolsSize;
-    uint8_t     uuid[16];             // v1 and above, also recorded in dyld_all_image_infos v13 and later
-};
-
-struct lldb_copy_dyld_cache_mapping_info
-{
-    uint64_t        address;
-    uint64_t        size;
-    uint64_t        fileOffset;
-    uint32_t        maxProt;
-    uint32_t        initProt;
-};
-
-struct lldb_copy_dyld_cache_local_symbols_info
-{
-    uint32_t        nlistOffset;
-    uint32_t        nlistCount;
-    uint32_t        stringsOffset;
-    uint32_t        stringsSize;
-    uint32_t        entriesOffset;
-    uint32_t        entriesCount;
-};
-struct lldb_copy_dyld_cache_local_symbols_entry
-{
-    uint32_t        dylibOffset;
-    uint32_t        nlistStartIndex;
-    uint32_t        nlistCount;
-};
-
-
 class RegisterContextDarwin_x86_64_Mach : public RegisterContextDarwin_x86_64
 {
 public:
@@ -1155,7 +1109,7 @@ ObjectFileMachO::ParseHeader (DataExtractor &data,
                               lldb::offset_t *data_offset_ptr,
                               llvm::MachO::mach_header &header)
 {
-    data.SetByteOrder (endian::InlHostByteOrder());
+    data.SetByteOrder (lldb::endian::InlHostByteOrder());
     // Leave magic in the original byte order
     header.magic = data.GetU32(data_offset_ptr);
     bool can_parse = false;
@@ -1163,26 +1117,26 @@ ObjectFileMachO::ParseHeader (DataExtractor &data,
     switch (header.magic)
     {
         case MH_MAGIC:
-            data.SetByteOrder (endian::InlHostByteOrder());
+            data.SetByteOrder (lldb::endian::InlHostByteOrder());
             data.SetAddressByteSize(4);
             can_parse = true;
             break;
             
         case MH_MAGIC_64:
-            data.SetByteOrder (endian::InlHostByteOrder());
+            data.SetByteOrder (lldb::endian::InlHostByteOrder());
             data.SetAddressByteSize(8);
             can_parse = true;
             is_64_bit = true;
             break;
             
         case MH_CIGAM:
-            data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
+            data.SetByteOrder(lldb::endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
             data.SetAddressByteSize(4);
             can_parse = true;
             break;
             
         case MH_CIGAM_64:
-            data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
+            data.SetByteOrder(lldb::endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
             data.SetAddressByteSize(8);
             is_64_bit = true;
             can_parse = true;
@@ -1215,31 +1169,31 @@ ObjectFileMachO::ParseHeader ()
         lldb_private::Mutex::Locker locker(module_sp->GetMutex());
         bool can_parse = false;
         lldb::offset_t offset = 0;
-        m_data.SetByteOrder (endian::InlHostByteOrder());
+        m_data.SetByteOrder (lldb::endian::InlHostByteOrder());
         // Leave magic in the original byte order
         m_header.magic = m_data.GetU32(&offset);
         switch (m_header.magic)
         {
         case MH_MAGIC:
-            m_data.SetByteOrder (endian::InlHostByteOrder());
+            m_data.SetByteOrder (lldb::endian::InlHostByteOrder());
             m_data.SetAddressByteSize(4);
             can_parse = true;
             break;
 
         case MH_MAGIC_64:
-            m_data.SetByteOrder (endian::InlHostByteOrder());
+            m_data.SetByteOrder (lldb::endian::InlHostByteOrder());
             m_data.SetAddressByteSize(8);
             can_parse = true;
             break;
 
         case MH_CIGAM:
-            m_data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
+            m_data.SetByteOrder(lldb::endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
             m_data.SetAddressByteSize(4);
             can_parse = true;
             break;
 
         case MH_CIGAM_64:
-            m_data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
+            m_data.SetByteOrder(lldb::endian::InlHostByteOrder() == eByteOrderBig ? eByteOrderLittle : eByteOrderBig);
             m_data.SetAddressByteSize(8);
             can_parse = true;
             break;
@@ -1369,7 +1323,6 @@ ObjectFileMachO::GetAddressClass (lldb::addr_t file_addr)
                     case eSectionTypeDWARFDebugLine:
                     case eSectionTypeDWARFDebugLoc:
                     case eSectionTypeDWARFDebugMacInfo:
-                    case eSectionTypeDWARFDebugMacro:
                     case eSectionTypeDWARFDebugPubNames:
                     case eSectionTypeDWARFDebugPubTypes:
                     case eSectionTypeDWARFDebugRanges:
@@ -1822,6 +1775,7 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
                                     static ConstString g_sect_name_data ("__data");
                                     static ConstString g_sect_name_go_symtab ("__gosymtab");
 
+
                                     if (section_name == g_sect_name_dwarf_debug_abbrev)
                                         sect_type = eSectionTypeDWARFDebugAbbrev;
                                     else if (section_name == g_sect_name_dwarf_debug_aranges)
@@ -2195,31 +2149,6 @@ ParseTrieEntries (DataExtractor &data,
         nameSlices.pop_back();
 	}
     return true;
-}
-
-// Read the UUID out of a dyld_shared_cache file on-disk.
-UUID
-ObjectFileMachO::GetSharedCacheUUID (FileSpec dyld_shared_cache, const ByteOrder byte_order, const uint32_t addr_byte_size)
-{
-    UUID dsc_uuid;
-    DataBufferSP dsc_data_sp = dyld_shared_cache.MemoryMapFileContentsIfLocal(0, sizeof(struct lldb_copy_dyld_cache_header_v1));
-    if (dsc_data_sp)
-    {
-        DataExtractor dsc_header_data (dsc_data_sp, byte_order, addr_byte_size);
-
-        char version_str[7];
-        lldb::offset_t offset = 0;
-        memcpy (version_str, dsc_header_data.GetData (&offset, 6), 6);
-        version_str[6] = '\0';
-        if (strcmp (version_str, "dyld_v") == 0)
-        {
-            offset = offsetof (struct lldb_copy_dyld_cache_header_v1, uuid);
-            uint8_t uuid_bytes[sizeof (uuid_t)];
-            memcpy (uuid_bytes, dsc_header_data.GetData (&offset, sizeof (uuid_t)), sizeof (uuid_t));
-            dsc_uuid.SetBytes (uuid_bytes);
-        }
-    }
-    return dsc_uuid;
 }
 
 size_t
@@ -2681,67 +2610,73 @@ ObjectFileMachO::ParseSymtab ()
             ArchSpec header_arch;
             GetArchitecture(header_arch);
             char dsc_path[PATH_MAX];
-            char dsc_path_development[PATH_MAX];
 
             snprintf(dsc_path, sizeof(dsc_path), "%s%s%s",
                      "/System/Library/Caches/com.apple.dyld/",  /* IPHONE_DYLD_SHARED_CACHE_DIR */
                      "dyld_shared_cache_",          /* DYLD_SHARED_CACHE_BASE_NAME */
                      header_arch.GetArchitectureName());
 
-            snprintf(dsc_path_development, sizeof(dsc_path), "%s%s%s%s",
-                     "/System/Library/Caches/com.apple.dyld/",  /* IPHONE_DYLD_SHARED_CACHE_DIR */
-                     "dyld_shared_cache_",          /* DYLD_SHARED_CACHE_BASE_NAME */
-                     header_arch.GetArchitectureName(),
-                     ".development");
+            FileSpec dsc_filespec(dsc_path, false);
 
-            FileSpec dsc_nondevelopment_filespec(dsc_path, false);
-            FileSpec dsc_development_filespec(dsc_path_development, false);
-            FileSpec dsc_filespec;
-
-            UUID dsc_uuid;
-            UUID process_shared_cache_uuid;
-
-            if (process)
+            // We need definitions of two structures in the on-disk DSC, copy them here manually
+            struct lldb_copy_dyld_cache_header_v0
             {
-                process_shared_cache_uuid = GetProcessSharedCacheUUID(process);
-            }
+                char        magic[16];            // e.g. "dyld_v0    i386", "dyld_v1   armv7", etc.
+                uint32_t    mappingOffset;        // file offset to first dyld_cache_mapping_info
+                uint32_t    mappingCount;         // number of dyld_cache_mapping_info entries
+                uint32_t    imagesOffset;
+                uint32_t    imagesCount;
+                uint64_t    dyldBaseAddress;
+                uint64_t    codeSignatureOffset;
+                uint64_t    codeSignatureSize;
+                uint64_t    slideInfoOffset;
+                uint64_t    slideInfoSize;
+                uint64_t    localSymbolsOffset;   // file offset of where local symbols are stored
+                uint64_t    localSymbolsSize;     // size of local symbols information
+            };
 
-            // First see if we can find an exact match for the inferior process shared cache UUID in
-            // the development or non-development shared caches on disk.
-            if (process_shared_cache_uuid.IsValid())
+            struct lldb_copy_dyld_cache_header_v1
             {
-                if (dsc_development_filespec.Exists())
-                {
-                    UUID dsc_development_uuid = GetSharedCacheUUID (dsc_development_filespec, byte_order, addr_byte_size);
-                    if (dsc_development_uuid.IsValid() && dsc_development_uuid == process_shared_cache_uuid)
-                    {
-                        dsc_filespec = dsc_development_filespec;
-                        dsc_uuid = dsc_development_uuid;
-                    }
-                }
-                if (!dsc_uuid.IsValid() && dsc_nondevelopment_filespec.Exists())
-                {
-                    UUID dsc_nondevelopment_uuid = GetSharedCacheUUID (dsc_nondevelopment_filespec, byte_order, addr_byte_size);
-                    if (dsc_nondevelopment_uuid.IsValid() && dsc_nondevelopment_uuid == process_shared_cache_uuid)
-                    {
-                        dsc_filespec = dsc_nondevelopment_filespec;
-                        dsc_uuid = dsc_nondevelopment_uuid;
-                    }
-                }
-            }
+                char        magic[16];            // e.g. "dyld_v0    i386", "dyld_v1   armv7", etc.
+                uint32_t    mappingOffset;        // file offset to first dyld_cache_mapping_info
+                uint32_t    mappingCount;         // number of dyld_cache_mapping_info entries
+                uint32_t    imagesOffset;
+                uint32_t    imagesCount;
+                uint64_t    dyldBaseAddress;
+                uint64_t    codeSignatureOffset;
+                uint64_t    codeSignatureSize;
+                uint64_t    slideInfoOffset;
+                uint64_t    slideInfoSize;
+                uint64_t    localSymbolsOffset;
+                uint64_t    localSymbolsSize;
+                uint8_t     uuid[16];             // v1 and above, also recorded in dyld_all_image_infos v13 and later
+            };
 
-            // Failing a UUID match, prefer the development dyld_shared cache if both are present.
-            if (!dsc_filespec.Exists())
+            struct lldb_copy_dyld_cache_mapping_info
             {
-                if (dsc_development_filespec.Exists())
-                {
-                    dsc_filespec = dsc_development_filespec;
-                }
-                else
-                {
-                    dsc_filespec = dsc_nondevelopment_filespec;
-                }
-            }
+                uint64_t        address;
+                uint64_t        size;
+                uint64_t        fileOffset;
+                uint32_t        maxProt;
+                uint32_t        initProt;
+            };
+
+            struct lldb_copy_dyld_cache_local_symbols_info
+            {
+                uint32_t        nlistOffset;
+                uint32_t        nlistCount;
+                uint32_t        stringsOffset;
+                uint32_t        stringsSize;
+                uint32_t        entriesOffset;
+                uint32_t        entriesCount;
+            };
+
+            struct lldb_copy_dyld_cache_local_symbols_entry
+            {
+                uint32_t        dylibOffset;
+                uint32_t        nlistStartIndex;
+                uint32_t        nlistCount;
+            };
 
             /* The dyld_cache_header has a pointer to the dyld_cache_local_symbols_info structure (localSymbolsOffset).
                The dyld_cache_local_symbols_info structure gives us three things:
@@ -2755,21 +2690,46 @@ ObjectFileMachO::ParseSymtab ()
                and the count of how many nlist records there are for this dylib/framework.
             */
 
-            // Process the dyld shared cache header to find the unmapped symbols
+            // Process the dsc header to find the unmapped symbols
+            //
+            // Save some VM space, do not map the entire cache in one shot.
 
-            DataBufferSP dsc_data_sp = dsc_filespec.MemoryMapFileContentsIfLocal(0, sizeof(struct lldb_copy_dyld_cache_header_v1));
-            if (!dsc_uuid.IsValid())
-            {
-                dsc_uuid = GetSharedCacheUUID (dsc_filespec, byte_order, addr_byte_size);
-            }
+            DataBufferSP dsc_data_sp;
+            dsc_data_sp = dsc_filespec.MemoryMapFileContentsIfLocal(0, sizeof(struct lldb_copy_dyld_cache_header_v1));
+
             if (dsc_data_sp)
             {
-                DataExtractor dsc_header_data (dsc_data_sp, byte_order, addr_byte_size);
+                DataExtractor dsc_header_data(dsc_data_sp, byte_order, addr_byte_size);
+
+                char version_str[17];
+                int version = -1;
+                lldb::offset_t offset = 0;
+                memcpy (version_str, dsc_header_data.GetData (&offset, 16), 16);
+                version_str[16] = '\0';
+                if (strncmp (version_str, "dyld_v", 6) == 0 && isdigit (version_str[6]))
+                {
+                    int v;
+                    if (::sscanf (version_str + 6, "%d", &v) == 1)
+                    {
+                        version = v;
+                    }
+                }
+
+                UUID dsc_uuid;
+                if (version >= 1)
+                {
+                    offset = offsetof (struct lldb_copy_dyld_cache_header_v1, uuid);
+                    uint8_t uuid_bytes[sizeof (uuid_t)];
+                    memcpy (uuid_bytes, dsc_header_data.GetData (&offset, sizeof (uuid_t)), sizeof (uuid_t));
+                    dsc_uuid.SetBytes (uuid_bytes);
+                }
 
                 bool uuid_match = true;
                 if (dsc_uuid.IsValid() && process)
                 {
-                    if (process_shared_cache_uuid.IsValid() && dsc_uuid != process_shared_cache_uuid)
+                    UUID shared_cache_uuid(GetProcessSharedCacheUUID(process));
+
+                    if (shared_cache_uuid.IsValid() && dsc_uuid != shared_cache_uuid)
                     {
                         // The on-disk dyld_shared_cache file is not the same as the one in this
                         // process' memory, don't use it.
@@ -2786,7 +2746,7 @@ ObjectFileMachO::ParseSymtab ()
 
                 // If the mappingOffset points to a location inside the header, we've
                 // opened an old dyld shared cache, and should not proceed further.
-                if (uuid_match && mappingOffset >= sizeof(struct lldb_copy_dyld_cache_header_v1))
+                if (uuid_match && mappingOffset >= sizeof(struct lldb_copy_dyld_cache_header_v0))
                 {
 
                     DataBufferSP dsc_mapping_info_data_sp = dsc_filespec.MemoryMapFileContentsIfLocal(mappingOffset, sizeof (struct lldb_copy_dyld_cache_mapping_info));
@@ -2982,10 +2942,7 @@ ObjectFileMachO::ParseSymtab ()
                                                         // static symbol: name,,n_sect,type,address
                                                         N_STSYM_addr_to_sym_idx.insert(std::make_pair(nlist.n_value, sym_idx));
                                                         symbol_section = section_info.GetSection (nlist.n_sect, nlist.n_value);
-                                                        if (symbol_name && symbol_name[0])
-                                                        {
-                                                            type = ObjectFile::GetSymbolTypeFromName(symbol_name+1, eSymbolTypeData);
-                                                        }
+                                                        type = eSymbolTypeData;
                                                         break;
 
                                                     case N_LCSYM:
@@ -3372,36 +3329,33 @@ ObjectFileMachO::ParseSymtab ()
                                                                         if (symbol_sect_name && ::strstr (symbol_sect_name, "__objc") == symbol_sect_name)
                                                                         {
                                                                             type = eSymbolTypeRuntime;
-                                                                            
-                                                                            if (symbol_name)
+
+                                                                            if (symbol_name &&
+                                                                                symbol_name[0] == '_' &&
+                                                                                symbol_name[1] == 'O' &&
+                                                                                symbol_name[2] == 'B')
                                                                             {
                                                                                 llvm::StringRef symbol_name_ref(symbol_name);
-                                                                                if (symbol_name_ref.startswith("_OBJC_"))
+                                                                                if (symbol_name_ref.startswith(g_objc_v2_prefix_class))
                                                                                 {
-                                                                                    static const llvm::StringRef g_objc_v2_prefix_class ("_OBJC_CLASS_$_");
-                                                                                    static const llvm::StringRef g_objc_v2_prefix_metaclass ("_OBJC_METACLASS_$_");
-                                                                                    static const llvm::StringRef g_objc_v2_prefix_ivar ("_OBJC_IVAR_$_");
-                                                                                    if (symbol_name_ref.startswith(g_objc_v2_prefix_class))
-                                                                                    {
-                                                                                        symbol_name_non_abi_mangled = symbol_name + 1;
-                                                                                        symbol_name = symbol_name + g_objc_v2_prefix_class.size();
-                                                                                        type = eSymbolTypeObjCClass;
-                                                                                        demangled_is_synthesized = true;
-                                                                                    }
-                                                                                    else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass))
-                                                                                    {
-                                                                                        symbol_name_non_abi_mangled = symbol_name + 1;
-                                                                                        symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
-                                                                                        type = eSymbolTypeObjCMetaClass;
-                                                                                        demangled_is_synthesized = true;
-                                                                                    }
-                                                                                    else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar))
-                                                                                    {
-                                                                                        symbol_name_non_abi_mangled = symbol_name + 1;
-                                                                                        symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
-                                                                                        type = eSymbolTypeObjCIVar;
-                                                                                        demangled_is_synthesized = true;
-                                                                                    }
+                                                                                    symbol_name_non_abi_mangled = symbol_name + 1;
+                                                                                    symbol_name = symbol_name + g_objc_v2_prefix_class.size();
+                                                                                    type = eSymbolTypeObjCClass;
+                                                                                    demangled_is_synthesized = true;
+                                                                                }
+                                                                                else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass))
+                                                                                {
+                                                                                    symbol_name_non_abi_mangled = symbol_name + 1;
+                                                                                    symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
+                                                                                    type = eSymbolTypeObjCMetaClass;
+                                                                                    demangled_is_synthesized = true;
+                                                                                }
+                                                                                else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar))
+                                                                                {
+                                                                                    symbol_name_non_abi_mangled = symbol_name + 1;
+                                                                                    symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
+                                                                                    type = eSymbolTypeObjCIVar;
+                                                                                    demangled_is_synthesized = true;
                                                                                 }
                                                                             }
                                                                         }
@@ -3837,10 +3791,7 @@ ObjectFileMachO::ParseSymtab ()
                         // static symbol: name,,n_sect,type,address
                         N_STSYM_addr_to_sym_idx.insert(std::make_pair(nlist.n_value, sym_idx));
                         symbol_section = section_info.GetSection (nlist.n_sect, nlist.n_value);
-                        if (symbol_name && symbol_name[0])
-                        {
-                            type = ObjectFile::GetSymbolTypeFromName(symbol_name+1, eSymbolTypeData);
-                        }
+                        type = eSymbolTypeData;
                         break;
 
                     case N_LCSYM:
@@ -4230,35 +4181,32 @@ ObjectFileMachO::ParseSymtab ()
                                         {
                                             type = eSymbolTypeRuntime;
 
-                                            if (symbol_name)
+                                            if (symbol_name &&
+                                                symbol_name[0] == '_' &&
+                                                symbol_name[1] == 'O' &&
+                                                symbol_name[2] == 'B')
                                             {
                                                 llvm::StringRef symbol_name_ref(symbol_name);
-                                                if (symbol_name_ref.startswith("_OBJC_"))
+                                                if (symbol_name_ref.startswith(g_objc_v2_prefix_class))
                                                 {
-                                                    static const llvm::StringRef g_objc_v2_prefix_class ("_OBJC_CLASS_$_");
-                                                    static const llvm::StringRef g_objc_v2_prefix_metaclass ("_OBJC_METACLASS_$_");
-                                                    static const llvm::StringRef g_objc_v2_prefix_ivar ("_OBJC_IVAR_$_");
-                                                    if (symbol_name_ref.startswith(g_objc_v2_prefix_class))
-                                                    {
-                                                        symbol_name_non_abi_mangled = symbol_name + 1;
-                                                        symbol_name = symbol_name + g_objc_v2_prefix_class.size();
-                                                        type = eSymbolTypeObjCClass;
-                                                        demangled_is_synthesized = true;
-                                                    }
-                                                    else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass))
-                                                    {
-                                                        symbol_name_non_abi_mangled = symbol_name + 1;
-                                                        symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
-                                                        type = eSymbolTypeObjCMetaClass;
-                                                        demangled_is_synthesized = true;
-                                                    }
-                                                    else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar))
-                                                    {
-                                                        symbol_name_non_abi_mangled = symbol_name + 1;
-                                                        symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
-                                                        type = eSymbolTypeObjCIVar;
-                                                        demangled_is_synthesized = true;
-                                                    }
+                                                    symbol_name_non_abi_mangled = symbol_name + 1;
+                                                    symbol_name = symbol_name + g_objc_v2_prefix_class.size();
+                                                    type = eSymbolTypeObjCClass;
+                                                    demangled_is_synthesized = true;
+                                                }
+                                                else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass))
+                                                {
+                                                    symbol_name_non_abi_mangled = symbol_name + 1;
+                                                    symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
+                                                    type = eSymbolTypeObjCMetaClass;
+                                                    demangled_is_synthesized = true;
+                                                }
+                                                else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar))
+                                                {
+                                                    symbol_name_non_abi_mangled = symbol_name + 1;
+                                                    symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
+                                                    type = eSymbolTypeObjCIVar;
+                                                    demangled_is_synthesized = true;
                                                 }
                                             }
                                         }
@@ -4845,22 +4793,14 @@ ObjectFileMachO::GetArchitecture (const llvm::MachO::mach_header &header,
                 
                 switch (load_cmd.cmd)
                 {
-                    case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
+                    case LC_VERSION_MIN_IPHONEOS:
                         triple.setOS (llvm::Triple::IOS);
                         return true;
                         
-                    case llvm::MachO::LC_VERSION_MIN_MACOSX:
+                    case LC_VERSION_MIN_MACOSX:
                         triple.setOS (llvm::Triple::MacOSX);
                         return true;
-
-                    case llvm::MachO::LC_VERSION_MIN_TVOS:
-                        triple.setOS (llvm::Triple::TvOS);
-                        return true;
                         
-                    case llvm::MachO::LC_VERSION_MIN_WATCHOS:
-                        triple.setOS (llvm::Triple::WatchOS);
-                        return true;
-
                     default:
                         break;
                 }
@@ -5500,10 +5440,7 @@ ObjectFileMachO::GetMinimumOSVersion (uint32_t *versions, uint32_t num_versions)
             version_min_command lc;
             if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
                 break;
-            if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX 
-                 || lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS 
-                 || lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS 
-                 || lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS)
+            if (lc.cmd == LC_VERSION_MIN_MACOSX || lc.cmd == LC_VERSION_MIN_IPHONEOS)
             {
                 if (m_data.GetU32 (&offset, &lc.version, (sizeof(lc) / sizeof(uint32_t)) - 2))
                 {
@@ -5561,10 +5498,7 @@ ObjectFileMachO::GetSDKVersion(uint32_t *versions, uint32_t num_versions)
             version_min_command lc;
             if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
                 break;
-            if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX 
-                || lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS
-                || lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS
-                || lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS)
+            if (lc.cmd == LC_VERSION_MIN_MACOSX || lc.cmd == LC_VERSION_MIN_IPHONEOS)
             {
                 if (m_data.GetU32 (&offset, &lc.version, (sizeof(lc) / sizeof(uint32_t)) - 2))
                 {
@@ -5776,10 +5710,8 @@ ObjectFileMachO::SaveCore (const lldb::ProcessSP &process_sp,
         const ArchSpec target_arch = target.GetArchitecture();
         const llvm::Triple &target_triple = target_arch.GetTriple();
         if (target_triple.getVendor() == llvm::Triple::Apple &&
-            (target_triple.getOS() == llvm::Triple::MacOSX 
-             || target_triple.getOS() == llvm::Triple::IOS
-             || target_triple.getOS() == llvm::Triple::WatchOS
-             || target_triple.getOS() == llvm::Triple::TvOS))
+            (target_triple.getOS() == llvm::Triple::MacOSX ||
+             target_triple.getOS() == llvm::Triple::IOS))
         {
             bool make_core = false;
             switch (target_arch.GetMachine())

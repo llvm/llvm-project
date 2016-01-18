@@ -373,7 +373,6 @@ protected:
         void
         GetThreadQueueInfo (nub_process_t pid,
                             nub_addr_t dispatch_qaddr,
-                            nub_addr_t &dispatch_queue_t,
                             std::string &queue_name,
                             uint64_t &queue_width,
                             uint64_t &queue_serialnum) const;

@@ -612,8 +612,7 @@ public:
 /// @interface NSArray<T> // stores the <T>
 /// @end
 /// \endcode
-class ObjCTypeParamList final
-    : private llvm::TrailingObjects<ObjCTypeParamList, ObjCTypeParamDecl *> {
+class ObjCTypeParamList {
   /// Stores the components of a SourceRange as a POD.
   struct PODSourceRange {
     unsigned Begin;
@@ -645,7 +644,7 @@ public:
   /// Iterate through the type parameters in the list.
   typedef ObjCTypeParamDecl **iterator;
 
-  iterator begin() { return getTrailingObjects<ObjCTypeParamDecl *>(); }
+  iterator begin() { return reinterpret_cast<ObjCTypeParamDecl **>(this + 1); }
 
   iterator end() { return begin() + size(); }
 
@@ -656,7 +655,7 @@ public:
   typedef ObjCTypeParamDecl * const *const_iterator;
 
   const_iterator begin() const {
-    return getTrailingObjects<ObjCTypeParamDecl *>();
+    return reinterpret_cast<ObjCTypeParamDecl * const *>(this + 1);
   }
 
   const_iterator end() const {
@@ -686,7 +685,6 @@ public:
   /// Gather the default set of type arguments to be substituted for
   /// these type parameters when dealing with an unspecialized type.
   void gatherDefaultTypeArgs(SmallVectorImpl<QualType> &typeArgs) const;
-  friend TrailingObjects;
 };
 
 /// ObjCContainerDecl - Represents a container for method declarations.
@@ -2511,12 +2509,15 @@ public:
   void setPropertyAttributes(PropertyAttributeKind PRVal) {
     PropertyAttributes |= PRVal;
   }
-  void overwritePropertyAttributes(unsigned PRVal) {
-    PropertyAttributes = PRVal;
-  }
 
   PropertyAttributeKind getPropertyAttributesAsWritten() const {
     return PropertyAttributeKind(PropertyAttributesAsWritten);
+  }
+
+  bool hasWrittenStorageAttribute() const {
+    return PropertyAttributesAsWritten & (OBJC_PR_assign | OBJC_PR_copy |
+        OBJC_PR_unsafe_unretained | OBJC_PR_retain | OBJC_PR_strong |
+        OBJC_PR_weak);
   }
 
   void setPropertyAttributesAsWritten(PropertyAttributeKind PRVal) {

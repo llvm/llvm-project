@@ -86,11 +86,12 @@ static unsigned NumRegisteredSignals = 0;
 static struct {
   struct sigaction SA;
   int SigNo;
-} RegisteredSignalInfo[array_lengthof(IntSigs) + array_lengthof(KillSigs)];
+} RegisteredSignalInfo[(sizeof(IntSigs)+sizeof(KillSigs))/sizeof(KillSigs[0])];
 
 
 static void RegisterHandler(int Signal) {
-  assert(NumRegisteredSignals < array_lengthof(RegisteredSignalInfo) &&
+  assert(NumRegisteredSignals <
+         sizeof(RegisteredSignalInfo)/sizeof(RegisteredSignalInfo[0]) &&
          "Out of space for signal handlers!");
 
   struct sigaction NewHandler;
@@ -252,9 +253,10 @@ void llvm::sys::AddSignalHandler(void (*FnPtr)(void *), void *Cookie) {
   RegisterHandlers();
 }
 
-#if defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES) && HAVE_LINK_H &&    \
-    (defined(__linux__) || defined(__FreeBSD__) ||                             \
-     defined(__FreeBSD_kernel__) || defined(__NetBSD__))
+#if defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES)
+
+#if HAVE_LINK_H && (defined(__linux__) || defined(__FreeBSD__) ||              \
+                    defined(__FreeBSD_kernel__) || defined(__NetBSD__))
 struct DlIteratePhdrData {
   void **StackTrace;
   int depth;
@@ -287,8 +289,6 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   return 0;
 }
 
-/// If this is an ELF platform, we can find all loaded modules and their virtual
-/// addresses with dl_iterate_phdr.
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   const char **Modules, intptr_t *Offsets,
                                   const char *MainExecutableName,
@@ -299,15 +299,14 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   return true;
 }
 #else
-/// This platform does not have dl_iterate_phdr, so we do not yet know how to
-/// find all loaded DSOs.
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   const char **Modules, intptr_t *Offsets,
                                   const char *MainExecutableName,
                                   StringSaver &StrPool) {
   return false;
 }
-#endif // defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES) && ...
+#endif
+#endif // defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES)
 
 // PrintStackTrace - In the case of a program crash or fault, print out a stack
 // trace so that the user has an indication of why and where we died.

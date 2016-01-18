@@ -15,7 +15,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <cstdarg>
 #include <cstdio>
 
 namespace fuzzer {
@@ -89,6 +88,11 @@ void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,
 std::string DirPlusFile(const std::string &DirPath,
                         const std::string &FileName) {
   return DirPath + "/" + FileName;
+}
+
+void PrintFileAsBase64(const std::string &Path) {
+  std::string Cmd = "base64 -w 0 < " + Path + "; echo";
+  ExecuteCommand(Cmd);
 }
 
 void Printf(const char *Fmt, ...) {

@@ -33,28 +33,18 @@ class Triple;
 
 class AArch64Subtarget : public AArch64GenSubtargetInfo {
 protected:
-  enum ARMProcFamilyEnum {
-    Others,
-    CortexA35,
-    CortexA53,
-    CortexA57,
-    Cyclone,
-    ExynosM1
-  };
+  enum ARMProcFamilyEnum {Others, CortexA53, CortexA57, Cyclone};
 
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
   ARMProcFamilyEnum ARMProcFamily;
 
   bool HasV8_1aOps;
-  bool HasV8_2aOps;
 
   bool HasFPARMv8;
   bool HasNEON;
   bool HasCrypto;
   bool HasCRC;
   bool HasPerfMon;
-  bool HasFullFP16;
-  bool HasSPE;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove;
@@ -109,11 +99,10 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override {
-    return isGeneric() || isCortexA53() || isCortexA57();
+    return isCortexA53() || isCortexA57();
   }
 
   bool hasV8_1aOps() const { return HasV8_1aOps; }
-  bool hasV8_2aOps() const { return HasV8_2aOps; }
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
 
@@ -126,13 +115,7 @@ public:
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }
   bool hasCRC() const { return HasCRC; }
-  /// CPU has TBI (top byte of addresses is ignored during HW address
-  /// translation) and OS enables it.
-  bool supportsAddressTopByteIgnored() const;
-
   bool hasPerfMon() const { return HasPerfMon; }
-  bool hasFullFP16() const { return HasFullFP16; }
-  bool hasSPE() const { return HasSPE; }
 
   bool isLittleEndian() const { return IsLittle; }
 
@@ -146,11 +129,9 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
-  bool isGeneric() const { return CPUString == "generic"; }
   bool isCyclone() const { return CPUString == "cyclone"; }
   bool isCortexA57() const { return CPUString == "cortex-a57"; }
   bool isCortexA53() const { return CPUString == "cortex-a53"; }
-  bool isExynosM1() const { return CPUString == "exynos-m1"; }
 
   bool useAA() const override { return isCortexA53(); }
 

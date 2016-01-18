@@ -145,8 +145,6 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (int k = 0; k < argc; ++k) { ++k; v += j; }
   #pragma omp for linear(i)
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp for linear(i) ordered(1) // expected-error {{'linear' clause cannot be specified along with 'ordered' clause with a parameter}}
-  for (int k = 0; k < argc; ++k) ++k;
   return 0;
 }
 
@@ -208,8 +206,6 @@ int main(int argc, char **argv) {
   #pragma omp for linear(j)
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp for linear(i)
-  for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp for linear(i) ordered(1) // expected-error {{'linear' clause cannot be specified along with 'ordered' clause with a parameter}}
   for (int k = 0; k < argc; ++k) ++k;
 
   foomain<int,char>(argc,argv);

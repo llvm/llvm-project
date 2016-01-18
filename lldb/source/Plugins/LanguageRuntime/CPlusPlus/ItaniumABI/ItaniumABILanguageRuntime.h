@@ -80,6 +80,9 @@ namespace lldb_private {
         lldb::SearchFilterSP
         CreateExceptionSearchFilter() override;
 
+        size_t
+        GetAlternateManglings(const ConstString &mangled, std::vector<ConstString> &alternates) override;
+
         //------------------------------------------------------------------
         // PluginInterface protocol
         //------------------------------------------------------------------

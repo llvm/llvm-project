@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-#include <cstring>
+#include "lldb/Target/ThreadPlan.h"
 
+// C Includes
+#include <string.h>
+// C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/ThreadPlan.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
@@ -57,7 +57,8 @@ ThreadPlanTracer::ThreadPlanTracer (Thread &thread) :
 Stream *
 ThreadPlanTracer::GetLogStream ()
 {
-    if (m_stream_sp)
+    
+    if (m_stream_sp.get())
         return m_stream_sp.get();
     else
     {
@@ -65,7 +66,7 @@ ThreadPlanTracer::GetLogStream ()
         if (target_sp)
             return target_sp->GetDebugger().GetOutputFile().get();
     }
-    return nullptr;
+    return NULL;
 }
 
 void 
@@ -82,6 +83,7 @@ ThreadPlanTracer::Log()
         stream->Printf("\n");
         stream->Flush();
     }
+    
 }
 
 bool
@@ -90,7 +92,10 @@ ThreadPlanTracer::TracerExplainsStop ()
     if (m_enabled && m_single_step)
     {
         lldb::StopInfoSP stop_info = m_thread.GetStopInfo();
-        return (stop_info->GetStopReason() == eStopReasonTrace);
+        if (stop_info->GetStopReason() == eStopReasonTrace)
+            return true;
+        else 
+            return false;
     }
     else
         return false;
@@ -117,8 +122,8 @@ ThreadPlanAssemblyTracer::ThreadPlanAssemblyTracer (Thread &thread) :
 Disassembler *
 ThreadPlanAssemblyTracer::GetDisassembler ()
 {
-    if (!m_disassembler_sp)
-        m_disassembler_sp = Disassembler::FindPlugin(m_thread.GetProcess()->GetTarget().GetArchitecture(), nullptr, nullptr);
+    if (m_disassembler_sp.get() == NULL)
+        m_disassembler_sp = Disassembler::FindPlugin(m_thread.GetProcess()->GetTarget().GetArchitecture(), NULL, NULL);
     return m_disassembler_sp.get();
 }
 
@@ -138,14 +143,18 @@ ThreadPlanAssemblyTracer::GetIntPointerType()
     return m_intptr_type;
 }
 
-ThreadPlanAssemblyTracer::~ThreadPlanAssemblyTracer() = default;
+
+
+ThreadPlanAssemblyTracer::~ThreadPlanAssemblyTracer()
+{
+}
 
 void 
 ThreadPlanAssemblyTracer::TracingStarted ()
 {
     RegisterContext *reg_ctx = m_thread.GetRegisterContext().get();
     
-    if (m_register_values.empty())
+    if (m_register_values.size() == 0)
         m_register_values.resize (reg_ctx->GetRegisterCount());
 }
 
@@ -202,15 +211,15 @@ ThreadPlanAssemblyTracer::Log ()
                 const bool show_address = true;
                 Instruction *instruction = instruction_list.GetInstructionAtIndex(0).get();
                 const FormatEntity::Entry *disassemble_format = m_thread.GetProcess()->GetTarget().GetDebugger().GetDisassemblyFormat();
-                instruction->Dump(stream,
-                                  max_opcode_byte_size,
-                                  show_address,
-                                  show_bytes,
-                                  nullptr,
-                                  nullptr,
-                                  nullptr,
-                                  disassemble_format,
-                                  0);
+                instruction->Dump (stream,
+                                   max_opcode_byte_size,
+                                   show_address,
+                                   show_bytes,
+                                   NULL,
+                                   NULL,
+                                   NULL,
+                                   disassemble_format,
+                                   0);
             }
         }
     }
@@ -243,7 +252,8 @@ ThreadPlanAssemblyTracer::Log ()
             }
         }
     }
-
+    
+    
     RegisterValue reg_value;
     for (uint32_t reg_num = 0, num_registers = reg_ctx->GetRegisterCount();
          reg_num < num_registers;

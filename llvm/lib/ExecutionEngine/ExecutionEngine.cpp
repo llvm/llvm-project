@@ -103,10 +103,12 @@ public:
   /// \brief Returns the address the GlobalVariable should be written into.  The
   /// GVMemoryBlock object prefixes that.
   static char *Create(const GlobalVariable *GV, const DataLayout& TD) {
-    Type *ElTy = GV->getValueType();
+    Type *ElTy = GV->getType()->getElementType();
     size_t GVSize = (size_t)TD.getTypeAllocSize(ElTy);
     void *RawMemory = ::operator new(
-        alignTo(sizeof(GVMemoryBlock), TD.getPreferredAlignment(GV)) + GVSize);
+      RoundUpToAlignment(sizeof(GVMemoryBlock),
+                         TD.getPreferredAlignment(GV))
+      + GVSize);
     new(RawMemory) GVMemoryBlock(GV);
     return static_cast<char*>(RawMemory) + sizeof(GVMemoryBlock);
   }
@@ -1353,7 +1355,7 @@ void ExecutionEngine::EmitGlobalVariable(const GlobalVariable *GV) {
   if (!GV->isThreadLocal())
     InitializeMemory(GV->getInitializer(), GA);
 
-  Type *ElTy = GV->getValueType();
+  Type *ElTy = GV->getType()->getElementType();
   size_t GVSize = (size_t)getDataLayout().getTypeAllocSize(ElTy);
   NumInitBytes += (unsigned)GVSize;
   ++NumGlobals;

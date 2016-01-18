@@ -328,9 +328,11 @@ int main(int argc, char **argv) {
   if (TraceExecution)
     errs() << ToolName << ": Found Program: " << ProgramToRun << '\n';
 
-  for (const std::string &Arg : Argv) {
+  for (std::vector<std::string>::iterator i = Argv.begin(),
+                                          e = Argv.end();
+                                          i != e; ++i) {
     CommandLine.push_back(' ');
-    CommandLine.append(Arg);
+    CommandLine.append(*i);
   }
 
   if (TraceExecution)

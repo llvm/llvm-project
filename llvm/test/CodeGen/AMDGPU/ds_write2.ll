@@ -345,9 +345,8 @@ define void @store_constant_disjoint_offsets() {
 
 ; SI-LABEL: @store_misaligned64_constant_offsets
 ; SI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; SI-DAG: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
-; SI-DAG: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
-; SI: s_endpgm
+; SI: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
+; SI: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
 define void @store_misaligned64_constant_offsets() {
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4
@@ -431,9 +430,9 @@ declare i32 @llvm.r600.read.tidig.x() #1
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.r600.read.tidig.y() #1
 
-; Function Attrs: convergent nounwind
+; Function Attrs: noduplicate nounwind
 declare void @llvm.AMDGPU.barrier.local() #2
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { convergent nounwind }
+attributes #2 = { noduplicate nounwind }

@@ -16,7 +16,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Error.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -69,20 +68,6 @@ PlatformAppleWatchSimulator::Terminate ()
 PlatformSP
 PlatformAppleWatchSimulator::CreateInstance (bool force, const ArchSpec *arch)
 {
-    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
-    if (log)
-    {
-        const char *arch_name;
-        if (arch && arch->GetArchitectureName ())
-            arch_name = arch->GetArchitectureName ();
-        else
-            arch_name = "<null>";
-
-        const char *triple_cstr = arch ? arch->GetTriple ().getTriple ().c_str() : "<null>";
-
-        log->Printf ("PlatformAppleWatchSimulator::%s(force=%s, arch={%s,%s})", __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
-    }
-
     bool create = force;
     if (create == false && arch && arch->IsValid())
     {
@@ -136,16 +121,7 @@ PlatformAppleWatchSimulator::CreateInstance (bool force, const ArchSpec *arch)
         }
     }
     if (create)
-    {
-        if (log)
-            log->Printf ("PlatformAppleWatchSimulator::%s() creating platform", __FUNCTION__);
-
         return PlatformSP(new PlatformAppleWatchSimulator ());
-    }
-
-    if (log)
-        log->Printf ("PlatformAppleWatchSimulator::%s() aborting creation of platform", __FUNCTION__);
-
     return PlatformSP();
 }
 

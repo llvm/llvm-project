@@ -10,8 +10,6 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 
-#ifndef LLDB_DISABLE_PYTHON
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
@@ -23,11 +21,8 @@
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/OptionValue.h"
 
-#include "llvm/ADT/ArrayRef.h"
-
 namespace lldb_private {
 
-class PythonBytes;
 class PythonString;
 class PythonList;
 class PythonDictionary;
@@ -74,10 +69,6 @@ enum class PyObjectType
     Dictionary,
     List,
     String,
-    Bytes,
-    Module,
-    Callable,
-    Tuple,
     File
 };
 
@@ -194,40 +185,20 @@ public:
         return result;
     }
 
+    PyObjectType
+    GetObjectType() const;
+
+    PythonString
+    Repr ();
+        
+    PythonString
+    Str ();
+
     PythonObject &
     operator=(const PythonObject &other)
     {
         Reset(PyRefType::Borrowed, other.get());
         return *this;
-    }
-
-    PyObjectType
-    GetObjectType() const;
-
-    PythonString
-    Repr() const;
-
-    PythonString
-    Str() const;
-
-    static PythonObject
-    ResolveNameWithDictionary(llvm::StringRef name, const PythonDictionary &dict);
-
-    template<typename T>
-    static T
-    ResolveNameWithDictionary(llvm::StringRef name, const PythonDictionary &dict)
-    {
-        return ResolveNameWithDictionary(name, dict).AsType<T>();
-    }
-
-    PythonObject
-    ResolveName(llvm::StringRef name) const;
-
-    template<typename T>
-    T
-    ResolveName(llvm::StringRef name) const
-    {
-        return ResolveName(name).AsType<T>();
     }
 
     bool
@@ -253,44 +224,10 @@ public:
         return T(PyRefType::Borrowed, m_py_obj);
     }
 
-    StructuredData::ObjectSP
-    CreateStructuredObject() const;
+    StructuredData::ObjectSP CreateStructuredObject() const;
 
 protected:
     PyObject* m_py_obj;
-};
-
-class PythonBytes : public PythonObject
-{
-public:
-    PythonBytes();
-    explicit PythonBytes(llvm::ArrayRef<uint8_t> bytes);
-    PythonBytes(const uint8_t *bytes, size_t length);
-    PythonBytes(PyRefType type, PyObject *o);
-    PythonBytes(const PythonBytes &object);
-
-    ~PythonBytes() override;
-
-    static bool
-    Check(PyObject *py_obj);
-
-    // Bring in the no-argument base class version
-    using PythonObject::Reset;
-
-    void
-    Reset(PyRefType type, PyObject *py_obj) override;
-
-    llvm::ArrayRef<uint8_t>
-    GetBytes() const;
-
-    size_t
-    GetSize() const;
-
-    void
-    SetBytes(llvm::ArrayRef<uint8_t> stringbytes);
-
-    StructuredData::StringSP
-    CreateStructuredString() const;
 };
 
 class PythonString : public PythonObject
@@ -350,7 +287,6 @@ public:
 class PythonList : public PythonObject
 {
 public:
-    PythonList() {}
     explicit PythonList(PyInitialValue value);
     explicit PythonList(int list_size);
     PythonList(PyRefType type, PyObject *o);
@@ -376,39 +312,9 @@ public:
     StructuredData::ArraySP CreateStructuredArray() const;
 };
 
-class PythonTuple : public PythonObject
-{
-public:
-    PythonTuple() {}
-    explicit PythonTuple(PyInitialValue value);
-    explicit PythonTuple(int tuple_size);
-    PythonTuple(PyRefType type, PyObject *o);
-    PythonTuple(const PythonTuple &tuple);
-    PythonTuple(std::initializer_list<PythonObject> objects);
-    PythonTuple(std::initializer_list<PyObject*> objects);
-
-    ~PythonTuple() override;
-
-    static bool Check(PyObject *py_obj);
-
-    // Bring in the no-argument base class version
-    using PythonObject::Reset;
-
-    void Reset(PyRefType type, PyObject *py_obj) override;
-
-    uint32_t GetSize() const;
-
-    PythonObject GetItemAtIndex(uint32_t index) const;
-
-    void SetItemAtIndex(uint32_t index, const PythonObject &object);
-
-    StructuredData::ArraySP CreateStructuredArray() const;
-};
-
 class PythonDictionary : public PythonObject
 {
 public:
-    PythonDictionary() {}
     explicit PythonDictionary(PyInitialValue value);
     PythonDictionary(PyRefType type, PyObject *o);
     PythonDictionary(const PythonDictionary &dict);
@@ -432,82 +338,6 @@ public:
     StructuredData::DictionarySP CreateStructuredDictionary() const;
 };
 
-class PythonModule : public PythonObject
-{
-  public:
-    PythonModule();
-    PythonModule(PyRefType type, PyObject *o);
-    PythonModule(const PythonModule &dict);
-
-    ~PythonModule() override;
-
-    static bool Check(PyObject *py_obj);
-
-    static PythonModule
-    BuiltinsModule();
-
-    static PythonModule
-    MainModule();
-
-    static PythonModule
-    AddModule(llvm::StringRef module);
-
-    static PythonModule
-    ImportModule(llvm::StringRef module);
-
-    // Bring in the no-argument base class version
-    using PythonObject::Reset;
-
-    void Reset(PyRefType type, PyObject *py_obj) override;
-
-    PythonDictionary GetDictionary() const;
-};
-
-class PythonCallable : public PythonObject
-{
-public:
-    struct ArgInfo {
-        size_t count;
-        bool has_varargs : 1;
-        bool has_kwargs : 1;
-    };
-
-    PythonCallable();
-    PythonCallable(PyRefType type, PyObject *o);
-    PythonCallable(const PythonCallable &dict);
-
-    ~PythonCallable() override;
-
-    static bool
-    Check(PyObject *py_obj);
-
-    // Bring in the no-argument base class version
-    using PythonObject::Reset;
-
-    void
-    Reset(PyRefType type, PyObject *py_obj) override;
-
-    ArgInfo
-    GetNumArguments() const;
-
-    PythonObject
-    operator ()();
-
-    PythonObject
-    operator ()(std::initializer_list<PyObject*> args);
-
-    PythonObject
-    operator ()(std::initializer_list<PythonObject> args);
-
-    template<typename Arg, typename... Args>
-    PythonObject
-    operator ()(const Arg &arg, Args... args)
-    {
-        return operator()({ arg, args... });
-    }
-};
-
-
 class PythonFile : public PythonObject
 {
   public:
@@ -525,13 +355,9 @@ class PythonFile : public PythonObject
     void Reset(PyRefType type, PyObject *py_obj) override;
     void Reset(File &file, const char *mode);
 
-    static uint32_t GetOptionsFromMode(llvm::StringRef mode);
-    
     bool GetUnderlyingFile(File &file) const;
 };
 
 } // namespace lldb_private
-
-#endif
 
 #endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H

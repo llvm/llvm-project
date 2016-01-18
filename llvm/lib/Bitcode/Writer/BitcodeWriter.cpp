@@ -178,10 +178,6 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_IN_ALLOCA;
   case Attribute::Cold:
     return bitc::ATTR_KIND_COLD;
-  case Attribute::InaccessibleMemOnly:
-    return bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY;
-  case Attribute::InaccessibleMemOrArgMemOnly:
-    return bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEMONLY;
   case Attribute::InlineHint:
     return bitc::ATTR_KIND_INLINE_HINT;
   case Attribute::InReg:
@@ -206,8 +202,6 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_IMPLICIT_FLOAT;
   case Attribute::NoInline:
     return bitc::ATTR_KIND_NO_INLINE;
-  case Attribute::NoRecurse:
-    return bitc::ATTR_KIND_NO_RECURSE;
   case Attribute::NonLazyBind:
     return bitc::ATTR_KIND_NON_LAZY_BIND;
   case Attribute::NonNull:
@@ -780,21 +774,6 @@ static uint64_t WriteModuleInfo(const Module *M, const ValueEnumerator &VE,
     Vals.clear();
   }
 
-  // Write a record indicating the number of module-level metadata IDs
-  // This is needed because the ids of metadata are assigned implicitly
-  // based on their ordering in the bitcode, with the function-level
-  // metadata ids starting after the module-level metadata ids. For
-  // function importing where we lazy load the metadata as a postpass,
-  // we want to avoid parsing the module-level metadata before parsing
-  // the imported functions.
-  BitCodeAbbrev *Abbv = new BitCodeAbbrev();
-  Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_METADATA_VALUES));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-  unsigned MDValsAbbrev = Stream.EmitAbbrev(Abbv);
-  Vals.push_back(VE.numMDs());
-  Stream.EmitRecord(bitc::MODULE_CODE_METADATA_VALUES, Vals, MDValsAbbrev);
-  Vals.clear();
-
   uint64_t VSTOffsetPlaceholder =
       WriteValueSymbolTableForwardDecl(M->getValueSymbolTable(), Stream);
   return VSTOffsetPlaceholder;
@@ -1021,7 +1000,6 @@ static void WriteDICompileUnit(const DICompileUnit *N,
   Record.push_back(VE.getMetadataOrNullID(N->getGlobalVariables().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getImportedEntities().get()));
   Record.push_back(N->getDWOId());
-  Record.push_back(VE.getMetadataOrNullID(N->getMacros().get()));
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();
@@ -1094,33 +1072,6 @@ static void WriteDINamespace(const DINamespace *N, const ValueEnumerator &VE,
   Record.push_back(N->getLine());
 
   Stream.EmitRecord(bitc::METADATA_NAMESPACE, Record, Abbrev);
-  Record.clear();
-}
-
-static void WriteDIMacro(const DIMacro *N, const ValueEnumerator &VE,
-                         BitstreamWriter &Stream,
-                         SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
-  Record.push_back(N->getMacinfoType());
-  Record.push_back(N->getLine());
-  Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
-  Record.push_back(VE.getMetadataOrNullID(N->getRawValue()));
-
-  Stream.EmitRecord(bitc::METADATA_MACRO, Record, Abbrev);
-  Record.clear();
-}
-
-static void WriteDIMacroFile(const DIMacroFile *N, const ValueEnumerator &VE,
-                             BitstreamWriter &Stream,
-                             SmallVectorImpl<uint64_t> &Record,
-                             unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
-  Record.push_back(N->getMacinfoType());
-  Record.push_back(N->getLine());
-  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
-  Record.push_back(VE.getMetadataOrNullID(N->getElements().get()));
-
-  Stream.EmitRecord(bitc::METADATA_MACRO_FILE, Record, Abbrev);
   Record.clear();
 }
 
@@ -1430,7 +1381,7 @@ static void WriteModuleMetadataStore(const Module *M, BitstreamWriter &Stream) {
 
   if (Names.empty()) return;
 
-  Stream.EnterSubblock(bitc::METADATA_KIND_BLOCK_ID, 3);
+  Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
 
   for (unsigned MDKindID = 0, e = Names.size(); MDKindID != e; ++MDKindID) {
     Record.push_back(MDKindID);
@@ -1630,10 +1581,19 @@ static void WriteConstants(unsigned FirstVal, unsigned LastVal,
       if (isa<IntegerType>(EltTy)) {
         for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
+      } else if (EltTy->isFloatTy()) {
+        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
+          union { float F; uint32_t I; };
+          F = CDS->getElementAsFloat(i);
+          Record.push_back(I);
+        }
       } else {
-        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
-          Record.push_back(
-              CDS->getElementAsAPFloat(i).bitcastToAPInt().getLimitedValue());
+        assert(EltTy->isDoubleTy() && "Unknown ConstantData element type");
+        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
+          union { double F; uint64_t I; };
+          F = CDS->getElementAsDouble(i);
+          Record.push_back(I);
+        }
       }
     } else if (isa<ConstantArray>(C) || isa<ConstantStruct>(C) ||
                isa<ConstantVector>(C)) {
@@ -1776,8 +1736,8 @@ static void WriteOperandBundles(BitstreamWriter &Stream, ImmutableCallSite CS,
   LLVMContext &C = CS.getInstruction()->getContext();
 
   for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i) {
-    const auto &Bundle = CS.getOperandBundleAt(i);
-    Record.push_back(C.getOperandBundleTagID(Bundle.getTagName()));
+    const auto &Bundle = CS.getOperandBundle(i);
+    Record.push_back(C.getOperandBundleTagID(Bundle.Tag));
 
     for (auto &Input : Bundle.Inputs)
       PushValueAndType(Input, InstID, Record, VE);
@@ -1929,9 +1889,10 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
       Vals.push_back(VE.getTypeID(SI.getCondition()->getType()));
       pushValue(SI.getCondition(), InstID, Vals, VE);
       Vals.push_back(VE.getValueID(SI.getDefaultDest()));
-      for (SwitchInst::ConstCaseIt Case : SI.cases()) {
-        Vals.push_back(VE.getValueID(Case.getCaseValue()));
-        Vals.push_back(VE.getValueID(Case.getCaseSuccessor()));
+      for (SwitchInst::ConstCaseIt i = SI.case_begin(), e = SI.case_end();
+           i != e; ++i) {
+        Vals.push_back(VE.getValueID(i.getCaseValue()));
+        Vals.push_back(VE.getValueID(i.getCaseSuccessor()));
       }
     }
     break;
@@ -1992,32 +1953,51 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(VE.getValueID(CRI.getSuccessor()));
     break;
   }
-  case Instruction::CleanupPad:
   case Instruction::CatchPad: {
-    const auto &FuncletPad = cast<FuncletPadInst>(I);
-    Code = isa<CatchPadInst>(FuncletPad) ? bitc::FUNC_CODE_INST_CATCHPAD
-                                         : bitc::FUNC_CODE_INST_CLEANUPPAD;
-    pushValue(FuncletPad.getParentPad(), InstID, Vals, VE);
-
-    unsigned NumArgOperands = FuncletPad.getNumArgOperands();
+    Code = bitc::FUNC_CODE_INST_CATCHPAD;
+    const auto &CPI = cast<CatchPadInst>(I);
+    Vals.push_back(VE.getValueID(CPI.getNormalDest()));
+    Vals.push_back(VE.getValueID(CPI.getUnwindDest()));
+    unsigned NumArgOperands = CPI.getNumArgOperands();
     Vals.push_back(NumArgOperands);
     for (unsigned Op = 0; Op != NumArgOperands; ++Op)
-      PushValueAndType(FuncletPad.getArgOperand(Op), InstID, Vals, VE);
+      PushValueAndType(CPI.getArgOperand(Op), InstID, Vals, VE);
     break;
   }
-  case Instruction::CatchSwitch: {
-    Code = bitc::FUNC_CODE_INST_CATCHSWITCH;
-    const auto &CatchSwitch = cast<CatchSwitchInst>(I);
-
-    pushValue(CatchSwitch.getParentPad(), InstID, Vals, VE);
-
-    unsigned NumHandlers = CatchSwitch.getNumHandlers();
-    Vals.push_back(NumHandlers);
-    for (const BasicBlock *CatchPadBB : CatchSwitch.handlers())
-      Vals.push_back(VE.getValueID(CatchPadBB));
-
-    if (CatchSwitch.hasUnwindDest())
-      Vals.push_back(VE.getValueID(CatchSwitch.getUnwindDest()));
+  case Instruction::TerminatePad: {
+    Code = bitc::FUNC_CODE_INST_TERMINATEPAD;
+    const auto &TPI = cast<TerminatePadInst>(I);
+    Vals.push_back(TPI.hasUnwindDest());
+    if (TPI.hasUnwindDest())
+      Vals.push_back(VE.getValueID(TPI.getUnwindDest()));
+    unsigned NumArgOperands = TPI.getNumArgOperands();
+    Vals.push_back(NumArgOperands);
+    for (unsigned Op = 0; Op != NumArgOperands; ++Op)
+      PushValueAndType(TPI.getArgOperand(Op), InstID, Vals, VE);
+    break;
+  }
+  case Instruction::CleanupPad: {
+    Code = bitc::FUNC_CODE_INST_CLEANUPPAD;
+    const auto &CPI = cast<CleanupPadInst>(I);
+    unsigned NumOperands = CPI.getNumOperands();
+    Vals.push_back(NumOperands);
+    for (unsigned Op = 0; Op != NumOperands; ++Op)
+      PushValueAndType(CPI.getOperand(Op), InstID, Vals, VE);
+    break;
+  }
+  case Instruction::CatchEndPad: {
+    Code = bitc::FUNC_CODE_INST_CATCHENDPAD;
+    const auto &CEPI = cast<CatchEndPadInst>(I);
+    if (CEPI.hasUnwindDest())
+      Vals.push_back(VE.getValueID(CEPI.getUnwindDest()));
+    break;
+  }
+  case Instruction::CleanupEndPad: {
+    Code = bitc::FUNC_CODE_INST_CLEANUPENDPAD;
+    const auto &CEPI = cast<CleanupEndPadInst>(I);
+    pushValue(CEPI.getCleanupPad(), InstID, Vals, VE);
+    if (CEPI.hasUnwindDest())
+      Vals.push_back(VE.getValueID(CEPI.getUnwindDest()));
     break;
   }
   case Instruction::Unreachable:
@@ -2148,17 +2128,8 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
     Code = bitc::FUNC_CODE_INST_CALL;
 
     Vals.push_back(VE.getAttributeID(CI.getAttributes()));
-
-    unsigned Flags = GetOptimizationFlags(&I);
-    Vals.push_back(CI.getCallingConv() << bitc::CALL_CCONV |
-                   unsigned(CI.isTailCall()) << bitc::CALL_TAIL |
-                   unsigned(CI.isMustTailCall()) << bitc::CALL_MUSTTAIL |
-                   1 << bitc::CALL_EXPLICIT_TYPE |
-                   unsigned(CI.isNoTailCall()) << bitc::CALL_NOTAIL |
-                   unsigned(Flags != 0) << bitc::CALL_FMF);
-    if (Flags != 0)
-      Vals.push_back(Flags);
-
+    Vals.push_back((CI.getCallingConv() << 1) | unsigned(CI.isTailCall()) |
+                   unsigned(CI.isMustTailCall()) << 14 | 1 << 15);
     Vals.push_back(VE.getTypeID(FTy));
     PushValueAndType(CI.getCalledValue(), InstID, Vals, VE);  // Callee
 

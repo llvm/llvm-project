@@ -143,7 +143,7 @@ Scalar::GetData (DataExtractor &data, size_t limit_byte_size) const
     {
         if (limit_byte_size < byte_size)
         {
-            if (endian::InlHostByteOrder() == eByteOrderLittle)
+            if (lldb::endian::InlHostByteOrder() == eByteOrderLittle)
             {
                 // On little endian systems if we want fewer bytes from the
                 // current type we just specify fewer bytes since the LSByte
@@ -160,23 +160,23 @@ Scalar::GetData (DataExtractor &data, size_t limit_byte_size) const
                 case e_ulonglong:
                 case e_sint128:
                 case e_uint128:
-                    data.SetData((const uint8_t *)m_integer.getRawData(), limit_byte_size, endian::InlHostByteOrder());
+                    data.SetData((const uint8_t *)m_integer.getRawData(), limit_byte_size, lldb::endian::InlHostByteOrder());
                     return true;
                 case e_float:
                     f_val = m_float.convertToFloat();
-                    data.SetData((uint8_t *)&f_val, limit_byte_size, endian::InlHostByteOrder());
+                    data.SetData((uint8_t *)&f_val, limit_byte_size, lldb::endian::InlHostByteOrder());
                     return true;
                 case e_double:
                     d_val = m_float.convertToDouble();
-                    data.SetData((uint8_t *)&d_val, limit_byte_size, endian::InlHostByteOrder());
+                    data.SetData((uint8_t *)&d_val, limit_byte_size, lldb::endian::InlHostByteOrder());
                     return true;
                 case e_long_double:
                     static llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-                    data.SetData((const uint8_t *)ldbl_val.getRawData(), limit_byte_size, endian::InlHostByteOrder());
+                    data.SetData((const uint8_t *)ldbl_val.getRawData(), limit_byte_size, lldb::endian::InlHostByteOrder());
                     return true;
                 }
             }
-            else if (endian::InlHostByteOrder() == eByteOrderBig)
+            else if (lldb::endian::InlHostByteOrder() == eByteOrderBig)
             {
                 // On big endian systems if we want fewer bytes from the
                 // current type have to advance our initial byte pointer and
@@ -193,19 +193,19 @@ Scalar::GetData (DataExtractor &data, size_t limit_byte_size) const
                 case e_ulonglong:
                 case e_sint128:
                 case e_uint128:
-                    data.SetData((const uint8_t *)m_integer.getRawData() + byte_size - limit_byte_size, limit_byte_size, endian::InlHostByteOrder());
+                    data.SetData((const uint8_t *)m_integer.getRawData() + byte_size - limit_byte_size, limit_byte_size, lldb::endian::InlHostByteOrder());
                     return true;
                 case e_float:
                     f_val = m_float.convertToFloat();
-                    data.SetData((uint8_t *)&f_val + byte_size - limit_byte_size, limit_byte_size, endian::InlHostByteOrder());
+                    data.SetData((uint8_t *)&f_val + byte_size - limit_byte_size, limit_byte_size, lldb::endian::InlHostByteOrder());
                     return true;
                 case e_double:
                     d_val = m_float.convertToDouble();
-                    data.SetData((uint8_t *)&d_val + byte_size - limit_byte_size, limit_byte_size, endian::InlHostByteOrder());
+                    data.SetData((uint8_t *)&d_val + byte_size - limit_byte_size, limit_byte_size, lldb::endian::InlHostByteOrder());
                     return true;
                 case e_long_double:
                     static llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-                    data.SetData((const uint8_t *)ldbl_val.getRawData() + byte_size - limit_byte_size, limit_byte_size, endian::InlHostByteOrder());
+                    data.SetData((const uint8_t *)ldbl_val.getRawData() + byte_size - limit_byte_size, limit_byte_size, lldb::endian::InlHostByteOrder());
                     return true;
                 }
             }
@@ -225,19 +225,19 @@ Scalar::GetData (DataExtractor &data, size_t limit_byte_size) const
             case e_ulonglong:
             case e_sint128:
             case e_uint128:
-                data.SetData((const uint8_t *)m_integer.getRawData(), byte_size, endian::InlHostByteOrder());
+                data.SetData((const uint8_t *)m_integer.getRawData(), byte_size, lldb::endian::InlHostByteOrder());
                 return true;
             case e_float:
                 f_val = m_float.convertToFloat();
-                data.SetData((uint8_t *)&f_val, byte_size, endian::InlHostByteOrder());
+                data.SetData((uint8_t *)&f_val, byte_size, lldb::endian::InlHostByteOrder());
                 return true;
             case e_double:
                 d_val = m_float.convertToDouble();
-                data.SetData((uint8_t *)&d_val, byte_size, endian::InlHostByteOrder());
+                data.SetData((uint8_t *)&d_val, byte_size, lldb::endian::InlHostByteOrder());
                 return true;
             case e_long_double:
                 static llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-                data.SetData((const uint8_t *)ldbl_val.getRawData(), byte_size, endian::InlHostByteOrder());
+                data.SetData((const uint8_t *)ldbl_val.getRawData(), byte_size, lldb::endian::InlHostByteOrder());
                 return true;
             }
         }
@@ -1574,6 +1574,8 @@ Scalar::ULongLong(unsigned long long fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+        if(m_integer.isAllOnesValue())
+            return *(const ulonglong_t *)(llvm::APInt::getAllOnesValue(128)).getRawData();
         return *(const ulonglong_t *)m_integer.getRawData();
     case e_float:
         return (ulonglong_t)m_float.convertToFloat();
@@ -2948,14 +2950,12 @@ Scalar::SetType (const RegisterInfo *reg_info)
         case eEncodingIEEE754:
             if (byte_size == sizeof(float))
             {
-                bool losesInfo = false;
-                m_float.convert(llvm::APFloat::IEEEsingle, llvm::APFloat::rmTowardZero, &losesInfo);
+                m_float = llvm::APFloat(m_float.convertToFloat());
                 m_type = e_float;
             }
             else if (byte_size == sizeof(double))
             {
-                bool losesInfo = false;
-                m_float.convert(llvm::APFloat::IEEEdouble, llvm::APFloat::rmTowardZero, &losesInfo);
+                m_float = llvm::APFloat(m_float.convertToDouble());
                 m_type = e_double;
             }
             else if (byte_size == sizeof(long double))

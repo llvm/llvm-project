@@ -54,7 +54,6 @@ class CoverageMappingModuleGen {
   CoverageSourceInfo &SourceInfo;
   llvm::SmallDenseMap<const FileEntry *, unsigned, 8> FileEntries;
   std::vector<llvm::Constant *> FunctionRecords;
-  std::vector<llvm::Constant *> FunctionNames;
   llvm::StructType *FunctionRecordTy;
   std::string CoverageMappings;
 
@@ -71,8 +70,7 @@ public:
   void addFunctionMappingRecord(llvm::GlobalVariable *FunctionName,
                                 StringRef FunctionNameValue,
                                 uint64_t FunctionHash,
-                                const std::string &CoverageMapping,
-                                bool isUsed = true);
+                                const std::string &CoverageMapping);
 
   /// \brief Emit the coverage mapping data for a translation unit.
   void emit();

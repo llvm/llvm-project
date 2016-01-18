@@ -3,7 +3,7 @@ LEVEL := ../../make
 LIB_PREFIX := loadunload_
 
 LD_EXTRAS := -L. -l$(LIB_PREFIX)d -ldl
-CXX_SOURCES := main.cpp
+C_SOURCES := main.c
 
 include $(LEVEL)/Makefile.rules
 

@@ -62,11 +62,6 @@ static cl::opt<unsigned> AlignAllBlock("align-all-blocks",
                                                 "blocks in the function."),
                                        cl::init(0), cl::Hidden);
 
-static cl::opt<unsigned>
-    AlignAllLoops("align-all-loops",
-                  cl::desc("Force the alignment of all loops in the function."),
-                  cl::init(0), cl::Hidden);
-
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned> ExitBlockBias(
     "block-placement-exit-block-bias",
@@ -385,56 +380,31 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
   const BranchProbability HotProb(4, 5); // 80%
 
   MachineBasicBlock *BestSucc = nullptr;
-  auto BestProb = BranchProbability::getZero();
-
-  // Adjust edge probabilities by excluding edges pointing to blocks that is
-  // either not in BlockFilter or is already in the current chain. Consider the
-  // following CFG:
-  //
-  //     --->A
-  //     |  / \
-  //     | B   C
-  //     |  \ / \
-  //     ----D   E
-  //
-  // Assume A->C is very hot (>90%), and C->D has a 50% probability, then after
-  // A->C is chosen as a fall-through, D won't be selected as a successor of C
-  // due to CFG constraint (the probability of C->D is not greater than
-  // HotProb). If we exclude E that is not in BlockFilter when calculating the
-  // probability of C->D, D will be selected and we will get A C D B as the
-  // layout of this loop.
-  auto AdjustedSumProb = BranchProbability::getOne();
-  SmallVector<MachineBasicBlock *, 4> Successors;
-  for (MachineBasicBlock *Succ : BB->successors()) {
-    bool SkipSucc = false;
-    if (BlockFilter && !BlockFilter->count(Succ)) {
-      SkipSucc = true;
-    } else {
-      BlockChain *SuccChain = BlockToChain[Succ];
-      if (SuccChain == &Chain) {
-        DEBUG(dbgs() << "    " << getBlockName(Succ)
-                     << " -> Already merged!\n");
-        SkipSucc = true;
-      } else if (Succ != *SuccChain->begin()) {
-        DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> Mid chain!\n");
-        continue;
-      }
-    }
-    if (SkipSucc)
-      AdjustedSumProb -= MBPI->getEdgeProbability(BB, Succ);
-    else
-      Successors.push_back(Succ);
-  }
-
+  // FIXME: Due to the performance of the probability and weight routines in
+  // the MBPI analysis, we manually compute probabilities using the edge
+  // weights. This is suboptimal as it means that the somewhat subtle
+  // definition of edge weight semantics is encoded here as well. We should
+  // improve the MBPI interface to efficiently support query patterns such as
+  // this.
+  uint32_t BestWeight = 0;
+  uint32_t WeightScale = 0;
+  uint32_t SumWeight = MBPI->getSumForBlock(BB, WeightScale);
   DEBUG(dbgs() << "Attempting merge from: " << getBlockName(BB) << "\n");
-  for (MachineBasicBlock *Succ : Successors) {
-    BranchProbability SuccProb;
-    uint32_t SuccProbN = MBPI->getEdgeProbability(BB, Succ).getNumerator();
-    uint32_t SuccProbD = AdjustedSumProb.getNumerator();
-    if (SuccProbN >= SuccProbD)
-      SuccProb = BranchProbability::getOne();
-    else
-      SuccProb = BranchProbability(SuccProbN, SuccProbD);
+  for (MachineBasicBlock *Succ : BB->successors()) {
+    if (BlockFilter && !BlockFilter->count(Succ))
+      continue;
+    BlockChain &SuccChain = *BlockToChain[Succ];
+    if (&SuccChain == &Chain) {
+      DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> Already merged!\n");
+      continue;
+    }
+    if (Succ != *SuccChain.begin()) {
+      DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> Mid chain!\n");
+      continue;
+    }
+
+    uint32_t SuccWeight = MBPI->getEdgeWeight(BB, Succ);
+    BranchProbability SuccProb(SuccWeight / WeightScale, SumWeight);
 
     // If we outline optional branches, look whether Succ is unavoidable, i.e.
     // dominates all terminators of the MachineFunction. If it does, other
@@ -462,7 +432,6 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
 
     // Only consider successors which are either "hot", or wouldn't violate
     // any CFG constraints.
-    BlockChain &SuccChain = *BlockToChain[Succ];
     if (SuccChain.LoopPredecessors != 0) {
       if (SuccProb < HotProb) {
         DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> " << SuccProb
@@ -472,9 +441,8 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
 
       // Make sure that a hot successor doesn't have a globally more
       // important predecessor.
-      auto RealSuccProb = MBPI->getEdgeProbability(BB, Succ);
       BlockFrequency CandidateEdgeFreq =
-          MBFI->getBlockFreq(BB) * RealSuccProb * HotProb.getCompl();
+          MBFI->getBlockFreq(BB) * SuccProb * HotProb.getCompl();
       bool BadCFGConflict = false;
       for (MachineBasicBlock *Pred : Succ->predecessors()) {
         if (Pred == Succ || (BlockFilter && !BlockFilter->count(Pred)) ||
@@ -498,10 +466,10 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
                  << " (prob)"
                  << (SuccChain.LoopPredecessors != 0 ? " (CFG break)" : "")
                  << "\n");
-    if (BestSucc && BestProb >= SuccProb)
+    if (BestSucc && BestWeight >= SuccWeight)
       continue;
     BestSucc = Succ;
-    BestProb = SuccProb;
+    BestWeight = SuccWeight;
   }
   return BestSucc;
 }
@@ -730,6 +698,11 @@ MachineBlockPlacement::findBestLoopExit(MachineFunction &F, MachineLoop &L,
     MachineBasicBlock *OldExitingBB = ExitingBB;
     BlockFrequency OldBestExitEdgeFreq = BestExitEdgeFreq;
     bool HasLoopingSucc = false;
+    // FIXME: Due to the performance of the probability and weight routines in
+    // the MBPI analysis, we use the internal weights and manually compute the
+    // probabilities to avoid quadratic behavior.
+    uint32_t WeightScale = 0;
+    uint32_t SumWeight = MBPI->getSumForBlock(MBB, WeightScale);
     for (MachineBasicBlock *Succ : MBB->successors()) {
       if (Succ->isEHPad())
         continue;
@@ -743,10 +716,10 @@ MachineBlockPlacement::findBestLoopExit(MachineFunction &F, MachineLoop &L,
         continue;
       }
 
-      auto SuccProb = MBPI->getEdgeProbability(MBB, Succ);
+      uint32_t SuccWeight = MBPI->getEdgeWeight(MBB, Succ);
       if (LoopBlockSet.count(Succ)) {
         DEBUG(dbgs() << "    looping: " << getBlockName(MBB) << " -> "
-                     << getBlockName(Succ) << " (" << SuccProb << ")\n");
+                     << getBlockName(Succ) << " (" << SuccWeight << ")\n");
         HasLoopingSucc = true;
         continue;
       }
@@ -758,6 +731,7 @@ MachineBlockPlacement::findBestLoopExit(MachineFunction &F, MachineLoop &L,
           BlocksExitingToOuterLoop.insert(MBB);
       }
 
+      BranchProbability SuccProb(SuccWeight / WeightScale, SumWeight);
       BlockFrequency ExitEdgeFreq = MBFI->getBlockFreq(MBB) * SuccProb;
       DEBUG(dbgs() << "    exiting: " << getBlockName(MBB) << " -> "
                    << getBlockName(Succ) << " [L:" << SuccLoopDepth << "] (";
@@ -900,17 +874,21 @@ void MachineBlockPlacement::rotateLoopWithProfile(
   // edge from the tail of the loop chain.
   SmallVector<std::pair<MachineBasicBlock *, BlockFrequency>, 4> ExitsWithFreq;
   for (auto BB : LoopChain) {
-    auto LargestExitEdgeProb = BranchProbability::getZero();
+    uint32_t LargestExitEdgeWeight = 0;
     for (auto *Succ : BB->successors()) {
       BlockChain *SuccChain = BlockToChain[Succ];
       if (!LoopBlockSet.count(Succ) &&
           (!SuccChain || Succ == *SuccChain->begin())) {
-        auto SuccProb = MBPI->getEdgeProbability(BB, Succ);
-        LargestExitEdgeProb = std::max(LargestExitEdgeProb, SuccProb);
+        uint32_t SuccWeight = MBPI->getEdgeWeight(BB, Succ);
+        LargestExitEdgeWeight = std::max(LargestExitEdgeWeight, SuccWeight);
       }
     }
-    if (LargestExitEdgeProb > BranchProbability::getZero()) {
-      auto ExitFreq = MBFI->getBlockFreq(BB) * LargestExitEdgeProb;
+    if (LargestExitEdgeWeight > 0) {
+      uint32_t WeightScale = 0;
+      uint32_t SumWeight = MBPI->getSumForBlock(BB, WeightScale);
+      auto ExitFreq =
+          MBFI->getBlockFreq(BB) *
+          BranchProbability(LargestExitEdgeWeight / WeightScale, SumWeight);
       ExitsWithFreq.emplace_back(BB, ExitFreq);
     }
   }
@@ -1282,16 +1260,14 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
       }
 
       // If PrevBB has a two-way branch, try to re-order the branches
-      // such that we branch to the successor with higher probability first.
+      // such that we branch to the successor with higher weight first.
       if (TBB && !Cond.empty() && FBB &&
-          MBPI->getEdgeProbability(PrevBB, FBB) >
-              MBPI->getEdgeProbability(PrevBB, TBB) &&
+          MBPI->getEdgeWeight(PrevBB, FBB) > MBPI->getEdgeWeight(PrevBB, TBB) &&
           !TII->ReverseBranchCondition(Cond)) {
         DEBUG(dbgs() << "Reverse order of the two branches: "
                      << getBlockName(PrevBB) << "\n");
-        DEBUG(dbgs() << "    Edge probability: "
-                     << MBPI->getEdgeProbability(PrevBB, FBB) << " vs "
-                     << MBPI->getEdgeProbability(PrevBB, TBB) << "\n");
+        DEBUG(dbgs() << "    Edge weight: " << MBPI->getEdgeWeight(PrevBB, FBB)
+                     << " vs " << MBPI->getEdgeWeight(PrevBB, TBB) << "\n");
         DebugLoc dl; // FIXME: this is nowhere
         TII->RemoveBranch(*PrevBB);
         TII->InsertBranch(*PrevBB, FBB, TBB, Cond, dl);
@@ -1333,11 +1309,6 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
     MachineLoop *L = MLI->getLoopFor(ChainBB);
     if (!L)
       continue;
-
-    if (AlignAllLoops) {
-      ChainBB->setAlignment(AlignAllLoops);
-      continue;
-    }
 
     unsigned Align = TLI->getPrefLoopAlignment(L);
     if (!Align)

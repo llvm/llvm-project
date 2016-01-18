@@ -1,4 +1,4 @@
-//===-- ThreadPlanCallFunctionUsingABI.cpp ----------------------*- C++ -*-===//
+//===-- ThreadPlanCallFunctionUsingABI.cpp ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Target/ThreadPlanCallFunctionUsingABI.h"
+
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+
 // Project includes
-#include "lldb/Target/ThreadPlanCallFunctionUsingABI.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Stream.h"
@@ -55,7 +57,10 @@ ThreadPlanCallFunctionUsingABI::ThreadPlanCallFunctionUsingABI (Thread &thread,
     m_valid = true;
 }
 
-ThreadPlanCallFunctionUsingABI::~ThreadPlanCallFunctionUsingABI() = default;
+ThreadPlanCallFunctionUsingABI::~ThreadPlanCallFunctionUsingABI()
+{
+
+}
 
 void
 ThreadPlanCallFunctionUsingABI::GetDescription(Stream *s, DescriptionLevel level)
@@ -75,7 +80,7 @@ void
 ThreadPlanCallFunctionUsingABI::SetReturnValue()
 {
     ProcessSP process_sp(m_thread.GetProcess());
-    const ABI *abi = process_sp ? process_sp->GetABI().get() : nullptr;
+    const ABI *abi = process_sp ? process_sp->GetABI().get() : NULL;
 
     // Ask the abi for the return value
     if (abi)

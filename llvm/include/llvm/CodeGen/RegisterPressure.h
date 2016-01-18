@@ -141,28 +141,6 @@ public:
   LLVM_DUMP_METHOD void dump(const TargetRegisterInfo &TRI) const;
 };
 
-/// List of registers defined and used by a machine instruction.
-class RegisterOperands {
-public:
-  /// List of virtual regiserts and register units read by the instruction.
-  SmallVector<unsigned, 8> Uses;
-  /// \brief List of virtual registers and register units defined by the
-  /// instruction which are not dead.
-  SmallVector<unsigned, 8> Defs;
-  /// \brief List of virtual registers and register units defined by the
-  /// instruction but dead.
-  SmallVector<unsigned, 8> DeadDefs;
-
-  /// Analyze the given instruction \p MI and fill in the Uses, Defs and
-  /// DeadDefs list based on the MachineOperand flags.
-  void collect(const MachineInstr &MI, const TargetRegisterInfo &TRI,
-               const MachineRegisterInfo &MRI, bool IgnoreDead = false);
-
-  /// Use liveness information to find dead defs not marked with a dead flag
-  /// and move them to the DeadDefs vector.
-  void detectDeadDefs(const MachineInstr &MI, const LiveIntervals &LIS);
-};
-
 /// Array of PressureDiffs.
 class PressureDiffs {
   PressureDiff *PDiffArray;
@@ -183,10 +161,6 @@ public:
   const PressureDiff &operator[](unsigned Idx) const {
     return const_cast<PressureDiffs*>(this)->operator[](Idx);
   }
-  /// \brief Record pressure difference induced by the given operand list to
-  /// node with index \p Idx.
-  void addInstruction(unsigned Idx, const RegisterOperands &RegOpers,
-                      const MachineRegisterInfo &MRI);
 };
 
 /// Store the effects of a change in pressure on things that MI scheduler cares
@@ -354,21 +328,16 @@ public:
   // position changes while pressure does not.
   void setPos(MachineBasicBlock::const_iterator Pos) { CurrPos = Pos; }
 
-  /// Recede across the previous instruction.
-  void recede(SmallVectorImpl<unsigned> *LiveUses = nullptr);
+  /// \brief Get the SlotIndex for the first nondebug instruction including or
+  /// after the current position.
+  SlotIndex getCurrSlot() const;
 
   /// Recede across the previous instruction.
-  /// This "low-level" variant assumes that recedeSkipDebugValues() was
-  /// called previously and takes precomputed RegisterOperands for the
-  /// instruction.
-  void recede(const RegisterOperands &RegOpers,
-              SmallVectorImpl<unsigned> *LiveUses = nullptr);
-
-  /// Recede until we find an instruction which is not a DebugValue.
-  void recedeSkipDebugValues();
+  bool recede(SmallVectorImpl<unsigned> *LiveUses = nullptr,
+              PressureDiff *PDiff = nullptr);
 
   /// Advance across the current instruction.
-  void advance();
+  bool advance();
 
   /// Finalize the region boundaries and recored live ins and live outs.
   void closeRegion();
@@ -385,7 +354,8 @@ public:
   ArrayRef<unsigned> getLiveThru() const { return LiveThruPressure; }
 
   /// Get the resulting register pressure over the traversed region.
-  /// This result is complete if closeRegion() was explicitly invoked.
+  /// This result is complete if either advance() or recede() has returned true,
+  /// or if closeRegion() was explicitly invoked.
   RegisterPressure &getPressure() { return P; }
   const RegisterPressure &getPressure() const { return P; }
 
@@ -394,6 +364,9 @@ public:
   const std::vector<unsigned> &getRegSetPressureAtPos() const {
     return CurrSetPressure;
   }
+
+  void discoverLiveOut(unsigned Reg);
+  void discoverLiveIn(unsigned Reg);
 
   bool isTopClosed() const;
   bool isBottomClosed() const;
@@ -469,12 +442,7 @@ public:
   void dump() const;
 
 protected:
-  void discoverLiveOut(unsigned Reg);
-  void discoverLiveIn(unsigned Reg);
-
-  /// \brief Get the SlotIndex for the first nondebug instruction including or
-  /// after the current position.
-  SlotIndex getCurrSlot() const;
+  const LiveRange *getLiveRange(unsigned Reg) const;
 
   void increaseRegPressure(ArrayRef<unsigned> Regs);
   void decreaseRegPressure(ArrayRef<unsigned> Regs);

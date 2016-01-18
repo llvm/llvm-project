@@ -44,8 +44,8 @@ struct MipsRelocationEntry {
 
     ~MipsELFObjectWriter() override;
 
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
+    unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
+                          bool IsPCRel) const override;
     bool needsRelocateWithSymbol(const MCSymbol &Sym,
                                  unsigned Type) const override;
     virtual void sortRelocs(const MCAssembler &Asm,
@@ -61,16 +61,13 @@ MipsELFObjectWriter::MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
 
 MipsELFObjectWriter::~MipsELFObjectWriter() {}
 
-unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
-                                           const MCValue &Target,
+unsigned MipsELFObjectWriter::GetRelocType(const MCValue &Target,
                                            const MCFixup &Fixup,
                                            bool IsPCRel) const {
   // Determine the type of the relocation.
   unsigned Kind = (unsigned)Fixup.getKind();
 
   switch (Kind) {
-  case Mips::fixup_Mips_NONE:
-    return ELF::R_MIPS_NONE;
   case Mips::fixup_Mips_16:
   case FK_Data_2:
     return IsPCRel ? ELF::R_MIPS_PC16 : ELF::R_MIPS_16;
@@ -328,25 +325,13 @@ static void setMatch(MipsRelocationEntry &Hi, MipsRelocationEntry &Lo) {
 //   matching LO;
 // - prefer LOs without a pair;
 // - prefer LOs with higher offset;
-
-static int cmpRel(const ELFRelocationEntry *AP, const ELFRelocationEntry *BP) {
-  const ELFRelocationEntry &A = *AP;
-  const ELFRelocationEntry &B = *BP;
-  if (A.Offset < B.Offset)
-    return 1;
-  if (A.Offset > B.Offset)
-    return -1;
-  assert(B.Type != A.Type && "We don't have a total order");
-  return A.Type - B.Type;
-}
-
 void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
                                      std::vector<ELFRelocationEntry> &Relocs) {
   if (Relocs.size() < 2)
     return;
 
-  // Sorts entries by Offset in descending order.
-  array_pod_sort(Relocs.begin(), Relocs.end(), cmpRel);
+  // The default function sorts entries by Offset in descending order.
+  MCELFObjectTargetWriter::sortRelocs(Asm, Relocs);
 
   // Init MipsRelocs from Relocs.
   std::vector<MipsRelocationEntry> MipsRelocs;

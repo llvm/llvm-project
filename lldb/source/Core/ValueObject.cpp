@@ -97,7 +97,6 @@ ValueObject::ValueObject (ValueObject &parent) :
     m_address_type_of_ptr_or_ref_children(eAddressTypeInvalid),
     m_value_checksum(),
     m_preferred_display_language(lldb::eLanguageTypeUnknown),
-    m_language_flags(0),
     m_value_is_valid (false),
     m_value_did_change (false),
     m_children_count_valid (false),
@@ -149,7 +148,6 @@ ValueObject::ValueObject (ExecutionContextScope *exe_scope,
     m_address_type_of_ptr_or_ref_children(child_ptr_or_ref_addr_type),
     m_value_checksum(),
     m_preferred_display_language(lldb::eLanguageTypeUnknown),
-    m_language_flags(0),
     m_value_is_valid (false),
     m_value_did_change (false),
     m_children_count_valid (false),
@@ -601,16 +599,40 @@ ValueObjectSP
 ValueObject::GetChildAtIndexPath (const std::initializer_list<size_t>& idxs,
                                   size_t* index_of_error)
 {
-    return GetChildAtIndexPath( std::vector<size_t>(idxs),
-                               index_of_error );
+    if (idxs.size() == 0)
+        return GetSP();
+    ValueObjectSP root(GetSP());
+    for (size_t idx : idxs)
+    {
+        root = root->GetChildAtIndex(idx, true);
+        if (!root)
+        {
+            if (index_of_error)
+                *index_of_error = idx;
+            return root;
+        }
+    }
+    return root;
 }
 
 ValueObjectSP
 ValueObject::GetChildAtIndexPath (const std::initializer_list< std::pair<size_t, bool> >& idxs,
                                   size_t* index_of_error)
 {
-    return GetChildAtIndexPath( std::vector<std::pair<size_t,bool>>(idxs),
-                               index_of_error );
+    if (idxs.size() == 0)
+        return GetSP();
+    ValueObjectSP root(GetSP());
+    for (std::pair<size_t, bool> idx : idxs)
+    {
+        root = root->GetChildAtIndex(idx.first, idx.second);
+        if (!root)
+        {
+            if (index_of_error)
+                *index_of_error = idx.first;
+            return root;
+        }
+    }
+    return root;
 }
 
 lldb::ValueObjectSP
@@ -657,16 +679,20 @@ lldb::ValueObjectSP
 ValueObject::GetChildAtNamePath (const std::initializer_list<ConstString> &names,
                                  ConstString* name_of_error)
 {
-    return GetChildAtNamePath( std::vector<ConstString>(names),
-                              name_of_error );
-}
-
-lldb::ValueObjectSP
-ValueObject::GetChildAtNamePath (const std::initializer_list< std::pair<ConstString, bool> > &names,
-                                 ConstString* name_of_error)
-{
-    return GetChildAtNamePath( std::vector<std::pair<ConstString,bool>>(names),
-                              name_of_error );
+    if (names.size() == 0)
+        return GetSP();
+    ValueObjectSP root(GetSP());
+    for (ConstString name : names)
+    {
+        root = root->GetChildMemberWithName(name, true);
+        if (!root)
+        {
+            if (name_of_error)
+                *name_of_error = name;
+            return root;
+        }
+    }
+    return root;
 }
 
 lldb::ValueObjectSP
@@ -690,7 +716,7 @@ ValueObject::GetChildAtNamePath (const std::vector<ConstString> &names,
 }
 
 lldb::ValueObjectSP
-ValueObject::GetChildAtNamePath (const std::vector< std::pair<ConstString, bool> > &names,
+ValueObject::GetChildAtNamePath (const std::initializer_list< std::pair<ConstString, bool> > &names,
                                  ConstString* name_of_error)
 {
     if (names.size() == 0)
@@ -703,9 +729,29 @@ ValueObject::GetChildAtNamePath (const std::vector< std::pair<ConstString, bool>
         {
             if (name_of_error)
                 *name_of_error = name.first;
-                return root;
+            return root;
         }
     }
+    return root;
+}
+
+lldb::ValueObjectSP
+ValueObject::GetChildAtNamePath (const std::vector< std::pair<ConstString, bool> > &names,
+                                 ConstString* name_of_error)
+{
+    if (names.size() == 0)
+        return GetSP();
+        ValueObjectSP root(GetSP());
+        for (std::pair<ConstString, bool> name : names)
+        {
+            root = root->GetChildMemberWithName(name.first, name.second);
+            if (!root)
+            {
+                if (name_of_error)
+                    *name_of_error = name.first;
+                    return root;
+            }
+        }
     return root;
 }
 
@@ -827,7 +873,6 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
     uint32_t child_bitfield_bit_offset = 0;
     bool child_is_base_class = false;
     bool child_is_deref_of_parent = false;
-    uint64_t language_flags = 0;
 
     const bool transparent_pointers = synthetic_array_member == false;
     CompilerType child_compiler_type;
@@ -846,8 +891,7 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
                                                                       child_bitfield_bit_offset,
                                                                       child_is_base_class,
                                                                       child_is_deref_of_parent,
-                                                                      this,
-                                                                      language_flags);
+                                                                      this);
     if (child_compiler_type)
     {
         if (synthetic_index)
@@ -866,8 +910,7 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
                                        child_bitfield_bit_offset,
                                        child_is_base_class,
                                        child_is_deref_of_parent,
-                                       eAddressTypeInvalid,
-                                       language_flags);
+                                       eAddressTypeInvalid);
         //if (valobj)
         //    valobj->SetAddressTypeOfChildren(eAddressTypeInvalid);
    }
@@ -1087,7 +1130,6 @@ ValueObject::GetData (DataExtractor& data, Error &error)
         if (m_data.GetByteSize())
         {
             data = m_data;
-            error.Clear();
             return data.GetByteSize();
         }
         else
@@ -1176,6 +1218,31 @@ ValueObject::SetData (DataExtractor &data, Error &error)
     // If we have reached this point, then we have successfully changed the value.
     SetNeedsUpdate();
     return true;
+}
+
+// will compute strlen(str), but without consuming more than
+// maxlen bytes out of str (this serves the purpose of reading
+// chunks of a string without having to worry about
+// missing NULL terminators in the chunk)
+// of course, if strlen(str) > maxlen, the function will return
+// maxlen_value (which should be != maxlen, because that allows you
+// to know whether strlen(str) == maxlen or strlen(str) > maxlen)
+static uint32_t
+strlen_or_inf (const char* str,
+               uint32_t maxlen,
+               uint32_t maxlen_value)
+{
+    uint32_t len = 0;
+    if (str)
+    {
+        while(*str)
+        {
+            len++;str++;
+            if (len >= maxlen)
+                return maxlen_value;
+        }
+    }
+    return len;
 }
 
 static bool
@@ -1285,7 +1352,10 @@ ValueObject::ReadPointedString (lldb::DataBufferSP& buffer_sp,
             {
                 total_bytes_read += bytes_read;
                 const char *cstr = data.PeekCStr(0);
-                size_t len = strnlen (cstr, k_max_buf_size);
+                size_t len = strlen_or_inf (cstr, k_max_buf_size, k_max_buf_size+1);
+                if (len > k_max_buf_size)
+                    len = k_max_buf_size;
+                
                 if (cstr_len_displayed < 0)
                     cstr_len_displayed = len;
                 
@@ -2070,23 +2140,15 @@ ValueObject::IsRuntimeSupportValue ()
 }
 
 bool
-ValueObject::IsNilReference ()
+ValueObject::IsObjCNil ()
 {
-    if (Language *language = Language::FindPlugin(GetObjectRuntimeLanguage()))
-    {
-        return language->IsNilReference(*this);
-    }
-    return false;
-}
-
-bool
-ValueObject::IsUninitializedReference ()
-{
-    if (Language *language = Language::FindPlugin(GetObjectRuntimeLanguage()))
-    {
-        return language->IsUninitializedReference(*this);
-    }
-    return false;
+    const uint32_t mask = eTypeIsObjC | eTypeIsPointer;
+    bool isObjCpointer = (((GetCompilerType().GetTypeInfo(NULL)) & mask) == mask);
+    if (!isObjCpointer)
+        return false;
+    bool canReadValue = true;
+    bool isZero = GetValueAsUnsigned(0,&canReadValue) == 0;
+    return canReadValue && isZero;
 }
 
 // This allows you to create an array member using and index
@@ -2157,8 +2219,7 @@ ValueObject::GetSyntheticBitFieldChild (uint32_t from, uint32_t to, bool can_cre
                                                                       from,
                                                                       false,
                                                                       false,
-                                                                      eAddressTypeInvalid,
-                                                                      0);
+                                                                      eAddressTypeInvalid);
             
             // Cache the value if we got one back...
             if (synthetic_child)
@@ -2204,8 +2265,7 @@ ValueObject::GetSyntheticChildAtOffset(uint32_t offset, const CompilerType& type
                                                              0,
                                                              false,
                                                              false,
-                                                             eAddressTypeInvalid,
-                                                             0);
+                                                             eAddressTypeInvalid);
     if (synthetic_child)
     {
         AddSyntheticChild(name_const_str, synthetic_child);
@@ -2248,8 +2308,7 @@ ValueObject::GetSyntheticBase (uint32_t offset, const CompilerType& type, bool c
                                                              0,
                                                              is_base_class,
                                                              false,
-                                                             eAddressTypeInvalid,
-                                                             0);
+                                                             eAddressTypeInvalid);
     if (synthetic_child)
     {
         AddSyntheticChild(name_const_str, synthetic_child);
@@ -3724,7 +3783,6 @@ ValueObject::Dereference (Error &error)
         const bool transparent_pointers = false;
         CompilerType compiler_type = GetCompilerType();
         CompilerType child_compiler_type;
-        uint64_t language_flags;
 
         ExecutionContext exe_ctx (GetExecutionContextRef());
 
@@ -3740,8 +3798,7 @@ ValueObject::Dereference (Error &error)
                                                                          child_bitfield_bit_offset,
                                                                          child_is_base_class,
                                                                          child_is_deref_of_parent,
-                                                                         this,
-                                                                         language_flags);
+                                                                         this);
         if (child_compiler_type && child_byte_size)
         {
             ConstString child_name;
@@ -3757,8 +3814,7 @@ ValueObject::Dereference (Error &error)
                                                    child_bitfield_bit_offset,
                                                    child_is_base_class,
                                                    child_is_deref_of_parent,
-                                                   eAddressTypeInvalid,
-                                                   language_flags);
+                                                   eAddressTypeInvalid);
         }
     }
 
@@ -4310,16 +4366,4 @@ void
 ValueObject::SetSyntheticChildrenGenerated (bool b)
 {
     m_is_synthetic_children_generated = b;
-}
-
-uint64_t
-ValueObject::GetLanguageFlags ()
-{
-    return m_language_flags;
-}
-
-void
-ValueObject::SetLanguageFlags (uint64_t flags)
-{
-    m_language_flags = flags;
 }

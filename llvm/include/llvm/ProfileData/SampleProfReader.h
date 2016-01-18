@@ -184,6 +184,7 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -266,10 +267,6 @@ public:
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(StringRef Filename, LLVMContext &C);
 
-  /// \brief Create a sample profile reader from the supplied memory buffer.
-  static ErrorOr<std::unique_ptr<SampleProfileReader>>
-  create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C);
-
 protected:
   /// \brief Map every function to its associated profile.
   ///
@@ -295,9 +292,6 @@ public:
 
   /// \brief Read sample profiles from the associated file.
   std::error_code read() override;
-
-  /// \brief Return true if \p Buffer is in the format supported by this class.
-  static bool hasFormat(const MemoryBuffer &Buffer);
 };
 
 class SampleProfileReaderBinary : public SampleProfileReader {

@@ -14,9 +14,6 @@ $f2 = comdat largest
 define internal void @f2() comdat($f2) {
   ret void
 }
-define void @f3() comdat($f2) {
-  ret void
-}
 
 ; CHECK-DAG: $f2 = comdat largest
 ; CHECK-DAG: define internal void @f2() comdat {

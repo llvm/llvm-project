@@ -47,8 +47,7 @@ CommandReturnObject::CommandReturnObject () :
     m_err_stream (),
     m_status (eReturnStatusStarted),
     m_did_change_process_state (false),
-    m_interactive (true),
-    m_abnormal_stop_was_expected(false)
+    m_interactive (true)
 {
 }
 

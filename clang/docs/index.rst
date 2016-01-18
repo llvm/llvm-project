@@ -24,11 +24,9 @@ Using Clang as a Compiler
    AddressSanitizer
    ThreadSanitizer
    MemorySanitizer
-   UndefinedBehaviorSanitizer
    DataFlowSanitizer
    LeakSanitizer
    SanitizerCoverage
-   SanitizerStats
    SanitizerSpecialCaseList
    ControlFlowIntegrity
    SafeStack

@@ -844,9 +844,6 @@ Breakpoint::GetDescription (Stream *s, lldb::DescriptionLevel level, bool show_l
 
         GetOptions()->GetDescription(s, level);
         
-        if (m_precondition_sp)
-            m_precondition_sp->GetDescription(*s, level);
-        
         if (level == lldb::eDescriptionLevelFull)
         {
             if (!m_name_list.empty())
@@ -962,7 +959,7 @@ Breakpoint::BreakpointPrecondition::EvaluatePrecondition(StoppointCallbackContex
 }
 
 void
-Breakpoint::BreakpointPrecondition::GetDescription(Stream &stream, lldb::DescriptionLevel level)
+Breakpoint::BreakpointPrecondition::DescribePrecondition(Stream &stream, lldb::DescriptionLevel level)
 {
 }
 

@@ -407,7 +407,6 @@ private:
   int cmpMem(StringRef L, StringRef R) const;
   int cmpAttrs(const AttributeSet L, const AttributeSet R) const;
   int cmpRangeMetadata(const MDNode* L, const MDNode* R) const;
-  int cmpOperandBundlesSchema(const Instruction *L, const Instruction *R) const;
 
   // The two functions undergoing comparison.
   const Function *FnL, *FnR;
@@ -565,32 +564,6 @@ int FunctionComparator::cmpRangeMetadata(const MDNode* L,
   return 0;
 }
 
-int FunctionComparator::cmpOperandBundlesSchema(const Instruction *L,
-                                                const Instruction *R) const {
-  ImmutableCallSite LCS(L);
-  ImmutableCallSite RCS(R);
-
-  assert(LCS && RCS && "Must be calls or invokes!");
-  assert(LCS.isCall() == RCS.isCall() && "Can't compare otherwise!");
-
-  if (int Res =
-          cmpNumbers(LCS.getNumOperandBundles(), RCS.getNumOperandBundles()))
-    return Res;
-
-  for (unsigned i = 0, e = LCS.getNumOperandBundles(); i != e; ++i) {
-    auto OBL = LCS.getOperandBundleAt(i);
-    auto OBR = RCS.getOperandBundleAt(i);
-
-    if (int Res = OBL.getTagName().compare(OBR.getTagName()))
-      return Res;
-
-    if (int Res = cmpNumbers(OBL.Inputs.size(), OBR.Inputs.size()))
-      return Res;
-  }
-
-  return 0;
-}
-
 /// Constants comparison:
 /// 1. Check whether type of L constant could be losslessly bitcasted to R
 /// type.
@@ -683,9 +656,7 @@ int FunctionComparator::cmpConstants(const Constant *L, const Constant *R) {
   }
 
   switch (L->getValueID()) {
-  case Value::UndefValueVal:
-  case Value::ConstantTokenNoneVal:
-    return TypesRes;
+  case Value::UndefValueVal: return TypesRes;
   case Value::ConstantIntVal: {
     const APInt &LInt = cast<ConstantInt>(L)->getValue();
     const APInt &RInt = cast<ConstantInt>(R)->getValue();
@@ -968,23 +939,19 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res =
             cmpAttrs(CI->getAttributes(), cast<CallInst>(R)->getAttributes()))
       return Res;
-    if (int Res = cmpOperandBundlesSchema(CI, R))
-      return Res;
     return cmpRangeMetadata(
         CI->getMetadata(LLVMContext::MD_range),
         cast<CallInst>(R)->getMetadata(LLVMContext::MD_range));
   }
-  if (const InvokeInst *II = dyn_cast<InvokeInst>(L)) {
-    if (int Res = cmpNumbers(II->getCallingConv(),
+  if (const InvokeInst *CI = dyn_cast<InvokeInst>(L)) {
+    if (int Res = cmpNumbers(CI->getCallingConv(),
                              cast<InvokeInst>(R)->getCallingConv()))
       return Res;
     if (int Res =
-            cmpAttrs(II->getAttributes(), cast<InvokeInst>(R)->getAttributes()))
-      return Res;
-    if (int Res = cmpOperandBundlesSchema(II, R))
+            cmpAttrs(CI->getAttributes(), cast<InvokeInst>(R)->getAttributes()))
       return Res;
     return cmpRangeMetadata(
-        II->getMetadata(LLVMContext::MD_range),
+        CI->getMetadata(LLVMContext::MD_range),
         cast<InvokeInst>(R)->getMetadata(LLVMContext::MD_range));
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
@@ -1280,7 +1247,6 @@ int FunctionComparator::compare() {
   return 0;
 }
 
-namespace {
 // Accumulate the hash of a sequence of 64-bit integers. This is similar to a
 // hash of a sequence of 64bit ints, but the entire input does not need to be
 // available at once. This interface is necessary for functionHash because it
@@ -1299,7 +1265,6 @@ public:
   // No finishing is required, because the entire hash value is used.
   uint64_t getHash() { return Hash; }
 };
-} // end anonymous namespace
 
 // A function hash is calculated by considering only the number of arguments and
 // whether a function is varargs, the order of basic blocks (given by the

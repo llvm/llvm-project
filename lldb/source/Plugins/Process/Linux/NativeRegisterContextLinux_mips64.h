@@ -89,9 +89,6 @@ namespace process_linux {
         uint32_t
         NumSupportedHardwareWatchpoints () override;
 
-        static bool
-        IsMSAAvailable();
-
     protected:
         Error
         DoReadRegisterValue(uint32_t offset,
@@ -121,6 +118,9 @@ namespace process_linux {
 
         bool
         IsMSA(uint32_t reg_index) const;
+
+        bool
+        IsMSAAvailable();
 
         void*
         GetGPRBuffer() override { return &m_gpr; }

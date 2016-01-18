@@ -460,7 +460,6 @@ private:
   CFGBlock *VisitImplicitCastExpr(ImplicitCastExpr *E, AddStmtChoice asc);
   CFGBlock *VisitIndirectGotoStmt(IndirectGotoStmt *I);
   CFGBlock *VisitLabelStmt(LabelStmt *L);
-  CFGBlock *VisitBlockExpr(BlockExpr *E, AddStmtChoice asc);
   CFGBlock *VisitLambdaExpr(LambdaExpr *E, AddStmtChoice asc);
   CFGBlock *VisitLogicalOperator(BinaryOperator *B);
   std::pair<CFGBlock *, CFGBlock *> VisitLogicalOperator(BinaryOperator *B,
@@ -825,7 +824,10 @@ private:
     // * Variable x is equal to the largest literal.
     // * Variable x is greater than largest literal.
     bool AlwaysTrue = true, AlwaysFalse = true;
-    for (llvm::APSInt Value : Values) {
+    for (unsigned int ValueIndex = 0;
+         ValueIndex < sizeof(Values) / sizeof(Values[0]);
+         ++ValueIndex) {
+      llvm::APSInt Value = Values[ValueIndex];
       TryResult Res1, Res2;
       Res1 = analyzeLogicOperatorCondition(BO1, Value, L1);
       Res2 = analyzeLogicOperatorCondition(BO2, Value, L2);
@@ -1451,7 +1453,7 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc) {
       return VisitBinaryOperator(cast<BinaryOperator>(S), asc);
 
     case Stmt::BlockExprClass:
-      return VisitBlockExpr(cast<BlockExpr>(S), asc);
+      return VisitNoRecurse(cast<Expr>(S), asc);
 
     case Stmt::BreakStmtClass:
       return VisitBreakStmt(cast<BreakStmt>(S));
@@ -1940,15 +1942,7 @@ CFGBlock *CFGBuilder::VisitChooseExpr(ChooseExpr *C,
 
 
 CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C) {
-  LocalScope::const_iterator scopeBeginPos = ScopePos;
-  if (BuildOpts.AddImplicitDtors) {
-    addLocalScopeForStmt(C);
-  }
-  if (!C->body_empty() && !isa<ReturnStmt>(*C->body_rbegin())) {
-    // If the body ends with a ReturnStmt, the dtors will be added in VisitReturnStmt
-    addAutomaticObjDtors(ScopePos, scopeBeginPos, C);
-  }
-
+  addLocalScopeAndDtors(C);
   CFGBlock *LastBlock = Block;
 
   for (CompoundStmt::reverse_body_iterator I=C->body_rbegin(), E=C->body_rend();
@@ -2329,18 +2323,6 @@ CFGBlock *CFGBuilder::VisitLabelStmt(LabelStmt *L) {
   Succ = LabelBlock;
 
   return LabelBlock;
-}
-
-CFGBlock *CFGBuilder::VisitBlockExpr(BlockExpr *E, AddStmtChoice asc) {
-  CFGBlock *LastBlock = VisitNoRecurse(E, asc);
-  for (const BlockDecl::Capture &CI : E->getBlockDecl()->captures()) {
-    if (Expr *CopyExpr = CI.getCopyExpr()) {
-      CFGBlock *Tmp = Visit(CopyExpr);
-      if (Tmp)
-        LastBlock = Tmp;
-    }
-  }
-  return LastBlock;
 }
 
 CFGBlock *CFGBuilder::VisitLambdaExpr(LambdaExpr *E, AddStmtChoice asc) {

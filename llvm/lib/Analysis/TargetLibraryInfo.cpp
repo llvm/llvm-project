@@ -52,20 +52,14 @@ static bool hasSinCosPiStret(const Triple &T) {
 /// specified target triple.  This should be carefully written so that a missing
 /// target triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<const char *> StandardNames) {
+                       const char *const *StandardNames) {
+#ifndef NDEBUG
   // Verify that the StandardNames array is in alphabetical order.
-  assert(std::is_sorted(StandardNames.begin(), StandardNames.end(),
-                        [](const char *LHS, const char *RHS) {
-                          return strcmp(LHS, RHS) < 0;
-                        }) &&
-         "TargetLibraryInfoImpl function names must be sorted");
-
-  if (T.getArch() == Triple::r600 ||
-      T.getArch() == Triple::amdgcn) {
-    TLI.setUnavailable(LibFunc::ldexp);
-    TLI.setUnavailable(LibFunc::ldexpf);
-    TLI.setUnavailable(LibFunc::ldexpl);
+  for (unsigned F = 1; F < LibFunc::NumLibFuncs; ++F) {
+    if (strcmp(StandardNames[F-1], StandardNames[F]) >= 0)
+      llvm_unreachable("TargetLibraryInfoImpl function names must be sorted");
   }
+#endif // !NDEBUG
 
   // There are no library implementations of mempcy and memset for AMD gpus and
   // these can be difficult to lower in the backend.
@@ -354,16 +348,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     break;
   default:
     TLI.setUnavailable(LibFunc::ffsll);
-  }
-
-  // The following functions are available on at least FreeBSD:
-  // http://svn.freebsd.org/base/head/lib/libc/string/fls.c
-  // http://svn.freebsd.org/base/head/lib/libc/string/flsl.c
-  // http://svn.freebsd.org/base/head/lib/libc/string/flsll.c
-  if (!T.isOSFreeBSD()) {
-    TLI.setUnavailable(LibFunc::fls);
-    TLI.setUnavailable(LibFunc::flsl);
-    TLI.setUnavailable(LibFunc::flsll);
   }
 
   // The following functions are available on at least Linux:

@@ -43,7 +43,6 @@ public:
     LLVMCastKind getKind() const { return m_kind; }
     
     ExpressionVariable(LLVMCastKind kind) :
-        m_flags(0),
         m_kind(kind)
     {
     }

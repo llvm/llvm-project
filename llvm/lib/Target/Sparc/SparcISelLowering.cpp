@@ -400,7 +400,6 @@ LowerFormalArguments_32(SDValue Chain,
   CCInfo.AnalyzeFormalArguments(Ins, CC_Sparc32);
 
   const unsigned StackOffset = 92;
-  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
 
   unsigned InIdx = 0;
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i, ++InIdx) {
@@ -443,10 +442,6 @@ LowerFormalArguments_32(SDValue Chain,
                                         &SP::IntRegsRegClass);
           LoVal = DAG.getCopyFromReg(Chain, dl, loReg, MVT::i32);
         }
-
-        if (IsLittleEndian)
-          std::swap(LoVal, HiVal);
-
         SDValue WholeValue =
           DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, LoVal, HiVal);
         WholeValue = DAG.getNode(ISD::BITCAST, dl, VA.getLocVT(), WholeValue);
@@ -503,9 +498,6 @@ LowerFormalArguments_32(SDValue Chain,
                                   MachinePointerInfo(),
                                   false, false, false, 0);
 
-      if (IsLittleEndian)
-        std::swap(LoVal, HiVal);
-
       SDValue WholeValue =
         DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, LoVal, HiVal);
       WholeValue = DAG.getNode(ISD::BITCAST, dl, VA.getValVT(), WholeValue);
@@ -522,12 +514,16 @@ LowerFormalArguments_32(SDValue Chain,
       Load = DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr,
                          MachinePointerInfo(),
                          false, false, false, 0);
-    } else if (VA.getValVT() == MVT::f128) {
-      report_fatal_error("SPARCv8 does not handle f128 in calls; "
-                         "pass indirectly");
     } else {
-      // We shouldn't see any other value types here.
-      llvm_unreachable("Unexpected ValVT encountered in frame lowering.");
+      ISD::LoadExtType LoadOp = ISD::SEXTLOAD;
+      // Sparc is big endian, so add an offset based on the ObjectVT.
+      unsigned Offset = 4-std::max(1U, VA.getValVT().getSizeInBits()/8);
+      FIPtr = DAG.getNode(ISD::ADD, dl, MVT::i32, FIPtr,
+                          DAG.getConstant(Offset, dl, MVT::i32));
+      Load = DAG.getExtLoad(LoadOp, dl, MVT::i32, Chain, FIPtr,
+                            MachinePointerInfo(),
+                            VA.getValVT(), false, false, false,0);
+      Load = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), Load);
     }
     InVals.push_back(Load);
   }
@@ -1131,7 +1127,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   unsigned ArgsSize = std::max(6*8u, CCInfo.getNextStackOffset());
 
   // Keep stack frames 16-byte aligned.
-  ArgsSize = alignTo(ArgsSize, 16);
+  ArgsSize = RoundUpToAlignment(ArgsSize, 16);
 
   // Varargs calls require special treatment.
   if (CLI.IsVarArg)
@@ -1678,6 +1674,9 @@ SparcTargetLowering::SparcTargetLowering(TargetMachine &TM,
   setOperationAction(ISD::STACKRESTORE      , MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32  , Custom);
 
+  setExceptionPointerRegister(SP::I0);
+  setExceptionSelectorRegister(SP::I1);
+
   setStackPointerRegisterToSaveRestore(SP::O6);
 
   setOperationAction(ISD::CTPOP, MVT::i32,
@@ -1840,15 +1839,18 @@ void SparcTargetLowering::computeKnownBitsForTargetNode
 // set LHS/RHS and SPCC to the LHS/RHS of the setcc and SPCC to the condition.
 static void LookThroughSetCC(SDValue &LHS, SDValue &RHS,
                              ISD::CondCode CC, unsigned &SPCC) {
-  if (isNullConstant(RHS) &&
+  if (isa<ConstantSDNode>(RHS) &&
+      cast<ConstantSDNode>(RHS)->isNullValue() &&
       CC == ISD::SETNE &&
       (((LHS.getOpcode() == SPISD::SELECT_ICC ||
          LHS.getOpcode() == SPISD::SELECT_XCC) &&
         LHS.getOperand(3).getOpcode() == SPISD::CMPICC) ||
        (LHS.getOpcode() == SPISD::SELECT_FCC &&
         LHS.getOperand(3).getOpcode() == SPISD::CMPFCC)) &&
-      isOneConstant(LHS.getOperand(0)) &&
-      isNullConstant(LHS.getOperand(1))) {
+      isa<ConstantSDNode>(LHS.getOperand(0)) &&
+      isa<ConstantSDNode>(LHS.getOperand(1)) &&
+      cast<ConstantSDNode>(LHS.getOperand(0))->isOne() &&
+      cast<ConstantSDNode>(LHS.getOperand(1))->isNullValue()) {
     SDValue CMPCC = LHS.getOperand(3);
     SPCC = cast<ConstantSDNode>(LHS.getOperand(2))->getZExtValue();
     LHS = CMPCC.getOperand(0);

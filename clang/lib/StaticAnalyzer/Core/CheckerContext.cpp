@@ -57,8 +57,12 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
     return false;
 
   // Look through 'extern "C"' and anything similar invented in the future.
-  // If this function is not in TU directly, it is not a C library function.
-  if (!FD->getDeclContext()->getRedeclContext()->isTranslationUnit())
+  const DeclContext *DC = FD->getDeclContext();
+  while (DC->isTransparentContext())
+    DC = DC->getParent();
+
+  // If this function is in a namespace, it is not a C library function.
+  if (!DC->isTranslationUnit())
     return false;
 
   // If this function is not externally visible, it is not a C library function.

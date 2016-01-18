@@ -28,18 +28,56 @@ using namespace CodeGen;
 
 void CodeGenPGO::setFuncName(StringRef Name,
                              llvm::GlobalValue::LinkageTypes Linkage) {
-  llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
-  FuncName = llvm::getPGOFuncName(
-      Name, Linkage, CGM.getCodeGenOpts().MainFileName,
-      PGOReader ? PGOReader->getVersion() : llvm::IndexedInstrProf::Version);
+  StringRef RawFuncName = Name;
+
+  // Function names may be prefixed with a binary '1' to indicate
+  // that the backend should not modify the symbols due to any platform
+  // naming convention. Do not include that '1' in the PGO profile name.
+  if (RawFuncName[0] == '\1')
+    RawFuncName = RawFuncName.substr(1);
+
+  FuncName = RawFuncName;
+  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
+    // For local symbols, prepend the main file name to distinguish them.
+    // Do not include the full path in the file name since there's no guarantee
+    // that it will stay the same, e.g., if the files are checked out from
+    // version control in different locations.
+    if (CGM.getCodeGenOpts().MainFileName.empty())
+      FuncName = FuncName.insert(0, "<unknown>:");
+    else
+      FuncName = FuncName.insert(0, CGM.getCodeGenOpts().MainFileName + ":");
+  }
 
   // If we're generating a profile, create a variable for the name.
   if (CGM.getCodeGenOpts().ProfileInstrGenerate)
-    FuncNameVar = llvm::createPGOFuncNameVar(CGM.getModule(), Linkage, FuncName);
+    createFuncNameVar(Linkage);
 }
 
 void CodeGenPGO::setFuncName(llvm::Function *Fn) {
   setFuncName(Fn->getName(), Fn->getLinkage());
+}
+
+void CodeGenPGO::createFuncNameVar(llvm::GlobalValue::LinkageTypes Linkage) {
+  // We generally want to match the function's linkage, but available_externally
+  // and extern_weak both have the wrong semantics, and anything that doesn't
+  // need to link across compilation units doesn't need to be visible at all.
+  if (Linkage == llvm::GlobalValue::ExternalWeakLinkage)
+    Linkage = llvm::GlobalValue::LinkOnceAnyLinkage;
+  else if (Linkage == llvm::GlobalValue::AvailableExternallyLinkage)
+    Linkage = llvm::GlobalValue::LinkOnceODRLinkage;
+  else if (Linkage == llvm::GlobalValue::InternalLinkage ||
+           Linkage == llvm::GlobalValue::ExternalLinkage)
+    Linkage = llvm::GlobalValue::PrivateLinkage;
+
+  auto *Value =
+      llvm::ConstantDataArray::getString(CGM.getLLVMContext(), FuncName, false);
+  FuncNameVar =
+      new llvm::GlobalVariable(CGM.getModule(), Value->getType(), true, Linkage,
+                               Value, llvm::getInstrProfNameVarPrefix() + FuncName);
+
+  // Hide the symbol so that we correctly get a copy for each executable.
+  if (!llvm::GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+    FuncNameVar->setVisibility(llvm::GlobalValue::HiddenVisibility);
 }
 
 namespace {
@@ -605,24 +643,27 @@ uint64_t PGOHash::finalize() {
   return endian::read<uint64_t, little, unaligned>(Result);
 }
 
-void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
-  const Decl *D = GD.getDecl();
+void CodeGenPGO::checkGlobalDecl(GlobalDecl GD) {
+  // Make sure we only emit coverage mapping for one constructor/destructor.
+  // Clang emits several functions for the constructor and the destructor of
+  // a class. Every function is instrumented, but we only want to provide
+  // coverage for one of them. Because of that we only emit the coverage mapping
+  // for the base constructor/destructor.
+  if ((isa<CXXConstructorDecl>(GD.getDecl()) &&
+       GD.getCtorType() != Ctor_Base) ||
+      (isa<CXXDestructorDecl>(GD.getDecl()) &&
+       GD.getDtorType() != Dtor_Base)) {
+    SkipCoverageMapping = true;
+  }
+}
+
+void CodeGenPGO::assignRegionCounters(const Decl *D, llvm::Function *Fn) {
   bool InstrumentRegions = CGM.getCodeGenOpts().ProfileInstrGenerate;
   llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
   if (!InstrumentRegions && !PGOReader)
     return;
   if (D->isImplicit())
     return;
-  // Constructors and destructors may be represented by several functions in IR.
-  // If so, instrument only base variant, others are implemented by delegation
-  // to the base one, it would be counted twice otherwise.
-  if (CGM.getTarget().getCXXABI().hasConstructorVariants() &&
-      ((isa<CXXConstructorDecl>(GD.getDecl()) &&
-        GD.getCtorType() != Ctor_Base) ||
-       (isa<CXXDestructorDecl>(GD.getDecl()) &&
-        GD.getDtorType() != Dtor_Base))) {
-      return;
-  }
   CGM.ClearUnusedCoverageMapping(D);
   setFuncName(Fn);
 
@@ -699,7 +740,7 @@ CodeGenPGO::emitEmptyCounterMapping(const Decl *D, StringRef Name,
 
   setFuncName(Name, Linkage);
   CGM.getCoverageMapping()->addFunctionMappingRecord(
-      FuncNameVar, FuncName, FunctionHash, CoverageMapping, false);
+      FuncNameVar, FuncName, FunctionHash, CoverageMapping);
 }
 
 void CodeGenPGO::computeRegionCounts(const Decl *D) {
@@ -721,14 +762,24 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   if (!haveRegionCounts())
     return;
 
+  uint64_t MaxFunctionCount = PGOReader->getMaximumFunctionCount();
   uint64_t FunctionCount = getRegionCount(nullptr);
+  if (FunctionCount >= (uint64_t)(0.3 * (double)MaxFunctionCount))
+    // Turn on InlineHint attribute for hot functions.
+    // FIXME: 30% is from preliminary tuning on SPEC, it may not be optimal.
+    Fn->addFnAttr(llvm::Attribute::InlineHint);
+  else if (FunctionCount <= (uint64_t)(0.01 * (double)MaxFunctionCount))
+    // Turn on Cold attribute for cold functions.
+    // FIXME: 1% is from preliminary tuning on SPEC, it may not be optimal.
+    Fn->addFnAttr(llvm::Attribute::Cold);
+
   Fn->setEntryCount(FunctionCount);
 }
 
 void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
   if (!CGM.getCodeGenOpts().ProfileInstrGenerate || !RegionCounterMap)
     return;
-  if (!Builder.GetInsertBlock())
+  if (!Builder.GetInsertPoint())
     return;
 
   unsigned Counter = (*RegionCounterMap)[S];

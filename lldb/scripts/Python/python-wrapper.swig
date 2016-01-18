@@ -26,6 +26,207 @@ private:
     bool m_print;
 };
 
+static PyObject*
+ResolvePythonName(const char* name,
+                  PyObject* pmodule)
+{
+    if (!name)
+        return pmodule;
+
+    PyErr_Cleaner pyerr_cleanup(true);  // show Python errors
+
+    PyObject* main_dict;
+
+    if (!pmodule)
+    {
+        pmodule = PyImport_AddModule ("__main__");
+        if (!pmodule)
+            return NULL;
+    }
+
+    if (PyType_Check(pmodule))
+    {
+        main_dict = ((PyTypeObject*)pmodule)->tp_dict;
+        if (!main_dict)
+            return NULL;
+    }
+    else if (!PyDict_Check(pmodule))
+    {
+        main_dict = PyModule_GetDict (pmodule);
+        if (!main_dict)
+            return NULL;
+    }
+    else
+        main_dict = pmodule;
+
+    const char* dot_pos = ::strchr(name, '.');
+
+    PyObject *dest_object;
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+
+    if (!dot_pos)
+    {
+        dest_object = NULL;
+        while (PyDict_Next (main_dict, &pos, &key, &value))
+        {
+            // We have stolen references to the key and value objects in the dictionary; we need to increment
+            // them now so that Python's garbage collector doesn't collect them out from under us.
+            Py_INCREF (key);
+            Py_INCREF (value);
+            if (strcmp (PyString_AsString (key), name) == 0)
+            {
+                dest_object = value;
+                break;
+            }
+        }
+        if (!dest_object || dest_object == Py_None)
+            return NULL;
+        return dest_object;
+    }
+    else
+    {
+        size_t len = dot_pos - name;
+        std::string piece(name,len);
+        pmodule = ResolvePythonName(piece.c_str(), main_dict);
+        if (!pmodule)
+            return NULL;
+        return ResolvePythonName(dot_pos+1,pmodule); // tail recursion.. should be optimized by the compiler
+    }
+}
+
+static PyObject*
+FindSessionDictionary(const char *session_dictionary_name)
+{
+    return ResolvePythonName(session_dictionary_name, NULL);
+}
+
+class PyCallable
+{
+public:
+    struct argc {
+        size_t num_args;
+        bool varargs : 1;
+        bool kwargs : 1;
+    };
+
+    argc
+    GetNumArguments ()
+    {
+        PyObject *py_func_obj = NULL;
+        if (m_callable)
+        {
+            if (PyMethod_Check(m_callable))
+                py_func_obj = PyMethod_GET_FUNCTION(m_callable);
+            else
+                py_func_obj = m_callable;
+        }
+
+        if (py_func_obj)
+        {
+            PyCodeObject* code = (PyCodeObject*)PyFunction_GET_CODE(py_func_obj);
+            if (code)
+            {
+                size_t args = code->co_argcount;
+                bool va=false,kw=false;
+                if ((code->co_flags & 4) == 4)
+                    va = true;
+                if ((code->co_flags & 8) == 8)
+                    kw = true;
+                return {args,va,kw};
+            }
+        }
+        return {SIZE_MAX,false,false};
+    }
+
+    operator
+    bool ()
+    {
+        return m_callable != NULL;
+    }
+
+    template<typename ...Args>
+    PyObject*
+    operator () (Args... args)
+    {
+        return (*this)({SBTypeToSWIGWrapper(args)...});
+    }
+
+    PyObject*
+    operator () (std::initializer_list<PyObject*> args)
+    {
+        PyObject* retval = NULL;
+        PyObject* pargs = PyTuple_New (args.size());
+        if (pargs == NULL)
+        {
+            if (PyErr_Occurred())
+                PyErr_Clear();
+            return retval;
+        }
+        size_t idx = 0;
+        for (auto arg : args)
+        {
+            if (!arg)
+                return retval;
+            Py_INCREF(arg); // _SetItem steals a reference
+            PyTuple_SetItem(pargs,idx,arg);
+            idx++;
+        }
+        retval = PyObject_CallObject (m_callable, pargs);
+        Py_XDECREF (pargs);
+        return retval;
+    }
+
+    static PyCallable
+    FindWithPythonObject (PyObject* pfunc)
+    {
+        return PyCallable(pfunc);
+    }
+
+    static PyCallable
+    FindWithFunctionName (const char *python_function_name,
+                          const char *session_dictionary_name)
+    {
+        if (!python_function_name || !session_dictionary_name)
+            return PyCallable();
+        if ( (python_function_name[0] == 0) || (session_dictionary_name[0] == 0) )
+            return PyCallable();
+        return FindWithFunctionName(python_function_name,FindSessionDictionary (session_dictionary_name));
+    }
+
+    static PyCallable
+    FindWithFunctionName (const char *python_function_name,
+                          PyObject *session_dict)
+    {
+        if (!python_function_name || !session_dict)
+            return PyCallable();
+        if ( (python_function_name[0] == 0))
+            return PyCallable();
+        return PyCallable(ResolvePythonName (python_function_name, session_dict));
+    }
+
+    static PyCallable
+    FindWithMemberFunction (PyObject *self,
+                            const char *python_function_name)
+    {
+        if (self == NULL || self == Py_None)
+            return PyCallable();
+        if (!python_function_name || (python_function_name[0] == 0))
+            return PyCallable();
+        return PyCallable(PyObject_GetAttrString(self, python_function_name));
+    }
+
+private:
+    PyObject* m_callable;
+
+    PyCallable (PyObject *callable = NULL) :
+    m_callable(callable)
+    {
+        if (m_callable && PyCallable_Check(m_callable) == false)
+            m_callable = NULL;
+    }
+};
+
 %}
 
 %wrapper %{
@@ -48,25 +249,30 @@ LLDBSwigPythonBreakpointCallbackFunction
     const lldb::BreakpointLocationSP& bp_loc_sp
 )
 {
-    using namespace lldb_private;
     lldb::SBFrame sb_frame (frame_sp);
     lldb::SBBreakpointLocation sb_bp_loc(bp_loc_sp);
 
     bool stop_at_breakpoint = true;
 
-    PyErr_Cleaner py_err_cleaner(true);
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    if (!pfunc.IsAllocated())
-        return stop_at_breakpoint;
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
 
-    PythonObject frame_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_frame));
-    PythonObject bp_loc_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_bp_loc));
-    PythonObject result = pfunc(frame_arg, bp_loc_arg, dict);
+        if (!pfunc)
+            return stop_at_breakpoint;
 
-    if (result.get() == Py_False)
-        stop_at_breakpoint = false;
+        PyObject* session_dict = NULL;
+        PyObject* pvalue = NULL;
+        pvalue = pfunc(sb_frame, sb_bp_loc, session_dict = FindSessionDictionary(session_dictionary_name));
+
+        Py_XINCREF (session_dict);
+
+        if (pvalue == Py_False)
+            stop_at_breakpoint = false;
+
+        Py_XDECREF (pvalue);
+    }
 
     return stop_at_breakpoint;
 }
@@ -83,28 +289,59 @@ LLDBSwigPythonWatchpointCallbackFunction
     const lldb::WatchpointSP& wp_sp
 )
 {
-    using namespace lldb_private;
     lldb::SBFrame sb_frame (frame_sp);
     lldb::SBWatchpoint sb_wp(wp_sp);
 
     bool stop_at_watchpoint = true;
 
-    PyErr_Cleaner py_err_cleaner(true);
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
 
-    if (!pfunc.IsAllocated())
-        return stop_at_watchpoint;
+        if (!pfunc)
+            return stop_at_watchpoint;
 
-    PythonObject frame_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_frame));
-    PythonObject wp_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_wp));
-    PythonObject result = pfunc(frame_arg, wp_arg, dict);
+        PyObject* session_dict = NULL;
+        PyObject* pvalue = NULL;
+        pvalue = pfunc(sb_frame, sb_wp, session_dict = FindSessionDictionary(session_dictionary_name));
 
-    if (result.get() == Py_False)
-        stop_at_watchpoint = false;
+        Py_XINCREF (session_dict);
+
+        if (pvalue == Py_False)
+            stop_at_watchpoint = false;
+
+        Py_XDECREF (pvalue);
+    }
 
     return stop_at_watchpoint;
+}
+
+bool
+PyObjectToString (PyObject* object,
+                  std::string& retval)
+{
+    retval.clear();
+    bool was_ok = false;
+    if (object != NULL && object != Py_None)
+    {
+        if (PyString_Check(object))
+        {
+            retval.assign(PyString_AsString(object));
+            was_ok = true;
+        }
+        else
+        {
+            PyObject* value_as_string = PyObject_Str(object);
+            if (value_as_string && value_as_string != Py_None && PyString_Check(value_as_string))
+            {
+                retval.assign(PyString_AsString(value_as_string));
+                was_ok = true;
+            }
+            Py_XDECREF(value_as_string);
+        }
+    }
+    return was_ok;
 }
 
 SWIGEXPORT bool
@@ -118,7 +355,6 @@ LLDBSwigPythonCallTypeScript
     std::string& retval
 )
 {
-    using namespace lldb_private;
     lldb::SBValue sb_value (valobj_sp);
     lldb::SBTypeSummaryOptions sb_options(options_sp.get());
 
@@ -127,7 +363,7 @@ LLDBSwigPythonCallTypeScript
     if (!python_function_name || !session_dictionary)
         return false;
 
-    PyObject *pfunc_impl = nullptr;
+    PyObject *session_dict = (PyObject*)session_dictionary, *pfunc_impl = NULL, *pvalue = NULL;
 
     if (pyfunct_wrapper && *pyfunct_wrapper && PyFunction_Check (*pyfunct_wrapper))
     {
@@ -139,41 +375,40 @@ LLDBSwigPythonCallTypeScript
         }
     }
 
-    PyObject *py_dict = (PyObject*)session_dictionary;
-    if (!PythonDictionary::Check(py_dict))
-        return true;
-
-    PythonDictionary dict(PyRefType::Borrowed, py_dict);
-
-    PyErr_Cleaner pyerr_cleanup(true);  // show Python errors
-
-    PythonCallable pfunc(PyRefType::Borrowed, pfunc_impl);
-
-    if (!pfunc.IsAllocated())
+    if (PyDict_Check(session_dict))
     {
-        pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
-        if (!pfunc.IsAllocated())
+        PyErr_Cleaner pyerr_cleanup(true);  // show Python errors
+
+        if (!pfunc_impl)
+        {
+            pfunc_impl = ResolvePythonName (python_function_name, session_dict);
+            if (!pfunc_impl || !PyCallable_Check (pfunc_impl))
+                return false;
+            else
+            {
+                if (pyfunct_wrapper)
+                    *pyfunct_wrapper = pfunc_impl;
+            }
+        }
+
+        PyCallable pfunc = PyCallable::FindWithPythonObject(pfunc_impl);
+
+        if (!pfunc)
             return false;
 
-        if (pyfunct_wrapper)
-        {
-            *pyfunct_wrapper = pfunc.get();
-            Py_XINCREF(pfunc.get());
-        }
+        // if the third argument is supported, or varargs are allowed
+        PyCallable::argc argc = pfunc.GetNumArguments();
+        if (argc.num_args == 3 || argc.varargs == true)
+            pvalue = pfunc(sb_value,session_dict,sb_options);
+        else
+            pvalue = pfunc(sb_value,session_dict);
+
+        Py_INCREF (session_dict);
+
+        PyObjectToString(pvalue,retval);
+
+        Py_XDECREF (pvalue);
     }
-
-    PythonObject result;
-    auto argc = pfunc.GetNumArguments();
-    // if the third argument is supported, or varargs are allowed
-    PythonObject value_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_value));
-    PythonObject options_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_options));
-    if (argc.count == 3 || argc.has_varargs)
-        result = pfunc(value_arg,dict,options_arg);
-    else
-        result = pfunc(value_arg,dict);
-
-    retval = result.Str().GetString().str();
-
     return true;
 }
 
@@ -185,34 +420,43 @@ LLDBSwigPythonCreateSyntheticProvider
     const lldb::ValueObjectSP& valobj_sp
 )
 {
-    using namespace lldb_private;
+    PyObject* retval = NULL;
 
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
-        Py_RETURN_NONE;
-
-    PyErr_Cleaner py_err_cleaner(true);
-
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name,dict);
-
-    if (!pfunc.IsAllocated())
         Py_RETURN_NONE;
 
     // I do not want the SBValue to be deallocated when going out of scope because python
     // has ownership of it and will manage memory for this object by itself
     lldb::SBValue *sb_value = new lldb::SBValue(valobj_sp);
     sb_value->SetPreferSyntheticValue(false);
+    PyObject *ValObj_PyObj = SBTypeToSWIGWrapper(sb_value);
 
-    PythonObject val_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_value));
-    if (!val_arg.IsAllocated())
+    if (ValObj_PyObj == NULL)
         Py_RETURN_NONE;
 
-    PythonObject result = pfunc(val_arg, dict);
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    if (result.IsAllocated())
-        return result.release();
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_class_name,session_dictionary_name);
 
-    Py_RETURN_NONE;
+        if (!pfunc)
+            return retval;
+
+        Py_INCREF(ValObj_PyObj);
+
+        PyObject* session_dict = NULL;
+        session_dict = FindSessionDictionary(session_dictionary_name);
+        retval = pfunc(sb_value, session_dict);
+
+        Py_XINCREF (session_dict);
+
+        Py_XINCREF(retval);
+    }
+
+    if (retval)
+        return retval;
+    else
+        Py_RETURN_NONE;
 }
 
 SWIGEXPORT void*
@@ -223,26 +467,34 @@ LLDBSwigPythonCreateCommandObject
     const lldb::DebuggerSP debugger_sp
 )
 {
-    using namespace lldb_private;
+    PyObject* retval = NULL;
 
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
-    PyErr_Cleaner py_err_cleaner(true);
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
-
-    if (!pfunc.IsAllocated())
-        return nullptr;
-
     lldb::SBDebugger debugger_sb(debugger_sp);
-    PythonObject debugger_arg(PyRefType::Owned, SBTypeToSWIGWrapper(debugger_sb));
-    PythonObject result = pfunc(debugger_arg, dict);
 
-    if (result.IsAllocated())
-        return result.release();
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    Py_RETURN_NONE;
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_class_name,session_dictionary_name);
+
+        if (!pfunc)
+            return retval;
+
+        PyObject* session_dict = NULL;
+        session_dict = FindSessionDictionary(session_dictionary_name);
+        retval = pfunc(debugger_sb, session_dict);
+
+        Py_XINCREF (session_dict);
+
+        Py_XINCREF(retval);
+    }
+
+    if (retval)
+        return retval;
+    else
+        Py_RETURN_NONE;
 }
 
 SWIGEXPORT void*
@@ -253,7 +505,7 @@ LLDBSwigPythonCreateScriptedThreadPlan
     const lldb::ThreadPlanSP& thread_plan_sp
 )
 {
-    using namespace lldb_private;
+    PyObject* retval = NULL;
 
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
@@ -262,26 +514,37 @@ LLDBSwigPythonCreateScriptedThreadPlan
     // has ownership of it and will manage memory for this object by itself
     lldb::SBThreadPlan *tp_value = new lldb::SBThreadPlan(thread_plan_sp);
 
-    PyErr_Cleaner py_err_cleaner(true);
+    PyObject *ThreadPlan_PyObj = SBTypeToSWIGWrapper(tp_value);
 
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
-
-    if (!pfunc.IsAllocated())
-        return nullptr;
-
-    PythonObject tp_arg(PyRefType::Owned, SBTypeToSWIGWrapper(tp_value));
-
-    if (!tp_arg.IsAllocated())
+    if (ThreadPlan_PyObj == NULL)
         Py_RETURN_NONE;
 
-    PythonObject result = pfunc(tp_arg, dict);
-    // FIXME: At this point we should check that the class we found supports all the methods
-    // that we need.
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    if (result.IsAllocated())
-        return result.release();
-    Py_RETURN_NONE;
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_class_name, session_dictionary_name);
+
+        if (!pfunc)
+            return retval;
+
+        Py_INCREF(ThreadPlan_PyObj);
+
+        PyObject* session_dict = NULL;
+        session_dict = FindSessionDictionary(session_dictionary_name);
+        retval = pfunc(tp_value, session_dict);
+
+        // FIXME: At this point we should check that the class we found supports all the methods
+        // that we need.
+
+        Py_XINCREF (session_dict);
+
+        Py_XINCREF(retval);
+    }
+
+    if (retval)
+        return retval;
+    else
+        Py_RETURN_NONE;
 }
 
 SWIGEXPORT bool
@@ -293,64 +556,74 @@ LLDBSWIGPythonCallThreadPlan
     bool &got_error
 )
 {
-    using namespace lldb_private;
-
+    bool ret_val = false;
     got_error = false;
 
+
     PyErr_Cleaner py_err_cleaner(false);
-    PythonObject self(PyRefType::Borrowed, static_cast<PyObject*>(implementor));
-    auto pfunc = self.ResolveName<PythonCallable>(method_name);
 
-    if (!pfunc.IsAllocated())
-        return false;
+    PyCallable pfunc = PyCallable::FindWithMemberFunction((PyObject *) implementor, method_name);
 
-    PythonObject result;
-    if (event != nullptr)
+    if (!pfunc)
+    {
+        return ret_val;
+    }
+
+    PyObject* py_return = Py_None;
+
+    if (event != NULL)
     {
         lldb::SBEvent sb_event(event);
-        PythonObject event_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_event));
-        result = pfunc(event_arg);
+
+        PyObject *py_obj_event = SBTypeToSWIGWrapper(sb_event);
+
+        py_return = pfunc(py_obj_event);
     }
     else
-        result = pfunc();
+    {
+        py_return = pfunc();
+    }
 
     if (PyErr_Occurred())
     {
         got_error = true;
         printf ("Return value was neither false nor true for call to %s.\n", method_name);
         PyErr_Print();
-        return false;
+    }
+    else
+    {
+        if (py_return == Py_True)
+            ret_val = true;
+        else if (py_return == Py_False)
+            ret_val = false;
+        else
+        {
+            // Somebody returned the wrong thing...
+            got_error = true;
+            printf ("Wrong return value type for call to %s.\n", method_name);
+        }
     }
 
-    if (result.get() == Py_True)
-        return true;
-    else if (result.get() == Py_False)
-        return false;
+    Py_XDECREF(py_return);
 
-    // Somebody returned the wrong thing...
-    got_error = true;
-    printf ("Wrong return value type for call to %s.\n", method_name);
-    return false;
+    return ret_val;
 }
 
 // wrapper that calls an optional instance member of an object taking no arguments
 static PyObject*
 LLDBSwigPython_CallOptionalMember
 (
-    PyObject* implementor,
+    PyObject* self,
     char* callee_name,
     PyObject* ret_if_not_found = Py_None,
     bool* was_found = NULL
 )
 {
-    using namespace lldb_private;
-
     PyErr_Cleaner py_err_cleaner(false);
 
-    PythonObject self(PyRefType::Borrowed, static_cast<PyObject*>(implementor));
-    auto pfunc = self.ResolveName<PythonCallable>(callee_name);
+    PyCallable pfunc = PyCallable::FindWithMemberFunction(self,callee_name);
 
-    if (!pfunc.IsAllocated())
+    if (!pfunc)
     {
         if (was_found)
             *was_found = false;
@@ -361,8 +634,8 @@ LLDBSwigPython_CallOptionalMember
     if (was_found)
         *was_found = true;
 
-    PythonObject result = pfunc();
-    return result.release();
+    PyObject* py_return = pfunc();
+    return py_return;
 }
 
 SWIGEXPORT size_t
@@ -372,29 +645,47 @@ LLDBSwigPython_CalculateNumChildren
     uint32_t max
 )
 {
-    using namespace lldb_private;
+    size_t ret_val = 0;
+    bool int_match = false;
 
-    PythonObject self(PyRefType::Borrowed, implementor);
-    auto pfunc = self.ResolveName<PythonCallable>("num_children");
+    PyCallable pfunc = PyCallable::FindWithMemberFunction(implementor, "num_children");
 
-    if (!pfunc.IsAllocated())
-        return 0;
+    if (!pfunc)
+        return ret_val;
 
-    PythonObject result;
+    PyObject* py_return = NULL;
     auto argc = pfunc.GetNumArguments();
-    if (argc.count == 1)
-        result = pfunc();
-    else if (argc.count == 2)
-        result = pfunc(PythonInteger(max));
+    if (argc.num_args == 1)
+        py_return = pfunc();
+    else if (argc.num_args == 2)
+        py_return = pfunc(max);
 
-    if (!result.IsAllocated())
-        return 0;
+    if (!py_return)
+        return ret_val;
 
-    PythonInteger int_result = result.AsType<PythonInteger>();
-    if (!int_result.IsAllocated())
-        return 0;
+    // PyInt_* are not available for Python 3 and above.
+#if PY_MAJOR_VERSION < 3
+    if (PyInt_Check (py_return))
+    {
+        int_match = true;
+        ret_val = static_cast<size_t> (PyInt_AsLong (py_return));
+    }
+#endif
 
-    size_t ret_val = int_result.GetInteger();
+    // We want to check for PyLong only if the return value did not
+    // match PyInt. This is because we do not want to call PyLong_Check if
+    // PyInt_Check returns true but PyInt_AsLong generates an error.
+    if (!int_match && PyLong_Check (py_return))
+    {
+#if PY_MAJOR_VERSION < 3
+        ret_val = static_cast<size_t> (PyLong_AsUnsignedLong (py_return));
+#else
+        // PyLong_AsSize_t is available only for Python 3 and above.
+        ret_val = PyLong_AsSize_t (py_return);
+#endif
+    }
+
+    Py_XDECREF(py_return);
 
     if (PyErr_Occurred())
     {
@@ -402,8 +693,8 @@ LLDBSwigPython_CalculateNumChildren
         PyErr_Clear();
     }
 
-    if (argc.count == 1)
-        ret_val = std::min(ret_val, static_cast<size_t>(max));
+    if (argc.num_args == 1 && ret_val > max)
+        ret_val = max;
 
     return ret_val;
 }
@@ -415,28 +706,34 @@ LLDBSwigPython_GetChildAtIndex
     uint32_t idx
 )
 {
-    using namespace lldb_private;
     PyErr_Cleaner py_err_cleaner(true);
 
-    PythonObject self(PyRefType::Borrowed, implementor);
-    auto pfunc = self.ResolveName<PythonCallable>("get_child_at_index");
+    PyCallable pfunc = PyCallable::FindWithMemberFunction(implementor,"get_child_at_index");
 
-    if (!pfunc.IsAllocated())
-        return nullptr;
+    if (!pfunc)
+        return NULL;
 
-    PythonObject result = pfunc(PythonInteger(idx));
+    PyObject *py_return = NULL;
+    py_return = pfunc(idx);
 
-    if (!result.IsAllocated())
-        return nullptr;
+    if (py_return == NULL || py_return == Py_None)
+    {
+        Py_XDECREF(py_return);
+        return NULL;
+    }
 
-    lldb::SBValue* sbvalue_ptr = nullptr;
-    if (SWIG_ConvertPtr(result.get(), (void**)&sbvalue_ptr, SWIGTYPE_p_lldb__SBValue, 0) == -1)
-        return nullptr;
+    lldb::SBValue* sbvalue_ptr = NULL;
 
-    if (sbvalue_ptr == nullptr)
-        return nullptr;
+    if (SWIG_ConvertPtr(py_return, (void**)&sbvalue_ptr, SWIGTYPE_p_lldb__SBValue, 0) == -1)
+    {
+        Py_XDECREF(py_return);
+        return NULL;
+    }
 
-    return result.release();
+    if (sbvalue_ptr == NULL)
+        return NULL;
+
+    return py_return;
 }
 
 SWIGEXPORT int
@@ -446,25 +743,25 @@ LLDBSwigPython_GetIndexOfChildWithName
     const char* child_name
 )
 {
-    using namespace lldb_private;
     PyErr_Cleaner py_err_cleaner(true);
 
-    PythonObject self(PyRefType::Borrowed, implementor);
-    auto pfunc = self.ResolveName<PythonCallable>("get_child_index");
+    PyCallable pfunc = PyCallable::FindWithMemberFunction(implementor,"get_child_index");
 
-    if (!pfunc.IsAllocated())
+    if (!pfunc)
         return UINT32_MAX;
 
-    PythonObject result = pfunc(PythonString(child_name));
+    PyObject *py_return = NULL;
+    py_return = pfunc(child_name);
 
-    if (!result.IsAllocated())
+    if (py_return == NULL || py_return == Py_None)
+    {
+        Py_XDECREF(py_return);
         return UINT32_MAX;
+    }
 
-    PythonInteger int_result = result.AsType<PythonInteger>();
-    if (!int_result.IsAllocated())
-        return UINT32_MAX;
+    long retval = PyInt_AsLong(py_return);
+    Py_XDECREF(py_return);
 
-    int64_t retval = int_result.GetInteger();
     if (retval >= 0)
         return (uint32_t)retval;
 
@@ -590,32 +887,39 @@ LLDBSwigPythonCallCommand
     lldb::ExecutionContextRefSP exe_ctx_ref_sp
 )
 {
-    using namespace lldb_private;
+
     lldb::SBCommandReturnObject cmd_retobj_sb(&cmd_retobj);
     SBCommandReturnObjectReleaser cmd_retobj_sb_releaser(cmd_retobj_sb);
     lldb::SBDebugger debugger_sb(debugger);
     lldb::SBExecutionContext exe_ctx_sb(exe_ctx_ref_sp);
 
-    PyErr_Cleaner py_err_cleaner(true);
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
+    bool retval = false;
 
-    if (!pfunc.IsAllocated())
-        return false;
+    {
+        PyErr_Cleaner py_err_cleaner(true);
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
 
-    // pass the pointer-to cmd_retobj_sb or watch the underlying object disappear from under you
-    // see comment above for SBCommandReturnObjectReleaser for further details
-    auto argc = pfunc.GetNumArguments();
-    PythonObject debugger_arg(PyRefType::Owned, SBTypeToSWIGWrapper(debugger_sb));
-    PythonObject exe_ctx_arg(PyRefType::Owned, SBTypeToSWIGWrapper(exe_ctx_sb));
-    PythonObject cmd_retobj_arg(PyRefType::Owned, SBTypeToSWIGWrapper(&cmd_retobj_sb));
+        if (!pfunc)
+            return retval;
 
-    if (argc.count == 5 || argc.has_varargs)
-        pfunc(debugger_arg, PythonString(args), exe_ctx_arg, cmd_retobj_arg, dict);
-    else
-        pfunc(debugger_arg, PythonString(args), cmd_retobj_arg, dict);
+        PyObject* session_dict = NULL;
+        // pass the pointer-to cmd_retobj_sb or watch the underlying object disappear from under you
+        // see comment above for SBCommandReturnObjectReleaser for further details
+        PyObject* pvalue = NULL;
 
-    return true;
+        PyCallable::argc argc = pfunc.GetNumArguments();
+        if (argc.num_args == 5 || argc.varargs == true)
+            pvalue = pfunc(debugger_sb, args, exe_ctx_sb, &cmd_retobj_sb, session_dict = FindSessionDictionary(session_dictionary_name));
+        else
+            pvalue = pfunc(debugger_sb, args, &cmd_retobj_sb, session_dict = FindSessionDictionary(session_dictionary_name));
+
+        Py_XINCREF (session_dict);
+        Py_XDECREF (pvalue);
+
+        retval = true;
+    }
+
+    return retval;
 }
 
 SWIGEXPORT bool
@@ -628,7 +932,7 @@ LLDBSwigPythonCallCommandObject
     lldb::ExecutionContextRefSP exe_ctx_ref_sp
 )
 {
-    using namespace lldb_private;
+
     lldb::SBCommandReturnObject cmd_retobj_sb(&cmd_retobj);
     SBCommandReturnObjectReleaser cmd_retobj_sb_releaser(cmd_retobj_sb);
     lldb::SBDebugger debugger_sb(debugger);
@@ -636,19 +940,18 @@ LLDBSwigPythonCallCommandObject
 
     PyErr_Cleaner py_err_cleaner(true);
 
-    PythonObject self(PyRefType::Borrowed, implementor);
-    auto pfunc = self.ResolveName<PythonCallable>("__call__");
+    PyCallable pfunc = PyCallable::FindWithMemberFunction(implementor,"__call__");
 
-    if (!pfunc.IsAllocated())
+    if (!pfunc)
         return false;
 
     // pass the pointer-to cmd_retobj_sb or watch the underlying object disappear from under you
     // see comment above for SBCommandReturnObjectReleaser for further details
-    PythonObject debugger_arg(PyRefType::Owned, SBTypeToSWIGWrapper(debugger_sb));
-    PythonObject exe_ctx_arg(PyRefType::Owned, SBTypeToSWIGWrapper(exe_ctx_sb));
-    PythonObject cmd_retobj_arg(PyRefType::Owned, SBTypeToSWIGWrapper(&cmd_retobj_sb));
+    PyObject* pvalue = NULL;
 
-    pfunc(debugger_arg, PythonString(args), exe_ctx_arg, cmd_retobj_arg);
+    pvalue = pfunc(debugger_sb, args, exe_ctx_sb, &cmd_retobj_sb);
+
+    Py_XDECREF (pvalue);
 
     return true;
 }
@@ -661,54 +964,67 @@ LLDBSWIGPythonCreateOSPlugin
     const lldb::ProcessSP& process_sp
 )
 {
-    using namespace lldb_private;
+    PyObject* retval = NULL;
 
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
-        Py_RETURN_NONE;
-
-    PyErr_Cleaner py_err_cleaner(true);
-
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
-
-    if (!pfunc.IsAllocated())
         Py_RETURN_NONE;
 
     // I do not want the SBProcess to be deallocated when going out of scope because python
     // has ownership of it and will manage memory for this object by itself
     lldb::SBProcess *process_sb = new lldb::SBProcess(process_sp);
-    PythonObject process_arg(PyRefType::Owned, SBTypeToSWIGWrapper(process_sb));
-    if (!process_arg.IsAllocated())
+
+    PyObject *SBProc_PyObj = SBTypeToSWIGWrapper(process_sb);
+
+    if (SBProc_PyObj == NULL)
         Py_RETURN_NONE;
 
-    auto result = pfunc(process_arg);
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    if (result.IsAllocated())
-        return result.release();
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_class_name,session_dictionary_name);
 
-    Py_RETURN_NONE;
+        if (!pfunc)
+            return retval;
+
+        Py_INCREF(SBProc_PyObj);
+
+        PyObject* session_dict = NULL;
+        session_dict = session_dict = FindSessionDictionary(session_dictionary_name);
+        retval = pfunc(SBProc_PyObj);
+
+        Py_XINCREF (session_dict);
+
+        Py_XINCREF(retval);
+    }
+
+    if (retval)
+        return retval;
+    else
+        Py_RETURN_NONE;
 }
 
 SWIGEXPORT void*
 LLDBSWIGPython_GetDynamicSetting (void* module, const char* setting, const lldb::TargetSP& target_sp)
 {
-    using namespace lldb_private;
 
     if (!module || !setting)
         Py_RETURN_NONE;
 
-    PyErr_Cleaner py_err_cleaner(true);
-    PythonObject py_module(PyRefType::Borrowed, (PyObject *)module);
-    auto pfunc = py_module.ResolveName<PythonCallable>("get_dynamic_setting");
-
-    if (!pfunc.IsAllocated())
-        Py_RETURN_NONE;
-
     lldb::SBTarget target_sb(target_sp);
-    PythonObject target_arg(PyRefType::Owned, SBTypeToSWIGWrapper(target_sb));
-    auto result = pfunc(target_arg, PythonString(setting));
 
-    return result.release();
+    PyObject *pvalue = NULL;
+
+    {
+        PyErr_Cleaner py_err_cleaner(true);
+        PyCallable pfunc = PyCallable::FindWithFunctionName("get_dynamic_setting",(PyObject *)module);
+
+        if (!pfunc)
+            Py_RETURN_NONE;
+
+        pvalue = pfunc(target_sb, setting);
+    }
+
+    return pvalue;
 }
 
 SWIGEXPORT bool
@@ -719,26 +1035,34 @@ lldb::ProcessSP& process,
 std::string& output)
 
 {
-    using namespace lldb_private;
+    bool retval = false;
 
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
-        return false;
-
-    PyErr_Cleaner py_err_cleaner(true);
-
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
-
-    if (!pfunc.IsAllocated())
-        return false;
+        return retval;
 
     lldb::SBProcess process_sb(process);
-    PythonObject process_arg(PyRefType::Owned, SBTypeToSWIGWrapper(process_sb));
-    auto result = pfunc(process_arg, dict);
 
-    output = result.Str().GetString().str();
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    return true;
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
+
+        if (!pfunc)
+            return retval;
+
+        PyObject* session_dict = NULL;
+        PyObject* pvalue = NULL;
+        pvalue = pfunc(process_sb, session_dict = FindSessionDictionary(session_dictionary_name));
+
+        Py_XINCREF (session_dict);
+
+        if (PyObjectToString(pvalue,output))
+            retval = true;
+
+        Py_XDECREF(pvalue);
+    }
+
+    return retval;
 }
 
 SWIGEXPORT bool
@@ -749,26 +1073,34 @@ lldb::ThreadSP& thread,
 std::string& output)
 
 {
-    using namespace lldb_private;
+    bool retval = false;
 
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
-        return false;
-
-    PyErr_Cleaner py_err_cleaner(true);
-
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
-
-    if (!pfunc.IsAllocated())
-        return false;
+        return retval;
 
     lldb::SBThread thread_sb(thread);
-    PythonObject thread_arg(PyRefType::Owned, SBTypeToSWIGWrapper(thread_sb));
-    auto result = pfunc(thread_arg, dict);
 
-    output = result.Str().GetString().str();
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    return true;
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
+
+        if (!pfunc)
+            return retval;
+
+        PyObject* session_dict = NULL;
+        PyObject* pvalue = NULL;
+        pvalue = pfunc(thread_sb, session_dict = FindSessionDictionary(session_dictionary_name));
+
+        Py_XINCREF (session_dict);
+
+        if (PyObjectToString(pvalue,output))
+            retval = true;
+
+        Py_XDECREF(pvalue);
+    }
+
+    return retval;
 }
 
 SWIGEXPORT bool
@@ -779,26 +1111,34 @@ lldb::TargetSP& target,
 std::string& output)
 
 {
-    using namespace lldb_private;
+    bool retval = false;
 
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
-        return false;
-
-    PyErr_Cleaner py_err_cleaner(true);
-
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name,dict);
-
-    if (!pfunc.IsAllocated())
-        return false;
+        return retval;
 
     lldb::SBTarget target_sb(target);
-    PythonObject target_arg(PyRefType::Owned, SBTypeToSWIGWrapper(target_sb));
-    auto result = pfunc(target_arg, dict);
 
-    output = result.Str().GetString().str();
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    return true;
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
+
+        if (!pfunc)
+            return retval;
+
+        PyObject* session_dict = NULL;
+        PyObject* pvalue = NULL;
+        pvalue = pfunc(target_sb, session_dict = FindSessionDictionary(session_dictionary_name));
+
+        Py_XINCREF (session_dict);
+
+        if (PyObjectToString(pvalue,output))
+            retval = true;
+
+        Py_XDECREF(pvalue);
+    }
+
+    return retval;
 }
 
 SWIGEXPORT bool
@@ -809,26 +1149,34 @@ lldb::StackFrameSP& frame,
 std::string& output)
 
 {
-    using namespace lldb_private;
+    bool retval = false;
 
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
-        return false;
-
-    PyErr_Cleaner py_err_cleaner(true);
-
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name,dict);
-
-    if (!pfunc.IsAllocated())
-        return false;
+        return retval;
 
     lldb::SBFrame frame_sb(frame);
-    PythonObject frame_arg(PyRefType::Owned, SBTypeToSWIGWrapper(frame_sb));
-    auto result = pfunc(frame_arg, dict);
 
-    output = result.Str().GetString().str();
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    return true;
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
+
+        if (!pfunc)
+            return retval;
+
+        PyObject* session_dict = NULL;
+        PyObject* pvalue = NULL;
+        pvalue = pfunc(frame_sb, session_dict = FindSessionDictionary(session_dictionary_name));
+
+        Py_XINCREF (session_dict);
+
+        if (PyObjectToString(pvalue,output))
+            retval = true;
+
+        Py_XDECREF(pvalue);
+    }
+
+    return retval;
 }
 
 SWIGEXPORT bool
@@ -839,26 +1187,34 @@ lldb::ValueObjectSP& value,
 std::string& output)
 
 {
-    using namespace lldb_private;
+    bool retval = false;
 
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
-        return false;
-
-    PyErr_Cleaner py_err_cleaner(true);
-
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
-
-    if (!pfunc.IsAllocated())
-        return false;
+        return retval;
 
     lldb::SBValue value_sb(value);
-    PythonObject value_arg(PyRefType::Owned, SBTypeToSWIGWrapper(value_sb));
-    auto result = pfunc(value_arg, dict);
 
-    output = result.Str().GetString().str();
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    return true;
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
+
+        if (!pfunc)
+            return retval;
+
+        PyObject* session_dict = NULL;
+        PyObject* pvalue = NULL;
+        pvalue = pfunc(value_sb, session_dict = FindSessionDictionary(session_dictionary_name));
+
+        Py_XINCREF (session_dict);
+
+        if (PyObjectToString(pvalue,output))
+            retval = true;
+
+        Py_XDECREF(pvalue);
+    }
+
+    return retval;
 }
 
 SWIGEXPORT bool
@@ -869,27 +1225,34 @@ LLDBSwigPythonCallModuleInit
     lldb::DebuggerSP& debugger
 )
 {
-    using namespace lldb_private;
+    bool retval = false;
+
+    lldb::SBDebugger debugger_sb(debugger);
 
     std::string python_function_name_string = python_module_name;
     python_function_name_string += ".__lldb_init_module";
     const char* python_function_name = python_function_name_string.c_str();
 
-    PyErr_Cleaner py_err_cleaner(true);
+    {
+        PyErr_Cleaner py_err_cleaner(true);
 
-    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
-    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
+        PyCallable pfunc = PyCallable::FindWithFunctionName(python_function_name,session_dictionary_name);
 
-    // This method is optional and need not exist.  So if we don't find it,
-    // it's actually a success, not a failure.
-    if (!pfunc.IsAllocated())
-        return true;
+        if (!pfunc)
+            return true;
 
-    lldb::SBDebugger debugger_sb(debugger);
-    PythonObject debugger_arg(PyRefType::Owned, SBTypeToSWIGWrapper(debugger_sb));
-    pfunc(debugger_arg, dict);
+        PyObject* session_dict = NULL;
+        PyObject* pvalue = NULL;
+        pvalue = pfunc(debugger_sb, session_dict = FindSessionDictionary(session_dictionary_name));
 
-    return true;
+        Py_XINCREF (session_dict);
+
+        retval = true;
+
+        Py_XDECREF(pvalue);
+    }
+
+    return retval;
 }
 %}
 

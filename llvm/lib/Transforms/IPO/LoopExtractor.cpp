@@ -38,18 +38,17 @@ namespace {
     static char ID; // Pass identification, replacement for typeid
     unsigned NumLoops;
 
-    explicit LoopExtractor(unsigned numLoops = ~0)
+    explicit LoopExtractor(unsigned numLoops = ~0) 
       : LoopPass(ID), NumLoops(numLoops) {
         initializeLoopExtractorPass(*PassRegistry::getPassRegistry());
       }
 
-    bool runOnLoop(Loop *L, LPPassManager &) override;
+    bool runOnLoop(Loop *L, LPPassManager &LPM) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequiredID(BreakCriticalEdgesID);
       AU.addRequiredID(LoopSimplifyID);
       AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<LoopInfoWrapperPass>();
     }
   };
 }
@@ -80,7 +79,7 @@ INITIALIZE_PASS(SingleLoopExtractor, "loop-extract-single",
 //
 Pass *llvm::createLoopExtractorPass() { return new LoopExtractor(); }
 
-bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &) {
+bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (skipOptnoneFunction(L))
     return false;
 
@@ -93,7 +92,6 @@ bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &) {
     return false;
 
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   bool Changed = false;
 
   // If there is more than one top-level loop in this function, extract all of
@@ -143,7 +141,7 @@ bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &) {
       Changed = true;
       // After extraction, the loop is replaced by a function call, so
       // we shouldn't try to run any more loop passes on it.
-      LI.markAsRemoved(L);
+      LPM.deleteLoopFromQueue(L);
     }
     ++NumExtracted;
   }

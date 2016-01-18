@@ -78,7 +78,6 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
     } else if (Rec->isSubClassOf("Operand")) {
       PrintMethod = Rec->getValueAsString("PrintMethod");
       OperandType = Rec->getValueAsString("OperandType");
-      OperandNamespace = Rec->getValueAsString("OperandNamespace");
       // If there is an explicit encoder method, use it.
       EncoderMethod = Rec->getValueAsString("EncoderMethod");
       MIOpInfo = Rec->getValueAsDag("MIOperandInfo");

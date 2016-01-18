@@ -98,8 +98,7 @@ class ExitDuringStepTestCase(TestBase):
         stepping_thread = None
         for thread in process:
             expected_bp_desc = "breakpoint %s." % self.bp_num
-            stop_desc = thread.GetStopDescription(100)
-            if stop_desc and (expected_bp_desc in stop_desc):
+            if expected_bp_desc in thread.GetStopDescription(100):
                 stepping_thread = thread
                 break
         self.assertTrue(stepping_thread != None, "unable to find thread stopped at %s" % expected_bp_desc)

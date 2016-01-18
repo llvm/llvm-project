@@ -10,7 +10,6 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "dsymutil.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,7 +53,7 @@ private:
   /// Owns the MemoryBuffer for the currently handled object file.
   BinaryHolder CurrentObjectHolder;
   /// Map of the currently processed object file symbol addresses.
-  StringMap<Optional<uint64_t>> CurrentObjectAddresses;
+  StringMap<uint64_t> CurrentObjectAddresses;
   /// Element of the debug map corresponfing to the current object file.
   DebugMapObject *CurrentDebugMapObject;
 
@@ -389,9 +388,7 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   if (ObjectSymIt == CurrentObjectAddresses.end())
     return Warning("could not find object file symbol for symbol " +
                    Twine(Name));
-  if (!ObjectSymIt->getValue())
-    return;
-  if (!CurrentDebugMapObject->addSymbol(Name, *ObjectSymIt->getValue(), Value,
+  if (!CurrentDebugMapObject->addSymbol(Name, ObjectSymIt->getValue(), Value,
                                         Size))
     return Warning(Twine("failed to insert symbol '") + Name +
                    "' in the debug map.");
@@ -407,15 +404,7 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
     ErrorOr<StringRef> Name = Sym.getName();
     if (!Name)
       continue;
-    // Objective-C on i386 uses artificial absolute symbols to
-    // perform some link time checks. Those symbols have a fixed 0
-    // address that might conflict with real symbols in the object
-    // file. As I cannot see a way for absolute symbols to find
-    // their way into the debug information, let's just ignore those.
-    if (Sym.getFlags() & SymbolRef::SF_Absolute)
-      CurrentObjectAddresses[*Name] = None;
-    else
-      CurrentObjectAddresses[*Name] = Addr;
+    CurrentObjectAddresses[*Name] = Addr;
   }
 }
 

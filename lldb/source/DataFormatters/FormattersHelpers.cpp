@@ -173,10 +173,7 @@ lldb_private::formatters::ExtractValueFromObjCExpression (ValueObject &valobj,
     options.SetCoerceToId(false);
     options.SetUnwindOnError(true);
     options.SetKeepInMemory(true);
-    options.SetLanguage(lldb::eLanguageTypeObjC_plus_plus);
-    options.SetResultIsInternal(true);
-    options.SetUseDynamic(lldb::eDynamicCanRunTarget);
-
+    
     target->EvaluateExpression(expr.GetData(),
                                stack_frame,
                                result_sp,
@@ -236,12 +233,10 @@ lldb_private::formatters::CallSelectorOnObject (ValueObject &valobj,
         return valobj_sp;
     if (!selector || !*selector)
         return valobj_sp;
+    StreamString expr_path_stream;
+    valobj.GetExpressionPath(expr_path_stream, false);
     StreamString expr;
-    const char *colon = "";
-    llvm::StringRef selector_sr(selector);
-    if (selector_sr.back() != ':')
-        colon = ":";
-    expr.Printf("(%s)[(id)0x%" PRIx64 " %s%s%" PRId64 "]",return_type,valobj.GetPointerValue(),selector,colon,index);
+    expr.Printf("(%s)[%s %s:%" PRId64 "]",return_type,expr_path_stream.GetData(),selector,index);
     ExecutionContext exe_ctx (valobj.GetExecutionContextRef());
     lldb::ValueObjectSP result_sp;
     Target* target = exe_ctx.GetTargetPtr();
@@ -253,8 +248,6 @@ lldb_private::formatters::CallSelectorOnObject (ValueObject &valobj,
     options.SetCoerceToId(false);
     options.SetUnwindOnError(true);
     options.SetKeepInMemory(true);
-    options.SetLanguage(lldb::eLanguageTypeObjC_plus_plus);
-    options.SetResultIsInternal(true);
     options.SetUseDynamic(lldb::eDynamicCanRunTarget);
     
     target->EvaluateExpression(expr.GetData(),
@@ -277,12 +270,10 @@ lldb_private::formatters::CallSelectorOnObject (ValueObject &valobj,
         return valobj_sp;
     if (!key || !*key)
         return valobj_sp;
+    StreamString expr_path_stream;
+    valobj.GetExpressionPath(expr_path_stream, false);
     StreamString expr;
-    const char *colon = "";
-    llvm::StringRef selector_sr(selector);
-    if (selector_sr.back() != ':')
-        colon = ":";
-    expr.Printf("(%s)[(id)0x%" PRIx64 " %s%s%s]",return_type,valobj.GetPointerValue(),selector,colon,key);
+    expr.Printf("(%s)[%s %s:%s]",return_type,expr_path_stream.GetData(),selector,key);
     ExecutionContext exe_ctx (valobj.GetExecutionContextRef());
     lldb::ValueObjectSP result_sp;
     Target* target = exe_ctx.GetTargetPtr();
@@ -294,8 +285,6 @@ lldb_private::formatters::CallSelectorOnObject (ValueObject &valobj,
     options.SetCoerceToId(false);
     options.SetUnwindOnError(true);
     options.SetKeepInMemory(true);
-    options.SetLanguage(lldb::eLanguageTypeObjC_plus_plus);
-    options.SetResultIsInternal(true);
     options.SetUseDynamic(lldb::eDynamicCanRunTarget);
     
     target->EvaluateExpression(expr.GetData(),

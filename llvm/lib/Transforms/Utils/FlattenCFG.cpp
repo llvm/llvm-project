@@ -28,11 +28,12 @@ class FlattenCFGOpt {
   AliasAnalysis *AA;
   /// \brief Use parallel-and or parallel-or to generate conditions for
   /// conditional branches.
-  bool FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder);
+  bool FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder,
+                            Pass *P = nullptr);
   /// \brief If \param BB is the merge block of an if-region, attempt to merge
   /// the if-region with an adjacent if-region upstream if two if-regions
   /// contain identical instructions.
-  bool MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder);
+  bool MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder, Pass *P = nullptr);
   /// \brief Compare a pair of blocks: \p Block1 and \p Block2, which
   /// are from two if-regions whose entry blocks are \p Head1 and \p
   /// Head2.  \returns true if \p Block1 and \p Block2 contain identical
@@ -121,7 +122,8 @@ public:
 ///  its predecessor.  In Case 2, \param BB (BB3) only has conditional branches
 ///  as its predecessors.
 ///
-bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
+bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder,
+                                         Pass *P) {
   PHINode *PHI = dyn_cast<PHINode>(BB->begin());
   if (PHI)
     return false; // For simplicity, avoid cases containing PHI nodes.
@@ -385,7 +387,8 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Head1, BasicBlock *Head2,
 /// if (a || b)
 ///   statement;
 ///
-bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
+bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder,
+                                  Pass *P) {
   BasicBlock *IfTrue2, *IfFalse2;
   Value *IfCond2 = GetIfCondition(BB, IfTrue2, IfFalse2);
   Instruction *CInst2 = dyn_cast_or_null<Instruction>(IfCond2);

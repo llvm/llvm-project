@@ -69,9 +69,6 @@ public:
     ParseCompileUnitLineTable(const lldb_private::SymbolContext& sc) override;
 
     bool
-    ParseCompileUnitDebugMacros(const lldb_private::SymbolContext& sc) override;
-
-    bool
     ParseCompileUnitSupportFiles(const lldb_private::SymbolContext& sc,
                                  lldb_private::FileSpecList &support_files) override;
     

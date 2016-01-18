@@ -907,9 +907,7 @@ namespace clang {
       /// \brief A DecayedType record.
       TYPE_DECAYED               = 41,
       /// \brief An AdjustedType record.
-      TYPE_ADJUSTED              = 42,
-      /// \brief A PipeType record.
-      TYPE_PIPE                  = 43
+      TYPE_ADJUSTED              = 42
     };
 
     /// \brief The type IDs for special types constructed by semantic
@@ -1415,7 +1413,6 @@ namespace clang {
 
       // Microsoft
       EXPR_CXX_PROPERTY_REF_EXPR, // MSPropertyRefExpr
-      EXPR_CXX_PROPERTY_SUBSCRIPT_EXPR, // MSPropertySubscriptExpr
       EXPR_CXX_UUIDOF_EXPR,       // CXXUuidofExpr (of expr).
       EXPR_CXX_UUIDOF_TYPE,       // CXXUuidofExpr (of type).
       STMT_SEH_LEAVE,             // SEHLeaveStmt
@@ -1449,9 +1446,6 @@ namespace clang {
       STMT_OMP_TASKGROUP_DIRECTIVE,
       STMT_OMP_CANCELLATION_POINT_DIRECTIVE,
       STMT_OMP_CANCEL_DIRECTIVE,
-      STMT_OMP_TASKLOOP_DIRECTIVE,
-      STMT_OMP_TASKLOOP_SIMD_DIRECTIVE,
-      STMT_OMP_DISTRIBUTE_DIRECTIVE,
       EXPR_OMP_ARRAY_SECTION,
 
       // ARC

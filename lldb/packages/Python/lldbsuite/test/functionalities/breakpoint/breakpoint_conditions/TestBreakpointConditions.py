@@ -103,15 +103,12 @@ class BreakpointConditionsTestCase(TestBase):
         self.runCmd("breakpoint disable")
 
         self.runCmd("breakpoint set -p Loop")
-        arch = self.getArchitecture()
-        if arch in ['x86_64', 'i386']:
+        if self.getArchitecture() in ['x86_64', 'i386']:
             self.runCmd("breakpoint modify -c ($eax&&i)")
-        elif arch in ['aarch64']:
+        elif self.getArchitecture() in ['aarch64']:
             self.runCmd("breakpoint modify -c ($x1&&i)")
-        elif arch in ['arm']:
+        elif self.getArchitecture() in ['arm']:
             self.runCmd("breakpoint modify -c ($r0&&i)")
-        elif re.match("mips",arch):
-            self.runCmd("breakpoint modify -c ($r2&&i)")
         self.runCmd("run")
 
         self.expect("process status", PROCESS_STOPPED,

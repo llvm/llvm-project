@@ -26,71 +26,39 @@
 
 using namespace llvm;
 
-namespace llvm {
-  void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
-                        MCInst &MCB, HexagonAsmPrinter &AP);
-}
-
-static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
-                              HexagonAsmPrinter &Printer) {
+static MCOperand GetSymbolRef(const MachineOperand& MO, const MCSymbol* Symbol,
+                              HexagonAsmPrinter& Printer) {
   MCContext &MC = Printer.OutContext;
   const MCExpr *ME;
 
-  // Populate the relocation type based on Hexagon target flags
-  // set on an operand
-  MCSymbolRefExpr::VariantKind RelocationType;
-  switch (MO.getTargetFlags()) {
-  default:
-    RelocationType = MCSymbolRefExpr::VK_None;
-    break;
-  case HexagonII::MO_PCREL:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_PCREL;
-    break;
-  case HexagonII::MO_GOT:
-    RelocationType = MCSymbolRefExpr::VK_GOT;
-    break;
-  case HexagonII::MO_LO16:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_LO16;
-    break;
-  case HexagonII::MO_HI16:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_HI16;
-    break;
-  case HexagonII::MO_GPREL:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_GPREL;
-    break;
-  }
-
-  ME = MCSymbolRefExpr::create(Symbol, RelocationType, MC);
+  ME = MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, MC);
 
   if (!MO.isJTI() && MO.getOffset())
     ME = MCBinaryExpr::createAdd(ME, MCConstantExpr::create(MO.getOffset(), MC),
                                  MC);
 
-  return MCOperand::createExpr(ME);
+  return (MCOperand::createExpr(ME));
 }
 
 // Create an MCInst from a MachineInstr
-void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
-                            MCInst &MCB, HexagonAsmPrinter &AP) {
-  if (MI->getOpcode() == Hexagon::ENDLOOP0) {
+void llvm::HexagonLowerToMC(MachineInstr const* MI, MCInst& MCB,
+                            HexagonAsmPrinter& AP) {
+  if(MI->getOpcode() == Hexagon::ENDLOOP0){
     HexagonMCInstrInfo::setInnerLoop(MCB);
     return;
   }
-  if (MI->getOpcode() == Hexagon::ENDLOOP1) {
+  if(MI->getOpcode() == Hexagon::ENDLOOP1){
     HexagonMCInstrInfo::setOuterLoop(MCB);
     return;
   }
-  MCInst *MCI = new (AP.OutContext) MCInst;
+  MCInst* MCI = new (AP.OutContext) MCInst;
   MCI->setOpcode(MI->getOpcode());
   assert(MCI->getOpcode() == static_cast<unsigned>(MI->getOpcode()) &&
          "MCI opcode should have been set on construction");
-  bool MustExtend = false;
 
   for (unsigned i = 0, e = MI->getNumOperands(); i < e; i++) {
     const MachineOperand &MO = MI->getOperand(i);
     MCOperand MCO;
-    if (MO.getTargetFlags() & HexagonII::HMOTF_ConstExtended)
-      MustExtend = true;
 
     switch (MO.getType()) {
     default:
@@ -105,14 +73,11 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
       APFloat Val = MO.getFPImm()->getValueAPF();
       // FP immediates are used only when setting GPRs, so they may be dealt
       // with like regular immediates from this point on.
-      MCO = MCOperand::createExpr(
-        MCConstantExpr::create(*Val.bitcastToAPInt().getRawData(),
-                               AP.OutContext));
+      MCO = MCOperand::createImm(*Val.bitcastToAPInt().getRawData());
       break;
     }
     case MachineOperand::MO_Immediate:
-      MCO = MCOperand::createExpr(
-        MCConstantExpr::create(MO.getImm(), AP.OutContext));
+      MCO = MCOperand::createImm(MO.getImm());
       break;
     case MachineOperand::MO_MachineBasicBlock:
       MCO = MCOperand::createExpr
@@ -139,8 +104,5 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
 
     MCI->addOperand(MCO);
   }
-  AP.HexagonProcessInstruction(*MCI, *MI);
-  HexagonMCInstrInfo::extendIfNeeded(AP.OutContext, MCII, MCB, *MCI,
-                                     MustExtend);
   MCB.addOperand(MCOperand::createInst(MCI));
 }

@@ -81,6 +81,7 @@ public:
   /// \brief Returns all the \c Replacements created during formatting.
   const tooling::Replacements &generateReplacements();
 
+private:
   /// \brief Represents a change before a token, a break inside a token,
   /// or the layout of an unchanged token (or whitespace within).
   struct Change {
@@ -109,8 +110,7 @@ public:
            unsigned IndentLevel, int Spaces, unsigned StartOfTokenColumn,
            unsigned NewlinesBefore, StringRef PreviousLinePostfix,
            StringRef CurrentLinePrefix, tok::TokenKind Kind,
-           bool ContinuesPPDirective, bool IsStartOfDeclName,
-           bool IsInsideToken);
+           bool ContinuesPPDirective, bool IsStartOfDeclName);
 
     bool CreateReplacement;
     // Changes might be in the middle of a token, so we cannot just keep the
@@ -140,10 +140,6 @@ public:
     // comments. Uncompensated negative offset is truncated to 0.
     int Spaces;
 
-    // If this change is inside of a token but not at the start of the token or
-    // directly after a newline.
-    bool IsInsideToken;
-
     // \c IsTrailingComment, \c TokenLength, \c PreviousEndOfTokenColumn and
     // \c EscapedNewlineColumn will be calculated in
     // \c calculateLineBreakInformation.
@@ -164,7 +160,6 @@ public:
     int IndentationOffset;
   };
 
-private:
   /// \brief Calculate \c IsTrailingComment, \c TokenLength for the last tokens
   /// or token parts in a line and \c PreviousEndOfTokenColumn and
   /// \c EscapedNewlineColumn for the first tokens or token parts in a line.
@@ -173,8 +168,19 @@ private:
   /// \brief Align consecutive assignments over all \c Changes.
   void alignConsecutiveAssignments();
 
+  /// \brief Align consecutive assignments from change \p Start to change \p End
+  /// at
+  /// the specified \p Column.
+  void alignConsecutiveAssignments(unsigned Start, unsigned End,
+                                   unsigned Column);
+
   /// \brief Align consecutive declarations over all \c Changes.
   void alignConsecutiveDeclarations();
+
+  /// \brief Align consecutive declarations from change \p Start to change \p
+  /// End at the specified \p Column.
+  void alignConsecutiveDeclarations(unsigned Start, unsigned End,
+                                    unsigned Column);
 
   /// \brief Align trailing comments over all \c Changes.
   void alignTrailingComments();

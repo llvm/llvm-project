@@ -44,25 +44,6 @@ namespace HexagonII {
     TypeMEMOP   = 9,
     TypeNV      = 10,
     TypeDUPLEX  = 11,
-    TypeCOMPOUND = 12,
-    TypeCVI_FIRST     = 13,
-    TypeCVI_VA        = TypeCVI_FIRST,
-    TypeCVI_VA_DV     = 14,
-    TypeCVI_VX        = 15,
-    TypeCVI_VX_DV     = 16,
-    TypeCVI_VP        = 17,
-    TypeCVI_VP_VS     = 18,
-    TypeCVI_VS        = 19,
-    TypeCVI_VINLANESAT= 20,
-    TypeCVI_VM_LD     = 21,
-    TypeCVI_VM_TMP_LD = 22,
-    TypeCVI_VM_CUR_LD = 23,
-    TypeCVI_VM_VP_LDU = 24,
-    TypeCVI_VM_ST     = 25,
-    TypeCVI_VM_NEW_ST = 26,
-    TypeCVI_VM_STU    = 27,
-    TypeCVI_HIST      = 28,
-    TypeCVI_LAST      = TypeCVI_HIST,
     TypePREFIX  = 30, // Such as extenders.
     TypeENDLOOP = 31  // Such as end of a HW loop.
   };
@@ -90,16 +71,12 @@ namespace HexagonII {
     PostInc        = 6   // Post increment addressing mode
   };
 
-  // MemAccessSize is represented as 1+log2(N) where N is size in bits.
   enum class MemAccessSize {
     NoMemAccess = 0,            // Not a memory acces instruction.
     ByteAccess = 1,             // Byte access instruction (memb).
     HalfWordAccess = 2,         // Half word access instruction (memh).
     WordAccess = 3,             // Word access instruction (memw).
-    DoubleWordAccess = 4,       // Double word access instruction (memd)
-                    // 5,       // We do not have a 16 byte vector access.
-    Vector64Access = 7,         // 64 Byte vector access instruction (vmem).
-    Vector128Access = 8         // 128 Byte vector access instruction (vmem).
+    DoubleWordAccess = 4        // Double word access instruction (memd)
   };
 
   // MCInstrDesc TSFlags
@@ -179,7 +156,7 @@ namespace HexagonII {
     AddrModeMask = 0x7,
     // Access size for load/store instructions.
     MemAccessSizePos = 43,
-    MemAccesSizeMask = 0xf,
+    MemAccesSizeMask = 0x7,
 
     // Branch predicted taken.
     TakenPos = 47,
@@ -187,23 +164,7 @@ namespace HexagonII {
 
     // Floating-point instructions.
     FPPos  = 48,
-    FPMask = 0x1,
-
-    // New-Value producer-2 instructions.
-    hasNewValuePos2  = 50,
-    hasNewValueMask2 = 0x1,
-
-    // Which operand consumes or produces a new value.
-    NewValueOpPos2  = 51,
-    NewValueOpMask2 = 0x7,
-
-    // Accumulator instructions.
-    AccumulatorPos = 54,
-    AccumulatorMask = 0x1,
-
-    // Complex XU, prevent xu competition by prefering slot3
-    PrefersSlot3Pos = 55,
-    PrefersSlot3Mask = 0x1,
+    FPMask = 0x1
   };
 
   // *** The code above must match HexagonInstrFormat*.td *** //
@@ -256,26 +217,6 @@ namespace HexagonII {
     INST_PARSE_NOT_END    = 0x00004000,
     INST_PARSE_DUPLEX     = 0x00000000,
     INST_PARSE_EXTENDER   = 0x00000000
-  };
-
-  enum InstIClassBits : unsigned {
-    INST_ICLASS_MASK      = 0xf0000000,
-    INST_ICLASS_EXTENDER  = 0x00000000,
-    INST_ICLASS_J_1       = 0x10000000,
-    INST_ICLASS_J_2       = 0x20000000,
-    INST_ICLASS_LD_ST_1   = 0x30000000,
-    INST_ICLASS_LD_ST_2   = 0x40000000,
-    INST_ICLASS_J_3       = 0x50000000,
-    INST_ICLASS_CR        = 0x60000000,
-    INST_ICLASS_ALU32_1   = 0x70000000,
-    INST_ICLASS_XTYPE_1   = 0x80000000,
-    INST_ICLASS_LD        = 0x90000000,
-    INST_ICLASS_ST        = 0xa0000000,
-    INST_ICLASS_ALU32_2   = 0xb0000000,
-    INST_ICLASS_XTYPE_2   = 0xc0000000,
-    INST_ICLASS_XTYPE_3   = 0xd0000000,
-    INST_ICLASS_XTYPE_4   = 0xe0000000,
-    INST_ICLASS_ALU32_3   = 0xf0000000
   };
 
 } // End namespace HexagonII.

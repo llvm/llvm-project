@@ -2,9 +2,6 @@
 
 #include <stddef.h>
 
-// Make this file work with nvcc, for testing compatibility.
-
-#ifndef __NVCC__
 #define __constant__ __attribute__((constant))
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
@@ -21,4 +18,3 @@ typedef struct cudaStream *cudaStream_t;
 
 int cudaConfigureCall(dim3 gridSize, dim3 blockSize, size_t sharedSize = 0,
                       cudaStream_t stream = 0);
-#endif // !__NVCC__

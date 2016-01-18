@@ -19,4 +19,4 @@
 type = Library
 name = Instrumentation
 parent = Transforms
-required_libraries = Analysis Core MC Support TransformUtils ProfileData
+required_libraries = Analysis Core MC Support TransformUtils

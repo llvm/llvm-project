@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 extern char *bork;
 char *& bar = bork;
@@ -20,7 +18,4 @@ int & volatile Y = val; // expected-error {{'volatile' qualifier may not be appl
 int & const volatile Z = val; /* expected-error {{'const' qualifier may not be applied}} \
                            expected-error {{'volatile' qualifier may not be applied}} */
 
-typedef int && RV; 
-#if __cplusplus <= 199711L
-// expected-warning@-2 {{rvalue references are a C++11 extension}}
-#endif
+typedef int && RV; // expected-warning {{rvalue references are a C++11 extension}}

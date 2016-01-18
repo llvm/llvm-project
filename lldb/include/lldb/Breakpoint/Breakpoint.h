@@ -163,7 +163,7 @@ public:
         ConfigurePrecondition(Args &options);
 
         virtual void
-        GetDescription(Stream &stream, lldb::DescriptionLevel level);
+        DescribePrecondition(Stream &stream, lldb::DescriptionLevel level);
     };
 
     typedef std::shared_ptr<BreakpointPrecondition> BreakpointPreconditionSP;

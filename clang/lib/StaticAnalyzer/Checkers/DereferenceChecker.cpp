@@ -19,7 +19,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -34,7 +33,8 @@ class DereferenceChecker
   mutable std::unique_ptr<BuiltinBug> BT_null;
   mutable std::unique_ptr<BuiltinBug> BT_undef;
 
-  void reportBug(ProgramStateRef State, const Stmt *S, CheckerContext &C) const;
+  void reportBug(ProgramStateRef State, const Stmt *S, CheckerContext &C,
+                 bool IsBind = false) const;
 
 public:
   void checkLocation(SVal location, bool isLoad, const Stmt* S,
@@ -88,31 +88,8 @@ DereferenceChecker::AddDerefSource(raw_ostream &os,
   }
 }
 
-static const Expr *getDereferenceExpr(const Stmt *S, bool IsBind=false){
-  const Expr *E = nullptr;
-
-  // Walk through lvalue casts to get the original expression
-  // that syntactically caused the load.
-  if (const Expr *expr = dyn_cast<Expr>(S))
-    E = expr->IgnoreParenLValueCasts();
-
-  if (IsBind) {
-    const VarDecl *VD;
-    const Expr *Init;
-    std::tie(VD, Init) = parseAssignment(S);
-    if (VD && Init)
-      E = Init;
-  }
-  return E;
-}
-
-static bool suppressReport(const Expr *E) {
-  // Do not report dereferences on memory in non-default address spaces.
-  return E->getType().getQualifiers().hasAddressSpace();
-}
-
 void DereferenceChecker::reportBug(ProgramStateRef State, const Stmt *S,
-                                   CheckerContext &C) const {
+                                   CheckerContext &C, bool IsBind) const {
   // Generate an error node.
   ExplodedNode *N = C.generateErrorNode(State);
   if (!N)
@@ -127,6 +104,23 @@ void DereferenceChecker::reportBug(ProgramStateRef State, const Stmt *S,
   llvm::raw_svector_ostream os(buf);
 
   SmallVector<SourceRange, 2> Ranges;
+
+  // Walk through lvalue casts to get the original expression
+  // that syntactically caused the load.
+  if (const Expr *expr = dyn_cast<Expr>(S))
+    S = expr->IgnoreParenLValueCasts();
+
+  if (IsBind) {
+    if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(S)) {
+      if (BO->isAssignmentOp())
+        S = BO->getRHS();
+    } else if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
+      assert(DS->isSingleDecl() && "We process decls one by one");
+      if (const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl()))
+        if (const Expr *Init = VD->getAnyInitializer())
+          S = Init;
+    }
+  }
 
   switch (S->getStmtClass()) {
   case Stmt::ArraySubscriptExprClass: {
@@ -218,11 +212,8 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
   // The explicit NULL case.
   if (nullState) {
     if (!notNullState) {
-      const Expr *expr = getDereferenceExpr(S);
-      if (!suppressReport(expr)) {
-        reportBug(nullState, expr, C);
-        return;
-      }
+      reportBug(nullState, S, C);
+      return;
     }
 
     // Otherwise, we have the case where the location could either be
@@ -260,11 +251,8 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
 
   if (StNull) {
     if (!StNonNull) {
-      const Expr *expr = getDereferenceExpr(S, /*IsBind=*/true);
-      if (!suppressReport(expr)) {
-        reportBug(StNull, expr, C);
-        return;
-      }
+      reportBug(StNull, S, C, /*isBind=*/true);
+      return;
     }
 
     // At this point the value could be either null or non-null.

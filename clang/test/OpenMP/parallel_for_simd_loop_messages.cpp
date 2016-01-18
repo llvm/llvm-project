@@ -10,7 +10,6 @@ public:
 };
 
 static int sii;
-// expected-note@+1 {{defined as threadprivate or thread local}}
 #pragma omp threadprivate(sii)
 static int globalii;
 
@@ -260,7 +259,6 @@ int test_iteration_spaces() {
     c[ii] = a[ii];
 
   {
-// expected-error@+2 {{loop iteration variable in the associated loop of 'omp parallel for simd' directive may not be threadprivate or thread local, predetermined as linear}}
 #pragma omp parallel for simd
     for (sii = 0; sii < 10; sii += 1)
       c[sii] = a[sii];
@@ -628,14 +626,8 @@ void test_loop_firstprivate_lastprivate() {
 }
 
 void test_ordered() {
+// expected-error@+1 2 {{unexpected OpenMP clause 'ordered' in directive '#pragma omp parallel for simd'}}
 #pragma omp parallel for simd ordered ordered // expected-error {{directive '#pragma omp parallel for simd' cannot contain more than one 'ordered' clause}}
-  for (int i = 0; i < 16; ++i)
-    ;
-#pragma omp parallel for simd ordered
-  for (int i = 0; i < 16; ++i)
-    ;
-//expected-error@+1 {{'ordered' clause with a parameter can not be specified in '#pragma omp parallel for simd' directive}}
-#pragma omp parallel for simd ordered(1)
   for (int i = 0; i < 16; ++i)
     ;
 }

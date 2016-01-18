@@ -113,7 +113,6 @@ public:
   /// when rendered as a input (e.g., Xlinker).
   void renderAsInput(const ArgList &Args, ArgStringList &Output) const;
 
-  void print(raw_ostream &O) const;
   void dump() const;
 
   /// \brief Return a formatted version of the argument and

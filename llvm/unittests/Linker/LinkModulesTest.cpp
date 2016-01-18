@@ -16,7 +16,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm-c/Core.h"
 #include "llvm-c/Linker.h"
 #include "gtest/gtest.h"
 
@@ -72,10 +71,6 @@ protected:
   BasicBlock *ExitBB;
 };
 
-static void expectNoDiags(const DiagnosticInfo &DI, void *C) {
-  EXPECT_TRUE(false);
-}
-
 TEST_F(LinkModuleTest, BlockAddress) {
   IRBuilder<> Builder(EntryBB);
 
@@ -98,8 +93,10 @@ TEST_F(LinkModuleTest, BlockAddress) {
   Builder.CreateRet(ConstantPointerNull::get(Type::getInt8PtrTy(Ctx)));
 
   Module *LinkedModule = new Module("MyModuleLinked", Ctx);
-  Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*LinkedModule, std::move(M));
+  Linker::LinkModules(LinkedModule, M.get());
+
+  // Delete the original module.
+  M.reset();
 
   // Check that the global "@switch.bas" is well-formed.
   const GlobalVariable *LinkedGV = LinkedModule->getNamedGlobal("switch.bas");
@@ -172,15 +169,13 @@ static Module *getInternal(LLVMContext &Ctx) {
 TEST_F(LinkModuleTest, EmptyModule) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
-  Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*EmptyM, std::move(InternalM));
+  Linker::LinkModules(EmptyM.get(), InternalM.get());
 }
 
 TEST_F(LinkModuleTest, EmptyModule2) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
-  Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*InternalM, std::move(EmptyM));
+  Linker::LinkModules(InternalM.get(), EmptyM.get());
 }
 
 TEST_F(LinkModuleTest, TypeMerge) {
@@ -195,8 +190,7 @@ TEST_F(LinkModuleTest, TypeMerge) {
                       "@t2 = weak global %t zeroinitializer\n";
   std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, C);
 
-  Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*M1, std::move(M2));
+  Linker::LinkModules(M1.get(), M2.get(), [](const llvm::DiagnosticInfo &){});
 
   EXPECT_EQ(M1->getNamedGlobal("t1")->getType(),
             M1->getNamedGlobal("t2")->getType());
@@ -224,37 +218,6 @@ TEST_F(LinkModuleTest, CAPIFailure) {
   EXPECT_EQ(1, result);
   EXPECT_STREQ("Linking globals named 'foo': symbol multiply defined!", errout);
   LLVMDisposeMessage(errout);
-}
-
-TEST_F(LinkModuleTest, NewCAPISuccess) {
-  std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
-  std::unique_ptr<Module> SourceM(getExternal(Ctx, "bar"));
-  LLVMBool Result =
-      LLVMLinkModules2(wrap(DestM.get()), wrap(SourceM.release()));
-  EXPECT_EQ(0, Result);
-  // "bar" is present in destination module
-  EXPECT_NE(nullptr, DestM->getFunction("bar"));
-}
-
-static void diagnosticHandler(LLVMDiagnosticInfoRef DI, void *C) {
-  auto *Err = reinterpret_cast<std::string *>(C);
-  char *CErr = LLVMGetDiagInfoDescription(DI);
-  *Err = CErr;
-  LLVMDisposeMessage(CErr);
-}
-
-TEST_F(LinkModuleTest, NewCAPIFailure) {
-  // Symbol clash between two modules
-  LLVMContext Ctx;
-  std::string Err;
-  LLVMContextSetDiagnosticHandler(wrap(&Ctx), diagnosticHandler, &Err);
-
-  std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
-  std::unique_ptr<Module> SourceM(getExternal(Ctx, "foo"));
-  LLVMBool Result =
-      LLVMLinkModules2(wrap(DestM.get()), wrap(SourceM.release()));
-  EXPECT_EQ(1, Result);
-  EXPECT_EQ("Linking globals named 'foo': symbol multiply defined!", Err);
 }
 
 TEST_F(LinkModuleTest, MoveDistinctMDs) {
@@ -304,8 +267,8 @@ TEST_F(LinkModuleTest, MoveDistinctMDs) {
   // Link into destination module.
   auto Dst = llvm::make_unique<Module>("Linked", C);
   ASSERT_TRUE(Dst.get());
-  Ctx.setDiagnosticHandler(expectNoDiags);
-  Linker::linkModules(*Dst, std::move(Src));
+  Linker::LinkModules(Dst.get(), Src.get(),
+                      [](const llvm::DiagnosticInfo &) {});
 
   // Check that distinct metadata was moved, not cloned.  Even !4, the uniqued
   // node, should effectively be moved, since its only operand hasn't changed.

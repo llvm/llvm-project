@@ -108,7 +108,9 @@ private:
 
     void Finalize() override {
       State = Finalizing;
-      RTDyld->finalizeWithMemoryManagerLocking();
+      RTDyld->resolveRelocations();
+      RTDyld->registerEHFrames();
+      MemMgr->finalizeMemory();
       State = Finalized;
     }
 

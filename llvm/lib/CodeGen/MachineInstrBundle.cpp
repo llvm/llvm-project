@@ -293,17 +293,15 @@ MachineOperandIteratorBase::PhysRegInfo
 MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
                                            const TargetRegisterInfo *TRI) {
   bool AllDefsDead = true;
-  PhysRegInfo PRI = {false, false, false, false, false, false, false};
+  PhysRegInfo PRI = {false, false, false, false, false, false};
 
   assert(TargetRegisterInfo::isPhysicalRegister(Reg) &&
          "analyzePhysReg not given a physical register!");
   for (; isValid(); ++*this) {
     MachineOperand &MO = deref();
 
-    if (MO.isRegMask() && MO.clobbersPhysReg(Reg)) {
-      PRI.Clobbered = true;
-      continue;
-    }
+    if (MO.isRegMask() && MO.clobbersPhysReg(Reg))
+      PRI.Clobbers = true;    // Regmask clobbers Reg.
 
     if (!MO.isReg())
       continue;
@@ -312,28 +310,33 @@ MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
     if (!MOReg || !TargetRegisterInfo::isPhysicalRegister(MOReg))
       continue;
 
-    if (!TRI->regsOverlap(MOReg, Reg))
+    bool IsRegOrSuperReg = MOReg == Reg || TRI->isSuperRegister(MOReg, Reg);
+    bool IsRegOrOverlapping = MOReg == Reg || TRI->regsOverlap(MOReg, Reg);
+
+    if (IsRegOrSuperReg && MO.readsReg()) {
+      // Reg or a super-reg is read, and perhaps killed also.
+      PRI.Reads = true;
+      PRI.Kills = MO.isKill();
+    }
+
+    if (IsRegOrOverlapping && MO.readsReg()) {
+      PRI.ReadsOverlap = true;// Reg or an overlapping register is read.
+    }
+
+    if (!MO.isDef())
       continue;
 
-    bool Covered = TRI->isSuperRegisterEq(Reg, MOReg);
-    if (MO.readsReg()) {
-      PRI.Read = true;
-      if (Covered) {
-        PRI.FullyRead = true;
-        if (MO.isKill())
-          PRI.Killed = true;
-      }
-    } else if (MO.isDef()) {
-      PRI.Defined = true;
-      if (Covered)
-        PRI.FullyDefined = true;
+    if (IsRegOrSuperReg) {
+      PRI.Defines = true;     // Reg or a super-register is defined.
       if (!MO.isDead())
         AllDefsDead = false;
     }
+    if (IsRegOrOverlapping)
+      PRI.Clobbers = true;    // Reg or an overlapping reg is defined.
   }
 
-  if (AllDefsDead && PRI.FullyDefined)
-    PRI.DeadDef = true;
+  if (AllDefsDead && PRI.Defines)
+    PRI.DefinesDead = true;   // Reg or super-register was defined and was dead.
 
   return PRI;
 }

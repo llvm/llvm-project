@@ -25,7 +25,7 @@ entry:
   %this_addr = alloca %struct.S*                  ; <%struct.S**> [#uses=1]
   %retval = alloca i32                            ; <i32*> [#uses=1]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  call void @llvm.dbg.declare(metadata %struct.S** %this_addr, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !21
+  call void @llvm.dbg.declare(metadata %struct.S** %this_addr, metadata !18, metadata !DIExpression()), !dbg !21
   store %struct.S* %this, %struct.S** %this_addr
   br label %return, !dbg !21
 
@@ -57,8 +57,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !15 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial, file: !25, scope: !4, baseType: !9)
 !16 = !DILocation(line: 3, scope: !1)
 !17 = !DILocation(line: 3, scope: !3)
-; Modified from being a pointer, to make this testcase independent of target pointer size
-!18 = !DILocalVariable(name: "this", line: 3, arg: 1, scope: !12, file: !10, type: !9)
+!18 = !DILocalVariable(name: "this", line: 3, arg: 1, scope: !12, file: !10, type: !19)
 !19 = !DIDerivedType(tag: DW_TAG_const_type, size: 64, align: 64, flags: DIFlagArtificial, file: !25, scope: !4, baseType: !20)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !25, scope: !4, baseType: !9)
 !21 = !DILocation(line: 3, scope: !12)

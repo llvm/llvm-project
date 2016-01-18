@@ -372,6 +372,7 @@ void SUnit::dumpAll(const ScheduleDAG *G) const {
       dbgs() << "\n";
     }
   }
+  dbgs() << "\n";
 }
 #endif
 

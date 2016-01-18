@@ -10,7 +10,6 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -671,10 +670,6 @@ DynamicLoaderMacOSXDYLD::NotifyBreakpointHit (void *baton,
             }
         }
     }
-    else
-    {
-        process->GetTarget().GetDebugger().GetAsyncErrorStream()->Printf("No ABI plugin located for triple %s -- shared libraries will not be registered!\n", process->GetTarget().GetArchitecture().GetTriple().getTriple().c_str());
-    }
     
     // Return true to stop the target, false to just let the target run
     return dyld_instance->GetStopWhenImagesChange();
@@ -1325,7 +1320,7 @@ DynamicLoaderMacOSXDYLD::ReadMachHeader (lldb::addr_t addr, llvm::MachO::mach_he
         ::memset (header, 0, sizeof(llvm::MachO::mach_header));
 
         // Get the magic byte unswapped so we can figure out what we are dealing with
-        DataExtractor data(header_bytes.GetBytes(), header_bytes.GetByteSize(), endian::InlHostByteOrder(), 4);
+        DataExtractor data(header_bytes.GetBytes(), header_bytes.GetByteSize(), lldb::endian::InlHostByteOrder(), 4);
         header->magic = data.GetU32(&offset);
         lldb::addr_t load_cmd_addr = addr;
         data.SetByteOrder(DynamicLoaderMacOSXDYLD::GetByteOrderFromMagic(header->magic));
@@ -2052,11 +2047,11 @@ DynamicLoaderMacOSXDYLD::GetByteOrderFromMagic (uint32_t magic)
     {
         case llvm::MachO::MH_MAGIC:
         case llvm::MachO::MH_MAGIC_64:
-            return endian::InlHostByteOrder();
+            return lldb::endian::InlHostByteOrder();
             
         case llvm::MachO::MH_CIGAM:
         case llvm::MachO::MH_CIGAM_64:
-            if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
+            if (lldb::endian::InlHostByteOrder() == lldb::eByteOrderBig)
                 return lldb::eByteOrderLittle;
             else
                 return lldb::eByteOrderBig;

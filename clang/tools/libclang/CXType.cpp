@@ -90,7 +90,6 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(DependentSizedArray);
     TKCASE(Vector);
     TKCASE(MemberPointer);
-    TKCASE(Auto);
     default:
       return CXType_Unexposed;
   }
@@ -145,7 +144,7 @@ extern "C" {
 
 CXType clang_getCursorType(CXCursor C) {
   using namespace cxcursor;
-
+  
   CXTranslationUnit TU = cxcursor::getCursorTU(C);
   if (!TU)
     return MakeCXType(QualType(), TU);
@@ -175,7 +174,7 @@ CXType clang_getCursorType(CXCursor C) {
       return MakeCXType(FTD->getTemplatedDecl()->getType(), TU);
     return MakeCXType(QualType(), TU);
   }
-
+  
   if (clang_isReference(C.kind)) {
     switch (C.kind) {
     case CXCursor_ObjCSuperClassRef: {
@@ -183,18 +182,18 @@ CXType clang_getCursorType(CXCursor C) {
         = Context.getObjCInterfaceType(getCursorObjCSuperClassRef(C).first);
       return MakeCXType(T, TU);
     }
-
+        
     case CXCursor_ObjCClassRef: {
       QualType T = Context.getObjCInterfaceType(getCursorObjCClassRef(C).first);
       return MakeCXType(T, TU);
     }
-
+        
     case CXCursor_TypeRef: {
       QualType T = Context.getTypeDeclType(getCursorTypeRef(C).first);
       return MakeCXType(T, TU);
 
     }
-
+      
     case CXCursor_CXXBaseSpecifier:
       return cxtype::MakeCXType(getCursorCXXBaseSpecifier(C)->getType(), TU);
 
@@ -211,7 +210,7 @@ CXType clang_getCursorType(CXCursor C) {
     default:
       break;
     }
-
+    
     return MakeCXType(QualType(), TU);
   }
 
@@ -349,10 +348,10 @@ unsigned clang_isRestrictQualifiedType(CXType CT) {
 CXType clang_getPointeeType(CXType CT) {
   QualType T = GetQualType(CT);
   const Type *TP = T.getTypePtrOrNull();
-
+  
   if (!TP)
     return MakeCXType(QualType(), GetTU(CT));
-
+  
   switch (TP->getTypeClass()) {
     case Type::Pointer:
       T = cast<PointerType>(TP)->getPointeeType();
@@ -411,13 +410,7 @@ try_again:
       D = cast<TemplateSpecializationType>(TP)->getTemplateName()
                                                          .getAsTemplateDecl();
     break;
-
-  case Type::Auto:
-    TP = cast<AutoType>(TP)->getDeducedType().getTypePtrOrNull();
-    if (TP)
-      goto try_again;
-    break;
-
+      
   case Type::InjectedClassName:
     D = cast<InjectedClassNameType>(TP)->getDecl();
     break;
@@ -427,7 +420,7 @@ try_again:
   case Type::Elaborated:
     TP = cast<ElaboratedType>(TP)->getNamedType().getTypePtrOrNull();
     goto try_again;
-
+    
   default:
     break;
   }
@@ -490,7 +483,6 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(DependentSizedArray);
     TKIND(Vector);
     TKIND(MemberPointer);
-    TKIND(Auto);
   }
 #undef TKIND
   return cxstring::createRef(s);

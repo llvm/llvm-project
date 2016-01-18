@@ -75,15 +75,10 @@ WatchpointList::FindByAddress (lldb::addr_t addr) const
     {
         wp_collection::const_iterator pos, end = m_watchpoints.end();
         for (pos = m_watchpoints.begin(); pos != end; ++pos)
-        {
-            lldb::addr_t wp_addr = (*pos)->GetLoadAddress();
-            uint32_t wp_bytesize = (*pos)->GetByteSize();
-            if ((wp_addr <= addr) && ((wp_addr + wp_bytesize) > addr))
-            {
+            if ((*pos)->GetLoadAddress() == addr) {
                 wp_sp = *pos;
                 break;
             }
-        }
     }
 
     return wp_sp;

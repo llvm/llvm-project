@@ -4,7 +4,7 @@
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/LazyEmittingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/OrcArchitectureSupport.h"
+#include "llvm/ExecutionEngine/Orc/OrcTargetSupport.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1085,7 +1085,7 @@ void PrototypeAST::CreateArgumentAllocas(Function *F, IRGenContext &C) {
     AllocaInst *Alloca = CreateEntryBlockAlloca(F, Args[Idx]);
 
     // Store the initial value into the alloca.
-    C.getBuilder().CreateStore(&*AI, Alloca);
+    C.getBuilder().CreateStore(AI, Alloca);
 
     // Add arguments to variable symbol table.
     C.NamedValues[Args[Idx]] = Alloca;
@@ -1308,7 +1308,7 @@ private:
 
   std::map<std::string, std::unique_ptr<FunctionAST>> FunctionDefs;
 
-  LocalJITCompileCallbackManager<OrcX86_64> CompileCallbacks;
+  JITCompileCallbackManager<OrcX86_64> CompileCallbacks;
 };
 
 static void HandleDefinition(SessionContext &S, KaleidoscopeJIT &J) {

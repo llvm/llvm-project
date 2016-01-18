@@ -52,6 +52,8 @@ public:
     addDirectiveHandler<
       &ELFAsmParser::ParseSectionDirectiveDataRelRo>(".data.rel.ro");
     addDirectiveHandler<
+      &ELFAsmParser::ParseSectionDirectiveDataRelRoLocal>(".data.rel.ro.local");
+    addDirectiveHandler<
       &ELFAsmParser::ParseSectionDirectiveEhFrame>(".eh_frame");
     addDirectiveHandler<&ELFAsmParser::ParseDirectiveSection>(".section");
     addDirectiveHandler<
@@ -79,8 +81,8 @@ public:
   // the best way for us to get access to it?
   bool ParseSectionDirectiveData(StringRef, SMLoc) {
     return ParseSectionSwitch(".data", ELF::SHT_PROGBITS,
-                              ELF::SHF_WRITE | ELF::SHF_ALLOC,
-                              SectionKind::getData());
+                              ELF::SHF_WRITE |ELF::SHF_ALLOC,
+                              SectionKind::getDataRel());
   }
   bool ParseSectionDirectiveText(StringRef, SMLoc) {
     return ParseSectionSwitch(".text", ELF::SHT_PROGBITS,
@@ -111,8 +113,9 @@ public:
   }
   bool ParseSectionDirectiveDataRel(StringRef, SMLoc) {
     return ParseSectionSwitch(".data.rel", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
-                              SectionKind::getData());
+                              ELF::SHF_ALLOC |
+                              ELF::SHF_WRITE,
+                              SectionKind::getDataRel());
   }
   bool ParseSectionDirectiveDataRelRo(StringRef, SMLoc) {
     return ParseSectionSwitch(".data.rel.ro", ELF::SHT_PROGBITS,
@@ -120,10 +123,17 @@ public:
                               ELF::SHF_WRITE,
                               SectionKind::getReadOnlyWithRel());
   }
+  bool ParseSectionDirectiveDataRelRoLocal(StringRef, SMLoc) {
+    return ParseSectionSwitch(".data.rel.ro.local", ELF::SHT_PROGBITS,
+                              ELF::SHF_ALLOC |
+                              ELF::SHF_WRITE,
+                              SectionKind::getReadOnlyWithRelLocal());
+  }
   bool ParseSectionDirectiveEhFrame(StringRef, SMLoc) {
     return ParseSectionSwitch(".eh_frame", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
-                              SectionKind::getData());
+                              ELF::SHF_ALLOC |
+                              ELF::SHF_WRITE,
+                              SectionKind::getDataRel());
   }
   bool ParseDirectivePushSection(StringRef, SMLoc);
   bool ParseDirectivePopSection(StringRef, SMLoc);

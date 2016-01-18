@@ -268,7 +268,6 @@ public:
     enum StopDisassemblyType
     {
         eStopDisassemblyTypeNever = 0,
-        eStopDisassemblyTypeNoDebugInfo,
         eStopDisassemblyTypeNoSource,
         eStopDisassemblyTypeAlways
     };

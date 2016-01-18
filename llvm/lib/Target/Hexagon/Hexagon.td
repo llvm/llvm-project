@@ -30,9 +30,6 @@ def ArchV60: SubtargetFeature<"v60", "HexagonArchVersion", "V60", "Hexagon V60">
 // Hexagon ISA Extensions
 def ExtensionHVX: SubtargetFeature<"hvx", "UseHVXOps",
                                    "true", "Hexagon HVX instructions">;
-def ExtensionHVXDbl: SubtargetFeature<"hvx-double", "UseHVXDblOps",
-                                   "true", "Hexagon HVX Double instructions">;
-
 //===----------------------------------------------------------------------===//
 // Hexagon Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
@@ -48,7 +45,7 @@ def UseHVXDbl          : Predicate<"HST->useHVXDblOps()">,
                          AssemblerPredicate<"ExtensionHVXDbl">;
 def UseHVXSgl          : Predicate<"HST->useHVXSglOps()">;
 
-def UseHVX             : Predicate<"HST->useHVXSglOps() ||HST->useHVXDblOps()">,
+def UseHVX             : Predicate<"HST->useHVXOps()">,
                          AssemblerPredicate<"ExtensionHVX">;
 
 //===----------------------------------------------------------------------===//
@@ -71,7 +68,6 @@ class NewValueRel: PredNewRel;
 // NewValueRel - Filter class used to relate load/store instructions having
 // different addressing modes with each other.
 class AddrModeRel: NewValueRel;
-class IntrinsicsRel;
 
 //===----------------------------------------------------------------------===//
 // Generate mapping table to relate non-predicate instructions with their
@@ -187,37 +183,6 @@ def getRegForm : InstrMapping {
   let ValueCols = [["reg"]];
 }
 
-def getRegShlForm : InstrMapping {
-  let FilterClass = "ImmRegShl";
-  let RowFields = ["CextOpcode", "PredSense", "PNewValue", "isNVStore"];
-  let ColFields = ["InputType"];
-  let KeyCol = ["imm"];
-  let ValueCols = [["reg"]];
-}
-
-def notTakenBranchPrediction : InstrMapping {
-  let FilterClass = "PredRel";
-  let RowFields = ["BaseOpcode", "PNewValue",  "PredSense", "isBranch", "isPredicated"];
-  let ColFields = ["isBrTaken"];
-  let KeyCol = ["true"];
-  let ValueCols = [["false"]];
-}
-
-def takenBranchPrediction : InstrMapping {
-  let FilterClass = "PredRel";
-  let RowFields = ["BaseOpcode", "PNewValue",  "PredSense", "isBranch", "isPredicated"];
-  let ColFields = ["isBrTaken"];
-  let KeyCol = ["false"];
-  let ValueCols = [["true"]];
-}
-
-def getRealHWInstr : InstrMapping {
-  let FilterClass = "IntrinsicsRel";
-  let RowFields = ["BaseOpcode"];
-  let ColFields = ["InstrType"];
-  let KeyCol = ["Pseudo"];
-  let ValueCols = [["Pseudo"], ["Real"]];
-}
 //===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
@@ -242,27 +207,12 @@ def : Proc<"hexagonv4",  HexagonModelV4,
            [ArchV4]>;
 def : Proc<"hexagonv5",  HexagonModelV4,
            [ArchV4, ArchV5]>;
-def : Proc<"hexagonv55", HexagonModelV55,
-           [ArchV4, ArchV5, ArchV55]>;
-def : Proc<"hexagonv60", HexagonModelV60,
-           [ArchV4, ArchV5, ArchV55, ArchV60, ExtensionHVX]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing
 //===----------------------------------------------------------------------===//
 
-def HexagonAsmParser : AsmParser {
-  bit HasMnemonicFirst = 0;
-}
-
-def HexagonAsmParserVariant : AsmParserVariant {
-  int Variant = 0;
-  string TokenizingCharacters = "#()=:.<>!+*";
-}
-
 def Hexagon : Target {
   // Pull in Instruction Info:
   let InstructionSet = HexagonInstrInfo;
-  let AssemblyParsers = [HexagonAsmParser];
-  let AssemblyParserVariants = [HexagonAsmParserVariant];
 }

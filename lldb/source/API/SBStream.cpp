@@ -23,13 +23,6 @@ SBStream::SBStream () :
 {
 }
 
-SBStream::SBStream (SBStream &&rhs) :
-    m_opaque_ap (std::move(rhs.m_opaque_ap)),
-    m_is_file (rhs.m_is_file)
-{
-}
-
-
 SBStream::~SBStream ()
 {
 }

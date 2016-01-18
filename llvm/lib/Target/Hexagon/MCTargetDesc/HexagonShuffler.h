@@ -20,7 +20,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -52,46 +51,6 @@ public:
   };
 };
 
-// HVX insn resources.
-class HexagonCVIResource : public HexagonResource {
-public:
-  typedef std::pair<unsigned, unsigned> UnitsAndLanes;
-  typedef llvm::DenseMap<unsigned, UnitsAndLanes> TypeUnitsAndLanes;
-
-private:
-  // Available HVX slots.
-  enum {
-    CVI_NONE = 0,
-    CVI_XLANE = 1 << 0,
-    CVI_SHIFT = 1 << 1,
-    CVI_MPY0 = 1 << 2,
-    CVI_MPY1 = 1 << 3
-  };
-
-  TypeUnitsAndLanes *TUL;
-
-  // Count of adjacent slots that the insn requires to be executed.
-  unsigned Lanes;
-  // Flag whether the insn is a load or a store.
-  bool Load, Store;
-  // Flag whether the HVX resources are valid.
-  bool Valid;
-
-  void setLanes(unsigned l) { Lanes = l; };
-  void setLoad(bool f = true) { Load = f; };
-  void setStore(bool f = true) { Store = f; };
-
-public:
-  HexagonCVIResource(TypeUnitsAndLanes *TUL, MCInstrInfo const &MCII,
-                     unsigned s, MCInst const *id);
-  static void SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU);
-
-  bool isValid() const { return (Valid); };
-  unsigned getLanes() const { return (Lanes); };
-  bool mayLoad() const { return (Load); };
-  bool mayStore() const { return (Store); };
-};
-
 // Handle to an insn used by the shuffling algorithm.
 class HexagonInstr {
   friend class HexagonShuffler;
@@ -99,15 +58,12 @@ class HexagonInstr {
   MCInst const *ID;
   MCInst const *Extender;
   HexagonResource Core;
-  HexagonCVIResource CVI;
   bool SoloException;
 
 public:
-  HexagonInstr(HexagonCVIResource::TypeUnitsAndLanes *T,
-               MCInstrInfo const &MCII, MCInst const *id,
-               MCInst const *Extender, unsigned s, bool x = false)
-      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id),
-        SoloException(x) {};
+  HexagonInstr(MCInst const *id, MCInst const *Extender, unsigned s,
+               bool x = false)
+      : ID(id), Extender(Extender), Core(s), SoloException(x){};
 
   MCInst const *getDesc() const { return (ID); };
 
@@ -123,10 +79,6 @@ public:
   static bool lessCore(const HexagonInstr &A, const HexagonInstr &B) {
     return (HexagonResource::lessUnits(A.Core, B.Core));
   };
-  // Check if the handles are in ascending order by HVX slots.
-  static bool lessCVI(const HexagonInstr &A, const HexagonInstr &B) {
-    return (HexagonResource::lessUnits(A.CVI, B.CVI));
-  };
 };
 
 // Bundle shuffler.
@@ -139,8 +91,6 @@ class HexagonShuffler {
 
   // Shuffling error code.
   unsigned Error;
-
-  HexagonCVIResource::TypeUnitsAndLanes TUL;
 
 protected:
   int64_t BundleFlags;
@@ -158,8 +108,6 @@ public:
     SHUFFLE_ERROR_BRANCHES, ///< No free slots for branch insns.
     SHUFFLE_ERROR_NOSLOTS,  ///< No free slots for other insns.
     SHUFFLE_ERROR_SLOTS,    ///< Over-subscribed slots.
-    SHUFFLE_ERROR_ERRATA2, ///< Errata violation (v60).
-    SHUFFLE_ERROR_STORE_LOAD_CONFLICT, ///< store/load conflict
     SHUFFLE_ERROR_UNKNOWN   ///< Unknown error.
   };
 

@@ -241,7 +241,7 @@ static void transferSegmentAndSections(
   // start address leave a sufficient gap to store the __DWARF
   // segment.
   uint64_t PrevEndAddress = EndAddress;
-  EndAddress = alignTo(EndAddress, 0x1000);
+  EndAddress = RoundUpToAlignment(EndAddress, 0x1000);
   if (GapForDwarf == UINT64_MAX && Segment.vmaddr > EndAddress &&
       Segment.vmaddr - EndAddress >= DwarfSegmentSize)
     GapForDwarf = EndAddress;
@@ -268,8 +268,8 @@ static void createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
                                uint64_t FileSize, unsigned NumSections,
                                MCAsmLayout &Layout, MachObjectWriter &Writer) {
   Writer.writeSegmentLoadCommand("__DWARF", NumSections, VMAddr,
-                                 alignTo(FileSize, 0x1000), FileOffset,
-                                 FileSize, /* MaxProt */ 7,
+                                 RoundUpToAlignment(FileSize, 0x1000),
+                                 FileOffset, FileSize, /* MaxProt */ 7,
                                  /* InitProt =*/3);
 
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
@@ -279,8 +279,8 @@ static void createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
 
     unsigned Align = Sec->getAlignment();
     if (Align > 1) {
-      VMAddr = alignTo(VMAddr, Align);
-      FileOffset = alignTo(FileOffset, Align);
+      VMAddr = RoundUpToAlignment(VMAddr, Align);
+      FileOffset = RoundUpToAlignment(FileOffset, Align);
     }
     Writer.writeSection(Layout, *Sec, VMAddr, FileOffset, 0, 0, 0);
 
@@ -394,7 +394,8 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
       continue;
 
     if (uint64_t Size = Layout.getSectionFileSize(Sec)) {
-      DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlignment());
+      DwarfSegmentSize =
+          RoundUpToAlignment(DwarfSegmentSize, Sec->getAlignment());
       DwarfSegmentSize += Size;
       ++NumDwarfSections;
     }
@@ -418,7 +419,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
 
   uint64_t SymtabStart = LoadCommandSize;
   SymtabStart += HeaderSize;
-  SymtabStart = alignTo(SymtabStart, 0x1000);
+  SymtabStart = RoundUpToAlignment(SymtabStart, 0x1000);
 
   // We gathered all the information we need, start emitting the output file.
   Writer.writeHeader(MachO::MH_DSYM, NumLoadCommands, LoadCommandSize, false);
@@ -440,7 +441,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
                                   NewStringsSize);
 
   uint64_t DwarfSegmentStart = StringStart + NewStringsSize;
-  DwarfSegmentStart = alignTo(DwarfSegmentStart, 0x1000);
+  DwarfSegmentStart = RoundUpToAlignment(DwarfSegmentStart, 0x1000);
 
   // Write the load commands for the segments and sections we 'import' from
   // the original binary.
@@ -459,7 +460,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
                                  DwarfSegmentSize, GapForDwarf, EndAddress);
   }
 
-  uint64_t DwarfVMAddr = alignTo(EndAddress, 0x1000);
+  uint64_t DwarfVMAddr = RoundUpToAlignment(EndAddress, 0x1000);
   uint64_t DwarfVMMax = Is64Bit ? UINT64_MAX : UINT32_MAX;
   if (DwarfVMAddr + DwarfSegmentSize > DwarfVMMax ||
       DwarfVMAddr + DwarfSegmentSize < DwarfVMAddr /* Overflow */) {
@@ -509,7 +510,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
       continue;
 
     uint64_t Pos = OutFile.tell();
-    Writer.WriteZeros(alignTo(Pos, Sec.getAlignment()) - Pos);
+    Writer.WriteZeros(RoundUpToAlignment(Pos, Sec.getAlignment()) - Pos);
     MCAsm.writeSectionData(&Sec, Layout);
   }
 

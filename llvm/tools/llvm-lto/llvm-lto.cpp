@@ -15,7 +15,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
 #include "llvm/LTO/LTOModule.h"
@@ -64,10 +63,6 @@ static cl::opt<bool>
     ThinLTO("thinlto", cl::init(false),
             cl::desc("Only write combined global index for ThinLTO backends"));
 
-static cl::opt<bool>
-SaveModuleFile("save-merged-module", cl::init(false),
-               cl::desc("Write merged LTO module to file before CodeGen"));
-
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::OneOrMore,
   cl::desc("<input bitcode files>"));
@@ -106,7 +101,6 @@ struct ModuleInfo {
 
 static void handleDiagnostics(lto_codegen_diagnostic_severity_t Severity,
                               const char *Msg, void *) {
-  errs() << "llvm-lto: ";
   switch (Severity) {
   case LTO_DS_NOTE:
     errs() << "note: ";
@@ -124,68 +118,18 @@ static void handleDiagnostics(lto_codegen_diagnostic_severity_t Severity,
   errs() << Msg << "\n";
 }
 
-static std::string CurrentActivity;
-static void diagnosticHandler(const DiagnosticInfo &DI) {
-  raw_ostream &OS = errs();
-  OS << "llvm-lto: ";
-  switch (DI.getSeverity()) {
-  case DS_Error:
-    OS << "error";
-    break;
-  case DS_Warning:
-    OS << "warning";
-    break;
-  case DS_Remark:
-    OS << "remark";
-    break;
-  case DS_Note:
-    OS << "note";
-    break;
-  }
-  if (!CurrentActivity.empty())
-    OS << ' ' << CurrentActivity;
-  OS << ": ";
-
-  DiagnosticPrinterRawOStream DP(OS);
-  DI.print(DP);
-  OS << '\n';
-
-  if (DI.getSeverity() == DS_Error)
-    exit(1);
-}
-
-static void diagnosticHandlerWithContenxt(const DiagnosticInfo &DI,
-                                          void *Context) {
-  diagnosticHandler(DI);
-}
-
-static void error(const Twine &Msg) {
-  errs() << "llvm-lto: " << Msg << '\n';
-  exit(1);
-}
-
-static void error(std::error_code EC, const Twine &Prefix) {
-  if (EC)
-    error(Prefix + ": " + EC.message());
-}
-
-template <typename T>
-static void error(const ErrorOr<T> &V, const Twine &Prefix) {
-  error(V.getError(), Prefix);
-}
-
 static std::unique_ptr<LTOModule>
 getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
-                  const TargetOptions &Options) {
+                  const TargetOptions &Options, std::string &Error) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Path);
-  error(BufferOrErr, "error loading file '" + Path + "'");
+  if (std::error_code EC = BufferOrErr.getError()) {
+    Error = EC.message();
+    return nullptr;
+  }
   Buffer = std::move(BufferOrErr.get());
-  CurrentActivity = ("loading file '" + Path + "'").str();
-  ErrorOr<std::unique_ptr<LTOModule>> Ret = LTOModule::createInLocalContext(
-      Buffer->getBufferStart(), Buffer->getBufferSize(), Options, Path);
-  CurrentActivity = "";
-  return std::move(*Ret);
+  return std::unique_ptr<LTOModule>(LTOModule::createInLocalContext(
+      Buffer->getBufferStart(), Buffer->getBufferSize(), Options, Error, Path));
 }
 
 /// \brief List symbols in each IR file.
@@ -194,44 +138,80 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
 /// functionality that's exposed by the C API to list symbols.  Moreover, this
 /// provides testing coverage for modules that have been created in their own
 /// contexts.
-static void listSymbols(const TargetOptions &Options) {
+static int listSymbols(StringRef Command, const TargetOptions &Options) {
   for (auto &Filename : InputFilenames) {
+    std::string Error;
     std::unique_ptr<MemoryBuffer> Buffer;
     std::unique_ptr<LTOModule> Module =
-        getLocalLTOModule(Filename, Buffer, Options);
+        getLocalLTOModule(Filename, Buffer, Options, Error);
+    if (!Module) {
+      errs() << Command << ": error loading file '" << Filename
+             << "': " << Error << "\n";
+      return 1;
+    }
 
     // List the symbols.
     outs() << Filename << ":\n";
     for (int I = 0, E = Module->getSymbolCount(); I != E; ++I)
       outs() << Module->getSymbolName(I) << "\n";
   }
+  return 0;
+}
+
+/// Parse the function index out of an IR file and return the function
+/// index object if found, or nullptr if not.
+static std::unique_ptr<FunctionInfoIndex>
+getFunctionIndexForFile(StringRef Path, std::string &Error,
+                        LLVMContext &Context) {
+  std::unique_ptr<MemoryBuffer> Buffer;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+      MemoryBuffer::getFile(Path);
+  if (std::error_code EC = BufferOrErr.getError()) {
+    Error = EC.message();
+    return nullptr;
+  }
+  Buffer = std::move(BufferOrErr.get());
+  ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
+      object::FunctionIndexObjectFile::create(Buffer->getMemBufferRef(),
+                                              Context);
+  if (std::error_code EC = ObjOrErr.getError()) {
+    Error = EC.message();
+    return nullptr;
+  }
+  return (*ObjOrErr)->takeIndex();
 }
 
 /// Create a combined index file from the input IR files and write it.
 ///
 /// This is meant to enable testing of ThinLTO combined index generation,
 /// currently available via the gold plugin via -thinlto.
-static void createCombinedFunctionIndex() {
+static int createCombinedFunctionIndex(StringRef Command) {
+  LLVMContext Context;
   FunctionInfoIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
-    CurrentActivity = "loading file '" + Filename + "'";
-    ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
-        llvm::getFunctionIndexForFile(Filename, diagnosticHandler);
-    std::unique_ptr<FunctionInfoIndex> Index = std::move(IndexOrErr.get());
-    CurrentActivity = "";
-    // Skip files without a function summary.
-    if (!Index)
-      continue;
+    std::string Error;
+    std::unique_ptr<FunctionInfoIndex> Index =
+        getFunctionIndexForFile(Filename, Error, Context);
+    if (!Index) {
+      errs() << Command << ": error loading file '" << Filename
+             << "': " << Error << "\n";
+      return 1;
+    }
     CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
   }
   std::error_code EC;
   assert(!OutputFilename.empty());
   raw_fd_ostream OS(OutputFilename + ".thinlto.bc", EC,
                     sys::fs::OpenFlags::F_None);
-  error(EC, "error opening the file '" + OutputFilename + ".thinlto.bc'");
+  if (EC) {
+    errs() << Command << ": error opening the file '" << OutputFilename
+           << ".thinlto.bc': " << EC.message() << "\n";
+    return 1;
+  }
   WriteFunctionSummaryToFile(CombinedIndex, OS);
   OS.close();
+  return 0;
 }
 
 int main(int argc, char **argv) {
@@ -242,8 +222,10 @@ int main(int argc, char **argv) {
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
 
-  if (OptLevel < '0' || OptLevel > '3')
-    error("optimization level must be between 0 and 3");
+  if (OptLevel < '0' || OptLevel > '3') {
+    errs() << argv[0] << ": optimization level must be between 0 and 3\n";
+    return 1;
+  }
 
   // Initialize the configured targets.
   InitializeAllTargets();
@@ -254,22 +236,15 @@ int main(int argc, char **argv) {
   // set up the TargetOptions for the machine
   TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
 
-  if (ListSymbolsOnly) {
-    listSymbols(Options);
-    return 0;
-  }
+  if (ListSymbolsOnly)
+    return listSymbols(argv[0], Options);
 
-  if (ThinLTO) {
-    createCombinedFunctionIndex();
-    return 0;
-  }
+  if (ThinLTO)
+    return createCombinedFunctionIndex(argv[0]);
 
   unsigned BaseArg = 0;
 
-  LLVMContext Context;
-  Context.setDiagnosticHandler(diagnosticHandlerWithContenxt, nullptr, true);
-
-  LTOCodeGenerator CodeGen(Context);
+  LTOCodeGenerator CodeGen;
 
   if (UseDiagnosticHandler)
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);
@@ -286,12 +261,14 @@ int main(int argc, char **argv) {
   std::vector<std::string> KeptDSOSyms;
 
   for (unsigned i = BaseArg; i < InputFilenames.size(); ++i) {
-    CurrentActivity = "loading file '" + InputFilenames[i] + "'";
-    ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
-        LTOModule::createFromFile(Context, InputFilenames[i].c_str(), Options);
-    error(ModuleOrErr, "error " + CurrentActivity);
-    std::unique_ptr<LTOModule> &Module = *ModuleOrErr;
-    CurrentActivity = "";
+    std::string error;
+    std::unique_ptr<LTOModule> Module(
+        LTOModule::createFromFile(InputFilenames[i].c_str(), Options, error));
+    if (!error.empty()) {
+      errs() << argv[0] << ": error loading file '" << InputFilenames[i]
+             << "': " << error << "\n";
+      return 1;
+    }
 
     unsigned NumSyms = Module->getSymbolCount();
     for (unsigned I = 0; I < NumSyms; ++I) {
@@ -339,26 +316,12 @@ int main(int argc, char **argv) {
   if (!attrs.empty())
     CodeGen.setAttr(attrs.c_str());
 
-  if (FileType.getNumOccurrences())
-    CodeGen.setFileType(FileType);
-
   if (!OutputFilename.empty()) {
+    std::string ErrorInfo;
     if (!CodeGen.optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
-                          DisableLTOVectorization)) {
-      // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error optimizing the code\n";
+                          DisableLTOVectorization, ErrorInfo)) {
+      errs() << argv[0] << ": error optimizing the code: " << ErrorInfo << "\n";
       return 1;
-    }
-
-    if (SaveModuleFile) {
-      std::string ModuleFilename = OutputFilename;
-      ModuleFilename += ".merged.bc";
-      std::string ErrMsg;
-
-      if (!CodeGen.writeMergedModules(ModuleFilename.c_str())) {
-        errs() << argv[0] << ": writing merged module failed.\n";
-        return 1;
-      }
     }
 
     std::list<tool_output_file> OSs;
@@ -377,9 +340,8 @@ int main(int argc, char **argv) {
       OSPtrs.push_back(&OSs.back().os());
     }
 
-    if (!CodeGen.compileOptimized(OSPtrs)) {
-      // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error compiling the code\n";
+    if (!CodeGen.compileOptimized(OSPtrs, ErrorInfo)) {
+      errs() << argv[0] << ": error compiling the code: " << ErrorInfo << "\n";
       return 1;
     }
 
@@ -391,16 +353,14 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    if (SaveModuleFile) {
-      errs() << argv[0] << ": -save-merged-module must be specified with -o\n";
-      return 1;
-    }
-
+    std::string ErrorInfo;
     const char *OutputName = nullptr;
     if (!CodeGen.compile_to_file(&OutputName, DisableVerify, DisableInline,
-                                 DisableGVNLoadPRE, DisableLTOVectorization)) {
-      // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error compiling the code\n";
+                                 DisableGVNLoadPRE, DisableLTOVectorization,
+                                 ErrorInfo)) {
+      errs() << argv[0]
+             << ": error compiling the code: " << ErrorInfo
+             << "\n";
       return 1;
     }
 

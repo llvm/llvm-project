@@ -112,7 +112,7 @@ RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
 
 /// Push an entry of the given size onto this protected-scope stack.
 char *EHScopeStack::allocate(size_t Size) {
-  Size = llvm::alignTo(Size, ScopeStackAlignment);
+  Size = llvm::RoundUpToAlignment(Size, ScopeStackAlignment);
   if (!StartOfBuffer) {
     unsigned Capacity = 1024;
     while (Capacity < Size) Capacity *= 2;
@@ -143,7 +143,7 @@ char *EHScopeStack::allocate(size_t Size) {
 }
 
 void EHScopeStack::deallocate(size_t Size) {
-  StartOfData += llvm::alignTo(Size, ScopeStackAlignment);
+  StartOfData += llvm::RoundUpToAlignment(Size, ScopeStackAlignment);
 }
 
 bool EHScopeStack::containsOnlyLifetimeMarkers(
@@ -243,6 +243,13 @@ EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
 void EHScopeStack::pushTerminate() {
   char *Buffer = allocate(EHTerminateScope::getSize());
   new (Buffer) EHTerminateScope(InnermostEHScope);
+  InnermostEHScope = stable_begin();
+}
+
+void EHScopeStack::pushPadEnd(llvm::BasicBlock *PadEndBB) {
+  char *Buffer = allocate(EHPadEndScope::getSize());
+  auto *CES = new (Buffer) EHPadEndScope(InnermostEHScope);
+  CES->setCachedEHDispatchBlock(PadEndBB);
   InnermostEHScope = stable_begin();
 }
 
@@ -676,25 +683,13 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     return;
   }
 
-  // Copy the cleanup emission data out.  This uses either a stack
-  // array or malloc'd memory, depending on the size, which is
-  // behavior that SmallVector would provide, if we could use it
-  // here. Unfortunately, if you ask for a SmallVector<char>, the
-  // alignment isn't sufficient.
+  // Copy the cleanup emission data out.  Note that SmallVector
+  // guarantees maximal alignment for its buffer regardless of its
+  // type parameter.
   auto *CleanupSource = reinterpret_cast<char *>(Scope.getCleanupBuffer());
-  llvm::AlignedCharArray<EHScopeStack::ScopeStackAlignment, 8 * sizeof(void *)> CleanupBufferStack;
-  std::unique_ptr<char[]> CleanupBufferHeap;
-  size_t CleanupSize = Scope.getCleanupSize();
-  EHScopeStack::Cleanup *Fn;
-
-  if (CleanupSize <= sizeof(CleanupBufferStack)) {
-    memcpy(CleanupBufferStack.buffer, CleanupSource, CleanupSize);
-    Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBufferStack.buffer);
-  } else {
-    CleanupBufferHeap.reset(new char[CleanupSize]);
-    memcpy(CleanupBufferHeap.get(), CleanupSource, CleanupSize);
-    Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBufferHeap.get());
-  }
+  SmallVector<char, 8 * sizeof(void *)> CleanupBuffer(
+      CleanupSource, CleanupSource + Scope.getCleanupSize());
+  auto *Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBuffer.data());
 
   EHScopeStack::Cleanup::Flags cleanupFlags;
   if (Scope.isNormalCleanup())
@@ -914,17 +909,24 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     // throwing cleanups. For funclet EH personalities, the cleanupendpad models
     // program termination when cleanups throw.
     bool PushedTerminate = false;
-    SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
-        CurrentFuncletPad);
+    SaveAndRestore<bool> RestoreIsCleanupPadScope(IsCleanupPadScope);
     llvm::CleanupPadInst *CPI = nullptr;
+    llvm::BasicBlock *CleanupEndBB = nullptr;
     if (!EHPersonality::get(*this).usesFuncletPads()) {
       EHStack.pushTerminate();
       PushedTerminate = true;
     } else {
-      llvm::Value *ParentPad = CurrentFuncletPad;
-      if (!ParentPad)
-        ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
-      CurrentFuncletPad = CPI = Builder.CreateCleanupPad(ParentPad);
+      CPI = Builder.CreateCleanupPad({});
+
+      // Build a cleanupendpad to unwind through. Our insertion point should be
+      // in the cleanuppad block.
+      CleanupEndBB = createBasicBlock("ehcleanup.end");
+      CGBuilderTy(*this, CleanupEndBB).CreateCleanupEndPad(CPI, NextAction);
+      EHStack.pushPadEnd(CleanupEndBB);
+
+      // Mark that we're inside a cleanuppad to block inlining.
+      // FIXME: Remove this once the inliner knows when it's safe to do so.
+      IsCleanupPadScope = true;
     }
 
     // We only actually emit the cleanup code if the cleanup is either
@@ -938,6 +940,17 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       Builder.CreateCleanupRet(CPI, NextAction);
     else
       Builder.CreateBr(NextAction);
+
+    // Insert the cleanupendpad block here, if it has any uses.
+    if (CleanupEndBB) {
+      EHStack.popPadEnd();
+      if (CleanupEndBB->hasNUsesOrMore(1)) {
+        CurFn->getBasicBlockList().insertAfter(Builder.GetInsertBlock(),
+                                               CleanupEndBB);
+      } else {
+        delete CleanupEndBB;
+      }
+    }
 
     // Leave the terminate scope.
     if (PushedTerminate)

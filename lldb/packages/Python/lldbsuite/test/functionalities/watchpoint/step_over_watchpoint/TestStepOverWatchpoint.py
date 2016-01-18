@@ -17,7 +17,6 @@ class TestStepOverWatchpoint(TestBase):
         return ['basic_process']
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureLinux(bugnumber="llvm.org/pr26031", archs=['arm'])
     @expectedFailureWindows("llvm.org/pr24446")
     def test(self):
         """Test stepping over watchpoints."""
@@ -55,6 +54,17 @@ class TestStepOverWatchpoint(TestBase):
                         error.GetCString())
         self.assertTrue(read_watchpoint, "Failed to set read watchpoint.")
 
+        write_value = frame.FindValue('g_watch_me_write',
+                                      lldb.eValueTypeVariableGlobal)
+        self.assertTrue(write_value, "Failed to find write value.")
+
+        # resolve_location=True, read=False, write=True
+        write_watchpoint = write_value.Watch(True, False, True, error)
+        self.assertTrue(read_watchpoint, "Failed to set write watchpoint.")
+        self.assertTrue(error.Success(),
+                        "Error while setting watchpoint: %s" %
+                        error.GetCString())
+
         thread.StepOver()
         self.assertTrue(thread.GetStopReason() == lldb.eStopReasonWatchpoint,
                         STOPPED_DUE_TO_WATCHPOINT)
@@ -66,22 +76,6 @@ class TestStepOverWatchpoint(TestBase):
         self.assertTrue(thread.GetStopDescription(20) == 'step over')
 
         self.step_inst_for_watchpoint(1)
-
-        write_value = frame.FindValue('g_watch_me_write',
-                                      lldb.eValueTypeVariableGlobal)
-        self.assertTrue(write_value, "Failed to find write value.")
-
-        # Most of the MIPS boards provide only one H/W watchpoints, and S/W watchpoints are not supported yet
-        arch = self.getArchitecture()
-        if arch in ['mips', 'mipsel', 'mips64', 'mips64el']:
-            self.runCmd("watchpoint delete 1")
-
-        # resolve_location=True, read=False, write=True
-        write_watchpoint = write_value.Watch(True, False, True, error)
-        self.assertTrue(read_watchpoint, "Failed to set write watchpoint.")
-        self.assertTrue(error.Success(),
-                        "Error while setting watchpoint: %s" %
-                        error.GetCString())
 
         thread.StepOver()
         self.assertTrue(thread.GetStopReason() == lldb.eStopReasonWatchpoint,

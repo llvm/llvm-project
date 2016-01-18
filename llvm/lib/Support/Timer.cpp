@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Timer.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -22,6 +21,9 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
+
+// CreateInfoOutputFile - Return a file stream to print our output on.
+namespace llvm { extern raw_ostream *CreateInfoOutputFile(); }
 
 // getLibSupportInfoOutputFilename - This ugly hack is brought to you courtesy
 // of constructor/destructor ordering being unspecified by C++.  Basically the
@@ -50,27 +52,28 @@ namespace {
                    cl::Hidden, cl::location(getLibSupportInfoOutputFilename()));
 }
 
-// Return a file stream to print our output on.
-std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
+// CreateInfoOutputFile - Return a file stream to print our output on.
+raw_ostream *llvm::CreateInfoOutputFile() {
   const std::string &OutputFilename = getLibSupportInfoOutputFilename();
   if (OutputFilename.empty())
-    return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
+    return new raw_fd_ostream(2, false); // stderr.
   if (OutputFilename == "-")
-    return llvm::make_unique<raw_fd_ostream>(1, false); // stdout.
-
+    return new raw_fd_ostream(1, false); // stdout.
+  
   // Append mode is used because the info output file is opened and closed
   // each time -stats or -time-passes wants to print output to it. To
   // compensate for this, the test-suite Makefiles have code to delete the
   // info output file before running commands which write to it.
   std::error_code EC;
-  auto Result = llvm::make_unique<raw_fd_ostream>(
-      OutputFilename, EC, sys::fs::F_Append | sys::fs::F_Text);
+  raw_ostream *Result = new raw_fd_ostream(OutputFilename, EC,
+                                           sys::fs::F_Append | sys::fs::F_Text);
   if (!EC)
     return Result;
-
+  
   errs() << "Error opening info-output-file '"
     << OutputFilename << " for appending!\n";
-  return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
+  delete Result;
+  return new raw_fd_ostream(2, false); // stderr.
 }
 
 
@@ -96,13 +99,17 @@ static TimerGroup *getDefaultTimerGroup() {
 //===----------------------------------------------------------------------===//
 
 void Timer::init(StringRef N) {
-  init(N, *getDefaultTimerGroup());
+  assert(!TG && "Timer already initialized");
+  Name.assign(N.begin(), N.end());
+  Started = false;
+  TG = getDefaultTimerGroup();
+  TG->addTimer(*this);
 }
 
 void Timer::init(StringRef N, TimerGroup &tg) {
   assert(!TG && "Timer already initialized");
   Name.assign(N.begin(), N.end());
-  Running = Triggered = false;
+  Started = false;
   TG = &tg;
   TG->addTimer(*this);
 }
@@ -135,22 +142,25 @@ TimeRecord TimeRecord::getCurrentTime(bool Start) {
   return Result;
 }
 
+static ManagedStatic<std::vector<Timer*> > ActiveTimers;
+
 void Timer::startTimer() {
-  assert(!Running && "Cannot start a running timer");
-  Running = Triggered = true;
-  StartTime = TimeRecord::getCurrentTime(true);
+  Started = true;
+  ActiveTimers->push_back(this);
+  Time -= TimeRecord::getCurrentTime(true);
 }
 
 void Timer::stopTimer() {
-  assert(Running && "Cannot stop a paused timer");
-  Running = false;
   Time += TimeRecord::getCurrentTime(false);
-  Time -= StartTime;
-}
 
-void Timer::clear() {
-  Running = Triggered = false;
-  Time = StartTime = TimeRecord();
+  if (ActiveTimers->back() == this) {
+    ActiveTimers->pop_back();
+  } else {
+    std::vector<Timer*>::iterator I =
+      std::find(ActiveTimers->begin(), ActiveTimers->end(), this);
+    assert(I != ActiveTimers->end() && "stop but no startTimer?");
+    ActiveTimers->erase(I);
+  }
 }
 
 static void printVal(double Val, double Total, raw_ostream &OS) {
@@ -268,8 +278,8 @@ void TimerGroup::removeTimer(Timer &T) {
   sys::SmartScopedLock<true> L(*TimerLock);
   
   // If the timer was started, move its data to TimersToPrint.
-  if (T.hasTriggered())
-    TimersToPrint.emplace_back(T.Time, T.Name);
+  if (T.Started)
+    TimersToPrint.push_back(std::make_pair(T.Time, T.Name));
 
   T.TG = nullptr;
   
@@ -282,9 +292,10 @@ void TimerGroup::removeTimer(Timer &T) {
   // them were started.
   if (FirstTimer || TimersToPrint.empty())
     return;
-
-  std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
+  
+  raw_ostream *OutStream = CreateInfoOutputFile();
   PrintQueuedTimers(*OutStream);
+  delete OutStream;   // Close the file.
 }
 
 void TimerGroup::addTimer(Timer &T) {
@@ -303,8 +314,8 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   std::sort(TimersToPrint.begin(), TimersToPrint.end());
   
   TimeRecord Total;
-  for (auto &RecordNamePair : TimersToPrint)
-    Total += RecordNamePair.first;
+  for (unsigned i = 0, e = TimersToPrint.size(); i != e; ++i)
+    Total += TimersToPrint[i].first;
   
   // Print out timing header.
   OS << "===" << std::string(73, '-') << "===\n";
@@ -354,11 +365,12 @@ void TimerGroup::print(raw_ostream &OS) {
   // See if any of our timers were started, if so add them to TimersToPrint and
   // reset them.
   for (Timer *T = FirstTimer; T; T = T->Next) {
-    if (!T->hasTriggered()) continue;
-    TimersToPrint.emplace_back(T->Time, T->Name);
+    if (!T->Started) continue;
+    TimersToPrint.push_back(std::make_pair(T->Time, T->Name));
     
     // Clear out the time.
-    T->clear();
+    T->Started = 0;
+    T->Time = TimeRecord();
   }
 
   // If any timers were started, print the group.

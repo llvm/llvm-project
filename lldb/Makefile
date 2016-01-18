@@ -46,8 +46,7 @@ endif
 
 ifeq (,$(findstring -DLLDB_DISABLE_PYTHON,$(CXXFLAGS)))
 # Set Python include directory
-PYTHON_CONFIG?=	python-config
-PYTHON_INC_DIR = $(shell $(PYTHON_CONFIG) --includes)
+PYTHON_INC_DIR = $(shell python-config --includes)
 CPP.Flags +=   $(PYTHON_INC_DIR)
 endif
 

@@ -412,8 +412,9 @@ public:
 
 template<typename DeclT>
 llvm::iterator_range<MergedRedeclIterator<DeclT>> merged_redecls(DeclT *D) {
-  return llvm::make_range(MergedRedeclIterator<DeclT>(D),
-                          MergedRedeclIterator<DeclT>());
+  return llvm::iterator_range<MergedRedeclIterator<DeclT>>(
+      MergedRedeclIterator<DeclT>(D),
+      MergedRedeclIterator<DeclT>());
 }
 
 uint64_t ASTDeclReader::GetCurrentCursorOffset() {
@@ -476,8 +477,6 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     // placeholder.
     GlobalDeclID SemaDCIDForTemplateParmDecl = ReadDeclID(Record, Idx);
     GlobalDeclID LexicalDCIDForTemplateParmDecl = ReadDeclID(Record, Idx);
-    if (!LexicalDCIDForTemplateParmDecl)
-      LexicalDCIDForTemplateParmDecl = SemaDCIDForTemplateParmDecl;
     Reader.addPendingDeclContextInfo(D,
                                      SemaDCIDForTemplateParmDecl,
                                      LexicalDCIDForTemplateParmDecl);
@@ -485,8 +484,6 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   } else {
     DeclContext *SemaDC = ReadDeclAs<DeclContext>(Record, Idx);
     DeclContext *LexicalDC = ReadDeclAs<DeclContext>(Record, Idx);
-    if (!LexicalDC)
-      LexicalDC = SemaDC;
     DeclContext *MergedSemaDC = Reader.MergedDeclContexts.lookup(SemaDC);
     // Avoid calling setLexicalDeclContext() directly because it uses
     // Decl::getASTContext() internally which is unsafe during derialization.
@@ -1731,7 +1728,7 @@ void ASTDeclReader::VisitImportDecl(ImportDecl *D) {
   VisitDecl(D);
   D->ImportedAndComplete.setPointer(readModule(Record, Idx));
   D->ImportedAndComplete.setInt(Record[Idx++]);
-  SourceLocation *StoredLocs = D->getTrailingObjects<SourceLocation>();
+  SourceLocation *StoredLocs = reinterpret_cast<SourceLocation *>(D + 1);
   for (unsigned I = 0, N = Record.back(); I != N; ++I)
     StoredLocs[I] = ReadSourceLocation(Record, Idx);
   ++Idx; // The number of stored source locations.
@@ -1749,8 +1746,7 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
   else
     D->Friend = GetTypeSourceInfo(Record, Idx);
   for (unsigned i = 0; i != D->NumTPLists; ++i)
-    D->getTrailingObjects<TemplateParameterList *>()[i] =
-        Reader.ReadTemplateParameterList(F, Record, Idx);
+    D->getTPLists()[i] = Reader.ReadTemplateParameterList(F, Record, Idx);
   D->NextFriend = ReadDeclID(Record, Idx);
   D->UnsupportedFriend = (Record[Idx++] != 0);
   D->FriendLoc = ReadSourceLocation(Record, Idx);
@@ -2099,11 +2095,10 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   D->setDepth(Record[Idx++]);
   D->setPosition(Record[Idx++]);
   if (D->isExpandedParameterPack()) {
-    auto TypesAndInfos =
-        D->getTrailingObjects<std::pair<QualType, TypeSourceInfo *>>();
+    void **Data = reinterpret_cast<void **>(D + 1);
     for (unsigned I = 0, N = D->getNumExpansionTypes(); I != N; ++I) {
-      new (&TypesAndInfos[I].first) QualType(Reader.readType(F, Record, Idx));
-      TypesAndInfos[I].second = GetTypeSourceInfo(Record, Idx);
+      Data[2*I] = Reader.readType(F, Record, Idx).getAsOpaquePtr();
+      Data[2*I + 1] = GetTypeSourceInfo(Record, Idx);
     }
   } else {
     // Rest of NonTypeTemplateParmDecl.
@@ -2119,8 +2114,7 @@ void ASTDeclReader::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
   D->setDepth(Record[Idx++]);
   D->setPosition(Record[Idx++]);
   if (D->isExpandedParameterPack()) {
-    TemplateParameterList **Data =
-        D->getTrailingObjects<TemplateParameterList *>();
+    void **Data = reinterpret_cast<void **>(D + 1);
     for (unsigned I = 0, N = D->getNumExpansionTemplateParameters();
          I != N; ++I)
       Data[I] = Reader.ReadTemplateParameterList(F, Record, Idx);
@@ -3625,21 +3619,6 @@ void ASTDeclReader::UpdateDecl(Decl *D, ModuleFile &ModuleFile,
       cast<VarDecl>(D)->getMemberSpecializationInfo()->setPointOfInstantiation(
           Reader.ReadSourceLocation(ModuleFile, Record, Idx));
       break;
-
-    case UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT: {
-      auto Param = cast<ParmVarDecl>(D);
-
-      // We have to read the default argument regardless of whether we use it
-      // so that hypothetical further update records aren't messed up.
-      // TODO: Add a function to skip over the next expr record.
-      auto DefaultArg = Reader.ReadExpr(F);
-
-      // Only apply the update if the parameter still has an uninstantiated
-      // default argument.
-      if (Param->hasUninstantiatedDefaultArg())
-        Param->setDefaultArg(DefaultArg);
-      break;
-    }
 
     case UPD_CXX_ADDED_FUNCTION_DEFINITION: {
       FunctionDecl *FD = cast<FunctionDecl>(D);

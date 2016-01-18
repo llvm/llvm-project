@@ -737,25 +737,17 @@ def print_stacktraces(process, string_buffer = False):
 def expect_state_changes(test, listener, states, timeout = 5):
     """Listens for state changed events on the listener and makes sure they match what we
     expect. Stop-and-restart events (where GetRestartedFromEvent() returns true) are ignored."""
-
+    event = lldb.SBEvent()
     for expected_state in states:
-        def get_next_event():
-            event = lldb.SBEvent()
-            if not listener.WaitForEvent(timeout, event):
-                test.fail("Timed out while waiting for a transition to state %s" %
-                    lldb.SBDebugger.StateAsCString(expected_state))
-            return event
+        if not listener.WaitForEvent(timeout, event):
+            test.Fail("Timed out while waiting for a transition to state %s" %
+                lldb.SBDebugger.StateAsCString(expected_state))
 
-        event = get_next_event()
-        while (lldb.SBProcess.GetStateFromEvent(event) == lldb.eStateStopped and
-                lldb.SBProcess.GetRestartedFromEvent(event)):
-            # Ignore restarted event and the subsequent running event.
-            event = get_next_event()
-            test.assertEqual(lldb.SBProcess.GetStateFromEvent(event), lldb.eStateRunning,
-                    "Restarted event followed by a running event")
-            event = get_next_event()
+        got_state = lldb.SBProcess.GetStateFromEvent(event)
+        if got_state == lldb.eStateStopped and lldb.SBProcess.GetRestartedFromEvent(event):
+            continue
 
-        test.assertEqual(lldb.SBProcess.GetStateFromEvent(event), expected_state)
+        test.assertEqual(expected_state, got_state)
 
 # ===================================
 # Utility functions related to Frames
@@ -993,11 +985,10 @@ class PrintableRegex(object):
     def __repr__(self):
         return "re.compile(%s) -> %s" % (self.text, self.regex)
 
-def skip_if_callable(test, mycallable, reason):
-    if six.callable(mycallable):
-        if mycallable(test):
-            test.skipTest(reason)
-            return True
+def skip_if_callable(test, callable, reason):
+    if six.callable(test):
+        test.skipTest(reason)
+        return True
     return False
 
 def skip_if_library_missing(test, target, library):

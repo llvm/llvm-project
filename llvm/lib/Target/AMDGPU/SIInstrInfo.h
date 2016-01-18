@@ -41,9 +41,6 @@ private:
 
   void swapOperands(MachineBasicBlock::iterator Inst) const;
 
-  void lowerScalarAbs(SmallVectorImpl<MachineInstr *> &Worklist,
-                      MachineInstr *Inst) const;
-
   void splitScalar64BitUnaryOp(SmallVectorImpl<MachineInstr *> &Worklist,
                                MachineInstr *Inst, unsigned Opcode) const;
 
@@ -381,23 +378,6 @@ public:
   bool isOperandLegal(const MachineInstr *MI, unsigned OpIdx,
                       const MachineOperand *MO = nullptr) const;
 
-  /// \brief Check if \p MO would be a valid operand for the given operand
-  /// definition \p OpInfo. Note this does not attempt to validate constant bus
-  /// restrictions (e.g. literal constant usage).
-  bool isLegalVSrcOperand(const MachineRegisterInfo &MRI,
-                          const MCOperandInfo &OpInfo,
-                          const MachineOperand &MO) const;
-
-  /// \brief Check if \p MO (a register operand) is a legal register for the
-  /// given operand description.
-  bool isLegalRegOperand(const MachineRegisterInfo &MRI,
-                         const MCOperandInfo &OpInfo,
-                         const MachineOperand &MO) const;
-
-  /// \brief Legalize operands in \p MI by either commuting it or inserting a
-  /// copy of src1.
-  void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr *MI) const;
-
   /// \brief Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr *MI) const;
 
@@ -441,7 +421,7 @@ public:
   void LoadM0(MachineInstr *MoveRel, MachineBasicBlock::iterator I,
               unsigned SavReg, unsigned IndexReg) const;
 
-  void insertWaitStates(MachineBasicBlock::iterator MI, int Count) const;
+  void insertNOPs(MachineBasicBlock::iterator MI, int Count) const;
 
   /// \brief Returns the operand named \p Op.  If \p MI does not have an
   /// operand named \c Op, this function returns nullptr.
@@ -462,9 +442,6 @@ public:
 
   uint64_t getDefaultRsrcDataFormat() const;
   uint64_t getScratchRsrcWords23() const;
-
-  bool isLowLatencyInstruction(const MachineInstr *MI) const;
-  bool isHighLatencyInstruction(const MachineInstr *MI) const;
 };
 
 namespace AMDGPU {

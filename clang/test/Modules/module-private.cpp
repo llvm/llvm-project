@@ -12,7 +12,11 @@ void test() {
 }
 
 int test_broken() {
-  HiddenStruct hidden; // expected-error{{unknown type name 'HiddenStruct'}}
+  HiddenStruct hidden; // \
+  // expected-error{{must use 'struct' tag to refer to type 'HiddenStruct' in this scope}} \
+  // expected-error{{definition of 'HiddenStruct' must be imported}}
+  // expected-note@Inputs/module_private_left.h:3 {{previous definition is here}}
+
   Integer i; // expected-error{{unknown type name 'Integer'}}
 
   int *ip = 0;

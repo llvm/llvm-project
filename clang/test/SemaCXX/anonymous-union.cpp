@@ -62,11 +62,11 @@ void test_unqual_references(X x, const X xc) {
 
 struct Redecl {
   int x; // expected-note{{previous declaration is here}}
-  class y { }; // expected-note{{previous declaration is here}}
+  class y { };
 
   union {
     int x; // expected-error{{member of anonymous union redeclares 'x'}}
-    float y; // expected-error{{member of anonymous union redeclares 'y'}}
+    float y;
     double z; // expected-note{{previous declaration is here}}
     double zz; // expected-note{{previous definition is here}}
   };

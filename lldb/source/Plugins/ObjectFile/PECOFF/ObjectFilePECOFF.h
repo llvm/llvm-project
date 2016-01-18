@@ -95,11 +95,6 @@ public:
                              lldb_private::ModuleSpecList &specs);
 
     static bool
-    SaveCore (const lldb::ProcessSP &process_sp,
-              const lldb_private::FileSpec &outfile,
-              lldb_private::Error &error);
-
-    static bool
     MagicBytesMatch (lldb::DataBufferSP& data_sp);
     
     bool

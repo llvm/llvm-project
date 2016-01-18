@@ -262,12 +262,7 @@ Code Generation Options
   Generate debug information that contains external references to
   types defined in clang modules or precompiled headers instead of
   emitting redundant debug type information into every object file.
-  This option implies :option:`-fmodule-format=obj`.
-
-  This option should not be used when building static libraries for
-  distribution to other machines because the debug info will contain
-  references to the module cache on the machine the object files in
-  the library were built on.
+  This option implies `-fmodule-format=obj`.
   
 .. option:: -fstandalone-debug -fno-standalone-debug
 

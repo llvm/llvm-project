@@ -12,7 +12,7 @@
 
 #include "lldb/lldb-enumerations.h"
 
-namespace lldb_private {
+namespace lldb {
 
 namespace endian {
 
@@ -22,7 +22,7 @@ namespace endian {
         uint8_t  bytes[sizeof(uint32_t)];
     } const endianTest = { 0x01020304 };
     
-    inline lldb::ByteOrder InlHostByteOrder() { return (lldb::ByteOrder)endianTest.bytes[0]; }
+    inline ByteOrder InlHostByteOrder() { return (ByteOrder)endianTest.bytes[0]; }
 
 //    ByteOrder const InlHostByteOrder = (ByteOrder)endianTest.bytes[0];
 }

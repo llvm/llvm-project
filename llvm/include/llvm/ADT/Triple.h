@@ -93,11 +93,8 @@ public:
   enum SubArchType {
     NoSubArch,
 
-    ARMSubArch_v8_2a,
     ARMSubArch_v8_1a,
     ARMSubArch_v8,
-    ARMSubArch_v8m_baseline,
-    ARMSubArch_v8m_mainline,
     ARMSubArch_v7,
     ARMSubArch_v7em,
     ARMSubArch_v7m,
@@ -216,7 +213,7 @@ public:
   /// @name Constructors
   /// @{
 
-  /// Default constructor is the same as an empty string and leaves all
+  /// \brief Default constructor is the same as an empty string and leaves all
   /// triple fields unknown.
   Triple() : Data(), Arch(), Vendor(), OS(), Environment(), ObjectFormat() {}
 
@@ -242,7 +239,7 @@ public:
   /// common case in which otherwise valid components are in the wrong order.
   static std::string normalize(StringRef Str);
 
-  /// Return the normalized form of this triple's string.
+  /// \brief Return the normalized form of this triple's string.
   std::string normalize() const { return normalize(Data); }
 
   /// @}
@@ -270,7 +267,7 @@ public:
   /// getEnvironment - Get the parsed environment type of this triple.
   EnvironmentType getEnvironment() const { return Environment; }
 
-  /// Parse the version number from the OS name component of the
+  /// \brief Parse the version number from the OS name component of the
   /// triple, if present.
   ///
   /// For example, "fooos1.2.3" would return (1, 2, 3).
@@ -347,7 +344,7 @@ public:
   /// @name Convenience Predicates
   /// @{
 
-  /// Test whether the architecture is 64-bit
+  /// \brief Test whether the architecture is 64-bit
   ///
   /// Note that this tests for 64-bit pointer width, and nothing else. Note
   /// that we intentionally expose only three predicates, 64-bit, 32-bit, and
@@ -356,12 +353,12 @@ public:
   /// system is provided.
   bool isArch64Bit() const;
 
-  /// Test whether the architecture is 32-bit
+  /// \brief Test whether the architecture is 32-bit
   ///
   /// Note that this tests for 32-bit pointer width, and nothing else.
   bool isArch32Bit() const;
 
-  /// Test whether the architecture is 16-bit
+  /// \brief Test whether the architecture is 16-bit
   ///
   /// Note that this tests for 16-bit pointer width, and nothing else.
   bool isArch16Bit() const;
@@ -461,14 +458,12 @@ public:
     return getOS() == Triple::ELFIAMCU;
   }
 
-  /// Checks if the environment could be MSVC.
   bool isWindowsMSVCEnvironment() const {
     return getOS() == Triple::Win32 &&
            (getEnvironment() == Triple::UnknownEnvironment ||
             getEnvironment() == Triple::MSVC);
   }
 
-  /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return getOS() == Triple::Win32 && getEnvironment() == Triple::MSVC;
   }
@@ -489,61 +484,61 @@ public:
     return getOS() == Triple::Win32 && getEnvironment() == Triple::GNU;
   }
 
-  /// Tests for either Cygwin or MinGW OS
+  /// \brief Tests for either Cygwin or MinGW OS
   bool isOSCygMing() const {
     return isWindowsCygwinEnvironment() || isWindowsGNUEnvironment();
   }
 
-  /// Is this a "Windows" OS targeting a "MSVCRT.dll" environment.
+  /// \brief Is this a "Windows" OS targeting a "MSVCRT.dll" environment.
   bool isOSMSVCRT() const {
     return isWindowsMSVCEnvironment() || isWindowsGNUEnvironment() ||
            isWindowsItaniumEnvironment();
   }
 
-  /// Tests whether the OS is Windows.
+  /// \brief Tests whether the OS is Windows.
   bool isOSWindows() const {
     return getOS() == Triple::Win32;
   }
 
-  /// Tests whether the OS is NaCl (Native Client)
+  /// \brief Tests whether the OS is NaCl (Native Client)
   bool isOSNaCl() const {
     return getOS() == Triple::NaCl;
   }
 
-  /// Tests whether the OS is Linux.
+  /// \brief Tests whether the OS is Linux.
   bool isOSLinux() const {
     return getOS() == Triple::Linux;
   }
 
-  /// Tests whether the OS uses the ELF binary format.
+  /// \brief Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {
     return getObjectFormat() == Triple::ELF;
   }
 
-  /// Tests whether the OS uses the COFF binary format.
+  /// \brief Tests whether the OS uses the COFF binary format.
   bool isOSBinFormatCOFF() const {
     return getObjectFormat() == Triple::COFF;
   }
 
-  /// Tests whether the environment is MachO.
+  /// \brief Tests whether the environment is MachO.
   bool isOSBinFormatMachO() const {
     return getObjectFormat() == Triple::MachO;
   }
 
-  /// Tests whether the target is the PS4 CPU
+  /// \brief Tests whether the target is the PS4 CPU
   bool isPS4CPU() const {
     return getArch() == Triple::x86_64 &&
            getVendor() == Triple::SCEI &&
            getOS() == Triple::PS4;
   }
 
-  /// Tests whether the target is the PS4 platform
+  /// \brief Tests whether the target is the PS4 platform
   bool isPS4() const {
     return getVendor() == Triple::SCEI &&
            getOS() == Triple::PS4;
   }
 
-  /// Tests whether the target is Android
+  /// \brief Tests whether the target is Android
   bool isAndroid() const { return getEnvironment() == Triple::Android; }
 
   /// @}
@@ -596,7 +591,7 @@ public:
   /// @name Helpers to build variants of a particular triple.
   /// @{
 
-  /// Form a triple with a 32-bit variant of the current architecture.
+  /// \brief Form a triple with a 32-bit variant of the current architecture.
   ///
   /// This can be used to move across "families" of architectures where useful.
   ///
@@ -604,7 +599,7 @@ public:
   ///          architecture if no such variant can be found.
   llvm::Triple get32BitArchVariant() const;
 
-  /// Form a triple with a 64-bit variant of the current architecture.
+  /// \brief Form a triple with a 64-bit variant of the current architecture.
   ///
   /// This can be used to move across "families" of architectures where useful.
   ///

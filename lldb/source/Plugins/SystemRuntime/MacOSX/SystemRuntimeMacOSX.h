@@ -104,8 +104,8 @@ public:
     void
     CompleteQueueItem(lldb_private::QueueItem *queue_item, lldb::addr_t item_ref) override;
 
-    lldb::QueueKind
-    GetQueueKind (lldb::addr_t dispatch_queue_addr) override;
+    virtual lldb::QueueKind
+    GetQueueKind (lldb::addr_t dispatch_queue_addr);
 
     void
     AddThreadExtendedInfoPacketHints(lldb_private::StructuredData::ObjectSP dict) override;

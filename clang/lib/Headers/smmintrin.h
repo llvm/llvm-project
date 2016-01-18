@@ -57,28 +57,35 @@
 #define _mm_floor_sd(X, Y)   _mm_round_sd((X), (Y), _MM_FROUND_FLOOR)
 
 #define _mm_round_ps(X, M) __extension__ ({ \
-  (__m128)__builtin_ia32_roundps((__v4sf)(__m128)(X), (M)); })
+  __m128 __X = (X); \
+  (__m128) __builtin_ia32_roundps((__v4sf)__X, (M)); })
 
 #define _mm_round_ss(X, Y, M) __extension__ ({ \
-  (__m128)__builtin_ia32_roundss((__v4sf)(__m128)(X), \
-                                 (__v4sf)(__m128)(Y), (M)); })
+  __m128 __X = (X); \
+  __m128 __Y = (Y); \
+  (__m128) __builtin_ia32_roundss((__v4sf)__X, (__v4sf)__Y, (M)); })
 
 #define _mm_round_pd(X, M) __extension__ ({ \
-  (__m128d)__builtin_ia32_roundpd((__v2df)(__m128d)(X), (M)); })
+  __m128d __X = (X); \
+  (__m128d) __builtin_ia32_roundpd((__v2df)__X, (M)); })
 
 #define _mm_round_sd(X, Y, M) __extension__ ({ \
-  (__m128d)__builtin_ia32_roundsd((__v2df)(__m128d)(X), \
-                                  (__v2df)(__m128d)(Y), (M)); })
+  __m128d __X = (X); \
+  __m128d __Y = (Y); \
+  (__m128d) __builtin_ia32_roundsd((__v2df)__X, (__v2df)__Y, (M)); })
 
 /* SSE4 Packed Blending Intrinsics.  */
 #define _mm_blend_pd(V1, V2, M) __extension__ ({ \
-  (__m128d)__builtin_shufflevector((__v2df)(__m128d)(V1), \
-                                   (__v2df)(__m128d)(V2), \
+  __m128d __V1 = (V1); \
+  __m128d __V2 = (V2); \
+  (__m128d)__builtin_shufflevector((__v2df)__V1, (__v2df)__V2, \
                                    (((M) & 0x01) ? 2 : 0), \
                                    (((M) & 0x02) ? 3 : 1)); })
 
 #define _mm_blend_ps(V1, V2, M) __extension__ ({ \
-  (__m128)__builtin_shufflevector((__v4sf)(__m128)(V1), (__v4sf)(__m128)(V2), \
+  __m128 __V1 = (V1); \
+  __m128 __V2 = (V2); \
+  (__m128)__builtin_shufflevector((__v4sf)__V1, (__v4sf)__V2, \
                                   (((M) & 0x01) ? 4 : 0), \
                                   (((M) & 0x02) ? 5 : 1), \
                                   (((M) & 0x04) ? 6 : 2), \
@@ -106,8 +113,9 @@ _mm_blendv_epi8 (__m128i __V1, __m128i __V2, __m128i __M)
 }
 
 #define _mm_blend_epi16(V1, V2, M) __extension__ ({ \
-  (__m128i)__builtin_shufflevector((__v8hi)(__m128i)(V1), \
-                                   (__v8hi)(__m128i)(V2), \
+  __m128i __V1 = (V1); \
+  __m128i __V2 = (V2); \
+  (__m128i)__builtin_shufflevector((__v8hi)__V1, (__v8hi)__V2, \
                                    (((M) & 0x01) ?  8 : 0), \
                                    (((M) & 0x02) ?  9 : 1), \
                                    (((M) & 0x04) ? 10 : 2), \
@@ -132,12 +140,14 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 
 /* SSE4 Floating Point Dot Product Instructions.  */
 #define _mm_dp_ps(X, Y, M) __extension__ ({ \
-  (__m128) __builtin_ia32_dpps((__v4sf)(__m128)(X), \
-                               (__v4sf)(__m128)(Y), (M)); })
+  __m128 __X = (X); \
+  __m128 __Y = (Y); \
+  (__m128) __builtin_ia32_dpps((__v4sf)__X, (__v4sf)__Y, (M)); })
 
 #define _mm_dp_pd(X, Y, M) __extension__ ({\
-  (__m128d) __builtin_ia32_dppd((__v2df)(__m128d)(X), \
-                                (__v2df)(__m128d)(Y), (M)); })
+  __m128d __X = (X); \
+  __m128d __Y = (Y); \
+  (__m128d) __builtin_ia32_dppd((__v2df)__X, (__v2df)__Y, (M)); })
 
 /* SSE4 Streaming Load Hint Instruction.  */
 static __inline__  __m128i __DEFAULT_FN_ATTRS
@@ -199,7 +209,7 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 #define _mm_insert_ps(X, Y, N) __builtin_ia32_insertps128((X), (Y), (N))
 #define _mm_extract_ps(X, N) (__extension__                      \
                               ({ union { int __i; float __f; } __t;  \
-                                 __v4sf __a = (__v4sf)(__m128)(X);       \
+                                 __v4sf __a = (__v4sf)(X);       \
                                  __t.__f = __a[(N) & 3];                 \
                                  __t.__i;}))
 
@@ -217,34 +227,29 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
                                              _MM_MK_INSERTPS_NDX((N), 0, 0x0e))
 
 /* Insert int into packed integer array at index.  */
-#define _mm_insert_epi8(X, I, N) (__extension__                           \
-                                  ({ __v16qi __a = (__v16qi)(__m128i)(X); \
-                                     __a[(N) & 15] = (I);                 \
-                                     __a;}))
-#define _mm_insert_epi32(X, I, N) (__extension__                         \
-                                   ({ __v4si __a = (__v4si)(__m128i)(X); \
-                                      __a[(N) & 3] = (I);                \
-                                      __a;}))
+#define _mm_insert_epi8(X, I, N) (__extension__ ({ __v16qi __a = (__v16qi)(X); \
+                                                   __a[(N) & 15] = (I);             \
+                                                   __a;}))
+#define _mm_insert_epi32(X, I, N) (__extension__ ({ __v4si __a = (__v4si)(X); \
+                                                    __a[(N) & 3] = (I);           \
+                                                    __a;}))
 #ifdef __x86_64__
-#define _mm_insert_epi64(X, I, N) (__extension__                         \
-                                   ({ __v2di __a = (__v2di)(__m128i)(X); \
-                                      __a[(N) & 1] = (I);                \
-                                      __a;}))
+#define _mm_insert_epi64(X, I, N) (__extension__ ({ __v2di __a = (__v2di)(X); \
+                                                    __a[(N) & 1] = (I);           \
+                                                    __a;}))
 #endif /* __x86_64__ */
 
 /* Extract int from packed integer array at index.  This returns the element
  * as a zero extended value, so it is unsigned.
  */
-#define _mm_extract_epi8(X, N) (__extension__                           \
-                                ({ __v16qi __a = (__v16qi)(__m128i)(X); \
-                                   (int)(unsigned char) __a[(N) & 15];}))
-#define _mm_extract_epi32(X, N) (__extension__                         \
-                                 ({ __v4si __a = (__v4si)(__m128i)(X); \
-                                    (int)__a[(N) & 3];}))
+#define _mm_extract_epi8(X, N) (__extension__ ({ __v16qi __a = (__v16qi)(X); \
+                                                 (int)(unsigned char) \
+                                                     __a[(N) & 15];}))
+#define _mm_extract_epi32(X, N) (__extension__ ({ __v4si __a = (__v4si)(X); \
+                                                  __a[(N) & 3];}))
 #ifdef __x86_64__
-#define _mm_extract_epi64(X, N) (__extension__                         \
-                                 ({ __v2di __a = (__v2di)(__m128i)(X); \
-                                    (long long)__a[(N) & 1];}))
+#define _mm_extract_epi64(X, N) (__extension__ ({ __v2di __a = (__v2di)(X); \
+                                                  __a[(N) & 1];}))
 #endif /* __x86_64 */
 
 /* SSE4 128-bit Packed Integer Comparisons.  */
@@ -367,8 +372,9 @@ _mm_packus_epi32(__m128i __V1, __m128i __V2)
 
 /* SSE4 Multiple Packed Sums of Absolute Difference.  */
 #define _mm_mpsadbw_epu8(X, Y, M) __extension__ ({ \
-  (__m128i) __builtin_ia32_mpsadbw128((__v16qi)(__m128i)(X), \
-                                      (__v16qi)(__m128i)(Y), (M)); })
+  __m128i __X = (X); \
+  __m128i __Y = (Y); \
+  (__m128i) __builtin_ia32_mpsadbw128((__v16qi)__X, (__v16qi)__Y, (M)); })
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_minpos_epu16(__m128i __V)
@@ -411,59 +417,36 @@ _mm_minpos_epu16(__m128i __V)
 #define _SIDD_UNIT_MASK                 0x40
 
 /* SSE4.2 Packed Comparison Intrinsics.  */
-#define _mm_cmpistrm(A, B, M) \
-  (__m128i)__builtin_ia32_pcmpistrm128((__v16qi)(__m128i)(A), \
-                                       (__v16qi)(__m128i)(B), (int)(M))
-#define _mm_cmpistri(A, B, M) \
-  (int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(A), \
-                                   (__v16qi)(__m128i)(B), (int)(M))
+#define _mm_cmpistrm(A, B, M) __builtin_ia32_pcmpistrm128((A), (B), (M))
+#define _mm_cmpistri(A, B, M) __builtin_ia32_pcmpistri128((A), (B), (M))
 
 #define _mm_cmpestrm(A, LA, B, LB, M) \
-  (__m128i)__builtin_ia32_pcmpestrm128((__v16qi)(__m128i)(A), (int)(LA), \
-                                       (__v16qi)(__m128i)(B), (int)(LB), \
-                                       (int)(M))
+     __builtin_ia32_pcmpestrm128((A), (LA), (B), (LB), (M))
 #define _mm_cmpestri(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestri128((__v16qi)(__m128i)(A), (int)(LA), \
-                                   (__v16qi)(__m128i)(B), (int)(LB), \
-                                   (int)(M))
+     __builtin_ia32_pcmpestri128((A), (LA), (B), (LB), (M))
 
 /* SSE4.2 Packed Comparison Intrinsics and EFlag Reading.  */
 #define _mm_cmpistra(A, B, M) \
-  (int)__builtin_ia32_pcmpistria128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+     __builtin_ia32_pcmpistria128((A), (B), (M))
 #define _mm_cmpistrc(A, B, M) \
-  (int)__builtin_ia32_pcmpistric128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+     __builtin_ia32_pcmpistric128((A), (B), (M))
 #define _mm_cmpistro(A, B, M) \
-  (int)__builtin_ia32_pcmpistrio128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+     __builtin_ia32_pcmpistrio128((A), (B), (M))
 #define _mm_cmpistrs(A, B, M) \
-  (int)__builtin_ia32_pcmpistris128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+     __builtin_ia32_pcmpistris128((A), (B), (M))
 #define _mm_cmpistrz(A, B, M) \
-  (int)__builtin_ia32_pcmpistriz128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+     __builtin_ia32_pcmpistriz128((A), (B), (M))
 
 #define _mm_cmpestra(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestria128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+     __builtin_ia32_pcmpestria128((A), (LA), (B), (LB), (M))
 #define _mm_cmpestrc(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestric128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+     __builtin_ia32_pcmpestric128((A), (LA), (B), (LB), (M))
 #define _mm_cmpestro(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestrio128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+     __builtin_ia32_pcmpestrio128((A), (LA), (B), (LB), (M))
 #define _mm_cmpestrs(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestris128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+     __builtin_ia32_pcmpestris128((A), (LA), (B), (LB), (M))
 #define _mm_cmpestrz(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestriz128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+     __builtin_ia32_pcmpestriz128((A), (LA), (B), (LB), (M))
 
 /* SSE4.2 Compare Packed Data -- Greater Than.  */
 static __inline__ __m128i __DEFAULT_FN_ATTRS

@@ -47,36 +47,10 @@ $comdat.samesize = comdat samesize
 ; CHECK: @const.struct = constant %const.struct.type { i32 -1, i8 undef }
 @const.struct.packed = constant %const.struct.type.packed <{ i32 -1, i8 1 }>
 ; CHECK: @const.struct.packed = constant %const.struct.type.packed <{ i32 -1, i8 1 }>
-
-; CHECK: @constant.array.i8  = constant [3 x i8] c"\00\01\00"
-@constant.array.i8  = constant [3 x i8] [i8 -0, i8 1, i8 0]
-; CHECK: @constant.array.i16 = constant [3 x i16] [i16 0, i16 1, i16 0]
-@constant.array.i16 = constant [3 x i16] [i16 -0, i16 1, i16 0]
-; CHECK: @constant.array.i32 = constant [3 x i32] [i32 0, i32 1, i32 0]
-@constant.array.i32 = constant [3 x i32] [i32 -0, i32 1, i32 0]
-; CHECK: @constant.array.i64 = constant [3 x i64] [i64 0, i64 1, i64 0]
-@constant.array.i64 = constant [3 x i64] [i64 -0, i64 1, i64 0]
-; CHECK: @constant.array.f16 = constant [3 x half] [half 0xH8000, half 0xH3C00, half 0xH0000]
-@constant.array.f16 = constant [3 x half] [half -0.0, half 1.0, half 0.0]
-; CHECK: @constant.array.f32 = constant [3 x float] [float -0.000000e+00, float 1.000000e+00, float 0.000000e+00]
-@constant.array.f32 = constant [3 x float] [float -0.0, float 1.0, float 0.0]
-; CHECK: @constant.array.f64 = constant [3 x double] [double -0.000000e+00, double 1.000000e+00, double 0.000000e+00]
-@constant.array.f64 = constant [3 x double] [double -0.0, double 1.0, double 0.0]
-
-; CHECK: @constant.vector.i8  = constant <3 x i8>  <i8 0, i8 1, i8 0>
-@constant.vector.i8  = constant <3 x i8>  <i8 -0, i8 1, i8 0>
-; CHECK: @constant.vector.i16 = constant <3 x i16> <i16 0, i16 1, i16 0>
-@constant.vector.i16 = constant <3 x i16> <i16 -0, i16 1, i16 0>
-; CHECK: @constant.vector.i32 = constant <3 x i32> <i32 0, i32 1, i32 0>
-@constant.vector.i32 = constant <3 x i32> <i32 -0, i32 1, i32 0>
-; CHECK: @constant.vector.i64 = constant <3 x i64> <i64 0, i64 1, i64 0>
-@constant.vector.i64 = constant <3 x i64> <i64 -0, i64 1, i64 0>
-; CHECK: @constant.vector.f16 = constant <3 x half> <half 0xH8000, half 0xH3C00, half 0xH0000>
-@constant.vector.f16 = constant <3 x half> <half -0.0, half 1.0, half 0.0>
-; CHECK: @constant.vector.f32 = constant <3 x float> <float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>
-@constant.vector.f32 = constant <3 x float> <float -0.0, float 1.0, float 0.0>
-; CHECK: @constant.vector.f64 = constant <3 x double> <double -0.000000e+00, double 1.000000e+00, double 0.000000e+00>
-@constant.vector.f64 = constant <3 x double> <double -0.0, double 1.0, double 0.0>
+@const.array = constant [2 x i32] [i32 -3, i32 -4]
+; CHECK: @const.array = constant [2 x i32] [i32 -3, i32 -4]
+@const.vector = constant <2 x i32> <i32 -5, i32 -6>
+; CHECK: @const.vector = constant <2 x i32> <i32 -5, i32 -6>
 
 ;; Global Variables
 ; Format: [@<GlobalVarName> =] [Linkage] [Visibility] [DLLStorageClass]
@@ -527,12 +501,6 @@ declare void @f.uwtable() uwtable
 ; CHECK: declare void @f.uwtable() #30
 declare void @f.kvpair() "cpu"="cortex-a8"
 ; CHECK:declare void @f.kvpair() #31
-declare void @f.norecurse() norecurse
-; CHECK: declare void @f.norecurse() #32
-declare void @f.inaccessiblememonly() inaccessiblememonly
-; CHECK: declare void @f.inaccessiblememonly() #33
-declare void @f.inaccessiblemem_or_argmemonly() inaccessiblemem_or_argmemonly
-; CHECK: declare void @f.inaccessiblemem_or_argmemonly() #34
 
 ; Functions -- section
 declare void @f.section() section "80"
@@ -591,7 +559,7 @@ declare void @f.prologuearray() prologue [4 x i32] [i32 0, i32 1, i32 2, i32 3]
 
 ; Functions -- Personality constant
 declare void @llvm.donothing() nounwind readnone
-; CHECK: declare void @llvm.donothing() #35
+; CHECK: declare void @llvm.donothing() #32
 define void @f.no_personality() personality i8 3 {
 ; CHECK: define void @f.no_personality() personality i8 3
   invoke void @llvm.donothing() to label %normal unwind label %exception
@@ -691,28 +659,6 @@ define void @fastmathflags(float %op1, float %op2) {
   ; CHECK: %f.arcp = fadd arcp float %op1, %op2
   %f.fast = fadd fast float %op1, %op2
   ; CHECK: %f.fast = fadd fast float %op1, %op2
-  ret void
-}
-
-; Check various fast math flags and floating-point types on calls.
-
-declare float @fmf1()
-declare double @fmf2()
-declare <4 x double> @fmf3()
-
-; CHECK-LABEL: fastMathFlagsForCalls(
-define void @fastMathFlagsForCalls(float %f, double %d1, <4 x double> %d2) {
-  %call.fast = call fast float @fmf1()
-  ; CHECK: %call.fast = call fast float @fmf1()
-
-  ; Throw in some other attributes to make sure those stay in the right places.
-
-  %call.nsz.arcp = notail call nsz arcp double @fmf2()
-  ; CHECK: %call.nsz.arcp = notail call nsz arcp double @fmf2()
-
-  %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf3()
-  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf3()
-
   ret void
 }
 
@@ -821,89 +767,95 @@ define i32 @instructions.win_eh.1() personality i32 -3 {
 entry:
   %arg1 = alloca i32
   %arg2 = alloca i32
-  invoke void @f.ccc() to label %normal unwind label %catchswitch1
-  invoke void @f.ccc() to label %normal unwind label %catchswitch2
-  invoke void @f.ccc() to label %normal unwind label %catchswitch3
-
-catchswitch1:
-  %cs1 = catchswitch within none [label %catchpad1] unwind to caller
+  invoke void @f.ccc() to label %normal unwind label %catchpad1
+  invoke void @f.ccc() to label %normal unwind label %catchpad2
+  invoke void @f.ccc() to label %normal unwind label %catchpad3
 
 catchpad1:
-  catchpad within %cs1 []
-  br label %normal
-  ; CHECK: catchpad within %cs1 []
-  ; CHECK-NEXT: br label %normal
-
-catchswitch2:
-  %cs2 = catchswitch within none [label %catchpad2] unwind to caller
+  catchpad [] to label %normal unwind label %exn.1
+  ; CHECK: catchpad []
+  ; CHECK-NEXT: to label %normal unwind label %exn.1
 
 catchpad2:
-  catchpad within %cs2 [i32* %arg1]
-  br label %normal
-  ; CHECK: catchpad within %cs2 [i32* %arg1]
-  ; CHECK-NEXT: br label %normal
-
-catchswitch3:
-  %cs3 = catchswitch within none [label %catchpad3] unwind label %cleanuppad1
+  catchpad [i32* %arg1] to label %normal unwind label %exn.2
+  ; CHECK: catchpad [i32* %arg1]
+  ; CHECK-NEXT: to label %normal unwind label %exn.2
 
 catchpad3:
-  catchpad within %cs3 [i32* %arg1, i32* %arg2]
-  br label %normal
-  ; CHECK: catchpad within %cs3 [i32* %arg1, i32* %arg2]
-  ; CHECK-NEXT: br label %normal
+  catchpad [i32* %arg1, i32* %arg2] to label %normal unwind label %exn.3
+  ; CHECK: catchpad [i32* %arg1, i32* %arg2] 
+  ; CHECK-NEXT: to label %normal unwind label %exn.3
+
+exn.1:
+  catchendpad unwind label %terminate.1
+  ; CHECK: catchendpad unwind label %terminate.1
+
+exn.2:
+  catchendpad unwind to caller
+  ; CHECK: catchendpad unwind to caller
+
+exn.3:
+  catchendpad unwind label %cleanuppad1
+  ; CHECK: catchendpad unwind label %cleanuppad1
 
 cleanuppad1:
-  %clean.1 = cleanuppad within none []
-  unreachable
-  ; CHECK: %clean.1 = cleanuppad within none []
-  ; CHECK-NEXT: unreachable
+  %clean.1 = cleanuppad []
+  ; CHECK: %clean.1 = cleanuppad []
+  invoke void @f.ccc() to label %normal unwind label %cleanupendpad1
+
+cleanupendpad1:
+  cleanupendpad %clean.1 unwind label %terminate.2
+  ; CHECK: cleanupendpad %clean.1 unwind label %terminate.2
+
+terminate.1:
+  terminatepad [] unwind to caller
+  ; CHECK: terminatepad [] unwind to caller
+
+terminate.2:
+  terminatepad [i32* %arg1] unwind label %normal.pre
+  ; CHECK: terminatepad [i32* %arg1] unwind label %normal.pre
+
+normal.pre:
+  terminatepad [i32* %arg1, i32* %arg2] unwind to caller
+  ; CHECK: terminatepad [i32* %arg1, i32* %arg2] unwind to caller
 
 normal:
   ret i32 0
 }
-;
+
 define i32 @instructions.win_eh.2() personality i32 -4 {
 entry:
-  invoke void @f.ccc() to label %invoke.cont unwind label %catchswitch
+  invoke void @f.ccc() to label %invoke.cont unwind label %catchpad
 
 invoke.cont:
   invoke void @f.ccc() to label %continue unwind label %cleanup
 
 cleanup:
-  %clean = cleanuppad within none []
-  ; CHECK: %clean = cleanuppad within none []
-  cleanupret from %clean unwind to caller
-  ; CHECK: cleanupret from %clean unwind to caller
-
-catchswitch:
-  %cs = catchswitch within none [label %catchpad] unwind label %terminate
+  %clean = cleanuppad []
+  ; CHECK: %clean = cleanuppad []
+  cleanupret %clean unwind to caller
+  ; CHECK: cleanupret %clean unwind to caller
 
 catchpad:
-  %catch = catchpad within %cs []
-  br label %body
-  ; CHECK: %catch = catchpad within %cs []
-  ; CHECK-NEXT: br label %body
+  %catch = catchpad [] to label %body unwind label %catchend
+  ; CHECK: %catch = catchpad []
+  ; CHECK-NEXT: to label %body unwind label %catchend
 
 body:
-  invoke void @f.ccc() [ "funclet"(token %catch) ]
-    to label %continue unwind label %terminate.inner
-  catchret from %catch to label %return
-  ; CHECK: catchret from %catch to label %return
+  invoke void @f.ccc() to label %continue unwind label %catchend
+  catchret %catch to label %return
+  ; CHECK: catchret %catch to label %return
 
 return:
   ret i32 0
 
-terminate.inner:
-  cleanuppad within %catch []
-  unreachable
-  ; CHECK: cleanuppad within %catch []
-  ; CHECK-NEXT: unreachable
+catchend:
+  catchendpad unwind label %terminate
+  ; CHECK: catchendpad unwind label %terminate
 
 terminate:
-  cleanuppad within none []
-  unreachable
-  ; CHECK: cleanuppad within none []
-  ; CHECK-NEXT: unreachable
+  terminatepad [] unwind to caller
+  ; CHECK: terminatepad [] unwind to caller
 
 continue:
   ret i32 0
@@ -1173,7 +1125,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #39
+  ; CHECK: call void @f.nobuiltin() #36
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1186,13 +1138,6 @@ exit:
 define void @instructions.call_musttail(i8* inalloca %val) {
   musttail call void @f.param.inalloca(i8* inalloca %val)
   ; CHECK: musttail call void @f.param.inalloca(i8* inalloca %val)
-
-  ret void
-}
-
-define void @instructions.call_notail() {
-  notail call void @f1()
-  ; CHECK: notail call void @f1()
 
   ret void
 }
@@ -1552,14 +1497,11 @@ normal:
 ; CHECK: attributes #29 = { "thunk" }
 ; CHECK: attributes #30 = { uwtable }
 ; CHECK: attributes #31 = { "cpu"="cortex-a8" }
-; CHECK: attributes #32 = { norecurse }
-; CHECK: attributes #33 = { inaccessiblememonly }
-; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly }
-; CHECK: attributes #35 = { nounwind readnone }
-; CHECK: attributes #36 = { argmemonly nounwind readonly }
-; CHECK: attributes #37 = { argmemonly nounwind }
-; CHECK: attributes #38 = { nounwind readonly }
-; CHECK: attributes #39 = { builtin }
+; CHECK: attributes #32 = { nounwind readnone }
+; CHECK: attributes #33 = { nounwind readonly argmemonly }
+; CHECK: attributes #34 = { nounwind argmemonly }
+; CHECK: attributes #35 = { nounwind readonly }
+; CHECK: attributes #36 = { builtin }
 
 ;; Metadata
 

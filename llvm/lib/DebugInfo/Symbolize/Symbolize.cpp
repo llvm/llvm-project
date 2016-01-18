@@ -22,7 +22,6 @@
 #include "llvm/DebugInfo/PDB/PDBContext.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
-#include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
@@ -110,10 +109,9 @@ ErrorOr<DIGlobal> LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
 }
 
 void LLVMSymbolizer::flush() {
-  ObjectForUBPathAndArch.clear();
-  BinaryForPath.clear();
-  ObjectPairForPathArch.clear();
   Modules.clear();
+  ObjectPairForPathArch.clear();
+  ObjectFileForArch.clear();
 }
 
 // For Path="/path/to/foo" and Basename="foo" assume that debug info is in
@@ -225,16 +223,23 @@ ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
   for (const auto &Path : Opts.DsymHints) {
     DsymPaths.push_back(getDarwinDWARFResourceForPath(Path, Filename));
   }
-  for (const auto &Path : DsymPaths) {
-    auto DbgObjOrErr = getOrCreateObject(Path, ArchName);
+  for (const auto &path : DsymPaths) {
+    ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(path);
+    if (!BinaryOrErr)
+      continue;
+    OwningBinary<Binary> &B = BinaryOrErr.get();
+    auto DbgObjOrErr = getObjectFileFromBinary(B.getBinary(), ArchName);
     if (!DbgObjOrErr)
       continue;
     ObjectFile *DbgObj = DbgObjOrErr.get();
-    const MachOObjectFile *MachDbgObj = dyn_cast<const MachOObjectFile>(DbgObj);
+    const MachOObjectFile *MachDbgObj =
+        dyn_cast<const MachOObjectFile>(DbgObj);
     if (!MachDbgObj)
       continue;
-    if (darwinDsymMatchesBinary(MachDbgObj, MachExeObj))
+    if (darwinDsymMatchesBinary(MachDbgObj, MachExeObj)) {
+      addOwningBinary(std::move(B));
       return DbgObj;
+    }
   }
   return nullptr;
 }
@@ -249,25 +254,40 @@ ObjectFile *LLVMSymbolizer::lookUpDebuglinkObject(const std::string &Path,
     return nullptr;
   if (!findDebugBinary(Path, DebuglinkName, CRCHash, DebugBinaryPath))
     return nullptr;
-  auto DbgObjOrErr = getOrCreateObject(DebugBinaryPath, ArchName);
+  ErrorOr<OwningBinary<Binary>> DebugBinaryOrErr =
+      createBinary(DebugBinaryPath);
+  if (!DebugBinaryOrErr)
+    return nullptr;
+  OwningBinary<Binary> &DB = DebugBinaryOrErr.get();
+  auto DbgObjOrErr = getObjectFileFromBinary(DB.getBinary(), ArchName);
   if (!DbgObjOrErr)
     return nullptr;
+  addOwningBinary(std::move(DB));
   return DbgObjOrErr.get();
 }
 
 ErrorOr<LLVMSymbolizer::ObjectPair>
-LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
-                                      const std::string &ArchName) {
+LLVMSymbolizer::getOrCreateObjects(const std::string &Path,
+                                   const std::string &ArchName) {
   const auto &I = ObjectPairForPathArch.find(std::make_pair(Path, ArchName));
   if (I != ObjectPairForPathArch.end())
     return I->second;
 
-  auto ObjOrErr = getOrCreateObject(Path, ArchName);
+  ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(Path);
+  if (auto EC = BinaryOrErr.getError()) {
+    ObjectPairForPathArch.insert(
+        std::make_pair(std::make_pair(Path, ArchName), EC));
+    return EC;
+  }
+  OwningBinary<Binary> &B = BinaryOrErr.get();
+
+  auto ObjOrErr = getObjectFileFromBinary(B.getBinary(), ArchName);
   if (auto EC = ObjOrErr.getError()) {
     ObjectPairForPathArch.insert(
         std::make_pair(std::make_pair(Path, ArchName), EC));
     return EC;
   }
+  addOwningBinary(std::move(B));
 
   ObjectFile *Obj = ObjOrErr.get();
   assert(Obj != nullptr);
@@ -286,43 +306,24 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
 }
 
 ErrorOr<ObjectFile *>
-LLVMSymbolizer::getOrCreateObject(const std::string &Path,
-                                  const std::string &ArchName) {
-  const auto &I = BinaryForPath.find(Path);
-  Binary *Bin = nullptr;
-  if (I == BinaryForPath.end()) {
-    ErrorOr<OwningBinary<Binary>> BinOrErr = createBinary(Path);
-    if (auto EC = BinOrErr.getError()) {
-      BinaryForPath.insert(std::make_pair(Path, EC));
-      return EC;
-    }
-    Bin = BinOrErr->getBinary();
-    BinaryForPath.insert(std::make_pair(Path, std::move(BinOrErr.get())));
-  } else if (auto EC = I->second.getError()) {
-    return EC;
-  } else {
-    Bin = I->second->getBinary();
-  }
-
+LLVMSymbolizer::getObjectFileFromBinary(Binary *Bin,
+                                        const std::string &ArchName) {
   assert(Bin != nullptr);
-
   if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(Bin)) {
-    const auto &I = ObjectForUBPathAndArch.find(std::make_pair(Path, ArchName));
-    if (I != ObjectForUBPathAndArch.end()) {
-      if (auto EC = I->second.getError())
-        return EC;
-      return I->second->get();
-    }
-    ErrorOr<std::unique_ptr<ObjectFile>> ObjOrErr =
+    const auto &I = ObjectFileForArch.find(
+        std::make_pair(UB, ArchName));
+    if (I != ObjectFileForArch.end())
+      return I->second;
+    ErrorOr<std::unique_ptr<ObjectFile>> ParsedObj =
         UB->getObjectForArch(ArchName);
-    if (auto EC = ObjOrErr.getError()) {
-      ObjectForUBPathAndArch.insert(
-          std::make_pair(std::make_pair(Path, ArchName), EC));
+    if (auto EC = ParsedObj.getError()) {
+      ObjectFileForArch.insert(
+          std::make_pair(std::make_pair(UB, ArchName), EC));
       return EC;
     }
-    ObjectFile *Res = ObjOrErr->get();
-    ObjectForUBPathAndArch.insert(std::make_pair(std::make_pair(Path, ArchName),
-                                                 std::move(ObjOrErr.get())));
+    ObjectFile *Res = ParsedObj.get().get();
+    ParsedBinariesAndObjects.push_back(std::move(ParsedObj.get()));
+    ObjectFileForArch.insert(std::make_pair(std::make_pair(UB, ArchName), Res));
     return Res;
   }
   if (Bin->isObject()) {
@@ -351,7 +352,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
       ArchName = ArchStr;
     }
   }
-  auto ObjectsOrErr = getOrCreateObjectPair(BinaryName, ArchName);
+  auto ObjectsOrErr = getOrCreateObjects(BinaryName, ArchName);
   if (auto EC = ObjectsOrErr.getError()) {
     // Failed to find valid object file.
     Modules.insert(std::make_pair(ModuleName, EC));

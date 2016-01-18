@@ -107,11 +107,7 @@ public:
     CopyType (clang::ASTContext *dst_ctx,
               clang::ASTContext *src_ctx,
               lldb::opaque_compiler_type_t type);
-
-    CompilerType
-    CopyType (ClangASTContext &dst,
-              const CompilerType &src_type);
-
+    
     clang::Decl *
     CopyDecl (clang::ASTContext *dst_ctx,
               clang::ASTContext *src_ctx,
@@ -138,10 +134,7 @@ public:
     
     bool
     CompleteObjCInterfaceDecl (clang::ObjCInterfaceDecl *interface_decl);
-
-    bool
-    CompleteAndFetchChildren (clang::QualType type);
-
+    
     bool
     RequireCompleteType (clang::QualType type);
     

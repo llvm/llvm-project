@@ -4,14 +4,11 @@ Test lldb process launch flags.
 
 from __future__ import print_function
 
-import copy
-import os
-import time
 
+
+import os, time
 import lldb
 from lldbsuite.test.lldbtest import *
-
-import six
 
 class ProcessLaunchTestCase(TestBase):
 
@@ -20,11 +17,9 @@ class ProcessLaunchTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
+        # disable "There is a running process, kill it and restart?" prompt
         self.runCmd("settings set auto-confirm true")
-
-    def tearDown(self):
-        self.runCmd("settings clear auto-confirm")
-        TestBase.tearDown(self)
+        self.addTearDownHook(lambda: self.runCmd("settings clear auto-confirm"))
 
     @not_remote_testsuite_ready
     def test_io (self):
@@ -183,31 +178,3 @@ class ProcessLaunchTestCase(TestBase):
 
         if not success:
             self.fail(err_msg)
-
-    def test_environment_with_special_char (self):
-        """Test that environment variables containing '*' and '}' are handled correctly by the inferior."""
-        source = 'print_env.cpp'
-        d = {'CXX_SOURCES' : source}
-        self.build(dictionary=d)
-        self.setTearDownCleanup(d)
-        exe = os.path.join (os.getcwd(), "a.out")
-
-        evil_var = 'INIT*MIDDLE}TAIL'
-
-        target = self.dbg.CreateTarget(exe)
-        main_source_spec = lldb.SBFileSpec(source)
-        breakpoint = target.BreakpointCreateBySourceRegex('// Set breakpoint here.', main_source_spec)
-
-        process = target.LaunchSimple(None, ['EVIL=' + evil_var], self.get_process_working_directory())
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(threads), 1)
-        frame = threads[0].GetFrameAtIndex(0)
-        sbvalue = frame.EvaluateExpression("evil")
-        value = sbvalue.GetSummary().strip('"')
-
-        self.assertEqual(value, evil_var)
-        process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
-        pass

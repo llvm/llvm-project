@@ -100,7 +100,8 @@ public:
   relocation_iterator relocation_begin() const;
   relocation_iterator relocation_end() const;
   iterator_range<relocation_iterator> relocations() const {
-    return make_range(relocation_begin(), relocation_end());
+    return iterator_range<relocation_iterator>(relocation_begin(),
+                                               relocation_end());
   }
   section_iterator getRelocatedSection() const;
 

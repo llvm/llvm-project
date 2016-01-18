@@ -95,9 +95,6 @@ DefinedOrUnknownSVal
 SValBuilder::getRegionValueSymbolVal(const TypedValueRegion* region) {
   QualType T = region->getValueType();
 
-  if (T->isNullPtrType())
-    return makeZeroVal(T);
-  
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
@@ -115,9 +112,6 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *SymbolTag,
                                                    unsigned Count) {
   QualType T = Ex->getType();
 
-  if (T->isNullPtrType())
-    return makeZeroVal(T);
-
   // Compute the type of the result. If the expression is not an R-value, the
   // result should be a location.
   QualType ExType = Ex->getType();
@@ -132,9 +126,6 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned count) {
-  if (type->isNullPtrType())
-    return makeZeroVal(type);
-
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
@@ -151,9 +142,6 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const Stmt *stmt,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned visitCount) {
-  if (type->isNullPtrType())
-    return makeZeroVal(type);
-
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
@@ -172,8 +160,6 @@ SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
   QualType T = E->getType();
   assert(Loc::isLocType(T));
   assert(SymbolManager::canSymbolicate(T));
-  if (T->isNullPtrType())
-    return makeZeroVal(T);
 
   SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, T, VisitCount);
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
@@ -199,9 +185,6 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
                                              const TypedValueRegion *region) {
   QualType T = region->getValueType();
 
-  if (T->isNullPtrType())
-    return makeZeroVal(T);
-
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
@@ -214,15 +197,15 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
 }
 
 DefinedSVal SValBuilder::getFunctionPointer(const FunctionDecl *func) {
-  return loc::MemRegionVal(MemMgr.getFunctionCodeRegion(func));
+  return loc::MemRegionVal(MemMgr.getFunctionTextRegion(func));
 }
 
 DefinedSVal SValBuilder::getBlockPointer(const BlockDecl *block,
                                          CanQualType locTy,
                                          const LocationContext *locContext,
                                          unsigned blockCount) {
-  const BlockCodeRegion *BC =
-    MemMgr.getBlockCodeRegion(block, locTy, locContext->getAnalysisDeclContext());
+  const BlockTextRegion *BC =
+    MemMgr.getBlockTextRegion(block, locTy, locContext->getAnalysisDeclContext());
   const BlockDataRegion *BD = MemMgr.getBlockDataRegion(BC, locContext,
                                                         blockCount);
   return loc::MemRegionVal(BD);
@@ -292,17 +275,11 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
 
   case Stmt::ImplicitCastExprClass: {
     const CastExpr *CE = cast<CastExpr>(E);
-    switch (CE->getCastKind()) {
-    default:
-      break;
-    case CK_ArrayToPointerDecay:
-    case CK_BitCast: {
-      const Expr *SE = CE->getSubExpr();
-      Optional<SVal> Val = getConstantVal(SE);
-      if (!Val)
+    if (CE->getCastKind() == CK_ArrayToPointerDecay) {
+      Optional<SVal> ArrayVal = getConstantVal(CE->getSubExpr());
+      if (!ArrayVal)
         return None;
-      return evalCast(*Val, CE->getType(), SE->getType());
-    }
+      return evalCast(*ArrayVal, CE->getType(), CE->getSubExpr()->getType());
     }
     // FALLTHROUGH
   }
@@ -421,45 +398,6 @@ static bool shouldBeModeledWithNoOp(ASTContext &Context, QualType ToTy,
     return false;
 
   return true;
-}
-
-// Handles casts of type CK_IntegralCast.
-// At the moment, this function will redirect to evalCast, except when the range
-// of the original value is known to be greater than the max of the target type.
-SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
-                                   QualType castTy, QualType originalTy) {
-
-  // No truncations if target type is big enough.
-  if (getContext().getTypeSize(castTy) >= getContext().getTypeSize(originalTy))
-    return evalCast(val, castTy, originalTy);
-
-  const SymExpr *se = val.getAsSymbolicExpression();
-  if (!se) // Let evalCast handle non symbolic expressions.
-    return evalCast(val, castTy, originalTy);
-
-  // Find the maximum value of the target type.
-  APSIntType ToType(getContext().getTypeSize(castTy),
-                    castTy->isUnsignedIntegerType());
-  llvm::APSInt ToTypeMax = ToType.getMaxValue();
-  NonLoc ToTypeMaxVal =
-      makeIntVal(ToTypeMax.isUnsigned() ? ToTypeMax.getZExtValue()
-                                        : ToTypeMax.getSExtValue(),
-                 castTy)
-          .castAs<NonLoc>();
-  // Check the range of the symbol being casted against the maximum value of the
-  // target type.
-  NonLoc FromVal = val.castAs<NonLoc>();
-  QualType CmpTy = getConditionType();
-  NonLoc CompVal =
-      evalBinOpNN(state, BO_LT, FromVal, ToTypeMaxVal, CmpTy).castAs<NonLoc>();
-  ProgramStateRef IsNotTruncated, IsTruncated;
-  std::tie(IsNotTruncated, IsTruncated) = state->assume(CompVal);
-  if (!IsNotTruncated && IsTruncated) {
-    // Symbol is truncated so we evaluate it as a cast.
-    NonLoc CastVal = makeNonLoc(se, originalTy, castTy);
-    return CastVal;
-  }
-  return evalCast(val, castTy, originalTy);
 }
 
 // FIXME: should rewrite according to the cast kind.

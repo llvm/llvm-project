@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
@@ -599,7 +599,7 @@ Value *RecurrenceDescriptor::createMinMaxOp(IRBuilder<> &Builder,
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
   FastMathFlags FMF;
   FMF.setUnsafeAlgebra();
-  Builder.setFastMathFlags(FMF);
+  Builder.SetFastMathFlags(FMF);
 
   Value *Cmp;
   if (RK == MRK_FloatMin || RK == MRK_FloatMax)

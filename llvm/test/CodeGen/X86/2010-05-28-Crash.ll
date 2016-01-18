@@ -16,7 +16,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 define i32 @bar(i32 %x) nounwind optsize ssp !dbg !8 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !7, metadata !DIExpression()), !dbg !DILocation(scope: !8)
-  tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !0, metadata !DIExpression()) nounwind, !dbg !DILocation(scope: !1, inlinedAt: !DILocation(scope: !8))
+  tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !0, metadata !DIExpression()) nounwind, !dbg !DILocation(scope: !1)
   %0 = tail call i32 (...) @zoo(i32 1) nounwind, !dbg !12 ; <i32> [#uses=1]
   %1 = add nsw i32 %0, %x, !dbg !13               ; <i32> [#uses=1]
   ret i32 %1, !dbg !13
@@ -46,7 +46,7 @@ entry:
 !18 = !DIFile(filename: "f.c", directory: "/tmp")
 !19 = !{}
 
-;CHECK: DEBUG_VALUE: bar:x <- %E
+;CHECK: DEBUG_VALUE: bar:x <- E
 ;CHECK: Ltmp
 ;CHECK:	DEBUG_VALUE: foo:y <- 1{{$}}
 !20 = !{i32 1, !"Debug Info Version", i32 3}

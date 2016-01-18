@@ -21,40 +21,20 @@
 
 namespace fuzzer {
 
-void PrintHexArray(const uint8_t *Data, size_t Size,
-                   const char *PrintAfter) {
-  for (size_t i = 0; i < Size; i++)
-    Printf("0x%x,", (unsigned)Data[i]);
-  Printf("%s", PrintAfter);
-}
-
 void Print(const Unit &v, const char *PrintAfter) {
-  PrintHexArray(v.data(), v.size(), PrintAfter);
-}
-
-void PrintASCIIByte(uint8_t Byte) {
-  if (Byte == '\\')
-    Printf("\\\\");
-  else if (Byte == '"')
-    Printf("\\\"");
-  else if (Byte >= 32 && Byte < 127)
-    Printf("%c", Byte);
-  else
-    Printf("\\x%02x", Byte);
-}
-
-void PrintASCII(const uint8_t *Data, size_t Size, const char *PrintAfter) {
-  for (size_t i = 0; i < Size; i++)
-    PrintASCIIByte(Data[i]);
+  for (auto x : v)
+    Printf("0x%x,", (unsigned) x);
   Printf("%s", PrintAfter);
-}
-
-void PrintASCII(const Word &W, const char *PrintAfter) {
-  PrintASCII(W.data(), W.size(), PrintAfter);
 }
 
 void PrintASCII(const Unit &U, const char *PrintAfter) {
-  PrintASCII(U.data(), U.size(), PrintAfter);
+  for (auto X : U) {
+    if (isprint(X))
+      Printf("%c", X);
+    else
+      Printf("\\x%x", (unsigned)X);
+  }
+  Printf("%s", PrintAfter);
 }
 
 std::string Hash(const Unit &U) {
@@ -89,8 +69,8 @@ int NumberOfCpuCores() {
   return N;
 }
 
-int ExecuteCommand(const std::string &Command) {
-  return system(Command.c_str());
+void ExecuteCommand(const std::string &Command) {
+  system(Command.c_str());
 }
 
 bool ToASCII(Unit &U) {
@@ -186,34 +166,5 @@ bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units) {
 }
 
 int GetPid() { return getpid(); }
-
-
-std::string Base64(const Unit &U) {
-  static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                              "abcdefghijklmnopqrstuvwxyz"
-                              "0123456789+/";
-  std::string Res;
-  size_t i;
-  for (i = 0; i + 2 < U.size(); i += 3) {
-    uint32_t x = (U[i] << 16) + (U[i + 1] << 8) + U[i + 2];
-    Res += Table[(x >> 18) & 63];
-    Res += Table[(x >> 12) & 63];
-    Res += Table[(x >> 6) & 63];
-    Res += Table[x & 63];
-  }
-  if (i + 1 == U.size()) {
-    uint32_t x = (U[i] << 16);
-    Res += Table[(x >> 18) & 63];
-    Res += Table[(x >> 12) & 63];
-    Res += "==";
-  } else if (i + 2 == U.size()) {
-    uint32_t x = (U[i] << 16) + (U[i + 1] << 8);
-    Res += Table[(x >> 18) & 63];
-    Res += Table[(x >> 12) & 63];
-    Res += Table[(x >> 6) & 63];
-    Res += "=";
-  }
-  return Res;
-}
 
 }  // namespace fuzzer

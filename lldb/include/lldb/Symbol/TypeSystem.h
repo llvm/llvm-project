@@ -25,7 +25,6 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/Mutex.h"
-#include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 
 class DWARFDIE;
@@ -117,42 +116,24 @@ public:
     virtual ConstString
     DeclGetName (void *opaque_decl) = 0;
 
-    virtual ConstString
-    DeclGetMangledName (void *opaque_decl);
-
     virtual lldb::VariableSP
     DeclGetVariable (void *opaque_decl) = 0;
 
     virtual void
     DeclLinkToObject (void *opaque_decl, std::shared_ptr<void> object) = 0;
 
-    virtual CompilerDeclContext
-    DeclGetDeclContext (void *opaque_decl);
-
-    virtual CompilerType
-    DeclGetFunctionReturnType(void *opaque_decl);
-
-    virtual size_t
-    DeclGetFunctionNumArguments(void *opaque_decl);
-
-    virtual CompilerType
-    DeclGetFunctionArgumentType (void *opaque_decl, size_t arg_idx);
-
     //----------------------------------------------------------------------
     // CompilerDeclContext functions
     //----------------------------------------------------------------------
     
-    virtual std::vector<CompilerDecl>
-    DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name);
+    virtual std::vector<void *>
+    DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name) = 0;
 
     virtual bool
     DeclContextIsStructUnionOrClass (void *opaque_decl_ctx) = 0;
 
     virtual ConstString
     DeclContextGetName (void *opaque_decl_ctx) = 0;
-
-    virtual ConstString
-    DeclContextGetScopeQualifiedName (void *opaque_decl_ctx) = 0;
 
     virtual bool
     DeclContextIsClassMethod (void *opaque_decl_ctx,
@@ -172,9 +153,6 @@ public:
     
     virtual bool
     IsAggregateType (lldb::opaque_compiler_type_t type) = 0;
-
-    virtual bool
-    IsAnonymousType (lldb::opaque_compiler_type_t type);
     
     virtual bool
     IsCharType (lldb::opaque_compiler_type_t type) = 0;
@@ -371,8 +349,7 @@ public:
                                  uint32_t &child_bitfield_bit_offset,
                                  bool &child_is_base_class,
                                  bool &child_is_deref_of_parent,
-                                 ValueObject *valobj,
-                                 uint64_t &language_flags) = 0;
+                                 ValueObject *valobj) = 0;
     
     // Lookup a child given a name. This function will match base class names
     // and member member names in "clang_type" only, not descendants.
@@ -515,12 +492,6 @@ public:
     virtual bool
     IsReferenceType (lldb::opaque_compiler_type_t type, CompilerType *pointee_type, bool* is_rvalue) = 0;
     
-    virtual bool
-    ShouldTreatScalarValueAsAddress (lldb::opaque_compiler_type_t type)
-    {
-        return IsPointerOrReferenceType(type, nullptr);
-    }
-    
     virtual UserExpression *
     GetUserExpression (const char *expr,
                        const char *expr_prefix,
@@ -556,7 +527,7 @@ public:
     GetTypeForFormatters (void* type);
     
     virtual LazyBool
-    ShouldPrintAsOneLiner (void* type, ValueObject* valobj);
+    ShouldPrintAsOneLiner (void* type);
     
     // Type systems can have types that are placeholder types, which are meant to indicate
     // the presence of a type, but offer no actual information about said types, and leave

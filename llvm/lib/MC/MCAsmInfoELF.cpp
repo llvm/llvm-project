@@ -21,8 +21,6 @@ using namespace llvm;
 void MCAsmInfoELF::anchor() { }
 
 MCSection *MCAsmInfoELF::getNonexecutableStackSection(MCContext &Ctx) const {
-  if (!UsesNonexecutableStackSection)
-    return nullptr;
   return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS, 0);
 }
 
@@ -31,5 +29,4 @@ MCAsmInfoELF::MCAsmInfoELF() {
   WeakRefDirective = "\t.weak\t";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
-  UsesNonexecutableStackSection = true;
 }

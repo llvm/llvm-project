@@ -46,15 +46,15 @@ namespace llvm {
   /// or a symbolic (%var) reference.  This is just a discriminated union.
   struct ValID {
     enum {
-      t_LocalID, t_GlobalID,           // ID in UIntVal.
-      t_LocalName, t_GlobalName,       // Name in StrVal.
-      t_APSInt, t_APFloat,             // Value in APSIntVal/APFloatVal.
-      t_Null, t_Undef, t_Zero, t_None, // No value.
-      t_EmptyArray,                    // No value:  []
-      t_Constant,                      // Value in ConstantVal.
-      t_InlineAsm,                     // Value in FTy/StrVal/StrVal2/UIntVal.
-      t_ConstantStruct,                // Value in ConstantStructElts.
-      t_PackedConstantStruct           // Value in ConstantStructElts.
+      t_LocalID, t_GlobalID,      // ID in UIntVal.
+      t_LocalName, t_GlobalName,  // Name in StrVal.
+      t_APSInt, t_APFloat,        // Value in APSIntVal/APFloatVal.
+      t_Null, t_Undef, t_Zero,    // No value.
+      t_EmptyArray,               // No value:  []
+      t_Constant,                 // Value in ConstantVal.
+      t_InlineAsm,                // Value in FTy/StrVal/StrVal2/UIntVal.
+      t_ConstantStruct,           // Value in ConstantStructElts.
+      t_PackedConstantStruct      // Value in ConstantStructElts.
     } Kind = t_LocalID;
 
     LLLexer::LocTy Loc;
@@ -106,6 +106,14 @@ namespace llvm {
     struct MDRef {
       SMLoc Loc;
       unsigned MDKind, MDSlot;
+    };
+
+    /// Indicates which operator an operand allows (for the few operands that
+    /// may only reference a certain operator).
+    enum OperatorConstraint {
+      OC_None = 0,  // No constraint
+      OC_CatchPad,  // Must be CatchPadInst
+      OC_CleanupPad // Must be CleanupPadInst
     };
 
     SmallVector<Instruction*, 64> InstsWithTBAATag;
@@ -329,8 +337,10 @@ namespace llvm {
       /// GetVal - Get a value with the specified name or ID, creating a
       /// forward reference record if needed.  This can return null if the value
       /// exists but does not have the right type.
-      Value *GetVal(const std::string &Name, Type *Ty, LocTy Loc);
-      Value *GetVal(unsigned ID, Type *Ty, LocTy Loc);
+      Value *GetVal(const std::string &Name, Type *Ty, LocTy Loc,
+                    OperatorConstraint OC = OC_None);
+      Value *GetVal(unsigned ID, Type *Ty, LocTy Loc,
+                    OperatorConstraint OC = OC_None);
 
       /// SetInstName - After an instruction is parsed and inserted into its
       /// basic block, this installs its name.
@@ -352,14 +362,16 @@ namespace llvm {
     };
 
     bool ConvertValIDToValue(Type *Ty, ValID &ID, Value *&V,
-                             PerFunctionState *PFS);
+                             PerFunctionState *PFS,
+                             OperatorConstraint OC = OC_None);
 
     bool parseConstantValue(Type *Ty, Constant *&C);
-    bool ParseValue(Type *Ty, Value *&V, PerFunctionState *PFS);
-    bool ParseValue(Type *Ty, Value *&V, PerFunctionState &PFS) {
-      return ParseValue(Ty, V, &PFS);
+    bool ParseValue(Type *Ty, Value *&V, PerFunctionState *PFS,
+                    OperatorConstraint OC = OC_None);
+    bool ParseValue(Type *Ty, Value *&V, PerFunctionState &PFS,
+                    OperatorConstraint OC = OC_None) {
+      return ParseValue(Ty, V, &PFS, OC);
     }
-
     bool ParseValue(Type *Ty, Value *&V, LocTy &Loc,
                     PerFunctionState &PFS) {
       Loc = Lex.getLoc();
@@ -463,9 +475,11 @@ namespace llvm {
     bool ParseResume(Instruction *&Inst, PerFunctionState &PFS);
     bool ParseCleanupRet(Instruction *&Inst, PerFunctionState &PFS);
     bool ParseCatchRet(Instruction *&Inst, PerFunctionState &PFS);
-    bool ParseCatchSwitch(Instruction *&Inst, PerFunctionState &PFS);
     bool ParseCatchPad(Instruction *&Inst, PerFunctionState &PFS);
+    bool ParseTerminatePad(Instruction *&Inst, PerFunctionState &PFS);
     bool ParseCleanupPad(Instruction *&Inst, PerFunctionState &PFS);
+    bool ParseCatchEndPad(Instruction *&Inst, PerFunctionState &PFS);
+    bool ParseCleanupEndPad(Instruction *&Inst, PerFunctionState &PFS);
 
     bool ParseArithmetic(Instruction *&I, PerFunctionState &PFS, unsigned Opc,
                          unsigned OperandType);

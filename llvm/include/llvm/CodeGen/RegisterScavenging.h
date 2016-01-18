@@ -74,6 +74,10 @@ public:
   /// Start tracking liveness from the begin of the specific basic block.
   void enterBasicBlock(MachineBasicBlock *mbb);
 
+  /// Allow resetting register state info for multiple
+  /// passes over/within the same function.
+  void initRegState();
+
   /// Move the internal MBB iterator and update register states.
   void forward();
 
@@ -176,9 +180,6 @@ private:
                            unsigned InstrLimit,
                            MachineBasicBlock::iterator &UseMI);
 
-  /// Allow resetting register state info for multiple
-  /// passes over/within the same function.
-  void initRegState();
 };
 
 } // End llvm namespace

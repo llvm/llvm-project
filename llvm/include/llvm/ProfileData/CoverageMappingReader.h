@@ -140,14 +140,14 @@ private:
 class BinaryCoverageReader : public CoverageMappingReader {
 public:
   struct ProfileMappingRecord {
-    CovMapVersion Version;
+    CoverageMappingVersion Version;
     StringRef FunctionName;
     uint64_t FunctionHash;
     StringRef CoverageMapping;
     size_t FilenamesBegin;
     size_t FilenamesSize;
 
-    ProfileMappingRecord(CovMapVersion Version, StringRef FunctionName,
+    ProfileMappingRecord(CoverageMappingVersion Version, StringRef FunctionName,
                          uint64_t FunctionHash, StringRef CoverageMapping,
                          size_t FilenamesBegin, size_t FilenamesSize)
         : Version(Version), FunctionName(FunctionName),
@@ -158,7 +158,6 @@ public:
 private:
   std::vector<StringRef> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
-  InstrProfSymtab ProfileNames;
   size_t CurrentRecord;
   std::vector<StringRef> FunctionsFilenames;
   std::vector<CounterExpression> Expressions;

@@ -22,7 +22,6 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -59,7 +58,12 @@ FileManager::FileManager(const FileSystemOptions &FSO,
     this->FS = vfs::getRealFileSystem();
 }
 
-FileManager::~FileManager() = default;
+FileManager::~FileManager() {
+  for (unsigned i = 0, e = VirtualFileEntries.size(); i != e; ++i)
+    delete VirtualFileEntries[i];
+  for (unsigned i = 0, e = VirtualDirectoryEntries.size(); i != e; ++i)
+    delete VirtualDirectoryEntries[i];
+}
 
 void FileManager::addStatCache(std::unique_ptr<FileSystemStatCache> statCache,
                                bool AtBeginning) {
@@ -133,14 +137,14 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   // at the same time.  Therefore, if DirName is already in the cache,
   // we don't need to recurse as its ancestors must also already be in
   // the cache.
-  if (NamedDirEnt.second && NamedDirEnt.second != NON_EXISTENT_DIR)
+  if (NamedDirEnt.second)
     return;
 
   // Add the virtual directory to the cache.
-  auto UDE = llvm::make_unique<DirectoryEntry>();
+  DirectoryEntry *UDE = new DirectoryEntry;
   UDE->Name = NamedDirEnt.first().data();
-  NamedDirEnt.second = UDE.get();
-  VirtualDirectoryEntries.push_back(std::move(UDE));
+  NamedDirEnt.second = UDE;
+  VirtualDirectoryEntries.push_back(UDE);
 
   // Recursively add the other ancestors.
   addAncestorsAsVirtualDirs(DirName);
@@ -371,8 +375,8 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
   }
 
   if (!UFE) {
-    VirtualFileEntries.push_back(llvm::make_unique<FileEntry>());
-    UFE = VirtualFileEntries.back().get();
+    UFE = new FileEntry();
+    VirtualFileEntries.push_back(UFE);
     NamedFileEnt.second = UFE;
   }
 
@@ -509,15 +513,50 @@ void FileManager::GetUniqueIDMapping(
       UIDToFiles[FE->getValue()->getUID()] = FE->getValue();
   
   // Map virtual file entries
-  for (const auto &VFE : VirtualFileEntries)
-    if (VFE && VFE.get() != NON_EXISTENT_FILE)
-      UIDToFiles[VFE->getUID()] = VFE.get();
+  for (SmallVectorImpl<FileEntry *>::const_iterator
+         VFE = VirtualFileEntries.begin(), VFEEnd = VirtualFileEntries.end();
+       VFE != VFEEnd; ++VFE)
+    if (*VFE && *VFE != NON_EXISTENT_FILE)
+      UIDToFiles[(*VFE)->getUID()] = *VFE;
 }
 
 void FileManager::modifyFileEntry(FileEntry *File,
                                   off_t Size, time_t ModificationTime) {
   File->Size = Size;
   File->ModTime = ModificationTime;
+}
+
+/// Remove '.' and '..' path components from the given absolute path.
+/// \return \c true if any changes were made.
+// FIXME: Move this to llvm::sys::path.
+bool FileManager::removeDotPaths(SmallVectorImpl<char> &Path, bool RemoveDotDot) {
+  using namespace llvm::sys;
+
+  SmallVector<StringRef, 16> ComponentStack;
+  StringRef P(Path.data(), Path.size());
+
+  // Skip the root path, then look for traversal in the components.
+  StringRef Rel = path::relative_path(P);
+  for (StringRef C : llvm::make_range(path::begin(Rel), path::end(Rel))) {
+    if (C == ".")
+      continue;
+    if (RemoveDotDot) {
+      if (C == "..") {
+        if (!ComponentStack.empty())
+          ComponentStack.pop_back();
+        continue;
+      }
+    }
+    ComponentStack.push_back(C);
+  }
+
+  SmallString<256> Buffer = path::root_path(P);
+  for (StringRef C : ComponentStack)
+    path::append(Buffer, C);
+
+  bool Changed = (Path != Buffer);
+  Path.swap(Buffer);
+  return Changed;
 }
 
 StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
@@ -543,7 +582,7 @@ StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
   // '..' is pretty safe.
   // Ideally we'd have an equivalent of `realpath` and could implement
   // sys::fs::canonical across all the platforms.
-  llvm::sys::path::remove_dots(CanonicalNameBuf, /* remove_dot_dot */ true);
+  removeDotPaths(CanonicalNameBuf, /*RemoveDotDot*/true);
   CanonicalName = StringRef(CanonicalNameBuf).copy(CanonicalNameStorage);
 #endif
 

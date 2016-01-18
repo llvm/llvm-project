@@ -1,4 +1,4 @@
-//=== tools/dsymutil/DebugMap.h - Generic debug map representation -*- C++ -*-//
+//===- tools/dsymutil/DebugMap.h - Generic debug map representation -------===//
 //
 //                             The LLVM Linker
 //

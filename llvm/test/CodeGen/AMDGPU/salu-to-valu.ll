@@ -1,6 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=CI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI --check-prefix=GCN-HSA %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
 
 declare i32 @llvm.r600.read.tidig.x() #0
 declare i32 @llvm.r600.read.tidig.y() #0
@@ -19,10 +18,8 @@ declare i32 @llvm.r600.read.tidig.y() #0
 
 ; Make sure we aren't using VGPR's for the srsrc operand of BUFFER_LOAD_*
 ; instructions
-; GCN-NOHSA: buffer_load_ubyte v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64
-; GCN-NOHSA: buffer_load_ubyte v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64
-; GCN-HSA: flat_load_ubyte v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}
-; GCN-HSA: flat_load_ubyte v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}
+; GCN: buffer_load_ubyte v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64
+; GCN: buffer_load_ubyte v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64
 
 define void @mubuf(i32 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
 entry:
@@ -53,10 +50,8 @@ done:                                             ; preds = %loop
 ; Test moving an SMRD instruction to the VALU
 
 ; GCN-LABEL: {{^}}smrd_valu:
-; FIXME: We should be using flat load for HSA.
 ; GCN: buffer_load_dword [[OUT:v[0-9]+]]
-; GCN-NOHSA: buffer_store_dword [[OUT]]
-; GCN-HSA: flat_store_dword [[OUT]]
+; GCN: buffer_store_dword [[OUT]]
 define void @smrd_valu(i32 addrspace(2)* addrspace(1)* %in, i32 %a, i32 %b, i32 addrspace(1)* %out) #1 {
 entry:
   %tmp = icmp ne i32 %a, 0
@@ -82,9 +77,7 @@ endif:                                            ; preds = %else, %if
 ; Test moving an SMRD with an immediate offset to the VALU
 
 ; GCN-LABEL: {{^}}smrd_valu2:
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16{{$}}
-; GCN-HSA: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 define void @smrd_valu2(i32 addrspace(1)* %out, [8 x i32] addrspace(2)* %in) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -97,14 +90,10 @@ entry:
 
 ; Use a big offset that will use the SMRD literal offset on CI
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset:
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_movk_i32 [[OFFSET:s[0-9]+]], 0x4e20{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET]] addr64{{$}}
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: buffer_store_dword
-; GCN-HSA: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
-; GCN-HSA: flat_store_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
+; GCN: s_movk_i32 s[[OFFSET:[0-9]+]], 0x4e20{{$}}
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN: v_add_i32_e32
+; GCN: buffer_store_dword
 define void @smrd_valu_ci_offset(i32 addrspace(1)* %out, i32 addrspace(2)* %in, i32 %c) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -117,14 +106,11 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x2:
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET:s[0-9]+]], 0x9c40{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET]] addr64{{$}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: buffer_store_dwordx2
-; GCN-HSA: flat_load_dwordx2 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
+; GCN: s_mov_b32 s[[OFFSET:[0-9]+]], 0x9c40{{$}}
+; GCN: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: buffer_store_dwordx2
 define void @smrd_valu_ci_offset_x2(i64 addrspace(1)* %out, i64 addrspace(2)* %in, i64 %c) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -137,16 +123,13 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x4:
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_movk_i32 [[OFFSET:s[0-9]+]], 0x4d20{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET]] addr64{{$}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-HSA: flat_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
+; GCN: s_movk_i32 s[[OFFSET:[0-9]+]], 0x4d20{{$}}
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: buffer_store_dwordx4
 define void @smrd_valu_ci_offset_x4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(2)* %in, <4 x i32> %c) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -162,27 +145,31 @@ entry:
 ; CI.
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x8:
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x9a40{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
+; GCN: s_mov_b32 s[[OFFSET0:[0-9]+]], 0x9a40{{$}}
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET0]]:{{[0-9]+}}], 0 addr64{{$}}
 
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
+; SI: s_add_i32 s[[OFFSET1:[0-9]+]], s[[OFFSET0]], 16
+; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET1]]:{{[0-9]+}}], 0 addr64{{$}}
+
+; CI: s_mov_b32 s[[OFFSET1:[0-9]+]], 0x9a50{{$}}
+; CI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET1]]:{{[0-9]+}}], 0 addr64{{$}}
+
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
 define void @smrd_valu_ci_offset_x8(<8 x i32> addrspace(1)* %out, <8 x i32> addrspace(2)* %in, <8 x i32> %c) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -194,44 +181,38 @@ entry:
   ret void
 }
 
+; FIXME: should use immediate offset instead of using s_add_i32 for adding to constant.
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x16:
 
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x13480{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x13490{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET2:s[0-9]+]], 0x134a0{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET2]] addr64{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET3:s[0-9]+]], 0x134b0{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET3]] addr64{{$}}
+; GCN: s_mov_b32 s[[OFFSET0:[0-9]+]], 0x13480{{$}}
+; SI: s_add_i32 s[[OFFSET1:[0-9]+]], s[[OFFSET0]], 16
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET0]]:{{[0-9]+}}], 0 addr64{{$}}
 
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
+; CI: s_mov_b32 s[[OFFSET1:[0-9]+]], 0x13490{{$}}
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET1]]:{{[0-9]+}}], 0 addr64{{$}}
 
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
+; SI: s_add_i32 s[[OFFSET2:[0-9]+]], s[[OFFSET0]], 32
+; CI: s_mov_b32 s[[OFFSET2:[0-9]+]], 0x134a0
 
-; GCN: s_endpgm
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET2]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN: s_add_i32 s[[OFFSET3:[0-9]+]], s[[OFFSET2]], 16
+; GCN: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET3]]:{{[0-9]+}}], 0 addr64{{$}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
 define void @smrd_valu_ci_offset_x16(<16 x i32> addrspace(1)* %out, <16 x i32> addrspace(2)* %in, <16 x i32> %c) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -244,11 +225,9 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}smrd_valu2_salu_user:
-; GCN-NOHSA: buffer_load_dword [[MOVED:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
-; GCN-HSA: flat_load_dword [[MOVED:v[0-9]+]], v[{{[0-9+:[0-9]+}}]
+; GCN: buffer_load_dword [[MOVED:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 ; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, s{{[0-9]+}}, [[MOVED]]
-; GCN-NOHSA: buffer_store_dword [[ADD]]
-; GCN-HSA: flat_store_dword [[ADD]]
+; GCN: buffer_store_dword [[ADD]]
 define void @smrd_valu2_salu_user(i32 addrspace(1)* %out, [8 x i32] addrspace(2)* %in, i32 %a) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -261,8 +240,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}smrd_valu2_max_smrd_offset:
-; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1020{{$}}
-; GCN-HSA flat_load_dword v{{[0-9]}}, v{{[0-9]+:[0-9]+}}
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1020{{$}}
 define void @smrd_valu2_max_smrd_offset(i32 addrspace(1)* %out, [1024 x i32] addrspace(2)* %in) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -273,10 +251,15 @@ entry:
   ret void
 }
 
+; Offset is too big to fit in SMRD 8-bit offset, but small enough to
+; fit in MUBUF offset.
+; FIXME: We should be using the offset but we don't
+
 ; GCN-LABEL: {{^}}smrd_valu2_mubuf_offset:
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1024{{$}}
-; GCN-HSA: flat_load_dword v{{[0-9]}}, v[{{[0-9]+:[0-9]+}}]
+; SI: s_movk_i32 s[[OFFSET:[0-9]+]], 0x400{{$}}
+; SI: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[OFFSET]]:{{[0-9]+\]}}, 0 addr64{{$}}
+
+; CI: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1024{{$}}
 define void @smrd_valu2_mubuf_offset(i32 addrspace(1)* %out, [1024 x i32] addrspace(2)* %in) #1 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x() #0
@@ -288,10 +271,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}s_load_imm_v8i32:
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
 define void @s_load_imm_v8i32(<8 x i32> addrspace(1)* %out, i32 addrspace(2)* nocapture readonly %in) #1 {
 entry:
   %tmp0 = tail call i32 @llvm.r600.read.tidig.x()
@@ -303,18 +284,16 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}s_load_imm_v8i32_salu_user:
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: buffer_store_dword
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: buffer_store_dword
 define void @s_load_imm_v8i32_salu_user(i32 addrspace(1)* %out, i32 addrspace(2)* nocapture readonly %in) #1 {
 entry:
   %tmp0 = tail call i32 @llvm.r600.read.tidig.x()
@@ -344,14 +323,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}s_load_imm_v16i32:
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
 define void @s_load_imm_v16i32(<16 x i32> addrspace(1)* %out, i32 addrspace(2)* nocapture readonly %in) #1 {
 entry:
   %tmp0 = tail call i32 @llvm.r600.read.tidig.x() #1
@@ -363,30 +338,26 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}s_load_imm_v16i32_salu_user:
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: v_add_i32_e32
-; GCN-NOHSA: buffer_store_dword
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
-; GCN-HSA: flat_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: buffer_load_dwordx4
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: buffer_store_dword
 define void @s_load_imm_v16i32_salu_user(i32 addrspace(1)* %out, i32 addrspace(2)* nocapture readonly %in) #1 {
 entry:
   %tmp0 = tail call i32 @llvm.r600.read.tidig.x() #1

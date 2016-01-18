@@ -52,12 +52,6 @@ class CLRemainingArgs<string name> : Option<["/", "-"], name,
 // (We don't put any of these in cl_compile_Group as the options they alias are
 // already in the right group.)
 
-def _SLASH_Brepro : CLFlag<"Brepro">,
-  HelpText<"Emit an object file which can be reproduced over time">,
-  Alias<mincremental_linker_compatible>;
-def _SLASH_Brepro_ : CLFlag<"Brepro-">,
-  HelpText<"Emit an object file which cannot be reproduced over time">,
-  Alias<mno_incremental_linker_compatible>;
 def _SLASH_C : CLFlag<"C">,
   HelpText<"Don't discard comments when preprocessing">, Alias<C>;
 def _SLASH_c : CLFlag<"c">, HelpText<"Compile only">, Alias<c>;
@@ -125,8 +119,8 @@ def _SLASH_W0 : CLFlag<"W0">, HelpText<"Disable all warnings">, Alias<w>;
 def _SLASH_W1 : CLFlag<"W1">, HelpText<"Enable -Wall">, Alias<Wall>;
 def _SLASH_W2 : CLFlag<"W2">, HelpText<"Enable -Wall">, Alias<Wall>;
 def _SLASH_W3 : CLFlag<"W3">, HelpText<"Enable -Wall">, Alias<Wall>;
-def _SLASH_W4 : CLFlag<"W4">, HelpText<"Enable -Wall and -Wextra">, Alias<WCL4>;
-def _SLASH_Wall : CLFlag<"Wall">, HelpText<"Enable -Wall and -Wextra">, Alias<WCL4>;
+def _SLASH_W4 : CLFlag<"W4">, HelpText<"Enable -Wall">, Alias<Wall>;
+def _SLASH_Wall : CLFlag<"Wall">, HelpText<"Enable -Wall">, Alias<Wall>;
 def _SLASH_WX : CLFlag<"WX">, HelpText<"Treat warnings as errors">,
   Alias<W_Joined>, AliasArgs<["error"]>;
 def _SLASH_WX_ : CLFlag<"WX-">, HelpText<"Do not treat warnings as errors">,
@@ -134,12 +128,10 @@ def _SLASH_WX_ : CLFlag<"WX-">, HelpText<"Do not treat warnings as errors">,
 def _SLASH_w_flag : CLFlag<"w">, HelpText<"Disable all warnings">, Alias<w>;
 def _SLASH_wd4005 : CLFlag<"wd4005">, Alias<W_Joined>,
   AliasArgs<["no-macro-redefined"]>;
-def _SLASH_wd4100 : CLFlag<"wd4100">, Alias<W_Joined>,
-  AliasArgs<["no-unused-parameter"]>;
-def _SLASH_wd4910 : CLFlag<"wd4910">, Alias<W_Joined>,
-  AliasArgs<["no-dllexport-explicit-instantiation-decl"]>;
 def _SLASH_wd4996 : CLFlag<"wd4996">, Alias<W_Joined>,
   AliasArgs<["no-deprecated-declarations"]>;
+def _SLASH_wd4910 : CLFlag<"wd4910">, Alias<W_Joined>,
+  AliasArgs<["no-dllexport-explicit-instantiation-decl"]>;
 def _SLASH_vd : CLJoined<"vd">, HelpText<"Control vtordisp placement">,
   Alias<vtordisp_mode_EQ>;
 def _SLASH_Zc_sizedDealloc : CLFlag<"Zc:sizedDealloc">,

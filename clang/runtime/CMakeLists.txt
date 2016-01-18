@@ -47,16 +47,14 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
   # Find all variables that start with COMPILER_RT and populate a variable with
   # them.
   get_cmake_property(variableNames VARIABLES)
-  foreach(variableName ${variableNames})
-    if(variableName MATCHES "^COMPILER_RT")
-      string(REPLACE ";" "\;" value "${${variableName}}")
+  foreach(varaibleName ${variableNames})
+    if(${varaibleName} MATCHES "^COMPILER_RT")
       list(APPEND COMPILER_RT_PASSTHROUGH_VARIABLES
-        -D${variableName}=${value})
+        -D${varaibleName}=${${varaibleName}})
     endif()
   endforeach()
 
   ExternalProject_Add(compiler-rt
-    DEPENDS llvm-config clang
     PREFIX ${COMPILER_RT_PREFIX}
     SOURCE_DIR ${COMPILER_RT_SRC_ROOT}
     STAMP_DIR ${STAMP_DIR}
@@ -65,7 +63,6 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
                -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang
                -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-               -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                -DLLVM_CONFIG_PATH=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-config
                -DCOMPILER_RT_OUTPUT_DIR=${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}
                -DCOMPILER_RT_EXEC_OUTPUT_DIR=${LLVM_RUNTIME_OUTPUT_INTDIR}
@@ -87,6 +84,8 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
     DEPENDS clang
     WORKING_DIRECTORY ${BINARY_DIR}
     )
+
+  add_dependencies(compiler-rt-configure clang llvm-config)
 
   install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${BINARY_DIR}/cmake_install.cmake \)"
     COMPONENT compiler-rt)
@@ -111,7 +110,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
   if(LLVM_INCLUDE_TESTS)
     # Add binaries that compiler-rt tests depend on.
     set(COMPILER_RT_TEST_DEPENDENCIES
-      FileCheck count not llvm-nm llvm-objdump llvm-symbolizer)
+      FileCheck count not llvm-nm llvm-symbolizer)
 
     # Add top-level targets for various compiler-rt test suites.
     set(COMPILER_RT_TEST_SUITES check-asan check-asan-dynamic check-dfsan

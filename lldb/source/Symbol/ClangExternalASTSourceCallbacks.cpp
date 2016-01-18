@@ -41,7 +41,6 @@
 #endif
 
 #include "lldb/Core/Log.h"
-#include "clang/AST/Decl.h"
 
 using namespace clang;
 using namespace lldb_private;
@@ -159,18 +158,5 @@ ClangExternalASTSourceCallbacks::layoutRecordType(
                                              VirtualBaseOffsets);
     
     return false;
-}
-
-void
-ClangExternalASTSourceCallbacks::FindExternalLexicalDecls (const clang::DeclContext *decl_ctx,
-                                                           llvm::function_ref<bool(clang::Decl::Kind)> IsKindWeWant,
-                                                           llvm::SmallVectorImpl<clang::Decl *> &decls)
-{
-    if (m_callback_tag_decl && decl_ctx)
-    {
-        clang::TagDecl *tag_decl = llvm::dyn_cast<clang::TagDecl>(const_cast<clang::DeclContext *>(decl_ctx));
-        if (tag_decl)
-            CompleteType(tag_decl);
-    }
 }
 

@@ -33,7 +33,6 @@
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteiOS.h"
-#include "Plugins/Platform/NetBSD/PlatformNetBSD.h"
 #include "Plugins/Platform/Windows/PlatformWindows.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 
@@ -115,7 +114,6 @@ SystemInitializerCommon::Initialize()
     DynamicLoaderWindowsDYLD::Initialize();
     platform_freebsd::PlatformFreeBSD::Initialize();
     platform_linux::PlatformLinux::Initialize();
-    platform_netbsd::PlatformNetBSD::Initialize();
     PlatformWindows::Initialize();
     PlatformKalimba::Initialize();
     platform_android::PlatformAndroid::Initialize();
@@ -163,7 +161,6 @@ SystemInitializerCommon::Terminate()
     DynamicLoaderWindowsDYLD::Terminate();
     platform_freebsd::PlatformFreeBSD::Terminate();
     platform_linux::PlatformLinux::Terminate();
-    platform_netbsd::PlatformNetBSD::Terminate();
     PlatformWindows::Terminate();
     PlatformKalimba::Terminate();
     platform_android::PlatformAndroid::Terminate();

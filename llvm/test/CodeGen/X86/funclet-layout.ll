@@ -15,20 +15,20 @@ entry:
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:
-  %cs1 = catchswitch within none [label %catch] unwind to caller
+  %cp = catchpad [i8* null, i32 64, i8* null]
+          to label %catch unwind label %catchendblock
 
 catch:
-  %cp = catchpad within %cs1 [i8* null, i32 64, i8* null]
-  br label %catch.loop
-
-catch.loop:
-  br i1 %B, label %catchret, label %catch.loop
+  br i1 %B, label %catchret, label %catch
 
 catchret:
-  catchret from %cp to label %try.cont
+  catchret %cp to label %try.cont
 
 try.cont:
   ret void
+
+catchendblock:
+  catchendpad unwind to caller
 
 unreachable:
   unreachable
@@ -55,49 +55,53 @@ entry:
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %cs1 = catchswitch within none [label %catch] unwind to caller
+  %0 = catchpad [i8* null, i32 64, i8* null]
+          to label %catch unwind label %catchendblock
 
 catch:                                            ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1 ["funclet"(token %0)]
+  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1
           to label %unreachable unwind label %catch.dispatch.1
 
 catch.dispatch.1:                                 ; preds = %catch
-  %cs2 = catchswitch within %0 [label %catch.3] unwind to caller
+  %1 = catchpad [i8* null, i32 64, i8* null]
+          to label %catch.3 unwind label %catchendblock.2
 
 catch.3:                                          ; preds = %catch.dispatch.1
-  %1 = catchpad within %cs2 [i8* null, i32 64, i8* null]
-  catchret from %1 to label %try.cont
+  catchret %1 to label %try.cont
 
 try.cont:                                         ; preds = %catch.3
-  catchret from %0 to label %try.cont.5
+  catchret %0 to label %try.cont.5
 
 try.cont.5:                                       ; preds = %try.cont
   ret i32 0
 
+catchendblock.2:                                  ; preds = %catch.dispatch.1
+  catchendpad unwind label %catchendblock
+
+catchendblock:                                    ; preds = %catchendblock.2, %catch.dispatch
+  catchendpad unwind to caller
+
 unreachable:                                      ; preds = %catch, %entry
   unreachable
+
 }
 
 ; CHECK-LABEL: test2:
 
-; The parent function contains %entry and %try.cont.5
-; CHECK: .seh_proc
+; The entry funclet contains %entry and %try.cont.5
 ; CHECK: # %entry
 ; CHECK: # %try.cont.5
 ; CHECK: retq
 
-; The inner catch funclet contains %catch.3
-; CHECK: .seh_proc
-; CHECK: # %catch.3{{$}}
-; CHECK: retq
-
-; The outer catch funclet contains %catch
-; CHECK: .seh_proc
-; CHECK: # %catch{{$}}
+; The outer catch funclet contains %catch.dispatch
+; CHECK: # %catch.dispatch{{$}}
 ; CHECK: callq _CxxThrowException
 ; CHECK: # %unreachable
 ; CHECK: ud2
+
+; The inner catch funclet contains %catch.dispatch.1
+; CHECK: # %catch.dispatch.1
+; CHECK: retq
 
 
 define void @test3(i1 %V) #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
@@ -106,20 +110,23 @@ entry:
           to label %try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %cs1 = catchswitch within none [label %catch.2] unwind label %catch.dispatch.1
+  %0 = catchpad [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+          to label %catch.2 unwind label %catch.dispatch.1
 
 catch.2:                                          ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
-  tail call void @exit(i32 0) #2 [ "funclet"(token %0) ]
+  tail call void @exit(i32 0) #2
   unreachable
 
 catch.dispatch.1:                                 ; preds = %catch.dispatch
-  %cs2 = catchswitch within none [label %catch] unwind to caller
+  %1 = catchpad [i8* null, i32 64, i8* null]
+          to label %catch unwind label %catchendblock
 
 catch:                                            ; preds = %catch.dispatch.1
-  %1 = catchpad within %cs2 [i8* null, i32 64, i8* null]
-  tail call void @exit(i32 0) #2 [ "funclet"(token %1) ]
+  tail call void @exit(i32 0) #2
   unreachable
+
+catchendblock:                                    ; preds = %catch.dispatch.1
+  catchendpad unwind to caller
 
 try.cont:                                         ; preds = %entry
   br i1 %V, label %exit_one, label %exit_two
@@ -143,13 +150,13 @@ exit_two:
 ; CHECK-NOT: # exit_two
 ; CHECK: ud2
 
-; The catch(...) funclet contains %catch.2
-; CHECK: # %catch.2{{$}}
+; The catch(...) funclet contains %catch.dispatch
+; CHECK: # %catch.dispatch{{$}}
 ; CHECK: callq exit
 ; CHECK: ud2
 
-; The catch(int) funclet contains %catch
-; CHECK: # %catch{{$}}
+; The catch(int) funclet contains %catch.dispatch.1
+; CHECK: # %catch.dispatch.1
 ; CHECK: callq exit
 ; CHECK: ud2
 

@@ -578,7 +578,7 @@ unsigned ARMFastISel::ARMMaterializeInt(const Constant *C, MVT VT) {
 
 unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
   // For now 32-bit only.
-  if (VT != MVT::i32 || GV->isThreadLocal()) return 0;
+  if (VT != MVT::i32) return 0;
 
   Reloc::Model RelocM = TM.getRelocationModel();
   bool IsIndirect = Subtarget->GVIsIndirectSymbol(GV, RelocM);
@@ -2083,9 +2083,6 @@ bool ARMFastISel::SelectRet(const Instruction *I) {
   if (!FuncInfo.CanLowerReturn)
     return false;
 
-  if (TLI.supportSplitCSR(FuncInfo.MF))
-    return false;
-
   // Build a list of return value registers.
   SmallVector<unsigned, 4> RetRegs;
 
@@ -2295,7 +2292,8 @@ bool ARMFastISel::SelectCall(const Instruction *I,
 
   // TODO: Avoid some calling conventions?
 
-  FunctionType *FTy = CS.getFunctionType();
+  PointerType *PT = cast<PointerType>(CS.getCalledValue()->getType());
+  FunctionType *FTy = cast<FunctionType>(PT->getElementType());
   bool isVarArg = FTy->isVarArg();
 
   // Handle *simple* calls for now.
@@ -3038,7 +3036,7 @@ bool ARMFastISel::fastLowerArguments() {
   }
 
 
-  static const MCPhysReg GPRArgRegs[] = {
+  static const uint16_t GPRArgRegs[] = {
     ARM::R0, ARM::R1, ARM::R2, ARM::R3
   };
 

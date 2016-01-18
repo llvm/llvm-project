@@ -489,12 +489,10 @@ test [ECX], AL
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
-// CHECK: fnstsw (%eax)
 fnstsw
 fnstsw AX
 fnstsw EAX
 fnstsw AL
-fnstsw WORD PTR [EAX]
 
 // CHECK: faddp %st(1)
 // CHECK: fmulp %st(1)
@@ -534,20 +532,6 @@ fsubp ST(1)
 fsubrp ST(1)
 fdivp ST(1)
 fdivrp ST(1)
-
-
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fdivrp %st(1)
-// CHECK: fdivp %st(1)
-fadd 
-fmul
-fsub
-fsubr
-fdiv
-fdivr
 
 // CHECK: faddp %st(1)
 // CHECK: fmulp %st(1)
@@ -738,16 +722,3 @@ fbld tbyte ptr [eax]
 fbstp tbyte ptr [eax]
 // CHECK: fbld (%eax)
 // CHECK: fbstp (%eax)
-
-fcomip st, st(2)
-fucomip st, st(2)
-// CHECK: fcompi  %st(2)
-// CHECK: fucompi  %st(2)
-
-loopz _foo
-loopnz _foo
-// CHECK: loope _foo
-// CHECK: loopne _foo
-
-sidt fword ptr [eax]
-// CHECK: sidtq (%eax)

@@ -24,6 +24,7 @@ class ThreadExitTestCase(TestBase):
         self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
         self.break_4 = line_number('main.cpp', '// Set fourth breakpoint here')
 
+    @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
     @expectedFailureWindows("llvm.org/pr24681")
     def test(self):
         """Test thread exit handling."""

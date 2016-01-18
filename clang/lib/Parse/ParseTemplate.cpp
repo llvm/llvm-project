@@ -126,7 +126,8 @@ Parser::ParseTemplateDeclarationOrSpecialization(unsigned Context,
       Actions.ActOnTemplateParameterList(CurTemplateDepthTracker.getDepth(), 
                                          ExportLoc,
                                          TemplateLoc, LAngleLoc,
-                                         TemplateParams, RAngleLoc));
+                                         TemplateParams.data(),
+                                         TemplateParams.size(), RAngleLoc));
 
     if (!TemplateParams.empty()) {
       isSpecialization = false;
@@ -279,8 +280,8 @@ Parser::ParseSingleDeclarationAfterTemplate(
         // Recover as if it were an explicit specialization.
         TemplateParameterLists FakedParamLists;
         FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-            0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, None,
-            LAngleLoc));
+            0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, nullptr,
+            0, LAngleLoc));
 
         return ParseFunctionDefinition(
             DeclaratorInfo, ParsedTemplateInfo(&FakedParamLists,
@@ -630,7 +631,8 @@ Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
   TemplateParameterList *ParamList =
     Actions.ActOnTemplateParameterList(Depth, SourceLocation(),
                                        TemplateLoc, LAngleLoc,
-                                       TemplateParams,
+                                       TemplateParams.data(),
+                                       TemplateParams.size(),
                                        RAngleLoc);
 
   // Grab a default argument (if available).
@@ -693,8 +695,7 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
     //   end of the template-parameter-list rather than a greater-than
     //   operator.
     GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
-    EnterExpressionEvaluationContext ConstantEvaluated(Actions,
-                                                       Sema::ConstantEvaluated);
+    EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated);
 
     DefaultArg = Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
     if (DefaultArg.isInvalid())
@@ -1061,7 +1062,7 @@ void Parser::AnnotateTemplateIdTokenAsType() {
                                   TemplateId->RAngleLoc);
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
-  setTypeAnnotation(Tok, Type.isInvalid() ? nullptr : Type.get());
+  setTypeAnnotation(Tok, Type.isInvalid() ? ParsedType() : Type.get());
   if (TemplateId->SS.isNotEmpty()) // it was a C++ qualified type name.
     Tok.setLocation(TemplateId->SS.getBeginLoc());
   // End location stays the same
@@ -1094,9 +1095,9 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
   // followed by a token that terminates a template argument, such as ',', 
   // '>', or (in some cases) '>>'.
   CXXScopeSpec SS; // nested-name-specifier, if present
-  ParseOptionalCXXScopeSpecifier(SS, nullptr,
+  ParseOptionalCXXScopeSpecifier(SS, ParsedType(),
                                  /*EnteringContext=*/false);
-
+  
   ParsedTemplateArgument Result;
   SourceLocation EllipsisLoc;
   if (SS.isSet() && Tok.is(tok::kw_template)) {
@@ -1117,10 +1118,11 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
       // template argument.
       TemplateTy Template;
       if (isEndOfTemplateArgument(Tok) &&
-          Actions.ActOnDependentTemplateName(
-              getCurScope(), SS, TemplateKWLoc, Name,
-              /*ObjectType=*/nullptr,
-              /*EnteringContext=*/false, Template))
+          Actions.ActOnDependentTemplateName(getCurScope(),
+                                             SS, TemplateKWLoc, Name,
+                                             /*ObjectType=*/ ParsedType(),
+                                             /*EnteringContext=*/false,
+                                             Template))
         Result = ParsedTemplateArgument(SS, Template, Name.StartLocation);
     }
   } else if (Tok.is(tok::identifier)) {
@@ -1134,11 +1136,13 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
 
     if (isEndOfTemplateArgument(Tok)) {
       bool MemberOfUnknownSpecialization;
-      TemplateNameKind TNK = Actions.isTemplateName(
-          getCurScope(), SS,
-          /*hasTemplateKeyword=*/false, Name,
-          /*ObjectType=*/nullptr,
-          /*EnteringContext=*/false, Template, MemberOfUnknownSpecialization);
+      TemplateNameKind TNK = Actions.isTemplateName(getCurScope(), SS,
+                                               /*hasTemplateKeyword=*/false,
+                                                    Name,
+                                               /*ObjectType=*/ ParsedType(), 
+                                                    /*EnteringContext=*/false, 
+                                                    Template,
+                                                MemberOfUnknownSpecialization);
       if (TNK == TNK_Dependent_template_name || TNK == TNK_Type_template) {
         // We have an id-expression that refers to a class template or
         // (C++0x) alias template. 

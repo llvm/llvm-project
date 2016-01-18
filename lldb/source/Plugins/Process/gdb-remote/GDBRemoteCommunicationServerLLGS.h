@@ -122,6 +122,7 @@ protected:
     Mutex m_debugged_process_mutex;
     NativeProcessProtocolSP m_debugged_process_sp;
 
+    Mutex m_stdio_communication_mutex; // Protects m_stdio_communication and m_stdio_handle_up
     Communication m_stdio_communication;
     MainLoop::ReadHandleUP m_stdio_handle_up;
 
@@ -295,9 +296,6 @@ private:
 
     void
     SendProcessOutput ();
-
-    void
-    StartSTDIOForwarding();
 
     void
     StopSTDIOForwarding();

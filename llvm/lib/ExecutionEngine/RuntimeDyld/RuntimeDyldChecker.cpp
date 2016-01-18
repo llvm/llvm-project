@@ -799,10 +799,11 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(
   unsigned SectionID = SectionInfo->SectionID;
   uint64_t Addr;
   if (IsInsideLoad)
-    Addr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(
-        getRTDyld().Sections[SectionID].getAddress()));
+    Addr =
+      static_cast<uint64_t>(
+        reinterpret_cast<uintptr_t>(getRTDyld().Sections[SectionID].Address));
   else
-    Addr = getRTDyld().Sections[SectionID].getLoadAddress();
+    Addr = getRTDyld().Sections[SectionID].LoadAddress;
 
   return std::make_pair(Addr, std::string(""));
 }
@@ -834,11 +835,11 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubAddrFor(
 
   uint64_t Addr;
   if (IsInsideLoad) {
-    uintptr_t SectionBase = reinterpret_cast<uintptr_t>(
-        getRTDyld().Sections[SectionID].getAddress());
+    uintptr_t SectionBase =
+        reinterpret_cast<uintptr_t>(getRTDyld().Sections[SectionID].Address);
     Addr = static_cast<uint64_t>(SectionBase) + StubOffset;
   } else {
-    uint64_t SectionBase = getRTDyld().Sections[SectionID].getLoadAddress();
+    uint64_t SectionBase = getRTDyld().Sections[SectionID].LoadAddress;
     Addr = SectionBase + StubOffset;
   }
 
@@ -854,16 +855,16 @@ RuntimeDyldCheckerImpl::getSubsectionStartingAt(StringRef Name) const {
   const auto &SymInfo = pos->second;
   uint8_t *SectionAddr = getRTDyld().getSectionAddress(SymInfo.getSectionID());
   return StringRef(reinterpret_cast<const char *>(SectionAddr) +
-                       SymInfo.getOffset(),
-                   getRTDyld().Sections[SymInfo.getSectionID()].getSize() -
-                       SymInfo.getOffset());
+                     SymInfo.getOffset(),
+                   getRTDyld().Sections[SymInfo.getSectionID()].Size -
+                     SymInfo.getOffset());
 }
 
 void RuntimeDyldCheckerImpl::registerSection(
     StringRef FilePath, unsigned SectionID) {
   StringRef FileName = sys::path::filename(FilePath);
   const SectionEntry &Section = getRTDyld().Sections[SectionID];
-  StringRef SectionName = Section.getName();
+  StringRef SectionName = Section.Name;
 
   Stubs[FileName][SectionName].SectionID = SectionID;
 }
@@ -873,7 +874,7 @@ void RuntimeDyldCheckerImpl::registerStubMap(
     const RuntimeDyldImpl::StubMap &RTDyldStubs) {
   StringRef FileName = sys::path::filename(FilePath);
   const SectionEntry &Section = getRTDyld().Sections[SectionID];
-  StringRef SectionName = Section.getName();
+  StringRef SectionName = Section.Name;
 
   Stubs[FileName][SectionName].SectionID = SectionID;
 

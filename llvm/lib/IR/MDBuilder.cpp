@@ -36,7 +36,8 @@ MDNode *MDBuilder::createFPMath(float Accuracy) {
 
 MDNode *MDBuilder::createBranchWeights(uint32_t TrueWeight,
                                        uint32_t FalseWeight) {
-  return createBranchWeights({TrueWeight, FalseWeight});
+  uint32_t Weights[] = {TrueWeight, FalseWeight};
+  return createBranchWeights(Weights);
 }
 
 MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights) {
@@ -57,10 +58,13 @@ MDNode *MDBuilder::createUnpredictable() {
 }
 
 MDNode *MDBuilder::createFunctionEntryCount(uint64_t Count) {
+  SmallVector<Metadata *, 2> Vals(2);
+  Vals[0] = createString("function_entry_count");
+
   Type *Int64Ty = Type::getInt64Ty(Context);
-  return MDNode::get(Context,
-                     {createString("function_entry_count"),
-                      createConstant(ConstantInt::get(Int64Ty, Count))});
+  Vals[1] = createConstant(ConstantInt::get(Int64Ty, Count));
+
+  return MDNode::get(Context, Vals);
 }
 
 MDNode *MDBuilder::createRange(const APInt &Lo, const APInt &Hi) {
@@ -76,7 +80,8 @@ MDNode *MDBuilder::createRange(Constant *Lo, Constant *Hi) {
     return nullptr;
 
   // Return the range [Lo, Hi).
-  return MDNode::get(Context, {createConstant(Lo), createConstant(Hi)});
+  Metadata *Range[2] = {createConstant(Lo), createConstant(Hi)};
+  return MDNode::get(Context, Range);
 }
 
 MDNode *MDBuilder::createAnonymousAARoot(StringRef Name, MDNode *Extra) {
@@ -111,10 +116,12 @@ MDNode *MDBuilder::createTBAANode(StringRef Name, MDNode *Parent,
                                   bool isConstant) {
   if (isConstant) {
     Constant *Flags = ConstantInt::get(Type::getInt64Ty(Context), 1);
-    return MDNode::get(Context,
-                       {createString(Name), Parent, createConstant(Flags)});
+    Metadata *Ops[3] = {createString(Name), Parent, createConstant(Flags)};
+    return MDNode::get(Context, Ops);
+  } else {
+    Metadata *Ops[2] = {createString(Name), Parent};
+    return MDNode::get(Context, Ops);
   }
-  return MDNode::get(Context, {createString(Name), Parent});
 }
 
 MDNode *MDBuilder::createAliasScopeDomain(StringRef Name) {
@@ -122,7 +129,8 @@ MDNode *MDBuilder::createAliasScopeDomain(StringRef Name) {
 }
 
 MDNode *MDBuilder::createAliasScope(StringRef Name, MDNode *Domain) {
-  return MDNode::get(Context, {createString(Name), Domain});
+  Metadata *Ops[2] = {createString(Name), Domain};
+  return MDNode::get(Context, Ops);
 }
 
 /// \brief Return metadata for a tbaa.struct node with the given
@@ -157,19 +165,23 @@ MDNode *MDBuilder::createTBAAStructTypeNode(
 MDNode *MDBuilder::createTBAAScalarTypeNode(StringRef Name, MDNode *Parent,
                                             uint64_t Offset) {
   ConstantInt *Off = ConstantInt::get(Type::getInt64Ty(Context), Offset);
-  return MDNode::get(Context,
-                     {createString(Name), Parent, createConstant(Off)});
+  Metadata *Ops[3] = {createString(Name), Parent, createConstant(Off)};
+  return MDNode::get(Context, Ops);
 }
 
 /// \brief Return metadata for a TBAA tag node with the given
 /// base type, access type and offset relative to the base type.
 MDNode *MDBuilder::createTBAAStructTagNode(MDNode *BaseType, MDNode *AccessType,
                                            uint64_t Offset, bool IsConstant) {
-  IntegerType *Int64 = Type::getInt64Ty(Context);
-  ConstantInt *Off = ConstantInt::get(Int64, Offset);
+  Type *Int64 = Type::getInt64Ty(Context);
   if (IsConstant) {
-    return MDNode::get(Context, {BaseType, AccessType, createConstant(Off),
-                                 createConstant(ConstantInt::get(Int64, 1))});
+    Metadata *Ops[4] = {BaseType, AccessType,
+                        createConstant(ConstantInt::get(Int64, Offset)),
+                        createConstant(ConstantInt::get(Int64, 1))};
+    return MDNode::get(Context, Ops);
+  } else {
+    Metadata *Ops[3] = {BaseType, AccessType,
+                        createConstant(ConstantInt::get(Int64, Offset))};
+    return MDNode::get(Context, Ops);
   }
-  return MDNode::get(Context, {BaseType, AccessType, createConstant(Off)});
 }

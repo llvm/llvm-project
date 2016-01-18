@@ -364,26 +364,11 @@ void DeleteContainerSeconds(Container &C) {
 }
 
 /// Provide wrappers to std::all_of which take ranges instead of having to pass
-/// begin/end explicitly.
+/// being/end explicitly.
 template<typename R, class UnaryPredicate>
 bool all_of(R &&Range, UnaryPredicate &&P) {
   return std::all_of(Range.begin(), Range.end(),
                      std::forward<UnaryPredicate>(P));
-}
-
-/// Provide wrappers to std::any_of which take ranges instead of having to pass
-/// begin/end explicitly.
-template <typename R, class UnaryPredicate>
-bool any_of(R &&Range, UnaryPredicate &&P) {
-  return std::any_of(Range.begin(), Range.end(),
-                     std::forward<UnaryPredicate>(P));
-}
-
-/// Provide wrappers to std::find which take ranges instead of having to pass
-/// begin/end explicitly.
-template<typename R, class T>
-auto find(R &&Range, const T &val) -> decltype(Range.begin()) {
-  return std::find(Range.begin(), Range.end(), val);
 }
 
 //===----------------------------------------------------------------------===//

@@ -6,7 +6,7 @@
   entry:
     %x.i = alloca i8, align 1
     %y.i = alloca [256 x i8], align 16
-    %0 = bitcast i8* %x.i to i8*
+    %0 = bitcast [256 x i8]* %y.i to i8*
     br label %for.body
 
   for.body:

@@ -22,7 +22,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TrailingObjects.h"
 
 namespace llvm {
   class FoldingSetNodeID;
@@ -563,72 +562,84 @@ public:
 /// the "<int>" in "sort<int>".
 /// This is safe to be used inside an AST node, in contrast with
 /// TemplateArgumentListInfo.
-struct ASTTemplateArgumentListInfo final
-    : private llvm::TrailingObjects<ASTTemplateArgumentListInfo,
-                                    TemplateArgumentLoc> {
-private:
-  friend TrailingObjects;
-
-  ASTTemplateArgumentListInfo(const TemplateArgumentListInfo &List);
-
-public:
+struct ASTTemplateArgumentListInfo {
   /// \brief The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
-
+  
   /// \brief The source location of the right angle bracket ('>').
   SourceLocation RAngleLoc;
+  
+  union {
+    /// \brief The number of template arguments in TemplateArgs.
+    /// The actual template arguments (if any) are stored after the
+    /// ExplicitTemplateArgumentList structure.
+    unsigned NumTemplateArgs;
 
-  /// \brief The number of template arguments in TemplateArgs.
-  unsigned NumTemplateArgs;
+    /// Force ASTTemplateArgumentListInfo to the right alignment
+    /// for the following array of TemplateArgumentLocs.
+    llvm::AlignedCharArray<
+        llvm::AlignOf<TemplateArgumentLoc>::Alignment, 1> Aligner;
+  };
 
   /// \brief Retrieve the template arguments
+  TemplateArgumentLoc *getTemplateArgs() {
+    return reinterpret_cast<TemplateArgumentLoc *> (this + 1);
+  }
+  
+  /// \brief Retrieve the template arguments
   const TemplateArgumentLoc *getTemplateArgs() const {
-    return getTrailingObjects<TemplateArgumentLoc>();
+    return reinterpret_cast<const TemplateArgumentLoc *> (this + 1);
   }
 
   const TemplateArgumentLoc &operator[](unsigned I) const {
     return getTemplateArgs()[I];
   }
 
-  static const ASTTemplateArgumentListInfo *
-  Create(ASTContext &C, const TemplateArgumentListInfo &List);
+  static const ASTTemplateArgumentListInfo *Create(ASTContext &C,
+                                          const TemplateArgumentListInfo &List);
+
+  void initializeFrom(const TemplateArgumentListInfo &List);
+  void initializeFrom(const TemplateArgumentListInfo &List,
+                      bool &Dependent, bool &InstantiationDependent,
+                      bool &ContainsUnexpandedParameterPack);
+  void copyInto(TemplateArgumentListInfo &List) const;
+  static std::size_t sizeFor(unsigned NumTemplateArgs);
 };
 
-/// \brief Represents an explicit template argument list in C++, e.g.,
-/// the "<int>" in "sort<int>".
-///
-/// It is intended to be used as a trailing object on AST nodes, and
-/// as such, doesn't contain the array of TemplateArgumentLoc itself,
-/// but expects the containing object to also provide storage for
-/// that.
-struct LLVM_ALIGNAS(LLVM_PTR_SIZE) ASTTemplateKWAndArgsInfo {
-  /// \brief The source location of the left angle bracket ('<').
-  SourceLocation LAngleLoc;
+/// \brief Extends ASTTemplateArgumentListInfo with the source location
+/// information for the template keyword; this is used as part of the
+/// representation of qualified identifiers, such as S<T>::template apply<T>.
+struct ASTTemplateKWAndArgsInfo : public ASTTemplateArgumentListInfo {
+  typedef ASTTemplateArgumentListInfo Base;
 
-  /// \brief The source location of the right angle bracket ('>').
-  SourceLocation RAngleLoc;
+  // NOTE: the source location of the (optional) template keyword is
+  // stored after all template arguments.
 
-  /// \brief The source location of the template keyword; this is used
-  /// as part of the representation of qualified identifiers, such as
-  /// S<T>::template apply<T>.  Will be empty if this expression does
-  /// not have a template keyword.
-  SourceLocation TemplateKWLoc;
+  /// \brief Get the source location of the template keyword.
+  SourceLocation getTemplateKeywordLoc() const {
+    return *reinterpret_cast<const SourceLocation*>
+      (getTemplateArgs() + NumTemplateArgs);
+  }
 
-  /// \brief The number of template arguments in TemplateArgs.
-  unsigned NumTemplateArgs;
+  /// \brief Sets the source location of the template keyword.
+  void setTemplateKeywordLoc(SourceLocation TemplateKWLoc) {
+    *reinterpret_cast<SourceLocation*>
+      (getTemplateArgs() + NumTemplateArgs) = TemplateKWLoc;
+  }
+
+  static const ASTTemplateKWAndArgsInfo*
+  Create(ASTContext &C, SourceLocation TemplateKWLoc,
+         const TemplateArgumentListInfo &List);
 
   void initializeFrom(SourceLocation TemplateKWLoc,
-                      const TemplateArgumentListInfo &List,
-                      TemplateArgumentLoc *OutArgArray);
+                      const TemplateArgumentListInfo &List);
   void initializeFrom(SourceLocation TemplateKWLoc,
                       const TemplateArgumentListInfo &List,
-                      TemplateArgumentLoc *OutArgArray, bool &Dependent,
-                      bool &InstantiationDependent,
+                      bool &Dependent, bool &InstantiationDependent,
                       bool &ContainsUnexpandedParameterPack);
   void initializeFrom(SourceLocation TemplateKWLoc);
 
-  void copyInto(const TemplateArgumentLoc *ArgArray,
-                TemplateArgumentListInfo &List) const;
+  static std::size_t sizeFor(unsigned NumTemplateArgs);
 };
 
 const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,

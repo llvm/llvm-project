@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple=x86_64-linux-gnu %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -triple=x86_64-linux-gnu %s -DCPP11ONLY
 
 // C++11 [temp.arg.nontype]p1:
 //
@@ -7,8 +6,6 @@
 //   be one of:
 //   -- an integral constant expression; or
 //   -- the name of a non-type template-parameter ; or
-#ifndef CPP11ONLY 
-
 namespace non_type_tmpl_param {
   template <int N> struct X0 { X0(); };
   template <int N> X0<N>::X0() { }
@@ -97,15 +94,4 @@ namespace bad_args {
   X0<&i + 2> x0a; // expected-error{{non-type template argument does not refer to any declaration}}
   int* iptr = &i;
   X0<iptr> x0b; // expected-error{{non-type template argument for template parameter of pointer type 'int *' must have its address taken}}
-}
-#endif // CPP11ONLY
-
-namespace default_args {
-#ifdef CPP11ONLY
-namespace lambdas {
-template<int I = ([] { return 5; }())> //expected-error 2{{constant expression}} expected-note{{constant expression}}
-int f();
-}
-#endif // CPP11ONLY
-
 }

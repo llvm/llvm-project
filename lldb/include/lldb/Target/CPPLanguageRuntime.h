@@ -42,6 +42,9 @@ public:
     bool
     GetObjectDescription(Stream &str, Value &value, ExecutionContextScope *exe_scope) override;
     
+    virtual size_t
+    GetAlternateManglings(const ConstString &mangled, std::vector<ConstString> &alternates) = 0;
+
 protected:
 
     //------------------------------------------------------------------

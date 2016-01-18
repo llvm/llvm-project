@@ -2882,26 +2882,22 @@ static void GroupNewVirtualOverloads(
   // Put the virtual methods into VirtualMethods in the proper order:
   // 1) Group overloads by declaration name. New groups are added to the
   //    vftable in the order of their first declarations in this class
-  //    (including overrides, non-virtual methods and any other named decl that
-  //    might be nested within the class).
+  //    (including overrides and non-virtual methods).
   // 2) In each group, new overloads appear in the reverse order of declaration.
   typedef SmallVector<const CXXMethodDecl *, 1> MethodGroup;
   SmallVector<MethodGroup, 10> Groups;
   typedef llvm::DenseMap<DeclarationName, unsigned> VisitedGroupIndicesTy;
   VisitedGroupIndicesTy VisitedGroupIndices;
-  for (const auto *D : RD->decls()) {
-    const auto *ND = dyn_cast<NamedDecl>(D);
-    if (!ND)
-      continue;
+  for (const auto *MD : RD->methods()) {
+    MD = MD->getCanonicalDecl();
     VisitedGroupIndicesTy::iterator J;
     bool Inserted;
     std::tie(J, Inserted) = VisitedGroupIndices.insert(
-        std::make_pair(ND->getDeclName(), Groups.size()));
+        std::make_pair(MD->getDeclName(), Groups.size()));
     if (Inserted)
       Groups.push_back(MethodGroup());
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(ND))
-      if (MD->isVirtual())
-        Groups[J->second].push_back(MD->getCanonicalDecl());
+    if (MD->isVirtual())
+      Groups[J->second].push_back(MD);
   }
 
   for (const MethodGroup &Group : Groups)

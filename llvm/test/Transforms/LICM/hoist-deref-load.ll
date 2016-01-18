@@ -388,49 +388,5 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
-; In this test we should be able to only hoist load from %cptr. We can't hoist
-; load from %c because it's dereferenceability can depend on %cmp1 condition.
-; By moving it out of the loop we break this dependency and can not rely
-; on the dereferenceability anymore.
-; In other words this test checks that we strip dereferenceability  metadata
-; after hoisting an instruction.
-
-; CHECK-LABEL: @test10
-; CHECK: %c = load i32*, i32** %cptr
-; CHECK-NOT: dereferenceable
-; CHECK: if.then:
-; CHECK: load i32, i32* %c, align 4
-
-define void @test10(i32* noalias %a, i32* %b, i32** dereferenceable(8) %cptr, i32 %n) #0 {
-entry:
-  %cmp11 = icmp sgt i32 %n, 0
-  br i1 %cmp11, label %for.body, label %for.end
-
-for.body:                                         ; preds = %entry, %for.inc
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %cmp1 = icmp sgt i32 %0, 0
-  br i1 %cmp1, label %if.then, label %for.inc
-
-if.then:                                          ; preds = %for.body
-  %c = load i32*, i32** %cptr, !dereferenceable !0
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
-  %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
-  br label %for.inc
-
-for.inc:                                          ; preds = %for.body, %if.then
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp eq i32 %lftr.wideiv, %n
-  br i1 %exitcond, label %for.end, label %for.body
-
-for.end:                                          ; preds = %for.inc, %entry
-  ret void
-}
-
 attributes #0 = { nounwind uwtable }
 !0 = !{i64 4}

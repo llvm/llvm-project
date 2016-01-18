@@ -815,7 +815,7 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
         bool is_declaration = false;
         //bool is_artificial = false;
         bool has_address = false;
-        bool has_location_or_const_value = false;
+        bool has_location = false;
         bool is_global_or_static_variable = false;
         
         DWARFFormValue specification_die_form;
@@ -860,8 +860,7 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
                     break;
 
                 case DW_AT_location:
-                case DW_AT_const_value:
-                    has_location_or_const_value = true;
+                    has_location = true;
                     if (tag == DW_TAG_variable)
                     {
                         const DWARFDebugInfoEntry* parent_die = die.GetParent();
@@ -1036,7 +1035,7 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
             break;
 
         case DW_TAG_variable:
-            if (name && has_location_or_const_value && is_global_or_static_variable)
+            if (name && has_location && is_global_or_static_variable)
             {
                 globals.Insert (ConstString(name), DIERef(cu_offset, die.GetOffset()));
                 // Be sure to include variables by their mangled and demangled

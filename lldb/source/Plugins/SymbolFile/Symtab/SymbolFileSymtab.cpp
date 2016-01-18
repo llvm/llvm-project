@@ -253,12 +253,6 @@ SymbolFileSymtab::ParseCompileUnitLineTable (const SymbolContext &sc)
 }
 
 bool
-SymbolFileSymtab::ParseCompileUnitDebugMacros (const SymbolContext &sc)
-{
-    return false;
-}
-
-bool
 SymbolFileSymtab::ParseCompileUnitSupportFiles (const SymbolContext& sc, FileSpecList &support_files)
 {
     return false;

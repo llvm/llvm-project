@@ -60,6 +60,8 @@ class RegisterContextWindows : public lldb_private::RegisterContext
     virtual bool CacheAllRegisterValues();
 
     CONTEXT m_context;
+
+  private:
     bool m_context_stale;
 };
 }

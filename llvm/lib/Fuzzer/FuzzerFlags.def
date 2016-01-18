@@ -11,7 +11,7 @@
 // portability and independence.
 //===----------------------------------------------------------------------===//
 FUZZER_FLAG_INT(verbosity, 1, "Verbosity level.")
-FUZZER_FLAG_UNSIGNED(seed, 0, "Random seed. If 0, seed is generated.")
+FUZZER_FLAG_INT(seed, 0, "Random seed. If 0, seed is generated.")
 FUZZER_FLAG_INT(runs, -1,
             "Number of individual test runs (-1 for infinite runs).")
 FUZZER_FLAG_INT(max_len, 64, "Maximum length of the test input.")
@@ -32,14 +32,15 @@ FUZZER_FLAG_INT(
 FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
                                    "time in seconds to run the fuzzer.")
 FUZZER_FLAG_INT(help, 0, "Print help.")
-FUZZER_FLAG_INT(save_minimized_corpus, 0, "Deprecated. Use -merge=1")
+FUZZER_FLAG_INT(
+    save_minimized_corpus, 0,
+    "If 1, the minimized corpus is saved into the first input directory. "
+    "Example: ./fuzzer -save_minimized_corpus=1 NEW_EMPTY_DIR OLD_CORPUS")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken.")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
 FUZZER_FLAG_INT(use_indir_calls, 1, "Use indirect caller-callee counters")
 FUZZER_FLAG_INT(use_traces, 0, "Experimental: use instruction traces")
-FUZZER_FLAG_INT(use_memcmp, 1,
-                "Use hints from intercepting memcmp, strcmp, etc")
 FUZZER_FLAG_INT(jobs, 0, "Number of jobs to run. If jobs >= 1 we spawn"
                           " this number of jobs in separate worker processes"
                           " with stdout/stderr redirected to fuzz-JOB.log.")
@@ -58,17 +59,11 @@ FUZZER_FLAG_INT(report_slow_units, 10,
 FUZZER_FLAG_INT(only_ascii, 0,
                 "If 1, generate only ASCII (isprint+isspace) inputs.")
 FUZZER_FLAG_STRING(dict, "Experimental. Use the dictionary file.")
+FUZZER_FLAG_INT(tbm_depth, 5, "Apply at most this number of consecutive"
+                               "trace-based-mutations (tbm).")
+FUZZER_FLAG_INT(tbm_width, 5, "Apply at most this number of independent"
+                               "trace-based-mutations (tbm)")
 FUZZER_FLAG_STRING(test_single_input, "Use specified file as test input.")
 FUZZER_FLAG_STRING(artifact_prefix, "Write fuzzing artifacts (crash, "
                                     "timeout, or slow inputs) as "
                                     "$(artifact_prefix)file")
-FUZZER_FLAG_STRING(exact_artifact_path,
-                   "Write the single artifact on failure (crash, timeout) "
-                   "as $(exact_artifact_path). This overrides -artifact_prefix "
-                   "and will not use checksum in the file name. Do not "
-                   "use the same path for several parallel processes.")
-FUZZER_FLAG_INT(drill, 0, "Experimental: fuzz using a single unit as the seed "
-                          "corpus, then merge with the initial corpus")
-FUZZER_FLAG_INT(output_csv, 0, "Enable pulse output in CSV format.")
-FUZZER_FLAG_INT(print_new_cov_pcs, 0, "If 1, print out new covered pcs.")
-
