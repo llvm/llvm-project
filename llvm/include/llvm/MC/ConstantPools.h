@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/SMLoc.h"
 
 namespace llvm {
 class MCContext;
@@ -27,12 +26,11 @@ class MCStreamer;
 class MCSymbol;
 
 struct ConstantPoolEntry {
-  ConstantPoolEntry(MCSymbol *L, const MCExpr *Val, unsigned Sz, SMLoc Loc_)
-    : Label(L), Value(Val), Size(Sz), Loc(Loc_) {}
+  ConstantPoolEntry(MCSymbol *L, const MCExpr *Val, unsigned Sz)
+    : Label(L), Value(Val), Size(Sz) {}
   MCSymbol *Label;
   const MCExpr *Value;
   unsigned Size;
-  SMLoc Loc;
 };
 
 // A class to keep track of assembler-generated constant pools that are use to
@@ -51,7 +49,7 @@ public:
   //
   // \returns a MCExpr that references the newly inserted value
   const MCExpr *addEntry(const MCExpr *Value, MCContext &Context,
-                         unsigned Size, SMLoc Loc);
+                         unsigned Size);
 
   // Emit the contents of the constant pool using the provided streamer.
   void emitEntries(MCStreamer &Streamer);
@@ -82,7 +80,7 @@ public:
   void emitAll(MCStreamer &Streamer);
   void emitForCurrentSection(MCStreamer &Streamer);
   const MCExpr *addEntry(MCStreamer &Streamer, const MCExpr *Expr,
-                         unsigned Size, SMLoc Loc);
+                         unsigned Size);
 
 private:
   ConstantPool *getConstantPool(MCSection *Section);

@@ -162,7 +162,6 @@ namespace {
     ScalarEvolution *SE;
     TargetLibraryInfo *TLI;
     DominatorTree *DT;
-    bool PreserveLCSSA;
 
     typedef SmallVector<Instruction *, 16> SmallInstructionVector;
     typedef SmallSet<Instruction *, 16>   SmallInstructionSet;
@@ -354,11 +353,10 @@ namespace {
     struct DAGRootTracker {
       DAGRootTracker(LoopReroll *Parent, Loop *L, Instruction *IV,
                      ScalarEvolution *SE, AliasAnalysis *AA,
-                     TargetLibraryInfo *TLI, DominatorTree *DT, LoopInfo *LI,
-                     bool PreserveLCSSA,
+                     TargetLibraryInfo *TLI,
                      DenseMap<Instruction *, int64_t> &IncrMap)
-          : Parent(Parent), L(L), SE(SE), AA(AA), TLI(TLI), DT(DT), LI(LI),
-            PreserveLCSSA(PreserveLCSSA), IV(IV), IVToIncMap(IncrMap) {}
+          : Parent(Parent), L(L), SE(SE), AA(AA), TLI(TLI), IV(IV),
+            IVToIncMap(IncrMap) {}
 
       /// Stage 1: Find all the DAG roots for the induction variable.
       bool findRoots();
@@ -404,9 +402,6 @@ namespace {
       ScalarEvolution *SE;
       AliasAnalysis *AA;
       TargetLibraryInfo *TLI;
-      DominatorTree *DT;
-      LoopInfo *LI;
-      bool PreserveLCSSA;
 
       // The loop induction variable.
       Instruction *IV;
@@ -480,7 +475,7 @@ void LoopReroll::collectPossibleIVs(Loop *L,
         continue;
       if (const SCEVConstant *IncSCEV =
           dyn_cast<SCEVConstant>(PHISCEV->getStepRecurrence(*SE))) {
-        const APInt &AInt = IncSCEV->getAPInt().abs();
+        const APInt &AInt = IncSCEV->getValue()->getValue().abs();
         if (IncSCEV->getValue()->isZero() || AInt.uge(MaxInc))
           continue;
         IVToIncMap[&*I] = IncSCEV->getValue()->getSExtValue();
@@ -1308,7 +1303,7 @@ void LoopReroll::DAGRootTracker::replace(const SCEV *IterCount) {
           } else {
             BasicBlock *Preheader = L->getLoopPreheader();
             if (!Preheader)
-              Preheader = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
+              Preheader = InsertPreheaderForLoop(L, Parent);
 
             ICMinus1 = Expander.expandCodeFor(ICMinus1SCEV, NewIV->getType(),
                                               Preheader->getTerminator());
@@ -1449,8 +1444,7 @@ void LoopReroll::ReductionTracker::replaceSelected() {
 bool LoopReroll::reroll(Instruction *IV, Loop *L, BasicBlock *Header,
                         const SCEV *IterCount,
                         ReductionTracker &Reductions) {
-  DAGRootTracker DAGRoots(this, L, IV, SE, AA, TLI, DT, LI, PreserveLCSSA,
-                          IVToIncMap);
+  DAGRootTracker DAGRoots(this, L, IV, SE, AA, TLI, IVToIncMap);
 
   if (!DAGRoots.findRoots())
     return false;
@@ -1480,7 +1474,6 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   BasicBlock *Header = L->getHeader();
   DEBUG(dbgs() << "LRR: F[" << Header->getParent()->getName() <<

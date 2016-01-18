@@ -65,8 +65,8 @@ typedef std::vector<uint8_t> DecoderTable;
 typedef uint32_t DecoderFixup;
 typedef std::vector<DecoderFixup> FixupList;
 typedef std::vector<FixupList> FixupScopeList;
-typedef SmallSetVector<std::string, 16> PredicateSet;
-typedef SmallSetVector<std::string, 16> DecoderSet;
+typedef SetVector<std::string> PredicateSet;
+typedef SetVector<std::string> DecoderSet;
 struct DecoderTableInfo {
   DecoderTable Table;
   FixupScopeList FixupStack;
@@ -78,7 +78,7 @@ struct DecoderTableInfo {
 
 namespace {
 class FixedLenDecoderEmitter {
-  ArrayRef<const CodeGenInstruction *> NumberedInstructions;
+  const std::vector<const CodeGenInstruction*> *NumberedInstructions;
 public:
 
   // Defaults preserved here for documentation, even though they aren't
@@ -306,7 +306,7 @@ protected:
   friend class Filter;
 
   // Vector of codegen instructions to choose our filter.
-  ArrayRef<const CodeGenInstruction *> AllInstructions;
+  const std::vector<const CodeGenInstruction*> &AllInstructions;
 
   // Vector of uid's for this filter chooser to work on.
   const std::vector<unsigned> &Opcodes;
@@ -337,7 +337,7 @@ protected:
   void operator=(const FilterChooser &) = delete;
 public:
 
-  FilterChooser(ArrayRef<const CodeGenInstruction *> Insts,
+  FilterChooser(const std::vector<const CodeGenInstruction*> &Insts,
                 const std::vector<unsigned> &IDs,
                 const std::map<unsigned, std::vector<OperandInfo> > &Ops,
                 unsigned BW,
@@ -348,7 +348,7 @@ public:
     doFilter();
   }
 
-  FilterChooser(ArrayRef<const CodeGenInstruction *> Insts,
+  FilterChooser(const std::vector<const CodeGenInstruction*> &Insts,
                 const std::vector<unsigned> &IDs,
                 const std::map<unsigned, std::vector<OperandInfo> > &Ops,
                 const std::vector<bit_value_t> &ParentFilterBitValues,
@@ -806,7 +806,7 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
 
       if (!IsTry) {
         OS << "// Opcode: "
-           << NumberedInstructions[Opc]->TheDef->getName() << "\n";
+           << NumberedInstructions->at(Opc)->TheDef->getName() << "\n";
         break;
       }
 
@@ -821,7 +821,7 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
       NumToSkip |= Byte << 8;
 
       OS << "// Opcode: "
-         << NumberedInstructions[Opc]->TheDef->getName()
+         << NumberedInstructions->at(Opc)->TheDef->getName()
          << ", skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -2250,13 +2250,13 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
   Target.reverseBitsForLittleEndianEncoding();
 
   // Parameterize the decoders based on namespace and instruction width.
-  NumberedInstructions = Target.getInstructionsByEnumValue();
+  NumberedInstructions = &Target.getInstructionsByEnumValue();
   std::map<std::pair<std::string, unsigned>,
            std::vector<unsigned> > OpcMap;
   std::map<unsigned, std::vector<OperandInfo> > Operands;
 
-  for (unsigned i = 0; i < NumberedInstructions.size(); ++i) {
-    const CodeGenInstruction *Inst = NumberedInstructions[i];
+  for (unsigned i = 0; i < NumberedInstructions->size(); ++i) {
+    const CodeGenInstruction *Inst = NumberedInstructions->at(i);
     const Record *Def = Inst->TheDef;
     unsigned Size = Def->getValueAsInt("Size");
     if (Def->getValueAsString("Namespace") == "TargetOpcode" ||
@@ -2277,7 +2277,7 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
   DecoderTableInfo TableInfo;
   for (const auto &Opc : OpcMap) {
     // Emit the decoder for this namespace+width combination.
-    FilterChooser FC(NumberedInstructions, Opc.second, Operands,
+    FilterChooser FC(*NumberedInstructions, Opc.second, Operands,
                      8*Opc.first.second, this);
 
     // The decode table is cleared for each top level decoder function. The

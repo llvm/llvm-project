@@ -24,37 +24,30 @@
 namespace llvm {
 
 /// Writer for instrumentation based profile data.
-class ProfOStream;
 class InstrProfWriter {
 public:
   typedef SmallDenseMap<uint64_t, InstrProfRecord, 1> ProfilingData;
 
 private:
+  InstrProfStringTable StringTable;
   StringMap<ProfilingData> FunctionData;
   uint64_t MaxFunctionCount;
-
 public:
   InstrProfWriter() : MaxFunctionCount(0) {}
 
+  /// Update string entries in profile data with references to StringTable.
+  void updateStringTableReferences(InstrProfRecord &I);
   /// Add function counts for the given function. If there are already counts
   /// for this function and the hash and number of counts match, each counter is
-  /// summed. Optionally scale counts by \p Weight.
-  std::error_code addRecord(InstrProfRecord &&I, uint64_t Weight = 1);
+  /// summed.
+  std::error_code addRecord(InstrProfRecord &&I);
   /// Write the profile to \c OS
   void write(raw_fd_ostream &OS);
-  /// Write the profile in text format to \c OS
-  void writeText(raw_fd_ostream &OS);
-  /// Write \c Record in text format to \c OS
-  static void writeRecordInText(const InstrProfRecord &Record,
-                                InstrProfSymtab &Symtab, raw_fd_ostream &OS);
   /// Write the profile, returning the raw data. For testing.
   std::unique_ptr<MemoryBuffer> writeBuffer();
 
-  // Internal interface for testing purpose only.
-  void setValueProfDataEndianness(support::endianness Endianness);
-
 private:
-  void writeImpl(ProfOStream &OS);
+  std::pair<uint64_t, uint64_t> writeImpl(raw_ostream &OS);
 };
 
 } // end namespace llvm

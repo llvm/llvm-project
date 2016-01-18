@@ -523,14 +523,10 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(zeroinitializer);
   KEYWORD(undef);
   KEYWORD(null);
-  KEYWORD(none);
   KEYWORD(to);
   KEYWORD(caller);
-  KEYWORD(within);
-  KEYWORD(from);
   KEYWORD(tail);
   KEYWORD(musttail);
-  KEYWORD(notail);
   KEYWORD(target);
   KEYWORD(triple);
   KEYWORD(unwind);
@@ -591,10 +587,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(preserve_mostcc);
   KEYWORD(preserve_allcc);
   KEYWORD(ghccc);
-  KEYWORD(x86_intrcc);
   KEYWORD(hhvmcc);
   KEYWORD(hhvm_ccc);
-  KEYWORD(cxx_fast_tlscc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -610,8 +604,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(convergent);
   KEYWORD(dereferenceable);
   KEYWORD(dereferenceable_or_null);
-  KEYWORD(inaccessiblememonly);
-  KEYWORD(inaccessiblemem_or_argmemonly);
   KEYWORD(inlinehint);
   KEYWORD(inreg);
   KEYWORD(jumptable);
@@ -624,7 +616,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(noduplicate);
   KEYWORD(noimplicitfloat);
   KEYWORD(noinline);
-  KEYWORD(norecurse);
   KEYWORD(nonlazybind);
   KEYWORD(nonnull);
   KEYWORD(noredzone);
@@ -764,9 +755,11 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(landingpad,     LandingPad);
   INSTKEYWORD(cleanupret,     CleanupRet);
   INSTKEYWORD(catchret,       CatchRet);
-  INSTKEYWORD(catchswitch,  CatchSwitch);
   INSTKEYWORD(catchpad,     CatchPad);
+  INSTKEYWORD(terminatepad, TerminatePad);
   INSTKEYWORD(cleanuppad,   CleanupPad);
+  INSTKEYWORD(catchendpad,  CatchEndPad);
+  INSTKEYWORD(cleanupendpad, CleanupEndPad);
 #undef INSTKEYWORD
 
 #define DWKEYWORD(TYPE, TOKEN)                                                 \
@@ -781,7 +774,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(VIRTUALITY, DwarfVirtuality);
   DWKEYWORD(LANG, DwarfLang);
   DWKEYWORD(OP, DwarfOp);
-  DWKEYWORD(MACINFO, DwarfMacinfo);
 #undef DWKEYWORD
 
   if (Keyword.startswith("DIFlag")) {

@@ -87,9 +87,15 @@ static OrderMap orderModule(const Module &M) {
     if (!isa<GlobalValue>(A.getAliasee()))
       orderValue(A.getAliasee(), OM);
   for (const Function &F : M) {
-    for (const Use &U : F.operands())
-      if (!isa<GlobalValue>(U.get()))
-        orderValue(U.get(), OM);
+    if (F.hasPrefixData())
+      if (!isa<GlobalValue>(F.getPrefixData()))
+        orderValue(F.getPrefixData(), OM);
+    if (F.hasPrologueData())
+      if (!isa<GlobalValue>(F.getPrologueData()))
+        orderValue(F.getPrologueData(), OM);
+    if (F.hasPersonalityFn())
+      if (!isa<GlobalValue>(F.getPersonalityFn()))
+        orderValue(F.getPersonalityFn(), OM);
   }
   OM.LastGlobalConstantID = OM.size();
 
@@ -267,8 +273,12 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
   for (const GlobalAlias &A : M.aliases())
     predictValueUseListOrder(A.getAliasee(), nullptr, OM, Stack);
   for (const Function &F : M) {
-    for (const Use &U : F.operands())
-      predictValueUseListOrder(U.get(), nullptr, OM, Stack);
+    if (F.hasPrefixData())
+      predictValueUseListOrder(F.getPrefixData(), nullptr, OM, Stack);
+    if (F.hasPrologueData())
+      predictValueUseListOrder(F.getPrologueData(), nullptr, OM, Stack);
+    if (F.hasPersonalityFn())
+      predictValueUseListOrder(F.getPersonalityFn(), nullptr, OM, Stack);
   }
 
   return Stack;
@@ -311,10 +321,20 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   for (const GlobalAlias &GA : M.aliases())
     EnumerateValue(GA.getAliasee());
 
-  // Enumerate any optional Function data.
+  // Enumerate the prefix data constants.
   for (const Function &F : M)
-    for (const Use &U : F.operands())
-      EnumerateValue(U.get());
+    if (F.hasPrefixData())
+      EnumerateValue(F.getPrefixData());
+
+  // Enumerate the prologue data constants.
+  for (const Function &F : M)
+    if (F.hasPrologueData())
+      EnumerateValue(F.getPrologueData());
+
+  // Enumerate the personality functions.
+  for (Module::const_iterator I = M.begin(), E = M.end(); I != E; ++I)
+    if (I->hasPersonalityFn())
+      EnumerateValue(I->getPersonalityFn());
 
   // Enumerate the metadata type.
   //
@@ -405,7 +425,7 @@ unsigned ValueEnumerator::getValueID(const Value *V) const {
 void ValueEnumerator::dump() const {
   print(dbgs(), ValueMap, "Default");
   dbgs() << '\n';
-  print(dbgs(), MetadataMap, "MetaData");
+  print(dbgs(), MDValueMap, "MetaData");
   dbgs() << '\n';
 }
 
@@ -522,7 +542,7 @@ void ValueEnumerator::EnumerateMetadata(const Metadata *MD) {
   // EnumerateMDNodeOperands() from re-visiting MD in a cyclic graph.
   //
   // Return early if there's already an ID.
-  if (!MetadataMap.insert(std::make_pair(MD, 0)).second)
+  if (!MDValueMap.insert(std::make_pair(MD, 0)).second)
     return;
 
   // Visit operands first to minimize RAUW.
@@ -535,10 +555,10 @@ void ValueEnumerator::EnumerateMetadata(const Metadata *MD) {
   HasDILocation |= isa<DILocation>(MD);
   HasGenericDINode |= isa<GenericDINode>(MD);
 
-  // Replace the dummy ID inserted above with the correct one.  MetadataMap may
+  // Replace the dummy ID inserted above with the correct one.  MDValueMap may
   // have changed by inserting operands, so we need a fresh lookup here.
   MDs.push_back(MD);
-  MetadataMap[MD] = MDs.size();
+  MDValueMap[MD] = MDs.size();
 }
 
 /// EnumerateFunctionLocalMetadataa - Incorporate function-local metadata
@@ -546,12 +566,12 @@ void ValueEnumerator::EnumerateMetadata(const Metadata *MD) {
 void ValueEnumerator::EnumerateFunctionLocalMetadata(
     const LocalAsMetadata *Local) {
   // Check to see if it's already in!
-  unsigned &MetadataID = MetadataMap[Local];
-  if (MetadataID)
+  unsigned &MDValueID = MDValueMap[Local];
+  if (MDValueID)
     return;
 
   MDs.push_back(Local);
-  MetadataID = MDs.size();
+  MDValueID = MDs.size();
 
   EnumerateValue(Local->getValue());
 
@@ -758,7 +778,7 @@ void ValueEnumerator::purgeFunction() {
   for (unsigned i = NumModuleValues, e = Values.size(); i != e; ++i)
     ValueMap.erase(Values[i].first);
   for (unsigned i = NumModuleMDs, e = MDs.size(); i != e; ++i)
-    MetadataMap.erase(MDs[i]);
+    MDValueMap.erase(MDs[i]);
   for (unsigned i = 0, e = BasicBlocks.size(); i != e; ++i)
     ValueMap.erase(BasicBlocks[i]);
 

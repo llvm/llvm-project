@@ -499,7 +499,7 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
   (void)EC;
 
   if (useNormalizedPaths())
-    llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
+    FileManager::removeDotPaths(Path, /*RemoveDotDot=*/true);
 
   if (Path.empty())
     return false;
@@ -572,7 +572,7 @@ lookupInMemoryNode(const InMemoryFileSystem &FS, detail::InMemoryDirectory *Dir,
   (void)EC;
 
   if (FS.useNormalizedPaths())
-    llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
+    FileManager::removeDotPaths(Path, /*RemoveDotDot=*/true);
 
   if (Path.empty())
     return Dir;
@@ -657,23 +657,6 @@ directory_iterator InMemoryFileSystem::dir_begin(const Twine &Dir,
 
   EC = make_error_code(llvm::errc::not_a_directory);
   return directory_iterator(std::make_shared<InMemoryDirIterator>());
-}
-
-std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
-  SmallString<128> Path;
-  P.toVector(Path);
-
-  // Fix up relative paths. This just prepends the current working directory.
-  std::error_code EC = makeAbsolute(Path);
-  assert(!EC);
-  (void)EC;
-
-  if (useNormalizedPaths())
-    llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
-
-  if (!Path.empty())
-    WorkingDirectory = Path.str();
-  return std::error_code();
 }
 }
 }
@@ -979,7 +962,8 @@ class RedirectingFileSystemParser {
       KeyStatusPair("use-external-name", false),
     };
 
-    DenseMap<StringRef, KeyStatus> Keys(std::begin(Fields), std::end(Fields));
+    DenseMap<StringRef, KeyStatus> Keys(
+        &Fields[0], Fields + sizeof(Fields)/sizeof(Fields[0]));
 
     bool HasContents = false; // external or otherwise
     std::vector<std::unique_ptr<Entry>> EntryArrayContents;
@@ -1137,7 +1121,8 @@ public:
       KeyStatusPair("roots", true),
     };
 
-    DenseMap<StringRef, KeyStatus> Keys(std::begin(Fields), std::end(Fields));
+    DenseMap<StringRef, KeyStatus> Keys(
+        &Fields[0], Fields + sizeof(Fields)/sizeof(Fields[0]));
 
     // Parse configuration and 'roots'
     for (yaml::MappingNode::iterator I = Top->begin(), E = Top->end(); I != E;
@@ -1283,27 +1268,20 @@ RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
   return make_error_code(llvm::errc::no_such_file_or_directory);
 }
 
-static Status getRedirectedFileStatus(const Twine &Path, bool UseExternalNames,
-                                      Status ExternalStatus) {
-  Status S = ExternalStatus;
-  if (!UseExternalNames)
-    S = Status::copyWithNewName(S, Path.str());
-  S.IsVFSMapped = true;
-  return S;
-}
-
 ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path, Entry *E) {
   assert(E != nullptr);
+  std::string PathStr(Path.str());
   if (auto *F = dyn_cast<RedirectingFileEntry>(E)) {
     ErrorOr<Status> S = ExternalFS->status(F->getExternalContentsPath());
     assert(!S || S->getName() == F->getExternalContentsPath());
+    if (S && !F->useExternalName(UseExternalNames))
+      *S = Status::copyWithNewName(*S, PathStr);
     if (S)
-      return getRedirectedFileStatus(Path, F->useExternalName(UseExternalNames),
-                                     *S);
+      S->IsVFSMapped = true;
     return S;
   } else { // directory
     auto *DE = cast<RedirectingDirectoryEntry>(E);
-    return Status::copyWithNewName(DE->getStatus(), Path.str());
+    return Status::copyWithNewName(DE->getStatus(), PathStr);
   }
 }
 
@@ -1315,17 +1293,22 @@ ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path) {
 }
 
 namespace {
-/// Provide a file wrapper with an overriden status.
-class FileWithFixedStatus : public File {
+/// Provide a file wrapper that returns the external name when asked.
+class NamedFileAdaptor : public File {
   std::unique_ptr<File> InnerFile;
-  Status S;
+  std::string NewName;
 
 public:
-  FileWithFixedStatus(std::unique_ptr<File> InnerFile, Status S)
-      : InnerFile(std::move(InnerFile)), S(S) {}
+  NamedFileAdaptor(std::unique_ptr<File> InnerFile, std::string NewName)
+      : InnerFile(std::move(InnerFile)), NewName(std::move(NewName)) {}
 
-  ErrorOr<Status> status() override { return S; }
-  ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  llvm::ErrorOr<Status> status() override {
+    auto InnerStatus = InnerFile->status();
+    if (InnerStatus)
+      return Status::copyWithNewName(*InnerStatus, NewName);
+    return InnerStatus.getError();
+  }
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
             bool IsVolatile) override {
     return InnerFile->getBuffer(Name, FileSize, RequiresNullTerminator,
@@ -1349,15 +1332,11 @@ RedirectingFileSystem::openFileForRead(const Twine &Path) {
   if (!Result)
     return Result;
 
-  auto ExternalStatus = (*Result)->status();
-  if (!ExternalStatus)
-    return ExternalStatus.getError();
+  if (!F->useExternalName(UseExternalNames))
+    return std::unique_ptr<File>(
+        new NamedFileAdaptor(std::move(*Result), Path.str()));
 
-  // FIXME: Update the status with the name and VFSMapped.
-  Status S = getRedirectedFileStatus(Path, F->useExternalName(UseExternalNames),
-                                     *ExternalStatus);
-  return std::unique_ptr<File>(
-      llvm::make_unique<FileWithFixedStatus>(std::move(*Result), S));
+  return Result;
 }
 
 IntrusiveRefCntPtr<FileSystem>

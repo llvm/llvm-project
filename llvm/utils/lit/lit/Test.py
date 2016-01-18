@@ -33,7 +33,6 @@ FAIL        = ResultCode('FAIL', True)
 XPASS       = ResultCode('XPASS', True)
 UNRESOLVED  = ResultCode('UNRESOLVED', True)
 UNSUPPORTED = ResultCode('UNSUPPORTED', False)
-TIMEOUT     = ResultCode('TIMEOUT', True)
 
 # Test metric values.
 

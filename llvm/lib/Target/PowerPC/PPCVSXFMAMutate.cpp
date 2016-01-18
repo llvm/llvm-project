@@ -220,14 +220,6 @@ protected:
         if (OldFMAReg == KilledProdReg)
           continue;
 
-        // If there isn't a class that fits, we can't perform the transform.
-        // This is needed for correctness with a mixture of VSX and Altivec
-        // instructions to make sure that a low VSX register is not assigned to
-        // the Altivec instruction.
-        if (!MRI.constrainRegClass(KilledProdReg,
-                                   MRI.getRegClass(OldFMAReg)))
-          continue;
-
         assert(OldFMAReg == AddendMI->getOperand(0).getReg() &&
                "Addend copy not tied to old FMA output!");
 
@@ -270,7 +262,8 @@ protected:
           if (UseMI == AddendMI)
             continue;
 
-          UseMO.substVirtReg(KilledProdReg, KilledProdSubReg, *TRI);
+          UseMO.setReg(KilledProdReg);
+          UseMO.setSubReg(KilledProdSubReg);
         }
 
         // Extend the live intervals of the killed product operand to hold the

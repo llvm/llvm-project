@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Transforms/Utils/ASanStackFrameLayout.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 
 namespace llvm {
@@ -44,7 +44,7 @@ static size_t VarAndRedzoneSize(size_t Size, size_t Alignment) {
   else if (Size <= 512) Res = Size + 64;
   else if (Size <= 4096) Res = Size + 128;
   else                   Res = Size + 256;
-  return alignTo(Res, Alignment);
+  return RoundUpToAlignment(Res, Alignment);
 }
 
 void

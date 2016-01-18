@@ -139,7 +139,9 @@ public:
   /// supported by the target (i.e. there are registers that directly hold it).
   bool isLegalValueType(MVT::SimpleValueType VT) const {
     ArrayRef<MVT::SimpleValueType> LegalVTs = getLegalValueTypes();
-    return std::find(LegalVTs.begin(), LegalVTs.end(), VT) != LegalVTs.end();
+    for (unsigned i = 0, e = LegalVTs.size(); i != e; ++i)
+      if (LegalVTs[i] == VT) return true;
+    return false;
   }
 
   CodeGenSchedModels &getSchedModels() const;
@@ -161,15 +163,18 @@ public:
 
   /// getInstructionsByEnumValue - Return all of the instructions defined by the
   /// target, ordered by their enum value.
-  ArrayRef<const CodeGenInstruction *>
+  const std::vector<const CodeGenInstruction*> &
   getInstructionsByEnumValue() const {
     if (InstrsByEnum.empty()) ComputeInstrsByEnum();
     return InstrsByEnum;
   }
 
-  typedef ArrayRef<const CodeGenInstruction *>::const_iterator inst_iterator;
+  typedef std::vector<const CodeGenInstruction*>::const_iterator inst_iterator;
   inst_iterator inst_begin() const{return getInstructionsByEnumValue().begin();}
   inst_iterator inst_end() const { return getInstructionsByEnumValue().end(); }
+  iterator_range<inst_iterator> instructions() const {
+    return iterator_range<inst_iterator>(inst_begin(), inst_end());
+  }
 
 
   /// isLittleEndianEncoding - are instruction bit patterns defined as  [0..n]?

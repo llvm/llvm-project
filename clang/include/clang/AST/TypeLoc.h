@@ -170,18 +170,19 @@ public:
 
   /// \brief Initializes this by copying its information from another
   /// TypeLoc of the same type.
-  void initializeFullCopy(TypeLoc Other) {
+  void initializeFullCopy(TypeLoc Other) const {
     assert(getType() == Other.getType());
-    copy(Other);
+    size_t Size = getFullDataSize();
+    memcpy(getOpaqueData(), Other.getOpaqueData(), Size);
   }
 
   /// \brief Initializes this by copying its information from another
   /// TypeLoc of the same type.  The given size must be the full data
   /// size.
-  void initializeFullCopy(TypeLoc Other, unsigned Size) {
+  void initializeFullCopy(TypeLoc Other, unsigned Size) const {
     assert(getType() == Other.getType());
     assert(getFullDataSize() == Size);
-    copy(Other);
+    memcpy(getOpaqueData(), Other.getOpaqueData(), Size);
   }
 
   /// Copies the other type loc into this one.
@@ -254,7 +255,7 @@ public:
     unsigned align =
         TypeLoc::getLocalAlignmentForType(QualType(getTypePtr(), 0));
     uintptr_t dataInt = reinterpret_cast<uintptr_t>(Data);
-    dataInt = llvm::alignTo(dataInt, align);
+    dataInt = llvm::RoundUpToAlignment(dataInt, align);
     return UnqualTypeLoc(getTypePtr(), reinterpret_cast<void*>(dataInt));
   }
 
@@ -353,7 +354,7 @@ public:
   unsigned getLocalDataSize() const {
     unsigned size = sizeof(LocalData);
     unsigned extraAlign = asDerived()->getExtraLocalDataAlignment();
-    size = llvm::alignTo(size, extraAlign);
+    size = llvm::RoundUpToAlignment(size, extraAlign);
     size += asDerived()->getExtraLocalDataSize();
     return size;
   }
@@ -399,14 +400,14 @@ protected:
   void *getExtraLocalData() const {
     unsigned size = sizeof(LocalData);
     unsigned extraAlign = asDerived()->getExtraLocalDataAlignment();
-    size = llvm::alignTo(size, extraAlign);
+    size = llvm::RoundUpToAlignment(size, extraAlign);
     return reinterpret_cast<char*>(Base::Data) + size;
   }
 
   void *getNonLocalData() const {
     uintptr_t data = reinterpret_cast<uintptr_t>(Base::Data);
     data += asDerived()->getLocalDataSize();
-    data = llvm::alignTo(data, getNextTypeAlign());
+    data = llvm::RoundUpToAlignment(data, getNextTypeAlign());
     return reinterpret_cast<void*>(data);
   }
 
@@ -2033,26 +2034,7 @@ public:
   }
 };
 
-struct PipeTypeLocInfo {
-  SourceLocation KWLoc;
-};
 
-class PipeTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, PipeTypeLoc, PipeType,
-                                           PipeTypeLocInfo> {
-public:
-  TypeLoc getValueLoc() const { return this->getInnerTypeLoc(); }
-
-  SourceRange getLocalSourceRange() const { return SourceRange(getKWLoc()); }
-
-  SourceLocation getKWLoc() const { return this->getLocalData()->KWLoc; }
-  void setKWLoc(SourceLocation Loc) { this->getLocalData()->KWLoc = Loc; }
-
-  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
-    setKWLoc(Loc);
-  }
-
-  QualType getInnerType() const { return this->getTypePtr()->getElementType(); }
-};
 }
 
 #endif

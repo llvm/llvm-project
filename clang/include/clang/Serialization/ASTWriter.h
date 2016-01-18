@@ -551,8 +551,7 @@ private:
   void WriteObjCCategories();
   void WriteLateParsedTemplates(Sema &SemaRef);
   void WriteOptimizePragmaOptions(Sema &SemaRef);
-  void WriteModuleFileExtension(Sema &SemaRef,
-                                ModuleFileExtensionWriter &Writer);
+  void WriteModuleFileExtension(ModuleFileExtensionWriter &Writer);
 
   unsigned DeclParmVarAbbrev;
   unsigned DeclContextLexicalAbbrev;
@@ -871,7 +870,6 @@ public:
                               const FunctionDecl *Delete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void StaticDataMemberInstantiated(const VarDecl *D) override;
-  void DefaultArgumentInstantiated(const ParmVarDecl *D) override;
   void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
   void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                     const ObjCInterfaceDecl *IFD) override;

@@ -22,14 +22,13 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include "llvm/Support/Process.h"
 #include <sstream>
 
 namespace llvm {
 namespace orc {
 
-/// @brief Target-independent base class for compile callback management.
-class JITCompileCallbackManager {
+/// @brief Target-independent base class JITCompileCallbackManager.
+class JITCompileCallbackManagerBase {
 public:
 
   typedef std::function<TargetAddress()> CompileFtor;
@@ -51,13 +50,13 @@ public:
     CompileFtor &Compile;
   };
 
-  /// @brief Construct a JITCompileCallbackManager.
+  /// @brief Construct a JITCompileCallbackManagerBase.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
-  JITCompileCallbackManager(TargetAddress ErrorHandlerAddress)
+  JITCompileCallbackManagerBase(TargetAddress ErrorHandlerAddress)
     : ErrorHandlerAddress(ErrorHandlerAddress) {}
 
-  virtual ~JITCompileCallbackManager() {}
+  virtual ~JITCompileCallbackManagerBase() {}
 
   /// @brief Execute the callback for the given trampoline id. Called by the JIT
   ///        to compile functions on demand.
@@ -85,11 +84,7 @@ public:
   }
 
   /// @brief Reserve a compile callback.
-  CompileCallbackInfo getCompileCallback() {
-    TargetAddress TrampolineAddr = getAvailableTrampolineAddr();
-    auto &Compile = this->ActiveTrampolines[TrampolineAddr];
-    return CompileCallbackInfo(TrampolineAddr, Compile);
-  }
+  virtual CompileCallbackInfo getCompileCallback() = 0;
 
   /// @brief Get a CompileCallbackInfo for an existing callback.
   CompileCallbackInfo getCompileCallbackInfo(TargetAddress TrampolineAddr) {
@@ -118,33 +113,19 @@ protected:
   std::vector<TargetAddress> AvailableTrampolines;
 
 private:
-
-  TargetAddress getAvailableTrampolineAddr() {
-    if (this->AvailableTrampolines.empty())
-      grow();
-    assert(!this->AvailableTrampolines.empty() &&
-           "Failed to grow available trampolines.");
-    TargetAddress TrampolineAddr = this->AvailableTrampolines.back();
-    this->AvailableTrampolines.pop_back();
-    return TrampolineAddr;
-  }
-
-  // Create new trampolines - to be implemented in subclasses.
-  virtual void grow() = 0;
-
   virtual void anchor();
 };
 
-/// @brief Manage compile callbacks for in-process JITs.
+/// @brief Manage compile callbacks.
 template <typename TargetT>
-class LocalJITCompileCallbackManager : public JITCompileCallbackManager {
+class JITCompileCallbackManager : public JITCompileCallbackManagerBase {
 public:
 
-  /// @brief Construct a InProcessJITCompileCallbackManager.
+  /// @brief Construct a JITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
-  LocalJITCompileCallbackManager(TargetAddress ErrorHandlerAddress)
-    : JITCompileCallbackManager(ErrorHandlerAddress) {
+  JITCompileCallbackManager(TargetAddress ErrorHandlerAddress)
+    : JITCompileCallbackManagerBase(ErrorHandlerAddress) {
 
     /// Set up the resolver block.
     std::error_code EC;
@@ -155,13 +136,20 @@ public:
                                           sys::Memory::MF_WRITE, EC));
     assert(!EC && "Failed to allocate resolver block");
 
-    TargetT::writeResolverCode(static_cast<uint8_t *>(ResolverBlock.base()),
-                               &reenter, this);
+    TargetT::writeResolverCode(static_cast<uint8_t*>(ResolverBlock.base()),
+			       &reenter, this);
 
     EC = sys::Memory::protectMappedMemory(ResolverBlock.getMemoryBlock(),
-                                          sys::Memory::MF_READ |
-                                              sys::Memory::MF_EXEC);
+					  sys::Memory::MF_READ |
+					  sys::Memory::MF_EXEC);
     assert(!EC && "Failed to mprotect resolver block");
+  }
+
+  /// @brief Get/create a compile callback with the given signature.
+  CompileCallbackInfo getCompileCallback() final {
+    TargetAddress TrampolineAddr = getAvailableTrampolineAddr();
+    auto &Compile = this->ActiveTrampolines[TrampolineAddr];
+    return CompileCallbackInfo(TrampolineAddr, Compile);
   }
 
 private:
@@ -174,36 +162,46 @@ private:
                reinterpret_cast<uintptr_t>(TrampolineId)));
   }
 
-  void grow() override {
+  TargetAddress getAvailableTrampolineAddr() {
+    if (this->AvailableTrampolines.empty())
+      grow();
+    assert(!this->AvailableTrampolines.empty() &&
+           "Failed to grow available trampolines.");
+    TargetAddress TrampolineAddr = this->AvailableTrampolines.back();
+    this->AvailableTrampolines.pop_back();
+    return TrampolineAddr;
+  }
+
+  void grow() {
     assert(this->AvailableTrampolines.empty() && "Growing prematurely?");
 
     std::error_code EC;
     auto TrampolineBlock =
       sys::OwningMemoryBlock(
-        sys::Memory::allocateMappedMemory(sys::Process::getPageSize(), nullptr,
+        sys::Memory::allocateMappedMemory(TargetT::PageSize, nullptr,
                                           sys::Memory::MF_READ |
                                           sys::Memory::MF_WRITE, EC));
     assert(!EC && "Failed to allocate trampoline block");
 
 
     unsigned NumTrampolines =
-      (sys::Process::getPageSize() - TargetT::PointerSize) /
-        TargetT::TrampolineSize;
+      (TargetT::PageSize - TargetT::PointerSize) / TargetT::TrampolineSize;
 
     uint8_t *TrampolineMem = static_cast<uint8_t*>(TrampolineBlock.base());
     TargetT::writeTrampolines(TrampolineMem, ResolverBlock.base(),
-                              NumTrampolines);
+			      NumTrampolines);
 
     for (unsigned I = 0; I < NumTrampolines; ++I)
       this->AvailableTrampolines.push_back(
-          static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(
-              TrampolineMem + (I * TargetT::TrampolineSize))));
+        static_cast<TargetAddress>(
+	  reinterpret_cast<uintptr_t>(
+				      TrampolineMem + (I * TargetT::TrampolineSize))));
 
     EC = sys::Memory::protectMappedMemory(TrampolineBlock.getMemoryBlock(),
-                                          sys::Memory::MF_READ |
-                                              sys::Memory::MF_EXEC);
+					  sys::Memory::MF_READ |
+					  sys::Memory::MF_EXEC);
     assert(!EC && "Failed to mprotect trampoline block");
-
+    
     TrampolineBlocks.push_back(std::move(TrampolineBlock));
   }
 
@@ -212,13 +210,13 @@ private:
 };
 
 /// @brief Base class for managing collections of named indirect stubs.
-class IndirectStubsManager {
+class IndirectStubsManagerBase {
 public:
 
   /// @brief Map type for initializing the manager. See init.
   typedef StringMap<std::pair<TargetAddress, JITSymbolFlags>> StubInitsMap;
 
-  virtual ~IndirectStubsManager() {}
+  virtual ~IndirectStubsManagerBase() {}
 
   /// @brief Create a single stub with the given name, target address and flags.
   virtual std::error_code createStub(StringRef StubName, TargetAddress StubAddr,
@@ -242,10 +240,10 @@ private:
   virtual void anchor();
 };
 
-/// @brief IndirectStubsManager implementation for the host architecture, e.g.
-///        OrcX86_64. (See OrcArchitectureSupport.h).
+/// @brief IndirectStubsManager implementation for a concrete target, e.g.
+///        OrcX86_64. (See OrcTargetSupport.h).
 template <typename TargetT>
-class LocalIndirectStubsManager : public IndirectStubsManager {
+class IndirectStubsManager : public IndirectStubsManagerBase {
 public:
 
   std::error_code createStub(StringRef StubName, TargetAddress StubAddr,
@@ -405,7 +403,7 @@ void moveGlobalVariableInitializer(GlobalVariable &OrigGV,
                                    ValueMaterializer *Materializer = nullptr,
                                    GlobalVariable *NewGV = nullptr);
 
-/// @brief Clone
+/// @brief Clone 
 GlobalAlias* cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
                                   ValueToValueMapTy &VMap);
 

@@ -540,7 +540,7 @@ public:
       Size = EHPadEndScope::getSize();
       break;
     }
-    Ptr += llvm::alignTo(Size, ScopeStackAlignment);
+    Ptr += llvm::RoundUpToAlignment(Size, ScopeStackAlignment);
     return *this;
   }
 
@@ -585,6 +585,14 @@ inline void EHScopeStack::popTerminate() {
   EHTerminateScope &scope = cast<EHTerminateScope>(*begin());
   InnermostEHScope = scope.getEnclosingEHScope();
   deallocate(EHTerminateScope::getSize());
+}
+
+inline void EHScopeStack::popPadEnd() {
+  assert(!empty() && "popping exception stack when not empty");
+
+  EHPadEndScope &scope = cast<EHPadEndScope>(*begin());
+  InnermostEHScope = scope.getEnclosingEHScope();
+  deallocate(EHPadEndScope::getSize());
 }
 
 inline EHScopeStack::iterator EHScopeStack::find(stable_iterator sp) const {

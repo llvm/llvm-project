@@ -72,10 +72,15 @@
 
 using namespace llvm;
 
-// External symbol to be used when generating the shadow address for
-// architectures with multiple VMAs. Instead of using a constant integer
-// the runtime will set the external mask based on the VMA range.
-static const char *const kDFSanExternShadowPtrMask = "__dfsan_shadow_ptr_mask";
+// VMA size definition for architecture that support multiple sizes.
+// AArch64 has 3 VMA sizes: 39, 42 and 48.
+#ifndef SANITIZER_AARCH64_VMA
+# define SANITIZER_AARCH64_VMA 39
+#else
+# if SANITIZER_AARCH64_VMA != 39 && SANITIZER_AARCH64_VMA != 42
+#  error "invalid SANITIZER_AARCH64_VMA size"
+# endif
+#endif
 
 // The -dfsan-preserve-alignment flag controls whether this pass assumes that
 // alignment requirements provided by the input IR are correct.  For example,
@@ -129,12 +134,11 @@ static cl::opt<bool> ClDebugNonzeroLabels(
              "load or return with a nonzero label"),
     cl::Hidden);
 
-
 namespace {
 
 StringRef GetGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
-  Type *GType = G.getValueType();
+  Type *GType = G.getType()->getElementType();
   // For now we support blacklisting struct types only.
   if (StructType *SGType = dyn_cast<StructType>(GType)) {
     if (!SGType->isLiteral())
@@ -166,7 +170,7 @@ class DFSanABIList {
     if (isIn(*GA.getParent(), Category))
       return true;
 
-    if (isa<FunctionType>(GA.getValueType()))
+    if (isa<FunctionType>(GA.getType()->getElementType()))
       return SCL->inSection("fun", GA.getName(), Category);
 
     return SCL->inSection("global", GA.getName(), Category) ||
@@ -237,7 +241,6 @@ class DataFlowSanitizer : public ModulePass {
   void *(*GetRetvalTLSPtr)();
   Constant *GetArgTLS;
   Constant *GetRetvalTLS;
-  Constant *ExternalShadowMask;
   FunctionType *DFSanUnionFnTy;
   FunctionType *DFSanUnionLoadFnTy;
   FunctionType *DFSanUnimplementedFnTy;
@@ -255,7 +258,6 @@ class DataFlowSanitizer : public ModulePass {
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
   AttributeSet ReadOnlyNoneAttrs;
-  bool DFSanRuntimeShadowMask;
 
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
   bool isInstrumented(const Function *F);
@@ -369,8 +371,7 @@ llvm::createDataFlowSanitizerPass(const std::vector<std::string> &ABIListFiles,
 DataFlowSanitizer::DataFlowSanitizer(
     const std::vector<std::string> &ABIListFiles, void *(*getArgTLS)(),
     void *(*getRetValTLS)())
-    : ModulePass(ID), GetArgTLSPtr(getArgTLS), GetRetvalTLSPtr(getRetValTLS),
-      DFSanRuntimeShadowMask(false) {
+    : ModulePass(ID), GetArgTLSPtr(getArgTLS), GetRetvalTLSPtr(getRetValTLS) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   AllABIListFiles.insert(AllABIListFiles.end(), ClABIListFiles.begin(),
                          ClABIListFiles.end());
@@ -444,9 +445,12 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
     ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x700000000000LL);
   else if (IsMIPS64)
     ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0xF000000000LL);
-  // AArch64 supports multiple VMAs and the shadow mask is set at runtime.
   else if (IsAArch64)
-    DFSanRuntimeShadowMask = true;
+#if SANITIZER_AARCH64_VMA == 39
+    ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x7800000000LL);
+#else
+    ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x3c000000000LL);
+#endif
   else
     report_fatal_error("unsupported triple");
 
@@ -616,9 +620,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS))
       G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
   }
-
-  ExternalShadowMask =
-      Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
 
   DFSanUnionFn = Mod->getOrInsertFunction("__dfsan_union", DFSanUnionFnTy);
   if (Function *F = dyn_cast<Function>(DFSanUnionFn)) {
@@ -937,15 +938,9 @@ void DFSanFunction::setShadow(Instruction *I, Value *Shadow) {
 Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
   assert(Addr != RetvalTLS && "Reinstrumenting?");
   IRBuilder<> IRB(Pos);
-  Value *ShadowPtrMaskValue;
-  if (DFSanRuntimeShadowMask)
-    ShadowPtrMaskValue = IRB.CreateLoad(IntptrTy, ExternalShadowMask);
-  else
-    ShadowPtrMaskValue = ShadowPtrMask;
   return IRB.CreateIntToPtr(
       IRB.CreateMul(
-          IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
-                        IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy)),
+          IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy), ShadowPtrMask),
           ShadowPtrMul),
       ShadowPtrTy);
 }

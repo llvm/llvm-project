@@ -8,19 +8,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "IndexingContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DataRecursiveASTVisitor.h"
 
 using namespace clang;
 using namespace cxindex;
 
 namespace {
 
-class BodyIndexer : public RecursiveASTVisitor<BodyIndexer> {
+class BodyIndexer : public DataRecursiveASTVisitor<BodyIndexer> {
   IndexingContext &IndexCtx;
   const NamedDecl *Parent;
   const DeclContext *ParentDC;
 
-  typedef RecursiveASTVisitor<BodyIndexer> base;
+  typedef DataRecursiveASTVisitor<BodyIndexer> base;
 public:
   BodyIndexer(IndexingContext &indexCtx,
               const NamedDecl *Parent, const DeclContext *DC)
@@ -125,11 +125,10 @@ public:
     return true;
   }
 
-  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *E,
-                                   DataRecursionQueue *Q = nullptr) {
+  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
     if (E->getOperatorLoc().isInvalid())
       return true; // implicit.
-    return base::TraverseCXXOperatorCallExpr(E, Q);
+    return base::TraverseCXXOperatorCallExpr(E);
   }
 
   bool VisitDeclStmt(DeclStmt *S) {

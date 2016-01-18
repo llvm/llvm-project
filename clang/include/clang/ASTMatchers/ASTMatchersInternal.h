@@ -188,11 +188,8 @@ class ASTMatchFinder;
 /// Used by the implementation of Matcher<T> and DynTypedMatcher.
 /// In general, implement MatcherInterface<T> or SingleNodeMatcherInterface<T>
 /// instead.
-class DynMatcherInterface
-    : public llvm::ThreadSafeRefCountedBase<DynMatcherInterface> {
+class DynMatcherInterface : public RefCountedBaseVPTR {
 public:
-  virtual ~DynMatcherInterface() {}
-
   /// \brief Returns true if \p DynNode can be matched.
   ///
   /// May bind \p DynNode to an ID via \p Builder, or recurse into
@@ -212,6 +209,8 @@ public:
 template <typename T>
 class MatcherInterface : public DynMatcherInterface {
 public:
+  ~MatcherInterface() override {}
+
   /// \brief Returns true if 'Node' can be matched.
   ///
   /// May bind 'Node' to an ID via 'Builder', or recurse into
@@ -558,32 +557,22 @@ bool matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
   return false;
 }
 
-// Metafunction to determine if type T has a member called
-// getDecl.
-#if defined(_MSC_VER) && !defined(__clang__)
-// For MSVC, we use a weird nonstandard __if_exists statement, as it
-// is not standards-conformant enough to properly compile the standard
-// code below. (At least up through MSVC 2015 require this workaround)
+/// \brief Metafunction to determine if type T has a member called getDecl.
 template <typename T> struct has_getDecl {
-  __if_exists(T::getDecl) {
-    enum { value = 1 };
-  }
-  __if_not_exists(T::getDecl) {
-    enum { value = 0 };
-  }
+  struct Default { int getDecl; };
+  struct Derived : T, Default { };
+
+  template<typename C, C> struct CheckT;
+
+  // If T::getDecl exists, an ambiguity arises and CheckT will
+  // not be instantiable. This makes f(...) the only available
+  // overload.
+  template<typename C>
+  static char (&f(CheckT<int Default::*, &C::getDecl>*))[1];
+  template<typename C> static char (&f(...))[2];
+
+  static bool const value = sizeof(f<Derived>(nullptr)) == 2;
 };
-#else
-// There is a default template inheriting from "false_type". Then, a
-// partial specialization inherits from "true_type". However, this
-// specialization will only exist when the call to getDecl() isn't an
-// error -- it vanishes by SFINAE when the member doesn't exist.
-template <typename> struct type_sink_to_void { typedef void type; };
-template <typename T, typename = void> struct has_getDecl : std::false_type {};
-template <typename T>
-struct has_getDecl<
-    T, typename type_sink_to_void<decltype(std::declval<T>().getDecl())>::type>
-    : std::true_type {};
-#endif
 
 /// \brief Matches overloaded operators with a specific name.
 ///

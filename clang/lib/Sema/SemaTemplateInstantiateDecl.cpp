@@ -2767,7 +2767,7 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
 
   TemplateParameterList *InstL
     = TemplateParameterList::Create(SemaRef.Context, L->getTemplateLoc(),
-                                    L->getLAngleLoc(), Params,
+                                    L->getLAngleLoc(), &Params.front(), N,
                                     L->getRAngleLoc());
   return InstL;
 }

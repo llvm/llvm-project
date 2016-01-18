@@ -312,9 +312,18 @@ static void doPrint(StringRef Name, const object::Archive::Child &C) {
 // Utility function for printing out the file mode when the 't' operation is in
 // verbose mode.
 static void printMode(unsigned mode) {
-  outs() << ((mode & 004) ? "r" : "-");
-  outs() << ((mode & 002) ? "w" : "-");
-  outs() << ((mode & 001) ? "x" : "-");
+  if (mode & 004)
+    outs() << "r";
+  else
+    outs() << "-";
+  if (mode & 002)
+    outs() << "w";
+  else
+    outs() << "-";
+  if (mode & 001)
+    outs() << "x";
+  else
+    outs() << "-";
 }
 
 // Implement the 't' operation. This function prints out just
@@ -390,8 +399,10 @@ static bool shouldCreateArchive(ArchiveOperation Op) {
 
 static void performReadOperation(ArchiveOperation Operation,
                                  object::Archive *OldArchive) {
-  if (Operation == Extract && OldArchive->isThin())
-    fail("extracting from a thin archive is not supported");
+  if (Operation == Extract && OldArchive->isThin()) {
+    errs() << "extracting from a thin archive is not supported\n";
+    std::exit(1);
+  }
 
   bool Filter = !Members.empty();
   for (auto &ChildOrErr : OldArchive->children()) {
@@ -653,13 +664,20 @@ static int performOperation(ArchiveOperation Operation,
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
       MemoryBuffer::getFile(ArchiveName, -1, false);
   std::error_code EC = Buf.getError();
-  if (EC && EC != errc::no_such_file_or_directory)
-    fail("error opening '" + ArchiveName + "': " + EC.message() + "!");
+  if (EC && EC != errc::no_such_file_or_directory) {
+    errs() << ToolName << ": error opening '" << ArchiveName
+           << "': " << EC.message() << "!\n";
+    return 1;
+  }
 
   if (!EC) {
     object::Archive Archive(Buf.get()->getMemBufferRef(), EC);
-    failIfError(EC,
-                "error loading '" + ArchiveName + "': " + EC.message() + "!");
+
+    if (EC) {
+      errs() << ToolName << ": error loading '" << ArchiveName
+             << "': " << EC.message() << "!\n";
+      return 1;
+    }
     performOperation(Operation, &Archive, NewMembers);
     return 0;
   }

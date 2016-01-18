@@ -1077,9 +1077,6 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
     case CK_BuiltinFnToFnPtr:
     case CK_ZeroToOCLEvent:
       return false;
-
-    case CK_BooleanToSignedIntegral:
-      llvm_unreachable("OpenCL-specific cast in Objective-C?");
     }
   }
 

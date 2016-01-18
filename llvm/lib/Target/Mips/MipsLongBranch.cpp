@@ -148,7 +148,7 @@ void MipsLongBranch::splitMBB(MachineBasicBlock *MBB) {
   // Insert NewMBB and fix control flow.
   MachineBasicBlock *Tgt = getTargetMBB(*FirstBr);
   NewMBB->transferSuccessors(MBB);
-  NewMBB->removeSuccessor(Tgt, true);
+  NewMBB->removeSuccessor(Tgt);
   MBB->addSuccessor(NewMBB);
   MBB->addSuccessor(Tgt);
   MF->insert(std::next(MachineFunction::iterator(MBB)), NewMBB);
@@ -262,7 +262,8 @@ void MipsLongBranch::expandToLongBranch(MBBInfo &I) {
       static_cast<const MipsInstrInfo *>(Subtarget.getInstrInfo());
 
   MF->insert(FallThroughMBB, LongBrMBB);
-  MBB->replaceSuccessor(TgtMBB, LongBrMBB);
+  MBB->removeSuccessor(TgtMBB);
+  MBB->addSuccessor(LongBrMBB);
 
   if (IsPIC) {
     MachineBasicBlock *BalTgtMBB = MF->CreateMachineBasicBlock(BB);

@@ -336,7 +336,11 @@ namespace ISD {
     SHL, SRA, SRL, ROTL, ROTR,
 
     /// Byte Swap and Counting operators.
-    BSWAP, CTTZ, CTLZ, CTPOP, BITREVERSE,
+    BSWAP, CTTZ, CTLZ, CTPOP,
+
+    /// [SU]ABSDIFF - Signed/Unsigned absolute difference of two input integer
+    /// vector. These nodes are generated from llvm.*absdiff* intrinsics.
+    SABSDIFF, UABSDIFF,
 
     /// Bit counting operators with an undefined result for zero inputs.
     CTTZ_ZERO_UNDEF, CTLZ_ZERO_UNDEF,
@@ -368,14 +372,9 @@ namespace ISD {
     /// then the result type must also be a vector type.
     SETCC,
 
-    /// Like SetCC, ops #0 and #1 are the LHS and RHS operands to compare, but
-    /// op #2 is a *carry value*. This operator checks the result of
-    /// "LHS - RHS - Carry", and can be used to compare two wide integers:
-    /// (setcce lhshi rhshi (subc lhslo rhslo) cc). Only valid for integers.
-    SETCCE,
-
     /// SHL_PARTS/SRA_PARTS/SRL_PARTS - These operators are used for expanded
-    /// integer shift operations.  The operation ordering is:
+    /// integer shift operations, just like ADD/SUB_PARTS.  The operation
+    /// ordering is:
     ///       [Lo,Hi] = op [LoLHS,HiLHS], Amt
     SHL_PARTS, SRA_PARTS, SRL_PARTS,
 
@@ -592,9 +591,6 @@ namespace ISD {
     /// take a chain as input and return a chain.
     EH_LABEL,
 
-    /// CATCHPAD - Represents a catchpad instruction.
-    CATCHPAD,
-
     /// CATCHRET - Represents a return from a catch block funclet. Used for
     /// MSVC compatible exception handling. Takes a chain operand and a
     /// destination basic block operand.
@@ -749,12 +745,6 @@ namespace ISD {
     /// nested.
     GC_TRANSITION_START,
     GC_TRANSITION_END,
-
-    /// GET_DYNAMIC_AREA_OFFSET - get offset from native SP to the address of
-    /// the most recent dynamic alloca. For most targets that would be 0, but
-    /// for some others (e.g. PowerPC, PowerPC64) that would be compile-time
-    /// known nonzero constant. The only operand here is the chain.
-    GET_DYNAMIC_AREA_OFFSET,
 
     /// BUILTIN_OP_END - This must be the last enum value in this list.
     /// The target-specific pre-isel opcode values start here.

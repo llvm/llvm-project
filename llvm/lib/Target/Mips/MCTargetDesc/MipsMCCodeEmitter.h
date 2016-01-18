@@ -137,13 +137,6 @@ public:
                                     SmallVectorImpl<MCFixup> &Fixups,
                                     const MCSubtargetInfo &STI) const;
 
-  // getBranchTarget26OpValueMM - Return binary encoding of the branch
-  // offset operand. If the machine operand requires relocation,
-  // record the relocation and return zero.
-  unsigned getBranchTarget26OpValueMM(const MCInst &MI, unsigned OpNo,
-                                      SmallVectorImpl<MCFixup> &Fixups,
-                                      const MCSubtargetInfo &STI) const;
-
   // getJumpOffset16OpValue - Return binary encoding of the jump
   // offset operand. If the machine operand requires relocation,
   // record the relocation and return zero.
@@ -191,15 +184,17 @@ public:
   unsigned getMemEncodingMMImm4sp(const MCInst &MI, unsigned OpNo,
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &STI) const;
+  unsigned getSizeExtEncoding(const MCInst &MI, unsigned OpNo,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const;
   unsigned getSizeInsEncoding(const MCInst &MI, unsigned OpNo,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const;
 
-  /// Subtract Offset then encode as a N-bit unsigned integer.
-  template <unsigned Bits, int Offset>
-  unsigned getUImmWithOffsetEncoding(const MCInst &MI, unsigned OpNo,
-                                     SmallVectorImpl<MCFixup> &Fixups,
-                                     const MCSubtargetInfo &STI) const;
+  // getLSAImmEncoding - Return binary encoding of LSA immediate.
+  unsigned getLSAImmEncoding(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
 
   unsigned getSimm19Lsl2Encoding(const MCInst &MI, unsigned OpNo,
                                  SmallVectorImpl<MCFixup> &Fixups,

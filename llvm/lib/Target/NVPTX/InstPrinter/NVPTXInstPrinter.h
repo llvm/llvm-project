@@ -15,9 +15,11 @@
 #define LLVM_LIB_TARGET_NVPTX_INSTPRINTER_NVPTXINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
+class MCOperand;
 class MCSubtargetInfo;
 
 class NVPTXInstPrinter : public MCInstPrinter {

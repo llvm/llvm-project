@@ -25,7 +25,7 @@ class CastInst;
 class DominatorTree;
 class IVUsers;
 class Loop;
-class LoopInfo;
+class LPPassManager;
 class PHINode;
 class ScalarEvolution;
 
@@ -58,13 +58,13 @@ public:
 /// simplifyUsersOfIV - Simplify instructions that use this induction variable
 /// by using ScalarEvolution to analyze the IV's recurrence.
 bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LoopInfo *LI, SmallVectorImpl<WeakVH> &Dead,
+                       LPPassManager *LPM, SmallVectorImpl<WeakVH> &Dead,
                        IVVisitor *V = nullptr);
 
 /// SimplifyLoopIVs - Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.
 bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
-                     LoopInfo *LI, SmallVectorImpl<WeakVH> &Dead);
+                     LPPassManager *LPM, SmallVectorImpl<WeakVH> &Dead);
 
 } // namespace llvm
 

@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 struct C { };
 
@@ -51,9 +49,6 @@ template void X1<int>::f<>(int&, int*); // expected-note{{instantiation}}
 // Explicitly instantiate members of a class template
 struct Incomplete; // expected-note{{forward declaration}}
 struct NonDefaultConstructible { // expected-note{{candidate constructor (the implicit copy constructor) not viable}}
-#if __cplusplus >= 201103L // C++11 or later
-// expected-note@-2 {{candidate constructor (the implicit move constructor) not viable}}
-#endif
   NonDefaultConstructible(int); // expected-note{{candidate constructor}}
 };
 

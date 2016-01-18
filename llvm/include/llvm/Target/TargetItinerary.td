@@ -134,19 +134,3 @@ class ProcessorItineraries<list<FuncUnit> fu, list<Bypass> bp,
 // info. Subtargets using NoItineraries can bypass the scheduler's
 // expensive HazardRecognizer because no reservation table is needed.
 def NoItineraries : ProcessorItineraries<[], [], []>;
-
-//===----------------------------------------------------------------------===//
-// Combo Function Unit data - This is a map of combo function unit names to
-// the list of functional units that are included in the combination.
-//
-class ComboFuncData<FuncUnit ComboFunc, list<FuncUnit> funclist> {
-  FuncUnit TheComboFunc = ComboFunc;
-  list<FuncUnit> FuncList = funclist;
-}
-
-//===----------------------------------------------------------------------===//
-// Combo Function Units - This is a list of all combo function unit data.
-class ComboFuncUnits<list<ComboFuncData> cfd> {
-  list<ComboFuncData> CFD = cfd;
-}
-

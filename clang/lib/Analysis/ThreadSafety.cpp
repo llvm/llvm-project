@@ -258,15 +258,16 @@ private:
   typedef SmallVector<const ValueDecl*, 4>  BeforeVect;
 
   struct BeforeInfo {
-    BeforeInfo() : Visited(0) {}
-    BeforeInfo(BeforeInfo &&O) : Vect(std::move(O.Vect)), Visited(O.Visited) {}
+    BeforeInfo() : Vect(nullptr), Visited(false) { }
+    BeforeInfo(BeforeInfo &&O)
+        : Vect(std::move(O.Vect)), Visited(O.Visited)
+    {}
 
-    BeforeVect Vect;
-    int Visited;
+    std::unique_ptr<BeforeVect> Vect;
+    int                         Visited;
   };
 
-  typedef llvm::DenseMap<const ValueDecl *, std::unique_ptr<BeforeInfo>>
-      BeforeMap;
+  typedef llvm::DenseMap<const ValueDecl*, BeforeInfo>  BeforeMap;
   typedef llvm::DenseMap<const ValueDecl*, bool>        CycleMap;
 
 public:
@@ -274,9 +275,6 @@ public:
 
   BeforeInfo* insertAttrExprs(const ValueDecl* Vd,
                               ThreadSafetyAnalyzer& Analyzer);
-
-  BeforeInfo *getBeforeInfoForDecl(const ValueDecl *Vd,
-                                   ThreadSafetyAnalyzer &Analyzer);
 
   void checkBeforeAfter(const ValueDecl* Vd,
                         const FactSet& FSet,
@@ -967,27 +965,26 @@ public:
 BeforeSet::BeforeInfo* BeforeSet::insertAttrExprs(const ValueDecl* Vd,
     ThreadSafetyAnalyzer& Analyzer) {
   // Create a new entry for Vd.
-  BeforeInfo *Info = nullptr;
-  {
-    // Keep InfoPtr in its own scope in case BMap is modified later and the
-    // reference becomes invalid.
-    std::unique_ptr<BeforeInfo> &InfoPtr = BMap[Vd];
-    if (!InfoPtr)
-      InfoPtr.reset(new BeforeInfo());
-    Info = InfoPtr.get();
-  }
+  auto& Entry = BMap.FindAndConstruct(Vd);
+  BeforeInfo* Info = &Entry.second;
+  BeforeVect* Bv = nullptr;
 
   for (Attr* At : Vd->attrs()) {
     switch (At->getKind()) {
       case attr::AcquiredBefore: {
         auto *A = cast<AcquiredBeforeAttr>(At);
 
+        // Create a new BeforeVect for Vd if necessary.
+        if (!Bv) {
+          Bv = new BeforeVect;
+          Info->Vect.reset(Bv);
+        }
         // Read exprs from the attribute, and add them to BeforeVect.
         for (const auto *Arg : A->args()) {
           CapabilityExpr Cp =
             Analyzer.SxBuilder.translateAttrExpr(Arg, nullptr);
           if (const ValueDecl *Cpvd = Cp.valueDecl()) {
-            Info->Vect.push_back(Cpvd);
+            Bv->push_back(Cpvd);
             auto It = BMap.find(Cpvd);
             if (It == BMap.end())
               insertAttrExprs(Cpvd, Analyzer);
@@ -1004,8 +1001,20 @@ BeforeSet::BeforeInfo* BeforeSet::insertAttrExprs(const ValueDecl* Vd,
             Analyzer.SxBuilder.translateAttrExpr(Arg, nullptr);
           if (const ValueDecl *ArgVd = Cp.valueDecl()) {
             // Get entry for mutex listed in attribute
-            BeforeInfo *ArgInfo = getBeforeInfoForDecl(ArgVd, Analyzer);
-            ArgInfo->Vect.push_back(Vd);
+            BeforeInfo* ArgInfo;
+            auto It = BMap.find(ArgVd);
+            if (It == BMap.end())
+              ArgInfo = insertAttrExprs(ArgVd, Analyzer);
+            else
+              ArgInfo = &It->second;
+
+            // Create a new BeforeVect if necessary.
+            BeforeVect* ArgBv = ArgInfo->Vect.get();
+            if (!ArgBv) {
+              ArgBv = new BeforeVect;
+              ArgInfo->Vect.reset(ArgBv);
+            }
+            ArgBv->push_back(Vd);
           }
         }
         break;
@@ -1018,18 +1027,6 @@ BeforeSet::BeforeInfo* BeforeSet::insertAttrExprs(const ValueDecl* Vd,
   return Info;
 }
 
-BeforeSet::BeforeInfo *
-BeforeSet::getBeforeInfoForDecl(const ValueDecl *Vd,
-                                ThreadSafetyAnalyzer &Analyzer) {
-  auto It = BMap.find(Vd);
-  BeforeInfo *Info = nullptr;
-  if (It == BMap.end())
-    Info = insertAttrExprs(Vd, Analyzer);
-  else
-    Info = It->second.get();
-  assert(Info && "BMap contained nullptr?");
-  return Info;
-}
 
 /// Return true if any mutexes in FSet are in the acquired_before set of Vd.
 void BeforeSet::checkBeforeAfter(const ValueDecl* StartVd,
@@ -1044,7 +1041,12 @@ void BeforeSet::checkBeforeAfter(const ValueDecl* StartVd,
     if (!Vd)
       return false;
 
-    BeforeSet::BeforeInfo *Info = getBeforeInfoForDecl(Vd, Analyzer);
+    BeforeSet::BeforeInfo* Info;
+    auto It = BMap.find(Vd);
+    if (It == BMap.end())
+      Info = insertAttrExprs(Vd, Analyzer);
+    else
+      Info = &It->second;
 
     if (Info->Visited == 1)
       return true;
@@ -1052,12 +1054,13 @@ void BeforeSet::checkBeforeAfter(const ValueDecl* StartVd,
     if (Info->Visited == 2)
       return false;
 
-    if (Info->Vect.empty())
+    BeforeVect* Bv = Info->Vect.get();
+    if (!Bv)
       return false;
 
     InfoVect.push_back(Info);
     Info->Visited = 1;
-    for (auto *Vdb : Info->Vect) {
+    for (auto *Vdb : *Bv) {
       // Exclude mutexes in our immediate before set.
       if (FSet.containsMutexDecl(Analyzer.FactMan, Vdb)) {
         StringRef L1 = StartVd->getName();

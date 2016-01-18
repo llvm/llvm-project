@@ -32,10 +32,10 @@ dnl===-----------------------------------------------------------------------===
 dnl Initialize autoconf and define the package name, version number and
 dnl address for reporting bugs.
 
-AC_INIT([LLVM],[3.9.0svn],[http://llvm.org/bugs/])
+AC_INIT([LLVM],[3.8.0svn],[http://llvm.org/bugs/])
 
 LLVM_VERSION_MAJOR=3
-LLVM_VERSION_MINOR=9
+LLVM_VERSION_MINOR=8
 LLVM_VERSION_PATCH=0
 LLVM_VERSION_SUFFIX=svn
 
@@ -431,7 +431,6 @@ AC_CACHE_CHECK([target architecture],[llvm_cv_target_arch],
   arm64*-*)               llvm_cv_target_arch="AArch64" ;;
   arm*-*)                 llvm_cv_target_arch="ARM" ;;
   aarch64*-*)             llvm_cv_target_arch="AArch64" ;;
-  avr-*)                  llvm_cv_target_arch="AVR" ;;
   mips-* | mips64-*)      llvm_cv_target_arch="Mips" ;;
   mipsel-* | mips64el-*)  llvm_cv_target_arch="Mips" ;;
   xcore-*)                llvm_cv_target_arch="XCore" ;;
@@ -469,7 +468,6 @@ case $host in
   arm64*-*)               host_arch="AArch64" ;;
   arm*-*)                 host_arch="ARM" ;;
   aarch64*-*)             host_arch="AArch64" ;;
-  avr-*)                  host_arch="AVR" ;;
   mips-* | mips64-*)      host_arch="Mips" ;;
   mipsel-* | mips64el-*)  host_arch="Mips" ;;
   xcore-*)                host_arch="XCore" ;;
@@ -803,7 +801,6 @@ else
     PowerPC)     AC_SUBST(TARGET_HAS_JIT,1) ;;
     x86_64)      AC_SUBST(TARGET_HAS_JIT,1) ;;
     ARM)         AC_SUBST(TARGET_HAS_JIT,1) ;;
-    AVR)         AC_SUBST(TARGET_HAS_JIT,0) ;;
     Mips)        AC_SUBST(TARGET_HAS_JIT,1) ;;
     XCore)       AC_SUBST(TARGET_HAS_JIT,0) ;;
     MSP430)      AC_SUBST(TARGET_HAS_JIT,0) ;;
@@ -1343,7 +1340,7 @@ AC_DEFINE_UNQUOTED(DEFAULT_SYSROOT,"$withval",
 AC_ARG_WITH(clang-default-openmp-runtime,
   AS_HELP_STRING([--with-clang-default-openmp-runtime],
     [The default OpenMP runtime for Clang.]),,
-    withval="libomp")
+    withval="libgomp")
 AC_DEFINE_UNQUOTED(CLANG_DEFAULT_OPENMP_RUNTIME,"$withval",
                    [Default OpenMP runtime used by -fopenmp.])
 
@@ -1643,7 +1640,6 @@ if test "$llvm_cv_os_type" = "MingW" ; then
   AC_CHECK_LIB(ole32, main)
   AC_CHECK_LIB(psapi, main)
   AC_CHECK_LIB(shell32, main)
-  AC_CHECK_LIB(uuid,main)
 fi
 
 dnl dlopen() is required for plugin support.
@@ -2242,14 +2238,3 @@ AC_CONFIG_MAKEFILE(bindings/ocaml/Makefile.ocaml)
 
 dnl Finally, crank out the output
 AC_OUTPUT
-echo ""
-echo ""
-echo "################################################################################"
-echo "################################################################################"
-echo "The LLVM project has deprecated building with configure & make."
-echo "The autoconf-based makefile build system will be removed in the 3.9 release."
-echo ""
-echo "Please migrate to the CMake-based build system."
-echo "For more information see: http://llvm.org/docs/CMake.html"
-echo "################################################################################"
-echo "################################################################################"

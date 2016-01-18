@@ -461,7 +461,7 @@ static Value *SimplifyX86extrq(IntrinsicInst &II, Value *Op0,
     // If we were an EXTRQ call, we'll save registers if we convert to EXTRQI.
     if (II.getIntrinsicID() == Intrinsic::x86_sse4a_extrq) {
       Value *Args[] = {Op0, CILength, CIIndex};
-      Module *M = II.getModule();
+      Module *M = II.getParent()->getParent()->getParent();
       Value *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_extrqi);
       return Builder.CreateCall(F, Args);
     }
@@ -563,7 +563,7 @@ static Value *SimplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
     Constant *CIIndex = ConstantInt::get(IntTy8, Index, false);
 
     Value *Args[] = {Op0, Op1, CILength, CIIndex};
-    Module *M = II.getModule();
+    Module *M = II.getParent()->getParent()->getParent();
     Value *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_insertqi);
     return Builder.CreateCall(F, Args);
   }
@@ -725,7 +725,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (MemMoveInst *MMI = dyn_cast<MemMoveInst>(MI)) {
       if (GlobalVariable *GVSrc = dyn_cast<GlobalVariable>(MMI->getSource()))
         if (GVSrc->isConstant()) {
-          Module *M = CI.getModule();
+          Module *M = CI.getParent()->getParent()->getParent();
           Intrinsic::ID MemCpyID = Intrinsic::memcpy;
           Type *Tys[3] = { CI.getArgOperand(0)->getType(),
                            CI.getArgOperand(1)->getType(),
@@ -785,16 +785,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       Value *V = Builder->CreateLShr(X, CV);
       return new TruncInst(V, IIOperand->getType());
     }
-    break;
-  }
-
-  case Intrinsic::bitreverse: {
-    Value *IIOperand = II->getArgOperand(0);
-    Value *X = nullptr;
-
-    // bitreverse(bitreverse(x)) -> x
-    if (match(IIOperand, m_Intrinsic<Intrinsic::bitreverse>(m_Value(X))))
-      return ReplaceInstUsesWith(CI, X);
     break;
   }
 
@@ -1747,7 +1737,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Translate facts known about a pointer before relocating into
     // facts about the relocate value, while being careful to
     // preserve relocation semantics.
-    Value *DerivedPtr = cast<GCRelocateInst>(II)->getDerivedPtr();
+    GCRelocateOperands Operands(II);
+    Value *DerivedPtr = Operands.getDerivedPtr();
     auto *GCRelocateType = cast<PointerType>(II->getType());
 
     // Remove the relocation if unused, note that this check is required
@@ -1941,26 +1932,19 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
   // Mark any parameters that are known to be non-null with the nonnull
   // attribute.  This is helpful for inlining calls to functions with null
   // checks on their arguments.
-  SmallVector<unsigned, 4> Indices;
   unsigned ArgNo = 0;
-
   for (Value *V : CS.args()) {
     if (V->getType()->isPointerTy() && !CS.paramHasAttr(ArgNo+1, Attribute::NonNull) &&
-        isKnownNonNullAt(V, CS.getInstruction(), DT, TLI))
-      Indices.push_back(ArgNo + 1);
+        isKnownNonNullAt(V, CS.getInstruction(), DT, TLI)) {
+      AttributeSet AS = CS.getAttributes();
+      AS = AS.addAttribute(CS.getInstruction()->getContext(), ArgNo+1,
+                           Attribute::NonNull);
+      CS.setAttributes(AS);
+      Changed = true;
+    }
     ArgNo++;
   }
-
   assert(ArgNo == CS.arg_size() && "sanity check");
-
-  if (!Indices.empty()) {
-    AttributeSet AS = CS.getAttributes();
-    LLVMContext &Ctx = CS.getInstruction()->getContext();
-    AS = AS.addAttribute(Ctx, Indices,
-                         Attribute::get(Ctx, Attribute::NonNull));
-    CS.setAttributes(AS);
-    Changed = true;
-  }
 
   // If the callee is a pointer to a function, attempt to move any casts to the
   // arguments of the call/invoke.
@@ -2273,19 +2257,16 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
   const AttributeSet &NewCallerPAL = AttributeSet::get(Callee->getContext(),
                                                        attrVec);
 
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  CS.getOperandBundlesAsDefs(OpBundles);
-
   Instruction *NC;
   if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
-    NC = Builder->CreateInvoke(Callee, II->getNormalDest(), II->getUnwindDest(),
-                               Args, OpBundles);
+    NC = Builder->CreateInvoke(Callee, II->getNormalDest(),
+                               II->getUnwindDest(), Args);
     NC->takeName(II);
     cast<InvokeInst>(NC)->setCallingConv(II->getCallingConv());
     cast<InvokeInst>(NC)->setAttributes(NewCallerPAL);
   } else {
     CallInst *CI = cast<CallInst>(Caller);
-    NC = Builder->CreateCall(Callee, Args, OpBundles);
+    NC = Builder->CreateCall(Callee, Args);
     NC->takeName(CI);
     if (CI->isTailCall())
       cast<CallInst>(NC)->setTailCall();
@@ -2351,7 +2332,8 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
          "transformCallThroughTrampoline called with incorrect CallSite.");
 
   Function *NestF =cast<Function>(Tramp->getArgOperand(1)->stripPointerCasts());
-  FunctionType *NestFTy = cast<FunctionType>(NestF->getValueType());
+  PointerType *NestFPTy = cast<PointerType>(NestF->getType());
+  FunctionType *NestFTy = cast<FunctionType>(NestFPTy->getElementType());
 
   const AttributeSet &NestAttrs = NestF->getAttributes();
   if (!NestAttrs.isEmpty()) {

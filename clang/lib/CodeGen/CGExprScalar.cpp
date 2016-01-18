@@ -523,9 +523,8 @@ public:
 #undef HANDLEBINOP
 
   // Comparisons.
-  Value *EmitCompare(const BinaryOperator *E, llvm::CmpInst::Predicate UICmpOpc,
-                     llvm::CmpInst::Predicate SICmpOpc,
-                     llvm::CmpInst::Predicate FCmpOpc);
+  Value *EmitCompare(const BinaryOperator *E, unsigned UICmpOpc,
+                     unsigned SICmpOpc, unsigned FCmpOpc);
 #define VISITCOMP(CODE, UI, SI, FP) \
     Value *VisitBin##CODE(const BinaryOperator *E) { \
       return EmitCompare(E, llvm::ICmpInst::UI, llvm::ICmpInst::SI, \
@@ -811,15 +810,14 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
   // A scalar can be splatted to an extended vector of the same element type
   if (DstType->isExtVectorType() && !SrcType->isVectorType()) {
-    // Sema should add casts to make sure that the source expression's type is
-    // the same as the vector's element type (sans qualifiers)
-    assert(DstType->castAs<ExtVectorType>()->getElementType().getTypePtr() ==
-               SrcType.getTypePtr() &&
-           "Splatted expr doesn't match with vector element type?");
+    // Cast the scalar to element type
+    QualType EltTy = DstType->getAs<ExtVectorType>()->getElementType();
+    llvm::Value *Elt = EmitScalarConversion(
+        Src, SrcType, EltTy, Loc, CGF.getContext().getLangOpts().OpenCL);
 
     // Splat the element across to all elements
     unsigned NumElements = cast<llvm::VectorType>(DstTy)->getNumElements();
-    return Builder.CreateVectorSplat(NumElements, Src, "splat");
+    return Builder.CreateVectorSplat(NumElements, Elt, "splat");
   }
 
   // Allow bitcast from vector to integer/fp of the same size.
@@ -1542,7 +1540,15 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_VectorSplat: {
     llvm::Type *DstTy = ConvertType(DestTy);
-    Value *Elt = Visit(const_cast<Expr*>(E));
+    // Need an IgnoreImpCasts here as by default a boolean will be promoted to
+    // an int, which will not perform the sign extension, so if we know we are
+    // going to cast to a vector we have to strip the implicit cast off.
+    Value *Elt = Visit(const_cast<Expr*>(E->IgnoreImpCasts()));
+    Elt = EmitScalarConversion(Elt, E->IgnoreImpCasts()->getType(),
+                               DestTy->getAs<VectorType>()->getElementType(),
+                               CE->getExprLoc(), 
+                               CGF.getContext().getLangOpts().OpenCL);
+
     // Splat the element across to all elements
     unsigned NumElements = cast<llvm::VectorType>(DstTy)->getNumElements();
     return Builder.CreateVectorSplat(NumElements, Elt, "splat");
@@ -1554,10 +1560,6 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FloatingCast:
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
-  case CK_BooleanToSignedIntegral:
-    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
-                                CE->getExprLoc(),
-                                /*TreatBooleanAsSigned=*/true);
   case CK_IntegralToBoolean:
     return EmitIntToBoolConversion(Visit(E));
   case CK_PointerToBoolean:
@@ -1921,10 +1923,10 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
   llvm::Value* Result = llvm::Constant::getNullValue(ResultType);
   QualType CurrentType = E->getTypeSourceInfo()->getType();
   for (unsigned i = 0; i != n; ++i) {
-    OffsetOfNode ON = E->getComponent(i);
+    OffsetOfExpr::OffsetOfNode ON = E->getComponent(i);
     llvm::Value *Offset = nullptr;
     switch (ON.getKind()) {
-    case OffsetOfNode::Array: {
+    case OffsetOfExpr::OffsetOfNode::Array: {
       // Compute the index
       Expr *IdxExpr = E->getIndexExpr(ON.getArrayExprIndex());
       llvm::Value* Idx = CGF.EmitScalarExpr(IdxExpr);
@@ -1944,7 +1946,7 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       break;
     }
 
-    case OffsetOfNode::Field: {
+    case OffsetOfExpr::OffsetOfNode::Field: {
       FieldDecl *MemberDecl = ON.getField();
       RecordDecl *RD = CurrentType->getAs<RecordType>()->getDecl();
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
@@ -1970,10 +1972,10 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       break;
     }
 
-    case OffsetOfNode::Identifier:
+    case OffsetOfExpr::OffsetOfNode::Identifier:
       llvm_unreachable("dependent __builtin_offsetof");
 
-    case OffsetOfNode::Base: {
+    case OffsetOfExpr::OffsetOfNode::Base: {
       if (ON.getBase()->isVirtual()) {
         CGF.ErrorUnsupported(E, "virtual base in offsetof");
         continue;
@@ -2373,9 +2375,9 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
 
   // Branch in case of overflow.
   llvm::BasicBlock *initialBB = Builder.GetInsertBlock();
-  llvm::Function::iterator insertPt = initialBB->getIterator();
+  llvm::Function::iterator insertPt = initialBB;
   llvm::BasicBlock *continueBB = CGF.createBasicBlock("nooverflow", CGF.CurFn,
-                                                      &*std::next(insertPt));
+                                                      std::next(insertPt));
   llvm::BasicBlock *overflowBB = CGF.createBasicBlock("overflow", CGF.CurFn);
 
   Builder.CreateCondBr(overflow, overflowBB, continueBB);
@@ -2562,17 +2564,19 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
     return nullptr;
 
   // We have a potentially fusable op. Look for a mul on one of the operands.
-  // Also, make sure that the mul result isn't used directly. In that case,
-  // there's no point creating a muladd operation.
-  if (auto *LHSBinOp = dyn_cast<llvm::BinaryOperator>(op.LHS)) {
-    if (LHSBinOp->getOpcode() == llvm::Instruction::FMul &&
-        LHSBinOp->use_empty())
+  if (llvm::BinaryOperator* LHSBinOp = dyn_cast<llvm::BinaryOperator>(op.LHS)) {
+    if (LHSBinOp->getOpcode() == llvm::Instruction::FMul) {
+      assert(LHSBinOp->getNumUses() == 0 &&
+             "Operations with multiple uses shouldn't be contracted.");
       return buildFMulAdd(LHSBinOp, op.RHS, CGF, Builder, false, isSub);
-  }
-  if (auto *RHSBinOp = dyn_cast<llvm::BinaryOperator>(op.RHS)) {
-    if (RHSBinOp->getOpcode() == llvm::Instruction::FMul &&
-        RHSBinOp->use_empty())
+    }
+  } else if (llvm::BinaryOperator* RHSBinOp =
+               dyn_cast<llvm::BinaryOperator>(op.RHS)) {
+    if (RHSBinOp->getOpcode() == llvm::Instruction::FMul) {
+      assert(RHSBinOp->getNumUses() == 0 &&
+             "Operations with multiple uses shouldn't be contracted.");
       return buildFMulAdd(RHSBinOp, op.LHS, CGF, Builder, isSub, false);
+    }
   }
 
   return nullptr;
@@ -2830,10 +2834,8 @@ static llvm::Intrinsic::ID GetIntrinsic(IntrinsicType IT,
   }
 }
 
-Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
-                                      llvm::CmpInst::Predicate UICmpOpc,
-                                      llvm::CmpInst::Predicate SICmpOpc,
-                                      llvm::CmpInst::Predicate FCmpOpc) {
+Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,unsigned UICmpOpc,
+                                      unsigned SICmpOpc, unsigned FCmpOpc) {
   TestAndClearIgnoreResultAssign();
   Value *Result;
   QualType LHSTy = E->getLHS()->getType();
@@ -2916,12 +2918,15 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     }
 
     if (LHS->getType()->isFPOrFPVectorTy()) {
-      Result = Builder.CreateFCmp(FCmpOpc, LHS, RHS, "cmp");
+      Result = Builder.CreateFCmp((llvm::CmpInst::Predicate)FCmpOpc,
+                                  LHS, RHS, "cmp");
     } else if (LHSTy->hasSignedIntegerRepresentation()) {
-      Result = Builder.CreateICmp(SICmpOpc, LHS, RHS, "cmp");
+      Result = Builder.CreateICmp((llvm::ICmpInst::Predicate)SICmpOpc,
+                                  LHS, RHS, "cmp");
     } else {
       // Unsigned integers and pointers.
-      Result = Builder.CreateICmp(UICmpOpc, LHS, RHS, "cmp");
+      Result = Builder.CreateICmp((llvm::ICmpInst::Predicate)UICmpOpc,
+                                  LHS, RHS, "cmp");
     }
 
     // If this is a vector comparison, sign extend the result to the appropriate
@@ -2956,13 +2961,17 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
 
     Value *ResultR, *ResultI;
     if (CETy->isRealFloatingType()) {
-      ResultR = Builder.CreateFCmp(FCmpOpc, LHS.first, RHS.first, "cmp.r");
-      ResultI = Builder.CreateFCmp(FCmpOpc, LHS.second, RHS.second, "cmp.i");
+      ResultR = Builder.CreateFCmp((llvm::FCmpInst::Predicate)FCmpOpc,
+                                   LHS.first, RHS.first, "cmp.r");
+      ResultI = Builder.CreateFCmp((llvm::FCmpInst::Predicate)FCmpOpc,
+                                   LHS.second, RHS.second, "cmp.i");
     } else {
       // Complex comparisons can only be equality comparisons.  As such, signed
       // and unsigned opcodes are the same.
-      ResultR = Builder.CreateICmp(UICmpOpc, LHS.first, RHS.first, "cmp.r");
-      ResultI = Builder.CreateICmp(UICmpOpc, LHS.second, RHS.second, "cmp.i");
+      ResultR = Builder.CreateICmp((llvm::ICmpInst::Predicate)UICmpOpc,
+                                   LHS.first, RHS.first, "cmp.r");
+      ResultI = Builder.CreateICmp((llvm::ICmpInst::Predicate)UICmpOpc,
+                                   LHS.second, RHS.second, "cmp.i");
     }
 
     if (E->getOpcode() == BO_EQ) {

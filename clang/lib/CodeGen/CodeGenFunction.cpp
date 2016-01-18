@@ -29,7 +29,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/CodeGenOptions.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -79,7 +78,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
   if (CGM.getCodeGenOpts().ReciprocalMath) {
     FMF.setAllowReciprocal();
   }
-  Builder.setFastMathFlags(FMF);
+  Builder.SetFastMathFlags(FMF);
 }
 
 CodeGenFunction::~CodeGenFunction() {
@@ -195,7 +194,6 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::FunctionNoProto:
     case Type::Enum:
     case Type::ObjCObjectPointer:
-    case Type::Pipe:
       return TEK_Scalar;
 
     // Complexes.
@@ -512,8 +510,7 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
         typeQuals += typeQuals.empty() ? "volatile" : " volatile";
     } else {
       uint32_t AddrSpc = 0;
-      bool isPipe = ty->isPipeType();
-      if (ty->isImageType() || isPipe)
+      if (ty->isImageType())
         AddrSpc =
           CGM.getContext().getTargetAddressSpace(LangAS::opencl_global);
 
@@ -521,11 +518,7 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
           llvm::ConstantAsMetadata::get(Builder.getInt32(AddrSpc)));
 
       // Get argument type name.
-      std::string typeName;
-      if (isPipe)
-        typeName = cast<PipeType>(ty)->getElementType().getAsString(Policy);
-      else
-        typeName = ty.getUnqualifiedType().getAsString(Policy);
+      std::string typeName = ty.getUnqualifiedType().getAsString(Policy);
 
       // Turn "unsigned type" to "utype"
       std::string::size_type pos = typeName.find("unsigned");
@@ -534,12 +527,7 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
 
       argTypeNames.push_back(llvm::MDString::get(Context, typeName));
 
-      std::string baseTypeName;
-      if (isPipe)
-        baseTypeName =
-          cast<PipeType>(ty)->getElementType().getCanonicalType().getAsString(Policy);
-      else
-        baseTypeName =
+      std::string baseTypeName =
           ty.getUnqualifiedType().getCanonicalType().getAsString(Policy);
 
       // Turn "unsigned type" to "utype"
@@ -554,16 +542,12 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
         typeQuals = "const";
       if (ty.isVolatileQualified())
         typeQuals += typeQuals.empty() ? "volatile" : " volatile";
-      if (isPipe)
-        typeQuals = "pipe";
     }
 
     argTypeQuals.push_back(llvm::MDString::get(Context, typeQuals));
 
-    // Get image and pipe access qualifier:
-    // FIXME: now image and pipe share the same access qualifier maybe we can
-    // refine it to OpenCL access qualifier and also handle write_read
-    if (ty->isImageType()|| ty->isPipeType()) {
+    // Get image access qualifier:
+    if (ty->isImageType()) {
       const OpenCLImageAccessAttr *A = parm->getAttr<OpenCLImageAccessAttr>();
       if (A && A->isWriteOnly())
         accessQuals.push_back(llvm::MDString::get(Context, "write_only"));
@@ -731,14 +715,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     }
   }
 
-  // If we're in C++ mode and the function name is "main", it is guaranteed
-  // to be norecurse by the standard (3.6.1.3 "The function main shall not be
-  // used within a program").
-  if (getLangOpts().CPlusPlus)
-    if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
-      if (FD->isMain())
-        Fn->addFnAttr(llvm::Attribute::NoRecurse);
-  
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 
   // Create a marker to make it easy to insert allocas into the entryblock
@@ -787,14 +763,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     auto AI = CurFn->arg_begin();
     if (CurFnInfo->getReturnInfo().isSRetAfterThis())
       ++AI;
-    ReturnValue = Address(&*AI, CurFnInfo->getReturnInfo().getIndirectAlign());
+    ReturnValue = Address(AI, CurFnInfo->getReturnInfo().getIndirectAlign());
   } else if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::InAlloca &&
              !hasScalarEvaluationKind(CurFnInfo->getReturnType())) {
     // Load the sret pointer from the argument struct and return into that.
     unsigned Idx = CurFnInfo->getReturnInfo().getInAllocaFieldIndex();
     llvm::Function::arg_iterator EI = CurFn->arg_end();
     --EI;
-    llvm::Value *Addr = Builder.CreateStructGEP(nullptr, &*EI, Idx);
+    llvm::Value *Addr = Builder.CreateStructGEP(nullptr, EI, Idx);
     Addr = Builder.CreateAlignedLoad(Addr, getPointerAlign(), "agg.result");
     ReturnValue = Address(Addr, getNaturalTypeAlignment(RetTy));
   } else {
@@ -935,18 +911,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     CGM.getCXXABI().buildThisParam(*this, Args);
   }
 
-  for (auto *Param : FD->params()) {
-    Args.push_back(Param);
-    if (!Param->hasAttr<PassObjectSizeAttr>())
-      continue;
-
-    IdentifierInfo *NoID = nullptr;
-    auto *Implicit = ImplicitParamDecl::Create(
-        getContext(), Param->getDeclContext(), Param->getLocation(), NoID,
-        getContext().getSizeType());
-    SizeArguments[Param] = Implicit;
-    Args.push_back(Implicit);
-  }
+  Args.append(FD->param_begin(), FD->param_end());
 
   if (MD && (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)))
     CGM.getCXXABI().addImplicitStructorParams(*this, ResTy, Args);
@@ -972,7 +937,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
 
   // Generate the body of the function.
-  PGO.assignRegionCounters(GD, CurFn);
+  PGO.checkGlobalDecl(GD);
+  PGO.assignRegionCounters(GD.getDecl(), CurFn);
   if (isa<CXXDestructorDecl>(FD))
     EmitDestructorBody(Args);
   else if (isa<CXXConstructorDecl>(FD))
@@ -1742,10 +1708,6 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::Atomic:
       type = cast<AtomicType>(ty)->getValueType();
       break;
-
-    case Type::Pipe:
-      type = cast<PipeType>(ty)->getElementType();
-      break;
     }
   } while (type->isVariablyModifiedType());
 }
@@ -1879,89 +1841,3 @@ template void CGBuilderInserter<PreserveNames>::InsertHelper(
     llvm::Instruction *I, const llvm::Twine &Name, llvm::BasicBlock *BB,
     llvm::BasicBlock::iterator InsertPt) const;
 #undef PreserveNames
-
-static bool hasRequiredFeatures(const SmallVectorImpl<StringRef> &ReqFeatures,
-                                CodeGenModule &CGM, const FunctionDecl *FD,
-                                std::string &FirstMissing) {
-  // If there aren't any required features listed then go ahead and return.
-  if (ReqFeatures.empty())
-    return false;
-
-  // Now build up the set of caller features and verify that all the required
-  // features are there.
-  llvm::StringMap<bool> CallerFeatureMap;
-  CGM.getFunctionFeatureMap(CallerFeatureMap, FD);
-
-  // If we have at least one of the features in the feature list return
-  // true, otherwise return false.
-  return std::all_of(
-      ReqFeatures.begin(), ReqFeatures.end(), [&](StringRef Feature) {
-        SmallVector<StringRef, 1> OrFeatures;
-        Feature.split(OrFeatures, "|");
-        return std::any_of(OrFeatures.begin(), OrFeatures.end(),
-                           [&](StringRef Feature) {
-                             if (!CallerFeatureMap.lookup(Feature)) {
-                               FirstMissing = Feature.str();
-                               return false;
-                             }
-                             return true;
-                           });
-      });
-}
-
-// Emits an error if we don't have a valid set of target features for the
-// called function.
-void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
-                                          const FunctionDecl *TargetDecl) {
-  // Early exit if this is an indirect call.
-  if (!TargetDecl)
-    return;
-
-  // Get the current enclosing function if it exists. If it doesn't
-  // we can't check the target features anyhow.
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl);
-  if (!FD)
-    return;
-
-  // Grab the required features for the call. For a builtin this is listed in
-  // the td file with the default cpu, for an always_inline function this is any
-  // listed cpu and any listed features.
-  unsigned BuiltinID = TargetDecl->getBuiltinID();
-  std::string MissingFeature;
-  if (BuiltinID) {
-    SmallVector<StringRef, 1> ReqFeatures;
-    const char *FeatureList =
-        CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
-    // Return if the builtin doesn't have any required features.
-    if (!FeatureList || StringRef(FeatureList) == "")
-      return;
-    StringRef(FeatureList).split(ReqFeatures, ",");
-    if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
-      CGM.getDiags().Report(E->getLocStart(), diag::err_builtin_needs_feature)
-          << TargetDecl->getDeclName()
-          << CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
-
-  } else if (TargetDecl->hasAttr<TargetAttr>()) {
-    // Get the required features for the callee.
-    SmallVector<StringRef, 1> ReqFeatures;
-    llvm::StringMap<bool> CalleeFeatureMap;
-    CGM.getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
-    for (const auto &F : CalleeFeatureMap) {
-      // Only positive features are "required".
-      if (F.getValue())
-        ReqFeatures.push_back(F.getKey());
-    }
-    if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
-      CGM.getDiags().Report(E->getLocStart(), diag::err_function_needs_feature)
-          << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
-  }
-}
-
-void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
-  if (!CGM.getCodeGenOpts().SanitizeStats)
-    return;
-
-  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
-  IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
-  CGM.getSanStats().create(IRB, SSK);
-}

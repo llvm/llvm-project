@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
@@ -23,7 +23,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/InlinerPass.h"
 
 using namespace llvm;
@@ -38,36 +37,38 @@ namespace {
 /// inliner pass and the always inliner pass. The two passes use different cost
 /// analyses to determine when to inline.
 class SimpleInliner : public Inliner {
-  // This field is populated based on one of the following:
-  //  optimization or size optimization levels,
-  //  --inline-threshold flag,
-  //  user specified value.
-  int DefaultThreshold;
+  InlineCostAnalysis *ICA;
 
 public:
-  SimpleInliner()
-      : Inliner(ID), DefaultThreshold(llvm::getDefaultInlineThreshold()) {
+  SimpleInliner() : Inliner(ID), ICA(nullptr) {
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 
-  SimpleInliner(int Threshold) : Inliner(ID), DefaultThreshold(Threshold) {
+  SimpleInliner(int Threshold)
+      : Inliner(ID, Threshold, /*InsertLifetime*/ true), ICA(nullptr) {
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 
   static char ID; // Pass identification, replacement for typeid
 
   InlineCost getInlineCost(CallSite CS) override {
-    Function *Callee = CS.getCalledFunction();
-    TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
-    return llvm::getInlineCost(CS, DefaultThreshold, TTI, ACT);
+    return ICA->getInlineCost(CS, getInlineThreshold(CS));
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-  TargetTransformInfoWrapperPass *TTIWP;
 };
+
+static int computeThresholdFromOptLevels(unsigned OptLevel,
+                                         unsigned SizeOptLevel) {
+  if (OptLevel > 2)
+    return 275;
+  if (SizeOptLevel == 1) // -Os
+    return 75;
+  if (SizeOptLevel == 2) // -Oz
+    return 25;
+  return 225;
+}
 
 } // end anonymous namespace
 
@@ -76,7 +77,7 @@ INITIALIZE_PASS_BEGIN(SimpleInliner, "inline",
                 "Function Integration/Inlining", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(InlineCostAnalysis)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(SimpleInliner, "inline",
                 "Function Integration/Inlining", false, false)
@@ -90,15 +91,15 @@ Pass *llvm::createFunctionInliningPass(int Threshold) {
 Pass *llvm::createFunctionInliningPass(unsigned OptLevel,
                                        unsigned SizeOptLevel) {
   return new SimpleInliner(
-      llvm::computeThresholdFromOptLevels(OptLevel, SizeOptLevel));
+      computeThresholdFromOptLevels(OptLevel, SizeOptLevel));
 }
 
 bool SimpleInliner::runOnSCC(CallGraphSCC &SCC) {
-  TTIWP = &getAnalysis<TargetTransformInfoWrapperPass>();
+  ICA = &getAnalysis<InlineCostAnalysis>();
   return Inliner::runOnSCC(SCC);
 }
 
 void SimpleInliner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addRequired<InlineCostAnalysis>();
   Inliner::getAnalysisUsage(AU);
 }

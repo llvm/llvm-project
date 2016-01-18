@@ -1,4 +1,4 @@
-//===-- MCObjectFileInfo.cpp - Object File Information --------------------===//
+//===-- MObjectFileInfo.cpp - Object File Information ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -49,12 +49,6 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
   // MachO
   SupportsWeakOmittedEHFrame = false;
 
-  EHFrameSection = Ctx->getMachOSection(
-      "__TEXT", "__eh_frame",
-      MachO::S_COALESCED | MachO::S_ATTR_NO_TOC |
-          MachO::S_ATTR_STRIP_STATIC_SYMS | MachO::S_ATTR_LIVE_SUPPORT,
-      SectionKind::getReadOnly());
-
   if (T.isOSDarwin() && T.getArch() == Triple::aarch64)
     SupportsCompactUnwindWithoutEHFrame = true;
 
@@ -76,15 +70,16 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
                            MachO::S_ATTR_PURE_INSTRUCTIONS,
                            SectionKind::getText());
   DataSection // .data
-      = Ctx->getMachOSection("__DATA", "__data", 0, SectionKind::getData());
+    = Ctx->getMachOSection("__DATA", "__data", 0,
+                           SectionKind::getDataRel());
 
   // BSSSection might not be expected initialized on msvc.
   BSSSection = nullptr;
 
   TLSDataSection // .tdata
-      = Ctx->getMachOSection("__DATA", "__thread_data",
-                             MachO::S_THREAD_LOCAL_REGULAR,
-                             SectionKind::getData());
+    = Ctx->getMachOSection("__DATA", "__thread_data",
+                           MachO::S_THREAD_LOCAL_REGULAR,
+                           SectionKind::getDataRel());
   TLSBSSSection // .tbss
     = Ctx->getMachOSection("__DATA", "__thread_bss",
                            MachO::S_THREAD_LOCAL_ZEROFILL,
@@ -92,13 +87,14 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
 
   // TODO: Verify datarel below.
   TLSTLVSection // .tlv
-      = Ctx->getMachOSection("__DATA", "__thread_vars",
-                             MachO::S_THREAD_LOCAL_VARIABLES,
-                             SectionKind::getData());
+    = Ctx->getMachOSection("__DATA", "__thread_vars",
+                           MachO::S_THREAD_LOCAL_VARIABLES,
+                           SectionKind::getDataRel());
 
-  TLSThreadInitSection = Ctx->getMachOSection(
-      "__DATA", "__thread_init", MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS,
-      SectionKind::getData());
+  TLSThreadInitSection
+    = Ctx->getMachOSection("__DATA", "__thread_init",
+                          MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS,
+                          SectionKind::getDataRel());
 
   CStringSection // .cstring
     = Ctx->getMachOSection("__TEXT", "__cstring",
@@ -143,8 +139,10 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
       = Ctx->getMachOSection("__TEXT", "__const_coal",
                              MachO::S_COALESCED,
                              SectionKind::getReadOnly());
-    DataCoalSection = Ctx->getMachOSection(
-        "__DATA", "__datacoal_nt", MachO::S_COALESCED, SectionKind::getData());
+    DataCoalSection
+      = Ctx->getMachOSection("__DATA","__datacoal_nt",
+                             MachO::S_COALESCED,
+                             SectionKind::getDataRel());
   } else {
     TextCoalSection = TextSection;
     ConstTextCoalSection = ReadOnlySection;
@@ -173,17 +171,21 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
                            SectionKind::getMetadata());
 
   if (RelocM == Reloc::Static) {
-    StaticCtorSection = Ctx->getMachOSection("__TEXT", "__constructor", 0,
-                                             SectionKind::getData());
-    StaticDtorSection = Ctx->getMachOSection("__TEXT", "__destructor", 0,
-                                             SectionKind::getData());
+    StaticCtorSection
+      = Ctx->getMachOSection("__TEXT", "__constructor", 0,
+                             SectionKind::getDataRel());
+    StaticDtorSection
+      = Ctx->getMachOSection("__TEXT", "__destructor", 0,
+                             SectionKind::getDataRel());
   } else {
-    StaticCtorSection = Ctx->getMachOSection("__DATA", "__mod_init_func",
-                                             MachO::S_MOD_INIT_FUNC_POINTERS,
-                                             SectionKind::getData());
-    StaticDtorSection = Ctx->getMachOSection("__DATA", "__mod_term_func",
-                                             MachO::S_MOD_TERM_FUNC_POINTERS,
-                                             SectionKind::getData());
+    StaticCtorSection
+      = Ctx->getMachOSection("__DATA", "__mod_init_func",
+                             MachO::S_MOD_INIT_FUNC_POINTERS,
+                             SectionKind::getDataRel());
+    StaticDtorSection
+      = Ctx->getMachOSection("__DATA", "__mod_term_func",
+                             MachO::S_MOD_TERM_FUNC_POINTERS,
+                             SectionKind::getDataRel());
   }
 
   // Exception Handling.
@@ -256,17 +258,8 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
   DwarfRangesSection =
       Ctx->getMachOSection("__DWARF", "__debug_ranges", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "debug_range");
-  DwarfMacinfoSection =
-      Ctx->getMachOSection("__DWARF", "__debug_macinfo", MachO::S_ATTR_DEBUG,
-                           SectionKind::getMetadata());
   DwarfDebugInlineSection =
       Ctx->getMachOSection("__DWARF", "__debug_inlined", MachO::S_ATTR_DEBUG,
-                           SectionKind::getMetadata());
-  DwarfCUIndexSection =
-      Ctx->getMachOSection("__DWARF", "__debug_cu_index", MachO::S_ATTR_DEBUG,
-                           SectionKind::getMetadata());
-  DwarfTUIndexSection =
-      Ctx->getMachOSection("__DWARF", "__debug_tu_index", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata());
   StackMapSection = Ctx->getMachOSection("__LLVM_STACKMAPS", "__llvm_stackmaps",
                                          0, SectionKind::getMetadata());
@@ -423,15 +416,16 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
     break;
   }
 
-  unsigned EHSectionType = T.getArch() == Triple::x86_64
-                               ? ELF::SHT_X86_64_UNWIND
-                               : ELF::SHT_PROGBITS;
-
   // Solaris requires different flags for .eh_frame to seemingly every other
   // platform.
-  unsigned EHSectionFlags = ELF::SHF_ALLOC;
-  if (T.isOSSolaris() && T.getArch() != Triple::x86_64)
-    EHSectionFlags |= ELF::SHF_WRITE;
+  EHSectionType = ELF::SHT_PROGBITS;
+  EHSectionFlags = ELF::SHF_ALLOC;
+  if (T.isOSSolaris()) {
+    if (T.getArch() == Triple::x86_64)
+      EHSectionType = ELF::SHT_X86_64_UNWIND;
+    else
+      EHSectionFlags |= ELF::SHF_WRITE;
+  }
 
   // ELF
   BSSSection = Ctx->getELFSection(".bss", ELF::SHT_NOBITS,
@@ -453,8 +447,17 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
   TLSBSSSection = Ctx->getELFSection(
       ".tbss", ELF::SHT_NOBITS, ELF::SHF_ALLOC | ELF::SHF_TLS | ELF::SHF_WRITE);
 
+  DataRelSection = Ctx->getELFSection(".data.rel", ELF::SHT_PROGBITS,
+                                      ELF::SHF_ALLOC | ELF::SHF_WRITE);
+
+  DataRelLocalSection = Ctx->getELFSection(".data.rel.local", ELF::SHT_PROGBITS,
+                                           ELF::SHF_ALLOC | ELF::SHF_WRITE);
+
   DataRelROSection = Ctx->getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_WRITE);
+
+  DataRelROLocalSection = Ctx->getELFSection(
+      ".data.rel.ro.local", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_WRITE);
 
   MergeableConst4Section =
       Ctx->getELFSection(".rodata.cst4", ELF::SHT_PROGBITS,
@@ -508,8 +511,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
       Ctx->getELFSection(".debug_aranges", ELF::SHT_PROGBITS, 0);
   DwarfRangesSection =
       Ctx->getELFSection(".debug_ranges", ELF::SHT_PROGBITS, 0, "debug_range");
-  DwarfMacinfoSection =
-      Ctx->getELFSection(".debug_macinfo", ELF::SHT_PROGBITS, 0);
 
   // DWARF5 Experimental Debug Info
 
@@ -542,28 +543,14 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
   DwarfAddrSection =
       Ctx->getELFSection(".debug_addr", ELF::SHT_PROGBITS, 0, "addr_sec");
 
-  // DWP Sections
-  DwarfCUIndexSection =
-      Ctx->getELFSection(".debug_cu_index", ELF::SHT_PROGBITS, 0);
-  DwarfTUIndexSection =
-      Ctx->getELFSection(".debug_tu_index", ELF::SHT_PROGBITS, 0);
-
   StackMapSection =
       Ctx->getELFSection(".llvm_stackmaps", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
 
   FaultMapSection =
       Ctx->getELFSection(".llvm_faultmaps", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-
-  EHFrameSection =
-      Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
-  EHFrameSection = Ctx->getCOFFSection(
-      ".eh_frame", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                       COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
-      SectionKind::getData());
-
   bool IsWoA = T.getArch() == Triple::arm || T.getArch() == Triple::thumb;
 
   CommDirectiveSupportsAlignment = true;
@@ -582,7 +569,7 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
   DataSection = Ctx->getCOFFSection(
       ".data", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
                    COFF::IMAGE_SCN_MEM_WRITE,
-      SectionKind::getData());
+      SectionKind::getDataRel());
   ReadOnlySection = Ctx->getCOFFSection(
       ".rdata", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getReadOnly());
@@ -600,17 +587,18 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
     StaticCtorSection = Ctx->getCOFFSection(
         ".ctors", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                       COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
-        SectionKind::getData());
+        SectionKind::getDataRel());
     StaticDtorSection = Ctx->getCOFFSection(
         ".dtors", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                       COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
-        SectionKind::getData());
+        SectionKind::getDataRel());
   }
 
   // FIXME: We're emitting LSDA info into a readonly section on COFF, even
   // though it contains relocatable pointers.  In PIC mode, this is probably a
   // big runtime hit for C++ apps.  Either the contents of the LSDA need to be
   // adjusted or this should be a data section.
+  assert(T.isOSWindows() && "Windows is the only supported COFF target");
   if (T.getArch() == Triple::x86_64) {
     // On Windows 64 with SEH, the LSDA is emitted into the .xdata section
     LSDASection = nullptr;
@@ -689,11 +677,6 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
           COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getMetadata(), "debug_range");
-  DwarfMacinfoSection = Ctx->getCOFFSection(
-      ".debug_macinfo",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getMetadata());
   DwarfInfoDWOSection = Ctx->getCOFFSection(
       ".debug_info.dwo",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -734,16 +717,6 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
           COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getMetadata(), "addr_sec");
-  DwarfCUIndexSection = Ctx->getCOFFSection(
-      ".debug_cu_index",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getMetadata());
-  DwarfTUIndexSection = Ctx->getCOFFSection(
-      ".debug_tu_index",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getMetadata());
   DwarfAccelNamesSection = Ctx->getCOFFSection(
       ".apple_names",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -771,11 +744,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
 
   PDataSection = Ctx->getCOFFSection(
       ".pdata", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getData());
+      SectionKind::getDataRel());
 
   XDataSection = Ctx->getCOFFSection(
       ".xdata", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getData());
+      SectionKind::getDataRel());
 
   SXDataSection = Ctx->getCOFFSection(".sxdata", COFF::IMAGE_SCN_LNK_INFO,
                                       SectionKind::getMetadata());
@@ -783,7 +756,7 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
   TLSDataSection = Ctx->getCOFFSection(
       ".tls$", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
                    COFF::IMAGE_SCN_MEM_WRITE,
-      SectionKind::getData());
+      SectionKind::getDataRel());
 
   StackMapSection = Ctx->getCOFFSection(".llvm_stackmaps",
                                         COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -819,26 +792,25 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple,
 
   TT = TheTriple;
 
-  switch (TT.getObjectFormat()) {
-  case Triple::MachO:
+  Triple::ArchType Arch = TT.getArch();
+  // FIXME: Checking for Arch here to filter out bogus triples such as
+  // cellspu-apple-darwin. Perhaps we should fix in Triple?
+  if ((Arch == Triple::x86 || Arch == Triple::x86_64 ||
+       Arch == Triple::arm || Arch == Triple::thumb ||
+       Arch == Triple::aarch64 ||
+       Arch == Triple::ppc || Arch == Triple::ppc64 ||
+       Arch == Triple::UnknownArch) &&
+      TT.isOSBinFormatMachO()) {
     Env = IsMachO;
     initMachOMCObjectFileInfo(TT);
-    break;
-  case Triple::COFF:
-    if (!TT.isOSWindows())
-      report_fatal_error(
-          "Cannot initialize MC for non-Windows COFF object files.");
-
+  } else if ((Arch == Triple::x86 || Arch == Triple::x86_64 ||
+              Arch == Triple::arm || Arch == Triple::thumb) &&
+             (TT.isOSWindows() && TT.getObjectFormat() == Triple::COFF)) {
     Env = IsCOFF;
     initCOFFMCObjectFileInfo(TT);
-    break;
-  case Triple::ELF:
+  } else {
     Env = IsELF;
     initELFMCObjectFileInfo(TT);
-    break;
-  case Triple::UnknownObjectFormat:
-    report_fatal_error("Cannot initialize MC for unknown object file format.");
-    break;
   }
 }
 
@@ -851,4 +823,25 @@ void MCObjectFileInfo::InitMCObjectFileInfo(StringRef TT, Reloc::Model RM,
 MCSection *MCObjectFileInfo::getDwarfTypesSection(uint64_t Hash) const {
   return Ctx->getELFSection(".debug_types", ELF::SHT_PROGBITS, ELF::SHF_GROUP,
                             0, utostr(Hash));
+}
+
+void MCObjectFileInfo::InitEHFrameSection() {
+  if (Env == IsMachO)
+    EHFrameSection =
+      Ctx->getMachOSection("__TEXT", "__eh_frame",
+                           MachO::S_COALESCED |
+                           MachO::S_ATTR_NO_TOC |
+                           MachO::S_ATTR_STRIP_STATIC_SYMS |
+                           MachO::S_ATTR_LIVE_SUPPORT,
+                           SectionKind::getReadOnly());
+  else if (Env == IsELF)
+    EHFrameSection =
+        Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
+  else
+    EHFrameSection =
+      Ctx->getCOFFSection(".eh_frame",
+                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                          COFF::IMAGE_SCN_MEM_READ |
+                          COFF::IMAGE_SCN_MEM_WRITE,
+                          SectionKind::getDataRel());
 }

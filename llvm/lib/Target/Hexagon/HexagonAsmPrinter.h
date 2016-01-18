@@ -42,10 +42,6 @@ namespace llvm {
 
     void EmitInstruction(const MachineInstr *MI) override;
 
-    void HexagonProcessInstruction(MCInst &Inst,
-                                   const MachineInstr &MBB);
-
-
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                          unsigned AsmVariant, const char *ExtraCode,

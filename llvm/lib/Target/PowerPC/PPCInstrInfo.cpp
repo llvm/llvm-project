@@ -744,43 +744,20 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
          "isel is for regular integer GPRs only");
 
   unsigned OpCode = Is64Bit ? PPC::ISEL8 : PPC::ISEL;
-  auto SelectPred = static_cast<PPC::Predicate>(Cond[0].getImm());
+  unsigned SelectPred = Cond[0].getImm();
 
-  unsigned SubIdx = 0;
-  bool SwapOps = false;
+  unsigned SubIdx;
+  bool SwapOps;
   switch (SelectPred) {
-  case PPC::PRED_EQ:
-  case PPC::PRED_EQ_MINUS:
-  case PPC::PRED_EQ_PLUS:
-      SubIdx = PPC::sub_eq; SwapOps = false; break;
-  case PPC::PRED_NE:
-  case PPC::PRED_NE_MINUS:
-  case PPC::PRED_NE_PLUS:
-      SubIdx = PPC::sub_eq; SwapOps = true; break;
-  case PPC::PRED_LT:
-  case PPC::PRED_LT_MINUS:
-  case PPC::PRED_LT_PLUS:
-      SubIdx = PPC::sub_lt; SwapOps = false; break;
-  case PPC::PRED_GE:
-  case PPC::PRED_GE_MINUS:
-  case PPC::PRED_GE_PLUS:
-      SubIdx = PPC::sub_lt; SwapOps = true; break;
-  case PPC::PRED_GT:
-  case PPC::PRED_GT_MINUS:
-  case PPC::PRED_GT_PLUS:
-      SubIdx = PPC::sub_gt; SwapOps = false; break;
-  case PPC::PRED_LE:
-  case PPC::PRED_LE_MINUS:
-  case PPC::PRED_LE_PLUS:
-      SubIdx = PPC::sub_gt; SwapOps = true; break;
-  case PPC::PRED_UN:
-  case PPC::PRED_UN_MINUS:
-  case PPC::PRED_UN_PLUS:
-      SubIdx = PPC::sub_un; SwapOps = false; break;
-  case PPC::PRED_NU:
-  case PPC::PRED_NU_MINUS:
-  case PPC::PRED_NU_PLUS:
-      SubIdx = PPC::sub_un; SwapOps = true; break;
+  default: llvm_unreachable("invalid predicate for isel");
+  case PPC::PRED_EQ: SubIdx = PPC::sub_eq; SwapOps = false; break;
+  case PPC::PRED_NE: SubIdx = PPC::sub_eq; SwapOps = true; break;
+  case PPC::PRED_LT: SubIdx = PPC::sub_lt; SwapOps = false; break;
+  case PPC::PRED_GE: SubIdx = PPC::sub_lt; SwapOps = true; break;
+  case PPC::PRED_GT: SubIdx = PPC::sub_gt; SwapOps = false; break;
+  case PPC::PRED_LE: SubIdx = PPC::sub_gt; SwapOps = true; break;
+  case PPC::PRED_UN: SubIdx = PPC::sub_un; SwapOps = false; break;
+  case PPC::PRED_NU: SubIdx = PPC::sub_un; SwapOps = true; break;
   case PPC::PRED_BIT_SET:   SubIdx = 0; SwapOps = false; break;
   case PPC::PRED_BIT_UNSET: SubIdx = 0; SwapOps = true; break;
   }
@@ -1771,13 +1748,13 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
     MI->setDesc(NewDesc);
 
     if (NewDesc.ImplicitDefs)
-      for (const MCPhysReg *ImpDefs = NewDesc.getImplicitDefs();
+      for (const uint16_t *ImpDefs = NewDesc.getImplicitDefs();
            *ImpDefs; ++ImpDefs)
         if (!MI->definesRegister(*ImpDefs))
           MI->addOperand(*MI->getParent()->getParent(),
                          MachineOperand::CreateReg(*ImpDefs, true, true));
     if (NewDesc.ImplicitUses)
-      for (const MCPhysReg *ImpUses = NewDesc.getImplicitUses();
+      for (const uint16_t *ImpUses = NewDesc.getImplicitUses();
            *ImpUses; ++ImpUses)
         if (!MI->readsRegister(*ImpUses))
           MI->addOperand(*MI->getParent()->getParent(),

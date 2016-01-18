@@ -437,7 +437,7 @@ std::string CppWriter::getCppName(const Value* val) {
 
   if (const GlobalVariable* GV = dyn_cast<GlobalVariable>(val)) {
     name = std::string("gvar_") +
-      getTypePrefix(GV->getValueType());
+      getTypePrefix(GV->getType()->getElementType());
   } else if (isa<Function>(val)) {
     name = std::string("func_");
   } else if (const Constant* C = dyn_cast<Constant>(val)) {
@@ -997,13 +997,13 @@ void CppWriter::printVariableHead(const GlobalVariable *GV) {
   if (is_inline) {
     Out << " = mod->getGlobalVariable(mod->getContext(), ";
     printEscapedString(GV->getName());
-    Out << ", " << getCppName(GV->getValueType()) << ",true)";
+    Out << ", " << getCppName(GV->getType()->getElementType()) << ",true)";
     nl(Out) << "if (!" << getCppName(GV) << ") {";
     in(); nl(Out) << getCppName(GV);
   }
   Out << " = new GlobalVariable(/*Module=*/*mod, ";
   nl(Out) << "/*Type=*/";
-  printCppName(GV->getValueType());
+  printCppName(GV->getType()->getElementType());
   Out << ",";
   nl(Out) << "/*isConstant=*/" << (GV->isConstant()?"true":"false");
   Out << ",";

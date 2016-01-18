@@ -19,7 +19,6 @@
 #include "clang/AST/Comment.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
@@ -661,7 +660,8 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                        nullptr,
                          TemplateParameterList::Create(*this, SourceLocation(),
                                                        SourceLocation(),
-                                                       CanonParams,
+                                                       CanonParams.data(),
+                                                       CanonParams.size(),
                                                        SourceLocation()));
 
   // Get the new insert position for the node we care about.
@@ -761,8 +761,10 @@ ASTContext::~ASTContext() {
   ReleaseDeclContextMaps();
 
   // Call all of the deallocation functions on all of their targets.
-  for (auto &Pair : Deallocations)
-    (Pair.first)(Pair.second);
+  for (DeallocationMap::const_iterator I = Deallocations.begin(),
+           E = Deallocations.end(); I != E; ++I)
+    for (unsigned J = 0, N = I->second.size(); J != N; ++J)
+      (I->first)((I->second)[J]);
 
   // ASTRecordLayout objects in ASTRecordLayouts must always be destroyed
   // because they can contain DenseMaps.
@@ -811,7 +813,7 @@ void ASTContext::ReleaseParentMapEntries() {
 }
 
 void ASTContext::AddDeallocation(void (*Callback)(void*), void *Data) {
-  Deallocations.push_back({Callback, Data});
+  Deallocations[Callback].push_back(Data);
 }
 
 void
@@ -1480,7 +1482,7 @@ static getConstantArrayInfoInChars(const ASTContext &Context,
   unsigned Align = EltInfo.second.getQuantity();
   if (!Context.getTargetInfo().getCXXABI().isMicrosoft() ||
       Context.getTargetInfo().getPointerWidth(0) == 64)
-    Width = llvm::alignTo(Width, Align);
+    Width = llvm::RoundUpToAlignment(Width, Align);
   return std::make_pair(CharUnits::fromQuantity(Width),
                         CharUnits::fromQuantity(Align));
 }
@@ -1564,7 +1566,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = EltInfo.Align;
     if (!getTargetInfo().getCXXABI().isMicrosoft() ||
         getTargetInfo().getPointerWidth(0) == 64)
-      Width = llvm::alignTo(Width, Align);
+      Width = llvm::RoundUpToAlignment(Width, Align);
     break;
   }
   case Type::ExtVector:
@@ -1577,7 +1579,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     // This happens for non-power-of-2 length vectors.
     if (Align & (Align-1)) {
       Align = llvm::NextPowerOf2(Align);
-      Width = llvm::alignTo(Width, Align);
+      Width = llvm::RoundUpToAlignment(Width, Align);
     }
     // Adjust the alignment based on the target max.
     uint64_t TargetVectorAlign = Target->getMaxVectorAlign();
@@ -1836,13 +1838,6 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = static_cast<unsigned>(Width);
     }
   }
-  break;
-
-  case Type::Pipe: {
-    TypeInfo Info = getTypeInfo(cast<PipeType>(T)->getElementType());
-    Width = Info.Width;
-    Align = Info.Align;
-  }
 
   }
 
@@ -2068,17 +2063,6 @@ void ASTContext::setObjCImplementation(ObjCCategoryDecl *CatD,
                            ObjCCategoryImplDecl *ImplD) {
   assert(CatD && ImplD && "Passed null params");
   ObjCImpls[CatD] = ImplD;
-}
-
-const ObjCMethodDecl *
-ASTContext::getObjCMethodRedeclaration(const ObjCMethodDecl *MD) const {
-  return ObjCMethodRedecls.lookup(MD);
-}
-
-void ASTContext::setObjCMethodRedeclaration(const ObjCMethodDecl *MD,
-                                            const ObjCMethodDecl *Redecl) {
-  assert(!getObjCMethodRedeclaration(MD) && "MD already has a redeclaration");
-  ObjCMethodRedecls[MD] = Redecl;
 }
 
 const ObjCInterfaceDecl *ASTContext::getObjContainingInterface(
@@ -2670,7 +2654,6 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::FunctionProto:
   case Type::BlockPointer:
   case Type::MemberPointer:
-  case Type::Pipe:
     return type;
 
   // These types can be variably-modified.  All these modifications
@@ -3123,32 +3106,6 @@ ASTContext::getFunctionType(QualType ResultTy, ArrayRef<QualType> ArgArray,
   Types.push_back(FTP);
   FunctionProtoTypes.InsertNode(FTP, InsertPos);
   return QualType(FTP, 0);
-}
-
-/// Return pipe type for the specified type.
-QualType ASTContext::getPipeType(QualType T) const {
-  llvm::FoldingSetNodeID ID;
-  PipeType::Profile(ID, T);
-
-  void *InsertPos = 0;
-  if (PipeType *PT = PipeTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(PT, 0);
-
-  // If the pipe element type isn't canonical, this won't be a canonical type
-  // either, so fill in the canonical type field.
-  QualType Canonical;
-  if (!T.isCanonical()) {
-    Canonical = getPipeType(getCanonicalType(T));
-
-    // Get the new insert position for the node we care about.
-    PipeType *NewIP = PipeTypes.FindNodeOrInsertPos(ID, InsertPos);
-    assert(!NewIP && "Shouldn't be in the map!");
-    (void)NewIP;
-  }
-  PipeType *New = new (*this, TypeAlignment) PipeType(T, Canonical);
-  Types.push_back(New);
-  PipeTypes.InsertNode(New, InsertPos);
-  return QualType(New, 0);
 }
 
 #ifndef NDEBUG
@@ -3692,13 +3649,14 @@ static int CmpProtocolNames(ObjCProtocolDecl *const *LHS,
   return DeclarationName::compare((*LHS)->getDeclName(), (*RHS)->getDeclName());
 }
 
-static bool areSortedAndUniqued(ArrayRef<ObjCProtocolDecl *> Protocols) {
-  if (Protocols.empty()) return true;
+static bool areSortedAndUniqued(ObjCProtocolDecl * const *Protocols,
+                                unsigned NumProtocols) {
+  if (NumProtocols == 0) return true;
 
   if (Protocols[0]->getCanonicalDecl() != Protocols[0])
     return false;
   
-  for (unsigned i = 1; i != Protocols.size(); ++i)
+  for (unsigned i = 1; i != NumProtocols; ++i)
     if (CmpProtocolNames(&Protocols[i - 1], &Protocols[i]) >= 0 ||
         Protocols[i]->getCanonicalDecl() != Protocols[i])
       return false;
@@ -3763,7 +3721,8 @@ QualType ASTContext::getObjCObjectType(
                                           [&](QualType type) {
                                             return type.isCanonical();
                                           });
-  bool protocolsSorted = areSortedAndUniqued(protocols);
+  bool protocolsSorted = areSortedAndUniqued(protocols.data(),
+                                             protocols.size());
   if (!typeArgsAreCanonical || !protocolsSorted || !baseType.isCanonical()) {
     // Determine the canonical type arguments.
     ArrayRef<QualType> canonTypeArgs;
@@ -4024,20 +3983,20 @@ QualType ASTContext::getUnaryTransformType(QualType BaseType,
 /// getAutoType - Return the uniqued reference to the 'auto' type which has been
 /// deduced to the given type, or to the canonical undeduced 'auto' type, or the
 /// canonical deduced-but-dependent 'auto' type.
-QualType ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
+QualType ASTContext::getAutoType(QualType DeducedType, bool IsDecltypeAuto,
                                  bool IsDependent) const {
-  if (DeducedType.isNull() && Keyword == AutoTypeKeyword::Auto && !IsDependent)
+  if (DeducedType.isNull() && !IsDecltypeAuto && !IsDependent)
     return getAutoDeductType();
 
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  AutoType::Profile(ID, DeducedType, Keyword, IsDependent);
+  AutoType::Profile(ID, DeducedType, IsDecltypeAuto, IsDependent);
   if (AutoType *AT = AutoTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(AT, 0);
 
   AutoType *AT = new (*this, TypeAlignment) AutoType(DeducedType,
-                                                     Keyword,
+                                                     IsDecltypeAuto,
                                                      IsDependent);
   Types.push_back(AT);
   if (InsertPos)
@@ -4077,7 +4036,7 @@ QualType ASTContext::getAtomicType(QualType T) const {
 QualType ASTContext::getAutoDeductType() const {
   if (AutoDeductTy.isNull())
     AutoDeductTy = QualType(
-      new (*this, TypeAlignment) AutoType(QualType(), AutoTypeKeyword::Auto,
+      new (*this, TypeAlignment) AutoType(QualType(), /*decltype(auto)*/false,
                                           /*dependent*/false),
       0);
   return AutoDeductTy;
@@ -5891,7 +5850,6 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
   case Type::Auto:
     return;
 
-  case Type::Pipe:
 #define ABSTRACT_TYPE(KIND, BASE)
 #define TYPE(KIND, BASE)
 #define DEPENDENT_TYPE(KIND, BASE) \
@@ -5913,7 +5871,7 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
                                                  QualType *NotEncodedT) const {
   assert(RDecl && "Expected non-null RecordDecl");
   assert(!RDecl->isUnion() && "Should not be called for unions");
-  if (!RDecl->getDefinition() || RDecl->getDefinition()->isInvalidDecl())
+  if (!RDecl->getDefinition())
     return;
 
   CXXRecordDecl *CXXRec = dyn_cast<CXXRecordDecl>(RDecl);
@@ -7827,24 +7785,6 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
 
     return QualType();
   }
-  case Type::Pipe:
-  {
-    // Merge two pointer types, while trying to preserve typedef info
-    QualType LHSValue = LHS->getAs<PipeType>()->getElementType();
-    QualType RHSValue = RHS->getAs<PipeType>()->getElementType();
-    if (Unqualified) {
-      LHSValue = LHSValue.getUnqualifiedType();
-      RHSValue = RHSValue.getUnqualifiedType();
-    }
-    QualType ResultType = mergeTypes(LHSValue, RHSValue, false,
-                                     Unqualified);
-    if (ResultType.isNull()) return QualType();
-    if (getCanonicalType(LHSValue) == getCanonicalType(ResultType))
-      return LHS;
-    if (getCanonicalType(RHSValue) == getCanonicalType(ResultType))
-      return RHS;
-    return getPipeType(ResultType);
-  }
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -7866,10 +7806,6 @@ bool ASTContext::FunctionTypesMatchOnNSConsumedAttrs(
         return false;
     }
   return true;
-}
-
-void ASTContext::ResetObjCLayout(const ObjCContainerDecl *CD) {
-  ObjCLayouts[CD] = nullptr;
 }
 
 /// mergeObjCGCQualifiers - This routine merges ObjC's GC attribute of 'LHS' and
@@ -8793,6 +8729,7 @@ createDynTypedNode(const NestedNameSpecifierLoc &Node) {
   ///
   /// FIXME: Currently only builds up the map using \c Stmt and \c Decl nodes.
   class ParentMapASTVisitor : public RecursiveASTVisitor<ParentMapASTVisitor> {
+
   public:
     /// \brief Builds and returns the translation unit's parent map.
     ///
@@ -8819,11 +8756,15 @@ createDynTypedNode(const NestedNameSpecifierLoc &Node) {
     bool shouldVisitImplicitCode() const {
       return true;
     }
+    // Disables data recursion. We intercept Traverse* methods in the RAV, which
+    // are not triggered during data recursion.
+    bool shouldUseDataRecursionFor(clang::Stmt *S) const {
+      return false;
+    }
 
-    template <typename T, typename MapNodeTy, typename BaseTraverseFn,
-              typename MapTy>
+    template <typename T, typename MapNodeTy, typename MapTy>
     bool TraverseNode(T Node, MapNodeTy MapNode,
-                      BaseTraverseFn BaseTraverse, MapTy *Parents) {
+                      bool (VisitorBase::*traverse)(T), MapTy *Parents) {
       if (!Node)
         return true;
       if (ParentStack.size() > 0) {
@@ -8871,37 +8812,31 @@ createDynTypedNode(const NestedNameSpecifierLoc &Node) {
         }
       }
       ParentStack.push_back(createDynTypedNode(Node));
-      bool Result = BaseTraverse();
+      bool Result = (this ->* traverse) (Node);
       ParentStack.pop_back();
       return Result;
     }
 
     bool TraverseDecl(Decl *DeclNode) {
-      return TraverseNode(DeclNode, DeclNode,
-                          [&] { return VisitorBase::TraverseDecl(DeclNode); },
+      return TraverseNode(DeclNode, DeclNode, &VisitorBase::TraverseDecl,
                           Parents);
     }
 
     bool TraverseStmt(Stmt *StmtNode) {
-      return TraverseNode(StmtNode, StmtNode,
-                          [&] { return VisitorBase::TraverseStmt(StmtNode); },
+      return TraverseNode(StmtNode, StmtNode, &VisitorBase::TraverseStmt,
                           Parents);
     }
 
     bool TraverseTypeLoc(TypeLoc TypeLocNode) {
-      return TraverseNode(
-          TypeLocNode, ast_type_traits::DynTypedNode::create(TypeLocNode),
-          [&] { return VisitorBase::TraverseTypeLoc(TypeLocNode); },
-          OtherParents);
+      return TraverseNode(TypeLocNode,
+                          ast_type_traits::DynTypedNode::create(TypeLocNode),
+                          &VisitorBase::TraverseTypeLoc, OtherParents);
     }
 
     bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) {
       return TraverseNode(
           NNSLocNode, ast_type_traits::DynTypedNode::create(NNSLocNode),
-          [&] {
-            return VisitorBase::TraverseNestedNameSpecifierLoc(NNSLocNode);
-          },
-          OtherParents);
+          &VisitorBase::TraverseNestedNameSpecifierLoc, OtherParents);
     }
 
     ASTContext::ParentMapPointers *Parents;

@@ -27,7 +27,6 @@
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
-using namespace llvm::codeview;
 
 namespace {
 template <class T>
@@ -58,10 +57,10 @@ void FunctionDumper::start(const PDBSymbolTypeFunctionSig &Symbol,
       Symbol.getSession().getConcreteSymbolById<PDBSymbolTypeUDT>(
           ClassParentId);
 
-  CallingConvention CC = Symbol.getCallingConvention();
+  PDB_CallingConv CC = Symbol.getCallingConvention();
   bool ShouldDumpCallingConvention = true;
-  if ((ClassParent && CC == CallingConvention::ThisCall) ||
-      (!ClassParent && CC == CallingConvention::NearStdCall)) {
+  if ((ClassParent && CC == PDB_CallingConv::Thiscall) ||
+      (!ClassParent && CC == PDB_CallingConv::NearStdcall)) {
     ShouldDumpCallingConvention = false;
   }
 
@@ -153,12 +152,12 @@ void FunctionDumper::start(const PDBSymbolFunc &Symbol, PointerType Pointer) {
   Printer << " ";
 
   auto ClassParent = Symbol.getClassParent();
-  CallingConvention CC = Signature->getCallingConvention();
+  PDB_CallingConv CC = Signature->getCallingConvention();
   if (Pointer != FunctionDumper::PointerType::None)
     Printer << "(";
 
-  if ((ClassParent && CC != CallingConvention::ThisCall) ||
-      (!ClassParent && CC != CallingConvention::NearStdCall)) {
+  if ((ClassParent && CC != PDB_CallingConv::Thiscall) ||
+      (!ClassParent && CC != PDB_CallingConv::NearStdcall)) {
     WithColor(Printer, PDB_ColorItem::Keyword).get()
         << Signature->getCallingConvention() << " ";
   }

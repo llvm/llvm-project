@@ -83,7 +83,7 @@ class TargetLoweringBase {
 public:
   /// This enum indicates whether operations are valid for a target, and if not,
   /// what action should be used to make them valid.
-  enum LegalizeAction : uint8_t {
+  enum LegalizeAction {
     Legal,      // The target natively supports this operation.
     Promote,    // This operation should be executed in a larger type.
     Expand,     // Try to expand this to other ops, otherwise use a libcall.
@@ -93,12 +93,11 @@ public:
 
   /// This enum indicates whether a types are legal for a target, and if not,
   /// what action should be used to make them valid.
-  enum LegalizeTypeAction : uint8_t {
+  enum LegalizeTypeAction {
     TypeLegal,           // The target natively supports this type.
     TypePromoteInteger,  // Replace this integer with a larger one.
     TypeExpandInteger,   // Split this integer into two of half the size.
-    TypeSoftenFloat,     // Convert this float to a same size integer type,
-                         // if an operation is not supported in target HW.
+    TypeSoftenFloat,     // Convert this float to a same size integer type.
     TypeExpandFloat,     // Split this float into two of half the size.
     TypeScalarizeVector, // Replace this one-element vector with its element.
     TypeSplitVector,     // Split this vector into two of half the size.
@@ -131,12 +130,10 @@ public:
   /// support for these atomic instructions, and also have different options
   /// w.r.t. what they should expand to.
   enum class AtomicExpansionKind {
-    None,    // Don't expand the instruction.
-    LLSC,    // Expand the instruction into loadlinked/storeconditional; used
-             // by ARM/AArch64.
-    LLOnly,  // Expand the (load) instruction into just a load-linked, which has
-             // greater atomic guarantees than a normal load.
-    CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
+    None,      // Don't expand the instruction.
+    LLSC,      // Expand the instruction into loadlinked/storeconditional; used
+               // by ARM/AArch64.
+    CmpXChg,   // Expand the instruction into cmpxchg; used by at least X86.
   };
 
   static ISD::NodeType getExtendForContent(BooleanContent Content) {
@@ -413,20 +410,20 @@ public:
   class ValueTypeActionImpl {
     /// ValueTypeActions - For each value type, keep a LegalizeTypeAction enum
     /// that indicates how instruction selection should deal with the type.
-    LegalizeTypeAction ValueTypeActions[MVT::LAST_VALUETYPE];
+    uint8_t ValueTypeActions[MVT::LAST_VALUETYPE];
 
   public:
     ValueTypeActionImpl() {
-      std::fill(std::begin(ValueTypeActions), std::end(ValueTypeActions),
-                TypeLegal);
+      std::fill(std::begin(ValueTypeActions), std::end(ValueTypeActions), 0);
     }
 
     LegalizeTypeAction getTypeAction(MVT VT) const {
-      return ValueTypeActions[VT.SimpleTy];
+      return (LegalizeTypeAction)ValueTypeActions[VT.SimpleTy];
     }
 
     void setTypeAction(MVT VT, LegalizeTypeAction Action) {
-      ValueTypeActions[VT.SimpleTy] = Action;
+      unsigned I = VT.SimpleTy;
+      ValueTypeActions[I] = Action;
     }
   };
 
@@ -550,7 +547,8 @@ public:
     // If a target-specific SDNode requires legalization, require the target
     // to provide custom legalization for it.
     if (Op > array_lengthof(OpActions[0])) return Custom;
-    return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
+    unsigned I = (unsigned) VT.getSimpleVT().SimpleTy;
+    return (LegalizeAction)OpActions[I][Op];
   }
 
   /// Return true if the specified operation is legal on this target or can be
@@ -594,7 +592,7 @@ public:
     unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::LAST_VALUETYPE &&
            MemI < MVT::LAST_VALUETYPE && "Table isn't big enough!");
-    return LoadExtActions[ValI][MemI][ExtType];
+    return (LegalizeAction)LoadExtActions[ValI][MemI][ExtType];
   }
 
   /// Return true if the specified load with extension is legal on this target.
@@ -620,7 +618,7 @@ public:
     unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
     assert(ValI < MVT::LAST_VALUETYPE && MemI < MVT::LAST_VALUETYPE &&
            "Table isn't big enough!");
-    return TruncStoreActions[ValI][MemI];
+    return (LegalizeAction)TruncStoreActions[ValI][MemI];
   }
 
   /// Return true if the specified store with truncation is legal on this
@@ -835,10 +833,6 @@ public:
     return TargetDAGCombineArray[NT >> 3] & (1 << (NT&7));
   }
 
-  unsigned getGatherAllAliasesMaxDepth() const {
-    return GatherAllAliasesMaxDepth;
-  }
-
   /// \brief Get maximum # of store operations permitted for llvm.memset
   ///
   /// This function returns the maximum number of store operations permitted
@@ -945,19 +939,15 @@ public:
   }
 
   /// If a physical register, this returns the register that receives the
-  /// exception address on entry to an EH pad.
-  virtual unsigned
-  getExceptionPointerRegister(const Constant *PersonalityFn) const {
-    // 0 is guaranteed to be the NoRegister value on all targets
-    return 0;
+  /// exception address on entry to a landing pad.
+  unsigned getExceptionPointerRegister() const {
+    return ExceptionPointerRegister;
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
-  virtual unsigned
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const {
-    // 0 is guaranteed to be the NoRegister value on all targets
-    return 0;
+  unsigned getExceptionSelectorRegister() const {
+    return ExceptionSelectorRegister;
   }
 
   /// Returns the target's jmp_buf size in bytes (if never set, the default is
@@ -1238,6 +1228,18 @@ protected:
     StackPointerRegisterToSaveRestore = R;
   }
 
+  /// If set to a physical register, this sets the register that receives the
+  /// exception address on entry to a landing pad.
+  void setExceptionPointerRegister(unsigned R) {
+    ExceptionPointerRegister = R;
+  }
+
+  /// If set to a physical register, this sets the register that receives the
+  /// exception typeid on entry to a landing pad.
+  void setExceptionSelectorRegister(unsigned R) {
+    ExceptionSelectorRegister = R;
+  }
+
   /// Tells the code generator not to expand operations into sequences that use
   /// the select operations if possible.
   void setSelectIsExpensive(bool isExpensive = true) {
@@ -1292,7 +1294,7 @@ protected:
 
   /// Remove all register classes.
   void clearRegisterClasses() {
-    std::fill(std::begin(RegClassForVT), std::end(RegClassForVT), nullptr);
+    memset(RegClassForVT, 0,MVT::LAST_VALUETYPE * sizeof(TargetRegisterClass*));
 
     AvailableRegClasses.clear();
   }
@@ -1315,7 +1317,7 @@ protected:
   void setOperationAction(unsigned Op, MVT VT,
                           LegalizeAction Action) {
     assert(Op < array_lengthof(OpActions[0]) && "Table isn't big enough!");
-    OpActions[(unsigned)VT.SimpleTy][Op] = Action;
+    OpActions[(unsigned)VT.SimpleTy][Op] = (uint8_t)Action;
   }
 
   /// Indicate that the specified load with extension does not work with the
@@ -1324,7 +1326,7 @@ protected:
                         LegalizeAction Action) {
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
            MemVT.isValid() && "Table isn't big enough!");
-    LoadExtActions[(unsigned)ValVT.SimpleTy][MemVT.SimpleTy][ExtType] = Action;
+    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy][ExtType] = (uint8_t)Action;
   }
 
   /// Indicate that the specified truncating store does not work with the
@@ -1332,7 +1334,7 @@ protected:
   void setTruncStoreAction(MVT ValVT, MVT MemVT,
                            LegalizeAction Action) {
     assert(ValVT.isValid() && MemVT.isValid() && "Table isn't big enough!");
-    TruncStoreActions[(unsigned)ValVT.SimpleTy][MemVT.SimpleTy] = Action;
+    TruncStoreActions[ValVT.SimpleTy][MemVT.SimpleTy] = (uint8_t)Action;
   }
 
   /// Indicate that the specified indexed load does or does not work with the
@@ -1854,6 +1856,14 @@ private:
   /// llvm.savestack/llvm.restorestack should save and restore.
   unsigned StackPointerRegisterToSaveRestore;
 
+  /// If set to a physical register, this specifies the register that receives
+  /// the exception address on entry to a landing pad.
+  unsigned ExceptionPointerRegister;
+
+  /// If set to a physical register, this specifies the register that receives
+  /// the exception typeid on entry to a landing pad.
+  unsigned ExceptionSelectorRegister;
+
   /// This indicates the default register class to use for each ValueType the
   /// target supports natively.
   const TargetRegisterClass *RegClassForVT[MVT::LAST_VALUETYPE];
@@ -1885,17 +1895,17 @@ private:
   /// operations are Legal (aka, supported natively by the target), but
   /// operations that are not should be described.  Note that operations on
   /// non-legal value types are not described here.
-  LegalizeAction OpActions[MVT::LAST_VALUETYPE][ISD::BUILTIN_OP_END];
+  uint8_t OpActions[MVT::LAST_VALUETYPE][ISD::BUILTIN_OP_END];
 
   /// For each load extension type and each value type, keep a LegalizeAction
   /// that indicates how instruction selection should deal with a load of a
   /// specific value type and extension type.
-  LegalizeAction LoadExtActions[MVT::LAST_VALUETYPE][MVT::LAST_VALUETYPE]
-                               [ISD::LAST_LOADEXT_TYPE];
+  uint8_t LoadExtActions[MVT::LAST_VALUETYPE][MVT::LAST_VALUETYPE]
+                        [ISD::LAST_LOADEXT_TYPE];
 
   /// For each value type pair keep a LegalizeAction that indicates whether a
   /// truncating store of a specific value type and truncating type is legal.
-  LegalizeAction TruncStoreActions[MVT::LAST_VALUETYPE][MVT::LAST_VALUETYPE];
+  uint8_t TruncStoreActions[MVT::LAST_VALUETYPE][MVT::LAST_VALUETYPE];
 
   /// For each indexed mode and each value type, keep a pair of LegalizeAction
   /// that indicates how instruction selection should deal with the load /
@@ -1913,7 +1923,6 @@ private:
   /// up the MVT::LAST_VALUETYPE value to the next multiple of 8.
   uint32_t CondCodeActions[ISD::SETCC_INVALID][(MVT::LAST_VALUETYPE + 7) / 8];
 
-protected:
   ValueTypeActionImpl ValueTypeActions;
 
 private:
@@ -1952,12 +1961,6 @@ protected:
   /// \pre \p I is a sign, zero, or fp extension and
   ///      is[Z|FP]ExtFree of the related types is not true.
   virtual bool isExtFreeImpl(const Instruction *I) const { return false; }
-
-  /// Depth that GatherAllAliases should should continue looking for chain
-  /// dependencies when trying to find a more preferrable chain. As an
-  /// approximation, this should be more than the number of consecutive stores
-  /// expected to be merged.
-  unsigned GatherAllAliasesMaxDepth;
 
   /// \brief Specify maximum number of store instructions per memset call.
   ///
@@ -2263,35 +2266,6 @@ public:
     return false;
   }
 
-  /// Return true if the target supports that a subset of CSRs for the given
-  /// machine function is handled explicitly via copies.
-  virtual bool supportSplitCSR(MachineFunction *MF) const {
-    return false;
-  }
-
-  /// Return true if the MachineFunction contains a COPY which would imply
-  /// HasCopyImplyingStackAdjustment.
-  virtual bool hasCopyImplyingStackAdjustment(MachineFunction *MF) const {
-    return false;
-  }
-
-  /// Perform necessary initialization to handle a subset of CSRs explicitly
-  /// via copies. This function is called at the beginning of instruction
-  /// selection.
-  virtual void initializeSplitCSR(MachineBasicBlock *Entry) const {
-    llvm_unreachable("Not Implemented");
-  }
-
-  /// Insert explicit copies in entry and exit blocks. We copy a subset of
-  /// CSRs to virtual registers in the entry block, and copy them back to
-  /// physical registers in the exit blocks. This function is called at the end
-  /// of instruction selection.
-  virtual void insertCopiesSplitCSR(
-      MachineBasicBlock *Entry,
-      const SmallVectorImpl<MachineBasicBlock *> &Exits) const {
-    llvm_unreachable("Not Implemented");
-  }
-
   //===--------------------------------------------------------------------===//
   // Lowering methods - These methods must be implemented by targets so that
   // the SelectionDAGBuilder code knows how to lower these.
@@ -2458,6 +2432,13 @@ public:
     }
 
   };
+
+  // Mark inreg arguments for lib-calls. For normal calls this is done by
+  // the frontend ABI code.
+  virtual void markInRegArguments(SelectionDAG &DAG, 
+                 TargetLowering::ArgListTy &Args) const {
+    return;
+  }
 
   /// This function lowers an abstract call to a function into an actual call.
   /// This returns a pair of operands.  The first element is the return value

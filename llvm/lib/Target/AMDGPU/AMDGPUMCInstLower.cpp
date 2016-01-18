@@ -61,7 +61,7 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
       MCOp = MCOperand::createImm(MO.getImm());
       break;
     case MachineOperand::MO_Register:
-      MCOp = MCOperand::createReg(AMDGPU::getMCReg(MO.getReg(), ST));
+      MCOp = MCOperand::createReg(MO.getReg());
       break;
     case MachineOperand::MO_MachineBasicBlock:
       MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(
@@ -71,6 +71,13 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
       const GlobalValue *GV = MO.getGlobal();
       MCSymbol *Sym = Ctx.getOrCreateSymbol(StringRef(GV->getName()));
       MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(Sym, Ctx));
+      break;
+    }
+    case MachineOperand::MO_TargetIndex: {
+      assert(MO.getIndex() == AMDGPU::TI_CONSTDATA_START);
+      MCSymbol *Sym = Ctx.getOrCreateSymbol(StringRef(END_OF_TEXT_LABEL_NAME));
+      const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+      MCOp = MCOperand::createExpr(Expr);
       break;
     }
     case MachineOperand::MO_ExternalSymbol: {

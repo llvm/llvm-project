@@ -56,7 +56,6 @@ public:
   virtual void printCOFFExports() { }
   virtual void printCOFFDirectives() { }
   virtual void printCOFFBaseReloc() { }
-  virtual void printCodeViewDebugInfo() { }
 
   // Only implemented for MachO.
   virtual void printMachODataInCode() { }

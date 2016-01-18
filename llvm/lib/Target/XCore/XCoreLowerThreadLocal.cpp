@@ -189,7 +189,7 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
     return false;
 
   // Create replacement global.
-  ArrayType *NewType = createLoweredType(GV->getValueType());
+  ArrayType *NewType = createLoweredType(GV->getType()->getElementType());
   Constant *NewInitializer = nullptr;
   if (GV->hasInitializer())
     NewInitializer = createLoweredInitializer(NewType,

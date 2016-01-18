@@ -318,11 +318,14 @@ Value *llvm::getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   // Strip off the size of access multiplication if we are still analyzing the
   // pointer.
   if (OrigPtr == Ptr) {
+    const DataLayout &DL = Lp->getHeader()->getModule()->getDataLayout();
+    DL.getTypeAllocSize(PtrTy->getElementType());
     if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(V)) {
       if (M->getOperand(0)->getSCEVType() != scConstant)
         return nullptr;
 
-      const APInt &APStepVal = cast<SCEVConstant>(M->getOperand(0))->getAPInt();
+      const APInt &APStepVal =
+          cast<SCEVConstant>(M->getOperand(0))->getValue()->getValue();
 
       // Huge step value - give up.
       if (APStepVal.getBitWidth() > 64)
@@ -414,11 +417,9 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 /// the input value is (1) a splat constants vector or (2) a sequence
 /// of instructions that broadcast a single value into a vector.
 ///
-const llvm::Value *llvm::getSplatValue(const Value *V) {
-
-  if (auto *C = dyn_cast<Constant>(V))
-    if (isa<VectorType>(V->getType()))
-      return C->getSplatValue();
+llvm::Value *llvm::getSplatValue(Value *V) {
+  if (auto *CV = dyn_cast<ConstantDataVector>(V))
+    return CV->getSplatValue();
 
   auto *ShuffleInst = dyn_cast<ShuffleVectorInst>(V);
   if (!ShuffleInst)
@@ -437,21 +438,21 @@ const llvm::Value *llvm::getSplatValue(const Value *V) {
   return InsertEltInst->getOperand(1);
 }
 
-MapVector<Instruction *, uint64_t>
-llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
-                               const TargetTransformInfo *TTI) {
+DenseMap<Instruction*, uint64_t> llvm::computeMinimumValueSizes(
+  ArrayRef<BasicBlock*> Blocks, DemandedBits &DB,
+  const TargetTransformInfo *TTI) {
 
   // DemandedBits will give us every value's live-out bits. But we want
   // to ensure no extra casts would need to be inserted, so every DAG
   // of connected values must have the same minimum bitwidth.
-  EquivalenceClasses<Value *> ECs;
-  SmallVector<Value *, 16> Worklist;
-  SmallPtrSet<Value *, 4> Roots;
-  SmallPtrSet<Value *, 16> Visited;
-  DenseMap<Value *, uint64_t> DBits;
-  SmallPtrSet<Instruction *, 4> InstructionSet;
-  MapVector<Instruction *, uint64_t> MinBWs;
-
+  EquivalenceClasses<Value*> ECs;
+  SmallVector<Value*,16> Worklist;
+  SmallPtrSet<Value*,4> Roots;
+  SmallPtrSet<Value*,16> Visited;
+  DenseMap<Value*,uint64_t> DBits;
+  SmallPtrSet<Instruction*,4> InstructionSet;
+  DenseMap<Instruction*, uint64_t> MinBWs;
+  
   // Determine the roots. We work bottom-up, from truncs or icmps.
   bool SeenExtFromIllegalType = false;
   for (auto *BB : Blocks)
@@ -461,7 +462,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       if (TTI && (isa<ZExtInst>(&I) || isa<SExtInst>(&I)) &&
           !TTI->isTypeLegal(I.getOperand(0)->getType()))
         SeenExtFromIllegalType = true;
-
+    
       // Only deal with non-vector integers up to 64-bits wide.
       if ((isa<TruncInst>(&I) || isa<ICmpInst>(&I)) &&
           !I.getType()->isVectorTy() &&
@@ -470,7 +471,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
         // don't add it to the worklist.
         if (TTI && isa<TruncInst>(&I) && TTI->isTypeLegal(I.getType()))
           continue;
-
+      
         Worklist.push_back(&I);
         Roots.insert(&I);
       }
@@ -478,12 +479,12 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   // Early exit.
   if (Worklist.empty() || (TTI && !SeenExtFromIllegalType))
     return MinBWs;
-
+  
   // Now proceed breadth-first, unioning values together.
   while (!Worklist.empty()) {
     Value *Val = Worklist.pop_back_val();
     Value *Leader = ECs.getOrInsertLeaderValue(Val);
-
+    
     if (Visited.count(Val))
       continue;
     Visited.insert(Val);
@@ -496,11 +497,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // If we encounter a type that is larger than 64 bits, we can't represent
     // it so bail out.
     if (DB.getDemandedBits(I).getBitWidth() > 64)
-      return MapVector<Instruction *, uint64_t>();
-
+      return DenseMap<Instruction*,uint64_t>();
+    
     uint64_t V = DB.getDemandedBits(I).getZExtValue();
     DBits[Leader] |= V;
-
+    
     // Casts, loads and instructions outside of our range terminate a chain
     // successfully.
     if (isa<SExtInst>(I) || isa<ZExtInst>(I) || isa<LoadInst>(I) ||
@@ -539,7 +540,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     for (auto *U : I.first->users())
       if (U->getType()->isIntegerTy() && DBits.count(U) == 0)
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
-
+  
   for (auto I = ECs.begin(), E = ECs.end(); I != E; ++I) {
     uint64_t LeaderDemandedBits = 0;
     for (auto MI = ECs.member_begin(I), ME = ECs.member_end(); MI != ME; ++MI)

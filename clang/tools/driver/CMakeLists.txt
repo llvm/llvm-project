@@ -54,14 +54,11 @@ add_dependencies(clang clang-headers)
 install(TARGETS clang
   RUNTIME DESTINATION bin
   COMPONENT clang)
-
-if(NOT CMAKE_CONFIGURATION_TYPES)
-  add_custom_target(install-clang
-    DEPENDS clang
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=clang
-            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-endif()
+add_custom_target(install-clang
+  DEPENDS clang
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=clang
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 
 if(NOT CLANG_LINKS_TO_CREATE)
   set(CLANG_LINKS_TO_CREATE clang++ clang-cl)

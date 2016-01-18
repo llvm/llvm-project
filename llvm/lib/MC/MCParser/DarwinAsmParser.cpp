@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
@@ -391,8 +390,9 @@ bool DarwinAsmParser::parseSectionSwitch(const char *Segment,
   // FIXME: Arch specific.
   bool isText = TAA & MachO::S_ATTR_PURE_INSTRUCTIONS;
   getStreamer().SwitchSection(getContext().getMachOSection(
-      Segment, Section, TAA, StubSize,
-      isText ? SectionKind::getText() : SectionKind::getData()));
+                                Segment, Section, TAA, StubSize,
+                                isText ? SectionKind::getText()
+                                       : SectionKind::getDataRel()));
 
   // Set the implicit alignment, if any.
   //
@@ -614,8 +614,9 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
   // FIXME: Arch specific.
   bool isText = Segment == "__TEXT";  // FIXME: Hack.
   getStreamer().SwitchSection(getContext().getMachOSection(
-      Segment, Section, TAA, StubSize,
-      isText ? SectionKind::getText() : SectionKind::getData()));
+                                Segment, Section, TAA, StubSize,
+                                isText ? SectionKind::getText()
+                                : SectionKind::getDataRel()));
   return false;
 }
 
@@ -667,16 +668,17 @@ bool DarwinAsmParser::parseDirectiveSecureLogUnique(StringRef, SMLoc IDLoc) {
                  "environment variable unset.");
 
   // Open the secure log file if we haven't already.
-  raw_fd_ostream *OS = getContext().getSecureLog();
+  raw_ostream *OS = getContext().getSecureLog();
   if (!OS) {
     std::error_code EC;
-    auto NewOS = llvm::make_unique<raw_fd_ostream>(
-        SecureLogFile, EC, sys::fs::F_Append | sys::fs::F_Text);
-    if (EC)
+    OS = new raw_fd_ostream(SecureLogFile, EC,
+                            sys::fs::F_Append | sys::fs::F_Text);
+    if (EC) {
+       delete OS;
        return Error(IDLoc, Twine("can't open secure log file: ") +
                                SecureLogFile + " (" + EC.message() + ")");
-    OS = NewOS.get();
-    getContext().setSecureLog(std::move(NewOS));
+    }
+    getContext().setSecureLog(OS);
   }
 
   // Write the message.

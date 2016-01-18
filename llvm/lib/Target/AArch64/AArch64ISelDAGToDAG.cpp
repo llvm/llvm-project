@@ -687,7 +687,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexed(SDValue N, unsigned Size,
 
     const GlobalValue *GV = GAN->getGlobal();
     unsigned Alignment = GV->getAlignment();
-    Type *Ty = GV->getValueType();
+    Type *Ty = GV->getType()->getElementType();
     if (Alignment == 0 && Ty->isSized())
       Alignment = DL.getABITypeAlignment(Ty);
 
@@ -1974,8 +1974,7 @@ static bool isBitfieldPositioningOp(SelectionDAG *CurDAG, SDValue Op,
 // f = Opc Opd0, Opd1, LSB, MSB ; where Opc is a BFM, LSB = imm, and MSB = imm2
 static bool isBitfieldInsertOpFromOr(SDNode *N, unsigned &Opc, SDValue &Dst,
                                      SDValue &Src, unsigned &ImmR,
-                                     unsigned &ImmS, const APInt &UsefulBits,
-                                     SelectionDAG *CurDAG) {
+                                     unsigned &ImmS, SelectionDAG *CurDAG) {
   assert(N->getOpcode() == ISD::OR && "Expect a OR operation");
 
   // Set Opc
@@ -1989,6 +1988,8 @@ static bool isBitfieldInsertOpFromOr(SDNode *N, unsigned &Opc, SDValue &Dst,
 
   // Because of simplify-demanded-bits in DAGCombine, involved masks may not
   // have the expected shape. Try to undo that.
+  APInt UsefulBits;
+  getUsefulBits(SDValue(N, 0), UsefulBits);
 
   unsigned NumberOfIgnoredLowBits = UsefulBits.countTrailingZeros();
   unsigned NumberOfIgnoredHighBits = UsefulBits.countLeadingZeros();
@@ -2082,18 +2083,11 @@ SDNode *AArch64DAGToDAGISel::SelectBitfieldInsertOp(SDNode *N) {
   unsigned Opc;
   unsigned LSB, MSB;
   SDValue Opd0, Opd1;
-  EVT VT = N->getValueType(0);
-  APInt NUsefulBits;
-  getUsefulBits(SDValue(N, 0), NUsefulBits);
 
-  // If all bits are not useful, just return UNDEF.
-  if (!NUsefulBits)
-    return CurDAG->SelectNodeTo(N, TargetOpcode::IMPLICIT_DEF, VT);
-
-  if (!isBitfieldInsertOpFromOr(N, Opc, Opd0, Opd1, LSB, MSB, NUsefulBits,
-                                CurDAG))
+  if (!isBitfieldInsertOpFromOr(N, Opc, Opd0, Opd1, LSB, MSB, CurDAG))
     return nullptr;
 
+  EVT VT = N->getValueType(0);
   SDLoc dl(N);
   SDValue Ops[] = { Opd0,
                     Opd1,
@@ -2272,7 +2266,7 @@ SDNode *AArch64DAGToDAGISel::SelectWriteRegister(SDNode *N) {
               && "Expected a constant integer expression.");
     uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
     unsigned State;
-    if (Reg == AArch64PState::PAN || Reg == AArch64PState::UAO) {
+    if (Reg == AArch64PState::PAN) {
       assert(Immed < 2 && "Bad imm");
       State = AArch64::MSRpstateImm1;
     } else {

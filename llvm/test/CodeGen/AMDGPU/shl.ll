@@ -53,14 +53,14 @@ define void @shl_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in
   ret void
 }
 
-;EG-LABEL: {{^}}shl_i64:
+;EG: {{^}}shl_i64:
 ;EG: SUB_INT {{\*? *}}[[COMPSH:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHIFT:T[0-9]+\.[XYZW]]]
 ;EG: LSHR {{\* *}}[[TEMP:T[0-9]+\.[XYZW]]], [[OPLO:T[0-9]+\.[XYZW]]], {{[[COMPSH]]|PV.[XYZW]}}
-;EG-DAG: ADD_INT {{\*? *}}[[BIGSH:T[0-9]+\.[XYZW]]], [[SHIFT]], literal
-;EG-DAG: LSHR {{\*? *}}[[OVERF:T[0-9]+\.[XYZW]]], {{[[TEMP]]|PV.[XYZW]}}, 1
+;EG: LSHR {{\*? *}}[[OVERF:T[0-9]+\.[XYZW]]], {{[[TEMP]]|PV.[XYZW]}}, 1
+;EG_CHECK-DAG: ADD_INT {{\*? *}}[[BIGSH:T[0-9]+\.[XYZW]]], [[SHIFT]], literal
 ;EG-DAG: LSHL {{\*? *}}[[HISMTMP:T[0-9]+\.[XYZW]]], [[OPHI:T[0-9]+\.[XYZW]]], [[SHIFT]]
-;EG-DAG: OR_INT {{\*? *}}[[HISM:T[0-9]+\.[XYZW]]], {{[[HISMTMP]]|PV.[XYZW]|PS}}, {{[[OVERF]]|PV.[XYZW]}}
-;EG-DAG: LSHL {{\*? *}}[[LOSM:T[0-9]+\.[XYZW]]], [[OPLO]], {{PS|[[SHIFT]]|PV.[XYZW]}}
+;EG-DAG: OR_INT {{\*? *}}[[HISM:T[0-9]+\.[XYZW]]], {{[[HISMTMP]]|PV.[XYZW]}}, {{[[OVERF]]|PV.[XYZW]}}
+;EG-DAG: LSHL {{\*? *}}[[LOSM:T[0-9]+\.[XYZW]]], [[OPLO]], {{PS|[[SHIFT]]}}
 ;EG-DAG: SETGT_UINT {{\*? *}}[[RESC:T[0-9]+\.[XYZW]]], [[SHIFT]], literal
 ;EG-DAG: CNDE_INT {{\*? *}}[[RESLO:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW]}}
 ;EG-DAG: CNDE_INT {{\*? *}}[[RESHI:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW], .*}}, 0.0
@@ -80,7 +80,7 @@ define void @shl_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   ret void
 }
 
-;EG-LABEL: {{^}}shl_v2i64:
+;EG: {{^}}shl_v2i64:
 ;EG-DAG: SUB_INT {{\*? *}}[[COMPSHA:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHA:T[0-9]+\.[XYZW]]]
 ;EG-DAG: SUB_INT {{\*? *}}[[COMPSHB:T[0-9]+\.[XYZW]]], {{literal.[xy]}}, [[SHB:T[0-9]+\.[XYZW]]]
 ;EG-DAG: LSHR {{\*? *}}[[COMPSHA]]

@@ -55,11 +55,6 @@ static cl::opt<bool> DistributeNonIfConvertible(
              "if-convertible by the loop vectorizer"),
     cl::init(false));
 
-static cl::opt<unsigned> DistributeSCEVCheckThreshold(
-    "loop-distribute-scev-check-threshold", cl::init(8), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed for Loop "
-             "Distribution"));
-
 STATISTIC(NumLoopsDistributed, "Number of loops distributed");
 
 namespace {
@@ -377,7 +372,7 @@ public:
 
   /// \brief This performs the main chunk of the work of cloning the loops for
   /// the partitions.
-  void cloneLoops() {
+  void cloneLoops(Pass *P) {
     BasicBlock *OrigPH = L->getLoopPreheader();
     // At this point the predecessor of the preheader is either the memcheck
     // block or the top part of the original preheader.
@@ -582,7 +577,6 @@ public:
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     LAA = &getAnalysis<LoopAccessAnalysis>();
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
     // Build up a worklist of inner-loops to vectorize. This is necessary as the
     // act of distributing a loop creates new loops and can invalidate iterators
@@ -605,7 +599,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<LoopAccessAnalysis>();
@@ -760,13 +753,6 @@ private:
         return false;
     }
 
-    // Don't distribute the loop if we need too many SCEV run-time checks.
-    const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
-    if (Pred.getComplexity() > DistributeSCEVCheckThreshold) {
-      DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
-      return false;
-    }
-
     DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
     // We're done forming the partitions set up the reverse mapping from
     // instructions to partitions.
@@ -778,25 +764,23 @@ private:
     if (!PH->getSinglePredecessor() || &*PH->begin() != PH->getTerminator())
       SplitBlock(PH, PH->getTerminator(), DT, LI);
 
-    // If we need run-time checks, version the loop now.
+    // If we need run-time checks to disambiguate pointers are run-time, version
+    // the loop now.
     auto PtrToPartition = Partitions.computePartitionSetForPointers(LAI);
     const auto *RtPtrChecking = LAI.getRuntimePointerChecking();
     const auto &AllChecks = RtPtrChecking->getChecks();
     auto Checks = includeOnlyCrossPartitionChecks(AllChecks, PtrToPartition,
                                                   RtPtrChecking);
-
-    if (!Pred.isAlwaysTrue() || !Checks.empty()) {
+    if (!Checks.empty()) {
       DEBUG(dbgs() << "\nPointers:\n");
       DEBUG(LAI.getRuntimePointerChecking()->printChecks(dbgs(), Checks));
-      LoopVersioning LVer(LAI, L, LI, DT, SE, false);
-      LVer.setAliasChecks(std::move(Checks));
-      LVer.setSCEVChecks(LAI.PSE.getUnionPredicate());
+      LoopVersioning LVer(std::move(Checks), LAI, L, LI, DT);
       LVer.versionLoop(DefsUsedOutside);
     }
 
     // Create identical copies of the original loop for each partition and hook
     // them up sequentially.
-    Partitions.cloneLoops();
+    Partitions.cloneLoops(this);
 
     // Now, we remove the instruction from each loop that don't belong to that
     // partition.
@@ -817,7 +801,6 @@ private:
   LoopInfo *LI;
   LoopAccessAnalysis *LAA;
   DominatorTree *DT;
-  ScalarEvolution *SE;
 };
 } // anonymous namespace
 
@@ -828,7 +811,6 @@ INITIALIZE_PASS_BEGIN(LoopDistribute, LDIST_NAME, ldist_name, false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessAnalysis)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(LoopDistribute, LDIST_NAME, ldist_name, false, false)
 
 namespace llvm {

@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+class MCOperand;
+
 class PPCInstPrinter : public MCInstPrinter {
   bool IsDarwin;
 public:

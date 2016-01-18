@@ -536,19 +536,19 @@ bool ScanReachableSymbols::scan(const SymExpr *sym) {
 
   // TODO: should be rewritten using SymExpr::symbol_iterator.
   switch (sym->getKind()) {
-    case SymExpr::SymbolRegionValueKind:
-    case SymExpr::SymbolConjuredKind:
-    case SymExpr::SymbolDerivedKind:
-    case SymExpr::SymbolExtentKind:
-    case SymExpr::SymbolMetadataKind:
+    case SymExpr::RegionValueKind:
+    case SymExpr::ConjuredKind:
+    case SymExpr::DerivedKind:
+    case SymExpr::ExtentKind:
+    case SymExpr::MetadataKind:
       break;
-    case SymExpr::SymbolCastKind:
+    case SymExpr::CastSymbolKind:
       return scan(cast<SymbolCast>(sym)->getOperand());
-    case SymExpr::SymIntExprKind:
+    case SymExpr::SymIntKind:
       return scan(cast<SymIntExpr>(sym)->getLHS());
-    case SymExpr::IntSymExprKind:
+    case SymExpr::IntSymKind:
       return scan(cast<IntSymExpr>(sym)->getRHS());
-    case SymExpr::SymSymExprKind: {
+    case SymExpr::SymSymKind: {
       const SymSymExpr *x = cast<SymSymExpr>(sym);
       return scan(x->getLHS()) && scan(x->getRHS());
     }

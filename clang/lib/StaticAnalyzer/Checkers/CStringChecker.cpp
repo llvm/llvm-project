@@ -948,15 +948,15 @@ bool CStringChecker::SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
   const TypedValueRegion *TVR = dyn_cast<TypedValueRegion>(MR);
 
   switch (MR->getKind()) {
-  case MemRegion::FunctionCodeRegionKind: {
-    const NamedDecl *FD = cast<FunctionCodeRegion>(MR)->getDecl();
+  case MemRegion::FunctionTextRegionKind: {
+    const NamedDecl *FD = cast<FunctionTextRegion>(MR)->getDecl();
     if (FD)
       os << "the address of the function '" << *FD << '\'';
     else
       os << "the address of a function";
     return true;
   }
-  case MemRegion::BlockCodeRegionKind:
+  case MemRegion::BlockTextRegionKind:
     os << "block text";
     return true;
   case MemRegion::BlockDataRegionKind:
@@ -2013,7 +2013,10 @@ bool CStringChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   // properties are held. However, if the user chooses to turn off some of these
   // checks, we ignore the issues and leave the call evaluation to a generic
   // handler.
-  return C.isDifferent();
+  if (!C.isDifferent())
+    return false;
+
+  return true;
 }
 
 void CStringChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {

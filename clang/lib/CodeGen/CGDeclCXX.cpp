@@ -337,7 +337,7 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
     // FIXME: We only need to register one __cxa_thread_atexit function for the
     // entire TU.
     CXXThreadLocalInits.push_back(Fn);
-    CXXThreadLocalInitVars.push_back(D);
+    CXXThreadLocalInitVars.push_back(Addr);
   } else if (PerformInit && ISA) {
     EmitPointerToInitFunc(D, Addr, Fn, ISA);
   } else if (auto *IPA = D->getAttr<InitPriorityAttr>()) {
@@ -518,14 +518,14 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       llvm::Value *GuardVal = Builder.CreateLoad(Guard);
       llvm::Value *Uninit = Builder.CreateIsNull(GuardVal,
                                                  "guard.uninitialized");
-      llvm::BasicBlock *InitBlock = createBasicBlock("init");
-      ExitBlock = createBasicBlock("exit");
-      Builder.CreateCondBr(Uninit, InitBlock, ExitBlock);
-      EmitBlock(InitBlock);
       // Mark as initialized before initializing anything else. If the
       // initializers use previously-initialized thread_local vars, that's
       // probably supposed to be OK, but the standard doesn't say.
       Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(),1), Guard);
+      llvm::BasicBlock *InitBlock = createBasicBlock("init");
+      ExitBlock = createBasicBlock("exit");
+      Builder.CreateCondBr(Uninit, InitBlock, ExitBlock);
+      EmitBlock(InitBlock);
     }
 
     RunCleanupsScope Scope(*this);

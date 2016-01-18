@@ -44,7 +44,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -64,28 +63,10 @@ static cl::opt<unsigned> SampleProfileMaxPropagateIterations(
     "sample-profile-max-propagate-iterations", cl::init(100),
     cl::desc("Maximum number of iterations to go through when propagating "
              "sample block/edge weights through the CFG."));
-static cl::opt<unsigned> SampleProfileRecordCoverage(
-    "sample-profile-check-record-coverage", cl::init(0), cl::value_desc("N"),
-    cl::desc("Emit a warning if less than N% of records in the input profile "
-             "are matched to the IR."));
-static cl::opt<unsigned> SampleProfileSampleCoverage(
-    "sample-profile-check-sample-coverage", cl::init(0), cl::value_desc("N"),
+static cl::opt<unsigned> SampleProfileCoverage(
+    "sample-profile-check-coverage", cl::init(0), cl::value_desc("N"),
     cl::desc("Emit a warning if less than N% of samples in the input profile "
              "are matched to the IR."));
-static cl::opt<double> SampleProfileHotThreshold(
-    "sample-profile-inline-hot-threshold", cl::init(0.1), cl::value_desc("N"),
-    cl::desc("Inlined functions that account for more than N% of all samples "
-             "collected in the parent function, will be inlined again."));
-static cl::opt<double> SampleProfileGlobalHotThreshold(
-    "sample-profile-global-hot-threshold", cl::init(30), cl::value_desc("N"),
-    cl::desc("Top-level functions that account for more than N% of all samples "
-             "collected in the profile, will be marked as hot for the inliner "
-             "to consider."));
-static cl::opt<double> SampleProfileGlobalColdThreshold(
-    "sample-profile-global-cold-threshold", cl::init(0.5), cl::value_desc("N"),
-    cl::desc("Top-level functions that account for less than N% of all samples "
-             "collected in the profile, will be marked as cold for the inliner "
-             "to consider."));
 
 namespace {
 typedef DenseMap<const BasicBlock *, uint64_t> BlockWeightMap;
@@ -107,8 +88,7 @@ public:
 
   SampleProfileLoader(StringRef Name = SampleProfileFile)
       : ModulePass(ID), DT(nullptr), PDT(nullptr), LI(nullptr), Reader(),
-        Samples(nullptr), Filename(Name), ProfileIsValid(false),
-        TotalCollectedSamples(0) {
+        Samples(nullptr), Filename(Name), ProfileIsValid(false) {
     initializeSampleProfileLoaderPass(*PassRegistry::getPassRegistry());
   }
 
@@ -133,7 +113,6 @@ protected:
   const FunctionSamples *findCalleeFunctionSamples(const CallInst &I) const;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   bool inlineHotFunctions(Function &F);
-  bool emitInlineHints(Function &F);
   void printEdgeWeight(raw_ostream &OS, Edge E);
   void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
@@ -198,32 +177,20 @@ protected:
 
   /// \brief Flag indicating whether the profile input loaded successfully.
   bool ProfileIsValid;
-
-  /// \brief Total number of samples collected in this profile.
-  ///
-  /// This is the sum of all the samples collected in all the functions executed
-  /// at runtime.
-  uint64_t TotalCollectedSamples;
 };
 
 class SampleCoverageTracker {
 public:
-  SampleCoverageTracker() : SampleCoverage(), TotalUsedSamples(0) {}
+  SampleCoverageTracker() : SampleCoverage() {}
 
-  bool markSamplesUsed(const FunctionSamples *FS, uint32_t LineOffset,
-                       uint32_t Discriminator, uint64_t Samples);
+  bool markSamplesUsed(const FunctionSamples *Samples, uint32_t LineOffset,
+                       uint32_t Discriminator);
   unsigned computeCoverage(unsigned Used, unsigned Total) const;
-  unsigned countUsedRecords(const FunctionSamples *FS) const;
-  unsigned countBodyRecords(const FunctionSamples *FS) const;
-  uint64_t getTotalUsedSamples() const { return TotalUsedSamples; }
-  uint64_t countBodySamples(const FunctionSamples *FS) const;
-  void clear() {
-    SampleCoverage.clear();
-    TotalUsedSamples = 0;
-  }
+  unsigned countUsedSamples(const FunctionSamples *Samples) const;
+  unsigned countBodySamples(const FunctionSamples *Samples) const;
 
 private:
-  typedef std::map<LineLocation, unsigned> BodySampleCoverageMap;
+  typedef DenseMap<LineLocation, unsigned> BodySampleCoverageMap;
   typedef DenseMap<const FunctionSamples *, BodySampleCoverageMap>
       FunctionSamplesCoverageMap;
 
@@ -237,130 +204,42 @@ private:
   /// another map that counts how many times the sample record at the
   /// given location has been used.
   FunctionSamplesCoverageMap SampleCoverage;
-
-  /// Number of samples used from the profile.
-  ///
-  /// When a sampling record is used for the first time, the samples from
-  /// that record are added to this accumulator.  Coverage is later computed
-  /// based on the total number of samples available in this function and
-  /// its callsites.
-  ///
-  /// Note that this accumulator tracks samples used from a single function
-  /// and all the inlined callsites. Strictly, we should have a map of counters
-  /// keyed by FunctionSamples pointers, but these stats are cleared after
-  /// every function, so we just need to keep a single counter.
-  uint64_t TotalUsedSamples;
 };
 
 SampleCoverageTracker CoverageTracker;
-
-/// Return true if the given callsite is hot wrt to its caller.
-///
-/// Functions that were inlined in the original binary will be represented
-/// in the inline stack in the sample profile. If the profile shows that
-/// the original inline decision was "good" (i.e., the callsite is executed
-/// frequently), then we will recreate the inline decision and apply the
-/// profile from the inlined callsite.
-///
-/// To decide whether an inlined callsite is hot, we compute the fraction
-/// of samples used by the callsite with respect to the total number of samples
-/// collected in the caller.
-///
-/// If that fraction is larger than the default given by
-/// SampleProfileHotThreshold, the callsite will be inlined again.
-bool callsiteIsHot(const FunctionSamples *CallerFS,
-                   const FunctionSamples *CallsiteFS) {
-  if (!CallsiteFS)
-    return false; // The callsite was not inlined in the original binary.
-
-  uint64_t ParentTotalSamples = CallerFS->getTotalSamples();
-  if (ParentTotalSamples == 0)
-    return false; // Avoid division by zero.
-
-  uint64_t CallsiteTotalSamples = CallsiteFS->getTotalSamples();
-  if (CallsiteTotalSamples == 0)
-    return false; // Callsite is trivially cold.
-
-  double PercentSamples =
-      (double)CallsiteTotalSamples / (double)ParentTotalSamples * 100.0;
-  return PercentSamples >= SampleProfileHotThreshold;
-}
-
 }
 
 /// Mark as used the sample record for the given function samples at
 /// (LineOffset, Discriminator).
 ///
 /// \returns true if this is the first time we mark the given record.
-bool SampleCoverageTracker::markSamplesUsed(const FunctionSamples *FS,
+bool SampleCoverageTracker::markSamplesUsed(const FunctionSamples *Samples,
                                             uint32_t LineOffset,
-                                            uint32_t Discriminator,
-                                            uint64_t Samples) {
+                                            uint32_t Discriminator) {
   LineLocation Loc(LineOffset, Discriminator);
-  unsigned &Count = SampleCoverage[FS][Loc];
-  bool FirstTime = (++Count == 1);
-  if (FirstTime)
-    TotalUsedSamples += Samples;
-  return FirstTime;
+  unsigned &Count = SampleCoverage[Samples][Loc];
+  return ++Count == 1;
 }
 
 /// Return the number of sample records that were applied from this profile.
-///
-/// This count does not include records from cold inlined callsites.
 unsigned
-SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS) const {
-  auto I = SampleCoverage.find(FS);
-
-  // The size of the coverage map for FS represents the number of records
-  // that were marked used at least once.
+SampleCoverageTracker::countUsedSamples(const FunctionSamples *Samples) const {
+  auto I = SampleCoverage.find(Samples);
   unsigned Count = (I != SampleCoverage.end()) ? I->second.size() : 0;
-
-  // If there are inlined callsites in this function, count the samples found
-  // in the respective bodies. However, do not bother counting callees with 0
-  // total samples, these are callees that were never invoked at runtime.
-  for (const auto &I : FS->getCallsiteSamples()) {
-    const FunctionSamples *CalleeSamples = &I.second;
-    if (callsiteIsHot(FS, CalleeSamples))
-      Count += countUsedRecords(CalleeSamples);
-  }
-
+  for (const auto &I : Samples->getCallsiteSamples())
+    Count += countUsedSamples(&I.second);
   return Count;
 }
 
 /// Return the number of sample records in the body of this profile.
 ///
-/// This count does not include records from cold inlined callsites.
+/// The count includes all the samples in inlined callees.
 unsigned
-SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS) const {
-  unsigned Count = FS->getBodySamples().size();
-
-  // Only count records in hot callsites.
-  for (const auto &I : FS->getCallsiteSamples()) {
-    const FunctionSamples *CalleeSamples = &I.second;
-    if (callsiteIsHot(FS, CalleeSamples))
-      Count += countBodyRecords(CalleeSamples);
-  }
-
+SampleCoverageTracker::countBodySamples(const FunctionSamples *Samples) const {
+  unsigned Count = Samples->getBodySamples().size();
+  for (const auto &I : Samples->getCallsiteSamples())
+    Count += countBodySamples(&I.second);
   return Count;
-}
-
-/// Return the number of samples collected in the body of this profile.
-///
-/// This count does not include samples from cold inlined callsites.
-uint64_t
-SampleCoverageTracker::countBodySamples(const FunctionSamples *FS) const {
-  uint64_t Total = 0;
-  for (const auto &I : FS->getBodySamples())
-    Total += I.second.getSamples();
-
-  // Only count samples in hot callsites.
-  for (const auto &I : FS->getCallsiteSamples()) {
-    const FunctionSamples *CalleeSamples = &I.second;
-    if (callsiteIsHot(FS, CalleeSamples))
-      Total += countBodySamples(CalleeSamples);
-  }
-
-  return Total;
 }
 
 /// Return the fraction of sample records used in this profile.
@@ -387,7 +266,6 @@ void SampleProfileLoader::clearFunctionData() {
   LI = nullptr;
   Predecessors.clear();
   Successors.clear();
-  CoverageTracker.clear();
 }
 
 /// \brief Returns the offset of lineno \p L to head_lineno \p H
@@ -462,15 +340,13 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
   ErrorOr<uint64_t> R = FS->findSamplesAt(LineOffset, Discriminator);
   if (R) {
     bool FirstMark =
-        CoverageTracker.markSamplesUsed(FS, LineOffset, Discriminator, R.get());
+        CoverageTracker.markSamplesUsed(FS, LineOffset, Discriminator);
     if (FirstMark) {
       const Function *F = Inst.getParent()->getParent();
       LLVMContext &Ctx = F->getContext();
-      emitOptimizationRemark(
-          Ctx, DEBUG_TYPE, *F, DLoc,
-          Twine("Applied ") + Twine(*R) + " samples from profile (offset: " +
-              Twine(LineOffset) +
-              ((Discriminator) ? Twine(".") + Twine(Discriminator) : "") + ")");
+      emitOptimizationRemark(Ctx, DEBUG_TYPE, *F, DLoc,
+                             Twine("Applied ") + Twine(*R) +
+                                 " samples from profile");
     }
     DEBUG(dbgs() << "    " << Lineno << "." << DIL->getDiscriminator() << ":"
                  << Inst << " (line offset: " << Lineno - HeaderLineno << "."
@@ -601,64 +477,6 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return FS;
 }
 
-/// \brief Emit an inline hint if \p F is globally hot or cold.
-///
-/// If \p F consumes a significant fraction of samples (indicated by
-/// SampleProfileGlobalHotThreshold), apply the InlineHint attribute for the
-/// inliner to consider the function hot.
-///
-/// If \p F consumes a small fraction of samples (indicated by
-/// SampleProfileGlobalColdThreshold), apply the Cold attribute for the inliner
-/// to consider the function cold.
-///
-/// FIXME - This setting of inline hints is sub-optimal. Instead of marking a
-/// function globally hot or cold, we should be annotating individual callsites.
-/// This is not currently possible, but work on the inliner will eventually
-/// provide this ability. See http://reviews.llvm.org/D15003 for details and
-/// discussion.
-///
-/// \returns True if either attribute was applied to \p F.
-bool SampleProfileLoader::emitInlineHints(Function &F) {
-  if (TotalCollectedSamples == 0)
-    return false;
-
-  uint64_t FunctionSamples = Samples->getTotalSamples();
-  double SamplesPercent =
-      (double)FunctionSamples / (double)TotalCollectedSamples * 100.0;
-
-  // If the function collected more samples than the hot threshold, mark
-  // it globally hot.
-  if (SamplesPercent >= SampleProfileGlobalHotThreshold) {
-    F.addFnAttr(llvm::Attribute::InlineHint);
-    std::string Msg;
-    raw_string_ostream S(Msg);
-    S << "Applied inline hint to globally hot function '" << F.getName()
-      << "' with " << format("%.2f", SamplesPercent)
-      << "% of samples (threshold: "
-      << format("%.2f", SampleProfileGlobalHotThreshold.getValue()) << "%)";
-    S.flush();
-    emitOptimizationRemark(F.getContext(), DEBUG_TYPE, F, DebugLoc(), Msg);
-    return true;
-  }
-
-  // If the function collected fewer samples than the cold threshold, mark
-  // it globally cold.
-  if (SamplesPercent <= SampleProfileGlobalColdThreshold) {
-    F.addFnAttr(llvm::Attribute::Cold);
-    std::string Msg;
-    raw_string_ostream S(Msg);
-    S << "Applied cold hint to globally cold function '" << F.getName()
-      << "' with " << format("%.2f", SamplesPercent)
-      << "% of samples (threshold: "
-      << format("%.2f", SampleProfileGlobalColdThreshold.getValue()) << "%)";
-    S.flush();
-    emitOptimizationRemark(F.getContext(), DEBUG_TYPE, F, DebugLoc(), Msg);
-    return true;
-  }
-
-  return false;
-}
-
 /// \brief Iteratively inline hot callsites of a function.
 ///
 /// Iteratively traverse all callsites of the function \p F, and find if
@@ -680,8 +498,12 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
     for (auto &BB : F) {
       for (auto &I : BB.getInstList()) {
         CallInst *CI = dyn_cast<CallInst>(&I);
-        if (CI && callsiteIsHot(Samples, findCalleeFunctionSamples(*CI)))
-          CIS.push_back(CI);
+        if (CI) {
+          const FunctionSamples *FS = findCalleeFunctionSamples(*CI);
+          if (FS && FS->getTotalSamples() > 0) {
+            CIS.push_back(CI);
+          }
+        }
       }
     }
     for (auto CI : CIS) {
@@ -1165,8 +987,6 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
   DEBUG(dbgs() << "Line number for the first instruction in " << F.getName()
                << ": " << getFunctionLoc(F) << "\n");
 
-  Changed |= emitInlineHints(F);
-
   Changed |= inlineHotFunctions(F);
 
   // Compute basic block weights.
@@ -1184,11 +1004,11 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
   }
 
   // If coverage checking was requested, compute it now.
-  if (SampleProfileRecordCoverage) {
-    unsigned Used = CoverageTracker.countUsedRecords(Samples);
-    unsigned Total = CoverageTracker.countBodyRecords(Samples);
+  if (SampleProfileCoverage) {
+    unsigned Used = CoverageTracker.countUsedSamples(Samples);
+    unsigned Total = CoverageTracker.countBodySamples(Samples);
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
-    if (Coverage < SampleProfileRecordCoverage) {
+    if (Coverage < SampleProfileCoverage) {
       F.getContext().diagnose(DiagnosticInfoSampleProfile(
           getDISubprogram(&F)->getFilename(), getFunctionLoc(F),
           Twine(Used) + " of " + Twine(Total) + " available profile records (" +
@@ -1197,18 +1017,6 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
     }
   }
 
-  if (SampleProfileSampleCoverage) {
-    uint64_t Used = CoverageTracker.getTotalUsedSamples();
-    uint64_t Total = CoverageTracker.countBodySamples(Samples);
-    unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
-    if (Coverage < SampleProfileSampleCoverage) {
-      F.getContext().diagnose(DiagnosticInfoSampleProfile(
-          getDISubprogram(&F)->getFilename(), getFunctionLoc(F),
-          Twine(Used) + " of " + Twine(Total) + " available profile samples (" +
-              Twine(Coverage) + "%) were applied",
-          DS_Warning));
-    }
-  }
   return Changed;
 }
 
@@ -1243,10 +1051,6 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
 bool SampleProfileLoader::runOnModule(Module &M) {
   if (!ProfileIsValid)
     return false;
-
-  // Compute the total number of samples collected in this profile.
-  for (const auto &I : Reader->getProfiles())
-    TotalCollectedSamples += I.second.getTotalSamples();
 
   bool retval = false;
   for (auto &F : M)

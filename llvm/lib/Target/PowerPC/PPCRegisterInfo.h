@@ -77,7 +77,7 @@ public:
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override;
-  const uint32_t *getNoPreservedMask() const override;
+  const uint32_t *getNoPreservedMask() const;
 
   void adjustStackMapLiveOutMask(uint32_t *Mask) const override;
 
@@ -101,7 +101,6 @@ public:
   }
 
   void lowerDynamicAlloc(MachineBasicBlock::iterator II) const;
-  void lowerDynamicAreaOffset(MachineBasicBlock::iterator II) const;
   void lowerCRSpilling(MachineBasicBlock::iterator II,
                        unsigned FrameIndex) const;
   void lowerCRRestore(MachineBasicBlock::iterator II,

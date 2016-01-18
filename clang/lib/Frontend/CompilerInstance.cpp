@@ -155,6 +155,7 @@ static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
           << DiagOpts->DiagnosticLogFile << EC.message();
     } else {
       FileOS->SetUnbuffered();
+      FileOS->SetUseAtomicWrites(true);
       OS = FileOS.get();
       StreamOwner = std::move(FileOS);
     }
@@ -830,13 +831,13 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   if (getFrontendOpts().ShowStats)
     llvm::EnableStatistics();
 
-  for (const FrontendInputFile &FIF : getFrontendOpts().Inputs) {
+  for (unsigned i = 0, e = getFrontendOpts().Inputs.size(); i != e; ++i) {
     // Reset the ID tables if we are reusing the SourceManager and parsing
     // regular files.
     if (hasSourceManager() && !Act.isModelParsingAction())
       getSourceManager().clearIDTables();
 
-    if (Act.BeginSourceFile(*this, FIF)) {
+    if (Act.BeginSourceFile(*this, getFrontendOpts().Inputs[i])) {
       Act.Execute();
       Act.EndSourceFile();
     }

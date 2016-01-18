@@ -154,39 +154,39 @@ private:
       unsigned JTCasesIndex;
       unsigned BTCasesIndex;
     };
-    BranchProbability Prob;
+    uint32_t Weight;
 
     static CaseCluster range(const ConstantInt *Low, const ConstantInt *High,
-                             MachineBasicBlock *MBB, BranchProbability Prob) {
+                             MachineBasicBlock *MBB, uint32_t Weight) {
       CaseCluster C;
       C.Kind = CC_Range;
       C.Low = Low;
       C.High = High;
       C.MBB = MBB;
-      C.Prob = Prob;
+      C.Weight = Weight;
       return C;
     }
 
     static CaseCluster jumpTable(const ConstantInt *Low,
                                  const ConstantInt *High, unsigned JTCasesIndex,
-                                 BranchProbability Prob) {
+                                 uint32_t Weight) {
       CaseCluster C;
       C.Kind = CC_JumpTable;
       C.Low = Low;
       C.High = High;
       C.JTCasesIndex = JTCasesIndex;
-      C.Prob = Prob;
+      C.Weight = Weight;
       return C;
     }
 
     static CaseCluster bitTests(const ConstantInt *Low, const ConstantInt *High,
-                                unsigned BTCasesIndex, BranchProbability Prob) {
+                                unsigned BTCasesIndex, uint32_t Weight) {
       CaseCluster C;
       C.Kind = CC_BitTests;
       C.Low = Low;
       C.High = High;
       C.BTCasesIndex = BTCasesIndex;
-      C.Prob = Prob;
+      C.Weight = Weight;
       return C;
     }
   };
@@ -198,13 +198,13 @@ private:
     uint64_t Mask;
     MachineBasicBlock* BB;
     unsigned Bits;
-    BranchProbability ExtraProb;
+    uint32_t ExtraWeight;
 
     CaseBits(uint64_t mask, MachineBasicBlock* bb, unsigned bits,
-             BranchProbability Prob):
-      Mask(mask), BB(bb), Bits(bits), ExtraProb(Prob) { }
+             uint32_t Weight):
+      Mask(mask), BB(bb), Bits(bits), ExtraWeight(Weight) { }
 
-    CaseBits() : Mask(0), BB(nullptr), Bits(0) {}
+    CaseBits() : Mask(0), BB(nullptr), Bits(0), ExtraWeight(0) {}
   };
 
   typedef std::vector<CaseBits> CaseBitsVector;
@@ -217,13 +217,13 @@ private:
   /// blocks needed by multi-case switch statements.
   struct CaseBlock {
     CaseBlock(ISD::CondCode cc, const Value *cmplhs, const Value *cmprhs,
-              const Value *cmpmiddle, MachineBasicBlock *truebb,
-              MachineBasicBlock *falsebb, MachineBasicBlock *me,
-              BranchProbability trueprob = BranchProbability::getUnknown(),
-              BranchProbability falseprob = BranchProbability::getUnknown())
-        : CC(cc), CmpLHS(cmplhs), CmpMHS(cmpmiddle), CmpRHS(cmprhs),
-          TrueBB(truebb), FalseBB(falsebb), ThisBB(me), TrueProb(trueprob),
-          FalseProb(falseprob) {}
+              const Value *cmpmiddle,
+              MachineBasicBlock *truebb, MachineBasicBlock *falsebb,
+              MachineBasicBlock *me,
+              uint32_t trueweight = 0, uint32_t falseweight = 0)
+      : CC(cc), CmpLHS(cmplhs), CmpMHS(cmpmiddle), CmpRHS(cmprhs),
+        TrueBB(truebb), FalseBB(falsebb), ThisBB(me),
+        TrueWeight(trueweight), FalseWeight(falseweight) { }
 
     // CC - the condition code to use for the case block's setcc node
     ISD::CondCode CC;
@@ -239,8 +239,8 @@ private:
     // ThisBB - the block into which to emit the code for the setcc and branches
     MachineBasicBlock *ThisBB;
 
-    // TrueProb/FalseProb - branch weights.
-    BranchProbability TrueProb, FalseProb;
+    // TrueWeight/FalseWeight - branch weights.
+    uint32_t TrueWeight, FalseWeight;
   };
 
   struct JumpTable {
@@ -272,12 +272,12 @@ private:
 
   struct BitTestCase {
     BitTestCase(uint64_t M, MachineBasicBlock* T, MachineBasicBlock* Tr,
-                BranchProbability Prob):
-      Mask(M), ThisBB(T), TargetBB(Tr), ExtraProb(Prob) { }
+                uint32_t Weight):
+      Mask(M), ThisBB(T), TargetBB(Tr), ExtraWeight(Weight) { }
     uint64_t Mask;
     MachineBasicBlock *ThisBB;
     MachineBasicBlock *TargetBB;
-    BranchProbability ExtraProb;
+    uint32_t ExtraWeight;
   };
 
   typedef SmallVector<BitTestCase, 3> BitTestInfo;
@@ -285,10 +285,10 @@ private:
   struct BitTestBlock {
     BitTestBlock(APInt F, APInt R, const Value *SV, unsigned Rg, MVT RgVT,
                  bool E, bool CR, MachineBasicBlock *P, MachineBasicBlock *D,
-                 BitTestInfo C, BranchProbability Pr)
+                 BitTestInfo C, uint32_t W)
         : First(F), Range(R), SValue(SV), Reg(Rg), RegVT(RgVT), Emitted(E),
           ContiguousRange(CR), Parent(P), Default(D), Cases(std::move(C)),
-          Prob(Pr) {}
+          Weight(W), DefaultWeight(0) {}
     APInt First;
     APInt Range;
     const Value *SValue;
@@ -299,8 +299,8 @@ private:
     MachineBasicBlock *Parent;
     MachineBasicBlock *Default;
     BitTestInfo Cases;
-    BranchProbability Prob;
-    BranchProbability DefaultProb;
+    uint32_t Weight;
+    uint32_t DefaultWeight;
   };
 
   /// Minimum jump table density, in percent.
@@ -342,7 +342,7 @@ private:
     CaseClusterIt LastCluster;
     const ConstantInt *GE;
     const ConstantInt *LT;
-    BranchProbability DefaultProb;
+    uint32_t DefaultWeight;
   };
   typedef SmallVector<SwitchWorkListItem, 4> SwitchWorkList;
 
@@ -694,13 +694,13 @@ public:
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
-                            Instruction::BinaryOps Opc, BranchProbability TW,
-                            BranchProbability FW);
+                            Instruction::BinaryOps Opc,
+                            uint32_t TW, uint32_t FW);
   void EmitBranchForMergedCondition(const Value *Cond, MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     MachineBasicBlock *CurBB,
                                     MachineBasicBlock *SwitchBB,
-                                    BranchProbability TW, BranchProbability FW);
+                                    uint32_t TW, uint32_t FW);
   bool ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases);
   bool isExportableFromCurrentBlock(const Value *V, const BasicBlock *FromBB);
   void CopyToExportRegsIfNeeded(const Value *V);
@@ -736,18 +736,18 @@ private:
   void visitSwitch(const SwitchInst &I);
   void visitIndirectBr(const IndirectBrInst &I);
   void visitUnreachable(const UnreachableInst &I);
+  void visitCleanupEndPad(const CleanupEndPadInst &I);
   void visitCleanupRet(const CleanupReturnInst &I);
-  void visitCatchSwitch(const CatchSwitchInst &I);
+  void visitCatchEndPad(const CatchEndPadInst &I);
   void visitCatchRet(const CatchReturnInst &I);
   void visitCatchPad(const CatchPadInst &I);
+  void visitTerminatePad(const TerminatePadInst &TPI);
   void visitCleanupPad(const CleanupPadInst &CPI);
 
-  BranchProbability getEdgeProbability(const MachineBasicBlock *Src,
-                                       const MachineBasicBlock *Dst) const;
-  void addSuccessorWithProb(
-      MachineBasicBlock *Src, MachineBasicBlock *Dst,
-      BranchProbability Prob = BranchProbability::getUnknown());
-
+  uint32_t getEdgeWeight(const MachineBasicBlock *Src,
+                         const MachineBasicBlock *Dst) const;
+  void addSuccessorWithWeight(MachineBasicBlock *Src, MachineBasicBlock *Dst,
+                              uint32_t Weight = 0);
 public:
   void visitSwitchCase(CaseBlock &CB,
                        MachineBasicBlock *SwitchBB);
@@ -757,7 +757,7 @@ public:
   void visitBitTestHeader(BitTestBlock &B, MachineBasicBlock *SwitchBB);
   void visitBitTestCase(BitTestBlock &BB,
                         MachineBasicBlock* NextMBB,
-                        BranchProbability BranchProbToNext,
+                        uint32_t BranchWeightToNext,
                         unsigned Reg,
                         BitTestCase &B,
                         MachineBasicBlock *SwitchBB);
@@ -855,7 +855,7 @@ private:
 
   // These three are implemented in StatepointLowering.cpp
   void visitStatepoint(const CallInst &I);
-  void visitGCRelocate(const GCRelocateInst &I);
+  void visitGCRelocate(const CallInst &I);
   void visitGCResult(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {

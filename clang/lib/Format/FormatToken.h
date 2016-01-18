@@ -248,9 +248,9 @@ struct FormatToken {
   /// with the same precedence, contains the 0-based operator index.
   unsigned OperatorIndex = 0;
 
-  /// \brief If this is an operator (or "."/"->") in a sequence of operators
-  /// with the same precedence, points to the next operator.
-  FormatToken *NextOperator = nullptr;
+  /// \brief Is this the last operator (or "."/"->") in a sequence of operators
+  /// with the same precedence?
+  bool LastOperator = false;
 
   /// \brief Is this token part of a \c DeclStmt defining multiple variables?
   ///
@@ -536,7 +536,6 @@ struct AdditionalKeywords {
     kw_finally = &IdentTable.get("finally");
     kw_function = &IdentTable.get("function");
     kw_import = &IdentTable.get("import");
-    kw_is = &IdentTable.get("is");
     kw_let = &IdentTable.get("let");
     kw_var = &IdentTable.get("var");
 
@@ -554,7 +553,6 @@ struct AdditionalKeywords {
 
     kw_mark = &IdentTable.get("mark");
 
-    kw_extend = &IdentTable.get("extend");
     kw_option = &IdentTable.get("option");
     kw_optional = &IdentTable.get("optional");
     kw_repeated = &IdentTable.get("repeated");
@@ -562,7 +560,6 @@ struct AdditionalKeywords {
     kw_returns = &IdentTable.get("returns");
 
     kw_signals = &IdentTable.get("signals");
-    kw_qsignals = &IdentTable.get("Q_SIGNALS");
     kw_slots = &IdentTable.get("slots");
     kw_qslots = &IdentTable.get("Q_SLOTS");
   }
@@ -581,7 +578,6 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_finally;
   IdentifierInfo *kw_function;
   IdentifierInfo *kw_import;
-  IdentifierInfo *kw_is;
   IdentifierInfo *kw_let;
   IdentifierInfo *kw_var;
 
@@ -601,7 +597,6 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_mark;
 
   // Proto keywords.
-  IdentifierInfo *kw_extend;
   IdentifierInfo *kw_option;
   IdentifierInfo *kw_optional;
   IdentifierInfo *kw_repeated;
@@ -610,7 +605,6 @@ struct AdditionalKeywords {
 
   // QT keywords.
   IdentifierInfo *kw_signals;
-  IdentifierInfo *kw_qsignals;
   IdentifierInfo *kw_slots;
   IdentifierInfo *kw_qslots;
 };

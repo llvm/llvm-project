@@ -15,7 +15,6 @@
 #define LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -86,7 +85,7 @@ Value *findScalarElement(Value *V, unsigned EltNo);
 /// \brief Get splat value if the input is a splat vector or return nullptr.
 /// The value may be extracted from a splat constants vector or from
 /// a sequence of instructions that broadcast a single value into a vector.
-const Value *getSplatValue(const Value *V);
+Value *getSplatValue(Value *V);
 
 /// \brief Compute a map of integer instructions to their minimum legal type
 /// size.
@@ -122,7 +121,7 @@ const Value *getSplatValue(const Value *V);
 ///
 /// If the optional TargetTransformInfo is provided, this function tries harder
 /// to do less work by only looking at illegal types.
-MapVector<Instruction*, uint64_t>
+DenseMap<Instruction*, uint64_t>
 computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
                          DemandedBits &DB,
                          const TargetTransformInfo *TTI=nullptr);

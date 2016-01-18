@@ -502,10 +502,6 @@ private:
   void HandlePragmaAlign();
 
   /// \brief Handle the annotation token produced for
-  /// #pragma clang __debug dump...
-  void HandlePragmaDump();
-
-  /// \brief Handle the annotation token produced for
   /// #pragma weak id...
   void HandlePragmaWeak();
 
@@ -1644,22 +1640,13 @@ private:
   /// A SmallVector of types.
   typedef SmallVector<ParsedType, 12> TypeVector;
 
-  StmtResult ParseStatement(SourceLocation *TrailingElseLoc = nullptr,
-                            bool AllowOpenMPStandalone = false);
-  enum AllowedContsructsKind {
-    /// \brief Allow any declarations, statements, OpenMP directives.
-    ACK_Any,
-    /// \brief Allow only statements and non-standalone OpenMP directives.
-    ACK_StatementsOpenMPNonStandalone,
-    /// \brief Allow statements and all executable OpenMP directives
-    ACK_StatementsOpenMPAnyExecutable
-  };
+  StmtResult ParseStatement(SourceLocation *TrailingElseLoc = nullptr);
   StmtResult
-  ParseStatementOrDeclaration(StmtVector &Stmts, AllowedContsructsKind Allowed,
+  ParseStatementOrDeclaration(StmtVector &Stmts, bool OnlyStatement,
                               SourceLocation *TrailingElseLoc = nullptr);
   StmtResult ParseStatementOrDeclarationAfterAttributes(
                                          StmtVector &Stmts,
-                                         AllowedContsructsKind Allowed,
+                                         bool OnlyStatement,
                                          SourceLocation *TrailingElseLoc,
                                          ParsedAttributesWithRange &Attrs);
   StmtResult ParseExprStatement();
@@ -1687,8 +1674,7 @@ private:
   StmtResult ParseReturnStatement();
   StmtResult ParseAsmStatement(bool &msAsm);
   StmtResult ParseMicrosoftAsmStatement(SourceLocation AsmLoc);
-  StmtResult ParsePragmaLoopHint(StmtVector &Stmts,
-                                 AllowedContsructsKind Allowed,
+  StmtResult ParsePragmaLoopHint(StmtVector &Stmts, bool OnlyStatement,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributesWithRange &Attrs);
 
@@ -2351,8 +2337,8 @@ private:
 
   void DiagnoseUnexpectedNamespace(NamedDecl *Context);
 
-  DeclGroupPtrTy ParseNamespace(unsigned Context, SourceLocation &DeclEnd,
-                                SourceLocation InlineLoc = SourceLocation());
+  Decl *ParseNamespace(unsigned Context, SourceLocation &DeclEnd,
+                       SourceLocation InlineLoc = SourceLocation());
   void ParseInnerNamespace(std::vector<SourceLocation>& IdentLoc,
                            std::vector<IdentifierInfo*>& Ident,
                            std::vector<SourceLocation>& NamespaceLoc,
@@ -2453,13 +2439,11 @@ private:
                                 bool AllowScopeSpecifier);
   /// \brief Parses declarative or executable directive.
   ///
-  /// \param Allowed ACK_Any, if any directives are allowed,
-  /// ACK_StatementsOpenMPAnyExecutable - if any executable directives are
-  /// allowed, ACK_StatementsOpenMPNonStandalone - if only non-standalone
-  /// executable directives are allowed.
+  /// \param StandAloneAllowed true if allowed stand-alone directives,
+  /// false - otherwise
   ///
   StmtResult
-  ParseOpenMPDeclarativeOrExecutableDirective(AllowedContsructsKind Allowed);
+  ParseOpenMPDeclarativeOrExecutableDirective(bool StandAloneAllowed);
   /// \brief Parses clause of kind \a CKind for directive of a kind \a Kind.
   ///
   /// \param DKind Kind of current directive.
@@ -2494,9 +2478,7 @@ private:
   ///
   /// \param Kind Kind of current clause.
   ///
-  OMPClause *ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
-                                      OpenMPClauseKind Kind);
-
+  OMPClause *ParseOpenMPVarListClause(OpenMPClauseKind Kind);
 public:
   bool ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
                           bool AllowDestructorName,

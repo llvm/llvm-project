@@ -63,7 +63,7 @@ enum FPURestriction {
 
 // Arch names.
 enum ArchKind {
-#define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT) ID,
+#define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_BASE_EXT) ID,
 #include "ARMTargetParser.def"
   AK_LAST
 };
@@ -82,7 +82,6 @@ enum ArchExtKind : unsigned {
   AEK_SEC = 0x100,
   AEK_VIRT = 0x200,
   AEK_DSP = 0x400,
-  AEK_FP16 = 0x800,
   // Unsupported extensions.
   AEK_OS = 0x8000000,
   AEK_IWMMXT = 0x10000000,
@@ -120,12 +119,11 @@ unsigned getArchAttr(unsigned ArchKind);
 StringRef getCPUAttr(unsigned ArchKind);
 StringRef getSubArch(unsigned ArchKind);
 StringRef getArchExtName(unsigned ArchExtKind);
-const char *getArchExtFeature(StringRef ArchExt);
 StringRef getHWDivName(unsigned HWDivKind);
 
 // Information by Name
-unsigned  getDefaultFPU(StringRef CPU, unsigned ArchKind);
-unsigned  getDefaultExtensions(StringRef CPU, unsigned ArchKind);
+unsigned  getDefaultFPU(StringRef CPU);
+unsigned  getDefaultExtensions(StringRef CPU);
 StringRef getDefaultCPU(StringRef Arch);
 
 // Parser

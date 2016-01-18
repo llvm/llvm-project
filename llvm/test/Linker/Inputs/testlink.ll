@@ -53,6 +53,4 @@ define internal void @testIntern() {
   ret void
 }
 
-define void @VecSizeCrash1(%VecSize) {
-  ret void
-}
+declare void @VecSizeCrash1(%VecSize)

@@ -11,7 +11,6 @@ define void @test1(i32) gc "statepoint-example" {
 ; CHECK: statepoint
 ; CHECK-LABEL: loop
 ; CHECK-NOT: statepoint
-; CHECK-LABEL: exit
 
 entry:
   br label %loop
@@ -33,7 +32,6 @@ define void @test2(i32) gc "statepoint-example" {
 ; CHECK: statepoint
 ; CHECK-LABEL: loop
 ; CHECK-NOT: statepoint
-; CHECK-LABEL: exit
 
 entry:
   br label %loop
@@ -58,7 +56,6 @@ define void @test3(i8 %upper) gc "statepoint-example" {
 ; CHECK: statepoint
 ; CHECK-LABEL: loop
 ; CHECK-NOT: statepoint
-; CHECK-LABEL: exit
 
 entry:
   br label %loop
@@ -80,14 +77,12 @@ define void @test4(i64 %upper) gc "statepoint-example" {
 ; CHECK: statepoint
 ; CHECK-LABEL: loop
 ; CHECK: statepoint
-; CHECK-LABEL: exit
 
 ; COUNTED-64-LABEL: test4
 ; COUNTED-64-LABEL: entry
 ; COUNTED-64: statepoint
 ; COUNTED-64-LABEL: loop
 ; COUNTED-64-NOT: statepoint
-; COUNTED-64-LABEL: exit
 
 entry:
   br label %loop
@@ -110,14 +105,12 @@ define void @test5(i64 %upper) gc "statepoint-example" {
 ; CHECK: statepoint
 ; CHECK-LABEL: loop
 ; CHECK: statepoint
-; CHECK-LABEL: exit
 
 ; COUNTED-64-LABEL: test5
 ; COUNTED-64-LABEL: entry
 ; COUNTED-64: statepoint
 ; COUNTED-64-LABEL: loop
 ; COUNTED-64: statepoint
-; COUNTED-64-LABEL: exit
 
 entry:
   br label %loop

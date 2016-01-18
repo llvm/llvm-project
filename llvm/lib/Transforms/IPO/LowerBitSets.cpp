@@ -544,7 +544,7 @@ void LowerBitSets::buildBitSetsFromGlobalVariables(
     // Cap at 128 was found experimentally to have a good data/instruction
     // overhead tradeoff.
     if (Padding > 128)
-      Padding = alignTo(InitSize, 128) - InitSize;
+      Padding = RoundUpToAlignment(InitSize, 128) - InitSize;
 
     GlobalInits.push_back(
         ConstantAggregateZero::get(ArrayType::get(Int8Ty, Padding)));
@@ -683,7 +683,7 @@ Constant *LowerBitSets::createJumpTableEntry(GlobalObject *Src, Function *Dest,
   ConstantInt *DispOffset =
       ConstantInt::get(IntPtrTy, Distance * kX86JumpTableEntrySize + 5);
   Constant *OffsetedDisp = ConstantExpr::getSub(Disp, DispOffset);
-  OffsetedDisp = ConstantExpr::getTruncOrBitCast(OffsetedDisp, Int32Ty);
+  OffsetedDisp = ConstantExpr::getTrunc(OffsetedDisp, Int32Ty);
 
   ConstantInt *Int3 = ConstantInt::get(Int8Ty, kInt3Code);
 

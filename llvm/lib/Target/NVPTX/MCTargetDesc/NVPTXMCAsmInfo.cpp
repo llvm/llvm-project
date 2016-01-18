@@ -41,9 +41,6 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple) {
   // PTX does not allow .align on functions.
   HasFunctionAlignment = false;
   HasDotTypeDotSizeDirective = false;
-  // PTX does not allow .hidden or .protected
-  HiddenDeclarationVisibilityAttr = HiddenVisibilityAttr = MCSA_Invalid;
-  ProtectedVisibilityAttr = MCSA_Invalid;
 
   Data8bitsDirective = " .b8 ";
   Data16bitsDirective = " .b16 ";

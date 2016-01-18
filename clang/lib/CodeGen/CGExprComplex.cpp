@@ -462,7 +462,6 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_ToVoid:
   case CK_VectorSplat:
   case CK_IntegralCast:
-  case CK_BooleanToSignedIntegral:
   case CK_IntegralToBoolean:
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
@@ -586,25 +585,19 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
   // We *must* use the full CG function call building logic here because the
   // complex type has special ABI handling. We also should not forget about
   // special calling convention which may be used for compiler builtins.
-
-  // We create a function qualified type to state that this call does not have
-  // any exceptions.
-  FunctionProtoType::ExtProtoInfo EPI;
-  EPI = EPI.withExceptionSpec(
-      FunctionProtoType::ExceptionSpecInfo(EST_BasicNoexcept));
-  SmallVector<QualType, 4> ArgsQTys(
-      4, Op.Ty->castAs<ComplexType>()->getElementType());
-  QualType FQTy = CGF.getContext().getFunctionType(Op.Ty, ArgsQTys, EPI);
-  const CGFunctionInfo &FuncInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
-      Args, cast<FunctionType>(FQTy.getTypePtr()), false);
-
+  const CGFunctionInfo &FuncInfo =
+    CGF.CGM.getTypes().arrangeFreeFunctionCall(
+      Op.Ty, Args, FunctionType::ExtInfo(/* No CC here - will be added later */),
+      RequiredArgs::All);
   llvm::FunctionType *FTy = CGF.CGM.getTypes().GetFunctionType(FuncInfo);
   llvm::Constant *Func = CGF.CGM.CreateBuiltinFunction(FTy, LibCallName);
   llvm::Instruction *Call;
 
   RValue Res = CGF.EmitCall(FuncInfo, Func, ReturnValueSlot(), Args,
-                            FQTy->getAs<FunctionProtoType>(), &Call);
+                            nullptr, &Call);
   cast<llvm::CallInst>(Call)->setCallingConv(CGF.CGM.getBuiltinCC());
+  cast<llvm::CallInst>(Call)->setDoesNotThrow();
+
   return Res.getComplexVal();
 }
 

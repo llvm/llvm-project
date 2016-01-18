@@ -6,7 +6,10 @@
 ; CHECK-NEXT: .long 2139095040
 
 ; CHECK-LABEL: foo:
-; CHECK: testb $-128, -15(%rsp)
+; CHECK: movq {{.*}}, %rax
+; CHECK: shlq $48, %rax
+; CHECK: sets %al
+; CHECK: testb %al, %al
 ; CHECK: flds LCPI0_0(%rip)
 ; CHECK: flds LCPI0_1(%rip)
 ; CHECK: fcmovne %st(1), %st(0)
@@ -18,19 +21,3 @@ define x86_fp80 @foo(x86_fp80 %a) {
 }
 
 declare x86_fp80 @copysignl(x86_fp80, x86_fp80) nounwind readnone
-
-; This would crash:
-; https://llvm.org/bugs/show_bug.cgi?id=26070
-
-define float @pr26070() {
-  %c = call float @copysignf(float 1.0, float undef) readnone
-  ret float %c
-
-; CHECK-LABEL: pr26070:
-; CHECK:       andps
-; CHECK-NEXT:  orps
-; CHECK-NEXT:  retq
-}
-
-declare float @copysignf(float, float)
-

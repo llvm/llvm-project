@@ -33,7 +33,6 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Target/TargetOptions.h"
 #include <memory>
 
 namespace llvm {
@@ -187,6 +186,30 @@ struct SymbolCU {
   DwarfCompileUnit *CU;
 };
 
+/// Identify a debugger for "tuning" the debug info.
+///
+/// The "debugger tuning" concept allows us to present a more intuitive
+/// interface that unpacks into different sets of defaults for the various
+/// individual feature-flag settings, that suit the preferences of the
+/// various debuggers.  However, it's worth remembering that debuggers are
+/// not the only consumers of debug info, and some variations in DWARF might
+/// better be treated as target/platform issues. Fundamentally,
+/// o if the feature is useful (or not) to a particular debugger, regardless
+///   of the target, that's a tuning decision;
+/// o if the feature is useful (or not) on a particular platform, regardless
+///   of the debugger, that's a target decision.
+/// It's not impossible to see both factors in some specific case.
+///
+/// The "tuning" should be used to set defaults for individual feature flags
+/// in DwarfDebug; if a given feature has a more specific command-line option,
+/// that option should take precedence over the tuning.
+enum class DebuggerKind {
+  Default,  // No specific tuning requested.
+  GDB,      // Tune debug info for gdb.
+  LLDB,     // Tune debug info for lldb.
+  SCE       // Tune debug info for SCE targets (e.g. PS4).
+};
+
 /// Collects and handles dwarf debug information.
 class DwarfDebug : public AsmPrinterHandler {
   /// Target of Dwarf emission.
@@ -321,6 +344,8 @@ class DwarfDebug : public AsmPrinterHandler {
   DwarfAccelTable AccelNamespace;
   DwarfAccelTable AccelTypes;
 
+  DenseMap<const Function *, DISubprogram *> FunctionDIs;
+
   // Identify a debugger for "tuning" the debug info.
   DebuggerKind DebuggerTuning;
 
@@ -400,25 +425,17 @@ class DwarfDebug : public AsmPrinterHandler {
   /// Emit visible names into a debug str section.
   void emitDebugStr();
 
-  /// Emit variable locations into a debug loc section.
+  /// Emit visible names into a debug loc section.
   void emitDebugLoc();
 
-  /// Emit variable locations into a debug loc dwo section.
+  /// Emit visible names into a debug loc dwo section.
   void emitDebugLocDWO();
 
-  /// Emit address ranges into a debug aranges section.
+  /// Emit visible names into a debug aranges section.
   void emitDebugARanges();
 
-  /// Emit address ranges into a debug ranges section.
+  /// Emit visible names into a debug ranges section.
   void emitDebugRanges();
-
-  /// Emit macros into a debug macinfo section.
-  void emitDebugMacinfo();
-  unsigned emitMacro(AsmStreamerBase *AS, DIMacro &M);
-  unsigned emitMacroFile(AsmStreamerBase *AS, DIMacroFile &F,
-                         DwarfCompileUnit &U);
-  unsigned handleMacroNodes(AsmStreamerBase *AS, DIMacroNodeArray Nodes,
-                            DwarfCompileUnit &U);
 
   /// DWARF 5 Experimental Split Dwarf Emitters
 

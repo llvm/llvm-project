@@ -163,12 +163,14 @@ namespace {
     /// LaneMask are split as necessary. @p LaneMask are the lanes that
     /// @p ToMerge will occupy in the coalescer register. @p LI has its subrange
     /// lanemasks already adjusted to the coalesced register.
-    void mergeSubRangeInto(LiveInterval &LI, const LiveRange &ToMerge,
+    /// @returns false if live range conflicts couldn't get resolved.
+    bool mergeSubRangeInto(LiveInterval &LI, const LiveRange &ToMerge,
                            LaneBitmask LaneMask, CoalescerPair &CP);
 
     /// Join the liveranges of two subregisters. Joins @p RRange into
     /// @p LRange, @p RRange may be invalid afterwards.
-    void joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
+    /// @returns false if live range conflicts couldn't get resolved.
+    bool joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
                           LaneBitmask LaneMask, const CoalescerPair &CP);
 
     /// We found a non-trivially-coalescable copy. If the source value number is
@@ -2467,7 +2469,7 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
   }
 }
 
-void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
+bool RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
                                          LaneBitmask LaneMask,
                                          const CoalescerPair &CP) {
   SmallVector<VNInfo*, 16> NewVNInfo;
@@ -2482,15 +2484,13 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
   // ranges get mapped to the "overflow" lane mask bit which creates unexpected
   // interferences.
   if (!LHSVals.mapValues(RHSVals) || !RHSVals.mapValues(LHSVals)) {
-    // We already determined that it is legal to merge the intervals, so this
-    // should never fail.
-    llvm_unreachable("*** Couldn't join subrange!\n");
+    DEBUG(dbgs() << "*** Couldn't join subrange!\n");
+    return false;
   }
   if (!LHSVals.resolveConflicts(RHSVals) ||
       !RHSVals.resolveConflicts(LHSVals)) {
-    // We already determined that it is legal to merge the intervals, so this
-    // should never fail.
-    llvm_unreachable("*** Couldn't join subrange!\n");
+    DEBUG(dbgs() << "*** Couldn't join subrange!\n");
+    return false;
   }
 
   // The merging algorithm in LiveInterval::join() can't handle conflicting
@@ -2513,16 +2513,17 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
 
   DEBUG(dbgs() << "\t\tjoined lanes: " << LRange << "\n");
   if (EndPoints.empty())
-    return;
+    return true;
 
   // Recompute the parts of the live range we had to remove because of
   // CR_Replace conflicts.
   DEBUG(dbgs() << "\t\trestoring liveness to " << EndPoints.size()
                << " points: " << LRange << '\n');
   LIS->extendToIndices(LRange, EndPoints);
+  return true;
 }
 
-void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
+bool RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
                                           const LiveRange &ToMerge,
                                           LaneBitmask LaneMask,
                                           CoalescerPair &CP) {
@@ -2552,7 +2553,8 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
       CommonRange = &R;
     }
     LiveRange RangeCopy(ToMerge, Allocator);
-    joinSubRegRanges(*CommonRange, RangeCopy, Common, CP);
+    if (!joinSubRegRanges(*CommonRange, RangeCopy, Common, CP))
+      return false;
     LaneMask &= ~RMask;
   }
 
@@ -2560,6 +2562,7 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
     DEBUG(dbgs() << "\t\tNew Lane " << PrintLaneMask(LaneMask) << '\n');
     LI.createSubRangeFrom(Allocator, LaneMask, ToMerge);
   }
+  return true;
 }
 
 bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
@@ -2610,21 +2613,41 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
     // Determine lanemasks of RHS in the coalesced register and merge subranges.
     unsigned SrcIdx = CP.getSrcIdx();
+    bool Abort = false;
     if (!RHS.hasSubRanges()) {
       LaneBitmask Mask = SrcIdx == 0 ? CP.getNewRC()->getLaneMask()
                                      : TRI->getSubRegIndexLaneMask(SrcIdx);
-      mergeSubRangeInto(LHS, RHS, Mask, CP);
+      if (!mergeSubRangeInto(LHS, RHS, Mask, CP))
+        Abort = true;
     } else {
       // Pair up subranges and merge.
       for (LiveInterval::SubRange &R : RHS.subranges()) {
         LaneBitmask Mask = TRI->composeSubRegIndexLaneMask(SrcIdx, R.LaneMask);
-        mergeSubRangeInto(LHS, R, Mask, CP);
+        if (!mergeSubRangeInto(LHS, R, Mask, CP)) {
+          Abort = true;
+          break;
+        }
       }
     }
-    DEBUG(dbgs() << "\tJoined SubRanges " << LHS << "\n");
+    if (Abort) {
+      // This shouldn't have happened :-(
+      // However we are aware of at least one existing problem where we
+      // can't merge subranges when multiple ranges end up in the
+      // "overflow bit" 32. As a workaround we drop all subregister ranges
+      // which means we loose some precision but are back to a well defined
+      // state.
+      assert(TargetRegisterInfo::isImpreciseLaneMask(
+             CP.getNewRC()->getLaneMask())
+             && "SubRange merge should only fail when merging into bit 32.");
+      DEBUG(dbgs() << "\tSubrange join aborted!\n");
+      LHS.clearSubRanges();
+      RHS.clearSubRanges();
+    } else {
+      DEBUG(dbgs() << "\tJoined SubRanges " << LHS << "\n");
 
-    LHSVals.pruneSubRegValues(LHS, ShrinkMask);
-    RHSVals.pruneSubRegValues(LHS, ShrinkMask);
+      LHSVals.pruneSubRegValues(LHS, ShrinkMask);
+      RHSVals.pruneSubRegValues(LHS, ShrinkMask);
+    }
   }
 
   // The merging algorithm in LiveInterval::join() can't handle conflicting
@@ -2874,7 +2897,7 @@ void RegisterCoalescer::joinAllIntervals() {
 
   std::vector<MBBPriorityInfo> MBBs;
   MBBs.reserve(MF->size());
-  for (MachineFunction::iterator I = MF->begin(), E = MF->end(); I != E; ++I) {
+  for (MachineFunction::iterator I = MF->begin(), E = MF->end();I != E;++I){
     MachineBasicBlock *MBB = &*I;
     MBBs.push_back(MBBPriorityInfo(MBB, Loops->getLoopDepth(MBB),
                                    JoinSplitEdges && isSplitEdge(MBB)));
@@ -2952,25 +2975,22 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
     if (MRI->recomputeRegClass(Reg)) {
       DEBUG(dbgs() << PrintReg(Reg) << " inflated to "
                    << TRI->getRegClassName(MRI->getRegClass(Reg)) << '\n');
-      ++NumInflated;
-
       LiveInterval &LI = LIS->getInterval(Reg);
-      if (LI.hasSubRanges()) {
+      LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
+      if (MaxMask == 0) {
         // If the inflated register class does not support subregisters anymore
         // remove the subranges.
-        if (!MRI->shouldTrackSubRegLiveness(Reg)) {
-          LI.clearSubRanges();
-        } else {
+        LI.clearSubRanges();
+      } else {
 #ifndef NDEBUG
-          LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
-          // If subranges are still supported, then the same subregs
-          // should still be supported.
-          for (LiveInterval::SubRange &S : LI.subranges()) {
-            assert((S.LaneMask & ~MaxMask) == 0);
-          }
-#endif
+        // If subranges are still supported, then the same subregs should still
+        // be supported.
+        for (LiveInterval::SubRange &S : LI.subranges()) {
+          assert ((S.LaneMask & ~MaxMask) == 0);
         }
+#endif
       }
+      ++NumInflated;
     }
   }
 

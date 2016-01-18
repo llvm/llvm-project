@@ -15,12 +15,8 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CHECKERHELPERS_H
 
 #include "clang/AST/Stmt.h"
-#include <tuple>
 
 namespace clang {
-
-class Expr;
-class VarDecl;
 
 namespace ento {
 
@@ -38,9 +34,6 @@ template <class T> bool containsStmt(const Stmt *S) {
 
   return false;
 }
-
-std::pair<const clang::VarDecl *, const clang::Expr *>
-parseAssignment(const Stmt *S);
 
 } // end GR namespace
 

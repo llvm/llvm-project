@@ -86,15 +86,6 @@ public:
     return startsWith(First, Tokens...);
   }
 
-  /// \c true if this line looks like a function definition instead of a
-  /// function declaration. Asserts MightBeFunctionDecl.
-  bool mightBeFunctionDefinition() const {
-    assert(MightBeFunctionDecl);
-    // FIXME: Line.Last points to other characters than tok::semi
-    // and tok::lbrace.
-    return !Last->isOneOf(tok::semi, tok::comment);
-  }
-
   FormatToken *First;
   FormatToken *Last;
 
@@ -164,8 +155,6 @@ private:
   bool mustBreakBefore(const AnnotatedLine &Line, const FormatToken &Right);
 
   bool canBreakBefore(const AnnotatedLine &Line, const FormatToken &Right);
-
-  bool mustBreakForReturnType(const AnnotatedLine &Line) const;
 
   void printDebugInfo(const AnnotatedLine &Line);
 

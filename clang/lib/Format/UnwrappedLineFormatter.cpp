@@ -90,8 +90,8 @@ private:
       return 0;
     if (RootToken.isAccessSpecifier(false) ||
         RootToken.isObjCAccessSpecifier() ||
-        (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
-         RootToken.Next && RootToken.Next->is(tok::colon)))
+        (RootToken.is(Keywords.kw_signals) && RootToken.Next &&
+         RootToken.Next->is(tok::colon)))
       return Style.AccessModifierOffset;
     return 0;
   }

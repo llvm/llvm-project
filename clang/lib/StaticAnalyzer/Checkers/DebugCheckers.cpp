@@ -230,12 +230,11 @@ public:
     if (!N)
       return;
 
-    const LangOptions &Opts = C.getLangOpts();
     const SourceManager &SM = C.getSourceManager();
     FullSourceLoc FL(S->getLocStart(), SM);
     std::string HashContent =
         GetIssueString(SM, FL, getCheckName().getName(), BT->getCategory(),
-                       C.getLocationContext()->getDecl(), Opts);
+                       C.getLocationContext()->getDecl());
 
     C.emitReport(llvm::make_unique<BugReport>(*BT, HashContent, N));
   }

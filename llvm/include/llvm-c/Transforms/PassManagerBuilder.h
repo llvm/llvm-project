@@ -14,7 +14,7 @@
 #ifndef LLVM_C_TRANSFORMS_PASSMANAGERBUILDER_H
 #define LLVM_C_TRANSFORMS_PASSMANAGERBUILDER_H
 
-#include "llvm-c/Types.h"
+#include "llvm-c/Core.h"
 
 typedef struct LLVMOpaquePassManagerBuilder *LLVMPassManagerBuilderRef;
 

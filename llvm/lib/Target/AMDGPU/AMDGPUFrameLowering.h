@@ -8,12 +8,14 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Interface to describe a layout of a stack frame on an AMDGPU target.
+/// \brief Interface to describe a layout of a stack frame on a AMDIL target
+/// machine.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUFRAMELOWERING_H
-#define LLVM_LIB_TARGET_AMDGPU_AMDGPUFRAMELOWERING_H
+#ifndef LLVM_LIB_TARGET_R600_AMDGPUFRAMELOWERING_H
+#define LLVM_LIB_TARGET_R600_AMDGPUFRAMELOWERING_H
 
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Target/TargetFrameLowering.h"
 
 namespace llvm {

@@ -62,18 +62,6 @@ class POOL16C_JRCADDIUSP_FM_MM16R6<bits<5> op> {
   let Inst{4-0}   = op;
 }
 
-class POOL16C_LWM_SWM_FM_MM16R6<bits<4> funct> {
-  bits<2> rt;
-  bits<4> addr;
-
-  bits<16> Inst;
-
-  let Inst{15-10} = 0x11;
-  let Inst{9-8}   = rt;
-  let Inst{7-4}   = addr;
-  let Inst{3-0}   = funct;
-}
-
 class POOL32A_BITSWAP_FM_MMR6<bits<6> funct> : MipsR6Inst {
   bits<5> rd;
   bits<5> rt;
@@ -473,13 +461,12 @@ class CMP_BRANCH_1R_BOTH_OFF16_FM_MMR6<bits<6> funct> : MipsR6Inst {
   let Inst{15-0}  = offset;
 }
 
-class POOL32A_ERET_FM_MMR6<string instr_asm, bits<10> funct>
-    : MMR6Arch<instr_asm> {
+class ERET_FM_MMR6<string instr_asm> : MMR6Arch<instr_asm> {
   bits<32> Inst;
 
   let Inst{31-26} = 0x00;
   let Inst{25-16} = 0x00;
-  let Inst{15-6}  = funct;
+  let Inst{15-6}  = 0x3cd;
   let Inst{5-0}   = 0x3c;
 }
 
@@ -514,8 +501,7 @@ class BARRIER_MMR6_ENC<string instr_asm, bits<5> op> : MMR6Arch<instr_asm> {
   let Inst{5-0}   = 0x0;
 }
 
-class POOL32A_EIDI_MMR6_ENC<string instr_asm, bits<10> funct>
-    : MMR6Arch<instr_asm> {
+class EIDI_MMR6_ENC<string instr_asm, bits<10> funct> : MMR6Arch<instr_asm> {
   bits<32> Inst;
   bits<5> rt; // Actually rs but we're sharing code with the standard encodings which call it rt
 
@@ -797,66 +783,4 @@ class POOL32A_WRPGPR_WSBH_FM_MMR6<bits<10> funct> : MipsR6Inst {
   let Inst{20-16} = rs;
   let Inst{15-6}  = funct;
   let Inst{5-0}   = 0x3c;
-}
-
-class POOL32F_RECIP_ROUND_FM_MMR6<string instr_asm, bits<1> fmt, bits<8> funct>
-    : MMR6Arch<instr_asm>, MipsR6Inst {
-  bits<5> ft;
-  bits<5> fs;
-
-  bits<32> Inst;
-
-  let Inst{31-26} = 0b010101;
-  let Inst{25-21} = ft;
-  let Inst{20-16} = fs;
-  let Inst{15}    = 0;
-  let Inst{14}    = fmt;
-  let Inst{13-6}  = funct;
-  let Inst{5-0}   = 0b111011;
-}
-
-class POOL32F_RINT_FM_MMR6<string instr_asm, bits<2> fmt>
-    : MMR6Arch<instr_asm>, MipsR6Inst {
-  bits<5> fs;
-  bits<5> fd;
-
-  bits<32> Inst;
-
-  let Inst{31-26} = 0b010101;
-  let Inst{25-21} = fs;
-  let Inst{20-16} = fd;
-  let Inst{15-11} = 0;
-  let Inst{10-9}  = fmt;
-  let Inst{8-0}   = 0b000100000;
-}
-
-class POOL32F_SEL_FM_MMR6<string instr_asm, bits<2> fmt, bits<9> funct>
-    : MMR6Arch<instr_asm>, MipsR6Inst {
-  bits<5> ft;
-  bits<5> fs;
-  bits<5> fd;
-
-  bits<32> Inst;
-
-  let Inst{31-26} = 0b010101;
-  let Inst{25-21} = ft;
-  let Inst{20-16} = fs;
-  let Inst{15-11} = fd;
-  let Inst{10-9}  = fmt;
-  let Inst{8-0}   = funct;
-}
-
-class POOL32F_CLASS_FM_MMR6<string instr_asm, bits<2> fmt, bits<9> funct>
-    : MMR6Arch<instr_asm>, MipsR6Inst {
-  bits<5> fs;
-  bits<5> fd;
-
-  bits<32> Inst;
-
-  let Inst{31-26} = 0b010101;
-  let Inst{25-21} = fs;
-  let Inst{20-16} = fd;
-  let Inst{15-11} = 0b00000;
-  let Inst{10-9}  = fmt;
-  let Inst{8-0}   = funct;
 }

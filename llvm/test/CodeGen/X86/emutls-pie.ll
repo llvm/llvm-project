@@ -24,7 +24,7 @@ define i32 @my_get_xyz() {
 ; X64:      movq my_emutls_v_xyz@GOTPCREL(%rip), %rdi
 ; X64-NEXT: callq my_emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
-; X64-NEXT: popq %rcx
+; X64-NEXT: popq %rdx
 ; X64-NEXT: retq
 
 entry:
@@ -50,7 +50,7 @@ define i32 @f1() {
 ; X64:      movq __emutls_v.i@GOTPCREL(%rip), %rdi
 ; X64-NEXT: callq __emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
-; X64-NEXT: popq %rcx
+; X64-NEXT: popq %rdx
 ; X64-NEXT: retq
 
 entry:
@@ -100,7 +100,7 @@ entry:
 
 ;;;;; 32-bit targets
 
-; X32:      .data
+; X32:      .section .data.rel.local,
 ; X32-LABEL: __emutls_v.i:
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 4
@@ -116,7 +116,7 @@ entry:
 
 ;;;;; 64-bit targets
 
-; X64:      .data
+; X64:      .section .data.rel.local,
 ; X64-LABEL: __emutls_v.i:
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 4

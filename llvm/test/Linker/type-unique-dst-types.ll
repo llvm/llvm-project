@@ -17,7 +17,3 @@
 %A = type { %B }
 %B = type { i8 }
 @g3 = external global %A
-
-define %A* @use_g3() {
-  ret %A* @g3
-}

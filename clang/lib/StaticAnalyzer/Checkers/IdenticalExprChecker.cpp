@@ -305,7 +305,9 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
                             const Stmt *Stmt2, bool IgnoreSideEffects) {
 
   if (!Stmt1 || !Stmt2) {
-    return !Stmt1 && !Stmt2;
+    if (!Stmt1 && !Stmt2)
+      return true;
+    return false;
   }
 
   // If Stmt1 & Stmt2 are of different class then they are not

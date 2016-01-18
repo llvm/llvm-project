@@ -40,19 +40,15 @@ public:
   ///
   /// An implementation of this class my override this function to indicate that
   /// only certain functions should be viewed.
-  ///
-  /// @param Analysis The current analysis result for this function.
-  virtual bool processFunction(Function &F, AnalysisT &Analysis) {
+  virtual bool processFunction(Function &F) {
     return true;
   }
 
   bool runOnFunction(Function &F) override {
-    auto &Analysis = getAnalysis<AnalysisT>();
-
-    if (!processFunction(F, Analysis))
+    if (!processFunction(F))
       return false;
 
-    GraphT Graph = AnalysisGraphTraitsT::getGraph(&Analysis);
+    GraphT Graph = AnalysisGraphTraitsT::getGraph(&getAnalysis<AnalysisT>());
     std::string GraphName = DOTGraphTraits<GraphT>::getGraphName(Graph);
     std::string Title = GraphName + " for '" + F.getName().str() + "' function";
 
@@ -82,19 +78,15 @@ public:
   ///
   /// An implementation of this class my override this function to indicate that
   /// only certain functions should be printed.
-  ///
-  /// @param Analysis The current analysis result for this function.
-  virtual bool processFunction(Function &F, AnalysisT &Analysis) {
+  virtual bool processFunction(Function &F) {
     return true;
   }
 
   bool runOnFunction(Function &F) override {
-    auto &Analysis = getAnalysis<AnalysisT>();
-
-    if (!processFunction(F, Analysis))
+    if (!processFunction(F))
       return false;
 
-    GraphT Graph = AnalysisGraphTraitsT::getGraph(&Analysis);
+    GraphT Graph = AnalysisGraphTraitsT::getGraph(&getAnalysis<AnalysisT>());
     std::string Filename = Name + "." + F.getName().str() + ".dot";
     std::error_code EC;
 

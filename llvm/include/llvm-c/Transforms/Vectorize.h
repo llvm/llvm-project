@@ -20,7 +20,7 @@
 #ifndef LLVM_C_TRANSFORMS_VECTORIZE_H
 #define LLVM_C_TRANSFORMS_VECTORIZE_H
 
-#include "llvm-c/Types.h"
+#include "llvm-c/Core.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,3 +51,4 @@ void LLVMAddSLPVectorizePass(LLVMPassManagerRef PM);
 #endif /* defined(__cplusplus) */
 
 #endif
+

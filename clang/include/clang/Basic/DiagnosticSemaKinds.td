@@ -1,3 +1,4 @@
+
 //==--- DiagnosticSemaKinds.td - libsema diagnostics ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -66,9 +67,6 @@ def warn_wrong_absolute_value_type : Warning<
   "when argument is of %select{integer|floating point|complex}2 type">,
   InGroup<AbsoluteValue>;
 def note_replace_abs_function : Note<"use function '%0' instead">;
-def warn_pointer_abs : Warning<
-  "taking the absolute value of %select{pointer|function|array}0 type %1 is suspicious">,
-  InGroup<AbsoluteValue>;
 
 def warn_infinite_recursive_function : Warning<
   "all paths through this function will call itself">,
@@ -190,63 +188,6 @@ def ext_flexible_array_init : Extension<
   "flexible array initialization is a GNU extension">, InGroup<GNUFlexibleArrayInitializer>;
 
 // Declarations.
-def ext_duplicate_declspec : ExtWarn<"duplicate '%0' declaration specifier">,
-  InGroup<DuplicateDeclSpecifier>;
-def warn_duplicate_declspec : Warning<"duplicate '%0' declaration specifier">,
-  InGroup<DuplicateDeclSpecifier>;
-def ext_plain_complex : ExtWarn<
-  "plain '_Complex' requires a type specifier; assuming '_Complex double'">;
-def ext_integer_complex : Extension<
-  "complex integer types are a GNU extension">, InGroup<GNUComplexInteger>;
-
-def err_invalid_sign_spec : Error<"'%0' cannot be signed or unsigned">;
-def err_invalid_width_spec : Error<
-  "'%select{|short|long|long long}0 %1' is invalid">;
-def err_invalid_complex_spec : Error<"'_Complex %0' is invalid">;
-def err_friend_decl_spec : Error<"'%0' is invalid in friend declarations">;
-
-def ext_auto_type_specifier : ExtWarn<
-  "'auto' type specifier is a C++11 extension">, InGroup<CXX11>;
-def warn_auto_storage_class : Warning<
-  "'auto' storage class specifier is redundant and incompatible with C++11">,
-  InGroup<CXX11Compat>, DefaultIgnore;
-
-def warn_deprecated_register : Warning<
-  "'register' storage class specifier is deprecated "
-  "and incompatible with C++1z">, InGroup<DeprecatedRegister>;
-def ext_register_storage_class : ExtWarn<
-  "ISO C++1z does not allow 'register' storage class specifier">,
-  DefaultError, InGroup<Register>;
-
-def err_invalid_decl_spec_combination : Error<
-  "cannot combine with previous '%0' declaration specifier">;
-def err_invalid_vector_decl_spec_combination : Error<
-  "cannot combine with previous '%0' declaration specifier. "
-  "'__vector' must be first">;
-def err_invalid_pixel_decl_spec_combination : Error<
-  "'__pixel' must be preceded by '__vector'.  "
-  "'%0' declaration specifier not allowed here">;
-def err_invalid_vector_bool_decl_spec : Error<
-  "cannot use '%0' with '__vector bool'">;
-def err_invalid_vector_long_decl_spec : Error<
-  "cannot use 'long' with '__vector'">;
-def err_invalid_vector_float_decl_spec : Error<
-  "cannot use 'float' with '__vector'">;
-def err_invalid_vector_double_decl_spec : Error <
-  "use of 'double' with '__vector' requires VSX support to be enabled "
-  "(available on POWER7 or later)">;
-def err_invalid_vector_long_long_decl_spec : Error <
-  "use of 'long long' with '__vector bool' requires VSX support (available on "
-  "POWER7 or later) or extended Altivec support (available on POWER8 or later) " 
-  "to be enabled">;
-def err_invalid_vector_long_double_decl_spec : Error<
-  "cannot use 'long double' with '__vector'">;
-def warn_vector_long_decl_spec_combination : Warning<
-  "Use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
-
-def err_use_of_tag_name_without_tag : Error<
-  "must use '%1' tag to refer to type %0%select{| in this scope}2">;
-
 def err_redeclaration_different_type : Error<
   "redeclaration of %0 with a different type%diff{: $ vs $|}1,2">;
 def err_bad_variable_name : Error<
@@ -254,17 +195,6 @@ def err_bad_variable_name : Error<
 def err_bad_parameter_name : Error<
   "%0 cannot be the name of a parameter">;
 def err_parameter_name_omitted : Error<"parameter name omitted">;
-def err_anyx86_interrupt_attribute : Error<
-  "%select{x86|x86-64}0 'interrupt' attribute only applies to functions that "
-  "have %select{a 'void' return type|"
-  "only a pointer parameter optionally followed by an integer parameter|"
-  "a pointer as the first parameter|a %2 type as the second parameter}1">;
-def err_anyx86_interrupt_called : Error<
-  "interrupt service routine cannot be called directly">;
-def warn_mips_interrupt_attribute : Warning<
-   "MIPS 'interrupt' attribute only applies to functions that have "
-   "%select{no parameters|a 'void' return type}0">,
-   InGroup<IgnoredAttributes>;
 def warn_unused_parameter : Warning<"unused parameter %0">,
   InGroup<UnusedParameter>, DefaultIgnore;
 def warn_unused_variable : Warning<"unused variable %0">,
@@ -501,10 +431,6 @@ def err_builtin_definition : Error<"definition of builtin function %0">;
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_invalid_cpu_supports : Error<"invalid cpu feature string for builtin">;
 def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
-def err_function_needs_feature
-    : Error<"always_inline function %1 requires target feature '%2', but would "
-            "be inlined into function %0 that is compiled without support for "
-            "'%2'">;
 def warn_builtin_unknown : Warning<"use of unknown builtin %0">,
   InGroup<ImplicitFunctionDeclare>, DefaultError;
 def warn_dyn_class_memaccess : Warning<
@@ -936,9 +862,6 @@ def warn_missing_explicit_synthesis : Warning <
 def warn_property_getter_owning_mismatch : Warning<
   "property declared as returning non-retained objects"
   "; getter returning retained objects">;
-def warn_property_redecl_getter_mismatch : Warning<
-  "getter name mismatch between property redeclaration (%1) and its original "
-  "declaration (%0)">, InGroup<PropertyAttr>;
 def error_property_setter_ambiguous_use : Error<
   "synthesized properties %0 and %1 both claim setter %2 -"
   " use of this setter will cause unexpected behavior">;
@@ -1178,8 +1101,6 @@ def err_type_defined_in_param_type : Error<
   "%0 cannot be defined in a parameter type">;
 def err_type_defined_in_alias_template : Error<
   "%0 cannot be defined in a type alias template">;
-def err_type_defined_in_condition : Error<
-  "%0 cannot be defined in a condition">;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -1578,7 +1499,8 @@ def err_init_conversion_failed : Error<
   "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
   "volatile and restrict|const, volatile, and restrict}5 vs "
   "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}6)}4">;
+  "volatile and restrict|const, volatile, and restrict}6)"
+  "|: cannot take the address of a potentially disabled function}4">;
 
 def err_lvalue_to_rvalue_ref : Error<"rvalue reference %diff{to type $ cannot "
   "bind to lvalue of type $|cannot bind to incompatible lvalue}0,1">;
@@ -1742,22 +1664,18 @@ def warn_cxx98_compat_auto_type_specifier : Warning<
   "'auto' type specifier is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_auto_variable_cannot_appear_in_own_initializer : Error<
-  "variable %0 declared with %select{'auto'|'decltype(auto)'|'__auto_type'}1 "
-  "type cannot appear in its own initializer">;
+  "variable %0 declared with 'auto' type cannot appear in its own initializer">;
 def err_illegal_decl_array_of_auto : Error<
   "'%0' declared as array of %1">;
 def err_new_array_of_auto : Error<
   "cannot allocate array of 'auto'">;
 def err_auto_not_allowed : Error<
-  "%select{'auto'|'decltype(auto)'|'__auto_type'}0 not allowed "
-  "%select{in function prototype"
-  "|in non-static struct member|in struct member"
-  "|in non-static union member|in union member"
-  "|in non-static class member|in interface member"
+  "%select{'auto'|'decltype(auto)'}0 not allowed %select{in function prototype"
+  "|in non-static struct member"
+  "|in non-static union member|in non-static class member|in interface member"
   "|in exception declaration|in template parameter|in block literal"
   "|in template argument|in typedef|in type alias|in function return type"
-  "|in conversion function type|here|in lambda parameter"
-  "|in type allocated by 'new'|in K&R-style function parameter}1">;
+  "|in conversion function type|here|in lambda parameter}1">;
 def err_auto_not_allowed_var_inst : Error<
   "'auto' variable template instantiation is not allowed">;
 def err_auto_var_requires_init : Error<
@@ -1771,8 +1689,12 @@ def err_auto_var_init_no_expression : Error<
 def err_auto_var_init_multiple_expressions : Error<
   "initializer for variable %0 with type %1 contains multiple expressions">;
 def err_auto_var_init_paren_braces : Error<
-  "cannot deduce type for variable %1 with type %2 from "
-  "%select{parenthesized|nested}0 initializer list">;
+  "cannot deduce type for variable %0 with type %1 from "
+  "parenthesized initializer list">;
+def warn_auto_var_direct_list_init : Warning<
+  "direct list initialization of a variable with a deduced type will change "
+  "meaning in a future version of Clang; insert an '=' to avoid a change in "
+  "behavior">, InGroup<FutureCompat>;
 def err_auto_new_ctor_multiple_expressions : Error<
   "new expression for type %0 contains multiple constructor arguments">;
 def err_auto_missing_trailing_return : Error<
@@ -1791,8 +1713,8 @@ def err_auto_var_deduction_failure_from_init_list : Error<
 def err_auto_new_deduction_failure : Error<
   "new expression for type %0 has incompatible constructor argument of type %1">;
 def err_auto_different_deductions : Error<
-  "'%select{auto|decltype(auto)|__auto_type}0' deduced as %1 in declaration "
-  "of %2 and deduced as %3 in declaration of %4">;
+  "'%select{auto|decltype(auto)}0' deduced as %1 in declaration of %2 and "
+  "deduced as %3 in declaration of %4">;
 def err_implied_std_initializer_list_not_found : Error<
   "cannot deduce type of initializer list because std::initializer_list was "
   "not found; include <initializer_list>">;
@@ -1802,10 +1724,6 @@ def warn_dangling_std_initializer_list : Warning<
   "array backing the initializer list will be destroyed at the end of "
   "%select{the full-expression|the constructor}0">,
   InGroup<DiagGroup<"dangling-initializer-list">>;
-def err_auto_init_list_from_c : Error<
-  "cannot use __auto_type with initializer list in C">;
-def err_auto_bitfield : Error<
-  "cannot pass bit-field as __auto_type initializer in C">;
 
 // C++1y decltype(auto) type
 def err_decltype_auto_cannot_be_combined : Error<
@@ -2072,8 +1990,6 @@ def err_function_concept_exception_spec : Error<
 def err_concept_decl_invalid_specifiers : Error<
   "%select{variable|function}0 concept cannot be declared "
   "'%select{thread_local|inline|friend|constexpr}1'">;
-def err_function_concept_with_params : Error<
-  "function concept cannot have any parameters">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<
@@ -2136,7 +2052,8 @@ def err_attribute_argument_type : Error<
   "%0 attribute requires %select{int or bool|an integer "
   "constant|a string|an identifier}1">;
 def err_attribute_argument_outof_range : Error<
-  "%0 attribute requires integer constant between %1 and %2 inclusive">;
+  "init_priority attribute requires integer constant between "
+  "101 and 65535 inclusive">;
 def err_init_priority_object_attr : Error<
   "can only use 'init_priority' attribute on file-scope definitions "
   "of objects of class type">;
@@ -2144,12 +2061,10 @@ def err_attribute_argument_vec_type_hint : Error<
   "invalid attribute argument %0 - expecting a vector or vectorizable scalar type">;
 def err_attribute_argument_out_of_bounds : Error<
   "%0 attribute parameter %1 is out of bounds">;
-def err_attribute_only_once_per_parameter : Error<
-  "%0 attribute can only be applied once per parameter">;
 def err_attribute_uuid_malformed_guid : Error<
   "uuid attribute contains a malformed GUID">;
 def warn_attribute_pointers_only : Warning<
-  "%0 attribute only applies to%select{| constant}1 pointer arguments">,
+  "%0 attribute only applies to pointer arguments">,
   InGroup<IgnoredAttributes>;
 def err_attribute_pointers_only : Error<warn_attribute_pointers_only.Text>;
 def warn_attribute_return_pointers_only : Warning<
@@ -2406,8 +2321,6 @@ def warn_attribute_dll_instantiated_base_class : Warning<
   "propagating dll attribute to %select{already instantiated|explicitly specialized}0 "
   "base class template without dll attribute is not supported">,
   InGroup<DiagGroup<"unsupported-dll-base-class-template">>, DefaultIgnore;
-def err_attribute_dll_ambiguous_default_ctor : Error<
-  "'__declspec(dllexport)' cannot be applied to more than one default constructor in %0">;
 def err_attribute_weakref_not_static : Error<
   "weakref declaration must have internal linkage">;
 def err_attribute_weakref_not_global_context : Error<
@@ -2496,8 +2409,6 @@ def warn_attribute_not_on_decl : Warning<
   "%0 attribute ignored when parsing type">, InGroup<IgnoredAttributes>;
 def err_base_specifier_attribute : Error<
   "%0 attribute cannot be applied to a base specifier">;
-def err_invalid_attribute_on_virtual_function : Error<
-  "%0 attribute cannot be applied to virtual functions">;
 
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
@@ -2733,14 +2644,15 @@ def warn_impcast_floating_point_to_bool : Warning<
     InGroup<ImplicitConversionFloatingPointToBool>;
 def ext_ms_impcast_fn_obj : ExtWarn<
   "implicit conversion between pointer-to-function and pointer-to-object is a "
-  "Microsoft extension">, InGroup<MicrosoftCast>;
+  "Microsoft extension">,
+  InGroup<MicrosoftCast>, DefaultError, SFINAEFailure;
 
 def warn_impcast_pointer_to_bool : Warning<
     "address of%select{| function| array}0 '%1' will always evaluate to "
     "'true'">,
     InGroup<PointerBoolConversion>;
 def warn_cast_nonnull_to_bool : Warning<
-    "nonnull %select{function call|parameter}0 '%1' will evaluate to "
+    "nonnull parameter '%0' will evaluate to "
     "'true' on first encounter">,
     InGroup<PointerBoolConversion>;
 def warn_this_bool_conversion : Warning<
@@ -2755,10 +2667,9 @@ def warn_null_pointer_compare : Warning<
     "comparison of %select{address of|function|array}0 '%1' %select{not |}2"
     "equal to a null pointer is always %select{true|false}2">,
     InGroup<TautologicalPointerCompare>;
-def warn_nonnull_expr_compare : Warning<
-    "comparison of nonnull %select{function call|parameter}0 '%1' "
-    "%select{not |}2equal to a null pointer is '%select{true|false}2' on first "
-    "encounter">,
+def warn_nonnull_parameter_compare : Warning<
+    "comparison of nonnull parameter '%0' %select{not |}1"
+    "equal to a null pointer is %select{true|false}1 on first encounter">,
     InGroup<TautologicalPointerCompare>;
 def warn_this_null_compare : Warning<
   "'this' pointer cannot be null in well-defined C++ code; comparison may be "
@@ -2798,10 +2709,9 @@ def warn_int_to_void_pointer_cast : Warning<
   "cast to %1 from smaller integer type %0">,
   InGroup<IntToVoidPointerCast>;
 
-def warn_attribute_packed_for_bitfield : Warning<
-  "'packed' attribute was ignored on bit-fields with single-byte alignment "
-  "in older versions of GCC and Clang">,
-  InGroup<DiagGroup<"attribute-packed-for-bitfield">>;
+def warn_attribute_ignored_for_field_of_type : Warning<
+  "%0 attribute ignored for field of type %1">,
+  InGroup<IgnoredAttributes>;
 def warn_transparent_union_attribute_field_size_align : Warning<
   "%select{alignment|size}0 of field %1 (%2 bits) does not match the "
   "%select{alignment|size}0 of the first field in transparent union; "
@@ -2845,12 +2755,10 @@ def err_mode_not_primitive : Error<
   "mode attribute only supported for integer and floating-point types">;
 def err_mode_wrong_type : Error<
   "type of machine mode does not match type of base type">;
-def warn_vector_mode_deprecated : Warning<
-  "specifying vector types with the 'mode' attribute is deprecated; "
-  "use the 'vector_size' attribute instead">,
-  InGroup<DeprecatedAttributes>;
 def err_complex_mode_vector_type : Error<
   "type of machine mode does not support base vector types">;
+def err_attr_wrong_decl : Error<
+  "%0 attribute invalid on this declaration, requires typedef or value">;
 def warn_attribute_nonnull_no_pointers : Warning<
   "'nonnull' attribute applied to function with no pointer arguments">,
   InGroup<IgnoredAttributes>;
@@ -3076,7 +2984,8 @@ def note_ovl_candidate : Note<"candidate "
     "%select{none|const|restrict|const and restrict|volatile|const and volatile"
     "|volatile and restrict|const, volatile, and restrict}3 but found "
     "%select{none|const|restrict|const and restrict|volatile|const and volatile"
-    "|volatile and restrict|const, volatile, and restrict}4)}2">;
+    "|volatile and restrict|const, volatile, and restrict}4)"
+    "| made ineligible by enable_if}2">;
 
 def note_ovl_candidate_inherited_constructor : Note<"inherited from here">;
 def note_ovl_candidate_illegal_constructor : Note<
@@ -3105,23 +3014,11 @@ def note_ovl_candidate_substitution_failure : Note<
     "candidate template ignored: substitution failure%0%1">;
 def note_ovl_candidate_disabled_by_enable_if : Note<
     "candidate template ignored: disabled by %0%1">;
-def note_ovl_candidate_has_pass_object_size_params: Note<
-    "candidate address cannot be taken because parameter %0 has "
-    "pass_object_size attribute">;
 def note_ovl_candidate_disabled_by_enable_if_attr : Note<
     "candidate disabled: %0">;
-def err_addrof_function_disabled_by_enable_if_attr : Error<
-    "cannot take address of function %0 becuase it has one or more "
-    "non-tautological enable_if conditions">;
-def note_addrof_ovl_candidate_disabled_by_enable_if_attr : Note<
-    "candidate function made ineligible by enable_if">;
 def note_ovl_candidate_failed_overload_resolution : Note<
     "candidate template ignored: couldn't resolve reference to overloaded "
     "function %0">;
-def note_ovl_candidate_deduced_mismatch : Note<
-    "candidate template ignored: deduced type "
-    "%diff{$ of %ordinal0 parameter does not match adjusted type $ of argument"
-    "|of %ordinal0 parameter does not match adjusted type of argument}1,2%3">;
 def note_ovl_candidate_non_deduced_mismatch : Note<
     "candidate template ignored: could not match %diff{$ against $|types}0,1">;
 // This note is needed because the above note would sometimes print two
@@ -3129,7 +3026,7 @@ def note_ovl_candidate_non_deduced_mismatch : Note<
 // can handle that case properly.
 def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
     "candidate template ignored: could not match %q0 against %q1">;
-
+    
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
     "%select{function|function|constructor|function|function|constructor|"
@@ -4186,12 +4083,6 @@ def warn_undefined_inline : Warning<"inline function %q0 is not defined">,
   InGroup<DiagGroup<"undefined-inline">>;
 def note_used_here : Note<"used here">;
 
-def err_internal_linkage_redeclaration : Error<
-  "'internal_linkage' attribute does not appear on the first declaration of %0">;
-def warn_internal_linkage_local_storage : Warning<
-  "'internal_linkage' attribute on a non-static local variable is ignored">,
-  InGroup<IgnoredAttributes>;
-
 def ext_internal_in_extern_inline : ExtWarn<
   "static %select{function|variable}0 %1 is used in an inline function with "
   "external linkage">, InGroup<StaticInInline>;
@@ -4269,11 +4160,6 @@ def err_dependent_tag_decl : Error<
 def err_tag_definition_of_typedef : Error<
   "definition of type %0 conflicts with %select{typedef|type alias}1 of the same name">;
 def err_conflicting_types : Error<"conflicting types for %0">;
-def err_different_pass_object_size_params : Error<
-  "conflicting pass_object_size attributes on parameters">;
-def err_late_asm_label_name : Error<
-  "cannot apply asm label to %select{variable|function}0 after its first use">;
-def err_different_asm_label : Error<"conflicting asm label">;
 def err_nested_redefinition : Error<"nested redefinition of %0">;
 def err_use_with_wrong_tag : Error<
   "use of %0 with tag type that does not match previous declaration">;
@@ -4658,6 +4544,9 @@ def err_synthesizing_arc_weak_property_disabled : Error<
 def err_synthesizing_arc_weak_property_no_runtime : Error<
   "cannot synthesize weak property because the current deployment target "
   "does not support weak references">;
+def warn_objc_weak_compat : Warning<
+  "the meaning of __weak has changed in manual reference-counting">,
+  InGroup<DiagGroup<"objc-weak-compat">>, DefaultIgnore;
 def err_arc_unsupported_weak_class : Error<
   "class is incompatible with __weak references">;
 def err_arc_weak_unavailable_assign : Error<
@@ -4919,8 +4808,8 @@ def err_sizeof_alignof_function_type : Error<
   "function type">;
 def err_openmp_default_simd_align_expr : Error<
   "invalid application of '__builtin_omp_required_simd_align' to an expression, only type is allowed">;
-def err_sizeof_alignof_typeof_bitfield : Error<
-  "invalid application of '%select{sizeof|alignof|typeof}0' to bit-field">;
+def err_sizeof_alignof_bitfield : Error<
+  "invalid application of '%select{sizeof|alignof}0' to bit-field">;
 def err_alignof_member_of_incomplete_type : Error<
   "invalid application of 'alignof' to a field of a class still being defined">;
 def err_vecstep_non_scalar_vector_type : Error<
@@ -4948,8 +4837,9 @@ def warn_floatingpoint_eq : Warning<
   "comparing floating point with == or != is unsafe">,
   InGroup<DiagGroup<"float-equal">>, DefaultIgnore;
 
-def warn_remainder_division_by_zero : Warning<
-  "%select{remainder|division}0 by zero is undefined">,
+def warn_division_by_zero : Warning<"division by zero is undefined">,
+  InGroup<DivZero>;
+def warn_remainder_by_zero : Warning<"remainder by zero is undefined">,
   InGroup<DivZero>;
 def warn_shift_lhs_negative : Warning<"shifting a negative signed value is undefined">,
   InGroup<DiagGroup<"shift-negative-value">>;
@@ -4987,8 +4877,8 @@ def note_logical_instead_of_bitwise_change_operator : Note<
 def note_logical_instead_of_bitwise_remove_constant : Note<
   "remove constant to silence this warning">;
 
-def warn_bitwise_op_in_bitwise_op : Warning<
-  "'%0' within '%1'">, InGroup<BitwiseOpParentheses>;
+def warn_bitwise_and_in_bitwise_or : Warning<
+  "'&' within '|'">, InGroup<BitwiseOpParentheses>;
 
 def warn_logical_and_in_logical_or : Warning<
   "'&&' within '||'">, InGroup<LogicalOpParentheses>;
@@ -5238,9 +5128,6 @@ def err_unqualified_pointer_member_function : Error<
   "must explicitly qualify name of member function when taking its address">;
 def err_invalid_form_pointer_member_function : Error<
   "cannot create a non-constant pointer to member function">;
-def err_address_of_function_with_pass_object_size_params: Error<
-  "cannot take address of function %0 because parameter %1 has "
-  "pass_object_size attribute">;
 def err_parens_pointer_member_function : Error<
   "cannot parenthesize the name of a method when forming a member pointer">;
 def err_typecheck_invalid_lvalue_addrof_addrof_function : Error<
@@ -5622,7 +5509,8 @@ def ext_cast_fn_obj : Extension<
   "cast between pointer-to-function and pointer-to-object is an extension">;
 def ext_ms_cast_fn_obj : ExtWarn<
   "static_cast between pointer-to-function and pointer-to-object is a "
-  "Microsoft extension">, InGroup<MicrosoftCast>;
+  "Microsoft extension">,
+  InGroup<MicrosoftCast>, DefaultError, SFINAEFailure;
 def warn_cxx98_compat_cast_fn_obj : Warning<
   "cast between pointer-to-function and pointer-to-object is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
@@ -5763,11 +5651,8 @@ def note_member_declared_here : Note<
   "member %0 declared here">;
 def err_decrement_bool : Error<"cannot decrement expression of type bool">;
 def warn_increment_bool : Warning<
-  "incrementing expression of type bool is deprecated and "
-  "incompatible with C++1z">, InGroup<DeprecatedIncrementBool>;
-def ext_increment_bool : ExtWarn<
-  "ISO C++1z does not allow incrementing expression of type bool">,
-  DefaultError, InGroup<IncrementBool>;
+  "incrementing expression of type bool is deprecated">,
+  InGroup<DeprecatedIncrementBool>;
 def err_increment_decrement_enum : Error<
   "cannot %select{decrement|increment}0 expression of enum type %1">;
 def err_catch_incomplete_ptr : Error<
@@ -5807,14 +5692,11 @@ def warn_non_virtual_dtor : Warning<
   "%0 has virtual functions but non-virtual destructor">,
   InGroup<NonVirtualDtor>, DefaultIgnore;
 def warn_delete_non_virtual_dtor : Warning<
-  "%select{delete|destructor}0 called on non-final %1 that has "
-  "virtual functions but non-virtual destructor">,
+  "delete called on %0 that has virtual functions but non-virtual destructor">,
   InGroup<DeleteNonVirtualDtor>, DefaultIgnore;
-def note_delete_non_virtual : Note<
-  "qualify call to silence this warning">;
 def warn_delete_abstract_non_virtual_dtor : Warning<
-  "%select{delete|destructor}0 called on %1 that is abstract but has "
-  "non-virtual destructor">, InGroup<DeleteNonVirtualDtor>;
+  "delete called on %0 that is abstract but has non-virtual destructor">,
+  InGroup<DeleteNonVirtualDtor>;
 def warn_overloaded_virtual : Warning<
   "%q0 hides overloaded virtual %select{function|functions}1">,
   InGroup<OverloadedVirtual>, DefaultIgnore;
@@ -5828,7 +5710,8 @@ def note_hidden_overloaded_virtual_declared_here : Note<
   "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
   "volatile and restrict|const, volatile, and restrict}2 vs "
   "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}3)}1">;
+  "volatile and restrict|const, volatile, and restrict}3)"
+  "|: mismatch in enable_if attributes}1">;
 def warn_using_directive_in_header : Warning<
   "using namespace directive in global context in header">,
   InGroup<HeaderHygiene>, DefaultIgnore;
@@ -5928,8 +5811,8 @@ let CategoryName = "Lambda Issue" in {
   def err_init_capture_multiple_expressions : Error<
     "initializer for lambda capture %0 contains multiple expressions">;
   def err_init_capture_paren_braces : Error<
-    "cannot deduce type for lambda capture %1 from "
-    "%select{parenthesized|nested}0 initializer list">;
+    "cannot deduce type for lambda capture %0 from "
+    "parenthesized initializer list">;
   def err_init_capture_deduction_failure : Error<
     "cannot deduce type for lambda capture %0 from initializer of type %2">;
   def err_init_capture_deduction_failure_from_init_list : Error<
@@ -5976,6 +5859,8 @@ def err_pseudo_dtor_destructor_non_type : Error<
 def err_invalid_use_of_function_type : Error<
   "a function type is not allowed here">;
 def err_invalid_use_of_array_type : Error<"an array type is not allowed here">;
+def err_type_defined_in_condition : Error<
+  "types may not be defined in conditions">;
 def err_typecheck_bool_condition : Error<
   "value of type %0 is not contextually convertible to 'bool'">;
 def err_typecheck_ambiguous_condition : Error<
@@ -6063,7 +5948,8 @@ def err_typecheck_convert_incompatible : Error<
   "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
   "volatile and restrict|const, volatile, and restrict}5 vs "
   "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}6)}4">;
+  "volatile and restrict|const, volatile, and restrict}6)"
+  "|: cannot take the address of a potentially disabled function}4">;
 def err_typecheck_missing_return_type_incompatible : Error<
   "%diff{return type $ must match previous return type $|"
   "return type must match previous return type}0,1 when %select{block "
@@ -6586,10 +6472,6 @@ let CategoryName = "Inline Assembly Issue" in {
     "asm constraint has an unexpected number of alternatives: %0 vs %1">;
   def err_asm_incomplete_type : Error<"asm operand has incomplete type %0">;
   def err_asm_unknown_register_name : Error<"unknown register name '%0' in asm">;
-  def err_asm_invalid_global_var_reg : Error<"register '%0' unsuitable for "
-    "global register variables on this target">;
-  def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
-    "match variable size">;
   def err_asm_bad_register_type : Error<"bad type for named register variable">;
   def err_asm_invalid_input_size : Error<
     "invalid input size for constraint '%0'">;
@@ -6723,8 +6605,10 @@ def err_anonymous_union_with_storage_spec : Error<
 def err_anonymous_struct_not_member : Error<
   "anonymous %select{structs|structs and classes}0 must be "
   "%select{struct or union|class}0 members">;
-def err_anonymous_record_member_redecl : Error<
-  "member of anonymous %select{struct|union}0 redeclares %1">;
+def err_anonymous_union_member_redecl : Error<
+  "member of anonymous union redeclares %0">;
+def err_anonymous_struct_member_redecl : Error<
+  "member of anonymous struct redeclares %0">;
 def err_anonymous_record_with_type : Error<
   "types cannot be declared in an anonymous %select{struct|union}0">;
 def ext_anonymous_record_with_type : Extension<
@@ -7077,12 +6961,17 @@ def warn_null_ret : Warning<
   InGroup<NonNull>;
 
 // CHECK: returning address/reference of stack memory
-def warn_ret_stack_addr_ref : Warning<
-  "%select{address of|reference to}0 stack memory associated with local "
-  "variable %1 returned">,
+def warn_ret_stack_addr : Warning<
+  "address of stack memory associated with local variable %0 returned">,
   InGroup<ReturnStackAddress>;
-def warn_ret_local_temp_addr_ref : Warning<
-  "returning %select{address of|reference to}0 local temporary object">,
+def warn_ret_stack_ref : Warning<
+  "reference to stack memory associated with local variable %0 returned">,
+  InGroup<ReturnStackAddress>;
+def warn_ret_local_temp_addr : Warning<
+  "returning address of local temporary object">,
+  InGroup<ReturnStackAddress>;
+def warn_ret_local_temp_ref : Warning<
+  "returning reference to local temporary object">,
   InGroup<ReturnStackAddress>;
 def warn_ret_addr_label : Warning<
   "returning address of label, which is local">,
@@ -7649,10 +7538,6 @@ def err_wrong_sampler_addressspace: Error<
   "sampler type cannot be used with the __local and __global address space qualifiers">;
 def err_opencl_global_invalid_addr_space : Error<
   "program scope variable must reside in %0 address space">;
-def err_missing_actual_pipe_type : Error<
-  "missing actual type specifier for pipe">;
-def err_reference_pipe_type : Error <
-  "pipes packet types cannot be of reference type">;
 def err_opencl_no_main : Error<"%select{function|kernel}0 cannot be called 'main'">;
 def err_opencl_kernel_attr :
   Error<"attribute %0 can only be applied to a kernel function">;
@@ -7665,11 +7550,6 @@ def err_atomic_init_constant : Error<
   " in the declaration statement in the program scope">;
 def err_opencl_implicit_vector_conversion : Error<
   "implicit conversions between vector types (%0 and %1) are not permitted">;
-
-// OpenCL Section 6.8.g
-def err_opencl_unknown_type_specifier : Error<
-  "OpenCL does not support the '%0' %select{type qualifier|storage class specifier}1">;
-
 } // end of sema category
 
 let CategoryName = "OpenMP Issue" in {
@@ -7736,7 +7616,7 @@ def err_omp_not_for : Error<
 def note_omp_collapse_ordered_expr : Note<
   "as specified in %select{'collapse'|'ordered'|'collapse' and 'ordered'}0 clause%select{||s}0">;
 def err_omp_negative_expression_in_clause : Error<
-  "argument to '%0' clause must be a %select{non-negative|strictly positive}1 integer value">;
+  "argument to '%0' clause must be a positive integer value">;
 def err_omp_not_integral : Error<
   "expression must have integral or unscoped enumeration "
   "type, not %0">;
@@ -7825,8 +7705,7 @@ def err_omp_prohibited_region : Error<
   "region cannot be%select{| closely}0 nested inside '%1' region"
   "%select{|; perhaps you forget to enclose 'omp %3' directive into a parallel region?|"
   "; perhaps you forget to enclose 'omp %3' directive into a for or a parallel for region with 'ordered' clause?|"
-  "; perhaps you forget to enclose 'omp %3' directive into a target region?|"
-  "; perhaps you forget to enclose 'omp %3' directive into a teams region?}2">;
+  "; perhaps you forget to enclose 'omp %3' directive into a target region?}2">;
 def err_omp_prohibited_region_simd : Error<
   "OpenMP constructs may not be nested inside a simd region">;
 def err_omp_prohibited_region_atomic : Error<
@@ -7927,66 +7806,10 @@ def note_omp_previous_named_if_clause : Note<
   "previous clause with directive name modifier specified here">;
 def err_omp_ordered_directive_with_param : Error<
   "'ordered' directive %select{without any clauses|with 'threads' clause}0 cannot be closely nested inside ordered region with specified parameter">;
-def err_omp_ordered_directive_without_param : Error<
-  "'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter">;
 def note_omp_ordered_param : Note<
   "'ordered' clause with specified parameter">;
 def err_omp_expected_base_var_name : Error<
   "expected variable name as a base of the array %select{subscript|section}0">;
-def err_omp_map_shared_storage : Error<
-  "variable already marked as mapped in current construct">;
-def err_omp_not_mappable_type : Error<
-  "type %0 is not mappable to target">;
-def note_omp_polymorphic_in_target : Note<
-  "mappable type cannot be polymorphic">;
-def note_omp_static_member_in_target : Note<
-  "mappable type cannot contain static members">;
-def err_omp_threadprivate_in_map : Error<
-  "threadprivate variables are not allowed in map clause">;
-def err_omp_wrong_ordered_loop_count : Error<
-  "the parameter of the 'ordered' clause must be greater than or equal to the parameter of the 'collapse' clause">;
-def note_collapse_loop_count : Note<
-  "parameter of the 'collapse' clause">;
-def err_omp_grainsize_num_tasks_mutually_exclusive : Error<
-  "'%0' and '%1' clause are mutually exclusive and may not appear on the same directive">;
-def note_omp_previous_grainsize_num_tasks : Note<
-  "'%0' clause is specified here">;
-def err_omp_hint_clause_no_name : Error<
-  "the name of the construct must be specified in presence of 'hint' clause">;
-def err_omp_critical_with_hint : Error<
-  "constructs with the same name must have a 'hint' clause with the same value">;
-def note_omp_critical_hint_here : Note<
-  "%select{|previous }0'hint' clause with value '%1'">;
-def note_omp_critical_no_hint : Note<
-  "%select{|previous }0directive with no 'hint' clause specified">;
-def err_omp_firstprivate_distribute_private_teams : Error<
-  "private variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'">;
-def err_omp_firstprivate_and_lastprivate_in_distribute : Error<
-  "lastprivate variable cannot be firstprivate in '#pragma omp distribute'">;
-def err_omp_firstprivate_distribute_in_teams_reduction : Error<
-  "reduction variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'">;
-def err_omp_depend_clause_thread_simd : Error<
-  "'depend' clauses cannot be mixed with '%0' clause">;
-def err_omp_depend_sink_wrong_expr : Error<
-  "expected expression form x[+-d], where x is the loop iteration variable and d is a constant non-negative integer">;
-def err_omp_depend_sink_expected_loop_iteration : Error<
-  "expected %0 loop iteration variable">;
-def err_omp_depend_sink_unexpected_expr : Error<
-  "unexpected expression: number of expressions is larger than the number of associated loops">;
-def err_omp_depend_sink_expected_plus_minus : Error<
-  "expected '+' or '-' operation">;
-def err_omp_depend_sink_source_not_allowed : Error<
-  "'depend(%select{source|sink:vec}0)' clause%select{|s}0 cannot be mixed with 'depend(%select{sink:vec|source}0)' clause%select{s|}0">;
-def err_omp_linear_ordered : Error<
-  "'linear' clause cannot be specified along with 'ordered' clause with a parameter">;
-def err_omp_unexpected_schedule_modifier : Error<
-  "modifier '%0' cannot be used along with modifier '%1'">;
-def err_omp_schedule_nonmonotonic_static : Error<
-  "'nonmonotonic' modifier can only be specified with 'dynamic' or 'guided' schedule kind">;
-def err_omp_schedule_nonmonotonic_ordered : Error<
-  "'schedule' clause with 'nonmonotonic' modifier cannot be specified if an 'ordered' clause is specified">;
-def err_omp_ordered_simd : Error<
-  "'ordered' clause with a parameter can not be specified in '#pragma omp %0' directive">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -8038,9 +7861,6 @@ def note_module_import_in_extern_c : Note<
   "extern \"C\" language linkage specification begins here">;
 def err_module_import_not_at_top_level_fatal : Error<
   "import of module '%0' appears within %1">, DefaultFatal;
-def ext_module_import_not_at_top_level_noop : ExtWarn<
-  "redundant #include of module '%0' appears within %1">, DefaultError,
-  InGroup<DiagGroup<"modules-import-nested-redundant">>;
 def note_module_import_not_at_top_level : Note<"%0 begins here">;
 def err_module_self_import : Error<
   "import of module '%0' appears within same top-level module '%1'">;
@@ -8062,8 +7882,6 @@ def note_declared_coroutine_here : Note<
   "'%select{co_await|co_yield|co_return}0' here">;
 def err_coroutine_objc_method : Error<
   "Objective-C methods as coroutines are not yet supported">;
-def err_coroutine_unevaluated_context : Error<
-  "'%0' cannot be used in an unevaluated context">;
 def err_coroutine_outside_function : Error<
   "'%0' cannot be used outside a function">;
 def err_coroutine_ctor_dtor : Error<
@@ -8079,14 +7897,14 @@ def ext_coroutine_without_co_await_co_yield : ExtWarn<
 def err_implied_std_coroutine_traits_not_found : Error<
   "you need to include <coroutine> before defining a coroutine">;
 def err_malformed_std_coroutine_traits : Error<
-  "'std::coroutine_traits' must be a class template">;
+  "std::coroutine_traits must be a class template">;
 def err_implied_std_coroutine_traits_promise_type_not_found : Error<
-  "this function cannot be a coroutine: %q0 has no member named 'promise_type'">;
+  "this function cannot be a coroutine: %0 has no member named 'promise_type'">;
 def err_implied_std_coroutine_traits_promise_type_not_class : Error<
   "this function cannot be a coroutine: %0 is not a class">;
 def err_coroutine_traits_missing_specialization : Error<
   "this function cannot be a coroutine: missing definition of "
-  "specialization %q0">;
+  "specialization %0">;
 }
 
 let CategoryName = "Documentation Issue" in {

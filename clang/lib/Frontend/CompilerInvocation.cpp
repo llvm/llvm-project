@@ -8,14 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestModuleFileExtension.h"
-#include "clang/Basic/Builtins.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Util.h"
-#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/LangStandard.h"
 #include "clang/Frontend/Utils.h"
@@ -39,7 +38,6 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Target/TargetOptions.h"
 #include <atomic>
 #include <memory>
 #include <sys/stat.h>
@@ -134,20 +132,6 @@ static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
         Diagnostics.emplace_back(Arg);
     }
   }
-}
-
-static void getAllNoBuiltinFuncValues(ArgList &Args,
-                                      std::vector<std::string> &Funcs) {
-  SmallVector<const char *, 8> Values;
-  for (const auto &Arg : Args) {
-    const Option &O = Arg->getOption();
-    if (O.matches(options::OPT_fno_builtin_)) {
-      const char *FuncName = Arg->getValue();
-      if (Builtin::Context::isBuiltinFunc(FuncName))
-        Values.push_back(FuncName);
-    }
-  }
-  Funcs.insert(Funcs.end(), Values.begin(), Values.end());
 }
 
 static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
@@ -380,7 +364,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                              const TargetOptions &TargetOpts) {
   using namespace options;
   bool Success = true;
-  llvm::Triple Triple = llvm::Triple(TargetOpts.Triple);
 
   unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
   // TODO: This could be done in Driver
@@ -414,36 +397,17 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   }
 
   if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
-    unsigned Val =
-        llvm::StringSwitch<unsigned>(A->getValue())
+    Opts.setDebugInfo(
+        llvm::StringSwitch<CodeGenOptions::DebugInfoKind>(A->getValue())
             .Case("line-tables-only", CodeGenOptions::DebugLineTablesOnly)
             .Case("limited", CodeGenOptions::LimitedDebugInfo)
-            .Case("standalone", CodeGenOptions::FullDebugInfo)
-            .Default(~0U);
-    if (Val == ~0U)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << A->getValue();
-    else
-      Opts.setDebugInfo(static_cast<CodeGenOptions::DebugInfoKind>(Val));
-  }
-  if (Arg *A = Args.getLastArg(OPT_debugger_tuning_EQ)) {
-    unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
-                       .Case("gdb", CodeGenOptions::DebuggerKindGDB)
-                       .Case("lldb", CodeGenOptions::DebuggerKindLLDB)
-                       .Case("sce", CodeGenOptions::DebuggerKindSCE)
-                       .Default(~0U);
-    if (Val == ~0U)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << A->getValue();
-    else
-      Opts.setDebuggerTuning(static_cast<CodeGenOptions::DebuggerKind>(Val));
+            .Case("standalone", CodeGenOptions::FullDebugInfo));
   }
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 0, Diags);
   Opts.DebugColumnInfo = Args.hasArg(OPT_dwarf_column_info);
   Opts.EmitCodeView = Args.hasArg(OPT_gcodeview);
   Opts.SplitDwarfFile = Args.getLastArgValue(OPT_split_dwarf_file);
   Opts.DebugTypeExtRefs = Args.hasArg(OPT_dwarf_ext_refs);
-  Opts.DebugExplicitImport = Triple.isPS4CPU(); 
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ))
     Opts.DebugPrefixMap.insert(StringRef(Arg).split('='));
@@ -467,8 +431,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.OptimizeSize = getOptimizationLevelSize(Args);
   Opts.SimplifyLibCalls = !(Args.hasArg(OPT_fno_builtin) ||
                             Args.hasArg(OPT_ffreestanding));
-  if (Opts.SimplifyLibCalls)
-    getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1 && !Opts.OptimizeSize));
@@ -490,25 +452,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CXXCtorDtorAliases = Args.hasArg(OPT_mconstructor_aliases);
   Opts.CodeModel = getCodeModel(Args, Diags);
   Opts.DebugPass = Args.getLastArgValue(OPT_mdebug_pass);
-  Opts.DisableFPElim =
-      (Args.hasArg(OPT_mdisable_fp_elim) || Args.hasArg(OPT_pg));
+  Opts.DisableFPElim = Args.hasArg(OPT_mdisable_fp_elim);
   Opts.DisableFree = Args.hasArg(OPT_disable_free);
   Opts.DisableTailCalls = Args.hasArg(OPT_mdisable_tail_calls);
   Opts.FloatABI = Args.getLastArgValue(OPT_mfloat_abi);
-  if (Arg *A = Args.getLastArg(OPT_meabi)) {
-    StringRef Value = A->getValue();
-    llvm::EABI EABIVersion = llvm::StringSwitch<llvm::EABI>(Value)
-                                 .Case("default", llvm::EABI::Default)
-                                 .Case("4", llvm::EABI::EABI4)
-                                 .Case("5", llvm::EABI::EABI5)
-                                 .Case("gnu", llvm::EABI::GNU)
-                                 .Default(llvm::EABI::Unknown);
-    if (EABIVersion == llvm::EABI::Unknown)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << Value;
-    else
-      Opts.EABIVersion = Value;
-  }
   Opts.LessPreciseFPMAD = Args.hasArg(OPT_cl_mad_enable);
   Opts.LimitFloatPrecision = Args.getLastArgValue(OPT_mlimit_float_precision);
   Opts.NoInfsFPMath = (Args.hasArg(OPT_menable_no_infinities) ||
@@ -527,8 +474,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.FatalWarnings = Args.hasArg(OPT_massembler_fatal_warnings);
   Opts.EnableSegmentedStacks = Args.hasArg(OPT_split_stacks);
   Opts.RelaxAll = Args.hasArg(OPT_mrelax_all);
-  Opts.IncrementalLinkerCompatible =
-      Args.hasArg(OPT_mincremental_linker_compatible);
   Opts.OmitLeafFramePointer = Args.hasArg(OPT_momit_leaf_frame_pointer);
   Opts.SaveTempLabels = Args.hasArg(OPT_msave_temp_labels);
   Opts.NoDwarfDirectoryAsm = Args.hasArg(OPT_fno_dwarf_directory_asm);
@@ -560,12 +505,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   const Arg *A = Args.getLastArg(OPT_flto, OPT_flto_EQ);
   Opts.EmitFunctionSummary = A && A->containsValue("thin");
-  if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
-    if (IK != IK_LLVM_IR)
-      Diags.Report(diag::err_drv_argument_only_allowed_with)
-          << A->getAsString(Args) << "-x ir";
-    Opts.ThinLTOIndexFile = Args.getLastArgValue(OPT_fthinlto_index_EQ);
-  }
 
   Opts.MSVolatile = Args.hasArg(OPT_fms_volatile);
 
@@ -622,8 +561,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fsanitize_memory_track_origins_EQ, 0, Diags);
   Opts.SanitizeMemoryUseAfterDtor =
       Args.hasArg(OPT_fsanitize_memory_use_after_dtor);
-  Opts.SanitizeCfiCrossDso = Args.hasArg(OPT_fsanitize_cfi_cross_dso);
-  Opts.SanitizeStats = Args.hasArg(OPT_fsanitize_stats);
   Opts.SSPBufferSize =
       getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
   Opts.StackRealignment = Args.hasArg(OPT_mstackrealign);
@@ -698,7 +635,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   }
 
   Opts.DependentLibraries = Args.getAllArgValues(OPT_dependent_lib);
-  Opts.LinkerOptions = Args.getAllArgValues(OPT_linker_option);
   bool NeedLocTracking = false;
 
   if (Arg *A = Args.getLastArg(OPT_Rpass_EQ)) {
@@ -1064,7 +1000,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.ModuleMapFiles = Args.getAllArgValues(OPT_fmodule_map_file);
   Opts.ModuleFiles = Args.getAllArgValues(OPT_fmodule_file);
   Opts.ModulesEmbedFiles = Args.getAllArgValues(OPT_fmodules_embed_file_EQ);
-  Opts.ModulesEmbedAllFiles = Args.hasArg(OPT_fmodules_embed_all_files);
 
   Opts.CodeCompleteOpts.IncludeMacros
     = Args.hasArg(OPT_code_completion_macros);
@@ -1677,6 +1612,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasArg(OPT_fmodules_decluse) || Opts.ModulesStrictDeclUse;
   Opts.ModulesLocalVisibility =
       Args.hasArg(OPT_fmodules_local_submodule_visibility);
+  Opts.ModulesHideInternalLinkage =
+      !Args.hasArg(OPT_fno_modules_hide_internal_linkage);
   Opts.ModulesSearchAll = Opts.Modules &&
     !Args.hasArg(OPT_fno_modules_search_all) &&
     Args.hasArg(OPT_fmodules_search_all);
@@ -1688,8 +1625,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ShortEnums = Args.hasArg(OPT_fshort_enums);
   Opts.Freestanding = Args.hasArg(OPT_ffreestanding);
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
-  if (!Opts.NoBuiltin)
-    getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
   Opts.NoMathBuiltin = Args.hasArg(OPT_fno_math_builtin);
   Opts.AssumeSaneOperatorNew = !Args.hasArg(OPT_fno_assume_sane_operator_new);
   Opts.SizedDeallocation = Args.hasArg(OPT_fsized_deallocation);
@@ -1816,30 +1751,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.OpenMP = Args.hasArg(options::OPT_fopenmp);
   Opts.OpenMPUseTLS =
       Opts.OpenMP && !Args.hasArg(options::OPT_fnoopenmp_use_tls);
-  Opts.OpenMPIsDevice =
-      Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_device);
-
-  // Get the OpenMP target triples if any.
-  if (Arg *A = Args.getLastArg(options::OPT_omptargets_EQ)) {
-
-    for (unsigned i = 0; i < A->getNumValues(); ++i) {
-      llvm::Triple TT(A->getValue(i));
-
-      if (TT.getArch() == llvm::Triple::UnknownArch)
-        Diags.Report(clang::diag::err_drv_invalid_omp_target) << A->getValue(i);
-      else
-        Opts.OMPTargetTriples.push_back(TT);
-    }
-  }
-
-  // Get OpenMP host file path if any and report if a non existent file is
-  // found
-  if (Arg *A = Args.getLastArg(options::OPT_omp_host_ir_file_path)) {
-    Opts.OMPHostIRFile = A->getValue();
-    if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
-      Diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
-          << Opts.OMPHostIRFile;
-  }
 
   // Record whether the __DEPRECATED define was requested.
   Opts.Deprecated = Args.hasFlag(OPT_fdeprecated_macro,
@@ -2204,11 +2115,8 @@ std::string CompilerInvocation::getModuleHash() const {
     code = hash_combine(code, I->first, I->second);
   }
 
-  // Extend the signature with the sysroot and other header search options.
-  code = hash_combine(code, hsOpts.Sysroot,
-                      hsOpts.ModuleFormat,
-                      hsOpts.UseDebugInfo,
-                      hsOpts.UseBuiltinIncludes,
+  // Extend the signature with the sysroot.
+  code = hash_combine(code, hsOpts.Sysroot, hsOpts.UseBuiltinIncludes,
                       hsOpts.UseStandardSystemIncludes,
                       hsOpts.UseStandardCXXIncludes,
                       hsOpts.UseLibcxx);

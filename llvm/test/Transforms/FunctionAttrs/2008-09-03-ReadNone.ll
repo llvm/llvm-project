@@ -10,16 +10,15 @@ define i32 @f() {
 	ret i32 %tmp
 }
 
-; CHECK: define i32 @g() #1
+; CHECK: define i32 @g() #0
 define i32 @g() readonly {
 	ret i32 0
 }
 
-; CHECK: define i32 @h() #1
+; CHECK: define i32 @h() #0
 define i32 @h() readnone {
 	%tmp = load i32, i32* @x		; <i32> [#uses=1]
 	ret i32 %tmp
 }
 
 ; CHECK: attributes #0 = { readnone }
-; CHECK: attributes #1 = { norecurse readnone }

@@ -1000,9 +1000,12 @@ static bool isKnownDeallocObjCMethodName(const ObjCMethodCall &Call) {
   // Ex:  [NSData dataWithBytesNoCopy:bytes length:10];
   // (...unless a 'freeWhenDone' parameter is false, but that's checked later.)
   StringRef FirstSlot = Call.getSelector().getNameForSlot(0);
-  return FirstSlot == "dataWithBytesNoCopy" ||
-         FirstSlot == "initWithBytesNoCopy" ||
-         FirstSlot == "initWithCharactersNoCopy";
+  if (FirstSlot == "dataWithBytesNoCopy" ||
+      FirstSlot == "initWithBytesNoCopy" ||
+      FirstSlot == "initWithCharactersNoCopy")
+    return true;
+
+  return false;
 }
 
 static Optional<bool> getFreeWhenDoneArg(const ObjCMethodCall &Call) {
@@ -1513,15 +1516,15 @@ bool MallocChecker::SummarizeValue(raw_ostream &os, SVal V) {
 bool MallocChecker::SummarizeRegion(raw_ostream &os,
                                     const MemRegion *MR) {
   switch (MR->getKind()) {
-  case MemRegion::FunctionCodeRegionKind: {
-    const NamedDecl *FD = cast<FunctionCodeRegion>(MR)->getDecl();
+  case MemRegion::FunctionTextRegionKind: {
+    const NamedDecl *FD = cast<FunctionTextRegion>(MR)->getDecl();
     if (FD)
       os << "the address of the function '" << *FD << '\'';
     else
       os << "the address of a function";
     return true;
   }
-  case MemRegion::BlockCodeRegionKind:
+  case MemRegion::BlockTextRegionKind:
     os << "block text";
     return true;
   case MemRegion::BlockDataRegionKind:
@@ -2505,16 +2508,6 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
       FName == "CVPixelBufferCreateWithBytes" ||
       FName == "CVPixelBufferCreateWithPlanarBytes" ||
       FName == "OSAtomicEnqueue") {
-    return true;
-  }
-
-  if (FName == "postEvent" &&
-      FD->getQualifiedNameAsString() == "QCoreApplication::postEvent") {
-    return true;
-  }
-
-  if (FName == "postEvent" &&
-      FD->getQualifiedNameAsString() == "QCoreApplication::postEvent") {
     return true;
   }
 

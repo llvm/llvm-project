@@ -500,12 +500,12 @@ unsigned CostModelAnalysis::getInstructionCost(const Instruction *I) const {
   }
   case Instruction::Call:
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      SmallVector<Value *, 4> Args;
+      SmallVector<Type*, 4> Tys;
       for (unsigned J = 0, JE = II->getNumArgOperands(); J != JE; ++J)
-        Args.push_back(II->getArgOperand(J));
+        Tys.push_back(II->getArgOperand(J)->getType());
 
       return TTI->getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(),
-                                        Args);
+                                        Tys);
     }
     return -1;
   default:

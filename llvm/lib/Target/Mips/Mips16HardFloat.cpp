@@ -427,9 +427,15 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
         Value *F = (M->getOrInsertFunction(Name, A, MyVoid, T, nullptr));
         CallInst::Create(F, Params, "", &Inst );
       } else if (const CallInst *CI = dyn_cast<CallInst>(I)) {
-        FunctionType *FT = CI->getFunctionType();
+        const Value* V = CI->getCalledValue();
+        Type* T = nullptr;
+        if (V) T = V->getType();
+        PointerType *PFT = nullptr;
+        if (T) PFT = dyn_cast<PointerType>(T);
+        FunctionType *FT = nullptr;
+        if (PFT) FT = dyn_cast<FunctionType>(PFT->getElementType());
         Function *F_ =  CI->getCalledFunction();
-        if (needsFPReturnHelper(*FT) &&
+        if (FT && needsFPReturnHelper(*FT) &&
             !(F_ && isIntrinsicInline(F_))) {
           Modified=true;
           F.addFnAttr("saveS2");

@@ -27,11 +27,12 @@ void MachineRegisterInfo::Delegate::anchor() {}
 MachineRegisterInfo::MachineRegisterInfo(const MachineFunction *MF)
   : MF(MF), TheDelegate(nullptr), IsSSA(true), TracksLiveness(true),
     TracksSubRegLiveness(false) {
-  unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   RegAllocHints.reserve(256);
-  UsedPhysRegMask.resize(NumRegs);
-  PhysRegUseDefLists.reset(new MachineOperand*[NumRegs]());
+  UsedPhysRegMask.resize(getTargetRegisterInfo()->getNumRegs());
+
+  // Create the physreg use/def lists.
+  PhysRegUseDefLists.resize(getTargetRegisterInfo()->getNumRegs(), nullptr);
 }
 
 /// setRegClass - Set the register class of the specified virtual register.

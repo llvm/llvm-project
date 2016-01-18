@@ -962,8 +962,10 @@ void Scanner::skip(uint32_t Distance) {
 bool Scanner::isBlankOrBreak(StringRef::iterator Position) {
   if (Position == End)
     return false;
-  return *Position == ' ' || *Position == '\t' || *Position == '\r' ||
-         *Position == '\n';
+  if (   *Position == ' ' || *Position == '\t'
+      || *Position == '\r' || *Position == '\n')
+    return true;
+  return false;
 }
 
 bool Scanner::consumeLineBreakIfPresent() {

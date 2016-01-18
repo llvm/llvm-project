@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 template<typename T, int N = 2> struct X; // expected-note{{template is declared here}}
 
 X<int, 1> *x1;
@@ -144,10 +142,7 @@ namespace PR9643 {
 namespace PR16288 {
   template<typename X>
   struct S {
-    template<typename T = int, typename U>
-#if __cplusplus <= 199711L // C++03 or earlier modes
-    // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
-#endif
+    template<typename T = int, typename U> // expected-warning {{C++11}}
     void f();
   };
   template<typename X>
@@ -157,10 +152,8 @@ namespace PR16288 {
 
 namespace DR1635 {
   template <class T> struct X {
-    template <class U = typename T::type> static void f(int) {} // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
-#if __cplusplus <= 199711L // C++03 or earlier modes
-    // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
-#endif
+    template <class U = typename T::type> static void f(int) {} // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} \
+                                                                // expected-warning {{C++11}}
     static void f(...) {}
   };
 

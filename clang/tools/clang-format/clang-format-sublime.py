@@ -32,7 +32,7 @@ class ClangFormatCommand(sublime_plugin.TextCommand):
     if encoding == 'Undefined':
       encoding = 'utf-8'
     regions = []
-    command = [binary, '-style', style]
+    command = [binary, '-sort-includes', '-style', style]
     for region in self.view.sel():
       regions.append(region)
       region_offset = min(region.a, region.b)

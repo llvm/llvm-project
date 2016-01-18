@@ -10,7 +10,6 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_INPUTINFO_H
 #define LLVM_CLANG_LIB_DRIVER_INPUTINFO_H
 
-#include "clang/Driver/Action.h"
 #include "clang/Driver/Types.h"
 #include "llvm/Option/Arg.h"
 #include <cassert>
@@ -39,36 +38,21 @@ class InputInfo {
     const llvm::opt::Arg *InputArg;
   } Data;
   Class Kind;
-  const Action* Act;
   types::ID Type;
   const char *BaseInput;
 
-  static types::ID GetActionType(const Action *A) {
-    return A != nullptr ? A->getType() : types::TY_Nothing;
-  }
-
 public:
-  InputInfo() : InputInfo(nullptr, nullptr) {}
-  InputInfo(const Action *A, const char *_BaseInput)
-      : Kind(Nothing), Act(A), Type(GetActionType(A)), BaseInput(_BaseInput) {}
-
-  InputInfo(types::ID _Type, const char *_Filename, const char *_BaseInput)
-      : Kind(Filename), Act(nullptr), Type(_Type), BaseInput(_BaseInput) {
+  InputInfo() {}
+  InputInfo(types::ID _Type, const char *_BaseInput)
+    : Kind(Nothing), Type(_Type), BaseInput(_BaseInput) {
+  }
+  InputInfo(const char *_Filename, types::ID _Type, const char *_BaseInput)
+    : Kind(Filename), Type(_Type), BaseInput(_BaseInput) {
     Data.Filename = _Filename;
   }
-  InputInfo(const Action *A, const char *_Filename, const char *_BaseInput)
-      : Kind(Filename), Act(A), Type(GetActionType(A)), BaseInput(_BaseInput) {
-    Data.Filename = _Filename;
-  }
-
-  InputInfo(types::ID _Type, const llvm::opt::Arg *_InputArg,
+  InputInfo(const llvm::opt::Arg *_InputArg, types::ID _Type,
             const char *_BaseInput)
-      : Kind(InputArg), Act(nullptr), Type(_Type), BaseInput(_BaseInput) {
-    Data.InputArg = _InputArg;
-  }
-  InputInfo(const Action *A, const llvm::opt::Arg *_InputArg,
-            const char *_BaseInput)
-      : Kind(InputArg), Act(A), Type(GetActionType(A)), BaseInput(_BaseInput) {
+      : Kind(InputArg), Type(_Type), BaseInput(_BaseInput) {
     Data.InputArg = _InputArg;
   }
 
@@ -77,9 +61,6 @@ public:
   bool isInputArg() const { return Kind == InputArg; }
   types::ID getType() const { return Type; }
   const char *getBaseInput() const { return BaseInput; }
-  /// The action for which this InputInfo was created.  May be null.
-  const Action *getAction() const { return Act; }
-  void setAction(const Action *A) { Act = A; }
 
   const char *getFilename() const {
     assert(isFilename() && "Invalid accessor.");

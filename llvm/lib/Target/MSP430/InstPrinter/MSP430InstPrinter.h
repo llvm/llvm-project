@@ -17,6 +17,8 @@
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
+  class MCOperand;
+
   class MSP430InstPrinter : public MCInstPrinter {
   public:
     MSP430InstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,

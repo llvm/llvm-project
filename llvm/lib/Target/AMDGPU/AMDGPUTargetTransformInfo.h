@@ -60,11 +60,6 @@ public:
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector);
   unsigned getMaxInterleaveFactor(unsigned VF);
-
-  unsigned getCFInstrCost(unsigned Opcode);
-
-  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
-  bool isSourceOfDivergence(const Value *V) const;
 };
 
 } // end namespace llvm

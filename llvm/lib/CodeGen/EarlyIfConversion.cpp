@@ -538,11 +538,11 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock*> &RemovedBlocks) {
 
   // Fix up the CFG, temporarily leave Head without any successors.
   Head->removeSuccessor(TBB);
-  Head->removeSuccessor(FBB, true);
+  Head->removeSuccessor(FBB);
   if (TBB != Tail)
-    TBB->removeSuccessor(Tail, true);
+    TBB->removeSuccessor(Tail);
   if (FBB != Tail)
-    FBB->removeSuccessor(Tail, true);
+    FBB->removeSuccessor(Tail);
 
   // Fix up Head's terminators.
   // It should become a single branch or a fallthrough.

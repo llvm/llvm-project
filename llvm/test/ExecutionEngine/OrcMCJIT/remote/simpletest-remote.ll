@@ -1,5 +1,4 @@
 ; RUN: %lli -jit-kind=orc-mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
-; XFAIL: mingw32,win32
 
 define i32 @bar() nounwind {
 	ret i32 0

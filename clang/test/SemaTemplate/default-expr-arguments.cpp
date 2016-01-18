@@ -1,7 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
-
 template<typename T>
 class C { C(int a0 = 0); };
 
@@ -9,9 +6,6 @@ template<>
 C<char>::C(int a0);
 
 struct S { }; // expected-note 3 {{candidate constructor (the implicit copy constructor)}}
-#if __cplusplus >= 201103L // C++11 or later
-// expected-note@-2 3 {{candidate constructor (the implicit move constructor) not viable}}
-#endif
 
 template<typename T> void f1(T a, T b = 10) { } // expected-error{{no viable conversion}} \
 // expected-note{{passing argument to parameter 'b' here}}
@@ -73,10 +67,7 @@ void test_x0(X0<int> xi) {
   xi.f(17);
 }
 
-struct NotDefaultConstructible { // expected-note 2 {{candidate constructor (the implicit copy constructor) not viable}}
-#if __cplusplus >= 201103L // C++11 or later
-// expected-note@-2 2 {{candidate constructor (the implicit move constructor) not viable}}
-#endif
+struct NotDefaultConstructible { // expected-note 2{{candidate}}
   NotDefaultConstructible(int); // expected-note 2{{candidate}}
 };
 

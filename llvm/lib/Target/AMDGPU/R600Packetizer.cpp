@@ -149,8 +149,7 @@ private:
 public:
   // Ctor.
   R600PacketizerList(MachineFunction &MF, MachineLoopInfo &MLI)
-      : VLIWPacketizerList(MF, MLI, nullptr),
-        TII(static_cast<const R600InstrInfo *>(
+      : VLIWPacketizerList(MF, MLI), TII(static_cast<const R600InstrInfo *>(
             MF.getSubtarget().getInstrInfo())),
         TRI(TII->getRegisterInfo()) {
     VLIW5 = !MF.getSubtarget<AMDGPUSubtarget>().hasCaymanISA();
@@ -162,14 +161,14 @@ public:
   }
 
   // ignorePseudoInstruction - Ignore bundling of pseudo instructions.
-  bool ignorePseudoInstruction(const MachineInstr *MI,
-                               const MachineBasicBlock *MBB) override {
+  bool ignorePseudoInstruction(MachineInstr *MI,
+                               MachineBasicBlock *MBB) override {
     return false;
   }
 
   // isSoloInstruction - return true if instruction MI can not be packetized
   // with any other instruction, which means that MI itself is a packet.
-  bool isSoloInstruction(const MachineInstr *MI) override {
+  bool isSoloInstruction(MachineInstr *MI) override {
     if (TII->isVector(*MI))
       return true;
     if (!TII->isALUInstr(MI->getOpcode()))

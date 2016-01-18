@@ -20,7 +20,6 @@ class AsmToken;
 class MCInst;
 class MCParsedAsmOperand;
 class MCStreamer;
-class MCSubtargetInfo;
 class SMLoc;
 class StringRef;
 template <typename T> class SmallVectorImpl;
@@ -30,7 +29,6 @@ typedef SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand>> OperandVector;
 enum AsmRewriteKind {
   AOK_Delete = 0,     // Rewrite should be ignored.
   AOK_Align,          // Rewrite align as .align.
-  AOK_EVEN,           // Rewrite even as .even.
   AOK_DotOperator,    // Rewrite a dot operator expression as an immediate.
                       // E.g., [eax].foo.bar -> [eax].8
   AOK_Emit,           // Rewrite _emit as .byte.
@@ -46,7 +44,6 @@ enum AsmRewriteKind {
 const char AsmRewritePrecedence [] = {
   0, // AOK_Delete
   2, // AOK_Align
-  2, // AOK_EVEN
   2, // AOK_DotOperator
   2, // AOK_Emit
   4, // AOK_Imm
@@ -95,10 +92,7 @@ private:
   MCTargetAsmParser(const MCTargetAsmParser &) = delete;
   void operator=(const MCTargetAsmParser &) = delete;
 protected: // Can only create subclasses.
-  MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI);
-
-  /// Create a copy of STI and return a non-const reference to it.
-  MCSubtargetInfo &copySTI();
+  MCTargetAsmParser(MCTargetOptions const &);
 
   /// AvailableFeatures - The current set of available features.
   uint64_t AvailableFeatures;
@@ -113,13 +107,8 @@ protected: // Can only create subclasses.
   /// Set of options which affects instrumentation of inline assembly.
   MCTargetOptions MCOptions;
 
-  /// Current STI.
-  const MCSubtargetInfo *STI;
-
 public:
   ~MCTargetAsmParser() override;
-
-  const MCSubtargetInfo &getSTI() const;
 
   uint64_t getAvailableFeatures() const { return AvailableFeatures; }
   void setAvailableFeatures(uint64_t Value) { AvailableFeatures = Value; }
@@ -154,10 +143,6 @@ public:
   /// \return True on failure.
   virtual bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                 SMLoc NameLoc, OperandVector &Operands) = 0;
-  virtual bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
-                                AsmToken Token, OperandVector &Operands) {
-    return ParseInstruction(Info, Name, Token.getLoc(), Operands);
-  }
 
   /// ParseDirective - Parse a target specific assembler directive
   ///
@@ -170,6 +155,10 @@ public:
   ///
   /// \param DirectiveID - the identifier token of the directive.
   virtual bool ParseDirective(AsmToken DirectiveID) = 0;
+
+  /// mnemonicIsValid - This returns true if this is a valid mnemonic and false
+  /// otherwise.
+  virtual bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) = 0;
 
   /// MatchAndEmitInstruction - Recognize a series of operands of a parsed
   /// instruction as an actual MCInst and emit it to the specified MCStreamer.
@@ -202,11 +191,6 @@ public:
 
   virtual void convertToMapAndConstraints(unsigned Kind,
                                           const OperandVector &Operands) = 0;
-
-  // Return whether this parser uses assignment statements with equals tokens
-  virtual bool equalIsAsmAssignment() { return true; };
-  // Return whether this start of statement identifier is a label
-  virtual bool isLabel(AsmToken &Token) { return true; };
 
   virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
                                             MCSymbolRefExpr::VariantKind,

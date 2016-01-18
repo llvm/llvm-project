@@ -13,12 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
-#include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -51,10 +51,11 @@ static cl::opt<bool> UseTBAA("use-tbaa-in-sched-mi", cl::Hidden,
 
 ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      const MachineLoopInfo *mli,
+                                     LiveIntervals *LIS,
                                      bool RemoveKillFlags)
-    : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
+    : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()), LIS(LIS),
       RemoveKillFlags(RemoveKillFlags), CanHandleTerminators(false),
-      TrackLaneMasks(false), FirstDbgValue(nullptr) {
+      FirstDbgValue(nullptr) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
@@ -362,20 +363,6 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-LaneBitmask ScheduleDAGInstrs::getLaneMaskForMO(const MachineOperand &MO) const
-{
-  unsigned Reg = MO.getReg();
-  // No point in tracking lanemasks if we don't have interesting subregisters.
-  const TargetRegisterClass &RC = *MRI.getRegClass(Reg);
-  if (!RC.HasDisjunctSubRegs)
-    return ~0u;
-
-  unsigned SubReg = MO.getSubReg();
-  if (SubReg == 0)
-    return RC.getLaneMask();
-  return TRI->getSubRegIndexLaneMask(SubReg);
-}
-
 /// addVRegDefDeps - Add register output and data dependencies from this SUnit
 /// to instructions that occur later in the same scheduling region if they read
 /// from or write to the virtual register defined at OperIdx.
@@ -383,106 +370,35 @@ LaneBitmask ScheduleDAGInstrs::getLaneMaskForMO(const MachineOperand &MO) const
 /// TODO: Hoist loop induction variable increments. This has to be
 /// reevaluated. Generally, IV scheduling should be done before coalescing.
 void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
-  MachineInstr *MI = SU->getInstr();
-  MachineOperand &MO = MI->getOperand(OperIdx);
-  unsigned Reg = MO.getReg();
+  const MachineInstr *MI = SU->getInstr();
+  unsigned Reg = MI->getOperand(OperIdx).getReg();
 
-  LaneBitmask DefLaneMask;
-  LaneBitmask KillLaneMask;
-  if (TrackLaneMasks) {
-    bool IsKill = MO.getSubReg() == 0 || MO.isUndef();
-    DefLaneMask = getLaneMaskForMO(MO);
-    // If we have a <read-undef> flag, none of the lane values comes from an
-    // earlier instruction.
-    KillLaneMask = IsKill ? ~0u : DefLaneMask;
-
-    // Clear undef flag, we'll re-add it later once we know which subregister
-    // Def is first.
-    MO.setIsUndef(false);
-  } else {
-    DefLaneMask = ~0u;
-    KillLaneMask = ~0u;
-  }
-
-  if (MO.isDead()) {
-    assert(CurrentVRegUses.find(Reg) == CurrentVRegUses.end() &&
-           "Dead defs should have no uses");
-  } else {
-    // Add data dependence to all uses we found so far.
-    const TargetSubtargetInfo &ST = MF.getSubtarget();
-    for (VReg2SUnitOperIdxMultiMap::iterator I = CurrentVRegUses.find(Reg),
-         E = CurrentVRegUses.end(); I != E; /*empty*/) {
-      LaneBitmask LaneMask = I->LaneMask;
-      // Ignore uses of other lanes.
-      if ((LaneMask & KillLaneMask) == 0) {
-        ++I;
-        continue;
-      }
-
-      if ((LaneMask & DefLaneMask) != 0) {
-        SUnit *UseSU = I->SU;
-        MachineInstr *Use = UseSU->getInstr();
-        SDep Dep(SU, SDep::Data, Reg);
-        Dep.setLatency(SchedModel.computeOperandLatency(MI, OperIdx, Use,
-                                                        I->OperandIndex));
-        ST.adjustSchedDependency(SU, UseSU, Dep);
-        UseSU->addPred(Dep);
-      }
-
-      LaneMask &= ~KillLaneMask;
-      // If we found a Def for all lanes of this use, remove it from the list.
-      if (LaneMask != 0) {
-        I->LaneMask = LaneMask;
-        ++I;
-      } else
-        I = CurrentVRegUses.erase(I);
-    }
-  }
-
-  // Shortcut: Singly defined vregs do not have output/anti dependencies.
+  // Singly defined vregs do not have output/anti dependencies.
+  // The current operand is a def, so we have at least one.
+  // Check here if there are any others...
   if (MRI.hasOneDef(Reg))
     return;
 
-  // Add output dependence to the next nearest defs of this vreg.
+  // Add output dependence to the next nearest def of this vreg.
   //
   // Unless this definition is dead, the output dependence should be
   // transitively redundant with antidependencies from this definition's
   // uses. We're conservative for now until we have a way to guarantee the uses
   // are not eliminated sometime during scheduling. The output dependence edge
   // is also useful if output latency exceeds def-use latency.
-  LaneBitmask LaneMask = DefLaneMask;
-  for (VReg2SUnit &V2SU : make_range(CurrentVRegDefs.find(Reg),
-                                     CurrentVRegDefs.end())) {
-    // Ignore defs for other lanes.
-    if ((V2SU.LaneMask & LaneMask) == 0)
-      continue;
-    // Add an output dependence.
-    SUnit *DefSU = V2SU.SU;
-    // Ignore additional defs of the same lanes in one instruction. This can
-    // happen because lanemasks are shared for targets with too many
-    // subregisters. We also use some representration tricks/hacks where we
-    // add super-register defs/uses, to imply that although we only access parts
-    // of the reg we care about the full one.
-    if (DefSU == SU)
-      continue;
-    SDep Dep(SU, SDep::Output, Reg);
-    Dep.setLatency(
-      SchedModel.computeOutputLatency(MI, OperIdx, DefSU->getInstr()));
-    DefSU->addPred(Dep);
-
-    // Update current definition. This can get tricky if the def was about a
-    // bigger lanemask before. We then have to shrink it and create a new
-    // VReg2SUnit for the non-overlapping part.
-    LaneBitmask OverlapMask = V2SU.LaneMask & LaneMask;
-    LaneBitmask NonOverlapMask = V2SU.LaneMask & ~LaneMask;
-    if (NonOverlapMask != 0)
-      CurrentVRegDefs.insert(VReg2SUnit(Reg, NonOverlapMask, V2SU.SU));
-    V2SU.SU = SU;
-    V2SU.LaneMask = OverlapMask;
+  VReg2SUnitMap::iterator DefI = VRegDefs.find(Reg);
+  if (DefI == VRegDefs.end())
+    VRegDefs.insert(VReg2SUnit(Reg, SU));
+  else {
+    SUnit *DefSU = DefI->SU;
+    if (DefSU != SU && DefSU != &ExitSU) {
+      SDep Dep(SU, SDep::Output, Reg);
+      Dep.setLatency(
+        SchedModel.computeOutputLatency(MI, OperIdx, DefSU->getInstr()));
+      DefSU->addPred(Dep);
+    }
+    DefI->SU = SU;
   }
-  // If there was no CurrentVRegDefs entry for some lanes yet, create one.
-  if (LaneMask != 0)
-    CurrentVRegDefs.insert(VReg2SUnit(Reg, LaneMask, SU));
 }
 
 /// addVRegUseDeps - Add a register data dependency if the instruction that
@@ -492,26 +408,49 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
 ///
 /// TODO: Handle ExitSU "uses" properly.
 void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
-  const MachineInstr *MI = SU->getInstr();
-  const MachineOperand &MO = MI->getOperand(OperIdx);
-  unsigned Reg = MO.getReg();
+  MachineInstr *MI = SU->getInstr();
+  unsigned Reg = MI->getOperand(OperIdx).getReg();
 
-  // Remember the use. Data dependencies will be added when we find the def.
-  LaneBitmask LaneMask = TrackLaneMasks ? getLaneMaskForMO(MO) : ~0u;
-  CurrentVRegUses.insert(VReg2SUnitOperIdx(Reg, LaneMask, OperIdx, SU));
-
-  // Add antidependences to the following defs of the vreg.
-  for (VReg2SUnit &V2SU : make_range(CurrentVRegDefs.find(Reg),
-                                     CurrentVRegDefs.end())) {
-    // Ignore defs for unrelated lanes.
-    LaneBitmask PrevDefLaneMask = V2SU.LaneMask;
-    if ((PrevDefLaneMask & LaneMask) == 0)
-      continue;
-    if (V2SU.SU == SU)
-      continue;
-
-    V2SU.SU->addPred(SDep(SU, SDep::Anti, Reg));
+  // Record this local VReg use.
+  VReg2UseMap::iterator UI = VRegUses.find(Reg);
+  for (; UI != VRegUses.end(); ++UI) {
+    if (UI->SU == SU)
+      break;
   }
+  if (UI == VRegUses.end())
+    VRegUses.insert(VReg2SUnit(Reg, SU));
+
+  // Lookup this operand's reaching definition.
+  assert(LIS && "vreg dependencies requires LiveIntervals");
+  LiveQueryResult LRQ
+    = LIS->getInterval(Reg).Query(LIS->getInstructionIndex(MI));
+  VNInfo *VNI = LRQ.valueIn();
+
+  // VNI will be valid because MachineOperand::readsReg() is checked by caller.
+  assert(VNI && "No value to read by operand");
+  MachineInstr *Def = LIS->getInstructionFromIndex(VNI->def);
+  // Phis and other noninstructions (after coalescing) have a NULL Def.
+  if (Def) {
+    SUnit *DefSU = getSUnit(Def);
+    if (DefSU) {
+      // The reaching Def lives within this scheduling region.
+      // Create a data dependence.
+      SDep dep(DefSU, SDep::Data, Reg);
+      // Adjust the dependence latency using operand def/use information, then
+      // allow the target to perform its own adjustments.
+      int DefOp = Def->findRegisterDefOperandIdx(Reg);
+      dep.setLatency(SchedModel.computeOperandLatency(Def, DefOp, MI, OperIdx));
+
+      const TargetSubtargetInfo &ST = MF.getSubtarget();
+      ST.adjustSchedDependency(DefSU, SU, const_cast<SDep &>(dep));
+      SU->addPred(dep);
+    }
+  }
+
+  // Add antidependence to the following def of the vreg it uses.
+  VReg2SUnitMap::iterator DefI = VRegDefs.find(Reg);
+  if (DefI != VRegDefs.end() && DefI->SU != SU)
+    DefI->SU->addPred(SDep(SU, SDep::Anti, Reg));
 }
 
 /// Return true if MI is an instruction we are unable to reason about
@@ -794,44 +733,17 @@ void ScheduleDAGInstrs::initSUnits() {
   }
 }
 
-void ScheduleDAGInstrs::collectVRegUses(SUnit *SU) {
-  const MachineInstr *MI = SU->getInstr();
-  for (const MachineOperand &MO : MI->operands()) {
-    if (!MO.isReg())
-      continue;
-    if (!MO.readsReg())
-      continue;
-    if (TrackLaneMasks && !MO.isUse())
-      continue;
-
-    unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(Reg))
-      continue;
-
-    // Record this local VReg use.
-    VReg2SUnitMultiMap::iterator UI = VRegUses.find(Reg);
-    for (; UI != VRegUses.end(); ++UI) {
-      if (UI->SU == SU)
-        break;
-    }
-    if (UI == VRegUses.end())
-      VRegUses.insert(VReg2SUnit(Reg, 0, SU));
-  }
-}
-
 /// If RegPressure is non-null, compute register pressure as a side effect. The
 /// DAG builder is an efficient place to do it because it already visits
 /// operands.
 void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
                                         RegPressureTracker *RPTracker,
-                                        PressureDiffs *PDiffs,
-                                        bool TrackLaneMasks) {
+                                        PressureDiffs *PDiffs) {
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   bool UseAA = EnableAASchedMI.getNumOccurrences() > 0 ? EnableAASchedMI
                                                        : ST.useAA();
   AliasAnalysis *AAForDep = UseAA ? AA : nullptr;
 
-  this->TrackLaneMasks = TrackLaneMasks;
   MISUnitMap.clear();
   ScheduleDAG::clearDAG();
 
@@ -865,14 +777,10 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
   Defs.setUniverse(TRI->getNumRegs());
   Uses.setUniverse(TRI->getNumRegs());
 
-  assert(CurrentVRegDefs.empty() && "nobody else should use CurrentVRegDefs");
-  assert(CurrentVRegUses.empty() && "nobody else should use CurrentVRegUses");
-  unsigned NumVirtRegs = MRI.getNumVirtRegs();
-  CurrentVRegDefs.setUniverse(NumVirtRegs);
-  CurrentVRegUses.setUniverse(NumVirtRegs);
-
+  assert(VRegDefs.empty() && "Only BuildSchedGraph may access VRegDefs");
   VRegUses.clear();
-  VRegUses.setUniverse(NumVirtRegs);
+  VRegDefs.setUniverse(MRI.getNumVirtRegs());
+  VRegUses.setUniverse(MRI.getNumVirtRegs());
 
   // Model data dependencies between instructions being scheduled and the
   // ExitSU.
@@ -896,16 +804,10 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     assert(SU && "No SUnit mapped to this MI");
 
     if (RPTracker) {
-      collectVRegUses(SU);
-
-      RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI);
-      if (PDiffs != nullptr)
-        PDiffs->addInstruction(SU->NodeNum, RegOpers, MRI);
-
-      RPTracker->recedeSkipDebugValues();
-      assert(&*RPTracker->getPos() == MI && "RPTracker in sync");
-      RPTracker->recede(RegOpers);
+      PressureDiff *PDiff = PDiffs ? &(*PDiffs)[SU->NodeNum] : nullptr;
+      RPTracker->recede(/*LiveUses=*/nullptr, PDiff);
+      assert(RPTracker->getPos() == std::prev(MII) &&
+             "RPTracker can't find MI");
     }
 
     assert(
@@ -1010,9 +912,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
           addChainDependency(AAForDep, MFI, MF.getDataLayout(), SU,
                              I->second[i], RejectMemNodes, TrueMemOrderLatency);
       }
-      // This call must come after calls to addChainDependency() since it
-      // consumes the 'RejectMemNodes' list that addChainDependency() possibly
-      // adds to.
       adjustChainDeps(AA, MFI, MF.getDataLayout(), SU, &ExitSU, RejectMemNodes,
                       TrueMemOrderLatency);
       PendingLoads.clear();
@@ -1094,9 +993,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
           addChainDependency(AAForDep, MFI, MF.getDataLayout(), SU, AliasChain,
                              RejectMemNodes);
       }
-      // This call must come after calls to addChainDependency() since it
-      // consumes the 'RejectMemNodes' list that addChainDependency() possibly
-      // adds to.
       adjustChainDeps(AA, MFI, MF.getDataLayout(), SU, &ExitSU, RejectMemNodes,
                       TrueMemOrderLatency);
     } else if (MI->mayLoad()) {
@@ -1144,16 +1040,13 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
           else
             NonAliasMemUses[V].push_back(SU);
         }
+        if (MayAlias)
+          adjustChainDeps(AA, MFI, MF.getDataLayout(), SU, &ExitSU,
+                          RejectMemNodes, /*Latency=*/0);
         // Add dependencies on alias and barrier chains, if needed.
         if (MayAlias && AliasChain)
           addChainDependency(AAForDep, MFI, MF.getDataLayout(), SU, AliasChain,
                              RejectMemNodes);
-        if (MayAlias)
-          // This call must come after calls to addChainDependency() since it
-          // consumes the 'RejectMemNodes' list that addChainDependency()
-          // possibly adds to.
-          adjustChainDeps(AA, MFI, MF.getDataLayout(), SU, &ExitSU,
-                          RejectMemNodes, /*Latency=*/0);
         if (BarrierChain)
           BarrierChain->addPred(SDep(SU, SDep::Barrier));
       }
@@ -1164,8 +1057,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
 
   Defs.clear();
   Uses.clear();
-  CurrentVRegDefs.clear();
-  CurrentVRegUses.clear();
+  VRegDefs.clear();
   PendingLoads.clear();
 }
 

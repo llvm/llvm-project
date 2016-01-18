@@ -86,7 +86,7 @@ std::unique_ptr<Module>
 BugDriver::deleteInstructionFromProgram(const Instruction *I,
                                         unsigned Simplification) {
   // FIXME, use vmap?
-  Module *Clone = CloneModule(Program).release();
+  Module *Clone = CloneModule(Program);
 
   const BasicBlock *PBB = I->getParent();
   const Function *PF = PBB->getParent();
@@ -179,43 +179,11 @@ std::unique_ptr<Module> BugDriver::extractLoop(Module *M) {
   return NewM;
 }
 
-static void eliminateAliases(GlobalValue *GV) {
-  // First, check whether a GlobalAlias references this definition.
-  // GlobalAlias MAY NOT reference declarations.
-  for (;;) {
-    // 1. Find aliases
-    SmallVector<GlobalAlias*,1> aliases;
-    Module *M = GV->getParent();
-    for (Module::alias_iterator I=M->alias_begin(), E=M->alias_end(); I!=E; ++I)
-      if (I->getAliasee()->stripPointerCasts() == GV)
-        aliases.push_back(&*I);
-    if (aliases.empty())
-      break;
-    // 2. Resolve aliases
-    for (unsigned i=0, e=aliases.size(); i<e; ++i) {
-      aliases[i]->replaceAllUsesWith(aliases[i]->getAliasee());
-      aliases[i]->eraseFromParent();
-    }
-    // 3. Repeat until no more aliases found; there might
-    // be an alias to an alias...
-  }
-}
-
-//
-// DeleteGlobalInitializer - "Remove" the global variable by deleting its initializer,
-// making it external.
-//
-void llvm::DeleteGlobalInitializer(GlobalVariable *GV) {
-  eliminateAliases(GV);
-  GV->setInitializer(nullptr);
-}
 
 // DeleteFunctionBody - "Remove" the function by deleting all of its basic
 // blocks, making it external.
 //
 void llvm::DeleteFunctionBody(Function *F) {
-  eliminateAliases(F);
-
   // delete the body of the function...
   F->deleteBody();
   assert(F->isDeclaration() && "This didn't make the function external!");
@@ -303,8 +271,13 @@ static void SplitStaticCtorDtor(const char *GlobalName, Module *M1, Module *M2,
   }
 }
 
-std::unique_ptr<Module>
-llvm::SplitFunctionsOutOfModule(Module *M, const std::vector<Function *> &F,
+
+/// SplitFunctionsOutOfModule - Given a module and a list of functions in the
+/// module, split the functions OUT of the specified module, and place them in
+/// the new module.
+Module *
+llvm::SplitFunctionsOutOfModule(Module *M,
+                                const std::vector<Function*> &F,
                                 ValueToValueMapTy &VMap) {
   // Make sure functions & globals are all external so that linkage
   // between the two modules will work.
@@ -318,7 +291,7 @@ llvm::SplitFunctionsOutOfModule(Module *M, const std::vector<Function *> &F,
   }
 
   ValueToValueMapTy NewVMap;
-  std::unique_ptr<Module> New = CloneModule(M, NewVMap);
+  Module *New = CloneModule(M, NewVMap);
 
   // Remove the Test functions from the Safe module
   std::set<Function *> TestFunctions;
@@ -350,18 +323,18 @@ llvm::SplitFunctionsOutOfModule(Module *M, const std::vector<Function *> &F,
                << "' and from test function '" << TestFn->getName() << "'.\n";
         exit(1);
       }
-      DeleteGlobalInitializer(&I); // Delete the initializer to make it external
+      I.setInitializer(nullptr); // Delete the initializer to make it external
     } else {
       // If we keep it in the safe module, then delete it in the test module
-      DeleteGlobalInitializer(GV);
+      GV->setInitializer(nullptr);
     }
   }
 
   // Make sure that there is a global ctor/dtor array in both halves of the
   // module if they both have static ctor/dtor functions.
-  SplitStaticCtorDtor("llvm.global_ctors", M, New.get(), NewVMap);
-  SplitStaticCtorDtor("llvm.global_dtors", M, New.get(), NewVMap);
-
+  SplitStaticCtorDtor("llvm.global_ctors", M, New, NewVMap);
+  SplitStaticCtorDtor("llvm.global_dtors", M, New, NewVMap);
+  
   return New;
 }
 

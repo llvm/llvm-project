@@ -421,20 +421,19 @@ GetElementPtrInst *NaryReassociate::tryReassociateGEPAtIndex(
       GEP->getSourceElementType(), SE->getSCEV(GEP->getPointerOperand()),
       IndexExprs, GEP->isInBounds());
 
-  Value *Candidate = findClosestMatchingDominator(CandidateExpr, GEP);
+  auto *Candidate = findClosestMatchingDominator(CandidateExpr, GEP);
   if (Candidate == nullptr)
     return nullptr;
 
-  IRBuilder<> Builder(GEP);
-  // Candidate does not necessarily have the same pointer type as GEP. Use
-  // bitcast or pointer cast to make sure they have the same type, so that the
-  // later RAUW doesn't complain.
-  Candidate = Builder.CreateBitOrPointerCast(Candidate, GEP->getType());
-  assert(Candidate->getType() == GEP->getType());
+  PointerType *TypeOfCandidate = dyn_cast<PointerType>(Candidate->getType());
+  // Pretty rare but theoretically possible when a numeric value happens to
+  // share CandidateExpr.
+  if (TypeOfCandidate == nullptr)
+    return nullptr;
 
   // NewGEP = (char *)Candidate + RHS * sizeof(IndexedType)
   uint64_t IndexedSize = DL->getTypeAllocSize(IndexedType);
-  Type *ElementType = GEP->getType()->getElementType();
+  Type *ElementType = TypeOfCandidate->getElementType();
   uint64_t ElementSize = DL->getTypeAllocSize(ElementType);
   // Another less rare case: because I is not necessarily the last index of the
   // GEP, the size of the type at the I-th index (IndexedSize) is not
@@ -454,7 +453,8 @@ GetElementPtrInst *NaryReassociate::tryReassociateGEPAtIndex(
     return nullptr;
 
   // NewGEP = &Candidate[RHS * (sizeof(IndexedType) / sizeof(Candidate[0])));
-  Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
+  IRBuilder<> Builder(GEP);
+  Type *IntPtrTy = DL->getIntPtrType(TypeOfCandidate);
   if (RHS->getType() != IntPtrTy)
     RHS = Builder.CreateSExtOrTrunc(RHS, IntPtrTy);
   if (IndexedSize != ElementSize) {

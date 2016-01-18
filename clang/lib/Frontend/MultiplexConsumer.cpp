@@ -119,7 +119,6 @@ public:
                               const FunctionDecl *Delete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void StaticDataMemberInstantiated(const VarDecl *D) override;
-  void DefaultArgumentInstantiated(const ParmVarDecl *D) override;
   void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                     const ObjCInterfaceDecl *IFD) override;
   void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
@@ -193,11 +192,6 @@ void MultiplexASTMutationListener::StaticDataMemberInstantiated(
                                                              const VarDecl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->StaticDataMemberInstantiated(D);
-}
-void MultiplexASTMutationListener::DefaultArgumentInstantiated(
-                                                         const ParmVarDecl *D) {
-  for (size_t i = 0, e = Listeners.size(); i != e; ++i)
-    Listeners[i]->DefaultArgumentInstantiated(D);
 }
 void MultiplexASTMutationListener::AddedObjCCategoryToInterface(
                                                  const ObjCCategoryDecl *CatD,
@@ -317,9 +311,9 @@ void MultiplexConsumer::HandleImplicitImportDecl(ImportDecl *D) {
     Consumer->HandleImplicitImportDecl(D);
 }
 
-void MultiplexConsumer::HandleLinkerOption(llvm::StringRef Opts) {
+void MultiplexConsumer::HandleLinkerOptionPragma(llvm::StringRef Opts) {
   for (auto &Consumer : Consumers)
-    Consumer->HandleLinkerOption(Opts);
+    Consumer->HandleLinkerOptionPragma(Opts);
 }
 
 void MultiplexConsumer::HandleDetectMismatch(llvm::StringRef Name, llvm::StringRef Value) {

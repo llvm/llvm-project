@@ -63,9 +63,6 @@ bool PromotePass::runOnFunction(Function &F) {
 
   BasicBlock &BB = F.getEntryBlock();  // Get the entry node for the function
 
-  if (F.hasFnAttribute(Attribute::OptimizeNone))
-    return false;
-
   bool Changed  = false;
 
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();

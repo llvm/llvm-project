@@ -1838,22 +1838,43 @@ def: LogLogNot_pat<or,  or,  C4_or_orn>;
 // below are needed to support code generation for PIC
 //===----------------------------------------------------------------------===//
 
-def SDT_HexagonAtGot
-  : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
-def SDT_HexagonAtPcrel
+def SDT_HexagonPICAdd
   : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_HexagonGOTAdd
+  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
-// AT_GOT address-of-GOT, address-of-global, offset-in-global
-def HexagonAtGot       : SDNode<"HexagonISD::AT_GOT", SDT_HexagonAtGot>;
-// AT_PCREL address-of-global
-def HexagonAtPcrel     : SDNode<"HexagonISD::AT_PCREL", SDT_HexagonAtPcrel>;
+def SDT_HexagonGOTAddInternal   : SDTypeProfile<1, 1, [SDTCisVT<0, i32>]>;
+def SDT_HexagonGOTAddInternalJT : SDTypeProfile<1, 1, [SDTCisVT<0, i32>]>;
+def SDT_HexagonGOTAddInternalBA : SDTypeProfile<1, 1, [SDTCisVT<0, i32>]>;
 
-def: Pat<(HexagonAtGot I32:$got, I32:$addr, (i32 0)),
-         (L2_loadri_io I32:$got, imm:$addr)>;
-def: Pat<(HexagonAtGot I32:$got, I32:$addr, s30_2ImmPred:$off),
-         (A2_addi (L2_loadri_io I32:$got, imm:$addr), imm:$off)>;
-def: Pat<(HexagonAtPcrel I32:$addr),
-         (C4_addipc imm:$addr)>;
+def Hexagonpic_add      : SDNode<"HexagonISD::PIC_ADD", SDT_HexagonPICAdd>;
+def Hexagonat_got       : SDNode<"HexagonISD::AT_GOT", SDT_HexagonGOTAdd>;
+def Hexagongat_pcrel    : SDNode<"HexagonISD::AT_PCREL",
+                                 SDT_HexagonGOTAddInternal>;
+def Hexagongat_pcrel_jt : SDNode<"HexagonISD::AT_PCREL",
+                                 SDT_HexagonGOTAddInternalJT>;
+def Hexagongat_pcrel_ba : SDNode<"HexagonISD::AT_PCREL",
+                                 SDT_HexagonGOTAddInternalBA>;
+
+// PIC: Map from a block address computation to a PC-relative add
+def: Pat<(Hexagongat_pcrel_ba tblockaddress:$src1),
+         (C4_addipc u32ImmPred:$src1)>;
+
+// PIC: Map from the computation to generate a GOT pointer to a PC-relative add
+def: Pat<(Hexagonpic_add texternalsym:$src1),
+         (C4_addipc u32ImmPred:$src1)>;
+
+// PIC: Map from a jump table address computation to a PC-relative add
+def: Pat<(Hexagongat_pcrel_jt tjumptable:$src1),
+         (C4_addipc u32ImmPred:$src1)>;
+
+// PIC: Map from a GOT-relative symbol reference to a load
+def: Pat<(Hexagonat_got (i32 IntRegs:$src1), tglobaladdr:$src2),
+         (L2_loadri_io IntRegs:$src1, s30_2ImmPred:$src2)>;
+
+// PIC: Map from a static symbol reference to a PC-relative add
+def: Pat<(Hexagongat_pcrel tglobaladdr:$src1),
+         (C4_addipc u32ImmPred:$src1)>;
 
 //===----------------------------------------------------------------------===//
 // CR -
@@ -3281,22 +3302,16 @@ defm L4_return: LD_MISC_L4_RETURN <"dealloc_return">, PredNewRel;
 let isCall = 1, isBarrier = 1, isReturn = 1, isTerminator = 1,
     Defs = [R29, R30, R31, PC], isPredicable = 0, isAsmParserOnly = 1 in {
   def RESTORE_DEALLOC_RET_JMP_V4 : T_JMP<"">;
-  let isExtended = 1, opExtendable = 0 in
-    def RESTORE_DEALLOC_RET_JMP_V4_EXT : T_JMP<"">;
 }
 
 // Restore registers and dealloc frame before a tail call.
 let isCall = 1, Defs = [R29, R30, R31, PC], isAsmParserOnly = 1 in {
   def RESTORE_DEALLOC_BEFORE_TAILCALL_V4 : T_Call<"">, PredRel;
-  let isExtended = 1, opExtendable = 0 in
-    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT : T_Call<"">, PredRel;
 }
 
 // Save registers function call.
 let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
   def SAVE_REGISTERS_CALL_V4 : T_Call<"">, PredRel;
-  let isExtended = 1, opExtendable = 0 in
-    def SAVE_REGISTERS_CALL_V4_EXT : T_Call<"">, PredRel;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3305,9 +3320,9 @@ let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
 //===----------------------------------------------------------------------===//
 let hasSideEffects = 0, isPredicable = 1 in
 class T_StoreAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
-                    bits<2>MajOp, bit isAbs, bit isHalf>
-  : STInst<(outs), (ins ImmOp:$addr, RC:$src),
-  mnemonic # "(#$addr) = $src"#!if(isHalf, ".h",""),
+                    bits<2>MajOp, Operand AddrOp, bit isAbs, bit isHalf>
+  : STInst<(outs), (ins AddrOp:$addr, RC:$src),
+  mnemonic # !if(isAbs, "(##", "(#")#"$addr) = $src"#!if(isHalf, ".h",""),
   [], "", V2LDST_tc_st_SLOT01> {
     bits<19> addr;
     bits<5> src;
@@ -3320,7 +3335,6 @@ class T_StoreAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
                                       /* u16_0Imm */ addr{15-0})));
     // Store upper-half and store doubleword cannot be NV.
     let isNVStorable = !if (!eq(mnemonic, "memd"), 0, !if(isHalf,0,1));
-    let Uses = !if (isAbs, [], [GP]);
 
     let IClass = 0b0100;
     let Inst{27} = 1;
@@ -3341,7 +3355,7 @@ class T_StoreAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
 let hasSideEffects = 0, isPredicated = 1, opExtentBits = 6, opExtendable = 1 in
 class T_StoreAbs_Pred <string mnemonic, RegisterClass RC, bits<2> MajOp,
                        bit isHalf, bit isNot, bit isNew>
-  : STInst<(outs), (ins PredRegs:$src1, u32MustExt:$absaddr, RC: $src2),
+  : STInst<(outs), (ins PredRegs:$src1, u6Ext:$absaddr, RC: $src2),
   !if(isNot, "if (!$src1", "if ($src1")#!if(isNew, ".new) ",
   ") ")#mnemonic#"(#$absaddr) = $src2"#!if(isHalf, ".h",""),
   [], "", ST_tc_st_SLOT01>, AddrModeRel {
@@ -3373,7 +3387,7 @@ class T_StoreAbs_Pred <string mnemonic, RegisterClass RC, bits<2> MajOp,
 //===----------------------------------------------------------------------===//
 class T_StoreAbs <string mnemonic, RegisterClass RC, Operand ImmOp,
                  bits<2> MajOp, bit isHalf>
-  : T_StoreAbsGP <mnemonic, RC, u32MustExt, MajOp, 1, isHalf>,
+  : T_StoreAbsGP <mnemonic, RC, ImmOp, MajOp, u32Imm, 1, isHalf>,
                   AddrModeRel {
   string ImmOpStr = !cast<string>(ImmOp);
   let opExtentBits = !if (!eq(ImmOpStr, "u16_3Imm"), 19,
@@ -3426,7 +3440,6 @@ class T_StoreAbsGP_NV <string mnemonic, Operand ImmOp, bits<2>MajOp, bit isAbs>
                      !if (!eq(ImmOpStr, "u16_2Imm"), addr{17-2},
                      !if (!eq(ImmOpStr, "u16_1Imm"), addr{16-1},
                                       /* u16_0Imm */ addr{15-0})));
-    let Uses = !if (isAbs, [], [GP]);
     let IClass = 0b0100;
 
     let Inst{27} = 1;
@@ -3541,7 +3554,7 @@ defm storerf : ST_Abs <"memh", "STrif", IntRegs, u16_1Imm, 0b01, 1>;
 let isAsmParserOnly = 1 in
 class T_StoreGP <string mnemonic, string BaseOp, RegisterClass RC,
                  Operand ImmOp, bits<2> MajOp, bit isHalf = 0>
-  : T_StoreAbsGP <mnemonic, RC, ImmOp, MajOp, 0, isHalf> {
+  : T_StoreAbsGP <mnemonic, RC, ImmOp, MajOp, globaladdress, 0, isHalf> {
     // Set BaseOpcode same as absolute addressing instructions so that
     // non-predicated GP-Rel instructions can have relate with predicated
     // Absolute instruction.
@@ -3556,7 +3569,7 @@ multiclass ST_GP <string mnemonic, string BaseOp, Operand ImmOp,
   // Absolute instruction.
   let BaseOpcode = BaseOp#_abs in {
     def NAME#gp : T_StoreAbsGP <mnemonic, IntRegs, ImmOp, MajOp,
-                                0, isHalf>;
+                                globaladdress, 0, isHalf>;
     // New-value store
     def NAME#newgp : T_StoreAbsGP_NV <mnemonic, ImmOp, MajOp, 0> ;
   }
@@ -3618,9 +3631,9 @@ let AddedComplexity = 100 in {
 //===----------------------------------------------------------------------===//
 let isPredicable = 1, hasSideEffects = 0 in
 class T_LoadAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
-                   bits<3> MajOp>
-  : LDInst <(outs RC:$dst), (ins ImmOp:$addr),
-  "$dst = "#mnemonic# "(#$addr)",
+                   bits<3> MajOp, Operand AddrOp, bit isAbs>
+  : LDInst <(outs RC:$dst), (ins AddrOp:$addr),
+  "$dst = "#mnemonic# !if(isAbs, "(##", "(#")#"$addr)",
   [], "", V2LDST_tc_ld_SLOT01> {
     bits<5> dst;
     bits<19> addr;
@@ -3645,7 +3658,7 @@ class T_LoadAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
 
 class T_LoadAbs <string mnemonic, RegisterClass RC, Operand ImmOp,
                  bits<3> MajOp>
-  : T_LoadAbsGP <mnemonic, RC, u32MustExt, MajOp>, AddrModeRel {
+  : T_LoadAbsGP <mnemonic, RC, ImmOp, MajOp, u32Imm, 1>, AddrModeRel {
 
     string ImmOpStr = !cast<string>(ImmOp);
     let opExtentBits = !if (!eq(ImmOpStr, "u16_3Imm"), 19,
@@ -3663,11 +3676,10 @@ class T_LoadAbs <string mnemonic, RegisterClass RC, Operand ImmOp,
 // Template class for predicated load instructions with
 // absolute addressing mode.
 //===----------------------------------------------------------------------===//
-let isPredicated = 1, hasSideEffects = 0, hasNewValue = 1, opExtentBits = 6,
-    opExtendable = 2 in
+let isPredicated = 1, opExtentBits = 6, opExtendable = 2 in
 class T_LoadAbs_Pred <string mnemonic, RegisterClass RC, bits<3> MajOp,
                       bit isPredNot, bit isPredNew>
-  : LDInst <(outs RC:$dst), (ins PredRegs:$src1, u32MustExt:$absaddr),
+  : LDInst <(outs RC:$dst), (ins PredRegs:$src1, u6Ext:$absaddr),
   !if(isPredNot, "if (!$src1", "if ($src1")#!if(isPredNew, ".new) ",
   ") ")#"$dst = "#mnemonic#"(#$absaddr)">, AddrModeRel {
     bits<5> dst;
@@ -3738,10 +3750,10 @@ defm loadrd  : LD_Abs<"memd",  "LDrid", DoubleRegs, u16_3Imm, 0b110>;
 // if ([!]Pv[.new]) Rx=mem[bhwd](##global)
 //===----------------------------------------------------------------------===//
 
-let isAsmParserOnly = 1, Uses = [GP] in
+let isAsmParserOnly = 1 in
 class T_LoadGP <string mnemonic, string BaseOp, RegisterClass RC, Operand ImmOp,
                 bits<3> MajOp>
-  : T_LoadAbsGP <mnemonic, RC, ImmOp, MajOp>, PredNewRel {
+  : T_LoadAbsGP <mnemonic, RC, ImmOp, MajOp, globaladdress, 0>, PredNewRel {
     let BaseOpcode = BaseOp#_abs;
   }
 
@@ -3844,6 +3856,26 @@ let AddedComplexity = 100 in {
 
   def: Stoream_pat<truncstorei32, I64, addrga, LoReg, S2_storeriabs>;
 }
+
+// Map from Pd = load(globaladdress) -> Rd = memb(globaladdress), Pd = Rd
+let AddedComplexity = 100 in
+def : Pat <(i1 (load (HexagonCONST32_GP tglobaladdr:$global))),
+           (i1 (C2_tfrrp (i32 (L2_loadrbgp tglobaladdr:$global))))>;
+
+// Transfer global address into a register
+let isExtended = 1, opExtendable = 1, AddedComplexity=50, isMoveImm = 1,
+isAsCheapAsAMove = 1, isReMaterializable = 1, isCodeGenOnly = 1 in
+def TFRI_V4 : ALU32_ri<(outs IntRegs:$dst), (ins s16Ext:$src1),
+           "$dst = #$src1",
+           [(set IntRegs:$dst, (HexagonCONST32 tglobaladdr:$src1))]>;
+
+// Transfer a block address into a register
+def : Pat<(HexagonCONST32_GP tblockaddress:$src1),
+          (TFRI_V4 tblockaddress:$src1)>;
+
+let AddedComplexity = 50 in
+def : Pat<(HexagonCONST32_GP tglobaladdr:$src1),
+           (TFRI_V4 tglobaladdr:$src1)>;
 
 // i8/i16/i32 -> i64 loads
 // We need a complexity of 120 here to override preceding handling of

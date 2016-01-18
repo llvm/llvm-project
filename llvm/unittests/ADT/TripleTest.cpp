@@ -852,14 +852,10 @@ TEST(TripleTest, getARMCPUForArch) {
   }
   {
     llvm::Triple Triple("armv6j-unknown-eabi");
-    EXPECT_EQ("arm1136jf-s", Triple.getARMCPUForArch());
+    EXPECT_EQ("arm1136j-s", Triple.getARMCPUForArch());
   }
   {
     llvm::Triple Triple("armv6k-unknown-eabi");
-    EXPECT_EQ("arm1176j-s", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armv6kz-unknown-eabi");
     EXPECT_EQ("arm1176jzf-s", Triple.getARMCPUForArch());
   }
   {

@@ -18,29 +18,16 @@
 
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 namespace llvm {
 
 struct SIRegisterInfo : public AMDGPURegisterInfo {
 private:
-  unsigned SGPR32SetID;
-  unsigned VGPR32SetID;
-
   void reserveRegisterTuples(BitVector &, unsigned Reg) const;
 
 public:
   SIRegisterInfo();
-
-  /// Return the end register initially reserved for the scratch buffer in case
-  /// spilling is needed.
-  unsigned reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
-
-  /// Return the end register initially reserved for the scratch wave offset in
-  /// case spilling is needed.
-  unsigned reservedPrivateSegmentWaveByteOffsetReg(
-    const MachineFunction &MF) const;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
@@ -69,21 +56,8 @@ public:
     return isSGPRClass(getRegClass(RCID));
   }
 
-  bool isSGPRReg(const MachineRegisterInfo &MRI, unsigned Reg) const {
-    if (TargetRegisterInfo::isVirtualRegister(Reg))
-      return isSGPRClass(MRI.getRegClass(Reg));
-    return getPhysRegClass(Reg);
-  }
-
   /// \returns true if this class contains VGPR registers.
   bool hasVGPRs(const TargetRegisterClass *RC) const;
-
-  /// returns true if this is a pseudoregister class combination of VGPRs and
-  /// SGPRs for operand modeling. FIXME: We should set isAllocatable = 0 on
-  /// them.
-  static bool isPseudoRegClass(const TargetRegisterClass *RC) {
-    return RC == &AMDGPU::VS_32RegClass || RC == &AMDGPU::VS_64RegClass;
-  }
 
   /// \returns A VGPR reg class with the same width as \p SRC
   const TargetRegisterClass *getEquivalentVGPRClass(
@@ -112,25 +86,22 @@ public:
 
   /// \returns True if operands defined with this operand type can accept
   /// an inline constant. i.e. An integer value in the range (-16, 64) or
-  /// -4.0f, -2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f, 4.0f.
+  /// -4.0f, -2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f, 4.0f. 
   bool opCanUseInlineConstant(unsigned OpType) const;
 
   enum PreloadedValue {
     // SGPRS:
-    PRIVATE_SEGMENT_BUFFER =  0,
-    DISPATCH_PTR        =  1,
-    QUEUE_PTR           =  2,
-    KERNARG_SEGMENT_PTR =  3,
-    WORKGROUP_ID_X      = 10,
-    WORKGROUP_ID_Y      = 11,
-    WORKGROUP_ID_Z      = 12,
-    PRIVATE_SEGMENT_WAVE_BYTE_OFFSET = 14,
-
+    SCRATCH_PTR         =  0,
+    INPUT_PTR           =  3,
+    TGID_X              = 10,
+    TGID_Y              = 11,
+    TGID_Z              = 12,
+    SCRATCH_WAVE_OFFSET = 14,
     // VGPRS:
     FIRST_VGPR_VALUE    = 15,
-    WORKITEM_ID_X       = FIRST_VGPR_VALUE,
-    WORKITEM_ID_Y       = 16,
-    WORKITEM_ID_Z       = 17
+    TIDIG_X             = FIRST_VGPR_VALUE,
+    TIDIG_Y             = 16,
+    TIDIG_Z             = 17,
   };
 
   /// \brief Returns the physical register that \p Value is stored in.
@@ -148,9 +119,6 @@ public:
 
   unsigned findUnusedRegister(const MachineRegisterInfo &MRI,
                               const TargetRegisterClass *RC) const;
-
-  unsigned getSGPR32PressureSet() const { return SGPR32SetID; };
-  unsigned getVGPR32PressureSet() const { return VGPR32SetID; };
 
 private:
   void buildScratchLoadStore(MachineBasicBlock::iterator MI,

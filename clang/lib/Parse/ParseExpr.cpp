@@ -895,7 +895,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
         ((Tok.is(tok::identifier) &&
          (NextToken().is(tok::colon) || NextToken().is(tok::r_square))) ||
          Tok.is(tok::code_completion))) {
-      Res = ParseObjCMessageExpressionBody(SourceLocation(), ILoc, nullptr,
+      Res = ParseObjCMessageExpressionBody(SourceLocation(), ILoc, ParsedType(),
                                            nullptr);
       break;
     }
@@ -1204,7 +1204,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
         // type, translate it into a type and continue parsing as a
         // cast expression.
         CXXScopeSpec SS;
-        ParseOptionalCXXScopeSpecifier(SS, nullptr,
+        ParseOptionalCXXScopeSpecifier(SS, ParsedType(), 
                                        /*EnteringContext=*/false);
         AnnotateTemplateIdTokenAsType();
         return ParseCastExpression(isUnaryExpression, isAddressOfOperand,
@@ -1334,23 +1334,8 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     return ExprError();
   }
 
-  // Check to see whether Res is a function designator only. If it is and we
-  // are compiling for OpenCL, we need to return an error as this implies
-  // that the address of the function is being taken, which is illegal in CL.
-
   // These can be followed by postfix-expr pieces.
-  Res = ParsePostfixExpressionSuffix(Res);
-  if (getLangOpts().OpenCL)
-    if (Expr *PostfixExpr = Res.get()) {
-      QualType Ty = PostfixExpr->getType();
-      if (!Ty.isNull() && Ty->isFunctionType()) {
-        Diag(PostfixExpr->getExprLoc(),
-             diag::err_opencl_taking_function_address_parser);
-        return ExprError();
-      }
-    }
-
-  return Res;
+  return ParsePostfixExpressionSuffix(Res);
 }
 
 /// \brief Once the leading part of a postfix-expression is parsed, this
@@ -1395,7 +1380,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       if (getLangOpts().ObjC1 && !InMessageExpression && 
           (NextToken().is(tok::colon) || NextToken().is(tok::r_square))) {
         LHS = ParseObjCMessageExpressionBody(SourceLocation(), SourceLocation(),
-                                             nullptr, LHS.get());
+                                             ParsedType(), LHS.get());
         break;
       }
         
@@ -1606,7 +1591,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
                                        /*EnteringContext=*/false,
                                        &MayBePseudoDestructor);
         if (SS.isNotEmpty())
-          ObjectType = nullptr;
+          ObjectType = ParsedType();
       }
 
       if (Tok.is(tok::code_completion)) {
@@ -2160,7 +2145,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
 
   ExprResult Result(true);
   bool isAmbiguousTypeId;
-  CastTy = nullptr;
+  CastTy = ParsedType();
 
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteOrdinaryName(getCurScope(), 
@@ -2506,7 +2491,7 @@ ExprResult Parser::ParseGenericSelectionExpression() {
         return ExprError();
       }
       DefaultLoc = ConsumeToken();
-      Ty = nullptr;
+      Ty = ParsedType();
     } else {
       ColonProtectionRAIIObject X(*this);
       TypeResult TR = ParseTypeName();

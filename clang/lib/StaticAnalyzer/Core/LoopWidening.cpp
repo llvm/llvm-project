@@ -1,4 +1,4 @@
-//===--- LoopWidening.cpp - Widen loops -------------------------*- C++ -*-===//
+//===--- LoopWidening.cpp - Instruction class definition --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -152,28 +152,12 @@ def EH_RETURN64   : I<0xC3, RawFrm, (outs), (ins GR64:$addr),
 
 }
 
-let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
-    isCodeGenOnly = 1, isReturn = 1 in {
-  def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET", [(cleanupret)]>;
-
-  // CATCHRET needs a custom inserter for SEH.
-  let usesCustomInserter = 1 in
-    def CATCHRET : I<0, Pseudo, (outs), (ins brtarget32:$dst, brtarget32:$from),
-                     "# CATCHRET",
-                     [(catchret bb:$dst, bb:$from)]>;
+let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1, isCodeGenOnly = 1, isReturn = 1 in {
+def CATCHRET : I<0, Pseudo, (outs), (ins brtarget32:$dst, brtarget32:$from),
+                 "# CATCHRET",
+                 [(catchret bb:$dst, bb:$from)]>;
+def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET", [(cleanupret)]>;
 }
-
-let hasSideEffects = 1, hasCtrlDep = 1, isCodeGenOnly = 1,
-    usesCustomInserter = 1 in
-def CATCHPAD : I<0, Pseudo, (outs), (ins), "# CATCHPAD", [(catchpad)]>;
-
-// This instruction is responsible for re-establishing stack pointers after an
-// exception has been caught and we are rejoining normal control flow in the
-// parent function or funclet. It generally sets ESP and EBP, and optionally
-// ESI. It is only needed for 32-bit WinEH, as the runtime restores CSRs for us
-// elsewhere.
-let hasSideEffects = 1, hasCtrlDep = 1, isCodeGenOnly = 1 in
-def EH_RESTORE : I<0, Pseudo, (outs), (ins), "# EH_RESTORE", []>;
 
 let hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,
     usesCustomInserter = 1 in {
@@ -262,28 +246,13 @@ def : Pat<(i64 0), (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit)> {
   let AddedComplexity = 20;
 }
 
-let Predicates = [OptForSize, NotSlowIncDec, Not64BitMode],
-    AddedComplexity = 1 in {
-  // Pseudo instructions for materializing 1 and -1 using XOR+INC/DEC,
-  // which only require 3 bytes compared to MOV32ri which requires 5.
-  let Defs = [EFLAGS], isReMaterializable = 1, isPseudo = 1 in {
-    def MOV32r1 : I<0, Pseudo, (outs GR32:$dst), (ins), "",
-                        [(set GR32:$dst, 1)]>;
-    def MOV32r_1 : I<0, Pseudo, (outs GR32:$dst), (ins), "",
-                        [(set GR32:$dst, -1)]>;
-  }
-
-  // MOV16ri is 4 bytes, so the instructions above are smaller.
-  def : Pat<(i16 1), (EXTRACT_SUBREG (MOV32r1), sub_16bit)>;
-  def : Pat<(i16 -1), (EXTRACT_SUBREG (MOV32r_1), sub_16bit)>;
-}
-
 // Materialize i64 constant where top 32-bits are zero. This could theoretically
 // use MOV32ri with a SUBREG_TO_REG to represent the zero-extension, however
 // that would make it more difficult to rematerialize.
-let isReMaterializable = 1, isAsCheapAsAMove = 1,
-    isPseudo = 1, hasSideEffects = 0 in
-def MOV32ri64 : I<0, Pseudo, (outs GR32:$dst), (ins i64i32imm:$src), "", []>;
+let AddedComplexity = 1, isReMaterializable = 1, isAsCheapAsAMove = 1,
+    isCodeGenOnly = 1, hasSideEffects = 0 in
+def MOV32ri64 : Ii32<0xb8, AddRegFrm, (outs GR32:$dst), (ins i64i32imm:$src),
+                     "", [], IIC_ALU_NONMEM>, Sched<[WriteALU]>;
 
 // This 64-bit pseudo-move can be used for both a 64-bit constant that is
 // actually the zero-extension of a 32-bit constant and for labels in the
@@ -527,7 +496,6 @@ let usesCustomInserter = 1, Uses = [EFLAGS] in {
 
   defm _FR32   : CMOVrr_PSEUDO<FR32, f32>;
   defm _FR64   : CMOVrr_PSEUDO<FR64, f64>;
-  defm _FR128  : CMOVrr_PSEUDO<FR128, f128>;
   defm _V4F32  : CMOVrr_PSEUDO<VR128, v4f32>;
   defm _V2F64  : CMOVrr_PSEUDO<VR128, v2f64>;
   defm _V2I64  : CMOVrr_PSEUDO<VR128, v2i64>;
@@ -554,8 +522,8 @@ let usesCustomInserter = 1, Uses = [EFLAGS] in {
 // TODO: Get this to fold the constant into the instruction.
 let isCodeGenOnly = 1, Defs = [EFLAGS] in
 def OR32mrLocked  : I<0x09, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$zero),
-                      "or{l}\t{$zero, $dst|$dst, $zero}", [],
-                      IIC_ALU_MEM>, Requires<[Not64BitMode]>, OpSize32, LOCK,
+                      "or{l}\t{$zero, $dst|$dst, $zero}",
+                      [], IIC_ALU_MEM>, Requires<[Not64BitMode]>, LOCK,
                     Sched<[WriteALULd, WriteRMW]>;
 
 let hasSideEffects = 1 in

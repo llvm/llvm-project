@@ -309,12 +309,7 @@ enum {
   EM_COOL          = 217, // iCelero CoolEngine
   EM_NORC          = 218, // Nanoradio Optimized RISC
   EM_CSR_KALIMBA   = 219, // CSR Kalimba architecture family
-  EM_AMDGPU        = 224, // AMD GPU architecture
-
-  // A request has been made to the maintainer of the official registry for
-  // such numbers for an official value for WebAssembly. As soon as one is
-  // allocated, this enum will be updated to use it.
-  EM_WEBASSEMBLY   = 0x4157, // WebAssembly architecture
+  EM_AMDGPU        = 224  // AMD GPU architecture
 };
 
 // Object file classes.
@@ -554,28 +549,26 @@ enum {
   ODK_PAGESIZE   = 11   // Page size information
 };
 
-// Hexagon-specific e_flags
+// Hexagon Specific e_flags
+// Release 5 ABI
 enum {
-  // Object processor version flags, bits[11:0]
+  // Object processor version flags, bits[3:0]
   EF_HEXAGON_MACH_V2      = 0x00000001,   // Hexagon V2
   EF_HEXAGON_MACH_V3      = 0x00000002,   // Hexagon V3
   EF_HEXAGON_MACH_V4      = 0x00000003,   // Hexagon V4
   EF_HEXAGON_MACH_V5      = 0x00000004,   // Hexagon V5
-  EF_HEXAGON_MACH_V55     = 0x00000005,   // Hexagon V55
-  EF_HEXAGON_MACH_V60     = 0x00000060,   // Hexagon V60
 
   // Highest ISA version flags
-  EF_HEXAGON_ISA_MACH     = 0x00000000,   // Same as specified in bits[11:0]
+  EF_HEXAGON_ISA_MACH     = 0x00000000,   // Same as specified in bits[3:0]
                                           // of e_flags
   EF_HEXAGON_ISA_V2       = 0x00000010,   // Hexagon V2 ISA
   EF_HEXAGON_ISA_V3       = 0x00000020,   // Hexagon V3 ISA
   EF_HEXAGON_ISA_V4       = 0x00000030,   // Hexagon V4 ISA
-  EF_HEXAGON_ISA_V5       = 0x00000040,   // Hexagon V5 ISA
-  EF_HEXAGON_ISA_V55      = 0x00000050,   // Hexagon V55 ISA
-  EF_HEXAGON_ISA_V60      = 0x00000060,   // Hexagon V60 ISA
+  EF_HEXAGON_ISA_V5       = 0x00000040    // Hexagon V5 ISA
 };
 
-// Hexagon-specific section indexes for common small data
+// Hexagon specific Section indexes for common small data
+// Release 5 ABI
 enum {
   SHN_HEXAGON_SCOMMON     = 0xff00,       // Other access sizes
   SHN_HEXAGON_SCOMMON_1   = 0xff01,       // Byte-sized access
@@ -597,11 +590,6 @@ enum {
 // ELF Relocation type for Sparc.
 enum {
 #include "ELFRelocs/Sparc.def"
-};
-
-// ELF Relocation types for WebAssembly
-enum {
-#include "ELFRelocs/WebAssembly.def"
 };
 
 #undef ELF_RELOC
@@ -1034,10 +1022,7 @@ enum {
   PT_AMDGPU_HSA_LOAD_GLOBAL_PROGRAM = 0x60000000,
   PT_AMDGPU_HSA_LOAD_GLOBAL_AGENT   = 0x60000001,
   PT_AMDGPU_HSA_LOAD_READONLY_AGENT = 0x60000002,
-  PT_AMDGPU_HSA_LOAD_CODE_AGENT     = 0x60000003,
-
-  // WebAssembly program header types.
-  PT_WEBASSEMBLY_FUNCTIONS = PT_LOPROC + 0, // Function definitions.
+  PT_AMDGPU_HSA_LOAD_CODE_AGENT     = 0x60000003
 };
 
 // Segment flag bits.
@@ -1116,8 +1101,6 @@ enum {
   DT_HIPROC       = 0x7FFFFFFF, // End of processor specific tags.
 
   DT_GNU_HASH     = 0x6FFFFEF5, // Reference to the GNU hash table.
-  DT_TLSDESC_PLT  = 0x6FFFFEF6, // Location of PLT entry for TLS descriptor resolver calls.
-  DT_TLSDESC_GOT  = 0x6FFFFEF7, // Location of GOT entry used by TLS descriptor resolver PLT entry.
   DT_RELACOUNT    = 0x6FFFFFF9, // ELF32_Rela count.
   DT_RELCOUNT     = 0x6FFFFFFA, // ELF32_Rel count.
 
@@ -1201,12 +1184,8 @@ enum {
   DT_MIPS_PLTGOT            = 0x70000032, // Address of the base of the PLTGOT.
   DT_MIPS_RWPLT             = 0x70000034, // Points to the base
                                           // of a writable PLT.
-  DT_MIPS_RLD_MAP_REL       = 0x70000035, // Relative offset of run time loader
-
-  // Sun machine-independent extensions.
-  DT_AUXILIARY              = 0x7FFFFFFD, // Shared object to load before self
-  DT_FILTER                 = 0x7FFFFFFF, // Shared object to get values from
-  DT_EXTRANUM               = 3
+  DT_MIPS_RLD_MAP_REL       = 0x70000035  // Relative offset of run time loader
+                                          // map, used for debugging.
 };
 
 // DT_FLAGS values.

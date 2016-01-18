@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl --show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=i386-apple-darwin -mcpu=knl | FileCheck %s --check-prefix AVX512-32
 
 ; CHECK-LABEL: test1
 ; CHECK: vucomisd {{.*}}encoding: [0x62
@@ -99,3 +100,27 @@ A:
 B:
  ret i32 7
 }
+
+; AVX512-32-LABEL: test10
+; AVX512-32: movl    4(%esp), %ecx
+; AVX512-32: cmpl    $9, (%ecx)
+; AVX512-32: seta    %al
+; AVX512-32: cmpl    $0, 4(%ecx)
+; AVX512-32: setg    %cl
+; AVX512-32: je
+; AVX512-32: movb    %cl, %al
+; AVX512-32: testb   $1, %al
+
+define void @test10(i64* %i.addr)  {
+
+  %x = load i64, i64* %i.addr, align 8
+  %cmp = icmp slt i64 %x, 10
+  br i1 %cmp, label %true, label %false
+
+true:
+  ret void
+
+false:
+  ret void
+}
+

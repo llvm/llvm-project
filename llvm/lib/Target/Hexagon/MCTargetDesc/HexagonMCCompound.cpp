@@ -115,8 +115,8 @@ unsigned getCompoundCandidateGroup(MCInst const &MI, bool IsExtended) {
     SrcReg = MI.getOperand(1).getReg();
     if ((Hexagon::P0 == DstReg || Hexagon::P1 == DstReg) &&
         HexagonMCInstrInfo::isIntRegForSubInst(SrcReg) &&
-        (HexagonMCInstrInfo::inRange<5>(MI, 2) ||
-         HexagonMCInstrInfo::minConstant(MI, 2) == -1))
+        MI.getOperand(2).isImm() && ((isUInt<5>(MI.getOperand(2).getImm())) ||
+                                     (MI.getOperand(2).getImm() == -1)))
       return HexagonII::HCG_A;
     break;
   case Hexagon::A2_tfr:
@@ -134,8 +134,8 @@ unsigned getCompoundCandidateGroup(MCInst const &MI, bool IsExtended) {
       return false;
     // Rd = #u6
     DstReg = MI.getOperand(0).getReg();
-    if (HexagonMCInstrInfo::minConstant(MI, 1) <= 63 &&
-        HexagonMCInstrInfo::minConstant(MI, 1) >= 0 &&
+    if (MI.getOperand(1).isImm() && MI.getOperand(1).getImm() <= 63 &&
+        MI.getOperand(1).getImm() >= 0 &&
         HexagonMCInstrInfo::isIntRegForSubInst(DstReg))
       return HexagonII::HCG_A;
     break;
@@ -145,8 +145,9 @@ unsigned getCompoundCandidateGroup(MCInst const &MI, bool IsExtended) {
     DstReg = MI.getOperand(0).getReg();
     Src1Reg = MI.getOperand(1).getReg();
     if ((Hexagon::P0 == DstReg || Hexagon::P1 == DstReg) &&
+        MI.getOperand(2).isImm() &&
         HexagonMCInstrInfo::isIntRegForSubInst(Src1Reg) &&
-        HexagonMCInstrInfo::minConstant(MI, 2) == 0)
+        (MI.getOperand(2).getImm() == 0))
       return HexagonII::HCG_A;
     break;
   // The fact that .new form is used pretty much guarantees
@@ -205,8 +206,6 @@ MCInst *getCompoundInsn(MCContext &Context, MCInst const &L, MCInst const &R) {
   MCInst *CompoundInsn = 0;
   unsigned compoundOpcode;
   MCOperand Rs, Rt;
-  int64_t Value;
-  bool Success;
 
   switch (L.getOpcode()) {
   default:
@@ -278,10 +277,7 @@ MCInst *getCompoundInsn(MCContext &Context, MCInst const &L, MCInst const &R) {
 
   case Hexagon::C2_cmpeqi:
     DEBUG(dbgs() << "CX: C2_cmpeqi\n");
-    Success = L.getOperand(2).getExpr()->evaluateAsAbsolute(Value);
-    (void)Success;
-    assert(Success);
-    if (Value == -1)
+    if (L.getOperand(2).getImm() == -1)
       compoundOpcode = cmpeqn1BitOpcode[getCompoundOp(R)];
     else
       compoundOpcode = cmpeqiBitOpcode[getCompoundOp(R)];
@@ -290,17 +286,14 @@ MCInst *getCompoundInsn(MCContext &Context, MCInst const &L, MCInst const &R) {
     CompoundInsn = new (Context) MCInst;
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
-    if (Value != -1)
+    if (L.getOperand(2).getImm() != -1)
       CompoundInsn->addOperand(L.getOperand(2));
     CompoundInsn->addOperand(R.getOperand(1));
     break;
 
   case Hexagon::C2_cmpgti:
     DEBUG(dbgs() << "CX: C2_cmpgti\n");
-    Success = L.getOperand(2).getExpr()->evaluateAsAbsolute(Value);
-    (void)Success;
-    assert(Success);
-    if (Value == -1)
+    if (L.getOperand(2).getImm() == -1)
       compoundOpcode = cmpgtn1BitOpcode[getCompoundOp(R)];
     else
       compoundOpcode = cmpgtiBitOpcode[getCompoundOp(R)];
@@ -309,7 +302,7 @@ MCInst *getCompoundInsn(MCContext &Context, MCInst const &L, MCInst const &R) {
     CompoundInsn = new (Context) MCInst;
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
-    if (Value != -1)
+    if (L.getOperand(2).getImm() != -1)
       CompoundInsn->addOperand(L.getOperand(2));
     CompoundInsn->addOperand(R.getOperand(1));
     break;
@@ -411,7 +404,7 @@ bool lookForCompound(MCInstrInfo const &MCII, MCContext &Context, MCInst &MCI) {
 /// additional slot.
 void HexagonMCInstrInfo::tryCompound(MCInstrInfo const &MCII,
                                      MCContext &Context, MCInst &MCI) {
-  assert(HexagonMCInstrInfo::isBundle(MCI) &&
+  assert(MCI.getOpcode() == Hexagon::BUNDLE &&
          "Non-Bundle where Bundle expected");
 
   // By definition a compound must have 2 insn.

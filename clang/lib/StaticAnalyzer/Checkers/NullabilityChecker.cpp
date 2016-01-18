@@ -366,20 +366,24 @@ static bool checkPreconditionViolation(ProgramStateRef State, ExplodedNode *N,
   if (!D)
     return false;
 
-  ArrayRef<ParmVarDecl*> Params;
-  if (const auto *BD = dyn_cast<BlockDecl>(D))
-    Params = BD->parameters();
-  else if (const auto *FD = dyn_cast<FunctionDecl>(D))
-    Params = FD->parameters();
-  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
-    Params = MD->parameters();
-  else
+  if (const auto *BlockD = dyn_cast<BlockDecl>(D)) {
+    if (checkParamsForPreconditionViolation(BlockD->parameters(), State,
+                                            LocCtxt)) {
+      if (!N->isSink())
+        C.addTransition(State->set<PreconditionViolated>(true), N);
+      return true;
+    }
     return false;
+  }
 
-  if (checkParamsForPreconditionViolation(Params, State, LocCtxt)) {
-    if (!N->isSink())
-      C.addTransition(State->set<PreconditionViolated>(true), N);
-    return true;
+  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
+    if (checkParamsForPreconditionViolation(FuncDecl->parameters(), State,
+                                            LocCtxt)) {
+      if (!N->isSink())
+        C.addTransition(State->set<PreconditionViolated>(true), N);
+      return true;
+    }
+    return false;
   }
   return false;
 }
@@ -480,33 +484,20 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (!RetSVal)
     return;
 
-  QualType RequiredRetType;
   AnalysisDeclContext *DeclCtxt =
       C.getLocationContext()->getAnalysisDeclContext();
-  const Decl *D = DeclCtxt->getDecl();
-  if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
-    RequiredRetType = MD->getReturnType();
-  else if (auto *FD = dyn_cast<FunctionDecl>(D))
-    RequiredRetType = FD->getReturnType();
-  else
+  const FunctionType *FuncType = DeclCtxt->getDecl()->getFunctionType();
+  if (!FuncType)
     return;
 
   NullConstraint Nullness = getNullConstraint(*RetSVal, State);
 
-  Nullability RequiredNullability = getNullabilityAnnotation(RequiredRetType);
-
-  // If the returned value is null but the type of the expression
-  // generating it is nonnull then we will suppress the diagnostic.
-  // This enables explicit suppression when returning a nil literal in a
-  // function with a _Nonnull return type:
-  //    return (NSString * _Nonnull)0;
-  Nullability RetExprTypeLevelNullability =
-        getNullabilityAnnotation(RetExpr->getType());
+  Nullability StaticNullability =
+      getNullabilityAnnotation(FuncType->getReturnType());
 
   if (Filter.CheckNullReturnedFromNonnull &&
       Nullness == NullConstraint::IsNull &&
-      RetExprTypeLevelNullability != Nullability::Nonnull &&
-      RequiredNullability == Nullability::Nonnull) {
+      StaticNullability == Nullability::Nonnull) {
     static CheckerProgramPointTag Tag(this, "NullReturnedFromNonnull");
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)
@@ -527,7 +518,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
     if (Filter.CheckNullableReturnedFromNonnull &&
         Nullness != NullConstraint::IsNotNull &&
         TrackedNullabValue == Nullability::Nullable &&
-        RequiredNullability == Nullability::Nonnull) {
+        StaticNullability == Nullability::Nonnull) {
       static CheckerProgramPointTag Tag(this, "NullableReturnedFromNonnull");
       ExplodedNode *N = C.addTransition(State, C.getPredecessor(), &Tag);
       reportBugIfPreconditionHolds(ErrorKind::NullableReturnedToNonnull, N,
@@ -535,10 +526,9 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
     }
     return;
   }
-  if (RequiredNullability == Nullability::Nullable) {
+  if (StaticNullability == Nullability::Nullable) {
     State = State->set<NullabilityMap>(Region,
-                                       NullabilityState(RequiredNullability,
-                                                        S));
+                                       NullabilityState(StaticNullability, S));
     C.addTransition(State);
   }
 }
@@ -574,14 +564,13 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
 
     NullConstraint Nullness = getNullConstraint(*ArgSVal, State);
 
-    Nullability RequiredNullability =
-        getNullabilityAnnotation(Param->getType());
-    Nullability ArgExprTypeLevelNullability =
+    Nullability ParamNullability = getNullabilityAnnotation(Param->getType());
+    Nullability ArgStaticNullability =
         getNullabilityAnnotation(ArgExpr->getType());
 
     if (Filter.CheckNullPassedToNonnull && Nullness == NullConstraint::IsNull &&
-        ArgExprTypeLevelNullability != Nullability::Nonnull &&
-        RequiredNullability == Nullability::Nonnull) {
+        ArgStaticNullability != Nullability::Nonnull &&
+        ParamNullability == Nullability::Nonnull) {
       ExplodedNode *N = C.generateErrorNode(State);
       if (!N)
         return;
@@ -603,7 +592,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
         continue;
 
       if (Filter.CheckNullablePassedToNonnull &&
-          RequiredNullability == Nullability::Nonnull) {
+          ParamNullability == Nullability::Nonnull) {
         ExplodedNode *N = C.addTransition(State);
         reportBugIfPreconditionHolds(ErrorKind::NullablePassedToNonnull, N,
                                      Region, C, ArgExpr, /*SuppressPath=*/true);
@@ -619,10 +608,10 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
       continue;
     }
     // No tracked nullability yet.
-    if (ArgExprTypeLevelNullability != Nullability::Nullable)
+    if (ArgStaticNullability != Nullability::Nullable)
       continue;
     State = State->set<NullabilityMap>(
-        Region, NullabilityState(ArgExprTypeLevelNullability, ArgExpr));
+        Region, NullabilityState(ArgStaticNullability, ArgExpr));
   }
   if (State != OrigState)
     C.addTransition(State);
@@ -873,72 +862,6 @@ void NullabilityChecker::checkPostStmt(const ExplicitCastExpr *CE,
   }
 }
 
-/// For a given statement performing a bind, attempt to syntactically
-/// match the expression resulting in the bound value.
-static const Expr * matchValueExprForBind(const Stmt *S) {
-  // For `x = e` the value expression is the right-hand side.
-  if (auto *BinOp = dyn_cast<BinaryOperator>(S)) {
-    if (BinOp->getOpcode() == BO_Assign)
-      return BinOp->getRHS();
-  }
-
-  // For `int x = e` the value expression is the initializer.
-  if (auto *DS = dyn_cast<DeclStmt>(S))  {
-    if (DS->isSingleDecl()) {
-      auto *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
-      if (!VD)
-        return nullptr;
-
-      if (const Expr *Init = VD->getInit())
-        return Init;
-    }
-  }
-
-  return nullptr;
-}
-
-/// Returns true if \param S is a DeclStmt for a local variable that
-/// ObjC automated reference counting initialized with zero.
-static bool isARCNilInitializedLocal(CheckerContext &C, const Stmt *S) {
-  // We suppress diagnostics for ARC zero-initialized _Nonnull locals. This
-  // prevents false positives when a _Nonnull local variable cannot be
-  // initialized with an initialization expression:
-  //    NSString * _Nonnull s; // no-warning
-  //    @autoreleasepool {
-  //      s = ...
-  //    }
-  //
-  // FIXME: We should treat implicitly zero-initialized _Nonnull locals as
-  // uninitialized in Sema's UninitializedValues analysis to warn when a use of
-  // the zero-initialized definition will unexpectedly yield nil.
-
-  // Locals are only zero-initialized when automated reference counting
-  // is turned on.
-  if (!C.getASTContext().getLangOpts().ObjCAutoRefCount)
-    return false;
-
-  auto *DS = dyn_cast<DeclStmt>(S);
-  if (!DS || !DS->isSingleDecl())
-    return false;
-
-  auto *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
-  if (!VD)
-    return false;
-
-  // Sema only zero-initializes locals with ObjCLifetimes.
-  if(!VD->getType().getQualifiers().hasObjCLifetime())
-    return false;
-
-  const Expr *Init = VD->getInit();
-  assert(Init && "ObjC local under ARC without initializer");
-
-  // Return false if the local is explicitly initialized (e.g., with '= nil').
-  if (!isa<ImplicitValueInitExpr>(Init))
-    return false;
-
-  return true;
-}
-
 /// Propagate the nullability information through binds and warn when nullable
 /// pointer or null symbol is assigned to a pointer with a nonnull type.
 void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
@@ -970,19 +893,13 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
   if (Filter.CheckNullPassedToNonnull &&
       RhsNullness == NullConstraint::IsNull &&
       ValNullability != Nullability::Nonnull &&
-      LocNullability == Nullability::Nonnull &&
-      !isARCNilInitializedLocal(C, S)) {
+      LocNullability == Nullability::Nonnull) {
     static CheckerProgramPointTag Tag(this, "NullPassedToNonnull");
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)
       return;
-
-    const Stmt *ValueExpr = matchValueExprForBind(S);
-    if (!ValueExpr)
-      ValueExpr = S;
-
     reportBugIfPreconditionHolds(ErrorKind::NilAssignedToNonnull, N, nullptr, C,
-                                 ValueExpr);
+                                 S);
     return;
   }
   // Intentionally missing case: '0' is bound to a reference. It is handled by

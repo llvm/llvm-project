@@ -61,8 +61,8 @@ entry:
 ; CHECK:   %arrayidx.i = getelementptr inbounds float, float* %a, i64 7
 ; CHECK:   store float %1, float* %arrayidx.i, align 4, !alias.scope !14, !noalias !13
 ; CHECK:   %2 = load float, float* %c, align 4, !noalias !15
-; CHECK:   %arrayidx.i1 = getelementptr inbounds float, float* %a, i64 6
-; CHECK:   store float %2, float* %arrayidx.i1, align 4, !alias.scope !19, !noalias !20
+; CHECK:   %arrayidx.i.1 = getelementptr inbounds float, float* %a, i64 6
+; CHECK:   store float %2, float* %arrayidx.i.1, align 4, !alias.scope !19, !noalias !20
 ; CHECK:   %arrayidx1.i = getelementptr inbounds float, float* %b, i64 8
 ; CHECK:   store float %2, float* %arrayidx1.i, align 4, !alias.scope !20, !noalias !19
 ; CHECK:   %3 = load float, float* %c, align 4

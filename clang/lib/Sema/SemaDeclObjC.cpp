@@ -15,11 +15,12 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DataRecursiveASTVisitor.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/Lookup.h"
@@ -606,7 +607,7 @@ DeclResult Sema::actOnObjCTypeParam(Scope *S,
     } else if (typeBound->isObjCObjectType()) {
       // The user forgot the * on an Objective-C pointer type, e.g.,
       // "T : NSView".
-      SourceLocation starLoc = getLocForEndOfToken(
+      SourceLocation starLoc = PP.getLocForEndOfToken(
                                  typeBoundInfo->getTypeLoc().getEndLoc());
       Diag(typeBoundInfo->getTypeLoc().getBeginLoc(),
            diag::err_objc_type_param_bound_missing_pointer)
@@ -759,7 +760,7 @@ static bool checkTypeParamListConsistency(Sema &S,
     if (newTypeParams->size() > prevTypeParams->size()) {
       diagLoc = newTypeParams->begin()[prevTypeParams->size()]->getLocation();
     } else {
-      diagLoc = S.getLocForEndOfToken(newTypeParams->back()->getLocEnd());
+      diagLoc = S.PP.getLocForEndOfToken(newTypeParams->back()->getLocEnd());
     }
 
     S.Diag(diagLoc, diag::err_objc_type_param_arity_mismatch)
@@ -874,7 +875,7 @@ static bool checkTypeParamListConsistency(Sema &S,
         newContext == TypeParamListContext::Definition) {
       // Diagnose this problem for forward declarations and definitions.
       SourceLocation insertionLoc
-        = S.getLocForEndOfToken(newTypeParam->getLocation());
+        = S.PP.getLocForEndOfToken(newTypeParam->getLocation());
       std::string newCode
         = " : " + prevTypeParam->getUnderlyingType().getAsString(
                     S.Context.getPrintingPolicy());
@@ -1406,8 +1407,8 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
       if (allProtocolsDeclared) {
         Diag(firstClassNameLoc, diag::warn_objc_redundant_qualified_class_type)
           << baseClass->getDeclName() << SourceRange(lAngleLoc, rAngleLoc)
-          << FixItHint::CreateInsertion(getLocForEndOfToken(firstClassNameLoc),
-                                        " *");
+          << FixItHint::CreateInsertion(
+               PP.getLocForEndOfToken(firstClassNameLoc), " *");
       }
     }
 
@@ -1487,7 +1488,7 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
     // If we have a typedef of an Objective-C class type that is missing a '*',
     // add the '*'.
     if (type->getAs<ObjCInterfaceType>()) {
-      SourceLocation starLoc = getLocForEndOfToken(loc);
+      SourceLocation starLoc = PP.getLocForEndOfToken(loc);
       ParsedAttributes parsedAttrs(attrFactory);
       D.AddTypeInfo(DeclaratorChunk::getPointer(/*typeQuals=*/0, starLoc,
                                                 SourceLocation(),
@@ -1867,8 +1868,6 @@ Decl *Sema::ActOnStartClassImplementation(
     Diag(ClassLoc, diag::err_redefinition_different_kind) << ClassName;
     Diag(PrevDecl->getLocation(), diag::note_previous_definition);
   } else if ((IDecl = dyn_cast_or_null<ObjCInterfaceDecl>(PrevDecl))) {
-    // FIXME: This will produce an error if the definition of the interface has
-    // been imported from a module but is not visible.
     RequireCompleteType(ClassLoc, Context.getObjCInterfaceType(IDecl),
                         diag::warn_undef_interface);
   } else {
@@ -2266,7 +2265,7 @@ static bool CheckMethodOverrideReturn(Sema &S,
 
       DiagID = 
         IsOverridingMode ? diag::warn_non_covariant_overriding_ret_types 
-                         : diag::warn_non_covariant_ret_types;
+                          : diag::warn_non_covariant_ret_types;
     }
   }
 
@@ -2350,7 +2349,7 @@ static bool CheckMethodOverrideParam(Sema &S,
 
       DiagID = 
       IsOverridingMode ? diag::warn_non_contravariant_overriding_param_types 
-                       : diag::warn_non_contravariant_param_types;
+                       :  diag::warn_non_contravariant_param_types;
     }
   }
 
@@ -2359,7 +2358,7 @@ static bool CheckMethodOverrideParam(Sema &S,
     << MethodImpl->getDeclName() << IfaceTy << ImplTy;
   S.Diag(IfaceVar->getLocation(), 
          (IsOverridingMode ? diag::note_previous_declaration 
-                           : diag::note_previous_definition))
+                        : diag::note_previous_definition))
     << getTypeRange(IfaceVar->getTypeSourceInfo());
   return false;
 }
@@ -4568,7 +4567,7 @@ namespace {
   /// Used by Sema::DiagnoseUnusedBackingIvarInAccessor to check if a property
   /// accessor references the backing ivar.
   class UnusedBackingIvarChecker :
-      public RecursiveASTVisitor<UnusedBackingIvarChecker> {
+      public DataRecursiveASTVisitor<UnusedBackingIvarChecker> {
   public:
     Sema &S;
     const ObjCMethodDecl *Method;

@@ -1,6 +1,6 @@
 ; Test that we can correctly handle vectors of pointers in statepoint 
 ; rewriting.  Currently, we scalarize, but that's an implementation detail.
-; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -rs4gc-split-vector-values -S | FileCheck  %s
+; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -S | FileCheck  %s
 
 ; A non-vector relocation for comparison
 
@@ -90,7 +90,7 @@ exceptional_return:                               ; preds = %entry
 ; Can we handle an insert element with a constant offset?  This effectively
 ; tests both the equal and inequal case since we have to relocate both indices
 ; in the vector.
-  %landing_pad4 = landingpad token
+  %landing_pad4 = landingpad { i8*, i32 }
           cleanup
   ret <2 x i64 addrspace(1)*> %obj
 }

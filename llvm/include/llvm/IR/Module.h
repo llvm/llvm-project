@@ -15,7 +15,6 @@
 #ifndef LLVM_IR_MODULE_H
 #define LLVM_IR_MODULE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/DataLayout.h"
@@ -431,7 +430,7 @@ public:
 
   /// Sets the GVMaterializer to GVM. This module must not yet have a
   /// Materializer. To reset the materializer for a module that already has one,
-  /// call materializeAll first. Destroying this module will destroy
+  /// call MaterializeAllPermanently first. Destroying this module will destroy
   /// its materializer without materializing any more GlobalValues. Without
   /// destroying the Module, there is no way to detach or destroy a materializer
   /// without materializing all the GVs it controls, to avoid leaving orphan
@@ -439,16 +438,27 @@ public:
   void setMaterializer(GVMaterializer *GVM);
   /// Retrieves the GVMaterializer, if any, for this Module.
   GVMaterializer *getMaterializer() const { return Materializer.get(); }
-  bool isMaterialized() const { return !getMaterializer(); }
+
+  /// Returns true if this GV was loaded from this Module's GVMaterializer and
+  /// the GVMaterializer knows how to dematerialize the GV.
+  bool isDematerializable(const GlobalValue *GV) const;
 
   /// Make sure the GlobalValue is fully read. If the module is corrupt, this
   /// returns true and fills in the optional string with information about the
   /// problem. If successful, this returns false.
   std::error_code materialize(GlobalValue *GV);
+  /// If the GlobalValue is read in, and if the GVMaterializer supports it,
+  /// release the memory for the function, and set it up to be materialized
+  /// lazily. If !isDematerializable(), this method is a no-op.
+  void dematerialize(GlobalValue *GV);
+
+  /// Make sure all GlobalValues in this Module are fully read.
+  std::error_code materializeAll();
 
   /// Make sure all GlobalValues in this Module are fully read and clear the
+  /// Materializer. If the module is corrupt, this DOES NOT clear the old
   /// Materializer.
-  std::error_code materializeAll();
+  std::error_code materializeAllPermanently();
 
   std::error_code materializeMetadata();
 
@@ -504,10 +514,10 @@ public:
   bool                  global_empty() const { return GlobalList.empty(); }
 
   iterator_range<global_iterator> globals() {
-    return make_range(global_begin(), global_end());
+    return iterator_range<global_iterator>(global_begin(), global_end());
   }
   iterator_range<const_global_iterator> globals() const {
-    return make_range(global_begin(), global_end());
+    return iterator_range<const_global_iterator>(global_begin(), global_end());
   }
 
 /// @}
@@ -526,10 +536,10 @@ public:
   bool                    empty() const { return FunctionList.empty(); }
 
   iterator_range<iterator> functions() {
-    return make_range(begin(), end());
+    return iterator_range<iterator>(begin(), end());
   }
   iterator_range<const_iterator> functions() const {
-    return make_range(begin(), end());
+    return iterator_range<const_iterator>(begin(), end());
   }
 
 /// @}
@@ -544,10 +554,10 @@ public:
   bool                 alias_empty() const      { return AliasList.empty(); }
 
   iterator_range<alias_iterator> aliases() {
-    return make_range(alias_begin(), alias_end());
+    return iterator_range<alias_iterator>(alias_begin(), alias_end());
   }
   iterator_range<const_alias_iterator> aliases() const {
-    return make_range(alias_begin(), alias_end());
+    return iterator_range<const_alias_iterator>(alias_begin(), alias_end());
   }
 
 /// @}
@@ -568,10 +578,12 @@ public:
   bool named_metadata_empty() const { return NamedMDList.empty(); }
 
   iterator_range<named_metadata_iterator> named_metadata() {
-    return make_range(named_metadata_begin(), named_metadata_end());
+    return iterator_range<named_metadata_iterator>(named_metadata_begin(),
+                                                   named_metadata_end());
   }
   iterator_range<const_named_metadata_iterator> named_metadata() const {
-    return make_range(named_metadata_begin(), named_metadata_end());
+    return iterator_range<const_named_metadata_iterator>(named_metadata_begin(),
+                                                         named_metadata_end());
   }
 
   /// Destroy ConstantArrays in LLVMContext if they are not used.
@@ -627,16 +639,6 @@ public:
   /// \brief Set the PIC level (small or large model)
   void setPICLevel(PICLevel::Level PL);
 /// @}
-
-  /// @name Utility functions for querying and setting PGO counts
-  /// @{
-
-  /// \brief Set maximum function count in PGO mode
-  void setMaximumFunctionCount(uint64_t);
-
-  /// \brief Returns maximum function count in PGO mode
-  Optional<uint64_t> getMaximumFunctionCount();
-  /// @}
 };
 
 /// An raw_ostream inserter for modules.

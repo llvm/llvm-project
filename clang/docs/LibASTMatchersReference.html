@@ -1774,21 +1774,6 @@ cxxMethodDecl(isConst()) matches A::foo() but not A::bar()
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isCopyAssignmentOperator0')"><a name="isCopyAssignmentOperator0Anchor">isCopyAssignmentOperator</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isCopyAssignmentOperator0"><pre>Matches if the given method declaration declares a copy assignment
-operator.
-
-Given
-struct A {
-  A &amp;operator=(const A &amp;);
-  A &amp;operator=(A &amp;&amp;);
-};
-
-cxxMethodDecl(isCopyAssignmentOperator()) matches the first method but not
-the second one.
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isFinal1')"><a name="isFinal1Anchor">isFinal</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isFinal1"><pre>Matches if the given method or class declaration is final.
 
@@ -2236,20 +2221,6 @@ namespaceDecl(isInline()) will match n::m.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isNoThrow0')"><a name="isNoThrow0Anchor">isNoThrow</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isNoThrow0"><pre>Matches functions that have a non-throwing exception specification.
-
-Given:
-  void f();
-  void g() noexcept;
-  void h() throw();
-  void i() throw(int);
-  void j() noexcept(false);
-functionDecl(isNoThrow())
-  matches the declarations of g, and h, but not f, i or j.
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isTemplateInstantiation0')"><a name="isTemplateInstantiation0Anchor">isTemplateInstantiation</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isTemplateInstantiation0"><pre>Matches template instantiations of function, class, or static
 member variable template instantiations.
@@ -2502,18 +2473,6 @@ i is const-qualified but the qualifier is not local.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isAnyCharacter0')"><a name="isAnyCharacter0Anchor">isAnyCharacter</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isAnyCharacter0"><pre>Matches QualType nodes that are of character type.
-
-Given
-  void a(char);
-  void b(wchar_t);
-  void c(double);
-functionDecl(hasAnyParameter(hasType(isAnyCharacter())))
-matches "a(char)", "b(wchar_t)", but not "c(double)".
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isConstQualified0')"><a name="isConstQualified0Anchor">isConstQualified</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isConstQualified0"><pre>Matches QualType nodes that are const-qualified, i.e., that
 include "top-level" const.
@@ -2540,23 +2499,6 @@ Given
   void c(double);
 functionDecl(hasAnyParameter(hasType(isInteger())))
 matches "a(int)", "b(long)", but not "c(double)".
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isVolatileQualified0')"><a name="isVolatileQualified0Anchor">isVolatileQualified</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isVolatileQualified0"><pre>Matches QualType nodes that are volatile-qualified, i.e., that
-include "top-level" volatile.
-
-Given
-  void a(int);
-  void b(int volatile);
-  void c(volatile int);
-  void d(volatile int*);
-  void e(int volatile) {};
-functionDecl(hasAnyParameter(hasType(isVolatileQualified())))
-  matches "void b(int volatile)", "void c(volatile int)" and
-  "void e(int volatile) {}". It does not match d as there
-  is no top-level volatile on the parameter type "volatile int *".
 </pre></td></tr>
 
 
@@ -2754,16 +2696,6 @@ Usable as: Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.h
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('booleanType0')"><a name="booleanType0Anchor">booleanType</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="booleanType0"><pre>Matches type bool.
-
-Given
- struct S { bool func(); };
-functionDecl(returns(booleanType()))
-  matches "bool func();"
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('equalsBoundNode2')"><a name="equalsBoundNode2Anchor">equalsBoundNode</a></td><td>std::string ID</td></tr>
 <tr><td colspan="4" class="doc" id="equalsBoundNode2"><pre>Matches if a node equals a previously bound node.
 
@@ -2817,20 +2749,6 @@ Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasAutomaticStorageDuration0')"><a name="hasAutomaticStorageDuration0Anchor">hasAutomaticStorageDuration</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="hasAutomaticStorageDuration0"><pre>Matches a variable declaration that has automatic storage duration.
-
-Example matches x, but not y, z, or a.
-(matcher = varDecl(hasAutomaticStorageDuration())
-void f() {
-  int x;
-  static int y;
-  thread_local int z;
-}
-int a;
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasGlobalStorage0')"><a name="hasGlobalStorage0Anchor">hasGlobalStorage</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="hasGlobalStorage0"><pre>Matches a variable declaration that does not have local storage.
 
@@ -2853,34 +2771,6 @@ void f() {
   static int y;
 }
 int z;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasStaticStorageDuration0')"><a name="hasStaticStorageDuration0Anchor">hasStaticStorageDuration</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="hasStaticStorageDuration0"><pre>Matches a variable declaration that has static storage duration.
-
-Example matches y and a, but not x or z.
-(matcher = varDecl(hasStaticStorageDuration())
-void f() {
-  int x;
-  static int y;
-  thread_local int z;
-}
-int a;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasThreadStorageDuration0')"><a name="hasThreadStorageDuration0Anchor">hasThreadStorageDuration</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="hasThreadStorageDuration0"><pre>Matches a variable declaration that has thread storage duration.
-
-Example matches z, but not x, z, or a.
-(matcher = varDecl(hasThreadStorageDuration())
-void f() {
-  int x;
-  static int y;
-  thread_local int z;
-}
-int a;
 </pre></td></tr>
 
 
@@ -3147,22 +3037,6 @@ Given
   void f() { i[1] = 42; }
 arraySubscriptExpression(hasIndex(integerLiteral()))
   matches i[1] with the integerLiteral() matching 1
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasLHS1')"><a name="hasLHS1Anchor">hasLHS</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasLHS1"><pre>Matches the left hand side of binary operator expressions.
-
-Example matches a (matcher = binaryOperator(hasLHS()))
-  a || b
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasRHS1')"><a name="hasRHS1Anchor">hasRHS</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasRHS1"><pre>Matches the right hand side of binary operator expressions.
-
-Example matches b (matcher = binaryOperator(hasRHS()))
-  a || b
 </pre></td></tr>
 
 

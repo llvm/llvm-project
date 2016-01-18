@@ -186,7 +186,9 @@ public:
       Regex(RegexStr) { }
 
   bool isValid(std::string &Error) override {
-    return Regex.isValid(Error);
+    if (Regex.isValid(Error))
+      return true;
+    return false;
   }
 
   bool match(StringRef S) override {

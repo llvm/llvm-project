@@ -96,10 +96,10 @@ PrintMachineInstrs("print-machineinstrs", cl::ValueOptional,
 
 // Temporary option to allow experimenting with MachineScheduler as a post-RA
 // scheduler. Targets can "properly" enable this with
-// substitutePass(&PostRASchedulerID, &PostMachineSchedulerID).
-// Targets can return true in targetSchedulesPostRAScheduling() and
-// insert a PostRA scheduling pass wherever it wants.
-cl::opt<bool> MISchedPostRA("misched-postra", cl::Hidden,
+// substitutePass(&PostRASchedulerID, &PostMachineSchedulerID); Ideally it
+// wouldn't be part of the standard pass pipeline, and the target would just add
+// a PostRA scheduling pass wherever it wants.
+static cl::opt<bool> MISchedPostRA("misched-postra", cl::Hidden,
   cl::desc("Run MachineScheduler post regalloc (independent of preRA sched)"));
 
 // Experimental option to run live interval analysis early.
@@ -241,7 +241,7 @@ TargetPassConfig::TargetPassConfig(TargetMachine *tm, PassManagerBase &pm)
     : ImmutablePass(ID), PM(&pm), StartBefore(nullptr), StartAfter(nullptr),
       StopAfter(nullptr), Started(true), Stopped(false),
       AddingMachinePasses(false), TM(tm), Impl(nullptr), Initialized(false),
-      DisableVerify(false), EnableTailMerge(true) {
+      DisableVerify(false), EnableTailMerge(true) { 
 
   Impl = new PassConfigImpl();
 
@@ -556,7 +556,7 @@ void TargetPassConfig::addMachinePasses() {
   addPostRegAlloc();
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::None) 
     addPass(&ShrinkWrapID);
 
   addPass(&PrologEpilogCodeInserterID);
@@ -575,10 +575,7 @@ void TargetPassConfig::addMachinePasses() {
     addPass(&ImplicitNullChecksID);
 
   // Second pass scheduler.
-  // Let Target optionally insert this pass by itself at some other
-  // point.
-  if (getOptLevel() != CodeGenOpt::None &&
-      !TM->targetSchedulesPostRAScheduling()) {
+  if (getOptLevel() != CodeGenOpt::None) {
     if (MISchedPostRA)
       addPass(&PostMachineSchedulerID);
     else
@@ -600,7 +597,6 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&FuncletLayoutID, false);
 
   addPass(&StackMapLivenessID, false);
-  addPass(&LiveDebugValuesID, false);
 
   AddingMachinePasses = false;
 }

@@ -73,7 +73,7 @@ private:
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
-  std::unique_ptr<MachineOperand *[]> PhysRegUseDefLists;
+  std::vector<MachineOperand *> PhysRegUseDefLists;
 
   /// getRegUseDefListHead - Return the head pointer for the register use/def
   /// list for the specified virtual or physical register.
@@ -234,7 +234,7 @@ public:
   static reg_iterator reg_end() { return reg_iterator(nullptr); }
 
   inline iterator_range<reg_iterator>  reg_operands(unsigned Reg) const {
-    return make_range(reg_begin(Reg), reg_end());
+    return iterator_range<reg_iterator>(reg_begin(Reg), reg_end());
   }
 
   /// reg_instr_iterator/reg_instr_begin/reg_instr_end - Walk all defs and uses
@@ -250,7 +250,8 @@ public:
 
   inline iterator_range<reg_instr_iterator>
   reg_instructions(unsigned Reg) const {
-    return make_range(reg_instr_begin(Reg), reg_instr_end());
+    return iterator_range<reg_instr_iterator>(reg_instr_begin(Reg),
+                                              reg_instr_end());
   }
 
   /// reg_bundle_iterator/reg_bundle_begin/reg_bundle_end - Walk all defs and uses
@@ -265,7 +266,8 @@ public:
   }
 
   inline iterator_range<reg_bundle_iterator> reg_bundles(unsigned Reg) const {
-    return make_range(reg_bundle_begin(Reg), reg_bundle_end());
+    return iterator_range<reg_bundle_iterator>(reg_bundle_begin(Reg),
+                                               reg_bundle_end());
   }
 
   /// reg_empty - Return true if there are no instructions using or defining the
@@ -285,7 +287,8 @@ public:
 
   inline iterator_range<reg_nodbg_iterator>
   reg_nodbg_operands(unsigned Reg) const {
-    return make_range(reg_nodbg_begin(Reg), reg_nodbg_end());
+    return iterator_range<reg_nodbg_iterator>(reg_nodbg_begin(Reg),
+                                              reg_nodbg_end());
   }
 
   /// reg_instr_nodbg_iterator/reg_instr_nodbg_begin/reg_instr_nodbg_end - Walk
@@ -302,7 +305,8 @@ public:
 
   inline iterator_range<reg_instr_nodbg_iterator>
   reg_nodbg_instructions(unsigned Reg) const {
-    return make_range(reg_instr_nodbg_begin(Reg), reg_instr_nodbg_end());
+    return iterator_range<reg_instr_nodbg_iterator>(reg_instr_nodbg_begin(Reg),
+                                                    reg_instr_nodbg_end());
   }
 
   /// reg_bundle_nodbg_iterator/reg_bundle_nodbg_begin/reg_bundle_nodbg_end - Walk
@@ -319,7 +323,8 @@ public:
 
   inline iterator_range<reg_bundle_nodbg_iterator>
   reg_nodbg_bundles(unsigned Reg) const {
-    return make_range(reg_bundle_nodbg_begin(Reg), reg_bundle_nodbg_end());
+    return iterator_range<reg_bundle_nodbg_iterator>(reg_bundle_nodbg_begin(Reg),
+                                                     reg_bundle_nodbg_end());
   }
 
   /// reg_nodbg_empty - Return true if the only instructions using or defining
@@ -337,7 +342,7 @@ public:
   static def_iterator def_end() { return def_iterator(nullptr); }
 
   inline iterator_range<def_iterator> def_operands(unsigned Reg) const {
-    return make_range(def_begin(Reg), def_end());
+    return iterator_range<def_iterator>(def_begin(Reg), def_end());
   }
 
   /// def_instr_iterator/def_instr_begin/def_instr_end - Walk all defs of the
@@ -353,7 +358,8 @@ public:
 
   inline iterator_range<def_instr_iterator>
   def_instructions(unsigned Reg) const {
-    return make_range(def_instr_begin(Reg), def_instr_end());
+    return iterator_range<def_instr_iterator>(def_instr_begin(Reg),
+                                              def_instr_end());
   }
 
   /// def_bundle_iterator/def_bundle_begin/def_bundle_end - Walk all defs of the
@@ -368,7 +374,8 @@ public:
   }
 
   inline iterator_range<def_bundle_iterator> def_bundles(unsigned Reg) const {
-    return make_range(def_bundle_begin(Reg), def_bundle_end());
+    return iterator_range<def_bundle_iterator>(def_bundle_begin(Reg),
+                                               def_bundle_end());
   }
 
   /// def_empty - Return true if there are no instructions defining the
@@ -393,7 +400,7 @@ public:
   static use_iterator use_end() { return use_iterator(nullptr); }
 
   inline iterator_range<use_iterator> use_operands(unsigned Reg) const {
-    return make_range(use_begin(Reg), use_end());
+    return iterator_range<use_iterator>(use_begin(Reg), use_end());
   }
 
   /// use_instr_iterator/use_instr_begin/use_instr_end - Walk all uses of the
@@ -409,7 +416,8 @@ public:
 
   inline iterator_range<use_instr_iterator>
   use_instructions(unsigned Reg) const {
-    return make_range(use_instr_begin(Reg), use_instr_end());
+    return iterator_range<use_instr_iterator>(use_instr_begin(Reg),
+                                              use_instr_end());
   }
 
   /// use_bundle_iterator/use_bundle_begin/use_bundle_end - Walk all uses of the
@@ -424,7 +432,8 @@ public:
   }
 
   inline iterator_range<use_bundle_iterator> use_bundles(unsigned Reg) const {
-    return make_range(use_bundle_begin(Reg), use_bundle_end());
+    return iterator_range<use_bundle_iterator>(use_bundle_begin(Reg),
+                                               use_bundle_end());
   }
 
   /// use_empty - Return true if there are no instructions using the specified
@@ -453,7 +462,8 @@ public:
 
   inline iterator_range<use_nodbg_iterator>
   use_nodbg_operands(unsigned Reg) const {
-    return make_range(use_nodbg_begin(Reg), use_nodbg_end());
+    return iterator_range<use_nodbg_iterator>(use_nodbg_begin(Reg),
+                                              use_nodbg_end());
   }
 
   /// use_instr_nodbg_iterator/use_instr_nodbg_begin/use_instr_nodbg_end - Walk
@@ -470,7 +480,8 @@ public:
 
   inline iterator_range<use_instr_nodbg_iterator>
   use_nodbg_instructions(unsigned Reg) const {
-    return make_range(use_instr_nodbg_begin(Reg), use_instr_nodbg_end());
+    return iterator_range<use_instr_nodbg_iterator>(use_instr_nodbg_begin(Reg),
+                                                    use_instr_nodbg_end());
   }
 
   /// use_bundle_nodbg_iterator/use_bundle_nodbg_begin/use_bundle_nodbg_end - Walk
@@ -487,7 +498,8 @@ public:
 
   inline iterator_range<use_bundle_nodbg_iterator>
   use_nodbg_bundles(unsigned Reg) const {
-    return make_range(use_bundle_nodbg_begin(Reg), use_bundle_nodbg_end());
+    return iterator_range<use_bundle_nodbg_iterator>(use_bundle_nodbg_begin(Reg),
+                                                     use_bundle_nodbg_end());
   }
 
   /// use_nodbg_empty - Return true if there are no non-Debug instructions

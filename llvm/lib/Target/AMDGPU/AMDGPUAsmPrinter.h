@@ -99,11 +99,7 @@ public:
 
   void EmitFunctionBodyStart() override;
 
-  void EmitFunctionEntryLabel() override;
-
-  void EmitGlobalVariable(const GlobalVariable *GV) override;
-
-  void EmitStartOfAsmFile(Module &M) override;
+  void EmitEndOfAsmFile(Module &M) override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        unsigned AsmVariant, const char *ExtraCode,

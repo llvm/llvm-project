@@ -5,6 +5,7 @@
 // REQUIRES: x86-registered-target
 #ifndef HEADER
 #define HEADER
+// CHECK: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
 // CHECK-LABEL: foo
 void foo() {};
 // CHECK-LABEL: bar
@@ -72,6 +73,7 @@ int main() {
 // CHECK:      [[INNER_LOOP_END]]
   }
 // CHECK:      call void @__kmpc_for_static_fini(%{{.+}}* @{{.+}}, i32 [[GTID]])
+// CHECK:      call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]],
   return tmain<int>();
 }
 
@@ -87,6 +89,7 @@ int main() {
 // CHECK:       call void @__kmpc_end_single(
 // CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
+// CHECK-NEXT:  call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]],
 // CHECK-NEXT:  ret
 // CHECK:       [[TERM_LPAD]]
 // CHECK:       call void @__clang_call_terminate(i8*

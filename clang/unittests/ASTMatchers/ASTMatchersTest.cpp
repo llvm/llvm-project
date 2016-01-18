@@ -1355,29 +1355,6 @@ TEST(Matcher, VarDecl_Storage) {
   EXPECT_TRUE(matches("void f() { static int X; }", M));
 }
 
-TEST(Matcher, VarDecl_StorageDuration) {
-  std::string T =
-      "void f() { int x; static int y; } int a;";
-
-  EXPECT_TRUE(matches(T, varDecl(hasName("x"), hasAutomaticStorageDuration())));
-  EXPECT_TRUE(
-      notMatches(T, varDecl(hasName("y"), hasAutomaticStorageDuration())));
-  EXPECT_TRUE(
-      notMatches(T, varDecl(hasName("a"), hasAutomaticStorageDuration())));
-
-  EXPECT_TRUE(matches(T, varDecl(hasName("y"), hasStaticStorageDuration())));
-  EXPECT_TRUE(matches(T, varDecl(hasName("a"), hasStaticStorageDuration())));
-  EXPECT_TRUE(notMatches(T, varDecl(hasName("x"), hasStaticStorageDuration())));
-
-  // FIXME: It is really hard to test with thread_local itself because not all
-  // targets support TLS, which causes this to be an error depending on what
-  // platform the test is being run on. We do not have access to the TargetInfo
-  // object to be able to test whether the platform supports TLS or not.
-  EXPECT_TRUE(notMatches(T, varDecl(hasName("x"), hasThreadStorageDuration())));
-  EXPECT_TRUE(notMatches(T, varDecl(hasName("y"), hasThreadStorageDuration())));
-  EXPECT_TRUE(notMatches(T, varDecl(hasName("a"), hasThreadStorageDuration())));
-}
-
 TEST(Matcher, FindsVarDeclInFunctionParameter) {
   EXPECT_TRUE(matches(
       "void f(int i) {}",
@@ -1467,14 +1444,6 @@ TEST(IsInteger, ReportsNoFalsePositives) {
   EXPECT_TRUE(notMatches("struct T {}; T t; void f(T *) { }; void g() {f(&t);}",
                       callExpr(hasArgument(0, declRefExpr(
                           to(varDecl(hasType(isInteger()))))))));
-}
-
-TEST(IsAnyCharacter, MatchesCharacters) {
-  EXPECT_TRUE(matches("char i = 0;", varDecl(hasType(isAnyCharacter()))));
-}
-
-TEST(IsAnyCharacter, ReportsNoFalsePositives) {
-  EXPECT_TRUE(notMatches("int i;", varDecl(hasType(isAnyCharacter()))));
 }
 
 TEST(IsArrow, MatchesMemberVariablesViaArrow) {
@@ -1722,15 +1691,6 @@ TEST(IsDeleted, MatchesDeletedFunctionDeclarations) {
       notMatches("void Func();", functionDecl(hasName("Func"), isDeleted())));
   EXPECT_TRUE(matches("void Func() = delete;",
                       functionDecl(hasName("Func"), isDeleted())));
-}
-
-TEST(IsNoThrow, MatchesNoThrowFunctionDeclarations) {
-  EXPECT_TRUE(notMatches("void f();", functionDecl(isNoThrow())));
-  EXPECT_TRUE(notMatches("void f() throw(int);", functionDecl(isNoThrow())));
-  EXPECT_TRUE(
-      notMatches("void f() noexcept(false);", functionDecl(isNoThrow())));
-  EXPECT_TRUE(matches("void f() throw();", functionDecl(isNoThrow())));
-  EXPECT_TRUE(matches("void f() noexcept;", functionDecl(isNoThrow())));
 }
 
 TEST(isConstexpr, MatchesConstexprDeclarations) {
@@ -3040,15 +3000,6 @@ TEST(Field, MatchesField) {
   EXPECT_TRUE(matches("class X { int m; };", fieldDecl(hasName("m"))));
 }
 
-TEST(IsVolatileQualified, QualifiersMatch) {
-  EXPECT_TRUE(matches("volatile int i = 42;",
-                      varDecl(hasType(isVolatileQualified()))));
-  EXPECT_TRUE(notMatches("volatile int *i;",
-                         varDecl(hasType(isVolatileQualified()))));
-  EXPECT_TRUE(matches("typedef volatile int v_int; v_int i = 42;",
-                      varDecl(hasType(isVolatileQualified()))));
-}
-
 TEST(IsConstQualified, MatchesConstInt) {
   EXPECT_TRUE(matches("const int i = 42;",
                       varDecl(hasType(isConstQualified()))));
@@ -4146,13 +4097,6 @@ TEST(TypeMatching, MatchesTypes) {
   EXPECT_TRUE(matches("struct S {};", qualType().bind("loc")));
 }
 
-TEST(TypeMatching, MatchesBool) {
-  EXPECT_TRUE(matches("struct S { bool func(); };",
-                      cxxMethodDecl(returns(booleanType()))));
-  EXPECT_TRUE(notMatches("struct S { void func(); };",
-                         cxxMethodDecl(returns(booleanType()))));
-}
-
 TEST(TypeMatching, MatchesVoid) {
   EXPECT_TRUE(matches("struct S { void func(); };",
                       cxxMethodDecl(returns(voidType()))));
@@ -4510,8 +4454,6 @@ TEST(NNS, MatchesNestedNameSpecifiers) {
   EXPECT_TRUE(matches("template <typename T> class A { typename T::B b; };",
                       nestedNameSpecifier()));
   EXPECT_TRUE(matches("struct A { void f(); }; void A::f() {}",
-                      nestedNameSpecifier()));
-  EXPECT_TRUE(matches("namespace a { namespace b {} } namespace ab = a::b;",
                       nestedNameSpecifier()));
 
   EXPECT_TRUE(matches(

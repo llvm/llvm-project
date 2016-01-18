@@ -206,7 +206,7 @@ static bool needsStatepoint(const CallSite &CS) {
   return true;
 }
 
-static Value *ReplaceWithStatepoint(const CallSite &CS);
+static Value *ReplaceWithStatepoint(const CallSite &CS, Pass *P);
 
 /// Returns true if this loop is known to contain a call safepoint which
 /// must unconditionally execute on any iteration of the loop which returns
@@ -499,7 +499,7 @@ static bool isGCSafepointPoll(Function &F) {
 static bool shouldRewriteFunction(Function &F) {
   // TODO: This should check the GCStrategy
   if (F.hasGC()) {
-    const auto &FunctionGCName = F.getGC();
+    const char *FunctionGCName = F.getGC();
     const StringRef StatepointExampleName("statepoint-example");
     const StringRef CoreCLRName("coreclr");
     return (StatepointExampleName == FunctionGCName) ||
@@ -704,7 +704,7 @@ bool PlaceSafepoints::runOnFunction(Function &F) {
                                   Invoke->getParent());
     }
 
-    Value *GCResult = ReplaceWithStatepoint(CS);
+    Value *GCResult = ReplaceWithStatepoint(CS, nullptr);
     Results.push_back(GCResult);
   }
   assert(Results.size() == ParsePointNeeded.size());
@@ -762,8 +762,7 @@ InsertSafepointPoll(Instruction *InsertBefore,
   // path call - where we need to insert a safepoint (parsepoint).
 
   auto *F = M->getFunction(GCSafepointPollName);
-  assert(F && "gc.safepoint_poll function is missing");
-  assert(F->getValueType() ==
+  assert(F->getType()->getElementType() ==
          FunctionType::get(Type::getVoidTy(M->getContext()), false) &&
          "gc.safepoint_poll declared with wrong type");
   assert(!F->empty() && "gc.safepoint_poll must be a non-empty function");
@@ -831,8 +830,10 @@ InsertSafepointPoll(Instruction *InsertBefore,
 /// Replaces the given call site (Call or Invoke) with a gc.statepoint
 /// intrinsic with an empty deoptimization arguments list.  This does
 /// NOT do explicit relocation for GC support.
-static Value *ReplaceWithStatepoint(const CallSite &CS /* to replace */) {
-  assert(CS.getInstruction()->getModule() && "must be set");
+static Value *ReplaceWithStatepoint(const CallSite &CS, /* to replace */
+                                    Pass *P) {
+  assert(CS.getInstruction()->getParent()->getParent()->getParent() &&
+         "must be set");
 
   // TODO: technically, a pass is not allowed to get functions from within a
   // function pass since it might trigger a new function addition.  Refactor

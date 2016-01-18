@@ -92,6 +92,7 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
       delete OS;
     } else {
       OS->SetUnbuffered();
+      OS->SetUseAtomicWrites(true);
       OutputFile = OS;
       OwnsOutputFile = true;
     }

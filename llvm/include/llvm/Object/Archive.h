@@ -191,13 +191,14 @@ public:
   child_iterator child_begin(bool SkipInternal = true) const;
   child_iterator child_end() const;
   iterator_range<child_iterator> children(bool SkipInternal = true) const {
-    return make_range(child_begin(SkipInternal), child_end());
+    return iterator_range<child_iterator>(child_begin(SkipInternal),
+                                          child_end());
   }
 
   symbol_iterator symbol_begin() const;
   symbol_iterator symbol_end() const;
   iterator_range<symbol_iterator> symbols() const {
-    return make_range(symbol_begin(), symbol_end());
+    return iterator_range<symbol_iterator>(symbol_begin(), symbol_end());
   }
 
   // Cast methods.

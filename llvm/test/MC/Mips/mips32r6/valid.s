@@ -107,7 +107,7 @@ a:
         eretnc                   # CHECK: eretnc           # encoding: [0x42,0x00,0x00,0x58]
         jialc   $5, 256          # CHECK: jialc $5, 256    # encoding: [0xf8,0x05,0x01,0x00]
         jic     $5, 256          # CHECK: jic $5, 256      # encoding: [0xd8,0x05,0x01,0x00]
-        lsa     $2, $3, $4, 3    # CHECK: lsa  $2, $3, $4, 3 # encoding: [0x00,0x64,0x10,0x85]
+        lsa     $2, $3, $4, 3    # CHECK: lsa  $2, $3, $4, 3 # encoding: [0x00,0x64,0x10,0xc5]
         lwpc    $2,268           # CHECK: lwpc $2, 268     # encoding: [0xec,0x48,0x00,0x43]
         lwupc   $2,268           # CHECK: lwupc $2, 268    # encoding: [0xec,0x50,0x00,0x43]
         mfc0    $8,$15,1         # CHECK: mfc0 $8, $15, 1  # encoding: [0x40,0x08,0x78,0x01]
@@ -159,7 +159,6 @@ a:
         j       a                # CHECK: j a                    # encoding: [0b000010AA,A,A,A]
                                  # CHECK:                        #   fixup A - offset: 0, value: a, kind: fixup_Mips_26
         j       1328             # CHECK: j 1328                 # encoding: [0x08,0x00,0x01,0x4c]
-        jal       21100                # CHECK: jal 21100     # encoding: [0x0c,0x00,0x14,0x9b]
         jr.hb   $4               # CHECK: jr.hb $4               # encoding: [0x00,0x80,0x04,0x09]
         jalr.hb $4               # CHECK: jalr.hb $4             # encoding: [0x00,0x80,0xfc,0x09]
         jalr.hb $4, $5           # CHECK: jalr.hb $4, $5         # encoding: [0x00,0xa0,0x24,0x09]

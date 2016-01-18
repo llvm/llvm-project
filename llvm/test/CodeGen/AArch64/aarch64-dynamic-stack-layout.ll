@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -disable-post-ra < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
 
 ; This test aims to check basic correctness of frame layout &
 ; frame access code. There are 8 functions in this test file,
@@ -522,10 +522,10 @@ bb1:
 
 ; CHECK-LABEL: realign_conditional2
 ; Extra realignment in the prologue (performance issue).
-; CHECK:  tbz  {{.*}} .[[LABEL:.*]]
 ; CHECK:  sub  x9, sp, #32            // =32
 ; CHECK:  and  sp, x9, #0xffffffffffffffe0
 ; CHECK:  mov   x19, sp
+; CHECK:  tbz  {{.*}} .[[LABEL:.*]]
 ; Stack is realigned in a non-entry BB.
 ; CHECK:  sub  [[REG:x[01-9]+]], sp, #64
 ; CHECK:  and  sp, [[REG]], #0xffffffffffffffe0

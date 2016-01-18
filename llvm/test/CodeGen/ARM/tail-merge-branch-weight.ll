@@ -9,7 +9,7 @@
 ;                = 0.2 * 0.4 + 0.8 * 0.7 = 0.64
 
 ; CHECK: # Machine code for function test0:
-; CHECK: Successors according to CFG: BB#{{[0-9]+}}({{[0-9a-fx/= ]+}}20.00%) BB#{{[0-9]+}}({{[0-9a-fx/= ]+}}80.00%)
+; CHECK: Successors according to CFG: BB#{{[0-9]+}}(13) BB#{{[0-9]+}}(24)
 ; CHECK: BB#{{[0-9]+}}:
 ; CHECK: BB#{{[0-9]+}}:
 ; CHECK: # End machine code for function test0.

@@ -14,14 +14,9 @@
 // C_P: "-E"
 // C_P: "-C"
 
-// RUN: %clang_cl /Dfoo=bar /D bar=baz /DMYDEF#value /DMYDEF2=foo#bar /DMYDEF3#a=b /DMYDEF4# \
-// RUN:    -### -- %s 2>&1 | FileCheck -check-prefix=D %s
+// RUN: %clang_cl /Dfoo=bar -### -- %s 2>&1 | FileCheck -check-prefix=D %s
+// RUN: %clang_cl /D foo=bar -### -- %s 2>&1 | FileCheck -check-prefix=D %s
 // D: "-D" "foo=bar"
-// D: "-D" "bar=baz"
-// D: "-D" "MYDEF=value"
-// D: "-D" "MYDEF2=foo#bar"
-// D: "-D" "MYDEF3=a=b"
-// D: "-D" "MYDEF4="
 
 // RUN: %clang_cl /E -### -- %s 2>&1 | FileCheck -check-prefix=E %s
 // E: "-E"
@@ -178,10 +173,9 @@
 // RUN: %clang_cl /W1 -### -- %s 2>&1 | FileCheck -check-prefix=W1 %s
 // RUN: %clang_cl /W2 -### -- %s 2>&1 | FileCheck -check-prefix=W1 %s
 // RUN: %clang_cl /W3 -### -- %s 2>&1 | FileCheck -check-prefix=W1 %s
-// RUN: %clang_cl /W4 -### -- %s 2>&1 | FileCheck -check-prefix=W4 %s
-// RUN: %clang_cl /Wall -### -- %s 2>&1 | FileCheck -check-prefix=W4 %s
+// RUN: %clang_cl /W4 -### -- %s 2>&1 | FileCheck -check-prefix=W1 %s
+// RUN: %clang_cl /Wall -### -- %s 2>&1 | FileCheck -check-prefix=W1 %s
 // W1: -Wall
-// W4: -WCL4
 
 // RUN: %clang_cl /WX -### -- %s 2>&1 | FileCheck -check-prefix=WX %s
 // WX: -Werror
@@ -221,12 +215,11 @@
 // NOSTRICT: "-relaxed-aliasing"
 
 // For some warning ids, we can map from MSVC warning to Clang warning.
-// RUN: %clang_cl -wd4005 -wd4100 -wd4910 -wd4996 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
+// RUN: %clang_cl -wd4005 -wd4996 -wd4910 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
 // Wno: "-cc1"
 // Wno: "-Wno-macro-redefined"
-// Wno: "-Wno-unused-parameter"
-// Wno: "-Wno-dllexport-explicit-instantiation-decl"
 // Wno: "-Wno-deprecated-declarations"
+// Wno: "-Wno-dllexport-explicit-instantiation-decl"
 
 // Ignored options. Check that we don't get "unused during compilation" errors.
 // RUN: %clang_cl /c \
@@ -380,15 +373,6 @@
 // RUN: %clang_cl /Z7 /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7 %s
 // Z7: "-gcodeview"
 // Z7: "-debug-info-kind=line-tables-only"
-
-// RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=BreproDefault %s
-// BreproDefault: "-mincremental-linker-compatible"
-
-// RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
-// Brepro: "-mincremental-linker-compatible"
-
-// RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
-// Brepro_-NOT: "-mincremental-linker-compatible"
 
 // This test was super sneaky: "/Z7" means "line-tables", but "-gdwarf" occurs
 // later on the command line, so it should win. Interestingly the cc1 arguments

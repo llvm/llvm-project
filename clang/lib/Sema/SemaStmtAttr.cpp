@@ -150,8 +150,9 @@ CheckForIncompatibleAttributes(Sema &S,
     if (!LH)
       continue;
 
-    LoopHintAttr::OptionType Option = LH->getOption();
-    enum { Vectorize, Interleave, Unroll } Category;
+    int Option = LH->getOption();
+    int Category;
+    enum { Vectorize, Interleave, Unroll };
     switch (Option) {
     case LoopHintAttr::Vectorize:
     case LoopHintAttr::VectorizeWidth:

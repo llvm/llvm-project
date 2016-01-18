@@ -259,8 +259,6 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
         TheModule, FatbinWrapperTy, true, llvm::GlobalValue::InternalLinkage,
         llvm::ConstantStruct::get(FatbinWrapperTy, Values),
         "__cuda_fatbin_wrapper");
-    // NVIDIA's cuobjdump looks for fatbins in this section.
-    FatbinWrapper->setSection(".nvFatBinSegment");
 
     // GpuBinaryHandle = __cudaRegisterFatBinary(&FatbinWrapper);
     llvm::CallInst *RegisterFatbinCall = CtorBuilder.CreateCall(

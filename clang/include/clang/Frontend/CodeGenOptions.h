@@ -82,13 +82,6 @@ public:
     FullDebugInfo         /// Generate complete debug info.
   };
 
-  enum DebuggerKind {
-    DebuggerKindDefault,
-    DebuggerKindGDB,
-    DebuggerKindLLDB,
-    DebuggerKindSCE
-  };
-
   enum TLSModel {
     GeneralDynamicTLSModel,
     LocalDynamicTLSModel,
@@ -164,9 +157,6 @@ public:
   /// A list of dependent libraries.
   std::vector<std::string> DependentLibraries;
 
-  /// A list of linker options to embed in the object file.
-  std::vector<std::string> LinkerOptions;
-
   /// Name of the profile file to use as output for -fprofile-instr-generate
   /// and -fprofile-generate.
   std::string InstrProfileOutput;
@@ -176,13 +166,6 @@ public:
 
   /// Name of the profile file to use as input for -fprofile-instr-use
   std::string InstrProfileInput;
-
-  /// Name of the function summary index file to use for ThinLTO function
-  /// importing.
-  std::string ThinLTOIndexFile;
-
-  /// The EABI version to use
-  std::string EABIVersion;
 
   /// A list of file names passed with -fcuda-include-gpubinary options to
   /// forward to CUDA runtime back-end for incorporating them into host-side
@@ -221,9 +204,6 @@ public:
   /// Set of sanitizer checks that trap rather than diagnose.
   SanitizerSet SanitizeTrap;
 
-  /// \brief A list of all -fno-builtin-* function names (e.g., memset).
-  std::vector<std::string> NoBuiltinFuncs;
-
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
@@ -233,14 +213,6 @@ public:
 #include "clang/Frontend/CodeGenOptions.def"
 
   CodeGenOptions();
-
-  /// \brief Is this a libc/libm function that is no longer recognized as a
-  /// builtin because a -fno-builtin-* option has been specified?
-  bool isNoBuiltinFunc(const char *Name) const;
-
-  const std::vector<std::string> &getNoBuiltinFuncs() const {
-    return NoBuiltinFuncs;
-  }
 };
 
 }  // end namespace clang

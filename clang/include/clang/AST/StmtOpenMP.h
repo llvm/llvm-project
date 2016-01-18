@@ -70,7 +70,8 @@ protected:
       : Stmt(SC), Kind(K), StartLoc(std::move(StartLoc)),
         EndLoc(std::move(EndLoc)), NumClauses(NumClauses),
         NumChildren(NumChildren),
-        ClausesOffset(llvm::alignTo(sizeof(T), llvm::alignOf<OMPClause *>())) {}
+        ClausesOffset(llvm::RoundUpToAlignment(sizeof(T),
+                                               llvm::alignOf<OMPClause *>())) {}
 
   /// \brief Sets the list of variables for this clause.
   ///
@@ -390,11 +391,8 @@ protected:
 
   /// \brief Offset to the start of children expression arrays.
   static unsigned getArraysOffset(OpenMPDirectiveKind Kind) {
-    return (isOpenMPWorksharingDirective(Kind) ||
-            isOpenMPTaskLoopDirective(Kind) ||
-            isOpenMPDistributeDirective(Kind))
-               ? WorksharingEnd
-               : DefaultEnd;
+    return isOpenMPWorksharingDirective(Kind) ? WorksharingEnd
+                                              : DefaultEnd;
   }
 
   /// \brief Children number.
@@ -423,51 +421,37 @@ protected:
   void setInit(Expr *Init) { *std::next(child_begin(), InitOffset) = Init; }
   void setInc(Expr *Inc) { *std::next(child_begin(), IncOffset) = Inc; }
   void setIsLastIterVariable(Expr *IL) {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
-            isOpenMPDistributeDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     *std::next(child_begin(), IsLastIterVariableOffset) = IL;
   }
   void setLowerBoundVariable(Expr *LB) {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
-            isOpenMPDistributeDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     *std::next(child_begin(), LowerBoundVariableOffset) = LB;
   }
   void setUpperBoundVariable(Expr *UB) {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
-            isOpenMPDistributeDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     *std::next(child_begin(), UpperBoundVariableOffset) = UB;
   }
   void setStrideVariable(Expr *ST) {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
-            isOpenMPDistributeDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     *std::next(child_begin(), StrideVariableOffset) = ST;
   }
   void setEnsureUpperBound(Expr *EUB) {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
-            isOpenMPDistributeDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     *std::next(child_begin(), EnsureUpperBoundOffset) = EUB;
   }
   void setNextLowerBound(Expr *NLB) {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
-            isOpenMPDistributeDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     *std::next(child_begin(), NextLowerBoundOffset) = NLB;
   }
   void setNextUpperBound(Expr *NUB) {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
-            isOpenMPDistributeDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     *std::next(child_begin(), NextUpperBoundOffset) = NUB;
   }
@@ -594,50 +578,43 @@ public:
         reinterpret_cast<const Expr *>(*std::next(child_begin(), IncOffset)));
   }
   Expr *getIsLastIterVariable() const {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), IsLastIterVariableOffset)));
   }
   Expr *getLowerBoundVariable() const {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), LowerBoundVariableOffset)));
   }
   Expr *getUpperBoundVariable() const {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), UpperBoundVariableOffset)));
   }
   Expr *getStrideVariable() const {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), StrideVariableOffset)));
   }
   Expr *getEnsureUpperBound() const {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), EnsureUpperBoundOffset)));
   }
   Expr *getNextLowerBound() const {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), NextLowerBoundOffset)));
   }
   Expr *getNextUpperBound() const {
-    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
-            isOpenMPTaskLoopDirective(getDirectiveKind())) &&
+    assert(isOpenMPWorksharingDirective(getDirectiveKind()) &&
            "expected worksharing loop directive");
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), NextUpperBoundOffset)));
@@ -688,10 +665,7 @@ public:
            T->getStmtClass() == OMPForDirectiveClass ||
            T->getStmtClass() == OMPForSimdDirectiveClass ||
            T->getStmtClass() == OMPParallelForDirectiveClass ||
-           T->getStmtClass() == OMPParallelForSimdDirectiveClass ||
-           T->getStmtClass() == OMPTaskLoopDirectiveClass ||
-           T->getStmtClass() == OMPTaskLoopSimdDirectiveClass ||
-           T->getStmtClass() == OMPDistributeDirectiveClass;
+           T->getStmtClass() == OMPParallelForSimdDirectiveClass;
   }
 };
 
@@ -1152,22 +1126,18 @@ class OMPCriticalDirective : public OMPExecutableDirective {
   /// \param Name Name of the directive.
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending location of the directive.
-  /// \param NumClauses Number of clauses.
   ///
   OMPCriticalDirective(const DeclarationNameInfo &Name, SourceLocation StartLoc,
-                       SourceLocation EndLoc, unsigned NumClauses)
+                       SourceLocation EndLoc)
       : OMPExecutableDirective(this, OMPCriticalDirectiveClass, OMPD_critical,
-                               StartLoc, EndLoc, NumClauses, 1),
+                               StartLoc, EndLoc, 0, 1),
         DirName(Name) {}
 
   /// \brief Build an empty directive.
   ///
-  /// \param NumClauses Number of clauses.
-  ///
-  explicit OMPCriticalDirective(unsigned NumClauses)
+  explicit OMPCriticalDirective()
       : OMPExecutableDirective(this, OMPCriticalDirectiveClass, OMPD_critical,
-                               SourceLocation(), SourceLocation(), NumClauses,
-                               1),
+                               SourceLocation(), SourceLocation(), 0, 1),
         DirName() {}
 
   /// \brief Set name of the directive.
@@ -1183,21 +1153,17 @@ public:
   /// \param Name Name of the directive.
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending Location of the directive.
-  /// \param Clauses List of clauses.
   /// \param AssociatedStmt Statement, associated with the directive.
   ///
   static OMPCriticalDirective *
   Create(const ASTContext &C, const DeclarationNameInfo &Name,
-         SourceLocation StartLoc, SourceLocation EndLoc,
-         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
+         SourceLocation StartLoc, SourceLocation EndLoc, Stmt *AssociatedStmt);
 
   /// \brief Creates an empty directive.
   ///
   /// \param C AST context.
-  /// \param NumClauses Number of clauses.
   ///
-  static OMPCriticalDirective *CreateEmpty(const ASTContext &C,
-                                           unsigned NumClauses, EmptyShell);
+  static OMPCriticalDirective *CreateEmpty(const ASTContext &C, EmptyShell);
 
   /// \brief Return name of the directive.
   ///
@@ -2214,205 +2180,6 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPCancelDirectiveClass;
-  }
-};
-
-/// \brief This represents '#pragma omp taskloop' directive.
-///
-/// \code
-/// #pragma omp taskloop private(a,b) grainsize(val) num_tasks(num)
-/// \endcode
-/// In this example directive '#pragma omp taskloop' has clauses 'private'
-/// with the variables 'a' and 'b', 'grainsize' with expression 'val' and
-/// 'num_tasks' with expression 'num'.
-///
-class OMPTaskLoopDirective : public OMPLoopDirective {
-  friend class ASTStmtReader;
-  /// \brief Build directive with the given start and end location.
-  ///
-  /// \param StartLoc Starting location of the directive kind.
-  /// \param EndLoc Ending location of the directive.
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  OMPTaskLoopDirective(SourceLocation StartLoc, SourceLocation EndLoc,
-                       unsigned CollapsedNum, unsigned NumClauses)
-      : OMPLoopDirective(this, OMPTaskLoopDirectiveClass, OMPD_taskloop,
-                         StartLoc, EndLoc, CollapsedNum, NumClauses) {}
-
-  /// \brief Build an empty directive.
-  ///
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  explicit OMPTaskLoopDirective(unsigned CollapsedNum, unsigned NumClauses)
-      : OMPLoopDirective(this, OMPTaskLoopDirectiveClass, OMPD_taskloop,
-                         SourceLocation(), SourceLocation(), CollapsedNum,
-                         NumClauses) {}
-
-public:
-  /// \brief Creates directive with a list of \a Clauses.
-  ///
-  /// \param C AST context.
-  /// \param StartLoc Starting location of the directive kind.
-  /// \param EndLoc Ending Location of the directive.
-  /// \param CollapsedNum Number of collapsed loops.
-  /// \param Clauses List of clauses.
-  /// \param AssociatedStmt Statement, associated with the directive.
-  /// \param Exprs Helper expressions for CodeGen.
-  ///
-  static OMPTaskLoopDirective *
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
-         Stmt *AssociatedStmt, const HelperExprs &Exprs);
-
-  /// \brief Creates an empty directive with the place
-  /// for \a NumClauses clauses.
-  ///
-  /// \param C AST context.
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  static OMPTaskLoopDirective *CreateEmpty(const ASTContext &C,
-                                           unsigned NumClauses,
-                                           unsigned CollapsedNum, EmptyShell);
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == OMPTaskLoopDirectiveClass;
-  }
-};
-
-/// \brief This represents '#pragma omp taskloop simd' directive.
-///
-/// \code
-/// #pragma omp taskloop simd private(a,b) grainsize(val) num_tasks(num)
-/// \endcode
-/// In this example directive '#pragma omp taskloop simd' has clauses 'private'
-/// with the variables 'a' and 'b', 'grainsize' with expression 'val' and
-/// 'num_tasks' with expression 'num'.
-///
-class OMPTaskLoopSimdDirective : public OMPLoopDirective {
-  friend class ASTStmtReader;
-  /// \brief Build directive with the given start and end location.
-  ///
-  /// \param StartLoc Starting location of the directive kind.
-  /// \param EndLoc Ending location of the directive.
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  OMPTaskLoopSimdDirective(SourceLocation StartLoc, SourceLocation EndLoc,
-                           unsigned CollapsedNum, unsigned NumClauses)
-      : OMPLoopDirective(this, OMPTaskLoopSimdDirectiveClass,
-                         OMPD_taskloop_simd, StartLoc, EndLoc, CollapsedNum,
-                         NumClauses) {}
-
-  /// \brief Build an empty directive.
-  ///
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  explicit OMPTaskLoopSimdDirective(unsigned CollapsedNum, unsigned NumClauses)
-      : OMPLoopDirective(this, OMPTaskLoopSimdDirectiveClass,
-                         OMPD_taskloop_simd, SourceLocation(), SourceLocation(),
-                         CollapsedNum, NumClauses) {}
-
-public:
-  /// \brief Creates directive with a list of \a Clauses.
-  ///
-  /// \param C AST context.
-  /// \param StartLoc Starting location of the directive kind.
-  /// \param EndLoc Ending Location of the directive.
-  /// \param CollapsedNum Number of collapsed loops.
-  /// \param Clauses List of clauses.
-  /// \param AssociatedStmt Statement, associated with the directive.
-  /// \param Exprs Helper expressions for CodeGen.
-  ///
-  static OMPTaskLoopSimdDirective *
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
-         Stmt *AssociatedStmt, const HelperExprs &Exprs);
-
-  /// \brief Creates an empty directive with the place
-  /// for \a NumClauses clauses.
-  ///
-  /// \param C AST context.
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  static OMPTaskLoopSimdDirective *CreateEmpty(const ASTContext &C,
-                                               unsigned NumClauses,
-                                               unsigned CollapsedNum,
-                                               EmptyShell);
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == OMPTaskLoopSimdDirectiveClass;
-  }
-};
-
-/// \brief This represents '#pragma omp distribute' directive.
-///
-/// \code
-/// #pragma omp distribute private(a,b)
-/// \endcode
-/// In this example directive '#pragma omp distribute' has clauses 'private'
-/// with the variables 'a' and 'b'
-///
-class OMPDistributeDirective : public OMPLoopDirective {
-  friend class ASTStmtReader;
-
-  /// \brief Build directive with the given start and end location.
-  ///
-  /// \param StartLoc Starting location of the directive kind.
-  /// \param EndLoc Ending location of the directive.
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  OMPDistributeDirective(SourceLocation StartLoc, SourceLocation EndLoc,
-                         unsigned CollapsedNum, unsigned NumClauses)
-      : OMPLoopDirective(this, OMPDistributeDirectiveClass, OMPD_distribute,
-                         StartLoc, EndLoc, CollapsedNum, NumClauses)
-        {}
-
-  /// \brief Build an empty directive.
-  ///
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  explicit OMPDistributeDirective(unsigned CollapsedNum, unsigned NumClauses)
-      : OMPLoopDirective(this, OMPDistributeDirectiveClass, OMPD_distribute,
-                         SourceLocation(), SourceLocation(), CollapsedNum,
-                         NumClauses)
-        {}
-
-public:
-  /// \brief Creates directive with a list of \a Clauses.
-  ///
-  /// \param C AST context.
-  /// \param StartLoc Starting location of the directive kind.
-  /// \param EndLoc Ending Location of the directive.
-  /// \param CollapsedNum Number of collapsed loops.
-  /// \param Clauses List of clauses.
-  /// \param AssociatedStmt Statement, associated with the directive.
-  /// \param Exprs Helper expressions for CodeGen.
-    ///
-  static OMPDistributeDirective *
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
-         Stmt *AssociatedStmt, const HelperExprs &Exprs);
-
-  /// \brief Creates an empty directive with the place
-  /// for \a NumClauses clauses.
-  ///
-  /// \param C AST context.
-  /// \param CollapsedNum Number of collapsed nested loops.
-  /// \param NumClauses Number of clauses.
-  ///
-  static OMPDistributeDirective *CreateEmpty(const ASTContext &C,
-                                             unsigned NumClauses,
-                                             unsigned CollapsedNum, EmptyShell);
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == OMPDistributeDirectiveClass;
   }
 };
 

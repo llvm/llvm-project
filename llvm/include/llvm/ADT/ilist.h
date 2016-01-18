@@ -220,8 +220,8 @@ private:
   template<class T> void operator-(T) const;
 public:
 
-  explicit ilist_iterator(pointer NP) : NodePtr(NP) {}
-  explicit ilist_iterator(reference NR) : NodePtr(&NR) {}
+  ilist_iterator(pointer NP) : NodePtr(NP) {}
+  ilist_iterator(reference NR) : NodePtr(&NR) {}
   ilist_iterator() : NodePtr(nullptr) {}
 
   // This is templated so that we can allow constructing a const iterator from
@@ -241,7 +241,7 @@ public:
   void reset(pointer NP) { NodePtr = NP; }
 
   // Accessors...
-  explicit operator pointer() const {
+  operator pointer() const {
     return NodePtr;
   }
 
@@ -251,11 +251,11 @@ public:
   pointer operator->() const { return &operator*(); }
 
   // Comparison operators
-  template <class Y> bool operator==(const ilist_iterator<Y> &RHS) const {
-    return NodePtr == RHS.getNodePtrUnchecked();
+  bool operator==(const ilist_iterator &RHS) const {
+    return NodePtr == RHS.NodePtr;
   }
-  template <class Y> bool operator!=(const ilist_iterator<Y> &RHS) const {
-    return NodePtr != RHS.getNodePtrUnchecked();
+  bool operator!=(const ilist_iterator &RHS) const {
+    return NodePtr != RHS.NodePtr;
   }
 
   // Increment and decrement operators...
@@ -687,30 +687,6 @@ public:
     merge(RightHalf, comp);
   }
   void sort() { sort(op_less); }
-
-  /// \brief Get the previous node, or \c nullptr for the list head.
-  NodeTy *getPrevNode(NodeTy &N) const {
-    auto I = N.getIterator();
-    if (I == begin())
-      return nullptr;
-    return &*std::prev(I);
-  }
-  /// \brief Get the previous node, or \c nullptr for the list head.
-  const NodeTy *getPrevNode(const NodeTy &N) const {
-    return getPrevNode(const_cast<NodeTy &>(N));
-  }
-
-  /// \brief Get the next node, or \c nullptr for the list tail.
-  NodeTy *getNextNode(NodeTy &N) const {
-    auto Next = std::next(N.getIterator());
-    if (Next == end())
-      return nullptr;
-    return &*Next;
-  }
-  /// \brief Get the next node, or \c nullptr for the list tail.
-  const NodeTy *getNextNode(const NodeTy &N) const {
-    return getNextNode(const_cast<NodeTy &>(N));
-  }
 };
 
 

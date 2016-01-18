@@ -192,10 +192,10 @@ public:
         TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()) {
     MFI = funcInfo.MF->getInfo<MipsFunctionInfo>();
     Context = &funcInfo.Fn->getContext();
-    bool ISASupported = !Subtarget->hasMips32r6() && Subtarget->hasMips32();
     TargetSupported =
-        ISASupported && (TM.getRelocationModel() == Reloc::PIC_) &&
-        (static_cast<const MipsTargetMachine &>(TM).getABI().IsO32());
+        ((TM.getRelocationModel() == Reloc::PIC_) &&
+         ((Subtarget->hasMips32r2() || Subtarget->hasMips32()) &&
+          (static_cast<const MipsTargetMachine &>(TM).getABI().IsO32())));
     UnsupportedFPMode = Subtarget->isFP64bit();
   }
 
@@ -1180,7 +1180,7 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
       // for now (will return false). We need to determine the right alignment
       // based on the normal alignment for the underlying machine type.
       //
-      unsigned ArgSize = alignTo(ArgVT.getSizeInBits(), 4);
+      unsigned ArgSize = RoundUpToAlignment(ArgVT.getSizeInBits(), 4);
 
       unsigned BEAlign = 0;
       if (ArgSize < 8 && !Subtarget->isLittle())

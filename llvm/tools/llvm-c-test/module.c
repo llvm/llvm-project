@@ -19,14 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void diagnosticHandler(LLVMDiagnosticInfoRef DI, void *C) {
-  char *CErr = LLVMGetDiagInfoDescription(DI);
-  fprintf(stderr, "Error with new bitcode parser: %s\n", CErr);
-  LLVMDisposeMessage(CErr);
-  exit(1);
-}
-
-static LLVMModuleRef load_module(bool Lazy, bool New) {
+static LLVMModuleRef load_module(void) {
   LLVMMemoryBufferRef MB;
   LLVMModuleRef M;
   char *msg = NULL;
@@ -36,35 +29,18 @@ static LLVMModuleRef load_module(bool Lazy, bool New) {
     exit(1);
   }
 
-  LLVMBool Ret;
-  if (New) {
-    LLVMContextRef C = LLVMGetGlobalContext();
-    LLVMContextSetDiagnosticHandler(C, diagnosticHandler, NULL);
-    if (Lazy)
-      Ret = LLVMGetBitcodeModule2(MB, &M);
-    else
-      Ret = LLVMParseBitcode2(MB, &M);
-  } else {
-    if (Lazy)
-      Ret = LLVMGetBitcodeModule(MB, &M, &msg);
-    else
-      Ret = LLVMParseBitcode(MB, &M, &msg);
-  }
-
-  if (Ret) {
+  if (LLVMParseBitcode(MB, &M, &msg)) {
     fprintf(stderr, "Error parsing bitcode: %s\n", msg);
     LLVMDisposeMemoryBuffer(MB);
     exit(1);
   }
 
-  if (!Lazy)
-    LLVMDisposeMemoryBuffer(MB);
-
+  LLVMDisposeMemoryBuffer(MB);
   return M;
 }
 
-int module_dump(bool Lazy, bool New) {
-  LLVMModuleRef M = load_module(Lazy, New);
+int module_dump(void) {
+  LLVMModuleRef M = load_module();
 
   char *irstr = LLVMPrintModuleToString(M);
   puts(irstr);
@@ -76,7 +52,7 @@ int module_dump(bool Lazy, bool New) {
 }
 
 int module_list_functions(void) {
-  LLVMModuleRef M = load_module(false, false);
+  LLVMModuleRef M = load_module();
   LLVMValueRef f;
 
   f = LLVMGetFirstFunction(M);
@@ -117,7 +93,7 @@ int module_list_functions(void) {
 }
 
 int module_list_globals(void) {
-  LLVMModuleRef M = load_module(false, false);
+  LLVMModuleRef M = load_module();
   LLVMValueRef g;
 
   g = LLVMGetFirstGlobal(M);

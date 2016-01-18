@@ -115,7 +115,7 @@ public:
                                               const MCRegisterInfo &MRI,
                                               const Triple &TT, StringRef CPU);
   typedef MCTargetAsmParser *(*MCAsmParserCtorTy)(
-      const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
+      MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
       const MCTargetOptions &Options);
   typedef MCDisassembler *(*MCDisassemblerCtorTy)(const Target &T,
                                                   const MCSubtargetInfo &STI,
@@ -141,8 +141,7 @@ public:
   typedef MCStreamer *(*COFFStreamerCtorTy)(MCContext &Ctx, MCAsmBackend &TAB,
                                             raw_pwrite_stream &OS,
                                             MCCodeEmitter *Emitter,
-                                            bool RelaxAll,
-                                            bool IncrementalLinkerCompatible);
+                                            bool RelaxAll);
   typedef MCTargetStreamer *(*NullTargetStreamerCtorTy)(MCStreamer &S);
   typedef MCTargetStreamer *(*AsmTargetStreamerCtorTy)(
       MCStreamer &S, formatted_raw_ostream &OS, MCInstPrinter *InstPrint,
@@ -383,7 +382,7 @@ public:
   ///
   /// \param Parser The target independent parser implementation to use for
   /// parsing and lexing.
-  MCTargetAsmParser *createMCAsmParser(const MCSubtargetInfo &STI,
+  MCTargetAsmParser *createMCAsmParser(MCSubtargetInfo &STI,
                                        MCAsmParser &Parser,
                                        const MCInstrInfo &MII,
                                        const MCTargetOptions &Options) const {
@@ -438,7 +437,6 @@ public:
                                      MCAsmBackend &TAB, raw_pwrite_stream &OS,
                                      MCCodeEmitter *Emitter,
                                      const MCSubtargetInfo &STI, bool RelaxAll,
-                                     bool IncrementalLinkerCompatible,
                                      bool DWARFMustBeAtTheEnd) const {
     MCStreamer *S;
     switch (T.getObjectFormat()) {
@@ -446,8 +444,7 @@ public:
       llvm_unreachable("Unknown object format");
     case Triple::COFF:
       assert(T.isOSWindows() && "only Windows COFF is supported");
-      S = COFFStreamerCtorFn(Ctx, TAB, OS, Emitter, RelaxAll,
-                             IncrementalLinkerCompatible);
+      S = COFFStreamerCtorFn(Ctx, TAB, OS, Emitter, RelaxAll);
       break;
     case Triple::MachO:
       if (MachOStreamerCtorFn)
@@ -1136,8 +1133,8 @@ template <class MCAsmParserImpl> struct RegisterMCAsmParser {
   }
 
 private:
-  static MCTargetAsmParser *Allocator(const MCSubtargetInfo &STI,
-                                      MCAsmParser &P, const MCInstrInfo &MII,
+  static MCTargetAsmParser *Allocator(MCSubtargetInfo &STI, MCAsmParser &P,
+                                      const MCInstrInfo &MII,
                                       const MCTargetOptions &Options) {
     return new MCAsmParserImpl(STI, P, MII, Options);
   }

@@ -1058,7 +1058,6 @@ private:
     off_t StoredSize;
     time_t StoredTime;
     bool Overridden;
-    bool Transient;
   };
 
   /// \brief Reads the stored information about an input file.

@@ -12,8 +12,8 @@ TOOLNAME := lli-child-target
 
 include $(LEVEL)/Makefile.config
 
-LINK_COMPONENTS := support OrcJIT
+LINK_COMPONENTS := support
 
-SOURCES := ChildTarget.cpp
+SOURCES := ChildTarget.cpp ../RemoteTarget.cpp
 
 include $(LLVM_SRC_ROOT)/Makefile.rules

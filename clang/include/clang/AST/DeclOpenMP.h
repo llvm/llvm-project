@@ -33,12 +33,8 @@ class Expr;
 /// };
 /// \endcode
 ///
-class OMPThreadPrivateDecl final
-    : public Decl,
-      private llvm::TrailingObjects<OMPThreadPrivateDecl, Expr *> {
+class OMPThreadPrivateDecl : public Decl {
   friend class ASTDeclReader;
-  friend TrailingObjects;
-
   unsigned NumVars;
 
   virtual void anchor();
@@ -47,11 +43,14 @@ class OMPThreadPrivateDecl final
     Decl(DK, DC, L), NumVars(0) { }
 
   ArrayRef<const Expr *> getVars() const {
-    return llvm::makeArrayRef(getTrailingObjects<Expr *>(), NumVars);
+    return llvm::makeArrayRef(reinterpret_cast<const Expr * const *>(this + 1),
+                              NumVars);
   }
 
   MutableArrayRef<Expr *> getVars() {
-    return MutableArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumVars);
+    return MutableArrayRef<Expr *>(
+                           reinterpret_cast<Expr **>(this + 1),
+                           NumVars);
   }
 
   void setVars(ArrayRef<Expr *> VL);

@@ -13,7 +13,7 @@
 // PCH:
 // RUN: %clang_cc1 -triple %itanium_abi_triple -x c++ -std=c++11 -emit-pch -fmodule-format=obj -I %S/Inputs -o %t.pch %S/Inputs/DebugCXX.h -mllvm -debug-only=pchcontainer &>%t-pch.ll
 // RUN: cat %t-pch.ll | FileCheck %s
-// RUN: cat %t-pch.ll | FileCheck --check-prefix=CHECK-NEG %s
+// RUN: cat %t-mod.ll | FileCheck --check-prefix=CHECK-NEG %s
 
 #ifdef MODULES
 @import DebugCXX;
@@ -23,34 +23,22 @@
 // CHECK-SAME:                    isOptimized: false,
 // CHECK-SAME-NOT:                splitDebugFilename:
 // CHECK-DWO:                     dwoId:
-
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX4EnumE")
 // CHECK: !DINamespace(name: "DebugCXX"
-
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Struct"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
-
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
 // CHECK-SAME:             name: "Template<int, DebugCXX::traits<int> >"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIiNS_6traitsIiEEEE")
-
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A<void>"
-// CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
-
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
 // CHECK-SAME:             name: "Template<float, DebugCXX::traits<float> >"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
-
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "FwdVirtual"
-// CHECK-SAME:             elements:
-// CHECK-SAME:             identifier: "_ZTS10FwdVirtual")
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$FwdVirtual"
-
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A<void>"
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstatiation"
 // no mangled name here yet.
-
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
 // no mangled name here yet.
 
-// CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"
+// CHECK-NEG-NOT: "_ZTSN8DebugCXX8TemplateIlNS_6traitsIlEEEE"

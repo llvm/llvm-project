@@ -72,10 +72,7 @@ struct BitFields4_packed {
 typedef float float2 __attribute__((ext_vector_type(2)));
 float2 float2x;
 
-// Register "0" is currently an invalid register for global register variables.
-// Use "esp" instead of "0".
-// register int rix __asm__("0");
-register int rix __asm__("esp");
+register int rix __asm__("0");
 
 int main() {
 // CHECK-NOT: atomicrmw

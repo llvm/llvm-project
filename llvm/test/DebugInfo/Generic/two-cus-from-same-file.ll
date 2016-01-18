@@ -24,8 +24,7 @@ declare i32 @puts(i8* nocapture) nounwind
 define i32 @main(i32 %argc, i8** nocapture %argv) nounwind !dbg !12 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !21, metadata !DIExpression()), !dbg !26
-  ; Avoid talking about the pointer size in debug info because that's target dependent
-  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !22, metadata !DIExpression(DW_OP_deref, DW_OP_deref)), !dbg !27
+  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !22, metadata !DIExpression()), !dbg !27
   %puts = tail call i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @str1, i32 0, i32 0)), !dbg !28
   tail call void @foo() nounwind, !dbg !30
   ret i32 0, !dbg !31
@@ -47,12 +46,14 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !10 = !{!12}
 !12 = distinct !DISubprogram(name: "main", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 11, file: !32, scope: !6, type: !13, variables: !19)
 !13 = !DISubroutineType(types: !14)
-!14 = !{!15, !15, !18}
+!14 = !{!15, !15, !16}
 !15 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!16 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !17)
+!17 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !18)
 !18 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !19 = !{!21, !22}
 !21 = !DILocalVariable(name: "argc", line: 11, arg: 1, scope: !12, file: !6, type: !15)
-!22 = !DILocalVariable(name: "argv", line: 11, arg: 2, scope: !12, file: !6, type: !18)
+!22 = !DILocalVariable(name: "argv", line: 11, arg: 2, scope: !12, file: !6, type: !16)
 !23 = !DILocation(line: 6, column: 3, scope: !24)
 !24 = distinct !DILexicalBlock(line: 5, column: 16, file: !32, scope: !5)
 !25 = !DILocation(line: 7, column: 1, scope: !24)

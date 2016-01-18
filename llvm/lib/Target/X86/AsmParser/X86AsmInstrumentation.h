@@ -28,8 +28,7 @@ class X86AsmInstrumentation;
 
 X86AsmInstrumentation *
 CreateX86AsmInstrumentation(const MCTargetOptions &MCOptions,
-                            const MCContext &Ctx,
-                            const MCSubtargetInfo *&STI);
+                            const MCContext &Ctx, const MCSubtargetInfo &STI);
 
 class X86AsmInstrumentation {
 public:
@@ -49,16 +48,15 @@ public:
 protected:
   friend X86AsmInstrumentation *
   CreateX86AsmInstrumentation(const MCTargetOptions &MCOptions,
-                              const MCContext &Ctx,
-                              const MCSubtargetInfo *&STI);
+                              const MCContext &Ctx, const MCSubtargetInfo &STI);
 
-  X86AsmInstrumentation(const MCSubtargetInfo *&STI);
+  X86AsmInstrumentation(const MCSubtargetInfo &STI);
 
   unsigned GetFrameRegGeneric(const MCContext &Ctx, MCStreamer &Out);
 
   void EmitInstruction(MCStreamer &Out, const MCInst &Inst);
 
-  const MCSubtargetInfo *&STI;
+  const MCSubtargetInfo &STI;
 
   unsigned InitialFrameReg;
 };

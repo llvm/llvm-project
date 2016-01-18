@@ -67,7 +67,7 @@ std::error_code ModuleDependencyListener::copyToRoot(StringRef Src) {
   path::native(AbsoluteSrc);
   // TODO: We probably need to handle .. as well as . in order to have valid
   // input to the YAMLVFSWriter.
-  path::remove_dots(AbsoluteSrc);
+  FileManager::removeDotPaths(AbsoluteSrc);
 
   // Build the destination path.
   SmallString<256> Dest = Collector.getDest();

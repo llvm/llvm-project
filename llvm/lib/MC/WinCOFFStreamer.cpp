@@ -122,37 +122,29 @@ void MCWinCOFFStreamer::BeginCOFFSymbolDef(MCSymbol const *Symbol) {
          "Got non-COFF section in the COFF backend!");
 
   if (CurSymbol)
-    Error("starting a new symbol definition without completing the "
-          "previous one");
+    FatalError("starting a new symbol definition without completing the "
+               "previous one");
   CurSymbol = Symbol;
 }
 
 void MCWinCOFFStreamer::EmitCOFFSymbolStorageClass(int StorageClass) {
-  if (!CurSymbol) {
-    Error("storage class specified outside of symbol definition");
-    return;
-  }
+  if (!CurSymbol)
+    FatalError("storage class specified outside of symbol definition");
 
-  if (StorageClass & ~COFF::SSC_Invalid) {
-    Error("storage class value '" + Twine(StorageClass) +
+  if (StorageClass & ~COFF::SSC_Invalid)
+    FatalError("storage class value '" + Twine(StorageClass) +
                "' out of range");
-    return;
-  }
 
   getAssembler().registerSymbol(*CurSymbol);
   cast<MCSymbolCOFF>(CurSymbol)->setClass((uint16_t)StorageClass);
 }
 
 void MCWinCOFFStreamer::EmitCOFFSymbolType(int Type) {
-  if (!CurSymbol) {
-    Error("symbol type specified outside of a symbol definition");
-    return;
-  }
+  if (!CurSymbol)
+    FatalError("symbol type specified outside of a symbol definition");
 
-  if (Type & ~0xffff) {
-    Error("type value '" + Twine(Type) + "' out of range");
-    return;
-  }
+  if (Type & ~0xffff)
+    FatalError("type value '" + Twine(Type) + "' out of range");
 
   getAssembler().registerSymbol(*CurSymbol);
   cast<MCSymbolCOFF>(CurSymbol)->setType((uint16_t)Type);
@@ -160,7 +152,7 @@ void MCWinCOFFStreamer::EmitCOFFSymbolType(int Type) {
 
 void MCWinCOFFStreamer::EndCOFFSymbolDef() {
   if (!CurSymbol)
-    Error("ending symbol definition without starting one");
+    FatalError("ending symbol definition without starting one");
   CurSymbol = nullptr;
 }
 
@@ -289,8 +281,9 @@ void MCWinCOFFStreamer::FinishImpl() {
   MCObjectStreamer::FinishImpl();
 }
 
-void MCWinCOFFStreamer::Error(const Twine &Msg) const {
-  getContext().reportError(SMLoc(), Msg);
+LLVM_ATTRIBUTE_NORETURN
+void MCWinCOFFStreamer::FatalError(const Twine &Msg) const {
+  getContext().reportFatalError(SMLoc(), Msg);
 }
 }
 

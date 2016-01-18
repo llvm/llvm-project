@@ -566,10 +566,6 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (index_options & CXIndexOpt_SuppressWarnings)
     CInvok->getDiagnosticOpts().IgnoreWarnings = true;
 
-  // Make sure to use the raw module format.
-  CInvok->getHeaderSearchOpts().ModuleFormat =
-    CXXIdx->getPCHContainerOperations()->getRawReader().getFormat();
-
   ASTUnit *Unit = ASTUnit::create(CInvok.get(), Diags, CaptureDiagnostics,
                                   /*UserFilesAreVolatile=*/true);
   if (!Unit)
@@ -601,7 +597,6 @@ static CXErrorCode clang_indexSourceFile_Impl(
   bool Persistent = requestedToGetTU;
   bool OnlyLocalDecls = false;
   bool PrecompilePreamble = false;
-  bool CreatePreambleOnFirstParse = false;
   bool CacheCodeCompletionResults = false;
   PreprocessorOptions &PPOpts = CInvok->getPreprocessorOpts(); 
   PPOpts.AllowPCHWithCompilerErrors = true;
@@ -609,8 +604,6 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (requestedToGetTU) {
     OnlyLocalDecls = CXXIdx->getOnlyLocalDecls();
     PrecompilePreamble = TU_options & CXTranslationUnit_PrecompiledPreamble;
-    CreatePreambleOnFirstParse =
-        TU_options & CXTranslationUnit_CreatePreambleOnFirstParse;
     // FIXME: Add a flag for modules.
     CacheCodeCompletionResults
       = TU_options & CXTranslationUnit_CacheCompletionResults;
@@ -623,16 +616,11 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (!requestedToGetTU && !CInvok->getLangOpts()->Modules)
     PPOpts.DetailedRecord = false;
 
-  // Unless the user specified that they want the preamble on the first parse
-  // set it up to be created on the first reparse. This makes the first parse
-  // faster, trading for a slower (first) reparse.
-  unsigned PrecompilePreambleAfterNParses =
-      !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
   DiagnosticErrorTrap DiagTrap(*Diags);
   bool Success = ASTUnit::LoadFromCompilerInvocationAction(
       CInvok.get(), CXXIdx->getPCHContainerOperations(), Diags,
       IndexAction.get(), Unit, Persistent, CXXIdx->getClangResourcesPath(),
-      OnlyLocalDecls, CaptureDiagnostics, PrecompilePreambleAfterNParses,
+      OnlyLocalDecls, CaptureDiagnostics, PrecompilePreamble,
       CacheCodeCompletionResults,
       /*IncludeBriefCommentsInCodeCompletion=*/false,
       /*UserFilesAreVolatile=*/true);
@@ -681,7 +669,9 @@ static void indexPreprocessingRecord(ASTUnit &Unit, IndexingContext &IdxCtx) {
 static bool topLevelDeclVisitor(void *context, const Decl *D) {
   IndexingContext &IdxCtx = *static_cast<IndexingContext*>(context);
   IdxCtx.indexTopLevelDecl(D);
-  return !IdxCtx.shouldAbort();
+  if (IdxCtx.shouldAbort())
+    return false;
+  return true;
 }
 
 static void indexTranslationUnit(ASTUnit &Unit, IndexingContext &IdxCtx) {
@@ -917,22 +907,6 @@ int clang_indexSourceFile(CXIndexAction idxAction,
                           unsigned num_unsaved_files,
                           CXTranslationUnit *out_TU,
                           unsigned TU_options) {
-  SmallVector<const char *, 4> Args;
-  Args.push_back("clang");
-  Args.append(command_line_args, command_line_args + num_command_line_args);
-  return clang_indexSourceFileFullArgv(
-      idxAction, client_data, index_callbacks, index_callbacks_size,
-      index_options, source_filename, Args.data(), Args.size(), unsaved_files,
-      num_unsaved_files, out_TU, TU_options);
-}
-
-int clang_indexSourceFileFullArgv(
-    CXIndexAction idxAction, CXClientData client_data,
-    IndexerCallbacks *index_callbacks, unsigned index_callbacks_size,
-    unsigned index_options, const char *source_filename,
-    const char *const *command_line_args, int num_command_line_args,
-    struct CXUnsavedFile *unsaved_files, unsigned num_unsaved_files,
-    CXTranslationUnit *out_TU, unsigned TU_options) {
   LOG_FUNC_SECTION {
     *Log << source_filename << ": ";
     for (int i = 0; i != num_command_line_args; ++i)

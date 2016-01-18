@@ -86,8 +86,7 @@ MCAsmBackend *createThumbBEAsmBackend(const Target &T,
 // object file.
 MCStreamer *createARMWinCOFFStreamer(MCContext &Context, MCAsmBackend &MAB,
                                      raw_pwrite_stream &OS,
-                                     MCCodeEmitter *Emitter, bool RelaxAll,
-                                     bool IncrementalLinkerCompatible);
+                                     MCCodeEmitter *Emitter, bool RelaxAll);
 
 /// Construct an ELF Mach-O object writer.
 MCObjectWriter *createARMELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,

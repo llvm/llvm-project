@@ -204,7 +204,7 @@ define void @f34()
 ; CHECK: define void @f34()
 {
         call void @nobuiltin() nobuiltin
-; CHECK: call void @nobuiltin() #30
+; CHECK: call void @nobuiltin() #27
         ret void;
 }
 
@@ -272,21 +272,6 @@ define "string_attribute_with_value"="value" void @f46(i32 "string_attribute_wit
   ret void
 }
 
-; CHECK: define void @f47() #27
-define void @f47() norecurse {
-  ret void
-}
-
-; CHECK: define void @f48() #28
-define void @f48() inaccessiblememonly {
-  ret void
-}
-
-; CHECK: define void @f49() #29
-define void @f49() inaccessiblemem_or_argmemonly {
-  ret void
-}
-
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -314,7 +299,4 @@ define void @f49() inaccessiblemem_or_argmemonly {
 ; CHECK: attributes #24 = { jumptable }
 ; CHECK: attributes #25 = { convergent }
 ; CHECK: attributes #26 = { argmemonly }
-; CHECK: attributes #27 = { norecurse }
-; CHECK: attributes #28 = { inaccessiblememonly }
-; CHECK: attributes #29 = { inaccessiblemem_or_argmemonly }
-; CHECK: attributes #30 = { nobuiltin }
+; CHECK: attributes #27 = { nobuiltin }

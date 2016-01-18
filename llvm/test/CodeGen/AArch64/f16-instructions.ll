@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra | FileCheck %s
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
@@ -139,33 +139,6 @@ define half @test_select(half %a, half %b, i1 zeroext %c) #0 {
 ; CHECK-NEXT: ret
 define half @test_select_cc(half %a, half %b, half %c, half %d) #0 {
   %cc = fcmp une half %c, %d
-  %r = select i1 %cc, half %a, half %b
-  ret half %r
-}
-
-; CHECK-LABEL: test_select_cc_f32_f16:
-; CHECK-DAG:   fcvt s2, h2
-; CHECK-DAG:   fcvt s3, h3
-; CHECK-NEXT:  fcmp s2, s3
-; CHECK-NEXT:  fcsel s0, s0, s1, ne
-; CHECK-NEXT:  ret
-define float @test_select_cc_f32_f16(float %a, float %b, half %c, half %d) #0 {
-  %cc = fcmp une half %c, %d
-  %r = select i1 %cc, float %a, float %b
-  ret float %r
-}
-
-; CHECK-LABEL: test_select_cc_f16_f32:
-; CHECK-DAG:  fcvt s0, h0
-; CHECK-DAG:  fcvt s1, h1
-; CHECK-DAG:  fcmp s2, s3
-; CHECK-DAG:  cset w8, ne
-; CHECK-NEXT: cmp w8, #0
-; CHECK-NEXT: fcsel s0, s0, s1, ne
-; CHECK-NEXT: fcvt h0, s0
-; CHECK-NEXT: ret
-define half @test_select_cc_f16_f32(half %a, half %b, float %c, float %d) #0 {
-  %cc = fcmp une float %c, %d
   %r = select i1 %cc, half %a, half %b
   ret half %r
 }

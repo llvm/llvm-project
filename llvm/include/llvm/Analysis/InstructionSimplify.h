@@ -207,7 +207,7 @@ namespace llvm {
                           const TargetLibraryInfo *TLI = nullptr,
                           const DominatorTree *DT = nullptr,
                           AssumptionCache *AC = nullptr,
-                          const Instruction *CxtI = nullptr);
+                          Instruction *CxtI = nullptr);
 
   /// SimplifyFCmpInst - Given operands for an FCmpInst, see if we can
   /// fold the result.  If not, this returns null.
@@ -229,8 +229,7 @@ namespace llvm {
 
   /// SimplifyGEPInst - Given operands for an GetElementPtrInst, see if we can
   /// fold the result.  If not, this returns null.
-  Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
-                         const DataLayout &DL,
+  Value *SimplifyGEPInst(ArrayRef<Value *> Ops, const DataLayout &DL,
                          const TargetLibraryInfo *TLI = nullptr,
                          const DominatorTree *DT = nullptr,
                          AssumptionCache *AC = nullptr,

@@ -15,13 +15,12 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROF_H_
 #define LLVM_PROFILEDATA_SAMPLEPROF_H_
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <map>
 #include <system_error>
 
 namespace llvm {
@@ -38,22 +37,11 @@ enum class sampleprof_error {
   unrecognized_format,
   unsupported_writing_format,
   truncated_name_table,
-  not_implemented,
-  counter_overflow
+  not_implemented
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
   return std::error_code(static_cast<int>(E), sampleprof_category());
-}
-
-inline sampleprof_error MergeResult(sampleprof_error &Accumulator,
-                                    sampleprof_error Result) {
-  // Prefer first error encountered as later errors may be secondary effects of
-  // the initial problem.
-  if (Accumulator == sampleprof_error::success &&
-      Result != sampleprof_error::success)
-    Accumulator = Result;
-  return Accumulator;
 }
 
 } // end namespace llvm
@@ -87,18 +75,9 @@ static inline uint64_t SPVersion() { return 102; }
 /// (e.g., the two post-increment instructions in "if (p) x++; else y++;").
 struct LineLocation {
   LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Discriminator(D) {}
-  void print(raw_ostream &OS) const;
-  void dump() const;
-  bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
-  }
-
   uint32_t LineOffset;
   uint32_t Discriminator;
 };
-
-raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
 /// Represents the relative location of a callsite.
 ///
@@ -109,13 +88,59 @@ raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 struct CallsiteLocation : public LineLocation {
   CallsiteLocation(uint32_t L, uint32_t D, StringRef N)
       : LineLocation(L, D), CalleeName(N) {}
-  void print(raw_ostream &OS) const;
-  void dump() const;
-
   StringRef CalleeName;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const CallsiteLocation &Loc);
+} // End namespace sampleprof
+
+template <> struct DenseMapInfo<sampleprof::LineLocation> {
+  typedef DenseMapInfo<uint32_t> OffsetInfo;
+  typedef DenseMapInfo<uint32_t> DiscriminatorInfo;
+  static inline sampleprof::LineLocation getEmptyKey() {
+    return sampleprof::LineLocation(OffsetInfo::getEmptyKey(),
+                                    DiscriminatorInfo::getEmptyKey());
+  }
+  static inline sampleprof::LineLocation getTombstoneKey() {
+    return sampleprof::LineLocation(OffsetInfo::getTombstoneKey(),
+                                    DiscriminatorInfo::getTombstoneKey());
+  }
+  static inline unsigned getHashValue(sampleprof::LineLocation Val) {
+    return DenseMapInfo<std::pair<uint32_t, uint32_t>>::getHashValue(
+        std::pair<uint32_t, uint32_t>(Val.LineOffset, Val.Discriminator));
+  }
+  static inline bool isEqual(sampleprof::LineLocation LHS,
+                             sampleprof::LineLocation RHS) {
+    return LHS.LineOffset == RHS.LineOffset &&
+           LHS.Discriminator == RHS.Discriminator;
+  }
+};
+
+template <> struct DenseMapInfo<sampleprof::CallsiteLocation> {
+  typedef DenseMapInfo<uint32_t> OffsetInfo;
+  typedef DenseMapInfo<uint32_t> DiscriminatorInfo;
+  typedef DenseMapInfo<StringRef> CalleeNameInfo;
+  static inline sampleprof::CallsiteLocation getEmptyKey() {
+    return sampleprof::CallsiteLocation(OffsetInfo::getEmptyKey(),
+                                        DiscriminatorInfo::getEmptyKey(), "");
+  }
+  static inline sampleprof::CallsiteLocation getTombstoneKey() {
+    return sampleprof::CallsiteLocation(OffsetInfo::getTombstoneKey(),
+                                        DiscriminatorInfo::getTombstoneKey(),
+                                        "");
+  }
+  static inline unsigned getHashValue(sampleprof::CallsiteLocation Val) {
+    return DenseMapInfo<std::pair<uint32_t, uint32_t>>::getHashValue(
+        std::pair<uint32_t, uint32_t>(Val.LineOffset, Val.Discriminator));
+  }
+  static inline bool isEqual(sampleprof::CallsiteLocation LHS,
+                             sampleprof::CallsiteLocation RHS) {
+    return LHS.LineOffset == RHS.LineOffset &&
+           LHS.Discriminator == RHS.Discriminator &&
+           LHS.CalleeName.equals(RHS.CalleeName);
+  }
+};
+
+namespace sampleprof {
 
 /// Representation of a single sample record.
 ///
@@ -134,30 +159,26 @@ public:
   SampleRecord() : NumSamples(0), CallTargets() {}
 
   /// Increment the number of samples for this record by \p S.
-  /// Optionally scale sample count \p S by \p Weight.
   ///
   /// Sample counts accumulate using saturating arithmetic, to avoid wrapping
   /// around unsigned integers.
-  sampleprof_error addSamples(uint64_t S, uint64_t Weight = 1) {
-    bool Overflowed;
-    NumSamples = SaturatingMultiplyAdd(S, Weight, NumSamples, &Overflowed);
-    return Overflowed ? sampleprof_error::counter_overflow
-                      : sampleprof_error::success;
+  void addSamples(uint64_t S) {
+    if (NumSamples <= std::numeric_limits<uint64_t>::max() - S)
+      NumSamples += S;
+    else
+      NumSamples = std::numeric_limits<uint64_t>::max();
   }
 
   /// Add called function \p F with samples \p S.
-  /// Optionally scale sample count \p S by \p Weight.
   ///
   /// Sample counts accumulate using saturating arithmetic, to avoid wrapping
   /// around unsigned integers.
-  sampleprof_error addCalledTarget(StringRef F, uint64_t S,
-                                   uint64_t Weight = 1) {
+  void addCalledTarget(StringRef F, uint64_t S) {
     uint64_t &TargetSamples = CallTargets[F];
-    bool Overflowed;
-    TargetSamples =
-        SaturatingMultiplyAdd(S, Weight, TargetSamples, &Overflowed);
-    return Overflowed ? sampleprof_error::counter_overflow
-                      : sampleprof_error::success;
+    if (TargetSamples <= std::numeric_limits<uint64_t>::max() - S)
+      TargetSamples += S;
+    else
+      TargetSamples = std::numeric_limits<uint64_t>::max();
   }
 
   /// Return true if this sample record contains function calls.
@@ -167,28 +188,20 @@ public:
   const CallTargetMap &getCallTargets() const { return CallTargets; }
 
   /// Merge the samples in \p Other into this record.
-  /// Optionally scale sample counts by \p Weight.
-  sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1) {
-    sampleprof_error Result = addSamples(Other.getSamples(), Weight);
-    for (const auto &I : Other.getCallTargets()) {
-      MergeResult(Result, addCalledTarget(I.first(), I.second, Weight));
-    }
-    return Result;
+  void merge(const SampleRecord &Other) {
+    addSamples(Other.getSamples());
+    for (const auto &I : Other.getCallTargets())
+      addCalledTarget(I.first(), I.second);
   }
-
-  void print(raw_ostream &OS, unsigned Indent) const;
-  void dump() const;
 
 private:
   uint64_t NumSamples;
   CallTargetMap CallTargets;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
-
-typedef std::map<LineLocation, SampleRecord> BodySampleMap;
+typedef DenseMap<LineLocation, SampleRecord> BodySampleMap;
 class FunctionSamples;
-typedef std::map<CallsiteLocation, FunctionSamples> CallsiteSampleMap;
+typedef DenseMap<CallsiteLocation, FunctionSamples> CallsiteSampleMap;
 
 /// Representation of the samples collected for a function.
 ///
@@ -199,32 +212,16 @@ class FunctionSamples {
 public:
   FunctionSamples() : TotalSamples(0), TotalHeadSamples(0) {}
   void print(raw_ostream &OS = dbgs(), unsigned Indent = 0) const;
-  void dump() const;
-  sampleprof_error addTotalSamples(uint64_t Num, uint64_t Weight = 1) {
-    bool Overflowed;
-    TotalSamples =
-        SaturatingMultiplyAdd(Num, Weight, TotalSamples, &Overflowed);
-    return Overflowed ? sampleprof_error::counter_overflow
-                      : sampleprof_error::success;
+  void addTotalSamples(uint64_t Num) { TotalSamples += Num; }
+  void addHeadSamples(uint64_t Num) { TotalHeadSamples += Num; }
+  void addBodySamples(uint32_t LineOffset, uint32_t Discriminator,
+                      uint64_t Num) {
+    BodySamples[LineLocation(LineOffset, Discriminator)].addSamples(Num);
   }
-  sampleprof_error addHeadSamples(uint64_t Num, uint64_t Weight = 1) {
-    bool Overflowed;
-    TotalHeadSamples =
-        SaturatingMultiplyAdd(Num, Weight, TotalHeadSamples, &Overflowed);
-    return Overflowed ? sampleprof_error::counter_overflow
-                      : sampleprof_error::success;
-  }
-  sampleprof_error addBodySamples(uint32_t LineOffset, uint32_t Discriminator,
-                                  uint64_t Num, uint64_t Weight = 1) {
-    return BodySamples[LineLocation(LineOffset, Discriminator)].addSamples(
-        Num, Weight);
-  }
-  sampleprof_error addCalledTargetSamples(uint32_t LineOffset,
-                                          uint32_t Discriminator,
-                                          std::string FName, uint64_t Num,
-                                          uint64_t Weight = 1) {
-    return BodySamples[LineLocation(LineOffset, Discriminator)].addCalledTarget(
-        FName, Num, Weight);
+  void addCalledTargetSamples(uint32_t LineOffset, uint32_t Discriminator,
+                              std::string FName, uint64_t Num) {
+    BodySamples[LineLocation(LineOffset, Discriminator)].addCalledTarget(FName,
+                                                                         Num);
   }
 
   /// Return the number of samples collected at the given location.
@@ -273,22 +270,19 @@ public:
   }
 
   /// Merge the samples in \p Other into this one.
-  /// Optionally scale samples by \p Weight.
-  sampleprof_error merge(const FunctionSamples &Other, uint64_t Weight = 1) {
-    sampleprof_error Result = sampleprof_error::success;
-    MergeResult(Result, addTotalSamples(Other.getTotalSamples(), Weight));
-    MergeResult(Result, addHeadSamples(Other.getHeadSamples(), Weight));
+  void merge(const FunctionSamples &Other) {
+    addTotalSamples(Other.getTotalSamples());
+    addHeadSamples(Other.getHeadSamples());
     for (const auto &I : Other.getBodySamples()) {
       const LineLocation &Loc = I.first;
       const SampleRecord &Rec = I.second;
-      MergeResult(Result, BodySamples[Loc].merge(Rec, Weight));
+      BodySamples[Loc].merge(Rec);
     }
     for (const auto &I : Other.getCallsiteSamples()) {
       const CallsiteLocation &Loc = I.first;
       const FunctionSamples &Rec = I.second;
-      MergeResult(Result, functionSamplesAt(Loc).merge(Rec, Weight));
+      functionSamplesAt(Loc).merge(Rec);
     }
-    return Result;
   }
 
 private:
@@ -327,31 +321,6 @@ private:
   /// in the call to bar() at line offset 1, the other for all the samples
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
-};
-
-raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
-
-/// Sort a LocationT->SampleT map by LocationT.
-///
-/// It produces a sorted list of <LocationT, SampleT> records by ascending
-/// order of LocationT.
-template <class LocationT, class SampleT> class SampleSorter {
-public:
-  typedef std::pair<const LocationT, SampleT> SamplesWithLoc;
-  typedef SmallVector<const SamplesWithLoc *, 20> SamplesWithLocList;
-
-  SampleSorter(const std::map<LocationT, SampleT> &Samples) {
-    for (const auto &I : Samples)
-      V.push_back(&I);
-    std::stable_sort(V.begin(), V.end(),
-                     [](const SamplesWithLoc *A, const SamplesWithLoc *B) {
-                       return A->first < B->first;
-                     });
-  }
-  const SamplesWithLocList &get() const { return V; }
-
-private:
-  SamplesWithLocList V;
 };
 
 } // end namespace sampleprof

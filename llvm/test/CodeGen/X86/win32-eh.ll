@@ -19,10 +19,12 @@ entry:
 cont:
   ret void
 lpad:
-  %cs = catchswitch within none [label %catch] unwind to caller
+  %p = catchpad [i8* bitcast (i32 ()* @catchall_filt to i8*)]
+      to label %catch unwind label %endpad
 catch:
-  %p = catchpad within %cs [i8* bitcast (i32 ()* @catchall_filt to i8*)]
-  catchret from %p to label %cont
+  catchret %p to label %cont
+endpad:
+  catchendpad unwind to caller
 }
 
 ; CHECK-LABEL: _use_except_handler3:
@@ -43,7 +45,7 @@ catch:
 ; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
 ; CHECK: movl %[[next]], %fs:0
 ; CHECK: retl
-; CHECK: LBB1_2: # %catch{{$}}
+; CHECK: LBB1_2: # %lpad{{$}}
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK-LABEL: L__ehtable$use_except_handler3:
@@ -58,10 +60,12 @@ entry:
 cont:
   ret void
 lpad:
-  %cs = catchswitch within none [label %catch] unwind to caller
+  %p = catchpad [i8* bitcast (i32 ()* @catchall_filt to i8*)]
+      to label %catch unwind label %endpad
 catch:
-  %p = catchpad within %cs [i8* bitcast (i32 ()* @catchall_filt to i8*)]
-  catchret from %p to label %cont
+  catchret %p to label %cont
+endpad:
+  catchendpad unwind to caller
 }
 
 ; CHECK-LABEL: _use_except_handler4:
@@ -82,7 +86,7 @@ catch:
 ; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
 ; CHECK: movl %[[next]], %fs:0
 ; CHECK: retl
-; CHECK: LBB2_2: # %catch{{$}}
+; CHECK: LBB2_2: # %lpad{{$}}
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK-LABEL: L__ehtable$use_except_handler4:
@@ -101,10 +105,14 @@ cont:
   ret void
 
 catchall:
-  %cs = catchswitch within none [label %catch] unwind to caller
+  %p = catchpad [i8* null, i32 64, i8* null]
+      to label %catch unwind label %endcatch
+
 catch:
-  %p = catchpad within %cs [i8* null, i32 64, i8* null]
-  catchret from %p to label %cont
+  catchret %p to label %cont
+
+endcatch:
+  catchendpad unwind to caller
 }
 
 ; CHECK-LABEL: _use_CxxFrameHandler3:

@@ -38,7 +38,6 @@ typedef int errno_t;
 
 #ifdef _MSC_VER
 # pragma comment(lib, "advapi32.lib")  // This provides CryptAcquireContextW.
-# pragma comment(lib, "ole32.lib")     // This provides CoTaskMemFree
 #endif
 
 using namespace llvm;
@@ -774,12 +773,17 @@ bool home_directory(SmallVectorImpl<char> &result) {
   return getKnownFolderPath(FOLDERID_Profile, result);
 }
 
-static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
+static bool getTempDirEnvVar(const char *Var, SmallVectorImpl<char> &Res) {
+  SmallVector<wchar_t, 128> NameUTF16;
+  if (windows::UTF8ToUTF16(Var, NameUTF16))
+    return false;
+
   SmallVector<wchar_t, 1024> Buf;
   size_t Size = 1024;
   do {
     Buf.reserve(Size);
-    Size = GetEnvironmentVariableW(Var, Buf.data(), Buf.capacity());
+    Size =
+        GetEnvironmentVariableW(NameUTF16.data(), Buf.data(), Buf.capacity());
     if (Size == 0)
       return false;
 
@@ -787,12 +791,14 @@ static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   } while (Size > Buf.capacity());
   Buf.set_size(Size);
 
-  return !windows::UTF16ToUTF8(Buf.data(), Size, Res);
+  if (windows::UTF16ToUTF8(Buf.data(), Size, Res))
+    return false;
+  return true;
 }
 
 static bool getTempDirEnvVar(SmallVectorImpl<char> &Res) {
-  const wchar_t *EnvironmentVariables[] = {L"TMP", L"TEMP", L"USERPROFILE"};
-  for (auto *Env : EnvironmentVariables) {
+  const char *EnvironmentVariables[] = {"TMP", "TEMP", "USERPROFILE"};
+  for (const char *Env : EnvironmentVariables) {
     if (getTempDirEnvVar(Env, Res))
       return true;
   }
@@ -803,19 +809,13 @@ void system_temp_directory(bool ErasedOnReboot, SmallVectorImpl<char> &Result) {
   (void)ErasedOnReboot;
   Result.clear();
 
-  // Check whether the temporary directory is specified by an environment var.
-  // This matches GetTempPath logic to some degree. GetTempPath is not used
-  // directly as it cannot handle evn var longer than 130 chars on Windows 7
-  // (fixed on Windows 8).
-  if (getTempDirEnvVar(Result)) {
-    assert(!Result.empty() && "Unexpected empty path");
-    native(Result); // Some Unix-like shells use Unix path separator in $TMP.
-    fs::make_absolute(Result); // Make it absolute if not already.
+  // Check whether the temporary directory is specified by an environment
+  // variable.
+  if (getTempDirEnvVar(Result))
     return;
-  }
 
   // Fall back to a system default.
-  const char *DefaultResult = "C:\\Temp";
+  const char *DefaultResult = "C:\\TEMP";
   Result.append(DefaultResult, DefaultResult + strlen(DefaultResult));
 }
 } // end namespace path

@@ -153,7 +153,8 @@ std::string HeaderSearch::getModuleFileName(StringRef ModuleName,
     auto FileName = llvm::sys::path::filename(ModuleMapPath);
 
     llvm::hash_code Hash =
-      llvm::hash_combine(DirName.lower(), FileName.lower());
+      llvm::hash_combine(DirName.lower(), FileName.lower(),
+                         HSOpts->ModuleFormat, HSOpts->UseDebugInfo);
 
     SmallString<128> HashStr;
     llvm::APInt(64, size_t(Hash)).toStringUnsigned(HashStr, /*Radix*/36);

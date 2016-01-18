@@ -156,10 +156,12 @@ _mm256_rcp_ps(__m256 __a)
 }
 
 #define _mm256_round_pd(V, M) __extension__ ({ \
-    (__m256d)__builtin_ia32_roundpd256((__v4df)(__m256d)(V), (M)); })
+    __m256d __V = (V); \
+    (__m256d)__builtin_ia32_roundpd256((__v4df)__V, (M)); })
 
 #define _mm256_round_ps(V, M) __extension__ ({ \
-  (__m256)__builtin_ia32_roundps256((__v8sf)(__m256)(V), (M)); })
+  __m256 __V = (V); \
+  (__m256)__builtin_ia32_roundps256((__v8sf)__V, (M)); })
 
 #define _mm256_ceil_pd(V)  _mm256_round_pd((V), _MM_FROUND_CEIL)
 #define _mm256_floor_pd(V) _mm256_round_pd((V), _MM_FROUND_FLOOR)
@@ -266,26 +268,26 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 }
 
 #define _mm_permute_pd(A, C) __extension__ ({ \
-  (__m128d)__builtin_shufflevector((__v2df)(__m128d)(A), \
-                                   (__v2df)_mm_setzero_pd(), \
+  __m128d __A = (A); \
+  (__m128d)__builtin_shufflevector((__v2df)__A, (__v2df) _mm_setzero_pd(), \
                                    (C) & 0x1, ((C) & 0x2) >> 1); })
 
 #define _mm256_permute_pd(A, C) __extension__ ({ \
-  (__m256d)__builtin_shufflevector((__v4df)(__m256d)(A), \
-                                   (__v4df)_mm256_setzero_pd(), \
+  __m256d __A = (A); \
+  (__m256d)__builtin_shufflevector((__v4df)__A, (__v4df) _mm256_setzero_pd(), \
                                    (C) & 0x1, ((C) & 0x2) >> 1, \
                                    2 + (((C) & 0x4) >> 2), \
                                    2 + (((C) & 0x8) >> 3)); })
 
 #define _mm_permute_ps(A, C) __extension__ ({ \
-  (__m128)__builtin_shufflevector((__v4sf)(__m128)(A), \
-                                  (__v4sf)_mm_setzero_ps(), \
+  __m128 __A = (A); \
+  (__m128)__builtin_shufflevector((__v4sf)__A, (__v4sf) _mm_setzero_ps(), \
                                    (C) & 0x3, ((C) & 0xc) >> 2, \
                                    ((C) & 0x30) >> 4, ((C) & 0xc0) >> 6); })
 
 #define _mm256_permute_ps(A, C) __extension__ ({ \
-  (__m256)__builtin_shufflevector((__v8sf)(__m256)(A), \
-                                  (__v8sf)_mm256_setzero_ps(), \
+  __m256 __A = (A); \
+  (__m256)__builtin_shufflevector((__v8sf)__A, (__v8sf) _mm256_setzero_ps(), \
                                   (C) & 0x3, ((C) & 0xc) >> 2, \
                                   ((C) & 0x30) >> 4, ((C) & 0xc0) >> 6, \
                                   4 + (((C) & 0x03) >> 0), \
@@ -294,29 +296,34 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
                                   4 + (((C) & 0xc0) >> 6)); })
 
 #define _mm256_permute2f128_pd(V1, V2, M) __extension__ ({ \
-  (__m256d)__builtin_ia32_vperm2f128_pd256((__v4df)(__m256d)(V1), \
-                                           (__v4df)(__m256d)(V2), (M)); })
+  __m256d __V1 = (V1); \
+  __m256d __V2 = (V2); \
+  (__m256d)__builtin_ia32_vperm2f128_pd256((__v4df)__V1, (__v4df)__V2, (M)); })
 
 #define _mm256_permute2f128_ps(V1, V2, M) __extension__ ({ \
-  (__m256)__builtin_ia32_vperm2f128_ps256((__v8sf)(__m256)(V1), \
-                                          (__v8sf)(__m256)(V2), (M)); })
+  __m256 __V1 = (V1); \
+  __m256 __V2 = (V2); \
+  (__m256)__builtin_ia32_vperm2f128_ps256((__v8sf)__V1, (__v8sf)__V2, (M)); })
 
 #define _mm256_permute2f128_si256(V1, V2, M) __extension__ ({ \
-  (__m256i)__builtin_ia32_vperm2f128_si256((__v8si)(__m256i)(V1), \
-                                           (__v8si)(__m256i)(V2), (M)); })
+  __m256i __V1 = (V1); \
+  __m256i __V2 = (V2); \
+  (__m256i)__builtin_ia32_vperm2f128_si256((__v8si)__V1, (__v8si)__V2, (M)); })
 
 /* Vector Blend */
 #define _mm256_blend_pd(V1, V2, M) __extension__ ({ \
-  (__m256d)__builtin_shufflevector((__v4df)(__m256d)(V1), \
-                                   (__v4df)(__m256d)(V2), \
+  __m256d __V1 = (V1); \
+  __m256d __V2 = (V2); \
+  (__m256d)__builtin_shufflevector((__v4df)__V1, (__v4df)__V2, \
                                    (((M) & 0x01) ? 4 : 0), \
                                    (((M) & 0x02) ? 5 : 1), \
                                    (((M) & 0x04) ? 6 : 2), \
                                    (((M) & 0x08) ? 7 : 3)); })
 
 #define _mm256_blend_ps(V1, V2, M) __extension__ ({ \
-  (__m256)__builtin_shufflevector((__v8sf)(__m256)(V1), \
-                                  (__v8sf)(__m256)(V2), \
+  __m256 __V1 = (V1); \
+  __m256 __V2 = (V2); \
+  (__m256)__builtin_shufflevector((__v8sf)__V1, (__v8sf)__V2, \
                                   (((M) & 0x01) ?  8 : 0), \
                                   (((M) & 0x02) ?  9 : 1), \
                                   (((M) & 0x04) ? 10 : 2), \
@@ -342,29 +349,28 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 
 /* Vector Dot Product */
 #define _mm256_dp_ps(V1, V2, M) __extension__ ({ \
-  (__m256)__builtin_ia32_dpps256((__v8sf)(__m256)(V1), \
-                                 (__v8sf)(__m256)(V2), (M)); })
+  __m256 __V1 = (V1); \
+  __m256 __V2 = (V2); \
+  (__m256)__builtin_ia32_dpps256((__v8sf)__V1, (__v8sf)__V2, (M)); })
 
 /* Vector shuffle */
 #define _mm256_shuffle_ps(a, b, mask) __extension__ ({ \
-        (__m256)__builtin_shufflevector((__v8sf)(__m256)(a), \
-                                        (__v8sf)(__m256)(b), \
-                                        (mask) & 0x3, \
-                                        ((mask) & 0xc) >> 2, \
-                                        (((mask) & 0x30) >> 4) + 8, \
-                                        (((mask) & 0xc0) >> 6) + 8, \
-                                        ((mask) & 0x3) + 4, \
-                                        (((mask) & 0xc) >> 2) + 4, \
-                                        (((mask) & 0x30) >> 4) + 12, \
-                                        (((mask) & 0xc0) >> 6) + 12); })
+        __m256 __a = (a); \
+        __m256 __b = (b); \
+        (__m256)__builtin_shufflevector((__v8sf)__a, (__v8sf)__b, \
+        (mask) & 0x3,                ((mask) & 0xc) >> 2, \
+        (((mask) & 0x30) >> 4) + 8,  (((mask) & 0xc0) >> 6) + 8, \
+        ((mask) & 0x3) + 4,          (((mask) & 0xc) >> 2) + 4, \
+        (((mask) & 0x30) >> 4) + 12, (((mask) & 0xc0) >> 6) + 12); })
 
 #define _mm256_shuffle_pd(a, b, mask) __extension__ ({ \
-        (__m256d)__builtin_shufflevector((__v4df)(__m256d)(a), \
-                                         (__v4df)(__m256d)(b), \
-                                         (mask) & 0x1, \
-                                         (((mask) & 0x2) >> 1) + 4, \
-                                         (((mask) & 0x4) >> 2) + 2, \
-                                         (((mask) & 0x8) >> 3) + 6); })
+        __m256d __a = (a); \
+        __m256d __b = (b); \
+        (__m256d)__builtin_shufflevector((__v4df)__a, (__v4df)__b, \
+        (mask) & 0x1, \
+        (((mask) & 0x2) >> 1) + 4, \
+        (((mask) & 0x4) >> 2) + 2, \
+        (((mask) & 0x8) >> 3) + 6); })
 
 /* Compare */
 #define _CMP_EQ_OQ    0x00 /* Equal (ordered, non-signaling)  */
@@ -401,28 +407,34 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 #define _CMP_TRUE_US  0x1f /* True (unordered, signaling)  */
 
 #define _mm_cmp_pd(a, b, c) __extension__ ({ \
-  (__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), \
-                                (__v2df)(__m128d)(b), (c)); })
+  __m128d __a = (a); \
+  __m128d __b = (b); \
+  (__m128d)__builtin_ia32_cmppd((__v2df)__a, (__v2df)__b, (c)); })
 
 #define _mm_cmp_ps(a, b, c) __extension__ ({ \
-  (__m128)__builtin_ia32_cmpps((__v4sf)(__m128)(a), \
-                               (__v4sf)(__m128)(b), (c)); })
+  __m128 __a = (a); \
+  __m128 __b = (b); \
+  (__m128)__builtin_ia32_cmpps((__v4sf)__a, (__v4sf)__b, (c)); })
 
 #define _mm256_cmp_pd(a, b, c) __extension__ ({ \
-  (__m256d)__builtin_ia32_cmppd256((__v4df)(__m256d)(a), \
-                                   (__v4df)(__m256d)(b), (c)); })
+  __m256d __a = (a); \
+  __m256d __b = (b); \
+  (__m256d)__builtin_ia32_cmppd256((__v4df)__a, (__v4df)__b, (c)); })
 
 #define _mm256_cmp_ps(a, b, c) __extension__ ({ \
-  (__m256)__builtin_ia32_cmpps256((__v8sf)(__m256)(a), \
-                                  (__v8sf)(__m256)(b), (c)); })
+  __m256 __a = (a); \
+  __m256 __b = (b); \
+  (__m256)__builtin_ia32_cmpps256((__v8sf)__a, (__v8sf)__b, (c)); })
 
 #define _mm_cmp_sd(a, b, c) __extension__ ({ \
-  (__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), \
-                                (__v2df)(__m128d)(b), (c)); })
+  __m128d __a = (a); \
+  __m128d __b = (b); \
+  (__m128d)__builtin_ia32_cmpsd((__v2df)__a, (__v2df)__b, (c)); })
 
 #define _mm_cmp_ss(a, b, c) __extension__ ({ \
-  (__m128)__builtin_ia32_cmpss((__v4sf)(__m128)(a), \
-                               (__v4sf)(__m128)(b), (c)); })
+  __m128 __a = (a); \
+  __m128 __b = (b); \
+  (__m128)__builtin_ia32_cmpss((__v4sf)__a, (__v4sf)__b, (c)); })
 
 static __inline int __DEFAULT_FN_ATTRS
 _mm256_extract_epi32(__m256i __a, const int __imm)
@@ -1157,7 +1169,7 @@ _mm256_castsi128_si256(__m128i __a)
 */
 #define _mm256_insertf128_ps(V1, V2, M) __extension__ ({ \
   (__m256)__builtin_shufflevector( \
-    (__v8sf)(__m256)(V1), \
+    (__v8sf)(V1), \
     (__v8sf)_mm256_castps128_ps256((__m128)(V2)), \
     (((M) & 1) ?  0 :  8), \
     (((M) & 1) ?  1 :  9), \
@@ -1170,7 +1182,7 @@ _mm256_castsi128_si256(__m128i __a)
 
 #define _mm256_insertf128_pd(V1, V2, M) __extension__ ({ \
   (__m256d)__builtin_shufflevector( \
-    (__v4df)(__m256d)(V1), \
+    (__v4df)(V1), \
     (__v4df)_mm256_castpd128_pd256((__m128d)(V2)), \
     (((M) & 1) ? 0 : 4), \
     (((M) & 1) ? 1 : 5), \
@@ -1179,7 +1191,7 @@ _mm256_castsi128_si256(__m128i __a)
 
 #define _mm256_insertf128_si256(V1, V2, M) __extension__ ({ \
   (__m256i)__builtin_shufflevector( \
-    (__v4di)(__m256i)(V1), \
+    (__v4di)(V1), \
     (__v4di)_mm256_castsi128_si256((__m128i)(V2)), \
     (((M) & 1) ? 0 : 4), \
     (((M) & 1) ? 1 : 5), \
@@ -1193,7 +1205,7 @@ _mm256_castsi128_si256(__m128i __a)
 */
 #define _mm256_extractf128_ps(V, M) __extension__ ({ \
   (__m128)__builtin_shufflevector( \
-    (__v8sf)(__m256)(V), \
+    (__v8sf)(V), \
     (__v8sf)(_mm256_setzero_ps()), \
     (((M) & 1) ? 4 : 0), \
     (((M) & 1) ? 5 : 1), \
@@ -1202,14 +1214,14 @@ _mm256_castsi128_si256(__m128i __a)
 
 #define _mm256_extractf128_pd(V, M) __extension__ ({ \
   (__m128d)__builtin_shufflevector( \
-    (__v4df)(__m256d)(V), \
+    (__v4df)(V), \
     (__v4df)(_mm256_setzero_pd()), \
     (((M) & 1) ? 2 : 0), \
     (((M) & 1) ? 3 : 1) );})
 
 #define _mm256_extractf128_si256(V, M) __extension__ ({ \
   (__m128i)__builtin_shufflevector( \
-    (__v4di)(__m256i)(V), \
+    (__v4di)(V), \
     (__v4di)(_mm256_setzero_si256()), \
     (((M) & 1) ? 2 : 0), \
     (((M) & 1) ? 3 : 1) );})

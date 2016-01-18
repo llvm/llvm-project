@@ -129,7 +129,6 @@ namespace {
     uint32_t lookup(Value *V) const;
     uint32_t lookup_or_add_cmp(unsigned Opcode, CmpInst::Predicate Pred,
                                Value *LHS, Value *RHS);
-    bool exists(Value *V) const;
     void add(Value *V, uint32_t num);
     void clear();
     void erase(Value *v);
@@ -389,9 +388,6 @@ uint32_t ValueTable::lookup_or_add_call(CallInst *C) {
     return nextValueNumber++;
   }
 }
-
-/// Returns true if a value number exists for the specified value.
-bool ValueTable::exists(Value *V) const { return valueNumbering.count(V) != 0; }
 
 /// lookup_or_add - Returns the value number for the specified value, assigning
 /// it a new number if it did not have one before.
@@ -1303,7 +1299,8 @@ static Value *ConstructSSAForLoadSet(LoadInst *LI,
   SSAUpdater SSAUpdate(&NewPHIs);
   SSAUpdate.Initialize(LI->getType(), LI->getName());
 
-  for (const AvailableValueInBlock &AV : ValuesPerBlock) {
+  for (unsigned i = 0, e = ValuesPerBlock.size(); i != e; ++i) {
+    const AvailableValueInBlock &AV = ValuesPerBlock[i];
     BasicBlock *BB = AV.BB;
 
     if (SSAUpdate.HasValueForBlock(BB))
@@ -1513,8 +1510,9 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // that we only have to insert *one* load (which means we're basically moving
   // the load, not inserting a new one).
 
-  SmallPtrSet<BasicBlock *, 4> Blockers(UnavailableBlocks.begin(),
-                                        UnavailableBlocks.end());
+  SmallPtrSet<BasicBlock *, 4> Blockers;
+  for (unsigned i = 0, e = UnavailableBlocks.size(); i != e; ++i)
+    Blockers.insert(UnavailableBlocks[i]);
 
   // Let's find the first basic block with more than one predecessor.  Walk
   // backwards through predecessors if needed.
@@ -1544,22 +1542,15 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // available.
   MapVector<BasicBlock *, Value *> PredLoads;
   DenseMap<BasicBlock*, char> FullyAvailableBlocks;
-  for (const AvailableValueInBlock &AV : ValuesPerBlock)
-    FullyAvailableBlocks[AV.BB] = true;
-  for (BasicBlock *UnavailableBB : UnavailableBlocks)
-    FullyAvailableBlocks[UnavailableBB] = false;
+  for (unsigned i = 0, e = ValuesPerBlock.size(); i != e; ++i)
+    FullyAvailableBlocks[ValuesPerBlock[i].BB] = true;
+  for (unsigned i = 0, e = UnavailableBlocks.size(); i != e; ++i)
+    FullyAvailableBlocks[UnavailableBlocks[i]] = false;
 
   SmallVector<BasicBlock *, 4> CriticalEdgePred;
-  for (BasicBlock *Pred : predecessors(LoadBB)) {
-    // If any predecessor block is an EH pad that does not allow non-PHI
-    // instructions before the terminator, we can't PRE the load.
-    if (Pred->getTerminator()->isEHPad()) {
-      DEBUG(dbgs()
-            << "COULD NOT PRE LOAD BECAUSE OF AN EH PAD PREDECESSOR '"
-            << Pred->getName() << "': " << *LI << '\n');
-      return false;
-    }
-
+  for (pred_iterator PI = pred_begin(LoadBB), E = pred_end(LoadBB);
+       PI != E; ++PI) {
+    BasicBlock *Pred = *PI;
     if (IsValueFullyAvailableInBlock(Pred, FullyAvailableBlocks, 0)) {
       continue;
     }
@@ -1656,12 +1647,12 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
                  << *NewInsts.back() << '\n');
 
   // Assign value numbers to the new instructions.
-  for (Instruction *I : NewInsts) {
+  for (unsigned i = 0, e = NewInsts.size(); i != e; ++i) {
     // FIXME: We really _ought_ to insert these value numbers into their
     // parent's availability map.  However, in doing so, we risk getting into
     // ordering issues.  If a block hasn't been processed yet, we would be
     // marking a value as AVAIL-IN, which isn't what we intend.
-    VN.lookup_or_add(I);
+    VN.lookup_or_add(NewInsts[i]);
   }
 
   for (const auto &PredLoad : PredLoads) {
@@ -1678,8 +1669,6 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     if (Tags)
       NewLoad->setAAMetadata(Tags);
 
-    if (auto *MD = LI->getMetadata(LLVMContext::MD_invariant_load))
-      NewLoad->setMetadata(LLVMContext::MD_invariant_load, MD);
     if (auto *InvGroupMD = LI->getMetadata(LLVMContext::MD_invariant_group))
       NewLoad->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
 
@@ -1710,10 +1699,6 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
 /// Attempt to eliminate a load whose dependencies are
 /// non-local by performing PHI construction.
 bool GVN::processNonLocalLoad(LoadInst *LI) {
-  // non-local speculations are not allowed under asan.
-  if (LI->getParent()->getParent()->hasFnAttribute(Attribute::SanitizeAddress))
-    return false;
-
   // Step 1: Find the non-local dependencies of the load.
   LoadDepVect Deps;
   MD->getNonLocalPointerDependency(LI, Deps);
@@ -2543,14 +2528,7 @@ bool GVN::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
     Value *Op = Instr->getOperand(i);
     if (isa<Argument>(Op) || isa<Constant>(Op) || isa<GlobalValue>(Op))
       continue;
-    // This could be a newly inserted instruction, in which case, we won't
-    // find a value number, and should give up before we hurt ourselves.
-    // FIXME: Rewrite the infrastructure to let it easier to value number
-    // and process newly inserted instructions.
-    if (!VN.exists(Op)) {
-      success = false;
-      break;
-    }
+
     if (Value *V = findLeader(Pred, VN.lookup(Op))) {
       Instr->setOperand(i, V);
     } else {
@@ -2610,7 +2588,9 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   BasicBlock *CurrentBlock = CurInst->getParent();
   predMap.clear();
 
-  for (BasicBlock *P : predecessors(CurrentBlock)) {
+  for (pred_iterator PI = pred_begin(CurrentBlock), PE = pred_end(CurrentBlock);
+       PI != PE; ++PI) {
+    BasicBlock *P = *PI;
     // We're not interested in PRE where the block is its
     // own predecessor, or in blocks with predecessors
     // that are not reachable.
@@ -2723,7 +2703,7 @@ bool GVN::performPRE(Function &F) {
                               BE = CurrentBlock->end();
          BI != BE;) {
       Instruction *CurInst = &*BI++;
-      Changed |= performScalarPRE(CurInst);
+      Changed = performScalarPRE(CurInst);
     }
   }
 
@@ -2827,14 +2807,17 @@ void GVN::addDeadBlock(BasicBlock *BB) {
     DeadBlocks.insert(Dom.begin(), Dom.end());
     
     // Figure out the dominance-frontier(D).
-    for (BasicBlock *B : Dom) {
-      for (BasicBlock *S : successors(B)) {
+    for (SmallVectorImpl<BasicBlock *>::iterator I = Dom.begin(),
+           E = Dom.end(); I != E; I++) {
+      BasicBlock *B = *I;
+      for (succ_iterator SI = succ_begin(B), SE = succ_end(B); SI != SE; SI++) {
+        BasicBlock *S = *SI;
         if (DeadBlocks.count(S))
           continue;
 
         bool AllPredDead = true;
-        for (BasicBlock *P : predecessors(S))
-          if (!DeadBlocks.count(P)) {
+        for (pred_iterator PI = pred_begin(S), PE = pred_end(S); PI != PE; PI++)
+          if (!DeadBlocks.count(*PI)) {
             AllPredDead = false;
             break;
           }
@@ -2862,7 +2845,10 @@ void GVN::addDeadBlock(BasicBlock *BB) {
       continue;
 
     SmallVector<BasicBlock *, 4> Preds(pred_begin(B), pred_end(B));
-    for (BasicBlock *P : Preds) {
+    for (SmallVectorImpl<BasicBlock *>::iterator PI = Preds.begin(),
+           PE = Preds.end(); PI != PE; PI++) {
+      BasicBlock *P = *PI;
+
       if (!DeadBlocks.count(P))
         continue;
 
@@ -2922,10 +2908,14 @@ bool GVN::processFoldableCondBr(BranchInst *BI) {
 // instructions, it makes more sense just to "fabricate" a val-number for the
 // dead code than checking if instruction involved is dead or not.
 void GVN::assignValNumForDeadCode() {
-  for (BasicBlock *BB : DeadBlocks) {
-    for (Instruction &Inst : *BB) {
-      unsigned ValNum = VN.lookup_or_add(&Inst);
-      addToLeaderTable(ValNum, &Inst, BB);
+  for (SetVector<BasicBlock *>::iterator I = DeadBlocks.begin(),
+        E = DeadBlocks.end(); I != E; I++) {
+    BasicBlock *BB = *I;
+    for (BasicBlock::iterator II = BB->begin(), EE = BB->end();
+          II != EE; II++) {
+      Instruction *Inst = &*II;
+      unsigned ValNum = VN.lookup_or_add(Inst);
+      addToLeaderTable(ValNum, Inst, BB);
     }
   }
 }

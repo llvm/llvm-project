@@ -461,8 +461,8 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
       if (I != MBB.succ_begin())
         OS << ", ";
       printMBBReference(**I);
-      if (MBB.hasSuccessorProbabilities())
-        OS << '(' << MBB.getSuccProbability(I) << ')';
+      if (MBB.hasSuccessorWeights())
+        OS << '(' << MBB.getSuccWeight(I) << ')';
     }
     OS << "\n";
     HasLineAttributes = true;

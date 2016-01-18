@@ -91,97 +91,106 @@ bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,
   return StringRef(Triple).startswith(TriplePrefix);
 }
 
-std::string LTOModule::getProducerString(MemoryBuffer *Buffer) {
-  ErrorOr<MemoryBufferRef> BCOrErr =
-      IRObjectFile::findBitcodeInMemBuffer(Buffer->getMemBufferRef());
-  if (!BCOrErr)
-    return "";
-  LLVMContext Context;
-  return getBitcodeProducerString(*BCOrErr, Context);
-}
-
-ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createFromFile(LLVMContext &Context, const char *path,
-                          TargetOptions options) {
+LTOModule *LTOModule::createFromFile(const char *path, TargetOptions options,
+                                     std::string &errMsg) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(path);
-  if (std::error_code EC = BufferOrErr.getError())
-    return EC;
+  if (std::error_code EC = BufferOrErr.getError()) {
+    errMsg = EC.message();
+    return nullptr;
+  }
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BufferOrErr.get());
-  return makeLTOModule(Buffer->getMemBufferRef(), options, &Context);
+  return makeLTOModule(Buffer->getMemBufferRef(), options, errMsg,
+                       &getGlobalContext());
 }
 
-ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createFromOpenFile(LLVMContext &Context, int fd, const char *path,
-                              size_t size, TargetOptions options) {
-  return createFromOpenFileSlice(Context, fd, path, size, 0, options);
+LTOModule *LTOModule::createFromOpenFile(int fd, const char *path, size_t size,
+                                         TargetOptions options,
+                                         std::string &errMsg) {
+  return createFromOpenFileSlice(fd, path, size, 0, options, errMsg);
 }
 
-ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createFromOpenFileSlice(LLVMContext &Context, int fd,
-                                   const char *path, size_t map_size,
-                                   off_t offset, TargetOptions options) {
+LTOModule *LTOModule::createFromOpenFileSlice(int fd, const char *path,
+                                              size_t map_size, off_t offset,
+                                              TargetOptions options,
+                                              std::string &errMsg) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getOpenFileSlice(fd, path, map_size, offset);
-  if (std::error_code EC = BufferOrErr.getError())
-    return EC;
+  if (std::error_code EC = BufferOrErr.getError()) {
+    errMsg = EC.message();
+    return nullptr;
+  }
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BufferOrErr.get());
-  return makeLTOModule(Buffer->getMemBufferRef(), options, &Context);
+  return makeLTOModule(Buffer->getMemBufferRef(), options, errMsg,
+                       &getGlobalContext());
 }
 
-ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createFromBuffer(LLVMContext &Context, const void *mem,
-                            size_t length, TargetOptions options,
-                            StringRef path) {
-  return createInContext(mem, length, options, path, &Context);
+LTOModule *LTOModule::createFromBuffer(const void *mem, size_t length,
+                                       TargetOptions options,
+                                       std::string &errMsg, StringRef path) {
+  return createInContext(mem, length, options, errMsg, path,
+                         &getGlobalContext());
 }
 
-ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createInLocalContext(const void *mem, size_t length,
-                                TargetOptions options, StringRef path) {
-  return createInContext(mem, length, options, path, nullptr);
+LTOModule *LTOModule::createInLocalContext(const void *mem, size_t length,
+                                           TargetOptions options,
+                                           std::string &errMsg,
+                                           StringRef path) {
+  return createInContext(mem, length, options, errMsg, path, nullptr);
 }
 
-ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createInContext(const void *mem, size_t length,
-                           TargetOptions options, StringRef path,
-                           LLVMContext *Context) {
+LTOModule *LTOModule::createInContext(const void *mem, size_t length,
+                                      TargetOptions options,
+                                      std::string &errMsg, StringRef path,
+                                      LLVMContext *Context) {
   StringRef Data((const char *)mem, length);
   MemoryBufferRef Buffer(Data, path);
-  return makeLTOModule(Buffer, options, Context);
+  return makeLTOModule(Buffer, options, errMsg, Context);
 }
 
-static ErrorOr<std::unique_ptr<Module>>
-parseBitcodeFileImpl(MemoryBufferRef Buffer, LLVMContext &Context,
-                     bool ShouldBeLazy) {
+static std::unique_ptr<Module> parseBitcodeFileImpl(MemoryBufferRef Buffer,
+                                                    LLVMContext &Context,
+                                                    bool ShouldBeLazy,
+                                                    std::string &ErrMsg) {
 
   // Find the buffer.
   ErrorOr<MemoryBufferRef> MBOrErr =
       IRObjectFile::findBitcodeInMemBuffer(Buffer);
-  if (std::error_code EC = MBOrErr.getError())
-    return EC;
+  if (std::error_code EC = MBOrErr.getError()) {
+    ErrMsg = EC.message();
+    return nullptr;
+  }
+
+  std::function<void(const DiagnosticInfo &)> DiagnosticHandler =
+      [&ErrMsg](const DiagnosticInfo &DI) {
+        raw_string_ostream Stream(ErrMsg);
+        DiagnosticPrinterRawOStream DP(Stream);
+        DI.print(DP);
+      };
 
   if (!ShouldBeLazy) {
     // Parse the full file.
-    ErrorOr<std::unique_ptr<Module>> M = parseBitcodeFile(*MBOrErr, Context);
-    if (std::error_code EC = M.getError())
-      return EC;
+    ErrorOr<std::unique_ptr<Module>> M =
+        parseBitcodeFile(*MBOrErr, Context, DiagnosticHandler);
+    if (!M)
+      return nullptr;
     return std::move(*M);
   }
 
   // Parse lazily.
   std::unique_ptr<MemoryBuffer> LightweightBuf =
       MemoryBuffer::getMemBuffer(*MBOrErr, false);
-  ErrorOr<std::unique_ptr<Module>> M = getLazyBitcodeModule(
-      std::move(LightweightBuf), Context, true /*ShouldLazyLoadMetadata*/);
-  if (std::error_code EC = M.getError())
-    return EC;
+  ErrorOr<std::unique_ptr<Module>> M =
+      getLazyBitcodeModule(std::move(LightweightBuf), Context,
+                           DiagnosticHandler, true /*ShouldLazyLoadMetadata*/);
+  if (!M)
+    return nullptr;
   return std::move(*M);
 }
 
-ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::makeLTOModule(MemoryBufferRef Buffer, TargetOptions options,
-                         LLVMContext *Context) {
+LTOModule *LTOModule::makeLTOModule(MemoryBufferRef Buffer,
+                                    TargetOptions options, std::string &errMsg,
+                                    LLVMContext *Context) {
   std::unique_ptr<LLVMContext> OwnedContext;
   if (!Context) {
     OwnedContext = llvm::make_unique<LLVMContext>();
@@ -190,12 +199,11 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, TargetOptions options,
 
   // If we own a context, we know this is being used only for symbol
   // extraction, not linking.  Be lazy in that case.
-  ErrorOr<std::unique_ptr<Module>> MOrErr =
-      parseBitcodeFileImpl(Buffer, *Context,
-                           /* ShouldBeLazy */ static_cast<bool>(OwnedContext));
-  if (std::error_code EC = MOrErr.getError())
-    return EC;
-  std::unique_ptr<Module> &M = *MOrErr;
+  std::unique_ptr<Module> M = parseBitcodeFileImpl(
+      Buffer, *Context,
+      /* ShouldBeLazy */ static_cast<bool>(OwnedContext), errMsg);
+  if (!M)
+    return nullptr;
 
   std::string TripleStr = M->getTargetTriple();
   if (TripleStr.empty())
@@ -203,10 +211,9 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, TargetOptions options,
   llvm::Triple Triple(TripleStr);
 
   // find machine architecture for this module
-  std::string errMsg;
   const Target *march = TargetRegistry::lookupTarget(TripleStr, errMsg);
   if (!march)
-    return std::unique_ptr<LTOModule>(nullptr);
+    return nullptr;
 
   // construct LTOModule, hand over ownership of module and target
   SubtargetFeatures Features;
@@ -230,16 +237,20 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, TargetOptions options,
   std::unique_ptr<object::IRObjectFile> IRObj(
       new object::IRObjectFile(Buffer, std::move(M)));
 
-  std::unique_ptr<LTOModule> Ret;
+  LTOModule *Ret;
   if (OwnedContext)
-    Ret.reset(new LTOModule(std::move(IRObj), target, std::move(OwnedContext)));
+    Ret = new LTOModule(std::move(IRObj), target, std::move(OwnedContext));
   else
-    Ret.reset(new LTOModule(std::move(IRObj), target));
+    Ret = new LTOModule(std::move(IRObj), target);
 
-  Ret->parseSymbols();
+  if (Ret->parseSymbols(errMsg)) {
+    delete Ret;
+    return nullptr;
+  }
+
   Ret->parseMetadata();
 
-  return std::move(Ret);
+  return Ret;
 }
 
 /// Create a MemoryBuffer from a memory range with an optional name.
@@ -572,7 +583,9 @@ void LTOModule::addPotentialUndefinedSymbol(const object::BasicSymbolRef &Sym,
   info.symbol = decl;
 }
 
-void LTOModule::parseSymbols() {
+/// parseSymbols - Parse the symbols from the module and model-level ASM and add
+/// them to either the defined or undefined lists.
+bool LTOModule::parseSymbols(std::string &errMsg) {
   for (auto &Sym : IRFile->symbols()) {
     const GlobalValue *GV = IRFile->getSymbolGV(Sym.getRawDataRefImpl());
     uint32_t Flags = Sym.getFlags();
@@ -627,6 +640,8 @@ void LTOModule::parseSymbols() {
     NameAndAttributes info = u->getValue();
     _symbols.push_back(info);
   }
+
+  return false;
 }
 
 /// parseMetadata - Parse metadata from the module

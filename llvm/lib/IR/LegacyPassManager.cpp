@@ -28,7 +28,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <map>
-#include <unordered_set>
 using namespace llvm;
 using namespace llvm::legacy;
 
@@ -84,13 +83,6 @@ PrintAfterAll("print-after-all",
               llvm::cl::desc("Print IR after each pass"),
               cl::init(false));
 
-static cl::list<std::string>
-    PrintFuncsList("filter-print-funcs", cl::value_desc("function names"),
-                   cl::desc("Only print IR for functions whose name "
-                            "match this for all print-[before|after][-all] "
-                            "options"),
-                   cl::CommaSeparated);
-
 /// This is a helper to determine whether to print IR before or
 /// after a pass.
 
@@ -117,11 +109,6 @@ static bool ShouldPrintAfterPass(const PassInfo *PI) {
   return PrintAfterAll || ShouldPrintBeforeOrAfterPass(PI, PrintAfter);
 }
 
-bool llvm::isFunctionInPrintList(StringRef FunctionName) {
-  static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
-                                                        PrintFuncsList.end());
-  return PrintFuncNames.empty() || PrintFuncNames.count(FunctionName);
-}
 /// isPassDebuggingExecutionsOrMore - Return true if -debug-pass=Executions
 /// or higher is specified.
 bool PMDataManager::isPassDebuggingExecutionsOrMore() const {
@@ -582,33 +569,13 @@ void PMTopLevelManager::collectLastUses(SmallVectorImpl<Pass *> &LastUses,
 
 AnalysisUsage *PMTopLevelManager::findAnalysisUsage(Pass *P) {
   AnalysisUsage *AnUsage = nullptr;
-  auto DMI = AnUsageMap.find(P);
+  DenseMap<Pass *, AnalysisUsage *>::iterator DMI = AnUsageMap.find(P);
   if (DMI != AnUsageMap.end())
     AnUsage = DMI->second;
   else {
-    // Look up the analysis usage from the pass instance (different instances
-    // of the same pass can produce different results), but unique the
-    // resulting object to reduce memory usage.  This helps to greatly reduce
-    // memory usage when we have many instances of only a few pass types
-    // (e.g. instcombine, simplifycfg, etc...) which tend to share a fixed set
-    // of dependencies.
-    AnalysisUsage AU;
-    P->getAnalysisUsage(AU);
-    
-    AUFoldingSetNode* Node = nullptr;
-    FoldingSetNodeID ID;
-    AUFoldingSetNode::Profile(ID, AU);
-    void *IP = nullptr;
-    if (auto *N = UniqueAnalysisUsages.FindNodeOrInsertPos(ID, IP))
-      Node = N;
-    else {
-      Node = new (AUFoldingSetNodeAllocator.Allocate()) AUFoldingSetNode(AU);
-      UniqueAnalysisUsages.InsertNode(Node, IP);
-    }
-    assert(Node && "cached analysis usage must be non null");
-
-    AnUsageMap[P] = &Node->AU;
-    AnUsage = &Node->AU;;
+    AnUsage = new AnalysisUsage();
+    P->getAnalysisUsage(*AnUsage);
+    AnUsageMap[P] = AnUsage;
   }
   return AnUsage;
 }
@@ -831,6 +798,10 @@ PMTopLevelManager::~PMTopLevelManager() {
   for (SmallVectorImpl<ImmutablePass *>::iterator
          I = ImmutablePasses.begin(), E = ImmutablePasses.end(); I != E; ++I)
     delete *I;
+
+  for (DenseMap<Pass *, AnalysisUsage *>::iterator DMI = AnUsageMap.begin(),
+         DME = AnUsageMap.end(); DMI != DME; ++DMI)
+    delete DMI->second;
 }
 
 //===----------------------------------------------------------------------===//

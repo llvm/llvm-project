@@ -79,12 +79,14 @@ protected:
           if (J == (*PI)->end())
             break;
 
+          MachineInstrBuilder MIB;
           if (J->getOpcode() == PPC::B) {
             if (J->getOperand(0).getMBB() == &ReturnMBB) {
               // This is an unconditional branch to the return. Replace the
               // branch with a blr.
-              BuildMI(**PI, J, J->getDebugLoc(), TII->get(I->getOpcode()))
-                  .copyImplicitOps(I);
+              MIB =
+                BuildMI(**PI, J, J->getDebugLoc(), TII->get(I->getOpcode()));
+              MIB.copyImplicitOps(I);
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
               BlockChanged = true;
@@ -95,10 +97,10 @@ protected:
             if (J->getOperand(2).getMBB() == &ReturnMBB) {
               // This is a conditional branch to the return. Replace the branch
               // with a bclr.
-              BuildMI(**PI, J, J->getDebugLoc(), TII->get(PPC::BCCLR))
-                  .addImm(J->getOperand(0).getImm())
-                  .addReg(J->getOperand(1).getReg())
-                  .copyImplicitOps(I);
+              MIB = BuildMI(**PI, J, J->getDebugLoc(), TII->get(PPC::BCCLR))
+                      .addImm(J->getOperand(0).getImm())
+                      .addReg(J->getOperand(1).getReg());
+              MIB.copyImplicitOps(I);
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
               BlockChanged = true;
@@ -109,11 +111,11 @@ protected:
             if (J->getOperand(1).getMBB() == &ReturnMBB) {
               // This is a conditional branch to the return. Replace the branch
               // with a bclr.
-              BuildMI(
-                  **PI, J, J->getDebugLoc(),
-                  TII->get(J->getOpcode() == PPC::BC ? PPC::BCLR : PPC::BCLRn))
-                  .addReg(J->getOperand(0).getReg())
-                  .copyImplicitOps(I);
+              MIB = BuildMI(**PI, J, J->getDebugLoc(),
+                            TII->get(J->getOpcode() == PPC::BC ?
+                                     PPC::BCLR : PPC::BCLRn))
+                      .addReg(J->getOperand(0).getReg());
+              MIB.copyImplicitOps(I);
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
               BlockChanged = true;
@@ -151,7 +153,7 @@ protected:
       }
 
       for (unsigned i = 0, ie = PredToRemove.size(); i != ie; ++i)
-        PredToRemove[i]->removeSuccessor(&ReturnMBB, true);
+        PredToRemove[i]->removeSuccessor(&ReturnMBB);
 
       if (Changed && !ReturnMBB.hasAddressTaken()) {
         // We now might be able to merge this blr-only block into its
@@ -161,7 +163,7 @@ protected:
           if (PrevMBB.isLayoutSuccessor(&ReturnMBB) && PrevMBB.canFallThrough()) {
             // Move the blr into the preceding block.
             PrevMBB.splice(PrevMBB.end(), &ReturnMBB, I);
-            PrevMBB.removeSuccessor(&ReturnMBB, true);
+            PrevMBB.removeSuccessor(&ReturnMBB);
           }
         }
 

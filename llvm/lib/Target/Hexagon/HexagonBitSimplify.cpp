@@ -876,12 +876,6 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
     case Hexagon::DoubleRegsRegClassID:
       VerifySR(RR.Sub);
       return &Hexagon::IntRegsRegClass;
-    case Hexagon::VecDblRegsRegClassID:
-      VerifySR(RR.Sub);
-      return &Hexagon::VectorRegsRegClass;
-    case Hexagon::VecDblRegs128BRegClassID:
-      VerifySR(RR.Sub);
-      return &Hexagon::VectorRegs128BRegClass;
   }
   return nullptr;
 }
@@ -1281,8 +1275,6 @@ bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
     if (!BT.has(RD.Reg))
       continue;
     const BitTracker::RegisterCell &DC = BT.lookup(RD.Reg);
-    auto At = MI->isPHI() ? B.getFirstNonPHI()
-                          : MachineBasicBlock::iterator(MI);
 
     // Find a source operand that is equal to the result.
     for (auto &Op : MI->uses()) {
@@ -1306,7 +1298,7 @@ bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
       DebugLoc DL = MI->getDebugLoc();
       const TargetRegisterClass *FRC = HBS::getFinalVRegClass(RD, MRI);
       unsigned NewR = MRI.createVirtualRegister(FRC);
-      BuildMI(B, At, DL, HII.get(TargetOpcode::COPY), NewR)
+      BuildMI(B, I, DL, HII.get(TargetOpcode::COPY), NewR)
           .addReg(RS.Reg, 0, RS.Sub);
       HBS::replaceSubWithSub(RD.Reg, RD.Sub, NewR, 0, MRI);
       BT.put(BitTracker::RegisterRef(NewR), SC);
@@ -1933,9 +1925,7 @@ bool BitSimplification::genPackhl(MachineInstr *MI,
   MachineBasicBlock &B = *MI->getParent();
   unsigned NewR = MRI.createVirtualRegister(&Hexagon::DoubleRegsRegClass);
   DebugLoc DL = MI->getDebugLoc();
-  auto At = MI->isPHI() ? B.getFirstNonPHI()
-                        : MachineBasicBlock::iterator(MI);
-  BuildMI(B, At, DL, HII.get(Hexagon::S2_packhl), NewR)
+  BuildMI(B, MI, DL, HII.get(Hexagon::S2_packhl), NewR)
       .addReg(Rs.Reg, 0, Rs.Sub)
       .addReg(Rt.Reg, 0, Rt.Sub);
   HBS::replaceSubWithSub(RD.Reg, RD.Sub, NewR, 0, MRI);
@@ -1960,16 +1950,15 @@ bool BitSimplification::genExtractHalf(MachineInstr *MI,
   // Prefer zxth, since zxth can go in any slot, while extractu only in
   // slots 2 and 3.
   unsigned NewR = 0;
-  auto At = MI->isPHI() ? B.getFirstNonPHI()
-                        : MachineBasicBlock::iterator(MI);
   if (L.Low && Opc != Hexagon::A2_zxth) {
     NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-    BuildMI(B, At, DL, HII.get(Hexagon::A2_zxth), NewR)
+    BuildMI(B, MI, DL, HII.get(Hexagon::A2_zxth), NewR)
         .addReg(L.Reg, 0, L.Sub);
-  } else if (!L.Low && Opc != Hexagon::S2_lsr_i_r) {
+  } else if (!L.Low && Opc != Hexagon::S2_extractu) {
     NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-    BuildMI(B, MI, DL, HII.get(Hexagon::S2_lsr_i_r), NewR)
+    BuildMI(B, MI, DL, HII.get(Hexagon::S2_extractu), NewR)
         .addReg(L.Reg, 0, L.Sub)
+        .addImm(16)
         .addImm(16);
   }
   if (NewR == 0)
@@ -2000,9 +1989,7 @@ bool BitSimplification::genCombineHalf(MachineInstr *MI,
   MachineBasicBlock &B = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   unsigned NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-  auto At = MI->isPHI() ? B.getFirstNonPHI()
-                        : MachineBasicBlock::iterator(MI);
-  BuildMI(B, At, DL, HII.get(COpc), NewR)
+  BuildMI(B, MI, DL, HII.get(COpc), NewR)
       .addReg(H.Reg, 0, H.Sub)
       .addReg(L.Reg, 0, L.Sub);
   HBS::replaceSubWithSub(RD.Reg, RD.Sub, NewR, 0, MRI);
@@ -2056,9 +2043,7 @@ bool BitSimplification::genExtractLow(MachineInstr *MI,
       continue;
 
     unsigned NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-    auto At = MI->isPHI() ? B.getFirstNonPHI()
-                          : MachineBasicBlock::iterator(MI);
-    auto MIB = BuildMI(B, At, DL, HII.get(NewOpc), NewR)
+    auto MIB = BuildMI(B, MI, DL, HII.get(NewOpc), NewR)
                   .addReg(RS.Reg, 0, RS.Sub);
     if (NewOpc == Hexagon::A2_andir)
       MIB.addImm((1 << W) - 1);
@@ -2091,8 +2076,6 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
   if (!BT.has(RS.Reg) || !HBS::getSubregMask(RS, F, W, MRI))
     return false;
   MachineBasicBlock &B = *MI->getParent();
-  auto At = MI->isPHI() ? B.getFirstNonPHI()
-                        : MachineBasicBlock::iterator(MI);
 
   const BitTracker::RegisterCell &SC = BT.lookup(RS.Reg);
   const BitTracker::BitValue &V = SC[F+BN];
@@ -2115,7 +2098,7 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
     }
     if (P != UINT_MAX) {
       unsigned NewR = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
-      BuildMI(B, At, DL, HII.get(Hexagon::S2_tstbit_i), NewR)
+      BuildMI(B, MI, DL, HII.get(Hexagon::S2_tstbit_i), NewR)
           .addReg(RR.Reg, 0, RR.Sub)
           .addImm(P);
       HBS::replaceReg(RD.Reg, NewR, MRI);
@@ -2125,7 +2108,7 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
   } else if (V.is(0) || V.is(1)) {
     unsigned NewR = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
     unsigned NewOpc = V.is(0) ? Hexagon::TFR_PdFalse : Hexagon::TFR_PdTrue;
-    BuildMI(B, At, DL, HII.get(NewOpc), NewR);
+    BuildMI(B, MI, DL, HII.get(NewOpc), NewR);
     HBS::replaceReg(RD.Reg, NewR, MRI);
     return true;
   }

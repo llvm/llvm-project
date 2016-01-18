@@ -80,8 +80,8 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   // Ensure that we start on the opening brace.
   const FormatToken *LBrace =
       State.NextToken->Previous->getPreviousNonComment();
-  if (!LBrace || !LBrace->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
-      LBrace->BlockKind == BK_Block || LBrace->Type == TT_DictLiteral ||
+  if (!LBrace || LBrace->isNot(tok::l_brace) || LBrace->BlockKind == BK_Block ||
+      LBrace->Type == TT_DictLiteral ||
       LBrace->Next->Type == TT_DesignatedInitializerPeriod)
     return 0;
 
@@ -144,8 +144,7 @@ static unsigned CodePointsBetween(const FormatToken *Begin,
 
 void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // FIXME: At some point we might want to do this for other lists, too.
-  if (!Token->MatchingParen ||
-      !Token->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare))
+  if (!Token->MatchingParen || Token->isNot(tok::l_brace))
     return;
 
   // In C++11 braced list style, we should not format in columns unless they
@@ -153,12 +152,6 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // arguments.
   if (Style.Cpp11BracedListStyle && !Style.BinPackArguments &&
       Commas.size() < 19)
-    return;
-
-  // Limit column layout for JavaScript array initializers to 20 or more items
-  // for now to introduce it carefully. We can become more aggressive if this
-  // necessary.
-  if (Token->is(TT_ArrayInitializerLSquare) && Commas.size() < 19)
     return;
 
   // Column format doesn't really make sense if we don't align after brackets.
@@ -218,12 +211,9 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
     ItemBegin = ItemEnd->Next;
   }
 
-  // Don't use column layout for lists with few elements and in presence of
-  // separating comments.
-  if (Commas.size() < 5 || HasSeparatingComment)
-    return;
-
-  if (Token->NestingLevel != 0 && Token->is(tok::l_brace) && Commas.size() < 19)
+  // Don't use column layout for nested lists, lists with few elements and in
+  // presence of separating comments.
+  if (Token->NestingLevel != 0 || Commas.size() < 5 || HasSeparatingComment)
     return;
 
   // We can never place more than ColumnLimit / 3 items in a row (because of the

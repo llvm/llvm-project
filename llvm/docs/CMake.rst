@@ -26,10 +26,7 @@ Quick start
 We use here the command-line, non-interactive CMake interface.
 
 #. `Download <http://www.cmake.org/cmake/resources/software.html>`_ and install
-   CMake. Version 2.8.8 is the minimum required, but if you're using the Ninja
-   backend, CMake v3.2 or newer is required to `get interactive output
-   <http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20141117/244797.html>`_
-   when running :doc:`Lit <CommandGuide/lit>`.
+   CMake. Version 2.8.8 is the minimum required.
 
 #. Open a shell. Your development tools must be reachable from this shell
    through the PATH environment variable.
@@ -196,6 +193,12 @@ CMake manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 
 **CMAKE_CXX_FLAGS**:STRING
   Extra flags to use when compiling C++ source files.
+
+**BUILD_SHARED_LIBS**:BOOL
+  Flag indicating if shared libraries will be built. Its default value is
+  OFF. This option is only recommended for use by LLVM developers.
+  On Windows, shared libraries may be used when building with MinGW, including
+  mingw-w64, but not when building with the Microsoft toolchain.
 
 .. _LLVM-specific variables:
 
@@ -438,27 +441,6 @@ LLVM-specific variables
   'install-xcode-toolchain'. This target will create a directory at
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools. 
-
-**LLVM_BUILD_LLVM_DYLIB**:BOOL
-  If enabled, the target for building the libLLVM shared library is added.
-  Defaults to OFF. This cannot be used in conjunction with BUILD_SHARED_LIBS.
-  Tools will only be linked to the libLLVM shared library if
-  LLVM_LINK_LLVM_DYLIB is also ON.
-
-**LLVM_LINK_LLVM_DYLIB**:BOOL
-  If enabled, tools will be linked with the libLLVM shared library. Defaults
-  to OFF. Setting LLVM_LINK_LLVM_DYLIB to ON also sets LLVM_BUILD_LLVM_DYLIB
-  to ON.
-
-**BUILD_SHARED_LIBS**:BOOL
-  Flag indicating if shared libraries will be built instead of static
-  libraries. Its default value is OFF. On Windows, shared libraries may
-  be used when building with MinGW, including mingw-w64, but not when
-  building with the Microsoft toolchain.
- 
-  .. note:: BUILD_SHARED_LIBS is only recommended for use by LLVM developers.
-            If you want to build LLVM as a shared library, you should use the
-            ``LLVM_BUILD_LLVM_DYLIB`` option.
 
 Executing the test suite
 ========================

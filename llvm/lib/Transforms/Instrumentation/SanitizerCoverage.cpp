@@ -31,7 +31,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/LibCallSemantics.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -156,9 +156,7 @@ class SanitizerCoverageModule : public ModulePass {
   void SetNoSanitizeMetadata(Instruction *I);
   void InjectCoverageAtBlock(Function &F, BasicBlock &BB, bool UseCalls);
   unsigned NumberOfInstrumentedBlocks() {
-    return SanCovFunction->getNumUses() +
-           SanCovWithCheckFunction->getNumUses() + SanCovTraceBB->getNumUses() +
-           SanCovTraceEnter->getNumUses();
+    return SanCovFunction->getNumUses() + SanCovWithCheckFunction->getNumUses();
   }
   Function *SanCovFunction;
   Function *SanCovWithCheckFunction;
@@ -213,10 +211,12 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
                             StringRef(""), StringRef(""),
                             /*hasSideEffects=*/true);
 
-  SanCovTraceEnter = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(kSanCovTraceEnter, VoidTy, Int32PtrTy, nullptr));
-  SanCovTraceBB = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(kSanCovTraceBB, VoidTy, Int32PtrTy, nullptr));
+  if (Options.TraceBB) {
+    SanCovTraceEnter = checkSanitizerInterfaceFunction(
+        M.getOrInsertFunction(kSanCovTraceEnter, VoidTy, Int32PtrTy, nullptr));
+    SanCovTraceBB = checkSanitizerInterfaceFunction(
+        M.getOrInsertFunction(kSanCovTraceBB, VoidTy, Int32PtrTy, nullptr));
+  }
 
   // At this point we create a dummy array of guards because we don't
   // know how many elements we will need.
@@ -253,7 +253,8 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   if (Options.Use8bitCounters) {
     // Make sure the array is 16-aligned.
     static const int kCounterAlignment = 16;
-    Type *Int8ArrayNTy = ArrayType::get(Int8Ty, alignTo(N, kCounterAlignment));
+    Type *Int8ArrayNTy =
+        ArrayType::get(Int8Ty, RoundUpToAlignment(N, kCounterAlignment));
     RealEightBitCounterArray = new GlobalVariable(
         M, Int8ArrayNTy, false, GlobalValue::PrivateLinkage,
         Constant::getNullValue(Int8ArrayNTy), "__sancov_gen_cov_counter");
@@ -430,7 +431,8 @@ void SanitizerCoverageModule::InjectTraceForCmp(
 
 void SanitizerCoverageModule::SetNoSanitizeMetadata(Instruction *I) {
   I->setMetadata(
-      I->getModule()->getMDKindID("nosanitize"), MDNode::get(*C, None));
+      I->getParent()->getParent()->getParent()->getMDKindID("nosanitize"),
+      MDNode::get(*C, None));
 }
 
 void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
@@ -464,9 +466,7 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
       ConstantInt::get(IntptrTy, (1 + NumberOfInstrumentedBlocks()) * 4));
   Type *Int32PtrTy = PointerType::getUnqual(IRB.getInt32Ty());
   GuardP = IRB.CreateIntToPtr(GuardP, Int32PtrTy);
-  if (Options.TraceBB) {
-    IRB.CreateCall(IsEntryBB ? SanCovTraceEnter : SanCovTraceBB, GuardP);
-  } else if (UseCalls) {
+  if (UseCalls) {
     IRB.CreateCall(SanCovWithCheckFunction, GuardP);
   } else {
     LoadInst *Load = IRB.CreateLoad(GuardP);
@@ -494,6 +494,13 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     StoreInst *SI = IRB.CreateStore(Inc, P);
     SetNoSanitizeMetadata(LI);
     SetNoSanitizeMetadata(SI);
+  }
+
+  if (Options.TraceBB) {
+    // Experimental support for tracing.
+    // Insert a callback with the same guard variable as used for coverage.
+    IRB.SetInsertPoint(&*IP);
+    IRB.CreateCall(IsEntryBB ? SanCovTraceEnter : SanCovTraceBB, GuardP);
   }
 }
 

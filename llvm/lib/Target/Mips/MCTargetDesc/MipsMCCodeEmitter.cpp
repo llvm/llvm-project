@@ -350,23 +350,6 @@ getBranchTarget26OpValue(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-/// getBranchTarget26OpValueMM - Return binary encoding of the branch
-/// target operand. If the machine operand requires relocation,
-/// record the relocation and return zero.
-unsigned MipsMCCodeEmitter::getBranchTarget26OpValueMM(
-    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
-    const MCSubtargetInfo &STI) const {
-
-  const MCOperand &MO = MI.getOperand(OpNo);
-
-  // If the destination is an immediate, divide by 2.
-  if (MO.isImm())
-    return MO.getImm() >> 1;
-
-  // TODO: Push 26 PC fixup.
-  return 0;
-}
-
 /// getJumpOffset16OpValue - Return binary encoding of the jump
 /// target operand. If the machine operand requires relocation,
 /// record the relocation and return zero.
@@ -849,9 +832,7 @@ getMemEncodingMMImm4sp(const MCInst &MI, unsigned OpNo,
   default:
     break;
   case Mips::SWM16_MM:
-  case Mips::SWM16_MMR6:
   case Mips::LWM16_MM:
-  case Mips::LWM16_MMR6:
     OpNo = MI.getNumOperands() - 2;
     break;
   }
@@ -863,6 +844,15 @@ getMemEncodingMMImm4sp(const MCInst &MI, unsigned OpNo,
   unsigned OffBits = getMachineOpValue(MI, MI.getOperand(OpNo+1), Fixups, STI);
 
   return ((OffBits >> 2) & 0x0F);
+}
+
+unsigned
+MipsMCCodeEmitter::getSizeExtEncoding(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  assert(MI.getOperand(OpNo).isImm());
+  unsigned SizeEncoding = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
+  return SizeEncoding - 1;
 }
 
 // FIXME: should be called getMSBEncoding
@@ -879,15 +869,13 @@ MipsMCCodeEmitter::getSizeInsEncoding(const MCInst &MI, unsigned OpNo,
   return Position + Size - 1;
 }
 
-template <unsigned Bits, int Offset>
 unsigned
-MipsMCCodeEmitter::getUImmWithOffsetEncoding(const MCInst &MI, unsigned OpNo,
-                                             SmallVectorImpl<MCFixup> &Fixups,
-                                             const MCSubtargetInfo &STI) const {
+MipsMCCodeEmitter::getLSAImmEncoding(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
   assert(MI.getOperand(OpNo).isImm());
-  unsigned Value = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
-  Value -= Offset;
-  return Value;
+  // The immediate is encoded as 'immediate - 1'.
+  return getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI) - 1;
 }
 
 unsigned

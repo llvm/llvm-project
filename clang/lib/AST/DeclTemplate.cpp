@@ -30,10 +30,10 @@ using namespace clang;
 
 TemplateParameterList::TemplateParameterList(SourceLocation TemplateLoc,
                                              SourceLocation LAngleLoc,
-                                             ArrayRef<NamedDecl *> Params,
+                                             NamedDecl **Params, unsigned NumParams,
                                              SourceLocation RAngleLoc)
   : TemplateLoc(TemplateLoc), LAngleLoc(LAngleLoc), RAngleLoc(RAngleLoc),
-    NumParams(Params.size()), ContainsUnexpandedParameterPack(false) {
+    NumParams(NumParams), ContainsUnexpandedParameterPack(false) {
   assert(this->NumParams == NumParams && "Too many template parameters");
   for (unsigned Idx = 0; Idx < NumParams; ++Idx) {
     NamedDecl *P = Params[Idx];
@@ -54,13 +54,14 @@ TemplateParameterList::TemplateParameterList(SourceLocation TemplateLoc,
   }
 }
 
-TemplateParameterList *TemplateParameterList::Create(
-    const ASTContext &C, SourceLocation TemplateLoc, SourceLocation LAngleLoc,
-    ArrayRef<NamedDecl *> Params, SourceLocation RAngleLoc) {
-  void *Mem = C.Allocate(totalSizeToAlloc<NamedDecl *>(Params.size()),
+TemplateParameterList *
+TemplateParameterList::Create(const ASTContext &C, SourceLocation TemplateLoc,
+                              SourceLocation LAngleLoc, NamedDecl **Params,
+                              unsigned NumParams, SourceLocation RAngleLoc) {
+  void *Mem = C.Allocate(totalSizeToAlloc<NamedDecl *>(NumParams),
                          llvm::alignOf<TemplateParameterList>());
   return new (Mem) TemplateParameterList(TemplateLoc, LAngleLoc, Params,
-                                         RAngleLoc);
+                                         NumParams, RAngleLoc);
 }
 
 unsigned TemplateParameterList::getMinRequiredArguments() const {
@@ -1211,7 +1212,7 @@ createMakeIntegerSeqParameterList(const ASTContext &C, DeclContext *DC) {
   // <typename T, T ...Ints>
   NamedDecl *P[2] = {T, N};
   auto *TPL = TemplateParameterList::Create(
-      C, SourceLocation(), SourceLocation(), P, SourceLocation());
+      C, SourceLocation(), SourceLocation(), P, 2, SourceLocation());
 
   // template <typename T, ...Ints> class IntSeq
   auto *TemplateTemplateParm = TemplateTemplateParmDecl::Create(
@@ -1236,7 +1237,7 @@ createMakeIntegerSeqParameterList(const ASTContext &C, DeclContext *DC) {
 
   // template <template <typename T, T ...Ints> class IntSeq, typename T, T N>
   return TemplateParameterList::Create(C, SourceLocation(), SourceLocation(),
-                                       Params, SourceLocation());
+                                       Params, 3, SourceLocation());
 }
 
 static TemplateParameterList *createBuiltinTemplateParameterList(

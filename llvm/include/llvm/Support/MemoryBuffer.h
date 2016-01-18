@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_MEMORYBUFFER_H
 #define LLVM_SUPPORT_MEMORYBUFFER_H
 
+#include "llvm-c/Support.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/DataTypes.h"
@@ -151,8 +152,6 @@ class MemoryBufferRef {
 
 public:
   MemoryBufferRef() {}
-  MemoryBufferRef(MemoryBuffer& Buffer)
-      : Buffer(Buffer.getBuffer()), Identifier(Buffer.getBufferIdentifier()) {}
   MemoryBufferRef(StringRef Buffer, StringRef Identifier)
       : Buffer(Buffer), Identifier(Identifier) {}
 

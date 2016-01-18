@@ -28,7 +28,6 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SanitizerBlacklist.h"
@@ -131,7 +130,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<AutoType> AutoTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
   llvm::FoldingSet<AttributedType> AttributedTypes;
-  mutable llvm::FoldingSet<PipeType> PipeTypes;
 
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
   mutable llvm::FoldingSet<DependentTemplateName> DependentTemplateNames;
@@ -1080,9 +1078,6 @@ public:
   /// blocks.
   QualType getBlockDescriptorType() const;
 
-  /// \brief Return pipe type for the specified type.
-  QualType getPipeType(QualType T) const;
-
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.
   QualType getBlockDescriptorExtendedType() const;
@@ -1304,7 +1299,7 @@ public:
                                  UnaryTransformType::UTTKind UKind) const;
 
   /// \brief C++11 deduced auto type.
-  QualType getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
+  QualType getAutoType(QualType DeducedType, bool IsDecltypeAuto,
                        bool IsDependent) const;
 
   /// \brief C++11 deduction pattern for 'auto' type.
@@ -2261,7 +2256,9 @@ public:
          const FunctionProtoType *FromFunctionType,
          const FunctionProtoType *ToFunctionType);
 
-  void ResetObjCLayout(const ObjCContainerDecl *CD);
+  void ResetObjCLayout(const ObjCContainerDecl *CD) {
+    ObjCLayouts[CD] = nullptr;
+  }
 
   //===--------------------------------------------------------------------===//
   //                    Integer Predicates
@@ -2277,19 +2274,25 @@ public:
   QualType getCorrespondingUnsignedType(QualType T) const;
 
   //===--------------------------------------------------------------------===//
+  //                    Type Iterators.
+  //===--------------------------------------------------------------------===//
+  typedef llvm::iterator_range<SmallVectorImpl<Type *>::const_iterator>
+    type_const_range;
+
+  type_const_range types() const {
+    return type_const_range(Types.begin(), Types.end());
+  }
+
+  //===--------------------------------------------------------------------===//
   //                    Integer Values
   //===--------------------------------------------------------------------===//
 
   /// \brief Make an APSInt of the appropriate width and signedness for the
   /// given \p Value and integer \p Type.
   llvm::APSInt MakeIntValue(uint64_t Value, QualType Type) const {
-    // If Type is a signed integer type larger than 64 bits, we need to be sure
-    // to sign extend Res appropriately.
-    llvm::APSInt Res(64, !Type->isSignedIntegerOrEnumerationType());
+    llvm::APSInt Res(getIntWidth(Type), 
+                     !Type->isSignedIntegerOrEnumerationType());
     Res = Value;
-    unsigned Width = getIntWidth(Type);
-    if (Width != Res.getBitWidth())
-      return Res.extOrTrunc(Width);
     return Res;
   }
 
@@ -2316,11 +2319,16 @@ public:
 
   /// \brief Get the duplicate declaration of a ObjCMethod in the same
   /// interface, or null if none exists.
-  const ObjCMethodDecl *
-  getObjCMethodRedeclaration(const ObjCMethodDecl *MD) const;
+  const ObjCMethodDecl *getObjCMethodRedeclaration(
+                                               const ObjCMethodDecl *MD) const {
+    return ObjCMethodRedecls.lookup(MD);
+  }
 
   void setObjCMethodRedeclaration(const ObjCMethodDecl *MD,
-                                  const ObjCMethodDecl *Redecl);
+                                  const ObjCMethodDecl *Redecl) {
+    assert(!getObjCMethodRedeclaration(MD) && "MD already has a redeclaration");
+    ObjCMethodRedecls[MD] = Redecl;
+  }
 
   /// \brief Returns the Objective-C interface that \p ND belongs to if it is
   /// an Objective-C method/property/ivar etc. that is part of an interface,
@@ -2516,15 +2524,9 @@ private:
 
   /// \brief A set of deallocations that should be performed when the
   /// ASTContext is destroyed.
-  // FIXME: We really should have a better mechanism in the ASTContext to
-  // manage running destructors for types which do variable sized allocation
-  // within the AST. In some places we thread the AST bump pointer allocator
-  // into the datastructures which avoids this mess during deallocation but is
-  // wasteful of memory, and here we require a lot of error prone book keeping
-  // in order to track and run destructors while we're tearing things down.
-  typedef llvm::SmallVector<std::pair<void (*)(void *), void *>, 16>
-      DeallocationFunctionsAndArguments;
-  DeallocationFunctionsAndArguments Deallocations;
+  typedef llvm::SmallDenseMap<void(*)(void*), llvm::SmallVector<void*, 16> >
+    DeallocationMap;
+  DeallocationMap Deallocations;
 
   // FIXME: This currently contains the set of StoredDeclMaps used
   // by DeclContext objects.  This probably should not be in ASTContext,

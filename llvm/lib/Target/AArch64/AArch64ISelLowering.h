@@ -15,7 +15,6 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64ISELLOWERING_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64ISELLOWERING_H
 
-#include "AArch64.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/CallingConv.h"
@@ -226,26 +225,30 @@ public:
   /// Selects the correct CCAssignFn for a given CallingConvention value.
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
 
-  /// Determine which of the bits specified in Mask are known to be either zero
-  /// or one and return them in the KnownZero/KnownOne bitsets.
+  /// computeKnownBitsForTargetNode - Determine which of the bits specified in
+  /// Mask are known to be either zero or one and return them in the
+  /// KnownZero/KnownOne bitsets.
   void computeKnownBitsForTargetNode(const SDValue Op, APInt &KnownZero,
                                      APInt &KnownOne, const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
 
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
 
-  /// Returns true if the target allows unaligned memory accesses of the
-  /// specified type.
+  /// allowsMisalignedMemoryAccesses - Returns true if the target allows
+  /// unaligned memory accesses of the specified type.
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace = 0,
                                       unsigned Align = 1,
                                       bool *Fast = nullptr) const override;
 
-  /// Provide custom lowering hooks for some operations.
+  /// LowerOperation - Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  /// getFunctionAlignment - Return the Log2 alignment of this function.
+  unsigned getFunctionAlignment(const Function *F) const;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
@@ -253,8 +256,8 @@ public:
     return true;
   }
 
-  /// This method returns a target specific FastISel object, or null if the
-  /// target does not support "fast" ISel.
+  /// createFastISel - This method returns a target specific FastISel object,
+  /// or null if the target does not support "fast" ISel.
   FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
                            const TargetLibraryInfo *libInfo) const override;
 
@@ -262,11 +265,11 @@ public:
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
 
-  /// Return true if the given shuffle mask can be codegen'd directly, or if it
-  /// should be stack expanded.
+  /// isShuffleMaskLegal - Return true if the given shuffle mask can be
+  /// codegen'd directly, or if it should be stack expanded.
   bool isShuffleMaskLegal(const SmallVectorImpl<int> &M, EVT VT) const override;
 
-  /// Return the ISD::SETCC ValueType.
+  /// getSetCCResultType - Return the ISD::SETCC ValueType
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
@@ -311,8 +314,8 @@ public:
                           bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
                           MachineFunction &MF) const override;
 
-  /// Return true if the addressing mode represented by AM is legal for this
-  /// target, for a load/store of the specified type.
+  /// isLegalAddressingMode - Return true if the addressing mode represented
+  /// by AM is legal for this target, for a load/store of the specified type.
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS) const override;
 
@@ -324,9 +327,10 @@ public:
   int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                            unsigned AS) const override;
 
-  /// Return true if an FMA operation is faster than a pair of fmul and fadd
-  /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
-  /// returns true, otherwise fmuladd is expanded to fmul + fadd.
+  /// isFMAFasterThanFMulAndFAdd - Return true if an FMA operation is faster
+  /// than a pair of fmul and fadd instructions. fmuladd intrinsics will be
+  /// expanded to FMAs when this method returns true, otherwise fmuladd is
+  /// expanded to fmul + fadd.
   bool isFMAFasterThanFMulAndFAdd(EVT VT) const override;
 
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
@@ -362,42 +366,10 @@ public:
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getSafeStackPointerLocation(IRBuilder<> &IRB) const override;
 
-  /// If a physical register, this returns the register that receives the
-  /// exception address on entry to an EH pad.
-  unsigned
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override {
-    // FIXME: This is a guess. Has this been defined yet?
-    return AArch64::X0;
-  }
-
-  /// If a physical register, this returns the register that receives the
-  /// exception typeid on entry to a landing pad.
-  unsigned
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
-    // FIXME: This is a guess. Has this been defined yet?
-    return AArch64::X1;
-  }
-
-  bool isCheapToSpeculateCttz() const override {
-    return true;
-  }
-
-  bool isCheapToSpeculateCtlz() const override {
-    return true;
-  }
-  bool supportSplitCSR(MachineFunction *MF) const override {
-    return MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
-           MF->getFunction()->hasFnAttribute(Attribute::NoUnwind);
-  }
-  void initializeSplitCSR(MachineBasicBlock *Entry) const override;
-  void insertCopiesSplitCSR(
-      MachineBasicBlock *Entry,
-      const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
-
 private:
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
-  /// Keep a pointer to the AArch64Subtarget around so that we can
+  /// Subtarget - Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
   const AArch64Subtarget *Subtarget;
 

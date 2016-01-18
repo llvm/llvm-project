@@ -112,7 +112,6 @@ namespace {
     const DataLayout *DL;
     DominatorTree *DT;
     const TargetLibraryInfo *LibInfo;
-    bool PreserveLCSSA;
   };
 
   char PPCCTRLoops::ID = 0;
@@ -175,7 +174,6 @@ bool PPCCTRLoops::runOnFunction(Function &F) {
   DL = &F.getParent()->getDataLayout();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
   LibInfo = TLIP ? &TLIP->getTLI() : nullptr;
-  PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   bool MadeChange = false;
 
@@ -539,7 +537,7 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   // the CTR register because some such uses might be reordered by the
   // selection DAG after the mtctr instruction).
   if (!Preheader || mightUseCTR(TT, Preheader))
-    Preheader = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
+    Preheader = InsertPreheaderForLoop(L, this);
   if (!Preheader)
     return MadeChange;
 

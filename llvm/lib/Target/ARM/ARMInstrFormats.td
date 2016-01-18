@@ -563,12 +563,12 @@ class AIstrex<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,
 class AIldaex<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,
               string opc, string asm, list<dag> pattern>
   : AIldr_ex_or_acq<opcod, 0b10, oops, iops, itin, opc, asm, pattern>,
-    Requires<[IsARM, HasAcquireRelease, HasV7Clrex]>;
+    Requires<[IsARM, HasV8]>;
 
 class AIstlex<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,
               string opc, string asm, list<dag> pattern>
   : AIstr_ex_or_rel<opcod, 0b10, oops, iops, itin, opc, asm, pattern>,
-    Requires<[IsARM, HasAcquireRelease, HasV7Clrex]> {
+    Requires<[IsARM, HasV8]> {
   bits<4> Rd;
   let Inst{15-12} = Rd;
 }
@@ -593,12 +593,12 @@ class AIswp<bit b, dag oops, dag iops, string opc, list<dag> pattern>
 class AIldracq<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,
               string opc, string asm, list<dag> pattern>
   : AIldr_ex_or_acq<opcod, 0b00, oops, iops, itin, opc, asm, pattern>,
-    Requires<[IsARM, HasAcquireRelease]>;
+    Requires<[IsARM, HasV8]>;
 
 class AIstrrel<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,
               string opc, string asm, list<dag> pattern>
   : AIstr_ex_or_rel<opcod, 0b00, oops, iops, itin, opc, asm, pattern>,
-    Requires<[IsARM, HasAcquireRelease]> {
+    Requires<[IsARM, HasV8]> {
   let Inst{15-12}   = 0b1111;
 }
 

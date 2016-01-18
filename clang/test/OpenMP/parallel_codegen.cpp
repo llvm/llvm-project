@@ -57,6 +57,7 @@ int main (int argc, char **argv) {
 // CHECK:       [[ARGC_REF:%.+]] = load i32*, i32** [[ARGC_PTR_ADDR]]
 // CHECK-NEXT:  [[ARGC:%.+]] = load i32, i32* [[ARGC_REF]]
 // CHECK-NEXT:  invoke {{.*}}void [[FOO:@.+foo.+]](i32{{[ ]?[a-z]*}} [[ARGC]])
+// CHECK:       call {{.+}} @__kmpc_barrier(
 // CHECK:       ret void
 // CHECK:       call {{.*}}void @{{.+terminate.*|abort}}(
 // CHECK-NEXT:  unreachable
@@ -67,6 +68,7 @@ int main (int argc, char **argv) {
 // CHECK-DEBUG:  [[ARGC_REF:%.+]] = load i32*, i32** [[ARGC_PTR_ADDR]]
 // CHECK-DEBUG-NEXT:  [[ARGC:%.+]] = load i32, i32* [[ARGC_REF]]
 // CHECK-DEBUG-NEXT:  invoke void [[FOO:@.+foo.+]](i32 [[ARGC]])
+// CHECK-DEBUG:       call {{.+}} @__kmpc_barrier(
 // CHECK-DEBUG:       ret void
 // CHECK-DEBUG:       call void @{{.+terminate.*|abort}}(
 // CHECK-DEBUG-NEXT:  unreachable
@@ -99,6 +101,7 @@ int main (int argc, char **argv) {
 // CHECK:       [[ARGC_REF:%.+]] = load i8***, i8**** [[ARGC_PTR_ADDR]]
 // CHECK-NEXT:  [[ARGC:%.+]] = load i8**, i8*** [[ARGC_REF]]
 // CHECK-NEXT:  invoke {{.*}}void [[FOO1:@.+foo.+]](i8** [[ARGC]])
+// CHECK:       call {{.+}} @__kmpc_barrier(
 // CHECK:       ret void
 // CHECK:       call {{.*}}void @{{.+terminate.*|abort}}(
 // CHECK-NEXT:  unreachable
@@ -108,6 +111,7 @@ int main (int argc, char **argv) {
 // CHECK-DEBUG:       [[ARGC_REF:%.+]] = load i8***, i8**** [[ARGC_PTR_ADDR]]
 // CHECK-DEBUG-NEXT:  [[ARGC:%.+]] = load i8**, i8*** [[ARGC_REF]]
 // CHECK-DEBUG-NEXT:  invoke void [[FOO1:@.+foo.+]](i8** [[ARGC]])
+// CHECK-DEBUG:       call {{.+}} @__kmpc_barrier(
 // CHECK-DEBUG:       ret void
 // CHECK-DEBUG:       call void @{{.+terminate.*|abort}}(
 // CHECK-DEBUG-NEXT:  unreachable

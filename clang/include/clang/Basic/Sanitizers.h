@@ -46,6 +46,8 @@ enum SanitizerOrdinal : uint64_t {
 }
 
 struct SanitizerSet {
+  SanitizerSet() : Mask(0) {}
+
   /// \brief Check if a certain (single) sanitizer is enabled.
   bool has(SanitizerMask K) const {
     assert(llvm::isPowerOf2_64(K));
@@ -68,7 +70,7 @@ struct SanitizerSet {
   bool empty() const { return Mask == 0; }
 
   /// \brief Bitmask of enabled sanitizers.
-  SanitizerMask Mask = 0;
+  SanitizerMask Mask;
 };
 
 /// Parse a single value from a -fsanitize= or -fno-sanitize= value list.

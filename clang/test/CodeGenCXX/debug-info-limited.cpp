@@ -14,7 +14,8 @@ A *foo (A* x) {
 }
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "B"
-// CHECK-SAME:             flags: DIFlagFwdDecl
+// CHECK-NOT:              DIFlagFwdDecl
+// CHECK-SAME:             ){{$}}
 
 class B {
 public:

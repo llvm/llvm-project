@@ -473,10 +473,6 @@ namespace {
     /// notes attached to it will also be stored, otherwise they will not be.
     bool HasActiveDiagnostic;
 
-    /// \brief Have we emitted a diagnostic explaining why we couldn't constant
-    /// fold (not just why it's not strictly a constant expression)?
-    bool HasFoldFailureDiagnostic;
-
     enum EvaluationMode {
       /// Evaluate as a constant expression. Stop if we find that the expression
       /// is not a constant expression.
@@ -541,7 +537,7 @@ namespace {
         BottomFrame(*this, SourceLocation(), nullptr, nullptr, nullptr),
         EvaluatingDecl((const ValueDecl *)nullptr),
         EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-        HasFoldFailureDiagnostic(false), EvalMode(Mode) {}
+        EvalMode(Mode) {}
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value) {
       EvaluatingDecl = Base;
@@ -601,7 +597,7 @@ namespace {
     /// Diagnose that the evaluation cannot be folded.
     OptionalDiagnostic Diag(SourceLocation Loc, diag::kind DiagId
                               = diag::note_invalid_subexpr_in_const_expr,
-                            unsigned ExtraNotes = 0, bool IsCCEDiag = false) {
+                            unsigned ExtraNotes = 0) {
       if (EvalStatus.Diag) {
         // If we have a prior diagnostic, it will be noting that the expression
         // isn't a constant expression. This diagnostic is more important,
@@ -614,9 +610,10 @@ namespace {
           case EM_ConstantFold:
           case EM_IgnoreSideEffects:
           case EM_EvaluateForOverflow:
-            if (!HasFoldFailureDiagnostic)
+            if (!EvalStatus.HasSideEffects)
               break;
-            // We've already failed to fold something. Keep that diagnostic.
+            // We've had side-effects; we want the diagnostic from them, not
+            // some later problem.
           case EM_ConstantExpression:
           case EM_PotentialConstantExpression:
           case EM_ConstantExpressionUnevaluated:
@@ -635,7 +632,6 @@ namespace {
           CallStackNotes = 0;
 
         HasActiveDiagnostic = true;
-        HasFoldFailureDiagnostic = !IsCCEDiag;
         EvalStatus.Diag->clear();
         EvalStatus.Diag->reserve(1 + ExtraNotes + CallStackNotes);
         addDiag(Loc, DiagId);
@@ -649,9 +645,9 @@ namespace {
 
     OptionalDiagnostic Diag(const Expr *E, diag::kind DiagId
                               = diag::note_invalid_subexpr_in_const_expr,
-                            unsigned ExtraNotes = 0, bool IsCCEDiag = false) {
+                            unsigned ExtraNotes = 0) {
       if (EvalStatus.Diag)
-        return Diag(E->getExprLoc(), DiagId, ExtraNotes, IsCCEDiag);
+        return Diag(E->getExprLoc(), DiagId, ExtraNotes);
       HasActiveDiagnostic = false;
       return OptionalDiagnostic();
     }
@@ -671,7 +667,7 @@ namespace {
         HasActiveDiagnostic = false;
         return OptionalDiagnostic();
       }
-      return Diag(Loc, DiagId, ExtraNotes, true);
+      return Diag(Loc, DiagId, ExtraNotes);
     }
 
     /// Add a note to a prior diagnostic.
@@ -713,32 +709,6 @@ namespace {
     bool noteSideEffect() {
       EvalStatus.HasSideEffects = true;
       return keepEvaluatingAfterSideEffect();
-    }
-
-    /// Should we continue evaluation after encountering undefined behavior?
-    bool keepEvaluatingAfterUndefinedBehavior() {
-      switch (EvalMode) {
-      case EM_EvaluateForOverflow:
-      case EM_IgnoreSideEffects:
-      case EM_ConstantFold:
-      case EM_DesignatorFold:
-        return true;
-
-      case EM_PotentialConstantExpression:
-      case EM_PotentialConstantExpressionUnevaluated:
-      case EM_ConstantExpression:
-      case EM_ConstantExpressionUnevaluated:
-        return false;
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
-    /// Note that we hit something that was technically undefined behavior, but
-    /// that we can evaluate past it (such as signed overflow or floating-point
-    /// division by zero.)
-    bool noteUndefinedBehavior() {
-      EvalStatus.HasUndefinedBehavior = true;
-      return keepEvaluatingAfterUndefinedBehavior();
     }
 
     /// Should we continue evaluation as much as possible after encountering a
@@ -1180,13 +1150,12 @@ static bool EvaluatePointer(const Expr *E, LValue &Result, EvalInfo &Info);
 static bool EvaluateMemberPointer(const Expr *E, MemberPtr &Result,
                                   EvalInfo &Info);
 static bool EvaluateTemporary(const Expr *E, LValue &Result, EvalInfo &Info);
-static bool EvaluateInteger(const Expr *E, APSInt &Result, EvalInfo &Info);
+static bool EvaluateInteger(const Expr *E, APSInt  &Result, EvalInfo &Info);
 static bool EvaluateIntegerOrLValue(const Expr *E, APValue &Result,
                                     EvalInfo &Info);
 static bool EvaluateFloat(const Expr *E, APFloat &Result, EvalInfo &Info);
 static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, APValue &Result, EvalInfo &Info);
-static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
 
 //===----------------------------------------------------------------------===//
 // Misc utilities
@@ -1571,11 +1540,10 @@ static bool EvaluateAsBooleanCondition(const Expr *E, bool &Result,
 }
 
 template<typename T>
-static bool HandleOverflow(EvalInfo &Info, const Expr *E,
+static void HandleOverflow(EvalInfo &Info, const Expr *E,
                            const T &SrcValue, QualType DestType) {
   Info.CCEDiag(E, diag::note_constexpr_overflow)
     << SrcValue << DestType;
-  return Info.noteUndefinedBehavior();
 }
 
 static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
@@ -1589,7 +1557,7 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
   bool ignored;
   if (Value.convertToInteger(Result, llvm::APFloat::rmTowardZero, &ignored)
       & APFloat::opInvalidOp)
-    return HandleOverflow(Info, E, Value, DestType);
+    HandleOverflow(Info, E, Value, DestType);
   return true;
 }
 
@@ -1601,13 +1569,13 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
   if (Result.convert(Info.Ctx.getFloatTypeSemantics(DestType),
                      APFloat::rmNearestTiesToEven, &ignored)
       & APFloat::opOverflow)
-    return HandleOverflow(Info, E, Value, DestType);
+    HandleOverflow(Info, E, Value, DestType);
   return true;
 }
 
 static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
                                  QualType DestType, QualType SrcType,
-                                 const APSInt &Value) {
+                                 APSInt &Value) {
   unsigned DestWidth = Info.Ctx.getIntWidth(DestType);
   APSInt Result = Value;
   // Figure out if this is a truncate, extend or noop cast.
@@ -1624,7 +1592,7 @@ static bool HandleIntToFloatCast(EvalInfo &Info, const Expr *E,
   if (Result.convertFromAPInt(Value, Value.isSigned(),
                               APFloat::rmNearestTiesToEven)
       & APFloat::opOverflow)
-    return HandleOverflow(Info, E, Value, DestType);
+    HandleOverflow(Info, E, Value, DestType);
   return true;
 }
 
@@ -1700,26 +1668,23 @@ static bool EvalAndBitcastToAPInt(EvalInfo &Info, const Expr *E,
 /// bits, and check for overflow in the original type (if that type was not an
 /// unsigned type).
 template<typename Operation>
-static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
-                                 const APSInt &LHS, const APSInt &RHS,
-                                 unsigned BitWidth, Operation Op,
-                                 APSInt &Result) {
-  if (LHS.isUnsigned()) {
-    Result = Op(LHS, RHS);
-    return true;
-  }
+static APSInt CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
+                                   const APSInt &LHS, const APSInt &RHS,
+                                   unsigned BitWidth, Operation Op) {
+  if (LHS.isUnsigned())
+    return Op(LHS, RHS);
 
   APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)), false);
-  Result = Value.trunc(LHS.getBitWidth());
+  APSInt Result = Value.trunc(LHS.getBitWidth());
   if (Result.extend(BitWidth) != Value) {
     if (Info.checkingForOverflow())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
-                                       diag::warn_integer_constant_overflow)
+        diag::warn_integer_constant_overflow)
           << Result.toString(10) << E->getType();
     else
-      return HandleOverflow(Info, E, Value, E->getType());
+      HandleOverflow(Info, E, Value, E->getType());
   }
-  return true;
+  return Result;
 }
 
 /// Perform the given binary integer operation.
@@ -1731,14 +1696,17 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
     Info.Diag(E);
     return false;
   case BO_Mul:
-    return CheckedIntArithmetic(Info, E, LHS, RHS, LHS.getBitWidth() * 2,
-                                std::multiplies<APSInt>(), Result);
+    Result = CheckedIntArithmetic(Info, E, LHS, RHS, LHS.getBitWidth() * 2,
+                                  std::multiplies<APSInt>());
+    return true;
   case BO_Add:
-    return CheckedIntArithmetic(Info, E, LHS, RHS, LHS.getBitWidth() + 1,
-                                std::plus<APSInt>(), Result);
+    Result = CheckedIntArithmetic(Info, E, LHS, RHS, LHS.getBitWidth() + 1,
+                                  std::plus<APSInt>());
+    return true;
   case BO_Sub:
-    return CheckedIntArithmetic(Info, E, LHS, RHS, LHS.getBitWidth() + 1,
-                                std::minus<APSInt>(), Result);
+    Result = CheckedIntArithmetic(Info, E, LHS, RHS, LHS.getBitWidth() + 1,
+                                  std::minus<APSInt>());
+    return true;
   case BO_And: Result = LHS & RHS; return true;
   case BO_Xor: Result = LHS ^ RHS; return true;
   case BO_Or:  Result = LHS | RHS; return true;
@@ -1748,13 +1716,11 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
       Info.Diag(E, diag::note_expr_divide_by_zero);
       return false;
     }
-    Result = (Opcode == BO_Rem ? LHS % RHS : LHS / RHS);
-    // Check for overflow case: INT_MIN / -1 or INT_MIN % -1. APSInt supports
-    // this operation and gives the two's complement result.
+    // Check for overflow case: INT_MIN / -1 or INT_MIN % -1.
     if (RHS.isNegative() && RHS.isAllOnesValue() &&
         LHS.isSigned() && LHS.isMinSignedValue())
-      return HandleOverflow(Info, E, -LHS.extend(LHS.getBitWidth() + 1),
-                            E->getType());
+      HandleOverflow(Info, E, -LHS.extend(LHS.getBitWidth() + 1), E->getType());
+    Result = (Opcode == BO_Rem ? LHS % RHS : LHS / RHS);
     return true;
   case BO_Shl: {
     if (Info.getLangOpts().OpenCL)
@@ -1842,10 +1808,8 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const Expr *E,
     break;
   }
 
-  if (LHS.isInfinity() || LHS.isNaN()) {
+  if (LHS.isInfinity() || LHS.isNaN())
     Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << LHS.isNaN();
-    return Info.noteUndefinedBehavior();
-  }
   return true;
 }
 
@@ -3044,7 +3008,7 @@ struct IncDecSubobjectHandler {
       if (!WasNegative && Value.isNegative() &&
           isOverflowingIntegerType(Info.Ctx, SubobjType)) {
         APSInt ActualValue(Value, /*IsUnsigned*/true);
-        return HandleOverflow(Info, E, ActualValue, SubobjType);
+        HandleOverflow(Info, E, ActualValue, SubobjType);
       }
     } else {
       --Value;
@@ -3054,7 +3018,7 @@ struct IncDecSubobjectHandler {
         unsigned BitWidth = Value.getBitWidth();
         APSInt ActualValue(Value.sext(BitWidth + 1), /*IsUnsigned*/false);
         ActualValue.setBit(BitWidth);
-        return HandleOverflow(Info, E, ActualValue, SubobjType);
+        HandleOverflow(Info, E, ActualValue, SubobjType);
       }
     }
     return true;
@@ -5135,7 +5099,7 @@ bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     // The offset must also have the correct alignment.
-    if (OffsetResult.Offset.alignTo(Align) != OffsetResult.Offset) {
+    if (OffsetResult.Offset.RoundUpToAlignment(Align) != OffsetResult.Offset) {
       Result.Designator.setInvalid();
       APSInt Offset(64, false);
       Offset = OffsetResult.Offset.getQuantity();
@@ -5655,7 +5619,7 @@ static bool EvaluateVector(const Expr* E, APValue& Result, EvalInfo &Info) {
   return VectorExprEvaluator(Info, Result).Visit(E);
 }
 
-bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
+bool VectorExprEvaluator::VisitCastExpr(const CastExpr* E) {
   const VectorType *VTy = E->getType()->castAs<VectorType>();
   unsigned NElts = VTy->getNumElements();
 
@@ -5668,13 +5632,13 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (SETy->isIntegerType()) {
       APSInt IntResult;
       if (!EvaluateInteger(SE, IntResult, Info))
-        return false;
-      Val = APValue(std::move(IntResult));
+         return false;
+      Val = APValue(IntResult);
     } else if (SETy->isRealFloatingType()) {
-      APFloat FloatResult(0.0);
-      if (!EvaluateFloat(SE, FloatResult, Info))
-        return false;
-      Val = APValue(std::move(FloatResult));
+       APFloat F(0.0);
+       if (!EvaluateFloat(SE, F, Info))
+         return false;
+       Val = APValue(F);
     } else {
       return Error(E);
     }
@@ -6275,8 +6239,8 @@ static bool EvaluateBuiltinConstantP(ASTContext &Ctx, const Expr *Arg) {
     APValue &V = Result.Val;
     if (V.getKind() == APValue::Int)
       return true;
-    if (V.getKind() == APValue::LValue)
-      return EvaluateBuiltinConstantPForLValue(V);
+
+    return EvaluateBuiltinConstantPForLValue(V);
   } else if (ArgType->isFloatingType() || ArgType->isAnyComplexType()) {
     return Arg->isEvaluatable(Ctx);
   } else if (ArgType->isPointerType() || Arg->isGLValue()) {
@@ -6413,28 +6377,8 @@ static bool refersToCompleteObject(const LValue &LVal) {
   return false;
 }
 
-/// Tries to evaluate the __builtin_object_size for @p E. If successful, returns
-/// true and stores the result in @p Size.
-///
-/// If @p WasError is non-null, this will report whether the failure to evaluate
-/// is to be treated as an Error in IntExprEvaluator.
-static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
-                                         EvalInfo &Info, uint64_t &Size,
-                                         bool *WasError = nullptr) {
-  if (WasError != nullptr)
-    *WasError = false;
-
-  auto Error = [&](const Expr *E) {
-    if (WasError != nullptr)
-      *WasError = true;
-    return false;
-  };
-
-  auto Success = [&](uint64_t S, const Expr *E) {
-    Size = S;
-    return true;
-  };
-
+bool IntExprEvaluator::TryEvaluateBuiltinObjectSize(const CallExpr *E,
+                                                    unsigned Type) {
   // Determine the denoted object.
   LValue Base;
   {
@@ -6443,15 +6387,8 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
     // ignore the side-effects.
     SpeculativeEvaluationRAII SpeculativeEval(Info);
     FoldOffsetRAII Fold(Info, Type & 1);
-
-    if (E->isGLValue()) {
-      // It's possible for us to be given GLValues if we're called via
-      // Expr::tryEvaluateObjectSize.
-      APValue RVal;
-      if (!EvaluateAsRValue(Info, E, RVal))
-        return false;
-      Base.setFrom(Info.Ctx, RVal);
-    } else if (!EvaluatePointer(ignorePointerCastsAndParens(E), Base, Info))
+    const Expr *Ptr = ignorePointerCastsAndParens(E->getArg(0));
+    if (!EvaluatePointer(Ptr, Base, Info))
       return false;
   }
 
@@ -6510,7 +6447,7 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
       End.Designator.Entries.size() == End.Designator.MostDerivedPathLength) {
     // We got a pointer to an array. Step to its end.
     AmountToAdd = End.Designator.MostDerivedArraySize -
-                  End.Designator.Entries.back().ArrayIndex;
+      End.Designator.Entries.back().ArrayIndex;
   } else if (End.Designator.isOnePastTheEnd()) {
     // We're already pointing at the end of the object.
     AmountToAdd = 0;
@@ -6547,18 +6484,7 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
   if (BaseOffset > EndOffset)
     return Success(0, E);
 
-  return Success((EndOffset - BaseOffset).getQuantity(), E);
-}
-
-bool IntExprEvaluator::TryEvaluateBuiltinObjectSize(const CallExpr *E,
-                                                    unsigned Type) {
-  uint64_t Size;
-  bool WasError;
-  if (::tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, Size, &WasError))
-    return Success(Size, E);
-  if (WasError)
-    return Error(E);
-  return false;
+  return Success(EndOffset - BaseOffset, E);
 }
 
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
@@ -6575,7 +6501,12 @@ bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (TryEvaluateBuiltinObjectSize(E, Type))
       return true;
 
-    if (E->getArg(0)->HasSideEffects(Info.Ctx))
+    // If evaluating the argument has side-effects, we can't determine the size
+    // of the object, and so we lower it to unknown now. CodeGen relies on us to
+    // handle all cases where the expression has side-effects.
+    // Likewise, if Type is 3, we must handle this because CodeGen cannot give a
+    // conservatively correct answer in that case.
+    if (E->getArg(0)->HasSideEffects(Info.Ctx) || Type == 3)
       return Success((Type & 2) ? 0 : -1, E);
 
     // Expression had no side effects, but we couldn't statically determine the
@@ -7293,7 +7224,7 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       LValue LHSValue, RHSValue;
 
       bool LHSOK = EvaluatePointer(E->getLHS(), LHSValue, Info);
-      if (!LHSOK && !Info.keepEvaluatingAfterFailure())
+      if (!LHSOK && Info.keepEvaluatingAfterFailure())
         return false;
 
       if (!EvaluatePointer(E->getRHS(), RHSValue, Info) || !LHSOK)
@@ -7305,20 +7236,21 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
         if (E->getOpcode() == BO_Sub) {
           // Handle &&A - &&B.
           if (!LHSValue.Offset.isZero() || !RHSValue.Offset.isZero())
-            return Error(E);
+            return false;
           const Expr *LHSExpr = LHSValue.Base.dyn_cast<const Expr*>();
           const Expr *RHSExpr = RHSValue.Base.dyn_cast<const Expr*>();
           if (!LHSExpr || !RHSExpr)
-            return Error(E);
+            return false;
           const AddrLabelExpr *LHSAddrExpr = dyn_cast<AddrLabelExpr>(LHSExpr);
           const AddrLabelExpr *RHSAddrExpr = dyn_cast<AddrLabelExpr>(RHSExpr);
           if (!LHSAddrExpr || !RHSAddrExpr)
-            return Error(E);
+            return false;
           // Make sure both labels come from the same function.
           if (LHSAddrExpr->getLabel()->getDeclContext() !=
               RHSAddrExpr->getLabel()->getDeclContext())
-            return Error(E);
-          return Success(APValue(LHSAddrExpr, RHSAddrExpr), E);
+            return false;
+          Result = APValue(LHSAddrExpr, RHSAddrExpr);
+          return true;
         }
         // Inequalities and subtractions between unrelated pointers have
         // unspecified or undefined behavior.
@@ -7409,9 +7341,8 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
         APSInt TrueResult = (LHS - RHS) / ElemSize;
         APSInt Result = TrueResult.trunc(Info.Ctx.getIntWidth(E->getType()));
 
-        if (Result.extend(65) != TrueResult &&
-            !HandleOverflow(Info, E, TrueResult, E->getType()))
-          return false;
+        if (Result.extend(65) != TrueResult)
+          HandleOverflow(Info, E, TrueResult, E->getType());
         return Success(Result, E);
       }
 
@@ -7617,9 +7548,9 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
     return Error(OOE);
   QualType CurrentType = OOE->getTypeSourceInfo()->getType();
   for (unsigned i = 0; i != n; ++i) {
-    OffsetOfNode ON = OOE->getComponent(i);
+    OffsetOfExpr::OffsetOfNode ON = OOE->getComponent(i);
     switch (ON.getKind()) {
-    case OffsetOfNode::Array: {
+    case OffsetOfExpr::OffsetOfNode::Array: {
       const Expr *Idx = OOE->getIndexExpr(ON.getArrayExprIndex());
       APSInt IdxResult;
       if (!EvaluateInteger(Idx, IdxResult, Info))
@@ -7633,7 +7564,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       break;
     }
 
-    case OffsetOfNode::Field: {
+    case OffsetOfExpr::OffsetOfNode::Field: {
       FieldDecl *MemberDecl = ON.getField();
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
@@ -7648,10 +7579,10 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       break;
     }
 
-    case OffsetOfNode::Identifier:
+    case OffsetOfExpr::OffsetOfNode::Identifier:
       llvm_unreachable("dependent __builtin_offsetof");
 
-    case OffsetOfNode::Base: {
+    case OffsetOfExpr::OffsetOfNode::Base: {
       CXXBaseSpecifier *BaseSpec = ON.getBase();
       if (BaseSpec->isVirtual())
         return Error(OOE);
@@ -7697,10 +7628,9 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!Result.isInt()) return Error(E);
     const APSInt &Value = Result.getInt();
-    if (Value.isSigned() && Value.isMinSignedValue() &&
-        !HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),
-                        E->getType()))
-      return false;
+    if (Value.isSigned() && Value.isMinSignedValue())
+      HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),
+                     E->getType());
     return Success(-Value, E);
   }
   case UO_Not: {
@@ -7781,16 +7711,12 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_PointerToBoolean:
   case CK_IntegralToBoolean:
   case CK_FloatingToBoolean:
-  case CK_BooleanToSignedIntegral:
   case CK_FloatingComplexToBoolean:
   case CK_IntegralComplexToBoolean: {
     bool BoolResult;
     if (!EvaluateAsBooleanCondition(SubExpr, BoolResult, Info))
       return false;
-    uint64_t IntResult = BoolResult;
-    if (BoolResult && E->getCastKind() == CK_BooleanToSignedIntegral)
-      IntResult = (uint64_t)-1;
-    return Success(IntResult, E);
+    return Success(BoolResult, E);
   }
 
   case CK_IntegralCast: {
@@ -8227,7 +8153,6 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_ToVoid:
   case CK_VectorSplat:
   case CK_IntegralCast:
-  case CK_BooleanToSignedIntegral:
   case CK_IntegralToBoolean:
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
@@ -8865,12 +8790,6 @@ bool Expr::EvaluateAsBooleanCondition(bool &Result,
          HandleConversionToBool(Scratch.Val, Result);
 }
 
-static bool hasUnacceptableSideEffect(Expr::EvalStatus &Result,
-                                      Expr::SideEffectsKind SEK) {
-  return (SEK < Expr::SE_AllowSideEffects && Result.HasSideEffects) ||
-         (SEK < Expr::SE_AllowUndefinedBehavior && Result.HasUndefinedBehavior);
-}
-
 bool Expr::EvaluateAsInt(APSInt &Result, const ASTContext &Ctx,
                          SideEffectsKind AllowSideEffects) const {
   if (!getType()->isIntegralOrEnumerationType())
@@ -8878,7 +8797,7 @@ bool Expr::EvaluateAsInt(APSInt &Result, const ASTContext &Ctx,
 
   EvalResult ExprResult;
   if (!EvaluateAsRValue(ExprResult, Ctx) || !ExprResult.Val.isInt() ||
-      hasUnacceptableSideEffect(ExprResult, AllowSideEffects))
+      (!AllowSideEffects && ExprResult.HasSideEffects))
     return false;
 
   Result = ExprResult.Val.getInt();
@@ -8910,9 +8829,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
-  EvalInfo InitInfo(Ctx, EStatus, VD->isConstexpr()
-                                      ? EvalInfo::EM_ConstantExpression
-                                      : EvalInfo::EM_ConstantFold);
+  EvalInfo InitInfo(Ctx, EStatus, EvalInfo::EM_ConstantFold);
   InitInfo.setEvaluatingDecl(VD, Value);
 
   LValue LVal;
@@ -8941,10 +8858,9 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 
 /// isEvaluatable - Call EvaluateAsRValue to see if this expression can be
 /// constant folded, but discard the result.
-bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
+bool Expr::isEvaluatable(const ASTContext &Ctx) const {
   EvalResult Result;
-  return EvaluateAsRValue(Result, Ctx) &&
-         !hasUnacceptableSideEffect(Result, SEK);
+  return EvaluateAsRValue(Result, Ctx) && !Result.HasSideEffects;
 }
 
 APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,
@@ -9058,7 +8974,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CXXTypeidExprClass:
   case Expr::CXXUuidofExprClass:
   case Expr::MSPropertyRefExprClass:
-  case Expr::MSPropertySubscriptExprClass:
   case Expr::CXXNullPtrLiteralExprClass:
   case Expr::UserDefinedLiteralClass:
   case Expr::CXXThisExprClass:
@@ -9445,11 +9360,7 @@ bool Expr::isIntegerConstantExpr(llvm::APSInt &Value, const ASTContext &Ctx,
 
   if (!isIntegerConstantExpr(Ctx, Loc))
     return false;
-  // The only possible side-effects here are due to UB discovered in the
-  // evaluation (for instance, INT_MAX + 1). In such a case, we are still
-  // required to treat the expression as an ICE, so we produce the folded
-  // value.
-  if (!EvaluateAsInt(Value, Ctx, SE_AllowSideEffects))
+  if (!EvaluateAsInt(Value, Ctx))
     llvm_unreachable("ICE cannot be evaluated!");
   return true;
 }
@@ -9570,14 +9481,4 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   APValue ResultScratch;
   Evaluate(ResultScratch, Info, E);
   return Diags.empty();
-}
-
-bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                                 unsigned Type) const {
-  if (!getType()->isPointerType())
-    return false;
-
-  Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
-  return ::tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
 }

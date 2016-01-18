@@ -63,7 +63,7 @@ template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
   }
 };
 
-#if __GNUC__ >= 4 || defined(_MSC_VER)
+#if __GNUC__ >= 4 || _MSC_VER
 template <typename T> struct TrailingZerosCounter<T, 4> {
   static std::size_t count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
@@ -71,7 +71,7 @@ template <typename T> struct TrailingZerosCounter<T, 4> {
 
 #if __has_builtin(__builtin_ctz) || LLVM_GNUC_PREREQ(4, 0, 0)
     return __builtin_ctz(Val);
-#elif defined(_MSC_VER)
+#elif _MSC_VER
     unsigned long Index;
     _BitScanForward(&Index, Val);
     return Index;
@@ -87,7 +87,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 
 #if __has_builtin(__builtin_ctzll) || LLVM_GNUC_PREREQ(4, 0, 0)
     return __builtin_ctzll(Val);
-#elif defined(_MSC_VER)
+#elif _MSC_VER
     unsigned long Index;
     _BitScanForward64(&Index, Val);
     return Index;
@@ -132,7 +132,7 @@ template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
   }
 };
 
-#if __GNUC__ >= 4 || defined(_MSC_VER)
+#if __GNUC__ >= 4 || _MSC_VER
 template <typename T> struct LeadingZerosCounter<T, 4> {
   static std::size_t count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
@@ -140,7 +140,7 @@ template <typename T> struct LeadingZerosCounter<T, 4> {
 
 #if __has_builtin(__builtin_clz) || LLVM_GNUC_PREREQ(4, 0, 0)
     return __builtin_clz(Val);
-#elif defined(_MSC_VER)
+#elif _MSC_VER
     unsigned long Index;
     _BitScanReverse(&Index, Val);
     return Index ^ 31;
@@ -156,7 +156,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 
 #if __has_builtin(__builtin_clzll) || LLVM_GNUC_PREREQ(4, 0, 0)
     return __builtin_clzll(Val);
-#elif defined(_MSC_VER)
+#elif _MSC_VER
     unsigned long Index;
     _BitScanReverse64(&Index, Val);
     return Index ^ 63;
@@ -606,31 +606,27 @@ inline uint64_t PowerOf2Floor(uint64_t A) {
 ///
 /// Examples:
 /// \code
-///   alignTo(5, 8) = 8
-///   alignTo(17, 8) = 24
-///   alignTo(~0LL, 8) = 0
-///   alignTo(321, 255) = 510
+///   RoundUpToAlignment(5, 8) = 8
+///   RoundUpToAlignment(17, 8) = 24
+///   RoundUpToAlignment(~0LL, 8) = 0
+///   RoundUpToAlignment(321, 255) = 510
 ///
-///   alignTo(5, 8, 7) = 7
-///   alignTo(17, 8, 1) = 17
-///   alignTo(~0LL, 8, 3) = 3
-///   alignTo(321, 255, 42) = 552
+///   RoundUpToAlignment(5, 8, 7) = 7
+///   RoundUpToAlignment(17, 8, 1) = 17
+///   RoundUpToAlignment(~0LL, 8, 3) = 3
+///   RoundUpToAlignment(321, 255, 42) = 552
 /// \endcode
-inline uint64_t alignTo(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {
-  Skew %= Align;
-  return (Value + Align - 1 - Skew) / Align * Align + Skew;
-}
-
 inline uint64_t RoundUpToAlignment(uint64_t Value, uint64_t Align,
                                    uint64_t Skew = 0) {
-  return alignTo(Value, Align, Skew);
+  Skew %= Align;
+  return (Value + Align - 1 - Skew) / Align * Align + Skew;
 }
 
 /// Returns the offset to the next integer (mod 2**64) that is greater than
 /// or equal to \p Value and is a multiple of \p Align. \p Align must be
 /// non-zero.
 inline uint64_t OffsetToAlignment(uint64_t Value, uint64_t Align) {
-  return alignTo(Value, Align) - Value;
+  return RoundUpToAlignment(Value, Align) - Value;
 }
 
 /// SignExtend32 - Sign extend B-bit number x to 32-bit int.
@@ -655,89 +651,6 @@ template <unsigned B> inline int64_t SignExtend64(uint64_t x) {
 /// Requires 0 < B <= 64.
 inline int64_t SignExtend64(uint64_t X, unsigned B) {
   return int64_t(X << (64 - B)) >> (64 - B);
-}
-
-/// \brief Add two unsigned integers, X and Y, of type T.
-/// Clamp the result to the maximum representable value of T on overflow.
-/// ResultOverflowed indicates if the result is larger than the maximum
-/// representable value of type T.
-template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value, T>::type
-SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
-  bool Dummy;
-  bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
-  // Hacker's Delight, p. 29
-  T Z = X + Y;
-  Overflowed = (Z < X || Z < Y);
-  if (Overflowed)
-    return std::numeric_limits<T>::max();
-  else
-    return Z;
-}
-
-/// \brief Multiply two unsigned integers, X and Y, of type T.
-/// Clamp the result to the maximum representable value of T on overflow.
-/// ResultOverflowed indicates if the result is larger than the maximum
-/// representable value of type T.
-template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value, T>::type
-SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
-  bool Dummy;
-  bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
-
-  // Hacker's Delight, p. 30 has a different algorithm, but we don't use that
-  // because it fails for uint16_t (where multiplication can have undefined
-  // behavior due to promotion to int), and requires a division in addition
-  // to the multiplication.
-
-  Overflowed = false;
-
-  // Log2(Z) would be either Log2Z or Log2Z + 1.
-  // Special case: if X or Y is 0, Log2_64 gives -1, and Log2Z
-  // will necessarily be less than Log2Max as desired.
-  int Log2Z = Log2_64(X) + Log2_64(Y);
-  const T Max = std::numeric_limits<T>::max();
-  int Log2Max = Log2_64(Max);
-  if (Log2Z < Log2Max) {
-    return X * Y;
-  }
-  if (Log2Z > Log2Max) {
-    Overflowed = true;
-    return Max;
-  }
-
-  // We're going to use the top bit, and maybe overflow one
-  // bit past it. Multiply all but the bottom bit then add
-  // that on at the end.
-  T Z = (X >> 1) * Y;
-  if (Z & ~(Max >> 1)) {
-    Overflowed = true;
-    return Max;
-  }
-  Z <<= 1;
-  if (X & 1)
-    return SaturatingAdd(Z, Y, ResultOverflowed);
-
-  return Z;
-}
-
-/// \brief Multiply two unsigned integers, X and Y, and add the unsigned
-/// integer, A to the product. Clamp the result to the maximum representable
-/// value of T on overflow. ResultOverflowed indicates if the result is larger
-/// than the maximum representable value of type T.
-/// Note that this is purely a convenience function as there is no distinction
-/// where overflow occurred in a 'fused' multiply-add for unsigned numbers.
-template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value, T>::type
-SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
-  bool Dummy;
-  bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
-
-  T Product = SaturatingMultiply(X, Y, &Overflowed);
-  if (Overflowed)
-    return Product;
-
-  return SaturatingAdd(A, Product, &Overflowed);
 }
 
 extern const float huge_valf;

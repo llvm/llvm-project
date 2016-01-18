@@ -540,23 +540,19 @@ def VCVTSD  : VFPAI<(outs SPR:$Sd), (ins DPR:$Dm), VFPUnaryFrm,
 // FIXME: Verify encoding after integrated assembler is working.
 def VCVTBHS: ASuI<0b11101, 0b11, 0b0010, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtb", ".f32.f16\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
-                 Requires<[HasFP16]>;
+                 [/* For disassembly only; pattern left blank */]>;
 
 def VCVTBSH: ASuI<0b11101, 0b11, 0b0011, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtb", ".f16.f32\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
-                 Requires<[HasFP16]>;
+                 [/* For disassembly only; pattern left blank */]>;
 
 def VCVTTHS: ASuI<0b11101, 0b11, 0b0010, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtt", ".f32.f16\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
-                 Requires<[HasFP16]>;
+                 [/* For disassembly only; pattern left blank */]>;
 
 def VCVTTSH: ASuI<0b11101, 0b11, 0b0011, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtt", ".f16.f32\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
-                 Requires<[HasFP16]>;
+                 [/* For disassembly only; pattern left blank */]>;
 
 def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
                    (outs DPR:$Dd), (ins SPR:$Sm),
@@ -930,10 +926,10 @@ def VMOVDRR : AVConv5I<0b11000100, 0b1011,
 // and could enable the conversion to float to be removed completely.
 def : Pat<(fabs (arm_fmdrr GPR:$Rl, GPR:$Rh)),
           (VMOVDRR GPR:$Rl, (BFC GPR:$Rh, (i32 0x7FFFFFFF)))>,
-      Requires<[IsARM, HasV6T2]>;
+      Requires<[IsARM]>;
 def : Pat<(fabs (arm_fmdrr GPR:$Rl, GPR:$Rh)),
           (VMOVDRR GPR:$Rl, (t2BFC GPR:$Rh, (i32 0x7FFFFFFF)))>,
-      Requires<[IsThumb2, HasV6T2]>;
+      Requires<[IsThumb2]>;
 def : Pat<(fneg (arm_fmdrr GPR:$Rl, GPR:$Rh)),
           (VMOVDRR GPR:$Rl, (EORri GPR:$Rh, (i32 0x80000000)))>,
       Requires<[IsARM]>;

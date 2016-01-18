@@ -10,7 +10,6 @@
 #ifndef LLVM_TOOLS_LLVM_READOBJ_STREAMWRITER_H
 #define LLVM_TOOLS_LLVM_READOBJ_STREAMWRITER_H
 
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -20,6 +19,7 @@
 #include <algorithm>
 
 using namespace llvm;
+using namespace llvm::support;
 
 namespace llvm {
 
@@ -180,10 +180,6 @@ public:
     startLine() << Label << ": " << int(Value) << "\n";
   }
 
-  void printNumber(StringRef Label, APSInt Value) {
-    startLine() << Label << ": " << Value << "\n";
-  }
-
   void printBoolean(StringRef Label, bool Value) {
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
@@ -222,11 +218,6 @@ public:
   template<typename T>
   void printHex(StringRef Label, StringRef Str, T Value) {
     startLine() << Label << ": " << Str << " (" << hex(Value) << ")\n";
-  }
-
-  template <typename T>
-  void printSymbolOffset(StringRef Label, StringRef Symbol, T Value) {
-    startLine() << Label << ": " << Symbol << '+' << hex(Value) << '\n';
   }
 
   void printString(StringRef Label, StringRef Value) {
@@ -295,13 +286,6 @@ private:
   raw_ostream &OS;
   int IndentLevel;
 };
-
-template <>
-inline void
-StreamWriter::printHex<support::ulittle16_t>(StringRef Label,
-                                             support::ulittle16_t Value) {
-  startLine() << Label << ": " << hex(Value) << "\n";
-}
 
 struct DictScope {
   DictScope(StreamWriter& W, StringRef N) : W(W) {

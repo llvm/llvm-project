@@ -24,9 +24,8 @@ using namespace llvm::opt;
 
 Compilation::Compilation(const Driver &D, const ToolChain &_DefaultToolChain,
                          InputArgList *_Args, DerivedArgList *_TranslatedArgs)
-    : TheDriver(D), DefaultToolChain(_DefaultToolChain),
-      CudaHostToolChain(&DefaultToolChain), CudaDeviceToolChain(nullptr),
-      Args(_Args), TranslatedArgs(_TranslatedArgs), Redirects(nullptr),
+    : TheDriver(D), DefaultToolChain(_DefaultToolChain), Args(_Args),
+      TranslatedArgs(_TranslatedArgs), Redirects(nullptr),
       ForDiagnostics(false) {}
 
 Compilation::~Compilation() {
@@ -39,6 +38,11 @@ Compilation::~Compilation() {
          ie = TCArgs.end(); it != ie; ++it)
     if (it->second != TranslatedArgs)
       delete it->second;
+
+  // Free the actions, if built.
+  for (ActionList::iterator it = Actions.begin(), ie = Actions.end();
+       it != ie; ++it)
+    delete *it;
 
   // Free redirections of stdout/stderr.
   if (Redirects) {
@@ -203,8 +207,7 @@ void Compilation::initCompilationForDiagnostics() {
   ForDiagnostics = true;
 
   // Free actions and jobs.
-  Actions.clear();
-  AllActions.clear();
+  DeleteContainerPointers(Actions);
   Jobs.clear();
 
   // Clear temporary/results file lists.

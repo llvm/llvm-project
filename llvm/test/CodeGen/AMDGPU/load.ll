@@ -1,8 +1,7 @@
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=R600 --check-prefix=FUNC %s
 ; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck --check-prefix=R600 --check-prefix=FUNC %s
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck --check-prefix=SI-NOHSA --check-prefix=FUNC %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck --check-prefix=FUNC --check-prefix=CI-HSA --check-prefix=SI %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI-NOHSA --check-prefix=FUNC %s
+; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
 
 ;===------------------------------------------------------------------------===;
 ; GLOBAL ADDRESS SPACE
@@ -12,8 +11,7 @@
 ; FUNC-LABEL: {{^}}load_i8:
 ; R600: VTX_READ_8 T{{[0-9]+\.X, T[0-9]+\.X}}
 
-; SI-NOHSA: buffer_load_ubyte v{{[0-9]+}},
-; CI-HSA: flat_load_ubyte
+; SI: buffer_load_ubyte v{{[0-9]+}},
 define void @load_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
   %1 = load i8, i8 addrspace(1)* %in
   %2 = zext i8 %1 to i32
@@ -25,8 +23,7 @@ define void @load_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
 ; R600: VTX_READ_8 [[DST:T[0-9]\.[XYZW]]], [[DST]]
 ; R600: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, [[DST]], 0.0, literal
 ; R600: 8
-; SI-NOHSA: buffer_load_sbyte
-; CI-HSA: flat_load_sbyte
+; SI: buffer_load_sbyte
 define void @load_i8_sext(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
 entry:
   %0 = load i8, i8 addrspace(1)* %in
@@ -38,10 +35,8 @@ entry:
 ; FUNC-LABEL: {{^}}load_v2i8:
 ; R600: VTX_READ_8
 ; R600: VTX_READ_8
-; SI-NOHSA: buffer_load_ubyte
-; SI-NOHSA: buffer_load_ubyte
-; CI-HSA: flat_load_ubyte
-; CI-HSA: flat_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
 define void @load_v2i8(<2 x i32> addrspace(1)* %out, <2 x i8> addrspace(1)* %in) {
 entry:
   %0 = load <2 x i8>, <2 x i8> addrspace(1)* %in
@@ -58,10 +53,8 @@ entry:
 ; R600-DAG: 8
 ; R600-DAG: 8
 
-; SI-NOHSA: buffer_load_sbyte
-; SI-NOHSA: buffer_load_sbyte
-; CI-HSA: flat_load_sbyte
-; CI-HSA: flat_load_sbyte
+; SI: buffer_load_sbyte
+; SI: buffer_load_sbyte
 define void @load_v2i8_sext(<2 x i32> addrspace(1)* %out, <2 x i8> addrspace(1)* %in) {
 entry:
   %0 = load <2 x i8>, <2 x i8> addrspace(1)* %in
@@ -75,14 +68,10 @@ entry:
 ; R600: VTX_READ_8
 ; R600: VTX_READ_8
 ; R600: VTX_READ_8
-; SI-NOHSA: buffer_load_ubyte
-; SI-NOHSA: buffer_load_ubyte
-; SI-NOHSA: buffer_load_ubyte
-; SI-NOHSA: buffer_load_ubyte
-; CI-HSA: flat_load_ubyte
-; CI-HSA: flat_load_ubyte
-; CI-HSA: flat_load_ubyte
-; CI-HSA: flat_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
 define void @load_v4i8(<4 x i32> addrspace(1)* %out, <4 x i8> addrspace(1)* %in) {
 entry:
   %0 = load <4 x i8>, <4 x i8> addrspace(1)* %in
@@ -104,14 +93,10 @@ entry:
 ; R600-DAG: 8
 ; R600-DAG: 8
 ; R600-DAG: 8
-; SI-NOHSA: buffer_load_sbyte
-; SI-NOHSA: buffer_load_sbyte
-; SI-NOHSA: buffer_load_sbyte
-; SI-NOHSA: buffer_load_sbyte
-; CI-HSA: flat_load_sbyte
-; CI-HSA: flat_load_sbyte
-; CI-HSA: flat_load_sbyte
-; CI-HSA: flat_load_sbyte
+; SI: buffer_load_sbyte
+; SI: buffer_load_sbyte
+; SI: buffer_load_sbyte
+; SI: buffer_load_sbyte
 define void @load_v4i8_sext(<4 x i32> addrspace(1)* %out, <4 x i8> addrspace(1)* %in) {
 entry:
   %0 = load <4 x i8>, <4 x i8> addrspace(1)* %in
@@ -123,8 +108,7 @@ entry:
 ; Load an i16 value from the global address space.
 ; FUNC-LABEL: {{^}}load_i16:
 ; R600: VTX_READ_16 T{{[0-9]+\.X, T[0-9]+\.X}}
-; SI-NOHSA: buffer_load_ushort
-; CI-HSA: flat_load_ushort
+; SI: buffer_load_ushort
 define void @load_i16(i32 addrspace(1)* %out, i16 addrspace(1)* %in) {
 entry:
   %0 = load i16	, i16	 addrspace(1)* %in
@@ -137,8 +121,7 @@ entry:
 ; R600: VTX_READ_16 [[DST:T[0-9]\.[XYZW]]], [[DST]]
 ; R600: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, [[DST]], 0.0, literal
 ; R600: 16
-; SI-NOHSA: buffer_load_sshort
-; CI-HSA: flat_load_sshort
+; SI: buffer_load_sshort
 define void @load_i16_sext(i32 addrspace(1)* %out, i16 addrspace(1)* %in) {
 entry:
   %0 = load i16, i16 addrspace(1)* %in
@@ -150,10 +133,8 @@ entry:
 ; FUNC-LABEL: {{^}}load_v2i16:
 ; R600: VTX_READ_16
 ; R600: VTX_READ_16
-; SI-NOHSA: buffer_load_ushort
-; SI-NOHSA: buffer_load_ushort
-; CI-HSA: flat_load_ushort
-; CI-HSA: flat_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
 define void @load_v2i16(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
 entry:
   %0 = load <2 x i16>, <2 x i16> addrspace(1)* %in
@@ -169,10 +150,8 @@ entry:
 ; R600-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, [[DST_Y]], 0.0, literal
 ; R600-DAG: 16
 ; R600-DAG: 16
-; SI-NOHSA: buffer_load_sshort
-; SI-NOHSA: buffer_load_sshort
-; CI-HSA: flat_load_sshort
-; CI-HSA: flat_load_sshort
+; SI: buffer_load_sshort
+; SI: buffer_load_sshort
 define void @load_v2i16_sext(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
 entry:
   %0 = load <2 x i16>, <2 x i16> addrspace(1)* %in
@@ -186,14 +165,10 @@ entry:
 ; R600: VTX_READ_16
 ; R600: VTX_READ_16
 ; R600: VTX_READ_16
-; SI-NOHSA: buffer_load_ushort
-; SI-NOHSA: buffer_load_ushort
-; SI-NOHSA: buffer_load_ushort
-; SI-NOHSA: buffer_load_ushort
-; CI-HSA: flat_load_ushort
-; CI-HSA: flat_load_ushort
-; CI-HSA: flat_load_ushort
-; CI-HSA: flat_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
 define void @load_v4i16(<4 x i32> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
 entry:
   %0 = load <4 x i16>, <4 x i16> addrspace(1)* %in
@@ -215,14 +190,10 @@ entry:
 ; R600-DAG: 16
 ; R600-DAG: 16
 ; R600-DAG: 16
-; SI-NOHSA: buffer_load_sshort
-; SI-NOHSA: buffer_load_sshort
-; SI-NOHSA: buffer_load_sshort
-; SI-NOHSA: buffer_load_sshort
-; CI-HSA: flat_load_sshort
-; CI-HSA: flat_load_sshort
-; CI-HSA: flat_load_sshort
-; CI-HSA: flat_load_sshort
+; SI: buffer_load_sshort
+; SI: buffer_load_sshort
+; SI: buffer_load_sshort
+; SI: buffer_load_sshort
 define void @load_v4i16_sext(<4 x i32> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
 entry:
   %0 = load <4 x i16>, <4 x i16> addrspace(1)* %in
@@ -235,8 +206,7 @@ entry:
 ; FUNC-LABEL: {{^}}load_i32:
 ; R600: VTX_READ_32 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0
 
-; SI-NOHSA: buffer_load_dword v{{[0-9]+}}
-; CI-HSA: flat_load_dword
+; SI: buffer_load_dword v{{[0-9]+}}
 define void @load_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
   %0 = load i32, i32 addrspace(1)* %in
@@ -248,8 +218,7 @@ entry:
 ; FUNC-LABEL: {{^}}load_f32:
 ; R600: VTX_READ_32 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0
 
-; SI-NOHSA: buffer_load_dword v{{[0-9]+}}
-; CI-HSA: flat_load_dword
+; SI: buffer_load_dword v{{[0-9]+}}
 define void @load_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
 entry:
   %0 = load float, float addrspace(1)* %in
@@ -261,8 +230,7 @@ entry:
 ; FUNC-LABEL: {{^}}load_v2f32:
 ; R600: MEM_RAT
 ; R600: VTX_READ_64
-; SI-NOHSA: buffer_load_dwordx2
-; CI-HSA: flat_load_dwordx2
+; SI: buffer_load_dwordx2
 define void @load_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in) {
 entry:
   %0 = load <2 x float>, <2 x float> addrspace(1)* %in
@@ -272,8 +240,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}load_i64:
 ; R600: VTX_READ_64
-; SI-NOHSA: buffer_load_dwordx2
-; CI-HSA: flat_load_dwordx2
+; SI: buffer_load_dwordx2
 define void @load_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 entry:
   %0 = load i64, i64 addrspace(1)* %in
@@ -286,8 +253,7 @@ entry:
 ; R600: MEM_RAT
 ; R600: ASHR {{[* ]*}}T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}},  literal.x
 ; R600: 31
-; SI-NOHSA: buffer_load_dword
-; CI-HSA: flat_load_dword
+; SI: buffer_load_dword
 
 define void @load_i64_sext(i64 addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
@@ -311,11 +277,15 @@ entry:
 ; FUNC-LABEL: {{^}}load_v8i32:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-
-; SI-NOHSA: buffer_load_dwordx4
-; SI-NOHSA: buffer_load_dwordx4
-; CI-HSA: flat_load_dwordx4
-; CI-HSA: flat_load_dwordx4
+; XXX: We should be using DWORDX4 instructions on SI.
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
 define void @load_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %in) {
 entry:
   %0 = load <8 x i32>, <8 x i32> addrspace(1)* %in
@@ -328,15 +298,23 @@ entry:
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
 ; R600: VTX_READ_128
-
-; SI-NOHSA: buffer_load_dwordx4
-; SI-NOHSA: buffer_load_dwordx4
-; SI-NOHSA: buffer_load_dwordx4
-; SI-NOHSA: buffer_load_dwordx4
-; CI-HSA: flat_load_dwordx4
-; CI-HSA: flat_load_dwordx4
-; CI-HSA: flat_load_dwordx4
-; CI-HSA: flat_load_dwordx4
+; XXX: We should be using DWORDX4 instructions on SI.
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
 define void @load_v16i32(<16 x i32> addrspace(1)* %out, <16 x i32> addrspace(1)* %in) {
 entry:
   %0 = load <16 x i32>, <16 x i32> addrspace(1)* %in
@@ -353,8 +331,7 @@ entry:
 ; R600: VTX_READ_8 [[DST:T[0-9]\.[XYZW]]], [[DST]]
 ; R600: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, [[DST]], 0.0, literal
 ; R600: 8
-; SI-NOHSA: buffer_load_sbyte v{{[0-9]+}},
-; CI-HSA: flat_load_sbyte v{{[0-9]+}},
+; SI: buffer_load_sbyte v{{[0-9]+}},
 define void @load_const_i8_sext(i32 addrspace(1)* %out, i8 addrspace(2)* %in) {
 entry:
   %0 = load i8, i8 addrspace(2)* %in
@@ -366,8 +343,7 @@ entry:
 ; Load an aligned i8 value
 ; FUNC-LABEL: {{^}}load_const_i8_aligned:
 ; R600: VTX_READ_8 T{{[0-9]+\.X, T[0-9]+\.X}}
-; SI-NOHSA: buffer_load_ubyte v{{[0-9]+}},
-; CI-HSA: flat_load_ubyte v{{[0-9]+}},
+; SI: buffer_load_ubyte v{{[0-9]+}},
 define void @load_const_i8_aligned(i32 addrspace(1)* %out, i8 addrspace(2)* %in) {
 entry:
   %0 = load i8, i8 addrspace(2)* %in
@@ -379,8 +355,7 @@ entry:
 ; Load an un-aligned i8 value
 ; FUNC-LABEL: {{^}}load_const_i8_unaligned:
 ; R600: VTX_READ_8 T{{[0-9]+\.X, T[0-9]+\.X}}
-; SI-NOHSA: buffer_load_ubyte v{{[0-9]+}},
-; CI-HSA: flat_load_ubyte v{{[0-9]+}},
+; SI: buffer_load_ubyte v{{[0-9]+}},
 define void @load_const_i8_unaligned(i32 addrspace(1)* %out, i8 addrspace(2)* %in) {
 entry:
   %0 = getelementptr i8, i8 addrspace(2)* %in, i32 1
@@ -395,8 +370,7 @@ entry:
 ; R600: VTX_READ_16 [[DST:T[0-9]\.[XYZW]]], [[DST]]
 ; R600: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, [[DST]], 0.0, literal
 ; R600: 16
-; SI-NOHSA: buffer_load_sshort
-; CI-HSA: flat_load_sshort
+; SI: buffer_load_sshort
 define void @load_const_i16_sext(i32 addrspace(1)* %out, i16 addrspace(2)* %in) {
 entry:
   %0 = load i16, i16 addrspace(2)* %in
@@ -408,8 +382,7 @@ entry:
 ; Load an aligned i16 value
 ; FUNC-LABEL: {{^}}load_const_i16_aligned:
 ; R600: VTX_READ_16 T{{[0-9]+\.X, T[0-9]+\.X}}
-; SI-NOHSA: buffer_load_ushort
-; CI-HSA: flat_load_ushort
+; SI: buffer_load_ushort
 define void @load_const_i16_aligned(i32 addrspace(1)* %out, i16 addrspace(2)* %in) {
 entry:
   %0 = load i16, i16 addrspace(2)* %in
@@ -421,8 +394,7 @@ entry:
 ; Load an un-aligned i16 value
 ; FUNC-LABEL: {{^}}load_const_i16_unaligned:
 ; R600: VTX_READ_16 T{{[0-9]+\.X, T[0-9]+\.X}}
-; SI-NOHSA: buffer_load_ushort
-; CI-HSA: flat_load_ushort
+; SI: buffer_load_ushort
 define void @load_const_i16_unaligned(i32 addrspace(1)* %out, i16 addrspace(2)* %in) {
 entry:
   %0 = getelementptr i16, i16 addrspace(2)* %in, i32 1

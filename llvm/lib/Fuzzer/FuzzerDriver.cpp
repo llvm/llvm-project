@@ -23,10 +23,6 @@
 #include <algorithm>
 #include <iterator>
 
-// This function should be present in the libFuzzer so that the client
-// binary can test for its existence.
-extern "C" __attribute__((used)) void __libfuzzer_is_present() {}
-
 namespace fuzzer {
 
 // Program arguments.
@@ -36,30 +32,23 @@ struct FlagDescription {
   int   Default;
   int   *IntFlag;
   const char **StrFlag;
-  unsigned int *UIntFlag;
 };
 
 struct {
 #define FUZZER_FLAG_INT(Name, Default, Description) int Name;
-#define FUZZER_FLAG_UNSIGNED(Name, Default, Description) unsigned int Name;
 #define FUZZER_FLAG_STRING(Name, Description) const char *Name;
 #include "FuzzerFlags.def"
 #undef FUZZER_FLAG_INT
-#undef FUZZER_FLAG_UNSIGNED
 #undef FUZZER_FLAG_STRING
 } Flags;
 
 static const FlagDescription FlagDescriptions [] {
 #define FUZZER_FLAG_INT(Name, Default, Description)                            \
-  {#Name, Description, Default, &Flags.Name, nullptr, nullptr},
-#define FUZZER_FLAG_UNSIGNED(Name, Default, Description)                       \
-  {#Name,   Description, static_cast<int>(Default),                            \
-   nullptr, nullptr, &Flags.Name},
+  { #Name, Description, Default, &Flags.Name, nullptr},
 #define FUZZER_FLAG_STRING(Name, Description)                                  \
-  {#Name, Description, 0, nullptr, &Flags.Name, nullptr},
+  { #Name, Description, 0, nullptr, &Flags.Name },
 #include "FuzzerFlags.def"
 #undef FUZZER_FLAG_INT
-#undef FUZZER_FLAG_UNSIGNED
 #undef FUZZER_FLAG_STRING
 };
 
@@ -97,18 +86,6 @@ static const char *FlagValue(const char *Param, const char *Name) {
   return nullptr;
 }
 
-// Avoid calling stol as it triggers a bug in clang/glibc build.
-static long MyStol(const char *Str) {
-  long Res = 0;
-  for (size_t i = 0; Str[i]; i++) {
-    char Ch = Str[i];
-    if (Ch < '0' || Ch > '9')
-      return Res;
-    Res = Res * 10 + (Ch - '0');
-  }
-  return Res;
-}
-
 static bool ParseOneFlag(const char *Param) {
   if (Param[0] != '-') return false;
   if (Param[1] == '-') {
@@ -124,16 +101,10 @@ static bool ParseOneFlag(const char *Param) {
     const char *Str = FlagValue(Param, Name);
     if (Str)  {
       if (FlagDescriptions[F].IntFlag) {
-        int Val = MyStol(Str);
+        int Val = std::stol(Str);
         *FlagDescriptions[F].IntFlag = Val;
         if (Flags.verbosity >= 2)
           Printf("Flag: %s %d\n", Name, Val);;
-        return true;
-      } else if (FlagDescriptions[F].UIntFlag) {
-        unsigned int Val = std::stoul(Str);
-        *FlagDescriptions[F].UIntFlag = Val;
-        if (Flags.verbosity >= 2)
-          Printf("Flag: %s %u\n", Name, Val);
         return true;
       } else if (FlagDescriptions[F].StrFlag) {
         *FlagDescriptions[F].StrFlag = Str;
@@ -152,9 +123,6 @@ static void ParseFlags(const std::vector<std::string> &Args) {
   for (size_t F = 0; F < kNumFlags; F++) {
     if (FlagDescriptions[F].IntFlag)
       *FlagDescriptions[F].IntFlag = FlagDescriptions[F].Default;
-    if (FlagDescriptions[F].UIntFlag)
-      *FlagDescriptions[F].UIntFlag =
-          static_cast<unsigned int>(FlagDescriptions[F].Default);
     if (FlagDescriptions[F].StrFlag)
       *FlagDescriptions[F].StrFlag = nullptr;
   }
@@ -184,7 +152,7 @@ static void WorkerThread(const std::string &Cmd, std::atomic<int> *Counter,
     std::string ToRun = Cmd + " > " + Log + " 2>&1\n";
     if (Flags.verbosity)
       Printf("%s", ToRun.c_str());
-    int ExitCode = ExecuteCommand(ToRun.c_str());
+    int ExitCode = system(ToRun.c_str());
     if (ExitCode != 0)
       *HasErrors = true;
     std::lock_guard<std::mutex> Lock(Mu);
@@ -270,13 +238,13 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   Options.UseCounters = Flags.use_counters;
   Options.UseIndirCalls = Flags.use_indir_calls;
   Options.UseTraces = Flags.use_traces;
-  Options.UseMemcmp = Flags.use_memcmp;
   Options.ShuffleAtStartUp = Flags.shuffle;
   Options.PreferSmallDuringInitialShuffle =
       Flags.prefer_small_during_initial_shuffle;
   Options.Reload = Flags.reload;
   Options.OnlyASCII = Flags.only_ascii;
-  Options.OutputCSV = Flags.output_csv;
+  Options.TBMDepth = Flags.tbm_depth;
+  Options.TBMWidth = Flags.tbm_width;
   if (Flags.runs >= 0)
     Options.MaxNumberOfRuns = Flags.runs;
   if (!Inputs->empty())
@@ -287,36 +255,21 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   Options.ReportSlowUnits = Flags.report_slow_units;
   if (Flags.artifact_prefix)
     Options.ArtifactPrefix = Flags.artifact_prefix;
-  if (Flags.exact_artifact_path)
-    Options.ExactArtifactPath = Flags.exact_artifact_path;
-  std::vector<Unit> Dictionary;
   if (Flags.dict)
-    if (!ParseDictionaryFile(FileToString(Flags.dict), &Dictionary))
+    if (!ParseDictionaryFile(FileToString(Flags.dict), &Options.Dictionary))
       return 1;
-  if (Flags.verbosity > 0 && !Dictionary.empty())
-    Printf("Dictionary: %zd entries\n", Dictionary.size());
+  if (Flags.verbosity > 0 && !Options.Dictionary.empty())
+    Printf("Dictionary: %zd entries\n", Options.Dictionary.size());
   Options.SaveArtifacts = !Flags.test_single_input;
-  Options.PrintNewCovPcs = Flags.print_new_cov_pcs;
 
   Fuzzer F(USF, Options);
-
-  for (auto &U: Dictionary)
-    if (U.size() <= Word::GetMaxSize())
-      USF.GetMD().AddWordToManualDictionary(Word(U.data(), U.size()));
 
   // Timer
   if (Flags.timeout > 0)
     SetTimer(Flags.timeout / 2 + 1);
 
-  if (Flags.test_single_input) {
-    RunOneTest(&F, Flags.test_single_input);
-    exit(0);
-  }
-
-  if (Flags.save_minimized_corpus) {
-    Printf("The flag -save_minimized_corpus is deprecated; use -merge=1\n");
-    exit(1);
-  }
+  if (Flags.test_single_input)
+    return RunOneTest(&F, Flags.test_single_input);
 
   if (Flags.merge) {
     F.Merge(*Inputs);
@@ -339,11 +292,9 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   if (F.CorpusSize() == 0)
     F.AddToCorpus(Unit());  // Can't fuzz empty corpus, so add an empty input.
   F.ShuffleAndMinimize();
-  if (Flags.drill)
-    F.Drill();
-  else
-    F.Loop();
-
+  if (Flags.save_minimized_corpus)
+    F.SaveCorpus();
+  F.Loop();
   if (Flags.verbosity)
     Printf("Done %d runs in %zd second(s)\n", F.getTotalNumberOfRuns(),
            F.secondsSinceProcessStartUp());

@@ -1164,7 +1164,7 @@ int AMDGPUCFGStructurizer::loopcontPatternMatch(MachineLoop *LoopRep,
 
   for (SmallVectorImpl<MachineBasicBlock *>::iterator It = ContMBB.begin(),
       E = ContMBB.end(); It != E; ++It) {
-    (*It)->removeSuccessor(LoopHeader, true);
+    (*It)->removeSuccessor(LoopHeader);
   }
 
   numLoopcontPatternMatch += NumCont;
@@ -1487,7 +1487,7 @@ void AMDGPUCFGStructurizer::mergeSerialBlock(MachineBasicBlock *DstMBB,
   );
   DstMBB->splice(DstMBB->end(), SrcMBB, SrcMBB->begin(), SrcMBB->end());
 
-  DstMBB->removeSuccessor(SrcMBB, true);
+  DstMBB->removeSuccessor(SrcMBB);
   cloneSuccessorList(DstMBB, SrcMBB);
 
   removeSuccessor(SrcMBB);
@@ -1537,9 +1537,9 @@ void AMDGPUCFGStructurizer::mergeIfthenelseBlock(MachineInstr *BranchMI,
 
   if (TrueMBB) {
     MBB->splice(I, TrueMBB, TrueMBB->begin(), TrueMBB->end());
-    MBB->removeSuccessor(TrueMBB, true);
+    MBB->removeSuccessor(TrueMBB);
     if (LandMBB && TrueMBB->succ_size()!=0)
-      TrueMBB->removeSuccessor(LandMBB, true);
+      TrueMBB->removeSuccessor(LandMBB);
     retireBlock(TrueMBB);
     MLI->removeBlock(TrueMBB);
   }
@@ -1548,9 +1548,9 @@ void AMDGPUCFGStructurizer::mergeIfthenelseBlock(MachineInstr *BranchMI,
     insertInstrBefore(I, AMDGPU::ELSE);
     MBB->splice(I, FalseMBB, FalseMBB->begin(),
                    FalseMBB->end());
-    MBB->removeSuccessor(FalseMBB, true);
+    MBB->removeSuccessor(FalseMBB);
     if (LandMBB && FalseMBB->succ_size() != 0)
-      FalseMBB->removeSuccessor(LandMBB, true);
+      FalseMBB->removeSuccessor(LandMBB);
     retireBlock(FalseMBB);
     MLI->removeBlock(FalseMBB);
   }
@@ -1570,7 +1570,8 @@ void AMDGPUCFGStructurizer::mergeLooplandBlock(MachineBasicBlock *DstBlk,
 
   insertInstrBefore(DstBlk, AMDGPU::WHILELOOP, DebugLoc());
   insertInstrEnd(DstBlk, AMDGPU::ENDLOOP, DebugLoc());
-  DstBlk->replaceSuccessor(DstBlk, LandMBB);
+  DstBlk->addSuccessor(LandMBB);
+  DstBlk->removeSuccessor(DstBlk);
 }
 
 
@@ -1591,7 +1592,7 @@ void AMDGPUCFGStructurizer::mergeLoopbreakBlock(MachineBasicBlock *ExitingMBB,
   //now branchInst can be erase safely
   BranchMI->eraseFromParent();
   //now take care of successors, retire blocks
-  ExitingMBB->removeSuccessor(LandMBB, true);
+  ExitingMBB->removeSuccessor(LandMBB);
 }
 
 void AMDGPUCFGStructurizer::settleLoopcontBlock(MachineBasicBlock *ContingMBB,
@@ -1665,7 +1666,8 @@ AMDGPUCFGStructurizer::cloneBlockForPredecessor(MachineBasicBlock *MBB,
   replaceInstrUseOfBlockWith(PredMBB, MBB, CloneMBB);
   //srcBlk, oldBlk, newBlk
 
-  PredMBB->replaceSuccessor(MBB, CloneMBB);
+  PredMBB->removeSuccessor(MBB);
+  PredMBB->addSuccessor(CloneMBB);
 
   // add all successor to cloneBlk
   cloneSuccessorList(CloneMBB, MBB);
@@ -1757,7 +1759,7 @@ void AMDGPUCFGStructurizer::removeRedundantConditionalBranch(
   DEBUG(dbgs() << "Removing unneeded cond branch instr: " << *BranchMI);
   BranchMI->eraseFromParent();
   SHOWNEWBLK(MBB1, "Removing redundant successor");
-  MBB->removeSuccessor(MBB1, true);
+  MBB->removeSuccessor(MBB1);
 }
 
 void AMDGPUCFGStructurizer::addDummyExitBlock(

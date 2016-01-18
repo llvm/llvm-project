@@ -1,6 +1,6 @@
 ; RUN: opt < %s -basicaa -licm -S | FileCheck %s
 
-declare i32 @strlen(i8*) readonly nounwind
+declare i32 @strlen(i8*) readonly
 
 declare void @foo()
 
@@ -20,7 +20,7 @@ Out:		; preds = %Loop
 ; CHECK-NEXT: ret i32 %A
 }
 
-declare double @sin(double) readnone nounwind
+declare double @sin(double) readnone
 
 ; Sink readnone function out of loop with unknown memory behavior.
 define double @test2(double %X) {

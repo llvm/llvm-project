@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
     ErrorOr<std::unique_ptr<Module>> MOrErr =
         getStreamedBitcodeModule(DisplayFilename, std::move(Streamer), Context);
     M = std::move(*MOrErr);
-    M->materializeAll();
+    M->materializeAllPermanently();
   } else {
     errs() << argv[0] << ": " << ErrorMessage << '\n';
     return 1;

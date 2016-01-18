@@ -69,11 +69,9 @@ lpad.c:
           filter [1 x i32*] [i32* @T1]
           catch i32* @T2
   unreachable
-; Caught types should not be removed from filters
 ; CHECK: %c = landingpad
-; CHECK-NEXT: catch i32* @T1
-; CHECK-NEXT: filter [1 x i32*] [i32* @T1]
-; CHECK-NEXT: catch i32* @T2 
+; CHECK-NEXT: @T1
+; CHECK-NEXT: filter [0 x i32*]
 ; CHECK-NEXT: unreachable
 
 lpad.d:
@@ -89,10 +87,9 @@ lpad.e:
           catch i32* @T1
           filter [3 x i32*] [i32* @T1, i32* @T2, i32* @T2]
   unreachable
-; Caught types should not be removed from filters
 ; CHECK: %e = landingpad
-; CHECK-NEXT: catch i32* @T1
-; CHECK-NEXT: filter [2 x i32*] [i32* @T1, i32* @T2]
+; CHECK-NEXT: @T1
+; CHECK-NEXT: filter [1 x i32*] [i32* @T2]
 ; CHECK-NEXT: unreachable
 
 lpad.f:

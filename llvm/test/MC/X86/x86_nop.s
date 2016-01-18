@@ -22,7 +22,13 @@ inc %eax
 inc %eax
 
 // CHECK: 0:	40                                           	incl	%eax
-// CHECK: 1:	8d b4 26 00 00 00 00                            leal (%esi), %esi
+// CHECK: 1:	90                                           	nop
+// CHECK: 2:	90                                           	nop
+// CHECK: 3:	90                                           	nop
+// CHECK: 4:	90                                           	nop
+// CHECK: 5:	90                                           	nop
+// CHECK: 6:	90                                           	nop
+// CHECK: 7:	90                                           	nop
 // CHECK: 8:	40                                           	incl	%eax
 
 

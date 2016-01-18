@@ -26,7 +26,7 @@
 ; CHECK: .debug_loc
 ; CHECK: [[LOC]]:
 ; CHECK: Beginning address offset: 0x0000000000000000
-; CHECK:    Ending address offset: 0x0000000000000008
+; CHECK:    Ending address offset: 0x0000000000000004
 ; rdi, piece 0x00000008, piece 0x00000004, rsi, piece 0x00000004
 ; CHECK: Location description: 55 93 08 93 04 54 93 04 
 ;

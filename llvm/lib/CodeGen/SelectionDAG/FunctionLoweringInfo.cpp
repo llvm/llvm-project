@@ -87,7 +87,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
   MachineModuleInfo &MMI = MF->getMMI();
-  const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -104,29 +103,28 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (BasicBlock::const_iterator I = BB->begin(), E = BB->end();
          I != E; ++I) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
-        Type *Ty = AI->getAllocatedType();
-        unsigned Align =
-          std::max((unsigned)MF->getDataLayout().getPrefTypeAlignment(Ty),
-                   AI->getAlignment());
-        unsigned StackAlign = TFI->getStackAlignment();
-
-        // Static allocas can be folded into the initial stack frame
-        // adjustment. For targets that don't realign the stack, don't
-        // do this if there is an extra alignment requirement.
-        if (AI->isStaticAlloca() && 
-            (TFI->isStackRealignable() || (Align <= StackAlign))) {
+        // Static allocas can be folded into the initial stack frame adjustment.
+        if (AI->isStaticAlloca()) {
           const ConstantInt *CUI = cast<ConstantInt>(AI->getArraySize());
+          Type *Ty = AI->getAllocatedType();
           uint64_t TySize = MF->getDataLayout().getTypeAllocSize(Ty);
+          unsigned Align =
+              std::max((unsigned)MF->getDataLayout().getPrefTypeAlignment(Ty),
+                       AI->getAlignment());
 
           TySize *= CUI->getZExtValue();   // Get total allocated size.
           if (TySize == 0) TySize = 1; // Don't create zero-sized stack objects.
 
           StaticAllocaMap[AI] =
             MF->getFrameInfo()->CreateStackObject(TySize, Align, false, AI);
+
         } else {
-          // FIXME: Overaligned static allocas should be grouped into
-          // a single dynamic allocation instead of using a separate
-          // stack allocation for each one.
+          unsigned Align =
+              std::max((unsigned)MF->getDataLayout().getPrefTypeAlignment(
+                           AI->getAllocatedType()),
+                       AI->getAlignment());
+          unsigned StackAlign =
+              MF->getSubtarget().getFrameLowering()->getStackAlignment();
           if (Align <= StackAlign)
             Align = 0;
           // Inform the Frame Information that we have variable-sized objects.
@@ -165,7 +163,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           MF->getFrameInfo()->setHasVAStart(true);
       }
 
-      // If we have a musttail call in a variadic function, we need to ensure we
+      // If we have a musttail call in a variadic funciton, we need to ensure we
       // forward implicit register parameters.
       if (const auto *CI = dyn_cast<CallInst>(I)) {
         if (CI->isMustTailCall() && Fn->isVarArg())
@@ -225,12 +223,12 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         MMI.setHasEHFunclets(true);
         MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
       }
-      if (isa<CatchSwitchInst>(I)) {
+      if (isa<CatchEndPadInst>(I) || isa<CleanupEndPadInst>(I)) {
         assert(&*BB->begin() == I &&
                "WinEHPrepare failed to remove PHIs from imaginary BBs");
         continue;
       }
-      if (isa<FuncletPadInst>(I))
+      if (isa<CatchPadInst>(I) || isa<CleanupPadInst>(I))
         assert(&*BB->begin() == I && "WinEHPrepare failed to demote PHIs");
     }
 
@@ -289,13 +287,15 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     return;
 
   // Calculate state numbers if we haven't already.
-  WinEHFuncInfo &EHInfo = *MF->getWinEHFuncInfo();
+  WinEHFuncInfo &EHInfo = MMI.getWinEHFuncInfo(&fn);
   if (Personality == EHPersonality::MSVC_CXX)
     calculateWinCXXEHStateNumbers(&fn, EHInfo);
   else if (isAsynchronousEHPersonality(Personality))
     calculateSEHStateNumbers(&fn, EHInfo);
   else if (Personality == EHPersonality::CoreCLR)
     calculateClrEHStateNumbers(&fn, EHInfo);
+
+  calculateCatchReturnSuccessorColors(&fn, EHInfo);
 
   // Map all BB references in the WinEH data to MBBs.
   for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
@@ -320,6 +320,24 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
     const BasicBlock *BB = CME.Handler.get<const BasicBlock *>();
     CME.Handler = MBBMap[BB];
+  }
+
+  // If there's an explicit EH registration node on the stack, record its
+  // frame index.
+  if (EHInfo.EHRegNode && EHInfo.EHRegNode->getParent()->getParent() == Fn) {
+    assert(StaticAllocaMap.count(EHInfo.EHRegNode));
+    EHInfo.EHRegNodeFrameIndex = StaticAllocaMap[EHInfo.EHRegNode];
+  }
+
+  // Copy the state numbers to LandingPadInfo for the current function, which
+  // could be a handler or the parent. This should happen for 32-bit SEH and
+  // C++ EH.
+  if (Personality == EHPersonality::MSVC_CXX ||
+      Personality == EHPersonality::MSVC_X86SEH) {
+    for (const LandingPadInst *LP : LPads) {
+      MachineBasicBlock *LPadMBB = MBBMap[LP->getParent()];
+      MMI.addWinEHState(LPadMBB, EHInfo.EHPadStateMap[LP]);
+    }
   }
 }
 

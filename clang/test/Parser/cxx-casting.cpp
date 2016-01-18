@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 char *const_cast_test(const char *var)
 {
@@ -43,25 +41,10 @@ namespace test1 {
 typedef char* c;
 typedef A* a;
 void test2(char x, struct B * b) {
-  (void)const_cast<::c>(&x);
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a const_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
-
-  (void)dynamic_cast<::a>(b);
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a dynamic_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
-
-  (void)reinterpret_cast<::c>(x);
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a reinterpret_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
-
-  (void)static_cast<::c>(&x);
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a static_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
+  (void)const_cast<::c>(&x);  // expected-error{{found '<::' after a const_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
+  (void)dynamic_cast<::a>(b);  // expected-error{{found '<::' after a dynamic_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
+  (void)reinterpret_cast<::c>(x);  // expected-error{{found '<::' after a reinterpret_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
+  (void)static_cast<::c>(&x);  // expected-error{{found '<::' after a static_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
 
   // Do not do digraph correction.
   (void)static_cast<: :c>(&x); //\
@@ -81,15 +64,8 @@ void test2(char x, struct B * b) {
   (void)static_cast<:C c>(&x); // expected-error {{expected '<' after 'static_cast'}} expected-error 2{{}} expected-note{{}}
 
 #define LCC <::
-  test1::A LCC B> e;
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
-
-  (void)static_cast LCC c>(&x);
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a static_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
+  test1::A LCC B> e; // expected-error{{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
+  (void)static_cast LCC c>(&x); // expected-error{{found '<::' after a static_cast which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
 }
 
                                // This note comes from "::D[:F> A5;"
@@ -98,25 +74,10 @@ template <class T> void E() {};
 class F {};
 
 void test3() {
-  ::D<::F> A1;
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
-
-  D<::F> A2;
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
-
-  ::E<::F>();
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
-
-  E<::F>();
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
-#endif
+  ::D<::F> A1; // expected-error{{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
+  D<::F> A2; // expected-error{{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
+  ::E<::F>(); // expected-error{{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
+  E<::F>(); // expected-error{{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
 
   ::D< ::F> A3;
   D< ::F> A4;

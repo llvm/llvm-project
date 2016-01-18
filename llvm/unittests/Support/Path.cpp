@@ -351,76 +351,6 @@ TEST(Support, UserCacheDirectory) {
   }
 }
 
-TEST(Support, TempDirectory) {
-  SmallString<32> TempDir;
-  path::system_temp_directory(false, TempDir);
-  EXPECT_TRUE(!TempDir.empty());
-  TempDir.clear();
-  path::system_temp_directory(true, TempDir);
-  EXPECT_TRUE(!TempDir.empty());
-}
-
-#ifdef LLVM_ON_WIN32
-static std::string path2regex(std::string Path) {
-  size_t Pos = 0;
-  while ((Pos = Path.find('\\', Pos)) != std::string::npos) {
-    Path.replace(Pos, 1, "\\\\");
-    Pos += 2;
-  }
-  return Path;
-}
-
-/// Helper for running temp dir test in separated process. See below.
-#define EXPECT_TEMP_DIR(prepare, expected)                                     \
-  EXPECT_EXIT(                                                                 \
-      {                                                                        \
-        prepare;                                                               \
-        SmallString<300> TempDir;                                              \
-        path::system_temp_directory(true, TempDir);                            \
-        raw_os_ostream(std::cerr) << TempDir;                                  \
-        std::exit(0);                                                          \
-      },                                                                       \
-      ::testing::ExitedWithCode(0), path2regex(expected))
-
-TEST(SupportDeathTest, TempDirectoryOnWindows) {
-  // In this test we want to check how system_temp_directory responds to
-  // different values of specific env vars. To prevent corrupting env vars of
-  // the current process all checks are done in separated processes.
-  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:\\OtherFolder"), "C:\\OtherFolder");
-  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:/Unix/Path/Seperators"),
-                  "C:\\Unix\\Path\\Seperators");
-  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"Local Path"), ".+\\Local Path$");
-  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"F:\\TrailingSep\\"), "F:\\TrailingSep");
-  EXPECT_TEMP_DIR(
-      _wputenv_s(L"TMP", L"C:\\2\x03C0r-\x00B5\x00B3\\\x2135\x2080"),
-      "C:\\2\xCF\x80r-\xC2\xB5\xC2\xB3\\\xE2\x84\xB5\xE2\x82\x80");
-
-  // Test $TMP empty, $TEMP set.
-  EXPECT_TEMP_DIR(
-      {
-        _wputenv_s(L"TMP", L"");
-        _wputenv_s(L"TEMP", L"C:\\Valid\\Path");
-      },
-      "C:\\Valid\\Path");
-
-  // All related env vars empty
-  EXPECT_TEMP_DIR(
-  {
-    _wputenv_s(L"TMP", L"");
-    _wputenv_s(L"TEMP", L"");
-    _wputenv_s(L"USERPROFILE", L"");
-  },
-    "C:\\Temp");
-
-  // Test evn var / path with 260 chars.
-  SmallString<270> Expected{"C:\\Temp\\AB\\123456789"};
-  while (Expected.size() < 260)
-    Expected.append("\\DirNameWith19Charss");
-  ASSERT_EQ(260, Expected.size());
-  EXPECT_TEMP_DIR(_putenv_s("TMP", Expected.c_str()), Expected.c_str());
-}
-#endif
-
 class FileSystemTest : public testing::Test {
 protected:
   /// Unique temporary directory in which all created filesystem entities must
@@ -913,38 +843,5 @@ TEST(Support, RemoveLeadingDotSlash) {
   EXPECT_EQ(Path1, "foolz/wat");
   Path2 = path::remove_leading_dotslash(Path2);
   EXPECT_EQ(Path2, "");
-}
-
-static std::string remove_dots(StringRef path,
-    bool remove_dot_dot) {
-  SmallString<256> buffer(path);
-  path::remove_dots(buffer, remove_dot_dot);
-  return buffer.str();
-}
-
-TEST(Support, RemoveDots) {
-#if defined(LLVM_ON_WIN32)
-  EXPECT_EQ("foolz\\wat", remove_dots(".\\.\\\\foolz\\wat", false));
-  EXPECT_EQ("", remove_dots(".\\\\\\\\\\", false));
-
-  EXPECT_EQ("a\\..\\b\\c", remove_dots(".\\a\\..\\b\\c", false));
-  EXPECT_EQ("b\\c", remove_dots(".\\a\\..\\b\\c", true));
-  EXPECT_EQ("c", remove_dots(".\\.\\c", true));
-
-  SmallString<64> Path1(".\\.\\c");
-  EXPECT_TRUE(path::remove_dots(Path1, true));
-  EXPECT_EQ("c", Path1);
-#else
-  EXPECT_EQ("foolz/wat", remove_dots("././/foolz/wat", false));
-  EXPECT_EQ("", remove_dots("./////", false));
-
-  EXPECT_EQ("a/../b/c", remove_dots("./a/../b/c", false));
-  EXPECT_EQ("b/c", remove_dots("./a/../b/c", true));
-  EXPECT_EQ("c", remove_dots("././c", true));
-
-  SmallString<64> Path1("././c");
-  EXPECT_TRUE(path::remove_dots(Path1, true));
-  EXPECT_EQ("c", Path1);
-#endif
 }
 } // anonymous namespace

@@ -8,26 +8,6 @@
 
 void foo() {}
 
-// CHECK: template <typename T, int N> int tmain(T argc, char **argv)
-template <typename T, int N>
-int tmain (T argc, char **argv) {
-  T b = argc, c, d, e, f, g;
-  static int a;
-// CHECK: static int a;
-#pragma omp critical
-  a=2;
-// CHECK-NEXT: #pragma omp critical
-// CHECK-NEXT: a = 2;
-// CHECK-NEXT: ++a;
-  ++a;
-#pragma omp critical  (the_name) hint(N)
-  foo();
-// CHECK-NEXT: #pragma omp critical (the_name) hint(N)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: return N;
-  return N;
-}
-
 int main (int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
@@ -38,12 +18,12 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: ++a;
   ++a;
-#pragma omp critical  (the_name1) hint(23)
+#pragma omp critical  (the_name)
   foo();
-// CHECK-NEXT: #pragma omp critical (the_name1) hint(23)
+// CHECK-NEXT: #pragma omp critical (the_name)
 // CHECK-NEXT: foo();
-// CHECK-NEXT: return tmain<int, 4>(a, argv);
-  return tmain<int, 4>(a, argv);
+// CHECK-NEXT: return 0;
+  return 0;
 }
 
 #endif

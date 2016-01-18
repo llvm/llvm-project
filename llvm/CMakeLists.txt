@@ -30,7 +30,7 @@ if(NOT DEFINED LLVM_VERSION_MAJOR)
   set(LLVM_VERSION_MAJOR 3)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
-  set(LLVM_VERSION_MINOR 9)
+  set(LLVM_VERSION_MINOR 8)
 endif()
 if(NOT DEFINED LLVM_VERSION_PATCH)
   set(LLVM_VERSION_PATCH 0)
@@ -85,10 +85,6 @@ set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
-
-# Generate a CompilationDatabase (compile_commands.json file) for our build,
-# for use by clang_complete, YouCompleteMe, etc.
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 option(LLVM_INSTALL_UTILS "Include utility binaries in the 'install' target." OFF)
 
@@ -304,9 +300,6 @@ endif( LLVM_USE_INTEL_JITEVENTS )
 
 option(LLVM_USE_OPROFILE
   "Use opagent JIT interface to inform OProfile about JIT code" OFF)
-
-option(LLVM_EXTERNALIZE_DEBUGINFO
-  "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
 # If enabled, verify we are on a platform that supports oprofile.
 if( LLVM_USE_OPROFILE )
@@ -690,13 +683,6 @@ if( LLVM_INCLUDE_EXAMPLES )
 endif()
 
 if( LLVM_INCLUDE_TESTS )
-  if(EXISTS ${LLVM_MAIN_SRC_DIR}/projects/test-suite AND TARGET clang)
-    include(LLVMExternalProjectUtils)
-    llvm_ExternalProject_Add(test-suite ${LLVM_MAIN_SRC_DIR}/projects/test-suite
-      USE_TOOLCHAIN
-      EXCLUDE_FROM_ALL
-      NO_INSTALL)
-  endif()
   add_subdirectory(test)
   add_subdirectory(unittests)
   if (MSVC)

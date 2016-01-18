@@ -267,4 +267,5 @@ check-asan`` command.
 More Information
 ================
 
-`<https://github.com/google/sanitizers/wiki/AddressSanitizer>`_
+`http://code.google.com/p/address-sanitizer <http://code.google.com/p/address-sanitizer/>`_
+

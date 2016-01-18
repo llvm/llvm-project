@@ -276,10 +276,7 @@ void ASTDeclWriter::Visit(Decl *D) {
 
 void ASTDeclWriter::VisitDecl(Decl *D) {
   Writer.AddDeclRef(cast_or_null<Decl>(D->getDeclContext()), Record);
-  if (D->getDeclContext() != D->getLexicalDeclContext())
-    Writer.AddDeclRef(cast_or_null<Decl>(D->getLexicalDeclContext()), Record);
-  else
-    Record.push_back(0);
+  Writer.AddDeclRef(cast_or_null<Decl>(D->getLexicalDeclContext()), Record);
   Record.push_back(D->isInvalidDecl());
   Record.push_back(D->hasAttrs());
   if (D->hasAttrs())
@@ -343,8 +340,7 @@ void ASTDeclWriter::VisitTypedefNameDecl(TypedefNameDecl *D) {
 
 void ASTDeclWriter::VisitTypedefDecl(TypedefDecl *D) {
   VisitTypedefNameDecl(D);
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
+  if (!D->hasAttrs() &&
       !D->isImplicit() &&
       D->getFirstDecl() == D->getMostRecentDecl() &&
       !D->isInvalidDecl() &&
@@ -406,8 +402,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
     Writer.AddDeclRef(nullptr, Record);
   }
 
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
+  if (!D->hasAttrs() &&
       !D->isImplicit() &&
       !D->isUsed(false) &&
       !D->hasExtInfo() &&
@@ -435,8 +430,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->hasObjectMember());
   Record.push_back(D->hasVolatileMember());
 
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
+  if (!D->hasAttrs() &&
       !D->isImplicit() &&
       !D->isUsed(false) &&
       !D->hasExtInfo() &&
@@ -694,8 +688,7 @@ void ASTDeclWriter::VisitObjCIvarDecl(ObjCIvarDecl *D) {
   Record.push_back(D->getAccessControl());
   Record.push_back(D->getSynthesize());
 
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
+  if (!D->hasAttrs() &&
       !D->isImplicit() &&
       !D->isUsed(false) &&
       !D->isInvalidDecl() &&
@@ -827,8 +820,7 @@ void ASTDeclWriter::VisitFieldDecl(FieldDecl *D) {
   if (!D->getDeclName())
     Writer.AddDeclRef(Context.getInstantiatedFromUnnamedFieldDecl(D), Record);
 
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
+  if (!D->hasAttrs() &&
       !D->isImplicit() &&
       !D->isUsed(false) &&
       !D->isInvalidDecl() &&
@@ -902,8 +894,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     Record.push_back(VarNotTemplate);
   }
 
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
+  if (!D->hasAttrs() &&
       !D->isImplicit() &&
       !D->isUsed(false) &&
       !D->isInvalidDecl() &&
@@ -951,8 +942,7 @@ void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   // If the assumptions about the DECL_PARM_VAR abbrev are true, use it.  Here
   // we dynamically check for the properties that we optimize for, but don't
   // know are true of all PARM_VAR_DECLs.
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
+  if (!D->hasAttrs() &&
       !D->hasExtInfo() &&
       !D->isImplicit() &&
       !D->isUsed(false) &&
@@ -1172,8 +1162,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
     Record.push_back(0);
   }
 
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      D->getFirstDecl() == D->getMostRecentDecl() &&
+  if (D->getFirstDecl() == D->getMostRecentDecl() &&
       !D->isInvalidDecl() &&
       !D->hasAttrs() &&
       !D->isTopLevelDeclInObjCContainer() &&
@@ -1642,7 +1631,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_FIELD));
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalDeclContext
   Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
   Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
@@ -1675,7 +1664,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_OBJC_IVAR));
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalDeclContext
   Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
   Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
@@ -1713,7 +1702,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalDeclContext
   Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
   Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
@@ -1761,7 +1750,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalDeclContext
   Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
   Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
@@ -1804,7 +1793,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalDeclContext
   Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
   Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
@@ -1851,7 +1840,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalDeclContext
   Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
   Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
@@ -1880,7 +1869,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalDeclContext
   Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
   Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
@@ -1926,7 +1915,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // CanonicalDecl
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                         // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalDeclContext
   Abv->Add(BitCodeAbbrevOp(0));                         // Invalid
   Abv->Add(BitCodeAbbrevOp(0));                         // HasAttrs
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Implicit
@@ -2033,7 +2022,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   //Character Literal
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // getValue
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // getKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // getKind
   CharacterLiteralAbbrev = Stream.EmitAbbrev(Abv);
 
   // Abbreviation for EXPR_IMPLICIT_CAST

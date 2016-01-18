@@ -75,7 +75,6 @@ private:
   typedef typename ELFO::Elf_Dyn_Range Elf_Dyn_Range;
   typedef typename ELFO::Elf_Rel Elf_Rel;
   typedef typename ELFO::Elf_Rela Elf_Rela;
-  typedef typename ELFO::Elf_Rel_Range Elf_Rel_Range;
   typedef typename ELFO::Elf_Rela_Range Elf_Rela_Range;
   typedef typename ELFO::Elf_Phdr Elf_Phdr;
   typedef typename ELFO::Elf_Half Elf_Half;
@@ -105,16 +104,12 @@ private:
   void printSymbol(const Elf_Sym *Symbol, const Elf_Shdr *SymTab,
                    StringRef StrTable, bool IsDynamic);
 
-  void printDynamicRelocation(Elf_Rela Rel);
   void printRelocations(const Elf_Shdr *Sec);
   void printRelocation(Elf_Rela Rel, const Elf_Shdr *SymTab);
   void printValue(uint64_t Type, uint64_t Value);
 
-  template <typename RELA>
-  static const RELA *dyn_rela_begin(const DynRegionInfo &region);
-  template <typename RELA>
-  static const RELA *dyn_rela_end(const DynRegionInfo &region);
-  Elf_Rel_Range dyn_rels() const;
+  const Elf_Rela *dyn_rela_begin() const;
+  const Elf_Rela *dyn_rela_end() const;
   Elf_Rela_Range dyn_relas() const;
   StringRef getDynamicString(uint64_t Offset) const;
   const Elf_Dyn *dynamic_table_begin() const {
@@ -134,7 +129,6 @@ private:
   void LoadVersionDefs(const Elf_Shdr *sec) const;
 
   const ELFO *Obj;
-  DynRegionInfo DynRelRegion;
   DynRegionInfo DynRelaRegion;
   const Elf_Phdr *DynamicProgHeader = nullptr;
   StringRef DynamicStringTable;
@@ -439,11 +433,17 @@ StringRef ELFDumper<ELFT>::getSymbolVersion(StringRef StrTab,
   if (entry.isVerdef()) {
     // The first Verdaux entry holds the name.
     name_offset = entry.getVerdef()->getAux()->vda_name;
-    IsDefault = !(vs->vs_index & ELF::VERSYM_HIDDEN);
   } else {
     name_offset = entry.getVernaux()->vna_name;
+  }
+
+  // Set IsDefault
+  if (entry.isVerdef()) {
+    IsDefault = !(vs->vs_index & ELF::VERSYM_HIDDEN);
+  } else {
     IsDefault = false;
   }
+
   if (name_offset >= StrTab.size())
     reportError("Invalid string offset");
   return StringRef(StrTab.data() + name_offset);
@@ -714,8 +714,7 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EM_VIDEOCORE5   ),
   LLVM_READOBJ_ENUM_ENT(ELF, EM_78KOR        ),
   LLVM_READOBJ_ENUM_ENT(ELF, EM_56800EX      ),
-  LLVM_READOBJ_ENUM_ENT(ELF, EM_AMDGPU       ),
-  LLVM_READOBJ_ENUM_ENT(ELF, EM_WEBASSEMBLY  ),
+  LLVM_READOBJ_ENUM_ENT(ELF, EM_AMDGPU       )
 };
 
 static const EnumEntry<unsigned> ElfSymbolBindings[] = {
@@ -950,15 +949,6 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, StreamWriter &Writer)
       GnuHashTable =
           reinterpret_cast<const Elf_GnuHash *>(toMappedAddr(Dyn.getPtr()));
       break;
-    case ELF::DT_REL:
-      DynRelRegion.Addr = toMappedAddr(Dyn.getPtr());
-      break;
-    case ELF::DT_RELSZ:
-      DynRelRegion.Size = Dyn.getVal();
-      break;
-    case ELF::DT_RELENT:
-      DynRelRegion.EntSize = Dyn.getVal();
-      break;
     case ELF::DT_RELA:
       DynRelaRegion.Addr = toMappedAddr(Dyn.getPtr());
       break;
@@ -1026,32 +1016,25 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, StreamWriter &Writer)
 }
 
 template <typename ELFT>
-template <typename RELA>
-const RELA *ELFDumper<ELFT>::dyn_rela_begin(const DynRegionInfo &Region) {
-  if (Region.Size && Region.EntSize != sizeof(RELA))
+const typename ELFDumper<ELFT>::Elf_Rela *
+ELFDumper<ELFT>::dyn_rela_begin() const {
+  if (DynRelaRegion.Size && DynRelaRegion.EntSize != sizeof(Elf_Rela))
     report_fatal_error("Invalid relocation entry size");
-  return reinterpret_cast<const RELA *>(Region.Addr);
+  return reinterpret_cast<const Elf_Rela *>(DynRelaRegion.Addr);
 }
 
 template <typename ELFT>
-template <typename RELA>
-const RELA *ELFDumper<ELFT>::dyn_rela_end(const DynRegionInfo &Region) {
-  uint64_t Size = Region.Size;
-  if (Size % sizeof(RELA))
+const typename ELFDumper<ELFT>::Elf_Rela *
+ELFDumper<ELFT>::dyn_rela_end() const {
+  uint64_t Size = DynRelaRegion.Size;
+  if (Size % sizeof(Elf_Rela))
     report_fatal_error("Invalid relocation table size");
-  return dyn_rela_begin<RELA>(Region) + Size / sizeof(RELA);
-}
-
-template <typename ELFT>
-typename ELFDumper<ELFT>::Elf_Rel_Range ELFDumper<ELFT>::dyn_rels() const {
-  return make_range(dyn_rela_begin<Elf_Rel>(DynRelRegion),
-                    dyn_rela_end<Elf_Rel>(DynRelRegion));
+  return dyn_rela_begin() + Size / sizeof(Elf_Rela);
 }
 
 template <typename ELFT>
 typename ELFDumper<ELFT>::Elf_Rela_Range ELFDumper<ELFT>::dyn_relas() const {
-  return make_range(dyn_rela_begin<Elf_Rela>(DynRelaRegion),
-                    dyn_rela_end<Elf_Rela>(DynRelaRegion));
+  return make_range(dyn_rela_begin(), dyn_rela_end());
 }
 
 template<class ELFT>
@@ -1180,22 +1163,31 @@ void ELFDumper<ELFT>::printRelocations() {
   }
 }
 
-template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
-  if (DynRelRegion.Size && DynRelaRegion.Size)
-    report_fatal_error("There are both REL and RELA dynamic relocations");
+template<class ELFT>
+void ELFDumper<ELFT>::printDynamicRelocations() {
   W.startLine() << "Dynamic Relocations {\n";
   W.indent();
-  if (DynRelaRegion.Size > 0)
-    for (const Elf_Rela &Rela : dyn_relas())
-      printDynamicRelocation(Rela);
-  else
-    for (const Elf_Rel &Rel : dyn_rels()) {
-      Elf_Rela Rela;
-      Rela.r_offset = Rel.r_offset;
-      Rela.r_info = Rel.r_info;
-      Rela.r_addend = 0;
-      printDynamicRelocation(Rela);
+  for (const Elf_Rela &Rel : dyn_relas()) {
+    SmallString<32> RelocName;
+    Obj->getRelocationTypeName(Rel.getType(Obj->isMips64EL()), RelocName);
+    StringRef SymbolName;
+    uint32_t SymIndex = Rel.getSymbol(Obj->isMips64EL());
+    const Elf_Sym *Sym = DynSymStart + SymIndex;
+    SymbolName = errorOrDefault(Sym->getName(DynamicStringTable));
+    if (opts::ExpandRelocs) {
+      DictScope Group(W, "Relocation");
+      W.printHex("Offset", Rel.r_offset);
+      W.printNumber("Type", RelocName, (int)Rel.getType(Obj->isMips64EL()));
+      W.printString("Symbol", SymbolName.size() > 0 ? SymbolName : "-");
+      W.printHex("Addend", Rel.r_addend);
     }
+    else {
+      raw_ostream& OS = W.startLine();
+      OS << W.hex(Rel.r_offset) << " " << RelocName << " "
+         << (SymbolName.size() > 0 ? SymbolName : "-") << " "
+         << W.hex(Rel.r_addend) << "\n";
+    }
+  }
   W.unindent();
   W.startLine() << "}\n";
 }
@@ -1252,28 +1244,6 @@ void ELFDumper<ELFT>::printRelocation(Elf_Rela Rel, const Elf_Shdr *SymTab) {
     raw_ostream& OS = W.startLine();
     OS << W.hex(Rel.r_offset) << " " << RelocName << " "
        << (TargetName.size() > 0 ? TargetName : "-") << " "
-       << W.hex(Rel.r_addend) << "\n";
-  }
-}
-
-template <class ELFT>
-void ELFDumper<ELFT>::printDynamicRelocation(Elf_Rela Rel) {
-  SmallString<32> RelocName;
-  Obj->getRelocationTypeName(Rel.getType(Obj->isMips64EL()), RelocName);
-  StringRef SymbolName;
-  uint32_t SymIndex = Rel.getSymbol(Obj->isMips64EL());
-  const Elf_Sym *Sym = DynSymStart + SymIndex;
-  SymbolName = errorOrDefault(Sym->getName(DynamicStringTable));
-  if (opts::ExpandRelocs) {
-    DictScope Group(W, "Relocation");
-    W.printHex("Offset", Rel.r_offset);
-    W.printNumber("Type", RelocName, (int)Rel.getType(Obj->isMips64EL()));
-    W.printString("Symbol", SymbolName.size() > 0 ? SymbolName : "-");
-    W.printHex("Addend", Rel.r_addend);
-  } else {
-    raw_ostream &OS = W.startLine();
-    OS << W.hex(Rel.r_offset) << " " << RelocName << " "
-       << (SymbolName.size() > 0 ? SymbolName : "-") << " "
        << W.hex(Rel.r_addend) << "\n";
   }
 }
@@ -1371,11 +1341,8 @@ static const char *getTypeString(uint64_t Type) {
   LLVM_READOBJ_TYPE_CASE(VERNEED);
   LLVM_READOBJ_TYPE_CASE(VERNEEDNUM);
   LLVM_READOBJ_TYPE_CASE(VERSYM);
-  LLVM_READOBJ_TYPE_CASE(RELACOUNT);
   LLVM_READOBJ_TYPE_CASE(RELCOUNT);
   LLVM_READOBJ_TYPE_CASE(GNU_HASH);
-  LLVM_READOBJ_TYPE_CASE(TLSDESC_PLT);
-  LLVM_READOBJ_TYPE_CASE(TLSDESC_GOT);
   LLVM_READOBJ_TYPE_CASE(MIPS_RLD_VERSION);
   LLVM_READOBJ_TYPE_CASE(MIPS_RLD_MAP_REL);
   LLVM_READOBJ_TYPE_CASE(MIPS_FLAGS);
@@ -1518,7 +1485,6 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
   case DT_MIPS_OPTIONS:
     OS << format("0x%" PRIX64, Value);
     break;
-  case DT_RELACOUNT:
   case DT_RELCOUNT:
   case DT_VERDEFNUM:
   case DT_VERNEEDNUM:

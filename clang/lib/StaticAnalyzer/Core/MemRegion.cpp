@@ -245,7 +245,7 @@ QualType CXXBaseObjectRegion::getValueType() const {
 // FoldingSet profiling.
 //===----------------------------------------------------------------------===//
 
-void MemSpaceRegion::Profile(llvm::FoldingSetNodeID &ID) const {
+void MemSpaceRegion::Profile(llvm::FoldingSetNodeID& ID) const {
   ID.AddInteger((unsigned)getKind());
 }
 
@@ -357,31 +357,31 @@ void ElementRegion::Profile(llvm::FoldingSetNodeID& ID) const {
   ElementRegion::ProfileRegion(ID, ElementType, Index, superRegion);
 }
 
-void FunctionCodeRegion::ProfileRegion(llvm::FoldingSetNodeID& ID,
+void FunctionTextRegion::ProfileRegion(llvm::FoldingSetNodeID& ID,
                                        const NamedDecl *FD,
                                        const MemRegion*) {
-  ID.AddInteger(MemRegion::FunctionCodeRegionKind);
+  ID.AddInteger(MemRegion::FunctionTextRegionKind);
   ID.AddPointer(FD);
 }
 
-void FunctionCodeRegion::Profile(llvm::FoldingSetNodeID& ID) const {
-  FunctionCodeRegion::ProfileRegion(ID, FD, superRegion);
+void FunctionTextRegion::Profile(llvm::FoldingSetNodeID& ID) const {
+  FunctionTextRegion::ProfileRegion(ID, FD, superRegion);
 }
 
-void BlockCodeRegion::ProfileRegion(llvm::FoldingSetNodeID& ID,
+void BlockTextRegion::ProfileRegion(llvm::FoldingSetNodeID& ID,
                                     const BlockDecl *BD, CanQualType,
                                     const AnalysisDeclContext *AC,
                                     const MemRegion*) {
-  ID.AddInteger(MemRegion::BlockCodeRegionKind);
+  ID.AddInteger(MemRegion::BlockTextRegionKind);
   ID.AddPointer(BD);
 }
 
-void BlockCodeRegion::Profile(llvm::FoldingSetNodeID& ID) const {
-  BlockCodeRegion::ProfileRegion(ID, BD, locTy, AC, superRegion);
+void BlockTextRegion::Profile(llvm::FoldingSetNodeID& ID) const {
+  BlockTextRegion::ProfileRegion(ID, BD, locTy, AC, superRegion);
 }
 
 void BlockDataRegion::ProfileRegion(llvm::FoldingSetNodeID& ID,
-                                    const BlockCodeRegion *BC,
+                                    const BlockTextRegion *BC,
                                     const LocationContext *LC,
                                     unsigned BlkCount,
                                     const MemRegion *sReg) {
@@ -457,11 +457,11 @@ void AllocaRegion::dumpToStream(raw_ostream &os) const {
   os << "alloca{" << (const void*) Ex << ',' << Cnt << '}';
 }
 
-void FunctionCodeRegion::dumpToStream(raw_ostream &os) const {
+void FunctionTextRegion::dumpToStream(raw_ostream &os) const {
   os << "code{" << getDecl()->getDeclName().getAsString() << '}';
 }
 
-void BlockCodeRegion::dumpToStream(raw_ostream &os) const {
+void BlockTextRegion::dumpToStream(raw_ostream &os) const {
   os << "block_code{" << (const void*) this << '}';
 }
 
@@ -531,10 +531,6 @@ void RegionRawOffset::dump() const {
 
 void RegionRawOffset::dumpToStream(raw_ostream &os) const {
   os << "raw_offset{" << getRegion() << ',' << getOffset().getQuantity() << '}';
-}
-
-void CodeSpaceRegion::dumpToStream(raw_ostream &os) const {
-  os << "CodeSpaceRegion";
 }
 
 void StaticGlobalSpaceRegion::dumpToStream(raw_ostream &os) const {
@@ -715,11 +711,11 @@ const HeapSpaceRegion *MemRegionManager::getHeapRegion() {
   return LazyAllocate(heap);
 }
 
-const UnknownSpaceRegion *MemRegionManager::getUnknownRegion() {
+const MemSpaceRegion *MemRegionManager::getUnknownRegion() {
   return LazyAllocate(unknown);
 }
 
-const CodeSpaceRegion *MemRegionManager::getCodeRegion() {
+const MemSpaceRegion *MemRegionManager::getCodeRegion() {
   return LazyAllocate(code);
 }
 
@@ -819,11 +815,11 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
         const Decl *STCD = STC->getDecl();
         if (isa<FunctionDecl>(STCD) || isa<ObjCMethodDecl>(STCD))
           sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind,
-                                  getFunctionCodeRegion(cast<NamedDecl>(STCD)));
+                                  getFunctionTextRegion(cast<NamedDecl>(STCD)));
         else if (const BlockDecl *BD = dyn_cast<BlockDecl>(STCD)) {
           // FIXME: The fallback type here is totally bogus -- though it should
           // never be queried, it will prevent uniquing with the real
-          // BlockCodeRegion. Ideally we'd fix the AST so that we always had a
+          // BlockTextRegion. Ideally we'd fix the AST so that we always had a
           // signature.
           QualType T;
           if (const TypeSourceInfo *TSI = BD->getSignatureAsWritten())
@@ -834,8 +830,8 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
             T = getContext().getFunctionNoProtoType(T);
           T = getContext().getBlockPointerType(T);
 
-          const BlockCodeRegion *BTR =
-            getBlockCodeRegion(BD, C.getCanonicalType(T),
+          const BlockTextRegion *BTR =
+            getBlockTextRegion(BD, C.getCanonicalType(T),
                                STC->getAnalysisDeclContext());
           sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind,
                                   BTR);
@@ -856,7 +852,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
 }
 
 const BlockDataRegion *
-MemRegionManager::getBlockDataRegion(const BlockCodeRegion *BC,
+MemRegionManager::getBlockDataRegion(const BlockTextRegion *BC,
                                      const LocationContext *LC,
                                      unsigned blockCount) {
   const MemRegion *sReg = nullptr;
@@ -929,15 +925,15 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
   return R;
 }
 
-const FunctionCodeRegion *
-MemRegionManager::getFunctionCodeRegion(const NamedDecl *FD) {
-  return getSubRegion<FunctionCodeRegion>(FD, getCodeRegion());
+const FunctionTextRegion *
+MemRegionManager::getFunctionTextRegion(const NamedDecl *FD) {
+  return getSubRegion<FunctionTextRegion>(FD, getCodeRegion());
 }
 
-const BlockCodeRegion *
-MemRegionManager::getBlockCodeRegion(const BlockDecl *BD, CanQualType locTy,
+const BlockTextRegion *
+MemRegionManager::getBlockTextRegion(const BlockDecl *BD, CanQualType locTy,
                                      AnalysisDeclContext *AC) {
-  return getSubRegion<BlockCodeRegion>(BD, locTy, AC, getCodeRegion());
+  return getSubRegion<BlockTextRegion>(BD, locTy, AC, getCodeRegion());
 }
 
 
@@ -1181,7 +1177,6 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
 /// Returns true if \p Base is an immediate base class of \p Child
 static bool isImmediateBase(const CXXRecordDecl *Child,
                             const CXXRecordDecl *Base) {
-  assert(Child && "Child must not be null");
   // Note that we do NOT canonicalize the base class here, because
   // ASTRecordLayout doesn't either. If that leads us down the wrong path,
   // so be it; at least we won't crash.
@@ -1200,7 +1195,7 @@ RegionOffset MemRegion::getAsOffset() const {
 
   while (1) {
     switch (R->getKind()) {
-    case CodeSpaceRegionKind:
+    case GenericMemSpaceRegionKind:
     case StackLocalsSpaceRegionKind:
     case StackArgumentsSpaceRegionKind:
     case HeapSpaceRegionKind:
@@ -1213,8 +1208,8 @@ RegionOffset MemRegion::getAsOffset() const {
       assert(Offset == 0 && !SymbolicOffsetBase);
       goto Finish;
 
-    case FunctionCodeRegionKind:
-    case BlockCodeRegionKind:
+    case FunctionTextRegionKind:
+    case BlockTextRegionKind:
     case BlockDataRegionKind:
       // These will never have bindings, but may end up having values requested
       // if the user does some strange casting.
@@ -1261,18 +1256,18 @@ RegionOffset MemRegion::getAsOffset() const {
       if (!Child) {
         // We cannot compute the offset of the base class.
         SymbolicOffsetBase = R;
-      } else {
-        if (RootIsSymbolic) {
-          // Base layers on symbolic regions may not be type-correct.
-          // Double-check the inheritance here, and revert to a symbolic offset
-          // if it's invalid (e.g. due to a reinterpret_cast).
-          if (BOR->isVirtual()) {
-            if (!Child->isVirtuallyDerivedFrom(BOR->getDecl()))
-              SymbolicOffsetBase = R;
-          } else {
-            if (!isImmediateBase(Child, BOR->getDecl()))
-              SymbolicOffsetBase = R;
-          }
+      }
+
+      if (RootIsSymbolic) {
+        // Base layers on symbolic regions may not be type-correct.
+        // Double-check the inheritance here, and revert to a symbolic offset
+        // if it's invalid (e.g. due to a reinterpret_cast).
+        if (BOR->isVirtual()) {
+          if (!Child->isVirtuallyDerivedFrom(BOR->getDecl()))
+            SymbolicOffsetBase = R;
+        } else {
+          if (!isImmediateBase(Child, BOR->getDecl()))
+            SymbolicOffsetBase = R;
         }
       }
 

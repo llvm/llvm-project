@@ -43,8 +43,6 @@ typedef std::thread thread;
 
 #else // !LLVM_ENABLE_THREADS
 
-#include <utility>
-
 namespace llvm {
 
 struct thread {

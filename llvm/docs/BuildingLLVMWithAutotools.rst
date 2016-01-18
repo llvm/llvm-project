@@ -5,12 +5,6 @@ Building LLVM With Autotools
 .. contents::
    :local:
 
-.. warning::
-
-    Building LLVM with autoconf is deprecated as of 3.8. The autoconf build
-    system will be removed in 3.9. Please migrate to using CMake. For more
-    information see: `Building LLVM with CMake <CMake.html>`_
-
 Overview
 ========
 

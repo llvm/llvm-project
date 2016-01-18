@@ -135,7 +135,7 @@ public:
     return SDValue(Node, R);
   }
 
-  /// Return true if this node is an operand of N.
+  // Return true if this node is an operand of N.
   bool isOperandOf(const SDNode *N) const;
 
   /// Return the ValueType of the referenced return value.
@@ -369,18 +369,6 @@ public:
     (UnsafeAlgebra << 3) | (NoNaNs << 4) | (NoInfs << 5) |
     (NoSignedZeros << 6) | (AllowReciprocal << 7);
   }
-
-  /// Clear any flags in this flag set that aren't also set in Flags.
-  void intersectWith(const SDNodeFlags *Flags) {
-    NoUnsignedWrap &= Flags->NoUnsignedWrap;
-    NoSignedWrap &= Flags->NoSignedWrap;
-    Exact &= Flags->Exact;
-    UnsafeAlgebra &= Flags->UnsafeAlgebra;
-    NoNaNs &= Flags->NoNaNs;
-    NoInfs &= Flags->NoInfs;
-    NoSignedZeros &= Flags->NoSignedZeros;
-    AllowReciprocal &= Flags->AllowReciprocal;
-  }
 };
 
 /// Represents one node in the SelectionDAG.
@@ -588,10 +576,10 @@ public:
   static use_iterator use_end() { return use_iterator(nullptr); }
 
   inline iterator_range<use_iterator> uses() {
-    return make_range(use_begin(), use_end());
+    return iterator_range<use_iterator>(use_begin(), use_end());
   }
   inline iterator_range<use_iterator> uses() const {
-    return make_range(use_begin(), use_end());
+    return iterator_range<use_iterator>(use_begin(), use_end());
   }
 
   /// Return true if there are exactly NUSES uses of the indicated value.
@@ -663,8 +651,8 @@ public:
   };
 
   iterator_range<value_op_iterator> op_values() const {
-    return make_range(value_op_iterator(op_begin()),
-                      value_op_iterator(op_end()));
+    return iterator_range<value_op_iterator>(value_op_iterator(op_begin()),
+                                             value_op_iterator(op_end()));
   }
 
   SDVTList getVTList() const {
@@ -676,7 +664,7 @@ public:
   /// to which the glue operand points. Otherwise return NULL.
   SDNode *getGluedNode() const {
     if (getNumOperands() != 0 &&
-        getOperand(getNumOperands()-1).getValueType() == MVT::Glue)
+      getOperand(getNumOperands()-1).getValueType() == MVT::Glue)
       return getOperand(getNumOperands()-1).getNode();
     return nullptr;
   }
@@ -693,9 +681,6 @@ public:
   /// This could be defined as a virtual function and implemented more simply
   /// and directly, but it is not to avoid creating a vtable for this class.
   const SDNodeFlags *getFlags() const;
-
-  /// Clear any flags in this node that aren't also set in Flags.
-  void intersectFlagsWith(const SDNodeFlags *Flags);
 
   /// Return the number of values defined/returned by this operator.
   unsigned getNumValues() const { return NumValues; }
@@ -1089,9 +1074,6 @@ class HandleSDNode : public SDNode {
 public:
   explicit HandleSDNode(SDValue X)
     : SDNode(ISD::HANDLENODE, 0, DebugLoc(), getSDVTList(MVT::Other)) {
-    // HandleSDNodes are never inserted into the DAG, so they won't be
-    // auto-numbered. Use ID 65535 as a sentinel.
-    PersistentId = 0xffff;
     InitOperands(&Op, X);
   }
   ~HandleSDNode();
@@ -1508,15 +1490,6 @@ public:
            N->getOpcode() == ISD::TargetConstantFP;
   }
 };
-
-/// Returns true if \p V is a constant integer zero.
-bool isNullConstant(SDValue V);
-/// Returns true if \p V is an FP constant with a value of positive zero.
-bool isNullFPConstant(SDValue V);
-/// Returns true if \p V is an integer constant with all bits set.
-bool isAllOnesConstant(SDValue V);
-/// Returns true if \p V is a constant integer one.
-bool isOneConstant(SDValue V);
 
 class GlobalAddressSDNode : public SDNode {
   const GlobalValue *TheGlobal;
@@ -2137,13 +2110,12 @@ public:
     : MaskedGatherScatterSDNode(ISD::MGATHER, Order, dl, Operands, VTs, MemVT,
                                 MMO) {
     assert(getValue().getValueType() == getValueType(0) &&
-           "Incompatible type of the PassThru value in MaskedGatherSDNode");
+           "Incompatible type of the PathThru value in MaskedGatherSDNode");
     assert(getMask().getValueType().getVectorNumElements() ==
-           getValueType(0).getVectorNumElements() &&
+               getValueType(0).getVectorNumElements() &&
            "Vector width mismatch between mask and data");
-    assert(getIndex().getValueType().getVectorNumElements() ==
-           getValueType(0).getVectorNumElements() &&
-           "Vector width mismatch between index and data");
+    assert(getMask().getValueType().getScalarType() == MVT::i1 &&
+           "Vector width mismatch between mask and data");
   }
 
   static bool classof(const SDNode *N) {
@@ -2159,14 +2131,13 @@ public:
   friend class SelectionDAG;
   MaskedScatterSDNode(unsigned Order, DebugLoc dl,ArrayRef<SDValue> Operands,
                       SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
-    : MaskedGatherScatterSDNode(ISD::MSCATTER, Order, dl, Operands, VTs, MemVT,
-                                MMO) {
+      : MaskedGatherScatterSDNode(ISD::MSCATTER, Order, dl, Operands, VTs,
+                                  MemVT, MMO) {
     assert(getMask().getValueType().getVectorNumElements() ==
-           getValue().getValueType().getVectorNumElements() &&
+               getValue().getValueType().getVectorNumElements() &&
            "Vector width mismatch between mask and data");
-    assert(getIndex().getValueType().getVectorNumElements() ==
-           getValue().getValueType().getVectorNumElements() &&
-           "Vector width mismatch between index and data");
+    assert(getMask().getValueType().getScalarType() == MVT::i1 &&
+           "Vector width mismatch between mask and data");
   }
 
   static bool classof(const SDNode *N) {

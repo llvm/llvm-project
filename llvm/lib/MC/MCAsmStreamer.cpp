@@ -240,9 +240,6 @@ public:
   void EmitBundleLock(bool AlignToEnd) override;
   void EmitBundleUnlock() override;
 
-  bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
-                          const MCExpr *Expr, SMLoc Loc) override;
-
   /// EmitRawText - If this file is backed by an assembly streamer, this dumps
   /// the specified string in the output .s file.  This capability is
   /// indicated by the hasRawTextSupport() predicate.
@@ -1358,19 +1355,6 @@ void MCAsmStreamer::EmitBundleLock(bool AlignToEnd) {
 void MCAsmStreamer::EmitBundleUnlock() {
   OS << "\t.bundle_unlock";
   EmitEOL();
-}
-
-bool MCAsmStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                       const MCExpr *Expr, SMLoc) {
-  OS << "\t.reloc ";
-  Offset.print(OS, MAI);
-  OS << ", " << Name;
-  if (Expr) {
-    OS << ", ";
-    Expr->print(OS, MAI);
-  }
-  EmitEOL();
-  return false;
 }
 
 /// EmitRawText - If this file is backed by an assembly streamer, this dumps

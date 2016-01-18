@@ -323,35 +323,13 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
                               ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
 
-  // TODO: Clean this up once autoconf is gone
-  SmallString<128> P(getDriver().ResourceDir);
-  llvm::sys::path::append(P, "lib", "darwin");
-  const char *Library = "libclang_rt.profile_osx.a";
-
   // Select the appropriate runtime library for the target.
-  if (isTargetWatchOS()) {
-    Library = "libclang_rt.profile_watchos.a";
-  } else if (isTargetWatchOSSimulator()) {
-    llvm::sys::path::append(P, "libclang_rt.profile_watchossim.a");
-    Library = getVFS().exists(P) ? "libclang_rt.profile_watchossim.a"
-                                 : "libclang_rt.profile_watchos.a";
-  } else if (isTargetTvOS()) {
-    Library = "libclang_rt.profile_tvos.a";
-  } else if (isTargetTvOSSimulator()) {
-    llvm::sys::path::append(P, "libclang_rt.profile_tvossim.a");
-    Library = getVFS().exists(P) ? "libclang_rt.profile_tvossim.a"
-                                 : "libclang_rt.profile_tvos.a";
-  } else if (isTargetIPhoneOS()) {
-    Library = "libclang_rt.profile_ios.a";
-  } else if (isTargetIOSSimulator()) {
-    llvm::sys::path::append(P, "libclang_rt.profile_iossim.a");
-    Library = getVFS().exists(P) ? "libclang_rt.profile_iossim.a"
-                                 : "libclang_rt.profile_ios.a";
-  } else {
-    assert(isTargetMacOS() && "unexpected non MacOS platform");
-  }
-  AddLinkRuntimeLib(Args, CmdArgs, Library,
-                    /*AlwaysLink*/ true);
+  if (isTargetIOSBased())
+    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_ios.a",
+                      /*AlwaysLink*/ true);
+  else
+    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.profile_osx.a",
+                      /*AlwaysLink*/ true);
   return;
 }
 
@@ -411,15 +389,6 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
   if (Sanitize.needsUbsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "ubsan");
-  if (Sanitize.needsTsanRt())
-    AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
-  if (Sanitize.needsStatsRt()) {
-    StringRef OS = isTargetMacOS() ? "osx" : "iossim";
-    AddLinkRuntimeLib(Args, CmdArgs,
-                      (Twine("libclang_rt.stats_client_") + OS + ".a").str(),
-                      /*AlwaysLink=*/true);
-    AddLinkSanitizerLibArgs(Args, CmdArgs, "stats");
-  }
 
   // Otherwise link libSystem, then the dynamic runtime library, and finally any
   // target specific static runtime library.
@@ -533,7 +502,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     // no environment variable defined, see if we can set the default based
     // on -isysroot.
     if (OSXTarget.empty() && iOSTarget.empty() && WatchOSTarget.empty() &&
-        TvOSTarget.empty() && Args.hasArg(options::OPT_isysroot)) {
+        Args.hasArg(options::OPT_isysroot)) {
       if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
         StringRef isysroot = A->getValue();
         // Assume SDK has path: SOME_PATH/SDKs/PlatformXX.YY.sdk
@@ -1074,8 +1043,12 @@ bool Darwin::UseSjLjExceptions(const ArgList &Args) const {
       getTriple().getArch() != llvm::Triple::thumb)
     return false;
 
-  // Only watchOS uses the new DWARF/Compact unwinding method.
-  return !isTargetWatchOS();
+  // We can't check directly for watchOS here. ComputeLLVMTriple only
+  // fills in the ArchName correctly.
+  llvm::Triple Triple(ComputeLLVMTriple(Args));
+  return !(Triple.getArchName() == "armv7k" ||
+           Triple.getArchName() == "thumbv7k");
+
 }
 
 bool MachO::isPICDefault() const { return true; }
@@ -1226,7 +1199,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
     if (!isMacosxVersionLT(10, 9))
       Res |= SanitizerKind::Vptr;
     Res |= SanitizerKind::SafeStack;
-    Res |= SanitizerKind::Thread;
   }
   return Res;
 }
@@ -1459,9 +1431,8 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
       "i586-linux-gnu"};
 
   static const char *const MIPSLibDirs[] = {"/lib"};
-  static const char *const MIPSTriples[] = {"mips-linux-gnu", "mips-mti-linux",
-                                            "mips-mti-linux-gnu",
-                                            "mips-img-linux-gnu"};
+  static const char *const MIPSTriples[] = {
+      "mips-linux-gnu", "mips-mti-linux-gnu", "mips-img-linux-gnu"};
   static const char *const MIPSELLibDirs[] = {"/lib"};
   static const char *const MIPSELTriples[] = {
       "mipsel-linux-gnu", "mipsel-linux-android", "mips-img-linux-gnu"};
@@ -1650,7 +1621,6 @@ void Generic_GCC::CudaInstallationDetector::init(
         Args.getLastArgValue(options::OPT_cuda_path_EQ));
   else {
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda");
-    CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.5");
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.0");
   }
 
@@ -1659,41 +1629,15 @@ void Generic_GCC::CudaInstallationDetector::init(
       continue;
 
     CudaInstallPath = CudaPath;
-    CudaBinPath = CudaPath + "/bin";
     CudaIncludePath = CudaInstallPath + "/include";
     CudaLibDevicePath = CudaInstallPath + "/nvvm/libdevice";
     CudaLibPath =
         CudaInstallPath + (TargetTriple.isArch64Bit() ? "/lib64" : "/lib");
 
     if (!(D.getVFS().exists(CudaIncludePath) &&
-          D.getVFS().exists(CudaBinPath) && D.getVFS().exists(CudaLibPath) &&
+          D.getVFS().exists(CudaLibPath) &&
           D.getVFS().exists(CudaLibDevicePath)))
       continue;
-
-    std::error_code EC;
-    for (llvm::sys::fs::directory_iterator LI(CudaLibDevicePath, EC), LE;
-         !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef FilePath = LI->path();
-      StringRef FileName = llvm::sys::path::filename(FilePath);
-      // Process all bitcode filenames that look like libdevice.compute_XX.YY.bc
-      const StringRef LibDeviceName = "libdevice.";
-      if (!(FileName.startswith(LibDeviceName) && FileName.endswith(".bc")))
-        continue;
-      StringRef GpuArch = FileName.slice(
-          LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
-      CudaLibDeviceMap[GpuArch] = FilePath.str();
-      // Insert map entries for specifc devices with this compute capability.
-      if (GpuArch == "compute_20") {
-        CudaLibDeviceMap["sm_20"] = FilePath;
-        CudaLibDeviceMap["sm_21"] = FilePath;
-      } else if (GpuArch == "compute_30") {
-        CudaLibDeviceMap["sm_30"] = FilePath;
-        CudaLibDeviceMap["sm_32"] = FilePath;
-      } else if (GpuArch == "compute_35") {
-        CudaLibDeviceMap["sm_35"] = FilePath;
-        CudaLibDeviceMap["sm_37"] = FilePath;
-      }
-    }
 
     IsValid = true;
     break;
@@ -1879,32 +1823,6 @@ static bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
             });
   }
 
-  // Check for Musl toolchain multilibs
-  MultilibSet MuslMipsMultilibs;
-  {
-    auto MArchMipsR2 = makeMultilib("")
-                           .osSuffix("/mips-r2-hard-musl")
-                           .flag("+EB")
-                           .flag("-EL")
-                           .flag("+march=mips32r2");
-
-    auto MArchMipselR2 = makeMultilib("/mipsel-r2-hard-musl")
-                             .flag("-EB")
-                             .flag("+EL")
-                             .flag("+march=mips32r2");
-
-    MuslMipsMultilibs = MultilibSet().Either(MArchMipsR2, MArchMipselR2);
-
-    // Specify the callback that computes the include directories.
-    MuslMipsMultilibs.setIncludeDirsCallback([](
-        StringRef InstallDir, StringRef TripleStr, const Multilib &M) {
-      std::vector<std::string> Dirs;
-      Dirs.push_back(
-          (InstallDir + "/../sysroot" + M.osSuffix() + "/usr/include").str());
-      return Dirs;
-    });
-  }
-
   // Check for Code Sourcery toolchain multilibs
   MultilibSet CSMipsMultilibs;
   {
@@ -2045,16 +1963,6 @@ static bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
     // Select Android toolchain. It's the only choice in that case.
     if (AndroidMipsMultilibs.select(Flags, Result.SelectedMultilib)) {
       Result.Multilibs = AndroidMipsMultilibs;
-      return true;
-    }
-    return false;
-  }
-
-  if (TargetTriple.getVendor() == llvm::Triple::MipsTechnologies &&
-      TargetTriple.getOS() == llvm::Triple::Linux &&
-      TargetTriple.getEnvironment() == llvm::Triple::UnknownEnvironment) {
-    if (MuslMipsMultilibs.select(Flags, Result.SelectedMultilib)) {
-      Result.Multilibs = MuslMipsMultilibs;
       return true;
     }
     return false;
@@ -2385,6 +2293,9 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::sparc:
+  case llvm::Triple::sparcel:
+  case llvm::Triple::sparcv9:
   case llvm::Triple::systemz:
     return true;
   default:
@@ -2434,238 +2345,131 @@ void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
       getTriple().getArch() == llvm::Triple::aarch64_be ||
       (getTriple().getOS() == llvm::Triple::Linux &&
        (!V.isOlderThan(4, 7, 0) || getTriple().isAndroid())) ||
-      getTriple().getOS() == llvm::Triple::NaCl ||
-      (getTriple().getVendor() == llvm::Triple::MipsTechnologies &&
-       !getTriple().hasEnvironment());
+      getTriple().getOS() == llvm::Triple::NaCl;
 
   if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
                          options::OPT_fno_use_init_array, UseInitArrayDefault))
     CC1Args.push_back("-fuse-init-array");
 }
 
-/// Mips Toolchain
-MipsLLVMToolChain::MipsLLVMToolChain(const Driver &D,
-                                     const llvm::Triple &Triple,
-                                     const ArgList &Args)
-    : Linux(D, Triple, Args) {
-  // Select the correct multilib according to the given arguments.
-  DetectedMultilibs Result;
-  findMIPSMultilibs(D, Triple, "", Args, Result);
-  Multilibs = Result.Multilibs;
-  SelectedMultilib = Result.SelectedMultilib;
-
-  // Find out the library suffix based on the ABI.
-  LibSuffix = tools::mips::getMipsABILibSuffix(Args, Triple);
-  getFilePaths().clear();
-  getFilePaths().push_back(computeSysRoot() + "/usr/lib" + LibSuffix);
-
-  // Use LLD by default.
-  DefaultLinker = "lld";
-}
-
-void MipsLLVMToolChain::AddClangSystemIncludeArgs(
-    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdinc))
-    return;
-
-  const Driver &D = getDriver();
-
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "include");
-    addSystemInclude(DriverArgs, CC1Args, P);
-  }
-
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
-    return;
-
-  const auto &Callback = Multilibs.includeDirsCallback();
-  if (Callback) {
-    const auto IncludePaths =
-        Callback(D.getInstalledDir(), getTripleString(), SelectedMultilib);
-    for (const auto &Path : IncludePaths)
-      addExternCSystemIncludeIfExists(DriverArgs, CC1Args, Path);
-  }
-}
-
-Tool *MipsLLVMToolChain::buildLinker() const {
-  return new tools::gnutools::Linker(*this);
-}
-
-std::string MipsLLVMToolChain::computeSysRoot() const {
-  if (!getDriver().SysRoot.empty())
-    return getDriver().SysRoot + SelectedMultilib.osSuffix();
-
-  const std::string InstalledDir(getDriver().getInstalledDir());
-  std::string SysRootPath =
-      InstalledDir + "/../sysroot" + SelectedMultilib.osSuffix();
-  if (llvm::sys::fs::exists(SysRootPath))
-    return SysRootPath;
-
-  return std::string();
-}
-
-ToolChain::CXXStdlibType
-MipsLLVMToolChain::GetCXXStdlibType(const ArgList &Args) const {
-  Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
-  if (A) {
-    StringRef Value = A->getValue();
-    if (Value != "libc++")
-      getDriver().Diag(diag::err_drv_invalid_stdlib_name)
-          << A->getAsString(Args);
-  }
-
-  return ToolChain::CST_Libcxx;
-}
-
-void MipsLLVMToolChain::AddClangCXXStdlibIncludeArgs(
-    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
-      DriverArgs.hasArg(options::OPT_nostdincxx))
-    return;
-
-  assert((GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx) &&
-         "Only -lc++ (aka libcxx) is suported in this toolchain.");
-
-  const auto &Callback = Multilibs.includeDirsCallback();
-  if (Callback) {
-    const auto IncludePaths = Callback(getDriver().getInstalledDir(),
-                                       getTripleString(), SelectedMultilib);
-    for (const auto &Path : IncludePaths) {
-      if (llvm::sys::fs::exists(Path + "/c++/v1")) {
-        addSystemInclude(DriverArgs, CC1Args, Path + "/c++/v1");
-        break;
-      }
-    }
-  }
-}
-
-void MipsLLVMToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
-                                            ArgStringList &CmdArgs) const {
-  assert((GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) &&
-         "Only -lc++ (aka libxx) is suported in this toolchain.");
-
-  CmdArgs.push_back("-lc++");
-  CmdArgs.push_back("-lc++abi");
-  CmdArgs.push_back("-lunwind");
-}
-
-std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
-                                             StringRef Component,
-                                             bool Shared) const {
-  SmallString<128> Path(getDriver().ResourceDir);
-  llvm::sys::path::append(Path, SelectedMultilib.osSuffix(), "lib" + LibSuffix,
-                          getOS());
-  llvm::sys::path::append(Path, Twine("libclang_rt." + Component + "-" +
-                                      "mips" + (Shared ? ".so" : ".a")));
-  return Path.str();
-}
-
 /// Hexagon Toolchain
 
-std::string HexagonToolChain::getHexagonTargetDir(
-      const std::string &InstalledDir,
-      const SmallVectorImpl<std::string> &PrefixDirs) const {
-  std::string InstallRelDir;
-  const Driver &D = getDriver();
-
+std::string HexagonToolChain::GetGnuDir(const std::string &InstalledDir,
+                                        const ArgList &Args) const {
   // Locate the rest of the toolchain ...
-  for (auto &I : PrefixDirs)
-    if (D.getVFS().exists(I))
-      return I;
+  std::string GccToolchain = getGCCToolchainDir(Args);
 
-  if (getVFS().exists(InstallRelDir = InstalledDir + "/../target"))
+  if (!GccToolchain.empty())
+    return GccToolchain;
+
+  std::string InstallRelDir = InstalledDir + "/../../gnu";
+  if (getVFS().exists(InstallRelDir))
     return InstallRelDir;
 
-  std::string PrefixRelDir = std::string(LLVM_PREFIX) + "/target";
+  std::string PrefixRelDir = std::string(LLVM_PREFIX) + "/../gnu";
   if (getVFS().exists(PrefixRelDir))
     return PrefixRelDir;
 
   return InstallRelDir;
 }
 
+const char *HexagonToolChain::GetSmallDataThreshold(const ArgList &Args) {
+  Arg *A;
 
-Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
-      const ArgList &Args) {
-  StringRef Gn = "";
-  if (Arg *A = Args.getLastArg(options::OPT_G, options::OPT_G_EQ,
-                               options::OPT_msmall_data_threshold_EQ)) {
-    Gn = A->getValue();
-  } else if (Args.getLastArg(options::OPT_shared, options::OPT_fpic,
-                             options::OPT_fPIC)) {
-    Gn = "0";
-  }
+  A = Args.getLastArg(options::OPT_G, options::OPT_G_EQ,
+                      options::OPT_msmall_data_threshold_EQ);
+  if (A)
+    return A->getValue();
 
-  unsigned G;
-  if (!Gn.getAsInteger(10, G))
-    return G;
+  A = Args.getLastArg(options::OPT_shared, options::OPT_fpic,
+                      options::OPT_fPIC);
+  if (A)
+    return "0";
 
-  return None;
+  return nullptr;
 }
 
+bool HexagonToolChain::UsesG0(const char *smallDataThreshold) {
+  return smallDataThreshold && smallDataThreshold[0] == '0';
+}
 
-void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
-      ToolChain::path_list &LibPaths) const {
-  const Driver &D = getDriver();
+static void GetHexagonLibraryPaths(const HexagonToolChain &TC,
+                                   const ArgList &Args, const std::string &Ver,
+                                   const std::string &MarchString,
+                                   const std::string &InstalledDir,
+                                   ToolChain::path_list *LibPaths) {
+  bool buildingLib = Args.hasArg(options::OPT_shared);
 
   //----------------------------------------------------------------------------
   // -L Args
   //----------------------------------------------------------------------------
   for (Arg *A : Args.filtered(options::OPT_L))
     for (const char *Value : A->getValues())
-      LibPaths.push_back(Value);
+      LibPaths->push_back(Value);
 
   //----------------------------------------------------------------------------
   // Other standard paths
   //----------------------------------------------------------------------------
-  std::vector<std::string> RootDirs;
-  std::copy(D.PrefixDirs.begin(), D.PrefixDirs.end(),
-            std::back_inserter(RootDirs));
+  const std::string MarchSuffix = "/" + MarchString;
+  const std::string G0Suffix = "/G0";
+  const std::string MarchG0Suffix = MarchSuffix + G0Suffix;
+  const std::string RootDir = TC.GetGnuDir(InstalledDir, Args) + "/";
 
-  std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                              D.PrefixDirs);
-  if (std::find(RootDirs.begin(), RootDirs.end(), TargetDir) == RootDirs.end())
-    RootDirs.push_back(TargetDir);
-
-  bool HasPIC = Args.hasArg(options::OPT_fpic, options::OPT_fPIC);
-  // Assume G0 with -shared.
-  bool HasG0 = Args.hasArg(options::OPT_shared);
-  if (auto G = getSmallDataThreshold(Args))
-    HasG0 = G.getValue() == 0;
-
-  const std::string CpuVer = GetTargetCPUVersion(Args).str();
-  for (auto &Dir : RootDirs) {
-    std::string LibDir = Dir + "/hexagon/lib";
-    std::string LibDirCpu = LibDir + '/' + CpuVer;
-    if (HasG0) {
-      if (HasPIC)
-        LibPaths.push_back(LibDirCpu + "/G0/pic");
-      LibPaths.push_back(LibDirCpu + "/G0");
-    }
-    LibPaths.push_back(LibDirCpu);
-    LibPaths.push_back(LibDir);
+  // lib/gcc/hexagon/...
+  std::string LibGCCHexagonDir = RootDir + "lib/gcc/hexagon/";
+  if (buildingLib) {
+    LibPaths->push_back(LibGCCHexagonDir + Ver + MarchG0Suffix);
+    LibPaths->push_back(LibGCCHexagonDir + Ver + G0Suffix);
   }
+  LibPaths->push_back(LibGCCHexagonDir + Ver + MarchSuffix);
+  LibPaths->push_back(LibGCCHexagonDir + Ver);
+
+  // lib/gcc/...
+  LibPaths->push_back(RootDir + "lib/gcc");
+
+  // hexagon/lib/...
+  std::string HexagonLibDir = RootDir + "hexagon/lib";
+  if (buildingLib) {
+    LibPaths->push_back(HexagonLibDir + MarchG0Suffix);
+    LibPaths->push_back(HexagonLibDir + G0Suffix);
+  }
+  LibPaths->push_back(HexagonLibDir + MarchSuffix);
+  LibPaths->push_back(HexagonLibDir);
 }
 
 HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
-                                   const llvm::opt::ArgList &Args)
+                                   const ArgList &Args)
     : Linux(D, Triple, Args) {
-  const std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                                    D.PrefixDirs);
+  const std::string InstalledDir(getDriver().getInstalledDir());
+  const std::string GnuDir = GetGnuDir(InstalledDir, Args);
 
   // Note: Generic_GCC::Generic_GCC adds InstalledDir and getDriver().Dir to
   // program paths
-  const std::string BinDir(TargetDir + "/bin");
+  const std::string BinDir(GnuDir + "/bin");
   if (D.getVFS().exists(BinDir))
     getProgramPaths().push_back(BinDir);
 
-  ToolChain::path_list &LibPaths = getFilePaths();
+  // Determine version of GCC libraries and headers to use.
+  const std::string HexagonDir(GnuDir + "/lib/gcc/hexagon");
+  std::error_code ec;
+  GCCVersion MaxVersion = GCCVersion::Parse("0.0.0");
+  for (vfs::directory_iterator di = D.getVFS().dir_begin(HexagonDir, ec), de;
+       !ec && di != de; di = di.increment(ec)) {
+    GCCVersion cv = GCCVersion::Parse(llvm::sys::path::filename(di->getName()));
+    if (MaxVersion < cv)
+      MaxVersion = cv;
+  }
+  GCCLibAndIncVersion = MaxVersion;
+
+  ToolChain::path_list *LibPaths = &getFilePaths();
 
   // Remove paths added by Linux toolchain. Currently Hexagon_TC really targets
   // 'elf' OS type, so the Linux paths are not appropriate. When we actually
   // support 'linux' we'll need to fix this up
-  LibPaths.clear();
-  getHexagonLibraryPaths(Args, LibPaths);
+  LibPaths->clear();
+
+  GetHexagonLibraryPaths(*this, Args, GetGCCLibAndIncVersion(),
+                         GetTargetCPU(Args), InstalledDir, LibPaths);
 }
 
 HexagonToolChain::~HexagonToolChain() {}
@@ -2680,14 +2484,18 @@ Tool *HexagonToolChain::buildLinker() const {
 
 void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  const Driver &D = getDriver();
-  std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                              D.PrefixDirs);
-  addExternCSystemInclude(DriverArgs, CC1Args, TargetDir + "/hexagon/include");
+  std::string Ver(GetGCCLibAndIncVersion());
+  std::string GnuDir = GetGnuDir(D.InstalledDir, DriverArgs);
+  std::string HexagonDir(GnuDir + "/lib/gcc/hexagon/" + Ver);
+  addExternCSystemInclude(DriverArgs, CC1Args, HexagonDir + "/include");
+  addExternCSystemInclude(DriverArgs, CC1Args, HexagonDir + "/include-fixed");
+  addExternCSystemInclude(DriverArgs, CC1Args, GnuDir + "/hexagon/include");
 }
 
 void HexagonToolChain::AddClangCXXStdlibIncludeArgs(
@@ -2697,8 +2505,12 @@ void HexagonToolChain::AddClangCXXStdlibIncludeArgs(
     return;
 
   const Driver &D = getDriver();
-  std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
-  addSystemInclude(DriverArgs, CC1Args, TargetDir + "/hexagon/include/c++");
+  std::string Ver(GetGCCLibAndIncVersion());
+  SmallString<128> IncludeDir(GetGnuDir(D.InstalledDir, DriverArgs));
+
+  llvm::sys::path::append(IncludeDir, "hexagon/include/c++/");
+  llvm::sys::path::append(IncludeDir, Ver);
+  addSystemInclude(DriverArgs, CC1Args, IncludeDir);
 }
 
 ToolChain::CXXStdlibType
@@ -2708,29 +2520,53 @@ HexagonToolChain::GetCXXStdlibType(const ArgList &Args) const {
     return ToolChain::CST_Libstdcxx;
 
   StringRef Value = A->getValue();
-  if (Value != "libstdc++")
+  if (Value != "libstdc++") {
     getDriver().Diag(diag::err_drv_invalid_stdlib_name) << A->getAsString(Args);
+  }
 
   return ToolChain::CST_Libstdcxx;
 }
 
-//
-// Returns the default CPU for Hexagon. This is the default compilation target
-// if no Hexagon processor is selected at the command-line.
-//
-const StringRef HexagonToolChain::GetDefaultCPU() {
-  return "hexagonv60";
+static int getHexagonVersion(const ArgList &Args) {
+  Arg *A = Args.getLastArg(options::OPT_march_EQ, options::OPT_mcpu_EQ);
+  // Select the default CPU (v4) if none was given.
+  if (!A)
+    return 4;
+
+  // FIXME: produce errors if we cannot parse the version.
+  StringRef WhichHexagon = A->getValue();
+  if (WhichHexagon.startswith("hexagonv")) {
+    int Val;
+    if (!WhichHexagon.substr(sizeof("hexagonv") - 1).getAsInteger(10, Val))
+      return Val;
+  }
+  if (WhichHexagon.startswith("v")) {
+    int Val;
+    if (!WhichHexagon.substr(1).getAsInteger(10, Val))
+      return Val;
+  }
+
+  // FIXME: should probably be an error.
+  return 4;
 }
 
-const StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
-  Arg *CpuArg = nullptr;
-  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ, options::OPT_march_EQ))
-    CpuArg = A;
-
-  StringRef CPU = CpuArg ? CpuArg->getValue() : GetDefaultCPU();
-  if (CPU.startswith("hexagon"))
-    return CPU.substr(sizeof("hexagon") - 1);
-  return CPU;
+StringRef HexagonToolChain::GetTargetCPU(const ArgList &Args) {
+  int V = getHexagonVersion(Args);
+  // FIXME: We don't support versions < 4. We should error on them.
+  switch (V) {
+  default:
+    llvm_unreachable("Unexpected version");
+  case 5:
+    return "v5";
+  case 4:
+    return "v4";
+  case 3:
+    return "v3";
+  case 2:
+    return "v2";
+  case 1:
+    return "v1";
+  }
 }
 // End Hexagon
 
@@ -2796,6 +2632,8 @@ NaClToolChain::NaClToolChain(const Driver &D, const llvm::Triple &Triple,
     break;
   }
 
+  // Use provided linker, not system linker
+  Linker = GetLinkerPath();
   NaClArmMacrosPath = GetFilePath("nacl-arm-macros.s");
 }
 
@@ -3499,8 +3337,7 @@ static Distro DetectDistro(const Driver &D, llvm::Triple::ArchType Arch) {
 static std::string getMultiarchTriple(const Driver &D,
                                       const llvm::Triple &TargetTriple,
                                       StringRef SysRoot) {
-  llvm::Triple::EnvironmentType TargetEnvironment =
-      TargetTriple.getEnvironment();
+  llvm::Triple::EnvironmentType TargetEnvironment = TargetTriple.getEnvironment();
 
   // For most architectures, just use whatever we have rather than trying to be
   // clever.
@@ -3650,6 +3487,8 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   PPaths.push_back(Twine(GCCInstallation.getParentLibPath() + "/../" +
                          GCCInstallation.getTriple().str() + "/bin")
                        .str());
+
+  Linker = GetLinkerPath();
 
   Distro Distro = DetectDistro(D, Arch);
 
@@ -3917,10 +3756,6 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       "/usr/include/arm-linux-gnueabi"};
   const StringRef ARMHFMultiarchIncludeDirs[] = {
       "/usr/include/arm-linux-gnueabihf"};
-  const StringRef ARMEBMultiarchIncludeDirs[] = {
-      "/usr/include/armeb-linux-gnueabi"};
-  const StringRef ARMEBHFMultiarchIncludeDirs[] = {
-      "/usr/include/armeb-linux-gnueabihf"};
   const StringRef MIPSMultiarchIncludeDirs[] = {"/usr/include/mips-linux-gnu"};
   const StringRef MIPSELMultiarchIncludeDirs[] = {
       "/usr/include/mipsel-linux-gnu"};
@@ -3954,18 +3789,10 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     MultiarchIncludeDirs = AArch64MultiarchIncludeDirs;
     break;
   case llvm::Triple::arm:
-  case llvm::Triple::thumb:
     if (getTriple().getEnvironment() == llvm::Triple::GNUEABIHF)
       MultiarchIncludeDirs = ARMHFMultiarchIncludeDirs;
     else
       MultiarchIncludeDirs = ARMMultiarchIncludeDirs;
-    break;
-  case llvm::Triple::armeb:
-  case llvm::Triple::thumbeb:
-    if (getTriple().getEnvironment() == llvm::Triple::GNUEABIHF)
-      MultiarchIncludeDirs = ARMEBHFMultiarchIncludeDirs;
-    else
-      MultiarchIncludeDirs = ARMEBMultiarchIncludeDirs;
     break;
   case llvm::Triple::mips:
     MultiarchIncludeDirs = MIPSMultiarchIncludeDirs;
@@ -4019,25 +3846,6 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 
-static std::string DetectLibcxxIncludePath(StringRef base) {
-  std::error_code EC;
-  int MaxVersion = 0;
-  std::string MaxVersionString = "";
-  for (llvm::sys::fs::directory_iterator LI(base, EC), LE; !EC && LI != LE;
-       LI = LI.increment(EC)) {
-    StringRef VersionText = llvm::sys::path::filename(LI->path());
-    int Version;
-    if (VersionText[0] == 'v' &&
-        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
-      if (Version > MaxVersion) {
-        MaxVersion = Version;
-        MaxVersionString = VersionText;
-      }
-    }
-  }
-  return MaxVersion ? (base + "/" + MaxVersionString).str() : "";
-}
-
 void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                          ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
@@ -4047,14 +3855,17 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   // Check if libc++ has been enabled and provide its include paths if so.
   if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx) {
     const std::string LibCXXIncludePathCandidates[] = {
-        DetectLibcxxIncludePath(getDriver().Dir + "/../include/c++"),
+        // The primary location is within the Clang installation.
+        // FIXME: We shouldn't hard code 'v1' here to make Clang future proof to
+        // newer ABI versions.
+        getDriver().Dir + "/../include/c++/v1",
 
         // We also check the system as for a long time this is the only place
         // Clang looked.
         // FIXME: We should really remove this. It doesn't make any sense.
-        DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/include/c++")};
+        getDriver().SysRoot + "/usr/include/c++/v1"};
     for (const auto &IncludePath : LibCXXIncludePathCandidates) {
-      if (IncludePath.empty() || !getVFS().exists(IncludePath))
+      if (!getVFS().exists(IncludePath))
         continue;
       // Add the first candidate that exists.
       addSystemInclude(DriverArgs, CC1Args, IncludePath);
@@ -4112,18 +3923,6 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-void Linux::AddCudaIncludeArgs(const ArgList &DriverArgs,
-                               ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nocudainc))
-    return;
-
-  if (CudaInstallation.isValid()) {
-    addSystemInclude(DriverArgs, CC1Args, CudaInstallation.getIncludePath());
-    CC1Args.push_back("-include");
-    CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
-  }
-}
-
 bool Linux::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }
 
 SanitizerMask Linux::getSupportedSanitizers() const {
@@ -4144,7 +3943,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
     Res |= SanitizerKind::DataFlow;
   if (IsX86_64 || IsMIPS64 || IsAArch64)
     Res |= SanitizerKind::Leak;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64)
+  if (IsX86_64 || IsMIPS64 || IsAArch64)
     Res |= SanitizerKind::Thread;
   if (IsX86_64 || IsMIPS64 || IsPowerPC64 || IsAArch64)
     Res |= SanitizerKind::Memory;
@@ -4179,7 +3978,10 @@ DragonFly::DragonFly(const Driver &D, const llvm::Triple &Triple,
 
   getFilePaths().push_back(getDriver().Dir + "/../lib");
   getFilePaths().push_back("/usr/lib");
-  getFilePaths().push_back("/usr/lib/gcc50");
+  if (D.getVFS().exists("/usr/lib/gcc47"))
+    getFilePaths().push_back("/usr/lib/gcc47");
+  else
+    getFilePaths().push_back("/usr/lib/gcc44");
 }
 
 Tool *DragonFly::buildAssembler() const {
@@ -4190,38 +3992,19 @@ Tool *DragonFly::buildLinker() const {
   return new tools::dragonfly::Linker(*this);
 }
 
-/// CUDA toolchain.  Our assembler is ptxas, and our "linker" is fatbinary,
-/// which isn't properly a linker but nonetheless performs the step of stitching
-/// together object files from the assembler into a single blob.
+/// Stub for CUDA toolchain. At the moment we don't have assembler or
+/// linker and need toolchain mainly to propagate device-side options
+/// to CC1.
 
 CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
-    : Linux(D, Triple, Args) {
-  if (CudaInstallation.isValid())
-    getProgramPaths().push_back(CudaInstallation.getBinPath());
-}
+    : Linux(D, Triple, Args) {}
 
 void
 CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                      llvm::opt::ArgStringList &CC1Args) const {
   Linux::addClangTargetOptions(DriverArgs, CC1Args);
   CC1Args.push_back("-fcuda-is-device");
-
-  if (DriverArgs.hasArg(options::OPT_nocudalib))
-    return;
-
-  std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(
-      DriverArgs.getLastArgValue(options::OPT_march_EQ));
-  if (!LibDeviceFile.empty()) {
-    CC1Args.push_back("-mlink-cuda-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
-
-    // Libdevice in CUDA-7.0 requires PTX version that's more recent
-    // than LLVM defaults to. Use PTX4.2 which is the PTX version that
-    // came with CUDA-7.0.
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+ptx42");
-  }
 }
 
 llvm::opt::DerivedArgList *
@@ -4233,7 +4016,7 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   for (Arg *A : Args) {
     if (A->getOption().matches(options::OPT_Xarch__)) {
       // Skip this argument unless the architecture matches BoundArch
-      if (!BoundArch || A->getValue(0) != StringRef(BoundArch))
+      if (A->getValue(0) != StringRef(BoundArch))
         continue;
 
       unsigned Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
@@ -4264,17 +4047,8 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     DAL->append(A);
   }
 
-  if (BoundArch)
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), BoundArch);
+  DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), BoundArch);
   return DAL;
-}
-
-Tool *CudaToolChain::buildAssembler() const {
-  return new tools::NVPTX::Assembler(*this);
-}
-
-Tool *CudaToolChain::buildLinker() const {
-  return new tools::NVPTX::Linker(*this);
 }
 
 /// XCore tool chain
@@ -4352,32 +4126,11 @@ MyriadToolChain::MyriadToolChain(const Driver &D, const llvm::Triple &Triple,
   // choose the myriad installation when targeting a non-myriad sparc install.
   switch (Triple.getArch()) {
   default:
-    D.Diag(diag::err_target_unsupported_arch) << Triple.getArchName()
-                                              << "myriad";
+    D.Diag(diag::err_target_unsupported_arch) << Triple.getArchName() << "myriad";
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::shave:
     GCCInstallation.init(Triple, Args, {"sparc-myriad-elf"});
-  }
-
-  if (GCCInstallation.isValid()) {
-    // The contents of LibDir are independent of the version of gcc.
-    // This contains libc, libg (a superset of libc), libm, libstdc++, libssp.
-    SmallString<128> LibDir(GCCInstallation.getParentLibPath());
-    if (Triple.getArch() == llvm::Triple::sparcel)
-      llvm::sys::path::append(LibDir, "../sparc-myriad-elf/lib/le");
-    else
-      llvm::sys::path::append(LibDir, "../sparc-myriad-elf/lib");
-    addPathIfExists(D, LibDir, getFilePaths());
-
-    // This directory contains crt{i,n,begin,end}.o as well as libgcc.
-    // These files are tied to a particular version of gcc.
-    SmallString<128> CompilerSupportDir(GCCInstallation.getInstallPath());
-    // There are actually 4 choices: {le,be} x {fpu,nofpu}
-    // but as this toolchain is for LEON sparc, it can assume FPU.
-    if (Triple.getArch() == llvm::Triple::sparcel)
-      llvm::sys::path::append(CompilerSupportDir, "le");
-    addPathIfExists(D, CompilerSupportDir, getFilePaths());
   }
 }
 
@@ -4389,8 +4142,8 @@ void MyriadToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
 }
 
-void MyriadToolChain::AddClangCXXStdlibIncludeArgs(
-    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+void MyriadToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                                   ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
@@ -4401,9 +4154,8 @@ void MyriadToolChain::AddClangCXXStdlibIncludeArgs(
   StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
 
-  addLibStdCXXIncludePaths(
-      LibDir.str() + "/../" + TripleStr.str() + "/include/c++/" + Version.Text,
-      "", TripleStr, "", "", Multilib.includeSuffix(), DriverArgs, CC1Args);
+  addLibStdCXXIncludePaths(LibDir.str() + "/../" + TripleStr.str() + "/include/c++/" + Version.Text,
+                           "", TripleStr, "", "", Multilib.includeSuffix(), DriverArgs, CC1Args);
 }
 
 // MyriadToolChain handles several triples:
@@ -4413,7 +4165,6 @@ Tool *MyriadToolChain::SelectTool(const JobAction &JA) const {
   if (!isShaveCompilation(getTriple()))
     return ToolChain::SelectTool(JA);
   switch (JA.getKind()) {
-  case Action::PreprocessJobClass:
   case Action::CompileJobClass:
     if (!Compiler)
       Compiler.reset(new tools::SHAVE::Compiler(*this));
@@ -4427,15 +4178,29 @@ Tool *MyriadToolChain::SelectTool(const JobAction &JA) const {
   }
 }
 
-Tool *MyriadToolChain::buildLinker() const {
-  return new tools::Myriad::Linker(*this);
+void MyriadToolChain::getCompilerSupportDir(std::string &Dir) const {
+  // This directory contains crt{i,n,begin,end}.o as well as libgcc.
+  // These files are tied to a particular version of gcc.
+  SmallString<128> Result(GCCInstallation.getInstallPath());
+  // There are actually 4 choices: {le,be} x {fpu,nofpu}
+  // but as this toolchain is for LEON sparc, it can assume FPU.
+  if (this->getTriple().getArch() == llvm::Triple::sparcel)
+    llvm::sys::path::append(Result, "le");
+  Dir.assign(Result.str());
+}
+void MyriadToolChain::getBuiltinLibDir(std::string &Dir) const {
+  // The contents of LibDir are independent of the version of gcc.
+  // This contains libc, libg (a superset of libc), libm, libstdc++, libssp.
+  SmallString<128> Result(GCCInstallation.getParentLibPath());
+  if (this->getTriple().getArch() == llvm::Triple::sparcel)
+    llvm::sys::path::append(Result, "../sparc-myriad-elf/lib/le");
+  else
+    llvm::sys::path::append(Result, "../sparc-myriad-elf/lib");
+  Dir.assign(Result.str());
 }
 
-WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
-                         const llvm::opt::ArgList &Args)
-  : ToolChain(D, Triple, Args) {
-  // Use LLD by default.
-  DefaultLinker = "lld";
+Tool *MyriadToolChain::buildLinker() const {
+  return new tools::Myriad::Linker(*this);
 }
 
 bool WebAssembly::IsMathErrnoDefault() const { return false; }
@@ -4460,40 +4225,11 @@ bool WebAssembly::hasBlocksRuntime() const { return false; }
 // TODO: Support profiling.
 bool WebAssembly::SupportsProfiling() const { return false; }
 
-bool WebAssembly::HasNativeLLVMSupport() const { return true; }
-
 void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
   if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
                          options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fuse-init-array");
-}
-
-ToolChain::RuntimeLibType WebAssembly::GetDefaultRuntimeLibType() const {
-  return ToolChain::RLT_CompilerRT;
-}
-
-ToolChain::CXXStdlibType WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
-  return ToolChain::CST_Libcxx;
-}
-
-void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
-                                            ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(options::OPT_nostdinc))
-    addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
-}
-
-void WebAssembly::AddClangCXXStdlibIncludeArgs(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(options::OPT_nostdlibinc) &&
-      !DriverArgs.hasArg(options::OPT_nostdincxx))
-    addSystemInclude(DriverArgs, CC1Args,
-                     getDriver().SysRoot + "/include/c++/v1");
-}
-
-Tool *WebAssembly::buildLinker() const {
-  return new tools::wasm::Linker(*this);
 }
 
 PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
@@ -4513,11 +4249,11 @@ PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   } else {
     PS4SDKDir = getDriver().Dir;
     llvm::sys::path::append(PS4SDKDir, "/../../");
-  }
+  } 
 
-  // By default, the driver won't report a warning if it can't find
+  // By default, the driver won't report a warning if it can't find 
   // PS4's include or lib directories. This behavior could be changed if
-  // -Weverything or -Winvalid-or-nonexistent-directory options are passed.
+  // -Weverything or -Winvalid-or-nonexistent-directory options are passed.  
   // If -isysroot was passed, use that as the SDK base path.
   std::string PrefixDir;
   if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {

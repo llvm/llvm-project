@@ -494,20 +494,6 @@ TEST_F(MDNodeTest, isTemporary) {
   EXPECT_TRUE(T->isTemporary());
 }
 
-#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
-
-TEST_F(MDNodeTest, deathOnNoReplaceTemporaryRAUW) {
-  auto Temp = MDNode::getTemporary(Context, None);
-  Temp->setCanReplace(false);
-  EXPECT_DEATH(Temp->replaceAllUsesWith(nullptr),
-               "Attempted to replace Metadata marked for no replacement");
-  Temp->setCanReplace(true);
-  // Remove the references to Temp; required for teardown.
-  Temp->replaceAllUsesWith(nullptr);
-}
-
-#endif
-
 TEST_F(MDNodeTest, getDistinctWithUnresolvedOperands) {
   // temporary !{}
   auto Temp = MDTuple::getTemporary(Context, None);
@@ -825,14 +811,6 @@ TEST_F(DILocationTest, getTemporary) {
   auto L = DILocation::getTemporary(Context, 2, 7, N);
   EXPECT_TRUE(L->isTemporary());
   EXPECT_FALSE(L->isResolved());
-}
-
-TEST_F(DILocationTest, cloneTemporary) {
-  MDNode *N = MDNode::get(Context, None);
-  auto L = DILocation::getTemporary(Context, 2, 7, N);
-  EXPECT_TRUE(L->isTemporary());
-  auto L2 = L->clone();
-  EXPECT_TRUE(L2->isTemporary());
 }
 
 typedef MetadataTest GenericDINodeTest;
@@ -1326,12 +1304,10 @@ TEST_F(DICompileUnitTest, get) {
   MDTuple *GlobalVariables = getTuple();
   MDTuple *ImportedEntities = getTuple();
   uint64_t DWOId = 0x10000000c0ffee;
-  MDTuple *Macros = getTuple();
   auto *N = DICompileUnit::getDistinct(
       Context, SourceLanguage, File, Producer, IsOptimized, Flags,
       RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, Subprograms, GlobalVariables, ImportedEntities, Macros,
-      DWOId);
+      RetainedTypes, Subprograms, GlobalVariables, ImportedEntities, DWOId);
 
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, N->getTag());
   EXPECT_EQ(SourceLanguage, N->getSourceLanguage());
@@ -1347,7 +1323,6 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(Subprograms, N->getSubprograms().get());
   EXPECT_EQ(GlobalVariables, N->getGlobalVariables().get());
   EXPECT_EQ(ImportedEntities, N->getImportedEntities().get());
-  EXPECT_EQ(Macros, N->getMacros().get());
   EXPECT_EQ(DWOId, N->getDWOId());
 
   TempDICompileUnit Temp = N->clone();
@@ -1365,7 +1340,6 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(Subprograms, Temp->getSubprograms().get());
   EXPECT_EQ(GlobalVariables, Temp->getGlobalVariables().get());
   EXPECT_EQ(ImportedEntities, Temp->getImportedEntities().get());
-  EXPECT_EQ(Macros, Temp->getMacros().get());
   EXPECT_EQ(DWOId, Temp->getDWOId());
 
   auto *TempAddress = Temp.get();
@@ -1390,7 +1364,7 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   auto *N = DICompileUnit::getDistinct(
       Context, SourceLanguage, File, Producer, IsOptimized, Flags,
       RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, nullptr, nullptr, ImportedEntities, nullptr, DWOId);
+      RetainedTypes, nullptr, nullptr, ImportedEntities, DWOId);
 
   auto *Subprograms = MDTuple::getDistinct(Context, None);
   EXPECT_EQ(nullptr, N->getSubprograms().get());
@@ -1405,13 +1379,6 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   EXPECT_EQ(GlobalVariables, N->getGlobalVariables().get());
   N->replaceGlobalVariables(nullptr);
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
-
-  auto *Macros = MDTuple::getDistinct(Context, None);
-  EXPECT_EQ(nullptr, N->getMacros().get());
-  N->replaceMacros(Macros);
-  EXPECT_EQ(Macros, N->getMacros().get());
-  N->replaceMacros(nullptr);
-  EXPECT_EQ(nullptr, N->getMacros().get());
 }
 
 typedef MetadataTest DISubprogramTest;

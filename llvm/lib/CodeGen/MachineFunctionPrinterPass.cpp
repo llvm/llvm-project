@@ -31,7 +31,7 @@ struct MachineFunctionPrinterPass : public MachineFunctionPass {
   const std::string Banner;
 
   MachineFunctionPrinterPass() : MachineFunctionPass(ID), OS(dbgs()) { }
-  MachineFunctionPrinterPass(raw_ostream &os, const std::string &banner)
+  MachineFunctionPrinterPass(raw_ostream &os, const std::string &banner) 
       : MachineFunctionPass(ID), OS(os), Banner(banner) {}
 
   const char *getPassName() const override { return "MachineFunction Printer"; }
@@ -42,8 +42,6 @@ struct MachineFunctionPrinterPass : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (!llvm::isFunctionInPrintList(MF.getName()))
-      return false;
     OS << "# " << Banner << ":\n";
     MF.print(OS, getAnalysisIfAvailable<SlotIndexes>());
     return false;

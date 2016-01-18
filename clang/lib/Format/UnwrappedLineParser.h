@@ -96,7 +96,7 @@ private:
   void parseNamespace();
   void parseNew();
   void parseAccessSpecifier();
-  bool parseEnum();
+  void parseEnum();
   void parseJavaEnumBody();
   void parseRecord();
   void parseObjCProtocolList();
@@ -110,7 +110,6 @@ private:
   void addUnwrappedLine();
   bool eof() const;
   void nextToken();
-  const FormatToken *getPreviousToken();
   void readToken();
   void flushComments(bool NewlineBeforeNext);
   void pushToken(FormatToken *Tok);

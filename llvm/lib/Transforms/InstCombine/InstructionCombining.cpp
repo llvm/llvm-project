@@ -42,9 +42,9 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LibCallSemantics.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -1245,11 +1245,16 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
 /// specified one but with other operands.
 static Value *CreateBinOpAsGiven(BinaryOperator &Inst, Value *LHS, Value *RHS,
                                  InstCombiner::BuilderTy *B) {
-  Value *BO = B->CreateBinOp(Inst.getOpcode(), LHS, RHS);
-  // If LHS and RHS are constant, BO won't be a binary operator.
-  if (BinaryOperator *NewBO = dyn_cast<BinaryOperator>(BO))
-    NewBO->copyIRFlags(&Inst);
-  return BO;
+  Value *BORes = B->CreateBinOp(Inst.getOpcode(), LHS, RHS);
+  if (BinaryOperator *NewBO = dyn_cast<BinaryOperator>(BORes)) {
+    if (isa<OverflowingBinaryOperator>(NewBO)) {
+      NewBO->setHasNoSignedWrap(Inst.hasNoSignedWrap());
+      NewBO->setHasNoUnsignedWrap(Inst.hasNoUnsignedWrap());
+    }
+    if (isa<PossiblyExactOperator>(NewBO))
+      NewBO->setIsExact(Inst.isExact());
+  }
+  return BORes;
 }
 
 /// \brief Makes transformation of binary operation specific for vector types.
@@ -1283,8 +1288,9 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
         LShuf->getMask() == RShuf->getMask()) {
       Value *NewBO = CreateBinOpAsGiven(Inst, LShuf->getOperand(0),
           RShuf->getOperand(0), Builder);
-      return Builder->CreateShuffleVector(NewBO,
+      Value *Res = Builder->CreateShuffleVector(NewBO,
           UndefValue::get(NewBO->getType()), LShuf->getMask());
+      return Res;
     }
   }
 
@@ -1320,11 +1326,18 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
     }
     if (MayChange) {
       Constant *C2 = ConstantVector::get(C2M);
-      Value *NewLHS = isa<Constant>(LHS) ? C2 : Shuffle->getOperand(0);
-      Value *NewRHS = isa<Constant>(LHS) ? Shuffle->getOperand(0) : C2;
+      Value *NewLHS, *NewRHS;
+      if (isa<Constant>(LHS)) {
+        NewLHS = C2;
+        NewRHS = Shuffle->getOperand(0);
+      } else {
+        NewLHS = Shuffle->getOperand(0);
+        NewRHS = C2;
+      }
       Value *NewBO = CreateBinOpAsGiven(Inst, NewLHS, NewRHS, Builder);
-      return Builder->CreateShuffleVector(NewBO,
+      Value *Res = Builder->CreateShuffleVector(NewBO,
           UndefValue::get(Inst.getType()), Shuffle->getMask());
+      return Res;
     }
   }
 
@@ -1334,7 +1347,7 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
 Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
 
-  if (Value *V = SimplifyGEPInst(GEP.getSourceElementType(), Ops, DL, TLI, DT, AC))
+  if (Value *V = SimplifyGEPInst(Ops, DL, TLI, DT, AC))
     return ReplaceInstUsesWith(GEP, V);
 
   Value *PtrOp = GEP.getOperand(0);
@@ -1342,8 +1355,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // Eliminate unneeded casts for indices, and replace indices which displace
   // by multiples of a zero size type with zero.
   bool MadeChange = false;
-  Type *IntPtrTy =
-    DL.getIntPtrType(GEP.getPointerOperandType()->getScalarType());
+  Type *IntPtrTy = DL.getIntPtrType(GEP.getPointerOperandType());
 
   gep_type_iterator GTI = gep_type_begin(GEP);
   for (User::op_iterator I = GEP.op_begin() + 1, E = GEP.op_end(); I != E;
@@ -1353,25 +1365,21 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (!SeqTy)
       continue;
 
-    // Index type should have the same width as IntPtr
-    Type *IndexTy = (*I)->getType();
-    Type *NewIndexType = IndexTy->isVectorTy() ?
-      VectorType::get(IntPtrTy, IndexTy->getVectorNumElements()) : IntPtrTy;
- 
     // If the element type has zero size then any index over it is equivalent
     // to an index of zero, so replace it with zero if it is not zero already.
     if (SeqTy->getElementType()->isSized() &&
         DL.getTypeAllocSize(SeqTy->getElementType()) == 0)
       if (!isa<Constant>(*I) || !cast<Constant>(*I)->isNullValue()) {
-        *I = Constant::getNullValue(NewIndexType);
+        *I = Constant::getNullValue(IntPtrTy);
         MadeChange = true;
       }
 
-    if (IndexTy != NewIndexType) {
+    Type *IndexTy = (*I)->getType();
+    if (IndexTy != IntPtrTy) {
       // If we are using a wider index than needed for this platform, shrink
       // it to what we need.  If narrower, sign-extend it to what we need.
       // This explicit cast can make subsequent optimizations more obvious.
-      *I = Builder->CreateIntCast(*I, NewIndexType, true);
+      *I = Builder->CreateIntCast(*I, IntPtrTy, true);
       MadeChange = true;
     }
   }
@@ -1962,7 +1970,7 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
 
     if (InvokeInst *II = dyn_cast<InvokeInst>(&MI)) {
       // Replace invoke with a NOP intrinsic to maintain the original CFG
-      Module *M = II->getModule();
+      Module *M = II->getParent()->getParent()->getParent();
       Function *F = Intrinsic::getDeclaration(M, Intrinsic::donothing);
       InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(),
                          None, "", II->getParent());
@@ -2311,10 +2319,9 @@ Instruction *InstCombiner::visitExtractValueInst(ExtractValueInst &EV) {
   }
   if (LoadInst *L = dyn_cast<LoadInst>(Agg))
     // If the (non-volatile) load only has one use, we can rewrite this to a
-    // load from a GEP. This reduces the size of the load. If a load is used
-    // only by extractvalue instructions then this either must have been
-    // optimized before, or it is a struct with padding, in which case we
-    // don't want to do the transformation as it loses padding knowledge.
+    // load from a GEP. This reduces the size of the load.
+    // FIXME: If a load is used only by extractvalue instructions then this
+    //        could be done regardless of having multiple uses.
     if (L->isSimple() && L->hasOneUse()) {
       // extractvalue has integer indices, getelementptr has Value*s. Convert.
       SmallVector<Value*, 4> Indices;
@@ -2474,24 +2481,10 @@ Instruction *InstCombiner::visitLandingPadInst(LandingPadInst &LI) {
             SawCatchAll = true;
             break;
           }
-
-          // Even if we've seen a type in a catch clause, we don't want to
-          // remove it from the filter.  An unexpected type handler may be
-          // set up for a call site which throws an exception of the same
-          // type caught.  In order for the exception thrown by the unexpected
-          // handler to propogate correctly, the filter must be correctly
-          // described for the call site.
-          //
-          // Example:
-          //
-          // void unexpected() { throw 1;}
-          // void foo() throw (int) {
-          //   std::set_unexpected(unexpected);
-          //   try {
-          //     throw 2.0;
-          //   } catch (int i) {}
-          // }
-
+          if (AlreadyCaught.count(TypeInfo))
+            // Already caught by an earlier clause, so having it in the filter
+            // is pointless.
+            continue;
           // There is no point in having multiple copies of the same typeinfo in
           // a filter, so only add it if we didn't already.
           if (SeenInFilter.insert(TypeInfo).second)
@@ -3019,9 +3012,9 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     while (EndInst != BB->begin()) {
       // Delete the next to last instruction.
       Instruction *Inst = &*--EndInst->getIterator();
-      if (!Inst->use_empty() && !Inst->getType()->isTokenTy())
+      if (!Inst->use_empty())
         Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
-      if (Inst->isEHPad() || Inst->getType()->isTokenTy()) {
+      if (Inst->isEHPad()) {
         EndInst = Inst;
         continue;
       }

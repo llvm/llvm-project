@@ -72,20 +72,6 @@ private:
     return TLI.getTypeAction(*DAG.getContext(), VT) == TargetLowering::TypeLegal;
   }
 
-  /// isSimpleLegalType - Return true if this is a simple legal type.
-  bool isSimpleLegalType(EVT VT) const {
-    return VT.isSimple() && TLI.isTypeLegal(VT);
-  }
-
-  /// isLegalInHWReg - Return true if this type can be passed in registers.
-  /// For example, x86_64's f128, should to be legally in registers
-  /// and only some operations converted to library calls or integer
-  /// bitwise operations.
-  bool isLegalInHWReg(EVT VT) const {
-    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-    return VT == NVT && isSimpleLegalType(VT);
-  }
-
   EVT getSetCCResultType(EVT VT) const {
     return TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   }
@@ -187,11 +173,6 @@ private:
   std::pair<SDValue, SDValue> ExpandAtomic(SDNode *Node);
 
   SDValue PromoteTargetBoolean(SDValue Bool, EVT ValVT);
-
-  /// Modify Bit Vector to match SetCC result type of ValVT.
-  /// The bit vector is widened with zeroes when WithZeroes is true.
-  SDValue WidenTargetBoolean(SDValue Bool, EVT ValVT, bool WithZeroes = false);
-
   void ReplaceValueWith(SDValue From, SDValue To);
   void SplitInteger(SDValue Op, SDValue &Lo, SDValue &Hi);
   void SplitInteger(SDValue Op, EVT LoVT, EVT HiVT,
@@ -253,7 +234,6 @@ private:
   SDValue PromoteIntRes_CONCAT_VECTORS(SDNode *N);
   SDValue PromoteIntRes_BITCAST(SDNode *N);
   SDValue PromoteIntRes_BSWAP(SDNode *N);
-  SDValue PromoteIntRes_BITREVERSE(SDNode *N);
   SDValue PromoteIntRes_BUILD_PAIR(SDNode *N);
   SDValue PromoteIntRes_Constant(SDNode *N);
   SDValue PromoteIntRes_CONVERT_RNDSAT(SDNode *N);
@@ -266,22 +246,21 @@ private:
   SDValue PromoteIntRes_INT_EXTEND(SDNode *N);
   SDValue PromoteIntRes_LOAD(LoadSDNode *N);
   SDValue PromoteIntRes_MLOAD(MaskedLoadSDNode *N);
-  SDValue PromoteIntRes_MGATHER(MaskedGatherSDNode *N);
   SDValue PromoteIntRes_Overflow(SDNode *N);
   SDValue PromoteIntRes_SADDSUBO(SDNode *N, unsigned ResNo);
+  SDValue PromoteIntRes_SDIV(SDNode *N);
   SDValue PromoteIntRes_SELECT(SDNode *N);
   SDValue PromoteIntRes_VSELECT(SDNode *N);
   SDValue PromoteIntRes_SELECT_CC(SDNode *N);
   SDValue PromoteIntRes_SETCC(SDNode *N);
   SDValue PromoteIntRes_SHL(SDNode *N);
   SDValue PromoteIntRes_SimpleIntBinOp(SDNode *N);
-  SDValue PromoteIntRes_ZExtIntBinOp(SDNode *N);
-  SDValue PromoteIntRes_SExtIntBinOp(SDNode *N);
   SDValue PromoteIntRes_SIGN_EXTEND_INREG(SDNode *N);
   SDValue PromoteIntRes_SRA(SDNode *N);
   SDValue PromoteIntRes_SRL(SDNode *N);
   SDValue PromoteIntRes_TRUNCATE(SDNode *N);
   SDValue PromoteIntRes_UADDSUBO(SDNode *N, unsigned ResNo);
+  SDValue PromoteIntRes_UDIV(SDNode *N);
   SDValue PromoteIntRes_UNDEF(SDNode *N);
   SDValue PromoteIntRes_VAARG(SDNode *N);
   SDValue PromoteIntRes_XMULO(SDNode *N, unsigned ResNo);
@@ -313,8 +292,6 @@ private:
   SDValue PromoteIntOp_ZERO_EXTEND(SDNode *N);
   SDValue PromoteIntOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_MGATHER(MaskedGatherSDNode *N, unsigned OpNo);
 
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
 
@@ -353,7 +330,6 @@ private:
   void ExpandIntRes_ADDSUB            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ADDSUBC           (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ADDSUBE           (SDNode *N, SDValue &Lo, SDValue &Hi);
-  void ExpandIntRes_BITREVERSE        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_BSWAP             (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_MUL               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_SDIV              (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -378,7 +354,6 @@ private:
   SDValue ExpandIntOp_BR_CC(SDNode *N);
   SDValue ExpandIntOp_SELECT_CC(SDNode *N);
   SDValue ExpandIntOp_SETCC(SDNode *N);
-  SDValue ExpandIntOp_SETCCE(SDNode *N);
   SDValue ExpandIntOp_Shift(SDNode *N);
   SDValue ExpandIntOp_SINT_TO_FP(SDNode *N);
   SDValue ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo);
@@ -394,48 +369,32 @@ private:
   // Float to Integer Conversion Support: LegalizeFloatTypes.cpp
   //===--------------------------------------------------------------------===//
 
-  /// GetSoftenedFloat - Given an operand Op of Float type, returns the integer
-  /// if the Op is not supported in target HW and converted to the integer.
-  /// The integer contains exactly the same bits as Op - only the type changed.
-  /// For example, if Op is an f32 which was softened to an i32, then this method
-  /// returns an i32, the bits of which coincide with those of Op.
-  /// If the Op can be efficiently supported in target HW or the operand must
-  /// stay in a register, the Op is not converted to an integer.
-  /// In that case, the given op is returned.
+  /// GetSoftenedFloat - Given a processed operand Op which was converted to an
+  /// integer of the same size, this returns the integer.  The integer contains
+  /// exactly the same bits as Op - only the type changed.  For example, if Op
+  /// is an f32 which was softened to an i32, then this method returns an i32,
+  /// the bits of which coincide with those of Op.
   SDValue GetSoftenedFloat(SDValue Op) {
     SDValue &SoftenedOp = SoftenedFloats[Op];
-    if (!SoftenedOp.getNode() &&
-        isSimpleLegalType(Op.getValueType()))
-      return Op;
     RemapValue(SoftenedOp);
     assert(SoftenedOp.getNode() && "Operand wasn't converted to integer?");
     return SoftenedOp;
   }
   void SetSoftenedFloat(SDValue Op, SDValue Result);
 
-  // Call ReplaceValueWith(SDValue(N, ResNo), Res) if necessary.
-  void ReplaceSoftenFloatResult(SDNode *N, unsigned ResNo, SDValue &NewRes) {
-    // When the result type can be kept in HW registers, the converted
-    // NewRes node could have the same type. We can save the effort in
-    // cloning every user of N in SoftenFloatOperand or other legalization functions,
-    // by calling ReplaceValueWith here to update all users.
-    if (NewRes.getNode() != N && isLegalInHWReg(N->getValueType(ResNo)))
-      ReplaceValueWith(SDValue(N, ResNo), NewRes);
-  }
-
-  // Convert Float Results to Integer for Non-HW-supported Operations.
-  bool SoftenFloatResult(SDNode *N, unsigned ResNo);
+  // Result Float to Integer Conversion.
+  void SoftenFloatResult(SDNode *N, unsigned OpNo);
   SDValue SoftenFloatRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
-  SDValue SoftenFloatRes_BITCAST(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_BITCAST(SDNode *N);
   SDValue SoftenFloatRes_BUILD_PAIR(SDNode *N);
-  SDValue SoftenFloatRes_ConstantFP(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_ConstantFP(ConstantFPSDNode *N);
   SDValue SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N);
-  SDValue SoftenFloatRes_FABS(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_FABS(SDNode *N);
   SDValue SoftenFloatRes_FMINNUM(SDNode *N);
   SDValue SoftenFloatRes_FMAXNUM(SDNode *N);
   SDValue SoftenFloatRes_FADD(SDNode *N);
   SDValue SoftenFloatRes_FCEIL(SDNode *N);
-  SDValue SoftenFloatRes_FCOPYSIGN(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_FCOPYSIGN(SDNode *N);
   SDValue SoftenFloatRes_FCOS(SDNode *N);
   SDValue SoftenFloatRes_FDIV(SDNode *N);
   SDValue SoftenFloatRes_FEXP(SDNode *N);
@@ -447,7 +406,7 @@ private:
   SDValue SoftenFloatRes_FMA(SDNode *N);
   SDValue SoftenFloatRes_FMUL(SDNode *N);
   SDValue SoftenFloatRes_FNEARBYINT(SDNode *N);
-  SDValue SoftenFloatRes_FNEG(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_FNEG(SDNode *N);
   SDValue SoftenFloatRes_FP_EXTEND(SDNode *N);
   SDValue SoftenFloatRes_FP16_TO_FP(SDNode *N);
   SDValue SoftenFloatRes_FP_ROUND(SDNode *N);
@@ -460,25 +419,21 @@ private:
   SDValue SoftenFloatRes_FSQRT(SDNode *N);
   SDValue SoftenFloatRes_FSUB(SDNode *N);
   SDValue SoftenFloatRes_FTRUNC(SDNode *N);
-  SDValue SoftenFloatRes_LOAD(SDNode *N, unsigned ResNo);
-  SDValue SoftenFloatRes_SELECT(SDNode *N, unsigned ResNo);
-  SDValue SoftenFloatRes_SELECT_CC(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_LOAD(SDNode *N);
+  SDValue SoftenFloatRes_SELECT(SDNode *N);
+  SDValue SoftenFloatRes_SELECT_CC(SDNode *N);
   SDValue SoftenFloatRes_UNDEF(SDNode *N);
   SDValue SoftenFloatRes_VAARG(SDNode *N);
   SDValue SoftenFloatRes_XINT_TO_FP(SDNode *N);
 
-  // Return true if we can skip softening the given operand or SDNode because
-  // it was soften before by SoftenFloatResult and references to the operand
-  // were replaced by ReplaceValueWith.
-  bool CanSkipSoftenFloatOperand(SDNode *N, unsigned OpNo);
-
-  // Convert Float Operand to Integer for Non-HW-supported Operations.
+  // Operand Float to Integer Conversion.
   bool SoftenFloatOperand(SDNode *N, unsigned OpNo);
   SDValue SoftenFloatOp_BITCAST(SDNode *N);
   SDValue SoftenFloatOp_BR_CC(SDNode *N);
   SDValue SoftenFloatOp_FP_EXTEND(SDNode *N);
   SDValue SoftenFloatOp_FP_ROUND(SDNode *N);
-  SDValue SoftenFloatOp_FP_TO_XINT(SDNode *N);
+  SDValue SoftenFloatOp_FP_TO_SINT(SDNode *N);
+  SDValue SoftenFloatOp_FP_TO_UINT(SDNode *N);
   SDValue SoftenFloatOp_SELECT_CC(SDNode *N);
   SDValue SoftenFloatOp_SETCC(SDNode *N);
   SDValue SoftenFloatOp_STORE(SDNode *N, unsigned OpNo);
@@ -717,7 +672,6 @@ private:
   SDValue WidenVecRes_INSERT_VECTOR_ELT(SDNode* N);
   SDValue WidenVecRes_LOAD(SDNode* N);
   SDValue WidenVecRes_MLOAD(MaskedLoadSDNode* N);
-  SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
   SDValue WidenVecRes_SCALAR_TO_VECTOR(SDNode* N);
   SDValue WidenVecRes_SELECT(SDNode* N);
   SDValue WidenVecRes_SELECT_CC(SDNode* N);
@@ -745,7 +699,6 @@ private:
   SDValue WidenVecOp_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue WidenVecOp_STORE(SDNode* N);
   SDValue WidenVecOp_MSTORE(SDNode* N, unsigned OpNo);
-  SDValue WidenVecOp_MSCATTER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_SETCC(SDNode* N);
 
   SDValue WidenVecOp_Convert(SDNode *N);
@@ -785,10 +738,8 @@ private:
 
   /// Modifies a vector input (widen or narrows) to a vector of NVT.  The
   /// input vector must have the same element type as NVT.
-  /// When FillWithZeroes is "on" the vector will be widened with
-  /// zeroes.
-  /// By default, the vector will be widened with undefined values.
-  SDValue ModifyToType(SDValue InOp, EVT NVT, bool FillWithZeroes = false);
+  SDValue ModifyToType(SDValue InOp, EVT WidenVT);
+
 
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp

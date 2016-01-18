@@ -37,7 +37,9 @@ static cl::opt<unsigned>
 
 void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
                                            const MCSubtargetInfo &STI) {
-  MCInst HMI = HexagonMCInstrInfo::createBundle();
+  MCInst HMI;
+  HMI.setOpcode(Hexagon::BUNDLE);
+  HMI.addOperand(MCOperand::createImm(0));
   MCInst *MCB;
 
   if (MCK.getOpcode() != Hexagon::BUNDLE) {
@@ -48,7 +50,7 @@ void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
 
   // Examines packet and pad the packet, if needed, when an
   // end-loop is in the bundle.
-  HexagonMCInstrInfo::padEndloop(getContext(), *MCB);
+  HexagonMCInstrInfo::padEndloop(*MCB);
   HexagonMCShuffle(*MCII, STI, *MCB);
 
   assert(HexagonMCInstrInfo::bundleSize(*MCB) <= HEXAGON_PACKET_SIZE);
@@ -58,9 +60,9 @@ void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
     if (Extended) {
       if (HexagonMCInstrInfo::isDuplex(*MCII, *MCI)) {
         MCInst *SubInst = const_cast<MCInst *>(MCI->getOperand(1).getInst());
-        HexagonMCInstrInfo::clampExtended(*MCII, getContext(), *SubInst);
+        HexagonMCInstrInfo::clampExtended(*MCII, *SubInst);
       } else {
-        HexagonMCInstrInfo::clampExtended(*MCII, getContext(), *MCI);
+        HexagonMCInstrInfo::clampExtended(*MCII, *MCI);
       }
       Extended = false;
     } else {

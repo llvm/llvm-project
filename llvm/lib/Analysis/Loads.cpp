@@ -62,17 +62,14 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 ///
 /// This uses the pointee type to determine how many bytes need to be safe to
 /// load from the pointer.
-bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align,
-                                       Instruction *ScanFrom) {
+bool llvm::isSafeToLoadUnconditionally(Value *V, Instruction *ScanFrom,
+                                       unsigned Align) {
   const DataLayout &DL = ScanFrom->getModule()->getDataLayout();
 
   // Zero alignment means that the load has the ABI alignment for the target
   if (Align == 0)
     Align = DL.getABITypeAlignment(V->getType()->getPointerElementType());
   assert(isPowerOf2_32(Align));
-
-  if (isDereferenceableAndAlignedPointer(V, Align, DL))
-    return true;
 
   int64_t ByteOffset = 0;
   Value *Base = V;

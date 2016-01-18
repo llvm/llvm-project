@@ -63,7 +63,7 @@ private:
   std::vector<const Metadata *> MDs;
   SmallVector<const LocalAsMetadata *, 8> FunctionLocalMDs;
   typedef DenseMap<const Metadata *, unsigned> MetadataMapType;
-  MetadataMapType MetadataMap;
+  MetadataMapType MDValueMap;
   bool HasMDString;
   bool HasDILocation;
   bool HasGenericDINode;
@@ -93,7 +93,7 @@ private:
   /// before incorporation.
   unsigned NumModuleValues;
 
-  /// When a function is incorporated, this is the size of the Metadatas list
+  /// When a function is incorporated, this is the size of the MDValues list
   /// before incorporation.
   unsigned NumModuleMDs;
 
@@ -117,9 +117,8 @@ public:
     return ID - 1;
   }
   unsigned getMetadataOrNullID(const Metadata *MD) const {
-    return MetadataMap.lookup(MD);
+    return MDValueMap.lookup(MD);
   }
-  unsigned numMDs() const { return MDs.size(); }
 
   bool hasMDString() const { return HasMDString; }
   bool hasDILocation() const { return HasDILocation; }

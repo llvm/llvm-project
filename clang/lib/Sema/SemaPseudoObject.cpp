@@ -44,76 +44,17 @@ using namespace sema;
 
 namespace {
   // Basically just a very focused copy of TreeTransform.
-  struct Rebuilder {
+  template <class T> struct Rebuilder {
     Sema &S;
-    unsigned MSPropertySubscriptCount;
-    typedef llvm::function_ref<Expr *(Expr *, unsigned)> SpecificRebuilderRefTy;
-    const SpecificRebuilderRefTy &SpecificCallback;
-    Rebuilder(Sema &S, const SpecificRebuilderRefTy &SpecificCallback)
-        : S(S), MSPropertySubscriptCount(0),
-          SpecificCallback(SpecificCallback) {}
+    Rebuilder(Sema &S) : S(S) {}
 
-    Expr *rebuildObjCPropertyRefExpr(ObjCPropertyRefExpr *refExpr) {
-      // Fortunately, the constraint that we're rebuilding something
-      // with a base limits the number of cases here.
-      if (refExpr->isClassReceiver() || refExpr->isSuperReceiver())
-        return refExpr;
-
-      if (refExpr->isExplicitProperty()) {
-        return new (S.Context) ObjCPropertyRefExpr(
-            refExpr->getExplicitProperty(), refExpr->getType(),
-            refExpr->getValueKind(), refExpr->getObjectKind(),
-            refExpr->getLocation(), SpecificCallback(refExpr->getBase(), 0));
-      }
-      return new (S.Context) ObjCPropertyRefExpr(
-          refExpr->getImplicitPropertyGetter(),
-          refExpr->getImplicitPropertySetter(), refExpr->getType(),
-          refExpr->getValueKind(), refExpr->getObjectKind(),
-          refExpr->getLocation(), SpecificCallback(refExpr->getBase(), 0));
-    }
-    Expr *rebuildObjCSubscriptRefExpr(ObjCSubscriptRefExpr *refExpr) {
-      assert(refExpr->getBaseExpr());
-      assert(refExpr->getKeyExpr());
-
-      return new (S.Context) ObjCSubscriptRefExpr(
-          SpecificCallback(refExpr->getBaseExpr(), 0),
-          SpecificCallback(refExpr->getKeyExpr(), 1), refExpr->getType(),
-          refExpr->getValueKind(), refExpr->getObjectKind(),
-          refExpr->getAtIndexMethodDecl(), refExpr->setAtIndexMethodDecl(),
-          refExpr->getRBracket());
-    }
-    Expr *rebuildMSPropertyRefExpr(MSPropertyRefExpr *refExpr) {
-      assert(refExpr->getBaseExpr());
-
-      return new (S.Context) MSPropertyRefExpr(
-          SpecificCallback(refExpr->getBaseExpr(), 0),
-          refExpr->getPropertyDecl(), refExpr->isArrow(), refExpr->getType(),
-          refExpr->getValueKind(), refExpr->getQualifierLoc(),
-          refExpr->getMemberLoc());
-    }
-    Expr *rebuildMSPropertySubscriptExpr(MSPropertySubscriptExpr *refExpr) {
-      assert(refExpr->getBase());
-      assert(refExpr->getIdx());
-
-      auto *NewBase = rebuild(refExpr->getBase());
-      ++MSPropertySubscriptCount;
-      return new (S.Context) MSPropertySubscriptExpr(
-          NewBase,
-          SpecificCallback(refExpr->getIdx(), MSPropertySubscriptCount),
-          refExpr->getType(), refExpr->getValueKind(), refExpr->getObjectKind(),
-          refExpr->getRBracketLoc());
-    }
+    T &getDerived() { return static_cast<T&>(*this); }
 
     Expr *rebuild(Expr *e) {
       // Fast path: nothing to look through.
-      if (auto *PRE = dyn_cast<ObjCPropertyRefExpr>(e))
-        return rebuildObjCPropertyRefExpr(PRE);
-      if (auto *SRE = dyn_cast<ObjCSubscriptRefExpr>(e))
-        return rebuildObjCSubscriptRefExpr(SRE);
-      if (auto *MSPRE = dyn_cast<MSPropertyRefExpr>(e))
-        return rebuildMSPropertyRefExpr(MSPRE);
-      if (auto *MSPSE = dyn_cast<MSPropertySubscriptExpr>(e))
-        return rebuildMSPropertySubscriptExpr(MSPSE);
+      if (typename T::specific_type *specific
+            = dyn_cast<typename T::specific_type>(e))
+        return getDerived().rebuildSpecific(specific);
 
       // Otherwise, we should look through and rebuild anything that
       // IgnoreParens would.
@@ -184,6 +125,72 @@ namespace {
     }
   };
 
+  struct ObjCPropertyRefRebuilder : Rebuilder<ObjCPropertyRefRebuilder> {
+    Expr *NewBase;
+    ObjCPropertyRefRebuilder(Sema &S, Expr *newBase)
+      : Rebuilder<ObjCPropertyRefRebuilder>(S), NewBase(newBase) {}
+
+    typedef ObjCPropertyRefExpr specific_type;
+    Expr *rebuildSpecific(ObjCPropertyRefExpr *refExpr) {
+      // Fortunately, the constraint that we're rebuilding something
+      // with a base limits the number of cases here.
+      assert(refExpr->isObjectReceiver());
+
+      if (refExpr->isExplicitProperty()) {
+        return new (S.Context)
+          ObjCPropertyRefExpr(refExpr->getExplicitProperty(),
+                              refExpr->getType(), refExpr->getValueKind(),
+                              refExpr->getObjectKind(), refExpr->getLocation(),
+                              NewBase);
+      }
+      return new (S.Context)
+        ObjCPropertyRefExpr(refExpr->getImplicitPropertyGetter(),
+                            refExpr->getImplicitPropertySetter(),
+                            refExpr->getType(), refExpr->getValueKind(),
+                            refExpr->getObjectKind(),refExpr->getLocation(),
+                            NewBase);
+    }
+  };
+
+  struct ObjCSubscriptRefRebuilder : Rebuilder<ObjCSubscriptRefRebuilder> {
+    Expr *NewBase;
+    Expr *NewKeyExpr;
+    ObjCSubscriptRefRebuilder(Sema &S, Expr *newBase, Expr *newKeyExpr)
+    : Rebuilder<ObjCSubscriptRefRebuilder>(S), 
+      NewBase(newBase), NewKeyExpr(newKeyExpr) {}
+    
+    typedef ObjCSubscriptRefExpr specific_type;
+    Expr *rebuildSpecific(ObjCSubscriptRefExpr *refExpr) {
+      assert(refExpr->getBaseExpr());
+      assert(refExpr->getKeyExpr());
+      
+      return new (S.Context)
+        ObjCSubscriptRefExpr(NewBase,
+                             NewKeyExpr,
+                             refExpr->getType(), refExpr->getValueKind(),
+                             refExpr->getObjectKind(),refExpr->getAtIndexMethodDecl(),
+                             refExpr->setAtIndexMethodDecl(),
+                             refExpr->getRBracket());
+    }
+  };
+
+  struct MSPropertyRefRebuilder : Rebuilder<MSPropertyRefRebuilder> {
+    Expr *NewBase;
+    MSPropertyRefRebuilder(Sema &S, Expr *newBase)
+    : Rebuilder<MSPropertyRefRebuilder>(S), NewBase(newBase) {}
+
+    typedef MSPropertyRefExpr specific_type;
+    Expr *rebuildSpecific(MSPropertyRefExpr *refExpr) {
+      assert(refExpr->getBaseExpr());
+
+      return new (S.Context)
+        MSPropertyRefExpr(NewBase, refExpr->getPropertyDecl(),
+                       refExpr->isArrow(), refExpr->getType(),
+                       refExpr->getValueKind(), refExpr->getQualifierLoc(),
+                       refExpr->getMemberLoc());
+    }
+  };
+  
   class PseudoOpBuilder {
   public:
     Sema &S;
@@ -229,7 +236,7 @@ namespace {
     }
 
     /// Return true if assignments have a non-void result.
-    static bool CanCaptureValue(Expr *exp) {
+    bool CanCaptureValue(Expr *exp) {
       if (exp->isGLValue())
         return true;
       QualType ty = exp->getType();
@@ -245,20 +252,6 @@ namespace {
     virtual ExprResult buildGet() = 0;
     virtual ExprResult buildSet(Expr *, SourceLocation,
                                 bool captureSetValueAsResult) = 0;
-    /// \brief Should the result of an assignment be the formal result of the
-    /// setter call or the value that was passed to the setter?
-    ///
-    /// Different pseudo-object language features use different language rules
-    /// for this.
-    /// The default is to use the set value.  Currently, this affects the
-    /// behavior of simple assignments, compound assignments, and prefix
-    /// increment and decrement.
-    /// Postfix increment and decrement always use the getter result as the
-    /// expression result.
-    ///
-    /// If this method returns true, and the set value isn't capturable for
-    /// some reason, the result of the expression will be void.
-    virtual bool captureSetValueAsResult() const { return true; }
   };
 
   /// A PseudoOpBuilder for Objective-C \@properties.
@@ -336,24 +329,15 @@ namespace {
  class MSPropertyOpBuilder : public PseudoOpBuilder {
    MSPropertyRefExpr *RefExpr;
    OpaqueValueExpr *InstanceBase;
-   SmallVector<Expr *, 4> CallArgs;
-
-   MSPropertyRefExpr *getBaseMSProperty(MSPropertySubscriptExpr *E);
 
  public:
    MSPropertyOpBuilder(Sema &S, MSPropertyRefExpr *refExpr) :
      PseudoOpBuilder(S, refExpr->getSourceRange().getBegin()),
      RefExpr(refExpr), InstanceBase(nullptr) {}
-   MSPropertyOpBuilder(Sema &S, MSPropertySubscriptExpr *refExpr)
-       : PseudoOpBuilder(S, refExpr->getSourceRange().getBegin()),
-         InstanceBase(nullptr) {
-     RefExpr = getBaseMSProperty(refExpr);
-   }
 
    Expr *rebuildAndCaptureObject(Expr *) override;
    ExprResult buildGet() override;
    ExprResult buildSet(Expr *op, SourceLocation, bool) override;
-   bool captureSetValueAsResult() const override { return false; }
  };
 }
 
@@ -470,12 +454,9 @@ PseudoOpBuilder::buildAssignmentOperation(Scope *Sc, SourceLocation opcLoc,
 
   // The result of the assignment, if not void, is the value set into
   // the l-value.
-  result = buildSet(result.get(), opcLoc, captureSetValueAsResult());
+  result = buildSet(result.get(), opcLoc, /*captureSetValueAsResult*/ true);
   if (result.isInvalid()) return ExprError();
   addSemanticExpr(result.get());
-  if (!captureSetValueAsResult() && !result.get()->getType()->isVoidType() &&
-      (result.get()->isTypeDependent() || CanCaptureValue(result.get())))
-    setResultToLastSemantic();
 
   return complete(syntactic);
 }
@@ -517,14 +498,9 @@ PseudoOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
 
   // Store that back into the result.  The value stored is the result
   // of a prefix operation.
-  result = buildSet(result.get(), opcLoc, UnaryOperator::isPrefix(opcode) &&
-                                              captureSetValueAsResult());
+  result = buildSet(result.get(), opcLoc, UnaryOperator::isPrefix(opcode));
   if (result.isInvalid()) return ExprError();
   addSemanticExpr(result.get());
-  if (UnaryOperator::isPrefix(opcode) && !captureSetValueAsResult() &&
-      !result.get()->getType()->isVoidType() &&
-      (result.get()->isTypeDependent() || CanCaptureValue(result.get())))
-    setResultToLastSemantic();
 
   UnaryOperator *syntactic =
     new (S.Context) UnaryOperator(syntacticOp, opcode, resultType,
@@ -698,9 +674,9 @@ Expr *ObjCPropertyOpBuilder::rebuildAndCaptureObject(Expr *syntacticBase) {
   // form to use the OVE as its base.
   if (RefExpr->isObjectReceiver()) {
     InstanceReceiver = capture(RefExpr->getBase());
-    syntacticBase = Rebuilder(S, [=](Expr *, unsigned) -> Expr * {
-                      return InstanceReceiver;
-                    }).rebuild(syntacticBase);
+
+    syntacticBase =
+      ObjCPropertyRefRebuilder(S, InstanceReceiver).rebuild(syntacticBase);
   }
 
   if (ObjCPropertyRefExpr *
@@ -1018,19 +994,11 @@ Expr *ObjCSubscriptOpBuilder::rebuildAndCaptureObject(Expr *syntacticBase) {
   // form to use the OVE as its base expression.
   InstanceBase = capture(RefExpr->getBaseExpr());
   InstanceKey = capture(RefExpr->getKeyExpr());
-
+    
   syntacticBase =
-      Rebuilder(S, [=](Expr *, unsigned Idx) -> Expr * {
-        switch (Idx) {
-        case 0:
-          return InstanceBase;
-        case 1:
-          return InstanceKey;
-        default:
-          llvm_unreachable("Unexpected index for ObjCSubscriptExpr");
-        }
-      }).rebuild(syntacticBase);
-
+    ObjCSubscriptRefRebuilder(S, InstanceBase, 
+                              InstanceKey).rebuild(syntacticBase);
+  
   return syntacticBase;
 }
 
@@ -1432,30 +1400,11 @@ ExprResult ObjCSubscriptOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
 //  MSVC __declspec(property) references
 //===----------------------------------------------------------------------===//
 
-MSPropertyRefExpr *
-MSPropertyOpBuilder::getBaseMSProperty(MSPropertySubscriptExpr *E) {
-  CallArgs.insert(CallArgs.begin(), E->getIdx());
-  Expr *Base = E->getBase()->IgnoreParens();
-  while (auto *MSPropSubscript = dyn_cast<MSPropertySubscriptExpr>(Base)) {
-    CallArgs.insert(CallArgs.begin(), MSPropSubscript->getIdx());
-    Base = MSPropSubscript->getBase()->IgnoreParens();
-  }
-  return cast<MSPropertyRefExpr>(Base);
-}
-
 Expr *MSPropertyOpBuilder::rebuildAndCaptureObject(Expr *syntacticBase) {
   InstanceBase = capture(RefExpr->getBaseExpr());
-  std::for_each(CallArgs.begin(), CallArgs.end(),
-                [this](Expr *&Arg) { Arg = capture(Arg); });
-  syntacticBase = Rebuilder(S, [=](Expr *, unsigned Idx) -> Expr * {
-                    switch (Idx) {
-                    case 0:
-                      return InstanceBase;
-                    default:
-                      assert(Idx <= CallArgs.size());
-                      return CallArgs[Idx - 1];
-                    }
-                  }).rebuild(syntacticBase);
+
+  syntacticBase =
+    MSPropertyRefRebuilder(S, InstanceBase).rebuild(syntacticBase);
 
   return syntacticBase;
 }
@@ -1483,8 +1432,9 @@ ExprResult MSPropertyOpBuilder::buildGet() {
     return ExprError();
   }
 
+  MultiExprArg ArgExprs;
   return S.ActOnCallExpr(S.getCurScope(), GetterExpr.get(),
-                         RefExpr->getSourceRange().getBegin(), CallArgs,
+                         RefExpr->getSourceRange().getBegin(), ArgExprs,
                          RefExpr->getSourceRange().getEnd());
 }
 
@@ -1512,8 +1462,7 @@ ExprResult MSPropertyOpBuilder::buildSet(Expr *op, SourceLocation sl,
     return ExprError();
   }
 
-  SmallVector<Expr*, 4> ArgExprs;
-  ArgExprs.append(CallArgs.begin(), CallArgs.end());
+  SmallVector<Expr*, 1> ArgExprs;
   ArgExprs.push_back(op);
   return S.ActOnCallExpr(S.getCurScope(), SetterExpr.get(),
                          RefExpr->getSourceRange().getBegin(), ArgExprs,
@@ -1539,10 +1488,6 @@ ExprResult Sema::checkPseudoObjectRValue(Expr *E) {
              = dyn_cast<MSPropertyRefExpr>(opaqueRef)) {
     MSPropertyOpBuilder builder(*this, refExpr);
     return builder.buildRValueOperation(E);
-  } else if (MSPropertySubscriptExpr *RefExpr =
-                 dyn_cast<MSPropertySubscriptExpr>(opaqueRef)) {
-    MSPropertyOpBuilder Builder(*this, RefExpr);
-    return Builder.buildRValueOperation(E);
   } else {
     llvm_unreachable("unknown pseudo-object kind!");
   }
@@ -1569,10 +1514,6 @@ ExprResult Sema::checkPseudoObjectIncDec(Scope *Sc, SourceLocation opcLoc,
              = dyn_cast<MSPropertyRefExpr>(opaqueRef)) {
     MSPropertyOpBuilder builder(*this, refExpr);
     return builder.buildIncDecOperation(Sc, opcLoc, opcode, op);
-  } else if (MSPropertySubscriptExpr *RefExpr
-             = dyn_cast<MSPropertySubscriptExpr>(opaqueRef)) {
-    MSPropertyOpBuilder Builder(*this, RefExpr);
-    return Builder.buildIncDecOperation(Sc, opcLoc, opcode, op);
   } else {
     llvm_unreachable("unknown pseudo-object kind!");
   }
@@ -1604,12 +1545,8 @@ ExprResult Sema::checkPseudoObjectAssignment(Scope *S, SourceLocation opcLoc,
     return builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
   } else if (MSPropertyRefExpr *refExpr
              = dyn_cast<MSPropertyRefExpr>(opaqueRef)) {
-      MSPropertyOpBuilder builder(*this, refExpr);
-      return builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
-  } else if (MSPropertySubscriptExpr *RefExpr
-             = dyn_cast<MSPropertySubscriptExpr>(opaqueRef)) {
-      MSPropertyOpBuilder Builder(*this, RefExpr);
-      return Builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
+    MSPropertyOpBuilder builder(*this, refExpr);
+    return builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
   } else {
     llvm_unreachable("unknown pseudo-object kind!");
   }
@@ -1619,11 +1556,29 @@ ExprResult Sema::checkPseudoObjectAssignment(Scope *S, SourceLocation opcLoc,
 /// values.  Basically, undo the behavior of rebuildAndCaptureObject.
 /// This should never operate in-place.
 static Expr *stripOpaqueValuesFromPseudoObjectRef(Sema &S, Expr *E) {
-  return Rebuilder(S,
-                   [=](Expr *E, unsigned) -> Expr * {
-                     return cast<OpaqueValueExpr>(E)->getSourceExpr();
-                   })
-      .rebuild(E);
+  Expr *opaqueRef = E->IgnoreParens();
+  if (ObjCPropertyRefExpr *refExpr
+        = dyn_cast<ObjCPropertyRefExpr>(opaqueRef)) {
+    // Class and super property references don't have opaque values in them.
+    if (refExpr->isClassReceiver() || refExpr->isSuperReceiver())
+      return E;
+    
+    assert(refExpr->isObjectReceiver() && "Unknown receiver kind?");
+    OpaqueValueExpr *baseOVE = cast<OpaqueValueExpr>(refExpr->getBase());
+    return ObjCPropertyRefRebuilder(S, baseOVE->getSourceExpr()).rebuild(E);
+  } else if (ObjCSubscriptRefExpr *refExpr
+               = dyn_cast<ObjCSubscriptRefExpr>(opaqueRef)) {
+    OpaqueValueExpr *baseOVE = cast<OpaqueValueExpr>(refExpr->getBaseExpr());
+    OpaqueValueExpr *keyOVE = cast<OpaqueValueExpr>(refExpr->getKeyExpr());
+    return ObjCSubscriptRefRebuilder(S, baseOVE->getSourceExpr(), 
+                                     keyOVE->getSourceExpr()).rebuild(E);
+  } else if (MSPropertyRefExpr *refExpr
+             = dyn_cast<MSPropertyRefExpr>(opaqueRef)) {
+    OpaqueValueExpr *baseOVE = cast<OpaqueValueExpr>(refExpr->getBaseExpr());
+    return MSPropertyRefRebuilder(S, baseOVE->getSourceExpr()).rebuild(E);
+  } else {
+    llvm_unreachable("unknown pseudo-object kind!");
+  }
 }
 
 /// Given a pseudo-object expression, recreate what it looks like

@@ -20,28 +20,27 @@
 #include "llvm-c/Core.h"
 using namespace llvm;
 
-/// This is not as easy as it might seem because we have to worry about making
-/// copies of global variables and functions, and making their (initializers and
-/// references, respectively) refer to the right globals.
+/// CloneModule - Return an exact copy of the specified module.  This is not as
+/// easy as it might seem because we have to worry about making copies of global
+/// variables and functions, and making their (initializers and references,
+/// respectively) refer to the right globals.
 ///
-std::unique_ptr<Module> llvm::CloneModule(const Module *M) {
+Module *llvm::CloneModule(const Module *M) {
   // Create the value map that maps things from the old module over to the new
   // module.
   ValueToValueMapTy VMap;
   return CloneModule(M, VMap);
 }
 
-std::unique_ptr<Module> llvm::CloneModule(const Module *M,
-                                          ValueToValueMapTy &VMap) {
+Module *llvm::CloneModule(const Module *M, ValueToValueMapTy &VMap) {
   return CloneModule(M, VMap, [](const GlobalValue *GV) { return true; });
 }
 
-std::unique_ptr<Module> llvm::CloneModule(
+Module *llvm::CloneModule(
     const Module *M, ValueToValueMapTy &VMap,
     std::function<bool(const GlobalValue *)> ShouldCloneDefinition) {
   // First off, we need to create the new module.
-  std::unique_ptr<Module> New =
-      llvm::make_unique<Module>(M->getModuleIdentifier(), M->getContext());
+  Module *New = new Module(M->getModuleIdentifier(), M->getContext());
   New->setDataLayout(M->getDataLayout());
   New->setTargetTriple(M->getTargetTriple());
   New->setModuleInlineAsm(M->getModuleInlineAsm());
@@ -53,7 +52,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   for (Module::const_global_iterator I = M->global_begin(), E = M->global_end();
        I != E; ++I) {
     GlobalVariable *GV = new GlobalVariable(*New, 
-                                            I->getValueType(),
+                                            I->getType()->getElementType(),
                                             I->isConstant(), I->getLinkage(),
                                             (Constant*) nullptr, I->getName(),
                                             (GlobalVariable*) nullptr,
@@ -66,8 +65,8 @@ std::unique_ptr<Module> llvm::CloneModule(
   // Loop over the functions in the module, making external functions as before
   for (Module::const_iterator I = M->begin(), E = M->end(); I != E; ++I) {
     Function *NF =
-        Function::Create(cast<FunctionType>(I->getValueType()),
-                         I->getLinkage(), I->getName(), New.get());
+      Function::Create(cast<FunctionType>(I->getType()->getElementType()),
+                       I->getLinkage(), I->getName(), New);
     NF->copyAttributesFrom(&*I);
     VMap[&*I] = NF;
   }
@@ -83,8 +82,7 @@ std::unique_ptr<Module> llvm::CloneModule(
       GlobalValue *GV;
       if (I->getValueType()->isFunctionTy())
         GV = Function::Create(cast<FunctionType>(I->getValueType()),
-                              GlobalValue::ExternalLinkage, I->getName(),
-                              New.get());
+                              GlobalValue::ExternalLinkage, I->getName(), New);
       else
         GV = new GlobalVariable(
             *New, I->getValueType(), false, GlobalValue::ExternalLinkage,
@@ -98,7 +96,7 @@ std::unique_ptr<Module> llvm::CloneModule(
     }
     auto *GA = GlobalAlias::create(I->getValueType(),
                                    I->getType()->getPointerAddressSpace(),
-                                   I->getLinkage(), I->getName(), New.get());
+                                   I->getLinkage(), I->getName(), New);
     GA->copyAttributesFrom(&*I);
     VMap[&*I] = GA;
   }
@@ -170,7 +168,7 @@ std::unique_ptr<Module> llvm::CloneModule(
 extern "C" {
 
 LLVMModuleRef LLVMCloneModule(LLVMModuleRef M) {
-  return wrap(CloneModule(unwrap(M)).release());
+  return wrap(CloneModule(unwrap(M)));
 }
 
 }

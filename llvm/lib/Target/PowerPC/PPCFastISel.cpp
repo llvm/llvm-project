@@ -293,7 +293,10 @@ bool PPCFastISel::isValueAvailable(const Value *V) const {
     return true;
 
   const auto *I = cast<Instruction>(V);
-  return FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB;
+  if (FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB)
+    return true;
+
+  return false;
 }
 
 // Given a value Obj, create an Address object Addr that represents its
@@ -1969,15 +1972,19 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA),
             HighPartReg).addReg(PPC::X2).addGlobalAddress(GV);
 
-    unsigned char GVFlags = PPCSubTarget->classifyGlobalReference(GV);
-    if (GVFlags & PPCII::MO_NLP_FLAG) {
+    // If/when switches are implemented, jump tables should be handled
+    // on the "if" path here.
+    if (CModel == CodeModel::Large ||
+        (GV->getType()->getElementType()->isFunctionTy() &&
+         !GV->isStrongDefinitionForLinker()) ||
+        GV->isDeclaration() || GV->hasCommonLinkage() ||
+        GV->hasAvailableExternallyLinkage())
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::LDtocL),
               DestReg).addGlobalAddress(GV).addReg(HighPartReg);
-    } else {
+    else
       // Otherwise generate the ADDItocL.
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDItocL),
               DestReg).addReg(HighPartReg).addGlobalAddress(GV);
-    }
   }
 
   return DestReg;

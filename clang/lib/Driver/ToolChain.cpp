@@ -333,6 +333,7 @@ Tool *ToolChain::SelectTool(const JobAction &JA) const {
 
 std::string ToolChain::GetFilePath(const char *Name) const {
   return D.GetFilePath(Name, *this);
+
 }
 
 std::string ToolChain::GetProgramPath(const char *Name) const {
@@ -359,7 +360,7 @@ std::string ToolChain::GetLinkerPath() const {
     return "";
   }
 
-  return GetProgramPath(DefaultLinker);
+  return GetProgramPath("ld");
 }
 
 types::ID ToolChain::LookupTypeForExtension(const char *Ext) const {
@@ -616,13 +617,6 @@ void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
   }
 }
 
-void ToolChain::AddFilePathLibArgs(const ArgList &Args,
-                                   ArgStringList &CmdArgs) const {
-  for (const auto &LibPath : getFilePaths())
-    if(LibPath.length() > 0)
-      CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
-}
-
 void ToolChain::AddCCKextLibArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   CmdArgs.push_back("-lcc_kext");
@@ -663,6 +657,3 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
     Res |= CFIICall;
   return Res;
 }
-
-void ToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
-                                   ArgStringList &CC1Args) const {}

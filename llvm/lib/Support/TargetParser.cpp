@@ -16,7 +16,6 @@
 #include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Twine.h"
 #include <cctype>
 
 using namespace llvm;
@@ -28,7 +27,7 @@ namespace {
 // features they correspond to (use getFPUFeatures).
 // FIXME: TableGen this.
 // The entries must appear in the order listed in ARM::FPUKind for correct indexing
-static const struct {
+struct {
   const char *NameCStr;
   size_t NameLength;
   ARM::FPUKind ID;
@@ -51,17 +50,16 @@ static const struct {
 // of the triples and are not conforming with their official names.
 // Check to see if the expectation should be changed.
 // FIXME: TableGen this.
-static const struct {
+struct {
   const char *NameCStr;
   size_t NameLength;
+  ARM::ArchKind ID;
   const char *CPUAttrCStr;
   size_t CPUAttrLength;
   const char *SubArchCStr;
   size_t SubArchLength;
-  unsigned DefaultFPU;
-  unsigned ArchBaseExtensions;
-  ARM::ArchKind ID;
   ARMBuildAttrs::CPUArch ArchAttr; // Arch ID in build attributes.
+  unsigned ArchBaseExtensions;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
 
@@ -71,32 +69,29 @@ static const struct {
   // Sub-Arch name.
   StringRef getSubArch() const { return StringRef(SubArchCStr, SubArchLength); }
 } ARCHNames[] = {
-#define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
-  {NAME, sizeof(NAME) - 1, CPU_ATTR, sizeof(CPU_ATTR) - 1, SUB_ARCH,       \
-   sizeof(SUB_ARCH) - 1, ARCH_FPU, ARCH_BASE_EXT, ID, ARCH_ATTR},
+#define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_BASE_EXT)       \
+  {NAME, sizeof(NAME) - 1, ID, CPU_ATTR, sizeof(CPU_ATTR) - 1, SUB_ARCH,       \
+   sizeof(SUB_ARCH) - 1, ARCH_ATTR, ARCH_BASE_EXT},
 #include "llvm/Support/ARMTargetParser.def"
 };
 
 // List of Arch Extension names.
 // FIXME: TableGen this.
-static const struct {
+struct {
   const char *NameCStr;
   size_t NameLength;
   unsigned ID;
-  const char *Feature;
-  const char *NegFeature;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
 } ARCHExtNames[] = {
-#define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE) \
-  { NAME, sizeof(NAME) - 1, ID, FEATURE, NEGFEATURE },
+#define ARM_ARCH_EXT_NAME(NAME, ID) { NAME, sizeof(NAME) - 1, ID },
 #include "llvm/Support/ARMTargetParser.def"
 };
 
 // List of HWDiv names (use getHWDivSynonym) and which architectural
 // features they correspond to (use getHWDivFeatures).
 // FIXME: TableGen this.
-static const struct {
+struct {
   const char *NameCStr;
   size_t NameLength;
   unsigned ID;
@@ -112,7 +107,7 @@ static const struct {
 // When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
 // When this becomes table-generated, we'd probably need two tables.
 // FIXME: TableGen this.
-static const struct {
+struct {
   const char *NameCStr;
   size_t NameLength;
   ARM::ArchKind ArchID;
@@ -156,26 +151,12 @@ unsigned llvm::ARM::getFPURestriction(unsigned FPUKind) {
   return FPUNames[FPUKind].Restriction;
 }
 
-unsigned llvm::ARM::getDefaultFPU(StringRef CPU, unsigned ArchKind) {
-  if (CPU == "generic")
-    return ARCHNames[ArchKind].DefaultFPU;
-
+unsigned llvm::ARM::getDefaultFPU(StringRef CPU) {
   return StringSwitch<unsigned>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
     .Case(NAME, DEFAULT_FPU)
 #include "llvm/Support/ARMTargetParser.def"
     .Default(ARM::FK_INVALID);
-}
-
-unsigned llvm::ARM::getDefaultExtensions(StringRef CPU, unsigned ArchKind) {
-  if (CPU == "generic")
-    return ARCHNames[ArchKind].ArchBaseExtensions;
-
-  return StringSwitch<unsigned>(CPU)
-#define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
-    .Case(NAME, ARCHNames[ID].ArchBaseExtensions | DEFAULT_EXT)
-#include "llvm/Support/ARMTargetParser.def"
-    .Default(ARM::AEK_INVALID);
 }
 
 bool llvm::ARM::getHWDivFeatures(unsigned HWDivKind,
@@ -330,28 +311,20 @@ StringRef llvm::ARM::getArchExtName(unsigned ArchExtKind) {
   return StringRef();
 }
 
-const char *llvm::ARM::getArchExtFeature(StringRef ArchExt) {
-  if (ArchExt.startswith("no")) {
-    StringRef ArchExtBase(ArchExt.substr(2));
-    for (const auto AE : ARCHExtNames) {
-      if (AE.NegFeature && ArchExtBase == AE.getName())
-        return AE.NegFeature;
-    }
-  }
-  for (const auto AE : ARCHExtNames) {
-    if (AE.Feature && ArchExt == AE.getName())
-      return AE.Feature;
-  }
-
-  return nullptr;
-}
-
 StringRef llvm::ARM::getHWDivName(unsigned HWDivKind) {
   for (const auto D : HWDivNames) {
     if (HWDivKind == D.ID)
       return D.getName();
   }
   return StringRef();
+}
+
+unsigned llvm::ARM::getDefaultExtensions(StringRef CPU) {
+  for (const auto C : CPUNames) {
+    if (CPU == C.getName())
+      return (ARCHNames[C.ArchID].ArchBaseExtensions | C.DefaultExtensions);
+  }
+  return ARM::AEK_INVALID;
 }
 
 StringRef llvm::ARM::getDefaultCPU(StringRef Arch) {
@@ -364,9 +337,7 @@ StringRef llvm::ARM::getDefaultCPU(StringRef Arch) {
     if (CPU.ArchID == AK && CPU.Default)
       return CPU.getName();
   }
-
-  // If we can't find a default then target the architecture instead
-  return "generic";
+  return StringRef();
 }
 
 // ======================================================= //
@@ -398,21 +369,14 @@ static StringRef getFPUSynonym(StringRef FPU) {
 
 static StringRef getArchSynonym(StringRef Arch) {
   return StringSwitch<StringRef>(Arch)
-      .Case("v5", "v5t")
-      .Case("v5e", "v5te")
-      .Case("v6j", "v6")
-      .Case("v6hl", "v6k")
-      .Cases("v6m", "v6sm", "v6s-m", "v6-m")
-      .Cases("v6z", "v6zk", "v6kz")
-      .Cases("v7", "v7a", "v7hl", "v7l", "v7-a")
+      .Case("v6sm", "v6s-m")
+      .Case("v6m", "v6-m")
+      .Case("v7a", "v7-a")
       .Case("v7r", "v7-r")
       .Case("v7m", "v7-m")
       .Case("v7em", "v7e-m")
       .Cases("v8", "v8a", "aarch64", "arm64", "v8-a")
       .Case("v8.1a", "v8.1-a")
-      .Case("v8.2a", "v8.2-a")
-      .Case("v8m.base", "v8-m.base")
-      .Case("v8m.main", "v8-m.main")
       .Default(Arch);
 }
 
@@ -549,17 +513,17 @@ unsigned llvm::ARM::parseArchProfile(StringRef Arch) {
   switch (parseArch(Arch)) {
   case ARM::AK_ARMV6M:
   case ARM::AK_ARMV7M:
+  case ARM::AK_ARMV6SM:
   case ARM::AK_ARMV7EM:
-  case ARM::AK_ARMV8MMainline:
-  case ARM::AK_ARMV8MBaseline:
     return ARM::PK_M;
   case ARM::AK_ARMV7R:
     return ARM::PK_R;
+  case ARM::AK_ARMV7:
   case ARM::AK_ARMV7A:
   case ARM::AK_ARMV7K:
+  case ARM::AK_ARMV7L:
   case ARM::AK_ARMV8A:
   case ARM::AK_ARMV8_1A:
-  case ARM::AK_ARMV8_2A:
     return ARM::PK_A;
   }
   return ARM::PK_INVALID;
@@ -578,31 +542,37 @@ unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
   case ARM::AK_ARMV4:
   case ARM::AK_ARMV4T:
     return 4;
+  case ARM::AK_ARMV5:
   case ARM::AK_ARMV5T:
   case ARM::AK_ARMV5TE:
   case ARM::AK_IWMMXT:
   case ARM::AK_IWMMXT2:
   case ARM::AK_XSCALE:
+  case ARM::AK_ARMV5E:
   case ARM::AK_ARMV5TEJ:
     return 5;
   case ARM::AK_ARMV6:
+  case ARM::AK_ARMV6J:
   case ARM::AK_ARMV6K:
   case ARM::AK_ARMV6T2:
-  case ARM::AK_ARMV6KZ:
+  case ARM::AK_ARMV6Z:
+  case ARM::AK_ARMV6ZK:
   case ARM::AK_ARMV6M:
+  case ARM::AK_ARMV6SM:
+  case ARM::AK_ARMV6HL:
     return 6;
+  case ARM::AK_ARMV7:
   case ARM::AK_ARMV7A:
   case ARM::AK_ARMV7R:
   case ARM::AK_ARMV7M:
+  case ARM::AK_ARMV7L:
+  case ARM::AK_ARMV7HL:
   case ARM::AK_ARMV7S:
   case ARM::AK_ARMV7EM:
   case ARM::AK_ARMV7K:
     return 7;
   case ARM::AK_ARMV8A:
   case ARM::AK_ARMV8_1A:
-  case ARM::AK_ARMV8_2A:
-  case ARM::AK_ARMV8MBaseline:
-  case ARM::AK_ARMV8MMainline:
     return 8;
   }
   return 0;

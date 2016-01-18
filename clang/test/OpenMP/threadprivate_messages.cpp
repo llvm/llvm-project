@@ -96,10 +96,7 @@ class TempClass {
 static __thread int t; // expected-note {{'t' defined here}}
 #pragma omp threadprivate (t) // expected-error {{variable 't' cannot be threadprivate because it is thread-local}}
 
-// Register "0" is currently an invalid register for global register variables.
-// Use "esp" instead of "0".
-// register int reg0 __asm__("0");
-register int reg0 __asm__("esp"); // expected-note {{'reg0' defined here}}
+register int reg0 __asm__("0"); // expected-note {{'reg0' defined here}}
 #pragma omp threadprivate (reg0) // expected-error {{variable 'reg0' cannot be threadprivate because it is a global named register variable}}
 
 int o; // expected-note {{candidate found by name lookup is 'o'}}
@@ -118,7 +115,6 @@ int main(int argc, char **argv) { // expected-note {{'argc' defined here}}
   static double d1;
   static double d2;
   static double d3; // expected-note {{'d3' defined here}}
-  static double d4;
   static TestClass LocalClass(y); // expected-error {{variable with local storage in initial value of threadprivate variable}}
 #pragma omp threadprivate(LocalClass)
 
@@ -134,8 +130,6 @@ int main(int argc, char **argv) { // expected-note {{'argc' defined here}}
 #pragma omp threadprivate(d3) // expected-error {{'#pragma omp threadprivate' must appear in the scope of the 'd3' variable declaration}}
   }
 #pragma omp threadprivate(d3)
-label:
-#pragma omp threadprivate(d4) // expected-error {{'#pragma omp threadprivate' cannot be an immediate substatement}}
 
 #pragma omp threadprivate(a) // expected-error {{'#pragma omp threadprivate' must appear in the scope of the 'a' variable declaration}}
   return (y);

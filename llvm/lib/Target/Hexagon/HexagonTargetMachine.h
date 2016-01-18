@@ -16,7 +16,6 @@
 
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -40,10 +39,12 @@ public:
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   TargetIRAnalysis getTargetIRAnalysis() override;
 
-  HexagonTargetObjectFile *getObjFileLowering() const override {
-    return static_cast<HexagonTargetObjectFile*>(TLOF.get());
+  TargetLoweringObjectFile *getObjFileLowering() const override {
+    return TLOF.get();
   }
 };
+
+extern bool flag_aligned_memcpy;
 
 } // end namespace llvm
 

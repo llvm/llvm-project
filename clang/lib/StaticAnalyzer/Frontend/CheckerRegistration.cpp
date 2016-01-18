@@ -83,7 +83,10 @@ bool ClangCheckerRegistry::isCompatibleAPIVersion(const char *versionString) {
 
   // For now, none of the static analyzer API is considered stable.
   // Versions must match exactly.
-  return strcmp(versionString, CLANG_ANALYZER_API_VERSION_STRING) == 0;
+  if (strcmp(versionString, CLANG_ANALYZER_API_VERSION_STRING) == 0)
+    return true;
+
+  return false;
 }
 
 void ClangCheckerRegistry::warnIncompatible(DiagnosticsEngine *diags,

@@ -27,7 +27,7 @@ define void @f2() nounwind ssp {
 entry:
 ; CHECK-LABEL: f2:
 ; CHECK: cmp
-; CHECK: bxlt
+; CHECK: poplt
 ; CHECK-NOT: cmp
 ; CHECK: movle
   %0 = load i32, i32* @foo, align 4

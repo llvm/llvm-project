@@ -162,11 +162,6 @@ public:
     return *this;
   }
 
-  const MachineInstrBuilder &setMemRefs(std::pair<MachineInstr::mmo_iterator,
-                                        unsigned> MemOperandsRef) const {
-    MI->setMemRefs(MemOperandsRef);
-    return *this;
-  }
 
   const MachineInstrBuilder &addOperand(const MachineOperand &MO) const {
     MI->addOperand(*MF, MO);
@@ -205,30 +200,27 @@ public:
   // Add a displacement from an existing MachineOperand with an added offset.
   const MachineInstrBuilder &addDisp(const MachineOperand &Disp, int64_t off,
                                      unsigned char TargetFlags = 0) const {
-    // If caller specifies new TargetFlags then use it, otherwise the
-    // default behavior is to copy the target flags from the existing
-    // MachineOperand. This means if the caller wants to clear the
-    // target flags it needs to do so explicitly.
-    if (0 == TargetFlags)
-      TargetFlags = Disp.getTargetFlags();
-
     switch (Disp.getType()) {
       default:
         llvm_unreachable("Unhandled operand type in addDisp()");
       case MachineOperand::MO_Immediate:
         return addImm(Disp.getImm() + off);
-      case MachineOperand::MO_ConstantPoolIndex:
-        return addConstantPoolIndex(Disp.getIndex(), Disp.getOffset() + off,
-                                    TargetFlags);
-      case MachineOperand::MO_GlobalAddress:
+      case MachineOperand::MO_GlobalAddress: {
+        // If caller specifies new TargetFlags then use it, otherwise the
+        // default behavior is to copy the target flags from the existing
+        // MachineOperand. This means if the caller wants to clear the
+        // target flags it needs to do so explicitly.
+        if (TargetFlags)
+          return addGlobalAddress(Disp.getGlobal(), Disp.getOffset() + off,
+                                  TargetFlags);
         return addGlobalAddress(Disp.getGlobal(), Disp.getOffset() + off,
-                                TargetFlags);
+                                Disp.getTargetFlags());
+      }
     }
   }
 
   /// Copy all the implicit operands from OtherMI onto this one.
-  const MachineInstrBuilder &
-  copyImplicitOps(const MachineInstr *OtherMI) const {
+  const MachineInstrBuilder &copyImplicitOps(const MachineInstr *OtherMI) {
     MI->copyImplicitOps(*MF, OtherMI);
     return *this;
   }

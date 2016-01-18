@@ -146,7 +146,7 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
   // Finally, ensure that the size is sufficiently aligned for the
   // data on the stack.
   if (MFI->getMaxAlignment() > 0) {
-    NumBytes = alignTo(NumBytes, MFI->getMaxAlignment());
+    NumBytes = RoundUpToAlignment(NumBytes, MFI->getMaxAlignment());
   }
 
   // Update stack size with corrected value.

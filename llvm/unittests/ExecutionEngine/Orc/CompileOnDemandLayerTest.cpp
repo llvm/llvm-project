@@ -16,14 +16,22 @@ using namespace llvm::orc;
 
 namespace {
 
-class DummyCallbackManager : public orc::JITCompileCallbackManager {
+class DummyCallbackManager : public orc::JITCompileCallbackManagerBase {
 public:
-  DummyCallbackManager() : JITCompileCallbackManager(0) { }
+  DummyCallbackManager()
+      : JITCompileCallbackManagerBase(0), NextStubAddress(0),
+        UniversalCompile([]() { return 0; }) {
+  }
+
+  CompileCallbackInfo getCompileCallback() override {
+    return CompileCallbackInfo(++NextStubAddress, UniversalCompile);
+  }
 public:
-  void grow() override { llvm_unreachable("not implemented"); }
+  TargetAddress NextStubAddress;
+  CompileFtor UniversalCompile;
 };
 
-class DummyStubsManager : public orc::IndirectStubsManager {
+class DummyStubsManager : public orc::IndirectStubsManagerBase {
 public:
   std::error_code createStub(StringRef StubName, TargetAddress InitAddr,
                              JITSymbolFlags Flags) override {

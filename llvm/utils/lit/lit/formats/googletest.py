@@ -109,15 +109,8 @@ class GoogleTest(TestFormat):
         if litConfig.noExecute:
             return lit.Test.PASS, ''
 
-        try:
-            out, err, exitCode = lit.util.executeCommand(
-                cmd, env=test.config.environment,
-                timeout=litConfig.maxIndividualTestTime)
-        except lit.util.ExecuteCommandTimeoutException:
-            return (lit.Test.TIMEOUT,
-                    'Reached timeout of {} seconds'.format(
-                        litConfig.maxIndividualTestTime)
-                   )
+        out, err, exitCode = lit.util.executeCommand(
+            cmd, env=test.config.environment)
 
         if exitCode:
             return lit.Test.FAIL, out + err

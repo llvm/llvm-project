@@ -186,11 +186,13 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
 
             if (case1 || case2) {
               InvertAndChangeJumpTarget(MI, UncondTarget);
-              MBB->replaceSuccessor(JumpAroundTarget, UncondTarget);
+              MBB->removeSuccessor(JumpAroundTarget);
+              MBB->addSuccessor(UncondTarget);
 
               // Remove the unconditional branch in LayoutSucc.
               LayoutSucc->erase(LayoutSucc->begin());
-              LayoutSucc->replaceSuccessor(UncondTarget, JumpAroundTarget);
+              LayoutSucc->removeSuccessor(UncondTarget);
+              LayoutSucc->addSuccessor(JumpAroundTarget);
 
               // This code performs the conversion for case 2, which moves
               // the block to the fall-thru case (BB3 in the code above).

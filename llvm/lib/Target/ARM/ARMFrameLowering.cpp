@@ -1889,9 +1889,10 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   // first in the list.
   MachineBasicBlock *AddedBlocks[] = {PrevStackMBB, McrMBB, GetMBB, AllocMBB,
                                       PostStackMBB};
+  const int NbAddedBlocks = sizeof(AddedBlocks) / sizeof(AddedBlocks[0]);
 
-  for (MachineBasicBlock *B : AddedBlocks)
-    BeforePrologueRegion.insert(B);
+  for (int Idx = 0; Idx < NbAddedBlocks; ++Idx)
+    BeforePrologueRegion.insert(AddedBlocks[Idx]);
 
   for (const auto &LI : PrologueMBB.liveins()) {
     for (MachineBasicBlock *PredBB : BeforePrologueRegion)
@@ -1900,9 +1901,9 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Remove the newly added blocks from the list, since we know
   // we do not have to do the following updates for them.
-  for (MachineBasicBlock *B : AddedBlocks) {
-    BeforePrologueRegion.erase(B);
-    MF.insert(PrologueMBB.getIterator(), B);
+  for (int Idx = 0; Idx < NbAddedBlocks; ++Idx) {
+    BeforePrologueRegion.erase(AddedBlocks[Idx]);
+    MF.insert(PrologueMBB.getIterator(), AddedBlocks[Idx]);
   }
 
   for (MachineBasicBlock *MBB : BeforePrologueRegion) {

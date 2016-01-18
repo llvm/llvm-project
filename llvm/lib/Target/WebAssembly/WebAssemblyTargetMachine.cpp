@@ -45,17 +45,11 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Reloc::Model RM, CodeModel::Model CM,
     CodeGenOpt::Level OL)
-    : LLVMTargetMachine(T,
-                        TT.isArch64Bit() ? "e-m:e-p:64:64-i64:64-n32:64-S128"
-                                         : "e-m:e-p:32:32-i64:64-n32:64-S128",
+    : LLVMTargetMachine(T, TT.isArch64Bit()
+                               ? "e-p:64:64-i64:64-n32:64-S128"
+                               : "e-p:32:32-i64:64-n32:64-S128",
                         TT, CPU, FS, Options, RM, CM, OL),
       TLOF(make_unique<WebAssemblyTargetObjectFile>()) {
-  // WebAssembly type-checks expressions, but a noreturn function with a return
-  // type that doesn't match the context will cause a check failure. So we lower
-  // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
-  // 'unreachable' expression which is meant for that case.
-  this->Options.TrapUnreachable = true;
-
   initAsmInfo();
 
   // We need a reducible CFG, so disable some optimizations which tend to
@@ -102,10 +96,12 @@ public:
   FunctionPass *createTargetRegisterAllocator(bool) override;
 
   void addIRPasses() override;
+  bool addPreISel() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
+  void addPreSched2() override;
   void addPreEmitPass() override;
 };
 } // end anonymous namespace
@@ -131,80 +127,46 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
+  // FIXME: the default for this option is currently POSIX, whereas
+  // WebAssembly's MVP should default to Single.
   if (TM->Options.ThreadModel == ThreadModel::Single)
-    // In "single" mode, atomics get lowered to non-atomics.
     addPass(createLowerAtomicPass());
   else
     // Expand some atomic operations. WebAssemblyTargetLowering has hooks which
     // control specifically what gets lowered.
     addPass(createAtomicExpandPass(TM));
 
-  // Optimize "returned" function attributes.
-  addPass(createWebAssemblyOptimizeReturned());
-
   TargetPassConfig::addIRPasses();
 }
 
+bool WebAssemblyPassConfig::addPreISel() { return false; }
+
 bool WebAssemblyPassConfig::addInstSelector() {
-  (void)TargetPassConfig::addInstSelector();
   addPass(
       createWebAssemblyISelDag(getWebAssemblyTargetMachine(), getOptLevel()));
-  // Run the argument-move pass immediately after the ScheduleDAG scheduler
-  // so that we can fix up the ARGUMENT instructions before anything else
-  // sees them in the wrong place.
-  addPass(createWebAssemblyArgumentMove());
   return false;
 }
 
-bool WebAssemblyPassConfig::addILPOpts() {
-  (void)TargetPassConfig::addILPOpts();
-  return true;
-}
+bool WebAssemblyPassConfig::addILPOpts() { return true; }
 
-void WebAssemblyPassConfig::addPreRegAlloc() {
-  TargetPassConfig::addPreRegAlloc();
-
-  // Prepare store instructions for register stackifying.
-  addPass(createWebAssemblyStoreResults());
-}
+void WebAssemblyPassConfig::addPreRegAlloc() {}
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
-  // TODO: The following CodeGen passes don't currently support code containing
-  // virtual registers. Consider removing their restrictions and re-enabling
-  // them.
+  // FIXME: the following passes dislike virtual registers. Disable them for now
+  //        so that basic tests can pass. Future patches will remedy this.
   //
-  // We use our own PrologEpilogInserter which is very slightly modified to
-  // tolerate virtual registers.
+  // Fails with: Regalloc must assign all vregs.
   disablePass(&PrologEpilogCodeInserterID);
   // Fails with: should be run after register allocation.
   disablePass(&MachineCopyPropagationID);
 
-  // Mark registers as representing wasm's expression stack.
-  addPass(createWebAssemblyRegStackify());
-
-  // Run the register coloring pass to reduce the total number of registers.
-  addPass(createWebAssemblyRegColoring());
-
-  TargetPassConfig::addPostRegAlloc();
-
-  // Run WebAssembly's version of the PrologEpilogInserter. Target-independent
-  // PEI runs after PostRegAlloc and after ShrinkWrap. Putting it here will run
-  // PEI before ShrinkWrap but otherwise in the same position in the order.
-  addPass(createWebAssemblyPEI());
+  // TODO: Until we get ReverseBranchCondition support, MachineBlockPlacement
+  // can create ugly-looking control flow.
+  disablePass(&MachineBlockPlacementID);
 }
 
+void WebAssemblyPassConfig::addPreSched2() {}
+
 void WebAssemblyPassConfig::addPreEmitPass() {
-  TargetPassConfig::addPreEmitPass();
-
-  // Put the CFG in structured form; insert BLOCK and LOOP markers.
   addPass(createWebAssemblyCFGStackify());
-
-  // Lower br_unless into br_if.
-  addPass(createWebAssemblyLowerBrUnless());
-
-  // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
-  addPass(createWebAssemblyRegNumbering());
-
-  // Perform the very last peephole optimizations on the code.
-  addPass(createWebAssemblyPeephole());
 }

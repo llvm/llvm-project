@@ -54,13 +54,10 @@ class OrcMCJITReplacement : public ExecutionEngine {
       return Addr;
     }
 
-    void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                                uintptr_t RODataSize, uint32_t RODataAlign,
-                                uintptr_t RWDataSize,
-                                uint32_t RWDataAlign) override {
-      return ClientMM->reserveAllocationSpace(CodeSize, CodeAlign,
-                                              RODataSize, RODataAlign,
-                                              RWDataSize, RWDataAlign);
+    void reserveAllocationSpace(uintptr_t CodeSize, uintptr_t DataSizeRO,
+                                uintptr_t DataSizeRW) override {
+      return ClientMM->reserveAllocationSpace(CodeSize, DataSizeRO,
+                                                DataSizeRW);
     }
 
     bool needsToReserveAllocationSpace() override {
@@ -75,11 +72,6 @@ class OrcMCJITReplacement : public ExecutionEngine {
     void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                             size_t Size) override {
       return ClientMM->deregisterEHFrames(Addr, LoadAddr, Size);
-    }
-
-    void notifyObjectLoaded(RuntimeDyld &RTDyld,
-                            const object::ObjectFile &O) override {
-      return ClientMM->notifyObjectLoaded(RTDyld, O);
     }
 
     void notifyObjectLoaded(ExecutionEngine *EE,

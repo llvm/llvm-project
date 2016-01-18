@@ -307,7 +307,8 @@ void NilArgChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       warnIfNilArg(C, msg, /* Arg */1, Class);
     } else if (S == SetObjectForKeyedSubscriptSel) {
       CanBeSubscript = true;
-      Arg = 1;
+      Arg = 0;
+      warnIfNilArg(C, msg, /* Arg */1, Class, CanBeSubscript);
     } else if (S == RemoveObjectForKeySel) {
       Arg = 0;
     }
@@ -992,7 +993,9 @@ static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
 
   ProgramPoint P = N->getLocation();
   if (Optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
-    return BE->getSrc()->getLoopTarget() == FCS;
+    if (BE->getSrc()->getLoopTarget() == FCS)
+      return true;
+    return false;
   }
 
   // Keep looking for a block edge.
@@ -1036,8 +1039,11 @@ bool ObjCLoopChecker::isCollectionCountMethod(const ObjCMethodCall &M,
     CountSelectorII = &C.getASTContext().Idents.get("count");
 
   // If the method returns collection count, record the value.
-  return S.isUnarySelector() &&
-         (S.getIdentifierInfoForSlot(0) == CountSelectorII);
+  if (S.isUnarySelector() &&
+      (S.getIdentifierInfoForSlot(0) == CountSelectorII))
+    return true;
+
+  return false;
 }
 
 void ObjCLoopChecker::checkPostObjCMessage(const ObjCMethodCall &M,

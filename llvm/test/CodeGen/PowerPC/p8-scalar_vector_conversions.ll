@@ -63,7 +63,7 @@ entry:
   ret <2 x i64> %splat.splat
 ; CHECK: mtvsrd {{[0-9]+}}, 3
 ; CHECK-LE: mtvsrd [[REG1:[0-9]+]], 3
-; CHECK-LE: xxspltd [[REG1]], [[REG1]], 0
+; CHECK-LE: xxswapd {{[0-9]+}}, [[REG1]]
 }
 
 ; Function Attrs: nounwind
@@ -1036,7 +1036,7 @@ entry:
 ; CHECK-DAG: mfvsrd [[MOV:[0-9]+]],
 ; CHECK-DAG: li [[IMM3:[0-9]+]], 3
 ; CHECK-DAG: andc [[ANDC:[0-9]+]], [[IMM3]]
-; CHECK-DAG: sldi [[SHL:[0-9]+]], [[ANDC]], 4
+; CHECK-DAG: rldicr [[SHL:[0-9]+]], [[ANDC]], 4, 60
 ; CHECK-DAG: srd 3, [[MOV]], [[SHL]]
 ; CHECK-DAG: extsh 3, 3
 ; CHECK-LE-LABEL: @getvelss
@@ -1072,7 +1072,7 @@ entry:
 ; CHECK-DAG: mfvsrd [[MOV:[0-9]+]],
 ; CHECK-DAG: li [[IMM3:[0-9]+]], 3
 ; CHECK-DAG: andc [[ANDC:[0-9]+]], [[IMM3]]
-; CHECK-DAG: sldi [[SHL:[0-9]+]], [[ANDC]], 4
+; CHECK-DAG: rldicr [[SHL:[0-9]+]], [[ANDC]], 4, 60
 ; CHECK-DAG: srd 3, [[MOV]], [[SHL]]
 ; CHECK-DAG: clrldi   3, 3, 48
 ; CHECK-LE-LABEL: @getvelus
