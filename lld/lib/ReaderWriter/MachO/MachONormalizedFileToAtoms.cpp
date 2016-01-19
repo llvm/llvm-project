@@ -88,6 +88,7 @@ const MachORelocatableSectionToAtomType sectsToAtomType[] = {
   ENTRY("__DATA", "__thread_data", S_THREAD_LOCAL_REGULAR, typeTLVInitialData),
   ENTRY("__DATA", "__thread_bss",     S_THREAD_LOCAL_ZEROFILL,
                                                         typeTLVInitialZeroFill),
+  ENTRY("__DATA", "__objc_imageinfo", S_REGULAR,          typeObjCImageInfo),
   ENTRY("",       "",                 S_INTERPOSING,      typeInterposingTuples),
   ENTRY("__LD",   "__compact_unwind", S_REGULAR,
                                                          typeCompactUnwindInfo),
@@ -867,58 +868,42 @@ std::error_code addEHFrameReferences(const NormalizedFile &normalizedFile,
   return ehFrameErr;
 }
 
-std::error_code parseObjCImageInfo(const NormalizedFile &normalizedFile,
+std::error_code parseObjCImageInfo(const Section &sect,
+                                   const NormalizedFile &normalizedFile,
                                    MachOFile &file) {
-
-  const Section *imageInfoSection = nullptr;
-  for (auto &section : normalizedFile.sections) {
-    if (section.segmentName == "__OBJC" &&
-        section.sectionName == "__image_info") {
-      imageInfoSection = &section;
-      break;
-    }
-    if (section.segmentName == "__DATA" &&
-        section.sectionName == "__objc_imageinfo") {
-      imageInfoSection = &section;
-      break;
-    }
-  }
-
-  // No image info section so nothing to do.
-  if (!imageInfoSection)
-    return std::error_code();
 
   //	struct objc_image_info  {
   //		uint32_t	version;	// initially 0
   //		uint32_t	flags;
   //	};
-  enum {
-    OBJC_IMAGE_SUPPORTS_GC=2,
-    OBJC_IMAGE_GC_ONLY=4,
-    OBJC_IMAGE_IS_SIMULATED=32,
-  };
 
-  ArrayRef<uint8_t> content = imageInfoSection->content;
+  ArrayRef<uint8_t> content = sect.content;
   if (content.size() != 8)
-    return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
-                                   imageInfoSection->sectionName +
+    return make_dynamic_error_code(sect.segmentName + "/" +
+                                   sect.sectionName +
                                    " in file " + file.path() +
                                    " should be 8 bytes in size");
 
   const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
   uint32_t version = read32(content.data(), isBig);
   if (version)
-    return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
-                                   imageInfoSection->sectionName +
+    return make_dynamic_error_code(sect.segmentName + "/" +
+                                   sect.sectionName +
                                    " in file " + file.path() +
                                    " should have version=0");
 
   uint32_t flags = read32(content.data() + 4, isBig);
-  if (flags & (OBJC_IMAGE_SUPPORTS_GC|OBJC_IMAGE_GC_ONLY))
-    return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
-                                   imageInfoSection->sectionName +
+  if (flags & (MachOLinkingContext::objc_supports_gc |
+               MachOLinkingContext::objc_gc_only))
+    return make_dynamic_error_code(sect.segmentName + "/" +
+                                   sect.sectionName +
                                    " in file " + file.path() +
                                    " uses GC.  This is not supported");
+
+  if (flags & MachOLinkingContext::objc_retainReleaseForSimulator)
+    file.setObjcConstraint(MachOLinkingContext::objc_retainReleaseForSimulator);
+  else
+    file.setObjcConstraint(MachOLinkingContext::objc_retainRelease);
 
   file.setSwiftVersion((flags >> 8) & 0xFF);
 
@@ -950,6 +935,11 @@ dylibToAtoms(const NormalizedFile &normalizedFile, StringRef path,
 
 namespace normalized {
 
+static bool isObjCImageInfo(const Section &sect) {
+  return (sect.segmentName == "__OBJC" && sect.sectionName == "__image_info") ||
+    (sect.segmentName == "__DATA" && sect.sectionName == "__objc_imageinfo");
+}
+
 std::error_code
 normalizedObjectToAtoms(MachOFile *file,
                         const NormalizedFile &normalizedFile,
@@ -963,6 +953,18 @@ normalizedObjectToAtoms(MachOFile *file,
     DEBUG(llvm::dbgs() << "Creating atoms: "; sect.dump());
     if (isDebugInfoSection(sect))
       continue;
+
+
+    // If the file contains an objc_image_info struct, then we should parse the
+    // ObjC flags and Swift version.
+    if (isObjCImageInfo(sect)) {
+      if (std::error_code ec = parseObjCImageInfo(sect, normalizedFile, *file))
+        return ec;
+      // We then skip adding atoms for this section as we use the ObjCPass to
+      // re-emit this data after it has been aggregated for all files.
+      continue;
+    }
+
     bool customSectionName;
     DefinedAtom::ContentType atomType = atomTypeFromSection(sect,
                                                             customSectionName);
@@ -1004,11 +1006,6 @@ normalizedObjectToAtoms(MachOFile *file,
   // represented in the relocations on some architectures, so we have to add
   // them back in manually there.
   if (std::error_code ec = addEHFrameReferences(normalizedFile, *file, *handler))
-    return ec;
-
-  // If the file contains an objc_image_info struct, then we should parse the
-  // ObjC flags and Swift version.
-  if (std::error_code ec = parseObjCImageInfo(normalizedFile, *file))
     return ec;
 
   // Process mach-o data-in-code regions array. That information is encoded in

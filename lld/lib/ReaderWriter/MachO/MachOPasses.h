@@ -21,6 +21,7 @@ void addStubsPass(PassManager &pm, const MachOLinkingContext &ctx);
 void addGOTPass(PassManager &pm, const MachOLinkingContext &ctx);
 void addTLVPass(PassManager &pm, const MachOLinkingContext &ctx);
 void addCompactUnwindPass(PassManager &pm, const MachOLinkingContext &ctx);
+void addObjCPass(PassManager &pm, const MachOLinkingContext &ctx);
 void addShimPass(PassManager &pm, const MachOLinkingContext &ctx);
 
 } // namespace mach_o

@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 #ifndef SUPPORT_NASTY_MACROS_HPP
 #define SUPPORT_NASTY_MACROS_HPP
 

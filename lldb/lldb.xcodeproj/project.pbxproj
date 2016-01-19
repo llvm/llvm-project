@@ -637,8 +637,6 @@
 		26FFC19D14FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19714FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp */; };
 		30DED5DE1B4ECB49004CC508 /* MainLoopPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30DED5DC1B4ECB17004CC508 /* MainLoopPosix.cpp */; };
 		332CCB181AFF41620034D4C4 /* SBLanguageRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 3392EBB71AFF402200858B9F /* SBLanguageRuntime.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		33E5E8421A672A240024ED68 /* StringConvert.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 33E5E8411A672A240024ED68 /* StringConvert.cpp */; };
-		33E5E8461A6736D30024ED68 /* StringConvert.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 33E5E8451A6736D30024ED68 /* StringConvert.h */; };
 		33E5E8471A674FB60024ED68 /* StringConvert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33E5E8411A672A240024ED68 /* StringConvert.cpp */; };
 		3F8160A61AB9F7DD001DA9DF /* Logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8160A51AB9F7DD001DA9DF /* Logging.cpp */; };
 		3F8169191ABA2419001DA9DF /* ConvertEnum.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8169171ABA2419001DA9DF /* ConvertEnum.cpp */; };
@@ -648,12 +646,7 @@
 		3F8169321ABB7A6D001DA9DF /* SystemInitializerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692F1ABB7A6D001DA9DF /* SystemInitializerCommon.cpp */; };
 		3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8169301ABB7A6D001DA9DF /* SystemLifetimeManager.cpp */; };
 		3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FA093141BF65D3A0037DD08 /* PythonExceptionStateTests.cpp */; };
-		3FBA69DF1B6067020008F44A /* ScriptInterpreterNone.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
-		3FBA69E01B6067020008F44A /* ScriptInterpreterNone.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69DE1B6067020008F44A /* ScriptInterpreterNone.h */; };
 		3FBA69E11B6067120008F44A /* ScriptInterpreterNone.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
-		3FBA69E71B60672A0008F44A /* lldb-python.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69E21B60672A0008F44A /* lldb-python.h */; };
-		3FBA69E91B60672A0008F44A /* PythonDataObjects.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69E41B60672A0008F44A /* PythonDataObjects.h */; };
-		3FBA69EB1B60672A0008F44A /* ScriptInterpreterPython.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3FBA69E61B60672A0008F44A /* ScriptInterpreterPython.h */; };
 		3FBA69EC1B6067430008F44A /* PythonDataObjects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69E31B60672A0008F44A /* PythonDataObjects.cpp */; };
 		3FBA69ED1B60674B0008F44A /* ScriptInterpreterPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69E51B60672A0008F44A /* ScriptInterpreterPython.cpp */; };
 		3FDFDDBD199C3A06009756A7 /* FileAction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBC199C3A06009756A7 /* FileAction.cpp */; };
@@ -678,7 +671,6 @@
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
 		4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
 		4966DCC4148978A10028481B /* ClangExternalASTSourceCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */; };
-		49684D7B1BAB37E400E6D5D5 /* MIUtilParse.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 49684D791BAB37E400E6D5D5 /* MIUtilParse.h */; };
 		49684D7C1BAB37F200E6D5D5 /* MIUtilParse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */; };
 		49724D991AD6ED390033C538 /* RenderScriptRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49724D971AD6ED390033C538 /* RenderScriptRuntime.cpp */; };
 		4984BA131B978C55008658D4 /* ClangExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4984BA0E1B978C3E008658D4 /* ClangExpressionVariable.cpp */; };
@@ -898,7 +890,6 @@
 		AF9107EF168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */; };
 		AFB3D2801AC262AB003B4B30 /* MICmdCmdGdbShow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */; };
-		AFC234081AF85CE000CDE8B6 /* CommandObjectLanguage.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */; };
 		AFC234091AF85CE100CDE8B6 /* CommandObjectLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */; };
 		AFCB2BBD1BF577F40018B553 /* PythonExceptionState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB2BBB1BF577F40018B553 /* PythonExceptionState.cpp */; };
 		AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */ = {isa = PBXBuildFile; fileRef = AFCB2BBC1BF577F40018B553 /* PythonExceptionState.h */; };
@@ -1105,16 +1096,7 @@
 			dstPath = "$(DEVELOPER_DIR)/usr/share/man/man1/";
 			dstSubfolderSpec = 0;
 			files = (
-				3FBA69E91B60672A0008F44A /* PythonDataObjects.h in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
-				3FBA69E71B60672A0008F44A /* lldb-python.h in CopyFiles */,
-				3FBA69DF1B6067020008F44A /* ScriptInterpreterNone.cpp in CopyFiles */,
-				3FBA69E01B6067020008F44A /* ScriptInterpreterNone.h in CopyFiles */,
-				33E5E8461A6736D30024ED68 /* StringConvert.h in CopyFiles */,
-				3FBA69EB1B60672A0008F44A /* ScriptInterpreterPython.h in CopyFiles */,
-				AFC234081AF85CE000CDE8B6 /* CommandObjectLanguage.cpp in CopyFiles */,
-				33E5E8421A672A240024ED68 /* StringConvert.cpp in CopyFiles */,
-				49684D7B1BAB37E400E6D5D5 /* MIUtilParse.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};

@@ -4147,6 +4147,12 @@ Target::TargetEventData::GetFlavorString ()
 void
 Target::TargetEventData::Dump (Stream *s) const
 {
+    for (size_t i = 0; i < m_module_list.GetSize(); ++i)
+    {
+        if (i != 0)
+             *s << ", ";
+        m_module_list.GetModuleAtIndex(i)->GetDescription(s, lldb::eDescriptionLevelBrief);
+    }
 }
 
 const Target::TargetEventData *

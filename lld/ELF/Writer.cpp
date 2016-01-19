@@ -613,7 +613,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
 
   // Don't include synthetic symbols like __init_array_start in every output.
   if (auto *U = dyn_cast<DefinedRegular<ELFT>>(&B))
-    if (&U->Sym == &ElfSym<ELFT>::IgnoredWeak)
+    if (&U->Sym == &ElfSym<ELFT>::Ignored)
       return false;
 
   return true;

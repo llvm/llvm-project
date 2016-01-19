@@ -134,6 +134,7 @@ public:
     typeCStringPtr,         // pointer to UTF8 C string [Darwin]
     typeObjCClassPtr,       // pointer to ObjC class [Darwin]
     typeObjC2CategoryList,  // pointers to ObjC category [Darwin]
+    typeObjCImageInfo,      // pointer to ObjC class [Darwin]
     typeDTraceDOF,          // runtime data for Dtrace [Darwin]
     typeInterposingTuples,  // tuples of interposing info for dyld [Darwin]
     typeTempLTO,            // temporary atom for bitcode reader

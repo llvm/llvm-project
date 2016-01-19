@@ -1504,8 +1504,6 @@ Process::IsAlive ()
         case eStateCrashed:
         case eStateSuspended:
             return true;
-        default:
-            return false;
     }
 }
 
