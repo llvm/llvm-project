@@ -174,6 +174,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(fieldDecl);
   REGISTER_MATCHER(floatLiteral);
   REGISTER_MATCHER(forEach);
+  REGISTER_MATCHER(forEachArgumentWithParam);
   REGISTER_MATCHER(forEachConstructorInitializer);
   REGISTER_MATCHER(forEachDescendant);
   REGISTER_MATCHER(forEachSwitchCase);
@@ -269,6 +270,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isConstQualified);
   REGISTER_MATCHER(isCopyConstructor);
   REGISTER_MATCHER(isDefaultConstructor);
+  REGISTER_MATCHER(isDefaulted);
   REGISTER_MATCHER(isDefinition);
   REGISTER_MATCHER(isDeleted);
   REGISTER_MATCHER(isExceptionVariable);

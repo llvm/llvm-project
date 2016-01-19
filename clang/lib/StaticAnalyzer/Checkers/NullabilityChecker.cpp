@@ -456,6 +456,20 @@ void NullabilityChecker::checkEvent(ImplicitNullDerefEvent Event) const {
   }
 }
 
+/// Find the outermost subexpression of E that is not an implicit cast.
+/// This looks through the implicit casts to _Nonnull that ARC adds to
+/// return expressions of ObjC types when the return type of the function or
+/// method is non-null but the express is not.
+static const Expr *lookThroughImplicitCasts(const Expr *E) {
+  assert(E);
+
+  while (auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    E = ICE->getSubExpr();
+  }
+
+  return E;
+}
+
 /// This method check when nullable pointer or null value is returned from a
 /// function that has nonnull return type.
 ///
@@ -501,7 +515,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   // function with a _Nonnull return type:
   //    return (NSString * _Nonnull)0;
   Nullability RetExprTypeLevelNullability =
-        getNullabilityAnnotation(RetExpr->getType());
+        getNullabilityAnnotation(lookThroughImplicitCasts(RetExpr)->getType());
 
   if (Filter.CheckNullReturnedFromNonnull &&
       Nullness == NullConstraint::IsNull &&

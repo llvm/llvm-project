@@ -215,7 +215,7 @@ protected:
   ///
   /// @returns The preloaded value casted to type @p Ty
   Value *preloadUnconditionally(__isl_take isl_set *AccessRange,
-                                isl_ast_build *Build, Type *Ty);
+                                isl_ast_build *Build, Instruction *AccInst);
 
   /// @brief Preload the memory load access @p MA.
   ///

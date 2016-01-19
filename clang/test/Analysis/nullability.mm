@@ -120,12 +120,12 @@ void testArgumentTracking(Dummy *_Nonnull nonnull, Dummy *_Nullable nullable) {
 
 Dummy *_Nonnull testNullableReturn(Dummy *_Nullable a) {
   Dummy *p = a;
-  return p; // expected-warning {{}}
+  return p; // expected-warning {{Nullable pointer is returned from a function that is expected to return a non-null value}}
 }
 
 Dummy *_Nonnull testNullReturn() {
   Dummy *p = 0;
-  return p; // expected-warning {{}}
+  return p; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 void testObjCMessageResultNullability() {
@@ -279,11 +279,25 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   return p;
 }
 
-void testObjCARCImplicitZeroInitialization() {
-  TestObject * _Nonnull implicitlyZeroInitialized; // no-warning
-  implicitlyZeroInitialized = getNonnullTestObject();
+@interface SomeClass : NSObject
+@end
+
+@implementation SomeClass (MethodReturn)
+- (TestObject * _Nonnull)testReturnsNullableInNonnullIndirectly {
+  TestObject *local = getNullableTestObject();
+  return local; // expected-warning {{Nullable pointer is returned from a function that is expected to return a non-null value}}
 }
 
-void testObjCARCExplicitZeroInitialization() {
-  TestObject * _Nonnull explicitlyZeroInitialized = nil; // expected-warning {{Null is assigned to a pointer which is expected to have non-null value}}
+- (TestObject * _Nonnull)testReturnsCastSuppressedNullableInNonnullIndirectly {
+  TestObject *local = getNullableTestObject();
+  return (TestObject * _Nonnull)local; // no-warning
 }
+
+- (TestObject * _Nonnull)testReturnsNullableInNonnullWhenPreconditionViolated:(TestObject * _Nonnull) p {
+  TestObject *local = getNullableTestObject();
+  if (!p) // Pre-condition violated here.
+    return local; // no-warning
+  else
+    return p; // no-warning
+}
+@end

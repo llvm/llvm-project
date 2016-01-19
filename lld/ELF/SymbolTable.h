@@ -55,7 +55,6 @@ public:
   SymbolBody *addSynthetic(StringRef Name, OutputSectionBase<ELFT> &Section,
                            uintX_t Value);
   SymbolBody *addIgnored(StringRef Name);
-  SymbolBody *addIgnoredStrong(StringRef Name);
 
   void scanShlibUndefined();
   SymbolBody *find(StringRef Name);

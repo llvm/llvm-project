@@ -39,8 +39,9 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
   typedef typename ELFFile<ELFT>::uintX_t uintX_t;
   assert(!isLazy() && !Other->isLazy());
-  std::pair<bool, bool> L(isDefined(), !isWeak());
-  std::pair<bool, bool> R(Other->isDefined(), !Other->isWeak());
+  std::tuple<bool, bool, bool> L(isDefined(), !isShared(), !isWeak());
+  std::tuple<bool, bool, bool> R(Other->isDefined(), !Other->isShared(),
+                                 !Other->isWeak());
 
   // Normalize
   if (L > R)
@@ -54,11 +55,7 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
 
   if (L != R)
     return -1;
-  if (!L.first || !L.second)
-    return 1;
-  if (isShared())
-    return -1;
-  if (Other->isShared())
+  if (!std::get<0>(L) || !std::get<1>(L) || !std::get<2>(L))
     return 1;
   if (isCommon()) {
     if (!Other->isCommon())
@@ -127,8 +124,6 @@ template <class ELFT> static void doInitSymbols() {
   ElfSym<ELFT>::End.setBinding(STB_GLOBAL);
   ElfSym<ELFT>::IgnoredWeak.setBinding(STB_WEAK);
   ElfSym<ELFT>::IgnoredWeak.setVisibility(STV_HIDDEN);
-  ElfSym<ELFT>::Ignored.setBinding(STB_GLOBAL);
-  ElfSym<ELFT>::Ignored.setVisibility(STV_HIDDEN);
 }
 
 void elf2::initSymbols() {

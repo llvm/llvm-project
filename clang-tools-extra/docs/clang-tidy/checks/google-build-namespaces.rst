@@ -3,7 +3,7 @@
 google-build-namespaces
 =======================
 
-"cert-dcl59-cpp" redirects here as an alias for this checker.
+"cert-dcl59-cpp" redirects here as an alias for this check.
 
 Finds anonymous namespaces in headers.
 

@@ -3,7 +3,7 @@
 misc-throw-by-value-catch-by-reference
 ======================================
 
-"cert-err61-cpp" redirects here as an alias for this checker.
+"cert-err61-cpp" redirects here as an alias for this check.
 
 Finds violations of the rule "Throw by value, catch by reference" presented for example in "C++ Coding Standards" by H. Sutter and A. Alexandrescu. This check also has the option to find violations of the rule "Throw anonymous temporaries" (https://www.securecoding.cert.org/confluence/display/cplusplus/ERR09-CPP.+Throw+anonymous+temporaries). The option is named "CheckThrowTemporaries" and it's on by default.
 

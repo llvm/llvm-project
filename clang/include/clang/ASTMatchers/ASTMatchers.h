@@ -2871,6 +2871,57 @@ AST_MATCHER_P2(FunctionDecl, hasParameter,
               *Node.getParamDecl(N), Finder, Builder));
 }
 
+/// \brief Matches all arguments and their respective ParmVarDecl.
+///
+/// Given
+/// \code
+///   void f(int i);
+///   int y;
+///   f(y);
+/// \endcode
+/// callExpr(declRefExpr(to(varDecl(hasName("y")))),
+/// parmVarDecl(hasType(isInteger())))
+///   matches f(y);
+/// with declRefExpr(...)
+///   matching int y
+/// and parmVarDecl(...)
+///   matching int i
+AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
+                           AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
+                                                           CXXConstructExpr),
+                           internal::Matcher<Expr>, ArgMatcher,
+                           internal::Matcher<ParmVarDecl>, ParamMatcher) {
+  BoundNodesTreeBuilder Result;
+  // The first argument of an overloaded member operator is the implicit object
+  // argument of the method which should not be matched against a parameter, so
+  // we skip over it here.
+  BoundNodesTreeBuilder Matches;
+  unsigned ArgIndex = cxxOperatorCallExpr(callee(cxxMethodDecl()))
+                              .matches(Node, Finder, &Matches)
+                          ? 1
+                          : 0;
+  int ParamIndex = 0;
+  bool Matched = false;
+  for (; ArgIndex < Node.getNumArgs(); ++ArgIndex) {
+    BoundNodesTreeBuilder ArgMatches(*Builder);
+    if (ArgMatcher.matches(*(Node.getArg(ArgIndex)->IgnoreParenCasts()),
+                           Finder, &ArgMatches)) {
+      BoundNodesTreeBuilder ParamMatches(ArgMatches);
+      if (expr(anyOf(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
+                         hasParameter(ParamIndex, ParamMatcher)))),
+                     callExpr(callee(functionDecl(
+                         hasParameter(ParamIndex, ParamMatcher))))))
+              .matches(Node, Finder, &ParamMatches)) {
+        Result.addMatch(ParamMatches);
+        Matched = true;
+      }
+    }
+    ++ParamIndex;
+  }
+  *Builder = std::move(Result);
+  return Matched;
+}
+
 /// \brief Matches any parameter of a function declaration.
 ///
 /// Does not match the 'this' parameter of a method.
@@ -2940,6 +2991,19 @@ AST_MATCHER(FunctionDecl, isExternC) {
 ///   matches the declaration of DeletedFunc, but not Func.
 AST_MATCHER(FunctionDecl, isDeleted) {
   return Node.isDeleted();
+}
+
+/// \brief Matches defaulted function declarations.
+///
+/// Given:
+/// \code
+///   class A { ~A(); };
+///   class B { ~B() = default; };
+/// \endcode
+/// functionDecl(isDefaulted())
+///   matches the declaration of ~B, but not ~A.
+AST_MATCHER(FunctionDecl, isDefaulted) {
+  return Node.isDefaulted();
 }
 
 /// \brief Matches functions that have a non-throwing exception specification.

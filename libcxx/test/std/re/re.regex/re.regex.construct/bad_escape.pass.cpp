@@ -33,6 +33,7 @@ int main()
 {
     assert(error_escape_thrown("[\\a]"));
     assert(error_escape_thrown("\\a"));
+    assert(error_escape_thrown("\\"));
 
     assert(error_escape_thrown("[\\e]"));
     assert(error_escape_thrown("\\e"));

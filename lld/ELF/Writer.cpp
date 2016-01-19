@@ -312,10 +312,11 @@ void Writer<ELFT>::scanRelocs(
 
     // Here we are creating a relocation for the dynamic linker based on
     // a relocation from an object file, but some relocations need no
-    // load-time fixup. Skip such relocation.
+    // load-time fixup when the final target is known. Skip such relocation.
     bool CBP = canBePreempted(Body, NeedsGot);
-    bool NoDynrel = Target->isRelRelative(Type) || Target->isSizeReloc(Type);
-    if (!CBP && (NoDynrel || !Config->Shared))
+    bool NoDynrel = Target->isRelRelative(Type) || Target->isSizeReloc(Type) ||
+                    !Config->Shared;
+    if (!CBP && NoDynrel)
       continue;
 
     if (CBP)
@@ -612,8 +613,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
 
   // Don't include synthetic symbols like __init_array_start in every output.
   if (auto *U = dyn_cast<DefinedRegular<ELFT>>(&B))
-    if (&U->Sym == &ElfSym<ELFT>::IgnoredWeak ||
-        &U->Sym == &ElfSym<ELFT>::Ignored)
+    if (&U->Sym == &ElfSym<ELFT>::IgnoredWeak)
       return false;
 
   return true;
