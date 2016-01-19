@@ -77,7 +77,7 @@ IRMemoryMap::FindSpace (size_t size, bool zero_memory)
         auto back = m_allocations.rbegin();
         lldb::addr_t addr = back->first;
         size_t alloc_size = back->second.m_size;
-        ret = llvm::RoundUpToAlignment(addr+alloc_size, 4096);
+        ret = llvm::alignTo(addr+alloc_size, 4096);
     }
 
     return ret;

@@ -3,7 +3,7 @@
 misc-non-copyable-objects
 =========================
 
-"cert-fio38-c" redirects here as an alias for this checker.
+"cert-fio38-c" redirects here as an alias for this check.
 
 The check flags dereferences and non-pointer declarations of objects that are
 not meant to be passed by value, such as C FILE objects or POSIX
