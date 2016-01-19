@@ -239,14 +239,8 @@ public:
   /// @brief Add a set of objects (or archives) that will be treated as a unit
   ///        for the purposes of symbol lookup and memory management.
   ///
-  /// @return A pair containing (1) A handle that can be used to free the memory
-  ///         allocated for the objects, and (2) a LoadedObjInfoList containing
-  ///         one LoadedObjInfo instance for each object at the corresponding
-  ///         index in the Objects list.
-  ///
-  ///   This version of this method allows the client to pass in an
-  /// RTDyldMemoryManager instance that will be used to allocate memory and look
-  /// up external symbol addresses for the given objects.
+  /// @return A handle that can be used to refer to the loaded objects (for 
+  ///         symbol searching, finalization, freeing memory, etc.).
   template <typename ObjSetT,
             typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
