@@ -5211,6 +5211,24 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool& ModifiedDT) {
   return false;
 }
 
+/// Given an OR instruction, check to see if this is a bitreverse
+/// idiom. If so, insert the new intrinsic and return true.
+static bool makeBitReverse(Instruction &I, const DataLayout &DL,
+                           const TargetLowering &TLI) {
+  if (!I.getType()->isIntegerTy() ||
+      !TLI.isOperationLegalOrCustom(ISD::BITREVERSE,
+                                    TLI.getValueType(DL, I.getType(), true)))
+    return false;
+
+  SmallVector<Instruction*, 4> Insts;
+  if (!recognizeBitReverseOrBSwapIdiom(&I, false, true, Insts))
+    return false;
+  Instruction *LastInst = Insts.back();
+  I.replaceAllUsesWith(LastInst);
+  RecursivelyDeleteTriviallyDeadInstructions(&I);
+  return true;
+}
+
 // In this pass we look for GEP and cast instructions that are used
 // across basic blocks and rewrite them to improve basic-block-at-a-time
 // selection.
@@ -5226,6 +5244,17 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool& ModifiedDT) {
   }
   MadeChange |= dupRetToEnableTailCallOpts(&BB);
 
+  bool MadeBitReverse = true;
+  while (TLI && MadeBitReverse) {
+    MadeBitReverse = false;
+    for (auto &I : reverse(BB)) {
+      if (makeBitReverse(I, *DL, *TLI)) {
+        MadeBitReverse = MadeChange = true;
+        break;
+      }
+    }
+  }
+  
   return MadeChange;
 }
 
