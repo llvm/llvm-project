@@ -49,6 +49,8 @@
 
 static const u64 kMagic64 = 0xC0BFFFFFFFFFFF64ULL;
 static const u64 kMagic32 = 0xC0BFFFFFFFFFFF32ULL;
+static constexpr uptr kNumWordsForMagic = SANITIZER_WORDSIZE == 64 ? 1 : 2;
+static constexpr u64 kMagic = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
 
 static atomic_uint32_t dump_once_guard;  // Ensure that CovDump runs only once.
 
@@ -107,12 +109,19 @@ class CoverageData {
   uptr Update8bitCounterBitsetAndClearCounters(u8 *bitset);
 
   uptr *data();
-  uptr size();
+  uptr size() const;
   uptr *buffer() const { return pc_buffer; }
 
  private:
+  struct NamedPcRange {
+    const char *copied_module_name;
+    uptr beg, end; // elements [beg,end) in pc_array.
+  };
+
   void DirectOpen();
   void UpdateModuleNameVec(uptr caller_pc, uptr range_beg, uptr range_end);
+  void GetRangeOffsets(const NamedPcRange& r, Symbolizer* s,
+      InternalMmapVector<uptr>* offsets) const;
 
   // Maximal size pc array may ever grow.
   // We MmapNoReserve this space to ensure that the array is contiguous.
@@ -138,11 +147,6 @@ class CoverageData {
 
   // Vector of coverage guard arrays, protected by mu.
   InternalMmapVectorNoCtor<s32*> guard_array_vec;
-
-  struct NamedPcRange {
-    const char *copied_module_name;
-    uptr beg, end; // elements [beg,end) in pc_array.
-  };
 
   // Vector of module and compilation unit pc ranges.
   InternalMmapVectorNoCtor<NamedPcRange> comp_unit_name_vec;
@@ -525,7 +529,7 @@ uptr *CoverageData::data() {
   return pc_array;
 }
 
-uptr CoverageData::size() {
+uptr CoverageData::size() const {
   return atomic_load(&pc_array_index, memory_order_relaxed);
 }
 
@@ -755,6 +759,30 @@ void CoverageData::DumpAsBitSet() {
   }
 }
 
+
+void CoverageData::GetRangeOffsets(const NamedPcRange& r, Symbolizer* sym,
+    InternalMmapVector<uptr>* offsets) const {
+  offsets->clear();
+  for (uptr i = 0; i < kNumWordsForMagic; i++)
+    offsets->push_back(0);
+  CHECK(r.copied_module_name);
+  CHECK_LE(r.beg, r.end);
+  CHECK_LE(r.end, size());
+  for (uptr i = r.beg; i < r.end; i++) {
+    uptr pc = UnbundlePc(pc_array[i]);
+    uptr counter = UnbundleCounter(pc_array[i]);
+    if (!pc) continue; // Not visited.
+    uptr offset = 0;
+    sym->GetModuleNameAndOffsetForPC(pc, nullptr, &offset);
+    offsets->push_back(BundlePcAndCounter(offset, counter));
+  }
+
+  CHECK_GE(offsets->size(), kNumWordsForMagic);
+  SortArray(offsets->data(), offsets->size());
+  for (uptr i = 0; i < offsets->size(); i++)
+    (*offsets)[i] = UnbundlePc((*offsets)[i]);
+}
+
 void CoverageData::DumpOffsets() {
   auto sym = Symbolizer::GetOrInit();
   if (!common_flags()->coverage_pcs) return;
@@ -762,34 +790,15 @@ void CoverageData::DumpOffsets() {
   InternalMmapVector<uptr> offsets(0);
   InternalScopedString path(kMaxPathLength);
   for (uptr m = 0; m < module_name_vec.size(); m++) {
-    offsets.clear();
-    uptr num_words_for_magic = SANITIZER_WORDSIZE == 64 ? 1 : 2;
-    for (uptr i = 0; i < num_words_for_magic; i++)
-      offsets.push_back(0);
     auto r = module_name_vec[m];
-    CHECK(r.copied_module_name);
-    CHECK_LE(r.beg, r.end);
-    CHECK_LE(r.end, size());
-    for (uptr i = r.beg; i < r.end; i++) {
-      uptr pc = UnbundlePc(pc_array[i]);
-      uptr counter = UnbundleCounter(pc_array[i]);
-      if (!pc) continue; // Not visited.
-      uptr offset = 0;
-      sym->GetModuleNameAndOffsetForPC(pc, nullptr, &offset);
-      offsets.push_back(BundlePcAndCounter(offset, counter));
-    }
+    GetRangeOffsets(r, sym, &offsets);
 
-    CHECK_GE(offsets.size(), num_words_for_magic);
-    SortArray(offsets.data(), offsets.size());
-    for (uptr i = 0; i < offsets.size(); i++)
-      offsets[i] = UnbundlePc(offsets[i]);
-
-    uptr num_offsets = offsets.size() - num_words_for_magic;
+    uptr num_offsets = offsets.size() - kNumWordsForMagic;
     u64 *magic_p = reinterpret_cast<u64*>(offsets.data());
     CHECK_EQ(*magic_p, 0ULL);
     // FIXME: we may want to write 32-bit offsets even in 64-mode
     // if all the offsets are small enough.
-    *magic_p = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
+    *magic_p = kMagic;
 
     const char *module_name = StripModuleName(r.copied_module_name);
     if (cov_sandboxed) {
