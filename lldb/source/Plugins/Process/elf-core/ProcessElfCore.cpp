@@ -517,7 +517,7 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
 
         size_t note_start, note_size;
         note_start = offset;
-        note_size = llvm::RoundUpToAlignment(note.n_descsz, 4);
+        note_size = llvm::alignTo(note.n_descsz, 4);
 
         // Store the NOTE information in the current thread
         DataExtractor note_data (segment_data, note_start, note_size);

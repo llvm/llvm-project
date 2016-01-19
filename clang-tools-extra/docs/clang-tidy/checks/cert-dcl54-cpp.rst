@@ -5,6 +5,6 @@
 cert-dcl54-cpp
 ==============
 
-The cert-dcl54-cpp checker is an alias, please see
+The cert-dcl54-cpp check is an alias, please see
 `misc-new-delete-overloads <misc-new-delete-overloads.html>`_ for more
 information.

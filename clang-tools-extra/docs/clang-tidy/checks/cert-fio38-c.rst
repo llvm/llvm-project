@@ -5,6 +5,6 @@
 cert-fio38-c
 ============
 
-The cert-fio38-c checker is an alias, please see
+The cert-fio38-c check is an alias, please see
 `misc-non-copyable-objects <misc-non-copyable-objects.html>`_ for more
 information.

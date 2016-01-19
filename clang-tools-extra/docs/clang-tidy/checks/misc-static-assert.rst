@@ -3,7 +3,7 @@
 misc-static-assert
 ==================
 
-"cert-dcl03-c" redirects here as an alias for this checker.
+"cert-dcl03-c" redirects here as an alias for this check.
 
 Replaces ``assert()`` with ``static_assert()`` if the condition is evaluatable
 at compile time.

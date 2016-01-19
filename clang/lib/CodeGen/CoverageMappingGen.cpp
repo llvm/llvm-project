@@ -911,7 +911,7 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
 
 void CoverageMappingModuleGen::addFunctionMappingRecord(
     llvm::GlobalVariable *NamePtr, StringRef NameValue, uint64_t FuncHash,
-    const std::string &CoverageMapping, bool isUsed) {
+    const std::string &CoverageMapping, bool IsUsed) {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
   if (!FunctionRecordTy) {
 #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) LLVMType,
@@ -929,7 +929,7 @@ void CoverageMappingModuleGen::addFunctionMappingRecord(
   };
   FunctionRecords.push_back(llvm::ConstantStruct::get(
       FunctionRecordTy, makeArrayRef(FunctionRecordVals)));
-  if (!isUsed)
+  if (!IsUsed)
     FunctionNames.push_back(
         llvm::ConstantExpr::getBitCast(NamePtr, llvm::Type::getInt8PtrTy(Ctx)));
   CoverageMappings += CoverageMapping;

@@ -283,7 +283,7 @@ ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset)
         }
     }
 
-    const char *cstr = data.GetCStr(offset, llvm::RoundUpToAlignment (n_namesz, 4));
+    const char *cstr = data.GetCStr(offset, llvm::alignTo (n_namesz, 4));
     if (cstr == NULL)
     {
         Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_SYMBOLS));
@@ -1449,7 +1449,7 @@ ObjectFileELF::RefineModuleDetailsFromNote (lldb_private::DataExtractor &data, l
             // this ELF targets.
             if(note.n_descsz)
             {
-                const char *cstr = data.GetCStr(&offset, llvm::RoundUpToAlignment (note.n_descsz, 4));
+                const char *cstr = data.GetCStr(&offset, llvm::alignTo (note.n_descsz, 4));
                 (void)cstr;
             }
         }
@@ -1635,7 +1635,7 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                     {
                         lldb::offset_t gnu_debuglink_offset = 0;
                         gnu_debuglink_file = data.GetCStr (&gnu_debuglink_offset);
-                        gnu_debuglink_offset = llvm::RoundUpToAlignment (gnu_debuglink_offset, 4);
+                        gnu_debuglink_offset = llvm::alignTo (gnu_debuglink_offset, 4);
                         data.GetU32 (&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
                     }
                 }
@@ -2430,7 +2430,7 @@ GetPltEntrySizeAndOffset(const ELFSectionHeader* rel_hdr, const ELFSectionHeader
     // Clang 3.3 sets entsize to 4 for 32-bit binaries, but the plt entries are 16 bytes.
     // So round the entsize up by the alignment if addralign is set.
     elf_xword plt_entsize = plt_hdr->sh_addralign ?
-        llvm::RoundUpToAlignment (plt_hdr->sh_entsize, plt_hdr->sh_addralign) : plt_hdr->sh_entsize;
+        llvm::alignTo (plt_hdr->sh_entsize, plt_hdr->sh_addralign) : plt_hdr->sh_entsize;
 
     if (plt_entsize == 0)
     {

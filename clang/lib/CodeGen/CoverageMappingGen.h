@@ -72,7 +72,7 @@ public:
                                 StringRef FunctionNameValue,
                                 uint64_t FunctionHash,
                                 const std::string &CoverageMapping,
-                                bool isUsed = true);
+                                bool IsUsed = true);
 
   /// \brief Emit the coverage mapping data for a translation unit.
   void emit();

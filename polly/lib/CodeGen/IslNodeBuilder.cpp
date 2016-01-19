@@ -893,15 +893,20 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set, bool All) {
 }
 
 Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
-                                              isl_ast_build *Build, Type *Ty) {
+                                              isl_ast_build *Build,
+                                              Instruction *AccInst) {
   isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
   PWAccRel = isl_pw_multi_aff_gist_params(PWAccRel, S.getContext());
   isl_ast_expr *Access =
       isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
   Value *PreloadVal = ExprBuilder.create(Access);
 
+  if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
+    PreloadInst->setAlignment(dyn_cast<LoadInst>(AccInst)->getAlignment());
+
   // Correct the type as the SAI might have a different type than the user
   // expects, especially if the base pointer is a struct.
+  Type *Ty = AccInst->getType();
   if (Ty == PreloadVal->getType())
     return PreloadVal;
 
@@ -916,6 +921,9 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(),
                                   Ptr->getName() + ".cast");
   PreloadVal = Builder.CreateLoad(Ptr, LInst->getName());
+  if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
+    PreloadInst->setAlignment(dyn_cast<LoadInst>(AccInst)->getAlignment());
+
   LInst->eraseFromParent();
   return PreloadVal;
 }
@@ -940,7 +948,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
 
   Value *PreloadVal = nullptr;
   if (AlwaysExecuted) {
-    PreloadVal = preloadUnconditionally(AccessRange, Build, AccInstTy);
+    PreloadVal = preloadUnconditionally(AccessRange, Build, AccInst);
     isl_ast_build_free(Build);
     isl_set_free(Domain);
     return PreloadVal;
@@ -984,8 +992,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Builder.CreateBr(MergeBB);
 
   Builder.SetInsertPoint(ExecBB->getTerminator());
-  Value *PreAccInst = preloadUnconditionally(AccessRange, Build, AccInstTy);
-
+  Value *PreAccInst = preloadUnconditionally(AccessRange, Build, AccInst);
   Builder.SetInsertPoint(MergeBB->getTerminator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");

@@ -123,13 +123,6 @@ SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
   return addAbsolute(Name, ElfSym<ELFT>::IgnoredWeak);
 }
 
-// The 'strong' variant of the addIgnored. Adds symbol which has a global
-// binding and cannot be substituted.
-template <class ELFT>
-SymbolBody *SymbolTable<ELFT>::addIgnoredStrong(StringRef Name) {
-  return addAbsolute(Name, ElfSym<ELFT>::Ignored);
-}
-
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
 // Used to implement --wrap.
 template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {

@@ -308,7 +308,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // On MIPS O32 ABI, _gp_disp is a magic symbol designates offset between
     // start of function and gp pointer into GOT. Use 'strong' variant of
     // the addIgnored to prevent '_gp_disp' substitution.
-    Config->MipsGpDisp = Symtab.addIgnoredStrong("_gp_disp");
+    Config->MipsGpDisp = Symtab.addIgnored("_gp_disp");
 
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which is relative to GOT.

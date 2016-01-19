@@ -152,13 +152,12 @@ static bool beforeThanCompareGroups(const GroupInfo *LHS, const GroupInfo *RHS){
 }
 
 static SMRange findSuperClassRange(const Record *R, StringRef SuperName) {
-  ArrayRef<Record *> Supers = R->getSuperClasses();
-
-  for (size_t i = 0, e = Supers.size(); i < e; ++i)
-    if (Supers[i]->getName() == SuperName)
-      return R->getSuperClassRanges()[i];
-
-  return SMRange();
+  ArrayRef<std::pair<Record *, SMRange>> Supers = R->getSuperClasses();
+  auto I = std::find_if(Supers.begin(), Supers.end(),
+                        [&](const std::pair<Record *, SMRange> &SuperPair) {
+                          return SuperPair.first->getName() == SuperName;
+                        });
+  return (I != Supers.end()) ? I->second : SMRange();
 }
 
 /// \brief Invert the 1-[0/1] mapping of diags to group into a one to many
