@@ -1489,12 +1489,6 @@ Process::IsAlive ()
 {
     switch (m_private_state.GetValue())
     {
-        case eStateInvalid:
-        case eStateUnloaded:
-        case eStateDetached:
-        case eStateExited:
-            return false;
-
         case eStateConnected:
         case eStateAttaching:
         case eStateLaunching:
@@ -1504,6 +1498,8 @@ Process::IsAlive ()
         case eStateCrashed:
         case eStateSuspended:
             return true;
+        default:
+            return false;
     }
 }
 

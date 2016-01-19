@@ -106,8 +106,6 @@ public:
         {
             case CURRENT_FILE_NOT_YET_PUSHED:
                 return true;
-            case CURRENT_FILE_POPPED:
-                return false;
             case CURRENT_FILE_PUSHED:
                 // If we are in file included in the current file,
                 // the entry should be added.
@@ -118,6 +116,8 @@ public:
                     return false;
                 else
                     return true;
+            default:
+                return false;
         }
     }
 
