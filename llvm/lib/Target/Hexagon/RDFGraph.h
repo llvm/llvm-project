@@ -697,8 +697,16 @@ namespace rdf {
     NodeList getRelatedRefs(NodeAddr<InstrNode*> IA,
         NodeAddr<RefNode*> RA) const;
 
-    void unlinkUse(NodeAddr<UseNode*> UA);
-    void unlinkDef(NodeAddr<DefNode*> DA);
+    void unlinkUse(NodeAddr<UseNode*> UA, bool RemoveFromOwner) {
+      unlinkUseDF(UA);
+      if (RemoveFromOwner)
+        removeFromOwner(UA);
+    }
+    void unlinkDef(NodeAddr<DefNode*> DA, bool RemoveFromOwner) {
+      unlinkDefDF(DA);
+      if (RemoveFromOwner)
+        removeFromOwner(DA);
+    }
 
     // Some useful filters.
     template <uint16_t Kind>
@@ -764,6 +772,13 @@ namespace rdf {
         NodeAddr<T> TA, DefStack &DS);
     void linkStmtRefs(DefStackMap &DefM, NodeAddr<StmtNode*> SA);
     void linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA);
+
+    void unlinkUseDF(NodeAddr<UseNode*> UA);
+    void unlinkDefDF(NodeAddr<DefNode*> DA);
+    void removeFromOwner(NodeAddr<RefNode*> RA) {
+      NodeAddr<InstrNode*> IA = RA.Addr->getOwner(*this);
+      IA.Addr->removeMember(RA, *this);
+    }
 
     TimerGroup TimeG;
     NodeAddr<FuncNode*> Func;

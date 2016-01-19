@@ -18,8 +18,37 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
+#include <queue>
+
 using namespace llvm;
 using namespace rdf;
+
+// This drastically improves execution time in "collect" over using
+// SetVector as a work queue, and popping the first element from it.
+template<typename T> struct DeadCodeElimination::SetQueue {
+  SetQueue() : Set(), Queue() {}
+
+  bool empty() const {
+    return Queue.empty();
+  }
+  T pop_front() {
+    T V = Queue.front();
+    Queue.pop();
+    Set.erase(V);
+    return V;
+  }
+  void push_back(T V) {
+    if (Set.count(V))
+      return;
+    Queue.push(V);
+    Set.insert(V);
+  }
+
+private:
+  DenseSet<T> Set;
+  std::queue<T> Queue;
+};
+
 
 // Check if the given instruction has observable side-effects, i.e. if
 // it should be considered "live". It is safe for this function to be
@@ -40,33 +69,33 @@ bool DeadCodeElimination::isLiveInstr(const MachineInstr *MI) const {
 }
 
 void DeadCodeElimination::scanInstr(NodeAddr<InstrNode*> IA,
-      SetVector<NodeId> &WorkQ) {
+      SetQueue<NodeId> &WorkQ) {
   if (!DFG.IsCode<NodeAttrs::Stmt>(IA))
     return;
   if (!isLiveInstr(NodeAddr<StmtNode*>(IA).Addr->getCode()))
     return;
   for (NodeAddr<RefNode*> RA : IA.Addr->members(DFG)) {
     if (!LiveNodes.count(RA.Id))
-      WorkQ.insert(RA.Id);
+      WorkQ.push_back(RA.Id);
   }
 }
 
 void DeadCodeElimination::processDef(NodeAddr<DefNode*> DA,
-      SetVector<NodeId> &WorkQ) {
+      SetQueue<NodeId> &WorkQ) {
   NodeAddr<InstrNode*> IA = DA.Addr->getOwner(DFG);
   for (NodeAddr<UseNode*> UA : IA.Addr->members_if(DFG.IsUse, DFG)) {
     if (!LiveNodes.count(UA.Id))
-      WorkQ.insert(UA.Id);
+      WorkQ.push_back(UA.Id);
   }
   for (NodeAddr<DefNode*> TA : DFG.getRelatedRefs(IA, DA))
     LiveNodes.insert(TA.Id);
 }
 
 void DeadCodeElimination::processUse(NodeAddr<UseNode*> UA,
-      SetVector<NodeId> &WorkQ) {
+      SetQueue<NodeId> &WorkQ) {
   for (NodeAddr<DefNode*> DA : LV.getAllReachingDefs(UA)) {
     if (!LiveNodes.count(DA.Id))
-      WorkQ.insert(DA.Id);
+      WorkQ.push_back(DA.Id);
   }
 }
 
@@ -84,14 +113,13 @@ bool DeadCodeElimination::collect() {
   // instruction are considered live. For each live use, all its reaching
   // defs are considered live.
   LiveNodes.clear();
-  SetVector<NodeId> WorkQ;
+  SetQueue<NodeId> WorkQ;
   for (NodeAddr<BlockNode*> BA : DFG.getFunc().Addr->members(DFG))
     for (NodeAddr<InstrNode*> IA : BA.Addr->members(DFG))
       scanInstr(IA, WorkQ);
 
   while (!WorkQ.empty()) {
-    NodeId N = *WorkQ.begin();
-    WorkQ.remove(N);
+    NodeId N = WorkQ.pop_front();
     LiveNodes.insert(N);
     auto RA = DFG.addr<RefNode*>(N);
     if (DFG.IsDef(RA))
@@ -183,9 +211,9 @@ bool DeadCodeElimination::erase(const SetVector<NodeId> &Nodes) {
     if (trace())
       dbgs() << "  " << PrintNode<RefNode*>(RA, DFG) << '\n';
     if (DFG.IsUse(RA))
-      DFG.unlinkUse(RA);
+      DFG.unlinkUse(RA, true);
     else if (DFG.IsDef(RA))
-      DFG.unlinkDef(RA);
+      DFG.unlinkDef(RA, true);
   }
 
   // Now, remove all dead instruction nodes.

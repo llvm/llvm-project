@@ -1205,8 +1205,7 @@ enum {
 
   // Sun machine-independent extensions.
   DT_AUXILIARY              = 0x7FFFFFFD, // Shared object to load before self
-  DT_FILTER                 = 0x7FFFFFFF, // Shared object to get values from
-  DT_EXTRANUM               = 3
+  DT_FILTER                 = 0x7FFFFFFF  // Shared object to get values from
 };
 
 // DT_FLAGS values.

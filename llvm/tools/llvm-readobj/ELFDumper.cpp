@@ -110,10 +110,10 @@ private:
   void printRelocation(Elf_Rela Rel, const Elf_Shdr *SymTab);
   void printValue(uint64_t Type, uint64_t Value);
 
-  template <typename RELA>
-  static const RELA *dyn_rela_begin(const DynRegionInfo &region);
-  template <typename RELA>
-  static const RELA *dyn_rela_end(const DynRegionInfo &region);
+  template <typename REL>
+  static const REL *dyn_rel_begin(const DynRegionInfo &region);
+  template <typename REL>
+  static const REL *dyn_rel_end(const DynRegionInfo &region);
   Elf_Rel_Range dyn_rels() const;
   Elf_Rela_Range dyn_relas() const;
   StringRef getDynamicString(uint64_t Offset) const;
@@ -1026,32 +1026,32 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, StreamWriter &Writer)
 }
 
 template <typename ELFT>
-template <typename RELA>
-const RELA *ELFDumper<ELFT>::dyn_rela_begin(const DynRegionInfo &Region) {
-  if (Region.Size && Region.EntSize != sizeof(RELA))
+template <typename REL>
+const REL *ELFDumper<ELFT>::dyn_rel_begin(const DynRegionInfo &Region) {
+  if (Region.Size && Region.EntSize != sizeof(REL))
     report_fatal_error("Invalid relocation entry size");
-  return reinterpret_cast<const RELA *>(Region.Addr);
+  return reinterpret_cast<const REL *>(Region.Addr);
 }
 
 template <typename ELFT>
-template <typename RELA>
-const RELA *ELFDumper<ELFT>::dyn_rela_end(const DynRegionInfo &Region) {
+template <typename REL>
+const REL *ELFDumper<ELFT>::dyn_rel_end(const DynRegionInfo &Region) {
   uint64_t Size = Region.Size;
-  if (Size % sizeof(RELA))
+  if (Size % sizeof(REL))
     report_fatal_error("Invalid relocation table size");
-  return dyn_rela_begin<RELA>(Region) + Size / sizeof(RELA);
+  return dyn_rel_begin<REL>(Region) + Size / sizeof(REL);
 }
 
 template <typename ELFT>
 typename ELFDumper<ELFT>::Elf_Rel_Range ELFDumper<ELFT>::dyn_rels() const {
-  return make_range(dyn_rela_begin<Elf_Rel>(DynRelRegion),
-                    dyn_rela_end<Elf_Rel>(DynRelRegion));
+  return make_range(dyn_rel_begin<Elf_Rel>(DynRelRegion),
+                    dyn_rel_end<Elf_Rel>(DynRelRegion));
 }
 
 template <typename ELFT>
 typename ELFDumper<ELFT>::Elf_Rela_Range ELFDumper<ELFT>::dyn_relas() const {
-  return make_range(dyn_rela_begin<Elf_Rela>(DynRelaRegion),
-                    dyn_rela_end<Elf_Rela>(DynRelaRegion));
+  return make_range(dyn_rel_begin<Elf_Rela>(DynRelaRegion),
+                    dyn_rel_end<Elf_Rela>(DynRelaRegion));
 }
 
 template<class ELFT>

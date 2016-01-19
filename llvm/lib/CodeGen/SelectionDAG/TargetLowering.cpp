@@ -1244,6 +1244,24 @@ bool TargetLowering::isConstFalseVal(const SDNode *N) const {
   return CN->isNullValue();
 }
 
+bool TargetLowering::isExtendedTrueVal(const ConstantSDNode *N, EVT VT,
+                                       bool SExt) const {
+  if (VT == MVT::i1)
+    return N->isOne();
+
+  TargetLowering::BooleanContent Cnt = getBooleanContents(VT);
+  switch (Cnt) {
+  case TargetLowering::ZeroOrOneBooleanContent:
+    // An extended value of 1 is always true, unless its original type is i1,
+    // in which case it will be sign extended to -1.
+    return (N->isOne() && !SExt) || (SExt && (N->getValueType(0) != MVT::i1));
+  case TargetLowering::UndefinedBooleanContent:
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    return N->isAllOnesValue() && SExt;
+  }
+  llvm_unreachable("Unexpected enumeration.");
+}
+
 /// Try to simplify a setcc built with the specified operands and cc. If it is
 /// unable to simplify it, return a null SDValue.
 SDValue
@@ -1377,6 +1395,38 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, MinVT, PreExt);
           SDValue C = DAG.getConstant(C1.trunc(MinBits), dl, MinVT);
           return DAG.getSetCC(dl, VT, Trunc, C, Cond);
+        }
+
+        // If truncating the setcc operands is not desirable, we can still
+        // simplify the expression in some cases:
+        // setcc ([sz]ext (setcc x, y, cc)), 0, setne) -> setcc (x, y, cc)
+        // setcc ([sz]ext (setcc x, y, cc)), 0, seteq) -> setcc (x, y, inv(cc))
+        // setcc (zext (setcc x, y, cc)), 1, setne) -> setcc (x, y, inv(cc))
+        // setcc (zext (setcc x, y, cc)), 1, seteq) -> setcc (x, y, cc)
+        // setcc (sext (setcc x, y, cc)), -1, setne) -> setcc (x, y, inv(cc))
+        // setcc (sext (setcc x, y, cc)), -1, seteq) -> setcc (x, y, cc)
+        SDValue TopSetCC = N0->getOperand(0);
+        unsigned N0Opc = N0->getOpcode();
+        bool SExt = (N0Opc == ISD::SIGN_EXTEND);
+        if (TopSetCC.getValueType() == MVT::i1 && VT == MVT::i1 &&
+            TopSetCC.getOpcode() == ISD::SETCC &&
+            (N0Opc == ISD::ZERO_EXTEND || N0Opc == ISD::SIGN_EXTEND) &&
+            (isConstFalseVal(N1C) ||
+             isExtendedTrueVal(N1C, N0->getValueType(0), SExt))) {
+
+          bool Inverse = (N1C->isNullValue() && Cond == ISD::SETEQ) ||
+                         (!N1C->isNullValue() && Cond == ISD::SETNE);
+
+          if (!Inverse)
+            return TopSetCC;
+
+          ISD::CondCode InvCond = ISD::getSetCCInverse(
+              cast<CondCodeSDNode>(TopSetCC.getOperand(2))->get(),
+              TopSetCC.getOperand(0).getValueType().isInteger());
+          return DAG.getSetCC(dl, VT, TopSetCC.getOperand(0),
+                                      TopSetCC.getOperand(1),
+                                      InvCond);
+
         }
       }
     }

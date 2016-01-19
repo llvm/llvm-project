@@ -1915,6 +1915,9 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   if (DCI.isBeforeLegalize())
     return SDValue();
 
+  if (SDValue Base = AMDGPUTargetLowering::performAndCombine(N, DCI))
+    return Base;
+
   SelectionDAG &DAG = DCI.DAG;
 
   // (and (fcmp ord x, x), (fcmp une (fabs x), inf)) ->

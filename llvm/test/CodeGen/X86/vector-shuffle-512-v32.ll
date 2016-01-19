@@ -3,6 +3,25 @@
 
 target triple = "x86_64-unknown-unknown"
 
+define <32 x i16> @shuffle_v32i16_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00(<32 x i16> %a)  {
+; ALL-LABEL: shuffle_v32i16_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpbroadcastw %xmm0, %zmm0
+; ALL-NEXT:    retq
+  %c = shufflevector <32 x i16> %a, <32 x i16> undef, <32 x i32> zeroinitializer
+  ret <32 x i16> %c
+}
+
+define <32 x i16> @shuffle_v32i16_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08(<32 x i16> %a)  {
+; ALL-LABEL: shuffle_v32i16_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08:
+; ALL:       # BB#0:
+; ALL-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; ALL-NEXT:    vpbroadcastw %xmm0, %zmm0
+; ALL-NEXT:    retq
+  %c = shufflevector <32 x i16> %a, <32 x i16> undef, <32 x i32> <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  ret <32 x i16> %c
+}
+
 define <32 x i16> @shuffle_v32i16_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_1f(<32 x i16> %a)  {
 ; ALL-LABEL: shuffle_v32i16_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_1f:
 ; ALL:       # BB#0:

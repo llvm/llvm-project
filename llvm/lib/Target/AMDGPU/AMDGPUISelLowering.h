@@ -67,19 +67,28 @@ private:
 
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
+protected:
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performShlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performSraCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performSrlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCtlzCombine(SDLoc SL, SDValue Cond, SDValue LHS, SDValue RHS,
                              DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
-protected:
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
   static EVT getEquivalentLoadRegType(LLVMContext &Context, EVT VT);
 
   virtual SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
+
+  /// Return 64-bit value Op as two 32-bit integers.
+  std::pair<SDValue, SDValue> split64BitValue(SDValue Op,
+                                              SelectionDAG &DAG) const;
+  SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
+  SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
   /// \brief Split a vector load into a scalar load of each component.
   SDValue ScalarizeVectorLoad(SDValue Op, SelectionDAG &DAG) const;

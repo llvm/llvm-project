@@ -396,8 +396,6 @@ define void @global_extload_v2f16_to_v2f64(<2 x double> addrspace(1)* %out, <2 x
 ; GCN-LABEL: {{^}}global_extload_v3f16_to_v3f64:
 
 ; GCN: buffer_load_dwordx2 [[LOAD:v\[[0-9]+:[0-9]+\]]]
-; SI: v_lshr_b64 v{{\[[0-9]+:[0-9]+\]}}, [[LOAD]], 32
-; VI: v_lshrrev_b64 v{{\[[0-9]+:[0-9]+\]}}, 32, [[LOAD]]
 ; GCN: v_lshrrev_b32_e32 {{v[0-9]+}}, 16, {{v[0-9]+}}
 
 ; GCN: v_cvt_f32_f16_e32

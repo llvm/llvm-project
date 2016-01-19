@@ -35,8 +35,8 @@ namespace llvm {
 }
 
 namespace {
-  cl::opt<unsigned> RDFLimit("rdf-limit", cl::init(UINT_MAX));
   unsigned RDFCount = 0;
+  cl::opt<unsigned> RDFLimit("rdf-limit", cl::init(UINT_MAX));
   cl::opt<bool> RDFDump("rdf-dump", cl::init(false));
 
   class HexagonRDFOpt : public MachineFunctionPass {
@@ -71,6 +71,12 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(HexagonRDFOpt, "rdfopt", "Hexagon RDF opt", false, false)
 
 
+struct HexagonCP : public CopyPropagation {
+  HexagonCP(DataFlowGraph &G) : CopyPropagation(G) {}
+  bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) override;
+};
+
+
 struct HexagonDCE : public DeadCodeElimination {
   HexagonDCE(DataFlowGraph &G, MachineRegisterInfo &MRI)
     : DeadCodeElimination(G, MRI) {}
@@ -79,6 +85,43 @@ struct HexagonDCE : public DeadCodeElimination {
 
   bool run();
 };
+
+
+bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
+  auto mapRegs = [MI,&EM] (RegisterRef DstR, RegisterRef SrcR) -> void {
+    EM.insert(std::make_pair(DstR, SrcR));
+  };
+
+  unsigned Opc = MI->getOpcode();
+  switch (Opc) {
+    case Hexagon::A2_combinew: {
+      const MachineOperand &DstOp = MI->getOperand(0);
+      const MachineOperand &HiOp = MI->getOperand(1);
+      const MachineOperand &LoOp = MI->getOperand(2);
+      assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
+      mapRegs({ DstOp.getReg(), Hexagon::subreg_hireg },
+              { HiOp.getReg(), HiOp.getSubReg() });
+      mapRegs({ DstOp.getReg(), Hexagon::subreg_loreg },
+              { LoOp.getReg(), LoOp.getSubReg() });
+      return true;
+    }
+    case Hexagon::A2_addi: {
+      const MachineOperand &A = MI->getOperand(2);
+      if (!A.isImm() || A.getImm() != 0)
+        return false;
+    }
+    // Fall through.
+    case Hexagon::A2_tfr: {
+      const MachineOperand &DstOp = MI->getOperand(0);
+      const MachineOperand &SrcOp = MI->getOperand(1);
+      mapRegs({ DstOp.getReg(), DstOp.getSubReg() },
+              { SrcOp.getReg(), SrcOp.getSubReg() });
+      return true;
+    }
+  }
+
+  return CopyPropagation::interpretAsCopy(MI, EM);
+}
 
 
 bool HexagonDCE::run() {
@@ -105,6 +148,7 @@ bool HexagonDCE::run() {
       }
     }
   }
+
 
   // Nodes to remove.
   SetVector<NodeId> Remove = DeadInstrs;
@@ -227,31 +271,33 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   MRI = &MF.getRegInfo();
-
-  HexagonRegisterAliasInfo HAI(HRI);
-  TargetOperandInfo TOI(HII);
+  bool Changed;
 
   if (RDFDump)
     MF.print(dbgs() << "Before " << getPassName() << "\n", nullptr);
+
+  HexagonRegisterAliasInfo HAI(HRI);
+  TargetOperandInfo TOI(HII);
   DataFlowGraph G(MF, HII, HRI, *MDT, MDF, HAI, TOI);
   G.build();
-  if (RDFDump) {
-    dbgs() << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
-    dbgs() << MF.getName() << '\n';
-  }
 
-  bool Changed;
-  CopyPropagation CP(G);
+  if (RDFDump)
+    dbgs() << "Starting copy propagation on: " << MF.getName() << '\n'
+           << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
+  HexagonCP CP(G);
   CP.trace(RDFDump);
   Changed = CP.run();
-  if (Changed)
-    G.build();
 
+  if (RDFDump)
+    dbgs() << "Starting dead code elimination on: " << MF.getName() << '\n'
+           << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
   HexagonDCE DCE(G, *MRI);
   DCE.trace(RDFDump);
   Changed |= DCE.run();
 
   if (Changed) {
+    if (RDFDump)
+      dbgs() << "Starting liveness recomputation on: " << MF.getName() << '\n';
     Liveness LV(*MRI, G);
     LV.trace(RDFDump);
     LV.computeLiveIns();
@@ -261,6 +307,7 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
 
   if (RDFDump)
     MF.print(dbgs() << "After " << getPassName() << "\n", nullptr);
+
   return false;
 }
 
@@ -268,5 +315,3 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
 FunctionPass *llvm::createHexagonRDFOpt() {
   return new HexagonRDFOpt();
 }
-
-

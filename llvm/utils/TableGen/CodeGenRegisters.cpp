@@ -587,10 +587,9 @@ struct TupleExpander : SetTheory::Expander {
       Elts.insert(NewReg);
 
       // Copy Proto super-classes.
-      ArrayRef<Record *> Supers = Proto->getSuperClasses();
-      ArrayRef<SMRange> Ranges = Proto->getSuperClassRanges();
-      for (unsigned i = 0, e = Supers.size(); i != e; ++i)
-        NewReg->addSuperClass(Supers[i], Ranges[i]);
+      ArrayRef<std::pair<Record *, SMRange>> Supers = Proto->getSuperClasses();
+      for (const auto &SuperPair : Supers)
+        NewReg->addSuperClass(SuperPair.first, SuperPair.second);
 
       // Copy Proto fields.
       for (unsigned i = 0, e = Proto->getValues().size(); i != e; ++i) {

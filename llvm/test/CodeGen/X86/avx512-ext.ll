@@ -1312,8 +1312,7 @@ define   <16 x i32> @zext_16i1_to_16xi32(i16 %b) {
 define   <8 x i64> @zext_8i1_to_8xi64(i8 %b) {
 ; KNL-LABEL: zext_8i1_to_8xi64:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    movzbl %dil, %eax
-; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;

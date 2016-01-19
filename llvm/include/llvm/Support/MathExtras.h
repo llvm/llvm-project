@@ -621,11 +621,6 @@ inline uint64_t alignTo(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {
   return (Value + Align - 1 - Skew) / Align * Align + Skew;
 }
 
-inline uint64_t RoundUpToAlignment(uint64_t Value, uint64_t Align,
-                                   uint64_t Skew = 0) {
-  return alignTo(Value, Align, Skew);
-}
-
 /// Returns the offset to the next integer (mod 2**64) that is greater than
 /// or equal to \p Value and is a multiple of \p Align. \p Align must be
 /// non-zero.

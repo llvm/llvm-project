@@ -35,6 +35,10 @@ OutputFilename("o", cl::desc("Override output filename"),
 static cl::opt<unsigned> NumOutputs("j", cl::Prefix, cl::init(2),
                                     cl::desc("Number of output files"));
 
+static cl::opt<bool>
+    PreserveLocals("preserve-locals", cl::Prefix, cl::init(false),
+                   cl::desc("Split without externalizing locals"));
+
 int main(int argc, char **argv) {
   LLVMContext &Context = getGlobalContext();
   SMDiagnostic Err;
@@ -61,7 +65,7 @@ int main(int argc, char **argv) {
 
     // Declare success.
     Out->keep();
-  });
+  }, PreserveLocals);
 
   return 0;
 }
