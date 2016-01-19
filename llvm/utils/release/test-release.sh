@@ -65,11 +65,6 @@ function usage() {
     echo " -no-openmp           Disable check-out & build libomp"
 }
 
-if [ `uname -s` = "Darwin" ]; then
-  # compiler-rt doesn't yet build with CMake on Darwin.
-  use_autoconf="yes"
-fi
-
 while [ $# -gt 0 ]; do
     case $1 in
         -release | --release )
