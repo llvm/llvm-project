@@ -22,16 +22,15 @@ class SwiftDynamicTypeGenericsTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll('<rdar://problem/24239973>')
-    def test_break_commands(self):
+    def test_genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
         self.build()
-        self.break_commands()
+        self.genericresolution_commands()
 
     def setUp(self):
         TestBase.setUp(self)
 
-    def break_commands(self):
+    def genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_source_regexp(self,"//Break here")

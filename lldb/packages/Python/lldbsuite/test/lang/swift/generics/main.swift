@@ -23,7 +23,7 @@ extension String : Proto {
 func function <SomeType : Proto> (x : SomeType)
 {
 	var v = x.get()
-	print("Hello world") //Break here
+	print(v) //Break here
 }
 
 class AClass <TypeA>
