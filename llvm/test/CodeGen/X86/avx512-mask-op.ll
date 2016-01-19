@@ -18,8 +18,7 @@ define i16 @mask16(i16 %x) {
 define i8 @mask8(i8 %x) {
 ; KNL-LABEL: mask8:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    movzbl %dil, %eax
-; KNL-NEXT:    kmovw %eax, %k0
+; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    knotw %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    retq
@@ -232,7 +231,6 @@ define void @test7(<8 x i1> %mask)  {
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    movb $85, %al
-; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
@@ -1337,8 +1335,7 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 define <8 x i1> @test18(i8 %a, i16 %y) {
 ; KNL-LABEL: test18:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    movzbl %dil, %eax
-; KNL-NEXT:    kmovw %eax, %k0
+; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    kmovw %esi, %k1
 ; KNL-NEXT:    kshiftlw $7, %k1, %k2
 ; KNL-NEXT:    kshiftrw $15, %k2, %k2

@@ -98,6 +98,10 @@ static cl::opt<bool> SetMergedModule(
 static cl::opt<unsigned> Parallelism("j", cl::Prefix, cl::init(1),
                                      cl::desc("Number of backend threads"));
 
+static cl::opt<bool> RestoreGlobalsLinkage(
+    "restore-linkage", cl::init(false),
+    cl::desc("Restore original linkage of globals prior to CodeGen"));
+
 namespace {
 struct ModuleInfo {
   std::vector<bool> CanBeHidden;
@@ -278,6 +282,7 @@ int main(int argc, char **argv) {
 
   CodeGen.setDebugInfo(LTO_DEBUG_MODEL_DWARF);
   CodeGen.setTargetOptions(Options);
+  CodeGen.setShouldRestoreGlobalsLinkage(RestoreGlobalsLinkage);
 
   llvm::StringSet<llvm::MallocAllocator> DSOSymbolsSet;
   for (unsigned i = 0; i < DSOSymbols.size(); ++i)

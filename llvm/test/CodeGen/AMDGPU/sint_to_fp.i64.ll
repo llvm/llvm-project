@@ -13,8 +13,7 @@ define void @s_sint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) #0 {
 ; FUNC-LABEL: {{^}}v_sint_to_fp_i64_to_f32:
 ; GCN: {{buffer|flat}}_load_dwordx2
 
-; SI: v_ashr_i64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, 63
-; VI: v_ashrrev_i64 {{v\[[0-9]+:[0-9]+\]}}, 63, {{v\[[0-9]+:[0-9]+\]}}
+; GCN: v_ashrrev_i32_e32 v{{[0-9]+}}, 31, v{{[0-9]+}}
 ; GCN: v_xor_b32
 
 ; GCN: v_ffbh_u32

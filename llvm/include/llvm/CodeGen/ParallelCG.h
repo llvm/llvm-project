@@ -36,7 +36,8 @@ splitCodeGen(std::unique_ptr<Module> M, ArrayRef<raw_pwrite_stream *> OSs,
              Reloc::Model RM = Reloc::Default,
              CodeModel::Model CM = CodeModel::Default,
              CodeGenOpt::Level OL = CodeGenOpt::Default,
-             TargetMachine::CodeGenFileType FT = TargetMachine::CGFT_ObjectFile);
+             TargetMachine::CodeGenFileType FT = TargetMachine::CGFT_ObjectFile,
+             bool PreserveLocals = false);
 
 } // namespace llvm
 

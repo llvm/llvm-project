@@ -167,8 +167,8 @@ bool RecordRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
   if (RTy->getRecord() == Rec || Rec->isSubClassOf(RTy->getRecord()))
     return true;
 
-  for (Record *SC : RTy->getRecord()->getSuperClasses())
-    if (Rec->isSubClassOf(SC))
+  for (const auto &SCPair : RTy->getRecord()->getSuperClasses())
+    if (Rec->isSubClassOf(SCPair.first))
       return true;
 
   return false;
@@ -186,8 +186,8 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
   // If one is a Record type, check superclasses
   if (RecordRecTy *RecTy1 = dyn_cast<RecordRecTy>(T1)) {
     // See if T2 inherits from a type T1 also inherits from
-    for (Record *SuperRec1 : RecTy1->getRecord()->getSuperClasses()) {
-      RecordRecTy *SuperRecTy1 = RecordRecTy::get(SuperRec1);
+    for (const auto &SuperPair1 : RecTy1->getRecord()->getSuperClasses()) {
+      RecordRecTy *SuperRecTy1 = RecordRecTy::get(SuperPair1.first);
       RecTy *NewType1 = resolveTypes(SuperRecTy1, T2);
       if (NewType1)
         return NewType1;
@@ -195,8 +195,8 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
   }
   if (RecordRecTy *RecTy2 = dyn_cast<RecordRecTy>(T2)) {
     // See if T1 inherits from a type T2 also inherits from
-    for (Record *SuperRec2 : RecTy2->getRecord()->getSuperClasses()) {
-      RecordRecTy *SuperRecTy2 = RecordRecTy::get(SuperRec2);
+    for (const auto &SuperPair2 : RecTy2->getRecord()->getSuperClasses()) {
+      RecordRecTy *SuperRecTy2 = RecordRecTy::get(SuperPair2.first);
       RecTy *NewType2 = resolveTypes(T1, SuperRecTy2);
       if (NewType2)
         return NewType2;
@@ -274,14 +274,17 @@ BitsInit *BitsInit::get(ArrayRef<Init *> Range) {
   if (BitsInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  BitsInit *I = new BitsInit(Range);
+  void *Mem = ::operator new (totalSizeToAlloc<Init *>(Range.size()));
+  BitsInit *I = new (Mem) BitsInit(Range.size());
+  std::uninitialized_copy(Range.begin(), Range.end(),
+                          I->getTrailingObjects<Init *>());
   ThePool.InsertNode(I, IP);
   TheActualPool.push_back(std::unique_ptr<BitsInit>(I));
   return I;
 }
 
 void BitsInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileBitsInit(ID, Bits);
+  ProfileBitsInit(ID, makeArrayRef(getTrailingObjects<Init *>(), NumBits));
 }
 
 Init *BitsInit::convertInitializerTo(RecTy *Ty) const {
@@ -355,7 +358,7 @@ Init *BitsInit::resolveReferences(Record &R, const RecordVal *RV) const {
   bool CachedBitVarChanged = false;
 
   for (unsigned i = 0, e = getNumBits(); i != e; ++i) {
-    Init *CurBit = Bits[i];
+    Init *CurBit = getBit(i);
     Init *CurBitVar = CurBit->getBitVar();
 
     NewBits[i] = CurBit;
@@ -486,7 +489,10 @@ ListInit *ListInit::get(ArrayRef<Init *> Range, RecTy *EltTy) {
   if (ListInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  ListInit *I = new ListInit(Range, EltTy);
+  void *Mem = ::operator new (totalSizeToAlloc<Init *>(Range.size()));
+  ListInit *I = new (Mem) ListInit(Range.size(), EltTy);
+  std::uninitialized_copy(Range.begin(), Range.end(),
+                          I->getTrailingObjects<Init *>());
   ThePool.InsertNode(I, IP);
   TheActualPool.push_back(std::unique_ptr<ListInit>(I));
   return I;
@@ -495,7 +501,7 @@ ListInit *ListInit::get(ArrayRef<Init *> Range, RecTy *EltTy) {
 void ListInit::Profile(FoldingSetNodeID &ID) const {
   RecTy *EltTy = cast<ListRecTy>(getType())->getElementType();
 
-  ProfileListInit(ID, Values, EltTy);
+  ProfileListInit(ID, getValues(), EltTy);
 }
 
 Init *ListInit::convertInitializerTo(RecTy *Ty) const {
@@ -529,8 +535,8 @@ ListInit::convertInitListSlice(const std::vector<unsigned> &Elements) const {
 }
 
 Record *ListInit::getElementAsRecord(unsigned i) const {
-  assert(i < Values.size() && "List element index out of range!");
-  DefInit *DI = dyn_cast<DefInit>(Values[i]);
+  assert(i < NumValues && "List element index out of range!");
+  DefInit *DI = dyn_cast<DefInit>(getElement(i));
   if (!DI)
     PrintFatalError("Expected record in list!");
   return DI->getDef();
@@ -572,9 +578,9 @@ Init *ListInit::resolveListElementReference(Record &R, const RecordVal *IRV,
 
 std::string ListInit::getAsString() const {
   std::string Result = "[";
-  for (unsigned i = 0, e = Values.size(); i != e; ++i) {
+  for (unsigned i = 0, e = NumValues; i != e; ++i) {
     if (i) Result += ", ";
-    Result += Values[i]->getAsString();
+    Result += getElement(i)->getAsString();
   }
   return Result + "]";
 }
@@ -603,15 +609,32 @@ Init *OpInit::getBit(unsigned Bit) const {
   return VarBitInit::get(const_cast<OpInit*>(this), Bit);
 }
 
-UnOpInit *UnOpInit::get(UnaryOp opc, Init *lhs, RecTy *Type) {
-  typedef std::pair<std::pair<unsigned, Init *>, RecTy *> Key;
-  static DenseMap<Key, std::unique_ptr<UnOpInit>> ThePool;
+static void
+ProfileUnOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *Op, RecTy *Type) {
+  ID.AddInteger(Opcode);
+  ID.AddPointer(Op);
+  ID.AddPointer(Type);
+}
 
-  Key TheKey(std::make_pair(std::make_pair(opc, lhs), Type));
+UnOpInit *UnOpInit::get(UnaryOp Opc, Init *LHS, RecTy *Type) {
+  static FoldingSet<UnOpInit> ThePool;
+  static std::vector<std::unique_ptr<UnOpInit>> TheActualPool;
 
-  std::unique_ptr<UnOpInit> &I = ThePool[TheKey];
-  if (!I) I.reset(new UnOpInit(opc, lhs, Type));
-  return I.get();
+  FoldingSetNodeID ID;
+  ProfileUnOpInit(ID, Opc, LHS, Type);
+
+  void *IP = nullptr;
+  if (UnOpInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
+    return I;
+
+  UnOpInit *I = new UnOpInit(Opc, LHS, Type);
+  ThePool.InsertNode(I, IP);
+  TheActualPool.push_back(std::unique_ptr<UnOpInit>(I));
+  return I;
+}
+
+void UnOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileUnOpInit(ID, getOpcode(), getOperand(), getType());
 }
 
 Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
@@ -731,21 +754,35 @@ std::string UnOpInit::getAsString() const {
   return Result + "(" + LHS->getAsString() + ")";
 }
 
-BinOpInit *BinOpInit::get(BinaryOp opc, Init *lhs,
-                          Init *rhs, RecTy *Type) {
-  typedef std::pair<
-    std::pair<std::pair<unsigned, Init *>, Init *>,
-    RecTy *
-    > Key;
+static void
+ProfileBinOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *LHS, Init *RHS,
+                 RecTy *Type) {
+  ID.AddInteger(Opcode);
+  ID.AddPointer(LHS);
+  ID.AddPointer(RHS);
+  ID.AddPointer(Type);
+}
 
-  static DenseMap<Key, std::unique_ptr<BinOpInit>> ThePool;
+BinOpInit *BinOpInit::get(BinaryOp Opc, Init *LHS,
+                          Init *RHS, RecTy *Type) {
+  static FoldingSet<BinOpInit> ThePool;
+  static std::vector<std::unique_ptr<BinOpInit>> TheActualPool;
 
-  Key TheKey(std::make_pair(std::make_pair(std::make_pair(opc, lhs), rhs),
-                            Type));
+  FoldingSetNodeID ID;
+  ProfileBinOpInit(ID, Opc, LHS, RHS, Type);
 
-  std::unique_ptr<BinOpInit> &I = ThePool[TheKey];
-  if (!I) I.reset(new BinOpInit(opc, lhs, rhs, Type));
-  return I.get();
+  void *IP = nullptr;
+  if (BinOpInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
+    return I;
+
+  BinOpInit *I = new BinOpInit(Opc, LHS, RHS, Type);
+  ThePool.InsertNode(I, IP);
+  TheActualPool.push_back(std::unique_ptr<BinOpInit>(I));
+  return I;
+}
+
+void BinOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileBinOpInit(ID, getOpcode(), getLHS(), getRHS(), getType());
 }
 
 Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
@@ -864,27 +901,36 @@ std::string BinOpInit::getAsString() const {
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
 }
 
-TernOpInit *TernOpInit::get(TernaryOp opc, Init *lhs, Init *mhs, Init *rhs,
+static void
+ProfileTernOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *LHS, Init *MHS,
+                  Init *RHS, RecTy *Type) {
+  ID.AddInteger(Opcode);
+  ID.AddPointer(LHS);
+  ID.AddPointer(MHS);
+  ID.AddPointer(RHS);
+  ID.AddPointer(Type);
+}
+
+TernOpInit *TernOpInit::get(TernaryOp Opc, Init *LHS, Init *MHS, Init *RHS,
                             RecTy *Type) {
-  typedef std::pair<
-    std::pair<
-      std::pair<std::pair<unsigned, RecTy *>, Init *>,
-      Init *
-      >,
-    Init *
-    > Key;
+  static FoldingSet<TernOpInit> ThePool;
+  static std::vector<std::unique_ptr<TernOpInit>> TheActualPool;
 
-  static DenseMap<Key, std::unique_ptr<TernOpInit>> ThePool;
+  FoldingSetNodeID ID;
+  ProfileTernOpInit(ID, Opc, LHS, MHS, RHS, Type);
 
-  Key TheKey(std::make_pair(std::make_pair(std::make_pair(std::make_pair(opc,
-                                                                         Type),
-                                                          lhs),
-                                           mhs),
-                            rhs));
+  void *IP = nullptr;
+  if (TernOpInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
+    return I;
 
-  std::unique_ptr<TernOpInit> &I = ThePool[TheKey];
-  if (!I) I.reset(new TernOpInit(opc, lhs, mhs, rhs, Type));
-  return I.get();
+  TernOpInit *I = new TernOpInit(Opc, LHS, MHS, RHS, Type);
+  ThePool.InsertNode(I, IP);
+  TheActualPool.push_back(std::unique_ptr<TernOpInit>(I));
+  return I;
+}
+
+void TernOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileTernOpInit(ID, getOpcode(), getLHS(), getMHS(), getRHS(), getType());
 }
 
 static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
@@ -1656,11 +1702,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  ArrayRef<Record *> SC = R.getSuperClasses();
+  ArrayRef<std::pair<Record *, SMRange>> SC = R.getSuperClasses();
   if (!SC.empty()) {
     OS << "\t//";
-    for (const Record *Super : SC)
-      OS << " " << Super->getNameInitAsString();
+    for (const auto &SuperPair : SC)
+      OS << " " << SuperPair.first->getNameInitAsString();
   }
   OS << "\n";
 

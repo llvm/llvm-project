@@ -69,6 +69,7 @@ private:
   bool FP64Denormals;
   bool FP32Denormals;
   bool FastFMAF32;
+  bool HalfRate64Ops;
   bool CaymanISA;
   bool FlatAddressSpace;
   bool FlatForGlobal;
@@ -156,6 +157,10 @@ public:
 
   bool hasFastFMAF32() const {
     return FastFMAF32;
+  }
+
+  bool hasHalfRate64Ops() const {
+    return HalfRate64Ops;
   }
 
   bool hasFlatAddressSpace() const {

@@ -83,7 +83,7 @@ static cl::opt<bool>
 /// This is purely to provide a debugging and dianostic hook until the vector
 /// split is replaced with vector relocations.
 static cl::opt<bool> UseVectorSplit("rs4gc-split-vector-values", cl::Hidden,
-                                    cl::init(true));
+                                    cl::init(false));
 
 namespace {
 struct RewriteStatepointsForGC : public ModulePass {

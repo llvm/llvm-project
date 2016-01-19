@@ -277,7 +277,6 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    movb $85, %al
-; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
 ; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
@@ -313,7 +312,6 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL_X32-NEXT:    vpsllvq LCPI7_0, %zmm0, %zmm0
 ; KNL_X32-NEXT:    movb $85, %al
-; KNL_X32-NEXT:    movzbl %al, %eax
 ; KNL_X32-NEXT:    kmovw %eax, %k1
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
 ; KNL_X32-NEXT:    vpbroadcastd LCPI7_1, %zmm0

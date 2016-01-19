@@ -441,9 +441,12 @@ LLVM-specific variables
 
 **LLVM_BUILD_LLVM_DYLIB**:BOOL
   If enabled, the target for building the libLLVM shared library is added.
+  This library contains all of LLVM's components in a single shared library.
   Defaults to OFF. This cannot be used in conjunction with BUILD_SHARED_LIBS.
-  Tools will only be linked to the libLLVM shared library if
-  LLVM_LINK_LLVM_DYLIB is also ON.
+  Tools will only be linked to the libLLVM shared library if LLVM_LINK_LLVM_DYLIB
+  is also ON.
+  The components in the library can be customised by setting LLVM_DYLIB_COMPONENTS
+  to a list of the desired components.
 
 **LLVM_LINK_LLVM_DYLIB**:BOOL
   If enabled, tools will be linked with the libLLVM shared library. Defaults
@@ -451,10 +454,10 @@ LLVM-specific variables
   to ON.
 
 **BUILD_SHARED_LIBS**:BOOL
-  Flag indicating if shared libraries will be built instead of static
-  libraries. Its default value is OFF. On Windows, shared libraries may
-  be used when building with MinGW, including mingw-w64, but not when
-  building with the Microsoft toolchain.
+  Flag indicating if each LLVM component (e.g. Support) is built as a shared
+  library (ON) or as a static library (OFF). Its default value is OFF. On
+  Windows, shared libraries may be used when building with MinGW, including
+  mingw-w64, but not when building with the Microsoft toolchain.
  
   .. note:: BUILD_SHARED_LIBS is only recommended for use by LLVM developers.
             If you want to build LLVM as a shared library, you should use the

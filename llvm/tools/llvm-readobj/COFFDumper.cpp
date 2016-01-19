@@ -1726,9 +1726,8 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
       error(object_error::parse_failed);
     StringRef ChecksumBytes = Data.substr(0, FC->ChecksumSize);
     W.printBinary("ChecksumBytes", ChecksumBytes);
-    unsigned PaddedSize =
-        RoundUpToAlignment(FC->ChecksumSize + sizeof(FileChecksum), 4) -
-        sizeof(FileChecksum);
+    unsigned PaddedSize = alignTo(FC->ChecksumSize + sizeof(FileChecksum), 4) -
+                          sizeof(FileChecksum);
     Data = Data.drop_front(PaddedSize);
   }
 }

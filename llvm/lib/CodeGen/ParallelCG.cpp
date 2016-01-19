@@ -44,7 +44,8 @@ llvm::splitCodeGen(std::unique_ptr<Module> M,
                    ArrayRef<llvm::raw_pwrite_stream *> OSs, StringRef CPU,
                    StringRef Features, const TargetOptions &Options,
                    Reloc::Model RM, CodeModel::Model CM, CodeGenOpt::Level OL,
-                   TargetMachine::CodeGenFileType FileType) {
+                   TargetMachine::CodeGenFileType FileType,
+                   bool PreserveLocals) {
   StringRef TripleStr = M->getTargetTriple();
   std::string ErrMsg;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
@@ -87,7 +88,7 @@ llvm::splitCodeGen(std::unique_ptr<Module> M,
         // Pass BC using std::move to ensure that it get moved rather than
         // copied into the thread's context.
         std::move(BC));
-  });
+  }, PreserveLocals);
 
   for (thread &T : Threads)
     T.join();

@@ -4227,6 +4227,14 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.writeMem = true;
     break;
   }
+  case STOREA:
+  case STOREU: {
+    Info.ptrVal = I.getArgOperand(0);
+    Info.memVT = MVT::getVT(I.getArgOperand(1)->getType());
+    Info.align = (IntrData->Type == STOREA ? Info.memVT.getSizeInBits()/8 : 1);
+    Info.writeMem = true;
+    break;
+  }
   default:
     return false;
   }
@@ -8283,10 +8291,28 @@ static SDValue lowerVectorShuffleAsBroadcast(SDLoc DL, MVT VT, SDValue V,
     V = DAG.getLoad(SVT, DL, Ld->getChain(), NewAddr,
                     DAG.getMachineFunction().getMachineMemOperand(
                         Ld->getMemOperand(), Offset, SVT.getStoreSize()));
-  } else if (BroadcastIdx != 0 || !Subtarget->hasAVX2()) {
-    // We can't broadcast from a vector register without AVX2, and we can only
-    // broadcast from the zero-element of a vector register.
+  } else if (!Subtarget->hasAVX2()) {
+    // We can't broadcast from a vector register without AVX2.
     return SDValue();
+  } else if (BroadcastIdx != 0) {
+    // We can only broadcast from the zero-element of a vector register,
+    // but it can be advantageous to broadcast from the zero-element of a
+    // subvector.
+    if (!VT.is256BitVector() && !VT.is512BitVector())
+      return SDValue();
+
+    // VPERMQ/VPERMPD can perform the cross-lane shuffle directly.
+    if (VT == MVT::v4f64 || VT == MVT::v4i64)
+      return SDValue();
+
+    // Only broadcast the zero-element of a 128-bit subvector.
+    unsigned EltSize = VT.getScalarSizeInBits();
+    if (((BroadcastIdx * EltSize) % 128) != 0)
+      return SDValue();
+
+    MVT ExtVT = MVT::getVectorVT(VT.getScalarType(), 128 / EltSize);
+    V = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtVT, V,
+                    DAG.getIntPtrConstant(BroadcastIdx, DL));
   }
 
   V = DAG.getNode(X86ISD::VBROADCAST, DL, BroadcastVT, V);
@@ -17658,6 +17684,26 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
     SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
     return DAG.getMaskedLoad(VT, dl, Chain, Addr, VMask, PassThru, VT,
                              MemIntr->getMemOperand(), ISD::NON_EXTLOAD);
+  }
+  case STOREU:
+  case STOREA: {
+    SDValue Mask = Op.getOperand(4);
+    SDValue Data = Op.getOperand(3);
+    SDValue Addr = Op.getOperand(2);
+    SDValue Chain = Op.getOperand(0);
+
+    MemIntrinsicSDNode *MemIntr = dyn_cast<MemIntrinsicSDNode>(Op);
+    assert(MemIntr && "Expected MemIntrinsicSDNode!");
+
+    if (isAllOnesConstant(Mask)) // return just a store
+      return DAG.getStore(Chain, dl, Data, Addr, MemIntr->getMemOperand());
+
+    EVT VT  = MemIntr->getMemoryVT();
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+    SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+
+    return DAG.getMaskedStore(Chain, dl, Data, Addr, VMask, VT,
+                              MemIntr->getMemOperand(), false);
   }
   }
 }
