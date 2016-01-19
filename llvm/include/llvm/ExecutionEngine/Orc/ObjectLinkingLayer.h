@@ -105,10 +105,10 @@ private:
                             FinalizerFtor Finalizer,
                             bool ProcessAllSections)
       : MemMgr(std::move(MemMgr)),
-        PFC(make_unique<PreFinalizeContents>(std::move(Objects),
-                                             std::move(Resolver),
-                                             std::move(Finalizer),
-                                             ProcessAllSections)) {
+        PFC(llvm::make_unique<PreFinalizeContents>(std::move(Objects),
+                                                   std::move(Resolver),
+                                                   std::move(Finalizer),
+                                                   ProcessAllSections)) {
       buildInitialSymbolTable(PFC->Objects);
     }
 
