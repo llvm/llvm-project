@@ -396,8 +396,10 @@ public:
       // function name. This is useful to ignore the redundant records for the
       // functions with ODR linkage.
       NameRefType NameRef = CFR->template getFuncNameRef<Endian>();
-      if (!UniqueFunctionMappingData.insert(NameRef).second)
+      if (!UniqueFunctionMappingData.insert(NameRef).second) {
+        CFR++;
         continue;
+      }
 
       StringRef FuncName;
       if (std::error_code EC =
