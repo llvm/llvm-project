@@ -1,10 +1,10 @@
-; RUN: llc < %s -mtriple=armv7-apple-ios -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-IOS
-; RUN: llc < %s -mtriple=thumbv7m-none-macho -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-DARWIN
-; RUN: llc < %s -mtriple=arm-none-eabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-eabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-androideabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-gnueabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
-; RUN: llc < %s -mtriple=arm-none-gnueabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
+; RUN: llc < %s -mtriple=armv7-apple-ios -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-IOS --check-prefix=CHECK
+; RUN: llc < %s -mtriple=thumbv7m-none-macho -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-DARWIN --check-prefix=CHECK
+; RUN: llc < %s -mtriple=arm-none-eabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI --check-prefix=CHECK
+; RUN: llc < %s -mtriple=arm-none-eabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI --check-prefix=CHECK
+; RUN: llc < %s -mtriple=arm-none-androideabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI --check-prefix=CHECK
+; RUN: llc < %s -mtriple=arm-none-gnueabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
+; RUN: llc < %s -mtriple=arm-none-gnueabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
 
 define void @f1(i8* %dest, i8* %src) {
 entry:
@@ -402,8 +402,8 @@ entry:
 ; CHECK: arr1:
 ; CHECK-IOS: .align 3
 ; CHECK-DARWIN: .align 2
-; CHECK-EABI: .align 2
-; CHECK-GNUEABI: .align 2
+; CHECK-EABI-NOT: .align
+; CHECK-GNUEABI-NOT: .align
 ; CHECK: arr2:
 ; CHECK: {{\.section.+foo,bar}}
 ; CHECK-NOT: .align

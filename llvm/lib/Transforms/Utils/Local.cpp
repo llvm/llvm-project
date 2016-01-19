@@ -944,37 +944,44 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 static unsigned enforceKnownAlignment(Value *V, unsigned Align,
                                       unsigned PrefAlign,
                                       const DataLayout &DL) {
+  assert(PrefAlign > Align);
+
   V = V->stripPointerCasts();
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
+    // TODO: ideally, computeKnownBits ought to have used
+    // AllocaInst::getAlignment() in its computation already, making
+    // the below max redundant. But, as it turns out,
+    // stripPointerCasts recurses through infinite layers of bitcasts,
+    // while computeKnownBits is not allowed to traverse more than 6
+    // levels.
+    Align = std::max(AI->getAlignment(), Align);
+    if (PrefAlign <= Align)
+      return Align;
+
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
     if (DL.exceedsNaturalStackAlignment(PrefAlign))
       return Align;
-    // If there is a requested alignment and if this is an alloca, round up.
-    if (AI->getAlignment() >= PrefAlign)
-      return AI->getAlignment();
     AI->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   if (auto *GO = dyn_cast<GlobalObject>(V)) {
+    // TODO: as above, this shouldn't be necessary.
+    Align = std::max(GO->getAlignment(), Align);
+    if (PrefAlign <= Align)
+      return Align;
+
     // If there is a large requested alignment and we can, bump up the alignment
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
-    if (!GO->isStrongDefinitionForLinker())
+    if (!GO->canIncreaseAlignment())
       return Align;
 
-    if (GO->getAlignment() >= PrefAlign)
-      return GO->getAlignment();
-    // We can only increase the alignment of the global if it has no alignment
-    // specified or if it is not assigned a section.  If it is assigned a
-    // section, the global could be densely packed with other objects in the
-    // section, increasing the alignment could cause padding issues.
-    if (!GO->hasSection() || GO->getAlignment() == 0)
-      GO->setAlignment(PrefAlign);
-    return GO->getAlignment();
+    GO->setAlignment(PrefAlign);
+    return PrefAlign;
   }
 
   return Align;
