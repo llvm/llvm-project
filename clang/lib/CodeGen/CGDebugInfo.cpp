@@ -1536,8 +1536,9 @@ static bool shouldOmitDefinition(CodeGenOptions::DebugInfoKind DebugKind,
                                  const RecordDecl *RD,
                                  const LangOptions &LangOpts) {
   // Does the type exist in an imported clang module?
-  if (DebugTypeExtRefs && RD->isFromASTFile() && RD->getDefinition())
-      return true;
+  if (DebugTypeExtRefs && RD->isFromASTFile() && RD->getDefinition() &&
+      RD->isExternallyVisible())
+    return true;
 
   if (DebugKind > CodeGenOptions::LimitedDebugInfo)
     return false;

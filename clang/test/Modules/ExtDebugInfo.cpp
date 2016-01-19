@@ -84,4 +84,13 @@ void foo() {
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, scope: ![[NS]],
 // CHECK-SAME:             line: 16
 
+// CHECK: !DIGlobalVariable(name: "GlobalUnion",
+// CHECK-SAME:              type: ![[GLOBAL_UNION:[0-9]+]]
+// CHECK: ![[GLOBAL_UNION]] = !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-SAME:                elements: !{{[0-9]+}})
+// CHECK: !DIGlobalVariable(name: "GlobalStruct",
+// CHECK-SAME:              type: ![[GLOBAL_STRUCT:[0-9]+]]
+// CHECK: ![[GLOBAL_STRUCT]] = !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME:                elements: !{{[0-9]+}})
+
 // CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: !"_ZTSN8DebugCXX6StructE", line: 24)
