@@ -92,6 +92,7 @@
 //   GTEST_OS_LINUX    - Linux
 //     GTEST_OS_LINUX_ANDROID - Google Android
 //   GTEST_OS_MAC      - Mac OS X
+//   GTEST_OS_MINIX    - Minix
 //   GTEST_OS_NACL     - Google Native Client (NaCl)
 //   GTEST_OS_SOLARIS  - Sun Solaris
 //   GTEST_OS_SYMBIAN  - Symbian
@@ -248,6 +249,8 @@
 # define GTEST_OS_NACL 1
 #elif defined(__HAIKU__)
 # define GTEST_OS_HAIKU 1
+#elif defined(_MINIX)
+# define GTEST_OS_MINIX 1
 #endif  // __CYGWIN__
 
 // Brings in definitions for functions used in the testing::internal::posix
@@ -359,7 +362,7 @@
 // no support for it at least as recent as Froyo (2.2).
 // Minix currently doesn't support it either.
 # define GTEST_HAS_STD_WSTRING \
-    (!(GTEST_OS_LINUX_ANDROID || GTEST_OS_CYGWIN || GTEST_OS_SOLARIS || GTEST_OS_HAIKU || defined(_MINIX)))
+    (!(GTEST_OS_LINUX_ANDROID || GTEST_OS_CYGWIN || GTEST_OS_SOLARIS || GTEST_OS_HAIKU || GTEST_OS_MINIX))
 
 #endif  // GTEST_HAS_STD_WSTRING
 
