@@ -2315,6 +2315,11 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 // Since the interceptor only initializes memory for msan, the simplest solution
 // is to disable the interceptor in tsan (other sanitizers do not call
 // signal handlers from COMMON_INTERCEPTOR_ENTER).
+// As __tls_get_addr has been intercepted in the past, to avoid breaking
+// libtsan ABI, keep it around, but just call the real function.
+#if SANITIZER_INTERCEPT_TLS_GET_ADDR
+#define NEED_TLS_GET_ADDR
+#endif
 #undef SANITIZER_INTERCEPT_TLS_GET_ADDR
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
@@ -2540,6 +2545,12 @@ static void syscall_post_fork(uptr pc, int pid) {
 
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
 
+#ifdef NEED_TLS_GET_ADDR
+TSAN_INTERCEPTOR(void *, __tls_get_addr, void *arg) {
+  return REAL(__tls_get_addr)(arg);
+}
+#endif
+
 namespace __tsan {
 
 static void finalize(void *arg) {
@@ -2722,6 +2733,10 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(on_exit);
   TSAN_INTERCEPT(__cxa_atexit);
   TSAN_INTERCEPT(_exit);
+
+#ifdef NEED_TLS_GET_ADDR
+  TSAN_INTERCEPT(__tls_get_addr);
+#endif
 
 #if !SANITIZER_MAC && !SANITIZER_ANDROID
   // Need to setup it, because interceptors check that the function is resolved.

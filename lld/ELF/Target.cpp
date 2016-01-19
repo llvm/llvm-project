@@ -426,7 +426,13 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   case R_386_32:
     add32le(Loc, SA);
     break;
-  case R_386_GOT32:
+  case R_386_GOT32: {
+    uint64_t V = SA - Out<ELF32LE>::Got->getVA() -
+                 Out<ELF32LE>::Got->getNumEntries() * 4;
+    checkInt<32>(V, Type);
+    add32le(Loc, V);
+    break;
+  }
   case R_386_GOTOFF:
     add32le(Loc, SA - Out<ELF32LE>::Got->getVA());
     break;

@@ -2283,6 +2283,12 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
                 mangled.SetDemangledName( ConstString((demangled_name + suffix).str()) );
         }
 
+        // In ELF all symbol should have a valid size but it is not true for some code symbols
+        // coming from hand written assembly. As none of the code symbol should have 0 size we try
+        // to calculate the size for these symbols in the symtab with saying that their original
+        // size is not valid.
+        bool symbol_size_valid = symbol.st_size != 0 || symbol_type != eSymbolTypeCode;
+
         Symbol dc_symbol(
             i + start_id,       // ID is the original symbol table index.
             mangled,
@@ -2295,7 +2301,7 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
                 symbol_section_sp,  // Section in which this symbol is defined or null.
                 symbol_value,       // Offset in section or symbol value.
                 symbol.st_size),    // Size in bytes of this symbol.
-            symbol.st_size != 0,    // Size is valid if it is not 0
+            symbol_size_valid,      // Symbol size is valid
             has_suffix,             // Contains linker annotations?
             flags);                 // Symbol flags.
         symtab->AddSymbol(dc_symbol);
@@ -2304,7 +2310,9 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
 }
 
 unsigned
-ObjectFileELF::ParseSymbolTable(Symtab *symbol_table, user_id_t start_id, lldb_private::Section *symtab)
+ObjectFileELF::ParseSymbolTable(Symtab *symbol_table,
+                                user_id_t start_id,
+                                lldb_private::Section *symtab)
 {
     if (symtab->GetObjectFile() != this)
     {
