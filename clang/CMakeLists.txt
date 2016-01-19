@@ -447,7 +447,6 @@ endmacro(add_clang_executable)
 macro(add_clang_tool name)
   add_clang_executable(${name} ${ARGN})
   install(TARGETS ${name}
-    EXPORT ClangTargets
     RUNTIME DESTINATION bin
     COMPONENT ${name})
 
