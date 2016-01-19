@@ -35,7 +35,11 @@
 #include <sys/file.h>
 #endif
 
-#define I386_FREEBSD (defined(__FreeBSD__) && defined(__i386__))
+#if defined(__FreeBSD__) && defined(__i386__)
+#define I386_FREEBSD 1
+#else
+#define I386_FREEBSD 0
+#endif
 
 #if !defined(_MSC_VER) && !I386_FREEBSD
 #include <stdint.h>
