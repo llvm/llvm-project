@@ -58,3 +58,7 @@ class FwdVirtual {
 };
 
 struct PureForwardDecl;
+
+typedef union { int i; } TypedefUnion;
+typedef enum { e0 = 0 } TypedefEnum;
+typedef struct { int i; } TypedefStruct;

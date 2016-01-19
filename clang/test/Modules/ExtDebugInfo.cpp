@@ -35,6 +35,10 @@ enum {
 auto anon_enum = DebugCXX::e2;
 char _anchor = anon_enum + conflicting_uid;
 
+TypedefUnion tdu;
+TypedefEnum tde;
+TypedefStruct tds;
+
 // CHECK: ![[NS:.*]] = !DINamespace(name: "DebugCXX", scope: ![[MOD:[0-9]+]],
 // CHECK: ![[MOD]] = !DIModule(scope: null, name: {{.*}}DebugCXX
 
@@ -61,6 +65,13 @@ char _anchor = anon_enum + conflicting_uid;
 // CHECK-SAME:             scope: ![[NS]],
 // CHECK-SAME:             flags: DIFlagFwdDecl,
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
+
+// CHECK: !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-SAME:             flags: DIFlagFwdDecl, identifier: "_ZTS12TypedefUnion")
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME:             flags: DIFlagFwdDecl, identifier: "_ZTS11TypedefEnum")
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME:             flags: DIFlagFwdDecl, identifier: "_ZTS13TypedefStruct")
 
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "static_member",
 // CHECK-SAME:           scope: !"_ZTSN8DebugCXX6StructE"
