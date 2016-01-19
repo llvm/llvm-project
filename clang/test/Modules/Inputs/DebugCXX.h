@@ -62,3 +62,7 @@ struct PureForwardDecl;
 typedef union { int i; } TypedefUnion;
 typedef enum { e0 = 0 } TypedefEnum;
 typedef struct { int i; } TypedefStruct;
+
+union { int i; } GlobalUnion;
+struct { int i; } GlobalStruct;
+enum { e5 = 5 } GlobalEnum;

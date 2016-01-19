@@ -59,10 +59,8 @@ class PCHContainerGenerator : public ASTConsumer {
   struct DebugTypeVisitor : public RecursiveASTVisitor<DebugTypeVisitor> {
     clang::CodeGen::CGDebugInfo &DI;
     ASTContext &Ctx;
-    bool SkipTagDecls;
-    DebugTypeVisitor(clang::CodeGen::CGDebugInfo &DI, ASTContext &Ctx,
-                     bool SkipTagDecls)
-        : DI(DI), Ctx(Ctx), SkipTagDecls(SkipTagDecls) {}
+    DebugTypeVisitor(clang::CodeGen::CGDebugInfo &DI, ASTContext &Ctx)
+        : DI(DI), Ctx(Ctx) {}
 
     /// Determine whether this type can be represented in DWARF.
     static bool CanRepresent(const Type *Ty) {
@@ -80,7 +78,8 @@ class PCHContainerGenerator : public ASTConsumer {
       // TagDecls may be deferred until after all decls have been merged and we
       // know the complete type. Pure forward declarations will be skipped, but
       // they don't need to be emitted into the module anyway.
-      if (SkipTagDecls && isa<TagDecl>(D))
+      if (auto *TD = dyn_cast<TagDecl>(D))
+        if (!TD->isCompleteDefinition())
           return true;
 
       QualType QualTy = Ctx.getTypeDeclType(D);
@@ -173,7 +172,7 @@ public:
     // Collect debug info for all decls in this group.
     for (auto *I : D)
       if (!I->isFromASTFile()) {
-        DebugTypeVisitor DTV(*Builder->getModuleDebugInfo(), *Ctx, true);
+        DebugTypeVisitor DTV(*Builder->getModuleDebugInfo(), *Ctx);
         DTV.TraverseDecl(I);
       }
     return true;
@@ -194,7 +193,7 @@ public:
     if (D->getName().empty())
       return;
 
-    DebugTypeVisitor DTV(*Builder->getModuleDebugInfo(), *Ctx, false);
+    DebugTypeVisitor DTV(*Builder->getModuleDebugInfo(), *Ctx);
     DTV.TraverseDecl(D);
     Builder->UpdateCompletedType(D);
   }
