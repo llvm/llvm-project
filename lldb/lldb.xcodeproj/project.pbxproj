@@ -683,12 +683,7 @@
 		3F8169321ABB7A6D001DA9DF /* SystemInitializerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692F1ABB7A6D001DA9DF /* SystemInitializerCommon.cpp */; };
 		3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8169301ABB7A6D001DA9DF /* SystemLifetimeManager.cpp */; };
 		3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FA093141BF65D3A0037DD08 /* PythonExceptionStateTests.cpp */; };
-		3FBA69DF1B6067020008F44A /* ScriptInterpreterNone.cpp in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
-		3FBA69E01B6067020008F44A /* ScriptInterpreterNone.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69DE1B6067020008F44A /* ScriptInterpreterNone.h */; };
 		3FBA69E11B6067120008F44A /* ScriptInterpreterNone.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
-		3FBA69E71B60672A0008F44A /* lldb-python.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69E21B60672A0008F44A /* lldb-python.h */; };
-		3FBA69E91B60672A0008F44A /* PythonDataObjects.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69E41B60672A0008F44A /* PythonDataObjects.h */; };
-		3FBA69EB1B60672A0008F44A /* ScriptInterpreterPython.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69E61B60672A0008F44A /* ScriptInterpreterPython.h */; };
 		3FBA69EC1B6067430008F44A /* PythonDataObjects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69E31B60672A0008F44A /* PythonDataObjects.cpp */; };
 		3FBA69ED1B60674B0008F44A /* ScriptInterpreterPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69E51B60672A0008F44A /* ScriptInterpreterPython.cpp */; };
 		3FDFDDBD199C3A06009756A7 /* FileAction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBC199C3A06009756A7 /* FileAction.cpp */; };
@@ -715,16 +710,9 @@
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
 		4966DCC4148978A10028481B /* ClangExternalASTSourceCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */; };
-		49684D7B1BAB37E400E6D5D5 /* MIUtilParse.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 49684D791BAB37E400E6D5D5 /* MIUtilParse.h */; };
 		49684D7C1BAB37F200E6D5D5 /* MIUtilParse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */; };
 		49724D991AD6ED390033C538 /* RenderScriptRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49724D971AD6ED390033C538 /* RenderScriptRuntime.cpp */; };
-		49753FB31BEAB2BB00019E45 /* PythonDataObjects.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69E41B60672A0008F44A /* PythonDataObjects.h */; };
 		49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
-		49753FB51BEAB2BB00019E45 /* lldb-python.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69E21B60672A0008F44A /* lldb-python.h */; };
-		49753FB61BEAB2BB00019E45 /* ScriptInterpreterNone.cpp in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
-		49753FB71BEAB2BB00019E45 /* ScriptInterpreterNone.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69DE1B6067020008F44A /* ScriptInterpreterNone.h */; };
-		49753FB81BEAB2BB00019E45 /* ScriptInterpreterPython.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 3FBA69E61B60672A0008F44A /* ScriptInterpreterPython.h */; };
-		49753FB91BEAB2BB00019E45 /* MIUtilParse.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 49684D791BAB37E400E6D5D5 /* MIUtilParse.h */; };
 		49753FBB1BEAB2BB00019E45 /* repl_swift in Copy Files */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		49753FBD1BEAB2BB00019E45 /* repl_swift in CopyFiles */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; };
 		4984BA131B978C55008658D4 /* ClangExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4984BA0E1B978C3E008658D4 /* ClangExpressionVariable.cpp */; };
@@ -1216,13 +1204,7 @@
 			dstPath = "/$(DT_VARIANT)/$(LLDB_TOOLS_INSTALL_DIR)/../share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				49753FB31BEAB2BB00019E45 /* PythonDataObjects.h in Copy Files */,
 				49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */,
-				49753FB51BEAB2BB00019E45 /* lldb-python.h in Copy Files */,
-				49753FB61BEAB2BB00019E45 /* ScriptInterpreterNone.cpp in Copy Files */,
-				49753FB71BEAB2BB00019E45 /* ScriptInterpreterNone.h in Copy Files */,
-				49753FB81BEAB2BB00019E45 /* ScriptInterpreterPython.h in Copy Files */,
-				49753FB91BEAB2BB00019E45 /* MIUtilParse.h in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -1285,13 +1267,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				3FBA69E91B60672A0008F44A /* PythonDataObjects.h in Copy Files */,
 				AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */,
-				3FBA69E71B60672A0008F44A /* lldb-python.h in Copy Files */,
-				3FBA69DF1B6067020008F44A /* ScriptInterpreterNone.cpp in Copy Files */,
-				3FBA69E01B6067020008F44A /* ScriptInterpreterNone.h in Copy Files */,
-				3FBA69EB1B60672A0008F44A /* ScriptInterpreterPython.h in Copy Files */,
-				49684D7B1BAB37E400E6D5D5 /* MIUtilParse.h in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
