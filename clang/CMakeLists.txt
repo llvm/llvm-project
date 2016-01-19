@@ -216,14 +216,15 @@ endif()
 
 option(CLANG_APPEND_VC_REV
   "Append the version control system revision id to clang version spew" OFF)
+if(CLANG_APPEND_VC_REV)
+  if(NOT SVN_REVISION)
+    # This macro will set SVN_REVISION in the parent scope
+    add_version_info_from_vcs(VERSION_VAR)
+  endif()
 
-if(NOT SVN_REVISION)
-  # This macro will set SVN_REVISION in the parent scope
-  add_version_info_from_vcs(VERSION_VAR)
-endif()
-
-if(SVN_REVISION)
-  add_definitions(-DSVN_REVISION="${SVN_REVISION}")
+  if(SVN_REVISION)
+    add_definitions(-DSVN_REVISION="${SVN_REVISION}")
+  endif()
 endif()
 
 set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
