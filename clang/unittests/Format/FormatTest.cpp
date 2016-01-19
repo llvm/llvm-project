@@ -6133,6 +6133,7 @@ TEST_F(FormatTest, FormatsArrays) {
       "aaaaaaaaaaa aaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaaaaaaaaa->aaaaaaaaa[0]\n"
       "                                  .aaaaaaa[0]\n"
       "                                  .aaaaaaaaaaaaaaaaaaaaaa();");
+  verifyFormat("a[::b::c];");
 
   verifyNoCrash("a[,Y?)]", getLLVMStyleWithColumns(10));
 
