@@ -26,6 +26,7 @@ class ExitDuringStepTestCase(TestBase):
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
     @expectedFailureWindows("llvm.org/pr24681")
+    @expectedFlakeyAndroid("llvm.org/pr26206")
     def test(self):
         """Test thread exit during step handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -33,6 +34,7 @@ class ExitDuringStepTestCase(TestBase):
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
     @expectedFailureWindows("llvm.org/pr24681")
+    @expectedFlakeyAndroid("llvm.org/pr26206")
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -40,6 +42,7 @@ class ExitDuringStepTestCase(TestBase):
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
     @expectedFailureWindows("llvm.org/pr24681")
+    @expectedFlakeyAndroid("llvm.org/pr26206")
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build(dictionary=self.getBuildFlags())
