@@ -49,8 +49,8 @@
 
 static const u64 kMagic64 = 0xC0BFFFFFFFFFFF64ULL;
 static const u64 kMagic32 = 0xC0BFFFFFFFFFFF32ULL;
-static constexpr uptr kNumWordsForMagic = SANITIZER_WORDSIZE == 64 ? 1 : 2;
-static constexpr u64 kMagic = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
+static const uptr kNumWordsForMagic = SANITIZER_WORDSIZE == 64 ? 1 : 2;
+static const u64 kMagic = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
 
 static atomic_uint32_t dump_once_guard;  // Ensure that CovDump runs only once.
 
