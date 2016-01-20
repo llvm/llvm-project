@@ -30,3 +30,7 @@ global i1 icmp slt (i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 0),
 @cons = weak global i32 0, align 8              ; <i32*> [#uses=1]
 global i64 and (i64 ptrtoint (i32* @cons to i64), i64 7)
 
+global <2 x i8*> getelementptr(i8, <2 x i8*> undef, <2 x i64> <i64 1, i64 1>)
+global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> undef, <2 x i64> <i64 1, i64 1>, <2 x i32> <i32 0, i32 0>)
+global <2 x i8*> getelementptr(i8, <2 x i8*> zeroinitializer, <2 x i64> <i64 0, i64 0>)
+global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> zeroinitializer, <2 x i64> <i64 0, i64 0>, <2 x i32> <i32 0, i32 0>)

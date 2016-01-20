@@ -90,10 +90,11 @@ public:
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
-      { "reloc_riprel_4byte", 0, 4 * 8, MCFixupKindInfo::FKF_IsPCRel },
-      { "reloc_riprel_4byte_movq_load", 0, 4 * 8, MCFixupKindInfo::FKF_IsPCRel},
+      { "reloc_riprel_4byte", 0, 4 * 8, MCFixupKindInfo::FKF_IsPCRel, },
+      { "reloc_riprel_4byte_movq_load", 0, 4 * 8, MCFixupKindInfo::FKF_IsPCRel,},
       { "reloc_signed_4byte", 0, 4 * 8, 0},
-      { "reloc_global_offset_table", 0, 4 * 8, 0}
+      { "reloc_global_offset_table", 0, 4 * 8, 0},
+      { "reloc_global_offset_table8", 0, 8 * 8, 0},
     };
 
     if (Kind < FirstTargetFixupKind)
@@ -421,6 +422,14 @@ public:
   WindowsX86AsmBackend(const Target &T, bool is64Bit, StringRef CPU)
     : X86AsmBackend(T, CPU)
     , Is64Bit(is64Bit) {
+  }
+
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override {
+    return StringSwitch<Optional<MCFixupKind>>(Name)
+        .Case("dir32", FK_Data_4)
+        .Case("secrel32", FK_SecRel_4)
+        .Case("secidx", FK_SecRel_2)
+        .Default(MCAsmBackend::getFixupKind(Name));
   }
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
@@ -821,7 +830,7 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
   if (TheTriple.isOSBinFormatMachO())
     return new DarwinX86_32AsmBackend(T, MRI, CPU);
 
-  if (TheTriple.isOSWindows() && !TheTriple.isOSBinFormatELF())
+  if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
     return new WindowsX86AsmBackend(T, false, CPU);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
@@ -844,7 +853,7 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
     return new DarwinX86_64AsmBackend(T, MRI, CPU, CS);
   }
 
-  if (TheTriple.isOSWindows() && !TheTriple.isOSBinFormatELF())
+  if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
     return new WindowsX86AsmBackend(T, true, CPU);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());

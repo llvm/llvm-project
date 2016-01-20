@@ -7,7 +7,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: single_block:
-; CHECK-NOT: .local
+; CHECK-NOT: local
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK: i32.store $push[[STORE:[0-9]+]]=, 0($0), $pop{{[0-9]+}}{{$}}
 ; CHECK: return $pop[[STORE]]{{$}}
@@ -26,7 +26,7 @@ entry:
 @pos = global %class.Vec3 zeroinitializer, align 4
 
 ; CHECK-LABEL: foo:
-; CHECK: i32.store $discard=, pos($0), $0{{$}}
+; CHECK: i32.store $discard=, pos($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
 define void @foo() {
 for.body.i:
   br label %for.body5.i
@@ -44,7 +44,7 @@ for.cond.cleanup4.i:
 }
 
 ; CHECK-LABEL: bar:
-; CHECK: i32.store $discard=, pos($0), $0{{$}}
+; CHECK: i32.store $discard=, pos($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
 define void @bar() {
 for.body.i:
   br label %for.body5.i

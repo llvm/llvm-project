@@ -3263,6 +3263,26 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, SDLoc DL, EVT VT,
   return getConstant(Folded.first, DL, VT);
 }
 
+SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
+                                       const GlobalAddressSDNode *GA,
+                                       const SDNode *N2) {
+  if (GA->getOpcode() != ISD::GlobalAddress)
+    return SDValue();
+  if (!TLI->isOffsetFoldingLegal(GA))
+    return SDValue();
+  const ConstantSDNode *Cst2 = dyn_cast<ConstantSDNode>(N2);
+  if (!Cst2)
+    return SDValue();
+  int64_t Offset = Cst2->getSExtValue();
+  switch (Opcode) {
+  case ISD::ADD: break;
+  case ISD::SUB: Offset = -uint64_t(Offset); break;
+  default: return SDValue();
+  }
+  return getGlobalAddress(GA->getGlobal(), SDLoc(Cst2), VT,
+                          GA->getOffset() + uint64_t(Offset));
+}
+
 SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, SDLoc DL, EVT VT,
                                              SDNode *Cst1, SDNode *Cst2) {
   // If the opcode is a target-specific ISD node, there's nothing we can
@@ -3288,6 +3308,12 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, SDLoc DL, EVT VT,
       }
     }
   }
+
+  // fold (add Sym, c) -> Sym+c
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Cst1))
+    return FoldSymbolOffset(Opcode, VT, GA, Cst2);
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Cst2))
+    return FoldSymbolOffset(Opcode, VT, GA, Cst1);
 
   // For vectors extract each constant element into Inputs so we can constant
   // fold them individually.
@@ -7320,6 +7346,22 @@ bool ShuffleVectorSDNode::isSplatMask(const int *Mask, EVT VT) {
     if (Mask[i] >= 0 && Mask[i] != Idx)
       return false;
   return true;
+}
+
+// \brief Returns the SDNode if it is a constant integer BuildVector
+// or constant integer.
+SDNode *SelectionDAG::isConstantIntBuildVectorOrConstantInt(SDValue N) {
+  if (isa<ConstantSDNode>(N))
+    return N.getNode();
+  if (ISD::isBuildVectorOfConstantSDNodes(N.getNode()))
+    return N.getNode();
+  // Treat a GlobalAddress supporting constant offset folding as a
+  // constant integer.
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N))
+    if (GA->getOpcode() == ISD::GlobalAddress &&
+        TLI->isOffsetFoldingLegal(GA))
+      return GA;
+  return nullptr;
 }
 
 #ifndef NDEBUG

@@ -15,8 +15,8 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_INSTPRINTER_WEBASSEMBLYINSTPRINTER_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_INSTPRINTER_WEBASSEMBLYINSTPRINTER_H
 
-#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 

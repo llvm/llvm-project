@@ -1833,10 +1833,6 @@ static bool isSafeToEliminateVarargsCast(const CallSite CS,
   return true;
 }
 
-// Try to fold some different type of calls here.
-// Currently we're only working with the checking functions, memcpy_chk,
-// mempcpy_chk, memmove_chk, memset_chk, strcpy_chk, stpcpy_chk, strncpy_chk,
-// strcat_chk and strncat_chk.
 Instruction *InstCombiner::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
 

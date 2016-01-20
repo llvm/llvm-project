@@ -4087,16 +4087,16 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Instruction *I,
 /// operations. This allows them to be analyzed by regular SCEV code.
 ///
 const SCEV *ScalarEvolution::createNodeForGEP(GEPOperator *GEP) {
-  Value *Base = GEP->getOperand(0);
   // Don't attempt to analyze GEPs over unsized objects.
-  if (!Base->getType()->getPointerElementType()->isSized())
+  if (!GEP->getSourceElementType()->isSized())
     return getUnknown(GEP);
 
   SmallVector<const SCEV *, 4> IndexExprs;
   for (auto Index = GEP->idx_begin(); Index != GEP->idx_end(); ++Index)
     IndexExprs.push_back(getSCEV(*Index));
-  return getGEPExpr(GEP->getSourceElementType(), getSCEV(Base), IndexExprs,
-                    GEP->isInBounds());
+  return getGEPExpr(GEP->getSourceElementType(),
+                    getSCEV(GEP->getPointerOperand()),
+                    IndexExprs, GEP->isInBounds());
 }
 
 /// GetMinTrailingZeros - Determine the minimum number of zero bits that S is
@@ -5248,13 +5248,12 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
   // lead to the loop header.
   bool MustExecuteLoopHeader = true;
   BasicBlock *Exit = nullptr;
-  for (succ_iterator SI = succ_begin(ExitingBlock), SE = succ_end(ExitingBlock);
-       SI != SE; ++SI)
-    if (!L->contains(*SI)) {
+  for (auto *SBB : successors(ExitingBlock))
+    if (!L->contains(SBB)) {
       if (Exit) // Multiple exit successors.
         return getCouldNotCompute();
-      Exit = *SI;
-    } else if (*SI != L->getHeader()) {
+      Exit = SBB;
+    } else if (SBB != L->getHeader()) {
       MustExecuteLoopHeader = false;
     }
 
@@ -5367,6 +5366,14 @@ ScalarEvolution::computeExitLimitFromCond(const Loop *L,
         if (EL0.Exact == EL1.Exact)
           BECount = EL0.Exact;
       }
+
+      // There are cases (e.g. PR26207) where computeExitLimitFromCond is able
+      // to be more aggressive when computing BECount than when computing
+      // MaxBECount.  In these cases it is possible for EL0.Exact and EL1.Exact
+      // to match, but for EL0.Max and EL1.Max to not.
+      if (isa<SCEVCouldNotCompute>(MaxBECount) &&
+          !isa<SCEVCouldNotCompute>(BECount))
+        MaxBECount = BECount;
 
       return ExitLimit(BECount, MaxBECount);
     }

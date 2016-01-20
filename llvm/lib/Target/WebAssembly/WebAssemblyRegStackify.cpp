@@ -23,6 +23,7 @@
 #include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblySubtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -116,9 +117,9 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
     // Ask LiveIntervals whether moving this virtual register use or def to
     // Insert will change value numbers are seen.
     const LiveInterval &LI = LIS.getInterval(Reg);
-    VNInfo *DefVNI = MO.isDef() ?
-        LI.getVNInfoAt(LIS.getInstructionIndex(Def).getRegSlot()) :
-        LI.getVNInfoBefore(LIS.getInstructionIndex(Def));
+    VNInfo *DefVNI =
+        MO.isDef() ? LI.getVNInfoAt(LIS.getInstructionIndex(Def).getRegSlot())
+                   : LI.getVNInfoBefore(LIS.getInstructionIndex(Def));
     assert(DefVNI && "Instruction input missing value number");
     VNInfo *InsVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(Insert));
     if (InsVNI && DefVNI != InsVNI)
@@ -127,7 +128,7 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
 
   // Check for memory dependencies and side effects.
   for (--I; I != D; --I)
-    SawSideEffects |= I->isSafeToMove(&AA, SawStore);
+    SawSideEffects |= !I->isSafeToMove(&AA, SawStore);
   return !(SawStore && Def->mayLoad() && !Def->isInvariantLoad(&AA)) &&
          !(SawSideEffects && !Def->isSafeToMove(&AA, SawStore));
 }
@@ -140,6 +141,8 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  const auto *TRI = MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
   AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   LiveIntervals &LIS = getAnalysis<LiveIntervals>();
 
@@ -176,10 +179,6 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (!Def)
           continue;
 
-        // There's no use in nesting implicit defs inside anything.
-        if (Def->getOpcode() == TargetOpcode::IMPLICIT_DEF)
-          continue;
-
         // Don't nest an INLINE_ASM def into anything, because we don't have
         // constraints for $pop outputs.
         if (Def->getOpcode() == TargetOpcode::INLINEASM)
@@ -197,30 +196,51 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
             Def->getOpcode() == WebAssembly::ARGUMENT_F64)
           continue;
 
-        // Single-use expression trees require defs that have one use.
-        // TODO: Eventually we'll relax this, to take advantage of set_local
-        // returning its result.
-        if (!MRI.hasOneUse(Reg))
-          continue;
+        if (MRI.hasOneUse(Reg) && Def->getParent() == &MBB &&
+            IsSafeToMove(Def, Insert, AA, LIS, MRI)) {
+          // A single-use def in the same block with no intervening memory or
+          // register dependencies; move the def down and nest it with the
+          // current instruction.
+          // TODO: Stackify multiple-use values, taking advantage of set_local
+          // returning its result.
+          Changed = true;
+          AnyStackified = true;
+          MBB.splice(Insert, &MBB, Def);
+          LIS.handleMove(Def);
+          MFI.stackifyVReg(Reg);
+          ImposeStackOrdering(Def);
+          Insert = Def;
+        } else if (Def->isAsCheapAsAMove() &&
+                   TII->isTriviallyReMaterializable(Def, &AA)) {
+          // A trivially cloneable instruction; clone it and nest the new copy
+          // with the current instruction.
+          Changed = true;
+          AnyStackified = true;
+          unsigned OldReg = Def->getOperand(0).getReg();
+          unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
+          TII->reMaterialize(MBB, Insert, NewReg, 0, Def, *TRI);
+          Op.setReg(NewReg);
+          MachineInstr *Clone =
+              &*std::prev(MachineBasicBlock::instr_iterator(Insert));
+          LIS.InsertMachineInstrInMaps(Clone);
+          LIS.createAndComputeVirtRegInterval(NewReg);
+          MFI.stackifyVReg(NewReg);
+          ImposeStackOrdering(Clone);
+          Insert = Clone;
 
-        // For now, be conservative and don't look across block boundaries.
-        // TODO: Be more aggressive?
-        if (Def->getParent() != &MBB)
-          continue;
-
-        // Don't move instructions that have side effects or memory dependencies
-        // or other complications.
-        if (!IsSafeToMove(Def, Insert, AA, LIS, MRI))
-          continue;
-
-        Changed = true;
-        AnyStackified = true;
-        // Move the def down and nest it in the current instruction.
-        MBB.splice(Insert, &MBB, Def);
-        LIS.handleMove(Def);
-        MFI.stackifyVReg(Reg);
-        ImposeStackOrdering(Def);
-        Insert = Def;
+          // If that was the last use of the original, delete the original.
+          // Otherwise shrink the LiveInterval.
+          if (MRI.use_empty(OldReg)) {
+            SlotIndex Idx = LIS.getInstructionIndex(Def).getRegSlot();
+            LIS.removePhysRegDefAt(WebAssembly::ARGUMENTS, Idx);
+            LIS.removeVRegDefAt(LIS.getInterval(OldReg), Idx);
+            LIS.removeInterval(OldReg);
+            LIS.RemoveMachineInstrFromMaps(Def);
+            Def->eraseFromParent();
+          } else {
+            LIS.shrinkToUses(&LIS.getInterval(OldReg));
+          }
+        }
       }
       if (AnyStackified)
         ImposeStackOrdering(&*MII);
@@ -236,7 +256,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   }
 
 #ifndef NDEBUG
-  // Verify that pushes and pops are performed in FIFO order.
+  // Verify that pushes and pops are performed in LIFO order.
   SmallVector<unsigned, 0> Stack;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {

@@ -510,15 +510,11 @@ bool ConvertToScalarInfo::CanConvertToScalar(Value *V, uint64_t Offset,
 
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(UI)) {
       // If this is a GEP with a variable indices, we can't handle it.
-      PointerType* PtrTy = dyn_cast<PointerType>(GEP->getPointerOperandType());
-      if (!PtrTy)
-        return false;
-
       // Compute the offset that this GEP adds to the pointer.
       SmallVector<Value*, 8> Indices(GEP->op_begin()+1, GEP->op_end());
       Value *GEPNonConstantIdx = nullptr;
       if (!GEP->hasAllConstantIndices()) {
-        if (!isa<VectorType>(PtrTy->getElementType()))
+        if (!isa<VectorType>(GEP->getSourceElementType()))
           return false;
         if (NonConstantIdx)
           return false;
@@ -528,7 +524,7 @@ bool ConvertToScalarInfo::CanConvertToScalar(Value *V, uint64_t Offset,
         HadDynamicAccess = true;
       } else
         GEPNonConstantIdx = NonConstantIdx;
-      uint64_t GEPOffset = DL.getIndexedOffset(PtrTy,
+      uint64_t GEPOffset = DL.getIndexedOffset(GEP->getPointerOperandType(),
                                                Indices);
       // See if all uses can be converted.
       if (!CanConvertToScalar(GEP, Offset+GEPOffset, GEPNonConstantIdx))

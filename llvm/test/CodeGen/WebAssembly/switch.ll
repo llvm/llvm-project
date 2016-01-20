@@ -21,7 +21,7 @@ declare void @foo5()
 ; CHECK: block{{$}}
 ; CHECK: block{{$}}
 ; CHECK: block{{$}}
-; CHECK: tableswitch {{[^,]*}}, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5{{$}}
+; CHECK: tableswitch {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5{{$}}
 ; CHECK: .LBB0_2:
 ; CHECK:   call foo0@FUNCTION{{$}}
 ; CHECK: .LBB0_3:
@@ -101,7 +101,7 @@ sw.epilog:                                        ; preds = %entry, %sw.bb.5, %s
 ; CHECK: block{{$}}
 ; CHECK: block{{$}}
 ; CHECK: block{{$}}
-; CHECK: tableswitch {{[^,]*}}, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5{{$}}
+; CHECK: tableswitch {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5{{$}}
 ; CHECK: .LBB1_2:
 ; CHECK:   call foo0@FUNCTION{{$}}
 ; CHECK: .LBB1_3:

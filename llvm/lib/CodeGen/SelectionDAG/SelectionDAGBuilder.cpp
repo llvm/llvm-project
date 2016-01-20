@@ -42,6 +42,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -3035,8 +3036,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   Value *Op0 = I.getOperand(0);
   // Note that the pointer operand may be a vector of pointers. Take the scalar
   // element which holds a pointer.
-  Type *Ty = Op0->getType()->getScalarType();
-  unsigned AS = Ty->getPointerAddressSpace();
+  unsigned AS = Op0->getType()->getScalarType()->getPointerAddressSpace();
   SDValue N = getValue(Op0);
   SDLoc dl = getCurSDLoc();
 
@@ -3050,10 +3050,10 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
     SmallVector<SDValue, 16> Ops(VectorWidth, N);
     N = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
   }
-  for (GetElementPtrInst::const_op_iterator OI = I.op_begin()+1, E = I.op_end();
-       OI != E; ++OI) {
-    const Value *Idx = *OI;
-    if (StructType *StTy = dyn_cast<StructType>(Ty)) {
+  for (gep_type_iterator GTI = gep_type_begin(&I), E = gep_type_end(&I);
+       GTI != E; ++GTI) {
+    const Value *Idx = GTI.getOperand();
+    if (StructType *StTy = dyn_cast<StructType>(*GTI)) {
       unsigned Field = cast<Constant>(Idx)->getUniqueInteger().getZExtValue();
       if (Field) {
         // N = N + Offset
@@ -3068,14 +3068,11 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
                         DAG.getConstant(Offset, dl, N.getValueType()), &Flags);
       }
-
-      Ty = StTy->getElementType(Field);
     } else {
-      Ty = cast<SequentialType>(Ty)->getElementType();
       MVT PtrTy =
           DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout(), AS);
       unsigned PtrSize = PtrTy.getSizeInBits();
-      APInt ElementSize(PtrSize, DL->getTypeAllocSize(Ty));
+      APInt ElementSize(PtrSize, DL->getTypeAllocSize(GTI.getIndexedType()));
 
       // If this is a scalar constant or a splat vector of constants,
       // handle it quickly.

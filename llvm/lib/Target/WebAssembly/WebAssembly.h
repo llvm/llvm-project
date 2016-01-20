@@ -38,8 +38,6 @@ FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
 FunctionPass *createWebAssemblyPeephole();
 
-FunctionPass *createWebAssemblyRelooper();
-
 } // end namespace llvm
 
 #endif

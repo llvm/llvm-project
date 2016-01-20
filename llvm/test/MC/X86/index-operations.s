@@ -144,3 +144,19 @@ insw %dx, (%edi)
 // 64: insw %dx, %es:(%edi) # encoding: [0x66,0x67,0x6d]
 // 32: insw %dx, %es:(%edi) # encoding: [0x66,0x6d]
 // 16: insw %dx, %es:(%edi) # encoding: [0x67,0x6d]
+
+insw %dx, (%bx)
+// ERR64: invalid 16-bit base register
+// 32: insw %dx, %es:(%di) # encoding: [0x66,0x67,0x6d]
+// 16: insw %dx, %es:(%di) # encoding: [0x6d]
+
+insw %dx, (%ebx)
+// 64: insw %dx, %es:(%edi) # encoding: [0x66,0x67,0x6d]
+// 32: insw %dx, %es:(%edi) # encoding: [0x66,0x6d]
+// 16: insw %dx, %es:(%edi) # encoding: [0x67,0x6d]
+
+insw %dx, (%rbx)
+// 64: insw %dx, %es:(%rdi) # encoding: [0x66,0x6d]
+// ERR32: 64-bit
+// ERR16: 64-bit
+

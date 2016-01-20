@@ -6,16 +6,12 @@
 define <4 x float> @shuffle_v4f32_0z27(<4 x float> %x, <4 x float> %a) {
 ; SSE-LABEL: shuffle_v4f32_0z27:
 ; SSE:       # BB#0:
-; SSE-NEXT:    xorps %xmm2, %xmm2
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3]
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[2]
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[2],xmm1[2]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0z27:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[2]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[2],xmm1[2]
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x float> %x, i32 0
   %vecinit = insertelement <4 x float> undef, float %vecext, i32 0
@@ -28,16 +24,12 @@ define <4 x float> @shuffle_v4f32_0z27(<4 x float> %x, <4 x float> %a) {
 define <4 x float> @shuffle_v4f32_0zz4(<4 x float> %xyzw, <4 x float> %abcd) {
 ; SSE-LABEL: shuffle_v4f32_0zz4:
 ; SSE:       # BB#0:
-; SSE-NEXT:    xorps %xmm2, %xmm2
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0zz4:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x float> %xyzw, i32 0
   %vecinit = insertelement <4 x float> undef, float %vecext, i32 0
@@ -50,16 +42,12 @@ define <4 x float> @shuffle_v4f32_0zz4(<4 x float> %xyzw, <4 x float> %abcd) {
 define <4 x float> @shuffle_v4f32_0z24(<4 x float> %xyzw, <4 x float> %abcd) {
 ; SSE-LABEL: shuffle_v4f32_0z24:
 ; SSE:       # BB#0:
-; SSE-NEXT:    xorps %xmm2, %xmm2
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3]
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[2],xmm1[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0z24:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[2],xmm1[0]
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x float> %xyzw, i32 0
   %vecinit = insertelement <4 x float> undef, float %vecext, i32 0

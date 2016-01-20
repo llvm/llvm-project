@@ -420,12 +420,17 @@ bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
   if (!Offset.evaluateAsAbsolute(OffsetValue))
     llvm_unreachable("Offset is not absolute");
 
+  if (OffsetValue < 0)
+    llvm_unreachable("Offset is negative");
+
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
-  MCFixupKind Kind;
-  if (!Assembler->getBackend().getFixupKind(Name, Kind))
+  Optional<MCFixupKind> MaybeKind = Assembler->getBackend().getFixupKind(Name);
+  if (!MaybeKind.hasValue())
     return true;
+
+  MCFixupKind Kind = *MaybeKind;
 
   if (Expr == nullptr)
     Expr =
@@ -436,9 +441,9 @@ bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
 
 void MCObjectStreamer::EmitFill(uint64_t NumBytes, uint8_t FillValue) {
   const MCSection *Sec = getCurrentSection().first;
+  (void)Sec;
   assert(Sec && "need a section");
-  unsigned ItemSize = Sec->isVirtualSection() ? 0 : 1;
-  insert(new MCFillFragment(FillValue, ItemSize, NumBytes));
+  insert(new MCFillFragment(FillValue, NumBytes));
 }
 
 void MCObjectStreamer::FinishImpl() {

@@ -109,8 +109,7 @@ static void adjustStackPointer(unsigned StackSize,
 void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
-  const auto *TII =
-      static_cast<const WebAssemblyInstrInfo*>(MF.getSubtarget().getInstrInfo());
+  const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   DebugLoc DL = I->getDebugLoc();
   unsigned Opc = I->getOpcode();
   bool IsDestroy = Opc == TII->getCallFrameDestroyOpcode();
@@ -132,7 +131,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   if (!StackSize && (!MFI->adjustsStack() || MFI->getMaxCallFrameSize() == 0))
     return;
 
-  const auto *TII = MF.getSubtarget().getInstrInfo();
+  const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
   auto InsertPt = MBB.begin();
   DebugLoc DL;
@@ -145,7 +144,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t StackSize = MF.getFrameInfo()->getStackSize();
   if (!StackSize)
     return;
-  const auto *TII = MF.getSubtarget().getInstrInfo();
+  const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MRI = MF.getRegInfo();
   unsigned OffsetReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
   auto InsertPt = MBB.getFirstTerminator();

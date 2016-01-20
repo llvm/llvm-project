@@ -120,7 +120,7 @@ define void @coldcc_tail_call_void_nullary() {
   ret void
 }
 
-; FIXME test the following:
+; TODO: test the following:
 ;  - More argument combinations.
 ;  - Tail call.
 ;  - Interesting returns (struct, multiple).

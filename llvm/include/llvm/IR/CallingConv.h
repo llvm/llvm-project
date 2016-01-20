@@ -168,6 +168,16 @@ namespace CallingConv {
     /// subtargets.
     X86_INTR = 83,
 
+    /// Used for AVR interrupt routines.
+    AVR_INTR = 84,
+
+    /// Calling convention used for AVR signal routines.
+    AVR_SIGNAL = 85,
+
+    /// Calling convention used for special AVR rtlib functions
+    /// which have an "optimized" convention to preserve registers.
+    AVR_BUILTIN = 86,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

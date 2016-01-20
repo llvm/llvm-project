@@ -2886,8 +2886,7 @@ bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
       return false;
 
     // Make sure the index-ee is a pointer to array of i8.
-    PointerType *PT = cast<PointerType>(GEP->getOperand(0)->getType());
-    ArrayType *AT = dyn_cast<ArrayType>(PT->getElementType());
+    ArrayType *AT = dyn_cast<ArrayType>(GEP->getSourceElementType());
     if (!AT || !AT->getElementType()->isIntegerTy(8))
       return false;
 
@@ -3253,8 +3252,7 @@ static bool isDereferenceableAndAlignedPointer(
 
   // For GEPs, determine if the indexing lands within the allocated object.
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-    Type *VTy = GEP->getType();
-    Type *Ty = VTy->getPointerElementType();
+    Type *Ty = GEP->getResultElementType();
     const Value *Base = GEP->getPointerOperand();
 
     // Conservatively require that the base pointer be fully dereferenceable
@@ -3265,14 +3263,14 @@ static bool isDereferenceableAndAlignedPointer(
                                             Visited))
       return false;
 
-    APInt Offset(DL.getPointerTypeSizeInBits(VTy), 0);
+    APInt Offset(DL.getPointerTypeSizeInBits(GEP->getType()), 0);
     if (!GEP->accumulateConstantOffset(DL, Offset))
       return false;
 
     // Check if the load is within the bounds of the underlying object
     // and offset is aligned.
     uint64_t LoadSize = DL.getTypeStoreSize(Ty);
-    Type *BaseType = Base->getType()->getPointerElementType();
+    Type *BaseType = GEP->getSourceElementType();
     assert(isPowerOf2_32(Align) && "must be a power of 2!");
     return (Offset + LoadSize).ule(DL.getTypeAllocSize(BaseType)) && 
            !(Offset & APInt(Offset.getBitWidth(), Align-1));

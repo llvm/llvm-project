@@ -248,16 +248,11 @@ void MipsAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
   }
 }
 
-bool MipsAsmBackend::getFixupKind(StringRef Name, MCFixupKind &MappedKind) const {
-  if (Name == "R_MIPS_NONE") {
-    MappedKind = (MCFixupKind)Mips::fixup_Mips_NONE;
-    return true;
-  }
-  if (Name == "R_MIPS_32") {
-    MappedKind = FK_Data_4;
-    return true;
-  }
-  return MCAsmBackend::getFixupKind(Name, MappedKind);
+Optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
+  return StringSwitch<Optional<MCFixupKind>>(Name)
+      .Case("R_MIPS_NONE", (MCFixupKind)Mips::fixup_Mips_NONE)
+      .Case("R_MIPS_32", FK_Data_4)
+      .Default(MCAsmBackend::getFixupKind(Name));
 }
 
 const MCFixupKindInfo &MipsAsmBackend::

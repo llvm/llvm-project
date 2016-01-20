@@ -29,9 +29,8 @@ struct DictionaryEntry {
 
 struct Dictionary : public std::vector<DictionaryEntry>{
   bool ContainsWord(const Word &W) const {
-    return end() !=
-           std::find_if(begin(), end(),
-                        [&](const DictionaryEntry &DE) { return DE.W == W; });
+    return std::any_of(begin(), end(),
+                       [&](const DictionaryEntry &DE) { return DE.W == W; });
   }
 };
 

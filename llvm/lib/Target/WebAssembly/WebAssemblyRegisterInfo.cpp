@@ -79,7 +79,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   } else {
     // Otherwise create an i32.add SP, offset and make it the operand.
     auto &MRI = MF.getRegInfo();
-    const auto *TII = MF.getSubtarget().getInstrInfo();
+    const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
     unsigned OffsetReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(WebAssembly::CONST_I32), OffsetReg)

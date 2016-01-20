@@ -1,5 +1,8 @@
 # Tests which are known to fail from the GCC torture test suite.
 
+# InstrEmitter.cpp:302: unsigned int llvm::InstrEmitter::getVR(llvm::SDValue, DenseMap<llvm::SDValue, unsigned int> &): Assertion `I != VRBaseMap.end() && "Node emitted out of order - late"' failed.
+20030916-1.c
+
 # WebAssemblyCFGStackify.cpp:438: void PlaceMarkers(llvm::MachineFunction&, const llvm::MachineLoopInfo&, const llvm::WebAssemblyInstrInfo&, llvm::MachineDominatorTree&): Assertion `ScopeTops[Stack.back()->getNumber()] == &MBB && "Block should be balanced"' failed.
 ashldi-1.c
 ashrdi-1.c

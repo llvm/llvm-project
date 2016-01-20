@@ -140,7 +140,8 @@ void WebAssemblyPassConfig::addIRPasses() {
     addPass(createAtomicExpandPass(TM));
 
   // Optimize "returned" function attributes.
-  addPass(createWebAssemblyOptimizeReturned());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createWebAssemblyOptimizeReturned());
 
   TargetPassConfig::addIRPasses();
 }
@@ -165,7 +166,8 @@ void WebAssemblyPassConfig::addPreRegAlloc() {
   TargetPassConfig::addPreRegAlloc();
 
   // Prepare store instructions for register stackifying.
-  addPass(createWebAssemblyStoreResults());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createWebAssemblyStoreResults());
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
@@ -206,5 +208,6 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyRegNumbering());
 
   // Perform the very last peephole optimizations on the code.
-  addPass(createWebAssemblyPeephole());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createWebAssemblyPeephole());
 }

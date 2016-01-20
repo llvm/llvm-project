@@ -295,7 +295,7 @@ public:
   }
 
   /// Should we be emitting segmented stack stuff for the function
-  bool shouldSplitStack();
+  bool shouldSplitStack() const;
 
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   ///

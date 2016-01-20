@@ -381,7 +381,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
     }
 
     // Don't attempt to analyze GEPs over unsized objects.
-    if (!GEPOp->getOperand(0)->getType()->getPointerElementType()->isSized())
+    if (!GEPOp->getSourceElementType()->isSized())
       return V;
 
     unsigned AS = GEPOp->getPointerAddressSpace();

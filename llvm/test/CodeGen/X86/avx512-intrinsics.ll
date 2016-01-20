@@ -7000,3 +7000,179 @@ define <16 x i32>@test_int_x86_avx512_mask_permvar_si_512(<16 x i32> %x0, <16 x 
   %res4 = add <16 x i32> %res3, %res2
   ret <16 x i32> %res4
 }
+
+declare <8 x double> @llvm.x86.avx512.mask.fixupimm.pd.512(<8 x double>, <8 x double>, <8 x i64>, i32, i8, i32)
+
+define <8 x double>@test_int_x86_avx512_mask_fixupimm_pd_512(<8 x double> %x0, <8 x double> %x1, <8 x i64> %x2, i8 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fixupimm_pd_512
+; CHECK: kmovw  %edi, %k1
+; CHECK: vmovaps  %zmm0, %zmm3
+; CHECK: vfixupimmpd  $4, %zmm2, %zmm1, %zmm3 {%k1} 
+; CHECK: vpxord  %zmm4, %zmm4, %zmm4
+; CHECK: vfixupimmpd  $5, %zmm2, %zmm1, %zmm4 {%k1} {z} 
+; CHECK: vfixupimmpd  $3, {sae}, %zmm2, %zmm1, %zmm0 
+; CHECK: vaddpd  %zmm4, %zmm3, %zmm1
+; CHECK: vaddpd  %zmm0, %zmm1, %zmm0
+
+  %res = call <8 x double> @llvm.x86.avx512.mask.fixupimm.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x i64> %x2, i32 4, i8 %x4, i32 4)
+  %res1 = call <8 x double> @llvm.x86.avx512.mask.fixupimm.pd.512(<8 x double> zeroinitializer, <8 x double> %x1, <8 x i64> %x2, i32 5, i8 %x4, i32 4)
+  %res2 = call <8 x double> @llvm.x86.avx512.mask.fixupimm.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x i64> %x2, i32 3, i8 -1, i32 8)
+  %res3 = fadd <8 x double> %res, %res1
+  %res4 = fadd <8 x double> %res3, %res2
+  ret <8 x double> %res4
+}
+
+declare <8 x double> @llvm.x86.avx512.maskz.fixupimm.pd.512(<8 x double>, <8 x double>, <8 x i64>, i32, i8, i32)
+
+define <8 x double>@test_int_x86_avx512_maskz_fixupimm_pd_512(<8 x double> %x0, <8 x double> %x1, <8 x i64> %x2, i8 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_fixupimm_pd_512
+; CHECK: kmovw  %edi, %k1
+; CHECK: vmovaps  %zmm0, %zmm3
+; CHECK: vfixupimmpd  $3, %zmm2, %zmm1, %zmm3 {%k1} {z} 
+; CHECK: vpxord  %zmm4, %zmm4, %zmm4
+; CHECK: vmovaps  %zmm0, %zmm5
+; CHECK: vfixupimmpd  $5, %zmm4, %zmm1, %zmm5 {%k1} {z} 
+; CHECK: vfixupimmpd  $2, {sae}, %zmm2, %zmm1, %zmm0 
+; CHECK: vaddpd  %zmm5, %zmm3, %zmm1
+; CHECK: vaddpd  %zmm0, %zmm1, %zmm0
+
+  %res = call <8 x double> @llvm.x86.avx512.maskz.fixupimm.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x i64> %x2, i32 3, i8 %x4, i32 4)
+  %res1 = call <8 x double> @llvm.x86.avx512.maskz.fixupimm.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x i64> zeroinitializer, i32 5, i8 %x4, i32 4)
+  %res2 = call <8 x double> @llvm.x86.avx512.maskz.fixupimm.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x i64> %x2, i32 2, i8 -1, i32 8)
+  %res3 = fadd <8 x double> %res, %res1
+  %res4 = fadd <8 x double> %res3, %res2
+  ret <8 x double> %res4
+}
+
+declare <4 x float> @llvm.x86.avx512.mask.fixupimm.ss(<4 x float>, <4 x float>, <4 x i32>, i32, i8, i32)
+
+define <4 x float>@test_int_x86_avx512_mask_fixupimm_ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i8 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fixupimm_ss
+; CHECK: kmovw  %edi, %k1
+; CHECK: vmovaps  %zmm0, %zmm3
+; CHECK: vfixupimmss  $5, %xmm2, %xmm1, %xmm3 {%k1} 
+; CHECK: vpxor  %xmm4, %xmm4, %xmm4
+; CHECK: vmovaps  %zmm0, %zmm5
+; CHECK: vfixupimmss  $5, %xmm4, %xmm1, %xmm5 {%k1} 
+; CHECK: vfixupimmss  $5, {sae}, %xmm2, %xmm1, %xmm0 
+; CHECK: vaddps  %xmm5, %xmm3, %xmm1
+; CHECK: vaddps  %xmm0, %xmm1, %xmm0
+
+  %res = call <4 x float> @llvm.x86.avx512.mask.fixupimm.ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i32 5, i8 %x4, i32 4)
+  %res1 = call <4 x float> @llvm.x86.avx512.mask.fixupimm.ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> zeroinitializer, i32 5, i8 %x4, i32 4)
+  %res2 = call <4 x float> @llvm.x86.avx512.mask.fixupimm.ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i32 5, i8 -1, i32 8)
+  %res3 = fadd <4 x float> %res, %res1
+  %res4 = fadd <4 x float> %res3, %res2
+  ret <4 x float> %res4
+}
+
+declare <4 x float> @llvm.x86.avx512.maskz.fixupimm.ss(<4 x float>, <4 x float>, <4 x i32>, i32, i8, i32)
+
+define <4 x float>@test_int_x86_avx512_maskz_fixupimm_ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i8 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_fixupimm_ss
+; CHECK: kmovw  %edi, %k1
+; CHECK: vmovaps  %zmm0, %zmm3
+; CHECK: vfixupimmss  $5, %xmm2, %xmm1, %xmm3 {%k1} {z} 
+; CHECK: vmovaps  %zmm0, %zmm4
+; CHECK: vfixupimmss  $5, %xmm2, %xmm1, %xmm4 
+; CHECK: vpxor  %xmm2, %xmm2, %xmm2
+; CHECK: vfixupimmss  $5, {sae}, %xmm2, %xmm1, %xmm0 {%k1} {z} 
+; CHECK: vaddps  %xmm0, %xmm3, %xmm0
+; CHECK: vaddps  %xmm4, %xmm0, %xmm0
+
+  %res = call <4 x float> @llvm.x86.avx512.maskz.fixupimm.ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i32 5, i8 %x4, i32 4)
+  %res1 = call <4 x float> @llvm.x86.avx512.maskz.fixupimm.ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> zeroinitializer, i32 5, i8 %x4, i32 8)
+  %res2 = call <4 x float> @llvm.x86.avx512.maskz.fixupimm.ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i32 5, i8 -1, i32 4)
+  %res3 = fadd <4 x float> %res, %res1
+  %res4 = fadd <4 x float> %res3, %res2
+  ret <4 x float> %res4
+}
+
+declare <16 x float> @llvm.x86.avx512.mask.fixupimm.ps.512(<16 x float>, <16 x float>, <16 x i32>, i32, i16, i32)
+
+define <16 x float>@test_int_x86_avx512_mask_fixupimm_ps_512(<16 x float> %x0, <16 x float> %x1, <16 x i32> %x2, i16 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fixupimm_ps_512
+; CHECK: kmovw  %edi, %k1
+; CHECK: vmovaps  %zmm0, %zmm3
+; CHECK: vfixupimmps  $5, %zmm2, %zmm1, %zmm3 {%k1} 
+; CHECK: vpxord  %zmm4, %zmm4, %zmm4
+; CHECK: vmovaps  %zmm0, %zmm5
+; CHECK: vfixupimmps  $5, %zmm4, %zmm1, %zmm5 {%k1} 
+; CHECK: vfixupimmps  $5, {sae}, %zmm2, %zmm1, %zmm0 
+; CHECK: vaddps  %zmm5, %zmm3, %zmm1
+; CHECK: vaddps  %zmm0, %zmm1, %zmm0
+
+  %res = call <16 x float> @llvm.x86.avx512.mask.fixupimm.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x i32> %x2, i32 5, i16 %x4, i32 4)
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.fixupimm.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x i32> zeroinitializer, i32 5, i16 %x4, i32 4)
+  %res2 = call <16 x float> @llvm.x86.avx512.mask.fixupimm.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x i32> %x2, i32 5, i16 -1, i32 8)
+  %res3 = fadd <16 x float> %res, %res1
+  %res4 = fadd <16 x float> %res3, %res2
+  ret <16 x float> %res4
+}
+
+declare <16 x float> @llvm.x86.avx512.maskz.fixupimm.ps.512(<16 x float>, <16 x float>, <16 x i32>, i32, i16, i32)
+
+define <16 x float>@test_int_x86_avx512_maskz_fixupimm_ps_512(<16 x float> %x0, <16 x float> %x1, <16 x i32> %x2, i16 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_fixupimm_ps_512
+; CHECK: kmovw  %edi, %k1
+; CHECK: vmovaps  %zmm0, %zmm3
+; CHECK: vfixupimmps  $5, %zmm2, %zmm1, %zmm3 {%k1} {z} 
+; CHECK: vmovaps  %zmm0, %zmm4
+; CHECK: vfixupimmps  $5, %zmm2, %zmm1, %zmm4 
+; CHECK: vpxord  %zmm2, %zmm2, %zmm2
+; CHECK: vfixupimmps  $5, {sae}, %zmm2, %zmm1, %zmm0 {%k1} {z} 
+; CHECK: vaddps  %zmm0, %zmm3, %zmm0
+; CHECK: vaddps  %zmm4, %zmm0, %zmm0
+
+  %res = call <16 x float> @llvm.x86.avx512.maskz.fixupimm.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x i32> %x2, i32 5, i16 %x4, i32 4)
+  %res1 = call <16 x float> @llvm.x86.avx512.maskz.fixupimm.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x i32> zeroinitializer, i32 5, i16 %x4, i32 8)
+  %res2 = call <16 x float> @llvm.x86.avx512.maskz.fixupimm.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x i32> %x2, i32 5, i16 -1, i32 4)
+  %res3 = fadd <16 x float> %res, %res1
+  %res4 = fadd <16 x float> %res3, %res2
+  ret <16 x float> %res4
+}
+
+declare <2 x double> @llvm.x86.avx512.mask.fixupimm.sd(<2 x double>, <2 x double>, <2 x i64>, i32, i8, i32)
+
+define <2 x double>@test_int_x86_avx512_mask_fixupimm_sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i8 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fixupimm_sd
+; CHECK: kmovw  %edi, %k1
+; CHECK: vmovaps  %zmm0, %zmm3
+; CHECK: vfixupimmsd  $5, %xmm2, %xmm1, %xmm3 {%k1} 
+; CHECK: vmovaps  %zmm0, %zmm4
+; CHECK: vfixupimmsd  $5, %xmm2, %xmm1, %xmm4 
+; CHECK: vpxor  %xmm2, %xmm2, %xmm2
+; CHECK: vfixupimmsd  $5, {sae}, %xmm2, %xmm1, %xmm0 {%k1} 
+; CHECK: vaddpd  %xmm0, %xmm3, %xmm0
+; CHECK: vaddpd  %xmm4, %xmm0, %xmm0
+
+  %res = call <2 x double> @llvm.x86.avx512.mask.fixupimm.sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i32 5, i8 %x4, i32 4)
+  %res1 = call <2 x double> @llvm.x86.avx512.mask.fixupimm.sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> zeroinitializer, i32 5, i8 %x4, i32 8) 
+  %res2 = call <2 x double> @llvm.x86.avx512.mask.fixupimm.sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i32 5, i8 -1, i32 4)
+  %res3 = fadd <2 x double> %res, %res1
+  %res4 = fadd <2 x double> %res3, %res2
+  ret <2 x double> %res4
+}
+
+declare <2 x double> @llvm.x86.avx512.maskz.fixupimm.sd(<2 x double>, <2 x double>, <2 x i64>, i32, i8, i32)
+
+define <2 x double>@test_int_x86_avx512_maskz_fixupimm_sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i8 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_fixupimm_sd
+; CHECK: kmovw  %edi, %k1
+; CHECK: vmovaps  %zmm0, %zmm3
+; CHECK: vfixupimmsd  $5, %xmm2, %xmm1, %xmm3 {%k1} {z} 
+; CHECK: vpxor  %xmm4, %xmm4, %xmm4
+; CHECK: vmovaps  %zmm0, %zmm5
+; CHECK: vfixupimmsd  $5, {sae}, %xmm4, %xmm1, %xmm5 {%k1} {z} 
+; CHECK: vfixupimmsd  $5, {sae}, %xmm2, %xmm1, %xmm0 {%k1} {z} 
+; CHECK: vaddpd  %xmm5, %xmm3, %xmm1
+; CHECK: vaddpd  %xmm0, %xmm1, %xmm0
+
+  %res = call <2 x double> @llvm.x86.avx512.maskz.fixupimm.sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i32 5, i8 %x4, i32 4)
+  %res1 = call <2 x double> @llvm.x86.avx512.maskz.fixupimm.sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> zeroinitializer, i32 5, i8 %x4, i32 8)
+  %res2 = call <2 x double> @llvm.x86.avx512.maskz.fixupimm.sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i32 5, i8 %x4, i32 8)
+  %res3 = fadd <2 x double> %res, %res1
+  %res4 = fadd <2 x double> %res3, %res2
+  ret <2 x double> %res4
+}
+

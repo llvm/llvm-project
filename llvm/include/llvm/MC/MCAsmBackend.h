@@ -11,6 +11,7 @@
 #define LLVM_MC_MCASMBACKEND_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCFixup.h"
@@ -68,9 +69,7 @@ public:
   virtual unsigned getNumFixupKinds() const = 0;
 
   /// Map a relocation name used in .reloc to a fixup kind.
-  /// Returns true and sets MappedKind if Name is successfully mapped.
-  /// Otherwise returns false and leaves MappedKind unchanged.
-  virtual bool getFixupKind(StringRef Name, MCFixupKind &MappedKind) const;
+  virtual Optional<MCFixupKind> getFixupKind(StringRef Name) const;
 
   /// Get information on a fixup kind.
   virtual const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const;

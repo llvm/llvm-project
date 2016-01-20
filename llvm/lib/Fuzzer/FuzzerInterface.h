@@ -68,12 +68,25 @@ class FuzzerRandomBase {
   bool RandBool() { return Rand() % 2; }
 };
 
+// Using libc's stand/rand.
 class FuzzerRandomLibc : public FuzzerRandomBase {
  public:
   FuzzerRandomLibc(unsigned int seed) { ResetSeed(seed); }
   void ResetSeed(unsigned int seed) override;
-  ~FuzzerRandomLibc() override {}
+  ~FuzzerRandomLibc() override {};
   size_t Rand() override;
+};
+
+// Using std::mt19937
+class FuzzerRandom_mt19937 : public FuzzerRandomBase {
+ public:
+  FuzzerRandom_mt19937(unsigned int seed) { ResetSeed(seed); }
+  void ResetSeed(unsigned int seed) override;
+  ~FuzzerRandom_mt19937() override;
+  size_t Rand() override;
+ private:
+  struct Impl;
+  Impl *R = nullptr;
 };
 
 // For backward compatibility only, deprecated.
