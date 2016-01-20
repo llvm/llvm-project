@@ -1005,23 +1005,6 @@ Constant *IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   return Ret;
 }
 
-static bool useExistingDest(GlobalValue &SGV, GlobalValue *DGV,
-                            bool ShouldLink) {
-  if (!DGV)
-    return false;
-
-  if (SGV.isDeclaration())
-    return true;
-
-  if (DGV->isDeclarationForLinker() && !SGV.isDeclarationForLinker())
-    return false;
-
-  if (ShouldLink)
-    return false;
-
-  return true;
-}
-
 bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   // Already imported all the values. Just map to the Dest value
   // in case it is referenced in the metadata.
@@ -1037,7 +1020,7 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   if (SGV.hasLocalLinkage())
     return true;
 
-  if (DGV && !DGV->isDeclaration())
+  if (DGV && !DGV->isDeclarationForLinker())
     return false;
 
   if (SGV.hasAvailableExternallyLinkage())
@@ -1077,7 +1060,7 @@ Constant *IRLinker::linkGlobalValueProto(GlobalValue *SGV, bool ForAlias) {
                                  cast<GlobalVariable>(SGV));
 
   GlobalValue *NewGV;
-  if (useExistingDest(*SGV, DGV, ShouldLink)) {
+  if (DGV && !ShouldLink) {
     NewGV = DGV;
   } else {
     // If we are done linking global value bodies (i.e. we are performing
