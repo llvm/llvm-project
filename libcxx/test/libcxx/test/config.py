@@ -1,3 +1,12 @@
+#===----------------------------------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is dual licensed under the MIT and the University of Illinois Open
+# Source Licenses. See LICENSE.TXT for details.
+#
+#===----------------------------------------------------------------------===##
+
 import locale
 import os
 import platform
@@ -606,7 +615,7 @@ class Configuration(object):
         for k, v in self.env.items():
             exec_env_str += ' %s=%s' % (k, v)
         # Configure run env substitution.
-        exec_str = ''
+        exec_str = exec_env_str
         if self.lit_config.useValgrind:
             exec_str = ' '.join(self.lit_config.valgrindArgs) + exec_env_str
         sub.append(('%exec', exec_str))

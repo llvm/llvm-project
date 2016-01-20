@@ -596,6 +596,7 @@ RegisterContextDarwin_arm::ReadRegisterSet (uint32_t set, bool force)
     switch (set)
     {
     case GPRRegSet:    return ReadGPR(force);
+    case GPRAltRegSet: return ReadGPR(force);
     case FPURegSet:    return ReadFPU(force);
     case EXCRegSet:    return ReadEXC(force);
     case DBGRegSet:    return ReadDBG(force);
@@ -613,6 +614,7 @@ RegisterContextDarwin_arm::WriteRegisterSet (uint32_t set)
         switch (set)
         {
         case GPRRegSet:    return WriteGPR();
+        case GPRAltRegSet: return WriteGPR();
         case FPURegSet:    return WriteFPU();
         case EXCRegSet:    return WriteEXC();
         case DBGRegSet:    return WriteDBG();

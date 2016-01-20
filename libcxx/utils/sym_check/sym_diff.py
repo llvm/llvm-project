@@ -1,7 +1,16 @@
 #!/usr/bin/env python
+#===----------------------------------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is dual licensed under the MIT and the University of Illinois Open
+# Source Licenses. See LICENSE.TXT for details.
+#
+#===----------------------------------------------------------------------===##
 """
 sym_diff - Compare two symbol lists and output the differences.
 """
+
 from argparse import ArgumentParser
 import sys
 from sym_check import diff, util

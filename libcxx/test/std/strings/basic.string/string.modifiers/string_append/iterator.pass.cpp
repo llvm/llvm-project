@@ -161,6 +161,7 @@ int main()
          S("12345678901234567890""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
     }
 #endif
+#ifndef TEST_HAS_NO_EXCEPTIONS
 	{ // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
@@ -174,4 +175,5 @@ int main()
     test_exceptions(S(), TIter(s, s+10, 5, TIter::TADereference), TIter());
     test_exceptions(S(), TIter(s, s+10, 6, TIter::TAComparison), TIter());
 	}
+#endif
 }

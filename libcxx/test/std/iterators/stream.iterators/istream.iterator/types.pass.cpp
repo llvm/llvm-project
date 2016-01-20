@@ -9,6 +9,9 @@
 
 // <iterator>
 
+// Test fails due to use of is_trivially_* trait.
+// XFAIL: gcc-4.9
+
 // template <class T, class charT = char, class traits = char_traits<charT>,
 //           class Distance = ptrdiff_t>
 // class istream_iterator

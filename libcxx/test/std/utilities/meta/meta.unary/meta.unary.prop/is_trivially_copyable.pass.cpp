@@ -11,6 +11,8 @@
 
 // is_trivially_copyable
 
+// XFAIL: gcc-4.9
+
 #include <type_traits>
 #include <cassert>
 #include "test_macros.h"

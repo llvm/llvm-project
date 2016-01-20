@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 #===- clang-tidy-diff.py - ClangTidy Diff Checker ------------*- python -*--===#
 #

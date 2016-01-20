@@ -194,6 +194,13 @@ public:
   MachOLinkingContext::OS OS() const { return _os; }
   void setOS(MachOLinkingContext::OS os) { _os = os; }
 
+  MachOLinkingContext::ObjCConstraint objcConstraint() const {
+    return _objcConstraint;
+  }
+  void setObjcConstraint(MachOLinkingContext::ObjCConstraint v) {
+    _objcConstraint = v;
+  }
+
   uint32_t swiftVersion() const { return _swiftVersion; }
   void setSwiftVersion(uint32_t v) { _swiftVersion = v; }
 
@@ -242,6 +249,8 @@ private:
   NameToAtom                     _undefAtoms;
   MachOLinkingContext::Arch      _arch = MachOLinkingContext::arch_unknown;
   MachOLinkingContext::OS        _os = MachOLinkingContext::OS::unknown;
+  MachOLinkingContext::ObjCConstraint _objcConstraint =
+      MachOLinkingContext::objc_unknown;
   uint32_t                       _swiftVersion = 0;
   normalized::FileFlags          _flags;
 };

@@ -162,10 +162,11 @@ public:
 protected:
     enum
     {
-        GPRRegSet = 1, // ARM_THREAD_STATE
-        FPURegSet = 2, // ARM_VFP_STATE
-        EXCRegSet = 3, // ARM_EXCEPTION_STATE
-        DBGRegSet = 4  // ARM_DEBUG_STATE
+        GPRRegSet = 1,    // ARM_THREAD_STATE
+        GPRAltRegSet = 9, // ARM_THREAD_STATE32
+        FPURegSet = 2,    // ARM_VFP_STATE
+        EXCRegSet = 3,    // ARM_EXCEPTION_STATE
+        DBGRegSet = 4     // ARM_DEBUG_STATE
     };
 
     enum

@@ -15,8 +15,7 @@ class AssertingInferiorTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailurei386("llvm.org/pr25338")
-    @expectedFailureLinux("llvm.org/pr25338", archs=['arm', 'i386'])
+    @expectedFailureLinux("llvm.org/pr25338", archs=['arm'])
     def test_inferior_asserting(self):
         """Test that lldb reliably catches the inferior asserting (command)."""
         self.build()
@@ -30,8 +29,7 @@ class AssertingInferiorTestCase(TestBase):
         self.inferior_asserting_registers()
 
     @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailurei386("llvm.org/pr25338")
-    @expectedFailureLinux("llvm.org/pr25338", archs=['arm', 'i386'])
+    @expectedFailureLinux("llvm.org/pr25338", archs=['arm'])
     def test_inferior_asserting_disassemble(self):
         """Test that lldb reliably disassembles frames after asserting (command)."""
         self.build()
@@ -45,16 +43,14 @@ class AssertingInferiorTestCase(TestBase):
         self.inferior_asserting_python()
 
     @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailurei386("llvm.org/pr25338")
-    @expectedFailureLinux("llvm.org/pr25338", archs=['arm', 'i386'])
+    @expectedFailureLinux("llvm.org/pr25338", archs=['arm'])
     def test_inferior_asserting_expr(self):
         """Test that the lldb expression interpreter can read from the inferior after asserting (command)."""
         self.build()
         self.inferior_asserting_expr()
 
     @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailurei386("llvm.org/pr25338")
-    @expectedFailureLinux("llvm.org/pr25338", archs=['arm', 'i386'])
+    @expectedFailureLinux("llvm.org/pr25338", archs=['arm'])
     def test_inferior_asserting_step(self):
         """Test that lldb functions correctly after stepping through a call to assert()."""
         self.build()

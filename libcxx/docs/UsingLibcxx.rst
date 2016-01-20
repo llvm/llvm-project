@@ -87,3 +87,16 @@ not just libstdc++ so they must be manually linked. For example:
 
   $ g++ -nostdinc++ -I<libcxx-install-prefix>/include/c++/v1 \
          test.cpp -nodefaultlibs -lc++ -lc++abi -lm -lc -lgcc_s -lgcc
+
+
+GDB Pretty printers for libc++
+------------------------------
+
+GDB does not support pretty-printing of libc++ symbols by default. Unfortunately
+libc++ does not provide pretty-printers itself. However there are 3rd
+party implementations available and although they are not officially
+supported by libc++ they may be useful to users.
+
+Known 3rd Party Implementations Include:
+
+* `Koutheir's libc++ pretty-printers <https://github.com/koutheir/libcxx-pretty-printers>`_.

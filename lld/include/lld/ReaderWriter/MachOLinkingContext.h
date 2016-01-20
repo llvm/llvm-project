@@ -71,6 +71,16 @@ public:
     dynamicLookup
   };
 
+  enum ObjCConstraint {
+    objc_unknown = 0,
+    objc_supports_gc = 2,
+    objc_gc_only = 4,
+    // Image optimized by dyld = 8
+    // GC compaction = 16
+    objc_retainReleaseForSimulator = 32,
+    objc_retainRelease
+  };
+
   /// Initializes the context to sane default values given the specified output
   /// file type, arch, os, and minimum os version.  This should be called before
   /// other setXXX() methods.
@@ -142,6 +152,10 @@ public:
 
   uint64_t baseAddress() const { return _baseAddress; }
   void setBaseAddress(uint64_t baseAddress) { _baseAddress = baseAddress; }
+
+  ObjCConstraint objcConstraint() const { return _objcConstraint; }
+
+  uint32_t swiftVersion() const { return _swiftVersion; }
 
   /// \brief Checks whether a given path on the filesystem exists.
   ///
@@ -297,6 +311,9 @@ public:
   /// Pass to add shims switching between thumb and arm mode.
   bool needsShimPass() const;
 
+  /// Pass to add objc image info and optimized objc data.
+  bool needsObjCPass() const;
+
   /// Magic symbol name stubs will need to help lazy bind.
   StringRef binderSymbolName() const;
 
@@ -398,6 +415,7 @@ private:
   uint64_t _stackSize;
   uint32_t _compatibilityVersion;
   uint32_t _currentVersion;
+  ObjCConstraint _objcConstraint;
   uint32_t _swiftVersion;
   StringRef _installName;
   StringRefVector _rpaths;

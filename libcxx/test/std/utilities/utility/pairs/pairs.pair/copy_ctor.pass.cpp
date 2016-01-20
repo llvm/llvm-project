@@ -13,8 +13,13 @@
 
 // pair(const pair&) = default;
 
+// Doesn't pass due to use of is_trivially_* trait.
+// XFAIL: gcc-4.9
+
 #include <utility>
 #include <cassert>
+
+#include "test_macros.h"
 
 int main()
 {
@@ -28,7 +33,7 @@ int main()
 
     static_assert((std::is_trivially_copy_constructible<std::pair<int, int> >::value), "");
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         typedef std::pair<int, short> P1;
         constexpr P1 p1(3, 4);

@@ -14,6 +14,9 @@
 // Test that reference wrapper meets the requirements of TriviallyCopyable,
 // CopyConstructible and CopyAssignable.
 
+// Test fails due to use of is_trivially_* trait.
+// XFAIL: gcc-4.9
+
 #include <functional>
 #include <type_traits>
 #include <string>
