@@ -3189,28 +3189,30 @@ void Parser::ParseConstructorInitializer(Decl *ConstructorDecl) {
       Actions.CodeCompleteConstructorInitializer(ConstructorDecl,
                                                  MemInitializers);
       return cutOffParsing();
-    } else {
-      MemInitResult MemInit = ParseMemInitializer(ConstructorDecl);
-      if (!MemInit.isInvalid())
-        MemInitializers.push_back(MemInit.get());
-      else
-        AnyErrors = true;
     }
-    
+
+    MemInitResult MemInit = ParseMemInitializer(ConstructorDecl);
+    if (!MemInit.isInvalid())
+      MemInitializers.push_back(MemInit.get());
+    else
+      AnyErrors = true;
+
     if (Tok.is(tok::comma))
       ConsumeToken();
     else if (Tok.is(tok::l_brace))
       break;
-    // If the next token looks like a base or member initializer, assume that
-    // we're just missing a comma.
-    else if (Tok.isOneOf(tok::identifier, tok::coloncolon)) {
+    // If the previous initializer was valid and the next token looks like a
+    // base or member initializer, assume that we're just missing a comma.
+    else if (!MemInit.isInvalid() &&
+             Tok.isOneOf(tok::identifier, tok::coloncolon)) {
       SourceLocation Loc = PP.getLocForEndOfToken(PrevTokLocation);
       Diag(Loc, diag::err_ctor_init_missing_comma)
         << FixItHint::CreateInsertion(Loc, ", ");
     } else {
       // Skip over garbage, until we get to '{'.  Don't eat the '{'.
-      Diag(Tok.getLocation(), diag::err_expected_either) << tok::l_brace
-                                                         << tok::comma;
+      if (!MemInit.isInvalid())
+        Diag(Tok.getLocation(), diag::err_expected_either) << tok::l_brace
+                                                           << tok::comma;
       SkipUntil(tok::l_brace, StopAtSemi | StopBeforeMatch);
       break;
     }

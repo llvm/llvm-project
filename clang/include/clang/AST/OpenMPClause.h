@@ -2741,6 +2741,8 @@ class OMPMapClause final : public OMPVarListClause<OMPMapClause>,
   OpenMPMapClauseKind MapTypeModifier;
   /// \brief Map type for the 'map' clause.
   OpenMPMapClauseKind MapType;
+  /// \brief Is this an implicit map type or not.
+  bool MapTypeIsImplicit;
   /// \brief Location of the map type.
   SourceLocation MapLoc;
   /// \brief Colon location.
@@ -2771,17 +2773,21 @@ class OMPMapClause final : public OMPVarListClause<OMPMapClause>,
   ///
   /// \param MapTypeModifier Map type modifier.
   /// \param MapType Map type.
+  /// \param MapTypeIsImplicit Map type is inferred implicitly.
   /// \param MapLoc Location of the map type.
   /// \param StartLoc Starting location of the clause.
   /// \param EndLoc Ending location of the clause.
   /// \param N Number of the variables in the clause.
   ///
   explicit OMPMapClause(OpenMPMapClauseKind MapTypeModifier,
-                        OpenMPMapClauseKind MapType, SourceLocation MapLoc,
-                        SourceLocation StartLoc, SourceLocation LParenLoc,
-                        SourceLocation EndLoc, unsigned N)
-    : OMPVarListClause<OMPMapClause>(OMPC_map, StartLoc, LParenLoc, EndLoc, N),
-      MapTypeModifier(MapTypeModifier), MapType(MapType), MapLoc(MapLoc) {}
+                        OpenMPMapClauseKind MapType, bool MapTypeIsImplicit,
+                        SourceLocation MapLoc, SourceLocation StartLoc,
+                        SourceLocation LParenLoc, SourceLocation EndLoc,
+                        unsigned N)
+      : OMPVarListClause<OMPMapClause>(OMPC_map, StartLoc, LParenLoc, EndLoc,
+                                       N),
+        MapTypeModifier(MapTypeModifier), MapType(MapType),
+        MapTypeIsImplicit(MapTypeIsImplicit), MapLoc(MapLoc) {}
 
   /// \brief Build an empty clause.
   ///
@@ -2790,7 +2796,8 @@ class OMPMapClause final : public OMPVarListClause<OMPMapClause>,
   explicit OMPMapClause(unsigned N)
       : OMPVarListClause<OMPMapClause>(OMPC_map, SourceLocation(),
                                        SourceLocation(), SourceLocation(), N),
-        MapTypeModifier(OMPC_MAP_unknown), MapType(OMPC_MAP_unknown), MapLoc() {}
+        MapTypeModifier(OMPC_MAP_unknown), MapType(OMPC_MAP_unknown),
+        MapTypeIsImplicit(false), MapLoc() {}
 
 public:
   /// \brief Creates clause with a list of variables \a VL.
@@ -2801,13 +2808,15 @@ public:
   /// \param VL List of references to the variables.
   /// \param TypeModifier Map type modifier.
   /// \param Type Map type.
+  /// \param TypeIsImplicit Map type is inferred implicitly.
   /// \param TypeLoc Location of the map type.
   ///
   static OMPMapClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                              SourceLocation LParenLoc,
-                              SourceLocation EndLoc, ArrayRef<Expr *> VL,
+                              SourceLocation LParenLoc, SourceLocation EndLoc,
+                              ArrayRef<Expr *> VL,
                               OpenMPMapClauseKind TypeModifier,
-                              OpenMPMapClauseKind Type, SourceLocation TypeLoc);
+                              OpenMPMapClauseKind Type, bool TypeIsImplicit,
+                              SourceLocation TypeLoc);
   /// \brief Creates an empty clause with the place for \a N variables.
   ///
   /// \param C AST context.
@@ -2817,6 +2826,13 @@ public:
 
   /// \brief Fetches mapping kind for the clause.
   OpenMPMapClauseKind getMapType() const LLVM_READONLY { return MapType; }
+
+  /// \brief Is this an implicit map type?
+  /// We have to capture 'IsMapTypeImplicit' from the parser for more
+  /// informative error messages.  It helps distinguish map(r) from
+  /// map(tofrom: r), which is important to print more helpful error
+  /// messages for some target directives.
+  bool isImplicitMapType() const LLVM_READONLY { return MapTypeIsImplicit; }
 
   /// \brief Fetches the map type modifier for the clause.
   OpenMPMapClauseKind getMapTypeModifier() const LLVM_READONLY {

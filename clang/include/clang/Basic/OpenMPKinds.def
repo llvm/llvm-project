@@ -60,6 +60,12 @@
 #ifndef OPENMP_TARGET_DATA_CLAUSE
 #  define OPENMP_TARGET_DATA_CLAUSE(Name)
 #endif
+#ifndef OPENMP_TARGET_ENTER_DATA_CLAUSE
+#define OPENMP_TARGET_ENTER_DATA_CLAUSE(Name)
+#endif
+#ifndef OPENMP_TARGET_EXIT_DATA_CLAUSE
+#define OPENMP_TARGET_EXIT_DATA_CLAUSE(Name)
+#endif
 #ifndef OPENMP_TEAMS_CLAUSE
 #  define OPENMP_TEAMS_CLAUSE(Name)
 #endif
@@ -128,6 +134,8 @@ OPENMP_DIRECTIVE(target)
 OPENMP_DIRECTIVE(teams)
 OPENMP_DIRECTIVE(cancel)
 OPENMP_DIRECTIVE_EXT(target_data, "target data")
+OPENMP_DIRECTIVE_EXT(target_enter_data, "target enter data")
+OPENMP_DIRECTIVE_EXT(target_exit_data, "target exit data")
 OPENMP_DIRECTIVE_EXT(parallel_for, "parallel for")
 OPENMP_DIRECTIVE_EXT(parallel_for_simd, "parallel for simd")
 OPENMP_DIRECTIVE_EXT(parallel_sections, "parallel sections")
@@ -346,12 +354,25 @@ OPENMP_ATOMIC_CLAUSE(seq_cst)
 OPENMP_TARGET_CLAUSE(if)
 OPENMP_TARGET_CLAUSE(device)
 OPENMP_TARGET_CLAUSE(map)
+OPENMP_TARGET_CLAUSE(private)
 
 // Clauses allowed for OpenMP directive 'target data'.
 // TODO More clauses for 'target data' directive.
 OPENMP_TARGET_DATA_CLAUSE(if)
 OPENMP_TARGET_DATA_CLAUSE(device)
 OPENMP_TARGET_DATA_CLAUSE(map)
+
+// Clauses allowed for OpenMP directive 'target enter data'.
+// TODO More clauses for 'target enter data' directive.
+OPENMP_TARGET_ENTER_DATA_CLAUSE(if)
+OPENMP_TARGET_ENTER_DATA_CLAUSE(device)
+OPENMP_TARGET_ENTER_DATA_CLAUSE(map)
+
+// Clauses allowed for OpenMP directive 'target exit data'.
+// TODO More clauses for 'target exit data' directive.
+OPENMP_TARGET_EXIT_DATA_CLAUSE(if)
+OPENMP_TARGET_EXIT_DATA_CLAUSE(device)
+OPENMP_TARGET_EXIT_DATA_CLAUSE(map)
 
 // Clauses allowed for OpenMP directive 'teams'.
 // TODO More clauses for 'teams' directive.
@@ -451,6 +472,8 @@ OPENMP_DIST_SCHEDULE_KIND(static)
 #undef OPENMP_ATOMIC_CLAUSE
 #undef OPENMP_TARGET_CLAUSE
 #undef OPENMP_TARGET_DATA_CLAUSE
+#undef OPENMP_TARGET_ENTER_DATA_CLAUSE
+#undef OPENMP_TARGET_EXIT_DATA_CLAUSE
 #undef OPENMP_TEAMS_CLAUSE
 #undef OPENMP_SIMD_CLAUSE
 #undef OPENMP_FOR_CLAUSE

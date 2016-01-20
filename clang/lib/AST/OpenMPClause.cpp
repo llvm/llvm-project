@@ -400,10 +400,12 @@ OMPMapClause *OMPMapClause::Create(const ASTContext &C, SourceLocation StartLoc,
                                    SourceLocation EndLoc, ArrayRef<Expr *> VL,
                                    OpenMPMapClauseKind TypeModifier,
                                    OpenMPMapClauseKind Type,
+                                   bool TypeIsImplicit,
                                    SourceLocation TypeLoc) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
-  OMPMapClause *Clause = new (Mem) OMPMapClause(
-      TypeModifier, Type, TypeLoc, StartLoc, LParenLoc, EndLoc, VL.size());
+  OMPMapClause *Clause =
+      new (Mem) OMPMapClause(TypeModifier, Type, TypeIsImplicit, TypeLoc,
+                             StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
   Clause->setMapTypeModifier(TypeModifier);
   Clause->setMapType(Type);

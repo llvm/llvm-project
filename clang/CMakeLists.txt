@@ -216,14 +216,15 @@ endif()
 
 option(CLANG_APPEND_VC_REV
   "Append the version control system revision id to clang version spew" OFF)
+if(CLANG_APPEND_VC_REV)
+  if(NOT SVN_REVISION)
+    # This macro will set SVN_REVISION in the parent scope
+    add_version_info_from_vcs(VERSION_VAR)
+  endif()
 
-if(NOT SVN_REVISION)
-  # This macro will set SVN_REVISION in the parent scope
-  add_version_info_from_vcs(VERSION_VAR)
-endif()
-
-if(SVN_REVISION)
-  add_definitions(-DSVN_REVISION="${SVN_REVISION}")
+  if(SVN_REVISION)
+    add_definitions(-DSVN_REVISION="${SVN_REVISION}")
+  endif()
 endif()
 
 set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
@@ -442,6 +443,21 @@ macro(add_clang_executable name)
   set_target_properties(${name} PROPERTIES FOLDER "Clang executables")
   set_clang_windows_version_resource_properties(${name})
 endmacro(add_clang_executable)
+
+macro(add_clang_tool name)
+  add_clang_executable(${name} ${ARGN})
+  install(TARGETS ${name}
+    RUNTIME DESTINATION bin
+    COMPONENT ${name})
+
+  if(NOT CMAKE_CONFIGURATION_TYPES)
+    add_custom_target(install-${name}
+      DEPENDS ${name}
+      COMMAND "${CMAKE_COMMAND}"
+              -DCMAKE_INSTALL_COMPONENT=${name}
+              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  endif()
+endmacro()
 
 macro(add_clang_symlink name dest)
   add_llvm_tool_symlink(${name} ${dest} ALWAYS_GENERATE)

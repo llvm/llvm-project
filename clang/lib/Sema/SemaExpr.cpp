@@ -11715,9 +11715,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   return Result;
 }
 
-ExprResult Sema::ActOnVAArg(SourceLocation BuiltinLoc,
-                                        Expr *E, ParsedType Ty,
-                                        SourceLocation RPLoc) {
+ExprResult Sema::ActOnVAArg(SourceLocation BuiltinLoc, Expr *E, ParsedType Ty,
+                            SourceLocation RPLoc) {
   TypeSourceInfo *TInfo;
   GetTypeFromParser(Ty, &TInfo);
   return BuildVAArgExpr(BuiltinLoc, E, TInfo, RPLoc);
@@ -11728,6 +11727,15 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc) {
   Expr *OrigExpr = E;
   bool IsMS = false;
+
+  // CUDA device code does not support varargs.
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
+    if (const FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {
+      CUDAFunctionTarget T = IdentifyCUDATarget(F);
+      if (T == CFT_Global || T == CFT_Device || T == CFT_HostDevice)
+        return ExprError(Diag(E->getLocStart(), diag::err_va_arg_in_device));
+    }
+  }
 
   // It might be a __builtin_ms_va_list. (But don't ever mark a va_arg()
   // as Microsoft ABI on an actual Microsoft platform, where
@@ -12886,7 +12894,7 @@ static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
   // Using an LValue reference type is consistent with Lambdas (see below).
   if (S.getLangOpts().OpenMP) {
     ByRef = S.IsOpenMPCapturedByRef(Var, RSI);
-    if (S.IsOpenMPCapturedVar(Var))
+    if (S.IsOpenMPCapturedDecl(Var))
       DeclRefType = DeclRefType.getUnqualifiedType();
   }
 
@@ -13077,7 +13085,7 @@ bool Sema::tryCaptureVariable(
   // Capture global variables if it is required to use private copy of this
   // variable.
   bool IsGlobal = !Var->hasLocalStorage();
-  if (IsGlobal && !(LangOpts.OpenMP && IsOpenMPCapturedVar(Var)))
+  if (IsGlobal && !(LangOpts.OpenMP && IsOpenMPCapturedDecl(Var)))
     return true;
 
   // Walk up the stack to determine whether we can capture the variable,
@@ -13272,14 +13280,14 @@ bool Sema::tryCaptureVariable(
         // just break here. Similarly, global variables that are captured in a
         // target region should not be captured outside the scope of the region.
         if (RSI->CapRegionKind == CR_OpenMP) {
-          auto isTargetCap = isOpenMPTargetCapturedVar(Var, OpenMPLevel);
+          auto isTargetCap = isOpenMPTargetCapturedDecl(Var, OpenMPLevel);
           // When we detect target captures we are looking from inside the
           // target region, therefore we need to propagate the capture from the
           // enclosing region. Therefore, the capture is not initially nested.
           if (isTargetCap)
             FunctionScopesIndex--;
 
-          if (isTargetCap || isOpenMPPrivateVar(Var, OpenMPLevel)) {
+          if (isTargetCap || isOpenMPPrivateDecl(Var, OpenMPLevel)) {
             Nested = !isTargetCap;
             DeclRefType = DeclRefType.getUnqualifiedType();
             CaptureType = Context.getLValueReferenceType(DeclRefType);

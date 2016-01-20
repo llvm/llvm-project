@@ -2443,7 +2443,8 @@ def warn_attribute_wrong_decl_type : Warning<
   "Objective-C instance methods|init methods of interface or class extension declarations|"
   "variables, functions and classes|Objective-C protocols|"
   "functions and global variables|structs, unions, and typedefs|structs and typedefs|"
-  "interface or protocol declarations|kernel functions|non-K&R-style functions}1">,
+  "interface or protocol declarations|kernel functions|non-K&R-style functions|"
+  "variables, fields and typedefs}1">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Text>;
 def warn_type_attribute_wrong_type : Warning<
@@ -6427,6 +6428,8 @@ def err_deleted_function_use : Error<"attempt to use a deleted function">;
 
 def err_kern_type_not_void_return : Error<
   "kernel function type %0 must have void return type">;
+def err_kern_is_nonstatic_method : Error<
+  "kernel function %0 must be a free function or static member function">;
 def err_config_scalar_return : Error<
   "CUDA special function 'cudaConfigureCall' must have scalar return type">;
 def err_kern_call_not_global_function : Error<
@@ -6439,6 +6442,14 @@ def err_ref_bad_target : Error<
 def warn_host_calls_from_host_device : Warning<
   "calling __host__ function %0 from __host__ __device__ function %1 can lead to runtime errors">,
   InGroup<CudaCompat>;
+def warn_kern_is_method : Extension<
+  "kernel function %0 is a member function; this may not be accepted by nvcc">,
+  InGroup<CudaCompat>;
+def warn_kern_is_inline : Warning<
+  "ignored 'inline' attribute on kernel function %0">,
+  InGroup<CudaCompat>;
+def err_va_arg_in_device : Error<
+  "CUDA device code does not support va_arg">;
 
 def warn_non_pod_vararg_with_format_string : Warning<
   "cannot pass %select{non-POD|non-trivial}0 object of type %1 to variadic "
@@ -7724,10 +7735,10 @@ def err_omp_reduction_incomplete_type : Error<
   "a reduction list item with incomplete type %0">;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
-def err_omp_expected_var_name : Error<
-  "expected variable name">;
-def err_omp_expected_var_name_or_array_item : Error<
-  "expected variable name, array element or array section">;
+def err_omp_expected_var_name_member_expr : Error<
+  "expected variable name%select{| or data member of current class}0">;
+def err_omp_expected_var_name_member_expr_or_array_item : Error<
+  "expected variable name%select{|, data member of current class}0, array element or array section">;
 def note_omp_task_predetermined_firstprivate_here : Note<
   "predetermined as a firstprivate in a task construct here">;
 def err_omp_threadprivate_incomplete_type : Error<
@@ -7962,6 +7973,10 @@ def err_omp_map_shared_storage : Error<
   "variable already marked as mapped in current construct">;
 def err_omp_not_mappable_type : Error<
   "type %0 is not mappable to target">;
+def err_omp_invalid_map_type_for_directive : Error<
+  "%select{map type '%1' is not allowed|map type must be specified}0 for '#pragma omp %2'">;
+def err_omp_no_map_for_directive : Error<
+  "expected at least one map clause for '#pragma omp %0'">;
 def note_omp_polymorphic_in_target : Note<
   "mappable type cannot be polymorphic">;
 def note_omp_static_member_in_target : Note<
