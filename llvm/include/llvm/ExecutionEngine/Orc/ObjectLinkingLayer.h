@@ -125,7 +125,7 @@ private:
 
       PFC->Finalizer(PFC->Handle, RTDyld, std::move(PFC->Objects),
                      [&]() {
-                       updateSymbolTable(RTDyld);
+                       this->updateSymbolTable(RTDyld);
                        this->Finalized = true;
                      });
 
@@ -139,8 +139,8 @@ private:
           // The symbol may be materialized between the creation of this lambda
           // and its execution, so we need to double check.
           if (!this->Finalized)
-            finalize();
-          return getSymbol(Name, false).getAddress();
+            this->finalize();
+          return this->getSymbol(Name, false).getAddress();
         };
     }
 
@@ -254,7 +254,7 @@ public:
       LoadedObjInfoList LoadedObjInfos;
 
       for (auto &Obj : Objs)
-        LoadedObjInfos.push_back(RTDyld.loadObject(getObject(*Obj)));
+        LoadedObjInfos.push_back(RTDyld.loadObject(this->getObject(*Obj)));
 
       LOSHandleLoad();
 
