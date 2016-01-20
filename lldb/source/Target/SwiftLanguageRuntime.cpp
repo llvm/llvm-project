@@ -3261,6 +3261,18 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
 {
     class_type_or_name.Clear();
 
+    if (SwiftASTContext *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(in_value.GetCompilerType().GetTypeSystem()))
+    {
+        if (swift_ast->HasFatalErrors() || !swift_ast->GetClangImporter())
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+    
     if (use_dynamic == lldb::eNoDynamicValues || !CouldHaveDynamicValue(in_value))
         return false;
     

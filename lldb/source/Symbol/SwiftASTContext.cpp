@@ -1749,7 +1749,7 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
 
                 SwiftASTContext *module_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
 
-                if (!module_swift_ast || !module_swift_ast->GetClangImporter())
+                if (!module_swift_ast || module_swift_ast->HasFatalErrors() || !module_swift_ast->GetClangImporter())
                 {
                     // Make sure we warn about this module load failure, the one that comes from loading types
                     // often gets swallowed up and not seen, this is the only reliable point where we can show this.
@@ -1766,12 +1766,9 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                                                                      "Debug info from this module will be unavailable in the debugger.\n\n",
                                                                      ss.GetData());
                     }
-                }
-
-                if (!module_swift_ast)
+                    
                     continue;
-                
-                assert (module_swift_ast->GetClangImporter()); // if this isn't here, then the AST should not have returned as non-NULL
+                }
 
                 if (!handled_sdk_path)
                 {
@@ -3115,6 +3112,11 @@ SwiftASTContext::GetClangImporter ()
     if (m_clang_importer == NULL)
     {
         swift::ASTContext *ast_ctx = GetASTContext();
+        
+        if (!ast_ctx)
+        {
+            return nullptr;
+        }
         
         // Install the Clang module loader
         TargetSP target_sp (m_target_wp.lock());

@@ -121,6 +121,13 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                 return;
             }
             
+            if (!swift_ast_ctx->GetClangImporter())
+            {
+                if (log)
+                    log->Printf("  [SUE::SC] Swift AST Context has no Clang importer");
+                return;
+            }
+
             if (swift_ast_ctx->HasFatalErrors())
             {
                 if (log)
