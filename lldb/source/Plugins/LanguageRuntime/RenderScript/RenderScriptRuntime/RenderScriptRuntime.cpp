@@ -390,6 +390,8 @@ const unsigned int RenderScriptRuntime::AllocationDetails::RSTypeToFormat[][3] =
     {eFormatVectorOfFloat32, eFormatVectorOfFloat32, sizeof(float) * 4} // RS_TYPE_MATRIX_2X2
 };
 
+const std::string RenderScriptRuntime::s_runtimeExpandSuffix(".expand");
+const std::array<const char *, 3> RenderScriptRuntime::s_runtimeCoordVars{{"rsIndex", "p->current.y", "p->current.z"}};
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
@@ -3071,6 +3073,79 @@ RenderScriptRuntime::GetFrameVarAsUnsigned(const StackFrameSP frame_sp, const ch
     return true;
 }
 
+// Function attempts to find the current coordinate of a kernel invocation by investigating the
+// values of frame variables in the .expand function. These coordinates are returned via the coord
+// array reference parameter. Returns true if the coordinates could be found, and false otherwise.
+bool
+RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord, Thread *thread_ptr)
+{
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+
+    if (!thread_ptr)
+    {
+        if (log)
+            log->Printf("%s - Error, No thread pointer", __FUNCTION__);
+
+        return false;
+    }
+
+    // Walk the call stack looking for a function whose name has the suffix '.expand'
+    // and contains the variables we're looking for.
+    for (uint32_t i = 0; i < thread_ptr->GetStackFrameCount(); ++i)
+    {
+        if (!thread_ptr->SetSelectedFrameByIndex(i))
+            continue;
+
+        StackFrameSP frame_sp = thread_ptr->GetSelectedFrame();
+        if (!frame_sp)
+            continue;
+
+        // Find the function name
+        const SymbolContext sym_ctx = frame_sp->GetSymbolContext(false);
+        const char *func_name_cstr = sym_ctx.GetFunctionName().AsCString();
+        if (!func_name_cstr)
+            continue;
+
+        if (log)
+            log->Printf("%s - Inspecting function '%s'", __FUNCTION__, func_name_cstr);
+
+        // Check if function name has .expand suffix
+        std::string func_name(func_name_cstr);
+        const int length_difference = func_name.length() - RenderScriptRuntime::s_runtimeExpandSuffix.length();
+        if (length_difference <= 0)
+            continue;
+
+        const int32_t has_expand_suffix = func_name.compare(length_difference,
+                                                            RenderScriptRuntime::s_runtimeExpandSuffix.length(),
+                                                            RenderScriptRuntime::s_runtimeExpandSuffix);
+
+        if (has_expand_suffix != 0)
+            continue;
+
+        if (log)
+            log->Printf("%s - Found .expand function '%s'", __FUNCTION__, func_name_cstr);
+
+        // Get values for variables in .expand frame that tell us the current kernel invocation
+        bool found_coord_variables = true;
+        assert(RenderScriptRuntime::s_runtimeCoordVars.size() == coord.size());
+
+        for (uint32_t i = 0; i < coord.size(); ++i)
+        {
+            uint64_t value = 0;
+            if (!GetFrameVarAsUnsigned(frame_sp, RenderScriptRuntime::s_runtimeCoordVars[i], value))
+            {
+                found_coord_variables = false;
+                break;
+            }
+            coord[i] = value;
+        }
+
+        if (found_coord_variables)
+            return true;
+    }
+    return false;
+}
+
 // Callback when a kernel breakpoint hits and we're looking for a specific coordinate.
 // Baton parameter contains a pointer to the target coordinate we want to break on.
 // Function then checks the .expand frame for the current coordinate and breaks to user if it matches.
@@ -3086,53 +3161,38 @@ RenderScriptRuntime::KernelBreakpointHit(void *baton, StoppointCallbackContext *
     assert(baton && "Error: null baton in conditional kernel breakpoint callback");
 
     // Coordinate we want to stop on
-    const int* target_coord = static_cast<const int*>(baton);
+    const uint32_t *target_coord = static_cast<const uint32_t *>(baton);
 
     if (log)
-        log->Printf("RenderScriptRuntime::KernelBreakpointHit - Break ID %" PRIu64 ", target coord (%d, %d, %d)",
-                    break_id, target_coord[0], target_coord[1], target_coord[2]);
+        log->Printf("%s - Break ID %" PRIu64 ", (%" PRIu32 ", %" PRIu32 ", %" PRIu32 ")", __FUNCTION__, break_id,
+                    target_coord[0], target_coord[1], target_coord[2]);
 
-    // Go up one stack frame to .expand kernel
+    // Select current thread
     ExecutionContext context(ctx->exe_ctx_ref);
-    ThreadSP thread_sp = context.GetThreadSP();
-    if (!thread_sp->SetSelectedFrameByIndex(1))
+    Thread *thread_ptr = context.GetThreadPtr();
+    assert(thread_ptr && "Null thread pointer");
+
+    // Find current kernel invocation from .expand frame variables
+    RSCoordinate current_coord{}; // Zero initialise array
+    if (!GetKernelCoordinate(current_coord, thread_ptr))
     {
         if (log)
-            log->Printf("RenderScriptRuntime::KernelBreakpointHit - Error, couldn't go up stack frame");
-
-       return false;
-    }
-
-    StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
-    if (!frame_sp)
-    {
-        if (log)
-            log->Printf("RenderScriptRuntime::KernelBreakpointHit - Error, couldn't select .expand stack frame");
+            log->Printf("%s - Error, couldn't select .expand stack frame", __FUNCTION__);
 
         return false;
     }
 
-    // Get values for variables in .expand frame that tell us the current kernel invocation
-    const char* coord_expressions[] = {"rsIndex", "p->current.y", "p->current.z"};
-    uint64_t current_coord[3] = {0, 0, 0};
-
-    for(int i = 0; i < 3; ++i)
-    {
-        if (!GetFrameVarAsUnsigned(frame_sp, coord_expressions[i], current_coord[i]))
-            return false;
-
-        if (log)
-            log->Printf("RenderScriptRuntime::KernelBreakpointHit, %s = %" PRIu64, coord_expressions[i], current_coord[i]);
-    }
+    if (log)
+        log->Printf("%s - (%" PRIu32 ",%" PRIu32 ",%" PRIu32 ")", __FUNCTION__, current_coord[0], current_coord[1],
+                    current_coord[2]);
 
     // Check if the current kernel invocation coordinate matches our target coordinate
-    if (current_coord[0] == static_cast<uint64_t>(target_coord[0]) &&
-        current_coord[1] == static_cast<uint64_t>(target_coord[1]) &&
-        current_coord[2] == static_cast<uint64_t>(target_coord[2]))
+    if (current_coord[0] == target_coord[0] && current_coord[1] == target_coord[1] &&
+        current_coord[2] == target_coord[2])
     {
         if (log)
-             log->Printf("RenderScriptRuntime::KernelBreakpointHit, BREAKING %" PRIu64 ", %" PRIu64 ", %" PRIu64,
-                         current_coord[0], current_coord[1], current_coord[2]);
+            log->Printf("%s, BREAKING (%" PRIu32 ",%" PRIu32 ",%" PRIu32 ")", __FUNCTION__, current_coord[0],
+                        current_coord[1], current_coord[2]);
 
         BreakpointSP breakpoint_sp = context.GetTargetPtr()->GetBreakpointByID(break_id);
         assert(breakpoint_sp != nullptr && "Error: Couldn't find breakpoint matching break id for callback");
@@ -3169,7 +3229,7 @@ RenderScriptRuntime::PlaceBreakpointOnKernel(Stream &strm, const char* name, con
         strm.EOL();
 
         // Allocate memory for the baton, and copy over coordinate
-        int* baton = new int[3];
+        uint32_t *baton = new uint32_t[coords.size()];
         baton[0] = coords[0]; baton[1] = coords[1]; baton[2] = coords[2];
 
         // Create a callback that will be invoked everytime the breakpoint is hit.
@@ -3177,7 +3237,7 @@ RenderScriptRuntime::PlaceBreakpointOnKernel(Stream &strm, const char* name, con
         bp->SetCallback(KernelBreakpointHit, baton, true);
 
         // Store a shared pointer to the baton, so the memory will eventually be cleaned up after destruction
-        m_conditional_breaks[bp->GetID()] = std::shared_ptr<int>(baton);
+        m_conditional_breaks[bp->GetID()] = std::shared_ptr<uint32_t>(baton);
     }
 
     if (bp)
@@ -3606,6 +3666,42 @@ public:
     }
 };
 
+class CommandObjectRenderScriptRuntimeKernelCoordinate : public CommandObjectParsed
+{
+public:
+    CommandObjectRenderScriptRuntimeKernelCoordinate(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "renderscript kernel coordinate",
+                              "Shows the (x,y,z) coordinate of the current kernel invocation.",
+                              "renderscript kernel coordinate",
+                              eCommandRequiresProcess | eCommandProcessMustBeLaunched | eCommandProcessMustBePaused)
+    {
+    }
+
+    ~CommandObjectRenderScriptRuntimeKernelCoordinate() override = default;
+
+    bool
+    DoExecute(Args &command, CommandReturnObject &result) override
+    {
+        RSCoordinate coord{}; // Zero initialize array
+        bool success = RenderScriptRuntime::GetKernelCoordinate(coord, m_exe_ctx.GetThreadPtr());
+        Stream &stream = result.GetOutputStream();
+
+        if (success)
+        {
+            stream.Printf("Coordinate: (%" PRIu32 ", %" PRIu32 ", %" PRIu32 ")", coord[0], coord[1], coord[2]);
+            stream.EOL();
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+        }
+        else
+        {
+            stream.Printf("Error: Coordinate could not be found.");
+            stream.EOL();
+            result.SetStatus(eReturnStatusFailed);
+        }
+        return true;
+    }
+};
+
 class CommandObjectRenderScriptRuntimeKernelBreakpoint : public CommandObjectMultiword
 {
 public:
@@ -3629,6 +3725,7 @@ public:
     {
         LoadSubCommand("list", CommandObjectSP(new CommandObjectRenderScriptRuntimeKernelList(interpreter)));
         LoadSubCommand("breakpoint", CommandObjectSP(new CommandObjectRenderScriptRuntimeKernelBreakpoint(interpreter)));
+        LoadSubCommand("coordinate", CommandObjectSP(new CommandObjectRenderScriptRuntimeKernelCoordinate(interpreter)));
     }
 
     ~CommandObjectRenderScriptRuntimeKernel() override = default;

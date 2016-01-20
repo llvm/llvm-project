@@ -130,7 +130,6 @@ class ConcurrentEventsTestCase(TestBase):
 
     @skipIfFreeBSD # timing out on buildbot
     @skipIfRemoteDueToDeadlock
-    @expectedFailureAll("llvm.org/pr16714", oslist=["linux"], archs=["i386"])
     @expectedFailureAll(archs=['mips64', 'mips64el']) # Atomic sequences are not supported yet for MIPS in LLDB.
     def test_signal_delay_watch(self):
         """Test a (1 second delay) watchpoint and a signal in multiple threads."""
