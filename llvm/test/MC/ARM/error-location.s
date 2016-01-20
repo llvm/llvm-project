@@ -16,9 +16,6 @@
 @ CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Cannot represent a difference across sections
   .word x_a - y_a
 
-@ CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Cannot represent a subtraction with a weak symbol
-  .word a - w
-
 @ CHECK: <unknown>:0: error: expression could not be evaluated
   .set v1, -undef
 
