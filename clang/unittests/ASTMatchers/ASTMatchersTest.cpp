@@ -2973,6 +2973,10 @@ TEST(HasBody, FindsBodyOfForWhileDoLoops) {
               doStmt(hasBody(compoundStmt()))));
   EXPECT_TRUE(matches("void f() { int p[2]; for (auto x : p) {} }",
               cxxForRangeStmt(hasBody(compoundStmt()))));
+  EXPECT_TRUE(matches("void f() {}", functionDecl(hasBody(compoundStmt()))));
+  EXPECT_TRUE(notMatches("void f();", functionDecl(hasBody(compoundStmt()))));
+  EXPECT_TRUE(matches("void f(); void f() {}",
+                         functionDecl(hasBody(compoundStmt()))));
 }
 
 TEST(HasAnySubstatement, MatchesForTopLevelCompoundStatement) {
@@ -3665,6 +3669,14 @@ TEST(ExceptionHandling, SimpleCases) {
                       varDecl(isExceptionVariable())));
   EXPECT_TRUE(notMatches("void foo() try { int X; } catch (...) { }",
                          varDecl(isExceptionVariable())));
+}
+
+TEST(ParenExpression, SimpleCases) {
+  EXPECT_TRUE(matches("int i = (3);", parenExpr()));
+  EXPECT_TRUE(matches("int i = (3 + 7);", parenExpr()));
+  EXPECT_TRUE(notMatches("int i = 3;", parenExpr()));
+  EXPECT_TRUE(notMatches("int foo() { return 1; }; int a = foo();",
+                         parenExpr()));
 }
 
 TEST(HasConditionVariableStatement, DoesNotMatchCondition) {

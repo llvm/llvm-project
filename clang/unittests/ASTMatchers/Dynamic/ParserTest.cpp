@@ -263,7 +263,7 @@ TEST(ParserTest, Errors) {
             "1:1: Matcher does not support binding.",
             ParseWithError("isArrow().bind(\"foo\")"));
   EXPECT_EQ("Input value has unresolved overloaded type: "
-            "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt>",
+            "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt|FunctionDecl>",
             ParseMatcherWithError("hasBody(stmt())"));
 }
 

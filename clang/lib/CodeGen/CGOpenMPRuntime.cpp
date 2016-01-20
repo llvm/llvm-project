@@ -3685,8 +3685,6 @@ void CGOpenMPRuntime::emitCancelCall(CodeGenFunction &CGF, SourceLocation Loc,
   // kmp_int32 cncl_kind);
   if (auto *OMPRegionInfo =
           dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
-    if (OMPRegionInfo->getDirectiveKind() == OMPD_single)
-      return;
     auto &&ThenGen = [this, Loc, CancelRegion,
                       OMPRegionInfo](CodeGenFunction &CGF) {
       llvm::Value *Args[] = {

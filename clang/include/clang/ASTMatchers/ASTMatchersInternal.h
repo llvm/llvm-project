@@ -1584,6 +1584,18 @@ struct NotEqualsBoundNodePredicate {
   ast_type_traits::DynTypedNode Node;
 };
 
+template <typename Ty>
+struct GetBodyMatcher {
+  static const Stmt *get(const Ty &Node) {
+    return Node.getBody();
+  }
+};
+
+template <>
+inline const Stmt *GetBodyMatcher<FunctionDecl>::get(const FunctionDecl &Node) {
+  return Node.doesThisDeclarationHaveABody() ? Node.getBody() : nullptr;
+}
+
 } // end namespace internal
 } // end namespace ast_matchers
 } // end namespace clang

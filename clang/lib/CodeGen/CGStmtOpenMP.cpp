@@ -1786,7 +1786,11 @@ CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
     CGF.EmitOMPPrivateClause(S, SingleScope);
     (void)SingleScope.Privatize();
 
+    auto Exit = CGF.getJumpDestInCurrentScope("omp.sections.exit");
+    CGF.BreakContinueStack.push_back(BreakContinue(Exit, Exit));
     CGF.EmitStmt(Stmt);
+    CGF.EmitBlock(Exit.getBlock());
+    CGF.BreakContinueStack.pop_back();
   };
   CGM.getOpenMPRuntime().emitSingleRegion(*this, CodeGen, S.getLocStart(),
                                           llvm::None, llvm::None, llvm::None,
@@ -2647,7 +2651,8 @@ CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
   if (Kind == OMPD_parallel || Kind == OMPD_task)
     return ReturnBlock;
   assert(Kind == OMPD_for || Kind == OMPD_section || Kind == OMPD_sections ||
-         Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for);
+         Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for ||
+         Kind == OMPD_single);
   return BreakContinueStack.back().BreakBlock;
 }
 

@@ -506,6 +506,12 @@ TEST_F(RegistryTest, HasArgs) {
   EXPECT_FALSE(matches("struct X {};", Value));
 }
 
+TEST_F(RegistryTest, ParenExpr) {
+  Matcher<Stmt> Value = constructMatcher("parenExpr").getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("int i = (1);", Value));
+  EXPECT_FALSE(matches("int i = 1;", Value));
+}
+
 } // end anonymous namespace
 } // end namespace dynamic
 } // end namespace ast_matchers
