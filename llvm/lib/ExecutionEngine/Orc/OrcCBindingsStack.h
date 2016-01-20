@@ -89,8 +89,9 @@ public:
   OrcCBindingsStack(TargetMachine &TM,
 		    std::unique_ptr<CompileCallbackMgr> CCMgr, 
                     IndirectStubsManagerBuilder IndirectStubsMgrBuilder)
-    : DL(TM.createDataLayout()), CCMgr(std::move(CCMgr)),
+    : DL(TM.createDataLayout()),
       IndirectStubsMgr(IndirectStubsMgrBuilder()),
+      CCMgr(std::move(CCMgr)),
       ObjectLayer(),
       CompileLayer(ObjectLayer, orc::SimpleCompiler(TM)),
       CODLayer(CompileLayer,
