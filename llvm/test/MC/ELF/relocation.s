@@ -63,6 +63,11 @@ pr24486:
         .code16
         call pr23771
 
+        .weak weak_sym
+weak_sym:
+        .long  pr23272-weak_sym
+
+
 // CHECK:        Section {
 // CHECK:          Name: .rela.text
 // CHECK:          Relocations [
@@ -101,5 +106,6 @@ pr24486:
 // CHECK-NEXT:       0xDC R_X86_64_PLT32 foo 0x0
 // CHECK-NEXT:       0xF0 R_X86_64_32 .text 0xF0
 // CHECK-NEXT:       0xF5 R_X86_64_PC16 pr23771 0xFFFFFFFFFFFFFFFE
+// CHECK-NEXT:       0xF7 R_X86_64_PC32 pr23272 0x0
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
