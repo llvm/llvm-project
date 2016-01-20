@@ -3594,7 +3594,8 @@ CXEvalResult clang_Cursor_Evaluate(CXCursor C) {
       expr = Field->getInClassInitializer();
     }
     if (expr)
-      return (CXEvalResult)evaluateExpr((Expr *)expr, C);
+      return const_cast<CXEvalResult>(reinterpret_cast<const void *>(
+          evaluateExpr(const_cast<Expr *>(expr), C)));
     return nullptr;
   }
 
@@ -3607,7 +3608,8 @@ CXEvalResult clang_Cursor_Evaluate(CXCursor C) {
       }
     }
     if (expr)
-      return (CXEvalResult)evaluateExpr(expr, C);
+      return const_cast<CXEvalResult>(
+          reinterpret_cast<const void *>(evaluateExpr(expr, C)));
   }
   return nullptr;
 }

@@ -1061,6 +1061,14 @@ NSString's "alloc". This matcher should match both message sends.
   [[NSString alloc] initWithString:@"Hello"]
 </pre></td></tr>
 
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('parenExpr0')"><a name="parenExpr0Anchor">parenExpr</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ParenExpr.html">ParenExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="parenExpr0"><pre>Matches parentheses used in expressions.
+
+Given
+  int foo() { return 1; }
+  int a = (foo() + 1);
+matches '(foo() + 1)'
+</pre></td></tr>
 
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('returnStmt0')"><a name="returnStmt0Anchor">returnStmt</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ReturnStmt.html">ReturnStmt</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="returnStmt0"><pre>Matches return statements.
@@ -3428,8 +3436,8 @@ with withInitializer matching (1)
 
 
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXForRangeStmt.html">CXXForRangeStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody3')"><a name="hasBody3Anchor">hasBody</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody3"><pre>Matches a 'for', 'while', or 'do while' statement that has
-a given body.
+<tr><td colspan="4" class="doc" id="hasBody3"><pre>Matches a 'for', 'while', 'do while' statement or a function
+definition that has a given body.
 
 Given
   for (;;) {}
@@ -3870,8 +3878,8 @@ declaration of class D.
 
 
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1DoStmt.html">DoStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody0')"><a name="hasBody0Anchor">hasBody</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody0"><pre>Matches a 'for', 'while', or 'do while' statement that has
-a given body.
+<tr><td colspan="4" class="doc" id="hasBody0"><pre>Matches a 'for', 'while', 'do while' statement or a function
+definition that has a given body.
 
 Given
   for (;;) {}
@@ -4051,8 +4059,8 @@ would only match the declaration for a.
 
 
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ForStmt.html">ForStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody1')"><a name="hasBody1Anchor">hasBody</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody1"><pre>Matches a 'for', 'while', or 'do while' statement that has
-a given body.
+<tr><td colspan="4" class="doc" id="hasBody1"><pre>Matches a 'for', 'while', 'do while' statement or a function
+definition that has a given body.
 
 Given
   for (;;) {}
@@ -4103,6 +4111,19 @@ cxxMethodDecl(hasAnyParameter(hasName("y")))
   matches f(int x, int y, int z) {}
 with hasAnyParameter(...)
   matching int y
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasBody4')"><a name="hasBody4Anchor">hasBody</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasBody4"><pre>Matches a 'for', 'while', 'do while' statement or a function
+definition that has a given body.
+
+Given
+  for (;;) {}
+hasBody(compoundStmt())
+  matches 'for (;;) {}'
+with compoundStmt()
+  matching '{}'
 </pre></td></tr>
 
 
@@ -4883,8 +4904,8 @@ variableArrayType(hasSizeExpr(ignoringImpCasts(declRefExpr(to(
 
 
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1WhileStmt.html">WhileStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody2')"><a name="hasBody2Anchor">hasBody</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody2"><pre>Matches a 'for', 'while', or 'do while' statement that has
-a given body.
+<tr><td colspan="4" class="doc" id="hasBody2"><pre>Matches a 'for', 'while', 'do while' statement or a function
+definition that has a given body.
 
 Given
   for (;;) {}
