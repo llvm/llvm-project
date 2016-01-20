@@ -541,6 +541,7 @@ public:
             lldb::offset_t next_thread_state = offset + (count * 4);
             switch (flavor)
             {
+                case GPRAltRegSet:
                 case GPRRegSet:
                     for (uint32_t i=0; i<count; ++i)
                     {
@@ -5059,7 +5060,7 @@ ObjectFileMachO::GetEntryPointAddress ()
                         switch (m_header.cputype)
                         {
                         case llvm::MachO::CPU_TYPE_ARM:
-                           if (flavor == 1) // ARM_THREAD_STATE from mach/arm/thread_status.h
+                           if (flavor == 1 || flavor == 9) // ARM_THREAD_STATE/ARM_THREAD_STATE32 from mach/arm/thread_status.h
                            {
                                offset += 60;  // This is the offset of pc in the GPR thread state data structure.
                                start_address = m_data.GetU32(&offset);

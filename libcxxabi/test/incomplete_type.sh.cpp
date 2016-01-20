@@ -16,7 +16,7 @@
 
 // RUN: %cxx %flags %compile_flags -c %s -o %t.one.o
 // RUN: %cxx %flags %compile_flags -c %s -o %t.two.o -DTU_ONE
-// RUN: %cxx %flags %link_flags -o %t.exe %t.one.o %t.two.o
+// RUN: %cxx %flags %t.one.o %t.two.o %link_flags -o %t.exe
 // RUN: %exec %t.exe
 
 #include <stdio.h>

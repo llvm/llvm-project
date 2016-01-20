@@ -38,14 +38,47 @@
 // MODULE-CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
 // MODULE-CHECK-SAME:             scope: ![[MODULE:[0-9]+]],
 // MODULE-CHECK: ![[MODULE]] = !DIModule(scope: null, name: "DebugObjC"
+
+// MODULE-CHECK: ![[TD_ENUM:.*]] = !DICompositeType(tag: DW_TAG_enumeration_type,
+// MODULE-CHECK-SAME-NOT:         name:
+// MODULE-CHECK-SAME:             elements:
+
 // MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type,
 // MODULE-CHECK-SAME:             name: "FwdDecl",
 // MODULE-CHECK-SAME:             scope: ![[MODULE]],
 // MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type,
 // MODULE-CHECK-SAME:             name: "ObjCClass",
 // MODULE-CHECK-SAME:             scope: ![[MODULE]],
+
+// MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDeclared"
+// MODULE-CHECK-SAME:             elements:
+
+// MODULE-CHECK: ![[TD_UNION:.*]] = !DICompositeType(tag: DW_TAG_union_type,
+// MODULE-CHECK-SAME-NOT:         name:
+// MODULE-CHECK-SAME:             elements:
+
+// MODULE-CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefUnion",
+// MODULE-CHECK-SAME:           baseType: ![[TD_UNION]])
+
+// MODULE-CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefEnum",
+// MODULE-CHECK-SAME:           baseType: ![[TD_ENUM:.*]])
+
+// MODULE-CHECK: ![[TD_STRUCT:.*]] = !DICompositeType(tag: DW_TAG_structure_type,
+// MODULE-CHECK-SAME-NOT:         name:
+// MODULE-CHECK-SAME:             elements:
+// MODULE-CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefStruct",
+// MODULE-CHECK-SAME:           baseType: ![[TD_STRUCT]])
+
+// MODULE-CHECK: !DICompositeType(tag: DW_TAG_union_type,
+// MODULE-CHECK-SAME-NOT:         name:
+
+// MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type,
+// MODULE-CHECK-SAME-NOT:         name:
+
 // MODULE-CHECK: !DISubprogram(name: "+[ObjCClass classMethod]",
 // MODULE-CHECK-SAME:          scope: ![[MODULE]],
 
 // The forward declaration should not be in the module scope.
 // MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "OpaqueData", file
+
+// MODULE-CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"

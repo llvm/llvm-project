@@ -28,6 +28,20 @@
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX4EnumE")
 // CHECK: !DINamespace(name: "DebugCXX"
 
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME-NOT:         name:
+
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME-NOT:         name:
+
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME-NOT:         name:
+// CHECK-SAME:             identifier: "_ZTS11TypedefEnum")
+
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME-NOT:         name:
+// CHECK: !DIEnumerator(name: "e5", value: 5)
+
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Struct"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
 
@@ -47,10 +61,28 @@
 // CHECK-SAME:             identifier: "_ZTS10FwdVirtual")
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$FwdVirtual"
 
+// CHECK: !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-SAME-NOT:         name:
+// CHECK-SAME:             identifier: "_ZTS12TypedefUnion")
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME-NOT:         name:
+// CHECK-SAME:             identifier: "_ZTS13TypedefStruct")
+
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstatiation"
 // no mangled name here yet.
 
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
 // no mangled name here yet.
+
+// CHECK: !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-SAME-NOT:         name:
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME-NOT:         name:
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME:             name: "InAnonymousNamespace",
+// CHECK-SAME:             elements: !{{[0-9]+}})
 
 // CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"

@@ -11,6 +11,8 @@
 
 // is_trivially_move_assignable
 
+// XFAIL: gcc-4.9
+
 #include <type_traits>
 #include "test_macros.h"
 

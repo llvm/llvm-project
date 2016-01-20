@@ -1061,6 +1061,18 @@ void StmtPrinter::VisitOMPTargetDataDirective(OMPTargetDataDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPTargetEnterDataDirective(
+    OMPTargetEnterDataDirective *Node) {
+  Indent() << "#pragma omp target enter data ";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPTargetExitDataDirective(
+    OMPTargetExitDataDirective *Node) {
+  Indent() << "#pragma omp target exit data ";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
   Indent() << "#pragma omp teams ";
   PrintOMPExecutableDirective(Node);

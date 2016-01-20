@@ -10690,10 +10690,35 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   CmdArgs.push_back(TC.getTriple().isArch64Bit() ? "-m64" : "-m32");
 
-  // Clang's default optimization level is -O0, but ptxas's default is -O3.
-  CmdArgs.push_back(Args.MakeArgString(
-      llvm::Twine("-O") +
-      Args.getLastArgValue(options::OPT_O_Group, "0").data()));
+  // Map the -O we received to -O{0,1,2,3}.
+  //
+  // TODO: Perhaps we should map host -O2 to ptxas -O3. -O3 is ptxas's default,
+  // so it may correspond more closely to the spirit of clang -O2.
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    // -O3 seems like the least-bad option when -Osomething is specified to
+    // clang but it isn't handled below.
+    StringRef OOpt = "3";
+    if (A->getOption().matches(options::OPT_O4) ||
+        A->getOption().matches(options::OPT_Ofast))
+      OOpt = "3";
+    else if (A->getOption().matches(options::OPT_O0))
+      OOpt = "0";
+    else if (A->getOption().matches(options::OPT_O)) {
+      // -Os, -Oz, and -O(anything else) map to -O2, for lack of better options.
+      OOpt = llvm::StringSwitch<const char *>(A->getValue())
+                 .Case("1", "1")
+                 .Case("2", "2")
+                 .Case("3", "3")
+                 .Case("s", "2")
+                 .Case("z", "2")
+                 .Default("2");
+    }
+    CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
+  } else {
+    // If no -O was passed, pass -O0 to ptxas -- no opt flag should correspond
+    // to no optimizations, but ptxas's default is -O3.
+    CmdArgs.push_back("-O0");
+  }
 
   // Don't bother passing -g to ptxas: It's enabled by default at -O0, and
   // not supported at other optimization levels.

@@ -2336,6 +2336,8 @@ public:
   void EmitOMPAtomicDirective(const OMPAtomicDirective &S);
   void EmitOMPTargetDirective(const OMPTargetDirective &S);
   void EmitOMPTargetDataDirective(const OMPTargetDataDirective &S);
+  void EmitOMPTargetEnterDataDirective(const OMPTargetEnterDataDirective &S);
+  void EmitOMPTargetExitDataDirective(const OMPTargetExitDataDirective &S);
   void EmitOMPTeamsDirective(const OMPTeamsDirective &S);
   void
   EmitOMPCancellationPointDirective(const OMPCancellationPointDirective &S);

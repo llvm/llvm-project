@@ -7796,23 +7796,23 @@ public:
   /// \brief Return true if the provided declaration \a VD should be captured by
   /// reference in the provided scope \a RSI. This will take into account the
   /// semantics of the directive and associated clauses.
-  bool IsOpenMPCapturedByRef(VarDecl *VD,
+  bool IsOpenMPCapturedByRef(ValueDecl *D,
                              const sema::CapturedRegionScopeInfo *RSI);
 
   /// \brief Check if the specified variable is used in one of the private
   /// clauses (private, firstprivate, lastprivate, reduction etc.) in OpenMP
   /// constructs.
-  bool IsOpenMPCapturedVar(VarDecl *VD);
+  bool IsOpenMPCapturedDecl(ValueDecl *D);
 
   /// \brief Check if the specified variable is used in 'private' clause.
   /// \param Level Relative level of nested OpenMP construct for that the check
   /// is performed.
-  bool isOpenMPPrivateVar(VarDecl *VD, unsigned Level);
+  bool isOpenMPPrivateDecl(ValueDecl *D, unsigned Level);
 
   /// \brief Check if the specified variable is captured  by 'target' directive.
   /// \param Level Relative level of nested OpenMP construct for that the check
   /// is performed.
-  bool isOpenMPTargetCapturedVar(VarDecl *VD, unsigned Level);
+  bool isOpenMPTargetCapturedDecl(ValueDecl *D, unsigned Level);
 
   ExprResult PerformOpenMPImplicitIntegerConversion(SourceLocation OpLoc,
                                                     Expr *Op);
@@ -7872,19 +7872,19 @@ public:
   StmtResult ActOnOpenMPSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
-      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
   /// \brief Called on well-formed '\#pragma omp for' after parsing
   /// of the associated statement.
   StmtResult ActOnOpenMPForDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
-      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
   /// \brief Called on well-formed '\#pragma omp for simd' after parsing
   /// of the associated statement.
   StmtResult ActOnOpenMPForSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
-      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
   /// \brief Called on well-formed '\#pragma omp sections' after parsing
   /// of the associated statement.
   StmtResult ActOnOpenMPSectionsDirective(ArrayRef<OMPClause *> Clauses,
@@ -7914,13 +7914,13 @@ public:
   StmtResult ActOnOpenMPParallelForDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
-      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
   /// \brief Called on well-formed '\#pragma omp parallel for simd' after
   /// parsing of the  associated statement.
   StmtResult ActOnOpenMPParallelForSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
-      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
   /// \brief Called on well-formed '\#pragma omp parallel sections' after
   /// parsing of the  associated statement.
   StmtResult ActOnOpenMPParallelSectionsDirective(ArrayRef<OMPClause *> Clauses,
@@ -7968,6 +7968,16 @@ public:
   StmtResult ActOnOpenMPTargetDataDirective(ArrayRef<OMPClause *> Clauses,
                                             Stmt *AStmt, SourceLocation StartLoc,
                                             SourceLocation EndLoc);
+  /// \brief Called on well-formed '\#pragma omp target enter data' after
+  /// parsing of the associated statement.
+  StmtResult ActOnOpenMPTargetEnterDataDirective(ArrayRef<OMPClause *> Clauses,
+                                                 SourceLocation StartLoc,
+                                                 SourceLocation EndLoc);
+  /// \brief Called on well-formed '\#pragma omp target exit data' after
+  /// parsing of the associated statement.
+  StmtResult ActOnOpenMPTargetExitDataDirective(ArrayRef<OMPClause *> Clauses,
+                                                SourceLocation StartLoc,
+                                                SourceLocation EndLoc);
   /// \brief Called on well-formed '\#pragma omp teams' after parsing of the
   /// associated statement.
   StmtResult ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
@@ -7988,19 +7998,19 @@ public:
   StmtResult ActOnOpenMPTaskLoopDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
-      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
   /// \brief Called on well-formed '\#pragma omp taskloop simd' after parsing of
   /// the associated statement.
   StmtResult ActOnOpenMPTaskLoopSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
-      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
   /// \brief Called on well-formed '\#pragma omp distribute' after parsing
   /// of the associated statement.
   StmtResult ActOnOpenMPDistributeDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
-      llvm::DenseMap<VarDecl *, Expr *> &VarsWithImplicitDSA);
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
 
   OMPClause *ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
                                          Expr *Expr,
@@ -8129,7 +8139,8 @@ public:
       CXXScopeSpec &ReductionIdScopeSpec,
       const DeclarationNameInfo &ReductionId, OpenMPDependClauseKind DepKind,
       OpenMPLinearClauseKind LinKind, OpenMPMapClauseKind MapTypeModifier,
-      OpenMPMapClauseKind MapType, SourceLocation DepLinMapLoc);
+      OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
+      SourceLocation DepLinMapLoc);
   /// \brief Called on well-formed 'private' clause.
   OMPClause *ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                                       SourceLocation StartLoc,
@@ -8196,10 +8207,12 @@ public:
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc);
   /// \brief Called on well-formed 'map' clause.
-  OMPClause *ActOnOpenMPMapClause(
-      OpenMPMapClauseKind MapTypeModifier, OpenMPMapClauseKind MapType,
-      SourceLocation MapLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
-      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
+  OMPClause *
+  ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
+                       OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
+                       SourceLocation MapLoc, SourceLocation ColonLoc,
+                       ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                       SourceLocation LParenLoc, SourceLocation EndLoc);
   /// \brief Called on well-formed 'num_teams' clause.
   OMPClause *ActOnOpenMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
                                        SourceLocation LParenLoc,

@@ -2274,7 +2274,15 @@ enum CXCursorKind {
    */
   CXCursor_OMPDistributeDirective        = 260,
 
-  CXCursor_LastStmt                      = CXCursor_OMPDistributeDirective,
+  /** \brief OpenMP target enter data directive.
+   */
+  CXCursor_OMPTargetEnterDataDirective   = 261,
+
+  /** \brief OpenMP target exit data directive.
+   */
+  CXCursor_OMPTargetExitDataDirective    = 262,
+
+  CXCursor_LastStmt                      = CXCursor_OMPTargetExitDataDirective,
 
   /**
    * \brief Cursor that represents the translation unit itself.
