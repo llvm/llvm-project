@@ -126,7 +126,7 @@ private:
       PFC->Finalizer(PFC->Handle, RTDyld, std::move(PFC->Objects),
                      [&]() {
                        updateSymbolTable(RTDyld);
-                       Finalized = true;
+                       this->Finalized = true;
                      });
 
       // Release resources.
