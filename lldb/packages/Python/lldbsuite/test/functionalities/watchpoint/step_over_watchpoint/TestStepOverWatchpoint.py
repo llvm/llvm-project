@@ -17,7 +17,7 @@ class TestStepOverWatchpoint(TestBase):
         return ['basic_process']
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureLinux(bugnumber="llvm.org/pr26031", archs=['arm'])
+    @expectedFailureLinux(bugnumber="llvm.org/pr26031", archs=['aarch64', 'arm'])
     @expectedFailureWindows("llvm.org/pr24446")
     def test(self):
         """Test stepping over watchpoints."""
