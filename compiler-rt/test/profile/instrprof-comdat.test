@@ -1,0 +1,6 @@
+RUN: mkdir -p %t.d
+RUN: %clang_profgen -xc++ -o %t.d/comdat -fcoverage-mapping %S/Inputs/instrprof-comdat-1.cpp %S/Inputs/instrprof-comdat-2.cpp
+RUN: LLVM_PROFILE_FILE=%t-comdat.profraw %t.d/comdat
+RUN: llvm-profdata merge -o %t.d/comdat.prof %t-comdat.profraw 
+RUN: llvm-cov show --filename-equivalence --instr-profile=%t.d/comdat.prof %t.d/comdat | FileCheck --check-prefix=HEADER %S/Inputs/instrprof-comdat.h
+
