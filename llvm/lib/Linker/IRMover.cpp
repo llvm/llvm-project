@@ -1087,7 +1087,7 @@ Constant *IRLinker::linkGlobalValueProto(GlobalValue *SGV, bool ForAlias) {
       return nullptr;
 
     NewGV = copyGlobalValueProto(SGV, ShouldLink);
-    if (!ForAlias)
+    if (ShouldLink || !ForAlias)
       forceRenaming(NewGV, SGV->getName());
   }
   if (ShouldLink || ForAlias) {
