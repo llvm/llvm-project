@@ -2031,6 +2031,10 @@ void X86FrameLowering::adjustForSegmentedStacks(
   unsigned TlsReg, TlsOffset;
   DebugLoc DL;
 
+  // To support shrink-wrapping we would need to insert the new blocks
+  // at the right place and update the branches to PrologueMBB.
+  assert(&(*MF.begin()) == &PrologueMBB && "Shrink-wrapping not supported yet");
+
   unsigned ScratchReg = GetScratchRegister(Is64Bit, IsLP64, MF, true);
   assert(!MF.getRegInfo().isLiveIn(ScratchReg) &&
          "Scratch register is live-in");
@@ -2271,6 +2275,11 @@ void X86FrameLowering::adjustForHiPEPrologue(
     MachineFunction &MF, MachineBasicBlock &PrologueMBB) const {
   MachineFrameInfo *MFI = MF.getFrameInfo();
   DebugLoc DL;
+
+  // To support shrink-wrapping we would need to insert the new blocks
+  // at the right place and update the branches to PrologueMBB.
+  assert(&(*MF.begin()) == &PrologueMBB && "Shrink-wrapping not supported yet");
+
   // HiPE-specific values
   const unsigned HipeLeafWords = 24;
   const unsigned CCRegisteredArgs = Is64Bit ? 6 : 5;
@@ -2584,7 +2593,14 @@ bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
 bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // If we may need to emit frameless compact unwind information, give
   // up as this is currently broken: PR25614.
-  return MF.getFunction()->hasFnAttribute(Attribute::NoUnwind) || hasFP(MF);
+  return (MF.getFunction()->hasFnAttribute(Attribute::NoUnwind) || hasFP(MF)) &&
+         // The lowering of segmented stack and HiPE only support entry blocks
+         // as prologue blocks: PR26107.
+         // This limitation may be lifted if we fix:
+         // - adjustForSegmentedStacks
+         // - adjustForHiPEPrologue
+         MF.getFunction()->getCallingConv() != CallingConv::HiPE &&
+         !MF.shouldSplitStack();
 }
 
 MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
