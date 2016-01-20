@@ -1,3 +1,7 @@
+// Template instantiations are placed into comdat sections. Check that
+// coverage data from different instantiations are mapped back to the correct
+// source regions.
+
 template <class T> class FOO {
 public:
   FOO() : t(0) {}
