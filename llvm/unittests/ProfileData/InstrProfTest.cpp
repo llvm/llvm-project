@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/Support/Compression.h"
@@ -706,6 +709,39 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   ASSERT_EQ(StringRef("bar2"), R);
   R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar3"));
   ASSERT_EQ(StringRef("bar3"), R);
+}
+
+TEST_F(InstrProfTest, instr_prof_symtab_module_test) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = llvm::make_unique<Module>("MyModule.cpp", Ctx);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx),
+                                        /*isVarArg=*/false);
+  Function::Create(FTy, Function::ExternalLinkage, "Gfoo", M.get());
+  Function::Create(FTy, Function::ExternalLinkage, "Gblah", M.get());
+  Function::Create(FTy, Function::ExternalLinkage, "Gbar", M.get());
+  Function::Create(FTy, Function::InternalLinkage, "Ifoo", M.get());
+  Function::Create(FTy, Function::InternalLinkage, "Iblah", M.get());
+  Function::Create(FTy, Function::InternalLinkage, "Ibar", M.get());
+  Function::Create(FTy, Function::PrivateLinkage, "Pfoo", M.get());
+  Function::Create(FTy, Function::PrivateLinkage, "Pblah", M.get());
+  Function::Create(FTy, Function::PrivateLinkage, "Pbar", M.get());
+  Function::Create(FTy, Function::WeakODRLinkage, "Wfoo", M.get());
+  Function::Create(FTy, Function::WeakODRLinkage, "Wblah", M.get());
+  Function::Create(FTy, Function::WeakODRLinkage, "Wbar", M.get());
+
+  InstrProfSymtab ProfSymtab;
+  ProfSymtab.create(*(M.get()));
+
+  StringRef Funcs[] = {"Gfoo", "Gblah", "Gbar", "Ifoo", "Iblah", "Ibar",
+                       "Pfoo", "Pblah", "Pbar", "Wfoo", "Wblah", "Wbar"};
+
+  for (unsigned I = 0; I < sizeof(Funcs) / sizeof(*Funcs); I++) {
+    Function *F = M->getFunction(Funcs[I]);
+    ASSERT_TRUE(F != NULL);
+    StringRef PGOName = getPGOFuncName(*F);
+    ASSERT_EQ(PGOName,
+              ProfSymtab.getFuncName(IndexedInstrProf::ComputeHash(PGOName)));
+  }
 }
 
 TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
