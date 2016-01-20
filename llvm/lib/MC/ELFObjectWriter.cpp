@@ -649,10 +649,6 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
       Asm.getContext().reportFatalError(
           Fixup.getLoc(), "Cannot represent a difference across sections");
 
-    if (::isWeak(SymB))
-      Asm.getContext().reportFatalError(
-          Fixup.getLoc(), "Cannot represent a subtraction with a weak symbol");
-
     uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
     uint64_t K = SymBOffset - FixupOffset;
     IsPCRel = true;
