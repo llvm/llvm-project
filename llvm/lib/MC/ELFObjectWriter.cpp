@@ -655,12 +655,6 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
 
-    if (::isWeak(SymB)) {
-      Ctx.reportError(Fixup.getLoc(),
-                      "Cannot represent a subtraction with a weak symbol");
-      return;
-    }
-
     uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
     uint64_t K = SymBOffset - FixupOffset;
     IsPCRel = true;
