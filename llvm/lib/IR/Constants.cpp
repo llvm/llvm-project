@@ -2335,7 +2335,8 @@ GetElementPtrConstantExpr::GetElementPtrConstantExpr(
                    OperandTraits<GetElementPtrConstantExpr>::op_end(this) -
                        (IdxList.size() + 1),
                    IdxList.size() + 1),
-      SrcElementTy(SrcElementTy) {
+      SrcElementTy(SrcElementTy),
+      ResElementTy(GetElementPtrInst::getIndexedType(SrcElementTy, IdxList)) {
   Op<0>() = C;
   Use *OperandList = getOperandList();
   for (unsigned i = 0, E = IdxList.size(); i != E; ++i)
@@ -2344,6 +2345,10 @@ GetElementPtrConstantExpr::GetElementPtrConstantExpr(
 
 Type *GetElementPtrConstantExpr::getSourceElementType() const {
   return SrcElementTy;
+}
+
+Type *GetElementPtrConstantExpr::getResultElementType() const {
+  return ResElementTy;
 }
 
 //===----------------------------------------------------------------------===//

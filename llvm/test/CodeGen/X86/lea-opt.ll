@@ -34,12 +34,12 @@ sw.bb.2:                                          ; preds = %entry
 sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, %entry
   ret void
 ; CHECK-LABEL: test1:
-; CHECK:	leaq (%rdi,%rdi,2), [[REG1:%[a-z]+]]
-; CHECK:	movl arr1(,[[REG1]],4), {{.*}}
-; CHECK:	leaq arr1+4(,[[REG1]],4), [[REG2:%[a-z]+]]
-; CHECK:	subl arr1+4(,[[REG1]],4), {{.*}}
-; CHECK:	leaq arr1+8(,[[REG1]],4), [[REG3:%[a-z]+]]
-; CHECK:	addl arr1+8(,[[REG1]],4), {{.*}}
+; CHECK:	shlq $2, [[REG1:%[a-z]+]]
+; CHECK:	movl arr1([[REG1]],[[REG1]],2), {{.*}}
+; CHECK:	leaq arr1+4([[REG1]],[[REG1]],2), [[REG2:%[a-z]+]]
+; CHECK:	subl arr1+4([[REG1]],[[REG1]],2), {{.*}}
+; CHECK:	leaq arr1+8([[REG1]],[[REG1]],2), [[REG3:%[a-z]+]]
+; CHECK:	addl arr1+8([[REG1]],[[REG1]],2), {{.*}}
 ; CHECK:	movl ${{[1-4]+}}, ([[REG2]])
 ; CHECK:	movl ${{[1-4]+}}, ([[REG3]])
 ; CHECK:	movl ${{[1-4]+}}, ([[REG2]])
@@ -74,11 +74,11 @@ sw.bb.2:                                          ; preds = %entry
 sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, %entry
   ret void
 ; CHECK-LABEL: test2:
-; CHECK:	leaq (%rdi,%rdi,2), [[REG1:%[a-z]+]]
-; CHECK:	leaq arr1+4(,[[REG1]],4), [[REG2:%[a-z]+]]
+; CHECK:	shlq $2, [[REG1:%[a-z]+]]
+; CHECK:	leaq arr1+4([[REG1]],[[REG1]],2), [[REG2:%[a-z]+]]
 ; CHECK:	movl -4([[REG2]]), {{.*}}
 ; CHECK:	subl ([[REG2]]), {{.*}}
-; CHECK:	leaq arr1+8(,[[REG1]],4), [[REG3:%[a-z]+]]
+; CHECK:	leaq arr1+8([[REG1]],[[REG1]],2), [[REG3:%[a-z]+]]
 ; CHECK:	addl ([[REG3]]), {{.*}}
 ; CHECK:	movl ${{[1-4]+}}, ([[REG2]])
 ; CHECK:	movl ${{[1-4]+}}, ([[REG3]])

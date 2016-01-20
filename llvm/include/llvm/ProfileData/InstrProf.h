@@ -91,10 +91,12 @@ inline StringRef getCoverageMappingVarName() {
 }
 
 /// Return the name of the internal variable recording the array
-/// of PGO name vars referenced by the coverage mapping, The owning
+/// of PGO name vars referenced by the coverage mapping. The owning
 /// functions of those names are not emitted by FE (e.g, unused inline
 /// functions.)
-inline StringRef getCoverageNamesVarName() { return "__llvm_coverage_names"; }
+inline StringRef getCoverageUnusedNamesVarName() {
+  return "__llvm_coverage_names";
+}
 
 /// Return the name of function that registers all the per-function control
 /// data at program startup time by calling __llvm_register_function. This
@@ -272,6 +274,10 @@ public:
   ///  encoded in the format described in \c collectPGOFuncNameStrings.
   /// This method is a wrapper to \c readPGOFuncNameStrings method.
   inline std::error_code create(StringRef NameStrings);
+  /// A wrapper interface to populate the PGO symtab with functions
+  /// decls from module \c M. This interface is used by transformation
+  /// passes such as indirect function call promotion.
+  void create(const Module &M);
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.
   template <typename NameIterRange> void create(const NameIterRange &IterRange);

@@ -1349,19 +1349,18 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   for (User::op_iterator I = GEP.op_begin() + 1, E = GEP.op_end(); I != E;
        ++I, ++GTI) {
     // Skip indices into struct types.
-    SequentialType *SeqTy = dyn_cast<SequentialType>(*GTI);
-    if (!SeqTy)
+    if (isa<StructType>(*GTI))
       continue;
 
     // Index type should have the same width as IntPtr
     Type *IndexTy = (*I)->getType();
     Type *NewIndexType = IndexTy->isVectorTy() ?
       VectorType::get(IntPtrTy, IndexTy->getVectorNumElements()) : IntPtrTy;
- 
+
     // If the element type has zero size then any index over it is equivalent
     // to an index of zero, so replace it with zero if it is not zero already.
-    if (SeqTy->getElementType()->isSized() &&
-        DL.getTypeAllocSize(SeqTy->getElementType()) == 0)
+    Type *EltTy = GTI.getIndexedType();
+    if (EltTy->isSized() && DL.getTypeAllocSize(EltTy) == 0)
       if (!isa<Constant>(*I) || !cast<Constant>(*I)->isNullValue()) {
         *I = Constant::getNullValue(NewIndexType);
         MadeChange = true;
@@ -1405,7 +1404,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         return nullptr;
 
       // Keep track of the type as we walk the GEP.
-      Type *CurTy = Op1->getOperand(0)->getType()->getScalarType();
+      Type *CurTy = nullptr;
 
       for (unsigned J = 0, F = Op1->getNumOperands(); J != F; ++J) {
         if (Op1->getOperand(J)->getType() != Op2->getOperand(J)->getType())
@@ -1436,7 +1435,9 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
         // Sink down a layer of the type for the next iteration.
         if (J > 0) {
-          if (CompositeType *CT = dyn_cast<CompositeType>(CurTy)) {
+          if (J == 1) {
+            CurTy = Op1->getSourceElementType();
+          } else if (CompositeType *CT = dyn_cast<CompositeType>(CurTy)) {
             CurTy = CT->getTypeAtIndex(Op1->getOperand(J));
           } else {
             CurTy = nullptr;
@@ -1565,8 +1566,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getPointerSizeInBits(AS)) {
-      Type *PtrTy = GEP.getPointerOperandType();
-      Type *Ty = PtrTy->getPointerElementType();
+      Type *Ty = GEP.getSourceElementType();
       uint64_t TyAllocSize = DL.getTypeAllocSize(Ty);
 
       bool Matched = false;
@@ -1629,9 +1629,8 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     //
     // This occurs when the program declares an array extern like "int X[];"
     if (HasZeroPointerIndex) {
-      PointerType *CPTy = cast<PointerType>(PtrOp->getType());
       if (ArrayType *CATy =
-          dyn_cast<ArrayType>(CPTy->getElementType())) {
+          dyn_cast<ArrayType>(GEP.getSourceElementType())) {
         // GEP (bitcast i8* X to [0 x i8]*), i32 0, ... ?
         if (CATy->getElementType() == StrippedPtrTy->getElementType()) {
           // -> GEP i8* X, ...
@@ -1688,7 +1687,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // %t = getelementptr i32* bitcast ([2 x i32]* %str to i32*), i32 %V
       // into:  %t1 = getelementptr [2 x i32]* %str, i32 0, i32 %V; bitcast
       Type *SrcElTy = StrippedPtrTy->getElementType();
-      Type *ResElTy = PtrOp->getType()->getPointerElementType();
+      Type *ResElTy = GEP.getSourceElementType();
       if (SrcElTy->isArrayTy() &&
           DL.getTypeAllocSize(SrcElTy->getArrayElementType()) ==
               DL.getTypeAllocSize(ResElTy)) {

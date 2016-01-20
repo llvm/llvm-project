@@ -2487,6 +2487,9 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   if (!Offset->evaluateAsAbsolute(OffsetValue))
     return Error(OffsetLoc, "expression is not a constant value");
 
+  if (OffsetValue < 0)
+    return Error(OffsetLoc, "expression is negative");
+
   if (Lexer.isNot(AsmToken::Comma))
     return TokError("expected comma");
   Lexer.Lex();

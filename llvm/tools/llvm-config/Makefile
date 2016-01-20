@@ -44,6 +44,8 @@ else
   LLVM_HAS_RTTI := YES
 endif
 
+LLVM_DYLIB_VERSION := $(LLVM_VERSION_MAJOR).$(LLVM_VERSION_MINOR)$(LLVM_VERSION_SUFFIX)
+
 # This is blank for now.  We need to be careful about adding stuff here:
 # LDFLAGS tend not to be portable, and we don't currently require the
 # user to use libtool when linking against LLVM.
@@ -82,6 +84,8 @@ $(ObjDir)/BuildVariables.inc: $(BUILDVARIABLES_SRCPATH) Makefile $(ObjDir)/.dir
 	$(Verb) $(ECHO) 's/@LLVM_BUILD_SYSTEM@/autoconf/' \
 	  >> temp.sed
 	$(Verb) $(ECHO) 's/@LLVM_HAS_RTTI@/$(LLVM_HAS_RTTI)/' \
+	  >> temp.sed
+	$(Verb) $(ECHO) 's/@LLVM_DYLIB_VERSION@/$(LLVM_DYLIB_VERSION)/' \
 	  >> temp.sed
 	$(Verb) $(SED) -f temp.sed < $< > $@
 	$(Verb) $(RM) temp.sed

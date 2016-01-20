@@ -165,6 +165,13 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), FuncName);
 }
 
+void InstrProfSymtab::create(const Module &M) {
+  for (const Function &F : M)
+    addFuncName(getPGOFuncName(F));
+
+  finalizeSymtab();
+}
+
 int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
                               bool doCompression, std::string &Result) {
   uint8_t Header[16], *P = Header;

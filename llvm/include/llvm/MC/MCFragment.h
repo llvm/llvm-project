@@ -321,35 +321,18 @@ public:
 
 class MCFillFragment : public MCFragment {
 
-  /// Value - Value to use for filling bytes.
-  int64_t Value;
+  /// Value to use for filling bytes.
+  uint8_t Value;
 
-  /// ValueSize - The size (in bytes) of \p Value to use when filling, or 0 if
-  /// this is a virtual fill fragment.
-  unsigned ValueSize;
-
-  /// Size - The number of bytes to insert.
+  /// The number of bytes to insert.
   uint64_t Size;
 
 public:
-  MCFillFragment(int64_t Value, unsigned ValueSize, uint64_t Size,
-                 MCSection *Sec = nullptr)
-      : MCFragment(FT_Fill, false, 0, Sec), Value(Value), ValueSize(ValueSize),
-        Size(Size) {
-    assert((!ValueSize || (Size % ValueSize) == 0) &&
-           "Fill size must be a multiple of the value size!");
-  }
+  MCFillFragment(uint8_t Value, uint64_t Size, MCSection *Sec = nullptr)
+      : MCFragment(FT_Fill, false, 0, Sec), Value(Value), Size(Size) {}
 
-  /// \name Accessors
-  /// @{
-
-  int64_t getValue() const { return Value; }
-
-  unsigned getValueSize() const { return ValueSize; }
-
+  uint8_t getValue() const { return Value; }
   uint64_t getSize() const { return Size; }
-
-  /// @}
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Fill;

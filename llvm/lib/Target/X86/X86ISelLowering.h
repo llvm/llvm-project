@@ -402,6 +402,7 @@ namespace llvm {
       VPTERNLOG,
       // Fix Up Special Packed Float32/64 values
       VFIXUPIMM,
+      VFIXUPIMMS,
       // Range Restriction Calculation For Packed Pairs of Float32/64 values
       VRANGE,
       // Reduce - Perform Reduction Transformation on scalar\packed FP

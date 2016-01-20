@@ -17,6 +17,7 @@ $ mv COPYING LICENSE.TXT
 
 Modified as follows:
 * Added support for FreeBSD.
+* Added support for Minix (PR6797).
 * To GTestStreamToHelper in include/gtest/internal/gtest-internal.h,
   added the ability to stream with raw_os_ostream.
 * To refresh Haiku support in include/gtest/internal/gtest-port.h,

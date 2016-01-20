@@ -533,6 +533,16 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return TII->isInlineConstant(Imm);
 }
 
+bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
+
+  // SimplifySetCC uses this function to determine whether or not it should
+  // create setcc with i1 operands.  We don't have instructions for i1 setcc.
+  if (VT == MVT::i1 && Op == ISD::SETCC)
+    return false;
+
+  return TargetLowering::isTypeDesirableForOp(Op, VT);
+}
+
 SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                          SDLoc SL, SDValue Chain,
                                          unsigned Offset, bool Signed) const {

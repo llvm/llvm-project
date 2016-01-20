@@ -12,12 +12,26 @@
 
 #include "FuzzerInterface.h"
 #include "FuzzerInternal.h"
+#include <random>
 
 namespace fuzzer {
 
 void FuzzerRandomLibc::ResetSeed(unsigned int seed) { srand(seed); }
 
 size_t FuzzerRandomLibc::Rand() { return rand(); }
+
+struct FuzzerRandom_mt19937::Impl : public std::mt19937 {
+  Impl(unsigned seed) : std::mt19937(seed) {}
+};
+
+void FuzzerRandom_mt19937::ResetSeed(unsigned int seed) {
+  delete R;
+  R = new Impl(seed);
+}
+
+FuzzerRandom_mt19937::~FuzzerRandom_mt19937() { delete R; }
+
+size_t FuzzerRandom_mt19937::Rand() { return (*R)(); }
 
 UserSuppliedFuzzer::UserSuppliedFuzzer(FuzzerRandomBase *Rand)
     : Rand(Rand), MD(new MutationDispatcher(*Rand)) {}

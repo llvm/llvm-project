@@ -412,7 +412,11 @@ namespace llvm {
 
       /*implicit*/ ExitLimit(const SCEV *E) : Exact(E), Max(E) {}
 
-      ExitLimit(const SCEV *E, const SCEV *M) : Exact(E), Max(M) {}
+      ExitLimit(const SCEV *E, const SCEV *M) : Exact(E), Max(M) {
+        assert((isa<SCEVCouldNotCompute>(Exact) ||
+                !isa<SCEVCouldNotCompute>(Max)) &&
+               "Exact is not allowed to be less precise than Max");
+      }
 
       /// Test whether this ExitLimit contains any computed information, or
       /// whether it's all SCEVCouldNotCompute values.

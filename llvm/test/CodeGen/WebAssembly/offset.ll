@@ -266,8 +266,9 @@ define i32 @load_i32_from_global_address() {
 }
 
 ; CHECK-LABEL: store_i32_to_numeric_address:
-; CHECK: i32.const $0=, 0{{$}}
-; CHECK: i32.store $discard=, 42($0), $0{{$}}
+; CHECK-NEXT: i32.const $push0=, 0{{$}}
+; CHECK-NEXT: i32.const $push1=, 0{{$}}
+; CHECK-NEXT: i32.store $discard=, 42($pop0), $pop1{{$}}
 define void @store_i32_to_numeric_address() {
   %s = inttoptr i32 42 to i32*
   store i32 0, i32* %s
@@ -275,8 +276,9 @@ define void @store_i32_to_numeric_address() {
 }
 
 ; CHECK-LABEL: store_i32_to_global_address:
-; CHECK: i32.const $0=, 0{{$}}
-; CHECK: i32.store $discard=, gv($0), $0{{$}}
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.const $push1=, 0{{$}}
+; CHECK: i32.store $discard=, gv($pop0), $pop1{{$}}
 define void @store_i32_to_global_address() {
   store i32 0, i32* @gv
   ret void

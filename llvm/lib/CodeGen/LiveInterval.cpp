@@ -1466,3 +1466,186 @@ void ConnectedVNInfoEqClasses::Distribute(LiveInterval &LI, LiveInterval *LIV[],
   // Distribute main liverange.
   DistributeRange(LI, LIV, EqClass);
 }
+
+void ConnectedSubRegClasses::renameComponents(LiveInterval &LI) const {
+  // Shortcut: We cannot have split components with a single definition.
+  if (LI.valnos.size() < 2)
+    return;
+
+  SmallVector<SubRangeInfo, 4> SubRangeInfos;
+  IntEqClasses Classes;
+  if (!findComponents(Classes, SubRangeInfos, LI))
+    return;
+
+  // Create a new VReg for each class.
+  unsigned Reg = LI.reg;
+  const TargetRegisterClass *RegClass = MRI.getRegClass(Reg);
+  SmallVector<LiveInterval*, 4> Intervals;
+  Intervals.push_back(&LI);
+  for (unsigned I = 1, NumClasses = Classes.getNumClasses(); I < NumClasses;
+       ++I) {
+    unsigned NewVReg = MRI.createVirtualRegister(RegClass);
+    LiveInterval &NewLI = LIS.createEmptyInterval(NewVReg);
+    Intervals.push_back(&NewLI);
+  }
+
+  rewriteOperands(Classes, SubRangeInfos, Intervals);
+  distribute(Classes, SubRangeInfos, Intervals);
+  computeMainRangesFixFlags(Classes, SubRangeInfos, Intervals);
+}
+
+bool ConnectedSubRegClasses::findComponents(IntEqClasses &Classes,
+    SmallVectorImpl<ConnectedSubRegClasses::SubRangeInfo> &SubRangeInfos,
+    LiveInterval &LI) const {
+  // First step: Create connected components for the VNInfos inside the
+  // subranges and count the global number of such components.
+  unsigned NumComponents = 0;
+  for (LiveInterval::SubRange &SR : LI.subranges()) {
+    SubRangeInfos.push_back(SubRangeInfo(LIS, SR, NumComponents));
+    ConnectedVNInfoEqClasses &ConEQ = SubRangeInfos.back().ConEQ;
+
+    unsigned NumSubComponents = ConEQ.Classify(SR);
+    NumComponents += NumSubComponents;
+  }
+  // Shortcut: With only 1 subrange, the normal separate component tests are
+  // enough and we do not need to perform the union-find on the subregister
+  // segments.
+  if (SubRangeInfos.size() < 2)
+    return false;
+
+  // Next step: Build union-find structure over all subranges and merge classes
+  // across subranges when they are affected by the same MachineOperand.
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  Classes.grow(NumComponents);
+  unsigned Reg = LI.reg;
+  for (const MachineOperand &MO : MRI.reg_nodbg_operands(Reg)) {
+    if (!MO.isDef() && !MO.readsReg())
+      continue;
+    unsigned SubRegIdx = MO.getSubReg();
+    LaneBitmask LaneMask = TRI.getSubRegIndexLaneMask(SubRegIdx);
+    unsigned MergedID = ~0u;
+    for (auto &SRInfo : SubRangeInfos) {
+      const LiveInterval::SubRange &SR = *SRInfo.SR;
+      if ((SR.LaneMask & LaneMask) == 0)
+        continue;
+      SlotIndex Pos = LIS.getInstructionIndex(MO.getParent());
+      Pos = MO.isDef() ? Pos.getRegSlot(MO.isEarlyClobber())
+                       : Pos.getBaseIndex();
+      const VNInfo *VNI = SR.getVNInfoAt(Pos);
+      if (VNI == nullptr)
+        continue;
+
+      // Map to local representant ID.
+      unsigned LocalID = SRInfo.ConEQ.getEqClass(VNI);
+      // Global ID
+      unsigned ID = LocalID + SRInfo.Index;
+      // Merge other sets
+      MergedID = MergedID == ~0u ? ID : Classes.join(MergedID, ID);
+    }
+  }
+
+  // Early exit if we ended up with a single equivalence class.
+  Classes.compress();
+  unsigned NumClasses = Classes.getNumClasses();
+  return NumClasses > 1;
+}
+
+void ConnectedSubRegClasses::rewriteOperands(const IntEqClasses &Classes,
+    const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
+    const SmallVectorImpl<LiveInterval*> &Intervals) const {
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  unsigned Reg = Intervals[0]->reg;;
+  for (MachineRegisterInfo::reg_nodbg_iterator I = MRI.reg_nodbg_begin(Reg),
+       E = MRI.reg_nodbg_end(); I != E; ) {
+    MachineOperand &MO = *I++;
+    if (!MO.isDef() && !MO.readsReg())
+      continue;
+
+    MachineInstr &MI = *MO.getParent();
+
+    SlotIndex Pos = LIS.getInstructionIndex(&MI);
+    unsigned SubRegIdx = MO.getSubReg();
+    LaneBitmask LaneMask = TRI.getSubRegIndexLaneMask(SubRegIdx);
+
+    unsigned ID = ~0u;
+    for (auto &SRInfo : SubRangeInfos) {
+      const LiveInterval::SubRange &SR = *SRInfo.SR;
+      if ((SR.LaneMask & LaneMask) == 0)
+        continue;
+      LiveRange::const_iterator I = SR.find(Pos);
+      if (I == SR.end())
+        continue;
+
+      const VNInfo &VNI = *I->valno;
+      // Map to local representant ID.
+      unsigned LocalID = SRInfo.ConEQ.getEqClass(&VNI);
+      // Global ID
+      ID = Classes[LocalID + SRInfo.Index];
+      break;
+    }
+
+    unsigned VReg = Intervals[ID]->reg;
+    MO.setReg(VReg);
+  }
+}
+
+void ConnectedSubRegClasses::distribute(const IntEqClasses &Classes,
+    const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
+    const SmallVectorImpl<LiveInterval*> &Intervals) const {
+  unsigned NumClasses = Classes.getNumClasses();
+  SmallVector<unsigned, 8> VNIMapping;
+  SmallVector<LiveInterval::SubRange*, 8> SubRanges;
+  BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
+  for (auto &SRInfo : SubRangeInfos) {
+    LiveInterval::SubRange &SR = *SRInfo.SR;
+    unsigned NumValNos = SR.valnos.size();
+    VNIMapping.clear();
+    VNIMapping.reserve(NumValNos);
+    SubRanges.clear();
+    SubRanges.resize(NumClasses-1, nullptr);
+    for (unsigned I = 0; I < NumValNos; ++I) {
+      const VNInfo &VNI = *SR.valnos[I];
+      unsigned LocalID = SRInfo.ConEQ.getEqClass(&VNI);
+      unsigned ID = Classes[LocalID + SRInfo.Index];
+      VNIMapping.push_back(ID);
+      if (ID > 0 && SubRanges[ID-1] == nullptr)
+        SubRanges[ID-1] = Intervals[ID]->createSubRange(Allocator, SR.LaneMask);
+    }
+    DistributeRange(SR, SubRanges.data(), VNIMapping);
+  }
+}
+
+void ConnectedSubRegClasses::computeMainRangesFixFlags(
+    const IntEqClasses &Classes,
+    const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
+    const SmallVectorImpl<LiveInterval*> &Intervals) const {
+  BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
+  for (size_t I = 0, E = Intervals.size(); I < E; ++I) {
+    LiveInterval *LI = Intervals[I];
+    LI->removeEmptySubRanges();
+    if (I == 0)
+      LI->clear();
+    LI->constructMainRangeFromSubranges(*LIS.getSlotIndexes(), Allocator);
+
+    for (MachineOperand &MO : MRI.reg_nodbg_operands(LI->reg)) {
+      if (!MO.isDef())
+        continue;
+      unsigned SubRegIdx = MO.getSubReg();
+      if (SubRegIdx == 0)
+        continue;
+      // After assigning the new vreg we may not have any other sublanes living
+      // in and out of the instruction anymore. We need to add new dead and kill
+      // flags in these cases.
+      if (!MO.isUndef()) {
+        SlotIndex Pos = LIS.getInstructionIndex(MO.getParent());
+        if (!LI->liveAt(Pos.getBaseIndex()))
+          MO.setIsUndef();
+      }
+      if (!MO.isDead()) {
+        SlotIndex Pos = LIS.getInstructionIndex(MO.getParent());
+        if (!LI->liveAt(Pos.getDeadSlot()))
+          MO.setIsDead();
+      }
+    }
+  }
+}

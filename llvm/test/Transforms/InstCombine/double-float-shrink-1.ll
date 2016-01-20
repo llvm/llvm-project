@@ -366,30 +366,28 @@ define float @max1(float %a, float %b) {
 
 declare double @fmax(double, double)
 
-declare double @tanh(double) #1
-declare double @tan(double) #1
+declare double @tanh(double)
+declare double @tan(double)
 
 ; sqrt is a special case: the shrinking optimization 
 ; is valid even without unsafe-fp-math.
 declare double @sqrt(double) 
 declare double @llvm.sqrt.f64(double) 
 
-declare double @sin(double) #1
-declare double @log2(double) #1
-declare double @log1p(double) #1
-declare double @log10(double) #1
-declare double @log(double) #1
-declare double @logb(double) #1
-declare double @exp10(double) #1
-declare double @expm1(double) #1
-declare double @exp(double) #1
-declare double @cbrt(double) #1
-declare double @atanh(double) #1
-declare double @atan(double) #1
-declare double @acos(double) #1
-declare double @acosh(double) #1
-declare double @asin(double) #1
-declare double @asinh(double) #1
-
-attributes #1 = { "unsafe-fp-math"="true" }
+declare double @sin(double)
+declare double @log2(double)
+declare double @log1p(double)
+declare double @log10(double)
+declare double @log(double)
+declare double @logb(double)
+declare double @exp10(double)
+declare double @expm1(double)
+declare double @exp(double)
+declare double @cbrt(double)
+declare double @atanh(double)
+declare double @atan(double)
+declare double @acos(double)
+declare double @acosh(double)
+declare double @asin(double)
+declare double @asinh(double)
 

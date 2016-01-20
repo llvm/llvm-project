@@ -751,3 +751,31 @@ loopnz _foo
 
 sidt fword ptr [eax]
 // CHECK: sidtq (%eax)
+
+ins byte ptr [eax], dx
+// CHECK: insb %dx, %es:(%edi)
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+outs dx, word ptr [eax]
+// CHECK: outsw (%esi), %dx
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)SI will be used for the location
+lods dword ptr [eax]
+// CHECK: lodsl (%esi), %eax
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)SI will be used for the location
+stos qword ptr [eax]
+// CHECK: stosq %rax, %es:(%edi)
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+scas byte ptr [eax]
+// CHECK: scasb %es:(%edi), %al
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+cmps word ptr [eax], word ptr [ebx]
+// CHECK: cmpsw %es:(%edi), (%esi)
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)SI will be used for the location
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+movs dword ptr [eax], dword ptr [ebx]
+// CHECK: movsl (%esi), %es:(%edi)
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)SI will be used for the location
+
+xlat byte ptr [eax]
+// CHECK: xlatb
+// CHECK-STDERR: memory operand is only for determining the size, (R|E)BX will be used for the location

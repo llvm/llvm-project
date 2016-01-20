@@ -217,6 +217,12 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Cache of constants visited in search of ConstantExprs.
   SmallPtrSet<const Constant *, 32> ConstantExprVisited;
 
+  // Verify that this GlobalValue is only used in this module.
+  // This map is used to avoid visiting uses twice. We can arrive at a user
+  // twice, if they have multiple operands. In particular for very large
+  // constant expressions, we can arrive at a particular user many times.
+  SmallPtrSet<const Value *, 32> GlobalValueVisited;
+
   void checkAtomicMemAccessSize(const Module *M, Type *Ty,
                                 const Instruction *I);
 public:
@@ -494,12 +500,7 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
   if (GV.isDeclarationForLinker())
     Assert(!GV.hasComdat(), "Declaration may not be in a Comdat!", &GV);
 
-  // Verify that this GlobalValue is only used in this module.
-  // This map is used to avoid visiting uses twice. We can arrive at a user
-  // twice, if they have multiple operands. In particular for very large
-  // constant expressions, we can arrive at a particular user many times.
-  SmallPtrSet<const Value *, 32> Visited;
-  forEachUser(&GV, Visited, [&](const Value *V) -> bool {
+  forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const Instruction *I = dyn_cast<Instruction>(V)) {
       if (!I->getParent() || !I->getParent()->getParent())
         CheckFailed("Global is referenced by parentless instruction!", &GV,

@@ -258,7 +258,7 @@ void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         ByteAlignment, Section);
 
   MCFillFragment *Fragment = new MCFillFragment(
-      /*Value=*/0, /*ValueSize=*/0, Size, Section);
+      /*Value=*/0, Size, Section);
   Symbol->setFragment(Fragment);
 }
 

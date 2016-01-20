@@ -47,10 +47,6 @@ namespace llvm {
                                           Constant *V2);
   Constant *ConstantFoldCompareInstruction(unsigned short predicate, 
                                            Constant *C1, Constant *C2);
-  Constant *ConstantFoldGetElementPtr(Constant *C, bool inBounds,
-                                      ArrayRef<Constant *> Idxs);
-  Constant *ConstantFoldGetElementPtr(Constant *C, bool inBounds,
-                                      ArrayRef<Value *> Idxs);
   Constant *ConstantFoldGetElementPtr(Type *Ty, Constant *C, bool inBounds,
                                       ArrayRef<Constant *> Idxs);
   Constant *ConstantFoldGetElementPtr(Type *Ty, Constant *C, bool inBounds,

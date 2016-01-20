@@ -186,7 +186,7 @@ void AArch64FrameLowering::eliminateCallFramePseudoInstr(
       // 2) For 12-bit <= offset <= 24-bit, we use two instructions. One uses
       // LSL #0, and the other uses LSL #12.
       //
-      // Mostly call frames will be allocated at the start of a function so
+      // Most call frames will be allocated at the start of a function so
       // this is OK, but it is a limitation that needs dealing with.
       assert(Amount > -0xffffff && Amount < 0xffffff && "call frame too large");
       emitFrameOffset(MBB, I, DL, AArch64::SP, AArch64::SP, Amount, TII);

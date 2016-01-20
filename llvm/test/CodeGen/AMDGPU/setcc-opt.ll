@@ -68,6 +68,34 @@ define void @sext_bool_icmp_ne_1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind
   ret void
 }
 
+; FUNC-LABEL: {{^}}sext_bool_icmp_eq_neg1:
+; GCN-NOT: v_cmp
+; GCN: v_cmp_eq_i32_e32 vcc,
+; GCN-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN-NEXT: buffer_store_byte [[RESULT]]
+; GCN-NEXT: s_endpgm
+define void @sext_bool_icmp_eq_neg1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+  %icmp0 = icmp eq i32 %a, %b
+  %ext = sext i1 %icmp0 to i32
+  %icmp1 = icmp eq i32 %ext, -1
+  store i1 %icmp1, i1 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}sext_bool_icmp_ne_neg1:
+; GCN-NOT: v_cmp
+; GCN: v_cmp_eq_i32_e32 vcc,
+; GCN-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN-NEXT: buffer_store_byte [[RESULT]]
+; GCN-NEXT: s_endpgm
+define void @sext_bool_icmp_ne_neg1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+  %icmp0 = icmp ne i32 %a, %b
+  %ext = sext i1 %icmp0 to i32
+  %icmp1 = icmp ne i32 %ext, -1
+  store i1 %icmp1, i1 addrspace(1)* %out
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}zext_bool_icmp_eq_0:
 ; GCN-NOT: v_cmp
 ; GCN: v_cmp_ne_i32_e32 vcc,
@@ -119,6 +147,32 @@ define void @zext_bool_icmp_ne_1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind
   %icmp0 = icmp ne i32 %a, %b
   %ext = zext i1 %icmp0 to i32
   %icmp1 = icmp ne i32 %ext, 1
+  store i1 %icmp1, i1 addrspace(1)* %out
+  ret void
+}
+
+; Reduces to false:
+; FUNC-LABEL: {{^}}zext_bool_icmp_eq_neg1:
+; GCN: v_mov_b32_e32 [[TMP:v[0-9]+]], 0{{$}}
+; GCN: buffer_store_byte [[TMP]]
+; GCN-NEXT: s_endpgm
+define void @zext_bool_icmp_eq_neg1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+  %icmp0 = icmp eq i32 %a, %b
+  %ext = zext i1 %icmp0 to i32
+  %icmp1 = icmp eq i32 %ext, -1
+  store i1 %icmp1, i1 addrspace(1)* %out
+  ret void
+}
+
+; Reduces to true:
+; FUNC-LABEL: {{^}}zext_bool_icmp_ne_neg1:
+; GCN: v_mov_b32_e32 [[TMP:v[0-9]+]], 1{{$}}
+; GCN: buffer_store_byte [[TMP]]
+; GCN-NEXT: s_endpgm
+define void @zext_bool_icmp_ne_neg1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+  %icmp0 = icmp ne i32 %a, %b
+  %ext = zext i1 %icmp0 to i32
+  %icmp1 = icmp ne i32 %ext, -1
   store i1 %icmp1, i1 addrspace(1)* %out
   ret void
 }

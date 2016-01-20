@@ -32,6 +32,21 @@ WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
                               WebAssembly::ADJCALLSTACKUP),
       RI(STI.getTargetTriple()) {}
 
+bool WebAssemblyInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr *MI, AliasAnalysis *AA) const {
+  switch (MI->getOpcode()) {
+  case WebAssembly::CONST_I32:
+  case WebAssembly::CONST_I64:
+  case WebAssembly::CONST_F32:
+  case WebAssembly::CONST_F64:
+    // isReallyTriviallyReMaterializableGeneric misses these because of the
+    // ARGUMENTS implicit def, so we manualy override it here.
+    return true;
+  default:
+    return false;
+  }
+}
+
 void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        DebugLoc DL, unsigned DestReg,
@@ -39,9 +54,10 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // This method is called by post-RA expansion, which expects only pregs to
   // exist. However we need to handle both here.
   auto &MRI = MBB.getParent()->getRegInfo();
-  const TargetRegisterClass *RC = TargetRegisterInfo::isVirtualRegister(DestReg) ?
-      MRI.getRegClass(DestReg) :
-      MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(SrcReg);
+  const TargetRegisterClass *RC =
+      TargetRegisterInfo::isVirtualRegister(DestReg)
+          ? MRI.getRegClass(DestReg)
+          : MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(SrcReg);
 
   unsigned CopyLocalOpcode;
   if (RC == &WebAssembly::I32RegClass)
@@ -145,9 +161,7 @@ unsigned WebAssemblyInstrInfo::InsertBranch(MachineBasicBlock &MBB,
   assert(Cond.size() == 2 && "Expected a flag and a successor block");
 
   if (Cond[0].getImm()) {
-    BuildMI(&MBB, DL, get(WebAssembly::BR_IF))
-        .addOperand(Cond[1])
-        .addMBB(TBB);
+    BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addOperand(Cond[1]).addMBB(TBB);
   } else {
     BuildMI(&MBB, DL, get(WebAssembly::BR_UNLESS))
         .addOperand(Cond[1])
