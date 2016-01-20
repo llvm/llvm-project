@@ -899,7 +899,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       collectVRegUses(SU);
 
       RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI);
+      RegOpers.collect(*MI, *TRI, MRI, TrackLaneMasks, false);
       if (PDiffs != nullptr)
         PDiffs->addInstruction(SU->NodeNum, RegOpers, MRI);
 

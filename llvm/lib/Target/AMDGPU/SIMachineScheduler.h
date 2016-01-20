@@ -441,7 +441,7 @@ public:
 
   // To init Block's RPTracker.
   void initRPTracker(RegPressureTracker &RPTracker) {
-    RPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin);
+    RPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin, false, false);
   }
 
   MachineBasicBlock *getBB() { return BB; }
@@ -460,8 +460,10 @@ public:
                                                      unsigned &VgprUsage,
                                                      unsigned &SgprUsage);
   std::set<unsigned> getInRegs() {
-    std::set<unsigned> InRegs (RPTracker.getPressure().LiveInRegs.begin(),
-                               RPTracker.getPressure().LiveInRegs.end());
+    std::set<unsigned> InRegs;
+    for (const auto &RegMaskPair : RPTracker.getPressure().LiveInRegs) {
+      InRegs.insert(RegMaskPair.RegUnit);
+    }
     return InRegs;
   };
 
