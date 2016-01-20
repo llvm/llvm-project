@@ -2561,7 +2561,7 @@ std::error_code BitcodeReader::parseConstants() {
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
       if (NextCstNo != ValueList.size())
-        return error("Invalid ronstant reference");
+        return error("Invalid constant reference");
 
       // Once all the constants have been read, go through and resolve forward
       // references.
