@@ -352,6 +352,19 @@ static void addRegLanes(SmallVectorImpl<RegisterMaskPair> &RegUnits,
   }
 }
 
+static void setRegZero(SmallVectorImpl<RegisterMaskPair> &RegUnits,
+                       unsigned RegUnit) {
+  auto I = std::find_if(RegUnits.begin(), RegUnits.end(),
+                        [RegUnit](const RegisterMaskPair Other) {
+                          return Other.RegUnit == RegUnit;
+                        });
+  if (I == RegUnits.end()) {
+    RegUnits.push_back(RegisterMaskPair(RegUnit, 0));
+  } else {
+    I->LaneMask = 0;
+  }
+}
+
 static void removeRegLanes(SmallVectorImpl<RegisterMaskPair> &RegUnits,
                            RegisterMaskPair Pair) {
   unsigned RegUnit = Pair.RegUnit;
@@ -510,7 +523,8 @@ void RegisterOperands::detectDeadDefs(const MachineInstr &MI,
 
 void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
                                           const MachineRegisterInfo &MRI,
-                                          SlotIndex Pos) {
+                                          SlotIndex Pos,
+                                          MachineInstr *AddFlagsMI) {
   for (auto I = Defs.begin(); I != Defs.end(); ) {
     LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, I->RegUnit,
                                            Pos.getDeadSlot());
@@ -519,10 +533,20 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
     if (DeadDef != 0)
       addRegLanes(DeadDefs, RegisterMaskPair(I->RegUnit, DeadDef));
 #endif
+    // If the the def is all that is live after the instruction, then in case
+    // of a subregister def we need a read-undef flag.
+    unsigned RegUnit = I->RegUnit;
+    if (TargetRegisterInfo::isVirtualRegister(RegUnit) &&
+        AddFlagsMI != nullptr && (LiveAfter & ~I->LaneMask) == 0)
+      AddFlagsMI->setRegisterDefReadUndef(RegUnit);
+
     unsigned LaneMask = I->LaneMask & LiveAfter;
-    if (LaneMask == 0)
+    if (LaneMask == 0) {
       I = Defs.erase(I);
-    else {
+      // Make sure the operand is properly marked as Dead.
+      if (AddFlagsMI != nullptr)
+        AddFlagsMI->addRegisterDead(RegUnit, MRI.getTargetRegisterInfo());
+    } else {
       I->LaneMask = LaneMask;
       ++I;
     }
@@ -536,6 +560,15 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
     } else {
       I->LaneMask = LaneMask;
       ++I;
+    }
+  }
+  if (AddFlagsMI != nullptr) {
+    for (const RegisterMaskPair &P : DeadDefs) {
+      unsigned RegUnit = P.RegUnit;
+      LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, RegUnit,
+                                             Pos.getDeadSlot());
+      if (LiveAfter == 0)
+        AddFlagsMI->setRegisterDefReadUndef(RegUnit);
     }
   }
 }
@@ -684,6 +717,13 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
       PreviousMask = LiveOut;
     }
 
+    if (NewMask == 0) {
+      // Add a 0 entry to LiveUses as a marker that the complete vreg has become
+      // dead.
+      if (TrackLaneMasks && LiveUses != nullptr)
+        setRegZero(*LiveUses, Reg);
+    }
+
     decreaseRegPressure(Reg, PreviousMask, NewMask);
   }
 
@@ -703,8 +743,22 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
     // Did the register just become live?
     if (PreviousMask == 0) {
       if (LiveUses != nullptr) {
-        unsigned NewLanes = NewMask & ~PreviousMask;
-        addRegLanes(*LiveUses, RegisterMaskPair(Reg, NewLanes));
+        if (!TrackLaneMasks) {
+          addRegLanes(*LiveUses, RegisterMaskPair(Reg, NewMask));
+        } else {
+          auto I = std::find_if(LiveUses->begin(), LiveUses->end(),
+                                [Reg](const RegisterMaskPair Other) {
+                                return Other.RegUnit == Reg;
+                                });
+          bool IsRedef = I != LiveUses->end();
+          if (IsRedef) {
+            // ignore re-defs here...
+            assert(I->LaneMask == 0);
+            removeRegLanes(*LiveUses, RegisterMaskPair(Reg, NewMask));
+          } else {
+            addRegLanes(*LiveUses, RegisterMaskPair(Reg, NewMask));
+          }
+        }
       }
 
       // Discover live outs if this may be the first occurance of this register.
@@ -764,9 +818,8 @@ void RegPressureTracker::recede(SmallVectorImpl<RegisterMaskPair> *LiveUses) {
 }
 
 /// Advance across the current instruction.
-void RegPressureTracker::advance() {
+void RegPressureTracker::advance(const RegisterOperands &RegOpers) {
   assert(!TrackUntiedDefs && "unsupported mode");
-
   assert(CurrPos != MBB->end());
   if (!isTopClosed())
     closeTop();
@@ -782,11 +835,6 @@ void RegPressureTracker::advance() {
     else
       static_cast<RegionPressure&>(P).openBottom(CurrPos);
   }
-
-  RegisterOperands RegOpers;
-  RegOpers.collect(*CurrPos, *TRI, *MRI, TrackLaneMasks, false);
-  if (TrackLaneMasks)
-    RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
 
   for (const RegisterMaskPair &Use : RegOpers.Uses) {
     unsigned Reg = Use.RegUnit;
@@ -819,6 +867,17 @@ void RegPressureTracker::advance() {
   do
     ++CurrPos;
   while (CurrPos != MBB->end() && CurrPos->isDebugValue());
+}
+
+void RegPressureTracker::advance() {
+  const MachineInstr &MI = *CurrPos;
+  RegisterOperands RegOpers;
+  RegOpers.collect(MI, *TRI, *MRI, TrackLaneMasks, false);
+  if (TrackLaneMasks) {
+    SlotIndex SlotIdx = getCurrSlot();
+    RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
+  }
+  advance(RegOpers);
 }
 
 /// Find the max change in excess pressure across all sets.
