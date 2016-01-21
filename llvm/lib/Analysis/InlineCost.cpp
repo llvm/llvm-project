@@ -533,8 +533,7 @@ bool CallAnalyzer::visitUnaryInstruction(UnaryInstruction &I) {
     COp = SimplifiedValues.lookup(Operand);
   if (COp) {
     const DataLayout &DL = F.getParent()->getDataLayout();
-    if (Constant *C = ConstantFoldInstOperands(I.getOpcode(), I.getType(),
-                                               COp, DL)) {
+    if (Constant *C = ConstantFoldInstOperands(&I, COp, DL)) {
       SimplifiedValues[&I] = C;
       return true;
     }

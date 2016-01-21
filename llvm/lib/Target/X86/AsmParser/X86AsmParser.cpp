@@ -1007,7 +1007,7 @@ std::unique_ptr<X86Operand> X86AsmParser::DefaultMemDIOperand(SMLoc Loc) {
 bool X86AsmParser::IsSIReg(unsigned Reg) {
   switch (Reg) {
   default:
-    assert("Only (R|E)SI and (R|E)DI are expected!");
+    llvm_unreachable("Only (R|E)SI and (R|E)DI are expected!");
     return false;
   case X86::RSI:
   case X86::ESI:
@@ -1024,7 +1024,7 @@ unsigned X86AsmParser::GetSIDIForRegClass(unsigned RegClassID, unsigned Reg,
                                           bool IsSIReg) {
   switch (RegClassID) {
   default:
-    assert("Unexpected register class");
+    llvm_unreachable("Unexpected register class");
     return Reg;
   case X86::GR64RegClassID:
     return IsSIReg ? X86::RSI : X86::RDI;
@@ -1090,6 +1090,10 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
           RegClassID = X86::GR32RegClassID;
         else if (X86MCRegisterClasses[X86::GR16RegClassID].contains(OrigReg))
           RegClassID = X86::GR16RegClassID;
+        else
+          // Unexpexted register class type
+          // Return false and let a normal complaint about bogus operands happen
+          return false;
 
         bool IsSI = IsSIReg(FinalReg);
         FinalReg = GetSIDIForRegClass(RegClassID, FinalReg, IsSI);

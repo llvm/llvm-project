@@ -251,7 +251,9 @@ we get:
 
 Note that in this example %p and %obj.relocate are the same address and we
 could replace one with the other, potentially removing the derived pointer
-from the live set at the safepoint entirely.  
+from the live set at the safepoint entirely.
+
+.. _gc_transition_args:
 
 GC Transitions
 ^^^^^^^^^^^^^^^^^^

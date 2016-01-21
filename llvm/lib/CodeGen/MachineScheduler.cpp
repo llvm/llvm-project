@@ -219,6 +219,11 @@ static cl::opt<bool> EnableMachineSched(
     cl::desc("Enable the machine instruction scheduling pass."), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool> EnablePostRAMachineSched(
+    "enable-post-misched",
+    cl::desc("Enable the post-ra machine instruction scheduling pass."),
+    cl::init(true), cl::Hidden);
+
 /// Forward declare the standard machine scheduler. This will be used as the
 /// default scheduler if the target does not set a default.
 static ScheduleDAGInstrs *createGenericSchedLive(MachineSchedContext *C);
@@ -314,6 +319,9 @@ ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
 /// design would be to split blocks at scheduling boundaries, but LLVM has a
 /// general bias against block splitting purely for implementation simplicity.
 bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
+  if (skipOptnoneFunction(*mf.getFunction()))
+    return false;
+
   if (EnableMachineSched.getNumOccurrences()) {
     if (!EnableMachineSched)
       return false;
@@ -352,7 +360,10 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   if (skipOptnoneFunction(*mf.getFunction()))
     return false;
 
-  if (!mf.getSubtarget().enablePostRAScheduler()) {
+  if (EnablePostRAMachineSched.getNumOccurrences()) {
+    if (!EnablePostRAMachineSched)
+      return false;
+  } else if (!mf.getSubtarget().enablePostRAScheduler()) {
     DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
     return false;
   }

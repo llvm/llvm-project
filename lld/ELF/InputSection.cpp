@@ -189,12 +189,18 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uintX_t A = getAddend<ELFT>(RI);
     if (!Body) {
       uintX_t SymVA = getLocalRelTarget(*File, RI, A);
-      // We need to adjust SymVA value in case of R_MIPS_GPREL16/32 relocations
-      // because they use the following expression to calculate the relocation's
-      // result for local symbol: S + A + GP0 - G.
-      if (Config->EMachine == EM_MIPS &&
-          (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
-        SymVA += File->getMipsGp0();
+      if (Config->EMachine == EM_MIPS) {
+        if (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32)
+          // We need to adjust SymVA value in case of R_MIPS_GPREL16/32
+          // relocations because they use the following expression to calculate
+          // the relocation's result for local symbol: S + A + GP0 - G.
+          SymVA += File->getMipsGp0();
+        else if (Type == R_MIPS_GOT16)
+          // R_MIPS_GOT16 relocation against local symbol requires index of
+          // a local GOT entry which contains page address corresponds
+          // to the symbol address.
+          SymVA = Out<ELFT>::Got->getMipsLocalPageAddr(SymVA);
+      }
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA, 0,
                           findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
       continue;
@@ -212,7 +218,13 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     if (Target->relocNeedsPlt(Type, *Body)) {
       SymVA = Out<ELFT>::Plt->getEntryAddr(*Body);
     } else if (Target->relocNeedsGot(Type, *Body)) {
-      SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
+      if (Config->EMachine == EM_MIPS && needsMipsLocalGot(Type, Body))
+        // Under some conditions relocations against non-local symbols require
+        // entries in the local part of MIPS GOT. In that case we need an entry
+        // initialized by full address of the symbol.
+        SymVA = Out<ELFT>::Got->getMipsLocalFullAddr(*Body);
+      else
+        SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
       if (Body->isTls())
         Type = Target->getTlsGotReloc(Type);
     } else if (!Target->needsCopyRel(Type, *Body) &&

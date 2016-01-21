@@ -913,6 +913,10 @@ def FAULTING_LOAD_OP : Instruction {
   let usesCustomInserter = 1;
   let mayLoad = 1;
 }
+
+// Generic opcodes used in GlobalISel.
+include "llvm/Target/GenericOpcodes.td"
+
 }
 
 //===----------------------------------------------------------------------===//

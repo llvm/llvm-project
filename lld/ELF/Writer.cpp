@@ -258,8 +258,13 @@ void Writer<ELFT>::scanRelocs(
     }
 
     bool NeedsGot = false;
+    bool NeedsMipsLocalGot = false;
     bool NeedsPlt = false;
-    if (Body) {
+    if (Config->EMachine == EM_MIPS && needsMipsLocalGot(Type, Body)) {
+      NeedsMipsLocalGot = true;
+      // FIXME (simon): Do not add so many redundant entries.
+      Out<ELFT>::Got->addMipsLocalEntry();
+    } else if (Body) {
       if (auto *E = dyn_cast<SharedSymbol<ELFT>>(Body)) {
         if (E->NeedsCopy)
           continue;
@@ -294,13 +299,23 @@ void Writer<ELFT>::scanRelocs(
     }
 
     if (Config->EMachine == EM_MIPS) {
-      if (NeedsGot) {
+      if (Type == R_MIPS_LO16)
+        // Ignore R_MIPS_LO16 relocation. If it is a pair for R_MIPS_GOT16 we
+        // already completed all required action (GOT entry allocation) when
+        // handle R_MIPS_GOT16a. If it is a pair for R_MIPS_HI16 against
+        // _gp_disp it does not require dynamic relocation. If its a pair for
+        // R_MIPS_HI16 against a regular symbol it does not require dynamic
+        // relocation too because that case is possible for executable file
+        // linking only.
+        continue;
+      if (NeedsGot || NeedsMipsLocalGot) {
         // MIPS ABI has special rules to process GOT entries
         // and doesn't require relocation entries for them.
         // See "Global Offset Table" in Chapter 5 in the following document
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-        Body->setUsedInDynamicReloc();
+        if (NeedsGot)
+          Body->setUsedInDynamicReloc();
         continue;
       }
       if (Body == Config->MipsGpDisp)
@@ -363,6 +378,8 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
 // Local symbols are not in the linker's symbol table. This function scans
 // each object file's symbol table to copy local symbols to the output.
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
+  if (!Out<ELFT>::SymTab)
+    return;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
     for (const Elf_Sym &Sym : F->getLocalSymbols()) {
       ErrorOr<StringRef> SymNameOrErr = Sym.getName(F->getStringTable());
@@ -370,8 +387,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       StringRef SymName = *SymNameOrErr;
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
-      if (Out<ELFT>::SymTab)
-        Out<ELFT>::SymTab->addLocalSymbol(SymName);
+      Out<ELFT>::SymTab->addLocalSymbol(SymName);
     }
   }
 }

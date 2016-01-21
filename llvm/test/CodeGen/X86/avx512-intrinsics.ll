@@ -7176,3 +7176,35 @@ define <2 x double>@test_int_x86_avx512_maskz_fixupimm_sd(<2 x double> %x0, <2 x
   ret <2 x double> %res4
 }
 
+declare void @llvm.x86.avx512.storent.q.512(i8*, <8 x i64>)
+
+define void@test_storent_q_512(<8 x i64> %data, i8* %ptr) {
+; CHECK-LABEL: test_storent_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vmovntdq %zmm0, (%rdi)
+; CHECK-NEXT:    retq
+  call void @llvm.x86.avx512.storent.q.512(i8* %ptr, <8 x i64> %data)
+  ret void
+}
+
+declare void @llvm.x86.avx512.storent.pd.512(i8*, <8 x double>)
+
+define void @test_storent_pd_512(<8 x double> %data, i8* %ptr) {
+; CHECK-LABEL: test_storent_pd_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vmovntpd %zmm0, (%rdi)
+; CHECK-NEXT:    retq
+  call void @llvm.x86.avx512.storent.pd.512(i8* %ptr, <8 x double> %data)
+  ret void
+}
+
+declare void @llvm.x86.avx512.storent.ps.512(i8*, <16 x float>)
+
+define void @test_storent_ps_512(<16 x float> %data, i8* %ptr) {
+; CHECK-LABEL: test_storent_ps_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vmovntps %zmm0, (%rdi)
+; CHECK-NEXT:    retq
+  call void @llvm.x86.avx512.storent.ps.512(i8* %ptr, <16 x float> %data)
+  ret void
+}

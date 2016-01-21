@@ -29,8 +29,8 @@ using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
 
-/// getPromotedType - Return the specified type promoted as it would be to pass
-/// though a va_arg area.
+/// Return the specified type promoted as it would be to pass though a va_arg
+/// area.
 static Type *getPromotedType(Type *Ty) {
   if (IntegerType* ITy = dyn_cast<IntegerType>(Ty)) {
     if (ITy->getBitWidth() < 32)
@@ -39,8 +39,8 @@ static Type *getPromotedType(Type *Ty) {
   return Ty;
 }
 
-/// reduceToSingleValueType - Given an aggregate type which ultimately holds a
-/// single scalar element, like {{{type}}} or [1 x type], return type.
+/// Given an aggregate type which ultimately holds a single scalar element,
+/// like {{{type}}} or [1 x type], return type.
 static Type *reduceToSingleValueType(Type *T) {
   while (!T->isSingleValueType()) {
     if (StructType *STy = dyn_cast<StructType>(T)) {
@@ -673,10 +673,9 @@ static Value *SimplifyX86vpcom(const IntrinsicInst &II,
   return nullptr;
 }
 
-/// visitCallInst - CallInst simplification.  This mostly only handles folding
-/// of intrinsic instructions.  For normal calls, it allows visitCallSite to do
-/// the heavy lifting.
-///
+/// CallInst simplification. This mostly only handles folding of intrinsic
+/// instructions. For normal calls, it allows visitCallSite to do the heavy
+/// lifting.
 Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   auto Args = CI.arg_operands();
   if (Value *V = SimplifyCall(CI.getCalledValue(), Args.begin(), Args.end(), DL,
@@ -754,8 +753,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (Changed) return II;
   }
 
-  auto SimplifyDemandedVectorEltsLow = [this](Value *Op, unsigned Width, unsigned DemandedWidth)
-  {
+  auto SimplifyDemandedVectorEltsLow = [this](Value *Op, unsigned Width,
+                                              unsigned DemandedWidth) {
     APInt UndefElts(Width, 0);
     APInt DemandedElts = APInt::getLowBitsSet(Width, DemandedWidth);
     return SimplifyDemandedVectorElts(Op, DemandedElts, UndefElts);
@@ -1800,8 +1799,8 @@ Instruction *InstCombiner::visitInvokeInst(InvokeInst &II) {
   return visitCallSite(&II);
 }
 
-/// isSafeToEliminateVarargsCast - If this cast does not affect the value
-/// passed through the varargs area, we can eliminate the use of the cast.
+/// If this cast does not affect the value passed through the varargs area, we
+/// can eliminate the use of the cast.
 static bool isSafeToEliminateVarargsCast(const CallSite CS,
                                          const DataLayout &DL,
                                          const CastInst *const CI,
@@ -1925,8 +1924,7 @@ static IntrinsicInst *FindInitTrampoline(Value *Callee) {
   return nullptr;
 }
 
-// visitCallSite - Improvements for call and invoke instructions.
-//
+/// Improvements for call and invoke instructions.
 Instruction *InstCombiner::visitCallSite(CallSite CS) {
 
   if (isAllocLikeFn(CS.getInstruction(), TLI))
@@ -2050,9 +2048,8 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
   return Changed ? CS.getInstruction() : nullptr;
 }
 
-// transformConstExprCastCall - If the callee is a constexpr cast of a function,
-// attempt to move the cast to the arguments of the call/invoke.
-//
+/// If the callee is a constexpr cast of a function, attempt to move the cast to
+/// the arguments of the call/invoke.
 bool InstCombiner::transformConstExprCastCall(CallSite CS) {
   Function *Callee =
     dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
@@ -2326,10 +2323,8 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
   return true;
 }
 
-// transformCallThroughTrampoline - Turn a call to a function created by
-// init_trampoline / adjust_trampoline intrinsic pair into a direct call to the
-// underlying function.
-//
+/// Turn a call to a function created by init_trampoline / adjust_trampoline
+/// intrinsic pair into a direct call to the underlying function.
 Instruction *
 InstCombiner::transformCallThroughTrampoline(CallSite CS,
                                              IntrinsicInst *Tramp) {

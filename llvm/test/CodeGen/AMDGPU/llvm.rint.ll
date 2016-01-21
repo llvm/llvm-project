@@ -43,18 +43,6 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}legacy_amdil_round_nearest_f32:
-; R600: RNDNE
-
-; SI: v_rndne_f32_e32
-define void @legacy_amdil_round_nearest_f32(float addrspace(1)* %out, float %in) {
-entry:
-  %0 = call float @llvm.AMDIL.round.nearest.f32(float %in) #0
-  store float %0, float addrspace(1)* %out
-  ret void
-}
-
-declare float @llvm.AMDIL.round.nearest.f32(float) #0
 declare float @llvm.rint.f32(float) #0
 declare <2 x float> @llvm.rint.v2f32(<2 x float>) #0
 declare <4 x float> @llvm.rint.v4f32(<4 x float>) #0

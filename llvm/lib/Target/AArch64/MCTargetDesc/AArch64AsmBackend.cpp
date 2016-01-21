@@ -28,9 +28,12 @@ namespace {
 class AArch64AsmBackend : public MCAsmBackend {
   static const unsigned PCRelFlagVal =
       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits | MCFixupKindInfo::FKF_IsPCRel;
+public:
+  bool IsLittleEndian;
 
 public:
-  AArch64AsmBackend(const Target &T) : MCAsmBackend() {}
+  AArch64AsmBackend(const Target &T, bool IsLittleEndian)
+     : MCAsmBackend(), IsLittleEndian(IsLittleEndian) {}
 
   unsigned getNumFixupKinds() const override {
     return AArch64::NumTargetFixupKinds;
@@ -80,6 +83,8 @@ public:
   void HandleAssemblerFlag(MCAssemblerFlag Flag) {}
 
   unsigned getPointerSize() const { return 8; }
+
+  unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 };
 
 } // end anonymous namespace
@@ -201,6 +206,45 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   }
 }
 
+/// getFixupKindContainereSizeInBytes - The number of bytes of the
+/// container involved in big endian or 0 if the item is little endian
+unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) const {
+  if (IsLittleEndian)
+    return 0;
+
+  switch (Kind) {
+  default:
+    llvm_unreachable("Unknown fixup kind!");
+
+  case FK_Data_1:
+    return 1;
+  case FK_Data_2:
+    return 2;
+  case FK_Data_4:
+    return 4;
+  case FK_Data_8:
+    return 8;
+
+  case AArch64::fixup_aarch64_tlsdesc_call:
+  case AArch64::fixup_aarch64_movw:
+  case AArch64::fixup_aarch64_pcrel_branch14:
+  case AArch64::fixup_aarch64_add_imm12:
+  case AArch64::fixup_aarch64_ldst_imm12_scale1:
+  case AArch64::fixup_aarch64_ldst_imm12_scale2:
+  case AArch64::fixup_aarch64_ldst_imm12_scale4:
+  case AArch64::fixup_aarch64_ldst_imm12_scale8:
+  case AArch64::fixup_aarch64_ldst_imm12_scale16:
+  case AArch64::fixup_aarch64_ldr_pcrel_imm19:
+  case AArch64::fixup_aarch64_pcrel_branch19:
+  case AArch64::fixup_aarch64_pcrel_adr_imm21:
+  case AArch64::fixup_aarch64_pcrel_adrp_imm21:
+  case AArch64::fixup_aarch64_pcrel_branch26:
+  case AArch64::fixup_aarch64_pcrel_call26:
+    // Instructions are always little endian
+    return 0;
+  }
+}
+
 void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                    unsigned DataSize, uint64_t Value,
                                    bool IsPCRel) const {
@@ -217,10 +261,25 @@ void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
   unsigned Offset = Fixup.getOffset();
   assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
 
+  // Used to point to big endian bytes.
+  unsigned FulleSizeInBytes = getFixupKindContainereSizeInBytes(Fixup.getKind());
+
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
-  for (unsigned i = 0; i != NumBytes; ++i)
-    Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+  if (FulleSizeInBytes == 0) {
+    // Handle as little-endian
+    for (unsigned i = 0; i != NumBytes; ++i) {
+      Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+    }
+  } else {
+    // Handle as big-endian
+    assert((Offset + FulleSizeInBytes) <= DataSize && "Invalid fixup size!");
+    assert(NumBytes <= FulleSizeInBytes && "Invalid fixup size!");
+    for (unsigned i = 0; i != NumBytes; ++i) {
+      unsigned Idx = FulleSizeInBytes - 1 - i;
+      Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+    }
+  }
 }
 
 bool AArch64AsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
@@ -308,7 +367,7 @@ class DarwinAArch64AsmBackend : public AArch64AsmBackend {
 
 public:
   DarwinAArch64AsmBackend(const Target &T, const MCRegisterInfo &MRI)
-      : AArch64AsmBackend(T), MRI(MRI) {}
+      : AArch64AsmBackend(T, /*IsLittleEndian*/true), MRI(MRI) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
     return createAArch64MachObjectWriter(OS, MachO::CPU_TYPE_ARM64,
@@ -453,10 +512,9 @@ namespace {
 class ELFAArch64AsmBackend : public AArch64AsmBackend {
 public:
   uint8_t OSABI;
-  bool IsLittleEndian;
 
   ELFAArch64AsmBackend(const Target &T, uint8_t OSABI, bool IsLittleEndian)
-    : AArch64AsmBackend(T), OSABI(OSABI), IsLittleEndian(IsLittleEndian) {}
+    : AArch64AsmBackend(T, IsLittleEndian), OSABI(OSABI) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
     return createAArch64ELFObjectWriter(OS, OSABI, IsLittleEndian);
@@ -466,9 +524,6 @@ public:
                          const MCFixup &Fixup, const MCFragment *DF,
                          const MCValue &Target, uint64_t &Value,
                          bool &IsResolved) override;
-
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
 };
 
 void ELFAArch64AsmBackend::processFixupValue(
@@ -491,32 +546,6 @@ void ELFAArch64AsmBackend::processFixupValue(
     IsResolved = false;
 }
 
-// Returns whether this fixup is based on an address in the .eh_frame section,
-// and therefore should be byte swapped.
-// FIXME: Should be replaced with something more principled.
-static bool isByteSwappedFixup(const MCExpr *E) {
-  MCValue Val;
-  if (!E->evaluateAsRelocatable(Val, nullptr, nullptr))
-    return false;
-
-  if (!Val.getSymA() || Val.getSymA()->getSymbol().isUndefined())
-    return false;
-
-  const MCSectionELF *SecELF =
-      dyn_cast<MCSectionELF>(&Val.getSymA()->getSymbol().getSection());
-  return SecELF->getSectionName() == ".eh_frame";
-}
-
-void ELFAArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                      unsigned DataSize, uint64_t Value,
-                                      bool IsPCRel) const {
-  // store fixups in .eh_frame section in big endian order
-  if (!IsLittleEndian && Fixup.getKind() == FK_Data_4) {
-    if (isByteSwappedFixup(Fixup.getValue()))
-      Value = ByteSwap_32(unsigned(Value));
-  }
-  AArch64AsmBackend::applyFixup (Fixup, Data, DataSize, Value, IsPCRel);
-}
 }
 
 MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,

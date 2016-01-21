@@ -137,6 +137,11 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   assert(FuncletEntry->second == LLVMContext::OB_funclet &&
          "funclet operand bundle id drifted!");
   (void)FuncletEntry;
+
+  auto *GCTransitionEntry = pImpl->getOrInsertBundleTag("gc-transition");
+  assert(GCTransitionEntry->second == LLVMContext::OB_gc_transition &&
+         "gc-transition operand bundle id drifted!");
+  (void)GCTransitionEntry;
 }
 LLVMContext::~LLVMContext() { delete pImpl; }
 

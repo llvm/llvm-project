@@ -27,12 +27,34 @@ struct DictionaryEntry {
   size_t PositionHint;
 };
 
-struct Dictionary : public std::vector<DictionaryEntry>{
+class Dictionary {
+ public:
+  static const size_t kMaxDictSize = 1 << 14;
+
   bool ContainsWord(const Word &W) const {
     return std::any_of(begin(), end(),
                        [&](const DictionaryEntry &DE) { return DE.W == W; });
   }
+  const DictionaryEntry *begin() const { return &DE[0]; }
+  const DictionaryEntry *end() const { return begin() + Size; }
+  const DictionaryEntry & operator[] (size_t Idx) const {
+    assert(Idx < Size);
+    return DE[Idx];
+  }
+  void push_back(DictionaryEntry DE) {
+    if (Size < kMaxDictSize)
+      this->DE[Size++] = DE;
+  }
+  void clear() { Size = 0; }
+  bool empty() const { return Size == 0; }
+  size_t size() const { return Size; }
+
+private:
+  DictionaryEntry DE[kMaxDictSize];
+  size_t Size = 0;
 };
+
+const size_t Dictionary::kMaxDictSize;
 
 struct MutationDispatcher::Impl {
   // Dictionary provided by the user via -dict=DICT_FILE.
@@ -67,8 +89,8 @@ struct MutationDispatcher::Impl {
          "AddFromPersAutoDict"});
   }
   void SetCorpus(const std::vector<Unit> *Corpus) { this->Corpus = Corpus; }
-  size_t AddWordFromDictionary(const std::vector<DictionaryEntry> &D,
-                               uint8_t *Data, size_t Size, size_t MaxSize);
+  size_t AddWordFromDictionary(const Dictionary &D, uint8_t *Data, size_t Size,
+                               size_t MaxSize);
 };
 
 static char FlipRandomBit(char X, FuzzerRandomBase &Rand) {
@@ -154,9 +176,10 @@ size_t MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary(
                                        MaxSize);
 }
 
-size_t MutationDispatcher::Impl::AddWordFromDictionary(
-    const std::vector<DictionaryEntry> &D, uint8_t *Data, size_t Size,
-    size_t MaxSize) {
+size_t MutationDispatcher::Impl::AddWordFromDictionary(const Dictionary &D,
+                                                       uint8_t *Data,
+                                                       size_t Size,
+                                                       size_t MaxSize) {
   if (D.empty()) return 0;
   const DictionaryEntry &DE = D[Rand(D.size())];
   const Word &W = DE.W;

@@ -1,4 +1,4 @@
-//===-- AMDILISelDAGToDAG.cpp - A dag to dag inst selector for AMDIL ------===//
+//===-- AMDGPUISelDAGToDAG.cpp - A dag to dag inst selector for AMDGPU ----===//
 //
 //                     The LLVM Compiler Infrastructure
 //

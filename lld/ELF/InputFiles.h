@@ -134,7 +134,7 @@ private:
   void initializeSymbols();
   InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec);
 
-  SymbolBody *createSymbolBody(StringRef StringTable, const Elf_Sym *Sym);
+  SymbolBody *createSymbolBody(const Elf_Sym *Sym);
 
   // List of all sections defined by this file.
   std::vector<InputSectionBase<ELFT> *> Sections;

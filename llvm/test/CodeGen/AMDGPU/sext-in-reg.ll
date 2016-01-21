@@ -458,7 +458,8 @@ define void @vgpr_sext_in_reg_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out, <4 x 
 define void @sext_in_reg_to_illegal_type(i16 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %src) nounwind {
   %tmp5 = load i8, i8 addrspace(1)* %src, align 1
   %tmp2 = sext i8 %tmp5 to i32
-  %tmp3 = tail call i32 @llvm.AMDGPU.imax(i32 %tmp2, i32 0) nounwind readnone
+  %tmp2.5 = icmp sgt i32 %tmp2, 0
+  %tmp3 = select i1 %tmp2.5, i32 %tmp2, i32 0
   %tmp4 = trunc i32 %tmp3 to i8
   %tmp6 = sext i8 %tmp4 to i16
   store i16 %tmp6, i16 addrspace(1)* %out, align 2
