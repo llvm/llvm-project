@@ -272,6 +272,7 @@ void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   // that are not user-provided (automatically generated).
   if (SpecialFunctionDecl->isDeleted() ||
       SpecialFunctionDecl->isExplicitlyDefaulted() ||
+      SpecialFunctionDecl->isLateTemplateParsed() ||
       !SpecialFunctionDecl->isUserProvided() || !SpecialFunctionDecl->hasBody())
     return;
 
