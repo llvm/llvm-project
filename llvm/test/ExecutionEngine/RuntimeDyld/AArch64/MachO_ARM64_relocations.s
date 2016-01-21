@@ -77,3 +77,8 @@ tgt:
     .fill 4096, 1, 0
 _ptr:
     .quad _foo
+
+# Test ARM64_RELOC_SUBTRACTOR.
+# rtdyld-check: *{8}_subtractor_result = _test_branch_reloc - _foo
+_subtractor_result:
+    .quad _test_branch_reloc - _foo
