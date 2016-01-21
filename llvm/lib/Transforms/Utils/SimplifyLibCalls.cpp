@@ -970,13 +970,34 @@ static Value *valueHasFloatPrecision(Value *Val) {
   return nullptr;
 }
 
+/// Any floating-point library function that we're trying to simplify will have
+/// a signature of the form: fptype foo(fptype param1, fptype param2, ...).
+/// CheckDoubleTy indicates that 'fptype' must be 'double'.
+static bool matchesFPLibFunctionSignature(const Function *F, unsigned NumParams,
+                                          bool CheckDoubleTy) {
+  FunctionType *FT = F->getFunctionType();
+  if (FT->getNumParams() != NumParams)
+    return false;
+
+  // The return type must match what we're looking for.
+  Type *RetTy = FT->getReturnType();
+  if (CheckDoubleTy ? !RetTy->isDoubleTy() : !RetTy->isFloatingPointTy())
+    return false;
+
+  // Each parameter must match the return type, and therefore, match every other
+  // parameter too.
+  for (const Type *ParamTy : FT->params())
+    if (ParamTy != RetTy)
+      return false;
+
+  return true;
+}
+
 /// Shrink double -> float for unary functions like 'floor'.
 static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
                                     bool CheckRetType) {
   Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 1 || !FT->getReturnType()->isDoubleTy() ||
-      !FT->getParamType(0)->isDoubleTy())
+  if (!matchesFPLibFunctionSignature(Callee, 1, true))
     return nullptr;
 
   if (CheckRetType) {
@@ -1014,12 +1035,7 @@ static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
 /// Shrink double -> float for binary functions like 'fmin/fmax'.
 static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  // Just make sure this has 2 arguments of the same FP type, which match the
-  // result type.
-  if (FT->getNumParams() != 2 || FT->getReturnType() != FT->getParamType(0) ||
-      FT->getParamType(0) != FT->getParamType(1) ||
-      !FT->getParamType(0)->isFloatingPointTy())
+  if (!matchesFPLibFunctionSignature(Callee, 2, true))
     return nullptr;
 
   // If this is something like 'fmin((double)floatval1, (double)floatval2)',
