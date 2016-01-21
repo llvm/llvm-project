@@ -252,11 +252,34 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
 
             switch (tag)
             {
+                case DW_TAG_typedef:
+                    // Try to parse a typedef from the DWO file first as modules
+                    // can contain typedef'ed structures that have no names like:
+                    //
+                    //  typedef struct { int a; } Foo;
+                    //
+                    // In this case we will have a structure with no name and a
+                    // typedef named "Foo" that points to this unnamed structure.
+                    // The name in the typedef is the only identifier for the struct,
+                    // so always try to get typedefs from DWO files if possible.
+                    //
+                    // The type_sp returned will be empty if the typedef doesn't exist
+                    // in a DWO file, so it is cheap to call this function just to check.
+                    //
+                    // If we don't do this we end up creating a TypeSP that says this
+                    // is a typedef to type 0x123 (the DW_AT_type value would be 0x123
+                    // in the DW_TAG_typedef), and this is the unnamed structure type.
+                    // We will have a hard time tracking down an unnammed structure
+                    // type in the module DWO file, so we make sure we don't get into
+                    // this situation by always resolving typedefs from the DWO file.
+                    type_sp = ParseTypeFromDWO(die, log);
+                    if (type_sp)
+                        return type_sp;
+
                 case DW_TAG_base_type:
                 case DW_TAG_pointer_type:
                 case DW_TAG_reference_type:
                 case DW_TAG_rvalue_reference_type:
-                case DW_TAG_typedef:
                 case DW_TAG_const_type:
                 case DW_TAG_restrict_type:
                 case DW_TAG_volatile_type:
