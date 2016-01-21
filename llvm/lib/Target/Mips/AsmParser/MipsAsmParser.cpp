@@ -2180,7 +2180,8 @@ bool MipsAsmParser::loadImmediate(int64_t ImmValue, unsigned DstReg,
     UseSrcReg = true;
 
   unsigned TmpReg = DstReg;
-  if (UseSrcReg && (DstReg == SrcReg)) {
+  if (UseSrcReg &&
+      getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg, SrcReg)) {
     // At this point we need AT to perform the expansions and we exit if it is
     // not available.
     unsigned ATReg = getATReg(IDLoc);
@@ -2344,7 +2345,7 @@ bool MipsAsmParser::expandLoadAddress(unsigned DstReg, unsigned BaseReg,
   }
 
   // dla requires 64-bit addresses.
-  if (!Is32BitAddress && !ABI.ArePtrs64bit()) {
+  if (!Is32BitAddress && !hasMips3()) {
     Error(IDLoc, "instruction requires a 64-bit architecture");
     return true;
   }
@@ -2352,6 +2353,11 @@ bool MipsAsmParser::expandLoadAddress(unsigned DstReg, unsigned BaseReg,
   if (!Offset.isImm())
     return loadAndAddSymbolAddress(Offset.getExpr(), DstReg, BaseReg,
                                    Is32BitAddress, IDLoc, Instructions);
+
+  if (!ABI.ArePtrs64bit()) {
+    // Continue as if we had 'la' whether we had 'la' or 'dla'.
+    Is32BitAddress = true;
+  }
 
   return loadImmediate(Offset.getImm(), DstReg, BaseReg, Is32BitAddress, true,
                        IDLoc, Instructions);
@@ -2383,7 +2389,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(
     const MipsMCExpr *HigherExpr = MipsMCExpr::create(
         MCSymbolRefExpr::VK_Mips_HIGHER, Symbol, getContext());
 
-    if (UseSrcReg && (DstReg == SrcReg)) {
+    if (UseSrcReg &&
+        getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg,
+                                                               SrcReg)) {
       // If $rs is the same as $rd:
       // (d)la $rd, sym($rd) => lui    $at, %highest(sym)
       //                        daddiu $at, $at, %higher(sym)
@@ -2441,7 +2449,8 @@ bool MipsAsmParser::loadAndAddSymbolAddress(
   //                            ori   $rd, $rd, %lo(sym)
   //                            (addu $rd, $rd, $rs)
   unsigned TmpReg = DstReg;
-  if (UseSrcReg && (DstReg == SrcReg)) {
+  if (UseSrcReg &&
+      getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg, SrcReg)) {
     // If $rs is the same as $rd, we need to use AT.
     // If it is not available we exit.
     unsigned ATReg = getATReg(IDLoc);
@@ -2457,7 +2466,8 @@ bool MipsAsmParser::loadAndAddSymbolAddress(
   if (UseSrcReg)
     emitRRR(Mips::ADDu, DstReg, TmpReg, SrcReg, IDLoc, Instructions);
   else
-    assert(DstReg == TmpReg);
+    assert(
+        getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg, TmpReg));
 
   return false;
 }

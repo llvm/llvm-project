@@ -440,6 +440,11 @@ public:
     return RegA == RegB || isSuperRegister(RegA, RegB);
   }
 
+  /// \brief Returns true if RegB is a super-register or sub-register of RegA
+  /// or if RegB == RegA.
+  bool isSuperOrSubRegisterEq(unsigned RegA, unsigned RegB) const {
+    return isSubRegisterEq(RegA, RegB) || isSuperRegister(RegA, RegB);
+  }
 };
 
 //===----------------------------------------------------------------------===//
