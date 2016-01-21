@@ -499,7 +499,7 @@ class IRLinker {
   /// from the source module that we don't need to link into the dest module,
   /// because the functions were not imported directly or via an inlined body
   /// in an imported function.
-  void findNeededSubprograms(ValueToValueMapTy &ValueMap);
+  void findNeededSubprograms();
 
   /// The value mapper leaves nulls in the list of subprograms for any
   /// in the UnneededSubprograms map. Strip those out after metadata linking.
@@ -1195,7 +1195,7 @@ bool IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
   return false;
 }
 
-void IRLinker::findNeededSubprograms(ValueToValueMapTy &ValueMap) {
+void IRLinker::findNeededSubprograms() {
   // Track unneeded nodes to make it simpler to handle the case
   // where we are checking if an already-mapped SP is needed.
   NamedMDNode *CompileUnits = SrcM.getNamedMetadata("llvm.dbg.cu");
@@ -1270,7 +1270,7 @@ void IRLinker::stripNullSubprograms() {
 
 /// Insert all of the named MDNodes in Src into the Dest module.
 void IRLinker::linkNamedMDNodes() {
-  findNeededSubprograms(ValueMap);
+  findNeededSubprograms();
   const NamedMDNode *SrcModFlags = SrcM.getModuleFlagsMetadata();
   for (const NamedMDNode &NMD : SrcM.named_metadata()) {
     // Don't link module flags here. Do them separately.
