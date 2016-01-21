@@ -566,6 +566,15 @@ def get_threads_stopped_at_breakpoint (process, bkpt):
 
     return threads
 
+def get_one_thread_stopped_at_breakpoint(process, bkpt, require_exactly_one = True):
+    threads = get_threads_stopped_at_breakpoint(process, bkpt)
+    if len(threads) == 0:
+        return None
+    if require_exactly_one and len(threads) != 1:
+        return None
+
+    return threads[0]
+
 def is_thread_crashed (test, thread):
     """In the test suite we dereference a null pointer to simulate a crash. The way this is
     reported depends on the platform."""

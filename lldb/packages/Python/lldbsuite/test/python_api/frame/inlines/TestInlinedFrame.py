@@ -60,7 +60,10 @@ class InlinedFrameAPITestCase(TestBase):
         #
         #     outer_inline (argc);
         #
-        frame0 = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
+
+        frame0 = thread.GetFrameAtIndex(0)
         if frame0.IsInlined():
             filename = frame0.GetLineEntry().GetFileSpec().GetFilename()
             self.assertTrue(filename == self.source)

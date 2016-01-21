@@ -69,28 +69,17 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
+        bp = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = breakpoint'])
 
         # Get the target process
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        # Get the number of threads
-        num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 1, 'Number of expected threads and actual threads do not match.')
-
-        # Get the thread object
-        thread = process.GetThreadAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         # Make sure the thread is in the stopped state.
         self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' during breakpoint 1.")
@@ -117,23 +106,12 @@ class ThreadStateTestCase(TestBase):
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = breakpoint'])
-
         # Get the target process
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        # Get the number of threads
-        num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 1, 'Number of expected threads and actual threads do not match.')
-
-        # Get the thread object
-        thread = process.GetThreadAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
         self.dbg.SetAsync(True)
@@ -162,23 +140,12 @@ class ThreadStateTestCase(TestBase):
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = breakpoint'])
-
         # Get the target process
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        # Get the number of threads
-        num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 1, 'Number of expected threads and actual threads do not match.')
-
-        # Get the thread object
-        thread = process.GetThreadAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         # Get the inferior out of its loop
         self.runCmd("expression g_test = 1")
@@ -202,20 +169,12 @@ class ThreadStateTestCase(TestBase):
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = breakpoint'])
-
         # Get the target process
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        # Get the number of threads
-        num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 1, 'Number of expected threads and actual threads do not match.')
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
         self.dbg.SetAsync(True)
@@ -228,11 +187,7 @@ class ThreadStateTestCase(TestBase):
         # Stop the process
         self.runCmd("process interrupt")
 
-        # The stop reason of the thread should be signal.
-        self.expect("process status", STOPPED_DUE_TO_SIGNAL,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = signal'])
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         # Get the inferior out of its loop
         self.runCmd("expression g_test = 1")
@@ -252,23 +207,11 @@ class ThreadStateTestCase(TestBase):
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = breakpoint'])
-
         # Get the target process
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
-
-        # Get the number of threads
-        num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 1, 'Number of expected threads and actual threads do not match.')
-
-        # Get the thread object
-        thread = process.GetThreadAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         # Make sure the thread is in the stopped state.
         self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' during breakpoint 1.")
@@ -289,11 +232,7 @@ class ThreadStateTestCase(TestBase):
         # Stop the process
         self.runCmd("process interrupt")
 
-        # The stop reason of the thread should be signal.
-        self.expect("process status", STOPPED_DUE_TO_SIGNAL,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = signal'])
+        self.assertEqual(thread.GetState(), lldb.eStopReasonSignal)
 
         # Check the thread state
         self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' after process stop.")
@@ -306,20 +245,12 @@ class ThreadStateTestCase(TestBase):
         self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' after expression evaluation.")
         self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' after expression evaluation.")
 
-        # The stop reason of the thread should be signal.
-        self.expect("process status", STOPPED_DUE_TO_SIGNAL,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = signal'])
+        self.assertEqual(thread.GetState(), lldb.eStopReasonSignal)
 
         # Run to breakpoint 2
         self.runCmd("continue")
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = breakpoint'])
+        self.assertEqual(thread.GetState(), lldb.eStopReasonBreakpoint)
 
         # Make sure both threads are stopped
         self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' during breakpoint 2.")
@@ -329,4 +260,4 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("continue")
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(process.GetState() == lldb.eStateExited, PROCESS_EXITED)
+        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)

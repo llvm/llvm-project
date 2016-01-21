@@ -64,7 +64,8 @@ class ConditionalBreakTestCase(TestBase):
         for j in range(10):
             if self.TraceOn():
                 print("j is: ", j)
-            thread = process.GetThreadAtIndex(0)
+            thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
+            self.assertIsNotNone(thread, "Expected one thread to be stopped at the breakpoint")
             
             if thread.GetNumFrames() >= 2:
                 frame0 = thread.GetFrameAtIndex(0)

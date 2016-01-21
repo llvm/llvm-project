@@ -46,7 +46,8 @@ class IterateFrameAndDisassembleTestCase(TestBase):
         # disassemble it.
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
-        thread = process.GetThreadAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
         depth = thread.GetNumFrames()
         for i in range(depth - 1):
             frame = thread.GetFrameAtIndex(i)

@@ -27,7 +27,7 @@ class ConsecutiveBreakpoitsTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        breakpoint = target.BreakpointCreateBySourceRegex("Set breakpoint here", lldb.SBFileSpec("main.cpp"))
+        breakpoint1 = target.BreakpointCreateBySourceRegex("Set breakpoint here", lldb.SBFileSpec("main.cpp"))
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -37,8 +37,8 @@ class ConsecutiveBreakpoitsTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # We should be stopped at the first breakpoint
-        thread = process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint1)
+        self.assertIsNotNone(thread, "Expected one thread to be stopped at breakpoint 1")
 
         # Set breakpoint to the next instruction
         frame = thread.GetFrameAtIndex(0)
@@ -48,12 +48,12 @@ class ConsecutiveBreakpoitsTestCase(TestBase):
         self.assertTrue(len(instructions) == 2)
         address = instructions[1].GetAddress()
         
-        target.BreakpointCreateByAddress(address.GetLoadAddress(target))
+        breakpoint2 = target.BreakpointCreateByAddress(address.GetLoadAddress(target))
         process.Continue()
 
         # We should be stopped at the second breakpoint
-        thread = process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint2)
+        self.assertIsNotNone(thread, "Expected one thread to be stopped at breakpoint 2")
 
         # Run the process until termination
         process.Continue()

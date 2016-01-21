@@ -290,7 +290,16 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     uint32_t Type = RI.getType(Config->Mips64EL);
     if (applyTlsDynamicReloc(Body, Type, P, reinterpret_cast<Elf_Rel *>(Buf)))
       continue;
-    bool NeedsCopy = Body && Target->needsCopyRel(Type, *Body);
+
+    // Emit a copy relocation.
+    auto *SS = dyn_cast_or_null<SharedSymbol<ELFT>>(Body);
+    if (SS && SS->NeedsCopy) {
+      P->setSymbolAndType(Body->DynamicSymbolTableIndex, Target->getCopyReloc(),
+                          Config->Mips64EL);
+      P->r_offset = Out<ELFT>::Bss->getVA() + SS->OffsetInBss;
+      continue;
+    }
+
     bool NeedsGot = Body && Target->relocNeedsGot(Type, *Body);
     bool CBP = canBePreempted(Body, NeedsGot);
     bool LazyReloc = Body && Target->supportsLazyRelocations() &&
@@ -307,8 +316,6 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       Reloc = Target->getPltReloc();
     else if (NeedsGot)
       Reloc = Body->isTls() ? Target->getTlsGotReloc() : Target->getGotReloc();
-    else if (NeedsCopy)
-      Reloc = Target->getCopyReloc();
     else
       Reloc = Target->getDynReloc(Type);
     P->setSymbolAndType(Sym, Reloc, Config->Mips64EL);
@@ -317,9 +324,6 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       P->r_offset = Out<ELFT>::GotPlt->getEntryAddr(*Body);
     else if (NeedsGot)
       P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
-    else if (NeedsCopy)
-      P->r_offset = Out<ELFT>::Bss->getVA() +
-                    cast<SharedSymbol<ELFT>>(Body)->OffsetInBss;
     else
       P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
 
@@ -328,9 +332,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       OrigAddend = static_cast<const Elf_Rela &>(RI).r_addend;
 
     uintX_t Addend;
-    if (NeedsCopy)
-      Addend = 0;
-    else if (CBP || IsDynRelative)
+    if (CBP || IsDynRelative)
       Addend = OrigAddend;
     else if (Body)
       Addend = getSymVA<ELFT>(*Body) + OrigAddend;

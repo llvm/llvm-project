@@ -38,11 +38,8 @@ class CreateDuringStepTestCase(TestBase):
 
         # The stop reason should be breakpoint.
         self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        self.assertEqual(lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint).IsValid(), 1,
-                STOPPED_DUE_TO_BREAKPOINT)
-
-        thread = process.GetThreadAtIndex(0)
-        self.assertTrue(thread and thread.IsValid(), "Thread is valid")
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(thread.IsValid(), STOPPED_DUE_TO_BREAKPOINT)
 
         # Keep stepping until the inferior crashes
         while process.GetState() == lldb.eStateStopped and not lldbutil.is_thread_crashed(self, thread):
