@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace llvm {
