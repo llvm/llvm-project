@@ -133,6 +133,11 @@ public:
   bool MergeFunctions;
   bool PrepareForLTO;
 
+  /// Profile data file name that the instrumentation will be written to.
+  std::string PGOInstrGen;
+  /// Path of the profile data file.
+  std::string PGOInstrUse;
+
 private:
   /// ExtensionList - This is list of all of the extensions that are registered.
   std::vector<std::pair<ExtensionPointTy, ExtensionFn> > Extensions;
@@ -152,6 +157,7 @@ private:
   void addInitialAliasAnalysisPasses(legacy::PassManagerBase &PM) const;
   void addLTOOptimizationPasses(legacy::PassManagerBase &PM);
   void addLateLTOOptimizationPasses(legacy::PassManagerBase &PM);
+  void addPGOInstrPasses(legacy::PassManagerBase &MPM);
 
 public:
   /// populateFunctionPassManager - This fills in the function pass manager,
