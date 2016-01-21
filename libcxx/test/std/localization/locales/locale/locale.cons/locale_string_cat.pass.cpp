@@ -6,7 +6,8 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
+ 
+// REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
 // UNSUPPORTED: sanitizer-new-delete
 
