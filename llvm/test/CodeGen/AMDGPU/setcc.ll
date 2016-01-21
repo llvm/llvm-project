@@ -389,3 +389,23 @@ if:
 endif:
   ret void
 }
+
+; FUNC-LABEL: setcc-i1-and-xor
+; SI-DAG: v_cmp_le_f32_e64 [[A:s\[[0-9]+:[0-9]+\]]], 0, s{{[0-9]+}}
+; SI-DAG: v_cmp_ge_f32_e64 [[B:s\[[0-9]+:[0-9]+\]]], 1.0, s{{[0-9]+}}
+; SI: s_and_b64 s[2:3], [[A]], [[B]]
+define void @setcc-i1-and-xor(i32 addrspace(1)* %out, float %cond) #0 {
+bb0:
+  %tmp5 = fcmp oge float %cond, 0.000000e+00
+  %tmp7 = fcmp ole float %cond, 1.000000e+00
+  %tmp9 = and i1 %tmp5, %tmp7
+  %tmp11 = xor i1 %tmp9, 1
+  br i1 %tmp11, label %bb2, label %bb1
+
+bb1:
+  store i32 0, i32 addrspace(1)* %out
+  br label %bb2
+
+bb2:
+  ret void
+}

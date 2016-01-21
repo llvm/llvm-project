@@ -7,7 +7,7 @@
 //
 //==-----------------------------------------------------------------------===//
 //
-// Interface to describe a layout of a stack frame on a AMDIL target machine
+// Interface to describe a layout of a stack frame on a AMDGPU target machine.
 //
 //===----------------------------------------------------------------------===//
 #include "AMDGPUFrameLowering.h"
@@ -57,7 +57,7 @@ unsigned AMDGPUFrameLowering::getStackWidth(const MachineFunction &MF) const {
   // T2.Y = stack[1].y
   // T3.X = stack[1].z
   // T3.Y = stack[1].w
-  // 
+  //
   // StackWidth = 4:
   // T0.X = stack[0].x
   // T0.Y = stack[0].y

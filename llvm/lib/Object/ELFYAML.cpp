@@ -336,6 +336,9 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_AVR_ARCH_XMEGA6)
     BCase(EF_AVR_ARCH_XMEGA7)
     break;
+  case ELF::EM_AMDGPU:
+  case ELF::EM_X86_64:
+    break;
   default:
     llvm_unreachable("Unsupported architecture");
   }
@@ -421,6 +424,22 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
     BCase(SHF_AMDGPU_HSA_READONLY)
     BCase(SHF_AMDGPU_HSA_CODE)
     BCase(SHF_AMDGPU_HSA_AGENT)
+    break;
+  case ELF::EM_HEXAGON:
+    BCase(SHF_HEX_GPREL)
+    break;
+  case ELF::EM_MIPS:
+    BCase(SHF_MIPS_NODUPES)
+    BCase(SHF_MIPS_NAMES)
+    BCase(SHF_MIPS_LOCAL)
+    BCase(SHF_MIPS_NOSTRIP)
+    BCase(SHF_MIPS_GPREL)
+    BCase(SHF_MIPS_MERGE)
+    BCase(SHF_MIPS_ADDR)
+    BCase(SHF_MIPS_STRING)
+    break;
+  case ELF::EM_X86_64:
+    BCase(SHF_X86_64_LARGE)
     break;
   default:
     // Nothing to do.

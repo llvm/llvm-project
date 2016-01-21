@@ -144,6 +144,11 @@ def FeatureEnableHugeScratchBuffer : SubtargetFeature<"huge-scratch-buffer",
         "true",
         "Enable scratch buffer sizes greater than 128 GB">;
 
+def FeatureEnableSIScheduler : SubtargetFeature<"si-scheduler",
+        "EnableSIScheduler",
+        "true",
+        "Enable SI Machine Scheduler">;
+
 class SubtargetFeatureFetchLimit <string Value> :
                           SubtargetFeature <"fetch"#Value,
         "TexVTXClauseSize",

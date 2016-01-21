@@ -2030,6 +2030,18 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
                   [IntrReadWriteArgMem]>;
 }
 
+// Store ops using non-temporal hint
+let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
+  def int_x86_avx512_storent_q_512 :
+        GCCBuiltin<"__builtin_ia32_movntdq512">,
+        Intrinsic<[], [llvm_ptr_ty, llvm_v8i64_ty], [IntrReadWriteArgMem]>;
+  def int_x86_avx512_storent_pd_512 :
+        GCCBuiltin<"__builtin_ia32_movntpd512">,
+        Intrinsic<[], [llvm_ptr_ty, llvm_v8f64_ty], [IntrReadWriteArgMem]>;  
+  def int_x86_avx512_storent_ps_512 :
+        GCCBuiltin<"__builtin_ia32_movntps512">,
+        Intrinsic<[], [llvm_ptr_ty, llvm_v16f32_ty], [IntrReadWriteArgMem]>;
+}
 //===----------------------------------------------------------------------===//
 // AVX2
 
@@ -4302,14 +4314,14 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
               Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty,
                         llvm_v32i16_ty, llvm_v32i16_ty, llvm_i32_ty],  [IntrNoMem]>;
   def int_x86_avx512_mask_permvar_qi_128 : GCCBuiltin<"__builtin_ia32_permvarqi128_mask">,
-              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
-                        llvm_v8i16_ty, llvm_v8i16_ty, llvm_i8_ty],  [IntrNoMem]>;
+              Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty,
+                        llvm_v16i8_ty, llvm_v16i8_ty, llvm_i16_ty],  [IntrNoMem]>;
   def int_x86_avx512_mask_permvar_qi_256 : GCCBuiltin<"__builtin_ia32_permvarqi256_mask">,
-              Intrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty,
-                        llvm_v16i16_ty, llvm_v16i16_ty, llvm_i16_ty],  [IntrNoMem]>;
+              Intrinsic<[llvm_v32i8_ty], [llvm_v32i8_ty,
+                        llvm_v32i8_ty, llvm_v32i8_ty, llvm_i32_ty],  [IntrNoMem]>;
   def int_x86_avx512_mask_permvar_qi_512 : GCCBuiltin<"__builtin_ia32_permvarqi512_mask">,
-              Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty,
-                        llvm_v32i16_ty, llvm_v32i16_ty, llvm_i32_ty],  [IntrNoMem]>;
+              Intrinsic<[llvm_v64i8_ty], [llvm_v64i8_ty,
+                        llvm_v64i8_ty, llvm_v64i8_ty, llvm_i64_ty],  [IntrNoMem]>;
   def int_x86_avx512_mask_permvar_sf_256 : GCCBuiltin<"__builtin_ia32_permvarsf256_mask">,
               Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty,
                         llvm_v8i32_ty, llvm_v8f32_ty, llvm_i8_ty],  [IntrNoMem]>;

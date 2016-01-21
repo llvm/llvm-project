@@ -256,7 +256,7 @@ ELSE2584:                                         ; preds = %IF2565
 ENDIF2582:                                        ; preds = %ELSE2584, %IF2565
   %213 = fadd float %1, undef
   %214 = fadd float 0.000000e+00, %213
-  %215 = call float @llvm.AMDIL.fraction.(float %214)
+  %215 = call float @llvm.AMDGPU.fract.f32(float %214)
   br i1 undef, label %IF2589, label %ELSE2590
 
 IF2589:                                           ; preds = %ENDIF2582
@@ -479,8 +479,8 @@ ELSE2824:                                         ; preds = %ELSE2821
 ; Function Attrs: nounwind readnone
 declare float @llvm.SI.load.const(<16 x i8>, i32) #1
 
-; Function Attrs: readnone
-declare float @llvm.AMDIL.fraction.(float) #2
+; Function Attrs: nounwind readnone
+declare float @llvm.AMDGPU.fract.f32(float) #1
 
 ; Function Attrs: nounwind readnone
 declare float @llvm.sqrt.f32(float) #1

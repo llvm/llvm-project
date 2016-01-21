@@ -129,9 +129,27 @@ enum {
   /// comparisons into existing memory operations.
   FAULTING_LOAD_OP = 22,
 
+  /// The following generic opcodes are not supposed to appear after ISel.
+  /// This is something we might want to relax, but for now, this is convenient
+  /// to produce diagnostic.
+  PRE_ISEL_GENERIC_OPCODE_START,
+  // Generic opcodes used before ISel are here.
+
+  /// Generic ADD instruction. This is an integer add.
+  G_ADD = PRE_ISEL_GENERIC_OPCODE_START,
+  // TODO: Add more generic opcodes as we move along.
+  // FIXME: Right now, we have to manually add any new opcode in
+  // CodeGenTarget.cpp for TableGen to pick them up.
+  // Moreover the order must match.
+
+  /// Marker for the end of the generic opcode.
+  /// This is used to check if an opcode is in the range of the
+  /// generic opcodes.
+  PRE_ISEL_GENERIC_OPCODE_END,
+
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific post-isel opcode values start here.
-  GENERIC_OP_END = FAULTING_LOAD_OP,
+  GENERIC_OP_END = PRE_ISEL_GENERIC_OPCODE_END,
 };
 } // end namespace TargetOpcode
 } // end namespace llvm

@@ -1450,17 +1450,17 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
           uint32_t Annotation = GetCompressedAnnotation();
           int32_t LineOffset = DecodeSignedOperand(Annotation >> 4);
           uint32_t CodeOffset = Annotation & 0xf;
-          W.startLine() << "ChangeCodeOffsetAndLineOffset: {LineOffset: "
-                        << LineOffset << ", CodeOffset: " << W.hex(CodeOffset)
+          W.startLine() << "ChangeCodeOffsetAndLineOffset: {CodeOffset: "
+                        << W.hex(CodeOffset) << ", LineOffset: " << LineOffset
                         << "}\n";
           break;
         }
         case ChangeCodeLengthAndCodeOffset: {
           uint32_t Length = GetCompressedAnnotation();
           uint32_t CodeOffset = GetCompressedAnnotation();
-          W.startLine() << "ChangeCodeLengthAndCodeOffset: {Length: "
-                        << W.hex(Length)
-                        << ", CodeOffset: " << W.hex(CodeOffset) << "}\n";
+          W.startLine() << "ChangeCodeLengthAndCodeOffset: {CodeOffset: "
+                        << W.hex(CodeOffset) << ", Length: " << W.hex(Length)
+                        << "}\n";
           break;
         }
         case ChangeColumnEnd:

@@ -1,4 +1,4 @@
-;===- ./lib/Target/AMDIL/LLVMBuild.txt -------------------------*- Conf -*--===;
+;===- ./lib/Target/AMDGPU/LLVMBuild.txt ------------------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;

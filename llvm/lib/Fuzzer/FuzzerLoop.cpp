@@ -265,7 +265,7 @@ size_t Fuzzer::RecordBlockCoverage() {
   LastCoveragePcBufferLen = __sanitizer_get_coverage_pc_buffer(&CoverageBuf);
   assert(CoverageBuf);
   for (size_t i = PrevBufferLen; i < LastCoveragePcBufferLen; ++i) {
-    Printf("0x%x\n", CoverageBuf[i]);
+    Printf("%p\n", CoverageBuf[i]);
   }
 
   return LastRecordedBlockCoverage;

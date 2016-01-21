@@ -917,9 +917,6 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntrinsicID) {
     default: return Op;
-    case AMDGPUIntrinsic::AMDGPU_abs:
-    case AMDGPUIntrinsic::AMDIL_abs: // Legacy name.
-      return LowerIntrinsicIABS(Op, DAG);
     case AMDGPUIntrinsic::AMDGPU_lrp:
       return LowerIntrinsicLRP(Op, DAG);
 
@@ -991,19 +988,6 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(AMDGPUISD::LDEXP, DL, VT, Op.getOperand(1),
                                                    Op.getOperand(2));
 
-    case AMDGPUIntrinsic::AMDGPU_imax:
-      return DAG.getNode(ISD::SMAX, DL, VT, Op.getOperand(1),
-                                            Op.getOperand(2));
-    case AMDGPUIntrinsic::AMDGPU_umax:
-      return DAG.getNode(ISD::UMAX, DL, VT, Op.getOperand(1),
-                                            Op.getOperand(2));
-    case AMDGPUIntrinsic::AMDGPU_imin:
-      return DAG.getNode(ISD::SMIN, DL, VT, Op.getOperand(1),
-                                            Op.getOperand(2));
-    case AMDGPUIntrinsic::AMDGPU_umin:
-      return DAG.getNode(ISD::UMIN, DL, VT, Op.getOperand(1),
-                                            Op.getOperand(2));
-
     case AMDGPUIntrinsic::AMDGPU_umul24:
       return DAG.getNode(AMDGPUISD::MUL_U24, DL, VT,
                          Op.getOperand(1), Op.getOperand(2));
@@ -1062,24 +1046,9 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case AMDGPUIntrinsic::AMDIL_exp: // Legacy name.
       return DAG.getNode(ISD::FEXP2, DL, VT, Op.getOperand(1));
 
-    case AMDGPUIntrinsic::AMDIL_round_nearest: // Legacy name.
-      return DAG.getNode(ISD::FRINT, DL, VT, Op.getOperand(1));
-    case AMDGPUIntrinsic::AMDGPU_trunc: // Legacy name.
-      return DAG.getNode(ISD::FTRUNC, DL, VT, Op.getOperand(1));
     case AMDGPUIntrinsic::AMDGPU_brev: // Legacy name
       return DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(1));
   }
-}
-
-///IABS(a) = SMAX(sub(0, a), a)
-SDValue AMDGPUTargetLowering::LowerIntrinsicIABS(SDValue Op,
-                                                 SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-  SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                            Op.getOperand(1));
-
-  return DAG.getNode(ISD::SMAX, DL, VT, Neg, Op.getOperand(1));
 }
 
 /// Linear Interpolation
@@ -3167,21 +3136,6 @@ SDValue AMDGPUTargetLowering::getRecipEstimate(SDValue Operand,
   return SDValue();
 }
 
-static void computeKnownBitsForMinMax(const SDValue Op0,
-                                      const SDValue Op1,
-                                      APInt &KnownZero,
-                                      APInt &KnownOne,
-                                      const SelectionDAG &DAG,
-                                      unsigned Depth) {
-  APInt Op0Zero, Op0One;
-  APInt Op1Zero, Op1One;
-  DAG.computeKnownBits(Op0, Op0Zero, Op0One, Depth);
-  DAG.computeKnownBits(Op1, Op1Zero, Op1One, Depth);
-
-  KnownZero = Op0Zero & Op1Zero;
-  KnownOne = Op0One & Op1One;
-}
-
 void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   const SDValue Op,
   APInt &KnownZero,
@@ -3198,22 +3152,6 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   switch (Opc) {
   default:
     break;
-  case ISD::INTRINSIC_WO_CHAIN: {
-    // FIXME: The intrinsic should just use the node.
-    switch (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue()) {
-    case AMDGPUIntrinsic::AMDGPU_imax:
-    case AMDGPUIntrinsic::AMDGPU_umax:
-    case AMDGPUIntrinsic::AMDGPU_imin:
-    case AMDGPUIntrinsic::AMDGPU_umin:
-      computeKnownBitsForMinMax(Op.getOperand(1), Op.getOperand(2),
-                                KnownZero, KnownOne, DAG, Depth);
-      break;
-    default:
-      break;
-    }
-
-    break;
-  }
   case AMDGPUISD::CARRY:
   case AMDGPUISD::BORROW: {
     KnownZero = APInt::getHighBitsSet(32, 31);

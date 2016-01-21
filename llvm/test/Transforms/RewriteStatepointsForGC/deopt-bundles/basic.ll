@@ -63,3 +63,11 @@ define i32 addrspace(1)* @f3(i32 addrspace(1)* %arg) gc "statepoint-example"  pe
   %lpad = landingpad token cleanup
   resume token undef
 }
+
+define i32 addrspace(1)* @f4(i32 addrspace(1)* %arg) gc "statepoint-example" {
+; CHECK-LABEL: @f4(
+ entry:
+; CHECK: @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 1, i32 2, i32 400, i8 90,
+  call void @g() [ "gc-transition"(i32 400, i8 90) ]
+  ret i32 addrspace(1)* %arg
+}

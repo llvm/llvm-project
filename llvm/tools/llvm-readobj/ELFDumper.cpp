@@ -806,11 +806,32 @@ static const EnumEntry<unsigned> ElfSectionFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, SHF_TLS             ),
   LLVM_READOBJ_ENUM_ENT(ELF, XCORE_SHF_CP_SECTION),
   LLVM_READOBJ_ENUM_ENT(ELF, XCORE_SHF_DP_SECTION),
-  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_NOSTRIP    ),
+};
+
+static const EnumEntry<unsigned> ElfAMDGPUSectionFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_GLOBAL),
   LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_READONLY),
   LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_CODE),
   LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_AGENT)
+};
+
+static const EnumEntry<unsigned> ElfHexagonSectionFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_HEX_GPREL)
+};
+
+static const EnumEntry<unsigned> ElfMipsSectionFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_NODUPES),
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_NAMES  ),
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_LOCAL  ),
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_NOSTRIP),
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_GPREL  ),
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_MERGE  ),
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_ADDR   ),
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_MIPS_STRING )
+};
+
+static const EnumEntry<unsigned> ElfX86_64SectionFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_X86_64_LARGE)
 };
 
 static const char *getElfSegmentType(unsigned Arch, unsigned Type) {
@@ -1118,7 +1139,31 @@ void ELFDumper<ELFT>::printSections() {
     W.printHex("Type",
                getElfSectionType(Obj->getHeader()->e_machine, Sec.sh_type),
                Sec.sh_type);
-    W.printFlags("Flags", Sec.sh_flags, makeArrayRef(ElfSectionFlags));
+    std::vector<EnumEntry<unsigned>> SectionFlags(std::begin(ElfSectionFlags),
+                                                  std::end(ElfSectionFlags));
+    switch (Obj->getHeader()->e_machine) {
+    case EM_AMDGPU:
+      SectionFlags.insert(SectionFlags.end(), std::begin(ElfAMDGPUSectionFlags),
+                          std::end(ElfAMDGPUSectionFlags));
+      break;
+    case EM_HEXAGON:
+      SectionFlags.insert(SectionFlags.end(),
+                          std::begin(ElfHexagonSectionFlags),
+                          std::end(ElfHexagonSectionFlags));
+      break;
+    case EM_MIPS:
+      SectionFlags.insert(SectionFlags.end(), std::begin(ElfMipsSectionFlags),
+                          std::end(ElfMipsSectionFlags));
+      break;
+    case EM_X86_64:
+      SectionFlags.insert(SectionFlags.end(), std::begin(ElfX86_64SectionFlags),
+                          std::end(ElfX86_64SectionFlags));
+      break;
+    default:
+      // Nothing to do.
+      break;
+    }
+    W.printFlags("Flags", Sec.sh_flags, makeArrayRef(SectionFlags));
     W.printHex("Address", Sec.sh_addr);
     W.printHex("Offset", Sec.sh_offset);
     W.printNumber("Size", Sec.sh_size);
