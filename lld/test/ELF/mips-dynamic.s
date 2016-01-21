@@ -24,6 +24,7 @@
 # EXE-NEXT:     Type: SHT_PROGBITS
 # EXE-NEXT:     Flags [ (0x10000003)
 # EXE-NEXT:       SHF_ALLOC
+# EXE-NEXT:       SHF_MIPS_GPREL
 # EXE-NEXT:       SHF_WRITE
 # EXE-NEXT:     ]
 # EXE-NEXT:     Address: [[GOTADDR:0x[0-9a-f]+]]
@@ -61,6 +62,7 @@
 # DSO-NEXT:     Type: SHT_PROGBITS
 # DSO-NEXT:     Flags [ (0x10000003)
 # DSO-NEXT:       SHF_ALLOC
+# DSO-NEXT:       SHF_MIPS_GPREL
 # DSO-NEXT:       SHF_WRITE
 # DSO-NEXT:     ]
 # DSO-NEXT:     Address: [[GOTADDR:0x[0-9a-f]+]]

@@ -1411,7 +1411,7 @@ template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
 template <class ELFT>
 bool elf2::shouldKeepInSymtab(const ObjectFile<ELFT> &File, StringRef SymName,
                               const typename ELFFile<ELFT>::Elf_Sym &Sym) {
-  if (Sym.getType() == STT_SECTION)
+  if (Sym.getType() == STT_SECTION || Sym.getType() == STT_FILE)
     return false;
 
   InputSectionBase<ELFT> *Sec = File.getSection(Sym);

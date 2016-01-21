@@ -36,6 +36,7 @@ struct RSKernelDescriptor;
 typedef std::shared_ptr<RSModuleDescriptor> RSModuleDescriptorSP;
 typedef std::shared_ptr<RSGlobalDescriptor> RSGlobalDescriptorSP;
 typedef std::shared_ptr<RSKernelDescriptor> RSKernelDescriptorSP;
+typedef std::array<uint32_t, 3> RSCoordinate;
 
 // Breakpoint Resolvers decide where a breakpoint is placed,
 // so having our own allows us to limit the search scope to RS kernel modules.
@@ -224,6 +225,9 @@ public:
 
     uint32_t GetPluginVersion() override;
 
+    static bool
+    GetKernelCoordinate(lldb_renderscript::RSCoordinate &coord, Thread *thread_ptr);
+
 protected:
     struct ScriptDetails;
     struct AllocationDetails;
@@ -279,7 +283,7 @@ protected:
 
     std::map<lldb::addr_t, lldb_renderscript::RSModuleDescriptorSP> m_scriptMappings;
     std::map<lldb::addr_t, RuntimeHookSP> m_runtimeHooks;
-    std::map<lldb::user_id_t, std::shared_ptr<int>> m_conditional_breaks;
+    std::map<lldb::user_id_t, std::shared_ptr<uint32_t>> m_conditional_breaks;
 
     lldb::SearchFilterSP m_filtersp; // Needed to create breakpoints through Target API
 
@@ -288,6 +292,8 @@ protected:
     bool m_breakAllKernels;
     static const HookDefn s_runtimeHookDefns[];
     static const size_t s_runtimeHookCount;
+    static const std::string s_runtimeExpandSuffix;
+    static const std::array<const char *, 3> s_runtimeCoordVars;
 
 private:
     RenderScriptRuntime(Process *process); // Call CreateInstance instead.

@@ -27,7 +27,7 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # Build dictionary to have unique executable names for each test method.
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureLinux(bugnumber="llvm.org/pr26031", archs=['arm'])
+    @expectedFailureLinux(bugnumber="llvm.org/pr26031", archs=['aarch64', 'arm'])
     @expectedFailureWindows("llvm.org/pr24446") # WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows
     def test_watchlocation_using_watchpoint_set(self):
         """Test watching a location with 'watchpoint set expression -w write -s size' option."""

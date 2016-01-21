@@ -17,7 +17,8 @@ class TestGdbRemoteSingleStep(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.single_step_only_steps_one_instruction(use_Hc_packet=True, step_instruction="s")
 
     @llgs_test
-    @expectedFailureAndroid(bugnumber="llvm.com/pr24739", archs=["arm", "aarch64"])
+    @expectedFailureAndroid(bugnumber="llvm.org/pr24739", archs=["arm", "aarch64"])
+    @expectedFailureLinux(bugnumber="llvm.org/pr24739", archs=["arm", "aarch64"])
     def test_single_step_only_steps_one_instruction_with_s_llgs(self):
         self.init_llgs_test()
         self.build()

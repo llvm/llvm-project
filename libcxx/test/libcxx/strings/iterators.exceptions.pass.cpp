@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-
+// XFAIL: libcpp-no-exceptions
 // <iterator>
 
 // __libcpp_is_trivial_iterator<Tp>
@@ -23,6 +23,7 @@
 #include <vector>
 #include <initializer_list>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 int main()
@@ -49,12 +50,12 @@ int main()
     static_assert((!std::__libcpp_string_gets_noexcept_iterator<random_access_iterator<char *> >::value), "");
     static_assert((!std::__libcpp_string_gets_noexcept_iterator<ThrowingIterator      <char *> >::value), "");
     
-#if __has_feature(cxx_noexcept)
+#if TEST_STD_VER >= 11
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<NonThrowingIterator   <char *> >::value), "");
 #else
     static_assert((!std::__libcpp_string_gets_noexcept_iterator<NonThrowingIterator   <char *> >::value), "");
 #endif
-	
+
 //
 //  iterators from libc++'s containers
 //

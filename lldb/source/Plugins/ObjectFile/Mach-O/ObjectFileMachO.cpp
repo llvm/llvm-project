@@ -4828,9 +4828,22 @@ ObjectFileMachO::GetArchitecture (const llvm::MachO::mach_header &header,
 
         if (header.filetype == MH_PRELOAD)
         {
-            // Set vendor to an unspecified unknown or a "*" so it can match any vendor
-            triple.setVendor(llvm::Triple::UnknownVendor);
-            triple.setVendorName(llvm::StringRef());
+            if (header.cputype == CPU_TYPE_ARM)
+            {
+                // If this is a 32-bit arm binary, and it's a standalone binary,
+                // force the Vendor to Apple so we don't accidentally pick up 
+                // the generic armv7 ABI at runtime.  Apple's armv7 ABI always uses
+                // r7 for the frame pointer register; most other armv7 ABIs use a
+                // combination of r7 and r11.
+                triple.setVendor(llvm::Triple::Apple);
+            }
+            else
+            {
+                // Set vendor to an unspecified unknown or a "*" so it can match any vendor
+                // This is required for correct behavior of EFI debugging on x86_64
+                triple.setVendor(llvm::Triple::UnknownVendor);
+                triple.setVendorName(llvm::StringRef());
+            }
             return true;
         }
         else

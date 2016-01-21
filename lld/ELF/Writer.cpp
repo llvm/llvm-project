@@ -363,6 +363,8 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
 // Local symbols are not in the linker's symbol table. This function scans
 // each object file's symbol table to copy local symbols to the output.
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
+  if (!Out<ELFT>::SymTab)
+    return;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
     for (const Elf_Sym &Sym : F->getLocalSymbols()) {
       ErrorOr<StringRef> SymNameOrErr = Sym.getName(F->getStringTable());
@@ -370,8 +372,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       StringRef SymName = *SymNameOrErr;
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
-      if (Out<ELFT>::SymTab)
-        Out<ELFT>::SymTab->addLocalSymbol(SymName);
+      Out<ELFT>::SymTab->addLocalSymbol(SymName);
     }
   }
 }

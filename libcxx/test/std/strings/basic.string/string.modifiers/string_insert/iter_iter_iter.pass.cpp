@@ -33,6 +33,7 @@ test(S s, typename S::difference_type pos, It first, It last, S expected)
     assert(s == expected);
 }
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
 template <class S, class It>
 void
 test_exceptions(S s, typename S::difference_type pos, It first, It last)
@@ -47,6 +48,7 @@ test_exceptions(S s, typename S::difference_type pos, It first, It last)
     assert(s.__invariants());
     assert(s == aCopy);
 }
+#endif
 
 int main()
 {

@@ -60,12 +60,12 @@ lit.site.cfg: FORCE
 Unit/lit.site.cfg: FORCE
 	@echo "Making Unit/lit.site.cfg for Clang extra tools..."
 	@$(MKDIR) $(dir $@)
-	@$(ECHOPATH) s=@LLVM_LIBS_DIR@=$(LibDir)=g >> lit.tmp
-	@$(ECHOPATH) s=@CLANG_TOOLS_BINARY_DIR@=$(PROJ_OBJ_DIR)/..=g >> lit.tmp
-	@$(ECHOPATH) s=@TARGET_TRIPLE@=$(TARGET_TRIPLE)=g >> lit.tmp
-	@$(ECHOPATH) s=@CLANG_TOOLS_SOURCE_DIR@=$(PROJ_SRC_DIR)/..=g >> lit.tmp
-	@sed -f lit.tmp $(PROJ_SRC_DIR)/Unit/lit.site.cfg.in > $@
-	@-rm -f lit.tmp
+	@$(ECHOPATH) s=@LLVM_LIBS_DIR@=$(LibDir)=g >> unit.tmp
+	@$(ECHOPATH) s=@CLANG_TOOLS_BINARY_DIR@=$(PROJ_OBJ_DIR)/..=g >> unit.tmp
+	@$(ECHOPATH) s=@TARGET_TRIPLE@=$(TARGET_TRIPLE)=g >> unit.tmp
+	@$(ECHOPATH) s=@CLANG_TOOLS_SOURCE_DIR@=$(PROJ_SRC_DIR)/..=g >> unit.tmp
+	@sed -f unit.tmp $(PROJ_SRC_DIR)/Unit/lit.site.cfg.in > $@
+	@-rm -f unit.tmp
 
 clean::
 	@ find . -name Output | xargs rm -fr

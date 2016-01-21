@@ -266,7 +266,7 @@ template <class ELFT> void ObjectFile<ELFT>::initializeSymbols() {
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   SymbolBodies.reserve(NumSymbols);
   for (const Elf_Sym &Sym : Syms)
-    SymbolBodies.push_back(createSymbolBody(this->StringTable, &Sym));
+    SymbolBodies.push_back(createSymbolBody(&Sym));
 }
 
 template <class ELFT>
@@ -281,9 +281,8 @@ ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 }
 
 template <class ELFT>
-SymbolBody *ObjectFile<ELFT>::createSymbolBody(StringRef StringTable,
-                                                     const Elf_Sym *Sym) {
-  ErrorOr<StringRef> NameOrErr = Sym->getName(StringTable);
+SymbolBody *ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
+  ErrorOr<StringRef> NameOrErr = Sym->getName(this->StringTable);
   error(NameOrErr);
   StringRef Name = *NameOrErr;
 

@@ -35,6 +35,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l, S ex
     assert(s.size() == old_size - xlen + rlen);
 }
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
 template <class S, class It>
 void
 test_exceptions(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l)
@@ -50,6 +51,7 @@ test_exceptions(S s, typename S::size_type pos1, typename S::size_type n1, It f,
     assert(s.__invariants());
     assert(s == aCopy);
 }
+#endif
 
 const char* str = "12345678901234567890";
 
