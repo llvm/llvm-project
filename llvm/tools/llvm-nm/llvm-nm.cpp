@@ -367,7 +367,13 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
         outs() << "(?,?) ";
       break;
     }
-    section_iterator Sec = *MachO->getSymbolSection(I->Sym.getRawDataRefImpl());
+    ErrorOr<section_iterator> SecOrErr =
+      MachO->getSymbolSection(I->Sym.getRawDataRefImpl());
+    if (SecOrErr.getError()) {
+      outs() << "(?,?) ";
+      break;
+    }
+    section_iterator Sec = *SecOrErr;
     DataRefImpl Ref = Sec->getRawDataRefImpl();
     StringRef SectionName;
     MachO->getSectionName(Ref, SectionName);
@@ -772,7 +778,10 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   case MachO::N_INDR:
     return 'i';
   case MachO::N_SECT: {
-    section_iterator Sec = *Obj.getSymbolSection(Symb);
+    ErrorOr<section_iterator> SecOrErr = Obj.getSymbolSection(Symb);
+    if (SecOrErr.getError())
+      return 's';
+    section_iterator Sec = *SecOrErr;
     DataRefImpl Ref = Sec->getRawDataRefImpl();
     StringRef SectionName;
     Obj.getSectionName(Ref, SectionName);
