@@ -521,7 +521,7 @@ SwiftASTManipulator::FindSpecialNames (llvm::SmallVectorImpl<swift::Identifier> 
         {
             if (swift::UnresolvedDeclRefExpr *decl_ref_expr = llvm::dyn_cast<swift::UnresolvedDeclRefExpr>(expr))
             {
-                swift::Identifier name = decl_ref_expr->getName();
+  	        swift::Identifier name = decl_ref_expr->getName().getBaseName();
                 
                 if (m_prefix.empty() || name.str().startswith(m_prefix))
                     m_names.push_back(name);
