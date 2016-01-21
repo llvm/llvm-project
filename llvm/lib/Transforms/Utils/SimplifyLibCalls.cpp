@@ -970,11 +970,9 @@ static Value *valueHasFloatPrecision(Value *Val) {
   return nullptr;
 }
 
-//===----------------------------------------------------------------------===//
-// Double -> Float Shrinking Optimizations for Unary Functions like 'floor'
-
-Value *LibCallSimplifier::optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
-                                                bool CheckRetType) {
+/// Shrink double -> float for unary functions like 'floor'.
+static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
+                                    bool CheckRetType) {
   Function *Callee = CI->getCalledFunction();
   FunctionType *FT = Callee->getFunctionType();
   if (FT->getNumParams() != 1 || !FT->getReturnType()->isDoubleTy() ||
@@ -1013,8 +1011,8 @@ Value *LibCallSimplifier::optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
   return B.CreateFPExt(V, B.getDoubleTy());
 }
 
-// Double -> Float Shrinking Optimizations for Binary Functions like 'fmin/fmax'
-Value *LibCallSimplifier::optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
+/// Shrink double -> float for binary functions like 'fmin/fmax'.
+static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
   FunctionType *FT = Callee->getFunctionType();
   // Just make sure this has 2 arguments of the same FP type, which match the
