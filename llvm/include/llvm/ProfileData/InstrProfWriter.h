@@ -51,7 +51,7 @@ public:
   std::unique_ptr<MemoryBuffer> writeBuffer();
 
   // Internal interface for testing purpose only.
-  void setValueProfDataEndianness(support::endianness Endianness);
+  static support::endianness getValueProfDataEndianness();
 
 private:
   void writeImpl(ProfOStream &OS);

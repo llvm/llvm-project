@@ -51,7 +51,7 @@ extern cl::opt<unsigned> DefMaxInstsToScan;
 /// If AATags is non-null and a load or store is found, the AA tags from the
 /// load or store are recorded there.  If there are no AA tags or if no access
 /// is found, it is left unmodified.
-Value *FindAvailableLoadedValue(Value *Ptr, BasicBlock *ScanBB,
+Value *FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
                                 BasicBlock::iterator &ScanFrom,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan,
                                 AliasAnalysis *AA = nullptr,

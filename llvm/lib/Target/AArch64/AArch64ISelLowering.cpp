@@ -6689,6 +6689,9 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
     return DAG.getSExtOrTrunc(Cmp, dl, Op.getValueType());
   }
 
+  if (LHS.getValueType().getVectorElementType() == MVT::f16)
+    return SDValue();
+
   assert(LHS.getValueType().getVectorElementType() == MVT::f32 ||
          LHS.getValueType().getVectorElementType() == MVT::f64);
 

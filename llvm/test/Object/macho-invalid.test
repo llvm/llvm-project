@@ -31,9 +31,15 @@ RUN: not llvm-objdump -t %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF %s
 NAME-PAST-EOF: Symbol name entry points before beginning or past end of file
 
-RUN: not llvm-nm %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
+RUN: llvm-nm %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
 RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC %s
-INVALID-SECTION-IDX-SYMBOL-SEC: getSymbolSection: Invalid section index
+INVALID-SECTION-IDX-SYMBOL-SEC: 0000000100000000 S __mh_execute_header
+RUN: llvm-nm -m %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
+RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC-m %s
+INVALID-SECTION-IDX-SYMBOL-SEC-m: 0000000100000000 (?,?) [referenced dynamically] external __mh_execute_header
+RUN: llvm-nm -pax %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
+RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC-pax %s
+INVALID-SECTION-IDX-SYMBOL-SEC-pax: 0000000100000000 0f 42 0010 00000065 __mh_execute_header
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
 INVALID-HEADER: Invalid data was encountered while parsing the file

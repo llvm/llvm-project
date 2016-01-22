@@ -362,6 +362,7 @@ void TraceState::DFSanSwitchCallback(uint64_t PC, size_t ValSizeInBits,
 
 int TraceState::TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
                                     size_t DataSize) {
+  if (NumMutations >= kMaxMutations) return 0;
   int Res = 0;
   const uint8_t *Beg = *CurrentUnitData;
   const uint8_t *End = Beg + *CurrentUnitSize;
@@ -382,6 +383,7 @@ int TraceState::TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
 int TraceState::TryToAddDesiredData(const uint8_t *PresentData,
                                     const uint8_t *DesiredData,
                                     size_t DataSize) {
+  if (NumMutations >= kMaxMutations) return 0;
   int Res = 0;
   const uint8_t *Beg = *CurrentUnitData;
   const uint8_t *End = Beg + *CurrentUnitSize;

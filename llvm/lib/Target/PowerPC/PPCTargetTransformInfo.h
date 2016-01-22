@@ -70,6 +70,7 @@ public:
   bool enableInterleavedAccessVectorization();
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector);
+  unsigned getCacheLineSize();
   unsigned getMaxInterleaveFactor(unsigned VF);
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,

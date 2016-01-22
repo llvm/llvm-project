@@ -9052,6 +9052,26 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
   MutableArrayRef<int> HToLInputs(LoInputs.data() + NumLToL, NumHToL);
   MutableArrayRef<int> HToHInputs(HiInputs.data() + NumLToH, NumHToH);
 
+  // If we are splatting two values from one half - one to each half, then
+  // we can shuffle that half so each is splatted to a dword, then splat those
+  // to their respective halves.
+  auto SplatHalfs = [&](int LoInput, int HiInput, unsigned ShufWOp,
+                        int DOffset) {
+    int PSHUFHalfMask[] = {LoInput % 4, LoInput % 4, HiInput % 4, HiInput % 4};
+    int PSHUFDMask[] = {DOffset + 0, DOffset + 0, DOffset + 1, DOffset + 1};
+    V = DAG.getNode(ShufWOp, DL, VT, V,
+                    getV4X86ShuffleImm8ForMask(PSHUFHalfMask, DL, DAG));
+    V = DAG.getBitcast(PSHUFDVT, V);
+    V = DAG.getNode(X86ISD::PSHUFD, DL, PSHUFDVT, V,
+                    getV4X86ShuffleImm8ForMask(PSHUFDMask, DL, DAG));
+    return DAG.getBitcast(VT, V);
+  };
+
+  if (NumLToL == 1 && NumLToH == 1 && (NumHToL + NumHToH) == 0)
+    return SplatHalfs(LToLInputs[0], LToHInputs[0], X86ISD::PSHUFLW, 0);
+  if (NumHToL == 1 && NumHToH == 1 && (NumLToL + NumLToH) == 0)
+    return SplatHalfs(HToLInputs[0], HToHInputs[0], X86ISD::PSHUFHW, 2);
+
   // Simplify the 1-into-3 and 3-into-1 cases with a single pshufd. For all
   // such inputs we can swap two of the dwords across the half mark and end up
   // with <=2 inputs to each half in each half. Once there, we can fall through

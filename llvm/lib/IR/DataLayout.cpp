@@ -723,37 +723,31 @@ unsigned DataLayout::getLargestLegalIntTypeSize() const {
   return Max != LegalIntWidths.end() ? *Max : 0;
 }
 
-uint64_t DataLayout::getIndexedOffset(Type *ptrTy,
-                                      ArrayRef<Value *> Indices) const {
-  Type *Ty = ptrTy;
-  assert(Ty->isPointerTy() && "Illegal argument for getIndexedOffset()");
+uint64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
+                                            ArrayRef<Value *> Indices) const {
   uint64_t Result = 0;
 
+  // We can use 0 as the address space as we don't need
+  // to get pointer types back from gep_type_iterator.
+  unsigned AS = 0;
   generic_gep_type_iterator<Value* const*>
-    TI = gep_type_begin(ptrTy, Indices);
-  for (unsigned CurIDX = 0, EndIDX = Indices.size(); CurIDX != EndIDX;
-       ++CurIDX, ++TI) {
-    if (StructType *STy = dyn_cast<StructType>(*TI)) {
-      assert(Indices[CurIDX]->getType() ==
-             Type::getInt32Ty(ptrTy->getContext()) &&
-             "Illegal struct idx");
-      unsigned FieldNo = cast<ConstantInt>(Indices[CurIDX])->getZExtValue();
+    GTI = gep_type_begin(ElemTy, AS, Indices),
+    GTE = gep_type_end(ElemTy, AS, Indices);
+  for (; GTI != GTE; ++GTI) {
+    Value *Idx = GTI.getOperand();
+    if (StructType *STy = dyn_cast<StructType>(*GTI)) {
+      assert(Idx->getType()->isIntegerTy(32) && "Illegal struct idx");
+      unsigned FieldNo = cast<ConstantInt>(Idx)->getZExtValue();
 
       // Get structure layout information...
       const StructLayout *Layout = getStructLayout(STy);
 
       // Add in the offset, as calculated by the structure layout info...
       Result += Layout->getElementOffset(FieldNo);
-
-      // Update Ty to refer to current element
-      Ty = STy->getElementType(FieldNo);
     } else {
-      // Update Ty to refer to current element
-      Ty = cast<SequentialType>(Ty)->getElementType();
-
       // Get the array index and the size of each array element.
-      if (int64_t arrayIdx = cast<ConstantInt>(Indices[CurIDX])->getSExtValue())
-        Result += (uint64_t)arrayIdx * getTypeAllocSize(Ty);
+      if (int64_t arrayIdx = cast<ConstantInt>(Idx)->getSExtValue())
+        Result += (uint64_t)arrayIdx * getTypeAllocSize(GTI.getIndexedType());
     }
   }
 

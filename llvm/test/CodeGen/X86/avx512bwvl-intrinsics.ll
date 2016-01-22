@@ -5163,3 +5163,67 @@ define void@test_int_x86_avx512_mask_storeu_w_256(i8* %ptr1, i8* %ptr2, <16 x i1
   call void @llvm.x86.avx512.mask.storeu.w.256(i8* %ptr2, <16 x i16> %x1, i16 -1)
   ret void
 }
+
+declare <8 x i16> @llvm.x86.avx512.mask.movu.w.128(<8 x i16>, <8 x i16>, i8)
+
+define <8 x i16>@test_int_x86_avx512_mask_movu_w_128(<8 x i16> %x0, <8 x i16> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_movu_w_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+	%res = call <8 x i16> @llvm.x86.avx512.mask.movu.w.128(<8 x i16> %x0, <8 x i16> %x1, i8 %x2)
+	%res1 = call <8 x i16> @llvm.x86.avx512.mask.movu.w.128(<8 x i16> %x0, <8 x i16> zeroinitializer, i8 %x2)
+	%res2 = add <8 x i16> %res, %res1
+	ret <8 x i16> %res2
+}
+
+declare <16 x i16> @llvm.x86.avx512.mask.movu.w.256(<16 x i16>, <16 x i16>, i16)
+
+define <16 x i16>@test_int_x86_avx512_mask_movu_w_256(<16 x i16> %x0, <16 x i16> %x1, i16 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_movu_w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vpaddw %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+	%res = call <16 x i16> @llvm.x86.avx512.mask.movu.w.256(<16 x i16> %x0, <16 x i16> %x1, i16 %x2)
+	%res1 = call <16 x i16> @llvm.x86.avx512.mask.movu.w.256(<16 x i16> %x0, <16 x i16> zeroinitializer, i16 %x2)
+	%res2 = add <16 x i16> %res, %res1
+	ret <16 x i16> %res2
+}
+
+declare <16 x i8> @llvm.x86.avx512.mask.movu.b.128(<16 x i8>, <16 x i8>, i16)
+
+define <16 x i8>@test_int_x86_avx512_mask_movu_b_128(<16 x i8> %x0, <16 x i8> %x1, i16 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_movu_b_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovdqu8 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqu8 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+	%res = call <16 x i8> @llvm.x86.avx512.mask.movu.b.128(<16 x i8> %x0, <16 x i8> %x1, i16 %x2)
+	%res1 = call <16 x i8> @llvm.x86.avx512.mask.movu.b.128(<16 x i8> %x0, <16 x i8> zeroinitializer, i16 %x2)
+	%res2 = add <16 x i8> %res, %res1
+	ret <16 x i8> %res2
+}
+
+declare <32 x i8> @llvm.x86.avx512.mask.movu.b.256(<32 x i8>, <32 x i8>, i32)
+
+define <32 x i8>@test_int_x86_avx512_mask_movu_b_256(<32 x i8> %x0, <32 x i8> %x1, i32 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_movu_b_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vmovdqu8 %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovdqu8 %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+	%res = call <32 x i8> @llvm.x86.avx512.mask.movu.b.256(<32 x i8> %x0, <32 x i8> %x1, i32 %x2)
+	%res1 = call <32 x i8> @llvm.x86.avx512.mask.movu.b.256(<32 x i8> %x0, <32 x i8> zeroinitializer, i32 %x2)
+	%res2 = add <32 x i8> %res, %res1
+	ret <32 x i8> %res2
+}

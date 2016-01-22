@@ -409,7 +409,7 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
         while (&*It != MI) {
           if (!It->isDebugValue())
             ++NumInstsToDef;
-          *It++;
+          ++It;
         }
 
         if (NumInstsToDef > MaxNumOfInstsBetweenNewValueStoreAndTFR)

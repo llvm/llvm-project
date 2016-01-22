@@ -545,9 +545,8 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-LABEL: splatvar_shift_v16i8:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm1[0,1,2,3,4,4,4,4]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,0,1,1]
 ; SSE2-NEXT:    psllw $5, %xmm2
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
@@ -667,9 +666,8 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; X32-SSE-LABEL: splatvar_shift_v16i8:
 ; X32-SSE:       # BB#0:
 ; X32-SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
 ; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
-; X32-SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm1[0,1,2,3,4,4,4,4]
+; X32-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,0,1,1]
 ; X32-SSE-NEXT:    psllw $5, %xmm2
 ; X32-SSE-NEXT:    pxor %xmm1, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm3, %xmm3

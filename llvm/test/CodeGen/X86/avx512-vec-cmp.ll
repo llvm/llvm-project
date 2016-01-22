@@ -210,7 +210,7 @@ define <16 x i32> @test14(<16 x i32>%a, <16 x i32>%b) {
 ; KNL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
 ; KNL-NEXT:    knotw %k0, %k0
 ; KNL-NEXT:    knotw %k0, %k1
-; KNL-NEXT:    vmovdqu32 %zmm1, %zmm0 {%k1} {z}
+; KNL-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
 ; KNL-NEXT:    retq
   %sub_r = sub <16 x i32> %a, %b
   %cmp.i2.i = icmp sgt <16 x i32> %sub_r, %a
@@ -227,7 +227,7 @@ define <8 x i64> @test15(<8 x i64>%a, <8 x i64>%b) {
 ; KNL-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; KNL-NEXT:    knotw %k0, %k0
 ; KNL-NEXT:    knotw %k0, %k1
-; KNL-NEXT:    vmovdqu64 %zmm1, %zmm0 {%k1} {z}
+; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
 ; KNL-NEXT:    retq
   %sub_r = sub <8 x i64> %a, %b
   %cmp.i2.i = icmp sgt <8 x i64> %sub_r, %a

@@ -137,8 +137,6 @@ public:
     // may be exported to another backend compilation.
     if (ImportIndex && !FunctionsToImport)
       HasExportedFunctions = ImportIndex->hasExportedFunctions(SrcM);
-    assert((ValIDToTempMDMap || !FunctionsToImport) &&
-           "Function importing must provide a ValIDToTempMDMap");
   }
 
   bool run();

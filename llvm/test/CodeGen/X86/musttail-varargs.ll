@@ -2,6 +2,7 @@
 ; RUN: llc < %s -enable-tail-merge=0 -mtriple=x86_64-linux-gnux32 | FileCheck %s --check-prefix=LINUX-X32
 ; RUN: llc < %s -enable-tail-merge=0 -mtriple=x86_64-windows | FileCheck %s --check-prefix=WINDOWS
 ; RUN: llc < %s -enable-tail-merge=0 -mtriple=i686-windows | FileCheck %s --check-prefix=X86
+; RUN: llc < %s -enable-tail-merge=0 -mtriple=i686-windows -mattr=+sse2 | FileCheck %s --check-prefix=X86
 
 ; Test that we actually spill and reload all arguments in the variadic argument
 ; pack. Doing a normal call will clobber all argument registers, and we will
@@ -136,6 +137,8 @@ define void @g_thunk(i8* %fptr_i8, ...) {
 ; WINDOWS: jmpq *%rcx # TAILCALL
 
 ; X86-LABEL: _g_thunk:
+; X86-NOT: push %ebp
+; X86-NOT: andl {{.*}}, %esp
 ; X86: jmpl *%eax # TAILCALL
 
 ; Do a simple multi-exit multi-bb test.

@@ -1117,7 +1117,7 @@ static int AnalyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   Src = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Src->getContext()), Src,
                                        OffsetCst);
   Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
-  if (ConstantFoldLoadFromConstPtr(Src, DL))
+  if (ConstantFoldLoadFromConstPtr(Src, LoadTy, DL))
     return Offset;
   return -1;
 }
@@ -1279,7 +1279,7 @@ static Value *GetMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
   Src = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Src->getContext()), Src,
                                        OffsetCst);
   Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
-  return ConstantFoldLoadFromConstPtr(Src, DL);
+  return ConstantFoldLoadFromConstPtr(Src, LoadTy, DL);
 }
 
 
@@ -2133,7 +2133,8 @@ bool GVN::replaceOperandsWithConsts(Instruction *Instr) const {
 /// The given values are known to be equal in every block
 /// dominated by 'Root'.  Exploit this, for example by replacing 'LHS' with
 /// 'RHS' everywhere in the scope.  Returns whether a change was made.
-/// If DominatesByEdge is false, then it means that it is dominated by Root.End.
+/// If DominatesByEdge is false, then it means that we will propagate the RHS
+/// value starting from the end of Root.Start.
 bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
                             bool DominatesByEdge) {
   SmallVector<std::pair<Value*, Value*>, 4> Worklist;
@@ -2195,7 +2196,7 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
       unsigned NumReplacements =
           DominatesByEdge
               ? replaceDominatedUsesWith(LHS, RHS, *DT, Root)
-              : replaceDominatedUsesWith(LHS, RHS, *DT, Root.getEnd());
+              : replaceDominatedUsesWith(LHS, RHS, *DT, Root.getStart());
 
       Changed |= NumReplacements > 0;
       NumGVNEqProp += NumReplacements;
@@ -2271,7 +2272,7 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
               DominatesByEdge
                   ? replaceDominatedUsesWith(NotCmp, NotVal, *DT, Root)
                   : replaceDominatedUsesWith(NotCmp, NotVal, *DT,
-                                             Root.getEnd());
+                                             Root.getStart());
           Changed |= NumReplacements > 0;
           NumGVNEqProp += NumReplacements;
         }

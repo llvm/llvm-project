@@ -75,12 +75,12 @@ define <8 x i1> @shuf8i1_3_6_1_0_3_7_7_0(<8 x i64> %a, <8 x i64> %b, <8 x i64> %
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1
 ; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0
-; AVX512F-NEXT:    vmovdqu64 %zmm0, %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,1,0,3,7,7,0]
 ; AVX512F-NEXT:    vpermq %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
-; AVX512F-NEXT:    vmovdqu64 %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -106,13 +106,13 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<16 x i32> %a, <1
 ; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
 ; AVX512F-NEXT:    vpcmpeqd %zmm3, %zmm1, %k2
 ; AVX512F-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0
-; AVX512F-NEXT:    vmovdqu32 %zmm0, %zmm1 {%k2} {z}
-; AVX512F-NEXT:    vmovdqu32 %zmm0, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k2} {z}
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm2 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
 ; AVX512F-NEXT:    vpermt2d %zmm1, %zmm3, %zmm2
 ; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512F-NEXT:    vmovdqu32 %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -164,12 +164,12 @@ define <8 x i1> @shuf8i1_u_2_u_u_2_u_2_u(i8 %a) {
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0
-; AVX512F-NEXT:    vmovdqu64 %zmm0, %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vextracti32x4 $1, %zmm1, %xmm1
 ; AVX512F-NEXT:    vpbroadcastq %xmm1, %zmm1
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
-; AVX512F-NEXT:    vmovdqu64 %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -311,8 +311,8 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; AVX512F-NEXT:    movb $51, %al
 ; AVX512F-NEXT:    kmovw %eax, %k2
 ; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0
-; AVX512F-NEXT:    vmovdqu64 %zmm0, %zmm1 {%k2} {z}
-; AVX512F-NEXT:    vmovdqu64 %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k2} {z}
+; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [9,6,1,0,3,7,7,1]
 ; AVX512F-NEXT:    vpermt2q %zmm0, %zmm2, %zmm1
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm0

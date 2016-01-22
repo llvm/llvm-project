@@ -953,15 +953,34 @@ static Value *valueHasFloatPrecision(Value *Val) {
   return nullptr;
 }
 
-//===----------------------------------------------------------------------===//
-// Double -> Float Shrinking Optimizations for Unary Functions like 'floor'
+/// Any floating-point library function that we're trying to simplify will have
+/// a signature of the form: fptype foo(fptype param1, fptype param2, ...).
+/// CheckDoubleTy indicates that 'fptype' must be 'double'.
+static bool matchesFPLibFunctionSignature(const Function *F, unsigned NumParams,
+                                          bool CheckDoubleTy) {
+  FunctionType *FT = F->getFunctionType();
+  if (FT->getNumParams() != NumParams)
+    return false;
 
-Value *LibCallSimplifier::optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
-                                                bool CheckRetType) {
+  // The return type must match what we're looking for.
+  Type *RetTy = FT->getReturnType();
+  if (CheckDoubleTy ? !RetTy->isDoubleTy() : !RetTy->isFloatingPointTy())
+    return false;
+
+  // Each parameter must match the return type, and therefore, match every other
+  // parameter too.
+  for (const Type *ParamTy : FT->params())
+    if (ParamTy != RetTy)
+      return false;
+
+  return true;
+}
+
+/// Shrink double -> float for unary functions like 'floor'.
+static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
+                                    bool CheckRetType) {
   Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 1 || !FT->getReturnType()->isDoubleTy() ||
-      !FT->getParamType(0)->isDoubleTy())
+  if (!matchesFPLibFunctionSignature(Callee, 1, true))
     return nullptr;
 
   if (CheckRetType) {
@@ -996,15 +1015,10 @@ Value *LibCallSimplifier::optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
   return B.CreateFPExt(V, B.getDoubleTy());
 }
 
-// Double -> Float Shrinking Optimizations for Binary Functions like 'fmin/fmax'
-Value *LibCallSimplifier::optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
+/// Shrink double -> float for binary functions like 'fmin/fmax'.
+static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  // Just make sure this has 2 arguments of the same FP type, which match the
-  // result type.
-  if (FT->getNumParams() != 2 || FT->getReturnType() != FT->getParamType(0) ||
-      FT->getParamType(0) != FT->getParamType(1) ||
-      !FT->getParamType(0)->isFloatingPointTy())
+  if (!matchesFPLibFunctionSignature(Callee, 2, true))
     return nullptr;
 
   // If this is something like 'fmin((double)floatval1, (double)floatval2)',
@@ -1030,17 +1044,13 @@ Value *LibCallSimplifier::optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeCos(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
+  if (!matchesFPLibFunctionSignature(Callee, 1, false))
+    return nullptr;
+
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "cos" && hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
-
-  FunctionType *FT = Callee->getFunctionType();
-  // Just make sure this has 1 argument of FP type, which matches the
-  // result type.
-  if (FT->getNumParams() != 1 || FT->getReturnType() != FT->getParamType(0) ||
-      !FT->getParamType(0)->isFloatingPointTy())
-    return Ret;
 
   // cos(-x) -> cos(x)
   Value *Op1 = CI->getArgOperand(0);
@@ -1078,18 +1088,13 @@ static Value *getPow(Value *InnerChain[33], unsigned Exp, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
+  if (!matchesFPLibFunctionSignature(Callee, 2, false))
+    return nullptr;
+
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "pow" && hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
-
-  FunctionType *FT = Callee->getFunctionType();
-  // Just make sure this has 2 arguments of the same FP type, which match the
-  // result type.
-  if (FT->getNumParams() != 2 || FT->getReturnType() != FT->getParamType(0) ||
-      FT->getParamType(0) != FT->getParamType(1) ||
-      !FT->getParamType(0)->isFloatingPointTy())
-    return Ret;
 
   Value *Op1 = CI->getArgOperand(0), *Op2 = CI->getArgOperand(1);
   if (ConstantFP *Op1C = dyn_cast<ConstantFP>(Op1)) {
@@ -1204,18 +1209,13 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  Function *Caller = CI->getParent()->getParent();
+  if (!matchesFPLibFunctionSignature(Callee, 1, false))
+    return nullptr;
+
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "exp2" && hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
-
-  FunctionType *FT = Callee->getFunctionType();
-  // Just make sure this has 1 argument of FP type, which matches the
-  // result type.
-  if (FT->getNumParams() != 1 || FT->getReturnType() != FT->getParamType(0) ||
-      !FT->getParamType(0)->isFloatingPointTy())
-    return Ret;
 
   Value *Op = CI->getArgOperand(0);
   // Turn exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= 32
@@ -1241,11 +1241,11 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
       if (!Op->getType()->isFloatTy())
         One = ConstantExpr::getFPExtend(One, Op->getType());
 
-      Module *M = Caller->getParent();
-      Value *Callee =
+      Module *M = CI->getModule();
+      Value *NewCallee =
           M->getOrInsertFunction(TLI->getName(LdExp), Op->getType(),
                                  Op->getType(), B.getInt32Ty(), nullptr);
-      CallInst *CI = B.CreateCall(Callee, {One, LdExpArg});
+      CallInst *CI = B.CreateCall(NewCallee, {One, LdExpArg});
       if (const Function *F = dyn_cast<Function>(Callee->stripPointerCasts()))
         CI->setCallingConv(F->getCallingConv());
 
@@ -1257,16 +1257,13 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeFabs(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
+  if (!matchesFPLibFunctionSignature(Callee, 1, false))
+    return nullptr;
+
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (Name == "fabs" && hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, false);
-
-  FunctionType *FT = Callee->getFunctionType();
-  // Make sure this has 1 argument of FP type which matches the result type.
-  if (FT->getNumParams() != 1 || FT->getReturnType() != FT->getParamType(0) ||
-      !FT->getParamType(0)->isFloatingPointTy())
-    return Ret;
 
   Value *Op = CI->getArgOperand(0);
   if (Instruction *I = dyn_cast<Instruction>(Op)) {
@@ -1279,20 +1276,16 @@ Value *LibCallSimplifier::optimizeFabs(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
+  Function *Callee = CI->getCalledFunction();
+  if (!matchesFPLibFunctionSignature(Callee, 2, false))
+    return nullptr;
+
   // If we can shrink the call to a float function rather than a double
   // function, do that first.
-  Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
   if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(Name))
     if (Value *Ret = optimizeBinaryDoubleFP(CI, B))
       return Ret;
-
-  // Make sure this has 2 arguments of FP type which match the result type.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || FT->getReturnType() != FT->getParamType(0) ||
-      FT->getParamType(0) != FT->getParamType(1) ||
-      !FT->getParamType(0)->isFloatingPointTy())
-    return nullptr;
 
   IRBuilder<>::FastMathFlagGuard Guard(B);
   FastMathFlags FMF;
@@ -1324,17 +1317,13 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
+  if (!matchesFPLibFunctionSignature(Callee, 1, false))
+    return nullptr;
+
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
-  FunctionType *FT = Callee->getFunctionType();
-
-  // Just make sure this has 1 argument of FP type, which matches the
-  // result type.
-  if (FT->getNumParams() != 1 || FT->getReturnType() != FT->getParamType(0) ||
-      !FT->getParamType(0)->isFloatingPointTy())
-    return Ret;
 
   if (!CI->hasUnsafeAlgebra())
     return Ret;
@@ -1376,20 +1365,13 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
+  if (!matchesFPLibFunctionSignature(Callee, 1, false))
+    return nullptr;
 
   Value *Ret = nullptr;
   if (TLI->has(LibFunc::sqrtf) && (Callee->getName() == "sqrt" ||
                                    Callee->getIntrinsicID() == Intrinsic::sqrt))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
-
-  // FIXME: Refactor - this check is repeated all over this file and even in the
-  // preceding call to shrink double -> float.
-
-  // Make sure this has 1 argument of FP type, which matches the result type.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 1 || FT->getReturnType() != FT->getParamType(0) ||
-      !FT->getParamType(0)->isFloatingPointTy())
-    return Ret;
 
   if (!CI->hasUnsafeAlgebra())
     return Ret;
@@ -1453,17 +1435,13 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
 // TODO: Generalize to handle any trig function and its inverse.
 Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
+  if (!matchesFPLibFunctionSignature(Callee, 1, false))
+    return nullptr;
+
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "tan" && hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
-  FunctionType *FT = Callee->getFunctionType();
-
-  // Just make sure this has 1 argument of FP type, which matches the
-  // result type.
-  if (FT->getNumParams() != 1 || FT->getReturnType() != FT->getParamType(0) ||
-      !FT->getParamType(0)->isFloatingPointTy())
-    return Ret;
 
   Value *Op1 = CI->getArgOperand(0);
   auto *OpC = dyn_cast<CallInst>(Op1);
@@ -1487,13 +1465,73 @@ Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilder<> &B) {
   return Ret;
 }
 
-static bool isTrigLibCall(CallInst *CI);
+static bool isTrigLibCall(CallInst *CI) {
+  Function *Callee = CI->getCalledFunction();
+  FunctionType *FT = Callee->getFunctionType();
+
+  // We can only hope to do anything useful if we can ignore things like errno
+  // and floating-point exceptions.
+  bool AttributesSafe =
+  CI->hasFnAttr(Attribute::NoUnwind) && CI->hasFnAttr(Attribute::ReadNone);
+
+  // Other than that we need float(float) or double(double)
+  return AttributesSafe && FT->getNumParams() == 1 &&
+  FT->getReturnType() == FT->getParamType(0) &&
+  (FT->getParamType(0)->isFloatTy() ||
+   FT->getParamType(0)->isDoubleTy());
+}
+
 static void insertSinCosCall(IRBuilder<> &B, Function *OrigCallee, Value *Arg,
                              bool UseFloat, Value *&Sin, Value *&Cos,
-                             Value *&SinCos);
+                             Value *&SinCos) {
+  Type *ArgTy = Arg->getType();
+  Type *ResTy;
+  StringRef Name;
+
+  Triple T(OrigCallee->getParent()->getTargetTriple());
+  if (UseFloat) {
+    Name = "__sincospif_stret";
+
+    assert(T.getArch() != Triple::x86 && "x86 messy and unsupported for now");
+    // x86_64 can't use {float, float} since that would be returned in both
+    // xmm0 and xmm1, which isn't what a real struct would do.
+    ResTy = T.getArch() == Triple::x86_64
+    ? static_cast<Type *>(VectorType::get(ArgTy, 2))
+    : static_cast<Type *>(StructType::get(ArgTy, ArgTy, nullptr));
+  } else {
+    Name = "__sincospi_stret";
+    ResTy = StructType::get(ArgTy, ArgTy, nullptr);
+  }
+
+  Module *M = OrigCallee->getParent();
+  Value *Callee = M->getOrInsertFunction(Name, OrigCallee->getAttributes(),
+                                         ResTy, ArgTy, nullptr);
+
+  if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
+    // If the argument is an instruction, it must dominate all uses so put our
+    // sincos call there.
+    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+  } else {
+    // Otherwise (e.g. for a constant) the beginning of the function is as
+    // good a place as any.
+    BasicBlock &EntryBB = B.GetInsertBlock()->getParent()->getEntryBlock();
+    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+  }
+
+  SinCos = B.CreateCall(Callee, Arg, "sincospi");
+
+  if (SinCos->getType()->isStructTy()) {
+    Sin = B.CreateExtractValue(SinCos, 0, "sinpi");
+    Cos = B.CreateExtractValue(SinCos, 1, "cospi");
+  } else {
+    Sin = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 0),
+                                 "sinpi");
+    Cos = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 1),
+                                 "cospi");
+  }
+}
 
 Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilder<> &B) {
-
   // Make sure the prototype is as expected, otherwise the rest of the
   // function is probably invalid and likely to abort.
   if (!isTrigLibCall(CI))
@@ -1525,22 +1563,6 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilder<> &B) {
   replaceTrigInsts(SinCosCalls, SinCos);
 
   return nullptr;
-}
-
-static bool isTrigLibCall(CallInst *CI) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-
-  // We can only hope to do anything useful if we can ignore things like errno
-  // and floating-point exceptions.
-  bool AttributesSafe =
-      CI->hasFnAttr(Attribute::NoUnwind) && CI->hasFnAttr(Attribute::ReadNone);
-
-  // Other than that we need float(float) or double(double)
-  return AttributesSafe && FT->getNumParams() == 1 &&
-         FT->getReturnType() == FT->getParamType(0) &&
-         (FT->getParamType(0)->isFloatTy() ||
-          FT->getParamType(0)->isDoubleTy());
 }
 
 void
@@ -1580,55 +1602,6 @@ void LibCallSimplifier::replaceTrigInsts(SmallVectorImpl<CallInst *> &Calls,
                                          Value *Res) {
   for (CallInst *C : Calls)
     replaceAllUsesWith(C, Res);
-}
-
-void insertSinCosCall(IRBuilder<> &B, Function *OrigCallee, Value *Arg,
-                      bool UseFloat, Value *&Sin, Value *&Cos, Value *&SinCos) {
-  Type *ArgTy = Arg->getType();
-  Type *ResTy;
-  StringRef Name;
-
-  Triple T(OrigCallee->getParent()->getTargetTriple());
-  if (UseFloat) {
-    Name = "__sincospif_stret";
-
-    assert(T.getArch() != Triple::x86 && "x86 messy and unsupported for now");
-    // x86_64 can't use {float, float} since that would be returned in both
-    // xmm0 and xmm1, which isn't what a real struct would do.
-    ResTy = T.getArch() == Triple::x86_64
-                ? static_cast<Type *>(VectorType::get(ArgTy, 2))
-                : static_cast<Type *>(StructType::get(ArgTy, ArgTy, nullptr));
-  } else {
-    Name = "__sincospi_stret";
-    ResTy = StructType::get(ArgTy, ArgTy, nullptr);
-  }
-
-  Module *M = OrigCallee->getParent();
-  Value *Callee = M->getOrInsertFunction(Name, OrigCallee->getAttributes(),
-                                         ResTy, ArgTy, nullptr);
-
-  if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
-    // If the argument is an instruction, it must dominate all uses so put our
-    // sincos call there.
-    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
-  } else {
-    // Otherwise (e.g. for a constant) the beginning of the function is as
-    // good a place as any.
-    BasicBlock &EntryBB = B.GetInsertBlock()->getParent()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
-  }
-
-  SinCos = B.CreateCall(Callee, Arg, "sincospi");
-
-  if (SinCos->getType()->isStructTy()) {
-    Sin = B.CreateExtractValue(SinCos, 0, "sinpi");
-    Cos = B.CreateExtractValue(SinCos, 1, "cospi");
-  } else {
-    Sin = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 0),
-                                 "sinpi");
-    Cos = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 1),
-                                 "cospi");
-  }
 }
 
 //===----------------------------------------------------------------------===//

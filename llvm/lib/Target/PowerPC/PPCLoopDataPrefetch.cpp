@@ -50,10 +50,6 @@ static cl::opt<unsigned>
 PrefDist("ppc-loop-prefetch-distance", cl::Hidden, cl::init(300),
          cl::desc("The loop prefetch distance"));
 
-static cl::opt<unsigned>
-CacheLineSize("ppc-loop-prefetch-cache-line", cl::Hidden, cl::init(64),
-              cl::desc("The loop prefetch cache line size"));
-
 namespace llvm {
   void initializePPCLoopDataPrefetchPass(PassRegistry&);
 }
@@ -109,6 +105,8 @@ bool PPCLoopDataPrefetch::runOnFunction(Function &F) {
   DL = &F.getParent()->getDataLayout();
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+
+  assert(TTI->getCacheLineSize() && "Cache line size is not set for target");
 
   bool MadeChange = false;
 
@@ -193,7 +191,7 @@ bool PPCLoopDataPrefetch::runOnLoop(Loop *L) {
         if (const SCEVConstant *ConstPtrDiff =
             dyn_cast<SCEVConstant>(PtrDiff)) {
           int64_t PD = std::abs(ConstPtrDiff->getValue()->getSExtValue());
-          if (PD < (int64_t) CacheLineSize) {
+          if (PD < (int64_t) TTI->getCacheLineSize()) {
             DupPref = true;
             break;
           }

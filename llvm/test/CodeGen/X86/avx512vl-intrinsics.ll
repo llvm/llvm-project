@@ -7467,6 +7467,134 @@ define <8 x i32>@test_int_x86_avx512_mask_permvar_si_256(<8 x i32> %x0, <8 x i32
   ret <8 x i32> %res4
 }
 
+declare <2 x double> @llvm.x86.avx512.mask.mova.pd.128(<2 x double>, <2 x double>, i8)
+
+define <2 x double>@test_int_x86_avx512_mask_mova_pd_128(<2 x double> %x0, <2 x double> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_mova_pd_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovapd %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+    %res = call <2 x double> @llvm.x86.avx512.mask.mova.pd.128(<2 x double> %x0, <2 x double> %x1, i8 %x2)
+    %res1 = call <2 x double> @llvm.x86.avx512.mask.mova.pd.128(<2 x double> %x0, <2 x double> zeroinitializer, i8 %x2)
+    %res2 = fadd <2 x double> %res, %res1
+    ret <2 x double> %res2
+}
+
+declare <4 x double> @llvm.x86.avx512.mask.mova.pd.256(<4 x double>, <4 x double>, i8)
+
+define <4 x double>@test_int_x86_avx512_mask_mova_pd_256(<4 x double> %x0, <4 x double> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_mova_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovapd %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+    %res = call <4 x double> @llvm.x86.avx512.mask.mova.pd.256(<4 x double> %x0, <4 x double> %x1, i8 %x2)
+    %res1 = call <4 x double> @llvm.x86.avx512.mask.mova.pd.256(<4 x double> %x0, <4 x double> zeroinitializer, i8 %x2)
+    %res2 = fadd <4 x double> %res, %res1
+    ret <4 x double> %res2
+}
+
+declare <4 x float> @llvm.x86.avx512.mask.mova.ps.128(<4 x float>, <4 x float>, i8)
+
+define <4 x float>@test_int_x86_avx512_mask_mova_ps_128(<4 x float> %x0, <4 x float> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_mova_ps_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovaps %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+    %res = call <4 x float> @llvm.x86.avx512.mask.mova.ps.128(<4 x float> %x0, <4 x float> %x1, i8 %x2)
+    %res1 = call <4 x float> @llvm.x86.avx512.mask.mova.ps.128(<4 x float> %x0, <4 x float> zeroinitializer, i8 %x2)
+    %res2 = fadd <4 x float> %res, %res1
+    ret <4 x float> %res2
+}
+
+declare <8 x float> @llvm.x86.avx512.mask.mova.ps.256(<8 x float>, <8 x float>, i8)
+
+define <8 x float>@test_int_x86_avx512_mask_mova_ps_256(<8 x float> %x0, <8 x float> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_mova_ps_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vaddps %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+    %res = call <8 x float> @llvm.x86.avx512.mask.mova.ps.256(<8 x float> %x0, <8 x float> %x1, i8 %x2)
+    %res1 = call <8 x float> @llvm.x86.avx512.mask.mova.ps.256(<8 x float> %x0, <8 x float> zeroinitializer, i8 %x2)
+    %res2 = fadd <8 x float> %res, %res1
+    ret <8 x float> %res2
+}
+
+declare <2 x i64> @llvm.x86.avx512.mask.mova.q.128(<2 x i64>, <2 x i64>, i8)
+
+define <2 x i64>@test_int_x86_avx512_mask_mova_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_mova_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovdqa64 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+    %res = call <2 x i64> @llvm.x86.avx512.mask.mova.q.128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2)
+    %res1 = call <2 x i64> @llvm.x86.avx512.mask.mova.q.128(<2 x i64> %x0, <2 x i64> zeroinitializer, i8 %x2)
+    %res2 = add <2 x i64> %res, %res1
+    ret <2 x i64> %res2
+}
+
+declare <4 x i64> @llvm.x86.avx512.mask.mova.q.256(<4 x i64>, <4 x i64>, i8)
+
+define <4 x i64>@test_int_x86_avx512_mask_mova_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_mova_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+    %res = call <4 x i64> @llvm.x86.avx512.mask.mova.q.256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2)
+    %res1 = call <4 x i64> @llvm.x86.avx512.mask.mova.q.256(<4 x i64> %x0, <4 x i64> zeroinitializer, i8 %x2)
+    %res2 = add <4 x i64> %res, %res1
+    ret <4 x i64> %res2
+}
+
+declare <4 x i32> @llvm.x86.avx512.mask.mova.d.128(<4 x i32>, <4 x i32>, i8)
+
+define <4 x i32>@test_int_x86_avx512_mask_mova_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_mova_d_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+    %res = call <4 x i32> @llvm.x86.avx512.mask.mova.d.128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2)
+    %res1 = call <4 x i32> @llvm.x86.avx512.mask.mova.d.128(<4 x i32> %x0, <4 x i32> zeroinitializer, i8 %x2)
+    %res2 = add <4 x i32> %res, %res1
+    ret <4 x i32> %res2
+}
+
+declare <8 x i32> @llvm.x86.avx512.mask.mova.d.256(<8 x i32>, <8 x i32>, i8)
+
+define <8 x i32>@test_int_x86_avx512_mask_mova_d_256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_mova_d_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+    %res = call <8 x i32> @llvm.x86.avx512.mask.mova.d.256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2)
+    %res1 = call <8 x i32> @llvm.x86.avx512.mask.mova.d.256(<8 x i32> %x0, <8 x i32> zeroinitializer, i8 %x2)
+    %res2 = add <8 x i32> %res, %res1
+    ret <8 x i32> %res2
+}
+
 declare void @llvm.x86.avx512.mask.store.pd.128(i8*, <2 x double>, i8)
 
 define void@test_int_x86_avx512_mask_store_pd_128(i8* %ptr1, i8* %ptr2, <2 x double> %x1, i8 %x2) {

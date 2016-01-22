@@ -3102,9 +3102,11 @@ void BitcodeReader::saveMetadataList(
     if (!OnlyTempMD || (N && N->isTemporary())) {
       // Will call this after materializing each function, in order to
       // handle remapping of the function's instructions/metadata.
+      auto IterBool = MetadataToIDs.insert(std::make_pair(MD, ID));
       // See if we already have an entry in that case.
-      if (OnlyTempMD && MetadataToIDs.count(MD)) {
-        assert(MetadataToIDs[MD] == ID && "Inconsistent metadata value id");
+      if (OnlyTempMD && !IterBool.second) {
+        assert(IterBool.first->second == ID &&
+               "Inconsistent metadata value id");
         continue;
       }
       if (N && N->isTemporary())
@@ -3112,7 +3114,6 @@ void BitcodeReader::saveMetadataList(
         // metadata while it is the key of a map. The flag will be set back
         // to true when the saved metadata list is destroyed.
         N->setCanReplace(false);
-      MetadataToIDs[MD] = ID;
     }
   }
 }

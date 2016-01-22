@@ -38,7 +38,6 @@ class AsmWriterEmitter {
   CodeGenTarget Target;
   ArrayRef<const CodeGenInstruction *> NumberedInstructions;
   std::vector<AsmWriterInst> Instructions;
-  std::vector<std::string> PrintMethods;
 public:
   AsmWriterEmitter(RecordKeeper &R);
 
@@ -788,6 +787,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   // A map of which conditions need to be met for each instruction operand
   // before it can be matched to the mnemonic.
   std::map<std::string, std::vector<IAPrinter>> IAPrinterMap;
+
+  std::vector<std::string> PrintMethods;
 
   // A list of MCOperandPredicates for all operands in use, and the reverse map
   std::vector<const Record*> MCOpPredicates;

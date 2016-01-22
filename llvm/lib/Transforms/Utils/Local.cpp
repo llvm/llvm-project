@@ -1569,7 +1569,7 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
        UI != UE;) {
     Use &U = *UI++;
     auto *I = cast<Instruction>(U.getUser());
-    if (DT.dominates(BB, I->getParent())) {
+    if (DT.properlyDominates(BB, I->getParent())) {
       U.set(To);
       DEBUG(dbgs() << "Replace dominated use of '" << From->getName() << "' as "
                    << *To << " in " << *U << "\n");
