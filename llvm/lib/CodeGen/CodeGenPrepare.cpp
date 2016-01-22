@@ -5242,7 +5242,6 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool& ModifiedDT) {
     if (ModifiedDT)
       return true;
   }
-  MadeChange |= dupRetToEnableTailCallOpts(&BB);
 
   bool MadeBitReverse = true;
   while (TLI && MadeBitReverse) {
@@ -5254,6 +5253,7 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool& ModifiedDT) {
       }
     }
   }
+  MadeChange |= dupRetToEnableTailCallOpts(&BB);
   
   return MadeChange;
 }
