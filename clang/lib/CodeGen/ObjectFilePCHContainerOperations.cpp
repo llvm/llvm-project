@@ -219,7 +219,11 @@ public:
 
     M->setTargetTriple(Ctx.getTargetInfo().getTriple().getTriple());
     M->setDataLayout(Ctx.getTargetInfo().getDataLayoutString());
-    Builder->getModuleDebugInfo()->setDwoId(Buffer->Signature);
+
+    // PCH files don't have a signature field in the control block,
+    // but LLVM detects DWO CUs by looking for a non-zero DWO id.
+    uint64_t Signature = Buffer->Signature ? Buffer->Signature : ~1U;
+    Builder->getModuleDebugInfo()->setDwoId(Signature);
 
     // Finalize the Builder.
     if (Builder)

@@ -1740,11 +1740,14 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
 
   bool IsRootModule = M ? !M->Parent : true;
   if (CreateSkeletonCU && IsRootModule) {
+    // PCH files don't have a signature field in the control block,
+    // but LLVM detects skeleton CUs by looking for a non-zero DWO id.
+    uint64_t Signature = Mod.getSignature() ? Mod.getSignature() : ~1U;
     llvm::DIBuilder DIB(CGM.getModule());
     DIB.createCompileUnit(TheCU->getSourceLanguage(), Mod.getModuleName(),
                           Mod.getPath(), TheCU->getProducer(), true,
                           StringRef(), 0, Mod.getASTFile(),
-                          llvm::DIBuilder::FullDebug, Mod.getSignature());
+                          llvm::DIBuilder::FullDebug, Signature);
     DIB.finalize();
   }
   llvm::DIModule *Parent =
