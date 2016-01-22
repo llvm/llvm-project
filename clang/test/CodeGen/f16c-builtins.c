@@ -5,6 +5,18 @@
 
 #include <x86intrin.h>
 
+float test_cvtsh_ss(unsigned short a) {
+  // CHECK-LABEL: test_cvtsh_ss
+  // CHECK: @llvm.x86.vcvtph2ps.128
+  return _cvtsh_ss(a);
+}
+
+unsigned short test_cvtss_sh(float a) {
+  // CHECK-LABEL: test_cvtss_sh
+  // CHECK: @llvm.x86.vcvtps2ph.128
+  return _cvtss_sh(a, 0);
+}
+
 __m128 test_mm_cvtph_ps(__m128i a) {
   // CHECK-LABEL: test_mm_cvtph_ps
   // CHECK: @llvm.x86.vcvtph2ps.128

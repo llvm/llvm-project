@@ -83,6 +83,11 @@ def strip_doxygen(comment):
   """Returns the given comment without \-escaped words."""
   # If there is only a doxygen keyword in the line, delete the whole line.
   comment = re.sub(r'^\\[^\s]+\n', r'', comment, flags=re.M)
+  
+  # If there is a doxygen \see command, change the \see prefix into "See also:".
+  # FIXME: it would be better to turn this into a link to the target instead.
+  comment = re.sub(r'\\see', r'See also:', comment)
+  
   # Delete the doxygen command and the following whitespace.
   comment = re.sub(r'\\[^\s]+\s+', r'', comment)
   return comment

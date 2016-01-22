@@ -232,6 +232,23 @@ problems happening in certain source files or with certain global variables.
     type:*BadInitClassSubstring*=init
     src:bad/init/files/*=init
 
+Suppressing memory leaks
+------------------------
+
+Memory leak reports produced by :doc:`LeakSanitizer` (if it is run as a part
+of AddressSanitizer) can be suppressed by a separate file passed as
+
+.. code-block:: bash
+
+    LSAN_OPTIONS=suppressions=MyLSan.supp
+
+which contains lines of the form `leak:<pattern>`. Memory leak will be
+suppressed if pattern matches any function name, source file name, or
+library name in the symbolized stack trace of the leak report. See
+`full documentation
+<https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer#suppressions>`_
+for more details.
+
 Limitations
 ===========
 

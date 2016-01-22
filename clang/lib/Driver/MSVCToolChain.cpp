@@ -659,7 +659,8 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
             DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
             DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
           }
-          if (SupportsForcingFramePointer)
+          if (SupportsForcingFramePointer &&
+              !DAL.hasArgNoClaim(options::OPT_fno_omit_frame_pointer))
             DAL.AddFlagArg(A,
                            Opts.getOption(options::OPT_fomit_frame_pointer));
           if (OptChar == '1' || OptChar == '2')
