@@ -1,4 +1,12 @@
 # -*- Python -*- vim: set syntax=python tabstop=4 expandtab cc=80:
+#===----------------------------------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is dual licensed under the MIT and the University of Illinois Open
+# Source Licenses. See LICENSE.TXT for details.
+#
+#===----------------------------------------------------------------------===##
 """
 match - A set of functions for matching symbols in a list to a list of regexs
 """
