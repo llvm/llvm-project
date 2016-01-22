@@ -2163,17 +2163,17 @@ static void emitSimpleAtomicStore(CodeGenFunction &CGF, bool IsSeqCst,
   }
 }
 
-static void emitSimpleStore(CodeGenFunction &CGF, LValue LVal, RValue RVal,
-                            QualType RValTy, SourceLocation Loc) {
-  switch (CGF.getEvaluationKind(LVal.getType())) {
+void CodeGenFunction::emitOMPSimpleStore(LValue LVal, RValue RVal,
+                                         QualType RValTy, SourceLocation Loc) {
+  switch (getEvaluationKind(LVal.getType())) {
   case TEK_Scalar:
-    CGF.EmitStoreThroughLValue(RValue::get(convertToScalarValue(
-                                   CGF, RVal, RValTy, LVal.getType(), Loc)),
-                               LVal);
+    EmitStoreThroughLValue(RValue::get(convertToScalarValue(
+                               *this, RVal, RValTy, LVal.getType(), Loc)),
+                           LVal);
     break;
   case TEK_Complex:
-    CGF.EmitStoreOfComplex(
-        convertToComplexValue(CGF, RVal, RValTy, LVal.getType(), Loc), LVal,
+    EmitStoreOfComplex(
+        convertToComplexValue(*this, RVal, RValTy, LVal.getType(), Loc), LVal,
         /*isInit=*/false);
     break;
   case TEK_Aggregate:
@@ -2201,7 +2201,7 @@ static void EmitOMPAtomicReadExpr(CodeGenFunction &CGF, bool IsSeqCst,
   // list.
   if (IsSeqCst)
     CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc);
-  emitSimpleStore(CGF, VLValue, Res, X->getType().getNonReferenceType(), Loc);
+  CGF.emitOMPSimpleStore(VLValue, Res, X->getType().getNonReferenceType(), Loc);
 }
 
 static void EmitOMPAtomicWriteExpr(CodeGenFunction &CGF, bool IsSeqCst,
@@ -2459,7 +2459,7 @@ static void EmitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
     }
   }
   // Emit post-update store to 'v' of old/new 'x' value.
-  emitSimpleStore(CGF, VLValue, NewVVal, NewVValType, Loc);
+  CGF.emitOMPSimpleStore(VLValue, NewVVal, NewVValType, Loc);
   // OpenMP, 2.12.6, atomic Construct
   // Any atomic construct with a seq_cst clause forces the atomically
   // performed operation to include an implicit flush operation without a

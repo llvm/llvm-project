@@ -3548,14 +3548,16 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
               E = CGF.EmitAnyExpr(EExpr);
             CGF.EmitOMPAtomicSimpleUpdateExpr(
                 X, E, BO, /*IsXLHSInRHSPart=*/true, llvm::Monotonic, Loc,
-                [&CGF, UpExpr, VD, IPriv](RValue XRValue) {
+                [&CGF, UpExpr, VD, IPriv, Loc](RValue XRValue) {
                   CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
-                  PrivateScope.addPrivate(VD, [&CGF, VD, XRValue]() -> Address {
-                    Address LHSTemp = CGF.CreateMemTemp(VD->getType());
-                    CGF.EmitStoreThroughLValue(
-                        XRValue, CGF.MakeAddrLValue(LHSTemp, VD->getType()));
-                    return LHSTemp;
-                  });
+                  PrivateScope.addPrivate(
+                      VD, [&CGF, VD, XRValue, Loc]() -> Address {
+                        Address LHSTemp = CGF.CreateMemTemp(VD->getType());
+                        CGF.emitOMPSimpleStore(
+                            CGF.MakeAddrLValue(LHSTemp, VD->getType()), XRValue,
+                            VD->getType().getNonReferenceType(), Loc);
+                        return LHSTemp;
+                      });
                   (void)PrivateScope.Privatize();
                   return CGF.EmitAnyExpr(UpExpr);
                 });
