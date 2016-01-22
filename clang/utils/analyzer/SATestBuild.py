@@ -285,8 +285,8 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     # Run scan-build from within the patched source directory.
     SBCwd = os.path.join(Dir, PatchedSourceDirName)
 
-    SBOptions = "--use-analyzer " + Clang + " "
-    SBOptions += "-plist-html -o '" + SBOutputDir + "' "
+    SBOptions = "--use-analyzer '%s' " %  Clang
+    SBOptions += "-plist-html -o '%s' " % SBOutputDir
     SBOptions += "-enable-checker " + AllCheckers + " "
     SBOptions += "--keep-empty "
     # Always use ccc-analyze to ensure that we can locate the failures
