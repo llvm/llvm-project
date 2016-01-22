@@ -550,6 +550,18 @@ else()
   filter_available_targets(CFI_SUPPORTED_ARCH ${ALL_CFI_SUPPORTED_ARCH})
 endif()
 
+if (MSVC)
+  # See if the DIA SDK is available and usable.
+  set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK")
+  if (IS_DIRECTORY ${MSVC_DIA_SDK_DIR})
+    set(CAN_SYMBOLIZE 1)
+  else()
+    set(CAN_SYMBOLIZE 0)
+  endif()
+else()
+  set(CAN_SYMBOLIZE 1)
+endif()
+
 message(STATUS "Compiler-RT supported architectures: ${COMPILER_RT_SUPPORTED_ARCH}")
 
 if(ANDROID)
