@@ -185,7 +185,8 @@ $builtin_logger_initialize()
     // the compiler might try to dispatch them dynamically, which it can't do correctly for these functions.
     
     StreamString wrapped_expr_text;
-    wrapped_expr_text.Printf ("do                                                          {\n"
+    wrapped_expr_text.Printf ("do\n"
+                              "{\n"
                               "%s\n" // Don't indent the code so error columns match up with errors from compiler
                               "}\n"
                               "catch (let __lldb_tmp_error)\n"
@@ -1565,6 +1566,21 @@ SwiftASTManipulator::MakeGlobalTypealias(swift::Identifier name, CompilerType &t
                                                                                    source_loc,
                                                                                    swift::TypeLoc::withoutLoc(GetSwiftType(type)),
                                                                                    &m_source_file);
+
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+    if (log)
+    {
+
+        std::string s;
+        llvm::raw_string_ostream ss(s);
+        type_alias_decl->dump(ss);
+        ss.flush();
+        
+        log->Printf("Made global type alias for %s (%p) in context (%p):\n%s", name.get(), GetSwiftType(type).getPointer(), &ast_context, s.c_str());
+        
+        
+    }
+    
     if (type_alias_decl)
     {
         if (make_private)

@@ -712,6 +712,25 @@ AddRequiredAliases(Block *block,
         if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsMetatype))
             imported_self_type = imported_self_type.GetInstanceType();
         
+        // If 'self' is the Self archetype, resolve it to the actual metatype it is
+        if (SwiftASTContext::IsSelfArchetypeType(imported_self_type))
+        {
+            SwiftLanguageRuntime *swift_runtime = stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
+            if (CompilerType concrete_self_type = swift_runtime->GetConcreteType(stack_frame_sp.get(), ConstString("Self")))
+            {
+                if (SwiftASTContext *concrete_self_type_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(concrete_self_type.GetTypeSystem()))
+                {
+                    imported_self_type = concrete_self_type_ast_ctx->CreateMetatypeType(concrete_self_type);
+                    imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
+                    imported_self_type = ImportType(swift_ast_context, imported_self_type);
+                    if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsMetatype))
+                    {
+                        imported_self_type = imported_self_type.GetInstanceType();
+                    }
+                }
+            }
+        }
+        
         swift::Type object_type = swift::Type((swift::TypeBase*)(imported_self_type.GetOpaqueQualType()))->getLValueOrInOutObjectType();
         
         if (object_type.getPointer() && (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
@@ -727,8 +746,11 @@ AddRequiredAliases(Block *block,
             if (is_bound)
                 imported_self_type = imported_self_type.GetUnboundType();
         }
-
-        swift::ValueDecl *type_alias_decl = manipulator.MakeGlobalTypealias(swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"), imported_self_type);
+        swift::ValueDecl *type_alias_decl = nullptr;
+        
+        imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
+        if (imported_self_type_flags.AllClear(lldb::eTypeIsArchetype))
+             type_alias_decl = manipulator.MakeGlobalTypealias(swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"), imported_self_type);
         
         if (!type_alias_decl)
             break;
@@ -873,9 +895,9 @@ CountLocals (SymbolContext &sc,
 
             // If we couldn't fully realize the type, then we aren't going to get very far making a local out of it,
             // so discard it here.
+            Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_TYPES|LIBLLDB_LOG_EXPRESSIONS));
             if (!SwiftASTContext::IsFullyRealized(target_type))
             {
-                Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TYPES));
                 if (log)
                 {
                     log->Printf ("Discarding local %s because we couldn't fully realize it, our best attempt was: %s.",
@@ -890,7 +912,21 @@ CountLocals (SymbolContext &sc,
             const char *overridden_name = name_cstring;
             
             if (name == s_self_name)
+            {
                 overridden_name = ConstString("$__lldb_injected_self").AsCString();
+                if (log)
+                {
+                    swift::TypeBase *swift_type = (swift::TypeBase *)target_type.GetOpaqueQualType();
+                    if (swift_type)
+                    {
+                        std::string s;
+                        llvm::raw_string_ostream ss(s);
+                        swift_type->dump(ss);
+                        ss.flush();
+                        log->Printf("Adding injected self: type (%p) context(%p) is: %s", swift_type, ast_context.GetASTContext(), s.c_str());
+                    }
+                }
+            }
             
             SwiftASTManipulator::VariableInfo variable_info(target_type, ast_context.GetASTContext()->getIdentifier(overridden_name), metadata_sp);
 

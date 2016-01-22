@@ -602,6 +602,9 @@ public:
     
     static bool
     IsArchetypeType (const CompilerType& compiler_type);
+    
+    static bool
+    IsSelfArchetypeType (const CompilerType& compiler_type);
 
     static bool
     IsPossibleZeroSizeType (const CompilerType& compiler_type);

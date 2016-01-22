@@ -203,13 +203,15 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                     {
                         self_type = self_type.GetInstanceType();
                         self_type_flags = self_type.GetTypeInfo();
-                        m_is_swift_class = true;
+                        if (self_type_flags.Test(lldb::eTypeIsClass))
+                            m_is_swift_class = true;
                         m_in_static_method = true;
                     }
 
                     if (self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeInstanceIsPointer))
                     {
-                        m_is_swift_class = true;
+                        if (self_type_flags.Test(lldb::eTypeIsClass))
+                            m_is_swift_class = true;
                     }
                     
                     swift::Type object_type = swift::Type((swift::TypeBase*)(self_type.GetOpaqueQualType()))->getLValueOrInOutObjectType();
