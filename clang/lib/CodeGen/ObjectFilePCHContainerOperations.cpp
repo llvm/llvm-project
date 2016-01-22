@@ -42,6 +42,7 @@ namespace {
 class PCHContainerGenerator : public ASTConsumer {
   DiagnosticsEngine &Diags;
   const std::string MainFileName;
+  const std::string OutputFileName;
   ASTContext *Ctx;
   ModuleMap &MMap;
   const HeaderSearchOptions &HeaderSearchOpts;
@@ -137,7 +138,8 @@ public:
                         const std::string &OutputFileName,
                         raw_pwrite_stream *OS,
                         std::shared_ptr<PCHBuffer> Buffer)
-      : Diags(CI.getDiagnostics()), Ctx(nullptr),
+      : Diags(CI.getDiagnostics()), MainFileName(MainFileName),
+        OutputFileName(OutputFileName), Ctx(nullptr),
         MMap(CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()),
         HeaderSearchOpts(CI.getHeaderSearchOpts()),
         PreprocessorOpts(CI.getPreprocessorOpts()),
@@ -163,6 +165,8 @@ public:
     Builder.reset(new CodeGen::CodeGenModule(
         *Ctx, HeaderSearchOpts, PreprocessorOpts, CodeGenOpts, *M, Diags));
     Builder->getModuleDebugInfo()->setModuleMap(MMap);
+    Builder->getModuleDebugInfo()->setPCHDescriptor(
+        {MainFileName, "", OutputFileName, ~1ULL});
   }
 
   bool HandleTopLevelDecl(DeclGroupRef D) override {
