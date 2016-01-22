@@ -1287,7 +1287,8 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 /// Create a conditional comparison; Use CCMP, CCMN or FCCMP as appropriate.
 static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
                                          ISD::CondCode CC, SDValue CCOp,
-                                         SDValue Condition, unsigned NZCV,
+                                         AArch64CC::CondCode Predicate,
+                                         AArch64CC::CondCode OutCC,
                                          SDLoc DL, SelectionDAG &DAG) {
   unsigned Opcode = 0;
   if (LHS.getValueType().isFloatingPoint())
@@ -1303,6 +1304,9 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;
 
+  SDValue Condition = DAG.getConstant(Predicate, DL, MVT_CC);
+  AArch64CC::CondCode InvOutCC = AArch64CC::getInvertedCondCode(OutCC);
+  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
   SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
   return DAG.getNode(Opcode, DL, MVT_CC, LHS, RHS, NZCVOp, Condition, CCOp);
 }
@@ -1380,14 +1384,9 @@ static SDValue emitConjunctionDisjunctionTree(SelectionDAG &DAG, SDValue Val,
         SDValue ExtraCmp;
         if (!CCOp.getNode())
           ExtraCmp = emitComparison(LHS, RHS, CC, DL, DAG);
-        else {
-          SDValue ConditionOp = DAG.getConstant(Predicate, DL, MVT_CC);
-          AArch64CC::CondCode InvExtraCC =
-              AArch64CC::getInvertedCondCode(ExtraCC);
-          unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvExtraCC);
-          ExtraCmp = emitConditionalComparison(LHS, RHS, CC, CCOp, ConditionOp,
-                                               NZCV, DL, DAG);
-        }
+        else
+          ExtraCmp = emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate,
+                                               ExtraCC, DL, DAG);
         CCOp = ExtraCmp;
         Predicate = ExtraCC;
       }
@@ -1397,10 +1396,7 @@ static SDValue emitConjunctionDisjunctionTree(SelectionDAG &DAG, SDValue Val,
     if (!CCOp.getNode())
       return emitComparison(LHS, RHS, CC, DL, DAG);
     // Otherwise produce a ccmp.
-    SDValue ConditionOp = DAG.getConstant(Predicate, DL, MVT_CC);
-    AArch64CC::CondCode InvOutCC = AArch64CC::getInvertedCondCode(OutCC);
-    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
-    return emitConditionalComparison(LHS, RHS, CC, CCOp, ConditionOp, NZCV, DL,
+    return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
                                      DAG);
   } else if ((Opcode != ISD::AND && Opcode != ISD::OR) || !Val->hasOneUse())
     return SDValue();
