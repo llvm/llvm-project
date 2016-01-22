@@ -15,7 +15,8 @@ entry:
 define <16 x i16> @funcB(<16 x i16> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcB:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[10,11,10,11,10,11,10,11,10,11,10,11,10,11,10,11]
+; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:

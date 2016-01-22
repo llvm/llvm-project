@@ -441,8 +441,9 @@ public:
   /// \brief Returns the offset from the beginning of the type for the specified
   /// indices.
   ///
+  /// Note that this takes the element type, not the pointer type.
   /// This is used to implement getelementptr.
-  uint64_t getIndexedOffset(Type *Ty, ArrayRef<Value *> Indices) const;
+  uint64_t getIndexedOffsetInType(Type *ElemTy, ArrayRef<Value *> Indices) const;
 
   /// \brief Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.

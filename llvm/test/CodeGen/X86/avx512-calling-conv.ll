@@ -87,7 +87,7 @@ define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL_X32-NEXT:    vptestmq %zmm1, %zmm1, %k1 {%k1}
 ; KNL_X32-NEXT:    vpbroadcastd LCPI2_1, %zmm0
-; KNL_X32-NEXT:    vmovdqu64 %zmm0, %zmm0 {%k1} {z}
+; KNL_X32-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL_X32-NEXT:    retl
   %c = and <8 x i1>%a, %b
@@ -315,7 +315,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    kmovw %eax, %k1
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
 ; KNL_X32-NEXT:    vpbroadcastd LCPI7_1, %zmm0
-; KNL_X32-NEXT:    vmovdqu64 %zmm0, %zmm0 {%k1} {z}
+; KNL_X32-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl

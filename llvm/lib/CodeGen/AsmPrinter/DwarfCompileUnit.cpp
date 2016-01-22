@@ -192,14 +192,14 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     addToAccelTable = true;
     // GV is a merged global.
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    Value *Ptr = CE->getOperand(0);
-    MCSymbol *Sym = Asm->getSymbol(cast<GlobalValue>(Ptr));
+    auto *Ptr = cast<GlobalValue>(CE->getOperand(0));
+    MCSymbol *Sym = Asm->getSymbol(Ptr);
     DD->addArangeLabel(SymbolCU(this, Sym));
     addOpAddress(*Loc, Sym);
     addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
     SmallVector<Value *, 3> Idx(CE->op_begin() + 1, CE->op_end());
     addUInt(*Loc, dwarf::DW_FORM_udata,
-            Asm->getDataLayout().getIndexedOffset(Ptr->getType(), Idx));
+            Asm->getDataLayout().getIndexedOffsetInType(Ptr->getValueType(), Idx));
     addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
     addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
   }

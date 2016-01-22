@@ -195,6 +195,7 @@ class CCState {
 private:
   CallingConv::ID CallingConv;
   bool IsVarArg;
+  bool AnalyzingMustTailForwardedRegs = false;
   MachineFunction &MF;
   const TargetRegisterInfo &TRI;
   SmallVectorImpl<CCValAssign> &Locs;
@@ -416,8 +417,13 @@ public:
     unsigned Result = StackOffset;
     StackOffset += Size;
     MaxStackArgAlign = std::max(Align, MaxStackArgAlign);
-    MF.getFrameInfo()->ensureMaxAlignment(Align);
+    ensureMaxAlignment(Align);
     return Result;
+  }
+
+  void ensureMaxAlignment(unsigned Align) {
+    if (!AnalyzingMustTailForwardedRegs)
+      MF.getFrameInfo()->ensureMaxAlignment(Align);
   }
 
   /// Version of AllocateStack with extra register to be shadowed.

@@ -216,7 +216,7 @@ define <16 x i32> @test_vbroadcast() {
 ; ALL-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
 ; ALL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; ALL-NEXT:    knotw %k1, %k1
-; ALL-NEXT:    vmovdqu32 %zmm0, %zmm0 {%k1} {z}
+; ALL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
 entry:
   %0 = sext <16 x i1> zeroinitializer to <16 x i32>

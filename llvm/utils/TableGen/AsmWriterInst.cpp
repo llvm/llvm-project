@@ -162,14 +162,14 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
 
       if (VarName.empty()) {
         // Just a modifier, pass this into PrintSpecial.
-        Operands.emplace_back("PrintSpecial", ~0U, ~0U, Modifier);
+        Operands.emplace_back("PrintSpecial", ~0U, Modifier);
       } else {
         // Otherwise, normal operand.
         unsigned OpNo = CGI.Operands.getOperandNamed(VarName);
         CGIOperandList::OperandInfo OpInfo = CGI.Operands[OpNo];
 
         unsigned MIOp = OpInfo.MIOperandNo;
-        Operands.emplace_back(OpInfo.PrinterMethodName, OpNo, MIOp, Modifier);
+        Operands.emplace_back(OpInfo.PrinterMethodName, MIOp, Modifier);
       }
       LastEmitted = VarEnd;
     }

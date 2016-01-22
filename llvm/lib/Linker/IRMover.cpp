@@ -659,19 +659,16 @@ Metadata *IRLinker::mapTemporaryMetadata(Metadata *MD) {
     return nullptr;
   // If this temporary metadata has a value id recorded during function
   // parsing, record that in the ValIDToTempMDMap if one was provided.
-  if (MetadataToIDs.count(MD)) {
-    unsigned Idx = MetadataToIDs[MD];
-    // Check if we created a temp MD when importing a different function from
-    // this module. If so, reuse it the same temporary metadata, otherwise
-    // add this temporary metadata to the map.
-    if (!ValIDToTempMDMap->count(Idx)) {
-      MDNode *Node = cast<MDNode>(MD);
-      assert(Node->isTemporary());
-      (*ValIDToTempMDMap)[Idx] = Node;
-    }
-    return (*ValIDToTempMDMap)[Idx];
-  }
-  return nullptr;
+  auto I = MetadataToIDs.find(MD);
+  if (I == MetadataToIDs.end())
+    return nullptr;
+  unsigned Idx = I->second;
+  MDNode *Node = cast<MDNode>(MD);
+  assert(Node->isTemporary());
+  // If we created a temp MD when importing a different function from
+  // this module, reuse the same temporary metadata.
+  auto IterBool = ValIDToTempMDMap->insert(std::make_pair(Idx, Node));
+  return IterBool.first->second;
 }
 
 void IRLinker::replaceTemporaryMetadata(const Metadata *OrigMD,
@@ -686,17 +683,19 @@ void IRLinker::replaceTemporaryMetadata(const Metadata *OrigMD,
   // created during function importing was provided, and the source
   // metadata has a value id recorded during metadata parsing, replace
   // the temporary metadata with the final mapped metadata now.
-  if (MetadataToIDs.count(OrigMD)) {
-    unsigned Idx = MetadataToIDs[OrigMD];
-    // Nothing to do if we didn't need to create a temporary metadata during
-    // function importing.
-    if (!ValIDToTempMDMap->count(Idx))
-      return;
-    MDNode *TempMD = (*ValIDToTempMDMap)[Idx];
-    TempMD->replaceAllUsesWith(NewMD);
-    MDNode::deleteTemporary(TempMD);
-    ValIDToTempMDMap->erase(Idx);
-  }
+  auto I = MetadataToIDs.find(OrigMD);
+  if (I == MetadataToIDs.end())
+    return;
+  unsigned Idx = I->second;
+  auto VI = ValIDToTempMDMap->find(Idx);
+  // Nothing to do if we didn't need to create a temporary metadata during
+  // function importing.
+  if (VI == ValIDToTempMDMap->end())
+    return;
+  MDNode *TempMD = VI->second;
+  TempMD->replaceAllUsesWith(NewMD);
+  MDNode::deleteTemporary(TempMD);
+  ValIDToTempMDMap->erase(VI);
 }
 
 bool IRLinker::isMetadataNeeded(Metadata *MD) {

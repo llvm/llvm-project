@@ -791,7 +791,7 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
   BasicBlock::iterator BBI(LI);
   AAMDNodes AATags;
   if (Value *AvailableVal =
-      FindAvailableLoadedValue(Op, LI.getParent(), BBI,
+      FindAvailableLoadedValue(&LI, LI.getParent(), BBI,
                                DefMaxInstsToScan, AA, &AATags)) {
     if (LoadInst *NLI = dyn_cast<LoadInst>(AvailableVal)) {
       unsigned KnownIDs[] = {

@@ -14,11 +14,15 @@
 
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include <tuple>
 
 using namespace llvm;
+
+static cl::opt<bool> WriteVPInBE("write-vp-data-in-big", cl::ReallyHidden,
+                                 cl::init(false));
 
 // A struct to define how the data stream should be patched. For Indexed
 // profiling, only uint64_t data type is needed.
@@ -74,8 +78,6 @@ public:
 }
 
 namespace {
-static support::endianness ValueProfDataEndianness = support::little;
-
 class InstrProfRecordTrait {
 public:
   typedef StringRef key_type;
@@ -134,17 +136,18 @@ public:
       std::unique_ptr<ValueProfData> VDataPtr =
           ValueProfData::serializeFrom(ProfileData.second);
       uint32_t S = VDataPtr->getSize();
-      VDataPtr->swapBytesFromHost(ValueProfDataEndianness);
+      VDataPtr->swapBytesFromHost(
+          InstrProfWriter::getValueProfDataEndianness());
       Out.write((const char *)VDataPtr.get(), S);
     }
   }
 };
 }
 
-// Internal interface for testing purpose only.
-void InstrProfWriter::setValueProfDataEndianness(
-    support::endianness Endianness) {
-  ValueProfDataEndianness = Endianness;
+support::endianness InstrProfWriter::getValueProfDataEndianness() {
+  if (WriteVPInBE)
+    return support::big;
+  return support::little;
 }
 
 std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,

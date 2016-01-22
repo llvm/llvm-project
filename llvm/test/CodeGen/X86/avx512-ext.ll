@@ -1820,13 +1820,9 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpsllw $7, %zmm2, %zmm2
 ; SKX-NEXT:    vpmovb2m %zmm2, %k1
-; SKX-NEXT:    vpxord %zmm2, %zmm2, %zmm2
-; SKX-NEXT:    vpxord %zmm3, %zmm3, %zmm3
-; SKX-NEXT:    vmovdqu16 %zmm0, %zmm3 {%k1}
+; SKX-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
 ; SKX-NEXT:    kshiftrq $32, %k1, %k1
-; SKX-NEXT:    vmovdqu16 %zmm1, %zmm2 {%k1}
-; SKX-NEXT:    vmovaps %zmm3, %zmm0
-; SKX-NEXT:    vmovaps %zmm2, %zmm1
+; SKX-NEXT:    vmovdqu16 %zmm1, %zmm1 {%k1} {z}
 ; SKX-NEXT:    retq
   %ret = select <64 x i1> %mask, <64 x i16> %x, <64 x i16> zeroinitializer
   ret <64 x i16> %ret

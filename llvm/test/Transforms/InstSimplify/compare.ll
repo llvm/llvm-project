@@ -397,6 +397,22 @@ define i1 @lshr3(i32 %x) {
 ; CHECK: ret i1 true
 }
 
+define i1 @lshr4(i32 %X, i32 %Y) {
+; CHECK-LABEL: @lshr4(
+  %A = lshr i32 %X, %Y
+  %C = icmp ule i32 %A, %X
+  ret i1 %C
+; CHECK: ret i1 true
+}
+
+define i1 @lshr5(i32 %X, i32 %Y) {
+; CHECK-LABEL: @lshr5(
+  %A = lshr i32 %X, %Y
+  %C = icmp ugt i32 %A, %X
+  ret i1 %C
+; CHECK: ret i1 false
+}
+
 define i1 @ashr1(i32 %x) {
 ; CHECK-LABEL: @ashr1(
   %s = ashr i32 -1, %x

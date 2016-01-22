@@ -40,3 +40,116 @@ define <32 x i8>@test_int_x86_avx512_mask_permvar_qi_256(<32 x i8> %x0, <32 x i8
   ret <32 x i8> %res4
 }
 
+declare <16 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
+
+define <16 x i8>@test_int_x86_avx512_mask_vpermi2var_qi_128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_qi_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 
+; CHECK-NEXT:    vmovaps %zmm1, %zmm3 
+; CHECK-NEXT:    vpermt2b %xmm2, %xmm0, %xmm3 {%k1} 
+; CHECK-NEXT:    vpermt2b %xmm2, %xmm0, %xmm1 
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 
+; CHECK-NEXT:    vpermt2b %xmm2, %xmm0, %xmm4 {%k1} {z} 
+; CHECK-NEXT:    vpaddb %xmm4, %xmm3, %xmm0 
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3)
+  %res1 = call <16 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.128(<16 x i8> %x0, <16 x i8> zeroinitializer, <16 x i8> %x2, i16 %x3)
+  %res2 = call <16 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 -1)
+  %res3 = add <16 x i8> %res, %res1
+  %res4 = add <16 x i8> %res3, %res2
+  ret <16 x i8> %res4
+}
+
+declare <32 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
+
+define <32 x i8>@test_int_x86_avx512_mask_vpermi2var_qi_256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_qi_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k1 
+; CHECK-NEXT:    vmovaps %zmm1, %zmm3 
+; CHECK-NEXT:    vpermt2b %ymm2, %ymm0, %ymm3 {%k1} 
+; CHECK-NEXT:    vpermt2b %ymm2, %ymm0, %ymm1 
+; CHECK-NEXT:    vpxor %ymm4, %ymm4, %ymm4 
+; CHECK-NEXT:    vpermt2b %ymm2, %ymm0, %ymm4 {%k1} {z} 
+; CHECK-NEXT:    vpaddb %ymm4, %ymm3, %ymm0 
+; CHECK-NEXT:    vpaddb %ymm1, %ymm0, %ymm0 
+; CHECK-NEXT:    retq 
+  %res = call <32 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3)
+  %res1 = call <32 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.256(<32 x i8> %x0, <32 x i8> zeroinitializer, <32 x i8> %x2, i32 %x3)
+  %res2 = call <32 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 -1)
+  %res3 = add <32 x i8> %res, %res1
+  %res4 = add <32 x i8> %res3, %res2
+  ret <32 x i8> %res4
+}
+
+declare <16 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
+
+define <16 x i8>@test_int_x86_avx512_mask_vpermt2var_qi_128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_vpermt2var_qi_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 
+; CHECK-NEXT:    vmovaps %zmm1, %zmm3 
+; CHECK-NEXT:    vpermt2b %xmm2, %xmm0, %xmm3 {%k1} 
+; CHECK-NEXT:    vpermt2b %xmm2, %xmm0, %xmm1 
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 
+; CHECK-NEXT:    vpermt2b %xmm2, %xmm0, %xmm4 {%k1} {z} 
+; CHECK-NEXT:    vpaddb %xmm4, %xmm3, %xmm0 
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3)
+  %res1 = call <16 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.128(<16 x i8> %x0, <16 x i8> zeroinitializer, <16 x i8> %x2, i16 %x3)
+  %res2 = call <16 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 -1)
+  %res3 = add <16 x i8> %res, %res1
+  %res4 = add <16 x i8> %res3, %res2
+  ret <16 x i8> %res4
+}
+
+declare <32 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
+
+define <32 x i8>@test_int_x86_avx512_mask_vpermt2var_qi_256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_vpermt2var_qi_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k1 
+; CHECK-NEXT:    vmovaps %zmm1, %zmm3 
+; CHECK-NEXT:    vpermt2b %ymm2, %ymm0, %ymm3 {%k1} 
+; CHECK-NEXT:    vpermt2b %ymm2, %ymm0, %ymm1 
+; CHECK-NEXT:    vpxor %ymm4, %ymm4, %ymm4 
+; CHECK-NEXT:    vpermt2b %ymm2, %ymm0, %ymm4 {%k1} {z} 
+; CHECK-NEXT:    vpaddb %ymm4, %ymm3, %ymm0 
+; CHECK-NEXT:    vpaddb %ymm1, %ymm0, %ymm0 
+; CHECK-NEXT:    retq 
+  %res = call <32 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3)
+  %res1 = call <32 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.256(<32 x i8> %x0, <32 x i8> zeroinitializer, <32 x i8> %x2, i32 %x3)
+  %res2 = call <32 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 -1)
+  %res3 = add <32 x i8> %res, %res1
+  %res4 = add <32 x i8> %res3, %res2
+  ret <32 x i8> %res4
+}
+
+declare <16 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
+
+define <16 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_qi_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 
+; CHECK-NEXT:    vpermt2b %xmm2, %xmm0, %xmm1 {%k1} {z} 
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0 
+; CHECK-NEXT:    retq 
+  %res = call <16 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3)
+  ret <16 x i8> %res
+}
+
+declare <32 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
+
+define <32 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_qi_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k1 
+; CHECK-NEXT:    vpermt2b %ymm2, %ymm0, %ymm1 {%k1} {z} 
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0 
+; CHECK-NEXT:    retq 
+  %res = call <32 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3)
+  ret <32 x i8> %res
+}

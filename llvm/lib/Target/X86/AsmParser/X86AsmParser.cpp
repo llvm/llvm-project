@@ -1056,6 +1056,7 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
     assert(OrigOperands.size() == FinalOperands.size() + 1 &&
            "Opernand size mismatch");
 
+    SmallVector<std::pair<SMLoc, std::string>, 2> Warnings;
     // Verify types match
     int RegClassID = -1;
     for (unsigned int i = 0; i < FinalOperands.size(); ++i) {
@@ -1100,9 +1101,10 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
 
         if (FinalReg != OrigReg) {
           std::string RegName = IsSI ? "ES:(R|E)SI" : "ES:(R|E)DI";
-          Warning(OrigOp.getStartLoc(),
-                  "memory operand is only for determining the size, " +
-                      RegName + " will be used for the location");
+          Warnings.push_back(std::make_pair(
+              OrigOp.getStartLoc(),
+              "memory operand is only for determining the size, " + RegName +
+                  " will be used for the location"));
         }
 
         FinalOp.Mem.Size = OrigOp.Mem.Size;
@@ -1111,7 +1113,14 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
       }
     }
 
-    // Remove old operandss
+    // Produce warnings only if all the operands passed the adjustment - prevent
+    // legal cases like "movsd (%rax), %xmm0" mistakenly produce warnings
+    for (auto WarningMsg = Warnings.begin(); WarningMsg < Warnings.end();
+         ++WarningMsg) {
+      Warning((*WarningMsg).first, (*WarningMsg).second);
+    }
+
+    // Remove old operands
     for (unsigned int i = 0; i < FinalOperands.size(); ++i)
       OrigOperands.pop_back();
   }

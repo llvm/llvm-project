@@ -364,6 +364,26 @@ define float @max1(float %a, float %b) {
 ; CHECK-NEXT:  ret
 }
 
+; A function can have a name that matches a common libcall,
+; but with the wrong type(s). Let it be.
+
+define float @fake_fmin(float %a, float %b) {
+  %c = fpext float %a to fp128
+  %d = fpext float %b to fp128
+  %e = call fp128 @fmin(fp128 %c, fp128 %d)
+  %f = fptrunc fp128 %e to float
+  ret float %f
+
+; CHECK-LABEL: fake_fmin(
+; CHECK-NEXT:  %c = fpext float %a to fp128
+; CHECK-NEXT:  %d = fpext float %b to fp128
+; CHECK-NEXT:  %e = call fp128 @fmin(fp128 %c, fp128 %d)
+; CHECK-NEXT:  %f = fptrunc fp128 %e to float
+; CHECK-NEXT:  ret float %f
+}
+
+declare fp128 @fmin(fp128, fp128) ; This is not the 'fmin' you're looking for.
+
 declare double @fmax(double, double)
 
 declare double @tanh(double)
