@@ -28,7 +28,7 @@
 
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
 // CHECK-SAME:             scope: ![[MODULE:[0-9]+]],
-// CHECK: ![[MODULE]] = !DIModule(scope: null, name:{{.*}}DebugObjC
+// CHECK: ![[MODULE]] = !DIModule(scope: null, name: "DebugObjC
 
 // CHECK: ![[TD_ENUM:.*]] = !DICompositeType(tag: DW_TAG_enumeration_type,
 // CHECK-SAME-NOT:         name:
