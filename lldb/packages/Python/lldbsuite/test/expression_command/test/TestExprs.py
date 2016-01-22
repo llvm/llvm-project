@@ -130,12 +130,8 @@ class BasicExprCommandsTestCase(TestBase):
                       "instead the actual state is: '%s'" %
                       lldbutil.state_type_to_str(process.GetState()))
 
-        # The stop reason of the thread should be breakpoint.
-        thread = process.GetThreadAtIndex(0)
-        if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
-            from lldbsuite.test.lldbutil import stop_reason_to_str
-            self.fail(STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS %
-                      stop_reason_to_str(thread.GetStopReason()))
+        thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
+        self.assertIsNotNone(thread, "Expected one thread to be stopped at the breakpoint")
 
         # The filename of frame #0 should be 'main.cpp' and function is main.
         self.expect(lldbutil.get_filenames(thread)[0],

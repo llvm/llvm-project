@@ -123,10 +123,13 @@ public:
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
+  void addMipsLocalEntry();
   bool addDynTlsEntry(SymbolBody *Sym);
   bool addCurrentModuleTlsIndex();
-  bool empty() const { return Entries.empty(); }
+  bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
   uintX_t getEntryAddr(const SymbolBody &B) const;
+  uintX_t getMipsLocalFullAddr(const SymbolBody &B);
+  uintX_t getMipsLocalPageAddr(uintX_t Addr);
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getNumEntries() const { return Entries.size(); }
 
@@ -145,6 +148,10 @@ public:
 private:
   std::vector<const SymbolBody *> Entries;
   uint32_t LocalTlsIndexOff = -1;
+  uint32_t MipsLocalEntries = 0;
+  llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
+
+  uintX_t getMipsLocalEntryAddr(uintX_t EntryValue);
 };
 
 template <class ELFT>

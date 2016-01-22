@@ -92,11 +92,8 @@ class ClassTypesTestCase(TestBase):
                       lldbutil.state_type_to_str(process.GetState()))
 
         # The stop reason of the thread should be breakpoint.
-        thread = process.GetThreadAtIndex(0)
-        if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
-            from lldbsuite.test.lldbutil import stop_reason_to_str
-            self.fail(STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS %
-                      stop_reason_to_str(thread.GetStopReason()))
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         # The filename of frame #0 should be 'main.cpp' and the line number
         # should be 93.
@@ -203,11 +200,8 @@ class ClassTypesTestCase(TestBase):
                       lldbutil.state_type_to_str(process.GetState()))
 
         # The stop reason of the thread should be breakpoint.
-        thread = process.GetThreadAtIndex(0)
-        if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
-            from lldbsuite.test.lldbutil import stop_reason_to_str
-            self.fail(STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS %
-                      stop_reason_to_str(thread.GetStopReason()))
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         frame = thread.frames[0]
         self.assertTrue (frame.IsValid(), "Got a valid frame.")

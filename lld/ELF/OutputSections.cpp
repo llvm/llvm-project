@@ -78,8 +78,12 @@ GotSection<ELFT>::GotSection()
 }
 
 template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody *Sym) {
-  Sym->GotIndex = Target->getGotHeaderEntriesNum() + Entries.size();
+  Sym->GotIndex = Entries.size();
   Entries.push_back(Sym);
+}
+
+template <class ELFT> void GotSection<ELFT>::addMipsLocalEntry() {
+  ++MipsLocalEntries;
 }
 
 template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody *Sym) {
@@ -104,7 +108,32 @@ template <class ELFT> bool GotSection<ELFT>::addCurrentModuleTlsIndex() {
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getEntryAddr(const SymbolBody &B) const {
-  return this->getVA() + B.GotIndex * sizeof(uintX_t);
+  return this->getVA() +
+         (Target->getGotHeaderEntriesNum() + MipsLocalEntries + B.GotIndex) *
+             sizeof(uintX_t);
+}
+
+template <class ELFT>
+typename GotSection<ELFT>::uintX_t
+GotSection<ELFT>::getMipsLocalFullAddr(const SymbolBody &B) {
+  return getMipsLocalEntryAddr(getSymVA<ELFT>(B));
+}
+
+template <class ELFT>
+typename GotSection<ELFT>::uintX_t
+GotSection<ELFT>::getMipsLocalPageAddr(uintX_t EntryValue) {
+  // Initialize the entry by the %hi(EntryValue) expression
+  // but without right-shifting.
+  return getMipsLocalEntryAddr((EntryValue + 0x8000) & ~0xffff);
+}
+
+template <class ELFT>
+typename GotSection<ELFT>::uintX_t
+GotSection<ELFT>::getMipsLocalEntryAddr(uintX_t EntryValue) {
+  size_t NewIndex = Target->getGotHeaderEntriesNum() + MipsLocalGotPos.size();
+  auto P = MipsLocalGotPos.insert(std::make_pair(EntryValue, NewIndex));
+  assert(!P.second || MipsLocalGotPos.size() <= MipsLocalEntries);
+  return this->getVA() + P.first->second * sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -120,18 +149,23 @@ const SymbolBody *GotSection<ELFT>::getMipsFirstGlobalEntry() const {
 
 template <class ELFT>
 unsigned GotSection<ELFT>::getMipsLocalEntriesNum() const {
-  // TODO: Update when the support of GOT entries for local symbols is added.
-  return Target->getGotHeaderEntriesNum();
+  return Target->getGotHeaderEntriesNum() + MipsLocalEntries;
 }
 
 template <class ELFT> void GotSection<ELFT>::finalize() {
   this->Header.sh_size =
-      (Target->getGotHeaderEntriesNum() + Entries.size()) * sizeof(uintX_t);
+      (Target->getGotHeaderEntriesNum() + MipsLocalEntries + Entries.size()) *
+      sizeof(uintX_t);
 }
 
 template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
   Target->writeGotHeaderEntries(Buf);
+  for (const auto &L : MipsLocalGotPos) {
+    uint8_t *Entry = Buf + L.second * sizeof(uintX_t);
+    write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, L.first);
+  }
   Buf += Target->getGotHeaderEntriesNum() * sizeof(uintX_t);
+  Buf += MipsLocalEntries * sizeof(uintX_t);
   for (const SymbolBody *B : Entries) {
     uint8_t *Entry = Buf;
     Buf += sizeof(uintX_t);
@@ -256,7 +290,16 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     uint32_t Type = RI.getType(Config->Mips64EL);
     if (applyTlsDynamicReloc(Body, Type, P, reinterpret_cast<Elf_Rel *>(Buf)))
       continue;
-    bool NeedsCopy = Body && Target->needsCopyRel(Type, *Body);
+
+    // Emit a copy relocation.
+    auto *SS = dyn_cast_or_null<SharedSymbol<ELFT>>(Body);
+    if (SS && SS->NeedsCopy) {
+      P->setSymbolAndType(Body->DynamicSymbolTableIndex, Target->getCopyReloc(),
+                          Config->Mips64EL);
+      P->r_offset = Out<ELFT>::Bss->getVA() + SS->OffsetInBss;
+      continue;
+    }
+
     bool NeedsGot = Body && Target->relocNeedsGot(Type, *Body);
     bool CBP = canBePreempted(Body, NeedsGot);
     bool LazyReloc = Body && Target->supportsLazyRelocations() &&
@@ -273,8 +316,6 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       Reloc = Target->getPltReloc();
     else if (NeedsGot)
       Reloc = Body->isTls() ? Target->getTlsGotReloc() : Target->getGotReloc();
-    else if (NeedsCopy)
-      Reloc = Target->getCopyReloc();
     else
       Reloc = Target->getDynReloc(Type);
     P->setSymbolAndType(Sym, Reloc, Config->Mips64EL);
@@ -283,9 +324,6 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       P->r_offset = Out<ELFT>::GotPlt->getEntryAddr(*Body);
     else if (NeedsGot)
       P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
-    else if (NeedsCopy)
-      P->r_offset = Out<ELFT>::Bss->getVA() +
-                    cast<SharedSymbol<ELFT>>(Body)->OffsetInBss;
     else
       P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
 
@@ -294,9 +332,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       OrigAddend = static_cast<const Elf_Rela &>(RI).r_addend;
 
     uintX_t Addend;
-    if (NeedsCopy)
-      Addend = 0;
-    else if (CBP || IsDynRelative)
+    if (CBP || IsDynRelative)
       Addend = OrigAddend;
     else if (Body)
       Addend = getSymVA<ELFT>(*Body) + OrigAddend;

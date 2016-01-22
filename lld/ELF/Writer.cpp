@@ -192,6 +192,34 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 };
 }
 
+template <class ELFT, class RelT>
+static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
+                                InputSectionBase<ELFT> &C, RelT &RI) {
+  if (Target->isTlsLocalDynamicReloc(Type)) {
+    if (Target->isTlsOptimized(Type, nullptr))
+      return true;
+    if (Out<ELFT>::Got->addCurrentModuleTlsIndex())
+      Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+    return true;
+  }
+
+  if (!Body || !Body->isTls())
+    return false;
+
+  if (Target->isTlsGlobalDynamicReloc(Type)) {
+    bool Opt = Target->isTlsOptimized(Type, Body);
+    if (!Opt && Out<ELFT>::Got->addDynTlsEntry(Body)) {
+      Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+      Out<ELFT>::RelaDyn->addReloc({nullptr, nullptr});
+      Body->setUsedInDynamicReloc();
+      return true;
+    }
+    if (!canBePreempted(Body, true))
+      return true;
+  }
+  return !Target->isTlsDynReloc(Type, *Body);
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -219,14 +247,6 @@ void Writer<ELFT>::scanRelocs(
     if (Target->isGotRelative(Type))
       HasGotOffRel = true;
 
-    if (Target->isTlsLocalDynamicReloc(Type)) {
-      if (Target->isTlsOptimized(Type, nullptr))
-        continue;
-      if (Out<ELFT>::Got->addCurrentModuleTlsIndex())
-        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
-      continue;
-    }
-
     // Set "used" bit for --as-needed.
     if (Body && Body->isUndefined() && !Body->isWeak())
       if (auto *S = dyn_cast<SharedSymbol<ELFT>>(Body->repl()))
@@ -235,19 +255,7 @@ void Writer<ELFT>::scanRelocs(
     if (Body)
       Body = Body->repl();
 
-    if (Body && Body->isTls() && Target->isTlsGlobalDynamicReloc(Type)) {
-      bool Opt = Target->isTlsOptimized(Type, Body);
-      if (!Opt && Out<ELFT>::Got->addDynTlsEntry(Body)) {
-        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
-        Out<ELFT>::RelaDyn->addReloc({nullptr, nullptr});
-        Body->setUsedInDynamicReloc();
-        continue;
-      }
-      if (!canBePreempted(Body, true))
-        continue;
-    }
-
-    if (Body && Body->isTls() && !Target->isTlsDynReloc(Type, *Body))
+    if (handleTlsRelocation<ELFT>(Type, Body, C, RI))
       continue;
 
     if (Target->relocNeedsDynRelative(Type)) {
@@ -258,8 +266,13 @@ void Writer<ELFT>::scanRelocs(
     }
 
     bool NeedsGot = false;
+    bool NeedsMipsLocalGot = false;
     bool NeedsPlt = false;
-    if (Body) {
+    if (Config->EMachine == EM_MIPS && needsMipsLocalGot(Type, Body)) {
+      NeedsMipsLocalGot = true;
+      // FIXME (simon): Do not add so many redundant entries.
+      Out<ELFT>::Got->addMipsLocalEntry();
+    } else if (Body) {
       if (auto *E = dyn_cast<SharedSymbol<ELFT>>(Body)) {
         if (E->NeedsCopy)
           continue;
@@ -294,13 +307,23 @@ void Writer<ELFT>::scanRelocs(
     }
 
     if (Config->EMachine == EM_MIPS) {
-      if (NeedsGot) {
+      if (Type == R_MIPS_LO16)
+        // Ignore R_MIPS_LO16 relocation. If it is a pair for R_MIPS_GOT16 we
+        // already completed all required action (GOT entry allocation) when
+        // handle R_MIPS_GOT16a. If it is a pair for R_MIPS_HI16 against
+        // _gp_disp it does not require dynamic relocation. If its a pair for
+        // R_MIPS_HI16 against a regular symbol it does not require dynamic
+        // relocation too because that case is possible for executable file
+        // linking only.
+        continue;
+      if (NeedsGot || NeedsMipsLocalGot) {
         // MIPS ABI has special rules to process GOT entries
         // and doesn't require relocation entries for them.
         // See "Global Offset Table" in Chapter 5 in the following document
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-        Body->setUsedInDynamicReloc();
+        if (NeedsGot)
+          Body->setUsedInDynamicReloc();
         continue;
       }
       if (Body == Config->MipsGpDisp)

@@ -38,8 +38,9 @@ class SBDataAPICase(TestBase):
         target = self.dbg.GetSelectedTarget()
         
         process = target.GetProcess()
-        
-        thread = process.GetThreadAtIndex(0)
+
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         frame = thread.GetSelectedFrame()
         if self.TraceOn():

@@ -100,11 +100,8 @@ class ArrayTypesTestCase(TestBase):
                        "executable = a.out"])
 
         # The stop reason of the thread should be breakpoint.
-        thread = process.GetThreadAtIndex(0)
-        if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
-            from lldbsuite.test.lldbutil import stop_reason_to_str
-            self.fail(STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS %
-                      stop_reason_to_str(thread.GetStopReason()))
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         # Sanity check the print representation of thread.
         thr = str(thread)
@@ -120,7 +117,7 @@ class ArrayTypesTestCase(TestBase):
             substrs = [tidstr])
 
         # The breakpoint should have a hit count of 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1, BREAKPOINT_HIT_ONCE)
+        self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
         # The breakpoint should be resolved by now.
         bp = str(breakpoint)

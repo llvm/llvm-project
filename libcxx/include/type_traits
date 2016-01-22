@@ -957,6 +957,38 @@ template <class _Tp> _LIBCPP_CONSTEXPR bool is_compound_v
     = is_compound<_Tp>::value;
 #endif
 
+
+// __is_referenceable  [defns.referenceable]
+template <class _Tp> struct __is_referenceable
+    : public std::integral_constant<bool, is_object<_Tp>::value || is_reference<_Tp>::value> {};
+
+#ifndef _LIBCPP_HAS_NO_VARIADICS
+template <class _Ret, class... _Args>
+struct __is_referenceable<_Ret(_Args...)>           : public std::true_type {};
+
+template <class _Ret, class... _Args>
+struct __is_referenceable<_Ret(_Args..., ...)>      : public std::true_type {};
+#else
+template <class _Ret>
+struct __is_referenceable<_Ret()>                   : public std::true_type {};
+template <class _Ret, class _A0>
+struct __is_referenceable<_Ret(_A0)>                : public std::true_type {};
+template <class _Ret, class _A0, class _A1>
+struct __is_referenceable<_Ret(_A0, _A1)>           : public std::true_type {};
+template <class _Ret, class _A0, class _A1, class _A2>
+struct __is_referenceable<_Ret(_A0, _A1, _A2)>      : public std::true_type {};
+
+template <class _Ret>
+struct __is_referenceable<_Ret(...)>                : public std::true_type {};
+template <class _Ret, class _A0>
+struct __is_referenceable<_Ret(_A0, ...)>           : public std::true_type {};
+template <class _Ret, class _A0, class _A1>
+struct __is_referenceable<_Ret(_A0, _A1, ...)>      : public std::true_type {};
+template <class _Ret, class _A0, class _A1, class _A2>
+struct __is_referenceable<_Ret(_A0, _A1, _A2, ...)> : public std::true_type {};
+#endif
+
+
 // add_const
 
 template <class _Tp, bool = is_reference<_Tp>::value ||
@@ -1014,12 +1046,11 @@ template <class _Tp> using remove_reference_t = typename remove_reference<_Tp>::
 
 // add_lvalue_reference
 
-template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY add_lvalue_reference                      {typedef _Tp& type;};
-template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY add_lvalue_reference<_Tp&>                {typedef _Tp& type;};  // for older compiler
-template <>          struct _LIBCPP_TYPE_VIS_ONLY add_lvalue_reference<void>                {typedef void type;};
-template <>          struct _LIBCPP_TYPE_VIS_ONLY add_lvalue_reference<const void>          {typedef const void type;};
-template <>          struct _LIBCPP_TYPE_VIS_ONLY add_lvalue_reference<volatile void>       {typedef volatile void type;};
-template <>          struct _LIBCPP_TYPE_VIS_ONLY add_lvalue_reference<const volatile void> {typedef const volatile void type;};
+template <class _Tp, bool = __is_referenceable<_Tp>::value> struct __add_lvalue_reference_impl            { typedef _Tp  type; };
+template <class _Tp                                       > struct __add_lvalue_reference_impl<_Tp, true> { typedef _Tp& type; };
+
+template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY add_lvalue_reference
+{typedef typename __add_lvalue_reference_impl<_Tp>::type type;};
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_lvalue_reference_t = typename add_lvalue_reference<_Tp>::type;
@@ -1027,11 +1058,11 @@ template <class _Tp> using add_lvalue_reference_t = typename add_lvalue_referenc
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
-template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY  add_rvalue_reference                     {typedef _Tp&& type;};
-template <>          struct _LIBCPP_TYPE_VIS_ONLY add_rvalue_reference<void>                {typedef void type;};
-template <>          struct _LIBCPP_TYPE_VIS_ONLY add_rvalue_reference<const void>          {typedef const void type;};
-template <>          struct _LIBCPP_TYPE_VIS_ONLY add_rvalue_reference<volatile void>       {typedef volatile void type;};
-template <>          struct _LIBCPP_TYPE_VIS_ONLY add_rvalue_reference<const volatile void> {typedef const volatile void type;};
+template <class _Tp, bool = __is_referenceable<_Tp>::value> struct __add_rvalue_reference_impl            { typedef _Tp   type; };
+template <class _Tp                                       > struct __add_rvalue_reference_impl<_Tp, true> { typedef _Tp&& type; };
+
+template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY add_rvalue_reference
+{typedef typename __add_rvalue_reference_impl<_Tp>::type type;};
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_rvalue_reference_t = typename add_rvalue_reference<_Tp>::type;
@@ -1072,8 +1103,16 @@ template <class _Tp> using remove_pointer_t = typename remove_pointer<_Tp>::type
 
 // add_pointer
 
-template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY add_pointer
+template <class _Tp, 
+        bool = __is_referenceable<_Tp>::value || 
+                is_same<typename remove_cv<_Tp>::type, void>::value>
+struct __add_pointer_impl
     {typedef typename remove_reference<_Tp>::type* type;};
+template <class _Tp> struct __add_pointer_impl<_Tp, false> 
+    {typedef _Tp type;};
+
+template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY add_pointer
+    {typedef typename __add_pointer_impl<_Tp>::type type;};
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_pointer_t = typename add_pointer<_Tp>::type;

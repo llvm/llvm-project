@@ -118,6 +118,9 @@ uint64_t getPPC64TocBase();
 template <class ELFT>
 typename llvm::object::ELFFile<ELFT>::uintX_t getMipsGpAddr();
 
+// Returns true if the relocation requires entry in the local part of GOT.
+bool needsMipsLocalGot(uint32_t Type, SymbolBody *Body);
+
 template <class ELFT> bool isGnuIFunc(const SymbolBody &S);
 
 extern std::unique_ptr<TargetInfo> Target;
