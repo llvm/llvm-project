@@ -29,7 +29,13 @@ BAD-SYMBOL: Requested symbol index is out of range
 
 RUN: not llvm-objdump -t %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF %s
-NAME-PAST-EOF: Symbol name entry points before beginning or past end of file
+NAME-PAST-EOF: error reading file: Invalid data was encountered while parsing the file.
+RUN: llvm-nm -pa %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
+RUN:      | FileCheck -check-prefix NAME-PAST-EOF-nm-pa %s
+NAME-PAST-EOF-nm-pa: 0000000000000000 - 00 0000    SO bad string index
+RUN: llvm-nm -pax %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
+RUN:      | FileCheck -check-prefix NAME-PAST-EOF-nm-pax %s
+NAME-PAST-EOF-nm-pax: 0000000000000000 64 00 0000 fe000002 bad string index
 
 RUN: llvm-nm %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
 RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC %s
