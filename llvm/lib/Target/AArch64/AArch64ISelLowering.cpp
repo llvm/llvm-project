@@ -1418,11 +1418,13 @@ static SDValue emitConjunctionDisjunctionTree(SelectionDAG &DAG, SDValue Val,
   AArch64CC::CondCode RHSCC;
   SDValue CmpR = emitConjunctionDisjunctionTree(DAG, RHS, RHSCC, PushNegate,
                                                 CCOp, Predicate, Depth+1);
+  assert(CmpR && "Transform legality should have been checked already!");
   if (NegateOperands && !PushNegate)
     RHSCC = AArch64CC::getInvertedCondCode(RHSCC);
   // Emit LHS. We must push the negate through if we need to negate it.
   SDValue CmpL = emitConjunctionDisjunctionTree(DAG, LHS, OutCC, NegateOperands,
                                                 CmpR, RHSCC, Depth+1);
+  assert(CmpL && "Transform legality should have been checked already!");
   // If we transformed an OR to and AND then we have to negate the result
   // (or absorb a PushNegate resulting in a double negation).
   if (Opcode == ISD::OR && !PushNegate)
