@@ -23,7 +23,7 @@ struct FooishStruct : Foo
     
     let x = 10
     let y = "Hello world"
-    let z = 3.14
+
     static let cvar = 333
 }
 
@@ -36,7 +36,23 @@ class FooishClass : Foo
     
     let x = 10
     let y = "Hello world"
-    let z = 3.14
+
+    static let cvar = 333
+}
+
+enum FooishEnum : Int, Foo
+{
+    case One = 1
+    case Two = 2
+
+    var x : Int {return 10}
+    var y : String { return "Hello world"}
+
+    func foo(x: Int) -> Int
+    {
+        return x + FooishEnum.cvar
+    }
+    
     static let cvar = 333
 }
 
@@ -62,6 +78,9 @@ func main()
 
     (FooishStruct()).baz()
     FooishStruct.bar()
+
+    FooishEnum.One.baz()
+    FooishEnum.bar()
 }
 
 main()

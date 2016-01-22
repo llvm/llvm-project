@@ -130,6 +130,27 @@ class TestSwiftExprInProtocolExtension(TestBase):
         self.check_expression("self.cvar", "333", False)
         self.check_expression("local_var", "222", False)
 
+        # This continues to the enum version:
+        self.continue_to_bkpt(process, method_bkpt)
+        # Check that we can evaluate expressions correctly in the struct method.
+        self.check_expression("self.x", "10", False)
+        self.check_expression("self.y", '"Hello world"', True)
+        self.check_expression("local_var", "111", False)
+
+        # And check that we got the type of self right:
+        self_var = self.frame.EvaluateExpression("self", lldb.eDynamicCanRunTarget)
+        self_type_name = self_var.GetTypeName()
+        print("Self type name is: ", self_type_name)
+
+        # Not checking yet since we don't get this right.
+
+        # Now continue to the static method and check things there:
+        self.continue_to_bkpt(process, static_bkpt)
+        
+        self.check_expression("self.cvar", "333", False)
+        self.check_expression("local_var", "222", False)
+
+
         
         
 if __name__ == '__main__':
