@@ -2028,6 +2028,16 @@ TEST(Matcher, MatchesVirtualMethod) {
   EXPECT_TRUE(notMatches("class X { int f(); };", cxxMethodDecl(isVirtual())));
 }
 
+TEST(Matcher, MatchesVirtualAsWrittenMethod) {
+  EXPECT_TRUE(matches("class A { virtual int f(); };"
+                      "class B : public A { int f(); };",
+                      cxxMethodDecl(isVirtualAsWritten(), hasName("::A::f"))));
+  EXPECT_TRUE(
+      notMatches("class A { virtual int f(); };"
+                 "class B : public A { int f(); };",
+                 cxxMethodDecl(isVirtualAsWritten(), hasName("::B::f"))));
+}
+
 TEST(Matcher, MatchesPureMethod) {
   EXPECT_TRUE(matches("class X { virtual int f() = 0; };",
                       cxxMethodDecl(isPure(), hasName("::X::f"))));

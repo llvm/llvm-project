@@ -56,7 +56,7 @@ class CoverageMappingModuleGen {
   std::vector<llvm::Constant *> FunctionRecords;
   std::vector<llvm::Constant *> FunctionNames;
   llvm::StructType *FunctionRecordTy;
-  std::string CoverageMappings;
+  std::vector<std::string> CoverageMappings;
 
 public:
   CoverageMappingModuleGen(CodeGenModule &CGM, CoverageSourceInfo &SourceInfo)

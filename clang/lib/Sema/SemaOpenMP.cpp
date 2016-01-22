@@ -5618,6 +5618,14 @@ StmtResult Sema::ActOnOpenMPTargetDataDirective(ArrayRef<OMPClause *> Clauses,
 
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
 
+  // OpenMP [2.10.1, Restrictions, p. 97]
+  // At least one map clause must appear on the directive.
+  if (!HasMapClause(Clauses)) {
+    Diag(StartLoc, diag::err_omp_no_map_for_directive) <<
+        getOpenMPDirectiveName(OMPD_target_data);
+    return StmtError();
+  }
+
   getCurFunction()->setHasBranchProtectedScope();
 
   return OMPTargetDataDirective::Create(Context, StartLoc, EndLoc, Clauses,

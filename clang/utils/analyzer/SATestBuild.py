@@ -218,11 +218,11 @@ def runScript(ScriptPath, PBuildLogFile, Cwd):
         try:
             if Verbose == 1:
                 print "  Executing: %s" % (ScriptPath,)
-            check_call("chmod +x %s" % ScriptPath, cwd = Cwd,
+            check_call("chmod +x '%s'" % ScriptPath, cwd = Cwd,
                                               stderr=PBuildLogFile,
                                               stdout=PBuildLogFile,
                                               shell=True)
-            check_call(ScriptPath, cwd = Cwd, stderr=PBuildLogFile,
+            check_call("'%s'" % ScriptPath, cwd = Cwd, stderr=PBuildLogFile,
                                               stdout=PBuildLogFile,
                                               shell=True)
         except:
@@ -261,7 +261,7 @@ def applyPatch(Dir, PBuildLogFile):
 
     print "  Applying patch."
     try:
-        check_call("patch -p1 < %s" % (PatchfilePath),
+        check_call("patch -p1 < '%s'" % (PatchfilePath),
                     cwd = PatchedSourceDirPath,
                     stderr=PBuildLogFile,
                     stdout=PBuildLogFile,
@@ -286,7 +286,7 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     SBCwd = os.path.join(Dir, PatchedSourceDirName)
 
     SBOptions = "--use-analyzer " + Clang + " "
-    SBOptions += "-plist-html -o " + SBOutputDir + " "
+    SBOptions += "-plist-html -o '" + SBOutputDir + "' "
     SBOptions += "-enable-checker " + AllCheckers + " "
     SBOptions += "--keep-empty "
     # Always use ccc-analyze to ensure that we can locate the failures
@@ -376,8 +376,8 @@ def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
             raise Exception()
 
         # Build and call the analyzer command.
-        OutputOption = "-o " + os.path.join(PlistPath, FileName) + ".plist "
-        Command = CmdPrefix + OutputOption + FileName
+        OutputOption = "-o '%s.plist' " % os.path.join(PlistPath, FileName)
+        Command = CmdPrefix + OutputOption + ("'%s'" % FileName)
         LogFile = open(os.path.join(FailPath, FileName + ".stderr.txt"), "w+b")
         try:
             if Verbose == 1:
@@ -406,14 +406,14 @@ def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
 
     # Clean up the log file.
     if (os.path.exists(BuildLogPath)) :
-        RmCommand = "rm " + BuildLogPath
+        RmCommand = "rm '%s'" % BuildLogPath
         if Verbose == 1:
             print "  Executing: %s" % (RmCommand,)
         check_call(RmCommand, shell=True)
 
     # Clean up scan build results.
     if (os.path.exists(SBOutputDir)) :
-        RmCommand = "rm -r " + SBOutputDir
+        RmCommand = "rm -r '%s'" % SBOutputDir
         if Verbose == 1:
             print "  Executing: %s" % (RmCommand,)
             check_call(RmCommand, shell=True)
@@ -593,9 +593,9 @@ def updateSVN(Mode, ProjectsMap):
             Path = os.path.join(ProjName, getSBOutputDirName(True))
 
             if Mode == "delete":
-                Command = "svn delete %s" % (Path,)
+                Command = "svn delete '%s'" % (Path,)
             else:
-                Command = "svn add %s" % (Path,)
+                Command = "svn add '%s'" % (Path,)
 
             if Verbose == 1:
                 print "  Executing: %s" % (Command,)

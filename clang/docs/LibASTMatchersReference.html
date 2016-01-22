@@ -787,8 +787,8 @@ Example matches reinterpret_cast&lt;char*&gt;(&amp;p) in
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxStaticCastExpr0')"><a name="cxxStaticCastExpr0Anchor">cxxStaticCastExpr</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXStaticCastExpr.html">CXXStaticCastExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="cxxStaticCastExpr0"><pre>Matches a C++ static_cast expression.
 
-hasDestinationType
-reinterpretCast
+See also: hasDestinationType
+See also: reinterpretCast
 
 Example:
   cxxStaticCastExpr()
@@ -898,7 +898,7 @@ Note: the name "explicitCast" is chosen to match Clang's terminology, as
 Clang uses the term "cast" to apply to implicit conversions as well as to
 actual cast expressions.
 
-hasDestinationType.
+See also: hasDestinationType.
 
 Example: matches all five of the casts in
   int((int)(reinterpret_cast&lt;int&gt;(static_cast&lt;int&gt;(const_cast&lt;int&gt;(42)))))
@@ -1061,14 +1061,15 @@ NSString's "alloc". This matcher should match both message sends.
   [[NSString alloc] initWithString:@"Hello"]
 </pre></td></tr>
 
+
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('parenExpr0')"><a name="parenExpr0Anchor">parenExpr</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ParenExpr.html">ParenExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="parenExpr0"><pre>Matches parentheses used in expressions.
 
-Given
+Example matches (foo() + 1)
   int foo() { return 1; }
   int a = (foo() + 1);
-matches '(foo() + 1)'
 </pre></td></tr>
+
 
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('returnStmt0')"><a name="returnStmt0Anchor">returnStmt</a></td><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1ReturnStmt.html">ReturnStmt</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="returnStmt0"><pre>Matches return statements.
@@ -1853,6 +1854,20 @@ Given
   matches A::x
 </pre></td></tr>
 
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isVirtualAsWritten0')"><a name="isVirtualAsWritten0Anchor">isVirtualAsWritten</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isVirtualAsWritten0"><pre>Matches if the given method declaration has an explicit "virtual".
+
+Given
+  class A {
+   public:
+    virtual void x();
+  };
+  class B : public A {
+   public:
+    void x();
+  };
+  matches A::x but not B::x
+</pre></td></tr>
 
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXOperatorCallExpr.html">CXXOperatorCallExpr</a>&gt;</td><td class="name" onclick="toggle('hasOverloadedOperatorName1')"><a name="hasOverloadedOperatorName1Anchor">hasOverloadedOperatorName</a></td><td>StringRef Name</td></tr>
 <tr><td colspan="4" class="doc" id="hasOverloadedOperatorName1"><pre>Matches overloaded operator names.
@@ -2177,6 +2192,17 @@ functionDecl(isConstexpr())
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isDefaulted0')"><a name="isDefaulted0Anchor">isDefaulted</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isDefaulted0"><pre>Matches defaulted function declarations.
+
+Given:
+  class A { ~A(); };
+  class B { ~B() = default; };
+functionDecl(isDefaulted())
+  matches the declaration of ~B, but not ~A.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isDefinition2')"><a name="isDefinition2Anchor">isDefinition</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isDefinition2"><pre>Matches if a declaration has a body attached.
 
@@ -2189,17 +2215,6 @@ Example matches A, va, fa
   void fb();  Doesn't match, as it has no body.
 
 Usable as: Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isDefaulted0')"><a name="isDefaulted0Anchor">isDefaulted</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isDefaulted0"><pre>Matches defaulted function declarations.
-
-Given:
-  class A { ~A(); };
-  class B { ~B() = default; };
-functionDecl(isDefaulted())
-  matches the declaration of ~B, but not ~A.
 </pre></td></tr>
 
 

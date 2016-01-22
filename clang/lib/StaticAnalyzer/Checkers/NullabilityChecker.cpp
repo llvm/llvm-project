@@ -470,6 +470,22 @@ static const Expr *lookThroughImplicitCasts(const Expr *E) {
   return E;
 }
 
+/// Returns true when the return statement is a syntactic 'return self' in
+/// Objective-C.
+static bool isReturnSelf(const ReturnStmt *RS, CheckerContext &C) {
+  const ImplicitParamDecl *SelfDecl =
+    C.getCurrentAnalysisDeclContext()->getSelfDecl();
+  if (!SelfDecl)
+    return false;
+
+  const Expr *ReturnExpr = lookThroughImplicitCasts(RS->getRetValue());
+  auto *RefExpr = dyn_cast<DeclRefExpr>(ReturnExpr);
+  if (!RefExpr)
+    return false;
+
+  return RefExpr->getDecl() == SelfDecl;
+}
+
 /// This method check when nullable pointer or null value is returned from a
 /// function that has nonnull return type.
 ///
@@ -494,16 +510,28 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (!RetSVal)
     return;
 
+  bool IsReturnSelfInObjCInit = false;
+
   QualType RequiredRetType;
   AnalysisDeclContext *DeclCtxt =
       C.getLocationContext()->getAnalysisDeclContext();
   const Decl *D = DeclCtxt->getDecl();
-  if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
+  if (auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     RequiredRetType = MD->getReturnType();
-  else if (auto *FD = dyn_cast<FunctionDecl>(D))
+    // Suppress diagnostics for returns of nil that are syntactic returns of
+    // self in ObjC initializers. This avoids warning under the common idiom of
+    // a defensive check of the result of a call to super:
+    //   if (self = [super init]) {
+    //     ...
+    //   }
+    //   return self; // no-warning
+    IsReturnSelfInObjCInit = (MD->getMethodFamily() == OMF_init) &&
+                              isReturnSelf(S, C);
+  } else if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     RequiredRetType = FD->getReturnType();
-  else
+  } else {
     return;
+  }
 
   NullConstraint Nullness = getNullConstraint(*RetSVal, State);
 
@@ -520,7 +548,8 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (Filter.CheckNullReturnedFromNonnull &&
       Nullness == NullConstraint::IsNull &&
       RetExprTypeLevelNullability != Nullability::Nonnull &&
-      RequiredNullability == Nullability::Nonnull) {
+      RequiredNullability == Nullability::Nonnull &&
+      !IsReturnSelfInObjCInit) {
     static CheckerProgramPointTag Tag(this, "NullReturnedFromNonnull");
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)
