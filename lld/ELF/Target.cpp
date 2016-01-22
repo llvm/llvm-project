@@ -105,7 +105,7 @@ public:
   bool isTlsOptimized(unsigned Type, const SymbolBody *S) const override;
   unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                                uint64_t P, uint64_t SA,
-                               const SymbolBody &S) const override;
+                               const SymbolBody *S) const override;
   bool isGotRelative(uint32_t Type) const override;
 
 private:
@@ -141,7 +141,7 @@ public:
   bool isSizeReloc(uint32_t Type) const override;
   unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                                uint64_t P, uint64_t SA,
-                               const SymbolBody &S) const override;
+                               const SymbolBody *S) const override;
 
 private:
   void relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
@@ -294,7 +294,7 @@ bool TargetInfo::isSizeReloc(uint32_t Type) const { return false; }
 
 unsigned TargetInfo::relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
                                          uint32_t Type, uint64_t P, uint64_t SA,
-                                         const SymbolBody &S) const {
+                                         const SymbolBody *S) const {
   return 0;
 }
 
@@ -483,10 +483,10 @@ bool X86TargetInfo::relocNeedsDynRelative(unsigned Type) const {
 unsigned X86TargetInfo::relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
                                             uint32_t Type, uint64_t P,
                                             uint64_t SA,
-                                            const SymbolBody &S) const {
+                                            const SymbolBody *S) const {
   switch (Type) {
   case R_386_TLS_GD:
-    if (canBePreempted(&S, true))
+    if (canBePreempted(S, true))
       relocateTlsGdToIe(Loc, BufEnd, P, SA);
     else
       relocateTlsGdToLe(Loc, BufEnd, P, SA);
@@ -858,7 +858,7 @@ void X86_64TargetInfo::relocateTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd,
 unsigned X86_64TargetInfo::relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
                                                uint32_t Type, uint64_t P,
                                                uint64_t SA,
-                                               const SymbolBody &S) const {
+                                               const SymbolBody *S) const {
   switch (Type) {
   case R_X86_64_DTPOFF32:
     relocateOne(Loc, BufEnd, R_X86_64_TPOFF32, P, SA);
@@ -867,7 +867,7 @@ unsigned X86_64TargetInfo::relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
     relocateTlsIeToLe(Loc, BufEnd, P, SA);
     return 0;
   case R_X86_64_TLSGD: {
-    if (canBePreempted(&S, true))
+    if (canBePreempted(S, true))
       relocateTlsGdToIe(Loc, BufEnd, P, SA);
     else
       relocateTlsGdToLe(Loc, BufEnd, P, SA);

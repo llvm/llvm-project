@@ -1135,12 +1135,17 @@ def walk_and_invoke(test_files, dotest_argv, num_workers, test_runner_func):
 def getExpectedTimeouts(platform_name):
     # returns a set of test filenames that might timeout
     # are we running against a remote target?
-    host = sys.platform
+
+    # Figure out the target system for which we're collecting
+    # the set of expected timeout test filenames.
     if platform_name is None:
         target = sys.platform
     else:
         m = re.search(r'remote-(\w+)', platform_name)
-        target = m.group(1)
+        if m is not None:
+            target = m.group(1)
+        else:
+            target = platform_name
 
     expected_timeout = set()
 
@@ -1150,13 +1155,6 @@ def getExpectedTimeouts(platform_name):
             "TestChangeProcessGroup.py",
             "TestValueObjectRecursion.py",
             "TestWatchpointConditionAPI.py",
-        }
-    elif target.startswith("darwin"):
-        expected_timeout |= {
-            # times out on MBP Retina, Mid 2012
-            "TestThreadSpecificBreakpoint.py",
-            "TestExitDuringStep.py",
-            "TestIntegerTypesExpr.py",
         }
     return expected_timeout
 

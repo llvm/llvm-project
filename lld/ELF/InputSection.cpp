@@ -180,7 +180,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
       // relocations that immediately follow TLS relocations. This function
       // knows how many slots we need to skip.
       I += Target->relocateTlsOptimize(BufLoc, BufEnd, Type, AddrLoc, SymVA,
-                                       *Body);
+                                       Body);
       continue;
     }
 

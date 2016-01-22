@@ -65,6 +65,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
 #include <set>
+#include <stack>
 
 using namespace llvm;
 using namespace polly;
@@ -1215,6 +1216,11 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
   if (!allBlocksValid(Context))
     return false;
 
+  DebugLoc DbgLoc;
+  if (!isReducibleRegion(CurRegion, DbgLoc))
+    return invalid<ReportIrreducibleRegion>(Context, /*Assert=*/true,
+                                            &CurRegion, DbgLoc);
+
   if (!isProfitableRegion(Context))
     return false;
 
@@ -1265,6 +1271,73 @@ void ScopDetection::emitMissedRemarksForLeaves(const Function &F,
       }
     }
   }
+}
+
+bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
+  BasicBlock *REntry = R.getEntry();
+  BasicBlock *RExit = R.getExit();
+  // Map to match the color of a BasicBlock during the DFS walk.
+  DenseMap<const BasicBlock *, Color> BBColorMap;
+  // Stack keeping track of current BB and index of next child to be processed.
+  std::stack<std::pair<BasicBlock *, unsigned>> DFSStack;
+
+  unsigned AdjacentBlockIndex = 0;
+  BasicBlock *CurrBB, *SuccBB;
+  CurrBB = REntry;
+
+  // Initialize the map for all BB with WHITE color.
+  for (auto *BB : R.blocks())
+    BBColorMap[BB] = ScopDetection::WHITE;
+
+  // Process the entry block of the Region.
+  BBColorMap[CurrBB] = ScopDetection::GREY;
+  DFSStack.push(std::make_pair(CurrBB, 0));
+
+  while (!DFSStack.empty()) {
+    // Get next BB on stack to be processed.
+    CurrBB = DFSStack.top().first;
+    AdjacentBlockIndex = DFSStack.top().second;
+    DFSStack.pop();
+
+    // Loop to iterate over the successors of current BB.
+    const TerminatorInst *TInst = CurrBB->getTerminator();
+    unsigned NSucc = TInst->getNumSuccessors();
+    for (unsigned I = AdjacentBlockIndex; I < NSucc;
+         ++I, ++AdjacentBlockIndex) {
+      SuccBB = TInst->getSuccessor(I);
+
+      // Checks for region exit block and self-loops in BB.
+      if (SuccBB == RExit || SuccBB == CurrBB)
+        continue;
+
+      // WHITE indicates an unvisited BB in DFS walk.
+      if (BBColorMap[SuccBB] == ScopDetection::WHITE) {
+        // Push the current BB and the index of the next child to be visited.
+        DFSStack.push(std::make_pair(CurrBB, I + 1));
+        // Push the next BB to be processed.
+        DFSStack.push(std::make_pair(SuccBB, 0));
+        // First time the BB is being processed.
+        BBColorMap[SuccBB] = ScopDetection::GREY;
+        break;
+      } else if (BBColorMap[SuccBB] == ScopDetection::GREY) {
+        // GREY indicates a loop in the control flow.
+        // If the destination dominates the source, it is a natural loop
+        // else, an irreducible control flow in the region is detected.
+        if (!DT->dominates(SuccBB, CurrBB)) {
+          // Get debug info of instruction which causes irregular control flow.
+          DbgLoc = TInst->getDebugLoc();
+          return false;
+        }
+      }
+    }
+
+    // If all children of current BB have been processed,
+    // then mark that BB as fully processed.
+    if (AdjacentBlockIndex == NSucc)
+      BBColorMap[CurrBB] = ScopDetection::BLACK;
+  }
+
+  return true;
 }
 
 bool ScopDetection::runOnFunction(llvm::Function &F) {

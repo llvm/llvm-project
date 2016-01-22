@@ -99,7 +99,6 @@ public:
   uint32_t PltIndex = -1;
   bool hasGlobalDynIndex() { return GlobalDynIndex != uint32_t(-1); }
   bool isInGot() const { return GotIndex != -1U; }
-  bool isInGotPlt() const { return GotPltIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
 
   // A SymbolBody has a backreference to a Symbol. Originally they are

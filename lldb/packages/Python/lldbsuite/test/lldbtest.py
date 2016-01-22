@@ -1345,7 +1345,7 @@ class Base(unittest2.TestCase):
             else:
                 categories = "default"
 
-            if channel == "gdb-remote" and lldb.remote_platform is None:
+            if channel == "gdb-remote":
                 # communicate gdb-remote categories to debugserver
                 os.environ["LLDB_DEBUGSERVER_LOG_FLAGS"] = categories
 
@@ -1354,15 +1354,12 @@ class Base(unittest2.TestCase):
                 raise Exception('log enable failed (check LLDB_LOG_OPTION env variable)')
 
         # Communicate log path name to debugserver & lldb-server
-        # For remote debugging, these variables need to be set when starting the platform
-        # instance.
-        if lldb.remote_platform is None:
-            server_log_path = "{}-server.log".format(log_basename)
-            open(server_log_path, 'w').close()
-            os.environ["LLDB_DEBUGSERVER_LOG_FILE"] = server_log_path
+        server_log_path = "{}-server.log".format(log_basename)
+        open(server_log_path, 'w').close()
+        os.environ["LLDB_DEBUGSERVER_LOG_FILE"] = server_log_path
 
-            # Communicate channels to lldb-server
-            os.environ["LLDB_SERVER_LOG_CHANNELS"] = ":".join(lldbtest_config.channels)
+        # Communicate channels to lldb-server
+        os.environ["LLDB_SERVER_LOG_CHANNELS"] = ":".join(lldbtest_config.channels)
 
         if len(lldbtest_config.channels) == 0:
             return
@@ -1375,15 +1372,6 @@ class Base(unittest2.TestCase):
             self.ci.HandleCommand("log disable " + channel, self.res)
             if not self.res.Succeeded():
                 raise Exception('log disable failed (check LLDB_LOG_OPTION env variable)')
-
-        # Retrieve the server log (if any) from the remote system. It is assumed the server log
-        # is writing to the "server.log" file in the current test directory. This can be
-        # achieved by setting LLDB_DEBUGSERVER_LOG_FILE="server.log" when starting remote
-        # platform. If the remote logging is not enabled, then just let the Get() command silently
-        # fail.
-        if lldb.remote_platform:
-            lldb.remote_platform.Get(lldb.SBFileSpec("server.log"),
-                    lldb.SBFileSpec(self.getLogBasenameForCurrentTest()+"-server.log"))
 
     def setUp(self):
         """Fixture for unittest test case setup.
