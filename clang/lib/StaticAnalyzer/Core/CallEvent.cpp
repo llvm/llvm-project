@@ -210,6 +210,16 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
   return PostImplicitCall(D, Loc, getLocationContext(), Tag);
 }
 
+bool CallEvent::isCalled(const CallDescription &CD) const {
+  assert(getKind() != CE_ObjCMessage && "Obj-C methods are not supported");
+  if (!CD.II)
+    CD.II = &getState()->getStateManager().getContext().Idents.get(CD.FuncName);
+  if (getCalleeIdentifier() != CD.II)
+    return false;
+  return (CD.RequiredArgs == CallDescription::NoArgRequirement ||
+          CD.RequiredArgs == getNumArgs());
+}
+
 SVal CallEvent::getArgSVal(unsigned Index) const {
   const Expr *ArgE = getArgExpr(Index);
   if (!ArgE)
