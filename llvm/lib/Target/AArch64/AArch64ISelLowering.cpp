@@ -1449,6 +1449,7 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
     bool NeedsNegOutR = RHS->getOpcode() == ISD::OR;
     assert((!NeedsNegOutR || !NeedsNegOutL) &&
            "Valid conjunction/disjunction tree");
+    (void)NeedsNegOutR;
     // Order the side where we need to negate the output flags to RHS so it
     // gets emitted first.
     if (NeedsNegOutL)
