@@ -1496,7 +1496,8 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
       DC->getParent()->isTranslationUnit())
     EmitFundamentalRTTIDescriptors();
 
-  CGM.EmitVTableBitSetEntries(VTable, VTLayout);
+  if (!VTable->isDeclarationForLinker())
+    CGM.EmitVTableBitSetEntries(VTable, VTLayout);
 }
 
 bool ItaniumCXXABI::isVirtualOffsetNeededForVTableField(
