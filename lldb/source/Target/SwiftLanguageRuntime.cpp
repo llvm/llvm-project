@@ -1244,12 +1244,14 @@ SwiftLanguageRuntime::GetNominalTypeDescriptorForType (CompilerType type)
 SwiftLanguageRuntime::NominalTypeDescriptorSP
 SwiftLanguageRuntime::GetNominalTypeDescriptorForLocation (lldb::addr_t addr)
 {
+    static ConstString g_PatternAndKind("PatternAndKid");
+    
     NominalTypeDescriptorSP nominal_sp;
     if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
         return nominal_sp;
     Error error;
     ProcessStructReader psr(m_process, addr, GetNominalTypeDescriptorType());
-    uint32_t kind = (psr.GetField<uint32_t>(ConstString("PatternAndKid")) & 0x3);
+    uint32_t kind = (psr.GetField<uint32_t>(g_PatternAndKind) & 0x3);
     switch (kind)
     {
         case 0: // class
@@ -1593,12 +1595,15 @@ SwiftLanguageRuntime::GenericParameterVector::GenericParameterVector (SwiftLangu
 m_num_primary_params(),
 m_params()
 {
+    static ConstString g_GpdOffset("GpdOffset");
+    static ConstString g_GpdNumPrimaryParams("GpdNumPrimaryParams");
+
     ProcessStructReader struct_reader(runtime.GetProcess(), nom_type_desc_addr, runtime.GetNominalTypeDescriptorType());
     
-    lldb::addr_t gpv_offset = struct_reader.GetField<lldb::addr_t>(ConstString("GpdOffset"));
+    lldb::addr_t gpv_offset = struct_reader.GetField<lldb::addr_t>(g_GpdOffset);
     if (gpv_offset == 0)
         return;
-    m_num_primary_params = struct_reader.GetField<size_t>(ConstString("GpdNumPrimaryParams"));
+    m_num_primary_params = struct_reader.GetField<size_t>(g_GpdNumPrimaryParams);
     // the witness table pointers are stored inline in some well-defined order
     // after all the metadata pointers, so we need a global counter
     lldb::addr_t witness_ptr = m_num_primary_params;
@@ -1650,12 +1655,17 @@ m_gpv_offset(0),
 m_num_type_params(0),
 m_num_witnesses()
 {
+    static ConstString g_PatternAndKind("PatternAndKid");
+    static ConstString g_Name("Name");
+    static ConstString g_GpdOffset("GpdOffset");
+    static ConstString g_GpdNumPrimaryParams("GpdNumPrimaryParams");
+
     ProcessStructReader struct_reader(runtime.GetProcess(), base_addr, runtime.GetNominalTypeDescriptorType());
     
-    int32_t kind = struct_reader.GetField<int32_t>(ConstString("PatternAndKid"));
+    int32_t kind = struct_reader.GetField<int32_t>(g_PatternAndKind);
     m_kind = (lldb_private::SwiftLanguageRuntime::NominalTypeDescriptor::Kind)(kind & 0x3); // the kind is in the two LSB of the pattern pointer
     Error error;
-    lldb::addr_t mangled_name_ptr = base_addr + (int32_t)struct_reader.GetField<lldb::addr_t>(ConstString("Name"));
+    lldb::addr_t mangled_name_ptr = base_addr + (int32_t)struct_reader.GetField<lldb::addr_t>(g_Name);
     m_runtime.GetProcess()->ReadCStringFromMemory (mangled_name_ptr, m_mangled_name, error);
     if (error.Fail())
         return;
@@ -1663,8 +1673,8 @@ m_num_witnesses()
     if (m_mangled_name.empty()) {}
     else if(m_mangled_name.front() != '_')
         m_mangled_name.insert(0, "_Tt");
-    m_gpv_offset = struct_reader.GetField<lldb::addr_t>(ConstString("GpdOffset"));
-    m_num_type_params = struct_reader.GetField<lldb::addr_t>(ConstString("GpdNumPrimaryParams"));
+    m_gpv_offset = struct_reader.GetField<lldb::addr_t>(g_GpdOffset);
+    m_num_type_params = struct_reader.GetField<lldb::addr_t>(g_GpdNumPrimaryParams);
 
     size_t num_witnesses_base_addr = runtime.GetNominalTypeDescriptorType().GetByteSize(nullptr);
     for (auto i = 0; i < m_num_type_params; i++)
@@ -1678,6 +1688,12 @@ m_num_fields(0),
 m_field_off_vec_offset(0),
 m_field_names()
 {
+    static ConstString g_NumFields("NumFields");
+    static ConstString g_FieldOffsetVectorOffset("FieldOffsetVectorOffset");
+    static ConstString g_FieldNames("FieldNames");
+    static ConstString g_GetTypes("GetTypes");
+    
+    
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TYPES));
     if (log)
         log->Printf("[SwiftLanguageRuntime::AggregateNominalTypeDescriptor::AggregateNominalTypeDescriptor] reading aggregate descriptor at 0x%" PRIx64 "into descriptor object %p", base_addr, this);
@@ -1685,11 +1701,11 @@ m_field_names()
     ProcessStructReader struct_reader(runtime.GetProcess(), base_addr, runtime.GetNominalTypeDescriptorType());
     
 
-    m_num_fields = struct_reader.GetField<uint32_t>(ConstString("NumFields"));
-    m_field_off_vec_offset = struct_reader.GetField<uint32_t>(ConstString("FieldOffsetVectorOffset"));
-    const size_t field_names_offset = struct_reader.GetOffsetOf(ConstString("FieldNames"));
-    m_field_names = ReadDoublyTerminatedStringList(base_addr + field_names_offset + struct_reader.GetField<int32_t>(ConstString("FieldNames")));
-    m_field_metadata_generator = struct_reader.GetField<lldb::addr_t>(ConstString("GetTypes"));
+    m_num_fields = struct_reader.GetField<uint32_t>(g_NumFields);
+    m_field_off_vec_offset = struct_reader.GetField<uint32_t>(g_FieldOffsetVectorOffset);
+    const size_t field_names_offset = struct_reader.GetOffsetOf(g_FieldNames);
+    m_field_names = ReadDoublyTerminatedStringList(base_addr + field_names_offset + struct_reader.GetField<int32_t>(g_FieldNames));
+    m_field_metadata_generator = struct_reader.GetField<lldb::addr_t>(g_GetTypes);
     
     if (log)
     {
@@ -1705,13 +1721,18 @@ SwiftLanguageRuntime::EnumNominalTypeDescriptor::EnumNominalTypeDescriptor (Swif
                                                                             lldb::addr_t base_addr) :
 NominalTypeDescriptor(runtime,base_addr)
 {
+    static ConstString g_NumFields("NumFields");
+    static ConstString g_FieldOffsetVectorOffset("FieldOffsetVectorOffset");
+    static ConstString g_FieldNames("FieldNames");
+    static ConstString g_GetTypes("GetTypes");
+
     ProcessStructReader struct_reader(runtime.GetProcess(), base_addr, runtime.GetNominalTypeDescriptorType());
     
     
-    m_num_nonempty_cases = struct_reader.GetField<uint32_t>(ConstString("NumFields")) & 0xFFFFFF;
-    m_num_empty_cases = struct_reader.GetField<uint32_t>(ConstString("FieldOffsetVectorOffset"));
-    const size_t field_names_offset = struct_reader.GetOffsetOf(ConstString("FieldNames"));
-    m_case_names = ReadDoublyTerminatedStringList(base_addr + field_names_offset + struct_reader.GetField<int32_t>(ConstString("FieldNames")));
+    m_num_nonempty_cases = struct_reader.GetField<uint32_t>(g_NumFields) & 0xFFFFFF;
+    m_num_empty_cases = struct_reader.GetField<uint32_t>(g_FieldOffsetVectorOffset);
+    const size_t field_names_offset = struct_reader.GetOffsetOf(g_FieldNames);
+    m_case_names = ReadDoublyTerminatedStringList(base_addr + field_names_offset + struct_reader.GetField<int32_t>(g_FieldNames));
 }
 
 SwiftLanguageRuntime::StructMetadata::StructMetadata (SwiftLanguageRuntime& runtime,
@@ -2055,6 +2076,9 @@ m_num_fields(),
 m_fields(),
 m_gpv_ap()
 {
+    static ConstString g_superclass("superclass");
+    static ConstString g_rodata("rodata");
+
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TYPES));
     if (log)
         log->Printf("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] reading class metadata at 0x%" PRIx64 "into metadata object %p", base_addr, this);
@@ -2067,7 +2091,7 @@ m_gpv_ap()
     
     ProcessStructReader reader(process, base_addr, runtime.GetClassMetadataType());
     
-    lldb::addr_t superclass_isa = reader.GetField<lldb::addr_t>(ConstString("superclass"));
+    lldb::addr_t superclass_isa = reader.GetField<lldb::addr_t>(g_superclass);
     
     if (log)
         log->Printf("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] superclass_isa = 0x%" PRIx64, superclass_isa);
@@ -2077,7 +2101,7 @@ m_gpv_ap()
     else
         m_superclass_metadata_sp = m_runtime.GetMetadataForLocation(superclass_isa);
     
-    m_rodata_ptr = reader.GetField<lldb::addr_t>(ConstString("rodata"));
+    m_rodata_ptr = reader.GetField<lldb::addr_t>(g_rodata);
     if (0 == (m_rodata_ptr & 1))
         m_is_objc = true;
     m_destructor_ptr = ReadPointerAtOffset(-2);
