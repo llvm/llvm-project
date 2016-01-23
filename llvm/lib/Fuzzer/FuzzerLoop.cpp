@@ -15,9 +15,9 @@
 #include <memory>
 
 #if defined(__has_include)
-# if __has_include(<sanitizer/coverage_interface.h>)
-#  include <sanitizer/coverage_interface.h>
-# endif
+#if __has_include(<sanitizer / coverage_interface.h>)
+#include <sanitizer/coverage_interface.h>
+#endif
 #endif
 
 extern "C" {
@@ -28,11 +28,11 @@ __attribute__((weak)) void __sanitizer_print_stack_trace();
 __attribute__((weak)) void __sanitizer_reset_coverage();
 __attribute__((weak)) size_t __sanitizer_get_total_unique_caller_callee_pairs();
 __attribute__((weak)) size_t __sanitizer_get_total_unique_coverage();
-__attribute__((weak))
-void __sanitizer_set_death_callback(void (*callback)(void));
+__attribute__((weak)) void
+__sanitizer_set_death_callback(void (*callback)(void));
 __attribute__((weak)) size_t __sanitizer_get_number_of_counters();
-__attribute__((weak))
-uintptr_t __sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
+__attribute__((weak)) uintptr_t
+__sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
 __attribute__((weak)) uintptr_t
 __sanitizer_get_coverage_pc_buffer(uintptr_t **data);
 }
@@ -42,7 +42,8 @@ static const size_t kMaxUnitSizeToPrint = 256;
 
 static void MissingWeakApiFunction(const char *FnName) {
   Printf("ERROR: %s is not defined. Exiting.\n"
-         "Did you use -fsanitize-coverage=... to build your code?\n", FnName);
+         "Did you use -fsanitize-coverage=... to build your code?\n",
+         FnName);
   exit(1);
 }
 
@@ -56,7 +57,7 @@ static void MissingWeakApiFunction(const char *FnName) {
 static Fuzzer *F;
 
 Fuzzer::Fuzzer(UserSuppliedFuzzer &USF, FuzzingOptions Options)
-    : USF(USF), Options(Options) {
+    : Generator(USF.GetRand().Rand()), USF(USF), Options(Options) {
   SetDeathCallback();
   InitializeTraceState();
   assert(!F);
@@ -92,7 +93,8 @@ void Fuzzer::AlarmCallback() {
   assert(Options.UnitTimeoutSec > 0);
   size_t Seconds =
       duration_cast<seconds>(system_clock::now() - UnitStartTime).count();
-  if (Seconds == 0) return;
+  if (Seconds == 0)
+    return;
   if (Options.Verbosity >= 2)
     Printf("AlarmCallback %zd\n", Seconds);
   if (Seconds >= (size_t)Options.UnitTimeoutSec) {
@@ -146,7 +148,8 @@ void Fuzzer::PrintStats(const char *Where, const char *End) {
 }
 
 void Fuzzer::RereadOutputCorpus() {
-  if (Options.OutputCorpus.empty()) return;
+  if (Options.OutputCorpus.empty())
+    return;
   std::vector<Unit> AdditionalCorpus;
   ReadDirToVectorOfUnits(Options.OutputCorpus.c_str(), &AdditionalCorpus,
                          &EpochOfLastReadOfOutputCorpus);
@@ -154,15 +157,17 @@ void Fuzzer::RereadOutputCorpus() {
     Corpus = AdditionalCorpus;
     return;
   }
-  if (!Options.Reload) return;
+  if (!Options.Reload)
+    return;
   if (Options.Verbosity >= 2)
-    Printf("Reload: read %zd new units.\n",  AdditionalCorpus.size());
+    Printf("Reload: read %zd new units.\n", AdditionalCorpus.size());
   for (auto &X : AdditionalCorpus) {
     if (X.size() > (size_t)Options.MaxLen)
       X.resize(Options.MaxLen);
     if (UnitHashesAddedToCorpus.insert(Hash(X)).second) {
       if (RunOne(X)) {
         Corpus.push_back(X);
+        UpdateCorpusDistribution();
         PrintStats("RELOAD");
       }
     }
@@ -200,6 +205,7 @@ void Fuzzer::ShuffleAndMinimize() {
     }
   }
   Corpus = NewCorpus;
+  UpdateCorpusDistribution();
   for (auto &X : Corpus)
     UnitHashesAddedToCorpus.insert(Hash(X));
   PrintStats("INITED");
@@ -304,7 +310,8 @@ bool Fuzzer::CheckCoverageAfterRun() {
 }
 
 void Fuzzer::WriteToOutputCorpus(const Unit &U) {
-  if (Options.OutputCorpus.empty()) return;
+  if (Options.OutputCorpus.empty())
+    return;
   std::string Path = DirPlusFile(Options.OutputCorpus, Hash(U));
   WriteToFile(U, Path);
   if (Options.Verbosity >= 2)
@@ -317,7 +324,7 @@ void Fuzzer::WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix) {
     return;
   std::string Path = Options.ArtifactPrefix + Prefix + Hash(U);
   if (!Options.ExactArtifactPath.empty())
-    Path = Options.ExactArtifactPath;  // Overrides ArtifactPrefix.
+    Path = Options.ExactArtifactPath; // Overrides ArtifactPrefix.
   WriteToFile(U, Path);
   Printf("artifact_prefix='%s'; Test unit written to %s\n",
          Options.ArtifactPrefix.c_str(), Path.c_str());
@@ -326,7 +333,8 @@ void Fuzzer::WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix) {
 }
 
 void Fuzzer::SaveCorpus() {
-  if (Options.OutputCorpus.empty()) return;
+  if (Options.OutputCorpus.empty())
+    return;
   for (const auto &U : Corpus)
     WriteToFile(U, DirPlusFile(Options.OutputCorpus, Hash(U)));
   if (Options.Verbosity)
@@ -347,6 +355,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
 
 void Fuzzer::ReportNewCoverage(const Unit &U) {
   Corpus.push_back(U);
+  UpdateCorpusDistribution();
   UnitHashesAddedToCorpus.insert(Hash(U));
   USF.GetMD().RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U);
@@ -409,22 +418,11 @@ void Fuzzer::MutateAndTestOne() {
 
 // Returns an index of random unit from the corpus to mutate.
 // Hypothesis: units added to the corpus last are more likely to be interesting.
-// This function gives more wieght to the more recent units.
+// This function gives more weight to the more recent units.
 size_t Fuzzer::ChooseUnitIdxToMutate() {
-    size_t N = Corpus.size();
-    size_t Total = (N + 1) * N / 2;
-    size_t R = USF.GetRand()(Total);
-    size_t IdxBeg = 0, IdxEnd = N;
-    // Binary search.
-    while (IdxEnd - IdxBeg >= 2) {
-      size_t Idx = IdxBeg + (IdxEnd - IdxBeg) / 2;
-      if (R > (Idx + 1) * Idx / 2)
-        IdxBeg = Idx;
-      else
-        IdxEnd = Idx;
-    }
-    assert(IdxBeg < N);
-    return IdxBeg;
+  size_t Idx = static_cast<size_t>(CorpusDistribution(Generator));
+  assert(Idx < Corpus.size());
+  return Idx;
 }
 
 // Experimental search heuristic: drilling.
@@ -437,7 +435,7 @@ size_t Fuzzer::ChooseUnitIdxToMutate() {
 void Fuzzer::Drill() {
   // The corpus is already read, shuffled, and minimized.
   assert(!Corpus.empty());
-  Options.PrintNEW = false;  // Don't print NEW status lines when drilling.
+  Options.PrintNEW = false; // Don't print NEW status lines when drilling.
 
   Unit U = ChooseUnitToMutate();
 
@@ -447,6 +445,7 @@ void Fuzzer::Drill() {
   std::vector<Unit> SavedCorpus;
   SavedCorpus.swap(Corpus);
   Corpus.push_back(U);
+  UpdateCorpusDistribution();
   assert(Corpus.size() == 1);
   RunOne(U);
   PrintStats("DRILL ");
@@ -490,7 +489,7 @@ void Fuzzer::Loop() {
       break;
     if (Options.MaxTotalTimeSec > 0 &&
         secondsSinceProcessStartUp() >
-        static_cast<size_t>(Options.MaxTotalTimeSec))
+            static_cast<size_t>(Options.MaxTotalTimeSec))
       break;
     // Perform several mutations and runs.
     MutateAndTestOne();
@@ -501,7 +500,8 @@ void Fuzzer::Loop() {
 }
 
 void Fuzzer::SyncCorpus() {
-  if (Options.SyncCommand.empty() || Options.OutputCorpus.empty()) return;
+  if (Options.SyncCommand.empty() || Options.OutputCorpus.empty())
+    return;
   auto Now = system_clock::now();
   if (duration_cast<seconds>(Now - LastExternalSync).count() <
       Options.SyncTimeout)
@@ -510,4 +510,14 @@ void Fuzzer::SyncCorpus() {
   ExecuteCommand(Options.SyncCommand + " " + Options.OutputCorpus);
 }
 
-}  // namespace fuzzer
+void Fuzzer::UpdateCorpusDistribution() {
+  size_t N = Corpus.size();
+  std::vector<double> Intervals(N + 1);
+  std::vector<double> Weights(N);
+  std::iota(Intervals.begin(), Intervals.end(), 0);
+  std::iota(Weights.begin(), Weights.end(), 1);
+  CorpusDistribution = std::piecewise_constant_distribution<double>(
+      Intervals.begin(), Intervals.end(), Weights.begin());
+}
+
+} // namespace fuzzer

@@ -2,6 +2,8 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
+; FIXME: Uses of this should be moved to llvm.amdgcn.rsq.clamped, and
+; an r600 variant added.
 
 declare float @llvm.AMDGPU.rsq.clamped.f32(float) nounwind readnone
 

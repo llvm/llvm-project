@@ -1191,7 +1191,7 @@ function(llvm_externalize_debuginfo name)
     endif()
     add_custom_command(TARGET ${name} POST_BUILD
       COMMAND xcrun dsymutil $<TARGET_FILE:${name}>
-      COMMAND xcrun strip -Sl $<TARGET_FILE:${name}>)
+      COMMAND xcrun strip -Sxl $<TARGET_FILE:${name}>)
   else()
     message(FATAL_ERROR "LLVM_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()

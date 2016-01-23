@@ -104,7 +104,7 @@ declare float @fabs(float) #2
 declare float @llvm.AMDGPU.rsq(float) #1
 
 ; Function Attrs: readnone
-declare float @llvm.AMDIL.clamp.(float, float, float) #1
+declare float @llvm.AMDGPU.clamp.f32(float, float, float) #1
 
 ; Function Attrs: nounwind readonly
 declare float @llvm.pow.f32(float, float) #3

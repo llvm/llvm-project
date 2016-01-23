@@ -917,74 +917,16 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntrinsicID) {
     default: return Op;
-    case AMDGPUIntrinsic::AMDGPU_lrp:
-      return LowerIntrinsicLRP(Op, DAG);
-
     case AMDGPUIntrinsic::AMDGPU_clamp:
     case AMDGPUIntrinsic::AMDIL_clamp: // Legacy name.
       return DAG.getNode(AMDGPUISD::CLAMP, DL, VT,
                          Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
 
-    case Intrinsic::AMDGPU_div_scale: {
-      // 3rd parameter required to be a constant.
-      const ConstantSDNode *Param = dyn_cast<ConstantSDNode>(Op.getOperand(3));
-      if (!Param)
-        return DAG.getUNDEF(VT);
-
-      // Translate to the operands expected by the machine instruction. The
-      // first parameter must be the same as the first instruction.
-      SDValue Numerator = Op.getOperand(1);
-      SDValue Denominator = Op.getOperand(2);
-
-      // Note this order is opposite of the machine instruction's operations,
-      // which is s0.f = Quotient, s1.f = Denominator, s2.f = Numerator. The
-      // intrinsic has the numerator as the first operand to match a normal
-      // division operation.
-
-      SDValue Src0 = Param->isAllOnesValue() ? Numerator : Denominator;
-
-      return DAG.getNode(AMDGPUISD::DIV_SCALE, DL, Op->getVTList(), Src0,
-                         Denominator, Numerator);
-    }
-
-    case Intrinsic::AMDGPU_div_fmas:
-      return DAG.getNode(AMDGPUISD::DIV_FMAS, DL, VT,
-                         Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
-                         Op.getOperand(4));
-
-    case Intrinsic::AMDGPU_div_fixup:
-      return DAG.getNode(AMDGPUISD::DIV_FIXUP, DL, VT,
-                         Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
-
-    case Intrinsic::AMDGPU_trig_preop:
-      return DAG.getNode(AMDGPUISD::TRIG_PREOP, DL, VT,
-                         Op.getOperand(1), Op.getOperand(2));
-
-    case Intrinsic::AMDGPU_rcp:
-      return DAG.getNode(AMDGPUISD::RCP, DL, VT, Op.getOperand(1));
-
-    case Intrinsic::AMDGPU_rsq:
-      return DAG.getNode(AMDGPUISD::RSQ, DL, VT, Op.getOperand(1));
-
-    case AMDGPUIntrinsic::AMDGPU_legacy_rsq:
-      return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
-
     case Intrinsic::AMDGPU_rsq_clamped:
-      if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-        Type *Type = VT.getTypeForEVT(*DAG.getContext());
-        APFloat Max = APFloat::getLargest(Type->getFltSemantics());
-        APFloat Min = APFloat::getLargest(Type->getFltSemantics(), true);
+      assert(Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS);
+      return DAG.getNode(AMDGPUISD::RSQ_CLAMPED, DL, VT, Op.getOperand(1));
 
-        SDValue Rsq = DAG.getNode(AMDGPUISD::RSQ, DL, VT, Op.getOperand(1));
-        SDValue Tmp = DAG.getNode(ISD::FMINNUM, DL, VT, Rsq,
-                                  DAG.getConstantFP(Max, DL, VT));
-        return DAG.getNode(ISD::FMAXNUM, DL, VT, Tmp,
-                           DAG.getConstantFP(Min, DL, VT));
-      } else {
-        return DAG.getNode(AMDGPUISD::RSQ_CLAMPED, DL, VT, Op.getOperand(1));
-      }
-
-    case Intrinsic::AMDGPU_ldexp:
+    case Intrinsic::AMDGPU_ldexp: // Legacy name
       return DAG.getNode(AMDGPUISD::LDEXP, DL, VT, Op.getOperand(1),
                                                    Op.getOperand(2));
 
@@ -1003,18 +945,6 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case AMDGPUIntrinsic::AMDGPU_imad24:
       return DAG.getNode(AMDGPUISD::MAD_I24, DL, VT,
                          Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
-
-    case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte0:
-      return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0, DL, VT, Op.getOperand(1));
-
-    case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte1:
-      return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE1, DL, VT, Op.getOperand(1));
-
-    case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte2:
-      return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE2, DL, VT, Op.getOperand(1));
-
-    case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte3:
-      return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE3, DL, VT, Op.getOperand(1));
 
     case AMDGPUIntrinsic::AMDGPU_bfe_i32:
       return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT,
@@ -1039,33 +969,12 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          Op.getOperand(1),
                          Op.getOperand(2));
 
-  case Intrinsic::AMDGPU_class:
-    return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2));
-
     case AMDGPUIntrinsic::AMDIL_exp: // Legacy name.
       return DAG.getNode(ISD::FEXP2, DL, VT, Op.getOperand(1));
 
     case AMDGPUIntrinsic::AMDGPU_brev: // Legacy name
       return DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(1));
   }
-}
-
-/// Linear Interpolation
-/// LRP(a, b, c) = muladd(a,  b, (1 - a) * c)
-SDValue AMDGPUTargetLowering::LowerIntrinsicLRP(SDValue Op,
-                                                SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-  // TODO: Should this propagate fast-math-flags?
-  SDValue OneSubA = DAG.getNode(ISD::FSUB, DL, VT,
-                                DAG.getConstantFP(1.0f, DL, MVT::f32),
-                                Op.getOperand(1));
-  SDValue OneSubAC = DAG.getNode(ISD::FMUL, DL, VT, OneSubA,
-                                                    Op.getOperand(3));
-  return DAG.getNode(ISD::FADD, DL, VT,
-      DAG.getNode(ISD::FMUL, DL, VT, Op.getOperand(1), Op.getOperand(2)),
-      OneSubAC);
 }
 
 /// \brief Generate Min/Max node

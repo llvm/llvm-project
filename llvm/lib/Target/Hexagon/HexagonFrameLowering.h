@@ -94,7 +94,7 @@ private:
       MachineBasicBlock::iterator At) const;
 
   void adjustForCalleeSavedRegsSpillCall(MachineFunction &MF) const;
-  bool replacePredRegPseudoSpillCode(MachineFunction &MF) const;
+  bool replacePseudoRegTransferCode(MachineFunction &MF) const;
   bool replaceVecPredRegPseudoSpillCode(MachineFunction &MF) const;
 
   void findShrunkPrologEpilog(MachineFunction &MF, MachineBasicBlock *&PrologB,

@@ -13,14 +13,15 @@
 #define LLVM_FUZZER_INTERNAL_H
 
 #include <cassert>
-#include <climits>
 #include <chrono>
+#include <climits>
 #include <cstddef>
 #include <cstdlib>
-#include <string>
+#include <random>
 #include <string.h>
-#include <vector>
+#include <string>
 #include <unordered_set>
+#include <vector>
 
 #include "FuzzerInterface.h"
 
@@ -29,11 +30,9 @@ using namespace std::chrono;
 typedef std::vector<uint8_t> Unit;
 
 // A simple POD sized array of bytes.
-template<size_t kMaxSize>
-class FixedWord {
- public:
-
-  FixedWord() : Size(0) {}
+template <size_t kMaxSize> class FixedWord {
+public:
+  FixedWord() {}
   FixedWord(const uint8_t *B, uint8_t S) { Set(B, S); }
 
   void Set(const uint8_t *B, uint8_t S) {
@@ -42,12 +41,13 @@ class FixedWord {
     Size = S;
   }
 
-  bool operator == (const FixedWord<kMaxSize> &w) const {
+  bool operator==(const FixedWord<kMaxSize> &w) const {
     return Size == w.Size && 0 == memcmp(Data, w.Data, Size);
   }
 
-  bool operator < (const FixedWord<kMaxSize> &w) const {
-    if (Size != w.Size) return Size < w.Size;
+  bool operator<(const FixedWord<kMaxSize> &w) const {
+    if (Size != w.Size)
+      return Size < w.Size;
     return memcmp(Data, w.Data, Size) < 0;
   }
 
@@ -55,12 +55,12 @@ class FixedWord {
   const uint8_t *data() const { return Data; }
   uint8_t size() const { return Size; }
 
- private:
-  uint8_t Size;
+private:
+  uint8_t Size = 0;
   uint8_t Data[kMaxSize];
 };
 
-typedef FixedWord<27> Word;  // 28 bytes.
+typedef FixedWord<27> Word; // 28 bytes.
 
 std::string FileToString(const std::string &Path);
 Unit FileToVector(const std::string &Path);
@@ -108,7 +108,7 @@ bool ParseOneDictionaryEntry(const std::string &Str, Unit *U);
 bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units);
 
 class MutationDispatcher {
- public:
+public:
   MutationDispatcher(FuzzerRandomBase &Rand);
   ~MutationDispatcher();
   /// Indicate that we are about to start a new sequence of mutations.
@@ -162,27 +162,27 @@ class MutationDispatcher {
 
   void SetCorpus(const std::vector<Unit> *Corpus);
 
- private:
+private:
   FuzzerRandomBase &Rand;
   struct Impl;
   Impl *MDImpl;
 };
 
 class Fuzzer {
- public:
+public:
   struct FuzzingOptions {
     int Verbosity = 1;
     int MaxLen = 0;
     int UnitTimeoutSec = 300;
     int MaxTotalTimeSec = 0;
     bool DoCrossOver = true;
-    int  MutateDepth = 5;
+    int MutateDepth = 5;
     bool ExitOnFirst = false;
     bool UseCounters = false;
     bool UseIndirCalls = true;
     bool UseTraces = false;
     bool UseMemcmp = true;
-    bool UseFullCoverageSet  = false;
+    bool UseFullCoverageSet = false;
     bool Reload = true;
     bool ShuffleAtStartUp = true;
     int PreferSmallDuringInitialShuffle = -1;
@@ -195,12 +195,15 @@ class Fuzzer {
     std::string ArtifactPrefix = "./";
     std::string ExactArtifactPath;
     bool SaveArtifacts = true;
-    bool PrintNEW = true;  // Print a status line when new units are found;
+    bool PrintNEW = true; // Print a status line when new units are found;
     bool OutputCSV = false;
     bool PrintNewCovPcs = false;
   };
   Fuzzer(UserSuppliedFuzzer &USF, FuzzingOptions Options);
-  void AddToCorpus(const Unit &U) { Corpus.push_back(U); }
+  void AddToCorpus(const Unit &U) {
+    Corpus.push_back(U);
+    UpdateCorpusDistribution();
+  }
   size_t ChooseUnitIdxToMutate();
   const Unit &ChooseUnitToMutate() { return Corpus[ChooseUnitIdxToMutate()]; };
   void Loop();
@@ -231,7 +234,7 @@ class Fuzzer {
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const std::vector<std::string> &Corpora);
 
- private:
+private:
   void AlarmCallback();
   void MutateAndTestOne();
   void ReportNewCoverage(const Unit &U);
@@ -241,6 +244,9 @@ class Fuzzer {
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n");
   void PrintStatusForNewUnit(const Unit &U);
+  // Updates the probability distribution for the units in the corpus.
+  // Must be called whenever the corpus or unit weights are changed.
+  void UpdateCorpusDistribution();
 
   void SyncCorpus();
 
@@ -248,7 +254,6 @@ class Fuzzer {
   size_t RecordCallerCalleeCoverage();
   void PrepareCoverageBeforeRun();
   bool CheckCoverageAfterRun();
-
 
   // Trace-based fuzzing: we run a unit with some kind of tracing
   // enabled and record potentially useful mutations. Then
@@ -274,12 +279,20 @@ class Fuzzer {
 
   // For UseCounters
   std::vector<uint8_t> CounterBitmap;
-  size_t TotalBits() {  // Slow. Call it only for printing stats.
+  size_t TotalBits() { // Slow. Call it only for printing stats.
     size_t Res = 0;
-    for (auto x : CounterBitmap) Res += __builtin_popcount(x);
+    for (auto x : CounterBitmap)
+      Res += __builtin_popcount(x);
     return Res;
   }
 
+  // TODO(krasin): remove GetRand from UserSuppliedFuzzer,
+  // and fully rely on the generator and the seed.
+  // The user supplied fuzzer will have a way to access the
+  // generator for its own purposes (like seeding the custom
+  // PRNG).
+  std::mt19937 Generator;
+  std::piecewise_constant_distribution<double> CorpusDistribution;
   UserSuppliedFuzzer &USF;
   FuzzingOptions Options;
   system_clock::time_point ProcessStartTime = system_clock::now();
@@ -292,8 +305,8 @@ class Fuzzer {
   size_t LastCoveragePcBufferLen = 0;
 };
 
-class SimpleUserSuppliedFuzzer: public UserSuppliedFuzzer {
- public:
+class SimpleUserSuppliedFuzzer : public UserSuppliedFuzzer {
+public:
   SimpleUserSuppliedFuzzer(FuzzerRandomBase *Rand, UserCallback Callback)
       : UserSuppliedFuzzer(Rand), Callback(Callback) {}
 
@@ -301,10 +314,10 @@ class SimpleUserSuppliedFuzzer: public UserSuppliedFuzzer {
     return Callback(Data, Size);
   }
 
- private:
+private:
   UserCallback Callback = nullptr;
 };
 
-};  // namespace fuzzer
+}; // namespace fuzzer
 
 #endif // LLVM_FUZZER_INTERNAL_H

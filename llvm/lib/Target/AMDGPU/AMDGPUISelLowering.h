@@ -176,7 +176,6 @@ public:
                           SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  SDValue LowerIntrinsicLRP(SDValue Op, SelectionDAG &DAG) const;
   SDValue CombineFMinMaxLegacy(SDLoc DL,
                                EVT VT,
                                SDValue LHS,

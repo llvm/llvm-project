@@ -1,6 +1,7 @@
 ; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -winehprepare  < %s | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
+declare i32 @__C_specific_handler(...)
 
 declare void @f()
 
@@ -327,7 +328,7 @@ exit:
 }
 
 ; CHECK-LABEL: @test8(
-define void @test8() personality i32 (...)* @__CxxFrameHandler3 { entry:
+define void @test8() personality i32 (...)* @__C_specific_handler { entry:
   invoke void @f()
           to label %done unwind label %cleanup1
   invoke void @f()

@@ -19,6 +19,7 @@
 #include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -1072,78 +1073,63 @@ static bool needToReserveScavengingSpillSlots(MachineFunction &MF,
 }
 
 
-/// Replaces the predicate spill code pseudo instructions by valid instructions.
-bool HexagonFrameLowering::replacePredRegPseudoSpillCode(MachineFunction &MF)
-      const {
-  auto &HST = static_cast<const HexagonSubtarget&>(MF.getSubtarget());
-  auto &HII = *HST.getInstrInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  bool HasReplacedPseudoInst = false;
-  // Replace predicate spill pseudo instructions by real code.
-  // Loop over all of the basic blocks.
-  for (MachineFunction::iterator MBBb = MF.begin(), MBBe = MF.end();
-       MBBb != MBBe; ++MBBb) {
-    MachineBasicBlock *MBB = &*MBBb;
-    // Traverse the basic block.
-    MachineBasicBlock::iterator NextII;
-    for (MachineBasicBlock::iterator MII = MBB->begin(); MII != MBB->end();
-         MII = NextII) {
-      MachineInstr *MI = MII;
-      NextII = std::next(MII);
-      int Opc = MI->getOpcode();
-      if (Opc == Hexagon::STriw_pred) {
-        HasReplacedPseudoInst = true;
-        // STriw_pred FI, 0, SrcReg;
-        unsigned VirtReg = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-        unsigned SrcReg = MI->getOperand(2).getReg();
-        bool IsOrigSrcRegKilled = MI->getOperand(2).isKill();
+/// Find a GPR register that's available in the range from It to any use of
+/// the 'spill' in FI.
+static bool findAvailableReg(int FI, MachineBasicBlock::iterator It,
+                             MachineBasicBlock::iterator End,
+                             unsigned *AvailReg,
+                             unsigned *NumUses,
+                             const TargetRegisterInfo *TRI,
+                             RegScavenger *Scavenger) {
+  assert(Scavenger->getCurrentPosition() == It &&
+         "Unexpected scavenger position!");
 
-        assert(MI->getOperand(0).isFI() && "Expect a frame index");
-        assert(Hexagon::PredRegsRegClass.contains(SrcReg) &&
-               "Not a predicate register");
+  BitVector Avail(Scavenger->getRegsAvailable(&Hexagon::IntRegsRegClass));
+  if (Avail.none())
+    return false;
 
-        // Insert transfer to general purpose register.
-        //   VirtReg = C2_tfrpr SrcPredReg
-        BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::C2_tfrpr),
-                VirtReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
+  BitVector AvailByLastLoad(Avail.size());
 
-        // Change instruction to S2_storeri_io.
-        //   S2_storeri_io FI, 0, VirtReg
-        MI->setDesc(HII.get(Hexagon::S2_storeri_io));
-        MI->getOperand(2).setReg(VirtReg);
-        MI->getOperand(2).setIsKill();
+  while (++It != End) {
+    MachineInstr *MI = It;
+    if (MI->isDebugValue())
+      continue;
 
-      } else if (Opc == Hexagon::LDriw_pred) {
-        // DstReg = LDriw_pred FI, 0
-        MachineOperand &M0 = MI->getOperand(0);
-        if (M0.isDead()) {
-          MBB->erase(MII);
-          continue;
-        }
+    // Remove all registers modified by this inst from Avail
+    int Reg = Avail.find_first();
+    while (Reg != -1) {
+      if (MI->modifiesRegister(Reg, TRI))
+        Avail[Reg] = false;
+      else
+        assert(!MI->readsRegister(Reg, TRI) && "Inst reads undefined register");
 
-        unsigned VirtReg = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-        unsigned DestReg = MI->getOperand(0).getReg();
-
-        assert(MI->getOperand(1).isFI() && "Expect a frame index");
-        assert(Hexagon::PredRegsRegClass.contains(DestReg) &&
-               "Not a predicate register");
-
-        // Change instruction to L2_loadri_io.
-        //   VirtReg = L2_loadri_io FI, 0
-        MI->setDesc(HII.get(Hexagon::L2_loadri_io));
-        MI->getOperand(0).setReg(VirtReg);
-
-        // Insert transfer to general purpose register.
-        //   DestReg = C2_tfrrp VirtReg
-        const MCInstrDesc &D = HII.get(Hexagon::C2_tfrrp);
-        BuildMI(*MBB, std::next(MII), MI->getDebugLoc(), D, DestReg)
-          .addReg(VirtReg, getKillRegState(true));
-        HasReplacedPseudoInst = true;
-      }
+      Reg = Avail.find_next(Reg);
     }
+
+    int Opc = MI->getOpcode();
+    // Stop if we find a store that overwrites the current spill in FI
+    if ((Opc == Hexagon::STriw_pred || Opc == Hexagon::STriw_mod) &&
+        MI->getOperand(0).getIndex() == FI)
+      break;
+
+    if ((Opc == Hexagon::LDriw_pred || Opc == Hexagon::LDriw_mod) &&
+        MI->getOperand(1).getIndex() == FI && !MI->getOperand(0).isDead()) {
+      AvailByLastLoad = Avail;
+      ++(*NumUses);
+    }
+
+    // Give up early if there are no registers available
+    if (AvailByLastLoad.none() && Avail.none())
+      break;
   }
-  return HasReplacedPseudoInst;
+
+  if (AvailByLastLoad.none())
+    return false;
+
+  *AvailReg = (unsigned) AvailByLastLoad.find_first();
+  return true;
 }
+
 
 
 void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
@@ -1167,13 +1153,13 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const TargetRegisterClass &RC = Hexagon::IntRegsRegClass;
 
   // Replace predicate register pseudo spill code.
-  bool HasReplacedPseudoInst = replacePredRegPseudoSpillCode(MF);
+  bool HasReplacedPseudoInst = replacePseudoRegTransferCode(MF);
 
   // We need to reserve a a spill slot if scavenging could potentially require
   // spilling a scavenged register.
   if (HasReplacedPseudoInst && needToReserveScavengingSpillSlots(MF, HRI)) {
     MachineFrameInfo *MFI = MF.getFrameInfo();
-    for (int i=0; i < NumberScavengerSlots; i++)
+    for (int i = 0; i < NumberScavengerSlots; i++)
       RS->addScavengingFrameIndex(
         MFI->CreateSpillStackObject(RC.getSize(), RC.getAlignment()));
   }
@@ -1326,6 +1312,231 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
 
   return true;
 }
+
+
+/// Expands pseudo instructions that copy/spill/restore registers that cannot
+/// have these operations done directly. For spills/restores, it will attempt
+/// to spill into a general-purpose register, instead of spilling to memory.
+bool HexagonFrameLowering::replacePseudoRegTransferCode(MachineFunction &MF)
+      const {
+  auto &HST = static_cast<const HexagonSubtarget&>(MF.getSubtarget());
+  auto &HII = *HST.getInstrInfo();
+  auto &HRI = *HST.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  bool HasReplacedPseudoInst = false;
+
+  // We use the register scavenger purely for tracking of available registers
+  // here, but do the 'scavenging' on our own.
+  RegScavenger Scavenger;
+
+  // Map from PredReg spill FIs to GPRs and remaining number of uses
+  DenseMap<int,std::pair<unsigned, unsigned>> FItoRegUses;
+
+  // PredReg FIs that cannot be 'spilled' into GPRs because they are live
+  // across BB boundaries.
+  SmallSet<int, 8> AlwaysSpill;
+
+  // Pred Reg FIs that have been spilled in a block due to shortage of GPRs
+  SmallSet<int, 8> LocallySpilled;
+
+  // Do an SCC traversal of the MachineFunction. This is to make sure we detect
+  // cases where a PredReg *must* be spilled to memory because it is live across
+  // BasicBlock boundaries: we see the reload before the spill and can mark the
+  // PredReg's FI in AlwaysSpill.
+  for (auto It = scc_begin(&MF); !It.isAtEnd(); ++It) {
+    const std::vector<MachineBasicBlock *> &Scc = *It;
+    for (MachineBasicBlock *MBB : Scc) {
+      if (MBB->empty())
+        continue;
+
+      Scavenger.enterBasicBlock(MBB);
+      Scavenger.forward();
+
+      LocallySpilled.clear();
+
+      // Traverse the basic block.
+      MachineBasicBlock::iterator NextII;
+      for (auto MII = MBB->begin(); MII != MBB->end(); MII = NextII) {
+        MachineInstr *MI = MII;
+        NextII = std::next(MII);
+
+        assert(Scavenger.getCurrentPosition() == MII &&
+            "Unexpected scavenger position");
+
+        unsigned Opc = MI->getOpcode();
+        DebugLoc DL = MI->getDebugLoc();
+
+        if (Opc == TargetOpcode::COPY) {
+          unsigned DestReg = MI->getOperand(0).getReg();
+          unsigned SrcReg = MI->getOperand(1).getReg();
+          MachineInstr *EraseMI = nullptr;
+          if (Hexagon::ModRegsRegClass.contains(DestReg) &&
+              Hexagon::ModRegsRegClass.contains(SrcReg)) {
+            unsigned T = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+            BuildMI(*MBB, MII, DL, HII.get(TargetOpcode::COPY), T)
+              .addOperand(MI->getOperand(1));
+            BuildMI(*MBB, MII, DL, HII.get(TargetOpcode::COPY), DestReg)
+              .addReg(T, RegState::Kill);
+            EraseMI = &*MII;
+            HasReplacedPseudoInst = true;
+          }
+          if (NextII != MBB->end())
+            Scavenger.forward(); // Move to next instruction
+          if (EraseMI)
+            MBB->erase(EraseMI);
+        } else if (Opc == Hexagon::STriw_pred || Opc == Hexagon::STriw_mod) {
+          // STriw_pred FI, 0, SrcReg
+          unsigned SrcReg = MI->getOperand(2).getReg();
+          bool IsOrigSrcRegKilled = MI->getOperand(2).isKill();
+
+          assert(MI->getOperand(0).isFI() && "Expect a frame index");
+          assert((Hexagon::PredRegsRegClass.contains(SrcReg) ||
+                  Hexagon::ModRegsRegClass.contains(SrcReg)) &&
+              "Not a predicate or modifier register");
+          int FI = MI->getOperand(0).getIndex();
+
+          assert(!FItoRegUses.count(FI) &&
+              "Still expecting a load of this spilled predicate register!");
+
+          // Check whether we have an available GPR here and all the way to the
+          // reload(s) of this spill
+          unsigned AvailReg, NumUses = 0;
+          if (!AlwaysSpill.count(FI) && findAvailableReg(FI, MII, MBB->end(),
+                &AvailReg, &NumUses, &HRI, &Scavenger)) {
+            // Found a register we can move this into instead of spilling
+            if (Opc == Hexagon::STriw_pred)
+              BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::C2_tfrpr),
+                  AvailReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
+            else
+              BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::A2_tfrcrr),
+                  AvailReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
+
+            // Mark the register as used in the function (important for callee
+            // saved registers).
+            BitVector UsedPhysRegsMask = MRI.getUsedPhysRegsMask();
+            UsedPhysRegsMask.set(AvailReg);
+            MRI.setUsedPhysRegMask(UsedPhysRegsMask);
+
+            Scavenger.setRegUsed(AvailReg);
+            if (NextII != MBB->end())
+              Scavenger.forward();
+
+            FItoRegUses[FI] = std::make_pair(AvailReg, NumUses);
+            LocallySpilled.erase(FI);
+
+            MBB->erase(MII);
+          } else {
+            // No register available. Insert actual spill.
+            //   VirtReg = C2_tfrpr SrcPredReg
+            unsigned VirtReg =
+              MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+            if (Opc == Hexagon::STriw_pred)
+              BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::C2_tfrpr),
+                  VirtReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
+            else
+              BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::A2_tfrcrr),
+                  VirtReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
+
+            // Change instruction to S2_storeri_io.
+            //   S2_storeri_io FI, 0, VirtReg
+            MI->setDesc(HII.get(Hexagon::S2_storeri_io));
+            MI->getOperand(2).setReg(VirtReg);
+            MI->getOperand(2).setIsKill();
+
+            HasReplacedPseudoInst = true;
+
+            if (NextII != MBB->end())
+              Scavenger.forward();
+
+            if (!AlwaysSpill.count(FI))
+              LocallySpilled.insert(FI);
+          }
+        } else if (Opc == Hexagon::LDriw_pred || Opc == Hexagon::LDriw_mod) {
+          // DstReg = LDriw_pred FI, 0
+          unsigned DestReg = MI->getOperand(0).getReg();
+          assert(MI->getOperand(1).isFI() && "Expect a frame index");
+          assert((Hexagon::PredRegsRegClass.contains(DestReg) ||
+                  Hexagon::ModRegsRegClass.contains(DestReg)) &&
+              "Not a predicate or modifier register");
+
+          int FI = MI->getOperand(1).getIndex();
+
+          MachineOperand &M0 = MI->getOperand(0);
+          if (M0.isDead()) {
+            if (NextII != MBB->end())
+              Scavenger.forward();
+            MBB->erase(MII);
+            continue;
+          }
+
+          if (FItoRegUses.count(FI)) {
+            // Reload from GPR
+            std::pair<unsigned,unsigned> &SpillInfo = FItoRegUses[FI];
+
+            --SpillInfo.second;
+            bool IsKill = SpillInfo.second == 0;
+            if (Opc == Hexagon::LDriw_pred)
+              BuildMI(*MBB, std::next(MII), MI->getDebugLoc(),
+                  HII.get(Hexagon::C2_tfrrp), DestReg).addReg(SpillInfo.first,
+                  getKillRegState(IsKill));
+            else
+              BuildMI(*MBB, std::next(MII), MI->getDebugLoc(),
+                  HII.get(Hexagon::A2_tfrrcr), DestReg).addReg(SpillInfo.first,
+                  getKillRegState(IsKill));
+
+            if (IsKill)
+              FItoRegUses.erase(FI);
+
+            Scavenger.forward(); // Process the newly inserted instruction
+            if (NextII != MBB->end())
+              Scavenger.forward(); // Move to next instruction
+
+            MBB->erase(MII);
+          } else {
+            // Reload from memory
+
+            // If this wasn't spilled previously in this block, the PredReg in
+            // this FI is live across blocks. Make sure it never ends up in a
+            // register.
+            if (!LocallySpilled.count(FI))
+              AlwaysSpill.insert(FI);
+
+            unsigned VirtReg =
+              MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+
+            // Change instruction to L2_loadri_io.
+            //   VirtReg = L2_loadri_io FI, 0
+            MI->setDesc(HII.get(Hexagon::L2_loadri_io));
+            MI->getOperand(0).setReg(VirtReg);
+
+            // Insert transfer to general purpose register.
+            //   DestReg = C2_tfrrp VirtReg
+            if (Opc == Hexagon::LDriw_pred)
+              BuildMI(*MBB, std::next(MII), MI->getDebugLoc(),
+                HII.get(Hexagon::C2_tfrrp), DestReg).addReg(VirtReg,
+                getKillRegState(true));
+            else
+              BuildMI(*MBB, std::next(MII), MI->getDebugLoc(),
+                HII.get(Hexagon::A2_tfrrcr), DestReg).addReg(VirtReg,
+                getKillRegState(true));
+
+            Scavenger.forward(); // Process newly inserted instruction
+            if (NextII != MBB->end())
+              Scavenger.forward(); // Move to next instruction
+
+            HasReplacedPseudoInst = true;
+          }
+        } else if (NextII != MBB->end())
+          Scavenger.forward();
+      }
+
+      assert(FItoRegUses.empty() && "PredRegs in GPRs outlast this block!");
+    }
+  }
+
+  return HasReplacedPseudoInst;
+}
+
 
 
 void HexagonFrameLowering::expandAlloca(MachineInstr *AI,

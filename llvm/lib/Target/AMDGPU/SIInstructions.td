@@ -481,7 +481,7 @@ def S_CBRANCH_EXECNZ : SOPP <
 
 let hasSideEffects = 1 in {
 def S_BARRIER : SOPP <0x0000000a, (ins), "s_barrier",
-  [(int_AMDGPU_barrier_local)]
+  [(int_amdgcn_s_barrier)]
 > {
   let SchedRW = [WriteBarrier];
   let simm16 = 0;
@@ -1450,7 +1450,7 @@ defm V_SUBREV_F32 : VOP2Inst <vop2<0x5, 0x3>, "v_subrev_f32",
 let isCommutable = 1 in {
 
 defm V_MUL_LEGACY_F32 : VOP2Inst <vop2<0x7, 0x4>, "v_mul_legacy_f32",
-  VOP_F32_F32_F32, int_AMDGPU_mul
+  VOP_F32_F32_F32
 >;
 
 defm V_MUL_F32 : VOP2Inst <vop2<0x8, 0x5>, "v_mul_f32",
@@ -1754,14 +1754,14 @@ defm V_MUL_LO_U32 : VOP3Inst <vop3<0x169, 0x285>, "v_mul_lo_u32",
   VOP_I32_I32_I32
 >;
 defm V_MUL_HI_U32 : VOP3Inst <vop3<0x16a, 0x286>, "v_mul_hi_u32",
-  VOP_I32_I32_I32
+  VOP_I32_I32_I32, mulhu
 >;
 
 defm V_MUL_LO_I32 : VOP3Inst <vop3<0x16b, 0x285>, "v_mul_lo_i32",
   VOP_I32_I32_I32
 >;
 defm V_MUL_HI_I32 : VOP3Inst <vop3<0x16c, 0x287>, "v_mul_hi_i32",
-  VOP_I32_I32_I32
+  VOP_I32_I32_I32, mulhs
 >;
 
 } // isCommutable = 1, SchedRW = [WriteQuarterRate32]
@@ -1874,14 +1874,14 @@ def SI_IF: InstSI <
   (outs SReg_64:$dst),
   (ins SReg_64:$vcc, brtarget:$target),
   "",
-  [(set i64:$dst, (int_SI_if i1:$vcc, bb:$target))]
+  [(set i64:$dst, (int_amdgcn_if i1:$vcc, bb:$target))]
 >;
 
 def SI_ELSE : InstSI <
   (outs SReg_64:$dst),
   (ins SReg_64:$src, brtarget:$target),
   "",
-  [(set i64:$dst, (int_SI_else i64:$src, bb:$target))]
+  [(set i64:$dst, (int_amdgcn_else i64:$src, bb:$target))]
 > {
   let Constraints = "$src = $dst";
 }
@@ -1890,7 +1890,7 @@ def SI_LOOP : InstSI <
   (outs),
   (ins SReg_64:$saved, brtarget:$target),
   "si_loop $saved, $target",
-  [(int_SI_loop i64:$saved, bb:$target)]
+  [(int_amdgcn_loop i64:$saved, bb:$target)]
 >;
 
 } // end isBranch = 1, isTerminator = 1
@@ -1899,28 +1899,28 @@ def SI_BREAK : InstSI <
   (outs SReg_64:$dst),
   (ins SReg_64:$src),
   "si_else $dst, $src",
-  [(set i64:$dst, (int_SI_break i64:$src))]
+  [(set i64:$dst, (int_amdgcn_break i64:$src))]
 >;
 
 def SI_IF_BREAK : InstSI <
   (outs SReg_64:$dst),
   (ins SReg_64:$vcc, SReg_64:$src),
   "si_if_break $dst, $vcc, $src",
-  [(set i64:$dst, (int_SI_if_break i1:$vcc, i64:$src))]
+  [(set i64:$dst, (int_amdgcn_if_break i1:$vcc, i64:$src))]
 >;
 
 def SI_ELSE_BREAK : InstSI <
   (outs SReg_64:$dst),
   (ins SReg_64:$src0, SReg_64:$src1),
   "si_else_break $dst, $src0, $src1",
-  [(set i64:$dst, (int_SI_else_break i64:$src0, i64:$src1))]
+  [(set i64:$dst, (int_amdgcn_else_break i64:$src0, i64:$src1))]
 >;
 
 def SI_END_CF : InstSI <
   (outs),
   (ins SReg_64:$saved),
   "si_end_cf $saved",
-  [(int_SI_end_cf i64:$saved)]
+  [(int_amdgcn_end_cf i64:$saved)]
 >;
 
 } // End Uses = [EXEC], Defs = [EXEC]
@@ -2049,13 +2049,6 @@ def SI_CONSTDATA_PTR : InstSI <
 
 let Predicates = [isGCN] in {
 
-def : Pat<
-  (int_AMDGPU_cndlt f32:$src0, f32:$src1, f32:$src2),
-  (V_CNDMASK_B32_e64 $src2, $src1,
-                     (V_CMP_GT_F32_e64 SRCMODS.NONE, 0, SRCMODS.NONE, $src0,
-                                       DSTCLAMP.NONE, DSTOMOD.NONE))
->;
-
 def : Pat <
   (int_AMDGPU_kilp),
   (SI_KILL 0xbf800000)
@@ -2167,8 +2160,14 @@ def : Pat <
 // SOPP Patterns
 //===----------------------------------------------------------------------===//
 
+// FIXME: These should be removed eventually
 def : Pat <
   (int_AMDGPU_barrier_global),
+  (S_BARRIER)
+>;
+
+def : Pat <
+  (int_AMDGPU_barrier_local),
   (S_BARRIER)
 >;
 
@@ -2707,11 +2706,6 @@ def : Pat <
 def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
 
 def : Pat <
-  (int_AMDGPU_div f32:$src0, f32:$src1),
-  (V_MUL_LEGACY_F32_e32 $src0, (V_RCP_LEGACY_F32_e32 $src1))
->;
-
-def : Pat <
   (int_AMDGPU_cube v4f32:$src),
   (REG_SEQUENCE VReg_128,
     (V_CUBETC_F32 0 /* src0_modifiers */, (EXTRACT_SUBREG $src, sub0),
@@ -2771,16 +2765,6 @@ def : Pat <
 
 def : IMad24Pat<V_MAD_I32_I24>;
 def : UMad24Pat<V_MAD_U32_U24>;
-
-def : Pat <
-  (mulhu i32:$src0, i32:$src1),
-  (V_MUL_HI_U32 $src0, $src1)
->;
-
-def : Pat <
-  (mulhs i32:$src0, i32:$src1),
-  (V_MUL_HI_I32 $src0, $src1)
->;
 
 defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
 def : ROTRPattern <V_ALIGNBIT_B32>;

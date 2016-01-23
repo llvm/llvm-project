@@ -11,7 +11,7 @@ import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
-class ConsecutiveBreakpoitsTestCase(TestBase):
+class ConsecutiveBreakpointsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -19,7 +19,7 @@ class ConsecutiveBreakpoitsTestCase(TestBase):
     def test (self):
         self.build ()
         self.consecutive_breakpoints_tests()
-        
+
     def consecutive_breakpoints_tests(self):
         exe = os.path.join (os.getcwd(), "a.out")
 
@@ -28,8 +28,8 @@ class ConsecutiveBreakpoitsTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         breakpoint1 = target.BreakpointCreateBySourceRegex("Set breakpoint here", lldb.SBFileSpec("main.cpp"))
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
+        self.assertTrue(breakpoint1 and
+                        breakpoint1.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
@@ -42,12 +42,12 @@ class ConsecutiveBreakpoitsTestCase(TestBase):
 
         # Set breakpoint to the next instruction
         frame = thread.GetFrameAtIndex(0)
-        
+
         address = frame.GetPCAddress()
         instructions = target.ReadInstructions(address, 2)
         self.assertTrue(len(instructions) == 2)
         address = instructions[1].GetAddress()
-        
+
         breakpoint2 = target.BreakpointCreateByAddress(address.GetLoadAddress(target))
         process.Continue()
 

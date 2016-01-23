@@ -305,6 +305,10 @@ public:
   /// Return function's PGO name from the name's md5 hash value.
   /// If not found, return an empty string.
   inline StringRef getFuncName(uint64_t FuncMD5Hash);
+  /// Return the function's original assembly name by stripping off
+  /// the prefix attached (to symbols with priviate linkage). For
+  /// global functions, it returns the same string as getFuncName.
+  inline StringRef getOrigFuncName(uint64_t FuncMD5Hash);
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
 };
@@ -346,6 +350,16 @@ StringRef InstrProfSymtab::getFuncName(uint64_t FuncMD5Hash) {
   if (Result != HashNameMap.end())
     return Result->second;
   return StringRef();
+}
+
+// See also getPGOFuncName implementation. These two need to be
+// matched.
+StringRef InstrProfSymtab::getOrigFuncName(uint64_t FuncMD5Hash) {
+  StringRef PGOName = getFuncName(FuncMD5Hash);
+  size_t S = PGOName.find_first_of(':');
+  if (S == StringRef::npos)
+    return PGOName;
+  return PGOName.drop_front(S + 1);
 }
 
 struct InstrProfValueSiteRecord {

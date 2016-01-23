@@ -44,7 +44,7 @@ noreturn:
 ; CHECK:   call void @llvm.foo(i32 %x)
 
 
-define void @test2() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test2() personality i32 (...)* @__C_specific_handler {
 entry:
   invoke void @f()
     to label %exit unwind label %cleanup
@@ -71,7 +71,7 @@ exit:
 ; CHECK-NEXT: ret void
 
 
-define void @test3() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test3() personality i32 (...)* @__C_specific_handler {
 entry:
   invoke void @f()
     to label %invoke.cont unwind label %catch.switch
