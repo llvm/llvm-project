@@ -397,19 +397,26 @@ def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
         if Failed == False:
             os.remove(LogFile.name);
 
+def getBuildLogPath(SBOutputDir):
+  return os.path.join(SBOutputDir, LogFolderName, BuildLogName)
+
+def removeLogFile(SBOutputDir):
+  BuildLogPath = getBuildLogPath(SBOutputDir)
+  # Clean up the log file.
+  if (os.path.exists(BuildLogPath)) :
+      RmCommand = "rm '%s'" % BuildLogPath
+      if Verbose == 1:
+          print "  Executing: %s" % (RmCommand,)
+      check_call(RmCommand, shell=True)
+
 def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
     TBegin = time.time()
 
-    BuildLogPath = os.path.join(SBOutputDir, LogFolderName, BuildLogName)
+    BuildLogPath = getBuildLogPath(SBOutputDir)
     print "Log file: %s" % (BuildLogPath,)
     print "Output directory: %s" %(SBOutputDir, )
 
-    # Clean up the log file.
-    if (os.path.exists(BuildLogPath)) :
-        RmCommand = "rm '%s'" % BuildLogPath
-        if Verbose == 1:
-            print "  Executing: %s" % (RmCommand,)
-        check_call(RmCommand, shell=True)
+    removeLogFile(SBOutputDir)
 
     # Clean up scan build results.
     if (os.path.exists(SBOutputDir)) :
@@ -585,6 +592,19 @@ def runCmpResults(Dir, Strictness = 0):
     print "Diagnostic comparison complete (time: %.2f)." % (time.time()-TBegin)
     return (NumDiffs > 0)
 
+def cleanupReferenceResults(SBOutputDir):
+    # Delete html, css, and js files from reference results. These can
+    # include multiple copies of the benchmark source and so get very large.
+    Extensions = ["html", "css", "js"]
+    for E in Extensions:
+        for F in glob.glob("%s/*/*.%s" % (SBOutputDir, E)):
+            P = os.path.join(SBOutputDir, F)
+            RmCommand = "rm '%s'" % P
+            check_call(RmCommand, shell=True)
+
+    # Remove the log file. It leaks absolute path names.
+    removeLogFile(SBOutputDir)
+
 def updateSVN(Mode, ProjectsMap):
     try:
         ProjectsMap.seek(0)
@@ -634,6 +654,8 @@ def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Dir=None, Strictne
 
     if IsReferenceBuild == False:
         runCmpResults(Dir, Strictness)
+    else:
+        cleanupReferenceResults(SBOutputDir)
 
     print "Completed tests for project %s (time: %.2f)." % \
           (ID, (time.time()-TBegin))
