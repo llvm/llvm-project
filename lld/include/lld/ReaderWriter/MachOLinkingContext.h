@@ -84,7 +84,8 @@ public:
   /// Initializes the context to sane default values given the specified output
   /// file type, arch, os, and minimum os version.  This should be called before
   /// other setXXX() methods.
-  void configure(HeaderFileType type, Arch arch, OS os, uint32_t minOSVersion);
+  void configure(HeaderFileType type, Arch arch, OS os, uint32_t minOSVersion,
+                 bool exportDynamicSymbols);
 
   void addPasses(PassManager &pm) override;
   bool validateImpl(raw_ostream &diagnostics) override;

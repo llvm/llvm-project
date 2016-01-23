@@ -208,7 +208,6 @@ class SettingsCommandTestCase(TestBase):
         self.expect("disassemble -n numberfn",
             substrs = ["5ah"])
 
-    @expectedFailureWindows("llvm.org/pr24579")
     def test_run_args_and_env_vars(self):
         """Test that run-args and env-vars are passed to the launched process."""
         self.build()

@@ -1047,11 +1047,12 @@ private:
     template <class ..._Args>
         __node_holder __construct_node(_Args&& ...__args);
 #endif  // _LIBCPP_HAS_NO_VARIADICS
-    __node_holder __construct_node(value_type&& __v, size_t __hash);
+    template <class _ValueTp>
+    __node_holder __construct_node_hash(_ValueTp&& __v, size_t __hash);
 #else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     __node_holder __construct_node(const value_type& __v);
 #endif
-    __node_holder __construct_node(const value_type& __v, size_t __hash);
+    __node_holder __construct_node_hash(const value_type& __v, size_t __hash);
 
     _LIBCPP_INLINE_VISIBILITY
     void __copy_assign_alloc(const __hash_table& __u)
@@ -1730,7 +1731,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__insert_unique_value(const value_type
         }
     }
     {
-        __node_holder __h = __construct_node(_VSTD::forward<_ValueTp>(__x), __hash);
+        __node_holder __h = __construct_node_hash(_VSTD::forward<_ValueTp>(__x), __hash);
         if (size()+1 > __bc * max_load_factor() || __bc == 0)
         {
             rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
@@ -2051,13 +2052,14 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(_Args&& ...__args)
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _ValueTp>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_holder
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(value_type&& __v,
-                                                           size_t __hash)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(_ValueTp&& __v,
+                                                                size_t __hash)
 {
     __node_allocator& __na = __node_alloc();
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_), _VSTD::move(__v));
+    __node_traits::construct(__na, _VSTD::addressof(__h->__value_), _VSTD::forward<_ValueTp>(__v));
     __h.get_deleter().__value_constructed = true;
     __h->__hash_ = __hash;
     __h->__next_ = nullptr;
@@ -2083,8 +2085,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(const value_type& __v
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_holder
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(const value_type& __v,
-                                                           size_t __hash)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(const value_type& __v,
+                                                                size_t __hash)
 {
     __node_allocator& __na = __node_alloc();
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));

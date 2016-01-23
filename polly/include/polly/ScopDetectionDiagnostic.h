@@ -62,6 +62,7 @@ enum RejectReasonKind {
   rrkInvalidTerminator,
   rrkCondition,
   rrkLastCFG,
+  rrkIrreducibleRegion,
 
   // Non-Affinity
   rrkAffFunc,
@@ -242,6 +243,29 @@ public:
   /// @name RejectReason interface
   //@{
   virtual std::string getMessage() const override;
+  virtual const DebugLoc &getDebugLoc() const override;
+  //@}
+};
+
+//===----------------------------------------------------------------------===//
+/// @brief Captures irreducible regions in CFG.
+class ReportIrreducibleRegion : public ReportCFG {
+  Region *R;
+  DebugLoc DbgLoc;
+
+public:
+  ReportIrreducibleRegion(Region *R, DebugLoc DbgLoc)
+      : ReportCFG(rrkIrreducibleRegion), R(R), DbgLoc(DbgLoc) {}
+
+  /// @name LLVM-RTTI interface
+  //@{
+  static bool classof(const RejectReason *RR);
+  //@}
+
+  /// @name RejectReason interface
+  //@{
+  virtual std::string getMessage() const override;
+  virtual std::string getEndUserMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   //@}
 };

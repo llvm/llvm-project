@@ -34,7 +34,7 @@ public:
 
 private:
   /// Check if the given method is possible to be overridden by some other
-  /// method.
+  /// method. Operators and destructors are excluded.
   ///
   /// Results are memoized in PossibleMap.
   bool isPossibleToBeOverridden(const CXXMethodDecl *BaseMD);

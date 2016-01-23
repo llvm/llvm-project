@@ -95,6 +95,10 @@ private:
   uintX_t SectionHeaderOff;
 
   llvm::StringMap<llvm::StringRef> InputToOutputSection;
+
+  // Flag to force GOT to be in output if we have relocations
+  // that relies on its address.
+  bool HasGotOffRel = false;
 };
 } // anonymous namespace
 

@@ -5,8 +5,6 @@ from __future__ import print_function
 
 
 import unittest2
-import os, time
-import lldb
 import platform
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -27,6 +25,7 @@ class IncompleteModulesTestCase(TestBase):
     @skipUnlessDarwin
     @unittest2.expectedFailure("rdar://20416388")
     @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion('12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
+    @skipIfDarwin  # llvm.org/pr26267
     def test_expr(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

@@ -23,8 +23,6 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf2;
 
-bool elf2::HasGotOffRel = false;
-
 template <class ELFT>
 OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
                                            uintX_t Flags)
@@ -863,11 +861,8 @@ template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 void EhFrameHeader<ELFT>::assignEhFrame(EHOutputSection<ELFT> *Sec) {
-  if (this->Sec && this->Sec != Sec) {
-    warning("multiple .eh_frame sections not supported for .eh_frame_hdr");
-    Live = false;
-    return;
-  }
+  if (this->Sec && this->Sec != Sec)
+    llvm_unreachable("multiple .eh_frame sections not supported for .eh_frame_hdr");
   Live = Config->EhFrameHdr;
   this->Sec = Sec;
 }

@@ -922,8 +922,32 @@ public:
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
     template <class... _Args>
-        pair<iterator, bool> emplace(_Args&&... __args);
+    pair<iterator, bool> emplace(_Args&&... __args)
+        {return __emplace_dispatch(std::forward<_Args>(__args)...);}
 
+private:
+    template <class _Arg>
+    pair<iterator, bool> __emplace_dispatch(_Arg&& __arg)
+        {
+            typedef is_constructible<value_type, _Arg> __constructible;
+            return __emplace_insert_if_constructible(std::forward<_Arg>(__arg),
+                                                     __constructible());
+        }
+    template <class _Arg1, class... _Args>
+    pair<iterator, bool> __emplace_dispatch(_Arg1&& __arg1, _Args&&... __args)
+        {return __emplace_impl(std::forward<_Arg1>(__arg1), std::forward<_Args>(__args)...);}
+
+    template <class _Arg>
+    pair<iterator, bool> __emplace_insert_if_constructible(_Arg&& __arg, false_type)
+        {return __emplace_impl(std::forward<_Arg>(__arg));}
+    template <class _Arg>
+    pair<iterator, bool> __emplace_insert_if_constructible(_Arg&& __arg, true_type)
+        {return insert(std::forward<_Arg>(__arg));}
+
+    template <class... _Args>
+    pair<iterator, bool> __emplace_impl(_Args&&... __args);
+
+public:
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -932,7 +956,7 @@ public:
             _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
                 "unordered_map::emplace_hint(const_iterator, args...) called with an iterator not"
                 " referring to this unordered_map");
-            return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...).first;
+            return emplace(_VSTD::forward<_Args>(__args)...).first;
         }
 #else
         iterator emplace_hint(const_iterator, _Args&&... __args)
@@ -1477,7 +1501,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(_A0&& __a0,
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class... _Args>
 pair<typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::iterator, bool>
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::emplace(_Args&&... __args)
+unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__emplace_impl(_Args&&... __args)
 {
     __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
     pair<iterator, bool> __r = __table_.__node_insert_unique(__h.get());

@@ -104,7 +104,7 @@ std::vector<StringRef> LinkerScript::tokenize(StringRef S) {
       size_t E = S.find("\"", 1);
       if (E == StringRef::npos)
         error("unclosed quote");
-      Ret.push_back(S.substr(1, E));
+      Ret.push_back(S.substr(1, E - 1));
       S = S.substr(E + 1);
       continue;
     }
