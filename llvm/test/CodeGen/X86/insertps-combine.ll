@@ -98,6 +98,38 @@ define <4 x float> @shuffle_v4f32_0z6z(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinit4
 }
 
+define <4 x float> @insertps_undef_input0(<4 x float> %a0, <4 x float> %a1) {
+; SSE-LABEL: insertps_undef_input0:
+; SSE:       # BB#0:
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm1[0],zero,zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: insertps_undef_input0:
+; AVX:       # BB#0:
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm1[0],zero,zero
+; AVX-NEXT:    retq
+  %res0 = fadd <4 x float> %a0, <float 1.0, float 1.0, float 1.0, float 1.0>
+  %res1 = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %res0, <4 x float> %a1, i8 21)
+  %res2 = shufflevector <4 x float> %res1, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+  ret <4 x float> %res2
+}
+
+define <4 x float> @insertps_undef_input1(<4 x float> %a0, <4 x float> %a1) {
+; SSE-LABEL: insertps_undef_input1:
+; SSE:       # BB#0:
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,zero,zero,xmm0[3]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: insertps_undef_input1:
+; AVX:       # BB#0:
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,zero,zero,xmm0[3]
+; AVX-NEXT:    retq
+  %res0 = fadd <4 x float> %a1, <float 1.0, float 1.0, float 1.0, float 1.0>
+  %res1 = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %res0, i8 21)
+  %res2 = shufflevector <4 x float> %res1, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+  ret <4 x float> %res2
+}
+
 define float @extract_zero_insertps_z0z7(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: extract_zero_insertps_z0z7:
 ; SSE:       # BB#0:
