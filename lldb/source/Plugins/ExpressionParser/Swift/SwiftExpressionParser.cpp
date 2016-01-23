@@ -729,6 +729,7 @@ AddRequiredAliases(Block *block,
                     }
                 }
             }
+            
         }
         
         swift::Type object_type = swift::Type((swift::TypeBase*)(imported_self_type.GetOpaqueQualType()))->getLValueOrInOutObjectType();
@@ -746,14 +747,28 @@ AddRequiredAliases(Block *block,
             if (is_bound)
                 imported_self_type = imported_self_type.GetUnboundType();
         }
-        swift::ValueDecl *type_alias_decl = nullptr;
-        
+
         imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
         if (imported_self_type_flags.AllClear(lldb::eTypeIsArchetype))
-             type_alias_decl = manipulator.MakeGlobalTypealias(swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"), imported_self_type);
+        {
+            swift::ValueDecl *type_alias_decl = nullptr;
         
-        if (!type_alias_decl)
-            break;
+            type_alias_decl = manipulator.MakeGlobalTypealias(swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"), imported_self_type);
+        
+            if (!type_alias_decl)
+            {
+                Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+                if (log)
+                    log->Printf("SEP:AddRequiredAliases: Failed to make the $__lldb_context typealias.");
+            }
+        }
+        else
+        {
+            Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+            if (log)
+                log->Printf("SEP:AddRequiredAliases: Failed to resolve the self archetype - could not make the $__lldb_context typealias.");
+        }
+        
     } while (0);
     
     // Emit the typedefs
