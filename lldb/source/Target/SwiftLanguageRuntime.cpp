@@ -1687,7 +1687,7 @@ m_field_names()
 
     m_num_fields = struct_reader.GetField<uint32_t>(ConstString("NumFields"));
     m_field_off_vec_offset = struct_reader.GetField<uint32_t>(ConstString("FieldOffsetVectorOffset"));
-    const int32_t field_names_offset = 12; // 3 * sizeof(int32_t) - the offset for the RelativeDirectPointer to the field names
+    const size_t field_names_offset = struct_reader.GetOffsetOf(ConstString("FieldNames"));
     m_field_names = ReadDoublyTerminatedStringList(base_addr + field_names_offset + struct_reader.GetField<int32_t>(ConstString("FieldNames")));
     m_field_metadata_generator = struct_reader.GetField<lldb::addr_t>(ConstString("GetTypes"));
     
@@ -1710,7 +1710,7 @@ NominalTypeDescriptor(runtime,base_addr)
     
     m_num_nonempty_cases = struct_reader.GetField<uint32_t>(ConstString("NumFields")) & 0xFFFFFF;
     m_num_empty_cases = struct_reader.GetField<uint32_t>(ConstString("FieldOffsetVectorOffset"));
-    const int32_t field_names_offset = 12; // 3 * sizeof(int32_t) - the offset for the RelativeDirectPointer to the field names
+    const size_t field_names_offset = struct_reader.GetOffsetOf(ConstString("FieldNames"));
     m_case_names = ReadDoublyTerminatedStringList(base_addr + field_names_offset + struct_reader.GetField<int32_t>(ConstString("FieldNames")));
 }
 
