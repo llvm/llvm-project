@@ -1326,8 +1326,8 @@ static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanPushNegate,
     CanPushNegate = true;
     return true;
   }
-  // Protect against stack overflow.
-  if (Depth > 15)
+  // Protect against exponential runtime and stack overflow.
+  if (Depth > 6)
     return false;
   if (Opcode == ISD::AND || Opcode == ISD::OR) {
     SDValue O0 = Val->getOperand(0);
