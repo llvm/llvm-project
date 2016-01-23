@@ -13552,7 +13552,7 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
   SDValue In = Op.getOperand(0);
   MVT InVT = In.getSimpleValueType();
 
-  assert(VT.getVectorElementType() == MVT::i1 && "Unexected vector type.");
+  assert(VT.getVectorElementType() == MVT::i1 && "Unexpected vector type.");
 
   // Shift LSB to MSB and use VPMOVB2M - SKX.
   unsigned ShiftInx = InVT.getScalarSizeInBits() - 1;
@@ -13585,7 +13585,7 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
   if (InVT.getSizeInBits() < 512 &&
       (InVT.getScalarType() == MVT::i8 || InVT.getScalarType() == MVT::i16 ||
        !Subtarget->hasVLX())) {
-    assert((NumElts == 8 || NumElts == 16) && "Unexected vector type.");
+    assert((NumElts == 8 || NumElts == 16) && "Unexpected vector type.");
 
     // TESTD/Q should be used (if BW supported we use CVT2MASK above),
     // so vector should be extended to packed dword/qword.

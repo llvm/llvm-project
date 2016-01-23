@@ -901,6 +901,78 @@ int llvm::isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr,
   return Stride;
 }
 
+/// Take the pointer operand from the Load/Store instruction.
+/// Returns NULL if this is not a valid Load/Store instruction.
+static Value *getPointerOperand(Value *I) {
+  if (LoadInst *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerOperand();
+  if (StoreInst *SI = dyn_cast<StoreInst>(I))
+    return SI->getPointerOperand();
+  return nullptr;
+}
+
+/// Take the address space operand from the Load/Store instruction.
+/// Returns -1 if this is not a valid Load/Store instruction.
+static unsigned getAddressSpaceOperand(Value *I) {
+  if (LoadInst *L = dyn_cast<LoadInst>(I))
+    return L->getPointerAddressSpace();
+  if (StoreInst *S = dyn_cast<StoreInst>(I))
+    return S->getPointerAddressSpace();
+  return -1;
+}
+
+/// Returns true if the memory operations \p A and \p B are consecutive.
+bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
+                               ScalarEvolution &SE, bool CheckType) {
+  Value *PtrA = getPointerOperand(A);
+  Value *PtrB = getPointerOperand(B);
+  unsigned ASA = getAddressSpaceOperand(A);
+  unsigned ASB = getAddressSpaceOperand(B);
+
+  // Check that the address spaces match and that the pointers are valid.
+  if (!PtrA || !PtrB || (ASA != ASB))
+    return false;
+
+  // Make sure that A and B are different pointers.
+  if (PtrA == PtrB)
+    return false;
+
+  // Make sure that A and B have the same type if required.
+  if(CheckType && PtrA->getType() != PtrB->getType())
+      return false;
+
+  unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
+  Type *Ty = cast<PointerType>(PtrA->getType())->getElementType();
+  APInt Size(PtrBitWidth, DL.getTypeStoreSize(Ty));
+
+  APInt OffsetA(PtrBitWidth, 0), OffsetB(PtrBitWidth, 0);
+  PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
+  PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
+
+  //  OffsetDelta = OffsetB - OffsetA;
+  const SCEV *OffsetSCEVA = SE.getConstant(OffsetA);
+  const SCEV *OffsetSCEVB = SE.getConstant(OffsetB);
+  const SCEV *OffsetDeltaSCEV = SE.getMinusSCEV(OffsetSCEVB, OffsetSCEVA);
+  const SCEVConstant *OffsetDeltaC = dyn_cast<SCEVConstant>(OffsetDeltaSCEV);
+  const APInt &OffsetDelta = OffsetDeltaC->getAPInt();
+  // Check if they are based on the same pointer. That makes the offsets
+  // sufficient.
+  if (PtrA == PtrB)
+    return OffsetDelta == Size;
+
+  // Compute the necessary base pointer delta to have the necessary final delta
+  // equal to the size.
+  // BaseDelta = Size - OffsetDelta;
+  const SCEV *SizeSCEV = SE.getConstant(Size);
+  const SCEV *BaseDelta = SE.getMinusSCEV(SizeSCEV, OffsetDeltaSCEV);
+
+  // Otherwise compute the distance with SCEV between the base pointers.
+  const SCEV *PtrSCEVA = SE.getSCEV(PtrA);
+  const SCEV *PtrSCEVB = SE.getSCEV(PtrB);
+  const SCEV *X = SE.getAddExpr(PtrSCEVA, BaseDelta);
+  return X == PtrSCEVB;
+}
+
 bool MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
   switch (Type) {
   case NoDep:

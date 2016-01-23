@@ -14,15 +14,11 @@
 
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include <tuple>
 
 using namespace llvm;
-
-static cl::opt<bool> WriteVPInBE("write-vp-data-in-big", cl::ReallyHidden,
-                                 cl::init(false));
 
 // A struct to define how the data stream should be patched. For Indexed
 // profiling, only uint64_t data type is needed.
@@ -75,10 +71,8 @@ public:
   raw_ostream &OS;
   support::endian::Writer<support::little> LE;
 };
-}
 
-namespace {
-class InstrProfRecordTrait {
+class InstrProfRecordWriterTrait {
 public:
   typedef StringRef key_type;
   typedef StringRef key_type_ref;
@@ -89,6 +83,9 @@ public:
   typedef uint64_t hash_value_type;
   typedef uint64_t offset_type;
 
+  support::endianness ValueProfDataEndianness;
+
+  InstrProfRecordWriterTrait() : ValueProfDataEndianness(support::little) {}
   static hash_value_type ComputeHash(key_type_ref K) {
     return IndexedInstrProf::ComputeHash(K);
   }
@@ -116,12 +113,11 @@ public:
     return std::make_pair(N, M);
   }
 
-  static void EmitKey(raw_ostream &Out, key_type_ref K, offset_type N){
+  void EmitKey(raw_ostream &Out, key_type_ref K, offset_type N) {
     Out.write(K.data(), N);
   }
 
-  static void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V,
-                       offset_type) {
+  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
     using namespace llvm::support;
     endian::Writer<little> LE(Out);
     for (const auto &ProfileData : *V) {
@@ -136,18 +132,23 @@ public:
       std::unique_ptr<ValueProfData> VDataPtr =
           ValueProfData::serializeFrom(ProfileData.second);
       uint32_t S = VDataPtr->getSize();
-      VDataPtr->swapBytesFromHost(
-          InstrProfWriter::getValueProfDataEndianness());
+      VDataPtr->swapBytesFromHost(ValueProfDataEndianness);
       Out.write((const char *)VDataPtr.get(), S);
     }
   }
 };
 }
 
-support::endianness InstrProfWriter::getValueProfDataEndianness() {
-  if (WriteVPInBE)
-    return support::big;
-  return support::little;
+InstrProfWriter::InstrProfWriter()
+    : FunctionData(), MaxFunctionCount(0),
+      InfoObj(new InstrProfRecordWriterTrait()) {}
+
+InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
+
+// Internal interface for testing purpose only.
+void InstrProfWriter::setValueProfDataEndianness(
+    support::endianness Endianness) {
+  InfoObj->ValueProfDataEndianness = Endianness;
 }
 
 std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
@@ -184,7 +185,7 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
 }
 
 void InstrProfWriter::writeImpl(ProfOStream &OS) {
-  OnDiskChainedHashTableGenerator<InstrProfRecordTrait> Generator;
+  OnDiskChainedHashTableGenerator<InstrProfRecordWriterTrait> Generator;
   // Populate the hash table generator.
   for (const auto &I : FunctionData)
     Generator.insert(I.getKey(), &I.getValue());
@@ -208,7 +209,7 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Reserve the space for HashOffset field.
   OS.write(0);
   // Write the hash table.
-  uint64_t HashTableStart = Generator.Emit(OS.OS);
+  uint64_t HashTableStart = Generator.Emit(OS.OS, *InfoObj);
 
   // Now do the final patch:
   PatchItem PatchItems[1] = {{HashTableStartLoc, &HashTableStart, 1}};

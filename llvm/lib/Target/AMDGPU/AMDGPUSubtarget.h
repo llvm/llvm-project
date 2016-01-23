@@ -59,7 +59,6 @@ public:
 
 private:
   std::string DevName;
-  bool Is64bit;
   bool DumpCode;
   bool R600ALUInst;
   bool HasVertexCache;
@@ -123,10 +122,6 @@ public:
   }
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
-
-  bool is64bit() const {
-    return Is64bit;
-  }
 
   bool hasVertexCache() const {
     return HasVertexCache;

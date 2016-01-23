@@ -43,10 +43,10 @@ LOOP:                                             ; preds = %IF31, %main_body
   br i1 %29, label %IF, label %LOOP29
 
 IF:                                               ; preds = %LOOP
-  %30 = call float @llvm.AMDIL.clamp.(float %temp4.0, float 0.000000e+00, float 1.000000e+00)
-  %31 = call float @llvm.AMDIL.clamp.(float %temp5.0, float 0.000000e+00, float 1.000000e+00)
-  %32 = call float @llvm.AMDIL.clamp.(float %temp6.0, float 0.000000e+00, float 1.000000e+00)
-  %33 = call float @llvm.AMDIL.clamp.(float 1.000000e+00, float 0.000000e+00, float 1.000000e+00)
+  %30 = call float @llvm.AMDGPU.clamp.f32(float %temp4.0, float 0.000000e+00, float 1.000000e+00)
+  %31 = call float @llvm.AMDGPU.clamp.f32(float %temp5.0, float 0.000000e+00, float 1.000000e+00)
+  %32 = call float @llvm.AMDGPU.clamp.f32(float %temp6.0, float 0.000000e+00, float 1.000000e+00)
+  %33 = call float @llvm.AMDGPU.clamp.f32(float 1.000000e+00, float 0.000000e+00, float 1.000000e+00)
   %34 = insertelement <4 x float> undef, float %30, i32 0
   %35 = insertelement <4 x float> %34, float %31, i32 1
   %36 = insertelement <4 x float> %35, float %32, i32 2
@@ -81,7 +81,7 @@ ENDIF30:                                          ; preds = %LOOP29
   br label %LOOP29
 }
 
-declare float @llvm.AMDIL.clamp.(float, float, float) #0
+declare float @llvm.AMDGPU.clamp.f32(float, float, float) #0
 
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
 

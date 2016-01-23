@@ -1614,7 +1614,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
-  case Intrinsic::AMDGPU_rcp: {
+  case Intrinsic::amdgcn_rcp: {
     if (const ConstantFP *C = dyn_cast<ConstantFP>(II->getArgOperand(0))) {
       const APFloat &ArgVal = C->getValueAPF();
       APFloat Val(ArgVal.getSemantics(), 1.0);

@@ -67,7 +67,7 @@ ENDIF28:                                          ; preds = %ENDIF
 declare <4 x float> @llvm.SI.vs.load.input(<16 x i8>, i32, i32) #1
 
 ; Function Attrs: readnone
-declare float @llvm.AMDIL.clamp.(float, float, float) #2
+declare float @llvm.AMDGPU.clamp.f32(float, float, float) #2
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 

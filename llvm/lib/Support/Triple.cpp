@@ -94,8 +94,8 @@ const char *Triple::getArchTypePrefix(ArchType Kind) {
 
   case hexagon:     return "hexagon";
 
-  case amdgcn:
-  case r600:        return "amdgpu";
+  case amdgcn:      return "amdgcn";
+  case r600:        return "r600";
 
   case bpfel:
   case bpfeb:       return "bpf";

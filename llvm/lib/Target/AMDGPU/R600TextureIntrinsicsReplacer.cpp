@@ -263,15 +263,15 @@ public:
 
     StringRef Name = I.getCalledFunction()->getName();
     if (Name == "llvm.AMDGPU.tex") {
-      ReplaceTexIntrinsic(I, false, TexSign, "llvm.R600.tex", "llvm.R600.texc");
+      ReplaceTexIntrinsic(I, false, TexSign, "llvm.r600.tex", "llvm.r600.texc");
       return;
     }
     if (Name == "llvm.AMDGPU.txl") {
-      ReplaceTexIntrinsic(I, true, TexSign, "llvm.R600.txl", "llvm.R600.txlc");
+      ReplaceTexIntrinsic(I, true, TexSign, "llvm.r600.txl", "llvm.r600.txlc");
       return;
     }
     if (Name == "llvm.AMDGPU.txb") {
-      ReplaceTexIntrinsic(I, true, TexSign, "llvm.R600.txb", "llvm.R600.txbc");
+      ReplaceTexIntrinsic(I, true, TexSign, "llvm.r600.txb", "llvm.r600.txbc");
       return;
     }
     if (Name == "llvm.AMDGPU.txf") {
@@ -279,15 +279,15 @@ public:
       return;
     }
     if (Name == "llvm.AMDGPU.txq") {
-      ReplaceTexIntrinsic(I, false, TexQSign, "llvm.R600.txq", "llvm.R600.txq");
+      ReplaceTexIntrinsic(I, false, TexQSign, "llvm.r600.txq", "llvm.r600.txq");
       return;
     }
     if (Name == "llvm.AMDGPU.ddx") {
-      ReplaceTexIntrinsic(I, false, TexSign, "llvm.R600.ddx", "llvm.R600.ddx");
+      ReplaceTexIntrinsic(I, false, TexSign, "llvm.r600.ddx", "llvm.r600.ddx");
       return;
     }
     if (Name == "llvm.AMDGPU.ddy") {
-      ReplaceTexIntrinsic(I, false, TexSign, "llvm.R600.ddy", "llvm.R600.ddy");
+      ReplaceTexIntrinsic(I, false, TexSign, "llvm.r600.ddy", "llvm.r600.ddy");
       return;
     }
   }

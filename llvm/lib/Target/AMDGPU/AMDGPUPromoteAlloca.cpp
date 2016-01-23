@@ -412,6 +412,14 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
       Intr->eraseFromParent();
       continue;
     }
+    case Intrinsic::invariant_start:
+    case Intrinsic::invariant_end:
+    case Intrinsic::invariant_group_barrier:
+      Intr->eraseFromParent();
+      // FIXME: I think the invariant marker should still theoretically apply,
+      // but the intrinsics need to be changed to accept pointers with any
+      // address space.
+      continue;
     default:
       Intr->dump();
       llvm_unreachable("Don't know how to promote alloca intrinsic use.");

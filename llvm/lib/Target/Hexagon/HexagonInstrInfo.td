@@ -2010,6 +2010,12 @@ let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
 def LDriw_pred : LDInst<(outs PredRegs:$dst),
                         (ins IntRegs:$addr, s11_2Ext:$off),
                         ".error \"should not emit\"", []>;
+// Load modifier.
+let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
+    isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
+def LDriw_mod : LDInst<(outs ModRegs:$dst),
+                        (ins IntRegs:$addr, s11_2Ext:$off),
+                        ".error \"should not emit\"", []>;
 
 let Defs = [R29, R30, R31], Uses = [R30], hasSideEffects = 0 in
   def L2_deallocframe : LDInst<(outs), (ins),
@@ -3650,6 +3656,12 @@ let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
 def STriw_pred : STInst<(outs),
       (ins IntRegs:$addr, s11_2Ext:$off, PredRegs:$src1),
+      ".error \"should not emit\"", []>;
+// Store modifier.
+let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
+    isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
+def STriw_mod : STInst<(outs),
+      (ins IntRegs:$addr, s11_2Ext:$off, ModRegs:$src1),
       ".error \"should not emit\"", []>;
 
 // S2_allocframe: Allocate stack frame.

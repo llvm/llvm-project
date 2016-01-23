@@ -128,7 +128,7 @@ INITIALIZE_PASS(NVPTXLowerKernelArgs, "nvptx-lower-kernel-args",
                 "Lower kernel arguments (NVPTX)", false, false)
 
 // =============================================================================
-// If the function had a byval struct ptr arg, say foo(%struct.x *byval %d),
+// If the function had a byval struct ptr arg, say foo(%struct.x* byval %d),
 // then add the following instructions to the first basic block:
 //
 // %temp = alloca %struct.x, align 8

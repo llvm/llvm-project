@@ -79,8 +79,8 @@ struct AlignOf {
       sizeof(detail::AlignmentCalcImpl<T>) - sizeof(T));
 #else
   enum {
-    Alignment = static_cast<unsigned int>(sizeof(detail::AlignmentCalcImpl<T>) -
-                                          sizeof(T))
+    Alignment = static_cast<unsigned int>(
+        sizeof(::llvm::detail::AlignmentCalcImpl<T>) - sizeof(T))
   };
 #endif
   enum { Alignment_GreaterEqual_2Bytes = Alignment >= 2 ? 1 : 0 };
@@ -244,15 +244,28 @@ union SizerImpl {
 /// expose a char array buffer member which can be used as suitable storage for
 /// a placement new of any of these types. Support for more than ten types can
 /// be added at the cost of more boilerplate.
+#if __GNUC__ == 4 && __GNUC_MINOR__ == 7
 template <typename T1,
           typename T2 = char, typename T3 = char, typename T4 = char,
           typename T5 = char, typename T6 = char, typename T7 = char,
           typename T8 = char, typename T9 = char, typename T10 = char>
 struct AlignedCharArrayUnion : llvm::AlignedCharArray<
     AlignOf<detail::AlignerImpl<T1, T2, T3, T4, T5,
-                                T6, T7, T8, T9, T10> >::Alignment,
-    sizeof(detail::SizerImpl<T1, T2, T3, T4, T5,
-                             T6, T7, T8, T9, T10>)> {
+                                        T6, T7, T8, T9, T10> >::Alignment,
+    sizeof(::llvm::detail::SizerImpl<T1, T2, T3, T4, T5,
+                                     T6, T7, T8, T9, T10>)> {
 };
+#else
+template <typename T1,
+          typename T2 = char, typename T3 = char, typename T4 = char,
+          typename T5 = char, typename T6 = char, typename T7 = char,
+          typename T8 = char, typename T9 = char, typename T10 = char>
+struct AlignedCharArrayUnion : llvm::AlignedCharArray<
+    AlignOf<::llvm::detail::AlignerImpl<T1, T2, T3, T4, T5,
+                                        T6, T7, T8, T9, T10> >::Alignment,
+    sizeof(::llvm::detail::SizerImpl<T1, T2, T3, T4, T5,
+                                     T6, T7, T8, T9, T10>)> {
+};
+#endif
 } // end namespace llvm
 #endif

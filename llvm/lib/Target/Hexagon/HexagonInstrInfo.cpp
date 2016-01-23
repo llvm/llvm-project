@@ -728,8 +728,12 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
           .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
   } else if (Hexagon::PredRegsRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::STriw_pred))
-          .addFrameIndex(FI).addImm(0)
-          .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
+      .addFrameIndex(FI).addImm(0)
+      .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
+  } else if (Hexagon::ModRegsRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(Hexagon::STriw_mod))
+      .addFrameIndex(FI).addImm(0)
+      .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
   } else {
     llvm_unreachable("Unimplemented");
   }
@@ -747,15 +751,18 @@ void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
       MFI.getObjectSize(FI), Align);
-  if (RC == &Hexagon::IntRegsRegClass) {
+  if (Hexagon::IntRegsRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::L2_loadri_io), DestReg)
           .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
-  } else if (RC == &Hexagon::DoubleRegsRegClass) {
+  } else if (Hexagon::DoubleRegsRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::L2_loadrd_io), DestReg)
           .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
-  } else if (RC == &Hexagon::PredRegsRegClass) {
+  } else if (Hexagon::PredRegsRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::LDriw_pred), DestReg)
-          .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
+      .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
+  } else if (Hexagon::ModRegsRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(Hexagon::LDriw_mod), DestReg)
+      .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
   } else {
     llvm_unreachable("Can't store this register to stack slot");
   }
@@ -2461,6 +2468,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   // any size. Later pass knows how to handle it.
   case Hexagon::STriw_pred:
   case Hexagon::LDriw_pred:
+  case Hexagon::STriw_mod:
+  case Hexagon::LDriw_mod:
     return true;
 
   case Hexagon::TFR_FI:

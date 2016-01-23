@@ -34,13 +34,13 @@ typedef std::pair<BasicBlock *, Value *> StackEntry;
 typedef SmallVector<StackEntry, 16> StackVector;
 
 // Intrinsic names the control flow is annotated with
-static const char *const IfIntrinsic = "llvm.SI.if";
-static const char *const ElseIntrinsic = "llvm.SI.else";
-static const char *const BreakIntrinsic = "llvm.SI.break";
-static const char *const IfBreakIntrinsic = "llvm.SI.if.break";
-static const char *const ElseBreakIntrinsic = "llvm.SI.else.break";
-static const char *const LoopIntrinsic = "llvm.SI.loop";
-static const char *const EndCfIntrinsic = "llvm.SI.end.cf";
+static const char *const IfIntrinsic = "llvm.amdgcn.if";
+static const char *const ElseIntrinsic = "llvm.amdgcn.else";
+static const char *const BreakIntrinsic = "llvm.amdgcn.break";
+static const char *const IfBreakIntrinsic = "llvm.amdgcn.if.break";
+static const char *const ElseBreakIntrinsic = "llvm.amdgcn.else.break";
+static const char *const LoopIntrinsic = "llvm.amdgcn.loop";
+static const char *const EndCfIntrinsic = "llvm.amdgcn.end.cf";
 
 class SIAnnotateControlFlow : public FunctionPass {
 

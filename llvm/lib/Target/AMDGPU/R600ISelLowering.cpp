@@ -615,12 +615,6 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     unsigned IntrinsicID =
                          cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
     switch (IntrinsicID) {
-    case AMDGPUIntrinsic::AMDGPU_store_output: {
-      int64_t RegIndex = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
-      unsigned Reg = AMDGPU::R600_TReg32RegClass.getRegister(RegIndex);
-      MFI->LiveOuts.push_back(Reg);
-      return DAG.getCopyToReg(Chain, SDLoc(Op), Reg, Op.getOperand(2));
-    }
     case AMDGPUIntrinsic::R600_store_swizzle: {
       SDLoc DL(Op);
       const SDValue Args[8] = {
@@ -649,50 +643,6 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     SDLoc DL(Op);
     switch(IntrinsicID) {
     default: return AMDGPUTargetLowering::LowerOperation(Op, DAG);
-    case AMDGPUIntrinsic::R600_load_input: {
-      int64_t RegIndex = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
-      unsigned Reg = AMDGPU::R600_TReg32RegClass.getRegister(RegIndex);
-      MachineFunction &MF = DAG.getMachineFunction();
-      MachineRegisterInfo &MRI = MF.getRegInfo();
-      MRI.addLiveIn(Reg);
-      return DAG.getCopyFromReg(DAG.getEntryNode(),
-          SDLoc(DAG.getEntryNode()), Reg, VT);
-    }
-
-    case AMDGPUIntrinsic::R600_interp_input: {
-      int slot = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
-      int ijb = cast<ConstantSDNode>(Op.getOperand(2))->getSExtValue();
-      MachineSDNode *interp;
-      if (ijb < 0) {
-        const R600InstrInfo *TII =
-            static_cast<const R600InstrInfo *>(Subtarget->getInstrInfo());
-        interp = DAG.getMachineNode(AMDGPU::INTERP_VEC_LOAD, DL,
-            MVT::v4f32, DAG.getTargetConstant(slot / 4, DL, MVT::i32));
-        return DAG.getTargetExtractSubreg(
-            TII->getRegisterInfo().getSubRegFromChannel(slot % 4),
-            DL, MVT::f32, SDValue(interp, 0));
-      }
-      MachineFunction &MF = DAG.getMachineFunction();
-      MachineRegisterInfo &MRI = MF.getRegInfo();
-      unsigned RegisterI = AMDGPU::R600_TReg32RegClass.getRegister(2 * ijb);
-      unsigned RegisterJ = AMDGPU::R600_TReg32RegClass.getRegister(2 * ijb + 1);
-      MRI.addLiveIn(RegisterI);
-      MRI.addLiveIn(RegisterJ);
-      SDValue RegisterINode = DAG.getCopyFromReg(DAG.getEntryNode(),
-          SDLoc(DAG.getEntryNode()), RegisterI, MVT::f32);
-      SDValue RegisterJNode = DAG.getCopyFromReg(DAG.getEntryNode(),
-          SDLoc(DAG.getEntryNode()), RegisterJ, MVT::f32);
-
-      if (slot % 4 < 2)
-        interp = DAG.getMachineNode(AMDGPU::INTERP_PAIR_XY, DL,
-            MVT::f32, MVT::f32, DAG.getTargetConstant(slot / 4, DL, MVT::i32),
-            RegisterJNode, RegisterINode);
-      else
-        interp = DAG.getMachineNode(AMDGPU::INTERP_PAIR_ZW, DL,
-            MVT::f32, MVT::f32, DAG.getTargetConstant(slot / 4, DL, MVT::i32),
-            RegisterJNode, RegisterINode);
-      return SDValue(interp, slot % 2);
-    }
     case AMDGPUIntrinsic::R600_interp_xy:
     case AMDGPUIntrinsic::R600_interp_zw: {
       int slot = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
@@ -711,47 +661,47 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
       return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2f32,
           SDValue(interp, 0), SDValue(interp, 1));
     }
-    case AMDGPUIntrinsic::R600_tex:
-    case AMDGPUIntrinsic::R600_texc:
-    case AMDGPUIntrinsic::R600_txl:
-    case AMDGPUIntrinsic::R600_txlc:
-    case AMDGPUIntrinsic::R600_txb:
-    case AMDGPUIntrinsic::R600_txbc:
-    case AMDGPUIntrinsic::R600_txf:
-    case AMDGPUIntrinsic::R600_txq:
-    case AMDGPUIntrinsic::R600_ddx:
-    case AMDGPUIntrinsic::R600_ddy:
+    case AMDGPUIntrinsic::r600_tex:
+    case AMDGPUIntrinsic::r600_texc:
+    case AMDGPUIntrinsic::r600_txl:
+    case AMDGPUIntrinsic::r600_txlc:
+    case AMDGPUIntrinsic::r600_txb:
+    case AMDGPUIntrinsic::r600_txbc:
+    case AMDGPUIntrinsic::r600_txf:
+    case AMDGPUIntrinsic::r600_txq:
+    case AMDGPUIntrinsic::r600_ddx:
+    case AMDGPUIntrinsic::r600_ddy:
     case AMDGPUIntrinsic::R600_ldptr: {
       unsigned TextureOp;
       switch (IntrinsicID) {
-      case AMDGPUIntrinsic::R600_tex:
+      case AMDGPUIntrinsic::r600_tex:
         TextureOp = 0;
         break;
-      case AMDGPUIntrinsic::R600_texc:
+      case AMDGPUIntrinsic::r600_texc:
         TextureOp = 1;
         break;
-      case AMDGPUIntrinsic::R600_txl:
+      case AMDGPUIntrinsic::r600_txl:
         TextureOp = 2;
         break;
-      case AMDGPUIntrinsic::R600_txlc:
+      case AMDGPUIntrinsic::r600_txlc:
         TextureOp = 3;
         break;
-      case AMDGPUIntrinsic::R600_txb:
+      case AMDGPUIntrinsic::r600_txb:
         TextureOp = 4;
         break;
-      case AMDGPUIntrinsic::R600_txbc:
+      case AMDGPUIntrinsic::r600_txbc:
         TextureOp = 5;
         break;
-      case AMDGPUIntrinsic::R600_txf:
+      case AMDGPUIntrinsic::r600_txf:
         TextureOp = 6;
         break;
-      case AMDGPUIntrinsic::R600_txq:
+      case AMDGPUIntrinsic::r600_txq:
         TextureOp = 7;
         break;
-      case AMDGPUIntrinsic::R600_ddx:
+      case AMDGPUIntrinsic::r600_ddx:
         TextureOp = 8;
         break;
-      case AMDGPUIntrinsic::R600_ddy:
+      case AMDGPUIntrinsic::r600_ddy:
         TextureOp = 9;
         break;
       case AMDGPUIntrinsic::R600_ldptr:
@@ -825,7 +775,8 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     case Intrinsic::r600_read_local_size_z:
       return LowerImplicitParameter(DAG, VT, DL, 8);
 
-    case Intrinsic::AMDGPU_read_workdim: {
+    case Intrinsic::r600_read_workdim:
+    case AMDGPUIntrinsic::AMDGPU_read_workdim: { // Legacy name.
       uint32_t ByteOffset = getImplicitParameterOffset(MFI, GRID_DIM);
       return LowerImplicitParameter(DAG, VT, DL, ByteOffset / 4);
     }
@@ -848,12 +799,14 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     case Intrinsic::r600_read_tidig_z:
       return CreateLiveInRegister(DAG, &AMDGPU::R600_TReg32RegClass,
                                   AMDGPU::T0_Z, VT);
-    case Intrinsic::AMDGPU_rsq:
+
+    // FIXME: Should be renamed to r600 prefix
+    case Intrinsic::AMDGPU_rsq_clamped:
+      return DAG.getNode(AMDGPUISD::RSQ_CLAMPED, DL, VT, Op.getOperand(1));
+
+    case Intrinsic::r600_rsq:
       // XXX - I'm assuming SI's RSQ_LEGACY matches R600's behavior.
       return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
-
-    case AMDGPUIntrinsic::AMDGPU_fract:
-      return DAG.getNode(AMDGPUISD::FRACT, DL, VT, Op.getOperand(1));
     }
     // break out of case ISD::INTRINSIC_WO_CHAIN in switch(Op.getOpcode())
     break;

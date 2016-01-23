@@ -201,7 +201,8 @@ struct PartiallyConstructedSafepointRecord {
 static ArrayRef<Use> GetDeoptBundleOperands(ImmutableCallSite CS) {
   assert(UseDeoptBundles && "Should not be called otherwise!");
 
-  Optional<OperandBundleUse> DeoptBundle = CS.getOperandBundle("deopt");
+  Optional<OperandBundleUse> DeoptBundle =
+      CS.getOperandBundle(LLVMContext::OB_deopt);
 
   if (!DeoptBundle.hasValue()) {
     assert(AllowStatepointWithNoDeoptInfo &&

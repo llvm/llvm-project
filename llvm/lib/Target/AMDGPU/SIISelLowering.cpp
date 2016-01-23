@@ -1284,7 +1284,25 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_64RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::DISPATCH_PTR), VT);
+  case Intrinsic::amdgcn_rcp:
+    return DAG.getNode(AMDGPUISD::RCP, DL, VT, Op.getOperand(1));
+  case Intrinsic::amdgcn_rsq:
+    return DAG.getNode(AMDGPUISD::RSQ, DL, VT, Op.getOperand(1));
+  case Intrinsic::amdgcn_rsq_clamped:
+  case Intrinsic::AMDGPU_rsq_clamped: { // Legacy name
+    if (Subtarget->getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return DAG.getNode(AMDGPUISD::RSQ_CLAMPED, DL, VT, Op.getOperand(1));
 
+    Type *Type = VT.getTypeForEVT(*DAG.getContext());
+    APFloat Max = APFloat::getLargest(Type->getFltSemantics());
+    APFloat Min = APFloat::getLargest(Type->getFltSemantics(), true);
+
+    SDValue Rsq = DAG.getNode(AMDGPUISD::RSQ, DL, VT, Op.getOperand(1));
+    SDValue Tmp = DAG.getNode(ISD::FMINNUM, DL, VT, Rsq,
+                              DAG.getConstantFP(Max, DL, VT));
+    return DAG.getNode(ISD::FMAXNUM, DL, VT, Tmp,
+                       DAG.getConstantFP(Min, DL, VT));
+  }
   case Intrinsic::r600_read_ngroups_x:
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::NGROUPS_X, false);
@@ -1312,7 +1330,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::r600_read_local_size_z:
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Z);
-  case Intrinsic::AMDGPU_read_workdim:
+  case Intrinsic::amdgcn_read_workdim:
+  case AMDGPUIntrinsic::AMDGPU_read_workdim: // Legacy name.
     // Really only 2 bits.
     return lowerImplicitZextParam(DAG, Op, MVT::i8,
                                   getImplicitParameterOffset(MFI, GRID_DIM));
@@ -1361,9 +1380,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(2),
                        Op.getOperand(3));
 
-  case AMDGPUIntrinsic::AMDGPU_fract: // Legacy name.
-    return DAG.getNode(ISD::FSUB, DL, VT, Op.getOperand(1),
-                       DAG.getNode(ISD::FFLOOR, DL, VT, Op.getOperand(1)));
   case AMDGPUIntrinsic::SI_fs_constant: {
     SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(3));
     SDValue Glue = M0.getValue(1);
@@ -1403,6 +1419,53 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(4),
                        Glue);
   }
+  case Intrinsic::amdgcn_ldexp:
+    return DAG.getNode(AMDGPUISD::LDEXP, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::amdgcn_class:
+    return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::amdgcn_div_fmas:
+    return DAG.getNode(AMDGPUISD::DIV_FMAS, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(4));
+
+  case Intrinsic::amdgcn_div_fixup:
+    return DAG.getNode(AMDGPUISD::DIV_FIXUP, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+
+  case Intrinsic::amdgcn_trig_preop:
+    return DAG.getNode(AMDGPUISD::TRIG_PREOP, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::amdgcn_div_scale: {
+    // 3rd parameter required to be a constant.
+    const ConstantSDNode *Param = dyn_cast<ConstantSDNode>(Op.getOperand(3));
+    if (!Param)
+      return DAG.getUNDEF(VT);
+
+    // Translate to the operands expected by the machine instruction. The
+    // first parameter must be the same as the first instruction.
+    SDValue Numerator = Op.getOperand(1);
+    SDValue Denominator = Op.getOperand(2);
+
+    // Note this order is opposite of the machine instruction's operations,
+    // which is s0.f = Quotient, s1.f = Denominator, s2.f = Numerator. The
+    // intrinsic has the numerator as the first operand to match a normal
+    // division operation.
+
+    SDValue Src0 = Param->isAllOnesValue() ? Numerator : Denominator;
+
+    return DAG.getNode(AMDGPUISD::DIV_SCALE, DL, Op->getVTList(), Src0,
+                       Denominator, Numerator);
+  }
+  case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte0:
+    return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0, DL, VT, Op.getOperand(1));
+  case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte1:
+    return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE1, DL, VT, Op.getOperand(1));
+  case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte2:
+    return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE2, DL, VT, Op.getOperand(1));
+  case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte3:
+    return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE3, DL, VT, Op.getOperand(1));
   default:
     return AMDGPUTargetLowering::LowerOperation(Op, DAG);
   }

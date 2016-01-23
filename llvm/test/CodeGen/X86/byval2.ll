@@ -37,8 +37,8 @@ entry:
 	store i64 %b, i64* %tmp2, align 16
 	%tmp4 = getelementptr %struct.s, %struct.s* %d, i32 0, i32 2
 	store i64 %c, i64* %tmp4, align 16
-	call void @f( %struct.s*byval %d )
-	call void @f( %struct.s*byval %d )
+	call void @f( %struct.s* byval %d )
+	call void @f( %struct.s* byval %d )
 	ret void
 }
 

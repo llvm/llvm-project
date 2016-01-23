@@ -356,8 +356,6 @@ let hasSideEffects = 1 in {
   def MOVA_INT_eg : R600_1OP <0xCC, "MOVA_INT", [], VecALU>;
 }
 
-def TGSI_LIT_Z_eg : TGSI_LIT_Z_Common<MUL_LIT_eg, LOG_CLAMPED_eg, EXP_IEEE_eg>;
-
 def FLT_TO_INT_eg : FLT_TO_INT_Common<0x50> {
   let Pattern = [];
   let Itinerary = AnyALU;

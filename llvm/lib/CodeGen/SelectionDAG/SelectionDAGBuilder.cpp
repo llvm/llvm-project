@@ -2487,7 +2487,7 @@ void SelectionDAGBuilder::visitFCmp(const User &I) {
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
   ISD::CondCode Condition = getFCmpCondCode(predicate);
-  
+
   // FIXME: Fcmp instructions have fast-math-flags in IR, so we should use them.
   // FIXME: We should propagate the fast-math-flags to the DAG node itself for
   // further optimization, but currently FMF is only applicable to binary nodes.
@@ -3105,7 +3105,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       if (!IdxN.getValueType().isVector() && VectorWidth) {
         MVT VT = MVT::getVectorVT(IdxN.getValueType().getSimpleVT(), VectorWidth);
         SmallVector<SDValue, 16> Ops(VectorWidth, IdxN);
-        IdxN = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);      
+        IdxN = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
       }
       // If the index is smaller or larger than intptr_t, truncate or extend
       // it.
@@ -4017,7 +4017,7 @@ static SDValue expandExp(SDLoc dl, SDValue Op, SelectionDAG &DAG,
 /// limited-precision mode.
 static SDValue expandLog(SDLoc dl, SDValue Op, SelectionDAG &DAG,
                          const TargetLowering &TLI) {
- 
+
   // TODO: What fast-math-flags should be set on the floating-point nodes?
 
   if (Op.getValueType() == MVT::f32 &&
@@ -4116,7 +4116,7 @@ static SDValue expandLog(SDLoc dl, SDValue Op, SelectionDAG &DAG,
 /// limited-precision mode.
 static SDValue expandLog2(SDLoc dl, SDValue Op, SelectionDAG &DAG,
                           const TargetLowering &TLI) {
-  
+
   // TODO: What fast-math-flags should be set on the floating-point nodes?
 
   if (Op.getValueType() == MVT::f32 &&

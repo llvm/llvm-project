@@ -66,7 +66,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                                  TargetMachine &TM)
-    : AMDGPUGenSubtargetInfo(TT, GPU, FS), DevName(GPU), Is64bit(false),
+    : AMDGPUGenSubtargetInfo(TT, GPU, FS), DevName(GPU),
       DumpCode(false), R600ALUInst(false), HasVertexCache(false),
       TexVTXClauseSize(0), Gen(AMDGPUSubtarget::R600), FP64(false),
       FP64Denormals(false), FP32Denormals(false), FastFMAF32(false),

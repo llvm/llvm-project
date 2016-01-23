@@ -26,6 +26,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -401,9 +402,6 @@ public:
     }
   }
 
-  /// \returns true if the memory operations A and B are consecutive.
-  bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL);
-
   /// \brief Perform LICM and CSE on the newly generated gather sequences.
   void optimizeGatherSequence();
 
@@ -437,14 +435,6 @@ private:
   /// \returns the pointer to the vectorized value if \p VL is already
   /// vectorized, or NULL. They may happen in cycles.
   Value *alreadyVectorized(ArrayRef<Value *> VL) const;
-
-  /// \brief Take the pointer operand from the Load/Store instruction.
-  /// \returns NULL if this is not a valid Load/Store instruction.
-  static Value *getPointerOperand(Value *I);
-
-  /// \brief Take the address space operand from the Load/Store instruction.
-  /// \returns -1 if this is not a valid Load/Store instruction.
-  static unsigned getAddressSpaceOperand(Value *I);
 
   /// \returns the scalarization cost for this type. Scalarization in this
   /// context means the creation of vectors from a group of scalars.
@@ -1191,8 +1181,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
           return;
         }
 
-        if (!isConsecutiveAccess(VL[i], VL[i + 1], DL)) {
-          if (VL.size() == 2 && isConsecutiveAccess(VL[1], VL[0], DL)) {
+        if (!isConsecutiveAccess(VL[i], VL[i + 1], DL, *SE)) {
+          if (VL.size() == 2 && isConsecutiveAccess(VL[1], VL[0], DL, *SE)) {
             ++NumLoadsWantToChangeOrder;
           }
           BS.cancelScheduling(VL);
@@ -1364,7 +1354,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       const DataLayout &DL = F->getParent()->getDataLayout();
       // Check if the stores are consecutive or of we need to swizzle them.
       for (unsigned i = 0, e = VL.size() - 1; i < e; ++i)
-        if (!isConsecutiveAccess(VL[i], VL[i + 1], DL)) {
+        if (!isConsecutiveAccess(VL[i], VL[i + 1], DL, *SE)) {
           BS.cancelScheduling(VL);
           newTreeEntry(VL, false);
           DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
@@ -1837,63 +1827,6 @@ int BoUpSLP::getGatherCost(ArrayRef<Value *> VL) {
   return getGatherCost(VecTy);
 }
 
-Value *BoUpSLP::getPointerOperand(Value *I) {
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerOperand();
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerOperand();
-  return nullptr;
-}
-
-unsigned BoUpSLP::getAddressSpaceOperand(Value *I) {
-  if (LoadInst *L = dyn_cast<LoadInst>(I))
-    return L->getPointerAddressSpace();
-  if (StoreInst *S = dyn_cast<StoreInst>(I))
-    return S->getPointerAddressSpace();
-  return -1;
-}
-
-bool BoUpSLP::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL) {
-  Value *PtrA = getPointerOperand(A);
-  Value *PtrB = getPointerOperand(B);
-  unsigned ASA = getAddressSpaceOperand(A);
-  unsigned ASB = getAddressSpaceOperand(B);
-
-  // Check that the address spaces match and that the pointers are valid.
-  if (!PtrA || !PtrB || (ASA != ASB))
-    return false;
-
-  // Make sure that A and B are different pointers of the same type.
-  if (PtrA == PtrB || PtrA->getType() != PtrB->getType())
-    return false;
-
-  unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
-  Type *Ty = cast<PointerType>(PtrA->getType())->getElementType();
-  APInt Size(PtrBitWidth, DL.getTypeStoreSize(Ty));
-
-  APInt OffsetA(PtrBitWidth, 0), OffsetB(PtrBitWidth, 0);
-  PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
-  PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
-
-  APInt OffsetDelta = OffsetB - OffsetA;
-
-  // Check if they are based on the same pointer. That makes the offsets
-  // sufficient.
-  if (PtrA == PtrB)
-    return OffsetDelta == Size;
-
-  // Compute the necessary base pointer delta to have the necessary final delta
-  // equal to the size.
-  APInt BaseDelta = Size - OffsetDelta;
-
-  // Otherwise compute the distance with SCEV between the base pointers.
-  const SCEV *PtrSCEVA = SE->getSCEV(PtrA);
-  const SCEV *PtrSCEVB = SE->getSCEV(PtrB);
-  const SCEV *C = SE->getConstant(BaseDelta);
-  const SCEV *X = SE->getAddExpr(PtrSCEVA, C);
-  return X == PtrSCEVB;
-}
-
 // Reorder commutative operations in alternate shuffle if the resulting vectors
 // are consecutive loads. This would allow us to vectorize the tree.
 // If we have something like-
@@ -1921,10 +1854,10 @@ void BoUpSLP::reorderAltShuffleOperands(ArrayRef<Value *> VL,
       if (LoadInst *L1 = dyn_cast<LoadInst>(Right[j + 1])) {
         Instruction *VL1 = cast<Instruction>(VL[j]);
         Instruction *VL2 = cast<Instruction>(VL[j + 1]);
-        if (isConsecutiveAccess(L, L1, DL) && VL1->isCommutative()) {
+        if (isConsecutiveAccess(L, L1, DL, *SE) && VL1->isCommutative()) {
           std::swap(Left[j], Right[j]);
           continue;
-        } else if (isConsecutiveAccess(L, L1, DL) && VL2->isCommutative()) {
+        } else if (isConsecutiveAccess(L, L1, DL, *SE) && VL2->isCommutative()) {
           std::swap(Left[j + 1], Right[j + 1]);
           continue;
         }
@@ -1935,10 +1868,10 @@ void BoUpSLP::reorderAltShuffleOperands(ArrayRef<Value *> VL,
       if (LoadInst *L1 = dyn_cast<LoadInst>(Left[j + 1])) {
         Instruction *VL1 = cast<Instruction>(VL[j]);
         Instruction *VL2 = cast<Instruction>(VL[j + 1]);
-        if (isConsecutiveAccess(L, L1, DL) && VL1->isCommutative()) {
+        if (isConsecutiveAccess(L, L1, DL, *SE) && VL1->isCommutative()) {
           std::swap(Left[j], Right[j]);
           continue;
-        } else if (isConsecutiveAccess(L, L1, DL) && VL2->isCommutative()) {
+        } else if (isConsecutiveAccess(L, L1, DL, *SE) && VL2->isCommutative()) {
           std::swap(Left[j + 1], Right[j + 1]);
           continue;
         }
@@ -2088,7 +2021,7 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
   for (unsigned j = 0; j < VL.size() - 1; ++j) {
     if (LoadInst *L = dyn_cast<LoadInst>(Left[j])) {
       if (LoadInst *L1 = dyn_cast<LoadInst>(Right[j + 1])) {
-        if (isConsecutiveAccess(L, L1, DL)) {
+        if (isConsecutiveAccess(L, L1, DL, *SE)) {
           std::swap(Left[j + 1], Right[j + 1]);
           continue;
         }
@@ -2096,7 +2029,7 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
     }
     if (LoadInst *L = dyn_cast<LoadInst>(Right[j])) {
       if (LoadInst *L1 = dyn_cast<LoadInst>(Left[j + 1])) {
-        if (isConsecutiveAccess(L, L1, DL)) {
+        if (isConsecutiveAccess(L, L1, DL, *SE)) {
           std::swap(Left[j + 1], Right[j + 1]);
           continue;
         }
@@ -3461,7 +3394,7 @@ bool SLPVectorizer::vectorizeStores(ArrayRef<StoreInst *> Stores,
       IndexQueue.push_back(j - 1);
 
     for (auto &k : IndexQueue) {
-      if (R.isConsecutiveAccess(Stores[i], Stores[k], DL)) {
+      if (isConsecutiveAccess(Stores[i], Stores[k], DL, *SE)) {
         Tails.insert(Stores[k]);
         Heads.insert(Stores[i]);
         ConsecutiveChain[Stores[i]] = Stores[k];

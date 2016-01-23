@@ -29,6 +29,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -186,32 +187,8 @@ bool PruneEH::SimplifyFunction(Function *F) {
   for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator()))
       if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(F)) {
-        SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
-        SmallVector<OperandBundleDef, 1> OpBundles;
-        II->getOperandBundlesAsDefs(OpBundles);
-
-        // Insert a call instruction before the invoke.
-        CallInst *Call = CallInst::Create(II->getCalledValue(), Args, OpBundles,
-                                          "", II);
-        Call->takeName(II);
-        Call->setCallingConv(II->getCallingConv());
-        Call->setAttributes(II->getAttributes());
-        Call->setDebugLoc(II->getDebugLoc());
-
-        // Anything that used the value produced by the invoke instruction
-        // now uses the value produced by the call instruction.  Note that we
-        // do this even for void functions and calls with no uses so that the
-        // callgraph edge is updated.
-        II->replaceAllUsesWith(Call);
         BasicBlock *UnwindBlock = II->getUnwindDest();
-        UnwindBlock->removePredecessor(II->getParent());
-
-        // Insert a branch to the normal destination right before the
-        // invoke.
-        BranchInst::Create(II->getNormalDest(), II);
-
-        // Finally, delete the invoke instruction!
-        BB->getInstList().pop_back();
+        removeUnwindEdge(&*BB);
 
         // If the unwind block is now dead, nuke it.
         if (pred_empty(UnwindBlock))
@@ -251,23 +228,39 @@ void PruneEH::DeleteBasicBlock(BasicBlock *BB) {
   assert(pred_empty(BB) && "BB is not dead!");
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
+  Instruction *TokenInst = nullptr;
+
   CallGraphNode *CGN = CG[BB->getParent()];
   for (BasicBlock::iterator I = BB->end(), E = BB->begin(); I != E; ) {
     --I;
-    if (CallInst *CI = dyn_cast<CallInst>(I)) {
-      if (!isa<IntrinsicInst>(I))
-        CGN->removeCallEdgeFor(CI);
-    } else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
-      CGN->removeCallEdgeFor(II);
+
+    if (I->getType()->isTokenTy()) {
+      TokenInst = &*I;
+      break;
+    }
+
+    if (auto CS = CallSite (&*I)) {
+      const Function *Callee = CS.getCalledFunction();
+      if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
+        CGN->removeCallEdgeFor(CS);
+      else if (!Callee->isIntrinsic())
+        CGN->removeCallEdgeFor(CS);
+    }
+
     if (!I->use_empty())
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
   }
 
-  // Get the list of successors of this block.
-  std::vector<BasicBlock*> Succs(succ_begin(BB), succ_end(BB));
+  if (TokenInst) {
+    if (!isa<TerminatorInst>(TokenInst))
+      changeToUnreachable(TokenInst->getNextNode(), /*UseLLVMTrap=*/false);
+  } else {
+    // Get the list of successors of this block.
+    std::vector<BasicBlock *> Succs(succ_begin(BB), succ_end(BB));
 
-  for (unsigned i = 0, e = Succs.size(); i != e; ++i)
-    Succs[i]->removePredecessor(BB);
+    for (unsigned i = 0, e = Succs.size(); i != e; ++i)
+      Succs[i]->removePredecessor(BB);
 
-  BB->eraseFromParent();
+    BB->eraseFromParent();
+  }
 }

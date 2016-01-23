@@ -6,7 +6,7 @@ using namespace fuzzer;
 
 // For now, have LLVMFuzzerTestOneInput just to make it link.
 // Later we may want to make unittests that actually call LLVMFuzzerTestOneInput.
-extern "C" void LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   abort();
 }
 
@@ -399,4 +399,24 @@ TEST(FuzzerUtil, Base64) {
   EXPECT_EQ("YWJjeA==", Base64({'a', 'b', 'c', 'x'}));
   EXPECT_EQ("YWJjeHk=", Base64({'a', 'b', 'c', 'x', 'y'}));
   EXPECT_EQ("YWJjeHl6", Base64({'a', 'b', 'c', 'x', 'y', 'z'}));
+}
+
+TEST(Corpus, Distribution) {
+  FuzzerRandomLibc Rand(0);
+  SimpleUserSuppliedFuzzer USF(&Rand, LLVMFuzzerTestOneInput);
+  Fuzzer::FuzzingOptions Options;
+  Fuzzer Fuzz(USF, Options);
+  size_t N = 10;
+  size_t TriesPerUnit = 1<<20;
+  for (size_t i = 0; i < N; i++) {
+    Fuzz.AddToCorpus(Unit{ static_cast<uint8_t>(i) });
+  }
+  std::vector<size_t> Hist(N);
+  for (size_t i = 0; i < N * TriesPerUnit; i++) {
+    Hist[Fuzz.ChooseUnitIdxToMutate()]++;
+  }
+  for (size_t i = 0; i < N; i++) {
+    // A weak sanity check that every unit gets invoked.
+    EXPECT_GT(Hist[i], TriesPerUnit / N / 3);
+  }
 }

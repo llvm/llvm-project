@@ -654,32 +654,30 @@ bool llvm::canBeOmittedFromSymbolTable(const GlobalValue *GV) {
 static void collectFuncletMembers(
     DenseMap<const MachineBasicBlock *, int> &FuncletMembership, int Funclet,
     const MachineBasicBlock *MBB) {
-  // Add this MBB to our funclet.
-  auto P = FuncletMembership.insert(std::make_pair(MBB, Funclet));
+  SmallVector<const MachineBasicBlock *, 16> Worklist = {MBB};
+  while (!Worklist.empty()) {
+    const MachineBasicBlock *Visiting = Worklist.pop_back_val();
+    // Don't follow blocks which start new funclets.
+    if (Visiting->isEHPad() && Visiting != MBB)
+      continue;
 
-  // Don't revisit blocks.
-  if (!P.second) {
-    assert(P.first->second == Funclet && "MBB is part of two funclets!");
-    return;
+    // Add this MBB to our funclet.
+    auto P = FuncletMembership.insert(std::make_pair(Visiting, Funclet));
+
+    // Don't revisit blocks.
+    if (!P.second) {
+      assert(P.first->second == Funclet && "MBB is part of two funclets!");
+      continue;
+    }
+
+    // Returns are boundaries where funclet transfer can occur, don't follow
+    // successors.
+    if (Visiting->isReturnBlock())
+      continue;
+
+    for (const MachineBasicBlock *Succ : Visiting->successors())
+      Worklist.push_back(Succ);
   }
-
-  bool IsReturn = false;
-  int NumTerminators = 0;
-  for (const MachineInstr &MI : MBB->terminators()) {
-    IsReturn |= MI.isReturn();
-    ++NumTerminators;
-  }
-  assert((!IsReturn || NumTerminators == 1) &&
-         "Expected only one terminator when a return is present!");
-
-  // Returns are boundaries where funclet transfer can occur, don't follow
-  // successors.
-  if (IsReturn)
-    return;
-
-  for (const MachineBasicBlock *SMBB : MBB->successors())
-    if (!SMBB->isEHPad())
-      collectFuncletMembers(FuncletMembership, Funclet, SMBB);
 }
 
 DenseMap<const MachineBasicBlock *, int>

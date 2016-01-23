@@ -55,6 +55,14 @@ int main() { return (float)x; }"
   endif()
 endif()
 
+if (CMAKE_LINKER MATCHES "lld-link.exe")
+  # Pass /MANIFEST:NO so that CMake doesn't run mt.exe on our binaries.  Adding
+  # manifests with mt.exe breaks LLD's symbol tables and takes as much time as
+  # the link. See PR24476.
+  append("/MANIFEST:NO"
+    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+endif()
+
 if( LLVM_ENABLE_ASSERTIONS )
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
   if( NOT MSVC )
@@ -514,10 +522,6 @@ macro(append_common_sanitizer_flags)
     if (CMAKE_LINKER MATCHES "lld-link.exe")
       # Use DWARF debug info with LLD.
       append("-gdwarf" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-      # Pass /MANIFEST:NO so that CMake doesn't run mt.exe on our binaries.
-      # Adding manifests with mt.exe breaks LLD's symbol tables. See PR24476.
-      append("/MANIFEST:NO"
-        CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
     else()
       # Enable codeview otherwise.
       append("/Z7" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

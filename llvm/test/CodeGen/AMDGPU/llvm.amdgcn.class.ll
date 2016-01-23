@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare i1 @llvm.AMDGPU.class.f32(float, i32) #1
-declare i1 @llvm.AMDGPU.class.f64(double, i32) #1
+declare i1 @llvm.amdgcn.class.f32(float, i32) #1
+declare i1 @llvm.amdgcn.class.f64(double, i32) #1
 declare i32 @llvm.r600.read.tidig.x() #1
 declare float @llvm.fabs.f32(float) #1
 declare double @llvm.fabs.f64(double) #1
@@ -15,7 +15,7 @@ declare double @llvm.fabs.f64(double) #1
 ; SI-NEXT: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_f32(i32 addrspace(1)* %out, float %a, i32 %b) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -31,7 +31,7 @@ define void @test_class_f32(i32 addrspace(1)* %out, float %a, i32 %b) #0 {
 ; SI: s_endpgm
 define void @test_class_fabs_f32(i32 addrspace(1)* %out, float %a, i32 %b) #0 {
   %a.fabs = call float @llvm.fabs.f32(float %a) #1
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a.fabs, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a.fabs, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -47,7 +47,7 @@ define void @test_class_fabs_f32(i32 addrspace(1)* %out, float %a, i32 %b) #0 {
 ; SI: s_endpgm
 define void @test_class_fneg_f32(i32 addrspace(1)* %out, float %a, i32 %b) #0 {
   %a.fneg = fsub float -0.0, %a
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a.fneg, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a.fneg, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -64,7 +64,7 @@ define void @test_class_fneg_f32(i32 addrspace(1)* %out, float %a, i32 %b) #0 {
 define void @test_class_fneg_fabs_f32(i32 addrspace(1)* %out, float %a, i32 %b) #0 {
   %a.fabs = call float @llvm.fabs.f32(float %a) #1
   %a.fneg.fabs = fsub float -0.0, %a.fabs
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a.fneg.fabs, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a.fneg.fabs, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -77,7 +77,7 @@ define void @test_class_fneg_fabs_f32(i32 addrspace(1)* %out, float %a, i32 %b) 
 ; SI-NEXT: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_1_f32(i32 addrspace(1)* %out, float %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a, i32 1) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 1) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -90,7 +90,7 @@ define void @test_class_1_f32(i32 addrspace(1)* %out, float %a) #0 {
 ; SI-NEXT: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_64_f32(i32 addrspace(1)* %out, float %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a, i32 64) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 64) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -105,7 +105,7 @@ define void @test_class_64_f32(i32 addrspace(1)* %out, float %a) #0 {
 ; SI-NEXT: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_full_mask_f32(i32 addrspace(1)* %out, float %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a, i32 1023) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 1023) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -119,7 +119,7 @@ define void @test_class_full_mask_f32(i32 addrspace(1)* %out, float %a) #0 {
 ; SI-NEXT: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_9bit_mask_f32(i32 addrspace(1)* %out, float %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a, i32 511) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 511) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -138,7 +138,7 @@ define void @v_test_class_full_mask_f32(i32 addrspace(1)* %out, float addrspace(
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
 
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a, i32 511) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 511) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %gep.out, align 4
   ret void
@@ -156,7 +156,7 @@ define void @test_class_inline_imm_constant_dynamic_mask_f32(i32 addrspace(1)* %
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %b = load i32, i32 addrspace(1)* %gep.in
 
-  %result = call i1 @llvm.AMDGPU.class.f32(float 1.0, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float 1.0, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %gep.out, align 4
   ret void
@@ -176,7 +176,7 @@ define void @test_class_lit_constant_dynamic_mask_f32(i32 addrspace(1)* %out, i3
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %b = load i32, i32 addrspace(1)* %gep.in
 
-  %result = call i1 @llvm.AMDGPU.class.f32(float 1024.0, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float 1024.0, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %gep.out, align 4
   ret void
@@ -191,7 +191,7 @@ define void @test_class_lit_constant_dynamic_mask_f32(i32 addrspace(1)* %out, i3
 ; SI-NEXT: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_f64(i32 addrspace(1)* %out, double %a, i32 %b) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -207,7 +207,7 @@ define void @test_class_f64(i32 addrspace(1)* %out, double %a, i32 %b) #0 {
 ; SI: s_endpgm
 define void @test_class_fabs_f64(i32 addrspace(1)* %out, double %a, i32 %b) #0 {
   %a.fabs = call double @llvm.fabs.f64(double %a) #1
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a.fabs, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a.fabs, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -223,7 +223,7 @@ define void @test_class_fabs_f64(i32 addrspace(1)* %out, double %a, i32 %b) #0 {
 ; SI: s_endpgm
 define void @test_class_fneg_f64(i32 addrspace(1)* %out, double %a, i32 %b) #0 {
   %a.fneg = fsub double -0.0, %a
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a.fneg, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a.fneg, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -240,7 +240,7 @@ define void @test_class_fneg_f64(i32 addrspace(1)* %out, double %a, i32 %b) #0 {
 define void @test_class_fneg_fabs_f64(i32 addrspace(1)* %out, double %a, i32 %b) #0 {
   %a.fabs = call double @llvm.fabs.f64(double %a) #1
   %a.fneg.fabs = fsub double -0.0, %a.fabs
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a.fneg.fabs, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a.fneg.fabs, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -250,7 +250,7 @@ define void @test_class_fneg_fabs_f64(i32 addrspace(1)* %out, double %a, i32 %b)
 ; SI: v_cmp_class_f64_e64 {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 1{{$}}
 ; SI: s_endpgm
 define void @test_class_1_f64(i32 addrspace(1)* %out, double %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a, i32 1) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a, i32 1) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -260,7 +260,7 @@ define void @test_class_1_f64(i32 addrspace(1)* %out, double %a) #0 {
 ; SI: v_cmp_class_f64_e64 {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 64{{$}}
 ; SI: s_endpgm
 define void @test_class_64_f64(i32 addrspace(1)* %out, double %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a, i32 64) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a, i32 64) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -276,7 +276,7 @@ define void @test_class_64_f64(i32 addrspace(1)* %out, double %a) #0 {
 ; SI-NEXT: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_full_mask_f64(i32 addrspace(1)* %out, double %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a, i32 511) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a, i32 511) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -296,7 +296,7 @@ define void @v_test_class_full_mask_f64(i32 addrspace(1)* %out, double addrspace
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load double, double addrspace(1)* %in
 
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a, i32 511) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a, i32 511) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %gep.out, align 4
   ret void
@@ -312,7 +312,7 @@ define void @test_class_inline_imm_constant_dynamic_mask_f64(i32 addrspace(1)* %
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %b = load i32, i32 addrspace(1)* %gep.in
 
-  %result = call i1 @llvm.AMDGPU.class.f64(double 1.0, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double 1.0, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %gep.out, align 4
   ret void
@@ -327,7 +327,7 @@ define void @test_class_lit_constant_dynamic_mask_f64(i32 addrspace(1)* %out, i3
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %b = load i32, i32 addrspace(1)* %gep.in
 
-  %result = call i1 @llvm.AMDGPU.class.f64(double 1024.0, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double 1024.0, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %gep.out, align 4
   ret void
@@ -344,8 +344,8 @@ define void @test_fold_or_class_f32_0(i32 addrspace(1)* %out, float addrspace(1)
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
 
-  %class0 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 1) #1
-  %class1 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 3) #1
+  %class0 = call i1 @llvm.amdgcn.class.f32(float %a, i32 1) #1
+  %class1 = call i1 @llvm.amdgcn.class.f32(float %a, i32 3) #1
   %or = or i1 %class0, %class1
 
   %sext = sext i1 %or to i32
@@ -364,9 +364,9 @@ define void @test_fold_or3_class_f32_0(i32 addrspace(1)* %out, float addrspace(1
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
 
-  %class0 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 1) #1
-  %class1 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 2) #1
-  %class2 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 4) #1
+  %class0 = call i1 @llvm.amdgcn.class.f32(float %a, i32 1) #1
+  %class1 = call i1 @llvm.amdgcn.class.f32(float %a, i32 2) #1
+  %class2 = call i1 @llvm.amdgcn.class.f32(float %a, i32 4) #1
   %or.0 = or i1 %class0, %class1
   %or.1 = or i1 %or.0, %class2
 
@@ -387,16 +387,16 @@ define void @test_fold_or_all_tests_class_f32_0(i32 addrspace(1)* %out, float ad
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
 
-  %class0 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 1) #1
-  %class1 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 2) #1
-  %class2 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 4) #1
-  %class3 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 8) #1
-  %class4 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 16) #1
-  %class5 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 32) #1
-  %class6 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 64) #1
-  %class7 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 128) #1
-  %class8 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 256) #1
-  %class9 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 512) #1
+  %class0 = call i1 @llvm.amdgcn.class.f32(float %a, i32 1) #1
+  %class1 = call i1 @llvm.amdgcn.class.f32(float %a, i32 2) #1
+  %class2 = call i1 @llvm.amdgcn.class.f32(float %a, i32 4) #1
+  %class3 = call i1 @llvm.amdgcn.class.f32(float %a, i32 8) #1
+  %class4 = call i1 @llvm.amdgcn.class.f32(float %a, i32 16) #1
+  %class5 = call i1 @llvm.amdgcn.class.f32(float %a, i32 32) #1
+  %class6 = call i1 @llvm.amdgcn.class.f32(float %a, i32 64) #1
+  %class7 = call i1 @llvm.amdgcn.class.f32(float %a, i32 128) #1
+  %class8 = call i1 @llvm.amdgcn.class.f32(float %a, i32 256) #1
+  %class9 = call i1 @llvm.amdgcn.class.f32(float %a, i32 512) #1
   %or.0 = or i1 %class0, %class1
   %or.1 = or i1 %or.0, %class2
   %or.2 = or i1 %or.1, %class3
@@ -422,8 +422,8 @@ define void @test_fold_or_class_f32_1(i32 addrspace(1)* %out, float addrspace(1)
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
 
-  %class0 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 4) #1
-  %class1 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 8) #1
+  %class0 = call i1 @llvm.amdgcn.class.f32(float %a, i32 4) #1
+  %class1 = call i1 @llvm.amdgcn.class.f32(float %a, i32 8) #1
   %or = or i1 %class0, %class1
 
   %sext = sext i1 %or to i32
@@ -442,8 +442,8 @@ define void @test_fold_or_class_f32_2(i32 addrspace(1)* %out, float addrspace(1)
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
 
-  %class0 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 7) #1
-  %class1 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 7) #1
+  %class0 = call i1 @llvm.amdgcn.class.f32(float %a, i32 7) #1
+  %class1 = call i1 @llvm.amdgcn.class.f32(float %a, i32 7) #1
   %or = or i1 %class0, %class1
 
   %sext = sext i1 %or to i32
@@ -462,8 +462,8 @@ define void @test_no_fold_or_class_f32_0(i32 addrspace(1)* %out, float addrspace
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
 
-  %class0 = call i1 @llvm.AMDGPU.class.f32(float %a, i32 4) #1
-  %class1 = call i1 @llvm.AMDGPU.class.f32(float %b, i32 8) #1
+  %class0 = call i1 @llvm.amdgcn.class.f32(float %a, i32 4) #1
+  %class1 = call i1 @llvm.amdgcn.class.f32(float %b, i32 8) #1
   %or = or i1 %class0, %class1
 
   %sext = sext i1 %or to i32
@@ -477,7 +477,7 @@ define void @test_no_fold_or_class_f32_0(i32 addrspace(1)* %out, float addrspace
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_0_f32(i32 addrspace(1)* %out, float %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f32(float %a, i32 0) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 0) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
@@ -489,7 +489,7 @@ define void @test_class_0_f32(i32 addrspace(1)* %out, float %a) #0 {
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_0_f64(i32 addrspace(1)* %out, double %a) #0 {
-  %result = call i1 @llvm.AMDGPU.class.f64(double %a, i32 0) #1
+  %result = call i1 @llvm.amdgcn.class.f64(double %a, i32 0) #1
   %sext = sext i1 %result to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
   ret void
