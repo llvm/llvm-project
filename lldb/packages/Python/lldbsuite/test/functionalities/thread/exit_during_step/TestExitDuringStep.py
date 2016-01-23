@@ -18,14 +18,12 @@ class ExitDuringStepTestCase(TestBase):
     @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
     @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
     @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureWindows("llvm.org/pr24681")
     def test_thread_state_is_stopped(self):
         """Test thread exit during step handling."""
         self.build(dictionary=self.getBuildFlags())
         self.exit_during_step_base("thread step-in -m all-threads", 'stop reason = step in', True)
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
-    @expectedFailureWindows("llvm.org/pr24681")
     @expectedFlakeyAndroid("llvm.org/pr26206")
     def test(self):
         """Test thread exit during step handling."""
@@ -33,7 +31,6 @@ class ExitDuringStepTestCase(TestBase):
         self.exit_during_step_base("thread step-inst -m all-threads", 'stop reason = instruction step', False)
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
-    @expectedFailureWindows("llvm.org/pr24681")
     @expectedFlakeyAndroid("llvm.org/pr26206")
     def test_step_over(self):
         """Test thread exit during step-over handling."""
@@ -41,7 +38,6 @@ class ExitDuringStepTestCase(TestBase):
         self.exit_during_step_base("thread step-over -m all-threads", 'stop reason = step over', False)
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
-    @expectedFailureWindows("llvm.org/pr24681")
     @expectedFlakeyAndroid("llvm.org/pr26206")
     def test_step_in(self):
         """Test thread exit during step-in handling."""
@@ -79,37 +75,16 @@ class ExitDuringStepTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        # Get the number of threads
         num_threads = process.GetNumThreads()
-
         # Make sure we see all three threads
-        self.assertTrue(num_threads == 3, 'Number of expected threads and actual threads do not match.')
+        self.assertGreaterEqual(num_threads, 3, 'Number of expected threads and actual threads do not match.')
 
-        # Get the thread objects
-        thread1 = process.GetThreadAtIndex(0)
-        thread2 = process.GetThreadAtIndex(1)
-        thread3 = process.GetThreadAtIndex(2)
-
-        # Make sure all threads are stopped
-        if test_thread_state:
-            self.assertTrue(thread1.IsStopped(), "Thread 1 didn't stop during breakpoint")
-            self.assertTrue(thread2.IsStopped(), "Thread 2 didn't stop during breakpoint")
-            self.assertTrue(thread3.IsStopped(), "Thread 3 didn't stop during breakpoint")
-            return
-
-        # Find the thread that is stopped at the breakpoint
-        stepping_thread = None
-        for thread in process:
-            expected_bp_desc = "breakpoint %s." % self.bp_num
-            stop_desc = thread.GetStopDescription(100)
-            if stop_desc and (expected_bp_desc in stop_desc):
-                stepping_thread = thread
-                break
-        self.assertTrue(stepping_thread != None, "unable to find thread stopped at %s" % expected_bp_desc)
+        stepping_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, self.bp_num)
+        self.assertIsNotNone(stepping_thread, "Could not find a thread stopped at the breakpoint")
 
         current_line = self.breakpoint
         stepping_frame = stepping_thread.GetFrameAtIndex(0)
-        self.assertTrue(current_line == stepping_frame.GetLineEntry().GetLine(), "Starting line for stepping doesn't match breakpoint line.")
+        self.assertEqual(current_line, stepping_frame.GetLineEntry().GetLine(), "Starting line for stepping doesn't match breakpoint line.")
 
         # Keep stepping until we've reached our designated continue point
         while current_line != self.continuepoint:
@@ -125,16 +100,16 @@ class ExitDuringStepTestCase(TestBase):
 
             current_line = frame.GetLineEntry().GetLine()
 
-            self.assertTrue(current_line >= self.breakpoint, "Stepped to unexpected line, " + str(current_line))
-            self.assertTrue(current_line <= self.continuepoint, "Stepped to unexpected line, " + str(current_line))
+            self.assertGreaterEqual(current_line, self.breakpoint, "Stepped to unexpected line, " + str(current_line))
+            self.assertLessEqual(current_line, self.continuepoint, "Stepped to unexpected line, " + str(current_line))
 
         self.runCmd("thread list")
 
         # Update the number of threads
-        num_threads = process.GetNumThreads()
+        new_num_threads = process.GetNumThreads()
 
         # Check to see that we reduced the number of threads as expected
-        self.assertTrue(num_threads == 2, 'Number of expected threads and actual threads do not match after thread exit.')
+        self.assertEqual(new_num_threads, num_threads-1, 'Number of threads did not reduce by 1 after thread exit.')
 
         self.expect("thread list", 'Process state is stopped due to step',
                 substrs = ['stopped',
@@ -144,4 +119,4 @@ class ExitDuringStepTestCase(TestBase):
         self.runCmd("continue")
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(process.GetState() == lldb.eStateExited, PROCESS_EXITED)
+        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)

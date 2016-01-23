@@ -85,6 +85,7 @@ public:
     IgnoredComma = 0x80,   // This comma is not a macro argument separator (MS).
     StringifiedInMacro = 0x100, // This string or character literal is formed by
                                 // macro stringizing or charizing operator.
+    CommaAfterElided = 0x200, // The comma following this token was elided (MS).
   };
 
   tok::TokenKind getKind() const { return Kind; }
@@ -296,6 +297,11 @@ public:
   /// operator.
   bool stringifiedInMacro() const {
     return (Flags & StringifiedInMacro) ? true : false;
+  }
+
+  /// Returns true if the comma after this token was elided.
+  bool commaAfterElided() const {
+    return (Flags & CommaAfterElided) ? true : false;
   }
 };
 

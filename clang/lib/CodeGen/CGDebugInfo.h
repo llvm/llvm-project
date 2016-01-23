@@ -16,6 +16,7 @@
 
 #include "CGBuilder.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/CodeGenOptions.h"
@@ -57,6 +58,7 @@ class CGDebugInfo {
   llvm::DIBuilder DBuilder;
   llvm::DICompileUnit *TheCU = nullptr;
   ModuleMap *ClangModuleMap = nullptr;
+  ExternalASTSource::ASTSourceDescriptor PCHDescriptor;
   SourceLocation CurLoc;
   llvm::DIType *VTablePtrType = nullptr;
   llvm::DIType *ClassTy = nullptr;
@@ -275,6 +277,8 @@ public:
 
   void finalize();
 
+  /// Module debugging: Support for building PCMs.
+  /// @{
   /// Set the main CU's DwoId field to \p Signature.
   void setDwoId(uint64_t Signature);
 
@@ -282,6 +286,14 @@ public:
   /// precompiled header, this module map will be used to determine
   /// the module of origin of each Decl.
   void setModuleMap(ModuleMap &MMap) { ClangModuleMap = &MMap; }
+
+  /// When generating debug information for a clang module or
+  /// precompiled header, this module map will be used to determine
+  /// the module of origin of each Decl.
+  void setPCHDescriptor(ExternalASTSource::ASTSourceDescriptor PCH) {
+    PCHDescriptor = PCH;
+  }
+  /// @}
 
   /// Update the current source location. If \arg loc is invalid it is
   /// ignored.

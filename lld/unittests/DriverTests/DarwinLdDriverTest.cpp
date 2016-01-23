@@ -84,7 +84,32 @@ TEST_F(DarwinLdParserTest, DeadStripRootsExe) {
 TEST_F(DarwinLdParserTest, DeadStripRootsDylib) {
   EXPECT_TRUE(parse("ld", "-arch", "x86_64", "-dylib", "-dead_strip", "foo.o",
                     nullptr));
+  EXPECT_FALSE(_ctx.globalsAreDeadStripRoots());
+}
+
+TEST_F(DarwinLdParserTest, DeadStripRootsRelocatable) {
+  EXPECT_TRUE(parse("ld", "-arch", "x86_64", "-r", "-dead_strip", "foo.o",
+                    nullptr));
+  EXPECT_FALSE(_ctx.globalsAreDeadStripRoots());
+}
+
+TEST_F(DarwinLdParserTest, DeadStripRootsExportDynamicExe) {
+  EXPECT_TRUE(parse("ld", "-arch", "x86_64", "-dead_strip",
+                    "-export_dynamic", "foo.o", nullptr));
   EXPECT_TRUE(_ctx.globalsAreDeadStripRoots());
+}
+
+TEST_F(DarwinLdParserTest, DeadStripRootsExportDynamicDylib) {
+  EXPECT_TRUE(parse("ld", "-arch", "x86_64", "-dylib", "-dead_strip",
+                    "-export_dynamic", "foo.o",
+                    nullptr));
+  EXPECT_TRUE(_ctx.globalsAreDeadStripRoots());
+}
+
+TEST_F(DarwinLdParserTest, DeadStripRootsExportDynamicRelocatable) {
+  EXPECT_TRUE(parse("ld", "-arch", "x86_64", "-r", "-dead_strip",
+                    "-export_dynamic", "foo.o", nullptr));
+  EXPECT_FALSE(_ctx.globalsAreDeadStripRoots());
 }
 
 TEST_F(DarwinLdParserTest, Arch) {

@@ -34,3 +34,12 @@ ACTION_TEMPLATE(InvokeArgument,
 
 MAKE_FUNC(MAK, ER, int a, _COMMA, int b);
 // CHECK: void func(int a , int b) {}
+
+#define macro(a, b) (a - b)
+void function(int a);
+#define COMMA_ELIDER(...) \
+  macro(x, __VA_ARGS__); \
+  function(x, __VA_ARGS__);
+COMMA_ELIDER();
+// CHECK: (x - );
+// CHECK: function(x);

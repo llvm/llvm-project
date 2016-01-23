@@ -378,27 +378,27 @@ bool MipsReginfoInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::MipsReginfo;
 }
 
-template class elf2::InputSectionBase<object::ELF32LE>;
-template class elf2::InputSectionBase<object::ELF32BE>;
-template class elf2::InputSectionBase<object::ELF64LE>;
-template class elf2::InputSectionBase<object::ELF64BE>;
+template class elf2::InputSectionBase<ELF32LE>;
+template class elf2::InputSectionBase<ELF32BE>;
+template class elf2::InputSectionBase<ELF64LE>;
+template class elf2::InputSectionBase<ELF64BE>;
 
-template class elf2::InputSection<object::ELF32LE>;
-template class elf2::InputSection<object::ELF32BE>;
-template class elf2::InputSection<object::ELF64LE>;
-template class elf2::InputSection<object::ELF64BE>;
+template class elf2::InputSection<ELF32LE>;
+template class elf2::InputSection<ELF32BE>;
+template class elf2::InputSection<ELF64LE>;
+template class elf2::InputSection<ELF64BE>;
 
-template class elf2::EHInputSection<object::ELF32LE>;
-template class elf2::EHInputSection<object::ELF32BE>;
-template class elf2::EHInputSection<object::ELF64LE>;
-template class elf2::EHInputSection<object::ELF64BE>;
+template class elf2::EHInputSection<ELF32LE>;
+template class elf2::EHInputSection<ELF32BE>;
+template class elf2::EHInputSection<ELF64LE>;
+template class elf2::EHInputSection<ELF64BE>;
 
-template class elf2::MergeInputSection<object::ELF32LE>;
-template class elf2::MergeInputSection<object::ELF32BE>;
-template class elf2::MergeInputSection<object::ELF64LE>;
-template class elf2::MergeInputSection<object::ELF64BE>;
+template class elf2::MergeInputSection<ELF32LE>;
+template class elf2::MergeInputSection<ELF32BE>;
+template class elf2::MergeInputSection<ELF64LE>;
+template class elf2::MergeInputSection<ELF64BE>;
 
-template class elf2::MipsReginfoInputSection<object::ELF32LE>;
-template class elf2::MipsReginfoInputSection<object::ELF32BE>;
-template class elf2::MipsReginfoInputSection<object::ELF64LE>;
-template class elf2::MipsReginfoInputSection<object::ELF64BE>;
+template class elf2::MipsReginfoInputSection<ELF32LE>;
+template class elf2::MipsReginfoInputSection<ELF32BE>;
+template class elf2::MipsReginfoInputSection<ELF64LE>;
+template class elf2::MipsReginfoInputSection<ELF64BE>;

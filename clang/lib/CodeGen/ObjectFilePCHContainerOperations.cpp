@@ -19,8 +19,8 @@
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitstreamReader.h"
@@ -31,6 +31,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include <memory>
 
@@ -42,6 +43,7 @@ namespace {
 class PCHContainerGenerator : public ASTConsumer {
   DiagnosticsEngine &Diags;
   const std::string MainFileName;
+  const std::string OutputFileName;
   ASTContext *Ctx;
   ModuleMap &MMap;
   const HeaderSearchOptions &HeaderSearchOpts;
@@ -137,7 +139,8 @@ public:
                         const std::string &OutputFileName,
                         raw_pwrite_stream *OS,
                         std::shared_ptr<PCHBuffer> Buffer)
-      : Diags(CI.getDiagnostics()), Ctx(nullptr),
+      : Diags(CI.getDiagnostics()), MainFileName(MainFileName),
+        OutputFileName(OutputFileName), Ctx(nullptr),
         MMap(CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()),
         HeaderSearchOpts(CI.getHeaderSearchOpts()),
         PreprocessorOpts(CI.getPreprocessorOpts()),
@@ -162,7 +165,12 @@ public:
     M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
     Builder.reset(new CodeGen::CodeGenModule(
         *Ctx, HeaderSearchOpts, PreprocessorOpts, CodeGenOpts, *M, Diags));
-    Builder->getModuleDebugInfo()->setModuleMap(MMap);
+
+    // Prepare CGDebugInfo to emit debug info for a clang module.
+    auto *DI = Builder->getModuleDebugInfo();
+    StringRef ModuleName = llvm::sys::path::filename(MainFileName);
+    DI->setPCHDescriptor({ModuleName, "", OutputFileName, ~1ULL});
+    DI->setModuleMap(MMap);
   }
 
   bool HandleTopLevelDecl(DeclGroupRef D) override {
@@ -219,7 +227,11 @@ public:
 
     M->setTargetTriple(Ctx.getTargetInfo().getTriple().getTriple());
     M->setDataLayout(Ctx.getTargetInfo().getDataLayoutString());
-    Builder->getModuleDebugInfo()->setDwoId(Buffer->Signature);
+
+    // PCH files don't have a signature field in the control block,
+    // but LLVM detects DWO CUs by looking for a non-zero DWO id.
+    uint64_t Signature = Buffer->Signature ? Buffer->Signature : ~1ULL;
+    Builder->getModuleDebugInfo()->setDwoId(Signature);
 
     // Finalize the Builder.
     if (Builder)

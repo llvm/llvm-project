@@ -5919,7 +5919,7 @@
 			dependencies = (
 			);
 			name = "lldb-python-test-suite";
-			passBuildSettingsInEnvironment = 1;
+			passBuildSettingsInEnvironment = 0;
 			productName = "LLDB Python Test Suite";
 		};
 		2687EAC51508110B00DD8C2E /* install-headers */ = {

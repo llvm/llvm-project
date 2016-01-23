@@ -154,12 +154,17 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
   // Remove the comma.
   ResultToks.pop_back();
 
-  // If the comma was right after another paste (e.g. "X##,##__VA_ARGS__"),
-  // then removal of the comma should produce a placemarker token (in C99
-  // terms) which we model by popping off the previous ##, giving us a plain
-  // "X" when __VA_ARGS__ is empty.
-  if (!ResultToks.empty() && ResultToks.back().is(tok::hashhash))
-    ResultToks.pop_back();
+  if (!ResultToks.empty()) {
+    // If the comma was right after another paste (e.g. "X##,##__VA_ARGS__"),
+    // then removal of the comma should produce a placemarker token (in C99
+    // terms) which we model by popping off the previous ##, giving us a plain
+    // "X" when __VA_ARGS__ is empty.
+    if (ResultToks.back().is(tok::hashhash))
+      ResultToks.pop_back();
+
+    // Remember that this comma was elided.
+    ResultToks.back().setFlag(Token::CommaAfterElided);
+  }
 
   // Never add a space, even if the comma, ##, or arg had a space.
   NextTokGetsSpace = false;

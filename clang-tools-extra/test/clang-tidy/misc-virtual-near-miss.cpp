@@ -3,6 +3,8 @@
 struct Base {
   virtual void func();
   virtual void gunk();
+  virtual ~Base();
+  virtual Base &operator=(const Base &);
 };
 
 struct Derived : Base {
@@ -20,6 +22,8 @@ struct Derived : Base {
 
   void fun();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Derived::fun' has {{.*}} 'Base::func'
+
+  Derived &operator==(const Base &); // Should not warn: operators are ignored.
 };
 
 class Father {
@@ -36,6 +40,7 @@ public:
   static void method();
   virtual int method(int argc, const char **argv);
   virtual int method(int argc) const;
+  virtual int decay(const char *str);
 };
 
 class Child : private Father, private Mother {
@@ -47,7 +52,8 @@ public:
 
   int methoe(int x, char **strs); // Should not warn: parameter types don't match.
 
-  int methoe(int x); // Should not warn: method is not const.
+  int methoe(int x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::methoe' has {{.*}} 'Mother::method'
 
   void methof(int x, const char **strs); // Should not warn: return types don't match.
 
@@ -60,6 +66,10 @@ public:
   virtual Derived &&generat();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::generat' has {{.*}} 'Father::generate'
 
+  int decaz(const char str[]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::decaz' has {{.*}} 'Mother::decay'
+
 private:
-  void funk(); // Should not warn: access qualifers don't match.
+  void funk();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::funk' has {{.*}} 'Father::func'
 };

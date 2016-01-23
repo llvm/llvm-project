@@ -155,7 +155,8 @@ MachOLinkingContext::MachOLinkingContext()
 MachOLinkingContext::~MachOLinkingContext() {}
 
 void MachOLinkingContext::configure(HeaderFileType type, Arch arch, OS os,
-                                    uint32_t minOSVersion) {
+                                    uint32_t minOSVersion,
+                                    bool exportDynamicSymbols) {
   _outputMachOType = type;
   _arch = arch;
   _os = os;
@@ -218,9 +219,10 @@ void MachOLinkingContext::configure(HeaderFileType type, Arch arch, OS os,
        case OS::unknown:
        break;
     }
+    setGlobalsAreDeadStripRoots(exportDynamicSymbols);
     break;
   case llvm::MachO::MH_DYLIB:
-    setGlobalsAreDeadStripRoots(true);
+    setGlobalsAreDeadStripRoots(exportDynamicSymbols);
     break;
   case llvm::MachO::MH_BUNDLE:
     break;

@@ -1,4 +1,4 @@
-//===-- EditlineTest.cpp -----------------------------------------*- C++ -*-===//
+//===-- EditlineTest.cpp ----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -293,49 +293,55 @@ EditlineAdapter::ConsumeAllOutput ()
     }
 }
 
-TEST (EditlineTest, EditlineReceivesSingleLineText)
+class EditlineTestFixture : public ::testing::Test
 {
-    setenv ("TERM", "vt100", 1);
+private:
+    EditlineAdapter _el_adapter;
+    std::shared_ptr<std::thread> _sp_output_thread;
 
-    // Create an editline.
-    EditlineAdapter el_adapter;
-    EXPECT_TRUE (el_adapter.IsValid ());
-    if (!el_adapter.IsValid ())
-        return;
+public:
+    void SetUp()
+    {
+        // We need a TERM set properly for editline to work as expected.
+        setenv("TERM", "vt100", 1);
 
-    // Dump output.
-    std::thread el_output_thread( [&] { el_adapter.ConsumeAllOutput (); });
+        // Validate the editline adapter.
+        EXPECT_TRUE(_el_adapter.IsValid());
+        if (!_el_adapter.IsValid())
+            return;
 
+        // Dump output.
+        _sp_output_thread.reset(new std::thread([&] { _el_adapter.ConsumeAllOutput(); }));
+    }
+
+    void TearDown()
+    {
+        _el_adapter.CloseInput();
+        if (_sp_output_thread)
+            _sp_output_thread->join();
+    }
+
+    EditlineAdapter &GetEditlineAdapter() { return _el_adapter; }
+};
+
+TEST_F(EditlineTestFixture, EditlineReceivesSingleLineText)
+{
     // Send it some text via our virtual keyboard.
     const std::string input_text ("Hello, world");
-    EXPECT_TRUE (el_adapter.SendLine (input_text));
+    EXPECT_TRUE(GetEditlineAdapter().SendLine(input_text));
 
     // Verify editline sees what we put in.
     std::string el_reported_line;
     bool input_interrupted = false;
-    const bool received_line = el_adapter.GetLine (el_reported_line, input_interrupted, TIMEOUT_MILLIS);
+    const bool received_line = GetEditlineAdapter().GetLine(el_reported_line, input_interrupted, TIMEOUT_MILLIS);
 
     EXPECT_TRUE (received_line);
     EXPECT_FALSE (input_interrupted);
     EXPECT_EQ (input_text, el_reported_line);
-
-    el_adapter.CloseInput();
-    el_output_thread.join();
 }
 
-TEST (EditlineTest, EditlineReceivesMultiLineText)
+TEST_F(EditlineTestFixture, EditlineReceivesMultiLineText)
 {
-    setenv ("TERM", "vt100", 1);
-
-    // Create an editline.
-    EditlineAdapter el_adapter;
-    EXPECT_TRUE (el_adapter.IsValid ());
-    if (!el_adapter.IsValid ())
-        return;
-
-    // Stick editline output/error dumpers on separate threads.
-    std::thread el_output_thread( [&] { el_adapter.ConsumeAllOutput (); });
-
     // Send it some text via our virtual keyboard.
     std::vector<std::string> input_lines;
     input_lines.push_back ("int foo()");
@@ -344,13 +350,13 @@ TEST (EditlineTest, EditlineReceivesMultiLineText)
     input_lines.push_back ("}");
     input_lines.push_back ("");
 
-    EXPECT_TRUE (el_adapter.SendLines (input_lines));
+    EXPECT_TRUE(GetEditlineAdapter().SendLines(input_lines));
 
     // Verify editline sees what we put in.
     lldb_private::StringList el_reported_lines;
     bool input_interrupted = false;
 
-    EXPECT_TRUE (el_adapter.GetLines (el_reported_lines, input_interrupted, TIMEOUT_MILLIS));
+    EXPECT_TRUE(GetEditlineAdapter().GetLines(el_reported_lines, input_interrupted, TIMEOUT_MILLIS));
     EXPECT_FALSE (input_interrupted);
 
     // Without any auto indentation support, our output should directly match our input.
@@ -360,9 +366,6 @@ TEST (EditlineTest, EditlineReceivesMultiLineText)
         for (auto i = 0; i < input_lines.size(); ++i)
             EXPECT_EQ (input_lines[i], el_reported_lines[i]);
     }
-
-    el_adapter.CloseInput();
-    el_output_thread.join();
 }
 
 #endif

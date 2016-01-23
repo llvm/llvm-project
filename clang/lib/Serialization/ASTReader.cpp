@@ -7581,8 +7581,9 @@ ASTReader::getSourceDescriptor(unsigned ID) {
   // Chained PCH are not suported.
   if (ModuleMgr.size() == 1) {
     ModuleFile &MF = ModuleMgr.getPrimaryModule();
-    return ASTReader::ASTSourceDescriptor(
-        MF.OriginalSourceFileName, MF.OriginalDir, MF.FileName, MF.Signature);
+    StringRef ModuleName = llvm::sys::path::filename(MF.OriginalSourceFileName);
+    return ASTReader::ASTSourceDescriptor(ModuleName, MF.OriginalDir,
+                                          MF.FileName, MF.Signature);
   }
   return None;
 }

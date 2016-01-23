@@ -94,6 +94,15 @@ namespace lldb_private {
                 return fail_value;
             return (RetType)(m_data.GetMaxU64(&offset, size));
         }
+
+        size_t
+        GetOffsetOf(ConstString name, size_t fail_value = SIZE_MAX)
+        {
+            auto iter = m_fields.find(name), end = m_fields.end();
+            if (iter == end)
+                return fail_value;
+            return iter->second.offset;
+        }
     };
 }
 

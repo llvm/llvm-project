@@ -385,9 +385,16 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
     // No min-os version on command line, check environment variables
   }
 
+  // Handle export_dynamic
+  // FIXME: Should we warn when this applies to something other than a static
+  // executable or dylib?  Those are the only cases where this has an effect.
+  // Note, this has to come before ctx.configure() so that we get the correct
+  // value for _globalsAreDeadStripRoots.
+  bool exportDynamicSymbols = parsedArgs.hasArg(OPT_export_dynamic);
+
   // Now that there's enough information parsed in, let the linking context
   // set up default values.
-  ctx.configure(fileType, arch, os, minOSVersion);
+  ctx.configure(fileType, arch, os, minOSVersion, exportDynamicSymbols);
 
   // Handle -e xxx
   if (llvm::opt::Arg *entry = parsedArgs.getLastArg(OPT_entry))

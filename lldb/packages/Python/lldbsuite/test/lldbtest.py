@@ -41,6 +41,7 @@ from distutils.version import LooseVersion
 import gc
 import glob
 import inspect
+import io
 import os, sys, traceback
 import os.path
 import re
@@ -201,7 +202,7 @@ def EnvArray():
 
 def line_number(filename, string_to_match):
     """Helper function to return the line number of the first matched string."""
-    with open(filename, 'r') as f:
+    with io.open(filename, mode='r', encoding="utf-8") as f:
         for i, line in enumerate(f):
             if line.find(string_to_match) != -1:
                 # Found our match.

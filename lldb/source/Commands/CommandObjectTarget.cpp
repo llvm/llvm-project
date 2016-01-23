@@ -4083,11 +4083,11 @@ public:
             case eLookupTypeAddress:
                 if (m_options.m_addr != LLDB_INVALID_ADDRESS)
                 {
-                    if (LookupAddressInModule (m_interpreter, 
-                                               result.GetOutputStream(), 
-                                               module, 
-                                               eSymbolContextEverything | (m_options.m_verbose ? eSymbolContextVariable : 0),
-                                               m_options.m_addr, 
+                    if (LookupAddressInModule (m_interpreter,
+                                               result.GetOutputStream(),
+                                               module,
+                                               eSymbolContextEverything | (m_options.m_verbose ? static_cast<int>(eSymbolContextVariable) : 0),
+                                               m_options.m_addr,
                                                m_options.m_offset,
                                                m_options.m_verbose))
                     {

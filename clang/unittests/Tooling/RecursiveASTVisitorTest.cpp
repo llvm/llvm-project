@@ -42,13 +42,13 @@ TEST(RecursiveASTVisitor, VisitsLambdaExpr) {
   LambdaExprVisitor Visitor;
   Visitor.ExpectMatch("", 1, 12);
   EXPECT_TRUE(Visitor.runOver("void f() { []{ return; }(); }",
-			      LambdaExprVisitor::Lang_CXX11));
+                              LambdaExprVisitor::Lang_CXX11));
 }
 
 TEST(RecursiveASTVisitor, TraverseLambdaBodyCanBeOverridden) {
   LambdaExprVisitor Visitor;
   EXPECT_TRUE(Visitor.runOver("void f() { []{ return; }(); }",
-			      LambdaExprVisitor::Lang_CXX11));
+                              LambdaExprVisitor::Lang_CXX11));
   EXPECT_TRUE(Visitor.allBodiesHaveBeenTraversed());
 }
 
@@ -92,8 +92,7 @@ private:
 
 TEST(RecursiveASTVisitor, LambdaClosureTypesAreImplicit) {
   ClassVisitor Visitor;
-  EXPECT_TRUE(Visitor.runOver("auto lambda = []{};",
-			      ClassVisitor::Lang_CXX11));
+  EXPECT_TRUE(Visitor.runOver("auto lambda = []{};", ClassVisitor::Lang_CXX11));
   EXPECT_TRUE(Visitor.sawOnlyImplicitLambdaClasses());
 }
 
@@ -132,6 +131,25 @@ TEST(RecursiveASTVisitor, AttributesAreVisited) {
     "  int a __attribute__((guarded_by(mu1)));\n"
     "  void bar() __attribute__((exclusive_locks_required(mu1, mu2)));\n"
     "};\n"));
+}
+
+// Check to ensure that VarDecls are visited.
+class VarDeclVisitor : public ExpectedLocationVisitor<VarDeclVisitor> {
+public:
+  bool VisitVarDecl(VarDecl *VD) {
+    Match(VD->getNameAsString(), VD->getLocStart());
+    return true;
+  }
+};
+
+TEST(RecursiveASTVisitor, ArrayInitializersAreVisited) {
+  VarDeclVisitor Visitor;
+  Visitor.ExpectMatch("__i0", 1, 8);
+  EXPECT_TRUE(
+      Visitor.runOver("struct MyClass {\n"
+                      "  int c[1];\n"
+                      "  static MyClass Create() { return MyClass(); }\n"
+                      "};\n"));
 }
 
 } // end anonymous namespace

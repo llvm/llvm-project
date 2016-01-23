@@ -47,7 +47,7 @@ def esc(text):
       except:
         doxygen_probes[url] = False
     if doxygen_probes[url]:
-      return r'Matcher&lt<a href="%s">%s</a>&gt;' % (url, name)
+      return r'Matcher&lt;<a href="%s">%s</a>&gt;' % (url, name)
     else:
       return m.group(0)
   text = re.sub(

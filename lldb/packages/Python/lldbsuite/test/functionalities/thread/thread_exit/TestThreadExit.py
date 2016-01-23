@@ -24,7 +24,6 @@ class ThreadExitTestCase(TestBase):
         self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
         self.break_4 = line_number('main.cpp', '// Set fourth breakpoint here')
 
-    @expectedFailureWindows("llvm.org/pr24681")
     def test(self):
         """Test thread exit handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -32,10 +31,10 @@ class ThreadExitTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint with 1 location.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_3, num_expected_locations=1)
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_4, num_expected_locations=1)
+        bp1_id = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
+        bp2_id = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
+        bp3_id = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_3, num_expected_locations=1)
+        bp4_id = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_4, num_expected_locations=1)
 
         # The breakpoint list should show 1 locations.
         self.expect("breakpoint list -f", "Breakpoint location shown correctly",
@@ -46,71 +45,46 @@ class ThreadExitTestCase(TestBase):
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint 1.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT + " 1",
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = breakpoint 1',
-                       'thread #2'])
-
         # Get the target process
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
+        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, bp1_id)
+        self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 1")
+
         # Get the number of threads
         num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 2, 'Number of expected threads and actual threads do not match at breakpoint 1.')
+        self.assertGreaterEqual(num_threads, 2, 'Number of expected threads and actual threads do not match at breakpoint 1.')
 
         # Run to the second breakpoint
         self.runCmd("continue")
-
-        # The stop reason of the thread should be breakpoint 1.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT + " 2",
-            substrs = ['stopped',
-                       'thread #1',
-                       'thread #2',
-                       'stop reason = breakpoint 2',
-                       'thread #3'])
+        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, bp2_id)
+        self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 2")
 
         # Update the number of threads
-        num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 3, 'Number of expected threads and actual threads do not match at breakpoint 2.')
+        new_num_threads = process.GetNumThreads()
+        self.assertEqual(new_num_threads, num_threads+1, 'Number of expected threads did not increase by 1 at bp 2.')
 
         # Run to the third breakpoint
         self.runCmd("continue")
-
-        # The stop reason of the thread should be breakpoint 3.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT + " 3",
-            substrs = ['stopped',
-                       'thread #1',
-                       'stop reason = breakpoint 3',
-                       'thread #3',
-                       ])
+        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, bp3_id)
+        self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 3")
 
         # Update the number of threads
-        num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 2, 'Number of expected threads and actual threads do not match at breakpoint 3.')
+        new_num_threads = process.GetNumThreads()
+        self.assertEqual(new_num_threads, num_threads, 'Number of expected threads is not equal to original number of threads at bp 3.')
 
         # Run to the fourth breakpoint
         self.runCmd("continue")
-
-        # The stop reason of the thread should be breakpoint 4.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT + " 4",
-            substrs = ['stopped',
-                       'thread #1',
-                       'stop reason = breakpoint 4'])
+        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, bp4_id)
+        self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 4")
 
         # Update the number of threads
-        num_threads = process.GetNumThreads()
-
-        self.assertTrue(num_threads == 1, 'Number of expected threads and actual threads do not match at breakpoint 4.')
+        new_num_threads = process.GetNumThreads()
+        self.assertEqual(new_num_threads, num_threads-1, 'Number of expected threads did not decrease by 1 at bp 4.')
 
         # Run to completion
         self.runCmd("continue")
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(process.GetState() == lldb.eStateExited, PROCESS_EXITED)
+        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)

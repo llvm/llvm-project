@@ -3576,6 +3576,21 @@ AST_MATCHER(CXXMethodDecl, isCopyAssignmentOperator) {
   return Node.isCopyAssignmentOperator();
 }
 
+/// \brief Matches if the given method declaration declares a move assignment
+/// operator.
+///
+/// Given
+/// \code
+///   struct S {
+///     S(const S &); // #1
+///     S& operator=(S &&); // #2
+///   };
+/// \endcode
+/// cxxMethodDecl(isMoveAssignmentOperator()) will match #2, but not #1.
+AST_MATCHER(CXXMethodDecl, isMoveAssignmentOperator) {
+  return Node.isMoveAssignmentOperator();
+}
+
 /// \brief Matches if the given method declaration overrides another method.
 ///
 /// Given

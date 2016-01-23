@@ -32,6 +32,7 @@ class ConditionalBreakTestCase(TestBase):
         self.build()
         self.simulate_conditional_break_by_user()
 
+    @expectedFailureWindows("llvm.org/pr26265")  # args in frames other than #0 are not evaluated correctly
     def do_conditional_break(self):
         """Exercise some thread and frame APIs to break if c() is called by a()."""
         exe = os.path.join(os.getcwd(), "a.out")
@@ -83,8 +84,8 @@ class ConditionalBreakTestCase(TestBase):
 
                     # And the local variable 'val' should have a value of (int) 3.
                     val = frame1.FindVariable("val")
-                    self.assertTrue(val.GetTypeName() == "int", "'val' has int type")
-                    self.assertTrue(val.GetValue() == "3", "'val' has a value of 3")
+                    self.assertEqual("int", val.GetTypeName())
+                    self.assertEqual("3", val.GetValue())
                     break
 
             process.Continue()

@@ -45,31 +45,20 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
     return true;
 
   /// Check if the return types are covariant.
+
+  // Both types must be pointers or references to classes.
+  if (!(BaseReturnTy->isPointerType() && DerivedReturnTy->isPointerType()) &&
+      !(BaseReturnTy->isReferenceType() && DerivedReturnTy->isReferenceType()))
+    return false;
+
   /// BTy is the class type in return type of BaseMD. For example,
   ///    B* Base::md()
   /// While BRD is the declaration of B.
-  QualType BTy, DTy;
-  const CXXRecordDecl *BRD, *DRD;
+  QualType DTy = DerivedReturnTy->getPointeeType();
+  QualType BTy = BaseReturnTy->getPointeeType();
 
-  // Both types must be pointers or references to classes.
-  if (const auto *DerivedPT = DerivedReturnTy->getAs<PointerType>()) {
-    if (const auto *BasePT = BaseReturnTy->getAs<PointerType>()) {
-      DTy = DerivedPT->getPointeeType();
-      BTy = BasePT->getPointeeType();
-    }
-  } else if (const auto *DerivedRT = DerivedReturnTy->getAs<ReferenceType>()) {
-    if (const auto *BaseRT = BaseReturnTy->getAs<ReferenceType>()) {
-      DTy = DerivedRT->getPointeeType();
-      BTy = BaseRT->getPointeeType();
-    }
-  }
-
-  // The return types aren't either both pointers or references to a class type.
-  if (DTy.isNull())
-    return false;
-
-  DRD = DTy->getAsCXXRecordDecl();
-  BRD = BTy->getAsCXXRecordDecl();
+  const CXXRecordDecl *DRD = DTy->getAsCXXRecordDecl();
+  const CXXRecordDecl *BRD = BTy->getAsCXXRecordDecl();
   if (DRD == nullptr || BRD == nullptr)
     return false;
 
@@ -116,6 +105,13 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
   return true;
 }
 
+/// \returns decayed type for arrays and functions.
+static QualType getDecayedType(QualType Type) {
+  if (const auto *Decayed = Type->getAs<DecayedType>())
+    return Decayed->getDecayedType();
+  return Type;
+}
+
 /// \returns true if the param types are the same.
 static bool checkParamTypes(const CXXMethodDecl *BaseMD,
                             const CXXMethodDecl *DerivedMD) {
@@ -125,8 +121,8 @@ static bool checkParamTypes(const CXXMethodDecl *BaseMD,
     return false;
 
   for (unsigned I = 0; I < NumParamA; I++) {
-    if (BaseMD->getParamDecl(I)->getType() !=
-        DerivedMD->getParamDecl(I)->getType())
+    if (getDecayedType(BaseMD->getParamDecl(I)->getType()) !=
+        getDecayedType(DerivedMD->getParamDecl(I)->getType()))
       return false;
   }
   return true;
@@ -137,13 +133,7 @@ static bool checkParamTypes(const CXXMethodDecl *BaseMD,
 static bool checkOverrideWithoutName(const ASTContext *Context,
                                      const CXXMethodDecl *BaseMD,
                                      const CXXMethodDecl *DerivedMD) {
-  if (BaseMD->getTypeQualifiers() != DerivedMD->getTypeQualifiers())
-    return false;
-
   if (BaseMD->isStatic() != DerivedMD->isStatic())
-    return false;
-
-  if (BaseMD->getAccess() != DerivedMD->getAccess())
     return false;
 
   if (BaseMD->getType() == DerivedMD->getType())
@@ -187,7 +177,8 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
     return Iter->second;
 
   bool IsPossible = !BaseMD->isImplicit() && !isa<CXXConstructorDecl>(BaseMD) &&
-                    BaseMD->isVirtual();
+                    !isa<CXXDestructorDecl>(BaseMD) && BaseMD->isVirtual() &&
+                    !BaseMD->isOverloadedOperator();
   PossibleMap[Id] = IsPossible;
   return IsPossible;
 }
@@ -218,17 +209,21 @@ void VirtualNearMissCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  Finder->addMatcher(cxxMethodDecl(unless(anyOf(isOverride(), isImplicit(),
-                                                cxxConstructorDecl())))
-                         .bind("method"),
-                     this);
+  Finder->addMatcher(
+      cxxMethodDecl(unless(anyOf(isOverride(), isImplicit(),
+                                 cxxConstructorDecl(), cxxDestructorDecl())))
+          .bind("method"),
+      this);
 }
 
 void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DerivedMD = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
-  assert(DerivedMD != nullptr);
+  assert(DerivedMD);
 
   if (DerivedMD->isStatic())
+    return;
+
+  if (DerivedMD->isOverloadedOperator())
     return;
 
   const ASTContext *Context = Result.Context;

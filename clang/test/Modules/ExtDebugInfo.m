@@ -34,7 +34,7 @@ int foo(ObjCClass *c) {
 // CHECK-SAME:             scope: ![[MOD:[0-9]+]],
 // CHECK-SAME:             flags: DIFlagFwdDecl)
 // CHECK-NOT: !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK: ![[MOD]] = !DIModule(scope: null, name: {{.*}}DebugObjC
+// CHECK: ![[MOD]] = !DIModule(scope: null, name: "DebugObjC
 
 // CHECK: !DIGlobalVariable(name: "GlobalUnion",
 // CHECK-SAME:              type: ![[GLOBAL_UNION:[0-9]+]]
