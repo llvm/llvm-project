@@ -3539,6 +3539,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   CS.setAttributes(Attrs);
   CS.setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 
+  // Insert instrumentation or attach profile metadata at indirect call sites
+  if (!CS.getCalledFunction())
+    PGO.valueProfile(Builder, llvm::IPVK_IndirectCallTarget,
+                     CS.getInstruction(), Callee);
+
   // In ObjC ARC mode with no ObjC ARC exception safety, tell the ARC
   // optimizer it can aggressively ignore unwind edges.
   if (CGM.getLangOpts().ObjCAutoRefCount)

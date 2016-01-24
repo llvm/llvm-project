@@ -3581,12 +3581,14 @@ AST_MATCHER(CXXMethodDecl, isCopyAssignmentOperator) {
 ///
 /// Given
 /// \code
-///   struct S {
-///     S(const S &); // #1
-///     S& operator=(S &&); // #2
-///   };
+/// struct A {
+///   A &operator=(const A &);
+///   A &operator=(A &&);
+/// };
 /// \endcode
-/// cxxMethodDecl(isMoveAssignmentOperator()) will match #2, but not #1.
+///
+/// cxxMethodDecl(isMoveAssignmentOperator()) matches the second method but not
+/// the first one.
 AST_MATCHER(CXXMethodDecl, isMoveAssignmentOperator) {
   return Node.isMoveAssignmentOperator();
 }

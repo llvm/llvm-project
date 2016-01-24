@@ -6448,8 +6448,11 @@ def warn_kern_is_method : Extension<
 def warn_kern_is_inline : Warning<
   "ignored 'inline' attribute on kernel function %0">,
   InGroup<CudaCompat>;
+def err_variadic_device_fn : Error<
+  "CUDA device code does not support variadic functions">;
 def err_va_arg_in_device : Error<
   "CUDA device code does not support va_arg">;
+def err_alias_not_supported_on_nvptx : Error<"CUDA does not support aliases">;
 
 def warn_non_pod_vararg_with_format_string : Warning<
   "cannot pass %select{non-POD|non-trivial}0 object of type %1 to variadic "

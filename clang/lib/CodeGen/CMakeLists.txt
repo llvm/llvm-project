@@ -32,6 +32,7 @@ add_clang_library(clangCodeGen
   CGAtomic.cpp
   CGBlocks.cpp
   CGBuiltin.cpp
+  CGCUDABuiltin.cpp
   CGCUDANV.cpp
   CGCUDARuntime.cpp
   CGCXX.cpp

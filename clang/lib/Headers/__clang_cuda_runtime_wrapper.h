@@ -210,6 +210,11 @@ extern "C" __device__ __attribute__((const)) int __nvvm_reflect(const void *);
 static __device__ __attribute__((used)) int __nvvm_reflect_anchor() {
   return __nvvm_reflect("NONE");
 }
+
+// The nvptx vprintf syscall.  This doesn't actually need to be declared, but we
+// declare it so that if someone else declares it with a different signature,
+// we'll throw an error.
+extern "C" __device__ int vprintf(const char*, const char*);
 #endif
 
 #endif // __CUDA__

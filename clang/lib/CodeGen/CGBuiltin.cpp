@@ -1963,6 +1963,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       return RValue::get(llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy));
     break;
   }
+  case Builtin::BIprintf:
+    if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+      return EmitCUDADevicePrintfCallExpr(E, ReturnValue);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
