@@ -207,7 +207,7 @@ uint32_t COFFObjectFile::getSymbolFlags(DataRefImpl Ref) const {
   uint32_t Result = SymbolRef::SF_None;
 
   if (Symb.isExternal() || Symb.isWeakExternal())
-    Result |= SymbolRef::SF_Global;
+    Result |= (SymbolRef::SF_Global | SymbolRef::SF_Exported);
 
   if (Symb.isWeakExternal())
     Result |= SymbolRef::SF_Weak;
