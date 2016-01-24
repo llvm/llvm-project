@@ -3012,24 +3012,9 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     if (Visited.count(&*BB))
       continue;
 
-    // Delete the instructions backwards, as it has a reduced likelihood of
-    // having to update as many def-use and use-def chains.
-    Instruction *EndInst = BB->getTerminator(); // Last not to be deleted.
-    while (EndInst != BB->begin()) {
-      // Delete the next to last instruction.
-      Instruction *Inst = &*--EndInst->getIterator();
-      if (!Inst->use_empty() && !Inst->getType()->isTokenTy())
-        Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
-      if (Inst->isEHPad() || Inst->getType()->isTokenTy()) {
-        EndInst = Inst;
-        continue;
-      }
-      if (!isa<DbgInfoIntrinsic>(Inst)) {
-        ++NumDeadInst;
-        MadeIRChange = true;
-      }
-      Inst->eraseFromParent();
-    }
+    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&*BB);
+    MadeIRChange |= NumDeadInstInBB > 0;
+    NumDeadInst += NumDeadInstInBB;
   }
 
   return MadeIRChange;

@@ -116,11 +116,11 @@ public:
   bool hasAttribute(StringRef Val) const;
 
   /// \brief Return the attribute's kind as an enum (Attribute::AttrKind). This
-  /// requires the attribute to be an enum or alignment attribute.
+  /// requires the attribute to be an enum or integer attribute.
   Attribute::AttrKind getKindAsEnum() const;
 
   /// \brief Return the attribute's value as an integer. This requires that the
-  /// attribute be an alignment attribute.
+  /// attribute be an integer attribute.
   uint64_t getValueAsInt() const;
 
   /// \brief Return the attribute's kind as a string. This requires the

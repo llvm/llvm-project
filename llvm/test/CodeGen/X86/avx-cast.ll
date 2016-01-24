@@ -31,8 +31,8 @@ define <4 x double> @castB(<2 x double> %m) nounwind uwtable readnone ssp {
 define <4 x i64> @castC(<2 x i64> %m) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: castC:
 ; AVX1:       ## BB#0:
-; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX1-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: castC:

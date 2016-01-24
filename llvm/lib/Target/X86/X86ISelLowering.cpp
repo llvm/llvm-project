@@ -10974,6 +10974,7 @@ static SDValue lowerV8I32VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
           lowerVectorShuffleAsShift(DL, MVT::v8i32, V1, V2, Mask, DAG))
     return Shift;
 
+  // Try to use byte rotation instructions.
   if (SDValue Rotate = lowerVectorShuffleAsByteRotate(
           DL, MVT::v8i32, V1, V2, Mask, Subtarget, DAG))
     return Rotate;
@@ -17070,7 +17071,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget *Subtarget
         Rnd = Op.getOperand(6);
       else
         Rnd = DAG.getConstant(X86::STATIC_ROUNDING::CUR_DIRECTION, dl, MVT::i32);
-      if (IntrData->Type == FIXUPIMM || IntrData->Type == FIXUPIMM_MASKZ) 
+      if (IntrData->Type == FIXUPIMM || IntrData->Type == FIXUPIMM_MASKZ)
         return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
                                                 Src1, Src2, Src3, Imm, Rnd),
                                     Mask, Passthru, Subtarget, DAG);
@@ -17761,7 +17762,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget *Subtarget,
                               MemIntr->getMemOperand(), false);
   }
   case STOREANT: {
-    // Store (MOVNTPD, MOVNTPS, MOVNTDQ) using non-temporal hint intrinsic implementation. 
+    // Store (MOVNTPD, MOVNTPS, MOVNTDQ) using non-temporal hint intrinsic implementation.
     SDValue Data = Op.getOperand(3);
     SDValue Addr = Op.getOperand(2);
     SDValue Chain = Op.getOperand(0);
@@ -20579,6 +20580,28 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
                                 return LowerGC_TRANSITION_START(Op, DAG);
   case ISD::GC_TRANSITION_END:  return LowerGC_TRANSITION_END(Op, DAG);
   }
+}
+
+/// Places new result values for the node in Results (their number
+/// and types must exactly match those of the original return values of
+/// the node), or leaves Results empty, which indicates that the node is not
+/// to be custom lowered after all.
+void X86TargetLowering::LowerOperationWrapper(SDNode *N,
+                                              SmallVectorImpl<SDValue> &Results,
+                                              SelectionDAG &DAG) const {
+  SDValue Res = LowerOperation(SDValue(N, 0), DAG);
+
+  if (!Res.getNode())
+    return;
+
+  assert((N->getNumValues() <= Res->getNumValues()) &&
+      "Lowering returned the wrong number of results!");
+
+  // Places new result values base on N result number.
+  // In some cases (LowerSINT_TO_FP for example) Res has more result values
+  // than original node, chain should be dropped(last value).
+  for (unsigned I = 0, E = N->getNumValues(); I != E; ++I)
+      Results.push_back(Res.getValue(I));
 }
 
 /// ReplaceNodeResults - Replace a node with an illegal result type
@@ -23937,9 +23960,19 @@ static SDValue PerformTargetShuffleCombine(SDValue N, SelectionDAG &DAG,
     SDValue Op1 = N.getOperand(1);
     SDValue Op2 = N.getOperand(2);
     unsigned InsertPSMask = cast<ConstantSDNode>(Op2)->getZExtValue();
-    unsigned DstIdx = (InsertPSMask >> 4) & 3;
+    unsigned DstIdx = (InsertPSMask >> 4) & 0x3;
+    unsigned ZeroMask = InsertPSMask & 0xF;
 
-    // Attempt to merge insertps with an inner target shuffle node.
+    // If we zero out all elements from Op0 then we don't need to reference it.
+    if (((ZeroMask | (1u << DstIdx)) == 0xF) && !Op0.isUndef())
+      return DAG.getNode(X86ISD::INSERTPS, DL, VT, DAG.getUNDEF(VT), Op1,
+                         DAG.getConstant(InsertPSMask, DL, MVT::i8));
+
+    // If we zero out the element from Op1 then we don't need to reference it.
+    if ((ZeroMask & (1u << DstIdx)) && !Op1.isUndef())
+      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, DAG.getUNDEF(VT),
+                         DAG.getConstant(InsertPSMask, DL, MVT::i8));
+
     SmallVector<int, 8> TargetMask;
     if (!setTargetShuffleZeroElements(Op0, TargetMask))
       return SDValue();
@@ -23979,7 +24012,7 @@ static SDValue PerformTargetShuffleCombine(SDValue N, SelectionDAG &DAG,
     }
 
     if (Updated)
-      return DAG.getNode(X86ISD::INSERTPS, DL, MVT::v4f32, Op0, Op1,
+      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
                          DAG.getConstant(InsertPSMask, DL, MVT::i8));
 
     return SDValue();
@@ -27179,13 +27212,11 @@ combineVectorTruncationWithPACKUS(SDNode *N, SelectionDAG &DAG,
   // First, use mask to unset all bits that won't appear in the result.
   assert((OutSVT == MVT::i8 || OutSVT == MVT::i16) &&
          "OutSVT can only be either i8 or i16.");
-  SDValue MaskVal =
-      DAG.getConstant(OutSVT == MVT::i8 ? 0xFF : 0xFFFF, DL, InSVT);
-  SDValue MaskVec = DAG.getNode(
-      ISD::BUILD_VECTOR, DL, InVT,
-      SmallVector<SDValue, 8>(InVT.getVectorNumElements(), MaskVal));
+  APInt Mask =
+      APInt::getLowBitsSet(InSVT.getSizeInBits(), OutSVT.getSizeInBits());
+  SDValue MaskVal = DAG.getConstant(Mask, DL, InVT);
   for (auto &Reg : Regs)
-    Reg = DAG.getNode(ISD::AND, DL, InVT, MaskVec, Reg);
+    Reg = DAG.getNode(ISD::AND, DL, InVT, MaskVal, Reg);
 
   MVT UnpackedVT, PackedVT;
   if (OutSVT == MVT::i8) {
@@ -27289,17 +27320,14 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
   // Split a long vector into vectors of legal type.
   unsigned RegNum = InVT.getSizeInBits() / 128;
   SmallVector<SDValue, 8> SubVec(RegNum);
-  if (InSVT == MVT::i32) {
-    for (unsigned i = 0; i < RegNum; i++)
-      SubVec[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i32, In,
-                              DAG.getIntPtrConstant(i * 4, DL));
-  } else {
-    for (unsigned i = 0; i < RegNum; i++)
-      SubVec[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, In,
-                              DAG.getIntPtrConstant(i * 2, DL));
-  }
+  unsigned NumSubRegElts = 128 / InSVT.getSizeInBits();
+  EVT SubRegVT = EVT::getVectorVT(*DAG.getContext(), InSVT, NumSubRegElts);
 
-  // SSE2 provides PACKUS for only 2 x v8i16 -> v16i8 and SSE4.1 provides PAKCUS
+  for (unsigned i = 0; i < RegNum; i++)
+    SubVec[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubRegVT, In,
+                            DAG.getIntPtrConstant(i * NumSubRegElts, DL));
+
+  // SSE2 provides PACKUS for only 2 x v8i16 -> v16i8 and SSE4.1 provides PACKUS
   // for 2 x v4i32 -> v8i16. For SSSE3 and below, we need to use PACKSS to
   // truncate 2 x v4i32 to v8i16.
   if (Subtarget->hasSSE41() || OutSVT == MVT::i8)

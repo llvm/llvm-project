@@ -6672,6 +6672,79 @@ define <4 x i64>@test_int_x86_avx512_mask_prorv_q_256(<4 x i64> %x0, <4 x i64> %
   %res4 = add <4 x i64> %res3, %res2
   ret <4 x i64> %res4
 }
+
+declare <4 x i32> @llvm.x86.avx512.mask.loadu.d.128(i8*, <4 x i32>, i8)
+
+define <4 x i32> @test_mask_load_unaligned_d_128(i8* %ptr, i8* %ptr2, <4 x i32> %data, i8 %mask) {
+; CHECK-LABEL: test_mask_load_unaligned_d_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edx, %k1
+; CHECK-NEXT:    vmovdqu32 (%rdi), %xmm0
+; CHECK-NEXT:    vmovdqu32 (%rsi), %xmm0 {%k1}
+; CHECK-NEXT:    vmovdqu32 (%rdi), %xmm1 {%k1} {z}
+; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <4 x i32> @llvm.x86.avx512.mask.loadu.d.128(i8* %ptr, <4 x i32> zeroinitializer, i8 -1)
+  %res1 = call <4 x i32> @llvm.x86.avx512.mask.loadu.d.128(i8* %ptr2, <4 x i32> %res, i8 %mask)
+  %res2 = call <4 x i32> @llvm.x86.avx512.mask.loadu.d.128(i8* %ptr, <4 x i32> zeroinitializer, i8 %mask)
+  %res4 = add <4 x i32> %res2, %res1
+  ret <4 x i32> %res4
+}
+
+declare <8 x i32> @llvm.x86.avx512.mask.loadu.d.256(i8*, <8 x i32>, i8)
+
+define <8 x i32> @test_mask_load_unaligned_d_256(i8* %ptr, i8* %ptr2, <8 x i32> %data, i8 %mask) {
+; CHECK-LABEL: test_mask_load_unaligned_d_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edx, %k1
+; CHECK-NEXT:    vmovdqu32 (%rdi), %ymm0
+; CHECK-NEXT:    vmovdqu32 (%rsi), %ymm0 {%k1}
+; CHECK-NEXT:    vmovdqu32 (%rdi), %ymm1 {%k1} {z}
+; CHECK-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i32> @llvm.x86.avx512.mask.loadu.d.256(i8* %ptr, <8 x i32> zeroinitializer, i8 -1)
+  %res1 = call <8 x i32> @llvm.x86.avx512.mask.loadu.d.256(i8* %ptr2, <8 x i32> %res, i8 %mask)
+  %res2 = call <8 x i32> @llvm.x86.avx512.mask.loadu.d.256(i8* %ptr, <8 x i32> zeroinitializer, i8 %mask)
+  %res4 = add <8 x i32> %res2, %res1
+  ret <8 x i32> %res4
+}
+
+declare <2 x i64> @llvm.x86.avx512.mask.loadu.q.128(i8*, <2 x i64>, i8)
+
+define <2 x i64> @test_mask_load_unaligned_q_128(i8* %ptr, i8* %ptr2, <2 x i64> %data, i8 %mask) {
+; CHECK-LABEL: test_mask_load_unaligned_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edx, %k1
+; CHECK-NEXT:    vmovdqu64 (%rdi), %xmm0
+; CHECK-NEXT:    vmovdqu64 (%rsi), %xmm0 {%k1}
+; CHECK-NEXT:    vmovdqu64 (%rdi), %xmm1 {%k1} {z}
+; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <2 x i64> @llvm.x86.avx512.mask.loadu.q.128(i8* %ptr, <2 x i64> zeroinitializer, i8 -1)
+  %res1 = call <2 x i64> @llvm.x86.avx512.mask.loadu.q.128(i8* %ptr2, <2 x i64> %res, i8 %mask)
+  %res2 = call <2 x i64> @llvm.x86.avx512.mask.loadu.q.128(i8* %ptr, <2 x i64> zeroinitializer, i8 %mask)
+  %res4 = add <2 x i64> %res2, %res1
+  ret <2 x i64> %res4
+}
+
+declare <4 x i64> @llvm.x86.avx512.mask.loadu.q.256(i8*, <4 x i64>, i8)
+
+define <4 x i64> @test_mask_load_unaligned_q_256(i8* %ptr, i8* %ptr2, <4 x i64> %data, i8 %mask) {
+; CHECK-LABEL: test_mask_load_unaligned_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edx, %k1
+; CHECK-NEXT:    vmovdqu64 (%rdi), %ymm0
+; CHECK-NEXT:    vmovdqu64 (%rsi), %ymm0 {%k1}
+; CHECK-NEXT:    vmovdqu64 (%rdi), %ymm1 {%k1} {z}
+; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <4 x i64> @llvm.x86.avx512.mask.loadu.q.256(i8* %ptr, <4 x i64> zeroinitializer, i8 -1)
+  %res1 = call <4 x i64> @llvm.x86.avx512.mask.loadu.q.256(i8* %ptr2, <4 x i64> %res, i8 %mask)
+  %res2 = call <4 x i64> @llvm.x86.avx512.mask.loadu.q.256(i8* %ptr, <4 x i64> zeroinitializer, i8 %mask)
+  %res4 = add <4 x i64> %res2, %res1
+  ret <4 x i64> %res4
+}
+
 declare <4 x i32> @llvm.x86.avx512.mask.prol.d.128(<4 x i32>, i8, <4 x i32>, i8)
 
 define <4 x i32>@test_int_x86_avx512_mask_prol_d_128(<4 x i32> %x0, i8 %x1, <4 x i32> %x2, i8 %x3) {

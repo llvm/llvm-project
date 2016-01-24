@@ -680,6 +680,14 @@ namespace llvm {
     ///
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
+    /// Places new result values for the node in Results (their number
+    /// and types must exactly match those of the original return values of
+    /// the node), or leaves Results empty, which indicates that the node is not
+    /// to be custom lowered after all.
+    virtual void LowerOperationWrapper(SDNode *N,
+                                       SmallVectorImpl<SDValue> &Results,
+                                       SelectionDAG &DAG) const override;
+
     /// Replace the results of node with an illegal result
     /// type with new values built out of custom code.
     ///
