@@ -1820,11 +1820,13 @@ matches A and C::f, but not B, C, or B::f
 operator.
 
 Given
-  struct S {
-    S(const S &amp;); #1
-    S&amp; operator=(S &amp;&amp;); #2
-  };
-cxxMethodDecl(isMoveAssignmentOperator()) will match #2, but not #1.
+struct A {
+  A &amp;operator=(const A &amp;);
+  A &amp;operator=(A &amp;&amp;);
+};
+
+cxxMethodDecl(isMoveAssignmentOperator()) matches the second method but not
+the first one.
 </pre></td></tr>
 
 

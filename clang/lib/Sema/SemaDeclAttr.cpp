@@ -1577,6 +1577,9 @@ static void handleAliasAttr(Sema &S, Decl *D, const AttributeList &Attr) {
     S.Diag(Attr.getLoc(), diag::err_alias_not_supported_on_darwin);
     return;
   }
+  if (S.Context.getTargetInfo().getTriple().isNVPTX()) {
+    S.Diag(Attr.getLoc(), diag::err_alias_not_supported_on_nvptx);
+  }
 
   // Aliases should be on declarations, not definitions.
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
