@@ -397,7 +397,7 @@ class DwarfDebug : public AsmPrinterHandler {
       bool GnuStyle, MCSection *PSec, StringRef Name,
       const StringMap<const DIE *> &(DwarfCompileUnit::*Accessor)() const);
 
-  /// Emit visible names into a debug str section.
+  /// Emit null-terminated strings into a debug str section.
   void emitDebugStr();
 
   /// Emit variable locations into a debug loc section.

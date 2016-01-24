@@ -1506,7 +1506,7 @@ void DwarfDebug::emitDebugPubTypes(bool GnuStyle) {
                       &DwarfCompileUnit::getGlobalTypes);
 }
 
-// Emit visible names into a debug str section.
+/// Emit null-terminated strings into a debug str section.
 void DwarfDebug::emitDebugStr() {
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
   Holder.emitStrings(Asm->getObjFileLowering().getDwarfStrSection());
@@ -1823,7 +1823,7 @@ void DwarfDebug::emitDebugARanges() {
   }
 }
 
-// Emit visible names into a debug ranges section.
+/// Emit address ranges into a debug ranges section.
 void DwarfDebug::emitDebugRanges() {
   // Start the dwarf ranges section.
   Asm->OutStreamer->SwitchSection(
@@ -1911,7 +1911,7 @@ unsigned DwarfDebug::emitMacroFile(AsmStreamerBase *AS, DIMacroFile &F,
   return Size;
 }
 
-// Emit visible names into a debug macinfo section.
+/// Emit macros into a debug macinfo section.
 void DwarfDebug::emitDebugMacinfo() {
   if (MCSection *Macinfo = Asm->getObjFileLowering().getDwarfMacinfoSection()) {
     // Start the dwarf macinfo section.

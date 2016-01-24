@@ -112,6 +112,8 @@ void Fuzzer::AlarmCallback() {
     if (__sanitizer_print_stack_trace)
       __sanitizer_print_stack_trace();
     Printf("SUMMARY: libFuzzer: timeout\n");
+    if (Options.AbortOnTimeout)
+      abort();
     exit(1);
   }
 }

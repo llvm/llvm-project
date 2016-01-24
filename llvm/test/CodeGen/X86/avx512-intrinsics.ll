@@ -6603,6 +6603,42 @@ define <8 x i64>@test_int_x86_avx512_mask_prorv_q_512(<8 x i64> %x0, <8 x i64> %
   ret <8 x i64> %res4
 }
 
+declare <16 x i32> @llvm.x86.avx512.mask.loadu.d.512(i8*, <16 x i32>, i16)
+
+define <16 x i32> @test_mask_load_unaligned_d(i8* %ptr, i8* %ptr2, <16 x i32> %data, i16 %mask) {
+; CHECK-LABEL: test_mask_load_unaligned_d:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edx, %k1
+; CHECK-NEXT:    vmovdqu32 (%rdi), %zmm0
+; CHECK-NEXT:    vmovdqu32 (%rsi), %zmm0 {%k1}
+; CHECK-NEXT:    vmovdqu32 (%rdi), %zmm1 {%k1} {z}
+; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.mask.loadu.d.512(i8* %ptr, <16 x i32> zeroinitializer, i16 -1)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.loadu.d.512(i8* %ptr2, <16 x i32> %res, i16 %mask)
+  %res2 = call <16 x i32> @llvm.x86.avx512.mask.loadu.d.512(i8* %ptr, <16 x i32> zeroinitializer, i16 %mask)
+  %res4 = add <16 x i32> %res2, %res1
+  ret <16 x i32> %res4
+}
+
+declare <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8*, <8 x i64>, i8)
+
+define <8 x i64> @test_mask_load_unaligned_q(i8* %ptr, i8* %ptr2, <8 x i64> %data, i8 %mask) {
+; CHECK-LABEL: test_mask_load_unaligned_q:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edx, %k1
+; CHECK-NEXT:    vmovdqu64 (%rdi), %zmm0
+; CHECK-NEXT:    vmovdqu64 (%rsi), %zmm0 {%k1}
+; CHECK-NEXT:    vmovdqu64 (%rdi), %zmm1 {%k1} {z}
+; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8* %ptr, <8 x i64> zeroinitializer, i8 -1)
+  %res1 = call <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8* %ptr2, <8 x i64> %res, i8 %mask)
+  %res2 = call <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8* %ptr, <8 x i64> zeroinitializer, i8 %mask)
+  %res4 = add <8 x i64> %res2, %res1
+  ret <8 x i64> %res4
+}
+
 declare <16 x i32> @llvm.x86.avx512.mask.prol.d.512(<16 x i32>, i8, <16 x i32>, i16)
 
 define <16 x i32>@test_int_x86_avx512_mask_prol_d_512(<16 x i32> %x0, i8 %x1, <16 x i32> %x2, i16 %x3) {

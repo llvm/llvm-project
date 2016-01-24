@@ -65,6 +65,30 @@ exit:
   unreachable
 }
 
+; CHECK-LABEL: @test2(
+define void @test2(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  invoke void @f()
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:
+  unreachable
+
+ehcleanup:
+  %cp = cleanuppad within none []
+  br i1 %B, label %ret, label %if.then
+
+if.then:
+  call void @exit(i32 1) [ "funclet"(token %cp) ]
+  unreachable
+
+ret:
+  cleanupret from %cp unwind to caller
+}
+
+; CHECK: call void @exit(i32 1) [ "funclet"(token %cp) ]
+; CHECK-NEXT: unreachable
+
 declare void @f()
 declare void @exit(i32) nounwind noreturn
 

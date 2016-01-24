@@ -524,8 +524,6 @@ static Constant *ConstantFoldLoadThroughBitcast(ConstantExpr *CE,
   return nullptr;
 }
 
-/// Return the value that a load from C would produce if it is constant and
-/// determinable. If this is not determinable, return null.
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                              const DataLayout &DL) {
   // First, try the easy cases:
@@ -951,11 +949,6 @@ static Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE,
 // Constant Folding public APIs
 //===----------------------------------------------------------------------===//
 
-/// Try to constant fold the specified instruction.
-/// If successful, the constant result is returned, if not, null is returned.
-/// Note that this fails if not all of the operands are constant.  Otherwise,
-/// this function can only fail when attempting to fold instructions like loads
-/// and stores, which have no constant expression form.
 Constant *llvm::ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
                                         const TargetLibraryInfo *TLI) {
   // Handle PHI nodes quickly here...
@@ -1050,9 +1043,6 @@ ConstantFoldConstantExpressionImpl(const ConstantExpr *CE, const DataLayout &DL,
   return ConstantFoldInstOperandsImpl(CE, CE->getOpcode(), Ops, DL, TLI);
 }
 
-/// Attempt to fold the constant expression
-/// using the specified DataLayout.  If successful, the constant result is
-/// result is returned, if not, null is returned.
 Constant *llvm::ConstantFoldConstantExpression(const ConstantExpr *CE,
                                                const DataLayout &DL,
                                                const TargetLibraryInfo *TLI) {
@@ -1067,9 +1057,6 @@ Constant *llvm::ConstantFoldInstOperands(Instruction *I,
   return ConstantFoldInstOperandsImpl(I, I->getOpcode(), Ops, DL, TLI);
 }
 
-/// Attempt to constant fold a compare
-/// instruction (icmp/fcmp) with the specified operands.  If it fails, it
-/// returns a constant expression of the specified operands.
 Constant *llvm::ConstantFoldCompareInstOperands(unsigned Predicate,
                                                 Constant *Ops0, Constant *Ops1,
                                                 const DataLayout &DL,
@@ -1222,9 +1209,6 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   }
 }
 
-/// Given a constant and a getelementptr constantexpr, return the constant value
-/// being addressed by the constant expression, or null if something is funny
-/// and we can't decide.
 Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
                                                        ConstantExpr *CE) {
   if (!CE->getOperand(1)->isNullValue())
@@ -1240,9 +1224,6 @@ Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
   return C;
 }
 
-/// Given a constant and getelementptr indices (with an *implied* zero pointer
-/// index that is not in the list), return the constant value being addressed by
-/// a virtual load, or null if something is funny and we can't decide.
 Constant *llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
                                                   ArrayRef<Constant*> Indices) {
   // Loop over all of the operands, tracking down which value we are
@@ -1260,7 +1241,6 @@ Constant *llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
 //  Constant Folding for Calls
 //
 
-/// Return true if it's even possible to fold a call to the specified function.
 bool llvm::canConstantFoldCallTo(const Function *F) {
   switch (F->getIntrinsicID()) {
   case Intrinsic::fabs:
@@ -1853,8 +1833,6 @@ static Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
   return ConstantVector::get(Result);
 }
 
-/// Attempt to constant fold a call to the specified function
-/// with the specified arguments, returning null if unsuccessful.
 Constant *
 llvm::ConstantFoldCall(Function *F, ArrayRef<Constant *> Operands,
                        const TargetLibraryInfo *TLI) {

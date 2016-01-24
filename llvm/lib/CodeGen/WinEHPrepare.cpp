@@ -1072,7 +1072,8 @@ void WinEHPrepare::fixupNoReturnCleanupPads(Function &F) {
     if (!CleanupPad)
       continue;
     // Skip over any cleanups have unwind targets, they do not need this.
-    if (getCleanupRetUnwindDest(CleanupPad) != nullptr)
+    if (any_of(CleanupPad->users(),
+               [](const User *U) { return isa<CleanupReturnInst>(U); }))
       continue;
     // Walk the blocks within the cleanup which end in 'unreachable'.
     // We will replace the unreachable instruction with a cleanupret;

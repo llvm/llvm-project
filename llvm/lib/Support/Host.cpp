@@ -805,25 +805,34 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avx2"]     = HasAVXSave && HasLeaf7 && ((EBX >>  5) & 1);
 
   Features["fsgsbase"] = HasLeaf7 && ((EBX >>  0) & 1);
+  Features["sgx"]      = HasLeaf7 && ((EBX >>  2) & 1);
   Features["bmi"]      = HasLeaf7 && ((EBX >>  3) & 1);
   Features["hle"]      = HasLeaf7 && ((EBX >>  4) & 1);
   Features["bmi2"]     = HasLeaf7 && ((EBX >>  8) & 1);
+  Features["invpcid"]  = HasLeaf7 && ((EBX >> 10) & 1);
   Features["rtm"]      = HasLeaf7 && ((EBX >> 11) & 1);
   Features["rdseed"]   = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]      = HasLeaf7 && ((EBX >> 19) & 1);
+  Features["smap"]     = HasLeaf7 && ((EBX >> 20) & 1);
+  Features["pcommit"]  = HasLeaf7 && ((EBX >> 22) & 1);
+  Features["clflushopt"] = HasLeaf7 && ((EBX >> 23) & 1);
+  Features["clwb"]     = HasLeaf7 && ((EBX >> 24) & 1);
   Features["sha"]      = HasLeaf7 && ((EBX >> 29) & 1);
-  // Enable protection keys
-  Features["pku"]    = HasLeaf7 && ((ECX >> 4) & 1);
 
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]  = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
   Features["avx512dq"] = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
+  Features["avx512ifma"] = HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save;
   Features["avx512pf"] = HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save;
   Features["avx512er"] = HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save;
   Features["avx512cd"] = HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save;
   Features["avx512bw"] = HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save;
   Features["avx512vl"] = HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save;
-  Features["avx512vbmi"] = HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save;
+
+  Features["prefetchwt1"] = HasLeaf7 && (ECX & 1);
+  Features["avx512vbmi"]  = HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save;
+  // Enable protection keys
+  Features["pku"]         = HasLeaf7 && ((ECX >> 4) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
     !GetX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);

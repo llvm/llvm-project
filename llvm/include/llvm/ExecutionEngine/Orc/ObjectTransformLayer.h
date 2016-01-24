@@ -42,13 +42,13 @@ public:
   /// @return A handle for the added objects.
   template <typename ObjSetT, typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
-  ObjSetHandleT addObjectSet(ObjSetT &Objects, MemoryManagerPtrT MemMgr,
+  ObjSetHandleT addObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
                              SymbolResolverPtrT Resolver) {
 
     for (auto I = Objects.begin(), E = Objects.end(); I != E; ++I)
       *I = Transform(std::move(*I));
 
-    return BaseLayer.addObjectSet(Objects, std::move(MemMgr),
+    return BaseLayer.addObjectSet(std::move(Objects), std::move(MemMgr),
                                   std::move(Resolver));
   }
 
