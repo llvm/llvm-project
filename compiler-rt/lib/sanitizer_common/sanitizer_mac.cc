@@ -670,6 +670,18 @@ char **GetArgv() {
   return *_NSGetArgv();
 }
 
+int StartSubprocess(const char *program, char *const argv[],
+                    fd_t std_in_fd = kInvalidFd, fd_t std_out_fd = kInvalidFd,
+                    fd_t std_err_fd = kInvalidFd) {
+  // FIXME: implement on this platform.
+  return -1;
+}
+
+bool IsProcessRunning(int pid) {
+  // FIXME: implement on this platform.
+  return false;
+}
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_MAC
