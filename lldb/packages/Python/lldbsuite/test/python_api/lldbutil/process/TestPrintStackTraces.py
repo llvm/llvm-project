@@ -22,6 +22,10 @@ class ThreadsStackTracesTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @expectedFailureAll("llvm.org/pr23043", ["linux"], archs=["i386"]) # We are unable to produce a backtrace of the main thread when the thread is blocked in fgets
+
+    #The __thread_start function in libc doesn't contain any epilogue and prologue instructions 
+    #hence unwinding fail when we are stopped in __thread_start
+    @expectedFailureAll(triple = 'mips*')
     @expectedFailureWindows("llvm.org/pr24778")
     @add_test_categories(['pyapi'])
     def test_stack_traces(self):

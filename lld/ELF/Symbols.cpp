@@ -53,6 +53,13 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
   if (IsUsedInRegularObj || Other->IsUsedInRegularObj)
     IsUsedInRegularObj = Other->IsUsedInRegularObj = true;
 
+  // We want to export all symbols that exist both in the executable
+  // and in DSOs, so that the symbols in the executable can interrupt
+  // symbols in the DSO at runtime.
+  if (isShared() != Other->isShared())
+    if (isa<DefinedRegular<ELFT>>(isShared() ? Other : this))
+      IsUsedInDynamicReloc = Other->IsUsedInDynamicReloc = true;
+
   if (L != R)
     return -1;
   if (!std::get<0>(L) || !std::get<1>(L) || !std::get<2>(L))

@@ -862,7 +862,7 @@ template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
 template <class ELFT>
 void EhFrameHeader<ELFT>::assignEhFrame(EHOutputSection<ELFT> *Sec) {
   if (this->Sec && this->Sec != Sec)
-    llvm_unreachable("multiple .eh_frame sections not supported for .eh_frame_hdr");
+    assert("multiple .eh_frame sections not supported for .eh_frame_hdr");
   Live = Config->EhFrameHdr;
   this->Sec = Sec;
 }
