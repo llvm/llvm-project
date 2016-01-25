@@ -5,10 +5,10 @@
 // doesn't litter the user's system with preprocessed output.
 
 // RUN: rm -f %t
-// RUN: %clang -Wx-unknown-warning -Wall -fsyntax-only --serialize-diagnostics %t.diag %s
+// RUN: %clang -Wx-typoed-warning -Wall -fsyntax-only --serialize-diagnostics %t.diag %s
 // RUN: c-index-test -read-diagnostics %t.diag 2>&1 | FileCheck %s
 
-// CHECK: warning: unknown warning option '-Wx-unknown-warning' [-Wunknown-warning-option] []
+// CHECK: warning: unknown warning option '-Wx-typoed-warning' [-Wunknown-warning-option] []
 
 // CHECK: warning: variable 'voodoo' is uninitialized when used here [-Wuninitialized]
 // CHECK: note: initialize the variable 'voodoo' to silence this warning []

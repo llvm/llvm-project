@@ -1817,6 +1817,17 @@ static void AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
 
   if (IsThinLTO)
     CmdArgs.push_back("-plugin-opt=thinlto");
+
+  // If an explicit debugger tuning argument appeared, pass it along.
+  if (Arg *A = Args.getLastArg(options::OPT_gTune_Group,
+                               options::OPT_ggdbN_Group)) {
+    if (A->getOption().matches(options::OPT_glldb))
+      CmdArgs.push_back("-plugin-opt=-debugger-tune=lldb");
+    else if (A->getOption().matches(options::OPT_gsce))
+      CmdArgs.push_back("-plugin-opt=-debugger-tune=sce");
+    else
+      CmdArgs.push_back("-plugin-opt=-debugger-tune=gdb");
+  }
 }
 
 /// This is a helper function for validating the optional refinement step
@@ -9028,6 +9039,9 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (WantPthread && !isAndroid)
         CmdArgs.push_back("-lpthread");
 
+      if (Args.hasArg(options::OPT_fsplit_stack))
+        CmdArgs.push_back("--wrap=pthread_create");
+
       CmdArgs.push_back("-lc");
 
       if (Args.hasArg(options::OPT_static))
@@ -9720,6 +9734,10 @@ std::unique_ptr<Command> visualstudio::Compiler::GetCommand(
   if (Arg *A = Args.getLastArg(options::OPT__SLASH_MD, options::OPT__SLASH_MDd,
                                options::OPT__SLASH_MT, options::OPT__SLASH_MTd))
     A->render(Args, CmdArgs);
+
+  // Pass through all unknown arguments so that the fallback command can see
+  // them too.
+  Args.AddAllArgs(CmdArgs, options::OPT_UNKNOWN);
 
   // Input filename.
   assert(Inputs.size() == 1);

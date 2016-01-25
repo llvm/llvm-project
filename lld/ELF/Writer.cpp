@@ -874,16 +874,15 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     Out<ELFT>::ShStrTab->reserve(Sec->getName());
 
   // Finalizers fix each section's size.
-  // .dynamic section's finalizer may add strings to .dynstr,
-  // so finalize that early.
-  // Likewise, .dynsym is finalized early since that may fill up .gnu.hash.
-  Out<ELFT>::Dynamic->finalize();
+  // .dynsym is finalized early since that may fill up .gnu.hash.
   if (isOutputDynamic())
     Out<ELFT>::DynSymTab->finalize();
 
-  // Fill other section headers.
+  // Fill other section headers. The dynamic string table in finalized
+  // once the .dynamic finalizer has added a few last strings.
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    Sec->finalize();
+    if (Sec != Out<ELFT>::DynStrTab)
+      Sec->finalize();
 }
 
 // This function add Out<ELFT>::* sections to OutputSections.

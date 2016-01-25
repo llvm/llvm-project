@@ -2024,8 +2024,9 @@ with a warning. For example:
 
 To suppress warnings about unused arguments, use the ``-Qunused-arguments`` option.
 
-Options that are not known to clang-cl will cause errors. If they are spelled with a
-leading ``/``, they will be mistaken for a filename:
+Options that are not known to clang-cl will be ignored by default. Use the
+``-Werror=unknown-argument`` option in order to treat them as errors. If these
+options are spelled with a leading ``/``, they will be mistaken for a filename:
 
   ::
 

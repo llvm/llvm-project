@@ -25,6 +25,8 @@
 #include "MachONormalizedFileBinaryUtils.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -49,6 +51,112 @@ using namespace llvm::MachO;
 namespace lld {
 namespace mach_o {
 namespace normalized {
+
+class ByteBuffer {
+public:
+  ByteBuffer() : _ostream(_bytes) { }
+
+  void append_byte(uint8_t b) {
+    _ostream << b;
+  }
+  void append_uleb128(uint64_t value) {
+    llvm::encodeULEB128(value, _ostream);
+  }
+  void append_uleb128Fixed(uint64_t value, unsigned byteCount) {
+    unsigned min = llvm::getULEB128Size(value);
+    assert(min <= byteCount);
+    unsigned pad = byteCount - min;
+    llvm::encodeULEB128(value, _ostream, pad);
+  }
+  void append_sleb128(int64_t value) {
+    llvm::encodeSLEB128(value, _ostream);
+  }
+  void append_string(StringRef str) {
+    _ostream << str;
+    append_byte(0);
+  }
+  void align(unsigned alignment) {
+    while ( (_ostream.tell() % alignment) != 0 )
+      append_byte(0);
+  }
+  size_t size() {
+    return _ostream.tell();
+  }
+  const uint8_t *bytes() {
+    return reinterpret_cast<const uint8_t*>(_ostream.str().data());
+  }
+
+private:
+  SmallVector<char, 128>        _bytes;
+  // Stream ivar must be after SmallVector ivar to construct properly.
+  llvm::raw_svector_ostream     _ostream;
+};
+
+struct TrieNode; // Forward declaration.
+
+struct TrieEdge : public llvm::ilist_node<TrieEdge> {
+  TrieEdge(StringRef s, TrieNode *node) : _subString(s), _child(node) {}
+
+  StringRef          _subString;
+  struct TrieNode   *_child;
+};
+
+} // namespace normalized
+} // namespace mach_o
+} // namespace lld
+
+
+namespace llvm {
+  using lld::mach_o::normalized::TrieEdge;
+  template <>
+  struct ilist_traits<TrieEdge>
+    : public ilist_default_traits<TrieEdge> {
+  private:
+    mutable ilist_half_node<TrieEdge> Sentinel;
+  public:
+    TrieEdge *createSentinel() const {
+      return static_cast<TrieEdge*>(&Sentinel);
+    }
+    void destroySentinel(TrieEdge *) const {}
+
+    TrieEdge *provideInitialHead() const { return createSentinel(); }
+    TrieEdge *ensureHead(TrieEdge*) const { return createSentinel(); }
+    static void noteHead(TrieEdge*, TrieEdge*) {}
+    void deleteNode(TrieEdge *N) {}
+
+  private:
+    void createNode(const TrieEdge &);
+  };
+} // namespace llvm
+
+
+namespace lld {
+namespace mach_o {
+namespace normalized {
+
+struct TrieNode {
+  typedef llvm::ilist<TrieEdge> TrieEdgeList;
+
+  TrieNode(StringRef s)
+      : _cummulativeString(s), _address(0), _flags(0), _other(0),
+        _trieOffset(0), _hasExportInfo(false) {}
+  ~TrieNode() = default;
+
+  void addSymbol(const Export &entry, BumpPtrAllocator &allocator,
+                 std::vector<TrieNode *> &allNodes);
+  bool updateOffset(uint32_t &offset);
+  void appendToByteBuffer(ByteBuffer &out);
+
+private:
+  StringRef                 _cummulativeString;
+  TrieEdgeList              _children;
+  uint64_t                  _address;
+  uint64_t                  _flags;
+  uint64_t                  _other;
+  StringRef                 _importedName;
+  uint32_t                  _trieOffset;
+  bool                      _hasExportInfo;
+};
 
 /// Utility class for writing a mach-o binary file given an in-memory
 /// normalized file.
@@ -115,77 +223,6 @@ private:
 
   uint32_t pointerAlign(uint32_t value);
   static StringRef dyldPath();
-
-  class ByteBuffer {
-  public:
-    ByteBuffer() : _ostream(_bytes) { }
-
-    void append_byte(uint8_t b) {
-      _ostream << b;
-    }
-    void append_uleb128(uint64_t value) {
-      llvm::encodeULEB128(value, _ostream);
-    }
-    void append_uleb128Fixed(uint64_t value, unsigned byteCount) {
-      unsigned min = llvm::getULEB128Size(value);
-      assert(min <= byteCount);
-      unsigned pad = byteCount - min;
-      llvm::encodeULEB128(value, _ostream, pad);
-    }
-    void append_sleb128(int64_t value) {
-      llvm::encodeSLEB128(value, _ostream);
-    }
-    void append_string(StringRef str) {
-      _ostream << str;
-      append_byte(0);
-    }
-    void align(unsigned alignment) {
-      while ( (_ostream.tell() % alignment) != 0 )
-        append_byte(0);
-    }
-    size_t size() {
-      return _ostream.tell();
-    }
-    const uint8_t *bytes() {
-      return reinterpret_cast<const uint8_t*>(_ostream.str().data());
-    }
-
-  private:
-    SmallVector<char, 128>        _bytes;
-    // Stream ivar must be after SmallVector ivar to construct properly.
-    llvm::raw_svector_ostream     _ostream;
-  };
-
-  struct TrieNode; // Forward declaration.
-
-  struct TrieEdge {
-    TrieEdge(StringRef s, TrieNode *node) : _subString(s), _child(node) {}
-
-    StringRef          _subString;
-    struct TrieNode   *_child;
-  };
-
-  struct TrieNode {
-    TrieNode(StringRef s)
-        : _cummulativeString(s), _address(0), _flags(0), _other(0),
-          _trieOffset(0), _hasExportInfo(false) {}
-    ~TrieNode() = default;
-
-    void addSymbol(const Export &entry, BumpPtrAllocator &allocator,
-                   std::vector<TrieNode *> &allNodes);
-    bool updateOffset(uint32_t &offset);
-    void appendToByteBuffer(ByteBuffer &out);
-
-  private:
-    StringRef                 _cummulativeString;
-    std::list<TrieEdge>       _children;
-    uint64_t                  _address;
-    uint64_t                  _flags;
-    uint64_t                  _other;
-    StringRef                 _importedName;
-    uint32_t                  _trieOffset;
-    bool                      _hasExportInfo;
-  };
 
   struct SegExtraInfo {
     uint32_t                    fileOffset;
@@ -1077,9 +1114,9 @@ void MachOFileLayout::buildLazyBindInfo() {
   _lazyBindingInfo.align(_is64 ? 8 : 4);
 }
 
-void MachOFileLayout::TrieNode::addSymbol(const Export& entry,
-                                          BumpPtrAllocator &allocator,
-                                          std::vector<TrieNode*> &allNodes) {
+void TrieNode::addSymbol(const Export& entry,
+                         BumpPtrAllocator &allocator,
+                         std::vector<TrieNode*> &allNodes) {
   StringRef partialStr = entry.name.drop_front(_cummulativeString.size());
   for (TrieEdge &edge : _children) {
     StringRef edgeStr = edge._subString;
@@ -1108,7 +1145,7 @@ void MachOFileLayout::TrieNode::addSymbol(const Export& entry,
         abEdge._subString = abEdgeStr;
         abEdge._child = bNode;
         auto *bcEdge = new (allocator) TrieEdge(bcEdgeStr, cNode);
-        bNode->_children.push_back(std::move(*bcEdge));
+        bNode->_children.insert(bNode->_children.end(), bcEdge);
         bNode->addSymbol(entry, allocator, allNodes);
         return;
       }
@@ -1123,7 +1160,7 @@ void MachOFileLayout::TrieNode::addSymbol(const Export& entry,
   // No commonality with any existing child, make a new edge.
   auto *newNode = new (allocator) TrieNode(entry.name.copy(allocator));
   auto *newEdge = new (allocator) TrieEdge(partialStr, newNode);
-  _children.push_back(std::move(*newEdge));
+  _children.insert(_children.end(), newEdge);
   DEBUG_WITH_TYPE("trie-builder", llvm::dbgs()
                    << "new TrieNode('" << entry.name << "') with edge '"
                    << partialStr << "' from node='"
@@ -1137,7 +1174,7 @@ void MachOFileLayout::TrieNode::addSymbol(const Export& entry,
   allNodes.push_back(newNode);
 }
 
-bool MachOFileLayout::TrieNode::updateOffset(uint32_t& offset) {
+bool TrieNode::updateOffset(uint32_t& offset) {
   uint32_t nodeSize = 1; // Length when no export info
   if (_hasExportInfo) {
     if (_flags & EXPORT_SYMBOL_FLAGS_REEXPORT) {
@@ -1169,7 +1206,7 @@ bool MachOFileLayout::TrieNode::updateOffset(uint32_t& offset) {
   return result;
 }
 
-void MachOFileLayout::TrieNode::appendToByteBuffer(ByteBuffer &out) {
+void TrieNode::appendToByteBuffer(ByteBuffer &out) {
   if (_hasExportInfo) {
     if (_flags & EXPORT_SYMBOL_FLAGS_REEXPORT) {
       if (!_importedName.empty()) {
