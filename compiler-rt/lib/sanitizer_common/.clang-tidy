@@ -9,4 +9,4 @@ CheckOptions:
   - key:             readability-identifier-naming.UnionCase
     value:           CamelCase
   - key:             readability-identifier-naming.VariableCase
-    value:           lowerCase
+    value:           lower_case
