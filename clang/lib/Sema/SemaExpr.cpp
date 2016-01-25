@@ -3887,14 +3887,24 @@ Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
 
   if (T->isVariablyModifiedType() && FunctionScopes.size() > 1) {
     if (auto *TT = T->getAs<TypedefType>()) {
-      if (auto *CSI = dyn_cast<CapturingScopeInfo>(FunctionScopes.back())) {
+      for (auto I = FunctionScopes.rbegin(),
+                E = std::prev(FunctionScopes.rend());
+           I != E; ++I) {
+        auto *CSI = dyn_cast<CapturingScopeInfo>(*I);
+        if (CSI == nullptr)
+          break;
         DeclContext *DC = nullptr;
-        if (auto LSI = dyn_cast<LambdaScopeInfo>(CSI))
+        if (auto *LSI = dyn_cast<LambdaScopeInfo>(CSI))
           DC = LSI->CallOperator;
-        else if (auto CRSI = dyn_cast<CapturedRegionScopeInfo>(CSI))
+        else if (auto *CRSI = dyn_cast<CapturedRegionScopeInfo>(CSI))
           DC = CRSI->TheCapturedDecl;
-        if (DC && TT->getDecl()->getDeclContext() != DC)
+        else if (auto *BSI = dyn_cast<BlockScopeInfo>(CSI))
+          DC = BSI->TheDecl;
+        if (DC) {
+          if (DC->containsDecl(TT->getDecl()))
+            break;
           captureVariablyModifiedType(Context, T, CSI);
+        }
       }
     }
   }

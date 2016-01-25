@@ -12,12 +12,16 @@ extern "C" auto cvar = []{};
 
 // CHECK-LABEL: define i32 @_Z9ARBSizeOfi(i32
 int ARBSizeOf(int n) {
-  typedef double (T)[8][n];
-  using TT = double [8][n];
+  typedef double(T)[8][n];
+  using TT = double[8][n];
   return [&]() -> int {
     typedef double(T1)[8][n];
     using TT1 = double[8][n];
-    return sizeof(T) + sizeof(T1) + sizeof(TT) + sizeof(TT1);
+    return [&n]() -> int {
+      typedef double(T2)[8][n];
+      using TT2 = double[8][n];
+      return sizeof(T) + sizeof(T1) + sizeof(T2) + sizeof(TT) + sizeof(TT1) + sizeof(TT2);
+    }();
   }();
 }
 
