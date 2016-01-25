@@ -34,7 +34,6 @@
 #include <pthread.h>
 #include <signal.h>
 #include <sys/resource.h>
-#include <sys/wait.h>
 
 #if SANITIZER_FREEBSD
 #include <pthread_np.h>
@@ -545,73 +544,6 @@ void WriteOneLineToSyslog(const char *s) {
 void LogMessageOnPrintf(const char *str) {
   if (common_flags()->log_to_syslog && ShouldLogAfterPrintf())
     WriteToSyslog(str);
-}
-
-int StartSubprocess(const char *program, char *const argv[], fd_t std_in_fd,
-                    fd_t std_out_fd, fd_t std_err_fd) {
-  auto file_closer = at_scope_exit([&] {
-    if (std_in_fd >= 0) {
-      internal_close(std_in_fd);
-    }
-    if (std_out_fd >= 0) {
-      internal_close(std_out_fd);
-    }
-    if (std_err_fd >= 0) {
-      internal_close(std_err_fd);
-    }
-  });
-
-  if (!FileExists(program)) {
-    Report("WARNING: Program %s not found!\n", program);
-    return -1;
-  }
-
-  int pid = internal_fork();
-
-  if (pid < 0) {
-    int rverrno;
-    if (internal_iserror(pid, &rverrno)) {
-      Report("WARNING: failed to fork (errno %d)\n", rverrno);
-    }
-    return pid;
-  }
-
-  if (pid == 0) {
-    // Child subprocess
-    if (std_in_fd >= 0) {
-      internal_close(STDIN_FILENO);
-      internal_dup2(std_in_fd, STDIN_FILENO);
-      internal_close(std_in_fd);
-    }
-    if (std_out_fd >= 0) {
-      internal_close(STDOUT_FILENO);
-      internal_dup2(std_out_fd, STDOUT_FILENO);
-      internal_close(std_out_fd);
-    }
-    if (std_err_fd >= 0) {
-      internal_close(STDERR_FILENO);
-      internal_dup2(std_err_fd, STDERR_FILENO);
-      internal_close(std_err_fd);
-    }
-
-    for (int fd = sysconf(_SC_OPEN_MAX); fd > 2; fd--) internal_close(fd);
-
-    internal_execve(program, argv, nullptr);
-    internal__exit(1);
-  }
-
-  return pid;
-}
-
-bool IsProcessRunning(int pid) {
-  int process_status;
-  uptr waitpid_status = internal_waitpid(pid, &process_status, WNOHANG);
-  int local_errno;
-  if (internal_iserror(waitpid_status, &local_errno)) {
-    VReport(1, "Waiting on the process failed (errno %d).\n", local_errno);
-    return false;
-  }
-  return waitpid_status == 0;
 }
 
 #endif // SANITIZER_LINUX
