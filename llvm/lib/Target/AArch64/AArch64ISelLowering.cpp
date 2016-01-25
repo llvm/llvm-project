@@ -1414,8 +1414,8 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
     return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
                                      DAG);
   }
-  assert(Opcode == ISD::AND || (Opcode == ISD::OR && Val->hasOneUse())
-         && "Valid conjunction/disjunction tree");
+  assert((Opcode == ISD::AND || (Opcode == ISD::OR && Val->hasOneUse())) &&
+         "Valid conjunction/disjunction tree");
 
   // Check if both sides can be transformed.
   SDValue LHS = Val->getOperand(0);

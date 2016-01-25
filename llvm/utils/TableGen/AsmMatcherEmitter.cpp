@@ -263,34 +263,79 @@ public:
     return false;
   }
 
-  /// operator< - Compare two classes.
-  // FIXME: This ordering seems to be broken. For example:
-  // u64 < i64, i64 < s8, s8 < u64, forming a cycle
-  // u64 is a subset of i64
-  // i64 and s8 are not subsets of each other, so are ordered by name
-  // s8 and u64 are not subsets of each other, so are ordered by name
+  int getTreeDepth() const {
+    int Depth = 0;
+    const ClassInfo *Root = this;
+    while (!Root->SuperClasses.empty()) {
+      Depth++;
+      Root = Root->SuperClasses.front();
+    }
+    return Depth;
+  }
+
+  const ClassInfo *findRoot() const {
+    const ClassInfo *Root = this;
+    while (!Root->SuperClasses.empty())
+      Root = Root->SuperClasses.front();
+    return Root;
+  }
+
+  /// Compare two classes. This does not produce a total ordering, but does
+  /// guarantee that subclasses are sorted before their parents, and that the
+  /// ordering is transitive.
   bool operator<(const ClassInfo &RHS) const {
     if (this == &RHS)
       return false;
 
-    // Unrelated classes can be ordered by kind.
-    if (!isRelatedTo(RHS))
-      return Kind < RHS.Kind;
-
-    switch (Kind) {
-    case Invalid:
-      llvm_unreachable("Invalid kind!");
-
-    default:
-      // This class precedes the RHS if it is a proper subset of the RHS.
-      if (isSubsetOf(RHS))
+    // First, enforce the ordering between the three different types of class.
+    // Tokens sort before registers, which sort before user classes.
+    if (Kind == Token) {
+      if (RHS.Kind != Token)
         return true;
-      if (RHS.isSubsetOf(*this))
+      assert(RHS.Kind == Token);
+    } else if (isRegisterClass()) {
+      if (RHS.Kind == Token)
         return false;
-
-      // Otherwise, order by name to ensure we have a total ordering.
-      return ValueName < RHS.ValueName;
+      else if (RHS.isUserClass())
+        return true;
+      assert(RHS.isRegisterClass());
+    } else if (isUserClass()) {
+      if (!RHS.isUserClass())
+        return false;
+      assert(RHS.isUserClass());
+    } else {
+      llvm_unreachable("Unknown ClassInfoKind");
     }
+
+    if (Kind == Token || isUserClass()) {
+      // Related tokens and user classes get sorted by depth in the inheritence
+      // tree (so that subclasses are before their parents).
+      if (isRelatedTo(RHS)) {
+        if (getTreeDepth() > RHS.getTreeDepth())
+          return true;
+        if (getTreeDepth() < RHS.getTreeDepth())
+          return false;
+      } else {
+        // Unrelated tokens and user classes are ordered by the name of their
+        // root nodes, so that there is a consistent ordering between
+        // unconnected trees.
+        return findRoot()->ValueName < RHS.findRoot()->ValueName;
+      }
+    } else if (isRegisterClass()) {
+      // For register sets, sort by number of registers. This guarantees that
+      // a set will always sort before all of it's strict supersets.
+      if (Registers.size() != RHS.Registers.size())
+        return Registers.size() < RHS.Registers.size();
+    } else {
+      llvm_unreachable("Unknown ClassInfoKind");
+    }
+
+    // FIXME: We should be able to just return false here, as we only need a
+    // partial order (we use stable sorts, so this is deterministic) and the
+    // name of a class shouldn't be significant. However, some of the backends
+    // accidentally rely on this behaviour, so it will have to stay like this
+    // until they are fixed.
+    return ValueName < RHS.ValueName;
   }
 };
 
@@ -1539,6 +1584,16 @@ void AsmMatcherInfo::buildInfo() {
 
   // Reorder classes so that classes precede super classes.
   Classes.sort();
+
+#ifndef NDEBUG
+  // Verify that the table is now sorted
+  for (auto I = Classes.begin(), E = Classes.end(); I != E; ++I) {
+    for (auto J = I; J != E; ++J) {
+      assert(!(*J < *I));
+      assert(I == J || !J->isSubsetOf(*I));
+    }
+  }
+#endif
 }
 
 /// buildInstructionOperandReference - The specified operand is a reference to a
@@ -2664,6 +2719,16 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
                    [](const std::unique_ptr<MatchableInfo> &a,
                       const std::unique_ptr<MatchableInfo> &b){
                      return *a < *b;});
+
+#ifndef NDEBUG
+  // Verify that the table is now sorted
+  for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
+       ++I) {
+    for (auto J = I; J != E; ++J) {
+      assert(!(**J < **I));
+    }
+  }
+#endif
 
   DEBUG_WITH_TYPE("instruction_info", {
       for (const auto &MI : Info.Matchables)

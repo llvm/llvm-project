@@ -489,14 +489,9 @@ ReprocessLoop:
       DEBUG(dbgs() << "LoopSimplify: Deleting edge from dead predecessor "
                    << P->getName() << "\n");
 
-      // Inform each successor of each dead pred.
-      for (succ_iterator SI = succ_begin(P), SE = succ_end(P); SI != SE; ++SI)
-        (*SI)->removePredecessor(P);
       // Zap the dead pred's terminator and replace it with unreachable.
       TerminatorInst *TI = P->getTerminator();
-       TI->replaceAllUsesWith(UndefValue::get(TI->getType()));
-      P->getTerminator()->eraseFromParent();
-      new UnreachableInst(P->getContext(), P);
+      changeToUnreachable(TI, /*UseLLVMTrap=*/false);
       Changed = true;
     }
   }
