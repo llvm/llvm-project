@@ -290,9 +290,9 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
   if (CanonicalPrefixes)
     llvm::sys::fs::make_absolute(InstalledPath);
 
-  InstalledPath = llvm::sys::path::parent_path(InstalledPath);
-  if (llvm::sys::fs::exists(InstalledPath.c_str()))
-    TheDriver.setInstalledDir(InstalledPath);
+  StringRef InstalledPathParent(llvm::sys::path::parent_path(InstalledPath));
+  if (llvm::sys::fs::exists(InstalledPathParent))
+    TheDriver.setInstalledDir(InstalledPathParent);
 }
 
 static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
