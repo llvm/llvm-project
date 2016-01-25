@@ -146,7 +146,9 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings) {
   }
 
   for (const Arg *A : Args.filtered(options::OPT_UNKNOWN))
-    Diags.Report(diag::err_drv_unknown_argument) << A->getAsString(Args);
+    Diags.Report(IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl :
+                              diag::err_drv_unknown_argument)
+      << A->getAsString(Args);
 
   return Args;
 }
@@ -1710,8 +1712,11 @@ void Driver::BuildJobs(Compilation &C) const {
           continue;
       }
 
-      Diag(clang::diag::warn_drv_unused_argument)
-          << A->getAsString(C.getArgs());
+      // In clang-cl, don't mention unknown arguments here since they have
+      // already been warned about.
+      if (!IsCLMode() || !A->getOption().matches(options::OPT_UNKNOWN))
+        Diag(clang::diag::warn_drv_unused_argument)
+            << A->getAsString(C.getArgs());
     }
   }
 }

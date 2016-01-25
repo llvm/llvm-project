@@ -49,3 +49,12 @@
 // RUN: FileCheck -check-prefix=CHECK-LINK-NOLTO-ACTION < %t %s
 //
 // CHECK-LINK-NOLTO-ACTION-NOT: "-plugin" "{{.*}}/LLVMgold.so"
+
+// -flto passes along an explicit debugger tuning argument.
+// RUN: %clang -target x86_64-unknown-linux -### %s -flto -glldb 2> %t
+// RUN: FileCheck -check-prefix=CHECK-TUNING-LLDB < %t %s
+// RUN: %clang -target x86_64-unknown-linux -### %s -flto -g 2> %t
+// RUN: FileCheck -check-prefix=CHECK-NO-TUNING < %t %s
+//
+// CHECK-TUNING-LLDB:   "-plugin-opt=-debugger-tune=lldb"
+// CHECK-NO-TUNING-NOT: "-plugin-opt=-debugger-tune
