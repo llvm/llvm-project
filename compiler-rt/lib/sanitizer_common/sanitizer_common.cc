@@ -423,10 +423,6 @@ bool TemplateMatch(const char *templ, const char *str) {
 static const char kPathSeparator = SANITIZER_WINDOWS ? ';' : ':';
 
 char *FindPathToBinary(const char *name) {
-  if (FileExists(name)) {
-    return internal_strdup(name);
-  }
-
   const char *path = GetEnv("PATH");
   if (!path)
     return nullptr;

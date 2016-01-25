@@ -279,15 +279,6 @@ const char *GetPwd();
 char *FindPathToBinary(const char *name);
 bool IsPathSeparator(const char c);
 bool IsAbsolutePath(const char *path);
-// Starts a subprocess and returs its pid.
-// If *_fd parameters are >=0 their corresponding input/output
-// streams would be redirect to the file. The files would always be closed
-// in parent process even in case of an error.
-int StartSubprocess(const char *program, char *const argv[],
-                    fd_t std_in_fd = kInvalidFd, fd_t std_out_fd = kInvalidFd,
-                    fd_t std_err_fd = kInvalidFd);
-// Checks if specified process is still running
-bool IsProcessRunning(int pid);
 
 u32 GetUid();
 void ReExec();
@@ -756,20 +747,6 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp);
 
 void DisableReexec();
 void MaybeReexec();
-
-template <typename Fn>
-struct AutoRunner {
-  explicit AutoRunner(Fn fn) : fn_(fn) {}
-  ~AutoRunner() { fn_(); }
-  Fn fn_;
-};
-
-// A simple scope guard. Usage:
-// auto cleanup = at_scope_exit([]{ do_cleanup; });
-template <typename Fn>
-AutoRunner<Fn> at_scope_exit(Fn fn) {
-  return AutoRunner<Fn>(fn);
-}
 
 }  // namespace __sanitizer
 

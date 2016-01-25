@@ -263,29 +263,6 @@ TEST(SanitizerLinux, ThreadSelfTest) {
 }
 #endif
 
-TEST(SanitizerCommon, StartSubprocessTest) {
-  int pipe_fds[2];
-  ASSERT_EQ(0, pipe(pipe_fds));
-  const char *argv[] = {"/bin/sh", "-c", "echo -n 'hello'"};
-  int pid = StartSubprocess("/bin/sh", const_cast<char **>(&argv[0]),
-                            kInvalidFd /* stdin */, pipe_fds[1] /* stdout */);
-  ASSERT_GT(pid, 0);
-
-  // wait for process to finish.
-  while (IsProcessRunning(pid)) {
-  }
-  ASSERT_FALSE(IsProcessRunning(pid));
-
-  char buffer[256];
-  char *ptr = buffer;
-  uptr bytes_read;
-  while (ReadFromFile(pipe_fds[0], ptr, 256, &bytes_read)) {
-    ptr += bytes_read;
-  }
-  ASSERT_EQ(0, memcmp(buffer, "hello", 5)) << "Buffer: " << buffer;
-  internal_close(pipe_fds[0]);
-}
-
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_LINUX
