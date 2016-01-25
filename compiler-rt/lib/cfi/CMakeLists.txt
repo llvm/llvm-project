@@ -30,7 +30,6 @@ foreach(arch ${CFI_SUPPORTED_ARCH})
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
 		RTUbsan
-		RTUbsan_cxx
     CFLAGS ${CFI_CFLAGS} ${CFI_DIAG_CFLAGS}
     PARENT_TARGET cfi)
 endforeach()

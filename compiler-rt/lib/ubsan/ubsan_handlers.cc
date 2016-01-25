@@ -523,8 +523,11 @@ void __ubsan::__ubsan_handle_nonnull_arg_abort(NonNullArgData *Data) {
   Die();
 }
 
-static void handleCFIBadIcall(CFIBadIcallData *Data, ValueHandle Function,
+static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
                               ReportOptions Opts) {
+  if (Data->CheckKind != CFITCK_ICall)
+    Die();
+
   SourceLocation Loc = Data->Loc.acquire();
   ErrorType ET = ErrorType::CFIBadType;
 
@@ -544,16 +547,28 @@ static void handleCFIBadIcall(CFIBadIcallData *Data, ValueHandle Function,
   Diag(FLoc, DL_Note, "%0 defined here") << FName;
 }
 
-void __ubsan::__ubsan_handle_cfi_bad_icall(CFIBadIcallData *Data,
-                                           ValueHandle Function) {
+namespace __ubsan {
+SANITIZER_WEAK_ATTRIBUTE
+void HandleCFIBadType(CFICheckFailData *Data, ValueHandle Vtable,
+                      ReportOptions Opts);
+}  // namespace __ubsan
+
+void __ubsan::__ubsan_handle_cfi_check_fail(CFICheckFailData *Data,
+                                           ValueHandle Value) {
   GET_REPORT_OPTIONS(false);
-  handleCFIBadIcall(Data, Function, Opts);
+  if (Data->CheckKind == CFITCK_ICall)
+    handleCFIBadIcall(Data, Value, Opts);
+  else
+    HandleCFIBadType(Data, Value, Opts);
 }
 
-void __ubsan::__ubsan_handle_cfi_bad_icall_abort(CFIBadIcallData *Data,
-                                                 ValueHandle Function) {
+void __ubsan::__ubsan_handle_cfi_check_fail_abort(CFICheckFailData *Data,
+                                                 ValueHandle Value) {
   GET_REPORT_OPTIONS(true);
-  handleCFIBadIcall(Data, Function, Opts);
+  if (Data->CheckKind == CFITCK_ICall)
+    handleCFIBadIcall(Data, Value, Opts);
+  else
+    HandleCFIBadType(Data, Value, Opts);
   Die();
 }
 
