@@ -1205,14 +1205,16 @@ void IRLinker::findNeededSubprograms() {
     assert(CU && "Expected valid compile unit");
     // Ensure that we don't remove subprograms referenced by DIImportedEntity.
     // It is not legal to have a DIImportedEntity with a null entity or scope.
+    // Using getDISubprogram handles the case where the subprogram is reached
+    // via an intervening DILexicalBlock.
     // FIXME: The DISubprogram for functions not linked in but kept due to
     // being referenced by a DIImportedEntity should also get their
     // IsDefinition flag is unset.
     SmallPtrSet<DISubprogram *, 8> ImportedEntitySPs;
     for (auto *IE : CU->getImportedEntities()) {
-      if (auto *SP = dyn_cast<DISubprogram>(IE->getEntity()))
+      if (auto *SP = getDISubprogram(dyn_cast<MDNode>(IE->getEntity())))
         ImportedEntitySPs.insert(SP);
-      if (auto *SP = dyn_cast<DISubprogram>(IE->getScope()))
+      if (auto *SP = getDISubprogram(dyn_cast<MDNode>(IE->getScope())))
         ImportedEntitySPs.insert(SP);
     }
     for (auto *Op : CU->getSubprograms()) {
