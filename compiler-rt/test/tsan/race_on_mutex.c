@@ -1,7 +1,7 @@
 // RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
-// This test fails on powerpc64 (VMA=46).
+// This test fails when run on powerpc64 (VMA=46).
 // The size of the write reported by Tsan for T1 is 8 instead of 1.
-// XFAIL: powerpc64-unknown-linux-gnu
+// XFAIL: powerpc64
 #include "test.h"
 
 pthread_mutex_t Mtx;
