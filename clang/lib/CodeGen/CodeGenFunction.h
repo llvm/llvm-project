@@ -1389,6 +1389,7 @@ public:
     CFITCK_NVCall,
     CFITCK_DerivedCast,
     CFITCK_UnrelatedCast,
+    CFITCK_ICall,
   };
 
   /// \brief Derived is the presumed address of an object of type T after a
@@ -3018,8 +3019,9 @@ public:
 
   /// \brief Emit a slow path cross-DSO CFI check which calls __cfi_slowpath
   /// if Cond if false.
-  void EmitCfiSlowPathCheck(llvm::Value *Cond, llvm::ConstantInt *TypeId,
-                            llvm::Value *Ptr);
+  void EmitCfiSlowPathCheck(SanitizerMask Kind, llvm::Value *Cond,
+                            llvm::ConstantInt *TypeId, llvm::Value *Ptr,
+                            ArrayRef<llvm::Constant *> StaticArgs);
 
   /// \brief Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
@@ -3028,6 +3030,9 @@ public:
   /// \brief Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.
   llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID);
+
+  /// \brief Emit a cross-DSO CFI failure handling function.
+  void EmitCfiCheckFail();
 
   /// \brief Create a check for a function parameter that may potentially be
   /// declared as non-null.

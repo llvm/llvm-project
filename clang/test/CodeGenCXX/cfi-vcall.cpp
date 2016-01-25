@@ -55,7 +55,7 @@ void D::h() {
 
 // DIAG: @[[SRC:.*]] = private unnamed_addr constant [{{.*}} x i8] c"{{.*}}cfi-vcall.cpp\00", align 1
 // DIAG: @[[TYPE:.*]] = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'A'\00" }
-// DIAG: @[[BADTYPESTATIC:.*]] = private unnamed_addr global { { [{{.*}} x i8]*, i32, i32 }, { i16, i16, [4 x i8] }*, i8 } { { [{{.*}} x i8]*, i32, i32 } { [{{.*}} x i8]* @[[SRC]], i32 [[@LINE+21]], i32 3 }, { i16, i16, [4 x i8] }* @[[TYPE]], i8 0 }
+// DIAG: @[[BADTYPESTATIC:.*]] = private unnamed_addr global { i8, { [{{.*}} x i8]*, i32, i32 }, { i16, i16, [4 x i8] }* } { i8 0, { [{{.*}} x i8]*, i32, i32 } { [{{.*}} x i8]* @[[SRC]], i32 [[@LINE+21]], i32 3 }, { i16, i16, [4 x i8] }* @[[TYPE]] }
 
 // ITANIUM: define void @_Z2afP1A
 // MS: define void @"\01?af@@YAXPEAUA@@@Z"
@@ -69,9 +69,9 @@ void af(A *a) {
   // NDIAG-NEXT: call void @llvm.trap()
   // NDIAG-NEXT: unreachable
   // DIAG-NEXT: [[VTINT:%[^ ]*]] = ptrtoint i8* [[VT]] to i64
-  // DIAG-ABORT-NEXT: call void @__ubsan_handle_cfi_bad_type_abort(i8* bitcast ({{.*}} @[[BADTYPESTATIC]] to i8*), i64 [[VTINT]])
+  // DIAG-ABORT-NEXT: call void @__ubsan_handle_cfi_check_fail_abort(i8* getelementptr inbounds ({{.*}} @[[BADTYPESTATIC]], i32 0, i32 0), i64 [[VTINT]])
   // DIAG-ABORT-NEXT: unreachable
-  // DIAG-RECOVER-NEXT: call void @__ubsan_handle_cfi_bad_type(i8* bitcast ({{.*}} @[[BADTYPESTATIC]] to i8*), i64 [[VTINT]])
+  // DIAG-RECOVER-NEXT: call void @__ubsan_handle_cfi_check_fail(i8* getelementptr inbounds ({{.*}} @[[BADTYPESTATIC]], i32 0, i32 0), i64 [[VTINT]])
   // DIAG-RECOVER-NEXT: br label %[[CONTBB]]
 
   // CHECK: [[CONTBB]]

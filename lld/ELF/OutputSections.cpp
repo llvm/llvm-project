@@ -604,62 +604,60 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
       Out<ELFT>::DynStrTab->reserve(F->getSoName());
   Out<ELFT>::DynStrTab->finalize();
 
+  auto Add = [=](Entry E) { Entries.push_back(E); };
+
   if (Out<ELFT>::RelaDyn->hasRelocs()) {
     bool IsRela = Out<ELFT>::RelaDyn->isRela();
-    Entries.push_back({IsRela ? DT_RELA : DT_REL, Out<ELFT>::RelaDyn});
-    Entries.push_back(
-        {IsRela ? DT_RELASZ : DT_RELSZ, Out<ELFT>::RelaDyn->getSize()});
-    Entries.push_back({IsRela ? DT_RELAENT : DT_RELENT,
-                       uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
+    Add({IsRela ? DT_RELA : DT_REL, Out<ELFT>::RelaDyn});
+    Add({IsRela ? DT_RELASZ : DT_RELSZ, Out<ELFT>::RelaDyn->getSize()});
+    Add({IsRela ? DT_RELAENT : DT_RELENT,
+         uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
   }
   if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
-    Entries.push_back({DT_JMPREL, Out<ELFT>::RelaPlt});
-    Entries.push_back({DT_PLTRELSZ, Out<ELFT>::RelaPlt->getSize()});
-    Entries.push_back({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
-                       Out<ELFT>::GotPlt});
-    Entries.push_back(
-        {DT_PLTREL, Out<ELFT>::RelaPlt->isRela() ? DT_RELA : DT_REL});
+    Add({DT_JMPREL, Out<ELFT>::RelaPlt});
+    Add({DT_PLTRELSZ, Out<ELFT>::RelaPlt->getSize()});
+    Add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
+         Out<ELFT>::GotPlt});
+    Add({DT_PLTREL, Out<ELFT>::RelaPlt->isRela() ? DT_RELA : DT_REL});
   }
 
-  Entries.push_back({DT_SYMTAB, Out<ELFT>::DynSymTab});
-  Entries.push_back({DT_SYMENT, sizeof(Elf_Sym)});
-  Entries.push_back({DT_STRTAB, Out<ELFT>::DynStrTab});
-  Entries.push_back({DT_STRSZ, Out<ELFT>::DynStrTab->getSize()});
+  Add({DT_SYMTAB, Out<ELFT>::DynSymTab});
+  Add({DT_SYMENT, sizeof(Elf_Sym)});
+  Add({DT_STRTAB, Out<ELFT>::DynStrTab});
+  Add({DT_STRSZ, Out<ELFT>::DynStrTab->getSize()});
   if (Out<ELFT>::GnuHashTab)
-    Entries.push_back({DT_GNU_HASH, Out<ELFT>::GnuHashTab});
+    Add({DT_GNU_HASH, Out<ELFT>::GnuHashTab});
   if (Out<ELFT>::HashTab)
-    Entries.push_back({DT_HASH, Out<ELFT>::HashTab});
+    Add({DT_HASH, Out<ELFT>::HashTab});
 
   if (!Config->RPath.empty())
-    Entries.push_back({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
-                       Out<ELFT>::DynStrTab->addString(Config->RPath)});
+    Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
+         Out<ELFT>::DynStrTab->addString(Config->RPath)});
 
   if (!Config->SoName.empty())
-    Entries.push_back(
-        {DT_SONAME, Out<ELFT>::DynStrTab->addString(Config->SoName)});
+    Add({DT_SONAME, Out<ELFT>::DynStrTab->addString(Config->SoName)});
 
   if (PreInitArraySec) {
-    Entries.push_back({DT_PREINIT_ARRAY, PreInitArraySec});
-    Entries.push_back({DT_PREINIT_ARRAYSZ, PreInitArraySec->getSize()});
+    Add({DT_PREINIT_ARRAY, PreInitArraySec});
+    Add({DT_PREINIT_ARRAYSZ, PreInitArraySec->getSize()});
   }
   if (InitArraySec) {
-    Entries.push_back({DT_INIT_ARRAY, InitArraySec});
-    Entries.push_back({DT_INIT_ARRAYSZ, (uintX_t)InitArraySec->getSize()});
+    Add({DT_INIT_ARRAY, InitArraySec});
+    Add({DT_INIT_ARRAYSZ, (uintX_t)InitArraySec->getSize()});
   }
   if (FiniArraySec) {
-    Entries.push_back({DT_FINI_ARRAY, FiniArraySec});
-    Entries.push_back({DT_FINI_ARRAYSZ, (uintX_t)FiniArraySec->getSize()});
+    Add({DT_FINI_ARRAY, FiniArraySec});
+    Add({DT_FINI_ARRAYSZ, (uintX_t)FiniArraySec->getSize()});
   }
 
   for (const std::unique_ptr<SharedFile<ELFT>> &F : SymTab.getSharedFiles())
     if (F->isNeeded())
-      Entries.push_back(
-          {DT_NEEDED, Out<ELFT>::DynStrTab->addString(F->getSoName())});
+      Add({DT_NEEDED, Out<ELFT>::DynStrTab->addString(F->getSoName())});
 
   if (SymbolBody *B = SymTab.find(Config->Init))
-    Entries.push_back({DT_INIT, B});
+    Add({DT_INIT, B});
   if (SymbolBody *B = SymTab.find(Config->Fini))
-    Entries.push_back({DT_FINI, B});
+    Add({DT_FINI, B});
 
   uint32_t DtFlags = 0;
   uint32_t DtFlags1 = 0;
@@ -677,29 +675,26 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   }
 
   if (DtFlags)
-    Entries.push_back({DT_FLAGS, DtFlags});
+    Add({DT_FLAGS, DtFlags});
   if (DtFlags1)
-    Entries.push_back({DT_FLAGS_1, DtFlags1});
+    Add({DT_FLAGS_1, DtFlags1});
 
   if (!Config->Entry.empty())
-    Entries.push_back({DT_DEBUG, (uintX_t)0});
+    Add({DT_DEBUG, (uintX_t)0});
 
   if (Config->EMachine == EM_MIPS) {
-    Entries.push_back({DT_MIPS_RLD_VERSION, 1});
-    Entries.push_back({DT_MIPS_FLAGS, RHF_NOTPOT});
-    Entries.push_back({DT_MIPS_BASE_ADDRESS, (uintX_t)Target->getVAStart()});
-    Entries.push_back(
-        {DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols()});
-    Entries.push_back(
-        {DT_MIPS_LOCAL_GOTNO, Out<ELFT>::Got->getMipsLocalEntriesNum()});
+    Add({DT_MIPS_RLD_VERSION, 1});
+    Add({DT_MIPS_FLAGS, RHF_NOTPOT});
+    Add({DT_MIPS_BASE_ADDRESS, (uintX_t)Target->getVAStart()});
+    Add({DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols()});
+    Add({DT_MIPS_LOCAL_GOTNO, Out<ELFT>::Got->getMipsLocalEntriesNum()});
     if (const SymbolBody *B = Out<ELFT>::Got->getMipsFirstGlobalEntry())
-      Entries.push_back({DT_MIPS_GOTSYM, B->DynamicSymbolTableIndex});
+      Add({DT_MIPS_GOTSYM, B->DynamicSymbolTableIndex});
     else
-      Entries.push_back(
-          {DT_MIPS_GOTSYM, Out<ELFT>::DynSymTab->getNumSymbols()});
-    Entries.push_back({DT_PLTGOT, Out<ELFT>::Got});
+      Add({DT_MIPS_GOTSYM, Out<ELFT>::DynSymTab->getNumSymbols()});
+    Add({DT_PLTGOT, Out<ELFT>::Got});
     if (Out<ELFT>::MipsRldMap)
-      Entries.push_back({DT_MIPS_RLD_MAP, Out<ELFT>::MipsRldMap});
+      Add({DT_MIPS_RLD_MAP, Out<ELFT>::MipsRldMap});
   }
 
   // +1 for DT_NULL

@@ -2566,6 +2566,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   case CFITCK_UnrelatedCast:
     SSK = llvm::SanStat_CFI_UnrelatedCast;
     break;
+  case CFITCK_ICall:
+    llvm_unreachable("not expecting CFITCK_ICall");
   }
   EmitSanitizerStatReport(SSK);
 
@@ -2577,13 +2579,6 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   llvm::Value *BitSetTest =
       Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::bitset_test),
                          {CastedVTable, BitSetName});
-
-  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso) {
-    if (auto TypeId = CGM.CreateCfiIdForTypeMetadata(MD)) {
-      EmitCfiSlowPathCheck(BitSetTest, TypeId, CastedVTable);
-      return;
-    }
-  }
 
   SanitizerMask M;
   switch (TCK) {
@@ -2599,15 +2594,23 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   case CFITCK_UnrelatedCast:
     M = SanitizerKind::CFIUnrelatedCast;
     break;
+  case CFITCK_ICall:
+    llvm_unreachable("not expecting CFITCK_ICall");
   }
 
   llvm::Constant *StaticData[] = {
+      llvm::ConstantInt::get(Int8Ty, TCK),
       EmitCheckSourceLocation(Loc),
       EmitCheckTypeDescriptor(QualType(RD->getTypeForDecl(), 0)),
-      llvm::ConstantInt::get(Int8Ty, TCK),
   };
-  EmitCheck(std::make_pair(BitSetTest, M), "cfi_bad_type", StaticData,
-            CastedVTable);
+
+  auto TypeId = CGM.CreateCfiIdForTypeMetadata(MD);
+  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && TypeId) {
+    EmitCfiSlowPathCheck(M, BitSetTest, TypeId, CastedVTable, StaticData);
+  } else {
+    EmitCheck(std::make_pair(BitSetTest, M), "cfi_check_fail", StaticData,
+              CastedVTable);
+  }
 }
 
 // FIXME: Ideally Expr::IgnoreParenNoopCasts should do this, but it doesn't do
