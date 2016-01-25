@@ -84,8 +84,8 @@ static bool error(std::error_code ec) {
   if (!ec)
     return false;
 
-  outs() << ToolName << ": error reading file: " << ec.message() << ".\n";
-  outs().flush();
+  errs() << ToolName << ": error reading file: " << ec.message() << ".\n";
+  errs().flush();
   return true;
 }
 

@@ -1806,7 +1806,7 @@ bool IPSCCP::runOnModule(Module &M) {
 
         ++NumDeadBlocks;
         NumInstRemoved +=
-            changeToUnreachable(&*BB->begin(), /*UseLLVMTrap=*/false);
+            changeToUnreachable(BB->getFirstNonPHI(), /*UseLLVMTrap=*/false);
 
         MadeChanges = true;
 

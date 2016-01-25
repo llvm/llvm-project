@@ -263,7 +263,7 @@ def ptr_rc_nosp : PointerLikeRegClass<1>;
 def X86MemAsmOperand : AsmOperandClass {
  let Name = "Mem";
 }
-let RenderMethod = "addMemOperands" in {
+let RenderMethod = "addMemOperands", SuperClasses = [X86MemAsmOperand] in {
   def X86Mem8AsmOperand   : AsmOperandClass { let Name = "Mem8"; }
   def X86Mem16AsmOperand  : AsmOperandClass { let Name = "Mem16"; }
   def X86Mem32AsmOperand  : AsmOperandClass { let Name = "Mem32"; }

@@ -338,8 +338,8 @@ Value *BlockGenerator::getOrCreateAlloca(Value *ScalarBase,
 
   auto Addr = Map[ScalarBase];
 
-  if (GlobalMap.count(Addr))
-    return GlobalMap[Addr];
+  if (auto NewAddr = GlobalMap.lookup(Addr))
+    return NewAddr;
 
   return Addr;
 }

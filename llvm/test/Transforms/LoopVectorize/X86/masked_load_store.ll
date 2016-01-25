@@ -1,8 +1,6 @@
-; RUN: opt < %s  -O3 -mcpu=corei7-avx -S | FileCheck %s -check-prefix=AVX1
-; RUN: opt < %s  -O3 -mcpu=core-avx2 -S | FileCheck %s -check-prefix=AVX2
+; RUN: opt < %s  -O3 -mcpu=corei7-avx -S | FileCheck %s -check-prefix=AVX -check-prefix=AVX1
+; RUN: opt < %s  -O3 -mcpu=core-avx2 -S | FileCheck %s -check-prefix=AVX -check-prefix=AVX2
 ; RUN: opt < %s  -O3 -mcpu=knl -S | FileCheck %s -check-prefix=AVX512
-
-;AVX1-NOT: llvm.masked
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc_linux"
@@ -18,12 +16,12 @@ target triple = "x86_64-pc_linux"
 ;  }
 ;}
 
-;AVX2-LABEL: @foo1
-;AVX2: icmp slt <8 x i32> %wide.load, <i32 100, i32 100, i32 100
-;AVX2: call <8 x i32> @llvm.masked.load.v8i32
-;AVX2: add nsw <8 x i32>
-;AVX2: call void @llvm.masked.store.v8i32
-;AVX2: ret void
+;AVX-LABEL: @foo1
+;AVX: icmp slt <8 x i32> %wide.load, <i32 100, i32 100, i32 100
+;AVX: call <8 x i32> @llvm.masked.load.v8i32
+;AVX: add nsw <8 x i32>
+;AVX: call void @llvm.masked.store.v8i32
+;AVX: ret void
 
 ;AVX512-LABEL: @foo1
 ;AVX512: icmp slt <16 x i32> %wide.load, <i32 100, i32 100, i32 100
@@ -102,12 +100,12 @@ for.end:                                          ; preds = %for.cond
 ;  }
 ;}
 
-;AVX2-LABEL: @foo2
-;AVX2: icmp slt <8 x i32> %wide.load, <i32 100, i32 100, i32 100
-;AVX2: call <8 x float> @llvm.masked.load.v8f32
-;AVX2: fadd <8 x float>
-;AVX2: call void @llvm.masked.store.v8f32
-;AVX2: ret void
+;AVX-LABEL: @foo2
+;AVX: icmp slt <8 x i32> %wide.load, <i32 100, i32 100, i32 100
+;AVX: call <8 x float> @llvm.masked.load.v8f32
+;AVX: fadd <8 x float>
+;AVX: call void @llvm.masked.store.v8f32
+;AVX: ret void
 
 ;AVX512-LABEL: @foo2
 ;AVX512: icmp slt <16 x i32> %wide.load, <i32 100, i32 100, i32 100
@@ -187,13 +185,13 @@ for.end:                                          ; preds = %for.cond
 ;  }
 ;}
 
-;AVX2-LABEL: @foo3
-;AVX2: icmp slt <4 x i32> %wide.load, <i32 100, i32 100,
-;AVX2: call <4 x double> @llvm.masked.load.v4f64
-;AVX2: sitofp <4 x i32> %wide.load to <4 x double>
-;AVX2: fadd <4 x double>
-;AVX2: call void @llvm.masked.store.v4f64
-;AVX2: ret void
+;AVX-LABEL: @foo3
+;AVX: icmp slt <4 x i32> %wide.load, <i32 100, i32 100,
+;AVX: call <4 x double> @llvm.masked.load.v4f64
+;AVX: sitofp <4 x i32> %wide.load to <4 x double>
+;AVX: fadd <4 x double>
+;AVX: call void @llvm.masked.store.v4f64
+;AVX: ret void
 
 ;AVX512-LABEL: @foo3
 ;AVX512: icmp slt <8 x i32> %wide.load, <i32 100, i32 100,
@@ -275,9 +273,9 @@ for.end:                                          ; preds = %for.cond
 ;  }
 ;}
 
-;AVX2-LABEL: @foo4
-;AVX2-NOT: llvm.masked
-;AVX2: ret void
+;AVX-LABEL: @foo4
+;AVX-NOT: llvm.masked
+;AVX: ret void
 
 ;AVX512-LABEL: @foo4
 ;AVX512-NOT: llvm.masked
@@ -349,10 +347,10 @@ for.end:                                          ; preds = %for.cond
 
 ; The loop here should not be vectorized due to trapping
 ; constant expression
-;AVX2-LABEL: @foo5
-;AVX2-NOT: llvm.masked
-;AVX2: store i32 sdiv
-;AVX2: ret void
+;AVX-LABEL: @foo5
+;AVX-NOT: llvm.masked
+;AVX: store i32 sdiv
+;AVX: ret void
 
 ;AVX512-LABEL: @foo5
 ;AVX512-NOT: llvm.masked

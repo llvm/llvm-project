@@ -426,9 +426,8 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &Symbol,
 }
 
 // Maximum offsets for different string table entry encodings.
-static const unsigned Max6DecimalOffset = 999999;
-static const unsigned Max7DecimalOffset = 9999999;
-static const uint64_t MaxBase64Offset = 0xFFFFFFFFFULL; // 64^6, including 0
+enum : unsigned { Max7DecimalOffset = 9999999U };
+enum : uint64_t { MaxBase64Offset = 0xFFFFFFFFFULL }; // 64^6, including 0
 
 // Encode a string table entry offset in base 64, padded to 6 chars, and
 // prefixed with a double slash: '//AAAAAA', '//AAAAAB', ...
@@ -456,22 +455,21 @@ void WinCOFFObjectWriter::SetSectionName(COFFSection &S) {
   if (S.Name.size() > COFF::NameSize) {
     uint64_t StringTableEntry = Strings.getOffset(S.Name);
 
-    if (StringTableEntry <= Max6DecimalOffset) {
-      std::sprintf(S.Header.Name, "/%d", unsigned(StringTableEntry));
-    } else if (StringTableEntry <= Max7DecimalOffset) {
-      // With seven digits, we have to skip the terminating null. Because
-      // sprintf always appends it, we use a larger temporary buffer.
-      char buffer[9] = {};
-      std::sprintf(buffer, "/%d", unsigned(StringTableEntry));
-      std::memcpy(S.Header.Name, buffer, 8);
+    if (StringTableEntry <= Max7DecimalOffset) {
+      SmallVector<char, COFF::NameSize> Buffer;
+      Twine('/').concat(Twine(StringTableEntry)).toVector(Buffer);
+      assert(Buffer.size() <= COFF::NameSize && Buffer.size() >= 2);
+
+      std::memcpy(S.Header.Name, Buffer.data(), Buffer.size());
     } else if (StringTableEntry <= MaxBase64Offset) {
       // Starting with 10,000,000, offsets are encoded as base64.
       encodeBase64StringEntry(S.Header.Name, StringTableEntry);
     } else {
       report_fatal_error("COFF string table is greater than 64 GB.");
     }
-  } else
+  } else {
     std::memcpy(S.Header.Name, S.Name.c_str(), S.Name.size());
+  }
 }
 
 void WinCOFFObjectWriter::SetSymbolName(COFFSymbol &S) {

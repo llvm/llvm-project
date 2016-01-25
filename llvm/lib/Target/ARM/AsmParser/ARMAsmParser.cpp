@@ -1186,6 +1186,20 @@ public:
     return (Val >= -1020 && Val <= 1020 && ((Val & 3) == 0)) ||
       Val == INT32_MIN;
   }
+  bool isAddrMode5FP16() const {
+    // If we have an immediate that's not a constant, treat it as a label
+    // reference needing a fixup. If it is a constant, it's something else
+    // and we reject it.
+    if (isImm() && !isa<MCConstantExpr>(getImm()))
+      return true;
+    if (!isMem() || Memory.Alignment != 0) return false;
+    // Check for register offset.
+    if (Memory.OffsetRegNum) return false;
+    // Immediate offset in range [-510, 510] and a multiple of 2.
+    if (!Memory.OffsetImm) return true;
+    int64_t Val = Memory.OffsetImm->getValue();
+    return (Val >= -510 && Val <= 510 && ((Val & 1) == 0)) || Val == INT32_MIN;
+  }
   bool isMemTBB() const {
     if (!isMem() || !Memory.OffsetRegNum || Memory.isNegative ||
         Memory.ShiftType != ARM_AM::no_shift || Memory.Alignment != 0)
@@ -2144,6 +2158,28 @@ public:
     if (Val == INT32_MIN) Val = 0;
     if (Val < 0) Val = -Val;
     Val = ARM_AM::getAM5Opc(AddSub, Val);
+    Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
+    Inst.addOperand(MCOperand::createImm(Val));
+  }
+
+  void addAddrMode5FP16Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 2 && "Invalid number of operands!");
+    // If we have an immediate that's not a constant, treat it as a label
+    // reference needing a fixup. If it is a constant, it's something else
+    // and we reject it.
+    if (isImm()) {
+      Inst.addOperand(MCOperand::createExpr(getImm()));
+      Inst.addOperand(MCOperand::createImm(0));
+      return;
+    }
+
+    // The lower bit is always zero and as such is not encoded.
+    int32_t Val = Memory.OffsetImm ? Memory.OffsetImm->getValue() / 2 : 0;
+    ARM_AM::AddrOpc AddSub = Val < 0 ? ARM_AM::sub : ARM_AM::add;
+    // Special case for #-0
+    if (Val == INT32_MIN) Val = 0;
+    if (Val < 0) Val = -Val;
+    Val = ARM_AM::getAM5FP16Opc(AddSub, Val);
     Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
     Inst.addOperand(MCOperand::createImm(Val));
   }
@@ -4976,7 +5012,8 @@ ARMAsmParser::parseFPImm(OperandVector &Operands) {
   // vmov.i{8|16|32|64} <dreg|qreg>, #imm
   ARMOperand &TyOp = static_cast<ARMOperand &>(*Operands[2]);
   bool isVmovf = TyOp.isToken() &&
-                 (TyOp.getToken() == ".f32" || TyOp.getToken() == ".f64");
+                 (TyOp.getToken() == ".f32" || TyOp.getToken() == ".f64" ||
+                  TyOp.getToken() == ".f16");
   ARMOperand &Mnemonic = static_cast<ARMOperand &>(*Operands[0]);
   bool isFconst = Mnemonic.isToken() && (Mnemonic.getToken() == "fconstd" ||
                                          Mnemonic.getToken() == "fconsts");
@@ -5268,7 +5305,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic == "vcvta" || Mnemonic == "vcvtn"  || Mnemonic == "vcvtp" ||
       Mnemonic == "vcvtm" || Mnemonic == "vrinta" || Mnemonic == "vrintn" ||
       Mnemonic == "vrintp" || Mnemonic == "vrintm" || Mnemonic == "hvc" ||
-      Mnemonic.startswith("vsel"))
+      Mnemonic.startswith("vsel") || Mnemonic == "vins" || Mnemonic == "vmovx")
     return Mnemonic;
 
   // First, split out any predication code. Ignore mnemonics we know aren't
@@ -5372,7 +5409,8 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic, StringRef FullInst,
       Mnemonic == "vrintn" || Mnemonic == "vrintp" || Mnemonic == "vrintm" ||
       Mnemonic.startswith("aes") || Mnemonic == "hvc" || Mnemonic == "setpan" ||
       Mnemonic.startswith("sha1") || Mnemonic.startswith("sha256") ||
-      (FullInst.startswith("vmull") && FullInst.endswith(".p64"))) {
+      (FullInst.startswith("vmull") && FullInst.endswith(".p64")) ||
+      Mnemonic == "vmovx" || Mnemonic == "vins") {
     // These mnemonics are never predicable
     CanAcceptPredicationCode = false;
   } else if (!isThumb()) {

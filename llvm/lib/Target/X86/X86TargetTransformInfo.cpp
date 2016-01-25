@@ -1438,7 +1438,7 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
   int DataWidth = isa<PointerType>(ScalarTy) ?
     DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
 
-  return (DataWidth >= 32 && ST->hasAVX2());
+  return (DataWidth >= 32 && ST->hasAVX());
 }
 
 bool X86TTIImpl::isLegalMaskedStore(Type *DataType) {
