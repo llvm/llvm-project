@@ -1176,9 +1176,9 @@ bb5:
 ; CHECK-NEXT: .LBB23_2:{{$}}
 ; CHECK-NEXT:     end_loop{{$}}
 ; CHECK-NEXT:     loop{{$}}
+; CHECK-NEXT:     i32.const   $discard=, 0{{$}}
 ; CHECK-NEXT:     i32.const   $push1=, 0{{$}}
-; CHECK-NEXT:     i32.const   $push2=, 0{{$}}
-; CHECK-NEXT:     br_if       $pop2, 0{{$}}
+; CHECK-NEXT:     br_if       $pop1, 0{{$}}
 ; CHECK-NEXT:     end_loop{{$}}
 ; CHECK-NEXT:     return{{$}}
 define void @test14() {

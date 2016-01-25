@@ -21063,6 +21063,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FNMSUB_RND:         return "X86ISD::FNMSUB_RND";
   case X86ISD::FMADDSUB_RND:       return "X86ISD::FMADDSUB_RND";
   case X86ISD::FMSUBADD_RND:       return "X86ISD::FMSUBADD_RND";
+  case X86ISD::VPMADD52H:          return "X86ISD::VPMADD52H";
+  case X86ISD::VPMADD52L:          return "X86ISD::VPMADD52L";
   case X86ISD::VRNDSCALE:          return "X86ISD::VRNDSCALE";
   case X86ISD::VREDUCE:            return "X86ISD::VREDUCE";
   case X86ISD::VGETMANT:           return "X86ISD::VGETMANT";

@@ -63,6 +63,7 @@ ARMAttributeParser::DisplayRoutines[] = {
   ATTRIBUTE_HANDLER(ABI_FP_16bit_format),
   ATTRIBUTE_HANDLER(MPextension_use),
   ATTRIBUTE_HANDLER(DIV_use),
+  ATTRIBUTE_HANDLER(DSP_extension),
   ATTRIBUTE_HANDLER(T2EE_use),
   ATTRIBUTE_HANDLER(Virtualization_use),
   ATTRIBUTE_HANDLER(nodefaults)
@@ -510,6 +511,16 @@ void ARMAttributeParser::DIV_use(AttrType Tag, const uint8_t *Data,
   static const char *const Strings[] = {
     "If Available", "Not Permitted", "Permitted"
   };
+
+  uint64_t Value = ParseInteger(Data, Offset);
+  StringRef ValueDesc =
+    (Value < array_lengthof(Strings)) ? Strings[Value] : nullptr;
+  PrintAttribute(Tag, Value, ValueDesc);
+}
+
+void ARMAttributeParser::DSP_extension(AttrType Tag, const uint8_t *Data,
+                                       uint32_t &Offset) {
+  static const char *const Strings[] = { "Not Permitted", "Permitted" };
 
   uint64_t Value = ParseInteger(Data, Offset);
   StringRef ValueDesc =

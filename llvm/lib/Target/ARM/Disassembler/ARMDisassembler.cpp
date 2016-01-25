@@ -4119,6 +4119,24 @@ static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val,
         // Values basepri, basepri_max and faultmask are only valid for v7m.
         return MCDisassembler::Fail;
       break;
+    case 0x8a: // msplim_ns
+    case 0x8b: // psplim_ns
+    case 0x91: // basepri_ns
+    case 0x92: // basepri_max_ns
+    case 0x93: // faultmask_ns
+      if (!(FeatureBits[ARM::HasV8MMainlineOps]))
+        return MCDisassembler::Fail;
+      // fall through
+    case 10:   // msplim
+    case 11:   // psplim
+    case 0x88: // msp_ns
+    case 0x89: // psp_ns
+    case 0x90: // primask_ns
+    case 0x94: // control_ns
+    case 0x98: // sp_ns
+      if (!(FeatureBits[ARM::Feature8MSecExt]))
+        return MCDisassembler::Fail;
+      break;
     default:
       return MCDisassembler::Fail;
     }

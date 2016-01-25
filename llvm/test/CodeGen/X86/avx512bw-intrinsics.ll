@@ -3444,3 +3444,75 @@ define <64 x i8>@test_int_x86_avx512_mask_movu_b_512(<64 x i8> %x0, <64 x i8> %x
 	%res2 = add <64 x i8> %res, %res1
 	ret <64 x i8> %res2
 }
+
+declare i64 @llvm.x86.avx512.ptestm.b.512(<64 x i8>, <64 x i8>, i64)
+
+define i64@test_int_x86_avx512_ptestm_b_512(<64 x i8> %x0, <64 x i8> %x1, i64 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_ptestm_b_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovq %rdi, %k1 ## encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; CHECK-NEXT:    vptestmb %zmm1, %zmm0, %k0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x26,0xc1]
+; CHECK-NEXT:    kmovq %k0, %rcx ## encoding: [0xc4,0xe1,0xfb,0x93,0xc8]
+; CHECK-NEXT:    vptestmb %zmm1, %zmm0, %k0 ## encoding: [0x62,0xf2,0x7d,0x48,0x26,0xc1]
+; CHECK-NEXT:    kmovq %k0, %rax ## encoding: [0xc4,0xe1,0xfb,0x93,0xc0]
+; CHECK-NEXT:    addq %rcx, %rax ## encoding: [0x48,0x01,0xc8]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i64 @llvm.x86.avx512.ptestm.b.512(<64 x i8> %x0, <64 x i8> %x1, i64 %x2)
+  %res1 = call i64 @llvm.x86.avx512.ptestm.b.512(<64 x i8> %x0, <64 x i8> %x1, i64-1)
+  %res2 = add i64 %res, %res1
+  ret i64 %res2
+}
+
+declare i32 @llvm.x86.avx512.ptestm.w.512(<32 x i16>, <32 x i16>, i32)
+
+define i32@test_int_x86_avx512_ptestm_w_512(<32 x i16> %x0, <32 x i16> %x1, i32 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_ptestm_w_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
+; CHECK-NEXT:    vptestmw %zmm1, %zmm0, %k0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x26,0xc1]
+; CHECK-NEXT:    kmovd %k0, %ecx ## encoding: [0xc5,0xfb,0x93,0xc8]
+; CHECK-NEXT:    vptestmw %zmm1, %zmm0, %k0 ## encoding: [0x62,0xf2,0xfd,0x48,0x26,0xc1]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    addl %ecx, %eax ## encoding: [0x01,0xc8]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i32 @llvm.x86.avx512.ptestm.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 %x2)
+  %res1 = call i32 @llvm.x86.avx512.ptestm.w.512(<32 x i16> %x0, <32 x i16> %x1, i32-1)
+  %res2 = add i32 %res, %res1
+  ret i32 %res2
+}
+
+declare i64 @llvm.x86.avx512.ptestnm.b.512(<64 x i8>, <64 x i8>, i64 %x2)
+
+define i64@test_int_x86_avx512_ptestnm_b_512(<64 x i8> %x0, <64 x i8> %x1, i64 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_ptestnm_b_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovq %rdi, %k1 
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm0, %k0 {%k1} 
+; CHECK-NEXT:    kmovq %k0, %rcx 
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm0, %k0 
+; CHECK-NEXT:    kmovq %k0, %rax 
+; CHECK-NEXT:    addq %rcx, %rax 
+; CHECK-NEXT:    retq 
+  %res = call i64 @llvm.x86.avx512.ptestnm.b.512(<64 x i8> %x0, <64 x i8> %x1, i64 %x2)
+  %res1 = call i64 @llvm.x86.avx512.ptestnm.b.512(<64 x i8> %x0, <64 x i8> %x1, i64-1)
+  %res2 = add i64 %res, %res1
+  ret i64 %res2
+}
+
+declare i32 @llvm.x86.avx512.ptestnm.w.512(<32 x i16>, <32 x i16>, i32 %x2)
+
+define i32@test_int_x86_avx512_ptestnm_w_512(<32 x i16> %x0, <32 x i16> %x1, i32 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_ptestnm_w_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k1 
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm0, %k0 {%k1} 
+; CHECK-NEXT:    kmovd %k0, %ecx 
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm0, %k0 
+; CHECK-NEXT:    kmovd %k0, %eax 
+; CHECK-NEXT:    addl %ecx, %eax 
+; CHECK-NEXT:    retq 
+  %res = call i32 @llvm.x86.avx512.ptestnm.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 %x2)
+  %res1 = call i32 @llvm.x86.avx512.ptestnm.w.512(<32 x i16> %x0, <32 x i16> %x1, i32-1)
+  %res2 = add i32 %res, %res1
+  ret i32 %res2
+}

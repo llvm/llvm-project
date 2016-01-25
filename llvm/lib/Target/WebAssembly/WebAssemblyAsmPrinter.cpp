@@ -119,8 +119,7 @@ std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
   return '$' + utostr(WAReg);
 }
 
-WebAssemblyTargetStreamer *
-WebAssemblyAsmPrinter::getTargetStreamer() {
+WebAssemblyTargetStreamer *WebAssemblyAsmPrinter::getTargetStreamer() {
   MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
   return static_cast<WebAssemblyTargetStreamer *>(TS);
 }

@@ -4698,6 +4698,55 @@ defm VFNMADD : avx512_fma3s<0xAD, 0xBD, 0x9D, "vfnmadd", X86Fnmadd, X86FnmaddRnd
 defm VFNMSUB : avx512_fma3s<0xAF, 0xBF, 0x9F, "vfnmsub", X86Fnmsub, X86FnmsubRnd>;
 
 //===----------------------------------------------------------------------===//
+// AVX-512  Packed Multiply of Unsigned 52-bit Integers and Add the Low 52-bit IFMA
+//===----------------------------------------------------------------------===//
+let Constraints = "$src1 = $dst" in {
+multiclass avx512_pmadd52_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                                                            X86VectorVTInfo _> {
+  defm r: AVX512_maskable_3src<opc, MRMSrcReg, _, (outs _.RC:$dst),
+          (ins _.RC:$src2, _.RC:$src3),
+          OpcodeStr, "$src3, $src2", "$src2, $src3",
+          (_.VT (OpNode _.RC:$src1, _.RC:$src2, _.RC:$src3))>,
+         AVX512FMA3Base;
+
+  let mayLoad = 1 in {
+    defm m: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
+            (ins _.RC:$src2, _.MemOp:$src3),
+            OpcodeStr, "$src3, $src2", "$src2, $src3",
+            (_.VT (OpNode _.RC:$src1, _.RC:$src2, (_.LdFrag addr:$src3)))>,
+            AVX512FMA3Base;
+
+    defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
+              (ins _.RC:$src2, _.ScalarMemOp:$src3),
+              OpcodeStr,   !strconcat("${src3}", _.BroadcastStr,", $src2"),
+              !strconcat("$src2, ${src3}", _.BroadcastStr ),
+              (OpNode _.RC:$src1,
+               _.RC:$src2,(_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3))))>,
+              AVX512FMA3Base, EVEX_B;
+  }
+}
+} // Constraints = "$src1 = $dst"
+
+multiclass avx512_pmadd52_common<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                                     AVX512VLVectorVTInfo _> {
+  let Predicates = [HasIFMA] in {
+    defm Z      : avx512_pmadd52_rm<opc, OpcodeStr, OpNode, _.info512>,
+                      EVEX_V512, EVEX_CD8<_.info512.EltSize, CD8VF>;
+  }
+  let Predicates = [HasVLX, HasIFMA] in {
+    defm Z256 : avx512_pmadd52_rm<opc, OpcodeStr, OpNode, _.info256>,
+                      EVEX_V256, EVEX_CD8<_.info256.EltSize, CD8VF>;
+    defm Z128 : avx512_pmadd52_rm<opc, OpcodeStr, OpNode, _.info128>,
+                      EVEX_V128, EVEX_CD8<_.info128.EltSize, CD8VF>;
+  }
+}
+
+defm VPMADD52LUQ : avx512_pmadd52_common<0xb4, "vpmadd52luq", x86vpmadd52l,
+                                  avx512vl_i64_info>, VEX_W;
+defm VPMADD52HUQ : avx512_pmadd52_common<0xb5, "vpmadd52huq", x86vpmadd52h,
+                                  avx512vl_i64_info>, VEX_W;
+
+//===----------------------------------------------------------------------===//
 // AVX-512  Scalar convert from sign integer to float/double
 //===----------------------------------------------------------------------===//
 
