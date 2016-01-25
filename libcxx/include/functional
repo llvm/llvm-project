@@ -407,7 +407,7 @@ public:
     // function modifiers:
     void swap(function&) noexcept;
     template<class F, class Alloc>
-      void assign(F&&, const Alloc&);
+      void assign(F&&, const Alloc&);                 // Removed in C++17
 
     // function capacity:
     explicit operator bool() const noexcept;
@@ -1626,10 +1626,13 @@ public:
 
     // function modifiers:
     void swap(function&) _NOEXCEPT;
+
+#if _LIBCPP_STD_VER <= 14
     template<class _Fp, class _Alloc>
       _LIBCPP_INLINE_VISIBILITY
       void assign(_Fp&& __f, const _Alloc& __a)
         {function(allocator_arg, __a, _VSTD::forward<_Fp>(__f)).swap(*this);}
+#endif
 
     // function capacity:
     _LIBCPP_INLINE_VISIBILITY

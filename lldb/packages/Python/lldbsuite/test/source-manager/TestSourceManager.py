@@ -80,12 +80,12 @@ class SourceManagerTestCase(TestBase):
         main_c_hidden = os.path.join("hidden", main_c)
         os.rename(main_c, main_c_hidden)
 
+        # Restore main.c after the test.
+        self.addTearDownHook(lambda: os.rename(main_c_hidden, main_c))
+
         if self.TraceOn():
             system([["ls"]])
             system([["ls", "hidden"]])
-
-        # Restore main.c after the test.
-        self.addTearDownHook(lambda: os.rename(main_c_hidden, main_c))
 
         # Set target.source-map settings.
         self.runCmd("settings set target.source-map %s %s" % (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
@@ -133,7 +133,7 @@ class SourceManagerTestCase(TestBase):
         self.assertTrue(int(m.group(1)) > 0)
 
         # Read the main.c file content.
-        with open('main.c', 'r') as f:
+        with io.open('main.c', 'r', newline='\n') as f:
             original_content = f.read()
             if self.TraceOn():
                 print("original content:", original_content)
@@ -145,7 +145,7 @@ class SourceManagerTestCase(TestBase):
         def restore_file():
             #print("os.path.getmtime() before restore:", os.path.getmtime('main.c'))
             time.sleep(1)
-            with open('main.c', 'wb') as f:
+            with io.open('main.c', 'w', newline='\n') as f:
                 f.write(original_content)
             if self.TraceOn():
                 with open('main.c', 'r') as f:
@@ -156,9 +156,8 @@ class SourceManagerTestCase(TestBase):
                 print("os.path.getmtime() after restore:", os.path.getmtime('main.c'))
 
 
-
         # Modify the source code file.
-        with open('main.c', 'wb') as f:
+        with io.open('main.c', 'w', newline='\n') as f:
             time.sleep(1)
             f.write(new_content)
             if self.TraceOn():
