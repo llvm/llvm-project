@@ -13,9 +13,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssemblyInstrInfo.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblySubtarget.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyInstrInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 

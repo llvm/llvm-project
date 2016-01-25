@@ -807,6 +807,9 @@ void ARMAsmPrinter::emitAttributes() {
   if (STI.hasDivideInARMMode() && !STI.hasV8Ops())
     ATS.emitAttribute(ARMBuildAttrs::DIV_use, ARMBuildAttrs::AllowDIVExt);
 
+  if (STI.hasDSP() && isV8M(&STI))
+    ATS.emitAttribute(ARMBuildAttrs::DSP_extension, ARMBuildAttrs::Allowed);
+
   if (MMI) {
     if (const Module *SourceModule = MMI->getModule()) {
       // ABI_PCS_wchar_t to indicate wchar_t width

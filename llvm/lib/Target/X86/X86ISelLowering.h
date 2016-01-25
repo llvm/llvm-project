@@ -441,6 +441,7 @@ namespace llvm {
       MULHRS,
       // Multiply and Add Packed Integers
       VPMADDUBSW, VPMADDWD,
+      VPMADD52L, VPMADD52H,
       // FMA nodes
       FMADD,
       FNMADD,

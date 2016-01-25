@@ -471,6 +471,9 @@ def X86FnmsubRnd    : SDNode<"X86ISD::FNMSUB_RND",    SDTFmaRound>;
 def X86FmaddsubRnd  : SDNode<"X86ISD::FMADDSUB_RND",  SDTFmaRound>;
 def X86FmsubaddRnd  : SDNode<"X86ISD::FMSUBADD_RND",  SDTFmaRound>;
 
+def x86vpmadd52l     : SDNode<"X86ISD::VPMADD52L",     SDTFma>;
+def x86vpmadd52h     : SDNode<"X86ISD::VPMADD52H",     SDTFma>;
+
 def X86rsqrt28   : SDNode<"X86ISD::RSQRT28",  STDFp1SrcRm>;
 def X86rcp28     : SDNode<"X86ISD::RCP28",    STDFp1SrcRm>;
 def X86exp2      : SDNode<"X86ISD::EXP2",     STDFp1SrcRm>;

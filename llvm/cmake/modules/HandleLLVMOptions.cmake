@@ -371,6 +371,23 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
+  # /Zc:strictStrings is incompatible with VS12's (Visual Studio 2013's)
+  # debug mode headers. Instead of only enabling them in VS2013's debug mode,
+  # we'll just enable them for Visual Studio 2015 (VS 14, MSVC_VERSION 1900)
+  # and up.
+  if (NOT (MSVC_VERSION LESS 1900))
+    # Disable string literal const->non-const type conversion.
+    # "When specified, the compiler requires strict const-qualification
+    # conformance for pointers initialized by using string literals."
+    append("/Zc:strictStrings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif(NOT (MSVC_VERSION LESS 1900))
+
+  # "Generate Intrinsic Functions".
+  append("/Oi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+  # "Enforce type conversion rules".
+  append("/Zc:rvalueCast" CMAKE_CXX_FLAGS)
+
   if (NOT LLVM_ENABLE_TIMESTAMPS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # clang-cl and cl by default produce non-deterministic binaries because
     # link.exe /incremental requires a timestamp in the .obj file.  clang-cl

@@ -92,6 +92,9 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
   unsigned CurReg = MFI.getParams().size();
   for (unsigned VRegIdx = 0; VRegIdx < NumVRegs; ++VRegIdx) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(VRegIdx);
+    // Skip unused registers.
+    if (MRI.use_empty(VReg))
+      continue;
     // Handle stackified registers.
     if (MFI.isVRegStackified(VReg)) {
       DEBUG(dbgs() << "VReg " << VReg << " -> WAReg "
@@ -99,9 +102,6 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
       MFI.setWAReg(VReg, INT32_MIN | NumStackRegs++);
       continue;
     }
-    // Skip unused registers.
-    if (MRI.use_empty(VReg))
-      continue;
     if (MFI.getWAReg(VReg) == WebAssemblyFunctionInfo::UnusedReg) {
       DEBUG(dbgs() << "VReg " << VReg << " -> WAReg " << CurReg << "\n");
       MFI.setWAReg(VReg, CurReg++);
