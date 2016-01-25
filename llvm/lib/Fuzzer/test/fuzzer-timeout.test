@@ -11,4 +11,4 @@ RUN: not LLVMFuzzer-TimeoutTest -timeout=1 -test_single_input=%S/hi.txt 2>&1 | F
 SingleInputTimeoutTest: ALARM: working on the last Unit for
 SingleInputTimeoutTest-NOT: Test unit written to ./timeout-
 
-RUN: not --crash LLVMFuzzer-TimeoutTest -timeout=1 -abort_on_timeout=1
+DISABLE: not --crash LLVMFuzzer-TimeoutTest -timeout=1 -abort_on_timeout=1

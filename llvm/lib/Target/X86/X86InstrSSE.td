@@ -8158,6 +8158,7 @@ def : Pat<(v2i64 (X86VPermilpi (loadv2i64 addr:$src1), (i8 imm:$imm))),
 // VPERM2F128 - Permute Floating-Point Values in 128-bit chunks
 //
 let ExeDomain = SSEPackedSingle in {
+let isCommutable = 1 in
 def VPERM2F128rr : AVXAIi8<0x06, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR256:$src2, u8imm:$src3),
           "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
@@ -8531,6 +8532,7 @@ defm VPERMPD : avx2_perm_imm<0x01, "vpermpd", loadv4f64, v4f64,
 //===----------------------------------------------------------------------===//
 // VPERM2I128 - Permute Floating-Point Values in 128-bit chunks
 //
+let isCommutable = 1 in
 def VPERM2I128rr : AVX2AIi8<0x46, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR256:$src2, u8imm:$src3),
           "vperm2i128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",

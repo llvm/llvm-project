@@ -184,4 +184,25 @@ TEST(EndianStream, WriteVectorLE) {
   EXPECT_EQ(static_cast<uint8_t>(Data[3]), 0x56);
 }
 
+TEST(EndianStream, WriteFloatArrayLE) {
+  SmallString<16> Data;
+
+  {
+    raw_svector_ostream OS(Data);
+    endian::Writer<little> LE(OS);
+    LE.write<float>({12345.0f, 12346.0f});
+  }
+
+  EXPECT_EQ(static_cast<uint8_t>(Data[0]), 0x00);
+  EXPECT_EQ(static_cast<uint8_t>(Data[1]), 0xE4);
+  EXPECT_EQ(static_cast<uint8_t>(Data[2]), 0x40);
+  EXPECT_EQ(static_cast<uint8_t>(Data[3]), 0x46);
+
+  EXPECT_EQ(static_cast<uint8_t>(Data[4]), 0x00);
+  EXPECT_EQ(static_cast<uint8_t>(Data[5]), 0xE8);
+  EXPECT_EQ(static_cast<uint8_t>(Data[6]), 0x40);
+  EXPECT_EQ(static_cast<uint8_t>(Data[7]), 0x46);
+}
+
+
 } // end anon namespace

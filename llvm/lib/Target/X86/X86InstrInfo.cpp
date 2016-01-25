@@ -3275,6 +3275,20 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr *MI,
     MI->getOperand(3).setImm(Imm);
     return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
   }
+  case X86::VPERM2F128rr:
+  case X86::VPERM2I128rr: {
+    // Flip permute source immediate.
+    // Imm & 0x02: lo = if set, select Op1.lo/hi else Op0.lo/hi.
+    // Imm & 0x20: hi = if set, select Op1.lo/hi else Op0.lo/hi.
+    unsigned Imm = MI->getOperand(3).getImm() & 0xFF;
+    if (NewMI) {
+      MachineFunction &MF = *MI->getParent()->getParent();
+      MI = MF.CloneMachineInstr(MI);
+      NewMI = false;
+    }
+    MI->getOperand(3).setImm(Imm ^ 0x22);
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+  }
   case X86::CMOVB16rr:  case X86::CMOVB32rr:  case X86::CMOVB64rr:
   case X86::CMOVAE16rr: case X86::CMOVAE32rr: case X86::CMOVAE64rr:
   case X86::CMOVE16rr:  case X86::CMOVE32rr:  case X86::CMOVE64rr:

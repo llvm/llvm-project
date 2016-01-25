@@ -22050,7 +22050,8 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr *MI,
   if (LastCMOV == MI &&
       NextMIIt != BB->end() && NextMIIt->getOpcode() == MI->getOpcode() &&
       NextMIIt->getOperand(2).getReg() == MI->getOperand(2).getReg() &&
-      NextMIIt->getOperand(1).getReg() == MI->getOperand(0).getReg()) {
+      NextMIIt->getOperand(1).getReg() == MI->getOperand(0).getReg() &&
+      NextMIIt->getOperand(1).isKill()) {
     CascadedCMOV = &*NextMIIt;
   }
 
