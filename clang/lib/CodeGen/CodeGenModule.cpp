@@ -391,6 +391,8 @@ void CodeGenModule::Release() {
   EmitDeferredUnusedCoverageMappings();
   if (CoverageMapping)
     CoverageMapping->emit();
+  if (CodeGenOpts.SanitizeCfiCrossDso)
+    CodeGenFunction(*this).EmitCfiCheckFail();
   emitLLVMUsed();
   if (SanStats)
     SanStats->finish();
@@ -3838,6 +3840,10 @@ static void EmitGlobalDeclMetadata(CodeGenModule &CGM,
 /// to such functions with an unmangled name from inline assembly within the
 /// same translation unit.
 void CodeGenModule::EmitStaticExternCAliases() {
+  // Don't do anything if we're generating CUDA device code -- the NVPTX
+  // assembly target doesn't support aliases.
+  if (Context.getTargetInfo().getTriple().isNVPTX())
+    return;
   for (auto &I : StaticExternCValues) {
     IdentifierInfo *Name = I.first;
     llvm::GlobalValue *Val = I.second;
