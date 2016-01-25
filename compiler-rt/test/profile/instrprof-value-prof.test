@@ -1,0 +1,4 @@
+// RUN: %clang_profgen -O2 -fprofile-instr-generate -mllvm -enable-value-profiling=true -o %t %S/Inputs/instrprof-value-prof-real.c
+// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
+// RUN: llvm-profdata merge -o %t.profdata %t.profraw
+// RUN: llvm-profdata show --all-functions -ic-targets  %t.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c
