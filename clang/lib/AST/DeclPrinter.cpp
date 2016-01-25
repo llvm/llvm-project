@@ -751,7 +751,10 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
       else if (D->getInitStyle() == VarDecl::CInit) {
         Out << " = ";
       }
-      Init->printPretty(Out, nullptr, Policy, Indentation);
+      PrintingPolicy SubPolicy(Policy);
+      SubPolicy.SuppressSpecifiers = false;
+      SubPolicy.SuppressTag = false;
+      Init->printPretty(Out, nullptr, SubPolicy, Indentation);
       if ((D->getInitStyle() == VarDecl::CallInit) && !isa<ParenListExpr>(Init))
         Out << ")";
     }
