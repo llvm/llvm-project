@@ -621,7 +621,7 @@ SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess (swift::Expr *expr,
     }
     swift::IntegerLiteralExpr *one_expr = new (ast_context) swift::IntegerLiteralExpr (swift::StringRef("1"), source_loc, true);
     false_body.push_back(one_expr);
-    swift::UnresolvedDeclRefExpr *equalequal_expr = new (ast_context) swift::UnresolvedDeclRefExpr (equalequal_name, swift::DeclRefKind::BinaryOperator, source_loc);
+    swift::UnresolvedDeclRefExpr *equalequal_expr = new (ast_context) swift::UnresolvedDeclRefExpr (equalequal_name, swift::DeclRefKind::BinaryOperator, swift::DeclNameLoc(source_loc));
     false_body.push_back(equalequal_expr);
     swift::IntegerLiteralExpr *zero_expr = new (ast_context) swift::IntegerLiteralExpr (swift::StringRef("0"), source_loc, true);
     false_body.push_back(zero_expr);
@@ -829,7 +829,7 @@ namespace {
             const swift::AccessSemantics uses_direct_property_access = swift::AccessSemantics::Ordinary;
             
             swift::DeclRefExpr *decl_ref = new (m_ast_context) swift::DeclRefExpr(var_decl,
-                                                                                  location,
+                                                                                  swift::DeclNameLoc(location),
                                                                                   implicit,
                                                                                   uses_direct_property_access,
                                                                                   target_lvalue_type);
@@ -1042,7 +1042,7 @@ SwiftASTManipulator::InsertResult (swift::VarDecl *result_var,
 
     // QUERY: Can I just make one of the LHS decl's and reuse it for all the assigns?
     const swift::AccessSemantics uses_direct_property_access = swift::AccessSemantics::Ordinary;
-    swift::DeclRefExpr *lhs_expr = new (ast_context) swift::DeclRefExpr (result_var, result_info.source_loc, true, uses_direct_property_access, lvalue_result);
+    swift::DeclRefExpr *lhs_expr = new (ast_context) swift::DeclRefExpr (result_var, swift::DeclNameLoc(result_info.source_loc), true, uses_direct_property_access, lvalue_result);
     
     swift::Expr *init_expr = getFirstInit(result_info.binding_decl);
     swift::AssignExpr *assign_expr = new (ast_context) swift::AssignExpr (lhs_expr, result_info.source_loc, init_expr, true);
@@ -1083,7 +1083,7 @@ SwiftASTManipulator::InsertError (swift::VarDecl *error_var,
     swift::SourceLoc error_loc = m_do_stmt->getBody()->getStartLoc();
 
     const swift::AccessSemantics uses_direct_property_access = swift::AccessSemantics::Ordinary;
-    swift::DeclRefExpr *lhs_expr = new (ast_context) swift::DeclRefExpr (error_var, error_loc, true, uses_direct_property_access, lvalue_result);
+    swift::DeclRefExpr *lhs_expr = new (ast_context) swift::DeclRefExpr (error_var, swift::DeclNameLoc(error_loc), true, uses_direct_property_access, lvalue_result);
 
     swift::BraceStmt *catch_body = llvm::dyn_cast<swift::BraceStmt>(m_catch_stmt->getBody());
     if (!catch_body)
