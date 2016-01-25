@@ -42,7 +42,7 @@ static uint16_t *mem_to_shadow(uptr x) {
   return (uint16_t *)(__cfi_shadow + ((x >> kShadowGranularity) << 1));
 }
 
-typedef int (*CFICheckFn)(u64, void *);
+typedef int (*CFICheckFn)(u64, void *, void *);
 
 class ShadowValue {
   uptr addr;
@@ -188,14 +188,20 @@ static void init_shadow() {
   dl_iterate_phdr(dl_iterate_phdr_cb, nullptr);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void __cfi_slowpath(u64 CallSiteTypeId, void *Ptr) {
+static ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
+                                            void *DiagData) {
   uptr Addr = (uptr)Ptr;
   VReport(3, "__cfi_slowpath: %llx, %p\n", CallSiteTypeId, Ptr);
   ShadowValue sv = ShadowValue::load(Addr);
   if (sv.is_invalid()) {
-    VReport(2, "CFI: invalid memory region for a function pointer (shadow==0): %p\n", Ptr);
-    Die();
+    // FIXME: call the ubsan handler if DiagData != nullptr?
+    Report(
+        "CFI: invalid memory region for a function pointer (shadow==0): %p\n",
+        Ptr);
+    if (DiagData)
+      return;
+    else
+      Die();
   }
   if (sv.is_unchecked()) {
     VReport(2, "CFI: unchecked call (shadow=FFFF): %p\n", Ptr);
@@ -203,7 +209,17 @@ void __cfi_slowpath(u64 CallSiteTypeId, void *Ptr) {
   }
   CFICheckFn cfi_check = sv.get_cfi_check();
   VReport(2, "__cfi_check at %p\n", cfi_check);
-  cfi_check(CallSiteTypeId, Ptr);
+  cfi_check(CallSiteTypeId, Ptr, DiagData);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__cfi_slowpath(u64 CallSiteTypeId, void *Ptr) {
+  CfiSlowPathCommon(CallSiteTypeId, Ptr, nullptr);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__cfi_slowpath_diag(u64 CallSiteTypeId, void *Ptr, void *DiagData) {
+  CfiSlowPathCommon(CallSiteTypeId, Ptr, DiagData);
 }
 
 static void InitializeFlags() {

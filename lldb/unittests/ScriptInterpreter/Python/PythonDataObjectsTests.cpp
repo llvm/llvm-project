@@ -224,6 +224,20 @@ TEST_F(PythonDataObjectsTest, TestPythonBytes)
     EXPECT_EQ(0, ::memcmp(bytes.data(), test_bytes, bytes.size()));
 }
 
+TEST_F(PythonDataObjectsTest, TestPythonByteArray)
+{
+    static const char *test_bytes = "PythonDataObjectsTest::TestPythonByteArray";
+    llvm::StringRef orig_bytes(test_bytes);
+    PyObject *py_bytes = PyByteArray_FromStringAndSize(test_bytes, orig_bytes.size());
+    EXPECT_TRUE(PythonByteArray::Check(py_bytes));
+    PythonByteArray python_bytes(PyRefType::Owned, py_bytes);
+    EXPECT_EQ(PyObjectType::ByteArray, python_bytes.GetObjectType());
+
+    llvm::ArrayRef<uint8_t> after_bytes = python_bytes.GetBytes();
+    EXPECT_EQ(after_bytes.size(), orig_bytes.size());
+    EXPECT_EQ(0, ::memcmp(orig_bytes.data(), test_bytes, orig_bytes.size()));
+}
+
 TEST_F(PythonDataObjectsTest, TestPythonString)
 {
     // Test that strings behave correctly when wrapped by a PythonString.

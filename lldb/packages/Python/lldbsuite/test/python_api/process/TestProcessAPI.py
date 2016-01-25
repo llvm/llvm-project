@@ -56,7 +56,7 @@ class ProcessAPITestCase(TestBase):
 
         self.expect(content, "Result from SBProcess.ReadMemory() matches our expected output: 'x'",
                     exe=False,
-            startstr = 'x')
+            startstr = b'x')
 
         # Read (char *)my_char_ptr.
         val = frame.FindValue("my_char_ptr", lldb.eValueTypeVariableGlobal)
@@ -154,7 +154,7 @@ class ProcessAPITestCase(TestBase):
 
         self.expect(content, "Result from SBProcess.ReadMemory() matches our expected output: 'a'",
                     exe=False,
-            startstr = 'a')
+            startstr = b'a')
 
     @add_test_categories(['pyapi'])
     def test_access_my_int(self):
@@ -206,9 +206,8 @@ class ProcessAPITestCase(TestBase):
         # But we want to use the WriteMemory() API to assign 256 to the variable.
 
         # Now use WriteMemory() API to write 256 into the global variable.
-        new_value = str(bytes)
         error = lldb.SBError()
-        result = process.WriteMemory(location, new_value, error)
+        result = process.WriteMemory(location, bytes, error)
         if not error.Success() or result != byteSize:
             self.fail("SBProcess.WriteMemory() failed")
 
@@ -230,14 +229,11 @@ class ProcessAPITestCase(TestBase):
         if not error.Success():
             self.fail("SBProcess.ReadMemory() failed")
 
-        # Use "ascii" as the encoding because each element of 'content' is in the range [0..255].
-        new_bytes = bytearray(content, "ascii")
-
         # The bytearray_to_int utility function expects a little endian bytearray.
         if byteOrder == lldb.eByteOrderBig:
             new_bytes.reverse()
 
-        new_value = bytearray_to_int(new_bytes, byteSize)
+        new_value = bytearray_to_int(content, byteSize)
         if new_value != 256:
             self.fail("Memory content read from 'my_int' does not match (int)256")
 
