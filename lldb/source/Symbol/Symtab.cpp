@@ -1074,7 +1074,7 @@ Symtab::FindSymbolContainingFileAddress (addr_t file_addr)
 }
 
 void
-Symtab::ForEachSymbolContainingFileAddresss (addr_t file_addr, std::function <bool(Symbol *)> const &callback)
+Symtab::ForEachSymbolContainingFileAddress(addr_t file_addr, std::function<bool(Symbol *)> const &callback)
 {
     Mutex::Locker locker (m_mutex);
 
@@ -1084,9 +1084,9 @@ Symtab::ForEachSymbolContainingFileAddresss (addr_t file_addr, std::function <bo
     std::vector<uint32_t> all_addr_indexes;
 
     // Get all symbols with file_addr
-    const size_t addr_match_count = m_file_addr_to_index.FindEntryIndexesThatContains(file_addr, all_addr_indexes);
+    const size_t addr_match_count = m_file_addr_to_index.FindEntryIndexesThatContain(file_addr, all_addr_indexes);
 
-    for (size_t i=0; i<addr_match_count; ++i)
+    for (size_t i = 0; i < addr_match_count; ++i)
     {
         if (!callback(SymbolAtIndex(all_addr_indexes[i])))
         break;

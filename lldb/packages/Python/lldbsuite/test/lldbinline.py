@@ -116,8 +116,8 @@ class InlineTest(TestBase):
         if ('CXX_SOURCES' in list(categories.keys())):
             makefile.write("CXXFLAGS += -std=c++11\n")
 
-        makefile.write("\ncleanup:\n\trm -f Makefile *.d\n\n")
         makefile.write("include $(LEVEL)/Makefile.rules\n")
+        makefile.write("\ncleanup:\n\trm -f Makefile *.d\n\n")
         makefile.flush()
         makefile.close()
 

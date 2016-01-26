@@ -289,6 +289,14 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     if (applyTlsDynamicReloc(Body, Type, P, reinterpret_cast<Elf_Rel *>(Buf)))
       continue;
 
+    // Writer::scanRelocs creates a RELATIVE reloc for some type of TLS reloc.
+    // We want to write it down as is.
+    if (Type == Target->getRelativeReloc()) {
+      P->setSymbolAndType(0, Type, Config->Mips64EL);
+      P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
+      continue;
+    }
+
     // Emit a copy relocation.
     auto *SS = dyn_cast_or_null<SharedSymbol<ELFT>>(Body);
     if (SS && SS->NeedsCopy) {
@@ -300,15 +308,26 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
 
     bool NeedsGot = Body && Target->relocNeedsGot(Type, *Body);
     bool CBP = canBePreempted(Body, NeedsGot);
+
+    // For a symbol with STT_GNU_IFUNC type, we always create a PLT and
+    // a GOT entry for the symbol, and emit an IRELATIVE reloc rather than
+    // the usual JUMP_SLOT reloc for the GOT entry. For the details, you
+    // want to read http://www.airs.com/blog/archives/403
+    if (!CBP && Body && isGnuIFunc<ELFT>(*Body)) {
+      P->setSymbolAndType(0, Target->getIRelativeReloc(), Config->Mips64EL);
+      if (Out<ELFT>::GotPlt)
+        P->r_offset = Out<ELFT>::GotPlt->getEntryAddr(*Body);
+      else
+        P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
+      continue;
+    }
+
     bool LazyReloc = Body && Target->supportsLazyRelocations() &&
                      Target->relocNeedsPlt(Type, *Body);
-    bool IsDynRelative = Type == Target->getRelativeReloc();
 
     unsigned Sym = CBP ? Body->DynamicSymbolTableIndex : 0;
     unsigned Reloc;
-    if (!CBP && Body && isGnuIFunc<ELFT>(*Body))
-      Reloc = Target->getIRelativeReloc();
-    else if (!CBP || IsDynRelative)
+    if (!CBP)
       Reloc = Target->getRelativeReloc();
     else if (LazyReloc)
       Reloc = Target->getPltReloc();
@@ -330,7 +349,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       OrigAddend = static_cast<const Elf_Rela &>(RI).r_addend;
 
     uintX_t Addend;
-    if (CBP || IsDynRelative)
+    if (CBP)
       Addend = OrigAddend;
     else if (Body)
       Addend = getSymVA<ELFT>(*Body) + OrigAddend;

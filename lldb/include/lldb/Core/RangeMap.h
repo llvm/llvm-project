@@ -1218,7 +1218,7 @@ namespace lldb_private {
         }
 
         uint32_t
-        FindEntryIndexesThatContains (B addr, std::vector<uint32_t> &indexes) const
+        FindEntryIndexesThatContain(B addr, std::vector<uint32_t> &indexes) const
         {
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
             assert (IsSorted());
@@ -1227,10 +1227,10 @@ namespace lldb_private {
             if (!m_entries.empty())
             {
                 typename Collection::const_iterator pos;
-                for(pos = m_entries.begin(); pos != m_entries.end(); pos++)
+                for (const auto &entry : m_entries)
                 {
-                    if (pos->Contains(addr))
-                        indexes.push_back (pos->data);
+                    if (entry.Contains(addr))
+                        indexes.push_back(entry.data);
                 }
             }
             return indexes.size() ;
