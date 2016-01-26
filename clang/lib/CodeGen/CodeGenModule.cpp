@@ -489,6 +489,11 @@ void CodeGenModule::UpdateCompletedType(const TagDecl *TD) {
   Types.UpdateCompletedType(TD);
 }
 
+void CodeGenModule::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
+  // Make sure that this type is translated.
+  Types.RefreshTypeCacheForClass(RD);
+}
+
 llvm::MDNode *CodeGenModule::getTBAAInfo(QualType QTy) {
   if (!TBAA)
     return nullptr;

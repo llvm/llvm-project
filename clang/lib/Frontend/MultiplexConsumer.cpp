@@ -337,6 +337,11 @@ void MultiplexConsumer::CompleteTentativeDefinition(VarDecl *D) {
     Consumer->CompleteTentativeDefinition(D);
 }
 
+void MultiplexConsumer::AssignInheritanceModel(CXXRecordDecl *RD) {
+  for (auto &Consumer : Consumers)
+    Consumer->AssignInheritanceModel(RD);
+}
+
 void MultiplexConsumer::HandleVTable(CXXRecordDecl *RD) {
   for (auto &Consumer : Consumers)
     Consumer->HandleVTable(RD);

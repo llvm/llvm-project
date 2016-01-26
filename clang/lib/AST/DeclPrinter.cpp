@@ -1301,6 +1301,11 @@ void DeclPrinter::VisitObjCPropertyDecl(ObjCPropertyDecl *PDecl) {
       }
     }
 
+    if (PDecl->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_class) {
+      Out << (first ? ' ' : ',') << "class";
+      first = false;
+    }
+
     (void) first; // Silence dead store warning due to idiomatic code.
     Out << " )";
   }

@@ -102,6 +102,23 @@ enum OpenMPDistScheduleClauseKind {
   OMPC_DIST_SCHEDULE_unknown
 };
 
+/// \brief OpenMP attributes for 'defaultmap' clause.
+enum OpenMPDefaultmapClauseKind {
+#define OPENMP_DEFAULTMAP_KIND(Name) \
+  OMPC_DEFAULTMAP_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEFAULTMAP_unknown
+};
+
+/// \brief OpenMP modifiers for 'defaultmap' clause.
+enum OpenMPDefaultmapClauseModifier {
+  OMPC_DEFAULTMAP_MODIFIER_unknown = OMPC_DEFAULTMAP_unknown,
+#define OPENMP_DEFAULTMAP_MODIFIER(Name) \
+  OMPC_DEFAULTMAP_MODIFIER_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEFAULTMAP_MODIFIER_last
+};
+
 OpenMPDirectiveKind getOpenMPDirectiveKind(llvm::StringRef Str);
 const char *getOpenMPDirectiveName(OpenMPDirectiveKind Kind);
 

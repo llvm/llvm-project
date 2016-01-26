@@ -29,6 +29,8 @@ T tmain(T argc, T *argv) {
   foo();
 #pragma omp target depend(in : argc, argv[i:argc], a[:])
   foo();
+#pragma omp target defaultmap(tofrom: scalar)
+  foo();
   return 0;
 }
 
@@ -52,6 +54,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target depend(in : argc,argv[i:argc],a[:])
 // CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target defaultmap(tofrom: scalar)
+// CHECK-NEXT: foo()
 // CHECK: template <typename T = char, int C = 1> char tmain(char argc, char *argv) {
 // CHECK-NEXT: char i, j, a[20]
 // CHECK-NEXT: #pragma omp target
@@ -72,6 +76,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target depend(in : argc,argv[i:argc],a[:])
 // CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target defaultmap(tofrom: scalar)
+// CHECK-NEXT: foo()
 // CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
 // CHECK-NEXT: T i, j, a[20]
 // CHECK-NEXT: #pragma omp target
@@ -91,6 +97,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp target nowait
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target depend(in : argc,argv[i:argc],a[:])
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target defaultmap(tofrom: scalar)
 // CHECK-NEXT: foo()
 
 // CHECK-LABEL: int main(int argc, char **argv) {
@@ -138,6 +146,11 @@ int main (int argc, char **argv) {
 
 #pragma omp target depend(in : argc, argv[i:argc], a[:])
 // CHECK-NEXT: #pragma omp target depend(in : argc,argv[i:argc],a[:])
+  foo();
+// CHECK-NEXT: foo();
+
+#pragma omp target defaultmap(tofrom: scalar)
+// CHECK-NEXT: #pragma omp target defaultmap(tofrom: scalar)
   foo();
 // CHECK-NEXT: foo();
 

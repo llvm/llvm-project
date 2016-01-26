@@ -75,8 +75,8 @@ bool clang::ento::containsBuiltinOffsetOf(const Stmt *S) {
 // Extract lhs and rhs from assignment statement
 std::pair<const clang::VarDecl *, const clang::Expr *>
 clang::ento::parseAssignment(const Stmt *S) {
-  const VarDecl *VD = 0;
-  const Expr *RHS = 0;
+  const VarDecl *VD = nullptr;
+  const Expr *RHS = nullptr;
 
   if (auto Assign = dyn_cast_or_null<BinaryOperator>(S)) {
     if (Assign->isAssignmentOp()) {

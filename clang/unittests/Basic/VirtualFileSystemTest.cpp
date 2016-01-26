@@ -29,7 +29,7 @@ struct DummyFile : public vfs::File {
             bool IsVolatile) override {
     llvm_unreachable("unimplemented");
   }
-  virtual std::error_code close() override { return std::error_code(); }
+  std::error_code close() override { return std::error_code(); }
 };
 
 class DummyFileSystem : public vfs::FileSystem {
@@ -347,7 +347,6 @@ TEST(VirtualFileSystemTest, BasicRealFSRecursiveIteration) {
   I = vfs::recursive_directory_iterator(*FS, Twine(TestDirectory), EC);
   ASSERT_FALSE(EC);
   ASSERT_NE(vfs::recursive_directory_iterator(), I);
-
 
   std::vector<std::string> Contents;
   for (auto E = vfs::recursive_directory_iterator(); !EC && I != E;

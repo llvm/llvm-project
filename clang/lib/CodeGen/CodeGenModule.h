@@ -994,6 +994,8 @@ public:
 
   void EmitVTable(CXXRecordDecl *Class);
 
+  void RefreshTypeCacheForClass(const CXXRecordDecl *Class);
+
   /// \brief Appends Opts to the "Linker Options" metadata value.
   void AppendLinkerOptions(StringRef Opts);
 

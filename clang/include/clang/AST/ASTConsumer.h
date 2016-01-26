@@ -121,6 +121,10 @@ public:
   /// modified by the introduction of an implicit zero initializer.
   virtual void CompleteTentativeDefinition(VarDecl *D) {}
 
+  /// \brief Callback invoked when an MSInheritanceAttr has been attached to a
+  /// CXXRecordDecl.
+  virtual void AssignInheritanceModel(CXXRecordDecl *RD) {}
+
   /// HandleCXXStaticMemberVarInstantiation - Tell the consumer that this
   // variable has been instantiated.
   virtual void HandleCXXStaticMemberVarInstantiation(VarDecl *D) {}

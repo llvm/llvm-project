@@ -1,4 +1,4 @@
-//===--- Marshallers.h - Generic matcher function marshallers -*- C++ -*-===//
+//===--- Marshallers.h - Generic matcher function marshallers ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -31,7 +31,6 @@ namespace clang {
 namespace ast_matchers {
 namespace dynamic {
 namespace internal {
-
 
 /// \brief Helper template class to just from argument type to the right is/get
 ///   functions in VariantValue.
@@ -234,7 +233,7 @@ static VariantMatcher outvalueToVariantMatcher(const DynTypedMatcher &Matcher) {
 template <typename T>
 static VariantMatcher outvalueToVariantMatcher(const T &PolyMatcher,
                                                typename T::ReturnTypes * =
-                                                   NULL) {
+                                                   nullptr) {
   std::vector<DynTypedMatcher> Matchers;
   mergePolyMatchers(PolyMatcher, Matchers, typename T::ReturnTypes());
   VariantMatcher Out = VariantMatcher::PolymorphicMatcher(std::move(Matchers));
@@ -409,7 +408,6 @@ private:
         << Args[index].Value.getTypeAsString();                                \
     return VariantMatcher();                                                   \
   }
-
 
 /// \brief 0-arg marshaller function.
 template <typename ReturnType>
@@ -708,9 +706,9 @@ makeMatcherAutoMarshall(ast_matchers::internal::VariadicOperatorMatcherFunc<
                                                MatcherName);
 }
 
-}  // namespace internal
-}  // namespace dynamic
-}  // namespace ast_matchers
-}  // namespace clang
+} // namespace internal
+} // namespace dynamic
+} // namespace ast_matchers
+} // namespace clang
 
-#endif  // LLVM_CLANG_AST_MATCHERS_DYNAMIC_MARSHALLERS_H
+#endif // LLVM_CLANG_AST_MATCHERS_DYNAMIC_MARSHALLERS_H

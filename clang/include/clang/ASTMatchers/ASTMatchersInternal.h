@@ -420,7 +420,7 @@ public:
   template <typename From>
   Matcher(const Matcher<From> &Other,
           typename std::enable_if<std::is_base_of<From, T>::value &&
-                                  !std::is_same<From, T>::value>::type * = 0)
+                               !std::is_same<From, T>::value>::type * = nullptr)
       : Implementation(restrictMatcher(Other.Implementation)) {
     assert(Implementation.getSupportedKind().isSame(
         ast_type_traits::ASTNodeKind::getFromNodeKind<T>()));
@@ -433,7 +433,7 @@ public:
   Matcher(const Matcher<TypeT> &Other,
           typename std::enable_if<
             std::is_same<T, QualType>::value &&
-            std::is_same<TypeT, Type>::value>::type* = 0)
+            std::is_same<TypeT, Type>::value>::type* = nullptr)
       : Implementation(new TypeToQualType<TypeT>(Other)) {}
 
   /// \brief Convert \c this into a \c Matcher<T> by applying dyn_cast<> to the
@@ -1600,4 +1600,4 @@ inline const Stmt *GetBodyMatcher<FunctionDecl>::get(const FunctionDecl &Node) {
 } // end namespace ast_matchers
 } // end namespace clang
 
-#endif
+#endif // LLVM_CLANG_ASTMATCHERS_ASTMATCHERSINTERNAL_H
