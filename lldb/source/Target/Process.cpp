@@ -1501,7 +1501,6 @@ Process::IsAlive ()
         default:
             return false;
     }
-    llvm_unreachable("unhandled state");
 }
 
 // This static callback can be used to watch for local child processes on

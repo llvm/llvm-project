@@ -771,6 +771,39 @@ private:
   void addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI, PHINode *PHICopy,
                        BasicBlock *IncomingBB, LoopToScevMapT &LTS);
 
+  /// @brief Create a PHI that combines the incoming values from all incoming
+  ///        blocks that are in the subregion.
+  ///
+  /// PHIs in the subregion's exit block can have incoming edges from within and
+  /// outside the subregion. This function combines the incoming values from
+  /// within the subregion to appear as if there is only one incoming edge from
+  /// the subregion (an additional exit block is created by RegionGenerator).
+  /// This is to avoid that a value is written to the .phiops location without
+  /// leaving the subregion because the exiting block as an edge back into the
+  /// subregion.
+  ///
+  /// @param MA    The WRITE of MK_PHI/MK_ExitPHI for a PHI in the subregion's
+  ///              exit block.
+  /// @param LTS   Virtual induction variable mapping.
+  /// @param BBMap A mapping from old values to their new values in this block.
+  /// @param L     Loop surrounding this region statement.
+  ///
+  /// @returns The constructed PHI node.
+  PHINode *buildExitPHI(MemoryAccess *MA, LoopToScevMapT &LTS, ValueMapT &BBMap,
+                        Loop *L);
+
+  /// @param Return the new value of a scalar write, creating a PHINode if
+  ///        necessary.
+  ///
+  /// @param MA    A scalar WRITE MemoryAccess.
+  /// @param LTS   Virtual induction variable mapping.
+  /// @param BBMap A mapping from old values to their new values in this block.
+  ///
+  /// @returns The effective value of @p MA's written value when leaving the
+  ///          subregion.
+  /// @see buildExitPHI
+  Value *getExitScalar(MemoryAccess *MA, LoopToScevMapT &LTS, ValueMapT &BBMap);
+
   /// @brief Generate the scalar stores for the given statement.
   ///
   /// After the statement @p Stmt was copied all inner-SCoP scalar dependences

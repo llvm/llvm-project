@@ -24,8 +24,6 @@
 ; CHECK-NEXT:             [N] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0__phi[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0[] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0[] };
 ; CHECK-NEXT:     Stmt_for_body
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] : N >= 2 and 0 <= i0 <= -2 + N };

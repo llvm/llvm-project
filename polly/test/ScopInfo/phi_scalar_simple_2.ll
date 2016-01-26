@@ -20,8 +20,6 @@
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_cond[i0] -> MemRef_A[i0] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N, c] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0[] };
 ; CHECK-NEXT:     Stmt_for_body
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_body[i0] : 0 <= i0 < N };
@@ -40,10 +38,6 @@
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_cond1[i0, i1] -> MemRef_x_addr_1[] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_cond1[i0, i1] -> MemRef_x_addr_1__phi[] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N, c] -> { Stmt_for_cond1[i0, i1] -> MemRef_x_addr_1[] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N, c] -> { Stmt_for_cond1[i0, i1] -> MemRef_x_addr_1[] };
 ; CHECK-NEXT:     Stmt_for_body3
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_body3[i0, i1] : 0 <= i0 < N and 0 <= i1 < N };

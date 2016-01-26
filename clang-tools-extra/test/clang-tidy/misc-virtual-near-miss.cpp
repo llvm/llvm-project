@@ -69,6 +69,7 @@ public:
   int decaz(const char str[]);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::decaz' has {{.*}} 'Mother::decay'
 
+  operator bool();
 private:
   void funk();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::funk' has {{.*}} 'Father::func'

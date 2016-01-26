@@ -36,8 +36,6 @@
 ; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_x[] };
-; CHECK-NEXT:          MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_y__phi[] };
 ; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_y__phi[] };
 ; CHECK-NEXT:      Stmt_bb7

@@ -8,14 +8,12 @@
 ;
 ; CHECK-LABEL: polly.stmt.subregion_entry:
 ; CHECK:         %[[R0:[0-9]*]] = add i32 %n, -2
-; CHECK:         store i32 %[[R0]], i32* %retval.s2a
 ;
 ; CHECK-LABEL: polly.stmt.subregion_if:
 ; CHECK:         %[[R1:[0-9]*]] = add i32 %n, -2
-; CHECK:         store i32 %[[R1]], i32* %retval.s2a
 ;
-; CHECK-LABEL: polly.stmt.polly.merge_new_and_old.exit:
-; CHECK:         load i32, i32* %retval.s2a
+; CHECK-LABEL: polly.stmt.subregion_exit.region_exiting:
+; CHECK:         %polly.retval = phi i32 [ %[[R1]], %polly.stmt.subregion_if ], [ %[[R0]], %polly.stmt.subregion_entry ]
 
 define i32 @func(i32 %n){
 entry:
