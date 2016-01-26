@@ -1045,7 +1045,7 @@ private:
           if (MO->isReg() && MO->isUse())
             MO->setIsKill(false);
       // Adjust OldIdxIn->end to reach NewIdx. This may temporarily make LR
-      // invalid by overlapping ranges. Case 5 above.
+      // invalid by overlapping ranges.
       bool isKill = SlotIndex::isSameInstr(OldIdx, OldIdxIn->end);
       OldIdxIn->end = NewIdx.getRegSlot(OldIdxIn->end.isEarlyClobber());
       // If this was not a kill, then there was no def and we're done.
@@ -1166,13 +1166,13 @@ private:
              "Same value defined more than once?");
       // If OldIdx was a dead def remove it.
       if (!OldIdxDefIsDead) {
-        // Case 3: Remove segment starting at NewIdx and move begin of OldIdxOut
-        // to NewIdx so it can take its place.
+        // Remove segment starting at NewIdx and move begin of OldIdxOut to
+        // NewIdx so it can take its place.
         OldIdxVNI->def = NewIdxDef;
         OldIdxOut->start = NewIdxDef;
         LR.removeValNo(NewIdxOut->valno);
       } else {
-        // Case 4: Remove the dead def at OldIdx.
+        // Simply remove the dead def at OldIdx.
         LR.removeValNo(OldIdxVNI);
       }
     } else {
