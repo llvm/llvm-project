@@ -325,7 +325,6 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     bool LazyReloc = Body && Target->supportsLazyRelocations() &&
                      Target->relocNeedsPlt(Type, *Body);
 
-    unsigned Sym = CBP ? Body->DynamicSymbolTableIndex : 0;
     unsigned Reloc;
     if (!CBP)
       Reloc = Target->getRelativeReloc();
@@ -335,7 +334,8 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       Reloc = Body->isTls() ? Target->getTlsGotReloc() : Target->getGotReloc();
     else
       Reloc = Target->getDynReloc(Type);
-    P->setSymbolAndType(Sym, Reloc, Config->Mips64EL);
+    P->setSymbolAndType(CBP ? Body->DynamicSymbolTableIndex : 0, Reloc,
+                        Config->Mips64EL);
 
     if (LazyReloc)
       P->r_offset = Out<ELFT>::GotPlt->getEntryAddr(*Body);
@@ -344,24 +344,18 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     else
       P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
 
-    uintX_t OrigAddend = 0;
-    if (IsRela && !NeedsGot)
-      OrigAddend = static_cast<const Elf_Rela &>(RI).r_addend;
+    if (!IsRela)
+      continue;
 
+    auto R = static_cast<const Elf_Rela &>(RI);
     uintX_t Addend;
     if (CBP)
-      Addend = OrigAddend;
+      Addend = NeedsGot ? 0 : R.r_addend;
     else if (Body)
-      Addend = getSymVA<ELFT>(*Body) + OrigAddend;
-    else if (IsRela)
-      Addend =
-          getLocalRelTarget(File, static_cast<const Elf_Rela &>(RI),
-                            getAddend<ELFT>(static_cast<const Elf_Rela &>(RI)));
+      Addend = getSymVA<ELFT>(*Body) + (NeedsGot ? 0 : R.r_addend);
     else
-      Addend = getLocalRelTarget(File, RI, 0);
-
-    if (IsRela)
-      static_cast<Elf_Rela *>(P)->r_addend = Addend;
+      Addend = getLocalRelTarget(File, R, R.r_addend);
+    static_cast<Elf_Rela *>(P)->r_addend = Addend;
   }
 }
 

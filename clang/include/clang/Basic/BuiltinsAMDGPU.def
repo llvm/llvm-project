@@ -33,6 +33,10 @@ BUILTIN(__builtin_amdgcn_ldexp, "ddi", "nc")
 BUILTIN(__builtin_amdgcn_ldexpf, "ffi", "nc")
 BUILTIN(__builtin_amdgcn_class, "bdi", "nc")
 BUILTIN(__builtin_amdgcn_classf, "bfi", "nc")
+BUILTIN(__builtin_amdgcn_cubeid, "ffff", "nc")
+BUILTIN(__builtin_amdgcn_cubesc, "ffff", "nc")
+BUILTIN(__builtin_amdgcn_cubetc, "ffff", "nc")
+BUILTIN(__builtin_amdgcn_cubema, "ffff", "nc")
 
 // Legacy names with amdgpu prefix
 BUILTIN(__builtin_amdgpu_rsq, "dd", "nc")
