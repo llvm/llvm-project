@@ -89,6 +89,7 @@ typedef unsigned error_t;
 typedef int fd_t;
 typedef int error_t;
 #endif
+typedef int pid_t;
 
 // WARNING: OFF_T may be different from OS type off_t, depending on the value of
 // _FILE_OFFSET_BITS. This definition of OFF_T matches the ABI of system calls

@@ -279,6 +279,17 @@ const char *GetPwd();
 char *FindPathToBinary(const char *name);
 bool IsPathSeparator(const char c);
 bool IsAbsolutePath(const char *path);
+// Starts a subprocess and returs its pid.
+// If *_fd parameters are not kInvalidFd their corresponding input/output
+// streams will be redirect to the file. The files will always be closed
+// in parent process even in case of an error.
+// The child process will close all fds after STDERR_FILENO
+// before passing control to a program.
+pid_t StartSubprocess(const char *filename, const char *const argv[],
+                      fd_t stdin_fd = kInvalidFd, fd_t stdout_fd = kInvalidFd,
+                      fd_t stderr_fd = kInvalidFd);
+// Checks if specified process is still running
+bool IsProcessRunning(pid_t pid);
 
 u32 GetUid();
 void ReExec();
@@ -747,6 +758,23 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp);
 
 void DisableReexec();
 void MaybeReexec();
+
+template <typename Fn>
+class RunOnDestruction {
+ public:
+  explicit RunOnDestruction(Fn fn) : fn_(fn) {}
+  ~RunOnDestruction() { fn_(); }
+
+ private:
+  Fn fn_;
+};
+
+// A simple scope guard. Usage:
+// auto cleanup = at_scope_exit([]{ do_cleanup; });
+template <typename Fn>
+RunOnDestruction<Fn> at_scope_exit(Fn fn) {
+  return RunOnDestruction<Fn>(fn);
+}
 
 }  // namespace __sanitizer
 
