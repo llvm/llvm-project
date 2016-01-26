@@ -267,55 +267,35 @@ function export_sources() {
     check_valid_urls
 
     for proj in $projects ; do
-        if [ -d $proj.src ]; then
-          echo "# Reusing $proj $Release-$RC sources"
+        case $proj in
+        llvm)
+            projsrc=$proj.src
+            ;;
+        cfe)
+            projsrc=llvm.src/tools/clang
+            ;;
+        clang-tools-extra)
+            projsrc=llvm.src/tools/clang/tools/extra
+            ;;
+        compiler-rt|libcxx|libcxxabi|libunwind|openmp|test-suite)
+            projsrc=llvm.src/projects/$proj
+            ;;
+        *)
+            echo "error: unknown project $proj"
+            exit 1
+            ;;
+        esac
+
+        if [ -d $projsrc ]; then
+          echo "# Reusing $proj $Release-$RC sources in $projsrc"
           continue
         fi
-        echo "# Exporting $proj $Release-$RC sources"
-        if ! svn export -q $Base_url/$proj/$ExportBranch $proj.src ; then
+        echo "# Exporting $proj $Release-$RC sources to $projsrc"
+        if ! svn export -q $Base_url/$proj/$ExportBranch $projsrc ; then
             echo "error: failed to export $proj project"
             exit 1
         fi
     done
-
-    echo "# Creating symlinks"
-    cd $BuildDir/llvm.src/tools
-    if [ ! -h clang ]; then
-        ln -s ../../cfe.src clang
-    fi
-
-    # The autoconf and CMake builds want different symlinks here:
-    if [ "$use_autoconf" = "yes" ]; then
-      cd $BuildDir/llvm.src/tools/clang/tools
-      if [ ! -h extra ]; then
-          ln -s ../../../../clang-tools-extra.src extra
-      fi
-    else
-      cd $BuildDir/cfe.src/tools
-      if [ ! -h extra ]; then
-          ln -s ../../clang-tools-extra.src extra
-      fi
-    fi
-
-    cd $BuildDir/llvm.src/projects
-    if [ -d $BuildDir/test-suite.src ] && [ ! -h test-suite ]; then
-        ln -s ../../test-suite.src test-suite
-    fi
-    if [ -d $BuildDir/compiler-rt.src ] && [ ! -h compiler-rt ]; then
-        ln -s ../../compiler-rt.src compiler-rt
-    fi
-    if [ -d $BuildDir/openmp.src ] && [ ! -h openmp ]; then
-        ln -s ../../openmp.src openmp
-    fi
-    if [ -d $BuildDir/libcxx.src ] && [ ! -h libcxx ]; then
-        ln -s ../../libcxx.src libcxx
-    fi
-    if [ -d $BuildDir/libcxxabi.src ] && [ ! -h libcxxabi ]; then
-        ln -s ../../libcxxabi.src libcxxabi
-    fi
-    if [ -d $BuildDir/libunwind.src ] && [ ! -h libunwind ]; then
-        ln -s ../../libunwind.src libunwind
-    fi
 
     cd $BuildDir
 }
