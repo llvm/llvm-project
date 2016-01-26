@@ -3121,13 +3121,16 @@ CodeGenFunction::EmitCallOrInvoke(llvm::Value *Callee,
                                   ArrayRef<llvm::Value *> Args,
                                   const Twine &Name) {
   llvm::BasicBlock *InvokeDest = getInvokeDest();
+  SmallVector<llvm::OperandBundleDef, 1> BundleList;
+  getBundlesForFunclet(Callee, CurrentFuncletPad, BundleList);
 
   llvm::Instruction *Inst;
   if (!InvokeDest)
-    Inst = Builder.CreateCall(Callee, Args, Name);
+    Inst = Builder.CreateCall(Callee, Args, BundleList, Name);
   else {
     llvm::BasicBlock *ContBB = createBasicBlock("invoke.cont");
-    Inst = Builder.CreateInvoke(Callee, ContBB, InvokeDest, Args, Name);
+    Inst = Builder.CreateInvoke(Callee, ContBB, InvokeDest, Args, BundleList,
+                                Name);
     EmitBlock(ContBB);
   }
 

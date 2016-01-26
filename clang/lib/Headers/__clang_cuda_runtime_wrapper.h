@@ -46,6 +46,7 @@
 // while some required macros (like __THROW) are in a weird state.
 #include <stdlib.h>
 #include <cmath>
+#include <cstdlib>
 
 // Preserve common macros that will be changed below by us or by CUDA
 // headers.
@@ -157,7 +158,7 @@ static inline float rcbrt(float a) { return rcbrtf(a); }
 static inline float sinpi(float a) { return sinpif(a); }
 static inline float cospi(float a) { return cospif(a); }
 static inline void sincospi(float a, float *b, float *c) {
-  return sincospi(a, b, c);
+  return sincospif(a, b, c);
 }
 static inline float erfcinv(float a) { return erfcinvf(a); }
 static inline float normcdfinv(float a) { return normcdfinvf(a); }
@@ -216,6 +217,8 @@ static __device__ __attribute__((used)) int __nvvm_reflect_anchor() {
 // we'll throw an error.
 extern "C" __device__ int vprintf(const char*, const char*);
 #endif
+
+#include <__clang_cuda_cmath.h>
 
 #endif // __CUDA__
 #endif // __CLANG_CUDA_RUNTIME_WRAPPER_H__
