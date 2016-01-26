@@ -849,6 +849,7 @@ static void diagnoseRedundantPropertyNullability(Parser &P,
 ///     nullable
 ///     null_unspecified
 ///     null_resettable
+///     class
 ///
 void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
   assert(Tok.getKind() == tok::l_paren);
@@ -964,6 +965,8 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
 
       // Also set the null_resettable bit.
       DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_null_resettable);
+    } else if (II->isStr("class")) {
+      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_class);
     } else {
       Diag(AttrName, diag::err_objc_expected_property_attr) << II;
       SkipUntil(tok::r_paren, StopAtSemi);

@@ -162,17 +162,17 @@ T tmain(T argc) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(+ : ba) // expected-error {{a reduction list item with array type 'const S2 [5]'}}
+#pragma omp sections reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(* : ca) // expected-error {{a reduction list item with array type 'const S3 [5]'}}
+#pragma omp sections reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(- : da) // expected-error {{a reduction list item with array type 'const int [5]'}} expected-error {{a reduction list item with array type 'const float [5]'}}
+#pragma omp sections reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}} expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
@@ -342,17 +342,17 @@ int main(int argc, char **argv) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(+ : ba) // expected-error {{a reduction list item with array type 'const S2 [5]'}}
+#pragma omp sections reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(* : ca) // expected-error {{a reduction list item with array type 'const S3 [5]'}}
+#pragma omp sections reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(- : da) // expected-error {{a reduction list item with array type 'const int [5]'}}
+#pragma omp sections reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }

@@ -129,13 +129,13 @@ T tmain(T argc) {
 #pragma omp parallel for simd reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel for simd reduction(+ : ba) // expected-error {{a reduction list item with array type 'const S2 [5]'}}
+#pragma omp parallel for simd reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel for simd reduction(* : ca) // expected-error {{a reduction list item with array type 'const S3 [5]'}}
+#pragma omp parallel for simd reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel for simd reduction(- : da) // expected-error {{a reduction list item with array type 'const int [5]'}} expected-error {{a reduction list item with array type 'const float [5]'}}
+#pragma omp parallel for simd reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}} expected-error {{const-qualified list item cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel for simd reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -251,13 +251,13 @@ int main(int argc, char **argv) {
 #pragma omp parallel for simd reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel for simd reduction(+ : ba) // expected-error {{a reduction list item with array type 'const S2 [5]'}}
+#pragma omp parallel for simd reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel for simd reduction(* : ca) // expected-error {{a reduction list item with array type 'const S3 [5]'}}
+#pragma omp parallel for simd reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel for simd reduction(- : da) // expected-error {{a reduction list item with array type 'const int [5]'}}
+#pragma omp parallel for simd reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel for simd reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}

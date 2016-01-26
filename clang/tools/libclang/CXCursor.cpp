@@ -606,6 +606,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPTargetExitDataDirectiveClass:
     K = CXCursor_OMPTargetExitDataDirective;
     break;
+  case Stmt::OMPTargetParallelDirectiveClass:
+    K = CXCursor_OMPTargetParallelDirective;
+    break;
   case Stmt::OMPTeamsDirectiveClass:
     K = CXCursor_OMPTeamsDirective;
     break;

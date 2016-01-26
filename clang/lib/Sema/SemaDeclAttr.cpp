@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaInternal.h"
+#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
@@ -4689,8 +4690,10 @@ static void handleMSInheritanceAttr(Sema &S, Decl *D, const AttributeList &Attr)
       D, Attr.getRange(), /*BestCase=*/true,
       Attr.getAttributeSpellingListIndex(),
       (MSInheritanceAttr::Spelling)Attr.getSemanticSpelling());
-  if (IA)
+  if (IA) {
     D->addAttr(IA);
+    S.Consumer.AssignInheritanceModel(cast<CXXRecordDecl>(D));
+  }
 }
 
 static void handleDeclspecThreadAttr(Sema &S, Decl *D,

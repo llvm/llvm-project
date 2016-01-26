@@ -594,6 +594,11 @@ void StmtProfiler::VisitOMPTargetExitDataDirective(
   VisitOMPExecutableDirective(S);
 }
 
+void StmtProfiler::VisitOMPTargetParallelDirective(
+    const OMPTargetParallelDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
 void StmtProfiler::VisitOMPTeamsDirective(const OMPTeamsDirective *S) {
   VisitOMPExecutableDirective(S);
 }
@@ -630,6 +635,8 @@ void OMPClauseProfiler::VisitOMPDistScheduleClause(
     }
   }
 }
+
+void OMPClauseProfiler::VisitOMPDefaultmapClause(const OMPDefaultmapClause *) {}
 
 void StmtProfiler::VisitExpr(const Expr *S) {
   VisitStmt(S);

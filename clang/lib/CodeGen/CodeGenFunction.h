@@ -2206,6 +2206,8 @@ public:
   void EmitCXXForRangeStmt(const CXXForRangeStmt &S,
                            ArrayRef<const Attr *> Attrs = None);
 
+  /// Returns calculated size of the specified type.
+  llvm::Value *getTypeSize(QualType Ty);
   LValue InitCapturedStruct(const CapturedStmt &S);
   llvm::Function *EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K);
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
@@ -2341,6 +2343,7 @@ public:
   void EmitOMPTargetDataDirective(const OMPTargetDataDirective &S);
   void EmitOMPTargetEnterDataDirective(const OMPTargetEnterDataDirective &S);
   void EmitOMPTargetExitDataDirective(const OMPTargetExitDataDirective &S);
+  void EmitOMPTargetParallelDirective(const OMPTargetParallelDirective &S);
   void EmitOMPTeamsDirective(const OMPTeamsDirective &S);
   void
   EmitOMPCancellationPointDirective(const OMPCancellationPointDirective &S);

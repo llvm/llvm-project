@@ -7872,8 +7872,6 @@ def warn_omp_loop_64_bit_var : Warning<
   InGroup<OpenMPLoopForm>;
 def err_omp_unknown_reduction_identifier : Error<
   "incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'">;
-def err_omp_reduction_type_array : Error<
-  "a reduction list item with array type %0">;
 def err_omp_reduction_ref_type_arg : Error<
   "argument of OpenMP clause 'reduction' must reference the same object in all threads">;
 def err_omp_clause_not_arithmetic_type_arg : Error<

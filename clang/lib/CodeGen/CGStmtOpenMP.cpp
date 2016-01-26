@@ -20,6 +20,26 @@
 using namespace clang;
 using namespace CodeGen;
 
+llvm::Value *CodeGenFunction::getTypeSize(QualType Ty) {
+  auto &C = getContext();
+  llvm::Value *Size = nullptr;
+  auto SizeInChars = C.getTypeSizeInChars(Ty);
+  if (SizeInChars.isZero()) {
+    // getTypeSizeInChars() returns 0 for a VLA.
+    while (auto *VAT = C.getAsVariableArrayType(Ty)) {
+      llvm::Value *ArraySize;
+      std::tie(ArraySize, Ty) = getVLASize(VAT);
+      Size = Size ? Builder.CreateNUWMul(Size, ArraySize) : ArraySize;
+    }
+    SizeInChars = C.getTypeSizeInChars(Ty);
+    if (SizeInChars.isZero())
+      return llvm::ConstantInt::get(SizeTy, /*V=*/0);
+    Size = Builder.CreateNUWMul(Size, CGM.getSize(SizeInChars));
+  } else
+    Size = CGM.getSize(SizeInChars);
+  return Size;
+}
+
 void CodeGenFunction::GenerateOpenMPCapturedVars(
     const CapturedStmt &S, SmallVectorImpl<llvm::Value *> &CapturedVars) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
@@ -779,32 +799,76 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
         assert(IsRegistered && "private var already registered as private");
         // Silence the warning about unused variable.
         (void)IsRegistered;
-        PrivateScope.addPrivate(RHSVD, [this, PrivateVD]() -> Address {
-          return GetAddrOfLocalVar(PrivateVD);
+        PrivateScope.addPrivate(RHSVD, [this, PrivateVD, RHSVD]() -> Address {
+          return Builder.CreateElementBitCast(
+              GetAddrOfLocalVar(PrivateVD), ConvertTypeForMem(RHSVD->getType()),
+              "rhs.begin");
         });
       } else {
         auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(IRef)->getDecl());
-        // Store the address of the original variable associated with the LHS
-        // implicit variable.
-        PrivateScope.addPrivate(LHSVD, [this, OrigVD, IRef]() -> Address {
+        QualType Type = PrivateVD->getType();
+        if (getContext().getAsArrayType(Type)) {
+          // Store the address of the original variable associated with the LHS
+          // implicit variable.
           DeclRefExpr DRE(const_cast<VarDecl *>(OrigVD),
                           CapturedStmtInfo->lookup(OrigVD) != nullptr,
                           IRef->getType(), VK_LValue, IRef->getExprLoc());
-          return EmitLValue(&DRE).getAddress();
-        });
-        // Emit reduction copy.
-        bool IsRegistered =
-            PrivateScope.addPrivate(OrigVD, [this, PrivateVD]() -> Address {
-              // Emit private VarDecl with reduction init.
-              EmitDecl(*PrivateVD);
-              return GetAddrOfLocalVar(PrivateVD);
-            });
-        assert(IsRegistered && "private var already registered as private");
-        // Silence the warning about unused variable.
-        (void)IsRegistered;
-        PrivateScope.addPrivate(RHSVD, [this, PrivateVD]() -> Address {
-          return GetAddrOfLocalVar(PrivateVD);
-        });
+          Address OriginalAddr = EmitLValue(&DRE).getAddress();
+          PrivateScope.addPrivate(LHSVD, [this, OriginalAddr,
+                                          LHSVD]() -> Address {
+            return Builder.CreateElementBitCast(
+                OriginalAddr, ConvertTypeForMem(LHSVD->getType()),
+                "lhs.begin");
+          });
+          bool IsRegistered = PrivateScope.addPrivate(OrigVD, [&]() -> Address {
+            if (Type->isVariablyModifiedType()) {
+              CodeGenFunction::OpaqueValueMapping OpaqueMap(
+                  *this, cast<OpaqueValueExpr>(
+                             getContext()
+                                 .getAsVariableArrayType(PrivateVD->getType())
+                                 ->getSizeExpr()),
+                  RValue::get(
+                      getTypeSize(OrigVD->getType().getNonReferenceType())));
+              EmitVariablyModifiedType(Type);
+            }
+            auto Emission = EmitAutoVarAlloca(*PrivateVD);
+            auto Addr = Emission.getAllocatedAddress();
+            auto *Init = PrivateVD->getInit();
+            EmitOMPAggregateInit(*this, Addr, PrivateVD->getType(), Init);
+            EmitAutoVarCleanups(Emission);
+            return Emission.getAllocatedAddress();
+          });
+          assert(IsRegistered && "private var already registered as private");
+          // Silence the warning about unused variable.
+          (void)IsRegistered;
+          PrivateScope.addPrivate(RHSVD, [this, PrivateVD, RHSVD]() -> Address {
+            return Builder.CreateElementBitCast(
+                GetAddrOfLocalVar(PrivateVD),
+                ConvertTypeForMem(RHSVD->getType()), "rhs.begin");
+          });
+        } else {
+          // Store the address of the original variable associated with the LHS
+          // implicit variable.
+          PrivateScope.addPrivate(LHSVD, [this, OrigVD, IRef]() -> Address {
+            DeclRefExpr DRE(const_cast<VarDecl *>(OrigVD),
+                            CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                            IRef->getType(), VK_LValue, IRef->getExprLoc());
+            return EmitLValue(&DRE).getAddress();
+          });
+          // Emit reduction copy.
+          bool IsRegistered =
+              PrivateScope.addPrivate(OrigVD, [this, PrivateVD]() -> Address {
+                // Emit private VarDecl with reduction init.
+                EmitDecl(*PrivateVD);
+                return GetAddrOfLocalVar(PrivateVD);
+              });
+          assert(IsRegistered && "private var already registered as private");
+          // Silence the warning about unused variable.
+          (void)IsRegistered;
+          PrivateScope.addPrivate(RHSVD, [this, PrivateVD]() -> Address {
+            return GetAddrOfLocalVar(PrivateVD);
+          });
+        }
       }
       ++ILHS, ++IRHS, ++IPriv;
     }
@@ -2500,6 +2564,7 @@ static void EmitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_num_tasks:
   case OMPC_hint:
   case OMPC_dist_schedule:
+  case OMPC_defaultmap:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }
@@ -2643,6 +2708,11 @@ void CodeGenFunction::EmitOMPTargetEnterDataDirective(
 void CodeGenFunction::EmitOMPTargetExitDataDirective(
     const OMPTargetExitDataDirective &S) {
   // TODO: codegen for target exit data.
+}
+
+void CodeGenFunction::EmitOMPTargetParallelDirective(
+    const OMPTargetParallelDirective &S) {
+  // TODO: codegen for target parallel.
 }
 
 void CodeGenFunction::EmitOMPTaskLoopDirective(const OMPTaskLoopDirective &S) {

@@ -3338,6 +3338,109 @@ public:
     return child_range(&ChunkSizes[CHUNK_SIZE], &ChunkSizes[CHUNK_SIZE] + 1);
   }
 };
+
+/// \brief This represents 'defaultmap' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp target defaultmap(tofrom: scalar)
+/// \endcode
+/// In this example directive '#pragma omp target' has 'defaultmap' clause of kind
+/// 'scalar' with modifier 'tofrom'.
+///
+class OMPDefaultmapClause : public OMPClause {
+  friend class OMPClauseReader;
+  /// \brief Location of '('.
+  SourceLocation LParenLoc;
+  /// \brief Modifiers for 'defaultmap' clause.
+  OpenMPDefaultmapClauseModifier Modifier;
+  /// \brief Locations of modifiers.
+  SourceLocation ModifierLoc;
+  /// \brief A kind of the 'defaultmap' clause.
+  OpenMPDefaultmapClauseKind Kind;
+  /// \brief Start location of the defaultmap kind in source code.
+  SourceLocation KindLoc;
+
+  /// \brief Set defaultmap kind.
+  ///
+  /// \param K Defaultmap kind.
+  ///
+  void setDefaultmapKind(OpenMPDefaultmapClauseKind K) { Kind = K; }
+  /// \brief Set the defaultmap modifier.
+  ///
+  /// \param M Defaultmap modifier.
+  ///
+  void setDefaultmapModifier(OpenMPDefaultmapClauseModifier M) {
+    Modifier = M;
+  }
+  /// \brief Set location of the defaultmap modifier.
+  ///
+  void setDefaultmapModifierLoc(SourceLocation Loc) {
+    ModifierLoc = Loc;
+  }
+  /// \brief Sets the location of '('.
+  ///
+  /// \param Loc Location of '('.
+  ///
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  /// \brief Set defaultmap kind start location.
+  ///
+  /// \param KLoc Defaultmap kind location.
+  ///
+  void setDefaultmapKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
+
+public:
+  /// \brief Build 'defaultmap' clause with defaultmap kind \a Kind
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param KLoc Starting location of the argument.
+  /// \param EndLoc Ending location of the clause.
+  /// \param Kind Defaultmap kind.
+  /// \param M The modifier applied to 'defaultmap' clause.
+  /// \param MLoc Location of the modifier
+  ///
+  OMPDefaultmapClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                      SourceLocation MLoc, SourceLocation KLoc,
+                      SourceLocation EndLoc, OpenMPDefaultmapClauseKind Kind,
+                      OpenMPDefaultmapClauseModifier M)
+      : OMPClause(OMPC_defaultmap, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Modifier(M), ModifierLoc(MLoc), Kind(Kind), KindLoc(KLoc) {}
+
+  /// \brief Build an empty clause.
+  ///
+  explicit OMPDefaultmapClause()
+      : OMPClause(OMPC_defaultmap, SourceLocation(), SourceLocation()),
+        Modifier(OMPC_DEFAULTMAP_MODIFIER_unknown),
+        Kind(OMPC_DEFAULTMAP_unknown) {}
+
+  /// \brief Get kind of the clause.
+  ///
+  OpenMPDefaultmapClauseKind getDefaultmapKind() const { return Kind; }
+  /// \brief Get the modifier of the clause.
+  ///
+  OpenMPDefaultmapClauseModifier getDefaultmapModifier() const {
+    return Modifier;
+  }
+  /// \brief Get location of '('.
+  ///
+  SourceLocation getLParenLoc() { return LParenLoc; }
+  /// \brief Get kind location.
+  ///
+  SourceLocation getDefaultmapKindLoc() { return KindLoc; }
+  /// \brief Get the modifier location.
+  ///
+  SourceLocation getDefaultmapModifierLoc() const {
+    return ModifierLoc;
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_defaultmap;
+  }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+};
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

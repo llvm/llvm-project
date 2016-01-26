@@ -2046,6 +2046,14 @@ void OMPClauseWriter::VisitOMPDistScheduleClause(OMPDistScheduleClause *C) {
   Writer->Writer.AddSourceLocation(C->getCommaLoc(), Record);
 }
 
+void OMPClauseWriter::VisitOMPDefaultmapClause(OMPDefaultmapClause *C) {
+  Record.push_back(C->getDefaultmapKind());
+  Record.push_back(C->getDefaultmapModifier());
+  Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
+  Writer->Writer.AddSourceLocation(C->getDefaultmapModifierLoc(), Record);
+  Writer->Writer.AddSourceLocation(C->getDefaultmapKindLoc(), Record);
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMP Directives.
 //===----------------------------------------------------------------------===//
@@ -2228,6 +2236,14 @@ void ASTStmtWriter::VisitOMPTargetExitDataDirective(
   Record.push_back(D->getNumClauses());
   VisitOMPExecutableDirective(D);
   Code = serialization::STMT_OMP_TARGET_EXIT_DATA_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPTargetParallelDirective(
+    OMPTargetParallelDirective *D) {
+  VisitStmt(D);
+  Record.push_back(D->getNumClauses());
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_TARGET_PARALLEL_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPTaskyieldDirective(OMPTaskyieldDirective *D) {

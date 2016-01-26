@@ -694,6 +694,30 @@ OMPTargetDirective *OMPTargetDirective::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPTargetDirective(NumClauses);
 }
 
+OMPTargetParallelDirective *OMPTargetParallelDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt) {
+  unsigned Size = llvm::alignTo(sizeof(OMPTargetParallelDirective),
+                                llvm::alignOf<OMPClause *>());
+  void *Mem =
+      C.Allocate(Size + sizeof(OMPClause *) * Clauses.size() + sizeof(Stmt *));
+  OMPTargetParallelDirective *Dir =
+      new (Mem) OMPTargetParallelDirective(StartLoc, EndLoc, Clauses.size());
+  Dir->setClauses(Clauses);
+  Dir->setAssociatedStmt(AssociatedStmt);
+  return Dir;
+}
+
+OMPTargetParallelDirective *
+OMPTargetParallelDirective::CreateEmpty(const ASTContext &C,
+                                        unsigned NumClauses, EmptyShell) {
+  unsigned Size = llvm::alignTo(sizeof(OMPTargetParallelDirective),
+                                llvm::alignOf<OMPClause *>());
+  void *Mem =
+      C.Allocate(Size + sizeof(OMPClause *) * NumClauses + sizeof(Stmt *));
+  return new (Mem) OMPTargetParallelDirective(NumClauses);
+}
+
 OMPTargetDataDirective *OMPTargetDataDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt) {

@@ -210,6 +210,10 @@ namespace clang {
       Gen->CompleteTentativeDefinition(D);
     }
 
+    void AssignInheritanceModel(CXXRecordDecl *RD) override {
+      Gen->AssignInheritanceModel(RD);
+    }
+
     void HandleVTable(CXXRecordDecl *RD) override {
       Gen->HandleVTable(RD);
     }
