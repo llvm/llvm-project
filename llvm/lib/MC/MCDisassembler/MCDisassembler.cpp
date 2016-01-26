@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCDisassembler.h"
-#include "llvm/MC/MCExternalSymbolizer.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler/MCExternalSymbolizer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

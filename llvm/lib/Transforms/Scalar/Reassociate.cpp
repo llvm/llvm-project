@@ -163,7 +163,8 @@ namespace {
       AU.addPreserved<GlobalsAAWrapperPass>();
     }
   private:
-    void BuildRankMap(Function &F);
+    void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);
+
     unsigned getRank(Value *V);
     void canonicalizeOperands(Instruction *I);
     void ReassociateExpression(BinaryOperator *I);
@@ -246,7 +247,8 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
   return nullptr;
 }
 
-void Reassociate::BuildRankMap(Function &F) {
+void Reassociate::BuildRankMap(Function &F,
+                               ReversePostOrderTraversal<Function *> &RPOT) {
   unsigned i = 2;
 
   // Assign distinct ranks to function arguments.
@@ -255,7 +257,6 @@ void Reassociate::BuildRankMap(Function &F) {
     DEBUG(dbgs() << "Calculated Rank[" << I->getName() << "] = " << i << "\n");
   }
 
-  ReversePostOrderTraversal<Function*> RPOT(&F);
   for (ReversePostOrderTraversal<Function*>::rpo_iterator I = RPOT.begin(),
          E = RPOT.end(); I != E; ++I) {
     BasicBlock *BB = *I;
@@ -2259,13 +2260,28 @@ bool Reassociate::runOnFunction(Function &F) {
   if (skipOptnoneFunction(F))
     return false;
 
-  // Calculate the rank map for F
-  BuildRankMap(F);
+  // Reassociate needs for each instruction to have its operands already
+  // processed, so we first perform a RPOT of the basic blocks so that
+  // when we process a basic block, all its dominators have been processed
+  // before.
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  BuildRankMap(F, RPOT);
 
   MadeChange = false;
-  for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
+  for (BasicBlock *BI : RPOT) {
+    // Use a worklist to keep track of which instructions have been processed
+    // (and which insts won't be optimized again) so when redoing insts,
+    // optimize insts rightaway which won't be processed later.
+    SmallSet<Instruction *, 8> Worklist;
+
+    // Insert all instructions in the BB
+    for (Instruction &I : *BI)
+      Worklist.insert(&I);
+
     // Optimize every instruction in the basic block.
-    for (BasicBlock::iterator II = BI->begin(), IE = BI->end(); II != IE; )
+    for (BasicBlock::iterator II = BI->begin(), IE = BI->end(); II != IE;) {
+      // This instruction has been processed.
+      Worklist.erase(&*II);
       if (isInstructionTriviallyDead(&*II)) {
         EraseInst(&*II++);
       } else {
@@ -2274,27 +2290,22 @@ bool Reassociate::runOnFunction(Function &F) {
         ++II;
       }
 
-    // Make a copy of all the instructions to be redone so we can remove dead
-    // instructions.
-    SetVector<AssertingVH<Instruction>> ToRedo(RedoInsts);
-    // Iterate over all instructions to be reevaluated and remove trivially dead
-    // instructions. If any operand of the trivially dead instruction becomes
-    // dead mark it for deletion as well. Continue this process until all
-    // trivially dead instructions have been removed.
-    while (!ToRedo.empty()) {
-      Instruction *I = ToRedo.pop_back_val();
-      if (isInstructionTriviallyDead(I))
-        RecursivelyEraseDeadInsts(I, ToRedo);
-    }
-
-    // Now that we have removed dead instructions, we can reoptimize the
-    // remaining instructions.
-    while (!RedoInsts.empty()) {
-      Instruction *I = RedoInsts.pop_back_val();
-      if (isInstructionTriviallyDead(I))
-        EraseInst(I);
-      else
-        OptimizeInst(I);
+      // If the above optimizations produced new instructions to optimize or
+      // made modifications which need to be redone, do them now if they won't
+      // be handled later.
+      while (!RedoInsts.empty()) {
+        Instruction *I = RedoInsts.pop_back_val();
+        // Process instructions that won't be processed later, either
+        // inside the block itself or in another basic block (based on rank),
+        // since these will be processed later.
+        if ((I->getParent() != BI || !Worklist.count(I)) &&
+            RankMap[I->getParent()] <= RankMap[BI]) {
+          if (isInstructionTriviallyDead(I))
+            EraseInst(I);
+          else
+            OptimizeInst(I);
+        }
+      }
     }
   }
 

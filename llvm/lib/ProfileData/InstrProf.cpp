@@ -65,7 +65,7 @@ class InstrProfErrorCategoryType : public std::error_category {
     llvm_unreachable("A value of instrprof_error has no message.");
   }
 };
-}
+} // end anonymous namespace
 
 static ManagedStatic<InstrProfErrorCategoryType> ErrorCategory;
 
@@ -443,12 +443,12 @@ ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
 }
 
 static ValueProfRecordClosure InstrProfRecordClosure = {
-    0,
+    nullptr,
     getNumValueKindsInstrProf,
     getNumValueSitesInstrProf,
     getNumValueDataInstrProf,
     getNumValueDataForSiteInstrProf,
-    0,
+    nullptr,
     getValueForSiteInstrProf,
     allocValueProfDataInstrProf};
 
@@ -638,7 +638,6 @@ void ProfileSummary::computeDetailedSummary() {
     ProfileSummaryEntry PSE = {Cutoff, Count, BlocksSeen};
     DetailedSummary.push_back(PSE);
   }
-  return;
 }
 
-}
+} // end namespace llvm

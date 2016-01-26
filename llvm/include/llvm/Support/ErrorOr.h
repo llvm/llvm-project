@@ -98,7 +98,7 @@ public:
   ErrorOr(E ErrorCode,
           typename std::enable_if<std::is_error_code_enum<E>::value ||
                                       std::is_error_condition_enum<E>::value,
-                                  void *>::type = 0)
+                                  void *>::type = nullptr)
       : HasError(true) {
     new (getErrorStorage()) std::error_code(make_error_code(ErrorCode));
   }
@@ -278,7 +278,6 @@ private:
     return const_cast<ErrorOr<T> *>(this)->getErrorStorage();
   }
 
-
   union {
     AlignedCharArrayUnion<storage_type> TStorage;
     AlignedCharArrayUnion<std::error_code> ErrorStorage;
@@ -295,4 +294,4 @@ operator==(const ErrorOr<T> &Err, E Code) {
 }
 } // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_ERROROR_H

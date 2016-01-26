@@ -38,7 +38,7 @@ struct AlignmentCalcImpl {
 #endif
   T t;
 private:
-  AlignmentCalcImpl() {} // Never instantiate.
+  AlignmentCalcImpl() = delete;
 };
 
 // Abstract base class helper, this will have the minimal alignment and size
@@ -55,7 +55,7 @@ struct AlignmentCalcImplBase {
 // of type T.
 template <typename T>
 struct AlignmentCalcImpl<T, true> : AlignmentCalcImplBase, T {
-  virtual ~AlignmentCalcImpl() = 0;
+  ~AlignmentCalcImpl() override = 0;
 };
 
 } // End detail namespace.
@@ -223,7 +223,7 @@ template <typename T1,
 class AlignerImpl {
   T1 t1; T2 t2; T3 t3; T4 t4; T5 t5; T6 t6; T7 t7; T8 t8; T9 t9; T10 t10;
 
-  AlignerImpl(); // Never defined or instantiated.
+  AlignerImpl() = delete;
 };
 
 template <typename T1,
@@ -255,4 +255,5 @@ struct AlignedCharArrayUnion : llvm::AlignedCharArray<
                                      T6, T7, T8, T9, T10>)> {
 };
 } // end namespace llvm
-#endif
+
+#endif // LLVM_SUPPORT_ALIGNOF_H

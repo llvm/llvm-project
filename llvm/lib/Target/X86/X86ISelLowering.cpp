@@ -4754,31 +4754,22 @@ static SDValue Concat256BitVectors(SDValue V1, SDValue V2, EVT VT,
 
 /// Returns a vector of specified type with all bits set.
 /// Always build ones vectors as <4 x i32> or <8 x i32>. For 256-bit types with
-/// no AVX2 supprt, use two <4 x i32> inserted in a <8 x i32> appropriately.
+/// no AVX2 support, use two <4 x i32> inserted in a <8 x i32> appropriately.
 /// Then bitcast to their original type, ensuring they get CSE'd.
 static SDValue getOnesVector(EVT VT, const X86Subtarget *Subtarget,
                              SelectionDAG &DAG, SDLoc dl) {
-  assert(VT.isVector() && "Expected a vector type");
+  assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
+         "Expected a 128/256/512-bit vector type");
 
-  SDValue Cst = DAG.getConstant(~0U, dl, MVT::i32);
+  APInt Ones = APInt::getAllOnesValue(32);
+  unsigned NumElts = VT.getSizeInBits() / 32;
   SDValue Vec;
-  if (VT.is512BitVector()) {
-    SDValue Ops[] = { Cst, Cst, Cst, Cst, Cst, Cst, Cst, Cst,
-                      Cst, Cst, Cst, Cst, Cst, Cst, Cst, Cst };
-    Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v16i32, Ops);
-  } else if (VT.is256BitVector()) {
-    if (Subtarget->hasInt256()) { // AVX2
-      SDValue Ops[] = { Cst, Cst, Cst, Cst, Cst, Cst, Cst, Cst };
-      Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v8i32, Ops);
-    } else { // AVX
-      Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4i32, Cst, Cst, Cst, Cst);
-      Vec = Concat128BitVectors(Vec, Vec, MVT::v8i32, 8, DAG, dl);
-    }
-  } else if (VT.is128BitVector()) {
-    Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4i32, Cst, Cst, Cst, Cst);
-  } else
-    llvm_unreachable("Unexpected vector type");
-
+  if (!Subtarget->hasInt256() && NumElts == 8) {
+    Vec = DAG.getConstant(Ones, dl, MVT::v4i32);
+    Vec = Concat128BitVectors(Vec, Vec, MVT::v8i32, 8, DAG, dl);
+  } else {
+    Vec = DAG.getConstant(Ones, dl, MVT::getVectorVT(MVT::i32, NumElts));
+  }
   return DAG.getBitcast(VT, Vec);
 }
 

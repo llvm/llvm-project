@@ -38,7 +38,8 @@ public:
     return DICtx->getKind() == CK_PDB;
   }
 
-  void dump(raw_ostream &OS, DIDumpType DumpType = DIDT_All) override;
+  void dump(raw_ostream &OS, DIDumpType DumpType = DIDT_All,
+            bool DumpEH = false) override;
 
   DILineInfo getLineInfoForAddress(
       uint64_t Address,

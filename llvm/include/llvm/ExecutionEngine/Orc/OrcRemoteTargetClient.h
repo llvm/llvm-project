@@ -57,7 +57,7 @@ public:
       return *this;
     }
 
-    ~RCMemoryManager() {
+    ~RCMemoryManager() override {
       Client.destroyRemoteAllocator(Id);
       DEBUG(dbgs() << "Destroyed remote allocator " << Id << "\n");
     }
@@ -355,7 +355,9 @@ public:
                            ResourceIdMgr::ResourceId Id)
         : Remote(Remote), Id(Id) {}
 
-    ~RCIndirectStubsManager() { Remote.destroyIndirectStubsManager(Id); }
+    ~RCIndirectStubsManager() override {
+      Remote.destroyIndirectStubsManager(Id);
+    }
 
     std::error_code createStub(StringRef StubName, TargetAddress StubAddr,
                                JITSymbolFlags StubFlags) override {
@@ -479,7 +481,7 @@ public:
     }
 
   private:
-    void grow() {
+    void grow() override {
       TargetAddress BlockAddr = 0;
       uint32_t NumTrampolines = 0;
       auto EC = Remote.emitTrampolineBlock(BlockAddr, NumTrampolines);
@@ -797,4 +799,4 @@ private:
 
 #undef DEBUG_TYPE
 
-#endif
+#endif // LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETCLIENT_H

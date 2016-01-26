@@ -1,4 +1,4 @@
-//=-- InstrProf.h - Instrumented profiling format support ---------*- C++ -*-=//
+//===-- InstrProf.h - Instrumented profiling format support -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_PROFILEDATA_INSTRPROF_H_
-#define LLVM_PROFILEDATA_INSTRPROF_H_
+#ifndef LLVM_PROFILEDATA_INSTRPROF_H
+#define LLVM_PROFILEDATA_INSTRPROF_H
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -413,10 +413,10 @@ struct InstrProfRecord {
   /// Return the array of profiled values at \p Site.
   inline std::unique_ptr<InstrProfValueData[]>
   getValueForSite(uint32_t ValueKind, uint32_t Site,
-                  uint64_t (*ValueMapper)(uint32_t, uint64_t) = 0) const;
+                  uint64_t (*ValueMapper)(uint32_t, uint64_t) = nullptr) const;
   inline void
   getValueForSite(InstrProfValueData Dest[], uint32_t ValueKind, uint32_t Site,
-                  uint64_t (*ValueMapper)(uint32_t, uint64_t) = 0) const;
+                  uint64_t (*ValueMapper)(uint32_t, uint64_t) = nullptr) const;
   /// Reserve space for NumValueSites sites.
   inline void reserveSites(uint32_t ValueKind, uint32_t NumValueSites);
   /// Add ValueData for ValueKind at value Site.
@@ -737,7 +737,7 @@ struct Header {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
-}  // end namespace RawInstrProf
+} // end namespace RawInstrProf
 
 } // end namespace llvm
 
@@ -746,4 +746,4 @@ template <>
 struct is_error_code_enum<llvm::instrprof_error> : std::true_type {};
 }
 
-#endif // LLVM_PROFILEDATA_INSTRPROF_H_
+#endif // LLVM_PROFILEDATA_INSTRPROF_H

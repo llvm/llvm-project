@@ -37,14 +37,13 @@ public:
     return SectionMemoryManager::needsToReserveAllocationSpace();
   }
 
-  bool finalizeMemory(std::string *ErrMsg = 0) override {
+  bool finalizeMemory(std::string *ErrMsg = nullptr) override {
     ++FinalizationCount;
     return SectionMemoryManager::finalizeMemory(ErrMsg);
   }
 };
 
 TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
-
   class SectionMemoryManagerWrapper : public SectionMemoryManager {
   public:
     SectionMemoryManagerWrapper(bool &DebugSeen) : DebugSeen(DebugSeen) {}
@@ -113,9 +112,7 @@ TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
   }
 }
 
-
 TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
-
   if (!TM)
     return;
 
@@ -187,7 +184,6 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
 }
 
 TEST_F(ObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
-
   if (!TM)
     return;
 
@@ -250,4 +246,4 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
          "(multiple unrelated objects loaded prior to finalization)";
 }
 
-}
+} // end anonymous namespace
