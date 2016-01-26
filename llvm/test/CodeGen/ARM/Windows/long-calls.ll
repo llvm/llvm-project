@@ -12,7 +12,7 @@ entry:
 ; CHECK-LABEL: caller
 ; CHECK: ldr [[REG:r[0-9]+]], [[CPI:LCPI[_0-9]+]]
 ; CHECK: bx [[REG]]
-; CHECK: .align 2
+; CHECK: .p2align 2
 ; CHECK: [[CPI]]:
 ; CHECK: .long callee
 

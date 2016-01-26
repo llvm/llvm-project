@@ -335,6 +335,23 @@ Below are the rules regarding patching the release branch:
 #. For dot releases all patches must mantain both API and ABI compatibility with
    the previous major release.  Only bugfixes will be accepted.
 
+Merging Patches
+^^^^^^^^^^^^^^^
+
+The ``utils/release/merge.sh`` script can be used to merge individual revisions
+into any one of the llvm projects. To merge revision ``$N`` into project
+``$PROJ``, do:
+
+#. ``svn co http://llvm.org/svn/llvm-project/$PROJ/branches/release_XX
+   $PROJ.src``
+
+#. ``$PROJ.src/utils/release/merge.sh --proj $PROJ --rev $N``
+
+#. Run regression tests.
+
+#. ``cd $PROJ.src``. Run the ``svn commit`` command printed out by ``merge.sh``
+   in step 2.
+
 Release Final Tasks
 -------------------
 

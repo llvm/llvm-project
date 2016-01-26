@@ -7,7 +7,7 @@ define double @double() {
 }
 ; CHECK:              .globl  __real@0000000000800000
 ; CHECK-NEXT:         .section        .rdata,"dr",discard,__real@0000000000800000
-; CHECK-NEXT:         .align  8
+; CHECK-NEXT:         .p2align  3
 ; CHECK-NEXT: __real@0000000000800000:
 ; CHECK-NEXT:         .quad   8388608
 ; CHECK:      double:
@@ -19,7 +19,7 @@ define <4 x i32> @vec1() {
 }
 ; CHECK:              .globl  __xmm@00000000000000010000000200000003
 ; CHECK-NEXT:         .section        .rdata,"dr",discard,__xmm@00000000000000010000000200000003
-; CHECK-NEXT:         .align  16
+; CHECK-NEXT:         .p2align  4
 ; CHECK-NEXT: __xmm@00000000000000010000000200000003:
 ; CHECK-NEXT:         .long   3
 ; CHECK-NEXT:         .long   2
@@ -34,7 +34,7 @@ define <8 x i16> @vec2() {
 }
 ; CHECK:             .globl  __xmm@00000001000200030004000500060007
 ; CHECK-NEXT:        .section        .rdata,"dr",discard,__xmm@00000001000200030004000500060007
-; CHECK-NEXT:        .align  16
+; CHECK-NEXT:        .p2align  4
 ; CHECK-NEXT: __xmm@00000001000200030004000500060007:
 ; CHECK-NEXT:        .short  7
 ; CHECK-NEXT:        .short  6
@@ -54,7 +54,7 @@ define <4 x float> @undef1() {
 
 ; CHECK:             .globl  __xmm@00000000000000003f8000003f800000
 ; CHECK-NEXT:        .section        .rdata,"dr",discard,__xmm@00000000000000003f8000003f800000
-; CHECK-NEXT:        .align  16
+; CHECK-NEXT:        .p2align  4
 ; CHECK-NEXT: __xmm@00000000000000003f8000003f800000:
 ; CHECK-NEXT:        .long   1065353216              # float 1
 ; CHECK-NEXT:        .long   1065353216              # float 1
@@ -73,7 +73,7 @@ define float @pr23966(i32 %a) {
 
 ; CHECK:              .globl  __real@bf8000003f800000
 ; CHECK-NEXT:         .section        .rdata,"dr",discard,__real@bf8000003f800000
-; CHECK-NEXT:         .align  4
+; CHECK-NEXT:         .p2align  2
 ; CHECK-NEXT: __real@bf8000003f800000:
 ; CHECK-NEXT:         .long   1065353216
 ; CHECK-NEXT:         .long   3212836864

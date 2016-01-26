@@ -81,7 +81,7 @@ entry:
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK: Lmain$parent_frame_offset = [[reg_offs]]
-; CHECK: .align 4
+; CHECK: .p2align 2
 ; CHECK: L__ehtable$main
 ; CHECK-NEXT: .long -1
 ; CHECK-NEXT: .long _filt$main

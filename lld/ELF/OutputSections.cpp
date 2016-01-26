@@ -300,15 +300,27 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
 
     bool NeedsGot = Body && Target->relocNeedsGot(Type, *Body);
     bool CBP = canBePreempted(Body, NeedsGot);
+
+    // For a symbol with STT_GNU_IFUNC type, we always create a PLT and
+    // a GOT entry for the symbol, and emit an IRELATIVE reloc rather than
+    // the usual JUMP_SLOT reloc for the GOT entry. For the details, you
+    // want to read http://www.airs.com/blog/archives/403
+    if (!CBP && Body && isGnuIFunc<ELFT>(*Body)) {
+      P->setSymbolAndType(0, Target->getIRelativeReloc(), Config->Mips64EL);
+      if (Out<ELFT>::GotPlt)
+        P->r_offset = Out<ELFT>::GotPlt->getEntryAddr(*Body);
+      else
+        P->r_offset = Out<ELFT>::Got->getEntryAddr(*Body);
+      continue;
+    }
+
     bool LazyReloc = Body && Target->supportsLazyRelocations() &&
                      Target->relocNeedsPlt(Type, *Body);
     bool IsDynRelative = Type == Target->getRelativeReloc();
 
     unsigned Sym = CBP ? Body->DynamicSymbolTableIndex : 0;
     unsigned Reloc;
-    if (!CBP && Body && isGnuIFunc<ELFT>(*Body))
-      Reloc = Target->getIRelativeReloc();
-    else if (!CBP || IsDynRelative)
+    if (!CBP || IsDynRelative)
       Reloc = Target->getRelativeReloc();
     else if (LazyReloc)
       Reloc = Target->getPltReloc();

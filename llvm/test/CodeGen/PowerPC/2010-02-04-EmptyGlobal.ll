@@ -6,7 +6,7 @@
 @_cmd = constant %cmd.type zeroinitializer
 
 ; CHECK:      .globl __cmd
-; CHECK-NEXT: .align 3
+; CHECK-NEXT: .p2align 3
 ; CHECK-NEXT: __cmd:
 ; CHECK-NEXT: .byte 0
 

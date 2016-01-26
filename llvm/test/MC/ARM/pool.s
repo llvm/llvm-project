@@ -2,7 +2,7 @@
 
 	.syntax unified
 
-	.align 2
+	.p2align 2
 	.global pool
 	.type pool,%function
 pool:
@@ -12,7 +12,7 @@ pool:
 
 @ CHECK-LABEL: pool
 @ CHECK: ldr r0, .Ltmp0
-@ CHECK: .align	2
+@ CHECK: .p2align	2
 @ CHECK-LABEL: .Ltmp0:
 @ CHECK: .long	3126770193
 

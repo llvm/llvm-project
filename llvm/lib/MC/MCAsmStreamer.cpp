@@ -808,7 +808,7 @@ void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
     default:
       llvm_unreachable("Invalid size for machine code value!");
     case 1:
-      OS << "\t.align\t";
+      OS << "\t.p2align\t";
       break;
     case 2:
       OS << ".p2alignw ";
@@ -820,10 +820,7 @@ void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
       llvm_unreachable("Unsupported alignment size!");
     }
 
-    if (MAI->getAlignmentIsInBytes())
-      OS << ByteAlignment;
-    else
-      OS << Log2_32(ByteAlignment);
+    OS << Log2_32(ByteAlignment);
 
     if (Value || MaxBytesToEmit) {
       OS << ", 0x";

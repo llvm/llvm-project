@@ -1,35 +1,35 @@
 ; RUN: opt -S -cross-dso-cfi < %s | FileCheck %s
 
-; CHECK:     define void @__cfi_check(i64 %[[TYPE:.*]], i8* %[[ADDR:.*]]) align 4096
-; CHECK:     switch i64 %[[TYPE]], label %[[TRAP:.*]] [
+; CHECK:     define void @__cfi_check(i64 %[[TYPE:.*]], i8* %[[ADDR:.*]], i8* %[[DATA:.*]]) align 4096
+; CHECK:     switch i64 %[[TYPE]], label %[[FAIL:.*]] [
 ; CHECK-NEXT:   i64 111, label %[[L1:.*]]
 ; CHECK-NEXT:   i64 222, label %[[L2:.*]]
 ; CHECK-NEXT:   i64 333, label %[[L3:.*]]
 ; CHECK-NEXT:   i64 444, label %[[L4:.*]]
 ; CHECK-NEXT: {{]$}}
 
-; CHECK:     [[TRAP]]:
-; CHECK-NEXT:   call void @llvm.trap()
-; CHECK-MEXT:   unreachable
-
 ; CHECK:     [[EXIT:.*]]:
 ; CHECK-NEXT:   ret void
 
+; CHECK:     [[FAIL]]:
+; CHECK-NEXT:   call void @__cfi_check_fail(i8* %[[DATA]], i8* %[[ADDR]])
+; CHECK-NEXT:   br label %[[EXIT]]
+
 ; CHECK:     [[L1]]:
 ; CHECK-NEXT:   call i1 @llvm.bitset.test(i8* %[[ADDR]], metadata i64 111)
-; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[TRAP]]
+; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[FAIL]]
 
 ; CHECK:     [[L2]]:
 ; CHECK-NEXT:   call i1 @llvm.bitset.test(i8* %[[ADDR]], metadata i64 222)
-; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[TRAP]]
+; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[FAIL]]
 
 ; CHECK:     [[L3]]:
 ; CHECK-NEXT:   call i1 @llvm.bitset.test(i8* %[[ADDR]], metadata i64 333)
-; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[TRAP]]
+; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[FAIL]]
 
 ; CHECK:     [[L4]]:
 ; CHECK-NEXT:   call i1 @llvm.bitset.test(i8* %[[ADDR]], metadata i64 444)
-; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[TRAP]]
+; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[FAIL]]
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -64,6 +64,11 @@ entry:
 define i32 @f22() {
 entry:
   ret i32 5
+}
+
+define weak_odr hidden void @__cfi_check_fail(i8*, i8*) {
+entry:
+  ret void
 }
 
 !llvm.bitsets = !{!0, !1, !2, !3, !4, !7, !8, !9, !10, !11, !12, !13, !14, !15}

@@ -37,7 +37,7 @@ declare noalias i32* @make_data()
 ; We use to produce a useless copy here and move %data in another temporary register. 
 ; CHECK-NOT: movq [[ARG1]]
 ; End of the first basic block.
-; CHECK: .align
+; CHECK: .p2align
 ; Now check that %data is used in an address computation.
 ; CHECK: leaq ([[ARG1]]
 define %struct._list* @make_list(i32* nocapture readonly %data, i32* nocapture %value, i32* nocapture %all) {

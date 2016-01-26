@@ -101,7 +101,7 @@ entry:
 
 ; FP + large frame: spill FP+SR+R4+LR = entsp 3 + 200000  + extsp 1
 ; CHECKFP: .section .cp.rodata.cst4,"aMc",@progbits,4
-; CHECKFP-NEXT: .align 4
+; CHECKFP-NEXT: .p2align 2
 ; CHECKFP-NEXT: .LCPI[[CNST0:[0-9_]+]]:
 ; CHECKFP-NEXT: .long 200002
 ; CHECKFP-NEXT: .LCPI[[CNST1:[0-9_]+]]:
@@ -154,7 +154,7 @@ entry:
 ;
 ; !FP + large frame: spill SR+SR+R4+LR = entsp 4 + 200000
 ; CHECK: .section .cp.rodata.cst4,"aMc",@progbits,4
-; CHECK-NEXT: .align 4
+; CHECK-NEXT: .p2align 2
 ; CHECK-NEXT: .LCPI[[CNST0:[0-9_]+]]:
 ; CHECK-NEXT: .long 200003
 ; CHECK-NEXT: .LCPI[[CNST1:[0-9_]+]]:

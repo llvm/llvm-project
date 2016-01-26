@@ -15,7 +15,7 @@ define void @unxlate_dev_mem_ptr(i64 %phis, i8* %addr) nounwind {
 }
 @bm_pte = internal global [512 x %struct.kmem_cache_order_objects] zeroinitializer, section ".bss.page_aligned", align 4096
 ; CHECK: .section        .bss.page_aligned,"aw",@nobits
-; CHECK-NEXT: .align  4096
+; CHECK-NEXT: .p2align  12
 ; CHECK-NEXT: bm_pte:
 ; CHECK-NEXT: .zero   4096
 ; CHECK-NEXT: .size   bm_pte, 4096

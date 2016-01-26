@@ -22,9 +22,9 @@ entry:
 ; GENERIC-LABEL: .globl  foo
 ; BASIC-LABEL: .globl  foo
 ; PWR-LABEL: .globl  foo
-; GENERIC: .align  2
-; BASIC: .align  4
-; PWR: .align  4
+; GENERIC: .p2align  2
+; BASIC: .p2align  4
+; PWR: .p2align  4
 ; GENERIC: @foo
 ; BASIC: @foo
 ; PWR: @foo
@@ -41,9 +41,9 @@ entry:
 ; GENERIC: mtctr
 ; BASIC: mtctr
 ; PWR: mtctr
-; GENERIC-NOT: .align
-; BASIC: .align  4
-; PWR: .align  4
+; GENERIC-NOT: .p2align
+; BASIC: .p2align  4
+; PWR: .p2align  4
 ; GENERIC: lwzu
 ; BASIC: lwzu
 ; PWR: lwzu
@@ -83,9 +83,9 @@ entry:
 ; GENERIC: mtctr
 ; BASIC: mtctr
 ; PWR: mtctr
-; GENERIC-NOT: .align
-; BASIC: .align  4
-; PWR: .align  5
+; GENERIC-NOT: .p2align
+; BASIC: .p2align  4
+; PWR: .p2align  5
 ; GENERIC: bdnz
 ; BASIC: bdnz
 ; PWR: bdnz

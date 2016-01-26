@@ -705,7 +705,7 @@ namespace {
     }
 
 
-    // Helper functions of redundant load elimination 
+    // Helper functions of redundant load elimination
     bool processLoad(LoadInst *L);
     bool processNonLocalLoad(LoadInst *L);
     bool processAssumeIntrinsic(IntrinsicInst *II);
@@ -1895,6 +1895,23 @@ bool GVN::processLoad(LoadInst *L) {
   MemDepResult Dep = MD->getDependency(L);
   const DataLayout &DL = L->getModule()->getDataLayout();
 
+  // If it is defined in another block, try harder.
+  if (Dep.isNonLocal())
+    return processNonLocalLoad(L);
+
+  // Only handle the local case below
+  if (!Dep.isDef() && !Dep.isClobber()) {
+    // This might be a NonFuncLocal or an Unknown
+    DEBUG(
+      // fast print dep, using operator<< on instruction is too slow.
+      dbgs() << "GVN: load ";
+      L->printAsOperand(dbgs());
+      dbgs() << " has unknown dependence\n";
+    );
+    return false;
+  }
+
+
   // If we have a clobber and target data is around, see if this is a clobber
   // that we can fix up through code synthesis.
   if (Dep.isClobber()) {
@@ -1966,21 +1983,10 @@ bool GVN::processLoad(LoadInst *L) {
     return false;
   }
 
-  // If it is defined in another block, try harder.
-  if (Dep.isNonLocal())
-    return processNonLocalLoad(L);
-
-  if (!Dep.isDef()) {
-    DEBUG(
-      // fast print dep, using operator<< on instruction is too slow.
-      dbgs() << "GVN: load ";
-      L->printAsOperand(dbgs());
-      dbgs() << " has unknown dependence\n";
-    );
-    return false;
-  }
+  assert(Dep.isDef() && "expected from control flow");
 
   Instruction *DepInst = Dep.getInst();
+  Value *AvailableValue = nullptr;
   if (StoreInst *DepSI = dyn_cast<StoreInst>(DepInst)) {
     Value *StoredVal = DepSI->getValueOperand();
 
@@ -1998,68 +2004,48 @@ bool GVN::processLoad(LoadInst *L) {
                    << '\n' << *L << "\n\n\n");
     }
 
-    // Remove it!
-    L->replaceAllUsesWith(StoredVal);
-    if (StoredVal->getType()->getScalarType()->isPointerTy())
-      MD->invalidateCachedPointerInfo(StoredVal);
-    markInstructionForDeletion(L);
-    ++NumGVNLoad;
-    return true;
+    AvailableValue = StoredVal;
   }
 
   if (LoadInst *DepLI = dyn_cast<LoadInst>(DepInst)) {
-    Value *AvailableVal = DepLI;
-
+    AvailableValue = DepLI;
     // The loads are of a must-aliased pointer, but they may not actually have
     // the same type.  See if we know how to reuse the previously loaded value
     // (depending on its type).
     if (DepLI->getType() != L->getType()) {
       IRBuilder<> Builder(L);
-      AvailableVal =
+      AvailableValue =
           CoerceAvailableValueToLoadType(DepLI, L->getType(), Builder, DL);
-      if (!AvailableVal)
+      if (!AvailableValue)
         return false;
 
-      DEBUG(dbgs() << "GVN COERCED LOAD:\n" << *DepLI << "\n" << *AvailableVal
+      DEBUG(dbgs() << "GVN COERCED LOAD:\n" << *DepLI << "\n" << *AvailableValue
                    << "\n" << *L << "\n\n\n");
     }
-
-    // Remove it!
-    patchAndReplaceAllUsesWith(L, AvailableVal);
-    if (DepLI->getType()->getScalarType()->isPointerTy())
-      MD->invalidateCachedPointerInfo(DepLI);
-    markInstructionForDeletion(L);
-    ++NumGVNLoad;
-    return true;
   }
 
   // If this load really doesn't depend on anything, then we must be loading an
   // undef value.  This can happen when loading for a fresh allocation with no
   // intervening stores, for example.
-  if (isa<AllocaInst>(DepInst) || isMallocLikeFn(DepInst, TLI)) {
-    L->replaceAllUsesWith(UndefValue::get(L->getType()));
-    markInstructionForDeletion(L);
-    ++NumGVNLoad;
-    return true;
-  }
-
-  // If this load occurs either right after a lifetime begin,
-  // then the loaded value is undefined.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(DepInst)) {
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      L->replaceAllUsesWith(UndefValue::get(L->getType()));
-      markInstructionForDeletion(L);
-      ++NumGVNLoad;
-      return true;
-    }
-  }
+  if (isa<AllocaInst>(DepInst) || isMallocLikeFn(DepInst, TLI) ||
+      isLifetimeStart(DepInst)) 
+    AvailableValue = UndefValue::get(L->getType());
 
   // If this load follows a calloc (which zero initializes memory),
   // then the loaded value is zero
-  if (isCallocLikeFn(DepInst, TLI)) {
-    L->replaceAllUsesWith(Constant::getNullValue(L->getType()));
+  if (isCallocLikeFn(DepInst, TLI))
+    AvailableValue = Constant::getNullValue(L->getType());
+
+  if (AvailableValue) {
+    // Do the actual replacement
+    patchAndReplaceAllUsesWith(L, AvailableValue);
     markInstructionForDeletion(L);
     ++NumGVNLoad;
+    // Tell MDA to rexamine the reused pointer since we might have more
+    // information after forwarding it.
+    if (MD && AvailableValue->getType()->getScalarType()->isPointerTy())
+      MD->invalidateCachedPointerInfo(AvailableValue);
+
     return true;
   }
 

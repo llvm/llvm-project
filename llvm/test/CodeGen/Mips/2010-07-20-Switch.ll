@@ -55,19 +55,19 @@ bb5:                                              ; preds = %entry
   ret i32 1
 }
 
-; STATIC-O32: .align  2
+; STATIC-O32: .p2align  2
 ; STATIC-O32: $JTI0_0:
 ; STATIC-O32: .4byte
 ; STATIC-O32: .4byte
 ; STATIC-O32: .4byte
 ; STATIC-O32: .4byte
-; PIC-O32: .align  2
+; PIC-O32: .p2align  2
 ; PIC-O32: $JTI0_0:
 ; PIC-O32: .gpword
 ; PIC-O32: .gpword
 ; PIC-O32: .gpword 
 ; PIC-O32: .gpword 
-; N64: .align  3
+; N64: .p2align  3
 ; N64: $JTI0_0:
 ; N64: .gpdword
 ; N64: .gpdword

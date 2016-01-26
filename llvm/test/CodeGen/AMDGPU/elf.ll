@@ -22,7 +22,7 @@
 ; CONFIG-NEXT: .long   45096
 ; TYPICAL-NEXT: .long   0
 ; TONGA-NEXT: .long   576
-; CONFIG: .align 256
+; CONFIG: .p2align 8
 ; CONFIG: test:
 define void @test(i32 %p) #0 {
    %i = add i32 %p, 2

@@ -130,7 +130,7 @@ entry:
 
 ; EMU-NOT:   __emutls_t.external_gd
 ; EMU-NOT:   __emutls_v.external_gd
-; EMU:       .align 2
+; EMU:       .p2align 2
 ; EMU-LABEL: __emutls_v.internal_gd:
 ; EMU-NEXT:  .long 4
 ; EMU-NEXT:  .long 4
@@ -144,7 +144,7 @@ entry:
 
 ; EMU-NOT:   __emutls_t.external_gd
 ; EMU-NOT:   __emutls_v.external_gd
-; EMU:       .align 2
+; EMU:       .p2align 2
 ; EMU-LABEL: __emutls_v.internal_le:
 ; EMU-NEXT:  .long 4
 ; EMU-NEXT:  .long 4

@@ -156,26 +156,26 @@ f15:
 @ Constant Pools
 @
 @ CHECK: .section b,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP0]]
 @ CHECK: .long 65537
 
 @ CHECK: .section c,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP1]]
 @ CHECK: .long 65538
 @ CHECK: .Ltmp[[TMP2]]
 @ CHECK: .long 65539
 
 @ CHECK: .section d,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP3]]
 @ CHECK: .long 65540
 @ CHECK: .Ltmp[[TMP4]]
 @ CHECK: .long 65540
 
 @ CHECK: .section e,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP5]]
 @ CHECK: .long 65542
 @ CHECK: .Ltmp[[TMP6]]
@@ -185,36 +185,36 @@ f15:
 @ CHECK-NOT: .section f,"ax",%progbits
 
 @ CHECK: .section g,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP7]]
 @ CHECK: .long foo
 
 @ CHECK: .section h,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP8]]
 @ CHECK: .long f5
 
 @ CHECK: .section i,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP9]]
 @ CHECK: .long f12
 
 @ CHECK: .section j,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP10]]
 @ CHECK: .long 257
 @ CHECK: .Ltmp[[TMP11]]
 @ CHECK: .long bar
 
 @ CHECK: .section k,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP12]]
 @ CHECK: .long 65544
 @ CHECK: .Ltmp[[TMP13]]
 @ CHECK: .long baz
 
 @ CHECK: .section l,"ax",%progbits
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP14]]
 @ CHECK: .long 65545
 @ CHECK: .Ltmp[[TMP15]]

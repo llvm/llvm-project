@@ -163,7 +163,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X64: retq
 
 ; X64:        .section .xdata,"dr"
-; X64-NEXT: .align  4
+; X64-NEXT: .p2align  2
 ; X64: $cppxdata$nested_cleanup:
 ; X64-NEXT: .long   429065506
 ; X64-NEXT: .long   2

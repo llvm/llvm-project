@@ -19,7 +19,7 @@ f2:
   b f3
 .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP0]]
 @ CHECK: .long 65537
 
@@ -39,7 +39,7 @@ f4:
   b f5
 .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP1]]
 @ CHECK: .long 65538
 
@@ -53,7 +53,7 @@ f5:
   b f6
 .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP2]]
 @ CHECK: .long 65539
 
@@ -86,7 +86,7 @@ f9:
   b f10
 .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP3]]
 @ CHECK: .long bar
 
@@ -106,7 +106,7 @@ f11:
   b f12
   .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP4]]
 @ CHECK: .long 65540
 @ CHECK-LABEL: f12:
@@ -130,7 +130,7 @@ f13:
 @ should have a non-empty constant pool at end of this section
 @ CHECK: .section e,"ax",%progbits
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP5]]
 @ CHECK: .long 65541
 

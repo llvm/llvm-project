@@ -125,7 +125,7 @@ catch:
 ; CHECK: retl
 
 ; CHECK: .section .xdata,"dr"
-; CHECK: .align 4
+; CHECK: .p2align 2
 ; CHECK-LABEL: L__ehtable$use_CxxFrameHandler3:
 ; CHECK-NEXT:  .long   429065506
 ; CHECK-NEXT:  .long   2

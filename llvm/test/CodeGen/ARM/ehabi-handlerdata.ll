@@ -40,13 +40,13 @@ try.cont:
 }
 
 ; CHECK:   .globl test1
-; CHECK:   .align 2
+; CHECK:   .p2align 2
 ; CHECK:   .type test1,%function
 ; CHECK-LABEL: test1:
 ; CHECK:   .fnstart
 ; CHECK:   .personality __gxx_personality_v0
 ; CHECK:   .handlerdata
-; CHECK:   .align 2
+; CHECK:   .p2align 2
 ; CHECK-LABEL: GCC_except_table0:
 ; CHECK-LABEL: .Lexception0:
 ; CHECK:   .byte 255                     @ @LPStart Encoding = omit

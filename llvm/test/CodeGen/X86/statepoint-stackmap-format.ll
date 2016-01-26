@@ -168,7 +168,7 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; No Padding or LiveOuts
 ; CHECK: .short	0
 ; CHECK: .short	0
-; CHECK: .align	8
+; CHECK: .p2align	3
 
 ;
 ; test_derived_arg
@@ -235,7 +235,7 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; No Padding or LiveOuts
 ; CHECK: .short	0
 ; CHECK: .short	0
-; CHECK: .align	8
+; CHECK: .p2align	3
 
 ; Records for the test_id function:
 
@@ -275,5 +275,5 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; No padding or LiveOuts
 ; CHECK: .short	0
 ; CHECK: .short	0
-; CHECK: .align	8
+; CHECK: .p2align	3
 

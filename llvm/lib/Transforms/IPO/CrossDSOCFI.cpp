@@ -110,31 +110,30 @@ void CrossDSOCFI::buildCFICheck() {
 
   LLVMContext &Ctx = M->getContext();
   Constant *C = M->getOrInsertFunction(
-      "__cfi_check",
-      FunctionType::get(
-          Type::getVoidTy(Ctx),
-          {Type::getInt64Ty(Ctx), PointerType::getUnqual(Type::getInt8Ty(Ctx))},
-          false));
+      "__cfi_check", Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx),
+      Type::getInt8PtrTy(Ctx), Type::getInt8PtrTy(Ctx), nullptr);
   Function *F = dyn_cast<Function>(C);
   F->setAlignment(4096);
   auto args = F->arg_begin();
-  Argument &CallSiteTypeId = *(args++);
+  Value &CallSiteTypeId = *(args++);
   CallSiteTypeId.setName("CallSiteTypeId");
-  Argument &Addr = *(args++);
+  Value &Addr = *(args++);
   Addr.setName("Addr");
+  Value &CFICheckFailData = *(args++);
+  CFICheckFailData.setName("CFICheckFailData");
   assert(args == F->arg_end());
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
-
-  BasicBlock *TrapBB = BasicBlock::Create(Ctx, "trap", F);
-  IRBuilder<> IRBTrap(TrapBB);
-  Function *TrapFn = Intrinsic::getDeclaration(M, Intrinsic::trap);
-  llvm::CallInst *TrapCall = IRBTrap.CreateCall(TrapFn);
-  TrapCall->setDoesNotReturn();
-  TrapCall->setDoesNotThrow();
-  IRBTrap.CreateUnreachable();
-
   BasicBlock *ExitBB = BasicBlock::Create(Ctx, "exit", F);
+
+  BasicBlock *TrapBB = BasicBlock::Create(Ctx, "fail", F);
+  IRBuilder<> IRBFail(TrapBB);
+  Constant *CFICheckFailFn = M->getOrInsertFunction(
+      "__cfi_check_fail", Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx),
+      Type::getInt8PtrTy(Ctx), nullptr);
+  IRBFail.CreateCall(CFICheckFailFn, {&CFICheckFailData, &Addr});
+  IRBFail.CreateBr(ExitBB);
+
   IRBuilder<> IRBExit(ExitBB);
   IRBExit.CreateRetVoid();
 

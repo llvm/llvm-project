@@ -20,7 +20,7 @@ f2:
 .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp0:
 @ CHECK: .long 65537
 @ CHECK: .end_data_region
@@ -42,7 +42,7 @@ f4:
 .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp1:
 @ CHECK: .long 65538
 @ CHECK: .end_data_region
@@ -58,7 +58,7 @@ f5:
 .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp2:
 @ CHECK: .long 65539
 @ CHECK: .end_data_region
@@ -93,7 +93,7 @@ f9:
 .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp3:
 @ CHECK: .long bar
 @ CHECK: .end_data_region
@@ -115,7 +115,7 @@ f11:
   .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp4:
 @ CHECK: .long 65540
 @ CHECK: .end_data_region
@@ -142,7 +142,7 @@ f13:
 @ CHECK: .section __TEXT,e,regular,pure_instructions
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp5:
 @ CHECK: .long 65541
 @ CHECK: .end_data_region
