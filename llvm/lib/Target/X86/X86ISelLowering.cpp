@@ -6389,6 +6389,38 @@ static SDValue LowerToHorizontalOp(const BuildVectorSDNode *BV,
   return SDValue();
 }
 
+/// Create a vector constant without a load. SSE/AVX provide the bare minimum
+/// functionality to do this, so it's all zeros, all ones, or some derivation
+/// that is cheap to calculate.
+static SDValue materializeVectorConstant(SDValue Op, SelectionDAG &DAG,
+                                         const X86Subtarget &Subtarget) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+
+  // Vectors containing all zeros can be matched by pxor and xorps.
+  if (ISD::isBuildVectorAllZeros(Op.getNode())) {
+    // Canonicalize this to <4 x i32> to 1) ensure the zero vectors are CSE'd
+    // and 2) ensure that i64 scalars are eliminated on x86-32 hosts.
+    if (VT == MVT::v4i32 || VT == MVT::v8i32 || VT == MVT::v16i32)
+      return Op;
+
+    return getZeroVector(VT, &Subtarget, DAG, DL);
+  }
+
+  // Vectors containing all ones can be matched by pcmpeqd on 128-bit width
+  // vectors or broken into v4i32 operations on 256-bit vectors. AVX2 can use
+  // vpcmpeqd on 256-bit vectors.
+  if (Subtarget.hasSSE2() && ISD::isBuildVectorAllOnes(Op.getNode())) {
+    if (VT == MVT::v4i32 || (VT == MVT::v8i32 && Subtarget.hasInt256()))
+      return Op;
+
+    if (!VT.is512BitVector())
+      return getOnesVector(VT, &Subtarget, DAG, DL);
+  }
+
+  return SDValue();
+}
+
 SDValue
 X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -6401,26 +6433,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getVectorElementType() == MVT::i1 && Subtarget->hasAVX512())
     return LowerBUILD_VECTORvXi1(Op, DAG);
 
-  // Vectors containing all zeros can be matched by pxor and xorps later
-  if (ISD::isBuildVectorAllZeros(Op.getNode())) {
-    // Canonicalize this to <4 x i32> to 1) ensure the zero vectors are CSE'd
-    // and 2) ensure that i64 scalars are eliminated on x86-32 hosts.
-    if (VT == MVT::v4i32 || VT == MVT::v8i32 || VT == MVT::v16i32)
-      return Op;
-
-    return getZeroVector(VT, Subtarget, DAG, dl);
-  }
-
-  // Vectors containing all ones can be matched by pcmpeqd on 128-bit width
-  // vectors or broken into v4i32 operations on 256-bit vectors. AVX2 can use
-  // vpcmpeqd on 256-bit vectors.
-  if (Subtarget->hasSSE2() && ISD::isBuildVectorAllOnes(Op.getNode())) {
-    if (VT == MVT::v4i32 || (VT == MVT::v8i32 && Subtarget->hasInt256()))
-      return Op;
-
-    if (!VT.is512BitVector())
-      return getOnesVector(VT, Subtarget, DAG, dl);
-  }
+  if (SDValue VectorConstant = materializeVectorConstant(Op, DAG, *Subtarget))
+    return VectorConstant;
 
   BuildVectorSDNode *BV = cast<BuildVectorSDNode>(Op.getNode());
   if (SDValue AddSub = LowerToAddSub(BV, Subtarget, DAG))

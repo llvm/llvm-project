@@ -15,7 +15,7 @@ function( get_host_triple var )
       set( value "i686-pc-mingw32" )
     endif()
   else( MSVC )
-    set(config_guess ${LLVM_MAIN_SRC_DIR}/autoconf/config.guess)
+    set(config_guess ${LLVM_MAIN_SRC_DIR}/cmake/config.guess)
     execute_process(COMMAND sh ${config_guess}
       RESULT_VARIABLE TT_RV
       OUTPUT_VARIABLE TT_OUT

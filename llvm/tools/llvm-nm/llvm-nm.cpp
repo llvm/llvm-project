@@ -587,14 +587,9 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
        I != E; ++I) {
     uint32_t SymFlags = I->Sym.getFlags();
     bool Undefined = SymFlags & SymbolRef::SF_Undefined;
-    if (!Undefined && UndefinedOnly)
-      continue;
-    if (Undefined && DefinedOnly)
-      continue;
     bool Global = SymFlags & SymbolRef::SF_Global;
-    if (!Global && ExternalOnly)
-      continue;
-    if (SizeSort && !PrintAddress)
+    if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
+        (!Global && ExternalOnly) || (SizeSort && !PrintAddress))
       continue;
     if (PrintFileName) {
       if (!ArchitectureName.empty())
