@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCSymbolizer.h"
+#include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 
 using namespace llvm;
 

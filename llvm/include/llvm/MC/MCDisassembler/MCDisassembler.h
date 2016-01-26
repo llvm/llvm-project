@@ -6,12 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_MC_MCDISASSEMBLER_H
-#define LLVM_MC_MCDISASSEMBLER_H
+#ifndef LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
+#define LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/MC/MCSymbolizer.h"
+#include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
