@@ -172,6 +172,16 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
+void
+WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(const MCInst *MI,
+                                                       unsigned OpNo,
+                                                       raw_ostream &O) {
+  int64_t Imm = MI->getOperand(OpNo).getImm();
+  if (Imm == WebAssembly::GetDefaultP2Align(MI->getOpcode()))
+    return;
+  O << ":p2align=" << Imm;
+}
+
 const char *llvm::WebAssembly::TypeToString(MVT Ty) {
   switch (Ty.SimpleTy) {
   case MVT::i32:

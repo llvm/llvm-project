@@ -15,7 +15,10 @@
 #include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblySubtarget.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-peephole"
@@ -28,6 +31,7 @@ class WebAssemblyPeephole final : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -44,11 +48,36 @@ FunctionPass *llvm::createWebAssemblyPeephole() {
   return new WebAssemblyPeephole();
 }
 
-bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
+/// If desirable, rewrite NewReg to a discard register.
+static bool MaybeRewriteToDiscard(unsigned OldReg, unsigned NewReg,
+                                  MachineOperand &MO,
+                                  WebAssemblyFunctionInfo &MFI,
+                                  MachineRegisterInfo &MRI) {
   bool Changed = false;
+  // TODO: Handle SP/physregs
+  if (OldReg == NewReg && TargetRegisterInfo::isVirtualRegister(NewReg)) {
+    Changed = true;
+    unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
+    MO.setReg(NewReg);
+    MO.setIsDead();
+    MFI.stackifyVReg(NewReg);
+    MFI.addWAReg(NewReg, WebAssemblyFunctionInfo::UnusedReg);
+  }
+  return Changed;
+}
+
+bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
+  DEBUG({
+    dbgs() << "********** Store Results **********\n"
+           << "********** Function: " << MF.getName() << '\n';
+  });
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  const WebAssemblyTargetLowering &TLI =
+      *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
+  auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  bool Changed = false;
 
   for (auto &MBB : MF)
     for (auto &MI : MBB)
@@ -69,15 +98,33 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
         // can use $discard instead.
         MachineOperand &MO = MI.getOperand(0);
         unsigned OldReg = MO.getReg();
-        // TODO: Handle SP/physregs
-        if (OldReg == MI.getOperand(3).getReg() &&
-            TargetRegisterInfo::isVirtualRegister(MI.getOperand(3).getReg())) {
-          Changed = true;
-          unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
-          MO.setReg(NewReg);
-          MO.setIsDead();
-          MFI.stackifyVReg(NewReg);
-          MFI.addWAReg(NewReg, WebAssemblyFunctionInfo::UnusedReg);
+        unsigned NewReg =
+            MI.getOperand(WebAssembly::StoreValueOperandNo).getReg();
+        Changed |= MaybeRewriteToDiscard(OldReg, NewReg, MO, MFI, MRI);
+        break;
+      }
+      case WebAssembly::CALL_I32:
+      case WebAssembly::CALL_I64: {
+        MachineOperand &Op1 = MI.getOperand(1);
+        if (Op1.isSymbol()) {
+          StringRef Name(Op1.getSymbolName());
+          if (Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
+              Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
+              Name == TLI.getLibcallName(RTLIB::MEMSET)) {
+            LibFunc::Func Func;
+            if (LibInfo.getLibFunc(Name, Func)) {
+              if (!MI.getOperand(2).isReg())
+                report_fatal_error(
+                    "Call to builtin function with wrong signature");
+              MachineOperand &MO = MI.getOperand(0);
+              unsigned OldReg = MO.getReg();
+              unsigned NewReg = MI.getOperand(2).getReg();
+              if (MRI.getRegClass(NewReg) != MRI.getRegClass(OldReg))
+                report_fatal_error(
+                    "Call to builtin function with wrong signature");
+              Changed |= MaybeRewriteToDiscard(OldReg, NewReg, MO, MFI, MRI);
+            }
+          }
         }
       }
       }

@@ -40,6 +40,15 @@ let TargetPrefix = "AMDGPU", isTarget = 1 in {
   def int_AMDGPU_bfm : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
   def int_AMDGPU_flbit_i32 : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 
+  def int_AMDGPU_rsq_clamped :  Intrinsic<
+    [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
+  >;
+
+  // Deprecated in favor of llvm.amdgcn.rsq
+  def int_AMDGPU_rsq : Intrinsic<
+    [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
+  >;
+
   // Deprecated in favor of llvm.bitreverse
   def int_AMDGPU_brev : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 

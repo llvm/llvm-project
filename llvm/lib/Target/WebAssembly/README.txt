@@ -58,10 +58,6 @@ us too?
 
 //===---------------------------------------------------------------------===//
 
-When is it profitable to set isAsCheapAsAMove on instructions in WebAssembly?
-
-//===---------------------------------------------------------------------===//
-
 Register stackification uses the EXPR_STACK physical register to impose
 ordering dependencies on instructions with stack operands. This is pessimistic;
 we should consider alternate ways to model stack dependencies.
@@ -79,11 +75,6 @@ Instead of the OptimizeReturned pass, which should consider preserving the
 pass to do this optimization on calls too. That would also let the
 WebAssemblyPeephole pass clean up dead defs for such calls, as it does for
 stores.
-
-//===---------------------------------------------------------------------===//
-
-Memset/memcpy/memmove should be marked with the "returned" attribute somehow,
-even when they are translated through intrinsics.
 
 //===---------------------------------------------------------------------===//
 

@@ -56,6 +56,8 @@ private:
   bool isCheapToSpeculateCtlz() const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS) const override;
+  bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, unsigned Align,
+                                      bool *Fast) const override;
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;

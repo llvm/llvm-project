@@ -17,12 +17,18 @@
 /// potentially also exposing the store to register stackifying. These both can
 /// reduce get_local/set_local traffic.
 ///
+/// This pass also performs this optimization for memcpy, memmove, and memset
+/// calls, since the LLVM intrinsics for these return void so they can't use the
+/// returned attribute and consequently aren't handled by the OptimizeReturned
+/// pass.
+///
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -49,6 +55,7 @@ public:
     AU.addPreserved<MachineBlockFrequencyInfo>();
     AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -63,6 +70,40 @@ FunctionPass *llvm::createWebAssemblyStoreResults() {
   return new WebAssemblyStoreResults();
 }
 
+// Replace uses of FromReg with ToReg if they are dominated by MI.
+static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
+                                 unsigned FromReg, unsigned ToReg,
+                                 const MachineRegisterInfo &MRI,
+                                 MachineDominatorTree &MDT) {
+  bool Changed = false;
+  for (auto I = MRI.use_begin(FromReg), E = MRI.use_end(); I != E;) {
+    MachineOperand &O = *I++;
+    MachineInstr *Where = O.getParent();
+    if (Where->getOpcode() == TargetOpcode::PHI) {
+      // PHIs use their operands on their incoming CFG edges rather than
+      // in their parent blocks. Get the basic block paired with this use
+      // of FromReg and check that MI's block dominates it.
+      MachineBasicBlock *Pred =
+          Where->getOperand(&O - &Where->getOperand(0) + 1).getMBB();
+      if (!MDT.dominates(&MBB, Pred))
+        continue;
+    } else {
+      // For a non-PHI, check that MI dominates the instruction in the
+      // normal way.
+      if (&MI == Where || !MDT.dominates(&MI, Where))
+        continue;
+    }
+    Changed = true;
+    DEBUG(dbgs() << "Setting operand " << O << " in " << *Where << " from "
+                 << MI << "\n");
+    O.setReg(ToReg);
+    // If the store's def was previously dead, it is no longer. But the
+    // dead flag shouldn't be set yet.
+    assert(!MI.getOperand(0).isDead() && "Unexpected dead flag");
+  }
+  return Changed;
+}
+
 bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
   DEBUG({
     dbgs() << "********** Store Results **********\n"
@@ -71,6 +112,9 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
+  const WebAssemblyTargetLowering &TLI =
+      *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
+  auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   bool Changed = false;
 
   assert(MRI.isSSA() && "StoreResults depends on SSA form");
@@ -89,34 +133,37 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE_F32:
       case WebAssembly::STORE_F64:
       case WebAssembly::STORE_I32:
-      case WebAssembly::STORE_I64:
+      case WebAssembly::STORE_I64: {
         unsigned ToReg = MI.getOperand(0).getReg();
-        unsigned FromReg = MI.getOperand(3).getReg();
-        for (auto I = MRI.use_begin(FromReg), E = MRI.use_end(); I != E;) {
-          MachineOperand &O = *I++;
-          MachineInstr *Where = O.getParent();
-          if (Where->getOpcode() == TargetOpcode::PHI) {
-            // PHIs use their operands on their incoming CFG edges rather than
-            // in their parent blocks. Get the basic block paired with this use
-            // of FromReg and check that MI's block dominates it.
-            MachineBasicBlock *Pred =
-                Where->getOperand(&O - &Where->getOperand(0) + 1).getMBB();
-            if (!MDT.dominates(&MBB, Pred))
-              continue;
-          } else {
-            // For a non-PHI, check that MI dominates the instruction in the
-            // normal way.
-            if (&MI == Where || !MDT.dominates(&MI, Where))
-              continue;
+        unsigned FromReg =
+            MI.getOperand(WebAssembly::StoreValueOperandNo).getReg();
+        Changed |= ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
+        break;
+      }
+      case WebAssembly::CALL_I32:
+      case WebAssembly::CALL_I64: {
+        MachineOperand &Op1 = MI.getOperand(1);
+        if (Op1.isSymbol()) {
+          StringRef Name(Op1.getSymbolName());
+          if (Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
+              Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
+              Name == TLI.getLibcallName(RTLIB::MEMSET)) {
+            LibFunc::Func Func;
+            if (LibInfo.getLibFunc(Name, Func)) {
+              if (!MI.getOperand(2).isReg())
+                report_fatal_error(
+                    "Call to builtin function with wrong signature");
+              unsigned FromReg = MI.getOperand(2).getReg();
+              unsigned ToReg = MI.getOperand(0).getReg();
+              if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
+                report_fatal_error(
+                    "Call to builtin function with wrong signature");
+              Changed |=
+                  ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
+            }
           }
-          Changed = true;
-          DEBUG(dbgs() << "Setting operand " << O << " in " << *Where
-                       << " from " << MI << "\n");
-          O.setReg(ToReg);
-          // If the store's def was previously dead, it is no longer. But the
-          // dead flag shouldn't be set yet.
-          assert(!MI.getOperand(0).isDead() && "Dead flag set on store result");
         }
+      }
       }
   }
 

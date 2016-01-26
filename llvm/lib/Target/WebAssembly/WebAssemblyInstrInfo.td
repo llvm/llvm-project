@@ -76,6 +76,12 @@ def f32imm_op : Operand<f32>;
 def f64imm_op : Operand<f64>;
 } // OperandType = "OPERAND_FPIMM"
 
+let OperandType = "OPERAND_P2ALIGN" in {
+def P2Align : Operand<i32> {
+  let PrintMethod = "printWebAssemblyP2AlignOperand";
+}
+} // OperandType = "OPERAND_P2ALIGN"
+
 } // OperandNamespace = "WebAssembly"
 
 //===----------------------------------------------------------------------===//
