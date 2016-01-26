@@ -56,7 +56,8 @@ RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC-pax %s
 INVALID-SECTION-IDX-SYMBOL-SEC-pax: 0000000100000000 0f 42 0010 00000065 __mh_execute_header
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
-INVALID-HEADER: Invalid data was encountered while parsing the file
+INVALID-HEADER: The file was not recognized as a valid object file.
+NOT-INVALID-HEADER: Invalid data was encountered while parsing the file.
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-incomplete-segment-load-command 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC %s
 INCOMPLETE-SEGMENT-LOADC: Invalid data was encountered while parsing the file
