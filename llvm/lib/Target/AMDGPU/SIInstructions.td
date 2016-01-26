@@ -101,7 +101,7 @@ let isMoveImm = 1 in {
   let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
     defm S_MOV_B32 : SOP1_32 <sop1<0x03, 0x00>, "s_mov_b32", []>;
     defm S_MOV_B64 : SOP1_64 <sop1<0x04, 0x01>, "s_mov_b64", []>;
-  } // let isRematerializeable = 1
+  } // End isRematerializeable = 1
 
   let Uses = [SCC] in {
     defm S_CMOV_B32 : SOP1_32 <sop1<0x05, 0x02>, "s_cmov_b32", []>;
@@ -1234,7 +1234,7 @@ defm V_CVT_F64_U32 : VOP1Inst <vop1<0x16>, "v_cvt_f64_u32",
   VOP_F64_I32, uint_to_fp
 >;
 
-} // let SchedRW = [WriteQuarterRate32]
+} // End SchedRW = [WriteQuarterRate32]
 
 defm V_FRACT_F32 : VOP1Inst <vop1<0x20, 0x1b>, "v_fract_f32",
   VOP_F32_F32, AMDGPUfract
@@ -1270,7 +1270,7 @@ defm V_RSQ_F32 : VOP1Inst <vop1<0x2e, 0x24>, "v_rsq_f32",
   VOP_F32_F32, AMDGPUrsq
 >;
 
-} //let SchedRW = [WriteQuarterRate32]
+} // End SchedRW = [WriteQuarterRate32]
 
 let SchedRW = [WriteDouble] in {
 
@@ -1281,7 +1281,7 @@ defm V_RSQ_F64 : VOP1Inst <vop1<0x31, 0x26>, "v_rsq_f64",
   VOP_F64_F64, AMDGPUrsq
 >;
 
-} // let SchedRW = [WriteDouble];
+} // End SchedRW = [WriteDouble];
 
 defm V_SQRT_F32 : VOP1Inst <vop1<0x33, 0x27>, "v_sqrt_f32",
   VOP_F32_F32, fsqrt
@@ -1636,16 +1636,16 @@ defm V_MAD_U32_U24 : VOP3Inst <vop3<0x143, 0x1c3>, "v_mad_u32_u24",
 } // End isCommutable = 1
 
 defm V_CUBEID_F32 : VOP3Inst <vop3<0x144, 0x1c4>, "v_cubeid_f32",
-  VOP_F32_F32_F32_F32
+  VOP_F32_F32_F32_F32, int_amdgcn_cubeid
 >;
 defm V_CUBESC_F32 : VOP3Inst <vop3<0x145, 0x1c5>, "v_cubesc_f32",
-  VOP_F32_F32_F32_F32
+  VOP_F32_F32_F32_F32, int_amdgcn_cubesc
 >;
 defm V_CUBETC_F32 : VOP3Inst <vop3<0x146, 0x1c6>, "v_cubetc_f32",
-  VOP_F32_F32_F32_F32
+  VOP_F32_F32_F32_F32, int_amdgcn_cubetc
 >;
 defm V_CUBEMA_F32 : VOP3Inst <vop3<0x147, 0x1c7>, "v_cubema_f32",
-  VOP_F32_F32_F32_F32
+  VOP_F32_F32_F32_F32, int_amdgcn_cubema
 >;
 
 defm V_BFE_U32 : VOP3Inst <vop3<0x148, 0x1c8>, "v_bfe_u32",
@@ -1710,7 +1710,7 @@ defm V_MED3_U32 : VOP3Inst <vop3<0x159, 0x1d8>, "v_med3_u32",
 defm V_SAD_U32 : VOP3Inst <vop3<0x15d, 0x1dc>, "v_sad_u32",
   VOP_I32_I32_I32_I32
 >;
-////def V_CVT_PK_U8_F32 : VOP3_U8 <0x0000015e, "v_cvt_pk_u8_f32", []>;
+//def V_CVT_PK_U8_F32 : VOP3_U8 <0x0000015e, "v_cvt_pk_u8_f32", []>;
 defm V_DIV_FIXUP_F32 : VOP3Inst <
   vop3<0x15f, 0x1de>, "v_div_fixup_f32", VOP_F32_F32_F32_F32, AMDGPUdiv_fixup
 >;
@@ -1740,13 +1740,13 @@ defm V_MAX_F64 : VOP3Inst <vop3<0x167, 0x283>, "v_max_f64",
   VOP_F64_F64_F64, fmaxnum
 >;
 
-} // isCommutable = 1
+} // End isCommutable = 1
 
 defm V_LDEXP_F64 : VOP3Inst <vop3<0x168, 0x284>, "v_ldexp_f64",
   VOP_F64_F64_I32, AMDGPUldexp
 >;
 
-} // let SchedRW = [WriteDoubleAdd]
+} // End let SchedRW = [WriteDoubleAdd]
 
 let isCommutable = 1, SchedRW = [WriteQuarterRate32] in {
 
@@ -1764,7 +1764,7 @@ defm V_MUL_HI_I32 : VOP3Inst <vop3<0x16c, 0x287>, "v_mul_hi_i32",
   VOP_I32_I32_I32, mulhs
 >;
 
-} // isCommutable = 1, SchedRW = [WriteQuarterRate32]
+} // End isCommutable = 1, SchedRW = [WriteQuarterRate32]
 
 let SchedRW = [WriteFloatFMA, WriteSALU] in {
 defm V_DIV_SCALE_F32 : VOP3bInst <vop3<0x16d, 0x1e0>, "v_div_scale_f32",
@@ -1777,7 +1777,7 @@ let SchedRW = [WriteDouble, WriteSALU] in {
 defm V_DIV_SCALE_F64 : VOP3bInst <vop3<0x16e, 0x1e1>, "v_div_scale_f64",
   VOP3b_F64_I1_F64_F64_F64
 >;
-} // let SchedRW = [WriteDouble]
+} // End SchedRW = [WriteDouble]
 
 let isCommutable = 1, Uses = [VCC, EXEC] in {
 
@@ -1814,7 +1814,7 @@ defm V_TRIG_PREOP_F64 : VOP3Inst <
   vop3<0x174, 0x292>, "v_trig_preop_f64", VOP_F64_F64_I32, AMDGPUtrig_preop
 >;
 
-} // let SchedRW = [WriteDouble]
+} // End SchedRW = [WriteDouble]
 
 // These instructions only exist on SI and CI
 let SubtargetPredicate = isSICI in {
@@ -1856,7 +1856,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
 // 64-bit vector move instruction.  This is mainly used by the SIFoldOperands
 // pass to enable folding of inline immediates.
 def V_MOV_B64_PSEUDO : InstSI <(outs VReg_64:$dst), (ins VSrc_64:$src0), "", []>;
-} // end let hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let hasSideEffects = 1, SALU = 1 in {
 def SGPR_USE : InstSI <(outs),(ins), "", []>;
@@ -1893,7 +1893,7 @@ def SI_LOOP : InstSI <
   [(int_amdgcn_loop i64:$saved, bb:$target)]
 >;
 
-} // end isBranch = 1, isTerminator = 1
+} // End isBranch = 1, isTerminator = 1
 
 def SI_BREAK : InstSI <
   (outs SReg_64:$dst),
@@ -1934,7 +1934,7 @@ def SI_KILL : InstSI <
 >;
 } // End Uses = [EXEC], Defs = [EXEC,VCC]
 
-} // end mayLoad = 1, mayStore = 1, hasSideEffects = 1
+} // End mayLoad = 1, mayStore = 1, hasSideEffects = 1
 
 let Uses = [EXEC], Defs = [EXEC,VCC,M0] in {
 
@@ -1967,7 +1967,7 @@ def SI_INDIRECT_DST_V4 : SI_INDIRECT_DST<VReg_128>;
 def SI_INDIRECT_DST_V8 : SI_INDIRECT_DST<VReg_256>;
 def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
 
-} // Uses = [EXEC,VCC,M0], Defs = [EXEC,VCC,M0]
+} // End Uses = [EXEC], Defs = [EXEC,VCC,M0]
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 
@@ -1975,8 +1975,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
     def _SAVE : InstSI <
       (outs),
       (ins sgpr_class:$src, i32imm:$frame_idx),
-      "", []
-    > {
+      "", []> {
       let mayStore = 1;
       let mayLoad = 0;
     }
@@ -1984,8 +1983,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
     def _RESTORE : InstSI <
       (outs sgpr_class:$dst),
       (ins i32imm:$frame_idx),
-      "", []
-    > {
+      "", []> {
       let mayStore = 0;
       let mayLoad = 1;
     }
@@ -2007,8 +2005,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
       (outs),
       (ins vgpr_class:$src, i32imm:$frame_idx, SReg_128:$scratch_rsrc,
            SReg_32:$scratch_offset),
-      "", []
-    > {
+      "", []> {
       let mayStore = 1;
       let mayLoad = 0;
     }
@@ -2016,8 +2013,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
     def _RESTORE : InstSI <
       (outs vgpr_class:$dst),
       (ins i32imm:$frame_idx, SReg_128:$scratch_rsrc, SReg_32:$scratch_offset),
-      "", []
-    > {
+      "", []> {
       let mayStore = 0;
       let mayLoad = 1;
     }
@@ -2043,9 +2039,9 @@ def SI_CONSTDATA_PTR : InstSI <
 
 } // End Defs = [SCC]
 
-} // end IsCodeGenOnly, isPseudo
+} // End isCodeGenOnly, isPseudo
 
-} // end SubtargetPredicate = isGCN
+} // End SubtargetPredicate = isGCN
 
 let Predicates = [isGCN] in {
 
@@ -2060,7 +2056,6 @@ def : Pat<
   (BUFFER_LOAD_FORMAT_XYZW_IDXEN $buf_idx_vgpr, $tlst, 0, imm:$attr_offset, 0, 0, 0)
 >;
 
-/* int_SI_export */
 def : Pat <
   (int_SI_export imm:$en, imm:$vm, imm:$done, imm:$tgt, imm:$compr,
                  f32:$src0, f32:$src1, f32:$src2, f32:$src3),
@@ -2102,7 +2097,6 @@ let AddedComplexity = 100 in {
 defm : SMRD_Pattern <"S_LOAD_DWORD", i32>;
 defm : SMRD_Pattern <"S_LOAD_DWORDX2", v2i32>;
 defm : SMRD_Pattern <"S_LOAD_DWORDX4", v4i32>;
-defm : SMRD_Pattern <"S_LOAD_DWORDX8", v32i8>;
 defm : SMRD_Pattern <"S_LOAD_DWORDX8", v8i32>;
 defm : SMRD_Pattern <"S_LOAD_DWORDX16", v16i32>;
 
@@ -2343,34 +2337,34 @@ defm : ImagePatterns<int_SI_image_load_mip, "IMAGE_LOAD_MIP">;
 
 /* SIsample for simple 1D texture lookup */
 def : Pat <
-  (SIsample i32:$addr, v32i8:$rsrc, v4i32:$sampler, imm),
+  (SIsample i32:$addr, v8i32:$rsrc, v4i32:$sampler, imm),
   (IMAGE_SAMPLE_V4_V1 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc, $sampler)
 >;
 
 class SamplePattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
-    (name vt:$addr, v32i8:$rsrc, v4i32:$sampler, imm),
+    (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, imm),
     (opcode 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc, $sampler)
 >;
 
 class SampleRectPattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
-    (name vt:$addr, v32i8:$rsrc, v4i32:$sampler, TEX_RECT),
+    (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_RECT),
     (opcode 0xf, 1, 0, 0, 0, 0, 0, 0, $addr, $rsrc, $sampler)
 >;
 
 class SampleArrayPattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
-    (name vt:$addr, v32i8:$rsrc, v4i32:$sampler, TEX_ARRAY),
+    (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_ARRAY),
     (opcode 0xf, 0, 0, 1, 0, 0, 0, 0, $addr, $rsrc, $sampler)
 >;
 
 class SampleShadowPattern<SDNode name, MIMG opcode,
                           ValueType vt> : Pat <
-    (name vt:$addr, v32i8:$rsrc, v4i32:$sampler, TEX_SHADOW),
+    (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_SHADOW),
     (opcode 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc, $sampler)
 >;
 
 class SampleShadowArrayPattern<SDNode name, MIMG opcode,
                                ValueType vt> : Pat <
-    (name vt:$addr, v32i8:$rsrc, v4i32:$sampler, TEX_SHADOW_ARRAY),
+    (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_SHADOW_ARRAY),
     (opcode 0xf, 0, 0, 1, 0, 0, 0, 0, $addr, $rsrc, $sampler)
 >;
 
@@ -2423,65 +2417,28 @@ defm : SamplePatterns<IMAGE_SAMPLE_V4_V16, IMAGE_SAMPLE_C_V4_V16,
 
 /* int_SI_imageload for texture fetches consuming varying address parameters */
 class ImageLoadPattern<Intrinsic name, MIMG opcode, ValueType addr_type> : Pat <
-    (name addr_type:$addr, v32i8:$rsrc, imm),
+    (name addr_type:$addr, v8i32:$rsrc, imm),
     (opcode 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc)
 >;
 
 class ImageLoadArrayPattern<Intrinsic name, MIMG opcode, ValueType addr_type> : Pat <
-    (name addr_type:$addr, v32i8:$rsrc, TEX_ARRAY),
+    (name addr_type:$addr, v8i32:$rsrc, TEX_ARRAY),
     (opcode 0xf, 0, 0, 1, 0, 0, 0, 0, $addr, $rsrc)
 >;
 
 class ImageLoadMSAAPattern<Intrinsic name, MIMG opcode, ValueType addr_type> : Pat <
-    (name addr_type:$addr, v32i8:$rsrc, TEX_MSAA),
+    (name addr_type:$addr, v8i32:$rsrc, TEX_MSAA),
     (opcode 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc)
 >;
 
 class ImageLoadArrayMSAAPattern<Intrinsic name, MIMG opcode, ValueType addr_type> : Pat <
-    (name addr_type:$addr, v32i8:$rsrc, TEX_ARRAY_MSAA),
+    (name addr_type:$addr, v8i32:$rsrc, TEX_ARRAY_MSAA),
     (opcode 0xf, 0, 0, 1, 0, 0, 0, 0, $addr, $rsrc)
->;
-
-multiclass ImageLoadPatterns<MIMG opcode, ValueType addr_type> {
-  def : ImageLoadPattern <int_SI_imageload, opcode, addr_type>;
-  def : ImageLoadArrayPattern <int_SI_imageload, opcode, addr_type>;
-}
-
-multiclass ImageLoadMSAAPatterns<MIMG opcode, ValueType addr_type> {
-  def : ImageLoadMSAAPattern <int_SI_imageload, opcode, addr_type>;
-  def : ImageLoadArrayMSAAPattern <int_SI_imageload, opcode, addr_type>;
-}
-
-defm : ImageLoadPatterns<IMAGE_LOAD_MIP_V4_V2, v2i32>;
-defm : ImageLoadPatterns<IMAGE_LOAD_MIP_V4_V4, v4i32>;
-
-defm : ImageLoadMSAAPatterns<IMAGE_LOAD_V4_V2, v2i32>;
-defm : ImageLoadMSAAPatterns<IMAGE_LOAD_V4_V4, v4i32>;
-
-/* Image resource information */
-def : Pat <
-  (int_SI_resinfo i32:$mipid, v32i8:$rsrc, imm),
-  (IMAGE_GET_RESINFO_V4_V1 0xf, 0, 0, 0, 0, 0, 0, 0, (V_MOV_B32_e32 $mipid), $rsrc)
->;
-
-def : Pat <
-  (int_SI_resinfo i32:$mipid, v32i8:$rsrc, TEX_ARRAY),
-  (IMAGE_GET_RESINFO_V4_V1 0xf, 0, 0, 1, 0, 0, 0, 0, (V_MOV_B32_e32 $mipid), $rsrc)
->;
-
-def : Pat <
-  (int_SI_resinfo i32:$mipid, v32i8:$rsrc, TEX_ARRAY_MSAA),
-  (IMAGE_GET_RESINFO_V4_V1 0xf, 0, 0, 1, 0, 0, 0, 0, (V_MOV_B32_e32 $mipid), $rsrc)
 >;
 
 /********** ============================================ **********/
 /********** Extraction, Insertion, Building and Casting  **********/
 /********** ============================================ **********/
-
-//def : Extract_Element<i64, v2i64, 0, sub0_sub1>;
-//def : Extract_Element<i64, v2i64, 1, sub2_sub3>;
-//def : Extract_Element<f64, v2f64, 0, sub0_sub1>;
-//def : Extract_Element<f64, v2f64, 1, sub2_sub3>;
 
 foreach Index = 0-2 in {
   def Extract_Element_v2i32_#Index : Extract_Element <
@@ -2547,50 +2504,45 @@ foreach Index = 0-15 in {
   >;
 }
 
-def : BitConvert <i32, f32, SReg_32>;
+// FIXME: Why do only some of these type combinations for SReg and
+// VReg?
+// 32-bit bitcast
 def : BitConvert <i32, f32, VGPR_32>;
-
-def : BitConvert <f32, i32, SReg_32>;
 def : BitConvert <f32, i32, VGPR_32>;
+def : BitConvert <i32, f32, SReg_32>;
+def : BitConvert <f32, i32, SReg_32>;
 
+// 64-bit bitcast
 def : BitConvert <i64, f64, VReg_64>;
-
 def : BitConvert <f64, i64, VReg_64>;
-
-def : BitConvert <v2f32, v2i32, VReg_64>;
 def : BitConvert <v2i32, v2f32, VReg_64>;
-def : BitConvert <v2i32, i64, VReg_64>;
+def : BitConvert <v2f32, v2i32, VReg_64>;
 def : BitConvert <i64, v2i32, VReg_64>;
-def : BitConvert <v2f32, i64, VReg_64>;
+def : BitConvert <v2i32, i64, VReg_64>;
 def : BitConvert <i64, v2f32, VReg_64>;
-def : BitConvert <v2f32, f64, VReg_64>;
-def : BitConvert <v2i32, f64, VReg_64>;
+def : BitConvert <v2f32, i64, VReg_64>;
 def : BitConvert <f64, v2f32, VReg_64>;
+def : BitConvert <v2f32, f64, VReg_64>;
 def : BitConvert <f64, v2i32, VReg_64>;
-def : BitConvert <v4f32, v4i32, VReg_128>;
+def : BitConvert <v2i32, f64, VReg_64>;
 def : BitConvert <v4i32, v4f32, VReg_128>;
+def : BitConvert <v4f32, v4i32, VReg_128>;
 
-
+// 128-bit bitcast
 def : BitConvert <v2i64, v4i32, SReg_128>;
 def : BitConvert <v4i32, v2i64, SReg_128>;
-
 def : BitConvert <v2f64, v4f32, VReg_128>;
 def : BitConvert <v2f64, v4i32, VReg_128>;
 def : BitConvert <v4f32, v2f64, VReg_128>;
 def : BitConvert <v4i32, v2f64, VReg_128>;
 
-
-
-
-def : BitConvert <v8f32, v8i32, SReg_256>;
+// 256-bit bitcast
 def : BitConvert <v8i32, v8f32, SReg_256>;
-def : BitConvert <v8i32, v32i8, SReg_256>;
-def : BitConvert <v32i8, v8i32, SReg_256>;
-def : BitConvert <v8i32, v32i8, VReg_256>;
+def : BitConvert <v8f32, v8i32, SReg_256>;
 def : BitConvert <v8i32, v8f32, VReg_256>;
 def : BitConvert <v8f32, v8i32, VReg_256>;
-def : BitConvert <v32i8, v8i32, VReg_256>;
 
+// 512-bit bitcast
 def : BitConvert <v16i32, v16f32, VReg_512>;
 def : BitConvert <v16f32, v16i32, VReg_512>;
 
@@ -2612,7 +2564,7 @@ def : Pat <
 
 def : Pat <
   (fneg (fabs f32:$src)),
-  (S_OR_B32 $src, 0x80000000) /* Set sign bit */
+  (S_OR_B32 $src, 0x80000000) // Set sign bit
 >;
 
 // FIXME: Should use S_OR_B32
@@ -2702,7 +2654,6 @@ def : Pat <
 /********** Intrinsic Patterns **********/
 /********** ================== **********/
 
-/* llvm.AMDGPU.pow */
 def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
 
 def : Pat <
@@ -2739,7 +2690,7 @@ class Ext32Pat <SDNode ext> : Pat <
 def : Ext32Pat <zext>;
 def : Ext32Pat <anyext>;
 
-// Offset in an 32Bit VGPR
+// Offset in an 32-bit VGPR
 def : Pat <
   (SIload_constant v4i32:$sbase, i32:$voff),
   (BUFFER_LOAD_DWORD_OFFEN $voff, $sbase, 0, 0, 0, 0, 0)
@@ -2970,22 +2921,6 @@ def : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, i32, truncstorei16_private
 def : MUBUFScratchStorePat <BUFFER_STORE_DWORD_OFFEN, i32, store_private>;
 def : MUBUFScratchStorePat <BUFFER_STORE_DWORDX2_OFFEN, v2i32, store_private>;
 def : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, v4i32, store_private>;
-
-/*
-class MUBUFStore_Pattern <MUBUF Instr, ValueType vt, PatFrag st> : Pat <
-  (st vt:$value, (MUBUFScratch v4i32:$srsrc, i64:$vaddr, u16imm:$offset)),
-  (Instr $value, $srsrc, $vaddr, $offset)
->;
-
-let Predicates = [isSICI] in {
-def : MUBUFStore_Pattern <BUFFER_STORE_BYTE_ADDR64, i32, truncstorei8_private>;
-def : MUBUFStore_Pattern <BUFFER_STORE_SHORT_ADDR64, i32, truncstorei16_private>;
-def : MUBUFStore_Pattern <BUFFER_STORE_DWORD_ADDR64, i32, store_private>;
-def : MUBUFStore_Pattern <BUFFER_STORE_DWORDX2_ADDR64, v2i32, store_private>;
-def : MUBUFStore_Pattern <BUFFER_STORE_DWORDX4_ADDR64, v4i32, store_private>;
-} // End Predicates = [isSICI]
-
-*/
 
 //===----------------------------------------------------------------------===//
 // MTBUF Patterns

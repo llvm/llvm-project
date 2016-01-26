@@ -81,6 +81,11 @@ Changes to the X86 Target
 
  During this release ...
 
+Changes to the AMDGPU Target
+-----------------------------
+
+ * Mesa 11.0.x is no longer supported
+
 
 Changes to the OCaml bindings
 -----------------------------

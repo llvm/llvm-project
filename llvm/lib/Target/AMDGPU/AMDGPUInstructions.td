@@ -587,13 +587,6 @@ def cvt_flr_i32_f32 : PatFrag <
   [{ (void)N; return TM.Options.NoNaNsFPMath; }]
 >;
 
-/*
-class UMUL24Pattern <Instruction UMUL24> : Pat <
-  (mul U24:$x, U24:$y),
-  (UMUL24 $x, $y)
->;
-*/
-
 class IMad24Pat<Instruction Inst> : Pat <
   (add (AMDGPUmul_i24 i32:$src0, i32:$src1), i32:$src2),
   (Inst $src0, $src1, $src2)
