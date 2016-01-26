@@ -216,12 +216,13 @@ StringRef getPGOFuncNameInitializer(GlobalVariable *NameVar) {
 }
 
 int collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
-                              std::string &Result) {
+                              std::string &Result, bool doCompression) {
   std::vector<std::string> NameStrs;
   for (auto *NameVar : NameVars) {
     NameStrs.push_back(getPGOFuncNameInitializer(NameVar));
   }
-  return collectPGOFuncNameStrings(NameStrs, zlib::isAvailable(), Result);
+  return collectPGOFuncNameStrings(
+      NameStrs, zlib::isAvailable() && doCompression, Result);
 }
 
 int readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {

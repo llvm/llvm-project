@@ -160,6 +160,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), OffsetReg)
       .addImm(StackSize);
   auto *SPSymbol = MF.createExternalSymbolName("__stack_pointer");
+  // TODO: Fold this add into the const offset field of the store.
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::ADD_I32), WebAssembly::SP32)
       .addReg(WebAssembly::SP32)
       .addReg(OffsetReg);

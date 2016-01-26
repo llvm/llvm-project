@@ -185,7 +185,7 @@ int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
 /// Produce \c Result string with the same format described above. The input
 /// is vector of PGO function name variables that are referenced.
 int collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
-                              std::string &Result);
+                              std::string &Result, bool doCompression = true);
 class InstrProfSymtab;
 /// \c NameStrings is a string composed of one of more sub-strings encoded in
 /// the format described above. The substrings are seperated by 0 or more zero

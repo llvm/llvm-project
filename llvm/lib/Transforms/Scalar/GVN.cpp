@@ -512,9 +512,11 @@ void ValueTable::verifyRemoved(const Value *V) const {
 
 namespace {
   class GVN;
-  struct AvailableValueInBlock {
-    /// BB - The basic block in question.
-    BasicBlock *BB;
+  /// Represents a particular available value that we know how to materialize.
+  /// Materialization of an AvailableValue never fails.  An AvailableValue is
+  /// implicitly associated with a rematerialization point which is the
+  /// location of the instruction from which it was formed. 
+  struct AvailableValue {
     enum ValType {
       SimpleVal,  // A simple offsetted value that is accessed.
       LoadVal,    // A value produced by a load.
@@ -529,39 +531,35 @@ namespace {
     /// Offset - The byte offset in Val that is interesting for the load query.
     unsigned Offset;
   
-    static AvailableValueInBlock get(BasicBlock *BB, Value *V,
-                                     unsigned Offset = 0) {
-      AvailableValueInBlock Res;
-      Res.BB = BB;
+    static AvailableValue get(Value *V,
+                              unsigned Offset = 0) {
+      AvailableValue Res;
       Res.Val.setPointer(V);
       Res.Val.setInt(SimpleVal);
       Res.Offset = Offset;
       return Res;
     }
   
-    static AvailableValueInBlock getMI(BasicBlock *BB, MemIntrinsic *MI,
-                                       unsigned Offset = 0) {
-      AvailableValueInBlock Res;
-      Res.BB = BB;
+    static AvailableValue getMI(MemIntrinsic *MI,
+                                unsigned Offset = 0) {
+      AvailableValue Res;
       Res.Val.setPointer(MI);
       Res.Val.setInt(MemIntrin);
       Res.Offset = Offset;
       return Res;
     }
   
-    static AvailableValueInBlock getLoad(BasicBlock *BB, LoadInst *LI,
-                                         unsigned Offset = 0) {
-      AvailableValueInBlock Res;
-      Res.BB = BB;
+    static AvailableValue getLoad(LoadInst *LI,
+                                  unsigned Offset = 0) {
+      AvailableValue Res;
       Res.Val.setPointer(LI);
       Res.Val.setInt(LoadVal);
       Res.Offset = Offset;
       return Res;
     }
 
-    static AvailableValueInBlock getUndef(BasicBlock *BB) {
-      AvailableValueInBlock Res;
-      Res.BB = BB;
+    static AvailableValue getUndef() {
+      AvailableValue Res;
       Res.Val.setPointer(nullptr);
       Res.Val.setInt(UndefVal);
       Res.Offset = 0;
@@ -587,10 +585,50 @@ namespace {
       assert(isMemIntrinValue() && "Wrong accessor");
       return cast<MemIntrinsic>(Val.getPointer());
     }
+
+    /// Emit code at the specified insertion point to adjust the value defined
+    /// here to the specified type. This handles various coercion cases.
+    Value *MaterializeAdjustedValue(LoadInst *LI, Instruction *InsertPt,
+                                    GVN &gvn) const;
+  };
+
+  /// Represents an AvailableValue which can be rematerialized at the end of
+  /// the associated BasicBlock.
+  struct AvailableValueInBlock {
+    /// BB - The basic block in question.
+    BasicBlock *BB;
+
+    /// AV - The actual available value
+    AvailableValue AV;
+
+    static AvailableValueInBlock get(BasicBlock *BB, AvailableValue &&AV) {
+      AvailableValueInBlock Res;
+      Res.BB = BB;
+      Res.AV = std::move(AV);
+      return Res;
+    }
+
+    static AvailableValueInBlock get(BasicBlock *BB, Value *V,
+                                     unsigned Offset = 0) {
+      return get(BB, AvailableValue::get(V, Offset));
+    }
+    static AvailableValueInBlock getMI(BasicBlock *BB, MemIntrinsic *MI,
+                                       unsigned Offset = 0) {
+      return get(BB, AvailableValue::getMI(MI, Offset));
+    }
+    static AvailableValueInBlock getLoad(BasicBlock *BB, LoadInst *LI,
+                                         unsigned Offset = 0) {
+      return get(BB, AvailableValue::getLoad(LI, Offset));
+    }
+    static AvailableValueInBlock getUndef(BasicBlock *BB) {
+      return get(BB, AvailableValue::getUndef());
+    }
   
-    /// Emit code into this block to adjust the value defined here to the
-    /// specified type. This handles various coercion cases.
-    Value *MaterializeAdjustedValue(LoadInst *LI, GVN &gvn) const;
+    /// Emit code at the end of this block to adjust the value defined here to
+    /// the specified type. This handles various coercion cases.
+    Value *MaterializeAdjustedValue(LoadInst *LI, GVN &gvn) const {
+      return AV.MaterializeAdjustedValue(LI, BB->getTerminator(), gvn);
+    }
   };
 
   class GVN : public FunctionPass {
@@ -1294,7 +1332,8 @@ static Value *ConstructSSAForLoadSet(LoadInst *LI,
   if (ValuesPerBlock.size() == 1 &&
       gvn.getDominatorTree().properlyDominates(ValuesPerBlock[0].BB,
                                                LI->getParent())) {
-    assert(!ValuesPerBlock[0].isUndefValue() && "Dead BB dominate this block");
+    assert(!ValuesPerBlock[0].AV.isUndefValue() &&
+           "Dead BB dominate this block");
     return ValuesPerBlock[0].MaterializeAdjustedValue(LI, gvn);
   }
 
@@ -1316,15 +1355,16 @@ static Value *ConstructSSAForLoadSet(LoadInst *LI,
   return SSAUpdate.GetValueInMiddleOfBlock(LI->getParent());
 }
 
-Value *AvailableValueInBlock::MaterializeAdjustedValue(LoadInst *LI,
-                                                       GVN &gvn) const {
+Value *AvailableValue::MaterializeAdjustedValue(LoadInst *LI,
+                                                Instruction *InsertPt,
+                                                GVN &gvn) const {
   Value *Res;
   Type *LoadTy = LI->getType();
   const DataLayout &DL = LI->getModule()->getDataLayout();
   if (isSimpleValue()) {
     Res = getSimpleValue();
     if (Res->getType() != LoadTy) {
-      Res = GetStoreValueForLoad(Res, Offset, LoadTy, BB->getTerminator(), DL);
+      Res = GetStoreValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
 
       DEBUG(dbgs() << "GVN COERCED NONLOCAL VAL:\nOffset: " << Offset << "  "
                    << *getSimpleValue() << '\n'
@@ -1335,16 +1375,15 @@ Value *AvailableValueInBlock::MaterializeAdjustedValue(LoadInst *LI,
     if (Load->getType() == LoadTy && Offset == 0) {
       Res = Load;
     } else {
-      Res = GetLoadValueForLoad(Load, Offset, LoadTy, BB->getTerminator(),
-                                gvn);
-  
+      Res = GetLoadValueForLoad(Load, Offset, LoadTy, InsertPt, gvn);
+      
       DEBUG(dbgs() << "GVN COERCED NONLOCAL LOAD:\nOffset: " << Offset << "  "
                    << *getCoercedLoadValue() << '\n'
                    << *Res << '\n' << "\n\n\n");
     }
   } else if (isMemIntrinValue()) {
     Res = GetMemInstValueForLoad(getMemIntrinValue(), Offset, LoadTy,
-                                 BB->getTerminator(), DL);
+                                 InsertPt, DL);
     DEBUG(dbgs() << "GVN COERCED NONLOCAL MEM INTRIN:\nOffset: " << Offset
                  << "  " << *getMemIntrinValue() << '\n'
                  << *Res << '\n' << "\n\n\n");
@@ -1353,6 +1392,7 @@ Value *AvailableValueInBlock::MaterializeAdjustedValue(LoadInst *LI,
     DEBUG(dbgs() << "GVN COERCED NONLOCAL Undef:\n";);
     return UndefValue::get(LoadTy);
   }
+  assert(Res && "failed to materialize?");
   return Res;
 }
 

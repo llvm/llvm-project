@@ -342,7 +342,7 @@ The ``utils/release/merge.sh`` script can be used to merge individual revisions
 into any one of the llvm projects. To merge revision ``$N`` into project
 ``$PROJ``, do:
 
-#. ``svn co http://llvm.org/svn/llvm-project/$PROJ/branches/release_XX
+#. ``svn co https://llvm.org/svn/llvm-project/$PROJ/branches/release_XX
    $PROJ.src``
 
 #. ``$PROJ.src/utils/release/merge.sh --proj $PROJ --rev $N``

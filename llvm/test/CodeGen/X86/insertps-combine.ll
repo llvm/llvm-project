@@ -130,6 +130,26 @@ define <4 x float> @insertps_undef_input1(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res2
 }
 
+define <4 x float> @consecutive_load_insertps_04zz(float* %p) {
+; SSE-LABEL: consecutive_load_insertps_04zz:
+; SSE:       # BB#0:
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: consecutive_load_insertps_04zz:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    retq
+  %p0 = getelementptr inbounds float, float* %p, i64 1
+  %p1 = getelementptr inbounds float, float* %p, i64 2
+  %s0 = load float, float* %p0
+  %s1 = load float, float* %p1
+  %v0 = insertelement <4 x float> undef, float %s0, i32 0
+  %v1 = insertelement <4 x float> undef, float %s1, i32 0
+  %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v0, <4 x float> %v1, i8 28)
+  ret <4 x float> %res
+}
+
 define float @extract_zero_insertps_z0z7(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: extract_zero_insertps_z0z7:
 ; SSE:       # BB#0:

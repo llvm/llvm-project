@@ -203,7 +203,7 @@ source code:
   If you need to update your bitcode libraries, this is the target to use once
   you've built them.
 
-Please see the `Makefile Guide <MakefileGuide.html>`_ for further details on
+Please see the `CMake <CMake.html>`_ documentation for further details on
 these ``make`` targets and descriptions of other targets available.
 
 It is also possible to override default values from ``configure`` by declaring

@@ -40,8 +40,6 @@ public:
   void EmitEnumInfo(const std::vector<CodeGenIntrinsic> &Ints,
                     raw_ostream &OS);
 
-  void EmitFnNameRecognizer(const std::vector<CodeGenIntrinsic> &Ints,
-                            raw_ostream &OS);
   void EmitIntrinsicToNameTable(const std::vector<CodeGenIntrinsic> &Ints,
                                 raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const std::vector<CodeGenIntrinsic> &Ints,
@@ -80,9 +78,6 @@ void IntrinsicEmitter::run(raw_ostream &OS) {
 
   // Emit the intrinsic ID -> overload table.
   EmitIntrinsicToOverloadTable(Ints, OS);
-
-  // Emit the function name recognizer.
-  EmitFnNameRecognizer(Ints, OS);
 
   // Emit the intrinsic declaration generator.
   EmitGenerator(Ints, OS);
@@ -128,61 +123,6 @@ void IntrinsicEmitter::EmitEnumInfo(const std::vector<CodeGenIntrinsic> &Ints,
       OS << std::string(40-Ints[i].EnumName.size(), ' ');
     OS << " // " << Ints[i].Name << "\n";
   }
-  OS << "#endif\n\n";
-}
-
-void IntrinsicEmitter::
-EmitFnNameRecognizer(const std::vector<CodeGenIntrinsic> &Ints,
-                     raw_ostream &OS) {
-  // Build a 'first character of function name' -> intrinsic # mapping.
-  std::map<char, std::vector<unsigned> > IntMapping;
-  for (unsigned i = 0, e = Ints.size(); i != e; ++i)
-    IntMapping[Ints[i].Name[5]].push_back(i);
-
-  OS << "// Function name -> enum value recognizer code.\n";
-  OS << "#ifdef GET_FUNCTION_RECOGNIZER\n";
-  OS << "  StringRef NameR(Name+6, Len-6);   // Skip over 'llvm.'\n";
-  OS << "  switch (Name[5]) {                  // Dispatch on first letter.\n";
-  OS << "  default: break;\n";
-  // Emit the intrinsic matching stuff by first letter.
-  for (std::map<char, std::vector<unsigned> >::iterator I = IntMapping.begin(),
-       E = IntMapping.end(); I != E; ++I) {
-    OS << "  case '" << I->first << "':\n";
-    std::vector<unsigned> &IntList = I->second;
-
-    // Sort in reverse order of intrinsic name so "abc.def" appears after
-    // "abd.def.ghi" in the overridden name matcher
-    std::sort(IntList.begin(), IntList.end(), [&](unsigned i, unsigned j) {
-      return Ints[i].Name > Ints[j].Name;
-    });
-
-    // Emit all the overloaded intrinsics first, build a table of the
-    // non-overloaded ones.
-    std::vector<StringMatcher::StringPair> MatchTable;
-
-    for (unsigned i = 0, e = IntList.size(); i != e; ++i) {
-      unsigned IntNo = IntList[i];
-      std::string Result = "return " + TargetPrefix + "Intrinsic::" +
-        Ints[IntNo].EnumName + ";";
-
-      if (!Ints[IntNo].isOverloaded) {
-        MatchTable.push_back(std::make_pair(Ints[IntNo].Name.substr(6),Result));
-        continue;
-      }
-
-      // For overloaded intrinsics, only the prefix needs to match
-      std::string TheStr = Ints[IntNo].Name.substr(6);
-      TheStr += '.';  // Require "bswap." instead of bswap.
-      OS << "    if (NameR.startswith(\"" << TheStr << "\")) "
-         << Result << '\n';
-    }
-
-    // Emit the matcher logic for the fixed length strings.
-    StringMatcher("NameR", MatchTable, OS).Emit(1);
-    OS << "    break;  // end of '" << I->first << "' case.\n";
-  }
-
-  OS << "  }\n";
   OS << "#endif\n\n";
 }
 

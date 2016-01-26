@@ -726,21 +726,29 @@ const char coff_import_library[] = "\x00\x00\xff\xff....";
 const char elf_relocatable[] = { 0x7f, 'E', 'L', 'F', 1, 2, 1, 0, 0,
                                  0,    0,   0,   0,   0, 0, 0, 0, 1 };
 const char macho_universal_binary[] = "\xca\xfe\xba\xbe...\0x00";
-const char macho_object[] = "\xfe\xed\xfa\xce..........\x00\x01";
-const char macho_executable[] = "\xfe\xed\xfa\xce..........\x00\x02";
+const char macho_object[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x01............";
+const char macho_executable[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x02............";
 const char macho_fixed_virtual_memory_shared_lib[] =
-    "\xfe\xed\xfa\xce..........\x00\x03";
-const char macho_core[] = "\xfe\xed\xfa\xce..........\x00\x04";
-const char macho_preload_executable[] = "\xfe\xed\xfa\xce..........\x00\x05";
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x03............";
+const char macho_core[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x04............";
+const char macho_preload_executable[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x05............";
 const char macho_dynamically_linked_shared_lib[] =
-    "\xfe\xed\xfa\xce..........\x00\x06";
-const char macho_dynamic_linker[] = "\xfe\xed\xfa\xce..........\x00\x07";
-const char macho_bundle[] = "\xfe\xed\xfa\xce..........\x00\x08";
-const char macho_dsym_companion[] = "\xfe\xed\xfa\xce..........\x00\x0a";
-const char macho_kext_bundle[] = "\xfe\xed\xfa\xce..........\x00\x0b";
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x06............";
+const char macho_dynamic_linker[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x07............";
+const char macho_bundle[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x08............";
+const char macho_dsym_companion[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x0a............";
+const char macho_kext_bundle[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x0b............";
 const char windows_resource[] = "\x00\x00\x00\x00\x020\x00\x00\x00\xff";
 const char macho_dynamically_linked_shared_lib_stub[] =
-    "\xfe\xed\xfa\xce..........\x00\x09";
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x09............";
 
 TEST_F(FileSystemTest, Magic) {
   struct type {

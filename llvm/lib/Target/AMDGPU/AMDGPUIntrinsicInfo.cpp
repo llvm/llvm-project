@@ -27,40 +27,43 @@ using namespace llvm;
 AMDGPUIntrinsicInfo::AMDGPUIntrinsicInfo()
     : TargetIntrinsicInfo() {}
 
-std::string AMDGPUIntrinsicInfo::getName(unsigned IntrID, Type **Tys,
-                                         unsigned numTys) const {
-  static const char *const names[] = {
+static const char *const IntrinsicNameTable[] = {
 #define GET_INTRINSIC_NAME_TABLE
 #include "AMDGPUGenIntrinsics.inc"
 #undef GET_INTRINSIC_NAME_TABLE
-  };
+};
 
+std::string AMDGPUIntrinsicInfo::getName(unsigned IntrID, Type **Tys,
+                                         unsigned numTys) const {
   if (IntrID < Intrinsic::num_intrinsics) {
     return nullptr;
   }
   assert(IntrID < AMDGPUIntrinsic::num_AMDGPU_intrinsics &&
          "Invalid intrinsic ID");
 
-  std::string Result(names[IntrID - Intrinsic::num_intrinsics]);
+  std::string Result(IntrinsicNameTable[IntrID - Intrinsic::num_intrinsics]);
   return Result;
 }
 
-unsigned AMDGPUIntrinsicInfo::lookupName(const char *Name,
+unsigned AMDGPUIntrinsicInfo::lookupName(const char *NameData,
                                          unsigned Len) const {
-  if (!StringRef(Name, Len).startswith("llvm."))
+  StringRef Name(NameData, Len);
+  if (!Name.startswith("llvm."))
     return 0; // All intrinsics start with 'llvm.'
 
-#define GET_FUNCTION_RECOGNIZER
-#include "AMDGPUGenIntrinsics.inc"
-#undef GET_FUNCTION_RECOGNIZER
-  AMDGPUIntrinsic::ID IntrinsicID =
-      (AMDGPUIntrinsic::ID)Intrinsic::not_intrinsic;
-  IntrinsicID = getIntrinsicForGCCBuiltin("AMDGPU", Name);
-
-  if (IntrinsicID != (AMDGPUIntrinsic::ID)Intrinsic::not_intrinsic) {
-    return IntrinsicID;
+  // Look for a name match in our table.  If the intrinsic is not overloaded,
+  // require an exact match. If it is overloaded, require a prefix match. The
+  // AMDGPU enum enum starts at Intrinsic::num_intrinsics.
+  int Idx = Intrinsic::lookupLLVMIntrinsicByName(IntrinsicNameTable, Name);
+  if (Idx >= 0) {
+    bool IsPrefixMatch = Name.size() > strlen(IntrinsicNameTable[Idx]);
+    return IsPrefixMatch == isOverloaded(Idx + 1)
+               ? Intrinsic::num_intrinsics + Idx
+               : 0;
   }
-  return 0;
+
+  // Fall back on GCC builtin names.
+  return getIntrinsicForGCCBuiltin("AMDGPU", NameData);
 }
 
 bool AMDGPUIntrinsicInfo::isOverloaded(unsigned id) const {
