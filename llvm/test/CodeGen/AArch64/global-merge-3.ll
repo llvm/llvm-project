@@ -21,7 +21,7 @@ define void @f1(i32 %a1, i32 %a2, i32 %a3) {
 }
 
 ;CHECK:	.type	.L_MergedGlobals,@object // @_MergedGlobals
-;CHECK: .align	4
+;CHECK: .p2align	4
 ;CHECK: .L_MergedGlobals:
 ;CHECK: .size	.L_MergedGlobals, 4004
 
@@ -29,7 +29,7 @@ define void @f1(i32 %a1, i32 %a2, i32 %a3) {
 ;CHECK: .local	.L_MergedGlobals.1
 ;CHECK: .comm	.L_MergedGlobals.1,4000,16
 
-;CHECK-APPLE-IOS: .align	4
+;CHECK-APPLE-IOS: .p2align	4
 ;CHECK-APPLE-IOS:  l__MergedGlobals:
 ;CHECK-APPLE-IOS: .long 1
 ;CHECK-APPLE-IOS: .space	4000

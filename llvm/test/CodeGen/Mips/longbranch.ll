@@ -155,7 +155,7 @@ end:
 ; NACL:             lw      $[[R1:[0-9]+]], %got(x)($[[GP]])
 ; NACL:             addiu   $[[R2:[0-9]+]], $zero, 1
 ; NACL:             sw      $[[R2]], 0($[[R1]])
-; NACL:             .align  4
+; NACL:             .p2align  4
 ; NACL-NEXT:   $[[BB2]]:
 ; NACL:             jr      $ra
 ; NACL:             nop

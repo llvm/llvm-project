@@ -12,13 +12,13 @@
 
     .section    .inst.aarch64_inst
 
-    .align  2
+    .p2align  2
     .global aarch64_inst
     .type   aarch64_inst,%function
 aarch64_inst:
     .inst 0x5e104020
 
-// CHECK-ASM:        .align  2
+// CHECK-ASM:        .p2align  2
 // CHECK-ASM:        .globl  aarch64_inst
 // CHECK-ASM:        .type   aarch64_inst,@function
 // CHECK-ASM: aarch64_inst:

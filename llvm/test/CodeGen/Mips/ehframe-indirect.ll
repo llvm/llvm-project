@@ -42,9 +42,9 @@ declare void @foo()
 ; ALL: .hidden DW.ref.__gxx_personality_v0
 ; ALL: .weak DW.ref.__gxx_personality_v0
 ; ALL: .section .data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
-; O32: .align 2
-; N32: .align 2
-; N64: .align 3
+; O32: .p2align 2
+; N32: .p2align 2
+; N64: .p2align 3
 ; ALL: .type DW.ref.__gxx_personality_v0,@object
 ; O32: .size DW.ref.__gxx_personality_v0, 4
 ; N32: .size DW.ref.__gxx_personality_v0, 4

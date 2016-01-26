@@ -9,7 +9,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 define i64 @access_int64(i64 %a) nounwind readonly {
 entry:
 ; CHECK-LABEL: access_int64:
-; CHECK-NEXT: .align  3
+; CHECK-NEXT: .p2align  3
 ; CHECK-NEXT: .quad   .L[[BEGIN:.*]]
 ; CHECK-NEXT: .quad   .TOC.@tocbase
 ; CHECK-NEXT: .quad   0

@@ -241,13 +241,13 @@ bb7:
 ; DARWIN:       .section        __DATA,__data{{$}}
 ; DARWIN: .globl _G10
 ; DARWIN:       .weak_definition _G10
-; DARWIN:       .align  5
+; DARWIN:       .p2align  5
 ; DARWIN: _G10:
 ; DARWIN:       .space  400
 
 ; LINUX:        .bss
 ; LINUX:        .weak   G10
-; LINUX:        .align  32
+; LINUX:        .p2align  5
 ; LINUX: G10:
 ; LINUX:        .zero   400
 

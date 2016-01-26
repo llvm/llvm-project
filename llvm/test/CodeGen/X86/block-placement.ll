@@ -7,15 +7,15 @@ define i32 @test_ifchains(i32 %i, i32* %a, i32 %b) {
 ; that is not expected to run.
 ; CHECK-LABEL: test_ifchains:
 ; CHECK: %entry
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %else1
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %else2
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %else3
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %else4
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %exit
 ; CHECK: %then1
 ; CHECK: %then2
@@ -81,11 +81,11 @@ define i32 @test_loop_cold_blocks(i32 %i, i32* %a) {
 ; Check that we sink cold loop blocks after the hot loop body.
 ; CHECK-LABEL: test_loop_cold_blocks:
 ; CHECK: %entry
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %unlikely1
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %unlikely2
-; CHECK: .align
+; CHECK: .p2align
 ; CHECK: %body1
 ; CHECK: %body2
 ; CHECK: %body3
@@ -242,7 +242,7 @@ define i32 @test_loop_align(i32 %i, i32* %a) {
 ; pass.
 ; CHECK-LABEL: test_loop_align:
 ; CHECK: %entry
-; CHECK: .align [[ALIGN:[0-9]+]],
+; CHECK: .p2align [[ALIGN:[0-9]+]],
 ; CHECK-NEXT: %body
 ; CHECK: %exit
 
@@ -267,11 +267,11 @@ define i32 @test_nested_loop_align(i32 %i, i32* %a, i32* %b) {
 ; Check that we provide nested loop body alignment.
 ; CHECK-LABEL: test_nested_loop_align:
 ; CHECK: %entry
-; CHECK: .align [[ALIGN]],
+; CHECK: .p2align [[ALIGN]],
 ; CHECK-NEXT: %loop.body.1
-; CHECK: .align [[ALIGN]],
+; CHECK: .p2align [[ALIGN]],
 ; CHECK-NEXT: %inner.loop.body
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %exit
 
 entry:
@@ -943,18 +943,18 @@ define void @benchmark_heapsort(i32 %n, double* nocapture %ra) {
 ; CHECK: @benchmark_heapsort
 ; CHECK: %entry
 ; First rotated loop top.
-; CHECK: .align
+; CHECK: .p2align
 ; CHECK: %while.end
 ; CHECK: %for.cond
 ; CHECK: %if.then
 ; CHECK: %if.else
 ; CHECK: %if.end10
 ; Second rotated loop top
-; CHECK: .align
+; CHECK: .p2align
 ; CHECK: %if.then24
 ; CHECK: %while.cond.outer
 ; Third rotated loop top
-; CHECK: .align
+; CHECK: .p2align
 ; CHECK: %while.cond
 ; CHECK: %while.body
 ; CHECK: %land.lhs.true

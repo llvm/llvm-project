@@ -96,7 +96,7 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; No Padding or LiveOuts
 ; CHECK: .short	0
 ; CHECK: .short	0
-; CHECK: .align	8
+; CHECK: .p2align	3
 
 ; The Deopt one
 ; CHECK: .long	.Ltmp3-test2
@@ -126,5 +126,5 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; No Padding or LiveOuts
 ; CHECK: .short	0
 ; CHECK: .short	0
-; CHECK: .align	8
+; CHECK: .p2align	3
 

@@ -4,11 +4,11 @@ target triple = "thumbv7-apple-ios"
 
 ; The double in the constant pool is 8-byte aligned, forcing the function
 ; alignment.
-; CHECK: .align 3
+; CHECK: .p2align 3
 ; CHECK: func
 ;
 ; Constant pool with 8-byte entry before 4-byte entry:
-; CHECK: .align 3
+; CHECK: .p2align 3
 ; CHECK: LCPI
 ; CHECK:	.long	2370821947
 ; CHECK:	.long	1080815255

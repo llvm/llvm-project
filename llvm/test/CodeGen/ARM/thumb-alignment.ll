@@ -3,13 +3,13 @@
 @x = external global i32
 
 ; CHECK: .globl	foo
-; CHECK-NEXT: .align	2
+; CHECK-NEXT: .p2align	2
 define i32* @foo() {
   ret i32* @x
 }
 
 ; CHECK: .globl	bar
-; CHECK-NEXT: .align	1
+; CHECK-NEXT: .p2align	1
 define i32* @bar() {
   ret i32* zeroinitializer
 }
@@ -22,7 +22,7 @@ define i32* @bar() {
 ; Create a Thumb-2 jump table, which should force alignment to 4 bytes.
 
 ; CHECK: .globl	baz
-; CHECK-NEXT: .align	2
+; CHECK-NEXT: .p2align	2
 ; CHECK: tbb
 define i32 @baz() {
   %1 = load i32, i32* @c, align 4
