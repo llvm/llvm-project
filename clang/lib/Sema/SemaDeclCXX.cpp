@@ -13073,7 +13073,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
     Diag(Old->getLocation(), diag::note_overridden_virtual_function)
         << Old->getReturnTypeSourceRange();
     return true;
-  };
+  }
 
 
   // The new class type must have the same or less qualifiers as the old type.
@@ -13085,7 +13085,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
     Diag(Old->getLocation(), diag::note_overridden_virtual_function)
         << Old->getReturnTypeSourceRange();
     return true;
-  };
+  }
 
   return false;
 }
