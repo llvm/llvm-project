@@ -1602,6 +1602,17 @@ SwiftExpressionParser::Parse (Stream &stream,
                             }
                         }
                     }
+                    swift::TypeBase *actual_swift_type = (swift::TypeBase*)actual_type.GetOpaqueQualType();
+                    if (swift::NameAliasType *actual_swift_namealias = llvm::dyn_cast_or_null<swift::NameAliasType>(actual_swift_type))
+                    {
+                        if (actual_swift_namealias->getDecl()->getNameStr().equals("$__lldb_context"))
+                        {
+                            actual_swift_type = actual_swift_namealias->getSinglyDesugaredType();
+                            actual_type.SetCompilerType(actual_type.GetTypeSystem(), (lldb::opaque_compiler_type_t)actual_swift_type);
+                        }
+                    }
+                    // if we add one more fixup here, we should break each of the above cases into a separate fixup to keep things clean
+                    
                     if (is_result)
                         offset = materializer->AddResultVariable(actual_type,
                                                                  false,
