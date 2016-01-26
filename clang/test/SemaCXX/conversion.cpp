@@ -228,3 +228,31 @@ namespace test10 {
     assert(test2(x));
   }
 }
+
+namespace test11 {
+
+#define assert11(expr) ((expr) ? 0 : 0)
+
+// The whitespace in macro run1 are important to trigger the macro being split
+// over multiple SLocEntry's.
+#define run1() (dostuff() ? \
+    NULL                                   : NULL)
+#define run2() (dostuff() ? NULL : NULL)
+int dostuff ();
+
+void test(const char * content_type) {
+  assert11(run1());
+  assert11(run2());
+}
+
+}
+
+namespace test12 {
+
+#define x return NULL;
+
+bool run() {
+  x  // expected-warning{{}}
+}
+
+}
