@@ -29,35 +29,44 @@ namespace llvm {
 namespace X86 {
   // X86 specific condition code. These correspond to X86_*_COND in
   // X86InstrInfo.td. They must be kept in synch.
-  enum CondCode {
-    COND_A  = 0,
-    COND_AE = 1,
-    COND_B  = 2,
-    COND_BE = 3,
-    COND_E  = 4,
-    COND_G  = 5,
-    COND_GE = 6,
-    COND_L  = 7,
-    COND_LE = 8,
-    COND_NE = 9,
-    COND_NO = 10,
-    COND_NP = 11,
-    COND_NS = 12,
-    COND_O  = 13,
-    COND_P  = 14,
-    COND_S  = 15,
-    LAST_VALID_COND = COND_S,
+enum CondCode {
+  COND_A  = 0,
+  COND_AE = 1,
+  COND_B  = 2,
+  COND_BE = 3,
+  COND_E  = 4,
+  COND_G  = 5,
+  COND_GE = 6,
+  COND_L  = 7,
+  COND_LE = 8,
+  COND_NE = 9,
+  COND_NO = 10,
+  COND_NP = 11,
+  COND_NS = 12,
+  COND_O  = 13,
+  COND_P  = 14,
+  COND_S  = 15,
+  LAST_VALID_COND = COND_S,
 
-    // Artificial condition codes. These are used by AnalyzeBranch
-    // to indicate a block terminated with two conditional branches to
-    // the same location. This occurs in code using FCMP_OEQ or FCMP_UNE,
-    // which can't be represented on x86 with a single condition. These
-    // are never used in MachineInstrs.
-    COND_NE_OR_P,
-    COND_NP_OR_E,
+  // Artificial condition codes. These are used by AnalyzeBranch
+  // to indicate a block terminated with two conditional branches to
+  // the same location. This occurs in code using FCMP_OEQ or FCMP_UNE,
+  // which can't be represented on x86 with a single condition. These
+  // are never used in MachineInstrs.
+  COND_NE_OR_P,
+  COND_NP_OR_E,
 
-    COND_INVALID
-  };
+  // Artificial condition codes. These are used to represent the negation of
+  // above two conditions. The only scenario we need these two conditions is
+  // when we try to reverse above two conditions in order to remove redundant
+  // unconditional jumps. Note that both true and false bodies need to be
+  // avaiable in order to correctly synthesize instructions for them. These are
+  // never used in MachineInstrs.
+  COND_E_AND_NP, // negate of COND_NE_OR_P
+  COND_P_AND_NE, // negate of COND_NP_OR_E
+
+  COND_INVALID
+};
 
   // Turn condition code into conditional branch opcode.
   unsigned GetCondBranchFromCond(CondCode CC);

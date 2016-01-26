@@ -2273,7 +2273,7 @@ template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {
       const Elf_Sym *Sym =
           Obj->template getEntry<Elf_Sym>(*Symtab, Sec.sh_info);
       auto Data = errorOrDefault(
-          Obj->template getSectionContentsAsArray<Elf32_Word>(&Sec));
+          Obj->template getSectionContentsAsArray<Elf_Word>(&Sec));
       DictScope D(W, "Group");
       StringRef Name = errorOrDefault(Obj->getSectionName(&Sec));
       W.printNumber("Name", Name, Sec.sh_name);
@@ -2282,7 +2282,7 @@ template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {
       W.startLine() << "Signature: " << StrTable.data() + Sym->st_name << "\n";
       {
         ListScope L(W, "Section(s) in group");
-        int Member = 1;
+        size_t Member = 1;
         while (Member < Data.size()) {
           auto Sec = errorOrDefault(Obj->getSection(Data[Member]));
           const StringRef Name = errorOrDefault(Obj->getSectionName(Sec));

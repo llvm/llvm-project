@@ -3805,6 +3805,10 @@ X86::CondCode X86::GetOppositeBranchCondition(X86::CondCode CC) {
   case X86::COND_NP: return X86::COND_P;
   case X86::COND_O:  return X86::COND_NO;
   case X86::COND_NO: return X86::COND_O;
+  case X86::COND_NE_OR_P:  return X86::COND_E_AND_NP;
+  case X86::COND_NP_OR_E:  return X86::COND_P_AND_NE;
+  case X86::COND_E_AND_NP: return X86::COND_NE_OR_P;
+  case X86::COND_P_AND_NE: return X86::COND_NP_OR_E;
   }
 }
 
@@ -3998,9 +4002,9 @@ bool X86InstrInfo::AnalyzeBranchImpl(
         MachineBasicBlock::iterator OldInst = I;
 
         BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(JNCC))
-          .addMBB(UnCondBrIter->getOperand(0).getMBB());
+            .addMBB(UnCondBrIter->getOperand(0).getMBB());
         BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(X86::JMP_1))
-          .addMBB(TargetBB);
+            .addMBB(TargetBB);
 
         OldInst->eraseFromParent();
         UnCondBrIter->eraseFromParent();
@@ -4024,11 +4028,6 @@ bool X86InstrInfo::AnalyzeBranchImpl(
     assert(Cond.size() == 1);
     assert(TBB);
 
-    // Only handle the case where all conditional branches branch to the same
-    // destination.
-    if (TBB != I->getOperand(0).getMBB())
-      return true;
-
     // If the conditions are the same, we can leave them alone.
     X86::CondCode OldBranchCode = (X86::CondCode)Cond[0].getImm();
     if (OldBranchCode == BranchCode)
@@ -4037,17 +4036,40 @@ bool X86InstrInfo::AnalyzeBranchImpl(
     // If they differ, see if they fit one of the known patterns. Theoretically,
     // we could handle more patterns here, but we shouldn't expect to see them
     // if instruction selection has done a reasonable job.
-    if ((OldBranchCode == X86::COND_NP &&
-         BranchCode == X86::COND_E) ||
-        (OldBranchCode == X86::COND_E &&
-         BranchCode == X86::COND_NP))
+    auto NewTBB = I->getOperand(0).getMBB();
+    if (TBB == NewTBB &&
+        ((OldBranchCode == X86::COND_NP && BranchCode == X86::COND_E) ||
+         (OldBranchCode == X86::COND_E && BranchCode == X86::COND_NP))) {
       BranchCode = X86::COND_NP_OR_E;
-    else if ((OldBranchCode == X86::COND_P &&
-              BranchCode == X86::COND_NE) ||
-             (OldBranchCode == X86::COND_NE &&
-              BranchCode == X86::COND_P))
+    } else if (TBB == NewTBB &&
+               ((OldBranchCode == X86::COND_P && BranchCode == X86::COND_NE) ||
+                (OldBranchCode == X86::COND_NE && BranchCode == X86::COND_P))) {
       BranchCode = X86::COND_NE_OR_P;
-    else
+    } else if ((OldBranchCode == X86::COND_NE && BranchCode == X86::COND_NP) ||
+               (OldBranchCode == X86::COND_P && BranchCode == X86::COND_E)) {
+      // X86::COND_P_AND_NE usually has two different branch destinations.
+      //
+      // JNP B1
+      // JNE B2
+      // B1: (fall-through)
+      // B2:
+      //
+      // Here this condition branches to B2 only if P && NE. It has another
+      // equivalent form:
+      //
+      // JE B1
+      // JP B2
+      // B1: (fall-through)
+      // B2:
+      //
+      // Similarly it branches to B2 only if NE && P. That is why this condition
+      // is named COND_P_AND_NE.
+      BranchCode = X86::COND_P_AND_NE;
+    } else if ((OldBranchCode == X86::COND_NP && BranchCode == X86::COND_NE) ||
+               (OldBranchCode == X86::COND_E && BranchCode == X86::COND_P)) {
+      // See comments above for X86::COND_P_AND_NE.
+      BranchCode = X86::COND_E_AND_NP;
+    } else
       return true;
 
     // Update the MachineOperand.
@@ -4156,6 +4178,13 @@ unsigned X86InstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
   return Count;
 }
 
+static MachineBasicBlock *getFallThroughMBB(MachineBasicBlock *MBB) {
+  auto I = std::next(MBB->getIterator());
+  if (I == MBB->getParent()->end())
+    return nullptr;
+  return &*I;
+}
+
 unsigned
 X86InstrInfo::InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                            MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
@@ -4171,6 +4200,9 @@ X86InstrInfo::InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
     BuildMI(&MBB, DL, get(X86::JMP_1)).addMBB(TBB);
     return 1;
   }
+
+  // If FBB is null, it is implied to be a fall-through block.
+  bool FallThru = FBB == nullptr;
 
   // Conditional branch.
   unsigned Count = 0;
@@ -4190,13 +4222,39 @@ X86InstrInfo::InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
     BuildMI(&MBB, DL, get(X86::JP_1)).addMBB(TBB);
     ++Count;
     break;
+  case X86::COND_P_AND_NE:
+    // Use the next block of MBB as FBB if it is null.
+    if (FBB == nullptr) {
+      FBB = getFallThroughMBB(&MBB);
+      assert(FBB && "MBB cannot be the last block in function when the false "
+                    "body is a fall-through.");
+    }
+    // Synthesize NEG_NP_OR_E with two branches.
+    BuildMI(&MBB, DL, get(X86::JNP_1)).addMBB(FBB);
+    ++Count;
+    BuildMI(&MBB, DL, get(X86::JNE_1)).addMBB(TBB);
+    ++Count;
+    break;
+  case X86::COND_E_AND_NP:
+    // Use the next block of MBB as FBB if it is null.
+    if (FBB == nullptr) {
+      FBB = getFallThroughMBB(&MBB);
+      assert(FBB && "MBB cannot be the last block in function when the false "
+                    "body is a fall-through.");
+    }
+    // Synthesize NEG_NE_OR_P with two branches.
+    BuildMI(&MBB, DL, get(X86::JNE_1)).addMBB(FBB);
+    ++Count;
+    BuildMI(&MBB, DL, get(X86::JNP_1)).addMBB(TBB);
+    ++Count;
+    break;
   default: {
     unsigned Opc = GetCondBranchFromCond(CC);
     BuildMI(&MBB, DL, get(Opc)).addMBB(TBB);
     ++Count;
   }
   }
-  if (FBB) {
+  if (!FallThru) {
     // Two-way Conditional branch. Insert the second branch.
     BuildMI(&MBB, DL, get(X86::JMP_1)).addMBB(FBB);
     ++Count;
@@ -6717,8 +6775,6 @@ bool X86InstrInfo::
 ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid X86 branch condition!");
   X86::CondCode CC = static_cast<X86::CondCode>(Cond[0].getImm());
-  if (CC == X86::COND_NE_OR_P || CC == X86::COND_NP_OR_E)
-    return true;
   Cond[0].setImm(GetOppositeBranchCondition(CC));
   return false;
 }

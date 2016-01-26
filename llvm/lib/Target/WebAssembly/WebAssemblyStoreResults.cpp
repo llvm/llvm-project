@@ -150,16 +150,22 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
               Name == TLI.getLibcallName(RTLIB::MEMSET)) {
             LibFunc::Func Func;
             if (LibInfo.getLibFunc(Name, Func)) {
-              if (!MI.getOperand(2).isReg())
-                report_fatal_error(
-                    "Call to builtin function with wrong signature");
-              unsigned FromReg = MI.getOperand(2).getReg();
-              unsigned ToReg = MI.getOperand(0).getReg();
-              if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
-                report_fatal_error(
-                    "Call to builtin function with wrong signature");
-              Changed |=
-                  ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
+              const auto &Op2 = MI.getOperand(2);
+              if (Op2.isReg()) {
+                unsigned FromReg = Op2.getReg();
+                unsigned ToReg = MI.getOperand(0).getReg();
+                if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
+                  report_fatal_error("Store results: call to builtin function "
+                                     "with wrong signature, from/to mismatch");
+                Changed |=
+                    ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
+              } else if (Op2.isFI()) {
+                break;
+              } else {
+                report_fatal_error("Store results: call to builtin function "
+                                   "with wrong signature, not consuming reg or "
+                                   "frame index");
+              }
             }
           }
         }
