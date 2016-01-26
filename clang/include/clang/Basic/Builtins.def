@@ -1252,6 +1252,32 @@ BUILTIN(__builtin___get_unsafe_stack_ptr, "v*", "Fn")
 BUILTIN(__builtin_nontemporal_store, "v.", "t")
 BUILTIN(__builtin_nontemporal_load, "v.", "t")
 
+// OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
+// We need the generic prototype, since the packet type could be anything.
+LANGBUILTIN(read_pipe, "i.", "tn", OCLC_LANG)
+LANGBUILTIN(write_pipe, "i.", "tn", OCLC_LANG)
+
+LANGBUILTIN(reserve_read_pipe, "i.", "tn", OCLC_LANG)
+LANGBUILTIN(reserve_write_pipe, "i.", "tn", OCLC_LANG)
+
+LANGBUILTIN(commit_write_pipe, "v.", "tn", OCLC_LANG)
+LANGBUILTIN(commit_read_pipe, "v.", "tn", OCLC_LANG)
+
+LANGBUILTIN(sub_group_reserve_read_pipe, "i.", "tn", OCLC_LANG)
+LANGBUILTIN(sub_group_reserve_write_pipe, "i.", "tn", OCLC_LANG)
+
+LANGBUILTIN(sub_group_commit_read_pipe, "v.", "tn", OCLC_LANG)
+LANGBUILTIN(sub_group_commit_write_pipe, "v.", "tn", OCLC_LANG)
+
+LANGBUILTIN(work_group_reserve_read_pipe, "i.", "tn", OCLC_LANG)
+LANGBUILTIN(work_group_reserve_write_pipe, "i.", "tn", OCLC_LANG)
+
+LANGBUILTIN(work_group_commit_read_pipe, "v.", "tn", OCLC_LANG)
+LANGBUILTIN(work_group_commit_write_pipe, "v.", "tn", OCLC_LANG)
+
+LANGBUILTIN(get_pipe_num_packets, "Ui.", "tn", OCLC_LANG)
+LANGBUILTIN(get_pipe_max_packets, "Ui.", "tn", OCLC_LANG)
+
 #undef BUILTIN
 #undef LIBBUILTIN
 #undef LANGBUILTIN

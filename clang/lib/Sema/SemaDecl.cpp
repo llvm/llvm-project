@@ -1748,6 +1748,9 @@ NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
           << Context.BuiltinInfo.getName(ID);
   }
 
+  if (R.isNull())
+    return nullptr;
+
   DeclContext *Parent = Context.getTranslationUnitDecl();
   if (getLangOpts().CPlusPlus) {
     LinkageSpecDecl *CLinkageDecl =
