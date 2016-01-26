@@ -2475,6 +2475,18 @@ __kmp_join_call(ident_t *loc, int gtid
     }
     KMP_DEBUG_ASSERT( root->r.r_in_parallel >= 0 );
 
+#if OMPT_SUPPORT && OMPT_TRACE
+    if(ompt_enabled){
+        ompt_task_info_t *task_info = __ompt_get_taskinfo(0);
+        if (ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)) {
+             ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)(
+               parallel_id, task_info->task_id);
+        }
+        task_info->frame.exit_runtime_frame = 0;
+        task_info->task_id = 0;
+    }
+#endif
+
     KF_TRACE( 10, ("__kmp_join_call1: T#%d, this_thread=%p team=%p\n",
                    0, master_th, team ) );
     __kmp_pop_current_task_from_thread( master_th );
@@ -5504,6 +5516,12 @@ __kmp_launch_thread( kmp_info_t *this_thr )
 
         /* have we been allocated? */
         if ( TCR_SYNC_PTR(*pteam) && !TCR_4(__kmp_global.g.g_done) ) {
+#if OMPT_SUPPORT
+            ompt_task_info_t *task_info;
+            if (ompt_enabled) {
+                task_info = __ompt_get_taskinfo(0);
+            }
+#endif
             /* we were just woken up, so run our new task */
             if ( TCR_SYNC_PTR((*pteam)->t.t_pkfn) != NULL ) {
                 int rc;
@@ -5517,8 +5535,7 @@ __kmp_launch_thread( kmp_info_t *this_thr )
                     this_thr->th.ompt_thread_info.state = ompt_state_work_parallel;
                     // Initialize OMPT task id for implicit task.
                     int tid = __kmp_tid_from_gtid(gtid);
-                    (*pteam)->t.t_implicit_task_taskdata[tid].ompt_task_info.task_id =
-                    __ompt_task_id_new(tid);
+                    task_info->task_id = __ompt_task_id_new(tid);
                 }
 #endif
 
@@ -5533,8 +5550,7 @@ __kmp_launch_thread( kmp_info_t *this_thr )
 #if OMPT_SUPPORT
                 if (ompt_enabled) {
                     /* no frame set while outside task */
-                    int tid = __kmp_tid_from_gtid(gtid);
-                    (*pteam)->t.t_implicit_task_taskdata[tid].ompt_task_info.frame.exit_runtime_frame = 0;
+                    task_info->frame.exit_runtime_frame = 0;
 
                     this_thr->th.ompt_thread_info.state = ompt_state_overhead;
                 }
@@ -5545,6 +5561,17 @@ __kmp_launch_thread( kmp_info_t *this_thr )
             }
             /* join barrier after parallel region */
             __kmp_join_barrier( gtid );
+#if OMPT_SUPPORT && OMPT_TRACE
+            if (ompt_enabled) {
+                if (ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)) {
+                    int my_parallel_id = (*pteam)->t.ompt_team_info.parallel_id;
+                    ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)(
+                        my_parallel_id, task_info->task_id);
+                }
+                task_info->frame.exit_runtime_frame = 0;
+                task_info->task_id = 0;
+            }
+#endif 
         }
     }
     TCR_SYNC_PTR((intptr_t)__kmp_global.g.g_done);
@@ -6857,17 +6884,6 @@ __kmp_invoke_task_func( int gtid )
 #endif
                                      );
     }
-
-#if OMPT_SUPPORT && OMPT_TRACE
-    if (ompt_enabled) {
-        if (ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)) {
-            ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)(
-                my_parallel_id, my_task_id);
-        }
-        // the implicit task is not dead yet, so we can't clear its task id here
-        team->t.t_implicit_task_taskdata[tid].ompt_task_info.frame.exit_runtime_frame = 0;
-    }
-#endif
 
 #if USE_ITT_BUILD
     if ( __itt_stack_caller_create_ptr ) {
