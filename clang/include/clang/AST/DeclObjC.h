@@ -904,11 +904,13 @@ public:
   typedef llvm::iterator_range<specific_decl_iterator<ObjCPropertyDecl>>
     prop_range;
 
-  prop_range properties() const { return prop_range(prop_begin(), prop_end()); }
-  prop_iterator prop_begin() const {
+  prop_range instance_properties() const {
+    return prop_range(instprop_begin(), instprop_end());
+  }
+  prop_iterator instprop_begin() const {
     return prop_iterator(decls_begin());
   }
-  prop_iterator prop_end() const {
+  prop_iterator instprop_end() const {
     return prop_iterator(decls_end());
   }
 

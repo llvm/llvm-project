@@ -1521,7 +1521,7 @@ static void CollectImmediateProperties(ObjCContainerDecl *CDecl,
                                        bool IncludeProtocols = true) {
 
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(CDecl)) {
-    for (auto *Prop : IDecl->properties())
+    for (auto *Prop : IDecl->instance_properties())
       PropMap[Prop->getIdentifier()] = Prop;
 
     // Collect the properties from visible extensions.
@@ -1535,7 +1535,7 @@ static void CollectImmediateProperties(ObjCContainerDecl *CDecl,
     }
   }
   if (ObjCCategoryDecl *CATDecl = dyn_cast<ObjCCategoryDecl>(CDecl)) {
-    for (auto *Prop : CATDecl->properties())
+    for (auto *Prop : CATDecl->instance_properties())
       PropMap[Prop->getIdentifier()] = Prop;
     if (IncludeProtocols) {
       // Scan through class's protocols.
@@ -1544,7 +1544,7 @@ static void CollectImmediateProperties(ObjCContainerDecl *CDecl,
     }
   }
   else if (ObjCProtocolDecl *PDecl = dyn_cast<ObjCProtocolDecl>(CDecl)) {
-    for (auto *Prop : PDecl->properties()) {
+    for (auto *Prop : PDecl->instance_properties()) {
       ObjCPropertyDecl *PropertyFromSuper = SuperPropMap[Prop->getIdentifier()];
       // Exclude property for protocols which conform to class's super-class, 
       // as super-class has to implement the property.
@@ -1590,7 +1590,7 @@ Sema::IvarBacksCurrentMethodAccessor(ObjCInterfaceDecl *IFace,
   
   // look up a property declaration whose one of its accessors is implemented
   // by this method.
-  for (const auto *Property : IFace->properties()) {
+  for (const auto *Property : IFace->instance_properties()) {
     if ((Property->getGetterName() == IMD->getSelector() ||
          Property->getSetterName() == IMD->getSelector()) &&
         (Property->getPropertyIvarDecl() == IV))
@@ -1599,7 +1599,7 @@ Sema::IvarBacksCurrentMethodAccessor(ObjCInterfaceDecl *IFace,
   // Also look up property declaration in class extension whose one of its
   // accessors is implemented by this method.
   for (const auto *Ext : IFace->known_extensions())
-    for (const auto *Property : Ext->properties())
+    for (const auto *Property : Ext->instance_properties())
       if ((Property->getGetterName() == IMD->getSelector() ||
            Property->getSetterName() == IMD->getSelector()) &&
           (Property->getPropertyIvarDecl() == IV))
@@ -1806,7 +1806,7 @@ void Sema::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl* IMPDecl,
       }
       // Add the properties of 'PDecl' to the list of properties that
       // need to be implemented.
-      for (auto *PropDecl : PDecl->properties()) {
+      for (auto *PropDecl : PDecl->instance_properties()) {
         if ((*LazyMap)[PropDecl->getIdentifier()])
           continue;
         PropMap[PropDecl->getIdentifier()] = PropDecl;
@@ -1893,10 +1893,10 @@ Sema::AtomicPropertySetterGetterRules (ObjCImplDecl* IMPDecl,
   if (getLangOpts().getGC() != LangOptions::NonGC)
     return;
   ObjCContainerDecl::PropertyMap PM;
-  for (auto *Prop : IDecl->properties())
+  for (auto *Prop : IDecl->instance_properties())
     PM[Prop->getIdentifier()] = Prop;
   for (const auto *Ext : IDecl->known_extensions())
-    for (auto *Prop : Ext->properties())
+    for (auto *Prop : Ext->instance_properties())
       PM[Prop->getIdentifier()] = Prop;
     
     for (ObjCContainerDecl::PropertyMap::iterator I = PM.begin(), E = PM.end();

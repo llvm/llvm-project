@@ -3570,7 +3570,7 @@ static void AddObjCProperties(const CodeCompletionContext &CCContext,
   Container = getContainerDef(Container);
   
   // Add properties in this container.
-  for (const auto *P : Container->properties())
+  for (const auto *P : Container->instance_properties())
     if (AddedProperties.insert(P->getIdentifier()).second)
       Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
                              CurContext);
@@ -7178,7 +7178,7 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S,
         Containers.push_back(Cat);
     
     for (unsigned I = 0, N = Containers.size(); I != N; ++I)
-      for (auto *P : Containers[I]->properties())
+      for (auto *P : Containers[I]->instance_properties())
         AddObjCKeyValueCompletions(P, IsInstanceMethod, ReturnType, Context, 
                                    KnownSelectors, Results);
   }
