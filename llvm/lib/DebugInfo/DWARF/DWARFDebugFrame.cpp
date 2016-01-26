@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataTypes.h"
@@ -199,19 +200,31 @@ public:
   CIE(uint64_t Offset, uint64_t Length, uint8_t Version,
       SmallString<8> Augmentation, uint8_t AddressSize,
       uint8_t SegmentDescriptorSize, uint64_t CodeAlignmentFactor,
-      int64_t DataAlignmentFactor, uint64_t ReturnAddressRegister)
+      int64_t DataAlignmentFactor, uint64_t ReturnAddressRegister,
+      SmallString<8> AugmentationData, Optional<uint32_t> FDEPointerEncoding,
+      Optional<uint32_t> LSDAPointerEncoding)
       : FrameEntry(FK_CIE, Offset, Length), Version(Version),
         Augmentation(std::move(Augmentation)),
         AddressSize(AddressSize),
         SegmentDescriptorSize(SegmentDescriptorSize),
         CodeAlignmentFactor(CodeAlignmentFactor),
         DataAlignmentFactor(DataAlignmentFactor),
-        ReturnAddressRegister(ReturnAddressRegister) {}
+        ReturnAddressRegister(ReturnAddressRegister),
+        AugmentationData(AugmentationData),
+        FDEPointerEncoding(FDEPointerEncoding),
+        LSDAPointerEncoding(LSDAPointerEncoding) { }
 
   ~CIE() override {}
 
+  StringRef getAugmentationString() const { return Augmentation; }
   uint64_t getCodeAlignmentFactor() const { return CodeAlignmentFactor; }
   int64_t getDataAlignmentFactor() const { return DataAlignmentFactor; }
+  Optional<uint32_t> getFDEPointerEncoding() const {
+    return FDEPointerEncoding;
+  }
+  Optional<uint32_t> getLSDAPointerEncoding() const {
+    return LSDAPointerEncoding;
+  }
 
   void dumpHeader(raw_ostream &OS) const override {
     OS << format("%08x %08x %08x CIE",
@@ -231,6 +244,8 @@ public:
                  (int32_t)DataAlignmentFactor);
     OS << format("  Return address column: %d\n",
                  (int32_t)ReturnAddressRegister);
+    if (!AugmentationData.empty())
+      OS << "  Augmentation data:     " << AugmentationData << "\n";
     OS << "\n";
   }
 
@@ -247,6 +262,11 @@ private:
   uint64_t CodeAlignmentFactor;
   int64_t DataAlignmentFactor;
   uint64_t ReturnAddressRegister;
+
+  // The following are used when the CIE represents an EH frame entry.
+  SmallString<8> AugmentationData;
+  Optional<uint32_t> FDEPointerEncoding;
+  Optional<uint32_t> LSDAPointerEncoding;
 };
 
 
@@ -431,7 +451,7 @@ void FrameEntry::dumpInstructions(raw_ostream &OS) const {
   }
 }
 
-DWARFDebugFrame::DWARFDebugFrame() {
+DWARFDebugFrame::DWARFDebugFrame(bool IsEH) : IsEH(IsEH) {
 }
 
 DWARFDebugFrame::~DWARFDebugFrame() {
@@ -447,6 +467,39 @@ static void LLVM_ATTRIBUTE_UNUSED dumpDataAux(DataExtractor Data,
   errs() << "\n";
 }
 
+static unsigned getSizeForEncoding(const DataExtractor &Data,
+                                   unsigned symbolEncoding) {
+  unsigned format = symbolEncoding & 0x0f;
+  switch (format) {
+    default: llvm_unreachable("Unknown Encoding");
+    case dwarf::DW_EH_PE_absptr:
+    case dwarf::DW_EH_PE_signed:
+      return Data.getAddressSize();
+    case dwarf::DW_EH_PE_udata2:
+    case dwarf::DW_EH_PE_sdata2:
+      return 2;
+    case dwarf::DW_EH_PE_udata4:
+    case dwarf::DW_EH_PE_sdata4:
+      return 4;
+    case dwarf::DW_EH_PE_udata8:
+    case dwarf::DW_EH_PE_sdata8:
+      return 8;
+  }
+}
+
+static uint64_t readPointer(const DataExtractor &Data, uint32_t &Offset,
+                            unsigned Encoding) {
+  switch (getSizeForEncoding(Data, Encoding)) {
+    case 2:
+      return Data.getU16(&Offset);
+    case 4:
+      return Data.getU32(&Offset);
+    case 8:
+      return Data.getU64(&Offset);
+    default:
+      llvm_unreachable("Illegal data size");
+  }
+}
 
 void DWARFDebugFrame::parse(DataExtractor Data) {
   uint32_t Offset = 0;
@@ -454,6 +507,14 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
 
   while (Data.isValidOffset(Offset)) {
     uint32_t StartOffset = Offset;
+
+    auto ReportError = [StartOffset](const char *ErrorMsg) {
+      std::string Str;
+      raw_string_ostream OS(Str);
+      OS << format(ErrorMsg, StartOffset);
+      OS.flush();
+      report_fatal_error(Str);
+    };
 
     bool IsDWARF64 = false;
     uint64_t Length = Data.getU32(&Offset);
@@ -473,47 +534,136 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
     // read).
     // TODO: For honest DWARF64 support, DataExtractor will have to treat
     //       offset_ptr as uint64_t*
+    uint32_t StartStructureOffset = Offset;
     uint32_t EndStructureOffset = Offset + static_cast<uint32_t>(Length);
 
     // The Id field's size depends on the DWARF format
-    Id = Data.getUnsigned(&Offset, IsDWARF64 ? 8 : 4);
-    bool IsCIE = ((IsDWARF64 && Id == DW64_CIE_ID) || Id == DW_CIE_ID);
+    Id = Data.getUnsigned(&Offset, (IsDWARF64 && !IsEH) ? 8 : 4);
+    bool IsCIE = ((IsDWARF64 && Id == DW64_CIE_ID) ||
+                  Id == DW_CIE_ID ||
+                  (IsEH && !Id));
 
     if (IsCIE) {
       uint8_t Version = Data.getU8(&Offset);
       const char *Augmentation = Data.getCStr(&Offset);
-      uint8_t AddressSize = Version < 4 ? Data.getAddressSize() : Data.getU8(&Offset);
+      StringRef AugmentationString(Augmentation ? Augmentation : "");
+      uint8_t AddressSize = Version < 4 ? Data.getAddressSize() :
+                                          Data.getU8(&Offset);
       Data.setAddressSize(AddressSize);
       uint8_t SegmentDescriptorSize = Version < 4 ? 0 : Data.getU8(&Offset);
       uint64_t CodeAlignmentFactor = Data.getULEB128(&Offset);
       int64_t DataAlignmentFactor = Data.getSLEB128(&Offset);
       uint64_t ReturnAddressRegister = Data.getULEB128(&Offset);
 
+      // Parse the augmentation data for EH CIEs
+      StringRef AugmentationData;
+      Optional<uint32_t> FDEPointerEncoding;
+      Optional<uint32_t> LSDAPointerEncoding;
+      if (IsEH) {
+        Optional<uint32_t> PersonalityEncoding;
+        Optional<uint64_t> Personality;
+
+        uint64_t AugmentationLength = 0;
+        uint32_t StartAugmentationOffset = 0;
+        uint32_t EndAugmentationOffset = 0;
+
+        // Walk the augmentation string to get all the augmentation data.
+        for (unsigned i = 0, e = AugmentationString.size(); i != e; ++i) {
+          switch (AugmentationString[i]) {
+            default:
+              ReportError("Unknown augmentation character in entry at %lx");
+            case 'L':
+              if (LSDAPointerEncoding)
+                ReportError("Duplicate LSDA encoding in entry at %lx");
+              LSDAPointerEncoding = Data.getU8(&Offset);
+              break;
+            case 'P': {
+              if (Personality)
+                ReportError("Duplicate personality in entry at %lx");
+              PersonalityEncoding = Data.getU8(&Offset);
+              Personality = readPointer(Data, Offset, *PersonalityEncoding);
+              break;
+            }
+            case 'R':
+              if (FDEPointerEncoding)
+                ReportError("Duplicate FDE encoding in entry at %lx");
+              FDEPointerEncoding = Data.getU8(&Offset);
+              break;
+            case 'z':
+              if (i)
+                ReportError("'z' must be the first character at %lx");
+              // Parse the augmentation length first.  We only parse it if
+              // the string contains a 'z'.
+              AugmentationLength = Data.getULEB128(&Offset);
+              StartAugmentationOffset = Offset;
+              EndAugmentationOffset =
+                Offset + static_cast<uint32_t>(AugmentationLength);
+          }
+        }
+
+        if (Offset != EndAugmentationOffset)
+          ReportError("Parsing augmentation data at %lx failed");
+
+        AugmentationData = Data.getData().slice(StartAugmentationOffset,
+                                                EndAugmentationOffset);
+      }
+
       auto Cie = make_unique<CIE>(StartOffset, Length, Version,
                                   StringRef(Augmentation), AddressSize,
                                   SegmentDescriptorSize, CodeAlignmentFactor,
-                                  DataAlignmentFactor, ReturnAddressRegister);
+                                  DataAlignmentFactor, ReturnAddressRegister,
+                                  AugmentationData, FDEPointerEncoding,
+                                  LSDAPointerEncoding);
       CIEs[StartOffset] = Cie.get();
       Entries.emplace_back(std::move(Cie));
     } else {
       // FDE
       uint64_t CIEPointer = Id;
-      uint64_t InitialLocation = Data.getAddress(&Offset);
-      uint64_t AddressRange = Data.getAddress(&Offset);
+      uint64_t InitialLocation = 0;
+      uint64_t AddressRange = 0;
+      CIE *Cie = CIEs[IsEH ? (StartStructureOffset - CIEPointer) : CIEPointer];
+
+      if (IsEH) {
+        // The address size is encoded in the CIE we reference.
+        if (!Cie)
+          ReportError("Parsing FDE data at %lx failed due to missing CIE");
+
+        Optional<uint32_t> FDEPointerEncoding = Cie->getFDEPointerEncoding();
+        if (!FDEPointerEncoding)
+          ReportError("Parsing at %lx failed due to missing pointer encoding");
+
+        InitialLocation = readPointer(Data, Offset, *FDEPointerEncoding);
+        AddressRange = readPointer(Data, Offset, *FDEPointerEncoding);
+        StringRef AugmentationString = Cie->getAugmentationString();
+        if (!AugmentationString.empty()) {
+          // Parse the augmentation length and data for this FDE.
+          uint64_t AugmentationLength = Data.getULEB128(&Offset);
+
+          uint32_t EndAugmentationOffset =
+            Offset + static_cast<uint32_t>(AugmentationLength);
+
+          // Decode the LSDA if the CIE augmentation string said we should.
+          uint64_t LSDA = 0;
+          if (Optional<uint32_t> Encoding = Cie->getLSDAPointerEncoding())
+            LSDA = readPointer(Data, Offset, *Encoding);
+
+          if (Offset != EndAugmentationOffset)
+            ReportError("Parsing augmentation data at %lx failed");
+        }
+      } else {
+        InitialLocation = Data.getAddress(&Offset);
+        AddressRange = Data.getAddress(&Offset);
+      }
 
       Entries.emplace_back(new FDE(StartOffset, Length, CIEPointer,
                                    InitialLocation, AddressRange,
-                                   CIEs[CIEPointer]));
+                                   Cie));
     }
 
     Entries.back()->parseInstructions(Data, &Offset, EndStructureOffset);
 
-    if (Offset != EndStructureOffset) {
-      std::string Str;
-      raw_string_ostream OS(Str);
-      OS << format("Parsing entry instructions at %lx failed", StartOffset);
-      report_fatal_error(Str);
-    }
+    if (Offset != EndStructureOffset)
+      ReportError("Parsing entry instructions at %lx failed");
   }
 }
 
