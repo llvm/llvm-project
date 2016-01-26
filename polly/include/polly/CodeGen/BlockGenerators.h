@@ -535,22 +535,6 @@ protected:
   void copyInstruction(ScopStmt &Stmt, Instruction *Inst, ValueMapT &BBMap,
                        LoopToScevMapT &LTS, isl_id_to_ast_expr *NewAccesses);
 
-  /// @brief Helper to get the newest version of @p ScalarValue.
-  ///
-  /// @param ScalarValue The original value needed.
-  /// @param R           The current SCoP region.
-  /// @param Stmt        The ScopStmt in which we look up this value.
-  /// @param LTS         A mapping from loops virtual canonical induction
-  ///                    variable to their new values
-  ///                    (for values recalculated in the new ScoP, but not
-  ///                     within this basic block)
-  /// @param BBMap       A mapping from old values to their new values
-  ///                    (for values recalculated within this basic block).
-  ///
-  /// @returns The newest version (e.g., reloaded) of the scalar value.
-  Value *getNewScalarValue(Value *ScalarValue, const Region &R, ScopStmt &,
-                           LoopToScevMapT &LTS, ValueMapT &BBMap);
-
   /// @brief Helper to determine if @p Inst can be synthezised in @p Stmt.
   ///
   /// @returns false, iff @p Inst can be synthesized in @p Stmt.

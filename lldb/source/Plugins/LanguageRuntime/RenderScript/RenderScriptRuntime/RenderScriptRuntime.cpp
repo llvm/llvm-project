@@ -2870,10 +2870,11 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame* frame_ptr, const u
     return true;
 }
 
-// Prints infomation regarding all the currently loaded allocations.
+// Prints information regarding currently loaded allocations.
 // These details are gathered by jitting the runtime, which has as latency.
+// Index parameter specifies a single allocation ID to print, or a zero value to print them all
 void
-RenderScriptRuntime::ListAllocations(Stream &strm, StackFrame* frame_ptr, bool recompute)
+RenderScriptRuntime::ListAllocations(Stream &strm, StackFrame *frame_ptr, const uint32_t index)
 {
     strm.Printf("RenderScript Allocations:");
     strm.EOL();
@@ -2881,13 +2882,14 @@ RenderScriptRuntime::ListAllocations(Stream &strm, StackFrame* frame_ptr, bool r
 
     for (auto &alloc : m_allocations)
     {
-        // JIT the allocation info if we haven't done it, or the user forces us to.
-        bool do_refresh = alloc->shouldRefresh() || recompute;
+        // index will only be zero if we want to print all allocations
+        if (index != 0 && index != alloc->id)
+            continue;
 
         // JIT current allocation information
-        if (do_refresh && !RefreshAllocation(alloc.get(), frame_ptr))
+        if (alloc->shouldRefresh() && !RefreshAllocation(alloc.get(), frame_ptr))
         {
-            strm.Printf("Error: Couldn't evaluate details for allocation %u\n", alloc->id);
+            strm.Printf("Error: Couldn't evaluate details for allocation %" PRIu32 "\n", alloc->id);
             continue;
         }
 
@@ -3926,9 +3928,7 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions(CommandInterpreter &interpreter) : Options(interpreter), m_refresh(false)
-        {
-        }
+        CommandOptions(CommandInterpreter &interpreter) : Options(interpreter), m_id(0) {}
 
         ~CommandOptions() override = default;
 
@@ -3940,8 +3940,11 @@ public:
 
             switch (short_option)
             {
-                case 'r':
-                    m_refresh = true;
+                case 'i':
+                    bool success;
+                    m_id = StringConvert::ToUInt32(option_arg, 0, 0, &success);
+                    if (!success)
+                        error.SetErrorStringWithFormat("invalid integer value for option '%c'", short_option);
                     break;
                 default:
                     error.SetErrorStringWithFormat("unrecognized option '%c'", short_option);
@@ -3953,7 +3956,7 @@ public:
         void
         OptionParsingStarting() override
         {
-            m_refresh = false;
+            m_id = 0;
         }
 
         const OptionDefinition*
@@ -3963,7 +3966,7 @@ public:
         }
 
         static OptionDefinition g_option_table[];
-        bool m_refresh;
+        uint32_t m_id;
     };
 
     bool
@@ -3971,7 +3974,7 @@ public:
     {
         RenderScriptRuntime *runtime =
           static_cast<RenderScriptRuntime *>(m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(eLanguageTypeExtRenderScript));
-        runtime->ListAllocations(result.GetOutputStream(), m_exe_ctx.GetFramePtr(), m_options.m_refresh);
+        runtime->ListAllocations(result.GetOutputStream(), m_exe_ctx.GetFramePtr(), m_options.m_id);
         result.SetStatus(eReturnStatusSuccessFinishResult);
         return true;
     }
@@ -3980,13 +3983,10 @@ private:
     CommandOptions m_options;
 };
 
-OptionDefinition
-CommandObjectRenderScriptRuntimeAllocationList::CommandOptions::g_option_table[] =
-{
-    { LLDB_OPT_SET_1, false, "refresh", 'r', OptionParser::eNoArgument, NULL, NULL, 0, eArgTypeNone,
-      "Recompute allocation details."},
-    { 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
-};
+OptionDefinition CommandObjectRenderScriptRuntimeAllocationList::CommandOptions::g_option_table[] = {
+    {LLDB_OPT_SET_1, false, "id", 'i', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeIndex,
+     "Only show details of a single allocation with specified id."},
+    {0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL}};
 
 class CommandObjectRenderScriptRuntimeAllocationLoad : public CommandObjectParsed
 {

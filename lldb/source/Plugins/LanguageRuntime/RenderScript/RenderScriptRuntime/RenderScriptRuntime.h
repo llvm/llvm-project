@@ -199,7 +199,8 @@ public:
 
     bool DumpAllocation(Stream &strm, StackFrame* frame_ptr, const uint32_t id);
 
-    void ListAllocations(Stream &strm, StackFrame* frame_ptr, bool recompute);
+    void
+    ListAllocations(Stream &strm, StackFrame *frame_ptr, const uint32_t index);
 
     void PlaceBreakpointOnKernel(Stream &strm, const char *name, const std::array<int,3> coords,
                                  Error &error, lldb::TargetSP target);

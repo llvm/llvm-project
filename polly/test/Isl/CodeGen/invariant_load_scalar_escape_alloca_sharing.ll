@@ -1,6 +1,14 @@
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
-; Verify the preloaded %0 is stored and communicated in the same alloca.
+; Verify the preloaded %tmp0 is stored and communicated in the same alloca.
+; In this case, we do not reload %ncol.load from the scalar stack slot, but
+; instead use directly the preloaded value stored in GlobalMap.
+;
+; TODO: We may want to not add preloaded values to GlobalMap, but instead model
+;       them as normal read/write memory accesses. This will allow us to
+;       easily reason about the use of preloaded data in scop statements.
+;       At the moment, we would need to scan the IR to understand if a stmt
+;       uses any preloaded values.
 ;
 ; CHECK-NOT: alloca
 ; CHECK:     %dec3.s2a = alloca i32
@@ -15,7 +23,7 @@
 ;
 ; CHECK:      polly.stmt.while.body.lr.ph:
 ; CHECK-NEXT:   %tmp0.preload.s2a.reload = load i32, i32* %tmp0.preload.s2a
-; CHECK-NEXT:   store i32 %tmp0.preload.s2a.reload, i32* %dec3.in.phiops
+; CHECK-NEXT:   store i32 %ncol.load, i32* %dec3.in.phiops
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
