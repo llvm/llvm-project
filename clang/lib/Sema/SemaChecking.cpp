@@ -7288,8 +7288,8 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
   // __null is usually wrapped in a macro.  Go up a macro if that is the case.
   if (NullKind == Expr::NPCK_GNUNull) {
     if (Loc.isMacroID()) {
-      StringRef MacroName =
-          Lexer::getImmediateMacroName(Loc, S.SourceMgr, S.getLangOpts());
+      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
+          Loc, S.SourceMgr, S.getLangOpts());
       if (MacroName == "NULL")
         Loc = S.SourceMgr.getImmediateExpansionRange(Loc).first;
     }
