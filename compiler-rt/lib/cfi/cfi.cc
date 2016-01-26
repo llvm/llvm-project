@@ -296,7 +296,7 @@ void ExitLoader() {
 }
 
 ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
-                                            void *DiagData) {
+                                     void *DiagData) {
   uptr Addr = (uptr)Ptr;
   VReport(3, "__cfi_slowpath: %llx, %p\n", CallSiteTypeId, Ptr);
   ShadowValue sv = ShadowValue::load(Addr);
@@ -362,10 +362,12 @@ __cfi_slowpath(u64 CallSiteTypeId, void *Ptr) {
   CfiSlowPathCommon(CallSiteTypeId, Ptr, nullptr);
 }
 
+#ifdef CFI_ENABLE_DIAG
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __cfi_slowpath_diag(u64 CallSiteTypeId, void *Ptr, void *DiagData) {
   CfiSlowPathCommon(CallSiteTypeId, Ptr, DiagData);
 }
+#endif
 
 // Setup shadow for dlopen()ed libraries.
 // The actual shadow setup happens after dlopen() returns, which means that
