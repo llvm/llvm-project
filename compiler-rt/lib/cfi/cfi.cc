@@ -26,15 +26,22 @@ typedef ElfW(Ehdr) Elf_Ehdr;
 #include "ubsan/ubsan_init.h"
 #include "ubsan/ubsan_flags.h"
 
+#ifdef CFI_ENABLE_DIAG
+#include "ubsan/ubsan_handlers.h"
+#endif
+
 namespace __cfi {
 
-static constexpr uptr kCfiShadowPointerStorageSize = 4096; // 1 page
+static constexpr uptr kCfiShadowLimitsStorageSize = 4096; // 1 page
 // Lets hope that the data segment is mapped with 4K pages.
 // The pointer to the cfi shadow region is stored at the start of this page.
 // The rest of the page is unused and re-mapped read-only.
-static char cfi_shadow_pointer_storage[kCfiShadowPointerStorageSize]
-    __attribute__((aligned(kCfiShadowPointerStorageSize)));
-static uptr cfi_shadow_size;
+static char cfi_shadow_pointer_storage[kCfiShadowLimitsStorageSize]
+    __attribute__((aligned(kCfiShadowLimitsStorageSize)));
+struct ShadowLimits {
+  uptr start;
+  uptr size;
+};
 static constexpr uptr kShadowGranularity = 12;
 static constexpr uptr kShadowAlign = 1UL << kShadowGranularity; // 4096
 
@@ -43,11 +50,24 @@ static constexpr uint16_t kUncheckedShadow = 0xFFFFU;
 
 // Get the start address of the CFI shadow region.
 uptr GetShadow() {
-  return *reinterpret_cast<uptr *>(&cfi_shadow_pointer_storage);
+  return reinterpret_cast<ShadowLimits *>(&cfi_shadow_pointer_storage)->start;
+}
+
+uptr GetShadowSize() {
+  return reinterpret_cast<ShadowLimits *>(&cfi_shadow_pointer_storage)->size;
+}
+
+// This will only work while the shadow is not allocated.
+void SetShadowSize(uptr size) {
+  reinterpret_cast<ShadowLimits *>(&cfi_shadow_pointer_storage)->size = size;
+}
+
+uptr MemToShadowOffset(uptr x) {
+  return (x >> kShadowGranularity) << 1;
 }
 
 uint16_t *MemToShadow(uptr x, uptr shadow_base) {
-  return (uint16_t *)(shadow_base + ((x >> kShadowGranularity) << 1));
+  return (uint16_t *)(shadow_base + MemToShadowOffset(x));
 }
 
 typedef int (*CFICheckFn)(u64, void *, void *);
@@ -70,9 +90,15 @@ public:
     return reinterpret_cast<CFICheckFn>(p);
   }
 
-  // Load a shadow valud for the given application memory address.
+  // Load a shadow value for the given application memory address.
   static const ShadowValue load(uptr addr) {
-    return ShadowValue(addr, *MemToShadow(addr, GetShadow()));
+    uptr shadow_base = GetShadow();
+    uptr shadow_offset = MemToShadowOffset(addr);
+    if (shadow_offset > GetShadowSize())
+      return ShadowValue(addr, kInvalidShadow);
+    else
+      return ShadowValue(
+          addr, *reinterpret_cast<uint16_t *>(shadow_base + shadow_offset));
   }
 };
 
@@ -95,8 +121,8 @@ public:
 };
 
 void ShadowBuilder::Start() {
-  shadow_ = (uptr)MmapNoReserveOrDie(cfi_shadow_size, "CFI shadow");
-  VReport(1, "CFI: shadow at %zx .. %zx\n", shadow_, shadow_ + cfi_shadow_size);
+  shadow_ = (uptr)MmapNoReserveOrDie(GetShadowSize(), "CFI shadow");
+  VReport(1, "CFI: shadow at %zx .. %zx\n", shadow_, shadow_ + GetShadowSize());
 }
 
 void ShadowBuilder::AddUnchecked(uptr begin, uptr end) {
@@ -122,20 +148,20 @@ void ShadowBuilder::Add(uptr begin, uptr end, uptr cfi_check) {
 
 #if SANITIZER_LINUX
 void ShadowBuilder::Install() {
-  MprotectReadOnly(shadow_, cfi_shadow_size);
+  MprotectReadOnly(shadow_, GetShadowSize());
   uptr main_shadow = GetShadow();
   if (main_shadow) {
     // Update.
-    void *res = mremap((void *)shadow_, cfi_shadow_size, cfi_shadow_size,
+    void *res = mremap((void *)shadow_, GetShadowSize(), GetShadowSize(),
                        MREMAP_MAYMOVE | MREMAP_FIXED, main_shadow);
     CHECK(res != MAP_FAILED);
   } else {
     // Initial setup.
-    CHECK_EQ(kCfiShadowPointerStorageSize, GetPageSizeCached());
+    CHECK_EQ(kCfiShadowLimitsStorageSize, GetPageSizeCached());
     CHECK_EQ(0, GetShadow());
     *reinterpret_cast<uptr *>(&cfi_shadow_pointer_storage) = shadow_;
     MprotectReadOnly((uptr)&cfi_shadow_pointer_storage,
-                     kCfiShadowPointerStorageSize);
+                     kCfiShadowLimitsStorageSize);
     CHECK_EQ(shadow_, GetShadow());
   }
 }
@@ -239,7 +265,14 @@ void UpdateShadow() {
 }
 
 void InitShadow() {
-  // No difference, really.
+  CHECK_EQ(0, GetShadow());
+  CHECK_EQ(0, GetShadowSize());
+
+  uptr vma = GetMaxVirtualAddress();
+  // Shadow is 2 -> 2**kShadowGranularity.
+  SetShadowSize((vma >> (kShadowGranularity - 1)) + 1);
+  VReport(1, "CFI: VMA size %zx, shadow size %zx\n", vma, GetShadowSize());
+
   UpdateShadow();
 }
 
@@ -269,13 +302,17 @@ ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
   ShadowValue sv = ShadowValue::load(Addr);
   if (sv.is_invalid()) {
     // FIXME: call the ubsan handler if DiagData != nullptr?
-    Report(
-        "CFI: invalid memory region for a function pointer (shadow==0): %p\n",
-        Ptr);
+    VReport(1, "CFI: invalid memory region for a check target: %p\n", Ptr);
+#ifdef CFI_ENABLE_DIAG
     if (DiagData)
-      return;
+      __ubsan_handle_cfi_check_fail(
+          reinterpret_cast<__ubsan::CFICheckFailData *>(DiagData),
+          reinterpret_cast<uptr>(Ptr));
     else
       Trap();
+#else
+    Trap();
+#endif
   }
   if (sv.is_unchecked()) {
     VReport(2, "CFI: unchecked call (shadow=FFFF): %p\n", Ptr);
@@ -360,12 +397,6 @@ __attribute__((constructor(0)))
 void __cfi_init() {
   SanitizerToolName = "CFI";
   InitializeFlags();
-
-  uptr vma = GetMaxVirtualAddress();
-  // Shadow is 2 -> 2**kShadowGranularity.
-  cfi_shadow_size = (vma >> (kShadowGranularity - 1)) + 1;
-  VReport(1, "CFI: VMA size %zx, shadow size %zx\n", vma, cfi_shadow_size);
-
   InitShadow();
 
   INTERCEPT_FUNCTION(dlopen);
