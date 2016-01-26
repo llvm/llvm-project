@@ -72,7 +72,7 @@ else
 fi
 svn log -c $rev http://llvm.org/svn/llvm-project/$proj/trunk >> $tempfile 2>&1
 
-cd $proj.src
+#cd $proj.src
 echo "# Updating tree"
 svn up
 
@@ -81,7 +81,7 @@ if [ $revert = "yes" ]; then
     svn merge -c -$rev . || exit 1
 else
     echo "# Merging r$rev into $proj locally"
-    svn merge -c $rev https://llvm.org/svn/llvm-project/$proj/trunk . || exit 1
+    svn merge -c $rev https://jamesm@llvm.org/svn/llvm-project/$proj/trunk . || exit 1
 fi
 
 echo
