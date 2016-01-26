@@ -59,13 +59,18 @@ define void @set_no(i8* %dst, i8 %src, i32 %len) {
   ret void
 }
 
+
 ; CHECK-LABEL: frame_index:
 ; CHECK: i32.call $discard=, memset@FUNCTION, $3, $pop1, $pop0{{$}}
+; CHECK: i32.call $discard=, memset@FUNCTION, $4, $pop3, $pop2{{$}}
 ; CHECK: return{{$}}
 define void @frame_index() {
 entry:
   %a = alloca [2048 x i8], align 16
+  %b = alloca [2048 x i8], align 16
   %0 = getelementptr inbounds [2048 x i8], [2048 x i8]* %a, i32 0, i32 0
+  %1 = getelementptr inbounds [2048 x i8], [2048 x i8]* %b, i32 0, i32 0
   call void @llvm.memset.p0i8.i32(i8* %0, i8 256, i32 1024, i32 16, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %1, i8 256, i32 1024, i32 16, i1 false)
   ret void
 }

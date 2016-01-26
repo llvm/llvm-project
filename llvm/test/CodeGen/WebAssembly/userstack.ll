@@ -76,6 +76,24 @@ define void @allocarray() {
  ret void
 }
 
+declare void @ext_func(i64* %ptr)
+; CHECK-LABEL: non_mem_use
+define void @non_mem_use() {
+ ; CHECK: i32.const [[L2:.+]]=, 16
+ ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, [[L2]]
+ %r = alloca i64
+ %r2 = alloca i64
+ ; %r is at SP+8
+ ; CHECK: i32.const [[OFF:.+]]=, 8
+ ; CHECK-NEXT: i32.add [[ARG1:.+]]=, [[SP]], [[OFF]]
+ ; CHECK-NEXT: call ext_func@FUNCTION, [[ARG1]]
+ call void @ext_func(i64* %r)
+ ; %r2 is at SP+0, no add needed
+ ; CHECK-NEXT: call ext_func@FUNCTION, [[SP]]
+ call void @ext_func(i64* %r2)
+ ret void
+}
+
 ; CHECK-LABEL: allocarray_inbounds:
 ; CHECK: .local i32, i32, i32, i32{{$}}
 define void @allocarray_inbounds() {

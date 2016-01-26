@@ -120,7 +120,10 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
               MachineOperand &MO = MI.getOperand(0);
               unsigned OldReg = MO.getReg();
               unsigned NewReg = Op2.getReg();
-              if (MRI.getRegClass(NewReg) != MRI.getRegClass(OldReg))
+
+              // TODO: Handle SP/physregs in MaybeRewriteToDiscard
+              if (TargetRegisterInfo::isVirtualRegister(NewReg) &&
+                  (MRI.getRegClass(NewReg) != MRI.getRegClass(OldReg)))
                 report_fatal_error("Peephole: call to builtin function with "
                                    "wrong signature, from/to mismatch");
               Changed |= MaybeRewriteToDiscard(OldReg, NewReg, MO, MFI, MRI);

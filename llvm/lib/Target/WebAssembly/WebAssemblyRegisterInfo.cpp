@@ -81,15 +81,18 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
     auto &MRI = MF.getRegInfo();
     const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
-    unsigned OffsetReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(WebAssembly::CONST_I32),
-            OffsetReg)
-        .addImm(FrameOffset);
-    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(WebAssembly::ADD_I32),
-            OffsetReg)
-        .addReg(WebAssembly::SP32)
-        .addReg(OffsetReg);
-    MI.getOperand(FIOperandNum).ChangeToRegister(OffsetReg, /*IsDef=*/false);
+    unsigned FIRegOperand = WebAssembly::SP32;
+    if (FrameOffset) {
+      FIRegOperand = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(WebAssembly::CONST_I32),
+              FIRegOperand)
+          .addImm(FrameOffset);
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(WebAssembly::ADD_I32),
+              FIRegOperand)
+          .addReg(WebAssembly::SP32)
+          .addReg(FIRegOperand);
+    }
+    MI.getOperand(FIOperandNum).ChangeToRegister(FIRegOperand, /*IsDef=*/false);
   }
 }
 
