@@ -1436,7 +1436,7 @@ class Base(unittest2.TestCase):
 
         session_file = "{}.log".format(self.log_basename)
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        self.session = open(session_file, "w")
+        self.session = io.open(session_file, "w", encoding="utf-8")
 
         # Optimistically set __errored__, __failed__, __expected__ to False
         # initially.  If the test errored/failed, the session info

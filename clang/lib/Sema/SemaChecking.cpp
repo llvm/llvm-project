@@ -258,6 +258,192 @@ static bool SemaBuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
   return false;
 }
 
+/// Returns readable name for a call.
+static StringRef getFunctionName(CallExpr *Call) {
+  return cast<FunctionDecl>(Call->getCalleeDecl())->getName();
+}
+
+/// Returns OpenCL access qual.
+// TODO: Refine OpenCLImageAccessAttr to OpenCLAccessAttr since pipe can use
+// it too
+static OpenCLImageAccessAttr *getOpenCLArgAccess(const Decl *D) {
+  if (D->hasAttr<OpenCLImageAccessAttr>())
+    return D->getAttr<OpenCLImageAccessAttr>();
+  return nullptr;
+}
+
+/// Returns true if pipe element type is different from the pointer.
+static bool checkOpenCLPipeArg(Sema &S, CallExpr *Call) {
+  const Expr *Arg0 = Call->getArg(0);
+  // First argument type should always be pipe.
+  if (!Arg0->getType()->isPipeType()) {
+    S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_first_arg)
+        << getFunctionName(Call) << Arg0->getSourceRange();
+    return true;
+  }
+  OpenCLImageAccessAttr *AccessQual =
+      getOpenCLArgAccess(cast<DeclRefExpr>(Arg0)->getDecl());
+  // Validates the access qualifier is compatible with the call.
+  // OpenCL v2.0 s6.13.16 - The access qualifiers for pipe should only be
+  // read_only and write_only, and assumed to be read_only if no qualifier is
+  // specified.
+  bool isValid = true;
+  bool ReadOnly = getFunctionName(Call).find("read") != StringRef::npos;
+  if (ReadOnly)
+    isValid = AccessQual == nullptr || AccessQual->isReadOnly();
+  else
+    isValid = AccessQual != nullptr && AccessQual->isWriteOnly();
+  if (!isValid) {
+    const char *AM = ReadOnly ? "read_only" : "write_only";
+    S.Diag(Arg0->getLocStart(),
+           diag::err_opencl_builtin_pipe_invalid_access_modifier)
+        << AM << Arg0->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
+/// Returns true if pipe element type is different from the pointer.
+static bool checkOpenCLPipePacketType(Sema &S, CallExpr *Call, unsigned Idx) {
+  const Expr *Arg0 = Call->getArg(0);
+  const Expr *ArgIdx = Call->getArg(Idx);
+  const PipeType *PipeTy = cast<PipeType>(Arg0->getType());
+  const Type *EltTy = PipeTy->getElementType().getTypePtr();
+  const PointerType *ArgTy =
+      dyn_cast<PointerType>(ArgIdx->getType().getTypePtr());
+  // The Idx argument should be a pointer and the type of the pointer and
+  // the type of pipe element should also be the same.
+  if (!ArgTy || EltTy != ArgTy->getPointeeType().getTypePtr()) {
+    S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
+        << getFunctionName(Call)
+        << S.Context.getPointerType(PipeTy->getElementType())
+        << ArgIdx->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
+// \brief Performs semantic analysis for the read/write_pipe call.
+// \param S Reference to the semantic analyzer.
+// \param Call A pointer to the builtin call.
+// \return True if a semantic error has been found, false otherwise.
+static bool SemaBuiltinRWPipe(Sema &S, CallExpr *Call) {
+  // Two kinds of read/write pipe
+  // From OpenCL C Specification 6.13.16.2 the built-in read/write
+  // functions have following forms.
+  switch (Call->getNumArgs()) {
+  case 2: {
+    if (checkOpenCLPipeArg(S, Call))
+      return true;
+    // The call with 2 arguments should be
+    // read/write_pipe(pipe T, T*)
+    // check packet type T
+    if (checkOpenCLPipePacketType(S, Call, 1))
+      return true;
+  } break;
+
+  case 4: {
+    if (checkOpenCLPipeArg(S, Call))
+      return true;
+    // The call with 4 arguments should be
+    // read/write_pipe(pipe T, reserve_id_t, uint, T*)
+    // check reserve_id_t
+    if (!Call->getArg(1)->getType()->isReserveIDT()) {
+      S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
+          << getFunctionName(Call) << S.Context.OCLReserveIDTy
+          << Call->getArg(1)->getSourceRange();
+      return true;
+    }
+
+    // check the index
+    const Expr *Arg2 = Call->getArg(2);
+    if (!Arg2->getType()->isIntegerType() &&
+        !Arg2->getType()->isUnsignedIntegerType()) {
+      S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
+          << getFunctionName(Call) << S.Context.UnsignedIntTy
+          << Arg2->getSourceRange();
+      return true;
+    }
+
+    // check packet type T
+    if (checkOpenCLPipePacketType(S, Call, 3))
+      return true;
+  } break;
+  default:
+    S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_arg_num)
+        << getFunctionName(Call) << Call->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
+// \brief Performs a semantic analysis on the {work_group_/sub_group_
+//        /_}reserve_{read/write}_pipe
+// \param S Reference to the semantic analyzer.
+// \param Call The call to the builtin function to be analyzed.
+// \return True if a semantic error was found, false otherwise.
+static bool SemaBuiltinReserveRWPipe(Sema &S, CallExpr *Call) {
+  if (checkArgCount(S, Call, 2))
+    return true;
+
+  if (checkOpenCLPipeArg(S, Call))
+    return true;
+
+  // check the reserve size
+  if (!Call->getArg(1)->getType()->isIntegerType() &&
+      !Call->getArg(1)->getType()->isUnsignedIntegerType()) {
+    S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
+        << getFunctionName(Call) << S.Context.UnsignedIntTy
+        << Call->getArg(1)->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
+// \brief Performs a semantic analysis on {work_group_/sub_group_
+//        /_}commit_{read/write}_pipe
+// \param S Reference to the semantic analyzer.
+// \param Call The call to the builtin function to be analyzed.
+// \return True if a semantic error was found, false otherwise.
+static bool SemaBuiltinCommitRWPipe(Sema &S, CallExpr *Call) {
+  if (checkArgCount(S, Call, 2))
+    return true;
+
+  if (checkOpenCLPipeArg(S, Call))
+    return true;
+
+  // check reserve_id_t
+  if (!Call->getArg(1)->getType()->isReserveIDT()) {
+    S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
+        << getFunctionName(Call) << S.Context.OCLReserveIDTy
+        << Call->getArg(1)->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
+// \brief Performs a semantic analysis on the call to built-in Pipe
+//        Query Functions.
+// \param S Reference to the semantic analyzer.
+// \param Call The call to the builtin function to be analyzed.
+// \return True if a semantic error was found, false otherwise.
+static bool SemaBuiltinPipePackets(Sema &S, CallExpr *Call) {
+  if (checkArgCount(S, Call, 1))
+    return true;
+
+  if (!Call->getArg(0)->getType()->isPipeType()) {
+    S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_first_arg)
+        << getFunctionName(Call) << Call->getArg(0)->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -562,6 +748,40 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
 
     TheCall->setType(Context.VoidPtrTy);
+    break;
+  case Builtin::BIread_pipe:
+  case Builtin::BIwrite_pipe:
+    // Since those two functions are declared with var args, we need a semantic
+    // check for the argument.
+    if (SemaBuiltinRWPipe(*this, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BIreserve_read_pipe:
+  case Builtin::BIreserve_write_pipe:
+  case Builtin::BIwork_group_reserve_read_pipe:
+  case Builtin::BIwork_group_reserve_write_pipe:
+  case Builtin::BIsub_group_reserve_read_pipe:
+  case Builtin::BIsub_group_reserve_write_pipe:
+    if (SemaBuiltinReserveRWPipe(*this, TheCall))
+      return ExprError();
+    // Since return type of reserve_read/write_pipe built-in function is
+    // reserve_id_t, which is not defined in the builtin def file , we used int
+    // as return type and need to override the return type of these functions.
+    TheCall->setType(Context.OCLReserveIDTy);
+    break;
+  case Builtin::BIcommit_read_pipe:
+  case Builtin::BIcommit_write_pipe:
+  case Builtin::BIwork_group_commit_read_pipe:
+  case Builtin::BIwork_group_commit_write_pipe:
+  case Builtin::BIsub_group_commit_read_pipe:
+  case Builtin::BIsub_group_commit_write_pipe:
+    if (SemaBuiltinCommitRWPipe(*this, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BIget_pipe_num_packets:
+  case Builtin::BIget_pipe_max_packets:
+    if (SemaBuiltinPipePackets(*this, TheCall))
+      return ExprError();
     break;
 
   }

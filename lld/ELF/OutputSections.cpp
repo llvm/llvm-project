@@ -289,6 +289,14 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     if (applyTlsDynamicReloc(Body, Type, P, reinterpret_cast<Elf_Rel *>(Buf)))
       continue;
 
+    // Writer::scanRelocs creates a RELATIVE reloc for some type of TLS reloc.
+    // We want to write it down as is.
+    if (Type == Target->getRelativeReloc()) {
+      P->setSymbolAndType(0, Type, Config->Mips64EL);
+      P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
+      continue;
+    }
+
     // Emit a copy relocation.
     auto *SS = dyn_cast_or_null<SharedSymbol<ELFT>>(Body);
     if (SS && SS->NeedsCopy) {
@@ -316,11 +324,10 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
 
     bool LazyReloc = Body && Target->supportsLazyRelocations() &&
                      Target->relocNeedsPlt(Type, *Body);
-    bool IsDynRelative = Type == Target->getRelativeReloc();
 
     unsigned Sym = CBP ? Body->DynamicSymbolTableIndex : 0;
     unsigned Reloc;
-    if (!CBP || IsDynRelative)
+    if (!CBP)
       Reloc = Target->getRelativeReloc();
     else if (LazyReloc)
       Reloc = Target->getPltReloc();
@@ -342,7 +349,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       OrigAddend = static_cast<const Elf_Rela &>(RI).r_addend;
 
     uintX_t Addend;
-    if (CBP || IsDynRelative)
+    if (CBP)
       Addend = OrigAddend;
     else if (Body)
       Addend = getSymVA<ELFT>(*Body) + OrigAddend;
@@ -630,7 +637,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({DT_PLTRELSZ, Out<ELFT>::RelaPlt->getSize()});
     Add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          Out<ELFT>::GotPlt});
-    Add({DT_PLTREL, Out<ELFT>::RelaPlt->isRela() ? DT_RELA : DT_REL});
+    Add({DT_PLTREL, uint64_t(Out<ELFT>::RelaPlt->isRela() ? DT_RELA : DT_REL)});
   }
 
   Add({DT_SYMTAB, Out<ELFT>::DynSymTab});
@@ -692,7 +699,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({DT_FLAGS_1, DtFlags1});
 
   if (!Config->Entry.empty())
-    Add({DT_DEBUG, (uintX_t)0});
+    Add({DT_DEBUG, (uint64_t)0});
 
   if (Config->EMachine == EM_MIPS) {
     Add({DT_MIPS_RLD_VERSION, 1});
@@ -1714,22 +1721,30 @@ template ELFFile<ELF32BE>::uintX_t getSymVA<ELF32BE>(const SymbolBody &);
 template ELFFile<ELF64LE>::uintX_t getSymVA<ELF64LE>(const SymbolBody &);
 template ELFFile<ELF64BE>::uintX_t getSymVA<ELF64BE>(const SymbolBody &);
 
-template ELFFile<ELF32LE>::uintX_t
-getLocalRelTarget(const ObjectFile<ELF32LE> &,
-                  const ELFFile<ELF32LE>::Elf_Rel &,
-                  ELFFile<ELF32LE>::uintX_t Addend);
-template ELFFile<ELF32BE>::uintX_t
-getLocalRelTarget(const ObjectFile<ELF32BE> &,
-                  const ELFFile<ELF32BE>::Elf_Rel &,
-                  ELFFile<ELF32BE>::uintX_t Addend);
-template ELFFile<ELF64LE>::uintX_t
-getLocalRelTarget(const ObjectFile<ELF64LE> &,
-                  const ELFFile<ELF64LE>::Elf_Rel &,
-                  ELFFile<ELF64LE>::uintX_t Addend);
-template ELFFile<ELF64BE>::uintX_t
-getLocalRelTarget(const ObjectFile<ELF64BE> &,
-                  const ELFFile<ELF64BE>::Elf_Rel &,
-                  ELFFile<ELF64BE>::uintX_t Addend);
+template uint32_t getLocalRelTarget(const ObjectFile<ELF32LE> &,
+                                    const ELFFile<ELF32LE>::Elf_Rel &,
+                                    uint32_t);
+template uint32_t getLocalRelTarget(const ObjectFile<ELF32BE> &,
+                                    const ELFFile<ELF32BE>::Elf_Rel &,
+                                    uint32_t);
+template uint64_t getLocalRelTarget(const ObjectFile<ELF64LE> &,
+                                    const ELFFile<ELF64LE>::Elf_Rel &,
+                                    uint64_t);
+template uint64_t getLocalRelTarget(const ObjectFile<ELF64BE> &,
+                                    const ELFFile<ELF64BE>::Elf_Rel &,
+                                    uint64_t);
+template uint32_t getLocalRelTarget(const ObjectFile<ELF32LE> &,
+                                    const ELFFile<ELF32LE>::Elf_Rela &,
+                                    uint32_t);
+template uint32_t getLocalRelTarget(const ObjectFile<ELF32BE> &,
+                                    const ELFFile<ELF32BE>::Elf_Rela &,
+                                    uint32_t);
+template uint64_t getLocalRelTarget(const ObjectFile<ELF64LE> &,
+                                    const ELFFile<ELF64LE>::Elf_Rela &,
+                                    uint64_t);
+template uint64_t getLocalRelTarget(const ObjectFile<ELF64BE> &,
+                                    const ELFFile<ELF64BE>::Elf_Rela &,
+                                    uint64_t);
 
 template bool shouldKeepInSymtab<ELF32LE>(const ObjectFile<ELF32LE> &,
                                           StringRef,
