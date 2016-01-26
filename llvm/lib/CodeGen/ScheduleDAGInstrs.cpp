@@ -519,8 +519,7 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
 /// (like a call or something with unmodeled side effects).
 static inline bool isGlobalMemoryObject(AliasAnalysis *AA, MachineInstr *MI) {
   return MI->isCall() || MI->hasUnmodeledSideEffects() ||
-         (MI->hasOrderedMemoryRef() &&
-          (!MI->mayLoad() || !MI->isInvariantLoad(AA)));
+         (MI->hasOrderedMemoryRef() && !MI->isInvariantLoad(AA));
 }
 
 // This MI might have either incomplete info, or known to be unsafe

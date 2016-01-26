@@ -59,6 +59,7 @@ public:
   void printGnuHashTable() override;
   void printLoadName() override;
   void printVersionInfo() override;
+  void printGroupSections() override;
 
   void printAttributes() override;
   void printMipsPLTGOT() override;
@@ -790,6 +791,13 @@ static const char *getElfSectionType(unsigned Arch, unsigned Type) {
   LLVM_READOBJ_ENUM_CASE(ELF, SHT_GNU_versym        );
   default: return "";
   }
+}
+
+static const char *getGroupType(uint32_t Flag) {
+  if (Flag & ELF::GRP_COMDAT)
+    return "COMDAT";
+  else
+    return "(unknown)";
 }
 
 static const EnumEntry<unsigned> ElfSectionFlags[] = {
@@ -2249,4 +2257,42 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
   prettyPrintStackMap(
               llvm::outs(),
               StackMapV1Parser<ELFT::TargetEndianness>(*StackMapContentsArray));
+}
+template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {
+  DictScope Lists(W, "Groups");
+  uint32_t SectionIndex = 0;
+  bool HasGroups = false;
+  for (const Elf_Shdr &Sec : Obj->sections()) {
+    if (Sec.sh_type == ELF::SHT_GROUP) {
+      HasGroups = true;
+      ErrorOr<const Elf_Shdr *> Symtab =
+          errorOrDefault(Obj->getSection(Sec.sh_link));
+      ErrorOr<StringRef> StrTableOrErr = Obj->getStringTableForSymtab(**Symtab);
+      error(StrTableOrErr.getError());
+      StringRef StrTable = *StrTableOrErr;
+      const Elf_Sym *Sym =
+          Obj->template getEntry<Elf_Sym>(*Symtab, Sec.sh_info);
+      auto Data = errorOrDefault(
+          Obj->template getSectionContentsAsArray<Elf32_Word>(&Sec));
+      DictScope D(W, "Group");
+      StringRef Name = errorOrDefault(Obj->getSectionName(&Sec));
+      W.printNumber("Name", Name, Sec.sh_name);
+      W.printNumber("Index", SectionIndex);
+      W.printHex("Type", getGroupType(Data[0]), Data[0]);
+      W.startLine() << "Signature: " << StrTable.data() + Sym->st_name << "\n";
+      {
+        ListScope L(W, "Section(s) in group");
+        int Member = 1;
+        while (Member < Data.size()) {
+          auto Sec = errorOrDefault(Obj->getSection(Data[Member]));
+          const StringRef Name = errorOrDefault(Obj->getSectionName(Sec));
+          W.startLine() << Name << " (" << std::to_string(Data[Member++])
+                        << ")\n";
+        }
+      }
+    }
+    ++SectionIndex;
+  }
+  if (!HasGroups)
+    W.startLine() << "There are no group sections in the file.\n";
 }
