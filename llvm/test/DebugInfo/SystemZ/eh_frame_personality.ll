@@ -29,7 +29,7 @@ clean:
 ; CHECK-FUNC: .cfi_endproc
 ;
 ; CHECK-ET: .section	.gcc_except_table,"a",@progbits
-; CHECK-ET-NEXT: .align	4
+; CHECK-ET-NEXT: .p2align	2
 ; CHECK-ET-NEXT: GCC_except_table0:
 ; CHECK-ET-NEXT: .Lexception0:
 ;
@@ -38,7 +38,7 @@ clean:
 ; CHECK-REF: .hidden	DW.ref.__gxx_personality_v0
 ; CHECK-REF: .weak	DW.ref.__gxx_personality_v0
 ; CHECK-REF: .section	.data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
-; CHECK-REF-NEXT: .align	8
+; CHECK-REF-NEXT: .p2align	3
 ; CHECK-REF-NEXT: .type	DW.ref.__gxx_personality_v0,@object
 ; CHECK-REF-NEXT: .size	DW.ref.__gxx_personality_v0, 8
 ; CHECK-REF-NEXT: DW.ref.__gxx_personality_v0:
