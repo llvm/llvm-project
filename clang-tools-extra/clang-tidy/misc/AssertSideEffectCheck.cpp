@@ -83,11 +83,18 @@ void AssertSideEffectCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void AssertSideEffectCheck::registerMatchers(MatchFinder *Finder) {
-  auto ConditionWithSideEffect =
-      hasCondition(hasDescendant(expr(hasSideEffect(CheckFunctionCalls))));
+  auto DescendantWithSideEffect =
+      hasDescendant(expr(hasSideEffect(CheckFunctionCalls)));
+  auto ConditionWithSideEffect = hasCondition(DescendantWithSideEffect);
   Finder->addMatcher(
-      stmt(anyOf(conditionalOperator(ConditionWithSideEffect),
-                 ifStmt(ConditionWithSideEffect))).bind("condStmt"),
+      stmt(
+          anyOf(conditionalOperator(ConditionWithSideEffect),
+                ifStmt(ConditionWithSideEffect),
+                unaryOperator(hasOperatorName("!"),
+                              hasUnaryOperand(unaryOperator(
+                                  hasOperatorName("!"),
+                                  hasUnaryOperand(DescendantWithSideEffect))))))
+          .bind("condStmt"),
       this);
 }
 

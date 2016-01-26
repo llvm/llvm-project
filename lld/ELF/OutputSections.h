@@ -403,6 +403,23 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+
+  struct Entry {
+    int32_t Tag;
+    union {
+      OutputSectionBase<ELFT> *OutSec;
+      uint64_t Val;
+      const SymbolBody *Sym;
+    };
+    enum KindT { SecAddr, SymAddr, PlainInt } Kind;
+    Entry(int32_t Tag, OutputSectionBase<ELFT> *OutSec)
+        : Tag(Tag), OutSec(OutSec), Kind(SecAddr) {}
+    Entry(int32_t Tag, uint64_t Val) : Tag(Tag), Val(Val), Kind(PlainInt) {}
+    Entry(int32_t Tag, const SymbolBody *Sym)
+        : Tag(Tag), Sym(Sym), Kind(SymAddr) {}
+  };
+  std::vector<Entry> Entries;
 
 public:
   DynamicSection(SymbolTable<ELFT> &SymTab);
@@ -415,10 +432,6 @@ public:
 
 private:
   SymbolTable<ELFT> &SymTab;
-  const SymbolBody *InitSym = nullptr;
-  const SymbolBody *FiniSym = nullptr;
-  uint32_t DtFlags = 0;
-  uint32_t DtFlags1 = 0;
 };
 
 template <class ELFT>

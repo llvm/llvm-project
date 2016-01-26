@@ -83,6 +83,8 @@ PythonObject::GetObjectType() const
     if (PythonBytes::Check(m_py_obj))
         return PyObjectType::Bytes;
 #endif
+    if (PythonByteArray::Check(m_py_obj))
+        return PyObjectType::ByteArray;
     if (PythonInteger::Check(m_py_obj))
         return PyObjectType::Integer;
     if (PythonFile::Check(m_py_obj))
@@ -218,6 +220,8 @@ PythonObject::CreateStructuredObject() const
             return PythonString(PyRefType::Borrowed, m_py_obj).CreateStructuredString();
         case PyObjectType::Bytes:
             return PythonBytes(PyRefType::Borrowed, m_py_obj).CreateStructuredString();
+        case PyObjectType::ByteArray:
+            return PythonByteArray(PyRefType::Borrowed, m_py_obj).CreateStructuredString();
         case PyObjectType::None:
             return StructuredData::ObjectSP();
         default:
@@ -320,6 +324,87 @@ PythonBytes::CreateStructuredString() const
     char *c;
     PyBytes_AsStringAndSize(m_py_obj, &c, &size);
     result->SetValue(std::string(c, size));
+    return result;
+}
+
+PythonByteArray::PythonByteArray(llvm::ArrayRef<uint8_t> bytes) : PythonByteArray(bytes.data(), bytes.size())
+{
+}
+
+PythonByteArray::PythonByteArray(const uint8_t *bytes, size_t length)
+{
+    const char *str = reinterpret_cast<const char *>(bytes);
+    Reset(PyRefType::Owned, PyByteArray_FromStringAndSize(str, length));
+}
+
+PythonByteArray::PythonByteArray(PyRefType type, PyObject *o)
+{
+    Reset(type, o);
+}
+
+PythonByteArray::PythonByteArray(const PythonBytes &object) : PythonObject(object)
+{
+}
+
+PythonByteArray::~PythonByteArray()
+{
+}
+
+bool
+PythonByteArray::Check(PyObject *py_obj)
+{
+    if (!py_obj)
+        return false;
+    if (PyByteArray_Check(py_obj))
+        return true;
+    return false;
+}
+
+void
+PythonByteArray::Reset(PyRefType type, PyObject *py_obj)
+{
+    // Grab the desired reference type so that if we end up rejecting
+    // `py_obj` it still gets decremented if necessary.
+    PythonObject result(type, py_obj);
+
+    if (!PythonByteArray::Check(py_obj))
+    {
+        PythonObject::Reset();
+        return;
+    }
+
+    // Calling PythonObject::Reset(const PythonObject&) will lead to stack overflow since it calls
+    // back into the virtual implementation.
+    PythonObject::Reset(PyRefType::Borrowed, result.get());
+}
+
+llvm::ArrayRef<uint8_t>
+PythonByteArray::GetBytes() const
+{
+    if (!IsValid())
+        return llvm::ArrayRef<uint8_t>();
+
+    char *c = PyByteArray_AsString(m_py_obj);
+    size_t size = GetSize();
+    return llvm::ArrayRef<uint8_t>(reinterpret_cast<uint8_t *>(c), size);
+}
+
+size_t
+PythonByteArray::GetSize() const
+{
+    if (!IsValid())
+        return 0;
+
+    return PyByteArray_Size(m_py_obj);
+}
+
+StructuredData::StringSP
+PythonByteArray::CreateStructuredString() const
+{
+    StructuredData::StringSP result(new StructuredData::String);
+    llvm::ArrayRef<uint8_t> bytes = GetBytes();
+    const char *str = reinterpret_cast<const char *>(bytes.data());
+    result->SetValue(std::string(str, bytes.size()));
     return result;
 }
 

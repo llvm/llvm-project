@@ -93,6 +93,9 @@
    }
    $1 = (char *) malloc($2);
 }
+// SBProcess::ReadCStringFromMemory() uses a void*, but needs to be treated
+// as char data instead of byte data.
+%typemap(in) (void *char_buf, size_t size) = (char *dst, size_t dst_len);
 
 // Return the char buffer.  Discarding any previous return result
 // See also SBThread::GetStopDescription.
@@ -108,18 +111,29 @@
    }
    free($1);
 }
+// SBProcess::ReadCStringFromMemory() uses a void*, but needs to be treated
+// as char data instead of byte data.
+%typemap(argout) (void *char_buf, size_t size) = (char *dst, size_t dst_len);
 
 
 // typemap for an outgoing buffer
 // See also SBEvent::SBEvent(uint32_t event, const char *cstr, uint32_t cstr_len).
 %typemap(in) (const char *cstr, uint32_t cstr_len) {
-   if (PyString_Check($input)) {
-      $1 = (char *) PyString_AsString($input);
-      $2 = PyString_Size($input);
+   using namespace lldb_private;
+   if (PythonString::Check($input)) {
+      PythonString str(PyRefType::Borrowed, $input);
+      $1 = (char*)str.GetString().data();
+      $2 = str.GetSize();
    }
-   else if(PyByteArray_Check($input)) {
-      $1 = (char *) PyByteArray_AsString($input);
-      $2 = PyByteArray_Size($input);
+   else if(PythonByteArray::Check($input)) {
+      PythonByteArray bytearray(PyRefType::Borrowed, $input);
+      $1 = (char*)bytearray.GetBytes().data();
+      $2 = bytearray.GetSize();
+   }
+   else if (PythonBytes::Check($input)) {
+      PythonBytes bytes(PyRefType::Borrowed, $input);
+      $1 = (char*)bytes.GetBytes().data();
+      $2 = bytes.GetSize();
    }
    else {
       PyErr_SetString(PyExc_ValueError, "Expecting a string");
@@ -128,13 +142,21 @@
 }
 // Ditto for SBProcess::PutSTDIN(const char *src, size_t src_len).
 %typemap(in) (const char *src, size_t src_len) {
-   if (PyString_Check($input)) {
-      $1 = (char *) PyString_AsString($input);
-      $2 = PyString_Size($input);
+   using namespace lldb_private;
+   if (PythonString::Check($input)) {
+      PythonString str(PyRefType::Borrowed, $input);
+      $1 = (char*)str.GetString().data();
+      $2 = str.GetSize();
    }
-   else if(PyByteArray_Check($input)) {
-      $1 = (char *) PyByteArray_AsString($input);
-      $2 = PyByteArray_Size($input);
+   else if(PythonByteArray::Check($input)) {
+      PythonByteArray bytearray(PyRefType::Borrowed, $input);
+      $1 = (char*)bytearray.GetBytes().data();
+      $2 = bytearray.GetSize();
+   }
+   else if (PythonBytes::Check($input)) {
+      PythonBytes bytes(PyRefType::Borrowed, $input);
+      $1 = (char*)bytes.GetBytes().data();
+      $2 = bytes.GetSize();
    }
    else {
       PyErr_SetString(PyExc_ValueError, "Expecting a string");
@@ -143,32 +165,48 @@
 }
 // And SBProcess::WriteMemory.
 %typemap(in) (const void *buf, size_t size) {
-   if (PyString_Check($input)) {
-      $1 = (void *) PyString_AsString($input);
-      $2 = PyString_Size($input);
+   using namespace lldb_private;
+   if (PythonString::Check($input)) {
+      PythonString str(PyRefType::Borrowed, $input);
+      $1 = (void*)str.GetString().data();
+      $2 = str.GetSize();
    }
-   else if(PyByteArray_Check($input)) {
-      $1 = (void *) PyByteArray_AsString($input);
-      $2 = PyByteArray_Size($input);
+   else if(PythonByteArray::Check($input)) {
+      PythonByteArray bytearray(PyRefType::Borrowed, $input);
+      $1 = (void*)bytearray.GetBytes().data();
+      $2 = bytearray.GetSize();
+   }
+   else if (PythonBytes::Check($input)) {
+      PythonBytes bytes(PyRefType::Borrowed, $input);
+      $1 = (void*)bytes.GetBytes().data();
+      $2 = bytes.GetSize();
    }
    else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a string");
+      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
       return NULL;
    }
 }
 
 // For SBDebugger::DispatchInput
 %typemap(in) (const void *data, size_t data_len) {
-   if (PyString_Check($input)) {
-      $1 = static_cast<void *>(PyString_AsString($input));
-      $2 = PyString_Size($input);
+   using namespace lldb_private;
+   if (PythonString::Check($input)) {
+      PythonString str(PyRefType::Borrowed, $input);
+      $1 = (void*)str.GetString().data();
+      $2 = str.GetSize();
    }
-   else if(PyByteArray_Check($input)) {
-      $1 = static_cast<void *>(PyByteArray_AsString($input));
-      $2 = PyByteArray_Size($input);
+   else if(PythonByteArray::Check($input)) {
+      PythonByteArray bytearray(PyRefType::Borrowed, $input);
+      $1 = (void*)bytearray.GetBytes().data();
+      $2 = bytearray.GetSize();
+   }
+   else if (PythonBytes::Check($input)) {
+      PythonBytes bytes(PyRefType::Borrowed, $input);
+      $1 = (void*)bytes.GetBytes().data();
+      $2 = bytes.GetSize();
    }
    else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a string or byte array");
+      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
       return NULL;
    }
 }
@@ -199,9 +237,8 @@
       $result = Py_None;
       Py_INCREF($result);
    } else {
-      llvm::StringRef ref(static_cast<const char*>($1), result);
-      lldb_private::PythonString string(ref);
-      $result = string.release();
+      lldb_private::PythonBytes bytes(static_cast<const uint8_t*>($1), result);
+      $result = bytes.release();
    }
    free($1);
 }

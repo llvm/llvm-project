@@ -84,7 +84,7 @@ def int_to_bytearray(val, bytesize):
         return None
 
     packed = struct.pack(fmt, val)
-    return bytearray(list(map(ord, packed)))
+    return bytearray(packed)
 
 def bytearray_to_int(bytes, bytesize):
     """Utility function to convert a bytearray into an integer.
@@ -108,7 +108,7 @@ def bytearray_to_int(bytes, bytesize):
     else:
         return None
 
-    unpacked = struct.unpack(fmt, str(bytes))
+    unpacked = struct.unpack_from(fmt, bytes)
     return unpacked[0]
 
 

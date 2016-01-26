@@ -296,7 +296,7 @@ public:
     ") ReadCStringFromMemory;
 
     size_t
-    ReadCStringFromMemory (addr_t addr, void *buf, size_t size, lldb::SBError &error);
+    ReadCStringFromMemory (addr_t addr, void *char_buf, size_t size, lldb::SBError &error);
 
     %feature("autodoc", "
     Reads an unsigned integer from memory given a byte size and an address. 
