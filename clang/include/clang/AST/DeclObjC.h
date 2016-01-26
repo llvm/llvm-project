@@ -716,12 +716,13 @@ public:
     /// property attribute rather than a type qualifier.
     OBJC_PR_nullability = 0x1000,
     OBJC_PR_null_resettable = 0x2000,
+    OBJC_PR_class = 0x4000
     // Adding a property should change NumPropertyAttrsBits
   };
 
   enum {
     /// \brief Number of bits fitting all the property attributes.
-    NumPropertyAttrsBits = 14
+    NumPropertyAttrsBits = 15
   };
 
   enum SetterKind { Assign, Retain, Copy, Weak };
@@ -823,6 +824,9 @@ public:
             (OBJC_PR_retain | OBJC_PR_strong | OBJC_PR_copy));
   }
 
+  bool isInstanceProperty() const { return !isClassProperty(); }
+  bool isClassProperty() const { return PropertyAttributes & OBJC_PR_class; }
+
   /// getSetterKind - Return the method used for doing assignment in
   /// the property setter. This is only valid if the property has been
   /// defined to have a setter.
@@ -899,19 +903,47 @@ public:
                     SourceLocation atStartLoc)
     : NamedDecl(DK, DC, nameLoc, Id), DeclContext(DK), AtStart(atStartLoc) {}
 
-  // Iterator access to properties.
+  // Iterator access to instance/class properties.
   typedef specific_decl_iterator<ObjCPropertyDecl> prop_iterator;
   typedef llvm::iterator_range<specific_decl_iterator<ObjCPropertyDecl>>
     prop_range;
 
-  prop_range instance_properties() const {
-    return prop_range(instprop_begin(), instprop_end());
-  }
-  prop_iterator instprop_begin() const {
+  prop_range properties() const { return prop_range(prop_begin(), prop_end()); }
+  prop_iterator prop_begin() const {
     return prop_iterator(decls_begin());
   }
-  prop_iterator instprop_end() const {
+  prop_iterator prop_end() const {
     return prop_iterator(decls_end());
+  }
+
+  typedef filtered_decl_iterator<ObjCPropertyDecl,
+                                 &ObjCPropertyDecl::isInstanceProperty>
+    instprop_iterator;
+  typedef llvm::iterator_range<instprop_iterator> instprop_range;
+
+  instprop_range instance_properties() const {
+    return instprop_range(instprop_begin(), instprop_end());
+  }
+  instprop_iterator instprop_begin() const {
+    return instprop_iterator(decls_begin());
+  }
+  instprop_iterator instprop_end() const {
+    return instprop_iterator(decls_end());
+  }
+
+  typedef filtered_decl_iterator<ObjCPropertyDecl,
+                                 &ObjCPropertyDecl::isClassProperty>
+    classprop_iterator;
+  typedef llvm::iterator_range<classprop_iterator> classprop_range;
+
+  classprop_range class_properties() const {
+    return classprop_range(classprop_begin(), classprop_end());
+  }
+  classprop_iterator classprop_begin() const {
+    return classprop_iterator(decls_begin());
+  }
+  classprop_iterator classprop_end() const {
+    return classprop_iterator(decls_end());
   }
 
   // Iterator access to instance/class methods.
