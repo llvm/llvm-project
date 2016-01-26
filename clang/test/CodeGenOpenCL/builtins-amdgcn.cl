@@ -148,6 +148,30 @@ void test_s_barrier()
   __builtin_amdgcn_s_barrier();
 }
 
+// CHECK-LABEL: @test_cubeid(
+// CHECK: call float @llvm.amdgcn.cubeid(float %a, float %b, float %c)
+void test_cubeid(global float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_cubeid(a, b, c);
+}
+
+// CHECK-LABEL: @test_cubesc(
+// CHECK: call float @llvm.amdgcn.cubesc(float %a, float %b, float %c)
+void test_cubesc(global float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_cubesc(a, b, c);
+}
+
+// CHECK-LABEL: @test_cubetc(
+// CHECK: call float @llvm.amdgcn.cubetc(float %a, float %b, float %c)
+void test_cubetc(global float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_cubetc(a, b, c);
+}
+
+// CHECK-LABEL: @test_cubema(
+// CHECK: call float @llvm.amdgcn.cubema(float %a, float %b, float %c)
+void test_cubema(global float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_cubema(a, b, c);
+}
+
 // Legacy intrinsics with AMDGPU prefix
 
 // CHECK-LABEL: @test_legacy_rsq_f32
