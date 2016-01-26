@@ -11,16 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME: Intercept dlopen/dlclose.
-// FIXME: Support diagnostic mode.
-// FIXME: Harden:
-//  * mprotect shadow, use mremap for updates
-//  * something else equally important
-
 #include <assert.h>
 #include <elf.h>
 #include <link.h>
 #include <string.h>
+#include <sys/mman.h>
 
 typedef ElfW(Phdr) Elf_Phdr;
 typedef ElfW(Ehdr) Elf_Ehdr;
@@ -31,19 +26,31 @@ typedef ElfW(Ehdr) Elf_Ehdr;
 #include "ubsan/ubsan_init.h"
 #include "ubsan/ubsan_flags.h"
 
-static uptr __cfi_shadow;
+static constexpr uptr kCfiShadowPointerStorageSize = 4096; // 1 page
+// Lets hope that the data segment is mapped with 4K pages.
+// The pointer to the cfi shadow region is stored at the start of this page.
+// The rest of the page is unused and re-mapped read-only.
+static char __cfi_shadow_pointer_storage[kCfiShadowPointerStorageSize]
+    __attribute__((aligned(kCfiShadowPointerStorageSize)));
+static uptr __cfi_shadow_size;
 static constexpr uptr kShadowGranularity = 12;
 static constexpr uptr kShadowAlign = 1UL << kShadowGranularity; // 4096
 
 static constexpr uint16_t kInvalidShadow = 0;
 static constexpr uint16_t kUncheckedShadow = 0xFFFFU;
 
-static uint16_t *mem_to_shadow(uptr x) {
-  return (uint16_t *)(__cfi_shadow + ((x >> kShadowGranularity) << 1));
+// Get the start address of the CFI shadow region.
+uptr GetShadow() {
+  return *reinterpret_cast<uptr *>(&__cfi_shadow_pointer_storage);
+}
+
+static uint16_t *MemToShadow(uptr x, uptr shadow_base) {
+  return (uint16_t *)(shadow_base + ((x >> kShadowGranularity) << 1));
 }
 
 typedef int (*CFICheckFn)(u64, void *, void *);
 
+// This class reads and decodes the shadow contents.
 class ShadowValue {
   uptr addr;
   uint16_t v;
@@ -63,40 +70,77 @@ public:
 
   // Load a shadow valud for the given application memory address.
   static const ShadowValue load(uptr addr) {
-    return ShadowValue(addr, *mem_to_shadow(addr));
+    return ShadowValue(addr, *MemToShadow(addr, GetShadow()));
   }
 };
 
-static void fill_shadow_constant(uptr begin, uptr end, uint16_t v) {
-  assert(v == kInvalidShadow || v == kUncheckedShadow);
-  uint16_t *shadow_begin = mem_to_shadow(begin);
-  uint16_t *shadow_end = mem_to_shadow(end - 1) + 1;
-  memset(shadow_begin, v, (shadow_end - shadow_begin) * sizeof(*shadow_begin));
+class ShadowBuilder {
+  uptr shadow_;
+
+public:
+  // Allocate a new empty shadow (for the entire address space) on the side.
+  void Start();
+  // Mark the given address range as unchecked.
+  // This is used for uninstrumented libraries like libc.
+  // Any CFI check with a target in that range will pass.
+  void AddUnchecked(uptr begin, uptr end);
+  // Mark the given address range as belonging to a library with the given
+  // cfi_check function.
+  void Add(uptr begin, uptr end, uptr cfi_check);
+  // Finish shadow construction. Atomically switch the current active shadow
+  // region with the newly constructed one and deallocate the former.
+  void Install();
+};
+
+void ShadowBuilder::Start() {
+  shadow_ = (uptr)MmapNoReserveOrDie(__cfi_shadow_size, "CFI shadow");
+  VReport(1, "CFI: shadow at %zx .. %zx\n", shadow_,
+          shadow_ + __cfi_shadow_size);
 }
 
-static void fill_shadow(uptr begin, uptr end, uptr cfi_check) {
+void ShadowBuilder::AddUnchecked(uptr begin, uptr end) {
+  uint16_t *shadow_begin = MemToShadow(begin, shadow_);
+  uint16_t *shadow_end = MemToShadow(end - 1, shadow_) + 1;
+  memset(shadow_begin, kUncheckedShadow,
+         (shadow_end - shadow_begin) * sizeof(*shadow_begin));
+}
+
+void ShadowBuilder::Add(uptr begin, uptr end, uptr cfi_check) {
   assert((cfi_check & (kShadowAlign - 1)) == 0);
 
   // Don't fill anything below cfi_check. We can not represent those addresses
   // in the shadow, and must make sure at codegen to place all valid call
   // targets above cfi_check.
-  uptr p = Max(begin, cfi_check);
-  uint16_t *s = mem_to_shadow(p);
-  uint16_t *s_end = mem_to_shadow(end - 1) + 1;
-  uint16_t sv = ((p - cfi_check) >> kShadowGranularity) + 1;
+  begin = Max(begin, cfi_check);
+  uint16_t *s = MemToShadow(begin, shadow_);
+  uint16_t *s_end = MemToShadow(end - 1, shadow_) + 1;
+  uint16_t sv = ((begin - cfi_check) >> kShadowGranularity) + 1;
   for (; s < s_end; s++, sv++)
     *s = sv;
+}
 
-  // Sanity checks.
-  uptr q = p & ~(kShadowAlign - 1);
-  for (; q < end; q += kShadowAlign) {
-    assert((uptr)ShadowValue::load(q).get_cfi_check() == cfi_check);
-    assert((uptr)ShadowValue::load(q + kShadowAlign / 2).get_cfi_check() ==
-           cfi_check);
-    assert((uptr)ShadowValue::load(q + kShadowAlign - 1).get_cfi_check() ==
-           cfi_check);
+#if SANITIZER_LINUX
+void ShadowBuilder::Install() {
+  MprotectReadOnly(shadow_, __cfi_shadow_size);
+  uptr main_shadow = GetShadow();
+  if (main_shadow) {
+    // Update.
+    void *res = mremap((void *)shadow_, __cfi_shadow_size, __cfi_shadow_size,
+                       MREMAP_MAYMOVE | MREMAP_FIXED, main_shadow);
+    CHECK(res != MAP_FAILED);
+  } else {
+    // Initial setup.
+    CHECK_EQ(kCfiShadowPointerStorageSize, GetPageSizeCached());
+    CHECK_EQ(0, GetShadow());
+    *reinterpret_cast<uptr *>(&__cfi_shadow_pointer_storage) = shadow_;
+    MprotectReadOnly((uptr)&__cfi_shadow_pointer_storage,
+                     kCfiShadowPointerStorageSize);
+    CHECK_EQ(shadow_, GetShadow());
   }
 }
+#else
+#error not implemented
+#endif
 
 // This is a workaround for a glibc bug:
 // https://sourceware.org/bugzilla/show_bug.cgi?id=15199
@@ -162,6 +206,8 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *data) {
   if (cfi_check)
     VReport(1, "Module '%s' __cfi_check %zx\n", info->dlpi_name, cfi_check);
 
+  ShadowBuilder *b = reinterpret_cast<ShadowBuilder *>(data);
+
   for (int i = 0; i < info->dlpi_phnum; i++) {
     const Elf_Phdr *phdr = &info->dlpi_phdr[i];
     if (phdr->p_type == PT_LOAD) {
@@ -174,18 +220,67 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *data) {
       uptr cur_end = cur_beg + phdr->p_memsz;
       if (cfi_check) {
         VReport(1, "   %zx .. %zx\n", cur_beg, cur_end);
-        fill_shadow(cur_beg, cur_end, cfi_check ? cfi_check : (uptr)(-1));
+        b->Add(cur_beg, cur_end, cfi_check);
       } else {
-        fill_shadow_constant(cur_beg, cur_end, kUncheckedShadow);
+        b->AddUnchecked(cur_beg, cur_end);
       }
     }
   }
   return 0;
 }
 
-// Fill shadow for the initial libraries.
-static void init_shadow() {
-  dl_iterate_phdr(dl_iterate_phdr_cb, nullptr);
+// Init or update shadow for the current set of loaded libraries.
+static void UpdateShadow() {
+  ShadowBuilder b;
+  b.Start();
+  dl_iterate_phdr(dl_iterate_phdr_cb, &b);
+  b.Install();
+}
+
+static void InitShadow() {
+  // No difference, really.
+  UpdateShadow();
+}
+
+static THREADLOCAL int in_loader;
+static BlockingMutex shadow_update_lock(LINKER_INITIALIZED);
+
+static void EnterLoader() {
+  if (in_loader == 0) {
+    shadow_update_lock.Lock();
+  }
+  ++in_loader;
+}
+
+static void ExitLoader() {
+  CHECK(in_loader > 0);
+  --in_loader;
+  UpdateShadow();
+  if (in_loader == 0) {
+    shadow_update_lock.Unlock();
+  }
+}
+
+// Setup shadow for dlopen()ed libraries.
+// The actual shadow setup happens after dlopen() returns, which means that
+// a library can not be a target of any CFI checks while its constructors are
+// running. It's unclear how to fix this without some extra help from libc.
+// In glibc, mmap inside dlopen is not interceptable.
+// Maybe a seccomp-bpf filter?
+// We could insert a high-priority constructor into the library, but that would
+// not help with the uninstrumented libraries.
+INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
+  EnterLoader();
+  void *handle = REAL(dlopen)(filename, flag);
+  ExitLoader();
+  return handle;
+}
+
+INTERCEPTOR(int, dlclose, void *handle) {
+  EnterLoader();
+  int res = REAL(dlclose)(handle);
+  ExitLoader();
+  return res;
 }
 
 static ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
@@ -201,7 +296,7 @@ static ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
     if (DiagData)
       return;
     else
-      Die();
+      Trap();
   }
   if (sv.is_unchecked()) {
     VReport(2, "CFI: unchecked call (shadow=FFFF): %p\n", Ptr);
@@ -263,13 +358,13 @@ void __cfi_init() {
 
   uptr vma = GetMaxVirtualAddress();
   // Shadow is 2 -> 2**kShadowGranularity.
-  uptr shadow_size = (vma >> (kShadowGranularity - 1)) + 1;
-  VReport(1, "CFI: VMA size %zx, shadow size %zx\n", vma, shadow_size);
-  void *shadow = MmapNoReserveOrDie(shadow_size, "CFI shadow");
-  VReport(1, "CFI: shadow at %zx .. %zx\n", shadow,
-          reinterpret_cast<uptr>(shadow) + shadow_size);
-  __cfi_shadow = (uptr)shadow;
-  init_shadow();
+  __cfi_shadow_size = (vma >> (kShadowGranularity - 1)) + 1;
+  VReport(1, "CFI: VMA size %zx, shadow size %zx\n", vma, __cfi_shadow_size);
+
+  InitShadow();
+
+  INTERCEPT_FUNCTION(dlopen);
+  INTERCEPT_FUNCTION(dlclose);
 
 #ifdef CFI_ENABLE_DIAG
   __ubsan::InitAsPlugin();
