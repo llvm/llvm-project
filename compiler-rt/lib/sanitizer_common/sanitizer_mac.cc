@@ -68,6 +68,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <util.h>
 
@@ -197,6 +198,15 @@ uptr internal_rename(const char *oldpath, const char *newpath) {
 
 uptr internal_ftruncate(fd_t fd, uptr size) {
   return ftruncate(fd, size);
+}
+
+uptr internal_execve(const char *filename, char *const argv[],
+                     char *const envp[]) {
+  return execve(filename, argv, envp);
+}
+
+uptr internal_waitpid(int pid, int *status, int options) {
+  return waitpid(pid, status, options);
 }
 
 // ----------------- sanitizer_common.h
