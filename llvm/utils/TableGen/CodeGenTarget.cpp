@@ -447,6 +447,10 @@ std::vector<CodeGenIntrinsic> llvm::LoadIntrinsics(const RecordKeeper &RC,
     if (isTarget == TargetOnly)
       Result.push_back(CodeGenIntrinsic(I[i]));
   }
+  std::sort(Result.begin(), Result.end(),
+            [](CodeGenIntrinsic LHS, CodeGenIntrinsic RHS) {
+              return LHS.Name < RHS.Name;
+            });
   return Result;
 }
 
