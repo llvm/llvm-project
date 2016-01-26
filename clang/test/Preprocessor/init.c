@@ -57,6 +57,10 @@
 //
 // C99:#define __STDC_VERSION__ 199901L
 // C99:#define __STRICT_ANSI__ 1
+// C99-NOT: __GXX_EXPERIMENTAL_CXX0X__
+// C99-NOT: __GXX_RTTI
+// C99-NOT: __GXX_WEAK__
+// C99-NOT: __cplusplus
 //
 // 
 // RUN: %clang_cc1 -std=c11 -E -dM < /dev/null | FileCheck -check-prefix C11 %s
@@ -65,6 +69,10 @@
 // C11:#define __STDC_UTF_32__ 1
 // C11:#define __STDC_VERSION__ 201112L
 // C11:#define __STRICT_ANSI__ 1
+// C11-NOT: __GXX_EXPERIMENTAL_CXX0X__
+// C11-NOT: __GXX_RTTI
+// C11-NOT: __GXX_WEAK__
+// C11-NOT: __cplusplus
 //
 // 
 // RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -check-prefix COMMON %s
@@ -3286,7 +3294,6 @@
 // MIPSN32BE: #define __GNUC_STDC_INLINE__ 1
 // MIPSN32BE: #define __GNUC__ 4
 // MIPSN32BE: #define __GXX_ABI_VERSION 1002
-// MIPSN32BE: #define __GXX_RTTI 1
 // MIPSN32BE: #define __ILP32__ 1
 // MIPSN32BE: #define __INT16_C_SUFFIX__
 // MIPSN32BE: #define __INT16_FMTd__ "hd"
@@ -3592,7 +3599,6 @@
 // MIPSN32EL: #define __GNUC_STDC_INLINE__ 1
 // MIPSN32EL: #define __GNUC__ 4
 // MIPSN32EL: #define __GXX_ABI_VERSION 1002
-// MIPSN32EL: #define __GXX_RTTI 1
 // MIPSN32EL: #define __ILP32__ 1
 // MIPSN32EL: #define __INT16_C_SUFFIX__
 // MIPSN32EL: #define __INT16_FMTd__ "hd"
@@ -7618,7 +7624,6 @@
 // X86_64-CLOUDABI:#define __GNUC_STDC_INLINE__ 1
 // X86_64-CLOUDABI:#define __GNUC__ 4
 // X86_64-CLOUDABI:#define __GXX_ABI_VERSION 1002
-// X86_64-CLOUDABI:#define __GXX_RTTI 1
 // X86_64-CLOUDABI:#define __INT16_C_SUFFIX__ 
 // X86_64-CLOUDABI:#define __INT16_FMTd__ "hd"
 // X86_64-CLOUDABI:#define __INT16_FMTi__ "hi"
@@ -8483,7 +8488,6 @@
 // WEBASSEMBLY32-NEXT:#define __GNUC_STDC_INLINE__ 1{{$}}
 // WEBASSEMBLY32-NEXT:#define __GNUC__ {{.}}
 // WEBASSEMBLY32-NEXT:#define __GXX_ABI_VERSION 1002{{$}}
-// WEBASSEMBLY32-NEXT:#define __GXX_RTTI 1{{$}}
 // WEBASSEMBLY32-NEXT:#define __ILP32__ 1{{$}}
 // WEBASSEMBLY32-NEXT:#define __INT16_C_SUFFIX__ {{$}}
 // WEBASSEMBLY32-NEXT:#define __INT16_FMTd__ "hd"{{$}}
@@ -8799,7 +8803,6 @@
 // WEBASSEMBLY64-NEXT:#define __GNUC_STDC_INLINE__ 1{{$}}
 // WEBASSEMBLY64-NEXT:#define __GNUC__ {{.}}
 // WEBASSEMBLY64-NEXT:#define __GXX_ABI_VERSION 1002{{$}}
-// WEBASSEMBLY64-NEXT:#define __GXX_RTTI 1{{$}}
 // WEBASSEMBLY64-NOT:#define __ILP32__
 // WEBASSEMBLY64-NEXT:#define __INT16_C_SUFFIX__ {{$}}
 // WEBASSEMBLY64-NEXT:#define __INT16_FMTd__ "hd"{{$}}
