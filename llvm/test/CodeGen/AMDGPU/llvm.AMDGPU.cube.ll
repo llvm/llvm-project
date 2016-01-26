@@ -1,7 +1,6 @@
-
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
 
-; CHECK: {{^}}cube:
+; CHECK-LABEL: {{^}}cube:
 ; CHECK: CUBE T{{[0-9]}}.X
 ; CHECK: CUBE T{{[0-9]}}.Y
 ; CHECK: CUBE T{{[0-9]}}.Z

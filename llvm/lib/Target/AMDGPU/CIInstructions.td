@@ -25,14 +25,6 @@
 // BUFFER_LOAD_DWORDX3
 // BUFFER_STORE_DWORDX3
 
-
-def isCIVI : Predicate <
-  "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS || "
-  "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS"
->, AssemblerPredicate<"FeatureCIInsts">;
-
-def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">;
-
 //===----------------------------------------------------------------------===//
 // VOP1 Instructions
 //===----------------------------------------------------------------------===//
@@ -262,7 +254,7 @@ defm FLAT_ATOMIC_FMAX_X2 : FLAT_ATOMIC <
   flat<0x60>, "flat_atomic_fmax_x2", VReg_64
 >;
 
-} // End let SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst
+} // End SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst
 
 let Predicates = [isCI] in {
 
@@ -289,7 +281,7 @@ def : Pat <
 
 let Predicates = [isCIVI] in {
 
-// Patterns for global loads with no offset
+// Patterns for global loads with no offset.
 class FlatLoadPat <FLAT inst, SDPatternOperator node, ValueType vt> : Pat <
   (vt (node i64:$addr)),
   (inst $addr, 0, 0, 0)

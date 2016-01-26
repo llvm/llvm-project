@@ -348,14 +348,14 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       continue;
 
     auto R = static_cast<const Elf_Rela &>(RI);
-    uintX_t Addend;
+    auto S = static_cast<Elf_Rela *>(P);
+    uintX_t A = NeedsGot ? 0 : R.r_addend;
     if (CBP)
-      Addend = NeedsGot ? 0 : R.r_addend;
+      S->r_addend = A;
     else if (Body)
-      Addend = getSymVA<ELFT>(*Body) + (NeedsGot ? 0 : R.r_addend);
+      S->r_addend = getSymVA<ELFT>(*Body) + A;
     else
-      Addend = getLocalRelTarget(File, R, R.r_addend);
-    static_cast<Elf_Rela *>(P)->r_addend = Addend;
+      S->r_addend = getLocalRelTarget(File, R, A);
   }
 }
 

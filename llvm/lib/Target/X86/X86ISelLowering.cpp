@@ -5480,55 +5480,84 @@ LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, SDLoc dl, SelectionDAG &DAG) {
 /// elements can be replaced by a single large load which has the same value as
 /// a build_vector or insert_subvector whose loaded operands are 'Elts'.
 ///
-/// Example: <load i32 *a, load i32 *a+4, undef, undef> -> zextload a
-///
-/// FIXME: we'd also like to handle the case where the last elements are zero
-/// rather than undef via VZEXT_LOAD, but we do not detect that case today.
-/// There's even a handy isZeroNode for that purpose.
+/// Example: <load i32 *a, load i32 *a+4, zero, undef> -> zextload a
 static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                                         SDLoc &DL, SelectionDAG &DAG,
                                         bool isAfterLegalize) {
   unsigned NumElems = Elts.size();
 
-  LoadSDNode *LDBase = nullptr;
-  unsigned LastLoadedElt = -1U;
+  int LastLoadedElt = -1;
+  SmallBitVector LoadMask(NumElems, false);
+  SmallBitVector ZeroMask(NumElems, false);
+  SmallBitVector UndefMask(NumElems, false);
 
-  // For each element in the initializer, see if we've found a load or an undef.
-  // If we don't find an initial load element, or later load elements are
-  // non-consecutive, bail out.
+  auto PeekThroughBitcast = [](SDValue V) {
+    while (V.getNode() && V.getOpcode() == ISD::BITCAST)
+      V = V.getOperand(0);
+    return V;
+  };
+
+  // For each element in the initializer, see if we've found a load, zero or an
+  // undef.
   for (unsigned i = 0; i < NumElems; ++i) {
-    SDValue Elt = Elts[i];
-    // Look through a bitcast.
-    if (Elt.getNode() && Elt.getOpcode() == ISD::BITCAST)
-      Elt = Elt.getOperand(0);
-    if (!Elt.getNode() ||
-        (Elt.getOpcode() != ISD::UNDEF && !ISD::isNON_EXTLoad(Elt.getNode())))
+    SDValue Elt = PeekThroughBitcast(Elts[i]);
+    if (!Elt.getNode())
       return SDValue();
-    if (!LDBase) {
-      if (Elt.getNode()->getOpcode() == ISD::UNDEF)
-        return SDValue();
-      LDBase = cast<LoadSDNode>(Elt.getNode());
-      LastLoadedElt = i;
-      continue;
-    }
-    if (Elt.getOpcode() == ISD::UNDEF)
-      continue;
 
-    LoadSDNode *LD = cast<LoadSDNode>(Elt);
-    EVT LdVT = Elt.getValueType();
-    // Each loaded element must be the correct fractional portion of the
-    // requested vector load.
-    if (LdVT.getSizeInBits() != VT.getSizeInBits() / NumElems)
+    if (Elt.isUndef())
+      UndefMask[i] = true;
+    else if (X86::isZeroNode(Elt) || ISD::isBuildVectorAllZeros(Elt.getNode()))
+      ZeroMask[i] = true;
+    else if (ISD::isNON_EXTLoad(Elt.getNode())) {
+      LoadMask[i] = true;
+      LastLoadedElt = i;
+      // Each loaded element must be the correct fractional portion of the
+      // requested vector load.
+      if ((NumElems * Elt.getValueSizeInBits()) != VT.getSizeInBits())
+        return SDValue();
+    } else
       return SDValue();
-    if (!DAG.isConsecutiveLoad(LD, LDBase, LdVT.getSizeInBits() / 8, i))
-      return SDValue();
-    LastLoadedElt = i;
+  }
+  assert((ZeroMask | UndefMask | LoadMask).count() == NumElems &&
+         "Incomplete element masks");
+
+  // Handle Special Cases - all undef or undef/zero.
+  if (UndefMask.count() == NumElems)
+    return DAG.getUNDEF(VT);
+
+  // FIXME: Should we return this as a BUILD_VECTOR instead?
+  if ((ZeroMask | UndefMask).count() == NumElems)
+    return VT.isInteger() ? DAG.getConstant(0, DL, VT)
+                          : DAG.getConstantFP(0.0, DL, VT);
+
+  int FirstLoadedElt = LoadMask.find_first();
+  SDValue EltBase = PeekThroughBitcast(Elts[FirstLoadedElt]);
+  LoadSDNode *LDBase = cast<LoadSDNode>(EltBase);
+  EVT LDBaseVT = EltBase.getValueType();
+
+  // Consecutive loads can contain UNDEFS but not ZERO elements.
+  bool IsConsecutiveLoad = true;
+  for (int i = FirstLoadedElt + 1; i <= LastLoadedElt; ++i) {
+    if (LoadMask[i]) {
+      SDValue Elt = PeekThroughBitcast(Elts[i]);
+      LoadSDNode *LD = cast<LoadSDNode>(Elt);
+      if (!DAG.isConsecutiveLoad(LD, LDBase,
+                                 Elt.getValueType().getStoreSizeInBits() / 8,
+                                 i - FirstLoadedElt)) {
+        IsConsecutiveLoad = false;
+        break;
+      }
+    } else if (ZeroMask[i]) {
+      IsConsecutiveLoad = false;
+      break;
+    }
   }
 
+  // LOAD - all consecutive load/undefs (must start/end with a load).
   // If we have found an entire vector of loads and undefs, then return a large
-  // load of the entire vector width starting at the base pointer.  If we found
-  // consecutive loads for the low half, generate a vzext_load node.
-  if (LastLoadedElt == NumElems - 1) {
+  // load of the entire vector width starting at the base pointer.
+  if (IsConsecutiveLoad && FirstLoadedElt == 0 &&
+      LastLoadedElt == (int)(NumElems - 1) && ZeroMask.none()) {
     assert(LDBase && "Did not find base load for merging consecutive loads");
     EVT EltVT = LDBase->getValueType(0);
     // Ensure that the input vector size for the merged loads matches the
@@ -5548,9 +5577,9 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                         LDBase->getAlignment());
 
     if (LDBase->hasAnyUseOfValue(1)) {
-      SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                                     SDValue(LDBase, 1),
-                                     SDValue(NewLd.getNode(), 1));
+      SDValue NewChain =
+          DAG.getNode(ISD::TokenFactor, DL, MVT::Other, SDValue(LDBase, 1),
+                      SDValue(NewLd.getNode(), 1));
       DAG.ReplaceAllUsesOfValueWith(SDValue(LDBase, 1), NewChain);
       DAG.UpdateNodeOperands(NewChain.getNode(), SDValue(LDBase, 1),
                              SDValue(NewLd.getNode(), 1));
@@ -5559,11 +5588,14 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     return NewLd;
   }
 
-  //TODO: The code below fires only for for loading the low v2i32 / v2f32
-  //of a v4i32 / v4f32. It's probably worth generalizing.
-  EVT EltVT = VT.getVectorElementType();
-  if (NumElems == 4 && LastLoadedElt == 1 && (EltVT.getSizeInBits() == 32) &&
-      DAG.getTargetLoweringInfo().isTypeLegal(MVT::v2i64)) {
+  int LoadSize =
+      (1 + LastLoadedElt - FirstLoadedElt) * LDBaseVT.getStoreSizeInBits();
+
+  // VZEXT_LOAD - consecutive load/undefs followed by zeros/undefs.
+  // TODO: The code below fires only for for loading the low 64-bits of a
+  // of a 128-bit vector. It's probably worth generalizing more.
+  if (IsConsecutiveLoad && FirstLoadedElt == 0 && VT.is128BitVector() &&
+      (LoadSize == 64 && DAG.getTargetLoweringInfo().isTypeLegal(MVT::v2i64))) {
     SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
     SDValue Ops[] = { LDBase->getChain(), LDBase->getBasePtr() };
     SDValue ResNode =
@@ -5577,8 +5609,9 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     // terms of dependency. We create a TokenFactor for LDBase and ResNode, and
     // update uses of LDBase's output chain to use the TokenFactor.
     if (LDBase->hasAnyUseOfValue(1)) {
-      SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                             SDValue(LDBase, 1), SDValue(ResNode.getNode(), 1));
+      SDValue NewChain =
+          DAG.getNode(ISD::TokenFactor, DL, MVT::Other, SDValue(LDBase, 1),
+                      SDValue(ResNode.getNode(), 1));
       DAG.ReplaceAllUsesOfValueWith(SDValue(LDBase, 1), NewChain);
       DAG.UpdateNodeOperands(NewChain.getNode(), SDValue(LDBase, 1),
                              SDValue(ResNode.getNode(), 1));
@@ -6551,15 +6584,17 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (IsAllConstants)
     return SDValue();
 
-  // For AVX-length vectors, see if we can use a vector load to get all of the
-  // elements, otherwise build the individual 128-bit pieces and use
+  // See if we can use a vector load to get all of the elements.
+  if (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) {
+    SmallVector<SDValue, 64> V(Op->op_begin(), Op->op_begin() + NumElems);
+    if (SDValue LD = EltsFromConsecutiveLoads(VT, V, dl, DAG, false))
+      return LD;
+  }
+
+  // For AVX-length vectors, build the individual 128-bit pieces and use
   // shuffles to put them in place.
   if (VT.is256BitVector() || VT.is512BitVector()) {
     SmallVector<SDValue, 64> V(Op->op_begin(), Op->op_begin() + NumElems);
-
-    // Check for a build vector of consecutive loads.
-    if (SDValue LD = EltsFromConsecutiveLoads(VT, V, dl, DAG, false))
-      return LD;
 
     EVT HVT = EVT::getVectorVT(*DAG.getContext(), ExtVT, NumElems/2);
 
@@ -6647,10 +6682,6 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     // Check for a build vector of consecutive loads.
     for (unsigned i = 0; i < NumElems; ++i)
       V[i] = Op.getOperand(i);
-
-    // Check for elements which are consecutive loads.
-    if (SDValue LD = EltsFromConsecutiveLoads(VT, V, dl, DAG, false))
-      return LD;
 
     // Check for a build vector from mostly shuffle plus few inserting.
     if (SDValue Sh = buildFromShuffleMostly(Op, DAG))

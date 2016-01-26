@@ -172,16 +172,6 @@ let TargetPrefix = "SI", isTarget = 1 in {
   def int_SI_image_load_mip : Image;
   def int_SI_getresinfo : Image;
 
-  // Deprecated image and sample intrinsics.
-  class Sample : Intrinsic <[llvm_v4f32_ty], [llvm_anyvector_ty, llvm_v32i8_ty, llvm_anyint_ty, llvm_i32_ty], [IntrNoMem]>;
-
-  def int_SI_sample : Sample;
-  def int_SI_sampleb : Sample;
-  def int_SI_sampled : Sample;
-  def int_SI_samplel : Sample;
-  def int_SI_imageload : Intrinsic <[llvm_v4i32_ty], [llvm_anyvector_ty, llvm_v32i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_SI_resinfo : Intrinsic <[llvm_v4i32_ty], [llvm_i32_ty, llvm_v32i8_ty, llvm_i32_ty], [IntrNoMem]>;
-
   /* Interpolation Intrinsics */
 
   def int_SI_fs_constant : Intrinsic <[llvm_float_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;

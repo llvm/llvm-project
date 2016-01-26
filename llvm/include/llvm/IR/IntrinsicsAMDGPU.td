@@ -110,6 +110,26 @@ def int_amdgcn_class : Intrinsic<
   [llvm_i1_ty], [llvm_anyfloat_ty, llvm_i32_ty], [IntrNoMem]
 >;
 
+def int_amdgcn_cubeid : GCCBuiltin<"__builtin_amdgcn_cubeid">,
+  Intrinsic<[llvm_float_ty],
+    [llvm_float_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]
+>;
+
+def int_amdgcn_cubema : GCCBuiltin<"__builtin_amdgcn_cubema">,
+  Intrinsic<[llvm_float_ty],
+  [llvm_float_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]
+>;
+
+def int_amdgcn_cubesc : GCCBuiltin<"__builtin_amdgcn_cubesc">,
+  Intrinsic<[llvm_float_ty],
+    [llvm_float_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]
+>;
+
+def int_amdgcn_cubetc : GCCBuiltin<"__builtin_amdgcn_cubetc">,
+  Intrinsic<[llvm_float_ty],
+    [llvm_float_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]
+>;
+
 def int_amdgcn_read_workdim : AMDGPUReadPreloadRegisterIntrinsic <
   "__builtin_amdgcn_read_workdim">;
 

@@ -23,7 +23,9 @@ main_body:
   %tmp28 = bitcast float %tmp26 to i32
   %tmp29 = insertelement <2 x i32> undef, i32 %tmp27, i32 0
   %tmp30 = insertelement <2 x i32> %tmp29, i32 %tmp28, i32 1
-  %tmp31 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp30, <32 x i8> %tmp22, <16 x i8> %tmp24, i32 2)
+  %tmp22.bc = bitcast <32 x i8> %tmp22 to <8 x i32>
+  %tmp24.bc = bitcast <16 x i8> %tmp24 to <4 x i32>
+  %tmp31 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp30, <8 x i32> %tmp22.bc, <4 x i32> %tmp24.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp32 = extractelement <4 x float> %tmp31, i32 0
   %tmp33 = extractelement <4 x float> %tmp31, i32 1
   %tmp34 = extractelement <4 x float> %tmp31, i32 2
@@ -39,8 +41,8 @@ main_body:
 ; Function Attrs: nounwind readnone
 declare float @llvm.SI.fs.interp(i32, i32, i32, <2 x i32>) #1
 
-; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.sample.v2i32(<2 x i32>, <32 x i8>, <16 x i8>, i32) #1
+declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.SI.packf16(float, float) #1

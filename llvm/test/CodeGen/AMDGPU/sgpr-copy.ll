@@ -4,10 +4,14 @@
 ; This test checks that no VGPR to SGPR copies are created by the register
 ; allocator.
 
+
+declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+
+
 ; CHECK-LABEL: {{^}}phi1:
 ; CHECK: s_buffer_load_dword [[DST:s[0-9]]], {{s\[[0-9]+:[0-9]+\]}}, 0x0
 ; CHECK: v_mov_b32_e32 v{{[0-9]}}, [[DST]]
-define void @phi1(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
+define void @phi1(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <8 x i32> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
 main_body:
   %tmp = getelementptr <16 x i8>, <16 x i8> addrspace(2)* %arg, i32 0
   %tmp20 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -31,7 +35,7 @@ ENDIF:                                            ; preds = %ELSE, %main_body
 
 ; Make sure this program doesn't crash
 ; CHECK-LABEL: {{^}}phi2:
-define void @phi2(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
+define void @phi2(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <8 x i32> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
 main_body:
   %tmp = getelementptr <16 x i8>, <16 x i8> addrspace(2)* %arg, i32 0
   %tmp20 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -50,8 +54,8 @@ main_body:
   %tmp33 = call float @llvm.SI.load.const(<16 x i8> %tmp20, i32 84)
   %tmp34 = call float @llvm.SI.load.const(<16 x i8> %tmp20, i32 88)
   %tmp35 = call float @llvm.SI.load.const(<16 x i8> %tmp20, i32 92)
-  %tmp36 = getelementptr <32 x i8>, <32 x i8> addrspace(2)* %arg2, i32 0
-  %tmp37 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp36, !tbaa !0
+  %tmp36 = getelementptr <8 x i32>, <8 x i32> addrspace(2)* %arg2, i32 0
+  %tmp37 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp36, !tbaa !0
   %tmp38 = getelementptr <16 x i8>, <16 x i8> addrspace(2)* %arg1, i32 0
   %tmp39 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp38, !tbaa !0
   %tmp40 = call float @llvm.SI.fs.interp(i32 0, i32 0, i32 %arg3, <2 x i32> %arg5)
@@ -63,7 +67,8 @@ main_body:
   %tmp46 = bitcast float %tmp41 to i32
   %tmp47 = insertelement <2 x i32> undef, i32 %tmp45, i32 0
   %tmp48 = insertelement <2 x i32> %tmp47, i32 %tmp46, i32 1
-  %tmp49 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp48, <32 x i8> %tmp37, <16 x i8> %tmp39, i32 2)
+  %tmp39.bc = bitcast <16 x i8> %tmp39 to <4 x i32>
+  %tmp49 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp48, <8 x i32> %tmp37, <4 x i32> %tmp39.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp50 = extractelement <4 x float> %tmp49, i32 2
   %tmp51 = call float @fabs(float %tmp50)
   %tmp52 = fmul float %tmp42, %tmp42
@@ -151,7 +156,7 @@ ENDIF24:                                          ; preds = %IF25, %ENDIF
 
 ; We just want ot make sure the program doesn't crash
 ; CHECK-LABEL: {{^}}loop:
-define void @loop(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
+define void @loop(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <8 x i32> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
 main_body:
   %tmp = getelementptr <16 x i8>, <16 x i8> addrspace(2)* %arg, i32 0
   %tmp20 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -200,7 +205,7 @@ declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float
 declare float @llvm.SI.fs.interp(i32, i32, i32, <2 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.sample.v2i32(<2 x i32>, <32 x i8>, <16 x i8>, i32) #1
+declare <4 x float> @llvm.SI.sample.v2i32(<2 x i32>, <8 x i32>, <16 x i8>, i32) #1
 
 ; Function Attrs: readnone
 declare float @llvm.amdgcn.rsq.f32(float) #3
@@ -222,27 +227,28 @@ declare i32 @llvm.SI.packf16(float, float) #1
 ; CHECK: image_sample
 ; CHECK: exp
 ; CHECK: s_endpgm
-define void @sample_v3([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <32 x i8>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define void @sample_v3([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
 entry:
   %tmp = getelementptr [17 x <16 x i8>], [17 x <16 x i8>] addrspace(2)* %arg, i64 0, i32 0
   %tmp21 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
   %tmp22 = call float @llvm.SI.load.const(<16 x i8> %tmp21, i32 16)
-  %tmp23 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 0
-  %tmp24 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp23, !tbaa !0
+  %tmp23 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 0
+  %tmp24 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp23, !tbaa !0
   %tmp25 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 0
   %tmp26 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp25, !tbaa !0
   %tmp27 = fcmp oeq float %tmp22, 0.000000e+00
+  %tmp26.bc = bitcast <16 x i8> %tmp26 to <4 x i32>
   br i1 %tmp27, label %if, label %else
 
 if:                                               ; preds = %entry
-  %val.if = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> zeroinitializer, <32 x i8> %tmp24, <16 x i8> %tmp26, i32 2)
+  %val.if = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> zeroinitializer, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %val.if.0 = extractelement <4 x float> %val.if, i32 0
   %val.if.1 = extractelement <4 x float> %val.if, i32 1
   %val.if.2 = extractelement <4 x float> %val.if, i32 2
   br label %endif
 
 else:                                             ; preds = %entry
-  %val.else = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> <i32 1, i32 0>, <32 x i8> %tmp24, <16 x i8> %tmp26, i32 2)
+  %val.else = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 1, i32 0>, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %val.else.0 = extractelement <4 x float> %val.else, i32 0
   %val.else.1 = extractelement <4 x float> %val.else, i32 1
   %val.else.2 = extractelement <4 x float> %val.else, i32 2
@@ -285,7 +291,7 @@ endif:                                            ; preds = %if1, %if0, %entry
 ; This test is just checking that we don't crash / assertion fail.
 ; CHECK-LABEL: {{^}}copy2:
 ; CHECK: s_endpgm
-define void @copy2([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <32 x i8>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define void @copy2([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
 entry:
   br label %LOOP68
 
@@ -335,9 +341,8 @@ bb38:                                             ; preds = %bb
   %tmp53 = bitcast float %tmp30 to i32
   %tmp54 = insertelement <2 x i32> undef, i32 %tmp52, i32 0
   %tmp55 = insertelement <2 x i32> %tmp54, i32 %tmp53, i32 1
-  %tmp56 = bitcast <8 x i32> %tmp26 to <32 x i8>
-  %tmp57 = bitcast <4 x i32> %tmp28 to <16 x i8>
-  %tmp58 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp55, <32 x i8> %tmp56, <16 x i8> %tmp57, i32 2)
+  %tmp56 = bitcast <8 x i32> %tmp26 to <8 x i32>
+  %tmp58 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp55, <8 x i32> %tmp56, <4 x i32> %tmp28, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   br label %bb71
 
 bb80:                                             ; preds = %bb
@@ -346,9 +351,8 @@ bb80:                                             ; preds = %bb
   %tmp82.2 = add i32 %tmp82, 1
   %tmp83 = insertelement <2 x i32> undef, i32 %tmp81, i32 0
   %tmp84 = insertelement <2 x i32> %tmp83, i32 %tmp82.2, i32 1
-  %tmp85 = bitcast <8 x i32> %tmp26 to <32 x i8>
-  %tmp86 = bitcast <4 x i32> %tmp28 to <16 x i8>
-  %tmp87 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp84, <32 x i8> %tmp85, <16 x i8> %tmp86, i32 2)
+  %tmp85 = bitcast <8 x i32> %tmp26 to <8 x i32>
+  %tmp87 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp84, <8 x i32> %tmp85, <4 x i32> %tmp28, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   br label %bb71
 
 bb71:                                             ; preds = %bb80, %bb38

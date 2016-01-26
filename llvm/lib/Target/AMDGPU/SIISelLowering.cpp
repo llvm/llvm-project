@@ -27,6 +27,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -41,9 +42,6 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
     : AMDGPUTargetLowering(TM, STI) {
   addRegisterClass(MVT::i1, &AMDGPU::VReg_1RegClass);
   addRegisterClass(MVT::i64, &AMDGPU::SReg_64RegClass);
-
-  addRegisterClass(MVT::v32i8, &AMDGPU::SReg_256RegClass);
-  addRegisterClass(MVT::v64i8, &AMDGPU::SReg_512RegClass);
 
   addRegisterClass(MVT::i32, &AMDGPU::SReg_32RegClass);
   addRegisterClass(MVT::f32, &AMDGPU::VGPR_32RegClass);
@@ -989,6 +987,52 @@ SDValue SITargetLowering::LowerReturn(SDValue Chain,
   return DAG.getNode(AMDGPUISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
+unsigned SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
+                                             SelectionDAG &DAG) const {
+  unsigned Reg = StringSwitch<unsigned>(RegName)
+    .Case("m0", AMDGPU::M0)
+    .Case("exec", AMDGPU::EXEC)
+    .Case("exec_lo", AMDGPU::EXEC_LO)
+    .Case("exec_hi", AMDGPU::EXEC_HI)
+    .Case("flat_scratch", AMDGPU::FLAT_SCR)
+    .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
+    .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
+    .Default(AMDGPU::NoRegister);
+
+  if (Reg == AMDGPU::NoRegister) {
+    report_fatal_error(Twine("invalid register name \""
+                             + StringRef(RegName)  + "\"."));
+
+  }
+
+  if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS &&
+      Subtarget->getRegisterInfo()->regsOverlap(Reg, AMDGPU::FLAT_SCR)) {
+    report_fatal_error(Twine("invalid register \""
+                             + StringRef(RegName)  + "\" for subtarget."));
+  }
+
+  switch (Reg) {
+  case AMDGPU::M0:
+  case AMDGPU::EXEC_LO:
+  case AMDGPU::EXEC_HI:
+  case AMDGPU::FLAT_SCR_LO:
+  case AMDGPU::FLAT_SCR_HI:
+    if (VT.getSizeInBits() == 32)
+      return Reg;
+    break;
+  case AMDGPU::EXEC:
+  case AMDGPU::FLAT_SCR:
+    if (VT.getSizeInBits() == 64)
+      return Reg;
+    break;
+  default:
+    llvm_unreachable("missing register type checking");
+  }
+
+  report_fatal_error(Twine("invalid type for register \""
+                           + StringRef(RegName) + "\"."));
+}
+
 MachineBasicBlock * SITargetLowering::EmitInstrWithCustomInserter(
     MachineInstr * MI, MachineBasicBlock * BB) const {
 
@@ -1367,14 +1411,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::LOAD_CONSTANT, DL,
                                    Op->getVTList(), Ops, VT, MMO);
   }
-  case AMDGPUIntrinsic::SI_sample:
-    return LowerSampleIntrinsic(AMDGPUISD::SAMPLE, Op, DAG);
-  case AMDGPUIntrinsic::SI_sampleb:
-    return LowerSampleIntrinsic(AMDGPUISD::SAMPLEB, Op, DAG);
-  case AMDGPUIntrinsic::SI_sampled:
-    return LowerSampleIntrinsic(AMDGPUISD::SAMPLED, Op, DAG);
-  case AMDGPUIntrinsic::SI_samplel:
-    return LowerSampleIntrinsic(AMDGPUISD::SAMPLEL, Op, DAG);
   case AMDGPUIntrinsic::SI_vs_load_input:
     return DAG.getNode(AMDGPUISD::LOAD_INPUT, DL, VT,
                        Op.getOperand(1),
@@ -1554,15 +1590,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return AMDGPUTargetLowering::LowerLOAD(Op, DAG);
-}
-
-SDValue SITargetLowering::LowerSampleIntrinsic(unsigned Opcode,
-                                               const SDValue &Op,
-                                               SelectionDAG &DAG) const {
-  return DAG.getNode(Opcode, SDLoc(Op), Op.getValueType(), Op.getOperand(1),
-                     Op.getOperand(2),
-                     Op.getOperand(3),
-                     Op.getOperand(4));
 }
 
 SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {

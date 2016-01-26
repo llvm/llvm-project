@@ -347,18 +347,12 @@ define <8 x i16> @merge_8i16_i16_34uuuuuu(i16* %ptr) nounwind uwtable noinline s
 define <8 x i16> @merge_8i16_i16_45u7zzzz(i16* %ptr) nounwind uwtable noinline ssp {
 ; SSE-LABEL: merge_8i16_i16_45u7zzzz:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    pinsrw $0, 8(%rdi), %xmm0
-; SSE-NEXT:    pinsrw $1, 10(%rdi), %xmm0
-; SSE-NEXT:    pinsrw $3, 14(%rdi), %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: merge_8i16_i16_45u7zzzz:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrw $0, 8(%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrw $1, 10(%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrw $3, 14(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %ptr0 = getelementptr inbounds i16, i16* %ptr, i64 4
   %ptr1 = getelementptr inbounds i16, i16* %ptr, i64 5
@@ -478,46 +472,14 @@ define <16 x i8> @merge_16i8_i8_01u3uuzzuuuuuzzz(i8* %ptr) nounwind uwtable noin
 }
 
 define <16 x i8> @merge_16i8_i8_0123uu67uuuuuzzz(i8* %ptr) nounwind uwtable noinline ssp {
-; SSE2-LABEL: merge_16i8_i8_0123uu67uuuuuzzz:
-; SSE2:       # BB#0:
-; SSE2-NEXT:    movzbl 2(%rdi), %eax
-; SSE2-NEXT:    movzbl 3(%rdi), %ecx
-; SSE2-NEXT:    shll $8, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    movzbl (%rdi), %eax
-; SSE2-NEXT:    movzbl 1(%rdi), %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %eax, %edx
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pinsrw $0, %edx, %xmm0
-; SSE2-NEXT:    pinsrw $1, %ecx, %xmm0
-; SSE2-NEXT:    movzbl 6(%rdi), %eax
-; SSE2-NEXT:    movzbl 7(%rdi), %ecx
-; SSE2-NEXT:    shll $8, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    pinsrw $3, %ecx, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: merge_16i8_i8_0123uu67uuuuuzzz:
-; SSE41:       # BB#0:
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    pinsrb $0, (%rdi), %xmm0
-; SSE41-NEXT:    pinsrb $1, 1(%rdi), %xmm0
-; SSE41-NEXT:    pinsrb $2, 2(%rdi), %xmm0
-; SSE41-NEXT:    pinsrb $3, 3(%rdi), %xmm0
-; SSE41-NEXT:    pinsrb $6, 6(%rdi), %xmm0
-; SSE41-NEXT:    pinsrb $7, 7(%rdi), %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: merge_16i8_i8_0123uu67uuuuuzzz:
+; SSE:       # BB#0:
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: merge_16i8_i8_0123uu67uuuuuzzz:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $0, (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $1, 1(%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $2, 2(%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $3, 3(%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $6, 6(%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $7, 7(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %ptr0 = getelementptr inbounds i8, i8* %ptr, i64 0
   %ptr1 = getelementptr inbounds i8, i8* %ptr, i64 1

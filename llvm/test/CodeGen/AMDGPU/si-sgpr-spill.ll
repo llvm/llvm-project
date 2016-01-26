@@ -22,7 +22,7 @@
 ; Writing to M0 from an SMRD instruction will hang the GPU.
 ; CHECK-NOT: s_buffer_load_dword m0
 ; CHECK: s_endpgm
-define void @main([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <32 x i8>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define void @main([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
 main_body:
   %tmp = getelementptr [17 x <16 x i8>], [17 x <16 x i8>] addrspace(2)* %arg, i64 0, i32 0
   %tmp21 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -64,36 +64,37 @@ main_body:
   %tmp57 = call float @llvm.SI.load.const(<16 x i8> %tmp21, i32 372)
   %tmp58 = call float @llvm.SI.load.const(<16 x i8> %tmp21, i32 376)
   %tmp59 = call float @llvm.SI.load.const(<16 x i8> %tmp21, i32 384)
-  %tmp60 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 0
-  %tmp61 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp60, !tbaa !0
+  %tmp60 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 0
+  %tmp61 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp60, !tbaa !0
   %tmp62 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 0
   %tmp63 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp62, !tbaa !0
-  %tmp64 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 1
-  %tmp65 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp64, !tbaa !0
+  %tmp63.bc = bitcast <16 x i8> %tmp63 to <4 x i32>
+  %tmp64 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 1
+  %tmp65 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp64, !tbaa !0
   %tmp66 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 1
   %tmp67 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp66, !tbaa !0
-  %tmp68 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 2
-  %tmp69 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp68, !tbaa !0
+  %tmp68 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 2
+  %tmp69 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp68, !tbaa !0
   %tmp70 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 2
   %tmp71 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp70, !tbaa !0
-  %tmp72 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 3
-  %tmp73 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp72, !tbaa !0
+  %tmp72 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 3
+  %tmp73 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp72, !tbaa !0
   %tmp74 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 3
   %tmp75 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp74, !tbaa !0
-  %tmp76 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 4
-  %tmp77 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp76, !tbaa !0
+  %tmp76 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 4
+  %tmp77 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp76, !tbaa !0
   %tmp78 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 4
   %tmp79 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp78, !tbaa !0
-  %tmp80 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 5
-  %tmp81 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp80, !tbaa !0
+  %tmp80 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 5
+  %tmp81 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp80, !tbaa !0
   %tmp82 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 5
   %tmp83 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp82, !tbaa !0
-  %tmp84 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 6
-  %tmp85 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp84, !tbaa !0
+  %tmp84 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 6
+  %tmp85 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp84, !tbaa !0
   %tmp86 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 6
   %tmp87 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp86, !tbaa !0
-  %tmp88 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 7
-  %tmp89 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp88, !tbaa !0
+  %tmp88 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 7
+  %tmp89 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp88, !tbaa !0
   %tmp90 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 7
   %tmp91 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp90, !tbaa !0
   %tmp92 = call float @llvm.SI.fs.interp(i32 0, i32 0, i32 %arg4, <2 x i32> %arg6)
@@ -272,7 +273,7 @@ ENDIF:                                            ; preds = %LOOP
   %tmp240 = insertelement <8 x i32> %tmp239, i32 %tmp238, i32 5
   %tmp241 = insertelement <8 x i32> %tmp240, i32 undef, i32 6
   %tmp242 = insertelement <8 x i32> %tmp241, i32 undef, i32 7
-  %tmp243 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp242, <32 x i8> %tmp61, <16 x i8> %tmp63, i32 2)
+  %tmp243 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp242, <8 x i32> %tmp61, <4 x i32> %tmp63.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp244 = extractelement <4 x float> %tmp243, i32 3
   %tmp245 = fcmp oge float %temp30.0, %tmp244
   %tmp246 = sext i1 %tmp245 to i32
@@ -317,7 +318,8 @@ IF67:                                             ; preds = %LOOP65
   %tmp274 = insertelement <8 x i32> %tmp273, i32 %tmp268, i32 5
   %tmp275 = insertelement <8 x i32> %tmp274, i32 undef, i32 6
   %tmp276 = insertelement <8 x i32> %tmp275, i32 undef, i32 7
-  %tmp277 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp276, <32 x i8> %tmp65, <16 x i8> %tmp67, i32 2)
+  %tmp67.bc = bitcast <16 x i8> %tmp67 to <4 x i32>
+  %tmp277 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp276, <8 x i32> %tmp65, <4 x i32> %tmp67.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp278 = extractelement <4 x float> %tmp277, i32 0
   %tmp279 = extractelement <4 x float> %tmp277, i32 1
   %tmp280 = extractelement <4 x float> %tmp277, i32 2
@@ -337,7 +339,8 @@ IF67:                                             ; preds = %LOOP65
   %tmp294 = insertelement <8 x i32> %tmp293, i32 %tmp288, i32 5
   %tmp295 = insertelement <8 x i32> %tmp294, i32 undef, i32 6
   %tmp296 = insertelement <8 x i32> %tmp295, i32 undef, i32 7
-  %tmp297 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp296, <32 x i8> %tmp81, <16 x i8> %tmp83, i32 2)
+  %tmp83.bc = bitcast <16 x i8> %tmp83 to <4 x i32>
+  %tmp297 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp296, <8 x i32> %tmp81, <4 x i32> %tmp83.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp298 = extractelement <4 x float> %tmp297, i32 0
   %tmp299 = extractelement <4 x float> %tmp297, i32 1
   %tmp300 = extractelement <4 x float> %tmp297, i32 2
@@ -355,7 +358,8 @@ IF67:                                             ; preds = %LOOP65
   %tmp312 = insertelement <8 x i32> %tmp311, i32 %tmp306, i32 5
   %tmp313 = insertelement <8 x i32> %tmp312, i32 undef, i32 6
   %tmp314 = insertelement <8 x i32> %tmp313, i32 undef, i32 7
-  %tmp315 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp314, <32 x i8> %tmp77, <16 x i8> %tmp79, i32 2)
+  %tmp79.bc = bitcast <16 x i8> %tmp79 to <4 x i32>
+  %tmp315 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp314, <8 x i32> %tmp77, <4 x i32> %tmp79.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp316 = extractelement <4 x float> %tmp315, i32 0
   %tmp317 = extractelement <4 x float> %tmp315, i32 1
   %tmp318 = extractelement <4 x float> %tmp315, i32 2
@@ -385,7 +389,7 @@ IF67:                                             ; preds = %LOOP65
   %tmp342 = insertelement <8 x i32> %tmp341, i32 %tmp336, i32 5
   %tmp343 = insertelement <8 x i32> %tmp342, i32 undef, i32 6
   %tmp344 = insertelement <8 x i32> %tmp343, i32 undef, i32 7
-  %tmp345 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp344, <32 x i8> %tmp61, <16 x i8> %tmp63, i32 2)
+  %tmp345 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp344, <8 x i32> %tmp61, <4 x i32> %tmp63.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp346 = extractelement <4 x float> %tmp345, i32 0
   %tmp347 = extractelement <4 x float> %tmp345, i32 1
   %tmp348 = extractelement <4 x float> %tmp345, i32 2
@@ -415,7 +419,8 @@ IF67:                                             ; preds = %LOOP65
   %tmp372 = insertelement <8 x i32> %tmp371, i32 %tmp366, i32 5
   %tmp373 = insertelement <8 x i32> %tmp372, i32 undef, i32 6
   %tmp374 = insertelement <8 x i32> %tmp373, i32 undef, i32 7
-  %tmp375 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp374, <32 x i8> %tmp69, <16 x i8> %tmp71, i32 2)
+  %tmp71.bc = bitcast <16 x i8> %tmp71 to <4 x i32>
+  %tmp375 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp374, <8 x i32> %tmp69, <4 x i32> %tmp71.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp376 = extractelement <4 x float> %tmp375, i32 0
   %tmp377 = extractelement <4 x float> %tmp375, i32 1
   %tmp378 = extractelement <4 x float> %tmp375, i32 2
@@ -469,7 +474,8 @@ IF67:                                             ; preds = %LOOP65
   %tmp426 = insertelement <8 x i32> %tmp425, i32 %tmp420, i32 5
   %tmp427 = insertelement <8 x i32> %tmp426, i32 undef, i32 6
   %tmp428 = insertelement <8 x i32> %tmp427, i32 undef, i32 7
-  %tmp429 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp428, <32 x i8> %tmp85, <16 x i8> %tmp87, i32 2)
+  %tmp87.bc = bitcast <16 x i8> %tmp87 to <4 x i32>
+  %tmp429 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp428, <8 x i32> %tmp85, <4 x i32> %tmp87.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp430 = extractelement <4 x float> %tmp429, i32 0
   %tmp431 = extractelement <4 x float> %tmp429, i32 1
   %tmp432 = extractelement <4 x float> %tmp429, i32 2
@@ -510,7 +516,8 @@ IF67:                                             ; preds = %LOOP65
   %tmp467 = insertelement <4 x i32> %tmp466, i32 %tmp464, i32 1
   %tmp468 = insertelement <4 x i32> %tmp467, i32 %tmp465, i32 2
   %tmp469 = insertelement <4 x i32> %tmp468, i32 undef, i32 3
-  %tmp470 = call <4 x float> @llvm.SI.sample.v4i32(<4 x i32> %tmp469, <32 x i8> %tmp89, <16 x i8> %tmp91, i32 4)
+  %tmp91.bc = bitcast <16 x i8> %tmp91 to <4 x i32>
+  %tmp470 = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %tmp469, <8 x i32> %tmp89, <4 x i32> %tmp91.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp471 = extractelement <4 x float> %tmp470, i32 0
   %tmp472 = extractelement <4 x float> %tmp470, i32 1
   %tmp473 = extractelement <4 x float> %tmp470, i32 2
@@ -611,7 +618,8 @@ IF67:                                             ; preds = %LOOP65
   %tmp568 = insertelement <8 x i32> %tmp567, i32 %tmp562, i32 5
   %tmp569 = insertelement <8 x i32> %tmp568, i32 undef, i32 6
   %tmp570 = insertelement <8 x i32> %tmp569, i32 undef, i32 7
-  %tmp571 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp570, <32 x i8> %tmp73, <16 x i8> %tmp75, i32 2)
+  %tmp75.bc = bitcast <16 x i8> %tmp75 to <4 x i32>
+  %tmp571 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp570, <8 x i32> %tmp73, <4 x i32> %tmp75.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp572 = extractelement <4 x float> %tmp571, i32 0
   %tmp573 = extractelement <4 x float> %tmp571, i32 1
   %tmp574 = extractelement <4 x float> %tmp571, i32 2
@@ -635,7 +643,7 @@ ENDIF66:                                          ; preds = %LOOP65
   %tmp588 = insertelement <8 x i32> %tmp587, i32 %tmp586, i32 5
   %tmp589 = insertelement <8 x i32> %tmp588, i32 undef, i32 6
   %tmp590 = insertelement <8 x i32> %tmp589, i32 undef, i32 7
-  %tmp591 = call <4 x float> @llvm.SI.sampled.v8i32(<8 x i32> %tmp590, <32 x i8> %tmp61, <16 x i8> %tmp63, i32 2)
+  %tmp591 = call <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32> %tmp590, <8 x i32> %tmp61, <4 x i32> %tmp63.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp592 = extractelement <4 x float> %tmp591, i32 3
   %tmp593 = fcmp oge float %temp30.1, %tmp592
   %tmp594 = sext i1 %tmp593 to i32
@@ -660,7 +668,7 @@ ENDIF66:                                          ; preds = %LOOP65
 
 ; CHECK-LABEL: {{^}}main1:
 ; CHECK: s_endpgm
-define void @main1([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <32 x i8>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define void @main1([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
 main_body:
   %tmp = getelementptr [17 x <16 x i8>], [17 x <16 x i8>] addrspace(2)* %arg, i64 0, i32 0
   %tmp21 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -767,40 +775,40 @@ main_body:
   %tmp122 = call float @llvm.SI.load.const(<16 x i8> %tmp21, i32 716)
   %tmp123 = call float @llvm.SI.load.const(<16 x i8> %tmp21, i32 864)
   %tmp124 = call float @llvm.SI.load.const(<16 x i8> %tmp21, i32 868)
-  %tmp125 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 0
-  %tmp126 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp125, !tbaa !0
+  %tmp125 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 0
+  %tmp126 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp125, !tbaa !0
   %tmp127 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 0
   %tmp128 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp127, !tbaa !0
-  %tmp129 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 1
-  %tmp130 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp129, !tbaa !0
+  %tmp129 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 1
+  %tmp130 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp129, !tbaa !0
   %tmp131 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 1
   %tmp132 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp131, !tbaa !0
-  %tmp133 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 2
-  %tmp134 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp133, !tbaa !0
+  %tmp133 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 2
+  %tmp134 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp133, !tbaa !0
   %tmp135 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 2
   %tmp136 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp135, !tbaa !0
-  %tmp137 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 3
-  %tmp138 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp137, !tbaa !0
+  %tmp137 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 3
+  %tmp138 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp137, !tbaa !0
   %tmp139 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 3
   %tmp140 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp139, !tbaa !0
-  %tmp141 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 4
-  %tmp142 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp141, !tbaa !0
+  %tmp141 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 4
+  %tmp142 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp141, !tbaa !0
   %tmp143 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 4
   %tmp144 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp143, !tbaa !0
-  %tmp145 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 5
-  %tmp146 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp145, !tbaa !0
+  %tmp145 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 5
+  %tmp146 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp145, !tbaa !0
   %tmp147 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 5
   %tmp148 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp147, !tbaa !0
-  %tmp149 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 6
-  %tmp150 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp149, !tbaa !0
+  %tmp149 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 6
+  %tmp150 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp149, !tbaa !0
   %tmp151 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 6
   %tmp152 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp151, !tbaa !0
-  %tmp153 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 7
-  %tmp154 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp153, !tbaa !0
+  %tmp153 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 7
+  %tmp154 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp153, !tbaa !0
   %tmp155 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 7
   %tmp156 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp155, !tbaa !0
-  %tmp157 = getelementptr [16 x <32 x i8>], [16 x <32 x i8>] addrspace(2)* %arg2, i64 0, i32 8
-  %tmp158 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp157, !tbaa !0
+  %tmp157 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(2)* %arg2, i64 0, i32 8
+  %tmp158 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp157, !tbaa !0
   %tmp159 = getelementptr [32 x <16 x i8>], [32 x <16 x i8>] addrspace(2)* %arg1, i64 0, i32 8
   %tmp160 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp159, !tbaa !0
   %tmp161 = fcmp ugt float %arg17, 0.000000e+00
@@ -868,7 +876,8 @@ main_body:
   %tmp222 = bitcast float %tmp174 to i32
   %tmp223 = insertelement <2 x i32> undef, i32 %tmp221, i32 0
   %tmp224 = insertelement <2 x i32> %tmp223, i32 %tmp222, i32 1
-  %tmp225 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp224, <32 x i8> %tmp130, <16 x i8> %tmp132, i32 2)
+  %tmp132.bc = bitcast <16 x i8> %tmp132 to <4 x i32>
+  %tmp225 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp224, <8 x i32> %tmp130, <4 x i32> %tmp132.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp226 = extractelement <4 x float> %tmp225, i32 0
   %tmp227 = extractelement <4 x float> %tmp225, i32 1
   %tmp228 = extractelement <4 x float> %tmp225, i32 2
@@ -938,7 +947,8 @@ LOOP:                                             ; preds = %LOOP, %main_body
   %tmp279 = insertelement <4 x i32> %tmp278, i32 %tmp277, i32 1
   %tmp280 = insertelement <4 x i32> %tmp279, i32 0, i32 2
   %tmp281 = insertelement <4 x i32> %tmp280, i32 undef, i32 3
-  %tmp282 = call <4 x float> @llvm.SI.samplel.v4i32(<4 x i32> %tmp281, <32 x i8> %tmp146, <16 x i8> %tmp148, i32 2)
+  %tmp148.bc = bitcast <16 x i8> %tmp148 to <4 x i32>
+  %tmp282 = call <4 x float> @llvm.SI.image.sample.l.v4i32(<4 x i32> %tmp281, <8 x i32> %tmp146, <4 x i32> %tmp148.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp283 = extractelement <4 x float> %tmp282, i32 3
   %tmp284 = fadd float %temp168.0, %tmp273
   %tmp285 = fadd float %temp169.0, %tmp274
@@ -1001,7 +1011,8 @@ IF189:                                            ; preds = %LOOP
   %tmp339 = bitcast float %tmp335 to i32
   %tmp340 = insertelement <2 x i32> undef, i32 %tmp338, i32 0
   %tmp341 = insertelement <2 x i32> %tmp340, i32 %tmp339, i32 1
-  %tmp342 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp341, <32 x i8> %tmp134, <16 x i8> %tmp136, i32 2)
+  %tmp136.bc = bitcast <16 x i8> %tmp136 to <4 x i32>
+  %tmp342 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp341, <8 x i32> %tmp134, <4 x i32> %tmp136.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp343 = extractelement <4 x float> %tmp342, i32 0
   %tmp344 = extractelement <4 x float> %tmp342, i32 1
   %tmp345 = extractelement <4 x float> %tmp342, i32 2
@@ -1033,7 +1044,8 @@ IF189:                                            ; preds = %LOOP
   %tmp359 = bitcast float %tmp337 to i32
   %tmp360 = insertelement <2 x i32> undef, i32 %tmp358, i32 0
   %tmp361 = insertelement <2 x i32> %tmp360, i32 %tmp359, i32 1
-  %tmp362 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp361, <32 x i8> %tmp150, <16 x i8> %tmp152, i32 2)
+  %tmp152.bc = bitcast <16 x i8> %tmp152 to <4 x i32>
+  %tmp362 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp361, <8 x i32> %tmp150, <4 x i32> %tmp152.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp363 = extractelement <4 x float> %tmp362, i32 2
   %tmp364 = fmul float %result.i40, %result.i
   %tmp365 = fmul float %result.i36, %result.i44
@@ -1043,7 +1055,8 @@ IF189:                                            ; preds = %LOOP
   %tmp369 = bitcast float %tmp311 to i32
   %tmp370 = insertelement <2 x i32> undef, i32 %tmp368, i32 0
   %tmp371 = insertelement <2 x i32> %tmp370, i32 %tmp369, i32 1
-  %tmp372 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp371, <32 x i8> %tmp138, <16 x i8> %tmp140, i32 2)
+  %tmp140.bc = bitcast <16 x i8> %tmp140 to <4 x i32>
+  %tmp372 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp371, <8 x i32> %tmp138, <4 x i32> %tmp140.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp373 = extractelement <4 x float> %tmp372, i32 0
   %tmp374 = extractelement <4 x float> %tmp372, i32 1
   %tmp375 = extractelement <4 x float> %tmp372, i32 2
@@ -1059,7 +1072,8 @@ IF189:                                            ; preds = %LOOP
   %tmp383 = bitcast float %tmp321 to i32
   %tmp384 = insertelement <2 x i32> undef, i32 %tmp382, i32 0
   %tmp385 = insertelement <2 x i32> %tmp384, i32 %tmp383, i32 1
-  %tmp386 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp385, <32 x i8> %tmp142, <16 x i8> %tmp144, i32 2)
+  %tmp144.bc = bitcast <16 x i8> %tmp144 to <4 x i32>
+  %tmp386 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp385, <8 x i32> %tmp142, <4 x i32> %tmp144.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp387 = extractelement <4 x float> %tmp386, i32 0
   %tmp388 = extractelement <4 x float> %tmp386, i32 1
   %tmp389 = extractelement <4 x float> %tmp386, i32 2
@@ -1155,7 +1169,8 @@ ENDIF197:                                         ; preds = %IF198, %IF189
   %tmp467 = bitcast float %tmp220 to i32
   %tmp468 = insertelement <2 x i32> undef, i32 %tmp466, i32 0
   %tmp469 = insertelement <2 x i32> %tmp468, i32 %tmp467, i32 1
-  %tmp470 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp469, <32 x i8> %tmp158, <16 x i8> %tmp160, i32 2)
+  %tmp160.bc = bitcast <16 x i8> %tmp160 to <4 x i32>
+  %tmp470 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp469, <8 x i32> %tmp158, <4 x i32> %tmp160.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp471 = extractelement <4 x float> %tmp470, i32 0
   %tmp472 = extractelement <4 x float> %tmp470, i32 1
   %tmp473 = extractelement <4 x float> %tmp470, i32 2
@@ -1172,7 +1187,8 @@ ENDIF197:                                         ; preds = %IF198, %IF189
   %tmp484 = bitcast float %tmp172 to i32
   %tmp485 = insertelement <2 x i32> undef, i32 %tmp483, i32 0
   %tmp486 = insertelement <2 x i32> %tmp485, i32 %tmp484, i32 1
-  %tmp487 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> %tmp486, <32 x i8> %tmp154, <16 x i8> %tmp156, i32 2)
+  %tmp156.bc = bitcast <16 x i8> %tmp156 to <4 x i32>
+  %tmp487 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp486, <8 x i32> %tmp154, <4 x i32> %tmp156.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp488 = extractelement <4 x float> %tmp487, i32 0
   %tmp489 = extractelement <4 x float> %tmp487, i32 1
   %tmp490 = extractelement <4 x float> %tmp487, i32 2
@@ -1377,7 +1393,8 @@ ENDIF209:                                         ; preds = %ELSE214, %ELSE211, 
   %tmp657 = insertelement <4 x i32> %tmp656, i32 %tmp654, i32 1
   %tmp658 = insertelement <4 x i32> %tmp657, i32 %tmp655, i32 2
   %tmp659 = insertelement <4 x i32> %tmp658, i32 undef, i32 3
-  %tmp660 = call <4 x float> @llvm.SI.samplel.v4i32(<4 x i32> %tmp659, <32 x i8> %tmp126, <16 x i8> %tmp128, i32 2)
+  %tmp128.bc = bitcast <16 x i8> %tmp128 to <4 x i32>
+  %tmp660 = call <4 x float> @llvm.SI.image.sample.l.v4i32(<4 x i32> %tmp659, <8 x i32> %tmp126, <4 x i32> %tmp128.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp661 = extractelement <4 x float> %tmp660, i32 0
   %tmp662 = extractelement <4 x float> %tmp660, i32 1
   %tmp663 = bitcast float %tmp646 to i32
@@ -1387,7 +1404,7 @@ ENDIF209:                                         ; preds = %ELSE214, %ELSE211, 
   %tmp667 = insertelement <4 x i32> %tmp666, i32 %tmp664, i32 1
   %tmp668 = insertelement <4 x i32> %tmp667, i32 %tmp665, i32 2
   %tmp669 = insertelement <4 x i32> %tmp668, i32 undef, i32 3
-  %tmp670 = call <4 x float> @llvm.SI.samplel.v4i32(<4 x i32> %tmp669, <32 x i8> %tmp126, <16 x i8> %tmp128, i32 2)
+  %tmp670 = call <4 x float> @llvm.SI.image.sample.l.v4i32(<4 x i32> %tmp669, <8 x i32> %tmp126, <4 x i32> %tmp128.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp671 = extractelement <4 x float> %tmp670, i32 0
   %tmp672 = extractelement <4 x float> %tmp670, i32 1
   %tmp673 = fsub float -0.000000e+00, %tmp662
@@ -1549,10 +1566,11 @@ ELSE214:                                          ; preds = %ELSE211
 declare float @llvm.AMDGPU.clamp.f32(float, float, float) #1
 
 ; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.sample.v2i32(<2 x i32>, <32 x i8>, <16 x i8>, i32) #2
+declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.samplel.v4i32(<4 x i32>, <32 x i8>, <16 x i8>, i32) #2
+declare <4 x float> @llvm.SI.image.sample.l.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #2
+
 
 declare float @llvm.exp2.f32(float) #2
 
@@ -1572,7 +1590,7 @@ declare float @ceil(float) #3
 declare float @llvm.amdgcn.rsq.f32(float) #2
 
 ; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.sampled.v8i32(<8 x i32>, <32 x i8>, <16 x i8>, i32) #2
+declare <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #2
 
 ; Function Attrs: readnone
 declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #1
@@ -1581,7 +1599,8 @@ declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #1
 declare float @fabs(float) #1
 
 ; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.sample.v4i32(<4 x i32>, <32 x i8>, <16 x i8>, i32) #2
+declare <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #2
+
 
 ; Function Attrs: nounwind readnone
 declare float @llvm.pow.f32(float, float) #2
