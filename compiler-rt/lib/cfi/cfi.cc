@@ -26,13 +26,15 @@ typedef ElfW(Ehdr) Elf_Ehdr;
 #include "ubsan/ubsan_init.h"
 #include "ubsan/ubsan_flags.h"
 
+namespace __cfi {
+
 static constexpr uptr kCfiShadowPointerStorageSize = 4096; // 1 page
 // Lets hope that the data segment is mapped with 4K pages.
 // The pointer to the cfi shadow region is stored at the start of this page.
 // The rest of the page is unused and re-mapped read-only.
-static char __cfi_shadow_pointer_storage[kCfiShadowPointerStorageSize]
+static char cfi_shadow_pointer_storage[kCfiShadowPointerStorageSize]
     __attribute__((aligned(kCfiShadowPointerStorageSize)));
-static uptr __cfi_shadow_size;
+static uptr cfi_shadow_size;
 static constexpr uptr kShadowGranularity = 12;
 static constexpr uptr kShadowAlign = 1UL << kShadowGranularity; // 4096
 
@@ -41,10 +43,10 @@ static constexpr uint16_t kUncheckedShadow = 0xFFFFU;
 
 // Get the start address of the CFI shadow region.
 uptr GetShadow() {
-  return *reinterpret_cast<uptr *>(&__cfi_shadow_pointer_storage);
+  return *reinterpret_cast<uptr *>(&cfi_shadow_pointer_storage);
 }
 
-static uint16_t *MemToShadow(uptr x, uptr shadow_base) {
+uint16_t *MemToShadow(uptr x, uptr shadow_base) {
   return (uint16_t *)(shadow_base + ((x >> kShadowGranularity) << 1));
 }
 
@@ -93,9 +95,8 @@ public:
 };
 
 void ShadowBuilder::Start() {
-  shadow_ = (uptr)MmapNoReserveOrDie(__cfi_shadow_size, "CFI shadow");
-  VReport(1, "CFI: shadow at %zx .. %zx\n", shadow_,
-          shadow_ + __cfi_shadow_size);
+  shadow_ = (uptr)MmapNoReserveOrDie(cfi_shadow_size, "CFI shadow");
+  VReport(1, "CFI: shadow at %zx .. %zx\n", shadow_, shadow_ + cfi_shadow_size);
 }
 
 void ShadowBuilder::AddUnchecked(uptr begin, uptr end) {
@@ -121,19 +122,19 @@ void ShadowBuilder::Add(uptr begin, uptr end, uptr cfi_check) {
 
 #if SANITIZER_LINUX
 void ShadowBuilder::Install() {
-  MprotectReadOnly(shadow_, __cfi_shadow_size);
+  MprotectReadOnly(shadow_, cfi_shadow_size);
   uptr main_shadow = GetShadow();
   if (main_shadow) {
     // Update.
-    void *res = mremap((void *)shadow_, __cfi_shadow_size, __cfi_shadow_size,
+    void *res = mremap((void *)shadow_, cfi_shadow_size, cfi_shadow_size,
                        MREMAP_MAYMOVE | MREMAP_FIXED, main_shadow);
     CHECK(res != MAP_FAILED);
   } else {
     // Initial setup.
     CHECK_EQ(kCfiShadowPointerStorageSize, GetPageSizeCached());
     CHECK_EQ(0, GetShadow());
-    *reinterpret_cast<uptr *>(&__cfi_shadow_pointer_storage) = shadow_;
-    MprotectReadOnly((uptr)&__cfi_shadow_pointer_storage,
+    *reinterpret_cast<uptr *>(&cfi_shadow_pointer_storage) = shadow_;
+    MprotectReadOnly((uptr)&cfi_shadow_pointer_storage,
                      kCfiShadowPointerStorageSize);
     CHECK_EQ(shadow_, GetShadow());
   }
@@ -147,7 +148,7 @@ void ShadowBuilder::Install() {
 // Other platforms can, hopefully, just do
 //    dlopen(RTLD_NOLOAD | RTLD_LAZY)
 //    dlsym("__cfi_check").
-static uptr find_cfi_check_in_dso(dl_phdr_info *info) {
+uptr find_cfi_check_in_dso(dl_phdr_info *info) {
   const ElfW(Dyn) *dynamic = nullptr;
   for (int i = 0; i < info->dlpi_phnum; ++i) {
     if (info->dlpi_phdr[i].p_type == PT_DYNAMIC) {
@@ -201,7 +202,7 @@ static uptr find_cfi_check_in_dso(dl_phdr_info *info) {
   return 0;
 }
 
-static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *data) {
+int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *data) {
   uptr cfi_check = find_cfi_check_in_dso(info);
   if (cfi_check)
     VReport(1, "Module '%s' __cfi_check %zx\n", info->dlpi_name, cfi_check);
@@ -230,29 +231,29 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *data) {
 }
 
 // Init or update shadow for the current set of loaded libraries.
-static void UpdateShadow() {
+void UpdateShadow() {
   ShadowBuilder b;
   b.Start();
   dl_iterate_phdr(dl_iterate_phdr_cb, &b);
   b.Install();
 }
 
-static void InitShadow() {
+void InitShadow() {
   // No difference, really.
   UpdateShadow();
 }
 
-static THREADLOCAL int in_loader;
-static BlockingMutex shadow_update_lock(LINKER_INITIALIZED);
+THREADLOCAL int in_loader;
+BlockingMutex shadow_update_lock(LINKER_INITIALIZED);
 
-static void EnterLoader() {
+void EnterLoader() {
   if (in_loader == 0) {
     shadow_update_lock.Lock();
   }
   ++in_loader;
 }
 
-static void ExitLoader() {
+void ExitLoader() {
   CHECK(in_loader > 0);
   --in_loader;
   UpdateShadow();
@@ -261,29 +262,7 @@ static void ExitLoader() {
   }
 }
 
-// Setup shadow for dlopen()ed libraries.
-// The actual shadow setup happens after dlopen() returns, which means that
-// a library can not be a target of any CFI checks while its constructors are
-// running. It's unclear how to fix this without some extra help from libc.
-// In glibc, mmap inside dlopen is not interceptable.
-// Maybe a seccomp-bpf filter?
-// We could insert a high-priority constructor into the library, but that would
-// not help with the uninstrumented libraries.
-INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
-  EnterLoader();
-  void *handle = REAL(dlopen)(filename, flag);
-  ExitLoader();
-  return handle;
-}
-
-INTERCEPTOR(int, dlclose, void *handle) {
-  EnterLoader();
-  int res = REAL(dlclose)(handle);
-  ExitLoader();
-  return res;
-}
-
-static ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
+ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
                                             void *DiagData) {
   uptr Addr = (uptr)Ptr;
   VReport(3, "__cfi_slowpath: %llx, %p\n", CallSiteTypeId, Ptr);
@@ -307,17 +286,7 @@ static ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
   cfi_check(CallSiteTypeId, Ptr, DiagData);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__cfi_slowpath(u64 CallSiteTypeId, void *Ptr) {
-  CfiSlowPathCommon(CallSiteTypeId, Ptr, nullptr);
-}
-
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__cfi_slowpath_diag(u64 CallSiteTypeId, void *Ptr, void *DiagData) {
-  CfiSlowPathCommon(CallSiteTypeId, Ptr, DiagData);
-}
-
-static void InitializeFlags() {
+void InitializeFlags() {
   SetCommonFlagsDefaults();
 #ifdef CFI_ENABLE_DIAG
   __ubsan::Flags *uf = __ubsan::flags();
@@ -347,6 +316,42 @@ static void InitializeFlags() {
   }
 }
 
+} // namespace __cfi
+
+using namespace __cfi;
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__cfi_slowpath(u64 CallSiteTypeId, void *Ptr) {
+  CfiSlowPathCommon(CallSiteTypeId, Ptr, nullptr);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__cfi_slowpath_diag(u64 CallSiteTypeId, void *Ptr, void *DiagData) {
+  CfiSlowPathCommon(CallSiteTypeId, Ptr, DiagData);
+}
+
+// Setup shadow for dlopen()ed libraries.
+// The actual shadow setup happens after dlopen() returns, which means that
+// a library can not be a target of any CFI checks while its constructors are
+// running. It's unclear how to fix this without some extra help from libc.
+// In glibc, mmap inside dlopen is not interceptable.
+// Maybe a seccomp-bpf filter?
+// We could insert a high-priority constructor into the library, but that would
+// not help with the uninstrumented libraries.
+INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
+  EnterLoader();
+  void *handle = REAL(dlopen)(filename, flag);
+  ExitLoader();
+  return handle;
+}
+
+INTERCEPTOR(int, dlclose, void *handle) {
+  EnterLoader();
+  int res = REAL(dlclose)(handle);
+  ExitLoader();
+  return res;
+}
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 #if !SANITIZER_CAN_USE_PREINIT_ARRAY
 // On ELF platforms, the constructor is invoked using .preinit_array (see below)
@@ -358,8 +363,8 @@ void __cfi_init() {
 
   uptr vma = GetMaxVirtualAddress();
   // Shadow is 2 -> 2**kShadowGranularity.
-  __cfi_shadow_size = (vma >> (kShadowGranularity - 1)) + 1;
-  VReport(1, "CFI: VMA size %zx, shadow size %zx\n", vma, __cfi_shadow_size);
+  cfi_shadow_size = (vma >> (kShadowGranularity - 1)) + 1;
+  VReport(1, "CFI: VMA size %zx, shadow size %zx\n", vma, cfi_shadow_size);
 
   InitShadow();
 

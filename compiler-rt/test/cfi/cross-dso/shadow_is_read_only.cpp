@@ -33,10 +33,13 @@ extern "C" A *create_A() { return new A(); }
 #else
 
 constexpr unsigned kShadowGranularity = 12;
+
+namespace __cfi {
 uintptr_t GetShadow();
+}
 
 void write_shadow(void *ptr) {
-  uintptr_t base = GetShadow();
+  uintptr_t base = __cfi::GetShadow();
   uint16_t *s =
       (uint16_t *)(base + (((uintptr_t)ptr >> kShadowGranularity) << 1));
   fprintf(stderr, "going to crash\n");
