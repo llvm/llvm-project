@@ -7,7 +7,7 @@
 ; CHECK:      .section        __TEXT,__text,regular,pure_instructions
 ; CHECK-NEXT: .syntax unified
 ; CHECK-NEXT: .globl  _f
-; CHECK-NEXT: .align  2
+; CHECK-NEXT: .p2align  2
 ; CHECK-NEXT: _f:                    @ @f
 
 ; CHECK:  .section        __DWARF,__debug_str,regular,debug
