@@ -554,18 +554,18 @@ int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
   for (I = 0; I <= IPVK_Last; I++) {
     uint16_t N = NumValueSites[I];
     if (!N) {
-      RuntimeRecord->SiteCountArray[I] = 0;
+      RuntimeRecord->SiteCountArray[I] = nullptr;
       continue;
     }
     NumValueKinds++;
     RuntimeRecord->SiteCountArray[I] = (uint8_t *)calloc(N, 1);
     if (!RuntimeRecord->SiteCountArray[I])
       return 1;
-    RuntimeRecord->NodesKind[I] = Nodes ? &Nodes[S] : NULL;
+    RuntimeRecord->NodesKind[I] = Nodes ? &Nodes[S] : nullptr;
     for (J = 0; J < N; J++) {
       /* Compute value count for each site. */
       uint32_t C = 0;
-      ValueProfNode *Site = Nodes ? RuntimeRecord->NodesKind[I][J] : NULL;
+      ValueProfNode *Site = Nodes ? RuntimeRecord->NodesKind[I][J] : nullptr;
       while (Site) {
         C++;
         Site = Site->Next;
@@ -606,7 +606,7 @@ uint32_t getNumValueDataForSiteRT(const void *R, uint32_t VK, uint32_t S) {
 uint32_t getNumValueDataRT(const void *R, uint32_t VK) {
   unsigned I, S = 0;
   const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
-  if (Record->SiteCountArray[VK] == 0)
+  if (Record->SiteCountArray[VK] == nullptr)
     return 0;
   for (I = 0; I < Record->NumValueSites[VK]; I++)
     S += Record->SiteCountArray[VK][I];
@@ -631,12 +631,12 @@ ValueProfData *allocValueProfDataRT(size_t TotalSizeInBytes) {
   return (ValueProfData *)calloc(TotalSizeInBytes, 1);
 }
 
-static ValueProfRecordClosure RTRecordClosure = {0,
+static ValueProfRecordClosure RTRecordClosure = {nullptr,
                                                  getNumValueKindsRT,
                                                  getNumValueSitesRT,
                                                  getNumValueDataRT,
                                                  getNumValueDataForSiteRT,
-                                                 0,
+                                                 nullptr,
                                                  getValueForSiteRT,
                                                  allocValueProfDataRT};
 
@@ -663,17 +663,15 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
   return serializeValueProfDataFrom(&RTRecordClosure, DstData);
 }
 
-
 #undef INSTR_PROF_COMMON_API_IMPL
 #endif /* INSTR_PROF_COMMON_API_IMPL */
 
 /*============================================================================*/
 
-
 #ifndef INSTR_PROF_DATA_DEFINED
 
-#ifndef INSTR_PROF_DATA_INC_
-#define INSTR_PROF_DATA_INC_
+#ifndef INSTR_PROF_DATA_INC
+#define INSTR_PROF_DATA_INC
 
 /* Helper macros.  */
 #define INSTR_PROF_SIMPLE_QUOTE(x) #x
@@ -760,7 +758,7 @@ typedef struct ValueProfNode {
   struct ValueProfNode *Next;
 } ValueProfNode;
 
-#endif /* INSTR_PROF_DATA_INC_ */
+#endif /* INSTR_PROF_DATA_INC */
 
 #else
 #undef INSTR_PROF_DATA_DEFINED

@@ -178,7 +178,8 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
 
   bool IsPossible = !BaseMD->isImplicit() && !isa<CXXConstructorDecl>(BaseMD) &&
                     !isa<CXXDestructorDecl>(BaseMD) && BaseMD->isVirtual() &&
-                    !BaseMD->isOverloadedOperator();
+                    !BaseMD->isOverloadedOperator() &&
+                    !isa<CXXConversionDecl>(BaseMD);
   PossibleMap[Id] = IsPossible;
   return IsPossible;
 }
@@ -210,8 +211,9 @@ void VirtualNearMissCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   Finder->addMatcher(
-      cxxMethodDecl(unless(anyOf(isOverride(), isImplicit(),
-                                 cxxConstructorDecl(), cxxDestructorDecl())))
+      cxxMethodDecl(
+          unless(anyOf(isOverride(), isImplicit(), cxxConstructorDecl(),
+                       cxxDestructorDecl(), cxxConversionDecl())))
           .bind("method"),
       this);
 }

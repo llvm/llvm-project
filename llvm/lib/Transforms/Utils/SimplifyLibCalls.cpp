@@ -915,11 +915,89 @@ Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilder<> &B) {
   return CI->getArgOperand(0);
 }
 
+// TODO: Does this belong in BuildLibCalls or should all of those similar
+// functions be moved here?
+static Value *emitCalloc(Value *Num, Value *Size, const AttributeSet &Attrs,
+                         IRBuilder<> &B, const TargetLibraryInfo &TLI) {
+  LibFunc::Func Func;
+  if (!TLI.getLibFunc("calloc", Func) || !TLI.has(Func))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  const DataLayout &DL = M->getDataLayout();
+  IntegerType *PtrType = DL.getIntPtrType((B.GetInsertBlock()->getContext()));
+  Value *Calloc = M->getOrInsertFunction("calloc", Attrs, B.getInt8PtrTy(),
+                                         PtrType, PtrType, nullptr);
+  CallInst *CI = B.CreateCall(Calloc, { Num, Size }, "calloc");
+
+  if (const auto *F = dyn_cast<Function>(Calloc->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+/// Fold memset[_chk](malloc(n), 0, n) --> calloc(1, n).
+static Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B,
+                               const TargetLibraryInfo &TLI) {
+  // This has to be a memset of zeros (bzero).
+  auto *FillValue = dyn_cast<ConstantInt>(Memset->getArgOperand(1));
+  if (!FillValue || FillValue->getZExtValue() != 0)
+    return nullptr;
+
+  // TODO: We should handle the case where the malloc has more than one use.
+  // This is necessary to optimize common patterns such as when the result of
+  // the malloc is checked against null or when a memset intrinsic is used in
+  // place of a memset library call.
+  auto *Malloc = dyn_cast<CallInst>(Memset->getArgOperand(0));
+  if (!Malloc || !Malloc->hasOneUse())
+    return nullptr;
+
+  // Is the inner call really malloc()?
+  Function *InnerCallee = Malloc->getCalledFunction();
+  LibFunc::Func Func;
+  if (!TLI.getLibFunc(InnerCallee->getName(), Func) || !TLI.has(Func) ||
+      Func != LibFunc::malloc)
+    return nullptr;
+
+  // Matching the name is not good enough. Make sure the parameter and return
+  // type match the standard library signature.
+  FunctionType *FT = InnerCallee->getFunctionType();
+  if (FT->getNumParams() != 1 || !FT->getParamType(0)->isIntegerTy())
+    return nullptr;
+
+  auto *RetType = dyn_cast<PointerType>(FT->getReturnType());
+  if (!RetType || !RetType->getPointerElementType()->isIntegerTy(8))
+    return nullptr;
+
+  // The memset must cover the same number of bytes that are malloc'd.
+  if (Memset->getArgOperand(2) != Malloc->getArgOperand(0))
+    return nullptr;
+
+  // Replace the malloc with a calloc. We need the data layout to know what the
+  // actual size of a 'size_t' parameter is. 
+  B.SetInsertPoint(Malloc->getParent(), ++Malloc->getIterator());
+  const DataLayout &DL = Malloc->getModule()->getDataLayout();
+  IntegerType *SizeType = DL.getIntPtrType(B.GetInsertBlock()->getContext());
+  Value *Calloc = emitCalloc(ConstantInt::get(SizeType, 1),
+                             Malloc->getArgOperand(0), Malloc->getAttributes(),
+                             B, TLI);
+  if (!Calloc)
+    return nullptr;
+
+  Malloc->replaceAllUsesWith(Calloc);
+  Malloc->eraseFromParent();
+
+  return Calloc;
+}
+
 Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
 
   if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memset))
     return nullptr;
+
+  if (auto *Calloc = foldMallocMemset(CI, B, *TLI))
+    return Calloc;
 
   // memset(p, v, n) -> llvm.memset(p, v, n, 1)
   Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
@@ -2170,6 +2248,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeLog(CI, Builder);
     case Intrinsic::sqrt:
       return optimizeSqrt(CI, Builder);
+    // TODO: Use foldMallocMemset() with memset intrinsic.
     default:
       return nullptr;
     }
@@ -2432,6 +2511,8 @@ Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
 
   if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memset_chk))
     return nullptr;
+
+  // TODO: Try foldMallocMemset() here.
 
   if (isFortifiedCallFoldable(CI, 3, 2, false)) {
     Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);

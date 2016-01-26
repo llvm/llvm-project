@@ -257,7 +257,7 @@ public:
 
     if (CreateGlobalVar)
       FuncNameVar = createPGOFuncNameVar(F, FuncName);
-  };
+  }
 };
 
 // Compute Hash value for the CFG: the lower 32 bits are CRC32 of the index
@@ -690,7 +690,7 @@ void PGOUseFunc::setBranchWeights() {
       const PGOUseEdge *E = BBCountInfo.OutEdges[s];
       const BasicBlock *SrcBB = E->SrcBB;
       const BasicBlock *DestBB = E->DestBB;
-      if (DestBB == 0)
+      if (DestBB == nullptr)
         continue;
       unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
       uint64_t EdgeCount = E->CountValue;

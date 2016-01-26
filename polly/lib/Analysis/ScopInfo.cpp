@@ -524,8 +524,9 @@ void MemoryAccess::assumeNoOutOfBound() {
   // bail out more often than strictly necessary.
   Outside = isl_set_remove_divs(Outside);
   Outside = isl_set_complement(Outside);
-  Statement->getParent()->addAssumption(INBOUNDS, Outside,
-                                        getAccessInstruction()->getDebugLoc());
+  Statement->getParent()->addAssumption(
+      INBOUNDS, Outside,
+      getAccessInstruction() ? getAccessInstruction()->getDebugLoc() : nullptr);
   isl_space_free(Space);
 }
 
@@ -905,6 +906,22 @@ void ScopStmt::addAccess(MemoryAccess *Access) {
   if (Access->isArrayKind()) {
     MemoryAccessList &MAL = InstructionToAccess[AccessInst];
     MAL.emplace_front(Access);
+  } else if (Access->isValueKind() && Access->isWrite()) {
+    Instruction *AccessVal = cast<Instruction>(Access->getAccessValue());
+    assert(Parent.getStmtForBasicBlock(AccessVal->getParent()) == this);
+    assert(!ValueWrites.lookup(AccessVal));
+
+    ValueWrites[AccessVal] = Access;
+  } else if (Access->isValueKind() && Access->isRead()) {
+    Value *AccessVal = Access->getAccessValue();
+    assert(!ValueReads.lookup(AccessVal));
+
+    ValueReads[AccessVal] = Access;
+  } else if (Access->isAnyPHIKind() && Access->isWrite()) {
+    PHINode *PHI = cast<PHINode>(Access->getBaseAddr());
+    assert(!PHIWrites.lookup(PHI));
+
+    PHIWrites[PHI] = Access;
   }
 
   MemAccs.push_back(Access);
@@ -1467,6 +1484,10 @@ void ScopStmt::dump() const { print(dbgs()); }
 void ScopStmt::removeMemoryAccesses(MemoryAccessList &InvMAs) {
   // Remove all memory accesses in @p InvMAs from this statement
   // together with all scalar accesses that were caused by them.
+  // MK_Value READs have no access instruction, hence would not be removed by
+  // this function. However, it is only used for invariant LoadInst accesses,
+  // its arguments are always affine, hence synthesizable, and therefore there
+  // are no MK_Value READ accesses to be removed.
   for (MemoryAccess *MA : InvMAs) {
     auto Predicate = [&](MemoryAccess *Acc) {
       return Acc->getAccessInstruction() == MA->getAccessInstruction();
@@ -2040,11 +2061,12 @@ void Scop::removeErrorBlockDomains() {
 
 void Scop::buildDomains(Region *R) {
 
+  bool IsOnlyNonAffineRegion = SD.isNonAffineSubRegion(R, R);
   auto *EntryBB = R->getEntry();
-  int LD = getRelativeLoopDepth(LI.getLoopFor(EntryBB));
+  auto *L = IsOnlyNonAffineRegion ? nullptr : LI.getLoopFor(EntryBB);
+  int LD = getRelativeLoopDepth(L);
   auto *S = isl_set_universe(isl_space_set_alloc(getIslCtx(), 0, LD + 1));
 
-  Loop *L = LI.getLoopFor(EntryBB);
   while (LD-- >= 0) {
     S = addDomainDimId(S, LD + 1, L);
     L = L->getParentLoop();
@@ -2052,7 +2074,7 @@ void Scop::buildDomains(Region *R) {
 
   DomainMap[EntryBB] = S;
 
-  if (SD.isNonAffineSubRegion(R, R))
+  if (IsOnlyNonAffineRegion)
     return;
 
   buildDomainsWithBranchConstraints(R);
@@ -2070,7 +2092,7 @@ void Scop::buildDomains(Region *R) {
 }
 
 void Scop::buildDomainsWithBranchConstraints(Region *R) {
-  RegionInfo &RI = *R->getRegionInfo();
+  auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
 
   // To create the domain for each block in R we iterate over all blocks and
   // subregions in R and propagate the conditions under which the current region
@@ -2145,10 +2167,8 @@ void Scop::buildDomainsWithBranchConstraints(Region *R) {
       // Do not adjust the number of dimensions if we enter a boxed loop or are
       // in a non-affine subregion or if the surrounding loop stays the same.
       Loop *SuccBBLoop = LI.getLoopFor(SuccBB);
-      Region *SuccRegion = RI.getRegionFor(SuccBB);
-      if (SD.isNonAffineSubRegion(SuccRegion, &getRegion()))
-        while (SuccBBLoop && SuccRegion->contains(SuccBBLoop))
-          SuccBBLoop = SuccBBLoop->getParentLoop();
+      while (BoxedLoops.count(SuccBBLoop))
+        SuccBBLoop = SuccBBLoop->getParentLoop();
 
       if (BBLoop != SuccBBLoop) {
 
@@ -3554,14 +3574,14 @@ void ScopInfo::buildPHIAccesses(PHINode *PHI, Region &R,
       // OpBB if the definition is not in OpBB.
       if (scop->getStmtForBasicBlock(OpIBB) !=
           scop->getStmtForBasicBlock(OpBB)) {
-        addValueReadAccess(OpI, PHI, OpBB);
-        addValueWriteAccess(OpI);
+        ensureValueRead(OpI, OpBB);
+        ensureValueWrite(OpI);
       }
     } else if (ModelReadOnlyScalars && !isa<Constant>(Op)) {
-      addValueReadAccess(Op, PHI, OpBB);
+      ensureValueRead(Op, OpBB);
     }
 
-    addPHIWriteAccess(PHI, OpBB, Op, IsExitBlock);
+    ensurePHIWrite(PHI, OpBB, Op, IsExitBlock);
   }
 
   if (!OnlyNonAffineSubRegionOperands && !IsExitBlock) {
@@ -3658,7 +3678,7 @@ bool ScopInfo::buildScalarDependences(Instruction *Inst, Region *R,
     // Do not build a read access that is not in the current SCoP
     // Use the def instruction as base address of the MemoryAccess, so that it
     // will become the name of the scalar access in the polyhedral form.
-    addValueReadAccess(Inst, UI);
+    ensureValueRead(Inst, UI->getParent());
   }
 
   if (ModelReadOnlyScalars && !isa<PHINode>(Inst)) {
@@ -3673,7 +3693,7 @@ bool ScopInfo::buildScalarDependences(Instruction *Inst, Region *R,
       if (isa<Constant>(Op))
         continue;
 
-      addValueReadAccess(Op, Inst);
+      ensureValueRead(Op, Inst->getParent());
     }
   }
 
@@ -3874,24 +3894,24 @@ void ScopInfo::buildAccessFunctions(Region &R, BasicBlock &BB,
 
     if (buildScalarDependences(Inst, &R, NonAffineSubRegion)) {
       if (!isa<StoreInst>(Inst))
-        addValueWriteAccess(Inst);
+        ensureValueWrite(Inst);
     }
   }
 }
 
-void ScopInfo::addMemoryAccess(BasicBlock *BB, Instruction *Inst,
-                               MemoryAccess::AccessType Type,
-                               Value *BaseAddress, unsigned ElemBytes,
-                               bool Affine, Value *AccessValue,
-                               ArrayRef<const SCEV *> Subscripts,
-                               ArrayRef<const SCEV *> Sizes,
-                               ScopArrayInfo::MemoryKind Kind) {
+MemoryAccess *ScopInfo::addMemoryAccess(BasicBlock *BB, Instruction *Inst,
+                                        MemoryAccess::AccessType Type,
+                                        Value *BaseAddress, unsigned ElemBytes,
+                                        bool Affine, Value *AccessValue,
+                                        ArrayRef<const SCEV *> Subscripts,
+                                        ArrayRef<const SCEV *> Sizes,
+                                        ScopArrayInfo::MemoryKind Kind) {
   ScopStmt *Stmt = scop->getStmtForBasicBlock(BB);
 
   // Do not create a memory access for anything not in the SCoP. It would be
   // ignored anyway.
   if (!Stmt)
-    return;
+    return nullptr;
 
   AccFuncSetType &AccList = AccFuncMap[BB];
   Value *BaseAddr = BaseAddress;
@@ -3912,12 +3932,19 @@ void ScopInfo::addMemoryAccess(BasicBlock *BB, Instruction *Inst,
       isKnownMustAccess = true;
   }
 
+  // Non-affine PHI writes do not "happen" at a particular instruction, but
+  // after exiting the statement. Therefore they are guaranteed execute and
+  // overwrite the old value.
+  if (Kind == ScopArrayInfo::MK_PHI || Kind == ScopArrayInfo::MK_ExitPHI)
+    isKnownMustAccess = true;
+
   if (!isKnownMustAccess && Type == MemoryAccess::MUST_WRITE)
     Type = MemoryAccess::MAY_WRITE;
 
   AccList.emplace_back(Stmt, Inst, Type, BaseAddress, ElemBytes, Affine,
                        Subscripts, Sizes, AccessValue, Kind, BaseName);
   Stmt->addAccess(&AccList.back());
+  return &AccList.back();
 }
 
 void ScopInfo::addArrayAccess(Instruction *MemAccInst,
@@ -3932,30 +3959,56 @@ void ScopInfo::addArrayAccess(Instruction *MemAccInst,
                   ElemBytes, IsAffine, AccessValue, Subscripts, Sizes,
                   ScopArrayInfo::MK_Array);
 }
-void ScopInfo::addValueWriteAccess(Instruction *Value) {
+void ScopInfo::ensureValueWrite(Instruction *Value) {
+  ScopStmt *Stmt = scop->getStmtForBasicBlock(Value->getParent());
+
+  // Value not defined within this SCoP.
+  if (!Stmt)
+    return;
+
+  // Do not process further if the value is already written.
+  if (Stmt->lookupValueWriteOf(Value))
+    return;
+
   addMemoryAccess(Value->getParent(), Value, MemoryAccess::MUST_WRITE, Value, 1,
                   true, Value, ArrayRef<const SCEV *>(),
                   ArrayRef<const SCEV *>(), ScopArrayInfo::MK_Value);
 }
-void ScopInfo::addValueReadAccess(Value *Value, Instruction *User) {
-  assert(!isa<PHINode>(User));
-  addMemoryAccess(User->getParent(), User, MemoryAccess::READ, Value, 1, true,
-                  Value, ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
-                  ScopArrayInfo::MK_Value);
-}
-void ScopInfo::addValueReadAccess(Value *Value, PHINode *User,
-                                  BasicBlock *UserBB) {
-  addMemoryAccess(UserBB, User, MemoryAccess::READ, Value, 1, true, Value,
+void ScopInfo::ensureValueRead(Value *Value, BasicBlock *UserBB) {
+  ScopStmt *UserStmt = scop->getStmtForBasicBlock(UserBB);
+
+  // We do not model uses outside the scop.
+  if (!UserStmt)
+    return;
+
+  // Do not create another MemoryAccess for reloading the value if one already
+  // exists.
+  if (UserStmt->lookupValueReadOf(Value))
+    return;
+
+  addMemoryAccess(UserBB, nullptr, MemoryAccess::READ, Value, 1, true, Value,
                   ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
                   ScopArrayInfo::MK_Value);
 }
-void ScopInfo::addPHIWriteAccess(PHINode *PHI, BasicBlock *IncomingBlock,
-                                 Value *IncomingValue, bool IsExitBlock) {
-  addMemoryAccess(IncomingBlock, IncomingBlock->getTerminator(),
-                  MemoryAccess::MUST_WRITE, PHI, 1, true, IncomingValue,
-                  ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
-                  IsExitBlock ? ScopArrayInfo::MK_ExitPHI
-                              : ScopArrayInfo::MK_PHI);
+void ScopInfo::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
+                              Value *IncomingValue, bool IsExitBlock) {
+  ScopStmt *IncomingStmt = scop->getStmtForBasicBlock(IncomingBlock);
+
+  // Do not add more than one MemoryAccess per PHINode and ScopStmt.
+  if (MemoryAccess *Acc = IncomingStmt->lookupPHIWriteOf(PHI)) {
+    assert(Acc->getAccessInstruction() == PHI);
+    Acc->addIncoming(IncomingBlock, IncomingValue);
+    return;
+  }
+
+  MemoryAccess *Acc = addMemoryAccess(
+      IncomingStmt->isBlockStmt() ? IncomingBlock
+                                  : IncomingStmt->getRegion()->getEntry(),
+      PHI, MemoryAccess::MUST_WRITE, PHI, 1, true, PHI,
+      ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
+      IsExitBlock ? ScopArrayInfo::MK_ExitPHI : ScopArrayInfo::MK_PHI);
+  assert(Acc);
+  Acc->addIncoming(IncomingBlock, IncomingValue);
 }
 void ScopInfo::addPHIReadAccess(PHINode *PHI) {
   addMemoryAccess(PHI->getParent(), PHI, MemoryAccess::READ, PHI, 1, true, PHI,

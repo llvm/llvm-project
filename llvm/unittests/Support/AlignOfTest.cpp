@@ -1,4 +1,4 @@
-//=== - llvm/unittest/Support/AlignOfTest.cpp - Alignment utility tests ----===//
+//=== - llvm/unittest/Support/AlignOfTest.cpp - Alignment utility tests ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -90,14 +90,14 @@ V7::~V7() {}
 V8::~V8() {}
 
 struct Abstract1 {
-  virtual ~Abstract1() {}
+  virtual ~Abstract1() = default;
   virtual void method() = 0;
 
   char c;
 };
 
 struct Abstract2 : Abstract1 {
-  virtual ~Abstract2() {}
+  ~Abstract2() override = default;
   double d;
 };
 
@@ -354,4 +354,4 @@ TEST(AlignOfTest, BasicAlignedArray) {
   EXPECT_EQ(2u, sizeof(AlignedCharArray<2, 2>));
   EXPECT_EQ(16u, sizeof(AlignedCharArray<2, 16>));
 }
-}
+} // end anonymous namespace

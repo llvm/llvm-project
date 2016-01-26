@@ -16,7 +16,18 @@ define i8* @test_simplify1(i8* %mem, i32 %val, i32 %size) {
 ; CHECK: ret i8* %mem
 }
 
+define i8* @pr25892_lite(i32 %size) #0 {
+  %call1 = call i8* @malloc(i32 %size) #1
+  %call2 = call i8* @memset(i8* %call1, i32 0, i32 %size) #1
+  ret i8* %call2
+
+; CHECK-LABEL: @pr25892_lite(
+; CHECK-NEXT:  %calloc = call i8* @calloc(i32 1, i32 %size)
+; CHECK-NEXT:  ret i8* %calloc
+}
+
 ; FIXME: memset(malloc(x), 0, x) -> calloc(1, x)
+; This doesn't fire currently because the malloc has more than one use.
 
 define float* @pr25892(i32 %size) #0 {
 entry:

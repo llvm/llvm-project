@@ -35,6 +35,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <deque>
+
 using namespace llvm;
 
 namespace {
@@ -497,7 +498,7 @@ private:
   std::error_code initStreamFromBuffer();
   std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
 };
-} // namespace
+} // end anonymous namespace
 
 BitcodeDiagnosticInfo::BitcodeDiagnosticInfo(std::error_code EC,
                                              DiagnosticSeverity Severity,
@@ -872,7 +873,7 @@ public:
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 };
-}
+} // end anonymous namespace
 
 // FIXME: can we inherit this from ConstantExpr?
 template <>
@@ -880,7 +881,7 @@ struct OperandTraits<ConstantPlaceHolder> :
   public FixedNumOperandTraits<ConstantPlaceHolder, 1> {
 };
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantPlaceHolder, Value)
-}
+} // end namespace llvm
 
 void BitcodeReaderValueList::assignValue(Value *V, unsigned Idx) {
   if (Idx == size()) {
@@ -908,10 +909,7 @@ void BitcodeReaderValueList::assignValue(Value *V, unsigned Idx) {
     OldV->replaceAllUsesWith(V);
     delete PrevVal;
   }
-
-  return;
 }
-
 
 Constant *BitcodeReaderValueList::getConstantFwdRef(unsigned Idx,
                                                     Type *Ty) {
@@ -1128,7 +1126,6 @@ StructType *BitcodeReader::createIdentifiedStructType(LLVMContext &Context) {
   IdentifiedStructTypes.push_back(Ret);
   return Ret;
 }
-
 
 //===----------------------------------------------------------------------===//
 //  Functions for parsing blocks from the bitcode file
@@ -2199,7 +2196,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
               getMDOrNull(Record[9]), getMDOrNull(Record[10]),
               getMDOrNull(Record[11]), getMDOrNull(Record[12]),
               getMDOrNull(Record[13]),
-              Record.size() <= 15 ? 0 : getMDOrNull(Record[15]),
+              Record.size() <= 15 ? nullptr : getMDOrNull(Record[15]),
               Record.size() <= 14 ? 0 : Record[14]),
           NextMetadataNo++);
       break;
@@ -2722,7 +2719,6 @@ std::error_code BitcodeReader::parseConstants() {
       }
       break;
     }
-
     case bitc::CST_CODE_CE_BINOP: {  // CE_BINOP: [opcode, opval, opval]
       if (Record.size() < 3)
         return error("Invalid record");
@@ -3395,7 +3391,6 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       // The interesting case.
       break;
     }
-
 
     // Read a record.
     auto BitCode = Stream.readRecord(Entry.ID, Record);
@@ -5839,7 +5834,7 @@ class BitcodeErrorCategoryType : public std::error_category {
     llvm_unreachable("Unknown error type!");
   }
 };
-}
+} // end anonymous namespace
 
 static ManagedStatic<BitcodeErrorCategoryType> ErrorCategory;
 

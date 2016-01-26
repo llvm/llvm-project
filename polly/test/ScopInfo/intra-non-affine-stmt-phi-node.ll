@@ -9,10 +9,6 @@
 ; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] -> [i0, 0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] -> MemRef_merge__phi[] };
-; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] -> MemRef_merge__phi[] };
-; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             { Stmt_loop__TO__backedge[i0] -> MemRef_merge__phi[] };
 ; CHECK-NEXT:     Stmt_backedge
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             { Stmt_backedge[i0] : 0 <= i0 <= 100 };

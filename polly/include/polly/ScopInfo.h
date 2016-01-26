@@ -494,17 +494,21 @@ private:
   /// intruction.
   ///
   /// For memory accesses of kind MK_Value the access instruction of a load
-  /// access is the instruction that uses the load. The access instruction of
-  /// a write access is the instruction that defines the llvm::Value.
+  /// access is nullptr because generally there can be multiple instructions in
+  /// the statement using the same llvm::Value. The access instruction of a
+  /// write access is the instruction that defines the llvm::Value.
   Instruction *AccessInstruction;
+
+  /// @brief Incoming block and value of a PHINode.
+  SmallVector<std::pair<BasicBlock *, Value *>, 4> Incoming;
 
   /// @brief The value associated with this memory access.
   ///
   ///  - For array memory accesses (MK_Array) it is the loaded result or the
   ///    stored value.
   ///  - For accesses of kind MK_Value it is the access instruction itself.
-  ///  - For accesses of kind MK_PHI or MK_ExitPHI it is the operand value
-  ///    of the PHI node.
+  ///  - For accesses of kind MK_PHI or MK_ExitPHI it is the PHI node itself
+  ///    (for both, READ and WRITE accesses).
   ///
   AssertingVH<Value> AccessValue;
 
@@ -601,6 +605,27 @@ public:
                Value *AccessValue, ScopArrayInfo::MemoryKind Kind,
                StringRef BaseName);
   ~MemoryAccess();
+
+  /// @brief Add a new incoming block/value pairs for this PHI/ExitPHI access.
+  ///
+  /// @param IncomingBlock The PHI's incoming block.
+  /// @param IncomingValue The value when reacing the PHI from the @p
+  ///                      IncomingBlock.
+  void addIncoming(BasicBlock *IncomingBlock, Value *IncomingValue) {
+    assert(isAnyPHIKind());
+    Incoming.emplace_back(std::make_pair(IncomingBlock, IncomingValue));
+  }
+
+  /// @brief Return the list of possible PHI/ExitPHI values.
+  ///
+  /// After code generation moves some PHIs around during region simplification,
+  /// we cannot reliably locate the original PHI node and its incoming values
+  /// anymore. For this reason we remember these explicitely for all PHI-kind
+  /// accesses.
+  ArrayRef<std::pair<BasicBlock *, Value *>> getIncoming() const {
+    assert(isAnyPHIKind());
+    return Incoming;
+  }
 
   /// @brief Get the type of a memory access.
   enum AccessType getType() { return AccType; }
@@ -710,6 +735,9 @@ public:
   /// @brief Is this MemoryAccess modeling the accesses of a PHI node in the
   /// SCoP's exit block?
   bool isExitPHIKind() const { return Kind == ScopArrayInfo::MK_ExitPHI; }
+
+  /// @brief Does this access orginate from one of the two PHI types?
+  bool isAnyPHIKind() const { return isPHIKind() || isExitPHIKind(); }
 
   /// @brief Get the statement that contains this memory access.
   ScopStmt *getStatement() const { return Statement; }
@@ -829,6 +857,23 @@ private:
 
   /// @brief Mapping from instructions to (scalar) memory accesses.
   DenseMap<const Instruction *, MemoryAccessList> InstructionToAccess;
+
+  /// @brief The set of values defined elsewhere required in this ScopStmt and
+  ///        their MK_Value READ MemoryAccesses.
+  DenseMap<Value *, MemoryAccess *> ValueReads;
+
+  /// @brief The set of values defined in this ScopStmt that are required
+  ///        elsewhere, mapped to their MK_Value WRITE MemoryAccesses.
+  DenseMap<Instruction *, MemoryAccess *> ValueWrites;
+
+  /// @brief Map from PHI nodes to its incoming value when coming from this
+  ///        statement.
+  ///
+  /// Non-affine subregions can have multiple exiting blocks that are incoming
+  /// blocks of the PHI nodes. This map ensures that there is only one write
+  /// operation for the complete subregion. A PHI selecting the relevant value
+  /// will be inserted.
+  DenseMap<PHINode *, MemoryAccess *> PHIWrites;
 
   //@}
 
@@ -991,6 +1036,29 @@ public:
 
     assert(ArrayAccess && "No array access found for instruction!");
     return *ArrayAccess;
+  }
+
+  /// @brief Return the MemoryAccess that writes the value of an instruction
+  ///        defined in this statement, or nullptr if not existing, respectively
+  ///        not yet added.
+  MemoryAccess *lookupValueWriteOf(Instruction *Inst) const {
+    assert((isRegionStmt() && R->contains(Inst)) ||
+           (!isRegionStmt() && Inst->getParent() == BB));
+    return ValueWrites.lookup(Inst);
+  }
+
+  /// @brief Return the MemoryAccess that reloads a value, or nullptr if not
+  ///        existing, respectively not yet added.
+  MemoryAccess *lookupValueReadOf(Value *Inst) const {
+    return ValueReads.lookup(Inst);
+  }
+
+  /// @brief Return the PHI write MemoryAccess for the incoming values from any
+  ///        basic block in this ScopStmt, or nullptr if not existing,
+  ///        respectively not yet added.
+  MemoryAccess *lookupPHIWriteOf(PHINode *PHI) const {
+    assert(isBlockStmt() || R->getExit() == PHI->getParent());
+    return PHIWrites.lookup(PHI);
   }
 
   void setBasicBlock(BasicBlock *Block) {
@@ -1886,12 +1954,16 @@ class ScopInfo : public RegionPass {
   /// @param Subscripts  Access subscripts per dimension.
   /// @param Sizes       The array diminsion's sizes.
   /// @param Kind        The kind of memory accessed.
-  void addMemoryAccess(BasicBlock *BB, Instruction *Inst,
-                       MemoryAccess::AccessType Type, Value *BaseAddress,
-                       unsigned ElemBytes, bool Affine, Value *AccessValue,
-                       ArrayRef<const SCEV *> Subscripts,
-                       ArrayRef<const SCEV *> Sizes,
-                       ScopArrayInfo::MemoryKind Kind);
+  ///
+  /// @return The created MemoryAccess, or nullptr if the access is not within
+  ///         the SCoP.
+  MemoryAccess *addMemoryAccess(BasicBlock *BB, Instruction *Inst,
+                                MemoryAccess::AccessType Type,
+                                Value *BaseAddress, unsigned ElemBytes,
+                                bool Affine, Value *AccessValue,
+                                ArrayRef<const SCEV *> Subscripts,
+                                ArrayRef<const SCEV *> Sizes,
+                                ScopArrayInfo::MemoryKind Kind);
 
   /// @brief Create a MemoryAccess that represents either a LoadInst or
   /// StoreInst.
@@ -1915,33 +1987,18 @@ class ScopInfo : public RegionPass {
   /// The access will be created at the @p Value's definition.
   ///
   /// @param Value The value to be written.
-  /// @see addValueReadAccess()
+  /// @see ensureValueRead()
   /// @see ScopArrayInfo::MemoryKind
-  void addValueWriteAccess(Instruction *Value);
+  void ensureValueWrite(Instruction *Value);
 
-  /// @brief Create a MemoryAccess for reloading an llvm::Value.
+  /// @brief Ensure an llvm::Value is available in the BB's statement, creating
+  ///        a MemoryAccess for reloading it if necessary.
   ///
-  /// Use this overload only for non-PHI instructions.
-  ///
-  /// @param Value The scalar expected to be loaded.
-  /// @param User  User of the scalar; this is where the access is added.
-  /// @see addValueWriteAccess()
+  /// @param Value  The value expected to be loaded.
+  /// @param UserBB Where to reload the value.
+  /// @see ensureValueStore()
   /// @see ScopArrayInfo::MemoryKind
-  void addValueReadAccess(Value *Value, Instruction *User);
-
-  /// @brief Create a MemoryAccess for reloading an llvm::Value.
-  ///
-  /// This is for PHINodes using the scalar. As we model it, the used value must
-  /// be available at the incoming block instead of when hitting the
-  /// instruction.
-  ///
-  /// @param Value  The scalar expected to be loaded.
-  /// @param User   The PHI node referencing @p Value.
-  /// @param UserBB Incoming block for the incoming @p Value.
-  /// @see addPHIWriteAccess()
-  /// @see addValueWriteAccess()
-  /// @see ScopArrayInfo::MemoryKind
-  void addValueReadAccess(Value *Value, PHINode *User, BasicBlock *UserBB);
+  void ensureValueRead(Value *Value, BasicBlock *UserBB);
 
   /// @brief Create a write MemoryAccess for the incoming block of a phi node.
   ///
@@ -1956,8 +2013,8 @@ class ScopInfo : public RegionPass {
   ///                      PHINode in the SCoP region's exit block.
   /// @see addPHIReadAccess()
   /// @see ScopArrayInfo::MemoryKind
-  void addPHIWriteAccess(PHINode *PHI, BasicBlock *IncomingBlock,
-                         Value *IncomingValue, bool IsExitBlock);
+  void ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
+                      Value *IncomingValue, bool IsExitBlock);
 
   /// @brief Create a MemoryAccess for reading the value of a phi.
   ///
@@ -1967,7 +2024,7 @@ class ScopInfo : public RegionPass {
   ///
   /// @param PHI PHINode under consideration; the READ access will be added
   /// here.
-  /// @see addPHIWriteAccess()
+  /// @see ensurePHIWrite()
   /// @see ScopArrayInfo::MemoryKind
   void addPHIReadAccess(PHINode *PHI);
 

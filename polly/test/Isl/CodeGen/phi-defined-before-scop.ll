@@ -5,7 +5,7 @@
 
 ; CHECK-LABEL: polly.stmt.bb3:
 ; CHECK-NEXT: %tmp2.s2a.reload = load %struct.wibble*, %struct.wibble** %tmp2.s2a
-; CHECK-NEXT: store %struct.wibble* %tmp2, %struct.wibble** %tmp7.s2a
+; CHECK-NEXT: store %struct.wibble* %tmp2.s2a.reload, %struct.wibble** %tmp7.s2a
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

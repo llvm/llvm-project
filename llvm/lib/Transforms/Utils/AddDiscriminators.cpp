@@ -80,7 +80,7 @@ struct AddDiscriminators : public FunctionPass {
 
   bool runOnFunction(Function &F) override;
 };
-}
+} // end anonymous namespace
 
 char AddDiscriminators::ID = 0;
 INITIALIZE_PASS_BEGIN(AddDiscriminators, "add-discriminators",
@@ -217,7 +217,7 @@ bool AddDiscriminators::runOnFunction(Function &F) {
   // Sample base profile needs to distinguish different function calls within
   // a same source line for correct profile annotation.
   for (BasicBlock &B : F) {
-    const DILocation *FirstDIL = NULL;
+    const DILocation *FirstDIL = nullptr;
     for (auto &I : B.getInstList()) {
       CallInst *Current = dyn_cast<CallInst>(&I);
       if (!Current || isa<DbgInfoIntrinsic>(&I))

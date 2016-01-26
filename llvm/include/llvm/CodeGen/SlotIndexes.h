@@ -66,7 +66,6 @@ namespace llvm {
 
     bool isPoisoned() const { return (reinterpret_cast<intptr_t>(mi) & 0x1) == 0x1; }
 #endif // EXPENSIVE_CHECKS
-
   };
 
   template <>
@@ -308,7 +307,6 @@ namespace llvm {
     SlotIndex getPrevIndex() const {
       return SlotIndex(&*--listEntry()->getIterator(), getSlot());
     }
-
   };
 
   template <> struct isPodLike<SlotIndex> { static const bool value = true; };
@@ -382,7 +380,7 @@ namespace llvm {
       initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
     }
 
-    ~SlotIndexes() {
+    ~SlotIndexes() override {
       // The indexList's nodes are all allocated in the BumpPtrAllocator.
       indexList.clearAndLeakNodesUnsafely();
     }
@@ -709,15 +707,13 @@ namespace llvm {
       indexList.erase(entry);
 #endif
     }
-
   };
-
 
   // Specialize IntervalMapInfo for half-open slot index intervals.
   template <>
   struct IntervalMapInfo<SlotIndex> : IntervalMapHalfOpenInfo<SlotIndex> {
   };
 
-}
+} // end namespace llvm
 
 #endif // LLVM_CODEGEN_SLOTINDEXES_H

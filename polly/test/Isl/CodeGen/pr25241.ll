@@ -6,10 +6,17 @@
 
 ; CHECK-LABEL: polly.stmt.if.then.862:
 ; CHECK:         %[[R1:[0-9]+]] = add i32 %tmp, 1
-; CHECK:         store i32 %0, i32* %curr.3.s2a
 ; CHECK:         br label
 
+; CHECK-LABEL: polly.stmt.while.body.740.region_exiting:
+; CHECK:         %polly.curr.3 = phi i32 [ %[[R1]], %polly.stmt.if.then.862 ], [ undef, %polly.stmt.if.else.864 ]
+; CHECK:         br label %polly.stmt.polly.merge_new_and_old.exit
+
 ; CHECK-LABEL: polly.stmt.polly.merge_new_and_old.exit:
+; CHECK:         store i32 %polly.curr.3, i32* %curr.3.s2a
+; CHECK:         br label %polly.exiting
+
+; CHECK-LABEL: polly.exiting:
 ; CHECK:         %curr.3.ph.final_reload = load i32, i32* %curr.3.s2a
 ; CHECK:         br label
 

@@ -119,7 +119,6 @@ public:
             default:
                 return false;
         }
-        llvm_unreachable("unhandled state");
     }
 
 private:

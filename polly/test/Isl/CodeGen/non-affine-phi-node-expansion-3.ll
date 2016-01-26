@@ -16,22 +16,22 @@ loop:
 ; CHECK-NEXT: %p_val0 = fadd float 1.000000e+00, 2.000000e+00
 ; CHECK-NEXT: %p_val1 = fadd float 1.000000e+00, 2.000000e+00
 ; CHECK-NEXT: %p_val2 = fadd float 1.000000e+00, 2.000000e+00
-; CHECK-NEXT: store float %p_val0, float* %merge.phiops
 ; CHECK-NEXT: br i1
 
 branch1:
   br i1 %cond1, label %branch2, label %backedge
 
 ; CHECK-LABEL: polly.stmt.branch1:
-; CHECK-NEXT:    store float %p_val1, float* %merge.phiops
 ; CHECK-NEXT: br i1
 
 branch2:
   br label %backedge
 
 ; CHECK-LABEL: polly.stmt.branch2:
-; CHECK-NEXT:    store float %p_val2, float* %merge.phiops
 ; CHECK-NEXT:    br label
+
+; CHECK-LABEL: polly.stmt.backedge.exit:
+; CHECK:         %polly.merge = phi float [ %p_val0, %polly.stmt.loop ], [ %p_val1, %polly.stmt.branch1 ], [ %p_val2, %polly.stmt.branch2 ]
 
 backedge:
   %merge = phi float [%val0, %loop], [%val1, %branch1], [%val2, %branch2]

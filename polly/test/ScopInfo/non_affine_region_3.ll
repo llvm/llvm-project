@@ -29,16 +29,10 @@
 ; CHECK-NEXT:              { Stmt_bb3__TO__bb18[i0] -> [i0, 0] };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:              { Stmt_bb3__TO__bb18[i0] -> MemRef_A[i0] };
-; CHECK-NEXT:          MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:              { Stmt_bb3__TO__bb18[i0] -> MemRef_x_2__phi[] };
-; CHECK-NEXT:          MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_bb3__TO__bb18[i0] -> MemRef_x_2__phi[] };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_bb3__TO__bb18[i0] -> MemRef_b[] };
-; CHECK-NEXT:          MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:              { Stmt_bb3__TO__bb18[i0] -> MemRef_x_2__phi[] };
-; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:              { Stmt_bb3__TO__bb18[i0] -> MemRef_x_2__phi[] };
 ; CHECK-NEXT:      Stmt_bb18
 ; CHECK-NEXT:          Domain :=
 ; CHECK-NEXT:              { Stmt_bb18[i0] : 0 <= i0 <= 1023 };

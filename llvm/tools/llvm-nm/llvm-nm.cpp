@@ -788,12 +788,11 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
     StringRef SegmentName = Obj.getSectionFinalSegmentName(Ref);
     if (SegmentName == "__TEXT" && SectionName == "__text")
       return 't';
-    else if (SegmentName == "__DATA" && SectionName == "__data")
+    if (SegmentName == "__DATA" && SectionName == "__data")
       return 'd';
-    else if (SegmentName == "__DATA" && SectionName == "__bss")
+    if (SegmentName == "__DATA" && SectionName == "__bss")
       return 'b';
-    else
-      return 's';
+    return 's';
   }
   }
 

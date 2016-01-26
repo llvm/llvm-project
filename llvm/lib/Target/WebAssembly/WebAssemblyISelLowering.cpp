@@ -291,7 +291,7 @@ bool WebAssemblyTargetLowering::allowsMisalignedMemoryAccesses(
   // WebAssembly supports unaligned accesses, though it should be declared
   // with the p2align attribute on loads and stores which do so, and there
   // may be a performance impact. We tell LLVM they're "fast" because
-  // for the kinds of things that LLVM uses this for (merging agacent stores
+  // for the kinds of things that LLVM uses this for (merging adjacent stores
   // of constants, etc.), WebAssembly implementations will either want the
   // unaligned access or they'll split anyway.
   if (Fast)

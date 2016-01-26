@@ -16,7 +16,6 @@
 #include <vector>
 
 namespace llvm {
-
   /// ArrayRef - Represent a constant reference to an array (0 or more elements
   /// consecutively in memory), i.e. a start pointer and a length.  It allows
   /// various APIs to take consecutive elements easily and conveniently.
@@ -92,19 +91,20 @@ namespace llvm {
     /// Construct an ArrayRef<const T*> from ArrayRef<T*>. This uses SFINAE to
     /// ensure that only ArrayRefs of pointers can be converted.
     template <typename U>
-    ArrayRef(const ArrayRef<U *> &A,
-             typename std::enable_if<
-                 std::is_convertible<U *const *, T const *>::value>::type* = 0)
+    ArrayRef(
+        const ArrayRef<U *> &A,
+        typename std::enable_if<
+           std::is_convertible<U *const *, T const *>::value>::type * = nullptr)
       : Data(A.data()), Length(A.size()) {}
 
     /// Construct an ArrayRef<const T*> from a SmallVector<T*>. This is
     /// templated in order to avoid instantiating SmallVectorTemplateCommon<T>
     /// whenever we copy-construct an ArrayRef.
     template<typename U, typename DummyT>
-    /*implicit*/ ArrayRef(const SmallVectorTemplateCommon<U*, DummyT> &Vec,
-                          typename std::enable_if<
-                              std::is_convertible<U *const *,
-                                                  T const *>::value>::type* = 0)
+    /*implicit*/ ArrayRef(
+      const SmallVectorTemplateCommon<U *, DummyT> &Vec,
+      typename std::enable_if<
+          std::is_convertible<U *const *, T const *>::value>::type * = nullptr)
       : Data(Vec.data()), Length(Vec.size()) {
     }
 
@@ -379,6 +379,6 @@ namespace llvm {
   template <typename T> hash_code hash_value(ArrayRef<T> S) {
     return hash_combine_range(S.begin(), S.end());
   }
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_ARRAYREF_H
