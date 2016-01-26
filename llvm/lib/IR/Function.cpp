@@ -416,17 +416,69 @@ void Function::copyAttributesFrom(const GlobalValue *Src) {
     setPrologueData(SrcF->getPrologueData());
 }
 
+/// Table of string intrinsic names indexed by enum value.
+static const char * const IntrinsicNameTable[] = {
+  "not_intrinsic",
+#define GET_INTRINSIC_NAME_TABLE
+#include "llvm/IR/Intrinsics.gen"
+#undef GET_INTRINSIC_NAME_TABLE
+};
+
+static int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
+                                     StringRef Name) {
+  // Do a binary search over the table of intrinsic names.
+  const char *const *NameEntry =
+      std::lower_bound(NameTable.begin(), NameTable.end(), Name.data(),
+                       [](const char *LHS, const char *RHS) {
+                         // Don't compare the first 5 characters, they are
+                         // always "llvm.".
+                         return strcmp(LHS + 5, RHS + 5) < 0;
+                       });
+  unsigned Idx = NameEntry - NameTable.begin();
+
+  // Check if this is a direct match.
+  if (Idx < NameTable.size() && strcmp(Name.data(), NameTable[Idx]) == 0)
+    return Idx;
+
+  // Otherwise, back up one entry to look for a prefix of Name where the next
+  // character in Name is a dot.
+  if (Idx == 0)
+    return -1;
+  --Idx;
+  bool CheckPrefixes = true;
+  while (CheckPrefixes) {
+    StringRef FoundName = NameTable[Idx];
+    if (Name.startswith(FoundName) && Name[FoundName.size()] == '.')
+      return Idx;
+    if (Idx == 0)
+      return -1;
+    --Idx;
+    // We have to keep scanning backwards until the previous entry is not a
+    // prefix of the current entry. Consider a key of llvm.foo.f64 and a table
+    // of llvm.foo and llvm.foo.bar.
+    CheckPrefixes = FoundName.startswith(NameTable[Idx]);
+  }
+
+  return -1;
+}
+
 /// \brief This does the actual lookup of an intrinsic ID which
 /// matches the given function name.
 static Intrinsic::ID lookupIntrinsicID(const ValueName *ValName) {
-  unsigned Len = ValName->getKeyLength();
-  const char *Name = ValName->getKeyData();
+  StringRef Name = ValName->getKey();
+  assert(Name.data()[Name.size()] == '\0' && "non-null terminated ValueName");
 
-#define GET_FUNCTION_RECOGNIZER
-#include "llvm/IR/Intrinsics.gen"
-#undef GET_FUNCTION_RECOGNIZER
+  ArrayRef<const char *> NameTable(&IntrinsicNameTable[1],
+                                   std::end(IntrinsicNameTable));
+  int Idx = lookupLLVMIntrinsicByName(NameTable, Name);
+  Intrinsic::ID ID = static_cast<Intrinsic::ID>(Idx + 1);
+  if (ID == Intrinsic::not_intrinsic)
+    return ID;
 
-  return Intrinsic::not_intrinsic;
+  // If the intrinsic is not overloaded, require an exact match. If it is
+  // overloaded, require a prefix match.
+  bool IsPrefixMatch = Name.size() > strlen(NameTable[Idx]);
+  return IsPrefixMatch == isOverloaded(ID) ? ID : Intrinsic::not_intrinsic;
 }
 
 void Function::recalculateIntrinsicID() {
@@ -481,15 +533,9 @@ static std::string getMangledTypeStr(Type* Ty) {
 
 std::string Intrinsic::getName(ID id, ArrayRef<Type*> Tys) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  static const char * const Table[] = {
-    "not_intrinsic",
-#define GET_INTRINSIC_NAME_TABLE
-#include "llvm/IR/Intrinsics.gen"
-#undef GET_INTRINSIC_NAME_TABLE
-  };
   if (Tys.empty())
-    return Table[id];
-  std::string Result(Table[id]);
+    return IntrinsicNameTable[id];
+  std::string Result(IntrinsicNameTable[id]);
   for (unsigned i = 0; i < Tys.size(); ++i) {
     Result += "." + getMangledTypeStr(Tys[i]);
   }
