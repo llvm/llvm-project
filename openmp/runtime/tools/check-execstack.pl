@@ -18,9 +18,9 @@ use FindBin;
 use lib "$FindBin::Bin/lib";
 
 use tools;
-use Platform ":vars";
 
 our $VERSION = "0.002";
+my $target_arch;
 
 sub execstack($) {
     my ( $file ) = @_;
@@ -56,7 +56,7 @@ sub execstack($) {
 }; # sub execstack
 
 get_options(
-    Platform::target_options(),
+    "arch=s" => \$target_arch,
 );
 
 foreach my $file ( @ARGV ) {

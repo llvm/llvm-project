@@ -17,10 +17,12 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/lib";
 
-use Platform ":vars";
 use tools;
 
 our $VERSION = "0.004";
+my $target_os;
+my $target_arch;
+my $target_mic_arch;
 
 my $hex = qr{[0-9a-f]}i;    # hex digit.
 
@@ -182,17 +184,20 @@ sub check_file($;$$) {
 my $max_instructions;
 my $show_instructions;
 get_options(
+    "os=s"               => \$target_os,
+    "arch=s"             => \$target_arch,
+    "mic-arch=s"         => \$target_mic_arch,
     "max-instructions=i" => \$max_instructions,
     "show-instructions!" => \$show_instructions,
-    Platform::target_options(),
 );
+my $target_platform = $target_os . "_" . $target_arch;
 if ( "$target_os" eq "lin" and "$target_mic_arch" eq "knf" ) {
     $mic_bad_re = qr{^(?:pause|[slm]fence|scatter|gather|cmpxchg16b|clevict[12])}i;
 } else {
     $mic_bad_re = qr{^(?:pause|[slm]fence|scatter|gather|cmov|cmpxchg16b|clevict[12])}i;
 };
 if ( 0 ) {
-} elsif ( $target_os eq "lin" and $target_arch eq "mic" ) {
+} elsif ( $target_platform eq "lin_mic" ) {
     *bad_instr = \*bad_mic_instr;
     *bad_fmt   = \*bad_mic_fmt;
 } elsif ( $target_platform eq "lin_32" ) {

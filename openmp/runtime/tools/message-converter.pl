@@ -21,11 +21,11 @@ use FindBin;
 use lib "$FindBin::Bin/lib";
 
 use tools;
-use Platform ":vars";
 
 our $VERSION = "0.04";
 my $escape      = qr{%};
 my $placeholder = qr{(\d)\$(s|l?[du])};
+my $target_os;
 
 my $sections =
     {
@@ -467,7 +467,7 @@ my $message_file;
 my $id;
 my $prefix = "";
 get_options(
-    Platform::target_options(),
+    "os=s"             => \$target_os,
     "enum-file=s"      => \$enum_file,
     "signature-file=s" => \$signature_file,
     "default-file=s"   => \$default_file,

@@ -227,6 +227,12 @@ namespace opts {
                   cl::desc("Display ELF version sections (if present)"));
   cl::alias VersionInfoShort("V", cl::desc("Alias for -version-info"),
                              cl::aliasopt(VersionInfo));
+
+  cl::opt<bool> SectionGroups("elf-section-groups",
+                              cl::desc("Display ELF section group contents"));
+  cl::alias SectionGroupsShort("g", cl::desc("Alias for -elf-sections-groups"),
+                               cl::aliasopt(SectionGroups));
+
 } // namespace opts
 
 namespace llvm {
@@ -334,16 +340,20 @@ static void dumpObject(const ObjectFile *Obj) {
     Dumper->printGnuHashTable();
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
-  if (Obj->getArch() == llvm::Triple::arm && Obj->isELF())
-    if (opts::ARMAttributes)
-      Dumper->printAttributes();
-  if (isMipsArch(Obj->getArch()) && Obj->isELF()) {
-    if (opts::MipsPLTGOT)
-      Dumper->printMipsPLTGOT();
-    if (opts::MipsABIFlags)
-      Dumper->printMipsABIFlags();
-    if (opts::MipsReginfo)
-      Dumper->printMipsReginfo();
+  if (Obj->isELF()) {
+    if (Obj->getArch() == llvm::Triple::arm)
+      if (opts::ARMAttributes)
+        Dumper->printAttributes();
+    if (isMipsArch(Obj->getArch())) {
+      if (opts::MipsPLTGOT)
+        Dumper->printMipsPLTGOT();
+      if (opts::MipsABIFlags)
+        Dumper->printMipsABIFlags();
+      if (opts::MipsReginfo)
+        Dumper->printMipsReginfo();
+    }
+    if (opts::SectionGroups)
+      Dumper->printGroupSections();
   }
   if (Obj->isCOFF()) {
     if (opts::COFFImports)
