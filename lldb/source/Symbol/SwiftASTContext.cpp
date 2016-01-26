@@ -53,6 +53,7 @@
 #include "swift/Driver/Util.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
+#include "swift/IDE/Utils.h"
 #include "swift/SIL/SILModule.h"
 
 #include "swift/../../lib/IRGen/GenEnum.h"
@@ -6773,7 +6774,9 @@ SwiftASTContext::GetTypeFromMangledTypename (const char *mangled_typename, Error
         Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
         if (log)
             log->Printf ("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s')", this, mangled_typename);
-        
+
+        error.Clear();
+
         // if we were to crash doing this, remember what type caused it
         Host::SetCrashDescriptionWithFormat ("error finding type for %s", mangled_typename);
         // Make a scoped cleanup object that will clear the crash description string
@@ -6799,16 +6802,13 @@ SwiftASTContext::GetTypeFromMangledTypename (const char *mangled_typename, Error
         if (log)
             log->Printf ("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') -- not cached, searching", this, mangled_typename);
         
-        std::vector<swift::Demangle::NodePointer> nodes;
-        nodes.push_back(swift::Demangle::demangleSymbolAsNode(mangled_typename, mangled_name.GetLength()));
-        VisitNodeResult empty_generic_context;
-        VisitNodeResult result;
-       
-        VisitNode (this, nodes, result, empty_generic_context, log);
-        error = result._error;
-        if (error.Success() && result._types.size() == 1)
+        std::string swift_error;
+        found_type = swift::ide::getTypeFromMangledSymbolname(*ast_ctx,
+                                                              mangled_typename,
+                                                              swift_error).getPointer();
+
+        if (found_type)
         {
-            swift::TypeBase *found_type = result._types.front().getPointer();
             CacheDemangledType(mangled_name.GetCString(), found_type);
             CompilerType result_type(ast_ctx, found_type);
             if (log)
@@ -6818,7 +6818,7 @@ SwiftASTContext::GetTypeFromMangledTypename (const char *mangled_typename, Error
         else
         {
             if (log)
-                log->Printf ("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') -- error: %s", this, mangled_typename, result._error.AsCString());
+                log->Printf ("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') -- error: %s", this, mangled_typename, swift_error.c_str());
             
             error.SetErrorStringWithFormat("type for typename '%s' was not found",mangled_typename);
             CacheDemangledTypeFailure(mangled_name.GetCString());
@@ -6828,7 +6828,6 @@ SwiftASTContext::GetTypeFromMangledTypename (const char *mangled_typename, Error
     error.SetErrorStringWithFormat("typename '%s' is not a valid Swift mangled typename, it should begin with _T",mangled_typename);
     return CompilerType();
 }
-
 
 CompilerType
 SwiftASTContext::GetVoidFunctionType()
