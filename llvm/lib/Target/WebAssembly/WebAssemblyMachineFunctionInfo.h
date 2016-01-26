@@ -58,6 +58,11 @@ public:
       VRegStackified.resize(TargetRegisterInfo::virtReg2Index(VReg) + 1);
     VRegStackified.set(TargetRegisterInfo::virtReg2Index(VReg));
   }
+  void unstackifyVReg(unsigned VReg) {
+    if (TargetRegisterInfo::virtReg2Index(VReg) >= VRegStackified.size())
+      return;
+    VRegStackified.reset(TargetRegisterInfo::virtReg2Index(VReg));
+  }
   bool isVRegStackified(unsigned VReg) const {
     if (TargetRegisterInfo::virtReg2Index(VReg) >= VRegStackified.size())
       return false;

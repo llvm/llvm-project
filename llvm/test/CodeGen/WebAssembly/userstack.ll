@@ -57,7 +57,7 @@ define void @allocarray() {
  ; CHECK-NEXT: i32.store [[SP]]=, 0([[L2]]), [[SP]]
  %r = alloca [5 x i32]
 
- ; CHECK-NEXT: i32.const $push[[L4:.+]]=, 4
+ ; CHECK-NEXT: i32.const $push[[L4:.+]]=, 12
  ; CHECK-NEXT: i32.const [[L5:.+]]=, 12
  ; CHECK-NEXT: i32.add [[L5]]=, [[SP]], [[L5]]
  ; CHECK-NEXT: i32.add $push[[L6:.+]]=, [[L5]], $pop[[L4]]
@@ -66,7 +66,7 @@ define void @allocarray() {
  ; CHECK-NEXT: i32.store $discard=, 0($pop3), $pop[[L10]]{{$}}
  %p = getelementptr [5 x i32], [5 x i32]* %r, i32 0, i32 0
  store i32 1, i32* %p
- %p2 = getelementptr [5 x i32], [5 x i32]* %r, i32 0, i32 1
+ %p2 = getelementptr [5 x i32], [5 x i32]* %r, i32 0, i32 3
  store i32 1, i32* %p2
 
  ; CHECK-NEXT: i32.const [[L7:.+]]=, 32
@@ -89,8 +89,8 @@ define void @allocarray_inbounds() {
  %p = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 0
  store i32 1, i32* %p
  ; This store should have both the GEP and the FI folded into it.
- ; CHECK-NEXT: i32.store {{.*}}=, 16([[SP]]), $pop
- %p2 = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 1
+ ; CHECK-NEXT: i32.store {{.*}}=, 24([[SP]]), $pop
+ %p2 = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 3
  store i32 1, i32* %p2
  ; CHECK: i32.const [[L7:.+]]=, 32
  ; CHECK-NEXT: i32.add [[SP]]=, [[SP]], [[L7]]

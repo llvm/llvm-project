@@ -29,6 +29,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyRegNumbering.cpp
   WebAssemblyRegStackify.cpp
   WebAssemblySelectionDAGInfo.cpp
+  WebAssemblySetP2AlignOperands.cpp
   WebAssemblyStoreResults.cpp
   WebAssemblySubtarget.cpp
   WebAssemblyTargetMachine.cpp

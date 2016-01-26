@@ -28,6 +28,7 @@ FunctionPass *createWebAssemblyOptimizeReturned();
 FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
                                        CodeGenOpt::Level OptLevel);
 FunctionPass *createWebAssemblyArgumentMove();
+FunctionPass *createWebAssemblySetP2AlignOperands();
 
 FunctionPass *createWebAssemblyStoreResults();
 FunctionPass *createWebAssemblyRegStackify();

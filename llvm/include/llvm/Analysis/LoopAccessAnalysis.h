@@ -659,6 +659,11 @@ const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 int isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
                  const ValueToValueMap &StridesMap);
 
+/// \brief Returns true if the memory operations \p A and \p B are consecutive.
+/// This is a simple API that does not depend on the analysis pass. 
+bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
+                         ScalarEvolution &SE, bool CheckType = true);
+
 /// \brief This analysis provides dependence information for the memory accesses
 /// of a loop.
 ///

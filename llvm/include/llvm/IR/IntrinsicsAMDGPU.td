@@ -57,10 +57,6 @@ def int_r600_read_workdim : AMDGPUReadPreloadRegisterIntrinsic <
 
 // FIXME: These should be renamed/moved to r600
 let TargetPrefix = "AMDGPU" in {
-def int_AMDGPU_rsq_clamped :  Intrinsic<
-  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
->;
-
 def int_AMDGPU_ldexp : Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_i32_ty], [IntrNoMem]
 >;

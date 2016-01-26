@@ -84,6 +84,7 @@ static void adjustStackPointer(unsigned StackSize,
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::LOAD_I32), SPReg)
       .addImm(0)
       .addReg(SPReg)
+      .addImm(2) // p2align
       .addMemOperand(LoadMMO);
   // Add/Subtract the frame size
   unsigned OffsetReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
@@ -102,6 +103,7 @@ static void adjustStackPointer(unsigned StackSize,
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::STORE_I32), WebAssembly::SP32)
       .addImm(0)
       .addReg(OffsetReg)
+      .addImm(2) // p2align
       .addReg(WebAssembly::SP32)
       .addMemOperand(MMO);
 }
@@ -169,6 +171,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::STORE_I32), WebAssembly::SP32)
       .addImm(0)
       .addReg(OffsetReg)
+      .addImm(2) // p2align
       .addReg(WebAssembly::SP32)
       .addMemOperand(MMO);
 }

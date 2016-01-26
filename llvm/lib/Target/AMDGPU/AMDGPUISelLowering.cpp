@@ -922,10 +922,6 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(AMDGPUISD::CLAMP, DL, VT,
                          Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
 
-    case Intrinsic::AMDGPU_rsq_clamped:
-      assert(Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS);
-      return DAG.getNode(AMDGPUISD::RSQ_CLAMPED, DL, VT, Op.getOperand(1));
-
     case Intrinsic::AMDGPU_ldexp: // Legacy name
       return DAG.getNode(AMDGPUISD::LDEXP, DL, VT, Op.getOperand(1),
                                                    Op.getOperand(2));

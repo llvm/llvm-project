@@ -372,14 +372,27 @@ define void @aggregate_load_store({i32,i32,i32,i32}* %p, {i32,i32,i32,i32}* %q) 
   ret void
 }
 
-; Fold the offsets when lowering aggregate return values.
+; Fold the offsets when lowering aggregate return values. The stores get
+; merged into i64 stores.
 
 ; CHECK-LABEL: aggregate_return:
-; CHECK: i32.const   $push0=, 0{{$}}
-; CHECK: i32.store   $push1=, 12($0), $pop0{{$}}
-; CHECK: i32.store   $push2=, 8($0), $pop1{{$}}
-; CHECK: i32.store   $push3=, 4($0), $pop2{{$}}
-; CHECK: i32.store   $discard=, 0($0), $pop3{{$}}
+; CHECK: i64.const   $push0=, 0{{$}}
+; CHECK: i64.store   $push1=, 8($0):p2align=2, $pop0{{$}}
+; CHECK: i64.store   $discard=, 0($0):p2align=2, $pop1{{$}}
 define {i32,i32,i32,i32} @aggregate_return() {
   ret {i32,i32,i32,i32} zeroinitializer
+}
+
+; Fold the offsets when lowering aggregate return values. The stores are not
+; merged.
+
+; CHECK-LABEL: aggregate_return_without_merge:
+; CHECK: i32.const   $push0=, 0{{$}}
+; CHECK: i32.store8  $push1=, 14($0), $pop0{{$}}
+; CHECK: i32.store16 $push2=, 12($0), $pop1{{$}}
+; CHECK: i32.store   $discard=, 8($0), $pop2{{$}}
+; CHECK: i64.const   $push3=, 0{{$}}
+; CHECK: i64.store   $discard=, 0($0), $pop3{{$}}
+define {i64,i32,i16,i8} @aggregate_return_without_merge() {
+  ret {i64,i32,i16,i8} zeroinitializer
 }

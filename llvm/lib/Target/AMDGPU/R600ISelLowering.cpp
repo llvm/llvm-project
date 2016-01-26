@@ -801,10 +801,11 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
                                   AMDGPU::T0_Z, VT);
 
     // FIXME: Should be renamed to r600 prefix
-    case Intrinsic::AMDGPU_rsq_clamped:
+    case AMDGPUIntrinsic::AMDGPU_rsq_clamped:
       return DAG.getNode(AMDGPUISD::RSQ_CLAMPED, DL, VT, Op.getOperand(1));
 
     case Intrinsic::r600_rsq:
+    case AMDGPUIntrinsic::AMDGPU_rsq: // Legacy name
       // XXX - I'm assuming SI's RSQ_LEGACY matches R600's behavior.
       return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
     }

@@ -154,6 +154,10 @@ bool WebAssemblyPassConfig::addInstSelector() {
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
   addPass(createWebAssemblyArgumentMove());
+  // Set the p2align operands. This information is present during ISel, however
+  // it's inconvenient to collect. Collect it now, and update the immediate
+  // operands.
+  addPass(createWebAssemblySetP2AlignOperands());
   return false;
 }
 
