@@ -1442,3 +1442,183 @@ define void @test23(<2 x i1> %a, <2 x i1>* %addr) {
   store <2 x i1> %a, <2 x i1>* %addr
   ret void
 }
+
+define void @store_v1i1(<1 x i1> %c , <1 x i1>* %ptr) {
+; KNL-LABEL: store_v1i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    andl $1, %edi
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kxnorw %k0, %k0, %k1
+; KNL-NEXT:    kshiftrw $15, %k1, %k1
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    movb %al, (%rsi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_v1i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    andl $1, %edi
+; SKX-NEXT:    kmovw %edi, %k0
+; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    kshiftrw $15, %k1, %k1
+; SKX-NEXT:    kxorw %k1, %k0, %k0
+; SKX-NEXT:    kmovb %k0, (%rsi)
+; SKX-NEXT:    retq
+  %x = xor <1 x i1> %c, <i1 1>
+  store <1 x i1> %x, <1 x i1>*  %ptr, align 4
+  ret void
+}
+
+define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
+; KNL-LABEL: store_v2i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpextrq $1, %xmm0, %rax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    vmovq %xmm0, %rax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_v2i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX-NEXT:    vpmovq2m %xmm0, %k0
+; SKX-NEXT:    knotw %k0, %k0
+; SKX-NEXT:    kmovb %k0, (%rdi)
+; SKX-NEXT:    retq
+  %x = xor <2 x i1> %c, <i1 1, i1 1>
+  store <2 x i1> %x, <2 x i1>*  %ptr, align 4
+  ret void
+}
+
+define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
+; KNL-LABEL: store_v4i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; KNL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; KNL-NEXT:    vpextrd $3, %xmm0, %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    vpextrd $2, %xmm0, %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    vpextrd $1, %xmm0, %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    vmovd %xmm0, %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_v4i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
+; SKX-NEXT:    vpmovd2m %xmm0, %k0
+; SKX-NEXT:    knotw %k0, %k0
+; SKX-NEXT:    kmovb %k0, (%rdi)
+; SKX-NEXT:    retq
+  %x = xor <4 x i1> %c, <i1 1, i1 1, i1 1, i1 1>
+  store <4 x i1> %x, <4 x i1>*  %ptr, align 4
+  ret void
+}
+
+define void @store_v8i1(<8 x i1> %c , <8 x i1>* %ptr) {
+; KNL-LABEL: store_v8i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
+; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
+; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL-NEXT:    knotw %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_v8i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
+; SKX-NEXT:    vpmovw2m %xmm0, %k0
+; SKX-NEXT:    knotb %k0, %k0
+; SKX-NEXT:    kmovb %k0, (%rdi)
+; SKX-NEXT:    retq
+  %x = xor <8 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
+  store <8 x i1> %x, <8 x i1>*  %ptr, align 4
+  ret void
+}
+
+define void @store_v16i1(<16 x i1> %c , <16 x i1>* %ptr) {
+; KNL-LABEL: store_v16i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    knotw %k0, %k0
+; KNL-NEXT:    kmovw %k0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_v16i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
+; SKX-NEXT:    vpmovb2m %xmm0, %k0
+; SKX-NEXT:    knotw %k0, %k0
+; SKX-NEXT:    kmovw %k0, (%rdi)
+; SKX-NEXT:    retq
+  %x = xor <16 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
+  store <16 x i1> %x, <16 x i1>*  %ptr, align 4
+  ret void
+}
+
+;void f2(int);
+;void f1(int c)
+;{
+;  static int v = 0;
+;  if (v == 0)
+;    v = 1;
+;  else
+;    v = 0;
+;  f2(v);
+;}
+
+@f1.v = internal unnamed_addr global i1 false, align 4
+
+define void @f1(i32 %c) {
+; KNL-LABEL: f1:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    movzbl {{.*}}(%rip), %edi
+; KNL-NEXT:    andl $1, %edi
+; KNL-NEXT:    movl %edi, %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k0
+; KNL-NEXT:    kxnorw %k0, %k0, %k1
+; KNL-NEXT:    kshiftrw $15, %k1, %k1
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    movb %al, {{.*}}(%rip)
+; KNL-NEXT:    xorl $1, %edi
+; KNL-NEXT:    jmp _f2 ## TAILCALL
+;
+; SKX-LABEL: f1:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    movzbl {{.*}}(%rip), %edi
+; SKX-NEXT:    andl $1, %edi
+; SKX-NEXT:    movl %edi, %eax
+; SKX-NEXT:    andl $1, %eax
+; SKX-NEXT:    kmovw %eax, %k0
+; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    kshiftrw $15, %k1, %k1
+; SKX-NEXT:    kxorw %k1, %k0, %k0
+; SKX-NEXT:    kmovb %k0, {{.*}}(%rip)
+; SKX-NEXT:    xorl $1, %edi
+; SKX-NEXT:    jmp _f2 ## TAILCALL
+entry:
+  %.b1 = load i1, i1* @f1.v, align 4
+  %not..b1 = xor i1 %.b1, true
+  store i1 %not..b1, i1* @f1.v, align 4
+  %0 = zext i1 %not..b1 to i32
+  tail call void @f2(i32 %0) #2
+  ret void
+}
+
+declare void @f2(i32) #1
+

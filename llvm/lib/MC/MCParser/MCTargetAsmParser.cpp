@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCTargetAsmParser.h"
 using namespace llvm;
 
 MCTargetAsmParser::MCTargetAsmParser(MCTargetOptions const &MCOptions,

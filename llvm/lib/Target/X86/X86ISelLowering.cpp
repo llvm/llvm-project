@@ -1412,9 +1412,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v8i1,  Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v16i1, Custom);
     if (Subtarget.hasDQI()) {
-      setOperationAction(ISD::TRUNCATE,         MVT::v2i1, Custom);
-      setOperationAction(ISD::TRUNCATE,         MVT::v4i1, Custom);
-
       setOperationAction(ISD::SINT_TO_FP,       MVT::v8i64, Legal);
       setOperationAction(ISD::UINT_TO_FP,       MVT::v8i64, Legal);
       setOperationAction(ISD::FP_TO_SINT,       MVT::v8i64, Legal);
@@ -1708,6 +1705,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v4i1,   &X86::VK4RegClass);
     addRegisterClass(MVT::v2i1,   &X86::VK2RegClass);
 
+    setOperationAction(ISD::TRUNCATE,           MVT::v2i1, Custom);
+    setOperationAction(ISD::TRUNCATE,           MVT::v4i1, Custom);
     setOperationAction(ISD::SETCC,              MVT::v4i1, Custom);
     setOperationAction(ISD::SETCC,              MVT::v2i1, Custom);
     setOperationAction(ISD::CONCAT_VECTORS,     MVT::v4i1, Custom);

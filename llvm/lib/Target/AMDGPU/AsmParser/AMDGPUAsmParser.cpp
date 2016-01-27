@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "AMDKernelCodeT.h"
 #include "SIDefines.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
@@ -25,16 +25,16 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/MC/MCTargetAsmParser.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 

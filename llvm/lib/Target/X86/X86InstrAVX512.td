@@ -2059,9 +2059,6 @@ let Predicates = [HasBWI] in {
                VEX, PD, VEX_W;
   defm KMOVD : avx512_mask_mov_gpr<0x92, 0x93, "kmovd", VK32, GR32>,
                VEX, XD;
-}
-
-let Predicates = [HasBWI] in {
   defm KMOVQ : avx512_mask_mov<0x90, 0x90, 0x91, "kmovq", VK64, v64i1, i64mem>,
                VEX, PS, VEX_W;
   defm KMOVQ : avx512_mask_mov_gpr<0x92, 0x93, "kmovq", VK64, GR64>,
@@ -2101,8 +2098,27 @@ let Predicates = [HasDQI] in {
             (KMOVBmk addr:$dst, (COPY_TO_REGCLASS VK4:$src, VK8))>;
   def : Pat<(store VK2:$src, addr:$dst),
             (KMOVBmk addr:$dst, (COPY_TO_REGCLASS VK2:$src, VK8))>;
+  def : Pat<(store VK1:$src, addr:$dst),
+            (KMOVBmk addr:$dst, (COPY_TO_REGCLASS VK1:$src, VK8))>;
 }
 let Predicates = [HasAVX512, NoDQI] in {
+  def : Pat<(store VK1:$src, addr:$dst),
+            (MOV8mr addr:$dst,
+             (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)),
+              sub_8bit))>;
+  def : Pat<(store VK2:$src, addr:$dst),
+            (MOV8mr addr:$dst,
+             (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK2:$src, VK16)),
+              sub_8bit))>;
+  def : Pat<(store VK4:$src, addr:$dst),
+            (MOV8mr addr:$dst,
+             (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK4:$src, VK16)),
+              sub_8bit))>;  
+  def : Pat<(store VK8:$src, addr:$dst),
+            (MOV8mr addr:$dst,
+             (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK8:$src, VK16)),
+              sub_8bit))>;
+  
   def : Pat<(store (i8 (bitconvert (v8i1 VK8:$src))), addr:$dst),
             (KMOVWmk addr:$dst, (COPY_TO_REGCLASS VK8:$src, VK16))>;
   def : Pat<(v8i1 (bitconvert (i8 (load addr:$src)))),
@@ -2182,6 +2198,17 @@ def : Pat<(v32i1 (scalar_to_vector VK1:$src)),
 def : Pat<(v64i1 (scalar_to_vector VK1:$src)),
           (COPY_TO_REGCLASS VK1:$src, VK64)>;
 
+def : Pat<(store (i1 -1), addr:$dst), (MOV8mi addr:$dst, (i8 1))>;
+def : Pat<(store (i1  1), addr:$dst), (MOV8mi addr:$dst, (i8 1))>;
+def : Pat<(store (i1  0), addr:$dst), (MOV8mi addr:$dst, (i8 0))>;
+
+def truncstorei1 : PatFrag<(ops node:$val, node:$ptr),
+                           (truncstore node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->getMemoryVT() == MVT::i1;
+}]>;
+
+def : Pat<(truncstorei1 GR8:$src, addr:$dst),
+          (MOV8mr addr:$dst, GR8:$src)>;
 
 // With AVX-512 only, 8-bit mask is promoted to 16-bit mask.
 let Predicates = [HasAVX512, NoDQI] in {
@@ -6561,28 +6588,6 @@ defm VSCATTERPF1QPD: avx512_gather_scatter_prefetch<0xC7, MRM6m, "vscatterpf1qpd
 // Helper fragments to match sext vXi1 to vXiY.
 def v16i1sextv16i32  : PatLeaf<(v16i32 (X86vsrai VR512:$src, (i8 31)))>;
 def v8i1sextv8i64  : PatLeaf<(v8i64 (X86vsrai VR512:$src, (i8 63)))>;
-
-def : Pat<(store (i1 -1), addr:$dst), (MOV8mi addr:$dst, (i8 1))>;
-def : Pat<(store (i1  1), addr:$dst), (MOV8mi addr:$dst, (i8 1))>;
-def : Pat<(store (i1  0), addr:$dst), (MOV8mi addr:$dst, (i8 0))>;
-
-def : Pat<(store VK1:$src, addr:$dst),
-          (MOV8mr addr:$dst,
-           (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)),
-            sub_8bit))>, Requires<[HasAVX512, NoDQI]>;
-
-def : Pat<(store VK8:$src, addr:$dst),
-          (MOV8mr addr:$dst,
-           (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK8:$src, VK16)),
-            sub_8bit))>, Requires<[HasAVX512, NoDQI]>;
-
-def truncstorei1 : PatFrag<(ops node:$val, node:$ptr),
-                           (truncstore node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getMemoryVT() == MVT::i1;
-}]>;
-
-def : Pat<(truncstorei1 GR8:$src, addr:$dst),
-          (MOV8mr addr:$dst, GR8:$src)>;
 
 multiclass cvt_by_vec_width<bits<8> opc, X86VectorVTInfo Vec, string OpcodeStr > {
 def rr : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
