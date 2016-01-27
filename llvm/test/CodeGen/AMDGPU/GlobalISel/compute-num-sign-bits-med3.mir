@@ -17,8 +17,7 @@ body:             |
     ; CHECK-NEXT: %val1:_(s32) = G_CONSTANT i32 -255
     ; CHECK-NEXT: %val2:_(s32) = G_CONSTANT i32 255
     ; CHECK-NEXT: %smed3:_(s32) = G_AMDGPU_SMED3 %val0, %val1, %val2
-    ; CHECK-NEXT: %inreg:_(s32) = G_SEXT_INREG %smed3, 9
-    ; CHECK-NEXT: $vgpr0 = COPY %inreg(s32)
+    ; CHECK-NEXT: $vgpr0 = COPY %smed3(s32)
     %val:_(s32) = COPY $vgpr0
     %val0:_(s32) = G_SEXT_INREG %val, 8
     %val1:_(s32) = G_CONSTANT i32 -255
@@ -45,8 +44,7 @@ body:             |
     ; CHECK-NEXT: %val1:_(s32) = G_CONSTANT i32 -255
     ; CHECK-NEXT: %val2:_(s32) = G_CONSTANT i32 255
     ; CHECK-NEXT: %smed3:_(s32) = G_AMDGPU_SMED3 %val1, %val0, %val2
-    ; CHECK-NEXT: %inreg:_(s32) = G_SEXT_INREG %smed3, 9
-    ; CHECK-NEXT: $vgpr0 = COPY %inreg(s32)
+    ; CHECK-NEXT: $vgpr0 = COPY %smed3(s32)
     %val:_(s32) = COPY $vgpr0
     %val0:_(s32) = G_SEXT_INREG %val, 8
     %val1:_(s32) = G_CONSTANT i32 -255
@@ -73,8 +71,7 @@ body:             |
     ; CHECK-NEXT: %val1:_(s32) = G_CONSTANT i32 -256
     ; CHECK-NEXT: %val2:_(s32) = G_CONSTANT i32 128
     ; CHECK-NEXT: %smed3:_(s32) = G_AMDGPU_SMED3 %val1, %val2, %val0
-    ; CHECK-NEXT: %inreg:_(s32) = G_SEXT_INREG %smed3, 9
-    ; CHECK-NEXT: $vgpr0 = COPY %inreg(s32)
+    ; CHECK-NEXT: $vgpr0 = COPY %smed3(s32)
     %val:_(s32) = COPY $vgpr0
     %val0:_(s32) = G_SEXT_INREG %val, 8
     %val1:_(s32) = G_CONSTANT i32 -256
