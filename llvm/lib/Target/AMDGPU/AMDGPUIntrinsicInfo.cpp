@@ -20,10 +20,6 @@
 
 using namespace llvm;
 
-#define GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
-#include "AMDGPUGenIntrinsics.inc"
-#undef GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
-
 AMDGPUIntrinsicInfo::AMDGPUIntrinsicInfo()
     : TargetIntrinsicInfo() {}
 
@@ -62,8 +58,7 @@ unsigned AMDGPUIntrinsicInfo::lookupName(const char *NameData,
                : 0;
   }
 
-  // Fall back on GCC builtin names.
-  return getIntrinsicForGCCBuiltin("AMDGPU", NameData);
+  return 0;
 }
 
 bool AMDGPUIntrinsicInfo::isOverloaded(unsigned id) const {

@@ -568,3 +568,10 @@ define <8 x i16> @shl_const_v8i16(<8 x i16> %a) {
   %shift = shl <8 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
   ret <8 x i16> %shift
 }
+
+define <8 x i16> @zext_16i8_to_8i16(<16 x i8> %A) nounwind uwtable readnone ssp {
+entry:
+  %B = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %C = zext <8 x i8> %B to <8 x i16>
+  ret <8 x i16> %C
+}

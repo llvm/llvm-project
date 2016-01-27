@@ -1854,10 +1854,10 @@ void BoUpSLP::reorderAltShuffleOperands(ArrayRef<Value *> VL,
       if (LoadInst *L1 = dyn_cast<LoadInst>(Right[j + 1])) {
         Instruction *VL1 = cast<Instruction>(VL[j]);
         Instruction *VL2 = cast<Instruction>(VL[j + 1]);
-        if (isConsecutiveAccess(L, L1, DL, *SE) && VL1->isCommutative()) {
+        if (VL1->isCommutative() && isConsecutiveAccess(L, L1, DL, *SE)) {
           std::swap(Left[j], Right[j]);
           continue;
-        } else if (isConsecutiveAccess(L, L1, DL, *SE) && VL2->isCommutative()) {
+        } else if (VL2->isCommutative() && isConsecutiveAccess(L, L1, DL, *SE)) {
           std::swap(Left[j + 1], Right[j + 1]);
           continue;
         }
@@ -1868,10 +1868,10 @@ void BoUpSLP::reorderAltShuffleOperands(ArrayRef<Value *> VL,
       if (LoadInst *L1 = dyn_cast<LoadInst>(Left[j + 1])) {
         Instruction *VL1 = cast<Instruction>(VL[j]);
         Instruction *VL2 = cast<Instruction>(VL[j + 1]);
-        if (isConsecutiveAccess(L, L1, DL, *SE) && VL1->isCommutative()) {
+        if (VL1->isCommutative() && isConsecutiveAccess(L, L1, DL, *SE)) {
           std::swap(Left[j], Right[j]);
           continue;
-        } else if (isConsecutiveAccess(L, L1, DL, *SE) && VL2->isCommutative()) {
+        } else if (VL2->isCommutative() && isConsecutiveAccess(L, L1, DL, *SE)) {
           std::swap(Left[j + 1], Right[j + 1]);
           continue;
         }

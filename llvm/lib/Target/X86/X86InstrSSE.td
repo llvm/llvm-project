@@ -5890,45 +5890,48 @@ multiclass SS41I_pmovx_rrrm<bits<8> opc, string OpcodeStr, X86MemOperand MemOp,
 multiclass SS41I_pmovx_rm_all<bits<8> opc, string OpcodeStr,
                           X86MemOperand MemOp, X86MemOperand MemYOp,
                           OpndItins SSEItins, OpndItins AVXItins,
-                          OpndItins AVX2Itins> {
+                          OpndItins AVX2Itins, Predicate prd> {
   defm NAME : SS41I_pmovx_rrrm<opc, OpcodeStr, MemOp, VR128, VR128, SSEItins>;
-  let Predicates = [HasAVX, NoVLX] in
+  let Predicates = [HasAVX, prd] in
     defm V#NAME   : SS41I_pmovx_rrrm<opc, !strconcat("v", OpcodeStr), MemOp,
                                      VR128, VR128, AVXItins>, VEX;
-  let Predicates = [HasAVX2, NoVLX] in
+  let Predicates = [HasAVX2, prd] in
     defm V#NAME#Y : SS41I_pmovx_rrrm<opc, !strconcat("v", OpcodeStr), MemYOp,
                                      VR256, VR128, AVX2Itins>, VEX, VEX_L;
 }
 
-multiclass SS41I_pmovx_rm<bits<8> opc, string OpcodeStr,
-                                X86MemOperand MemOp, X86MemOperand MemYOp> {
+multiclass SS41I_pmovx_rm<bits<8> opc, string OpcodeStr, X86MemOperand MemOp, 
+                          X86MemOperand MemYOp, Predicate prd> {
   defm PMOVSX#NAME : SS41I_pmovx_rm_all<opc, !strconcat("pmovsx", OpcodeStr),
                                         MemOp, MemYOp,
                                         SSE_INTALU_ITINS_SHUFF_P,
                                         DEFAULT_ITINS_SHUFFLESCHED,
-                                        DEFAULT_ITINS_SHUFFLESCHED>;
+                                        DEFAULT_ITINS_SHUFFLESCHED, prd>;
   defm PMOVZX#NAME : SS41I_pmovx_rm_all<!add(opc, 0x10),
                                         !strconcat("pmovzx", OpcodeStr),
                                         MemOp, MemYOp,
                                         SSE_INTALU_ITINS_SHUFF_P,
                                         DEFAULT_ITINS_SHUFFLESCHED,
-                                        DEFAULT_ITINS_SHUFFLESCHED>;
+                                        DEFAULT_ITINS_SHUFFLESCHED, prd>;
 }
 
-defm BW : SS41I_pmovx_rm<0x20, "bw", i64mem, i128mem>;
-defm WD : SS41I_pmovx_rm<0x23, "wd", i64mem, i128mem>;
-defm DQ : SS41I_pmovx_rm<0x25, "dq", i64mem, i128mem>;
+defm BW : SS41I_pmovx_rm<0x20, "bw", i64mem, i128mem, NoVLX_Or_NoBWI>;
+defm WD : SS41I_pmovx_rm<0x23, "wd", i64mem, i128mem, NoVLX>;
+defm DQ : SS41I_pmovx_rm<0x25, "dq", i64mem, i128mem, NoVLX>;
 
-defm BD : SS41I_pmovx_rm<0x21, "bd", i32mem, i64mem>;
-defm WQ : SS41I_pmovx_rm<0x24, "wq", i32mem, i64mem>;
+defm BD : SS41I_pmovx_rm<0x21, "bd", i32mem, i64mem, NoVLX>;
+defm WQ : SS41I_pmovx_rm<0x24, "wq", i32mem, i64mem, NoVLX>;
 
-defm BQ : SS41I_pmovx_rm<0x22, "bq", i16mem, i32mem>;
+defm BQ : SS41I_pmovx_rm<0x22, "bq", i16mem, i32mem, NoVLX>;
 
 // AVX2 Patterns
 multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtOp> {
   // Register-Register patterns
+  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   def : Pat<(v16i16 (ExtOp (v16i8 VR128:$src))),
             (!cast<I>(OpcPrefix#BWYrr) VR128:$src)>;
+  }
+  let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v8i32 (ExtOp (v16i8 VR128:$src))),
             (!cast<I>(OpcPrefix#BDYrr) VR128:$src)>;
   def : Pat<(v4i64 (ExtOp (v16i8 VR128:$src))),
@@ -5941,10 +5944,13 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtO
 
   def : Pat<(v4i64 (ExtOp (v4i32 VR128:$src))),
             (!cast<I>(OpcPrefix#DQYrr) VR128:$src)>;
-
+  }
   // On AVX2, we also support 256bit inputs.
+  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   def : Pat<(v16i16 (ExtOp (v32i8 VR256:$src))),
             (!cast<I>(OpcPrefix#BWYrr) (EXTRACT_SUBREG VR256:$src, sub_xmm))>;
+  }
+  let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v8i32 (ExtOp (v32i8 VR256:$src))),
             (!cast<I>(OpcPrefix#BDYrr) (EXTRACT_SUBREG VR256:$src, sub_xmm))>;
   def : Pat<(v4i64 (ExtOp (v32i8 VR256:$src))),
@@ -5957,10 +5963,14 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtO
 
   def : Pat<(v4i64 (ExtOp (v8i32 VR256:$src))),
             (!cast<I>(OpcPrefix#DQYrr) (EXTRACT_SUBREG VR256:$src, sub_xmm))>;
+  }
 
   // Simple Register-Memory patterns
+  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   def : Pat<(v16i16 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
             (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
+  }
+  let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v8i32 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
             (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
   def : Pat<(v4i64 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
@@ -5973,8 +5983,10 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtO
 
   def : Pat<(v4i64 (!cast<PatFrag>(ExtTy#"extloadvi32") addr:$src)),
             (!cast<I>(OpcPrefix#DQYrm) addr:$src)>;
-
+  }
+  
   // AVX2 Register-Memory patterns
+  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {  
   def : Pat<(v16i16 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
   def : Pat<(v16i16 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
@@ -5983,7 +5995,8 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtO
             (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
   def : Pat<(v16i16 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
-
+  }
+  let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v8i32 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
   def : Pat<(v8i32 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
@@ -6028,18 +6041,20 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtO
             (!cast<I>(OpcPrefix#DQYrm) addr:$src)>;
   def : Pat<(v4i64 (ExtOp (bc_v4i32 (loadv2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#DQYrm) addr:$src)>;
+  }
 }
 
-let Predicates = [HasAVX2, NoVLX] in {
-  defm : SS41I_pmovx_avx2_patterns<"VPMOVSX", "s", X86vsext>;
-  defm : SS41I_pmovx_avx2_patterns<"VPMOVZX", "z", X86vzext>;
-}
+defm : SS41I_pmovx_avx2_patterns<"VPMOVSX", "s", X86vsext>;
+defm : SS41I_pmovx_avx2_patterns<"VPMOVZX", "z", X86vzext>;
 
 // SSE4.1/AVX patterns.
 multiclass SS41I_pmovx_patterns<string OpcPrefix, string ExtTy,
                                 SDNode ExtOp, PatFrag ExtLoad16> {
+  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   def : Pat<(v8i16 (ExtOp (v16i8 VR128:$src))),
             (!cast<I>(OpcPrefix#BWrr) VR128:$src)>;
+  }
+  let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v4i32 (ExtOp (v16i8 VR128:$src))),
             (!cast<I>(OpcPrefix#BDrr) VR128:$src)>;
   def : Pat<(v2i64 (ExtOp (v16i8 VR128:$src))),
@@ -6052,9 +6067,12 @@ multiclass SS41I_pmovx_patterns<string OpcPrefix, string ExtTy,
 
   def : Pat<(v2i64 (ExtOp (v4i32 VR128:$src))),
             (!cast<I>(OpcPrefix#DQrr) VR128:$src)>;
-
+  }
+  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   def : Pat<(v8i16 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
             (!cast<I>(OpcPrefix#BWrm) addr:$src)>;
+  }
+  let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v4i32 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
             (!cast<I>(OpcPrefix#BDrm) addr:$src)>;
   def : Pat<(v2i64 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
@@ -6067,7 +6085,8 @@ multiclass SS41I_pmovx_patterns<string OpcPrefix, string ExtTy,
 
   def : Pat<(v2i64 (!cast<PatFrag>(ExtTy#"extloadvi32") addr:$src)),
             (!cast<I>(OpcPrefix#DQrm) addr:$src)>;
-
+  }
+  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   def : Pat<(v8i16 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#BWrm) addr:$src)>;
   def : Pat<(v8i16 (ExtOp (bc_v16i8 (v2f64 (scalar_to_vector (loadf64 addr:$src)))))),
@@ -6078,7 +6097,8 @@ multiclass SS41I_pmovx_patterns<string OpcPrefix, string ExtTy,
             (!cast<I>(OpcPrefix#BWrm) addr:$src)>;
   def : Pat<(v8i16 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BWrm) addr:$src)>;
-
+  }
+  let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v4i32 (ExtOp (bc_v16i8 (v4i32 (scalar_to_vector (loadi32 addr:$src)))))),
             (!cast<I>(OpcPrefix#BDrm) addr:$src)>;
   def : Pat<(v4i32 (ExtOp (v16i8 (vzmovl_v4i32 addr:$src)))),
@@ -6127,12 +6147,11 @@ multiclass SS41I_pmovx_patterns<string OpcPrefix, string ExtTy,
             (!cast<I>(OpcPrefix#DQrm) addr:$src)>;
   def : Pat<(v2i64 (ExtOp (bc_v4i32 (loadv2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#DQrm) addr:$src)>;
+  }
 }
 
-let Predicates = [HasAVX, NoVLX] in {
-  defm : SS41I_pmovx_patterns<"VPMOVSX", "s", X86vsext, extloadi32i16>;
-  defm : SS41I_pmovx_patterns<"VPMOVZX", "z", X86vzext, loadi16_anyext>;
-}
+defm : SS41I_pmovx_patterns<"VPMOVSX", "s", X86vsext, extloadi32i16>;
+defm : SS41I_pmovx_patterns<"VPMOVZX", "z", X86vzext, loadi16_anyext>;
 
 let Predicates = [UseSSE41] in {
   defm : SS41I_pmovx_patterns<"PMOVSX", "s", X86vsext, extloadi32i16>;

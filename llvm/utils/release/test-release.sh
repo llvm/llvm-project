@@ -541,8 +541,9 @@ for Flavor in $Flavors ; do
             # Substitute 'Phase2' for 'Phase3' in the Phase 2 object file in
             # case there are build paths in the debug info. On some systems,
             # sed adds a newline to the output, so pass $p3 through sed too.
-            if ! cmp -s <(sed -e 's,Phase2,Phase3,g' $p2) <(sed -e '' $p3) \
-                    16 16 ; then
+            if ! cmp -s \
+                <(env LC_CTYPE=C sed -e 's,Phase2,Phase3,g' $p2) \
+                <(env LC_CTYPE=C sed -e '' $p3) 16 16; then
                 echo "file `basename $p2` differs between phase 2 and phase 3"
             fi
         done

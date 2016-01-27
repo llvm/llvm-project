@@ -58,7 +58,6 @@ public:
   };
 
 private:
-  std::string DevName;
   bool DumpCode;
   bool R600ALUInst;
   bool HasVertexCache;
@@ -272,10 +271,6 @@ public:
   // Helper functions to simplify if statements
   bool isTargetELF() const {
     return false;
-  }
-
-  StringRef getDeviceName() const {
-    return DevName;
   }
 
   bool enableHugeScratchBuffer() const {
