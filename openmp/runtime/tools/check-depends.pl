@@ -18,9 +18,10 @@ use FindBin;
 use lib "$FindBin::Bin/lib";
 
 use tools;
-use Platform ":vars";
 
 our $VERSION = "0.005";
+my $target_os;
+my $target_arch;
 
 # --------------------------------------------------------------------------------------------------
 # Ouput parse error.
@@ -331,7 +332,8 @@ my $expected;
 my $bare;
 Getopt::Long::Configure( "permute" );
 get_options(
-    Platform::target_options(),
+    "os=s"       => \$target_os,
+    "arch=s"     => \$target_arch,
     "bare"       => \$bare,
     "expected=s" => \$expected,
 );

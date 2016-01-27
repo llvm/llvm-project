@@ -160,6 +160,14 @@ SBInstruction::DoesBranch ()
     return false;
 }
 
+bool
+SBInstruction::HasDelaySlot ()
+{
+    if (m_opaque_sp)
+        return m_opaque_sp->HasDelaySlot ();
+    return false;
+}
+
 void
 SBInstruction::SetOpaque (const lldb::InstructionSP &inst_sp)
 {

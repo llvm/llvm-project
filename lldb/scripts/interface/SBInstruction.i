@@ -51,6 +51,9 @@ public:
     bool
     DoesBranch ();
 
+    bool
+    HasDelaySlot ();
+
     void
     Print (FILE *out);
 

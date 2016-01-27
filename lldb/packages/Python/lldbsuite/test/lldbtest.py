@@ -636,6 +636,14 @@ def check_list_or_lambda(list_or_lambda, value):
     else:
         return list_or_lambda is None or value is None or list_or_lambda == value
 
+def matchArchitectures(archs, actual_arch):
+    retype = type(re.compile('hello, world'))
+    list_passes = isinstance(archs, list) and actual_arch in archs
+    basestring_passes = isinstance(archs, basestring) and actual_arch == archs
+    regex_passes = isinstance(archs, retype) and re.match(archs, actual_arch)
+
+    return (list_passes or basestring_passes or regex_passes)
+
 # provide a function to xfail on defined oslist, compiler version, and archs
 # if none is specified for any argument, that argument won't be checked and thus means for all
 # for example,
@@ -1029,7 +1037,7 @@ def skipUnlessHostPlatform(oslist):
     return unittest2.skipUnless(getHostPlatform() in oslist,
                                 "requires on of %s" % (", ".join(oslist)))
 
-def skipUnlessArch(archlist):
+def skipUnlessArch(archs):
     """Decorate the item to skip tests unless running on one of the listed architectures."""
     def myImpl(func):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
@@ -1038,9 +1046,8 @@ def skipUnlessArch(archlist):
         @wraps(func)
         def wrapper(*args, **kwargs):
             self = args[0]
-            if self.getArchitecture() not in archlist:
-                self.skipTest("skipping for architecture %s (requires one of %s)" % 
-                    (self.getArchitecture(), ", ".join(archlist)))
+            if not matchArchitectures(archs, self.getArchitecture()):
+                self.skipTest("skipping for architecture %s" % (self.getArchitecture())) 
             else:
                 func(*args, **kwargs)
         return wrapper
