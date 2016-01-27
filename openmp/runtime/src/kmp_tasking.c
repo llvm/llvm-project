@@ -690,12 +690,11 @@ __kmp_task_finish( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t *resumed_tas
     }
 
     // Free this task and then ancestor tasks if they have no children.
+    // Restore th_current_task first as suggested by John:
+    // johnmc: if an asynchronous inquiry peers into the runtime system
+    // it doesn't see the freed task as the current task.
+    thread->th.th_current_task = resumed_task;
     __kmp_free_task_and_ancestors(gtid, taskdata, thread);
-
-    // FIXME johnmc: I this statement should be before the last one so if an
-    // asynchronous inquiry peers into the runtime system it doesn't see the freed
-    // task as the current task
-    __kmp_threads[ gtid ] -> th.th_current_task = resumed_task; // restore current_task
 
     // TODO: GEH - make sure root team implicit task is initialized properly.
     // KMP_DEBUG_ASSERT( resumed_task->td_flags.executing == 0 );

@@ -6,7 +6,6 @@ config.name_suffix = "@ASAN_TEST_CONFIG_SUFFIX@"
 config.asan_lit_source_dir = "@ASAN_LIT_SOURCE_DIR@"
 config.target_cflags = "@ASAN_TEST_TARGET_CFLAGS@"
 config.clang = "@ASAN_TEST_TARGET_CC@"
-config.llvm_tools_dir = "@LLVM_TOOLS_BINARY_DIR@"
 config.bits = "@ASAN_TEST_BITS@"
 config.android = "@ANDROID@"
 config.asan_dynamic = @ASAN_TEST_DYNAMIC@
