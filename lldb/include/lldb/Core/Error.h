@@ -272,7 +272,7 @@ public:
     ///     A printf style format string
     //------------------------------------------------------------------
     int
-    SetErrorStringWithFormat (const char *format, ...) __attribute__ ((format (printf, 2, 3)));
+    SetErrorStringWithFormat (const char *format, ...) /*__attribute__ ((format (printf, 2, 3)))*/;
 
     int
     SetErrorStringWithVarArg (const char *format, va_list args);
