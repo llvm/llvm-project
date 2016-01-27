@@ -224,7 +224,6 @@ typedef union  kmp_team      kmp_team_p;
 typedef union  kmp_info      kmp_info_p;
 typedef union  kmp_root      kmp_root_p;
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2332,7 +2331,6 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
                                                  // #active threads in pool
     int                  th_active;              // ! sleeping
                                                  // 32 bits for TCR/TCW
-
 
     struct cons_header * th_cons; // used for consistency check
 

@@ -23,7 +23,6 @@
 #include "ompt-specific.h"
 #endif
 
-
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 
@@ -2476,7 +2475,6 @@ __kmp_wait_to_unref_task_teams(void)
 
     KMP_INIT_YIELD( spins );
 
-
     for (;;) {
         done = TRUE;
 
@@ -2529,8 +2527,6 @@ __kmp_wait_to_unref_task_teams(void)
         KMP_YIELD( TCR_4(__kmp_nth) > __kmp_avail_proc );
         KMP_YIELD_SPIN( spins );        // Yields only if KMP_LIBRARY=throughput
     }
-
-
 }
 
 
