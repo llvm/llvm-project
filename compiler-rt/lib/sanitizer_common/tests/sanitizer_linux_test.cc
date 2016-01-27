@@ -266,9 +266,14 @@ TEST(SanitizerLinux, ThreadSelfTest) {
 TEST(SanitizerCommon, StartSubprocessTest) {
   int pipe_fds[2];
   ASSERT_EQ(0, pipe(pipe_fds));
-  const char *argv[] = {"/bin/sh", "-c", "echo -n 'hello'"};
-  int pid = StartSubprocess("/bin/sh", const_cast<char **>(&argv[0]),
-                            kInvalidFd /* stdin */, pipe_fds[1] /* stdout */);
+#if SANITIZER_ANDROID
+  const char *shell = "/system/bin/sh";
+#else
+  const char *shell = "/bin/sh";
+#endif
+  const char *argv[] = {shell, "-c", "echo -n 'hello'"};
+  int pid = StartSubprocess(shell, argv,
+                            /* stdin */ kInvalidFd, /* stdout */ pipe_fds[1]);
   ASSERT_GT(pid, 0);
 
   // wait for process to finish.
