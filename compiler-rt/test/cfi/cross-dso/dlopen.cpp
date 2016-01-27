@@ -64,7 +64,7 @@ extern "C" void *create_B() {
   return (void *)(new B());
 }
 
-extern "C" void do_nothing() __attribute__((aligned(4096))) {}
+extern "C" __attribute__((aligned(4096))) void do_nothing() {}
 
 #else
 
