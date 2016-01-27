@@ -30,17 +30,6 @@ using namespace polly;
 
 #define DEBUG_TYPE "polly-scop-helper"
 
-Value *polly::getPointerOperand(Instruction &Inst) {
-  if (LoadInst *load = dyn_cast<LoadInst>(&Inst))
-    return load->getPointerOperand();
-  else if (StoreInst *store = dyn_cast<StoreInst>(&Inst))
-    return store->getPointerOperand();
-  else if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(&Inst))
-    return gep->getPointerOperand();
-
-  return 0;
-}
-
 bool polly::hasInvokeEdge(const PHINode *PN) {
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i < e; ++i)
     if (InvokeInst *II = dyn_cast<InvokeInst>(PN->getIncomingValue(i)))

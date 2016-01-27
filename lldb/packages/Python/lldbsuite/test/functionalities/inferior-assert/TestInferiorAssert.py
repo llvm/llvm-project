@@ -29,7 +29,7 @@ class AssertingInferiorTestCase(TestBase):
         self.inferior_asserting_registers()
 
     @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailureLinux("llvm.org/pr25338", archs=['arm'])
+    @expectedFailureLinux("llvm.org/pr25338", archs=['aarch64', 'arm'])
     def test_inferior_asserting_disassemble(self):
         """Test that lldb reliably disassembles frames after asserting (command)."""
         self.build()
@@ -43,14 +43,14 @@ class AssertingInferiorTestCase(TestBase):
         self.inferior_asserting_python()
 
     @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailureLinux("llvm.org/pr25338", archs=['arm'])
+    @expectedFailureLinux("llvm.org/pr25338", archs=['aarch64', 'arm'])
     def test_inferior_asserting_expr(self):
         """Test that the lldb expression interpreter can read from the inferior after asserting (command)."""
         self.build()
         self.inferior_asserting_expr()
 
     @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailureLinux("llvm.org/pr25338", archs=['arm'])
+    @expectedFailureLinux("llvm.org/pr25338", archs=['aarch64', 'arm'])
     def test_inferior_asserting_step(self):
         """Test that lldb functions correctly after stepping through a call to assert()."""
         self.build()
@@ -60,7 +60,8 @@ class AssertingInferiorTestCase(TestBase):
         lldbutil.run_break_set_by_file_and_line (self, "main.c", line, num_expected_locations=1, loc_exact=True)
 
     def check_stop_reason(self):
-        if matchAndroid(api_levels=list(range(1, 16+1)))(self):
+        match_result, _ = matchAndroid(api_levels=list(range(1, 16+1)))(self)
+        if match_result:
             # On android until API-16 the abort() call ended in a sigsegv instead of in a sigabrt
             stop_reason = 'stop reason = signal SIGSEGV'
         else:

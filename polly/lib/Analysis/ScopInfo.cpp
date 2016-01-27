@@ -533,7 +533,7 @@ void MemoryAccess::assumeNoOutOfBound() {
 void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
   ScalarEvolution *SE = Statement->getParent()->getSE();
 
-  Value *Ptr = getPointerOperand(*getAccessInstruction());
+  Value *Ptr = MemAccInst(getAccessInstruction()).getPointerOperand();
   if (!Ptr || !SE->isSCEVable(Ptr->getType()))
     return;
 
@@ -2497,8 +2497,8 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
         continue;
       if (!MA->isRead())
         HasWriteAccess.insert(MA->getBaseAddr());
-      Instruction *Acc = MA->getAccessInstruction();
-      PtrToAcc[getPointerOperand(*Acc)] = MA;
+      MemAccInst Acc(MA->getAccessInstruction());
+      PtrToAcc[Acc.getPointerOperand()] = MA;
       AST.add(Acc);
     }
   }
@@ -3703,28 +3703,16 @@ bool ScopInfo::buildScalarDependences(Instruction *Inst, Region *R,
 extern MapInsnToMemAcc InsnToMemAcc;
 
 void ScopInfo::buildMemoryAccess(
-    Instruction *Inst, Loop *L, Region *R,
+    MemAccInst Inst, Loop *L, Region *R,
     const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
     const InvariantLoadsSetTy &ScopRIL) {
-  unsigned Size;
-  Type *SizeType;
-  Value *Val;
-  enum MemoryAccess::AccessType Type;
 
-  if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-    SizeType = Load->getType();
-    Size = TD->getTypeAllocSize(SizeType);
-    Type = MemoryAccess::READ;
-    Val = Load;
-  } else {
-    StoreInst *Store = cast<StoreInst>(Inst);
-    SizeType = Store->getValueOperand()->getType();
-    Size = TD->getTypeAllocSize(SizeType);
-    Type = MemoryAccess::MUST_WRITE;
-    Val = Store->getValueOperand();
-  }
-
-  auto Address = getPointerOperand(*Inst);
+  Value *Address = Inst.getPointerOperand();
+  Value *Val = Inst.getValueOperand();
+  Type *SizeType = Val->getType();
+  unsigned Size = TD->getTypeAllocSize(SizeType);
+  enum MemoryAccess::AccessType Type =
+      Inst.isLoad() ? MemoryAccess::READ : MemoryAccess::MUST_WRITE;
 
   const SCEV *AccessFunction = SE->getSCEVAtScope(Address, L);
   const SCEVUnknown *BasePointer =
@@ -3809,7 +3797,7 @@ void ScopInfo::buildMemoryAccess(
   // FIXME: Size of the number of bytes of an array element, not the number of
   // elements as probably intended here.
   const SCEV *SizeSCEV =
-      SE->getConstant(TD->getIntPtrType(Inst->getContext()), Size);
+      SE->getConstant(TD->getIntPtrType(Inst.getContext()), Size);
 
   if (!IsAffine && Type == MemoryAccess::MUST_WRITE)
     Type = MemoryAccess::MAY_WRITE;
@@ -3881,8 +3869,8 @@ void ScopInfo::buildAccessFunctions(Region &R, BasicBlock &BB,
     //       invariant and will be hoisted for the SCoP to be processed. Though,
     //       there might be other invariant accesses that will be hoisted and
     //       that would allow to make a non-affine access affine.
-    if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
-      buildMemoryAccess(Inst, L, &R, BoxedLoops, ScopRIL);
+    if (auto MemInst = MemAccInst::dyn_cast(Inst))
+      buildMemoryAccess(MemInst, L, &R, BoxedLoops, ScopRIL);
 
     if (isIgnoredIntrinsic(Inst))
       continue;
@@ -3947,15 +3935,14 @@ MemoryAccess *ScopInfo::addMemoryAccess(BasicBlock *BB, Instruction *Inst,
   return &AccList.back();
 }
 
-void ScopInfo::addArrayAccess(Instruction *MemAccInst,
+void ScopInfo::addArrayAccess(MemAccInst MemAccInst,
                               MemoryAccess::AccessType Type, Value *BaseAddress,
                               unsigned ElemBytes, bool IsAffine,
                               ArrayRef<const SCEV *> Subscripts,
                               ArrayRef<const SCEV *> Sizes,
                               Value *AccessValue) {
-  assert(isa<LoadInst>(MemAccInst) || isa<StoreInst>(MemAccInst));
-  assert(isa<LoadInst>(MemAccInst) == (Type == MemoryAccess::READ));
-  addMemoryAccess(MemAccInst->getParent(), MemAccInst, Type, BaseAddress,
+  assert(MemAccInst.isLoad() == (Type == MemoryAccess::READ));
+  addMemoryAccess(MemAccInst.getParent(), MemAccInst, Type, BaseAddress,
                   ElemBytes, IsAffine, AccessValue, Subscripts, Sizes,
                   ScopArrayInfo::MK_Array);
 }

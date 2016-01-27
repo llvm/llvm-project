@@ -1383,34 +1383,6 @@ template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-bool elf2::shouldKeepInSymtab(const ObjectFile<ELFT> &File, StringRef SymName,
-                              const typename ELFFile<ELFT>::Elf_Sym &Sym) {
-  if (Sym.getType() == STT_SECTION || Sym.getType() == STT_FILE)
-    return false;
-
-  InputSectionBase<ELFT> *Sec = File.getSection(Sym);
-  // If sym references a section in a discarded group, don't keep it.
-  if (Sec == &InputSection<ELFT>::Discarded)
-    return false;
-
-  if (Config->DiscardNone)
-    return true;
-
-  // In ELF assembly .L symbols are normally discarded by the assembler.
-  // If the assembler fails to do so, the linker discards them if
-  // * --discard-locals is used.
-  // * The symbol is in a SHF_MERGE section, which is normally the reason for
-  //   the assembler keeping the .L symbol.
-  if (!SymName.startswith(".L") && !SymName.empty())
-    return true;
-
-  if (Config->DiscardLocals)
-    return false;
-
-  return !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
-}
-
-template <class ELFT>
 SymbolTableSection<ELFT>::SymbolTableSection(
     SymbolTable<ELFT> &Table, StringTableSection<ELFT> &StrTabSec)
     : OutputSectionBase<ELFT>(StrTabSec.isDynamic() ? ".dynsym" : ".symtab",
@@ -1461,7 +1433,6 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
 template <class ELFT>
 void SymbolTableSection<ELFT>::addLocalSymbol(StringRef Name) {
   StrTabSec.reserve(Name);
-  ++NumVisible;
   ++NumLocals;
 }
 
@@ -1469,7 +1440,6 @@ template <class ELFT>
 void SymbolTableSection<ELFT>::addSymbol(SymbolBody *Body) {
   StrTabSec.reserve(Body->getName());
   Symbols.push_back(Body);
-  ++NumVisible;
 }
 
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1488,34 +1458,29 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   // Iterate over all input object files to copy their local symbols
   // to the output symbol table pointed by Buf.
   for (const std::unique_ptr<ObjectFile<ELFT>> &File : Table.getObjectFiles()) {
-    Elf_Sym_Range Syms = File->getLocalSymbols();
-    for (const Elf_Sym &Sym : Syms) {
-      ErrorOr<StringRef> SymNameOrErr = Sym.getName(File->getStringTable());
+    for (const Elf_Sym *Sym : File->KeptLocalSyms) {
+      ErrorOr<StringRef> SymNameOrErr = Sym->getName(File->getStringTable());
       error(SymNameOrErr);
       StringRef SymName = *SymNameOrErr;
-      if (!shouldKeepInSymtab<ELFT>(*File, SymName, Sym))
-        continue;
 
       auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
       uintX_t VA = 0;
-      if (Sym.st_shndx == SHN_ABS) {
+      if (Sym->st_shndx == SHN_ABS) {
         ESym->st_shndx = SHN_ABS;
-        VA = Sym.st_value;
+        VA = Sym->st_value;
       } else {
-        InputSectionBase<ELFT> *Section = File->getSection(Sym);
-        if (!Section->isLive())
-          continue;
+        InputSectionBase<ELFT> *Section = File->getSection(*Sym);
         const OutputSectionBase<ELFT> *OutSec = Section->OutSec;
         ESym->st_shndx = OutSec->SectionIndex;
-        VA = Section->getOffset(Sym);
+        VA = Section->getOffset(*Sym);
         // Symbol offsets for AMDGPU need to be the offset in bytes of the
         // symbol from the beginning of the section.
         if (Config->EMachine != EM_AMDGPU)
           VA += OutSec->getVA();
       }
       ESym->st_name = StrTabSec.addString(SymName);
-      ESym->st_size = Sym.st_size;
-      ESym->setBindingAndType(Sym.getBinding(), Sym.getType());
+      ESym->st_size = Sym->st_size;
+      ESym->setBindingAndType(Sym->getBinding(), Sym->getType());
       ESym->st_value = VA;
       Buf += sizeof(*ESym);
     }
@@ -1739,18 +1704,5 @@ template uint64_t getLocalRelTarget(const ObjectFile<ELF64LE> &,
 template uint64_t getLocalRelTarget(const ObjectFile<ELF64BE> &,
                                     const ELFFile<ELF64BE>::Elf_Rela &,
                                     uint64_t);
-
-template bool shouldKeepInSymtab<ELF32LE>(const ObjectFile<ELF32LE> &,
-                                          StringRef,
-                                          const ELFFile<ELF32LE>::Elf_Sym &);
-template bool shouldKeepInSymtab<ELF32BE>(const ObjectFile<ELF32BE> &,
-                                          StringRef,
-                                          const ELFFile<ELF32BE>::Elf_Sym &);
-template bool shouldKeepInSymtab<ELF64LE>(const ObjectFile<ELF64LE> &,
-                                          StringRef,
-                                          const ELFFile<ELF64LE>::Elf_Sym &);
-template bool shouldKeepInSymtab<ELF64BE>(const ObjectFile<ELF64BE> &,
-                                          StringRef,
-                                          const ELFFile<ELF64BE>::Elf_Sym &);
 }
 }

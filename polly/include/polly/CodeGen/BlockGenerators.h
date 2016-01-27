@@ -483,9 +483,8 @@ protected:
   /// @param NewAccesses A map from memory access ids to new ast expressions,
   ///                    which may contain new access expressions for certain
   ///                    memory accesses.
-  Value *generateLocationAccessed(ScopStmt &Stmt, const Instruction *Inst,
-                                  Value *Pointer, ValueMapT &BBMap,
-                                  LoopToScevMapT &LTS,
+  Value *generateLocationAccessed(ScopStmt &Stmt, MemAccInst Inst,
+                                  ValueMapT &BBMap, LoopToScevMapT &LTS,
                                   isl_id_to_ast_expr *NewAccesses);
 
   /// @param NewAccesses A map from memory access ids to new ast expressions,

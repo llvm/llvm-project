@@ -839,7 +839,8 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           // the parent of Inst and lastly if the parent of Inst has an empty
           // domain. In the first and last case the instruction is dead but if
           // there is a statement or the domain is not empty Inst is not dead.
-          auto *Address = getPointerOperand(*Inst);
+          auto MemInst = MemAccInst::dyn_cast(Inst);
+          auto Address = MemInst ? MemInst.getPointerOperand() : nullptr;
           if (Address &&
               SE.getUnknown(UndefValue::get(Address->getType())) ==
                   SE.getPointerBase(SE.getSCEV(Address))) {

@@ -59,11 +59,6 @@ getLocalRelTarget(const ObjectFile<ELFT> &File,
 
 bool canBePreempted(const SymbolBody *Body, bool NeedsGot);
 
-template <class ELFT>
-bool shouldKeepInSymtab(
-    const ObjectFile<ELFT> &File, StringRef Name,
-    const typename llvm::object::ELFFile<ELFT>::Elf_Sym &Sym);
-
 // This represents a section in an output file.
 // Different sub classes represent different types of sections. Some contain
 // input sections, others are created by the linker.
@@ -203,7 +198,7 @@ public:
   void addLocalSymbol(StringRef Name);
   void addSymbol(SymbolBody *Body);
   StringTableSection<ELFT> &getStrTabSec() const { return StrTabSec; }
-  unsigned getNumSymbols() const { return NumVisible + 1; }
+  unsigned getNumSymbols() const { return NumLocals + Symbols.size() + 1; }
 
   ArrayRef<SymbolBody *> getSymbols() const { return Symbols; }
 
@@ -216,7 +211,6 @@ private:
   SymbolTable<ELFT> &Table;
   StringTableSection<ELFT> &StrTabSec;
   std::vector<SymbolBody *> Symbols;
-  unsigned NumVisible = 0;
   unsigned NumLocals = 0;
 };
 
