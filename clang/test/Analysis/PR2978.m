@@ -14,6 +14,7 @@
   id _Y;
   id _Z;
   id _K;
+  id _L;
   id _N;
   id _M;
   id _V;
@@ -23,6 +24,7 @@
 @property(retain) id Y;
 @property(assign) id Z;
 @property(assign) id K;
+@property(weak) id L;
 @property(readonly) id N;
 @property(retain) id M;
 @property(retain) id V;
@@ -33,13 +35,14 @@
 
 @implementation MyClass
 @synthesize X = _X;
-@synthesize Y = _Y; // expected-warning{{The '_Y' instance variable was retained by a synthesized property but wasn't released in 'dealloc'}}
-@synthesize Z = _Z; // expected-warning{{The '_Z' instance variable was not retained by a synthesized property but was released in 'dealloc'}}
+@synthesize Y = _Y; // expected-warning{{The '_Y' instance variable in 'MyClass' was retained by a synthesized property but was not released in 'dealloc'}}
+@synthesize Z = _Z; // expected-warning{{The '_Z' instance variable in 'MyClass' was not retained by a synthesized property but was released in 'dealloc'}}
 @synthesize K = _K;
-@synthesize N = _N;
+@synthesize L = _L; // no-warning
+@synthesize N = _N; // expected-warning{{The '_N' instance variable in 'MyClass' was not retained by a synthesized property but was released in 'dealloc'}}
 @synthesize M = _M;
 @synthesize V = _V;
-@synthesize W = _W; // expected-warning{{The '_W' instance variable was retained by a synthesized property but wasn't released in 'dealloc'}}
+@synthesize W = _W; // expected-warning{{The '_W' instance variable in 'MyClass' was retained by a synthesized property but was not released in 'dealloc'}}
 
 -(id) O{ return 0; }
 -(void) setO:(id)arg { }

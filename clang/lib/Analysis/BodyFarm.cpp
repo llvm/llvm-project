@@ -383,10 +383,49 @@ Stmt *BodyFarm::getBody(const FunctionDecl *D) {
   return Val.getValue();
 }
 
+static const ObjCIvarDecl *findBackingIvar(const ObjCPropertyDecl *Prop) {
+  const ObjCIvarDecl *IVar = Prop->getPropertyIvarDecl();
+
+  if (IVar)
+    return IVar;
+
+  // When a readonly property is shadowed in a class extensions with a
+  // a readwrite property, the instance variable belongs to the shadowing
+  // property rather than the shadowed property. If there is no instance
+  // variable on a readonly property, check to see whether the property is
+  // shadowed and if so try to get the instance variable from shadowing
+  // property.
+  if (!Prop->isReadOnly())
+    return nullptr;
+
+  auto *Container = cast<ObjCContainerDecl>(Prop->getDeclContext());
+  const ObjCInterfaceDecl *PrimaryInterface = nullptr;
+  if (auto *InterfaceDecl = dyn_cast<ObjCInterfaceDecl>(Container)) {
+    PrimaryInterface = InterfaceDecl;
+  } else if (auto *CategoryDecl = dyn_cast<ObjCCategoryDecl>(Container)) {
+    PrimaryInterface = CategoryDecl->getClassInterface();
+  } else if (auto *ImplDecl = dyn_cast<ObjCImplDecl>(Container)) {
+    PrimaryInterface = ImplDecl->getClassInterface();
+  } else {
+    return nullptr;
+  }
+
+  // FindPropertyVisibleInPrimaryClass() looks first in class extensions, so it
+  // is guaranteed to find the shadowing property, if it exists, rather than
+  // the shadowed property.
+  auto *ShadowingProp = PrimaryInterface->FindPropertyVisibleInPrimaryClass(
+      Prop->getIdentifier());
+  if (ShadowingProp && ShadowingProp != Prop) {
+    IVar = ShadowingProp->getPropertyIvarDecl();
+  }
+
+  return IVar;
+}
+
 static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
                                       const ObjCPropertyDecl *Prop) {
   // First, find the backing ivar.
-  const ObjCIvarDecl *IVar = Prop->getPropertyIvarDecl();
+  const ObjCIvarDecl *IVar = findBackingIvar(Prop);
   if (!IVar)
     return nullptr;
 
