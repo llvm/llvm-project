@@ -70,6 +70,8 @@
 // RUN: %expect_crash %t __v 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
 // RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=VCALL-FATAL
 
+// REQUIRES: cxxabi
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

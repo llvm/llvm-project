@@ -548,9 +548,16 @@ static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
 }
 
 namespace __ubsan {
+#ifdef UBSAN_CAN_USE_CXXABI
 SANITIZER_WEAK_ATTRIBUTE
 void HandleCFIBadType(CFICheckFailData *Data, ValueHandle Vtable,
                       ReportOptions Opts);
+#else
+static void HandleCFIBadType(CFICheckFailData *Data, ValueHandle Vtable,
+                             ReportOptions Opts) {
+  Die();
+}
+#endif
 }  // namespace __ubsan
 
 void __ubsan::__ubsan_handle_cfi_check_fail(CFICheckFailData *Data,
