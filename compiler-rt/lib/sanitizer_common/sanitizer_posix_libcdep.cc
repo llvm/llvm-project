@@ -365,7 +365,7 @@ pid_t StartSubprocess(const char *program, const char *const argv[],
 
     for (int fd = sysconf(_SC_OPEN_MAX); fd > 2; fd--) internal_close(fd);
 
-    internal_execve(program, const_cast<char **>(&argv[0]), nullptr);
+    execv(program, const_cast<char **>(&argv[0]));
     internal__exit(1);
   }
 
