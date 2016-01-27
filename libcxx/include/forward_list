@@ -326,7 +326,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_iterator& operator++()
     {
-        __ptr_ = __ptr_->__next_;
+        __ptr_ = __traits::__as_iter_node(__ptr_->__next_);
         return *this;
     }
     _LIBCPP_INLINE_VISIBILITY
@@ -410,7 +410,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_const_iterator& operator++()
     {
-        __ptr_ = __ptr_->__next_;
+        __ptr_ = __traits::__as_iter_node(__ptr_->__next_);
         return *this;
     }
     _LIBCPP_INLINE_VISIBILITY

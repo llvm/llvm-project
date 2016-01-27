@@ -41,7 +41,7 @@ then
 fi
 
 EXTRA_FLAGS="-nostdinc++ -std=${CXX_LANG} -fstrict-aliasing -Wall -Wextra -Wshadow -Wconversion \
-             -Wpadded -Wstrict-aliasing=2 -Wstrict-overflow=4 "
+             -Wstrict-aliasing=2 -Wstrict-overflow=4 "
 
 case $TRIPLE in
   *-apple-*)

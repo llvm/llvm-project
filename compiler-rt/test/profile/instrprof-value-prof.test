@@ -4,8 +4,8 @@
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c
 
 // do two step build before the clang option is ready
-// RUN: %clang_profgen -O2 -mllvm -disable-vp=false -mllvm -profile-generate=%t.ir.profraw -c -o %t.ir.o  %S/Inputs/instrprof-value-prof-real.c
-// RUN: %clang_profgen -O2 -fprofile-instr-generate -o %t.ir  %t.ir.o
+// RUN: %clang -O2 -mllvm -disable-vp=false -mllvm -profile-generate=%t.ir.profraw -c -o %t.ir.o  %S/Inputs/instrprof-value-prof-real.c
+// RUN: %clang_profgen -O2 -o %t.ir  %t.ir.o
 // RUN: %run %t.ir
 // RUN: llvm-profdata merge -o %t.ir.profdata %t.ir.profraw
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.ir.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c
