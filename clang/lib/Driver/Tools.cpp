@@ -698,6 +698,7 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
     case llvm::Triple::TvOS: {
       // Darwin defaults to "softfp" for v6 and v7.
       ABI = (SubArch == 6 || SubArch == 7) ? FloatABI::SoftFP : FloatABI::Soft;
+      ABI = Triple.isWatchABI() ? FloatABI::Hard : ABI;
       break;
     }
     case llvm::Triple::WatchOS:
@@ -954,7 +955,7 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   } else if (Triple.isOSBinFormatMachO()) {
     if (useAAPCSForMachO(Triple)) {
       ABIName = "aapcs";
-    } else if (Triple.isWatchOS()) {
+    } else if (Triple.isWatchABI()) {
       ABIName = "aapcs16";
     } else {
       ABIName = "apcs-gnu";
