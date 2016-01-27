@@ -262,7 +262,7 @@ class recording(SixStringIO):
         if self.trace:
             print(self.getvalue(), file=sys.stderr)
         if self.session:
-            print(self.getvalue().encode(), file=self.session)
+            print(self.getvalue(), file=self.session)
         self.close()
 
 @add_metaclass(abc.ABCMeta)
@@ -1843,7 +1843,7 @@ class Base(unittest2.TestCase):
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
-                    print(traceback.encode(), file=self.session)
+                    print(traceback, file=self.session)
 
         # put footer (timestamp/rerun instructions) into session
         testMethod = getattr(self, self._testMethodName)
