@@ -789,6 +789,8 @@ bool IsProcessRunning(pid_t pid) {
   return false;
 }
 
+int WaitForProcess(pid_t pid) { return -1; }
+
 }  // namespace __sanitizer
 
 #endif  // _WIN32
