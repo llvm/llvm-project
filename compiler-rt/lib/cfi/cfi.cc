@@ -32,16 +32,18 @@ typedef ElfW(Ehdr) Elf_Ehdr;
 
 namespace __cfi {
 
-static constexpr uptr kCfiShadowLimitsStorageSize = 4096; // 1 page
+#define kCfiShadowLimitsStorageSize 4096 // 1 page
 // Lets hope that the data segment is mapped with 4K pages.
 // The pointer to the cfi shadow region is stored at the start of this page.
 // The rest of the page is unused and re-mapped read-only.
-static char cfi_shadow_pointer_storage[kCfiShadowLimitsStorageSize]
+static union {
+  char space[kCfiShadowLimitsStorageSize];
+  struct {
+    uptr start;
+    uptr size;
+  } limits;
+} cfi_shadow_limits_storage
     __attribute__((aligned(kCfiShadowLimitsStorageSize)));
-struct ShadowLimits {
-  uptr start;
-  uptr size;
-};
 static constexpr uptr kShadowGranularity = 12;
 static constexpr uptr kShadowAlign = 1UL << kShadowGranularity; // 4096
 
@@ -50,16 +52,16 @@ static constexpr uint16_t kUncheckedShadow = 0xFFFFU;
 
 // Get the start address of the CFI shadow region.
 uptr GetShadow() {
-  return reinterpret_cast<ShadowLimits *>(&cfi_shadow_pointer_storage)->start;
+  return cfi_shadow_limits_storage.limits.start;
 }
 
 uptr GetShadowSize() {
-  return reinterpret_cast<ShadowLimits *>(&cfi_shadow_pointer_storage)->size;
+  return cfi_shadow_limits_storage.limits.size;
 }
 
 // This will only work while the shadow is not allocated.
 void SetShadowSize(uptr size) {
-  reinterpret_cast<ShadowLimits *>(&cfi_shadow_pointer_storage)->size = size;
+  cfi_shadow_limits_storage.limits.size = size;
 }
 
 uptr MemToShadowOffset(uptr x) {
@@ -159,9 +161,9 @@ void ShadowBuilder::Install() {
     // Initial setup.
     CHECK_EQ(kCfiShadowLimitsStorageSize, GetPageSizeCached());
     CHECK_EQ(0, GetShadow());
-    *reinterpret_cast<uptr *>(&cfi_shadow_pointer_storage) = shadow_;
-    MprotectReadOnly((uptr)&cfi_shadow_pointer_storage,
-                     kCfiShadowLimitsStorageSize);
+    cfi_shadow_limits_storage.limits.start = shadow_;
+    MprotectReadOnly((uptr)&cfi_shadow_limits_storage,
+                     sizeof(cfi_shadow_limits_storage));
     CHECK_EQ(shadow_, GetShadow());
   }
 }
