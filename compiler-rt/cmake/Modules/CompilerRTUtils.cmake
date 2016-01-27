@@ -58,7 +58,7 @@ macro(append_have_file_definition filename varname list)
   list(APPEND ${list} "${varname}=${${varname}}")
 endmacro()
 
-macro(list_union output input1 input2)
+macro(list_intersect output input1 input2)
   set(${output})
   foreach(it ${${input1}})
     list(FIND ${input2} ${it} index)

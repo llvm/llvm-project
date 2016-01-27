@@ -91,7 +91,7 @@ endfunction()
 # This function checks the host cpusubtype to see if it is post-haswell. Haswell
 # and later machines can run x86_64h binaries. Haswell is cpusubtype 8.
 function(darwin_filter_host_archs input output)
-  list_union(tmp_var DARWIN_osx_ARCHS ${input})
+  list_intersect(tmp_var DARWIN_osx_ARCHS ${input})
   execute_process(
     COMMAND sysctl hw.cpusubtype
     OUTPUT_VARIABLE SUBTYPE)
@@ -285,7 +285,7 @@ macro(darwin_add_builtin_libraries)
                       ../profile/InstrProfilingPlatformDarwin
                       ../profile/InstrProfilingWriter)
   foreach (os ${ARGN})
-    list_union(DARWIN_BUILTIN_ARCHS DARWIN_${os}_ARCHS BUILTIN_SUPPORTED_ARCH)
+    list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_ARCHS BUILTIN_SUPPORTED_ARCH)
     foreach (arch ${DARWIN_BUILTIN_ARCHS})
       darwin_find_excluded_builtins_list(${arch}_${os}_EXCLUDED_BUILTINS
                               OS ${os}
