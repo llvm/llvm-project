@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: locale.en_US.UTF-8
+
 // <iomanip>
 
 // template <class charT> T9 get_time(struct tm* tmb, const charT* fmt);
