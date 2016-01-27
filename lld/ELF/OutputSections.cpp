@@ -1207,13 +1207,15 @@ template <class ELFT>
 void EHOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *S = cast<EHInputSection<ELFT>>(C);
   const Elf_Shdr *RelSec = S->RelocSection;
-  if (!RelSec)
-    return addSectionAux(
-        S, make_range((const Elf_Rela *)nullptr, (const Elf_Rela *)nullptr));
+  if (!RelSec) {
+    addSectionAux(S, make_range<const Elf_Rela *>(nullptr, nullptr));
+    return;
+  }
   ELFFile<ELFT> &Obj = S->getFile()->getObj();
   if (RelSec->sh_type == SHT_RELA)
-    return addSectionAux(S, Obj.relas(RelSec));
-  return addSectionAux(S, Obj.rels(RelSec));
+    addSectionAux(S, Obj.relas(RelSec));
+  else
+    addSectionAux(S, Obj.rels(RelSec));
 }
 
 template <class ELFT>

@@ -291,6 +291,9 @@ pid_t StartSubprocess(const char *filename, const char *const argv[],
                       fd_t stderr_fd = kInvalidFd);
 // Checks if specified process is still running
 bool IsProcessRunning(pid_t pid);
+// Waits for the process to finish and returns its exit code.
+// Returns -1 in case of an error.
+int WaitForProcess(pid_t pid);
 
 u32 GetUid();
 void ReExec();

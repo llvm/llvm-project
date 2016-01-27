@@ -383,6 +383,17 @@ bool IsProcessRunning(pid_t pid) {
   return waitpid_status == 0;
 }
 
+int WaitForProcess(pid_t pid) {
+  int process_status;
+  uptr waitpid_status = internal_waitpid(pid, &process_status, 0);
+  int local_errno;
+  if (internal_iserror(waitpid_status, &local_errno)) {
+    VReport(1, "Waiting on the process failed (errno %d).\n", local_errno);
+    return -1;
+  }
+  return process_status;
+}
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_POSIX

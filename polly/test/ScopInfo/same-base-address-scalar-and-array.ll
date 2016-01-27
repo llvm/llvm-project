@@ -4,7 +4,6 @@
 ; as it is used as a memory base pointer (%0) but also as a scalar (%out.addr.0.lcssa).
 ;
 ; CHECK:         Arrays {
-; CHECK-NEXT:        float* MemRef_out; // Element size 8
 ; CHECK-NEXT:        float* MemRef_out_addr_0_lcssa; // Element size 8
 ; CHECK-NEXT:        float MemRef_out[*]; // Element size 4
 ; CHECK-NEXT:    }

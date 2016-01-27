@@ -3962,6 +3962,13 @@ void ScopInfo::ensureValueWrite(Instruction *Value) {
                   ArrayRef<const SCEV *>(), ScopArrayInfo::MK_Value);
 }
 void ScopInfo::ensureValueRead(Value *Value, BasicBlock *UserBB) {
+
+  // If the instruction can be synthesized and the user is in the region we do
+  // not need to add a value dependences.
+  Region &ScopRegion = scop->getRegion();
+  if (canSynthesize(Value, LI, SE, &ScopRegion))
+    return;
+
   ScopStmt *UserStmt = scop->getStmtForBasicBlock(UserBB);
 
   // We do not model uses outside the scop.

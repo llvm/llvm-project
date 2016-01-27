@@ -20,7 +20,7 @@ if(NOT ANDROID)
     # Use LLVM utils and Clang from the same build tree.
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS
       clang clang-headers FileCheck count not llvm-config llvm-nm llvm-objdump
-      llvm-symbolizer compiler-rt-headers)
+      llvm-symbolizer compiler-rt-headers sancov)
     if (COMPILER_RT_HAS_PROFILE)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS profile)
     endif()
