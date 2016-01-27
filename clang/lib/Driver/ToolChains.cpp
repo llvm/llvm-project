@@ -1076,8 +1076,7 @@ bool Darwin::UseSjLjExceptions(const ArgList &Args) const {
 
   // Only watchOS uses the new DWARF/Compact unwinding method.
   llvm::Triple Triple(ComputeLLVMTriple(Args));
-  return !(Triple.getArchName() == "armv7k" ||
-           Triple.getArchName() == "thumbv7k") && !isTargetWatchOS();
+  return !Triple.isWatchABI();
 }
 
 bool MachO::isPICDefault() const { return true; }
