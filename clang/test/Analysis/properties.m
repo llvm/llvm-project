@@ -211,6 +211,33 @@ void testConsistencyAssign(Person *p) {
   clang_analyzer_eval(p.friend == origFriend); // expected-warning{{UNKNOWN}}
 }
 
+@interface ClassWithShadowedReadWriteProperty {
+  int _f;
+}
+@property (readonly) int someProp;
+@end
+
+@interface ClassWithShadowedReadWriteProperty ()
+@property (readwrite) int someProp;
+@end
+
+@implementation ClassWithShadowedReadWriteProperty
+- (void)testSynthesisForShadowedReadWriteProperties; {
+  clang_analyzer_eval(self.someProp == self.someProp); // expected-warning{{TRUE}}
+
+  _f = 1;
+
+  // Read of shadowed property should not invalidate receiver.
+  (void)self.someProp;
+  clang_analyzer_eval(_f == 1); // expected-warning{{TRUE}}
+
+  _f = 2;
+  // Call to getter of shadowed property should not invalidate receiver.
+  (void)[self someProp];
+  clang_analyzer_eval(_f == 2); // expected-warning{{TRUE}}
+}
+@end
+
 #if !__has_feature(objc_arc)
 void testOverrelease(Person *p, int coin) {
   switch (coin) {

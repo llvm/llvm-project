@@ -141,8 +141,8 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
       nextKey++;
     size_t partialKeyLength = keyEnd - keyPath;
     char partialKey[256];
-    if (partialKeyLength > sizeof(partialKey))
-      partialKeyLength = sizeof(partialKey);
+    if (partialKeyLength >= sizeof(partialKey))
+      partialKeyLength = sizeof(partialKey) - 1;
     strncpy(partialKey, keyPath, partialKeyLength);
     partialKey[partialKeyLength] = '\0';
     HKEY hTopKey = NULL;
