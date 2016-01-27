@@ -1745,7 +1745,8 @@ static void DiagnoseUnimplementedAccessor(Sema &S,
   // the class is going to implement them.
   if (!SMap.count(Method) &&
       (PrimaryClass == nullptr ||
-       !PrimaryClass->lookupPropertyAccessor(Method, C))) {
+       !PrimaryClass->lookupPropertyAccessor(Method, C,
+                                             Prop->isClassProperty()))) {
         S.Diag(IMPDecl->getLocation(),
                isa<ObjCCategoryDecl>(CDecl) ?
                diag::warn_setter_getter_impl_required_in_category :
@@ -1916,8 +1917,12 @@ Sema::AtomicPropertySetterGetterRules (ObjCImplDecl* IMPDecl,
 
     if (!(AttributesAsWritten & ObjCPropertyDecl::OBJC_PR_atomic) &&
         !(AttributesAsWritten & ObjCPropertyDecl::OBJC_PR_nonatomic)) {
-      GetterMethod = IMPDecl->getInstanceMethod(Property->getGetterName());
-      SetterMethod = IMPDecl->getInstanceMethod(Property->getSetterName());
+      GetterMethod = Property->isClassProperty() ?
+                     IMPDecl->getClassMethod(Property->getGetterName()) :
+                     IMPDecl->getInstanceMethod(Property->getGetterName());
+      SetterMethod = Property->isClassProperty() ?
+                     IMPDecl->getClassMethod(Property->getSetterName()) :
+                     IMPDecl->getInstanceMethod(Property->getSetterName());
       LookedUpGetterSetter = true;
       if (GetterMethod) {
         Diag(GetterMethod->getLocation(),
@@ -1942,8 +1947,12 @@ Sema::AtomicPropertySetterGetterRules (ObjCImplDecl* IMPDecl,
       if (PIDecl->getPropertyImplementation() == ObjCPropertyImplDecl::Dynamic)
         continue;
       if (!LookedUpGetterSetter) {
-        GetterMethod = IMPDecl->getInstanceMethod(Property->getGetterName());
-        SetterMethod = IMPDecl->getInstanceMethod(Property->getSetterName());
+        GetterMethod = Property->isClassProperty() ?
+                       IMPDecl->getClassMethod(Property->getGetterName()) :
+                       IMPDecl->getInstanceMethod(Property->getGetterName());
+        SetterMethod = Property->isClassProperty() ?
+                       IMPDecl->getClassMethod(Property->getSetterName()) :
+                       IMPDecl->getInstanceMethod(Property->getSetterName());
       }
       if ((GetterMethod && !SetterMethod) || (!GetterMethod && SetterMethod)) {
         SourceLocation MethodLoc =
@@ -1986,6 +1995,7 @@ void Sema::DiagnoseOwningPropertyGetterSynthesis(const ObjCImplementationDecl *D
   for (const auto *PID : D->property_impls()) {
     const ObjCPropertyDecl *PD = PID->getPropertyDecl();
     if (PD && !PD->hasAttr<NSReturnsNotRetainedAttr>() &&
+        !PD->isClassProperty() &&
         !D->getInstanceMethod(PD->getGetterName())) {
       ObjCMethodDecl *method = PD->getGetterMethodDecl();
       if (!method)
@@ -2091,20 +2101,30 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
   if (CD->isInvalidDecl())
     return;
 
-  GetterMethod = CD->getInstanceMethod(property->getGetterName());
+  bool IsClassProperty = property->isClassProperty();
+  GetterMethod = IsClassProperty ?
+    CD->getClassMethod(property->getGetterName()) :
+    CD->getInstanceMethod(property->getGetterName());
+
   // if setter or getter is not found in class extension, it might be
   // in the primary class.
   if (!GetterMethod)
     if (const ObjCCategoryDecl *CatDecl = dyn_cast<ObjCCategoryDecl>(CD))
       if (CatDecl->IsClassExtension())
-        GetterMethod = CatDecl->getClassInterface()->
+        GetterMethod = IsClassProperty ? CatDecl->getClassInterface()->
+                         getClassMethod(property->getGetterName()) :
+                       CatDecl->getClassInterface()->
                          getInstanceMethod(property->getGetterName());
         
-  SetterMethod = CD->getInstanceMethod(property->getSetterName());
+  SetterMethod = IsClassProperty ?
+                 CD->getClassMethod(property->getSetterName()) :
+                 CD->getInstanceMethod(property->getSetterName());
   if (!SetterMethod)
     if (const ObjCCategoryDecl *CatDecl = dyn_cast<ObjCCategoryDecl>(CD))
       if (CatDecl->IsClassExtension())
-        SetterMethod = CatDecl->getClassInterface()->
+        SetterMethod = IsClassProperty ? CatDecl->getClassInterface()->
+                          getClassMethod(property->getSetterName()) :
+                       CatDecl->getClassInterface()->
                           getInstanceMethod(property->getSetterName());
   DiagnosePropertyAccessorMismatch(property, GetterMethod,
                                    property->getLocation());
@@ -2135,7 +2155,7 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
   // (which is odd, but allowed). Sema should be typechecking that the
   // declarations jive in that situation (which it is not currently).
   if (!GetterMethod) {
-    // No instance method of same name as property getter name was found.
+    // No instance/class method of same name as property getter name was found.
     // Declare a getter method and add it to the list of methods
     // for this class.
     SourceLocation Loc = property->getLocation();
@@ -2155,7 +2175,7 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
     GetterMethod = ObjCMethodDecl::Create(Context, Loc, Loc,
                              property->getGetterName(),
                              resultTy, nullptr, CD,
-                             /*isInstance=*/true, /*isVariadic=*/false,
+                             !IsClassProperty, /*isVariadic=*/false,
                              /*isPropertyAccessor=*/true,
                              /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
                              (property->getPropertyImplementation() ==
@@ -2191,7 +2211,8 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
   if (!property->isReadOnly()) {
     // Find the default setter and if one not found, add one.
     if (!SetterMethod) {
-      // No instance method of same name as property setter name was found.
+      // No instance/class method of same name as property setter name was
+      // found.
       // Declare a setter method and add it to the list of methods
       // for this class.
       SourceLocation Loc = property->getLocation();
@@ -2199,7 +2220,7 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       SetterMethod =
         ObjCMethodDecl::Create(Context, Loc, Loc,
                                property->getSetterName(), Context.VoidTy,
-                               nullptr, CD, /*isInstance=*/true,
+                               nullptr, CD, !IsClassProperty,
                                /*isVariadic=*/false,
                                /*isPropertyAccessor=*/true,
                                /*isImplicitlyDeclared=*/true,
@@ -2262,10 +2283,12 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
   //   double bar = [foo bar];
   // }
   //
-  if (GetterMethod)
-    AddInstanceMethodToGlobalPool(GetterMethod);
-  if (SetterMethod)
-    AddInstanceMethodToGlobalPool(SetterMethod);
+  if (!IsClassProperty) {
+    if (GetterMethod)
+      AddInstanceMethodToGlobalPool(GetterMethod);
+    if (SetterMethod)
+      AddInstanceMethodToGlobalPool(SetterMethod);
+  }
 
   ObjCInterfaceDecl *CurrentClass = dyn_cast<ObjCInterfaceDecl>(CD);
   if (!CurrentClass) {
