@@ -1366,8 +1366,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   QualType DestTy = CE->getType();
   CastKind Kind = CE->getCastKind();
 
-  if (!DestTy->isVoidType())
-    TestAndClearIgnoreResultAssign();
+  // These cases are generally not written to ignore the result of
+  // evaluating their sub-expressions, so we clear this now.
+  bool Ignored = TestAndClearIgnoreResultAssign();
 
   // Since almost all cast kinds apply to scalars, this switch doesn't have
   // a default case, so the compiler will warn on a missing case.  The cases
@@ -1494,11 +1495,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return CGF.EmitARCRetainScalarExpr(E);
   case CK_ARCConsumeObject:
     return CGF.EmitObjCConsumeObject(E->getType(), Visit(E));
-  case CK_ARCReclaimReturnedObject: {
-    llvm::Value *value = Visit(E);
-    value = CGF.EmitARCRetainAutoreleasedReturnValue(value);
-    return CGF.EmitObjCConsumeObject(E->getType(), value);
-  }
+  case CK_ARCReclaimReturnedObject:
+    return CGF.EmitARCReclaimReturnedObject(E, /*allowUnsafe*/ Ignored);
   case CK_ARCExtendBlockObject:
     return CGF.EmitARCExtendBlockObject(E);
 
@@ -2993,15 +2991,17 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     std::tie(LHS, RHS) = CGF.EmitARCStoreAutoreleasing(E);
     break;
 
+  case Qualifiers::OCL_ExplicitNone:
+    std::tie(LHS, RHS) = CGF.EmitARCStoreUnsafeUnretained(E, Ignore);
+    break;
+
   case Qualifiers::OCL_Weak:
     RHS = Visit(E->getRHS());
     LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
     RHS = CGF.EmitARCStoreWeak(LHS.getAddress(), RHS, Ignore);
     break;
 
-  // No reason to do any of these differently.
   case Qualifiers::OCL_None:
-  case Qualifiers::OCL_ExplicitNone:
     // __block variables need to have the rhs evaluated first, plus
     // this should improve codegen just a little.
     RHS = Visit(E->getRHS());
