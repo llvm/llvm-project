@@ -28,7 +28,7 @@
 using namespace clang;
 using namespace ento;
 
-static bool scan_ivar_release(Stmt *S, ObjCIvarDecl *ID,
+static bool scan_ivar_release(Stmt *S, const ObjCIvarDecl *ID,
                               const ObjCPropertyDecl *PD,
                               Selector Release,
                               IdentifierInfo* SelfII,
@@ -76,41 +76,66 @@ static bool scan_ivar_release(Stmt *S, ObjCIvarDecl *ID,
   return false;
 }
 
+static bool isSynthesizedRetainableProperty(const ObjCPropertyImplDecl *I,
+                                            const ObjCIvarDecl **ID,
+                                            const ObjCPropertyDecl **PD) {
+
+  if (I->getPropertyImplementation() != ObjCPropertyImplDecl::Synthesize)
+    return false;
+
+  (*ID) = I->getPropertyIvarDecl();
+  if (!(*ID))
+    return false;
+
+  QualType T = (*ID)->getType();
+  if (!T->isObjCRetainableType())
+    return false;
+
+  (*PD) = I->getPropertyDecl();
+  // Shouldn't be able to synthesize a property that doesn't exist.
+  assert(*PD);
+
+  return true;
+}
+
+static bool synthesizedPropertyRequiresRelease(const ObjCPropertyDecl *PD) {
+  // A synthesized property must be released if and only if the kind of setter
+  // was neither 'assign' or 'weak'.
+  ObjCPropertyDecl::SetterKind SK = PD->getSetterKind();
+  return (SK != ObjCPropertyDecl::Assign && SK != ObjCPropertyDecl::Weak);
+}
+
 static void checkObjCDealloc(const CheckerBase *Checker,
                              const ObjCImplementationDecl *D,
                              const LangOptions &LOpts, BugReporter &BR) {
 
-  assert (LOpts.getGC() != LangOptions::GCOnly);
+  assert(LOpts.getGC() != LangOptions::GCOnly);
+  assert(!LOpts.ObjCAutoRefCount);
 
   ASTContext &Ctx = BR.getContext();
   const ObjCInterfaceDecl *ID = D->getClassInterface();
 
-  // Does the class contain any ivars that are pointers (or id<...>)?
+  // Does the class contain any synthesized properties that are retainable?
   // If not, skip the check entirely.
-  // NOTE: This is motivated by PR 2517:
-  //        http://llvm.org/bugs/show_bug.cgi?id=2517
-
-  bool containsPointerIvar = false;
-
-  for (const auto *Ivar : ID->ivars()) {
-    QualType T = Ivar->getType();
-
-    if (!T->isObjCObjectPointerType() ||
-        Ivar->hasAttr<IBOutletAttr>() || // Skip IBOutlets.
-        Ivar->hasAttr<IBOutletCollectionAttr>()) // Skip IBOutletCollections.
+  bool containsRetainedSynthesizedProperty = false;
+  for (const auto *I : D->property_impls()) {
+    const ObjCIvarDecl *ID = nullptr;
+    const ObjCPropertyDecl *PD = nullptr;
+    if (!isSynthesizedRetainableProperty(I, &ID, &PD))
       continue;
 
-    containsPointerIvar = true;
-    break;
+    if (synthesizedPropertyRequiresRelease(PD)) {
+      containsRetainedSynthesizedProperty = true;
+      break;
+    }
   }
 
-  if (!containsPointerIvar)
+  if (!containsRetainedSynthesizedProperty)
     return;
 
   // Determine if the class subclasses NSObject.
   IdentifierInfo* NSObjectII = &Ctx.Idents.get("NSObject");
   IdentifierInfo* SenTestCaseII = &Ctx.Idents.get("SenTestCase");
-
 
   for ( ; ID ; ID = ID->getSuperClass()) {
     IdentifierInfo *II = ID->getIdentifier();
@@ -142,9 +167,6 @@ static void checkObjCDealloc(const CheckerBase *Checker,
     }
   }
 
-  PathDiagnosticLocation DLoc =
-    PathDiagnosticLocation::createBegin(D, BR.getSourceManager());
-
   if (!MD) { // No dealloc found.
 
     const char* name = LOpts.getGC() == LangOptions::NonGC
@@ -154,6 +176,9 @@ static void checkObjCDealloc(const CheckerBase *Checker,
     std::string buf;
     llvm::raw_string_ostream os(buf);
     os << "Objective-C class '" << *D << "' lacks a 'dealloc' instance method";
+
+    PathDiagnosticLocation DLoc =
+        PathDiagnosticLocation::createBegin(D, BR.getSourceManager());
 
     BR.EmitBasicReport(D, Checker, name, categories::CoreFoundationObjectiveC,
                        os.str(), DLoc);
@@ -170,28 +195,12 @@ static void checkObjCDealloc(const CheckerBase *Checker,
   // Scan for missing and extra releases of ivars used by implementations
   // of synthesized properties
   for (const auto *I : D->property_impls()) {
-    // We can only check the synthesized properties
-    if (I->getPropertyImplementation() != ObjCPropertyImplDecl::Synthesize)
+    const ObjCIvarDecl *ID = nullptr;
+    const ObjCPropertyDecl *PD = nullptr;
+    if (!isSynthesizedRetainableProperty(I, &ID, &PD))
       continue;
 
-    ObjCIvarDecl *ID = I->getPropertyIvarDecl();
-    if (!ID)
-      continue;
-
-    QualType T = ID->getType();
-    if (!T->isObjCObjectPointerType()) // Skip non-pointer ivars
-      continue;
-
-    const ObjCPropertyDecl *PD = I->getPropertyDecl();
-    if (!PD)
-      continue;
-
-    // ivars cannot be set via read-only properties, so we'll skip them
-    if (PD->isReadOnly())
-      continue;
-
-    // ivar must be released if and only if the kind of setter was not 'assign'
-    bool requiresRelease = PD->getSetterKind() != ObjCPropertyDecl::Assign;
+    bool requiresRelease = synthesizedPropertyRequiresRelease(PD);
     if (scan_ivar_release(MD->getBody(), ID, PD, RS, SelfII, Ctx)
        != requiresRelease) {
       const char *name = nullptr;
@@ -203,24 +212,28 @@ static void checkObjCDealloc(const CheckerBase *Checker,
                ? "missing ivar release (leak)"
                : "missing ivar release (Hybrid MM, non-GC)";
 
-        os << "The '" << *ID
-           << "' instance variable was retained by a synthesized property but "
-              "wasn't released in 'dealloc'";
+        os << "The '" << *ID << "' instance variable in '" << *D
+           << "' was retained by a synthesized property "
+              "but was not released in 'dealloc'";
       } else {
         name = LOpts.getGC() == LangOptions::NonGC
                ? "extra ivar release (use-after-release)"
                : "extra ivar release (Hybrid MM, non-GC)";
 
-        os << "The '" << *ID
-           << "' instance variable was not retained by a synthesized property "
+        os << "The '" << *ID << "' instance variable in '" << *D
+           << "' was not retained by a synthesized property "
               "but was released in 'dealloc'";
       }
 
-      PathDiagnosticLocation SDLoc =
-        PathDiagnosticLocation::createBegin(I, BR.getSourceManager());
+      // If @synthesize statement is missing, fall back to @property statement.
+      const Decl *SPDecl = I->getLocation().isValid()
+                               ? static_cast<const Decl *>(I)
+                               : static_cast<const Decl *>(PD);
+      PathDiagnosticLocation SPLoc =
+          PathDiagnosticLocation::createBegin(SPDecl, BR.getSourceManager());
 
       BR.EmitBasicReport(MD, Checker, name,
-                         categories::CoreFoundationObjectiveC, os.str(), SDLoc);
+                         categories::CoreFoundationObjectiveC, os.str(), SPLoc);
     }
   }
 }
@@ -235,7 +248,8 @@ class ObjCDeallocChecker : public Checker<
 public:
   void checkASTDecl(const ObjCImplementationDecl *D, AnalysisManager& mgr,
                     BugReporter &BR) const {
-    if (mgr.getLangOpts().getGC() == LangOptions::GCOnly)
+    if (mgr.getLangOpts().getGC() == LangOptions::GCOnly ||
+        mgr.getLangOpts().ObjCAutoRefCount)
       return;
     checkObjCDealloc(this, cast<ObjCImplementationDecl>(D), mgr.getLangOpts(),
                      BR);
