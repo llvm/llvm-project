@@ -444,6 +444,22 @@ macro(add_clang_executable name)
   set_clang_windows_version_resource_properties(${name})
 endmacro(add_clang_executable)
 
+macro(add_clang_tool name)
+  add_clang_executable(${name} ${ARGN})
+  install(TARGETS ${name}
+    EXPORT ClangTargets
+    RUNTIME DESTINATION bin
+    COMPONENT ${name})
+
+  if(NOT CMAKE_CONFIGURATION_TYPES)
+    add_custom_target(install-${name}
+      DEPENDS ${name}
+      COMMAND "${CMAKE_COMMAND}"
+              -DCMAKE_INSTALL_COMPONENT=${name}
+              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  endif()
+endmacro()
+
 macro(add_clang_symlink name dest)
   add_llvm_tool_symlink(${name} ${dest} ALWAYS_GENERATE)
   # Always generate install targets
