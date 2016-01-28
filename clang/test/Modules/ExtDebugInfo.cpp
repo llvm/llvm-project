@@ -102,3 +102,7 @@ void foo() {
 
 
 // CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: !"_ZTSN8DebugCXX6StructE", line: 24)
+
+// CHECK: !DICompileUnit(
+// CHECK-SAME:           splitDebugFilename:
+// CHECK-SAME:           dwoId:
