@@ -10,13 +10,14 @@
 // RUN:   -I %S/Inputs -I %t -emit-llvm -o %t.ll \
 // RUN:   -mllvm -debug-only=pchcontainer &>%t-mod.ll
 // RUN: cat %t-mod.ll | FileCheck %s
-// RUN: cat %t-mod.ll | FileCheck %s --check-prefix=MODULE-CHECK
+// RUN: cat %t-mod.ll | FileCheck %s --check-prefix=CHECK2
 
 // PCH:
 // RUN: %clang_cc1 -x objective-c -emit-pch -fmodule-format=obj -I %S/Inputs \
 // RUN:   -o %t.pch %S/Inputs/DebugObjC.h \
 // RUN:   -mllvm -debug-only=pchcontainer &>%t-pch.ll
 // RUN: cat %t-pch.ll | FileCheck %s
+// RUN: cat %t-pch.ll | FileCheck %s --check-prefix=CHECK2
 
 #ifdef MODULES
 @import DebugObjC;
@@ -24,61 +25,65 @@
 
 // CHECK: distinct !DICompileUnit(language: DW_LANG_ObjC
 // CHECK-SAME:                    isOptimized: false,
+
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME:             scope: ![[MODULE:[0-9]+]],
+// CHECK: ![[MODULE]] = !DIModule(scope: null, name:{{.*}}DebugObjC
+
+// CHECK: ![[TD_ENUM:.*]] = !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME-NOT:         name:
+// CHECK-SAME:             elements:
+
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:             name: "FwdDecl",
+// CHECK-SAME:             scope: ![[MODULE]],
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:             name: "ObjCClass",
-// CHECK: !DIObjCProperty(name: "property",
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "ivar"
-// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "InnerEnum"
-// CHECK: !DISubprogram(name: "+[ObjCClass classMethod]"
-// CHECK: !DISubprogram(name: "-[ObjCClass instanceMethodWithInt:]"
-// CHECK: !DISubprogram(name: "-[Category(Category) categoryMethod]"
+// CHECK-SAME:             scope: ![[MODULE]],
 
-// MODULE-CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
-// MODULE-CHECK-SAME:             scope: ![[MODULE:[0-9]+]],
-// MODULE-CHECK: ![[MODULE]] = !DIModule(scope: null, name: "DebugObjC"
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDeclared"
+// CHECK-SAME:             elements:
 
-// MODULE-CHECK: ![[TD_ENUM:.*]] = !DICompositeType(tag: DW_TAG_enumeration_type,
-// MODULE-CHECK-SAME-NOT:         name:
-// MODULE-CHECK-SAME:             elements:
+// CHECK: ![[TD_UNION:.*]] = !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-SAME-NOT:         name:
+// CHECK-SAME:             elements:
 
-// MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type,
-// MODULE-CHECK-SAME:             name: "FwdDecl",
-// MODULE-CHECK-SAME:             scope: ![[MODULE]],
-// MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type,
-// MODULE-CHECK-SAME:             name: "ObjCClass",
-// MODULE-CHECK-SAME:             scope: ![[MODULE]],
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefUnion",
+// CHECK-SAME:           baseType: ![[TD_UNION]])
 
-// MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDeclared"
-// MODULE-CHECK-SAME:             elements:
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefEnum",
+// CHECK-SAME:           baseType: ![[TD_ENUM:.*]])
 
-// MODULE-CHECK: ![[TD_UNION:.*]] = !DICompositeType(tag: DW_TAG_union_type,
-// MODULE-CHECK-SAME-NOT:         name:
-// MODULE-CHECK-SAME:             elements:
+// CHECK: ![[TD_STRUCT:.*]] = !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME-NOT:         name:
+// CHECK-SAME:             elements:
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefStruct",
+// CHECK-SAME:           baseType: ![[TD_STRUCT]])
 
-// MODULE-CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefUnion",
-// MODULE-CHECK-SAME:           baseType: ![[TD_UNION]])
+// CHECK: !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-SAME-NOT:         name:
 
-// MODULE-CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefEnum",
-// MODULE-CHECK-SAME:           baseType: ![[TD_ENUM:.*]])
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME-NOT:         name:
 
-// MODULE-CHECK: ![[TD_STRUCT:.*]] = !DICompositeType(tag: DW_TAG_structure_type,
-// MODULE-CHECK-SAME-NOT:         name:
-// MODULE-CHECK-SAME:             elements:
-// MODULE-CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefStruct",
-// MODULE-CHECK-SAME:           baseType: ![[TD_STRUCT]])
-
-// MODULE-CHECK: !DICompositeType(tag: DW_TAG_union_type,
-// MODULE-CHECK-SAME-NOT:         name:
-
-// MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type,
-// MODULE-CHECK-SAME-NOT:         name:
-
-// MODULE-CHECK: !DISubprogram(name: "+[ObjCClass classMethod]",
-// MODULE-CHECK-SAME:          scope: ![[MODULE]],
+// CHECK: !DISubprogram(name: "+[ObjCClass classMethod]",
+// CHECK-SAME:          scope: ![[MODULE]],
 
 // The forward declaration should not be in the module scope.
-// MODULE-CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "OpaqueData", file
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "OpaqueData", file
 
-// MODULE-CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"
+// CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"
+
+// The output order is sublty different for module vs. pch,
+// so these are checked separately:
+//
+// CHECK2: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK2-SAME:             name: "FwdDecl",
+// CHECK2: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK2-SAME:             name: "ObjCClass",
+// CHECK2: !DIObjCProperty(name: "property",
+// CHECK2: !DIDerivedType(tag: DW_TAG_member, name: "ivar"
+// CHECK2: !DIDerivedType(tag: DW_TAG_typedef, name: "InnerEnum"
+// CHECK2: !DISubprogram(name: "+[ObjCClass classMethod]"
+// CHECK2: !DISubprogram(name: "-[ObjCClass instanceMethodWithInt:]"
+// CHECK2: !DISubprogram(name: "-[Category(Category) categoryMethod]"
