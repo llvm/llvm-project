@@ -109,4 +109,5 @@ void foo() {
 // CHECK: !DICompileUnit(
 // CHECK-SAME:           splitDebugFilename:
 // CHECK-SAME:           dwoId:
-// CHECK-PCH:            dwoId: 18446744073709551614
+// CHECK-PCH: !DICompileUnit({{.*}}splitDebugFilename:
+// CHECK-PCH:                dwoId: 18446744073709551614
