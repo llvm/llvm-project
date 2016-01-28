@@ -173,9 +173,11 @@ public:
 
   /// Use liveness information to find out which uses/defs are partially
   /// undefined/dead and adjust the RegisterMaskPairs accordingly.
+  /// If \p AddFlagsMI is given then missing read-undef and dead flags will be
+  /// added to the instruction.
   void adjustLaneLiveness(const LiveIntervals &LIS,
-                          const MachineRegisterInfo &MRI, SlotIndex Pos);
-
+                          const MachineRegisterInfo &MRI, SlotIndex Pos,
+                          MachineInstr *AddFlagsMI = nullptr);
 };
 
 /// Array of PressureDiffs.
@@ -419,6 +421,11 @@ public:
 
   /// Advance across the current instruction.
   void advance();
+
+  /// Advance across the current instruction.
+  /// This is a "low-level" variant of advance() which takes precomputed
+  /// RegisterOperands of the instruction.
+  void advance(const RegisterOperands &RegOpers);
 
   /// Finalize the region boundaries and recored live ins and live outs.
   void closeRegion();

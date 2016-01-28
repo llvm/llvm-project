@@ -869,13 +869,27 @@ void ScheduleDAGMILive::enterRegion(MachineBasicBlock *bb,
   SUPressureDiffs.clear();
 
   ShouldTrackPressure = SchedImpl->shouldTrackPressure();
+  ShouldTrackLaneMasks = SchedImpl->shouldTrackLaneMasks();
+
+  if (ShouldTrackLaneMasks) {
+    if (!ShouldTrackPressure)
+      report_fatal_error("ShouldTrackLaneMasks requires ShouldTrackPressure");
+    // Dead subregister defs have no users and therefore no dependencies,
+    // moving them around may cause liveintervals to degrade into multiple
+    // components. Change independent components to have their own vreg to avoid
+    // this.
+    if (!DisconnectedComponentsRenamed)
+      LIS->renameDisconnectedComponents();
+  }
 }
 
 // Setup the register pressure trackers for the top scheduled top and bottom
 // scheduled regions.
 void ScheduleDAGMILive::initRegPressure() {
-  TopRPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin, false, false);
-  BotRPTracker.init(&MF, RegClassInfo, LIS, BB, LiveRegionEnd, false, false);
+  TopRPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin,
+                    ShouldTrackLaneMasks, false);
+  BotRPTracker.init(&MF, RegClassInfo, LIS, BB, LiveRegionEnd,
+                    ShouldTrackLaneMasks, false);
 
   // Close the RPTracker to finalize live ins.
   RPTracker.closeRegion();
@@ -972,46 +986,71 @@ updateScheduledPressure(const SUnit *SU,
 void ScheduleDAGMILive::updatePressureDiffs(
     ArrayRef<RegisterMaskPair> LiveUses) {
   for (const RegisterMaskPair &P : LiveUses) {
-    /// FIXME: Currently assuming single-use physregs.
     unsigned Reg = P.RegUnit;
-    assert(P.LaneMask != 0);
-    DEBUG(dbgs() << "  LiveReg: " << PrintVRegOrUnit(Reg, TRI) << "\n");
+    /// FIXME: Currently assuming single-use physregs.
     if (!TRI->isVirtualRegister(Reg))
       continue;
 
-    // This may be called before CurrentBottom has been initialized. However,
-    // BotRPTracker must have a valid position. We want the value live into the
-    // instruction or live out of the block, so ask for the previous
-    // instruction's live-out.
-    const LiveInterval &LI = LIS->getInterval(Reg);
-    VNInfo *VNI;
-    MachineBasicBlock::const_iterator I =
-      nextIfDebug(BotRPTracker.getPos(), BB->end());
-    if (I == BB->end())
-      VNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
-    else {
-      LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(I));
-      VNI = LRQ.valueIn();
-    }
-    // RegisterPressureTracker guarantees that readsReg is true for LiveUses.
-    assert(VNI && "No live value at use.");
-    for (const VReg2SUnit &V2SU
-         : make_range(VRegUses.find(Reg), VRegUses.end())) {
-      SUnit *SU = V2SU.SU;
-      // If this use comes before the reaching def, it cannot be a last use, so
-      // descrease its pressure change.
-      if (!SU->isScheduled && SU != &ExitSU) {
-        LiveQueryResult LRQ
-          = LI.Query(LIS->getInstructionIndex(SU->getInstr()));
-        if (LRQ.valueIn() == VNI) {
-          PressureDiff &PDiff = getPressureDiff(SU);
-          PDiff.addPressureChange(Reg, true, &MRI);
-          DEBUG(
-            dbgs() << "  UpdateRegP: SU(" << SU->NodeNum << ") "
-                   << *SU->getInstr();
-            dbgs() << "              to ";
-            PDiff.dump(*TRI);
-          );
+    if (ShouldTrackLaneMasks) {
+      // If the register has just become live then other uses won't change
+      // this fact anymore => decrement pressure.
+      // If the register has just become dead then other uses make it come
+      // back to life => increment pressure.
+      bool Decrement = P.LaneMask != 0;
+
+      for (const VReg2SUnit &V2SU
+           : make_range(VRegUses.find(Reg), VRegUses.end())) {
+        SUnit &SU = *V2SU.SU;
+        if (SU.isScheduled || &SU == &ExitSU)
+          continue;
+
+        PressureDiff &PDiff = getPressureDiff(&SU);
+        PDiff.addPressureChange(Reg, Decrement, &MRI);
+        DEBUG(
+          dbgs() << "  UpdateRegP: SU(" << SU.NodeNum << ") "
+                 << PrintReg(Reg, TRI) << ':' << PrintLaneMask(P.LaneMask)
+                 << ' ' << *SU.getInstr();
+          dbgs() << "              to ";
+          PDiff.dump(*TRI);
+        );
+      }
+    } else {
+      assert(P.LaneMask != 0);
+      DEBUG(dbgs() << "  LiveReg: " << PrintVRegOrUnit(Reg, TRI) << "\n");
+      // This may be called before CurrentBottom has been initialized. However,
+      // BotRPTracker must have a valid position. We want the value live into the
+      // instruction or live out of the block, so ask for the previous
+      // instruction's live-out.
+      const LiveInterval &LI = LIS->getInterval(Reg);
+      VNInfo *VNI;
+      MachineBasicBlock::const_iterator I =
+        nextIfDebug(BotRPTracker.getPos(), BB->end());
+      if (I == BB->end())
+        VNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
+      else {
+        LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(I));
+        VNI = LRQ.valueIn();
+      }
+      // RegisterPressureTracker guarantees that readsReg is true for LiveUses.
+      assert(VNI && "No live value at use.");
+      for (const VReg2SUnit &V2SU
+           : make_range(VRegUses.find(Reg), VRegUses.end())) {
+        SUnit *SU = V2SU.SU;
+        // If this use comes before the reaching def, it cannot be a last use,
+        // so decrease its pressure change.
+        if (!SU->isScheduled && SU != &ExitSU) {
+          LiveQueryResult LRQ
+            = LI.Query(LIS->getInstructionIndex(SU->getInstr()));
+          if (LRQ.valueIn() == VNI) {
+            PressureDiff &PDiff = getPressureDiff(SU);
+            PDiff.addPressureChange(Reg, true, &MRI);
+            DEBUG(
+              dbgs() << "  UpdateRegP: SU(" << SU->NodeNum << ") "
+                     << *SU->getInstr();
+              dbgs() << "              to ";
+              PDiff.dump(*TRI);
+            );
+          }
         }
       }
     }
@@ -1113,14 +1152,14 @@ void ScheduleDAGMILive::buildDAGWithRegPressure() {
 
   // Initialize the register pressure tracker used by buildSchedGraph.
   RPTracker.init(&MF, RegClassInfo, LIS, BB, LiveRegionEnd,
-                 false, /*TrackUntiedDefs=*/true);
+                 ShouldTrackLaneMasks, /*TrackUntiedDefs=*/true);
 
   // Account for liveness generate by the region boundary.
   if (LiveRegionEnd != RegionEnd)
     RPTracker.recede();
 
   // Build the DAG, and compute current register pressure.
-  buildSchedGraph(AA, &RPTracker, &SUPressureDiffs);
+  buildSchedGraph(AA, &RPTracker, &SUPressureDiffs, LIS, ShouldTrackLaneMasks);
 
   // Initialize top/bottom trackers after computing region pressure.
   initRegPressure();
@@ -1239,7 +1278,18 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
 
     if (ShouldTrackPressure) {
       // Update top scheduled pressure.
-      TopRPTracker.advance();
+      RegisterOperands RegOpers;
+      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
+      if (ShouldTrackLaneMasks) {
+        // Adjust liveness and add missing dead+read-undef flags.
+        SlotIndex SlotIdx = LIS->getInstructionIndex(MI).getRegSlot();
+        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+      } else {
+        // Adjust for missing dead-def flags.
+        RegOpers.detectDeadDefs(*MI, *LIS);
+      }
+
+      TopRPTracker.advance(RegOpers);
       assert(TopRPTracker.getPos() == CurrentTop && "out of sync");
       DEBUG(
         dbgs() << "Top Pressure:\n";
@@ -1264,9 +1314,20 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
       CurrentBottom = MI;
     }
     if (ShouldTrackPressure) {
-      // Update bottom scheduled pressure.
+      RegisterOperands RegOpers;
+      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
+      if (ShouldTrackLaneMasks) {
+        // Adjust liveness and add missing dead+read-undef flags.
+        SlotIndex SlotIdx = LIS->getInstructionIndex(MI).getRegSlot();
+        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+      } else {
+        // Adjust for missing dead-def flags.
+        RegOpers.detectDeadDefs(*MI, *LIS);
+      }
+
+      BotRPTracker.recedeSkipDebugValues();
       SmallVector<RegisterMaskPair, 8> LiveUses;
-      BotRPTracker.recede(&LiveUses);
+      BotRPTracker.recede(RegOpers, &LiveUses);
       assert(BotRPTracker.getPos() == CurrentBottom && "out of sync");
       DEBUG(
         dbgs() << "Bottom Pressure:\n";
