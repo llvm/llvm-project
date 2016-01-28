@@ -1,4 +1,4 @@
-; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -spp-print-base-pointers -S 2>&1 | FileCheck %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -spp-print-base-pointers -S 2>&1 | FileCheck %s
 
 ; CHECK: derived %merged_value base %merged_value.base
 

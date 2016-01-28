@@ -1,4 +1,4 @@
-; RUN: opt %s -S -place-safepoints | FileCheck %s
+; RUN: opt < %s -S -place-safepoints | FileCheck %s
 
 ; Basic test to make sure that safepoints are placed
 ; for CoreCLR GC
@@ -8,11 +8,9 @@ declare void @foo()
 define void @test_simple_call() gc "coreclr" {
 ; CHECK-LABEL: test_simple_call
 entry:
+; CHECK: call void @do_safepoint
   br label %other
 other:
-; CHECK-LABEL: other
-; CHECK: statepoint
-; CHECK-NOT: gc.result
   call void @foo()
   ret void
 }

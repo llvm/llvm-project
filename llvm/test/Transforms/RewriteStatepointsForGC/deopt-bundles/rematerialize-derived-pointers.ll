@@ -1,4 +1,4 @@
-; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -S 2>&1 | FileCheck %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -S 2>&1 | FileCheck %s
 
 
 declare void @use_obj16(i16 addrspace(1)*) "gc-leaf-function"

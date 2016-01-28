@@ -152,7 +152,7 @@ namespace llvm {
   /// instruction slots within an instruction group.
   bool isVector(const MachineInstr &MI) const;
 
-  bool isMov(unsigned Opcode) const override;
+  bool isMov(unsigned Opcode) const;
 
   DFAPacketizer *
   CreateTargetScheduleState(const TargetSubtargetInfo &) const override;
@@ -257,7 +257,7 @@ namespace llvm {
 
   MachineInstr *buildMovInstr(MachineBasicBlock *MBB,
                               MachineBasicBlock::iterator I,
-                              unsigned DstReg, unsigned SrcReg) const override;
+                              unsigned DstReg, unsigned SrcReg) const;
 
   /// \brief Get the index of Op in the MachineInstr.
   ///
@@ -290,6 +290,11 @@ namespace llvm {
 
   /// \brief Clear the specified flag on the instruction.
   void clearFlag(MachineInstr *MI, unsigned Operand, unsigned Flag) const;
+
+  // Helper functions that check the opcode for status information
+  bool isRegisterStore(const MachineInstr &MI) const;
+  bool isRegisterLoad(const MachineInstr &MI) const;
+
 };
 
 namespace AMDGPU {

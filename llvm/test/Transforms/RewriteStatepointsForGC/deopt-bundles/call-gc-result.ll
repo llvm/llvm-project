@@ -1,4 +1,4 @@
-;; RUN: opt %s -place-safepoints -S | FileCheck %s
+;; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -S | FileCheck %s
 
 ;; This test is to verify that gc_result from a call statepoint
 ;; can have preceding phis in its parent basic block. Unlike
@@ -21,8 +21,8 @@ branch2:
 
 merge:
 ;; CHECK: 		%phi = phi i32 [ %a, %branch2 ], [ %b, %branch1 ]
-;; CHECK-NEXT:  %safepoint_token1 = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* @foo, i32 0, i32 0, i32 0, i32 0)
-;; CHECK-NEXT:  %ret2 = call i32 @llvm.experimental.gc.result.i32(token %safepoint_token1)
+;; CHECK-NEXT:  [[TOKEN:%[^ ]+]] = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* @foo, i32 0, i32 0, i32 0, i32 0
+;; CHECK-NEXT:  call i32 @llvm.experimental.gc.result.i32(token [[TOKEN]])
   %phi = phi i32 [ %a, %branch2 ], [ %b, %branch1 ]
   %ret = call i32 @foo()
   ret i32 %ret

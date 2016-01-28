@@ -73,35 +73,46 @@ __kmp_node_deref ( kmp_info_t *thread, kmp_depnode_t *node )
 static void
 __kmp_depnode_list_free ( kmp_info_t *thread, kmp_depnode_list *list );
 
-static const kmp_int32 kmp_dephash_log2 = 6;
-static const kmp_int32 kmp_dephash_size = (1 << kmp_dephash_log2);
+enum {
+    KMP_DEPHASH_OTHER_SIZE = 97,
+    KMP_DEPHASH_MASTER_SIZE = 997
+};
 
 static inline kmp_int32
-__kmp_dephash_hash ( kmp_intptr_t addr )
+__kmp_dephash_hash ( kmp_intptr_t addr, size_t hsize )
 {
     //TODO alternate to try: set = (((Addr64)(addrUsefulBits * 9.618)) % m_num_sets );
-    return ((addr >> kmp_dephash_log2) ^ addr) % kmp_dephash_size;
+    return ((addr >> 6) ^ (addr >> 2)) % hsize;
 }
 
 static kmp_dephash_t *
-__kmp_dephash_create ( kmp_info_t *thread )
+__kmp_dephash_create ( kmp_info_t *thread, kmp_taskdata_t *current_task )
 {
     kmp_dephash_t *h;
 
-    kmp_int32 size = kmp_dephash_size * sizeof(kmp_dephash_entry_t) + sizeof(kmp_dephash_t);
+    size_t h_size;
+
+    if ( current_task->td_flags.tasktype == TASK_IMPLICIT )
+        h_size = KMP_DEPHASH_MASTER_SIZE;
+    else
+        h_size = KMP_DEPHASH_OTHER_SIZE;
+
+    kmp_int32 size = h_size * sizeof(kmp_dephash_entry_t) + sizeof(kmp_dephash_t);
 
 #if USE_FAST_MEMORY
     h = (kmp_dephash_t *) __kmp_fast_allocate( thread, size );
 #else
     h = (kmp_dephash_t *) __kmp_thread_malloc( thread, size );
 #endif
+    h->size = h_size;
 
 #ifdef KMP_DEBUG
     h->nelements = 0;
+    h->nconflicts = 0;
 #endif
     h->buckets = (kmp_dephash_entry **)(h+1);
 
-    for ( kmp_int32 i = 0; i < kmp_dephash_size; i++ )
+    for ( size_t i = 0; i < h_size; i++ )
         h->buckets[i] = 0;
 
     return h;
@@ -110,7 +121,7 @@ __kmp_dephash_create ( kmp_info_t *thread )
 static void
 __kmp_dephash_free ( kmp_info_t *thread, kmp_dephash_t *h )
 {
-    for ( kmp_int32 i=0; i < kmp_dephash_size; i++ ) {
+    for ( size_t i=0; i < h->size; i++ ) {
         if ( h->buckets[i] ) {
             kmp_dephash_entry_t *next;
             for ( kmp_dephash_entry_t *entry = h->buckets[i]; entry; entry = next ) {
@@ -135,7 +146,7 @@ __kmp_dephash_free ( kmp_info_t *thread, kmp_dephash_t *h )
 static kmp_dephash_entry *
 __kmp_dephash_find ( kmp_info_t *thread, kmp_dephash_t *h, kmp_intptr_t addr )
 {
-    kmp_int32 bucket = __kmp_dephash_hash(addr);
+    kmp_int32 bucket = __kmp_dephash_hash(addr,h->size);
 
     kmp_dephash_entry_t *entry;
     for ( entry = h->buckets[bucket]; entry; entry = entry->next_in_bucket )
@@ -475,7 +486,7 @@ __kmpc_omp_task_with_deps( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t * new_ta
     if ( !serial && ( ndeps > 0 || ndeps_noalias > 0 )) {
         /* if no dependencies have been tracked yet, create the dependence hash */
         if ( current_task->td_dephash == NULL )
-            current_task->td_dephash = __kmp_dephash_create(thread);
+            current_task->td_dephash = __kmp_dephash_create(thread, current_task);
 
 #if USE_FAST_MEMORY
         kmp_depnode_t *node = (kmp_depnode_t *) __kmp_fast_allocate(thread,sizeof(kmp_depnode_t));

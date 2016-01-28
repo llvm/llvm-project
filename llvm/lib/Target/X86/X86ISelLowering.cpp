@@ -2985,7 +2985,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
       // offset from the bottom of this and each funclet's frame must be the
       // same, so the size of funclets' (mostly empty) frames is dictated by
       // how far this slot is from the bottom (since they allocate just enough
-      // space to accomodate holding this slot at the correct offset).
+      // space to accommodate holding this slot at the correct offset).
       int PSPSymFI = MFI->CreateStackObject(8, 8, /*isSS=*/false);
       EHInfo->PSPSymFrameIdx = PSPSymFI;
     }
@@ -5571,6 +5571,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     return VT.isInteger() ? DAG.getConstant(0, DL, VT)
                           : DAG.getConstantFP(0.0, DL, VT);
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   int FirstLoadedElt = LoadMask.find_first();
   SDValue EltBase = PeekThroughBitcast(Elts[FirstLoadedElt]);
   LoadSDNode *LDBase = cast<LoadSDNode>(EltBase);
@@ -5606,8 +5607,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     if (VT.getSizeInBits() != EltVT.getSizeInBits() * NumElems)
       return SDValue();
 
-    if (isAfterLegalize &&
-        !DAG.getTargetLoweringInfo().isOperationLegal(ISD::LOAD, VT))
+    if (isAfterLegalize && !TLI.isOperationLegal(ISD::LOAD, VT))
       return SDValue();
 
     SDValue NewLd = SDValue();
@@ -5635,8 +5635,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   // VZEXT_LOAD - consecutive load/undefs followed by zeros/undefs.
   // TODO: The code below fires only for for loading the low 64-bits of a
   // of a 128-bit vector. It's probably worth generalizing more.
-  if (IsConsecutiveLoad && FirstLoadedElt == 0 && VT.is128BitVector() &&
-      (LoadSize == 64 && DAG.getTargetLoweringInfo().isTypeLegal(MVT::v2i64))) {
+  if (IsConsecutiveLoad && FirstLoadedElt == 0 && LoadSize == 64 &&
+      (VT.is128BitVector() && TLI.isTypeLegal(MVT::v2i64))) {
     SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
     SDValue Ops[] = { LDBase->getChain(), LDBase->getBasePtr() };
     SDValue ResNode =
@@ -13641,41 +13641,23 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
 
   assert(VT.getVectorElementType() == MVT::i1 && "Unexpected vector type.");
 
-  // Shift LSB to MSB and use VPMOVB2M - SKX.
+  // Shift LSB to MSB and use VPMOVB/W2M or TESTD/Q.
   unsigned ShiftInx = InVT.getScalarSizeInBits() - 1;
-  if ((InVT.is512BitVector() && InVT.getScalarSizeInBits() <= 16 &&
-         Subtarget.hasBWI()) ||     // legal, will go to VPMOVB2M, VPMOVW2M
-      ((InVT.is256BitVector() || InVT.is128BitVector()) &&
-             InVT.getScalarSizeInBits() <= 16 && Subtarget.hasBWI() &&
-             Subtarget.hasVLX())) { // legal, will go to VPMOVB2M, VPMOVW2M
-    // Shift packed bytes not supported natively, bitcast to dword
-    MVT ExtVT = MVT::getVectorVT(MVT::i16, InVT.getSizeInBits()/16);
-    SDValue  ShiftNode = DAG.getNode(ISD::SHL, DL, ExtVT,
-                                     DAG.getBitcast(ExtVT, In),
-                                     DAG.getConstant(ShiftInx, DL, ExtVT));
-    ShiftNode = DAG.getBitcast(InVT, ShiftNode);
-    return DAG.getNode(X86ISD::CVT2MASK, DL, VT, ShiftNode);
-  }
-  if ((InVT.is512BitVector() && InVT.getScalarSizeInBits() >= 32 &&
-         Subtarget.hasDQI()) ||  // legal, will go to VPMOVD2M, VPMOVQ2M
-      ((InVT.is256BitVector() || InVT.is128BitVector()) &&
-         InVT.getScalarSizeInBits() >= 32 && Subtarget.hasDQI() &&
-         Subtarget.hasVLX())) {  // legal, will go to VPMOVD2M, VPMOVQ2M
-
-    SDValue  ShiftNode = DAG.getNode(ISD::SHL, DL, InVT, In,
-                                     DAG.getConstant(ShiftInx, DL, InVT));
-    return DAG.getNode(X86ISD::CVT2MASK, DL, VT, ShiftNode);
-  }
-
-  // Shift LSB to MSB, extend if necessary and use TESTM.
-  unsigned NumElts = InVT.getVectorNumElements();
-  if (InVT.getSizeInBits() < 512 &&
-      (InVT.getScalarType() == MVT::i8 || InVT.getScalarType() == MVT::i16 ||
-       !Subtarget.hasVLX())) {
-    assert((NumElts == 8 || NumElts == 16) && "Unexpected vector type.");
-
-    // TESTD/Q should be used (if BW supported we use CVT2MASK above),
-    // so vector should be extended to packed dword/qword.
+  if (InVT.getScalarSizeInBits() <= 16) {
+    if (Subtarget.hasBWI()) {
+      // legal, will go to VPMOVB2M, VPMOVW2M
+      // Shift packed bytes not supported natively, bitcast to word
+      MVT ExtVT = MVT::getVectorVT(MVT::i16, InVT.getSizeInBits()/16);
+      SDValue  ShiftNode = DAG.getNode(ISD::SHL, DL, ExtVT,
+                                       DAG.getBitcast(ExtVT, In),
+                                       DAG.getConstant(ShiftInx, DL, ExtVT));
+      ShiftNode = DAG.getBitcast(InVT, ShiftNode);
+      return DAG.getNode(X86ISD::CVT2MASK, DL, VT, ShiftNode);
+    } 
+    // Use TESTD/Q, extended vector to packed dword/qword.
+    assert((InVT.is256BitVector() || InVT.is128BitVector()) &&
+           "Unexpected vector type.");
+    unsigned NumElts = InVT.getVectorNumElements();
     MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(512/NumElts), NumElts);
     In = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, In);
     InVT = ExtVT;
@@ -23628,7 +23610,7 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
   }
 
   // Minor canonicalization of the accumulated shuffle mask to make it easier
-  // to match below. All this does is detect masks with squential pairs of
+  // to match below. All this does is detect masks with sequential pairs of
   // elements, and shrink them to the half-width mask. It does this in a loop
   // so it will reduce the size of the mask to the minimal width mask which
   // performs an equivalent shuffle.

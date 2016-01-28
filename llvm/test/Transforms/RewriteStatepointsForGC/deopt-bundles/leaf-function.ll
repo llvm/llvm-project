@@ -1,4 +1,4 @@
-; RUN: opt %s -S -place-safepoints | FileCheck %s
+; RUN: opt < %s -S -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles | FileCheck %s
 
 declare void @foo() "gc-leaf-function"
 declare void @bar()
@@ -7,8 +7,7 @@ declare void @bar()
 ; into a safepoint.  An entry safepoint should get inserted, though.
 define void @test_leaf_function() gc "statepoint-example" {
 ; CHECK-LABEL: test_leaf_function
-; CHECK: gc.statepoint.p0f_isVoidf
-; CHECK-NOT: statepoint
+; CHECK-NOT: gc.statepoint
 ; CHECK-NOT: gc.result
 entry:
   call void @foo()
@@ -17,8 +16,7 @@ entry:
 
 define void @test_leaf_function_call() gc "statepoint-example" {
 ; CHECK-LABEL: test_leaf_function_call
-; CHECK: gc.statepoint.p0f_isVoidf
-; CHECK-NOT: statepoint
+; CHECK-NOT: gc.statepoint
 ; CHECK-NOT: gc.result
 entry:
   call void @bar() "gc-leaf-function"

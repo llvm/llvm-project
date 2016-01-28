@@ -302,9 +302,9 @@ void RuntimeDyldMachOCRTPBase<Impl>::registerEHFrames() {
 
     uint8_t *P = EHFrame->getAddress();
     uint8_t *End = P + EHFrame->getSize();
-    do {
+    while (P != End) {
       P = processFDE(P, DeltaForText, DeltaForEH);
-    } while (P != End);
+    }
 
     MemMgr.registerEHFrames(EHFrame->getAddress(), EHFrame->getLoadAddress(),
                             EHFrame->getSize());

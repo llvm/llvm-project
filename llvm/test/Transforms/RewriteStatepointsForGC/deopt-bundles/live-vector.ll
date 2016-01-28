@@ -1,6 +1,6 @@
 ; Test that we can correctly handle vectors of pointers in statepoint 
 ; rewriting.  Currently, we scalarize, but that's an implementation detail.
-; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -rs4gc-split-vector-values -S | FileCheck  %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -rs4gc-split-vector-values -S | FileCheck  %s
 
 ; A non-vector relocation for comparison
 

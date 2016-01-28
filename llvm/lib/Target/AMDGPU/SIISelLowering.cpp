@@ -20,6 +20,7 @@
 
 #include "SIISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUDiagnosticInfoUnsupported.h"
 #include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
@@ -28,7 +29,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/DiagnosticInfoCodeGen.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -591,8 +591,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   if (Subtarget->isAmdHsaOS() && Info->getShaderType() != ShaderType::COMPUTE) {
     const Function *Fn = MF.getFunction();
-    DiagnosticInfoUnsupported NoGraphicsHSA(
-        *Fn, "unsupported non-compute shaders with HSA", DL);
+    DiagnosticInfoUnsupported NoGraphicsHSA(*Fn, "non-compute shaders with HSA");
     DAG.getContext()->diagnose(NoGraphicsHSA);
     return SDValue();
   }
@@ -1321,9 +1320,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_dispatch_ptr:
     if (!Subtarget->isAmdHsaOS()) {
-      DiagnosticInfoUnsupported BadIntrin(
-          *MF.getFunction(), "unsupported hsa intrinsic without hsa target",
-          DL);
+      DiagnosticInfoUnsupported BadIntrin(*MF.getFunction(),
+                                          "hsa intrinsic without hsa target");
       DAG.getContext()->diagnose(BadIntrin);
       return DAG.getUNDEF(VT);
     }
@@ -2133,8 +2131,70 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   }
 }
 
-SDValue SITargetLowering::performMin3Max3Combine(SDNode *N,
-                                                 DAGCombinerInfo &DCI) const {
+static SDValue performIntMed3ImmCombine(SelectionDAG &DAG,
+                                        SDLoc SL,
+                                        SDValue Op0,
+                                        SDValue Op1,
+                                        bool Signed) {
+  ConstantSDNode *K1 = dyn_cast<ConstantSDNode>(Op1);
+  if (!K1)
+    return SDValue();
+
+  ConstantSDNode *K0 = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
+  if (!K0)
+    return SDValue();
+
+
+  if (Signed) {
+    if (K0->getAPIntValue().sge(K1->getAPIntValue()))
+      return SDValue();
+  } else {
+    if (K0->getAPIntValue().uge(K1->getAPIntValue()))
+      return SDValue();
+  }
+
+  EVT VT = K0->getValueType(0);
+  return DAG.getNode(Signed ? AMDGPUISD::SMED3 : AMDGPUISD::UMED3, SL, VT,
+                     Op0.getOperand(0), SDValue(K0, 0), SDValue(K1, 0));
+}
+
+static bool isKnownNeverSNan(SelectionDAG &DAG, SDValue Op) {
+  if (!DAG.getTargetLoweringInfo().hasFloatingPointExceptions())
+    return true;
+
+  return DAG.isKnownNeverNaN(Op);
+}
+
+static SDValue performFPMed3ImmCombine(SelectionDAG &DAG,
+                                       SDLoc SL,
+                                       SDValue Op0,
+                                       SDValue Op1) {
+  ConstantFPSDNode *K1 = dyn_cast<ConstantFPSDNode>(Op1);
+  if (!K1)
+    return SDValue();
+
+  ConstantFPSDNode *K0 = dyn_cast<ConstantFPSDNode>(Op0.getOperand(1));
+  if (!K0)
+    return SDValue();
+
+  // Ordered >= (although NaN inputs should have folded away by now).
+  APFloat::cmpResult Cmp = K0->getValueAPF().compare(K1->getValueAPF());
+  if (Cmp == APFloat::cmpGreaterThan)
+    return SDValue();
+
+  // This isn't safe with signaling NaNs because in IEEE mode, min/max on a
+  // signaling NaN gives a quiet NaN. The quiet NaN input to the min would then
+  // give the other result, which is different from med3 with a NaN input.
+  SDValue Var = Op0.getOperand(0);
+  if (!isKnownNeverSNan(DAG, Var))
+    return SDValue();
+
+  return DAG.getNode(AMDGPUISD::FMED3, SL, K0->getValueType(0),
+                     Var, SDValue(K0, 0), SDValue(K1, 0));
+}
+
+SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
+                                               DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
 
   unsigned Opc = N->getOpcode();
@@ -2144,26 +2204,51 @@ SDValue SITargetLowering::performMin3Max3Combine(SDNode *N,
   // Only do this if the inner op has one use since this will just increases
   // register pressure for no benefit.
 
-  // max(max(a, b), c)
-  if (Op0.getOpcode() == Opc && Op0.hasOneUse()) {
-    SDLoc DL(N);
-    return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc),
-                       DL,
-                       N->getValueType(0),
-                       Op0.getOperand(0),
-                       Op0.getOperand(1),
-                       Op1);
+  if (Opc != AMDGPUISD::FMIN_LEGACY && Opc != AMDGPUISD::FMAX_LEGACY) {
+    // max(max(a, b), c) -> max3(a, b, c)
+    // min(min(a, b), c) -> min3(a, b, c)
+    if (Op0.getOpcode() == Opc && Op0.hasOneUse()) {
+      SDLoc DL(N);
+      return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc),
+                         DL,
+                         N->getValueType(0),
+                         Op0.getOperand(0),
+                         Op0.getOperand(1),
+                         Op1);
+    }
+
+    // Try commuted.
+    // max(a, max(b, c)) -> max3(a, b, c)
+    // min(a, min(b, c)) -> min3(a, b, c)
+    if (Op1.getOpcode() == Opc && Op1.hasOneUse()) {
+      SDLoc DL(N);
+      return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc),
+                         DL,
+                         N->getValueType(0),
+                         Op0,
+                         Op1.getOperand(0),
+                         Op1.getOperand(1));
+    }
   }
 
-  // max(a, max(b, c))
-  if (Op1.getOpcode() == Opc && Op1.hasOneUse()) {
-    SDLoc DL(N);
-    return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc),
-                       DL,
-                       N->getValueType(0),
-                       Op0,
-                       Op1.getOperand(0),
-                       Op1.getOperand(1));
+  // min(max(x, K0), K1), K0 < K1 -> med3(x, K0, K1)
+  if (Opc == ISD::SMIN && Op0.getOpcode() == ISD::SMAX && Op0.hasOneUse()) {
+    if (SDValue Med3 = performIntMed3ImmCombine(DAG, SDLoc(N), Op0, Op1, true))
+      return Med3;
+  }
+
+  if (Opc == ISD::UMIN && Op0.getOpcode() == ISD::UMAX && Op0.hasOneUse()) {
+    if (SDValue Med3 = performIntMed3ImmCombine(DAG, SDLoc(N), Op0, Op1, false))
+      return Med3;
+  }
+
+  // fminnum(fmaxnum(x, K0), K1), K0 < K1 && !is_snan(x) -> fmed3(x, K0, K1)
+  if (((Opc == ISD::FMINNUM && Op0.getOpcode() == ISD::FMAXNUM) ||
+       (Opc == AMDGPUISD::FMIN_LEGACY &&
+        Op0.getOpcode() == AMDGPUISD::FMAX_LEGACY)) &&
+      N->getValueType(0) == MVT::f32 && Op0.hasOneUse()) {
+    if (SDValue Res = performFPMed3ImmCombine(DAG, SDLoc(N), Op0, Op1))
+      return Res;
   }
 
   return SDValue();
@@ -2210,16 +2295,18 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
-  case ISD::FMAXNUM: // TODO: What about fmax_legacy?
+  case ISD::FMAXNUM:
   case ISD::FMINNUM:
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
-  case ISD::UMIN: {
+  case ISD::UMIN:
+  case AMDGPUISD::FMIN_LEGACY:
+  case AMDGPUISD::FMAX_LEGACY: {
     if (DCI.getDAGCombineLevel() >= AfterLegalizeDAG &&
         N->getValueType(0) != MVT::f64 &&
         getTargetMachine().getOptLevel() > CodeGenOpt::None)
-      return performMin3Max3Combine(N, DCI);
+      return performMinMaxCombine(N, DCI);
     break;
   }
 

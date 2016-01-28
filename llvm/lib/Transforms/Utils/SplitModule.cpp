@@ -88,6 +88,13 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
         Member = &GV;
     }
 
+    // For aliases we should not separate them from their aliasees regardless
+    // of linkage.
+    if (GlobalAlias *GA = dyn_cast<GlobalAlias>(&GV)) {
+      if (const GlobalObject *Base = GA->getBaseObject())
+        GVtoClusterMap.unionSets(&GV, Base);
+    }
+
     // Further only iterate over local GVs.
     if (!GV.hasLocalLinkage())
       return;

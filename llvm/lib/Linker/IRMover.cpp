@@ -507,8 +507,9 @@ class IRLinker {
                               SmallPtrSet<const MDNode *, 16> &Visited);
 
   /// The value mapper leaves nulls in the list of subprograms for any
-  /// in the UnneededSubprograms map. Strip those out after metadata linking.
-  void stripNullSubprograms();
+  /// in the UnneededSubprograms map. Strip those out of the mapped
+  /// compile unit.
+  void stripNullSubprograms(DICompileUnit *CU);
 
 public:
   IRLinker(Module &DstM, IRMover::IdentifiedStructTypeSet &Set, Module &SrcM,
@@ -1266,28 +1267,24 @@ void IRLinker::findNeededSubprograms() {
   }
 }
 
-// Squash null subprograms from compile unit subprogram lists.
-void IRLinker::stripNullSubprograms() {
-  NamedMDNode *CompileUnits = DstM.getNamedMetadata("llvm.dbg.cu");
-  if (!CompileUnits)
+// Squash null subprograms from the given compile unit's subprogram list.
+void IRLinker::stripNullSubprograms(DICompileUnit *CU) {
+  // There won't be any nulls if we didn't have any subprograms marked
+  // as unneeded.
+  if (UnneededSubprograms.empty())
     return;
-  for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
-    auto *CU = cast<DICompileUnit>(CompileUnits->getOperand(I));
-    assert(CU && "Expected valid compile unit");
-
-    SmallVector<Metadata *, 16> NewSPs;
-    NewSPs.reserve(CU->getSubprograms().size());
-    bool FoundNull = false;
-    for (DISubprogram *SP : CU->getSubprograms()) {
-      if (!SP) {
-        FoundNull = true;
-        continue;
-      }
-      NewSPs.push_back(SP);
+  SmallVector<Metadata *, 16> NewSPs;
+  NewSPs.reserve(CU->getSubprograms().size());
+  bool FoundNull = false;
+  for (DISubprogram *SP : CU->getSubprograms()) {
+    if (!SP) {
+      FoundNull = true;
+      continue;
     }
-    if (FoundNull)
-      CU->replaceSubprograms(MDTuple::get(CU->getContext(), NewSPs));
+    NewSPs.push_back(SP);
   }
+  if (FoundNull)
+    CU->replaceSubprograms(MDTuple::get(CU->getContext(), NewSPs));
 }
 
 /// Insert all of the named MDNodes in Src into the Dest module.
@@ -1300,12 +1297,18 @@ void IRLinker::linkNamedMDNodes() {
       continue;
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
-    for (const MDNode *op : NMD.operands())
-      DestNMD->addOperand(MapMetadata(
+    for (const MDNode *op : NMD.operands()) {
+      MDNode *DestMD = MapMetadata(
           op, ValueMap, ValueMapperFlags | RF_NullMapMissingGlobalValues,
-          &TypeMap, &GValMaterializer));
+          &TypeMap, &GValMaterializer);
+      // For each newly mapped compile unit remove any null subprograms,
+      // which occur when findNeededSubprograms identified any as unneeded
+      // in the dest module.
+      if (auto *CU = dyn_cast<DICompileUnit>(DestMD))
+        stripNullSubprograms(CU);
+      DestNMD->addOperand(DestMD);
+    }
   }
-  stripNullSubprograms();
 }
 
 /// Merge the linker flags in Src into the Dest module.

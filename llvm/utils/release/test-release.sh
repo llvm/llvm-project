@@ -156,9 +156,12 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "$use_autoconf" = "no" ]; then
-  # See llvm.org/PR26146.
-  echo Skipping test-suite when using CMake.
-  do_test_suite="no"
+  if [ "$do_test_suite" = "yes" ]; then
+    # See llvm.org/PR26146.
+    echo Skipping test-suite build when using CMake.
+    echo It will still be exported.
+    do_test_suite="export-only"
+  fi
 fi
 
 # Check required arguments.
@@ -203,9 +206,11 @@ if [ $do_libs = "yes" ]; then
     projects="$projects libunwind"
   fi
 fi
-if [ $do_test_suite = "yes" ]; then
-  projects="$projects test-suite"
-fi
+case $do_test_suite in
+  yes|export-only)
+    projects="$projects test-suite"
+    ;;
+esac
 if [ $do_openmp = "yes" ]; then
   projects="$projects openmp"
 fi
@@ -278,8 +283,15 @@ function export_sources() {
         clang-tools-extra)
             projsrc=llvm.src/tools/clang/tools/extra
             ;;
-        compiler-rt|libcxx|libcxxabi|libunwind|openmp|test-suite)
+        compiler-rt|libcxx|libcxxabi|libunwind|openmp)
             projsrc=llvm.src/projects/$proj
+            ;;
+        test-suite)
+            if [ $do_test_suite = 'yes' ]; then
+              projsrc=llvm.src/projects/$proj
+            else
+              projsrc=$proj.src
+            fi
             ;;
         *)
             echo "error: unknown project $proj"

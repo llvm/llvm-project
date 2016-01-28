@@ -1,4 +1,4 @@
-; RUN: opt -spp-no-statepoints -S -place-safepoints < %s | FileCheck %s
+; RUN: opt -S -place-safepoints < %s | FileCheck %s
 
 define void @test() gc "statepoint-example" {
 ; CHECK-LABEL: test(

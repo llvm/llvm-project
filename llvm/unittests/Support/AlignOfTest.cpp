@@ -90,7 +90,7 @@ V7::~V7() {}
 V8::~V8() {}
 
 struct Abstract1 {
-  virtual ~Abstract1() = default;
+  virtual ~Abstract1() {}
   virtual void method() = 0;
 
   char c;
