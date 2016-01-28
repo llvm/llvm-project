@@ -25,7 +25,11 @@ TOO-MANY-SECTS: Mach-O segment load command contains too many sections
 
 RUN: not llvm-objdump -t %p/Inputs/macho-invalid-bad-symbol-index 2>&1 \
 RUN:      | FileCheck -check-prefix BAD-SYMBOL %s
-BAD-SYMBOL: Requested symbol index is out of range
+BAD-SYMBOL: Invalid data was encountered while parsing the file.
+RUN: llvm-objdump -t %p/Inputs/macho-valid-0-nsyms 2>&1 \
+RUN:      | FileCheck -check-prefix ZERO-NSYMS %s
+ZERO-NSYMS: SYMBOL TABLE
+ZERO-NSYMS-NOT: Requested symbol index is out of range
 
 RUN: not llvm-objdump -t %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF %s

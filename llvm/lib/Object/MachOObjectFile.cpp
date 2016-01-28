@@ -317,6 +317,61 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       Load = LoadOrErr.get();
     }
   }
+  if (!SymtabLoadCmd) {
+    if (DysymtabLoadCmd) {
+      // Diagnostic("truncated or malformed object (contains LC_DYSYMTAB load "
+      // "command without a LC_SYMTAB load command)");
+      EC = object_error::parse_failed;
+      return;
+    }
+  } else if (DysymtabLoadCmd) {
+    MachO::symtab_command Symtab =
+      getStruct<MachO::symtab_command>(this, SymtabLoadCmd);
+    MachO::dysymtab_command Dysymtab =
+      getStruct<MachO::dysymtab_command>(this, DysymtabLoadCmd);
+    if (Dysymtab.nlocalsym != 0 && Dysymtab.ilocalsym > Symtab.nsyms) {
+      // Diagnostic("truncated or malformed object (ilocalsym in LC_DYSYMTAB "
+      // "load command extends past the end of the symbol table)"
+      EC = object_error::parse_failed;
+      return;
+    }
+    uint64_t big_size = Dysymtab.ilocalsym;
+    big_size += Dysymtab.nlocalsym;
+    if (Dysymtab.nlocalsym != 0 && big_size > Symtab.nsyms) {
+      // Diagnostic("truncated or malformed object (ilocalsym plus nlocalsym "
+      // "in LC_DYSYMTAB load command extends past the end of the symbol table)"
+      EC = object_error::parse_failed;
+      return;
+    }
+    if (Dysymtab.nextdefsym != 0 && Dysymtab.ilocalsym > Symtab.nsyms) {
+      // Diagnostic("truncated or malformed object (nextdefsym in LC_DYSYMTAB "
+      // "load command extends past the end of the symbol table)"
+      EC = object_error::parse_failed;
+      return;
+    }
+    big_size = Dysymtab.iextdefsym;
+    big_size += Dysymtab.nextdefsym;
+    if (Dysymtab.nextdefsym != 0 && big_size > Symtab.nsyms) {
+      // Diagnostic("truncated or malformed object (iextdefsym plus nextdefsym "
+      // "in LC_DYSYMTAB load command extends past the end of the symbol table)"
+      EC = object_error::parse_failed;
+      return;
+    }
+    if (Dysymtab.nundefsym != 0 && Dysymtab.iundefsym > Symtab.nsyms) {
+      // Diagnostic("truncated or malformed object (nundefsym in LC_DYSYMTAB "
+      // "load command extends past the end of the symbol table)"
+      EC = object_error::parse_failed;
+      return;
+    }
+    big_size = Dysymtab.iundefsym;
+    big_size += Dysymtab.nundefsym;
+    if (Dysymtab.nundefsym != 0 && big_size > Symtab.nsyms) {
+      // Diagnostic("truncated or malformed object (iundefsym plus nundefsym "
+      // "in LC_DYSYMTAB load command extends past the end of the symbol table)"
+      EC = object_error::parse_failed;
+      return;
+    }
+  }
   assert(LoadCommands.size() == LoadCommandCount);
 }
 
@@ -941,15 +996,20 @@ MachOObjectFile::getRelocationRelocatedSection(relocation_iterator Rel) const {
 }
 
 basic_symbol_iterator MachOObjectFile::symbol_begin_impl() const {
+  DataRefImpl DRI;
+  MachO::symtab_command Symtab = getSymtabLoadCommand();
+  if (!SymtabLoadCmd || Symtab.nsyms == 0)
+    return basic_symbol_iterator(SymbolRef(DRI, this));
+
   return getSymbolByIndex(0);
 }
 
 basic_symbol_iterator MachOObjectFile::symbol_end_impl() const {
   DataRefImpl DRI;
-  if (!SymtabLoadCmd)
+  MachO::symtab_command Symtab = getSymtabLoadCommand();
+  if (!SymtabLoadCmd || Symtab.nsyms == 0)
     return basic_symbol_iterator(SymbolRef(DRI, this));
 
-  MachO::symtab_command Symtab = getSymtabLoadCommand();
   unsigned SymbolTableEntrySize = is64Bit() ?
     sizeof(MachO::nlist_64) :
     sizeof(MachO::nlist);
@@ -960,15 +1020,12 @@ basic_symbol_iterator MachOObjectFile::symbol_end_impl() const {
 }
 
 basic_symbol_iterator MachOObjectFile::getSymbolByIndex(unsigned Index) const {
-  DataRefImpl DRI;
-  if (!SymtabLoadCmd)
-    return basic_symbol_iterator(SymbolRef(DRI, this));
-
   MachO::symtab_command Symtab = getSymtabLoadCommand();
-  if (Index >= Symtab.nsyms)
+  if (!SymtabLoadCmd || Index >= Symtab.nsyms)
     report_fatal_error("Requested symbol index is out of range.");
   unsigned SymbolTableEntrySize =
     is64Bit() ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
+  DataRefImpl DRI;
   DRI.p = reinterpret_cast<uintptr_t>(getPtr(this, Symtab.symoff));
   DRI.p += Index * SymbolTableEntrySize;
   return basic_symbol_iterator(SymbolRef(DRI, this));
