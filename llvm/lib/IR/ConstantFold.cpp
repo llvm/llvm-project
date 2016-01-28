@@ -2040,11 +2040,13 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
     return C;
 
   if (isa<UndefValue>(C)) {
-    PointerType *PtrTy = cast<PointerType>(C->getType());
-    Type *Ty = GetElementPtrInst::getIndexedType(
-        cast<PointerType>(PtrTy->getScalarType())->getElementType(), Idxs);
+    PointerType *PtrTy = cast<PointerType>(C->getType()->getScalarType());
+    Type *Ty = GetElementPtrInst::getIndexedType(PtrTy->getElementType(), Idxs);
     assert(Ty && "Invalid indices for GEP!");
-    return UndefValue::get(PointerType::get(Ty, PtrTy->getAddressSpace()));
+    Type *GEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
+    if (VectorType *VT = dyn_cast<VectorType>(C->getType()))
+      GEPTy = VectorType::get(GEPTy, VT->getNumElements());
+    return UndefValue::get(GEPTy);
   }
 
   if (C->isNullValue()) {
@@ -2055,12 +2057,14 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
         break;
       }
     if (isNull) {
-      PointerType *PtrTy = cast<PointerType>(C->getType());
-      Type *Ty = GetElementPtrInst::getIndexedType(
-          cast<PointerType>(PtrTy->getScalarType())->getElementType(), Idxs);
+      PointerType *PtrTy = cast<PointerType>(C->getType()->getScalarType());
+      Type *Ty =
+          GetElementPtrInst::getIndexedType(PtrTy->getElementType(), Idxs);
       assert(Ty && "Invalid indices for GEP!");
-      return ConstantPointerNull::get(PointerType::get(Ty,
-                                                       PtrTy->getAddressSpace()));
+      Type *GEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
+      if (VectorType *VT = dyn_cast<VectorType>(C->getType()))
+        GEPTy = VectorType::get(GEPTy, VT->getNumElements());
+      return Constant::getNullValue(GEPTy);
     }
   }
 
