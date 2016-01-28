@@ -303,20 +303,15 @@ ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
   VReport(3, "__cfi_slowpath: %llx, %p\n", CallSiteTypeId, Ptr);
   ShadowValue sv = ShadowValue::load(Addr);
   if (sv.is_invalid()) {
-    // FIXME: call the ubsan handler if DiagData != nullptr?
     VReport(1, "CFI: invalid memory region for a check target: %p\n", Ptr);
 #ifdef CFI_ENABLE_DIAG
     if (DiagData) {
       __ubsan_handle_cfi_check_fail(
-          reinterpret_cast<__ubsan::CFICheckFailData *>(DiagData),
-          reinterpret_cast<uptr>(Ptr));
+          reinterpret_cast<__ubsan::CFICheckFailData *>(DiagData), Addr);
       return;
-    } else {
-      Trap();
     }
-#else
-    Trap();
 #endif
+    Trap();
   }
   if (sv.is_unchecked()) {
     VReport(2, "CFI: unchecked call (shadow=FFFF): %p\n", Ptr);
